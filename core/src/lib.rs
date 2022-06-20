@@ -4,6 +4,8 @@ mod event;
 mod mapping;
 mod variable;
 
+pub use odra_types as types;
+
 cfg_if::cfg_if! {
     if #[cfg(feature = "mock-vm")] {
         pub use odra_mock_test_env::TestEnv;
