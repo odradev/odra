@@ -1,0 +1,13 @@
+[workspace]
+members = [
+    "core",
+    "env",
+    "macros",
+    "mock/vm",
+    "mock/env",
+    "mock/test_env",
+    "modules",
+    "test_env",
+    "test_env/wrapper",
+    "types",
+]

@@ -1,0 +1,20 @@
+[package]
+name = "odra"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+odra-types = { path = "../types" }
+odra-macros = { path = "../macros" }
+odra-mock-env = { path = "../mock/env", optional = true }
+odra-mock-test-env = { path = "../mock/test_env", optional = true }
+ref_thread_local = "0.1.1"
+cfg-if = "1.0.0"
+
+[features]
+default = [ "mock-vm" ]
+mock-vm = [ "odra-mock-env", "odra-mock-test-env" ]
+wasm = []
+wasm-test = [ ]
