@@ -1,4 +1,7 @@
-use odra_types::{Address, CLValue, EventData, bytesrepr::{ToBytes, FromBytes}, CLTyped};
+use odra_types::{
+    bytesrepr::{FromBytes, ToBytes},
+    Address, CLTyped, CLValue, EventData,
+};
 
 #[allow(improper_ctypes)]
 extern "C" {
@@ -6,7 +9,7 @@ extern "C" {
     fn set_var(key: &[u8], value: &CLValue);
     fn get_var(key: &[u8]) -> Option<CLValue>;
     fn set_bool(key: &[u8], value: bool);
-    fn get_bool(key: &[u8])-> Option<bool>;
+    fn get_bool(key: &[u8]) -> Option<bool>;
     fn set_dict_value(dict: &[u8], key: &[u8], value: &CLValue);
     fn get_dict_value(dict: &[u8], key: &[u8]) -> Option<CLValue>;
     fn emit_event(event: &EventData);

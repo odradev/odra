@@ -1,11 +1,11 @@
 pub mod contract_def;
-pub mod instance;
 mod event;
+pub mod instance;
 mod mapping;
 mod variable;
 
+pub use odra_proc_macros::{contract, instance, Event};
 pub use odra_types as types;
-pub use odra_proc_macros::{Event, contract, instance};
 pub use variable::Variable;
 
 cfg_if::cfg_if! {

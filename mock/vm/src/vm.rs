@@ -1,8 +1,7 @@
 use odra_types::EventData;
 use odra_types::{bytesrepr::FromBytes, Address, CLValue};
 
-
-use super::context::{ExecutionContext, Context};
+use super::context::{Context, ExecutionContext};
 use super::storage::Storage;
 
 #[derive(Clone)]
@@ -83,10 +82,7 @@ impl MockVm {
     }
 
     pub fn assert_event_type(&self, event_name: &str, at: i32) {
-        assert_eq!(
-            MockVm::event_name(self.event(at).as_slice()),
-            event_name
-        );
+        assert_eq!(MockVm::event_name(self.event(at).as_slice()), event_name);
     }
 
     pub fn assert_event_type_not_emitted(&self, event_name: &str) {

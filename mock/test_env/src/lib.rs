@@ -1,7 +1,10 @@
+mod events;
+mod internal;
+
 use std::cell::RefCell;
 
 use odra_test_env::{ContractCollection, ContractContainer};
-use odra_types::{Address, RuntimeArgs, bytesrepr::Bytes};
+use odra_types::{bytesrepr::Bytes, Address, RuntimeArgs};
 
 thread_local! {
     static STORAGE: RefCell<ContractCollection> = RefCell::new(ContractCollection::default());
@@ -10,7 +13,6 @@ thread_local! {
 pub struct TestEnv;
 
 impl TestEnv {
-
     pub fn register_contract(container: &ContractContainer) -> Address {
         STORAGE.with(|storage| {
             let address = crate::internal::next_address();
@@ -31,6 +33,3 @@ impl TestEnv {
         "Mock".to_string()
     }
 }
-
-mod events;
-mod internal;

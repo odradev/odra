@@ -39,15 +39,15 @@ impl TestEnv {
     fn event(at: i32) -> EventData {
         todo!()
     }
-    
+
     fn assert_event_type(event_name: &str, at: i32) {
         todo!()
     }
-    
+
     fn assert_event_type_not_emitted(event_name: &str) {
         todo!()
     }
-    
+
     fn assert_event_not_emitted(event: &EventData) {
         todo!()
     }

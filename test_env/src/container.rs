@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use odra_types::{RuntimeArgs, bytesrepr::Bytes};
+use odra_types::{bytesrepr::Bytes, RuntimeArgs};
 
 #[derive(Default, Clone)]
 pub struct ContractContainer {

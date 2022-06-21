@@ -8,8 +8,8 @@ use odra_types::{
     CLTyped,
 };
 
-use crate::Env;
 use crate::instance::Instance;
+use crate::Env;
 
 #[derive(PartialEq, Debug)]
 pub struct Variable<T> {

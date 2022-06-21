@@ -32,7 +32,10 @@ impl From<syn::ItemImpl> for ContractImpl {
         let methods = extract_methods(item_impl.clone());
         Self {
             original_impl: item_impl,
-            entrypoints: methods.into_iter().map(|method| ContractEntrypoint::from(method)).collect(),
+            entrypoints: methods
+                .into_iter()
+                .map(|method| ContractEntrypoint::from(method))
+                .collect(),
             ident: contract_ident,
         }
     }
@@ -48,7 +51,6 @@ fn extract_methods<'a>(item: syn::ItemImpl) -> Vec<syn::ImplItemMethod> {
         .collect::<Vec<_>>()
 }
 
-
 pub struct ContractEntrypoint {
     pub ident: Ident,
     pub args: Vec<syn::PatType>,
@@ -58,11 +60,15 @@ pub struct ContractEntrypoint {
 impl From<syn::ImplItemMethod> for ContractEntrypoint {
     fn from(method: syn::ImplItemMethod) -> Self {
         let ident = method.sig.ident.to_owned();
-        let args = method.sig.inputs.iter().filter_map(|arg| match arg {
-            FnArg::Receiver(_) => None,
-            FnArg::Typed(pat) => Some(pat.clone())
-            
-        }).collect::<Vec<_>>();
+        let args = method
+            .sig
+            .inputs
+            .iter()
+            .filter_map(|arg| match arg {
+                FnArg::Receiver(_) => None,
+                FnArg::Typed(pat) => Some(pat.clone()),
+            })
+            .collect::<Vec<_>>();
         let ret = method.sig.output;
         Self { ident, args, ret }
     }

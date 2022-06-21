@@ -1,5 +1,5 @@
-use odra_ir::contract_item::ContractItem;
 use odra_codegen::contract_item;
+use odra_ir::contract_item::ContractItem;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 

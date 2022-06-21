@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use odra_types::{Address, RuntimeArgs, bytesrepr::Bytes};
+use odra_types::{bytesrepr::Bytes, Address, RuntimeArgs};
 
 use super::container::ContractContainer;
 
@@ -11,7 +11,9 @@ pub struct ContractCollection {
 
 impl ContractCollection {
     pub fn new() -> Self {
-        ContractCollection { contracts: HashMap::new() }
+        ContractCollection {
+            contracts: HashMap::new(),
+        }
     }
 
     pub fn add(&mut self, addr: Address, container: ContractContainer) {

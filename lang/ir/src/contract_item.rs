@@ -1,14 +1,14 @@
 use proc_macro2::TokenStream;
 use syn::{ImplItemMethod, ItemImpl};
 
-use self::{contract_struct::ContractStruct, contract_impl::ContractImpl};
+use self::{contract_impl::ContractImpl, contract_struct::ContractStruct};
 
 pub mod contract_impl;
 pub mod contract_struct;
 
 pub struct ContractItem {
     contract_struct: Option<ContractStruct>,
-    contract_impl: Option<ContractImpl>
+    contract_impl: Option<ContractImpl>,
 }
 
 impl ContractItem {
@@ -24,7 +24,9 @@ impl ContractItem {
         }
 
         Ok(Self {
-            contract_struct: item_struct.and_then(|item| Ok(ContractStruct::from(item))).ok(),
+            contract_struct: item_struct
+                .and_then(|item| Ok(ContractStruct::from(item)))
+                .ok(),
             contract_impl: item_impl.and_then(|item| Ok(ContractImpl::from(item))).ok(),
         })
     }

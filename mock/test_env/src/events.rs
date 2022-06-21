@@ -1,5 +1,5 @@
-use odra_types::EventData;
 use odra_mock_vm::{borrow_env, borrow_mut_env};
+use odra_types::EventData;
 
 pub(crate) fn emit_event(ev: &EventData) {
     borrow_mut_env().emit_event(ev);

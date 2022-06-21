@@ -1,7 +1,7 @@
 use dlopen::wrapper::{Container, WrapperApi};
 use dlopen_derive::WrapperApi;
 use odra_test_env::ContractContainer;
-use odra_types::{Address, RuntimeArgs, bytesrepr::Bytes};
+use odra_types::{bytesrepr::Bytes, Address, RuntimeArgs};
 
 #[derive(WrapperApi)]
 pub struct TestBackend {

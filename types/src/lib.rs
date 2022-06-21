@@ -1,5 +1,5 @@
 mod address;
 
-pub use casper_types::*;
 pub use address::Address;
+pub use casper_types::*;
 pub type EventData = Vec<u8>;
