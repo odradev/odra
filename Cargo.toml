@@ -2,7 +2,9 @@
 members = [
     "core",
     "env",
-    "macros",
+    "lang/generator",
+    "lang/ir",
+    "lang/proc_macros",
     "mock/vm",
     "mock/env",
     "mock/test_env",

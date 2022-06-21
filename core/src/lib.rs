@@ -1,10 +1,12 @@
-mod contract_def;
-mod instance;
+pub mod contract_def;
+pub mod instance;
 mod event;
 mod mapping;
 mod variable;
 
 pub use odra_types as types;
+pub use odra_proc_macros::{Event, contract, instance};
+pub use variable::Variable;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "mock-vm")] {

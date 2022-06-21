@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 odra-types = { path = "../types" }
-odra-macros = { path = "../macros" }
+odra-proc-macros = { path = "../lang/proc_macros" }
 odra-mock-env = { path = "../mock/env", optional = true }
 odra-mock-test-env = { path = "../mock/test_env", optional = true }
 ref_thread_local = "0.1.1"
