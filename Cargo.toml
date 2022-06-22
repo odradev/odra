@@ -1,7 +1,6 @@
 [workspace]
 members = [
     "core",
-    "env",
     "lang/generator",
     "lang/ir",
     "lang/proc_macros",

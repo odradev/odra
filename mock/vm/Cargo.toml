@@ -7,5 +7,5 @@ edition = "2021"
 
 [dependencies]
 odra-types = { path = "../../types" }
-odra-test-env = { path = "../../test_env" }
+odra-test-env = { path = "../../test_env", features = [ "mock-vm" ] }
 ref_thread_local = "0.1.1"

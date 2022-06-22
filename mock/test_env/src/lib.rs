@@ -22,7 +22,7 @@ impl TestEnv {
         })
     }
 
-    pub fn call_contract(address: &Address, entrypoint: &str, args: &RuntimeArgs) -> Bytes {
+    pub fn call_contract(address: &Address, entrypoint: &str, args: &RuntimeArgs, _has_return: bool) -> Option<Bytes> {
         STORAGE.with(|storage| {
             let storage = storage.borrow();
             storage.call(address, String::from(entrypoint), args.clone())

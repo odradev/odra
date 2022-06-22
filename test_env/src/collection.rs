@@ -1,6 +1,7 @@
 use std::collections::HashMap;
-
-use odra_types::{bytesrepr::Bytes, Address, RuntimeArgs};
+#[cfg(feature = "mock-vm")]
+use odra_types::{bytesrepr::Bytes, RuntimeArgs};
+use odra_types::Address;
 
 use super::container::ContractContainer;
 
@@ -20,7 +21,8 @@ impl ContractCollection {
         self.contracts.insert(addr, container);
     }
 
-    pub fn call(&self, addr: &Address, entrypoint: String, args: RuntimeArgs) -> Bytes {
+    #[cfg(feature = "mock-vm")]
+    pub fn call(&self, addr: &Address, entrypoint: String, args: RuntimeArgs) -> Option<Bytes> {
         self.contracts.get(addr).unwrap().call(entrypoint, args)
     }
 }

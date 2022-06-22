@@ -1,4 +1,5 @@
-use odra_types::{Address, EventData};
+use odra_test_env::ContractContainer;
+use odra_types::{Address, EventData, RuntimeArgs, bytesrepr::Bytes};
 
 #[allow(improper_ctypes)]
 extern "C" {
@@ -16,6 +17,15 @@ extern "C" {
 pub struct TestEnv;
 
 impl TestEnv {
+
+    pub fn register_contract(container: &ContractContainer) -> Address {
+        todo!()
+    }
+
+    pub fn call_contract(address: &Address, entrypoint: &str, args: &RuntimeArgs, _has_return: bool) -> Option<Bytes> {
+        todo!()
+    }
+
     fn set_caller(address: &Address) {
         todo!()
     }

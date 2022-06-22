@@ -7,6 +7,6 @@ edition = "2021"
 
 [dependencies]
 odra-types = { path = "../../types" }
-odra-test-env = { path = "../" }
+odra-test-env = { path = "../", features = [ "wasm-test" ] }
 dlopen = "0.1.8"
 dlopen_derive = "0.1.4"
