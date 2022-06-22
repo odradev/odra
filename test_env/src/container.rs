@@ -22,7 +22,6 @@ cfg_if::cfg_if! {
             }
         }
     } else if #[cfg(feature = "wasm-test")] {
-        use odra_types::{bytesrepr::Bytes, RuntimeArgs};
         #[derive(Default, Clone)]
         pub struct ContractContainer {
             pub name: String,
