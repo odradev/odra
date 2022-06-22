@@ -410,6 +410,7 @@ dependencies = [
  "odra-mock-test-env",
  "odra-proc-macros",
  "odra-test-env",
+ "odra-test-env-wrapper",
  "odra-types",
  "ref_thread_local",
 ]

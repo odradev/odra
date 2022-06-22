@@ -1,33 +1,24 @@
 use odra_test_env::ContractContainer;
 use odra_types::{bytesrepr::Bytes, Address, EventData, RuntimeArgs};
 
-#[allow(improper_ctypes)]
-extern "C" {
-    fn set_caller(address: &Address);
-    fn emit_event(event: &EventData);
-    fn assert_event(event: &EventData, at: i32);
-    fn assert_event_type_emitted(event_name: &str);
-    fn assert_event_emitted(event: &EventData);
-    fn event(at: i32) -> EventData;
-    fn assert_event_type(event_name: &str, at: i32);
-    fn assert_event_type_not_emitted(event_name: &str);
-    fn assert_event_not_emitted(event: &EventData);
-}
-
 pub struct TestEnv;
 
 impl TestEnv {
     pub fn register_contract(container: &ContractContainer) -> Address {
-        todo!()
+        odra_test_env_wrapper::on_backend(|env| {
+            env.register_contract(container)
+        })
     }
 
     pub fn call_contract(
         address: &Address,
         entrypoint: &str,
         args: &RuntimeArgs,
-        _has_return: bool,
+        has_return: bool,
     ) -> Option<Bytes> {
-        todo!()
+        odra_test_env_wrapper::on_backend(|env| {
+            Some(env.call_contract(address, entrypoint, args, has_return))
+        })
     }
 
     fn set_caller(address: &Address) {

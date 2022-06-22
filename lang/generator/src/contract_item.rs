@@ -128,7 +128,7 @@ fn generate_deploy(contract_impl: &ContractImpl) -> TokenStream {
         impl #struct_ident {
             fn deploy(name: &str) -> #ref_ident {
                 let container = odra::ContractContainer {
-                    name: name.to_string(),
+                    name: #struct_name_lowercased.to_string(),
                     wasm_path: format!("{}.wasm", #struct_name_lowercased),
                 };
 

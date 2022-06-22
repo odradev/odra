@@ -21,7 +21,5 @@ cfg_if::cfg_if! {
         pub use external_api::env::Env;
         pub use external_api::test_env::TestEnv;
         pub use odra_test_env::ContractContainer;
-    } else {
-        compile_error!("Unsupported feature");
     }
 }
