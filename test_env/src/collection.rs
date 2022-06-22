@@ -1,7 +1,7 @@
-use std::collections::HashMap;
+use odra_types::Address;
 #[cfg(feature = "mock-vm")]
 use odra_types::{bytesrepr::Bytes, RuntimeArgs};
-use odra_types::Address;
+use std::collections::HashMap;
 
 use super::container::ContractContainer;
 

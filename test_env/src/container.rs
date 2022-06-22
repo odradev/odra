@@ -8,7 +8,6 @@ cfg_if::cfg_if! {
         #[derive(Default, Clone)]
         pub struct ContractContainer {
             pub name: String,
-            pub wasm_path: String,
             pub entrypoints: HashMap<String, Fun>,
         }
 

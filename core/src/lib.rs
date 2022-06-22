@@ -8,7 +8,6 @@ pub use odra_proc_macros::{contract, instance, Event};
 pub use odra_types as types;
 pub use variable::Variable;
 
-
 cfg_if::cfg_if! {
     if #[cfg(feature = "mock-vm")] {
         pub use odra_mock_test_env::TestEnv;

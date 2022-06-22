@@ -1,5 +1,4 @@
-use proc_macro2::{Ident, TokenStream};
-use quote::{quote, ToTokens};
+use proc_macro2::Ident;
 use syn::FnArg;
 
 pub struct ContractImpl {
@@ -55,6 +54,7 @@ pub struct ContractEntrypoint {
     pub ident: Ident,
     pub args: Vec<syn::PatType>,
     pub ret: syn::ReturnType,
+    pub full_sig: syn::Signature,
 }
 
 impl From<syn::ImplItemMethod> for ContractEntrypoint {
@@ -69,40 +69,13 @@ impl From<syn::ImplItemMethod> for ContractEntrypoint {
                 FnArg::Typed(pat) => Some(pat.clone()),
             })
             .collect::<Vec<_>>();
-        let ret = method.sig.output;
-        Self { ident, args, ret }
-    }
-}
-
-impl ToTokens for ContractEntrypoint {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        let name = &self.ident.to_string();
-        let args = &self
-            .args
-            .iter()
-            .map(|arg| {
-                let name = &*arg.pat;
-                let ty = &*arg.ty;
-                let ty = quote!(<#ty as odra::types::CLTyped>::cl_type());
-                quote! {
-                    odra::contract_def::Argument {
-                        ident: String::from(stringify!(#name)),
-                        ty: #ty,
-                    },
-                }
-            })
-            .flatten()
-            .collect::<TokenStream>();
-        let ret = match &self.ret {
-            syn::ReturnType::Default => quote!(odra::types::CLType::Unit),
-            syn::ReturnType::Type(_, ty) => quote!(<#ty as odra::types::CLTyped>::cl_type()),
-        };
-        tokens.extend(quote! {
-            odra::contract_def::Entrypoint {
-                ident: String::from(#name),
-                args: vec![#args],
-                ret: #ret
-            },
-        });
+        let ret = method.clone().sig.output;
+        let full_sig = method.sig;
+        Self {
+            ident,
+            args,
+            ret,
+            full_sig,
+        }
     }
 }
