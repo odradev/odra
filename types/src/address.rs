@@ -3,7 +3,7 @@ use casper_types::{bytesrepr::ToBytes, CLType, CLTyped};
 
 #[derive(Clone, PartialEq, Hash, Eq)]
 pub struct Address {
-    data: Vec<u8>,
+    pub data: Vec<u8>,
 }
 
 impl Address {
@@ -42,9 +42,7 @@ impl FromBytes for Address {
 
 impl core::fmt::Debug for Address {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let name = std::str::from_utf8(self.data.as_slice())
-            .unwrap()
-            .to_string();
+        let name = hex::encode(&self.data);
         f.debug_struct("Address").field("data", &name).finish()
     }
 }

@@ -6,6 +6,7 @@ use syn::{parse_macro_input, DeriveInput};
 mod contract;
 mod event;
 mod instance;
+mod external_contract;
 
 #[proc_macro_attribute]
 pub fn contract(attr: TokenStream, item: TokenStream) -> TokenStream {
@@ -15,6 +16,11 @@ pub fn contract(attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn instance(attr: TokenStream, item: TokenStream) -> TokenStream {
     instance::generate_code(attr, item).into()
+}
+
+#[proc_macro_attribute]
+pub fn external_contract(attr: TokenStream, item: TokenStream) -> TokenStream {
+    external_contract::generate_code(attr, item).into()
 }
 
 #[proc_macro_derive(Event)]
