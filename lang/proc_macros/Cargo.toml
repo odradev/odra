@@ -7,8 +7,8 @@ edition = "2018"
 proc-macro2 = "1.0.40"
 quote = "1.0.19"
 syn =  { version = "1.0.89", features = ["full", "extra-traits"] }
-odra-ir = { path = "../ir" }
-odra-codegen = { path = "../generator" }
+odra-ir = { git = "https://github.com/odradev/odra" }
+odra-codegen = { git = "https://github.com/odradev/odra" }
 
 [lib]
 proc-macro = true

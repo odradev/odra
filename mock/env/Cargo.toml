@@ -6,5 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-odra-types = { path = "../../types" }
-odra-mock-vm = { path = "../vm" }
+odra-types = { git = "https://github.com/odradev/odra" }
+odra-mock-vm = { git = "https://github.com/odradev/odra" }

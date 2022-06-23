@@ -406,12 +406,27 @@ name = "odra"
 version = "0.1.0"
 dependencies = [
  "cfg-if",
- "odra-mock-env",
- "odra-mock-test-env",
- "odra-proc-macros",
- "odra-test-env",
- "odra-test-env-wrapper",
- "odra-types",
+ "odra-mock-env 0.1.0 (git+https://github.com/odradev/odra)",
+ "odra-mock-test-env 0.1.0 (git+https://github.com/odradev/odra)",
+ "odra-proc-macros 0.1.0 (git+https://github.com/odradev/odra)",
+ "odra-test-env 0.1.0 (git+https://github.com/odradev/odra)",
+ "odra-test-env-wrapper 0.1.0 (git+https://github.com/odradev/odra)",
+ "odra-types 0.1.0 (git+https://github.com/odradev/odra)",
+ "ref_thread_local",
+]
+
+[[package]]
+name = "odra"
+version = "0.1.0"
+source = "git+https://github.com/odradev/odra#de780f6117d4969749ba6474b2b770a4b528b7b0"
+dependencies = [
+ "cfg-if",
+ "odra-mock-env 0.1.0 (git+https://github.com/odradev/odra)",
+ "odra-mock-test-env 0.1.0 (git+https://github.com/odradev/odra)",
+ "odra-proc-macros 0.1.0 (git+https://github.com/odradev/odra)",
+ "odra-test-env 0.1.0 (git+https://github.com/odradev/odra)",
+ "odra-test-env-wrapper 0.1.0 (git+https://github.com/odradev/odra)",
+ "odra-types 0.1.0 (git+https://github.com/odradev/odra)",
  "ref_thread_local",
 ]
 
@@ -419,7 +434,19 @@ dependencies = [
 name = "odra-codegen"
 version = "0.1.0"
 dependencies = [
- "odra-ir",
+ "odra-ir 0.1.0 (git+https://github.com/odradev/odra)",
+ "proc-macro-error",
+ "proc-macro2 1.0.40",
+ "quote 1.0.20",
+ "syn 1.0.98",
+]
+
+[[package]]
+name = "odra-codegen"
+version = "0.1.0"
+source = "git+https://github.com/odradev/odra#de780f6117d4969749ba6474b2b770a4b528b7b0"
+dependencies = [
+ "odra-ir 0.1.0 (git+https://github.com/odradev/odra)",
  "proc-macro-error",
  "proc-macro2 1.0.40",
  "quote 1.0.20",
@@ -437,28 +464,68 @@ dependencies = [
 ]
 
 [[package]]
+name = "odra-ir"
+version = "0.1.0"
+source = "git+https://github.com/odradev/odra#de780f6117d4969749ba6474b2b770a4b528b7b0"
+dependencies = [
+ "proc-macro-error",
+ "proc-macro2 1.0.40",
+ "quote 1.0.20",
+ "syn 1.0.98",
+]
+
+[[package]]
 name = "odra-mock-env"
 version = "0.1.0"
 dependencies = [
- "odra-mock-vm",
- "odra-types",
+ "odra-mock-vm 0.1.0 (git+https://github.com/odradev/odra)",
+ "odra-types 0.1.0 (git+https://github.com/odradev/odra)",
+]
+
+[[package]]
+name = "odra-mock-env"
+version = "0.1.0"
+source = "git+https://github.com/odradev/odra#de780f6117d4969749ba6474b2b770a4b528b7b0"
+dependencies = [
+ "odra-mock-vm 0.1.0 (git+https://github.com/odradev/odra)",
+ "odra-types 0.1.0 (git+https://github.com/odradev/odra)",
 ]
 
 [[package]]
 name = "odra-mock-test-env"
 version = "0.1.0"
 dependencies = [
- "odra-mock-vm",
- "odra-test-env",
- "odra-types",
+ "odra-mock-vm 0.1.0 (git+https://github.com/odradev/odra)",
+ "odra-test-env 0.1.0 (git+https://github.com/odradev/odra)",
+ "odra-types 0.1.0 (git+https://github.com/odradev/odra)",
+]
+
+[[package]]
+name = "odra-mock-test-env"
+version = "0.1.0"
+source = "git+https://github.com/odradev/odra#de780f6117d4969749ba6474b2b770a4b528b7b0"
+dependencies = [
+ "odra-mock-vm 0.1.0 (git+https://github.com/odradev/odra)",
+ "odra-test-env 0.1.0 (git+https://github.com/odradev/odra)",
+ "odra-types 0.1.0 (git+https://github.com/odradev/odra)",
 ]
 
 [[package]]
 name = "odra-mock-vm"
 version = "0.1.0"
 dependencies = [
- "odra-test-env",
- "odra-types",
+ "odra-test-env 0.1.0 (git+https://github.com/odradev/odra)",
+ "odra-types 0.1.0 (git+https://github.com/odradev/odra)",
+ "ref_thread_local",
+]
+
+[[package]]
+name = "odra-mock-vm"
+version = "0.1.0"
+source = "git+https://github.com/odradev/odra#de780f6117d4969749ba6474b2b770a4b528b7b0"
+dependencies = [
+ "odra-test-env 0.1.0 (git+https://github.com/odradev/odra)",
+ "odra-types 0.1.0 (git+https://github.com/odradev/odra)",
  "ref_thread_local",
 ]
 
@@ -466,15 +533,27 @@ dependencies = [
 name = "odra-module"
 version = "0.1.0"
 dependencies = [
- "odra",
+ "odra 0.1.0 (git+https://github.com/odradev/odra)",
 ]
 
 [[package]]
 name = "odra-proc-macros"
 version = "0.1.0"
 dependencies = [
- "odra-codegen",
- "odra-ir",
+ "odra-codegen 0.1.0 (git+https://github.com/odradev/odra)",
+ "odra-ir 0.1.0 (git+https://github.com/odradev/odra)",
+ "proc-macro2 1.0.40",
+ "quote 1.0.20",
+ "syn 1.0.98",
+]
+
+[[package]]
+name = "odra-proc-macros"
+version = "0.1.0"
+source = "git+https://github.com/odradev/odra#de780f6117d4969749ba6474b2b770a4b528b7b0"
+dependencies = [
+ "odra-codegen 0.1.0 (git+https://github.com/odradev/odra)",
+ "odra-ir 0.1.0 (git+https://github.com/odradev/odra)",
  "proc-macro2 1.0.40",
  "quote 1.0.20",
  "syn 1.0.98",
@@ -485,7 +564,16 @@ name = "odra-test-env"
 version = "0.1.0"
 dependencies = [
  "cfg-if",
- "odra-types",
+ "odra-types 0.1.0 (git+https://github.com/odradev/odra)",
+]
+
+[[package]]
+name = "odra-test-env"
+version = "0.1.0"
+source = "git+https://github.com/odradev/odra#de780f6117d4969749ba6474b2b770a4b528b7b0"
+dependencies = [
+ "cfg-if",
+ "odra-types 0.1.0 (git+https://github.com/odradev/odra)",
 ]
 
 [[package]]
@@ -494,13 +582,32 @@ version = "0.1.0"
 dependencies = [
  "dlopen",
  "dlopen_derive",
- "odra-test-env",
- "odra-types",
+ "odra-test-env 0.1.0 (git+https://github.com/odradev/odra)",
+ "odra-types 0.1.0 (git+https://github.com/odradev/odra)",
+]
+
+[[package]]
+name = "odra-test-env-wrapper"
+version = "0.1.0"
+source = "git+https://github.com/odradev/odra#de780f6117d4969749ba6474b2b770a4b528b7b0"
+dependencies = [
+ "dlopen",
+ "dlopen_derive",
+ "odra-test-env 0.1.0 (git+https://github.com/odradev/odra)",
+ "odra-types 0.1.0 (git+https://github.com/odradev/odra)",
 ]
 
 [[package]]
 name = "odra-types"
 version = "0.1.0"
+dependencies = [
+ "casper-types",
+]
+
+[[package]]
+name = "odra-types"
+version = "0.1.0"
+source = "git+https://github.com/odradev/odra#de780f6117d4969749ba6474b2b770a4b528b7b0"
 dependencies = [
  "casper-types",
 ]

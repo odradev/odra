@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-odra = { path = "../core", default-features = false, optional = true }
+odra = { git = "https://github.com/odradev/odra", default-features = false, optional = true }
 
 [features]
 default = [ "mock-vm" ]

@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-odra-types = { path = "../../types" }
-odra-test-env = { path = "../", features = [ "wasm-test" ] }
+odra-types = { git = "https://github.com/odradev/odra" }
+odra-test-env = { git = "https://github.com/odradev/odra", features = [ "wasm-test" ] }
 dlopen = "0.1.8"
 dlopen_derive = "0.1.4"

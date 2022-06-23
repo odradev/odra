@@ -8,4 +8,4 @@ proc-macro2 = "1.0.40"
 proc-macro-error = "1.0.4"
 quote = "1.0.19"
 syn = { version = "1.0.89", features = [ "full" ] }
-odra-ir = { path = "../ir" }
+odra-ir = { git = "https://github.com/odradev/odra" }

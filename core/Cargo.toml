@@ -6,12 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-odra-types = { path = "../types" }
-odra-proc-macros = { path = "../lang/proc_macros" }
-odra-mock-env = { path = "../mock/env", optional = true }
-odra-mock-test-env = { path = "../mock/test_env", optional = true }
-odra-test-env = { path = "../test_env", optional = true  }
-odra-test-env-wrapper = { path = "../test_env/wrapper", optional = true  }
+odra-types = { git = "https://github.com/odradev/odra" }
+odra-proc-macros = { git = "https://github.com/odradev/odra" }
+odra-mock-env = { git = "https://github.com/odradev/odra", optional = true }
+odra-mock-test-env = { git = "https://github.com/odradev/odra", optional = true }
+odra-test-env = { git = "https://github.com/odradev/odra", optional = true  }
+odra-test-env-wrapper = { git = "https://github.com/odradev/odra", optional = true  }
 ref_thread_local = "0.1.1"
 cfg-if = "1.0.0"
 
