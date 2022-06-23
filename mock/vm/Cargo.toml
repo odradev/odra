@@ -7,5 +7,5 @@ edition = "2021"
 
 [dependencies]
 odra-types = { git = "https://github.com/odradev/odra" }
-odra-test-env = { git = "https://github.com/odradev/odra", features = [ "mock-vm" ] }
+odra-test-env = { git = "https://github.com/odradev/odra", default-features = false, features = [ "mock-vm" ] }
 ref_thread_local = "0.1.1"

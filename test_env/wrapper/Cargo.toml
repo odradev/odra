@@ -7,6 +7,6 @@ edition = "2021"
 
 [dependencies]
 odra-types = { git = "https://github.com/odradev/odra" }
-odra-test-env = { git = "https://github.com/odradev/odra", features = [ "wasm-test" ] }
+odra-test-env = { git = "https://github.com/odradev/odra", default-features = false, features = [ "wasm-test" ] }
 dlopen = "0.1.8"
 dlopen_derive = "0.1.4"

@@ -10,7 +10,7 @@ odra-types = { git = "https://github.com/odradev/odra" }
 odra-proc-macros = { git = "https://github.com/odradev/odra" }
 odra-mock-env = { git = "https://github.com/odradev/odra", optional = true }
 odra-mock-test-env = { git = "https://github.com/odradev/odra", optional = true }
-odra-test-env = { git = "https://github.com/odradev/odra", optional = true  }
+odra-test-env = { git = "https://github.com/odradev/odra", default-features = false, optional = true  }
 odra-test-env-wrapper = { git = "https://github.com/odradev/odra", optional = true  }
 ref_thread_local = "0.1.1"
 cfg-if = "1.0.0"
