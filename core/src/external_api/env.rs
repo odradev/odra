@@ -1,6 +1,6 @@
 use odra_types::{
     bytesrepr::{FromBytes, ToBytes},
-    Address, CLTyped, CLValue, EventData, RuntimeArgs, CLType,
+    Address, CLType, CLTyped, CLValue, EventData, RuntimeArgs,
 };
 
 #[allow(improper_ctypes)]
@@ -13,11 +13,7 @@ extern "C" {
     fn __set_dict_value(dict: &[u8], key: &[u8], value: &CLValue);
     fn __get_dict_value(dict: &[u8], key: &[u8]) -> Option<CLValue>;
     fn __emit_event(event: &EventData);
-    fn __call_contract(
-        address: &Address,
-        entrypoint: &str,
-        args: &RuntimeArgs,
-    ) -> Vec<u8>;
+    fn __call_contract(address: &Address, entrypoint: &str, args: &RuntimeArgs) -> Vec<u8>;
     fn __revert(reason: u32);
     fn __print(message: &str);
 }
@@ -67,11 +63,7 @@ impl ContractEnv {
         unsafe { __emit_event(event) }
     }
 
-    pub fn call_contract(
-        address: &Address,
-        entrypoint: &str,
-        args: &RuntimeArgs,
-    ) -> Vec<u8> {
+    pub fn call_contract(address: &Address, entrypoint: &str, args: &RuntimeArgs) -> Vec<u8> {
         unsafe { __call_contract(address, entrypoint, args) }
     }
 

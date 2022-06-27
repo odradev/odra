@@ -5,8 +5,8 @@ use syn::{parse_macro_input, DeriveInput};
 
 mod contract;
 mod event;
-mod instance;
 mod external_contract;
+mod instance;
 
 #[proc_macro_attribute]
 pub fn contract(attr: TokenStream, item: TokenStream) -> TokenStream {

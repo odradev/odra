@@ -1,4 +1,4 @@
-use odra_ir::external_contract_item::ExternalContractItem;
+use odra_ir::ExternalContractItem;
 use proc_macro2::TokenStream;
 
 pub fn generate_code(item: ExternalContractItem) -> TokenStream {

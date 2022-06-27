@@ -11,12 +11,19 @@ pub struct Entrypoint {
     pub ident: String,
     pub args: Vec<Argument>,
     pub ret: CLType,
+    pub ty: EntrypointType,
 }
 
 #[derive(Debug)]
 pub struct Argument {
     pub ident: String,
     pub ty: CLType,
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum EntrypointType {
+    Constructor,
+    Public,
 }
 
 pub trait HasContractDef {

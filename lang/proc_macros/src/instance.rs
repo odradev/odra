@@ -1,4 +1,4 @@
-use odra_codegen::instance_item;
+use odra_codegen::generator::instance_item;
 use odra_ir::instance_item::InstanceItem;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
