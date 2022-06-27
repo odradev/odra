@@ -1,4 +1,4 @@
-use odra_ir::event_item::EventItem;
+use odra_ir::EventItem;
 use proc_macro2::TokenStream;
 use quote::{quote, TokenStreamExt};
 

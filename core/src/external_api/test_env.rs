@@ -5,9 +5,7 @@ pub struct TestEnv;
 
 impl TestEnv {
     pub fn register_contract(container: &ContractContainer) -> Address {
-        odra_test_env_wrapper::on_backend(|env| {
-            env.register_contract(container)
-        })
+        odra_test_env_wrapper::on_backend(|env| env.register_contract(container))
     }
 
     pub fn call_contract(

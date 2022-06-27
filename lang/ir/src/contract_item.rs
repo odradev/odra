@@ -1,14 +1,19 @@
+use std::convert::TryFrom;
+
 use proc_macro2::TokenStream;
 use syn::{ImplItemMethod, ItemImpl};
 
 use self::{contract_impl::ContractImpl, contract_struct::ContractStruct};
 
+pub mod constructor;
 pub mod contract_impl;
 pub mod contract_struct;
+pub mod impl_item;
+pub mod method;
 
-pub struct ContractItem {
-    contract_struct: Option<ContractStruct>,
-    contract_impl: Option<ContractImpl>,
+pub enum ContractItem {
+    Struct(ContractStruct),
+    Impl(ContractImpl),
 }
 
 impl ContractItem {
@@ -16,27 +21,21 @@ impl ContractItem {
         let item_struct = syn::parse2::<syn::ItemStruct>(item.clone());
         let item_impl = syn::parse2::<syn::ItemImpl>(item.clone());
 
-        if item_struct.is_err() && item_impl.is_err() {
-            return Err(syn::Error::new_spanned(
-                item,
-                "ContractItem is neither a struct nor an impl block.",
-            ));
+        if item_struct.is_ok() {
+            let item = item_struct.unwrap();
+            return Ok(ContractItem::Struct(ContractStruct::from(item)));
         }
 
-        Ok(Self {
-            contract_struct: item_struct
-                .and_then(|item| Ok(ContractStruct::from(item)))
-                .ok(),
-            contract_impl: item_impl.and_then(|item| Ok(ContractImpl::from(item))).ok(),
-        })
-    }
+        if item_impl.is_ok() {
+            let item = item_impl.unwrap();
+            let item = ContractImpl::try_from(item)?;
+            return Ok(ContractItem::Impl(item));
+        }
 
-    pub fn contract_struct(&self) -> Option<&ContractStruct> {
-        self.contract_struct.as_ref()
-    }
-
-    pub fn contract_impl(&self) -> Option<&ContractImpl> {
-        self.contract_impl.as_ref()
+        Err(syn::Error::new_spanned(
+            item,
+            "ContractItem is neither a struct nor an impl block.",
+        ))
     }
 }
 

@@ -1,81 +1,54 @@
+use std::convert::TryFrom;
+
 use proc_macro2::Ident;
-use syn::FnArg;
+
+use super::impl_item::ImplItem;
 
 pub struct ContractImpl {
-    original_impl: syn::ItemImpl,
-    entrypoints: Vec<ContractEntrypoint>,
+    impl_items: Vec<ImplItem>,
     ident: Ident,
 }
 
 impl ContractImpl {
-    pub fn original_impl(&self) -> &syn::ItemImpl {
-        &self.original_impl
-    }
-
-    pub fn entrypoints(&self) -> &[ContractEntrypoint] {
-        self.entrypoints.as_ref()
+    pub fn impl_items(&self) -> &[ImplItem] {
+        self.impl_items.as_ref()
     }
 
     pub fn ident(&self) -> &Ident {
         &self.ident
     }
+
+    pub fn methods(&self) -> Vec<&ImplItem> {
+        self.impl_items
+            .iter()
+            .filter(|i| match i {
+                ImplItem::Method(_) => true,
+                ImplItem::Constructor(_) => true,
+                _ => false,
+            })
+            .collect::<Vec<_>>()
+    }
 }
 
-impl From<syn::ItemImpl> for ContractImpl {
-    fn from(item_impl: syn::ItemImpl) -> Self {
+impl TryFrom<syn::ItemImpl> for ContractImpl {
+    type Error = syn::Error;
+
+    fn try_from(item_impl: syn::ItemImpl) -> Result<Self, Self::Error> {
         let path = match &*item_impl.self_ty {
             syn::Type::Path(path) => path,
             _ => todo!(),
         };
         let contract_ident = path.path.segments.last().unwrap().clone().ident;
-        let methods = extract_methods(item_impl.clone());
-        Self {
-            original_impl: item_impl,
-            entrypoints: methods
-                .into_iter()
-                .map(|method| ContractEntrypoint::from(method))
-                .collect(),
+        let items = item_impl
+            .items
+            .clone()
+            .into_iter()
+            .map(|item| <ImplItem as TryFrom<_>>::try_from(item))
+            .collect::<Result<Vec<_>, syn::Error>>()?;
+
+        Ok(Self {
+            impl_items: items,
             ident: contract_ident,
-        }
-    }
-}
-
-fn extract_methods<'a>(item: syn::ItemImpl) -> Vec<syn::ImplItemMethod> {
-    item.items
-        .into_iter()
-        .filter_map(|item| match item {
-            syn::ImplItem::Method(method) => Some(method),
-            _ => None,
         })
-        .collect::<Vec<_>>()
-}
-
-pub struct ContractEntrypoint {
-    pub ident: Ident,
-    pub args: Vec<syn::PatType>,
-    pub ret: syn::ReturnType,
-    pub full_sig: syn::Signature,
-}
-
-impl From<syn::ImplItemMethod> for ContractEntrypoint {
-    fn from(method: syn::ImplItemMethod) -> Self {
-        let ident = method.sig.ident.to_owned();
-        let args = method
-            .sig
-            .inputs
-            .iter()
-            .filter_map(|arg| match arg {
-                FnArg::Receiver(_) => None,
-                FnArg::Typed(pat) => Some(pat.clone()),
-            })
-            .collect::<Vec<_>>();
-        let ret = method.clone().sig.output;
-        let full_sig = method.sig;
-        Self {
-            ident,
-            args,
-            ret,
-            full_sig,
-        }
     }
 }

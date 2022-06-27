@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream;
 
 pub struct ExternalContractItem {
-    item_trait: syn::ItemTrait
+    item_trait: syn::ItemTrait,
 }
 
 impl ExternalContractItem {
