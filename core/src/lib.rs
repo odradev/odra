@@ -4,8 +4,9 @@ pub mod instance;
 mod mapping;
 mod variable;
 
-pub use odra_proc_macros::{contract, instance, Event};
+pub use odra_proc_macros::{contract, instance, external_contract, Event};
 pub use odra_types as types;
+use types::{Address, RuntimeArgs, bytesrepr::FromBytes, CLType, CLTyped};
 pub use variable::Variable;
 
 cfg_if::cfg_if! {
@@ -21,5 +22,36 @@ cfg_if::cfg_if! {
         pub use external_api::env::Env;
         pub use external_api::test_env::TestEnv;
         pub use odra_test_env::ContractContainer;
+    }
+}
+
+pub fn call_contract<T>(
+    address: &Address,
+    entrypoint: &str,
+    args: &RuntimeArgs,
+    returned_type: &CLType,
+) -> T
+where T: CLTyped + FromBytes { 
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "mock-vm")] {
+            let has_return = &CLType::Unit != returned_type;
+            match TestEnv::call_contract(address, entrypoint, args, has_return) {
+                Some(bytes) => T::from_bytes(bytes.as_slice()).unwrap().0,
+                None => T::from_bytes(&[]).unwrap().0
+            }
+        } else if #[cfg(feature = "wasm-test")] {
+            dbg!("wasm-test");
+            dbg!(entrypoint);
+            let has_return = &CLType::Unit != returned_type;
+            match TestEnv::call_contract(address, entrypoint, args, has_return) {
+                Some(bytes) => T::from_bytes(bytes.as_slice()).unwrap().0,
+                None => T::from_bytes(&[]).unwrap().0
+            }
+        }  else if #[cfg(feature = "wasm")] {
+            let cl_value = Env::call_contract(address, entrypoint, args, returned_type);
+            cl_value.into_t::<T>().unwrap()
+        } else {
+            compile_error!("Unknown featue")
+        }
     }
 }
