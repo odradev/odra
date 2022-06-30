@@ -17,8 +17,7 @@ extern "C" {
         address: &Address,
         entrypoint: &str,
         args: &RuntimeArgs,
-        returned_type: &CLType,
-    ) -> CLValue;
+    ) -> Vec<u8>;
     fn __revert(reason: u32);
     fn __print(message: &str);
 }
@@ -72,9 +71,8 @@ impl ContractEnv {
         address: &Address,
         entrypoint: &str,
         args: &RuntimeArgs,
-        returned_type: &CLType,
-    ) -> CLValue {
-        unsafe { __call_contract(address, entrypoint, args, returned_type) }
+    ) -> Vec<u8> {
+        unsafe { __call_contract(address, entrypoint, args) }
     }
 
     pub fn revert(reason: u32) {
