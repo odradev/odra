@@ -187,13 +187,12 @@ fn generate_contract_ref(contract_impl: &ContractImpl) -> TokenStream {
             let fn_body = match &entrypoint.ret {
                 syn::ReturnType::Default => quote! {
                     #args
-                    odra::call_contract::<()>(&self.address, #entrypoint_name, &args, &odra::types::CLType::Unit);
+                    odra::call_contract::<()>(&self.address, #entrypoint_name, &args);
                 },
-                syn::ReturnType::Type(_, ty) => quote! {
+                syn::ReturnType::Type(_, _) => quote! {
                     #args
                     use odra::types::CLTyped;
-                    let t = #ty::cl_type();
-                    odra::call_contract(&self.address, #entrypoint_name, &args, &t)
+                    odra::call_contract(&self.address, #entrypoint_name, &args)
                 }
             };
 
