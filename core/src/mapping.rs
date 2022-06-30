@@ -4,7 +4,7 @@ use std::{
     ops::{Add, Sub},
 };
 
-use crate::Env;
+use crate::ContractEnv;
 use odra_types::{
     bytesrepr::{FromBytes, ToBytes},
     CLTyped,
@@ -29,7 +29,7 @@ impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped> Mapping<K, V
     }
 
     pub fn get(&self, key: &K) -> Option<V> {
-        let result = Env::get_dict_value(&self.name, key);
+        let result = ContractEnv::get_dict_value(&self.name, key);
 
         if let Some(value) = result {
             return Some(value.into_t::<V>().unwrap());
@@ -38,7 +38,7 @@ impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped> Mapping<K, V
     }
 
     pub fn set(&self, key: &K, value: V) {
-        Env::set_dict_value(&self.name, key, value);
+        ContractEnv::set_dict_value(&self.name, key, value);
     }
 }
 
@@ -55,7 +55,7 @@ impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped + Add<Output 
         let current_value = self.get(key).unwrap_or_default();
         // TODO: check overflow
         let new_value = current_value + value;
-        Env::set_dict_value(&self.name, key, new_value);
+        ContractEnv::set_dict_value(&self.name, key, new_value);
     }
 }
 
@@ -66,7 +66,7 @@ impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped + Sub<Output 
         let current_value = self.get(key).unwrap_or_default();
         // TODO: check overflow
         let new_value = current_value - value;
-        Env::set_dict_value(&self.name, key, new_value);
+        ContractEnv::set_dict_value(&self.name, key, new_value);
     }
 }
 

@@ -53,7 +53,7 @@ pub fn generate_code(item: EventItem) -> TokenStream {
     quote! {
         impl odra::Event for #struct_ident {
             fn emit(&self) {
-                odra::env::Env::emit_event(&<Self as odra::types::bytesrepr::ToBytes>::to_bytes(&self).unwrap())
+                odra::env::ContractEnv::emit_event(&<Self as odra::types::bytesrepr::ToBytes>::to_bytes(&self).unwrap())
             }
 
             fn name(&self) -> &str {

@@ -9,7 +9,7 @@ use odra_types::{
 };
 
 use crate::instance::Instance;
-use crate::Env;
+use crate::ContractEnv;
 
 #[derive(PartialEq, Debug)]
 pub struct Variable<T> {
@@ -29,7 +29,7 @@ impl<V: ToBytes + FromBytes + CLTyped + Add<Output = V> + Default> Variable<V> {
         let current_value = self.get().unwrap_or_default();
         // TODO: check overflow
         let new_value = current_value + value;
-        Env::set_var(&self.name, new_value);
+        ContractEnv::set_var(&self.name, new_value);
     }
 }
 
@@ -38,7 +38,7 @@ impl<V: ToBytes + FromBytes + CLTyped + Sub<Output = V> + Default> Variable<V> {
         let current_value = self.get().unwrap_or_default();
         // TODO: check overflow
         let new_value = current_value - value;
-        Env::set_var(&self.name, new_value);
+        ContractEnv::set_var(&self.name, new_value);
     }
 }
 
@@ -51,7 +51,7 @@ impl<T: FromBytes + ToBytes + CLTyped> Variable<T> {
     }
 
     pub fn get(&self) -> Option<T> {
-        let result = Env::get_var(&self.name);
+        let result = ContractEnv::get_var(&self.name);
 
         if let Some(value) = result {
             return Some(value.into_t::<T>().unwrap());
@@ -60,7 +60,7 @@ impl<T: FromBytes + ToBytes + CLTyped> Variable<T> {
     }
 
     pub fn set(&self, value: T) {
-        Env::set_var(&self.name, value);
+        ContractEnv::set_var(&self.name, value);
     }
 
     pub fn path(&self) -> &str {

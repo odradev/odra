@@ -23,9 +23,9 @@ extern "C" {
     fn __print(message: &str);
 }
 
-pub struct Env;
+pub struct ContractEnv;
 
-impl Env {
+impl ContractEnv {
     pub fn caller() -> Address {
         unsafe { __caller() }
     }
