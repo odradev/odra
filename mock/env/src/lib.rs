@@ -4,9 +4,9 @@ use odra_types::{
     Address, CLTyped, CLValue, EventData,
 };
 
-pub struct Env;
+pub struct ContractEnv;
 
-impl Env {
+impl ContractEnv {
     pub fn caller() -> Address {
         borrow_env().caller()
     }
