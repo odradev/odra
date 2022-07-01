@@ -47,3 +47,16 @@ where
         }
     }
 }
+
+#[macro_export]
+macro_rules! deploy {
+    ($name:ident, $namespace:literal, $args:expr) => {
+        $name::deploy($namespace, $args)
+    };
+    ($name:ident, $namespace:literal) => {
+        deploy!($name, $namespace, odra::types::RuntimeArgs::new())
+    };
+    ($name:ident) => {
+        deploy!($name, "contract", odra::types::RuntimeArgs::new())
+    };
+}
