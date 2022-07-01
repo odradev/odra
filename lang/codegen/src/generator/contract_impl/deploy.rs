@@ -56,23 +56,25 @@ impl GenerateCode for Deploy<'_> {
         quote! {
             #[cfg(all(test, feature = "wasm-test"))]
             impl #struct_ident {
-                fn deploy(name: &str) -> #ref_ident {
+                fn deploy(name: &str, args: odra::types::RuntimeArgs) -> #ref_ident {
                     let container = odra::ContractContainer {
                         name: #struct_name_lowercased.to_string(),
                         wasm_path: format!("{}.wasm", #struct_name_lowercased),
+                        args,
                     };
 
                     let address = odra::TestEnv::register_contract(&container);
                     #ref_ident { address }
                 }
             }
-
+ 
             #[cfg(all(test, feature = "mock-vm"))]
             impl #struct_ident {
-                fn deploy(name: &str) -> #ref_ident {
+                fn deploy(name: &str, args: odra::types::RuntimeArgs) -> #ref_ident {
                     let mut container = odra::ContractContainer {
                         name: name.to_string(),
                         entrypoints: Default::default(),
+                        args,
                     };
 
                     #register_entrypoints

@@ -9,6 +9,7 @@ cfg_if::cfg_if! {
         pub struct ContractContainer {
             pub name: String,
             pub entrypoints: HashMap<String, Fun>,
+            pub args: RuntimeArgs,
         }
 
         impl ContractContainer {
@@ -26,6 +27,7 @@ cfg_if::cfg_if! {
         pub struct ContractContainer {
             pub name: String,
             pub wasm_path: String,
+            pub args: odra_types::RuntimeArgs,
         }
     } else {
         compile_error!("Unsupported feature");
