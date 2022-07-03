@@ -42,7 +42,9 @@ where
     where
         G: GenerateCode + From<&'a odra_ir::ContractImpl>,
     {
-        <G as GenerateCode>::generate_code(&G::from(<Self as AsRef<odra_ir::ContractImpl>>::as_ref(self)))
+        <G as GenerateCode>::generate_code(&G::from(
+            <Self as AsRef<odra_ir::ContractImpl>>::as_ref(self),
+        ))
     }
 }
 

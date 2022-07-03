@@ -1,35 +1,22 @@
 use odra_types::Address;
 
-#[derive(Debug, Clone)]
-pub struct Context {
-    pub address: Address,
-}
-
-impl Context {}
-
-impl From<Address> for Context {
-    fn from(address: Address) -> Self {
-        Self { address }
-    }
-}
-
 #[derive(Debug, Default, Clone)]
 pub struct ExecutionContext {
-    callstack: Vec<Context>,
+    callstack: Vec<Address>,
 }
 
 impl ExecutionContext {
-    pub fn current(&self) -> &Context {
+    pub fn current(&self) -> &Address {
         self.callstack
             .last()
             .expect("Cannot modify storage in empty context")
     }
 
-    pub fn previous(&self) -> &Context {
+    pub fn previous(&self) -> &Address {
         self.callstack.get(self.callstack.len() - 2).unwrap()
     }
 
-    pub fn push(&mut self, ctx: Context) {
+    pub fn push(&mut self, ctx: Address) {
         self.callstack.push(ctx);
     }
 
