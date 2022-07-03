@@ -6,6 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-odra-types = { path = "../../types" }
-odra-test-env = { path = "../../test_env", default-features = false, features = [ "mock-vm" ] }
+odra-types = { path = "../types" }
 ref_thread_local = "0.1.1"

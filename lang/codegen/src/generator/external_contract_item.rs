@@ -1,6 +1,6 @@
 use odra_ir::ExternalContractItem;
 use proc_macro2::TokenStream;
-use quote::{quote, format_ident, TokenStreamExt};
+use quote::{format_ident, quote, TokenStreamExt};
 
 //TODO: should share some common code with reference.rs
 pub fn generate_code(item: ExternalContractItem) -> TokenStream {
@@ -8,7 +8,9 @@ pub fn generate_code(item: ExternalContractItem) -> TokenStream {
     let trait_ident = &item_trait.ident;
     let ref_ident = format_ident!("{}Ref", &item_trait.ident);
 
-    let methods = item_trait.items.iter()
+    let methods = item_trait
+        .items
+        .iter()
         .filter_map(|item| match item {
             syn::TraitItem::Method(method) => Some(method),
             _ => None,
@@ -47,13 +49,12 @@ pub fn generate_code(item: ExternalContractItem) -> TokenStream {
                 Self { address }
             }
         }
-        
+
         impl #trait_ident for #ref_ident {
             #methods
         }
     }
 }
-
 
 fn parse_args(syn_args: &Vec<syn::PatType>) -> TokenStream {
     let args = match &syn_args.is_empty() {

@@ -4,11 +4,13 @@ members = [
     "lang/codegen",
     "lang/ir",
     "lang/proc_macros",
-    "mock/vm",
-    "mock/env",
-    "mock/test_env",
+    "mock_vm",
     "modules",
     "test_env",
     "test_env/wrapper",
     "types",
+]
+
+exclude = [
+    "mycontract"
 ]

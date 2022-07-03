@@ -43,7 +43,7 @@ impl GenerateCode for Deploy<'_> {
                 }).flatten().collect::<TokenStream>();
 
                 quote! {
-                    container.add(#name, |name, args| {
+                    entrypoints.insert(#name, |name, args| {
                         let instance = <#struct_ident as odra::instance::Instance>::instance(name.as_str());
                         let result = instance.#ident(#args);
                         #return_value
@@ -67,19 +67,20 @@ impl GenerateCode for Deploy<'_> {
                     #ref_ident { address }
                 }
             }
- 
+
             #[cfg(all(test, feature = "mock-vm"))]
             impl #struct_ident {
                 fn deploy(name: &str, args: odra::types::RuntimeArgs) -> #ref_ident {
-                    let mut container = odra::ContractContainer {
-                        name: name.to_string(),
-                        entrypoints: Default::default(),
-                        args,
-                    };
+                    use std::collections::HashMap;
+                    use odra::types::{bytesrepr::Bytes, RuntimeArgs};
+
+                    pub type EntrypointCall = fn(String, RuntimeArgs) -> Option<Bytes>;
+
+                    let mut entrypoints: HashMap<String, EntrypointCall> = HashMap::new();
 
                     #register_entrypoints
 
-                    let address = odra::TestEnv::register_contract(&container);
+                    let address = odra::TestEnv::register_contract(name, entrypoints, args);
                     #ref_ident { address }
                 }
             }
