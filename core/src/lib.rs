@@ -7,7 +7,7 @@ mod variable;
 pub use odra_proc_macros::{contract, external_contract, instance, Event};
 pub use odra_types as types;
 use types::{
-    bytesrepr::{self, FromBytes},
+    bytesrepr::FromBytes,
     Address, CLType, CLTyped, RuntimeArgs,
 };
 pub use variable::Variable;
@@ -15,7 +15,7 @@ pub use variable::Variable;
 cfg_if::cfg_if! {
     if #[cfg(feature = "mock-vm")] {
         pub use odra_mock_test_env::TestEnv;
-        pub use odra_mock_env::ContractEnv;
+        pub use odra_mock_contract_env::ContractEnv;
         pub use odra_test_env::ContractContainer;
     } else if #[cfg(feature = "wasm")] {
         mod external_api;
@@ -41,22 +41,10 @@ where
             }
         }  else if #[cfg(feature = "wasm")] {
             let res = ContractEnv::call_contract(address, entrypoint, args);
+            // TODO: Remove unwrap.
             bytesrepr::deserialize(res).unwrap()
         } else {
             compile_error!("Unknown featue")
         }
     }
-}
-
-#[macro_export]
-macro_rules! deploy {
-    ($name:ident, $namespace:literal, $args:expr) => {
-        $name::deploy($namespace, $args)
-    };
-    ($name:ident, $namespace:literal) => {
-        deploy!($name, $namespace, odra::types::RuntimeArgs::new())
-    };
-    ($name:ident) => {
-        deploy!($name, "contract", odra::types::RuntimeArgs::new())
-    };
 }
