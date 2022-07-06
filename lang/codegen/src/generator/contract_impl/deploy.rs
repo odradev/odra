@@ -56,7 +56,7 @@ impl GenerateCode for Deploy<'_> {
         quote! {
             #[cfg(all(test, feature = "wasm-test"))]
             impl #struct_ident {
-                fn deploy(name: &str, args: odra::types::RuntimeArgs) -> #ref_ident {
+                fn deploy(args: odra::types::RuntimeArgs) -> #ref_ident {
                     let container = odra::ContractContainer {
                         name: #struct_name_lowercased.to_string(),
                         wasm_path: format!("{}.wasm", #struct_name_lowercased),
@@ -70,7 +70,7 @@ impl GenerateCode for Deploy<'_> {
 
             #[cfg(all(test, feature = "mock-vm"))]
             impl #struct_ident {
-                fn deploy(name: &str, args: odra::types::RuntimeArgs) -> #ref_ident {
+                fn deploy(args: odra::types::RuntimeArgs) -> #ref_ident {
                     use std::collections::HashMap;
                     use odra::types::{bytesrepr::Bytes, RuntimeArgs};
 
@@ -80,7 +80,7 @@ impl GenerateCode for Deploy<'_> {
 
                     #register_entrypoints
 
-                    let address = odra::TestEnv::register_contract(name, entrypoints, args);
+                    let address = odra::TestEnv::register_contract(entrypoints, args);
                     #ref_ident { address }
                 }
             }
