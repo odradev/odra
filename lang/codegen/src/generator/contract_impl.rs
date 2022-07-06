@@ -4,11 +4,11 @@ use quote::ToTokens;
 
 use crate::{GenerateCode, OdraPoetUsingImpl};
 
-use self::{def::ContractDef, deploy::Deploy, refrence::ContractReference};
+use self::{def::ContractDef, deploy::Deploy, reference::ContractReference};
 
 mod def;
 mod deploy;
-mod refrence;
+mod reference;
 
 #[derive(From)]
 pub struct ContractImpl<'a> {
