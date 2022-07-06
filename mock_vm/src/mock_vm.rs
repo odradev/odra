@@ -2,10 +2,10 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use odra_types::{
-    bytesrepr::{Bytes, FromBytes},
+    bytesrepr::Bytes,
     Address, CLValue,
 };
-use odra_types::{EventData, RuntimeArgs};
+use odra_types::{EventData, RuntimeArgs, OdraError};
 
 use crate::context::ExecutionContext;
 use crate::contract_container::{ContractContainer, EntrypointCall};
@@ -41,7 +41,7 @@ impl MockVm {
 
         // Call init if needed.
         if has_init {
-            self.call_contract(&address, "init", &args, false);
+            self.call_contract(&address, "init", &args, false).unwrap();
         }
         address
     }
@@ -53,9 +53,12 @@ impl MockVm {
         args: &RuntimeArgs,
         _has_return: bool,
     ) -> Option<Bytes> {
-        // Put the address on stack.
         {
-            self.state.write().unwrap().push_address(address);
+            let mut state = self.state.write().unwrap();
+            // If only one address on the call_stack, record snapshot.
+            state.snapshot();
+            // Put the address on stack.
+            state.push_address(address);
         }
 
         // Call contract from register.
@@ -65,8 +68,23 @@ impl MockVm {
         {
             self.state.write().unwrap().pop_address();
         }
-        // Return result.
-        result
+
+        let mut state = self.state.write().unwrap();
+        if state.error.is_none() {
+            state.drop_snapshot();
+            result
+        } else {
+            state.restore_snapshot();
+            None
+        }
+    }
+
+    pub fn revert(&self, error: OdraError) {
+        self.state.write().unwrap().set_error(error)
+    }
+
+    pub fn error(&self) -> Option<OdraError> {
+        self.state.read().unwrap().error()
     }
 
     pub fn get_backend_name(&self) -> String {
@@ -92,6 +110,10 @@ impl MockVm {
     pub fn get_dict_value(&self, dict: &[u8], key: &[u8]) -> Option<CLValue> {
         self.state.read().unwrap().get_dict_value(dict, key)
     }
+
+    pub fn events(&self) -> Vec<EventData> {
+        self.state.read().unwrap().events.clone()
+    }
 }
 
 #[derive(Clone)]
@@ -100,6 +122,7 @@ pub struct MockVmState {
     exec_context: ExecutionContext,
     events: Vec<EventData>,
     contract_counter: u32,
+    error: Option<OdraError>,
 }
 
 impl MockVmState {
@@ -123,7 +146,7 @@ impl MockVmState {
 
     pub fn get_var(&self, key: &[u8]) -> Option<CLValue> {
         let ctx = self.exec_context.current();
-        self.storage.get(&ctx, key)
+        self.storage.get_value(&ctx, key)
     }
 
     pub fn set_dict_value(&mut self, dict: &[u8], key: &[u8], value: &CLValue) {
@@ -139,61 +162,6 @@ impl MockVmState {
 
     pub fn emit_event(&mut self, event_data: &EventData) {
         self.events.push(event_data.clone());
-    }
-
-    pub fn event(&self, at: i32) -> EventData {
-        self.events.get(self.index_to_usize(at)).unwrap().clone()
-    }
-
-    pub fn assert_event_type_emitted(&self, event_name: &str) {
-        for event in self.events.clone().into_iter() {
-            if MockVmState::event_name(event.as_slice()) == *event_name {
-                return;
-            }
-        }
-
-        // TODO: better message
-        assert_eq!(event_name, "");
-    }
-
-    pub fn assert_event_emitted(&self, event_data: &EventData) {
-        for event in self.events.clone().into_iter() {
-            if event == *event_data {
-                return;
-            }
-        }
-
-        // TODO: better message
-        panic!("Event not found")
-    }
-
-    pub fn assert_event(&self, event_data: &EventData, at: i32) {
-        assert_eq!(self.event(at), event_data.clone())
-    }
-
-    pub fn assert_event_type(&self, event_name: &str, at: i32) {
-        assert_eq!(
-            MockVmState::event_name(self.event(at).as_slice()),
-            event_name
-        );
-    }
-
-    pub fn assert_event_type_not_emitted(&self, event_name: &str) {
-        for event in self.events.clone().into_iter() {
-            if MockVmState::event_name(event.as_slice()) == *event_name {
-                // TODO: better message
-                assert_eq!(event_name, "");
-            }
-        }
-    }
-
-    pub fn assert_event_not_emitted(&self, event_data: &EventData) {
-        for event in self.events.clone().into_iter() {
-            if event == *event_data {
-                // TODO: better message
-                panic!("Event not found")
-            }
-        }
     }
 
     pub fn require(expression: bool, msg: &str) {
@@ -215,6 +183,34 @@ impl MockVmState {
         self.contract_counter += 1;
         address
     }
+
+    pub fn set_error(&mut self, error: OdraError) {
+        if self.error.is_none() {
+            self.error = Some(error);
+        }
+    }
+
+    pub fn error(&self) -> Option<OdraError> {
+        self.error.clone()
+    }
+
+    fn snapshot(&mut self) {
+        if self.exec_context.is_in_caller_context() {
+            self.storage.take_snapshot();
+        }
+    }
+
+    fn drop_snapshot(&mut self) {
+        if self.exec_context.is_in_caller_context() {
+            self.storage.drop_snapshot();
+        }
+    }
+
+    fn restore_snapshot(&mut self) {
+        if self.exec_context.is_in_caller_context() {
+            self.storage.restore_snapshot();
+        }
+    }
 }
 
 impl Default for MockVmState {
@@ -224,24 +220,10 @@ impl Default for MockVmState {
             exec_context: Default::default(),
             events: Default::default(),
             contract_counter: 0,
+            error: None,
         };
         backend.push_address(default_accounts().first().unwrap());
         backend
-    }
-}
-
-impl MockVmState {
-    fn index_to_usize(&self, index: i32) -> usize {
-        if index.is_negative() {
-            self.events.len() - index.wrapping_abs() as usize
-        } else {
-            index as usize
-        }
-    }
-
-    fn event_name(event_data: &[u8]) -> String {
-        let (name, _): (String, _) = FromBytes::from_bytes(event_data).unwrap();
-        name
     }
 }
 

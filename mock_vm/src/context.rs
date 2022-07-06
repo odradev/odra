@@ -23,4 +23,8 @@ impl ExecutionContext {
     pub fn drop(&mut self) {
         self.callstack.pop();
     }
+
+    pub fn is_in_caller_context(&self) -> bool {
+        self.callstack.len() == 1
+    }
 }
