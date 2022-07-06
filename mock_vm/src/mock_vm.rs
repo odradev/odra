@@ -21,7 +21,6 @@ pub struct MockVm {
 impl MockVm {
     pub fn register_contract(
         &self,
-        name: &str,
         entrypoints: HashMap<String, EntrypointCall>,
         args: RuntimeArgs,
     ) -> Address {
@@ -32,7 +31,8 @@ impl MockVm {
 
         // Register new contract under the new address.
         {
-            let contract = ContractContainer::new(name, entrypoints);
+            let counter = self.state.read().unwrap().contract_counter();
+            let contract = ContractContainer::new(&counter.to_string(), entrypoints);
             self.contract_register
                 .write()
                 .unwrap()
@@ -182,6 +182,10 @@ impl MockVmState {
         let address = Address::new(&self.contract_counter.to_be_bytes());
         self.contract_counter += 1;
         address
+    }
+
+    pub fn contract_counter(&self) -> u32 {
+        self.contract_counter
     }
 
     pub fn set_error(&mut self, error: OdraError) {

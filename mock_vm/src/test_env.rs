@@ -8,11 +8,10 @@ pub struct TestEnv;
 
 impl TestEnv {
     pub fn register_contract(
-        name: &str,
         entrypoints: HashMap<String, EntrypointCall>,
         args: RuntimeArgs,
     ) -> Address {
-        borrow_env().register_contract(name, entrypoints, args)
+        borrow_env().register_contract(entrypoints, args)
     }
 
     pub fn call_contract(
