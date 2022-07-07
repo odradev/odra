@@ -7,7 +7,7 @@ pub struct Constructor {
     pub attrs: Vec<OdraAttribute>,
     pub impl_item: syn::ImplItemMethod,
     pub ident: syn::Ident,
-    pub args: Vec<syn::PatType>,
+    pub args: syn::punctuated::Punctuated<syn::PatType, syn::token::Comma>,
     pub full_sig: syn::Signature,
 }
 
@@ -18,6 +18,7 @@ impl ToTokens for Constructor {
             .args
             .iter()
             .map(|arg| {
+                
                 let name = &*arg.pat;
                 let ty = &*arg.ty;
                 let ty = quote!(<#ty as odra::types::CLTyped>::cl_type());
@@ -57,7 +58,7 @@ impl TryFrom<syn::ImplItemMethod> for Constructor {
                 syn::FnArg::Receiver(_) => None,
                 syn::FnArg::Typed(pat) => Some(pat.clone()),
             })
-            .collect::<Vec<_>>();
+            .collect::<syn::punctuated::Punctuated<syn::PatType, syn::token::Comma>>();
         if let syn::ReturnType::Type(_, _) = value.clone().sig.output {
             return Err(syn::Error::new_spanned(
                 value.sig,

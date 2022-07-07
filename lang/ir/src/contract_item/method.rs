@@ -6,7 +6,7 @@ pub struct Method {
     pub attrs: Vec<OdraAttribute>,
     pub impl_item: syn::ImplItemMethod,
     pub ident: syn::Ident,
-    pub args: Vec<syn::PatType>,
+    pub args: syn::punctuated::Punctuated<syn::PatType, syn::token::Comma>,
     pub ret: syn::ReturnType,
     pub full_sig: syn::Signature,
 }
@@ -60,7 +60,7 @@ impl From<syn::ImplItemMethod> for Method {
                 syn::FnArg::Receiver(_) => None,
                 syn::FnArg::Typed(pat) => Some(pat.clone()),
             })
-            .collect::<Vec<_>>();
+            .collect::<syn::punctuated::Punctuated<_, _>>();
         let ret = method.clone().sig.output;
         let full_sig = method.clone().sig;
         Self {

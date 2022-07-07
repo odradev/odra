@@ -1,7 +1,8 @@
 use derive_more::From;
-use odra_ir::contract_item::contract_impl::ContractImpl;
-use proc_macro2::TokenStream;
-use quote::{format_ident, quote};
+use odra_ir::{contract_item::{contract_impl::ContractImpl, constructor::Constructor, method::Method}, ImplItem};
+use proc_macro2::{TokenStream, Ident};
+use quote::{format_ident, quote, TokenStreamExt};
+use syn::{punctuated::Punctuated, token::Comma, ReturnType, Type, TypePath, PathSegment, Token, PatType};
 
 use crate::GenerateCode;
 
@@ -19,39 +20,22 @@ impl GenerateCode for Deploy<'_> {
         let struct_name_lowercased = struct_name.to_lowercase();
         let ref_ident = format_ident!("{}Ref", struct_ident);
 
-        let register_entrypoints = self.contract
+
+        let entrypoints = build_entrypoints( self.contract
             .methods()
             .iter()
             .filter_map(|item| match item {
-                odra_ir::contract_item::impl_item::ImplItem::Constructor(_) => None,
-                odra_ir::contract_item::impl_item::ImplItem::Method(method) => Some(method),
-                odra_ir::contract_item::impl_item::ImplItem::Other(_) => None,
-            })
-            .map(|entrypoint| {
-                let ident = &entrypoint.ident;
-                let name = quote!(stringify!(#ident).to_string());
-                let return_value = match &entrypoint.ret {
-                    syn::ReturnType::Default => quote!(None),
-                    syn::ReturnType::Type(_, _) => quote! {
-                        let bytes = odra::types::bytesrepr::ToBytes::to_bytes(&result).unwrap();
-                        Some(odra::types::bytesrepr::Bytes::from(bytes))
-                    }
-                };
-                let args = &entrypoint.args.iter().map(|arg| {
-                    let pat = &*arg.pat;
-                    quote!(args.get(stringify!(#pat)).cloned().unwrap().into_t().unwrap(),)
-                }).flatten().collect::<TokenStream>();
-
-                quote! {
-                    entrypoints.insert(#name, |name, args| {
-                        let instance = <#struct_ident as odra::instance::Instance>::instance(name.as_str());
-                        let result = instance.#ident(#args);
-                        #return_value
-                    });
-                }
-            })
-            .flatten()
-            .collect::<TokenStream>();
+               ImplItem::Method(method) => Some(method),
+                _ => None,
+            }), struct_ident);
+        
+        let constructors = build_constructors(self.contract
+            .methods()
+            .iter()
+            .filter_map(|item| match item {
+               ImplItem::Constructor(constructor) => Some(constructor),
+                _ => None,
+            }), entrypoints.clone(), struct_ident, ref_ident.clone());
 
         quote! {
             #[cfg(all(test, feature = "wasm-test"))]
@@ -70,20 +54,125 @@ impl GenerateCode for Deploy<'_> {
 
             #[cfg(all(test, feature = "mock-vm"))]
             impl #struct_ident {
-                fn deploy(args: odra::types::RuntimeArgs) -> #ref_ident {
+               
+                fn deploy() -> #ref_ident {
+                    type EntrypointCall = fn(String, RuntimeArgs) -> Option<Bytes>;
+                    type Constructor = (String, RuntimeArgs, EntrypointCall);
+    
                     use std::collections::HashMap;
-                    use odra::types::{bytesrepr::Bytes, RuntimeArgs};
-
-                    pub type EntrypointCall = fn(String, RuntimeArgs) -> Option<Bytes>;
+                    use odra::types::{bytesrepr::Bytes, RuntimeArgs, runtime_args};
 
                     let mut entrypoints: HashMap<String, EntrypointCall> = HashMap::new();
+                    #entrypoints
 
-                    #register_entrypoints
-
-                    let address = odra::TestEnv::register_contract(entrypoints, args);
+                    let address = odra::TestEnv::register_contract(None, entrypoints);
                     #ref_ident { address }
                 }
+
+                #constructors
             }
         }
     }
+}
+
+fn build_constructors<'a, C>(constructors: C, entrypoints: TokenStream, struct_ident: &Ident, ref_ident: Ident) -> TokenStream 
+where C: Iterator<Item = &'a Constructor> {
+    constructors.map(|constructor| {
+        let ty = Type::Path(TypePath { qself: None, path: From::from(ref_ident.clone()) });
+        let deploy_fn_ident = format_ident!("deploy_{}", &constructor.ident);
+        let sig = constructor.full_sig.clone();
+        let constructor_ident = &constructor.ident;
+
+        let inputs = sig.inputs.into_iter().filter(|i| match i {
+            syn::FnArg::Receiver(_) => false,
+            syn::FnArg::Typed(_) => true,
+        }).collect::<Punctuated<_, _>>();
+
+        let deploy_fn_sig = syn::Signature {
+            ident: deploy_fn_ident,
+            output: ReturnType::Type(Default::default(), Box::new(ty)),
+            inputs,
+            ..sig
+        };
+
+        let args = args_to_runtime_args_stream(&constructor.args);
+
+        let fn_args = args_to_fn_args(&constructor.args);
+
+        quote! {
+            #deploy_fn_sig {
+                type EntrypointCall = fn(String, RuntimeArgs) -> Option<Bytes>;
+                type Constructor = (String, RuntimeArgs, EntrypointCall);
+
+                use std::collections::HashMap;
+                use odra::types::{bytesrepr::Bytes, RuntimeArgs};
+
+                let mut entrypoints: HashMap<String, EntrypointCall> = HashMap::new();
+                #entrypoints
+
+                let args = {
+                    #args
+                };
+
+                let constructor: Option<Constructor> = Some((
+                    stringify!(#constructor_ident).to_string(), 
+                    args, 
+                    |name, args| {
+                        let instance = <#struct_ident as odra::instance::Instance>::instance(name.as_str());
+                        instance.#constructor_ident( #fn_args );
+                        None
+                    }
+                ));
+                let address = odra::TestEnv::register_contract(constructor, entrypoints);
+                #ref_ident { address }
+            }
+        }
+    }).collect::<TokenStream>()
+}
+
+fn build_entrypoints<'a, T>(methods: T, struct_ident: &Ident) -> TokenStream 
+where T: Iterator<Item = &'a Method> {
+    methods
+        .map(|entrypoint| {
+            let ident = &entrypoint.ident;
+            let name = quote!(stringify!(#ident).to_string());
+            let return_value = match &entrypoint.ret {
+                ReturnType::Default => quote!(None),
+                ReturnType::Type(_, _) => quote! {
+                    let bytes = odra::types::bytesrepr::ToBytes::to_bytes(&result).unwrap();
+                    Some(odra::types::bytesrepr::Bytes::from(bytes))
+                }
+            };
+            let args = args_to_fn_args(&entrypoint.args);
+
+            quote! {
+                entrypoints.insert(#name, |name, args| {
+                    let instance = <#struct_ident as odra::instance::Instance>::instance(name.as_str());
+                    let result = instance.#ident(#args);
+                    #return_value
+                });
+            }
+        })
+        .collect::<TokenStream>()
+}
+
+fn args_to_fn_args<'a, T>(args: T) -> Punctuated<TokenStream, Comma>
+where T: IntoIterator<Item = &'a syn::PatType> {
+    args
+        .into_iter()
+        .map(|arg| {
+            let pat = &*arg.pat;
+            quote!(args.get(stringify!(#pat)).cloned().unwrap().into_t().unwrap())
+        }).collect::<Punctuated<TokenStream, Comma>>()
+}
+
+fn args_to_runtime_args_stream<'a, T>(args: T) -> TokenStream
+where T: IntoIterator<Item = &'a syn::PatType> {
+    let mut tokens = quote!(let mut args = RuntimeArgs::new(););
+    tokens.append_all( args.into_iter().map(|arg| {
+        let pat = &*arg.pat;
+        quote! { args.insert(stringify!(#pat), #pat).unwrap(); }
+    }));
+    tokens.extend(quote!(args));
+    tokens
 }

@@ -21,18 +21,30 @@ pub struct MockVm {
 impl MockVm {
     pub fn register_contract(
         &self,
+        constructor: Option<(String, RuntimeArgs, EntrypointCall)>,
         entrypoints: HashMap<String, EntrypointCall>,
-        args: RuntimeArgs,
     ) -> Address {
         // Create a new address.
         let address = { self.state.write().unwrap().next_contract_address() };
         // Check if contract has init.
-        let has_init = entrypoints.contains_key("init");
+        let has_init = constructor.is_some();
+
+        let original_entrypoints = entrypoints.to_owned();
+
+        let contract_namespace = self.state.read().unwrap().get_contract_namespace();
+
+        let constructor_entrypoint = constructor
+            .clone()
+            .and_then(|(constructor_name, _, call)| Some([(constructor_name, call)]));
+
+        let entrypoints = match constructor_entrypoint {
+            Some(constructor) => constructor.into_iter().chain(entrypoints).collect::<HashMap<_, _>>(),
+            None => entrypoints,
+        };
 
         // Register new contract under the new address.
         {
-            let counter = self.state.read().unwrap().contract_counter();
-            let contract = ContractContainer::new(&counter.to_string(), entrypoints);
+            let contract = ContractContainer::new(&contract_namespace, entrypoints);
             self.contract_register
                 .write()
                 .unwrap()
@@ -41,7 +53,14 @@ impl MockVm {
 
         // Call init if needed.
         if has_init {
-            self.call_contract(&address, "init", &args, false).unwrap();
+            let (constructor_name, args, _) = constructor.unwrap();
+
+            self.call_contract(&address, &constructor_name, &args, false);
+            let contract = ContractContainer::new(&contract_namespace, original_entrypoints);
+            self.contract_register
+                .write()
+                .unwrap()
+                .add(address.clone(), contract);
         }
         address
     }
@@ -184,8 +203,8 @@ impl MockVmState {
         address
     }
 
-    pub fn contract_counter(&self) -> u32 {
-        self.contract_counter
+    pub fn get_contract_namespace(&self) -> String {
+        self.contract_counter.to_string()
     }
 
     pub fn set_error(&mut self, error: OdraError) {
