@@ -2,7 +2,6 @@ use derive_more::From;
 use odra_ir::contract_item::{contract_impl::ContractImpl, impl_item::ImplItem};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, TokenStreamExt};
-use syn::token::RArrow;
 
 use crate::GenerateCode;
 
@@ -46,28 +45,6 @@ impl GenerateCode for ContractReference<'_> {
     }
 }
 
-fn parse_args(syn_args: &Vec<syn::PatType>) -> TokenStream {
-    let args = match &syn_args.is_empty() {
-        true => quote! { RuntimeArgs::new()},
-        false => {
-            let mut args = quote!(let mut args = RuntimeArgs::new(););
-            args.append_all(syn_args.clone().into_iter().map(|arg| {
-                let pat = &*arg.pat;
-                quote! { args.insert(stringify!(#pat), #pat).unwrap(); }
-            }));
-            args.extend(quote!(args));
-            args
-        }
-    };
-
-    quote! {
-        use odra::types::RuntimeArgs;
-        let args = {
-            #args
-        };
-    }
-}
-
 fn build_entrypoints(methods: &Vec<&ImplItem>) -> TokenStream {
     methods
         .iter()
@@ -78,9 +55,7 @@ fn build_entrypoints(methods: &Vec<&ImplItem>) -> TokenStream {
         .map(|entrypoint| {
             let sig = &entrypoint.full_sig;
             let entrypoint_name = &entrypoint.ident.to_string();
-            let fn_body = generate_fn_body(entrypoint_name, &entrypoint.args, &entrypoint.ret);
-
-            let test_sig = sig_to_test_sig(sig);
+            let fn_body = generate_fn_body(entrypoint.args.clone(), entrypoint_name, &entrypoint.ret);
 
             quote! {
                 pub #sig {
@@ -100,12 +75,10 @@ fn build_constructors(methods: &Vec<&ImplItem>) -> TokenStream {
         })
         .map(|entrypoint| {
             let sig = &entrypoint.full_sig;
-            let entrypoint_name = &entrypoint.ident.to_string();
+            let entrypoint_name = entrypoint.ident.to_string();
             let fn_body =
-                generate_fn_body(entrypoint_name, &entrypoint.args, &syn::ReturnType::Default);
+                generate_fn_body(entrypoint.args.clone(), &entrypoint_name, &syn::ReturnType::Default);
             
-            let test_sig = sig_to_test_sig(sig);
-
             quote! {
                 pub #sig {
                     #fn_body
@@ -115,13 +88,14 @@ fn build_constructors(methods: &Vec<&ImplItem>) -> TokenStream {
         .collect::<TokenStream>()
 }
 
-fn generate_fn_body(
+fn generate_fn_body<T>(
+    args: T,
     entrypoint_name: &String,
-    args: &Vec<syn::PatType>,
     ret: &syn::ReturnType,
-) -> TokenStream {
+) -> TokenStream 
+where T: IntoIterator<Item = syn::PatType> {
     let args = parse_args(args);
-
+    
     match ret {
         syn::ReturnType::Default => quote! {
             #args
@@ -135,17 +109,19 @@ fn generate_fn_body(
     }
 }
 
-fn sig_to_test_sig(sig: &syn::Signature) -> syn::Signature {
-    let ty: syn::Type = match &sig.output {
-        syn::ReturnType::Default => syn::parse_quote!(Result<(), odra::types::OdraError>),
-        syn::ReturnType::Type(_, ty) => {
-            let ty = &**ty;
-            syn::parse_quote!(Result<#ty, odra::types::OdraError>)
-        },
-    };
+fn parse_args<T>(syn_args: T) -> TokenStream
+where T: IntoIterator<Item = syn::PatType> {
+    let mut tokens = quote!(let mut args = RuntimeArgs::new(););
+    tokens.append_all(syn_args.into_iter().map(|arg| {
+        let pat = &*arg.pat;
+        quote! { args.insert(stringify!(#pat), #pat).unwrap(); }
+    }));
+    tokens.extend(quote!(args));
 
-    syn::Signature { 
-        output: syn::ReturnType::Type(RArrow::default(), Box::new(ty)),
-        ..sig.to_owned()
+    quote! {
+        use odra::types::RuntimeArgs;
+        let args = {
+            #tokens
+        };
     }
 }

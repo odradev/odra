@@ -10,7 +10,10 @@ pub struct ContractContainer {
 }
 
 impl ContractContainer {
-    pub fn new(name: &str, entrypoints: HashMap<String, EntrypointCall>) -> Self {
+    pub fn new(
+        name: &str, 
+        entrypoints: HashMap<String, EntrypointCall>,
+    ) -> Self {
         Self {
             name: String::from(name),
             entrypoints,
@@ -19,6 +22,10 @@ impl ContractContainer {
 
     pub fn add(&mut self, entrypoint: String, f: EntrypointCall) {
         self.entrypoints.insert(entrypoint, f);
+    }
+
+    pub fn remove(&mut self, entrypoint: String) {
+        self.entrypoints.remove(&entrypoint);
     }
 
     pub fn call(&self, entrypoint: String, args: RuntimeArgs) -> Option<Bytes> {
