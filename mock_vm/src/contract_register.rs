@@ -1,4 +1,4 @@
-use odra_types::Address;
+use odra_types::{Address, OdraError, VmError};
 use odra_types::{bytesrepr::Bytes, RuntimeArgs};
 use std::collections::HashMap;
 
@@ -14,7 +14,11 @@ impl ContractRegister {
         self.contracts.insert(addr, container);
     }
 
-    pub fn call(&self, addr: &Address, entrypoint: String, args: RuntimeArgs) -> Option<Bytes> {
-        self.contracts.get(addr).unwrap().call(entrypoint, args)
+    pub fn call(&self, addr: &Address, entrypoint: String, args: RuntimeArgs) -> Result<Option<Bytes>, OdraError> {
+        let contract = self.contracts.get(addr);
+        match contract {
+            Some(container) => container.call(entrypoint, args),
+            None => Err(OdraError::VmError(VmError::InvalidContractAddress)),
+        }
     }
 }

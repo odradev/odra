@@ -86,6 +86,15 @@ impl MockVm {
         // Call contract from register.
         let register = self.contract_register.read().unwrap();
         let result = register.call(address, String::from(entrypoint), args.clone());
+        let result = match result {
+            Ok(data) => data,
+            Err(err) => {
+                {
+                    self.state.write().unwrap().set_error(err);
+                }
+                None
+            },
+        };
         // Drop the address from stack.
         {
             self.state.write().unwrap().pop_address();
@@ -121,6 +130,10 @@ impl MockVm {
 
     pub fn caller(&self) -> Address {
         self.state.read().unwrap().caller()
+    }
+
+    pub fn set_caller(&self, caller: &Address) {
+        self.state.write().unwrap().set_caller(caller);
     }
 
     pub fn set_var(&self, key: &[u8], value: &CLValue) {
@@ -273,16 +286,140 @@ fn default_accounts() -> Vec<Address> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
 
-    // use crate::vm::default_accounts;
+    use odra_types::{RuntimeArgs, Address, VmError, OdraError, CLValue};
 
-    // use super::MockVm;
+    use crate::EntrypointCall;
 
-    // #[test]
-    // fn test_default_caller() {
-    //     assert_eq!(
-    //         MockVm::default().caller(),
-    //         default_accounts().first().unwrap().clone()
-    //     );
-    // }
+    use super::MockVm;
+
+    #[test]
+    fn contracts_have_different_addresses() {
+        // given a new instance
+        let instance = MockVm::default();
+
+        // when register two contracts with the same entrypoints
+        let entrypoint: Vec<(String, EntrypointCall)> = vec![(String::from("abc"), |_, _| None)];
+        let entrypoints = entrypoint.into_iter().collect::<HashMap<_,_>>();
+
+        let address1 = instance.register_contract(None, entrypoints.clone());
+        let address2 = instance.register_contract(None, entrypoints);
+
+        // then addresses are different
+        assert_ne!(address1, address2);
+    }
+
+    #[test]
+    fn test_contract_call() {
+        // given an instance with a registered contract having one entrypoint
+        let instance = MockVm::default();
+
+        let entrypoint: Vec<(String, EntrypointCall)> = vec![
+            (String::from("abc"), |_, _|  { Some(vec![1,1,1].into()) }),
+        ];
+        let address = instance.register_contract(
+            None,
+            entrypoint.into_iter().collect::<HashMap<_,_>>()
+        );
+
+        // when call an existing entrypoint
+        let result = instance.call_contract(&address, "abc", &RuntimeArgs::new(), false);
+        
+        // then returns the expected value
+        assert_eq!(
+            result,
+            Some(vec![1,1,1].into())
+        );
+    }
+
+    #[test]
+    fn test_call_non_existing_contract() {
+        // given an empty vm
+        let instance = MockVm::default();
+
+        let address = Address::new(b"random");
+
+        // when call a contract
+        instance.call_contract(&address, "abc", &RuntimeArgs::new(), false);
+        
+        // then the vm is in error state
+        assert_eq!(
+            instance.error(),
+            Some(OdraError::VmError(VmError::InvalidContractAddress))
+        );
+    }
+
+    #[test]
+    fn test_call_non_existing_entrypoint() {
+        // given an instance with a registered contract having one entrypoint
+        let instance = MockVm::default();
+        let entrypoint: Vec<(String, EntrypointCall)> = vec![
+            (String::from("abc"), |_, _|  { Some(vec![1,1,1].into()) }),
+        ];
+        let address = instance.register_contract(
+            None,
+            entrypoint.into_iter().collect::<HashMap<_,_>>()
+        );
+
+        // when call non-existing entrypoint
+        instance.call_contract(&address, "cba", &RuntimeArgs::new(), false);
+        
+        // then the vm is in error state
+        assert_eq!(
+            instance.error(),
+            Some(OdraError::VmError(VmError::NoSuchMethod("cba".to_string())))
+        );
+    }
+
+    #[test]
+    fn test_caller_switching() {
+        let instance = MockVm::default();
+        
+        let new_caller = Address::new(b"new caller");
+        instance.set_caller(&new_caller);
+        // put a contract on stack
+        instance.state.write().unwrap().push_address(&Address::new(b"contract"));
+
+        assert_eq!(
+            instance.caller(),
+            new_caller
+        );
+    }
+
+    #[test]
+    fn test_revert() {
+        let instance = MockVm::default();
+
+        instance.revert(OdraError::Unknown);
+
+        assert_eq!(instance.error(), Some(OdraError::Unknown));
+    }
+
+    #[test]
+    fn test_read_write_value() {
+        let instance = MockVm::default();
+        let key: [u8; 2] = [1, 2];
+        let value = CLValue::from_t(32u8).unwrap();
+
+        instance.set_var(&key, &value);
+
+        assert_eq!(instance.get_var(&key), Some(value));
+
+        assert_eq!(instance.get_var(&[2, 1]), None);
+    }
+
+    #[test]
+    fn test_read_write_collection() {
+        let instance = MockVm::default();
+        let collection: [u8; 4] = [4, 2, 1, 2];
+        let key: [u8; 2] = [1, 2];
+        let value = CLValue::from_t(32u8).unwrap();
+
+        instance.set_dict_value(&collection, &key, &value);
+        
+        assert_eq!(instance.get_dict_value(&collection, &key), Some(value));
+        assert_eq!(instance.get_dict_value(&[], &key), None);
+        assert_eq!(instance.get_dict_value(&collection, &[]), None);
+    }
 }
