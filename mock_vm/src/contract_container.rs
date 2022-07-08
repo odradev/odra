@@ -1,4 +1,4 @@
-use odra_types::{bytesrepr::Bytes, RuntimeArgs};
+use odra_types::{bytesrepr::Bytes, RuntimeArgs, OdraError, VmError};
 use std::collections::HashMap;
 
 pub type EntrypointCall = fn(String, RuntimeArgs) -> Option<Bytes>;
@@ -28,8 +28,10 @@ impl ContractContainer {
         self.entrypoints.remove(&entrypoint);
     }
 
-    pub fn call(&self, entrypoint: String, args: RuntimeArgs) -> Option<Bytes> {
-        let f = self.entrypoints.get(&entrypoint).unwrap();
-        f(self.name.clone(), args)
+    pub fn call(&self, entrypoint: String, args: RuntimeArgs) -> Result<Option<Bytes>, OdraError> {
+        match self.entrypoints.get(&entrypoint) {
+            Some(f) => Ok(f(self.name.clone(), args)),
+            None => Err(OdraError::VmError(VmError::NoSuchMethod(entrypoint))),
+        }
     }
 }
