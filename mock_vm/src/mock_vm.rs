@@ -75,7 +75,10 @@ impl MockVm {
         {
             let mut state = self.state.write().unwrap();
             // If only one address on the call_stack, record snapshot.
-            state.snapshot();
+            if state.is_in_caller_context() {
+                state.take_snapshot();
+                state.clear_error();
+            }
             // Put the address on stack.
             state.push_address(address);
         }
@@ -90,10 +93,16 @@ impl MockVm {
 
         let mut state = self.state.write().unwrap();
         if state.error.is_none() {
-            state.drop_snapshot();
+            // If only one address on the call_stack, drop the snapshot
+            if state.is_in_caller_context() {
+                state.drop_snapshot();
+            }
             result
         } else {
-            state.restore_snapshot();
+            // If only one address on the call_stack an an error occurred, restore the snapshot
+            if state.is_in_caller_context() {
+                state.restore_snapshot();
+            }
             None
         }
     }
@@ -213,26 +222,28 @@ impl MockVmState {
         }
     }
 
+    fn clear_error(&mut self) {
+        self.error = None;
+    }
+
     pub fn error(&self) -> Option<OdraError> {
         self.error.clone()
     }
 
-    fn snapshot(&mut self) {
-        if self.exec_context.is_in_caller_context() {
-            self.storage.take_snapshot();
-        }
+    fn is_in_caller_context(&self) -> bool {
+        self.exec_context.len() == 1
+    }
+
+    fn take_snapshot(&mut self) {
+        self.storage.take_snapshot();
     }
 
     fn drop_snapshot(&mut self) {
-        if self.exec_context.is_in_caller_context() {
-            self.storage.drop_snapshot();
-        }
+        self.storage.drop_snapshot();
     }
 
     fn restore_snapshot(&mut self) {
-        if self.exec_context.is_in_caller_context() {
-            self.storage.restore_snapshot();
-        }
+        self.storage.restore_snapshot();
     }
 }
 

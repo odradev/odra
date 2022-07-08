@@ -30,6 +30,13 @@ impl TestEnv {
         }
     }
 
+    pub fn expect_revert<T: std::any::Any>(_: T, err: OdraError) {
+        let exec_err = borrow_env()
+            .error()
+            .expect("An error expected, but the call succeeded");
+        assert_eq!(exec_err, err);
+    }
+
     pub fn backend_name() -> String {
         borrow_env().get_backend_name()
     }
