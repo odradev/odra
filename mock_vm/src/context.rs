@@ -24,7 +24,7 @@ impl ExecutionContext {
         self.callstack.pop();
     }
 
-    pub fn is_in_caller_context(&self) -> bool {
-        self.callstack.len() == 1
+    pub fn len(&self) -> usize {
+        self.callstack.len()
     }
 }
