@@ -1,7 +1,6 @@
 use std::convert::TryFrom;
 
 use proc_macro2::TokenStream;
-use syn::{ImplItemMethod, ItemImpl};
 
 use self::{contract_impl::ContractImpl, contract_struct::ContractStruct};
 
@@ -37,16 +36,6 @@ impl ContractItem {
             "ContractItem is neither a struct nor an impl block.",
         ))
     }
-}
-
-pub fn extract_methods<'a>(item: ItemImpl) -> Vec<ImplItemMethod> {
-    item.items
-        .into_iter()
-        .filter_map(|item| match item {
-            syn::ImplItem::Method(method) => Some(method),
-            _ => None,
-        })
-        .collect::<Vec<_>>()
 }
 
 #[cfg(test)]

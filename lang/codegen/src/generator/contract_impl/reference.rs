@@ -1,9 +1,9 @@
 use derive_more::From;
 use odra_ir::contract_item::{contract_impl::ContractImpl, impl_item::ImplItem};
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote, TokenStreamExt};
+use quote::{format_ident, quote};
 
-use crate::GenerateCode;
+use crate::{GenerateCode, generator::common};
 
 #[derive(From)]
 pub struct ContractReference<'a> {
@@ -55,7 +55,7 @@ fn build_entrypoints(methods: &Vec<&ImplItem>) -> TokenStream {
         .map(|entrypoint| {
             let sig = &entrypoint.full_sig;
             let entrypoint_name = &entrypoint.ident.to_string();
-            let fn_body = generate_fn_body(entrypoint.args.clone(), entrypoint_name, &entrypoint.ret);
+            let fn_body = common::generate_fn_body(entrypoint.args.clone(), entrypoint_name, &entrypoint.ret);
 
             quote! {
                 pub #sig {
@@ -77,7 +77,7 @@ fn build_constructors(methods: &Vec<&ImplItem>) -> TokenStream {
             let sig = &entrypoint.full_sig;
             let entrypoint_name = entrypoint.ident.to_string();
             let fn_body =
-                generate_fn_body(entrypoint.args.clone(), &entrypoint_name, &syn::ReturnType::Default);
+                common::generate_fn_body(entrypoint.args.clone(), &entrypoint_name, &syn::ReturnType::Default);
             
             quote! {
                 pub #sig {
@@ -88,40 +88,3 @@ fn build_constructors(methods: &Vec<&ImplItem>) -> TokenStream {
         .collect::<TokenStream>()
 }
 
-fn generate_fn_body<T>(
-    args: T,
-    entrypoint_name: &String,
-    ret: &syn::ReturnType,
-) -> TokenStream 
-where T: IntoIterator<Item = syn::PatType> {
-    let args = parse_args(args);
-    
-    match ret {
-        syn::ReturnType::Default => quote! {
-            #args
-            odra::call_contract::<()>(&self.address, #entrypoint_name, &args);
-        },
-        syn::ReturnType::Type(_, _) => quote! {
-            use odra::types::CLTyped;
-            #args
-            odra::call_contract(&self.address, #entrypoint_name, &args)
-        },
-    }
-}
-
-fn parse_args<T>(syn_args: T) -> TokenStream
-where T: IntoIterator<Item = syn::PatType> {
-    let mut tokens = quote!(let mut args = RuntimeArgs::new(););
-    tokens.append_all(syn_args.into_iter().map(|arg| {
-        let pat = &*arg.pat;
-        quote! { args.insert(stringify!(#pat), #pat).unwrap(); }
-    }));
-    tokens.extend(quote!(args));
-
-    quote! {
-        use odra::types::RuntimeArgs;
-        let args = {
-            #tokens
-        };
-    }
-}
