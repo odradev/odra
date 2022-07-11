@@ -18,7 +18,6 @@ impl ToTokens for Constructor {
             .args
             .iter()
             .map(|arg| {
-                
                 let name = &*arg.pat;
                 let ty = &*arg.ty;
                 let ty = quote!(<#ty as odra::types::CLTyped>::cl_type());

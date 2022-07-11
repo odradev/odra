@@ -28,8 +28,8 @@ impl ToTokens for Method {
                     },
                 }
             })
-            .flatten()
             .collect::<proc_macro2::TokenStream>();
+            
         let ret = match &self.ret {
             syn::ReturnType::Default => quote!(odra::types::CLType::Unit),
             syn::ReturnType::Type(_, ty) => quote!(<#ty as odra::types::CLTyped>::cl_type()),
