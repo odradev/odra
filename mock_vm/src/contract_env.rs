@@ -1,4 +1,8 @@
-use odra_types::{Address, CLTyped, CLValue, bytesrepr::{ToBytes, FromBytes}, EventData, OdraError};
+use odra_types::{
+    bytesrepr::{FromBytes, ToBytes},
+    event::Event,
+    Address, CLTyped, CLValue, OdraError,
+};
 
 use crate::borrow_env;
 pub struct ContractEnv;
@@ -32,8 +36,12 @@ impl ContractEnv {
         borrow_env().get_dict_value(dict.as_bytes(), key.to_bytes().unwrap().as_slice())
     }
 
-    pub fn emit_event(event: &EventData) {
-        todo!()
+    pub fn emit_event<T>(event: &T)
+    where
+        T: ToBytes + Event,
+    {
+        let event_data = event.to_bytes().unwrap();
+        borrow_env().emit_event(&event_data);
     }
 
     pub fn revert(error: OdraError) {
