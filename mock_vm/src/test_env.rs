@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use odra_types::{RuntimeArgs, Address, bytesrepr::Bytes, OdraError};
+use odra_types::{bytesrepr::Bytes, Address, OdraError, RuntimeArgs};
 
-use crate::{EntrypointCall, borrow_env};
+use crate::{borrow_env, EntrypointCall};
 
 pub struct TestEnv;
 

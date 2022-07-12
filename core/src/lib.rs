@@ -3,6 +3,7 @@ mod event;
 pub mod instance;
 mod mapping;
 mod variable;
+pub mod test_utils;
 
 use std::fmt::Debug;
 

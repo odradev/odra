@@ -68,7 +68,6 @@ impl Storage {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use odra_types::{Address, CLValue};
@@ -93,10 +92,7 @@ mod test {
         storage.insert_single_value(&address, &key, value.clone());
 
         // then the value can be read
-        assert_eq!(
-            storage.get_value(&address, &key),
-            Some(value)
-        );
+        assert_eq!(storage.get_value(&address, &key), Some(value));
     }
 
     #[test]
@@ -111,10 +107,7 @@ mod test {
         storage.insert_single_value(&address, &key, next_value.clone());
 
         // then the previous value is replaced
-        assert_eq!(
-            storage.get_value(&address, &key),
-            Some(next_value)
-        );
+        assert_eq!(storage.get_value(&address, &key), Some(next_value));
     }
 
     #[test]
@@ -123,9 +116,9 @@ mod test {
         let storage = Storage::default();
         let (address, key, _) = setup();
 
-        // when lookup a key 
+        // when lookup a key
         let result = storage.get_value(&address, &key);
-        
+
         // then the None value is returned
         assert_eq!(result, None);
     }
@@ -136,10 +129,10 @@ mod test {
         let mut storage = Storage::default();
         let (address, key, value) = setup();
         let collection = [1u8];
-        
+
         // when put a value into a collection
         storage.insert_dict_value(&address, &collection, &key, value.clone());
-        
+
         // then the value can be read
         assert_eq!(
             storage.get_dict_value(&address, &collection, &key),
@@ -154,7 +147,7 @@ mod test {
         let (address, key, value) = setup();
         let collection = [1u8];
         storage.insert_dict_value(&address, &collection, &key, value.clone());
-        
+
         // when read a value from a non exisiting collection
         let non_existing_collection = [2u8];
         let result = storage.get_dict_value(&address, &non_existing_collection, &key);
@@ -165,16 +158,16 @@ mod test {
 
     #[test]
     fn read_from_non_existing_key_from_existing_collection_returns_none() {
-         // given storage with some stored value
+        // given storage with some stored value
         let mut storage = Storage::default();
         let (address, key, value) = setup();
         let collection = [1u8];
         storage.insert_dict_value(&address, &collection, &key, value.clone());
-        
+
         // when read a value from a non existing collection
         let non_existing_key = [2u8];
         let result = storage.get_dict_value(&address, &collection, &non_existing_key);
-        
+
         // then None is returned
         assert_eq!(result, None);
     }
@@ -193,15 +186,9 @@ mod test {
         storage.restore_snapshot();
 
         // then the changes are reverted
-        assert_eq!(
-            storage.get_value(&address, &key),
-            Some(initial_value),
-        );
+        assert_eq!(storage.get_value(&address, &key), Some(initial_value),);
         // the snapshot is removed
-        assert_eq!(
-            storage.snapshot,
-            None
-        );
+        assert_eq!(storage.snapshot, None);
     }
 
     #[test]
@@ -214,17 +201,14 @@ mod test {
         storage.insert_single_value(&address, &key, initial_value);
         storage.take_snapshot();
         storage.insert_single_value(&address, &key, second_value.clone());
-        
+
         // when take another snapshot and restore it
         storage.take_snapshot();
         storage.insert_single_value(&address, &key, third_value);
         storage.restore_snapshot();
-        
+
         // then the most recent snapshot is restored
-        assert_eq!(
-            storage.get_value(&address, &key),
-            Some(second_value),
-        );
+        assert_eq!(storage.get_value(&address, &key), Some(second_value),);
     }
 
     #[test]
@@ -241,14 +225,8 @@ mod test {
         storage.drop_snapshot();
 
         // then storage state does not change
-        assert_eq!(
-            storage.get_value(&address, &key),
-            Some(next_value),
-        );
+        assert_eq!(storage.get_value(&address, &key), Some(next_value),);
         // the snapshot is wiped out
-        assert_eq!(
-            storage.snapshot,
-            None
-        );
+        assert_eq!(storage.snapshot, None);
     }
 }
