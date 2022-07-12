@@ -1,11 +1,8 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
-use odra_types::{
-    bytesrepr::Bytes,
-    Address, CLValue,
-};
-use odra_types::{EventData, RuntimeArgs, OdraError};
+use odra_types::{bytesrepr::Bytes, Address, CLValue};
+use odra_types::{EventData, OdraError, RuntimeArgs};
 
 use crate::context::ExecutionContext;
 use crate::contract_container::{ContractContainer, EntrypointCall};
@@ -38,7 +35,10 @@ impl MockVm {
             .and_then(|(constructor_name, _, call)| Some([(constructor_name, call)]));
 
         let entrypoints = match constructor_entrypoint {
-            Some(constructor) => constructor.into_iter().chain(entrypoints).collect::<HashMap<_, _>>(),
+            Some(constructor) => constructor
+                .into_iter()
+                .chain(entrypoints)
+                .collect::<HashMap<_, _>>(),
             None => entrypoints,
         };
 
@@ -93,7 +93,7 @@ impl MockVm {
                     self.state.write().unwrap().set_error(err);
                 }
                 None
-            },
+            }
         };
         // Drop the address from stack.
         {
@@ -152,8 +152,18 @@ impl MockVm {
         self.state.read().unwrap().get_dict_value(dict, key)
     }
 
-    pub fn events(&self) -> Vec<EventData> {
-        self.state.read().unwrap().events.clone()
+    pub fn events(&self, contract_address: &Address) -> Vec<EventData> {
+        self.state
+            .read()
+            .unwrap()
+            .events
+            .get(contract_address)
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    pub fn emit_event(&self, event_data: &EventData) {
+        self.state.write().unwrap().emit_event(event_data);
     }
 }
 
@@ -161,7 +171,7 @@ impl MockVm {
 pub struct MockVmState {
     storage: Storage,
     exec_context: ExecutionContext,
-    events: Vec<EventData>,
+    events: HashMap<Address, Vec<EventData>>,
     contract_counter: u32,
     error: Option<OdraError>,
 }
@@ -202,12 +212,14 @@ impl MockVmState {
     }
 
     pub fn emit_event(&mut self, event_data: &EventData) {
-        self.events.push(event_data.clone());
-    }
-
-    pub fn require(expression: bool, msg: &str) {
-        if !expression {
-            panic!("\x1b[91mRequire failed: {}\x1b[0m", msg);
+        let contract_address = self.exec_context.current();
+        let events = self.events.get_mut(&contract_address).and_then(|events| {
+            events.push(event_data.clone());
+            Some(events)
+        });
+        if events.is_none() {
+            self.events
+                .insert(contract_address.clone(), vec![event_data.clone()]);
         }
     }
 
@@ -288,7 +300,7 @@ fn default_accounts() -> Vec<Address> {
 mod tests {
     use std::collections::HashMap;
 
-    use odra_types::{RuntimeArgs, Address, VmError, OdraError, CLValue};
+    use odra_types::{Address, CLValue, EventData, OdraError, RuntimeArgs, VmError};
 
     use crate::EntrypointCall;
 
@@ -301,7 +313,7 @@ mod tests {
 
         // when register two contracts with the same entrypoints
         let entrypoint: Vec<(String, EntrypointCall)> = vec![(String::from("abc"), |_, _| None)];
-        let entrypoints = entrypoint.into_iter().collect::<HashMap<_,_>>();
+        let entrypoints = entrypoint.into_iter().collect::<HashMap<_, _>>();
 
         let address1 = instance.register_contract(None, entrypoints.clone());
         let address2 = instance.register_contract(None, entrypoints);
@@ -315,22 +327,16 @@ mod tests {
         // given an instance with a registered contract having one entrypoint
         let instance = MockVm::default();
 
-        let entrypoint: Vec<(String, EntrypointCall)> = vec![
-            (String::from("abc"), |_, _|  { Some(vec![1,1,1].into()) }),
-        ];
-        let address = instance.register_contract(
-            None,
-            entrypoint.into_iter().collect::<HashMap<_,_>>()
-        );
+        let entrypoint: Vec<(String, EntrypointCall)> =
+            vec![(String::from("abc"), |_, _| Some(vec![1, 1, 1].into()))];
+        let address =
+            instance.register_contract(None, entrypoint.into_iter().collect::<HashMap<_, _>>());
 
         // when call an existing entrypoint
         let result = instance.call_contract(&address, "abc", &RuntimeArgs::new(), false);
-        
+
         // then returns the expected value
-        assert_eq!(
-            result,
-            Some(vec![1,1,1].into())
-        );
+        assert_eq!(result, Some(vec![1, 1, 1].into()));
     }
 
     #[test]
@@ -342,7 +348,7 @@ mod tests {
 
         // when call a contract
         instance.call_contract(&address, "abc", &RuntimeArgs::new(), false);
-        
+
         // then the vm is in error state
         assert_eq!(
             instance.error(),
@@ -354,17 +360,14 @@ mod tests {
     fn test_call_non_existing_entrypoint() {
         // given an instance with a registered contract having one entrypoint
         let instance = MockVm::default();
-        let entrypoint: Vec<(String, EntrypointCall)> = vec![
-            (String::from("abc"), |_, _|  { Some(vec![1,1,1].into()) }),
-        ];
-        let address = instance.register_contract(
-            None,
-            entrypoint.into_iter().collect::<HashMap<_,_>>()
-        );
+        let entrypoint: Vec<(String, EntrypointCall)> =
+            vec![(String::from("abc"), |_, _| Some(vec![1, 1, 1].into()))];
+        let address =
+            instance.register_contract(None, entrypoint.into_iter().collect::<HashMap<_, _>>());
 
         // when call non-existing entrypoint
         instance.call_contract(&address, "cba", &RuntimeArgs::new(), false);
-        
+
         // then the vm is in error state
         assert_eq!(
             instance.error(),
@@ -375,16 +378,17 @@ mod tests {
     #[test]
     fn test_caller_switching() {
         let instance = MockVm::default();
-        
+
         let new_caller = Address::new(b"new caller");
         instance.set_caller(&new_caller);
         // put a contract on stack
-        instance.state.write().unwrap().push_address(&Address::new(b"contract"));
+        instance
+            .state
+            .write()
+            .unwrap()
+            .push_address(&Address::new(b"contract"));
 
-        assert_eq!(
-            instance.caller(),
-            new_caller
-        );
+        assert_eq!(instance.caller(), new_caller);
     }
 
     #[test]
@@ -417,9 +421,45 @@ mod tests {
         let value = CLValue::from_t(32u8).unwrap();
 
         instance.set_dict_value(&collection, &key, &value);
-        
+
         assert_eq!(instance.get_dict_value(&collection, &key), Some(value));
         assert_eq!(instance.get_dict_value(&[], &key), None);
         assert_eq!(instance.get_dict_value(&collection, &[]), None);
+    }
+
+    #[test]
+    fn events() {
+        let instance = MockVm::default();
+
+        let first_contract_address = Address::new(b"contract");
+        // put a contract on stack
+        instance
+            .state
+            .write()
+            .unwrap()
+            .push_address(&first_contract_address);
+
+        let first_event: EventData = vec![1, 2, 3];
+        let second_event: EventData = vec![4, 5, 6];
+        instance.emit_event(&first_event);
+        instance.emit_event(&second_event);
+
+        let second_contract_address = Address::new(b"contract2");
+        // put a next contract on stack
+        instance
+            .state
+            .write()
+            .unwrap()
+            .push_address(&second_contract_address);
+        let third_event: EventData = vec![7, 8, 9];
+        let fourth_event: EventData = vec![11, 22, 33];
+        instance.emit_event(&first_event);
+        instance.emit_event(&second_event);
+
+        let events = instance.events(&first_contract_address);
+        assert_eq!(events, vec![first_event, second_event]);
+
+        let events = instance.events(&second_contract_address);
+        assert_eq!(events, vec![third_event, fourth_event]);
     }
 }
