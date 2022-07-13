@@ -1,13 +1,13 @@
 use derive_more::From;
-use odra_ir::contract_item::{contract_impl::ContractImpl, impl_item::ImplItem};
+use odra_ir::module_item::{impl_item::ImplItem, module_impl::ModuleImpl};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 
-use crate::{GenerateCode, generator::common};
+use crate::{generator::common, GenerateCode};
 
 #[derive(From)]
 pub struct ContractReference<'a> {
-    contract: &'a ContractImpl,
+    contract: &'a ModuleImpl,
 }
 
 as_ref_for_contract_impl_generator!(ContractReference);
@@ -55,7 +55,8 @@ fn build_entrypoints(methods: &Vec<&ImplItem>) -> TokenStream {
         .map(|entrypoint| {
             let sig = &entrypoint.full_sig;
             let entrypoint_name = &entrypoint.ident.to_string();
-            let fn_body = common::generate_fn_body(entrypoint.args.clone(), entrypoint_name, &entrypoint.ret);
+            let fn_body =
+                common::generate_fn_body(entrypoint.args.clone(), entrypoint_name, &entrypoint.ret);
 
             quote! {
                 pub #sig {
@@ -76,9 +77,12 @@ fn build_constructors(methods: &Vec<&ImplItem>) -> TokenStream {
         .map(|entrypoint| {
             let sig = &entrypoint.full_sig;
             let entrypoint_name = entrypoint.ident.to_string();
-            let fn_body =
-                common::generate_fn_body(entrypoint.args.clone(), &entrypoint_name, &syn::ReturnType::Default);
-            
+            let fn_body = common::generate_fn_body(
+                entrypoint.args.clone(),
+                &entrypoint_name,
+                &syn::ReturnType::Default,
+            );
+
             quote! {
                 pub #sig {
                     #fn_body
@@ -87,4 +91,3 @@ fn build_constructors(methods: &Vec<&ImplItem>) -> TokenStream {
         })
         .collect::<TokenStream>()
 }
-

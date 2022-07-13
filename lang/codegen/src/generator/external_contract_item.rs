@@ -7,7 +7,7 @@ use super::common;
 pub fn generate_code(item: ExternalContractItem) -> TokenStream {
     let ExternalContractItem {
         item_trait,
-        item_ref
+        item_ref,
     } = item;
     let trait_ident = &item_trait.ident;
     let ref_ident = &item_ref.ident;

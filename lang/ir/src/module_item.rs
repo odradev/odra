@@ -2,33 +2,33 @@ use std::convert::TryFrom;
 
 use proc_macro2::TokenStream;
 
-use self::{contract_impl::ContractImpl, contract_struct::ContractStruct};
+use self::{module_impl::ModuleImpl, module_struct::ModuleStruct};
 
 pub mod constructor;
-pub mod contract_impl;
-pub mod contract_struct;
 pub mod impl_item;
 pub mod method;
+pub mod module_impl;
+pub mod module_struct;
 
-pub enum ContractItem {
-    Struct(ContractStruct),
-    Impl(ContractImpl),
+pub enum ModuleItem {
+    Struct(ModuleStruct),
+    Impl(ModuleImpl),
 }
 
-impl ContractItem {
+impl ModuleItem {
     pub fn parse(_attr: TokenStream, item: TokenStream) -> Result<Self, syn::Error> {
         let item_struct = syn::parse2::<syn::ItemStruct>(item.clone());
         let item_impl = syn::parse2::<syn::ItemImpl>(item.clone());
 
         if item_struct.is_ok() {
             let item = item_struct.unwrap();
-            return Ok(ContractItem::Struct(ContractStruct::from(item)));
+            return Ok(ModuleItem::Struct(ModuleStruct::from(item)));
         }
 
         if item_impl.is_ok() {
             let item = item_impl.unwrap();
-            let item = ContractImpl::try_from(item)?;
-            return Ok(ContractItem::Impl(item));
+            let item = ModuleImpl::try_from(item)?;
+            return Ok(ModuleItem::Impl(item));
         }
 
         Err(syn::Error::new_spanned(
@@ -46,7 +46,7 @@ mod tests {
 
     #[test]
     fn invalid_usage() {
-        let result = ContractItem::parse(
+        let result = ModuleItem::parse(
             quote!(),
             quote!(
                 fn some_fn(x: u32) -> u32 {
@@ -56,7 +56,7 @@ mod tests {
         );
         assert!(result.is_err());
 
-        let result = ContractItem::parse(
+        let result = ModuleItem::parse(
             quote!(),
             quote!(
                 enum A {}
@@ -67,7 +67,7 @@ mod tests {
 
     #[test]
     fn struct_block() {
-        let result = ContractItem::parse(
+        let result = ModuleItem::parse(
             quote!(),
             quote!(
                 struct ContractItem {
@@ -81,7 +81,7 @@ mod tests {
 
     #[test]
     fn impl_block() {
-        let result = ContractItem::parse(
+        let result = ModuleItem::parse(
             quote!(),
             quote!(
                 impl ContractItem {

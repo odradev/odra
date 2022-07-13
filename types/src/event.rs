@@ -1,4 +1,3 @@
-
 pub trait Event {
     fn emit(&self);
     fn name(&self) -> String;
@@ -16,8 +15,7 @@ impl From<casper_types::bytesrepr::Error> for Error {
     fn from(err: casper_types::bytesrepr::Error) -> Self {
         match err {
             casper_types::bytesrepr::Error::Formatting => Self::Formatting,
-            _ => Self::Parsing
+            _ => Self::Parsing,
         }
     }
-  }
-  
+}

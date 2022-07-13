@@ -2,12 +2,12 @@ pub mod contract_def;
 mod event;
 pub mod instance;
 mod mapping;
-mod variable;
 pub mod test_utils;
+mod variable;
 
 use std::fmt::Debug;
 
-pub use odra_proc_macros::{contract, external_contract, instance, Event};
+pub use odra_proc_macros::{external_contract, instance, module, Event};
 pub use odra_types as types;
 use types::{bytesrepr::FromBytes, Address, CLType, CLTyped, RuntimeArgs};
 pub use variable::Variable;

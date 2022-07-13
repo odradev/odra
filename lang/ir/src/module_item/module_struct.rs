@@ -2,12 +2,12 @@ use quote::{quote, ToTokens};
 
 use crate::attrs::partition_attributes;
 
-pub struct ContractStruct {
+pub struct ModuleStruct {
     is_instantiable: bool,
     item: syn::ItemStruct,
 }
 
-impl From<syn::ItemStruct> for ContractStruct {
+impl From<syn::ItemStruct> for ModuleStruct {
     fn from(item: syn::ItemStruct) -> Self {
         let (_, other_attrs) = partition_attributes(item.attrs).unwrap();
         Self {
@@ -20,7 +20,7 @@ impl From<syn::ItemStruct> for ContractStruct {
     }
 }
 
-impl ToTokens for ContractStruct {
+impl ToTokens for ModuleStruct {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let item_struct = &self.item;
         let span = item_struct.ident.span();
