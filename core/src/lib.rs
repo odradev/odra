@@ -6,11 +6,14 @@ pub mod test_utils;
 mod variable;
 
 use std::fmt::Debug;
-
-pub use odra_proc_macros::{external_contract, instance, module, Event};
-pub use odra_types as types;
 use types::{bytesrepr::FromBytes, Address, CLType, CLTyped, RuntimeArgs};
-pub use variable::Variable;
+
+pub use {
+    mapping::Mapping,
+    odra_proc_macros::{external_contract, instance, module, Event},
+    odra_types as types,
+    variable::Variable
+};
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "mock-vm")] {
@@ -22,7 +25,6 @@ cfg_if::cfg_if! {
         mod external_api;
         pub use external_api::env::ContractEnv;
         pub use external_api::test_env::TestEnv;
-        pub use odra_test_env::ContractContainer;
     }
 }
 

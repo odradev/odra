@@ -7,8 +7,7 @@ members = [
     "mock_vm",
     "mock_vm/macro",
     "modules",
-    "test_env",
-    "test_env/wrapper",
+    "test_env_wrapper",
     "types",
 ]
 

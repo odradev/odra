@@ -286,7 +286,7 @@ impl Default for MockVmState {
     }
 }
 
-fn default_accounts() -> Vec<Address> {
+pub fn default_accounts() -> Vec<Address> {
     vec![
         Address::new(b"first_address"),
         Address::new(b"second_address"),
