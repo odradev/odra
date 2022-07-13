@@ -1,12 +1,12 @@
 use derive_more::From;
-use odra_ir::contract_item::contract_impl::ContractImpl;
+use odra_ir::module_item::module_impl::ModuleImpl;
 use quote::quote;
 
 use crate::GenerateCode;
 
 #[derive(From)]
 pub struct ContractDef<'a> {
-    contract: &'a ContractImpl,
+    contract: &'a ModuleImpl,
 }
 
 as_ref_for_contract_impl_generator!(ContractDef);

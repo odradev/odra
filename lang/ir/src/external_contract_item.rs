@@ -1,9 +1,9 @@
-use proc_macro2::{TokenStream, Ident};
+use proc_macro2::{Ident, TokenStream};
 use quote::format_ident;
 
 pub struct ExternalContractItem {
     pub item_trait: syn::ItemTrait,
-    pub item_ref: RefItem
+    pub item_ref: RefItem,
 }
 
 impl ExternalContractItem {
@@ -12,10 +12,11 @@ impl ExternalContractItem {
 
         let ref_ident = format_ident!("{}Ref", &item_trait.ident);
 
-        let item_ref = RefItem {
-            ident: ref_ident,
-        };
-        Ok(Self { item_trait, item_ref })
+        let item_ref = RefItem { ident: ref_ident };
+        Ok(Self {
+            item_trait,
+            item_ref,
+        })
     }
 }
 

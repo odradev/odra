@@ -4,12 +4,12 @@ use proc_macro2::Ident;
 
 use super::impl_item::ImplItem;
 
-pub struct ContractImpl {
+pub struct ModuleImpl {
     impl_items: Vec<ImplItem>,
     ident: Ident,
 }
 
-impl ContractImpl {
+impl ModuleImpl {
     pub fn impl_items(&self) -> &[ImplItem] {
         self.impl_items.as_ref()
     }
@@ -30,7 +30,7 @@ impl ContractImpl {
     }
 }
 
-impl TryFrom<syn::ItemImpl> for ContractImpl {
+impl TryFrom<syn::ItemImpl> for ModuleImpl {
     type Error = syn::Error;
 
     fn try_from(item_impl: syn::ItemImpl) -> Result<Self, Self::Error> {

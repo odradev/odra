@@ -61,17 +61,17 @@ pub fn generate_code(item: EventItem) -> TokenStream {
 
         impl odra::types::ToBytes for #struct_ident {
           type Error = odra::types::event::Error;
-      
+
           fn serialize(&self) -> Result<Vec<u8>, Self::Error> {
               core::result::Result::Ok(<Self as odra::types::bytesrepr::ToBytes>::to_bytes(self)?)
           }
         }
-        
+
         impl odra::types::FromBytes for #struct_ident {
           type Error = odra::types::event::Error;
-      
+
           type Item = Self;
-      
+
           fn deserialize(bytes: Vec<u8>) -> Result<(Self::Item, Vec<u8>), Self::Error> {
             #type_check
             #deserialize_fields

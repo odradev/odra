@@ -7,10 +7,9 @@ pub use casper_types::*;
 pub type EventData = Vec<u8>;
 pub use error::{OdraError, VmError};
 
-
 pub trait ToBytes: Sized {
     type Error;
-    
+
     fn serialize(&self) -> Result<Vec<u8>, Self::Error>;
 }
 

@@ -3,14 +3,14 @@ extern crate proc_macro;
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, DeriveInput};
 
-mod contract;
 mod event;
 mod external_contract;
 mod instance;
+mod module;
 
 #[proc_macro_attribute]
-pub fn contract(attr: TokenStream, item: TokenStream) -> TokenStream {
-    contract::generate_code(attr, item).into()
+pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
+    module::generate_code(attr, item).into()
 }
 
 #[proc_macro_attribute]

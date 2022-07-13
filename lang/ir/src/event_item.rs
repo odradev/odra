@@ -31,7 +31,11 @@ fn extract_fields(input: DeriveInput) -> Result<Vec<Ident>, syn::Error> {
         Data::Struct(DataStruct {
             fields: Fields::Named(named_fields),
             ..
-        }) => named_fields.named.into_iter().map(|f| f.ident.unwrap()).collect::<Vec<_>>(),
+        }) => named_fields
+            .named
+            .into_iter()
+            .map(|f| f.ident.unwrap())
+            .collect::<Vec<_>>(),
         _ => {
             return Err(syn::Error::new_spanned(
                 input,

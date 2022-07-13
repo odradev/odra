@@ -11,13 +11,13 @@ mod deploy;
 mod reference;
 
 #[derive(From)]
-pub struct ContractImpl<'a> {
-    contract: &'a odra_ir::ContractImpl,
+pub struct ModuleImpl<'a> {
+    contract: &'a odra_ir::ModuleImpl,
 }
 
-as_ref_for_contract_impl_generator!(ContractImpl);
+as_ref_for_contract_impl_generator!(ModuleImpl);
 
-impl GenerateCode for ContractImpl<'_> {
+impl GenerateCode for ModuleImpl<'_> {
     fn generate_code(&self) -> proc_macro2::TokenStream {
         let ident = self.contract.ident();
         let original_item_impls = self.contract.impl_items().iter().map(|item| match item {
