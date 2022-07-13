@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use odra_types::{bytesrepr::Bytes, Address, OdraError, RuntimeArgs};
 
-use crate::{borrow_env, EntrypointCall};
+use crate::{borrow_env, EntrypointCall, mock_vm::default_accounts};
 
 pub struct TestEnv;
 
@@ -41,5 +41,9 @@ impl TestEnv {
 
     pub fn set_caller(address: &Address) {
         borrow_env().set_caller(address)
+    }
+
+    pub fn get_account(n: usize) -> Address {
+        *default_accounts().get(n).unwrap()
     }
 }

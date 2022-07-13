@@ -1,7 +1,7 @@
 use std::{
     hash::Hash,
     marker::PhantomData,
-    ops::{Add, Sub},
+    ops::{Add, Sub}, fmt::Debug,
 };
 
 use crate::ContractEnv;
@@ -59,14 +59,16 @@ impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped + Add<Output 
     }
 }
 
-impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped + Sub<Output = V> + Default>
+impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped + Sub<Output = V> + Default + Debug + PartialOrd>
     Mapping<K, V>
 {
     pub fn subtract(&self, key: &K, value: V) {
         let current_value = self.get(key).unwrap_or_default();
         // TODO: check overflow
-        let new_value = current_value - value;
-        ContractEnv::set_dict_value(&self.name, key, new_value);
+        if value <= current_value {
+            let new_value = current_value - value;
+            ContractEnv::set_dict_value(&self.name, key, new_value);
+        }
     }
 }
 
