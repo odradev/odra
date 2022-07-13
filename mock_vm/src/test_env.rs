@@ -23,21 +23,23 @@ impl TestEnv {
         borrow_env().call_contract(address, entrypoint, args, has_return)
     }
 
-    pub fn execution_result() -> Result<(), OdraError> {
-        match borrow_env().error() {
-            Some(error) => Err(error),
-            None => Ok(()),
-        }
-    }
-
-    pub fn expect_revert<T: std::any::Any>(_: T, err: OdraError) {
+    pub fn assert_exception<F, E>(err: E, block: F)
+    where
+        F: Fn() -> (),
+        E: Into<OdraError>,
+    {
+        block();
         let exec_err = borrow_env()
             .error()
-            .expect("An error expected, but the call succeeded");
-        assert_eq!(exec_err, err);
+            .expect("An error expected, but did not occur");
+        assert_eq!(exec_err, err.into());
     }
 
     pub fn backend_name() -> String {
         borrow_env().get_backend_name()
+    }
+
+    pub fn set_caller(address: &Address) {
+        borrow_env().set_caller(address)
     }
 }
