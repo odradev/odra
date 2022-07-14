@@ -49,7 +49,6 @@ impl ContractEnv {
         E: Into<OdraError>,
     {
         borrow_env().revert(error.into());
-        // dbg!("Called PANIC!");
         panic!("OdraRevert");
     }
 }

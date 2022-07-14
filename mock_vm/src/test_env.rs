@@ -1,4 +1,4 @@
-use std::{collections::HashMap, panic::UnwindSafe};
+use std::{collections::HashMap};
 
 use odra_types::{bytesrepr::Bytes, Address, OdraError, RuntimeArgs};
 

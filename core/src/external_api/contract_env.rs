@@ -1,6 +1,7 @@
 use odra_types::{
+    event::Event,
     bytesrepr::{FromBytes, ToBytes},
-    Address, CLType, CLTyped, CLValue, EventData, RuntimeArgs,
+    Address, CLType, CLTyped, CLValue, EventData, RuntimeArgs, OdraError
 };
 
 #[allow(improper_ctypes)]
@@ -14,7 +15,7 @@ extern "C" {
     fn __get_dict_value(dict: &[u8], key: &[u8]) -> Option<CLValue>;
     fn __emit_event(event: &EventData);
     fn __call_contract(address: &Address, entrypoint: &str, args: &RuntimeArgs) -> Vec<u8>;
-    fn __revert(reason: u32);
+    fn __revert(reason: u32) -> !;
     fn __print(message: &str);
 }
 
@@ -59,17 +60,27 @@ impl ContractEnv {
         unsafe { __get_dict_value(dict.as_bytes(), key.to_bytes().unwrap().as_slice()) }
     }
 
-    pub fn emit_event(event: &EventData) {
-        unsafe { __emit_event(event) }
+    pub fn emit_event<T>(event: &T)
+    where
+        T: ToBytes + Event,
+    {
+        let event_data = event.to_bytes().unwrap();
+        unsafe { __emit_event(&event_data) }
     }
+
 
     pub fn call_contract(address: &Address, entrypoint: &str, args: &RuntimeArgs) -> Vec<u8> {
         unsafe { __call_contract(address, entrypoint, args) }
     }
 
-    pub fn revert(reason: u32) {
-        unsafe { __revert(reason) }
+    pub fn revert<E>(_error: E) -> !
+    where
+        E: Into<OdraError>,
+    {
+        // TODO
+        unsafe { __revert(7) }
     }
+
 
     pub fn print(message: &str) {
         unsafe { __print(message) }

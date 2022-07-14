@@ -1,6 +1,16 @@
+
 cfg_if::cfg_if! {
     if #[cfg(feature = "mock-vm")] {
         pub use odra_mock_vm::test_utils::*;
+    } else if #[cfg(feature = "wasm-test")] {
+        use odra_types::{Address, EventData, FromBytes, ToBytes};
+
+        pub fn get_event<T>(contract_address: &Address, at: i32) -> Result<T, odra_types::event::Error>
+        where
+            T: FromBytes<Item = T, Error = odra_types::event::Error>,
+        {
+            todo!()
+        }
     }
 }
 

@@ -52,9 +52,11 @@ impl GenerateCode for Deploy<'_> {
             impl #struct_ident {
                 fn deploy() -> #ref_ident {
                     let name = stringify!(#struct_name_lowercased);
-                    let address = odra::TestEnv::register_contract(name, odra::types::RuntimeArgs::new());
+                    let address = odra::TestEnv::register_contract(name, &odra::types::RuntimeArgs::new());
                     #ref_ident { address }
                 }
+
+                #constructors
             }
 
             #[cfg(all(test, feature = "mock-vm"))]

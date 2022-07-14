@@ -20,10 +20,10 @@ cfg_if::cfg_if! {
         pub use odra_mock_vm::{TestEnv, ContractEnv};
     } else if #[cfg(feature = "wasm")] {
         mod external_api;
-        pub use external_api::env::ContractEnv;
+        pub use external_api::contract_env::ContractEnv;
     } else if #[cfg(feature = "wasm-test")] {
         mod external_api;
-        pub use external_api::env::ContractEnv;
+        pub use external_api::contract_env::ContractEnv;
         pub use external_api::test_env::TestEnv;
     }
 }
