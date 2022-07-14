@@ -1,11 +1,10 @@
-use odra_test_env::ContractContainer;
 use odra_types::{bytesrepr::Bytes, Address, EventData, RuntimeArgs};
 
 pub struct TestEnv;
 
 impl TestEnv {
-    pub fn register_contract(container: &ContractContainer) -> Address {
-        odra_test_env_wrapper::on_backend(|env| env.register_contract(container))
+    pub fn register_contract(contract_name: &str, args: &RuntimeArgs) -> Address {
+        odra_test_env_wrapper::on_backend(|env| env.register_contract(contract_name, args))
     }
 
     pub fn call_contract(

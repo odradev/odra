@@ -25,7 +25,6 @@ cfg_if::cfg_if! {
         mod external_api;
         pub use external_api::env::ContractEnv;
         pub use external_api::test_env::TestEnv;
-        pub use odra_test_env::ContractContainer;
     }
 }
 

@@ -2,7 +2,6 @@ use std::cell::RefCell;
 
 use dlopen::wrapper::{Container, WrapperApi};
 use dlopen_derive::WrapperApi;
-use odra_test_env::ContractContainer;
 use odra_types::{bytesrepr::Bytes, Address, RuntimeArgs};
 
 thread_local! {
@@ -15,7 +14,7 @@ thread_local! {
 #[derive(WrapperApi)]
 pub struct TestBackend {
     backend_name: fn() -> String,
-    register_contract: fn(container: &ContractContainer) -> Address,
+    register_contract: fn(name: &str, args: &RuntimeArgs) -> Address,
     call_contract:
         fn(addr: &Address, entrypoint: &str, args: &RuntimeArgs, has_return: bool) -> Bytes,
 }
@@ -29,8 +28,8 @@ impl TestEnvWrapper {
         self.test_backend.backend_name()
     }
 
-    pub fn register_contract(&self, container: &ContractContainer) -> Address {
-        self.test_backend.register_contract(container)
+    pub fn register_contract(&self, name: &str, args: &RuntimeArgs) -> Address {
+        self.test_backend.register_contract(name, args)
     }
 
     pub fn call_contract(

@@ -1,7 +1,7 @@
 use casper_types::bytesrepr::{Error, FromBytes};
 use casper_types::{bytesrepr::ToBytes, CLType, CLTyped};
 
-const ADDRESS_LENGTH: usize = 32;
+const ADDRESS_LENGTH: usize = 64;
 
 #[derive(Clone, Copy, PartialEq, Hash, Eq)]
 pub struct Address {
