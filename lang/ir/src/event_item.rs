@@ -1,9 +1,9 @@
 use proc_macro2::Ident;
-use syn::{Data, DataStruct, DeriveInput, Field, Fields};
+use syn::{Data, DataStruct, DeriveInput, Fields};
 
 pub struct EventItem {
     struct_ident: Ident,
-    fields: Vec<Field>,
+    fields: Vec<Ident>,
 }
 
 impl EventItem {
@@ -17,7 +17,7 @@ impl EventItem {
         })
     }
 
-    pub fn fields(&self) -> &[syn::Field] {
+    pub fn fields(&self) -> &[Ident] {
         self.fields.as_ref()
     }
 
@@ -26,12 +26,16 @@ impl EventItem {
     }
 }
 
-fn extract_fields(input: DeriveInput) -> Result<Vec<Field>, syn::Error> {
+fn extract_fields(input: DeriveInput) -> Result<Vec<Ident>, syn::Error> {
     let fields = match input.data {
         Data::Struct(DataStruct {
             fields: Fields::Named(named_fields),
             ..
-        }) => named_fields.named.into_iter().collect::<Vec<_>>(),
+        }) => named_fields
+            .named
+            .into_iter()
+            .map(|f| f.ident.unwrap())
+            .collect::<Vec<_>>(),
         _ => {
             return Err(syn::Error::new_spanned(
                 input,

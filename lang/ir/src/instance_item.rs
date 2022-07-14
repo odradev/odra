@@ -6,7 +6,7 @@ pub struct InstanceItem {
 
 impl InstanceItem {
     pub fn parse(_attr: TokenStream, item: TokenStream) -> Result<Self, syn::Error> {
-        let item_struct = syn::parse2::<syn::ItemStruct>(item.clone())?;
+        let item_struct = syn::parse2::<syn::ItemStruct>(item)?;
 
         Ok(Self { item_struct })
     }
