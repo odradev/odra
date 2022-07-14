@@ -18,39 +18,28 @@ impl TestEnv {
         })
     }
 
-    fn set_caller(address: &Address) {
-        todo!()
-    }
+    // @TODO: implement
+    // pub fn assert_exception<F, E>(err: E, block: F)
+    // where
+    //     F: Fn() -> (),
+    //     E: Into<OdraError>,
+    // {
+    //     block();
+    //     let exec_err = borrow_env()
+    //         .error()
+    //         .expect("An error expected, but did not occur");
+    //     assert_eq!(exec_err, err.into());
+    // }
 
-    fn emit_event(event: &EventData) {
-        todo!()
-    }
+    // pub fn backend_name() -> String {
+    //     borrow_env().get_backend_name()
+    // }
 
-    fn assert_event(event: &EventData, at: i32) {
-        todo!()
-    }
+    // pub fn set_caller(address: &Address) {
+    //     borrow_env().set_caller(address)
+    // }
 
-    fn assert_event_type_emitted(event_name: &str) {
-        todo!()
-    }
-
-    fn assert_event_emitted(event: &EventData) {
-        todo!()
-    }
-
-    fn event(at: i32) -> EventData {
-        todo!()
-    }
-
-    fn assert_event_type(event_name: &str, at: i32) {
-        todo!()
-    }
-
-    fn assert_event_type_not_emitted(event_name: &str) {
-        todo!()
-    }
-
-    fn assert_event_not_emitted(event: &EventData) {
-        todo!()
-    }
+    // pub fn get_account(n: usize) -> Address {
+    //     *default_accounts().get(n).unwrap()
+    // }
 }

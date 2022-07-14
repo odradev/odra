@@ -27,4 +27,8 @@ impl ExecutionContext {
     pub fn len(&self) -> usize {
         self.callstack.len()
     }
+
+    pub fn clear(&mut self) {
+        self.callstack.clear();
+    }
 }

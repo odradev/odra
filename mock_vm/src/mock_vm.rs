@@ -86,6 +86,7 @@ impl MockVm {
         // Call contract from register.
         let register = self.contract_register.read().unwrap();
         let result = register.call(address, String::from(entrypoint), args.clone());
+        // dbg!(result.clone());
         let result = match result {
             Ok(data) => data,
             Err(err) => {
@@ -95,6 +96,7 @@ impl MockVm {
                 None
             }
         };
+        // dbg!(result.clone());
         // Drop the address from stack.
         {
             self.state.write().unwrap().pop_address();
@@ -111,13 +113,16 @@ impl MockVm {
             // If only one address on the call_stack an an error occurred, restore the snapshot
             if state.is_in_caller_context() {
                 state.restore_snapshot();
-            }
+            };
+            // dbg!(state.error.clone());
             None
         }
     }
 
     pub fn revert(&self, error: OdraError) {
-        self.state.write().unwrap().set_error(error)
+        // dbg!("SET ERROR");
+        // dbg!(error.clone());
+        self.state.write().unwrap().set_error(error);
     }
 
     pub fn error(&self) -> Option<OdraError> {

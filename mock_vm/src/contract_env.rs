@@ -44,10 +44,12 @@ impl ContractEnv {
         borrow_env().emit_event(&event_data);
     }
 
-    pub fn revert<E>(error: E)
+    pub fn revert<E>(error: E) -> !
     where
         E: Into<OdraError>,
     {
-        borrow_env().revert(error.into())
+        borrow_env().revert(error.into());
+        // dbg!("Called PANIC!");
+        panic!("OdraRevert");
     }
 }

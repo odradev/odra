@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, panic::UnwindSafe};
 
 use odra_types::{bytesrepr::Bytes, Address, OdraError, RuntimeArgs};
 
@@ -25,10 +25,13 @@ impl TestEnv {
 
     pub fn assert_exception<F, E>(err: E, block: F)
     where
-        F: Fn() -> (),
+        F: Fn() -> () + std::panic::RefUnwindSafe,
         E: Into<OdraError>,
     {
-        block();
+        let _ = std::panic::catch_unwind(|| {
+            block();
+        });
+        
         let exec_err = borrow_env()
             .error()
             .expect("An error expected, but did not occur");
