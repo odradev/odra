@@ -19,14 +19,19 @@ impl TestEnv {
     }
 
     // @TODO: implement
-    pub fn assert_exception<F, E>(err: E, block: F)
+    pub fn assert_exception<E, F>(err: E, block: F)
     where
-        F: Fn() -> (),
         E: Into<OdraError>,
+        F: Fn() -> () + std::panic::RefUnwindSafe,
     {
-        // odra_test_env_wrapper::on_backend(|env| {
-        //     env.assert_exception(err, block);
-        // })
+        let _ = std::panic::catch_unwind(|| {
+            block();
+        });
+        let maybe_error: Option<OdraError> = TestEnv::get_error();
+        if let Some(error) = maybe_error {
+            let expected: OdraError = err.into();
+            assert_eq!(error, expected);
+        }
     }
 
     pub fn backend_name() -> String {
@@ -44,6 +49,12 @@ impl TestEnv {
     pub fn get_account(n: usize) -> Address {
         odra_test_env_wrapper::on_backend(|env| {
             env.get_account(n)
+        })
+    }
+
+    pub fn get_error() -> Option<OdraError> {
+        odra_test_env_wrapper::on_backend(|env| {
+            env.get_error()
         })
     }
 }

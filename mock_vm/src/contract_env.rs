@@ -51,4 +51,5 @@ impl ContractEnv {
         borrow_env().revert(error.into());
         panic!("OdraRevert");
     }
+
 }

@@ -19,32 +19,8 @@ pub struct TestBackend {
         fn(addr: &Address, entrypoint: &str, args: &RuntimeArgs, has_return: bool) -> Bytes,
     get_account: fn(n: usize) -> Address,
     set_caller: fn(address: &Address),
+    get_error: fn() -> Option<OdraError>
 }
-
-// pub struct TestEnvWrapper {
-//     test_backend: Container<TestBackend>,
-// }
-
-// impl TestEnvWrapper {
-//     pub fn backend_name(&self) -> String {
-//         self.test_backend.backend_name()
-//     }
-
-//     pub fn register_contract(&self, name: &str, args: &RuntimeArgs) -> Address {
-//         self.test_backend.register_contract(name, args)
-//     }
-
-//     pub fn call_contract(
-//         &self,
-//         addr: &Address,
-//         entrypoint: &str,
-//         args: &RuntimeArgs,
-//         has_return: bool,
-//     ) -> Bytes {
-//         self.test_backend
-//             .call_contract(addr, entrypoint, args, has_return)
-//     }
-// }
 
 pub fn on_backend<F, R>(f: F) -> R
 where

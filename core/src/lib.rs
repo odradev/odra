@@ -6,7 +6,7 @@ pub mod test_utils;
 mod variable;
 
 use std::fmt::Debug;
-use types::{bytesrepr::FromBytes, Address, CLType, CLTyped, RuntimeArgs};
+use types::{bytesrepr::FromBytes, Address, CLType, CLTyped, RuntimeArgs, OdraError};
 
 pub use {
     mapping::Mapping,
