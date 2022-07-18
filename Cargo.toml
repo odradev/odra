@@ -9,6 +9,7 @@ members = [
     "modules",
     "test_env_wrapper",
     "types",
+    "utils"
 ]
 
 exclude = [

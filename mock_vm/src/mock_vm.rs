@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
-use odra_types::{bytesrepr::Bytes, Address, CLValue};
-use odra_types::{EventData, OdraError, RuntimeArgs};
+use odra_types::{bytesrepr::Bytes, Address, CLValue, EventData, OdraError, RuntimeArgs, event::Error as EventError};
 
 use crate::context::ExecutionContext;
 use crate::contract_container::{ContractContainer, EntrypointCall};
@@ -120,8 +119,6 @@ impl MockVm {
     }
 
     pub fn revert(&self, error: OdraError) {
-        // dbg!("SET ERROR");
-        // dbg!(error.clone());
         self.state.write().unwrap().set_error(error);
     }
 
@@ -170,6 +167,11 @@ impl MockVm {
     pub fn emit_event(&self, event_data: &EventData) {
         self.state.write().unwrap().emit_event(event_data);
     }
+
+    pub fn get_event(&self, address: &Address, index: i32) -> Result<EventData, EventError> {
+        self.state.read().unwrap().get_event(address, index)
+    }
+
 }
 
 #[derive(Clone)]
@@ -226,6 +228,16 @@ impl MockVmState {
             self.events
                 .insert(contract_address.clone(), vec![event_data.clone()]);
         }
+    }
+
+    pub fn get_event(&self, address: &Address, index: i32) -> Result<EventData, EventError> {
+        let events  = self.events.get(address);
+        if events.is_none() {
+            return Err(EventError::IndexOutOfBounds)
+        }
+        let events: &Vec<EventData> = events.unwrap();
+        let event_position = index_to_usize(events.len(), index)?;
+        Ok(events.get(event_position).unwrap().clone())
     }
 
     pub fn push_address(&mut self, address: &Address) {
@@ -299,6 +311,21 @@ pub fn default_accounts() -> Vec<Address> {
         Address::new(b"fourth_address"),
         Address::new(b"fifth_address"),
     ]
+}
+
+fn index_to_usize(len: usize, index: i32) -> Result<usize, EventError> {
+    if index.is_negative() {
+        let abs_idx = index.wrapping_abs() as usize;
+        if abs_idx > len {
+            return Err(EventError::IndexOutOfBounds);
+        }
+        Ok(len - abs_idx)
+    } else {
+        if index as usize >= len {
+            return Err(EventError::IndexOutOfBounds);
+        }
+        Ok(index as usize)
+    }
 }
 
 #[cfg(test)]

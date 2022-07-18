@@ -6,7 +6,6 @@ use odra_ir::{
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, TokenStreamExt};
 use syn::{punctuated::Punctuated, token::Comma, ReturnType, Type, TypePath};
-use convert_case::{Case, Casing};
 
 use crate::GenerateCode;
 
@@ -61,13 +60,13 @@ impl GenerateCode for Deploy<'_> {
             ref_ident.clone(),
         );
 
+        let struct_snake_case = odra_utils::camel_to_snake(&struct_name_lowercased);
 
         quote! {
             #[cfg(all(test, feature = "wasm-test"))]
             impl #struct_ident {
                 fn deploy() -> #ref_ident {
-                    let name = stringify!(#struct_name_lowercased);
-                    let address = odra::TestEnv::register_contract(name, &odra::types::RuntimeArgs::new());
+                    let address = odra::TestEnv::register_contract(&#struct_snake_case, &odra::types::RuntimeArgs::new());
                     #ref_ident { address }
                 }
 
@@ -169,7 +168,7 @@ where
     C: Iterator<Item = &'a Constructor>,
 {
     let struct_name = struct_ident.to_string();
-    let struct_name_snake_case = struct_name.to_case(Case::Snake);
+    let struct_name_snake_case = odra_utils::camel_to_snake(&struct_name);
 
     constructors.map(|constructor| {
         let ty = Type::Path(TypePath { qself: None, path: From::from(ref_ident.clone()) });

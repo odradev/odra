@@ -1,6 +1,6 @@
 use std::{collections::HashMap};
 
-use odra_types::{bytesrepr::Bytes, Address, OdraError, RuntimeArgs};
+use odra_types::{bytesrepr::Bytes, Address, OdraError, RuntimeArgs, EventData, event::Error as EventError};
 
 use crate::{borrow_env, EntrypointCall, mock_vm::default_accounts};
 
@@ -49,4 +49,9 @@ impl TestEnv {
     pub fn get_account(n: usize) -> Address {
         *default_accounts().get(n).unwrap()
     }
+
+    pub fn get_event(address: &Address, index: i32) -> Result<EventData, EventError> {
+        borrow_env().get_event(address, index)
+    }
+    
 }

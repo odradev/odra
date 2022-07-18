@@ -1,4 +1,4 @@
-use odra_types::{bytesrepr::Bytes, Address, EventData, RuntimeArgs, OdraError};
+use odra_types::{bytesrepr::Bytes, Address, EventData, RuntimeArgs, OdraError, event::Error as EventError};
 
 pub struct TestEnv;
 
@@ -27,11 +27,11 @@ impl TestEnv {
         let _ = std::panic::catch_unwind(|| {
             block();
         });
-        let maybe_error: Option<OdraError> = TestEnv::get_error();
-        if let Some(error) = maybe_error {
-            let expected: OdraError = err.into();
-            assert_eq!(error, expected);
-        }
+
+        let expected: OdraError = err.into();
+        let msg = format!("Expected {:?} error.", expected);
+        let error: OdraError = TestEnv::get_error().expect(&msg);
+        assert_eq!(error, expected);
     }
 
     pub fn backend_name() -> String {
@@ -55,6 +55,12 @@ impl TestEnv {
     pub fn get_error() -> Option<OdraError> {
         odra_test_env_wrapper::on_backend(|env| {
             env.get_error()
+        })
+    }
+
+    pub fn get_event(address: &Address, index: i32) -> Result<EventData, EventError> {
+        odra_test_env_wrapper::on_backend(|env| {
+            env.get_event(address, index)
         })
     }
 }

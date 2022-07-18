@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 odra-types = { path = "../types" }
+odra-utils = { path = "../utils" }
 odra-proc-macros = { path = "../lang/proc_macros" }
 odra-mock-vm = { path = "../mock_vm", optional = true }
 odra-test-env-wrapper = { path = "../test_env_wrapper", optional = true  }
