@@ -3,7 +3,6 @@ use odra_types::{
     event::Event,
     Address, CLTyped, CLValue, OdraError,
 };
-
 use crate::borrow_env;
 pub struct ContractEnv;
 
@@ -49,7 +48,7 @@ impl ContractEnv {
         E: Into<OdraError>,
     {
         borrow_env().revert(error.into());
-        panic!("OdraRevert");
+        panic!("OdraRevert")
     }
 
 }

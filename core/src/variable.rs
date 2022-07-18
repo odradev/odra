@@ -8,7 +8,7 @@ use odra_types::{
     CLTyped,
 };
 
-use crate::instance::Instance;
+use crate::{instance::Instance, UnwrapOrRevert};
 use crate::ContractEnv;
 
 #[derive(PartialEq, Debug)]
@@ -51,12 +51,10 @@ impl<T: FromBytes + ToBytes + CLTyped> Variable<T> {
     }
 
     pub fn get(&self) -> Option<T> {
-        let result = ContractEnv::get_var(&self.name);
-
-        if let Some(value) = result {
-            return Some(value.into_t::<T>().unwrap());
+        match ContractEnv::get_var(&self.name) {
+            Some(value) => Some(value.into_t::<T>().unwrap_or_revert()),
+            None => None,
         }
-        None
     }
 
     pub fn set(&self, value: T) {

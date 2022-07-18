@@ -9,6 +9,7 @@ use odra_types::{
     bytesrepr::{FromBytes, ToBytes},
     CLTyped,
 };
+use crate::UnwrapOrRevert;
 
 use crate::instance::Instance;
 
@@ -31,10 +32,10 @@ impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped> Mapping<K, V
     pub fn get(&self, key: &K) -> Option<V> {
         let result = ContractEnv::get_dict_value(&self.name, key);
 
-        if let Some(value) = result {
-            return Some(value.into_t::<V>().unwrap());
+        match result {
+            Some(value) => Some(value.into_t::<V>().unwrap_or_revert()),
+            None => None,
         }
-        None
     }
 
     pub fn set(&self, key: &K, value: V) {

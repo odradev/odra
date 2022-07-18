@@ -1,8 +1,9 @@
 use odra_types::{
     event::Event,
     bytesrepr::{FromBytes, ToBytes},
-    Address, CLType, CLTyped, CLValue, EventData, RuntimeArgs, OdraError
+    Address, CLTyped, CLValue, EventData, RuntimeArgs, OdraError
 };
+use crate::UnwrapOrRevert;
 
 #[allow(improper_ctypes)]
 extern "C" {
@@ -25,7 +26,10 @@ impl ContractEnv {
     }
 
     pub fn set_var<T: CLTyped + ToBytes>(key: &str, value: T) {
-        unsafe { __set_var(key.as_bytes(), &CLValue::from_t(value).unwrap()) }
+        unsafe { 
+            let cl_value = CLValue::from_t(value).unwrap_or_revert();
+            __set_var(key.as_bytes(), &cl_value) 
+        }
     }
 
     pub fn get_var(key: &str) -> Option<CLValue> {
@@ -40,21 +44,26 @@ impl ContractEnv {
         unsafe {
             __set_dict_value(
                 dict.as_bytes(),
-                key.to_bytes().unwrap().as_slice(),
-                &CLValue::from_t(value).unwrap(),
+                key.to_bytes().unwrap_or_revert().as_slice(),
+                &CLValue::from_t(value).unwrap_or_revert(),
             )
         }
     }
 
     pub fn get_dict_value<K: ToBytes>(dict: &str, key: &K) -> Option<CLValue> {
-        unsafe { __get_dict_value(dict.as_bytes(), key.to_bytes().unwrap().as_slice()) }
+        unsafe { 
+            __get_dict_value(
+                dict.as_bytes(), 
+                key.to_bytes().unwrap_or_revert().as_slice()
+            )
+        }
     }
 
     pub fn emit_event<T>(event: &T)
     where
         T: ToBytes + Event,
     {
-        let event_data = event.to_bytes().unwrap();
+        let event_data = event.to_bytes().unwrap_or_revert();
         unsafe { __emit_event(&event_data) }
     }
 

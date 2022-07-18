@@ -23,14 +23,7 @@ impl ContractRegister {
         let contract = self.contracts.get(addr);
         match contract {
             Some(container) => {
-                let maybe_error = std::panic::catch_unwind( || {
-                    container.call(entrypoint, args)
-                });
-                if maybe_error.is_err() {
-                    Err(OdraError::VmError(VmError::Panic))
-                } else {
-                    maybe_error.unwrap()
-                }
+                std::panic::catch_unwind( || container.call(entrypoint, args))?
             },
             None => Err(OdraError::VmError(VmError::InvalidContractAddress)),
         }
