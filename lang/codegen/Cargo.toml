@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+odra-utils = { path = "../../utils" }
 odra-ir = { path = "../ir" }
 proc-macro2 = "1.0.40"
 proc-macro-error = "1.0.4"

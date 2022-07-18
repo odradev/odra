@@ -1,30 +1,3 @@
-framework crates:
-    - odra
-      |-- pub use odra-core::* 
-      |-- pub use odra-macros::* 
-    - odra-core
-      |-- types
-        |-- U256
-        |-- U512
-        |-- Address
-      |-- macro-utils
-        |-- module-ast
-      |-- variable
-      |-- mapping
-      |-- backend-trait
-    - odra-macros
-      |-- Instance
-      |-- module
-      |-- external_contract
-    - odra-mock-vm
-    - odra-modules
-      |-- erc20
-      |-- Ownable
-backend crates:
-    - odra-casper
-        |-- pub use odra-casper-macros::*
-    - odra-casper-macros 
-
 ## Getting Started
 
 ### Init odra module.

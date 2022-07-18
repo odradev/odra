@@ -1,4 +1,4 @@
-use odra_types::{bytesrepr::Bytes, Address, EventData, RuntimeArgs};
+use odra_types::{bytesrepr::Bytes, Address, EventData, RuntimeArgs, OdraError, event::Error as EventError};
 
 pub struct TestEnv;
 
@@ -18,39 +18,49 @@ impl TestEnv {
         })
     }
 
-    fn set_caller(address: &Address) {
-        todo!()
+    // @TODO: implement
+    pub fn assert_exception<E, F>(err: E, block: F)
+    where
+        E: Into<OdraError>,
+        F: Fn() -> () + std::panic::RefUnwindSafe,
+    {
+        let _ = std::panic::catch_unwind(|| {
+            block();
+        });
+
+        let expected: OdraError = err.into();
+        let msg = format!("Expected {:?} error.", expected);
+        let error: OdraError = TestEnv::get_error().expect(&msg);
+        assert_eq!(error, expected);
     }
 
-    fn emit_event(event: &EventData) {
-        todo!()
+    pub fn backend_name() -> String {
+        odra_test_env_wrapper::on_backend(|env| {
+            env.backend_name()
+        })
     }
 
-    fn assert_event(event: &EventData, at: i32) {
-        todo!()
+    pub fn set_caller(address: &Address) {
+        odra_test_env_wrapper::on_backend(|env| {
+            env.set_caller(address);
+        });
     }
 
-    fn assert_event_type_emitted(event_name: &str) {
-        todo!()
+    pub fn get_account(n: usize) -> Address {
+        odra_test_env_wrapper::on_backend(|env| {
+            env.get_account(n)
+        })
     }
 
-    fn assert_event_emitted(event: &EventData) {
-        todo!()
+    pub fn get_error() -> Option<OdraError> {
+        odra_test_env_wrapper::on_backend(|env| {
+            env.get_error()
+        })
     }
 
-    fn event(at: i32) -> EventData {
-        todo!()
-    }
-
-    fn assert_event_type(event_name: &str, at: i32) {
-        todo!()
-    }
-
-    fn assert_event_type_not_emitted(event_name: &str) {
-        todo!()
-    }
-
-    fn assert_event_not_emitted(event: &EventData) {
-        todo!()
+    pub fn get_event(address: &Address, index: i32) -> Result<EventData, EventError> {
+        odra_test_env_wrapper::on_backend(|env| {
+            env.get_event(address, index)
+        })
     }
 }

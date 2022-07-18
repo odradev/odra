@@ -2,29 +2,31 @@ pub mod contract_def;
 mod event;
 pub mod instance;
 mod mapping;
-pub mod test_utils;
 mod variable;
 
 use std::fmt::Debug;
-use types::{bytesrepr::FromBytes, Address, CLType, CLTyped, RuntimeArgs};
+use types::{bytesrepr::FromBytes, Address, CLType, CLTyped, RuntimeArgs, OdraError};
 
 pub use {
     mapping::Mapping,
     odra_proc_macros::{external_contract, instance, module, Event},
     odra_types as types,
+    odra_utils as utils,
     variable::Variable
 };
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "mock-vm")] {
         pub use odra_mock_vm::{TestEnv, ContractEnv};
+        pub mod test_utils;
+    } else if #[cfg(feature = "wasm-test")] {
+        pub mod test_utils;
+        mod external_api;
+        pub use external_api::contract_env::ContractEnv;
+        pub use external_api::test_env::TestEnv;
     } else if #[cfg(feature = "wasm")] {
         mod external_api;
-        pub use external_api::env::ContractEnv;
-    } else if #[cfg(feature = "wasm-test")] {
-        mod external_api;
-        pub use external_api::env::ContractEnv;
-        pub use external_api::test_env::TestEnv;
+        pub use external_api::contract_env::ContractEnv;
     }
 }
 
