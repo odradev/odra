@@ -85,7 +85,6 @@ impl MockVm {
         // Call contract from register.
         let register = self.contract_register.read().unwrap();
         let result = register.call(address, String::from(entrypoint), args.clone());
-        // dbg!(result.clone());
         let result = match result {
             Ok(data) => data,
             Err(err) => {
@@ -95,7 +94,6 @@ impl MockVm {
                 None
             }
         };
-        // dbg!(result.clone());
         // Drop the address from stack.
         {
             self.state.write().unwrap().pop_address();
@@ -113,7 +111,6 @@ impl MockVm {
             if state.is_in_caller_context() {
                 state.restore_snapshot();
             };
-            // dbg!(state.error.clone());
             None
         }
     }
