@@ -11,7 +11,3 @@ members = [
     "types",
     "utils"
 ]
-
-exclude = [
-    "mycontract"
-]
