@@ -233,8 +233,8 @@ impl MockVmState {
             return Err(EventError::IndexOutOfBounds)
         }
         let events: &Vec<EventData> = events.unwrap();
-        let event_position = index_to_usize(events.len(), index)?;
-        Ok(events.get(event_position).unwrap().clone())
+        let event_position = odra_utils::event_absolute_position(events.len(), index)?;
+        Ok(events.get(event_position as usize).unwrap().clone())
     }
 
     pub fn push_address(&mut self, address: &Address) {
@@ -308,21 +308,6 @@ pub fn default_accounts() -> Vec<Address> {
         Address::new(b"fourth_address"),
         Address::new(b"fifth_address"),
     ]
-}
-
-fn index_to_usize(len: usize, index: i32) -> Result<usize, EventError> {
-    if index.is_negative() {
-        let abs_idx = index.wrapping_abs() as usize;
-        if abs_idx > len {
-            return Err(EventError::IndexOutOfBounds);
-        }
-        Ok(len - abs_idx)
-    } else {
-        if index as usize >= len {
-            return Err(EventError::IndexOutOfBounds);
-        }
-        Ok(index as usize)
-    }
 }
 
 #[cfg(test)]

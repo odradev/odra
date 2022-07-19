@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 odra-types = { path = "../types" }
+odra-utils = { path = "../utils" }
 ref_thread_local = "0.1.1"
