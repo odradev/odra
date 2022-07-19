@@ -37,7 +37,6 @@ impl TryFrom<syn::ItemImpl> for ModuleImpl {
         let contract_ident = path.path.segments.last().unwrap().clone().ident;
         let items = item_impl
             .items
-            .clone()
             .into_iter()
             .map(<ImplItem as TryFrom<_>>::try_from)
             .collect::<Result<Vec<_>, syn::Error>>()?;

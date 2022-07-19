@@ -9,7 +9,7 @@ use odra_types::{
 use crate::ContractEnv;
 use crate::{instance::Instance, UnwrapOrRevert};
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct Variable<T> {
     name: String,
     ty: PhantomData<T>,

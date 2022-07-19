@@ -3,7 +3,7 @@ pub trait Event {
     fn name(&self) -> String;
 }
 
-#[derive(Debug, PartialEq, PartialOrd)]
+#[derive(Debug, PartialEq, Eq, PartialOrd)]
 pub enum Error {
     UnexpectedType(String),
     IndexOutOfBounds,
