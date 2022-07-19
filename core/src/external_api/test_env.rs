@@ -24,7 +24,7 @@ impl TestEnv {
     pub fn assert_exception<E, F>(err: E, block: F)
     where
         E: Into<OdraError>,
-        F: Fn() -> () + std::panic::RefUnwindSafe,
+        F: Fn() + std::panic::RefUnwindSafe,
     {
         let _ = std::panic::catch_unwind(|| {
             block();

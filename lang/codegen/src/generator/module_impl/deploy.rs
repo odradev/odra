@@ -261,7 +261,7 @@ where
     let mut tokens = quote!(let mut args = RuntimeArgs::new(););
     tokens.append_all(args.into_iter().map(|arg| {
         let pat = &*arg.pat;
-        quote! { args.insert(stringify!(#pat), #pat).unwrap(); }
+        quote! { odra::UnwrapOrRevert::unwrap_or_revert(args.insert(stringify!(#pat), #pat)); }
     }));
     tokens.extend(quote!(args));
     tokens
