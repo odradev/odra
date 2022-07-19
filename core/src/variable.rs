@@ -1,11 +1,8 @@
-use std::{
-    marker::PhantomData,
-    ops::{Add, Sub},
-};
+use std::marker::PhantomData;
 
 use odra_types::{
     bytesrepr::{FromBytes, ToBytes},
-    CLTyped,
+    CLTyped, arithmetic::{OverflowingAdd, OverflowingSub, ArithmeticsError},
 };
 
 use crate::{instance::Instance, UnwrapOrRevert};
@@ -24,20 +21,25 @@ impl<T: FromBytes + ToBytes + CLTyped + Default> Variable<T> {
     }
 }
 
-impl<V: ToBytes + FromBytes + CLTyped + Add<Output = V> + Default> Variable<V> {
+impl<V: ToBytes + FromBytes + CLTyped + OverflowingAdd + Default> Variable<V> {
     pub fn add(&self, value: V) {
         let current_value = self.get().unwrap_or_default();
-        // TODO: check overflow
-        let new_value = current_value + value;
+        let (new_value, is_overflowed) = current_value.overflowing_add(value);
+        if is_overflowed {
+            ContractEnv::revert(ArithmeticsError::AdditionOverflow)
+        }
         ContractEnv::set_var(&self.name, new_value);
     }
 }
 
-impl<V: ToBytes + FromBytes + CLTyped + Sub<Output = V> + Default> Variable<V> {
+impl<V: ToBytes + FromBytes + CLTyped + OverflowingSub + Default> Variable<V> {
     pub fn subtract(&self, value: V) {
         let current_value = self.get().unwrap_or_default();
-        // TODO: check overflow
-        let new_value = current_value - value;
+
+        let (new_value, is_overflowed) = current_value.overflowing_sub(value);
+        if is_overflowed {
+            ContractEnv::revert(ArithmeticsError::SubtractingOverflow)
+        }
         ContractEnv::set_var(&self.name, new_value);
     }
 }

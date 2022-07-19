@@ -1,4 +1,5 @@
 mod address;
+pub mod arithmetic;
 mod error;
 pub mod event;
 

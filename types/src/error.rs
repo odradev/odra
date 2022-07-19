@@ -1,8 +1,13 @@
 use casper_types::bytesrepr;
 
+use crate::arithmetic::ArithmeticsError;
+
+const MAX_USER_ERROR: u16 = 32767; 
+const USER_ERROR_TOO_HIGH: u16 = 32768; 
+
 #[derive(Clone, Debug)]
 pub enum OdraError {
-    ExecutionError(u32, String),
+    ExecutionError(u16, String),
     VmError(VmError),
     Unknown,
 }
@@ -19,12 +24,15 @@ impl PartialEq for OdraError {
 
 impl OdraError {
     pub fn execution_err(code: u16, msg: &str) -> Self {
-        let shift: u32 = u16::MAX as u32;
-        OdraError::ExecutionError(code as u32 + shift, String::from(msg))
+        if code > MAX_USER_ERROR {
+            OdraError::ExecutionError(USER_ERROR_TOO_HIGH, String::from(msg))
+        } else {
+            OdraError::ExecutionError(code, String::from(msg))
+        }
     }
 
     fn internal_execution_err(code: u16, msg: &str) -> Self {
-        OdraError::ExecutionError(code as u32, String::from(msg))
+        OdraError::ExecutionError(code + USER_ERROR_TOO_HIGH, String::from(msg))
     }
 }
 
@@ -44,7 +52,16 @@ impl From<casper_types::CLValueError> for OdraError {
     fn from(error: casper_types::CLValueError) -> Self {
         match error {
             casper_types::CLValueError::Serialization(err) => err.into(),
-            casper_types::CLValueError::Type(ty) => OdraError::internal_execution_err(5, &format!("Type mismatch {:?}", ty)),
+            casper_types::CLValueError::Type(ty) => OdraError::internal_execution_err(6, &format!("Type mismatch {:?}", ty)),
+        }
+    }
+}
+
+impl Into<OdraError> for ArithmeticsError {
+    fn into(self) -> OdraError {
+        match self {
+            ArithmeticsError::AdditionOverflow => OdraError::internal_execution_err(7, "Addition overflow"),
+            ArithmeticsError::SubtractingOverflow => OdraError::internal_execution_err(8, "Subtracting overflow"),
         }
     }
 }

@@ -1,13 +1,13 @@
 use std::{
     hash::Hash,
     marker::PhantomData,
-    ops::{Add, Sub}, fmt::Debug,
+    fmt::Debug,
 };
 
 use crate::ContractEnv;
 use odra_types::{
     bytesrepr::{FromBytes, ToBytes},
-    CLTyped,
+    CLTyped, arithmetic::{OverflowingAdd, OverflowingSub, ArithmeticsError},
 };
 use crate::UnwrapOrRevert;
 
@@ -49,27 +49,29 @@ impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped + Default> Ma
     }
 }
 
-impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped + Add<Output = V> + Default>
+impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped + OverflowingAdd + Default>
     Mapping<K, V>
 {
     pub fn add(&self, key: &K, value: V) {
         let current_value = self.get(key).unwrap_or_default();
-        // TODO: check overflow
-        let new_value = current_value + value;
+        let (new_value, is_overflowed) = current_value.overflowing_add(value);
+        if is_overflowed {
+            ContractEnv::revert(ArithmeticsError::AdditionOverflow)
+        }
         ContractEnv::set_dict_value(&self.name, key, new_value);
     }
 }
 
-impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped + Sub<Output = V> + Default + Debug + PartialOrd>
+impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped + OverflowingSub + Default + Debug + PartialOrd>
     Mapping<K, V>
 {
     pub fn subtract(&self, key: &K, value: V) {
         let current_value = self.get(key).unwrap_or_default();
-        // TODO: check overflow
-        if value <= current_value {
-            let new_value = current_value - value;
-            ContractEnv::set_dict_value(&self.name, key, new_value);
+        let (new_value, is_overflowed) = current_value.overflowing_sub(value);
+        if is_overflowed {
+            ContractEnv::revert(ArithmeticsError::SubtractingOverflow)
         }
+        ContractEnv::set_dict_value(&self.name, key, new_value);
     }
 }
 
