@@ -2,7 +2,7 @@ use crate::UnwrapOrRevert;
 use odra_types::{
     bytesrepr::{FromBytes, ToBytes},
     event::Event,
-    Address, CLTyped, CLValue, EventData, OdraError, RuntimeArgs,
+    Address, CLTyped, CLValue, EventData, ExecutionError, RuntimeArgs,
 };
 
 #[allow(improper_ctypes)]
@@ -14,7 +14,7 @@ extern "C" {
     fn __get_dict_value(dict: &[u8], key: &[u8]) -> Option<CLValue>;
     fn __emit_event(event: &EventData);
     fn __call_contract(address: &Address, entrypoint: &str, args: &RuntimeArgs) -> Vec<u8>;
-    fn __revert(reason: &OdraError) -> !;
+    fn __revert(reason: &ExecutionError) -> !;
     fn __print(message: &str);
 }
 
@@ -73,7 +73,7 @@ impl ContractEnv {
 
     pub fn revert<E>(error: E) -> !
     where
-        E: Into<OdraError>,
+        E: Into<ExecutionError>,
     {
         unsafe { __revert(&error.into()) }
     }

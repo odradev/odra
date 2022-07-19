@@ -316,7 +316,9 @@ pub fn default_accounts() -> Vec<Address> {
 mod tests {
     use std::collections::HashMap;
 
-    use odra_types::{Address, CLValue, EventData, OdraError, RuntimeArgs, VmError};
+    use odra_types::{
+        Address, CLValue, EventData, ExecutionError, OdraError, RuntimeArgs, VmError,
+    };
 
     use crate::EntrypointCall;
 
@@ -411,9 +413,9 @@ mod tests {
     fn test_revert() {
         let instance = MockVm::default();
 
-        instance.revert(OdraError::Unknown);
+        instance.revert(ExecutionError::new(1, "err").into());
 
-        assert_eq!(instance.error(), Some(OdraError::Unknown));
+        assert_eq!(instance.error(), Some(ExecutionError::new(1, "err").into()));
     }
 
     #[test]
