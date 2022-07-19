@@ -1,9 +1,13 @@
 [package]
 name = "odra"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
+license = "MIT"
+repository = "https://github.com/odradev/odra"
+description = "Utilites uses by the Odra Casper-related crates."
+keywords = ["wasm", "webassembly", "blockchain"]
+categories = ["wasm", "smart contracts"]
 
 [dependencies]
 odra-types = { path = "../types" }
@@ -15,7 +19,7 @@ ref_thread_local = "0.1.1"
 cfg-if = "1.0.0"
 
 [features]
-default = [ "mock-vm" ]
+default = [ "wasm-test" ]
 mock-vm = [ "odra-mock-vm" ]
 wasm = [ ]
 wasm-test = [ "odra-test-env-wrapper" ]

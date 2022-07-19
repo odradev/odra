@@ -1,7 +1,13 @@
 [package]
 name = "odra-utils"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
+authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
+license = "MIT"
+repository = "https://github.com/odradev/odra"
+description = "Utilites uses by the Odra Casper-related crates."
+keywords = ["wasm", "webassembly", "blockchain"]
+categories = ["wasm", "smart contracts"]
 
 [dependencies]
 convert_case = "0.5.0"

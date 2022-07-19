@@ -5,7 +5,6 @@ members = [
     "lang/ir",
     "lang/proc_macros",
     "mock_vm",
-    "modules",
     "test_env_wrapper",
     "types",
     "utils"
