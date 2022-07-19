@@ -7,6 +7,7 @@ use odra_types::{
 
 #[allow(improper_ctypes)]
 extern "C" {
+    fn __self_address() -> Address;
     fn __caller() -> Address;
     fn __set_var(key: &[u8], value: &CLValue);
     fn __get_var(key: &[u8]) -> Option<CLValue>;
@@ -21,6 +22,10 @@ extern "C" {
 pub struct ContractEnv;
 
 impl ContractEnv {
+    pub fn self_address() -> Address {
+        unsafe { __self_address() }
+    }
+
     pub fn caller() -> Address {
         unsafe { __caller() }
     }

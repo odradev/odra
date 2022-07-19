@@ -7,6 +7,10 @@ use odra_types::{
 pub struct ContractEnv;
 
 impl ContractEnv {
+    pub fn self_address() -> Address {
+        borrow_env().callee()
+    }
+
     pub fn caller() -> Address {
         borrow_env().caller()
     }

@@ -130,6 +130,11 @@ impl MockVm {
         self.state.read().unwrap().get_backend_name()
     }
 
+    /// Returns the callee, i.e. the currently executing contract.
+    pub fn callee(&self) -> Address {
+        self.state.read().unwrap().callee()
+    }
+
     pub fn caller(&self) -> Address {
         self.state.read().unwrap().caller()
     }
@@ -185,6 +190,10 @@ pub struct MockVmState {
 impl MockVmState {
     pub fn get_backend_name(&self) -> String {
         "MockVM".to_string()
+    }
+
+    pub fn callee(&self) -> Address {
+        *self.exec_context.current()
     }
 
     pub fn caller(&self) -> Address {
@@ -400,11 +409,7 @@ mod tests {
         let new_caller = Address::new(b"new caller");
         instance.set_caller(&new_caller);
         // put a contract on stack
-        instance
-            .state
-            .write()
-            .unwrap()
-            .push_address(&Address::new(b"contract"));
+        push_address(&instance, &new_caller);
 
         assert_eq!(instance.caller(), new_caller);
     }
@@ -451,11 +456,7 @@ mod tests {
 
         let first_contract_address = Address::new(b"contract");
         // put a contract on stack
-        instance
-            .state
-            .write()
-            .unwrap()
-            .push_address(&first_contract_address);
+        push_address(&instance, &first_contract_address);
 
         let first_event: EventData = vec![1, 2, 3];
         let second_event: EventData = vec![4, 5, 6];
@@ -464,11 +465,8 @@ mod tests {
 
         let second_contract_address = Address::new(b"contract2");
         // put a next contract on stack
-        instance
-            .state
-            .write()
-            .unwrap()
-            .push_address(&second_contract_address);
+        push_address(&instance, &second_contract_address);
+
         let third_event: EventData = vec![7, 8, 9];
         let fourth_event: EventData = vec![11, 22, 33];
         instance.emit_event(&third_event);
@@ -479,5 +477,19 @@ mod tests {
 
         let events = instance.events(&second_contract_address);
         assert_eq!(events, vec![third_event, fourth_event]);
+    }
+
+    #[test]
+    fn test_current_contract_address() {
+        let instance = MockVm::default();
+        let contract_address = Address::new(b"contract");
+        // put a contract on stack
+        push_address(&instance, &contract_address);
+
+        assert_eq!(instance.callee(), contract_address);
+    }
+
+    fn push_address(vm: &MockVm, address: &Address) {
+        vm.state.write().unwrap().push_address(address);
     }
 }

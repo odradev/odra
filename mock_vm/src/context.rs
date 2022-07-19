@@ -7,9 +7,7 @@ pub struct ExecutionContext {
 
 impl ExecutionContext {
     pub fn current(&self) -> &Address {
-        self.callstack
-            .last()
-            .expect("Cannot modify storage in empty context")
+        self.callstack.last().unwrap()
     }
 
     pub fn previous(&self) -> &Address {
