@@ -1,4 +1,4 @@
-use casper_types::{U256, U512, U128};
+use casper_types::{U128, U256, U512};
 
 use crate::OdraError;
 

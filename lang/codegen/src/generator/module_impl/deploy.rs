@@ -168,36 +168,45 @@ where
     let struct_name = struct_ident.to_string();
     let struct_name_snake_case = odra_utils::camel_to_snake(&struct_name);
 
-    constructors.map(|constructor| {
-        let ty = Type::Path(TypePath { qself: None, path: From::from(ref_ident.clone()) });
-        let deploy_fn_ident = format_ident!("deploy_{}", &constructor.ident);
-        let sig = constructor.full_sig.clone();
-        let constructor_ident = &constructor.ident;
+    constructors
+        .map(|constructor| {
+            let ty = Type::Path(TypePath {
+                qself: None,
+                path: From::from(ref_ident.clone()),
+            });
+            let deploy_fn_ident = format_ident!("deploy_{}", &constructor.ident);
+            let sig = constructor.full_sig.clone();
+            let constructor_ident = &constructor.ident;
 
-        let inputs = sig.inputs.into_iter().filter(|i| match i {
-            syn::FnArg::Receiver(_) => false,
-            syn::FnArg::Typed(_) => true,
-        }).collect::<Punctuated<_, _>>();
+            let inputs = sig
+                .inputs
+                .into_iter()
+                .filter(|i| match i {
+                    syn::FnArg::Receiver(_) => false,
+                    syn::FnArg::Typed(_) => true,
+                })
+                .collect::<Punctuated<_, _>>();
 
-        let deploy_fn_sig = syn::Signature {
-            ident: deploy_fn_ident.clone(),
-            output: ReturnType::Type(Default::default(), Box::new(ty)),
-            inputs,
-            ..sig
-        };
+            let deploy_fn_sig = syn::Signature {
+                ident: deploy_fn_ident.clone(),
+                output: ReturnType::Type(Default::default(), Box::new(ty)),
+                inputs,
+                ..sig
+            };
 
-        let args = args_to_runtime_args_stream(&constructor.args);
+            let args = args_to_runtime_args_stream(&constructor.args);
 
-        quote! {
-            #deploy_fn_sig {
-                use odra::types::RuntimeArgs;
-                let mut args = { #args };
-                args.insert("constructor", stringify!(#constructor_ident));
-                let address = odra::TestEnv::register_contract(#struct_name_snake_case, &args);
-                #ref_ident { address }
+            quote! {
+                #deploy_fn_sig {
+                    use odra::types::RuntimeArgs;
+                    let mut args = { #args };
+                    args.insert("constructor", stringify!(#constructor_ident));
+                    let address = odra::TestEnv::register_contract(#struct_name_snake_case, &args);
+                    #ref_ident { address }
+                }
             }
-        }
-    }).collect::<TokenStream>()
+        })
+        .collect::<TokenStream>()
 }
 
 fn build_entrypoints<'a, T>(methods: T, struct_ident: &Ident) -> TokenStream

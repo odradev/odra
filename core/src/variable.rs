@@ -1,12 +1,13 @@
 use std::marker::PhantomData;
 
 use odra_types::{
+    arithmetic::{OverflowingAdd, OverflowingSub},
     bytesrepr::{FromBytes, ToBytes},
-    CLTyped, arithmetic::{OverflowingAdd, OverflowingSub},
+    CLTyped,
 };
 
-use crate::{instance::Instance, UnwrapOrRevert};
 use crate::ContractEnv;
+use crate::{instance::Instance, UnwrapOrRevert};
 
 #[derive(PartialEq, Debug)]
 pub struct Variable<T> {

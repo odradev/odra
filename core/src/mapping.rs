@@ -1,15 +1,12 @@
-use std::{
-    hash::Hash,
-    marker::PhantomData,
-    fmt::Debug,
-};
+use std::{fmt::Debug, hash::Hash, marker::PhantomData};
 
 use crate::ContractEnv;
-use odra_types::{
-    bytesrepr::{FromBytes, ToBytes},
-    CLTyped, arithmetic::{OverflowingAdd, OverflowingSub},
-};
 use crate::UnwrapOrRevert;
+use odra_types::{
+    arithmetic::{OverflowingAdd, OverflowingSub},
+    bytesrepr::{FromBytes, ToBytes},
+    CLTyped,
+};
 
 use crate::instance::Instance;
 
@@ -59,8 +56,10 @@ impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped + Overflowing
     }
 }
 
-impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped + OverflowingSub + Default + Debug + PartialOrd>
-    Mapping<K, V>
+impl<
+        K: ToBytes + CLTyped + Hash,
+        V: ToBytes + FromBytes + CLTyped + OverflowingSub + Default + Debug + PartialOrd,
+    > Mapping<K, V>
 {
     pub fn subtract(&self, key: &K, value: V) {
         let current_value = self.get(key).unwrap_or_default();

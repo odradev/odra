@@ -1,4 +1,6 @@
-use odra_types::{bytesrepr::Bytes, Address, EventData, RuntimeArgs, OdraError, event::Error as EventError};
+use odra_types::{
+    bytesrepr::Bytes, event::Error as EventError, Address, EventData, OdraError, RuntimeArgs,
+};
 
 pub struct TestEnv;
 
@@ -35,9 +37,7 @@ impl TestEnv {
     }
 
     pub fn backend_name() -> String {
-        odra_test_env_wrapper::on_backend(|env| {
-            env.backend_name()
-        })
+        odra_test_env_wrapper::on_backend(|env| env.backend_name())
     }
 
     pub fn set_caller(address: &Address) {
@@ -47,20 +47,14 @@ impl TestEnv {
     }
 
     pub fn get_account(n: usize) -> Address {
-        odra_test_env_wrapper::on_backend(|env| {
-            env.get_account(n)
-        })
+        odra_test_env_wrapper::on_backend(|env| env.get_account(n))
     }
 
     pub fn get_error() -> Option<OdraError> {
-        odra_test_env_wrapper::on_backend(|env| {
-            env.get_error()
-        })
+        odra_test_env_wrapper::on_backend(|env| env.get_error())
     }
 
     pub fn get_event(address: &Address, index: i32) -> Result<EventData, EventError> {
-        odra_test_env_wrapper::on_backend(|env| {
-            env.get_event(address, index)
-        })
+        odra_test_env_wrapper::on_backend(|env| env.get_event(address, index))
     }
 }

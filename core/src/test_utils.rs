@@ -1,4 +1,4 @@
-use odra_types::{EventData, FromBytes, Address};
+use odra_types::{Address, EventData, FromBytes};
 
 pub fn get_event<T>(contract_address: &Address, at: i32) -> Result<T, odra_types::event::Error>
 where
@@ -34,4 +34,3 @@ macro_rules! assert_events {
         )+
     };
 }
-

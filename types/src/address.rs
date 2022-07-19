@@ -15,9 +15,7 @@ impl Address {
 
         let mut bytes = [0u8; ADDRESS_LENGTH];
         bytes.copy_from_slice(bytes_vec.as_slice());
-        Address {
-            data: bytes,
-        }
+        Address { data: bytes }
     }
 
     pub fn bytes(&self) -> &[u8] {

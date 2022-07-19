@@ -1,9 +1,9 @@
-use odra_types::{
-    event::Event,
-    bytesrepr::{FromBytes, ToBytes},
-    Address, CLTyped, CLValue, EventData, RuntimeArgs, OdraError
-};
 use crate::UnwrapOrRevert;
+use odra_types::{
+    bytesrepr::{FromBytes, ToBytes},
+    event::Event,
+    Address, CLTyped, CLValue, EventData, OdraError, RuntimeArgs,
+};
 
 #[allow(improper_ctypes)]
 extern "C" {
@@ -26,9 +26,9 @@ impl ContractEnv {
     }
 
     pub fn set_var<T: CLTyped + ToBytes>(key: &str, value: T) {
-        unsafe { 
+        unsafe {
             let cl_value = CLValue::from_t(value).unwrap_or_revert();
-            __set_var(key.as_bytes(), &cl_value) 
+            __set_var(key.as_bytes(), &cl_value)
         }
     }
 
@@ -51,10 +51,10 @@ impl ContractEnv {
     }
 
     pub fn get_dict_value<K: ToBytes>(dict: &str, key: &K) -> Option<CLValue> {
-        unsafe { 
+        unsafe {
             __get_dict_value(
-                dict.as_bytes(), 
-                key.to_bytes().unwrap_or_revert().as_slice()
+                dict.as_bytes(),
+                key.to_bytes().unwrap_or_revert().as_slice(),
             )
         }
     }
@@ -67,7 +67,6 @@ impl ContractEnv {
         unsafe { __emit_event(&event_data) }
     }
 
-
     pub fn call_contract(address: &Address, entrypoint: &str, args: &RuntimeArgs) -> Vec<u8> {
         unsafe { __call_contract(address, entrypoint, args) }
     }
@@ -78,7 +77,6 @@ impl ContractEnv {
     {
         unsafe { __revert(&error.into()) }
     }
-
 
     pub fn print(message: &str) {
         unsafe { __print(message) }

@@ -1,9 +1,9 @@
+use crate::borrow_env;
 use odra_types::{
     bytesrepr::{FromBytes, ToBytes},
     event::Event,
     Address, CLTyped, CLValue, OdraError,
 };
-use crate::borrow_env;
 pub struct ContractEnv;
 
 impl ContractEnv {
@@ -50,5 +50,4 @@ impl ContractEnv {
         borrow_env().revert(error.into());
         panic!("OdraRevert")
     }
-
 }

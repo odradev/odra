@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
-use odra_types::{bytesrepr::Bytes, Address, CLValue, EventData, OdraError, RuntimeArgs, event::Error as EventError};
+use odra_types::{
+    bytesrepr::Bytes, event::Error as EventError, Address, CLValue, EventData, OdraError,
+    RuntimeArgs,
+};
 
 use crate::context::ExecutionContext;
 use crate::contract_container::{ContractContainer, EntrypointCall};
@@ -168,7 +171,6 @@ impl MockVm {
     pub fn get_event(&self, address: &Address, index: i32) -> Result<EventData, EventError> {
         self.state.read().unwrap().get_event(address, index)
     }
-
 }
 
 #[derive(Clone)]
@@ -228,9 +230,9 @@ impl MockVmState {
     }
 
     pub fn get_event(&self, address: &Address, index: i32) -> Result<EventData, EventError> {
-        let events  = self.events.get(address);
+        let events = self.events.get(address);
         if events.is_none() {
-            return Err(EventError::IndexOutOfBounds)
+            return Err(EventError::IndexOutOfBounds);
         }
         let events: &Vec<EventData> = events.unwrap();
         let event_position = odra_utils::event_absolute_position(events.len(), index)?;

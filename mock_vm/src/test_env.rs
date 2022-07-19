@@ -1,8 +1,10 @@
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
-use odra_types::{bytesrepr::Bytes, Address, OdraError, RuntimeArgs, EventData, event::Error as EventError};
+use odra_types::{
+    bytesrepr::Bytes, event::Error as EventError, Address, EventData, OdraError, RuntimeArgs,
+};
 
-use crate::{borrow_env, EntrypointCall, mock_vm::default_accounts};
+use crate::{borrow_env, mock_vm::default_accounts, EntrypointCall};
 
 pub struct TestEnv;
 
@@ -31,7 +33,7 @@ impl TestEnv {
         let _ = std::panic::catch_unwind(|| {
             block();
         });
-        
+
         let exec_err = borrow_env()
             .error()
             .expect("An error expected, but did not occur");
@@ -53,5 +55,4 @@ impl TestEnv {
     pub fn get_event(address: &Address, index: i32) -> Result<EventData, EventError> {
         borrow_env().get_event(address, index)
     }
-    
 }

@@ -2,8 +2,8 @@ use casper_types::bytesrepr;
 
 use crate::arithmetic::ArithmeticsError;
 
-const MAX_USER_ERROR: u16 = 32767; 
-const USER_ERROR_TOO_HIGH: u16 = 32768; 
+const MAX_USER_ERROR: u16 = 32767;
+const USER_ERROR_TOO_HIGH: u16 = 32768;
 
 #[derive(Clone, Debug)]
 pub enum OdraError {
@@ -39,11 +39,17 @@ impl OdraError {
 impl From<bytesrepr::Error> for OdraError {
     fn from(error: bytesrepr::Error) -> Self {
         match error {
-            bytesrepr::Error::EarlyEndOfStream => OdraError::internal_execution_err(1, "EarlyEndOfStream"),
+            bytesrepr::Error::EarlyEndOfStream => {
+                OdraError::internal_execution_err(1, "EarlyEndOfStream")
+            }
             bytesrepr::Error::Formatting => OdraError::internal_execution_err(2, "Formatting"),
-            bytesrepr::Error::LeftOverBytes => OdraError::internal_execution_err(3, "LeftOverBytes"),
+            bytesrepr::Error::LeftOverBytes => {
+                OdraError::internal_execution_err(3, "LeftOverBytes")
+            }
             bytesrepr::Error::OutOfMemory => OdraError::internal_execution_err(4, "OutOfMemory"),
-            bytesrepr::Error::ExceededRecursionDepth => OdraError::internal_execution_err(5, "ExceededRecursionDepth"),
+            bytesrepr::Error::ExceededRecursionDepth => {
+                OdraError::internal_execution_err(5, "ExceededRecursionDepth")
+            }
         }
     }
 }
@@ -52,7 +58,9 @@ impl From<casper_types::CLValueError> for OdraError {
     fn from(error: casper_types::CLValueError) -> Self {
         match error {
             casper_types::CLValueError::Serialization(err) => err.into(),
-            casper_types::CLValueError::Type(ty) => OdraError::internal_execution_err(6, &format!("Type mismatch {:?}", ty)),
+            casper_types::CLValueError::Type(ty) => {
+                OdraError::internal_execution_err(6, &format!("Type mismatch {:?}", ty))
+            }
         }
     }
 }
@@ -60,8 +68,12 @@ impl From<casper_types::CLValueError> for OdraError {
 impl Into<OdraError> for ArithmeticsError {
     fn into(self) -> OdraError {
         match self {
-            ArithmeticsError::AdditionOverflow => OdraError::internal_execution_err(7, "Addition overflow"),
-            ArithmeticsError::SubtractingOverflow => OdraError::internal_execution_err(8, "Subtracting overflow"),
+            ArithmeticsError::AdditionOverflow => {
+                OdraError::internal_execution_err(7, "Addition overflow")
+            }
+            ArithmeticsError::SubtractingOverflow => {
+                OdraError::internal_execution_err(8, "Subtracting overflow")
+            }
         }
     }
 }
@@ -78,5 +90,5 @@ pub enum VmError {
     InvalidContractAddress,
     InvalidContext,
     Other(String),
-    Panic
+    Panic,
 }

@@ -2,8 +2,8 @@ pub mod contract_def;
 mod event;
 pub mod instance;
 mod mapping;
-mod variable;
 mod unwrap_or_revert;
+mod variable;
 
 use std::fmt::Debug;
 use types::{bytesrepr::FromBytes, Address, CLType, CLTyped, RuntimeArgs};
@@ -11,10 +11,9 @@ use types::{bytesrepr::FromBytes, Address, CLType, CLTyped, RuntimeArgs};
 pub use {
     mapping::Mapping,
     odra_proc_macros::{external_contract, instance, module, Event},
-    odra_types as types,
-    odra_utils as utils,
-    variable::Variable,
+    odra_types as types, odra_utils as utils,
     unwrap_or_revert::UnwrapOrRevert,
+    variable::Variable,
 };
 
 cfg_if::cfg_if! {
