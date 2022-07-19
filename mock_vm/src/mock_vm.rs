@@ -469,8 +469,8 @@ mod tests {
             .push_address(&second_contract_address);
         let third_event: EventData = vec![7, 8, 9];
         let fourth_event: EventData = vec![11, 22, 33];
-        instance.emit_event(&first_event);
-        instance.emit_event(&second_event);
+        instance.emit_event(&third_event);
+        instance.emit_event(&fourth_event);
 
         let events = instance.events(&first_contract_address);
         assert_eq!(events, vec![first_event, second_event]);
