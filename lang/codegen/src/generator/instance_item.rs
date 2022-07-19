@@ -11,8 +11,7 @@ pub fn generate_code(item: InstanceItem) -> TokenStream {
         .clone()
         .fields
         .into_iter()
-        .map(|field| WrappedField(field).to_token_stream())
-        .flatten()
+        .flat_map(|field| WrappedField(field).to_token_stream())
         .collect();
 
     quote! {

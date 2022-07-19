@@ -188,7 +188,7 @@ where
                 .collect::<Punctuated<_, _>>();
 
             let deploy_fn_sig = syn::Signature {
-                ident: deploy_fn_ident.clone(),
+                ident: deploy_fn_ident,
                 output: ReturnType::Type(Default::default(), Box::new(ty)),
                 inputs,
                 ..sig

@@ -33,12 +33,11 @@ pub fn generate_code(item: EventItem) -> TokenStream {
 
     let append_bytes = fields
         .iter()
-        .map(|ident| {
+        .flat_map(|ident| {
             quote! {
               vec.extend(self.#ident.to_bytes()?);
             }
         })
-        .flatten()
         .collect::<TokenStream>();
 
     let type_check = quote! {

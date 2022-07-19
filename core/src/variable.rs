@@ -47,10 +47,7 @@ impl<T: FromBytes + ToBytes + CLTyped> Variable<T> {
     }
 
     pub fn get(&self) -> Option<T> {
-        match ContractEnv::get_var(&self.name) {
-            Some(value) => Some(value.into_t::<T>().unwrap_or_revert()),
-            None => None,
-        }
+        ContractEnv::get_var(&self.name).map(|value| value.into_t::<T>().unwrap_or_revert())
     }
 
     pub fn set(&self, value: T) {

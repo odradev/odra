@@ -28,11 +28,7 @@ impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped> Mapping<K, V
 
     pub fn get(&self, key: &K) -> Option<V> {
         let result = ContractEnv::get_dict_value(&self.name, key);
-
-        match result {
-            Some(value) => Some(value.into_t::<V>().unwrap_or_revert()),
-            None => None,
-        }
+        result.map(|value| value.into_t::<V>().unwrap_or_revert())
     }
 
     pub fn set(&self, key: &K, value: V) {

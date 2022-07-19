@@ -45,7 +45,7 @@ impl GenerateCode for ContractReference<'_> {
     }
 }
 
-fn build_entrypoints(methods: &Vec<&ImplItem>) -> TokenStream {
+fn build_entrypoints(methods: &[&ImplItem]) -> TokenStream {
     methods
         .iter()
         .filter_map(|item| match item {
@@ -67,7 +67,7 @@ fn build_entrypoints(methods: &Vec<&ImplItem>) -> TokenStream {
         .collect::<TokenStream>()
 }
 
-fn build_constructors(methods: &Vec<&ImplItem>) -> TokenStream {
+fn build_constructors(methods: &[&ImplItem]) -> TokenStream {
     methods
         .iter()
         .filter_map(|item| match item {

@@ -34,7 +34,7 @@ impl MockVm {
 
         let constructor_entrypoint = constructor
             .clone()
-            .and_then(|(constructor_name, _, call)| Some([(constructor_name, call)]));
+            .map(|(constructor_name, _, call)| [(constructor_name, call)]);
 
         let entrypoints = match constructor_entrypoint {
             Some(constructor) => constructor
@@ -50,7 +50,7 @@ impl MockVm {
             self.contract_register
                 .write()
                 .unwrap()
-                .add(address.clone(), contract);
+                .add(address, contract);
         }
 
         // Call init if needed.
@@ -62,7 +62,7 @@ impl MockVm {
             self.contract_register
                 .write()
                 .unwrap()
-                .add(address.clone(), contract);
+                .add(address, contract);
         }
         address
     }
@@ -188,7 +188,7 @@ impl MockVmState {
     }
 
     pub fn caller(&self) -> Address {
-        self.exec_context.previous().clone()
+        *self.exec_context.previous()
     }
 
     pub fn set_caller(&mut self, address: &Address) {
@@ -198,34 +198,34 @@ impl MockVmState {
 
     pub fn set_var(&mut self, key: &[u8], value: &CLValue) {
         let ctx = self.exec_context.current();
-        self.storage.insert_single_value(&ctx, key, value.clone());
+        self.storage.insert_single_value(ctx, key, value.clone());
     }
 
     pub fn get_var(&self, key: &[u8]) -> Option<CLValue> {
         let ctx = self.exec_context.current();
-        self.storage.get_value(&ctx, key)
+        self.storage.get_value(ctx, key)
     }
 
     pub fn set_dict_value(&mut self, dict: &[u8], key: &[u8], value: &CLValue) {
         let ctx = self.exec_context.current();
         self.storage
-            .insert_dict_value(&ctx, dict, key, value.clone());
+            .insert_dict_value(ctx, dict, key, value.clone());
     }
 
     pub fn get_dict_value(&self, dict: &[u8], key: &[u8]) -> Option<CLValue> {
         let ctx = self.exec_context.current();
-        self.storage.get_dict_value(&ctx, dict, key)
+        self.storage.get_dict_value(ctx, dict, key)
     }
 
     pub fn emit_event(&mut self, event_data: &EventData) {
         let contract_address = self.exec_context.current();
-        let events = self.events.get_mut(&contract_address).and_then(|events| {
+        let events = self.events.get_mut(contract_address).map(|events| {
             events.push(event_data.clone());
-            Some(events)
+            events
         });
         if events.is_none() {
             self.events
-                .insert(contract_address.clone(), vec![event_data.clone()]);
+                .insert(*contract_address, vec![event_data.clone()]);
         }
     }
 
@@ -240,7 +240,7 @@ impl MockVmState {
     }
 
     pub fn push_address(&mut self, address: &Address) {
-        self.exec_context.push(address.clone());
+        self.exec_context.push(*address);
     }
 
     pub fn pop_address(&mut self) {

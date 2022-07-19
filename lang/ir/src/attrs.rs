@@ -141,13 +141,7 @@ where
             Attribute::Other(other_attr) => Either::Right(other_attr),
         });
 
-    ensure_no_duplicates(
-        odra_attrs
-            .clone()
-            .into_iter()
-            .map(|attr| attr.kinds)
-            .flatten(),
-    )?;
+    ensure_no_duplicates(odra_attrs.clone().into_iter().flat_map(|attr| attr.kinds))?;
     Ok((odra_attrs, other_attrs))
 }
 

@@ -21,11 +21,7 @@ impl ModuleImpl {
     pub fn methods(&self) -> Vec<&ImplItem> {
         self.impl_items
             .iter()
-            .filter(|i| match i {
-                ImplItem::Method(_) => true,
-                ImplItem::Constructor(_) => true,
-                _ => false,
-            })
+            .filter(|i| matches!(i, ImplItem::Method(_) | ImplItem::Constructor(_)))
             .collect::<Vec<_>>()
     }
 }
@@ -43,7 +39,7 @@ impl TryFrom<syn::ItemImpl> for ModuleImpl {
             .items
             .clone()
             .into_iter()
-            .map(|item| <ImplItem as TryFrom<_>>::try_from(item))
+            .map(<ImplItem as TryFrom<_>>::try_from)
             .collect::<Result<Vec<_>, syn::Error>>()?;
 
         Ok(Self {

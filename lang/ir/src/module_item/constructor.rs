@@ -17,7 +17,7 @@ impl ToTokens for Constructor {
         let args = &self
             .args
             .iter()
-            .map(|arg| {
+            .flat_map(|arg| {
                 let name = &*arg.pat;
                 let ty = &*arg.ty;
                 let ty = quote!(<#ty as odra::types::CLTyped>::cl_type());
@@ -28,7 +28,6 @@ impl ToTokens for Constructor {
                     },
                 }
             })
-            .flatten()
             .collect::<proc_macro2::TokenStream>();
         let ep = quote! {
             odra::contract_def::Entrypoint {
@@ -58,7 +57,7 @@ impl TryFrom<syn::ImplItemMethod> for Constructor {
                 syn::FnArg::Typed(pat) => Some(pat.clone()),
             })
             .collect::<syn::punctuated::Punctuated<syn::PatType, syn::token::Comma>>();
-        if let syn::ReturnType::Type(_, _) = value.clone().sig.output {
+        if let syn::ReturnType::Type(_, _) = value.sig.output {
             return Err(syn::Error::new_spanned(
                 value.sig,
                 "Constructor must not return value.",

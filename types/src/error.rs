@@ -47,13 +47,11 @@ impl From<casper_types::CLValueError> for ExecutionError {
     }
 }
 
-impl Into<ExecutionError> for ArithmeticsError {
-    fn into(self) -> ExecutionError {
-        match self {
-            ArithmeticsError::AdditionOverflow => ExecutionError::internal(7, "Addition overflow"),
-            ArithmeticsError::SubtractingOverflow => {
-                ExecutionError::internal(8, "Subtracting overflow")
-            }
+impl From<ArithmeticsError> for ExecutionError {
+    fn from(error: ArithmeticsError) -> Self {
+        match error {
+            ArithmeticsError::AdditionOverflow => Self::internal(7, "Addition overflow"),
+            ArithmeticsError::SubtractingOverflow => Self::internal(8, "Subtracting overflow"),
         }
     }
 }
@@ -91,9 +89,9 @@ impl PartialEq for ExecutionError {
     }
 }
 
-impl Into<OdraError> for ExecutionError {
-    fn into(self) -> OdraError {
-        OdraError::ExecutionError(self)
+impl From<ExecutionError> for OdraError {
+    fn from(error: ExecutionError) -> Self {
+        Self::ExecutionError(error)
     }
 }
 
