@@ -7,7 +7,7 @@ use std::{
 use crate::ContractEnv;
 use odra_types::{
     bytesrepr::{FromBytes, ToBytes},
-    CLTyped, arithmetic::{OverflowingAdd, OverflowingSub, ArithmeticsError},
+    CLTyped, arithmetic::{OverflowingAdd, OverflowingSub},
 };
 use crate::UnwrapOrRevert;
 
@@ -54,10 +54,7 @@ impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped + Overflowing
 {
     pub fn add(&self, key: &K, value: V) {
         let current_value = self.get(key).unwrap_or_default();
-        let (new_value, is_overflowed) = current_value.overflowing_add(value);
-        if is_overflowed {
-            ContractEnv::revert(ArithmeticsError::AdditionOverflow)
-        }
+        let new_value = current_value.overflowing_add(value).unwrap_or_revert();
         ContractEnv::set_dict_value(&self.name, key, new_value);
     }
 }
@@ -67,10 +64,7 @@ impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped + Overflowing
 {
     pub fn subtract(&self, key: &K, value: V) {
         let current_value = self.get(key).unwrap_or_default();
-        let (new_value, is_overflowed) = current_value.overflowing_sub(value);
-        if is_overflowed {
-            ContractEnv::revert(ArithmeticsError::SubtractingOverflow)
-        }
+        let new_value = current_value.overflowing_sub(value).unwrap_or_revert();
         ContractEnv::set_dict_value(&self.name, key, new_value);
     }
 }

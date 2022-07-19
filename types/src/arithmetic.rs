@@ -1,18 +1,24 @@
 use casper_types::{U256, U512, U128};
 
+use crate::OdraError;
+
 pub trait OverflowingAdd: Sized {
-    fn overflowing_add(self, rhs: Self) -> (Self, bool);
+    fn overflowing_add(self, rhs: Self) -> Result<Self, OdraError>;
 }
 
 pub trait OverflowingSub: Sized {
-    fn overflowing_sub(self, rhs: Self) -> (Self, bool);
+    fn overflowing_sub(self, rhs: Self) -> Result<Self, OdraError>;
 }
 
 macro_rules! impl_overflowing_add {
     ( $( $ty:ty ),+ ) => {
         $( impl OverflowingAdd for $ty {
-            fn overflowing_add(self, rhs: Self) -> (Self, bool) {
-                self.overflowing_add(rhs)
+            fn overflowing_add(self, rhs: Self) -> Result<Self, OdraError> {
+                let (res, is_overflowed)  = self.overflowing_add(rhs);
+                match is_overflowed {
+                    true => Err(ArithmeticsError::AdditionOverflow.into()),
+                    false => Ok(res)
+                }
             }
         })+
     };
@@ -21,8 +27,12 @@ macro_rules! impl_overflowing_add {
 macro_rules! impl_overflowing_sub {
     ( $( $ty:ty ),+ ) => {
         $( impl OverflowingSub for $ty {
-            fn overflowing_sub(self, rhs: Self) -> (Self, bool) {
-                self.overflowing_sub(rhs)
+            fn overflowing_sub(self, rhs: Self) -> Result<Self, OdraError> {
+                let (res, is_overflowed)  = self.overflowing_sub(rhs);
+                match is_overflowed {
+                    true => Err(ArithmeticsError::SubtractingOverflow.into()),
+                    false => Ok(res)
+                }
             }
         })+
     };
