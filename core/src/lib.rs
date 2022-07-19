@@ -3,16 +3,18 @@ mod event;
 pub mod instance;
 mod mapping;
 mod variable;
+mod unwrap_or_revert;
 
 use std::fmt::Debug;
-use types::{bytesrepr::FromBytes, Address, CLType, CLTyped, RuntimeArgs, OdraError};
+use types::{bytesrepr::FromBytes, Address, CLType, CLTyped, RuntimeArgs};
 
 pub use {
     mapping::Mapping,
     odra_proc_macros::{external_contract, instance, module, Event},
     odra_types as types,
     odra_utils as utils,
-    variable::Variable
+    variable::Variable,
+    unwrap_or_revert::UnwrapOrRevert,
 };
 
 cfg_if::cfg_if! {
@@ -55,31 +57,5 @@ where
         } else {
             compile_error!("Unknown feature")
         }
-    }
-}
-
-pub trait UnwrapOrRevert<T> {
-    fn unwrap_or_revert_with<E: Into<OdraError>>(self, err: E) -> T;
-
-    fn unwrap_or_revert(self) -> T;
-}
-
-impl<T, E: Into<OdraError>> UnwrapOrRevert<T> for Result<T, E> {
-    fn unwrap_or_revert_with<F: Into<OdraError>>(self, err: F) -> T {
-        self.unwrap_or_else(|_| ContractEnv::revert(err.into()))
-    }
-
-    fn unwrap_or_revert(self) -> T {
-        self.unwrap_or_else(|err| ContractEnv::revert(err.into()))
-    }
-}
-
-impl<T> UnwrapOrRevert<T> for Option<T> {
-    fn unwrap_or_revert_with<E: Into<OdraError>>(self, err: E) -> T {
-        self.unwrap_or_else(|| ContractEnv::revert(err.into()))
-    }
-
-    fn unwrap_or_revert(self) -> T {
-        self.unwrap_or_else(|| ContractEnv::revert(OdraError::Unknown))
     }
 }
