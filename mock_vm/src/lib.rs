@@ -7,7 +7,6 @@ mod contract_register;
 mod mock_vm;
 mod storage;
 mod test_env;
-pub mod test_utils;
 
 pub use {contract_container::EntrypointCall, contract_env::ContractEnv, test_env::TestEnv};
 

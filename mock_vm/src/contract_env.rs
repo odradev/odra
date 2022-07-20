@@ -1,13 +1,16 @@
+use crate::borrow_env;
 use odra_types::{
     bytesrepr::{FromBytes, ToBytes},
     event::Event,
-    Address, CLTyped, CLValue, OdraError,
+    Address, CLTyped, CLValue, ExecutionError,
 };
-
-use crate::borrow_env;
 pub struct ContractEnv;
 
 impl ContractEnv {
+    pub fn self_address() -> Address {
+        borrow_env().callee()
+    }
+
     pub fn caller() -> Address {
         borrow_env().caller()
     }
@@ -46,10 +49,10 @@ impl ContractEnv {
 
     pub fn revert<E>(error: E) -> !
     where
-        E: Into<OdraError>,
+        E: Into<ExecutionError>,
     {
-        borrow_env().revert(error.into());
-        panic!("OdraRevert");
+        let execution_error: ExecutionError = error.into();
+        borrow_env().revert(execution_error.into());
+        panic!("OdraRevert")
     }
-
 }

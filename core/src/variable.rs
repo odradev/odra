@@ -1,17 +1,15 @@
-use std::{
-    marker::PhantomData,
-    ops::{Add, Sub},
-};
+use std::marker::PhantomData;
 
 use odra_types::{
+    arithmetic::{OverflowingAdd, OverflowingSub},
     bytesrepr::{FromBytes, ToBytes},
     CLTyped,
 };
 
-use crate::instance::Instance;
 use crate::ContractEnv;
+use crate::{instance::Instance, UnwrapOrRevert};
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct Variable<T> {
     name: String,
     ty: PhantomData<T>,
@@ -24,20 +22,18 @@ impl<T: FromBytes + ToBytes + CLTyped + Default> Variable<T> {
     }
 }
 
-impl<V: ToBytes + FromBytes + CLTyped + Add<Output = V> + Default> Variable<V> {
+impl<V: ToBytes + FromBytes + CLTyped + OverflowingAdd + Default> Variable<V> {
     pub fn add(&self, value: V) {
         let current_value = self.get().unwrap_or_default();
-        // TODO: check overflow
-        let new_value = current_value + value;
+        let new_value = current_value.overflowing_add(value).unwrap_or_revert();
         ContractEnv::set_var(&self.name, new_value);
     }
 }
 
-impl<V: ToBytes + FromBytes + CLTyped + Sub<Output = V> + Default> Variable<V> {
+impl<V: ToBytes + FromBytes + CLTyped + OverflowingSub + Default> Variable<V> {
     pub fn subtract(&self, value: V) {
         let current_value = self.get().unwrap_or_default();
-        // TODO: check overflow
-        let new_value = current_value - value;
+        let new_value = current_value.overflowing_sub(value).unwrap_or_revert();
         ContractEnv::set_var(&self.name, new_value);
     }
 }
@@ -51,12 +47,7 @@ impl<T: FromBytes + ToBytes + CLTyped> Variable<T> {
     }
 
     pub fn get(&self) -> Option<T> {
-        let result = ContractEnv::get_var(&self.name);
-
-        if let Some(value) = result {
-            return Some(value.into_t::<T>().unwrap());
-        }
-        None
+        ContractEnv::get_var(&self.name).map(|value| value.into_t::<T>().unwrap_or_revert())
     }
 
     pub fn set(&self, value: T) {

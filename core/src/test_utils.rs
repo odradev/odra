@@ -1,8 +1,8 @@
-use odra_types::{EventData, FromBytes, Address, event::Error as EventError};
+use odra_types::{Address, EventData, FromBytes};
 
-pub fn get_event<T>(contract_address: &Address, at: i32) -> Result<T, odra_types::event::Error>
+pub fn get_event<T>(contract_address: &Address, at: i32) -> Result<T, odra_types::event::EventError>
 where
-    T: FromBytes<Item = T, Error = odra_types::event::Error>,
+    T: FromBytes<Item = T, Error = odra_types::event::EventError>,
 {
     let event: EventData = crate::TestEnv::get_event(contract_address, at)?;
     match T::deserialize(event) {
@@ -33,19 +33,4 @@ macro_rules! assert_events {
             );
         )+
     };
-}
-
-pub fn event_absolute_position(len: u32, index: i32) -> Result<u32, EventError> {
-    if index.is_negative() {
-        let abs_idx = index.wrapping_abs() as u32;
-        if abs_idx > len {
-            return Err(EventError::IndexOutOfBounds);
-        }
-        Ok(len - abs_idx)
-    } else {
-        if index as u32 >= len {
-            return Err(EventError::IndexOutOfBounds);
-        }
-        Ok(index as u32)
-    }
 }

@@ -52,7 +52,7 @@ mod tests {
         entrypoints.insert(ep_name.clone(), ep);
         let instance = ContractContainer::new("c1", entrypoints);
 
-        let result = instance.call(ep_name.clone(), RuntimeArgs::new());
+        let result = instance.call(ep_name, RuntimeArgs::new());
         assert!(result.is_ok());
     }
 }

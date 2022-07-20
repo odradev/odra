@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
-use odra_types::{bytesrepr::Bytes, Address, CLValue, EventData, OdraError, RuntimeArgs, event::Error as EventError};
+use odra_types::{
+    bytesrepr::Bytes, event::EventError, Address, CLValue, EventData, OdraError, RuntimeArgs,
+};
 
 use crate::context::ExecutionContext;
 use crate::contract_container::{ContractContainer, EntrypointCall};
@@ -31,7 +33,7 @@ impl MockVm {
 
         let constructor_entrypoint = constructor
             .clone()
-            .and_then(|(constructor_name, _, call)| Some([(constructor_name, call)]));
+            .map(|(constructor_name, _, call)| [(constructor_name, call)]);
 
         let entrypoints = match constructor_entrypoint {
             Some(constructor) => constructor
@@ -47,7 +49,7 @@ impl MockVm {
             self.contract_register
                 .write()
                 .unwrap()
-                .add(address.clone(), contract);
+                .add(address, contract);
         }
 
         // Call init if needed.
@@ -59,7 +61,7 @@ impl MockVm {
             self.contract_register
                 .write()
                 .unwrap()
-                .add(address.clone(), contract);
+                .add(address, contract);
         }
         address
     }
@@ -127,6 +129,11 @@ impl MockVm {
         self.state.read().unwrap().get_backend_name()
     }
 
+    /// Returns the callee, i.e. the currently executing contract.
+    pub fn callee(&self) -> Address {
+        self.state.read().unwrap().callee()
+    }
+
     pub fn caller(&self) -> Address {
         self.state.read().unwrap().caller()
     }
@@ -168,7 +175,6 @@ impl MockVm {
     pub fn get_event(&self, address: &Address, index: i32) -> Result<EventData, EventError> {
         self.state.read().unwrap().get_event(address, index)
     }
-
 }
 
 #[derive(Clone)]
@@ -185,8 +191,12 @@ impl MockVmState {
         "MockVM".to_string()
     }
 
+    pub fn callee(&self) -> Address {
+        *self.exec_context.current()
+    }
+
     pub fn caller(&self) -> Address {
-        self.exec_context.previous().clone()
+        *self.exec_context.previous()
     }
 
     pub fn set_caller(&mut self, address: &Address) {
@@ -196,49 +206,49 @@ impl MockVmState {
 
     pub fn set_var(&mut self, key: &[u8], value: &CLValue) {
         let ctx = self.exec_context.current();
-        self.storage.insert_single_value(&ctx, key, value.clone());
+        self.storage.insert_single_value(ctx, key, value.clone());
     }
 
     pub fn get_var(&self, key: &[u8]) -> Option<CLValue> {
         let ctx = self.exec_context.current();
-        self.storage.get_value(&ctx, key)
+        self.storage.get_value(ctx, key)
     }
 
     pub fn set_dict_value(&mut self, dict: &[u8], key: &[u8], value: &CLValue) {
         let ctx = self.exec_context.current();
         self.storage
-            .insert_dict_value(&ctx, dict, key, value.clone());
+            .insert_dict_value(ctx, dict, key, value.clone());
     }
 
     pub fn get_dict_value(&self, dict: &[u8], key: &[u8]) -> Option<CLValue> {
         let ctx = self.exec_context.current();
-        self.storage.get_dict_value(&ctx, dict, key)
+        self.storage.get_dict_value(ctx, dict, key)
     }
 
     pub fn emit_event(&mut self, event_data: &EventData) {
         let contract_address = self.exec_context.current();
-        let events = self.events.get_mut(&contract_address).and_then(|events| {
+        let events = self.events.get_mut(contract_address).map(|events| {
             events.push(event_data.clone());
-            Some(events)
+            events
         });
         if events.is_none() {
             self.events
-                .insert(contract_address.clone(), vec![event_data.clone()]);
+                .insert(*contract_address, vec![event_data.clone()]);
         }
     }
 
     pub fn get_event(&self, address: &Address, index: i32) -> Result<EventData, EventError> {
-        let events  = self.events.get(address);
+        let events = self.events.get(address);
         if events.is_none() {
-            return Err(EventError::IndexOutOfBounds)
+            return Err(EventError::IndexOutOfBounds);
         }
         let events: &Vec<EventData> = events.unwrap();
-        let event_position = index_to_usize(events.len(), index)?;
-        Ok(events.get(event_position).unwrap().clone())
+        let event_position = odra_utils::event_absolute_position(events.len(), index)?;
+        Ok(events.get(event_position as usize).unwrap().clone())
     }
 
     pub fn push_address(&mut self, address: &Address) {
-        self.exec_context.push(address.clone());
+        self.exec_context.push(*address);
     }
 
     pub fn pop_address(&mut self) {
@@ -310,26 +320,13 @@ pub fn default_accounts() -> Vec<Address> {
     ]
 }
 
-fn index_to_usize(len: usize, index: i32) -> Result<usize, EventError> {
-    if index.is_negative() {
-        let abs_idx = index.wrapping_abs() as usize;
-        if abs_idx > len {
-            return Err(EventError::IndexOutOfBounds);
-        }
-        Ok(len - abs_idx)
-    } else {
-        if index as usize >= len {
-            return Err(EventError::IndexOutOfBounds);
-        }
-        Ok(index as usize)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
 
-    use odra_types::{Address, CLValue, EventData, OdraError, RuntimeArgs, VmError};
+    use odra_types::{
+        Address, CLValue, EventData, ExecutionError, OdraError, RuntimeArgs, VmError,
+    };
 
     use crate::EntrypointCall;
 
@@ -411,11 +408,7 @@ mod tests {
         let new_caller = Address::new(b"new caller");
         instance.set_caller(&new_caller);
         // put a contract on stack
-        instance
-            .state
-            .write()
-            .unwrap()
-            .push_address(&Address::new(b"contract"));
+        push_address(&instance, &new_caller);
 
         assert_eq!(instance.caller(), new_caller);
     }
@@ -424,9 +417,9 @@ mod tests {
     fn test_revert() {
         let instance = MockVm::default();
 
-        instance.revert(OdraError::Unknown);
+        instance.revert(ExecutionError::new(1, "err").into());
 
-        assert_eq!(instance.error(), Some(OdraError::Unknown));
+        assert_eq!(instance.error(), Some(ExecutionError::new(1, "err").into()));
     }
 
     #[test]
@@ -462,11 +455,7 @@ mod tests {
 
         let first_contract_address = Address::new(b"contract");
         // put a contract on stack
-        instance
-            .state
-            .write()
-            .unwrap()
-            .push_address(&first_contract_address);
+        push_address(&instance, &first_contract_address);
 
         let first_event: EventData = vec![1, 2, 3];
         let second_event: EventData = vec![4, 5, 6];
@@ -475,20 +464,31 @@ mod tests {
 
         let second_contract_address = Address::new(b"contract2");
         // put a next contract on stack
-        instance
-            .state
-            .write()
-            .unwrap()
-            .push_address(&second_contract_address);
+        push_address(&instance, &second_contract_address);
+
         let third_event: EventData = vec![7, 8, 9];
         let fourth_event: EventData = vec![11, 22, 33];
-        instance.emit_event(&first_event);
-        instance.emit_event(&second_event);
+        instance.emit_event(&third_event);
+        instance.emit_event(&fourth_event);
 
         let events = instance.events(&first_contract_address);
         assert_eq!(events, vec![first_event, second_event]);
 
         let events = instance.events(&second_contract_address);
         assert_eq!(events, vec![third_event, fourth_event]);
+    }
+
+    #[test]
+    fn test_current_contract_address() {
+        let instance = MockVm::default();
+        let contract_address = Address::new(b"contract");
+        // put a contract on stack
+        push_address(&instance, &contract_address);
+
+        assert_eq!(instance.callee(), contract_address);
+    }
+
+    fn push_address(vm: &MockVm, address: &Address) {
+        vm.state.write().unwrap().push_address(address);
     }
 }

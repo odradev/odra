@@ -1,11 +1,13 @@
+use crate::UnwrapOrRevert;
 use odra_types::{
-    event::Event,
     bytesrepr::{FromBytes, ToBytes},
-    Address, CLType, CLTyped, CLValue, EventData, RuntimeArgs, OdraError
+    event::Event,
+    Address, CLTyped, CLValue, EventData, ExecutionError, RuntimeArgs,
 };
 
 #[allow(improper_ctypes)]
 extern "C" {
+    fn __self_address() -> Address;
     fn __caller() -> Address;
     fn __set_var(key: &[u8], value: &CLValue);
     fn __get_var(key: &[u8]) -> Option<CLValue>;
@@ -13,19 +15,26 @@ extern "C" {
     fn __get_dict_value(dict: &[u8], key: &[u8]) -> Option<CLValue>;
     fn __emit_event(event: &EventData);
     fn __call_contract(address: &Address, entrypoint: &str, args: &RuntimeArgs) -> Vec<u8>;
-    fn __revert(reason: &OdraError) -> !;
+    fn __revert(reason: &ExecutionError) -> !;
     fn __print(message: &str);
 }
 
 pub struct ContractEnv;
 
 impl ContractEnv {
+    pub fn self_address() -> Address {
+        unsafe { __self_address() }
+    }
+
     pub fn caller() -> Address {
         unsafe { __caller() }
     }
 
     pub fn set_var<T: CLTyped + ToBytes>(key: &str, value: T) {
-        unsafe { __set_var(key.as_bytes(), &CLValue::from_t(value).unwrap()) }
+        unsafe {
+            let cl_value = CLValue::from_t(value).unwrap_or_revert();
+            __set_var(key.as_bytes(), &cl_value)
+        }
     }
 
     pub fn get_var(key: &str) -> Option<CLValue> {
@@ -40,24 +49,28 @@ impl ContractEnv {
         unsafe {
             __set_dict_value(
                 dict.as_bytes(),
-                key.to_bytes().unwrap().as_slice(),
-                &CLValue::from_t(value).unwrap(),
+                key.to_bytes().unwrap_or_revert().as_slice(),
+                &CLValue::from_t(value).unwrap_or_revert(),
             )
         }
     }
 
     pub fn get_dict_value<K: ToBytes>(dict: &str, key: &K) -> Option<CLValue> {
-        unsafe { __get_dict_value(dict.as_bytes(), key.to_bytes().unwrap().as_slice()) }
+        unsafe {
+            __get_dict_value(
+                dict.as_bytes(),
+                key.to_bytes().unwrap_or_revert().as_slice(),
+            )
+        }
     }
 
     pub fn emit_event<T>(event: &T)
     where
         T: ToBytes + Event,
     {
-        let event_data = event.to_bytes().unwrap();
+        let event_data = event.to_bytes().unwrap_or_revert();
         unsafe { __emit_event(&event_data) }
     }
-
 
     pub fn call_contract(address: &Address, entrypoint: &str, args: &RuntimeArgs) -> Vec<u8> {
         unsafe { __call_contract(address, entrypoint, args) }
@@ -65,11 +78,10 @@ impl ContractEnv {
 
     pub fn revert<E>(error: E) -> !
     where
-        E: Into<OdraError>,
+        E: Into<ExecutionError>,
     {
         unsafe { __revert(&error.into()) }
     }
-
 
     pub fn print(message: &str) {
         unsafe { __print(message) }

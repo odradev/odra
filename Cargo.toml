@@ -5,13 +5,7 @@ members = [
     "lang/ir",
     "lang/proc_macros",
     "mock_vm",
-    "mock_vm/macro",
-    "modules",
     "test_env_wrapper",
     "types",
     "utils"
-]
-
-exclude = [
-    "mycontract"
 ]

@@ -20,13 +20,11 @@ impl ModuleItem {
         let item_struct = syn::parse2::<syn::ItemStruct>(item.clone());
         let item_impl = syn::parse2::<syn::ItemImpl>(item.clone());
 
-        if item_struct.is_ok() {
-            let item = item_struct.unwrap();
+        if let Ok(item) = item_struct {
             return Ok(ModuleItem::Struct(ModuleStruct::from(item)));
         }
 
-        if item_impl.is_ok() {
-            let item = item_impl.unwrap();
+        if let Ok(item) = item_impl {
             let item = ModuleImpl::try_from(item)?;
             return Ok(ModuleItem::Impl(item));
         }

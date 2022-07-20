@@ -1,11 +1,12 @@
 mod address;
+pub mod arithmetic;
 mod error;
 pub mod event;
 
 pub use address::Address;
 pub use casper_types::*;
 pub type EventData = Vec<u8>;
-pub use error::{OdraError, VmError};
+pub use error::{ExecutionError, OdraError, VmError};
 
 pub trait ToBytes: Sized {
     type Error;

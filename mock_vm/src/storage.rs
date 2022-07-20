@@ -146,7 +146,7 @@ mod test {
         let mut storage = Storage::default();
         let (address, key, value) = setup();
         let collection = [1u8];
-        storage.insert_dict_value(&address, &collection, &key, value.clone());
+        storage.insert_dict_value(&address, &collection, &key, value);
 
         // when read a value from a non exisiting collection
         let non_existing_collection = [2u8];
@@ -162,7 +162,7 @@ mod test {
         let mut storage = Storage::default();
         let (address, key, value) = setup();
         let collection = [1u8];
-        storage.insert_dict_value(&address, &collection, &key, value.clone());
+        storage.insert_dict_value(&address, &collection, &key, value);
 
         // when read a value from a non existing collection
         let non_existing_key = [2u8];
