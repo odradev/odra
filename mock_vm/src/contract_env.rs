@@ -16,11 +16,11 @@ impl ContractEnv {
     }
 
     pub fn set_var<T: CLTyped + ToBytes>(key: &str, value: T) {
-        borrow_env().set_var(key.as_bytes(), &CLValue::from_t(value).unwrap())
+        borrow_env().set_var(key, &CLValue::from_t(value).unwrap())
     }
 
     pub fn get_var(key: &str) -> Option<CLValue> {
-        borrow_env().get_var(key.as_bytes())
+        borrow_env().get_var(key)
     }
 
     pub fn set_dict_value<K: ToBytes, V: ToBytes + FromBytes + CLTyped>(
@@ -29,14 +29,14 @@ impl ContractEnv {
         value: V,
     ) {
         borrow_env().set_dict_value(
-            dict.as_bytes(),
+            dict,
             key.to_bytes().unwrap().as_slice(),
             &CLValue::from_t(value).unwrap(),
         )
     }
 
     pub fn get_dict_value<K: ToBytes>(dict: &str, key: &K) -> Option<CLValue> {
-        borrow_env().get_dict_value(dict.as_bytes(), key.to_bytes().unwrap().as_slice())
+        borrow_env().get_dict_value(dict, key.to_bytes().unwrap().as_slice())
     }
 
     pub fn emit_event<T>(event: &T)

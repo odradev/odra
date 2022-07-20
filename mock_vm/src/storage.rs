@@ -12,7 +12,12 @@ pub struct Storage {
 }
 
 impl Storage {
-    pub fn insert_single_value(&mut self, address: &Address, key: &[u8], value: CLValue) {
+    pub fn get_value(&self, address: &Address, key: &[u8]) -> Option<CLValue> {
+        let hash = Storage::hashed_key(address, key);
+        self.state.get(&hash).cloned()
+    }
+
+    pub fn set_value(&mut self, address: &Address, key: &[u8], value: CLValue) {
         let hash = Storage::hashed_key(address, key);
         self.state.insert(hash, value);
     }
@@ -27,11 +32,6 @@ impl Storage {
         let dict_key = [collection, key].concat();
         let hash = Storage::hashed_key(address, dict_key);
         self.state.insert(hash, value);
-    }
-
-    pub fn get_value(&self, address: &Address, key: &[u8]) -> Option<CLValue> {
-        let hash = Storage::hashed_key(address, key);
-        self.state.get(&hash).cloned()
     }
 
     pub fn get_dict_value(
@@ -89,7 +89,7 @@ mod test {
         let (address, key, value) = setup();
 
         // when put a value
-        storage.insert_single_value(&address, &key, value.clone());
+        storage.set_value(&address, &key, value.clone());
 
         // then the value can be read
         assert_eq!(storage.get_value(&address, &key), Some(value));
@@ -100,11 +100,11 @@ mod test {
         // given a storage with some stored value
         let mut storage = Storage::default();
         let (address, key, value) = setup();
-        storage.insert_single_value(&address, &key, value);
+        storage.set_value(&address, &key, value);
 
         // when the next value is set under the same key
         let next_value = CLValue::from_t(2_000u32).unwrap();
-        storage.insert_single_value(&address, &key, next_value.clone());
+        storage.set_value(&address, &key, next_value.clone());
 
         // then the previous value is replaced
         assert_eq!(storage.get_value(&address, &key), Some(next_value));
@@ -177,10 +177,10 @@ mod test {
         // given storage with some state and a snapshot of the previous state
         let mut storage = Storage::default();
         let (address, key, initial_value) = setup();
-        storage.insert_single_value(&address, &key, initial_value.clone());
+        storage.set_value(&address, &key, initial_value.clone());
         storage.take_snapshot();
         let next_value = CLValue::from_t(2_000u32).unwrap();
-        storage.insert_single_value(&address, &key, next_value);
+        storage.set_value(&address, &key, next_value);
 
         // when restore the snapshot
         storage.restore_snapshot();
@@ -198,13 +198,13 @@ mod test {
         let (address, key, initial_value) = setup();
         let second_value = CLValue::from_t(2_000u32).unwrap();
         let third_value = CLValue::from_t(3_000u32).unwrap();
-        storage.insert_single_value(&address, &key, initial_value);
+        storage.set_value(&address, &key, initial_value);
         storage.take_snapshot();
-        storage.insert_single_value(&address, &key, second_value.clone());
+        storage.set_value(&address, &key, second_value.clone());
 
         // when take another snapshot and restore it
         storage.take_snapshot();
-        storage.insert_single_value(&address, &key, third_value);
+        storage.set_value(&address, &key, third_value);
         storage.restore_snapshot();
 
         // then the most recent snapshot is restored
@@ -217,9 +217,9 @@ mod test {
         let mut storage = Storage::default();
         let (address, key, initial_value) = setup();
         let next_value = CLValue::from_t(1_000u32).unwrap();
-        storage.insert_single_value(&address, &key, initial_value);
+        storage.set_value(&address, &key, initial_value);
         storage.take_snapshot();
-        storage.insert_single_value(&address, &key, next_value.clone());
+        storage.set_value(&address, &key, next_value.clone());
 
         // when the snapshot is dropped
         storage.drop_snapshot();

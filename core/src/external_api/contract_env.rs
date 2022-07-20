@@ -9,10 +9,10 @@ use odra_types::{
 extern "C" {
     fn __self_address() -> Address;
     fn __caller() -> Address;
-    fn __set_var(key: &[u8], value: &CLValue);
-    fn __get_var(key: &[u8]) -> Option<CLValue>;
-    fn __set_dict_value(dict: &[u8], key: &[u8], value: &CLValue);
-    fn __get_dict_value(dict: &[u8], key: &[u8]) -> Option<CLValue>;
+    fn __set_var(key: &str, value: &CLValue);
+    fn __get_var(key: &str) -> Option<CLValue>;
+    fn __set_dict_value(dict: &str, key: &[u8], value: &CLValue);
+    fn __get_dict_value(dict: &str, key: &[u8]) -> Option<CLValue>;
     fn __emit_event(event: &EventData);
     fn __call_contract(address: &Address, entrypoint: &str, args: &RuntimeArgs) -> Vec<u8>;
     fn __revert(reason: &ExecutionError) -> !;
@@ -33,12 +33,12 @@ impl ContractEnv {
     pub fn set_var<T: CLTyped + ToBytes>(key: &str, value: T) {
         unsafe {
             let cl_value = CLValue::from_t(value).unwrap_or_revert();
-            __set_var(key.as_bytes(), &cl_value)
+            __set_var(key, &cl_value)
         }
     }
 
     pub fn get_var(key: &str) -> Option<CLValue> {
-        unsafe { __get_var(key.as_bytes()) }
+        unsafe { __get_var(key) }
     }
 
     pub fn set_dict_value<K: ToBytes, V: ToBytes + FromBytes + CLTyped>(
@@ -48,7 +48,7 @@ impl ContractEnv {
     ) {
         unsafe {
             __set_dict_value(
-                dict.as_bytes(),
+                dict,
                 key.to_bytes().unwrap_or_revert().as_slice(),
                 &CLValue::from_t(value).unwrap_or_revert(),
             )
@@ -56,12 +56,7 @@ impl ContractEnv {
     }
 
     pub fn get_dict_value<K: ToBytes>(dict: &str, key: &K) -> Option<CLValue> {
-        unsafe {
-            __get_dict_value(
-                dict.as_bytes(),
-                key.to_bytes().unwrap_or_revert().as_slice(),
-            )
-        }
+        unsafe { __get_dict_value(dict, key.to_bytes().unwrap_or_revert().as_slice()) }
     }
 
     pub fn emit_event<T>(event: &T)
