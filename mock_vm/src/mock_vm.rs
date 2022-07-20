@@ -433,7 +433,7 @@ mod tests {
         instance.set_var(key, &value);
 
         assert_eq!(instance.get_var(key), Some(value));
-        assert_eq!(instance.get_var(key), None);
+        assert_eq!(instance.get_var("other_key"), None);
     }
 
     #[test]
