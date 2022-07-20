@@ -68,6 +68,10 @@ impl ExecutionError {
         Self::new(UNWRAP_ERROR, "Unwrap error")
     }
 
+    pub fn code(&self) -> u16 {
+        self.0
+    }
+
     fn internal(code: u16, msg: &str) -> Self {
         ExecutionError(code + USER_ERROR_TOO_HIGH, String::from(msg))
     }
