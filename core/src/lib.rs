@@ -1,5 +1,4 @@
 pub mod contract_def;
-mod event;
 pub mod instance;
 mod mapping;
 mod unwrap_or_revert;
