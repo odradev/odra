@@ -43,7 +43,7 @@ pub fn generate_code(item: EventItem) -> TokenStream {
     let type_check = quote! {
       let (event_name, bytes): (String, _) = odra::types::bytesrepr::FromBytes::from_vec(bytes)?;
       if &event_name != #name_literal {
-        return core::result::Result::Err(odra::types::event::Error::UnexpectedType(event_name));
+        return core::result::Result::Err(odra::types::event::EventError::UnexpectedType(event_name));
       }
     };
 
@@ -59,7 +59,7 @@ pub fn generate_code(item: EventItem) -> TokenStream {
         }
 
         impl odra::types::ToBytes for #struct_ident {
-          type Error = odra::types::event::Error;
+          type Error = odra::types::event::EventError;
 
           fn serialize(&self) -> Result<Vec<u8>, Self::Error> {
               core::result::Result::Ok(<Self as odra::types::bytesrepr::ToBytes>::to_bytes(self)?)
@@ -67,7 +67,7 @@ pub fn generate_code(item: EventItem) -> TokenStream {
         }
 
         impl odra::types::FromBytes for #struct_ident {
-          type Error = odra::types::event::Error;
+          type Error = odra::types::event::EventError;
 
           type Item = Self;
 
