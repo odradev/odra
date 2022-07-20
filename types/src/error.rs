@@ -75,10 +75,6 @@ impl ExecutionError {
     fn internal(code: u16, msg: &str) -> Self {
         ExecutionError(code + USER_ERROR_TOO_HIGH, String::from(msg))
     }
-
-    pub fn code(&self) -> u16 {
-        self.0
-    }
 }
 
 impl PartialEq for ExecutionError {

@@ -6,4 +6,4 @@ Changelog for `odra-test-env-wrapper`.
 ### Added
 - `TestBackend` defines the api of `libodra_test_env.so`.
 - `on_backend` function to interact with `libodra_test_env.so`.
-- `CHANGELOG.md` file.
+- `CHANGELOG.md` and `README.md` files.

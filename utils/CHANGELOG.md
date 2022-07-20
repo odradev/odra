@@ -6,4 +6,4 @@ Changelog for `odra-utils`.
 ### Added
 - `camel_to_snake` function for the contract name conversion.
 - `event_absolute_position`function to calculate the event absolute position.
-- `CHANGELOG.md` file.
+- `CHANGELOG.md` and `README.md` files.
