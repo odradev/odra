@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
+use odra_types::bytesrepr::ToBytes;
 use odra_types::{
     bytesrepr::Bytes, event::EventError, Address, CLValue, EventData, OdraError, RuntimeArgs,
 };
@@ -142,19 +143,19 @@ impl MockVm {
         self.state.write().unwrap().set_caller(caller);
     }
 
-    pub fn set_var(&self, key: &[u8], value: &CLValue) {
+    pub fn set_var(&self, key: &str, value: &CLValue) {
         self.state.write().unwrap().set_var(key, value);
     }
 
-    pub fn get_var(&self, key: &[u8]) -> Option<CLValue> {
+    pub fn get_var(&self, key: &str) -> Option<CLValue> {
         self.state.read().unwrap().get_var(key)
     }
 
-    pub fn set_dict_value(&self, dict: &[u8], key: &[u8], value: &CLValue) {
+    pub fn set_dict_value(&self, dict: &str, key: &[u8], value: &CLValue) {
         self.state.write().unwrap().set_dict_value(dict, key, value);
     }
 
-    pub fn get_dict_value(&self, dict: &[u8], key: &[u8]) -> Option<CLValue> {
+    pub fn get_dict_value(&self, dict: &str, key: &[u8]) -> Option<CLValue> {
         self.state.read().unwrap().get_dict_value(dict, key)
     }
 
@@ -204,25 +205,27 @@ impl MockVmState {
         self.push_address(address);
     }
 
-    pub fn set_var(&mut self, key: &[u8], value: &CLValue) {
-        let ctx = self.exec_context.current();
-        self.storage.insert_single_value(ctx, key, value.clone());
-    }
-
-    pub fn get_var(&self, key: &[u8]) -> Option<CLValue> {
-        let ctx = self.exec_context.current();
-        self.storage.get_value(ctx, key)
-    }
-
-    pub fn set_dict_value(&mut self, dict: &[u8], key: &[u8], value: &CLValue) {
+    pub fn set_var(&mut self, key: &str, value: &CLValue) {
         let ctx = self.exec_context.current();
         self.storage
-            .insert_dict_value(ctx, dict, key, value.clone());
+            .set_value(ctx, &key.to_bytes().unwrap(), value.clone());
     }
 
-    pub fn get_dict_value(&self, dict: &[u8], key: &[u8]) -> Option<CLValue> {
+    pub fn get_var(&self, key: &str) -> Option<CLValue> {
         let ctx = self.exec_context.current();
-        self.storage.get_dict_value(ctx, dict, key)
+        self.storage.get_value(ctx, &key.to_bytes().unwrap())
+    }
+
+    pub fn set_dict_value(&mut self, dict: &str, key: &[u8], value: &CLValue) {
+        let ctx = self.exec_context.current();
+        self.storage
+            .insert_dict_value(ctx, &dict.to_bytes().unwrap(), key, value.clone());
+    }
+
+    pub fn get_dict_value(&self, dict: &str, key: &[u8]) -> Option<CLValue> {
+        let ctx = self.exec_context.current();
+        self.storage
+            .get_dict_value(ctx, &dict.to_bytes().unwrap(), key)
     }
 
     pub fn emit_event(&mut self, event_data: &EventData) {
@@ -404,7 +407,6 @@ mod tests {
     #[test]
     fn test_caller_switching() {
         let instance = MockVm::default();
-
         let new_caller = Address::new(b"new caller");
         instance.set_caller(&new_caller);
         // put a contract on stack
@@ -425,28 +427,27 @@ mod tests {
     #[test]
     fn test_read_write_value() {
         let instance = MockVm::default();
-        let key: [u8; 2] = [1, 2];
+        let key = "key";
         let value = CLValue::from_t(32u8).unwrap();
 
-        instance.set_var(&key, &value);
+        instance.set_var(key, &value);
 
-        assert_eq!(instance.get_var(&key), Some(value));
-
-        assert_eq!(instance.get_var(&[2, 1]), None);
+        assert_eq!(instance.get_var(key), Some(value));
+        assert_eq!(instance.get_var("other_key"), None);
     }
 
     #[test]
-    fn test_read_write_collection() {
+    fn test_read_write_dict() {
         let instance = MockVm::default();
-        let collection: [u8; 4] = [4, 2, 1, 2];
+        let dict = "dict";
         let key: [u8; 2] = [1, 2];
         let value = CLValue::from_t(32u8).unwrap();
 
-        instance.set_dict_value(&collection, &key, &value);
+        instance.set_dict_value(dict, &key, &value);
 
-        assert_eq!(instance.get_dict_value(&collection, &key), Some(value));
-        assert_eq!(instance.get_dict_value(&[], &key), None);
-        assert_eq!(instance.get_dict_value(&collection, &[]), None);
+        assert_eq!(instance.get_dict_value(dict, &key), Some(value));
+        assert_eq!(instance.get_dict_value("other_dict", &key), None);
+        assert_eq!(instance.get_dict_value(dict, &[]), None);
     }
 
     #[test]
