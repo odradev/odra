@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
-use odra_types::{
-    bytesrepr::Bytes, event::Error as EventError, Address, EventData, OdraError, RuntimeArgs,
-};
+use odra_types::{bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs};
 
 use crate::{borrow_env, mock_vm::default_accounts, EntrypointCall};
 

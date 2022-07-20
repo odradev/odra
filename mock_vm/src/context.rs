@@ -7,11 +7,13 @@ pub struct ExecutionContext {
 
 impl ExecutionContext {
     pub fn current(&self) -> &Address {
-        self.callstack.last().unwrap()
+        self.callstack.last().expect("Callstack is empty")
     }
 
     pub fn previous(&self) -> &Address {
-        self.callstack.get(self.callstack.len() - 2).unwrap()
+        self.callstack
+            .get(self.callstack.len() - 2)
+            .expect("Not enough elements on callstack")
     }
 
     pub fn push(&mut self, ctx: Address) {

@@ -6,20 +6,10 @@ const MAX_USER_ERROR: u16 = 32767;
 const USER_ERROR_TOO_HIGH: u16 = 32768;
 const UNWRAP_ERROR: u16 = u16::MAX;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum OdraError {
     ExecutionError(ExecutionError),
     VmError(VmError),
-}
-
-impl PartialEq for OdraError {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::ExecutionError(l0), Self::ExecutionError(r0)) => l0 == r0,
-            (Self::VmError(l0), Self::VmError(r0)) => l0 == r0,
-            _ => core::mem::discriminant(self) == core::mem::discriminant(other),
-        }
-    }
 }
 
 impl From<bytesrepr::Error> for ExecutionError {

@@ -7,16 +7,16 @@ pub fn camel_to_snake(text: &str) -> String {
         .to_case(Case::Snake)
 }
 
-pub fn event_absolute_position(len: usize, index: i32) -> Result<usize, event::Error> {
+pub fn event_absolute_position(len: usize, index: i32) -> Result<usize, event::EventError> {
     if index.is_negative() {
         let abs_idx = index.wrapping_abs() as usize;
         if abs_idx > len {
-            return Err(event::Error::IndexOutOfBounds);
+            return Err(event::EventError::IndexOutOfBounds);
         }
         Ok(len - abs_idx)
     } else {
         if index as usize >= len {
-            return Err(event::Error::IndexOutOfBounds);
+            return Err(event::EventError::IndexOutOfBounds);
         }
         Ok(index as usize)
     }
@@ -42,20 +42,20 @@ mod tests {
     fn event_absolute_position_works() {
         assert_eq!(
             event_absolute_position(0, 1),
-            Err(event::Error::IndexOutOfBounds)
+            Err(event::EventError::IndexOutOfBounds)
         );
         assert_eq!(
             event_absolute_position(10, 10),
-            Err(event::Error::IndexOutOfBounds)
+            Err(event::EventError::IndexOutOfBounds)
+        );
+        assert_eq!(
+            event_absolute_position(10, -11),
+            Err(event::EventError::IndexOutOfBounds)
         );
         assert_eq!(event_absolute_position(10, 0), Ok(0));
         assert_eq!(event_absolute_position(10, 1), Ok(1));
         assert_eq!(event_absolute_position(10, -1), Ok(9));
         assert_eq!(event_absolute_position(10, -2), Ok(8));
         assert_eq!(event_absolute_position(10, -10), Ok(0));
-        assert_eq!(
-            event_absolute_position(10, -11),
-            Err(event::Error::IndexOutOfBounds)
-        );
     }
 }

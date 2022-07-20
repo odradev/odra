@@ -2,8 +2,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use odra_types::{
-    bytesrepr::Bytes, event::Error as EventError, Address, CLValue, EventData, OdraError,
-    RuntimeArgs,
+    bytesrepr::Bytes, event::EventError, Address, CLValue, EventData, OdraError, RuntimeArgs,
 };
 
 use crate::context::ExecutionContext;

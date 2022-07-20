@@ -1,8 +1,8 @@
 use odra_types::{Address, EventData, FromBytes};
 
-pub fn get_event<T>(contract_address: &Address, at: i32) -> Result<T, odra_types::event::Error>
+pub fn get_event<T>(contract_address: &Address, at: i32) -> Result<T, odra_types::event::EventError>
 where
-    T: FromBytes<Item = T, Error = odra_types::event::Error>,
+    T: FromBytes<Item = T, Error = odra_types::event::EventError>,
 {
     let event: EventData = crate::TestEnv::get_event(contract_address, at)?;
     match T::deserialize(event) {
