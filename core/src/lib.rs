@@ -3,13 +3,14 @@ pub mod instance;
 mod mapping;
 mod unwrap_or_revert;
 mod variable;
+mod error;
 
 use std::fmt::Debug;
 use types::{bytesrepr::FromBytes, Address, CLTyped, RuntimeArgs};
 
 pub use {
     mapping::Mapping,
-    odra_proc_macros::{external_contract, instance, module, Event},
+    odra_proc_macros::{external_contract, instance, module, Event, execution_error},
     odra_types as types, odra_utils as utils,
     unwrap_or_revert::UnwrapOrRevert,
     variable::Variable,
