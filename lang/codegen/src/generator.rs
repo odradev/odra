@@ -1,4 +1,5 @@
 mod common;
+pub mod errors;
 pub mod event_item;
 pub mod external_contract_item;
 pub mod instance_item;

@@ -1,13 +1,15 @@
+#![crate_name = "odra_proc_macros"]
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, DeriveInput};
 
 mod event;
+mod execution_error;
 mod external_contract;
 mod instance;
 mod module;
-mod execution_error;
+mod odra_error;
 
 #[proc_macro_attribute]
 pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
@@ -32,4 +34,9 @@ pub fn derive_event(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn execution_error(item: TokenStream) -> TokenStream {
     execution_error::generate_code(item).into()
+}
+
+#[proc_macro_attribute]
+pub fn odra_error(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    odra_error::generate_code(item).into()
 }
