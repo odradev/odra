@@ -1,5 +1,5 @@
 use odra_codegen::generator::event_item;
-use odra_ir::event_item::EventItem;
+use odra_ir::EventItem;
 use proc_macro2::TokenStream;
 use syn::DeriveInput;
 
