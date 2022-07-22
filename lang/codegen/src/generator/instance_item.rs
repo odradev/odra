@@ -3,9 +3,9 @@ use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
 pub fn generate_code(item: InstanceItem) -> TokenStream {
-    let item_struct = item.item_struct();
+    let item_struct = item.data_struct();
 
-    let ident = &item_struct.ident;
+    let ident = &item.ident();
 
     let fields: TokenStream = item_struct
         .clone()
@@ -15,8 +15,6 @@ pub fn generate_code(item: InstanceItem) -> TokenStream {
         .collect();
 
     quote! {
-        #item_struct
-
         impl odra::instance::Instance for #ident {
             fn instance(namespace: &str) -> Self {
                 Self {

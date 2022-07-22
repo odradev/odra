@@ -16,5 +16,10 @@ syn =  { version = "1.0.89", features = ["full", "extra-traits"] }
 odra-ir = { path = "../ir" }
 odra-codegen = { path = "../codegen" }
 
+[dev-dependencies]
+odra = { path = "../../core" }
+odra-codegen = { path = "../codegen" }
+proc-macro2 = "1.0.40"
+
 [lib]
 proc-macro = true

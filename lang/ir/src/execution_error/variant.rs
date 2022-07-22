@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::ToTokens;
-use syn::parse::Parse;
+use syn::{parse::Parse, spanned::Spanned};
 
 pub struct Variant {
     pub ident: syn::Ident,
@@ -15,6 +15,12 @@ impl Parse for Variant {
         let ident: syn::Ident = input.parse()?;
         let fat_arrow_token: syn::Token![=>] = input.parse()?;
         let expr: syn::Expr = input.parse()?;
+
+        let expr: syn::Expr = match expr {
+            syn::Expr::Lit(_) => expr,
+            _ => return Err(syn::Error::new(expr.span(), "The expression must be of type `syn::Expr::Lit`")),
+        };
+
         Ok(Variant {
             ident,
             fat_arrow_token,
