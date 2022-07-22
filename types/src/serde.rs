@@ -1,4 +1,3 @@
-
 /// A type which can be serialized to a `Vec<u8>`.
 pub trait ToBytes: Sized {
     /// Serialization failure reason.

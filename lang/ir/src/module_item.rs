@@ -10,6 +10,13 @@ pub mod method;
 pub mod module_impl;
 pub mod module_struct;
 
+/// Odra module item.
+///
+/// Can be either
+/// - an Odra [`odra_ir::module::ModuleStruct`](`crate::module::ModuleStruct`)
+/// - an Odra [`odra_ir::module::ModuleImpl`](`crate::module::ModuleImpl`)
+///
+/// All the items are based on syn with special variants for Odra `impl` items.
 pub enum ModuleItem {
     Struct(ModuleStruct),
     Impl(ModuleImpl),

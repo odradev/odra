@@ -11,16 +11,23 @@ thread_local! {
     });
 }
 
-/// Wrapped Test Env API. 
+/// Wrapped Test Env API.
 #[derive(WrapperApi)]
 pub struct TestBackend {
+    /// Returns the backend name.
     backend_name: fn() -> String,
+    /// Registers the contract in Test Env.
     register_contract: fn(name: &str, args: &RuntimeArgs) -> Address,
+    /// Calls contract at `address` invoking the `entrypoint` with `args`.
     call_contract:
         fn(addr: &Address, entrypoint: &str, args: &RuntimeArgs, has_return: bool) -> Bytes,
+    /// Returns nth user account.
     get_account: fn(n: usize) -> Address,
+    /// Replaces the current caller.
     set_caller: fn(address: &Address),
+    /// Gets the current error.
     get_error: fn() -> Option<OdraError>,
+    /// Gets nth event emitted by contract at `address`.
     get_event: fn(address: &Address, index: i32) -> Result<EventData, EventError>,
 }
 

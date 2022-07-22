@@ -1,4 +1,7 @@
-use crate::{CLType, CLTyped, bytesrepr::{Error, FromBytes, ToBytes}};
+use crate::{
+    bytesrepr::{Error, FromBytes, ToBytes},
+    CLType, CLTyped,
+};
 
 /// Max bytes of an [`Address`] internal representation.
 pub const ADDRESS_LENGTH: usize = 64;
@@ -10,9 +13,8 @@ pub struct Address {
 }
 
 impl Address {
-
     /// Creates a new Address from bytes.
-    /// 
+    ///
     /// If takes less than [`ADDRESS_LENGTH`], the remaining bytes are zeroed.
     /// If takes more and [`ADDRESS_LENGTH`] excess bytes are discarded.
     pub fn new(bytes: &[u8]) -> Address {

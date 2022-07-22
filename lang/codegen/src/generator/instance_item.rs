@@ -1,25 +1,35 @@
-use odra_ir::InstanceItem;
+use derive_more::From;
+use odra_ir::InstanceItem as IrInstanceItem;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
-pub fn generate_code(item: InstanceItem) -> TokenStream {
-    let item_struct = item.data_struct();
+use crate::GenerateCode;
 
-    let ident = &item.ident();
+#[derive(From)]
+pub struct InstanceItem<'a> {
+    item: &'a IrInstanceItem,
+}
 
-    let fields: TokenStream = item_struct
-        .clone()
-        .fields
-        .into_iter()
-        .flat_map(|field| WrappedField(field).to_token_stream())
-        .collect();
+impl GenerateCode for InstanceItem<'_> {
+    fn generate_code(&self) -> proc_macro2::TokenStream {
+        let item_struct = self.item.data_struct();
 
-    quote! {
-        impl odra::instance::Instance for #ident {
-            fn instance(namespace: &str) -> Self {
-                Self {
-                    #fields
-                 }
+        let ident = &self.item.ident();
+
+        let fields: TokenStream = item_struct
+            .clone()
+            .fields
+            .into_iter()
+            .flat_map(|field| WrappedField(field).to_token_stream())
+            .collect();
+
+        quote! {
+            impl odra::instance::Instance for #ident {
+                fn instance(namespace: &str) -> Self {
+                    Self {
+                        #fields
+                    }
+                }
             }
         }
     }

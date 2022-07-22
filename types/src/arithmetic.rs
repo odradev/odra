@@ -1,5 +1,5 @@
 //! Safe, overflowing addition and subtraction utilities.
-use crate::{U128, U256, U512, ExecutionError};
+use crate::{ExecutionError, U128, U256, U512};
 
 /// Overflowing addition, returning the result of addition or [ArithmeticsError::AdditionOverflow].
 pub trait OverflowingAdd: Sized {
@@ -51,7 +51,6 @@ macro_rules! impl_overflowing_sub {
 
 impl_overflowing_add!(u8, u16, u32, u64, U128, U256, U512, i8, i16, i32, i64);
 impl_overflowing_sub!(u8, u16, u32, u64, U128, U256, U512, i8, i16, i32, i64);
-
 
 #[cfg(test)]
 mod test {

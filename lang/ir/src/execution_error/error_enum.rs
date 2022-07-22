@@ -5,6 +5,9 @@ use syn::{parse::Parse, spanned::Spanned};
 
 use super::variant::Variant;
 
+/// User defined contract error with all required information.
+///
+/// The structure is similar to [syn::ItemEnum], but contains custom variants.
 pub struct ErrorEnumItem {
     pub vis: syn::Visibility,
     pub enum_token: syn::Token![enum],
@@ -37,7 +40,10 @@ impl Parse for ErrorEnumItem {
         let variant_count = variants.iter().count();
 
         if unique_variant_count != variant_count {
-            return Err(syn::Error::new(variants.span(), "Each error must have a unique code."));
+            return Err(syn::Error::new(
+                variants.span(),
+                "Each error must have a unique code.",
+            ));
         }
 
         Ok(ErrorEnumItem {

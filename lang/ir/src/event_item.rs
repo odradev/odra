@@ -1,6 +1,7 @@
 use proc_macro2::Ident;
 use syn::{Data, DataStruct, DeriveInput, Fields};
 
+/// Odra event definition.
 pub struct EventItem {
     struct_ident: Ident,
     fields: Vec<Ident>,

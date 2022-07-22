@@ -9,7 +9,7 @@ use types::{bytesrepr::FromBytes, Address, CLTyped, RuntimeArgs};
 
 pub use {
     mapping::Mapping,
-    odra_proc_macros::{execution_error, external_contract, Instance, module, odra_error, Event},
+    odra_proc_macros::{execution_error, external_contract, module, odra_error, Event, Instance},
     odra_types as types, odra_utils as utils,
     unwrap_or_revert::UnwrapOrRevert,
     variable::Variable,
@@ -30,6 +30,9 @@ cfg_if::cfg_if! {
     }
 }
 
+/// Calls contract at `address` invoking the `entrypoint` with `args`.
+///
+/// Returns already parsed result.
 pub fn call_contract<T>(address: &Address, entrypoint: &str, args: &RuntimeArgs) -> T
 where
     T: CLTyped + FromBytes + Debug,

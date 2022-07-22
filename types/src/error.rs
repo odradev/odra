@@ -56,24 +56,27 @@ impl From<Box<dyn std::any::Any + Send>> for OdraError {
 }
 
 /// An error that can occur during smart contract execution
-/// 
+///
 /// It is represented by an error code and a human-readable message.
-/// 
+///
 /// Errors codes 0..32767 are available for the user to define custom error
 /// in smart contracts.
 /// 32768 code is a special code representing a violation of the custom error code space.
-/// 
+///
 /// The rest of codes 32769..[u16::MAX](u16::MAX), are used internally by the framework.
 #[derive(Clone, Debug)]
 pub struct ExecutionError(u16, String);
 
 impl ExecutionError {
     /// Creates an instance with specified code and message.
-    /// 
+    ///
     /// If the custom error code space is violated, an error with code 32768 is returned.
     pub fn new(code: u16, msg: &str) -> Self {
         if code > MAX_USER_ERROR {
-            Self(USER_ERROR_TOO_HIGH, String::from("User error too high. The code should be in range 0..32767."))
+            Self(
+                USER_ERROR_TOO_HIGH,
+                String::from("User error too high. The code should be in range 0..32767."),
+            )
         } else {
             Self(code, String::from(msg))
         }

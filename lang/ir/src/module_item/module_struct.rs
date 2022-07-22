@@ -2,6 +2,9 @@ use quote::{quote, ToTokens};
 
 use crate::attrs::partition_attributes;
 
+/// Odra module struct.
+///
+/// Wraps up [syn::ItemStruct].
 pub struct ModuleStruct {
     is_instantiable: bool,
     item: syn::ItemStruct,
