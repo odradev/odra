@@ -46,7 +46,7 @@ pub fn generate_code(item: ExternalContractItem) -> TokenStream {
                 Self { address }
             }
 
-            fn address(&self) -> Address {
+            fn address(&self) -> odra::types::Address {
                 self.address.clone()
             }
         }

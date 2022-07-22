@@ -1,4 +1,3 @@
-#![crate_name = "odra_proc_macros"]
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
