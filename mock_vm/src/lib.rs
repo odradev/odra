@@ -14,6 +14,6 @@ ref_thread_local::ref_thread_local!(
     static managed ENV: mock_vm::MockVm = mock_vm::MockVm::default();
 );
 
-pub fn borrow_env<'a>() -> ref_thread_local::Ref<'a, mock_vm::MockVm> {
+pub(crate) fn borrow_env<'a>() -> ref_thread_local::Ref<'a, mock_vm::MockVm> {
     ENV.borrow()
 }

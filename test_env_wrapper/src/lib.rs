@@ -11,6 +11,7 @@ thread_local! {
     });
 }
 
+/// Wrapped Test Env API. 
 #[derive(WrapperApi)]
 pub struct TestBackend {
     backend_name: fn() -> String,
@@ -23,6 +24,7 @@ pub struct TestBackend {
     get_event: fn(address: &Address, index: i32) -> Result<EventData, EventError>,
 }
 
+/// An entry point for communication with dynamically loaded Test Env.
 pub fn on_backend<F, R>(f: F) -> R
 where
     F: FnOnce(&Container<TestBackend>) -> R,
