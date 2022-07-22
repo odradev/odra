@@ -1,5 +1,5 @@
 use derive_more::From;
-use odra_ir::module_item::module_impl::ModuleImpl;
+use odra_ir::module::ModuleImpl;
 use quote::quote;
 
 use crate::GenerateCode;

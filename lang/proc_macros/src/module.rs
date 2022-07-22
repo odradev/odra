@@ -1,4 +1,4 @@
-use odra_ir::ModuleItem;
+use odra_ir::module::ModuleItem;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 
