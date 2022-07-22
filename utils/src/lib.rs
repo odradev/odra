@@ -1,12 +1,36 @@
 use convert_case::{Boundary, Case, Casing};
 use odra_types::event;
 
+/// Converts a camel-cased &str to String.
+/// 
+/// # Example
+/// 
+/// ```
+/// use odra_utils::camel_to_snake;
+/// 
+/// let camel = "ContractName";
+/// let result = camel_to_snake(camel);
+/// 
+/// assert_eq!(&result, "contract_name");
+/// ```
 pub fn camel_to_snake(text: &str) -> String {
     text.from_case(Case::UpperCamel)
         .without_boundaries(&[Boundary::UpperDigit, Boundary::LowerDigit])
         .to_case(Case::Snake)
 }
 
+/// Calculates the absolute position of the event. Accepts both positive and negative indexing.
+/// 
+/// # Examples
+/// 
+/// ```
+/// use odra_utils::event_absolute_position;
+/// use odra_types::event::EventError;
+/// 
+/// assert_eq!(event_absolute_position(10, 0), Ok(0));
+/// assert_eq!(event_absolute_position(10, -1), Ok(9));
+/// assert_eq!(event_absolute_position(10, 10), Err(EventError::IndexOutOfBounds));
+/// ```
 pub fn event_absolute_position(len: usize, index: i32) -> Result<usize, event::EventError> {
     if index.is_negative() {
         let abs_idx = index.wrapping_abs() as usize;
