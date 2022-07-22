@@ -1,8 +1,6 @@
 macro_rules! as_ref_for_contract_impl_generator {
     ($struct_ident:ident) => {
-        impl ::core::convert::AsRef<odra_ir::module::ModuleImpl>
-            for $struct_ident<'_>
-        {
+        impl ::core::convert::AsRef<odra_ir::module::ModuleImpl> for $struct_ident<'_> {
             fn as_ref(&self) -> &odra_ir::module::ModuleImpl {
                 self.contract
             }
@@ -42,9 +40,9 @@ where
     where
         G: GenerateCode + From<&'a odra_ir::module::ModuleImpl>,
     {
-        <G as GenerateCode>::generate_code(&G::from(<Self as AsRef<odra_ir::module::ModuleImpl>>::as_ref(
-            self,
-        )))
+        <G as GenerateCode>::generate_code(&G::from(
+            <Self as AsRef<odra_ir::module::ModuleImpl>>::as_ref(self),
+        ))
     }
 }
 

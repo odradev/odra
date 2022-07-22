@@ -1,5 +1,5 @@
 use derive_more::From;
-use odra_ir::module::{Constructor, ModuleImpl, ImplItem, Method};
+use odra_ir::module::{Constructor, ImplItem, Method, ModuleImpl};
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, TokenStreamExt};
 use syn::{punctuated::Punctuated, token::Comma, ReturnType, Type, TypePath};
