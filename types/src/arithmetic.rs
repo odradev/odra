@@ -1,13 +1,24 @@
-use casper_types::{U128, U256, U512};
+//! Safe, overflowing addition and subtraction utilities.
+use crate::{U128, U256, U512, ExecutionError};
 
-use crate::ExecutionError;
-
+/// Overflowing addition, returning the result of addition or [ArithmeticsError::AdditionOverflow].
 pub trait OverflowingAdd: Sized {
+    /// Overflowing addition. Compute `self + rhs`, returns the result or error if overflowed.
     fn overflowing_add(self, rhs: Self) -> Result<Self, ExecutionError>;
 }
 
+/// Overflowing subtraction, returning the result of addition or [ArithmeticsError::SubtractingOverflow].
 pub trait OverflowingSub: Sized {
+    /// Overflowing subtraction. Compute `self - rhs`, returns the result or error if overflowed.
     fn overflowing_sub(self, rhs: Self) -> Result<Self, ExecutionError>;
+}
+
+/// Computation result error.
+pub enum ArithmeticsError {
+    // Addition result exceeds the max value.
+    AdditionOverflow,
+    // Subtraction result is lower than the min value.
+    SubtractingOverflow,
 }
 
 macro_rules! impl_overflowing_add {
@@ -41,10 +52,6 @@ macro_rules! impl_overflowing_sub {
 impl_overflowing_add!(u8, u16, u32, u64, U128, U256, U512, i8, i16, i32, i64);
 impl_overflowing_sub!(u8, u16, u32, u64, U128, U256, U512, i8, i16, i32, i64);
 
-pub enum ArithmeticsError {
-    AdditionOverflow,
-    SubtractingOverflow,
-}
 
 #[cfg(test)]
 mod test {

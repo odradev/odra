@@ -2,21 +2,15 @@ mod address;
 pub mod arithmetic;
 mod error;
 pub mod event;
+mod serde;
 
-pub use address::Address;
-pub use casper_types::*;
-pub type EventData = Vec<u8>;
+pub use address::*;
+pub use casper_types::{ApiError, U128, U256, U512, CLValue, CLType, CLTyped, CLValueError, RuntimeArgs, runtime_args, NamedArg};
 pub use error::{ExecutionError, OdraError, VmError};
-
-pub trait ToBytes: Sized {
-    type Error;
-
-    fn serialize(&self) -> Result<Vec<u8>, Self::Error>;
+pub use serde::{ToBytes, FromBytes};
+/// Contains serialization and deserialization code for types used throughout the system.
+pub mod bytesrepr {
+    pub use casper_types::bytesrepr::{FromBytes, ToBytes, Bytes, Error, deserialize, serialize};
 }
-
-pub trait FromBytes: Sized {
-    type Error;
-    type Item;
-
-    fn deserialize(data: Vec<u8>) -> Result<(Self::Item, Vec<u8>), Self::Error>;
-}
+/// Serialized event struct representation
+pub type EventData = Vec<u8>;
