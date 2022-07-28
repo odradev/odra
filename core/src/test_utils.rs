@@ -26,7 +26,7 @@ where
 /// # Example
 /// ```ignore
 /// use odra::odra_types::event::Event;
-/// 
+///
 /// #[derive(odra::Event, PartialEq, Eq, Debug)]
 /// struct SetValue {
 ///     pub value: u32
