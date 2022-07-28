@@ -1,9 +1,15 @@
 use crate::ContractEnv;
 use odra_types::ExecutionError;
 
+/// A trait that allows safe unwrapping in the context of a smart contract. 
+/// On failure the contract does not panic, but reverts calling [`ContractEnv::revert`](crate::ContractEnv).
+/// Works with `Result` and `Option`.
 pub trait UnwrapOrRevert<T> {
+    /// On success, unwraps the value into its inner type,
+    /// on failure, calls [`ContractEnv::revert`](crate::ContractEnv) with the passed error.
     fn unwrap_or_revert_with<E: Into<ExecutionError>>(self, err: E) -> T;
-
+    /// On success, unwraps the value into its inner type,
+    /// on failure, calls [`ContractEnv::revert`](crate::ContractEnv) with the default error.
     fn unwrap_or_revert(self) -> T;
 }
 

@@ -142,7 +142,7 @@ where
                     stringify!(#constructor_ident).to_string(),
                     args,
                     |name, args| {
-                        let instance = <#struct_ident as odra::instance::Instance>::instance(name.as_str());
+                        let instance = <#struct_ident as odra::Instance>::instance(name.as_str());
                         instance.#constructor_ident( #fn_args );
                         None
                     }
@@ -225,7 +225,7 @@ where
 
             quote! {
                 entrypoints.insert(#name, |name, args| {
-                    let instance = <#struct_ident as odra::instance::Instance>::instance(name.as_str());
+                    let instance = <#struct_ident as odra::Instance>::instance(name.as_str());
                     let result = instance.#ident(#args);
                     #return_value
                 });
