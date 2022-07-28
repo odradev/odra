@@ -24,19 +24,21 @@ where
 /// The events must be passed in the natural order, from the first emitted events.
 ///
 /// # Example
-/// ```rust no_run
-/// #[derive(odra::Event)]
+/// ```ignore
+/// use odra::odra_types::event::Event;
+/// 
+/// #[derive(odra::Event, PartialEq, Eq, Debug)]
 /// struct SetValue {
 ///     pub value: u32
 /// }
 ///
-/// #[derive(odra::Event)]
+/// #[derive(odra::Event, PartialEq, Eq, Debug)]
 /// struct GetValue {
 ///     pub value: u32
 /// }
 ///
 /// // Contract initialization goes here
-/// let contract = ...;
+/// # let contract = ...;
 ///
 /// SetValue { value: 1 }.emit();
 /// SetValue { value: 42 }.emit();
