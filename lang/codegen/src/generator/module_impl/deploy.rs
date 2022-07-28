@@ -219,7 +219,7 @@ where
                 ReturnType::Type(_, _) => quote! {
                     let bytes = odra::types::bytesrepr::ToBytes::to_bytes(&result).unwrap();
                     Some(odra::types::bytesrepr::Bytes::from(bytes))
-                }
+                },
             };
             let args = args_to_fn_args(&entrypoint.args);
 
