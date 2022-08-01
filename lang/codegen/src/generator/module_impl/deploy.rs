@@ -17,7 +17,6 @@ impl GenerateCode for Deploy<'_> {
     fn generate_code(&self) -> TokenStream {
         let struct_ident = self.contract.ident();
         let struct_name = struct_ident.to_string();
-        let struct_name_lowered = struct_name.to_lowercase();
         let ref_ident = format_ident!("{}Ref", struct_ident);
 
         let entrypoints = build_entrypoints(
@@ -56,8 +55,7 @@ impl GenerateCode for Deploy<'_> {
             ref_ident.clone(),
         );
 
-        let struct_snake_case = odra_utils::camel_to_snake(&struct_name_lowered);
-
+        let struct_snake_case = odra_utils::camel_to_snake(&struct_name);
         quote! {
             #[cfg(all(test, feature = "wasm-test"))]
             impl #struct_ident {
