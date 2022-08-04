@@ -21,9 +21,9 @@ pub fn generate_error_enum(item_enum: ErrorEnumItem) -> TokenStream {
         #[odra::odra_error]
         #item_enum
 
-        impl Into<odra::types::ExecutionError> for #enum_ident {
-            fn into(self) -> odra::types::ExecutionError {
-                match self {
+        impl From<#enum_ident> for odra::types::ExecutionError {
+            fn from(value: #enum_ident) -> Self {
+                match value {
                     #arms
                 }
             }
@@ -37,9 +37,9 @@ pub fn generate_into_odra_error(item_enum: syn::ItemEnum) -> TokenStream {
     quote::quote! {
         #item_enum
 
-        impl Into<odra::types::OdraError> for #ident {
-            fn into(self) -> odra::types::OdraError {
-                odra::types::OdraError::ExecutionError(self.into())
+        impl From<#ident> for odra::types::OdraError {
+            fn from(value: #ident) -> Self {
+                odra::types::OdraError::ExecutionError(value.into())
             }
         }
     }
