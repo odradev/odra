@@ -21,32 +21,16 @@ impl MockVm {
     pub fn register_contract(
         &self,
         constructor: Option<(String, RuntimeArgs, EntrypointCall)>,
+        constructors: HashMap<String, EntrypointCall>,
         entrypoints: HashMap<String, EntrypointCall>,
     ) -> Address {
         // Create a new address.
         let address = { self.state.write().unwrap().next_contract_address() };
-        // Check if contract has init.
-        let has_init = constructor.is_some();
-
-        let original_entrypoints = entrypoints.to_owned();
-
-        let contract_namespace = self.state.read().unwrap().get_contract_namespace();
-
-        let constructor_entrypoint = constructor
-            .clone()
-            .map(|(constructor_name, _, call)| [(constructor_name, call)]);
-
-        let entrypoints = match constructor_entrypoint {
-            Some(constructor) => constructor
-                .into_iter()
-                .chain(entrypoints)
-                .collect::<HashMap<_, _>>(),
-            None => entrypoints,
-        };
 
         // Register new contract under the new address.
         {
-            let contract = ContractContainer::new(&contract_namespace, entrypoints);
+            let contract_namespace = self.state.read().unwrap().get_contract_namespace();
+            let contract = ContractContainer::new(&contract_namespace, entrypoints, constructors);
             self.contract_register
                 .write()
                 .unwrap()
@@ -54,15 +38,9 @@ impl MockVm {
         }
 
         // Call init if needed.
-        if has_init {
-            let (constructor_name, args, _) = constructor.unwrap();
-
-            self.call_contract(&address, &constructor_name, &args, false);
-            let contract = ContractContainer::new(&contract_namespace, original_entrypoints);
-            self.contract_register
-                .write()
-                .unwrap()
-                .add(address, contract);
+        if let Some(constructor) = constructor {
+            let (constructor_name, args, _) = constructor;
+            self.call_constructor(&address, &constructor_name, &args);
         }
         address
     }
@@ -72,22 +50,41 @@ impl MockVm {
         address: &Address,
         entrypoint: &str,
         args: &RuntimeArgs,
-        _has_return: bool,
     ) -> Option<Bytes> {
-        {
-            let mut state = self.state.write().unwrap();
-            // If only one address on the call_stack, record snapshot.
-            if state.is_in_caller_context() {
-                state.take_snapshot();
-                state.clear_error();
-            }
-            // Put the address on stack.
-            state.push_address(address);
-        }
+        self.prepare_call(address);
 
         // Call contract from register.
         let register = self.contract_register.read().unwrap();
         let result = register.call(address, String::from(entrypoint), args.clone());
+        self.handle_call_result(result)
+    }
+
+    fn call_constructor(
+        &self,
+        address: &Address,
+        entrypoint: &str,
+        args: &RuntimeArgs,
+    ) -> Option<Bytes> {
+        self.prepare_call(address);
+
+        // Call contract from register.
+        let register = self.contract_register.read().unwrap();
+        let result = register.call_constructor(address, String::from(entrypoint), args.clone());
+        self.handle_call_result(result)
+    }
+
+    fn prepare_call(&self, address: &Address) {
+        let mut state = self.state.write().unwrap();
+        // If only one address on the call_stack, record snapshot.
+        if state.is_in_caller_context() {
+            state.take_snapshot();
+            state.clear_error();
+        }
+        // Put the address on stack.
+        state.push_address(address);
+    }
+
+    fn handle_call_result(&self, result: Result<Option<Bytes>, OdraError>) -> Option<Bytes> {
         let result = match result {
             Ok(data) => data,
             Err(err) => {
@@ -97,6 +94,7 @@ impl MockVm {
                 None
             }
         };
+
         // Drop the address from stack.
         {
             self.state.write().unwrap().pop_address();
@@ -343,9 +341,10 @@ mod tests {
         // when register two contracts with the same entrypoints
         let entrypoint: Vec<(String, EntrypointCall)> = vec![(String::from("abc"), |_, _| None)];
         let entrypoints = entrypoint.into_iter().collect::<HashMap<_, _>>();
+        let constructors = HashMap::new();
 
-        let address1 = instance.register_contract(None, entrypoints.clone());
-        let address2 = instance.register_contract(None, entrypoints);
+        let address1 = instance.register_contract(None, constructors.clone(), entrypoints.clone());
+        let address2 = instance.register_contract(None, constructors, entrypoints);
 
         // then addresses are different
         assert_ne!(address1, address2);
@@ -358,11 +357,15 @@ mod tests {
 
         let entrypoint: Vec<(String, EntrypointCall)> =
             vec![(String::from("abc"), |_, _| Some(vec![1, 1, 1].into()))];
-        let address =
-            instance.register_contract(None, entrypoint.into_iter().collect::<HashMap<_, _>>());
+        let constructors = HashMap::new();
+        let address = instance.register_contract(
+            None,
+            constructors,
+            entrypoint.into_iter().collect::<HashMap<_, _>>(),
+        );
 
         // when call an existing entrypoint
-        let result = instance.call_contract(&address, "abc", &RuntimeArgs::new(), false);
+        let result = instance.call_contract(&address, "abc", &RuntimeArgs::new());
 
         // then returns the expected value
         assert_eq!(result, Some(vec![1, 1, 1].into()));
@@ -376,7 +379,7 @@ mod tests {
         let address = Address::new(b"random");
 
         // when call a contract
-        instance.call_contract(&address, "abc", &RuntimeArgs::new(), false);
+        instance.call_contract(&address, "abc", &RuntimeArgs::new());
 
         // then the vm is in error state
         assert_eq!(
@@ -391,11 +394,14 @@ mod tests {
         let instance = MockVm::default();
         let entrypoint: Vec<(String, EntrypointCall)> =
             vec![(String::from("abc"), |_, _| Some(vec![1, 1, 1].into()))];
-        let address =
-            instance.register_contract(None, entrypoint.into_iter().collect::<HashMap<_, _>>());
+        let address = instance.register_contract(
+            None,
+            HashMap::new(),
+            entrypoint.into_iter().collect::<HashMap<_, _>>(),
+        );
 
         // when call non-existing entrypoint
-        instance.call_contract(&address, "cba", &RuntimeArgs::new(), false);
+        instance.call_contract(&address, "cba", &RuntimeArgs::new());
 
         // then the vm is in error state
         assert_eq!(

@@ -30,6 +30,17 @@ impl GenerateCode for Deploy<'_> {
             struct_ident,
         );
 
+        let constructors = build_constructors(
+            self.contract
+                .methods()
+                .iter()
+                .filter_map(|item| match item {
+                    ImplItem::Constructor(constructor) => Some(constructor),
+                    _ => None,
+                }),
+            struct_ident,
+        );
+
         let constructors_mock_vm = build_constructors_mock_vm(
             self.contract
                 .methods()
@@ -39,6 +50,7 @@ impl GenerateCode for Deploy<'_> {
                     _ => None,
                 }),
             entrypoints.clone(),
+            constructors.clone(),
             struct_ident,
             ref_ident.clone(),
         );
@@ -80,7 +92,10 @@ impl GenerateCode for Deploy<'_> {
                     let mut entrypoints: HashMap<String, EntrypointCall> = HashMap::new();
                     #entrypoints
 
-                    let address = odra::TestEnv::register_contract(None, entrypoints);
+                    let mut constructors: HashMap<String, EntrypointCall> = HashMap::new();
+                    #constructors
+
+                    let address = odra::TestEnv::register_contract(None, constructors, entrypoints);
                     #ref_ident { address }
                 }
 
@@ -92,7 +107,8 @@ impl GenerateCode for Deploy<'_> {
 
 fn build_constructors_mock_vm<'a, C>(
     constructors: C,
-    entrypoints: TokenStream,
+    entrypoints_stream: TokenStream,
+    constructors_stream: TokenStream,
     struct_ident: &Ident,
     ref_ident: Ident,
 ) -> TokenStream
@@ -130,7 +146,10 @@ where
                 use odra::types::{bytesrepr::Bytes, RuntimeArgs};
 
                 let mut entrypoints: HashMap<String, EntrypointCall> = HashMap::new();
-                #entrypoints
+                #entrypoints_stream
+
+                let mut constructors: HashMap<String, EntrypointCall> = HashMap::new();
+                #constructors_stream
 
                 let args = {
                     #args
@@ -145,7 +164,7 @@ where
                         None
                     }
                 ));
-                let address = odra::TestEnv::register_contract(constructor, entrypoints);
+                let address = odra::TestEnv::register_contract(constructor, constructors, entrypoints);
                 #ref_ident { address }
             }
         }
@@ -227,6 +246,29 @@ where
                     let result = instance.#ident(#args);
                     #return_value
                 });
+            }
+        })
+        .collect::<TokenStream>()
+}
+
+fn build_constructors<'a, T>(constructors: T, struct_ident: &Ident) -> TokenStream
+where
+    T: Iterator<Item = &'a Constructor>,
+{
+    constructors
+        .map(|constructor| {
+            let ident = &constructor.ident;
+            let args = args_to_fn_args(&constructor.args);
+
+            quote! {
+                constructors.insert(
+                    stringify!(#ident).to_string(),
+                    |name, args| {
+                        let instance = <#struct_ident as odra::instance::Instance>::instance(name.as_str());
+                        instance.#ident( #args );
+                        None
+                    }
+                );
             }
         })
         .collect::<TokenStream>()
