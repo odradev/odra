@@ -1,7 +1,7 @@
 <div align="center">
 
-<h1>Odra</h1>
-<h3>High-level smart contract framework for Rust.</h3>
+<img src=".images/odra_logo.png"></img>
+<h3>Odra - High-level smart contract framework for Rust.</h3>
 
 </div>
 

@@ -13,9 +13,10 @@ impl TestEnv {
     /// Registers the contract in the test environment.
     pub fn register_contract(
         constructor: Option<(String, RuntimeArgs, EntrypointCall)>,
+        constructors: HashMap<String, EntrypointCall>,
         entrypoints: HashMap<String, EntrypointCall>,
     ) -> Address {
-        borrow_env().register_contract(constructor, entrypoints)
+        borrow_env().register_contract(constructor, constructors, entrypoints)
     }
 
     /// Calls contract at `address` invoking the `entrypoint` with `args`.
@@ -25,9 +26,9 @@ impl TestEnv {
         address: &Address,
         entrypoint: &str,
         args: &RuntimeArgs,
-        has_return: bool,
+        _has_return: bool,
     ) -> Option<Bytes> {
-        borrow_env().call_contract(address, entrypoint, args, has_return)
+        borrow_env().call_contract(address, entrypoint, args)
     }
 
     /// Expects the `block` execution will fail with the specific error.

@@ -6,8 +6,12 @@ use odra_types::{bytesrepr::Bytes, event::EventError, Address, EventData, OdraEr
 
 thread_local! {
     static TEST_ENV: RefCell<Container<TestBackend>> = RefCell::new(unsafe {
-        Container::load("libodra_test_env.so")
-            .expect("Could not open library or load symbols")
+        let filename = format!(
+            r"{}odra_test_env.{}",
+            dlopen::utils::PLATFORM_FILE_PREFIX,
+            dlopen::utils::PLATFORM_FILE_EXTENSION
+        );
+        Container::load(filename).expect("Could not open library or load symbols")
     });
 }
 
