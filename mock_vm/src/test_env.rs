@@ -9,18 +9,19 @@ pub struct TestEnv;
 impl TestEnv {
     pub fn register_contract(
         constructor: Option<(String, RuntimeArgs, EntrypointCall)>,
+        constructors: HashMap<String, EntrypointCall>,
         entrypoints: HashMap<String, EntrypointCall>,
     ) -> Address {
-        borrow_env().register_contract(constructor, entrypoints)
+        borrow_env().register_contract(constructor, constructors, entrypoints)
     }
 
     pub fn call_contract(
         address: &Address,
         entrypoint: &str,
         args: &RuntimeArgs,
-        has_return: bool,
+        _has_return: bool,
     ) -> Option<Bytes> {
-        borrow_env().call_contract(address, entrypoint, args, has_return)
+        borrow_env().call_contract(address, entrypoint, args)
     }
 
     pub fn assert_exception<F, E>(err: E, block: F)
