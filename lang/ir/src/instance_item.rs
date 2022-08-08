@@ -1,17 +1,32 @@
-use proc_macro2::TokenStream;
+use syn::{spanned::Spanned, DeriveInput};
 
+/// Odra module instance definition.
+///
+/// Only a struct can be an instance of Odra module.
 pub struct InstanceItem {
-    item_struct: syn::ItemStruct,
+    ident: syn::Ident,
+    data_struct: syn::DataStruct,
 }
 
 impl InstanceItem {
-    pub fn parse(_attr: TokenStream, item: TokenStream) -> Result<Self, syn::Error> {
-        let item_struct = syn::parse2::<syn::ItemStruct>(item)?;
-
-        Ok(Self { item_struct })
+    pub fn parse(input: DeriveInput) -> Result<Self, syn::Error> {
+        match input.data {
+            syn::Data::Struct(data_struct) => Ok(Self {
+                ident: input.ident,
+                data_struct,
+            }),
+            _ => Err(syn::Error::new(
+                input.span(),
+                "Only struct can derive from Instance",
+            )),
+        }
     }
 
-    pub fn item_struct(&self) -> &syn::ItemStruct {
-        &self.item_struct
+    pub fn data_struct(&self) -> &syn::DataStruct {
+        &self.data_struct
+    }
+
+    pub fn ident(&self) -> &syn::Ident {
+        &self.ident
     }
 }

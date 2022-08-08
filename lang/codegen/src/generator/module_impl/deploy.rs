@@ -159,7 +159,7 @@ where
                     stringify!(#constructor_ident).to_string(),
                     args,
                     |name, args| {
-                        let instance = <#struct_ident as odra::instance::Instance>::instance(name.as_str());
+                        let instance = <#struct_ident as odra::Instance>::instance(name.as_str());
                         instance.#constructor_ident( #fn_args );
                         None
                     }
@@ -236,13 +236,13 @@ where
                 ReturnType::Type(_, _) => quote! {
                     let bytes = odra::types::bytesrepr::ToBytes::to_bytes(&result).unwrap();
                     Some(odra::types::bytesrepr::Bytes::from(bytes))
-                }
+                },
             };
             let args = args_to_fn_args(&entrypoint.args);
 
             quote! {
                 entrypoints.insert(#name, |name, args| {
-                    let instance = <#struct_ident as odra::instance::Instance>::instance(name.as_str());
+                    let instance = <#struct_ident as odra::Instance>::instance(name.as_str());
                     let result = instance.#ident(#args);
                     #return_value
                 });

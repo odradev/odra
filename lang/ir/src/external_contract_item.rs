@@ -1,6 +1,7 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::format_ident;
 
+/// Odra external contract trait definition.
 pub struct ExternalContractItem {
     pub item_trait: syn::ItemTrait,
     pub item_ref: RefItem,

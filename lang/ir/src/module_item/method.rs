@@ -2,6 +2,16 @@ use quote::{quote, ToTokens};
 
 use crate::attrs::{partition_attributes, OdraAttribute};
 
+/// Odra method definition.
+///
+/// # Examples
+/// ```
+/// # <odra_ir::module::Method as From<syn::ImplItemMethod>>::from(syn::parse_quote! {
+/// pub fn set_value(&self, value: u32) {
+///    // logic goes here
+/// }
+/// # });
+/// ```
 pub struct Method {
     pub attrs: Vec<OdraAttribute>,
     pub impl_item: syn::ImplItemMethod,

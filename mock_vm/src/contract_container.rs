@@ -1,7 +1,7 @@
 use odra_types::{bytesrepr::Bytes, OdraError, RuntimeArgs, VmError};
 use std::collections::HashMap;
 
-pub type EntrypointCall = fn(String, RuntimeArgs) -> Option<Bytes>;
+use crate::EntrypointCall;
 
 #[derive(Default, Clone)]
 pub struct ContractContainer {

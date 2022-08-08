@@ -7,9 +7,10 @@ use odra_types::{
 };
 
 use crate::context::ExecutionContext;
-use crate::contract_container::{ContractContainer, EntrypointCall};
+use crate::contract_container::ContractContainer;
 use crate::contract_register::ContractRegister;
 use crate::storage::Storage;
+use crate::EntrypointCall;
 
 #[derive(Default)]
 pub struct MockVm {
@@ -155,16 +156,6 @@ impl MockVm {
 
     pub fn get_dict_value(&self, dict: &str, key: &[u8]) -> Option<CLValue> {
         self.state.read().unwrap().get_dict_value(dict, key)
-    }
-
-    pub fn events(&self, contract_address: &Address) -> Vec<EventData> {
-        self.state
-            .read()
-            .unwrap()
-            .events
-            .get(contract_address)
-            .cloned()
-            .unwrap_or_default()
     }
 
     pub fn emit_event(&self, event_data: &EventData) {
@@ -478,11 +469,23 @@ mod tests {
         instance.emit_event(&third_event);
         instance.emit_event(&fourth_event);
 
-        let events = instance.events(&first_contract_address);
-        assert_eq!(events, vec![first_event, second_event]);
+        assert_eq!(
+            instance.get_event(&first_contract_address, 0),
+            Ok(first_event)
+        );
+        assert_eq!(
+            instance.get_event(&first_contract_address, 1),
+            Ok(second_event)
+        );
 
-        let events = instance.events(&second_contract_address);
-        assert_eq!(events, vec![third_event, fourth_event]);
+        assert_eq!(
+            instance.get_event(&second_contract_address, 0),
+            Ok(third_event)
+        );
+        assert_eq!(
+            instance.get_event(&second_contract_address, 1),
+            Ok(fourth_event)
+        );
     }
 
     #[test]

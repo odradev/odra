@@ -2,7 +2,7 @@ use derive_more::From;
 use odra_ir::module::ImplItem;
 use quote::ToTokens;
 
-use crate::{GenerateCode, OdraPoetUsingImpl};
+use crate::{poet::OdraPoetUsingImpl, GenerateCode};
 
 use self::{def::ContractDef, deploy::Deploy, reference::ContractReference};
 

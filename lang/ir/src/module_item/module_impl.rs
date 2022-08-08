@@ -4,6 +4,24 @@ use proc_macro2::Ident;
 
 use super::impl_item::ImplItem;
 
+/// Odra module implementation block.
+///
+/// # Examples
+/// ```
+/// # <odra_ir::module::ModuleImpl as TryFrom<syn::ItemImpl>>::try_from(syn::parse_quote! {
+/// impl MyModule {
+///     #[odra(init)]
+///     #[other_attribute]
+///     pub fn set_initial_value(&self, value: u32) {
+///         // initialization logic goes here
+///     }
+///
+///     pub fn set_value(&self, value: u32) {
+///         // logic goes here
+///     }
+/// }
+/// # }).unwrap();
+/// ```
 pub struct ModuleImpl {
     impl_items: Vec<ImplItem>,
     ident: Ident,

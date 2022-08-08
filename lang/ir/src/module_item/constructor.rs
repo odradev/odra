@@ -3,6 +3,18 @@ use std::convert::TryFrom;
 use crate::attrs::{partition_attributes, OdraAttribute};
 use quote::{quote, ToTokens};
 
+/// Odra constructor definition.
+///
+/// # Examples
+/// ```
+/// # <odra_ir::module::Constructor as TryFrom<syn::ImplItemMethod>>::try_from(syn::parse_quote! {
+/// #[odra(init)]
+/// #[other_attribute]
+/// pub fn set_initial_value(&self, value: u32) {
+///     // initialization logic goes here
+/// }
+/// # }).unwrap();
+/// ```
 pub struct Constructor {
     pub attrs: Vec<OdraAttribute>,
     pub impl_item: syn::ImplItemMethod,

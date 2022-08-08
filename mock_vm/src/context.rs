@@ -1,7 +1,7 @@
 use odra_types::Address;
 
 #[derive(Debug, Default, Clone)]
-pub struct ExecutionContext {
+pub(crate) struct ExecutionContext {
     callstack: Vec<Address>,
 }
 
