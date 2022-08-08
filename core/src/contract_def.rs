@@ -2,14 +2,14 @@
 use odra_types::CLType;
 
 /// Top-level contract abstraction.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ContractDef {
     pub ident: String,
     pub entrypoints: Vec<Entrypoint>,
 }
 
 /// Contract's entrypoint.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Entrypoint {
     pub ident: String,
     pub args: Vec<Argument>,
@@ -18,14 +18,14 @@ pub struct Entrypoint {
 }
 
 /// Defines an argument passed to an entrypoint.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Argument {
     pub ident: String,
     pub ty: CLType,
 }
 
 /// Defines an entrypoint type.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum EntrypointType {
     /// A special entrypoint that can be called just once on the contract initialization.
     Constructor,
