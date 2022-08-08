@@ -15,7 +15,7 @@ mod odra_error;
 /// Each module consists of two parts:
 /// 1. Module definition - a struct which composition of stored values (Variables and Mappings)
 /// and modules.
-/// 1. Module implementation - an implementation block.
+/// 2. Module implementation - an implementation block.
 ///
 /// The macro produces all the required code to use the module as a standalone smart contract.
 ///
