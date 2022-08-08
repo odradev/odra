@@ -1,4 +1,4 @@
-//! Events interface and errors
+//! Events interface and errors.
 
 /// Event interface
 pub trait Event {
