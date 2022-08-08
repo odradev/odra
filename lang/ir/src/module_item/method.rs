@@ -9,6 +9,13 @@ pub struct Method {
     pub args: syn::punctuated::Punctuated<syn::PatType, syn::token::Comma>,
     pub ret: syn::ReturnType,
     pub full_sig: syn::Signature,
+    pub visibility: syn::Visibility,
+}
+
+impl Method {
+    pub fn is_public(&self) -> bool {
+        matches!(self.visibility, syn::Visibility::Public(_))
+    }
 }
 
 impl ToTokens for Method {
@@ -63,6 +70,7 @@ impl From<syn::ImplItemMethod> for Method {
             .collect::<syn::punctuated::Punctuated<_, _>>();
         let ret = method.clone().sig.output;
         let full_sig = method.clone().sig;
+        let visibility = method.vis.clone();
         Self {
             attrs: odra_attrs,
             impl_item: syn::ImplItemMethod { attrs, ..method },
@@ -70,6 +78,7 @@ impl From<syn::ImplItemMethod> for Method {
             args,
             ret,
             full_sig,
+            visibility,
         }
     }
 }
