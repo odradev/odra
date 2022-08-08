@@ -9,7 +9,7 @@ pub struct Method {
     pub args: syn::punctuated::Punctuated<syn::PatType, syn::token::Comma>,
     pub ret: syn::ReturnType,
     pub full_sig: syn::Signature,
-    visibility: syn::Visibility,
+    pub visibility: syn::Visibility,
 }
 
 impl Method {
