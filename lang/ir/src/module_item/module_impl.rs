@@ -4,6 +4,24 @@ use proc_macro2::Ident;
 
 use super::impl_item::ImplItem;
 
+/// Odra module implementation block.
+///
+/// # Examples
+/// ```
+/// # <odra_ir::module::ModuleImpl as TryFrom<syn::ItemImpl>>::try_from(syn::parse_quote! {
+/// impl MyModule {
+///     #[odra(init)]
+///     #[other_attribute]
+///     pub fn set_initial_value(&self, value: u32) {
+///         // initialization logic goes here
+///     }
+///
+///     pub fn set_value(&self, value: u32) {
+///         // logic goes here
+///     }
+/// }
+/// # }).unwrap();
+/// ```
 pub struct ModuleImpl {
     impl_items: Vec<ImplItem>,
     ident: Ident,
@@ -21,10 +39,17 @@ impl ModuleImpl {
     pub fn methods(&self) -> Vec<&ImplItem> {
         self.impl_items
             .iter()
-            .filter(|i| match i {
-                ImplItem::Method(_) => true,
+            .filter(|i| matches!(i, ImplItem::Method(_) | ImplItem::Constructor(_)))
+            .collect::<Vec<_>>()
+    }
+
+    pub fn public_methods(&self) -> Vec<&ImplItem> {
+        self.impl_items
+            .iter()
+            .filter(|item| match item {
                 ImplItem::Constructor(_) => true,
-                _ => false,
+                ImplItem::Method(m) => m.is_public(),
+                ImplItem::Other(_) => false,
             })
             .collect::<Vec<_>>()
     }
@@ -41,14 +66,38 @@ impl TryFrom<syn::ItemImpl> for ModuleImpl {
         let contract_ident = path.path.segments.last().unwrap().clone().ident;
         let items = item_impl
             .items
-            .clone()
             .into_iter()
-            .map(|item| <ImplItem as TryFrom<_>>::try_from(item))
+            .map(<ImplItem as TryFrom<_>>::try_from)
             .collect::<Result<Vec<_>, syn::Error>>()?;
 
         Ok(Self {
             impl_items: items,
             ident: contract_ident,
         })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::ModuleImpl;
+
+    #[test]
+    fn impl_items_filtering() {
+        let item_impl: syn::ItemImpl = syn::parse_quote! {
+            impl Contract {
+                #[odra(init)]
+                pub fn constructor() {}
+
+                pub(crate) fn crate_public_fn() {}
+
+                pub fn public_fn() {}
+
+                fn private_fn() {}
+            }
+        };
+        let module_impl = ModuleImpl::try_from(item_impl).unwrap();
+
+        assert_eq!(module_impl.methods().len(), 4);
+        assert_eq!(module_impl.public_methods().len(), 2);
     }
 }

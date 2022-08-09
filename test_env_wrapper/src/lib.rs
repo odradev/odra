@@ -2,27 +2,40 @@ use std::cell::RefCell;
 
 use dlopen::wrapper::{Container, WrapperApi};
 use dlopen_derive::WrapperApi;
-use odra_types::{bytesrepr::Bytes, Address, RuntimeArgs, OdraError, EventData, event::Error as EventError};
+use odra_types::{bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs};
 
 thread_local! {
     static TEST_ENV: RefCell<Container<TestBackend>> = RefCell::new(unsafe {
-        Container::load("libodra_test_env.so")
-            .expect("Could not open library or load symbols")
+        let filename = format!(
+            r"{}odra_test_env.{}",
+            dlopen::utils::PLATFORM_FILE_PREFIX,
+            dlopen::utils::PLATFORM_FILE_EXTENSION
+        );
+        Container::load(filename).expect("Could not open library or load symbols")
     });
 }
 
+/// Wrapped Test Env API.
 #[derive(WrapperApi)]
 pub struct TestBackend {
+    /// Returns the backend name.
     backend_name: fn() -> String,
+    /// Registers the contract in Test Env.
     register_contract: fn(name: &str, args: &RuntimeArgs) -> Address,
+    /// Calls contract at `address` invoking the `entrypoint` with `args`.
     call_contract:
         fn(addr: &Address, entrypoint: &str, args: &RuntimeArgs, has_return: bool) -> Bytes,
+    /// Returns nth user account.
     get_account: fn(n: usize) -> Address,
+    /// Replaces the current caller.
     set_caller: fn(address: &Address),
+    /// Gets the current error.
     get_error: fn() -> Option<OdraError>,
-    get_event: fn(address: &Address, index: i32) -> Result<EventData, EventError>
+    /// Gets nth event emitted by contract at `address`.
+    get_event: fn(address: &Address, index: i32) -> Result<EventData, EventError>,
 }
 
+/// An entry point for communication with dynamically loaded Test Env.
 pub fn on_backend<F, R>(f: F) -> R
 where
     F: FnOnce(&Container<TestBackend>) -> R,
@@ -32,4 +45,3 @@ where
         f(backend)
     })
 }
-

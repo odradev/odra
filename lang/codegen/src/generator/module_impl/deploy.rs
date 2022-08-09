@@ -1,8 +1,5 @@
 use derive_more::From;
-use odra_ir::{
-    module_item::{constructor::Constructor, method::Method, module_impl::ModuleImpl},
-    ImplItem,
-};
+use odra_ir::module::{Constructor, ImplItem, Method, ModuleImpl};
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, TokenStreamExt};
 use syn::{punctuated::Punctuated, token::Comma, ReturnType, Type, TypePath};
@@ -20,7 +17,6 @@ impl GenerateCode for Deploy<'_> {
     fn generate_code(&self) -> TokenStream {
         let struct_ident = self.contract.ident();
         let struct_name = struct_ident.to_string();
-        let struct_name_lowered = struct_name.to_lowercase();
         let ref_ident = format_ident!("{}Ref", struct_ident);
 
         let entrypoints = build_entrypoints(
@@ -29,6 +25,17 @@ impl GenerateCode for Deploy<'_> {
                 .iter()
                 .filter_map(|item| match item {
                     ImplItem::Method(method) => Some(method),
+                    _ => None,
+                }),
+            struct_ident,
+        );
+
+        let constructors = build_constructors(
+            self.contract
+                .methods()
+                .iter()
+                .filter_map(|item| match item {
+                    ImplItem::Constructor(constructor) => Some(constructor),
                     _ => None,
                 }),
             struct_ident,
@@ -43,6 +50,7 @@ impl GenerateCode for Deploy<'_> {
                     _ => None,
                 }),
             entrypoints.clone(),
+            constructors.clone(),
             struct_ident,
             ref_ident.clone(),
         );
@@ -59,8 +67,7 @@ impl GenerateCode for Deploy<'_> {
             ref_ident.clone(),
         );
 
-        let struct_snake_case = odra_utils::camel_to_snake(&struct_name_lowered);
-
+        let struct_snake_case = odra_utils::camel_to_snake(&struct_name);
         quote! {
             #[cfg(all(test, feature = "wasm-test"))]
             impl #struct_ident {
@@ -85,7 +92,10 @@ impl GenerateCode for Deploy<'_> {
                     let mut entrypoints: HashMap<String, EntrypointCall> = HashMap::new();
                     #entrypoints
 
-                    let address = odra::TestEnv::register_contract(None, entrypoints);
+                    let mut constructors: HashMap<String, EntrypointCall> = HashMap::new();
+                    #constructors
+
+                    let address = odra::TestEnv::register_contract(None, constructors, entrypoints);
                     #ref_ident { address }
                 }
 
@@ -97,7 +107,8 @@ impl GenerateCode for Deploy<'_> {
 
 fn build_constructors_mock_vm<'a, C>(
     constructors: C,
-    entrypoints: TokenStream,
+    entrypoints_stream: TokenStream,
+    constructors_stream: TokenStream,
     struct_ident: &Ident,
     ref_ident: Ident,
 ) -> TokenStream
@@ -135,7 +146,10 @@ where
                 use odra::types::{bytesrepr::Bytes, RuntimeArgs};
 
                 let mut entrypoints: HashMap<String, EntrypointCall> = HashMap::new();
-                #entrypoints
+                #entrypoints_stream
+
+                let mut constructors: HashMap<String, EntrypointCall> = HashMap::new();
+                #constructors_stream
 
                 let args = {
                     #args
@@ -145,12 +159,12 @@ where
                     stringify!(#constructor_ident).to_string(),
                     args,
                     |name, args| {
-                        let instance = <#struct_ident as odra::instance::Instance>::instance(name.as_str());
+                        let instance = <#struct_ident as odra::Instance>::instance(name.as_str());
                         instance.#constructor_ident( #fn_args );
                         None
                     }
                 ));
-                let address = odra::TestEnv::register_contract(constructor, entrypoints);
+                let address = odra::TestEnv::register_contract(constructor, constructors, entrypoints);
                 #ref_ident { address }
             }
         }
@@ -168,36 +182,45 @@ where
     let struct_name = struct_ident.to_string();
     let struct_name_snake_case = odra_utils::camel_to_snake(&struct_name);
 
-    constructors.map(|constructor| {
-        let ty = Type::Path(TypePath { qself: None, path: From::from(ref_ident.clone()) });
-        let deploy_fn_ident = format_ident!("deploy_{}", &constructor.ident);
-        let sig = constructor.full_sig.clone();
-        let constructor_ident = &constructor.ident;
+    constructors
+        .map(|constructor| {
+            let ty = Type::Path(TypePath {
+                qself: None,
+                path: From::from(ref_ident.clone()),
+            });
+            let deploy_fn_ident = format_ident!("deploy_{}", &constructor.ident);
+            let sig = constructor.full_sig.clone();
+            let constructor_ident = &constructor.ident;
 
-        let inputs = sig.inputs.into_iter().filter(|i| match i {
-            syn::FnArg::Receiver(_) => false,
-            syn::FnArg::Typed(_) => true,
-        }).collect::<Punctuated<_, _>>();
+            let inputs = sig
+                .inputs
+                .into_iter()
+                .filter(|i| match i {
+                    syn::FnArg::Receiver(_) => false,
+                    syn::FnArg::Typed(_) => true,
+                })
+                .collect::<Punctuated<_, _>>();
 
-        let deploy_fn_sig = syn::Signature {
-            ident: deploy_fn_ident.clone(),
-            output: ReturnType::Type(Default::default(), Box::new(ty)),
-            inputs,
-            ..sig
-        };
+            let deploy_fn_sig = syn::Signature {
+                ident: deploy_fn_ident,
+                output: ReturnType::Type(Default::default(), Box::new(ty)),
+                inputs,
+                ..sig
+            };
 
-        let args = args_to_runtime_args_stream(&constructor.args);
+            let args = args_to_runtime_args_stream(&constructor.args);
 
-        quote! {
-            #deploy_fn_sig {
-                use odra::types::RuntimeArgs;
-                let mut args = { #args };
-                args.insert("constructor", stringify!(#constructor_ident));
-                let address = odra::TestEnv::register_contract(#struct_name_snake_case, &args);
-                #ref_ident { address }
+            quote! {
+                #deploy_fn_sig {
+                    use odra::types::RuntimeArgs;
+                    let mut args = { #args };
+                    args.insert("constructor", stringify!(#constructor_ident));
+                    let address = odra::TestEnv::register_contract(#struct_name_snake_case, &args);
+                    #ref_ident { address }
+                }
             }
-        }
-    }).collect::<TokenStream>()
+        })
+        .collect::<TokenStream>()
 }
 
 fn build_entrypoints<'a, T>(methods: T, struct_ident: &Ident) -> TokenStream
@@ -213,16 +236,39 @@ where
                 ReturnType::Type(_, _) => quote! {
                     let bytes = odra::types::bytesrepr::ToBytes::to_bytes(&result).unwrap();
                     Some(odra::types::bytesrepr::Bytes::from(bytes))
-                }
+                },
             };
             let args = args_to_fn_args(&entrypoint.args);
 
             quote! {
                 entrypoints.insert(#name, |name, args| {
-                    let instance = <#struct_ident as odra::instance::Instance>::instance(name.as_str());
+                    let instance = <#struct_ident as odra::Instance>::instance(name.as_str());
                     let result = instance.#ident(#args);
                     #return_value
                 });
+            }
+        })
+        .collect::<TokenStream>()
+}
+
+fn build_constructors<'a, T>(constructors: T, struct_ident: &Ident) -> TokenStream
+where
+    T: Iterator<Item = &'a Constructor>,
+{
+    constructors
+        .map(|constructor| {
+            let ident = &constructor.ident;
+            let args = args_to_fn_args(&constructor.args);
+
+            quote! {
+                constructors.insert(
+                    stringify!(#ident).to_string(),
+                    |name, args| {
+                        let instance = <#struct_ident as odra::Instance>::instance(name.as_str());
+                        instance.#ident( #args );
+                        None
+                    }
+                );
             }
         })
         .collect::<TokenStream>()
@@ -252,7 +298,7 @@ where
     let mut tokens = quote!(let mut args = RuntimeArgs::new(););
     tokens.append_all(args.into_iter().map(|arg| {
         let pat = &*arg.pat;
-        quote! { args.insert(stringify!(#pat), #pat).unwrap(); }
+        quote! { odra::UnwrapOrRevert::unwrap_or_revert(args.insert(stringify!(#pat), #pat)); }
     }));
     tokens.extend(quote!(args));
     tokens

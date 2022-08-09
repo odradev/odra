@@ -2,6 +2,9 @@ use quote::{quote, ToTokens};
 
 use crate::attrs::partition_attributes;
 
+/// Odra module struct.
+///
+/// Wraps up [syn::ItemStruct].
 pub struct ModuleStruct {
     is_instantiable: bool,
     item: syn::ItemStruct,
@@ -25,7 +28,7 @@ impl ToTokens for ModuleStruct {
         let item_struct = &self.item;
         let span = item_struct.ident.span();
         let instance = match &self.is_instantiable {
-            true => quote::quote_spanned!(span => #[odra::instance]),
+            true => quote::quote_spanned!(span => #[derive(odra::Instance)]),
             false => quote!(),
         };
         tokens.extend(quote! {

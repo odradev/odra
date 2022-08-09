@@ -10,6 +10,13 @@ pub mod method;
 pub mod module_impl;
 pub mod module_struct;
 
+/// Odra module item.
+///
+/// Can be either
+/// - an Odra [`odra_ir::module::ModuleStruct`](`crate::module::ModuleStruct`)
+/// - an Odra [`odra_ir::module::ModuleImpl`](`crate::module::ModuleImpl`)
+///
+/// All the items are based on syn with special variants for Odra `impl` items.
 pub enum ModuleItem {
     Struct(ModuleStruct),
     Impl(ModuleImpl),
@@ -20,13 +27,11 @@ impl ModuleItem {
         let item_struct = syn::parse2::<syn::ItemStruct>(item.clone());
         let item_impl = syn::parse2::<syn::ItemImpl>(item.clone());
 
-        if item_struct.is_ok() {
-            let item = item_struct.unwrap();
+        if let Ok(item) = item_struct {
             return Ok(ModuleItem::Struct(ModuleStruct::from(item)));
         }
 
-        if item_impl.is_ok() {
-            let item = item_impl.unwrap();
+        if let Ok(item) = item_impl {
             let item = ModuleImpl::try_from(item)?;
             return Ok(ModuleItem::Impl(item));
         }

@@ -1,5 +1,5 @@
 use derive_more::From;
-use odra_ir::module_item::module_impl::ModuleImpl;
+use odra_ir::module::ModuleImpl;
 use quote::quote;
 
 use crate::GenerateCode;
@@ -16,7 +16,7 @@ impl GenerateCode for ContractDef<'_> {
         let struct_ident = self.contract.ident();
         let struct_name = struct_ident.to_string();
 
-        let entrypoints = self.contract.methods();
+        let entrypoints = self.contract.public_methods();
 
         quote! {
             impl odra::contract_def::HasContractDef for #struct_ident {

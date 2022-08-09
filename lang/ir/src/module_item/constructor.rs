@@ -3,6 +3,18 @@ use std::convert::TryFrom;
 use crate::attrs::{partition_attributes, OdraAttribute};
 use quote::{quote, ToTokens};
 
+/// Odra constructor definition.
+///
+/// # Examples
+/// ```
+/// # <odra_ir::module::Constructor as TryFrom<syn::ImplItemMethod>>::try_from(syn::parse_quote! {
+/// #[odra(init)]
+/// #[other_attribute]
+/// pub fn set_initial_value(&self, value: u32) {
+///     // initialization logic goes here
+/// }
+/// # }).unwrap();
+/// ```
 pub struct Constructor {
     pub attrs: Vec<OdraAttribute>,
     pub impl_item: syn::ImplItemMethod,
@@ -17,7 +29,7 @@ impl ToTokens for Constructor {
         let args = &self
             .args
             .iter()
-            .map(|arg| {
+            .flat_map(|arg| {
                 let name = &*arg.pat;
                 let ty = &*arg.ty;
                 let ty = quote!(<#ty as odra::types::CLTyped>::cl_type());
@@ -28,7 +40,6 @@ impl ToTokens for Constructor {
                     },
                 }
             })
-            .flatten()
             .collect::<proc_macro2::TokenStream>();
         let ep = quote! {
             odra::contract_def::Entrypoint {
@@ -58,7 +69,7 @@ impl TryFrom<syn::ImplItemMethod> for Constructor {
                 syn::FnArg::Typed(pat) => Some(pat.clone()),
             })
             .collect::<syn::punctuated::Punctuated<syn::PatType, syn::token::Comma>>();
-        if let syn::ReturnType::Type(_, _) = value.clone().sig.output {
+        if let syn::ReturnType::Type(_, _) = value.sig.output {
             return Err(syn::Error::new_spanned(
                 value.sig,
                 "Constructor must not return value.",

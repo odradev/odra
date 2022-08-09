@@ -1,8 +1,8 @@
 use derive_more::From;
-use odra_ir::ImplItem;
+use odra_ir::module::ImplItem;
 use quote::ToTokens;
 
-use crate::{GenerateCode, OdraPoetUsingImpl};
+use crate::{poet::OdraPoetUsingImpl, GenerateCode};
 
 use self::{def::ContractDef, deploy::Deploy, reference::ContractReference};
 
@@ -12,7 +12,7 @@ mod reference;
 
 #[derive(From)]
 pub struct ModuleImpl<'a> {
-    contract: &'a odra_ir::ModuleImpl,
+    contract: &'a odra_ir::module::ModuleImpl,
 }
 
 as_ref_for_contract_impl_generator!(ModuleImpl);

@@ -2,6 +2,16 @@ use quote::{quote, ToTokens};
 
 use crate::attrs::{partition_attributes, OdraAttribute};
 
+/// Odra method definition.
+///
+/// # Examples
+/// ```
+/// # <odra_ir::module::Method as From<syn::ImplItemMethod>>::from(syn::parse_quote! {
+/// pub fn set_value(&self, value: u32) {
+///    // logic goes here
+/// }
+/// # });
+/// ```
 pub struct Method {
     pub attrs: Vec<OdraAttribute>,
     pub impl_item: syn::ImplItemMethod,
@@ -9,6 +19,13 @@ pub struct Method {
     pub args: syn::punctuated::Punctuated<syn::PatType, syn::token::Comma>,
     pub ret: syn::ReturnType,
     pub full_sig: syn::Signature,
+    pub visibility: syn::Visibility,
+}
+
+impl Method {
+    pub fn is_public(&self) -> bool {
+        matches!(self.visibility, syn::Visibility::Public(_))
+    }
 }
 
 impl ToTokens for Method {
@@ -63,6 +80,7 @@ impl From<syn::ImplItemMethod> for Method {
             .collect::<syn::punctuated::Punctuated<_, _>>();
         let ret = method.clone().sig.output;
         let full_sig = method.clone().sig;
+        let visibility = method.vis.clone();
         Self {
             attrs: odra_attrs,
             impl_item: syn::ImplItemMethod { attrs, ..method },
@@ -70,6 +88,7 @@ impl From<syn::ImplItemMethod> for Method {
             args,
             ret,
             full_sig,
+            visibility,
         }
     }
 }

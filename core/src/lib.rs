@@ -1,18 +1,19 @@
 pub mod contract_def;
-mod event;
-pub mod instance;
+mod instance;
 mod mapping;
+mod unwrap_or_revert;
 mod variable;
 
 use std::fmt::Debug;
-use types::{bytesrepr::FromBytes, Address, CLType, CLTyped, RuntimeArgs, OdraError};
+use types::{bytesrepr::FromBytes, Address, CLTyped, RuntimeArgs};
 
 pub use {
+    instance::Instance,
     mapping::Mapping,
-    odra_proc_macros::{external_contract, instance, module, Event},
-    odra_types as types,
-    odra_utils as utils,
-    variable::Variable
+    odra_proc_macros::{execution_error, external_contract, module, odra_error, Event, Instance},
+    odra_types as types, odra_utils as utils,
+    unwrap_or_revert::UnwrapOrRevert,
+    variable::Variable,
 };
 
 cfg_if::cfg_if! {
@@ -30,20 +31,23 @@ cfg_if::cfg_if! {
     }
 }
 
+/// Calls contract at `address` invoking the `entrypoint` with `args`.
+///
+/// Returns already parsed result.
 pub fn call_contract<T>(address: &Address, entrypoint: &str, args: &RuntimeArgs) -> T
 where
     T: CLTyped + FromBytes + Debug,
 {
     cfg_if::cfg_if! {
         if #[cfg(feature = "mock-vm")] {
-            let has_return = CLType::Unit != T::cl_type();
+            let has_return = types::CLType::Unit != T::cl_type();
             let result = TestEnv::call_contract(address, entrypoint, args, has_return);
             match result {
                 Some(bytes) => T::from_bytes(bytes.as_slice()).unwrap().0,
                 None => T::from_bytes(&[]).unwrap().0,
             }
         } else if #[cfg(feature = "wasm-test")] {
-            let has_return = CLType::Unit != T::cl_type();
+            let has_return = types::CLType::Unit != T::cl_type();
             let result = TestEnv::call_contract(address, entrypoint, args, has_return);
             match result {
                 Some(bytes) => T::from_bytes(bytes.as_slice()).unwrap().0,
@@ -51,8 +55,7 @@ where
             }
         }  else if #[cfg(feature = "wasm")] {
             let res = ContractEnv::call_contract(address, entrypoint, args);
-            // TODO: Remove unwrap.
-            types::bytesrepr::deserialize(res).unwrap()
+            types::bytesrepr::deserialize(res).unwrap_or_revert()
         } else {
             compile_error!("Unknown feature")
         }

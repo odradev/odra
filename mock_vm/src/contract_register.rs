@@ -20,18 +20,30 @@ impl ContractRegister {
         entrypoint: String,
         args: RuntimeArgs,
     ) -> Result<Option<Bytes>, OdraError> {
+        self.internal_call(addr, |container| {
+            std::panic::catch_unwind(|| container.call(entrypoint, args))?
+        })
+    }
+
+    pub fn call_constructor(
+        &self,
+        addr: &Address,
+        entrypoint: String,
+        args: RuntimeArgs,
+    ) -> Result<Option<Bytes>, OdraError> {
+        self.internal_call(addr, |container| {
+            std::panic::catch_unwind(|| container.call_constructor(entrypoint, args))?
+        })
+    }
+
+    fn internal_call<F: FnOnce(&ContractContainer) -> Result<Option<Bytes>, OdraError>>(
+        &self,
+        addr: &Address,
+        call_fn: F,
+    ) -> Result<Option<Bytes>, OdraError> {
         let contract = self.contracts.get(addr);
         match contract {
-            Some(container) => {
-                let maybe_error = std::panic::catch_unwind( || {
-                    container.call(entrypoint, args)
-                });
-                if maybe_error.is_err() {
-                    Err(OdraError::VmError(VmError::Panic))
-                } else {
-                    maybe_error.unwrap()
-                }
-            },
+            Some(container) => call_fn(container),
             None => Err(OdraError::VmError(VmError::InvalidContractAddress)),
         }
     }

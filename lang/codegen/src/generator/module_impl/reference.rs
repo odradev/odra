@@ -1,5 +1,5 @@
 use derive_more::From;
-use odra_ir::module_item::{impl_item::ImplItem, module_impl::ModuleImpl};
+use odra_ir::module::{ImplItem, ModuleImpl};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 
@@ -45,7 +45,7 @@ impl GenerateCode for ContractReference<'_> {
     }
 }
 
-fn build_entrypoints(methods: &Vec<&ImplItem>) -> TokenStream {
+fn build_entrypoints(methods: &[&ImplItem]) -> TokenStream {
     methods
         .iter()
         .filter_map(|item| match item {
@@ -67,7 +67,7 @@ fn build_entrypoints(methods: &Vec<&ImplItem>) -> TokenStream {
         .collect::<TokenStream>()
 }
 
-fn build_constructors(methods: &Vec<&ImplItem>) -> TokenStream {
+fn build_constructors(methods: &[&ImplItem]) -> TokenStream {
     methods
         .iter()
         .filter_map(|item| match item {

@@ -10,8 +10,11 @@ use super::{constructor::Constructor, method::Method};
 ///
 /// At this point there is not difference between a [Method] and a default syn::ImplItem
 pub enum ImplItem {
+    /// A `#[odra(init)]` marked function.
     Constructor(Constructor),
+    /// Unmarked function.
     Method(Method),
+    /// Any other implementation block item.
     Other(syn::ImplItem),
 }
 
