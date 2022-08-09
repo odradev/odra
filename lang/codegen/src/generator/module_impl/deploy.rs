@@ -214,7 +214,7 @@ where
                 #deploy_fn_sig {
                     use odra::types::RuntimeArgs;
                     let mut args = { #args };
-                    args.insert("constructor", stringify!(#constructor_ident));
+                    args.insert("constructor", stringify!(#constructor_ident)).unwrap();
                     let address = odra::TestEnv::register_contract(#struct_name_snake_case, &args);
                     #ref_ident { address }
                 }
@@ -298,7 +298,7 @@ where
     let mut tokens = quote!(let mut args = RuntimeArgs::new(););
     tokens.append_all(args.into_iter().map(|arg| {
         let pat = &*arg.pat;
-        quote! { odra::UnwrapOrRevert::unwrap_or_revert(args.insert(stringify!(#pat), #pat)); }
+        quote! { args.insert(stringify!(#pat), #pat).unwrap(); }
     }));
     tokens.extend(quote!(args));
     tokens
