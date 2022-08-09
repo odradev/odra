@@ -264,7 +264,7 @@ where
                 constructors.insert(
                     stringify!(#ident).to_string(),
                     |name, args| {
-                        let instance = <#struct_ident as odra::instance::Instance>::instance(name.as_str());
+                        let instance = <#struct_ident as odra::Instance>::instance(name.as_str());
                         instance.#ident( #args );
                         None
                     }
