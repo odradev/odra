@@ -10,11 +10,11 @@ keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm", "smart contracts"]
 
 [dependencies]
-odra-types = { path = "../types" }
-odra-utils = { path = "../utils" }
-odra-proc-macros = { path = "../lang/proc_macros" }
-odra-mock-vm = { path = "../mock_vm", optional = true }
-odra-test-env-wrapper = { path = "../test_env_wrapper", optional = true  }
+odra-types = { version = "0.0.1", path = "../types" }
+odra-utils = { version = "0.0.1", path = "../utils" }
+odra-proc-macros = { version = "0.0.1", path = "../lang/proc_macros" }
+odra-mock-vm = { version = "0.0.1", path = "../mock_vm", optional = true }
+odra-test-env-wrapper = { version = "0.0.1", path = "../test_env_wrapper", optional = true  }
 ref_thread_local = "0.1.1"
 cfg-if = "1.0.0"
 

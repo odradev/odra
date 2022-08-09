@@ -10,6 +10,6 @@ keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm", "smart contracts"]
 
 [dependencies]
-odra-types = { path = "../types" }
+odra-types = { version = "0.0.1", path = "../types" }
 dlopen = "0.1.8"
 dlopen_derive = "0.1.4"
