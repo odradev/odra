@@ -2,6 +2,9 @@
 
 Changelog for `odra`.
 
+## [0.1.0] - 2022-08-10
+No changes.
+
 ## [0.0.1] - 2022-07-20
 ### Added
 - `contract_def` provides an abstract definition of a smart contract.
