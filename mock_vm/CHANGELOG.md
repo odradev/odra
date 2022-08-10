@@ -2,6 +2,9 @@
 
 Changelog for `odra-mock-vm`.
 
+## [0.1.0] - 2022-08-10
+No changes.
+
 ## [0.0.1] - 2022-07-20
 ### Added
 - `TestEnv` and `ContractEnv` implementations used to run tests.

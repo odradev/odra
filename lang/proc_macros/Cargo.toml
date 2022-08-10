@@ -1,24 +1,24 @@
 [package]
 name = "odra-proc-macros"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2021"
 authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
 license = "MIT"
 repository = "https://github.com/odradev/odra"
 description = "Proc macros for Odra-based smart contracts."
 keywords = ["wasm", "webassembly", "blockchain"]
-categories = ["wasm", "smart contracts"]
+categories = ["wasm"]
 
 [dependencies]
 proc-macro2 = "1.0.40"
 quote = "1.0.19"
 syn =  { version = "1.0.89", features = ["full", "extra-traits"] }
-odra-ir = { version = "0.0.1", path = "../ir" }
-odra-codegen = { version = "0.0.1", path = "../codegen" }
+odra-ir = { version = "0.1.0", path = "../ir" }
+odra-codegen = { version = "0.1.0", path = "../codegen" }
 
 [dev-dependencies]
-odra = { version = "0.0.1", path = "../../core" }
-odra-codegen = { version = "0.0.1", path = "../codegen" }
+odra = { version = "0.1.0", path = "../../core" }
+odra-codegen = { version = "0.1.0", path = "../codegen" }
 proc-macro2 = "1.0.40"
 
 [lib]
