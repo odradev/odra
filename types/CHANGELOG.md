@@ -2,6 +2,9 @@
 
 Changelog for `odra-types`.
 
+## [0.1.0] - 2022-08-10
+No changes.
+
 ## [0.0.1] - 2022-07-20
 ### Added
 - `address` module defines a blockchain-agnostic address struct that can be used for storing contract and account addresses.

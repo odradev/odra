@@ -1,20 +1,20 @@
 [package]
 name = "odra"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2021"
 authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
 license = "MIT"
 repository = "https://github.com/odradev/odra"
 description = "High-level smart contract framework for Rust."
 keywords = ["wasm", "webassembly", "blockchain"]
-categories = ["wasm", "smart contracts"]
+categories = ["wasm"]
 
 [dependencies]
-odra-types = { version = "0.0.1", path = "../types" }
-odra-utils = { version = "0.0.1", path = "../utils" }
-odra-proc-macros = { version = "0.0.1", path = "../lang/proc_macros" }
-odra-mock-vm = { version = "0.0.1", path = "../mock_vm", optional = true }
-odra-test-env-wrapper = { version = "0.0.1", path = "../test_env_wrapper", optional = true  }
+odra-types = { version = "0.1.0", path = "../types" }
+odra-utils = { version = "0.1.0", path = "../utils" }
+odra-proc-macros = { version = "0.1.0", path = "../lang/proc_macros" }
+odra-mock-vm = { version = "0.1.0", path = "../mock_vm", optional = true }
+odra-test-env-wrapper = { version = "0.1.0", path = "../test_env_wrapper", optional = true  }
 ref_thread_local = "0.1.1"
 cfg-if = "1.0.0"
 
