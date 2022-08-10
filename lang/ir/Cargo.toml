@@ -1,13 +1,13 @@
 [package]
 name = "odra-ir"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2021"
 authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
 license = "MIT"
 repository = "https://github.com/odradev/odra"
 description = "Data structures for Odra IR (intermediate representation)."
 keywords = ["wasm", "webassembly", "blockchain"]
-categories = ["wasm", "smart contracts"]
+categories = ["wasm"]
 
 [dependencies]
 proc-macro2 = "1.0.40"
