@@ -1,14 +1,26 @@
 <div align="center">
     <img src=".images/odra_logo.png"></img>
     <h3>Odra - High-level smart contract framework for Rust.</h3>
+    <p>
+        <a href="https://github.com/odradev/odra/actions">
+            <img src="https://img.shields.io/github/workflow/status/odradev/odra/odra-ci/develop?style=plastic" alt="Build status" />
+        </a>
+        <a href="https://crates.io/crates/odra">
+            <img src="https://img.shields.io/crates/v/odra?style=plastic" alt="Version" />
+        </a>
+        <a href="https://crates.io/crates/odra">
+            <img src="https://img.shields.io/crates/l/odra?style=plastic" alt="License" />
+        </a>
+        <img src="https://img.shields.io/github/languages/top/odradev/odra" alt="Language" />
+    </p>
 </div>
 
 ## Table of Contents
-* [Usage](#usage)
-* [Example](#example)
-* [Backends](#backends)
-* [Links](#links)
-* [Contact](#contact)
+- [Usage](#usage)
+- [Example](#example)
+- [Backends](#backends)
+- [Links](#links)
+- [Contact](#contact)
 
 ## Usage
 
