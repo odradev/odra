@@ -1,4 +1,5 @@
 //! Encapsulates a set of structures that abstract out a smart contract layout.
+use alloc::{string::String, vec::Vec};
 use odra_types::CLType;
 
 /// Top-level contract abstraction.

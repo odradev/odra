@@ -1,4 +1,6 @@
 //! Events interface and errors.
+#[cfg(not(feature = "std"))]
+use alloc::string::String;
 
 /// Event interface
 pub trait Event {

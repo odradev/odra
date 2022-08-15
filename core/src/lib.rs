@@ -1,10 +1,16 @@
+#![cfg_attr(not(any(feature = "wasm-test", feature = "mock-vm", test)), no_std)]
+
+extern crate alloc;
+
+#[cfg(any(feature = "wasm-test", feature = "mock-vm", test))]
+extern crate std;
+
 pub mod contract_def;
 mod instance;
 mod mapping;
 mod unwrap_or_revert;
 mod variable;
 
-use std::fmt::Debug;
 use types::{bytesrepr::FromBytes, Address, CLTyped, RuntimeArgs};
 
 pub use {
@@ -36,7 +42,7 @@ cfg_if::cfg_if! {
 /// Returns already parsed result.
 pub fn call_contract<T>(address: &Address, entrypoint: &str, args: &RuntimeArgs) -> T
 where
-    T: CLTyped + FromBytes + Debug,
+    T: CLTyped + FromBytes,
 {
     cfg_if::cfg_if! {
         if #[cfg(feature = "mock-vm")] {

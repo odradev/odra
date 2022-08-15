@@ -63,7 +63,7 @@ impl GenerateCode for EventItem<'_> {
               }
 
               fn name(&self) -> String {
-                  stringify!(#struct_ident).to_string()
+                  String::from(stringify!(#struct_ident))
               }
             }
 

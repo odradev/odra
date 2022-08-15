@@ -13,11 +13,13 @@ where
 
     match ret {
         syn::ReturnType::Default => quote! {
+            use odra::UnwrapOrRevert;
             #args
             odra::call_contract::<()>(&self.address, #entrypoint_name, &args);
         },
         syn::ReturnType::Type(_, _) => quote! {
             use odra::types::CLTyped;
+            use odra::UnwrapOrRevert;
             #args
             odra::call_contract(&self.address, #entrypoint_name, &args)
         },
@@ -43,7 +45,7 @@ where
     let mut tokens = quote!(let mut args = RuntimeArgs::new(););
     tokens.append_all(syn_args.into_iter().map(|arg| {
         let pat = &*arg.pat;
-        quote! { args.insert(stringify!(#pat), #pat).unwrap(); }
+        quote! { args.insert(stringify!(#pat), #pat).unwrap_or_revert(); }
     }));
     tokens.extend(quote!(args));
 

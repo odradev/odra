@@ -1,5 +1,6 @@
-use std::marker::PhantomData;
+use core::marker::PhantomData;
 
+use alloc::string::String;
 use odra_types::{
     arithmetic::{OverflowingAdd, OverflowingSub},
     bytesrepr::{FromBytes, ToBytes},
@@ -75,7 +76,7 @@ impl<T: FromBytes + ToBytes + CLTyped> Variable<T> {
 
 impl<T: FromBytes + ToBytes + CLTyped> From<&str> for Variable<T> {
     fn from(name: &str) -> Self {
-        Variable::new(name.to_string())
+        Variable::new(String::from(name))
     }
 }
 

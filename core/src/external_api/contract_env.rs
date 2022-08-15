@@ -1,4 +1,5 @@
 use crate::UnwrapOrRevert;
+use alloc::vec::Vec;
 use odra_types::{
     bytesrepr::{FromBytes, ToBytes},
     event::Event,

@@ -1,3 +1,11 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+
+#[cfg(feature = "std")]
+extern crate std;
+
 mod address;
 pub mod arithmetic;
 mod error;
@@ -16,4 +24,7 @@ pub mod bytesrepr {
     pub use casper_types::bytesrepr::{deserialize, serialize, Bytes, Error, FromBytes, ToBytes};
 }
 /// Serialized event struct representation
-pub type EventData = Vec<u8>;
+#[cfg(not(feature = "std"))]
+pub type EventData = alloc::vec::Vec<u8>;
+#[cfg(feature = "std")]
+pub type EventData = std::vec::Vec<u8>;

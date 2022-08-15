@@ -1,7 +1,10 @@
-use std::{fmt::Debug, hash::Hash, marker::PhantomData};
+
+use core::marker::PhantomData;
+use core::hash::Hash;
 
 use crate::ContractEnv;
 use crate::UnwrapOrRevert;
+use alloc::string::String;
 use odra_types::{
     arithmetic::{OverflowingAdd, OverflowingSub},
     bytesrepr::{FromBytes, ToBytes},
@@ -63,7 +66,7 @@ impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped + Overflowing
 
 impl<
         K: ToBytes + CLTyped + Hash,
-        V: ToBytes + FromBytes + CLTyped + OverflowingSub + Default + Debug + PartialOrd,
+        V: ToBytes + FromBytes + CLTyped + OverflowingSub + Default + PartialOrd,
     > Mapping<K, V>
 {
     /// Utility function that gets the current value and subtracts the passed `value`
@@ -79,7 +82,7 @@ impl<
 
 impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped> From<&str> for Mapping<K, V> {
     fn from(name: &str) -> Self {
-        Mapping::new(name.to_string())
+        Mapping::new(String::from(name))
     }
 }
 

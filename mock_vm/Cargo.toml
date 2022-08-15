@@ -10,6 +10,6 @@ keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm"]
 
 [dependencies]
-odra-types = { version = "0.1.0", path = "../types" }
-odra-utils = { version = "0.1.0", path = "../utils" }
+odra-types = { version = "0.1.0", path = "../types", default-features = false, features = ["std"] }
+odra-utils = { version = "0.1.0", path = "../utils", features = ["std"] }
 ref_thread_local = "0.1.1"

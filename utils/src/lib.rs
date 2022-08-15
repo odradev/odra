@@ -1,3 +1,8 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(feature = "std")]
+extern crate std;
+#[cfg(feature = "std")]
 use convert_case::{Boundary, Case, Casing};
 use odra_types::event;
 
@@ -13,6 +18,7 @@ use odra_types::event;
 ///
 /// assert_eq!(&result, "contract_name");
 /// ```
+#[cfg(feature = "std")]
 pub fn camel_to_snake(text: &str) -> String {
     text.from_case(Case::UpperCamel)
         .without_boundaries(&[Boundary::UpperDigit, Boundary::LowerDigit])

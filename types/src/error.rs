@@ -1,3 +1,6 @@
+#[cfg(not(feature = "std"))]
+use alloc::{format, string::String};
+
 use crate::bytesrepr;
 
 use crate::arithmetic::ArithmeticsError;
@@ -7,7 +10,7 @@ const USER_ERROR_TOO_HIGH: u16 = 32768;
 const UNWRAP_ERROR: u16 = u16::MAX;
 
 /// General error type in Odra framework
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum OdraError {
     /// An error that can occur during smart contract execution
     ExecutionError(ExecutionError),
@@ -49,6 +52,7 @@ impl From<ArithmeticsError> for ExecutionError {
     }
 }
 
+#[cfg(feature = "std")]
 impl From<Box<dyn std::any::Any + Send>> for OdraError {
     fn from(_: Box<dyn std::any::Any + Send>) -> Self {
         OdraError::VmError(VmError::Panic)

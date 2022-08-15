@@ -5,7 +5,7 @@ pub mod test_env;
 pub mod contract_env;
 
 // This mock here is required because when loading a code of a module
-// in new contract repository, ContractEnv is required, but we semanticaly
+// in new contract repository, ContractEnv is required, but we semantically
 // doesn't make sense for `wasm-test` feature.
 #[cfg(feature = "wasm-test")]
 pub mod contract_env {

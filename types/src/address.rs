@@ -1,3 +1,6 @@
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
+
 use crate::{
     bytesrepr::{Error, FromBytes, ToBytes},
     CLType, CLTyped,
@@ -55,6 +58,7 @@ impl FromBytes for Address {
     }
 }
 
+#[cfg(feature = "std")]
 impl core::fmt::Debug for Address {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let name = hex::encode(&self.data);
