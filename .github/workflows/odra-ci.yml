@@ -17,26 +17,63 @@ on:
       - "**.md"
 
 jobs:
-  build:
-    runs-on: ubuntu-20.04
+#  check_and_test:
+#    runs-on: ubuntu-20.04
+#    steps:
+#      - uses: actions/checkout@v2
+#      - uses: actions-rs/toolchain@v1
+#        with:
+#          profile: minimal
+#          components: rustfmt, clippy
+#      - uses: Swatinem/rust-cache@v1
+#      - name: Run cargo fmt check
+#        uses: actions-rs/cargo@v1
+#        with:
+#          command: fmt
+#          args: -- --check
+#      - name: Run cargo clippy checks
+#        uses: actions-rs/cargo@v1
+#        with:
+#          command: clippy
+#          args: --all-targets -- -D warnings
+#      - name: Run cargo test
+#        uses: actions-rs/cargo@v1
+#        with:
+#          command: test
+  integration_tests:
+    runs-on: ubuntu-22.04
+    needs: check_and_test
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v1
-      - name: Run cargo fmt check
-        uses: actions-rs/cargo@v1
+      - name: Clone odra-examples
+        uses: actions/checkout@v2
         with:
-          command: fmt
-          args: -- --check
-      - name: Run cargo clippy checks
-        uses: actions-rs/cargo@v1
+          repository: odradev/odra-examples
+          path: odra-examples
+      - name: Clone casper-backend
+        uses: actions/checkout@v2
         with:
-          command: clippy
-          args: --all-targets -- -D warnings
-      - name: Run cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
+          repository: odradev/odra-casper
+          path: odra-casper
+      - name: Prepare odra to run examples
+        run: echo "exclude = [\"odra-examples\"]" >> Cargo.toml
+      - name: Prepare casper-backend to run examples
+        working-directory: odra-casper/backend
+        run: sed -i '/odra = { version/c\odra = { path = "../../core", default-features = false, features = [ "wasm" ] }' Cargo.toml
+      - name: Prepare casper-shared to run examples
+        working-directory: odra-casper/shared
+        run: sed -i '/odra-types/c\odra-types = { path = "../../types" }' Cargo.toml
+      - name: Prepare casper-test-env to run examples
+        working-directory: odra-casper/test_env
+        run: sed -i '/odra = { version/c\odra = { path = "../../core", default-features = false, features = [ "wasm-test" ] }' Cargo.toml
+      - name: Prepare examples to use local odra
+        working-directory: odra-examples
+        run: sed -i '/default-features/c\odra = { path = "../core", default-features = false }' Cargo.toml &&
+          sed -i '/version/c\path = "../odra-casper/"' Odra.toml
+      - name: Run tests
+        working-directory: odra-examples
+        run: sudo apt update && make prepare && make test
