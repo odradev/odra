@@ -18,7 +18,7 @@ on:
 
 jobs:
   check_and_test:
-    runs-on: ubuntu-20.04
+    runs-on: buildjet-8vcpu-ubuntu-2204 # We use buildjet instead GH's free ubuntu-latest for faster builds
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -41,7 +41,7 @@ jobs:
         with:
           command: test
   integration_tests:
-    runs-on: ubuntu-22.04
+    runs-on: buildjet-8vcpu-ubuntu-2204 # We use buildjet instead GH's free ubuntu-latest for faster builds
     needs: check_and_test
     steps:
       - uses: actions/checkout@v2
