@@ -76,4 +76,7 @@ jobs:
           sed -i '/version/c\path = "../odra-casper/"' Odra.toml
       - name: Run tests
         working-directory: odra-examples
-        run: sudo apt update && make prepare && make test
+        run: sudo apt update &&
+          rustup component add rustfmt &&
+          make prepare &&
+          make test
