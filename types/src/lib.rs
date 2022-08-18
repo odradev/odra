@@ -26,5 +26,6 @@ pub mod bytesrepr {
 /// Serialized event struct representation
 #[cfg(not(feature = "std"))]
 pub type EventData = alloc::vec::Vec<u8>;
+/// Serialized event struct representation
 #[cfg(feature = "std")]
 pub type EventData = std::vec::Vec<u8>;

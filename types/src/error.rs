@@ -1,5 +1,5 @@
 #[cfg(not(feature = "std"))]
-use alloc::{format, string::String};
+use alloc::string::String;
 
 use crate::bytesrepr;
 
@@ -36,8 +36,8 @@ impl From<casper_types::CLValueError> for ExecutionError {
     fn from(error: casper_types::CLValueError) -> Self {
         match error {
             casper_types::CLValueError::Serialization(err) => err.into(),
-            casper_types::CLValueError::Type(ty) => {
-                ExecutionError::internal(6, &format!("Type mismatch {:?}", ty))
+            casper_types::CLValueError::Type(_) => {
+                ExecutionError::internal(6, "Type mismatch")
             }
         }
     }
