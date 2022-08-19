@@ -36,9 +36,7 @@ impl From<casper_types::CLValueError> for ExecutionError {
     fn from(error: casper_types::CLValueError) -> Self {
         match error {
             casper_types::CLValueError::Serialization(err) => err.into(),
-            casper_types::CLValueError::Type(_) => {
-                ExecutionError::internal(6, "Type mismatch")
-            }
+            casper_types::CLValueError::Type(_) => ExecutionError::internal(6, "Type mismatch"),
         }
     }
 }

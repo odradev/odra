@@ -1,6 +1,5 @@
-
-use core::marker::PhantomData;
 use core::hash::Hash;
+use core::marker::PhantomData;
 
 use crate::ContractEnv;
 use crate::UnwrapOrRevert;

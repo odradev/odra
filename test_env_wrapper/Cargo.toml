@@ -1,6 +1,6 @@
 [package]
 name = "odra-test-env-wrapper"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
 license = "MIT"
@@ -10,6 +10,6 @@ keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm"]
 
 [dependencies]
-odra-types = { version = "0.1.0", path = "../types", default-features = false, features = ["std"] }
+odra-types = { version = "0.2.0", path = "../types", default-features = false, features = ["std"] }
 dlopen = "0.1.8"
 dlopen_derive = "0.1.4"
