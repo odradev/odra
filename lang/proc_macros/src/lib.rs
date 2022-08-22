@@ -24,6 +24,7 @@ mod odra_error;
 ///
 /// ```
 /// use odra;
+/// # extern crate alloc;
 ///
 /// #[odra::module]
 /// pub struct Flipper {
@@ -91,6 +92,7 @@ pub fn external_contract(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///
 /// ```
 /// use odra;
+/// # extern crate alloc;
 ///
 /// #[derive(odra::Event)]
 /// pub struct ValueUpdated {
