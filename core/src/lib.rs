@@ -5,6 +5,18 @@ extern crate alloc;
 #[cfg(any(feature = "wasm-test", feature = "mock-vm", test))]
 extern crate std;
 
+#[cfg(all(feature = "wasm-test", feature = "mock-vm"))]
+compile_error!("wasm-test and mock-vm are mutually exclusive features.");
+#[cfg(all(feature = "wasm-test", feature = "wasm"))]
+compile_error!("wasm-test and wasm are mutually exclusive features.");
+#[cfg(all(feature = "wasm", feature = "mock-vm"))]
+compile_error!("wasm and mock-vm are mutually exclusive features.");
+#[cfg(all(feature = "wasm", feature = "wasm-test", feature = "mock-vm"))]
+compile_error!("wasm, wasm-test, mock-vm are mutually exclusive features.");
+
+#[cfg(not(any(feature = "wasm-test", feature = "mock-vm", feature = "wasm")))]
+compile_error!("Exactly one of these features must be selected: `wasm-test`, `mock-vm`, `wasm`.");
+
 pub mod contract_def;
 mod instance;
 mod mapping;
@@ -22,18 +34,18 @@ pub use {
     variable::Variable,
 };
 
+#[cfg(feature = "external-api")]
+mod external_api;
+#[cfg(feature = "test-support")]
+pub mod test_utils;
+#[cfg(feature = "external-api")]
+pub use external_api::contract_env::ContractEnv;
+
 cfg_if::cfg_if! {
     if #[cfg(feature = "mock-vm")] {
         pub use odra_mock_vm::{TestEnv, ContractEnv};
-        pub mod test_utils;
     } else if #[cfg(feature = "wasm-test")] {
-        pub mod test_utils;
-        mod external_api;
-        pub use external_api::contract_env::ContractEnv;
         pub use external_api::test_env::TestEnv;
-    } else if #[cfg(feature = "wasm")] {
-        mod external_api;
-        pub use external_api::contract_env::ContractEnv;
     }
 }
 

@@ -20,7 +20,9 @@ cfg-if = "1.0.0"
 
 [features]
 default = [ "wasm" ]
-mock-vm = [ "odra-mock-vm",  "odra-types/std" ]
-wasm = [ "odra-types" ]
-wasm-test = [ "odra-test-env-wrapper", "odra-types/std" ]
-std = [ "odra-types/std" ]
+mock-vm = [ "std", "test-support", "odra-mock-vm" ]
+wasm = [ "external-api", "odra-types" ]
+wasm-test = [ "std", "test-support", "external-api", "odra-test-env-wrapper" ]
+test-support = []
+external-api = []
+std = [ "odra-types/std", "odra-utils/std" ]

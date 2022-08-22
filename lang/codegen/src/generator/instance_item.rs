@@ -46,9 +46,9 @@ impl ToTokens for WrappedField {
                     .iter()
                     .filter_map(|str| match str.is_empty() {
                         true => None,
-                        false => Some(String::from(*str)),
+                        false => Some(alloc::string::String::from(*str)),
                     })
-                    .collect::<Vec<String>>()
+                    .collect::<alloc::vec::Vec<alloc::string::String>>()
                     .join("_")
                     .as_str()
             ),

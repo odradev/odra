@@ -50,7 +50,7 @@ impl GenerateCode for EventItem<'_> {
             .collect::<TokenStream>();
 
         let type_check = quote! {
-          let (event_name, bytes): (String, _) = odra::types::bytesrepr::FromBytes::from_vec(bytes)?;
+          let (event_name, bytes): (alloc::string::String, _) = odra::types::bytesrepr::FromBytes::from_vec(bytes)?;
           if &event_name != #name_literal {
             return core::result::Result::Err(odra::types::event::EventError::UnexpectedType(event_name));
           }
@@ -62,15 +62,15 @@ impl GenerateCode for EventItem<'_> {
                   odra::ContractEnv::emit_event(self)
               }
 
-              fn name(&self) -> String {
-                  String::from(stringify!(#struct_ident))
+              fn name(&self) -> alloc::string::String {
+                  alloc::string::String::from(stringify!(#struct_ident))
               }
             }
 
             impl odra::types::ToBytes for #struct_ident {
               type Error = odra::types::event::EventError;
 
-              fn serialize(&self) -> Result<Vec<u8>, Self::Error> {
+              fn serialize(&self) -> Result<alloc::vec::Vec<u8>, Self::Error> {
                   core::result::Result::Ok(<Self as odra::types::bytesrepr::ToBytes>::to_bytes(self)?)
               }
             }
@@ -80,7 +80,7 @@ impl GenerateCode for EventItem<'_> {
 
               type Item = Self;
 
-              fn deserialize(bytes: Vec<u8>) -> Result<(Self::Item, Vec<u8>), Self::Error> {
+              fn deserialize(bytes: alloc::vec::Vec<u8>) -> Result<(Self::Item, alloc::vec::Vec<u8>), Self::Error> {
                 #type_check
                 #deserialize_fields
                 let value = #struct_ident {
@@ -97,8 +97,8 @@ impl GenerateCode for EventItem<'_> {
               return size;
             }
 
-            fn to_bytes(&self) -> Result<Vec<u8>, odra::types::bytesrepr::Error> {
-              let mut vec = Vec::with_capacity(self.serialized_length());
+            fn to_bytes(&self) -> Result<alloc::vec::Vec<u8>, odra::types::bytesrepr::Error> {
+              let mut vec = alloc::vec::Vec::with_capacity(self.serialized_length());
               vec.append(&mut #name_literal.to_bytes()?);
               #append_bytes
               Ok(vec)

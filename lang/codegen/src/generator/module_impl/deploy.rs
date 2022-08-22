@@ -234,7 +234,7 @@ where
             let return_value = match &entrypoint.ret {
                 ReturnType::Default => quote!(None),
                 ReturnType::Type(_, _) => quote! {
-                    let bytes = odra::types::bytesrepr::ToBytes::to_bytes(&result).unwrap_or_revert();
+                    let bytes = odra::types::bytesrepr::ToBytes::to_bytes(&result).unwrap();
                     Some(odra::types::bytesrepr::Bytes::from(bytes))
                 },
             };
@@ -284,9 +284,9 @@ where
             quote!(args
                 .get(stringify!(#pat))
                 .cloned()
-                .unwrap_or_revert()
+                .unwrap()
                 .into_t()
-                .unwrap_or_revert())
+                .unwrap())
         })
         .collect::<Punctuated<TokenStream, Comma>>()
 }

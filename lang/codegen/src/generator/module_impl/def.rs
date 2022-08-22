@@ -22,8 +22,8 @@ impl GenerateCode for ContractDef<'_> {
             impl odra::contract_def::HasContractDef for #struct_ident {
                 fn contract_def() -> odra::contract_def::ContractDef {
                     odra::contract_def::ContractDef {
-                        ident: String::from(#struct_name),
-                        entrypoints: vec![
+                        ident: alloc::string::String::from(#struct_name),
+                        entrypoints: alloc::vec![
                             # (#entrypoints)*
                         ],
                     }
