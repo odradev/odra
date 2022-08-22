@@ -1,10 +1,9 @@
 use core::ops::Range;
-use std::iter::FusedIterator;
 
 use crate::{ContractEnv, Mapping, Variable};
 use odra_types::{
     bytesrepr::{FromBytes, ToBytes},
-    CLTyped, ExecutionError,
+    CLTyped, CollectionError
 };
 
 use crate::Instance;
@@ -19,9 +18,13 @@ pub struct List<T> {
 impl<T: ToBytes + FromBytes + CLTyped> List<T> {
     /// Creates a new List instance.
     pub fn new(name: String) -> Self {
+        let mut name_values = name.clone();
+        name_values.push_str("values");
+        let mut name_index = name;
+        name_index.push_str("index");
         List {
-            values: Mapping::new(format!("{}{}", name, "values")),
-            index: Variable::new(format!("{}{}", name, "index")),
+            values: Mapping::new(name_values),
+            index: Variable::new(name_index),
         }
     }
 
@@ -41,7 +44,7 @@ impl<T: ToBytes + FromBytes + CLTyped> List<T> {
     pub fn replace(&self, index: u32, value: T) -> Option<T> {
         let current_index = self.index.get_or_default();
         if current_index < index {
-            ContractEnv::revert(ExecutionError::new(1000, "Index out of bounds"));
+            ContractEnv::revert(CollectionError::IndexOutOfBounds);
         }
 
         let prev_value = self.values.get(&current_index);
@@ -49,30 +52,31 @@ impl<T: ToBytes + FromBytes + CLTyped> List<T> {
         prev_value
     }
 
-    /// Returns an iterator instance
-    pub fn iter(&self) -> ListIter<T> {
-        ListIter::new(self)
+    /// Returns an iterator.
+    pub fn iter(&self) -> Iter<T> {
+        Iter::new(self)
     }
 }
 
 impl<T> List<T> {
-    /// Checks if the collection is empty
+    /// Checks if the collection is empty.
     pub fn is_empty(&self) -> bool {
         self.index.get_or_default() == 0
     }
 
-    /// Gets the collection length
+    /// Gets the collection length.
     pub fn len(&self) -> u32 {
         self.index.get_or_default()
     }
 }
 
-pub struct ListIter<'a, T> {
+pub struct Iter<'a, T> {
     list: &'a List<T>,
     range: Range<u32>,
 }
 
-impl<'a, T> ListIter<'a, T> {
+impl<'a, T> Iter<'a, T> {
+    /// Returns a new instance of Iter.
     fn new(list: &'a List<T>) -> Self {
         Self {
             list,
@@ -89,7 +93,7 @@ impl<'a, T> ListIter<'a, T> {
     }
 }
 
-impl<'a, T> Iterator for ListIter<'a, T>
+impl<'a, T> core::iter::Iterator for Iter<'a, T>
 where
     T: ToBytes + FromBytes + CLTyped,
 {
@@ -114,9 +118,19 @@ where
     }
 }
 
-impl<'a, T> ExactSizeIterator for ListIter<'a, T> where T: ToBytes + FromBytes + CLTyped {}
+impl<'a, T> core::iter::ExactSizeIterator for Iter<'a, T> where T: ToBytes + FromBytes + CLTyped {}
 
-impl<'a, T> FusedIterator for ListIter<'a, T> where T: ToBytes + FromBytes + CLTyped {}
+impl<'a, T> core::iter::FusedIterator for Iter<'a, T> where T: ToBytes + FromBytes + CLTyped {}
+
+impl<'a, T> core::iter::DoubleEndedIterator for Iter<'a, T>
+where
+    T: ToBytes + FromBytes + CLTyped,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let index = self.range.nth_back(0)?;
+        self.list.get(index)
+    }
+}
 
 impl<T: ToBytes + FromBytes + CLTyped + Default> List<T> {
     /// Reads `key` from the storage or the default value is returned.
@@ -127,7 +141,7 @@ impl<T: ToBytes + FromBytes + CLTyped + Default> List<T> {
 
 impl<T: ToBytes + FromBytes + CLTyped> From<&str> for List<T> {
     fn from(name: &str) -> Self {
-        List::new(name.to_string())
+        List::new(String::from(name))
     }
 }
 
