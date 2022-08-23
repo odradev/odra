@@ -84,3 +84,46 @@ impl<T: FromBytes + ToBytes + CLTyped> Instance for Variable<T> {
         namespace.into()
     }
 }
+
+#[cfg(all(feature = "mock-vm", test))]
+mod tests {
+    use crate::{Variable, Instance};
+    use odra_mock_vm::TestEnv;
+    use odra_types::{
+        arithmetic::{OverflowingAdd, OverflowingSub, ArithmeticsError},
+        bytesrepr::{FromBytes, ToBytes},
+        CLTyped, ExecutionError,
+    };
+
+    #[test]
+    fn test_get() {
+        let var = Variable::<u8>::default();
+
+        var.set(100);
+
+        assert_eq!(var.get().unwrap(), 100);
+        
+        var.set(200);
+        assert_eq!(var.get().unwrap(), 200);
+    }
+
+    #[test]
+    fn test_add() {
+        let var = Variable::<u8>::default();
+
+        var.add(u8::MAX);
+        
+        TestEnv::assert_exception(Into<ExecutionError>::into(ArithmeticsError::AdditionOverflow), || { var.add(1); });
+
+        assert_eq!(var.get().unwrap(), 100);
+        
+        var.set(200);
+        assert_eq!(var.get().unwrap(), 200);
+    }
+
+    impl<T> Default for Variable<T> where T: FromBytes + ToBytes + CLTyped {
+        fn default() -> Self {
+            Instance::instance("v")
+        }
+    }
+}
