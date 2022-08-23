@@ -87,43 +87,105 @@ impl<T: FromBytes + ToBytes + CLTyped> Instance for Variable<T> {
 
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
-    use crate::{Variable, Instance};
+    use crate::{Instance, Variable};
     use odra_mock_vm::TestEnv;
     use odra_types::{
-        arithmetic::{OverflowingAdd, OverflowingSub, ArithmeticsError},
+        arithmetic::ArithmeticsError,
         bytesrepr::{FromBytes, ToBytes},
         CLTyped, ExecutionError,
     };
 
     #[test]
     fn test_get() {
+        // Given uninitialized var
+        let value = 100;
         let var = Variable::<u8>::default();
 
-        var.set(100);
+        // When set a value
+        var.set(value);
 
-        assert_eq!(var.get().unwrap(), 100);
-        
-        var.set(200);
-        assert_eq!(var.get().unwrap(), 200);
+        // The the value can be returned
+        assert_eq!(var.get().unwrap(), value);
+
+        // When override
+        let value = 200;
+        var.set(value);
+
+        // Then the value is updated
+        assert_eq!(var.get().unwrap(), value);
+    }
+
+    #[test]
+    fn get_default_value() {
+        // Given uninitialized var
+        let var = Variable::<u8>::default();
+
+        // Raw get returns None
+        assert_eq!(var.get(), None);
+        // get_or_default returns the default value
+        assert_eq!(var.get_or_default(), 0);
     }
 
     #[test]
     fn test_add() {
-        let var = Variable::<u8>::default();
+        // Given var = u8::MAX-1;
+        let initial_value = u8::MAX - 1;
+        let var = Variable::<u8>::init(initial_value);
 
-        var.add(u8::MAX);
-        
-        TestEnv::assert_exception(Into<ExecutionError>::into(ArithmeticsError::AdditionOverflow), || { var.add(1); });
+        // When add 1
+        var.add(1);
 
-        assert_eq!(var.get().unwrap(), 100);
-        
-        var.set(200);
-        assert_eq!(var.get().unwrap(), 200);
+        // Then the value should be u8::MAX
+        assert_eq!(var.get_or_default(), initial_value + 1);
+
+        // When add 1 to max value
+        // Then should revert
+        TestEnv::assert_exception(
+            Into::<ExecutionError>::into(ArithmeticsError::AdditionOverflow),
+            || {
+                var.add(1);
+            },
+        );
     }
 
-    impl<T> Default for Variable<T> where T: FromBytes + ToBytes + CLTyped {
+    #[test]
+    fn test_subtract() {
+        // Given var = 2;
+        let initial_value = 2;
+        let var = Variable::<u8>::init(initial_value);
+        // When subtract 1
+        var.subtract(1);
+
+        // Then the value should be reduced by 1
+        assert_eq!(var.get_or_default(), initial_value - 1);
+
+        // When subtraction causes overflow
+        // Then it reverts
+        TestEnv::assert_exception(
+            Into::<ExecutionError>::into(ArithmeticsError::AdditionOverflow),
+            || {
+                var.subtract(2);
+            },
+        );
+    }
+
+    impl<T> Default for Variable<T>
+    where
+        T: FromBytes + ToBytes + CLTyped,
+    {
         fn default() -> Self {
             Instance::instance("v")
+        }
+    }
+
+    impl<T> Variable<T>
+    where
+        T: FromBytes + ToBytes + CLTyped,
+    {
+        pub fn init(value: T) -> Self {
+            let var: Self = Default::default();
+            var.set(value);
+            var
         }
     }
 }
