@@ -162,7 +162,7 @@ mod tests {
         // When subtraction causes overflow
         // Then it reverts
         TestEnv::assert_exception(
-            Into::<ExecutionError>::into(ArithmeticsError::AdditionOverflow),
+            Into::<ExecutionError>::into(ArithmeticsError::SubtractingOverflow),
             || {
                 var.subtract(2);
             },

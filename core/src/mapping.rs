@@ -88,3 +88,115 @@ impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped> Instance for
         namespace.into()
     }
 }
+
+#[cfg(all(feature = "mock-vm", test))]
+mod tests {
+    use crate::{Instance, Mapping};
+    use core::hash::Hash;
+    use odra_mock_vm::TestEnv;
+    use odra_types::{
+        arithmetic::ArithmeticsError,
+        bytesrepr::{FromBytes, ToBytes},
+        CLTyped, ExecutionError,
+    };
+
+    #[test]
+    fn test_get() {
+        // Given uninitialized var
+        let value = 100;
+        let key = String::from("k");
+        let var = Mapping::<String, u8>::default();
+
+        // When set a value
+        var.set(&key, value);
+
+        // The the value can be returned
+        assert_eq!(var.get(&key).unwrap(), value);
+
+        // When override
+        let value = 200;
+        var.set(&key, value);
+
+        // Then the value is updated
+        assert_eq!(var.get(&key).unwrap(), value);
+    }
+
+    #[test]
+    fn get_default_value() {
+        // Given uninitialized var
+        let var = Mapping::<String, u8>::default();
+
+        // Raw get returns None
+        let key = String::from("k");
+        assert_eq!(var.get(&key), None);
+        // get_or_default returns the default value
+        assert_eq!(var.get_or_default(&key), 0);
+    }
+
+    #[test]
+    fn test_add() {
+        // Given var = u8::MAX-1;
+        let initial_value = u8::MAX - 1;
+        let key = String::from("k");
+        let var = Mapping::<String, u8>::init(&key, initial_value);
+
+        // When add 1
+        var.add(&key, 1);
+
+        // Then the value should be u8::MAX
+        assert_eq!(var.get_or_default(&key), initial_value + 1);
+
+        // When add 1 to max value
+        // Then should revert
+        TestEnv::assert_exception(
+            Into::<ExecutionError>::into(ArithmeticsError::AdditionOverflow),
+            || {
+                var.add(&key, 1);
+            },
+        );
+    }
+
+    #[test]
+    fn test_subtract() {
+        // Given var = 2;
+        let initial_value = 2;
+        let key = String::from("k");
+        let var = Mapping::<String, u8>::init(&key, initial_value);
+        // When subtract 1
+        var.subtract(&key, 1);
+
+        // Then the value should be reduced by 1
+        assert_eq!(var.get_or_default(&key), initial_value - 1);
+
+        // When subtraction causes overflow
+        // Then it reverts
+        TestEnv::assert_exception(
+            Into::<ExecutionError>::into(ArithmeticsError::SubtractingOverflow),
+            || {
+                var.subtract(&key, 2);
+            },
+        );
+    }
+
+    impl<K, V> Default for Mapping<K, V>
+    where
+        K: ToBytes + CLTyped + Hash,
+        V: ToBytes + FromBytes + CLTyped,
+    {
+        fn default() -> Self {
+            Instance::instance("m")
+        }
+    }
+
+    impl<K, V> Mapping<K, V>
+    where
+        K: ToBytes + CLTyped + Hash,
+        V: ToBytes + FromBytes + CLTyped,
+    {
+        pub fn init(key: &K, value: V) -> Self {
+            let var: Self = Default::default();
+            var.set(key, value);
+            var
+        }
+    }
+}
