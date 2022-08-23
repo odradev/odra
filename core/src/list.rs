@@ -3,13 +3,12 @@ use core::ops::Range;
 use crate::{ContractEnv, Mapping, Variable};
 use odra_types::{
     bytesrepr::{FromBytes, ToBytes},
-    CLTyped, CollectionError
+    CLTyped, CollectionError,
 };
 
 use crate::Instance;
 
 /// Data structure for an indexed, iterable collection.
-#[derive(Debug)]
 pub struct List<T> {
     values: Mapping<u32, T>,
     index: Variable<u32>,
@@ -47,8 +46,8 @@ impl<T: ToBytes + FromBytes + CLTyped> List<T> {
             ContractEnv::revert(CollectionError::IndexOutOfBounds);
         }
 
-        let prev_value = self.values.get(&current_index);
-        self.values.set(&current_index, value);
+        let prev_value = self.values.get(&index);
+        self.values.set(&index, value);
         prev_value
     }
 
@@ -148,5 +147,164 @@ impl<T: ToBytes + FromBytes + CLTyped> From<&str> for List<T> {
 impl<T: ToBytes + FromBytes + CLTyped> Instance for List<T> {
     fn instance(namespace: &str) -> Self {
         namespace.into()
+    }
+}
+
+#[cfg(all(feature = "mock-vm", test))]
+mod tests {
+    use odra_mock_vm::TestEnv;
+    use odra_types::{
+        bytesrepr::{FromBytes, ToBytes},
+        CLTyped, CollectionError, ExecutionError,
+    };
+
+    use crate::List;
+
+    #[test]
+    fn test_getting_items() {
+        // Given an empty list
+        let list = List::<u8>::default();
+        assert_eq!(list.len(), 0);
+
+        // When push a first item
+        list.push(0u8);
+        // Then a value at index 0 is available
+        assert_eq!(list.get(0).unwrap(), 0);
+
+        // When push next two items
+        list.push(1u8);
+        list.push(3u8);
+
+        // Then these values are accessible at indexes 1 and 2
+        assert_eq!(list.get(1).unwrap(), 1);
+        assert_eq!(list.get(2).unwrap(), 3);
+
+        // When get a value under nonexistent index
+        let result = list.get(100);
+        // Then the value is None
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_replace() {
+        // Given a list with 5 items
+        let list = List::<u8>::default();
+        for i in 0..5 {
+            list.push(i);
+        }
+
+        // When replace last item
+        let result = list.replace(4, 10);
+
+        // Then the previous value is returned
+        assert_eq!(result.unwrap(), 4);
+        // Then the value is updated
+        assert_eq!(list.get(4).unwrap(), 10);
+
+        // When replaces nonexistent value then reverts
+        TestEnv::assert_exception(
+            Into::<ExecutionError>::into(CollectionError::IndexOutOfBounds),
+            || {
+                list.replace(100, 99);
+            },
+        );
+    }
+
+    #[test]
+    fn test_list_len() {
+        // Given an empty list
+        let list = List::<u8>::default();
+
+        // When push 3 elements
+        assert_eq!(list.len(), 0);
+        list.push(0u8);
+        list.push(1u8);
+        list.push(3u8);
+
+        // Then the length should be 3
+        assert_eq!(list.len(), 3);
+    }
+
+    #[test]
+    fn test_list_is_empty() {
+        // Given an empty list
+        let list = List::<u8>::default();
+        assert!(list.is_empty());
+
+        // When push an element
+        list.push(9u8);
+
+        // Then the list should not be empty
+        assert!(!list.is_empty());
+    }
+
+    #[test]
+    fn test_iter() {
+        // Given a list with 5 items
+        let list = List::<u8>::default();
+        for i in 0..5 {
+            list.push(i);
+        }
+
+        let mut iter = list.iter();
+
+        assert_eq!(iter.next(), Some(0));
+        assert_eq!(iter.next(), Some(1));
+        assert_eq!(iter.next(), Some(2));
+        assert_eq!(iter.next(), Some(3));
+        assert_eq!(iter.next(), Some(4));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_fuse_iter() {
+        // Given a list with 3 items
+        let list = List::<u8>::default();
+        for i in 0..3 {
+            list.push(i);
+        }
+
+        // When iterate over all the elements
+        let iter = list.iter();
+        let mut iter = iter.fuse();
+        iter.next();
+        iter.next();
+        iter.next();
+
+        // Then all consecutive iter.next() calls return None
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_double_ended_iter() {
+        // Given a list with 10 items
+        let list = List::<u8>::default();
+        for i in 0..10 {
+            list.push(i);
+        }
+
+        let mut iter = list.iter();
+
+        // When iterate from the start
+        // Then first two iterations returns the first and the second item
+        assert_eq!(iter.next(), Some(0));
+        assert_eq!(iter.next(), Some(1));
+        // When iterate from the end
+        // Then two iterations returns 10th and 9th items
+        assert_eq!(iter.next_back(), Some(9));
+        assert_eq!(iter.next_back(), Some(8));
+        // When iterate from the start again
+        // Then the first iteration returns third element
+        assert_eq!(iter.next(), Some(2));
+        // Then five items remaining
+        assert_eq!(iter.count(), 5);
+    }
+
+    impl<T: ToBytes + FromBytes + CLTyped> Default for List<T> {
+        fn default() -> Self {
+            Self::new(String::from("l"))
+        }
     }
 }
