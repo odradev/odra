@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use odra_types::{bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs};
 
-use crate::{borrow_env, mock_vm::default_accounts, EntrypointCall};
+use crate::{borrow_env, mock_vm::default_accounts, EntrypointArgs, EntrypointCall};
 
 /// Describes test environment API. TestEnv delegates methods to the underlying env implementation.
 ///
@@ -13,8 +13,8 @@ impl TestEnv {
     /// Registers the contract in the test environment.
     pub fn register_contract(
         constructor: Option<(String, RuntimeArgs, EntrypointCall)>,
-        constructors: HashMap<String, EntrypointCall>,
-        entrypoints: HashMap<String, EntrypointCall>,
+        constructors: HashMap<String, (EntrypointArgs, EntrypointCall)>,
+        entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>,
     ) -> Address {
         borrow_env().register_contract(constructor, constructors, entrypoints)
     }

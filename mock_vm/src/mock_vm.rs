@@ -7,10 +7,9 @@ use odra_types::{
 };
 
 use crate::context::ExecutionContext;
-use crate::contract_container::ContractContainer;
+use crate::contract_container::{ContractContainer, EntrypointArgs, EntrypointCall};
 use crate::contract_register::ContractRegister;
 use crate::storage::Storage;
-use crate::EntrypointCall;
 
 #[derive(Default)]
 pub struct MockVm {
@@ -22,12 +21,11 @@ impl MockVm {
     pub fn register_contract(
         &self,
         constructor: Option<(String, RuntimeArgs, EntrypointCall)>,
-        constructors: HashMap<String, EntrypointCall>,
-        entrypoints: HashMap<String, EntrypointCall>,
+        constructors: HashMap<String, (EntrypointArgs, EntrypointCall)>,
+        entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>,
     ) -> Address {
         // Create a new address.
         let address = { self.state.write().unwrap().next_contract_address() };
-
         // Register new contract under the new address.
         {
             let contract_namespace = self.state.read().unwrap().get_contract_namespace();
@@ -320,7 +318,7 @@ mod tests {
         Address, CLValue, EventData, ExecutionError, OdraError, RuntimeArgs, VmError,
     };
 
-    use crate::EntrypointCall;
+    use crate::{EntrypointArgs, EntrypointCall};
 
     use super::MockVm;
 
@@ -330,7 +328,8 @@ mod tests {
         let instance = MockVm::default();
 
         // when register two contracts with the same entrypoints
-        let entrypoint: Vec<(String, EntrypointCall)> = vec![(String::from("abc"), |_, _| None)];
+        let entrypoint: Vec<(String, (EntrypointArgs, EntrypointCall))> =
+            vec![(String::from("abc"), (vec![], |_, _| None))];
         let entrypoints = entrypoint.into_iter().collect::<HashMap<_, _>>();
         let constructors = HashMap::new();
 
@@ -346,8 +345,10 @@ mod tests {
         // given an instance with a registered contract having one entrypoint
         let instance = MockVm::default();
 
-        let entrypoint: Vec<(String, EntrypointCall)> =
-            vec![(String::from("abc"), |_, _| Some(vec![1, 1, 1].into()))];
+        let entrypoint: Vec<(String, (EntrypointArgs, EntrypointCall))> = vec![(
+            String::from("abc"),
+            (vec![], |_, _| Some(vec![1, 1, 1].into())),
+        )];
         let constructors = HashMap::new();
         let address = instance.register_contract(
             None,
@@ -383,8 +384,10 @@ mod tests {
     fn test_call_non_existing_entrypoint() {
         // given an instance with a registered contract having one entrypoint
         let instance = MockVm::default();
-        let entrypoint: Vec<(String, EntrypointCall)> =
-            vec![(String::from("abc"), |_, _| Some(vec![1, 1, 1].into()))];
+        let entrypoint: Vec<(String, (EntrypointArgs, EntrypointCall))> = vec![(
+            String::from("abc"),
+            (vec![], |_, _| Some(vec![1, 1, 1].into())),
+        )];
         let address = instance.register_contract(
             None,
             HashMap::new(),
