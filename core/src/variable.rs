@@ -140,12 +140,9 @@ mod tests {
 
         // When add 1 to max value.
         // Then should revert.
-        TestEnv::assert_exception(
-            Into::<ExecutionError>::into(ArithmeticsError::AdditionOverflow),
-            || {
-                var.add(1);
-            },
-        );
+        TestEnv::assert_exception(ArithmeticsError::AdditionOverflow, || {
+            var.add(1);
+        });
     }
 
     #[test]
@@ -161,12 +158,9 @@ mod tests {
 
         // When subtraction causes overflow.
         // Then it reverts.
-        TestEnv::assert_exception(
-            Into::<ExecutionError>::into(ArithmeticsError::SubtractingOverflow),
-            || {
-                var.subtract(2);
-            },
-        );
+        TestEnv::assert_exception(ArithmeticsError::SubtractingOverflow, || {
+            var.subtract(2);
+        });
     }
 
     impl<T> Default for Variable<T>

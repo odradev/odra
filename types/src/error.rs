@@ -49,6 +49,12 @@ impl From<ArithmeticsError> for ExecutionError {
     }
 }
 
+impl From<ArithmeticsError> for OdraError {
+    fn from(error: ArithmeticsError) -> Self {
+        Into::<ExecutionError>::into(error).into()
+    }
+}
+
 impl From<Box<dyn std::any::Any + Send>> for OdraError {
     fn from(_: Box<dyn std::any::Any + Send>) -> Self {
         OdraError::VmError(VmError::Panic)
