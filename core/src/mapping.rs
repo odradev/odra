@@ -97,7 +97,7 @@ mod tests {
     use odra_types::{
         arithmetic::ArithmeticsError,
         bytesrepr::{FromBytes, ToBytes},
-        CLTyped, ExecutionError,
+        CLTyped,
     };
 
     #[test]
@@ -172,6 +172,23 @@ mod tests {
         });
     }
 
+    #[test]
+    fn test_instances_with_the_same_namespace() {
+        // Given two variables with the same namespace.
+        let namespace = "shared_value";
+        let key = String::from("k");
+        let value = 42;
+        let x = Mapping::<String, u8>::instance(namespace);
+        let y = Mapping::<String, u8>::instance(namespace);
+
+        // When set a value for the first variable.
+        x.set(&key, value);
+
+        // Then both returns the same value.
+        assert_eq!(y.get_or_default(&key), value);
+        assert_eq!(x.get(&key), y.get(&key));
+    }
+
     impl<K, V> Default for Mapping<K, V>
     where
         K: ToBytes + CLTyped + Hash,
@@ -188,7 +205,7 @@ mod tests {
         V: ToBytes + FromBytes + CLTyped,
     {
         pub fn init(key: &K, value: V) -> Self {
-            let var: Self = Default::default();
+            let var = Self::default();
             var.set(key, value);
             var
         }

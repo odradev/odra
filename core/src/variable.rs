@@ -92,7 +92,7 @@ mod tests {
     use odra_types::{
         arithmetic::ArithmeticsError,
         bytesrepr::{FromBytes, ToBytes},
-        CLTyped, ExecutionError,
+        CLTyped,
     };
 
     #[test]
@@ -163,6 +163,22 @@ mod tests {
         });
     }
 
+    #[test]
+    fn test_instances_with_the_same_namespace() {
+        // Given two variables with the same namespace.
+        let namespace = "shared_value";
+        let value = 42;
+        let x = Variable::<u8>::instance(namespace);
+        let y = Variable::<u8>::instance(namespace);
+
+        // When set a value for the first variable.
+        x.set(value);
+
+        // Then both returns the same value.
+        assert_eq!(y.get_or_default(), value);
+        assert_eq!(x.get(), y.get());
+    }
+
     impl<T> Default for Variable<T>
     where
         T: FromBytes + ToBytes + CLTyped,
@@ -176,8 +192,8 @@ mod tests {
     where
         T: FromBytes + ToBytes + CLTyped,
     {
-        pub fn init(value: T) -> Self {
-            let var: Self = Default::default();
+        fn init(value: T) -> Self {
+            let var = Self::default();
             var.set(value);
             var
         }
