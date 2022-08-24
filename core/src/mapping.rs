@@ -102,18 +102,18 @@ mod tests {
 
     #[test]
     fn test_get() {
-        // Given uninitialized var
+        // Given uninitialized var.
         let value = 100;
         let key = String::from("k");
         let var = Mapping::<String, u8>::default();
 
-        // When set a value
+        // When set a value.
         var.set(&key, value);
 
-        // The the value can be returned
+        // The the value can be returned.
         assert_eq!(var.get(&key).unwrap(), value);
 
-        // When override
+        // When override.
         let value = 200;
         var.set(&key, value);
 
@@ -123,31 +123,31 @@ mod tests {
 
     #[test]
     fn get_default_value() {
-        // Given uninitialized var
+        // Given uninitialized var.
         let var = Mapping::<String, u8>::default();
 
-        // Raw get returns None
+        // Raw get returns None.
         let key = String::from("k");
         assert_eq!(var.get(&key), None);
-        // get_or_default returns the default value
+        // get_or_default returns the default value.
         assert_eq!(var.get_or_default(&key), 0);
     }
 
     #[test]
     fn test_add() {
-        // Given var = u8::MAX-1;
+        // Given var = u8::MAX-1.
         let initial_value = u8::MAX - 1;
         let key = String::from("k");
         let var = Mapping::<String, u8>::init(&key, initial_value);
 
-        // When add 1
+        // When add 1.
         var.add(&key, 1);
 
-        // Then the value should be u8::MAX
+        // Then the value should be u8::MAX.
         assert_eq!(var.get_or_default(&key), initial_value + 1);
 
-        // When add 1 to max value
-        // Then should revert
+        // When add 1 to max value.
+        // Then should revert.
         TestEnv::assert_exception(
             Into::<ExecutionError>::into(ArithmeticsError::AdditionOverflow),
             || {
@@ -158,18 +158,18 @@ mod tests {
 
     #[test]
     fn test_subtract() {
-        // Given var = 2;
+        // Given var = 2.
         let initial_value = 2;
         let key = String::from("k");
         let var = Mapping::<String, u8>::init(&key, initial_value);
         // When subtract 1
         var.subtract(&key, 1);
 
-        // Then the value should be reduced by 1
+        // Then the value should be reduced by 1.
         assert_eq!(var.get_or_default(&key), initial_value - 1);
 
-        // When subtraction causes overflow
-        // Then it reverts
+        // When subtraction causes overflow.
+        // Then it reverts.
         TestEnv::assert_exception(
             Into::<ExecutionError>::into(ArithmeticsError::SubtractingOverflow),
             || {
