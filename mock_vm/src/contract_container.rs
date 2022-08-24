@@ -224,7 +224,7 @@ mod tests {
             let args: EntrypointArgs = args.iter().map(|arg| arg.to_string()).collect();
 
             let mut entrypoints = HashMap::new();
-            entrypoints.insert(ep_name.clone(), (args, call));
+            entrypoints.insert(ep_name, (args, call));
 
             Self {
                 name: String::from("contract"),
@@ -238,7 +238,7 @@ mod tests {
             let args: EntrypointArgs = args.iter().map(|arg| arg.to_string()).collect();
 
             let mut constructors = HashMap::new();
-            constructors.insert(ep_name.clone(), (args, call));
+            constructors.insert(ep_name, (args, call));
 
             Self {
                 name: String::from("contract"),
