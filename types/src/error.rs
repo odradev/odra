@@ -125,7 +125,7 @@ pub enum VmError {
     /// Error calling a host function in a wrong context.
     InvalidContext,
     /// Calling a contract with missing entrypoint arguments.
-    MissingArgs(Vec<String>),
+    MissingArg,
     /// Non-specified error with a custom message.
     Other(String),
     /// Unspecified error.

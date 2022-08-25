@@ -52,26 +52,22 @@ impl ContractContainer {
         }
     }
 
-    pub fn validate_args(
-        &self,
-        args: &[String],
-        input_args: &RuntimeArgs,
-    ) -> Result<(), OdraError> {
+    fn validate_args(&self, args: &[String], input_args: &RuntimeArgs) -> Result<(), OdraError> {
         let named_args = input_args
             .named_args()
             .map(|arg| arg.name().to_owned())
             .collect::<Vec<_>>();
 
-        let missing_args = args
+        if args
             .iter()
             .filter(|arg| !named_args.contains(arg))
             .map(|arg| arg.to_owned())
-            .collect::<Vec<_>>();
-
-        if missing_args.is_empty() {
+            .next()
+            .is_none()
+        {
             Ok(())
         } else {
-            Err(OdraError::VmError(VmError::MissingArgs(missing_args)))
+            Err(OdraError::VmError(VmError::MissingArg))
         }
     }
 }
@@ -80,7 +76,7 @@ impl ContractContainer {
 mod tests {
     use std::collections::HashMap;
 
-    use odra_types::{bytesrepr::Bytes, runtime_args, OdraError, RuntimeArgs, VmError};
+    use odra_types::{runtime_args, OdraError, RuntimeArgs, VmError};
 
     use crate::{EntrypointArgs, EntrypointCall};
 
@@ -120,8 +116,8 @@ mod tests {
         // When call the registered entrypoint with an arg named "second".
         let result = instance.call(ep_name, runtime_args! { "second" => 0 });
 
-        // Then MissingArgs error is returned.
-        assert_missing_args(result, vec!["first"]);
+        // Then MissingArg error is returned.
+        assert_eq!(result.unwrap_err(), OdraError::VmError(VmError::MissingArg));
     }
 
     #[test]
@@ -133,11 +129,12 @@ mod tests {
         // When call a valid entrypoint without args.
         let result = instance.call(ep_name, RuntimeArgs::new());
 
-        // Then MissingArgs error is returned.
-        assert_missing_args(result, vec!["first"]);
+        // Then MissingArg error is returned.
+        assert_eq!(result.unwrap_err(), OdraError::VmError(VmError::MissingArg));
     }
 
     #[test]
+    #[ignore = "At the moment is impossible to find the name of all missing args."]
     fn test_all_missing_args_are_caught() {
         // Given an instance with a single entrypoint with "first", "second" and "third" args.
         let ep_name = String::from("ep");
@@ -147,8 +144,8 @@ mod tests {
         // When call a valid entrypoint with a single valid args,
         let result = instance.call(ep_name, runtime_args! { "third" => 0 });
 
-        // Then MissingArgs error is returned with the two remaining args.
-        assert_missing_args(result, vec!["first", "second"]);
+        // Then MissingArg error is returned with the two remaining args.
+        assert_eq!(result.unwrap_err(), OdraError::VmError(VmError::MissingArg));
     }
 
     #[test]
@@ -186,7 +183,7 @@ mod tests {
         let result = instance.call_constructor(name, RuntimeArgs::new());
 
         // Then MissingArgs error is returned.
-        assert_missing_args(result, vec!["first"]);
+        assert_eq!(result.unwrap_err(), OdraError::VmError(VmError::MissingArg));
     }
 
     #[test]
@@ -200,14 +197,6 @@ mod tests {
 
         // Then the call fails.
         assert!(result.is_err());
-    }
-
-    fn assert_missing_args(result: Result<Option<Bytes>, OdraError>, names: Vec<&str>) {
-        let args = names.iter().map(|arg| arg.to_string()).collect::<Vec<_>>();
-        assert_eq!(
-            result.unwrap_err(),
-            OdraError::VmError(VmError::MissingArgs(args))
-        );
     }
 
     impl ContractContainer {
