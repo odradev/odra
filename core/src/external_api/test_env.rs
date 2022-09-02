@@ -31,9 +31,9 @@ impl TestEnv {
         set_caller(address: &Address)
         ///Returns nth test user account.
         get_account(n: usize) -> Address
-        ///Gets nth event emitted by the contract at `address`."
+        ///Gets nth event emitted by the contract at `address`.
         get_event(address: &Address, index: i32) -> Result<EventData, EventError>
-        ///Gets the current error from the test environment."
+        ///Gets the current error from the test environment.
         get_error() -> Option<OdraError>
         ///Increases the current value of block_time.
         advance_block_time_by(seconds: u64)
