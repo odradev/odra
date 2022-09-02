@@ -66,4 +66,9 @@ impl TestEnv {
     pub fn get_event(address: &Address, index: i32) -> Result<EventData, EventError> {
         borrow_env().get_event(address, index)
     }
+
+    /// Increases the current value of block_time.
+    pub fn advance_block_time_by(&self, seconds: u64) {
+        borrow_env().advance_block_time_by(seconds)
+    }
 }
