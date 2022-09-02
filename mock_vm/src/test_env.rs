@@ -4,7 +4,6 @@ use odra_types::{bytesrepr::Bytes, event::EventError, Address, EventData, OdraEr
 
 use crate::{mock_vm::default_accounts, EntrypointCall};
 
-
 macro_rules! delegate_to_env {
     (
         $(
@@ -27,7 +26,6 @@ macro_rules! delegate_to_env {
 pub struct TestEnv;
 
 impl TestEnv {
-
     delegate_to_env! {
         /// Registers the contract in the test environment.
         register_contract(
@@ -69,9 +67,9 @@ impl TestEnv {
             .expect("An error expected, but did not occur");
         assert_eq!(exec_err, err.into());
     }
-    
+
     /// Returns nth test user account.
     pub fn get_account(n: usize) -> Address {
         *default_accounts().get(n).unwrap()
-    }       
+    }
 }
