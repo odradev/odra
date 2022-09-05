@@ -1,14 +1,14 @@
 use std::marker::PhantomData;
 
+use odra_contract_env::ContractEnv;
+use odra_contract_env::unwrap_or_revert::UnwrapOrRevert;
 use odra_types::{
     arithmetic::{OverflowingAdd, OverflowingSub},
     bytesrepr::{FromBytes, ToBytes},
     CLTyped,
 };
 
-use crate::ContractEnv;
-use crate::{instance::Instance, UnwrapOrRevert};
-
+use crate::instance::Instance;
 /// Data structure for storing a single value.
 #[derive(PartialEq, Eq, Debug)]
 pub struct Variable<T> {
@@ -87,13 +87,14 @@ impl<T: FromBytes + ToBytes + CLTyped> Instance for Variable<T> {
 
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
-    use crate::{Instance, Variable};
-    use odra_mock_vm::TestEnv;
+    use odra_contract_env::TestEnv;
     use odra_types::{
         arithmetic::ArithmeticsError,
         bytesrepr::{FromBytes, ToBytes},
         CLTyped,
     };
+
+    use crate::{variable::Variable, instance::Instance};
 
     #[test]
     fn test_get() {

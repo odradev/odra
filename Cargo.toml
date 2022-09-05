@@ -1,10 +1,13 @@
 [workspace]
 members = [
     "core",
+    "env",
     "lang/codegen",
     "lang/ir",
     "lang/proc_macros",
     "mock_vm",
+    "modules",
+    "primitives",
     "test_env_wrapper",
     "types",
     "utils"

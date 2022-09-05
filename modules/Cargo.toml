@@ -1,22 +1,20 @@
 [package]
-name = "odra"
+name = "odra-modules"
 version = "0.1.0"
 edition = "2021"
 authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
 license = "MIT"
 repository = "https://github.com/odradev/odra"
-description = "High-level smart contract framework for Rust."
+description = "Collection of reusable modules"
 keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm"]
 
+
 [dependencies]
 odra-types = { version = "0.1.0", path = "../types" }
-odra-utils = { version = "0.1.0", path = "../utils" }
 odra-proc-macros = { version = "0.1.0", path = "../lang/proc_macros" }
 odra-contract-env = { version = "0.1.0", path = "../env", default-features = false, optional = true }
 odra-primitives = { version = "0.1.0", path = "../primitives", default-features = false, optional = true }
-ref_thread_local = "0.1.1"
-cfg-if = "1.0.0"
 
 [features]
 default = [ "mock-vm" ]

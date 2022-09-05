@@ -1,7 +1,6 @@
 use std::{fmt::Debug, hash::Hash, marker::PhantomData};
 
-use crate::ContractEnv;
-use crate::UnwrapOrRevert;
+use odra_contract_env::{ContractEnv, unwrap_or_revert::UnwrapOrRevert};
 use odra_types::{
     arithmetic::{OverflowingAdd, OverflowingSub},
     bytesrepr::{FromBytes, ToBytes},
@@ -91,14 +90,15 @@ impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped> Instance for
 
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
-    use crate::{Instance, Mapping};
     use core::hash::Hash;
-    use odra_mock_vm::TestEnv;
+    use odra_contract_env::TestEnv;
     use odra_types::{
         arithmetic::ArithmeticsError,
         bytesrepr::{FromBytes, ToBytes},
         CLTyped,
     };
+
+    use crate::{mapping::Mapping, instance::Instance};
 
     #[test]
     fn test_get() {

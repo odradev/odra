@@ -1,9 +1,10 @@
-use crate::UnwrapOrRevert;
 use odra_types::{
     bytesrepr::{FromBytes, ToBytes},
     event::Event,
     Address, CLTyped, CLValue, EventData, ExecutionError, RuntimeArgs,
 };
+
+use crate::unwrap_or_revert::UnwrapOrRevert;
 
 #[allow(improper_ctypes)]
 extern "C" {

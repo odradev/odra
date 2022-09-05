@@ -1,35 +1,17 @@
 pub mod contract_def;
-mod instance;
-mod mapping;
-mod unwrap_or_revert;
-mod variable;
 
 use std::fmt::Debug;
 use types::{bytesrepr::FromBytes, Address, CLTyped, RuntimeArgs};
 
 pub use {
-    instance::Instance,
-    mapping::Mapping,
+    odra_primitives::{instance::Instance, mapping::Mapping, variable::Variable},
     odra_proc_macros::{execution_error, external_contract, module, odra_error, Event, Instance},
     odra_types as types, odra_utils as utils,
-    unwrap_or_revert::UnwrapOrRevert,
-    variable::Variable,
+    odra_contract_env::{ContractEnv, unwrap_or_revert::UnwrapOrRevert}
 };
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "mock-vm")] {
-        pub use odra_mock_vm::{TestEnv, ContractEnv};
-        pub mod test_utils;
-    } else if #[cfg(feature = "wasm-test")] {
-        pub mod test_utils;
-        mod external_api;
-        pub use external_api::contract_env::ContractEnv;
-        pub use external_api::test_env::TestEnv;
-    } else if #[cfg(feature = "wasm")] {
-        mod external_api;
-        pub use external_api::contract_env::ContractEnv;
-    }
-}
+#[cfg(any(feature = "mock-vm", feature = "wasm-test"))]
+pub use odra_contract_env::{TestEnv, test_utils};
 
 /// Calls contract at `address` invoking the `entrypoint` with `args`.
 ///

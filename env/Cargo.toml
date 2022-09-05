@@ -1,0 +1,22 @@
+[package]
+name = "odra-contract-env"
+version = "0.1.0"
+edition = "2021"
+authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
+license = "MIT"
+repository = "https://github.com/odradev/odra"
+description = "Collection of reusable modules"
+keywords = ["wasm", "webassembly", "blockchain"]
+categories = ["wasm"]
+
+[dependencies]
+odra-types = { version = "0.1.0", path = "../types" }
+odra-mock-vm = { version = "0.1.0", path = "../mock_vm", optional = true }
+odra-test-env-wrapper = { version = "0.1.0", path = "../test_env_wrapper", optional = true }
+cfg-if = "1.0.0"
+
+[features]
+default = [ "wasm-test" ]
+mock-vm = ["odra-mock-vm" ]
+wasm = []
+wasm-test = [ "odra-test-env-wrapper" ]
