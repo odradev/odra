@@ -10,11 +10,11 @@ keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm"]
 
 [dependencies]
-odra-contract-env = { version = "0.1.0", path = "../env", default-features = false, optional = true }
+odra-env = { version = "0.1.0", path = "../env", default-features = false, optional = true }
 odra-types = { version = "0.1.0", path = "../types" }
 
 [features]
 default = [ "mock-vm" ]
-mock-vm = ["odra-contract-env/mock-vm" ]
-wasm = [ "odra-contract-env/wasm"]
-wasm-test = [  "odra-contract-env/wasm-test"]
+mock-vm = ["odra-env/mock-vm" ]
+wasm = [ "odra-env/wasm"]
+wasm-test = [  "odra-env/wasm-test"]

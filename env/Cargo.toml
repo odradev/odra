@@ -1,5 +1,5 @@
 [package]
-name = "odra-contract-env"
+name = "odra-env"
 version = "0.1.0"
 edition = "2021"
 authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
@@ -16,7 +16,7 @@ odra-test-env-wrapper = { version = "0.1.0", path = "../test_env_wrapper", optio
 cfg-if = "1.0.0"
 
 [features]
-default = [ "wasm-test" ]
+default = [ "mock-vm" ]
 mock-vm = ["odra-mock-vm" ]
 wasm = []
 wasm-test = [ "odra-test-env-wrapper" ]

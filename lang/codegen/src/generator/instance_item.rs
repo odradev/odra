@@ -24,7 +24,7 @@ impl GenerateCode for InstanceItem<'_> {
             .collect();
 
         quote! {
-            impl odra::Instance for #ident {
+            impl odra_primitives::Instance for #ident {
                 fn instance(namespace: &str) -> Self {
                     Self {
                         #fields
@@ -41,7 +41,7 @@ impl ToTokens for WrappedField {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let ident = &self.0.ident.as_ref().unwrap();
         tokens.extend(quote! {
-            #ident: odra::Instance::instance(
+            #ident: odra_primitives::Instance::instance(
                 [stringify!(#ident), namespace]
                     .iter()
                     .filter_map(|str| match str.is_empty() {

@@ -28,7 +28,7 @@ impl ToTokens for ModuleStruct {
         let item_struct = &self.item;
         let span = item_struct.ident.span();
         let instance = match &self.is_instantiable {
-            true => quote::quote_spanned!(span => #[derive(odra::Instance)]),
+            true => quote::quote_spanned!(span => #[derive(odra_proc_macros::Instance)]),
             false => quote!(),
         };
         tokens.extend(quote! {

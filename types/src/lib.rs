@@ -3,8 +3,10 @@ pub mod arithmetic;
 mod error;
 pub mod event;
 mod serde;
+mod native_token;
 
 pub use address::*;
+pub use native_token::NativeToken;
 pub use casper_types::{
     runtime_args, ApiError, CLType, CLTyped, CLValue, CLValueError, NamedArg, RuntimeArgs, U128,
     U256, U512,

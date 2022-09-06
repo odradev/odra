@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
-use odra_contract_env::ContractEnv;
-use odra_contract_env::unwrap_or_revert::UnwrapOrRevert;
+use odra_env::unwrap_or_revert::UnwrapOrRevert;
+use odra_env::ContractEnv;
 use odra_types::{
     arithmetic::{OverflowingAdd, OverflowingSub},
     bytesrepr::{FromBytes, ToBytes},
@@ -87,14 +87,14 @@ impl<T: FromBytes + ToBytes + CLTyped> Instance for Variable<T> {
 
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
-    use odra_contract_env::TestEnv;
+    use odra_env::TestEnv;
     use odra_types::{
         arithmetic::ArithmeticsError,
         bytesrepr::{FromBytes, ToBytes},
         CLTyped,
     };
 
-    use crate::{variable::Variable, instance::Instance};
+    use crate::{instance::Instance, variable::Variable};
 
     #[test]
     fn test_get() {

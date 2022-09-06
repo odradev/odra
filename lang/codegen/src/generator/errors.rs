@@ -23,16 +23,16 @@ impl GenerateCode for ErrorEnumItem<'_> {
                 let msg = &v.ident.to_string().to_case(Case::Title);
                 let code = &v.expr;
                 quote::quote! {
-                    #enum_ident::#ident => odra::types::ExecutionError::new(#code, #msg),
+                    #enum_ident::#ident => odra_types::ExecutionError::new(#code, #msg),
                 }
             })
             .collect::<TokenStream>();
 
         quote::quote! {
-            #[odra::odra_error]
+            #[odra_proc_macros::odra_error]
             #item_enum
 
-            impl From<#enum_ident> for odra::types::ExecutionError {
+            impl From<#enum_ident> for odra_types::ExecutionError {
                 fn from(value: #enum_ident) -> Self {
                     match value {
                         #arms
@@ -56,9 +56,9 @@ impl GenerateCode for OdraErrorItem<'_> {
         quote::quote! {
             #item_enum
 
-            impl From<#ident> for odra::types::OdraError {
+            impl From<#ident> for odra_types::OdraError {
                 fn from(value: #ident) -> Self {
-                    odra::types::OdraError::ExecutionError(value.into())
+                    odra_types::OdraError::ExecutionError(value.into())
                 }
             }
         }

@@ -19,9 +19,9 @@ impl GenerateCode for ContractDef<'_> {
         let entrypoints = self.contract.public_methods();
 
         quote! {
-            impl odra::contract_def::HasContractDef for #struct_ident {
-                fn contract_def() -> odra::contract_def::ContractDef {
-                    odra::contract_def::ContractDef {
+            impl odra_primitives::contract_def::HasContractDef for #struct_ident {
+                fn contract_def() -> odra_primitives::contract_def::ContractDef {
+                    odra_primitives::contract_def::ContractDef {
                         ident: String::from(#struct_name),
                         entrypoints: vec![
                             # (#entrypoints)*

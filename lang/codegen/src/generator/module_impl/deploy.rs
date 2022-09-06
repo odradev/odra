@@ -72,7 +72,7 @@ impl GenerateCode for Deploy<'_> {
             #[cfg(all(test, feature = "wasm-test"))]
             impl #struct_ident {
                 fn deploy() -> #ref_ident {
-                    let address = odra::TestEnv::register_contract(&#struct_snake_case, &odra::types::RuntimeArgs::new());
+                    let address = odra_env::TestEnv::register_contract(&#struct_snake_case, &odra_types::RuntimeArgs::new());
                     #ref_ident { address }
                 }
 
@@ -87,7 +87,7 @@ impl GenerateCode for Deploy<'_> {
                     type Constructor = (String, RuntimeArgs, EntrypointCall);
 
                     use std::collections::HashMap;
-                    use odra::types::{bytesrepr::Bytes, RuntimeArgs, runtime_args};
+                    use odra_types::{bytesrepr::Bytes, RuntimeArgs, runtime_args};
 
                     let mut entrypoints: HashMap<String, EntrypointCall> = HashMap::new();
                     #entrypoints
@@ -95,7 +95,7 @@ impl GenerateCode for Deploy<'_> {
                     let mut constructors: HashMap<String, EntrypointCall> = HashMap::new();
                     #constructors
 
-                    let address = odra::TestEnv::register_contract(None, constructors, entrypoints);
+                    let address = odra_env::TestEnv::register_contract(None, constructors, entrypoints);
                     #ref_ident { address }
                 }
 
@@ -143,7 +143,7 @@ where
                 type Constructor = (String, RuntimeArgs, EntrypointCall);
 
                 use std::collections::HashMap;
-                use odra::types::{bytesrepr::Bytes, RuntimeArgs};
+                use odra_types::{bytesrepr::Bytes, RuntimeArgs};
 
                 let mut entrypoints: HashMap<String, EntrypointCall> = HashMap::new();
                 #entrypoints_stream
@@ -159,12 +159,12 @@ where
                     stringify!(#constructor_ident).to_string(),
                     args,
                     |name, args| {
-                        let instance = <#struct_ident as odra::Instance>::instance(name.as_str());
+                        let instance = <#struct_ident as odra_primitives::Instance>::instance(name.as_str());
                         instance.#constructor_ident( #fn_args );
                         None
                     }
                 ));
-                let address = odra::TestEnv::register_contract(constructor, constructors, entrypoints);
+                let address = odra_env::TestEnv::register_contract(constructor, constructors, entrypoints);
                 #ref_ident { address }
             }
         }
@@ -212,10 +212,10 @@ where
 
             quote! {
                 #deploy_fn_sig {
-                    use odra::types::RuntimeArgs;
+                    use odra_types::RuntimeArgs;
                     let mut args = { #args };
                     args.insert("constructor", stringify!(#constructor_ident)).unwrap();
-                    let address = odra::TestEnv::register_contract(#struct_name_snake_case, &args);
+                    let address = odra_env::TestEnv::register_contract(#struct_name_snake_case, &args);
                     #ref_ident { address }
                 }
             }
@@ -234,15 +234,15 @@ where
             let return_value = match &entrypoint.ret {
                 ReturnType::Default => quote!(None),
                 ReturnType::Type(_, _) => quote! {
-                    let bytes = odra::types::bytesrepr::ToBytes::to_bytes(&result).unwrap();
-                    Some(odra::types::bytesrepr::Bytes::from(bytes))
+                    let bytes = odra_types::bytesrepr::ToBytes::to_bytes(&result).unwrap();
+                    Some(odra_types::bytesrepr::Bytes::from(bytes))
                 },
             };
             let args = args_to_fn_args(&entrypoint.args);
 
             quote! {
                 entrypoints.insert(#name, |name, args| {
-                    let instance = <#struct_ident as odra::Instance>::instance(name.as_str());
+                    let instance = <#struct_ident as odra_primitives::Instance>::instance(name.as_str());
                     let result = instance.#ident(#args);
                     #return_value
                 });
@@ -264,7 +264,7 @@ where
                 constructors.insert(
                     stringify!(#ident).to_string(),
                     |name, args| {
-                        let instance = <#struct_ident as odra::Instance>::instance(name.as_str());
+                        let instance = <#struct_ident as odra_primitives::Instance>::instance(name.as_str());
                         instance.#ident( #args );
                         None
                     }

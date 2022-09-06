@@ -25,7 +25,7 @@ impl GenerateCode for ContractReference<'_> {
 
         quote! {
             pub struct #ref_ident {
-                address: odra::types::Address,
+                address: odra_types::Address,
             }
 
             impl #ref_ident {
@@ -33,11 +33,11 @@ impl GenerateCode for ContractReference<'_> {
 
                 #ref_constructors
 
-                pub fn address(&self) -> odra::types::Address {
+                pub fn address(&self) -> odra_types::Address {
                     self.address.clone()
                 }
 
-                pub fn at(address: odra::types::Address) -> Self {
+                pub fn at(address: odra_types::Address) -> Self {
                     Self { address }
                 }
             }

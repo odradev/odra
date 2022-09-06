@@ -45,15 +45,15 @@ impl GenerateCode for ExternalContractItem<'_> {
             #item_trait
 
             pub struct #ref_ident {
-                address: odra::types::Address,
+                address: odra_types::Address,
             }
 
             impl #ref_ident {
-                fn at(address: odra::types::Address) -> Self {
+                fn at(address: odra_types::Address) -> Self {
                     Self { address }
                 }
 
-                fn address(&self) -> odra::types::Address {
+                fn address(&self) -> odra_types::Address {
                     self.address.clone()
                 }
             }

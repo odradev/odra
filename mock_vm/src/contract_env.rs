@@ -2,7 +2,7 @@ use crate::borrow_env;
 use odra_types::{
     bytesrepr::{FromBytes, ToBytes},
     event::Event,
-    Address, CLTyped, CLValue, ExecutionError,
+    Address, CLTyped, CLValue, ExecutionError, NativeToken, U256,
 };
 
 /// Exposes the public API to communicate with the host.
@@ -64,5 +64,20 @@ impl ContractEnv {
         let execution_error: ExecutionError = error.into();
         borrow_env().revert(execution_error.into());
         panic!("OdraRevert")
+    }
+
+    /// Returns the backend native token metadata
+    pub fn native_token() -> NativeToken {
+        NativeToken::new("Wrapped Plascoin", "WPLS", 10)
+    }
+
+    /// Deposits native token. The most likely to be used in the exchange for the minting of a wrapped native token.
+    pub fn deposit_native_token(address: Address, amount: U256) {
+        
+    }
+
+    /// Withdraws native token. The most likely to be used in the exchange for the burning of a wrapped native token.
+    pub fn withdraw_native_token(recipient: Address, amount: U256) {
+
     }
 }

@@ -1,7 +1,7 @@
 use odra_types::{
     bytesrepr::{FromBytes, ToBytes},
     event::Event,
-    Address, CLTyped, CLValue, EventData, ExecutionError, RuntimeArgs,
+    Address, CLTyped, CLValue, EventData, ExecutionError, NativeToken, RuntimeArgs, U256,
 };
 
 use crate::unwrap_or_revert::UnwrapOrRevert;
@@ -18,6 +18,7 @@ extern "C" {
     fn __call_contract(address: &Address, entrypoint: &str, args: &RuntimeArgs) -> Vec<u8>;
     fn __revert(reason: &ExecutionError) -> !;
     fn __print(message: &str);
+    fn __native_token() -> NativeToken;
 }
 
 pub struct ContractEnv;
@@ -81,5 +82,17 @@ impl ContractEnv {
 
     pub fn print(message: &str) {
         unsafe { __print(message) }
+    }
+
+    pub fn native_token() -> NativeToken {
+        unsafe { __native_token() }
+    }
+
+    pub fn deposit_native_token(address: Address, amount: U256) {
+        
+    }
+
+    pub fn withdraw_native_token(recipient: Address, amount: U256) {
+
     }
 }
