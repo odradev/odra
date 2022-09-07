@@ -15,7 +15,6 @@ odra-types = { version = "0.1.0", path = "../types" }
 odra-proc-macros = { version = "0.1.0", path = "../lang/proc_macros" }
 odra-env = { version = "0.1.0", path = "../env", default-features = false, optional = true }
 odra-primitives = { version = "0.1.0", path = "../primitives", default-features = false, optional = true }
-delegate = "0.7.0"
 
 [features]
 default = [ "mock-vm" ]

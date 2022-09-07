@@ -7,7 +7,7 @@ use self::{
     events::{Approval, Transfer},
 };
 
-pub mod traits;
+pub mod ext;
 
 #[odra_proc_macros::module]
 pub struct Erc20 {
