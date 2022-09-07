@@ -22,7 +22,13 @@ pub struct Erc20 {
 #[odra_proc_macros::module]
 impl Erc20 {
     #[odra(init)]
-    pub fn init_with_supply(&self, symbol: String, name: String, decimals: u8, initial_supply: U256) {
+    pub fn init_with_supply(
+        &self,
+        symbol: String,
+        name: String,
+        decimals: u8,
+        initial_supply: U256,
+    ) {
         let caller = ContractEnv::caller();
 
         self.symbol.set(symbol);
@@ -107,7 +113,7 @@ impl Erc20 {
     pub fn increase_total_supply(&self, amount: U256) {
         self.total_supply.add(amount);
     }
-    
+
     pub fn decrease_total_supply(&self, amount: U256) {
         self.total_supply.subtract(amount);
     }
@@ -115,7 +121,7 @@ impl Erc20 {
     pub fn increase_balance_of(&self, address: &Address, amount: U256) {
         self.balances.add(address, amount);
     }
-    
+
     pub fn decrease_balance_of(&self, address: &Address, amount: U256) {
         self.balances.subtract(address, amount);
     }
@@ -123,7 +129,7 @@ impl Erc20 {
 
 pub mod events {
     use odra_proc_macros::Event;
-    use odra_types::{Address, U256, event::Event};
+    use odra_types::{event::Event, Address, U256};
 
     #[derive(Event, PartialEq, Debug)]
     pub struct Transfer {
@@ -165,5 +171,91 @@ pub mod errors {
             InsufficientBalance => 20,
             InsufficientAllowance => 21,
         }
+    }
+}
+
+#[cfg(all(test, feature = "mock-vm"))]
+mod tests {
+
+    use odra_env::{assert_events, TestEnv};
+    use odra_types::U256;
+
+    use crate::erc20::events::Transfer;
+
+    use super::{errors::Error, Erc20, Erc20Ref};
+
+    const NAME: &str = "Plascoin";
+    const SYMBOL: &str = "PLS";
+    const DECIMALS: u8 = 10;
+    const INITIAL_SUPPLY: u32 = 10_000;
+
+    fn setup() -> Erc20Ref {
+        let erc20 = Erc20::deploy_init_with_supply(
+            SYMBOL.to_string(),
+            NAME.to_string(),
+            DECIMALS,
+            INITIAL_SUPPLY.into(),
+        );
+        erc20
+    }
+
+    #[test]
+    fn initialization() {
+        let erc20 = setup();
+
+        assert_eq!(erc20.symbol(), SYMBOL.to_string());
+        assert_eq!(erc20.name(), NAME.to_string());
+        assert_eq!(erc20.decimals(), DECIMALS);
+        assert_eq!(erc20.total_supply(), INITIAL_SUPPLY.into());
+
+        assert_events!(
+            erc20,
+            Transfer {
+                from: None,
+                to: Some(TestEnv::get_account(0)),
+                amount: INITIAL_SUPPLY.into()
+            }
+        );
+    }
+
+    #[test]
+    fn transfer_works() {
+        let erc20 = setup();
+
+        let sender = TestEnv::get_account(0);
+        let recipient = TestEnv::get_account(1);
+
+        let amount = 1_000.into();
+
+        erc20.transfer(recipient, amount);
+
+        assert_eq!(
+            erc20.balance_of(sender),
+            U256::from(INITIAL_SUPPLY) - amount
+        );
+
+        assert_eq!(erc20.balance_of(recipient), amount);
+
+        assert_events!(
+            erc20,
+            Transfer {
+                from: Some(sender),
+                to: Some(recipient),
+                amount
+            }
+        );
+    }
+
+    #[test]
+    fn transfer_error() {
+        let erc20 = setup();
+
+        let recipient = TestEnv::get_account(1);
+
+        let amount = U256::from(INITIAL_SUPPLY) + U256::one();
+
+        TestEnv::assert_exception(Error::InsufficientBalance, || {
+            erc20.transfer(recipient, amount)
+        });
     }
 }

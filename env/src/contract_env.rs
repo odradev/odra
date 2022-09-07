@@ -88,11 +88,7 @@ impl ContractEnv {
         unsafe { __native_token() }
     }
 
-    pub fn deposit_native_token(address: Address, amount: U256) {
-        
-    }
+    pub fn deposit_native_token(address: Address, amount: U256) {}
 
-    pub fn withdraw_native_token(recipient: Address, amount: U256) {
-
-    }
+    pub fn withdraw_native_token(recipient: Address, amount: U256) {}
 }

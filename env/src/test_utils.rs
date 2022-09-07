@@ -65,11 +65,11 @@ macro_rules! assert_events {
         )+
         $(
             __idx += 1;
-            let __ev = odra::test_utils::get_event::<$event_ty>(&$contract.address(), __idx).unwrap();
+            let __ev = odra_env::test_utils::get_event::<$event_ty>(&$contract.address(), __idx).unwrap();
             let __name = stringify!($event_ty).to_string();
             let __name = __name.split("::").last().unwrap();
             assert_eq!(
-                <$event_ty as odra::types::event::Event>::name(&__ev), __name
+                <$event_ty as odra_types::event::Event>::name(&__ev), __name
             );
         )+
     };
@@ -81,7 +81,7 @@ macro_rules! assert_events {
         )+
         $(
             __idx += 1;
-            let __ev = odra::test_utils::get_event(&$contract.address(), __idx).unwrap();
+            let __ev = odra_env::test_utils::get_event(&$contract.address(), __idx).unwrap();
             assert_eq!(
                 $event, __ev
             );

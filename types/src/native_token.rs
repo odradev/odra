@@ -6,7 +6,11 @@ pub struct NativeToken {
 
 impl NativeToken {
     pub fn new(name: &str, symbol: &str, decimals: u8) -> Self {
-        Self { name: String::from(name), symbol: String::from(symbol), decimals }
+        Self {
+            name: String::from(name),
+            symbol: String::from(symbol),
+            decimals,
+        }
     }
 
     pub fn name(&self) -> String {
