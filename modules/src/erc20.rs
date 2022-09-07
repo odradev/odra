@@ -37,7 +37,9 @@ impl Erc20 {
         self.total_supply.set(initial_supply);
         self.balances.set(&caller, initial_supply);
 
-        Transfer::emit(None, Some(caller), initial_supply);
+        if initial_supply > U256::zero() {
+            Transfer::emit(None, Some(caller), initial_supply);
+        }
     }
 
     #[odra(init)]

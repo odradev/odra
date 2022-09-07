@@ -72,8 +72,12 @@ impl ContractEnv {
     }
 
     /// Deposits native token. The most likely to be used in the exchange for the minting of a wrapped native token.
-    pub fn deposit_native_token(address: Address, amount: U256) {}
+    pub fn deposit_native_token(address: Address, amount: U256) {
+        borrow_env().reduce_balance_of(address, amount);
+    }
 
     /// Withdraws native token. The most likely to be used in the exchange for the burning of a wrapped native token.
-    pub fn withdraw_native_token(recipient: Address, amount: U256) {}
+    pub fn withdraw_native_token(recipient: Address, amount: U256) {
+        borrow_env().increase_balance_of(recipient, amount);
+    }
 }

@@ -13,3 +13,4 @@ categories = ["wasm"]
 odra-types = { version = "0.1.0", path = "../types" }
 odra-utils = { version = "0.1.0", path = "../utils" }
 ref_thread_local = "0.1.1"
+anyhow = "1.0.64"

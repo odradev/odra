@@ -5,7 +5,9 @@ use odra_types::bytesrepr::ToBytes;
 use odra_types::{
     bytesrepr::Bytes, event::EventError, Address, CLValue, EventData, OdraError, RuntimeArgs,
 };
+use odra_types::{VmError, U256};
 
+use crate::account::Account;
 use crate::context::ExecutionContext;
 use crate::contract_container::ContractContainer;
 use crate::contract_register::ContractRegister;
@@ -165,6 +167,34 @@ impl MockVm {
     pub fn get_event(&self, address: &Address, index: i32) -> Result<EventData, EventError> {
         self.state.read().unwrap().get_event(address, index)
     }
+
+    pub(crate) fn get_address(&self, n: usize) -> Address {
+        self.state
+            .read()
+            .unwrap()
+            .accounts()
+            .get(n)
+            .unwrap()
+            .address()
+    }
+
+    pub(crate) fn get_balance(&self, address: Address) -> U256 {
+        self.state.read().unwrap().get_balance(address)
+    }
+
+    pub fn reduce_balance_of(&self, address: Address, amount: U256) {
+        self.state
+            .write()
+            .unwrap()
+            .reduce_balance_of(address, amount)
+    }
+
+    pub fn increase_balance_of(&self, address: Address, amount: U256) {
+        self.state
+            .write()
+            .unwrap()
+            .increase_balance_of(address, amount)
+    }
 }
 
 #[derive(Clone)]
@@ -173,6 +203,7 @@ pub struct MockVmState {
     exec_context: ExecutionContext,
     events: HashMap<Address, Vec<EventData>>,
     contract_counter: u32,
+    accounts: Vec<Account>,
     error: Option<OdraError>,
 }
 
@@ -263,6 +294,39 @@ impl MockVmState {
         }
     }
 
+    fn reduce_balance_of(&mut self, address: Address, amount: U256) {
+        self.accounts.iter_mut().for_each(|account| {
+            if account.address() == address {
+                if account.reduce_balance(amount).is_err() {
+                    self.error = Some(OdraError::VmError(VmError::Panic))
+                }
+                return;
+            }
+        });
+    }
+
+    fn increase_balance_of(&mut self, address: Address, amount: U256) {
+        self.accounts.iter_mut().for_each(|account| {
+            if account.address() == address {
+                if account.increase_balance(amount).is_err() {
+                    self.error = Some(OdraError::VmError(VmError::Panic))
+                }
+                return;
+            }
+        });
+    }
+
+    fn get_balance(&self, address: Address) -> U256 {
+        match self
+            .accounts
+            .iter()
+            .find(|account| account.address() == address)
+        {
+            Some(account) => account.balance(),
+            None => U256::zero(),
+        }
+    }
+
     fn clear_error(&mut self) {
         self.error = None;
     }
@@ -286,6 +350,10 @@ impl MockVmState {
     fn restore_snapshot(&mut self) {
         self.storage.restore_snapshot();
     }
+
+    pub fn accounts(&self) -> &[Account] {
+        self.accounts.as_ref()
+    }
 }
 
 impl Default for MockVmState {
@@ -295,21 +363,19 @@ impl Default for MockVmState {
             exec_context: Default::default(),
             events: Default::default(),
             contract_counter: 0,
+            accounts: vec![
+                Account::new(Address::new(b"first_address"), 100_000.into()),
+                Account::new(Address::new(b"second_address"), 100_000.into()),
+                Account::new(Address::new(b"third_address"), 100_000.into()),
+                Account::new(Address::new(b"fourth_address"), 100_000.into()),
+                Account::new(Address::new(b"fifth_address"), 100_000.into()),
+            ],
             error: None,
         };
-        backend.push_address(default_accounts().first().unwrap());
+
+        backend.push_address(&backend.accounts.first().unwrap().address());
         backend
     }
-}
-
-pub fn default_accounts() -> Vec<Address> {
-    vec![
-        Address::new(b"first_address"),
-        Address::new(b"second_address"),
-        Address::new(b"third_address"),
-        Address::new(b"fourth_address"),
-        Address::new(b"fifth_address"),
-    ]
 }
 
 #[cfg(test)]

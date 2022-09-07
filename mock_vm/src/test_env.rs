@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 
-use odra_types::{bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs};
+use odra_types::{
+    bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs, U256,
+};
 
-use crate::{borrow_env, mock_vm::default_accounts, EntrypointCall};
+use crate::{borrow_env, EntrypointCall};
 
 /// Describes test environment API. TestEnv delegates methods to the underlying env implementation.
 ///
@@ -59,7 +61,11 @@ impl TestEnv {
 
     /// Returns nth test user account.
     pub fn get_account(n: usize) -> Address {
-        *default_accounts().get(n).unwrap()
+        borrow_env().get_address(n)
+    }
+
+    pub fn get_balance(address: Address) -> U256 {
+        borrow_env().get_balance(address)
     }
 
     /// Gets nth event emitted by the contract at `address`.
