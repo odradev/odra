@@ -165,6 +165,14 @@ impl MockVm {
     pub fn get_event(&self, address: &Address, index: i32) -> Result<EventData, EventError> {
         self.state.read().unwrap().get_event(address, index)
     }
+
+    pub fn get_block_time(&self) -> u64 {
+        self.state.read().unwrap().block_time()
+    }
+
+    pub fn advance_block_time_by(&self, seconds: u64) {
+        self.state.write().unwrap().advance_block_time_by(seconds)
+    }
 }
 
 #[derive(Clone)]
@@ -174,6 +182,7 @@ pub struct MockVmState {
     events: HashMap<Address, Vec<EventData>>,
     contract_counter: u32,
     error: Option<OdraError>,
+    block_time: u64,
 }
 
 impl MockVmState {
@@ -286,6 +295,14 @@ impl MockVmState {
     fn restore_snapshot(&mut self) {
         self.storage.restore_snapshot();
     }
+
+    pub fn block_time(&self) -> u64 {
+        self.block_time
+    }
+
+    pub fn advance_block_time_by(&mut self, seconds: u64) {
+        self.block_time += seconds;
+    }
 }
 
 impl Default for MockVmState {
@@ -296,6 +313,7 @@ impl Default for MockVmState {
             events: Default::default(),
             contract_counter: 0,
             error: None,
+            block_time: 0,
         };
         backend.push_address(default_accounts().first().unwrap());
         backend

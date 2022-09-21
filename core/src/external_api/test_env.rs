@@ -1,14 +1,42 @@
 use odra_types::{bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs};
 
+macro_rules! delegate_to_wrapper {
+    (
+        $(
+            $(#[$outer:meta])*
+            $func_name:ident($( $param_ident:ident : $param_ty:ty ),*) $( -> $ret:ty)*
+        )+
+    ) => {
+        $(
+            $(#[$outer])*
+            pub fn $func_name( $($param_ident : $param_ty),* ) $(-> $ret)* {
+                odra_test_env_wrapper::on_backend(|env| env.$func_name($($param_ident),*))
+            }
+        )+
+    }
+}
+
 /// Describes test environment API. TestEnv delegates methods to the underlying dynamically loaded env.
 ///
 /// The actual test env is dynamically loaded in the runtime.
 pub struct TestEnv;
 
 impl TestEnv {
-    /// Registers the contract in the test environment.
-    pub fn register_contract(contract_name: &str, args: &RuntimeArgs) -> Address {
-        odra_test_env_wrapper::on_backend(|env| env.register_contract(contract_name, args))
+    delegate_to_wrapper! {
+        ///Registers the contract in the test environment.
+        register_contract(contract_name: &str, args: &RuntimeArgs) -> Address
+        ///Returns the backend name.
+        backend_name() -> String
+        ///Replaces the current caller.
+        set_caller(address: &Address)
+        ///Returns nth test user account.
+        get_account(n: usize) -> Address
+        ///Gets nth event emitted by the contract at `address`.
+        get_event(address: &Address, index: i32) -> Result<EventData, EventError>
+        ///Gets the current error from the test environment.
+        get_error() -> Option<OdraError>
+        ///Increases the current value of block_time.
+        advance_block_time_by(seconds: u64)
     }
 
     /// Calls contract at `address` invoking the `entrypoint` with `args`.
@@ -39,32 +67,5 @@ impl TestEnv {
         let msg = format!("Expected {:?} error.", expected);
         let error: OdraError = Self::get_error().expect(&msg);
         assert_eq!(error, expected);
-    }
-
-    /// Returns the backend name.
-    pub fn backend_name() -> String {
-        odra_test_env_wrapper::on_backend(|env| env.backend_name())
-    }
-
-    /// Replaces the current caller.
-    pub fn set_caller(address: &Address) {
-        odra_test_env_wrapper::on_backend(|env| {
-            env.set_caller(address);
-        });
-    }
-
-    /// Returns nth test user account.
-    pub fn get_account(n: usize) -> Address {
-        odra_test_env_wrapper::on_backend(|env| env.get_account(n))
-    }
-
-    /// Gets nth event emitted by the contract at `address`.
-    pub fn get_event(address: &Address, index: i32) -> Result<EventData, EventError> {
-        odra_test_env_wrapper::on_backend(|env| env.get_event(address, index))
-    }
-
-    /// Gets the current error from the test environment.
-    fn get_error() -> Option<OdraError> {
-        odra_test_env_wrapper::on_backend(|env| env.get_error())
     }
 }

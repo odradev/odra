@@ -2,7 +2,23 @@ use std::collections::HashMap;
 
 use odra_types::{bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs};
 
-use crate::{borrow_env, mock_vm::default_accounts, EntrypointCall};
+use crate::{mock_vm::default_accounts, EntrypointCall};
+
+macro_rules! delegate_to_env {
+    (
+        $(
+            $(#[$outer:meta])*
+            $func_name:ident($( $param_ident:ident : $param_ty:ty ),*) $( -> $ret:ty)*
+        )+
+    ) => {
+        $(
+            $(#[$outer])*
+            pub fn $func_name( $($param_ident : $param_ty),* ) $(-> $ret)* {
+                crate::borrow_env().$func_name($($param_ident),*)
+            }
+        )+
+    }
+}
 
 /// Describes test environment API. TestEnv delegates methods to the underlying env implementation.
 ///
@@ -10,25 +26,29 @@ use crate::{borrow_env, mock_vm::default_accounts, EntrypointCall};
 pub struct TestEnv;
 
 impl TestEnv {
-    /// Registers the contract in the test environment.
-    pub fn register_contract(
-        constructor: Option<(String, RuntimeArgs, EntrypointCall)>,
-        constructors: HashMap<String, EntrypointCall>,
-        entrypoints: HashMap<String, EntrypointCall>,
-    ) -> Address {
-        borrow_env().register_contract(constructor, constructors, entrypoints)
-    }
-
-    /// Calls contract at `address` invoking the `entrypoint` with `args`.
-    ///
-    /// Returns optional raw bytes to further processing.
-    pub fn call_contract(
-        address: &Address,
-        entrypoint: &str,
-        args: &RuntimeArgs,
-        _has_return: bool,
-    ) -> Option<Bytes> {
-        borrow_env().call_contract(address, entrypoint, args)
+    delegate_to_env! {
+        /// Registers the contract in the test environment.
+        register_contract(
+            constructor: Option<(String, RuntimeArgs, EntrypointCall)>,
+            constructors: HashMap<String, EntrypointCall>,
+            entrypoints: HashMap<String, EntrypointCall>
+        ) -> Address
+        /// Calls contract at `address` invoking the `entrypoint` with `args`.
+        ///
+        /// Returns optional raw bytes to further processing.
+        call_contract(
+            address: &Address,
+            entrypoint: &str,
+            args: &RuntimeArgs
+        ) -> Option<Bytes>
+        /// Increases the current value of block_time.
+        advance_block_time_by(seconds: u64)
+        /// Returns the backend name.
+        get_backend_name() -> String
+        /// Replaces the current caller.
+        set_caller(address: &Address)
+        /// Gets nth event emitted by the contract at `address`.
+        get_event(address: &Address, index: i32) -> Result<EventData, EventError>
     }
 
     /// Expects the `block` execution will fail with the specific error.
@@ -41,29 +61,14 @@ impl TestEnv {
             block();
         });
 
-        let exec_err = borrow_env()
+        let exec_err = crate::borrow_env()
             .error()
             .expect("An error expected, but did not occur");
         assert_eq!(exec_err, err.into());
     }
 
-    /// Returns the backend name.
-    pub fn backend_name() -> String {
-        borrow_env().get_backend_name()
-    }
-
-    /// Replaces the current caller.
-    pub fn set_caller(address: &Address) {
-        borrow_env().set_caller(address)
-    }
-
     /// Returns nth test user account.
     pub fn get_account(n: usize) -> Address {
         *default_accounts().get(n).unwrap()
-    }
-
-    /// Gets nth event emitted by the contract at `address`.
-    pub fn get_event(address: &Address, index: i32) -> Result<EventData, EventError> {
-        borrow_env().get_event(address, index)
     }
 }
