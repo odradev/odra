@@ -9,7 +9,7 @@ pub use casper_types::{
     runtime_args, ApiError, CLType, CLTyped, CLValue, CLValueError, NamedArg, RuntimeArgs, U128,
     U256, U512,
 };
-pub use error::{ExecutionError, OdraError, VmError};
+pub use error::{CollectionError, ExecutionError, OdraError, VmError};
 pub use serde::{FromBytes, ToBytes};
 /// Contains serialization and deserialization code for types used throughout the system.
 pub mod bytesrepr {

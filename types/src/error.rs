@@ -131,3 +131,23 @@ pub enum VmError {
     /// Unspecified error.
     Panic,
 }
+
+/// Error that can occur while operating on a collection.
+pub enum CollectionError {
+    // The requested index is bigger than the max collection index.
+    IndexOutOfBounds,
+}
+
+impl From<CollectionError> for ExecutionError {
+    fn from(error: CollectionError) -> Self {
+        match error {
+            CollectionError::IndexOutOfBounds => Self::internal(9, "Index out of bounds"),
+        }
+    }
+}
+
+impl From<CollectionError> for OdraError {
+    fn from(error: CollectionError) -> Self {
+        Into::<ExecutionError>::into(error).into()
+    }
+}

@@ -1,5 +1,6 @@
 pub mod contract_def;
 mod instance;
+mod list;
 mod mapping;
 mod unwrap_or_revert;
 mod variable;
@@ -9,6 +10,7 @@ use types::{bytesrepr::FromBytes, Address, CLTyped, RuntimeArgs};
 
 pub use {
     instance::Instance,
+    list::List,
     mapping::Mapping,
     odra_proc_macros::{execution_error, external_contract, module, odra_error, Event, Instance},
     odra_types as types, odra_utils as utils,
