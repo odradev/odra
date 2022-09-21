@@ -41,7 +41,7 @@ where
     cfg_if::cfg_if! {
         if #[cfg(feature = "mock-vm")] {
             let has_return = types::CLType::Unit != T::cl_type();
-            let result = TestEnv::call_contract(address, entrypoint, args, has_return);
+            let result = TestEnv::call_contract(address, entrypoint, args);
             match result {
                 Some(bytes) => T::from_bytes(bytes.as_slice()).unwrap().0,
                 None => T::from_bytes(&[]).unwrap().0,

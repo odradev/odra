@@ -51,7 +51,6 @@ impl MockVm {
         address: &Address,
         entrypoint: &str,
         args: &RuntimeArgs,
-        _has_return: bool,
     ) -> Option<Bytes> {
         self.prepare_call(address);
 
@@ -375,7 +374,7 @@ mod tests {
         );
 
         // when call an existing entrypoint
-        let result = instance.call_contract(&address, "abc", &RuntimeArgs::new(), false);
+        let result = instance.call_contract(&address, "abc", &RuntimeArgs::new());
 
         // then returns the expected value
         assert_eq!(result, Some(vec![1, 1, 1].into()));
@@ -389,7 +388,7 @@ mod tests {
         let address = Address::new(b"random");
 
         // when call a contract
-        instance.call_contract(&address, "abc", &RuntimeArgs::new(), false);
+        instance.call_contract(&address, "abc", &RuntimeArgs::new());
 
         // then the vm is in error state
         assert_eq!(
@@ -411,7 +410,7 @@ mod tests {
         );
 
         // when call non-existing entrypoint
-        instance.call_contract(&address, "cba", &RuntimeArgs::new(), false);
+        instance.call_contract(&address, "cba", &RuntimeArgs::new());
 
         // then the vm is in error state
         assert_eq!(

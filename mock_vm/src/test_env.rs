@@ -39,8 +39,7 @@ impl TestEnv {
         call_contract(
             address: &Address,
             entrypoint: &str,
-            args: &RuntimeArgs,
-            has_return: bool
+            args: &RuntimeArgs
         ) -> Option<Bytes>
         /// Increases the current value of block_time.
         advance_block_time_by(seconds: u64)
