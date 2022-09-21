@@ -69,9 +69,9 @@ impl GenerateCode for Deploy<'_> {
 
         let struct_snake_case = odra_utils::camel_to_snake(&struct_name);
         quote! {
-            #[cfg(all(test, feature = "wasm-test"))]
+            #[cfg(feature = "wasm-test")]
             impl #struct_ident {
-                fn deploy() -> #ref_ident {
+                pub fn deploy() -> #ref_ident {
                     let address = odra::TestEnv::register_contract(&#struct_snake_case, &odra::types::RuntimeArgs::new());
                     #ref_ident { address }
                 }
@@ -79,10 +79,10 @@ impl GenerateCode for Deploy<'_> {
                 #constructors_wasm_test
             }
 
-            #[cfg(all(test, feature = "mock-vm"))]
+            #[cfg(feature = "mock-vm")]
             impl #struct_ident {
 
-                fn deploy() -> #ref_ident {
+                pub fn deploy() -> #ref_ident {
                     use std::collections::HashMap;
                     use odra::types::{bytesrepr::Bytes, RuntimeArgs, runtime_args};
 
@@ -135,7 +135,7 @@ where
         let fn_args = args_to_fn_args(&constructor.args);
 
         quote! {
-            #deploy_fn_sig {
+            pub #deploy_fn_sig {
                 use std::collections::HashMap;
                 use odra::types::{bytesrepr::Bytes, RuntimeArgs};
 
@@ -204,7 +204,7 @@ where
             let args = args_to_runtime_args_stream(&constructor.args);
 
             quote! {
-                #deploy_fn_sig {
+                pub #deploy_fn_sig {
                     use odra::types::RuntimeArgs;
                     let mut args = { #args };
                     args.insert("constructor", stringify!(#constructor_ident)).unwrap();

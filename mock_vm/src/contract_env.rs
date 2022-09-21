@@ -65,4 +65,9 @@ impl ContractEnv {
         borrow_env().revert(execution_error.into());
         panic!("OdraRevert")
     }
+
+    /// Returns the current block time.
+    pub fn get_block_time() -> u64 {
+        borrow_env().get_block_time()
+    }
 }
