@@ -1,12 +1,10 @@
 use core::ops::Range;
 
-use crate::{ContractEnv, Mapping, UnwrapOrRevert, Variable};
+use crate::{ContractEnv, Instance, Mapping, UnwrapOrRevert, Variable};
 use odra_types::{
     bytesrepr::{FromBytes, ToBytes},
     CLTyped, CollectionError,
 };
-
-use crate::Instance;
 
 /// Data structure for an indexed, iterable collection.
 pub struct List<T> {
