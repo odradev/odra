@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use odra_types::{bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs};
 
-use crate::{mock_vm::default_accounts, EntrypointCall};
+use crate::{mock_vm::default_accounts, EntrypointArgs, EntrypointCall};
 
 macro_rules! delegate_to_env {
     (
@@ -30,8 +30,8 @@ impl TestEnv {
         /// Registers the contract in the test environment.
         register_contract(
             constructor: Option<(String, RuntimeArgs, EntrypointCall)>,
-            constructors: HashMap<String, EntrypointCall>,
-            entrypoints: HashMap<String, EntrypointCall>
+            constructors: HashMap<String, (EntrypointArgs, EntrypointCall)>,
+            entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>
         ) -> Address
         /// Calls contract at `address` invoking the `entrypoint` with `args`.
         ///
