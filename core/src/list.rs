@@ -1,6 +1,6 @@
 use core::ops::Range;
 
-use crate::{ContractEnv, Mapping, Variable};
+use crate::{ContractEnv, Mapping, UnwrapOrRevert, Variable};
 use odra_types::{
     bytesrepr::{FromBytes, ToBytes},
     CLTyped, CollectionError,
@@ -18,9 +18,9 @@ impl<T: ToBytes + FromBytes + CLTyped> List<T> {
     /// Creates a new List instance.
     pub fn new(name: String) -> Self {
         let mut name_values = name.clone();
-        name_values.push_str("values");
+        name_values.push_str("_values");
         let mut name_index = name;
-        name_index.push_str("index");
+        name_index.push_str("_index");
         List {
             values: Mapping::new(name_values),
             index: Variable::new(name_index),
@@ -40,13 +40,13 @@ impl<T: ToBytes + FromBytes + CLTyped> List<T> {
     }
 
     /// Replaces the current value with the `value` and returns it.
-    pub fn replace(&self, index: u32, value: T) -> Option<T> {
+    pub fn replace(&self, index: u32, value: T) -> T {
         let current_index = self.index.get_or_default();
         if current_index < index {
             ContractEnv::revert(CollectionError::IndexOutOfBounds);
         }
 
-        let prev_value = self.values.get(&index);
+        let prev_value = self.values.get(&index).unwrap_or_revert();
         self.values.set(&index, value);
         prev_value
     }
@@ -155,7 +155,7 @@ mod tests {
     use odra_mock_vm::TestEnv;
     use odra_types::{
         bytesrepr::{FromBytes, ToBytes},
-        CLTyped, CollectionError, ExecutionError,
+        CLTyped, CollectionError,
     };
 
     use crate::List;
@@ -197,17 +197,14 @@ mod tests {
         let result = list.replace(4, 10);
 
         // Then the previous value is returned
-        assert_eq!(result.unwrap(), 4);
+        assert_eq!(result, 4);
         // Then the value is updated
         assert_eq!(list.get(4).unwrap(), 10);
 
         // When replaces nonexistent value then reverts
-        TestEnv::assert_exception(
-            Into::<ExecutionError>::into(CollectionError::IndexOutOfBounds),
-            || {
-                list.replace(100, 99);
-            },
-        );
+        TestEnv::assert_exception(CollectionError::IndexOutOfBounds, || {
+            list.replace(100, 99);
+        });
     }
 
     #[test]

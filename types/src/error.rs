@@ -137,3 +137,9 @@ impl From<CollectionError> for ExecutionError {
         }
     }
 }
+
+impl From<CollectionError> for OdraError {
+    fn from(error: CollectionError) -> Self {
+        Into::<ExecutionError>::into(error).into()
+    }
+}
