@@ -15,6 +15,20 @@ where
         Err(err) => Err(err),
     }
 }
+
+/// Gets the name of the nth event emitted by the contract at `address`.
+///
+/// If the passed index is out of bounds, or a deserialization error occurs,
+/// an error is returned.
+pub fn get_event_name(
+    contract_address: &Address,
+    at: i32,
+) -> Result<String, odra_types::event::EventError> {
+    let event: EventData = crate::TestEnv::get_event(contract_address, at)?;
+    let (event_name, _): (String, _) = odra_types::bytesrepr::FromBytes::from_vec(event)?;
+    Ok(event_name)
+}
+
 /// A macro that simplifies events testing.
 ///
 /// It allows testing the presence of multiple events at once.

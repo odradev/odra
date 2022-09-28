@@ -8,6 +8,7 @@ use odra_types::{
 
 #[allow(improper_ctypes)]
 extern "C" {
+    fn __get_block_time() -> u64;
     fn __self_address() -> Address;
     fn __caller() -> Address;
     fn __set_var(key: &str, value: &CLValue);
@@ -23,6 +24,10 @@ extern "C" {
 pub struct ContractEnv;
 
 impl ContractEnv {
+    pub fn get_block_time() -> u64 {
+        unsafe { __get_block_time() }
+    }
+
     pub fn self_address() -> Address {
         unsafe { __self_address() }
     }

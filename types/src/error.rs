@@ -50,6 +50,12 @@ impl From<ArithmeticsError> for ExecutionError {
     }
 }
 
+impl From<ArithmeticsError> for OdraError {
+    fn from(error: ArithmeticsError) -> Self {
+        Into::<ExecutionError>::into(error).into()
+    }
+}
+
 #[cfg(feature = "std")]
 impl From<Box<dyn std::any::Any + Send>> for OdraError {
     fn from(_: Box<dyn std::any::Any + Send>) -> Self {
@@ -120,8 +126,30 @@ pub enum VmError {
     InvalidContractAddress,
     /// Error calling a host function in a wrong context.
     InvalidContext,
+    /// Calling a contract with missing entrypoint arguments.
+    MissingArg,
     /// Non-specified error with a custom message.
     Other(String),
     /// Unspecified error.
     Panic,
+}
+
+/// Error that can occur while operating on a collection.
+pub enum CollectionError {
+    // The requested index is bigger than the max collection index.
+    IndexOutOfBounds,
+}
+
+impl From<CollectionError> for ExecutionError {
+    fn from(error: CollectionError) -> Self {
+        match error {
+            CollectionError::IndexOutOfBounds => Self::internal(9, "Index out of bounds"),
+        }
+    }
+}
+
+impl From<CollectionError> for OdraError {
+    fn from(error: CollectionError) -> Self {
+        Into::<ExecutionError>::into(error).into()
+    }
 }

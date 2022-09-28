@@ -7,10 +7,9 @@ use odra_types::{
 };
 
 use crate::context::ExecutionContext;
-use crate::contract_container::ContractContainer;
+use crate::contract_container::{ContractContainer, EntrypointArgs, EntrypointCall};
 use crate::contract_register::ContractRegister;
 use crate::storage::Storage;
-use crate::EntrypointCall;
 
 #[derive(Default)]
 pub struct MockVm {
@@ -22,12 +21,11 @@ impl MockVm {
     pub fn register_contract(
         &self,
         constructor: Option<(String, RuntimeArgs, EntrypointCall)>,
-        constructors: HashMap<String, EntrypointCall>,
-        entrypoints: HashMap<String, EntrypointCall>,
+        constructors: HashMap<String, (EntrypointArgs, EntrypointCall)>,
+        entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>,
     ) -> Address {
         // Create a new address.
         let address = { self.state.write().unwrap().next_contract_address() };
-
         // Register new contract under the new address.
         {
             let contract_namespace = self.state.read().unwrap().get_contract_namespace();
@@ -165,6 +163,14 @@ impl MockVm {
     pub fn get_event(&self, address: &Address, index: i32) -> Result<EventData, EventError> {
         self.state.read().unwrap().get_event(address, index)
     }
+
+    pub fn get_block_time(&self) -> u64 {
+        self.state.read().unwrap().block_time()
+    }
+
+    pub fn advance_block_time_by(&self, seconds: u64) {
+        self.state.write().unwrap().advance_block_time_by(seconds)
+    }
 }
 
 #[derive(Clone)]
@@ -174,6 +180,7 @@ pub struct MockVmState {
     events: HashMap<Address, Vec<EventData>>,
     contract_counter: u32,
     error: Option<OdraError>,
+    block_time: u64,
 }
 
 impl MockVmState {
@@ -286,6 +293,14 @@ impl MockVmState {
     fn restore_snapshot(&mut self) {
         self.storage.restore_snapshot();
     }
+
+    pub fn block_time(&self) -> u64 {
+        self.block_time
+    }
+
+    pub fn advance_block_time_by(&mut self, seconds: u64) {
+        self.block_time += seconds;
+    }
 }
 
 impl Default for MockVmState {
@@ -296,6 +311,7 @@ impl Default for MockVmState {
             events: Default::default(),
             contract_counter: 0,
             error: None,
+            block_time: 0,
         };
         backend.push_address(default_accounts().first().unwrap());
         backend
@@ -320,7 +336,7 @@ mod tests {
         Address, CLValue, EventData, ExecutionError, OdraError, RuntimeArgs, VmError,
     };
 
-    use crate::EntrypointCall;
+    use crate::{EntrypointArgs, EntrypointCall};
 
     use super::MockVm;
 
@@ -330,7 +346,8 @@ mod tests {
         let instance = MockVm::default();
 
         // when register two contracts with the same entrypoints
-        let entrypoint: Vec<(String, EntrypointCall)> = vec![(String::from("abc"), |_, _| None)];
+        let entrypoint: Vec<(String, (EntrypointArgs, EntrypointCall))> =
+            vec![(String::from("abc"), (vec![], |_, _| None))];
         let entrypoints = entrypoint.into_iter().collect::<HashMap<_, _>>();
         let constructors = HashMap::new();
 
@@ -346,8 +363,10 @@ mod tests {
         // given an instance with a registered contract having one entrypoint
         let instance = MockVm::default();
 
-        let entrypoint: Vec<(String, EntrypointCall)> =
-            vec![(String::from("abc"), |_, _| Some(vec![1, 1, 1].into()))];
+        let entrypoint: Vec<(String, (EntrypointArgs, EntrypointCall))> = vec![(
+            String::from("abc"),
+            (vec![], |_, _| Some(vec![1, 1, 1].into())),
+        )];
         let constructors = HashMap::new();
         let address = instance.register_contract(
             None,
@@ -383,8 +402,10 @@ mod tests {
     fn test_call_non_existing_entrypoint() {
         // given an instance with a registered contract having one entrypoint
         let instance = MockVm::default();
-        let entrypoint: Vec<(String, EntrypointCall)> =
-            vec![(String::from("abc"), |_, _| Some(vec![1, 1, 1].into()))];
+        let entrypoint: Vec<(String, (EntrypointArgs, EntrypointCall))> = vec![(
+            String::from("abc"),
+            (vec![], |_, _| Some(vec![1, 1, 1].into())),
+        )];
         let address = instance.register_contract(
             None,
             HashMap::new(),

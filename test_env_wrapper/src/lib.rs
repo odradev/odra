@@ -33,6 +33,8 @@ pub struct TestBackend {
     get_error: fn() -> Option<OdraError>,
     /// Gets nth event emitted by contract at `address`.
     get_event: fn(address: &Address, index: i32) -> Result<EventData, EventError>,
+    /// Increases the current value of block_time.
+    advance_block_time_by: fn(seconds: u64),
 }
 
 /// An entry point for communication with dynamically loaded Test Env.
