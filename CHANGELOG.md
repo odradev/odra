@@ -5,6 +5,8 @@ Changelog for `odra`.
 ## [0.2.0] - xxxx-xx-xx
 ### Added
 - Global `CHANGELOG.md`
+- `odra`
+  - `List` collection.
 - `odra-types`
   - `std` feature, disabled by default.
 - `odra-utils`

@@ -10,7 +10,7 @@ mod address;
 pub mod arithmetic;
 mod error;
 pub mod event;
-mod serde;
+mod serialization;
 
 pub use address::*;
 pub use casper_types::{
@@ -18,7 +18,7 @@ pub use casper_types::{
     U256, U512,
 };
 pub use error::{CollectionError, ExecutionError, OdraError, VmError};
-pub use serde::{FromBytes, ToBytes};
+pub use serialization::{FromBytes, ToBytes};
 /// Contains serialization and deserialization code for types used throughout the system.
 pub mod bytesrepr {
     pub use casper_types::bytesrepr::{deserialize, serialize, Bytes, Error, FromBytes, ToBytes};

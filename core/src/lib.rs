@@ -1,5 +1,4 @@
 #![cfg_attr(not(any(feature = "wasm-test", feature = "mock-vm", test)), no_std)]
-
 extern crate alloc;
 
 #[cfg(any(feature = "wasm-test", feature = "mock-vm", test))]

@@ -44,9 +44,9 @@ impl ToTokens for WrappedField {
             #ident: odra::Instance::instance(
                 [stringify!(#ident), namespace]
                     .iter()
-                    .filter_map(|str| match str.is_empty() {
+                    .filter_map(|s| match str.is_empty() {
                         true => None,
-                        false => Some(alloc::string::String::from(*str)),
+                        false => Some(alloc::string::String::from(*s)),
                     })
                     .collect::<alloc::vec::Vec<alloc::string::String>>()
                     .join("_")

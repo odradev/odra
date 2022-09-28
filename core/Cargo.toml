@@ -10,7 +10,7 @@ keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm"]
 
 [dependencies]
-odra-types = { version = "0.2.0", path = "../types", default-features = false, optional = true }
+odra-types = { version = "0.2.0", path = "../types", default-features = false }
 odra-utils = { version = "0.2.0", path = "../utils" }
 odra-proc-macros = { version = "0.2.0", path = "../lang/proc_macros" }
 odra-mock-vm = { version = "0.2.0", path = "../mock_vm", optional = true }
@@ -19,9 +19,9 @@ ref_thread_local = "0.1.1"
 cfg-if = "1.0.0"
 
 [features]
-default = [ "wasm" ]
+default = [ "mock-vm" ]
 mock-vm = [ "std", "test-support", "odra-mock-vm" ]
-wasm = [ "external-api", "odra-types" ]
+wasm = [ "external-api" ]
 wasm-test = [ "std", "test-support", "external-api", "odra-test-env-wrapper" ]
 test-support = []
 external-api = []
