@@ -44,7 +44,7 @@ impl ToTokens for WrappedField {
             #ident: odra::Instance::instance(
                 [stringify!(#ident), namespace]
                     .iter()
-                    .filter_map(|s| match str.is_empty() {
+                    .filter_map(|s| match s.is_empty() {
                         true => None,
                         false => Some(alloc::string::String::from(*s)),
                     })

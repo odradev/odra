@@ -83,13 +83,13 @@ impl GenerateCode for Deploy<'_> {
             impl #struct_ident {
 
                 pub fn deploy() -> #ref_ident {
-                    use std::collections::HashMap;
+                    use alloc::collections::BTreeMap;
                     use odra::types::{bytesrepr::Bytes, RuntimeArgs, runtime_args};
 
-                    let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, RuntimeArgs) -> Option<Bytes>)>::new();
+                    let mut entrypoints = BTreeMap::<String, (Vec<String>, fn(String, RuntimeArgs) -> Option<Bytes>)>::new();
                     #entrypoints
 
-                    let mut constructors = HashMap::<String, (Vec<String>, fn(String, RuntimeArgs) -> Option<Bytes>)>::new();
+                    let mut constructors = BTreeMap::<String, (Vec<String>, fn(String, RuntimeArgs) -> Option<Bytes>)>::new();
                     #constructors
 
                     let address = odra::TestEnv::register_contract(None, constructors, entrypoints);
