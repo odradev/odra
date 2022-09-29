@@ -31,6 +31,12 @@ impl OdraAttribute {
             .iter()
             .any(|attr_kind| matches!(attr_kind, &AttrKind::Constructor))
     }
+
+    pub fn is_payable(&self) -> bool {
+        self.kinds
+            .iter()
+            .any(|attr_kind| matches!(attr_kind, &AttrKind::Payable))
+    }
 }
 
 impl From<OdraAttribute> for Attribute {
@@ -70,6 +76,7 @@ impl TryFrom<syn::Attribute> for OdraAttribute {
 enum AttrKind {
     Constructor,
     Entrypoint,
+    Payable,
 }
 
 impl TryFrom<syn::NestedMeta> for AttrKind {
@@ -86,6 +93,7 @@ impl TryFrom<syn::NestedMeta> for AttrKind {
                     })
                     .and_then(|ident| match ident.as_str() {
                         "init" => Ok(AttrKind::Constructor),
+                        "payable" => Ok(AttrKind::Payable),
                         "entrypoint" => Ok(AttrKind::Entrypoint),
                         _ => Err(syn::Error::new_spanned(
                             meta,
@@ -119,7 +127,7 @@ where
     match contains_duplicate {
         true => Err(syn::Error::new(
             Span::call_site(),
-            "attr duplicte encountered".to_string(),
+            "attr duplicate encountered".to_string(),
         )),
         false => Ok(()),
     }
@@ -148,6 +156,8 @@ where
 #[cfg(test)]
 mod tests {
 
+    use std::vec;
+
     use super::*;
 
     #[test]
@@ -160,6 +170,48 @@ mod tests {
                 #[odra(init)]
             },
             Ok(expected_value),
+        );
+    }
+
+    #[test]
+    fn payable_attr_works() {
+        let expected_value = Attribute::Odra(OdraAttribute {
+            kinds: vec![AttrKind::Payable],
+        });
+        assert_attribute_try_from(
+            syn::parse_quote! {
+                #[odra(payable)]
+            },
+            Ok(expected_value),
+        );
+    }
+
+    #[test]
+    fn multiple_attr_works() {
+        let expected_value = Attribute::Odra(OdraAttribute {
+            kinds: vec![AttrKind::Constructor, AttrKind::Payable],
+        });
+        assert_attribute_try_from(
+            syn::parse_quote! {
+                #[odra(init, payable)]
+            },
+            Ok(expected_value.clone()),
+        );
+
+        let expected_value = vec![
+            Attribute::Odra(OdraAttribute {
+                kinds: vec![AttrKind::Constructor],
+            }),
+            Attribute::Odra(OdraAttribute {
+                kinds: vec![AttrKind::Payable],
+            }),
+        ];
+        assert_attributes_try_from(
+            vec![
+                syn::parse_quote! { #[odra(init)] },
+                syn::parse_quote! { #[odra(payable)] },
+            ],
+            Ok((expected_value, vec![])),
         );
     }
 
@@ -177,7 +229,7 @@ mod tests {
             syn::parse_quote! {
                 #[odra(init, init)]
             },
-            Err("attr duplicte encountered"),
+            Err("attr duplicate encountered"),
         );
 
         assert_attributes_try_from(
@@ -185,7 +237,7 @@ mod tests {
                 syn::parse_quote! { #[odra(init)] },
                 syn::parse_quote! { #[odra(init)] },
             ],
-            Err("attr duplicte encountered"),
+            Err("attr duplicate encountered"),
         )
     }
 
