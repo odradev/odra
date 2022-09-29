@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
+use odra_types::U256;
 use odra_types::bytesrepr::ToBytes;
 use odra_types::{
     bytesrepr::Bytes, event::EventError, Address, CLValue, EventData, OdraError, RuntimeArgs,
@@ -51,10 +52,10 @@ impl MockVm {
         args: &RuntimeArgs,
     ) -> Option<Bytes> {
         self.prepare_call(address);
-
         // Call contract from register.
         let register = self.contract_register.read().unwrap();
         let result = register.call(address, String::from(entrypoint), args.clone());
+        self.clear_attached_value();
         self.handle_call_result(result)
     }
 
@@ -65,10 +66,10 @@ impl MockVm {
         args: &RuntimeArgs,
     ) -> Option<Bytes> {
         self.prepare_call(address);
-
         // Call contract from register.
         let register = self.contract_register.read().unwrap();
         let result = register.call_constructor(address, String::from(entrypoint), args.clone());
+        self.clear_attached_value();
         self.handle_call_result(result)
     }
 
@@ -171,6 +172,18 @@ impl MockVm {
     pub fn advance_block_time_by(&self, seconds: u64) {
         self.state.write().unwrap().advance_block_time_by(seconds)
     }
+
+    pub fn attach_value(&self, amount: U256) {
+        self.state.write().unwrap().attach_value(amount);
+    }
+
+    pub fn attached_value(&self) -> U256 {
+        self.state.read().unwrap().attached_value()
+    }
+
+    fn clear_attached_value(&self) {
+        self.state.write().unwrap().clear_attached_value();
+    }
 }
 
 #[derive(Clone)]
@@ -181,6 +194,7 @@ pub struct MockVmState {
     contract_counter: u32,
     error: Option<OdraError>,
     block_time: u64,
+    attached_value: Option<U256>,
 }
 
 impl MockVmState {
@@ -270,6 +284,18 @@ impl MockVmState {
         }
     }
 
+    pub fn attach_value(&mut self, amount: U256) {
+        self.attached_value = Some(amount);
+    }
+
+    pub fn attached_value(&self) -> U256 {
+        self.attached_value.unwrap_or_default()
+    }
+
+    pub fn clear_attached_value(&mut self) {
+        self.attached_value = None;
+    }
+
     fn clear_error(&mut self) {
         self.error = None;
     }
@@ -312,6 +338,7 @@ impl Default for MockVmState {
             contract_counter: 0,
             error: None,
             block_time: 0,
+            attached_value: None,
         };
         backend.push_address(default_accounts().first().unwrap());
         backend

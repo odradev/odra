@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use crate::attrs::{partition_attributes, OdraAttribute};
+use crate::{attrs::{partition_attributes, OdraAttribute}, module_item::utils};
 use quote::{quote, ToTokens};
 
 /// Odra constructor definition.
@@ -57,10 +57,10 @@ impl ToTokens for Constructor {
 impl TryFrom<syn::ImplItemMethod> for Constructor {
     type Error = syn::Error;
 
-    fn try_from(value: syn::ImplItemMethod) -> Result<Self, Self::Error> {
-        let (odra_attrs, attrs) = partition_attributes(value.clone().attrs).unwrap();
-        let ident = value.sig.ident.to_owned();
-        let args = value
+    fn try_from(method: syn::ImplItemMethod) -> Result<Self, Self::Error> {
+        let (odra_attrs, attrs) = partition_attributes(method.clone().attrs).unwrap();
+        let ident = method.sig.ident.to_owned();
+        let args = method
             .sig
             .inputs
             .iter()
@@ -69,16 +69,20 @@ impl TryFrom<syn::ImplItemMethod> for Constructor {
                 syn::FnArg::Typed(pat) => Some(pat.clone()),
             })
             .collect::<syn::punctuated::Punctuated<syn::PatType, syn::token::Comma>>();
-        if let syn::ReturnType::Type(_, _) = value.sig.output {
+        if let syn::ReturnType::Type(_, _) = method.sig.output {
             return Err(syn::Error::new_spanned(
-                value.sig,
+                method.sig,
                 "Constructor must not return value.",
             ));
         }
-        let full_sig = value.clone().sig;
+        let full_sig = method.clone().sig;
+
+        let is_payable = odra_attrs.iter().any(|attr| attr.is_payable());
+        let block = utils::payable_check(method.block, is_payable);
+
         Ok(Self {
             attrs: odra_attrs,
-            impl_item: syn::ImplItemMethod { attrs, ..value },
+            impl_item: syn::ImplItemMethod { attrs, block, ..method },
             ident,
             args,
             full_sig,

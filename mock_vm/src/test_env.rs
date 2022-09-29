@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use odra_types::{bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs};
+use odra_types::{bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs, U256};
 
 use crate::{mock_vm::default_accounts, EntrypointArgs, EntrypointCall};
 
@@ -70,5 +70,9 @@ impl TestEnv {
     /// Returns nth test user account.
     pub fn get_account(n: usize) -> Address {
         *default_accounts().get(n).unwrap()
+    }
+
+    pub fn with_tokens(amount: U256) {
+        crate::borrow_env().attach_value(amount);
     }
 }
