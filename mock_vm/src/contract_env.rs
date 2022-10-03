@@ -2,7 +2,7 @@ use crate::borrow_env;
 use odra_types::{
     bytesrepr::{FromBytes, ToBytes},
     event::Event,
-    Address, CLTyped, CLValue, ExecutionError, U256,
+    Address, CLTyped, CLValue, ExecutionError, U512,
 };
 
 /// Exposes the public API to communicate with the host.
@@ -72,16 +72,27 @@ impl ContractEnv {
     }
 
     /// Returns amount of native token attached to the call.
-    pub fn attached_value() -> U256 {
+    pub fn attached_value() -> U512 {
         borrow_env().attached_value()
     }
 
-    pub fn one_token() -> U256 {
-        U256::zero()
+    pub fn one_token() -> U512 {
+        U512::one()
     }
 
-    pub fn with_tokens(amount: U256) {
+    pub fn with_tokens(amount: U512) {
         borrow_env().attach_value(amount);
     }
 
+    pub fn token_balance(address: Address) -> U512 {
+        borrow_env().token_balance(address)
+    }
+
+    pub fn transfer_tokens(to: Address, amount: U512) {
+        borrow_env().transfer_tokens(to, amount);
+    }
+
+    pub fn self_balance() -> U512 {
+        borrow_env().self_balance()
+    }
 }

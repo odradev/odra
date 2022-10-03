@@ -5,7 +5,7 @@ pub mod test_env;
 pub mod contract_env;
 
 // This mock here is required because when loading a code of a module
-// in new contract repository, ContractEnv is required, but we semanticaly
+// in new contract repository, ContractEnv is required, but we semantically
 // doesn't make sense for `wasm-test` feature.
 #[cfg(feature = "wasm-test")]
 pub mod contract_env {
@@ -69,6 +69,30 @@ pub mod contract_env {
         }
 
         pub fn print(_message: &str) {
+            unimplemented!()
+        }
+
+        pub fn attached_value() -> U512 {
+            unimplemented!()
+        }
+    
+        pub fn one_token() -> U512 {
+            unimplemented!()
+        }
+    
+        pub fn with_tokens(amount: U512) {
+            unimplemented!()
+        }
+    
+        pub fn token_balance(address: Address) -> U512 {
+            unimplemented!()
+        }
+    
+        pub fn transfer_tokens(to: Address, amount: U512) {
+            unimplemented!()
+        }
+
+        pub fn self_balance() -> U512 {
             unimplemented!()
         }
     }

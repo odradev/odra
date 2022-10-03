@@ -2,7 +2,7 @@ use std::cell::RefCell;
 
 use dlopen::wrapper::{Container, WrapperApi};
 use dlopen_derive::WrapperApi;
-use odra_types::{bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs};
+use odra_types::{bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs, U512};
 
 thread_local! {
     static TEST_ENV: RefCell<Container<TestBackend>> = RefCell::new(unsafe {
@@ -35,6 +35,9 @@ pub struct TestBackend {
     get_event: fn(address: &Address, index: i32) -> Result<EventData, EventError>,
     /// Increases the current value of block_time.
     advance_block_time_by: fn(seconds: u64),
+    with_tokens: fn(amount: U512),
+    token_balance: fn(address: Address) -> U512,
+    one_token: fn() -> U512,
 }
 
 /// An entry point for communication with dynamically loaded Test Env.

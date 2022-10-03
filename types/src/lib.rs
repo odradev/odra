@@ -3,6 +3,7 @@ pub mod arithmetic;
 mod error;
 pub mod event;
 mod serde;
+pub mod token;
 
 pub use address::*;
 pub use casper_types::{

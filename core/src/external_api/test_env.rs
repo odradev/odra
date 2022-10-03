@@ -1,4 +1,4 @@
-use odra_types::{bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs};
+use odra_types::{bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs, U512};
 
 macro_rules! delegate_to_wrapper {
     (
@@ -37,6 +37,12 @@ impl TestEnv {
         get_error() -> Option<OdraError>
         ///Increases the current value of block_time.
         advance_block_time_by(seconds: u64)
+
+        with_tokens(amount: U512)
+    
+        token_balance(address: Address) -> U512
+
+        one_token() -> U512
     }
 
     /// Calls contract at `address` invoking the `entrypoint` with `args`.

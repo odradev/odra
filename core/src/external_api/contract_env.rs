@@ -2,11 +2,11 @@ use crate::UnwrapOrRevert;
 use odra_types::{
     bytesrepr::{FromBytes, ToBytes},
     event::Event,
-    Address, CLTyped, CLValue, EventData, ExecutionError, RuntimeArgs,
+    Address, CLTyped, CLValue, EventData, ExecutionError, RuntimeArgs, U512
 };
 
 #[allow(improper_ctypes)]
-extern "C" {
+extern "Rust" {
     fn __get_block_time() -> u64;
     fn __self_address() -> Address;
     fn __caller() -> Address;
@@ -18,6 +18,13 @@ extern "C" {
     fn __call_contract(address: &Address, entrypoint: &str, args: &RuntimeArgs) -> Vec<u8>;
     fn __revert(reason: &ExecutionError) -> !;
     fn __print(message: &str);
+    fn __attached_value() -> U512;
+    fn __self_balance() -> U512;
+    fn __one_token() -> U512;
+    fn __attached_value() -> U512;
+    fn __with_tokens(amount: U512);
+    fn __token_balance(address: Address) -> U512;
+    fn __transfer_tokens(to: Address, amount: U512);
 }
 
 pub struct ContractEnv;
@@ -85,5 +92,29 @@ impl ContractEnv {
 
     pub fn print(message: &str) {
         unsafe { __print(message) }
+    }
+
+    pub fn attached_value() -> U512 {
+        unsafe { __attached_value() }
+    }
+
+    pub fn self_balance() -> U512 {
+        unsafe { __self_balance() }
+    }
+
+    pub fn one_token() -> U512 {
+        unsafe { __one_token() }
+    }
+
+    pub fn with_tokens(amount: U512) {
+        unsafe { __with_tokens(amount) }
+    }
+
+    pub fn token_balance(address: Address) -> U512 {
+        unsafe { __token_balance(address) }
+    }
+
+    pub fn transfer_tokens(to: Address, amount: U512) {
+        unsafe { __transfer_tokens(to, amount) }
     }
 }

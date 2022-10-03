@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
-use odra_types::U256;
+use odra_types::U512;
 use odra_types::bytesrepr::ToBytes;
 use odra_types::{
     bytesrepr::Bytes, event::EventError, Address, CLValue, EventData, OdraError, RuntimeArgs,
 };
 
+use crate::account::Account;
 use crate::context::ExecutionContext;
 use crate::contract_container::{ContractContainer, EntrypointArgs, EntrypointCall};
 use crate::contract_register::ContractRegister;
@@ -173,16 +174,77 @@ impl MockVm {
         self.state.write().unwrap().advance_block_time_by(seconds)
     }
 
-    pub fn attach_value(&self, amount: U256) {
+    pub fn attach_value(&self, amount: U512) {
         self.state.write().unwrap().attach_value(amount);
     }
 
-    pub fn attached_value(&self) -> U256 {
+    pub fn attached_value(&self) -> U512 {
         self.state.read().unwrap().attached_value()
     }
 
     fn clear_attached_value(&self) {
         self.state.write().unwrap().clear_attached_value();
+    }
+
+    pub fn get_address(&self, n: usize) -> Address {
+        self.state
+            .read()
+            .unwrap()
+            .accounts()
+            .get(n)
+            .unwrap()
+            .address()
+    }
+
+    pub fn token_balance(&self, address: Address) -> U512 {
+        let register = self.contract_register.read().unwrap();
+        let contract_account = register.get_contract_account(address);
+        if let Some(account) = contract_account {
+            account.balance()
+        } else {
+            self.state.read().unwrap().get_balance(address)
+        }
+    }
+
+    pub fn transfer_tokens(&self, to: Address, amount: U512) -> bool {
+        let mut state = self.state.write().unwrap();
+        let mut register = self.contract_register.write().unwrap();
+        let caller_address = self.caller();
+
+        let mut recipient_account: Option<&mut Account> = None;
+        let mut caller_account: Option<&mut Account> = None;
+        for (address, account) in register.get_contract_accounts() {
+            if address == &to {
+                recipient_account = Some(account);
+            } else if address == &caller_address {
+                caller_account = Some(account);
+            }
+        }
+
+        for account in state.get_accounts_iter_mut() {
+            if recipient_account.is_none() && account.address() == to {
+                recipient_account = Some(account);
+            } else if caller_account.is_none() && account.address() == caller_address {
+                caller_account = Some(account);
+            }
+        }
+
+        if let Some(account) = caller_account {
+            if account.reduce_balance(amount).is_err() {
+                return false;
+            }
+            if let Some(recipient) = recipient_account {
+                if recipient.increase_balance(amount).is_err() {
+                    return false;
+                }
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn self_balance(&self) -> U512 {
+        self.state.read().unwrap().self_balance()
     }
 }
 
@@ -194,51 +256,52 @@ pub struct MockVmState {
     contract_counter: u32,
     error: Option<OdraError>,
     block_time: u64,
-    attached_value: Option<U256>,
+    attached_value: Option<U512>,
+    accounts: Vec<Account>,
 }
 
 impl MockVmState {
-    pub fn get_backend_name(&self) -> String {
+    fn get_backend_name(&self) -> String {
         "MockVM".to_string()
     }
 
-    pub fn callee(&self) -> Address {
+    fn callee(&self) -> Address {
         *self.exec_context.current()
     }
 
-    pub fn caller(&self) -> Address {
+    fn caller(&self) -> Address {
         *self.exec_context.previous()
     }
 
-    pub fn set_caller(&mut self, address: &Address) {
+    fn set_caller(&mut self, address: &Address) {
         self.pop_address();
         self.push_address(address);
     }
 
-    pub fn set_var(&mut self, key: &str, value: &CLValue) {
+    fn set_var(&mut self, key: &str, value: &CLValue) {
         let ctx = self.exec_context.current();
         self.storage
             .set_value(ctx, &key.to_bytes().unwrap(), value.clone());
     }
 
-    pub fn get_var(&self, key: &str) -> Option<CLValue> {
+    fn get_var(&self, key: &str) -> Option<CLValue> {
         let ctx = self.exec_context.current();
         self.storage.get_value(ctx, &key.to_bytes().unwrap())
     }
 
-    pub fn set_dict_value(&mut self, dict: &str, key: &[u8], value: &CLValue) {
+    fn set_dict_value(&mut self, dict: &str, key: &[u8], value: &CLValue) {
         let ctx = self.exec_context.current();
         self.storage
             .insert_dict_value(ctx, &dict.to_bytes().unwrap(), key, value.clone());
     }
 
-    pub fn get_dict_value(&self, dict: &str, key: &[u8]) -> Option<CLValue> {
+    fn get_dict_value(&self, dict: &str, key: &[u8]) -> Option<CLValue> {
         let ctx = self.exec_context.current();
         self.storage
             .get_dict_value(ctx, &dict.to_bytes().unwrap(), key)
     }
 
-    pub fn emit_event(&mut self, event_data: &EventData) {
+    fn emit_event(&mut self, event_data: &EventData) {
         let contract_address = self.exec_context.current();
         let events = self.events.get_mut(contract_address).map(|events| {
             events.push(event_data.clone());
@@ -250,7 +313,7 @@ impl MockVmState {
         }
     }
 
-    pub fn get_event(&self, address: &Address, index: i32) -> Result<EventData, EventError> {
+    fn get_event(&self, address: &Address, index: i32) -> Result<EventData, EventError> {
         let events = self.events.get(address);
         if events.is_none() {
             return Err(EventError::IndexOutOfBounds);
@@ -260,39 +323,39 @@ impl MockVmState {
         Ok(events.get(event_position as usize).unwrap().clone())
     }
 
-    pub fn push_address(&mut self, address: &Address) {
+    fn push_address(&mut self, address: &Address) {
         self.exec_context.push(*address);
     }
 
-    pub fn pop_address(&mut self) {
+    fn pop_address(&mut self) {
         self.exec_context.drop();
     }
 
-    pub fn next_contract_address(&mut self) -> Address {
+    fn next_contract_address(&mut self) -> Address {
         let address = Address::new(&self.contract_counter.to_be_bytes());
         self.contract_counter += 1;
         address
     }
 
-    pub fn get_contract_namespace(&self) -> String {
+    fn get_contract_namespace(&self) -> String {
         self.contract_counter.to_string()
     }
 
-    pub fn set_error(&mut self, error: OdraError) {
+    fn set_error(&mut self, error: OdraError) {
         if self.error.is_none() {
             self.error = Some(error);
         }
     }
 
-    pub fn attach_value(&mut self, amount: U256) {
+    fn attach_value(&mut self, amount: U512) {
         self.attached_value = Some(amount);
     }
 
-    pub fn attached_value(&self) -> U256 {
+    fn attached_value(&self) -> U512 {
         self.attached_value.unwrap_or_default()
     }
 
-    pub fn clear_attached_value(&mut self) {
+    fn clear_attached_value(&mut self) {
         self.attached_value = None;
     }
 
@@ -300,7 +363,7 @@ impl MockVmState {
         self.error = None;
     }
 
-    pub fn error(&self) -> Option<OdraError> {
+    fn error(&self) -> Option<OdraError> {
         self.error.clone()
     }
 
@@ -320,12 +383,72 @@ impl MockVmState {
         self.storage.restore_snapshot();
     }
 
-    pub fn block_time(&self) -> u64 {
+    fn block_time(&self) -> u64 {
         self.block_time
     }
 
-    pub fn advance_block_time_by(&mut self, seconds: u64) {
+    fn advance_block_time_by(&mut self, seconds: u64) {
         self.block_time += seconds;
+    }
+
+    fn get_balance(&self, address: Address) -> U512 {
+        match self
+            .accounts
+            .iter()
+            .find(|account| account.address() == address)
+        {
+            Some(account) => account.balance(),
+            None => U512::zero(),
+        }
+    }
+
+    fn get_account(&self, address: Address) -> Option<&Account> {
+        self
+            .accounts
+            .iter()
+            .find(|account| account.address() == address)
+    }
+
+    fn get_account_mut(&mut self, address: Address) -> Option<&mut Account> {
+        self
+            .accounts
+            .iter_mut()
+            .find(|account| account.address() == address)
+    }
+
+    fn get_accounts_iter_mut(&mut self) -> std::slice::IterMut<'_, Account> {
+        self
+            .accounts
+            .iter_mut()
+    }
+
+    fn transfer_tokens(&mut self, to: Address, amount: U512) -> bool {
+        let caller = self.caller();
+
+        let caller_account = self.get_account_mut(caller);
+
+        if let Some(account) = caller_account {
+            if account.reduce_balance(amount).is_err() {
+                return false;
+            }
+            let recipient_account = self.get_account_mut(to);
+            if let Some(recipient) = recipient_account {
+                if recipient.increase_balance(amount).is_err() {
+                    return false;
+                }
+                return true;
+            }
+        }
+        false
+    }
+
+    fn accounts(&self) -> &[Account] {
+        self.accounts.as_ref()
+    }
+
+    fn self_balance(&self) -> U512 {
+        let address = self.caller();
+        self.get_balance(address)
     }
 }
 
@@ -339,20 +462,22 @@ impl Default for MockVmState {
             error: None,
             block_time: 0,
             attached_value: None,
+            accounts: vec![
+                Account::new(Address::new(b"alice"), 100_000.into()),
+                Account::new(Address::new(b"bob"), 100_000.into()),
+                Account::new(Address::new(b"cab"), 100_000.into()),
+                Account::new(Address::new(b"dan"), 100_000.into()),
+                Account::new(Address::new(b"ed"), 100_000.into()),
+                Account::new(Address::new(b"frank"), 100_000.into()),
+                Account::new(Address::new(b"garry"), 100_000.into()),
+                Account::new(Address::new(b"garry"), 100_000.into()),
+                Account::new(Address::new(b"harry"), 100_000.into()),
+                Account::new(Address::new(b"ivan"), 100_000.into()),
+            ]
         };
-        backend.push_address(default_accounts().first().unwrap());
+        backend.push_address(&backend.accounts.first().unwrap().address());
         backend
     }
-}
-
-pub fn default_accounts() -> Vec<Address> {
-    vec![
-        Address::new(b"first_address"),
-        Address::new(b"second_address"),
-        Address::new(b"third_address"),
-        Address::new(b"fourth_address"),
-        Address::new(b"fifth_address"),
-    ]
 }
 
 #[cfg(test)]

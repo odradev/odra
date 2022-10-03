@@ -4,7 +4,7 @@ pub fn payable_check(impl_block: syn::Block, is_payable: bool) -> syn::Block {
     let attached_value_check: Option<syn::Stmt> = match is_payable {
         true => None,
         false => Some(parse_quote!(
-            if odra::ContractEnv::attached_value() > odra::types::U256::zero() {
+            if odra::ContractEnv::attached_value() > odra::types::U512::zero() {
                 odra::ContractEnv::revert(odra::types::ExecutionError::non_payable());
             } 
         )),
