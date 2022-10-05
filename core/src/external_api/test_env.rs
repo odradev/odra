@@ -37,11 +37,11 @@ impl TestEnv {
         get_error() -> Option<OdraError>
         ///Increases the current value of block_time.
         advance_block_time_by(seconds: u64)
-
+        /// Attaches [amount] of native token to the next contract call.
         with_tokens(amount: U512)
-    
+        /// Returns the balance of the account associated with the given address.
         token_balance(address: Address) -> U512
-
+        /// Returns the value that represents one native token.
         one_token() -> U512
     }
 

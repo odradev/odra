@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
-use odra_types::U512;
+use odra_types::{U512, VmError};
 use odra_types::bytesrepr::ToBytes;
 use odra_types::{
     bytesrepr::Bytes, event::EventError, Address, CLValue, EventData, OdraError, RuntimeArgs,
@@ -54,9 +54,12 @@ impl MockVm {
     ) -> Option<Bytes> {
         self.prepare_call(address);
         // Call contract from register.
+        if !self.handle_attached_value(address) {
+            return None;
+        }
+        
         let register = self.contract_register.read().unwrap();
         let result = register.call(address, String::from(entrypoint), args.clone());
-        self.clear_attached_value();
         self.handle_call_result(result)
     }
 
@@ -68,10 +71,23 @@ impl MockVm {
     ) -> Option<Bytes> {
         self.prepare_call(address);
         // Call contract from register.
+        if !self.handle_attached_value(address) {
+            return None;
+        }
+        
         let register = self.contract_register.read().unwrap();
         let result = register.call_constructor(address, String::from(entrypoint), args.clone());
-        self.clear_attached_value();
         self.handle_call_result(result)
+    }
+
+    fn handle_attached_value(&self, address: &Address) -> bool {
+        let value = self.attached_value();
+        let result = self.transfer_tokens(address, value);
+        if !result {
+            self.state.write().unwrap().set_error(OdraError::VmError(VmError::BalanceExceeded));
+            self.clear_attached_value();
+        }
+        result
     }
 
     fn prepare_call(&self, address: &Address) {
@@ -103,12 +119,16 @@ impl MockVm {
 
         let mut state = self.state.write().unwrap();
         if state.error.is_none() {
+            self.clear_attached_value();
+            
             // If only one address on the call_stack, drop the snapshot
             if state.is_in_caller_context() {
                 state.drop_snapshot();
             }
             result
         } else {
+            self.clear_attached_value();
+
             // If only one address on the call_stack an an error occurred, restore the snapshot
             if state.is_in_caller_context() {
                 state.restore_snapshot();
@@ -206,25 +226,28 @@ impl MockVm {
         }
     }
 
-    pub fn transfer_tokens(&self, to: Address, amount: U512) -> bool {
-        let mut state = self.state.write().unwrap();
-        let mut register = self.contract_register.write().unwrap();
-        let caller_address = self.caller();
-
+    pub fn transfer_tokens(&self, to: &Address, amount: U512) -> bool {
+        if amount == U512::zero() {
+            return true;
+        }
         let mut recipient_account: Option<&mut Account> = None;
         let mut caller_account: Option<&mut Account> = None;
-        for (address, account) in register.get_contract_accounts() {
-            if address == &to {
+        let caller_address = self.caller();
+
+        let mut state = self.state.write().unwrap();
+        for account in state.get_accounts_iter_mut() {
+            if recipient_account.is_none() && &account.address() == to {
                 recipient_account = Some(account);
-            } else if address == &caller_address {
+            } else if caller_account.is_none() && account.address() == caller_address {
                 caller_account = Some(account);
             }
         }
 
-        for account in state.get_accounts_iter_mut() {
-            if recipient_account.is_none() && account.address() == to {
+        let mut register = self.contract_register.write().unwrap();
+        for (address, account) in register.get_contract_accounts() {
+            if address == to {
                 recipient_account = Some(account);
-            } else if caller_account.is_none() && account.address() == caller_address {
+            } else if address == &caller_address {
                 caller_account = Some(account);
             }
         }
@@ -240,6 +263,7 @@ impl MockVm {
                 return true;
             }
         }
+
         false
     }
 

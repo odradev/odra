@@ -49,6 +49,8 @@ impl TestEnv {
         set_caller(address: &Address)
         /// Gets nth event emitted by the contract at `address`.
         get_event(address: &Address, index: i32) -> Result<EventData, EventError>
+        /// Returns the balance of the account associated with the given address.
+        token_balance(address: Address) -> U512
     }
 
     /// Expects the `block` execution will fail with the specific error.
@@ -72,14 +74,12 @@ impl TestEnv {
         crate::borrow_env().get_address(n)
     }
 
+    /// Attaches [amount] of native token to the next contract call.
     pub fn with_tokens(amount: U512) {
         crate::borrow_env().attach_value(amount);
     }
 
-    pub fn token_balance(address: Address) -> U512 {
-        crate::borrow_env().token_balance(address)
-    }
-
+    /// Returns the value that represents one native token.
     pub fn one_token() -> U512 {
         U512::one()
     }

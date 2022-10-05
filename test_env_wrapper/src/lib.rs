@@ -35,8 +35,11 @@ pub struct TestBackend {
     get_event: fn(address: &Address, index: i32) -> Result<EventData, EventError>,
     /// Increases the current value of block_time.
     advance_block_time_by: fn(seconds: u64),
+    /// Attaches [amount] of native token to the next contract call.
     with_tokens: fn(amount: U512),
+    /// Returns the balance of the account associated with the given address.
     token_balance: fn(address: Address) -> U512,
+    /// Returns the value that represents one native token.
     one_token: fn() -> U512,
 }
 

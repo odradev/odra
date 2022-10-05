@@ -76,22 +76,27 @@ impl ContractEnv {
         borrow_env().attached_value()
     }
 
+    /// Returns the value that represents one native token.
     pub fn one_token() -> U512 {
         U512::one()
     }
 
+    /// Attaches [amount] of native token to the next contract call.
     pub fn with_tokens(amount: U512) {
         borrow_env().attach_value(amount);
     }
 
+    /// Returns the balance of the account associated with the given address.
     pub fn token_balance(address: Address) -> U512 {
         borrow_env().token_balance(address)
     }
 
-    pub fn transfer_tokens(to: Address, amount: U512) {
-        borrow_env().transfer_tokens(to, amount);
+    /// Transfers native token from the contract caller to the given address.
+    pub fn transfer_tokens(to: Address, amount: U512) -> bool {
+        borrow_env().transfer_tokens(&to, amount)
     }
 
+    /// Returns the balance of the account associated with the current contract.
     pub fn self_balance() -> U512 {
         borrow_env().self_balance()
     }

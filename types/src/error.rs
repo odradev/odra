@@ -142,6 +142,8 @@ impl From<ExecutionError> for OdraError {
 /// An internal virtual machine error
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum VmError {
+    /// Exceeded the account balance
+    BalanceExceeded,
     /// Non existing host entrypoint was called.
     NoSuchMethod(String),
     /// Accessing a contract with an invalid address.
