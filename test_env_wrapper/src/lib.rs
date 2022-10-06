@@ -2,7 +2,9 @@ use std::cell::RefCell;
 
 use dlopen::wrapper::{Container, WrapperApi};
 use dlopen_derive::WrapperApi;
-use odra_types::{bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs, U512};
+use odra_types::{
+    bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs, U512,
+};
 
 thread_local! {
     static TEST_ENV: RefCell<Container<TestBackend>> = RefCell::new(unsafe {

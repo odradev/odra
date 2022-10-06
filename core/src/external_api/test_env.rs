@@ -1,4 +1,6 @@
-use odra_types::{bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs, U512};
+use odra_types::{
+    bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs, U512,
+};
 
 macro_rules! delegate_to_wrapper {
     (

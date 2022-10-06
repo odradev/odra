@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
-use odra_types::{U512, VmError};
 use odra_types::bytesrepr::ToBytes;
 use odra_types::{
     bytesrepr::Bytes, event::EventError, Address, CLValue, EventData, OdraError, RuntimeArgs,
 };
+use odra_types::{VmError, U512};
 
 use crate::account::Account;
 use crate::context::ExecutionContext;
@@ -57,10 +57,13 @@ impl MockVm {
         if !self.handle_attached_value(address) {
             return None;
         }
-        
-        let register = self.contract_register.read().unwrap();
-        let result = register.call(address, String::from(entrypoint), args.clone());
-        self.handle_call_result(result)
+        let result = {
+            let register = self.contract_register.read().unwrap();
+            register.call(address, String::from(entrypoint), args.clone())
+        };
+
+        self.clear_attached_value();
+        self.handle_call_result(address, result)
     }
 
     fn call_constructor(
@@ -77,14 +80,18 @@ impl MockVm {
         
         let register = self.contract_register.read().unwrap();
         let result = register.call_constructor(address, String::from(entrypoint), args.clone());
-        self.handle_call_result(result)
+        self.clear_attached_value();
+        self.handle_call_result(address, result)
     }
 
     fn handle_attached_value(&self, address: &Address) -> bool {
         let value = self.attached_value();
         let result = self.transfer_tokens(address, value);
         if !result {
-            self.state.write().unwrap().set_error(OdraError::VmError(VmError::BalanceExceeded));
+            self.state
+                .write()
+                .unwrap()
+                .set_error(OdraError::VmError(VmError::BalanceExceeded));
             self.clear_attached_value();
         }
         result
@@ -101,7 +108,12 @@ impl MockVm {
         state.push_address(address);
     }
 
-    fn handle_call_result(&self, result: Result<Option<Bytes>, OdraError>) -> Option<Bytes> {
+    fn handle_call_result(&self, address: &Address, result: Result<Option<Bytes>, OdraError>) -> Option<Bytes> {
+        if result.is_err() {
+            self.revert_balance(address);
+            self.revert_balance(&self.caller());
+        }
+
         let result = match result {
             Ok(data) => data,
             Err(err) => {
@@ -119,16 +131,12 @@ impl MockVm {
 
         let mut state = self.state.write().unwrap();
         if state.error.is_none() {
-            self.clear_attached_value();
-            
             // If only one address on the call_stack, drop the snapshot
             if state.is_in_caller_context() {
                 state.drop_snapshot();
             }
             result
         } else {
-            self.clear_attached_value();
-
             // If only one address on the call_stack an an error occurred, restore the snapshot
             if state.is_in_caller_context() {
                 state.restore_snapshot();
@@ -234,20 +242,20 @@ impl MockVm {
         let mut caller_account: Option<&mut Account> = None;
         let caller_address = self.caller();
 
-        let mut state = self.state.write().unwrap();
-        for account in state.get_accounts_iter_mut() {
-            if recipient_account.is_none() && &account.address() == to {
-                recipient_account = Some(account);
-            } else if caller_account.is_none() && account.address() == caller_address {
-                caller_account = Some(account);
-            }
-        }
-
         let mut register = self.contract_register.write().unwrap();
         for (address, account) in register.get_contract_accounts() {
             if address == to {
                 recipient_account = Some(account);
             } else if address == &caller_address {
+                caller_account = Some(account);
+            }
+        }
+
+        let mut state = self.state.write().unwrap();
+        for account in state.get_accounts_iter_mut() {
+            if recipient_account.is_none() && &account.address() == to {
+                recipient_account = Some(account);
+            } else if caller_account.is_none() && account.address() == caller_address {
                 caller_account = Some(account);
             }
         }
@@ -268,7 +276,33 @@ impl MockVm {
     }
 
     pub fn self_balance(&self) -> U512 {
-        self.state.read().unwrap().self_balance()
+        let address = self.callee();
+
+        let contract_register = self.contract_register.read().unwrap();
+        let contract_account = contract_register.get_contract_account(address);
+        if let Some(account) = contract_account {
+            account.balance()
+        } else {
+            self.state.read().unwrap().get_balance(address)
+        }
+    }
+
+    fn revert_balance(&self, address: &Address) {
+        let mut state = self.state.write().unwrap();
+        for account in state.get_accounts_iter_mut() {
+            if &account.address() == address {
+                account.revert_balance();
+                return;
+            }
+        }
+
+        let mut register = self.contract_register.write().unwrap();
+        for (contract_address, account) in register.get_contract_accounts() {
+            if address == contract_address {
+                account.revert_balance();
+                return;
+            }
+        }
     }
 }
 
@@ -416,63 +450,22 @@ impl MockVmState {
     }
 
     fn get_balance(&self, address: Address) -> U512 {
-        match self
+        let account = self
             .accounts
             .iter()
-            .find(|account| account.address() == address)
-        {
+            .find(|account| account.address() == address);
+        match account {
             Some(account) => account.balance(),
             None => U512::zero(),
         }
     }
 
-    fn get_account(&self, address: Address) -> Option<&Account> {
-        self
-            .accounts
-            .iter()
-            .find(|account| account.address() == address)
-    }
-
-    fn get_account_mut(&mut self, address: Address) -> Option<&mut Account> {
-        self
-            .accounts
-            .iter_mut()
-            .find(|account| account.address() == address)
-    }
-
     fn get_accounts_iter_mut(&mut self) -> std::slice::IterMut<'_, Account> {
-        self
-            .accounts
-            .iter_mut()
-    }
-
-    fn transfer_tokens(&mut self, to: Address, amount: U512) -> bool {
-        let caller = self.caller();
-
-        let caller_account = self.get_account_mut(caller);
-
-        if let Some(account) = caller_account {
-            if account.reduce_balance(amount).is_err() {
-                return false;
-            }
-            let recipient_account = self.get_account_mut(to);
-            if let Some(recipient) = recipient_account {
-                if recipient.increase_balance(amount).is_err() {
-                    return false;
-                }
-                return true;
-            }
-        }
-        false
+        self.accounts.iter_mut()
     }
 
     fn accounts(&self) -> &[Account] {
         self.accounts.as_ref()
-    }
-
-    fn self_balance(&self) -> U512 {
-        let address = self.caller();
-        self.get_balance(address)
     }
 }
 
@@ -497,7 +490,7 @@ impl Default for MockVmState {
                 Account::new(Address::new(b"garry"), 100_000.into()),
                 Account::new(Address::new(b"harry"), 100_000.into()),
                 Account::new(Address::new(b"ivan"), 100_000.into()),
-            ]
+            ],
         };
         backend.push_address(&backend.accounts.first().unwrap().address());
         backend

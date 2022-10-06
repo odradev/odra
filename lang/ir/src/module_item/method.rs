@@ -89,7 +89,11 @@ impl From<syn::ImplItemMethod> for Method {
 
         Self {
             attrs: odra_attrs,
-            impl_item: syn::ImplItemMethod { attrs, block, ..method },
+            impl_item: syn::ImplItemMethod {
+                attrs,
+                block,
+                ..method
+            },
             ident,
             args,
             ret,

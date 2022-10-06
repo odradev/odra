@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use odra_types::{bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs, U512};
+use odra_types::{
+    bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs, U512,
+};
 
 use crate::{EntrypointArgs, EntrypointCall};
 
@@ -62,7 +64,6 @@ impl TestEnv {
         let _ = std::panic::catch_unwind(|| {
             block();
         });
-
         let exec_err = crate::borrow_env()
             .error()
             .expect("An error expected, but did not occur");

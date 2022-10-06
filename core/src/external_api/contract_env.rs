@@ -2,7 +2,7 @@ use crate::UnwrapOrRevert;
 use odra_types::{
     bytesrepr::{FromBytes, ToBytes},
     event::Event,
-    Address, CLTyped, CLValue, EventData, ExecutionError, RuntimeArgs, U512
+    Address, CLTyped, CLValue, EventData, ExecutionError, RuntimeArgs, U512,
 };
 
 #[allow(improper_ctypes)]

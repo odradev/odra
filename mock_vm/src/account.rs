@@ -1,3 +1,5 @@
+use std::mem::swap;
+
 use anyhow::{Context, Result};
 use odra_types::{Address, U512};
 
@@ -5,6 +7,7 @@ use odra_types::{Address, U512};
 pub struct Account {
     address: Address,
     native_token_balance: U512,
+    prev_native_token_balance: U512,
 }
 
 impl Account {
@@ -12,11 +15,16 @@ impl Account {
         Self {
             address,
             native_token_balance: balance,
+            prev_native_token_balance: U512::zero(),
         }
     }
 
     pub fn zero_balance(address: Address) -> Self {
-        Self { address, native_token_balance: U512::zero() }
+        Self {
+            address,
+            native_token_balance: U512::zero(),
+            prev_native_token_balance: U512::zero(),
+        }
     }
 
     pub fn address(&self) -> Address {
@@ -32,6 +40,8 @@ impl Account {
             .native_token_balance
             .checked_add(amount)
             .context("Addition overflow")?;
+
+        self.prev_native_token_balance = self.native_token_balance;
         self.native_token_balance = result;
         Ok(())
     }
@@ -41,7 +51,15 @@ impl Account {
             .native_token_balance
             .checked_sub(amount)
             .context("Subtraction overflow")?;
+        self.prev_native_token_balance = self.native_token_balance;
         self.native_token_balance = result;
         Ok(())
+    }
+
+    pub fn revert_balance(&mut self) {
+        swap(
+            &mut self.native_token_balance,
+            &mut self.prev_native_token_balance,
+        );
     }
 }

@@ -1,9 +1,8 @@
-use odra_types::{bytesrepr::Bytes, RuntimeArgs};
-use odra_types::{Address, OdraError, VmError};
-use std::collections::HashMap;
-
 use crate::account::Account;
 use crate::contract_container::ContractContainer;
+use odra_types::{bytesrepr::Bytes, RuntimeArgs};
+use odra_types::{Address, OdraError, VmError};
+use std::collections::{hash_map::IterMut, HashMap};
 
 #[derive(Default)]
 pub struct ContractRegister {
@@ -40,17 +39,13 @@ impl ContractRegister {
         })
     }
 
-    pub fn get_contract_account_mut(&mut self, addr: Address) -> Option<&mut Account> {
-        self.accounts.get_mut(&addr)
-    }
-
-    pub fn get_contract_accounts(&mut self) -> std::collections::hash_map::IterMut<'_, Address, Account> {
+    pub fn get_contract_accounts(&mut self) -> IterMut<'_, Address, Account> {
         self.accounts.iter_mut()
     }
 
     pub fn get_contract_account(&self, addr: Address) -> Option<&Account> {
         self.accounts.get(&addr)
-    } 
+    }
 
     fn internal_call<F: FnOnce(&ContractContainer) -> Result<Option<Bytes>, OdraError>>(
         &self,

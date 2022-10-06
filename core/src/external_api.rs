@@ -75,19 +75,19 @@ pub mod contract_env {
         pub fn attached_value() -> U512 {
             unimplemented!()
         }
-    
+
         pub fn one_token() -> U512 {
             unimplemented!()
         }
-    
+
         pub fn with_tokens(amount: U512) {
             unimplemented!()
         }
-    
+
         pub fn token_balance(address: Address) -> U512 {
             unimplemented!()
         }
-    
+
         pub fn transfer_tokens(to: Address, amount: U512) {
             unimplemented!()
         }
