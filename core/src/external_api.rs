@@ -12,7 +12,7 @@ pub mod contract_env {
     use odra_types::{
         bytesrepr::{FromBytes, ToBytes},
         event::Event,
-        Address, CLTyped, CLValue, ExecutionError, RuntimeArgs, U512
+        Address, CLTyped, CLValue, ExecutionError, RuntimeArgs, U512,
     };
 
     pub struct ContractEnv;

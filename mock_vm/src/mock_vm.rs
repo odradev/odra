@@ -77,7 +77,7 @@ impl MockVm {
         if !self.handle_attached_value(address) {
             return None;
         }
-        
+
         let register = self.contract_register.read().unwrap();
         let result = register.call_constructor(address, String::from(entrypoint), args.clone());
         self.clear_attached_value();
@@ -108,7 +108,11 @@ impl MockVm {
         state.push_address(address);
     }
 
-    fn handle_call_result(&self, address: &Address, result: Result<Option<Bytes>, OdraError>) -> Option<Bytes> {
+    fn handle_call_result(
+        &self,
+        address: &Address,
+        result: Result<Option<Bytes>, OdraError>,
+    ) -> Option<Bytes> {
         if result.is_err() {
             self.revert_balance(address);
             self.revert_balance(&self.caller());

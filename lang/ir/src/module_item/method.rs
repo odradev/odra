@@ -56,7 +56,7 @@ impl ToTokens for Method {
 
         let ty = match self.attrs.iter().any(|attr| attr.is_payable()) {
             true => quote!(odra::contract_def::EntrypointType::PublicPayable),
-            false => quote!(odra::contract_def::EntrypointType::Public)
+            false => quote!(odra::contract_def::EntrypointType::Public),
         };
 
         let ep = quote! {

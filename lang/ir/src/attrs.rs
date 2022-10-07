@@ -67,6 +67,7 @@ impl TryFrom<syn::Attribute> for OdraAttribute {
             .unwrap();
 
         ensure_no_duplicates(kinds.clone())?;
+        validate(kinds.clone())?;
 
         Ok(OdraAttribute { kinds })
     }
@@ -133,6 +134,27 @@ where
     }
 }
 
+fn validate<I>(attrs: I) -> Result<(), syn::Error>
+where
+    I: IntoIterator<Item = AttrKind>,
+{
+    let mut has_constructor = false;
+    let mut has_payable = false;
+    attrs.into_iter().for_each(|attr| match attr {
+        AttrKind::Constructor => has_constructor = true,
+        AttrKind::Payable => has_payable = true,
+        _ => {}
+    });
+    if has_constructor && has_payable {
+        Err(syn::Error::new(
+            Span::call_site(),
+            "constructor cannot be payable".to_string(),
+        ))
+    } else {
+        Ok(())
+    }
+}
+
 pub fn partition_attributes<I>(
     attrs: I,
 ) -> Result<(Vec<OdraAttribute>, Vec<syn::Attribute>), syn::Error>
@@ -149,7 +171,13 @@ where
             Attribute::Other(other_attr) => Either::Right(other_attr),
         });
 
-    ensure_no_duplicates(odra_attrs.clone().into_iter().flat_map(|attr| attr.kinds))?;
+    let attrs = odra_attrs
+        .clone()
+        .into_iter()
+        .flat_map(|attr| attr.kinds)
+        .collect::<Vec<_>>();
+    ensure_no_duplicates(attrs.clone())?;
+    validate(attrs)?;
     Ok((odra_attrs, other_attrs))
 }
 
@@ -187,31 +215,20 @@ mod tests {
     }
 
     #[test]
-    fn multiple_attr_works() {
-        let expected_value = Attribute::Odra(OdraAttribute {
-            kinds: vec![AttrKind::Constructor, AttrKind::Payable],
-        });
+    fn constructor_cannot_be_payable() {
         assert_attribute_try_from(
             syn::parse_quote! {
                 #[odra(init, payable)]
             },
-            Ok(expected_value.clone()),
+            Err("constructor cannot be payable"),
         );
 
-        let expected_value = vec![
-            Attribute::Odra(OdraAttribute {
-                kinds: vec![AttrKind::Constructor],
-            }),
-            Attribute::Odra(OdraAttribute {
-                kinds: vec![AttrKind::Payable],
-            }),
-        ];
         assert_attributes_try_from(
             vec![
                 syn::parse_quote! { #[odra(init)] },
                 syn::parse_quote! { #[odra(payable)] },
             ],
-            Ok((expected_value, vec![])),
+            Err("constructor cannot be payable"),
         );
     }
 
