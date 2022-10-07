@@ -86,11 +86,6 @@ impl ContractEnv {
         borrow_env().attach_value(amount);
     }
 
-    /// Returns the balance of the account associated with the given address.
-    pub fn token_balance(address: Address) -> U512 {
-        borrow_env().token_balance(address)
-    }
-
     /// Transfers native token from the contract caller to the given address.
     pub fn transfer_tokens(to: Address, amount: U512) -> bool {
         borrow_env().transfer_tokens(&to, amount)

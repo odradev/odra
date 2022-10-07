@@ -31,6 +31,8 @@ pub enum EntrypointType {
     Constructor,
     /// A regular entrypoint.
     Public,
+    /// A payable entrypoint.
+    PublicPayable,
 }
 
 /// A trait that should be implemented by each smart contract to allow the backend

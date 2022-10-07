@@ -18,12 +18,10 @@ extern "Rust" {
     fn __call_contract(address: &Address, entrypoint: &str, args: &RuntimeArgs) -> Vec<u8>;
     fn __revert(reason: &ExecutionError) -> !;
     fn __print(message: &str);
-    fn __attached_value() -> U512;
     fn __self_balance() -> U512;
     fn __one_token() -> U512;
     fn __attached_value() -> U512;
     fn __with_tokens(amount: U512);
-    fn __token_balance(address: Address) -> U512;
     fn __transfer_tokens(to: Address, amount: U512);
 }
 
@@ -108,10 +106,6 @@ impl ContractEnv {
 
     pub fn with_tokens(amount: U512) {
         unsafe { __with_tokens(amount) }
-    }
-
-    pub fn token_balance(address: Address) -> U512 {
-        unsafe { __token_balance(address) }
     }
 
     pub fn transfer_tokens(to: Address, amount: U512) {
