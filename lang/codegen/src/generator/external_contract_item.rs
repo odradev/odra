@@ -46,15 +46,21 @@ impl GenerateCode for ExternalContractItem<'_> {
 
             pub struct #ref_ident {
                 address: odra::types::Address,
+                attached_value: Option<odra::types::U512>,
             }
 
             impl #ref_ident {
                 fn at(address: odra::types::Address) -> Self {
-                    Self { address }
+                    Self { address, attached_value: None }
                 }
 
                 fn address(&self) -> odra::types::Address {
                     self.address.clone()
+                }
+
+                fn with_tokens(mut self, amount: odra::types::U512) -> Self {
+                    self.attached_value = Some(amount);
+                    self
                 }
             }
 

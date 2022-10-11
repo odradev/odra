@@ -26,6 +26,7 @@ impl GenerateCode for ContractReference<'_> {
         quote! {
             pub struct #ref_ident {
                 address: odra::types::Address,
+                attached_value: Option<odra::types::U512>,
             }
 
             impl #ref_ident {
@@ -38,7 +39,12 @@ impl GenerateCode for ContractReference<'_> {
                 }
 
                 pub fn at(address: odra::types::Address) -> Self {
-                    Self { address }
+                    Self { address, attached_value: None }
+                }
+
+                pub fn with_tokens(mut self, amount: odra::types::U512) -> Self {
+                    self.attached_value = Some(amount);
+                    self
                 }
             }
         }
@@ -60,7 +66,11 @@ fn build_entrypoints(methods: &[&ImplItem]) -> TokenStream {
 
             quote! {
                 pub #sig {
+                    // if let Some(value) = self.attached_value {
+                        
+                    // }
                     #fn_body
+                    // self.attached_value = None;
                 }
             }
         })
