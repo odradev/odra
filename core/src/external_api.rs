@@ -80,15 +80,15 @@ pub mod contract_env {
             unimplemented!()
         }
 
-        pub fn with_tokens(amount: U512) {
+        pub fn with_tokens(_amount: U512) {
             unimplemented!()
         }
 
-        pub fn token_balance(address: Address) -> U512 {
+        pub fn token_balance(_address: Address) -> U512 {
             unimplemented!()
         }
 
-        pub fn transfer_tokens(to: Address, amount: U512) {
+        pub fn transfer_tokens(_to: Address, _amount: U512) {
             unimplemented!()
         }
 

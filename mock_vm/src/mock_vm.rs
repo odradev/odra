@@ -253,7 +253,8 @@ impl MockVm {
         let mut caller_account: Option<&mut Account> = None;
 
         let mut accounts = self.contract_accounts.write().unwrap();
-        for (address, account) in accounts.get_contract_accounts() {
+        let iter = accounts.get_contract_accounts();
+        for (address, account) in iter {
             if address == to {
                 recipient_account = Some(account);
             } else if address == from {
@@ -262,7 +263,8 @@ impl MockVm {
         }
 
         let mut state = self.state.write().unwrap();
-        for account in state.get_accounts_iter_mut() {
+        let iter = state.get_accounts_iter_mut();
+        for account in iter {
             if recipient_account.is_none() && &account.address() == to {
                 recipient_account = Some(account);
             } else if caller_account.is_none() && &account.address() == from {
@@ -299,7 +301,8 @@ impl MockVm {
 
     fn revert_balance(&self, address: &Address) {
         let mut state = self.state.write().unwrap();
-        for account in state.get_accounts_iter_mut() {
+        let iter = state.get_accounts_iter_mut();
+        for account in iter {
             if &account.address() == address {
                 account.revert_balance();
                 return;
@@ -307,7 +310,8 @@ impl MockVm {
         }
 
         let mut accounts = self.contract_accounts.write().unwrap();
-        for (contract_address, account) in accounts.get_contract_accounts() {
+        let iter = accounts.get_contract_accounts();
+        for (contract_address, account) in iter {
             if address == contract_address {
                 account.revert_balance();
                 return;
