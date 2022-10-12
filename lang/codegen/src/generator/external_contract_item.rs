@@ -58,9 +58,12 @@ impl GenerateCode for ExternalContractItem<'_> {
                     self.address.clone()
                 }
 
-                fn with_tokens(mut self, amount: odra::types::U512) -> Self {
-                    self.attached_value = Some(amount);
-                    self
+                pub fn with_tokens<T>(&self, amount: T) -> Self
+                where T: Into<odra::types::U512> {
+                    Self {
+                        address: self.address,
+                        attached_value: Some(amount.into()),
+                    }
                 }
             }
 

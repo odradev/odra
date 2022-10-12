@@ -10,13 +10,14 @@ use odra_types::{VmError, U512};
 use crate::account::Account;
 use crate::context::ExecutionContext;
 use crate::contract_container::{ContractContainer, EntrypointArgs, EntrypointCall};
-use crate::contract_register::ContractRegister;
+use crate::contract_register::{ContractAccounts, ContractRegister};
 use crate::storage::Storage;
 
 #[derive(Default)]
 pub struct MockVm {
     state: Arc<RwLock<MockVmState>>,
     contract_register: Arc<RwLock<ContractRegister>>,
+    contract_accounts: Arc<RwLock<ContractAccounts>>,
 }
 
 impl MockVm {
@@ -36,6 +37,7 @@ impl MockVm {
                 .write()
                 .unwrap()
                 .add(address, contract);
+            self.contract_accounts.write().unwrap().add(address);
         }
 
         // Call init if needed.
@@ -60,10 +62,12 @@ impl MockVm {
                 return None;
             }
         }
-        let result = {
-            let register = self.contract_register.read().unwrap();
-            register.call(address, String::from(entrypoint), args.clone())
-        };
+
+        let result = self.contract_register.read().unwrap().call(
+            address,
+            String::from(entrypoint),
+            args.clone(),
+        );
 
         self.clear_attached_value();
         self.handle_call_result(address, result)
@@ -85,7 +89,9 @@ impl MockVm {
     }
 
     fn handle_attached_value(&self, address: &Address, value: U512) -> bool {
-        self.attach_value(value);
+        {
+            self.attach_value(value);
+        }
 
         let result = self.transfer_tokens(address, value);
         if !result {
@@ -230,8 +236,8 @@ impl MockVm {
     }
 
     pub fn token_balance(&self, address: Address) -> U512 {
-        let register = self.contract_register.read().unwrap();
-        let contract_account = register.get_contract_account(address);
+        let accounts = self.contract_accounts.read().unwrap();
+        let contract_account = accounts.get_contract_account(address);
         if let Some(account) = contract_account {
             account.balance()
         } else {
@@ -247,8 +253,8 @@ impl MockVm {
         let mut caller_account: Option<&mut Account> = None;
         let caller_address = self.caller();
 
-        let mut register = self.contract_register.write().unwrap();
-        for (address, account) in register.get_contract_accounts() {
+        let mut accounts = self.contract_accounts.write().unwrap();
+        for (address, account) in accounts.get_contract_accounts() {
             if address == to {
                 recipient_account = Some(account);
             } else if address == &caller_address {
@@ -283,8 +289,8 @@ impl MockVm {
     pub fn self_balance(&self) -> U512 {
         let address = self.callee();
 
-        let contract_register = self.contract_register.read().unwrap();
-        let contract_account = contract_register.get_contract_account(address);
+        let accounts = self.contract_accounts.read().unwrap();
+        let contract_account = accounts.get_contract_account(address);
         if let Some(account) = contract_account {
             account.balance()
         } else {
@@ -301,8 +307,8 @@ impl MockVm {
             }
         }
 
-        let mut register = self.contract_register.write().unwrap();
-        for (contract_address, account) in register.get_contract_accounts() {
+        let mut accounts = self.contract_accounts.write().unwrap();
+        for (contract_address, account) in accounts.get_contract_accounts() {
             if address == contract_address {
                 account.revert_balance();
                 return;

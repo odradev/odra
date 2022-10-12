@@ -7,14 +7,11 @@ use std::collections::{hash_map::IterMut, HashMap};
 #[derive(Default)]
 pub struct ContractRegister {
     contracts: HashMap<Address, ContractContainer>,
-    accounts: HashMap<Address, Account>,
 }
 
 impl ContractRegister {
     pub fn add(&mut self, addr: Address, container: ContractContainer) {
-        let contract_account = Account::zero_balance(addr);
         self.contracts.insert(addr, container);
-        self.accounts.insert(addr, contract_account);
     }
 
     pub fn call(
@@ -39,14 +36,6 @@ impl ContractRegister {
         })
     }
 
-    pub fn get_contract_accounts(&mut self) -> IterMut<'_, Address, Account> {
-        self.accounts.iter_mut()
-    }
-
-    pub fn get_contract_account(&self, addr: Address) -> Option<&Account> {
-        self.accounts.get(&addr)
-    }
-
     fn internal_call<F: FnOnce(&ContractContainer) -> Result<Option<Bytes>, OdraError>>(
         &self,
         addr: &Address,
@@ -57,5 +46,25 @@ impl ContractRegister {
             Some(container) => call_fn(container),
             None => Err(OdraError::VmError(VmError::InvalidContractAddress)),
         }
+    }
+}
+
+#[derive(Default)]
+pub struct ContractAccounts {
+    accounts: HashMap<Address, Account>,
+}
+
+impl ContractAccounts {
+    pub fn add(&mut self, addr: Address) {
+        let contract_account = Account::zero_balance(addr);
+        self.accounts.insert(addr, contract_account);
+    }
+
+    pub fn get_contract_accounts(&mut self) -> IterMut<'_, Address, Account> {
+        self.accounts.iter_mut()
+    }
+
+    pub fn get_contract_account(&self, addr: Address) -> Option<&Account> {
+        self.accounts.get(&addr)
     }
 }
