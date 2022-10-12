@@ -124,7 +124,10 @@ impl ExecutionError {
     }
 
     pub fn can_not_transfer_to_contract() -> Self {
-        Self::internal(CODE_TRANSFER_TO_CONTRACT, "Can't transfer tokens to contract.")
+        Self::internal(
+            CODE_TRANSFER_TO_CONTRACT,
+            "Can't transfer tokens to contract.",
+        )
     }
 
     fn internal(code: u16, msg: &str) -> Self {
