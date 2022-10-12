@@ -15,6 +15,7 @@ const CODE_TYPE_MISMATCH: u16 = 6;
 const CODE_ADDITION_OVERFLOW: u16 = 7;
 const CODE_SUBTRACTION_OVERFLOW: u16 = 8;
 const CODE_NON_PAYABLE: u16 = 9;
+const CODE_TRANSFER_TO_CONTRACT: u16 = 10;
 
 /// General error type in Odra framework
 #[derive(Clone, Debug, PartialEq)]
@@ -120,6 +121,10 @@ impl ExecutionError {
 
     pub fn non_payable() -> Self {
         Self::internal(CODE_NON_PAYABLE, "Method does not accept deposit")
+    }
+
+    pub fn can_not_transfer_to_contract() -> Self {
+        Self::internal(CODE_TRANSFER_TO_CONTRACT, "Can't transfer tokens to contract.")
     }
 
     fn internal(code: u16, msg: &str) -> Self {
