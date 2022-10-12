@@ -14,12 +14,12 @@ where
     match ret {
         syn::ReturnType::Default => quote! {
             #args
-            odra::call_contract::<()>(&self.address, #entrypoint_name, &args);
+            odra::call_contract::<()>(&self.address, #entrypoint_name, &args, self.attached_value);
         },
         syn::ReturnType::Type(_, _) => quote! {
             use odra::types::CLTyped;
             #args
-            odra::call_contract(&self.address, #entrypoint_name, &args)
+            odra::call_contract(&self.address, #entrypoint_name, &args, self.attached_value)
         },
     }
 }

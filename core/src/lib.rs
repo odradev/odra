@@ -6,7 +6,7 @@ mod unwrap_or_revert;
 mod variable;
 
 use std::fmt::Debug;
-use types::{bytesrepr::FromBytes, Address, CLTyped, RuntimeArgs};
+use types::{bytesrepr::FromBytes, Address, CLTyped, RuntimeArgs, U512};
 
 pub use {
     instance::Instance,
@@ -36,26 +36,31 @@ cfg_if::cfg_if! {
 /// Calls contract at `address` invoking the `entrypoint` with `args`.
 ///
 /// Returns already parsed result.
-pub fn call_contract<T>(address: &Address, entrypoint: &str, args: &RuntimeArgs) -> T
+pub fn call_contract<T>(
+    address: &Address,
+    entrypoint: &str,
+    args: &RuntimeArgs,
+    amount: Option<U512>,
+) -> T
 where
     T: CLTyped + FromBytes + Debug,
 {
     cfg_if::cfg_if! {
         if #[cfg(feature = "mock-vm")] {
-            let result = TestEnv::call_contract(address, entrypoint, args);
+            let result = TestEnv::call_contract(address, entrypoint, args, amount);
             match result {
                 Some(bytes) => T::from_bytes(bytes.as_slice()).unwrap().0,
                 None => T::from_bytes(&[]).unwrap().0,
             }
         } else if #[cfg(feature = "wasm-test")] {
             let has_return = types::CLType::Unit != T::cl_type();
-            let result = TestEnv::call_contract(address, entrypoint, args, has_return);
+            let result = TestEnv::call_contract(address, entrypoint, args, has_return, amount);
             match result {
                 Some(bytes) => T::from_bytes(bytes.as_slice()).unwrap().0,
                 None => T::from_bytes(&[]).unwrap().0,
             }
         }  else if #[cfg(feature = "wasm")] {
-            let res = ContractEnv::call_contract(address, entrypoint, args);
+            let res = ContractEnv::call_contract(address, entrypoint, args, amount);
             types::bytesrepr::deserialize(res).unwrap_or_revert()
         } else {
             compile_error!("Unknown feature")

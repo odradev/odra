@@ -15,7 +15,12 @@ extern "Rust" {
     fn __set_dict_value(dict: &str, key: &[u8], value: &CLValue);
     fn __get_dict_value(dict: &str, key: &[u8]) -> Option<CLValue>;
     fn __emit_event(event: &EventData);
-    fn __call_contract(address: &Address, entrypoint: &str, args: &RuntimeArgs) -> Vec<u8>;
+    fn __call_contract(
+        address: &Address,
+        entrypoint: &str,
+        args: &RuntimeArgs,
+        amount: Option<U512>,
+    ) -> Vec<u8>;
     fn __revert(reason: &ExecutionError) -> !;
     fn __print(message: &str);
     fn __self_balance() -> U512;
@@ -77,8 +82,13 @@ impl ContractEnv {
         unsafe { __emit_event(&event_data) }
     }
 
-    pub fn call_contract(address: &Address, entrypoint: &str, args: &RuntimeArgs) -> Vec<u8> {
-        unsafe { __call_contract(address, entrypoint, args) }
+    pub fn call_contract(
+        address: &Address,
+        entrypoint: &str,
+        args: &RuntimeArgs,
+        amount: Option<U512>,
+    ) -> Vec<u8> {
+        unsafe { __call_contract(address, entrypoint, args, amount) }
     }
 
     pub fn revert<E>(error: E) -> !

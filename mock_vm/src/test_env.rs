@@ -41,7 +41,8 @@ impl TestEnv {
         call_contract(
             address: &Address,
             entrypoint: &str,
-            args: &RuntimeArgs
+            args: &RuntimeArgs,
+            amount: Option<U512>
         ) -> Option<Bytes>
         /// Increases the current value of block_time.
         advance_block_time_by(seconds: u64)
@@ -73,11 +74,6 @@ impl TestEnv {
     /// Returns nth test user account.
     pub fn get_account(n: usize) -> Address {
         crate::borrow_env().get_address(n)
-    }
-
-    /// Attaches [amount] of native token to the next contract call.
-    pub fn with_tokens(amount: U512) {
-        crate::borrow_env().attach_value(amount);
     }
 
     /// Returns the value that represents one native token.

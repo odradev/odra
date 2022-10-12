@@ -81,11 +81,6 @@ impl ContractEnv {
         U512::one()
     }
 
-    /// Attaches [amount] of native token to the next contract call.
-    pub fn with_tokens(amount: U512) {
-        borrow_env().attach_value(amount);
-    }
-
     /// Transfers native token from the contract caller to the given address.
     pub fn transfer_tokens(to: Address, amount: U512) -> bool {
         borrow_env().transfer_tokens(&to, amount)

@@ -51,11 +51,14 @@ impl MockVm {
         address: &Address,
         entrypoint: &str,
         args: &RuntimeArgs,
+        amount: Option<U512>,
     ) -> Option<Bytes> {
         self.prepare_call(address);
         // Call contract from register.
-        if !self.handle_attached_value(address) {
-            return None;
+        if let Some(amount) = amount {
+            if !self.handle_attached_value(address, amount) {
+                return None;
+            }
         }
         let result = {
             let register = self.contract_register.read().unwrap();
@@ -74,9 +77,6 @@ impl MockVm {
     ) -> Option<Bytes> {
         self.prepare_call(address);
         // Call contract from register.
-        if !self.handle_attached_value(address) {
-            return None;
-        }
 
         let register = self.contract_register.read().unwrap();
         let result = register.call_constructor(address, String::from(entrypoint), args.clone());
@@ -84,8 +84,9 @@ impl MockVm {
         self.handle_call_result(address, result)
     }
 
-    fn handle_attached_value(&self, address: &Address) -> bool {
-        let value = self.attached_value();
+    fn handle_attached_value(&self, address: &Address, value: U512) -> bool {
+        self.attach_value(value);
+
         let result = self.transfer_tokens(address, value);
         if !result {
             self.state
@@ -206,7 +207,7 @@ impl MockVm {
         self.state.write().unwrap().advance_block_time_by(seconds)
     }
 
-    pub fn attach_value(&self, amount: U512) {
+    fn attach_value(&self, amount: U512) {
         self.state.write().unwrap().attach_value(amount);
     }
 
@@ -548,7 +549,7 @@ mod tests {
         );
 
         // when call an existing entrypoint
-        let result = instance.call_contract(&address, "abc", &RuntimeArgs::new());
+        let result = instance.call_contract(&address, "abc", &RuntimeArgs::new(), None);
 
         // then returns the expected value
         assert_eq!(result, Some(vec![1, 1, 1].into()));
@@ -562,7 +563,7 @@ mod tests {
         let address = Address::new(b"random");
 
         // when call a contract
-        instance.call_contract(&address, "abc", &RuntimeArgs::new());
+        instance.call_contract(&address, "abc", &RuntimeArgs::new(), None);
 
         // then the vm is in error state
         assert_eq!(
@@ -586,7 +587,7 @@ mod tests {
         );
 
         // when call non-existing entrypoint
-        instance.call_contract(&address, "cba", &RuntimeArgs::new());
+        instance.call_contract(&address, "cba", &RuntimeArgs::new(), None);
 
         // then the vm is in error state
         assert_eq!(

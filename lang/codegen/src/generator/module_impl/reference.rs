@@ -66,11 +66,7 @@ fn build_entrypoints(methods: &[&ImplItem]) -> TokenStream {
 
             quote! {
                 pub #sig {
-                    // if let Some(value) = self.attached_value {
-                        
-                    // }
                     #fn_body
-                    // self.attached_value = None;
                 }
             }
         })
