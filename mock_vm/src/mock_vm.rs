@@ -93,7 +93,7 @@ impl MockVm {
             self.attach_value(value);
         }
 
-        let result = self.transfer_tokens(address, value);
+        let result = self.transfer_tokens(&self.caller(), address, value);
         if !result {
             self.state
                 .write()
@@ -245,19 +245,18 @@ impl MockVm {
         }
     }
 
-    pub fn transfer_tokens(&self, to: &Address, amount: U512) -> bool {
+    pub fn transfer_tokens(&self, from: &Address, to: &Address, amount: U512) -> bool {
         if amount == U512::zero() {
             return true;
         }
         let mut recipient_account: Option<&mut Account> = None;
         let mut caller_account: Option<&mut Account> = None;
-        let caller_address = self.caller();
 
         let mut accounts = self.contract_accounts.write().unwrap();
         for (address, account) in accounts.get_contract_accounts() {
             if address == to {
                 recipient_account = Some(account);
-            } else if address == &caller_address {
+            } else if address == from {
                 caller_account = Some(account);
             }
         }
@@ -266,7 +265,7 @@ impl MockVm {
         for account in state.get_accounts_iter_mut() {
             if recipient_account.is_none() && &account.address() == to {
                 recipient_account = Some(account);
-            } else if caller_account.is_none() && account.address() == caller_address {
+            } else if caller_account.is_none() && &account.address() == from {
                 caller_account = Some(account);
             }
         }
