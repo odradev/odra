@@ -1,17 +1,49 @@
+use anyhow::{Context, Result};
 use std::{
     collections::{hash_map::DefaultHasher, HashMap},
     hash::{Hash, Hasher},
 };
 
-use odra_types::{Address, CLValue};
+use odra_types::{Address, CLValue, U512};
+
+use crate::balance::Balance;
 
 #[derive(Default, Clone)]
 pub struct Storage {
     state: HashMap<u64, CLValue>,
-    snapshot: Option<HashMap<u64, CLValue>>,
+    balances: HashMap<Address, Balance>,
+    state_snapshot: Option<HashMap<u64, CLValue>>,
+    balances_snapshot: Option<HashMap<Address, Balance>>,
 }
 
 impl Storage {
+    pub fn new(balances: HashMap<Address, Balance>) -> Self {
+        Self {
+            state: Default::default(),
+            balances,
+            state_snapshot: Default::default(),
+            balances_snapshot: Default::default(),
+        }
+    }
+
+    pub fn balance_of(&self, address: &Address) -> Option<&Balance> {
+        self.balances.get(&address)
+    }
+
+    pub fn set_balance(&mut self, address: Address, balance: Balance) {
+        self.balances.insert(address, balance);
+    }
+
+    pub fn increase_balance(&mut self, address: &Address, amount: U512) -> Result<()> {
+        let balance = self.balances.get_mut(address).context("Unknown address")?;
+        balance.increase(amount)
+    }
+
+    pub fn reduce_balance(&mut self, address: &Address, amount: U512) -> Result<()> {
+        let balance = self.balances.get_mut(address).context("Unknown address")?;
+        balance.reduce(amount)
+    }
+
     pub fn get_value(&self, address: &Address, key: &[u8]) -> Option<CLValue> {
         let hash = Storage::hashed_key(address, key);
         self.state.get(&hash).cloned()
@@ -46,17 +78,23 @@ impl Storage {
     }
 
     pub fn take_snapshot(&mut self) {
-        self.snapshot = Some(self.state.clone());
+        self.state_snapshot = Some(self.state.clone());
+        self.balances_snapshot = Some(self.balances.clone());
     }
 
     pub fn drop_snapshot(&mut self) {
-        self.snapshot = None;
+        self.state_snapshot = None;
+        self.balances_snapshot = None;
     }
 
     pub fn restore_snapshot(&mut self) {
-        if let Some(snapshot) = self.snapshot.clone() {
+        if let Some(snapshot) = self.state_snapshot.clone() {
             self.state = snapshot;
-            self.snapshot = None;
+            self.state_snapshot = None;
+        };
+        if let Some(snapshot) = self.balances_snapshot.clone() {
+            self.balances = snapshot;
+            self.balances_snapshot = None;
         };
     }
 
@@ -188,7 +226,7 @@ mod test {
         // then the changes are reverted
         assert_eq!(storage.get_value(&address, &key), Some(initial_value),);
         // the snapshot is removed
-        assert_eq!(storage.snapshot, None);
+        assert_eq!(storage.state_snapshot, None);
     }
 
     #[test]
@@ -227,6 +265,6 @@ mod test {
         // then storage state does not change
         assert_eq!(storage.get_value(&address, &key), Some(next_value),);
         // the snapshot is wiped out
-        assert_eq!(storage.snapshot, None);
+        assert_eq!(storage.state_snapshot, None);
     }
 }

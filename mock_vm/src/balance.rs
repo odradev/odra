@@ -1,9 +1,7 @@
-use std::mem::swap;
-
 use anyhow::{Context, Result};
 use odra_types::U512;
 
-#[derive(Eq, Hash, PartialEq, Clone, Default)]
+#[derive(Eq, Hash, PartialEq, Clone, Default, Debug)]
 pub struct Balance {
     value: U512,
     prev_value: U512,
@@ -36,10 +34,6 @@ impl Balance {
         self.prev_value = self.value;
         self.value = result;
         Ok(())
-    }
-
-    pub fn revert(&mut self) {
-        swap(&mut self.value, &mut self.prev_value);
     }
 
     pub fn value(&self) -> U512 {

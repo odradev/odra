@@ -1,5 +1,4 @@
-use anyhow::{Context, Result};
-use std::borrow::BorrowMut;
+use anyhow::Result;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
@@ -10,7 +9,7 @@ use odra_types::{
 use odra_types::{VmError, U512};
 
 use crate::balance::Balance;
-use crate::context::ExecutionContext;
+use crate::callstack::{Callstack, CallstackElement};
 use crate::contract_container::{ContractContainer, EntrypointArgs, EntrypointCall};
 use crate::contract_register::ContractRegister;
 use crate::storage::Storage;
@@ -59,11 +58,13 @@ impl MockVm {
         args: &RuntimeArgs,
         amount: Option<U512>,
     ) -> Option<Bytes> {
-        self.prepare_call(address);
+        self.prepare_call(address, amount);
+
         // Call contract from register.
         if let Some(amount) = amount {
-            if !self.handle_attached_value(address, amount) {
-                return None;
+            let success = self.transfer_tokens(&self.caller(), address, amount);
+            if !success {
+                return self.handle_call_result(Err(OdraError::VmError(VmError::BalanceExceeded)));
             }
         }
 
@@ -73,8 +74,7 @@ impl MockVm {
             args.clone(),
         );
 
-        self.clear_attached_value();
-        self.handle_call_result(address, result)
+        self.handle_call_result(result)
     }
 
     fn call_constructor(
@@ -83,30 +83,14 @@ impl MockVm {
         entrypoint: &str,
         args: &RuntimeArgs,
     ) -> Option<Bytes> {
-        self.prepare_call(address);
+        self.prepare_call(address, None);
         // Call contract from register.
-
         let register = self.contract_register.read().unwrap();
         let result = register.call_constructor(address, String::from(entrypoint), args.clone());
-        self.clear_attached_value();
-        self.handle_call_result(address, result)
+        self.handle_call_result(result)
     }
 
-    fn handle_attached_value(&self, address: &Address, value: U512) -> bool {
-        self.attach_value(value);
-
-        let result = self.transfer_tokens(&self.caller(), address, value);
-        if !result {
-            self.state
-                .write()
-                .unwrap()
-                .set_error(OdraError::VmError(VmError::BalanceExceeded));
-            self.clear_attached_value();
-        }
-        result
-    }
-
-    fn prepare_call(&self, address: &Address) {
+    fn prepare_call(&self, address: &Address, amount: Option<U512>) {
         let mut state = self.state.write().unwrap();
         // If only one address on the call_stack, record snapshot.
         if state.is_in_caller_context() {
@@ -114,35 +98,23 @@ impl MockVm {
             state.clear_error();
         }
         // Put the address on stack.
-        state.push_address(address);
+        let element = CallstackElement::new(*address, amount);
+        state.push_callstack_element(element);
     }
 
-    fn handle_call_result(
-        &self,
-        address: &Address,
-        result: Result<Option<Bytes>, OdraError>,
-    ) -> Option<Bytes> {
-        if result.is_err() {
-            self.revert_balance(address);
-            self.revert_balance(&self.caller());
-        }
-
+    fn handle_call_result(&self, result: Result<Option<Bytes>, OdraError>) -> Option<Bytes> {
+        let mut state = self.state.write().unwrap();
         let result = match result {
             Ok(data) => data,
             Err(err) => {
-                {
-                    self.state.write().unwrap().set_error(err);
-                }
+                state.set_error(err);
                 None
             }
         };
 
         // Drop the address from stack.
-        {
-            self.state.write().unwrap().pop_address();
-        }
+        state.pop_callstack_element();
 
-        let mut state = self.state.write().unwrap();
         if state.error.is_none() {
             // If only one address on the call_stack, drop the snapshot
             if state.is_in_caller_context() {
@@ -215,16 +187,8 @@ impl MockVm {
         self.state.write().unwrap().advance_block_time_by(seconds)
     }
 
-    fn attach_value(&self, amount: U512) {
-        self.state.write().unwrap().attach_value(amount);
-    }
-
     pub fn attached_value(&self) -> U512 {
         self.state.read().unwrap().attached_value()
-    }
-
-    fn clear_attached_value(&self) {
-        self.state.write().unwrap().clear_attached_value();
     }
 
     pub fn get_address(&self, n: usize) -> Address {
@@ -254,23 +218,17 @@ impl MockVm {
         let address = self.callee();
         self.state.read().unwrap().get_balance(address)
     }
-
-    fn revert_balance(&self, address: &Address) {
-        self.state.write().unwrap().revert_balance(address);
-    }
 }
 
 #[derive(Clone)]
 pub struct MockVmState {
     storage: Storage,
-    exec_context: ExecutionContext,
+    callstack: Callstack,
     events: HashMap<Address, Vec<EventData>>,
     contract_counter: u32,
     error: Option<OdraError>,
     block_time: u64,
-    attached_value: Option<U512>,
     accounts: Vec<Address>,
-    balances: HashMap<Address, Balance>,
 }
 
 impl MockVmState {
@@ -279,43 +237,43 @@ impl MockVmState {
     }
 
     fn callee(&self) -> Address {
-        *self.exec_context.current()
+        self.callstack.current().address
     }
 
     fn caller(&self) -> Address {
-        *self.exec_context.previous()
+        self.callstack.previous().address
     }
 
     fn set_caller(&mut self, address: &Address) {
-        self.pop_address();
-        self.push_address(address);
+        self.pop_callstack_element();
+        self.push_callstack_element(CallstackElement::new(*address, None));
     }
 
     fn set_var(&mut self, key: &str, value: &CLValue) {
-        let ctx = self.exec_context.current();
+        let ctx = &self.callstack.current().address;
         self.storage
             .set_value(ctx, &key.to_bytes().unwrap(), value.clone());
     }
 
     fn get_var(&self, key: &str) -> Option<CLValue> {
-        let ctx = self.exec_context.current();
+        let ctx = &self.callstack.current().address;
         self.storage.get_value(ctx, &key.to_bytes().unwrap())
     }
 
     fn set_dict_value(&mut self, dict: &str, key: &[u8], value: &CLValue) {
-        let ctx = self.exec_context.current();
+        let ctx = &self.callstack.current().address;
         self.storage
             .insert_dict_value(ctx, &dict.to_bytes().unwrap(), key, value.clone());
     }
 
     fn get_dict_value(&self, dict: &str, key: &[u8]) -> Option<CLValue> {
-        let ctx = self.exec_context.current();
+        let ctx = &self.callstack.current().address;
         self.storage
             .get_dict_value(ctx, &dict.to_bytes().unwrap(), key)
     }
 
     fn emit_event(&mut self, event_data: &EventData) {
-        let contract_address = self.exec_context.current();
+        let contract_address = &self.callstack.current().address;
         let events = self.events.get_mut(contract_address).map(|events| {
             events.push(event_data.clone());
             events
@@ -336,12 +294,12 @@ impl MockVmState {
         Ok(events.get(event_position as usize).unwrap().clone())
     }
 
-    fn push_address(&mut self, address: &Address) {
-        self.exec_context.push(*address);
+    fn push_callstack_element(&mut self, element: CallstackElement) {
+        self.callstack.push(element);
     }
 
-    fn pop_address(&mut self) {
-        self.exec_context.drop();
+    fn pop_callstack_element(&mut self) {
+        self.callstack.pop();
     }
 
     fn next_contract_address(&mut self) -> Address {
@@ -360,16 +318,8 @@ impl MockVmState {
         }
     }
 
-    fn attach_value(&mut self, amount: U512) {
-        self.attached_value = Some(amount);
-    }
-
     fn attached_value(&self) -> U512 {
-        self.attached_value.unwrap_or_default()
-    }
-
-    fn clear_attached_value(&mut self) {
-        self.attached_value = None;
+        self.callstack.current_amount()
     }
 
     fn clear_error(&mut self) {
@@ -381,7 +331,7 @@ impl MockVmState {
     }
 
     fn is_in_caller_context(&self) -> bool {
-        self.exec_context.len() == 1
+        self.callstack.len() == 1
     }
 
     fn take_snapshot(&mut self) {
@@ -405,40 +355,22 @@ impl MockVmState {
     }
 
     fn get_balance(&self, address: Address) -> U512 {
-        self.balances
-            .get(&address)
-            .and_then(|balance| Some(balance.value()))
+        self.storage
+            .balance_of(&address)
+            .and_then(|b| Some(b.value()))
             .unwrap_or_default()
     }
 
     fn set_balance(&mut self, address: Address, amount: U512) {
-        self.balances
-            .borrow_mut()
-            .insert(address, Balance::new(amount));
+        self.storage.set_balance(address, Balance::new(amount));
     }
 
     fn increase_balance(&mut self, address: &Address, amount: U512) -> Result<()> {
-        let balance = self
-            .balances
-            .borrow_mut()
-            .get_mut(address)
-            .context("Unknown address")?;
-        balance.increase(amount)
+        self.storage.increase_balance(address, amount)
     }
 
     fn reduce_balance(&mut self, address: &Address, amount: U512) -> Result<()> {
-        let balance = self
-            .balances
-            .borrow_mut()
-            .get_mut(address)
-            .context("Unknown address")?;
-        balance.reduce(amount)
-    }
-
-    fn revert_balance(&mut self, address: &Address) {
-        if let Some(balance) = self.balances.borrow_mut().get_mut(address) {
-            balance.revert();
-        }
+        self.storage.reduce_balance(address, amount)
     }
 }
 
@@ -463,17 +395,15 @@ impl Default for MockVmState {
         }
 
         let mut backend = MockVmState {
-            storage: Default::default(),
-            exec_context: Default::default(),
+            storage: Storage::new(balances),
+            callstack: Default::default(),
             events: Default::default(),
             contract_counter: 0,
             error: None,
             block_time: 0,
-            attached_value: None,
             accounts: addresses.clone(),
-            balances,
         };
-        backend.push_address(addresses.first().unwrap());
+        backend.push_callstack_element(CallstackElement::new(*addresses.first().unwrap(), None));
         backend
     }
 }
@@ -487,7 +417,7 @@ mod tests {
         VmError, U512,
     };
 
-    use crate::{EntrypointArgs, EntrypointCall};
+    use crate::{callstack::CallstackElement, EntrypointArgs, EntrypointCall};
 
     use super::MockVm;
 
@@ -707,7 +637,8 @@ mod tests {
     }
 
     fn push_address(vm: &MockVm, address: &Address) {
-        vm.state.write().unwrap().push_address(address);
+        let element = CallstackElement::new(*address, None);
+        vm.state.write().unwrap().push_callstack_element(element);
     }
 
     fn setup_contract(instance: &MockVm) -> (Address, String, Option<Bytes>) {

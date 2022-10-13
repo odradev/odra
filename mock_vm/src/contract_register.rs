@@ -1,7 +1,7 @@
 use crate::contract_container::ContractContainer;
 use odra_types::{bytesrepr::Bytes, RuntimeArgs};
 use odra_types::{Address, OdraError, VmError};
-use std::collections::{hash_map::IterMut, HashMap};
+use std::collections::HashMap;
 
 #[derive(Default)]
 pub struct ContractRegister {
