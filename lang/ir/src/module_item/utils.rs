@@ -28,12 +28,18 @@ mod test {
     use super::payable_check;
 
     fn block() -> syn::Block {
-        parse_quote!(if value > 0 { 42 } else { 1 })
+        parse_quote!({
+            if value > 0 {
+                42
+            } else {
+                1
+            }
+        })
     }
 
     #[test]
     fn test_payable() {
-        let expected: syn::Block = parse_quote!({ 42 });
+        let expected: syn::Block = block();
 
         let result = payable_check(block(), true);
 
@@ -45,15 +51,15 @@ mod test {
 
     #[test]
     fn test_non_payable() {
+        let stmts = block().stmts;
         let expected: syn::Block = parse_quote!({
-            if odra::ContractEnv::attached_value() > odra::types::U256::zero() {
+            if odra::ContractEnv::attached_value() > odra::types::U512::zero() {
                 odra::ContractEnv::revert(odra::types::ExecutionError::non_payable());
             }
-            42
+            # ( #stmts )*
         });
 
         let result = payable_check(block(), false);
-
         assert_eq!(
             expected.to_token_stream().to_string(),
             result.to_token_stream().to_string()
