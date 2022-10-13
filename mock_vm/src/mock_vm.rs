@@ -1,3 +1,5 @@
+use anyhow::{Context, Result};
+use std::borrow::BorrowMut;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
@@ -7,17 +9,16 @@ use odra_types::{
 };
 use odra_types::{VmError, U512};
 
-use crate::account::Account;
+use crate::balance::Balance;
 use crate::context::ExecutionContext;
 use crate::contract_container::{ContractContainer, EntrypointArgs, EntrypointCall};
-use crate::contract_register::{ContractAccounts, ContractRegister};
+use crate::contract_register::ContractRegister;
 use crate::storage::Storage;
 
 #[derive(Default)]
 pub struct MockVm {
     state: Arc<RwLock<MockVmState>>,
     contract_register: Arc<RwLock<ContractRegister>>,
-    contract_accounts: Arc<RwLock<ContractAccounts>>,
 }
 
 impl MockVm {
@@ -37,7 +38,10 @@ impl MockVm {
                 .write()
                 .unwrap()
                 .add(address, contract);
-            self.contract_accounts.write().unwrap().add(address);
+            self.state
+                .write()
+                .unwrap()
+                .set_balance(address, U512::zero());
         }
 
         // Call init if needed.
@@ -89,9 +93,7 @@ impl MockVm {
     }
 
     fn handle_attached_value(&self, address: &Address, value: U512) -> bool {
-        {
-            self.attach_value(value);
-        }
+        self.attach_value(value);
 
         let result = self.transfer_tokens(&self.caller(), address, value);
         if !result {
@@ -226,97 +228,35 @@ impl MockVm {
     }
 
     pub fn get_address(&self, n: usize) -> Address {
-        self.state
-            .read()
-            .unwrap()
-            .accounts()
-            .get(n)
-            .unwrap()
-            .address()
+        self.state.read().unwrap().accounts.get(n).cloned().unwrap()
     }
 
     pub fn token_balance(&self, address: Address) -> U512 {
-        let accounts = self.contract_accounts.read().unwrap();
-        let contract_account = accounts.get_contract_account(address);
-        if let Some(account) = contract_account {
-            account.balance()
-        } else {
-            self.state.read().unwrap().get_balance(address)
-        }
+        self.state.read().unwrap().get_balance(address)
     }
 
     pub fn transfer_tokens(&self, from: &Address, to: &Address, amount: U512) -> bool {
         if amount == U512::zero() {
             return true;
         }
-        let mut recipient_account: Option<&mut Account> = None;
-        let mut caller_account: Option<&mut Account> = None;
-
-        let mut accounts = self.contract_accounts.write().unwrap();
-        let iter = accounts.get_contract_accounts();
-        for (address, account) in iter {
-            if address == to {
-                recipient_account = Some(account);
-            } else if address == from {
-                caller_account = Some(account);
-            }
-        }
 
         let mut state = self.state.write().unwrap();
-        let iter = state.get_accounts_iter_mut();
-        for account in iter {
-            if recipient_account.is_none() && &account.address() == to {
-                recipient_account = Some(account);
-            } else if caller_account.is_none() && &account.address() == from {
-                caller_account = Some(account);
-            }
+        if state.reduce_balance(from, amount).is_err() {
+            return false;
         }
-
-        if let Some(account) = caller_account {
-            if account.reduce_balance(amount).is_err() {
-                return false;
-            }
-            if let Some(recipient) = recipient_account {
-                if recipient.increase_balance(amount).is_err() {
-                    return false;
-                }
-                return true;
-            }
+        if state.increase_balance(to, amount).is_err() {
+            return false;
         }
-
-        false
+        true
     }
 
     pub fn self_balance(&self) -> U512 {
         let address = self.callee();
-
-        let accounts = self.contract_accounts.read().unwrap();
-        let contract_account = accounts.get_contract_account(address);
-        if let Some(account) = contract_account {
-            account.balance()
-        } else {
-            self.state.read().unwrap().get_balance(address)
-        }
+        self.state.read().unwrap().get_balance(address)
     }
 
     fn revert_balance(&self, address: &Address) {
-        let mut state = self.state.write().unwrap();
-        let iter = state.get_accounts_iter_mut();
-        for account in iter {
-            if &account.address() == address {
-                account.revert_balance();
-                return;
-            }
-        }
-
-        let mut accounts = self.contract_accounts.write().unwrap();
-        let iter = accounts.get_contract_accounts();
-        for (contract_address, account) in iter {
-            if address == contract_address {
-                account.revert_balance();
-                return;
-            }
-        }
+        self.state.write().unwrap().revert_balance(address);
     }
 }
 
@@ -329,7 +269,8 @@ pub struct MockVmState {
     error: Option<OdraError>,
     block_time: u64,
     attached_value: Option<U512>,
-    accounts: Vec<Account>,
+    accounts: Vec<Address>,
+    balances: HashMap<Address, Balance>,
 }
 
 impl MockVmState {
@@ -464,27 +405,63 @@ impl MockVmState {
     }
 
     fn get_balance(&self, address: Address) -> U512 {
-        let account = self
-            .accounts
-            .iter()
-            .find(|account| account.address() == address);
-        match account {
-            Some(account) => account.balance(),
-            None => U512::zero(),
+        self.balances
+            .get(&address)
+            .and_then(|balance| Some(balance.value()))
+            .unwrap_or_default()
+    }
+
+    fn set_balance(&mut self, address: Address, amount: U512) {
+        self.balances
+            .borrow_mut()
+            .insert(address, Balance::new(amount));
+    }
+
+    fn increase_balance(&mut self, address: &Address, amount: U512) -> Result<()> {
+        let balance = self
+            .balances
+            .borrow_mut()
+            .get_mut(address)
+            .context("Unknown address")?;
+        balance.increase(amount)
+    }
+
+    fn reduce_balance(&mut self, address: &Address, amount: U512) -> Result<()> {
+        let balance = self
+            .balances
+            .borrow_mut()
+            .get_mut(address)
+            .context("Unknown address")?;
+        balance.reduce(amount)
+    }
+
+    fn revert_balance(&mut self, address: &Address) {
+        if let Some(balance) = self.balances.borrow_mut().get_mut(address) {
+            balance.revert();
         }
-    }
-
-    fn get_accounts_iter_mut(&mut self) -> std::slice::IterMut<'_, Account> {
-        self.accounts.iter_mut()
-    }
-
-    fn accounts(&self) -> &[Account] {
-        self.accounts.as_ref()
     }
 }
 
 impl Default for MockVmState {
     fn default() -> Self {
+        let addresses = vec![
+            Address::new(b"alice"),
+            Address::new(b"bob"),
+            Address::new(b"cab"),
+            Address::new(b"dan"),
+            Address::new(b"ed"),
+            Address::new(b"frank"),
+            Address::new(b"garry"),
+            Address::new(b"garry"),
+            Address::new(b"harry"),
+            Address::new(b"ivan"),
+        ];
+
+        let mut balances = HashMap::<Address, Balance>::new();
+        for address in addresses.clone() {
+            balances.insert(address.clone(), 100_000.into());
+        }
+
         let mut backend = MockVmState {
             storage: Default::default(),
             exec_context: Default::default(),
@@ -493,20 +470,10 @@ impl Default for MockVmState {
             error: None,
             block_time: 0,
             attached_value: None,
-            accounts: vec![
-                Account::new(Address::new(b"alice"), 100_000.into()),
-                Account::new(Address::new(b"bob"), 100_000.into()),
-                Account::new(Address::new(b"cab"), 100_000.into()),
-                Account::new(Address::new(b"dan"), 100_000.into()),
-                Account::new(Address::new(b"ed"), 100_000.into()),
-                Account::new(Address::new(b"frank"), 100_000.into()),
-                Account::new(Address::new(b"garry"), 100_000.into()),
-                Account::new(Address::new(b"garry"), 100_000.into()),
-                Account::new(Address::new(b"harry"), 100_000.into()),
-                Account::new(Address::new(b"ivan"), 100_000.into()),
-            ],
+            accounts: addresses.clone(),
+            balances,
         };
-        backend.push_address(&backend.accounts.first().unwrap().address());
+        backend.push_address(addresses.first().unwrap());
         backend
     }
 }
@@ -516,7 +483,8 @@ mod tests {
     use std::collections::HashMap;
 
     use odra_types::{
-        Address, CLValue, EventData, ExecutionError, OdraError, RuntimeArgs, VmError,
+        bytesrepr::Bytes, Address, CLValue, EventData, ExecutionError, OdraError, RuntimeArgs,
+        VmError, U512,
     };
 
     use crate::{EntrypointArgs, EntrypointCall};
@@ -546,22 +514,14 @@ mod tests {
         // given an instance with a registered contract having one entrypoint
         let instance = MockVm::default();
 
-        let entrypoint: Vec<(String, (EntrypointArgs, EntrypointCall))> = vec![(
-            String::from("abc"),
-            (vec![], |_, _| Some(vec![1, 1, 1].into())),
-        )];
-        let constructors = HashMap::new();
-        let address = instance.register_contract(
-            None,
-            constructors,
-            entrypoint.into_iter().collect::<HashMap<_, _>>(),
-        );
+        let (contract_address, entrypoint, call_result) = setup_contract(&instance);
 
         // when call an existing entrypoint
-        let result = instance.call_contract(&address, "abc", &RuntimeArgs::new(), None);
+        let result =
+            instance.call_contract(&contract_address, &entrypoint, &RuntimeArgs::new(), None);
 
         // then returns the expected value
-        assert_eq!(result, Some(vec![1, 1, 1].into()));
+        assert_eq!(result, call_result);
     }
 
     #[test]
@@ -585,23 +545,24 @@ mod tests {
     fn test_call_non_existing_entrypoint() {
         // given an instance with a registered contract having one entrypoint
         let instance = MockVm::default();
-        let entrypoint: Vec<(String, (EntrypointArgs, EntrypointCall))> = vec![(
-            String::from("abc"),
-            (vec![], |_, _| Some(vec![1, 1, 1].into())),
-        )];
-        let address = instance.register_contract(
-            None,
-            HashMap::new(),
-            entrypoint.into_iter().collect::<HashMap<_, _>>(),
-        );
+
+        let (contract_address, entrypoint, _) = setup_contract(&instance);
 
         // when call non-existing entrypoint
-        instance.call_contract(&address, "cba", &RuntimeArgs::new(), None);
+        let invalid_entrypoint = entrypoint.chars().take(1).collect::<String>();
+        instance.call_contract(
+            &contract_address,
+            &invalid_entrypoint,
+            &RuntimeArgs::new(),
+            None,
+        );
 
         // then the vm is in error state
         assert_eq!(
             instance.error(),
-            Some(OdraError::VmError(VmError::NoSuchMethod("cba".to_string())))
+            Some(OdraError::VmError(VmError::NoSuchMethod(
+                invalid_entrypoint
+            )))
         );
     }
 
@@ -702,7 +663,72 @@ mod tests {
         assert_eq!(instance.callee(), contract_address);
     }
 
+    #[test]
+    fn test_call_contract_with_amount() {
+        let instance = MockVm::default();
+
+        let (contract_address, entrypoint_name, _) = setup_contract(&instance);
+
+        let caller = instance.get_address(0);
+        let caller_balance = instance.token_balance(caller);
+
+        instance.call_contract(
+            &contract_address,
+            &entrypoint_name,
+            &RuntimeArgs::new(),
+            Some(caller_balance),
+        );
+
+        assert_eq!(instance.token_balance(contract_address), caller_balance);
+
+        assert_eq!(instance.token_balance(caller), U512::zero());
+    }
+
+    #[test]
+    fn test_call_contract_with_amount_exceeding_balance() {
+        let instance = MockVm::default();
+
+        let (contract_address, entrypoint_name, _) = setup_contract(&instance);
+
+        let caller = instance.get_address(0);
+        let caller_balance = instance.token_balance(caller);
+
+        instance.call_contract(
+            &contract_address,
+            &entrypoint_name,
+            &RuntimeArgs::new(),
+            Some(caller_balance + U512::one()),
+        );
+
+        assert_eq!(
+            instance.error(),
+            Some(OdraError::VmError(VmError::BalanceExceeded))
+        );
+    }
+
     fn push_address(vm: &MockVm, address: &Address) {
         vm.state.write().unwrap().push_address(address);
+    }
+
+    fn setup_contract(instance: &MockVm) -> (Address, String, Option<Bytes>) {
+        let entrypoint_name = "abc";
+        let result: Bytes = vec![1, 1, 1].into();
+
+        let entrypoint: Vec<(String, (EntrypointArgs, EntrypointCall))> = vec![(
+            String::from(entrypoint_name),
+            (vec![], |_, _| Some(vec![1, 1, 1].into())),
+        )];
+        let constructors = HashMap::new();
+        let contract_address = instance.register_contract(
+            None,
+            constructors,
+            entrypoint.into_iter().collect::<HashMap<_, _>>(),
+        );
+
+        (
+            contract_address,
+            String::from(entrypoint_name),
+            Some(result),
+        )
     }
 }

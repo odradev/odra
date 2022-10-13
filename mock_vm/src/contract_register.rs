@@ -1,4 +1,3 @@
-use crate::account::Account;
 use crate::contract_container::ContractContainer;
 use odra_types::{bytesrepr::Bytes, RuntimeArgs};
 use odra_types::{Address, OdraError, VmError};
@@ -46,25 +45,5 @@ impl ContractRegister {
             Some(container) => call_fn(container),
             None => Err(OdraError::VmError(VmError::InvalidContractAddress)),
         }
-    }
-}
-
-#[derive(Default)]
-pub struct ContractAccounts {
-    accounts: HashMap<Address, Account>,
-}
-
-impl ContractAccounts {
-    pub fn add(&mut self, addr: Address) {
-        let contract_account = Account::zero_balance(addr);
-        self.accounts.insert(addr, contract_account);
-    }
-
-    pub fn get_contract_accounts(&mut self) -> IterMut<'_, Address, Account> {
-        self.accounts.iter_mut()
-    }
-
-    pub fn get_contract_account(&self, addr: Address) -> Option<&Account> {
-        self.accounts.get(&addr)
     }
 }
