@@ -27,7 +27,7 @@ impl Storage {
     }
 
     pub fn balance_of(&self, address: &Address) -> Option<&Balance> {
-        self.balances.get(&address)
+        self.balances.get(address)
     }
 
     pub fn set_balance(&mut self, address: Address, balance: Balance) {

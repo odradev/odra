@@ -357,7 +357,7 @@ impl MockVmState {
     fn get_balance(&self, address: Address) -> U512 {
         self.storage
             .balance_of(&address)
-            .and_then(|b| Some(b.value()))
+            .map(|b| b.value())
             .unwrap_or_default()
     }
 
@@ -391,7 +391,7 @@ impl Default for MockVmState {
 
         let mut balances = HashMap::<Address, Balance>::new();
         for address in addresses.clone() {
-            balances.insert(address.clone(), 100_000.into());
+            balances.insert(address, 100_000.into());
         }
 
         let mut backend = MockVmState {
