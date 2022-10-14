@@ -9,7 +9,6 @@ pub mod impl_item;
 pub mod method;
 pub mod module_impl;
 pub mod module_struct;
-mod utils;
 
 /// Odra module item.
 ///

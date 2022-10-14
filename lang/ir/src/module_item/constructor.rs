@@ -1,9 +1,6 @@
 use std::convert::TryFrom;
 
-use crate::{
-    attrs::{partition_attributes, OdraAttribute},
-    module_item::utils,
-};
+use crate::attrs::{partition_attributes, OdraAttribute};
 use quote::{quote, ToTokens};
 
 /// Odra constructor definition.
@@ -80,16 +77,9 @@ impl TryFrom<syn::ImplItemMethod> for Constructor {
         }
         let full_sig = method.sig.clone();
 
-        let is_payable = odra_attrs.iter().any(|attr| attr.is_payable());
-        let block = utils::payable_check(method.block, is_payable);
-
         Ok(Self {
             attrs: odra_attrs,
-            impl_item: syn::ImplItemMethod {
-                attrs,
-                block,
-                ..method
-            },
+            impl_item: syn::ImplItemMethod { attrs, ..method },
             ident,
             args,
             full_sig,

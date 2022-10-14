@@ -2,8 +2,6 @@ use quote::{quote, ToTokens};
 
 use crate::attrs::{partition_attributes, OdraAttribute};
 
-use super::utils;
-
 /// Odra method definition.
 ///
 /// # Examples
@@ -27,6 +25,10 @@ pub struct Method {
 impl Method {
     pub fn is_public(&self) -> bool {
         matches!(self.visibility, syn::Visibility::Public(_))
+    }
+
+    pub fn is_payable(&self) -> bool {
+        self.attrs.iter().any(|attr| attr.is_payable())
     }
 }
 
@@ -89,16 +91,9 @@ impl From<syn::ImplItemMethod> for Method {
         let full_sig = method.clone().sig;
         let visibility = method.vis.clone();
 
-        let is_payable = odra_attrs.iter().any(|attr| attr.is_payable());
-        let block = utils::payable_check(method.block, is_payable);
-
         Self {
             attrs: odra_attrs,
-            impl_item: syn::ImplItemMethod {
-                attrs,
-                block,
-                ..method
-            },
+            impl_item: syn::ImplItemMethod { attrs, ..method },
             ident,
             args,
             ret,

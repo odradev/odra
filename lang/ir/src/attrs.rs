@@ -120,7 +120,7 @@ impl TryFrom<syn::NestedMeta> for AttrKind {
 fn ensure_no_duplicates(attrs: &[AttrKind]) -> Result<(), syn::Error> {
     let mut set: HashSet<&AttrKind> = HashSet::new();
 
-    let contains_duplicate = attrs.into_iter().any(|attr| !set.insert(attr));
+    let contains_duplicate = attrs.iter().any(|attr| !set.insert(attr));
     match contains_duplicate {
         true => Err(syn::Error::new(
             Span::call_site(),
@@ -133,7 +133,7 @@ fn ensure_no_duplicates(attrs: &[AttrKind]) -> Result<(), syn::Error> {
 fn validate(attrs: &[AttrKind]) -> Result<(), syn::Error> {
     let mut has_constructor = false;
     let mut has_payable = false;
-    attrs.into_iter().for_each(|attr| match attr {
+    attrs.iter().for_each(|attr| match attr {
         AttrKind::Constructor => has_constructor = true,
         AttrKind::Payable => has_payable = true,
         _ => {}
