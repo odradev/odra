@@ -3,7 +3,7 @@ use odra_ir::module::{ImplItem, ModuleImpl};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 
-use crate::{generator::common, GenerateCode};
+use crate::{generator::common::{self, build_ref}, GenerateCode};
 
 #[derive(From)]
 pub struct ContractReference<'a> {
@@ -23,32 +23,15 @@ impl GenerateCode for ContractReference<'_> {
 
         let ref_constructors = build_constructors(&methods);
 
+        let contract_ref = build_ref(&ref_ident);
+
         quote! {
-            pub struct #ref_ident {
-                address: odra::types::Address,
-                attached_value: Option<odra::types::U512>,
-            }
+            #contract_ref
 
             impl #ref_ident {
                 #ref_entrypoints
 
                 #ref_constructors
-
-                pub fn address(&self) -> odra::types::Address {
-                    self.address.clone()
-                }
-
-                pub fn at(address: odra::types::Address) -> Self {
-                    Self { address, attached_value: None }
-                }
-
-                pub fn with_tokens<T>(&self, amount: T) -> Self
-                where T: Into<odra::types::U512> {
-                    Self {
-                        address: self.address,
-                        attached_value: Some(amount.into()),
-                    }
-                }
             }
         }
     }

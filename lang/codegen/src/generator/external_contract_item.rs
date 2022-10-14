@@ -2,7 +2,7 @@ use derive_more::From;
 use odra_ir::ExternalContractItem as IrExternalContractItem;
 use syn::parse_quote;
 
-use super::common;
+use super::common::{self, build_ref};
 use crate::GenerateCode;
 
 #[derive(From)]
@@ -40,32 +40,12 @@ impl GenerateCode for ExternalContractItem<'_> {
                 };
                 result
             });
+        let contract_ref = build_ref(ref_ident);
 
         quote::quote! {
             #item_trait
 
-            pub struct #ref_ident {
-                address: odra::types::Address,
-                attached_value: Option<odra::types::U512>,
-            }
-
-            impl #ref_ident {
-                fn at(address: odra::types::Address) -> Self {
-                    Self { address, attached_value: None }
-                }
-
-                fn address(&self) -> odra::types::Address {
-                    self.address.clone()
-                }
-
-                pub fn with_tokens<T>(&self, amount: T) -> Self
-                where T: Into<odra::types::U512> {
-                    Self {
-                        address: self.address,
-                        attached_value: Some(amount.into()),
-                    }
-                }
-            }
+            #contract_ref
 
             impl #trait_ident for #ref_ident {
                 # ( #methods) *

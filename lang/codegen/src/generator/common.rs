@@ -1,4 +1,4 @@
-use proc_macro2::TokenStream;
+use proc_macro2::{TokenStream, Ident};
 use quote::{quote, TokenStreamExt};
 
 pub(crate) fn generate_fn_body<T>(
@@ -34,6 +34,33 @@ where
             syn::FnArg::Typed(pat) => Some(pat.clone()),
         })
         .collect::<Vec<_>>()
+}
+
+pub(crate) fn build_ref(ref_ident: &Ident) -> TokenStream {
+    quote! {
+        pub struct #ref_ident {
+            address: odra::types::Address,
+            attached_value: Option<odra::types::U512>,
+        }
+
+        impl #ref_ident {
+            fn at(address: odra::types::Address) -> Self {
+                Self { address, attached_value: None }
+            }
+
+            fn address(&self) -> odra::types::Address {
+                self.address.clone()
+            }
+
+            pub fn with_tokens<T>(&self, amount: T) -> Self
+            where T: Into<odra::types::U512> {
+                Self {
+                    address: self.address,
+                    attached_value: Some(amount.into()),
+                }
+            }
+        }
+    }
 }
 
 fn parse_args<T>(syn_args: T) -> TokenStream
