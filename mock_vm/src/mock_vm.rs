@@ -43,7 +43,7 @@ impl MockVm {
                 .set_balance(address, U512::zero());
         }
 
-        // Call init if needed.
+        // Call constructor if needed.
         if let Some(constructor) = constructor {
             let (constructor_name, args, _) = constructor;
             self.call_constructor(&address, &constructor_name, &args);
@@ -384,7 +384,6 @@ impl Default for MockVmState {
             Address::new(b"ed"),
             Address::new(b"frank"),
             Address::new(b"garry"),
-            Address::new(b"garry"),
             Address::new(b"harry"),
             Address::new(b"ivan"),
         ];
@@ -475,7 +474,6 @@ mod tests {
     fn test_call_non_existing_entrypoint() {
         // given an instance with a registered contract having one entrypoint
         let instance = MockVm::default();
-
         let (contract_address, entrypoint, _) = setup_contract(&instance);
 
         // when call non-existing entrypoint
@@ -498,52 +496,69 @@ mod tests {
 
     #[test]
     fn test_caller_switching() {
+        // given an empty instance
         let instance = MockVm::default();
+
+        // when set a new caller
         let new_caller = Address::new(b"new caller");
         instance.set_caller(&new_caller);
-        // put a contract on stack
+        // put a fake contract on stack
         push_address(&instance, &new_caller);
 
+        // then the caller is set
         assert_eq!(instance.caller(), new_caller);
     }
 
     #[test]
     fn test_revert() {
+        // given an empty instance
         let instance = MockVm::default();
 
+        // when revert
         instance.revert(ExecutionError::new(1, "err").into());
 
+        // then an error is set
         assert_eq!(instance.error(), Some(ExecutionError::new(1, "err").into()));
     }
 
     #[test]
     fn test_read_write_value() {
+        // given an empty instance
         let instance = MockVm::default();
+
+        // when set a value
         let key = "key";
         let value = CLValue::from_t(32u8).unwrap();
-
         instance.set_var(key, &value);
 
+        // then the value can be read
         assert_eq!(instance.get_var(key), Some(value));
+        // then the value under unknown key does not exist
         assert_eq!(instance.get_var("other_key"), None);
     }
 
     #[test]
     fn test_read_write_dict() {
+        // given an empty instance
         let instance = MockVm::default();
+
+        // when set a value
         let dict = "dict";
         let key: [u8; 2] = [1, 2];
         let value = CLValue::from_t(32u8).unwrap();
-
         instance.set_dict_value(dict, &key, &value);
 
+        // then the value can be read
         assert_eq!(instance.get_dict_value(dict, &key), Some(value));
+        // then the value under the key in unknown dict does not exist
         assert_eq!(instance.get_dict_value("other_dict", &key), None);
+        // then the value under unknown key does not exist
         assert_eq!(instance.get_dict_value(dict, &[]), None);
     }
 
     #[test]
     fn events() {
+        // given an empty instance
         let instance = MockVm::default();
 
         let first_contract_address = Address::new(b"contract");
@@ -585,20 +600,24 @@ mod tests {
 
     #[test]
     fn test_current_contract_address() {
+        // given an empty instance
         let instance = MockVm::default();
+
+        // when push a contract into the stack
         let contract_address = Address::new(b"contract");
-        // put a contract on stack
         push_address(&instance, &contract_address);
 
+        // then the contract address in the callee
         assert_eq!(instance.callee(), contract_address);
     }
 
     #[test]
     fn test_call_contract_with_amount() {
+        // given an instance with a registered contract having one entrypoint
         let instance = MockVm::default();
-
         let (contract_address, entrypoint_name, _) = setup_contract(&instance);
 
+        // when call a contract with the whole balance of the caller
         let caller = instance.get_address(0);
         let caller_balance = instance.token_balance(caller);
 
@@ -609,20 +628,21 @@ mod tests {
             Some(caller_balance),
         );
 
+        // then the contract has the caller tokens and the caller balance is zero
         assert_eq!(instance.token_balance(contract_address), caller_balance);
-
         assert_eq!(instance.token_balance(caller), U512::zero());
     }
 
     #[test]
     fn test_call_contract_with_amount_exceeding_balance() {
+        // given an instance with a registered contract having one entrypoint
         let instance = MockVm::default();
-
         let (contract_address, entrypoint_name, _) = setup_contract(&instance);
 
         let caller = instance.get_address(0);
         let caller_balance = instance.token_balance(caller);
 
+        // when call a contract with the amount exceeding caller's balance
         instance.call_contract(
             &contract_address,
             &entrypoint_name,
@@ -630,6 +650,7 @@ mod tests {
             Some(caller_balance + U512::one()),
         );
 
+        // then the vm raises an error
         assert_eq!(
             instance.error(),
             Some(OdraError::VmError(VmError::BalanceExceeded))
