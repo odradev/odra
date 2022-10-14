@@ -66,8 +66,7 @@ impl TryFrom<syn::Attribute> for OdraAttribute {
             .unwrap()
             .unwrap();
 
-        ensure_no_duplicates(kinds.clone())?;
-        validate(kinds.clone())?;
+        validate(&kinds)?;
 
         Ok(OdraAttribute { kinds })
     }
@@ -118,11 +117,8 @@ impl TryFrom<syn::NestedMeta> for AttrKind {
     }
 }
 
-fn ensure_no_duplicates<I>(attrs: I) -> Result<(), syn::Error>
-where
-    I: IntoIterator<Item = AttrKind>,
-{
-    let mut set: HashSet<AttrKind> = HashSet::new();
+fn ensure_no_duplicates(attrs: &[AttrKind]) -> Result<(), syn::Error> {
+    let mut set: HashSet<&AttrKind> = HashSet::new();
 
     let contains_duplicate = attrs.into_iter().any(|attr| !set.insert(attr));
     match contains_duplicate {
@@ -134,10 +130,7 @@ where
     }
 }
 
-fn validate<I>(attrs: I) -> Result<(), syn::Error>
-where
-    I: IntoIterator<Item = AttrKind>,
-{
+fn validate(attrs: &[AttrKind]) -> Result<(), syn::Error> {
     let mut has_constructor = false;
     let mut has_payable = false;
     attrs.into_iter().for_each(|attr| match attr {
@@ -146,13 +139,13 @@ where
         _ => {}
     });
     if has_constructor && has_payable {
-        Err(syn::Error::new(
+        return Err(syn::Error::new(
             Span::call_site(),
             "constructor cannot be payable".to_string(),
-        ))
-    } else {
-        Ok(())
+        ));
     }
+
+    ensure_no_duplicates(attrs)
 }
 
 pub fn partition_attributes<I>(
@@ -176,8 +169,7 @@ where
         .into_iter()
         .flat_map(|attr| attr.kinds)
         .collect::<Vec<_>>();
-    ensure_no_duplicates(attrs.clone())?;
-    validate(attrs)?;
+    validate(&attrs)?;
     Ok((odra_attrs, other_attrs))
 }
 

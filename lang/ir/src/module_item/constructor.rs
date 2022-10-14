@@ -78,7 +78,7 @@ impl TryFrom<syn::ImplItemMethod> for Constructor {
                 "Constructor must not return value.",
             ));
         }
-        let full_sig = method.clone().sig;
+        let full_sig = method.sig.clone();
 
         let is_payable = odra_attrs.iter().any(|attr| attr.is_payable());
         let block = utils::payable_check(method.block, is_payable);

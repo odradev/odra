@@ -1,4 +1,4 @@
-use proc_macro2::{TokenStream, Ident};
+use proc_macro2::{Ident, TokenStream};
 use quote::{quote, TokenStreamExt};
 
 pub(crate) fn generate_fn_body<T>(

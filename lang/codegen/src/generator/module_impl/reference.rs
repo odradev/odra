@@ -3,7 +3,10 @@ use odra_ir::module::{ImplItem, ModuleImpl};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 
-use crate::{generator::common::{self, build_ref}, GenerateCode};
+use crate::{
+    generator::common::{self, build_ref},
+    GenerateCode,
+};
 
 #[derive(From)]
 pub struct ContractReference<'a> {
