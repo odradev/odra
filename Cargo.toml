@@ -7,5 +7,8 @@ members = [
     "mock_vm",
     "test_env_wrapper",
     "types",
-    "utils"
+    "utils",
+    "odra-casper/backend",
+    "odra-casper/test-env",
+    "odra-casper/shared",
 ]
