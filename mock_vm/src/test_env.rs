@@ -10,7 +10,7 @@ macro_rules! delegate_to_env {
     (
         $(
             $(#[$outer:meta])*
-            $func_name:ident($( $param_ident:ident : $param_ty:ty ),*) $( -> $ret:ty)*
+            fn $func_name:ident($( $param_ident:ident : $param_ty:ty ),*) $( -> $ret:ty)*
         )+
     ) => {
         $(
@@ -30,7 +30,7 @@ pub struct TestEnv;
 impl TestEnv {
     delegate_to_env! {
         /// Registers the contract in the test environment.
-        register_contract(
+        fn register_contract(
             constructor: Option<(String, RuntimeArgs, EntrypointCall)>,
             constructors: HashMap<String, (EntrypointArgs, EntrypointCall)>,
             entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>
@@ -38,22 +38,22 @@ impl TestEnv {
         /// Calls contract at `address` invoking the `entrypoint` with `args`.
         ///
         /// Returns optional raw bytes to further processing.
-        call_contract(
+        fn call_contract(
             address: &Address,
             entrypoint: &str,
             args: &RuntimeArgs,
             amount: Option<U512>
         ) -> Option<Bytes>
         /// Increases the current value of block_time.
-        advance_block_time_by(seconds: u64)
+        fn advance_block_time_by(seconds: u64)
         /// Returns the backend name.
-        get_backend_name() -> String
+        fn get_backend_name() -> String
         /// Replaces the current caller.
-        set_caller(address: &Address)
+        fn set_caller(address: &Address)
         /// Gets nth event emitted by the contract at `address`.
-        get_event(address: &Address, index: i32) -> Result<EventData, EventError>
+        fn get_event(address: &Address, index: i32) -> Result<EventData, EventError>
         /// Returns the balance of the account associated with the given address.
-        token_balance(address: Address) -> U512
+        fn token_balance(address: Address) -> U512
     }
 
     /// Expects the `block` execution will fail with the specific error.

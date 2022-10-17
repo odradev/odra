@@ -31,7 +31,7 @@ pub struct TestBackend {
         args: &RuntimeArgs,
         has_return: bool,
         amount: Option<U512>,
-    ) -> Bytes,
+    ) -> Option<Bytes>,
     /// Returns nth user account.
     get_account: fn(n: usize) -> Address,
     /// Replaces the current caller.
