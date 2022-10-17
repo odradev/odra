@@ -4,7 +4,7 @@ macro_rules! delegate_to_wrapper {
     (
         $(
             $(#[$outer:meta])*
-            $func_name:ident($( $param_ident:ident : $param_ty:ty ),*) $( -> $ret:ty)*
+            fn $func_name:ident($( $param_ident:ident : $param_ty:ty ),*) $( -> $ret:ty)*
         )+
     ) => {
         $(
@@ -23,34 +23,30 @@ pub struct TestEnv;
 
 impl TestEnv {
     delegate_to_wrapper! {
+        /// Calls contract at `address` invoking the `entrypoint` with `args`.
+        ///
+        /// Returns optional raw bytes to further processing.
+        fn call_contract(
+            address: &Address,
+            entrypoint: &str,
+            args: &RuntimeArgs,
+            has_return: bool,
+            amount: Option<U512>
+        ) -> Option<Bytes>
         ///Registers the contract in the test environment.
-        register_contract(contract_name: &str, args: &RuntimeArgs) -> Address
+        fn register_contract(contract_name: &str, args: &RuntimeArgs) -> Address
         ///Returns the backend name.
-        backend_name() -> String
+        fn backend_name() -> String
         ///Replaces the current caller.
-        set_caller(address: &Address)
+        fn set_caller(address: &Address)
         ///Returns nth test user account.
-        get_account(n: usize) -> Address
+        fn get_account(n: usize) -> Address
         ///Gets nth event emitted by the contract at `address`.
-        get_event(address: &Address, index: i32) -> Result<EventData, EventError>
+        fn get_event(address: &Address, index: i32) -> Result<EventData, EventError>
         ///Gets the current error from the test environment.
-        get_error() -> Option<OdraError>
+        fn get_error() -> Option<OdraError>
         ///Increases the current value of block_time.
-        advance_block_time_by(seconds: u64)
-    }
-
-    /// Calls contract at `address` invoking the `entrypoint` with `args`.
-    ///
-    /// Returns optional raw bytes to further processing.
-    pub fn call_contract(
-        address: &Address,
-        entrypoint: &str,
-        args: &RuntimeArgs,
-        has_return: bool,
-    ) -> Option<Bytes> {
-        odra_test_env_wrapper::on_backend(|env| {
-            Some(env.call_contract(address, entrypoint, args, has_return))
-        })
+        fn advance_block_time_by(seconds: u64)
     }
 
     /// Expects the `block` execution will fail with the specific error.

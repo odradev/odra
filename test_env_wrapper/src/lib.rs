@@ -24,7 +24,7 @@ pub struct TestBackend {
     register_contract: fn(name: &str, args: &RuntimeArgs) -> Address,
     /// Calls contract at `address` invoking the `entrypoint` with `args`.
     call_contract:
-        fn(addr: &Address, entrypoint: &str, args: &RuntimeArgs, has_return: bool) -> Bytes,
+        fn(addr: &Address, entrypoint: &str, args: &RuntimeArgs, has_return: bool) -> Option<Bytes>,
     /// Returns nth user account.
     get_account: fn(n: usize) -> Address,
     /// Replaces the current caller.
