@@ -73,7 +73,7 @@ impl GenerateCode for Deploy<'_> {
             impl #struct_ident {
                 pub fn deploy() -> #ref_ident {
                     let address = odra::TestEnv::register_contract(&#struct_snake_case, &odra::types::RuntimeArgs::new());
-                    #ref_ident { address }
+                    #ref_ident::at(address)
                 }
 
                 #constructors_wasm_test
@@ -93,7 +93,7 @@ impl GenerateCode for Deploy<'_> {
                     #constructors
 
                     let address = odra::TestEnv::register_contract(None, constructors, entrypoints);
-                    #ref_ident { address }
+                    #ref_ident::at(address)
                 }
 
                 #constructors_mock_vm
@@ -158,7 +158,7 @@ where
                     }
                 ));
                 let address = odra::TestEnv::register_contract(constructor, constructors, entrypoints);
-                #ref_ident { address }
+                #ref_ident::at(address)
             }
         }
     }).collect::<TokenStream>()
@@ -209,7 +209,7 @@ where
                     let mut args = { #args };
                     args.insert("constructor", stringify!(#constructor_ident)).unwrap();
                     let address = odra::TestEnv::register_contract(#struct_name_snake_case, &args);
-                    #ref_ident { address }
+                    #ref_ident::at(address)
                 }
             }
         })
@@ -233,9 +233,17 @@ where
             };
             let args = args_to_fn_args(&entrypoint.args);
             let arg_names = args_to_arg_names_stream(&entrypoint.args);
-
+            let attached_value_check = match entrypoint.is_payable() {
+                true => quote!(),
+                false => quote! {
+                    if odra::ContractEnv::attached_value() > odra::types::U512::zero() {
+                        odra::ContractEnv::revert(odra::types::ExecutionError::non_payable());
+                    }
+                },
+            };
             quote! {
                 entrypoints.insert(#name, (#arg_names, |name, args| {
+                    #attached_value_check
                     let instance = <#struct_ident as odra::Instance>::instance(name.as_str());
                     let result = instance.#ident(#args);
                     #return_value

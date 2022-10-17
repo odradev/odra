@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 
-use odra_types::{bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs};
+use odra_types::{
+    bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs, U512,
+};
 
-use crate::{mock_vm::default_accounts, EntrypointArgs, EntrypointCall};
+use crate::{EntrypointArgs, EntrypointCall};
 
 macro_rules! delegate_to_env {
     (
@@ -39,7 +41,8 @@ impl TestEnv {
         fn call_contract(
             address: &Address,
             entrypoint: &str,
-            args: &RuntimeArgs
+            args: &RuntimeArgs,
+            amount: Option<U512>
         ) -> Option<Bytes>
         /// Increases the current value of block_time.
         fn advance_block_time_by(seconds: u64)
@@ -49,6 +52,8 @@ impl TestEnv {
         fn set_caller(address: &Address)
         /// Gets nth event emitted by the contract at `address`.
         fn get_event(address: &Address, index: i32) -> Result<EventData, EventError>
+        /// Returns the balance of the account associated with the given address.
+        fn token_balance(address: Address) -> U512
     }
 
     /// Expects the `block` execution will fail with the specific error.
@@ -60,7 +65,6 @@ impl TestEnv {
         let _ = std::panic::catch_unwind(|| {
             block();
         });
-
         let exec_err = crate::borrow_env()
             .error()
             .expect("An error expected, but did not occur");
@@ -69,6 +73,11 @@ impl TestEnv {
 
     /// Returns nth test user account.
     pub fn get_account(n: usize) -> Address {
-        *default_accounts().get(n).unwrap()
+        crate::borrow_env().get_address(n)
+    }
+
+    /// Returns the value that represents one native token.
+    pub fn one_token() -> U512 {
+        U512::one()
     }
 }

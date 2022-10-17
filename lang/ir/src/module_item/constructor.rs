@@ -57,10 +57,10 @@ impl ToTokens for Constructor {
 impl TryFrom<syn::ImplItemMethod> for Constructor {
     type Error = syn::Error;
 
-    fn try_from(value: syn::ImplItemMethod) -> Result<Self, Self::Error> {
-        let (odra_attrs, attrs) = partition_attributes(value.clone().attrs).unwrap();
-        let ident = value.sig.ident.to_owned();
-        let args = value
+    fn try_from(method: syn::ImplItemMethod) -> Result<Self, Self::Error> {
+        let (odra_attrs, attrs) = partition_attributes(method.clone().attrs).unwrap();
+        let ident = method.sig.ident.to_owned();
+        let args = method
             .sig
             .inputs
             .iter()
@@ -69,16 +69,17 @@ impl TryFrom<syn::ImplItemMethod> for Constructor {
                 syn::FnArg::Typed(pat) => Some(pat.clone()),
             })
             .collect::<syn::punctuated::Punctuated<syn::PatType, syn::token::Comma>>();
-        if let syn::ReturnType::Type(_, _) = value.sig.output {
+        if let syn::ReturnType::Type(_, _) = method.sig.output {
             return Err(syn::Error::new_spanned(
-                value.sig,
+                method.sig,
                 "Constructor must not return value.",
             ));
         }
-        let full_sig = value.clone().sig;
+        let full_sig = method.sig.clone();
+
         Ok(Self {
             attrs: odra_attrs,
-            impl_item: syn::ImplItemMethod { attrs, ..value },
+            impl_item: syn::ImplItemMethod { attrs, ..method },
             ident,
             args,
             full_sig,

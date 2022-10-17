@@ -31,6 +31,12 @@ impl OdraAttribute {
             .iter()
             .any(|attr_kind| matches!(attr_kind, &AttrKind::Constructor))
     }
+
+    pub fn is_payable(&self) -> bool {
+        self.kinds
+            .iter()
+            .any(|attr_kind| matches!(attr_kind, &AttrKind::Payable))
+    }
 }
 
 impl From<OdraAttribute> for Attribute {
@@ -60,7 +66,7 @@ impl TryFrom<syn::Attribute> for OdraAttribute {
             .unwrap()
             .unwrap();
 
-        ensure_no_duplicates(kinds.clone())?;
+        validate(&kinds)?;
 
         Ok(OdraAttribute { kinds })
     }
@@ -70,6 +76,7 @@ impl TryFrom<syn::Attribute> for OdraAttribute {
 enum AttrKind {
     Constructor,
     Entrypoint,
+    Payable,
 }
 
 impl TryFrom<syn::NestedMeta> for AttrKind {
@@ -86,6 +93,7 @@ impl TryFrom<syn::NestedMeta> for AttrKind {
                     })
                     .and_then(|ident| match ident.as_str() {
                         "init" => Ok(AttrKind::Constructor),
+                        "payable" => Ok(AttrKind::Payable),
                         "entrypoint" => Ok(AttrKind::Entrypoint),
                         _ => Err(syn::Error::new_spanned(
                             meta,
@@ -109,20 +117,35 @@ impl TryFrom<syn::NestedMeta> for AttrKind {
     }
 }
 
-fn ensure_no_duplicates<I>(attrs: I) -> Result<(), syn::Error>
-where
-    I: IntoIterator<Item = AttrKind>,
-{
-    let mut set: HashSet<AttrKind> = HashSet::new();
+fn ensure_no_duplicates(attrs: &[AttrKind]) -> Result<(), syn::Error> {
+    let mut set: HashSet<&AttrKind> = HashSet::new();
 
-    let contains_duplicate = attrs.into_iter().any(|attr| !set.insert(attr));
+    let contains_duplicate = attrs.iter().any(|attr| !set.insert(attr));
     match contains_duplicate {
         true => Err(syn::Error::new(
             Span::call_site(),
-            "attr duplicte encountered".to_string(),
+            "attr duplicate encountered".to_string(),
         )),
         false => Ok(()),
     }
+}
+
+fn validate(attrs: &[AttrKind]) -> Result<(), syn::Error> {
+    let mut has_constructor = false;
+    let mut has_payable = false;
+    attrs.iter().for_each(|attr| match attr {
+        AttrKind::Constructor => has_constructor = true,
+        AttrKind::Payable => has_payable = true,
+        _ => {}
+    });
+    if has_constructor && has_payable {
+        return Err(syn::Error::new(
+            Span::call_site(),
+            "constructor cannot be payable".to_string(),
+        ));
+    }
+
+    ensure_no_duplicates(attrs)
 }
 
 pub fn partition_attributes<I>(
@@ -141,7 +164,12 @@ where
             Attribute::Other(other_attr) => Either::Right(other_attr),
         });
 
-    ensure_no_duplicates(odra_attrs.clone().into_iter().flat_map(|attr| attr.kinds))?;
+    let attrs = odra_attrs
+        .clone()
+        .into_iter()
+        .flat_map(|attr| attr.kinds)
+        .collect::<Vec<_>>();
+    validate(&attrs)?;
     Ok((odra_attrs, other_attrs))
 }
 
@@ -164,6 +192,37 @@ mod tests {
     }
 
     #[test]
+    fn payable_attr_works() {
+        let expected_value = Attribute::Odra(OdraAttribute {
+            kinds: vec![AttrKind::Payable],
+        });
+        assert_attribute_try_from(
+            syn::parse_quote! {
+                #[odra(payable)]
+            },
+            Ok(expected_value),
+        );
+    }
+
+    #[test]
+    fn constructor_cannot_be_payable() {
+        assert_attribute_try_from(
+            syn::parse_quote! {
+                #[odra(init, payable)]
+            },
+            Err("constructor cannot be payable"),
+        );
+
+        assert_attributes_try_from(
+            vec![
+                syn::parse_quote! { #[odra(init)] },
+                syn::parse_quote! { #[odra(payable)] },
+            ],
+            Err("constructor cannot be payable"),
+        );
+    }
+
+    #[test]
     fn non_odra_attr_works() {
         let expected_value: syn::Attribute = syn::parse_quote! {
             #[yoyo(abc)]
@@ -177,7 +236,7 @@ mod tests {
             syn::parse_quote! {
                 #[odra(init, init)]
             },
-            Err("attr duplicte encountered"),
+            Err("attr duplicate encountered"),
         );
 
         assert_attributes_try_from(
@@ -185,7 +244,7 @@ mod tests {
                 syn::parse_quote! { #[odra(init)] },
                 syn::parse_quote! { #[odra(init)] },
             ],
-            Err("attr duplicte encountered"),
+            Err("attr duplicate encountered"),
         )
     }
 

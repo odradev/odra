@@ -26,6 +26,10 @@ impl Method {
     pub fn is_public(&self) -> bool {
         matches!(self.visibility, syn::Visibility::Public(_))
     }
+
+    pub fn is_payable(&self) -> bool {
+        self.attrs.iter().any(|attr| attr.is_payable())
+    }
 }
 
 impl ToTokens for Method {
@@ -52,12 +56,17 @@ impl ToTokens for Method {
             syn::ReturnType::Type(_, ty) => quote!(<#ty as odra::types::CLTyped>::cl_type()),
         };
 
+        let ty = match self.attrs.iter().any(|attr| attr.is_payable()) {
+            true => quote!(odra::contract_def::EntrypointType::PublicPayable),
+            false => quote!(odra::contract_def::EntrypointType::Public),
+        };
+
         let ep = quote! {
             odra::contract_def::Entrypoint {
                 ident: String::from(#name),
                 args: vec![#args],
                 ret: #ret,
-                ty: odra::contract_def::EntrypointType::Public,
+                ty: #ty,
             },
         };
 
@@ -81,6 +90,7 @@ impl From<syn::ImplItemMethod> for Method {
         let ret = method.clone().sig.output;
         let full_sig = method.clone().sig;
         let visibility = method.vis.clone();
+
         Self {
             attrs: odra_attrs,
             impl_item: syn::ImplItemMethod { attrs, ..method },

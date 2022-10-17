@@ -1,4 +1,6 @@
-use odra_types::{bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs};
+use odra_types::{
+    bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs, U512,
+};
 
 macro_rules! delegate_to_wrapper {
     (
@@ -47,6 +49,10 @@ impl TestEnv {
         fn get_error() -> Option<OdraError>
         ///Increases the current value of block_time.
         fn advance_block_time_by(seconds: u64)
+        /// Returns the balance of the account associated with the given address.
+        fn token_balance(address: Address) -> U512
+        /// Returns the value that represents one native token.
+        fn one_token() -> U512
     }
 
     /// Expects the `block` execution will fail with the specific error.

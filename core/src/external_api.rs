@@ -5,14 +5,14 @@ pub mod test_env;
 pub mod contract_env;
 
 // This mock here is required because when loading a code of a module
-// in new contract repository, ContractEnv is required, but we semanticaly
+// in new contract repository, ContractEnv is required, but we semantically
 // doesn't make sense for `wasm-test` feature.
 #[cfg(feature = "wasm-test")]
 pub mod contract_env {
     use odra_types::{
         bytesrepr::{FromBytes, ToBytes},
         event::Event,
-        Address, CLTyped, CLValue, ExecutionError, RuntimeArgs,
+        Address, CLTyped, CLValue, ExecutionError, RuntimeArgs, U512,
     };
 
     pub struct ContractEnv;
@@ -69,6 +69,30 @@ pub mod contract_env {
         }
 
         pub fn print(_message: &str) {
+            unimplemented!()
+        }
+
+        pub fn attached_value() -> U512 {
+            unimplemented!()
+        }
+
+        pub fn one_token() -> U512 {
+            unimplemented!()
+        }
+
+        pub fn with_tokens(_amount: U512) {
+            unimplemented!()
+        }
+
+        pub fn token_balance(_address: Address) -> U512 {
+            unimplemented!()
+        }
+
+        pub fn transfer_tokens(_to: Address, _amount: U512) {
+            unimplemented!()
+        }
+
+        pub fn self_balance() -> U512 {
             unimplemented!()
         }
     }

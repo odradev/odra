@@ -1,12 +1,11 @@
+use crate::contract_container::ContractContainer;
 use odra_types::{bytesrepr::Bytes, RuntimeArgs};
 use odra_types::{Address, OdraError, VmError};
 use std::collections::HashMap;
 
-use crate::contract_container::ContractContainer;
-
 #[derive(Default)]
 pub struct ContractRegister {
-    pub contracts: HashMap<Address, ContractContainer>,
+    contracts: HashMap<Address, ContractContainer>,
 }
 
 impl ContractRegister {
