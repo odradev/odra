@@ -86,7 +86,7 @@ impl<T: FromBytes + ToBytes + CLTyped> Instance for Variable<T> {
 
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
-    use crate::{Instance, Variable, test_env};
+    use crate::{test_env, Instance, Variable};
     use odra_types::{
         arithmetic::ArithmeticsError,
         bytesrepr::{FromBytes, ToBytes},

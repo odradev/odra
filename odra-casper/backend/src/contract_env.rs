@@ -4,9 +4,12 @@
 use casper_contract::{
     contract_api::system::transfer_from_purse_to_account, unwrap_or_revert::UnwrapOrRevert,
 };
-use casper_types::{URef, U512, CLTyped, bytesrepr::{ToBytes, FromBytes}};
-use odra_types::{Address as OdraAddress, CLValue, EventData, ExecutionError, RuntimeArgs};
+use casper_types::{
+    bytesrepr::{FromBytes, ToBytes},
+    CLTyped, URef, U512,
+};
 use odra_casper_shared::{casper_address::CasperAddress, consts};
+use odra_types::{Address as OdraAddress, CLValue, EventData, ExecutionError, RuntimeArgs};
 
 use crate::casper_env;
 

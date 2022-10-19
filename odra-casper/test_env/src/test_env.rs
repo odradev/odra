@@ -1,7 +1,7 @@
 use crate::env::ENV;
 use casper_types::{bytesrepr::Bytes, RuntimeArgs};
-use odra_types::{event::EventError, Address as OdraAddress, EventData, OdraError, U512};
 use odra_casper_shared::casper_address::CasperAddress;
+use odra_types::{event::EventError, Address as OdraAddress, EventData, OdraError, U512};
 
 /// Returns backend name.
 pub fn backend_name() -> String {
@@ -73,7 +73,7 @@ pub fn get_event(address: &OdraAddress, index: i32) -> Result<EventData, EventEr
 }
 
 /// Increases the current value of block_time.
-fn advance_block_time_by(seconds: u64) {
+pub fn advance_block_time_by(seconds: u64) {
     ENV.with(|env| env.borrow_mut().advance_block_time_by(seconds))
 }
 
@@ -89,7 +89,6 @@ pub fn token_balance(address: OdraAddress) -> U512 {
 pub fn one_token() -> U512 {
     U512::from(1_000_000_000)
 }
-
 
 /// Expects the `block` execution will fail with the specific error.
 pub fn assert_exception<E, F>(err: E, block: F)

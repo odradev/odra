@@ -17,8 +17,8 @@ use casper_types::{
     runtime_args, ApiError, CLTyped, Contract, ContractHash, ContractPackageHash, Key, Motes,
     PublicKey, RuntimeArgs, SecretKey, URef, U512,
 };
-use odra_types::{event::EventError, EventData, ExecutionError, OdraError, VmError};
 use odra_casper_shared::{casper_address::CasperAddress, consts};
+use odra_types::{event::EventError, EventData, ExecutionError, OdraError, VmError};
 
 thread_local! {
     /// Thread local instance of [CasperTestEnv].

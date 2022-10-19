@@ -16,8 +16,8 @@ use casper_types::{
     ApiError, CLTyped, CLValue, ContractVersion, Key, RuntimeArgs, URef, U512,
 };
 
-use odra_types::EventData;
 use odra_casper_shared::{casper_address::CasperAddress, consts};
+use odra_types::EventData;
 
 lazy_static! {
     static ref SEEDS: Mutex<BTreeMap<String, URef>> = Mutex::new(BTreeMap::new());
@@ -203,7 +203,8 @@ pub fn call_contract_with_amount(
     let main_purse = get_or_create_purse();
 
     let mut args = runtime_args;
-    transfer_from_purse_to_purse(main_purse, cargo_purse, amount, None).unwrap_or_revert_with(ApiError::Transfer);
+    transfer_from_purse_to_purse(main_purse, cargo_purse, amount, None)
+        .unwrap_or_revert_with(ApiError::Transfer);
     args.insert(consts::CARGO_PURSE_ARG, cargo_purse)
         .unwrap_or_revert();
     let result = call_contract(address, entry_point, args);

@@ -90,7 +90,7 @@ impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped> Instance for
 
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
-    use crate::{Instance, Mapping, test_env};
+    use crate::{test_env, Instance, Mapping};
     use core::hash::Hash;
     use odra_types::{
         arithmetic::ArithmeticsError,

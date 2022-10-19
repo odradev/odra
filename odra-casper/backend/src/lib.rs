@@ -1,6 +1,6 @@
 //! Generate Casper contract and interact with Casper host.
 
-pub mod contract_env;
+pub mod backend;
 mod casper_env;
 pub mod codegen;
-pub mod backend;
+pub mod contract_env;

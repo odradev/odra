@@ -7,7 +7,6 @@ use odra_types::{
     Address, CLTyped, CLValue, ExecutionError, U512,
 };
 
-
 /// Returns the address of currently executing contract.
 pub fn self_address() -> Address {
     borrow_env().callee()
@@ -29,11 +28,7 @@ pub fn get_var(key: &str) -> Option<CLValue> {
 }
 
 /// Puts a key-value into a collection.
-pub fn set_dict_value<K: ToBytes, V: ToBytes + FromBytes + CLTyped>(
-    dict: &str,
-    key: &K,
-    value: V,
-) {
+pub fn set_dict_value<K: ToBytes, V: ToBytes + FromBytes + CLTyped>(dict: &str, key: &K, value: V) {
     borrow_env().set_dict_value(
         dict,
         key.to_bytes().unwrap().as_slice(),
