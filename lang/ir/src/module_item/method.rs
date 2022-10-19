@@ -43,7 +43,7 @@ impl ToTokens for Method {
                 let ty = &*arg.ty;
                 let ty = quote!(<#ty as odra::types::CLTyped>::cl_type());
                 quote! {
-                    odra::contract_def::Argument {
+                    odra::types::contract_def::Argument {
                         ident: String::from(stringify!(#name)),
                         ty: #ty,
                     },
@@ -57,12 +57,12 @@ impl ToTokens for Method {
         };
 
         let ty = match self.attrs.iter().any(|attr| attr.is_payable()) {
-            true => quote!(odra::contract_def::EntrypointType::PublicPayable),
-            false => quote!(odra::contract_def::EntrypointType::Public),
+            true => quote!(odra::types::contract_def::EntrypointType::PublicPayable),
+            false => quote!(odra::types::contract_def::EntrypointType::Public),
         };
 
         let ep = quote! {
-            odra::contract_def::Entrypoint {
+            odra::types::contract_def::Entrypoint {
                 ident: String::from(#name),
                 args: vec![#args],
                 ret: #ret,

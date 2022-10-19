@@ -14,12 +14,13 @@ odra-types = { version = "0.1.0", path = "../types" }
 odra-utils = { version = "0.1.0", path = "../utils" }
 odra-proc-macros = { version = "0.1.0", path = "../lang/proc_macros" }
 odra-mock-vm = { version = "0.1.0", path = "../mock_vm", optional = true }
-odra-test-env-wrapper = { version = "0.1.0", path = "../test_env_wrapper", optional = true  }
+odra-casper-backend = { version = "0.1.0", path = "../odra-casper/backend", optional = true }
+odra-casper-test-env = { version = "0.1.0", path = "../odra-casper/test_env", optional = true }
 ref_thread_local = "0.1.1"
 cfg-if = "1.0.0"
 
 [features]
 default = [ "mock-vm" ]
 mock-vm = [ "odra-mock-vm" ]
-wasm = [ ]
-wasm-test = [ "odra-test-env-wrapper" ]
+casper = [ "odra-casper-backend"]
+casper-test = ["odra-casper-test-env" ]

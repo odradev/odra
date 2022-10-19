@@ -16,7 +16,7 @@ use casper_types::{
     ApiError, CLTyped, CLValue, ContractVersion, Key, RuntimeArgs, URef, U512,
 };
 
-use odra::types::EventData;
+use odra_types::EventData;
 use odra_casper_shared::{casper_address::CasperAddress, consts};
 
 lazy_static! {
@@ -61,7 +61,7 @@ fn get_key<T: FromBytes + CLTyped>(name: &str) -> Option<T> {
     }
 }
 
-pub fn set_dict_value(seed: &str, key: &[u8], value: &CLValue) {
+pub fn set_dict_value(seed: &str, key: &[u8], value: CLValue) {
     let seed = get_seed(seed);
     let bytes: Bytes = value.to_bytes().unwrap_or_revert().into();
     storage::dictionary_put(seed, &to_dictionary_key(key), bytes);

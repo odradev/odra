@@ -59,7 +59,7 @@ impl GenerateCode for EventItem<'_> {
         quote! {
             impl odra::types::event::Event for #struct_ident {
               fn emit(&self) {
-                  odra::ContractEnv::emit_event(self)
+                  odra::contract_env::emit_event(self)
               }
 
               fn name(&self) -> String {

@@ -1,4 +1,4 @@
-use odra::contract_def::Entrypoint;
+use odra_types::contract_def::{Entrypoint, EntrypointType};
 use quote::{format_ident, quote, ToTokens};
 use syn::{self, punctuated::Punctuated, token::Comma, Ident, Path};
 
@@ -18,23 +18,23 @@ impl ToTokens for WasmEntrypoint<'_> {
             .for_each(|arg| fn_args.push(format_ident!("{}", arg.ident)));
 
         let payable = match self.0.ty {
-            odra::contract_def::EntrypointType::PublicPayable => quote! {
-                casper_backend::backend::handle_attached_value();
+            EntrypointType::PublicPayable => quote! {
+                casper_backend::contract_env::handle_attached_value();
             },
             _ => quote! {
-                casper_backend::backend::assert_no_attached_value();
+                casper_backend::contract_env::assert_no_attached_value();
             },
         };
 
         let payable_cleanup = match self.0.ty {
-            odra::contract_def::EntrypointType::PublicPayable => quote! {
-                casper_backend::backend::clear_attached_value();
+            EntrypointType::PublicPayable => quote! {
+                casper_backend::contract_env::clear_attached_value();
             },
             _ => quote!(),
         };
 
         let contract_call = match self.0.ret {
-            odra::types::CLType::Unit => quote! {
+            odra_types::CLType::Unit => quote! {
                 #args
                 contract.#entrypoint_ident(#fn_args);
             },
@@ -64,8 +64,8 @@ impl ToTokens for WasmEntrypoint<'_> {
 #[cfg(test)]
 mod tests {
     use crate::codegen::assert_eq_tokens;
-    use odra::contract_def::{Argument, EntrypointType};
-    use odra::types::CLType;
+    use odra_types::contract_def::{Argument, EntrypointType};
+    use odra_types::CLType;
 
     use super::*;
 
@@ -121,13 +121,13 @@ mod tests {
                     let cargo_purse = casper_backend::backend::casper_contract::contract_api::runtime::get_named_arg("purse");
                     let amount = casper_backend::backend::casper_contract::contract_api::system::get_purse_balance(cargo_purse).unwrap_or_default();
                     if amount > odra::types::U512::zero() {
-                        let contract_purse = casper_backend::backend::get_main_purse();
+                        let contract_purse = casper_backend::contract_env::get_main_purse();
                         casper_backend::backend::casper_contract::contract_api::system::transfer_from_purse_to_purse(cargo_purse, contract_purse, amount, None);
-                        casper_backend::backend::set_attached_value(amount);
+                        casper_backend::contract_env::set_attached_value(amount);
                     }
                     let contract = a::b::c::Contract::instance("contract");
                     contract.pay_me();
-                    casper_backend::backend::clear_attached_value();
+                    casper_backend::contract_env::clear_attached_value();
                 }
             ),
         );

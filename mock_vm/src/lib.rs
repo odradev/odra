@@ -3,17 +3,13 @@ use ref_thread_local::RefThreadLocal;
 mod balance;
 mod callstack;
 mod contract_container;
-mod contract_env;
+pub mod contract_env;
 mod contract_register;
 mod mock_vm;
 mod storage;
-mod test_env;
+pub mod test_env;
 
-pub use {
-    contract_container::{EntrypointArgs, EntrypointCall},
-    contract_env::ContractEnv,
-    test_env::TestEnv,
-};
+pub use contract_container::{EntrypointArgs, EntrypointCall};
 
 ref_thread_local::ref_thread_local!(
     static managed ENV: mock_vm::MockVm = mock_vm::MockVm::default();

@@ -1,5 +1,6 @@
 mod address;
 pub mod arithmetic;
+pub mod contract_def;
 mod error;
 pub mod event;
 mod serde;

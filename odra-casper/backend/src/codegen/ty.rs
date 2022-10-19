@@ -1,4 +1,4 @@
-use odra::types::CLType;
+use odra_types::CLType;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 

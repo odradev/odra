@@ -4,7 +4,7 @@ use self::{
     constructor::WasmConstructor, entrypoints_def::ContractEntrypoints,
     wasm_entrypoint::WasmEntrypoint,
 };
-use odra::contract_def::{ContractDef, EntrypointType};
+use odra_types::contract_def::{ContractDef, EntrypointType};
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote, ToTokens};
 use syn::{punctuated::Punctuated, Path, PathSegment, Token};
@@ -43,7 +43,7 @@ fn generate_entrypoints(contract_def: &ContractDef, fqn: String) -> TokenStream2
 
 fn generate_call(contract_def: &ContractDef, ref_fqn: String) -> TokenStream2 {
     let entrypoints = ContractEntrypoints(&contract_def.entrypoints);
-    let contract_def_name_snake = odra::utils::camel_to_snake(&contract_def.ident);
+    let contract_def_name_snake = odra_utils::camel_to_snake(&contract_def.ident);
     let package_hash = format!("{}_package_hash", contract_def_name_snake);
 
     let constructors = contract_def
@@ -98,8 +98,8 @@ fn assert_eq_tokens<A: ToTokens, B: ToTokens>(left: A, right: B) {
 
 #[cfg(test)]
 mod tests {
-    use odra::contract_def::{Argument, ContractDef, Entrypoint, EntrypointType};
-    use odra::types::CLType;
+    use odra_types::contract_def::{Argument, ContractDef, Entrypoint, EntrypointType};
+    use odra_types::CLType;
     use quote::{quote, ToTokens};
 
     use super::constructor::WasmConstructor;

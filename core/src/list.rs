@@ -1,6 +1,6 @@
 use core::ops::Range;
 
-use crate::{ContractEnv, Instance, Mapping, UnwrapOrRevert, Variable};
+use crate::{contract_env, Instance, Mapping, UnwrapOrRevert, Variable};
 use odra_types::{
     bytesrepr::{FromBytes, ToBytes},
     CLTyped, CollectionError,
@@ -41,7 +41,7 @@ impl<T: ToBytes + FromBytes + CLTyped> List<T> {
     pub fn replace(&self, index: u32, value: T) -> T {
         let current_index = self.index.get_or_default();
         if current_index < index {
-            ContractEnv::revert(CollectionError::IndexOutOfBounds);
+            contract_env::revert(CollectionError::IndexOutOfBounds);
         }
 
         let prev_value = self.values.get(&index).unwrap_or_revert();
@@ -150,7 +150,7 @@ impl<T: ToBytes + FromBytes + CLTyped> Instance for List<T> {
 
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
-    use odra_mock_vm::TestEnv;
+    use crate::test_env;
     use odra_types::{
         bytesrepr::{FromBytes, ToBytes},
         CLTyped, CollectionError,
@@ -200,7 +200,7 @@ mod tests {
         assert_eq!(list.get(4).unwrap(), 10);
 
         // When replaces nonexistent value then reverts
-        TestEnv::assert_exception(CollectionError::IndexOutOfBounds, || {
+        test_env::assert_exception(CollectionError::IndexOutOfBounds, || {
             list.replace(100, 99);
         });
     }

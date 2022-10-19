@@ -69,10 +69,10 @@ impl GenerateCode for Deploy<'_> {
 
         let struct_snake_case = odra_utils::camel_to_snake(&struct_name);
         quote! {
-            #[cfg(feature = "wasm-test")]
+            #[cfg(feature = "casper-test")]
             impl #struct_ident {
                 pub fn deploy() -> #ref_ident {
-                    let address = odra::TestEnv::register_contract(&#struct_snake_case, &odra::types::RuntimeArgs::new());
+                    let address = odra::test_env::register_contract(&#struct_snake_case, &odra::types::RuntimeArgs::new());
                     #ref_ident::at(address)
                 }
 
@@ -92,7 +92,7 @@ impl GenerateCode for Deploy<'_> {
                     let mut constructors = HashMap::<String, (Vec<String>, fn(String, RuntimeArgs) -> Option<Bytes>)>::new();
                     #constructors
 
-                    let address = odra::TestEnv::register_contract(None, constructors, entrypoints);
+                    let address = odra::test_env::register_contract(None, constructors, entrypoints);
                     #ref_ident::at(address)
                 }
 
@@ -157,7 +157,7 @@ where
                         None
                     }
                 ));
-                let address = odra::TestEnv::register_contract(constructor, constructors, entrypoints);
+                let address = odra::test_env::register_contract(constructor, constructors, entrypoints);
                 #ref_ident::at(address)
             }
         }
@@ -208,7 +208,7 @@ where
                     use odra::types::RuntimeArgs;
                     let mut args = { #args };
                     args.insert("constructor", stringify!(#constructor_ident)).unwrap();
-                    let address = odra::TestEnv::register_contract(#struct_name_snake_case, &args);
+                    let address = odra::test_env::register_contract(#struct_name_snake_case, &args);
                     #ref_ident::at(address)
                 }
             }
@@ -236,8 +236,8 @@ where
             let attached_value_check = match entrypoint.is_payable() {
                 true => quote!(),
                 false => quote! {
-                    if odra::ContractEnv::attached_value() > odra::types::U512::zero() {
-                        odra::ContractEnv::revert(odra::types::ExecutionError::non_payable());
+                    if odra::contract_env::attached_value() > odra::types::U512::zero() {
+                        odra::contract_env::revert(odra::types::ExecutionError::non_payable());
                     }
                 },
             };

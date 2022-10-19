@@ -6,8 +6,7 @@ use odra_types::{
     CLTyped,
 };
 
-use crate::ContractEnv;
-use crate::{instance::Instance, UnwrapOrRevert};
+use crate::{contract_env, instance::Instance, UnwrapOrRevert};
 
 /// Data structure for storing a single value.
 #[derive(PartialEq, Eq, Debug)]
@@ -32,7 +31,7 @@ impl<V: ToBytes + FromBytes + CLTyped + OverflowingAdd + Default> Variable<V> {
     pub fn add(&self, value: V) {
         let current_value = self.get().unwrap_or_default();
         let new_value = current_value.overflowing_add(value).unwrap_or_revert();
-        ContractEnv::set_var(&self.name, new_value);
+        contract_env::set_var(&self.name, new_value);
     }
 }
 
@@ -44,7 +43,7 @@ impl<V: ToBytes + FromBytes + CLTyped + OverflowingSub + Default> Variable<V> {
     pub fn subtract(&self, value: V) {
         let current_value = self.get().unwrap_or_default();
         let new_value = current_value.overflowing_sub(value).unwrap_or_revert();
-        ContractEnv::set_var(&self.name, new_value);
+        contract_env::set_var(&self.name, new_value);
     }
 }
 
@@ -59,12 +58,12 @@ impl<T: FromBytes + ToBytes + CLTyped> Variable<T> {
 
     /// Reads from the storage or returns `None` or reverts something unexpected happens.
     pub fn get(&self) -> Option<T> {
-        ContractEnv::get_var(&self.name).map(|value| value.into_t::<T>().unwrap_or_revert())
+        contract_env::get_var(&self.name).map(|value| value.into_t::<T>().unwrap_or_revert())
     }
 
     /// Stores `value` to the storage.
     pub fn set(&self, value: T) {
-        ContractEnv::set_var(&self.name, value);
+        contract_env::set_var(&self.name, value);
     }
 
     /// Return the named key path to the variable.
@@ -87,8 +86,7 @@ impl<T: FromBytes + ToBytes + CLTyped> Instance for Variable<T> {
 
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
-    use crate::{Instance, Variable};
-    use odra_mock_vm::TestEnv;
+    use crate::{Instance, Variable, test_env};
     use odra_types::{
         arithmetic::ArithmeticsError,
         bytesrepr::{FromBytes, ToBytes},
@@ -140,7 +138,7 @@ mod tests {
 
         // When add 1 to max value.
         // Then should revert.
-        TestEnv::assert_exception(ArithmeticsError::AdditionOverflow, || {
+        test_env::assert_exception(ArithmeticsError::AdditionOverflow, || {
             var.add(1);
         });
     }
@@ -158,7 +156,7 @@ mod tests {
 
         // When subtraction causes overflow.
         // Then it reverts.
-        TestEnv::assert_exception(ArithmeticsError::SubtractingOverflow, || {
+        test_env::assert_exception(ArithmeticsError::SubtractingOverflow, || {
             var.subtract(2);
         });
     }

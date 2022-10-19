@@ -5,10 +5,11 @@ members = [
     "lang/ir",
     "lang/proc_macros",
     "mock_vm",
-    "test_env_wrapper",
     "types",
     "utils",
     "odra-casper/backend",
-    "odra-casper/test-env",
+    "odra-casper/test_env",
     "odra-casper/shared",
 ]
+
+exclude = [ "contract", "contract/builder" ]

@@ -17,7 +17,7 @@ use casper_types::{
     runtime_args, ApiError, CLTyped, Contract, ContractHash, ContractPackageHash, Key, Motes,
     PublicKey, RuntimeArgs, SecretKey, URef, U512,
 };
-use odra::types::{event::EventError, EventData, ExecutionError, OdraError, VmError};
+use odra_types::{event::EventError, EventData, ExecutionError, OdraError, VmError};
 use odra_casper_shared::{casper_address::CasperAddress, consts};
 
 thread_local! {
@@ -220,7 +220,7 @@ impl CasperTestEnv {
             .into_t()
             .unwrap();
 
-        let event_position = odra::utils::event_absolute_position(events_length as usize, index)?;
+        let event_position = odra_utils::event_absolute_position(events_length as usize, index)?;
 
         match self.context.query_dictionary_item(
             None,

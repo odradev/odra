@@ -1,4 +1,4 @@
-use odra::contract_def::Entrypoint;
+use odra_types::contract_def::Entrypoint;
 use quote::{format_ident, quote, ToTokens};
 use syn::{punctuated::Punctuated, token::Comma, Ident, Path};
 
@@ -42,7 +42,7 @@ impl ToTokens for WasmConstructor<'_> {
             .collect();
 
         tokens.extend(quote! {
-            if casper_backend::backend::named_arg_exists("constructor") {
+            if casper_backend::contract_env::named_arg_exists("constructor") {
                 use casper_backend::backend::casper_contract::unwrap_or_revert::UnwrapOrRevert;
                 let constructor_access: casper_backend::backend::casper_types::URef =
                     casper_backend::backend::casper_contract::contract_api::storage::create_contract_user_group(
@@ -80,8 +80,8 @@ impl ToTokens for WasmConstructor<'_> {
 
 #[cfg(test)]
 mod tests {
-    use odra::contract_def::{Argument, EntrypointType};
-    use odra::types::CLType;
+    use odra_types::contract_def::{Argument, EntrypointType};
+    use odra_types::CLType;
 
     use crate::codegen::assert_eq_tokens;
 
@@ -110,7 +110,7 @@ mod tests {
         assert_eq_tokens(
             wasm_constructor,
             quote! {
-                if casper_backend::backend::named_arg_exists("constructor") {
+                if casper_backend::contract_env::named_arg_exists("constructor") {
                     use casper_backend::backend::casper_contract::unwrap_or_revert::UnwrapOrRevert;
                     let constructor_access: casper_backend::backend::casper_types::URef = casper_backend::backend::casper_contract::contract_api::storage::create_contract_user_group(
                         contract_package_hash , "constructor" , 1 , Default::default()

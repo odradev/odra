@@ -1,7 +1,6 @@
 use std::{fmt::Debug, hash::Hash, marker::PhantomData};
 
-use crate::ContractEnv;
-use crate::UnwrapOrRevert;
+use crate::{contract_env, UnwrapOrRevert};
 use odra_types::{
     arithmetic::{OverflowingAdd, OverflowingSub},
     bytesrepr::{FromBytes, ToBytes},
@@ -30,13 +29,13 @@ impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped> Mapping<K, V
 
     /// Reads `key` from the storage or returns `None`.
     pub fn get(&self, key: &K) -> Option<V> {
-        let result = ContractEnv::get_dict_value(&self.name, key);
+        let result = contract_env::get_dict_value(&self.name, key);
         result.map(|value| value.into_t::<V>().unwrap_or_revert())
     }
 
     /// Sets `value` under `key` to the storage. It overrides by default.
     pub fn set(&self, key: &K, value: V) {
-        ContractEnv::set_dict_value(&self.name, key, value);
+        contract_env::set_dict_value(&self.name, key, value);
     }
 }
 
@@ -57,7 +56,7 @@ impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped + Overflowing
     pub fn add(&self, key: &K, value: V) {
         let current_value = self.get(key).unwrap_or_default();
         let new_value = current_value.overflowing_add(value).unwrap_or_revert();
-        ContractEnv::set_dict_value(&self.name, key, new_value);
+        contract_env::set_dict_value(&self.name, key, new_value);
     }
 }
 
@@ -73,7 +72,7 @@ impl<
     pub fn subtract(&self, key: &K, value: V) {
         let current_value = self.get(key).unwrap_or_default();
         let new_value = current_value.overflowing_sub(value).unwrap_or_revert();
-        ContractEnv::set_dict_value(&self.name, key, new_value);
+        contract_env::set_dict_value(&self.name, key, new_value);
     }
 }
 
@@ -91,9 +90,8 @@ impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped> Instance for
 
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
-    use crate::{Instance, Mapping};
+    use crate::{Instance, Mapping, test_env};
     use core::hash::Hash;
-    use odra_mock_vm::TestEnv;
     use odra_types::{
         arithmetic::ArithmeticsError,
         bytesrepr::{FromBytes, ToBytes},
@@ -148,7 +146,7 @@ mod tests {
 
         // When add 1 to max value.
         // Then should revert.
-        TestEnv::assert_exception(ArithmeticsError::AdditionOverflow, || {
+        test_env::assert_exception(ArithmeticsError::AdditionOverflow, || {
             var.add(&key, 1);
         });
     }
@@ -167,7 +165,7 @@ mod tests {
 
         // When subtraction causes overflow.
         // Then it reverts.
-        TestEnv::assert_exception(ArithmeticsError::SubtractingOverflow, || {
+        test_env::assert_exception(ArithmeticsError::SubtractingOverflow, || {
             var.subtract(&key, 2);
         });
     }

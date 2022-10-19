@@ -1,4 +1,4 @@
-use odra::contract_def::Argument;
+use odra_types::contract_def::Argument;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 
@@ -22,7 +22,7 @@ impl ToTokens for CasperArgs<'_> {
 mod tests {
     use super::*;
     use crate::codegen::assert_eq_tokens;
-    use odra::types::CLType;
+    use odra_types::CLType;
 
     #[test]
     fn test_empty_args() {
