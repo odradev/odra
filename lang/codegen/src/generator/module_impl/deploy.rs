@@ -72,7 +72,7 @@ impl GenerateCode for Deploy<'_> {
             #[cfg(feature = "casper-test")]
             impl #struct_ident {
                 pub fn deploy() -> #ref_ident {
-                    let address = odra::test_env::register_contract(&#struct_snake_case, &odra::types::RuntimeArgs::new());
+                    let address = odra::test_env::register_contract(&#struct_snake_case, odra::types::CallArgs::new());
                     #ref_ident::at(address)
                 }
 
@@ -84,12 +84,12 @@ impl GenerateCode for Deploy<'_> {
 
                 pub fn deploy() -> #ref_ident {
                     use std::collections::HashMap;
-                    use odra::types::{bytesrepr::Bytes, RuntimeArgs, runtime_args};
+                    use odra::types::{Bytes, CallArgs};
 
-                    let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, RuntimeArgs) -> Option<Bytes>)>::new();
+                    let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Option<Bytes>)>::new();
                     #entrypoints
 
-                    let mut constructors = HashMap::<String, (Vec<String>, fn(String, RuntimeArgs) -> Option<Bytes>)>::new();
+                    let mut constructors = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Option<Bytes>)>::new();
                     #constructors
 
                     let address = odra::test_env::register_contract(None, constructors, entrypoints);
@@ -137,18 +137,18 @@ where
         quote! {
             pub #deploy_fn_sig {
                 use std::collections::HashMap;
-                use odra::types::{bytesrepr::Bytes, RuntimeArgs};
+                use odra::types::{Bytes, CallArgs};
 
-                let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, RuntimeArgs) -> Option<Bytes>)>::new();
+                let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Option<Bytes>)>::new();
                 #entrypoints_stream
 
-                let mut constructors = HashMap::<String, (Vec<String>, fn(String, RuntimeArgs) -> Option<Bytes>)>::new();
+                let mut constructors = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Option<Bytes>)>::new();
                 #constructors_stream
 
                 let args = {
                     #args
                 };
-                let constructor: Option<(String, RuntimeArgs, fn(String, RuntimeArgs) -> Option<Bytes>)> = Some((
+                let constructor: Option<(String, CallArgs, fn(String, CallArgs) -> Option<Bytes>)> = Some((
                     stringify!(#constructor_ident).to_string(),
                     args,
                     |name, args| {
@@ -205,7 +205,7 @@ where
 
             quote! {
                 pub #deploy_fn_sig {
-                    use odra::types::RuntimeArgs;
+                    use odra::types::CallArgs;
                     let mut args = { #args };
                     args.insert("constructor", stringify!(#constructor_ident)).unwrap();
                     let address = odra::test_env::register_contract(#struct_name_snake_case, &args);
@@ -227,8 +227,8 @@ where
             let return_value = match &entrypoint.ret {
                 ReturnType::Default => quote!(None),
                 ReturnType::Type(_, _) => quote! {
-                    let bytes = odra::types::bytesrepr::ToBytes::to_bytes(&result).unwrap();
-                    Some(odra::types::bytesrepr::Bytes::from(bytes))
+                    let bytes = odra::types::ToBytes::to_bytes(&result).unwrap();
+                    Some(odra::types::Bytes::from(bytes))
                 },
             };
             let args = args_to_fn_args(&entrypoint.args);
@@ -236,8 +236,8 @@ where
             let attached_value_check = match entrypoint.is_payable() {
                 true => quote!(),
                 false => quote! {
-                    if odra::contract_env::attached_value() > odra::types::U512::zero() {
-                        odra::contract_env::revert(odra::types::ExecutionError::non_payable());
+                    if odra::contract_env::attached_value() > odra::types::Balance::zero() {
+                        odra::contract_env::revert(odra::types::odra_types::ExecutionError::non_payable());
                     }
                 },
             };
@@ -297,7 +297,7 @@ fn args_to_runtime_args_stream<'a, T>(args: T) -> TokenStream
 where
     T: IntoIterator<Item = &'a syn::PatType>,
 {
-    let mut tokens = quote!(let mut args = RuntimeArgs::new(););
+    let mut tokens = quote!(let mut args = odra::types::CallArgs::new(););
     tokens.append_all(args.into_iter().map(|arg| {
         let pat = &*arg.pat;
         quote! { args.insert(stringify!(#pat), #pat).unwrap(); }

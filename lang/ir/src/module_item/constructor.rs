@@ -45,7 +45,7 @@ impl ToTokens for Constructor {
             odra::types::contract_def::Entrypoint {
                 ident: String::from(#name),
                 args: vec![#args],
-                ret: odra::types::CLType::Unit,
+                ret: odra::types::Type::Unit,
                 ty: odra::types::contract_def::EntrypointType::Constructor,
             },
         };

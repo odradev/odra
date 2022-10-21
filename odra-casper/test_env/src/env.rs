@@ -13,12 +13,15 @@ use casper_execution_engine::core::engine_state::{
 pub use casper_execution_engine::core::execution::Error as CasperExecutionError;
 use casper_types::{
     account::{Account, AccountHash},
-    bytesrepr::{Bytes, FromBytes, ToBytes},
-    runtime_args, ApiError, CLTyped, Contract, ContractHash, ContractPackageHash, Key, Motes,
-    PublicKey, RuntimeArgs, SecretKey, URef, U512,
+    bytesrepr::{Bytes, ToBytes},
+    runtime_args, ApiError, Contract, ContractHash, ContractPackageHash, Key, Motes, PublicKey,
+    RuntimeArgs, SecretKey, URef,
 };
-use odra_casper_shared::{casper_address::CasperAddress, consts};
-use odra_types::{event::EventError, EventData, ExecutionError, OdraError, VmError};
+use odra_casper_shared::consts;
+use odra_casper_types::{
+    odra_types::{event::EventError, EventData, ExecutionError, OdraError, VmError},
+    Address, Balance, BlockTime, CallArgs, OdraType,
+};
 
 thread_local! {
     /// Thread local instance of [CasperTestEnv].
@@ -27,20 +30,20 @@ thread_local! {
 
 /// Wrapper for InMemoryWasmTestBuilder.
 pub struct CasperTestEnv {
-    accounts: Vec<CasperAddress>,
-    active_account: CasperAddress,
+    accounts: Vec<Address>,
+    active_account: Address,
     context: InMemoryWasmTestBuilder,
-    block_time: u64,
+    block_time: BlockTime,
     calls_counter: u32,
     error: Option<OdraError>,
-    attached_value: Option<U512>,
+    attached_value: Option<Balance>,
 }
 
 impl CasperTestEnv {
     /// Create a new instance with predefined accounts.
     pub fn new() -> Self {
         let mut genesis_config = DEFAULT_GENESIS_CONFIG.clone();
-        let mut accounts: Vec<CasperAddress> = Vec::new();
+        let mut accounts: Vec<Address> = Vec::new();
         for i in 0..20 {
             // Create keypair.
             let secret_key = SecretKey::ed25519_from_bytes([i; 32]).unwrap();
@@ -52,7 +55,7 @@ impl CasperTestEnv {
             // Create a GenesisAccount.
             let account = GenesisAccount::account(
                 public_key,
-                Motes::new(U512::from(DEFAULT_ACCOUNT_INITIAL_BALANCE)),
+                Motes::new(Balance::from(DEFAULT_ACCOUNT_INITIAL_BALANCE)),
                 None,
             );
             genesis_config.ee_config_mut().push_account(account);
@@ -80,7 +83,7 @@ impl CasperTestEnv {
     }
 
     /// Deploy WASM file with args.
-    pub fn deploy_contract(&mut self, wasm_path: &str, args: RuntimeArgs) {
+    pub fn deploy_contract(&mut self, wasm_path: &str, args: CallArgs) {
         let session_code = PathBuf::from(wasm_path);
         let deploy_item = DeployItemBuilder::new()
             .with_empty_payment_bytes(runtime_args! {ARG_AMOUNT => *DEFAULT_PAYMENT})
@@ -98,13 +101,12 @@ impl CasperTestEnv {
     }
 
     /// Call contract.
-    pub fn call_contract(
+    pub fn call_contract<T: OdraType>(
         &mut self,
         hash: ContractPackageHash,
         entry_point: &str,
-        args: RuntimeArgs,
-        has_return: bool,
-    ) -> Option<Bytes> {
+        args: CallArgs,
+    ) -> T {
         self.error = None;
 
         let session_code = include_bytes!("../getter_proxy.wasm").to_vec();
@@ -113,7 +115,6 @@ impl CasperTestEnv {
             "contract_package_hash" => hash,
             "entry_point" => entry_point,
             "args" => Bytes::from(args_bytes),
-            "has_return" => has_return,
             "attached_value" => self.attached_value,
             "amount" => self.attached_value.unwrap_or_default(),
         };
@@ -136,21 +137,19 @@ impl CasperTestEnv {
 
         if self.context.is_error() {
             self.error = Some(parse_error(self.context.get_error().unwrap()));
-            None
-        } else if has_return {
-            Some(self.get_account_value(active_account, "result"))
+            self.get_account_value(active_account, "result")
         } else {
-            None
+            self.get_account_value(active_account, "result")
         }
     }
 
     /// Set caller.
-    pub fn set_caller(&mut self, account: CasperAddress) {
+    pub fn set_caller(&mut self, account: Address) {
         self.active_account = account;
     }
 
     /// Get one of the predefined accounts.
-    pub fn get_account(&self, n: usize) -> CasperAddress {
+    pub fn get_account(&self, n: usize) -> Address {
         *self.accounts.get(n).unwrap()
     }
 
@@ -164,7 +163,7 @@ impl CasperTestEnv {
     }
 
     /// Read a value from Account's named keys.
-    pub fn get_account_value<T: FromBytes + CLTyped>(&self, hash: AccountHash, name: &str) -> T {
+    pub fn get_account_value<T: OdraType>(&self, hash: AccountHash, name: &str) -> T {
         self.context
             .query(None, Key::Account(hash), &[name.to_string()])
             .unwrap()
@@ -191,7 +190,7 @@ impl CasperTestEnv {
     }
 
     /// Returns an event from the given contract.
-    pub fn get_event(&self, address: CasperAddress, index: i32) -> Result<EventData, EventError> {
+    pub fn get_event(&self, address: Address, index: i32) -> Result<EventData, EventError> {
         let address = address.as_contract_package_hash().unwrap();
 
         let contract_hash: ContractHash = self.get_contract_package_hash(*address);
@@ -241,22 +240,22 @@ impl CasperTestEnv {
     }
 
     /// Increases the current value of block_time.
-    pub fn advance_block_time_by(&mut self, seconds: u64) {
+    pub fn advance_block_time_by(&mut self, seconds: BlockTime) {
         self.block_time += seconds;
     }
 
     /// Sets the value that will be attached to the next contract call.
-    pub fn attach_value(&mut self, amount: U512) {
+    pub fn attach_value(&mut self, amount: Balance) {
         self.attached_value = Some(amount);
     }
 
     /// Returns the balance of the given account.
     ///
-    /// The accepted value can be either an [CasperAddress::Account] or [CasperAddress::Contract].
-    pub fn token_balance(&self, address: CasperAddress) -> U512 {
+    /// The accepted value can be either an [Address::Account] or [Address::Contract].
+    pub fn token_balance(&self, address: Address) -> Balance {
         match address {
-            CasperAddress::Account(account_hash) => self.get_account_cspr_balance(account_hash),
-            CasperAddress::Contract(contract_hash) => self.get_contract_cspr_balance(contract_hash),
+            Address::Account(account_hash) => self.get_account_cspr_balance(account_hash),
+            Address::Contract(contract_hash) => self.get_contract_cspr_balance(contract_hash),
         }
     }
 }
@@ -270,7 +269,7 @@ impl CasperTestEnv {
             .unwrap()
     }
 
-    fn get_contract_cspr_balance(&self, contract_hash: ContractPackageHash) -> U512 {
+    fn get_contract_cspr_balance(&self, contract_hash: ContractPackageHash) -> Balance {
         let contract_hash: ContractHash = self.get_contract_package_hash(contract_hash);
 
         let contract: Contract = self.context.get_contract(contract_hash).unwrap();
@@ -280,10 +279,10 @@ impl CasperTestEnv {
             .get(consts::CONTRACT_MAIN_PURSE)
             .and_then(|key| key.as_uref())
             .map(|purse| self.context.get_purse_balance(*purse))
-            .unwrap_or_else(|| U512::zero())
+            .unwrap_or_else(|| Balance::zero())
     }
 
-    fn get_account_cspr_balance(&self, account_hash: AccountHash) -> U512 {
+    fn get_account_cspr_balance(&self, account_hash: AccountHash) -> Balance {
         let account: Account = self.context.get_account(account_hash).unwrap();
         let purse = account.main_purse();
         self.context.get_purse_balance(purse)

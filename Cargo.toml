@@ -4,12 +4,15 @@ members = [
     "lang/codegen",
     "lang/ir",
     "lang/proc_macros",
-    "mock_vm",
+    "mock_vm/backend",
+    "mock_vm/types",
     "types",
     "utils",
     "odra-casper/backend",
-    "odra-casper/test_env",
+    "odra-casper/codegen",
     "odra-casper/shared",
+    "odra-casper/test_env",
+    "odra-casper/types",
 ]
 
 exclude = [ "contract", "contract/builder" ]

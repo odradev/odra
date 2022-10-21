@@ -4,7 +4,7 @@ use self::{
     constructor::WasmConstructor, entrypoints_def::ContractEntrypoints,
     wasm_entrypoint::WasmEntrypoint,
 };
-use odra_types::contract_def::{ContractDef, EntrypointType};
+use odra_casper_types::contract_def::{ContractDef, EntrypointType};
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote, ToTokens};
 use syn::{punctuated::Punctuated, Path, PathSegment, Token};
@@ -98,8 +98,8 @@ fn assert_eq_tokens<A: ToTokens, B: ToTokens>(left: A, right: B) {
 
 #[cfg(test)]
 mod tests {
-    use odra_types::contract_def::{Argument, ContractDef, Entrypoint, EntrypointType};
-    use odra_types::CLType;
+    use odra_casper_types::contract_def::{Argument, ContractDef, Entrypoint, EntrypointType};
+    use odra_casper_types::Type;
     use quote::{quote, ToTokens};
 
     use super::constructor::WasmConstructor;
@@ -113,15 +113,15 @@ mod tests {
             ident: String::from("construct_me"),
             args: vec![Argument {
                 ident: String::from("value"),
-                ty: CLType::I32,
+                ty: Type::I32,
             }],
-            ret: CLType::Unit,
+            ret: Type::Unit,
             ty: EntrypointType::Constructor,
         };
         let entrypoint = Entrypoint {
             ident: String::from("call_me"),
             args: vec![],
-            ret: CLType::Bool,
+            ret: Type::Bool,
             ty: EntrypointType::Public,
         };
 

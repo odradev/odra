@@ -21,7 +21,7 @@ impl GenerateCode for EventItem<'_> {
             .iter()
             .map(|ident| {
                 quote! {
-                  let (#ident, bytes) = odra::types::bytesrepr::FromBytes::from_vec(bytes)?;
+                  let (#ident, bytes) = odra::types::FromBytes::from_vec(bytes)?;
                 }
             })
             .collect::<TokenStream>();
@@ -50,7 +50,7 @@ impl GenerateCode for EventItem<'_> {
             .collect::<TokenStream>();
 
         let type_check = quote! {
-          let (event_name, bytes): (String, _) = odra::types::bytesrepr::FromBytes::from_vec(bytes)?;
+          let (event_name, bytes): (String, _) = odra::types::FromBytes::from_vec(bytes)?;
           if &event_name != #name_literal {
             return core::result::Result::Err(odra::types::event::EventError::UnexpectedType(event_name));
           }
@@ -71,7 +71,7 @@ impl GenerateCode for EventItem<'_> {
               type Error = odra::types::event::EventError;
 
               fn serialize(&self) -> Result<Vec<u8>, Self::Error> {
-                  core::result::Result::Ok(<Self as odra::types::bytesrepr::ToBytes>::to_bytes(self)?)
+                  core::result::Result::Ok(<Self as odra::types::ToBytes>::to_bytes(self)?)
               }
             }
 
@@ -90,7 +90,7 @@ impl GenerateCode for EventItem<'_> {
               }
             }
 
-          impl odra::types::bytesrepr::ToBytes for #struct_ident {
+          impl odra::types::ToBytes for #struct_ident {
             fn serialized_length(&self) -> usize {
               let mut size = 0;
               #sum_serialized_lengths

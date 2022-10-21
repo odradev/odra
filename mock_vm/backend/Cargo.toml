@@ -10,7 +10,8 @@ keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm"]
 
 [dependencies]
-odra-types = { version = "0.1.0", path = "../types" }
-odra-utils = { version = "0.1.0", path = "../utils" }
+odra-mock-vm-types = { version = "0.1.0", path = "../types" }
+odra-utils = { version = "0.1.0", path = "../../utils" }
 ref_thread_local = "0.1.1"
 anyhow = "1.0.65"
+hex = "0.4.3"

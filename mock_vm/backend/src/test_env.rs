@@ -3,8 +3,9 @@
 //! Depending on the selected feature, the actual test env is dynamically loaded in the runtime or the Odra local MockVM is used.
 use std::collections::HashMap;
 
-use odra_types::{
-    bytesrepr::Bytes, event::EventError, Address, EventData, OdraError, RuntimeArgs, U512,
+use odra_mock_vm_types::{
+    odra_types::{event::EventError, EventData, OdraError},
+    Address, Balance, BlockTime, Bytes, CallArgs,
 };
 
 use crate::{EntrypointArgs, EntrypointCall};
@@ -28,7 +29,7 @@ macro_rules! delegate_to_env {
 delegate_to_env! {
     /// Registers the contract in the test environment.
     fn register_contract(
-        constructor: Option<(String, RuntimeArgs, EntrypointCall)>,
+        constructor: Option<(String, CallArgs, EntrypointCall)>,
         constructors: HashMap<String, (EntrypointArgs, EntrypointCall)>,
         entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>
     ) -> Address
@@ -36,13 +37,13 @@ delegate_to_env! {
     ///
     /// Returns optional raw bytes to further processing.
     fn call_contract(
-        address: &Address,
+        address: Address,
         entrypoint: &str,
-        args: &RuntimeArgs,
-        amount: Option<U512>
+        args: CallArgs,
+        amount: Option<Balance>
     ) -> Option<Bytes>
     /// Increases the current value of block_time.
-    fn advance_block_time_by(seconds: u64)
+    fn advance_block_time_by(seconds: BlockTime)
     /// Returns the backend name.
     fn get_backend_name() -> String
     /// Replaces the current caller.
@@ -50,7 +51,7 @@ delegate_to_env! {
     /// Gets nth event emitted by the contract at `address`.
     fn get_event(address: &Address, index: i32) -> Result<EventData, EventError>
     /// Returns the balance of the account associated with the given address.
-    fn token_balance(address: Address) -> U512
+    fn token_balance(address: Address) -> Balance
 }
 
 /// Expects the `block` execution will fail with the specific error.
@@ -74,6 +75,6 @@ pub fn get_account(n: usize) -> Address {
 }
 
 /// Returns the value that represents one native token.
-pub fn one_token() -> U512 {
-    U512::one()
+pub fn one_token() -> Balance {
+    Balance::one()
 }

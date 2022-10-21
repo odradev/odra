@@ -1,0 +1,69 @@
+use casper_types::URef;
+use odra_casper_shared::consts;
+use odra_casper_types::{odra_types::ExecutionError, Balance};
+
+use crate::{
+    casper_env,
+    contract_env::{revert, ATTACHED_VALUE},
+};
+
+/// Checks if given named argument exists.
+pub fn named_arg_exists(name: &str) -> bool {
+    let mut arg_size: usize = 0;
+    let ret = unsafe {
+        casper_contract::ext_ffi::casper_get_named_arg_size(
+            name.as_bytes().as_ptr(),
+            name.len(),
+            &mut arg_size as *mut usize,
+        )
+    };
+    casper_types::api_error::result_from(ret).is_ok()
+}
+
+/// Gets the currently executing contract main purse [URef].
+pub fn get_main_purse() -> URef {
+    casper_env::get_or_create_purse()
+}
+
+/// Stores in memory the amount attached to the current call.
+pub fn set_attached_value(amount: Balance) {
+    unsafe {
+        ATTACHED_VALUE = amount;
+    }
+}
+
+/// Zeroes the amount attached to the current call.
+pub fn clear_attached_value() {
+    unsafe { ATTACHED_VALUE = Balance::zero() }
+}
+
+/// Transfers attached value to the currently executing contract.
+pub fn handle_attached_value() {
+    if named_arg_exists(consts::CARGO_PURSE_ARG) {
+        let cargo_purse =
+            casper_contract::contract_api::runtime::get_named_arg(consts::CARGO_PURSE_ARG);
+        let amount = casper_contract::contract_api::system::get_purse_balance(cargo_purse);
+        if let Some(amount) = amount {
+            let contract_purse = get_main_purse();
+            let _ = casper_contract::contract_api::system::transfer_from_purse_to_purse(
+                cargo_purse,
+                contract_purse,
+                amount,
+                None,
+            );
+            set_attached_value(amount);
+        }
+    }
+}
+
+/// Reverts with an [ExecutionError] if some value is attached to the call.
+pub fn assert_no_attached_value() {
+    if named_arg_exists(consts::CARGO_PURSE_ARG) {
+        let cargo_purse =
+            casper_contract::contract_api::runtime::get_named_arg(consts::CARGO_PURSE_ARG);
+        let amount = casper_contract::contract_api::system::get_purse_balance(cargo_purse);
+        if amount.is_some() && !amount.unwrap().is_zero() {
+            revert(ExecutionError::non_payable());
+        }
+    }
+}

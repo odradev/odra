@@ -1,4 +1,4 @@
-use odra_types::contract_def::{Entrypoint, EntrypointType};
+use odra_casper_types::contract_def::{Entrypoint, EntrypointType};
 use quote::{format_ident, quote, ToTokens};
 use syn::{self, punctuated::Punctuated, token::Comma, Ident, Path};
 
@@ -34,7 +34,7 @@ impl ToTokens for WasmEntrypoint<'_> {
         };
 
         let contract_call = match self.0.ret {
-            odra_types::CLType::Unit => quote! {
+            odra_casper_types::Type::Unit => quote! {
                 #args
                 contract.#entrypoint_ident(#fn_args);
             },
@@ -63,9 +63,11 @@ impl ToTokens for WasmEntrypoint<'_> {
 
 #[cfg(test)]
 mod tests {
-    use crate::codegen::assert_eq_tokens;
-    use odra_types::contract_def::{Argument, EntrypointType};
-    use odra_types::CLType;
+    use crate::assert_eq_tokens;
+    use odra_casper_types::{
+        contract_def::{Argument, EntrypointType},
+        Type,
+    };
 
     use super::*;
 
@@ -75,9 +77,9 @@ mod tests {
             ident: String::from("construct_me"),
             args: vec![Argument {
                 ident: String::from("value"),
-                ty: CLType::I32,
+                ty: Type::I32,
             }],
-            ret: CLType::Unit,
+            ret: Type::Unit,
             ty: EntrypointType::Public,
         };
         let path: Path = syn::parse2(
@@ -107,7 +109,7 @@ mod tests {
         let entrypoint = Entrypoint {
             ident: String::from("pay_me"),
             args: vec![],
-            ret: CLType::Unit,
+            ret: Type::Unit,
             ty: EntrypointType::PublicPayable,
         };
         let path: Path = syn::parse_quote!(a::b::c::Contract);

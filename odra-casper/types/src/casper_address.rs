@@ -6,8 +6,6 @@ use casper_types::{
     CLType, CLTyped, ContractPackageHash, Key,
 };
 
-use odra_types::Address as OdraAddress;
-
 /// An enum representing an [`AccountHash`] or a [`ContractPackageHash`].
 #[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum CasperAddress {
@@ -111,24 +109,6 @@ impl FromBytes for CasperAddress {
     }
 }
 
-impl TryFrom<CasperAddress> for OdraAddress {
-    type Error = bytesrepr::Error;
-
-    fn try_from(value: CasperAddress) -> Result<Self, Self::Error> {
-        let bytes = value.to_bytes()?;
-        Ok(OdraAddress::new(&bytes))
-    }
-}
-
-impl TryFrom<OdraAddress> for CasperAddress {
-    type Error = bytesrepr::Error;
-
-    fn try_from(value: OdraAddress) -> Result<Self, Self::Error> {
-        let (casper_address, _) = CasperAddress::from_bytes(value.bytes())?;
-        Ok(casper_address)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -195,42 +175,5 @@ mod tests {
         let (restored, rest) = CasperAddress::from_bytes(&bytes).unwrap();
         assert!(rest.is_empty());
         assert_eq!(restored, casper_address);
-    }
-
-    #[test]
-    fn test_casper_address_key_conversion_fails() {
-        let bad_key = Key::SystemContractRegistry;
-        assert_eq!(
-            CasperAddress::try_from(bad_key),
-            Err(String::from("Unsupport Key type."))
-        );
-    }
-
-    #[test]
-    fn test_casper_address_account_hash_to_odra_address_conversion_() {
-        let casper_address = CasperAddress::from(mock_account_hash());
-        test_casper_address_to_odra_address_conversion(casper_address);
-    }
-
-    #[test]
-    fn test_casper_address_contract_package_hash_to_odra_address_conversion_() {
-        let casper_address = CasperAddress::from(mock_contract_package_hash());
-        test_casper_address_to_odra_address_conversion(casper_address);
-    }
-
-    fn test_casper_address_to_odra_address_conversion(casper_address: CasperAddress) {
-        let odra_address = OdraAddress::try_from(casper_address).unwrap();
-        let restored = CasperAddress::try_from(odra_address).unwrap();
-        assert_eq!(restored, casper_address);
-    }
-
-    #[test]
-    fn test_casper_address_from_bad_odra_address_fails() {
-        // Only 0 and 1 is allowd to be on the first place.
-        let odra_address = OdraAddress::new(&[2, 2, 3]);
-        assert_eq!(
-            CasperAddress::try_from(odra_address),
-            Err(bytesrepr::Error::Formatting)
-        );
     }
 }

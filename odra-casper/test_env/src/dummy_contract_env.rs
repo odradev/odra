@@ -1,7 +1,6 @@
-use odra_types::{
-    bytesrepr::{FromBytes, ToBytes},
-    event::Event,
-    Address, CLTyped, CLValue, ExecutionError, U512,
+use odra_casper_types::{
+    odra_types::{event::Event, ExecutionError},
+    Address, Balance, BlockTime, OdraType,
 };
 
 pub fn self_address() -> Address {
@@ -12,25 +11,25 @@ pub fn caller() -> Address {
     unimplemented!()
 }
 
-pub fn set_var<T: CLTyped + ToBytes>(_: &str, _: T) {
+pub fn set_var<T: OdraType>(_: &str, _: T) {
     unimplemented!()
 }
 
-pub fn get_var(_: &str) -> Option<CLValue> {
+pub fn get_var<T: OdraType>(_: &str) -> Option<T> {
     unimplemented!()
 }
 
-pub fn set_dict_value<K: ToBytes, V: ToBytes + FromBytes + CLTyped>(_: &str, _: &K, _: V) {
+pub fn set_dict_value<K: OdraType, V: OdraType>(_: &str, _: &K, _: V) {
     unimplemented!()
 }
 
-pub fn get_dict_value<K: ToBytes>(_: &str, _: &K) -> Option<CLValue> {
+pub fn get_dict_value<K: OdraType, T: OdraType>(_: &str, _: &K) -> Option<T> {
     unimplemented!()
 }
 
-pub fn emit_event<T>(_: &T)
+pub fn emit_event<T>(_: T)
 where
-    T: ToBytes + Event,
+    T: OdraType + Event,
 {
     unimplemented!()
 }
@@ -42,22 +41,22 @@ where
     unimplemented!()
 }
 
-pub fn get_block_time() -> u64 {
+pub fn get_block_time() -> BlockTime {
     unimplemented!()
 }
 
-pub fn attached_value() -> U512 {
+pub fn attached_value() -> Balance {
     unimplemented!()
 }
 
-pub fn one_token() -> U512 {
+pub fn one_token() -> Balance {
     unimplemented!()
 }
 
-pub fn transfer_tokens(_: Address, _: U512) -> bool {
+pub fn transfer_tokens(_: Address, _: Balance) -> bool {
     unimplemented!()
 }
 
-pub fn self_balance() -> U512 {
+pub fn self_balance() -> Balance {
     unimplemented!()
 }

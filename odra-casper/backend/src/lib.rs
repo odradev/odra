@@ -2,5 +2,7 @@
 
 pub mod backend;
 mod casper_env;
-pub mod codegen;
 pub mod contract_env;
+pub mod utils;
+
+pub use odra_casper_types as types;

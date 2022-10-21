@@ -1,4 +1,4 @@
-use odra_types::contract_def::Entrypoint;
+use odra_casper_types::contract_def::Entrypoint;
 use quote::{format_ident, quote, ToTokens};
 use syn::{punctuated::Punctuated, token::Comma, Ident, Path};
 
@@ -80,10 +80,12 @@ impl ToTokens for WasmConstructor<'_> {
 
 #[cfg(test)]
 mod tests {
-    use odra_types::contract_def::{Argument, EntrypointType};
-    use odra_types::CLType;
+    use odra_casper_types::{
+        contract_def::{Argument, EntrypointType},
+        Type,
+    };
 
-    use crate::codegen::assert_eq_tokens;
+    use crate::assert_eq_tokens;
 
     use super::*;
 
@@ -93,9 +95,9 @@ mod tests {
             ident: String::from("construct_me"),
             args: vec![Argument {
                 ident: String::from("value"),
-                ty: CLType::I32,
+                ty: Type::I32,
             }],
-            ret: CLType::Unit,
+            ret: Type::Unit,
             ty: EntrypointType::Constructor,
         };
         let path: Path = syn::parse2(

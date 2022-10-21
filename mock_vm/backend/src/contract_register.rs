@@ -1,6 +1,9 @@
+use odra_mock_vm_types::{
+    odra_types::{OdraError, VmError},
+    Address, Bytes, CallArgs,
+};
+
 use crate::contract_container::ContractContainer;
-use odra_types::{bytesrepr::Bytes, RuntimeArgs};
-use odra_types::{Address, OdraError, VmError};
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -17,7 +20,7 @@ impl ContractRegister {
         &self,
         addr: &Address,
         entrypoint: String,
-        args: RuntimeArgs,
+        args: CallArgs,
     ) -> Result<Option<Bytes>, OdraError> {
         self.internal_call(addr, |container| {
             std::panic::catch_unwind(|| container.call(entrypoint, args))?
@@ -28,7 +31,7 @@ impl ContractRegister {
         &self,
         addr: &Address,
         entrypoint: String,
-        args: RuntimeArgs,
+        args: CallArgs,
     ) -> Result<Option<Bytes>, OdraError> {
         self.internal_call(addr, |container| {
             std::panic::catch_unwind(|| container.call_constructor(entrypoint, args))?

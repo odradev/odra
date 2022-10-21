@@ -1,10 +1,9 @@
-use crate::{
-    bytesrepr::{Error, FromBytes, ToBytes},
-    CLType, CLTyped,
-};
+use casper_types::{bytesrepr::{FromBytes, ToBytes}, CLType, CLTyped};
+
+use crate::OdraType;
 
 /// Max bytes of an [`Address`] internal representation.
-pub const ADDRESS_LENGTH: usize = 64;
+const ADDRESS_LENGTH: usize = 4;
 
 /// Blockchain-agnostic address representation.
 #[derive(Clone, Copy, PartialEq, Hash, Eq)]
@@ -32,32 +31,33 @@ impl Address {
     }
 }
 
-impl CLTyped for Address {
-    fn cl_type() -> casper_types::CLType {
-        CLType::Any
-    }
-}
-
-impl ToBytes for Address {
-    fn to_bytes(&self) -> Result<Vec<u8>, Error> {
-        Ok(self.data.to_vec())
-    }
-
-    fn serialized_length(&self) -> usize {
-        self.data.len()
-    }
-}
-
-impl FromBytes for Address {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), Error> {
-        let (data, remainder) = bytes.split_at(ADDRESS_LENGTH);
-        Ok((Address::new(data), remainder))
-    }
-}
-
 impl core::fmt::Debug for Address {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let name = hex::encode(&self.data);
         f.debug_struct("Address").field("data", &name).finish()
     }
 }
+
+impl FromBytes for Address {
+    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), casper_types::bytesrepr::Error> {
+        todo!()
+    }
+}
+
+impl ToBytes for Address {
+    fn to_bytes(&self) -> Result<Vec<u8>, casper_types::bytesrepr::Error> {
+        Ok(self.bytes().to_vec())
+    }
+
+    fn serialized_length(&self) -> usize {
+        self.bytes().len()
+    }
+}
+
+impl CLTyped for Address {
+    fn cl_type() -> CLType {
+        CLType::Any
+    }
+}
+
+impl OdraType for Address {}

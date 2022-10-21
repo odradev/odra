@@ -8,7 +8,3 @@ repository = "https://github.com/odradev/odra-casper"
 description = "Utilites uses by the Odra Casper-related crates."
 keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm", "smart contracts"]
-
-[dependencies]
-casper-types = "1.5.0"
-odra-types = { path = "../../types" }

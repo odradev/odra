@@ -1,5 +1,7 @@
 //! Utility functions that allow to write more compact tests.
-use odra_types::{Address, EventData, FromBytes};
+
+use odra_mock_vm::types::Address;
+use odra_types::EventData;
 
 /// Gets the nth event emitted by the contract at `address`.
 ///
@@ -25,7 +27,7 @@ pub fn get_event_name(
     at: i32,
 ) -> Result<String, odra_types::event::EventError> {
     let event: EventData = crate::test_env::get_event(contract_address, at)?;
-    let (event_name, _): (String, _) = odra_types::bytesrepr::FromBytes::from_vec(event)?;
+    let (event_name, _): (String, _) = odra_types::FromBytes::from_vec(event)?;
     Ok(event_name)
 }
 

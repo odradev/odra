@@ -1,4 +1,4 @@
-use odra_types::contract_def::{Argument, Entrypoint, EntrypointType};
+use odra_casper_types::contract_def::{Argument, Entrypoint, EntrypointType};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 
@@ -78,8 +78,8 @@ impl ToTokens for EntrypointParams<'_> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::codegen::assert_eq_tokens;
-    use odra_types::CLType;
+    use crate::assert_eq_tokens;
+    use odra_casper_types::Type;
 
     #[test]
     fn parse_cl_type() {
@@ -87,9 +87,9 @@ mod test {
             ident: String::from("call_me"),
             args: vec![Argument {
                 ident: String::from("value"),
-                ty: CLType::I32,
+                ty: Type::I32,
             }],
-            ret: CLType::Bool,
+            ret: Type::Bool,
             ty: EntrypointType::Public,
         }];
         let ep = ContractEntrypoints(&a);

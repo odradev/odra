@@ -1,4 +1,4 @@
-use odra_types::contract_def::Argument;
+use odra_casper_types::contract_def::Argument;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 
@@ -21,8 +21,8 @@ impl ToTokens for CasperArgs<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::codegen::assert_eq_tokens;
-    use odra_types::CLType;
+    use crate::assert_eq_tokens;
+    use odra_casper_types::Type;
 
     #[test]
     fn test_empty_args() {
@@ -36,11 +36,11 @@ mod tests {
         let args = vec![
             Argument {
                 ident: String::from("a"),
-                ty: CLType::Bool,
+                ty: Type::Bool,
             },
             Argument {
                 ident: String::from("b_c"),
-                ty: CLType::String,
+                ty: Type::String,
             },
         ];
         let args = CasperArgs(&args);

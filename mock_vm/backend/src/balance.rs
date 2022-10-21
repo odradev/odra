@@ -1,21 +1,21 @@
 use anyhow::{Context, Result};
-use odra_types::U512;
+use odra_mock_vm_types::Balance;
 
 #[derive(Eq, Hash, PartialEq, Clone, Default, Debug)]
-pub struct Balance {
-    value: U512,
-    prev_value: U512,
+pub struct AccountBalance {
+    value: Balance,
+    prev_value: Balance,
 }
 
-impl Balance {
-    pub fn new(amount: U512) -> Self {
+impl AccountBalance {
+    pub fn new(amount: Balance) -> Self {
         Self {
             value: amount,
-            prev_value: U512::zero(),
+            prev_value: Balance::zero(),
         }
     }
 
-    pub fn increase(&mut self, amount: U512) -> Result<()> {
+    pub fn increase(&mut self, amount: Balance) -> Result<()> {
         let result = self
             .value
             .checked_add(amount)
@@ -26,7 +26,7 @@ impl Balance {
         Ok(())
     }
 
-    pub fn reduce(&mut self, amount: U512) -> Result<()> {
+    pub fn reduce(&mut self, amount: Balance) -> Result<()> {
         let result = self
             .value
             .checked_sub(amount)
@@ -36,12 +36,12 @@ impl Balance {
         Ok(())
     }
 
-    pub fn value(&self) -> U512 {
+    pub fn value(&self) -> Balance {
         self.value
     }
 }
 
-impl From<u32> for Balance {
+impl From<u32> for AccountBalance {
     fn from(value: u32) -> Self {
         Self::new(value.into())
     }

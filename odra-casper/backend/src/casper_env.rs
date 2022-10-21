@@ -1,4 +1,8 @@
 use lazy_static::lazy_static;
+use odra_casper_types::{
+    odra_types::event::Event,
+    Address, OdraType,
+};
 use std::{collections::BTreeMap, sync::Mutex};
 
 use casper_contract::{
@@ -11,33 +15,19 @@ use casper_contract::{
 };
 use casper_types::{
     api_error,
-    bytesrepr::{Bytes, FromBytes, ToBytes},
+    bytesrepr::ToBytes,
     system::CallStackElement,
-    ApiError, CLTyped, CLValue, ContractVersion, Key, RuntimeArgs, URef, U512,
+    ApiError, ContractPackageHash, ContractVersion, Key, RuntimeArgs, URef, U512,
 };
 
-use odra_casper_shared::{casper_address::CasperAddress, consts};
-use odra_types::EventData;
+use odra_casper_shared::consts;
 
 lazy_static! {
     static ref SEEDS: Mutex<BTreeMap<String, URef>> = Mutex::new(BTreeMap::new());
 }
 
 /// Save value to the storage.
-pub fn set_cl_value(name: &str, value: CLValue) {
-    let bytes: Bytes = value.to_bytes().unwrap_or_revert().into();
-    set_key(name, bytes);
-}
-
-/// Read value from the storage.
-pub fn get_cl_value(name: &str) -> Option<CLValue> {
-    get_key::<Bytes>(name).map(|bytes| {
-        let (result, _rest) = CLValue::from_bytes(&bytes).unwrap_or_revert();
-        result
-    })
-}
-
-fn set_key<T: ToBytes + CLTyped>(name: &str, value: T) {
+pub fn set_key<T: OdraType>(name: &str, value: T) {
     match runtime::get_key(name) {
         Some(key) => {
             let key_ref = key.try_into().unwrap_or_revert();
@@ -50,7 +40,8 @@ fn set_key<T: ToBytes + CLTyped>(name: &str, value: T) {
     }
 }
 
-fn get_key<T: FromBytes + CLTyped>(name: &str) -> Option<T> {
+/// Read value from the storage.
+pub fn get_key<T: OdraType>(name: &str) -> Option<T> {
     match runtime::get_key(name) {
         None => None,
         Some(value) => {
@@ -61,38 +52,32 @@ fn get_key<T: FromBytes + CLTyped>(name: &str) -> Option<T> {
     }
 }
 
-pub fn set_dict_value(seed: &str, key: &[u8], value: CLValue) {
+pub fn set_dict_value<K: OdraType, V: OdraType>(seed: &str, key: &K, value: V) {
     let seed = get_seed(seed);
-    let bytes: Bytes = value.to_bytes().unwrap_or_revert().into();
-    storage::dictionary_put(seed, &to_dictionary_key(key), bytes);
+    storage::dictionary_put(seed, &to_dictionary_key(key), value);
 }
 
-pub fn get_dict_value(seed: &str, key: &[u8]) -> Option<CLValue> {
+pub fn get_dict_value<K: OdraType, V: OdraType>(seed: &str, key: &K) -> Option<V> {
     let seed = get_seed(seed);
-    let bytes: Option<Bytes> =
-        storage::dictionary_get(seed, &to_dictionary_key(key)).unwrap_or_revert();
-    bytes.map(|bytes| {
-        let (result, _rest) = CLValue::from_bytes(&bytes).unwrap_or_revert();
-        result
-    })
+    storage::dictionary_get(seed, &to_dictionary_key(key)).unwrap_or_revert()
 }
 
 /// Returns address based on a [`CallStackElement`].
 ///
 /// For `Session` and `StoredSession` variants it will return account hash, and for `StoredContract`
 /// case it will use contract hash as the address.
-fn call_stack_element_to_address(call_stack_element: CallStackElement) -> CasperAddress {
+fn call_stack_element_to_address(call_stack_element: CallStackElement) -> Address {
     match call_stack_element {
-        CallStackElement::Session { account_hash } => CasperAddress::from(account_hash),
+        CallStackElement::Session { account_hash } => Address::from(account_hash),
         CallStackElement::StoredSession { account_hash, .. } => {
             // Stored session code acts in account's context, so if stored session
             // wants to interact, caller's address will be used.
-            CasperAddress::from(account_hash)
+            Address::from(account_hash)
         }
         CallStackElement::StoredContract {
             contract_package_hash,
             ..
-        } => CasperAddress::from(contract_package_hash),
+        } => Address::from(contract_package_hash),
     }
 }
 
@@ -107,19 +92,22 @@ fn take_call_stack_elem(n: usize) -> CallStackElement {
 ///
 /// This function ensures that only session code can execute this function, and disallows stored
 /// session/stored contracts.
-pub fn caller() -> CasperAddress {
+pub fn caller() -> Address {
     let second_elem = take_call_stack_elem(1);
     call_stack_element_to_address(second_elem)
 }
 
 /// Gets the address of the currently run contract
-pub fn self_address() -> CasperAddress {
+pub fn self_address() -> Address {
     let first_elem = take_call_stack_elem(0);
     call_stack_element_to_address(first_elem)
 }
 
 /// Record event to the contract's storage.
-pub fn emit_event(event: &EventData) {
+pub fn emit_event<T>(event: T)
+where
+    T: OdraType + Event,
+{
     let (events_length, key): (u32, URef) = match runtime::get_key(consts::EVENTS_LENGTH) {
         None => {
             let key = storage::new_uref(0u32);
@@ -133,27 +121,27 @@ pub fn emit_event(event: &EventData) {
         }
     };
     let events_seed: URef = get_seed(consts::EVENTS);
-    dictionary_put(events_seed, &events_length.to_string(), event.clone());
+    dictionary_put(events_seed, &events_length.to_string(), event);
     storage::write(key, events_length + 1);
 }
 
 /// Convert any key to hash.
-pub fn to_dictionary_key(key: &[u8]) -> String {
-    let bytes = runtime::blake2b(key);
+pub fn to_dictionary_key<T: OdraType>(key: &T) -> String {
+    let preimage = key.to_bytes().unwrap_or_revert();
+    let bytes = runtime::blake2b(preimage);
     hex::encode(bytes)
 }
 
 /// Calls a contract method by Address
 pub fn call_contract(
-    address: CasperAddress,
+    contract_package_hash: ContractPackageHash,
     entry_point: &str,
     runtime_args: RuntimeArgs,
 ) -> Vec<u8> {
-    let contract_package_hash = address.as_contract_package_hash().unwrap_or_revert();
     let contract_version: Option<ContractVersion> = None;
 
     let (contract_package_hash_ptr, contract_package_hash_size, _bytes) =
-        to_ptr(*contract_package_hash);
+        to_ptr(contract_package_hash);
     let (contract_version_ptr, contract_version_size, _bytes) = to_ptr(contract_version);
     let (entry_point_name_ptr, entry_point_name_size, _bytes) = to_ptr(entry_point);
     let (runtime_args_ptr, runtime_args_size, _bytes) = to_ptr(runtime_args);
@@ -194,7 +182,7 @@ pub fn call_contract(
 }
 
 pub fn call_contract_with_amount(
-    address: CasperAddress,
+    contract_package_hash: ContractPackageHash,
     entry_point: &str,
     runtime_args: RuntimeArgs,
     amount: U512,
@@ -207,7 +195,7 @@ pub fn call_contract_with_amount(
         .unwrap_or_revert_with(ApiError::Transfer);
     args.insert(consts::CARGO_PURSE_ARG, cargo_purse)
         .unwrap_or_revert();
-    let result = call_contract(address, entry_point, args);
+    let result = call_contract(contract_package_hash, entry_point, args);
 
     if !is_purse_empty(cargo_purse) {
         runtime::revert(ApiError::InvalidPurse)

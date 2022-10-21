@@ -1,39 +1,39 @@
-use odra_types::CLType;
+use odra_casper_types::Type;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
-pub(super) struct WrappedType<'a>(pub &'a CLType);
+pub(super) struct WrappedType<'a>(pub &'a Type);
 
 impl ToTokens for WrappedType<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let stream = match &self.0 {
-            CLType::Bool => quote!(casper_backend::backend::casper_types::CLType::Bool),
-            CLType::I32 => quote!(casper_backend::backend::casper_types::CLType::I32),
-            CLType::I64 => quote!(casper_backend::backend::casper_types::CLType::I64),
-            CLType::U8 => quote!(casper_backend::backend::casper_types::CLType::U8),
-            CLType::U32 => quote!(casper_backend::backend::casper_types::CLType::U32),
-            CLType::U64 => quote!(casper_backend::backend::casper_types::CLType::U64),
-            CLType::U128 => quote!(casper_backend::backend::casper_types::CLType::U128),
-            CLType::U256 => quote!(casper_backend::backend::casper_types::CLType::U256),
-            CLType::U512 => quote!(casper_backend::backend::casper_types::CLType::U512),
-            CLType::Unit => quote!(casper_backend::backend::casper_types::CLType::Unit),
-            CLType::String => quote!(casper_backend::backend::casper_types::CLType::String),
-            CLType::Option(ty) => {
+            Type::Bool => quote!(casper_backend::backend::casper_types::CLType::Bool),
+            Type::I32 => quote!(casper_backend::backend::casper_types::CLType::I32),
+            Type::I64 => quote!(casper_backend::backend::casper_types::CLType::I64),
+            Type::U8 => quote!(casper_backend::backend::casper_types::CLType::U8),
+            Type::U32 => quote!(casper_backend::backend::casper_types::CLType::U32),
+            Type::U64 => quote!(casper_backend::backend::casper_types::CLType::U64),
+            Type::U128 => quote!(casper_backend::backend::casper_types::CLType::U128),
+            Type::U256 => quote!(casper_backend::backend::casper_types::CLType::U256),
+            Type::U512 => quote!(casper_backend::backend::casper_types::CLType::U512),
+            Type::Unit => quote!(casper_backend::backend::casper_types::CLType::Unit),
+            Type::String => quote!(casper_backend::backend::casper_types::CLType::String),
+            Type::Option(ty) => {
                 let value_stream = WrappedType(&**ty).to_token_stream();
                 quote!(casper_backend::backend::casper_types::CLType::Option(Box::new(#value_stream)))
             }
-            CLType::Any => quote!(casper_backend::backend::casper_types::CLType::Any),
-            CLType::Key => quote!(casper_backend::backend::casper_types::CLType::Key),
-            CLType::URef => quote!(casper_backend::backend::casper_types::CLType::URef),
-            CLType::PublicKey => quote!(casper_backend::backend::casper_types::CLType::PublicKey),
-            CLType::List(ty) => {
+            Type::Any => quote!(casper_backend::backend::casper_types::CLType::Any),
+            Type::Key => quote!(casper_backend::backend::casper_types::CLType::Key),
+            Type::URef => quote!(casper_backend::backend::casper_types::CLType::URef),
+            Type::PublicKey => quote!(casper_backend::backend::casper_types::CLType::PublicKey),
+            Type::List(ty) => {
                 let value_stream = WrappedType(&**ty).to_token_stream();
                 quote!(casper_backend::backend::casper_types::CLType::List(Box::new(#value_stream)))
             }
-            CLType::ByteArray(bytes) => {
+            Type::ByteArray(bytes) => {
                 quote!(casper_backend::backend::casper_types::CLType::ByteArray(#bytes))
             }
-            CLType::Result { ok, err } => {
+            Type::Result { ok, err } => {
                 let ok_stream = WrappedType(&**ok).to_token_stream();
                 let err_stream = WrappedType(&**err).to_token_stream();
                 quote! {
@@ -43,7 +43,7 @@ impl ToTokens for WrappedType<'_> {
                     }
                 }
             }
-            CLType::Map { key, value } => {
+            Type::Map { key, value } => {
                 let key_stream = WrappedType(&**key).to_token_stream();
                 let value_stream = WrappedType(&**value).to_token_stream();
                 quote! {
@@ -53,14 +53,14 @@ impl ToTokens for WrappedType<'_> {
                     }
                 }
             }
-            CLType::Tuple1(ty) => {
+            Type::Tuple1(ty) => {
                 let ty = &**ty.get(0).unwrap();
                 let ty = WrappedType(ty).to_token_stream();
                 quote! {
                     casper_backend::backend::casper_types::CLType::Tuple1([#ty])
                 }
             }
-            CLType::Tuple2(ty) => {
+            Type::Tuple2(ty) => {
                 let t1 = &**ty.get(0).unwrap();
                 let t1 = WrappedType(t1).to_token_stream();
                 let t2 = &**ty.get(1).unwrap();
@@ -69,7 +69,7 @@ impl ToTokens for WrappedType<'_> {
                     casper_backend::backend::casper_types::CLType::Tuple2([#t1, #t2])
                 }
             }
-            CLType::Tuple3(ty) => {
+            Type::Tuple3(ty) => {
                 let t1 = &**ty.get(0).unwrap();
                 let t1 = WrappedType(t1).to_token_stream();
                 let t2 = &**ty.get(1).unwrap();
@@ -88,11 +88,11 @@ impl ToTokens for WrappedType<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::codegen::assert_eq_tokens;
+    use crate::assert_eq_tokens;
 
     #[test]
     fn test_simple_type() {
-        let ty = CLType::Bool;
+        let ty = Type::Bool;
         let wrapped_type = WrappedType(&ty);
         assert_eq_tokens(
             wrapped_type,
@@ -102,9 +102,9 @@ mod tests {
 
     #[test]
     fn test_complex_type() {
-        let ty = CLType::Option(Box::new(CLType::Tuple2([
-            Box::new(CLType::Bool),
-            Box::new(CLType::I32),
+        let ty = Type::Option(Box::new(Type::Tuple2([
+            Box::new(Type::Bool),
+            Box::new(Type::I32),
         ])));
         let wrapped_type = WrappedType(&ty);
         assert_eq_tokens(

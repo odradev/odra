@@ -20,12 +20,3 @@ pub enum EventError {
     /// Unexpected error while deserializing.
     Parsing,
 }
-
-impl From<casper_types::bytesrepr::Error> for EventError {
-    fn from(err: casper_types::bytesrepr::Error) -> Self {
-        match err {
-            casper_types::bytesrepr::Error::Formatting => Self::Formatting,
-            _ => Self::Parsing,
-        }
-    }
-}

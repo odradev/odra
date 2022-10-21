@@ -1,10 +1,7 @@
 use std::marker::PhantomData;
 
-use odra_types::{
-    arithmetic::{OverflowingAdd, OverflowingSub},
-    bytesrepr::{FromBytes, ToBytes},
-    CLTyped,
-};
+use odra_mock_vm::types::OdraType;
+use crate::types::odra_types::arithmetic::{OverflowingAdd, OverflowingSub};
 
 use crate::{contract_env, instance::Instance, UnwrapOrRevert};
 
@@ -16,14 +13,14 @@ pub struct Variable<T> {
 }
 
 // <3
-impl<T: FromBytes + ToBytes + CLTyped + Default> Variable<T> {
+impl<T: OdraType + Default> Variable<T> {
     /// Reads from the storage, if theres no value in the storage the default value is returned.
     pub fn get_or_default(&self) -> T {
         self.get().unwrap_or_default()
     }
 }
 
-impl<V: ToBytes + FromBytes + CLTyped + OverflowingAdd + Default> Variable<V> {
+impl<V: OdraType + OverflowingAdd + Default> Variable<V> {
     /// Utility function that gets the current value and adds the passed `value`
     /// and sets the new value to the storage.
     ///
@@ -35,7 +32,7 @@ impl<V: ToBytes + FromBytes + CLTyped + OverflowingAdd + Default> Variable<V> {
     }
 }
 
-impl<V: ToBytes + FromBytes + CLTyped + OverflowingSub + Default> Variable<V> {
+impl<V: OdraType + OverflowingSub + Default> Variable<V> {
     /// Utility function that gets the current value and subtracts the passed `value`
     /// and sets the new value to the storage.
     ///
@@ -47,7 +44,7 @@ impl<V: ToBytes + FromBytes + CLTyped + OverflowingSub + Default> Variable<V> {
     }
 }
 
-impl<T: FromBytes + ToBytes + CLTyped> Variable<T> {
+impl<T: OdraType> Variable<T> {
     /// Creates a new Variable instance.
     pub fn new(name: String) -> Self {
         Variable {
@@ -58,7 +55,7 @@ impl<T: FromBytes + ToBytes + CLTyped> Variable<T> {
 
     /// Reads from the storage or returns `None` or reverts something unexpected happens.
     pub fn get(&self) -> Option<T> {
-        contract_env::get_var(&self.name).map(|value| value.into_t::<T>().unwrap_or_revert())
+        contract_env::get_var(&self.name)
     }
 
     /// Stores `value` to the storage.
@@ -72,13 +69,13 @@ impl<T: FromBytes + ToBytes + CLTyped> Variable<T> {
     }
 }
 
-impl<T: FromBytes + ToBytes + CLTyped> From<&str> for Variable<T> {
+impl<T: OdraType> From<&str> for Variable<T> {
     fn from(name: &str) -> Self {
         Variable::new(name.to_string())
     }
 }
 
-impl<T: FromBytes + ToBytes + CLTyped> Instance for Variable<T> {
+impl<T: OdraType> Instance for Variable<T> {
     fn instance(namespace: &str) -> Self {
         namespace.into()
     }
@@ -87,11 +84,8 @@ impl<T: FromBytes + ToBytes + CLTyped> Instance for Variable<T> {
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
     use crate::{test_env, Instance, Variable};
-    use odra_types::{
-        arithmetic::ArithmeticsError,
-        bytesrepr::{FromBytes, ToBytes},
-        CLTyped,
-    };
+    use crate::types::odra_types::arithmetic::ArithmeticsError;
+    use odra_mock_vm::types::OdraType;
 
     #[test]
     fn test_get() {
@@ -177,19 +171,13 @@ mod tests {
         assert_eq!(x.get(), y.get());
     }
 
-    impl<T> Default for Variable<T>
-    where
-        T: FromBytes + ToBytes + CLTyped,
-    {
+    impl<T: OdraType> Default for Variable<T> {
         fn default() -> Self {
             Instance::instance("v")
         }
     }
 
-    impl<T> Variable<T>
-    where
-        T: FromBytes + ToBytes + CLTyped,
-    {
+    impl<T: OdraType> Variable<T> {
         fn init(value: T) -> Self {
             let var = Self::default();
             var.set(value);

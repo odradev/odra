@@ -1,13 +1,13 @@
-use odra_types::{Address, U512};
+use odra_mock_vm_types::{Address, Balance};
 
 #[derive(Clone)]
 pub struct CallstackElement {
     pub address: Address,
-    pub attached_value: Option<U512>,
+    pub attached_value: Option<Balance>,
 }
 
 impl CallstackElement {
-    pub fn new(address: Address, value: Option<U512>) -> Self {
+    pub fn new(address: Address, value: Option<Balance>) -> Self {
         Self {
             address,
             attached_value: value,
@@ -27,7 +27,7 @@ impl Callstack {
         self.0.push(element);
     }
 
-    pub fn current_amount(&self) -> U512 {
+    pub fn current_amount(&self) -> Balance {
         self.0
             .last()
             .and_then(|e| e.attached_value)
