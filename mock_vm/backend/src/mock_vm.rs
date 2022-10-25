@@ -71,7 +71,6 @@ impl MockVm {
             String::from(entrypoint),
             args.clone(),
         );
-
         self.handle_call_result(result)
     }
 
