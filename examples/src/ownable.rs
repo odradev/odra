@@ -1,7 +1,5 @@
 use odra::{
-    execution_error, types::Address,
-    // types::{event::Event, Address},
-    contract_env, Event, Variable,
+    contract_env, execution_error, types::odra_types::event::Event, types::Address, Event, Variable,
 };
 
 #[odra::module]
@@ -17,22 +15,22 @@ impl Ownable {
             contract_env::revert(Error::OwnerIsAlreadyInitialized)
         }
         self.owner.set(owner);
-        // OwnershipChanged {
-        //     prev_owner: None,
-        //     new_owner: owner,
-        // }
-        // .emit();
+        OwnershipChanged {
+            prev_owner: None,
+            new_owner: owner,
+        }
+        .emit();
     }
 
     pub fn change_ownership(&self, new_owner: Address) {
         self.ensure_ownership(contract_env::caller());
         let current_owner = self.get_owner();
         self.owner.set(new_owner);
-        // OwnershipChanged {
-        //     prev_owner: Some(current_owner),
-        //     new_owner,
-        // }
-        // .emit();
+        OwnershipChanged {
+            prev_owner: Some(current_owner),
+            new_owner,
+        }
+        .emit();
     }
 
     pub fn ensure_ownership(&self, address: Address) {
@@ -57,16 +55,16 @@ execution_error! {
     }
 }
 
-// #[derive(Event, Debug, PartialEq, Eq)]
-// pub struct OwnershipChanged {
-//     pub prev_owner: Option<Address>,
-//     pub new_owner: Address,
-// }
+#[derive(Event, Debug, PartialEq, Eq)]
+pub struct OwnershipChanged {
+    pub prev_owner: Option<Address>,
+    pub new_owner: Address,
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use odra::test_env;
+    use odra::{assert_events, test_env};
 
     fn setup() -> (Address, OwnableRef) {
         let owner = test_env::get_account(0);
@@ -78,13 +76,13 @@ mod tests {
     fn initialization_works() {
         let (owner, ownable) = setup();
         assert_eq!(ownable.get_owner(), owner);
-        // assert_events!(
-        //     ownable,
-        //     OwnershipChanged {
-        //         prev_owner: None,
-        //         new_owner: owner
-        //     }
-        // );
+        assert_events!(
+            ownable,
+            OwnershipChanged {
+                prev_owner: None,
+                new_owner: owner
+            }
+        );
     }
 
     #[test]
@@ -94,13 +92,13 @@ mod tests {
         test_env::set_caller(&owner);
         ownable.change_ownership(new_owner);
         assert_eq!(ownable.get_owner(), new_owner);
-        // assert_events!(
-        //     ownable,
-        //     OwnershipChanged {
-        //         prev_owner: Some(owner),
-        //         new_owner
-        //     }
-        // );
+        assert_events!(
+            ownable,
+            OwnershipChanged {
+                prev_owner: Some(owner),
+                new_owner
+            }
+        );
     }
 
     #[test]

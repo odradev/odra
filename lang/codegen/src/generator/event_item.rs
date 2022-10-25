@@ -21,7 +21,7 @@ impl GenerateCode for EventItem<'_> {
             .iter()
             .map(|ident| {
                 quote! {
-                  let (#ident, bytes) = odra::types::FromBytes::from_vec(bytes)?;
+                  let (#ident, bytes) = odra::types::FromBytes::from_vec(bytes.to_vec())?;
                 }
             })
             .collect::<TokenStream>();
@@ -50,14 +50,15 @@ impl GenerateCode for EventItem<'_> {
             .collect::<TokenStream>();
 
         let type_check = quote! {
-          let (event_name, bytes): (String, _) = odra::types::FromBytes::from_vec(bytes)?;
+          let (event_name, bytes): (String, _) = odra::types::FromBytes::from_vec(bytes.to_vec())?;
           if &event_name != #name_literal {
-            return core::result::Result::Err(odra::types::event::EventError::UnexpectedType(event_name));
+            // TODO: Handle error. 
+            return Err(odra::types::BytesreprError::Formatting);
           }
         };
 
         quote! {
-            impl odra::types::event::Event for #struct_ident {
+            impl odra::types::odra_types::event::Event for #struct_ident {
               fn emit(&self) {
                   odra::contract_env::emit_event(self)
               }
@@ -67,41 +68,38 @@ impl GenerateCode for EventItem<'_> {
               }
             }
 
-            impl odra::types::ToBytes for #struct_ident {
-              type Error = odra::types::event::EventError;
-
-              fn serialize(&self) -> Result<Vec<u8>, Self::Error> {
-                  core::result::Result::Ok(<Self as odra::types::ToBytes>::to_bytes(self)?)
-              }
-            }
+            impl odra::types::OdraType for #struct_ident {}
 
             impl odra::types::FromBytes for #struct_ident {
-              type Error = odra::types::event::EventError;
-
-              type Item = Self;
-
-              fn deserialize(bytes: Vec<u8>) -> Result<(Self::Item, Vec<u8>), Self::Error> {
+              fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::types::BytesreprError> {
                 #type_check
                 #deserialize_fields
                 let value = #struct_ident {
                   #construct_struct
                 };
-                Ok((value, bytes))
+                Ok((value, &[]))
               }
             }
 
           impl odra::types::ToBytes for #struct_ident {
+
+            fn to_bytes(&self) -> Result<Vec<u8>, odra::types::BytesreprError> {
+              let mut vec = Vec::with_capacity(self.serialized_length());
+              vec.append(&mut #name_literal.to_bytes()?);
+              #append_bytes
+              Ok(vec)
+            }
+
             fn serialized_length(&self) -> usize {
               let mut size = 0;
               #sum_serialized_lengths
               return size;
             }
+          }
 
-            fn to_bytes(&self) -> Result<Vec<u8>, odra::types::bytesrepr::Error> {
-              let mut vec = Vec::with_capacity(self.serialized_length());
-              vec.append(&mut #name_literal.to_bytes()?);
-              #append_bytes
-              Ok(vec)
+          impl odra::types::CLTyped for #struct_ident {
+            fn cl_type() -> odra::types::Type {
+              odra::types::Type::Any
             }
           }
         }

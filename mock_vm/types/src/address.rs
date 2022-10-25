@@ -40,9 +40,8 @@ impl core::fmt::Debug for Address {
 
 impl FromBytes for Address {
     fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), casper_types::bytesrepr::Error> {
-        Ok((Address {
-            data: bytes.try_into().expect("cant convert")
-        }, &[]))
+        let (data, rest) = FromBytes::from_bytes(bytes)?;
+        Ok((Address { data}, rest))
     }
 }
 

@@ -1,20 +1,20 @@
 //! Utility functions that allow to write more compact tests.
 
-use odra_mock_vm::types::Address;
-use odra_types::EventData;
+use odra_mock_vm::types::OdraType;
+
+use crate::types::{odra_types::{self, EventData}, Address, FromBytes};
 
 /// Gets the nth event emitted by the contract at `address`.
 ///
 /// If the passed index is out of bounds, or a deserialization error occurs,
 /// an error is returned.
-pub fn get_event<T>(contract_address: &Address, at: i32) -> Result<T, odra_types::event::EventError>
-where
-    T: FromBytes<Item = T, Error = odra_types::event::EventError>,
+pub fn get_event<T: OdraType>(contract_address: &Address, at: i32) -> Result<T, odra_types::event::EventError>
 {
     let event: EventData = crate::test_env::get_event(contract_address, at)?;
-    match T::deserialize(event) {
+    match T::from_bytes(&event) {
         Ok(res) => Ok(res.0),
-        Err(err) => Err(err),
+        // TODO: Handle error conversion.
+        Err(_) => Err(odra_types::event::EventError::Parsing),
     }
 }
 
@@ -27,7 +27,7 @@ pub fn get_event_name(
     at: i32,
 ) -> Result<String, odra_types::event::EventError> {
     let event: EventData = crate::test_env::get_event(contract_address, at)?;
-    let (event_name, _): (String, _) = odra_types::FromBytes::from_vec(event)?;
+    let (event_name, _): (String, _) = FromBytes::from_vec(event).map_err(|_| odra_types::event::EventError::Parsing)?;
     Ok(event_name)
 }
 

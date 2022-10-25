@@ -63,7 +63,7 @@ where
 }
 
 /// Sends an event to the execution environment.
-pub fn emit_event<T>(event: T)
+pub fn emit_event<T>(event: &T)
 where
     T: OdraType + Event,
 {

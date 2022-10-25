@@ -16,8 +16,7 @@ pub use {
     variable::Variable,
 };
 
-// #[cfg(test)]
-// pub mod test_utils;
+pub mod test_utils;
 
 /*
     Environments import
@@ -49,11 +48,7 @@ where
 {
     cfg_if::cfg_if! {
         if #[cfg(feature = "mock-vm")] {
-            let result = test_env::call_contract(address, entrypoint, args, amount);
-            match result {
-                Some(bytes) => T::from_bytes(bytes.as_slice()).unwrap().0,
-                None => T::from_bytes(&[]).unwrap().0,
-            }
+            test_env::call_contract(address, entrypoint, args, amount)
         } else if #[cfg(feature = "casper-test")] {
             let has_return = types::CLType::Unit != T::cl_type();
             let result = test_env::call_contract(address, entrypoint, args, has_return, amount);

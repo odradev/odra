@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use odra_mock_vm_types::{
     odra_types::{event::EventError, EventData, OdraError},
-    Address, Balance, BlockTime, Bytes, CallArgs,
+    Address, Balance, BlockTime, Bytes, CallArgs, OdraType,
 };
 
 use crate::{EntrypointArgs, EntrypointCall};
@@ -33,15 +33,6 @@ delegate_to_env! {
         constructors: HashMap<String, (EntrypointArgs, EntrypointCall)>,
         entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>
     ) -> Address
-    /// Calls contract at `address` invoking the `entrypoint` with `args`.
-    ///
-    /// Returns optional raw bytes to further processing.
-    fn call_contract(
-        address: Address,
-        entrypoint: &str,
-        args: CallArgs,
-        amount: Option<Balance>
-    ) -> Option<Bytes>
     /// Increases the current value of block_time.
     fn advance_block_time_by(seconds: BlockTime)
     /// Returns the backend name.
@@ -77,4 +68,20 @@ pub fn get_account(n: usize) -> Address {
 /// Returns the value that represents one native token.
 pub fn one_token() -> Balance {
     Balance::one()
+}
+
+/// Calls contract at `address` invoking the `entrypoint` with `args`.
+///
+/// Returns optional raw bytes to further processing.
+pub fn call_contract<T: OdraType>(
+    address: Address,
+    entrypoint: &str,
+    args: CallArgs,
+    amount: Option<Balance>
+) -> T {
+    let result: Option<Bytes> = crate::borrow_env().call_contract(address, entrypoint, args, amount);
+    match result {
+        Some(bytes) => T::from_bytes(bytes.as_slice()).unwrap().0,
+        None => T::from_bytes(&[]).unwrap().0,
+    }
 }
