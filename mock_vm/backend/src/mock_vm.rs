@@ -66,11 +66,11 @@ impl MockVm {
             }
         }
 
-        let result = self.contract_register.read().unwrap().call(
-            &address,
-            String::from(entrypoint),
-            args,
-        );
+        let result =
+            self.contract_register
+                .read()
+                .unwrap()
+                .call(&address, String::from(entrypoint), args);
         self.handle_call_result(result)
     }
 
@@ -258,8 +258,7 @@ impl MockVmState {
 
     fn set_dict_value(&mut self, dict: &str, key: &[u8], value: TypedValue) {
         let ctx = &self.callstack.current().address;
-        self.storage
-            .insert_dict_value(ctx, dict, key, value);
+        self.storage.insert_dict_value(ctx, dict, key, value);
     }
 
     fn get_dict_value(&self, dict: &str, key: &[u8]) -> Option<TypedValue> {

@@ -1,9 +1,9 @@
 use std::{fmt::Debug, hash::Hash, marker::PhantomData};
 
-use crate::{contract_env, UnwrapOrRevert};
-use crate::types::odra_types::arithmetic::{OverflowingAdd, OverflowingSub};
 use crate::instance::Instance;
+use crate::types::odra_types::arithmetic::{OverflowingAdd, OverflowingSub};
 use crate::types::OdraType;
+use crate::{contract_env, UnwrapOrRevert};
 
 /// Data structure for storing key-value pairs.
 #[derive(Debug)]
@@ -81,8 +81,8 @@ impl<K: OdraType + Hash, V: OdraType> Instance for Mapping<K, V> {
 
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
-    use crate::{test_env, Instance, Mapping};
     use crate::types::odra_types::arithmetic::ArithmeticsError;
+    use crate::{test_env, Instance, Mapping};
     use core::hash::Hash;
     use odra_mock_vm::types::OdraType;
 

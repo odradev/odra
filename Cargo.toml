@@ -13,6 +13,7 @@ members = [
     "odra-casper/shared",
     "odra-casper/test_env",
     "odra-casper/types",
+    "odra-casper/test_env/getter_proxy" 
 ]
 
-exclude = [ "contract", "contract/builder", "examples" ]
+exclude = [ "contract", "contract/builder", "examples", ]

@@ -19,15 +19,14 @@ pub use {
 #[cfg(not(target_arch = "wasm32"))]
 pub mod test_utils;
 
-#[cfg(feature = "casper")]
-pub use odra_casper_backend::types;
 #[cfg(all(feature = "casper", target_arch = "wasm32"))]
 pub use odra_casper_backend::contract_env;
+#[cfg(feature = "casper")]
+pub use odra_casper_backend::types;
 #[cfg(all(feature = "casper", not(target_arch = "wasm32")))]
-pub use odra_casper_test_env::{test_env, dummy_contract_env as contract_env};
+pub use odra_casper_test_env::{dummy_contract_env as contract_env, test_env};
 #[cfg(feature = "mock-vm")]
 pub use odra_mock_vm::{contract_env, test_env, types};
-
 
 /// Calls contract at `address` invoking the `entrypoint` with `args`.
 ///

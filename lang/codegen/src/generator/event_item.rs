@@ -52,7 +52,7 @@ impl GenerateCode for EventItem<'_> {
         let type_check = quote! {
           let (event_name, bytes): (String, _) = odra::types::FromBytes::from_vec(bytes.to_vec())?;
           if &event_name != #name_literal {
-            // TODO: Handle error. 
+            // TODO: Handle error.
             return Err(odra::types::BytesreprError::Formatting);
           }
         };

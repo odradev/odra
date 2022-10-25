@@ -1,8 +1,5 @@
 use lazy_static::lazy_static;
-use odra_casper_types::{
-    odra_types::event::Event,
-    Address, OdraType,
-};
+use odra_casper_types::{odra_types::event::Event, Address, OdraType};
 use std::{collections::BTreeMap, sync::Mutex};
 
 use casper_contract::{
@@ -14,10 +11,8 @@ use casper_contract::{
     unwrap_or_revert::UnwrapOrRevert,
 };
 use casper_types::{
-    api_error,
-    bytesrepr::ToBytes,
-    system::CallStackElement,
-    ApiError, ContractPackageHash, ContractVersion, Key, RuntimeArgs, URef, U512,
+    api_error, bytesrepr::ToBytes, system::CallStackElement, ApiError, ContractPackageHash,
+    ContractVersion, Key, RuntimeArgs, URef, U512,
 };
 
 use odra_casper_shared::consts;

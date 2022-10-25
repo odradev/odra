@@ -77,9 +77,10 @@ pub fn call_contract<T: OdraType>(
     address: Address,
     entrypoint: &str,
     args: CallArgs,
-    amount: Option<Balance>
+    amount: Option<Balance>,
 ) -> T {
-    let result: Option<Bytes> = crate::borrow_env().call_contract(address, entrypoint, args, amount);
+    let result: Option<Bytes> =
+        crate::borrow_env().call_contract(address, entrypoint, args, amount);
     match result {
         Some(bytes) => T::from_bytes(bytes.as_slice()).unwrap().0,
         None => T::from_bytes(&[]).unwrap().0,

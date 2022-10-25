@@ -1,4 +1,7 @@
-use casper_types::{bytesrepr::{FromBytes, ToBytes}, CLType, CLTyped};
+use casper_types::{
+    bytesrepr::{FromBytes, ToBytes},
+    CLType, CLTyped,
+};
 
 use crate::OdraType;
 

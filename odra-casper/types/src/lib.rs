@@ -10,10 +10,10 @@ pub type Bytes = casper_types::bytesrepr::Bytes;
 pub type TypedValue = casper_types::CLValue;
 pub type Type = casper_types::CLType;
 // TODO: Remove ToBytes, FromBytes, CLTyped;
-pub use casper_types::CLTyped;
-pub use casper_types::bytesrepr::ToBytes;
-pub use casper_types::bytesrepr::FromBytes;
 pub use casper_types::bytesrepr::Error as BytesreprError;
+pub use casper_types::bytesrepr::FromBytes;
+pub use casper_types::bytesrepr::ToBytes;
+pub use casper_types::CLTyped;
 
 pub use casper_address::CasperAddress as Address;
 
