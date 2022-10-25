@@ -1,14 +1,12 @@
 //! Utility functions that allow to write more compact tests.
 
-use odra_mock_vm::types::OdraType;
-
-use crate::types::{odra_types::{self, EventData}, Address, FromBytes};
+use crate::types::{OdraType, odra_types::{self, EventData}, Address, FromBytes};
 
 /// Gets the nth event emitted by the contract at `address`.
 ///
 /// If the passed index is out of bounds, or a deserialization error occurs,
 /// an error is returned.
-pub fn get_event<T: OdraType>(contract_address: &Address, at: i32) -> Result<T, odra_types::event::EventError>
+pub fn get_event<T: OdraType>(contract_address: Address, at: i32) -> Result<T, odra_types::event::EventError>
 {
     let event: EventData = crate::test_env::get_event(contract_address, at)?;
     match T::from_bytes(&event) {
@@ -23,7 +21,7 @@ pub fn get_event<T: OdraType>(contract_address: &Address, at: i32) -> Result<T, 
 /// If the passed index is out of bounds, or a deserialization error occurs,
 /// an error is returned.
 pub fn get_event_name(
-    contract_address: &Address,
+    contract_address: Address,
     at: i32,
 ) -> Result<String, odra_types::event::EventError> {
     let event: EventData = crate::test_env::get_event(contract_address, at)?;
@@ -81,7 +79,7 @@ macro_rules! assert_events {
         )+
         $(
             __idx += 1;
-            let __ev = odra::test_utils::get_event::<$event_ty>(&$contract.address(), __idx).unwrap();
+            let __ev = odra::test_utils::get_event::<$event_ty>($contract.address(), __idx).unwrap();
             let __name = stringify!($event_ty).to_string();
             let __name = __name.split("::").last().unwrap();
             assert_eq!(

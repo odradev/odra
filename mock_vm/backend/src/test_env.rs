@@ -38,9 +38,9 @@ delegate_to_env! {
     /// Returns the backend name.
     fn get_backend_name() -> String
     /// Replaces the current caller.
-    fn set_caller(address: &Address)
+    fn set_caller(address: Address)
     /// Gets nth event emitted by the contract at `address`.
-    fn get_event(address: &Address, index: i32) -> Result<EventData, EventError>
+    fn get_event(address: Address, index: i32) -> Result<EventData, EventError>
     /// Returns the balance of the account associated with the given address.
     fn token_balance(address: Address) -> Balance
 }

@@ -69,7 +69,7 @@ impl GenerateCode for Deploy<'_> {
 
         let struct_snake_case = odra_utils::camel_to_snake(&struct_name);
         quote! {
-            #[cfg(feature = "casper-test")]
+            #[cfg(all(feature = "casper", not(target_arch = "wasm32")))]
             impl #struct_ident {
                 pub fn deploy() -> #ref_ident {
                     let address = odra::test_env::register_contract(&#struct_snake_case, odra::types::CallArgs::new());
@@ -208,7 +208,7 @@ where
                     use odra::types::CallArgs;
                     let mut args = { #args };
                     args.insert("constructor", stringify!(#constructor_ident)).unwrap();
-                    let address = odra::test_env::register_contract(#struct_name_snake_case, &args);
+                    let address = odra::test_env::register_contract(#struct_name_snake_case, args);
                     #ref_ident::at(address)
                 }
             }

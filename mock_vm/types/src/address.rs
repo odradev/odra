@@ -38,20 +38,20 @@ impl core::fmt::Debug for Address {
     }
 }
 
-impl FromBytes for Address {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), casper_types::bytesrepr::Error> {
-        let (data, rest) = FromBytes::from_bytes(bytes)?;
-        Ok((Address { data}, rest))
-    }
-}
-
 impl ToBytes for Address {
     fn to_bytes(&self) -> Result<Vec<u8>, casper_types::bytesrepr::Error> {
-        Ok(self.bytes().to_vec())
+        Ok(self.data.to_vec())
     }
 
     fn serialized_length(&self) -> usize {
-        self.bytes().len()
+        self.data.len()
+    }
+}
+
+impl FromBytes for Address {
+    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), casper_types::bytesrepr::Error> {
+        let (data, remainder) = bytes.split_at(ADDRESS_LENGTH);
+        Ok((Address::new(data), remainder))
     }
 }
 

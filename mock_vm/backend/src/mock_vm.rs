@@ -1,7 +1,7 @@
 use anyhow::Result;
 use odra_mock_vm_types::odra_types::event::EventError;
 use odra_mock_vm_types::odra_types::{EventData, OdraError, VmError};
-use odra_mock_vm_types::Address;
+use odra_mock_vm_types::{Address, OdraType};
 use odra_mock_vm_types::{Balance, BlockTime, Bytes, CallArgs, TypedValue};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -69,7 +69,7 @@ impl MockVm {
         let result = self.contract_register.read().unwrap().call(
             &address,
             String::from(entrypoint),
-            args.clone(),
+            args,
         );
         self.handle_call_result(result)
     }
@@ -83,7 +83,7 @@ impl MockVm {
         self.prepare_call(address, None);
         // Call contract from register.
         let register = self.contract_register.read().unwrap();
-        let result = register.call_constructor(&address, String::from(entrypoint), args.clone());
+        let result = register.call_constructor(&address, String::from(entrypoint), args);
         self.handle_call_result(result)
     }
 
@@ -148,7 +148,7 @@ impl MockVm {
         self.state.read().unwrap().caller()
     }
 
-    pub fn set_caller(&self, caller: &Address) {
+    pub fn set_caller(&self, caller: Address) {
         self.state.write().unwrap().set_caller(caller);
     }
 
@@ -160,7 +160,7 @@ impl MockVm {
         self.state.read().unwrap().get_var(key)
     }
 
-    pub fn set_dict_value(&self, dict: &str, key: &[u8], value: &TypedValue) {
+    pub fn set_dict_value(&self, dict: &str, key: &[u8], value: TypedValue) {
         self.state.write().unwrap().set_dict_value(dict, key, value);
     }
 
@@ -172,7 +172,7 @@ impl MockVm {
         self.state.write().unwrap().emit_event(event_data);
     }
 
-    pub fn get_event(&self, address: &Address, index: i32) -> Result<EventData, EventError> {
+    pub fn get_event(&self, address: Address, index: i32) -> Result<EventData, EventError> {
         self.state.read().unwrap().get_event(address, index)
     }
 
@@ -241,14 +241,14 @@ impl MockVmState {
         self.callstack.previous().address
     }
 
-    fn set_caller(&mut self, address: &Address) {
+    fn set_caller(&mut self, address: Address) {
         self.pop_callstack_element();
-        self.push_callstack_element(CallstackElement::new(*address, None));
+        self.push_callstack_element(CallstackElement::new(address, None));
     }
 
     fn set_var(&mut self, key: &str, value: TypedValue) {
         let ctx = &self.callstack.current().address;
-        self.storage.set_value(ctx, key, value.clone());
+        self.storage.set_value(ctx, key, value);
     }
 
     fn get_var(&self, key: &str) -> Option<TypedValue> {
@@ -256,10 +256,10 @@ impl MockVmState {
         self.storage.get_value(ctx, key)
     }
 
-    fn set_dict_value(&mut self, dict: &str, key: &[u8], value: &TypedValue) {
+    fn set_dict_value(&mut self, dict: &str, key: &[u8], value: TypedValue) {
         let ctx = &self.callstack.current().address;
         self.storage
-            .insert_dict_value(ctx, dict, key, value.clone());
+            .insert_dict_value(ctx, dict, key, value);
     }
 
     fn get_dict_value(&self, dict: &str, key: &[u8]) -> Option<TypedValue> {
@@ -279,8 +279,8 @@ impl MockVmState {
         }
     }
 
-    fn get_event(&self, address: &Address, index: i32) -> Result<EventData, EventError> {
-        let events = self.events.get(address);
+    fn get_event(&self, address: Address, index: i32) -> Result<EventData, EventError> {
+        let events = self.events.get(&address);
         if events.is_none() {
             return Err(EventError::IndexOutOfBounds);
         }
@@ -491,7 +491,7 @@ mod tests {
 
         // when set a new caller
         let new_caller = Address::new(b"new caller");
-        instance.set_caller(&new_caller);
+        instance.set_caller(new_caller);
         // put a fake contract on stack
         push_address(&instance, &new_caller);
 
@@ -536,7 +536,7 @@ mod tests {
         let dict = "dict";
         let key: [u8; 2] = [1, 2];
         let value = TypedValue::from_t(32u8).unwrap();
-        instance.set_dict_value(dict, &key, &value);
+        instance.set_dict_value(dict, &key, value.clone());
 
         // then the value can be read
         assert_eq!(instance.get_dict_value(dict, &key), Some(value));
@@ -570,20 +570,20 @@ mod tests {
         instance.emit_event(&fourth_event);
 
         assert_eq!(
-            instance.get_event(&first_contract_address, 0),
+            instance.get_event(first_contract_address, 0),
             Ok(first_event)
         );
         assert_eq!(
-            instance.get_event(&first_contract_address, 1),
+            instance.get_event(first_contract_address, 1),
             Ok(second_event)
         );
 
         assert_eq!(
-            instance.get_event(&second_contract_address, 0),
+            instance.get_event(second_contract_address, 0),
             Ok(third_event)
         );
         assert_eq!(
-            instance.get_event(&second_contract_address, 1),
+            instance.get_event(second_contract_address, 1),
             Ok(fourth_event)
         );
     }

@@ -1,7 +1,6 @@
 use core::ops::Range;
 
-use odra_mock_vm::types::OdraType;
-use crate::types::odra_types::CollectionError;
+use crate::types::{OdraType, odra_types::CollectionError};
 
 use crate::{contract_env, Instance, Mapping, UnwrapOrRevert, Variable};
 

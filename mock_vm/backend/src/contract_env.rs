@@ -39,7 +39,7 @@ pub fn set_dict_value<K: OdraType, V: OdraType>(dict: &str, key: &K, value: V) {
     borrow_env().set_dict_value(
         dict,
         key.to_bytes().unwrap().as_slice(),
-        &TypedValue::from_t(value).unwrap(),
+        TypedValue::from_t(value).unwrap(),
     )
 }
 

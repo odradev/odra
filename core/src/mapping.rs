@@ -3,7 +3,7 @@ use std::{fmt::Debug, hash::Hash, marker::PhantomData};
 use crate::{contract_env, UnwrapOrRevert};
 use crate::types::odra_types::arithmetic::{OverflowingAdd, OverflowingSub};
 use crate::instance::Instance;
-use odra_mock_vm::types::OdraType;
+use crate::types::OdraType;
 
 /// Data structure for storing key-value pairs.
 #[derive(Debug)]

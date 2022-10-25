@@ -1,7 +1,6 @@
 use std::marker::PhantomData;
 
-use odra_mock_vm::types::OdraType;
-use crate::types::odra_types::arithmetic::{OverflowingAdd, OverflowingSub};
+use crate::types::{OdraType, odra_types::arithmetic::{OverflowingAdd, OverflowingSub}};
 
 use crate::{contract_env, instance::Instance, UnwrapOrRevert};
 

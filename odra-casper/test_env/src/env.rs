@@ -279,7 +279,7 @@ impl CasperTestEnv {
             .get(consts::CONTRACT_MAIN_PURSE)
             .and_then(|key| key.as_uref())
             .map(|purse| self.context.get_purse_balance(*purse))
-            .unwrap_or_else(|| Balance::zero())
+            .unwrap_or_else(Balance::zero)
     }
 
     fn get_account_cspr_balance(&self, account_hash: AccountHash) -> Balance {

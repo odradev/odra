@@ -16,47 +16,37 @@ pub use {
     variable::Variable,
 };
 
+#[cfg(not(target_arch = "wasm32"))]
 pub mod test_utils;
 
-/*
-    Environments import
-*/
 #[cfg(feature = "casper")]
+pub use odra_casper_backend::types;
+#[cfg(all(feature = "casper", target_arch = "wasm32"))]
 pub use odra_casper_backend::contract_env;
-#[cfg(feature = "casper-test")]
-pub use odra_casper_test_env::dummy_contract_env as contract_env;
-#[cfg(feature = "casper-test")]
-pub use odra_casper_test_env::test_env;
-use odra_mock_vm::types::{Address, Balance, CallArgs, OdraType};
+#[cfg(all(feature = "casper", not(target_arch = "wasm32")))]
+pub use odra_casper_test_env::{test_env, dummy_contract_env as contract_env};
 #[cfg(feature = "mock-vm")]
 pub use odra_mock_vm::{contract_env, test_env, types};
 
-#[cfg(any(feature = "casper", feature = "casper-test"))]
-use backend_casper::OdraType;
 
 /// Calls contract at `address` invoking the `entrypoint` with `args`.
 ///
 /// Returns already parsed result.
 pub fn call_contract<T>(
-    address: Address,
+    address: types::Address,
     entrypoint: &str,
-    args: CallArgs,
-    amount: Option<Balance>,
+    args: types::CallArgs,
+    amount: Option<types::Balance>,
 ) -> T
 where
-    T: OdraType,
+    T: types::OdraType,
 {
     cfg_if::cfg_if! {
         if #[cfg(feature = "mock-vm")] {
             test_env::call_contract(address, entrypoint, args, amount)
-        } else if #[cfg(feature = "casper-test")] {
-            let has_return = types::CLType::Unit != T::cl_type();
-            let result = test_env::call_contract(address, entrypoint, args, has_return, amount);
-            match result {
-                Some(bytes) => T::from_bytes(bytes.as_slice()).unwrap().0,
-                None => T::from_bytes(&[]).unwrap().0,
-            }
-        }  else if #[cfg(feature = "casper")] {
+        } else if #[cfg(all(feature = "casper", not(target_arch = "wasm32")))] {
+           test_env::call_contract(address, entrypoint, args, amount)
+        }  else if #[cfg(all(feature = "casper", target_arch = "wasm32"))] {
             let res = contract_env::call_contract(address, entrypoint, args, amount);
             types::bytesrepr::deserialize(res).unwrap_or_revert()
         } else {

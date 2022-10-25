@@ -5,8 +5,8 @@ use casper_contract::{
     contract_api::system::transfer_from_purse_to_account, unwrap_or_revert::UnwrapOrRevert,
 };
 use odra_casper_types::{
-    odra_types::{event::Event, EventData, ExecutionError},
-    Address, Balance, BlockTime, CallArgs, OdraType, TypedValue,
+    odra_types::{event::Event, ExecutionError},
+    Address, Balance, BlockTime, CallArgs, OdraType,
 };
 
 use crate::{casper_env, utils::get_main_purse};

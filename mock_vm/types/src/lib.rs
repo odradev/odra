@@ -1,5 +1,3 @@
-#![feature(trait_alias)]
-
 mod address;
 pub mod contract_def;
 
