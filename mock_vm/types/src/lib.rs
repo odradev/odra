@@ -7,6 +7,7 @@ use odra_types::{
 };
 
 mod address;
+mod types;
 pub mod contract_def;
 
 pub type Balance = casper_types::U512;
