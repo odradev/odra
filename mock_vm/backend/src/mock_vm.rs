@@ -1,7 +1,7 @@
 use anyhow::Result;
 use odra_mock_vm_types::odra_types::event::EventError;
 use odra_mock_vm_types::odra_types::{EventData, OdraError, VmError};
-use odra_mock_vm_types::{Address, OdraType};
+use odra_mock_vm_types::{Address};
 use odra_mock_vm_types::{Balance, BlockTime, Bytes, CallArgs, TypedValue};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};

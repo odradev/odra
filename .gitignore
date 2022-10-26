@@ -5,3 +5,4 @@ Cargo.lock
 .vscode/
 odra-casper/**/target/
 contract/
+examples/target
