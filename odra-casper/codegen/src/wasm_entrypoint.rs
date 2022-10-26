@@ -19,16 +19,16 @@ impl ToTokens for WasmEntrypoint<'_> {
 
         let payable = match self.0.ty {
             EntrypointType::PublicPayable => quote! {
-                casper_backend::contract_env::handle_attached_value();
+                casper_backend::utils::handle_attached_value();
             },
             _ => quote! {
-                casper_backend::contract_env::assert_no_attached_value();
+                casper_backend::utils::assert_no_attached_value();
             },
         };
 
         let payable_cleanup = match self.0.ty {
             EntrypointType::PublicPayable => quote! {
-                casper_backend::contract_env::clear_attached_value();
+                casper_backend::utils::clear_attached_value();
             },
             _ => quote!(),
         };

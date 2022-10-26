@@ -44,10 +44,9 @@ where
         if #[cfg(feature = "mock-vm")] {
             test_env::call_contract(address, entrypoint, args, amount)
         } else if #[cfg(all(feature = "casper", not(target_arch = "wasm32")))] {
-           test_env::call_contract(address, entrypoint, args, amount)
+            test_env::call_contract(address, entrypoint, args, amount)
         }  else if #[cfg(all(feature = "casper", target_arch = "wasm32"))] {
-            let res = contract_env::call_contract(address, entrypoint, args, amount);
-            types::bytesrepr::deserialize(res).unwrap_or_revert()
+            contract_env::call_contract(address, entrypoint, args, amount)
         } else {
             compile_error!("Unknown feature")
         }

@@ -31,8 +31,7 @@ impl ToTokens for WasmConstructor<'_> {
             .flat_map(|(entrypoint_ident, casper_args, fn_args)| {
                 quote! {
                     stringify!(#entrypoint_ident) => {
-                        let casper_address = casper_backend::backend::CasperAddress::from(contract_package_hash);
-                        let odra_address = odra::types::Address::try_from(casper_address).unwrap_or_revert();
+                        let odra_address = odra::types::Address::from(contract_package_hash);
                         let contract_ref = #ref_ident::at(odra_address);
                         #casper_args
                         contract_ref.#entrypoint_ident( #fn_args );
@@ -42,7 +41,7 @@ impl ToTokens for WasmConstructor<'_> {
             .collect();
 
         tokens.extend(quote! {
-            if casper_backend::contract_env::named_arg_exists("constructor") {
+            if casper_backend::utils::named_arg_exists("constructor") {
                 use casper_backend::backend::casper_contract::unwrap_or_revert::UnwrapOrRevert;
                 let constructor_access: casper_backend::backend::casper_types::URef =
                     casper_backend::backend::casper_contract::contract_api::storage::create_contract_user_group(
@@ -112,7 +111,7 @@ mod tests {
         assert_eq_tokens(
             wasm_constructor,
             quote! {
-                if casper_backend::contract_env::named_arg_exists("constructor") {
+                if casper_backend::utils::named_arg_exists("constructor") {
                     use casper_backend::backend::casper_contract::unwrap_or_revert::UnwrapOrRevert;
                     let constructor_access: casper_backend::backend::casper_types::URef = casper_backend::backend::casper_contract::contract_api::storage::create_contract_user_group(
                         contract_package_hash , "constructor" , 1 , Default::default()
