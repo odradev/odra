@@ -1,6 +1,11 @@
 //! Encapsulates a set of structures that abstract out a smart contract layout.
 
-use crate::Type;
+/// Temporary Type representation.
+/// TODO: Use syn?
+#[derive(Debug, Clone)]
+pub struct Type {
+    pub ident: String,
+}
 
 /// Top-level contract abstraction.
 #[derive(Debug, Clone)]

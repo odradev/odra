@@ -1,15 +1,10 @@
-use casper_types::{
-    bytesrepr::{FromBytes, ToBytes},
-    CLType, CLTyped,
-};
-
-use crate::OdraType;
+use borsh::{BorshSerialize, BorshDeserialize};
 
 /// Max bytes of an [`Address`] internal representation.
 const ADDRESS_LENGTH: usize = 4;
 
 /// Blockchain-agnostic address representation.
-#[derive(Clone, Copy, PartialEq, Hash, Eq)]
+#[derive(Clone, Copy, PartialEq, Hash, Eq, BorshSerialize, BorshDeserialize)]
 pub struct Address {
     data: [u8; ADDRESS_LENGTH],
 }
@@ -27,11 +22,6 @@ impl Address {
         bytes.copy_from_slice(bytes_vec.as_slice());
         Address { data: bytes }
     }
-
-    /// Returns a slice containing the entire array of bytes.
-    pub fn bytes(&self) -> &[u8] {
-        self.data.as_slice()
-    }
 }
 
 impl core::fmt::Debug for Address {
@@ -40,28 +30,3 @@ impl core::fmt::Debug for Address {
         f.debug_struct("Address").field("data", &name).finish()
     }
 }
-
-impl ToBytes for Address {
-    fn to_bytes(&self) -> Result<Vec<u8>, casper_types::bytesrepr::Error> {
-        Ok(self.data.to_vec())
-    }
-
-    fn serialized_length(&self) -> usize {
-        self.data.len()
-    }
-}
-
-impl FromBytes for Address {
-    fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), casper_types::bytesrepr::Error> {
-        let (data, remainder) = bytes.split_at(ADDRESS_LENGTH);
-        Ok((Address::new(data), remainder))
-    }
-}
-
-impl CLTyped for Address {
-    fn cl_type() -> CLType {
-        CLType::Any
-    }
-}
-
-impl OdraType for Address {}

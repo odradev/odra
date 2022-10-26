@@ -7,32 +7,10 @@
 
 use borsh::{BorshSerialize, BorshDeserialize};
 
-#[derive(Debug, PartialEq)]
-pub enum MockVMSerializationError {
-    DeserializationError,
-    SerializationError
-}
-
 pub trait MockVMType: Sized {
     fn ser(&self) -> Result<Vec<u8>, MockVMSerializationError>;
     fn deser(bytes: Vec<u8>) -> Result<Self, MockVMSerializationError>;
 }
-
-mod uints {
-    use borsh::{BorshSerialize, BorshDeserialize};
-    use uint::construct_uint;
-
-    construct_uint! {
-        #[derive(BorshSerialize, BorshDeserialize)]
-        pub struct U256(4);
-    }
-
-    construct_uint! {
-        #[derive(BorshSerialize, BorshDeserialize)]
-        pub struct U512(8);
-    }
-}
-pub use uints::{U256, U512};
 
 impl<T: BorshSerialize + BorshDeserialize> MockVMType for T {
     fn ser(&self) -> Result<Vec<u8>, MockVMSerializationError> {
@@ -45,13 +23,17 @@ impl<T: BorshSerialize + BorshDeserialize> MockVMType for T {
     }
 }
 
+#[derive(Debug, PartialEq)]
+pub enum MockVMSerializationError {
+    DeserializationError,
+    SerializationError
+}
+
 #[cfg(test)]
 mod tests {
-    use std::fmt::Debug;
+    use crate::{MockVMType, U256, U512, Address};
 
-    use super::{MockVMType, U256, U512};
-
-    pub fn ser_deser<T: MockVMType + PartialEq + Debug>(value: T) {
+    pub fn ser_deser<T: MockVMType + PartialEq + std::fmt::Debug>(value: T) {
         let bytes = value.ser().unwrap();
         let deserialized = T::deser(bytes).unwrap();
         assert_eq!(deserialized, value);
@@ -120,6 +102,11 @@ mod tests {
     }
 
     #[test]
+    fn test_address() {
+        ser_deser(Address::new(b"Satoshi"));
+    }
+
+    #[test]
     fn test_complex_example() {
         ser_deser((
             vec![0u8, 1u8],
@@ -133,4 +120,5 @@ mod tests {
             )
         ));
     }
+
 }
