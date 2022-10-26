@@ -38,8 +38,7 @@ fn call() {
 
         args.insert("cargo_purse", cargo_purse).unwrap_or_revert();
     }
-    let result: Vec<u8> =
-        call_versioned_contract(contract_package_hash, None, &entry_point, args);
+    let result: Vec<u8> = call_versioned_contract(contract_package_hash, None, &entry_point, args);
     set_key("result", Bytes::from(result));
 }
 

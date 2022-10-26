@@ -15,7 +15,7 @@ use casper_types::{
     account::{Account, AccountHash},
     bytesrepr::{Bytes, ToBytes},
     runtime_args, ApiError, Contract, ContractHash, ContractPackageHash, Key, Motes, PublicKey,
-    RuntimeArgs, SecretKey, URef,
+    RuntimeArgs, SecretKey, StoredValue, URef,
 };
 use odra_casper_shared::consts;
 use odra_casper_types::{
@@ -132,14 +132,13 @@ impl CasperTestEnv {
             .build();
         self.context.exec(execute_request).commit();
 
-        let active_account = self.active_account_hash();
         self.attached_value = None;
 
         if self.context.is_error() {
             self.error = Some(parse_error(self.context.get_error().unwrap()));
-            self.get_account_value(active_account, "result")
+            self.get_active_account_result()
         } else {
-            self.get_account_value(active_account, "result")
+            self.get_active_account_result()
         }
     }
 
@@ -163,15 +162,16 @@ impl CasperTestEnv {
     }
 
     /// Read a value from Account's named keys.
-    pub fn get_account_value<T: OdraType>(&self, hash: AccountHash, name: &str) -> T {
-        self.context
-            .query(None, Key::Account(hash), &[name.to_string()])
-            .unwrap()
-            .as_cl_value()
-            .unwrap()
-            .clone()
-            .into_t()
-            .unwrap()
+    pub fn get_account_value<T: OdraType>(
+        &self,
+        hash: AccountHash,
+        name: &str,
+    ) -> Result<T, String> {
+        let result: Result<StoredValue, String> =
+            self.context
+                .query(None, Key::Account(hash), &[name.to_string()]);
+
+        result.map(|value| value.as_cl_value().unwrap().clone().into_t().unwrap())
     }
 
     /// Read a ContractPackageHash of a given name, from the active account.
@@ -290,6 +290,15 @@ impl CasperTestEnv {
 
     fn active_account_hash(&self) -> AccountHash {
         *self.active_account.as_account_hash().unwrap()
+    }
+
+    fn get_active_account_result<T: OdraType>(&self) -> T {
+        let active_account = self.active_account_hash();
+
+        let bytes: Bytes = self
+            .get_account_value(active_account, "result")
+            .unwrap_or_default();
+        T::from_bytes(bytes.inner_bytes()).unwrap().0
     }
 }
 

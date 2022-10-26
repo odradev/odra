@@ -43,7 +43,7 @@ macro_rules! impl_odra_type {
 
 // u8, u32, u64, i32, i64, bool, (), String, U256, U512, (T, T), (T, T, T), Vec<T>, Result<T, T>, Option<T>
 
-impl_odra_type!(u8, u32, u64, i32, i64, bool, (), String, U256, (Address, Address));
+impl_odra_type!(u8, u32, u64, i32, i64, bool, (), String, U256, (Address, Address), Bytes);
 
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub struct U256 {

@@ -25,4 +25,4 @@ macro_rules! impl_odra_type {
     };
 }
 
-impl_odra_type!(u8, u32, u64, i32, i64, bool, (), String);
+impl_odra_type!(u8, u32, u64, i32, i64, bool, (), String, Bytes);

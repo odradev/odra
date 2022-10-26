@@ -109,7 +109,3 @@ pub fn transfer_tokens(to: Address, amount: Balance) {
         Address::Contract(_) => revert(ExecutionError::can_not_transfer_to_contract()),
     };
 }
-
-// pub fn print(message: &str) {
-//     casper_env::print(message);
-// }

@@ -223,10 +223,6 @@ pub fn self_balance() -> U512 {
     get_purse_balance(purse).unwrap_or_default()
 }
 
-// pub fn print(message: &str) {
-//     runtime::print(message)
-// }
-
 fn to_ptr<T: ToBytes>(t: T) -> (*const u8, usize, Vec<u8>) {
     let bytes = t.into_bytes().unwrap_or_revert();
     let ptr = bytes.as_ptr();
