@@ -89,7 +89,7 @@ mod tests {
     fn owner_can_change_ownership() {
         let (owner, ownable) = setup();
         let new_owner = test_env::get_account(1);
-        test_env::set_caller(&owner);
+        test_env::set_caller(owner);
         ownable.change_ownership(new_owner);
         assert_eq!(ownable.get_owner(), new_owner);
         assert_events!(
