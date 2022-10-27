@@ -1,6 +1,6 @@
+use crate::types::OdraType;
 use core::ops::Range;
-
-use crate::types::{odra_types::CollectionError, OdraType};
+use odra_types::CollectionError;
 
 use crate::{contract_env, Instance, Mapping, UnwrapOrRevert, Variable};
 
@@ -148,8 +148,8 @@ impl<T: OdraType> Instance for List<T> {
 
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
-    use crate::types::odra_types::CollectionError;
     use odra_mock_vm::types::OdraType;
+    use odra_types::CollectionError;
 
     use crate::test_env;
 

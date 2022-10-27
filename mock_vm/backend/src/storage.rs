@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use odra_mock_vm_types::{Address, Balance, TypedValue};
+use odra_mock_vm_types::{Address, Balance, MockVMType};
 use std::{
     collections::{hash_map::DefaultHasher, HashMap},
     hash::{Hash, Hasher},
@@ -9,9 +9,9 @@ use crate::balance::AccountBalance;
 
 #[derive(Default, Clone)]
 pub struct Storage {
-    state: HashMap<u64, TypedValue>,
+    state: HashMap<u64, Vec<u8>>,
     balances: HashMap<Address, AccountBalance>,
-    state_snapshot: Option<HashMap<u64, TypedValue>>,
+    state_snapshot: Option<HashMap<u64, Vec<u8>>>,
     balances_snapshot: Option<HashMap<Address, AccountBalance>>,
 }
 
@@ -43,37 +43,47 @@ impl Storage {
         balance.reduce(amount)
     }
 
-    pub fn get_value(&self, address: &Address, key: &str) -> Option<TypedValue> {
+    // TODO: Handle unwraps.
+    pub fn get_value<T: MockVMType>(&self, address: &Address, key: &str) -> Option<T> {
         let hash = Storage::hashed_key(address, key);
-        self.state.get(&hash).cloned()
+        self.state
+            .get(&hash)
+            .cloned()
+            .map(|bytes| T::deser(bytes).unwrap())
     }
 
-    pub fn set_value(&mut self, address: &Address, key: &str, value: TypedValue) {
+    // TODO: Handle unwraps.
+    pub fn set_value<T: MockVMType>(&mut self, address: &Address, key: &str, value: T) {
         let hash = Storage::hashed_key(address, key);
-        self.state.insert(hash, value);
+        self.state.insert(hash, value.ser().unwrap());
     }
 
-    pub fn insert_dict_value(
+    // TODO: Handle unwraps.
+    pub fn insert_dict_value<T: MockVMType>(
         &mut self,
         address: &Address,
         collection: &str,
         key: &[u8],
-        value: TypedValue,
+        value: T,
     ) {
         let dict_key = [collection.as_bytes(), key].concat();
         let hash = Storage::hashed_key(address, dict_key);
-        self.state.insert(hash, value);
+        self.state.insert(hash, value.ser().unwrap());
     }
 
-    pub fn get_dict_value(
+    // TODO: Handle unwraps.
+    pub fn get_dict_value<T: MockVMType>(
         &self,
         address: &Address,
         collection: &str,
         key: &[u8],
-    ) -> Option<TypedValue> {
+    ) -> Option<T> {
         let dict_key = [collection.as_bytes(), key].concat();
         let hash = Storage::hashed_key(address, dict_key);
-        self.state.get(&hash).cloned()
+        self.state
+            .get(&hash)
+            .cloned()
+            .map(|bytes| T::deser(bytes).unwrap())
     }
 
     pub fn take_snapshot(&mut self) {
@@ -108,14 +118,14 @@ impl Storage {
 #[cfg(test)]
 mod test {
 
-    use odra_mock_vm_types::{Address, TypedValue};
+    use odra_mock_vm_types::Address;
 
     use super::Storage;
 
-    fn setup() -> (Address, String, TypedValue) {
+    fn setup() -> (Address, String, u8) {
         let address = Address::new(b"address");
         let key = String::from("key");
-        let value = TypedValue::from_t(1_000u32).unwrap();
+        let value = 88u8;
 
         (address, key, value)
     }
@@ -141,7 +151,7 @@ mod test {
         storage.set_value(&address, &key, value);
 
         // when the next value is set under the same key
-        let next_value = TypedValue::from_t(2_000u32).unwrap();
+        let next_value = String::from("new_value");
         storage.set_value(&address, &key, next_value.clone());
 
         // then the previous value is replaced
@@ -155,7 +165,7 @@ mod test {
         let (address, key, _) = setup();
 
         // when lookup a key
-        let result = storage.get_value(&address, &key);
+        let result: Option<()> = storage.get_value(&address, &key);
 
         // then the None value is returned
         assert_eq!(result, None);
@@ -188,7 +198,8 @@ mod test {
 
         // when read a value from a non exisiting collection
         let non_existing_collection = "collection";
-        let result = storage.get_dict_value(&address, non_existing_collection, key.as_bytes());
+        let result: Option<()> =
+            storage.get_dict_value(&address, non_existing_collection, key.as_bytes());
 
         // then None is returned
         assert_eq!(result, None);
@@ -204,7 +215,7 @@ mod test {
 
         // when read a value from a non existing collection
         let non_existing_key = [2u8];
-        let result = storage.get_dict_value(&address, collection, &non_existing_key);
+        let result: Option<()> = storage.get_dict_value(&address, collection, &non_existing_key);
 
         // then None is returned
         assert_eq!(result, None);
@@ -217,14 +228,14 @@ mod test {
         let (address, key, initial_value) = setup();
         storage.set_value(&address, &key, initial_value.clone());
         storage.take_snapshot();
-        let next_value = TypedValue::from_t(2_000u32).unwrap();
+        let next_value = String::from("next_value");
         storage.set_value(&address, &key, next_value);
 
         // when restore the snapshot
         storage.restore_snapshot();
 
         // then the changes are reverted
-        assert_eq!(storage.get_value(&address, &key), Some(initial_value),);
+        assert_eq!(storage.get_value(&address, &key), Some(initial_value));
         // the snapshot is removed
         assert_eq!(storage.state_snapshot, None);
     }
@@ -234,8 +245,8 @@ mod test {
         // given storage with some state and a snapshot of the previous state
         let mut storage = Storage::default();
         let (address, key, initial_value) = setup();
-        let second_value = TypedValue::from_t(2_000u32).unwrap();
-        let third_value = TypedValue::from_t(3_000u32).unwrap();
+        let second_value = 2_000u32;
+        let third_value = 3_000u32;
         storage.set_value(&address, &key, initial_value);
         storage.take_snapshot();
         storage.set_value(&address, &key, second_value.clone());
@@ -254,7 +265,7 @@ mod test {
         // given storage with some state and a snapshot of the previous state
         let mut storage = Storage::default();
         let (address, key, initial_value) = setup();
-        let next_value = TypedValue::from_t(1_000u32).unwrap();
+        let next_value = 1_000u32;
         storage.set_value(&address, &key, initial_value);
         storage.take_snapshot();
         storage.set_value(&address, &key, next_value.clone());

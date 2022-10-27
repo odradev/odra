@@ -11,6 +11,7 @@ categories = ["wasm"]
 
 [dependencies]
 odra-utils = { version = "0.1.0", path = "../utils" }
+odra-types = { version = "0.1.0", path = "../types" }
 odra-proc-macros = { version = "0.1.0", path = "../lang/proc_macros" }
 odra-mock-vm = { version = "0.1.0", path = "../mock_vm/backend", optional = true }
 odra-casper-backend = { version = "0.1.0", path = "../odra-casper/backend", optional = true }

@@ -1,4 +1,4 @@
-use borsh::{BorshSerialize, BorshDeserialize};
+use borsh::{BorshDeserialize, BorshSerialize};
 use uint::construct_uint;
 
 construct_uint! {

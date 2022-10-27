@@ -1,4 +1,4 @@
-use borsh::{BorshSerialize, BorshDeserialize};
+use borsh::{BorshDeserialize, BorshSerialize};
 
 /// Max bytes of an [`Address`] internal representation.
 const ADDRESS_LENGTH: usize = 4;

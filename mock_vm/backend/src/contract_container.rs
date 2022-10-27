@@ -1,11 +1,9 @@
 use std::collections::HashMap;
 
-use odra_mock_vm_types::{
-    odra_types::{OdraError, VmError},
-    Bytes, CallArgs,
-};
+use odra_mock_vm_types::CallArgs;
+use odra_types::{OdraError, VmError};
 
-pub type EntrypointCall = fn(String, CallArgs) -> Option<Bytes>;
+pub type EntrypointCall = fn(String, CallArgs) -> Option<Vec<u8>>;
 pub type EntrypointArgs = Vec<String>;
 
 #[derive(Default, Clone)]
@@ -28,7 +26,7 @@ impl ContractContainer {
         }
     }
 
-    pub fn call(&self, entrypoint: String, args: CallArgs) -> Result<Option<Bytes>, OdraError> {
+    pub fn call(&self, entrypoint: String, args: CallArgs) -> Result<Option<Vec<u8>>, OdraError> {
         if self.constructors.get(&entrypoint).is_some() {
             return Err(OdraError::VmError(VmError::InvalidContext));
         }
@@ -46,7 +44,7 @@ impl ContractContainer {
         &self,
         entrypoint: String,
         args: CallArgs,
-    ) -> Result<Option<Bytes>, OdraError> {
+    ) -> Result<Option<Vec<u8>>, OdraError> {
         match self.constructors.get(&entrypoint) {
             Some((ep_args, call)) => {
                 self.validate_args(ep_args, &args)?;
@@ -57,10 +55,7 @@ impl ContractContainer {
     }
 
     fn validate_args(&self, args: &[String], input_args: &CallArgs) -> Result<(), OdraError> {
-        let named_args = input_args
-            .named_args()
-            .map(|arg| arg.name().to_owned())
-            .collect::<Vec<_>>();
+        let named_args = input_args.arg_names();
 
         if args
             .iter()
@@ -80,10 +75,8 @@ impl ContractContainer {
 mod tests {
     use std::collections::HashMap;
 
-    use odra_mock_vm_types::{
-        odra_types::{OdraError, VmError},
-        CallArgs,
-    };
+    use odra_mock_vm_types::CallArgs;
+    use odra_types::{OdraError, VmError};
 
     use crate::{EntrypointArgs, EntrypointCall};
 
@@ -122,7 +115,7 @@ mod tests {
 
         // When call the registered entrypoint with an arg named "second".
         let mut args = CallArgs::new();
-        args.insert("second", 0).unwrap();
+        args.insert("second", 0);
         let result = instance.call(ep_name, args);
 
         // Then MissingArg error is returned.
@@ -152,7 +145,7 @@ mod tests {
 
         // When call a valid entrypoint with a single valid args,
         let mut args = CallArgs::new();
-        args.insert("third", 0).unwrap();
+        args.insert("third", 0);
         let result = instance.call(ep_name, args);
 
         // Then MissingArg error is returned with the two remaining args.

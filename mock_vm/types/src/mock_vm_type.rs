@@ -1,11 +1,10 @@
 /// MockVM Types implementation.
-/// 
+///
 /// It supports the following types:
 /// - Rust simple types: bool, u8, u32, u64, i32, i64, (), String.
 /// - Larger unsigned integers: U256, U512.
 /// - Rust complex types: Vec<T>, Result<T, E>, Option<T>.
-
-use borsh::{BorshSerialize, BorshDeserialize};
+use borsh::{BorshDeserialize, BorshSerialize};
 
 pub trait MockVMType: Sized {
     fn ser(&self) -> Result<Vec<u8>, MockVMSerializationError>;
@@ -26,12 +25,12 @@ impl<T: BorshSerialize + BorshDeserialize> MockVMType for T {
 #[derive(Debug, PartialEq)]
 pub enum MockVMSerializationError {
     DeserializationError,
-    SerializationError
+    SerializationError,
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{MockVMType, U256, U512, Address};
+    use crate::{Address, MockVMType, U256, U512};
 
     pub fn ser_deser<T: MockVMType + PartialEq + std::fmt::Debug>(value: T) {
         let bytes = value.ser().unwrap();
@@ -110,15 +109,8 @@ mod tests {
     fn test_complex_example() {
         ser_deser((
             vec![0u8, 1u8],
-            vec![
-                vec![0u8, 1u8],
-                vec![2u8, 3u8]
-            ],
-            (
-                Result::<Vec<u8>, ()>::Ok(vec![]),
-                Option::<String>::None
-            )
+            vec![vec![0u8, 1u8], vec![2u8, 3u8]],
+            (Result::<Vec<u8>, ()>::Ok(vec![]), Option::<String>::None),
         ));
     }
-
 }

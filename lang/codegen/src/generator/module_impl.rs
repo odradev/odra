@@ -35,7 +35,7 @@ impl GenerateCode for ModuleImpl<'_> {
                 # (#original_item_impls)*
             }
 
-            #contract_def
+            // #contract_def
 
             #deploy
 

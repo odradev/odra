@@ -1,9 +1,7 @@
 //! Utility functions that allow to write more compact tests.
 
-use crate::types::{
-    odra_types::{self, EventData},
-    Address, FromBytes, OdraType,
-};
+use crate::types::{Address, OdraType};
+use odra_types::{self, EventData};
 
 /// Gets the nth event emitted by the contract at `address`.
 ///
@@ -13,27 +11,22 @@ pub fn get_event<T: OdraType>(
     contract_address: Address,
     at: i32,
 ) -> Result<T, odra_types::event::EventError> {
-    let event: EventData = crate::test_env::get_event(contract_address, at)?;
-    match T::from_bytes(&event) {
-        Ok(res) => Ok(res.0),
-        // TODO: Handle error conversion.
-        Err(_) => Err(odra_types::event::EventError::Parsing),
-    }
+    crate::test_env::get_event(contract_address, at)
 }
 
 /// Gets the name of the nth event emitted by the contract at `address`.
 ///
 /// If the passed index is out of bounds, or a deserialization error occurs,
 /// an error is returned.
-pub fn get_event_name(
-    contract_address: Address,
-    at: i32,
-) -> Result<String, odra_types::event::EventError> {
-    let event: EventData = crate::test_env::get_event(contract_address, at)?;
-    let (event_name, _): (String, _) =
-        FromBytes::from_vec(event).map_err(|_| odra_types::event::EventError::Parsing)?;
-    Ok(event_name)
-}
+// pub fn get_event_name(
+//     contract_address: Address,
+//     at: i32,
+// ) -> Result<String, odra_types::event::EventError> {
+//     let event: EventData = crate::test_env::get_event(contract_address, at)?;
+//     let (event_name, _): (String, _) =
+//         FromBytes::from_vec(event).map_err(|_| odra_types::event::EventError::Parsing)?;
+//     Ok(event_name)
+// }
 
 /// A macro that simplifies events testing.
 ///
@@ -75,24 +68,26 @@ pub fn get_event_name(
 ///     GetValue { value: 8 }
 /// );
 /// ```
+
+// TODO: Uncomment event name assetion.
 #[macro_export]
 macro_rules! assert_events {
-    ($contract:ident, $ ( $event_ty:ty ),+ ) => {
-        let mut __idx = -1;
-        $(
-            __idx -= 1;
-            let _ = stringify!($event_ty);
-        )+
-        $(
-            __idx += 1;
-            let __ev = odra::test_utils::get_event::<$event_ty>($contract.address(), __idx).unwrap();
-            let __name = stringify!($event_ty).to_string();
-            let __name = __name.split("::").last().unwrap();
-            assert_eq!(
-                <$event_ty as odra::types::event::Event>::name(&__ev), __name
-            );
-        )+
-    };
+    // ($contract:ident, $ ( $event_ty:ty ),+ ) => {
+    //     let mut __idx = -1;
+    //     $(
+    //         __idx -= 1;
+    //         let _ = stringify!($event_ty);
+    //     )+
+    //     $(
+    //         __idx += 1;
+    //         let __ev = odra::test_utils::get_event::<$event_ty>($contract.address(), __idx).unwrap();
+    //         let __name = stringify!($event_ty).to_string();
+    //         let __name = __name.split("::").last().unwrap();
+    //         assert_eq!(
+    //             <$event_ty as odra::types::event::Event>::name(&__ev), __name
+    //         );
+    //     )+
+    // };
     ($contract:ident, $ ( $event:expr ),+ ) => {
         let mut __idx = -1;
         $(

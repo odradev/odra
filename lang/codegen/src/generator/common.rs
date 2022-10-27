@@ -17,7 +17,6 @@ where
             odra::call_contract::<()>(self.address, #entrypoint_name, args, self.attached_value);
         },
         syn::ReturnType::Type(_, _) => quote! {
-            use odra::types::Type;
             #args
             odra::call_contract(self.address, #entrypoint_name, args, self.attached_value)
         },
@@ -70,7 +69,7 @@ where
     let mut tokens = quote!(let mut args = odra::types::CallArgs::new(););
     tokens.append_all(syn_args.into_iter().map(|arg| {
         let pat = &*arg.pat;
-        quote! { args.insert(stringify!(#pat), #pat).unwrap(); }
+        quote! { args.insert(stringify!(#pat), #pat); }
     }));
     tokens.extend(quote!(args));
 

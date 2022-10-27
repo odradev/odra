@@ -84,12 +84,12 @@ impl GenerateCode for Deploy<'_> {
 
                 pub fn deploy() -> #ref_ident {
                     use std::collections::HashMap;
-                    use odra::types::{Bytes, CallArgs};
+                    use odra::types::CallArgs;
 
-                    let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Option<Bytes>)>::new();
+                    let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Option<Vec<u8>>)>::new();
                     #entrypoints
 
-                    let mut constructors = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Option<Bytes>)>::new();
+                    let mut constructors = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Option<Vec<u8>>)>::new();
                     #constructors
 
                     let address = odra::test_env::register_contract(None, constructors, entrypoints);
@@ -137,18 +137,18 @@ where
         quote! {
             pub #deploy_fn_sig {
                 use std::collections::HashMap;
-                use odra::types::{Bytes, CallArgs};
+                use odra::types::{CallArgs};
 
-                let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Option<Bytes>)>::new();
+                let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Option<Vec<u8>>)>::new();
                 #entrypoints_stream
 
-                let mut constructors = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Option<Bytes>)>::new();
+                let mut constructors = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Option<Vec<u8>>)>::new();
                 #constructors_stream
 
                 let args = {
                     #args
                 };
-                let constructor: Option<(String, CallArgs, fn(String, CallArgs) -> Option<Bytes>)> = Some((
+                let constructor: Option<(String, CallArgs, fn(String, CallArgs) -> Option<Vec<u8>>)> = Some((
                     stringify!(#constructor_ident).to_string(),
                     args,
                     |name, args| {
@@ -227,8 +227,9 @@ where
             let return_value = match &entrypoint.ret {
                 ReturnType::Default => quote!(None),
                 ReturnType::Type(_, _) => quote! {
-                    let bytes = odra::types::ToBytes::to_bytes(&result).unwrap();
-                    Some(odra::types::Bytes::from(bytes))
+                    // let bytes = odra::types::ToBytes::to_bytes(&result).unwrap();
+                    // Some(odra::types::Bytes::from(bytes))
+                    Some(odra::types::MockVMType::ser(&result).unwrap())
                 },
             };
             let args = args_to_fn_args(&entrypoint.args);
@@ -237,7 +238,7 @@ where
                 true => quote!(),
                 false => quote! {
                     if odra::contract_env::attached_value() > odra::types::Balance::zero() {
-                        odra::contract_env::revert(odra::types::odra_types::ExecutionError::non_payable());
+                        odra::contract_env::revert(odra::types::ExecutionError::non_payable());
                     }
                 },
             };
@@ -283,12 +284,7 @@ where
     args.into_iter()
         .map(|arg| {
             let pat = &*arg.pat;
-            quote!(args
-                .get(stringify!(#pat))
-                .cloned()
-                .unwrap()
-                .into_t()
-                .unwrap())
+            quote!(args.get(stringify!(#pat)))
         })
         .collect::<Punctuated<TokenStream, Comma>>()
 }
@@ -300,7 +296,7 @@ where
     let mut tokens = quote!(let mut args = odra::types::CallArgs::new(););
     tokens.append_all(args.into_iter().map(|arg| {
         let pat = &*arg.pat;
-        quote! { args.insert(stringify!(#pat), #pat).unwrap(); }
+        quote! { args.insert(stringify!(#pat), #pat); }
     }));
     tokens.extend(quote!(args));
     tokens

@@ -2,7 +2,7 @@ default:
     just --list
 
 test-examples-on-mockvm:
-    cargo test --manifest-path examples/Cargo.toml --target-dir target
+    cargo test -p odra-examples
 
 test-odra:
     cargo test

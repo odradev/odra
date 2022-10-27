@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 odra = { path = "../core" }
+borsh = "0.9.3"
 
 [features]
 default = ["mock-vm"]

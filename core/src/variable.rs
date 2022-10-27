@@ -1,9 +1,7 @@
 use std::marker::PhantomData;
 
-use crate::types::{
-    odra_types::arithmetic::{OverflowingAdd, OverflowingSub},
-    OdraType,
-};
+use crate::types::OdraType;
+use odra_types::arithmetic::{OverflowingAdd, OverflowingSub};
 
 use crate::{contract_env, instance::Instance, UnwrapOrRevert};
 
@@ -85,9 +83,9 @@ impl<T: OdraType> Instance for Variable<T> {
 
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
-    use crate::types::odra_types::arithmetic::ArithmeticsError;
     use crate::{test_env, Instance, Variable};
     use odra_mock_vm::types::OdraType;
+    use odra_types::arithmetic::ArithmeticsError;
 
     #[test]
     fn test_get() {

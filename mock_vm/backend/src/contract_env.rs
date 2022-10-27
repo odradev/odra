@@ -1,9 +1,7 @@
 //! Exposes the public API to communicate with the host.
 
-use odra_mock_vm_types::{
-    odra_types::{event::Event, ExecutionError},
-    Address, Balance, BlockTime, OdraType, TypedValue,
-};
+use odra_mock_vm_types::{Address, Balance, BlockTime, MockVMType, OdraType};
+use odra_types::{event::Event, ExecutionError};
 
 use crate::borrow_env;
 
@@ -23,33 +21,25 @@ pub fn self_address() -> Address {
 }
 
 /// Stores the `value` under `key`.
-pub fn set_var<T: OdraType>(key: &str, value: T) {
-    borrow_env().set_var(key, TypedValue::from_t(value).unwrap())
+pub fn set_var<T: MockVMType>(key: &str, value: T) {
+    borrow_env().set_var(key, value)
 }
 
 /// Gets a value stored under `key`.
 pub fn get_var<T: OdraType>(key: &str) -> Option<T> {
-    borrow_env()
-        .get_var(key)
-        .map(|val| TypedValue::into_t(val).unwrap())
+    borrow_env().get_var(key)
 }
 
 /// Puts a key-value into a collection.
-pub fn set_dict_value<K: OdraType, V: OdraType>(dict: &str, key: &K, value: V) {
-    borrow_env().set_dict_value(
-        dict,
-        key.to_bytes().unwrap().as_slice(),
-        TypedValue::from_t(value).unwrap(),
-    )
+pub fn set_dict_value<K: MockVMType, V: MockVMType>(dict: &str, key: &K, value: V) {
+    borrow_env().set_dict_value(dict, key.ser().unwrap().as_slice(), value)
 }
 
 /// Gets the value from the `dict` collection under `key`.
-pub fn get_dict_value<K: OdraType, T: OdraType>(dict: &str, key: &K) -> Option<T> {
-    let key = key.to_bytes().unwrap();
+pub fn get_dict_value<K: MockVMType, T: MockVMType>(dict: &str, key: &K) -> Option<T> {
+    let key = key.ser().unwrap();
     let key = key.as_slice();
-    borrow_env()
-        .get_dict_value(dict, key)
-        .map(|val| TypedValue::into_t(val).unwrap())
+    borrow_env().get_dict_value(dict, key)
 }
 
 /// Stops execution of a contract and reverts execution effects with a given [`ExecutionError`].
@@ -63,11 +53,8 @@ where
 }
 
 /// Sends an event to the execution environment.
-pub fn emit_event<T>(event: &T)
-where
-    T: OdraType + Event,
-{
-    let event_data = event.to_bytes().unwrap();
+pub fn emit_event<T: MockVMType>(event: &T) {
+    let event_data = event.ser().unwrap();
     borrow_env().emit_event(&event_data);
 }
 

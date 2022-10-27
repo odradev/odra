@@ -1,6 +1,6 @@
 use anyhow::Result;
-use odra_mock_vm_types::odra_types::{event::EventError, EventData, OdraError, VmError};
-use odra_mock_vm_types::{Address, Balance, BlockTime, Bytes, CallArgs, TypedValue};
+use odra_mock_vm_types::{Address, Balance, BlockTime, CallArgs, MockVMType};
+use odra_types::{event::EventError, EventData, OdraError, VmError};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
@@ -53,7 +53,7 @@ impl MockVm {
         entrypoint: &str,
         args: CallArgs,
         amount: Option<Balance>,
-    ) -> Option<Bytes> {
+    ) -> Option<Vec<u8>> {
         self.prepare_call(address, amount);
 
         // Call contract from register.
@@ -77,7 +77,7 @@ impl MockVm {
         address: Address,
         entrypoint: &str,
         args: CallArgs,
-    ) -> Option<Bytes> {
+    ) -> Option<Vec<u8>> {
         self.prepare_call(address, None);
         // Call contract from register.
         let register = self.contract_register.read().unwrap();
@@ -97,7 +97,7 @@ impl MockVm {
         state.push_callstack_element(element);
     }
 
-    fn handle_call_result(&self, result: Result<Option<Bytes>, OdraError>) -> Option<Bytes> {
+    fn handle_call_result(&self, result: Result<Option<Vec<u8>>, OdraError>) -> Option<Vec<u8>> {
         let mut state = self.state.write().unwrap();
         let result = match result {
             Ok(data) => data,
@@ -150,19 +150,19 @@ impl MockVm {
         self.state.write().unwrap().set_caller(caller);
     }
 
-    pub fn set_var(&self, key: &str, value: TypedValue) {
+    pub fn set_var<T: MockVMType>(&self, key: &str, value: T) {
         self.state.write().unwrap().set_var(key, value);
     }
 
-    pub fn get_var(&self, key: &str) -> Option<TypedValue> {
+    pub fn get_var<T: MockVMType>(&self, key: &str) -> Option<T> {
         self.state.read().unwrap().get_var(key)
     }
 
-    pub fn set_dict_value(&self, dict: &str, key: &[u8], value: TypedValue) {
+    pub fn set_dict_value<T: MockVMType>(&self, dict: &str, key: &[u8], value: T) {
         self.state.write().unwrap().set_dict_value(dict, key, value);
     }
 
-    pub fn get_dict_value(&self, dict: &str, key: &[u8]) -> Option<TypedValue> {
+    pub fn get_dict_value<T: MockVMType>(&self, dict: &str, key: &[u8]) -> Option<T> {
         self.state.read().unwrap().get_dict_value(dict, key)
     }
 
@@ -244,22 +244,22 @@ impl MockVmState {
         self.push_callstack_element(CallstackElement::new(address, None));
     }
 
-    fn set_var(&mut self, key: &str, value: TypedValue) {
+    fn set_var<T: MockVMType>(&mut self, key: &str, value: T) {
         let ctx = &self.callstack.current().address;
         self.storage.set_value(ctx, key, value);
     }
 
-    fn get_var(&self, key: &str) -> Option<TypedValue> {
+    fn get_var<T: MockVMType>(&self, key: &str) -> Option<T> {
         let ctx = &self.callstack.current().address;
         self.storage.get_value(ctx, key)
     }
 
-    fn set_dict_value(&mut self, dict: &str, key: &[u8], value: TypedValue) {
+    fn set_dict_value<T: MockVMType>(&mut self, dict: &str, key: &[u8], value: T) {
         let ctx = &self.callstack.current().address;
         self.storage.insert_dict_value(ctx, dict, key, value);
     }
 
-    fn get_dict_value(&self, dict: &str, key: &[u8]) -> Option<TypedValue> {
+    fn get_dict_value<T: MockVMType>(&self, dict: &str, key: &[u8]) -> Option<T> {
         let ctx = &self.callstack.current().address;
         self.storage.get_dict_value(ctx, dict, key)
     }
@@ -404,10 +404,8 @@ impl Default for MockVmState {
 mod tests {
     use std::collections::HashMap;
 
-    use odra_mock_vm_types::{
-        odra_types::{EventData, ExecutionError, OdraError, VmError},
-        Address, Balance, Bytes, CallArgs, TypedValue,
-    };
+    use odra_mock_vm_types::{Address, Balance, CallArgs};
+    use odra_types::{EventData, ExecutionError, OdraError, VmError};
 
     use crate::{callstack::CallstackElement, EntrypointArgs, EntrypointCall};
 
@@ -515,13 +513,13 @@ mod tests {
 
         // when set a value
         let key = "key";
-        let value = TypedValue::from_t(32u8).unwrap();
+        let value = 32u8;
         instance.set_var(key, value.clone());
 
         // then the value can be read
         assert_eq!(instance.get_var(key), Some(value));
         // then the value under unknown key does not exist
-        assert_eq!(instance.get_var("other_key"), None);
+        assert_eq!(instance.get_var::<()>("other_key"), None);
     }
 
     #[test]
@@ -532,15 +530,15 @@ mod tests {
         // when set a value
         let dict = "dict";
         let key: [u8; 2] = [1, 2];
-        let value = TypedValue::from_t(32u8).unwrap();
+        let value = 32u8;
         instance.set_dict_value(dict, &key, value.clone());
 
         // then the value can be read
         assert_eq!(instance.get_dict_value(dict, &key), Some(value));
         // then the value under the key in unknown dict does not exist
-        assert_eq!(instance.get_dict_value("other_dict", &key), None);
+        assert_eq!(instance.get_dict_value::<()>("other_dict", &key), None);
         // then the value under unknown key does not exist
-        assert_eq!(instance.get_dict_value(dict, &[]), None);
+        assert_eq!(instance.get_dict_value::<()>(dict, &[]), None);
     }
 
     #[test]
@@ -649,13 +647,13 @@ mod tests {
         vm.state.write().unwrap().push_callstack_element(element);
     }
 
-    fn setup_contract(instance: &MockVm) -> (Address, String, Option<Bytes>) {
+    fn setup_contract(instance: &MockVm) -> (Address, String, Option<Vec<u8>>) {
         let entrypoint_name = "abc";
-        let result: Bytes = vec![1, 1, 1].into();
+        let result = vec![1, 1, 1];
 
         let entrypoint: Vec<(String, (EntrypointArgs, EntrypointCall))> = vec![(
             String::from(entrypoint_name),
-            (vec![], |_, _| Some(vec![1, 1, 1].into())),
+            (vec![], |_, _| Some(vec![1, 1, 1])),
         )];
         let constructors = HashMap::new();
         let contract_address = instance.register_contract(

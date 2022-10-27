@@ -1,5 +1,5 @@
 use crate::contract_env;
-use crate::types::odra_types::ExecutionError;
+use odra_types::ExecutionError;
 
 /// A trait that allows safe unwrapping in the context of a smart contract.
 /// On failure the contract does not panic, but reverts calling [`contract_env::revert`](crate::contract_env).

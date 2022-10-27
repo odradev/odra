@@ -1,12 +1,10 @@
 use std::collections::BTreeMap;
 
-use borsh::BorshDeserialize;
-
 use crate::MockVMType;
 
 #[derive(Default, Debug)]
 pub struct CallArgs {
-    data: BTreeMap<String, Vec<u8>>
+    data: BTreeMap<String, Vec<u8>>,
 }
 
 impl CallArgs {
@@ -18,10 +16,14 @@ impl CallArgs {
         // TODO: Handle unwrap.
         self.data.insert(String::from(key), value.ser().unwrap());
     }
-    
+
     pub fn get<T: MockVMType>(&self, key: &str) -> T {
         // TODO: Handle unwraps.
         T::deser(self.data.get(key).unwrap().clone()).unwrap()
+    }
+
+    pub fn arg_names(&self) -> Vec<String> {
+        self.data.keys().cloned().collect()
     }
 }
 

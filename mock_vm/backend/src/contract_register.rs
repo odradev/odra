@@ -1,7 +1,5 @@
-use odra_mock_vm_types::{
-    odra_types::{OdraError, VmError},
-    Address, Bytes, CallArgs,
-};
+use odra_mock_vm_types::{Address, CallArgs};
+use odra_types::{OdraError, VmError};
 
 use crate::contract_container::ContractContainer;
 use std::collections::HashMap;
@@ -21,7 +19,7 @@ impl ContractRegister {
         addr: &Address,
         entrypoint: String,
         args: CallArgs,
-    ) -> Result<Option<Bytes>, OdraError> {
+    ) -> Result<Option<Vec<u8>>, OdraError> {
         self.internal_call(addr, |container| {
             std::panic::catch_unwind(|| container.call(entrypoint, args))?
         })
@@ -32,17 +30,17 @@ impl ContractRegister {
         addr: &Address,
         entrypoint: String,
         args: CallArgs,
-    ) -> Result<Option<Bytes>, OdraError> {
+    ) -> Result<Option<Vec<u8>>, OdraError> {
         self.internal_call(addr, |container| {
             std::panic::catch_unwind(|| container.call_constructor(entrypoint, args))?
         })
     }
 
-    fn internal_call<F: FnOnce(&ContractContainer) -> Result<Option<Bytes>, OdraError>>(
+    fn internal_call<F: FnOnce(&ContractContainer) -> Result<Option<Vec<u8>>, OdraError>>(
         &self,
         addr: &Address,
         call_fn: F,
-    ) -> Result<Option<Bytes>, OdraError> {
+    ) -> Result<Option<Vec<u8>>, OdraError> {
         let contract = self.contracts.get(addr);
         match contract {
             Some(container) => call_fn(container),

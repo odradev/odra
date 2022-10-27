@@ -3,10 +3,8 @@
 //! Depending on the selected feature, the actual test env is dynamically loaded in the runtime or the Odra local MockVM is used.
 use std::collections::HashMap;
 
-use odra_mock_vm_types::{
-    odra_types::{event::EventError, EventData, OdraError},
-    Address, Balance, BlockTime, Bytes, CallArgs, OdraType,
-};
+use odra_mock_vm_types::{Address, Balance, BlockTime, CallArgs, MockVMType};
+use odra_types::{event::EventError, EventData, OdraError};
 
 use crate::{EntrypointArgs, EntrypointCall};
 
@@ -39,8 +37,6 @@ delegate_to_env! {
     fn get_backend_name() -> String
     /// Replaces the current caller.
     fn set_caller(address: Address)
-    /// Gets nth event emitted by the contract at `address`.
-    fn get_event(address: Address, index: i32) -> Result<EventData, EventError>
     /// Returns the balance of the account associated with the given address.
     fn token_balance(address: Address) -> Balance
 }
@@ -73,16 +69,23 @@ pub fn one_token() -> Balance {
 /// Calls contract at `address` invoking the `entrypoint` with `args`.
 ///
 /// Returns optional raw bytes to further processing.
-pub fn call_contract<T: OdraType>(
+pub fn call_contract<T: MockVMType>(
     address: Address,
     entrypoint: &str,
     args: CallArgs,
     amount: Option<Balance>,
 ) -> T {
-    let result: Option<Bytes> =
+    let result: Option<Vec<u8>> =
         crate::borrow_env().call_contract(address, entrypoint, args, amount);
     match result {
-        Some(bytes) => T::from_bytes(bytes.as_slice()).unwrap().0,
-        None => T::from_bytes(&[]).unwrap().0,
+        Some(bytes) => T::deser(bytes).unwrap(),
+        // TODO: There should be a better way than this.
+        None => T::deser(().ser().unwrap()).unwrap(),
     }
+}
+
+/// Gets nth event emitted by the contract at `address`.
+pub fn get_event<T: MockVMType>(address: Address, index: i32) -> Result<T, EventError> {
+    let bytes = crate::borrow_env().get_event(address, index);
+    bytes.map(|b| T::deser(b).unwrap())
 }
