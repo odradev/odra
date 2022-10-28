@@ -1,7 +1,7 @@
 //! Exposes the public API to communicate with the host.
 
 use odra_mock_vm_types::{Address, Balance, BlockTime, MockVMType, OdraType};
-use odra_types::{event::Event, ExecutionError};
+use odra_types::ExecutionError;
 
 use crate::borrow_env;
 

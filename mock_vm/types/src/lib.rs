@@ -2,6 +2,7 @@ mod address;
 mod call_args;
 mod mock_vm_type;
 mod ty;
+#[allow(clippy::assign_op_pattern)]
 mod uints;
 
 pub use address::Address;

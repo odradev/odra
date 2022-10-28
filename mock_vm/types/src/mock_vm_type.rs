@@ -22,7 +22,7 @@ impl<T: BorshSerialize + BorshDeserialize> MockVMType for T {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum MockVMSerializationError {
     DeserializationError,
     SerializationError,

@@ -42,6 +42,7 @@ fn cl_type_to_type(ty: CLType) -> Type {
     }
 }
 
+#[allow(clippy::boxed_local)]
 fn boxed_cl_type_to_boxed_type(ty: Box<CLType>) -> Box<Type> {
     Box::new(cl_type_to_type(*ty))
 }

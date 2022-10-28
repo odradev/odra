@@ -213,7 +213,7 @@ mod tests {
         }
 
         fn setup_entrypoint(ep_name: String, args: Vec<&str>) -> Self {
-            let call: EntrypointCall = |_, _| Some(vec![1, 2, 3].into());
+            let call: EntrypointCall = |_, _| Some(vec![1, 2, 3]);
             let args: EntrypointArgs = args.iter().map(|arg| arg.to_string()).collect();
 
             let mut entrypoints = HashMap::new();
@@ -227,7 +227,7 @@ mod tests {
         }
 
         fn setup_constructor(ep_name: String, args: Vec<&str>) -> Self {
-            let call: EntrypointCall = |_, _| Some(vec![1, 2, 3].into());
+            let call: EntrypointCall = |_, _| Some(vec![1, 2, 3]);
             let args: EntrypointArgs = args.iter().map(|arg| arg.to_string()).collect();
 
             let mut constructors = HashMap::new();

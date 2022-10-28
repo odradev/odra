@@ -514,7 +514,7 @@ mod tests {
         // when set a value
         let key = "key";
         let value = 32u8;
-        instance.set_var(key, value.clone());
+        instance.set_var(key, value);
 
         // then the value can be read
         assert_eq!(instance.get_var(key), Some(value));
@@ -531,7 +531,7 @@ mod tests {
         let dict = "dict";
         let key: [u8; 2] = [1, 2];
         let value = 32u8;
-        instance.set_dict_value(dict, &key, value.clone());
+        instance.set_dict_value(dict, &key, value);
 
         // then the value can be read
         assert_eq!(instance.get_dict_value(dict, &key), Some(value));

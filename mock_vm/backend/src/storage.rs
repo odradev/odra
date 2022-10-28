@@ -137,7 +137,7 @@ mod test {
         let (address, key, value) = setup();
 
         // when put a value
-        storage.set_value(&address, &key, value.clone());
+        storage.set_value(&address, &key, value);
 
         // then the value can be read
         assert_eq!(storage.get_value(&address, &key), Some(value));
@@ -179,7 +179,7 @@ mod test {
         let collection = "dict";
 
         // when put a value into a collection
-        storage.insert_dict_value(&address, collection, key.as_bytes(), value.clone());
+        storage.insert_dict_value(&address, collection, key.as_bytes(), value);
 
         // then the value can be read
         assert_eq!(
@@ -226,7 +226,7 @@ mod test {
         // given storage with some state and a snapshot of the previous state
         let mut storage = Storage::default();
         let (address, key, initial_value) = setup();
-        storage.set_value(&address, &key, initial_value.clone());
+        storage.set_value(&address, &key, initial_value);
         storage.take_snapshot();
         let next_value = String::from("next_value");
         storage.set_value(&address, &key, next_value);
@@ -249,7 +249,7 @@ mod test {
         let third_value = 3_000u32;
         storage.set_value(&address, &key, initial_value);
         storage.take_snapshot();
-        storage.set_value(&address, &key, second_value.clone());
+        storage.set_value(&address, &key, second_value);
 
         // when take another snapshot and restore it
         storage.take_snapshot();
@@ -268,7 +268,7 @@ mod test {
         let next_value = 1_000u32;
         storage.set_value(&address, &key, initial_value);
         storage.take_snapshot();
-        storage.set_value(&address, &key, next_value.clone());
+        storage.set_value(&address, &key, next_value);
 
         // when the snapshot is dropped
         storage.drop_snapshot();

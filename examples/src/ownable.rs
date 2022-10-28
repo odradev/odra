@@ -1,5 +1,5 @@
 use borsh::{BorshDeserialize, BorshSerialize};
-use odra::{contract_env, execution_error, types::Address, Variable};
+use odra::{contract_env, types::Address, Variable};
 
 #[odra::module]
 pub struct Ownable {
@@ -23,7 +23,7 @@ impl Ownable {
 
     pub fn change_ownership(&self, new_owner: Address) {
         self.ensure_ownership(contract_env::caller());
-        let current_owner = self.get_owner();
+        let _current_owner = self.get_owner();
         self.owner.set(new_owner);
         // OwnershipChanged {
         //     prev_owner: Some(current_owner),
@@ -32,7 +32,7 @@ impl Ownable {
         // .emit();
     }
 
-    pub fn ensure_ownership(&self, address: Address) {
+    pub fn ensure_ownership(&self, _address: Address) {
         // if Some(address) != self.owner.get() {
         //     contract_env::revert(Error::NotOwner)
         // }
