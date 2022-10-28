@@ -1,18 +1,19 @@
+use casper_types::bytesrepr::FromBytes;
 use lazy_static::lazy_static;
-use odra_casper_types::{odra_types::event::Event, Address, OdraType};
+use odra_casper_types::{Address, OdraType};
+use odra_types::event::Event;
 use std::{collections::BTreeMap, sync::Mutex};
 
 use casper_contract::{
     contract_api::{
-        self, runtime,
+        runtime,
         storage::{self, dictionary_put},
         system::{create_purse, get_purse_balance, transfer_from_purse_to_purse},
     },
     unwrap_or_revert::UnwrapOrRevert,
 };
 use casper_types::{
-    api_error, bytesrepr::ToBytes, system::CallStackElement, ApiError, ContractPackageHash,
-    ContractVersion, Key, RuntimeArgs, URef, U512,
+    system::CallStackElement, ApiError, CLTyped, ContractPackageHash, Key, RuntimeArgs, URef, U512,
 };
 
 use odra_casper_shared::consts;
@@ -128,64 +129,24 @@ pub fn to_dictionary_key<T: OdraType>(key: &T) -> String {
 }
 
 /// Calls a contract method by Address
-pub fn call_contract(
+pub fn call_contract<T: CLTyped + FromBytes>(
     contract_package_hash: ContractPackageHash,
     entry_point: &str,
-    runtime_args: RuntimeArgs,
-) -> Vec<u8> {
-    let contract_version: Option<ContractVersion> = None;
-
-    let (contract_package_hash_ptr, contract_package_hash_size, _bytes) =
-        to_ptr(contract_package_hash);
-    let (contract_version_ptr, contract_version_size, _bytes) = to_ptr(contract_version);
-    let (entry_point_name_ptr, entry_point_name_size, _bytes) = to_ptr(entry_point);
-    let (runtime_args_ptr, runtime_args_size, _bytes) = to_ptr(runtime_args);
-
-    let bytes_written = {
-        let mut bytes_written = std::mem::MaybeUninit::uninit();
-        let ret = unsafe {
-            casper_contract::ext_ffi::casper_call_versioned_contract(
-                contract_package_hash_ptr,
-                contract_package_hash_size,
-                contract_version_ptr,
-                contract_version_size,
-                entry_point_name_ptr,
-                entry_point_name_size,
-                runtime_args_ptr,
-                runtime_args_size,
-                bytes_written.as_mut_ptr(),
-            )
-        };
-        api_error::result_from(ret).unwrap_or_revert();
-        unsafe { bytes_written.assume_init() }
-    };
-
-    if bytes_written == 0 {
-        // If no bytes were written, the host buffer hasn't been set and hence shouldn't be read.
-        vec![]
-    } else {
-        // NOTE: this is a copy of the contents of `read_host_buffer()`.  Calling that directly from
-        // here causes several contracts to fail with a Wasmi `Unreachable` error.
-        let bytes_non_null_ptr = contract_api::alloc_bytes(bytes_written);
-        let mut dest: Vec<u8> = unsafe {
-            Vec::from_raw_parts(bytes_non_null_ptr.as_ptr(), bytes_written, bytes_written)
-        };
-
-        read_host_buffer_into(&mut dest).unwrap_or_revert();
-        dest
-    }
+    args: RuntimeArgs,
+) -> T {
+    runtime::call_versioned_contract(contract_package_hash, None, entry_point, args)
 }
 
-pub fn call_contract_with_amount(
+pub fn call_contract_with_amount<T: CLTyped + FromBytes>(
     contract_package_hash: ContractPackageHash,
     entry_point: &str,
-    runtime_args: RuntimeArgs,
+    args: RuntimeArgs,
     amount: U512,
-) -> Vec<u8> {
+) -> T {
     let cargo_purse = create_purse();
     let main_purse = get_or_create_purse();
 
-    let mut args = runtime_args;
+    let mut args = args;
     transfer_from_purse_to_purse(main_purse, cargo_purse, amount, None)
         .unwrap_or_revert_with(ApiError::Transfer);
     args.insert(consts::CARGO_PURSE_ARG, cargo_purse)
@@ -221,29 +182,6 @@ pub fn get_or_create_purse() -> URef {
 pub fn self_balance() -> U512 {
     let purse = get_or_create_purse();
     get_purse_balance(purse).unwrap_or_default()
-}
-
-fn to_ptr<T: ToBytes>(t: T) -> (*const u8, usize, Vec<u8>) {
-    let bytes = t.into_bytes().unwrap_or_revert();
-    let ptr = bytes.as_ptr();
-    let size = bytes.len();
-    (ptr, size, bytes)
-}
-
-fn read_host_buffer_into(dest: &mut [u8]) -> Result<usize, ApiError> {
-    let mut bytes_written = std::mem::MaybeUninit::uninit();
-    let ret = unsafe {
-        casper_contract::ext_ffi::casper_read_host_buffer(
-            dest.as_mut_ptr(),
-            dest.len(),
-            bytes_written.as_mut_ptr(),
-        )
-    };
-    // NOTE: When rewriting below expression as `result_from(ret).map(|_| unsafe { ... })`, and the
-    // caller ignores the return value, execution of the contract becomes unstable and ultimately
-    // leads to `Unreachable` error.
-    api_error::result_from(ret)?;
-    Ok(unsafe { bytes_written.assume_init() })
 }
 
 fn get_seed(name: &str) -> URef {

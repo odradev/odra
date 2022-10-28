@@ -18,10 +18,8 @@ use casper_types::{
     RuntimeArgs, SecretKey, StoredValue, URef,
 };
 use odra_casper_shared::consts;
-use odra_casper_types::{
-    odra_types::{event::EventError, EventData, ExecutionError, OdraError, VmError},
-    Address, Balance, BlockTime, CallArgs, OdraType,
-};
+use odra_casper_types::{Address, Balance, BlockTime, CallArgs, OdraType};
+use odra_types::{event::EventError, EventData, ExecutionError, OdraError, VmError};
 
 thread_local! {
     /// Thread local instance of [CasperTestEnv].
@@ -89,7 +87,7 @@ impl CasperTestEnv {
             .with_empty_payment_bytes(runtime_args! {ARG_AMOUNT => *DEFAULT_PAYMENT})
             .with_authorization_keys(&[self.active_account_hash()])
             .with_address(self.active_account_hash())
-            .with_session_code(session_code, args)
+            .with_session_code(session_code, args.to_owned())
             .with_deploy_hash(self.next_hash())
             .build();
 
@@ -295,7 +293,7 @@ impl CasperTestEnv {
     fn get_active_account_result<T: OdraType>(&self) -> T {
         let active_account = self.active_account_hash();
 
-        let bytes: Bytes = self
+        let bytes: odra_casper_types::Bytes = self
             .get_account_value(active_account, "result")
             .unwrap_or_default();
         T::from_bytes(bytes.inner_bytes()).unwrap().0

@@ -12,6 +12,7 @@ categories = ["wasm", "smart contracts"]
 [dependencies]
 odra-casper-shared = { version = "0.1.0", path = "../shared" }
 odra-casper-types = { version = "0.1.0", path = "../types" }
+odra-types = { version = "0.1.0", path = "../../types" }
 casper-contract = { version = "1.4.4", default-features = false, features = ["std", "test-support"] }
 casper-types = "1.5.0"
 syn = "1.0.96"

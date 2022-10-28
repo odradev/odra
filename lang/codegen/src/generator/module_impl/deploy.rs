@@ -205,9 +205,8 @@ where
 
             quote! {
                 pub #deploy_fn_sig {
-                    use odra::types::CallArgs;
                     let mut args = { #args };
-                    args.insert("constructor", stringify!(#constructor_ident)).unwrap();
+                    args.insert("constructor", stringify!(#constructor_ident));
                     let address = odra::test_env::register_contract(#struct_name_snake_case, args);
                     #ref_ident::at(address)
                 }

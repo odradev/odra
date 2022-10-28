@@ -4,10 +4,9 @@
 use casper_contract::{
     contract_api::system::transfer_from_purse_to_account, unwrap_or_revert::UnwrapOrRevert,
 };
-use odra_casper_types::{
-    odra_types::{event::Event, ExecutionError},
-    Address, Balance, BlockTime, CallArgs, OdraType,
-};
+use odra_casper_types::{Address, Balance, BlockTime, CallArgs, OdraType};
+use odra_types::{event::Event, ExecutionError};
+use std::ops::Deref;
 
 use crate::{casper_env, utils::get_main_purse};
 
@@ -72,13 +71,16 @@ pub fn call_contract<T: OdraType>(
     amount: Option<Balance>,
 ) -> T {
     let contract_package_hash = *address.as_contract_package_hash().unwrap_or_revert();
-    let bytes = if let Some(amount) = amount {
-        casper_env::call_contract_with_amount(contract_package_hash, entrypoint, args, amount)
+    if let Some(amount) = amount {
+        casper_env::call_contract_with_amount(
+            contract_package_hash,
+            entrypoint,
+            args.deref().clone(),
+            amount,
+        )
     } else {
-        casper_env::call_contract(contract_package_hash, entrypoint, args)
-    };
-
-    T::from_vec(bytes).unwrap_or_revert().0
+        casper_env::call_contract(contract_package_hash, entrypoint, args.deref().clone())
+    }
 }
 
 /// Returns the value that represents one CSPR.

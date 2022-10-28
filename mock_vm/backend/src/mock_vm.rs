@@ -546,7 +546,7 @@ mod tests {
         // given an empty instance
         let instance = MockVm::default();
 
-        let first_contract_address = Address::new(b"contract");
+        let first_contract_address = Address::new(b"abc");
         // put a contract on stack
         push_address(&instance, &first_contract_address);
 
@@ -555,7 +555,7 @@ mod tests {
         instance.emit_event(&first_event);
         instance.emit_event(&second_event);
 
-        let second_contract_address = Address::new(b"contract2");
+        let second_contract_address = Address::new(b"bca");
         // put a next contract on stack
         push_address(&instance, &second_contract_address);
 

@@ -1,4 +1,4 @@
-use odra_casper_types::Type;
+use odra_types::Type;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
@@ -23,15 +23,9 @@ impl ToTokens for WrappedType<'_> {
                 quote!(casper_backend::backend::casper_types::CLType::Option(Box::new(#value_stream)))
             }
             Type::Any => quote!(casper_backend::backend::casper_types::CLType::Any),
-            Type::Key => quote!(casper_backend::backend::casper_types::CLType::Key),
-            Type::URef => quote!(casper_backend::backend::casper_types::CLType::URef),
-            Type::PublicKey => quote!(casper_backend::backend::casper_types::CLType::PublicKey),
-            Type::List(ty) => {
+            Type::Vec(ty) => {
                 let value_stream = WrappedType(&**ty).to_token_stream();
                 quote!(casper_backend::backend::casper_types::CLType::List(Box::new(#value_stream)))
-            }
-            Type::ByteArray(bytes) => {
-                quote!(casper_backend::backend::casper_types::CLType::ByteArray(#bytes))
             }
             Type::Result { ok, err } => {
                 let ok_stream = WrappedType(&**ok).to_token_stream();
@@ -80,6 +74,7 @@ impl ToTokens for WrappedType<'_> {
                     casper_backend::backend::casper_types::CLType::Tuple2([#t1, #t2, #t3])
                 }
             }
+            _ => quote!(casper_backend::backend::casper_types::CLType::Any),
         };
         tokens.extend(stream);
     }

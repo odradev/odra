@@ -1,6 +1,7 @@
 use casper_types::URef;
 use odra_casper_shared::consts;
-use odra_casper_types::{odra_types::ExecutionError, Balance};
+use odra_casper_types::Balance;
+use odra_types::ExecutionError;
 
 use crate::{
     casper_env,

@@ -1,7 +1,7 @@
 //! Utility functions that allow to write more compact tests.
 
 use crate::types::{Address, OdraType};
-use odra_types::{self, EventData};
+use odra_types;
 
 /// Gets the nth event emitted by the contract at `address`.
 ///

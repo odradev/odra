@@ -1,4 +1,4 @@
-use odra_casper_types::contract_def::Entrypoint;
+use odra_types::contract_def::Entrypoint;
 use quote::{format_ident, quote, ToTokens};
 use syn::{punctuated::Punctuated, token::Comma, Ident, Path};
 
@@ -79,7 +79,7 @@ impl ToTokens for WasmConstructor<'_> {
 
 #[cfg(test)]
 mod tests {
-    use odra_casper_types::{
+    use odra_types::{
         contract_def::{Argument, EntrypointType},
         Type,
     };
@@ -120,8 +120,7 @@ mod tests {
                     let constructor_name = constructor_name.as_str();
                     match constructor_name {
                         stringify!(construct_me) => {
-                            let casper_address = casper_backend::backend::CasperAddress::from(contract_package_hash);
-                            let odra_address = odra::types::Address::try_from(casper_address).unwrap_or_revert();
+                            let odra_address = odra::types::Address::from(contract_package_hash);
                             let contract_ref = my_contract::MyContract::at(odra_address);
                             let value = casper_backend::backend::casper_contract::contract_api::runtime::get_named_arg (stringify!(value));
                             contract_ref.construct_me(value);

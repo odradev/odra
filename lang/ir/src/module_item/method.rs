@@ -41,7 +41,7 @@ impl ToTokens for Method {
             .map(|arg| {
                 let name = &*arg.pat;
                 let ty = &*arg.ty;
-                let ty = quote!(<#ty as odra::types::CLTyped>::cl_type());
+                let ty = quote!(<#ty as odra::types::Typed>::ty());
                 quote! {
                     odra::types::contract_def::Argument {
                         ident: String::from(stringify!(#name)),
@@ -53,7 +53,7 @@ impl ToTokens for Method {
 
         let ret = match &self.ret {
             syn::ReturnType::Default => quote!(odra::types::Type::Unit),
-            syn::ReturnType::Type(_, ty) => quote!(<#ty as odra::types::CLTyped>::cl_type()),
+            syn::ReturnType::Type(_, ty) => quote!(<#ty as odra::types::Typed>::ty()),
         };
 
         let ty = match self.attrs.iter().any(|attr| attr.is_payable()) {

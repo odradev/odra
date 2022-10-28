@@ -32,7 +32,7 @@ impl ToTokens for Constructor {
             .flat_map(|arg| {
                 let name = &*arg.pat;
                 let ty = &*arg.ty;
-                let ty = quote!(<#ty as odra::types::CLTyped>::cl_type());
+                let ty = quote!(<#ty as odra::types::Typed>::ty());
                 quote! {
                     odra::types::contract_def::Argument {
                         ident: String::from(stringify!(#name)),

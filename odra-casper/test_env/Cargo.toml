@@ -15,4 +15,5 @@ casper-execution-engine = { version = "2.0.0" }
 casper-types = "1.5.0"
 odra-casper-shared = { version = "0.1.0", path = "../shared" }
 odra-casper-types = { version = "0.1.0", path = "../types" }
+odra-types = { version = "0.1.0", path = "../../types" }
 odra-utils = { path = "../../utils" }

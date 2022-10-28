@@ -1,7 +1,5 @@
-use odra_casper_types::{
-    odra_types::{event::Event, ExecutionError},
-    Address, Balance, BlockTime, OdraType,
-};
+use odra_casper_types::{Address, Balance, BlockTime, OdraType};
+use odra_types::{event::Event, ExecutionError};
 
 pub fn self_address() -> Address {
     unimplemented!()

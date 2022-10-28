@@ -89,7 +89,7 @@ pub fn external_contract(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///
 /// # Examples
 ///
-/// ```
+/// ```ignore
 /// use odra;
 ///
 /// #[derive(odra::Event)]

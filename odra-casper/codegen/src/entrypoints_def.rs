@@ -1,4 +1,4 @@
-use odra_casper_types::contract_def::{Argument, Entrypoint, EntrypointType};
+use odra_types::contract_def::{Argument, Entrypoint, EntrypointType};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 
@@ -77,9 +77,10 @@ impl ToTokens for EntrypointParams<'_> {
 
 #[cfg(test)]
 mod test {
+    use odra_types::Type;
+
     use super::*;
     use crate::assert_eq_tokens;
-    use odra_casper_types::Type;
 
     #[test]
     fn parse_cl_type() {

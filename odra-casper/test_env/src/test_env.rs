@@ -1,8 +1,6 @@
 use crate::env::ENV;
-use odra_casper_types::{
-    odra_types::{event::EventError, EventData, OdraError},
-    Address, Balance, CallArgs, OdraType,
-};
+use odra_casper_types::{Address, Balance, CallArgs, OdraType};
+use odra_types::{event::EventError, EventData, OdraError};
 
 /// Returns backend name.
 pub fn backend_name() -> String {
@@ -13,7 +11,7 @@ pub fn backend_name() -> String {
 pub fn register_contract(name: &str, args: CallArgs) -> Address {
     ENV.with(|env| {
         let wasm_name = format!("{}.wasm", name);
-        env.borrow_mut().deploy_contract(&wasm_name, args.clone());
+        env.borrow_mut().deploy_contract(&wasm_name, args);
 
         let contract_package_hash = format!("{}_package_hash", name);
         let contract_package_hash = env

@@ -1,4 +1,7 @@
-use odra_casper_types::contract_def::{Entrypoint, EntrypointType};
+use odra_types::{
+    contract_def::{Entrypoint, EntrypointType},
+    Type,
+};
 use quote::{format_ident, quote, ToTokens};
 use syn::{self, punctuated::Punctuated, token::Comma, Ident, Path};
 
@@ -34,7 +37,7 @@ impl ToTokens for WasmEntrypoint<'_> {
         };
 
         let contract_call = match self.0.ret {
-            odra_casper_types::Type::Unit => quote! {
+            Type::Unit => quote! {
                 #args
                 contract.#entrypoint_ident(#fn_args);
             },
@@ -64,10 +67,7 @@ impl ToTokens for WasmEntrypoint<'_> {
 #[cfg(test)]
 mod tests {
     use crate::assert_eq_tokens;
-    use odra_casper_types::{
-        contract_def::{Argument, EntrypointType},
-        Type,
-    };
+    use odra_types::contract_def::{Argument, EntrypointType};
 
     use super::*;
 
@@ -96,6 +96,7 @@ mod tests {
             quote!(
                 #[no_mangle]
                 fn construct_me() {
+                    casper_backend::utils::assert_no_attached_value();
                     let contract = my_contract::MyContract::instance("contract");
                     let value = casper_backend::backend::casper_contract::contract_api::runtime::get_named_arg(stringify!(value));
                     contract.construct_me(value);
@@ -120,16 +121,10 @@ mod tests {
             quote!(
                 #[no_mangle]
                 fn pay_me() {
-                    let cargo_purse = casper_backend::backend::casper_contract::contract_api::runtime::get_named_arg("purse");
-                    let amount = casper_backend::backend::casper_contract::contract_api::system::get_purse_balance(cargo_purse).unwrap_or_default();
-                    if amount > odra::types::U512::zero() {
-                        let contract_purse = casper_backend::contract_env::get_main_purse();
-                        casper_backend::backend::casper_contract::contract_api::system::transfer_from_purse_to_purse(cargo_purse, contract_purse, amount, None);
-                        casper_backend::contract_env::set_attached_value(amount);
-                    }
+                    casper_backend::utils::handle_attached_value();
                     let contract = a::b::c::Contract::instance("contract");
                     contract.pay_me();
-                    casper_backend::contract_env::clear_attached_value();
+                    casper_backend::utils::clear_attached_value();
                 }
             ),
         );

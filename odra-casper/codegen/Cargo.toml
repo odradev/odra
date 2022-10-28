@@ -15,4 +15,6 @@ quote = "1.0.18"
 syn = "1.0.96"
 pretty_assertions = "1.2.1"
 odra-casper-types = { path = "../types" }
+odra-types = { path = "../../types" }
 odra-utils = { path = "../../utils" }
+casper-types = "1.5.0"

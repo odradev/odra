@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 
 use odra_mock_vm_types::{Address, Balance, BlockTime, CallArgs, MockVMType};
-use odra_types::{event::EventError, EventData, OdraError};
+use odra_types::{event::EventError, OdraError};
 
 use crate::{EntrypointArgs, EntrypointCall};
 
