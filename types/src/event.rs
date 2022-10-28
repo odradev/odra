@@ -3,7 +3,7 @@
 /// Event interface
 pub trait Event {
     /// Emits &self in the current environment.
-    fn emit(&self);
+    fn emit(self);
     /// Returns the event name.
     fn name(&self) -> String;
 }

@@ -69,25 +69,24 @@ pub fn get_event<T: OdraType>(
 /// );
 /// ```
 
-// TODO: Uncomment event name assetion.
 #[macro_export]
 macro_rules! assert_events {
-    // ($contract:ident, $ ( $event_ty:ty ),+ ) => {
-    //     let mut __idx = -1;
-    //     $(
-    //         __idx -= 1;
-    //         let _ = stringify!($event_ty);
-    //     )+
-    //     $(
-    //         __idx += 1;
-    //         let __ev = odra::test_utils::get_event::<$event_ty>($contract.address(), __idx).unwrap();
-    //         let __name = stringify!($event_ty).to_string();
-    //         let __name = __name.split("::").last().unwrap();
-    //         assert_eq!(
-    //             <$event_ty as odra::types::event::Event>::name(&__ev), __name
-    //         );
-    //     )+
-    // };
+    ($contract:ident, $ ( $event_ty:ty ),+ ) => {
+        let mut __idx = -1;
+        $(
+            __idx -= 1;
+            let _ = stringify!($event_ty);
+        )+
+        $(
+            __idx += 1;
+            let __ev = odra::test_utils::get_event::<$event_ty>($contract.address(), __idx).unwrap();
+            let __name = stringify!($event_ty).to_string();
+            let __name = __name.split("::").last().unwrap();
+            assert_eq!(
+                <$event_ty as odra::types::event::Event>::name(&__ev), __name
+            );
+        )+
+    };
     ($contract:ident, $ ( $event:expr ),+ ) => {
         let mut __idx = -1;
         $(

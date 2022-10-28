@@ -122,7 +122,7 @@ where
 }
 
 /// Convert any key to hash.
-pub fn to_dictionary_key<T: OdraType>(key: &T) -> String {
+fn to_dictionary_key<T: OdraType>(key: &T) -> String {
     let preimage = key.to_bytes().unwrap_or_revert();
     let bytes = runtime::blake2b(preimage);
     hex::encode(bytes)
@@ -161,7 +161,7 @@ pub fn call_contract_with_amount<T: CLTyped + FromBytes>(
 }
 
 pub fn get_block_time() -> u64 {
-    u64::from(runtime::get_blocktime())
+    runtime::get_blocktime().into()
 }
 
 pub fn revert(error: u16) -> ! {

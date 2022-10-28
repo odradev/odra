@@ -53,7 +53,7 @@ where
 }
 
 /// Sends an event to the execution environment.
-pub fn emit_event<T: MockVMType>(event: &T) {
+pub fn emit_event<T: MockVMType>(event: T) {
     let event_data = event.ser().unwrap();
     borrow_env().emit_event(&event_data);
 }

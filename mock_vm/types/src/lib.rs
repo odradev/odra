@@ -14,5 +14,7 @@ pub use uints::{U256, U512};
 pub type Balance = U256;
 pub type BlockTime = u64;
 
+pub use borsh::{BorshDeserialize, BorshSerialize};
+
 pub trait OdraType: MockVMType {}
 impl<T: MockVMType> OdraType for T {}
