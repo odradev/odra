@@ -6,7 +6,7 @@
 
 use odra::{
     contract_env, execution_error,
-    types::odra_types::event::Event,
+    types::event::Event,
     types::{Address, U256},
     Event, Mapping, Variable,
 };

@@ -21,6 +21,7 @@ pub enum ArithmeticsError {
     SubtractingOverflow,
 }
 
+#[macro_export]
 macro_rules! impl_overflowing_add {
     ( $( $ty:ty ),+ ) => {
         $( impl OverflowingAdd for $ty {
@@ -35,6 +36,7 @@ macro_rules! impl_overflowing_add {
     };
 }
 
+#[macro_export]
 macro_rules! impl_overflowing_sub {
     ( $( $ty:ty ),+ ) => {
         $( impl OverflowingSub for $ty {

@@ -1,6 +1,6 @@
 use odra::{
+    contract_env,
     types::{Address, U256},
-    ContractEnv,
 };
 
 use crate::{erc20::Erc20, ownable::Ownable};
@@ -15,7 +15,7 @@ pub struct OwnedToken {
 impl OwnedToken {
     #[odra(init)]
     pub fn init(&self, name: String, symbol: String, decimals: u8, initial_supply: U256) {
-        let deployer = ContractEnv::caller();
+        let deployer = contract_env::caller();
         self.ownable.init(deployer);
         self.erc20.init(name, symbol, decimals, initial_supply);
     }
@@ -65,17 +65,16 @@ impl OwnedToken {
     }
 
     pub fn mint(&self, address: Address, amount: U256) {
-        self.ownable.ensure_ownership(ContractEnv::caller());
+        self.ownable.ensure_ownership(contract_env::caller());
         self.erc20.mint(address, amount);
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use alloc::string::String;
     use super::*;
     use crate::{erc20, ownable};
-    use odra::{assert_events, types::U256, TestEnv};
+    use odra::{assert_events, test_env, types::U256};
 
     const NAME: &str = "Plascoin";
     const SYMBOL: &str = "PLS";
@@ -94,7 +93,7 @@ mod tests {
     #[test]
     fn init_works() {
         let token = setup();
-        let owner = TestEnv::get_account(0);
+        let owner = test_env::get_account(0);
         assert_eq!(&token.symbol(), SYMBOL);
         assert_eq!(token.decimals(), DECIMALS);
         assert_eq!(token.total_supply(), INITIAL_SUPPLY.into());
@@ -116,7 +115,7 @@ mod tests {
     #[test]
     fn mint_works() {
         let token = setup();
-        let recipient = TestEnv::get_account(1);
+        let recipient = test_env::get_account(1);
         let amount = 10.into();
         token.mint(recipient, amount);
         assert_eq!(token.total_supply(), U256::from(INITIAL_SUPPLY) + amount);
@@ -126,16 +125,16 @@ mod tests {
     #[test]
     fn mint_error() {
         let token = setup();
-        let recipient = TestEnv::get_account(1);
+        let recipient = test_env::get_account(1);
         let amount = 10.into();
-        TestEnv::set_caller(&recipient);
-        TestEnv::assert_exception(ownable::Error::NotOwner, || token.mint(recipient, amount));
+        test_env::set_caller(recipient);
+        test_env::assert_exception(ownable::Error::NotOwner, || token.mint(recipient, amount));
     }
 
     #[test]
     fn change_ownership_works() {
         let token = setup();
-        let new_owner = TestEnv::get_account(1);
+        let new_owner = test_env::get_account(1);
         token.change_ownership(new_owner);
         assert_eq!(token.get_owner(), new_owner);
     }
@@ -143,9 +142,9 @@ mod tests {
     #[test]
     fn change_ownership_error() {
         let token = setup();
-        let new_owner = TestEnv::get_account(1);
-        TestEnv::set_caller(&new_owner);
-        TestEnv::assert_exception(ownable::Error::NotOwner, || {
+        let new_owner = test_env::get_account(1);
+        test_env::set_caller(new_owner);
+        test_env::assert_exception(ownable::Error::NotOwner, || {
             token.change_ownership(new_owner)
         });
     }

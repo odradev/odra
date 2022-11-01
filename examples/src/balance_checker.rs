@@ -19,11 +19,11 @@ trait Token {
 mod tests {
     use super::*;
     use crate::erc20;
-    use odra::TestEnv;
+    use odra::test_env;
 
     #[test]
     fn balance_checker() {
-        let (owner, second_account) = (TestEnv::get_account(0), TestEnv::get_account(1));
+        let (owner, second_account) = (test_env::get_account(0), test_env::get_account(1));
         let balance_checker = BalanceChecker::deploy();
         let token = erc20::tests::setup();
         let expected_owner_balance = erc20::tests::INITIAL_SUPPLY;

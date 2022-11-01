@@ -35,7 +35,6 @@ impl GenerateCode for EventItem<'_> {
     }
 }
 
-
 fn generate_casper_code(event: &IrEventItem) -> TokenStream {
     let struct_ident = event.struct_ident();
     let fields = event.fields();
@@ -55,9 +54,11 @@ fn generate_casper_code(event: &IrEventItem) -> TokenStream {
     let mut sum_serialized_lengths = quote! {
         size += #name_literal.serialized_length();
     };
-    sum_serialized_lengths.append_all(fields.iter().map(|ident| {
-        quote!(size += self.#ident.serialized_length();)
-    }));
+    sum_serialized_lengths.append_all(
+        fields
+            .iter()
+            .map(|ident| quote!(size += self.#ident.serialized_length();)),
+    );
 
     let append_bytes = fields
         .iter()
