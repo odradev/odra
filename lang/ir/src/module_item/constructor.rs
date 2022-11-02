@@ -20,7 +20,7 @@ pub struct Constructor {
     pub impl_item: syn::ImplItemMethod,
     pub ident: syn::Ident,
     pub args: syn::punctuated::Punctuated<syn::PatType, syn::token::Comma>,
-    pub full_sig: syn::Signature,
+    pub full_sig: syn::Signature
 }
 
 impl ToTokens for Constructor {
@@ -66,13 +66,13 @@ impl TryFrom<syn::ImplItemMethod> for Constructor {
             .iter()
             .filter_map(|arg| match arg {
                 syn::FnArg::Receiver(_) => None,
-                syn::FnArg::Typed(pat) => Some(pat.clone()),
+                syn::FnArg::Typed(pat) => Some(pat.clone())
             })
             .collect::<syn::punctuated::Punctuated<syn::PatType, syn::token::Comma>>();
         if let syn::ReturnType::Type(_, _) = method.sig.output {
             return Err(syn::Error::new_spanned(
                 method.sig,
-                "Constructor must not return value.",
+                "Constructor must not return value."
             ));
         }
         let full_sig = method.sig.clone();
@@ -82,7 +82,7 @@ impl TryFrom<syn::ImplItemMethod> for Constructor {
             impl_item: syn::ImplItemMethod { attrs, ..method },
             ident,
             args,
-            full_sig,
+            full_sig
         })
     }
 }

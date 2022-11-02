@@ -81,7 +81,7 @@ impl ToTokens for WasmConstructor<'_> {
 mod tests {
     use odra_types::{
         contract_def::{Argument, EntrypointType},
-        Type,
+        Type
     };
 
     use crate::assert_eq_tokens;
@@ -94,16 +94,16 @@ mod tests {
             ident: String::from("construct_me"),
             args: vec![Argument {
                 ident: String::from("value"),
-                ty: Type::I32,
+                ty: Type::I32
             }],
             ret: Type::Unit,
-            ty: EntrypointType::Constructor,
+            ty: EntrypointType::Constructor
         };
         let path: Path = syn::parse2(
             quote! {
                 my_contract::MyContract
             }
-            .to_token_stream(),
+            .to_token_stream()
         )
         .unwrap();
 
@@ -133,7 +133,7 @@ mod tests {
                         contract_package_hash , "constructor" , urefs
                     ).unwrap_or_revert();
                 }
-            },
+            }
         );
     }
 }

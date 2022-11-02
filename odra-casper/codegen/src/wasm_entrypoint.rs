@@ -1,6 +1,6 @@
 use odra_types::{
     contract_def::{Entrypoint, EntrypointType},
-    Type,
+    Type
 };
 use quote::{format_ident, quote, ToTokens};
 use syn::{self, punctuated::Punctuated, token::Comma, Ident, Path};
@@ -26,14 +26,14 @@ impl ToTokens for WasmEntrypoint<'_> {
             },
             _ => quote! {
                 odra::casper::utils::assert_no_attached_value();
-            },
+            }
         };
 
         let payable_cleanup = match self.0.ty {
             EntrypointType::PublicPayable => quote! {
                 odra::casper::utils::clear_attached_value();
             },
-            _ => quote!(),
+            _ => quote!()
         };
 
         let contract_call = match self.0.ret {
@@ -47,7 +47,7 @@ impl ToTokens for WasmEntrypoint<'_> {
                 let result = contract.#entrypoint_ident(#fn_args);
                 let result = odra::casper::casper_types::CLValue::from_t(result).unwrap_or_revert();
                 odra::casper::casper_contract::contract_api::runtime::ret(result);
-            },
+            }
         };
 
         let contract_path = &self.1;
@@ -77,16 +77,16 @@ mod tests {
             ident: String::from("construct_me"),
             args: vec![Argument {
                 ident: String::from("value"),
-                ty: Type::I32,
+                ty: Type::I32
             }],
             ret: Type::Unit,
-            ty: EntrypointType::Public,
+            ty: EntrypointType::Public
         };
         let path: Path = syn::parse2(
             quote! {
                 my_contract::MyContract
             }
-            .to_token_stream(),
+            .to_token_stream()
         )
         .unwrap();
 
@@ -103,7 +103,7 @@ mod tests {
                     );
                     contract.construct_me(value);
                 }
-            ),
+            )
         );
     }
 
@@ -113,7 +113,7 @@ mod tests {
             ident: String::from("pay_me"),
             args: vec![],
             ret: Type::Unit,
-            ty: EntrypointType::PublicPayable,
+            ty: EntrypointType::PublicPayable
         };
         let path: Path = syn::parse_quote!(a::b::c::Contract);
 
@@ -128,7 +128,7 @@ mod tests {
                     contract.pay_me();
                     odra::casper::utils::clear_attached_value();
                 }
-            ),
+            )
         );
     }
 }

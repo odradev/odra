@@ -12,7 +12,7 @@ mod reference;
 
 #[derive(From)]
 pub struct ModuleImpl<'a> {
-    contract: &'a odra_ir::module::ModuleImpl,
+    contract: &'a odra_ir::module::ModuleImpl
 }
 
 as_ref_for_contract_impl_generator!(ModuleImpl);
@@ -23,7 +23,7 @@ impl GenerateCode for ModuleImpl<'_> {
         let original_item_impls = self.contract.impl_items().iter().map(|item| match item {
             ImplItem::Constructor(item) => item.impl_item.to_token_stream(),
             ImplItem::Method(item) => item.impl_item.to_token_stream(),
-            ImplItem::Other(item) => item.to_token_stream(),
+            ImplItem::Other(item) => item.to_token_stream()
         });
 
         let contract_def = self.generate_code_using::<ContractDef>();

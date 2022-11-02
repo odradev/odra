@@ -7,7 +7,7 @@ use crate::GenerateCode;
 
 #[derive(From)]
 pub struct ErrorEnumItem<'a> {
-    item: &'a IrErrorEnumItem,
+    item: &'a IrErrorEnumItem
 }
 
 impl GenerateCode for ErrorEnumItem<'_> {
@@ -45,7 +45,7 @@ impl GenerateCode for ErrorEnumItem<'_> {
 
 #[derive(From)]
 pub struct OdraErrorItem<'a> {
-    item: &'a syn::ItemEnum,
+    item: &'a syn::ItemEnum
 }
 
 impl GenerateCode for OdraErrorItem<'_> {

@@ -5,7 +5,7 @@ use odra_types::ExecutionError;
 
 use crate::{
     casper_env,
-    contract_env::{revert, ATTACHED_VALUE},
+    contract_env::{revert, ATTACHED_VALUE}
 };
 
 /// Checks if given named argument exists.
@@ -15,7 +15,7 @@ pub fn named_arg_exists(name: &str) -> bool {
         casper_contract::ext_ffi::casper_get_named_arg_size(
             name.as_bytes().as_ptr(),
             name.len(),
-            &mut arg_size as *mut usize,
+            &mut arg_size as *mut usize
         )
     };
     casper_types::api_error::result_from(ret).is_ok()
@@ -50,7 +50,7 @@ pub fn handle_attached_value() {
                 cargo_purse,
                 contract_purse,
                 amount,
-                None,
+                None
             );
             set_attached_value(amount.into());
         }

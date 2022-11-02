@@ -7,7 +7,7 @@ use crate::GenerateCode;
 
 #[derive(From)]
 pub struct EventItem<'a> {
-    event: &'a IrEventItem,
+    event: &'a IrEventItem
 }
 
 impl GenerateCode for EventItem<'_> {
@@ -58,7 +58,7 @@ fn generate_casper_code(event: &IrEventItem) -> TokenStream {
     sum_serialized_lengths.append_all(
         fields
             .iter()
-            .map(|ident| quote!(size += self.#ident.serialized_length();)),
+            .map(|ident| quote!(size += self.#ident.serialized_length();))
     );
 
     let append_bytes = fields

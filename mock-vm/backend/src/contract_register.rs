@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 #[derive(Default)]
 pub struct ContractRegister {
-    contracts: HashMap<Address, ContractContainer>,
+    contracts: HashMap<Address, ContractContainer>
 }
 
 impl ContractRegister {
@@ -18,7 +18,7 @@ impl ContractRegister {
         &self,
         addr: &Address,
         entrypoint: String,
-        args: CallArgs,
+        args: CallArgs
     ) -> Result<Option<Vec<u8>>, OdraError> {
         self.internal_call(addr, |container| {
             std::panic::catch_unwind(|| container.call(entrypoint, args))?
@@ -29,7 +29,7 @@ impl ContractRegister {
         &self,
         addr: &Address,
         entrypoint: String,
-        args: CallArgs,
+        args: CallArgs
     ) -> Result<Option<Vec<u8>>, OdraError> {
         self.internal_call(addr, |container| {
             std::panic::catch_unwind(|| container.call_constructor(entrypoint, args))?
@@ -39,12 +39,12 @@ impl ContractRegister {
     fn internal_call<F: FnOnce(&ContractContainer) -> Result<Option<Vec<u8>>, OdraError>>(
         &self,
         addr: &Address,
-        call_fn: F,
+        call_fn: F
     ) -> Result<Option<Vec<u8>>, OdraError> {
         let contract = self.contracts.get(addr);
         match contract {
             Some(container) => call_fn(container),
-            None => Err(OdraError::VmError(VmError::InvalidContractAddress)),
+            None => Err(OdraError::VmError(VmError::InvalidContractAddress))
         }
     }
 }

@@ -6,7 +6,7 @@ use crate::Type;
 #[derive(Debug, Clone)]
 pub struct ContractDef {
     pub ident: String,
-    pub entrypoints: Vec<Entrypoint>,
+    pub entrypoints: Vec<Entrypoint>
 }
 
 /// Contract's entrypoint.
@@ -15,14 +15,14 @@ pub struct Entrypoint {
     pub ident: String,
     pub args: Vec<Argument>,
     pub ret: Type,
-    pub ty: EntrypointType,
+    pub ty: EntrypointType
 }
 
 /// Defines an argument passed to an entrypoint.
 #[derive(Debug, Clone)]
 pub struct Argument {
     pub ident: String,
-    pub ty: Type,
+    pub ty: Type
 }
 
 /// Defines an entrypoint type.
@@ -33,7 +33,7 @@ pub enum EntrypointType {
     /// A regular entrypoint.
     Public,
     /// A payable entrypoint.
-    PublicPayable,
+    PublicPayable
 }
 
 /// A trait that should be implemented by each smart contract to allow the backend

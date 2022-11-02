@@ -3,7 +3,7 @@
 use casper_types::{
     account::AccountHash,
     bytesrepr::{self, FromBytes, ToBytes},
-    CLType, CLTyped, ContractPackageHash, Key,
+    CLType, CLTyped, ContractPackageHash, Key
 };
 
 /// An enum representing an [`AccountHash`] or a [`ContractPackageHash`].
@@ -12,7 +12,7 @@ pub enum CasperAddress {
     /// Represents an account hash.
     Account(AccountHash),
     /// Represents a contract package hash.
-    Contract(ContractPackageHash),
+    Contract(ContractPackageHash)
 }
 
 impl CasperAddress {
@@ -70,9 +70,9 @@ impl TryFrom<Key> for CasperAddress {
         match key {
             Key::Account(account_hash) => Ok(CasperAddress::Account(account_hash)),
             Key::Hash(contract_package_hash) => Ok(CasperAddress::Contract(
-                ContractPackageHash::new(contract_package_hash),
+                ContractPackageHash::new(contract_package_hash)
             )),
-            _ => Err(String::from("Unsupported Key type.")),
+            _ => Err(String::from("Unsupported Key type."))
         }
     }
 }
@@ -102,7 +102,7 @@ impl FromBytes for CasperAddress {
             Key::Hash(raw_contract_package_hash) => {
                 CasperAddress::Contract(ContractPackageHash::new(raw_contract_package_hash))
             }
-            _ => return Err(bytesrepr::Error::Formatting),
+            _ => return Err(bytesrepr::Error::Formatting)
         };
 
         Ok((address, remainder))

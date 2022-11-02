@@ -8,7 +8,7 @@ use crate::GenerateCode;
 
 #[derive(From)]
 pub struct Deploy<'a> {
-    contract: &'a ModuleImpl,
+    contract: &'a ModuleImpl
 }
 
 as_ref_for_contract_impl_generator!(Deploy);
@@ -25,9 +25,9 @@ impl GenerateCode for Deploy<'_> {
                 .iter()
                 .filter_map(|item| match item {
                     ImplItem::Method(method) => Some(method),
-                    _ => None,
+                    _ => None
                 }),
-            struct_ident,
+            struct_ident
         );
 
         let constructors = build_constructors(
@@ -36,9 +36,9 @@ impl GenerateCode for Deploy<'_> {
                 .iter()
                 .filter_map(|item| match item {
                     ImplItem::Constructor(constructor) => Some(constructor),
-                    _ => None,
+                    _ => None
                 }),
-            struct_ident,
+            struct_ident
         );
 
         let constructors_mock_vm = build_constructors_mock_vm(
@@ -47,12 +47,12 @@ impl GenerateCode for Deploy<'_> {
                 .iter()
                 .filter_map(|item| match item {
                     ImplItem::Constructor(constructor) => Some(constructor),
-                    _ => None,
+                    _ => None
                 }),
             entrypoints.clone(),
             constructors.clone(),
             struct_ident,
-            ref_ident.clone(),
+            ref_ident.clone()
         );
 
         let constructors_wasm_test = build_constructors_wasm_test(
@@ -61,10 +61,10 @@ impl GenerateCode for Deploy<'_> {
                 .iter()
                 .filter_map(|item| match item {
                     ImplItem::Constructor(constructor) => Some(constructor),
-                    _ => None,
+                    _ => None
                 }),
             struct_ident,
-            ref_ident.clone(),
+            ref_ident.clone()
         );
 
         let struct_snake_case = odra_utils::camel_to_snake(&struct_name);
@@ -107,10 +107,10 @@ fn build_constructors_mock_vm<'a, C>(
     entrypoints_stream: TokenStream,
     constructors_stream: TokenStream,
     struct_ident: &Ident,
-    ref_ident: Ident,
+    ref_ident: Ident
 ) -> TokenStream
 where
-    C: Iterator<Item = &'a Constructor>,
+    C: Iterator<Item = &'a Constructor>
 {
     constructors.map(|constructor| {
         let ty = Type::Path(TypePath { qself: None, path: From::from(ref_ident.clone()) });
@@ -167,10 +167,10 @@ where
 fn build_constructors_wasm_test<'a, C>(
     constructors: C,
     struct_ident: &Ident,
-    ref_ident: Ident,
+    ref_ident: Ident
 ) -> TokenStream
 where
-    C: Iterator<Item = &'a Constructor>,
+    C: Iterator<Item = &'a Constructor>
 {
     let struct_name = struct_ident.to_string();
     let struct_name_snake_case = odra_utils::camel_to_snake(&struct_name);
@@ -179,7 +179,7 @@ where
         .map(|constructor| {
             let ty = Type::Path(TypePath {
                 qself: None,
-                path: From::from(ref_ident.clone()),
+                path: From::from(ref_ident.clone())
             });
             let deploy_fn_ident = format_ident!("deploy_{}", &constructor.ident);
             let sig = constructor.full_sig.clone();
@@ -190,7 +190,7 @@ where
                 .into_iter()
                 .filter(|i| match i {
                     syn::FnArg::Receiver(_) => false,
-                    syn::FnArg::Typed(_) => true,
+                    syn::FnArg::Typed(_) => true
                 })
                 .collect::<Punctuated<_, _>>();
 
@@ -217,7 +217,7 @@ where
 
 fn build_entrypoints<'a, T>(methods: T, struct_ident: &Ident) -> TokenStream
 where
-    T: Iterator<Item = &'a Method>,
+    T: Iterator<Item = &'a Method>
 {
     methods
         .map(|entrypoint| {
@@ -229,7 +229,7 @@ where
                     // let bytes = odra::types::ToBytes::to_bytes(&result).unwrap();
                     // Some(odra::types::Bytes::from(bytes))
                     Some(odra::types::MockVMType::ser(&result).unwrap())
-                },
+                }
             };
             let args = args_to_fn_args(&entrypoint.args);
             let arg_names = args_to_arg_names_stream(&entrypoint.args);
@@ -239,7 +239,7 @@ where
                     if odra::contract_env::attached_value() > odra::types::Balance::zero() {
                         odra::contract_env::revert(odra::types::ExecutionError::non_payable());
                     }
-                },
+                }
             };
             quote! {
                 entrypoints.insert(#name, (#arg_names, |name, args| {
@@ -255,7 +255,7 @@ where
 
 fn build_constructors<'a, T>(constructors: T, struct_ident: &Ident) -> TokenStream
 where
-    T: Iterator<Item = &'a Constructor>,
+    T: Iterator<Item = &'a Constructor>
 {
     constructors
         .map(|constructor| {
@@ -278,7 +278,7 @@ where
 
 fn args_to_fn_args<'a, T>(args: T) -> Punctuated<TokenStream, Comma>
 where
-    T: IntoIterator<Item = &'a syn::PatType>,
+    T: IntoIterator<Item = &'a syn::PatType>
 {
     args.into_iter()
         .map(|arg| {
@@ -290,7 +290,7 @@ where
 
 fn args_to_runtime_args_stream<'a, T>(args: T) -> TokenStream
 where
-    T: IntoIterator<Item = &'a syn::PatType>,
+    T: IntoIterator<Item = &'a syn::PatType>
 {
     let mut tokens = quote!(let mut args = odra::types::CallArgs::new(););
     tokens.append_all(args.into_iter().map(|arg| {
@@ -303,7 +303,7 @@ where
 
 fn args_to_arg_names_stream<'a, T>(args: T) -> TokenStream
 where
-    T: IntoIterator<Item = &'a syn::PatType>,
+    T: IntoIterator<Item = &'a syn::PatType>
 {
     let args_stream = args
         .into_iter()

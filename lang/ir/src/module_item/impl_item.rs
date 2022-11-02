@@ -15,7 +15,7 @@ pub enum ImplItem {
     /// Unmarked function.
     Method(Method),
     /// Any other implementation block item.
-    Other(syn::ImplItem),
+    Other(syn::ImplItem)
 }
 
 impl quote::ToTokens for ImplItem {
@@ -23,7 +23,7 @@ impl quote::ToTokens for ImplItem {
         match self {
             Self::Constructor(constructor) => constructor.to_tokens(tokens),
             Self::Method(message) => message.to_tokens(tokens),
-            Self::Other(other) => other.to_tokens(tokens),
+            Self::Other(other) => other.to_tokens(tokens)
         }
     }
 }
@@ -41,10 +41,10 @@ impl TryFrom<syn::ImplItem> for ImplItem {
                 let is_constructor = odra_attrs.iter().any(|attr| attr.is_constructor());
                 match is_constructor {
                     true => Ok(ImplItem::Constructor(Constructor::try_from(method)?)),
-                    false => Ok(ImplItem::Method(method.into())),
+                    false => Ok(ImplItem::Method(method.into()))
                 }
             }
-            other_item => Ok(ImplItem::Other(other_item)),
+            other_item => Ok(ImplItem::Other(other_item))
         }
     }
 }
@@ -53,7 +53,7 @@ pub struct ContractEntrypoint {
     pub ident: Ident,
     pub args: Vec<syn::PatType>,
     pub ret: syn::ReturnType,
-    pub full_sig: syn::Signature,
+    pub full_sig: syn::Signature
 }
 
 impl From<syn::ImplItemMethod> for ContractEntrypoint {
@@ -65,7 +65,7 @@ impl From<syn::ImplItemMethod> for ContractEntrypoint {
             .iter()
             .filter_map(|arg| match arg {
                 syn::FnArg::Receiver(_) => None,
-                syn::FnArg::Typed(pat) => Some(pat.clone()),
+                syn::FnArg::Typed(pat) => Some(pat.clone())
             })
             .collect::<Vec<_>>();
         let ret = method.clone().sig.output;
@@ -74,7 +74,7 @@ impl From<syn::ImplItemMethod> for ContractEntrypoint {
             ident,
             args,
             ret,
-            full_sig,
+            full_sig
         }
     }
 }

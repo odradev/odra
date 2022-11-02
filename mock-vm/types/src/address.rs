@@ -6,7 +6,7 @@ const ADDRESS_LENGTH: usize = 4;
 /// Blockchain-agnostic address representation.
 #[derive(Clone, Copy, PartialEq, Hash, Eq, BorshSerialize, BorshDeserialize)]
 pub struct Address {
-    data: [u8; ADDRESS_LENGTH],
+    data: [u8; ADDRESS_LENGTH]
 }
 
 impl Address {

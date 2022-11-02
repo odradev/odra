@@ -4,7 +4,7 @@ use crate::MockVMType;
 
 #[derive(Default, Debug)]
 pub struct CallArgs {
-    data: BTreeMap<String, Vec<u8>>,
+    data: BTreeMap<String, Vec<u8>>
 }
 
 impl CallArgs {

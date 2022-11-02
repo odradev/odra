@@ -7,7 +7,7 @@ use crate::{contract_env, Instance, Mapping, UnwrapOrRevert, Variable};
 /// Data structure for an indexed, iterable collection.
 pub struct List<T> {
     values: Mapping<u32, T>,
-    index: Variable<u32>,
+    index: Variable<u32>
 }
 
 impl<T: OdraType> List<T> {
@@ -19,7 +19,7 @@ impl<T: OdraType> List<T> {
         name_index.push_str("_index");
         List {
             values: Mapping::new(name_values),
-            index: Variable::new(name_index),
+            index: Variable::new(name_index)
         }
     }
 
@@ -67,7 +67,7 @@ impl<T> List<T> {
 
 pub struct Iter<'a, T> {
     list: &'a List<T>,
-    range: Range<u32>,
+    range: Range<u32>
 }
 
 impl<'a, T> Iter<'a, T> {
@@ -77,8 +77,8 @@ impl<'a, T> Iter<'a, T> {
             list,
             range: Range {
                 start: 0,
-                end: list.len(),
-            },
+                end: list.len()
+            }
         }
     }
 
@@ -90,7 +90,7 @@ impl<'a, T> Iter<'a, T> {
 
 impl<'a, T> core::iter::Iterator for Iter<'a, T>
 where
-    T: OdraType,
+    T: OdraType
 {
     type Item = T;
 
@@ -119,7 +119,7 @@ impl<'a, T> core::iter::FusedIterator for Iter<'a, T> where T: OdraType {}
 
 impl<'a, T> core::iter::DoubleEndedIterator for Iter<'a, T>
 where
-    T: OdraType,
+    T: OdraType
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         let index = self.range.nth_back(0)?;

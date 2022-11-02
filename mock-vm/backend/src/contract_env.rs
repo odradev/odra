@@ -45,7 +45,7 @@ pub fn get_dict_value<K: MockVMType, T: MockVMType>(dict: &str, key: &K) -> Opti
 /// Stops execution of a contract and reverts execution effects with a given [`ExecutionError`].
 pub fn revert<E>(error: E) -> !
 where
-    E: Into<ExecutionError>,
+    E: Into<ExecutionError>
 {
     let execution_error: ExecutionError = error.into();
     borrow_env().revert(execution_error.into());

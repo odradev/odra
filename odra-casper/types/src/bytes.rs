@@ -2,7 +2,7 @@ use std::ops::Deref;
 
 use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
-    CLTyped,
+    CLTyped
 };
 
 #[derive(Default)]

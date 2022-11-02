@@ -5,7 +5,7 @@ use syn::{spanned::Spanned, DeriveInput};
 /// Only a struct can be an instance of Odra module.
 pub struct InstanceItem {
     ident: syn::Ident,
-    data_struct: syn::DataStruct,
+    data_struct: syn::DataStruct
 }
 
 impl InstanceItem {
@@ -13,12 +13,12 @@ impl InstanceItem {
         match input.data {
             syn::Data::Struct(data_struct) => Ok(Self {
                 ident: input.ident,
-                data_struct,
+                data_struct
             }),
             _ => Err(syn::Error::new(
                 input.span(),
-                "Only struct can derive from Instance",
-            )),
+                "Only struct can derive from Instance"
+            ))
         }
     }
 

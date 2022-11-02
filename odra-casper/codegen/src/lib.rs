@@ -2,7 +2,7 @@
 
 use self::{
     constructor::WasmConstructor, entrypoints_def::ContractEntrypoints,
-    wasm_entrypoint::WasmEntrypoint,
+    wasm_entrypoint::WasmEntrypoint
 };
 use odra_types::contract_def::{ContractDef, EntrypointType};
 use proc_macro2::TokenStream as TokenStream2;
@@ -79,12 +79,12 @@ fn fqn_to_path(fqn: String) -> Path {
     let segments = Punctuated::<PathSegment, Token![::]>::from_iter(
         paths
             .iter()
-            .map(|ident| PathSegment::from(format_ident!("{}", ident))),
+            .map(|ident| PathSegment::from(format_ident!("{}", ident)))
     );
 
     syn::Path {
         leading_colon: None,
-        segments,
+        segments
     }
 }
 
@@ -112,16 +112,16 @@ mod tests {
             ident: String::from("construct_me"),
             args: vec![Argument {
                 ident: String::from("value"),
-                ty: Type::I32,
+                ty: Type::I32
             }],
             ret: Type::Unit,
-            ty: EntrypointType::Constructor,
+            ty: EntrypointType::Constructor
         };
         let entrypoint = Entrypoint {
             ident: String::from("call_me"),
             args: vec![],
             ret: Type::Bool,
-            ty: EntrypointType::Public,
+            ty: EntrypointType::Public
         };
 
         let path: syn::Path = syn::parse_str("my_contract::MyContract").unwrap();
@@ -131,7 +131,7 @@ mod tests {
 
         let contract_def = ContractDef {
             ident: String::from("MyContract"),
-            entrypoints: vec![constructor.clone(), entrypoint.clone()],
+            entrypoints: vec![constructor.clone(), entrypoint.clone()]
         };
 
         let result = gen_contract(contract_def, fqn);
@@ -170,7 +170,7 @@ mod tests {
                 #expected_constructor_no_mangle
 
                 #expected_entrypoint_no_mangle
-            },
+            }
         );
     }
 }

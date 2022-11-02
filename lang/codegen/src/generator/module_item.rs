@@ -5,7 +5,7 @@ use crate::GenerateCode;
 
 #[derive(From)]
 pub struct ModuleStruct<'a> {
-    contract: &'a odra_ir::module::ModuleStruct,
+    contract: &'a odra_ir::module::ModuleStruct
 }
 
 impl GenerateCode for ModuleStruct<'_> {

@@ -4,7 +4,7 @@ use syn::{Data, DataStruct, DeriveInput, Fields};
 /// Odra event definition.
 pub struct EventItem {
     struct_ident: Ident,
-    fields: Vec<Ident>,
+    fields: Vec<Ident>
 }
 
 impl EventItem {
@@ -14,7 +14,7 @@ impl EventItem {
 
         Ok(Self {
             struct_ident,
-            fields,
+            fields
         })
     }
 
@@ -40,7 +40,7 @@ fn extract_fields(input: DeriveInput) -> Result<Vec<Ident>, syn::Error> {
         _ => {
             return Err(syn::Error::new_spanned(
                 input,
-                "Expected a struct with named fields.",
+                "Expected a struct with named fields."
             ))
         }
     };

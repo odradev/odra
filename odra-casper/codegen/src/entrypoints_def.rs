@@ -87,10 +87,10 @@ mod test {
             ident: String::from("call_me"),
             args: vec![Argument {
                 ident: String::from("value"),
-                ty: Type::I32,
+                ty: Type::I32
             }],
             ret: Type::Bool,
-            ty: EntrypointType::Public,
+            ty: EntrypointType::Public
         }];
         let ep = ContractEntrypoints(&a);
         assert_eq_tokens(
@@ -110,7 +110,7 @@ mod test {
                         odra::casper::casper_types::EntryPointType::Contract,
                     )
                 );
-            },
+            }
         );
     }
 }

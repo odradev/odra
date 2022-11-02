@@ -19,7 +19,7 @@ pub mod module_struct;
 /// All the items are based on syn with special variants for Odra `impl` items.
 pub enum ModuleItem {
     Struct(Box<ModuleStruct>),
-    Impl(Box<ModuleImpl>),
+    Impl(Box<ModuleImpl>)
 }
 
 impl ModuleItem {
@@ -38,7 +38,7 @@ impl ModuleItem {
 
         Err(syn::Error::new_spanned(
             item,
-            "ContractItem is neither a struct nor an impl block.",
+            "ContractItem is neither a struct nor an impl block."
         ))
     }
 }
@@ -57,7 +57,7 @@ mod tests {
                 fn some_fn(x: u32) -> u32 {
                     x + 1
                 }
-            ),
+            )
         );
         assert!(result.is_err());
 
@@ -65,7 +65,7 @@ mod tests {
             quote!(),
             quote!(
                 enum A {}
-            ),
+            )
         );
         assert!(result.is_err());
     }
@@ -77,9 +77,9 @@ mod tests {
             quote!(
                 struct ContractItem {
                     x: u32,
-                    name: String,
+                    name: String
                 }
-            ),
+            )
         );
         assert!(result.is_ok())
     }
@@ -92,7 +92,7 @@ mod tests {
                 impl ContractItem {
                     fn a() {}
                 }
-            ),
+            )
         );
         assert!(result.is_ok())
     }

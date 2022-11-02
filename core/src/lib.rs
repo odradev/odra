@@ -17,7 +17,7 @@ pub use {
     odra_proc_macros::{execution_error, external_contract, module, odra_error, Event, Instance},
     odra_utils as utils,
     unwrap_or_revert::UnwrapOrRevert,
-    variable::Variable,
+    variable::Variable
 };
 
 //TODO: makes it invisible in the contract code, a feature maybe??
@@ -55,10 +55,10 @@ pub fn call_contract<T>(
     address: types::Address,
     entrypoint: &str,
     args: types::CallArgs,
-    amount: Option<types::Balance>,
+    amount: Option<types::Balance>
 ) -> T
 where
-    T: types::OdraType,
+    T: types::OdraType
 {
     cfg_if::cfg_if! {
         if #[cfg(feature = "mock-vm")] {

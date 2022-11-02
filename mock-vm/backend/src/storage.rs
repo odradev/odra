@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use odra_mock_vm_types::{Address, Balance, MockVMType};
 use std::{
     collections::{hash_map::DefaultHasher, HashMap},
-    hash::{Hash, Hasher},
+    hash::{Hash, Hasher}
 };
 
 use crate::balance::AccountBalance;
@@ -12,7 +12,7 @@ pub struct Storage {
     state: HashMap<u64, Vec<u8>>,
     balances: HashMap<Address, AccountBalance>,
     state_snapshot: Option<HashMap<u64, Vec<u8>>>,
-    balances_snapshot: Option<HashMap<Address, AccountBalance>>,
+    balances_snapshot: Option<HashMap<Address, AccountBalance>>
 }
 
 impl Storage {
@@ -21,7 +21,7 @@ impl Storage {
             state: Default::default(),
             balances,
             state_snapshot: Default::default(),
-            balances_snapshot: Default::default(),
+            balances_snapshot: Default::default()
         }
     }
 
@@ -64,7 +64,7 @@ impl Storage {
         address: &Address,
         collection: &str,
         key: &[u8],
-        value: T,
+        value: T
     ) {
         let dict_key = [collection.as_bytes(), key].concat();
         let hash = Storage::hashed_key(address, dict_key);
@@ -76,7 +76,7 @@ impl Storage {
         &self,
         address: &Address,
         collection: &str,
-        key: &[u8],
+        key: &[u8]
     ) -> Option<T> {
         let dict_key = [collection.as_bytes(), key].concat();
         let hash = Storage::hashed_key(address, dict_key);

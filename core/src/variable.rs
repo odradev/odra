@@ -9,7 +9,7 @@ use crate::{contract_env, instance::Instance, UnwrapOrRevert};
 #[derive(PartialEq, Eq, Debug)]
 pub struct Variable<T> {
     name: String,
-    ty: PhantomData<T>,
+    ty: PhantomData<T>
 }
 
 // <3
@@ -49,7 +49,7 @@ impl<T: OdraType> Variable<T> {
     pub fn new(name: String) -> Self {
         Variable {
             name,
-            ty: PhantomData::<T>::default(),
+            ty: PhantomData::<T>::default()
         }
     }
 

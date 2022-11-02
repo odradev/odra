@@ -6,7 +6,7 @@ use proc_macro2::{Ident, Span};
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Attribute {
     Odra(OdraAttribute),
-    Other(syn::Attribute),
+    Other(syn::Attribute)
 }
 
 impl TryFrom<syn::Attribute> for Attribute {
@@ -22,7 +22,7 @@ impl TryFrom<syn::Attribute> for Attribute {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct OdraAttribute {
-    kinds: Vec<AttrKind>,
+    kinds: Vec<AttrKind>
 }
 
 impl OdraAttribute {
@@ -61,7 +61,7 @@ impl TryFrom<syn::Attribute> for OdraAttribute {
 
                     Ok(attr_kinds)
                 }
-                _ => Err(syn::Error::new_spanned(attrs, "unknown Odra attr")),
+                _ => Err(syn::Error::new_spanned(attrs, "unknown Odra attr"))
             })
             .unwrap()
             .unwrap();
@@ -76,7 +76,7 @@ impl TryFrom<syn::Attribute> for OdraAttribute {
 enum AttrKind {
     Constructor,
     Entrypoint,
-    Payable,
+    Payable
 }
 
 impl TryFrom<syn::NestedMeta> for AttrKind {
@@ -97,22 +97,22 @@ impl TryFrom<syn::NestedMeta> for AttrKind {
                         "entrypoint" => Ok(AttrKind::Entrypoint),
                         _ => Err(syn::Error::new_spanned(
                             meta,
-                            "unknown Odra attribute argument (path)",
-                        )),
+                            "unknown Odra attribute argument (path)"
+                        ))
                     }),
                 syn::Meta::List(_) => Err(syn::Error::new_spanned(
                     meta,
-                    "unknown Odra attribute argument (list)",
+                    "unknown Odra attribute argument (list)"
                 )),
                 syn::Meta::NameValue(_) => Err(syn::Error::new_spanned(
                     meta,
-                    "unknown Odra attribute argument (name = value)",
-                )),
+                    "unknown Odra attribute argument (name = value)"
+                ))
             },
             syn::NestedMeta::Lit(_) => Err(syn::Error::new_spanned(
                 nested_meta,
-                "unknown Odra attribute argument (literal)",
-            )),
+                "unknown Odra attribute argument (literal)"
+            ))
         }
     }
 }
@@ -124,9 +124,9 @@ fn ensure_no_duplicates(attrs: &[AttrKind]) -> Result<(), syn::Error> {
     match contains_duplicate {
         true => Err(syn::Error::new(
             Span::call_site(),
-            "attr duplicate encountered".to_string(),
+            "attr duplicate encountered".to_string()
         )),
-        false => Ok(()),
+        false => Ok(())
     }
 }
 
@@ -141,7 +141,7 @@ fn validate(attrs: &[AttrKind]) -> Result<(), syn::Error> {
     if has_constructor && has_payable {
         return Err(syn::Error::new(
             Span::call_site(),
-            "constructor cannot be payable".to_string(),
+            "constructor cannot be payable".to_string()
         ));
     }
 
@@ -149,10 +149,10 @@ fn validate(attrs: &[AttrKind]) -> Result<(), syn::Error> {
 }
 
 pub fn partition_attributes<I>(
-    attrs: I,
+    attrs: I
 ) -> Result<(Vec<OdraAttribute>, Vec<syn::Attribute>), syn::Error>
 where
-    I: IntoIterator<Item = syn::Attribute>,
+    I: IntoIterator<Item = syn::Attribute>
 {
     let (odra_attrs, other_attrs): (Vec<OdraAttribute>, Vec<syn::Attribute>) = attrs
         .into_iter()
@@ -161,7 +161,7 @@ where
         .into_iter()
         .partition_map(|attr| match attr {
             Attribute::Odra(odra_attr) => Either::Left(odra_attr),
-            Attribute::Other(other_attr) => Either::Right(other_attr),
+            Attribute::Other(other_attr) => Either::Right(other_attr)
         });
 
     let attrs = odra_attrs
@@ -181,26 +181,26 @@ mod tests {
     #[test]
     fn constructor_attr_works() {
         let expected_value = Attribute::Odra(OdraAttribute {
-            kinds: vec![AttrKind::Constructor],
+            kinds: vec![AttrKind::Constructor]
         });
         assert_attribute_try_from(
             syn::parse_quote! {
                 #[odra(init)]
             },
-            Ok(expected_value),
+            Ok(expected_value)
         );
     }
 
     #[test]
     fn payable_attr_works() {
         let expected_value = Attribute::Odra(OdraAttribute {
-            kinds: vec![AttrKind::Payable],
+            kinds: vec![AttrKind::Payable]
         });
         assert_attribute_try_from(
             syn::parse_quote! {
                 #[odra(payable)]
             },
-            Ok(expected_value),
+            Ok(expected_value)
         );
     }
 
@@ -210,7 +210,7 @@ mod tests {
             syn::parse_quote! {
                 #[odra(init, payable)]
             },
-            Err("constructor cannot be payable"),
+            Err("constructor cannot be payable")
         );
 
         assert_attributes_try_from(
@@ -218,7 +218,7 @@ mod tests {
                 syn::parse_quote! { #[odra(init)] },
                 syn::parse_quote! { #[odra(payable)] },
             ],
-            Err("constructor cannot be payable"),
+            Err("constructor cannot be payable")
         );
     }
 
@@ -236,7 +236,7 @@ mod tests {
             syn::parse_quote! {
                 #[odra(init, init)]
             },
-            Err("attr duplicate encountered"),
+            Err("attr duplicate encountered")
         );
 
         assert_attributes_try_from(
@@ -244,7 +244,7 @@ mod tests {
                 syn::parse_quote! { #[odra(init)] },
                 syn::parse_quote! { #[odra(init)] },
             ],
-            Err("attr duplicate encountered"),
+            Err("attr duplicate encountered")
         )
     }
 
@@ -257,7 +257,7 @@ mod tests {
 
     fn assert_attributes_try_from(
         inputs: Vec<syn::Attribute>,
-        expected: Result<(Vec<Attribute>, Vec<syn::Attribute>), &'static str>,
+        expected: Result<(Vec<Attribute>, Vec<syn::Attribute>), &'static str>
     ) {
         let result = partition_attributes(inputs)
             .map(|(odra_attrs, other_attrs)| {
@@ -266,7 +266,7 @@ mod tests {
                         .into_iter()
                         .map(Attribute::from)
                         .collect::<Vec<_>>(),
-                    other_attrs,
+                    other_attrs
                 )
             })
             .map_err(|err| err.to_string());

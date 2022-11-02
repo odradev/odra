@@ -26,5 +26,5 @@ pub enum Type {
     Tuple2([Box<Type>; 2]),
     Tuple3([Box<Type>; 3]),
     Any,
-    Vec(Box<Type>),
+    Vec(Box<Type>)
 }

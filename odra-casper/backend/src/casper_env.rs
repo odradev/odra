@@ -8,12 +8,12 @@ use casper_contract::{
     contract_api::{
         runtime,
         storage::{self, dictionary_put},
-        system::{create_purse, get_purse_balance, transfer_from_purse_to_purse},
+        system::{create_purse, get_purse_balance, transfer_from_purse_to_purse}
     },
-    unwrap_or_revert::UnwrapOrRevert,
+    unwrap_or_revert::UnwrapOrRevert
 };
 use casper_types::{
-    system::CallStackElement, ApiError, CLTyped, ContractPackageHash, Key, RuntimeArgs, URef, U512,
+    system::CallStackElement, ApiError, CLTyped, ContractPackageHash, Key, RuntimeArgs, URef, U512
 };
 
 use odra_casper_shared::consts;
@@ -73,7 +73,7 @@ fn call_stack_element_to_address(call_stack_element: CallStackElement) -> Addres
         CallStackElement::StoredContract {
             contract_package_hash,
             ..
-        } => Address::from(contract_package_hash),
+        } => Address::from(contract_package_hash)
     }
 }
 
@@ -102,7 +102,7 @@ pub fn self_address() -> Address {
 /// Record event to the contract's storage.
 pub fn emit_event<T>(event: T)
 where
-    T: OdraType + Event,
+    T: OdraType + Event
 {
     let (events_length, key): (u32, URef) = match runtime::get_key(consts::EVENTS_LENGTH) {
         None => {
@@ -132,7 +132,7 @@ fn to_dictionary_key<T: OdraType>(key: &T) -> String {
 pub fn call_contract<T: CLTyped + FromBytes>(
     contract_package_hash: ContractPackageHash,
     entry_point: &str,
-    args: RuntimeArgs,
+    args: RuntimeArgs
 ) -> T {
     runtime::call_versioned_contract(contract_package_hash, None, entry_point, args)
 }
@@ -141,7 +141,7 @@ pub fn call_contract_with_amount<T: CLTyped + FromBytes>(
     contract_package_hash: ContractPackageHash,
     entry_point: &str,
     args: RuntimeArgs,
-    amount: U512,
+    amount: U512
 ) -> T {
     let cargo_purse = create_purse();
     let main_purse = get_or_create_purse();

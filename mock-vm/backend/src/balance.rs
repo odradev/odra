@@ -4,14 +4,14 @@ use odra_mock_vm_types::Balance;
 #[derive(Eq, Hash, PartialEq, Clone, Default, Debug)]
 pub struct AccountBalance {
     value: Balance,
-    prev_value: Balance,
+    prev_value: Balance
 }
 
 impl AccountBalance {
     pub fn new(amount: Balance) -> Self {
         Self {
             value: amount,
-            prev_value: Balance::zero(),
+            prev_value: Balance::zero()
         }
     }
 

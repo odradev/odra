@@ -7,7 +7,7 @@ use crate::attrs::partition_attributes;
 /// Wraps up [syn::ItemStruct].
 pub struct ModuleStruct {
     is_instantiable: bool,
-    item: syn::ItemStruct,
+    item: syn::ItemStruct
 }
 
 impl From<syn::ItemStruct> for ModuleStruct {
@@ -18,7 +18,7 @@ impl From<syn::ItemStruct> for ModuleStruct {
             item: syn::ItemStruct {
                 attrs: other_attrs,
                 ..item
-            },
+            }
         }
     }
 }
@@ -29,7 +29,7 @@ impl ToTokens for ModuleStruct {
         let span = item_struct.ident.span();
         let instance = match &self.is_instantiable {
             true => quote::quote_spanned!(span => #[derive(odra::Instance)]),
-            false => quote!(),
+            false => quote!()
         };
         tokens.extend(quote! {
             #instance

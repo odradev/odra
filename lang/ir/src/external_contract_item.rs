@@ -4,7 +4,7 @@ use quote::format_ident;
 /// Odra external contract trait definition.
 pub struct ExternalContractItem {
     pub item_trait: syn::ItemTrait,
-    pub item_ref: RefItem,
+    pub item_ref: RefItem
 }
 
 impl ExternalContractItem {
@@ -16,11 +16,11 @@ impl ExternalContractItem {
         let item_ref = RefItem { ident: ref_ident };
         Ok(Self {
             item_trait,
-            item_ref,
+            item_ref
         })
     }
 }
 
 pub struct RefItem {
-    pub ident: Ident,
+    pub ident: Ident
 }

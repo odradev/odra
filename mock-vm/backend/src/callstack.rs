@@ -3,14 +3,14 @@ use odra_mock_vm_types::{Address, Balance};
 #[derive(Clone)]
 pub struct CallstackElement {
     pub address: Address,
-    pub attached_value: Option<Balance>,
+    pub attached_value: Option<Balance>
 }
 
 impl CallstackElement {
     pub fn new(address: Address, value: Option<Balance>) -> Self {
         Self {
             address,
-            attached_value: value,
+            attached_value: value
         }
     }
 }

@@ -74,7 +74,7 @@ impl ToTokens for WrappedType<'_> {
                     odra::casper::casper_types::CLType::Tuple2([#t1, #t2, #t3])
                 }
             }
-            _ => quote!(odra::casper::casper_types::CLType::Any),
+            _ => quote!(odra::casper::casper_types::CLType::Any)
         };
         tokens.extend(stream);
     }
@@ -91,7 +91,7 @@ mod tests {
         let wrapped_type = WrappedType(&ty);
         assert_eq_tokens(
             wrapped_type,
-            quote!(odra::casper::casper_types::CLType::Bool),
+            quote!(odra::casper::casper_types::CLType::Bool)
         );
     }
 
@@ -99,7 +99,7 @@ mod tests {
     fn test_complex_type() {
         let ty = Type::Option(Box::new(Type::Tuple2([
             Box::new(Type::Bool),
-            Box::new(Type::I32),
+            Box::new(Type::I32)
         ])));
         let wrapped_type = WrappedType(&ty);
         assert_eq_tokens(
@@ -109,7 +109,7 @@ mod tests {
                     odra::casper::casper_types::CLType::Bool,
                     odra::casper::casper_types::CLType::I32
                 ])
-            ))),
+            )))
         );
     }
 }

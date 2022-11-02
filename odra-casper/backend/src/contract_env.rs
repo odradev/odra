@@ -2,7 +2,7 @@
 //!
 //! It provides all the required functions to communicate between Odra and Casper.
 use casper_contract::{
-    contract_api::system::transfer_from_purse_to_account, unwrap_or_revert::UnwrapOrRevert,
+    contract_api::system::transfer_from_purse_to_account, unwrap_or_revert::UnwrapOrRevert
 };
 use casper_types::U512;
 use odra_casper_types::{Address, Balance, BlockTime, CallArgs, OdraType};
@@ -51,7 +51,7 @@ pub fn get_dict_value<K: OdraType, T: OdraType>(dict: &str, key: &K) -> Option<T
 /// Revert the execution.
 pub fn revert<E>(error: E) -> !
 where
-    E: Into<ExecutionError>,
+    E: Into<ExecutionError>
 {
     casper_env::revert(error.into().code());
 }
@@ -59,7 +59,7 @@ where
 /// Emits event.
 pub fn emit_event<T>(event: T)
 where
-    T: OdraType + Event,
+    T: OdraType + Event
 {
     casper_env::emit_event(event);
 }
@@ -69,7 +69,7 @@ pub fn call_contract<T: OdraType>(
     address: Address,
     entrypoint: &str,
     args: CallArgs,
-    amount: Option<Balance>,
+    amount: Option<Balance>
 ) -> T {
     let contract_package_hash = *address.as_contract_package_hash().unwrap_or_revert();
     if let Some(amount) = amount {
@@ -77,7 +77,7 @@ pub fn call_contract<T: OdraType>(
             contract_package_hash,
             entrypoint,
             args.deref().clone(),
-            amount.inner(),
+            amount.inner()
         )
     } else {
         casper_env::call_contract(contract_package_hash, entrypoint, args.deref().clone())
@@ -110,6 +110,6 @@ pub fn transfer_tokens<B: Into<U512>>(to: Address, amount: B) {
             transfer_from_purse_to_account(main_purse, account, amount.into(), None)
                 .unwrap_or_revert();
         }
-        Address::Contract(_) => revert(ExecutionError::can_not_transfer_to_contract()),
+        Address::Contract(_) => revert(ExecutionError::can_not_transfer_to_contract())
     };
 }

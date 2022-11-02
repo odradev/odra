@@ -26,7 +26,7 @@ pub fn call_contract<T: OdraType>(
     addr: Address,
     entrypoint: &str,
     args: CallArgs,
-    amount: Option<Balance>,
+    amount: Option<Balance>
 ) -> T {
     ENV.with(|env| {
         let contract_package_hash = addr.as_contract_package_hash().unwrap();
@@ -79,7 +79,7 @@ pub fn one_token() -> Balance {
 pub fn assert_exception<E, F>(err: E, block: F)
 where
     E: Into<OdraError>,
-    F: Fn() + std::panic::RefUnwindSafe,
+    F: Fn() + std::panic::RefUnwindSafe
 {
     let _ = std::panic::catch_unwind(|| {
         block();

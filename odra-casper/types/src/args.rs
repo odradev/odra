@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
-    CLTyped,
+    CLTyped
 };
 
 #[derive(Default)]
@@ -16,7 +16,7 @@ impl CallArgs {
     pub fn insert<K, V>(&mut self, key: K, value: V)
     where
         K: Into<String>,
-        V: CLTyped + ToBytes,
+        V: CLTyped + ToBytes
     {
         self.0.insert(key, value).unwrap();
     }

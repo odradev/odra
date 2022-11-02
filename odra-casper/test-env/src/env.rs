@@ -5,17 +5,17 @@ use std::{cell::RefCell, path::PathBuf};
 use casper_engine_test_support::{
     DeployItemBuilder, ExecuteRequestBuilder, InMemoryWasmTestBuilder, ARG_AMOUNT,
     DEFAULT_ACCOUNT_INITIAL_BALANCE, DEFAULT_GENESIS_CONFIG, DEFAULT_GENESIS_CONFIG_HASH,
-    DEFAULT_PAYMENT,
+    DEFAULT_PAYMENT
 };
 use casper_execution_engine::core::engine_state::{
-    self, run_genesis_request::RunGenesisRequest, GenesisAccount,
+    self, run_genesis_request::RunGenesisRequest, GenesisAccount
 };
 pub use casper_execution_engine::core::execution::Error as CasperExecutionError;
 use casper_types::{
     account::{Account, AccountHash},
     bytesrepr::{Bytes, ToBytes},
     runtime_args, ApiError, Contract, ContractHash, ContractPackageHash, Key, Motes, PublicKey,
-    RuntimeArgs, SecretKey, StoredValue, URef, U512,
+    RuntimeArgs, SecretKey, StoredValue, URef, U512
 };
 use odra_casper_shared::consts;
 use odra_casper_types::{Address, BlockTime, CallArgs, OdraType};
@@ -34,7 +34,7 @@ pub struct CasperTestEnv {
     block_time: BlockTime,
     calls_counter: u32,
     error: Option<OdraError>,
-    attached_value: Option<U512>,
+    attached_value: Option<U512>
 }
 
 impl CasperTestEnv {
@@ -54,7 +54,7 @@ impl CasperTestEnv {
             let account = GenesisAccount::account(
                 public_key,
                 Motes::new(U512::from(DEFAULT_ACCOUNT_INITIAL_BALANCE)),
-                None,
+                None
             );
             genesis_config.ee_config_mut().push_account(account);
 
@@ -63,7 +63,7 @@ impl CasperTestEnv {
         let run_genesis_request = RunGenesisRequest::new(
             *DEFAULT_GENESIS_CONFIG_HASH,
             genesis_config.protocol_version(),
-            genesis_config.take_ee_config(),
+            genesis_config.take_ee_config()
         );
 
         let mut builder = InMemoryWasmTestBuilder::default();
@@ -76,7 +76,7 @@ impl CasperTestEnv {
             block_time: 0,
             calls_counter: 0,
             error: None,
-            attached_value: None,
+            attached_value: None
         }
     }
 
@@ -103,7 +103,7 @@ impl CasperTestEnv {
         &mut self,
         hash: ContractPackageHash,
         entry_point: &str,
-        args: CallArgs,
+        args: CallArgs
     ) -> T {
         self.error = None;
 
@@ -163,7 +163,7 @@ impl CasperTestEnv {
     pub fn get_account_value<T: OdraType>(
         &self,
         hash: AccountHash,
-        name: &str,
+        name: &str
     ) -> Result<T, String> {
         let result: Result<StoredValue, String> =
             self.context
@@ -208,7 +208,7 @@ impl CasperTestEnv {
             .query(
                 None,
                 Key::Hash(contract_hash.value()),
-                &[String::from(consts::EVENTS_LENGTH)],
+                &[String::from(consts::EVENTS_LENGTH)]
             )
             .unwrap()
             .as_cl_value()
@@ -222,13 +222,13 @@ impl CasperTestEnv {
         match self.context.query_dictionary_item(
             None,
             dictionary_seed_uref,
-            &event_position.to_string(),
+            &event_position.to_string()
         ) {
             Ok(val) => {
                 let value: T = val.as_cl_value().unwrap().clone().into_t::<T>().unwrap();
                 Ok(value)
             }
-            Err(_) => Err(EventError::IndexOutOfBounds),
+            Err(_) => Err(EventError::IndexOutOfBounds)
         }
     }
 
@@ -248,7 +248,7 @@ impl CasperTestEnv {
     pub fn token_balance(&self, address: Address) -> U512 {
         match address {
             Address::Account(account_hash) => self.get_account_cspr_balance(account_hash),
-            Address::Contract(contract_hash) => self.get_contract_cspr_balance(contract_hash),
+            Address::Contract(contract_hash) => self.get_contract_cspr_balance(contract_hash)
         }
     }
 }
@@ -321,7 +321,7 @@ fn parse_error(err: engine_state::Error) -> OdraError {
             CasperExecutionError::NoSuchMethod(name) => {
                 OdraError::VmError(VmError::NoSuchMethod(name))
             }
-            _ => OdraError::VmError(VmError::Other(format!("Casper ExecError: {}", exec_err))),
+            _ => OdraError::VmError(VmError::Other(format!("Casper ExecError: {}", exec_err)))
         }
     } else {
         OdraError::VmError(VmError::Other(format!("Casper EngineStateError: {}", err)))

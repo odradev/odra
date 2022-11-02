@@ -19,7 +19,7 @@ pub struct Method {
     pub args: syn::punctuated::Punctuated<syn::PatType, syn::token::Comma>,
     pub ret: syn::ReturnType,
     pub full_sig: syn::Signature,
-    pub visibility: syn::Visibility,
+    pub visibility: syn::Visibility
 }
 
 impl Method {
@@ -53,12 +53,12 @@ impl ToTokens for Method {
 
         let ret = match &self.ret {
             syn::ReturnType::Default => quote!(odra::types::Type::Unit),
-            syn::ReturnType::Type(_, ty) => quote!(<#ty as odra::types::Typed>::ty()),
+            syn::ReturnType::Type(_, ty) => quote!(<#ty as odra::types::Typed>::ty())
         };
 
         let ty = match self.attrs.iter().any(|attr| attr.is_payable()) {
             true => quote!(odra::types::contract_def::EntrypointType::PublicPayable),
-            false => quote!(odra::types::contract_def::EntrypointType::Public),
+            false => quote!(odra::types::contract_def::EntrypointType::Public)
         };
 
         let ep = quote! {
@@ -84,7 +84,7 @@ impl From<syn::ImplItemMethod> for Method {
             .iter()
             .filter_map(|arg| match arg {
                 syn::FnArg::Receiver(_) => None,
-                syn::FnArg::Typed(pat) => Some(pat.clone()),
+                syn::FnArg::Typed(pat) => Some(pat.clone())
             })
             .collect::<syn::punctuated::Punctuated<_, _>>();
         let ret = method.clone().sig.output;
@@ -98,7 +98,7 @@ impl From<syn::ImplItemMethod> for Method {
             args,
             ret,
             full_sig,
-            visibility,
+            visibility
         }
     }
 }

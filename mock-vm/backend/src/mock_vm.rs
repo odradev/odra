@@ -13,7 +13,7 @@ use crate::storage::Storage;
 #[derive(Default)]
 pub struct MockVm {
     state: Arc<RwLock<MockVmState>>,
-    contract_register: Arc<RwLock<ContractRegister>>,
+    contract_register: Arc<RwLock<ContractRegister>>
 }
 
 impl MockVm {
@@ -21,7 +21,7 @@ impl MockVm {
         &self,
         constructor: Option<(String, CallArgs, EntrypointCall)>,
         constructors: HashMap<String, (EntrypointArgs, EntrypointCall)>,
-        entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>,
+        entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>
     ) -> Address {
         // Create a new address.
         let address = { self.state.write().unwrap().next_contract_address() };
@@ -52,7 +52,7 @@ impl MockVm {
         address: Address,
         entrypoint: &str,
         args: CallArgs,
-        amount: Option<Balance>,
+        amount: Option<Balance>
     ) -> Option<Vec<u8>> {
         self.prepare_call(address, amount);
 
@@ -76,7 +76,7 @@ impl MockVm {
         &self,
         address: Address,
         entrypoint: &str,
-        args: CallArgs,
+        args: CallArgs
     ) -> Option<Vec<u8>> {
         self.prepare_call(address, None);
         // Call contract from register.
@@ -223,7 +223,7 @@ pub struct MockVmState {
     contract_counter: u32,
     error: Option<OdraError>,
     block_time: u64,
-    accounts: Vec<Address>,
+    accounts: Vec<Address>
 }
 
 impl MockVmState {
@@ -393,7 +393,7 @@ impl Default for MockVmState {
             contract_counter: 0,
             error: None,
             block_time: 0,
-            accounts: addresses.clone(),
+            accounts: addresses.clone()
         };
         backend.push_callstack_element(CallstackElement::new(*addresses.first().unwrap(), None));
         backend
@@ -610,7 +610,7 @@ mod tests {
             contract_address,
             &entrypoint_name,
             CallArgs::new(),
-            Some(caller_balance),
+            Some(caller_balance)
         );
 
         // then the contract has the caller tokens and the caller balance is zero
@@ -632,7 +632,7 @@ mod tests {
             contract_address,
             &entrypoint_name,
             CallArgs::new(),
-            Some(caller_balance + 1),
+            Some(caller_balance + 1)
         );
 
         // then the vm raises an error
@@ -653,19 +653,19 @@ mod tests {
 
         let entrypoint: Vec<(String, (EntrypointArgs, EntrypointCall))> = vec![(
             String::from(entrypoint_name),
-            (vec![], |_, _| Some(vec![1, 1, 1])),
+            (vec![], |_, _| Some(vec![1, 1, 1]))
         )];
         let constructors = HashMap::new();
         let contract_address = instance.register_contract(
             None,
             constructors,
-            entrypoint.into_iter().collect::<HashMap<_, _>>(),
+            entrypoint.into_iter().collect::<HashMap<_, _>>()
         );
 
         (
             contract_address,
             String::from(entrypoint_name),
-            Some(result),
+            Some(result)
         )
     }
 }

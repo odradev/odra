@@ -14,7 +14,7 @@ pub struct ErrorEnumItem {
     pub ident: syn::Ident,
     pub generics: syn::Generics,
     pub brace_token: syn::token::Brace,
-    pub variants: syn::punctuated::Punctuated<Variant, syn::Token![,]>,
+    pub variants: syn::punctuated::Punctuated<Variant, syn::Token![,]>
 }
 
 impl ErrorEnumItem {
@@ -42,7 +42,7 @@ impl Parse for ErrorEnumItem {
         if unique_variant_count != variant_count {
             return Err(syn::Error::new(
                 variants.span(),
-                "Each error must have a unique code.",
+                "Each error must have a unique code."
             ));
         }
 
@@ -55,7 +55,7 @@ impl Parse for ErrorEnumItem {
                 ..generics
             },
             brace_token,
-            variants,
+            variants
         })
     }
 }

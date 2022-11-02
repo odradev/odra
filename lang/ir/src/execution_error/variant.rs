@@ -6,7 +6,7 @@ use syn::{parse::Parse, spanned::Spanned};
 pub struct Variant {
     pub ident: syn::Ident,
     pub fat_arrow_token: syn::Token![=>],
-    pub expr: syn::Expr,
+    pub expr: syn::Expr
 }
 
 impl Parse for Variant {
@@ -22,7 +22,7 @@ impl Parse for Variant {
             _ => {
                 return Err(syn::Error::new(
                     expr.span(),
-                    "The expression must be of type `syn::Expr::Lit`",
+                    "The expression must be of type `syn::Expr::Lit`"
                 ))
             }
         };
@@ -30,7 +30,7 @@ impl Parse for Variant {
         Ok(Variant {
             ident,
             fat_arrow_token,
-            expr,
+            expr
         })
     }
 }

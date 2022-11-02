@@ -9,7 +9,7 @@ use odra_types;
 /// an error is returned.
 pub fn get_event<T: OdraType>(
     contract_address: Address,
-    at: i32,
+    at: i32
 ) -> Result<T, odra_types::event::EventError> {
     crate::test_env::get_event(contract_address, at)
 }

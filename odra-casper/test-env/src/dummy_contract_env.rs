@@ -27,14 +27,14 @@ pub fn get_dict_value<K: OdraType, T: OdraType>(_: &str, _: &K) -> Option<T> {
 
 pub fn emit_event<T>(_: T)
 where
-    T: OdraType + Event,
+    T: OdraType + Event
 {
     unimplemented!()
 }
 
 pub fn revert<E>(_: E) -> !
 where
-    E: Into<ExecutionError>,
+    E: Into<ExecutionError>
 {
     unimplemented!()
 }

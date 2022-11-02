@@ -5,12 +5,12 @@ use quote::{format_ident, quote};
 
 use crate::{
     generator::common::{self, build_ref},
-    GenerateCode,
+    GenerateCode
 };
 
 #[derive(From)]
 pub struct ContractReference<'a> {
-    contract: &'a ModuleImpl,
+    contract: &'a ModuleImpl
 }
 
 as_ref_for_contract_impl_generator!(ContractReference);
@@ -45,7 +45,7 @@ fn build_entrypoints(methods: &[&ImplItem]) -> TokenStream {
         .iter()
         .filter_map(|item| match item {
             ImplItem::Method(method) => Some(method),
-            _ => None,
+            _ => None
         })
         .map(|entrypoint| {
             let sig = &entrypoint.full_sig;
@@ -67,7 +67,7 @@ fn build_constructors(methods: &[&ImplItem]) -> TokenStream {
         .iter()
         .filter_map(|item| match item {
             ImplItem::Constructor(constructor) => Some(constructor),
-            _ => None,
+            _ => None
         })
         .map(|entrypoint| {
             let sig = &entrypoint.full_sig;
@@ -75,7 +75,7 @@ fn build_constructors(methods: &[&ImplItem]) -> TokenStream {
             let fn_body = common::generate_fn_body(
                 entrypoint.args.clone(),
                 &entrypoint_name,
-                &syn::ReturnType::Default,
+                &syn::ReturnType::Default
             );
 
             quote! {

@@ -1,7 +1,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use odra_types::{
     arithmetic::{ArithmeticsError, OverflowingAdd, OverflowingSub},
-    impl_overflowing_add, impl_overflowing_sub, ExecutionError,
+    impl_overflowing_add, impl_overflowing_sub, ExecutionError
 };
 use uint::construct_uint;
 

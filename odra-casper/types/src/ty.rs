@@ -28,18 +28,18 @@ fn cl_type_to_type(ty: CLType) -> Type {
         CLType::List(ty) => Type::Vec(boxed_cl_type_to_boxed_type(ty)),
         CLType::Result { ok, err } => Type::Map {
             key: boxed_cl_type_to_boxed_type(ok),
-            value: boxed_cl_type_to_boxed_type(err),
+            value: boxed_cl_type_to_boxed_type(err)
         },
         CLType::Map { key, value } => Type::Map {
             key: boxed_cl_type_to_boxed_type(key),
-            value: boxed_cl_type_to_boxed_type(value),
+            value: boxed_cl_type_to_boxed_type(value)
         },
         CLType::Tuple1(types) => Type::Tuple1(types.map(boxed_cl_type_to_boxed_type)),
         CLType::Tuple2(types) => Type::Tuple2(types.map(boxed_cl_type_to_boxed_type)),
         CLType::Tuple3(types) => Type::Tuple3(types.map(boxed_cl_type_to_boxed_type)),
         CLType::Any => Type::Any,
         CLType::Key => Type::Address,
-        _ => panic!("Unsupported type {:?}", ty),
+        _ => panic!("Unsupported type {:?}", ty)
     }
 }
 

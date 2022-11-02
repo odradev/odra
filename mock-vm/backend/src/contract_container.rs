@@ -10,19 +10,19 @@ pub type EntrypointArgs = Vec<String>;
 pub struct ContractContainer {
     name: String,
     entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>,
-    constructors: HashMap<String, (EntrypointArgs, EntrypointCall)>,
+    constructors: HashMap<String, (EntrypointArgs, EntrypointCall)>
 }
 
 impl ContractContainer {
     pub fn new(
         name: &str,
         entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>,
-        constructors: HashMap<String, (EntrypointArgs, EntrypointCall)>,
+        constructors: HashMap<String, (EntrypointArgs, EntrypointCall)>
     ) -> Self {
         Self {
             name: String::from(name),
             entrypoints,
-            constructors,
+            constructors
         }
     }
 
@@ -36,21 +36,21 @@ impl ContractContainer {
                 self.validate_args(ep_args, &args)?;
                 Ok(call(self.name.clone(), args))
             }
-            None => Err(OdraError::VmError(VmError::NoSuchMethod(entrypoint))),
+            None => Err(OdraError::VmError(VmError::NoSuchMethod(entrypoint)))
         }
     }
 
     pub fn call_constructor(
         &self,
         entrypoint: String,
-        args: CallArgs,
+        args: CallArgs
     ) -> Result<Option<Vec<u8>>, OdraError> {
         match self.constructors.get(&entrypoint) {
             Some((ep_args, call)) => {
                 self.validate_args(ep_args, &args)?;
                 Ok(call(self.name.clone(), args))
             }
-            None => Err(OdraError::VmError(VmError::NoSuchMethod(entrypoint))),
+            None => Err(OdraError::VmError(VmError::NoSuchMethod(entrypoint)))
         }
     }
 
@@ -208,7 +208,7 @@ mod tests {
             Self {
                 name: String::from("contract"),
                 entrypoints: HashMap::new(),
-                constructors: HashMap::new(),
+                constructors: HashMap::new()
             }
         }
 
@@ -222,7 +222,7 @@ mod tests {
             Self {
                 name: String::from("contract"),
                 entrypoints,
-                constructors: HashMap::new(),
+                constructors: HashMap::new()
             }
         }
 
@@ -236,7 +236,7 @@ mod tests {
             Self {
                 name: String::from("contract"),
                 entrypoints: HashMap::new(),
-                constructors,
+                constructors
             }
         }
     }

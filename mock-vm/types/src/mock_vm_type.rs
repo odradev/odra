@@ -25,7 +25,7 @@ impl<T: BorshSerialize + BorshDeserialize> MockVMType for T {
 #[derive(Debug, PartialEq, Eq)]
 pub enum MockVMSerializationError {
     DeserializationError,
-    SerializationError,
+    SerializationError
 }
 
 #[cfg(test)]
@@ -110,7 +110,7 @@ mod tests {
         ser_deser((
             vec![0u8, 1u8],
             vec![vec![0u8, 1u8], vec![2u8, 3u8]],
-            (Result::<Vec<u8>, ()>::Ok(vec![]), Option::<String>::None),
+            (Result::<Vec<u8>, ()>::Ok(vec![]), Option::<String>::None)
         ));
     }
 }

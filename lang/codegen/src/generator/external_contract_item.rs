@@ -7,14 +7,14 @@ use crate::GenerateCode;
 
 #[derive(From)]
 pub struct ExternalContractItem<'a> {
-    item: &'a IrExternalContractItem,
+    item: &'a IrExternalContractItem
 }
 
 impl GenerateCode for ExternalContractItem<'_> {
     fn generate_code(&self) -> proc_macro2::TokenStream {
         let IrExternalContractItem {
             item_trait,
-            item_ref,
+            item_ref
         } = &self.item;
         let trait_ident = &item_trait.ident;
         let ref_ident = &item_ref.ident;
@@ -24,7 +24,7 @@ impl GenerateCode for ExternalContractItem<'_> {
             .iter()
             .filter_map(|item| match item {
                 syn::TraitItem::Method(method) => Some(method),
-                _ => None,
+                _ => None
             })
             .map(|item| {
                 let sig = &item.sig;

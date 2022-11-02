@@ -13,13 +13,13 @@ use casper_contract::contract_api::system::transfer_from_purse_to_purse;
 use casper_contract::{
     contract_api::{self, runtime, system::create_purse},
     ext_ffi,
-    unwrap_or_revert::UnwrapOrRevert,
+    unwrap_or_revert::UnwrapOrRevert
 };
 use casper_types::U512;
 use casper_types::{
     api_error,
     bytesrepr::{Bytes, FromBytes, ToBytes},
-    ApiError, CLTyped, ContractPackageHash, ContractVersion, RuntimeArgs,
+    ApiError, CLTyped, ContractPackageHash, ContractVersion, RuntimeArgs
 };
 
 #[no_mangle]
@@ -46,7 +46,7 @@ fn call_versioned_contract(
     contract_package_hash: ContractPackageHash,
     contract_version: Option<ContractVersion>,
     entry_point_name: &str,
-    runtime_args: RuntimeArgs,
+    runtime_args: RuntimeArgs
 ) -> Vec<u8> {
     let (contract_package_hash_ptr, contract_package_hash_size, _bytes) =
         to_ptr(contract_package_hash);
@@ -66,7 +66,7 @@ fn call_versioned_contract(
                 entry_point_name_size,
                 runtime_args_ptr,
                 runtime_args_size,
-                bytes_written.as_mut_ptr(),
+                bytes_written.as_mut_ptr()
             )
         };
         api_error::result_from(ret).unwrap_or_revert();

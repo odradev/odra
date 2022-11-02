@@ -7,7 +7,7 @@ use crate::GenerateCode;
 
 #[derive(From)]
 pub struct InstanceItem<'a> {
-    item: &'a IrInstanceItem,
+    item: &'a IrInstanceItem
 }
 
 impl GenerateCode for InstanceItem<'_> {

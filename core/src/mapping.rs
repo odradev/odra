@@ -10,7 +10,7 @@ use odra_types::arithmetic::{OverflowingAdd, OverflowingSub};
 pub struct Mapping<K, V> {
     name: String,
     key_ty: PhantomData<K>,
-    value_ty: PhantomData<V>,
+    value_ty: PhantomData<V>
 }
 
 impl<K: OdraType + Hash, V: OdraType> Mapping<K, V> {
@@ -19,7 +19,7 @@ impl<K: OdraType + Hash, V: OdraType> Mapping<K, V> {
         Mapping {
             name,
             key_ty: PhantomData::<K>::default(),
-            value_ty: PhantomData::<V>::default(),
+            value_ty: PhantomData::<V>::default()
         }
     }
 
@@ -178,7 +178,7 @@ mod tests {
     impl<K, V> Default for Mapping<K, V>
     where
         K: OdraType + Hash,
-        V: OdraType,
+        V: OdraType
     {
         fn default() -> Self {
             Instance::instance("m")
@@ -188,7 +188,7 @@ mod tests {
     impl<K, V> Mapping<K, V>
     where
         K: OdraType + Hash,
-        V: OdraType,
+        V: OdraType
     {
         pub fn init(key: &K, value: V) -> Self {
             let var = Self::default();

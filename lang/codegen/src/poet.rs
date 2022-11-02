@@ -42,14 +42,14 @@ pub trait OdraPoetUsingImpl: AsRef<odra_ir::module::ModuleImpl> {
 
 impl<T> OdraPoetUsingImpl for T
 where
-    T: AsRef<odra_ir::module::ModuleImpl>,
+    T: AsRef<odra_ir::module::ModuleImpl>
 {
     fn generate_code_using<'a, G>(&'a self) -> proc_macro2::TokenStream
     where
-        G: GenerateCode + From<&'a odra_ir::module::ModuleImpl>,
+        G: GenerateCode + From<&'a odra_ir::module::ModuleImpl>
     {
         <G as GenerateCode>::generate_code(&G::from(
-            <Self as AsRef<odra_ir::module::ModuleImpl>>::as_ref(self),
+            <Self as AsRef<odra_ir::module::ModuleImpl>>::as_ref(self)
         ))
     }
 }

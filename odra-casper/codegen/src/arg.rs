@@ -37,11 +37,11 @@ mod tests {
         let args = vec![
             Argument {
                 ident: String::from("a"),
-                ty: Type::Bool,
+                ty: Type::Bool
             },
             Argument {
                 ident: String::from("b_c"),
-                ty: Type::String,
+                ty: Type::String
             },
         ];
         let args = CasperArgs(&args);
@@ -50,7 +50,7 @@ mod tests {
             quote!(
                 let a = odra::casper::casper_contract::contract_api::runtime::get_named_arg(stringify!(a));
                 let b_c = odra::casper::casper_contract::contract_api::runtime::get_named_arg(stringify!(b_c));
-            ),
+            )
         );
     }
 }

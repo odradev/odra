@@ -6,7 +6,7 @@ use crate::GenerateCode;
 
 #[derive(From)]
 pub struct ContractDef<'a> {
-    contract: &'a ModuleImpl,
+    contract: &'a ModuleImpl
 }
 
 as_ref_for_contract_impl_generator!(ContractDef);

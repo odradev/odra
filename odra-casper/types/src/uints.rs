@@ -1,7 +1,7 @@
 use crate::{CLTyped, FromBytes, ToBytes};
 use odra_types::{
     arithmetic::{ArithmeticsError, OverflowingAdd, OverflowingSub},
-    ExecutionError,
+    ExecutionError
 };
 use std::ops::{Add, Sub};
 

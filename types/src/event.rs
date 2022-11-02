@@ -18,5 +18,5 @@ pub enum EventError {
     /// Formatting error while deserializing.
     Formatting,
     /// Unexpected error while deserializing.
-    Parsing,
+    Parsing
 }

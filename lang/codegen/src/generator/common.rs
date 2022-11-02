@@ -4,10 +4,10 @@ use quote::{quote, TokenStreamExt};
 pub(crate) fn generate_fn_body<T>(
     args: T,
     entrypoint_name: &String,
-    ret: &syn::ReturnType,
+    ret: &syn::ReturnType
 ) -> TokenStream
 where
-    T: IntoIterator<Item = syn::PatType>,
+    T: IntoIterator<Item = syn::PatType>
 {
     let args = parse_args(args);
 
@@ -19,18 +19,18 @@ where
         syn::ReturnType::Type(_, _) => quote! {
             #args
             odra::call_contract(self.address, #entrypoint_name, args, self.attached_value)
-        },
+        }
     }
 }
 
 pub(crate) fn filter_args<'a, T>(args: T) -> Vec<syn::PatType>
 where
-    T: IntoIterator<Item = &'a syn::FnArg>,
+    T: IntoIterator<Item = &'a syn::FnArg>
 {
     args.into_iter()
         .filter_map(|arg| match arg {
             syn::FnArg::Receiver(_) => None,
-            syn::FnArg::Typed(pat) => Some(pat.clone()),
+            syn::FnArg::Typed(pat) => Some(pat.clone())
         })
         .collect::<Vec<_>>()
 }
@@ -64,7 +64,7 @@ pub(crate) fn build_ref(ref_ident: &Ident) -> TokenStream {
 
 fn parse_args<T>(syn_args: T) -> TokenStream
 where
-    T: IntoIterator<Item = syn::PatType>,
+    T: IntoIterator<Item = syn::PatType>
 {
     let mut tokens = quote!(let mut args = odra::types::CallArgs::new(););
     tokens.append_all(syn_args.into_iter().map(|arg| {

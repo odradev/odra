@@ -21,7 +21,7 @@ pub enum OdraError {
     /// An error that can occur during smart contract execution
     ExecutionError(ExecutionError),
     /// An internal virtual machine error
-    VmError(VmError),
+    VmError(VmError)
 }
 
 impl From<ArithmeticsError> for ExecutionError {
@@ -69,7 +69,7 @@ impl ExecutionError {
         if code > MAX_USER_ERROR {
             Self(
                 USER_ERROR_TOO_HIGH,
-                String::from("User error too high. The code should be in range 0..32767."),
+                String::from("User error too high. The code should be in range 0..32767.")
             )
         } else {
             Self(code, String::from(msg))
@@ -93,7 +93,7 @@ impl ExecutionError {
     pub fn can_not_transfer_to_contract() -> Self {
         Self::internal(
             CODE_TRANSFER_TO_CONTRACT,
-            "Can't transfer tokens to contract.",
+            "Can't transfer tokens to contract."
         )
     }
 
@@ -130,19 +130,19 @@ pub enum VmError {
     /// Non-specified error with a custom message.
     Other(String),
     /// Unspecified error.
-    Panic,
+    Panic
 }
 
 /// Error that can occur while operating on a collection.
 pub enum CollectionError {
     // The requested index is bigger than the max collection index.
-    IndexOutOfBounds,
+    IndexOutOfBounds
 }
 
 impl From<CollectionError> for ExecutionError {
     fn from(error: CollectionError) -> Self {
         match error {
-            CollectionError::IndexOutOfBounds => Self::internal(9, "Index out of bounds"),
+            CollectionError::IndexOutOfBounds => Self::internal(9, "Index out of bounds")
         }
     }
 }

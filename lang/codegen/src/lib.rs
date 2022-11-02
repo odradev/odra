@@ -16,7 +16,7 @@ pub use poet::OdraPoet;
 /// Generates the code for the given Odra module.
 pub fn generate_code<T>(entity: T) -> proc_macro2::TokenStream
 where
-    T: OdraPoet,
+    T: OdraPoet
 {
     <T as OdraPoet>::Poet::from(entity).generate_code()
 }

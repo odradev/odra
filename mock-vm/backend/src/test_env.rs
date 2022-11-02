@@ -45,7 +45,7 @@ delegate_to_env! {
 pub fn assert_exception<F, E>(err: E, block: F)
 where
     F: Fn() + std::panic::RefUnwindSafe,
-    E: Into<OdraError>,
+    E: Into<OdraError>
 {
     let _ = std::panic::catch_unwind(|| {
         block();
@@ -73,14 +73,14 @@ pub fn call_contract<T: MockVMType>(
     address: Address,
     entrypoint: &str,
     args: CallArgs,
-    amount: Option<Balance>,
+    amount: Option<Balance>
 ) -> T {
     let result: Option<Vec<u8>> =
         crate::borrow_env().call_contract(address, entrypoint, args, amount);
     match result {
         Some(bytes) => T::deser(bytes).unwrap(),
         // TODO: There should be a better way than this.
-        None => T::deser(().ser().unwrap()).unwrap(),
+        None => T::deser(().ser().unwrap()).unwrap()
     }
 }
 

@@ -14,7 +14,7 @@ pub type Balance = U512;
 pub type BlockTime = u64;
 use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
-    CLTyped,
+    CLTyped
 };
 pub trait OdraType: CLTyped + ToBytes + FromBytes {}
 
