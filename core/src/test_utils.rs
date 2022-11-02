@@ -18,6 +18,7 @@ pub fn get_event<T: OdraType>(
 ///
 /// If the passed index is out of bounds, or a deserialization error occurs,
 /// an error is returned.
+// TODO: Allow this to work.
 // pub fn get_event_name(
 //     contract_address: Address,
 //     at: i32,

@@ -1,9 +1,3 @@
-// use odra::{
-//     execution_error,
-//     types::{event::Event, Address, U256},
-//     contract_env, Event, Mapping, Variable,
-// };
-
 use odra::{
     contract_env, execution_error,
     types::event::Event,

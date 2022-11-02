@@ -17,6 +17,7 @@ impl GenerateCode for EventItem<'_> {
         let casper_code = generate_casper_code(self.event);
         let mock_vm_code = generate_mock_vm_code(self.event);
 
+        // TODO: Remove trait Event.
         quote! {
             impl odra::types::event::Event for #struct_ident {
                 fn emit(self) {

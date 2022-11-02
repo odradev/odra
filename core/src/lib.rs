@@ -21,7 +21,6 @@ pub use {
 };
 
 //TODO: makes it invisible in the contract code, a feature maybe??
-// #[cfg(all(test, not(target_arch = "wasm32")))]
 #[cfg(not(target_arch = "wasm32"))]
 pub mod test_utils;
 

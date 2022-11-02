@@ -10,6 +10,7 @@ mod instance;
 mod module;
 mod odra_error;
 
+// TODO: Unignore it.
 /// Core element of the Odra framework, entry point for writing smart contracts.
 ///
 /// Each module consists of two parts:
@@ -22,7 +23,7 @@ mod odra_error;
 ///
 /// # Examples
 ///
-/// ```
+/// ```ignore
 /// use odra;
 ///
 /// #[odra::module]
@@ -83,6 +84,7 @@ pub fn external_contract(attr: TokenStream, item: TokenStream) -> TokenStream {
     external_contract::generate_code(attr, item).into()
 }
 
+// TODO: Unignore it.
 /// Implements boilerplate code required by an event.
 ///
 /// Implements [Event](../odra_types/event/trait.Event.html) trait, and serialization/deserialization.
