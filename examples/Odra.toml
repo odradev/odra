@@ -1,0 +1,21 @@
+name = "odra-examples"
+
+[contracts.owned_token]
+path = "src/owned_token.rs"
+name = "owned_token"
+fqn = "odra_examples::owned_token::OwnedToken"
+
+[contracts.balance_checker]
+path = "src/balance_checker.rs"
+name = "balance_checker"
+fqn = "odra_examples::balance_checker::BalanceChecker"
+
+[contracts.ownable]
+path = "src/ownable.rs"
+name = "ownable"
+fqn = "odra_examples::ownable::Ownable"
+
+[contracts.erc20]
+path = "src/erc20.rs"
+name = "erc20"
+fqn = "odra_examples::erc20::Erc20"
