@@ -7,3 +7,4 @@ odra-casper/**/target/
 contract/
 examples/target
 examples/.builder_casper
+examples/wasm
