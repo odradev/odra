@@ -18,8 +18,8 @@ pub mod module_struct;
 ///
 /// All the items are based on syn with special variants for Odra `impl` items.
 pub enum ModuleItem {
-    Struct(ModuleStruct),
-    Impl(ModuleImpl),
+    Struct(Box<ModuleStruct>),
+    Impl(Box<ModuleImpl>),
 }
 
 impl ModuleItem {
@@ -28,12 +28,12 @@ impl ModuleItem {
         let item_impl = syn::parse2::<syn::ItemImpl>(item.clone());
 
         if let Ok(item) = item_struct {
-            return Ok(ModuleItem::Struct(ModuleStruct::from(item)));
+            return Ok(ModuleItem::Struct(Box::new(ModuleStruct::from(item))));
         }
 
         if let Ok(item) = item_impl {
             let item = ModuleImpl::try_from(item)?;
-            return Ok(ModuleItem::Impl(item));
+            return Ok(ModuleItem::Impl(Box::new(item)));
         }
 
         Err(syn::Error::new_spanned(

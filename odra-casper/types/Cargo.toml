@@ -1,0 +1,14 @@
+[package]
+name = "odra-casper-types"
+version = "0.1.0"
+edition = "2021"
+authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
+license = "MIT"
+repository = "https://github.com/odradev/odra-casper"
+description = "Utilites uses by the Odra Casper-related crates."
+keywords = ["wasm", "webassembly", "blockchain"]
+categories = ["wasm", "smart contracts"]
+
+[dependencies]
+casper-types = "1.5.0"
+odra-types = { path = "../../types" }

@@ -3,7 +3,7 @@
 /// Event interface
 pub trait Event {
     /// Emits &self in the current environment.
-    fn emit(&self);
+    fn emit(self);
     /// Returns the event name.
     fn name(&self) -> String;
 }
@@ -19,13 +19,4 @@ pub enum EventError {
     Formatting,
     /// Unexpected error while deserializing.
     Parsing,
-}
-
-impl From<casper_types::bytesrepr::Error> for EventError {
-    fn from(err: casper_types::bytesrepr::Error) -> Self {
-        match err {
-            casper_types::bytesrepr::Error::Formatting => Self::Formatting,
-            _ => Self::Parsing,
-        }
-    }
 }

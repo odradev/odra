@@ -1,14 +1,9 @@
 use std::{fmt::Debug, hash::Hash, marker::PhantomData};
 
-use crate::ContractEnv;
-use crate::UnwrapOrRevert;
-use odra_types::{
-    arithmetic::{OverflowingAdd, OverflowingSub},
-    bytesrepr::{FromBytes, ToBytes},
-    CLTyped,
-};
-
 use crate::instance::Instance;
+use crate::types::OdraType;
+use crate::{contract_env, UnwrapOrRevert};
+use odra_types::arithmetic::{OverflowingAdd, OverflowingSub};
 
 /// Data structure for storing key-value pairs.
 #[derive(Debug)]
@@ -18,7 +13,7 @@ pub struct Mapping<K, V> {
     value_ty: PhantomData<V>,
 }
 
-impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped> Mapping<K, V> {
+impl<K: OdraType + Hash, V: OdraType> Mapping<K, V> {
     /// Creates a new Mapping instance.
     pub fn new(name: String) -> Self {
         Mapping {
@@ -30,26 +25,23 @@ impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped> Mapping<K, V
 
     /// Reads `key` from the storage or returns `None`.
     pub fn get(&self, key: &K) -> Option<V> {
-        let result = ContractEnv::get_dict_value(&self.name, key);
-        result.map(|value| value.into_t::<V>().unwrap_or_revert())
+        contract_env::get_dict_value(&self.name, key)
     }
 
     /// Sets `value` under `key` to the storage. It overrides by default.
     pub fn set(&self, key: &K, value: V) {
-        ContractEnv::set_dict_value(&self.name, key, value);
+        contract_env::set_dict_value(&self.name, key, value);
     }
 }
 
-impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped + Default> Mapping<K, V> {
+impl<K: OdraType + Hash, V: OdraType + Default> Mapping<K, V> {
     /// Reads `key` from the storage or the default value is returned.
     pub fn get_or_default(&self, key: &K) -> V {
         self.get(key).unwrap_or_default()
     }
 }
 
-impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped + OverflowingAdd + Default>
-    Mapping<K, V>
-{
+impl<K: OdraType + Hash, V: OdraType + OverflowingAdd + Default> Mapping<K, V> {
     /// Utility function that gets the current value and adds the passed `value`
     /// and sets the new value to the storage.
     ///
@@ -57,14 +49,12 @@ impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped + Overflowing
     pub fn add(&self, key: &K, value: V) {
         let current_value = self.get(key).unwrap_or_default();
         let new_value = current_value.overflowing_add(value).unwrap_or_revert();
-        ContractEnv::set_dict_value(&self.name, key, new_value);
+        contract_env::set_dict_value(&self.name, key, new_value);
     }
 }
 
-impl<
-        K: ToBytes + CLTyped + Hash,
-        V: ToBytes + FromBytes + CLTyped + OverflowingSub + Default + Debug + PartialOrd,
-    > Mapping<K, V>
+impl<K: OdraType + Hash, V: OdraType + OverflowingSub + Default + Debug + PartialOrd>
+    Mapping<K, V>
 {
     /// Utility function that gets the current value and subtracts the passed `value`
     /// and sets the new value to the storage.
@@ -73,17 +63,17 @@ impl<
     pub fn subtract(&self, key: &K, value: V) {
         let current_value = self.get(key).unwrap_or_default();
         let new_value = current_value.overflowing_sub(value).unwrap_or_revert();
-        ContractEnv::set_dict_value(&self.name, key, new_value);
+        contract_env::set_dict_value(&self.name, key, new_value);
     }
 }
 
-impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped> From<&str> for Mapping<K, V> {
+impl<K: OdraType + Hash, V: OdraType> From<&str> for Mapping<K, V> {
     fn from(name: &str) -> Self {
         Mapping::new(name.to_string())
     }
 }
 
-impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped> Instance for Mapping<K, V> {
+impl<K: OdraType + Hash, V: OdraType> Instance for Mapping<K, V> {
     fn instance(namespace: &str) -> Self {
         namespace.into()
     }
@@ -91,14 +81,10 @@ impl<K: ToBytes + CLTyped + Hash, V: ToBytes + FromBytes + CLTyped> Instance for
 
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
-    use crate::{Instance, Mapping};
+    use crate::{test_env, Instance, Mapping};
     use core::hash::Hash;
-    use odra_mock_vm::TestEnv;
-    use odra_types::{
-        arithmetic::ArithmeticsError,
-        bytesrepr::{FromBytes, ToBytes},
-        CLTyped,
-    };
+    use odra_mock_vm::types::OdraType;
+    use odra_types::arithmetic::ArithmeticsError;
 
     #[test]
     fn test_get() {
@@ -148,7 +134,7 @@ mod tests {
 
         // When add 1 to max value.
         // Then should revert.
-        TestEnv::assert_exception(ArithmeticsError::AdditionOverflow, || {
+        test_env::assert_exception(ArithmeticsError::AdditionOverflow, || {
             var.add(&key, 1);
         });
     }
@@ -167,7 +153,7 @@ mod tests {
 
         // When subtraction causes overflow.
         // Then it reverts.
-        TestEnv::assert_exception(ArithmeticsError::SubtractingOverflow, || {
+        test_env::assert_exception(ArithmeticsError::SubtractingOverflow, || {
             var.subtract(&key, 2);
         });
     }
@@ -191,8 +177,8 @@ mod tests {
 
     impl<K, V> Default for Mapping<K, V>
     where
-        K: ToBytes + CLTyped + Hash,
-        V: ToBytes + FromBytes + CLTyped,
+        K: OdraType + Hash,
+        V: OdraType,
     {
         fn default() -> Self {
             Instance::instance("m")
@@ -201,8 +187,8 @@ mod tests {
 
     impl<K, V> Mapping<K, V>
     where
-        K: ToBytes + CLTyped + Hash,
-        V: ToBytes + FromBytes + CLTyped,
+        K: OdraType + Hash,
+        V: OdraType,
     {
         pub fn init(key: &K, value: V) -> Self {
             let var = Self::default();

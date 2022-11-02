@@ -14,12 +14,11 @@ where
     match ret {
         syn::ReturnType::Default => quote! {
             #args
-            odra::call_contract::<()>(&self.address, #entrypoint_name, &args, self.attached_value);
+            odra::call_contract::<()>(self.address, #entrypoint_name, args, self.attached_value);
         },
         syn::ReturnType::Type(_, _) => quote! {
-            use odra::types::CLTyped;
             #args
-            odra::call_contract(&self.address, #entrypoint_name, &args, self.attached_value)
+            odra::call_contract(self.address, #entrypoint_name, args, self.attached_value)
         },
     }
 }
@@ -40,7 +39,7 @@ pub(crate) fn build_ref(ref_ident: &Ident) -> TokenStream {
     quote! {
         pub struct #ref_ident {
             address: odra::types::Address,
-            attached_value: Option<odra::types::U512>,
+            attached_value: Option<odra::types::Balance>,
         }
 
         impl #ref_ident {
@@ -53,7 +52,7 @@ pub(crate) fn build_ref(ref_ident: &Ident) -> TokenStream {
             }
 
             pub fn with_tokens<T>(&self, amount: T) -> Self
-            where T: Into<odra::types::U512> {
+            where T: Into<odra::types::Balance> {
                 Self {
                     address: self.address,
                     attached_value: Some(amount.into()),
@@ -67,15 +66,14 @@ fn parse_args<T>(syn_args: T) -> TokenStream
 where
     T: IntoIterator<Item = syn::PatType>,
 {
-    let mut tokens = quote!(let mut args = RuntimeArgs::new(););
+    let mut tokens = quote!(let mut args = odra::types::CallArgs::new(););
     tokens.append_all(syn_args.into_iter().map(|arg| {
         let pat = &*arg.pat;
-        quote! { args.insert(stringify!(#pat), #pat).unwrap(); }
+        quote! { args.insert(stringify!(#pat), #pat); }
     }));
     tokens.extend(quote!(args));
 
     quote! {
-        use odra::types::RuntimeArgs;
         let args = {
             #tokens
         };

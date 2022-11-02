@@ -1,17 +1,15 @@
-use crate::bytesrepr;
-
 use crate::arithmetic::ArithmeticsError;
 
 const MAX_USER_ERROR: u16 = 32767;
 const USER_ERROR_TOO_HIGH: u16 = 32768;
 const UNWRAP_ERROR: u16 = u16::MAX;
 
-const CODE_EARLY_END_OF_STREAM: u16 = 1;
-const CODE_FORMATTING: u16 = 2;
-const CODE_LEFT_OVER_BYTES: u16 = 3;
-const CODE_OUT_OF_MEMORY: u16 = 4;
-const CODE_EXCEEDED_RECURSION_DEPTH: u16 = 5;
-const CODE_TYPE_MISMATCH: u16 = 6;
+// const CODE_EARLY_END_OF_STREAM: u16 = 1;
+// const CODE_FORMATTING: u16 = 2;
+// const CODE_LEFT_OVER_BYTES: u16 = 3;
+// const CODE_OUT_OF_MEMORY: u16 = 4;
+// const CODE_EXCEEDED_RECURSION_DEPTH: u16 = 5;
+// const CODE_TYPE_MISMATCH: u16 = 6;
 const CODE_ADDITION_OVERFLOW: u16 = 7;
 const CODE_SUBTRACTION_OVERFLOW: u16 = 8;
 const CODE_NON_PAYABLE: u16 = 9;
@@ -24,37 +22,6 @@ pub enum OdraError {
     ExecutionError(ExecutionError),
     /// An internal virtual machine error
     VmError(VmError),
-}
-
-impl From<bytesrepr::Error> for ExecutionError {
-    fn from(error: bytesrepr::Error) -> Self {
-        match error {
-            bytesrepr::Error::EarlyEndOfStream => {
-                ExecutionError::internal(CODE_EARLY_END_OF_STREAM, "EarlyEndOfStream")
-            }
-            bytesrepr::Error::Formatting => ExecutionError::internal(CODE_FORMATTING, "Formatting"),
-            bytesrepr::Error::LeftOverBytes => {
-                ExecutionError::internal(CODE_LEFT_OVER_BYTES, "LeftOverBytes")
-            }
-            bytesrepr::Error::OutOfMemory => {
-                ExecutionError::internal(CODE_OUT_OF_MEMORY, "OutOfMemory")
-            }
-            bytesrepr::Error::ExceededRecursionDepth => {
-                ExecutionError::internal(CODE_EXCEEDED_RECURSION_DEPTH, "ExceededRecursionDepth")
-            }
-        }
-    }
-}
-
-impl From<casper_types::CLValueError> for ExecutionError {
-    fn from(error: casper_types::CLValueError) -> Self {
-        match error {
-            casper_types::CLValueError::Serialization(err) => err.into(),
-            casper_types::CLValueError::Type(ty) => {
-                ExecutionError::internal(CODE_TYPE_MISMATCH, &format!("Type mismatch {:?}", ty))
-            }
-        }
-    }
 }
 
 impl From<ArithmeticsError> for ExecutionError {

@@ -3,9 +3,18 @@ members = [
     "core",
     "lang/codegen",
     "lang/ir",
-    "lang/proc_macros",
-    "mock_vm",
-    "test_env_wrapper",
+    "lang/proc-macros",
+    "mock-vm/backend",
+    "mock-vm/types",
     "types",
-    "utils"
+    "utils",
+    "odra-casper/backend",
+    "odra-casper/codegen",
+    "odra-casper/shared",
+    "odra-casper/test-env",
+    "odra-casper/types",
+    "odra-casper/test-env/getter_proxy",
+    "examples"
 ]
+
+exclude = [ "contract", "contract/builder"]

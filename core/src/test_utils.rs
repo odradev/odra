@@ -1,33 +1,33 @@
 //! Utility functions that allow to write more compact tests.
-use odra_types::{Address, EventData, FromBytes};
+
+use crate::types::{Address, OdraType};
+use odra_types;
 
 /// Gets the nth event emitted by the contract at `address`.
 ///
 /// If the passed index is out of bounds, or a deserialization error occurs,
 /// an error is returned.
-pub fn get_event<T>(contract_address: &Address, at: i32) -> Result<T, odra_types::event::EventError>
-where
-    T: FromBytes<Item = T, Error = odra_types::event::EventError>,
-{
-    let event: EventData = crate::TestEnv::get_event(contract_address, at)?;
-    match T::deserialize(event) {
-        Ok(res) => Ok(res.0),
-        Err(err) => Err(err),
-    }
+pub fn get_event<T: OdraType>(
+    contract_address: Address,
+    at: i32,
+) -> Result<T, odra_types::event::EventError> {
+    crate::test_env::get_event(contract_address, at)
 }
 
 /// Gets the name of the nth event emitted by the contract at `address`.
 ///
 /// If the passed index is out of bounds, or a deserialization error occurs,
 /// an error is returned.
-pub fn get_event_name(
-    contract_address: &Address,
-    at: i32,
-) -> Result<String, odra_types::event::EventError> {
-    let event: EventData = crate::TestEnv::get_event(contract_address, at)?;
-    let (event_name, _): (String, _) = odra_types::bytesrepr::FromBytes::from_vec(event)?;
-    Ok(event_name)
-}
+// TODO: Allow this to work.
+// pub fn get_event_name(
+//     contract_address: Address,
+//     at: i32,
+// ) -> Result<String, odra_types::event::EventError> {
+//     let event: EventData = crate::test_env::get_event(contract_address, at)?;
+//     let (event_name, _): (String, _) =
+//         FromBytes::from_vec(event).map_err(|_| odra_types::event::EventError::Parsing)?;
+//     Ok(event_name)
+// }
 
 /// A macro that simplifies events testing.
 ///
@@ -69,6 +69,7 @@ pub fn get_event_name(
 ///     GetValue { value: 8 }
 /// );
 /// ```
+
 #[macro_export]
 macro_rules! assert_events {
     ($contract:ident, $ ( $event_ty:ty ),+ ) => {
@@ -79,7 +80,7 @@ macro_rules! assert_events {
         )+
         $(
             __idx += 1;
-            let __ev = odra::test_utils::get_event::<$event_ty>(&$contract.address(), __idx).unwrap();
+            let __ev = odra::test_utils::get_event::<$event_ty>($contract.address(), __idx).unwrap();
             let __name = stringify!($event_ty).to_string();
             let __name = __name.split("::").last().unwrap();
             assert_eq!(
@@ -95,7 +96,7 @@ macro_rules! assert_events {
         )+
         $(
             __idx += 1;
-            let __ev = odra::test_utils::get_event(&$contract.address(), __idx).unwrap();
+            let __ev = odra::test_utils::get_event($contract.address(), __idx).unwrap();
             assert_eq!(
                 $event, __ev
             );

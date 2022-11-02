@@ -41,9 +41,9 @@ impl ToTokens for Method {
             .map(|arg| {
                 let name = &*arg.pat;
                 let ty = &*arg.ty;
-                let ty = quote!(<#ty as odra::types::CLTyped>::cl_type());
+                let ty = quote!(<#ty as odra::types::Typed>::ty());
                 quote! {
-                    odra::contract_def::Argument {
+                    odra::types::contract_def::Argument {
                         ident: String::from(stringify!(#name)),
                         ty: #ty,
                     },
@@ -52,17 +52,17 @@ impl ToTokens for Method {
             .collect::<proc_macro2::TokenStream>();
 
         let ret = match &self.ret {
-            syn::ReturnType::Default => quote!(odra::types::CLType::Unit),
-            syn::ReturnType::Type(_, ty) => quote!(<#ty as odra::types::CLTyped>::cl_type()),
+            syn::ReturnType::Default => quote!(odra::types::Type::Unit),
+            syn::ReturnType::Type(_, ty) => quote!(<#ty as odra::types::Typed>::ty()),
         };
 
         let ty = match self.attrs.iter().any(|attr| attr.is_payable()) {
-            true => quote!(odra::contract_def::EntrypointType::PublicPayable),
-            false => quote!(odra::contract_def::EntrypointType::Public),
+            true => quote!(odra::types::contract_def::EntrypointType::PublicPayable),
+            false => quote!(odra::types::contract_def::EntrypointType::Public),
         };
 
         let ep = quote! {
-            odra::contract_def::Entrypoint {
+            odra::types::contract_def::Entrypoint {
                 ident: String::from(#name),
                 args: vec![#args],
                 ret: #ret,

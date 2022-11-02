@@ -19,6 +19,7 @@ pub fn camel_to_snake(text: &str) -> String {
         .to_case(Case::Snake)
 }
 
+// TODO: Consider returning option and droping dependency on odra-types.
 /// Calculates the absolute position of the event. Accepts both positive and negative indexing.
 ///
 /// # Examples

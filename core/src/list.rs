@@ -1,10 +1,8 @@
+use crate::types::OdraType;
 use core::ops::Range;
+use odra_types::CollectionError;
 
-use crate::{ContractEnv, Instance, Mapping, UnwrapOrRevert, Variable};
-use odra_types::{
-    bytesrepr::{FromBytes, ToBytes},
-    CLTyped, CollectionError,
-};
+use crate::{contract_env, Instance, Mapping, UnwrapOrRevert, Variable};
 
 /// Data structure for an indexed, iterable collection.
 pub struct List<T> {
@@ -12,7 +10,7 @@ pub struct List<T> {
     index: Variable<u32>,
 }
 
-impl<T: ToBytes + FromBytes + CLTyped> List<T> {
+impl<T: OdraType> List<T> {
     /// Creates a new List instance.
     pub fn new(name: String) -> Self {
         let mut name_values = name.clone();
@@ -41,7 +39,7 @@ impl<T: ToBytes + FromBytes + CLTyped> List<T> {
     pub fn replace(&self, index: u32, value: T) -> T {
         let current_index = self.index.get_or_default();
         if current_index < index {
-            ContractEnv::revert(CollectionError::IndexOutOfBounds);
+            contract_env::revert(CollectionError::IndexOutOfBounds);
         }
 
         let prev_value = self.values.get(&index).unwrap_or_revert();
@@ -92,7 +90,7 @@ impl<'a, T> Iter<'a, T> {
 
 impl<'a, T> core::iter::Iterator for Iter<'a, T>
 where
-    T: ToBytes + FromBytes + CLTyped,
+    T: OdraType,
 {
     type Item = T;
 
@@ -115,13 +113,13 @@ where
     }
 }
 
-impl<'a, T> core::iter::ExactSizeIterator for Iter<'a, T> where T: ToBytes + FromBytes + CLTyped {}
+impl<'a, T> core::iter::ExactSizeIterator for Iter<'a, T> where T: OdraType {}
 
-impl<'a, T> core::iter::FusedIterator for Iter<'a, T> where T: ToBytes + FromBytes + CLTyped {}
+impl<'a, T> core::iter::FusedIterator for Iter<'a, T> where T: OdraType {}
 
 impl<'a, T> core::iter::DoubleEndedIterator for Iter<'a, T>
 where
-    T: ToBytes + FromBytes + CLTyped,
+    T: OdraType,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         let index = self.range.nth_back(0)?;
@@ -129,20 +127,20 @@ where
     }
 }
 
-impl<T: ToBytes + FromBytes + CLTyped + Default> List<T> {
+impl<T: OdraType + Default> List<T> {
     /// Reads `key` from the storage or the default value is returned.
     pub fn get_or_default(&self, index: u32) -> T {
         self.get(index).unwrap_or_default()
     }
 }
 
-impl<T: ToBytes + FromBytes + CLTyped> From<&str> for List<T> {
+impl<T: OdraType> From<&str> for List<T> {
     fn from(name: &str) -> Self {
         List::new(String::from(name))
     }
 }
 
-impl<T: ToBytes + FromBytes + CLTyped> Instance for List<T> {
+impl<T: OdraType> Instance for List<T> {
     fn instance(namespace: &str) -> Self {
         namespace.into()
     }
@@ -150,11 +148,10 @@ impl<T: ToBytes + FromBytes + CLTyped> Instance for List<T> {
 
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
-    use odra_mock_vm::TestEnv;
-    use odra_types::{
-        bytesrepr::{FromBytes, ToBytes},
-        CLTyped, CollectionError,
-    };
+    use odra_mock_vm::types::OdraType;
+    use odra_types::CollectionError;
+
+    use crate::test_env;
 
     use crate::List;
 
@@ -200,7 +197,7 @@ mod tests {
         assert_eq!(list.get(4).unwrap(), 10);
 
         // When replaces nonexistent value then reverts
-        TestEnv::assert_exception(CollectionError::IndexOutOfBounds, || {
+        test_env::assert_exception(CollectionError::IndexOutOfBounds, || {
             list.replace(100, 99);
         });
     }
@@ -297,7 +294,7 @@ mod tests {
         assert_eq!(iter.count(), 5);
     }
 
-    impl<T: ToBytes + FromBytes + CLTyped> Default for List<T> {
+    impl<T: OdraType> Default for List<T> {
         fn default() -> Self {
             Self::new(String::from("l"))
         }
