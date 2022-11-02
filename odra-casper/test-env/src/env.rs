@@ -19,7 +19,7 @@ use casper_types::{
 };
 use odra_casper_shared::consts;
 use odra_casper_types::{Address, Balance, BlockTime, CallArgs, OdraType};
-use odra_types::{event::EventError, EventData, ExecutionError, OdraError, VmError};
+use odra_types::{event::EventError, ExecutionError, OdraError, VmError};
 
 thread_local! {
     /// Thread local instance of [CasperTestEnv].
@@ -188,7 +188,7 @@ impl CasperTestEnv {
     }
 
     /// Returns an event from the given contract.
-    pub fn get_event(&self, address: Address, index: i32) -> Result<EventData, EventError> {
+    pub fn get_event<T: OdraType>(&self, address: Address, index: i32) -> Result<T, EventError> {
         let address = address.as_contract_package_hash().unwrap();
 
         let contract_hash: ContractHash = self.get_contract_package_hash(*address);
@@ -225,13 +225,8 @@ impl CasperTestEnv {
             &event_position.to_string(),
         ) {
             Ok(val) => {
-                let value: Bytes = val
-                    .as_cl_value()
-                    .unwrap()
-                    .clone()
-                    .into_t::<Bytes>()
-                    .unwrap();
-                Ok(value.inner_bytes().clone())
+                let value: T = val.as_cl_value().unwrap().clone().into_t::<T>().unwrap();
+                Ok(value)
             }
             Err(_) => Err(EventError::IndexOutOfBounds),
         }

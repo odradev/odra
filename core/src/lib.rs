@@ -39,6 +39,13 @@ pub mod types {
     pub use odra_types::*;
 }
 
+#[cfg(feature = "casper")]
+pub mod casper {
+    pub use odra_casper_backend::casper_types;
+    #[cfg(target_arch = "wasm32")]
+    pub use odra_casper_backend::{casper_contract, runtime, storage, utils};
+}
+
 /// Calls contract at `address` invoking the `entrypoint` with `args`.
 ///
 /// Returns already parsed result.

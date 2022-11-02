@@ -24,7 +24,6 @@ pub fn gen_contract(contract_def: ContractDef, fqn: String) -> TokenStream2 {
         #![no_main]
 
         use odra::Instance;
-        use odra_casper_backend as casper_backend;
 
         #call_fn
 
@@ -58,15 +57,15 @@ fn generate_call(contract_def: &ContractDef, ref_fqn: String) -> TokenStream2 {
     quote! {
         #[no_mangle]
         fn call() {
-            let (contract_package_hash, _) = casper_backend::backend::casper_contract::contract_api::storage::create_contract_package_at_hash();
-            casper_backend::backend::casper_contract::contract_api::runtime::put_key(#package_hash, contract_package_hash.into());
+            let (contract_package_hash, _) = odra::casper::casper_contract::contract_api::storage::create_contract_package_at_hash();
+            odra::casper::casper_contract::contract_api::runtime::put_key(#package_hash, contract_package_hash.into());
 
             #entrypoints
 
-            casper_backend::backend::casper_contract::contract_api::storage::add_contract_version(
+            odra::casper::casper_contract::contract_api::storage::add_contract_version(
                 contract_package_hash,
                 entry_points,
-                casper_backend::backend::casper_types::contracts::NamedKeys::new()
+                odra::casper::casper_types::contracts::NamedKeys::new()
             );
 
             #call_constructor
@@ -149,21 +148,20 @@ mod tests {
                 #![no_main]
 
                 use odra::Instance;
-                use odra_casper_backend as casper_backend;
                 #[no_mangle]
                 fn call() {
-                    let (contract_package_hash , _) = casper_backend::backend::casper_contract::contract_api::storage::create_contract_package_at_hash();
-                    casper_backend::backend::casper_contract::contract_api::runtime::put_key(
+                    let (contract_package_hash , _) = odra::casper::casper_contract::contract_api::storage::create_contract_package_at_hash();
+                    odra::casper::casper_contract::contract_api::runtime::put_key(
                         "my_contract_package_hash",
                         contract_package_hash.into()
                     );
 
                     #expected_entrypoints
 
-                    casper_backend::backend::casper_contract::contract_api::storage::add_contract_version(
+                    odra::casper::casper_contract::contract_api::storage::add_contract_version(
                         contract_package_hash,
                         entry_points,
-                        casper_backend::backend::casper_types::contracts::NamedKeys::new()
+                        odra::casper::casper_types::contracts::NamedKeys::new()
                     );
 
                     #expected_constructor_if

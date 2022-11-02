@@ -22,16 +22,16 @@ impl ToTokens for WasmEntrypoint<'_> {
 
         let payable = match self.0.ty {
             EntrypointType::PublicPayable => quote! {
-                casper_backend::utils::handle_attached_value();
+                odra::casper::utils::handle_attached_value();
             },
             _ => quote! {
-                casper_backend::utils::assert_no_attached_value();
+                odra::casper::utils::assert_no_attached_value();
             },
         };
 
         let payable_cleanup = match self.0.ty {
             EntrypointType::PublicPayable => quote! {
-                casper_backend::utils::clear_attached_value();
+                odra::casper::utils::clear_attached_value();
             },
             _ => quote!(),
         };
@@ -42,11 +42,11 @@ impl ToTokens for WasmEntrypoint<'_> {
                 contract.#entrypoint_ident(#fn_args);
             },
             _ => quote! {
-                use casper_backend::backend::casper_contract::unwrap_or_revert::UnwrapOrRevert;
+                use odra::casper::casper_contract::unwrap_or_revert::UnwrapOrRevert;
                 #args
                 let result = contract.#entrypoint_ident(#fn_args);
-                let result = casper_backend::backend::casper_types::CLValue::from_t(result).unwrap_or_revert();
-                casper_backend::backend::casper_contract::contract_api::runtime::ret(result);
+                let result = odra::casper::casper_types::CLValue::from_t(result).unwrap_or_revert();
+                odra::casper::casper_contract::contract_api::runtime::ret(result);
             },
         };
 
@@ -96,9 +96,11 @@ mod tests {
             quote!(
                 #[no_mangle]
                 fn construct_me() {
-                    casper_backend::utils::assert_no_attached_value();
+                    odra::casper::utils::assert_no_attached_value();
                     let contract = my_contract::MyContract::instance("contract");
-                    let value = casper_backend::backend::casper_contract::contract_api::runtime::get_named_arg(stringify!(value));
+                    let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg(
+                        stringify!(value),
+                    );
                     contract.construct_me(value);
                 }
             ),
@@ -121,10 +123,10 @@ mod tests {
             quote!(
                 #[no_mangle]
                 fn pay_me() {
-                    casper_backend::utils::handle_attached_value();
+                    odra::casper::utils::handle_attached_value();
                     let contract = a::b::c::Contract::instance("contract");
                     contract.pay_me();
-                    casper_backend::utils::clear_attached_value();
+                    odra::casper::utils::clear_attached_value();
                 }
             ),
         );

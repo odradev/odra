@@ -38,7 +38,8 @@ fn cl_type_to_type(ty: CLType) -> Type {
         CLType::Tuple2(types) => Type::Tuple2(types.map(boxed_cl_type_to_boxed_type)),
         CLType::Tuple3(types) => Type::Tuple3(types.map(boxed_cl_type_to_boxed_type)),
         CLType::Any => Type::Any,
-        _ => panic!("Unsupported type"),
+        CLType::Key => Type::Address,
+        _ => panic!("Unsupported type {:?}", ty),
     }
 }
 

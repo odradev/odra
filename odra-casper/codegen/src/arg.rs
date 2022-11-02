@@ -12,7 +12,7 @@ impl ToTokens for CasperArgs<'_> {
             let arg_ident = format_ident!("{}", arg.ident);
 
             tokens.append_all(quote! {
-                let #arg_ident = casper_backend::backend::casper_contract::contract_api::runtime::get_named_arg(stringify!(#arg_ident));
+                let #arg_ident = odra::casper::casper_contract::contract_api::runtime::get_named_arg(stringify!(#arg_ident));
             });
         });
     }
@@ -48,8 +48,8 @@ mod tests {
         assert_eq_tokens(
             args,
             quote!(
-                let a = casper_backend::backend::casper_contract::contract_api::runtime::get_named_arg(stringify!(a));
-                let b_c = casper_backend::backend::casper_contract::contract_api::runtime::get_named_arg(stringify!(b_c));
+                let a = odra::casper::casper_contract::contract_api::runtime::get_named_arg(stringify!(a));
+                let b_c = odra::casper::casper_contract::contract_api::runtime::get_named_arg(stringify!(b_c));
             ),
         );
     }
