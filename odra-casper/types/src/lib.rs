@@ -2,14 +2,15 @@ mod args;
 mod bytes;
 mod casper_address;
 mod ty;
+mod uints;
 
 pub use args::CallArgs;
 pub use bytes::Bytes;
 pub use ty::Typed;
+pub use uints::{U256, U512};
 
 pub use casper_address::CasperAddress as Address;
-pub use casper_types::{U256, U512};
-pub type Balance = casper_types::U512;
+pub type Balance = U512;
 pub type BlockTime = u64;
 use casper_types::{
     bytesrepr::{FromBytes, ToBytes},

@@ -4,13 +4,14 @@
 use casper_contract::{
     contract_api::system::transfer_from_purse_to_account, unwrap_or_revert::UnwrapOrRevert,
 };
+use casper_types::U512;
 use odra_casper_types::{Address, Balance, BlockTime, CallArgs, OdraType};
 use odra_types::{event::Event, ExecutionError};
 use std::ops::Deref;
 
 use crate::{casper_env, utils::get_main_purse};
 
-pub(crate) static mut ATTACHED_VALUE: Balance = Balance::zero();
+pub(crate) static mut ATTACHED_VALUE: U512 = U512::zero();
 
 /// Returns blocktime.
 pub fn get_block_time() -> BlockTime {
@@ -76,7 +77,7 @@ pub fn call_contract<T: OdraType>(
             contract_package_hash,
             entrypoint,
             args.deref().clone(),
-            amount,
+            amount.inner(),
         )
     } else {
         casper_env::call_contract(contract_package_hash, entrypoint, args.deref().clone())
@@ -92,21 +93,22 @@ pub fn one_token() -> Balance {
 
 /// Returns the balance of the account associated with the currently executing contract.
 pub fn self_balance() -> Balance {
-    casper_env::self_balance()
+    casper_env::self_balance().into()
 }
 
 /// Returns amount of native token attached to the call.
 pub fn attached_value() -> Balance {
-    unsafe { ATTACHED_VALUE }
+    unsafe { ATTACHED_VALUE.into() }
 }
 
 /// Transfers native token from the contract caller to the given address.
-pub fn transfer_tokens(to: Address, amount: Balance) {
+pub fn transfer_tokens<B: Into<U512>>(to: Address, amount: B) {
     let main_purse = get_main_purse();
 
     match to {
         Address::Account(account) => {
-            transfer_from_purse_to_account(main_purse, account, amount, None).unwrap_or_revert();
+            transfer_from_purse_to_account(main_purse, account, amount.into(), None)
+                .unwrap_or_revert();
         }
         Address::Contract(_) => revert(ExecutionError::can_not_transfer_to_contract()),
     };

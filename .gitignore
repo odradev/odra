@@ -6,3 +6,4 @@ Cargo.lock
 odra-casper/**/target/
 contract/
 examples/target
+examples/.builder_casper

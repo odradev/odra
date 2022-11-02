@@ -1,4 +1,4 @@
-use casper_types::URef;
+use casper_types::{URef, U512};
 use odra_casper_shared::consts;
 use odra_casper_types::Balance;
 use odra_types::ExecutionError;
@@ -29,13 +29,13 @@ pub fn get_main_purse() -> URef {
 /// Stores in memory the amount attached to the current call.
 pub fn set_attached_value(amount: Balance) {
     unsafe {
-        ATTACHED_VALUE = amount;
+        ATTACHED_VALUE = amount.inner();
     }
 }
 
 /// Zeroes the amount attached to the current call.
 pub fn clear_attached_value() {
-    unsafe { ATTACHED_VALUE = Balance::zero() }
+    unsafe { ATTACHED_VALUE = U512::zero() }
 }
 
 /// Transfers attached value to the currently executing contract.
@@ -52,7 +52,7 @@ pub fn handle_attached_value() {
                 amount,
                 None,
             );
-            set_attached_value(amount);
+            set_attached_value(amount.into());
         }
     }
 }

@@ -15,10 +15,10 @@ use casper_types::{
     account::{Account, AccountHash},
     bytesrepr::{Bytes, ToBytes},
     runtime_args, ApiError, Contract, ContractHash, ContractPackageHash, Key, Motes, PublicKey,
-    RuntimeArgs, SecretKey, StoredValue, URef,
+    RuntimeArgs, SecretKey, StoredValue, URef, U512,
 };
 use odra_casper_shared::consts;
-use odra_casper_types::{Address, Balance, BlockTime, CallArgs, OdraType};
+use odra_casper_types::{Address, BlockTime, CallArgs, OdraType};
 use odra_types::{event::EventError, ExecutionError, OdraError, VmError};
 
 thread_local! {
@@ -34,7 +34,7 @@ pub struct CasperTestEnv {
     block_time: BlockTime,
     calls_counter: u32,
     error: Option<OdraError>,
-    attached_value: Option<Balance>,
+    attached_value: Option<U512>,
 }
 
 impl CasperTestEnv {
@@ -53,7 +53,7 @@ impl CasperTestEnv {
             // Create a GenesisAccount.
             let account = GenesisAccount::account(
                 public_key,
-                Motes::new(Balance::from(DEFAULT_ACCOUNT_INITIAL_BALANCE)),
+                Motes::new(U512::from(DEFAULT_ACCOUNT_INITIAL_BALANCE)),
                 None,
             );
             genesis_config.ee_config_mut().push_account(account);
@@ -238,14 +238,14 @@ impl CasperTestEnv {
     }
 
     /// Sets the value that will be attached to the next contract call.
-    pub fn attach_value(&mut self, amount: Balance) {
+    pub fn attach_value(&mut self, amount: U512) {
         self.attached_value = Some(amount);
     }
 
     /// Returns the balance of the given account.
     ///
     /// The accepted value can be either an [Address::Account] or [Address::Contract].
-    pub fn token_balance(&self, address: Address) -> Balance {
+    pub fn token_balance(&self, address: Address) -> U512 {
         match address {
             Address::Account(account_hash) => self.get_account_cspr_balance(account_hash),
             Address::Contract(contract_hash) => self.get_contract_cspr_balance(contract_hash),
@@ -262,7 +262,7 @@ impl CasperTestEnv {
             .unwrap()
     }
 
-    fn get_contract_cspr_balance(&self, contract_hash: ContractPackageHash) -> Balance {
+    fn get_contract_cspr_balance(&self, contract_hash: ContractPackageHash) -> U512 {
         let contract_hash: ContractHash = self.get_contract_package_hash(contract_hash);
 
         let contract: Contract = self.context.get_contract(contract_hash).unwrap();
@@ -272,10 +272,10 @@ impl CasperTestEnv {
             .get(consts::CONTRACT_MAIN_PURSE)
             .and_then(|key| key.as_uref())
             .map(|purse| self.context.get_purse_balance(*purse))
-            .unwrap_or_else(Balance::zero)
+            .unwrap_or_else(U512::zero)
     }
 
-    fn get_account_cspr_balance(&self, account_hash: AccountHash) -> Balance {
+    fn get_account_cspr_balance(&self, account_hash: AccountHash) -> U512 {
         let account: Account = self.context.get_account(account_hash).unwrap();
         let purse = account.main_purse();
         self.context.get_purse_balance(purse)

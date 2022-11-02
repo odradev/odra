@@ -6,3 +6,7 @@ test-examples-on-mockvm:
 
 test-odra:
     cargo test
+
+lint:
+    cargo fmt
+    cargo clippy --all-targets -- -D warnings

@@ -31,7 +31,7 @@ pub fn call_contract<T: OdraType>(
     ENV.with(|env| {
         let contract_package_hash = addr.as_contract_package_hash().unwrap();
         if let Some(amount) = amount {
-            env.borrow_mut().attach_value(amount);
+            env.borrow_mut().attach_value(amount.inner());
         }
         env.borrow_mut()
             .call_contract(*contract_package_hash, entrypoint, args)
@@ -65,7 +65,7 @@ pub fn advance_block_time_by(seconds: u64) {
 
 /// Returns the balance of the account associated with the given address.
 pub fn token_balance(address: Address) -> Balance {
-    ENV.with(|env| env.borrow().token_balance(address))
+    ENV.with(|env| env.borrow().token_balance(address).into())
 }
 
 /// Returns the value that represents one CSPR.

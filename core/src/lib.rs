@@ -44,6 +44,8 @@ pub mod casper {
     pub use odra_casper_backend::casper_types;
     #[cfg(target_arch = "wasm32")]
     pub use odra_casper_backend::{casper_contract, runtime, storage, utils};
+    #[cfg(not(target_arch = "wasm32"))]
+    pub use odra_casper_codegen as codegen;
 }
 
 /// Calls contract at `address` invoking the `entrypoint` with `args`.
