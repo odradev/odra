@@ -4,9 +4,6 @@ mod error;
 pub mod event;
 
 pub use error::{CollectionError, ExecutionError, OdraError, VmError};
-// TODO: Remove if possible.
-/// Serialized event struct representation
-pub type EventData = Vec<u8>;
 
 #[derive(Debug, Clone)]
 pub enum Type {

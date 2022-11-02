@@ -8,12 +8,12 @@ pub use bytes::Bytes;
 pub use ty::Typed;
 
 pub use casper_address::CasperAddress as Address;
-
+pub use casper_types::{U256, U512};
 pub type Balance = casper_types::U512;
 pub type BlockTime = u64;
-pub use casper_types::{
-    bytesrepr::{Error as BytesError, FromBytes, ToBytes},
-    CLType, CLTyped,
+use casper_types::{
+    bytesrepr::{FromBytes, ToBytes},
+    CLTyped,
 };
 pub trait OdraType: CLTyped + ToBytes + FromBytes {}
 

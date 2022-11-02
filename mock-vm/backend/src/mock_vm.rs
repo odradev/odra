@@ -1,6 +1,6 @@
 use anyhow::Result;
-use odra_mock_vm_types::{Address, Balance, BlockTime, CallArgs, MockVMType};
-use odra_types::{event::EventError, EventData, OdraError, VmError};
+use odra_mock_vm_types::{Address, Balance, BlockTime, CallArgs, EventData, MockVMType};
+use odra_types::{event::EventError, OdraError, VmError};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
@@ -404,8 +404,8 @@ impl Default for MockVmState {
 mod tests {
     use std::collections::HashMap;
 
-    use odra_mock_vm_types::{Address, Balance, CallArgs};
-    use odra_types::{EventData, ExecutionError, OdraError, VmError};
+    use odra_mock_vm_types::{Address, Balance, CallArgs, EventData};
+    use odra_types::{ExecutionError, OdraError, VmError};
 
     use crate::{callstack::CallstackElement, EntrypointArgs, EntrypointCall};
 

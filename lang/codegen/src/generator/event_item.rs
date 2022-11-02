@@ -44,7 +44,7 @@ fn generate_casper_code(event: &IrEventItem) -> TokenStream {
 
     let deserialize_fields = fields
         .iter()
-        .map(|ident| quote!(let (#ident, bytes) = odra::types::FromBytes::from_vec(bytes.to_vec())?;))
+        .map(|ident| quote!(let (#ident, bytes) = odra::casper::casper_types::bytesrepr::FromBytes::from_vec(bytes.to_vec())?;))
         .collect::<TokenStream>();
 
     let construct_struct = fields
@@ -67,17 +67,17 @@ fn generate_casper_code(event: &IrEventItem) -> TokenStream {
         .collect::<TokenStream>();
 
     let type_check = quote! {
-        let (event_name, bytes): (String, _) = odra::types::FromBytes::from_vec(bytes.to_vec())?;
+        let (event_name, bytes): (String, _) = odra::casper::casper_types::bytesrepr::FromBytes::from_vec(bytes.to_vec())?;
         if &event_name != #name_literal {
             // TODO: Handle error.
-            return Err(odra::types::BytesError::Formatting);
+            return Err(odra::casper::casper_types::bytesrepr::Error::Formatting);
         }
     };
 
     quote! {
         #[cfg(feature = "casper")]
-        impl odra::types::FromBytes for #struct_ident {
-            fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::types::BytesError> {
+        impl odra::casper::casper_types::bytesrepr::FromBytes for #struct_ident {
+            fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper::casper_types::bytesrepr::Error> {
                 #type_check
                 #deserialize_fields
                 let value = #struct_ident {
@@ -88,8 +88,8 @@ fn generate_casper_code(event: &IrEventItem) -> TokenStream {
         }
 
         #[cfg(feature = "casper")]
-        impl odra::types::ToBytes for #struct_ident {
-            fn to_bytes(&self) -> Result<Vec<u8>, odra::types::BytesError> {
+        impl odra::casper::casper_types::bytesrepr::ToBytes for #struct_ident {
+            fn to_bytes(&self) -> Result<Vec<u8>, odra::casper::casper_types::bytesrepr::Error> {
                 let mut vec = Vec::with_capacity(self.serialized_length());
                 vec.append(&mut #name_literal.to_bytes()?);
                 #append_bytes
@@ -104,9 +104,9 @@ fn generate_casper_code(event: &IrEventItem) -> TokenStream {
         }
 
         #[cfg(feature = "casper")]
-        impl odra::types::CLTyped for #struct_ident {
-            fn cl_type() -> odra::types::CLType {
-                odra::types::CLType::Any
+        impl odra::casper::casper_types::CLTyped for #struct_ident {
+            fn cl_type() -> odra::casper::casper_types::CLType {
+                odra::casper::casper_types::CLType::Any
             }
         }
     }

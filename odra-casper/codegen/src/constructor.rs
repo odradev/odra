@@ -41,10 +41,10 @@ impl ToTokens for WasmConstructor<'_> {
             .collect();
 
         tokens.extend(quote! {
-            if casper_backend::utils::named_arg_exists("constructor") {
-                use casper_backend::backend::casper_contract::unwrap_or_revert::UnwrapOrRevert;
-                let constructor_access: casper_backend::backend::casper_types::URef =
-                    casper_backend::backend::casper_contract::contract_api::storage::create_contract_user_group(
+            if odra::casper::utils::named_arg_exists("constructor") {
+                use odra::casper::casper_contract::unwrap_or_revert::UnwrapOrRevert;
+                let constructor_access: odra::casper::casper_types::URef =
+                    odra::casper::casper_contract::contract_api::storage::create_contract_user_group(
                         contract_package_hash,
                         "constructor",
                         1,
@@ -54,7 +54,7 @@ impl ToTokens for WasmConstructor<'_> {
                     .pop()
                     .unwrap_or_revert();
 
-                let constructor_name = casper_backend::backend::casper_contract::contract_api::runtime::get_named_arg::<String>(
+                let constructor_name = odra::casper::casper_contract::contract_api::runtime::get_named_arg::<String>(
                     "constructor"
                 );
                 let constructor_name = constructor_name.as_str();
@@ -67,7 +67,7 @@ impl ToTokens for WasmConstructor<'_> {
                 // Revoke access to constructor.
                 let mut urefs = std::collections::BTreeSet::new();
                 urefs.insert(constructor_access);
-                casper_backend::backend::casper_contract::contract_api::storage::remove_contract_user_group_urefs(
+                odra::casper::casper_contract::contract_api::storage::remove_contract_user_group_urefs(
                     contract_package_hash,
                     "constructor",
                     urefs
@@ -111,25 +111,25 @@ mod tests {
         assert_eq_tokens(
             wasm_constructor,
             quote! {
-                if casper_backend::utils::named_arg_exists("constructor") {
-                    use casper_backend::backend::casper_contract::unwrap_or_revert::UnwrapOrRevert;
-                    let constructor_access: casper_backend::backend::casper_types::URef = casper_backend::backend::casper_contract::contract_api::storage::create_contract_user_group(
+                if odra::casper::utils::named_arg_exists("constructor") {
+                    use odra::casper::casper_contract::unwrap_or_revert::UnwrapOrRevert;
+                    let constructor_access: odra::casper::casper_types::URef = odra::casper::casper_contract::contract_api::storage::create_contract_user_group(
                         contract_package_hash , "constructor" , 1 , Default::default()
                     ).unwrap_or_revert().pop().unwrap_or_revert();
-                    let constructor_name = casper_backend::backend::casper_contract::contract_api::runtime::get_named_arg::<String>("constructor");
+                    let constructor_name = odra::casper::casper_contract::contract_api::runtime::get_named_arg::<String>("constructor");
                     let constructor_name = constructor_name.as_str();
                     match constructor_name {
                         stringify!(construct_me) => {
                             let odra_address = odra::types::Address::from(contract_package_hash);
                             let contract_ref = my_contract::MyContract::at(odra_address);
-                            let value = casper_backend::backend::casper_contract::contract_api::runtime::get_named_arg (stringify!(value));
+                            let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg (stringify!(value));
                             contract_ref.construct_me(value);
                         },
                         _ => {}
                     };
                     let mut urefs = std::collections::BTreeSet::new();
                     urefs.insert(constructor_access);
-                    casper_backend::backend::casper_contract::contract_api::storage::remove_contract_user_group_urefs(
+                    odra::casper::casper_contract::contract_api::storage::remove_contract_user_group_urefs(
                         contract_package_hash , "constructor" , urefs
                     ).unwrap_or_revert();
                 }
