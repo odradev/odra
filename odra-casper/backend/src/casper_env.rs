@@ -1,7 +1,7 @@
 use casper_types::bytesrepr::FromBytes;
 use lazy_static::lazy_static;
 use odra_casper_types::{Address, OdraType};
-use odra_types::event::Event;
+use odra_types::event::OdraEvent;
 use std::{collections::BTreeMap, sync::Mutex};
 
 use casper_contract::{
@@ -102,7 +102,7 @@ pub fn self_address() -> Address {
 /// Record event to the contract's storage.
 pub fn emit_event<T>(event: T)
 where
-    T: OdraType + Event
+    T: OdraType + OdraEvent
 {
     let (events_length, key): (u32, URef) = match runtime::get_key(consts::EVENTS_LENGTH) {
         None => {

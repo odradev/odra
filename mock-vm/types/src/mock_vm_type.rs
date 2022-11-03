@@ -13,12 +13,12 @@ pub trait MockVMType: Sized {
 
 impl<T: BorshSerialize + BorshDeserialize> MockVMType for T {
     fn ser(&self) -> Result<Vec<u8>, MockVMSerializationError> {
-        borsh::to_vec(self).map_err(|_| MockVMSerializationError::DeserializationError)
+        borsh::to_vec(self).map_err(|_| MockVMSerializationError::SerializationError)
     }
 
     fn deser(bytes: Vec<u8>) -> Result<Self, MockVMSerializationError> {
         <T as borsh::BorshDeserialize>::try_from_slice(&bytes)
-            .map_err(|_| MockVMSerializationError::SerializationError)
+            .map_err(|_| MockVMSerializationError::DeserializationError)
     }
 }
 

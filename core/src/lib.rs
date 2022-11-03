@@ -20,7 +20,6 @@ pub use {
     variable::Variable
 };
 
-//TODO: makes it invisible in the contract code, a feature maybe??
 #[cfg(not(target_arch = "wasm32"))]
 pub mod test_utils;
 

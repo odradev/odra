@@ -3,8 +3,11 @@
 //! Depending on the selected feature, the actual test env is dynamically loaded in the runtime or the Odra local MockVM is used.
 use std::collections::HashMap;
 
-use odra_mock_vm_types::{Address, Balance, BlockTime, CallArgs, MockVMType};
-use odra_types::{event::EventError, OdraError};
+use odra_mock_vm_types::{Address, Balance, BlockTime, BorshDeserialize, CallArgs, MockVMType};
+use odra_types::{
+    event::{EventError, OdraEvent},
+    OdraError
+};
 
 use crate::{EntrypointArgs, EntrypointCall};
 
@@ -85,7 +88,21 @@ pub fn call_contract<T: MockVMType>(
 }
 
 /// Gets nth event emitted by the contract at `address`.
-pub fn get_event<T: MockVMType>(address: Address, index: i32) -> Result<T, EventError> {
+pub fn get_event<T: MockVMType + OdraEvent>(address: Address, index: i32) -> Result<T, EventError> {
     let bytes = crate::borrow_env().get_event(address, index);
-    bytes.map(|b| T::deser(b).unwrap())
+
+    bytes.and_then(|bytes| {
+        let event_name = extract_event_name(&bytes)?;
+        if event_name == T::name() {
+            T::deser(bytes).map_err(|_| EventError::Parsing)
+        } else {
+            Err(EventError::UnexpectedType(event_name))
+        }
+    })
+}
+
+fn extract_event_name(mut bytes: &[u8]) -> Result<String, EventError> {
+    let name =
+        BorshDeserialize::deserialize(&mut bytes).map_err(|_| EventError::Formatting)?;
+    Ok(name)
 }
