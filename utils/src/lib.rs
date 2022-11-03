@@ -24,7 +24,6 @@ pub fn camel_to_snake(text: &str) -> String {
 ///
 /// ```
 /// use odra_utils::event_absolute_position;
-/// use odra_types::event::EventError;
 ///
 /// assert_eq!(event_absolute_position(10, 0), Some(0));
 /// assert_eq!(event_absolute_position(10, -1), Some(9));
