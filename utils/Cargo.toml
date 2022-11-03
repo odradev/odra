@@ -11,4 +11,3 @@ categories = ["wasm"]
 
 [dependencies]
 convert_case = "0.5.0"
-odra-types = { version = "0.1.0", path = "../types" }

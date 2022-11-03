@@ -282,7 +282,8 @@ impl MockVmState {
             return Err(EventError::IndexOutOfBounds);
         }
         let events: &Vec<EventData> = events.unwrap();
-        let event_position = odra_utils::event_absolute_position(events.len(), index)?;
+        let event_position = odra_utils::event_absolute_position(events.len(), index)
+            .ok_or(EventError::IndexOutOfBounds)?;
         Ok(events.get(event_position as usize).unwrap().clone())
     }
 

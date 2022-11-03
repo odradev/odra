@@ -1,5 +1,4 @@
 use convert_case::{Boundary, Case, Casing};
-use odra_types::event;
 
 /// Converts a camel-cased &str to String.
 ///
@@ -19,7 +18,6 @@ pub fn camel_to_snake(text: &str) -> String {
         .to_case(Case::Snake)
 }
 
-// TODO: Consider returning option and droping dependency on odra-types.
 /// Calculates the absolute position of the event. Accepts both positive and negative indexing.
 ///
 /// # Examples
@@ -28,29 +26,28 @@ pub fn camel_to_snake(text: &str) -> String {
 /// use odra_utils::event_absolute_position;
 /// use odra_types::event::EventError;
 ///
-/// assert_eq!(event_absolute_position(10, 0), Ok(0));
-/// assert_eq!(event_absolute_position(10, -1), Ok(9));
-/// assert_eq!(event_absolute_position(10, 10), Err(EventError::IndexOutOfBounds));
+/// assert_eq!(event_absolute_position(10, 0), Some(0));
+/// assert_eq!(event_absolute_position(10, -1), Some(9));
+/// assert_eq!(event_absolute_position(10, 10), None);
 /// ```
-pub fn event_absolute_position(len: usize, index: i32) -> Result<usize, event::EventError> {
+pub fn event_absolute_position(len: usize, index: i32) -> Option<usize> {
     if index.is_negative() {
         let abs_idx = index.wrapping_abs() as usize;
         if abs_idx > len {
-            return Err(event::EventError::IndexOutOfBounds);
+            return None;
         }
-        Ok(len - abs_idx)
+        Some(len - abs_idx)
     } else {
         if index as usize >= len {
-            return Err(event::EventError::IndexOutOfBounds);
+            return None;
         }
-        Ok(index as usize)
+        Some(index as usize)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{camel_to_snake, event_absolute_position};
-    use odra_types::event;
 
     #[test]
     fn camel_to_snake_works() {
@@ -65,22 +62,13 @@ mod tests {
 
     #[test]
     fn event_absolute_position_works() {
-        assert_eq!(
-            event_absolute_position(0, 1),
-            Err(event::EventError::IndexOutOfBounds)
-        );
-        assert_eq!(
-            event_absolute_position(10, 10),
-            Err(event::EventError::IndexOutOfBounds)
-        );
-        assert_eq!(
-            event_absolute_position(10, -11),
-            Err(event::EventError::IndexOutOfBounds)
-        );
-        assert_eq!(event_absolute_position(10, 0), Ok(0));
-        assert_eq!(event_absolute_position(10, 1), Ok(1));
-        assert_eq!(event_absolute_position(10, -1), Ok(9));
-        assert_eq!(event_absolute_position(10, -2), Ok(8));
-        assert_eq!(event_absolute_position(10, -10), Ok(0));
+        assert_eq!(event_absolute_position(0, 1), None);
+        assert_eq!(event_absolute_position(10, 10), None);
+        assert_eq!(event_absolute_position(10, -11), None);
+        assert_eq!(event_absolute_position(10, 0), Some(0));
+        assert_eq!(event_absolute_position(10, 1), Some(1));
+        assert_eq!(event_absolute_position(10, -1), Some(9));
+        assert_eq!(event_absolute_position(10, -2), Some(8));
+        assert_eq!(event_absolute_position(10, -10), Some(0));
     }
 }

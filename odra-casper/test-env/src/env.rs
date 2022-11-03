@@ -224,7 +224,8 @@ impl CasperTestEnv {
             .into_t()
             .unwrap();
 
-        let event_position = odra_utils::event_absolute_position(events_length as usize, index)?;
+        let event_position = odra_utils::event_absolute_position(events_length as usize, index)
+            .ok_or(EventError::IndexOutOfBounds)?;
 
         match self.context.query_dictionary_item(
             None,
