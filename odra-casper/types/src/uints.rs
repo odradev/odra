@@ -30,6 +30,14 @@ macro_rules! impl_casper_type_numeric_wrapper {
                 pub fn inner(&self) -> casper_types::$ty {
                     self.inner
                 }
+
+                pub fn is_zero(&self) -> bool {
+                    self.inner.is_zero()
+                }
+
+                pub fn as_u32(&self) -> u32 {
+                    self.inner.as_u32()
+                }
             }
 
             impl FromBytes for $ty {
