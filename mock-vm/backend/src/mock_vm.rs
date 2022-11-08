@@ -154,14 +154,7 @@ impl MockVm {
     }
 
     pub fn get_var<T: MockVMType>(&self, key: &str) -> Option<T> {
-        let result = { self.state.read().unwrap().get_var(key) };
-        match result {
-            Ok(result) => result,
-            Err(error) => {
-                self.state.write().unwrap().set_error(error);
-                None
-            }
-        }
+        self.state.write().unwrap().get_var(key)
     }
 
     pub fn set_dict_value<T: MockVMType>(&self, dict: &str, key: &[u8], value: T) {
@@ -169,14 +162,7 @@ impl MockVm {
     }
 
     pub fn get_dict_value<T: MockVMType>(&self, dict: &str, key: &[u8]) -> Option<T> {
-        let result = { self.state.read().unwrap().get_dict_value(dict, key) };
-        match result {
-            Ok(result) => result,
-            Err(error) => {
-                self.state.write().unwrap().set_error(error);
-                None
-            }
-        }
+        self.state.write().unwrap().get_dict_value(dict, key)
     }
 
     pub fn emit_event(&self, event_data: &EventData) {
@@ -264,9 +250,15 @@ impl MockVmState {
         }
     }
 
-    fn get_var<T: MockVMType>(&self, key: &str) -> Result<Option<T>, MockVMSerializationError> {
+    fn get_var<T: MockVMType>(&mut self, key: &str) -> Option<T> {
         let ctx = &self.callstack.current().address;
-        self.storage.get_value(ctx, key)
+        match self.storage.get_value(ctx, key) {
+            Ok(var) => var,
+            Err(err) => {
+                self.set_error(err);
+                None
+            }
+        }
     }
 
     fn set_dict_value<T: MockVMType>(&mut self, dict: &str, key: &[u8], value: T) {
@@ -276,13 +268,15 @@ impl MockVmState {
         }
     }
 
-    fn get_dict_value<T: MockVMType>(
-        &self,
-        dict: &str,
-        key: &[u8]
-    ) -> Result<Option<T>, MockVMSerializationError> {
+    fn get_dict_value<T: MockVMType>(&mut self, dict: &str, key: &[u8]) -> Option<T> {
         let ctx = &self.callstack.current().address;
-        self.storage.get_dict_value(ctx, dict, key)
+        match self.storage.get_dict_value(ctx, dict, key) {
+            Ok(val) => val,
+            Err(err) => {
+                self.set_error(err);
+                None
+            }
+        }
     }
 
     fn emit_event(&mut self, event_data: &EventData) {
