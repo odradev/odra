@@ -47,20 +47,21 @@ impl MockVm {
         address
     }
 
-    pub fn call_contract(
+    pub fn call_contract<T: MockVMType>(
         &self,
         address: Address,
         entrypoint: &str,
         args: CallArgs,
         amount: Option<Balance>
-    ) -> Option<Vec<u8>> {
+    ) -> T {
         self.prepare_call(address, amount);
-
         // Call contract from register.
         if let Some(amount) = amount {
             let success = self.transfer_tokens(self.caller(), address, amount);
             if !success {
-                return self.handle_call_result(Err(OdraError::VmError(VmError::BalanceExceeded)));
+                let bytes =
+                    self.handle_call_result(Err(OdraError::VmError(VmError::BalanceExceeded)));
+                return T::deser(bytes).unwrap();
             }
         }
 
@@ -69,15 +70,11 @@ impl MockVm {
                 .read()
                 .unwrap()
                 .call(&address, String::from(entrypoint), args);
-        self.handle_call_result(result)
+        let result = self.handle_call_result(result);
+        T::deser(result).unwrap()
     }
 
-    fn call_constructor(
-        &self,
-        address: Address,
-        entrypoint: &str,
-        args: CallArgs
-    ) -> Option<Vec<u8>> {
+    fn call_constructor(&self, address: Address, entrypoint: &str, args: CallArgs) -> Vec<u8> {
         self.prepare_call(address, None);
         // Call contract from register.
         let register = self.contract_register.read().unwrap();
@@ -97,13 +94,13 @@ impl MockVm {
         state.push_callstack_element(element);
     }
 
-    fn handle_call_result(&self, result: Result<Option<Vec<u8>>, OdraError>) -> Option<Vec<u8>> {
+    fn handle_call_result(&self, result: Result<Vec<u8>, OdraError>) -> Vec<u8> {
         let mut state = self.state.write().unwrap();
         let result = match result {
             Ok(data) => data,
             Err(err) => {
                 state.set_error(err);
-                None
+                vec![]
             }
         };
 
@@ -121,7 +118,7 @@ impl MockVm {
             if state.is_in_caller_context() {
                 state.restore_snapshot();
             };
-            None
+            vec![]
         }
     }
 
@@ -155,7 +152,7 @@ impl MockVm {
     }
 
     pub fn get_var<T: MockVMType>(&self, key: &str) -> Option<T> {
-        self.state.read().unwrap().get_var(key)
+        self.state.write().unwrap().get_var(key)
     }
 
     pub fn set_dict_value<T: MockVMType>(&self, dict: &str, key: &[u8], value: T) {
@@ -163,7 +160,7 @@ impl MockVm {
     }
 
     pub fn get_dict_value<T: MockVMType>(&self, dict: &str, key: &[u8]) -> Option<T> {
-        self.state.read().unwrap().get_dict_value(dict, key)
+        self.state.write().unwrap().get_dict_value(dict, key)
     }
 
     pub fn emit_event(&self, event_data: &EventData) {
@@ -246,22 +243,38 @@ impl MockVmState {
 
     fn set_var<T: MockVMType>(&mut self, key: &str, value: T) {
         let ctx = &self.callstack.current().address;
-        self.storage.set_value(ctx, key, value);
+        if let Err(err) = self.storage.set_value(ctx, key, value) {
+            self.set_error(err);
+        }
     }
 
-    fn get_var<T: MockVMType>(&self, key: &str) -> Option<T> {
+    fn get_var<T: MockVMType>(&mut self, key: &str) -> Option<T> {
         let ctx = &self.callstack.current().address;
-        self.storage.get_value(ctx, key)
+        match self.storage.get_value(ctx, key) {
+            Ok(var) => var,
+            Err(err) => {
+                self.set_error(err);
+                None
+            }
+        }
     }
 
     fn set_dict_value<T: MockVMType>(&mut self, dict: &str, key: &[u8], value: T) {
         let ctx = &self.callstack.current().address;
-        self.storage.insert_dict_value(ctx, dict, key, value);
+        if let Err(err) = self.storage.insert_dict_value(ctx, dict, key, value) {
+            self.set_error(err);
+        }
     }
 
-    fn get_dict_value<T: MockVMType>(&self, dict: &str, key: &[u8]) -> Option<T> {
+    fn get_dict_value<T: MockVMType>(&mut self, dict: &str, key: &[u8]) -> Option<T> {
         let ctx = &self.callstack.current().address;
-        self.storage.get_dict_value(ctx, dict, key)
+        match self.storage.get_dict_value(ctx, dict, key) {
+            Ok(val) => val,
+            Err(err) => {
+                self.set_error(err);
+                None
+            }
+        }
     }
 
     fn emit_event(&mut self, event_data: &EventData) {
@@ -305,9 +318,12 @@ impl MockVmState {
         self.contract_counter.to_string()
     }
 
-    fn set_error(&mut self, error: OdraError) {
+    fn set_error<E>(&mut self, error: E)
+    where
+        E: Into<OdraError>
+    {
         if self.error.is_none() {
-            self.error = Some(error);
+            self.error = Some(error.into());
         }
     }
 
@@ -405,7 +421,7 @@ impl Default for MockVmState {
 mod tests {
     use std::collections::HashMap;
 
-    use odra_mock_vm_types::{Address, Balance, CallArgs, EventData};
+    use odra_mock_vm_types::{Address, Balance, CallArgs, EventData, MockVMType};
     use odra_types::{ExecutionError, OdraError, VmError};
 
     use crate::{callstack::CallstackElement, EntrypointArgs, EntrypointCall};
@@ -419,7 +435,7 @@ mod tests {
 
         // when register two contracts with the same entrypoints
         let entrypoint: Vec<(String, (EntrypointArgs, EntrypointCall))> =
-            vec![(String::from("abc"), (vec![], |_, _| None))];
+            vec![(String::from("abc"), (vec![], |_, _| vec![]))];
         let entrypoints = entrypoint.into_iter().collect::<HashMap<_, _>>();
         let constructors = HashMap::new();
 
@@ -438,7 +454,8 @@ mod tests {
         let (contract_address, entrypoint, call_result) = setup_contract(&instance);
 
         // when call an existing entrypoint
-        let result = instance.call_contract(contract_address, &entrypoint, CallArgs::new(), None);
+        let result =
+            instance.call_contract::<u32>(contract_address, &entrypoint, CallArgs::new(), None);
 
         // then returns the expected value
         assert_eq!(result, call_result);
@@ -452,7 +469,7 @@ mod tests {
         let address = Address::new(b"random");
 
         // when call a contract
-        instance.call_contract(address, "abc", CallArgs::new(), None);
+        instance.call_contract::<()>(address, "abc", CallArgs::new(), None);
 
         // then the vm is in error state
         assert_eq!(
@@ -469,7 +486,7 @@ mod tests {
 
         // when call non-existing entrypoint
         let invalid_entrypoint = entrypoint.chars().take(1).collect::<String>();
-        instance.call_contract(contract_address, &invalid_entrypoint, CallArgs::new(), None);
+        instance.call_contract::<()>(contract_address, &invalid_entrypoint, CallArgs::new(), None);
 
         // then the vm is in error state
         assert_eq!(
@@ -607,7 +624,7 @@ mod tests {
         let caller = instance.get_address(0);
         let caller_balance = instance.token_balance(caller);
 
-        instance.call_contract(
+        instance.call_contract::<u32>(
             contract_address,
             &entrypoint_name,
             CallArgs::new(),
@@ -629,7 +646,7 @@ mod tests {
         let caller_balance = instance.token_balance(caller);
 
         // when call a contract with the amount exceeding caller's balance
-        instance.call_contract(
+        instance.call_contract::<()>(
             contract_address,
             &entrypoint_name,
             CallArgs::new(),
@@ -648,13 +665,13 @@ mod tests {
         vm.state.write().unwrap().push_callstack_element(element);
     }
 
-    fn setup_contract(instance: &MockVm) -> (Address, String, Option<Vec<u8>>) {
+    fn setup_contract(instance: &MockVm) -> (Address, String, u32) {
         let entrypoint_name = "abc";
-        let result = vec![1, 1, 1];
+        let result = vec![1, 1, 0, 0];
 
         let entrypoint: Vec<(String, (EntrypointArgs, EntrypointCall))> = vec![(
             String::from(entrypoint_name),
-            (vec![], |_, _| Some(vec![1, 1, 1]))
+            (vec![], |_, _| vec![1, 1, 0, 0])
         )];
         let constructors = HashMap::new();
         let contract_address = instance.register_contract(
@@ -666,7 +683,7 @@ mod tests {
         (
             contract_address,
             String::from(entrypoint_name),
-            Some(result)
+            <u32 as MockVMType>::deser(result).unwrap()
         )
     }
 }

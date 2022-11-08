@@ -18,8 +18,6 @@ odra-codegen = { version = "0.1.0", path = "../codegen" }
 
 [dev-dependencies]
 odra = { version = "0.1.0", path = "../../core" }
-odra-codegen = { version = "0.1.0", path = "../codegen" }
-proc-macro2 = "1.0.40"
 
 [lib]
 proc-macro = true

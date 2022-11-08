@@ -27,4 +27,21 @@ impl CallArgs {
     }
 }
 
-// TODO: Tests.
+#[cfg(test)]
+mod test {
+    use crate::CallArgs;
+
+    #[test]
+    fn test_args() {
+        let mut args = CallArgs::new();
+        args.insert("val", 1);
+        args.insert("opt", Some(1));
+        args.insert("vec", vec![1, 2, 3]);
+        args.insert("str", String::from("txt"));
+
+        assert_eq!(args.get::<u32>("val"), 1);
+        assert_eq!(args.get::<Option<u32>>("opt"), Some(1));
+        assert_eq!(args.get::<Vec<u32>>("vec"), vec![1, 2, 3]);
+        assert_eq!(args.get::<String>("str"), String::from("txt"));
+    }
+}

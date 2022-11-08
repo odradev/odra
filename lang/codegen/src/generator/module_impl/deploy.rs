@@ -86,10 +86,10 @@ impl GenerateCode for Deploy<'_> {
                     use std::collections::HashMap;
                     use odra::types::CallArgs;
 
-                    let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Option<Vec<u8>>)>::new();
+                    let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Vec<u8>)>::new();
                     #entrypoints
 
-                    let mut constructors = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Option<Vec<u8>>)>::new();
+                    let mut constructors = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Vec<u8>)>::new();
                     #constructors
 
                     let address = odra::test_env::register_contract(None, constructors, entrypoints);
@@ -139,22 +139,22 @@ where
                 use std::collections::HashMap;
                 use odra::types::{CallArgs};
 
-                let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Option<Vec<u8>>)>::new();
+                let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Vec<u8>)>::new();
                 #entrypoints_stream
 
-                let mut constructors = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Option<Vec<u8>>)>::new();
+                let mut constructors = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Vec<u8>)>::new();
                 #constructors_stream
 
                 let args = {
                     #args
                 };
-                let constructor: Option<(String, CallArgs, fn(String, CallArgs) -> Option<Vec<u8>>)> = Some((
+                let constructor: Option<(String, CallArgs, fn(String, CallArgs) -> Vec<u8>)> = Some((
                     stringify!(#constructor_ident).to_string(),
                     args,
                     |name, args| {
                         let instance = <#struct_ident as odra::Instance>::instance(name.as_str());
                         instance.#constructor_ident( #fn_args );
-                        None
+                        Vec::new()
                     }
                 ));
                 let address = odra::test_env::register_contract(constructor, constructors, entrypoints);
@@ -224,11 +224,9 @@ where
             let ident = &entrypoint.ident;
             let name = quote!(stringify!(#ident).to_string());
             let return_value = match &entrypoint.ret {
-                ReturnType::Default => quote!(None),
+                ReturnType::Default => quote!(Vec::new()),
                 ReturnType::Type(_, _) => quote! {
-                    // let bytes = odra::types::ToBytes::to_bytes(&result).unwrap();
-                    // Some(odra::types::Bytes::from(bytes))
-                    Some(odra::types::MockVMType::ser(&result).unwrap())
+                    odra::types::MockVMType::ser(&result).unwrap()
                 }
             };
             let args = args_to_fn_args(&entrypoint.args);
@@ -268,7 +266,7 @@ where
                     |name, args| {
                         let instance = <#struct_ident as odra::Instance>::instance(name.as_str());
                         instance.#ident( #args );
-                        None
+                        Vec::new()
                     }
                 ));
             }

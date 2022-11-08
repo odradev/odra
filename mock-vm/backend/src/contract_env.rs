@@ -1,7 +1,7 @@
 //! Exposes the public API to communicate with the host.
 
 use odra_mock_vm_types::{Address, Balance, BlockTime, MockVMType, OdraType};
-use odra_types::ExecutionError;
+use odra_types::{event::OdraEvent, ExecutionError};
 
 use crate::borrow_env;
 
@@ -53,7 +53,7 @@ where
 }
 
 /// Sends an event to the execution environment.
-pub fn emit_event<T: MockVMType>(event: T) {
+pub fn emit_event<T: OdraType + OdraEvent>(event: T) {
     let event_data = event.ser().unwrap();
     borrow_env().emit_event(&event_data);
 }

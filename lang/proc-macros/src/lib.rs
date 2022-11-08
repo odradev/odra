@@ -10,7 +10,6 @@ mod instance;
 mod module;
 mod odra_error;
 
-// TODO: Unignore it.
 /// Core element of the Odra framework, entry point for writing smart contracts.
 ///
 /// Each module consists of two parts:
@@ -23,7 +22,7 @@ mod odra_error;
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
 /// use odra;
 ///
 /// #[odra::module]
@@ -84,23 +83,36 @@ pub fn external_contract(attr: TokenStream, item: TokenStream) -> TokenStream {
     external_contract::generate_code(attr, item).into()
 }
 
-// TODO: Unignore it.
 /// Implements boilerplate code required by an event.
 ///
-/// Implements [Event](../odra_types/event/trait.Event.html) trait, and serialization/deserialization.
+/// Implements [Event](../odra_types/event/trait.OdraEvent.html) trait, and serialization/deserialization.
 ///
 /// # Examples
 ///
-/// ```ignore
-/// use odra;
-///
+/// ```
 /// #[derive(odra::Event)]
 /// pub struct ValueUpdated {
 ///     pub value: u32,
 /// }
+///
+/// # impl odra::types::BorshSerialize for ValueUpdated {
+/// #    fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+/// #        odra::types::BorshSerialize::serialize("ValueUpdated", writer)?;
+/// #        odra::types::BorshSerialize::serialize(&self.value, writer)?;
+/// #        Ok(())
+/// #    }
+/// # }
+/// # impl odra::types::BorshDeserialize for ValueUpdated {
+/// #    fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
+/// #        let _ = <String as odra::types::BorshDeserialize>::deserialize(buf)?;
+/// #        Ok(Self {
+/// #            value: odra::types::BorshDeserialize::deserialize(buf)?,
+/// #        })
+/// #    }
+/// # }
 /// let event = ValueUpdated { value: 42 };
 ///
-/// assert_eq!(&<ValueUpdated as odra::types::event::Event>::name(&event), "ValueUpdated");
+/// assert_eq!(&<ValueUpdated as odra::types::event::OdraEvent>::name(), "ValueUpdated");
 /// ```
 #[proc_macro_derive(Event)]
 pub fn derive_event(input: TokenStream) -> TokenStream {

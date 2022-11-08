@@ -35,7 +35,7 @@ impl GenerateCode for ModuleImpl<'_> {
                 # (#original_item_impls)*
             }
 
-            #[cfg(not(feature = "mock-vm"))]
+            #[cfg(feature = "casper")]
             #contract_def
 
             #deploy

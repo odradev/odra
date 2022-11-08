@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use odra_mock_vm_types::CallArgs;
 use odra_types::{OdraError, VmError};
 
-pub type EntrypointCall = fn(String, CallArgs) -> Option<Vec<u8>>;
+pub type EntrypointCall = fn(String, CallArgs) -> Vec<u8>;
 pub type EntrypointArgs = Vec<String>;
 
 #[derive(Default, Clone)]
@@ -26,7 +26,7 @@ impl ContractContainer {
         }
     }
 
-    pub fn call(&self, entrypoint: String, args: CallArgs) -> Result<Option<Vec<u8>>, OdraError> {
+    pub fn call(&self, entrypoint: String, args: CallArgs) -> Result<Vec<u8>, OdraError> {
         if self.constructors.get(&entrypoint).is_some() {
             return Err(OdraError::VmError(VmError::InvalidContext));
         }
@@ -44,7 +44,7 @@ impl ContractContainer {
         &self,
         entrypoint: String,
         args: CallArgs
-    ) -> Result<Option<Vec<u8>>, OdraError> {
+    ) -> Result<Vec<u8>, OdraError> {
         match self.constructors.get(&entrypoint) {
             Some((ep_args, call)) => {
                 self.validate_args(ep_args, &args)?;
@@ -213,7 +213,7 @@ mod tests {
         }
 
         fn setup_entrypoint(ep_name: String, args: Vec<&str>) -> Self {
-            let call: EntrypointCall = |_, _| Some(vec![1, 2, 3]);
+            let call: EntrypointCall = |_, _| vec![1, 2, 3];
             let args: EntrypointArgs = args.iter().map(|arg| arg.to_string()).collect();
 
             let mut entrypoints = HashMap::new();
@@ -227,7 +227,7 @@ mod tests {
         }
 
         fn setup_constructor(ep_name: String, args: Vec<&str>) -> Self {
-            let call: EntrypointCall = |_, _| Some(vec![1, 2, 3]);
+            let call: EntrypointCall = |_, _| vec![1, 2, 3];
             let args: EntrypointArgs = args.iter().map(|arg| arg.to_string()).collect();
 
             let mut constructors = HashMap::new();

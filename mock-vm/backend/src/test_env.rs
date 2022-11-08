@@ -78,13 +78,7 @@ pub fn call_contract<T: MockVMType>(
     args: CallArgs,
     amount: Option<Balance>
 ) -> T {
-    let result: Option<Vec<u8>> =
-        crate::borrow_env().call_contract(address, entrypoint, args, amount);
-    match result {
-        Some(bytes) => T::deser(bytes).unwrap(),
-        // TODO: There should be a better way than this.
-        None => T::deser(().ser().unwrap()).unwrap()
-    }
+    crate::borrow_env().call_contract(address, entrypoint, args, amount)
 }
 
 /// Gets nth event emitted by the contract at `address`.

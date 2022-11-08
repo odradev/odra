@@ -117,6 +117,10 @@ impl From<ExecutionError> for OdraError {
 /// An internal virtual machine error
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum VmError {
+    /// Failed to serialize a value.
+    Serialization,
+    /// Failed to deserialize a value.
+    Deserialization,
     /// Exceeded the account balance
     BalanceExceeded,
     /// Non existing host entrypoint was called.
