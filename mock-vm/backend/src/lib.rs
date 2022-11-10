@@ -20,3 +20,7 @@ pub(crate) fn borrow_env<'a>() -> ref_thread_local::Ref<'a, mock_vm::MockVm> {
 }
 
 pub use odra_mock_vm_types as types;
+
+pub(crate) fn native_token_metadata() -> (String, String, u8) {
+    (String::from("Plascoin"), String::from("PLS"), 8)
+}

@@ -78,3 +78,7 @@ pub fn transfer_tokens<B: Into<Balance>>(to: Address, amount: B) -> bool {
 pub fn self_balance() -> Balance {
     borrow_env().self_balance()
 }
+
+pub fn native_token_metadata() -> (String, String, u8) {
+    crate::native_token_metadata()
+}

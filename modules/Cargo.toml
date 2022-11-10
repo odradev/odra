@@ -1,0 +1,18 @@
+[package]
+name = "odra-modules"
+version = "0.1.0"
+edition = "2021"
+authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
+license = "MIT"
+repository = "https://github.com/odradev/odra"
+description = "Collection of reusable Odra modules"
+keywords = ["wasm", "webassembly", "blockchain"]
+categories = ["wasm"]
+
+[dependencies]
+odra = { path = "../core", default-features = false }
+
+[features]
+default = [ "mock-vm" ]
+mock-vm = [ "odra/mock-vm" ]
+casper = [ "odra/casper" ]

@@ -6,6 +6,7 @@ members = [
     "lang/proc-macros",
     "mock-vm/backend",
     "mock-vm/types",
+    "modules",
     "types",
     "utils",
     "odra-casper/backend",
