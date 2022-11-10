@@ -56,7 +56,7 @@ impl ToTokens for WasmEntrypoint<'_> {
             #[no_mangle]
             fn #entrypoint_ident() {
                 #payable
-                let contract = #contract_path::instance("contract");
+                let mut contract = #contract_path::instance("contract");
                 #contract_call
                 #payable_cleanup
             }

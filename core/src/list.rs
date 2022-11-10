@@ -29,14 +29,14 @@ impl<T: OdraType> List<T> {
     }
 
     /// Pushes the `value` to the storage.
-    pub fn push(&self, value: T) {
+    pub fn push(&mut self, value: T) {
         let current_index = self.index.get_or_default();
         self.values.set(&current_index, value);
         self.index.set(current_index + 1);
     }
 
     /// Replaces the current value with the `value` and returns it.
-    pub fn replace(&self, index: u32, value: T) -> T {
+    pub fn replace(&mut self, index: u32, value: T) -> T {
         let current_index = self.index.get_or_default();
         if current_index < index {
             contract_env::revert(CollectionError::IndexOutOfBounds);
@@ -158,7 +158,7 @@ mod tests {
     #[test]
     fn test_getting_items() {
         // Given an empty list
-        let list = List::<u8>::default();
+        let mut list = List::<u8>::default();
         assert_eq!(list.len(), 0);
 
         // When push a first item
@@ -183,7 +183,7 @@ mod tests {
     #[test]
     fn test_replace() {
         // Given a list with 5 items
-        let list = List::<u8>::default();
+        let mut list = List::<u8>::default();
         for i in 0..5 {
             list.push(i);
         }
@@ -198,6 +198,7 @@ mod tests {
 
         // When replaces nonexistent value then reverts
         test_env::assert_exception(CollectionError::IndexOutOfBounds, || {
+            let mut list = List::<u8>::default();
             list.replace(100, 99);
         });
     }
@@ -205,7 +206,7 @@ mod tests {
     #[test]
     fn test_list_len() {
         // Given an empty list
-        let list = List::<u8>::default();
+        let mut list = List::<u8>::default();
 
         // When push 3 elements
         assert_eq!(list.len(), 0);
@@ -220,7 +221,7 @@ mod tests {
     #[test]
     fn test_list_is_empty() {
         // Given an empty list
-        let list = List::<u8>::default();
+        let mut list = List::<u8>::default();
         assert!(list.is_empty());
 
         // When push an element
@@ -233,7 +234,7 @@ mod tests {
     #[test]
     fn test_iter() {
         // Given a list with 5 items
-        let list = List::<u8>::default();
+        let mut list = List::<u8>::default();
         for i in 0..5 {
             list.push(i);
         }
@@ -251,7 +252,7 @@ mod tests {
     #[test]
     fn test_fuse_iter() {
         // Given a list with 3 items
-        let list = List::<u8>::default();
+        let mut list = List::<u8>::default();
         for i in 0..3 {
             list.push(i);
         }
@@ -272,7 +273,7 @@ mod tests {
     #[test]
     fn test_double_ended_iter() {
         // Given a list with 10 items
-        let list = List::<u8>::default();
+        let mut list = List::<u8>::default();
         for i in 0..10 {
             list.push(i);
         }

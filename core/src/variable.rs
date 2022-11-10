@@ -25,7 +25,7 @@ impl<V: OdraType + OverflowingAdd + Default> Variable<V> {
     /// and sets the new value to the storage.
     ///
     /// If the operation fails due to overflow, the currently executing contract reverts.
-    pub fn add(&self, value: V) {
+    pub fn add(&mut self, value: V) {
         let current_value = self.get().unwrap_or_default();
         let new_value = current_value.overflowing_add(value).unwrap_or_revert();
         contract_env::set_var(&self.name, new_value);
@@ -37,7 +37,7 @@ impl<V: OdraType + OverflowingSub + Default> Variable<V> {
     /// and sets the new value to the storage.
     ///
     /// If the operation fails due to overflow, the currently executing contract reverts.
-    pub fn subtract(&self, value: V) {
+    pub fn subtract(&mut self, value: V) {
         let current_value = self.get().unwrap_or_default();
         let new_value = current_value.overflowing_sub(value).unwrap_or_revert();
         contract_env::set_var(&self.name, new_value);
@@ -59,7 +59,7 @@ impl<T: OdraType> Variable<T> {
     }
 
     /// Stores `value` to the storage.
-    pub fn set(&self, value: T) {
+    pub fn set(&mut self, value: T) {
         contract_env::set_var(&self.name, value);
     }
 
@@ -91,7 +91,7 @@ mod tests {
     fn test_get() {
         // Given uninitialized var.
         let value = 100;
-        let var = Variable::<u8>::default();
+        let mut var = Variable::<u8>::default();
 
         // When set a value.
         var.set(value);
@@ -122,7 +122,7 @@ mod tests {
     fn test_add() {
         // Given var = u8::MAX-1.
         let initial_value = u8::MAX - 1;
-        let var = Variable::<u8>::init(initial_value);
+        let mut var = Variable::<u8>::init(initial_value);
 
         // When add 1.
         var.add(1);
@@ -133,6 +133,7 @@ mod tests {
         // When add 1 to max value.
         // Then should revert.
         test_env::assert_exception(ArithmeticsError::AdditionOverflow, || {
+            let mut var = Variable::<u8>::default();
             var.add(1);
         });
     }
@@ -141,7 +142,7 @@ mod tests {
     fn test_subtract() {
         // Given var = 2.
         let initial_value = 2;
-        let var = Variable::<u8>::init(initial_value);
+        let mut var = Variable::<u8>::init(initial_value);
         // When subtract 1.
         var.subtract(1);
 
@@ -151,6 +152,7 @@ mod tests {
         // When subtraction causes overflow.
         // Then it reverts.
         test_env::assert_exception(ArithmeticsError::SubtractingOverflow, || {
+            let mut var = Variable::<u8>::default();
             var.subtract(2);
         });
     }
@@ -160,7 +162,7 @@ mod tests {
         // Given two variables with the same namespace.
         let namespace = "shared_value";
         let value = 42;
-        let x = Variable::<u8>::instance(namespace);
+        let mut x = Variable::<u8>::instance(namespace);
         let y = Variable::<u8>::instance(namespace);
 
         // When set a value for the first variable.
@@ -179,7 +181,7 @@ mod tests {
 
     impl<T: OdraType> Variable<T> {
         fn init(value: T) -> Self {
-            let var = Self::default();
+            let mut var = Self::default();
             var.set(value);
             var
         }

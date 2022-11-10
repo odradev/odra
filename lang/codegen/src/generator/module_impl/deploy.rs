@@ -152,7 +152,7 @@ where
                     stringify!(#constructor_ident).to_string(),
                     args,
                     |name, args| {
-                        let instance = <#struct_ident as odra::Instance>::instance(name.as_str());
+                        let mut instance = <#struct_ident as odra::Instance>::instance(name.as_str());
                         instance.#constructor_ident( #fn_args );
                         Vec::new()
                     }
@@ -242,7 +242,7 @@ where
             quote! {
                 entrypoints.insert(#name, (#arg_names, |name, args| {
                     #attached_value_check
-                    let instance = <#struct_ident as odra::Instance>::instance(name.as_str());
+                    let mut instance = <#struct_ident as odra::Instance>::instance(name.as_str());
                     let result = instance.#ident(#args);
                     #return_value
                 }));
@@ -264,7 +264,7 @@ where
             quote! {
                 constructors.insert(stringify!(#ident).to_string(), (#arg_names,
                     |name, args| {
-                        let instance = <#struct_ident as odra::Instance>::instance(name.as_str());
+                        let mut instance = <#struct_ident as odra::Instance>::instance(name.as_str());
                         instance.#ident( #args );
                         Vec::new()
                     }
