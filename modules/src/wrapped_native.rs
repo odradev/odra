@@ -15,12 +15,13 @@ pub struct WrappedNativeToken {
     erc20: Erc20
 }
 
-#[odra::module(delegate = [erc20])]
+#[odra::module]
 impl WrappedNativeToken {
     #[odra(init)]
     pub fn init(&self) {
-        let (name, symbol, decimals) = contract_env::native_token_metadata();
-        self.erc20.init(symbol, name, decimals);
+        let metadata = contract_env::native_token_metadata();
+        self.erc20
+            .init(metadata.symbol, metadata.name, metadata.decimals);
     }
 
     #[odra(payable)]
@@ -141,12 +142,12 @@ mod tests {
     fn test_init() {
         let token: WrappedNativeTokenRef = WrappedNativeToken::deploy_init();
 
-        let (name, symbol, decimals) = test_env::native_token_metadata();
+        let metadata = test_env::native_token_metadata();
 
         assert_eq!(token.total_supply(), Balance::zero());
-        assert_eq!(token.name(), name);
-        assert_eq!(token.symbol(), symbol);
-        assert_eq!(token.decimals(), decimals);
+        assert_eq!(token.name(), metadata.name);
+        assert_eq!(token.symbol(), metadata.symbol);
+        assert_eq!(token.decimals(), metadata.decimals);
     }
 
     #[test]
