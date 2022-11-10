@@ -1,4 +1,4 @@
-use odra::types::{Balance, Address};
+use odra::types::{Address, Balance};
 
 pub trait Mintable {
     fn mint(&self, address: Address, amount: Balance);

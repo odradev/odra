@@ -1,10 +1,14 @@
-use odra::{Variable, Mapping, types::{Address, Balance, event::OdraEvent}, contract_env};
+use odra::{
+    contract_env,
+    types::{event::OdraEvent, Address, Balance},
+    Mapping, Variable
+};
 
-use crate::traits::{Mintable, Burnable};
+use crate::traits::{Burnable, Mintable};
 
 use self::{
     errors::Error,
-    events::{Approval, Transfer},
+    events::{Approval, Transfer}
 };
 
 #[odra::module]
@@ -14,7 +18,7 @@ pub struct Erc20 {
     name: Variable<String>,
     total_supply: Variable<Balance>,
     balances: Mapping<Address, Balance>,
-    allowances: Mapping<(Address, Address), Balance>,
+    allowances: Mapping<(Address, Address), Balance>
 }
 
 #[odra::module]
@@ -25,7 +29,7 @@ impl Erc20 {
         symbol: String,
         name: String,
         decimals: u8,
-        initial_supply: Balance,
+        initial_supply: Balance
     ) {
         let caller = contract_env::caller();
 
@@ -36,7 +40,12 @@ impl Erc20 {
         self.balances.set(&caller, initial_supply);
 
         if initial_supply > Balance::zero() {
-            Transfer { from: None, to: Some(caller), amount: initial_supply }.emit();
+            Transfer {
+                from: None,
+                to: Some(caller),
+                amount: initial_supply
+            }
+            .emit();
         }
     }
 
@@ -61,7 +70,12 @@ impl Erc20 {
         let owner = contract_env::caller();
 
         self.allowances.set(&(owner, spender), amount);
-        Approval { owner, spender, value: amount }.emit();
+        Approval {
+            owner,
+            spender,
+            value: amount
+        }
+        .emit();
     }
 
     pub fn name(&self) -> String {
@@ -94,7 +108,12 @@ impl Mintable for Erc20 {
         self.increase_total_supply(amount);
         self.increase_balance_of(&address, amount);
 
-        Transfer { from: None, to: Some(address), amount }.emit();
+        Transfer {
+            from: None,
+            to: Some(address),
+            amount
+        }
+        .emit();
     }
 }
 
@@ -105,8 +124,13 @@ impl Burnable for Erc20 {
         }
         self.decrease_total_supply(amount);
         self.decrease_balance_of(&address, amount);
-    
-        Transfer { from: Some(address), to: None, amount }.emit();
+
+        Transfer {
+            from: Some(address),
+            to: None,
+            amount
+        }
+        .emit();
     }
 }
 
@@ -119,7 +143,12 @@ impl Erc20 {
         self.balances.subtract(&owner, amount);
         self.balances.add(&recipient, amount);
 
-        Transfer { from: Some(owner), to: Some(recipient), amount }.emit();
+        Transfer {
+            from: Some(owner),
+            to: Some(recipient),
+            amount
+        }
+        .emit();
     }
 
     fn spend_allowance(&self, owner: Address, spender: Address, amount: Balance) {
@@ -128,7 +157,12 @@ impl Erc20 {
             contract_env::revert(Error::InsufficientAllowance)
         }
         self.allowances.subtract(&key, amount);
-        Approval { owner, spender, value: amount }.emit();
+        Approval {
+            owner,
+            spender,
+            value: amount
+        }
+        .emit();
     }
 
     pub fn increase_total_supply(&self, amount: Balance) {
@@ -149,21 +183,21 @@ impl Erc20 {
 }
 
 pub mod events {
-    use odra::Event;
     use odra::types::{Address, Balance};
+    use odra::Event;
 
-    #[derive(Event, PartialEq, Debug)]
+    #[derive(Event, Eq, PartialEq, Debug)]
     pub struct Transfer {
         pub from: Option<Address>,
         pub to: Option<Address>,
-        pub amount: Balance,
+        pub amount: Balance
     }
 
-    #[derive(Event, PartialEq, Debug)]
+    #[derive(Event, Eq, PartialEq, Debug)]
     pub struct Approval {
         pub owner: Address,
         pub spender: Address,
-        pub value: Balance,
+        pub value: Balance
     }
 }
 
@@ -172,8 +206,8 @@ pub mod errors {
 
     execution_error! {
         pub enum Error {
-            InsufficientBalance => 20,
-            InsufficientAllowance => 21,
+            InsufficientBalance => 30_000,
+            InsufficientAllowance => 30_001,
         }
     }
 }
@@ -193,19 +227,17 @@ mod tests {
     const INITIAL_SUPPLY: u32 = 10_000;
 
     fn setup() -> Erc20Ref {
-        let erc20 = Erc20::deploy_init_with_supply(
+        Erc20::deploy_init_with_supply(
             SYMBOL.to_string(),
             NAME.to_string(),
             DECIMALS,
-            INITIAL_SUPPLY.into(),
-        );
-        erc20
+            INITIAL_SUPPLY.into()
+        )
     }
 
     #[test]
     fn initialization() {
         let erc20 = setup();
-
         assert_eq!(erc20.symbol(), SYMBOL.to_string());
         assert_eq!(erc20.name(), NAME.to_string());
         assert_eq!(erc20.decimals(), DECIMALS);

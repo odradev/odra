@@ -1,12 +1,18 @@
-use odra::{contract_env, types::{Address, event::OdraEvent, Balance}};
+use odra::{
+    contract_env,
+    types::{event::OdraEvent, Address, Balance}
+};
 
-use crate::{erc20::Erc20, traits::{Mintable, Burnable}};
+use crate::{
+    erc20::Erc20,
+    traits::{Burnable, Mintable}
+};
 
 use self::events::{Deposit, Withdrawal};
 
 #[odra::module]
 pub struct WrappedNativeToken {
-    erc20: Erc20,
+    erc20: Erc20
 }
 
 #[odra::module(delegate = [erc20])]
@@ -26,7 +32,7 @@ impl WrappedNativeToken {
 
         Deposit {
             account: caller,
-            value: amount,
+            value: amount
         }
         .emit();
     }
@@ -39,7 +45,7 @@ impl WrappedNativeToken {
 
         Withdrawal {
             account: caller,
-            value: amount,
+            value: amount
         }
         .emit()
     }
@@ -82,29 +88,35 @@ impl WrappedNativeToken {
 }
 
 pub mod events {
-    use odra::{Event, types::{Address, Balance}};
+    use odra::{
+        types::{Address, Balance},
+        Event
+    };
 
-    #[derive(Event, Debug, PartialEq)]
+    #[derive(Event, Debug, Eq, PartialEq)]
     pub struct Deposit {
         pub account: Address,
-        pub value: Balance,
+        pub value: Balance
     }
 
-    #[derive(Event, Debug, PartialEq)]
+    #[derive(Event, Debug, Eq, PartialEq)]
     pub struct Withdrawal {
         pub account: Address,
-        pub value: Balance,
+        pub value: Balance
     }
 }
 
 #[cfg(all(test, feature = "mock-vm"))]
 mod tests {
 
-    use odra::{test_env, types::{Address, Balance, VmError, OdraError}, assert_events};
+    use odra::{
+        assert_events, test_env,
+        types::{Address, Balance, OdraError, VmError}
+    };
 
     use crate::{
         erc20::events::Transfer,
-        wrapped_native::events::{Deposit, Withdrawal},
+        wrapped_native::events::{Deposit, Withdrawal}
     };
 
     use super::{WrappedNativeToken, WrappedNativeTokenRef};
@@ -121,7 +133,7 @@ mod tests {
             account_1,
             account_1_balance,
             account_2,
-            account_2_balance,
+            account_2_balance
         )
     }
 
