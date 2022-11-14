@@ -18,6 +18,7 @@ impl ToTokens for WrappedType<'_> {
             Type::U512 => quote!(odra::casper::casper_types::CLType::U512),
             Type::Unit => quote!(odra::casper::casper_types::CLType::Unit),
             Type::String => quote!(odra::casper::casper_types::CLType::String),
+            Type::Address => quote!(odra::casper::casper_types::CLType::Key),
             Type::Option(ty) => {
                 let value_stream = WrappedType(&**ty).to_token_stream();
                 quote!(odra::casper::casper_types::CLType::Option(Box::new(#value_stream)))
@@ -74,7 +75,6 @@ impl ToTokens for WrappedType<'_> {
                     odra::casper::casper_types::CLType::Tuple2([#t1, #t2, #t3])
                 }
             }
-            _ => quote!(odra::casper::casper_types::CLType::Any)
         };
         tokens.extend(stream);
     }
