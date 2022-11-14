@@ -1,5 +1,7 @@
 use anyhow::Result;
-use odra_mock_vm_types::{Address, Balance, BlockTime, CallArgs, EventData, MockVMType};
+use odra_mock_vm_types::{
+    Address, Balance, BlockTime, CallArgs, EventData, MockVMSerializationError, MockVMType
+};
 use odra_types::{event::EventError, OdraError, VmError};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -152,7 +154,14 @@ impl MockVm {
     }
 
     pub fn get_var<T: MockVMType>(&self, key: &str) -> Option<T> {
-        self.state.write().unwrap().get_var(key)
+        let result = { self.state.read().unwrap().get_var(key) };
+        match result {
+            Ok(result) => result,
+            Err(error) => {
+                self.state.write().unwrap().set_error(error);
+                None
+            }
+        }
     }
 
     pub fn set_dict_value<T: MockVMType>(&self, dict: &str, key: &[u8], value: T) {
@@ -160,7 +169,14 @@ impl MockVm {
     }
 
     pub fn get_dict_value<T: MockVMType>(&self, dict: &str, key: &[u8]) -> Option<T> {
-        self.state.write().unwrap().get_dict_value(dict, key)
+        let result = { self.state.read().unwrap().get_dict_value(dict, key) };
+        match result {
+            Ok(result) => result,
+            Err(error) => {
+                self.state.write().unwrap().set_error(error);
+                None
+            }
+        }
     }
 
     pub fn emit_event(&self, event_data: &EventData) {
@@ -248,15 +264,9 @@ impl MockVmState {
         }
     }
 
-    fn get_var<T: MockVMType>(&mut self, key: &str) -> Option<T> {
+    fn get_var<T: MockVMType>(&self, key: &str) -> Result<Option<T>, MockVMSerializationError> {
         let ctx = &self.callstack.current().address;
-        match self.storage.get_value(ctx, key) {
-            Ok(var) => var,
-            Err(err) => {
-                self.set_error(err);
-                None
-            }
-        }
+        self.storage.get_value(ctx, key)
     }
 
     fn set_dict_value<T: MockVMType>(&mut self, dict: &str, key: &[u8], value: T) {
@@ -266,15 +276,13 @@ impl MockVmState {
         }
     }
 
-    fn get_dict_value<T: MockVMType>(&mut self, dict: &str, key: &[u8]) -> Option<T> {
+    fn get_dict_value<T: MockVMType>(
+        &self,
+        dict: &str,
+        key: &[u8]
+    ) -> Result<Option<T>, MockVMSerializationError> {
         let ctx = &self.callstack.current().address;
-        match self.storage.get_dict_value(ctx, dict, key) {
-            Ok(val) => val,
-            Err(err) => {
-                self.set_error(err);
-                None
-            }
-        }
+        self.storage.get_dict_value(ctx, dict, key)
     }
 
     fn emit_event(&mut self, event_data: &EventData) {
