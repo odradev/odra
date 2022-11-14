@@ -115,13 +115,15 @@ mod tests {
                 ty: Type::I32
             }],
             ret: Type::Unit,
-            ty: EntrypointType::Constructor
+            ty: EntrypointType::Constructor,
+            is_mut: false
         };
         let entrypoint = Entrypoint {
             ident: String::from("call_me"),
             args: vec![],
             ret: Type::Bool,
-            ty: EntrypointType::Public
+            ty: EntrypointType::Public,
+            is_mut: false
         };
 
         let path: syn::Path = syn::parse_str("my_contract::MyContract").unwrap();

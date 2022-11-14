@@ -14,6 +14,7 @@ pub struct ContractDef {
 pub struct Entrypoint {
     pub ident: String,
     pub args: Vec<Argument>,
+    pub is_mut: bool,
     pub ret: Type,
     pub ty: EntrypointType
 }

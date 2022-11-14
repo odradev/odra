@@ -3,6 +3,8 @@ use std::convert::TryFrom;
 use crate::attrs::{partition_attributes, OdraAttribute};
 use quote::{quote, ToTokens};
 
+use super::utils;
+
 /// Odra constructor definition.
 ///
 /// # Examples
@@ -25,6 +27,7 @@ pub struct Constructor {
 
 impl ToTokens for Constructor {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let is_mut = utils::is_mut(&self.full_sig);
         let name = &self.ident.to_string();
         let args = &self
             .args
@@ -45,6 +48,7 @@ impl ToTokens for Constructor {
             odra::types::contract_def::Entrypoint {
                 ident: String::from(#name),
                 args: vec![#args],
+                is_mut: #is_mut,
                 ret: odra::types::Type::Unit,
                 ty: odra::types::contract_def::EntrypointType::Constructor,
             },

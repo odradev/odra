@@ -90,7 +90,8 @@ mod test {
                 ty: Type::I32
             }],
             ret: Type::Bool,
-            ty: EntrypointType::Public
+            ty: EntrypointType::Public,
+            is_mut: false
         }];
         let ep = ContractEntrypoints(&a);
         assert_eq_tokens(
