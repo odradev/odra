@@ -82,7 +82,7 @@ mod tests {
     const INITIAL_SUPPLY: u32 = 10_000;
 
     fn setup() -> OwnedTokenRef {
-        OwnedToken::deploy_init(
+        OwnedTokenDeployer::init(
             String::from(NAME),
             String::from(SYMBOL),
             DECIMALS,

@@ -68,7 +68,7 @@ mod tests {
 
     fn setup() -> (Address, OwnableRef) {
         let owner = test_env::get_account(0);
-        let ownable = Ownable::deploy_init(owner);
+        let ownable = OwnableDeployer::init(owner);
         (owner, ownable)
     }
 

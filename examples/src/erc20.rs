@@ -139,7 +139,7 @@ execution_error! {
 
 #[cfg(test)]
 pub mod tests {
-    use super::{Approval, Erc20, Erc20Ref, Error, Transfer};
+    use super::{Approval, Erc20Deployer, Erc20Ref, Error, Transfer};
     use odra::{assert_events, test_env, types::U256};
 
     pub const NAME: &str = "Plascoin";
@@ -148,7 +148,7 @@ pub mod tests {
     pub const INITIAL_SUPPLY: u32 = 10_000;
 
     pub fn setup() -> Erc20Ref {
-        Erc20::deploy_init(
+        Erc20Deployer::init(
             String::from(NAME),
             String::from(SYMBOL),
             DECIMALS,
