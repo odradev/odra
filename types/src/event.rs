@@ -1,11 +1,11 @@
 //! Events interface and errors.
 
 /// Event interface
-pub trait Event {
+pub trait OdraEvent {
     /// Emits &self in the current environment.
     fn emit(self);
     /// Returns the event name.
-    fn name(&self) -> String;
+    fn name() -> String;
 }
 
 /// Event-related errors.

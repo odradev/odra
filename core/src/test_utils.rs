@@ -1,33 +1,18 @@
 //! Utility functions that allow to write more compact tests.
 
 use crate::types::{Address, OdraType};
-use odra_types;
+use odra_types::{self, event::OdraEvent};
 
 /// Gets the nth event emitted by the contract at `address`.
 ///
 /// If the passed index is out of bounds, or a deserialization error occurs,
 /// an error is returned.
-pub fn get_event<T: OdraType>(
+pub fn get_event<T: OdraType + OdraEvent>(
     contract_address: Address,
     at: i32
 ) -> Result<T, odra_types::event::EventError> {
     crate::test_env::get_event(contract_address, at)
 }
-
-/// Gets the name of the nth event emitted by the contract at `address`.
-///
-/// If the passed index is out of bounds, or a deserialization error occurs,
-/// an error is returned.
-// TODO: Allow this to work.
-// pub fn get_event_name(
-//     contract_address: Address,
-//     at: i32,
-// ) -> Result<String, odra_types::event::EventError> {
-//     let event: EventData = crate::test_env::get_event(contract_address, at)?;
-//     let (event_name, _): (String, _) =
-//         FromBytes::from_vec(event).map_err(|_| odra_types::event::EventError::Parsing)?;
-//     Ok(event_name)
-// }
 
 /// A macro that simplifies events testing.
 ///
@@ -84,7 +69,7 @@ macro_rules! assert_events {
             let __name = stringify!($event_ty).to_string();
             let __name = __name.split("::").last().unwrap();
             assert_eq!(
-                <$event_ty as odra::types::event::Event>::name(&__ev), __name
+                <$event_ty as odra::types::event::OdraEvent>::name(), __name
             );
         )+
     };

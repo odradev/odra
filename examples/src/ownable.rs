@@ -1,4 +1,4 @@
-use odra::{contract_env, execution_error, types::event::Event, types::Address, Event, Variable};
+use odra::{contract_env, execution_error, types::event::OdraEvent, types::Address, Event, Variable};
 
 #[odra::module]
 pub struct Ownable {

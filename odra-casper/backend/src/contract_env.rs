@@ -6,7 +6,7 @@ use casper_contract::{
 };
 use casper_types::U512;
 use odra_casper_types::{Address, Balance, BlockTime, CallArgs, OdraType};
-use odra_types::{event::Event, ExecutionError};
+use odra_types::{event::OdraEvent, ExecutionError};
 use std::ops::Deref;
 
 use crate::{casper_env, utils::get_main_purse};
@@ -59,7 +59,7 @@ where
 /// Emits event.
 pub fn emit_event<T>(event: T)
 where
-    T: OdraType + Event
+    T: OdraType + OdraEvent
 {
     casper_env::emit_event(event);
 }

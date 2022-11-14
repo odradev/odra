@@ -1,5 +1,5 @@
 use odra_casper_types::{Address, Balance, BlockTime, OdraType};
-use odra_types::{event::Event, ExecutionError};
+use odra_types::{event::OdraEvent, ExecutionError};
 
 pub fn self_address() -> Address {
     unimplemented!()
@@ -27,7 +27,7 @@ pub fn get_dict_value<K: OdraType, T: OdraType>(_: &str, _: &K) -> Option<T> {
 
 pub fn emit_event<T>(_: T)
 where
-    T: OdraType + Event
+    T: OdraType + OdraEvent
 {
     unimplemented!()
 }

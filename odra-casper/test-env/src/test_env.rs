@@ -1,6 +1,9 @@
 use crate::env::ENV;
 use odra_casper_types::{Address, Balance, CallArgs, OdraType};
-use odra_types::{event::EventError, OdraError};
+use odra_types::{
+    event::{EventError, OdraEvent},
+    OdraError
+};
 
 /// Returns backend name.
 pub fn backend_name() -> String {
@@ -54,7 +57,7 @@ pub fn get_error() -> Option<OdraError> {
 }
 
 /// Returns an event from the given contract.
-pub fn get_event<T: OdraType>(address: Address, index: i32) -> Result<T, EventError> {
+pub fn get_event<T: OdraType + OdraEvent>(address: Address, index: i32) -> Result<T, EventError> {
     ENV.with(|env| env.borrow().get_event(address, index))
 }
 

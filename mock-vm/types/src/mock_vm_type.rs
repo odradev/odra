@@ -5,6 +5,7 @@
 /// - Larger unsigned integers: U256, U512.
 /// - Rust complex types: Vec<T>, Result<T, E>, Option<T>.
 use borsh::{BorshDeserialize, BorshSerialize};
+use odra_types::{OdraError, VmError};
 
 pub trait MockVMType: Sized {
     fn ser(&self) -> Result<Vec<u8>, MockVMSerializationError>;
@@ -13,12 +14,12 @@ pub trait MockVMType: Sized {
 
 impl<T: BorshSerialize + BorshDeserialize> MockVMType for T {
     fn ser(&self) -> Result<Vec<u8>, MockVMSerializationError> {
-        borsh::to_vec(self).map_err(|_| MockVMSerializationError::DeserializationError)
+        borsh::to_vec(self).map_err(|_| MockVMSerializationError::SerializationError)
     }
 
     fn deser(bytes: Vec<u8>) -> Result<Self, MockVMSerializationError> {
         <T as borsh::BorshDeserialize>::try_from_slice(&bytes)
-            .map_err(|_| MockVMSerializationError::SerializationError)
+            .map_err(|_| MockVMSerializationError::DeserializationError)
     }
 }
 
@@ -26,6 +27,19 @@ impl<T: BorshSerialize + BorshDeserialize> MockVMType for T {
 pub enum MockVMSerializationError {
     DeserializationError,
     SerializationError
+}
+
+impl From<MockVMSerializationError> for OdraError {
+    fn from(error: MockVMSerializationError) -> Self {
+        match error {
+            MockVMSerializationError::DeserializationError => {
+                OdraError::VmError(VmError::Deserialization)
+            }
+            MockVMSerializationError::SerializationError => {
+                OdraError::VmError(VmError::Serialization)
+            }
+        }
+    }
 }
 
 #[cfg(test)]

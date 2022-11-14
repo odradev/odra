@@ -13,13 +13,16 @@ use casper_execution_engine::core::engine_state::{
 pub use casper_execution_engine::core::execution::Error as CasperExecutionError;
 use casper_types::{
     account::{Account, AccountHash},
-    bytesrepr::{Bytes, ToBytes},
+    bytesrepr::{Bytes, FromBytes, ToBytes},
     runtime_args, ApiError, Contract, ContractHash, ContractPackageHash, Key, Motes, PublicKey,
     RuntimeArgs, SecretKey, StoredValue, URef, U512
 };
 use odra_casper_shared::consts;
 use odra_casper_types::{Address, BlockTime, CallArgs, OdraType};
-use odra_types::{event::EventError, ExecutionError, OdraError, VmError};
+use odra_types::{
+    event::{EventError, OdraEvent},
+    ExecutionError, OdraError, VmError
+};
 
 thread_local! {
     /// Thread local instance of [CasperTestEnv].
@@ -188,7 +191,11 @@ impl CasperTestEnv {
     }
 
     /// Returns an event from the given contract.
-    pub fn get_event<T: OdraType>(&self, address: Address, index: i32) -> Result<T, EventError> {
+    pub fn get_event<T: OdraType + OdraEvent>(
+        &self,
+        address: Address,
+        index: i32
+    ) -> Result<T, EventError> {
         let address = address.as_contract_package_hash().unwrap();
 
         let contract_hash: ContractHash = self.get_contract_package_hash(*address);
@@ -217,7 +224,8 @@ impl CasperTestEnv {
             .into_t()
             .unwrap();
 
-        let event_position = odra_utils::event_absolute_position(events_length as usize, index)?;
+        let event_position = odra_utils::event_absolute_position(events_length as usize, index)
+            .ok_or(EventError::IndexOutOfBounds)?;
 
         match self.context.query_dictionary_item(
             None,
@@ -225,11 +233,23 @@ impl CasperTestEnv {
             &event_position.to_string()
         ) {
             Ok(val) => {
+                let bytes = val.as_cl_value().unwrap().inner_bytes();
+                let event_type = CasperTestEnv::get_event_name(bytes)?;
+                if event_type != T::name() {
+                    return Err(EventError::UnexpectedType(event_type));
+                }
                 let value: T = val.as_cl_value().unwrap().clone().into_t::<T>().unwrap();
                 Ok(value)
             }
             Err(_) => Err(EventError::IndexOutOfBounds)
         }
+    }
+
+    fn get_event_name(bytes: &[u8]) -> Result<String, EventError> {
+        let (event_name, _): (String, _) =
+            FromBytes::from_bytes(bytes).map_err(|_| EventError::Formatting)?;
+
+        Ok(event_name)
     }
 
     /// Increases the current value of block_time.
