@@ -51,12 +51,16 @@ impl ToTokens for WasmEntrypoint<'_> {
         };
 
         let contract_path = &self.1;
+        let contract_instance = match self.0.is_mut {
+            true => quote!(let mut contract = #contract_path::instance("contract");),
+            false => quote!(let contract = #contract_path::instance("contract");)
+        };
 
         tokens.extend(quote! {
             #[no_mangle]
             fn #entrypoint_ident() {
                 #payable
-                let contract = #contract_path::instance("contract");
+                #contract_instance
                 #contract_call
                 #payable_cleanup
             }
@@ -80,7 +84,8 @@ mod tests {
                 ty: Type::I32
             }],
             ret: Type::Unit,
-            ty: EntrypointType::Public
+            ty: EntrypointType::Public,
+            is_mut: false
         };
         let path: Path = syn::parse2(
             quote! {
@@ -113,7 +118,8 @@ mod tests {
             ident: String::from("pay_me"),
             args: vec![],
             ret: Type::Unit,
-            ty: EntrypointType::PublicPayable
+            ty: EntrypointType::PublicPayable,
+            is_mut: false
         };
         let path: Path = syn::parse_quote!(a::b::c::Contract);
 
@@ -125,6 +131,32 @@ mod tests {
                 fn pay_me() {
                     odra::casper::utils::handle_attached_value();
                     let contract = a::b::c::Contract::instance("contract");
+                    contract.pay_me();
+                    odra::casper::utils::clear_attached_value();
+                }
+            )
+        );
+    }
+
+    #[test]
+    fn test_mutable() {
+        let entrypoint = Entrypoint {
+            ident: String::from("pay_me"),
+            args: vec![],
+            ret: Type::Unit,
+            ty: EntrypointType::PublicPayable,
+            is_mut: true
+        };
+        let path: Path = syn::parse_quote!(a::b::c::Contract);
+
+        let wasm_entrypoint = WasmEntrypoint(&entrypoint, &path);
+        assert_eq_tokens(
+            wasm_entrypoint,
+            quote!(
+                #[no_mangle]
+                fn pay_me() {
+                    odra::casper::utils::handle_attached_value();
+                    let mut contract = a::b::c::Contract::instance("contract");
                     contract.pay_me();
                     odra::casper::utils::clear_attached_value();
                 }

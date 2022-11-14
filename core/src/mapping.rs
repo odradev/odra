@@ -29,7 +29,7 @@ impl<K: OdraType + Hash, V: OdraType> Mapping<K, V> {
     }
 
     /// Sets `value` under `key` to the storage. It overrides by default.
-    pub fn set(&self, key: &K, value: V) {
+    pub fn set(&mut self, key: &K, value: V) {
         contract_env::set_dict_value(&self.name, key, value);
     }
 }
@@ -46,7 +46,7 @@ impl<K: OdraType + Hash, V: OdraType + OverflowingAdd + Default> Mapping<K, V> {
     /// and sets the new value to the storage.
     ///
     /// If the operation fails due to overflow, the currently executing contract reverts.
-    pub fn add(&self, key: &K, value: V) {
+    pub fn add(&mut self, key: &K, value: V) {
         let current_value = self.get(key).unwrap_or_default();
         let new_value = current_value.overflowing_add(value).unwrap_or_revert();
         contract_env::set_dict_value(&self.name, key, new_value);
@@ -60,7 +60,7 @@ impl<K: OdraType + Hash, V: OdraType + OverflowingSub + Default + Debug + Partia
     /// and sets the new value to the storage.
     ///
     /// If the operation fails due to overflow, the currently executing contract reverts.
-    pub fn subtract(&self, key: &K, value: V) {
+    pub fn subtract(&mut self, key: &K, value: V) {
         let current_value = self.get(key).unwrap_or_default();
         let new_value = current_value.overflowing_sub(value).unwrap_or_revert();
         contract_env::set_dict_value(&self.name, key, new_value);
@@ -91,32 +91,32 @@ mod tests {
         // Given uninitialized var.
         let value = 100;
         let key = String::from("k");
-        let var = Mapping::<String, u8>::default();
+        let mut map = Mapping::<String, u8>::default();
 
         // When set a value.
-        var.set(&key, value);
+        map.set(&key, value);
 
         // The the value can be returned.
-        assert_eq!(var.get(&key).unwrap(), value);
+        assert_eq!(map.get(&key).unwrap(), value);
 
         // When override.
         let value = 200;
-        var.set(&key, value);
+        map.set(&key, value);
 
         // Then the value is updated
-        assert_eq!(var.get(&key).unwrap(), value);
+        assert_eq!(map.get(&key).unwrap(), value);
     }
 
     #[test]
     fn get_default_value() {
         // Given uninitialized var.
-        let var = Mapping::<String, u8>::default();
+        let map = Mapping::<String, u8>::default();
 
         // Raw get returns None.
         let key = String::from("k");
-        assert_eq!(var.get(&key), None);
+        assert_eq!(map.get(&key), None);
         // get_or_default returns the default value.
-        assert_eq!(var.get_or_default(&key), 0);
+        assert_eq!(map.get_or_default(&key), 0);
     }
 
     #[test]
@@ -124,18 +124,19 @@ mod tests {
         // Given var = u8::MAX-1.
         let initial_value = u8::MAX - 1;
         let key = String::from("k");
-        let var = Mapping::<String, u8>::init(&key, initial_value);
+        let mut map = Mapping::<String, u8>::init(&key, initial_value);
 
         // When add 1.
-        var.add(&key, 1);
+        map.add(&key, 1);
 
         // Then the value should be u8::MAX.
-        assert_eq!(var.get_or_default(&key), initial_value + 1);
+        assert_eq!(map.get_or_default(&key), initial_value + 1);
 
         // When add 1 to max value.
         // Then should revert.
         test_env::assert_exception(ArithmeticsError::AdditionOverflow, || {
-            var.add(&key, 1);
+            let mut map = Mapping::<String, u8>::default();
+            map.add(&key, 1);
         });
     }
 
@@ -144,17 +145,18 @@ mod tests {
         // Given var = 2.
         let initial_value = 2;
         let key = String::from("k");
-        let var = Mapping::<String, u8>::init(&key, initial_value);
+        let mut map = Mapping::<String, u8>::init(&key, initial_value);
         // When subtract 1
-        var.subtract(&key, 1);
+        map.subtract(&key, 1);
 
         // Then the value should be reduced by 1.
-        assert_eq!(var.get_or_default(&key), initial_value - 1);
+        assert_eq!(map.get_or_default(&key), initial_value - 1);
 
         // When subtraction causes overflow.
         // Then it reverts.
         test_env::assert_exception(ArithmeticsError::SubtractingOverflow, || {
-            var.subtract(&key, 2);
+            let mut map = Mapping::<String, u8>::default();
+            map.subtract(&key, 2);
         });
     }
 
@@ -164,7 +166,7 @@ mod tests {
         let namespace = "shared_value";
         let key = String::from("k");
         let value = 42;
-        let x = Mapping::<String, u8>::instance(namespace);
+        let mut x = Mapping::<String, u8>::instance(namespace);
         let y = Mapping::<String, u8>::instance(namespace);
 
         // When set a value for the first variable.
@@ -191,7 +193,7 @@ mod tests {
         V: OdraType
     {
         pub fn init(key: &K, value: V) -> Self {
-            let var = Self::default();
+            let mut var = Self::default();
             var.set(key, value);
             var
         }

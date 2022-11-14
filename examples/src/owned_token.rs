@@ -1,6 +1,6 @@
 use odra::{
     contract_env,
-    types::{Address, U256},
+    types::{Address, U256}
 };
 
 use crate::{erc20::Erc20, ownable::Ownable};
@@ -8,13 +8,13 @@ use crate::{erc20::Erc20, ownable::Ownable};
 #[odra::module]
 pub struct OwnedToken {
     ownable: Ownable,
-    erc20: Erc20,
+    erc20: Erc20
 }
 
 #[odra::module]
 impl OwnedToken {
     #[odra(init)]
-    pub fn init(&self, name: String, symbol: String, decimals: u8, initial_supply: U256) {
+    pub fn init(&mut self, name: String, symbol: String, decimals: u8, initial_supply: U256) {
         let deployer = contract_env::caller();
         self.ownable.init(deployer);
         self.erc20.init(name, symbol, decimals, initial_supply);
@@ -44,15 +44,15 @@ impl OwnedToken {
         self.erc20.allowance(owner, spender)
     }
 
-    pub fn transfer(&self, recipient: Address, amount: U256) {
+    pub fn transfer(&mut self, recipient: Address, amount: U256) {
         self.erc20.transfer(recipient, amount);
     }
 
-    pub fn transfer_from(&self, owner: Address, recipient: Address, amount: U256) {
+    pub fn transfer_from(&mut self, owner: Address, recipient: Address, amount: U256) {
         self.erc20.transfer_from(owner, recipient, amount);
     }
 
-    pub fn approve(&self, spender: Address, amount: U256) {
+    pub fn approve(&mut self, spender: Address, amount: U256) {
         self.erc20.approve(spender, amount);
     }
 
@@ -60,11 +60,11 @@ impl OwnedToken {
         self.ownable.get_owner()
     }
 
-    pub fn change_ownership(&self, new_owner: Address) {
+    pub fn change_ownership(&mut self, new_owner: Address) {
         self.ownable.change_ownership(new_owner);
     }
 
-    pub fn mint(&self, address: Address, amount: U256) {
+    pub fn mint(&mut self, address: Address, amount: U256) {
         self.ownable.ensure_ownership(contract_env::caller());
         self.erc20.mint(address, amount);
     }
@@ -86,7 +86,7 @@ mod tests {
             String::from(NAME),
             String::from(SYMBOL),
             DECIMALS,
-            INITIAL_SUPPLY.into(),
+            INITIAL_SUPPLY.into()
         )
     }
 
@@ -114,7 +114,7 @@ mod tests {
 
     #[test]
     fn mint_works() {
-        let token = setup();
+        let mut token = setup();
         let recipient = test_env::get_account(1);
         let amount = 10.into();
         token.mint(recipient, amount);
@@ -128,12 +128,17 @@ mod tests {
         let recipient = test_env::get_account(1);
         let amount = 10.into();
         test_env::set_caller(recipient);
-        test_env::assert_exception(ownable::Error::NotOwner, || token.mint(recipient, amount));
+        test_env::assert_exception(ownable::Error::NotOwner, || {
+            // TODO: If we don't create a new ref, an error occurs:
+            // cannot borrow `token` as mutable, as it is a captured variable in a `Fn` closure cannot borrow as mutable
+            let mut token = OwnedTokenRef::at(token.address());
+            token.mint(recipient, amount);
+        });
     }
 
     #[test]
     fn change_ownership_works() {
-        let token = setup();
+        let mut token = setup();
         let new_owner = test_env::get_account(1);
         token.change_ownership(new_owner);
         assert_eq!(token.get_owner(), new_owner);
@@ -145,6 +150,9 @@ mod tests {
         let new_owner = test_env::get_account(1);
         test_env::set_caller(new_owner);
         test_env::assert_exception(ownable::Error::NotOwner, || {
+            // TODO: If we don't create a new ref, an error occurs:
+            // cannot borrow `token` as mutable, as it is a captured variable in a `Fn` closure cannot borrow as mutable
+            let mut token = OwnedTokenRef::at(token.address());
             token.change_ownership(new_owner)
         });
     }

@@ -2,7 +2,7 @@ use odra::{
     contract_env, execution_error,
     types::event::OdraEvent,
     types::{Address, U256},
-    Event, Mapping, Variable,
+    Event, Mapping, Variable
 };
 
 #[odra::module]
@@ -12,13 +12,13 @@ pub struct Erc20 {
     name: Variable<String>,
     total_supply: Variable<U256>,
     balances: Mapping<Address, U256>,
-    allowances: Mapping<(Address, Address), U256>,
+    allowances: Mapping<(Address, Address), U256>
 }
 
 #[odra::module]
 impl Erc20 {
     #[odra(init)]
-    pub fn init(&self, name: String, symbol: String, decimals: u8, initial_supply: U256) {
+    pub fn init(&mut self, name: String, symbol: String, decimals: u8, initial_supply: U256) {
         let caller = contract_env::caller();
         self.name.set(name);
         self.symbol.set(symbol);
@@ -26,24 +26,24 @@ impl Erc20 {
         self.mint(caller, initial_supply);
     }
 
-    pub fn transfer(&self, recipient: Address, amount: U256) {
+    pub fn transfer(&mut self, recipient: Address, amount: U256) {
         let caller = contract_env::caller();
         self.raw_transfer(caller, recipient, amount);
     }
 
-    pub fn transfer_from(&self, owner: Address, recipient: Address, amount: U256) {
+    pub fn transfer_from(&mut self, owner: Address, recipient: Address, amount: U256) {
         let spender = contract_env::caller();
         self.spend_allowance(owner, spender, amount);
         self.raw_transfer(owner, recipient, amount);
     }
 
-    pub fn approve(&self, spender: Address, amount: U256) {
+    pub fn approve(&mut self, spender: Address, amount: U256) {
         let owner = contract_env::caller();
         self.allowances.set(&(owner, spender), amount);
         Approval {
             owner,
             spender,
-            value: amount,
+            value: amount
         }
         .emit();
     }
@@ -74,7 +74,7 @@ impl Erc20 {
 }
 
 impl Erc20 {
-    fn raw_transfer(&self, owner: Address, recipient: Address, amount: U256) {
+    fn raw_transfer(&mut self, owner: Address, recipient: Address, amount: U256) {
         let owner_balance = self.balances.get_or_default(&owner);
         if amount > owner_balance {
             contract_env::revert(Error::InsufficientBalance)
@@ -84,12 +84,12 @@ impl Erc20 {
         Transfer {
             from: Some(owner),
             to: Some(recipient),
-            amount,
+            amount
         }
         .emit();
     }
 
-    fn spend_allowance(&self, owner: Address, spender: Address, amount: U256) {
+    fn spend_allowance(&mut self, owner: Address, spender: Address, amount: U256) {
         let key = (owner, spender);
         let allowance = self.allowances.get_or_default(&key);
         if allowance < amount {
@@ -99,18 +99,18 @@ impl Erc20 {
         Approval {
             owner,
             spender,
-            value: allowance - amount,
+            value: allowance - amount
         }
         .emit();
     }
 
-    pub fn mint(&self, address: Address, amount: U256) {
+    pub fn mint(&mut self, address: Address, amount: U256) {
         self.balances.add(&address, amount);
         self.total_supply.add(amount);
         Transfer {
             from: None,
             to: Some(address),
-            amount,
+            amount
         }
         .emit();
     }
@@ -120,14 +120,14 @@ impl Erc20 {
 pub struct Transfer {
     pub from: Option<Address>,
     pub to: Option<Address>,
-    pub amount: U256,
+    pub amount: U256
 }
 
 #[derive(Event, PartialEq, Eq, Debug)]
 pub struct Approval {
     pub owner: Address,
     pub spender: Address,
-    pub value: U256,
+    pub value: U256
 }
 
 execution_error! {
@@ -152,7 +152,7 @@ pub mod tests {
             String::from(NAME),
             String::from(SYMBOL),
             DECIMALS,
-            INITIAL_SUPPLY.into(),
+            INITIAL_SUPPLY.into()
         )
     }
 
@@ -176,7 +176,7 @@ pub mod tests {
 
     #[test]
     fn transfer_works() {
-        let erc20 = setup();
+        let mut erc20 = setup();
         let (sender, recipient) = (test_env::get_account(0), test_env::get_account(1));
         let amount = 1_000.into();
 
@@ -204,17 +204,20 @@ pub mod tests {
         let amount = U256::from(INITIAL_SUPPLY) + U256::from(1);
 
         test_env::assert_exception(Error::InsufficientBalance, || {
+            // TODO: If we don't create a new ref, an error occurs:
+            // cannot borrow `erc20` as mutable, as it is a captured variable in a `Fn` closure cannot borrow as mutable
+            let mut erc20 = Erc20Ref::at(erc20.address());
             erc20.transfer(recipient, amount)
         });
     }
 
     #[test]
     fn transfer_from_and_approval_work() {
-        let erc20 = setup();
+        let mut erc20 = setup();
         let (owner, recipient, spender) = (
             test_env::get_account(0),
             test_env::get_account(1),
-            test_env::get_account(2),
+            test_env::get_account(2)
         );
         let approved_amount = 3_000.into();
         let transfer_amount = 1_000.into();
@@ -266,6 +269,9 @@ pub mod tests {
 
         test_env::set_caller(spender);
         test_env::assert_exception(Error::InsufficientAllowance, || {
+            // TODO: If we don't create a new ref, an error occurs:
+            // cannot borrow `erc20` as mutable, as it is a captured variable in a `Fn` closure cannot borrow as mutable
+            let mut erc20 = Erc20Ref::at(erc20.address());
             erc20.transfer_from(owner, spender, amount)
         });
     }

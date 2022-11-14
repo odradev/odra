@@ -2,6 +2,8 @@ use quote::{quote, ToTokens};
 
 use crate::attrs::{partition_attributes, OdraAttribute};
 
+use super::utils;
+
 /// Odra method definition.
 ///
 /// # Examples
@@ -61,10 +63,13 @@ impl ToTokens for Method {
             false => quote!(odra::types::contract_def::EntrypointType::Public)
         };
 
+        let is_mut = utils::is_mut(&self.full_sig);
+
         let ep = quote! {
             odra::types::contract_def::Entrypoint {
                 ident: String::from(#name),
                 args: vec![#args],
+                is_mut: #is_mut,
                 ret: #ret,
                 ty: #ty,
             },

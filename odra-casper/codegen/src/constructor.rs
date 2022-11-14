@@ -32,7 +32,7 @@ impl ToTokens for WasmConstructor<'_> {
                 quote! {
                     stringify!(#entrypoint_ident) => {
                         let odra_address = odra::types::Address::from(contract_package_hash);
-                        let contract_ref = #ref_ident::at(odra_address);
+                        let mut contract_ref = #ref_ident::at(odra_address);
                         #casper_args
                         contract_ref.#entrypoint_ident( #fn_args );
                     },
@@ -97,7 +97,8 @@ mod tests {
                 ty: Type::I32
             }],
             ret: Type::Unit,
-            ty: EntrypointType::Constructor
+            ty: EntrypointType::Constructor,
+            is_mut: false
         };
         let path: Path = syn::parse2(
             quote! {
@@ -121,7 +122,7 @@ mod tests {
                     match constructor_name {
                         stringify!(construct_me) => {
                             let odra_address = odra::types::Address::from(contract_package_hash);
-                            let contract_ref = my_contract::MyContract::at(odra_address);
+                            let mut contract_ref = my_contract::MyContract::at(odra_address);
                             let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg (stringify!(value));
                             contract_ref.construct_me(value);
                         },

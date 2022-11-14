@@ -33,11 +33,11 @@ mod odra_error;
 /// #[odra::module]
 /// impl Flipper {
 ///     #[odra(init)]
-///     pub fn initial_settings(&self, value: bool) {
+///     pub fn initial_settings(&mut self, value: bool) {
 ///         self.value.set(value);
 ///     }
 ///
-///     pub fn flip(&self) {
+///     pub fn flip(&mut self) {
 ///         self.value.set(!self.get());
 ///     }
 ///
