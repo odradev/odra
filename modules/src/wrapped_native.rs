@@ -3,10 +3,7 @@ use odra::{
     types::{event::OdraEvent, Address, Balance}
 };
 
-use crate::{
-    erc20::Erc20,
-    traits::{Burnable, Mintable}
-};
+use crate::erc20::Erc20;
 
 use self::events::{Deposit, Withdrawal};
 
@@ -18,14 +15,14 @@ pub struct WrappedNativeToken {
 #[odra::module]
 impl WrappedNativeToken {
     #[odra(init)]
-    pub fn init(&self) {
+    pub fn init(&mut self) {
         let metadata = contract_env::native_token_metadata();
         self.erc20
             .init(metadata.symbol, metadata.name, metadata.decimals);
     }
 
     #[odra(payable)]
-    pub fn deposit(&self) {
+    pub fn deposit(&mut self) {
         let caller = contract_env::caller();
         let amount = contract_env::attached_value();
 
@@ -38,7 +35,7 @@ impl WrappedNativeToken {
         .emit();
     }
 
-    pub fn withdraw(&self, amount: Balance) {
+    pub fn withdraw(&mut self, amount: Balance) {
         let caller = contract_env::caller();
         self.erc20.burn(caller, amount);
 
@@ -75,15 +72,15 @@ impl WrappedNativeToken {
         self.erc20.name()
     }
 
-    pub fn approve(&self, spender: Address, amount: Balance) {
+    pub fn approve(&mut self, spender: Address, amount: Balance) {
         self.erc20.approve(spender, amount)
     }
 
-    pub fn transfer_from(&self, owner: Address, recipient: Address, amount: Balance) {
+    pub fn transfer_from(&mut self, owner: Address, recipient: Address, amount: Balance) {
         self.erc20.transfer_from(owner, recipient, amount)
     }
 
-    pub fn transfer(&self, recipient: Address, amount: Balance) {
+    pub fn transfer(&mut self, recipient: Address, amount: Balance) {
         self.erc20.transfer(recipient, amount)
     }
 }
@@ -203,7 +200,7 @@ mod tests {
 
     #[test]
     fn test_withdrawal() {
-        let (token, account, balance, _, _) = setup();
+        let (mut token, account, balance, _, _) = setup();
 
         let amount: Balance = 1_000.into();
         token.with_tokens(amount).deposit();
@@ -237,6 +234,7 @@ mod tests {
 
         //TODO: Consider what really should happen here.
         test_env::assert_exception(crate::erc20::errors::Error::InsufficientBalance, || {
+            let mut token = WrappedNativeTokenRef::at(token.address());
             token.withdraw(Balance::one());
         });
     }

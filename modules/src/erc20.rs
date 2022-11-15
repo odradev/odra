@@ -4,8 +4,6 @@ use odra::{
     Mapping, Variable
 };
 
-use crate::traits::{Burnable, Mintable};
-
 use self::{
     errors::Error,
     events::{Approval, Transfer}
@@ -25,7 +23,7 @@ pub struct Erc20 {
 impl Erc20 {
     #[odra(init)]
     pub fn init_with_supply(
-        &self,
+        &mut self,
         symbol: String,
         name: String,
         decimals: u8,
@@ -50,23 +48,23 @@ impl Erc20 {
     }
 
     #[odra(init)]
-    pub fn init(&self, symbol: String, name: String, decimals: u8) {
+    pub fn init(&mut self, symbol: String, name: String, decimals: u8) {
         self.init_with_supply(symbol, name, decimals, Balance::zero());
     }
 
-    pub fn transfer(&self, recipient: Address, amount: Balance) {
+    pub fn transfer(&mut self, recipient: Address, amount: Balance) {
         let caller = contract_env::caller();
         self.raw_transfer(caller, recipient, amount);
     }
 
-    pub fn transfer_from(&self, owner: Address, recipient: Address, amount: Balance) {
+    pub fn transfer_from(&mut self, owner: Address, recipient: Address, amount: Balance) {
         let spender = contract_env::caller();
         self.spend_allowance(owner, spender, amount);
 
         self.raw_transfer(owner, recipient, amount);
     }
 
-    pub fn approve(&self, spender: Address, amount: Balance) {
+    pub fn approve(&mut self, spender: Address, amount: Balance) {
         let owner = contract_env::caller();
 
         self.allowances.set(&(owner, spender), amount);
@@ -101,10 +99,8 @@ impl Erc20 {
     pub fn allowance(&self, owner: Address, spender: Address) -> Balance {
         self.allowances.get_or_default(&(owner, spender))
     }
-}
 
-impl Mintable for Erc20 {
-    fn mint(&self, address: Address, amount: Balance) {
+    pub fn mint(&mut self, address: Address, amount: Balance) {
         self.increase_total_supply(amount);
         self.increase_balance_of(&address, amount);
 
@@ -115,10 +111,8 @@ impl Mintable for Erc20 {
         }
         .emit();
     }
-}
 
-impl Burnable for Erc20 {
-    fn burn(&self, address: Address, amount: Balance) {
+    pub fn burn(&mut self, address: Address, amount: Balance) {
         if self.balance_of(address) < amount {
             contract_env::revert(Error::InsufficientBalance);
         }
@@ -135,7 +129,7 @@ impl Burnable for Erc20 {
 }
 
 impl Erc20 {
-    fn raw_transfer(&self, owner: Address, recipient: Address, amount: Balance) {
+    fn raw_transfer(&mut self, owner: Address, recipient: Address, amount: Balance) {
         if amount > self.balances.get_or_default(&owner) {
             contract_env::revert(Error::InsufficientBalance)
         }
@@ -151,7 +145,7 @@ impl Erc20 {
         .emit();
     }
 
-    fn spend_allowance(&self, owner: Address, spender: Address, amount: Balance) {
+    fn spend_allowance(&mut self, owner: Address, spender: Address, amount: Balance) {
         let key = (spender, owner);
         if self.allowances.get_or_default(&key) < amount {
             contract_env::revert(Error::InsufficientAllowance)
@@ -165,19 +159,19 @@ impl Erc20 {
         .emit();
     }
 
-    pub fn increase_total_supply(&self, amount: Balance) {
+    pub fn increase_total_supply(&mut self, amount: Balance) {
         self.total_supply.add(amount);
     }
 
-    pub fn decrease_total_supply(&self, amount: Balance) {
+    pub fn decrease_total_supply(&mut self, amount: Balance) {
         self.total_supply.subtract(amount);
     }
 
-    pub fn increase_balance_of(&self, address: &Address, amount: Balance) {
+    pub fn increase_balance_of(&mut self, address: &Address, amount: Balance) {
         self.balances.add(address, amount);
     }
 
-    pub fn decrease_balance_of(&self, address: &Address, amount: Balance) {
+    pub fn decrease_balance_of(&mut self, address: &Address, amount: Balance) {
         self.balances.subtract(address, amount);
     }
 }
@@ -255,7 +249,7 @@ mod tests {
 
     #[test]
     fn transfer_works() {
-        let erc20 = setup();
+        let mut erc20 = setup();
 
         let sender = test_env::get_account(0);
         let recipient = test_env::get_account(1);
@@ -290,6 +284,7 @@ mod tests {
         let amount = Balance::from(INITIAL_SUPPLY) + Balance::one();
 
         test_env::assert_exception(Error::InsufficientBalance, || {
+            let mut erc20 = Erc20Ref::at(erc20.address());
             erc20.transfer(recipient, amount)
         });
     }
