@@ -18,6 +18,8 @@ impl GenerateCode for Deploy<'_> {
         let struct_ident = self.contract.ident();
         let struct_name = struct_ident.to_string();
         let ref_ident = format_ident!("{}Ref", struct_ident);
+        let deployer_ident = format_ident!("{}Deployer", struct_ident);
+        let struct_snake_case = odra_utils::camel_to_snake(&struct_name);
 
         let entrypoints = build_entrypoints(
             self.contract
@@ -41,7 +43,7 @@ impl GenerateCode for Deploy<'_> {
             struct_ident
         );
 
-        let constructors_mock_vm = build_constructors_mock_vm(
+        let mut constructors_mock_vm = build_constructors_mock_vm(
             self.contract
                 .methods()
                 .iter()
@@ -55,34 +57,9 @@ impl GenerateCode for Deploy<'_> {
             ref_ident.clone()
         );
 
-        let constructors_wasm_test = build_constructors_wasm_test(
-            self.contract
-                .methods()
-                .iter()
-                .filter_map(|item| match item {
-                    ImplItem::Constructor(constructor) => Some(constructor),
-                    _ => None
-                }),
-            struct_ident,
-            ref_ident.clone()
-        );
-
-        let struct_snake_case = odra_utils::camel_to_snake(&struct_name);
-        quote! {
-            #[cfg(all(feature = "casper", not(target_arch = "wasm32")))]
-            impl #struct_ident {
-                pub fn deploy() -> #ref_ident {
-                    let address = odra::test_env::register_contract(&#struct_snake_case, odra::types::CallArgs::new());
-                    #ref_ident::at(address)
-                }
-
-                #constructors_wasm_test
-            }
-
-            #[cfg(feature = "mock-vm")]
-            impl #struct_ident {
-
-                pub fn deploy() -> #ref_ident {
+        if constructors_mock_vm.is_empty() {
+            constructors_mock_vm = quote! {
+                pub fn default() -> #ref_ident {
                     use std::collections::HashMap;
                     use odra::types::CallArgs;
 
@@ -95,7 +72,39 @@ impl GenerateCode for Deploy<'_> {
                     let address = odra::test_env::register_contract(None, constructors, entrypoints);
                     #ref_ident::at(address)
                 }
+            };
+        }
 
+        let mut constructors_wasm_test = build_constructors_wasm_test(
+            self.contract
+                .methods()
+                .iter()
+                .filter_map(|item| match item {
+                    ImplItem::Constructor(constructor) => Some(constructor),
+                    _ => None
+                }),
+            struct_ident,
+            ref_ident.clone()
+        );
+        if constructors_wasm_test.is_empty() {
+            constructors_wasm_test = quote! {
+                pub fn default() -> #ref_ident {
+                    let address = odra::test_env::register_contract(&#struct_snake_case, odra::types::CallArgs::new());
+                    #ref_ident::at(address)
+                }
+            };
+        }
+
+        quote! {
+            struct #deployer_ident;
+
+            #[cfg(all(feature = "casper", not(target_arch = "wasm32")))]
+            impl #deployer_ident {
+                #constructors_wasm_test
+            }
+
+            #[cfg(feature = "mock-vm")]
+            impl #deployer_ident {
                 #constructors_mock_vm
             }
         }
@@ -114,7 +123,6 @@ where
 {
     constructors.map(|constructor| {
         let ty = Type::Path(TypePath { qself: None, path: From::from(ref_ident.clone()) });
-        let deploy_fn_ident = format_ident!("deploy_{}", &constructor.ident);
         let sig = constructor.full_sig.clone();
         let constructor_ident = &constructor.ident;
 
@@ -123,8 +131,7 @@ where
             syn::FnArg::Typed(_) => true,
         }).collect::<Punctuated<_, _>>();
 
-        let deploy_fn_sig = syn::Signature {
-            ident: deploy_fn_ident,
+        let fn_sig = syn::Signature {
             output: ReturnType::Type(Default::default(), Box::new(ty)),
             inputs,
             ..sig
@@ -135,7 +142,7 @@ where
         let fn_args = args_to_fn_args(&constructor.args);
 
         quote! {
-            pub #deploy_fn_sig {
+            pub #fn_sig {
                 use std::collections::HashMap;
                 use odra::types::{CallArgs};
 
@@ -181,7 +188,6 @@ where
                 qself: None,
                 path: From::from(ref_ident.clone())
             });
-            let deploy_fn_ident = format_ident!("deploy_{}", &constructor.ident);
             let sig = constructor.full_sig.clone();
             let constructor_ident = &constructor.ident;
 
@@ -194,8 +200,7 @@ where
                 })
                 .collect::<Punctuated<_, _>>();
 
-            let deploy_fn_sig = syn::Signature {
-                ident: deploy_fn_ident,
+            let fn_sig = syn::Signature {
                 output: ReturnType::Type(Default::default(), Box::new(ty)),
                 inputs,
                 ..sig
@@ -204,7 +209,7 @@ where
             let args = args_to_runtime_args_stream(&constructor.args);
 
             quote! {
-                pub #deploy_fn_sig {
+                pub #fn_sig {
                     let mut args = { #args };
                     args.insert("constructor", stringify!(#constructor_ident));
                     let address = odra::test_env::register_contract(#struct_name_snake_case, args);

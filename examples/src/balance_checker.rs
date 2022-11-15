@@ -24,7 +24,7 @@ mod tests {
     #[test]
     fn balance_checker() {
         let (owner, second_account) = (test_env::get_account(0), test_env::get_account(1));
-        let balance_checker = BalanceChecker::deploy();
+        let balance_checker = BalanceCheckerDeployer::default();
         let token = erc20::tests::setup();
         let expected_owner_balance = erc20::tests::INITIAL_SUPPLY;
 
