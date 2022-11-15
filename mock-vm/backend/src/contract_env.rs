@@ -52,6 +52,15 @@ where
     panic!("OdraRevert")
 }
 
+pub fn require<E>(condition: bool, error: E)
+where
+    E: Into<ExecutionError>
+{
+    if !condition {
+        revert(error)
+    }
+}
+
 /// Sends an event to the execution environment.
 pub fn emit_event<T: OdraType + OdraEvent>(event: T) {
     let event_data = event.ser().unwrap();
