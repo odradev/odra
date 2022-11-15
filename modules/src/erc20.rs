@@ -213,7 +213,7 @@ mod tests {
 
     use crate::erc20::events::Transfer;
 
-    use super::{errors::Error, Erc20, Erc20Ref};
+    use super::{errors::Error, Erc20Deployer, Erc20Ref};
 
     const NAME: &str = "Plascoin";
     const SYMBOL: &str = "PLS";
@@ -221,7 +221,7 @@ mod tests {
     const INITIAL_SUPPLY: u32 = 10_000;
 
     fn setup() -> Erc20Ref {
-        Erc20::deploy_init_with_supply(
+        Erc20Deployer::init_with_supply(
             SYMBOL.to_string(),
             NAME.to_string(),
             DECIMALS,
@@ -231,12 +231,18 @@ mod tests {
 
     #[test]
     fn initialization() {
+        // When deploy a contract with the initial supply.
         let erc20 = setup();
+
+        // Then the contract has the metadata set.
         assert_eq!(erc20.symbol(), SYMBOL.to_string());
         assert_eq!(erc20.name(), NAME.to_string());
         assert_eq!(erc20.decimals(), DECIMALS);
+
+        // Then the total supply is updated.
         assert_eq!(erc20.total_supply(), INITIAL_SUPPLY.into());
 
+        // Then a Transfer event was emitted.
         assert_events!(
             erc20,
             Transfer {
@@ -249,22 +255,25 @@ mod tests {
 
     #[test]
     fn transfer_works() {
+        // Given a new contract.
         let mut erc20 = setup();
 
+        // When transfer tokens to a recipient.
         let sender = test_env::get_account(0);
         let recipient = test_env::get_account(1);
-
         let amount = 1_000.into();
-
         erc20.transfer(recipient, amount);
 
+        // Then the sender balance is deducted.
         assert_eq!(
             erc20.balance_of(sender),
             Balance::from(INITIAL_SUPPLY) - amount
         );
 
+        // Then the recipient balance is updated.
         assert_eq!(erc20.balance_of(recipient), amount);
 
+        // Then Transfer event was emitted.
         assert_events!(
             erc20,
             Transfer {
@@ -277,14 +286,15 @@ mod tests {
 
     #[test]
     fn transfer_error() {
-        let erc20 = setup();
-
-        let recipient = test_env::get_account(1);
-
-        let amount = Balance::from(INITIAL_SUPPLY) + Balance::one();
-
         test_env::assert_exception(Error::InsufficientBalance, || {
-            let mut erc20 = Erc20Ref::at(erc20.address());
+            // Given a new contract.
+            let mut erc20 = setup();
+
+            // When the transfer amount exceeds the sender balance.
+            let recipient = test_env::get_account(1);
+            let amount = Balance::from(INITIAL_SUPPLY) + Balance::one();
+
+            // Then an error occurs.
             erc20.transfer(recipient, amount)
         });
     }

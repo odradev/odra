@@ -37,8 +37,8 @@ impl WrappedNativeToken {
 
     pub fn withdraw(&mut self, amount: Balance) {
         let caller = contract_env::caller();
-        self.erc20.burn(caller, amount);
 
+        self.erc20.burn(caller, amount);
         contract_env::transfer_tokens(caller, amount);
 
         Withdrawal {
@@ -117,10 +117,10 @@ mod tests {
         wrapped_native::events::{Deposit, Withdrawal}
     };
 
-    use super::{WrappedNativeToken, WrappedNativeTokenRef};
+    use super::{WrappedNativeTokenDeployer, WrappedNativeTokenRef};
 
     fn setup() -> (WrappedNativeTokenRef, Address, Balance, Address, Balance) {
-        let token: WrappedNativeTokenRef = WrappedNativeToken::deploy_init();
+        let token: WrappedNativeTokenRef = WrappedNativeTokenDeployer::init();
         let account_1 = test_env::get_account(0);
         let account_1_balance = test_env::token_balance(account_1);
         let account_2 = test_env::get_account(1);
@@ -137,10 +137,11 @@ mod tests {
 
     #[test]
     fn test_init() {
-        let token: WrappedNativeTokenRef = WrappedNativeToken::deploy_init();
+        // When deploy a contract.
+        let (token, _, _, _, _) = setup();
 
+        // Then the contract has the default metadata.
         let metadata = test_env::native_token_metadata();
-
         assert_eq!(token.total_supply(), Balance::zero());
         assert_eq!(token.name(), metadata.name);
         assert_eq!(token.symbol(), metadata.symbol);
@@ -149,71 +150,85 @@ mod tests {
 
     #[test]
     fn test_deposit() {
+        // Given a fresh contract.
         let (token, account, account_balance, _, _) = setup();
 
-        let amount: Balance = 1_000.into();
+        // When deposit tokens.
+        let deposit_amount: Balance = 1_000.into();
+        token.with_tokens(deposit_amount).deposit();
 
-        token.with_tokens(amount).deposit();
-
-        assert_eq!(token.balance_of(account), amount);
-        assert_eq!(test_env::token_balance(account), account_balance - amount);
-
+        // Then the contract balance is updated.
+        assert_eq!(token.balance_of(account), deposit_amount);
+        // Then the user balance is deducted.
+        assert_eq!(
+            test_env::token_balance(account),
+            account_balance - deposit_amount
+        );
+        // The events were emitted.
         assert_events!(
             token,
             Transfer {
                 from: None,
                 to: Some(account),
-                amount
+                amount: deposit_amount
             },
             Deposit {
                 account,
-                value: amount
+                value: deposit_amount
             }
         );
     }
 
     #[test]
     fn test_minting() {
+        // Given a fresh contract.
         let (token, account_1, _, account_2, _) = setup();
 
-        let amount = 1_000u32;
+        // When two users deposit some tokens.
+        let deposit_amount = 1_000u32;
 
         test_env::set_caller(account_1);
-        token.with_tokens(amount).deposit();
+        token.with_tokens(deposit_amount).deposit();
 
         test_env::set_caller(account_2);
-        token.with_tokens(amount).deposit();
+        token.with_tokens(deposit_amount).deposit();
 
-        assert_eq!(token.total_supply(), (amount + amount).into());
+        // Then the total supply in the sum of deposits.
+        assert_eq!(
+            token.total_supply(),
+            (deposit_amount + deposit_amount).into()
+        );
+        // Then events were emitted.
         assert_events!(token, Transfer, Deposit, Transfer, Deposit);
     }
 
     #[test]
     fn test_deposit_amount_exceeding_account_balance() {
-        let (token, _, balance, _, _) = setup();
-
         //TODO: Consider what really should happen here.
         test_env::assert_exception(OdraError::VmError(VmError::BalanceExceeded), || {
+            // Given a new contract.
+            let (token, _, balance, _, _) = setup();
+            // When the deposit amount exceeds the user's balance
+            // Then an error occurs.
             token.with_tokens(balance + Balance::one()).deposit();
         });
     }
 
     #[test]
     fn test_withdrawal() {
+        // Deposit all tokens in the contract
         let (mut token, account, balance, _, _) = setup();
+        token.with_tokens(balance).deposit();
 
-        let amount: Balance = 1_000.into();
-        token.with_tokens(amount).deposit();
-
-        let withdrawal_amount: Balance = 100.into();
+        // When withdraw some tokens
+        let withdrawal_amount: Balance = 1_000.into();
         token.withdraw(withdrawal_amount);
 
-        let native_token_balance_diff = amount - withdrawal_amount;
-        assert_eq!(
-            test_env::token_balance(account),
-            balance - native_token_balance_diff
-        );
-        assert_eq!(token.balance_of(account), native_token_balance_diff);
+        // Then the user has the withdrawn tokens back.
+        assert_eq!(test_env::token_balance(account), withdrawal_amount);
+        // Then the balance in the contract is deducted.
+        assert_eq!(token.balance_of(account), balance - withdrawal_amount);
+        // Then events were emitted.
         assert_events!(
             token,
             Transfer {
@@ -230,11 +245,12 @@ mod tests {
 
     #[test]
     fn test_withdrawal_amount_exceeding_account_deposit() {
-        let (token, _, _, _, _) = setup();
-
         //TODO: Consider what really should happen here.
         test_env::assert_exception(crate::erc20::errors::Error::InsufficientBalance, || {
-            let mut token = WrappedNativeTokenRef::at(token.address());
+            // Given a new contract.
+            let (mut token, _, _, _, _) = setup();
+            // When the user withdraws amount exceeds the user's deposit
+            // Then an error occurs.
             token.withdraw(Balance::one());
         });
     }
