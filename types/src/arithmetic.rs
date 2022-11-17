@@ -21,38 +21,35 @@ pub enum ArithmeticsError {
     SubtractingOverflow
 }
 
+/// Implements [OverflowingAdd] and [OverflowingSub] for all the given types.
 #[macro_export]
-macro_rules! impl_overflowing_add {
+macro_rules! impl_overflowing_add_sub {
     ( $( $ty:ty ),+ ) => {
-        $( impl OverflowingAdd for $ty {
-            fn overflowing_add(self, rhs: Self) -> Result<Self, ExecutionError> {
-                let (res, is_overflowed)  = self.overflowing_add(rhs);
-                match is_overflowed {
-                    true => Err(ArithmeticsError::AdditionOverflow.into()),
-                    false => Ok(res)
+        $( 
+            impl OverflowingAdd for $ty {
+                fn overflowing_add(self, rhs: Self) -> Result<Self, ExecutionError> {
+                    let (res, is_overflowed)  = self.overflowing_add(rhs);
+                    match is_overflowed {
+                        true => Err(ArithmeticsError::AdditionOverflow.into()),
+                        false => Ok(res)
+                    }
                 }
             }
-        })+
+
+            impl OverflowingSub for $ty {
+                fn overflowing_sub(self, rhs: Self) -> Result<Self, ExecutionError> {
+                    let (res, is_overflowed)  = self.overflowing_sub(rhs);
+                    match is_overflowed {
+                        true => Err(ArithmeticsError::SubtractingOverflow.into()),
+                        false => Ok(res)
+                    }
+                }
+            }
+        )+
     };
 }
 
-#[macro_export]
-macro_rules! impl_overflowing_sub {
-    ( $( $ty:ty ),+ ) => {
-        $( impl OverflowingSub for $ty {
-            fn overflowing_sub(self, rhs: Self) -> Result<Self, ExecutionError> {
-                let (res, is_overflowed)  = self.overflowing_sub(rhs);
-                match is_overflowed {
-                    true => Err(ArithmeticsError::SubtractingOverflow.into()),
-                    false => Ok(res)
-                }
-            }
-        })+
-    };
-}
-
-impl_overflowing_add!(u8, u16, u32, u64, i8, i16, i32, i64);
-impl_overflowing_sub!(u8, u16, u32, u64, i8, i16, i32, i64);
+impl_overflowing_add_sub!(u8, u16, u32, u64, i8, i16, i32, i64);
 
 #[cfg(test)]
 mod test {

@@ -1,3 +1,7 @@
+//! Describes test environment API. Delegates methods to the underlying env implementation.
+//!
+//! Depending on the selected feature, the actual test env is dynamically loaded in the runtime or the Odra local MockVM is used.
+//! 
 use crate::env::ENV;
 use odra_casper_types::{Address, Balance, CallArgs, OdraType};
 use odra_types::{

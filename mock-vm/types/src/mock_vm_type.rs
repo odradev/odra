@@ -7,6 +7,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use odra_types::{OdraError, VmError};
 
+#[doc(hidden)]
 pub trait MockVMType: Sized {
     fn ser(&self) -> Result<Vec<u8>, MockVMSerializationError>;
     fn deser(bytes: Vec<u8>) -> Result<Self, MockVMSerializationError>;
@@ -23,9 +24,12 @@ impl<T: BorshSerialize + BorshDeserialize> MockVMType for T {
     }
 }
 
+/// An error that may occur while data de(serialization).
 #[derive(Debug, PartialEq, Eq)]
 pub enum MockVMSerializationError {
+    /// Occurs if something went wrong during deserialization, eg. unexpected data format.
     DeserializationError,
+    /// Occurs if something went wrong during data serialization.
     SerializationError
 }
 

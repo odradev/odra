@@ -5,6 +5,7 @@ use casper_types::{
     CLTyped
 };
 
+/// A wrapper for casper's [Bytes](casper_types::bytesrepr::Bytes).
 #[derive(Default)]
 pub struct Bytes(casper_types::bytesrepr::Bytes);
 

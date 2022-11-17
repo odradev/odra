@@ -2,6 +2,7 @@ use odra_types::Type;
 
 use crate::{Address, U256, U512};
 
+/// A type which can be described as a [Type].
 pub trait Typed {
     fn ty() -> Type;
 }
