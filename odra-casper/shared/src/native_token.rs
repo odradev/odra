@@ -15,7 +15,7 @@ impl NativeTokenMetadata {
         Self {
             name: String::from("Casper"),
             symbol: String::from("CSPR"),
-            decimals: 8
+            decimals: 9
         }
     }
 }

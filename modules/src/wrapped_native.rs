@@ -1,11 +1,10 @@
+use self::events::{Deposit, Withdrawal};
+use crate::{erc20::Erc20, utils};
 use odra::{
     contract_env,
-    types::{event::OdraEvent, Address, Balance}
+    types::{event::OdraEvent, Address, U256},
+    UnwrapOrRevert
 };
-
-use crate::erc20::Erc20;
-
-use self::events::{Deposit, Withdrawal};
 
 #[odra::module]
 pub struct WrappedNativeToken {
@@ -17,14 +16,16 @@ impl WrappedNativeToken {
     #[odra(init)]
     pub fn init(&mut self) {
         let metadata = contract_env::native_token_metadata();
-        self.erc20
-            .init(metadata.symbol, metadata.name, metadata.decimals);
+        let symbol = format!("W{}", metadata.symbol);
+        let name = format!("Wrapped {}", metadata.name);
+        self.erc20.init(symbol, name, metadata.decimals, None);
     }
 
     #[odra(payable)]
     pub fn deposit(&mut self) {
         let caller = contract_env::caller();
         let amount = contract_env::attached_value();
+        let amount = utils::balance_to_u256(amount).unwrap_or_revert();
 
         self.erc20.mint(caller, amount);
 
@@ -35,11 +36,11 @@ impl WrappedNativeToken {
         .emit();
     }
 
-    pub fn withdraw(&mut self, amount: Balance) {
+    pub fn withdraw(&mut self, amount: U256) {
         let caller = contract_env::caller();
 
         self.erc20.burn(caller, amount);
-        contract_env::transfer_tokens(caller, amount);
+        contract_env::transfer_tokens(caller, utils::u256_to_balance(amount));
 
         Withdrawal {
             account: caller,
@@ -48,15 +49,15 @@ impl WrappedNativeToken {
         .emit()
     }
 
-    pub fn allowance(&self, owner: Address, spender: Address) -> Balance {
+    pub fn allowance(&self, owner: Address, spender: Address) -> U256 {
         self.erc20.allowance(owner, spender)
     }
 
-    pub fn balance_of(&self, address: Address) -> Balance {
+    pub fn balance_of(&self, address: Address) -> U256 {
         self.erc20.balance_of(address)
     }
 
-    pub fn total_supply(&self) -> Balance {
+    pub fn total_supply(&self) -> U256 {
         self.erc20.total_supply()
     }
 
@@ -72,35 +73,35 @@ impl WrappedNativeToken {
         self.erc20.name()
     }
 
-    pub fn approve(&mut self, spender: Address, amount: Balance) {
+    pub fn approve(&mut self, spender: Address, amount: U256) {
         self.erc20.approve(spender, amount)
     }
 
-    pub fn transfer_from(&mut self, owner: Address, recipient: Address, amount: Balance) {
+    pub fn transfer_from(&mut self, owner: Address, recipient: Address, amount: U256) {
         self.erc20.transfer_from(owner, recipient, amount)
     }
 
-    pub fn transfer(&mut self, recipient: Address, amount: Balance) {
+    pub fn transfer(&mut self, recipient: Address, amount: U256) {
         self.erc20.transfer(recipient, amount)
     }
 }
 
 pub mod events {
     use odra::{
-        types::{Address, Balance},
+        types::{Address, U256},
         Event
     };
 
     #[derive(Event, Debug, Eq, PartialEq)]
     pub struct Deposit {
         pub account: Address,
-        pub value: Balance
+        pub value: U256
     }
 
     #[derive(Event, Debug, Eq, PartialEq)]
     pub struct Withdrawal {
         pub account: Address,
-        pub value: Balance
+        pub value: U256
     }
 }
 
@@ -109,15 +110,16 @@ mod tests {
 
     use odra::{
         assert_events, test_env,
-        types::{Address, Balance, OdraError, VmError}
+        types::{Address, Balance, OdraError, VmError, U256}
     };
 
     use crate::{
         erc20::events::Transfer,
-        wrapped_native::events::{Deposit, Withdrawal}
+        wrapped_native::{
+            events::{Deposit, Withdrawal},
+            WrappedNativeTokenDeployer, WrappedNativeTokenRef
+        }
     };
-
-    use super::{WrappedNativeTokenDeployer, WrappedNativeTokenRef};
 
     fn setup() -> (WrappedNativeTokenRef, Address, Balance, Address, Balance) {
         let token: WrappedNativeTokenRef = WrappedNativeTokenDeployer::init();
@@ -142,9 +144,9 @@ mod tests {
 
         // Then the contract has the default metadata.
         let metadata = test_env::native_token_metadata();
-        assert_eq!(token.total_supply(), Balance::zero());
-        assert_eq!(token.name(), metadata.name);
-        assert_eq!(token.symbol(), metadata.symbol);
+        assert_eq!(token.total_supply(), U256::zero());
+        assert_eq!(token.name(), format!("Wrapped {}", metadata.name));
+        assert_eq!(token.symbol(), format!("W{}", metadata.symbol));
         assert_eq!(token.decimals(), metadata.decimals);
     }
 
@@ -154,11 +156,11 @@ mod tests {
         let (token, account, account_balance, _, _) = setup();
 
         // When deposit tokens.
-        let deposit_amount: Balance = 1_000.into();
+        let deposit_amount = 1_000u32;
         token.with_tokens(deposit_amount).deposit();
 
         // Then the contract balance is updated.
-        assert_eq!(token.balance_of(account), deposit_amount);
+        assert_eq!(token.balance_of(account), deposit_amount.into());
         // Then the user balance is deducted.
         assert_eq!(
             test_env::token_balance(account),
@@ -170,11 +172,11 @@ mod tests {
             Transfer {
                 from: None,
                 to: Some(account),
-                amount: deposit_amount
+                amount: deposit_amount.into()
             },
             Deposit {
                 account,
-                value: deposit_amount
+                value: deposit_amount.into()
             }
         );
     }
@@ -204,7 +206,6 @@ mod tests {
 
     #[test]
     fn test_deposit_amount_exceeding_account_balance() {
-        //TODO: Consider what really should happen here.
         test_env::assert_exception(OdraError::VmError(VmError::BalanceExceeded), || {
             // Given a new contract.
             let (token, _, balance, _, _) = setup();
@@ -221,7 +222,7 @@ mod tests {
         token.with_tokens(balance).deposit();
 
         // When withdraw some tokens
-        let withdrawal_amount: Balance = 1_000.into();
+        let withdrawal_amount: U256 = 1_000.into();
         token.withdraw(withdrawal_amount);
 
         // Then the user has the withdrawn tokens back.
@@ -245,13 +246,12 @@ mod tests {
 
     #[test]
     fn test_withdrawal_amount_exceeding_account_deposit() {
-        //TODO: Consider what really should happen here.
         test_env::assert_exception(crate::erc20::errors::Error::InsufficientBalance, || {
             // Given a new contract.
             let (mut token, _, _, _, _) = setup();
             // When the user withdraws amount exceeds the user's deposit
             // Then an error occurs.
-            token.withdraw(Balance::one());
+            token.withdraw(U256::one());
         });
     }
 }

@@ -9,7 +9,7 @@ impl NativeTokenMetadata {
         Self {
             name: String::from("Plascoin"),
             symbol: String::from("PLS"),
-            decimals: 8
+            decimals: 2
         }
     }
 }
