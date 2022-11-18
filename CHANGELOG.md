@@ -7,6 +7,8 @@ Changelog for `odra`.
 - Global `CHANGELOG.md`
 - `odra`
   - `List` collection.
+  - Add tests for `Variable` and `Mapping`.
+  - Contract refs (`*Ref` struct) has `with_tokens()` function to attach tokens to the call.
 - `odra-types`
   - `std` feature, disabled by default.
 - `odra-utils`
@@ -15,23 +17,41 @@ Changelog for `odra`.
 - `odra-mock-vm-types`
 - `odra-casper-codegen`
 - `odra-casper-types`
-- `examples`
+- `odra-examples`
+   - `Ownable` - simple storage, errors, events.
+   - `Erc20` - erc-20 standard implementation.
+   - `OwnedToken` - modules reuse.
+   - `BalanceChecker` - external contract calls.
+   - `TimeLockWallet` - payable.
 - `odra-modules`
+- `CONTRIBUTING.md` and `SECURITY.md`.
+- `justfile`
   
 ### Changed
 - `odra`
+    - Features update: rename `wasm` to `casper`, remove `wasm-test`.
+    - Features check: setting `casper` and `mock-vm` causes compile error.
+    - `Mapping`'s functions: `set()`, `add()`, `subtract()`.
+    - `Variable`'s functions: `set()`, `add()`, `subtract()`.
+    - `Variable` and `Mapping` are implemented for `OdraType`.
+    - Add `amount` parameter to `call_contract`.
+    - `contract_env` and `test_env` are modules not structs.
+    - To deploy contract in test, structs no longer have `deploy_*` function, `*Deployer` structs are generated.
+    - The default contract constructor is called `*Deployer::default`.
 - `odra-types`
 - `odra-utils`
-  - `camel_to_snake` function available with the `std` feature.
+  - Remove `odra-types` dependency.
+  - Change `event_absolute_position` signature - the function returns `Option<usize>`.
 - `odra-test-env-wrapper`
 - `odra-codegen`
-  - Replace plain `unwrap()`s in generated code with `unwrap_or_revert()`.
-  - Replace `to_string()` with `String::from` in generated code.
+  - Handle `odra(payable)` attribute.
+  - Adjust generated code to framework changes.
 - `odra-test-env-wrapper`
 - `odra-mock-vm`
 - `odra-casper-backend`, `odra-casper-shared`, `odra-casper-test-env` moved from a separate repository.
 
 ### Removed
+- `odra` extern bindings.
 - `odra-test-env-wrapper` crate.
 - Separate changelog files per crate.
 
