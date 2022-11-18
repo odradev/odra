@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
 license = "MIT"
 repository = "https://github.com/odradev/odra"
-description = "Collection of reusable Odra modules"
+description = "Collection of reusable Odra modules."
 keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm"]
 
