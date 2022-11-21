@@ -1,5 +1,5 @@
 use self::events::{Deposit, Withdrawal};
-use crate::{erc20::Erc20, utils};
+use crate::erc20::Erc20;
 use odra::{
     contract_env,
     types::{event::OdraEvent, Address, U256},
@@ -24,8 +24,7 @@ impl WrappedNativeToken {
     #[odra(payable)]
     pub fn deposit(&mut self) {
         let caller = contract_env::caller();
-        let amount = contract_env::attached_value();
-        let amount = utils::balance_to_u256(amount).unwrap_or_revert();
+        let amount = contract_env::attached_value().to_u256().unwrap_or_revert();
 
         self.erc20.mint(caller, amount);
 
@@ -40,7 +39,8 @@ impl WrappedNativeToken {
         let caller = contract_env::caller();
 
         self.erc20.burn(caller, amount);
-        contract_env::transfer_tokens(caller, utils::u256_to_balance(amount));
+        let balance = amount.to_balance().unwrap_or_revert();
+        contract_env::transfer_tokens(caller, balance);
 
         Withdrawal {
             account: caller,
