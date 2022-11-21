@@ -25,6 +25,9 @@ impl WrappedNativeToken {
     pub fn deposit(&mut self) {
         let caller = contract_env::caller();
         let amount = contract_env::attached_value().to_u256().unwrap_or_revert();
+        // if amount.is_zero() {
+        //     contract_env::revert(odra::types::ExecutionError::new(1, ""));
+        // }
 
         self.erc20.mint(caller, amount);
 
@@ -105,7 +108,7 @@ pub mod events {
     }
 }
 
-#[cfg(all(test, feature = "mock-vm"))]
+#[cfg(test)]
 mod tests {
 
     use odra::{
@@ -226,9 +229,9 @@ mod tests {
         token.withdraw(withdrawal_amount);
 
         // Then the user has the withdrawn tokens back.
-        assert_eq!(test_env::token_balance(account), withdrawal_amount);
+        assert_eq!(test_env::token_balance(account).to_u256().unwrap(), withdrawal_amount);
         // Then the balance in the contract is deducted.
-        assert_eq!(token.balance_of(account), balance - withdrawal_amount);
+        assert_eq!(token.balance_of(account), balance.to_u256().unwrap() - withdrawal_amount);
         // Then events were emitted.
         assert_events!(
             token,

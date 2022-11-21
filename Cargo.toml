@@ -6,7 +6,6 @@ members = [
     "lang/proc-macros",
     "mock-vm/backend",
     "mock-vm/types",
-    "modules",
     "types",
     "utils",
     "odra-casper/backend",
@@ -17,4 +16,4 @@ members = [
     "odra-casper/test-env/getter_proxy"
 ]
 
-exclude = [ "contract", "contract/builder", "examples" ]
+exclude = [ "contract", "contract/builder", "examples", "modules" ]

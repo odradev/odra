@@ -194,7 +194,7 @@ pub mod errors {
     }
 }
 
-#[cfg(all(test, feature = "mock-vm"))]
+#[cfg(test)]
 mod tests {
     use super::{
         errors::Error,
