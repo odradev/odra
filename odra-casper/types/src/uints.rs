@@ -115,6 +115,26 @@ macro_rules! impl_casper_type_numeric_wrapper {
                     }
                 }
             }
+
+            impl Add<u32> for $ty {
+                type Output = Self;
+
+                fn add(self, rhs: u32) -> Self::Output {
+                    Self {
+                        inner: self.inner + rhs,
+                    }
+                }
+            }
+
+            impl Sub<u32> for $ty {
+                type Output = Self;
+
+                fn sub(self, rhs: u32) -> Self::Output {
+                    Self {
+                        inner: self.inner - rhs,
+                    }
+                }
+            }
         )+
     };
 }
