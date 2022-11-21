@@ -15,5 +15,5 @@ name = "erc20"
 fqn = "odra_examples::erc20::Erc20"
 
 [[contracts]]
-name = "wrapped_casper"
-fqn = "odra_examples::wrapped_casper::WrappedCasper"
+name = "time_lock_wallet"
+fqn = "odra_examples::tlw::TimeLockWallet"
