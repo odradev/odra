@@ -25,9 +25,6 @@ impl WrappedNativeToken {
     pub fn deposit(&mut self) {
         let caller = contract_env::caller();
         let amount = contract_env::attached_value().to_u256().unwrap_or_revert();
-        // if amount.is_zero() {
-        //     contract_env::revert(odra::types::ExecutionError::new(1, ""));
-        // }
 
         self.erc20.mint(caller, amount);
 
@@ -161,14 +158,17 @@ mod tests {
         // When deposit tokens.
         let deposit_amount = 1_000u32;
         token.with_tokens(deposit_amount).deposit();
+        
+        // Then native tokens are correctly deducted.
+        let gas_used = test_env::last_call_contract_gas_cost();
+        assert_eq!(
+            account_balance - gas_used - deposit_amount,
+            test_env::token_balance(account)
+        );
 
         // Then the contract balance is updated.
         assert_eq!(token.balance_of(account), deposit_amount.into());
-        // Then the user balance is deducted.
-        assert_eq!(
-            test_env::token_balance(account),
-            account_balance - deposit_amount
-        );
+
         // The events were emitted.
         assert_events!(
             token,
@@ -220,18 +220,24 @@ mod tests {
 
     #[test]
     fn test_withdrawal() {
-        // Deposit all tokens in the contract
-        let (mut token, account, balance, _, _) = setup();
-        token.with_tokens(balance).deposit();
+        // Deposit some tokens in the contract.
+        let (mut token, account, _, _, _) = setup();
+        let deposit_amount: Balance = 3_000.into();
+        token.with_tokens(deposit_amount).deposit();
+        let account_balance = test_env::token_balance(account);
 
-        // When withdraw some tokens
+        // When withdraw some tokens.
         let withdrawal_amount: U256 = 1_000.into();
         token.withdraw(withdrawal_amount);
 
         // Then the user has the withdrawn tokens back.
-        assert_eq!(test_env::token_balance(account).to_u256().unwrap(), withdrawal_amount);
+        let gas_used = test_env::last_call_contract_gas_cost();
+        assert_eq!(
+            account_balance - gas_used + withdrawal_amount.to_balance().unwrap(),
+            test_env::token_balance(account)
+        );
         // Then the balance in the contract is deducted.
-        assert_eq!(token.balance_of(account), balance.to_u256().unwrap() - withdrawal_amount);
+        assert_eq!(token.balance_of(account), deposit_amount.to_u256().unwrap() - withdrawal_amount);
         // Then events were emitted.
         assert_events!(
             token,

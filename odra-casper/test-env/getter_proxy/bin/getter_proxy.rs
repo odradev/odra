@@ -34,7 +34,7 @@ fn call() {
     if let Some(amount) = attached_value {
         let cargo_purse = create_purse();
         let main_purse = get_main_purse();
-        let _ = transfer_from_purse_to_purse(main_purse, cargo_purse, amount, None);
+        transfer_from_purse_to_purse(main_purse, cargo_purse, amount, None).unwrap_or_revert();
 
         args.insert("cargo_purse", cargo_purse).unwrap_or_revert();
     }

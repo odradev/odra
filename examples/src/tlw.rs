@@ -121,14 +121,22 @@ mod test {
         // Given a new contract.
         let (contract, user_1, user_2) = setup();
 
+        // Helper method for a single deposit.
+        let single_deposit = |account: Address, deposit: Balance| {
+            let balance = test_env::token_balance(account);
+            test_env::set_caller(account);
+            contract.with_tokens(deposit).deposit();
+            let gas_used = test_env::last_call_contract_gas_cost();
+            let balance_after = test_env::token_balance(account);
+            assert_eq!(balance_after + gas_used + deposit, balance);
+        };
+        
         // When two users deposit some tokens.
         let user_1_deposit: Balance = 100.into();
-        test_env::set_caller(user_1);
-        contract.with_tokens(user_1_deposit).deposit();
-
+        single_deposit(user_1, user_1_deposit);
+        
         let user_2_deposit: Balance = 200.into();
-        test_env::set_caller(user_2);
-        contract.with_tokens(user_2_deposit).deposit();
+        single_deposit(user_2, user_2_deposit);
 
         // Then the users' balance is the contract is equal to the deposited amount.
         assert_eq!(contract.get_balance(user_1), user_1_deposit);
@@ -172,11 +180,19 @@ mod test {
 
         // When the user makes two token withdrawals after the lock is expired.
         test_env::advance_block_time_by(ONE_DAY_IN_SECONDS + 1);
-        
+        let balance_before_withdrawals = test_env::token_balance(user);
         let first_withdrawal_amount: Balance = 50.into();
         let second_withdrawal_amount: Balance = 40.into();
         contract.withdraw(first_withdrawal_amount);
+        let mut gas_used = test_env::last_call_contract_gas_cost();
         contract.withdraw(second_withdrawal_amount);
+        gas_used = gas_used + test_env::last_call_contract_gas_cost();
+
+        // Then the native token balance is updated.
+        assert_eq!(
+            test_env::token_balance(user),
+            balance_before_withdrawals - gas_used + first_withdrawal_amount + second_withdrawal_amount
+        );
 
         // Then the user balance in the contract is deducted.
         assert_eq!(

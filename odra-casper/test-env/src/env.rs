@@ -134,7 +134,6 @@ impl CasperTestEnv {
         self.context.exec(execute_request).commit();
 
         self.attached_value = None;
-
         if self.context.is_error() {
             self.error = Some(parse_error(self.context.get_error().unwrap()));
             self.get_active_account_result()
@@ -271,6 +270,12 @@ impl CasperTestEnv {
             Address::Contract(contract_hash) => self.get_contract_cspr_balance(contract_hash)
         }
     }
+
+    /// Returns the cost of the last deploy.
+    /// Currently it is always Casper's DEFAULT_PAYMENT, but in future it might change.
+    pub fn last_call_contract_gas_cost(&self) -> U512 {
+        *DEFAULT_PAYMENT
+    }
 }
 
 impl CasperTestEnv {
@@ -340,6 +345,9 @@ fn parse_error(err: engine_state::Error) -> OdraError {
             }
             CasperExecutionError::NoSuchMethod(name) => {
                 OdraError::VmError(VmError::NoSuchMethod(name))
+            }
+            CasperExecutionError::Revert(ApiError::Mint(0)) => {
+                OdraError::VmError(VmError::BalanceExceeded)
             }
             _ => OdraError::VmError(VmError::Other(format!("Casper ExecError: {}", exec_err)))
         }

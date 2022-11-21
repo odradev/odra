@@ -99,3 +99,8 @@ where
 pub fn native_token_metadata() -> NativeTokenMetadata {
     NativeTokenMetadata::new()
 }
+
+/// Returns last call gas cost.
+pub fn last_call_contract_gas_cost() -> Balance {
+    ENV.with(|env| env.borrow().last_call_contract_gas_cost().into())
+}
