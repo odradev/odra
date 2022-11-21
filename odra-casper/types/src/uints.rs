@@ -38,6 +38,12 @@ macro_rules! impl_casper_type_numeric_wrapper {
                 pub fn as_u32(&self) -> u32 {
                     self.inner.as_u32()
                 }
+
+                pub fn max() -> Self {
+                    Self {
+                        inner: casper_types::$ty::MAX
+                    }
+                }
             }
 
             impl FromBytes for $ty {
@@ -109,8 +115,101 @@ macro_rules! impl_casper_type_numeric_wrapper {
                     }
                 }
             }
+
+            impl Add<u32> for $ty {
+                type Output = Self;
+
+                fn add(self, rhs: u32) -> Self::Output {
+                    Self {
+                        inner: self.inner + rhs,
+                    }
+                }
+            }
+
+            impl Sub<u32> for $ty {
+                type Output = Self;
+
+                fn sub(self, rhs: u32) -> Self::Output {
+                    Self {
+                        inner: self.inner - rhs,
+                    }
+                }
+            }
         )+
     };
 }
 
 impl_casper_type_numeric_wrapper!(U256, U512);
+
+impl U512 {
+    pub fn to_u256(self) -> Result<U256, ArithmeticsError> {
+        let inner = self.inner();
+        if exceeds_u256(inner) {
+            return Err(ArithmeticsError::AdditionOverflow);
+        }
+
+        let src = inner.0;
+        let mut words = [0u64; 4];
+        words.copy_from_slice(&src[0..4]);
+
+        Ok(U256 {
+            inner: casper_types::U256(words)
+        })
+    }
+}
+
+impl U256 {
+    pub fn to_u512(self) -> Result<U512, ArithmeticsError> {
+        let inner = self.inner();
+        let mut bytes = [0u8; 32];
+        inner.to_little_endian(&mut bytes);
+        let balance = casper_types::U512::from_little_endian(&bytes);
+        Ok(U512 { inner: balance })
+    }
+
+    pub fn to_balance(self) -> Result<U512, ArithmeticsError> {
+        self.to_u512()
+    }
+}
+
+fn exceeds_u256(value: casper_types::U512) -> bool {
+    let max_u256 = (casper_types::U512::one() << 256) - 1;
+    value > max_u256
+}
+
+#[cfg(test)]
+mod tests {
+    use casper_types::bytesrepr::{FromBytes, ToBytes};
+    use odra_types::arithmetic::ArithmeticsError;
+
+    use crate::{U256, U512};
+
+    #[test]
+    fn test_u512_to_256() {
+        let value = U512::from(100);
+        assert_eq!(value.to_u256().unwrap(), U256::from(100));
+
+        let value = U256::max();
+        let bytes = value.to_bytes().unwrap();
+        let (value, remainder) = U512::from_bytes(&bytes).unwrap();
+        assert!(remainder.is_empty());
+        assert_eq!(value.to_u256().unwrap(), U256::max());
+
+        let more_then_max = value + U512::one();
+        assert_eq!(
+            more_then_max.to_u256().unwrap_err(),
+            ArithmeticsError::AdditionOverflow
+        );
+    }
+
+    #[test]
+    fn test_u256_to_512() {
+        let value = U256::one();
+        assert_eq!(value.to_u512().unwrap(), U512::one());
+
+        let value = U256::max();
+        let max_u256 = (casper_types::U512::one() << 256) - 1;
+        let max_u256 = U512::from(max_u256);
+        assert_eq!(value.to_u512().unwrap(), max_u256);
+    }
+}

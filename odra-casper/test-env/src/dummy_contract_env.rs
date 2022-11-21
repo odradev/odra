@@ -1,3 +1,4 @@
+use odra_casper_shared::native_token::NativeTokenMetadata;
 use odra_casper_types::{Address, Balance, BlockTime, OdraType};
 use odra_types::{event::OdraEvent, ExecutionError};
 
@@ -56,5 +57,10 @@ pub fn transfer_tokens<B: Into<Balance>>(_: Address, _: B) -> bool {
 }
 
 pub fn self_balance() -> Balance {
+    unimplemented!()
+}
+
+/// Returns the platform native token metadata
+pub fn native_token_metadata() -> NativeTokenMetadata {
     unimplemented!()
 }

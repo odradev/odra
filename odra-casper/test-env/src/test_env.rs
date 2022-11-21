@@ -1,4 +1,5 @@
 use crate::env::ENV;
+use odra_casper_shared::native_token::NativeTokenMetadata;
 use odra_casper_types::{Address, Balance, CallArgs, OdraType};
 use odra_types::{
     event::{EventError, OdraEvent},
@@ -92,4 +93,9 @@ where
     let msg = format!("Expected {:?} error.", expected);
     let error: OdraError = get_error().expect(&msg);
     assert_eq!(error, expected);
+}
+
+/// Returns CSPR token metadata
+pub fn native_token_metadata() -> NativeTokenMetadata {
+    NativeTokenMetadata::new()
 }
