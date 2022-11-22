@@ -30,8 +30,8 @@ pub use odra_casper_test_env::{dummy_contract_env as contract_env, test_env};
 #[cfg(feature = "mock-vm")]
 pub use odra_mock_vm::{contract_env, test_env};
 
-/// Types that are used in Odra framework. 
-/// 
+/// Types that are used in Odra framework.
+///
 /// Re-exports all the platform-agnostic types and depending on the selected feature, re-exports platform-specific types.
 pub mod types {
     #[cfg(feature = "casper")]

@@ -5,6 +5,7 @@ use casper_contract::{
     contract_api::system::transfer_from_purse_to_account, unwrap_or_revert::UnwrapOrRevert
 };
 use casper_types::U512;
+use odra_casper_shared::native_token::NativeTokenMetadata;
 use odra_casper_types::{Address, Balance, BlockTime, CallArgs, OdraType};
 use odra_types::{event::OdraEvent, ExecutionError};
 use std::ops::Deref;
@@ -112,4 +113,9 @@ pub fn transfer_tokens<B: Into<Balance>>(to: Address, amount: B) {
         }
         Address::Contract(_) => revert(ExecutionError::can_not_transfer_to_contract())
     };
+}
+
+/// Returns CSPR token metadata
+pub fn native_token_metadata() -> NativeTokenMetadata {
+    NativeTokenMetadata::new()
 }

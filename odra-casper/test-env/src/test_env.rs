@@ -1,8 +1,8 @@
 //! Describes test environment API. Delegates methods to the underlying env implementation.
 //!
 //! Depending on the selected feature, the actual test env is dynamically loaded in the runtime or the Odra local MockVM is used.
-//! 
 use crate::env::ENV;
+use odra_casper_shared::native_token::NativeTokenMetadata;
 use odra_casper_types::{Address, Balance, CallArgs, OdraType};
 use odra_types::{
     event::{EventError, OdraEvent},
@@ -96,4 +96,14 @@ where
     let msg = format!("Expected {:?} error.", expected);
     let error: OdraError = get_error().expect(&msg);
     assert_eq!(error, expected);
+}
+
+/// Returns CSPR token metadata
+pub fn native_token_metadata() -> NativeTokenMetadata {
+    NativeTokenMetadata::new()
+}
+
+/// Returns last call gas cost.
+pub fn last_call_contract_gas_cost() -> Balance {
+    ENV.with(|env| env.borrow().last_call_contract_gas_cost().into())
 }

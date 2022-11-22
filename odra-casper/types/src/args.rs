@@ -6,7 +6,7 @@ use casper_types::{
 };
 
 /// Represents a collection of arguments passed to a smart contract entrypoint call.
-/// 
+///
 /// Wraps casper's [RuntimeArgs](casper_types::RuntimeArgs).
 #[derive(Default)]
 pub struct CallArgs(casper_types::RuntimeArgs);

@@ -7,12 +7,12 @@ mod ty;
 mod uints;
 
 pub use address::Address;
-pub use bytes::Bytes;
 pub use borsh::{BorshDeserialize, BorshSerialize};
+pub use bytes::Bytes;
 pub use call_args::CallArgs;
 pub use mock_vm_type::{MockVMSerializationError, MockVMType};
-pub use uints::{U256, U512};
 pub use ty::Typed;
+pub use uints::{U256, U512};
 /// A type representing the amount of native tokens.
 pub type Balance = U256;
 /// A type representing the block time.

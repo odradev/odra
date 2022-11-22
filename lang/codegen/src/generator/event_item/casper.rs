@@ -36,6 +36,7 @@ pub fn generate_code(event: &IrEventItem) -> TokenStream {
         #[cfg(feature = "casper")]
         impl odra::casper::casper_types::bytesrepr::FromBytes for #struct_ident {
             fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper::casper_types::bytesrepr::Error> {
+                let (_, bytes): (String, Vec<u8>) = odra::casper::casper_types::bytesrepr::FromBytes::from_vec(bytes.to_vec())?;
                 #deserialize_fields
                 let value = #struct_ident {
                     #construct_struct

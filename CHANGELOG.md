@@ -9,21 +9,23 @@ Changelog for `odra`.
   - `List` collection.
   - Add tests for `Variable` and `Mapping`.
   - Contract refs (`*Ref` struct) has `with_tokens()` function to attach tokens to the call.
-- `odra-types`
-  - `std` feature, disabled by default.
-- `odra-utils`
-  - `no_std` feature, enabled by default.
-  - `std` feature, disabled by default.
-- `odra-mock-vm-types`
-- `odra-casper-codegen`
-- `odra-casper-types`
-- `odra-examples`
+- `odra-mock-vm`
+  - Add `AccountBalance` to store the native token amount associated with the `Address`.
+  - Add `CallstackElement` to stack contract execution along with the attached value.
+- New crate `odra-mock-vm-types` - encapsulates `mock-vm`-specific types.
+- New crate `odra-casper-codegen` - generates Casper contracts, moved from `odra-casper-backend`. 
+- New crate `odra-casper-types` - encapsulates `Casper`-specific types.
+- `odra-casper-test-env`
+  - Add `dummy_contract_env` module.
+- New crate `odra-examples`
    - `Ownable` - simple storage, errors, events.
    - `Erc20` - erc-20 standard implementation.
    - `OwnedToken` - modules reuse.
    - `BalanceChecker` - external contract calls.
    - `TimeLockWallet` - payable.
-- `odra-modules`
+- New crate `odra-modules` a set of reusable modules.
+  - `Erc20` - erc-20 token.
+  - `WrappedNativeToken` - erc20-based wrapped token.
 - `CONTRIBUTING.md` and `SECURITY.md`.
 - `justfile`
   
@@ -39,16 +41,32 @@ Changelog for `odra`.
     - To deploy contract in test, structs no longer have `deploy_*` function, `*Deployer` structs are generated.
     - The default contract constructor is called `*Deployer::default`.
 - `odra-types`
+  - Add `Type` enum describing all supported types.
+  - Rename `Event` to `OdraEvent`.
+  - Remove all dependencies.
+  - Update `VmError`s.
+  - Bring `contract_def` module from `odra` crate.
+  - Remove `casper` dependencies from `contract_def`.
 - `odra-utils`
   - Remove `odra-types` dependency.
   - Change `event_absolute_position` signature - the function returns `Option<usize>`.
-- `odra-test-env-wrapper`
 - `odra-codegen`
   - Handle `odra(payable)` attribute.
   - Adjust generated code to framework changes.
-- `odra-test-env-wrapper`
 - `odra-mock-vm`
+  - `MockVM` refactor.
+  - `test_env` is a module not a struct.
+  - Change `call_contract()` signature.
+  - Add `advance_block_time_by()`, `token_balance()`, `one_token()` functions.
 - `odra-casper-backend`, `odra-casper-shared`, `odra-casper-test-env` moved from a separate repository.
+- `odra-casper-backend`
+    - `contract_env` is a module not a struct.
+    - Add `one_token()`, `self_balance()`, `attached_value()`, `transfer_tokens()` functions.
+    - Change `call_contract()` signature
+  - `odra-casper-test-env`
+    - `test_env` is a module not a struct.
+    - Change `call_contract()` signature.
+    - Add `advance_block_time_by()`, `token_balance()`, `one_token()` functions.
 
 ### Removed
 - `odra` extern bindings.
@@ -67,7 +85,7 @@ Changelog for `odra`.
   - `instance` module exposing a trait used to instantiate a module.
   - `variable` and `mapping` modules that allow to read and write single values and collections in smart contracts.
   - `test_utils` module that defines functions and macros to utilize smart contracts testing.
-  - `unwrap_or_revert` module that provides a trait for unwrapping values in the context of smart contract
+  - `unwrap_or_revert` module that provides a trait for unwrapping values in the context of smart contract.
   - `CHANGELOG.md` and `README.md` files.
 - `odra-types`
   - `address` module defines a blockchain-agnostic address struct that can be used for storing contract and account addresses.

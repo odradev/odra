@@ -1,12 +1,13 @@
 [package]
 name = "odra-examples"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
 odra = { path = "../core", default-features = false }
+odra-modules = { path = "../modules", default-features = false }
 
 [features]
 default = ["mock-vm"]
-mock-vm = ["odra/mock-vm"]
-casper = ["odra/casper"]
+mock-vm = ["odra/mock-vm", "odra-modules/mock-vm"]
+casper = ["odra/casper", "odra-modules/casper"]

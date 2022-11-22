@@ -9,7 +9,7 @@ use odra_types::{
     OdraError
 };
 
-use crate::{EntrypointArgs, EntrypointCall};
+use crate::{native_token::NativeTokenMetadata, EntrypointArgs, EntrypointCall};
 
 macro_rules! delegate_to_env {
     (
@@ -93,6 +93,16 @@ pub fn get_event<T: MockVMType + OdraEvent>(address: Address, index: i32) -> Res
             Err(EventError::UnexpectedType(event_name))
         }
     })
+}
+
+/// Returns the platform native token metadata
+pub fn native_token_metadata() -> NativeTokenMetadata {
+    NativeTokenMetadata::new()
+}
+
+/// Returns last call gas cost.
+pub fn last_call_contract_gas_cost() -> Balance {
+    Balance::zero()
 }
 
 fn extract_event_name(mut bytes: &[u8]) -> Result<String, EventError> {

@@ -3,7 +3,7 @@
 use odra_mock_vm_types::{Address, Balance, BlockTime, MockVMType, OdraType};
 use odra_types::{event::OdraEvent, ExecutionError};
 
-use crate::borrow_env;
+use crate::{borrow_env, native_token::NativeTokenMetadata};
 
 /// Returns the current block time.
 pub fn get_block_time() -> BlockTime {
@@ -77,4 +77,9 @@ pub fn transfer_tokens<B: Into<Balance>>(to: Address, amount: B) -> bool {
 /// Returns the balance of the account associated with the current contract.
 pub fn self_balance() -> Balance {
     borrow_env().self_balance()
+}
+
+/// Returns the platform native token metadata
+pub fn native_token_metadata() -> NativeTokenMetadata {
+    NativeTokenMetadata::new()
 }

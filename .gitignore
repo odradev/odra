@@ -8,3 +8,6 @@ contract/
 examples/target
 examples/.builder_casper
 examples/wasm
+modules/target
+modules/.builder_casper
+modules/wasm

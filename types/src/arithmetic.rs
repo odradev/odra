@@ -14,6 +14,7 @@ pub trait OverflowingSub: Sized {
 }
 
 /// Computation result error.
+#[cfg_attr(debug_assertions, derive(Debug, PartialEq, Eq))]
 pub enum ArithmeticsError {
     // Addition result exceeds the max value.
     AdditionOverflow,
@@ -25,7 +26,7 @@ pub enum ArithmeticsError {
 #[macro_export]
 macro_rules! impl_overflowing_add_sub {
     ( $( $ty:ty ),+ ) => {
-        $( 
+        $(
             impl OverflowingAdd for $ty {
                 fn overflowing_add(self, rhs: Self) -> Result<Self, ExecutionError> {
                     let (res, is_overflowed)  = self.overflowing_add(rhs);

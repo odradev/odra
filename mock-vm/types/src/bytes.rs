@@ -1,4 +1,4 @@
-use borsh::{BorshSerialize, BorshDeserialize};
+use borsh::{BorshDeserialize, BorshSerialize};
 
 /// A wrapper for bytes that has efficient (de)serialization.
 #[derive(Default, BorshSerialize, BorshDeserialize)]

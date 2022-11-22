@@ -10,3 +10,6 @@ test-odra:
 lint:
     cargo fmt
     cargo clippy --all-targets -- -D warnings
+
+test-modules-on-casper:
+    cd modules && cargo odra test -b casper
