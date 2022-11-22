@@ -100,7 +100,10 @@ pub struct Withdrawal {
 
 #[cfg(test)]
 mod test {
-    use odra::{assert_events, test_env, types::{Balance, Address}};
+    use odra::{
+        assert_events, test_env,
+        types::{Address, Balance}
+    };
 
     use crate::tlw::{Deposit, Withdrawal};
 
@@ -111,7 +114,7 @@ mod test {
     fn setup() -> (TimeLockWalletRef, Address, Address) {
         (
             TimeLockWalletDeployer::init(ONE_DAY_IN_SECONDS),
-            test_env::get_account(0), 
+            test_env::get_account(0),
             test_env::get_account(1)
         )
     }
@@ -130,11 +133,11 @@ mod test {
             let balance_after = test_env::token_balance(account);
             assert_eq!(balance_after + gas_used + deposit, balance);
         };
-        
+
         // When two users deposit some tokens.
         let user_1_deposit: Balance = 100.into();
         single_deposit(user_1, user_1_deposit);
-        
+
         let user_2_deposit: Balance = 200.into();
         single_deposit(user_2, user_2_deposit);
 
@@ -161,7 +164,7 @@ mod test {
         test_env::assert_exception(Error::CannotLockTwice, || {
             // Given a new contract.
             let (contract, _, _) = setup();
-            
+
             // The user makes the first deposit.
             let deposit: Balance = 100.into();
             contract.with_tokens(deposit).deposit();
@@ -191,7 +194,9 @@ mod test {
         // Then the native token balance is updated.
         assert_eq!(
             test_env::token_balance(user),
-            balance_before_withdrawals - gas_used + first_withdrawal_amount + second_withdrawal_amount
+            balance_before_withdrawals - gas_used
+                + first_withdrawal_amount
+                + second_withdrawal_amount
         );
 
         // Then the user balance in the contract is deducted.

@@ -158,7 +158,7 @@ mod tests {
         // When deposit tokens.
         let deposit_amount = 1_000u32;
         token.with_tokens(deposit_amount).deposit();
-        
+
         // Then native tokens are correctly deducted.
         let gas_used = test_env::last_call_contract_gas_cost();
         assert_eq!(
@@ -237,7 +237,10 @@ mod tests {
             test_env::token_balance(account)
         );
         // Then the balance in the contract is deducted.
-        assert_eq!(token.balance_of(account), deposit_amount.to_u256().unwrap() - withdrawal_amount);
+        assert_eq!(
+            token.balance_of(account),
+            deposit_amount.to_u256().unwrap() - withdrawal_amount
+        );
         // Then events were emitted.
         assert_events!(
             token,

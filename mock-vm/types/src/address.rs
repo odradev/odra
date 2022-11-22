@@ -26,7 +26,7 @@ impl Address {
 
 impl core::fmt::Debug for Address {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let name = hex::encode(&self.data);
+        let name = hex::encode(self.data);
         f.debug_struct("Address").field("data", &name).finish()
     }
 }
