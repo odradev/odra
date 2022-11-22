@@ -2,6 +2,7 @@ use odra_types::Type;
 
 use crate::{Address, U256, U512};
 
+/// A trait that adds [Type] description for a given type.
 pub trait Typed {
     fn ty() -> Type;
 }

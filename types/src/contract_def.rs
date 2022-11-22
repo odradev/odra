@@ -39,9 +39,6 @@ pub enum EntrypointType {
 
 /// A trait that should be implemented by each smart contract to allow the backend
 /// to generate blockchain-specific code.
-///
-/// Probably you will never implement this trait by your own, it is automatically
-/// implemented by [odra::module](crate::module) macro.
 pub trait HasContractDef {
     /// Returns an abstract contract definition.
     fn contract_def() -> ContractDef;

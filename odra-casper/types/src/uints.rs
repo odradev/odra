@@ -5,10 +5,10 @@ use odra_types::{
 };
 use std::ops::{Add, Sub};
 
-#[macro_export]
 macro_rules! impl_casper_type_numeric_wrapper {
     ( $( $ty:ident ),+ ) => {
         $(
+            /// Little-endian large integer type
             #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Clone, Copy)]
             pub struct $ty {
                 inner: casper_types::$ty

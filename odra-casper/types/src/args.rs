@@ -5,14 +5,19 @@ use casper_types::{
     CLTyped
 };
 
+/// Represents a collection of arguments passed to a smart contract entrypoint call.
+///
+/// Wraps casper's [RuntimeArgs](casper_types::RuntimeArgs).
 #[derive(Default)]
 pub struct CallArgs(casper_types::RuntimeArgs);
 
 impl CallArgs {
+    /// Creates a new no-args instance.
     pub fn new() -> Self {
         Self(casper_types::RuntimeArgs::default())
     }
 
+    /// Inserts a new empty arg into the collection.
     pub fn insert<K, V>(&mut self, key: K, value: V)
     where
         K: Into<String>,

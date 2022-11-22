@@ -313,7 +313,7 @@ impl CasperTestEnv {
     fn get_active_account_result<T: OdraType>(&self) -> T {
         let active_account = self.active_account_hash();
 
-        let bytes: odra_casper_types::Bytes = self
+        let bytes: casper_types::bytesrepr::Bytes = self
             .get_account_value(active_account, "result")
             .unwrap_or_default();
         T::from_bytes(bytes.inner_bytes()).unwrap().0

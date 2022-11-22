@@ -1,7 +1,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 
 /// Max bytes of an [`Address`] internal representation.
-const ADDRESS_LENGTH: usize = 4;
+pub const ADDRESS_LENGTH: usize = 8;
 
 /// Blockchain-agnostic address representation.
 #[derive(Clone, Copy, PartialEq, Hash, Eq, BorshSerialize, BorshDeserialize)]
@@ -12,8 +12,8 @@ pub struct Address {
 impl Address {
     /// Creates a new Address from bytes.
     ///
-    /// If takes less than [`ADDRESS_LENGTH`], the remaining bytes are zeroed.
-    /// If takes more and [`ADDRESS_LENGTH`] excess bytes are discarded.
+    /// If passed less bytes than the capacity, the remaining bytes are zeroed.
+    /// If passed more bytes and the capacity, the redundant bytes are discarded.
     pub fn new(bytes: &[u8]) -> Address {
         let mut bytes_vec = bytes.to_vec();
         bytes_vec.resize(ADDRESS_LENGTH, 0);

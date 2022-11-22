@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use odra_mock_vm_types::CallArgs;
 use odra_types::{OdraError, VmError};
 
+#[doc(hidden)]
 pub type EntrypointCall = fn(String, CallArgs) -> Vec<u8>;
+#[doc(hidden)]
 pub type EntrypointArgs = Vec<String>;
 
 #[derive(Default, Clone)]

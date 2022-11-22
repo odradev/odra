@@ -42,7 +42,7 @@ pub struct Flipper {
 
 #[odra::module]
 impl Flipper {
-    pub fn flip(&self) {
+    pub fn flip(&mut self) {
         self.value.set(!self.get());
     }
 
@@ -53,11 +53,11 @@ impl Flipper {
 
 #[cfg(test)]
 mod tests {
-    use super::Flipper;
+    use super::FlipperDeployer;
 
     #[test]
     fn flipping() {
-        let contract = Flipper::deploy();
+        let mut contract = FlipperDeployer::default();
         assert_eq!(contract.get(), false);
         contract.flip();
         assert_eq!(contract.get(), true);
@@ -65,15 +65,15 @@ mod tests {
 }
 ```
 
-Checkout our [ERC20 + Ownable Example](https://github.com/odradev/odra-examples).
+Checkout our [examples](https://github.com/odradev/odra/tree/HEAD/examples).
 It shows most of Odra features.
 
 ## Backends
 
-Odra is designed to integrate with most WebAssemby-based smart contract systems.
+Odra is designed to integrate with most WebAssembly-based smart contract systems.
 
 Integrated blockchains:
-* Casper Network. See [Odra Casper](https://github.com/odradev/odra-casper) for more details.
+* Casper Network.
 
 ## Links
 
@@ -81,12 +81,11 @@ Integrated blockchains:
 * [Documentation](https://docs.rs/odra/latest/odra/)
 * [Cargo Odra](https://github.com/odradev/cargo-odra)
 * [Odra Template](https://github.com/odradev/odra-template)
-* [Example Contracts](https://github.com/odradev/odra-examples)
-* [Odra Casper](https://github.com/odradev/odra-casper)
+* [Example Contracts](https://github.com/odradev/odra/tree/HEAD/examples)
 * [Original Proposal for Odra Framework](https://github.com/odradev/odra-proposal)
 
 ## Contact
-Write **maciej@odra.dev**, he will guide you.
+Need some help? Write to **contract@odra.dev**.
 
 ---
 <div align="center">

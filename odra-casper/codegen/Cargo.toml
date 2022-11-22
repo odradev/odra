@@ -1,11 +1,11 @@
 [package]
 name = "odra-casper-codegen"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
 license = "MIT"
 repository = "https://github.com/odradev/odra-casper"
-description = "Odra backend bindings and codegen utility for the Casper Blockchain."
+description = "Odra codegen utility to generate Casper contracts."
 keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm", "smart contracts"]
 

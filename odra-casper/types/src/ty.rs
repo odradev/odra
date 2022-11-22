@@ -1,6 +1,7 @@
 use casper_types::{CLType, CLTyped};
 use odra_types::Type;
 
+/// A type which can be described as a [Type].
 pub trait Typed {
     fn ty() -> Type;
 }
