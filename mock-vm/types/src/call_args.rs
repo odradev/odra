@@ -16,13 +16,11 @@ impl CallArgs {
 
     /// Inserts a new empty arg into the collection.
     pub fn insert<K: Into<String>, T: MockVMType>(&mut self, key: K, value: T) {
-        // TODO: Handle unwrap.
         self.data.insert(key.into(), value.ser().unwrap());
     }
 
     /// Gets an argument by the name.
     pub fn get<T: MockVMType>(&self, key: &str) -> T {
-        // TODO: Handle unwraps.
         T::deser(self.data.get(key).unwrap().clone()).unwrap()
     }
 

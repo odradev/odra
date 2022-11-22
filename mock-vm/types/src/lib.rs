@@ -1,5 +1,4 @@
 mod address;
-mod bytes;
 mod call_args;
 mod mock_vm_type;
 mod ty;
@@ -8,7 +7,6 @@ mod uints;
 
 pub use address::Address;
 pub use borsh::{BorshDeserialize, BorshSerialize};
-pub use bytes::Bytes;
 pub use call_args::CallArgs;
 pub use mock_vm_type::{MockVMSerializationError, MockVMType};
 pub use ty::Typed;

@@ -1,11 +1,9 @@
 mod args;
-mod bytes;
 mod casper_address;
 mod ty;
 mod uints;
 
 pub use args::CallArgs;
-pub use bytes::Bytes;
 pub use ty::Typed;
 pub use uints::{U256, U512};
 
