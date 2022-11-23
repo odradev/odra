@@ -1,5 +1,3 @@
-
-
 use odra::{
     contract_env, execution_error, types::event::OdraEvent, types::Address, Event, Variable
 };

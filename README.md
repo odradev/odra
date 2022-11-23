@@ -19,6 +19,7 @@
 - [Usage](#usage)
 - [Example](#example)
 - [Backends](#backends)
+- [Tests](#tests)
 - [Links](#links)
 - [Contact](#contact)
 
@@ -74,6 +75,21 @@ Odra is designed to integrate with most WebAssembly-based smart contract systems
 
 Integrated blockchains:
 * Casper Network.
+
+## Tests
+
+Before running tests make sure you have following packages installed:
+
+- Rust toolchain (see [rustup.rs](https://rustup.rs/)) with `wasm32-unknown-unknown` target.
+- `wasm-strip` (see [wabt](https://github.com/WebAssembly/wabt))
+- `cargo-odra` (see [Cargo Odra](https://github.com/odradev/cargo-odra))
+- `just` (see [just](https://github.com/casey/just#packages))
+
+Run tests:
+
+```bash
+$ just test
+```
 
 ## Links
 
