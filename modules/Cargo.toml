@@ -10,7 +10,7 @@ keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm"]
 
 [dependencies]
-odra = { path = "../core", default-features = false }
+odra = { version = "0.2.0", path = "../core", default-features = false }
 
 [features]
 default = [ "mock-vm" ]
