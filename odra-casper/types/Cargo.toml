@@ -11,4 +11,4 @@ categories = ["wasm", "smart contracts"]
 
 [dependencies]
 casper-types = "1.5.0"
-odra-types = { path = "../../types" }
+odra-types = { version = "0.2.0", path = "../../types" }
