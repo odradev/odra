@@ -3,16 +3,16 @@ name: odra-ci
 on:
   push:
     branches:
-      - '[0-9].[0-9]+.[0-9]+'
+      - 'release/**'
     paths-ignore:
-      - "**.md"
+      - '**.md'
 
   pull_request:
     branches:
-      - '[0-9].[0-9]+.[0-9]+'
-      - feature/**
+      - 'release/**'
+      - 'feature/**'
     paths-ignore:
-      - "**.md"
+      - '**.md'
 
 jobs:
   test:
