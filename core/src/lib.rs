@@ -1,8 +1,10 @@
 #[cfg(all(feature = "casper", feature = "mock-vm"))]
 compile_error!("casper and mock-vm are mutually exclusive features.");
 
-#[cfg(not(any(feature = "casper", feature = "mock-vm")))]
-compile_error!("Exactly one of these features must be selected: `casper`, `mock-vm`.");
+#[cfg(not(any(feature = "casper", feature = "mock-vm", feature = "casper-livenet")))]
+compile_error!(
+    "Exactly one of these features must be selected: `casper`, `mock-vm`, `casper-livenet`."
+);
 
 mod instance;
 mod list;
@@ -25,6 +27,8 @@ pub mod test_utils;
 
 #[cfg(all(feature = "casper", target_arch = "wasm32"))]
 pub use odra_casper_backend::contract_env;
+#[cfg(feature = "casper-livenet")]
+pub use odra_casper_livenet::{contract_env, test_env};
 #[cfg(all(feature = "casper", not(target_arch = "wasm32")))]
 pub use odra_casper_test_env::{dummy_contract_env as contract_env, test_env};
 #[cfg(feature = "mock-vm")]
@@ -34,7 +38,7 @@ pub use odra_mock_vm::{contract_env, test_env};
 ///
 /// Re-exports all the platform-agnostic types and depending on the selected feature, re-exports platform-specific types.
 pub mod types {
-    #[cfg(feature = "casper")]
+    #[cfg(any(feature = "casper", feature = "casper-livenet"))]
     pub use odra_casper_backend::types::*;
     #[cfg(feature = "mock-vm")]
     pub use odra_mock_vm::types::*;
@@ -48,6 +52,11 @@ pub mod casper {
     pub use odra_casper_backend::{casper_contract, runtime, storage, utils};
     #[cfg(not(target_arch = "wasm32"))]
     pub use odra_casper_codegen as codegen;
+}
+
+#[cfg(feature = "casper-livenet")]
+pub mod casper {
+    pub use odra_casper_backend::casper_types;
 }
 
 /// Calls contract at `address` invoking the `entrypoint` with `args`.
@@ -69,6 +78,8 @@ where
             test_env::call_contract(address, entrypoint, args, amount)
         }  else if #[cfg(all(feature = "casper", target_arch = "wasm32"))] {
             contract_env::call_contract(address, entrypoint, args, amount)
+        } else if #[cfg(feature = "casper-livenet")] {
+            test_env::call_contract(address, entrypoint, args, amount)
         } else {
             compile_error!("Unknown feature")
         }

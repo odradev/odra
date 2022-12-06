@@ -1,10 +1,13 @@
 //! Better address representation for Casper.
 
+use std::str::FromStr;
+
 use casper_types::{
     account::AccountHash,
     bytesrepr::{self, FromBytes, ToBytes},
     CLType, CLTyped, ContractPackageHash, Key
 };
+use odra_types::{OdraError, VmError};
 
 /// An enum representing an [`AccountHash`] or a [`ContractPackageHash`].
 #[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -64,7 +67,7 @@ impl From<CasperAddress> for Key {
 }
 
 impl TryFrom<Key> for CasperAddress {
-    type Error = String;
+    type Error = OdraError;
 
     fn try_from(key: Key) -> Result<Self, Self::Error> {
         match key {
@@ -72,7 +75,7 @@ impl TryFrom<Key> for CasperAddress {
             Key::Hash(contract_package_hash) => Ok(CasperAddress::Contract(
                 ContractPackageHash::new(contract_package_hash)
             )),
-            _ => Err(String::from("Unsupported Key type."))
+            _ => Err(OdraError::VmError(VmError::Deserialization))
         }
     }
 }
@@ -109,6 +112,29 @@ impl FromBytes for CasperAddress {
     }
 }
 
+impl FromStr for CasperAddress {
+    type Err = OdraError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match Key::from_formatted_str(s) {
+            Err(_) => Err(OdraError::VmError(VmError::Deserialization)),
+            Ok(key) => match key {
+                Key::Account(_) | Key::Hash(_) => match key.try_into() {
+                    Ok(address) => Ok(address),
+                    Err(_) => Err(OdraError::VmError(VmError::Deserialization))
+                },
+                _ => Err(OdraError::VmError(VmError::Deserialization))
+            }
+        }
+    }
+}
+
+impl ToString for CasperAddress {
+    fn to_string(&self) -> String {
+        Key::from(*self).to_formatted_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -118,6 +144,7 @@ mod tests {
         "contract-package-wasm7ba9daac84bebee8111c186588f21ebca35550b6cf1244e71768bd871938be6a";
     const ACCOUNT_HASH: &str =
         "account-hash-3b4ffcfb21411ced5fc1560c3f6ffed86f4885e5ea05cde49d90962a48a14d95";
+    const HASH: &str = "hash-7ba9daac84bebee8111c186588f21ebca35550b6cf1244e71768bd871938be6a";
 
     fn mock_account_hash() -> AccountHash {
         AccountHash::from_formatted_str(ACCOUNT_HASH).unwrap()
@@ -175,5 +202,21 @@ mod tests {
         let (restored, rest) = CasperAddress::from_bytes(&bytes).unwrap();
         assert!(rest.is_empty());
         assert_eq!(restored, casper_address);
+    }
+
+    #[test]
+    fn test_casper_address_from_to_string() {
+        let address = CasperAddress::from_str(HASH).unwrap();
+        assert!(address.is_contract());
+        assert_eq!(&address.to_string(), HASH);
+
+        let address = CasperAddress::from_str(ACCOUNT_HASH).unwrap();
+        assert!(!address.is_contract());
+        assert_eq!(&address.to_string(), ACCOUNT_HASH);
+
+        assert_eq!(
+            CasperAddress::from_str(CONTRACT_PACKAGE_HASH).unwrap_err(),
+            OdraError::VmError(VmError::Deserialization)
+        )
     }
 }

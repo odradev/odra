@@ -4,7 +4,7 @@ mod balance;
 mod callstack;
 mod contract_container;
 pub mod contract_env;
-mod contract_register;
+pub mod contract_register;
 mod mock_vm;
 mod native_token;
 mod storage;

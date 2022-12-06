@@ -1,0 +1,16 @@
+[package]
+name = "odra-casper-livenet"
+version = "0.2.0"
+edition = "2021"
+
+[dependencies]
+casper-types = "1.5.0"
+casper-client = "1.5.0"
+odra-casper-shared = { version = "0.2.0", path = "../shared" }
+odra-casper-types = { version = "0.2.0", path = "../types" }
+odra-types = { version = "0.2.0", path = "../../types" }
+odra-mock-vm = { version = "0.2.0", path = "../../mock-vm/backend" }
+ref_thread_local = "0.1.1"
+tokio = "*"
+serde_json = "*"
+hex = "*"

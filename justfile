@@ -46,3 +46,6 @@ test-modules-on-casper:
 test-modules: test-modules-on-mockvm test-modules-on-casper
 
 test: test-odra test-examples test-modules
+
+run-examples-token-name-reader:
+    cd examples && cargo run --no-default-features -F casper-livenet

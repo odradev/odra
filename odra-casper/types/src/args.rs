@@ -25,6 +25,14 @@ impl CallArgs {
     {
         self.0.insert(key, value).unwrap();
     }
+
+    /// Retrieves a vector of argument names.
+    pub fn arg_names(&self) -> Vec<String> {
+        self.0
+            .named_args()
+            .map(|arg| arg.name().to_string())
+            .collect()
+    }
 }
 
 impl ToBytes for CallArgs {
