@@ -98,7 +98,7 @@ impl GenerateCode for Deploy<'_> {
         quote! {
             struct #deployer_ident;
 
-            #[cfg(all(feature = "casper", not(target_arch = "wasm32")))]
+            #[cfg(all(any(feature = "cosmos", feature = "casper"), not(target_arch = "wasm32")))]
             impl #deployer_ident {
                 #constructors_wasm_test
             }
@@ -211,7 +211,7 @@ where
             quote! {
                 pub #fn_sig {
                     let mut args = { #args };
-                    args.insert("constructor", stringify!(#constructor_ident));
+                    args.insert("constructor", stringify!(#constructor_ident).to_string());
                     let address = odra::test_env::register_contract(#struct_name_snake_case, args);
                     #ref_ident::at(address)
                 }

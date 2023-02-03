@@ -4,6 +4,7 @@
 Cargo.lock
 .vscode/
 odra-casper/**/target/
+odra-cosmos/**/target/
 contract/
 examples/target
 examples/.builder_casper

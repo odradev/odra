@@ -79,3 +79,38 @@ where
         };
     }
 }
+
+#[cfg(test)]
+mod test {
+    use std::str::FromStr;
+
+    use proc_macro2::TokenStream;
+    use quote::{quote, ToTokens};
+    use syn::{parse, parse2, parse_quote, Type};
+
+    #[test]
+    fn ddd() {
+        let ty_str = "odra :: types :: Address";
+
+        let ts = TokenStream::from_str(stringify!(u32)).unwrap();
+        let ts = TokenStream::from_str(ty_str).unwrap();
+
+        let ty = parse2::<Type>(ts);
+        // dbg!(ty);
+        // let ty: Type = parse_quote!(u32);
+        // dbg!(ty);
+        // let s = ty.unwrap().to_token_stream();
+        // dbg!(s.to_string());
+
+        let ty = ty.unwrap();
+        // let ty = ty.to_token_stream();
+
+        let a = quote! {
+            odra::types::contract_def::Argument {
+                ty: String::from(stringify!(#ty)),
+            },
+        };
+
+        dbg!(a.to_string());
+    }
+}

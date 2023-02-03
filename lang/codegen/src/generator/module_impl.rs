@@ -35,7 +35,7 @@ impl GenerateCode for ModuleImpl<'_> {
                 # (#original_item_impls)*
             }
 
-            #[cfg(feature = "casper")]
+            #[cfg(any(feature = "cosmos", feature = "casper"))]
             #contract_def
 
             #deploy

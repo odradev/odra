@@ -79,10 +79,7 @@ impl ToTokens for WasmConstructor<'_> {
 
 #[cfg(test)]
 mod tests {
-    use odra_types::{
-        contract_def::{Argument, EntrypointType},
-        Type
-    };
+    use odra_types::contract_def::{Argument, EntrypointType};
 
     use crate::assert_eq_tokens;
 
@@ -94,9 +91,9 @@ mod tests {
             ident: String::from("construct_me"),
             args: vec![Argument {
                 ident: String::from("value"),
-                ty: Type::I32
+                ty: String::from("u32")
             }],
-            ret: Type::Unit,
+            ret: String::from("()"),
             ty: EntrypointType::Constructor,
             is_mut: false
         };

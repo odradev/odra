@@ -1,7 +1,5 @@
 //! Encapsulates a set of structures that abstract out a smart contract layout.
 
-use crate::Type;
-
 /// Top-level contract abstraction.
 #[derive(Debug, Clone)]
 pub struct ContractDef {
@@ -15,7 +13,7 @@ pub struct Entrypoint {
     pub ident: String,
     pub args: Vec<Argument>,
     pub is_mut: bool,
-    pub ret: Type,
+    pub ret: String,
     pub ty: EntrypointType
 }
 
@@ -23,7 +21,7 @@ pub struct Entrypoint {
 #[derive(Debug, Clone)]
 pub struct Argument {
     pub ident: String,
-    pub ty: Type
+    pub ty: String
 }
 
 /// Defines an entrypoint type.

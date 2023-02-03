@@ -1,8 +1,9 @@
+use std::str::FromStr;
+
 use odra_types::contract_def::{Argument, Entrypoint, EntrypointType};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens, TokenStreamExt};
-
-use super::ty::WrappedType;
+use syn::parse2;
 
 pub(crate) struct ContractEntrypoints<'a>(pub &'a Vec<Entrypoint>);
 
@@ -18,7 +19,8 @@ impl ContractEntrypoints<'_> {
     fn build_entry_point(entrypoint: &Entrypoint) -> TokenStream {
         let entrypoint_ident = format_ident!("{}", entrypoint.ident);
         let params = EntrypointParams(&entrypoint.args);
-        let ret = WrappedType(&entrypoint.ret);
+        let token = TokenStream::from_str(&entrypoint.ret).unwrap();
+        let ret = parse2::<syn::Type>(token).unwrap();
         let access = match &entrypoint.ty {
             EntrypointType::Constructor => quote! {
                 odra::casper::casper_types::EntryPointAccess::Groups(vec![odra::casper::casper_types::Group::new("constructor")])
@@ -35,7 +37,7 @@ impl ContractEntrypoints<'_> {
                 odra::casper::casper_types::EntryPoint::new(
                     stringify!(#entrypoint_ident),
                     #params,
-                    #ret,
+                    <#ret as odra::casper::casper_types::CLTyped>::cl_type(),
                     #access,
                     odra::casper::casper_types::EntryPointType::Contract,
                 )
@@ -56,8 +58,16 @@ impl ToTokens for EntrypointParams<'_> {
                 .iter()
                 .flat_map(|arg| {
                     let arg_ident = format_ident!("{}", arg.ident);
-                    let ty = WrappedType(&arg.ty);
-                    quote!(params.push(odra::casper::casper_types::Parameter::new(stringify!(#arg_ident), #ty));)
+                    let token = TokenStream::from_str(&arg.ty).unwrap();
+                    let ty = parse2::<syn::Type>(token).unwrap();
+                    quote!(
+                        params.push(
+                            odra::casper::casper_types::Parameter::new(
+                                stringify!(#arg_ident),
+                                <#ty as odra::casper::casper_types::CLTyped>::cl_type()
+                            )
+                        );
+                    )
                 })
                 .collect::<TokenStream>();
 
@@ -76,8 +86,6 @@ impl ToTokens for EntrypointParams<'_> {
 
 #[cfg(test)]
 mod test {
-    use odra_types::Type;
-
     use super::*;
     use crate::assert_eq_tokens;
 
@@ -87,9 +95,9 @@ mod test {
             ident: String::from("call_me"),
             args: vec![Argument {
                 ident: String::from("value"),
-                ty: Type::I32
+                ty: String::from("i32")
             }],
-            ret: Type::Bool,
+            ret: String::from("bool"),
             ty: EntrypointType::Public,
             is_mut: false
         }];

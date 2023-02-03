@@ -1,0 +1,17 @@
+[package]
+name = "odra-cosmos-backend"
+version = "0.2.0"
+edition = "2021"
+authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
+license = "MIT"
+
+[dependencies]
+odra-cosmos-shared = { version = "0.2.0", path = "../shared" }
+odra-cosmos-types = { version = "0.2.0", path = "../types" }
+odra-types = { version = "0.2.0", path = "../../types" }
+cosmwasm-std = "1.2.1"
+syn = "1.0.96"
+hex = "0.4.3"
+lazy_static = "1.4.0"
+serde-json-wasm = "0.5.0"
+serde = { version = "1.0.152", features = ["derive"] }

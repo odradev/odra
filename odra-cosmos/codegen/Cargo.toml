@@ -1,0 +1,15 @@
+[package]
+name = "odra-cosmos-codegen"
+version = "0.2.0"
+edition = "2021"
+authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
+
+[dependencies]
+proc-macro2 = "1.0.39"
+quote = "1.0.18"
+syn = "1.0.96"
+pretty_assertions = "1.2.1"
+convert_case = "0.5.0"
+odra-cosmos-types = { path = "../types" }
+odra-types = { path = "../../types" }
+odra-utils = { path = "../../utils" }

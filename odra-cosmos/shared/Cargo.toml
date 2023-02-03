@@ -1,0 +1,5 @@
+[package]
+name = "odra-cosmos-shared"
+version = "0.2.0"
+edition = "2021"
+authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]

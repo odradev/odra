@@ -1,7 +1,4 @@
-use odra_types::{
-    contract_def::{Entrypoint, EntrypointType},
-    Type
-};
+use odra_types::contract_def::{Entrypoint, EntrypointType};
 use quote::{format_ident, quote, ToTokens};
 use syn::{self, punctuated::Punctuated, token::Comma, Ident, Path};
 
@@ -36,8 +33,8 @@ impl ToTokens for WasmEntrypoint<'_> {
             _ => quote!()
         };
 
-        let contract_call = match self.0.ret {
-            Type::Unit => quote! {
+        let contract_call = match self.0.ret.as_str() {
+            "()" => quote! {
                 #args
                 contract.#entrypoint_ident(#fn_args);
             },
@@ -81,9 +78,9 @@ mod tests {
             ident: String::from("construct_me"),
             args: vec![Argument {
                 ident: String::from("value"),
-                ty: Type::I32
+                ty: String::from("u32")
             }],
-            ret: Type::Unit,
+            ret: String::from("()"),
             ty: EntrypointType::Public,
             is_mut: false
         };
@@ -117,7 +114,7 @@ mod tests {
         let entrypoint = Entrypoint {
             ident: String::from("pay_me"),
             args: vec![],
-            ret: Type::Unit,
+            ret: String::from("()"),
             ty: EntrypointType::PublicPayable,
             is_mut: false
         };
@@ -143,7 +140,7 @@ mod tests {
         let entrypoint = Entrypoint {
             ident: String::from("pay_me"),
             args: vec![],
-            ret: Type::Unit,
+            ret: String::from("()"),
             ty: EntrypointType::PublicPayable,
             is_mut: true
         };

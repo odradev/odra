@@ -12,7 +12,6 @@ use syn::{punctuated::Punctuated, Path, PathSegment, Token};
 mod arg;
 mod constructor;
 mod entrypoints_def;
-mod ty;
 mod wasm_entrypoint;
 
 /// Given the ContractDef from Odra, generate Casper contract.
@@ -23,7 +22,7 @@ pub fn gen_contract(contract_def: ContractDef, fqn: String) -> TokenStream2 {
     quote! {
         #![no_main]
 
-        use odra::Instance;
+        use odra::{types::Address, Instance};
 
         #call_fn
 
@@ -98,7 +97,6 @@ fn assert_eq_tokens<A: ToTokens, B: ToTokens>(left: A, right: B) {
 #[cfg(test)]
 mod tests {
     use odra_types::contract_def::{Argument, ContractDef, Entrypoint, EntrypointType};
-    use odra_types::Type;
     use quote::{quote, ToTokens};
 
     use super::constructor::WasmConstructor;
@@ -112,16 +110,16 @@ mod tests {
             ident: String::from("construct_me"),
             args: vec![Argument {
                 ident: String::from("value"),
-                ty: Type::I32
+                ty: String::from("i32")
             }],
-            ret: Type::Unit,
+            ret: String::from("()"),
             ty: EntrypointType::Constructor,
             is_mut: false
         };
         let entrypoint = Entrypoint {
             ident: String::from("call_me"),
             args: vec![],
-            ret: Type::Bool,
+            ret: String::from("bool"),
             ty: EntrypointType::Public,
             is_mut: false
         };

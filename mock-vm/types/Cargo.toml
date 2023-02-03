@@ -13,5 +13,5 @@ categories = ["wasm"]
 odra-types = { version = "0.2.0", path = "../../types" }
 odra-utils = { version = "0.2.0", path = "../../utils" }
 hex = "0.4.3"
-uint = "0.9.4"
-borsh = "0.9.3"
+uint = "0.9.3"
+borsh = "0.10.0"

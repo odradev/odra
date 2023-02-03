@@ -35,11 +35,11 @@ impl ToTokens for Constructor {
             .flat_map(|arg| {
                 let name = &*arg.pat;
                 let ty = &*arg.ty;
-                let ty = quote!(<#ty as odra::types::Typed>::ty());
+                let ty = ty.to_token_stream();
                 quote! {
                     odra::types::contract_def::Argument {
                         ident: String::from(stringify!(#name)),
-                        ty: #ty,
+                        ty: String::from(stringify!(#ty)),
                     },
                 }
             })
@@ -49,7 +49,7 @@ impl ToTokens for Constructor {
                 ident: String::from(#name),
                 args: vec![#args],
                 is_mut: #is_mut,
-                ret: odra::types::Type::Unit,
+                ret: String::from("()"),
                 ty: odra::types::contract_def::EntrypointType::Constructor,
             },
         };

@@ -20,8 +20,6 @@ impl ToTokens for CasperArgs<'_> {
 
 #[cfg(test)]
 mod tests {
-    use odra_types::Type;
-
     use super::*;
     use crate::assert_eq_tokens;
 
@@ -37,11 +35,11 @@ mod tests {
         let args = vec![
             Argument {
                 ident: String::from("a"),
-                ty: Type::Bool
+                ty: String::from("bool")
             },
             Argument {
                 ident: String::from("b_c"),
-                ty: Type::String
+                ty: String::from("String")
             },
         ];
         let args = CasperArgs(&args);

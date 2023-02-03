@@ -13,7 +13,15 @@ members = [
     "odra-casper/shared",
     "odra-casper/test-env",
     "odra-casper/types",
-    "odra-casper/test-env/getter_proxy"
+    "odra-casper/test-env/getter_proxy",
+    "odra-cosmos/backend",
+    "odra-cosmos/codegen",
+    "odra-cosmos/shared",
+    "odra-cosmos/test-env",
+    "odra-cosmos/types",
 ]
 
 exclude = [ "contract", "contract/builder", "examples", "modules" ]
+
+[patch.crates-io]
+casper-types = { git = "https://github.com/zie1ony/casper-node", branch = "k256-update" }
