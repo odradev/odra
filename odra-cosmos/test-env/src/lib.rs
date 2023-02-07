@@ -66,8 +66,6 @@ impl TestEnv {
         let init_res: Response = call_instantiate(&mut instance, &self.env, &message_info, &msg)
             .unwrap()
             .unwrap();
-
-        println!("{:?}", init_res);
     }
 
     fn build_message(entry_point: &str, args: CallArgs) -> Vec<u8> {
@@ -136,8 +134,6 @@ impl TestEnv {
 
     /// Reads a given compiled contract file based on path
     fn read_wasm_file_bytes<T: AsRef<Path>>(contract_file: T) -> Vec<u8> {
-        // let mut attempted_paths = vec![];
-
         if contract_file.as_ref().is_relative() {
             // Find first path to a given file found in a list of paths
             let wasm_path = env::current_dir()

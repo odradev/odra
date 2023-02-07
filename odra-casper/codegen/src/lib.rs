@@ -22,7 +22,7 @@ pub fn gen_contract(contract_def: ContractDef, fqn: String) -> TokenStream2 {
     quote! {
         #![no_main]
 
-        use odra::{types::Address, Instance};
+        use odra::{types::*, Instance};
 
         #call_fn
 

@@ -24,4 +24,4 @@ members = [
 exclude = [ "contract", "contract/builder", "examples", "modules" ]
 
 [patch.crates-io]
-casper-types = { git = "https://github.com/zie1ony/casper-node", branch = "k256-update" }
+casper-types = { git = "https://github.com/kpob/casper-node", branch = "feature/k256-update" }

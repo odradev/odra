@@ -1,5 +1,5 @@
 use odra_types::{OdraError, VmError};
-/// MockVM Types implementation.
+/// Cosmos Types implementation.
 ///
 /// It supports the following types:
 /// - Rust simple types: bool, u8, u32, u64, i32, i64, (), String.
@@ -15,11 +15,11 @@ pub trait CosmosType: Sized {
 
 impl<T: Serialize + DeserializeOwned> CosmosType for T {
     fn ser(&self) -> Result<Vec<u8>, CosmosSerializationError> {
-        serde_json::to_vec(self).map_err(|_| CosmosSerializationError::SerializationError)
+        serde_json_wasm::to_vec(self).map_err(|_| CosmosSerializationError::SerializationError)
     }
 
     fn deser(bytes: Vec<u8>) -> Result<Self, CosmosSerializationError> {
-        serde_json::from_slice(&bytes).map_err(|_| CosmosSerializationError::DeserializationError)
+        serde_json_wasm::from_slice(&bytes).map_err(|_| CosmosSerializationError::DeserializationError)
     }
 }
 

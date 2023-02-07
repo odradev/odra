@@ -7,6 +7,7 @@ use crate::GenerateCode;
 
 mod casper;
 mod mock_vm;
+mod cosmos;
 
 #[derive(From)]
 pub struct EventItem<'a> {
@@ -19,6 +20,7 @@ impl GenerateCode for EventItem<'_> {
 
         let casper_code = casper::generate_code(self.event);
         let mock_vm_code = mock_vm::generate_code(self.event);
+        let cosmos_code = cosmos::generate_code(self.event);
 
         quote! {
             impl odra::types::event::OdraEvent for #struct_ident {
@@ -34,6 +36,8 @@ impl GenerateCode for EventItem<'_> {
             #casper_code
 
             #mock_vm_code
+
+            #cosmos_code
         }
     }
 }

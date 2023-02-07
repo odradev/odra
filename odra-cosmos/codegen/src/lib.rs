@@ -80,36 +80,36 @@ pub fn gen_contract(contract_def: ContractDef, fqn: String) -> TokenStream2 {
 
         #[no_mangle]
         fn instantiate(ptr0: u32, ptr1: u32, ptr2: u32) -> u32 {
-            odra_cosmos_backend::instantiate(&init_fn, ptr0, ptr1, ptr2)
+            odra::cosmos::instantiate(&init_fn, ptr0, ptr1, ptr2)
         }
 
         #[no_mangle]
         fn execute(ptr0: u32, ptr1: u32, ptr2: u32) -> u32 {
-            odra_cosmos_backend::execute(&exe_fn, ptr0, ptr1, ptr2)
+            odra::cosmos::execute(&exe_fn, ptr0, ptr1, ptr2)
         }
 
         #[no_mangle]
         fn query(ptr0: u32, ptr1: u32) -> u32 {
-            odra_cosmos_backend::query(&query_fn, ptr0, ptr1)
+            odra::cosmos::query(&query_fn, ptr0, ptr1)
         }
 
         #init_msg
         #exec_msg
         #query_msg
 
-        fn init_fn(input: &[u8]) -> Result<odra_cosmos_backend::cosmwasm_std::Response, String> {
+        fn init_fn(input: &[u8]) -> Result<odra::cosmos::cosmwasm_std::Response, String> {
             let #message_ident: #ident_init_message = #parse_message
             #init_variant_matching
-            Ok(odra_cosmos_backend::cosmwasm_std::Response::new())
+            Ok(odra::cosmos::cosmwasm_std::Response::new())
         }
 
-        fn exe_fn(input: &[u8]) -> Result<odra_cosmos_backend::cosmwasm_std::Response, String> {
+        fn exe_fn(input: &[u8]) -> Result<odra::cosmos::cosmwasm_std::Response, String> {
             let #message_ident: #ident_exec_message = #parse_message
             #exec_variant_matching
-            Ok(odra_cosmos_backend::cosmwasm_std::Response::new())
+            Ok(odra::cosmos::cosmwasm_std::Response::new())
         }
 
-        fn query_fn(input: &[u8]) -> odra_cosmos_backend::cosmwasm_std::StdResult<odra_cosmos_backend::cosmwasm_std::Binary> {
+        fn query_fn(input: &[u8]) -> odra::cosmos::cosmwasm_std::StdResult<odra::cosmos::cosmwasm_std::Binary> {
             let #message_ident: #ident_query_message = #parse_query_message
             #query_variant_matching
         }
@@ -163,7 +163,7 @@ fn to_query_variant_branch(
         #message_ty::#variant_ident { #args } => {
             #contract_instance
             let result = contract.#fn_ident(#args);
-            odra_cosmos_backend::cosmwasm_std::to_binary(&result)
+            odra::cosmos::cosmwasm_std::to_binary(&result)
         }
     }
 }
@@ -227,7 +227,7 @@ where
 
 fn parse_message() -> TokenStream2 {
     quote! {
-        match odra_cosmos_backend::cosmwasm_std::from_slice(input) {
+        match odra::cosmos::cosmwasm_std::from_slice(input) {
             Ok(val) => val,
             Err(err) => {
                 return Err(err.to_string())
@@ -238,7 +238,7 @@ fn parse_message() -> TokenStream2 {
 
 fn parse_query_message() -> TokenStream2 {
     quote! {
-        match odra_cosmos_backend::cosmwasm_std::from_slice(input) {
+        match odra::cosmos::cosmwasm_std::from_slice(input) {
             Ok(val) => val,
             Err(err) => {
                 return Err(err)

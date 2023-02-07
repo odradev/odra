@@ -7,8 +7,8 @@ odra-casper/**/target/
 odra-cosmos/**/target/
 contract/
 examples/target
-examples/.builder_casper
+examples/.builder_*
 examples/wasm
 modules/target
-modules/.builder_casper
+modules/.builder_*
 modules/wasm

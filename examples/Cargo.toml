@@ -5,10 +5,13 @@ edition = "2021"
 
 [dependencies]
 odra = { path = "../core", default-features = false }
-odra-modules = { path = "../modules", default-features = false }
+odra-modules = { path = "../modules", default-features = false, optional = true }
 
 [features]
 default = ["mock-vm"]
 mock-vm = ["odra/mock-vm", "odra-modules/mock-vm"]
 casper = ["odra/casper", "odra-modules/casper"]
 cosmos = ["odra/cosmos", "odra-modules/cosmos"]
+
+[patch.crates-io]
+casper-types = { git = "https://github.com/kpob/casper-node", branch = "feature/k256-update" }

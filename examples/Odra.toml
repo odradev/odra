@@ -1,19 +1,23 @@
-[[contracts]]
-name = "owned_token"
-fqn = "odra_examples::owned_token::OwnedToken"
+# [[contracts]]
+# name = "owned_token"
+# fqn = "odra_examples::owned_token::OwnedToken"
+
+# [[contracts]]
+# name = "balance_checker"
+# fqn = "odra_examples::balance_checker::BalanceChecker"
+
+# [[contracts]]
+# name = "ownable"
+# fqn = "odra_examples::ownable::Ownable"
+
+# [[contracts]]
+# name = "erc20"
+# fqn = "odra_examples::erc20::Erc20"
+
+# [[contracts]]
+# name = "time_lock_wallet"
+# fqn = "odra_examples::tlw::TimeLockWallet"
 
 [[contracts]]
-name = "balance_checker"
-fqn = "odra_examples::balance_checker::BalanceChecker"
-
-[[contracts]]
-name = "ownable"
-fqn = "odra_examples::ownable::Ownable"
-
-[[contracts]]
-name = "erc20"
-fqn = "odra_examples::erc20::Erc20"
-
-[[contracts]]
-name = "time_lock_wallet"
-fqn = "odra_examples::tlw::TimeLockWallet"
+name = "counter"
+fqn = "odra_examples::counter::Counter"

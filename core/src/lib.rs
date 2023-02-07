@@ -64,8 +64,8 @@ pub mod casper {
 
 #[cfg(feature = "cosmos")]
 pub mod cosmos {
-    // #[cfg(target_arch = "wasm32")]
-    // pub use odra_cosmos_backend::{Serialize, Deserialize};
+    #[cfg(target_arch = "wasm32")]
+    pub use odra_cosmos_backend::{execute, instantiate, query, cosmwasm_std};
     #[cfg(not(target_arch = "wasm32"))]
     pub use odra_cosmos_codegen as codegen;
 }

@@ -14,4 +14,4 @@ syn = "1.0.96"
 hex = "0.4.3"
 lazy_static = "1.4.0"
 serde-json-wasm = "0.5.0"
-serde = { version = "1.0.152", features = ["derive"] }
+serde = { version = "1.0.147", features = ["derive"] }

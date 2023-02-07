@@ -19,6 +19,12 @@ impl Typed for u32 {
     }
 }
 
+impl Typed for i32 {
+    fn ty() -> Type {
+        Type::I32
+    }
+}
+
 impl Typed for u64 {
     fn ty() -> Type {
         Type::U64
@@ -58,6 +64,13 @@ impl Typed for String {
 impl Typed for Address {
     fn ty() -> Type {
         Type::Address
+    }
+}
+
+impl <T> Typed for Option<T>
+where T: Typed {
+    fn ty() -> Type {
+        Type::Option(Box::new(T::ty()))
     }
 }
 
