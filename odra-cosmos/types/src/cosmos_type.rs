@@ -19,7 +19,8 @@ impl<T: Serialize + DeserializeOwned> CosmosType for T {
     }
 
     fn deser(bytes: Vec<u8>) -> Result<Self, CosmosSerializationError> {
-        serde_json_wasm::from_slice(&bytes).map_err(|_| CosmosSerializationError::DeserializationError)
+        serde_json_wasm::from_slice(&bytes)
+            .map_err(|_| CosmosSerializationError::DeserializationError)
     }
 }
 

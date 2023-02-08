@@ -5,8 +5,6 @@ use odra_types::{
 use serde::{Deserialize, Serialize};
 use uint::construct_uint;
 
-use crate::Typed;
-
 construct_uint! {
     #[derive(Serialize, Deserialize)]
     pub struct U256(4);
@@ -40,6 +38,5 @@ impl Into<String> for U512 {
         String::from_utf8(self.as_u128().to_le_bytes().to_vec()).unwrap()
     }
 }
-
 
 impl_overflowing_add_sub!(U256, U512);

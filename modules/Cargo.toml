@@ -13,7 +13,6 @@ categories = ["wasm"]
 odra = { version = "0.2.0", path = "../core", default-features = false }
 serde = { version = "1.0.147", optional = true }
 
-
 [features]
 default = [ "mock-vm" ]
 mock-vm = [ "odra/mock-vm" ]

@@ -6,8 +6,8 @@ use quote::quote;
 use crate::GenerateCode;
 
 mod casper;
-mod mock_vm;
 mod cosmos;
+mod mock_vm;
 
 #[derive(From)]
 pub struct EventItem<'a> {

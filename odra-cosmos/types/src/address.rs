@@ -1,7 +1,10 @@
 //! Better address representation for Casper.
 
 use cosmwasm_std::Addr;
-use serde::{Deserialize, Serialize, de::{value::BytesDeserializer, Visitor}};
+use serde::{
+    de::{value::BytesDeserializer, Visitor},
+    Deserialize, Serialize
+};
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Copy)]
 pub struct Address([u8; 20]);
@@ -51,26 +54,49 @@ impl core::fmt::Debug for Address {
 impl Serialize for Address {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer {
-        serializer.serialize_bytes(&self.0)
+        S: serde::Serializer
+    {
+        let str: String = self.into();
+        serializer.serialize_str(&str)
     }
 }
 
-impl <'de> Deserialize<'de> for Address {
+impl<'de> Deserialize<'de> for Address {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: serde::Deserializer<'de> {
-            let bytes = deserializer.deserialize_bytes(VecVisitor)?;
-            Ok(Address::new(&bytes))
+        D: serde::Deserializer<'de>
+    {
+        let bytes = deserializer.deserialize_str(AddressVisitor)?;
+        Ok(Address::new(bytes.as_bytes()))
     }
 }
 
-struct VecVisitor;
+struct AddressVisitor;
 
-impl<'de> Visitor<'de> for VecVisitor {
-    type Value = Vec<u8>;
+impl<'de> Visitor<'de> for AddressVisitor {
+    type Value = String;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        formatter.write_str("a bytes vec")
+        formatter.write_str("a &str")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error
+    {
+        Ok(v.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{Address, CosmosType, OdraType};
+
+    #[test]
+    fn serde() {
+        let address = Address::new(b"some address");
+
+        let json = serde_json::to_vec(&address).unwrap();
+        assert_eq!(address, serde_json::from_slice(&json).unwrap());
     }
 }

@@ -2,7 +2,7 @@
 //!
 //! Depending on the selected feature, the actual test env is dynamically loaded in the runtime or the Odra local MockVM is used.
 //!
-use crate::ENV;
+use crate::cosmos_test_env::ENV;
 use odra_cosmos_shared::native_token::NativeTokenMetadata;
 use odra_cosmos_types::{Address, Balance, CallArgs, OdraType};
 use odra_types::{
@@ -36,8 +36,6 @@ pub fn call_contract<T: OdraType>(
         // if let Some(amount) = amount {
         //     env.borrow_mut().attach_value(amount.inner());
         // }
-        // dbg!(T::deser(vec![110, 117, 108, 108]).is_ok());
-        // dbg!(String::from_utf8(vec![110, 117, 108, 108]));
 
         // vec![110, 117, 108, 108] == null == ()
         if let Ok(null) = T::deser(vec![110, 117, 108, 108]) {
@@ -51,11 +49,13 @@ pub fn call_contract<T: OdraType>(
 
 /// Set the caller address for the next [call_contract].
 pub fn set_caller(address: Address) {
-    unimplemented!()
+    ENV.with(|env| {
+        env.borrow_mut().set_caller(address);
+    });
 }
 
 /// Returns predefined account.
-pub fn get_account(n: usize) -> Address {
+pub fn get_account(_n: usize) -> Address {
     unimplemented!()
 }
 

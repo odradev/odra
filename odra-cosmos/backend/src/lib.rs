@@ -14,3 +14,4 @@ pub use query::query;
 pub use cosmwasm_std;
 pub use odra_cosmos_types as types;
 pub use serde;
+pub use serde::ser::SerializeStruct;

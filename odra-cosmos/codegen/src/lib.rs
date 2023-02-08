@@ -16,66 +16,35 @@ pub fn gen_contract(contract_def: ContractDef, fqn: String) -> TokenStream2 {
     let exec_filter = |ep: &&Entrypoint| ep.ty != EntrypointType::Constructor && &ep.ret == UNIT;
     let query_filter = |ep: &&Entrypoint| ep.ty != EntrypointType::Constructor && &ep.ret != UNIT;
 
-    let init_variants = build_message_variants(&contract_def, init_filter);
-    let exec_variants = build_message_variants(&contract_def, exec_filter);
-    let query_variants = build_message_variants(&contract_def, query_filter);
-
-    let ident_init_message = format_ident!("InitMessage");
-    let ident_exec_message = format_ident!("ExecMessage");
-    let ident_query_message = format_ident!("QueryMessage");
-
     let contract_path = fqn_to_path(&fqn);
-    let message_ident = format_ident!("message");
+    let action_ident = format_ident!("action");
+    let action_ty_ident = format_ident!("Action");
 
     let init_variant_matching = build_variant_matching(
         &contract_def,
         &contract_path,
-        &ident_init_message,
-        &message_ident,
         init_filter,
         to_variant_branch
     );
     let exec_variant_matching = build_variant_matching(
         &contract_def,
         &contract_path,
-        &ident_exec_message,
-        &message_ident,
         exec_filter,
         to_variant_branch
     );
     let query_variant_matching = build_variant_matching(
         &contract_def,
         &contract_path,
-        &ident_query_message,
-        &message_ident,
         query_filter,
         to_query_variant_branch
     );
-
-    let init_msg = quote! {
-        #[derive(serde::Serialize, serde::Deserialize)]
-        enum #ident_init_message {
-            #init_variants
-        }
-    };
-    let exec_msg = quote! {
-        #[derive(serde::Serialize, serde::Deserialize)]
-        enum #ident_exec_message {
-            #exec_variants
-        }
-    };
-    let query_msg = quote! {
-        #[derive(serde::Serialize, serde::Deserialize)]
-        enum #ident_query_message {
-            #query_variants
-        }
-    };
 
     let parse_message = parse_message();
     let parse_query_message = parse_query_message();
 
     quote! {
         #![no_main]
+        use odra::UnwrapOrRevert;
         use odra::{types::Address, Instance};
 
         #[no_mangle]
@@ -93,33 +62,121 @@ pub fn gen_contract(contract_def: ContractDef, fqn: String) -> TokenStream2 {
             odra::cosmos::query(&query_fn, ptr0, ptr1)
         }
 
-        #init_msg
-        #exec_msg
-        #query_msg
-
         fn init_fn(input: &[u8]) -> Result<odra::cosmos::cosmwasm_std::Response, String> {
-            let #message_ident: #ident_init_message = #parse_message
-            #init_variant_matching
+            let #action_ident: #action_ty_ident = #parse_message
+            match action.name.as_str() {
+                #init_variant_matching
+                _ => return Err(String::from("Unknown action"))
+            }
             Ok(odra::cosmos::cosmwasm_std::Response::new())
         }
 
         fn exe_fn(input: &[u8]) -> Result<odra::cosmos::cosmwasm_std::Response, String> {
-            let #message_ident: #ident_exec_message = #parse_message
-            #exec_variant_matching
+            let #action_ident: #action_ty_ident = #parse_message
+            match action.name.as_str() {
+                #exec_variant_matching
+                _ => return Err(String::from("Unknown action"))
+            }
             Ok(odra::cosmos::cosmwasm_std::Response::new())
         }
 
         fn query_fn(input: &[u8]) -> odra::cosmos::cosmwasm_std::StdResult<odra::cosmos::cosmwasm_std::Binary> {
-            let #message_ident: #ident_query_message = #parse_query_message
-            #query_variant_matching
+            let #action_ident: #action_ty_ident = #parse_query_message
+
+            match action.name.as_str() {
+                #query_variant_matching
+                _ => return Err(odra::cosmos::cosmwasm_std::StdError::NotFound { kind: String::from("Unknown command")})
+            }
         }
 
+        #[derive(Debug, PartialEq)]
+        struct Action {
+            pub name: String,
+            pub args: Vec<Vec<u8>>,
+        }
+
+        impl odra::cosmos::serde::Serialize for Action {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: odra::cosmos::serde::Serializer {
+
+                let mut s = serializer.serialize_struct("Action", 2)?;
+                odra::cosmos::serde::ser::SerializeStruct::serialize_field(&mut s, "name", &self.name)?;
+                odra::cosmos::serde::ser::SerializeStruct::serialize_field(&mut s, "args", &self.args)?;
+                odra::cosmos::serde::ser::SerializeStruct::end(s)
+            }
+        }
+        struct ActionVisitor;
+
+        impl<'de> odra::cosmos::serde::de::Visitor<'de> for ActionVisitor {
+            type Value = Action;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("an Action")
+            }
+
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+                where
+                    A: odra::cosmos::serde::de::MapAccess<'de>, {
+                    let mut name: Option<String> = None;
+                    let mut args: Option<Vec<Vec<u8>>> = None;
+                    while let Some(key) =
+                        match odra::cosmos::serde::de::MapAccess::next_key::<String>(&mut map) {
+                            Ok(val) => val,
+                            Err(err) => return Err(err)
+                        }
+                    {
+                        match key.as_str() {
+                            "name" => {
+                                name = Some(
+                                    match odra::cosmos::serde::de::MapAccess::next_value::<String>(&mut map) {
+                                        Ok(val) => val,
+                                        Err(err) => return Err(err)
+                                    },
+                                );
+                            },
+                            "args" => {
+                                args = Some(
+                                    match odra::cosmos::serde::de::MapAccess::next_value::<Vec<Vec<u8>>>(&mut map) {
+                                        Ok(val) => val,
+                                        Err(err) => return Err(err)
+                                    },
+                                );
+                            },
+                            _ => odra::contract_env::revert(Error::UnknownAction),
+                        }
+                    }
+                    Ok(Action { name: name.unwrap(), args: args.unwrap() })
+            }
+        }
+
+        impl <'de> odra::cosmos::serde::Deserialize<'de> for Action {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: odra::cosmos::serde::Deserializer<'de> {
+                    deserializer.deserialize_struct(
+                        "Action",
+                        &["name", "args"],
+                        ActionVisitor
+                    )
+            }
+        }
+
+        fn get_arg<T: odra::types::OdraType>(bytes: Vec<u8>) -> T {
+            T::deser(bytes).unwrap()
+        }
+
+        odra::execution_error! {
+            enum Error {
+                UnknownAction => 1000
+            }
+        }
     }
 }
 
-fn to_variant_branch(ep: &Entrypoint, contract_path: &Path, message_ty: &Ident) -> TokenStream2 {
-    let variant_ident = format_ident!("{}", ep.ident.to_case(Case::Pascal));
+fn to_variant_branch(ep: &Entrypoint, contract_path: &Path) -> TokenStream2 {
     let fn_ident = format_ident!("{}", ep.ident);
+    let get_args = get_args(ep);
     let args = ep
         .args
         .iter()
@@ -133,20 +190,17 @@ fn to_variant_branch(ep: &Entrypoint, contract_path: &Path, message_ty: &Ident) 
         false => quote!(let contract = #contract_path::instance("contract");)
     };
     quote! {
-        #message_ty::#variant_ident { #args } => {
+        stringify!(#fn_ident) => {
             #contract_instance
+            #get_args
             contract.#fn_ident(#args);
         }
     }
 }
 
-fn to_query_variant_branch(
-    ep: &Entrypoint,
-    contract_path: &Path,
-    message_ty: &Ident
-) -> TokenStream2 {
-    let variant_ident = format_ident!("{}", ep.ident.to_case(Case::Pascal));
+fn to_query_variant_branch(ep: &Entrypoint, contract_path: &Path) -> TokenStream2 {
     let fn_ident = format_ident!("{}", ep.ident);
+    let get_args = get_args(ep);
     let args = ep
         .args
         .iter()
@@ -160,69 +214,41 @@ fn to_query_variant_branch(
         false => quote!(let contract = #contract_path::instance("contract");)
     };
     quote! {
-        #message_ty::#variant_ident { #args } => {
+        stringify!(#fn_ident) => {
             #contract_instance
+            #get_args
             let result = contract.#fn_ident(#args);
             odra::cosmos::cosmwasm_std::to_binary(&result)
         }
     }
 }
 
-fn to_variant_token_stream(ep: &Entrypoint) -> TokenStream2 {
-    let ident = format_ident!("{}", ep.ident.to_case(Case::Pascal));
-    let args = ep
-        .args
+fn get_args(ep: &Entrypoint) -> TokenStream2 {
+    ep.args
         .iter()
-        .map(|arg| {
+        .enumerate()
+        .map(|(idx, arg)| {
             let ident = format_ident!("{}", arg.ident);
-            let ty = TokenStream2::from_str(&arg.ty)
-                .expect("An argument type should be a valid TokenStream");
-            let ty = syn::parse2::<syn::Type>(ty).expect("Should be a valid type");
-            quote!(#ident: #ty,)
+            quote!(let #ident = get_arg(action.args.get(#idx).unwrap_or_revert().clone());)
         })
-        .collect::<TokenStream2>();
-    quote!(#ident { #args },)
-}
-
-fn build_message_variants<'a, F>(def: &ContractDef, f: F) -> TokenStream2
-where
-    F: FnMut(&&Entrypoint) -> bool
-{
-    def.entrypoints
-        .iter()
-        .filter(f)
-        .map(to_variant_token_stream)
         .collect::<TokenStream2>()
 }
 
 fn build_variant_matching<'a, F, M>(
     def: &ContractDef,
     contract_path: &Path,
-    message_ty: &Ident,
-    message_ident: &Ident,
     f: F,
     mut m: M
 ) -> TokenStream2
 where
     F: FnMut(&&Entrypoint) -> bool,
-    M: FnMut(&Entrypoint, &Path, &Ident) -> TokenStream2
+    M: FnMut(&Entrypoint, &Path) -> TokenStream2
 {
-    let matching = def
-        .entrypoints
+    def.entrypoints
         .iter()
         .filter(f)
-        .map(|ep| m(ep, contract_path, message_ty))
-        .collect::<TokenStream2>();
-
-    if matching.is_empty() {
-        return matching;
-    }
-
-    quote! {
-        match #message_ident {
-            #matching
-        }
-    }
+        .map(|ep| m(ep, contract_path))
+        .collect::<TokenStream2>()
 }
 
 fn parse_message() -> TokenStream2 {

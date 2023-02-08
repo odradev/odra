@@ -43,17 +43,30 @@ pub fn get_var<T: OdraType>(key: &str) -> Option<T> {
 }
 
 /// Store the mapping value under a given key.
+#[cfg(target_arch = "wasm32")]
 pub fn set_dict_value<K: OdraType, V: OdraType>(dict: &str, key: &K, value: V) {
-    unimplemented!()
+    use cosmwasm_std::Storage;
+
+    let mut storage = cosmwasm_std::ExternalStorage::new();
+
+    let key = key.ser().unwrap();
+    let key = dict
+        .as_bytes()
+        .iter()
+        .chain(&key)
+        .map(|v| v.to_owned())
+        .collect::<Vec<_>>();
+    storage.set(&key, value.ser().unwrap().as_slice());
 }
 
 /// Read value from the mapping.
-pub fn get_dict_value<K: OdraType, T: OdraType>(dict: &str, key: &K) -> Option<T> {
+#[cfg(target_arch = "wasm32")]
+pub fn get_dict_value<K: OdraType, T: OdraType>(_dict: &str, _key: &K) -> Option<T> {
     unimplemented!()
 }
 
 /// Revert the execution.
-pub fn revert<E>(error: E) -> !
+pub fn revert<E>(_error: E) -> !
 where
     E: Into<ExecutionError>
 {
@@ -61,7 +74,7 @@ where
 }
 
 /// Emits event.
-pub fn emit_event<T>(event: T)
+pub fn emit_event<T>(_event: T)
 where
     T: OdraType + OdraEvent
 {
@@ -70,10 +83,10 @@ where
 
 /// Call another contract.
 pub fn call_contract<T: OdraType>(
-    address: Address,
-    entrypoint: &str,
-    args: CallArgs,
-    amount: Option<Balance>
+    _address: Address,
+    _entrypoint: &str,
+    _args: CallArgs,
+    _amount: Option<Balance>
 ) -> T {
     unimplemented!()
 }
