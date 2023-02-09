@@ -20,4 +20,4 @@ casper = [ "odra/casper" ]
 cosmos = [ "odra/cosmos", "serde" ]
 
 [patch.crates-io]
-casper-types = { git = "https://github.com/kpob/casper-node", branch = "feature/k256-update" }
+casper-types = { git = "https://github.com/odradev/casper-node", branch = "feature/k256-update" }
