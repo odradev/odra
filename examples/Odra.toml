@@ -17,3 +17,47 @@ fqn = "odra_examples::erc20::Erc20"
 [[contracts]]
 name = "time_lock_wallet"
 fqn = "odra_examples::tlw::TimeLockWallet"
+
+[[contracts]]
+name = "variable"
+fqn = "odra_examples::docs::variable::DogContract"
+
+[[contracts]]
+name = "mapping"
+fqn = "odra_examples::docs::variable::DogContract2"
+
+[[contracts]]
+name = "list"
+fqn = "odra_examples::docs::variable::DogContract3"
+
+[[contracts]]
+name = "testing"
+fqn = "odra_examples::docs::testing::TestContract"
+
+[[contracts]]
+name = "host"
+fqn = "odra_examples::docs::host::MyContract"
+
+[[contracts]]
+name = "errors"
+fqn = "odra_examples::docs::errors::OwnedContract"
+
+[[contracts]]
+name = "events"
+fqn = "odra_examples::docs::events::PartyContract"
+
+[[contracts]]
+name = "cross1"
+fqn = "odra_examples::docs::cross_calls::MyContract
+
+[[contracts]]
+name = "cross2"
+fqn = "odra_examples::docs::cross_calls::MathEngine
+
+[[contracts]]
+name = "modules"
+fqn = "odra_examples::docs::modules::MyContract
+
+[[contracts]]
+name = "native_token"
+fqn = "odra_examples::docs::native_token::PublicWallet
