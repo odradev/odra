@@ -2,7 +2,7 @@ use cosmwasm_std::{ContractResult, CustomMsg, Env, MessageInfo, Response};
 
 use crate::{
     runtime::{Runtime, RT},
-    utils::{self, consume_region, Region}
+    private::{self, consume_region, Region}
 };
 
 pub fn execute<C, E>(
@@ -16,7 +16,7 @@ where
     E: ToString
 {
     #[cfg(target_arch = "wasm32")]
-    utils::install_panic_handler();
+    private::install_panic_handler();
 
     let env: Vec<u8> = unsafe { consume_region(env_ptr as *mut Region) };
     let info: Vec<u8> = unsafe { consume_region(info_ptr as *mut Region) };
@@ -25,13 +25,13 @@ where
     let env: Env = match cosmwasm_std::from_slice(&env) {
         Ok(val) => val,
         Err(err) => {
-            return utils::err_to_u32::<Response<C>>(err);
+            return private::err_to_u32::<Response<C>>(err);
         }
     };
     let info: MessageInfo = match cosmwasm_std::from_slice(&info) {
         Ok(val) => val,
         Err(err) => {
-            return utils::err_to_u32::<Response<C>>(err);
+            return private::err_to_u32::<Response<C>>(err);
         }
     };
 
@@ -39,5 +39,5 @@ where
     let result: ContractResult<Response<C>> = exe_fn(&msg).into();
     RT.with(|rt_ref| rt_ref.replace(Runtime::default()));
     let v = serde_json_wasm::to_vec(&result).unwrap();
-    crate::utils::release_buffer(v) as u32
+    crate::private::release_buffer(v) as u32
 }

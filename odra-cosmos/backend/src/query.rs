@@ -2,7 +2,7 @@ use cosmwasm_std::{ContractResult, Env, QueryResponse};
 
 use crate::{
     runtime::{Runtime, RT},
-    utils::{self, consume_region, Region}
+    private::{self, consume_region, Region}
 };
 
 pub fn query<E: ToString>(
@@ -11,14 +11,14 @@ pub fn query<E: ToString>(
     msg_ptr: u32
 ) -> u32 {
     #[cfg(target_arch = "wasm32")]
-    utils::install_panic_handler();
+    private::install_panic_handler();
 
     let env: Vec<u8> = unsafe { consume_region(env_ptr as *mut Region) };
     let msg: Vec<u8> = unsafe { consume_region(msg_ptr as *mut Region) };
     let env: Env = match cosmwasm_std::from_slice(&env) {
         Ok(val) => val,
         Err(err) => {
-            return utils::err_to_u32::<QueryResponse>(err);
+            return private::err_to_u32::<QueryResponse>(err);
         }
     };
 
@@ -27,5 +27,5 @@ pub fn query<E: ToString>(
     RT.with(|rt_ref| rt_ref.replace(Runtime::default()));
 
     let v = serde_json_wasm::to_vec(&result).unwrap();
-    crate::utils::release_buffer(v) as u32
+    crate::private::release_buffer(v) as u32
 }

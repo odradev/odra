@@ -6,6 +6,7 @@ mod init;
 mod query;
 mod runtime;
 mod utils;
+mod private;
 
 pub use execute::execute;
 pub use init::instantiate;
