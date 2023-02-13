@@ -2,6 +2,7 @@
 //!
 //! It provides all the required functions to communicate between Odra and Casper.
 
+use cosmwasm_std::Response;
 use odra_cosmos_shared::native_token::NativeTokenMetadata;
 use odra_cosmos_types::{Address, Balance, BlockTime, CallArgs, OdraType};
 use odra_types::{event::OdraEvent, ExecutionError};
@@ -66,19 +67,20 @@ pub fn get_dict_value<K: OdraType, T: OdraType>(_dict: &str, _key: &K) -> Option
 }
 
 /// Revert the execution.
-pub fn revert<E>(_error: E) -> !
+pub fn revert<E>(error: E) -> !
 where
     E: Into<ExecutionError>
 {
-    unimplemented!()
+    let error: ExecutionError = error.into();
+    panic!("{}", error.message());
 }
 
 /// Emits event.
-pub fn emit_event<T>(_event: T)
+pub fn emit_event<T>(event: T)
 where
-    T: OdraType + OdraEvent
+    T: OdraEvent + Into<cosmwasm_std::Event>
 {
-    unimplemented!()
+    RT.with(|runtime| runtime.borrow_mut().add_event(event.into()))
 }
 
 /// Call another contract.
@@ -109,11 +111,15 @@ pub fn attached_value() -> Balance {
 }
 
 /// Transfers native token from the contract caller to the given address.
-pub fn transfer_tokens<B: Into<Balance>>(to: Address, amount: B) {
+pub fn transfer_tokens<B: Into<Balance>>(_to: Address, _amount: B) {
     unimplemented!()
 }
 
 /// Returns CSPR token metadata
 pub fn native_token_metadata() -> NativeTokenMetadata {
     unimplemented!()
+}
+
+pub fn get_response() -> Response {
+    RT.with(|runtime| runtime.borrow().get_response())
 }

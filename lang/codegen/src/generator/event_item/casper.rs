@@ -1,4 +1,4 @@
-use odra_ir::EventItem as IrEventItem;
+use odra_ir::{EventItem as IrEventItem, Field};
 use proc_macro2::TokenStream;
 use quote::{quote, TokenStreamExt};
 
@@ -10,12 +10,12 @@ pub fn generate_code(event: &IrEventItem) -> TokenStream {
 
     let deserialize_fields = fields
         .iter()
-        .map(|ident| quote!(let (#ident, bytes) = odra::casper::casper_types::bytesrepr::FromBytes::from_vec(bytes.to_vec())?;))
+        .map(|Field { ident, ..}| quote!(let (#ident, bytes) = odra::casper::casper_types::bytesrepr::FromBytes::from_vec(bytes.to_vec())?;))
         .collect::<TokenStream>();
 
     let construct_struct = fields
         .iter()
-        .map(|ident| quote! { #ident, })
+        .map(|Field { ident, .. }| quote! { #ident, })
         .collect::<TokenStream>();
 
     let mut sum_serialized_lengths = quote! {
@@ -24,12 +24,12 @@ pub fn generate_code(event: &IrEventItem) -> TokenStream {
     sum_serialized_lengths.append_all(
         fields
             .iter()
-            .map(|ident| quote!(size += self.#ident.serialized_length();))
+            .map(|Field { ident, .. }| quote!(size += self.#ident.serialized_length();))
     );
 
     let append_bytes = fields
         .iter()
-        .flat_map(|ident| quote!(vec.extend(self.#ident.to_bytes()?);))
+        .flat_map(|Field { ident, .. }| quote!(vec.extend(self.#ident.to_bytes()?);))
         .collect::<TokenStream>();
 
     quote! {

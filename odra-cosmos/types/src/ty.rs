@@ -85,18 +85,50 @@ where
     }
 }
 
-trait ToValue {
-    fn to_value(&self) -> serde_json::Value;
+pub trait AsString {
+    fn as_string(&self) -> String;
 }
-impl ToValue for Address {
-    fn to_value(&self) -> serde_json::Value {
-        let str: String = self.into();
-        serde_json::Value::String(str)
+
+macro_rules! impl_as_string {
+    ( $( $name:ident ),+ ) => {
+        $(impl AsString for $name {
+            fn as_string(&self) -> String {
+                self.to_string()
+            }
+        })+
+    };
+}
+
+impl_as_string!(u8, u32, i32, u64, U256, U512, bool, String, Address);
+
+impl<T: AsString> AsString for Option<T> {
+    fn as_string(&self) -> String {
+        match self {
+            Some(value) => value.as_string(),
+            None => String::from("null")
+        }
     }
 }
 
-impl ToValue for bool {
-    fn to_value(&self) -> serde_json::Value {
-        serde_json::Value::Bool(*self)
+impl AsString for () {
+    fn as_string(&self) -> String {
+        String::from("")
+    }
+}
+
+impl AsString for &str {
+    fn as_string(&self) -> String {
+        String::from(*self)
+    }
+}
+
+impl<T: AsString> AsString for Vec<T> {
+    fn as_string(&self) -> String {
+        let values = self
+            .iter()
+            .map(|value| value.as_string())
+            .collect::<Vec<_>>();
+        let values = values.join(",");
+        format!("[{}]", values)
     }
 }

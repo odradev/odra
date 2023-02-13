@@ -1,6 +1,9 @@
 use std::mem;
 
 use cosmwasm_std::{ContractResult, StdError};
+use odra_cosmos_types::AsString;
+
+use crate::runtime::RT;
 
 #[repr(C)]
 pub struct Region {
@@ -55,4 +58,27 @@ pub fn err_to_u32<C: serde::Serialize>(err: StdError) -> u32 {
     let result: ContractResult<C> = ContractResult::Err(err.to_string());
     let v = serde_json_wasm::to_vec(&result).unwrap();
     return crate::utils::release_buffer(v) as u32;
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn install_panic_handler() {
+    std::panic::set_hook(Box::new(|info| {
+        let full_message = info.to_string();
+        let region = build_region(full_message.as_bytes());
+        let region_ptr = region.as_ref() as *const Region as u32;
+        unsafe { abort(region_ptr) };
+    }));
+}
+
+#[cfg(target_arch = "wasm32")]
+extern "C" {
+    fn abort(source_ptr: u32);
+}
+
+pub fn add_attribute<T: AsString>(key: &str, value: T) {
+    RT.with(|runtime| {
+        runtime
+            .borrow_mut()
+            .add_attribute(key.to_string(), value.as_string())
+    });
 }

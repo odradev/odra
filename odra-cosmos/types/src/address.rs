@@ -1,22 +1,31 @@
-//! Better address representation for Casper.
+//! Address representation for Cosmos.
 
 use cosmwasm_std::Addr;
-use serde::{
-    de::{value::BytesDeserializer, Visitor},
-    Deserialize, Serialize
-};
+use serde::{de::Visitor, Deserialize, Serialize};
 
+const ADDRESS_LENGTH: usize = 90;
+
+/// Internal address representation.
+///
+/// Typically an `Address` should be created from cosmwasm [Addr].
+///
+/// In Cosmos, an address is typically bech32 encoded. For other cosmos-based chains
+/// smart contracts no assumptions should be made other than being UTF-8 encoded
+/// and of reasonable length.
+///
+/// Read more in [`comsmwasm_std docs`](Addr).
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Copy)]
-pub struct Address([u8; 20]);
+pub struct Address([u8; ADDRESS_LENGTH], u8);
 
 impl Address {
     pub fn new(bytes: &[u8]) -> Address {
+        let len = bytes.len();
         let mut bytes_vec = bytes.to_vec();
-        bytes_vec.resize(20, 0);
+        bytes_vec.resize(ADDRESS_LENGTH, 0);
 
-        let mut bytes = [0u8; 20];
+        let mut bytes = [0u8; ADDRESS_LENGTH];
         bytes.copy_from_slice(bytes_vec.as_slice());
-        Address(bytes)
+        Address(bytes, len as u8)
     }
 }
 
@@ -26,21 +35,10 @@ impl Into<Addr> for Address {
     }
 }
 
-impl Into<String> for Address {
-    fn into(self) -> String {
-        String::from_utf8(self.0.to_vec()).unwrap()
-    }
-}
-
-impl Into<String> for &Address {
-    fn into(self) -> String {
-        String::from_utf8(self.0.to_vec()).unwrap()
-    }
-}
-
 impl ToString for Address {
     fn to_string(&self) -> String {
-        String::from_utf8(self.0.to_vec()).unwrap()
+        let significant_bytes = &self.0[0..self.1 as usize];
+        String::from_utf8(significant_bytes.to_vec()).unwrap()
     }
 }
 
@@ -56,7 +54,7 @@ impl Serialize for Address {
     where
         S: serde::Serializer
     {
-        let str: String = self.into();
+        let str: String = self.to_string();
         serializer.serialize_str(&str)
     }
 }
@@ -90,13 +88,23 @@ impl<'de> Visitor<'de> for AddressVisitor {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Address, CosmosType, OdraType};
+    use cosmwasm_std::Addr;
+
+    use crate::Address;
 
     #[test]
     fn serde() {
-        let address = Address::new(b"some address");
+        let address_str = "juno1sh3lp27j2xkpgj46qszltfv9nm7ewdnzy724tgm5u8ze2wklrekqn99vrs";
+        let address = Address::new(address_str.as_bytes());
 
-        let json = serde_json::to_vec(&address).unwrap();
-        assert_eq!(address, serde_json::from_slice(&json).unwrap());
+        let serialized_address = serde_json::to_vec(&address).unwrap();
+        let deserialized_address: Address = serde_json::from_slice(&serialized_address).unwrap();
+
+        assert_eq!(address, deserialized_address);
+
+        let expected_address = Addr::unchecked(address_str);
+        let actual_address: Addr = deserialized_address.into();
+
+        assert_eq!(actual_address, expected_address);
     }
 }

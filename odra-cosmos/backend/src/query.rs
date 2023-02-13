@@ -10,8 +10,9 @@ pub fn query<E: ToString>(
     env_ptr: u32,
     msg_ptr: u32
 ) -> u32 {
-    #[cfg(feature = "abort")]
-    install_panic_handler();
+    #[cfg(target_arch = "wasm32")]
+    utils::install_panic_handler();
+
     let env: Vec<u8> = unsafe { consume_region(env_ptr as *mut Region) };
     let msg: Vec<u8> = unsafe { consume_region(msg_ptr as *mut Region) };
     let env: Env = match cosmwasm_std::from_slice(&env) {

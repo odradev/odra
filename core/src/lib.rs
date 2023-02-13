@@ -64,8 +64,11 @@ pub mod casper {
 
 #[cfg(feature = "cosmos")]
 pub mod cosmos {
+    pub use odra_cosmos_backend::cosmwasm_std::Event;
     #[cfg(target_arch = "wasm32")]
-    pub use odra_cosmos_backend::{cosmwasm_std, execute, instantiate, query, serde};
+    pub use odra_cosmos_backend::{
+        add_attribute, cosmwasm_std, execute, instantiate, query, serde
+    };
     #[cfg(not(target_arch = "wasm32"))]
     pub use odra_cosmos_codegen as codegen;
 }

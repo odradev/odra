@@ -12,7 +12,7 @@ pub use call_args::CallArgs;
 pub use cosmos_type::CosmosSerializationError;
 pub use cosmos_type::CosmosType;
 pub use serde::{Deserialize, Serialize};
-pub use ty::Typed;
+pub use ty::{AsString, Typed};
 pub use uints::{U256, U512};
 /// A type representing the amount of native tokens.
 pub type Balance = U256;
@@ -20,9 +20,9 @@ pub type Balance = U256;
 pub type BlockTime = u64;
 
 /// A type that can be written to the storage and read from the storage.
-pub trait OdraType: CosmosType {}
+pub trait OdraType: CosmosType + AsString {}
 
-impl<T: CosmosType> OdraType for T {}
+impl<T: CosmosType + AsString> OdraType for T {}
 
 /// Represents a serialized event.
 pub type EventData = Vec<u8>;

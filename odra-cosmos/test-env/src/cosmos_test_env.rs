@@ -1,14 +1,14 @@
 use std::{cell::RefCell, env, fs, path::Path};
 
-use convert_case::Casing;
-use cosmwasm_std::{to_vec, Env, Event, MessageInfo, Response};
+use cosmwasm_std::{to_vec, Binary, ContractResult, Env, Event, MessageInfo, Response};
 use cosmwasm_vm::{
     call_execute, call_instantiate, call_query,
     testing::{mock_env, mock_info, mock_instance, MockApi, MockQuerier, MockStorage},
-    Instance
+    Instance, VmError, VmResult
 };
 
-use odra_cosmos_types::{Address, BlockTime, CallArgs, OdraType, U512};
+use odra_cosmos_types::{Address, BlockTime, CallArgs, OdraType, Balance};
+use odra_types::{ExecutionError, OdraError, VmError as OdraVmError};
 use serde_json::{Map, Value};
 
 thread_local! {
@@ -24,11 +24,12 @@ pub struct TestEnv {
     accounts: Vec<Address>,
     active_account: Address,
     block_time: BlockTime,
-    attached_value: Option<U512>,
+    attached_value: Option<Balance>,
     wasm_path: Option<String>,
     mock_instance: Option<Instance<MockApi, MockStorage, MockQuerier>>,
     env: Env,
-    events: Vec<Event>
+    events: Vec<Event>,
+    error: Option<OdraError>
 }
 
 impl TestEnv {
@@ -48,7 +49,8 @@ impl TestEnv {
             mock_instance: None,
             attached_value: None,
             env: mock_env(),
-            events: vec![]
+            events: vec![],
+            error: None
         }
     }
 
@@ -62,46 +64,55 @@ impl TestEnv {
             .mock_instance
             .as_mut()
             .expect("The instance should initialized");
-        // TODO: handle unwraps
-        let msg = Self::build_message(constructor, args);
-        let response: Response = call_instantiate(&mut instance, &self.env, &message_info, &msg)
-            .unwrap()
-            .unwrap();
 
-        // self.events.extend(response.events.iter());
+        let msg = build_message(constructor, args);
+        let result: VmResult<ContractResult<Response>> =
+            call_instantiate(&mut instance, &self.env, &message_info, &msg);
+        self.handle_error(&result);
+        self.handle_response(&result);
     }
 
-    ///EVENTS!!!!
     pub fn execute(&mut self, entry_point: &str, args: CallArgs) {
+        self.error = None;
+
         let message_info = self.active_account_message_info();
-        let msg = Self::build_message(entry_point, args);
+        let msg = build_message(entry_point, args);
+        let instance = self
+            .mock_instance
+            .as_mut()
+            .expect("The instance should initialized");
 
-        // TODO: handle unwraps
-        let response: Response = call_execute(
-            self.mock_instance.as_mut().unwrap(),
-            &self.env,
-            &message_info,
-            &msg
-        )
-        .unwrap()
-        .unwrap();
+        let result: VmResult<ContractResult<Response>> =
+            call_execute(instance, &self.env, &message_info, &msg);
 
-        // self.events.extend(response.events.iter());
+        self.handle_error(&result);
+        self.handle_response(&result);
+
         self.active_account = self.get_account(0);
     }
 
     pub fn query<T: OdraType>(&mut self, entry_point: &str, args: CallArgs) -> T {
-        let msg = Self::build_message(entry_point, args);
-        // TODO: handle unwraps
-        let res = call_query(self.mock_instance.as_mut().unwrap(), &self.env, &msg)
-            .unwrap()
-            .unwrap();
+        self.error = None;
+
+        let msg = build_message(entry_point, args);
+        let instance = self
+            .mock_instance
+            .as_mut()
+            .expect("The instance should initialized");
+
+        let result: VmResult<ContractResult<Binary>> = call_query(instance, &self.env, &msg);
+
+        self.handle_error(&result);
 
         self.active_account = self.get_account(0);
 
-        let data = res.0;
+        if let Ok(result) = result {
+            if let ContractResult::Ok(binary) = result {
+                return T::deser(binary.0).unwrap();
+            }
+        };
 
-        T::deser(data).unwrap()
+        T::deser(vec![]).unwrap()
     }
 
     pub fn set_caller(&mut self, address: Address) {
@@ -114,13 +125,18 @@ impl TestEnv {
     }
 
     /// Sets the value that will be attached to the next contract call.
-    pub fn attach_value(&mut self, amount: U512) {
+    pub fn attach_value(&mut self, amount: Balance) {
         self.attached_value = Some(amount);
     }
 
     /// Get one of the predefined accounts.
     pub fn get_account(&self, n: usize) -> Address {
         *self.accounts.get(n).unwrap()
+    }
+
+    /// Returns possible error.
+    pub fn get_error(&self) -> Option<OdraError> {
+        self.error.clone()
     }
 
     /// Reads a given compiled contract file based on path
@@ -147,7 +163,7 @@ impl TestEnv {
     }
 
     fn active_account_message_info(&self) -> MessageInfo {
-        let account_name: String = self.active_account.into();
+        let account_name: String = self.active_account.to_string();
         let mut funds = vec![];
         if let Some(value) = self.attached_value {
             funds.push(cosmwasm_std::Coin::new(value.as_u128(), "ucosm"));
@@ -155,23 +171,66 @@ impl TestEnv {
         mock_info(&account_name, &funds)
     }
 
-    fn build_message(entry_point: &str, args: CallArgs) -> Vec<u8> {
-        let args = args
-            .arg_names()
-            .iter()
-            .filter(|name| *name != CALL_ARG_CONSTRUCTOR)
-            .map(|name| args.get_as_value(name))
-            .collect::<Vec<Value>>();
+    fn handle_error<S>(&mut self, result: &VmResult<ContractResult<S>>) {
+        if let Err(error) = result {
+            self.error = Some(parse_error(error));
+        };
+    }
 
-        let args = Value::Array(args);
-        let mut ep = Map::new();
-        ep.insert(
-            ARG_ACTION_NAME.to_string(),
-            Value::String(entry_point.to_string())
-        );
-        ep.insert(ARG_ACTION_ARGS.to_string(), args);
-        let root = Value::Object(ep);
+    fn handle_response(&mut self, result: &VmResult<ContractResult<Response>>) {
+        if let Ok(result) = result {
+            if let ContractResult::Ok(response) = result {
+                let events = response.events.clone();
+                self.events.extend(events.into_iter());
+            }
+        };
+    }
+}
 
-        to_vec(&root).unwrap()
+fn build_message(entry_point: &str, args: CallArgs) -> Vec<u8> {
+    let args = args
+        .arg_names()
+        .iter()
+        .filter(|name| *name != CALL_ARG_CONSTRUCTOR)
+        .map(|name| args.get_as_value(name))
+        .collect::<Vec<Value>>();
+
+    let args = Value::Array(args);
+    let mut ep = Map::new();
+    ep.insert(
+        ARG_ACTION_NAME.to_string(),
+        Value::String(entry_point.to_string())
+    );
+    ep.insert(ARG_ACTION_ARGS.to_string(), args);
+    let root = Value::Object(ep);
+    to_vec(&root).unwrap()
+}
+
+fn parse_error(err: &VmError) -> OdraError {
+    match err {
+        VmError::RuntimeErr { msg } => {
+            // The `msg` looks like "Wasmer runtime error: RuntimeError: Aborted:
+            // panicked at '{{original message}}', {{path}}", so search for the string
+            // between quotes ''.
+            let start = msg.find("'").unwrap();
+            let end = msg.rfind("'").unwrap();
+            let original_err_msg = &msg[start + 1..end];
+            OdraError::ExecutionError(ExecutionError::new(0, original_err_msg))
+        }
+        other => OdraError::VmError(OdraVmError::Other(format!("{}", other)))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_message;
+    use odra_cosmos_types::CallArgs;
+
+    #[test]
+    fn parsing_args() {
+        let ep = "init";
+        let mut args = CallArgs::new();
+        args.insert("value", 123);
+        dbg!(build_message(ep, args));
     }
 }

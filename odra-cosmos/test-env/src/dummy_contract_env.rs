@@ -28,7 +28,7 @@ pub fn get_dict_value<K: OdraType, T: OdraType>(_: &str, _: &K) -> Option<T> {
 
 pub fn emit_event<T>(_: T)
 where
-    T: OdraType + OdraEvent
+    T: OdraEvent + Into<cosmwasm_std::Event>
 {
     unimplemented!()
 }

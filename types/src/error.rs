@@ -81,9 +81,14 @@ impl ExecutionError {
         Self::new(UNWRAP_ERROR, "Unwrap error")
     }
 
-    /// Return the underlying error code
+    /// Returns the underlying error code.
     pub fn code(&self) -> u16 {
         self.0
+    }
+
+    /// Returns the underlying message.
+    pub fn message(&self) -> String {
+        self.1.clone()
     }
 
     pub fn non_payable() -> Self {
@@ -104,7 +109,11 @@ impl ExecutionError {
 
 impl PartialEq for ExecutionError {
     fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
+        if !self.1.is_empty() && !other.1.is_empty() {
+            self.1 == other.1
+        } else {
+            self.0 == other.0
+        }
     }
 }
 

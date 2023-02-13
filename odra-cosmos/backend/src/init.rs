@@ -15,8 +15,8 @@ where
     C: CustomMsg,
     E: ToString
 {
-    #[cfg(feature = "abort")]
-    install_panic_handler();
+    #[cfg(target_arch = "wasm32")]
+    utils::install_panic_handler();
 
     let env: Vec<u8> = unsafe { consume_region(env_ptr as *mut Region) };
     let info: Vec<u8> = unsafe { consume_region(info_ptr as *mut Region) };

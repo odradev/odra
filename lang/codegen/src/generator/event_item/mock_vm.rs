@@ -1,4 +1,4 @@
-use odra_ir::EventItem as IrEventItem;
+use odra_ir::{EventItem as IrEventItem, Field};
 use proc_macro2::TokenStream;
 use quote::quote;
 
@@ -8,12 +8,14 @@ pub fn generate_code(event: &IrEventItem) -> TokenStream {
 
     let fields_serialization = fields
         .iter()
-        .map(|ident| quote!(odra::types::BorshSerialize::serialize(&self.#ident, writer)?;))
+        .map(|Field { ident, ..}| quote!(odra::types::BorshSerialize::serialize(&self.#ident, writer)?;))
         .collect::<TokenStream>();
 
     let fields_deserialization = fields
         .iter()
-        .map(|ident| quote!(#ident: odra::types::BorshDeserialize::deserialize(buf)?,))
+        .map(
+            |Field { ident, .. }| quote!(#ident: odra::types::BorshDeserialize::deserialize(buf)?,)
+        )
         .collect::<TokenStream>();
 
     quote! {
