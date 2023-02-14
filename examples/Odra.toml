@@ -48,16 +48,16 @@ fqn = "odra_examples::docs::events::PartyContract"
 
 [[contracts]]
 name = "cross1"
-fqn = "odra_examples::docs::cross_calls::MyContract
+fqn = "odra_examples::docs::cross_calls::MyContract"
 
 [[contracts]]
 name = "cross2"
-fqn = "odra_examples::docs::cross_calls::MathEngine
+fqn = "odra_examples::docs::cross_calls::MathEngine"
 
 [[contracts]]
 name = "modules"
-fqn = "odra_examples::docs::modules::MyContract
+fqn = "odra_examples::docs::modules::MyContract"
 
 [[contracts]]
 name = "native_token"
-fqn = "odra_examples::docs::native_token::PublicWallet
+fqn = "odra_examples::docs::native_token::PublicWallet"
