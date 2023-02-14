@@ -2,14 +2,14 @@ use odra::Variable;
 use odra::types::{BlockTime, Address};
 
 #[odra::module]
-pub struct MyContract {
+pub struct HostContract {
     name: Variable<String>,
     created_at: Variable<BlockTime>,
     created_by: Variable<Address>,
 }
 
 #[odra::module]
-impl MyContract {
+impl HostContract {
     #[odra(init)]
     pub fn init(&mut self, name: String) {
         self.name.set(name);
@@ -24,11 +24,11 @@ impl MyContract {
 
 #[cfg(test)]
 mod tests {
-    use super::MyContractDeployer;
+    use super::HostContractDeployer;
 
     #[test]
     fn host_test() {
-        let my_contract = MyContractDeployer::init("MyContract".to_string());
-        assert_eq!(my_contract.name(), "MyContract".to_string());
+        let host_contract = HostContractDeployer::init("HostContract".to_string());
+        assert_eq!(host_contract.name(), "HostContract".to_string());
     }
 }

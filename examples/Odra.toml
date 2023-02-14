@@ -19,45 +19,45 @@ name = "time_lock_wallet"
 fqn = "odra_examples::tlw::TimeLockWallet"
 
 [[contracts]]
-name = "variable"
+name = "dog_contract"
 fqn = "odra_examples::docs::variable::DogContract"
 
 [[contracts]]
-name = "mapping"
-fqn = "odra_examples::docs::variable::DogContract2"
+name = "dog_contract2"
+fqn = "odra_examples::docs::mapping::DogContract2"
 
 [[contracts]]
-name = "list"
-fqn = "odra_examples::docs::variable::DogContract3"
+name = "dog_contract3"
+fqn = "odra_examples::docs::list::DogContract3"
 
 [[contracts]]
-name = "testing"
-fqn = "odra_examples::docs::testing::TestContract"
+name = "testing_contract"
+fqn = "odra_examples::docs::testing::TestingContract"
 
 [[contracts]]
-name = "host"
-fqn = "odra_examples::docs::host::MyContract"
+name = "host_contract"
+fqn = "odra_examples::docs::host::HostContract"
 
 [[contracts]]
-name = "errors"
+name = "owned_contract"
 fqn = "odra_examples::docs::errors::OwnedContract"
 
 [[contracts]]
-name = "events"
+name = "party_contract"
 fqn = "odra_examples::docs::events::PartyContract"
 
 [[contracts]]
-name = "cross1"
-fqn = "odra_examples::docs::cross_calls::MyContract"
+name = "cross_contract"
+fqn = "odra_examples::docs::cross_calls::CrossContract"
 
 [[contracts]]
-name = "cross2"
+name = "math_engine"
 fqn = "odra_examples::docs::cross_calls::MathEngine"
 
 [[contracts]]
-name = "modules"
-fqn = "odra_examples::docs::modules::MyContract"
+name = "modules_contract"
+fqn = "odra_examples::docs::modules::ModulesContract"
 
 [[contracts]]
-name = "native_token"
+name = "public_wallet"
 fqn = "odra_examples::docs::native_token::PublicWallet"

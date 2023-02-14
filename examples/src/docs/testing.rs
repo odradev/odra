@@ -2,14 +2,14 @@ use odra::Variable;
 use odra::types::{BlockTime, Address};
 
 #[odra::module]
-pub struct MyContract {
+pub struct TestingContract {
     name: Variable<String>,
     created_at: Variable<BlockTime>,
     created_by: Variable<Address>,
 }
 
 #[odra::module]
-impl MyContract {
+impl TestingContract {
     #[odra(init)]
     pub fn init(&mut self, name: String) {
         self.name.set(name);
@@ -32,15 +32,17 @@ impl MyContract {
 
 #[cfg(test)]
 mod tests {
-    use super::MyContractDeployer;
-
+    use super::TestingContractDeployer;
+    // Ignored due to a bug in Casper backend
+    #[ignore]
     #[test]
     fn test_env() {
-        let my_contract = MyContractDeployer::init("MyContract".to_string());
-        let creator = my_contract.created_by();
+        odra::test_env::set_caller(odra::test_env::get_account(0));
+        let testing_contract = TestingContractDeployer::init("MyContract".to_string());
+        let creator = testing_contract.created_by();
         odra::test_env::set_caller(odra::test_env::get_account(1));
-        let my_contract2 = MyContractDeployer::init("MyContract2".to_string());
-        let creator2 = my_contract2.created_by();
+        let testing_contract2 = TestingContractDeployer::init("MyContract2".to_string());
+        let creator2 = testing_contract2.created_by();
         assert!(creator != creator2);
     }
 }

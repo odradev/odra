@@ -2,12 +2,12 @@ use odra::Variable;
 use odra::types::{Address};
 
 #[odra::module]
-pub struct MyContract {
+pub struct CrossContract {
     pub math_engine: Variable<Address>,
 }
 
 #[odra::module]
-impl MyContract {
+impl CrossContract {
     #[odra(init)]
     pub fn init(&mut self, math_engine_address: Address) {
         self.math_engine.set(math_engine_address);
@@ -32,13 +32,13 @@ impl MathEngine {
 
 #[cfg(test)]
 mod tests {
-    use super::{MyContractDeployer, MathEngineDeployer};
+    use super::{CrossContractDeployer, MathEngineDeployer};
 
     #[test]
     fn test_cross_calls() {
         let math_engine_contract = MathEngineDeployer::default();
-        let my_contract = MyContractDeployer::init(math_engine_contract.address());
+        let cross_contract = CrossContractDeployer::init(math_engine_contract.address());
 
-        assert_eq!(my_contract.add_using_another(), 8);
+        assert_eq!(cross_contract.add_using_another(), 8);
     }
 }

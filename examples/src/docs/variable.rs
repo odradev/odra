@@ -30,9 +30,9 @@ impl DogContract {
         self.name.get_or_default()
     }
 
-    pub fn walks_amount(&self) -> usize {
+    pub fn walks_amount(&self) -> u32 {
         let walks = self.walks.get_or_default();
-        walks.len()
+        walks.len() as u32
     }
 
     pub fn walks_total_length(&self) -> u32 {
