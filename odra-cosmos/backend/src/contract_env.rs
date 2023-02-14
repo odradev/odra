@@ -2,8 +2,8 @@
 //!
 //! It provides all the required functions to communicate between Odra and Casper.
 
-use cosmwasm_std::Response;
-use odra_cosmos_shared::native_token::NativeTokenMetadata;
+use cosmwasm_std::{Response, Binary};
+use odra_cosmos_shared::{native_token::NativeTokenMetadata, utils::build_wasm_message};
 use odra_cosmos_types::{Address, Balance, BlockTime, CallArgs, OdraType};
 use odra_types::{event::OdraEvent, ExecutionError};
 
@@ -85,12 +85,26 @@ where
 
 /// Call another contract.
 pub fn call_contract<T: OdraType>(
-    _address: Address,
-    _entrypoint: &str,
-    _args: CallArgs,
+    address: Address,
+    entrypoint: &str,
+    args: CallArgs,
     _amount: Option<Balance>
 ) -> T {
-    unimplemented!()
+    RT.with(|runtime| {
+        let cosmos_address: cosmwasm_std::Addr = address.into();
+        let msg = build_wasm_message(entrypoint, args);
+        let call =  cosmwasm_std::WasmMsg::Execute {
+            contract_addr: cosmos_address.into_string(),
+            msg: Binary(msg),
+            funds: vec![],
+        };
+        runtime.borrow_mut().add_call(call);
+        if let Ok(null) = T::deser(vec![110, 117, 108, 108]) {
+            null
+        } else {
+            unimplemented!()
+        }
+    })
 }
 
 /// Returns the value that represents one CSPR.

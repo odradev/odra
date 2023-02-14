@@ -4,9 +4,9 @@
 //!
 use crate::cosmos_test_env::ENV;
 use odra_cosmos_shared::native_token::NativeTokenMetadata;
-use odra_cosmos_types::{Address, Balance, CallArgs, OdraType};
+use odra_cosmos_types::{Address, Balance, CallArgs, OdraType, SerializableEvent};
 use odra_types::{
-    event::{EventError, OdraEvent},
+    event::EventError,
     OdraError
 };
 
@@ -55,8 +55,8 @@ pub fn set_caller(address: Address) {
 }
 
 /// Returns predefined account.
-pub fn get_account(_n: usize) -> Address {
-    unimplemented!()
+pub fn get_account(n: usize) -> Address {
+    ENV.with(|env| env.borrow().get_account(n))
 }
 
 /// Return possible error, from the previous execution.
@@ -65,8 +65,8 @@ pub fn get_error() -> Option<OdraError> {
 }
 
 /// Returns an event from the given contract.
-pub fn get_event<T: OdraType + OdraEvent>(_address: Address, _index: i32) -> Result<T, EventError> {
-    unimplemented!()
+pub fn get_event<T: SerializableEvent>(_address: Address, index: i32) -> Result<T, EventError> {
+    ENV.with(|env| env.borrow().get_event(index))
 }
 
 /// Increases the current value of block_time.

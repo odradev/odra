@@ -6,9 +6,9 @@
 # name = "balance_checker"
 # fqn = "odra_examples::balance_checker::BalanceChecker"
 
-# [[contracts]]
-# name = "ownable"
-# fqn = "odra_examples::ownable::Ownable"
+[[contracts]]
+name = "ownable"
+fqn = "odra_examples::ownable::Ownable"
 
 # [[contracts]]
 # name = "erc20"

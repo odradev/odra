@@ -33,6 +33,8 @@ impl GenerateCode for EventItem<'_> {
                 }
             }
 
+            impl odra::types::SerializableEvent for #struct_ident {}
+
             #casper_code
 
             #mock_vm_code

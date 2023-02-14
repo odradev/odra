@@ -1,4 +1,4 @@
-use odra::{types::{event::OdraEvent}, Variable, contract_env};
+use odra::{types::{Address, event::OdraEvent}, Variable, contract_env};
 
 #[derive(odra::Event)]
 struct ValueUpdated {
@@ -38,6 +38,10 @@ impl Counter {
     pub fn increment_and_die(&mut self) {
         self.increment();
         contract_env::revert(Error::Forbidden);
+    }
+
+    pub fn cross_increment(&mut self, counter_address: Address) {
+        CounterRef::at(counter_address).increment();
     }
 
     pub fn increment(&mut self) {

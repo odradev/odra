@@ -1,5 +1,5 @@
 use odra::{
-    contract_env, execution_error, types::event::OdraEvent, types::Address, Event, Variable
+    contract_env, execution_error, types::{event::OdraEvent}, types::Address, Event, Variable
 };
 
 #[odra::module]
@@ -60,6 +60,7 @@ pub struct OwnershipChanged {
     pub prev_owner: Option<Address>,
     pub new_owner: Address
 }
+
 
 #[cfg(test)]
 mod tests {

@@ -3,9 +3,9 @@
 //! Depending on the selected feature, the actual test env is dynamically loaded in the runtime or the Odra local MockVM is used.
 use std::collections::HashMap;
 
-use odra_mock_vm_types::{Address, Balance, BlockTime, BorshDeserialize, CallArgs, MockVMType};
+use odra_mock_vm_types::{Address, Balance, BlockTime, BorshDeserialize, CallArgs, MockVMType, SerializableEvent};
 use odra_types::{
-    event::{EventError, OdraEvent},
+    event::EventError,
     OdraError
 };
 
@@ -82,7 +82,7 @@ pub fn call_contract<T: MockVMType>(
 }
 
 /// Gets nth event emitted by the contract at `address`.
-pub fn get_event<T: MockVMType + OdraEvent>(address: Address, index: i32) -> Result<T, EventError> {
+pub fn get_event<T: SerializableEvent>(address: Address, index: i32) -> Result<T, EventError> {
     let bytes = crate::borrow_env().get_event(address, index);
 
     bytes.and_then(|bytes| {

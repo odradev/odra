@@ -4,6 +4,7 @@ mod ty;
 mod uints;
 
 pub use args::CallArgs;
+use odra_types::event::OdraEvent;
 pub use ty::Typed;
 pub use uints::{U256, U512};
 
@@ -20,3 +21,5 @@ use casper_types::{
 pub trait OdraType: CLTyped + ToBytes + FromBytes {}
 
 impl<T: CLTyped + ToBytes + FromBytes> OdraType for T {}
+
+pub trait SerializableEvent: OdraEvent + CLTyped + ToBytes + FromBytes  {}

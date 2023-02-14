@@ -23,13 +23,47 @@ pub fn generate_code(event: &IrEventItem) -> TokenStream {
         })
         .collect::<TokenStream>();
 
+    let parse_event_fields = fields
+        .iter()
+        .flat_map(|Field { ident, is_optional }| {
+            let parse_arg = if *is_optional {
+                quote!(let #ident = #ident.value.parse().ok();)
+            } else {
+                quote!(let #ident = #ident.value.parse().expect("invalid arg");)
+            };
+
+            quote! {
+                let #ident = value.attributes.iter()
+                    .find(|attr| attr.key == stringify!(#ident))
+                    .expect("missing argument");
+                #parse_arg
+            }
+        })
+        .collect::<TokenStream>();
+
+    let event_fields = fields
+        .iter()
+        .flat_map(|Field { ident, .. }| quote!(#ident,))
+        .collect::<TokenStream>();
+
     quote! {
         #[cfg(feature = "cosmos")]
-        impl Into<odra::cosmos::Event> for #struct_ident {
-            fn into(self) -> odra::cosmos::Event {
-                let ev = odra::cosmos::Event::new(<#struct_ident as odra::types::event::OdraEvent>::name());
+        impl Into<odra::cosmos::CosmosEvent> for #struct_ident {
+            fn into(self) -> odra::cosmos::CosmosEvent {
+                let ev = odra::cosmos::CosmosEvent::new(<#struct_ident as odra::types::event::OdraEvent>::name());
                 #add_attrs
                 ev
+            }
+        }
+
+        #[cfg(feature = "cosmos")]
+        impl From<odra::cosmos::CosmosEvent> for #struct_ident {
+            fn from(value: odra::cosmos::CosmosEvent) -> Self {
+                #parse_event_fields
+        
+                Self { 
+                    #event_fields
+                }
             }
         }
     }

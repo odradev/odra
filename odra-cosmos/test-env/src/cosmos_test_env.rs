@@ -1,23 +1,19 @@
 use std::{cell::RefCell, env, fs, path::Path};
 
-use cosmwasm_std::{to_vec, Binary, ContractResult, Env, Event, MessageInfo, Response};
+use cosmwasm_std::{Binary, ContractResult, Env, Event, MessageInfo, Response};
 use cosmwasm_vm::{
     call_execute, call_instantiate, call_query,
     testing::{mock_env, mock_info, mock_instance, MockApi, MockQuerier, MockStorage},
     Instance, VmError, VmResult
 };
 
-use odra_cosmos_types::{Address, BlockTime, CallArgs, OdraType, Balance};
-use odra_types::{ExecutionError, OdraError, VmError as OdraVmError};
-use serde_json::{Map, Value};
+use odra_cosmos_shared::utils::build_wasm_message;
+use odra_cosmos_types::{Address, BlockTime, CallArgs, OdraType, Balance, SerializableEvent};
+use odra_types::{ExecutionError, OdraError, VmError as OdraVmError, event::EventError};
 
 thread_local! {
     pub static ENV: RefCell<TestEnv> = RefCell::new(TestEnv::new());
 }
-
-const ARG_ACTION_NAME: &str = "name";
-const ARG_ACTION_ARGS: &str = "args";
-const CALL_ARG_CONSTRUCTOR: &str = "constructor";
 
 #[allow(dead_code)]
 pub struct TestEnv {
@@ -65,7 +61,7 @@ impl TestEnv {
             .as_mut()
             .expect("The instance should initialized");
 
-        let msg = build_message(constructor, args);
+        let msg = build_wasm_message(constructor, args);
         let result: VmResult<ContractResult<Response>> =
             call_instantiate(&mut instance, &self.env, &message_info, &msg);
         self.handle_error(&result);
@@ -75,8 +71,11 @@ impl TestEnv {
     pub fn execute(&mut self, entry_point: &str, args: CallArgs) {
         self.error = None;
 
+        dbg!(entry_point);
+
         let message_info = self.active_account_message_info();
-        let msg = build_message(entry_point, args);
+        let msg = build_wasm_message(entry_point, args);
+        dbg!(&msg);
         let instance = self
             .mock_instance
             .as_mut()
@@ -94,7 +93,7 @@ impl TestEnv {
     pub fn query<T: OdraType>(&mut self, entry_point: &str, args: CallArgs) -> T {
         self.error = None;
 
-        let msg = build_message(entry_point, args);
+        let msg = build_wasm_message(entry_point, args);
         let instance = self
             .mock_instance
             .as_mut()
@@ -137,6 +136,14 @@ impl TestEnv {
     /// Returns possible error.
     pub fn get_error(&self) -> Option<OdraError> {
         self.error.clone()
+    }
+
+    pub fn get_event<T: SerializableEvent>(&self, index: i32) -> Result<T, EventError> {
+        let event_position = odra_utils::event_absolute_position(self.events.len(), index)
+            .ok_or(EventError::IndexOutOfBounds)?;
+        let ev = self.events.get(event_position).cloned().unwrap();
+        let ev = ev.into();
+        Ok(ev)
     }
 
     /// Reads a given compiled contract file based on path
@@ -187,25 +194,6 @@ impl TestEnv {
     }
 }
 
-fn build_message(entry_point: &str, args: CallArgs) -> Vec<u8> {
-    let args = args
-        .arg_names()
-        .iter()
-        .filter(|name| *name != CALL_ARG_CONSTRUCTOR)
-        .map(|name| args.get_as_value(name))
-        .collect::<Vec<Value>>();
-
-    let args = Value::Array(args);
-    let mut ep = Map::new();
-    ep.insert(
-        ARG_ACTION_NAME.to_string(),
-        Value::String(entry_point.to_string())
-    );
-    ep.insert(ARG_ACTION_ARGS.to_string(), args);
-    let root = Value::Object(ep);
-    to_vec(&root).unwrap()
-}
-
 fn parse_error(err: &VmError) -> OdraError {
     match err {
         VmError::RuntimeErr { msg } => {
@@ -221,16 +209,4 @@ fn parse_error(err: &VmError) -> OdraError {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::build_message;
-    use odra_cosmos_types::CallArgs;
 
-    #[test]
-    fn parsing_args() {
-        let ep = "init";
-        let mut args = CallArgs::new();
-        args.insert("value", 123);
-        dbg!(build_message(ep, args));
-    }
-}

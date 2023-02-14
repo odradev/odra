@@ -11,13 +11,12 @@ categories = ["wasm"]
 
 [dependencies]
 odra = { version = "0.2.0", path = "../core", default-features = false }
-serde = { version = "1.0.147", optional = true }
 
 [features]
 default = [ "mock-vm" ]
 mock-vm = [ "odra/mock-vm" ]
 casper = [ "odra/casper" ]
-cosmos = [ "odra/cosmos", "serde" ]
+cosmos = [ "odra/cosmos" ]
 
 [patch.crates-io]
 casper-types = { git = "https://github.com/odradev/casper-node", branch = "feature/k256-update" }

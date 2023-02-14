@@ -1,5 +1,7 @@
 //! Address representation for Cosmos.
 
+use std::str::FromStr;
+
 use cosmwasm_std::Addr;
 use serde::{de::Visitor, Deserialize, Serialize};
 
@@ -46,6 +48,18 @@ impl core::fmt::Debug for Address {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let name = hex::encode(self.to_string());
         f.debug_struct("Address").field("data", &name).finish()
+    }
+}
+
+impl FromStr for Address {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s == "null" {
+            return Err(String::from("Null address"))
+        }
+        let bytes = s.as_bytes();
+        Ok(Address::new(bytes))
     }
 }
 
@@ -97,8 +111,8 @@ mod tests {
         let address_str = "juno1sh3lp27j2xkpgj46qszltfv9nm7ewdnzy724tgm5u8ze2wklrekqn99vrs";
         let address = Address::new(address_str.as_bytes());
 
-        let serialized_address = serde_json::to_vec(&address).unwrap();
-        let deserialized_address: Address = serde_json::from_slice(&serialized_address).unwrap();
+        let serialized_address = serde_json_wasm::to_vec(&address).unwrap();
+        let deserialized_address: Address = serde_json_wasm::from_slice(&serialized_address).unwrap();
 
         assert_eq!(address, deserialized_address);
 

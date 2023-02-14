@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 
-use cosmwasm_std::{Attribute, Env, Event, MessageInfo, Response};
+use cosmwasm_std::{Attribute, Env, Event, MessageInfo, Response, WasmMsg, SubMsg};
 use odra_cosmos_types::{Address, BlockTime};
 
 #[derive(Default)]
@@ -44,6 +44,12 @@ impl Runtime {
     pub fn add_event(&mut self, event: Event) {
         if let Some(response) = self.response.as_mut() {
             response.events.push(event);
+        }
+    }
+
+    pub fn add_call(&mut self, call: WasmMsg) {
+        if let Some(response) = self.response.as_mut() {
+            response.messages.push(SubMsg::new(call));
         }
     }
 
