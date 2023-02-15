@@ -21,7 +21,13 @@ members = [
     "odra-cosmos/types",
 ]
 
-exclude = [ "contract", "contract/builder", "examples", "modules" ]
+exclude = [ 
+    "contract", 
+    "contract/builder", 
+    "examples", 
+    "modules", 
+    "odra-cosmos/juno-client/arg-parser" 
+]
 
 [patch.crates-io]
 casper-types = { git = "https://github.com/odradev/casper-node", branch = "feature/k256-update" }

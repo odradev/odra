@@ -1,0 +1,101 @@
+NODE := "--node https://rpc.uni.juno.deuslabs.fi:443"
+CHAIN_ID := "--chain-id uni-6"
+QUERY_FLAGS := NODE + " " + CHAIN_ID
+TRANSACTION_DEFAULTS := "--gas-prices 0.025ujunox --gas auto --gas-adjustment 1.3 --broadcast-mode block"
+EXEC_FLAGS := NODE + " " + CHAIN_ID + " " + TRANSACTION_DEFAULTS
+
+# GENERAL ACTIONS
+
+default:
+    just --list
+
+add-wallet NAME:
+    junod keys add {{NAME}} --recover
+
+get-address NAME:
+    junod keys show {{NAME}} | grep -o juno.*
+
+account-balances NAME:
+    junod q bank balances \
+        `just get-address {{NAME}}` \
+        {{QUERY_FLAGS}}
+
+get-tx-info TX_HASH:
+    junod q tx {{TX_HASH}} {{QUERY_FLAGS}}
+
+store-wasm WASM_PATH SENDER:
+    junod tx wasm store \
+    {{WASM_PATH}} --from {{SENDER}} {{EXEC_FLAGS}}
+
+query-tx TX_HASH:
+    junod query tx {{TX_HASH}} {{QUERY_FLAGS}}
+
+run-args-parser args:
+    cd args-parser && cargo run '{{args}}'
+
+# COUNTER CONTRACT
+
+init-contract CODE_ID VALUE SENDER CONTRACT_NAME:
+    junod tx wasm instantiate \
+    {{CODE_ID}} \
+    `just run-args-parser '{"name": "init", "args": [ { "value" : {{VALUE}} }]}'` \
+    --label '{{CONTRACT_NAME}}' --from odra \
+    --admin `just get-address {{SENDER}}` \
+    {{EXEC_FLAGS}}
+
+exec-increment ADDRESS SENDER:
+    junod tx wasm execute \
+    {{ADDRESS}} \
+    `just run-args-parser '{"name": "increment"}'` \
+    --from {{SENDER}}  \
+    {{EXEC_FLAGS}}
+
+exec-cross-increment ADDRESS SENDER OTHER_COUNTER_ADDRESS:
+    junod tx wasm execute \
+    {{ADDRESS}} \
+    `just run-args-parser '{"name": "cross_increment", "args": [ { "address" : "{{OTHER_COUNTER_ADDRESS}}" }]}'` \
+    --from {{SENDER}}  \
+    {{EXEC_FLAGS}}
+
+exec-increment-and-die ADDRESS SENDER:
+    junod tx wasm execute \
+    {{ADDRESS}} \
+    `just run-args-parser '{"name": "increment_and_die"}'` \
+    --from {{SENDER}}  \
+    {{EXEC_FLAGS}}
+
+exec-add-sum ADDRESS SENDER A B:
+    junod tx wasm execute \
+    {{ADDRESS}} \
+    `just run-args-parser '{"name": "add_sum", "args": [ { "a": {{A}} }, { "b": {{B}} } ]}'` \
+    --from {{SENDER}}  \
+    {{EXEC_FLAGS}}
+
+query-get-given-value ADDRESS VALUE:
+    junod q wasm contract-state smart {{ADDRESS}} \
+    `just run-args-parser '{"name": "get_given_value", "args": [ { "value" : {{VALUE}} }]}'` {{QUERY_FLAGS}}
+
+query-get-value ADDRESS:
+    junod q wasm contract-state smart {{ADDRESS}} \
+    `just run-args-parser '{"name": "get_value"}'` {{QUERY_FLAGS}}
+
+# OWNABLE CONTRACT
+
+init-ownable CODE_ID ADDRESS SENDER CONTRACT_NAME:
+    junod tx wasm instantiate \
+    {{CODE_ID}} \
+    `just run-args-parser '{"name": "init", "args": [ { "value" : "{{ADDRESS}}" }]}'` \
+    --label '{{CONTRACT_NAME}}' --from odra \
+    --admin `just get-address {{SENDER}}` \
+    {{EXEC_FLAGS}}
+
+exec-ensure-ownership CONTRACT_ADDRESS ADDRESS SENDER:
+    junod tx wasm execute \
+    {{CONTRACT_ADDRESS}} \
+    `just run-args-parser '{"name": "ensure_ownership", "args": [ { "value" : "{{ADDRESS}}" }]}'` \
+    --from {{SENDER}}  \
+    {{EXEC_FLAGS}}
+
+query-get-owner ADDRESS:
+    junod q wasm contract-state smart {{ADDRESS}} \
+    `just run-args-parser '{"name": "get_owner"}'` {{QUERY_FLAGS}}
