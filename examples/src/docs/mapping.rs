@@ -1,12 +1,9 @@
 use odra::{Mapping, Variable};
 
-type FriendName = String;
-type Visits = u32;
-
 #[odra::module]
 pub struct DogContract2 {
     name: Variable<String>,
-    friends: Mapping<FriendName, Visits>,
+    friends: Mapping<String, u32>,
 }
 
 #[odra::module]
@@ -20,12 +17,12 @@ impl DogContract2 {
         self.name.get_or_default()
     }
 
-    pub fn visit(&mut self, friend_name: FriendName) {
+    pub fn visit(&mut self, friend_name: String) {
         let visits = self.visits(friend_name.clone());
         self.friends.set(&friend_name, visits + 1);
     }
 
-    pub fn visits(&self, friend_name: FriendName) -> u32 {
+    pub fn visits(&self, friend_name: String) -> u32 {
         match self.friends.get(&friend_name) {
             None => {
                 0
