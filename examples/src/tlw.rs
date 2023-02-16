@@ -175,6 +175,7 @@ mod test {
     }
 
     #[test]
+    #[allow(clippy::assign_op_pattern)]
     fn test_successful_withdrawal() {
         // Given a contract with the user's deposit.
         let (mut contract, user, _) = setup();
@@ -189,7 +190,7 @@ mod test {
         contract.withdraw(first_withdrawal_amount);
         let mut gas_used = test_env::last_call_contract_gas_cost();
         contract.withdraw(second_withdrawal_amount);
-        gas_used += test_env::last_call_contract_gas_cost();
+        gas_used = gas_used + test_env::last_call_contract_gas_cost();
 
         // Then the native token balance is updated.
         assert_eq!(
