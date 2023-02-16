@@ -1,11 +1,11 @@
+use odra::types::{Address, BlockTime};
 use odra::Variable;
-use odra::types::{BlockTime, Address};
 
 #[odra::module]
 pub struct TestingContract {
     name: Variable<String>,
     created_at: Variable<BlockTime>,
-    created_by: Variable<Address>,
+    created_by: Variable<Address>
 }
 
 #[odra::module]
@@ -33,7 +33,7 @@ impl TestingContract {
 #[cfg(test)]
 mod tests {
     use super::TestingContractDeployer;
-    
+
     #[test]
     fn test_env() {
         odra::test_env::set_caller(odra::test_env::get_account(0));

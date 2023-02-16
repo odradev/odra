@@ -1,9 +1,9 @@
-use odra::{Variable, List};
+use odra::{List, Variable};
 
 #[odra::module]
 pub struct DogContract3 {
     name: Variable<String>,
-    walks: List<u32>,
+    walks: List<u32>
 }
 
 #[odra::module]

@@ -1,10 +1,10 @@
-use odra::{execution_error, Variable, UnwrapOrRevert};
 use odra::types::Address;
+use odra::{execution_error, UnwrapOrRevert, Variable};
 
 #[odra::module]
 pub struct OwnedContract {
     name: Variable<String>,
-    owner: Variable<Address>,
+    owner: Variable<Address>
 }
 
 execution_error! {
@@ -13,7 +13,6 @@ execution_error! {
         NotAnOwner => 2,
     }
 }
-
 
 #[odra::module]
 impl OwnedContract {
@@ -43,8 +42,8 @@ impl OwnedContract {
 
 #[cfg(test)]
 mod tests {
-    use super::{OwnedContractDeployer, OwnedContractRef};
     use super::Error;
+    use super::{OwnedContractDeployer, OwnedContractRef};
 
     #[test]
     fn test_owner() {

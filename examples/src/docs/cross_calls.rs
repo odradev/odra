@@ -1,9 +1,9 @@
+use odra::types::Address;
 use odra::Variable;
-use odra::types::{Address};
 
 #[odra::module]
 pub struct CrossContract {
-    pub math_engine: Variable<Address>,
+    pub math_engine: Variable<Address>
 }
 
 #[odra::module]
@@ -20,8 +20,7 @@ impl CrossContract {
 }
 
 #[odra::module]
-pub struct MathEngine {
-}
+pub struct MathEngine {}
 
 #[odra::module]
 impl MathEngine {
