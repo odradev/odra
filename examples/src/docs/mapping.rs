@@ -23,10 +23,7 @@ impl DogContract2 {
     }
 
     pub fn visits(&self, friend_name: String) -> u32 {
-        match self.friends.get(&friend_name) {
-            None => 0,
-            Some(v) => v
-        }
+        self.friends.get(&friend_name).unwrap_or(0)
     }
 }
 
