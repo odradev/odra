@@ -2,7 +2,7 @@ use crate::docs::cross_calls::MathEngine;
 
 #[odra::module]
 pub struct ModulesContract {
-    pub math_engine: MathEngine,
+    pub math_engine: MathEngine
 }
 
 #[odra::module]

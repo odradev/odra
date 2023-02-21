@@ -5,7 +5,7 @@ pub struct DogContract {
     barks: Variable<bool>,
     weight: Variable<u32>,
     name: Variable<String>,
-    walks: Variable<Vec<u32>>,
+    walks: Variable<Vec<u32>>
 }
 
 #[odra::module]

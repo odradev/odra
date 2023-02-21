@@ -1,10 +1,10 @@
-pub mod variable;
-pub mod list;
-pub mod mapping;
-pub mod testing;
-pub mod host;
+pub mod cross_calls;
 pub mod errors;
 pub mod events;
-pub mod cross_calls;
+pub mod host;
+pub mod list;
+pub mod mapping;
 pub mod modules;
 pub mod native_token;
+pub mod testing;
+pub mod variable;

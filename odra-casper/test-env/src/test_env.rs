@@ -24,6 +24,8 @@ pub fn register_contract(name: &str, args: CallArgs) -> Address {
         let contract_package_hash = env
             .borrow()
             .contract_package_hash_from_name(&contract_package_hash);
+        let default_account = env.borrow().get_account(0);
+        env.borrow_mut().set_caller(default_account);
         contract_package_hash.into()
     })
 }

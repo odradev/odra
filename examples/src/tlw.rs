@@ -175,6 +175,7 @@ mod test {
     }
 
     #[test]
+    #[allow(clippy::assign_op_pattern)]
     fn test_successful_withdrawal() {
         // Given a contract with the user's deposit.
         let (mut contract, user, _) = setup();

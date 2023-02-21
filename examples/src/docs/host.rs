@@ -1,11 +1,11 @@
+use odra::types::{Address, BlockTime};
 use odra::Variable;
-use odra::types::{BlockTime, Address};
 
 #[odra::module]
 pub struct HostContract {
     name: Variable<String>,
     created_at: Variable<BlockTime>,
-    created_by: Variable<Address>,
+    created_by: Variable<Address>
 }
 
 #[odra::module]
