@@ -29,8 +29,17 @@ impl MathEngine {
     }
 }
 
+#[odra::external_contract]
+pub trait Adder {
+    fn add(&self, n1: u32, n2: u32) -> u32;
+}
+
 #[cfg(test)]
 mod tests {
+    use odra::types::Address;
+
+    use crate::docs::cross_calls::{Adder, AdderRef};
+
     use super::{CrossContractDeployer, MathEngineDeployer};
 
     #[test]
@@ -39,5 +48,17 @@ mod tests {
         let cross_contract = CrossContractDeployer::init(math_engine_contract.address());
 
         assert_eq!(cross_contract.add_using_another(), 8);
+    }
+
+    #[test]
+    fn test_ext() {
+        let adder = AdderRef::at(get_adder_address());
+
+        assert_eq!(adder.add(1, 2), 3);
+    }
+
+    fn get_adder_address() -> Address {
+        let contract = MathEngineDeployer::default();
+        contract.address()
     }
 }
