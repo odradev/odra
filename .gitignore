@@ -3,6 +3,7 @@
 /target/
 Cargo.lock
 .vscode/
+.idea/
 odra-casper/**/target/
 contract/
 examples/target

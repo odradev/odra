@@ -38,6 +38,17 @@ impl CasperAddress {
     pub fn is_contract(&self) -> bool {
         self.as_contract_package_hash().is_some()
     }
+
+    /// Returns true if `self` is the `Account` variant and the inner account hash is zero.
+    pub fn is_zero(&self) -> bool {
+        match self {
+            CasperAddress::Account(account_hash) => {
+                // check if account hash is zero
+                account_hash.value().iter().all(|&b| b == 0)
+            }
+            CasperAddress::Contract(_) => false
+        }
+    }
 }
 
 impl From<ContractPackageHash> for CasperAddress {

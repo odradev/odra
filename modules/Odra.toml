@@ -3,5 +3,9 @@ name = "erc20"
 fqn = "odra_modules::erc20::Erc20"
 
 [[contracts]]
+name = "erc721_token"
+fqn = "odra_modules::erc721token::Erc721Token"
+
+[[contracts]]
 name = "wrapped_native_token"
 fqn = "odra_modules::wrapped_native::WrappedNativeToken"

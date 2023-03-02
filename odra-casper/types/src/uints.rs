@@ -3,6 +3,7 @@ use odra_types::{
     arithmetic::{ArithmeticsError, OverflowingAdd, OverflowingSub},
     ExecutionError
 };
+use std::hash::{Hash, Hasher};
 use std::ops::{Add, Sub};
 
 macro_rules! impl_casper_type_numeric_wrapper {
@@ -169,6 +170,12 @@ impl U256 {
 
     pub fn to_balance(self) -> Result<U512, ArithmeticsError> {
         self.to_u512()
+    }
+}
+
+impl Hash for U256 {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.inner().0.hash(state);
     }
 }
 

@@ -22,6 +22,11 @@ impl Address {
         bytes.copy_from_slice(bytes_vec.as_slice());
         Address { data: bytes }
     }
+
+    /// Returns true if the address is zero.
+    pub fn is_zero(&self) -> bool {
+        self.data.iter().all(|&b| b == 0)
+    }
 }
 
 impl core::fmt::Debug for Address {
