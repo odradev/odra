@@ -25,7 +25,7 @@ pub fn register_contract(name: &str, args: CallArgs) -> Address {
         let contract_package_hash = env
             .borrow()
             .contract_package_hash_from_name(&contract_package_hash);
-        contract_package_hash.into()
+        contract_package_hash.try_into().unwrap()
     })
 }
 

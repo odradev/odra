@@ -317,9 +317,8 @@ impl MockVmState {
     }
 
     fn next_contract_address(&mut self) -> Address {
-        let address = Address::new(&self.contract_counter.to_be_bytes());
         self.contract_counter += 1;
-        address
+        Address::try_from(&self.contract_counter.to_be_bytes()).unwrap()
     }
 
     fn get_contract_namespace(&self) -> String {
@@ -395,15 +394,15 @@ impl MockVmState {
 impl Default for MockVmState {
     fn default() -> Self {
         let addresses = vec![
-            Address::new(b"alice"),
-            Address::new(b"bob"),
-            Address::new(b"cab"),
-            Address::new(b"dan"),
-            Address::new(b"ed"),
-            Address::new(b"frank"),
-            Address::new(b"garry"),
-            Address::new(b"harry"),
-            Address::new(b"ivan"),
+            Address::try_from(b"alice").unwrap(),
+            Address::try_from(b"bob").unwrap(),
+            Address::try_from(b"cab").unwrap(),
+            Address::try_from(b"dan").unwrap(),
+            Address::try_from(b"ed").unwrap(),
+            Address::try_from(b"frank").unwrap(),
+            Address::try_from(b"garry").unwrap(),
+            Address::try_from(b"harry").unwrap(),
+            Address::try_from(b"ivan").unwrap(),
         ];
 
         let mut balances = HashMap::<Address, AccountBalance>::new();
@@ -474,7 +473,7 @@ mod tests {
         // given an empty vm
         let instance = MockVm::default();
 
-        let address = Address::new(b"random");
+        let address = Address::try_from(b"random").unwrap();
 
         // when call a contract
         instance.call_contract::<()>(address, "abc", CallArgs::new(), None);
@@ -511,7 +510,7 @@ mod tests {
         let instance = MockVm::default();
 
         // when set a new caller
-        let new_caller = Address::new(b"new caller");
+        let new_caller = Address::try_from(b"new caller").unwrap();
         instance.set_caller(new_caller);
         // put a fake contract on stack
         push_address(&instance, &new_caller);
@@ -572,7 +571,7 @@ mod tests {
         // given an empty instance
         let instance = MockVm::default();
 
-        let first_contract_address = Address::new(b"abc");
+        let first_contract_address = Address::try_from(b"abc").unwrap();
         // put a contract on stack
         push_address(&instance, &first_contract_address);
 
@@ -581,7 +580,7 @@ mod tests {
         instance.emit_event(&first_event);
         instance.emit_event(&second_event);
 
-        let second_contract_address = Address::new(b"bca");
+        let second_contract_address = Address::try_from(b"bca").unwrap();
         // put a next contract on stack
         push_address(&instance, &second_contract_address);
 
@@ -615,7 +614,7 @@ mod tests {
         let instance = MockVm::default();
 
         // when push a contract into the stack
-        let contract_address = Address::new(b"contract");
+        let contract_address = Address::try_from(b"contract").unwrap();
         push_address(&instance, &contract_address);
 
         // then the contract address in the callee

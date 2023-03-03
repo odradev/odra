@@ -5,7 +5,7 @@ use odra::types::Address;
 use odra::types::U256;
 
 use crate::erc721::erc721_base::Erc721Base;
-use crate::erc721::errors::Error::{NotAnOwnerOrApproved, ZeroAddress};
+use crate::erc721::errors::Error::NotAnOwnerOrApproved;
 use crate::erc721::extensions::erc721_metadata::{Erc721Metadata, Erc721MetadataExtension};
 use crate::erc721::Erc721;
 use crate::erc721token::errors::Error;
@@ -54,7 +54,7 @@ impl OwnedErc721WithMetadata for Erc721Token {
         self.core.transfer_from(from, to, token_id);
     }
 
-    pub fn approve(&mut self, approved: Address, token_id: U256) {
+    pub fn approve(&mut self, approved: Option<Address>, token_id: U256) {
         self.core.approve(approved, token_id);
     }
 
@@ -87,10 +87,6 @@ impl OwnedErc721WithMetadata for Erc721Token {
 
         if self.core.exists(&token_id) {
             revert(Error::TokenAlreadyExists)
-        }
-
-        if to.is_zero() {
-            revert(ZeroAddress)
         }
 
         self.core.balances.add(&to, U256::from(1));
@@ -146,8 +142,7 @@ mod tests {
         token: Erc721TokenRef,
         alice: Address,
         bob: Address,
-        carol: Address,
-        zero: Address
+        carol: Address
     }
 
     fn setup() -> TokenEnv {
@@ -159,8 +154,7 @@ mod tests {
             ),
             alice: test_env::get_account(1),
             bob: test_env::get_account(2),
-            carol: test_env::get_account(3),
-            zero: test_env::zero_address()
+            carol: test_env::get_account(3)
         }
     }
 
@@ -199,17 +193,6 @@ mod tests {
     }
 
     #[test]
-    fn zero_address() {
-        // When deploy a contract with the initial supply.
-        let erc721_env = setup();
-
-        // Then checking balance of zero address throws an error.
-        assert_exception(Error::ZeroAddress, || {
-            erc721_env.token.balance_of(erc721_env.zero);
-        });
-    }
-
-    #[test]
     fn minting_same_id() {
         // When deploy a contract with the initial supply.
         let mut erc721_env = setup();
@@ -221,18 +204,6 @@ mod tests {
         assert_exception(super::Error::TokenAlreadyExists, || {
             let mut erc721 = Erc721TokenRef::at(erc721_env.token.address());
             erc721.mint(erc721_env.alice, U256::from(1));
-        });
-    }
-
-    #[test]
-    fn minting_for_zero() {
-        // When deploy a contract with the initial supply.
-        let erc721_env = setup();
-
-        // Then minting a token to zero address throws an error.
-        assert_exception(Error::ZeroAddress, || {
-            let mut erc721 = Erc721TokenRef::at(erc721_env.token.address());
-            erc721.mint(erc721_env.zero, U256::from(1));
         });
     }
 
@@ -269,7 +240,9 @@ mod tests {
 
         // And approve Bob to transfer the token.
         test_env::set_caller(erc721_env.alice);
-        erc721_env.token.approve(erc721_env.bob, U256::from(1));
+        erc721_env
+            .token
+            .approve(Some(erc721_env.bob), U256::from(1));
 
         // Then Bob is approved to transfer the token.
         assert_eq!(
@@ -288,11 +261,13 @@ mod tests {
 
         // And approve Bob to transfer the token.
         test_env::set_caller(erc721_env.alice);
-        erc721_env.token.approve(erc721_env.bob, U256::from(1));
+        erc721_env
+            .token
+            .approve(Some(erc721_env.bob), U256::from(1));
 
         // And cancel the approval.
         test_env::set_caller(erc721_env.alice);
-        erc721_env.token.approve(erc721_env.zero, U256::from(1));
+        erc721_env.token.approve(None, U256::from(1));
 
         // Then Bob is not approved to transfer the token.
         assert_eq!(erc721_env.token.get_approved(U256::from(1)), None);
@@ -306,7 +281,7 @@ mod tests {
         // Then approving a non existing token throws an error.
         assert_exception(Error::InvalidTokenId, || {
             let mut erc721 = Erc721TokenRef::at(erc721_env.token.address());
-            erc721.approve(erc721_env.bob, U256::from(1));
+            erc721.approve(Some(erc721_env.bob), U256::from(1));
         });
     }
 
@@ -321,7 +296,7 @@ mod tests {
         // Then approving a token that is not owned by the caller throws an error.
         assert_exception(Error::NotAnOwnerOrApproved, || {
             let mut erc721 = Erc721TokenRef::at(erc721_env.token.address());
-            erc721.approve(erc721_env.bob, U256::from(1));
+            erc721.approve(Some(erc721_env.bob), U256::from(1));
         });
     }
 
@@ -393,7 +368,9 @@ mod tests {
 
         // And approve Bob to transfer the token.
         test_env::set_caller(erc721_env.alice);
-        erc721_env.token.approve(erc721_env.bob, U256::from(1));
+        erc721_env
+            .token
+            .approve(Some(erc721_env.bob), U256::from(1));
 
         // And transfer the token to Carol.
         test_env::set_caller(erc721_env.bob);
@@ -444,22 +421,6 @@ mod tests {
     }
 
     #[test]
-    fn transferring_to_zero_address() {
-        // When deploy a contract with the initial supply.
-        let mut erc721_env = setup();
-
-        // And mint a token to Alice.
-        erc721_env.token.mint(erc721_env.alice, U256::from(1));
-
-        // Then transferring a token to the zero address throws an error.
-        assert_exception(Error::ZeroAddress, || {
-            test_env::set_caller(erc721_env.alice);
-            let mut erc721 = Erc721TokenRef::at(erc721_env.token.address());
-            erc721.transfer_from(erc721_env.alice, erc721_env.zero, U256::from(1));
-        });
-    }
-
-    #[test]
     fn transferring_invalid_nft() {
         // When deploy a contract with the initial supply.
         let erc721_env = setup();
@@ -489,20 +450,20 @@ mod tests {
         assert_eq!(erc721_env.token.owner_of(U256::from(1)), erc721_env.bob);
     }
 
-    #[test]
-    fn safe_transfer_to_contract_which_does_not_support_nft() {
-        todo!()
-    }
-
-    #[test]
-    fn safe_transfer_to_contract_which_supports_nft() {
-        todo!()
-    }
-
-    #[test]
-    fn safe_transfer_to_contract_with_data() {
-        todo!()
-    }
+    // #[test]
+    // fn safe_transfer_to_contract_which_does_not_support_nft() {
+    //     todo!()
+    // }
+    //
+    // #[test]
+    // fn safe_transfer_to_contract_which_supports_nft() {
+    //     todo!()
+    // }
+    //
+    // #[test]
+    // fn safe_transfer_to_contract_with_data() {
+    //     todo!()
+    // }
 
     #[test]
     fn burn() {

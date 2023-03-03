@@ -69,11 +69,6 @@ pub fn one_token() -> Balance {
     Balance::one()
 }
 
-/// Returns zero address for an account.
-pub fn zero_address() -> Address {
-    Address::new(&[0; 32])
-}
-
 /// Calls contract at `address` invoking the `entrypoint` with `args`.
 ///
 /// Returns optional raw bytes to further processing.

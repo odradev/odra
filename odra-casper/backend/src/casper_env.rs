@@ -12,11 +12,13 @@ use casper_contract::{
     },
     unwrap_or_revert::UnwrapOrRevert
 };
+
 use casper_types::{
     system::CallStackElement, ApiError, CLTyped, ContractPackageHash, Key, RuntimeArgs, URef, U512
 };
 
 use odra_casper_shared::consts;
+use odra_types::ExecutionError;
 
 lazy_static! {
     static ref SEEDS: Mutex<BTreeMap<String, URef>> = Mutex::new(BTreeMap::new());
@@ -64,16 +66,22 @@ pub fn get_dict_value<K: OdraType, V: OdraType>(seed: &str, key: &K) -> Option<V
 /// case it will use contract hash as the address.
 fn call_stack_element_to_address(call_stack_element: CallStackElement) -> Address {
     match call_stack_element {
-        CallStackElement::Session { account_hash } => Address::from(account_hash),
+        CallStackElement::Session { account_hash } => Address::try_from(account_hash)
+            .map_err(|e| ApiError::User(ExecutionError::from(e).code()))
+            .unwrap_or_revert(),
         CallStackElement::StoredSession { account_hash, .. } => {
             // Stored session code acts in account's context, so if stored session
             // wants to interact, caller's address will be used.
-            Address::from(account_hash)
+            Address::try_from(account_hash)
+                .map_err(|e| ApiError::User(ExecutionError::from(e).code()))
+                .unwrap_or_revert()
         }
         CallStackElement::StoredContract {
             contract_package_hash,
             ..
-        } => Address::from(contract_package_hash)
+        } => Address::try_from(contract_package_hash)
+            .map_err(|e| ApiError::User(ExecutionError::from(e).code()))
+            .unwrap_or_revert()
     }
 }
 

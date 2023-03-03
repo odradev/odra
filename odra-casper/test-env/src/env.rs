@@ -61,7 +61,7 @@ impl CasperTestEnv {
             );
             genesis_config.ee_config_mut().push_account(account);
 
-            accounts.push(account_addr.into());
+            accounts.push(account_addr.try_into().unwrap());
         }
         let run_genesis_request = RunGenesisRequest::new(
             *DEFAULT_GENESIS_CONFIG_HASH,

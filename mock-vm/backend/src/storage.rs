@@ -134,7 +134,7 @@ mod test {
     use super::Storage;
 
     fn setup() -> (Address, String, u8) {
-        let address = Address::new(b"address");
+        let address = Address::try_from(b"address").unwrap();
         let key = String::from("key");
         let value = 88u8;
 

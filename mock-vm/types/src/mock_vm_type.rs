@@ -120,7 +120,7 @@ mod tests {
 
     #[test]
     fn test_address() {
-        ser_deser(Address::new(b"Satoshi"));
+        ser_deser(Address::try_from(b"Satoshi").unwrap());
     }
 
     #[test]

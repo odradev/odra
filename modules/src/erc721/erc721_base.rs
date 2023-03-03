@@ -17,9 +17,6 @@ pub struct Erc721Base {
 
 impl Erc721 for Erc721Base {
     fn balance_of(&self, owner: Address) -> U256 {
-        if owner.is_zero() {
-            revert(Error::ZeroAddress);
-        }
         self.balances.get_or_default(&owner)
     }
 
@@ -44,11 +41,11 @@ impl Erc721 for Erc721Base {
         self.transfer(from, to, token_id);
     }
 
-    fn approve(&mut self, approved: Address, token_id: U256) {
+    fn approve(&mut self, approved: Option<Address>, token_id: U256) {
         let owner = self.owner_of(token_id);
         let caller = caller();
 
-        if owner == approved {
+        if Some(owner) == approved {
             revert(Error::ApprovalToCurrentOwner);
         }
 
@@ -56,11 +53,7 @@ impl Erc721 for Erc721Base {
             revert(Error::NotAnOwnerOrApproved);
         }
 
-        if approved.is_zero() {
-            self.token_approvals.set(&token_id, None);
-        } else {
-            self.token_approvals.set(&token_id, Some(approved));
-        }
+        self.token_approvals.set(&token_id, approved);
 
         Approval {
             owner,

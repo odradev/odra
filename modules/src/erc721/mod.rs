@@ -10,7 +10,7 @@ pub trait Erc721 {
     // TODO: what about data?
     fn safe_transfer_from(&mut self, from: Address, to: Address, token_id: U256);
     fn transfer_from(&mut self, from: Address, to: Address, token_id: U256);
-    fn approve(&mut self, approved: Address, token_id: U256);
+    fn approve(&mut self, approved: Option<Address>, token_id: U256);
     fn set_approval_for_all(&mut self, operator: Address, approved: bool);
     fn get_approved(&self, token_id: U256) -> Option<Address>;
     fn is_approved_for_all(&self, owner: Address, operator: Address) -> bool;
@@ -29,7 +29,7 @@ pub mod events {
     #[derive(odra::Event)]
     pub struct Approval {
         pub(crate) owner: Address,
-        pub(crate) approved: Address,
+        pub(crate) approved: Option<Address>,
         pub(crate) token_id: U256
     }
 
@@ -50,7 +50,6 @@ pub mod errors {
             NotAnOwnerOrApproved => 30_001,
             ApprovalToCurrentOwner => 30_002,
             ApproveToCaller => 30_003,
-            ZeroAddress => 30_004,
             StorageError => 30_501,
         }
     }

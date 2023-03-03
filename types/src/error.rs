@@ -156,3 +156,27 @@ impl From<CollectionError> for OdraError {
         Into::<ExecutionError>::into(error).into()
     }
 }
+
+/// Error that can occur while operating on an Address.
+#[derive(Clone, Debug, PartialEq)]
+pub enum AddressError {
+    /// Tried to construct a zero address.
+    ZeroAddress,
+    /// Tried to construct an address and failed.
+    AddressCreationError
+}
+
+impl From<AddressError> for ExecutionError {
+    fn from(error: AddressError) -> Self {
+        match error {
+            AddressError::ZeroAddress => Self::internal(10, "Zero address"),
+            AddressError::AddressCreationError => Self::internal(11, "Address creation error")
+        }
+    }
+}
+
+impl From<AddressError> for OdraError {
+    fn from(error: AddressError) -> Self {
+        Into::<ExecutionError>::into(error).into()
+    }
+}

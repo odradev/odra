@@ -5,6 +5,8 @@ use casper_types::{
     bytesrepr::{self, FromBytes, ToBytes},
     CLType, CLTyped, ContractPackageHash, Key
 };
+use odra_types::AddressError;
+use odra_types::AddressError::ZeroAddress;
 
 /// An enum representing an [`AccountHash`] or a [`ContractPackageHash`].
 #[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -38,28 +40,21 @@ impl CasperAddress {
     pub fn is_contract(&self) -> bool {
         self.as_contract_package_hash().is_some()
     }
+}
 
-    /// Returns true if `self` is the `Account` variant and the inner account hash is zero.
-    pub fn is_zero(&self) -> bool {
-        match self {
-            CasperAddress::Account(account_hash) => {
-                // check if account hash is zero
-                account_hash.value().iter().all(|&b| b == 0)
-            }
-            CasperAddress::Contract(_) => false
-        }
+impl TryFrom<ContractPackageHash> for CasperAddress {
+    type Error = AddressError;
+    fn try_from(contract_package_hash: ContractPackageHash) -> Result<Self, Self::Error> {
+        // TODO: check for zero
+        Ok(Self::Contract(contract_package_hash))
     }
 }
 
-impl From<ContractPackageHash> for CasperAddress {
-    fn from(contract_package_hash: ContractPackageHash) -> Self {
-        Self::Contract(contract_package_hash)
-    }
-}
-
-impl From<AccountHash> for CasperAddress {
-    fn from(account_hash: AccountHash) -> Self {
-        Self::Account(account_hash)
+impl TryFrom<AccountHash> for CasperAddress {
+    type Error = AddressError;
+    fn try_from(account_hash: AccountHash) -> Result<Self, Self::Error> {
+        // TODO: check for zero
+        Ok(Self::Account(account_hash))
     }
 }
 
@@ -75,15 +70,16 @@ impl From<CasperAddress> for Key {
 }
 
 impl TryFrom<Key> for CasperAddress {
-    type Error = String;
+    type Error = AddressError;
 
     fn try_from(key: Key) -> Result<Self, Self::Error> {
+        // TODO: check for zero
         match key {
             Key::Account(account_hash) => Ok(CasperAddress::Account(account_hash)),
             Key::Hash(contract_package_hash) => Ok(CasperAddress::Contract(
                 ContractPackageHash::new(contract_package_hash)
             )),
-            _ => Err(String::from("Unsupported Key type."))
+            _ => Err(AddressError::AddressCreationError)
         }
     }
 }
@@ -120,6 +116,20 @@ impl FromBytes for CasperAddress {
     }
 }
 
+impl<const N: usize> TryFrom<&[u8; N]> for CasperAddress {
+    type Error = AddressError;
+    fn try_from(value: &[u8; N]) -> Result<Self, Self::Error> {
+        let address = CasperAddress::from_bytes(value)
+            .map(|(address, _)| address)
+            .map_err(|_| AddressError::AddressCreationError)?;
+        if address.to_bytes().unwrap().iter().all(|&x| x == 0) {
+            Err(ZeroAddress)
+        } else {
+            Ok(address)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -143,7 +153,7 @@ mod tests {
         let account_hash = mock_account_hash();
 
         // It is possible to convert CasperAddress back to AccountHash.
-        let casper_address = CasperAddress::from(account_hash);
+        let casper_address = CasperAddress::try_from(account_hash).unwrap();
         assert_eq!(casper_address.as_account_hash().unwrap(), &account_hash);
 
         // It is not possible to convert CasperAddress to ContractPackageHash.
@@ -158,7 +168,7 @@ mod tests {
     #[test]
     fn test_casper_address_contract_package_hash_conversion() {
         let contract_package_hash = mock_contract_package_hash();
-        let casper_address = CasperAddress::from(contract_package_hash);
+        let casper_address = CasperAddress::try_from(contract_package_hash).unwrap();
 
         // It is possible to convert CasperAddress back to ContractPackageHash.
         assert_eq!(
