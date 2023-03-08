@@ -1,5 +1,6 @@
 //! Blockchain-agnostic types used by Odra Framework.
 
+pub mod address;
 pub mod arithmetic;
 pub mod contract_def;
 mod error;

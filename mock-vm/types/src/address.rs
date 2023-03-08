@@ -1,13 +1,25 @@
 use borsh::{BorshDeserialize, BorshSerialize};
+use odra_types::address::OdraAddress;
 use odra_types::AddressError;
 
 /// Max bytes of an [`Address`] internal representation.
 pub const ADDRESS_LENGTH: usize = 8;
 
+/// Prefix for contract addresses.
+pub const CONTRACT_ADDRESS_PREFIX: u32 = 0x0000cadd;
+
 /// Blockchain-agnostic address representation.
 #[derive(Clone, Copy, PartialEq, Hash, Eq, BorshSerialize, BorshDeserialize)]
 pub struct Address {
     data: [u8; ADDRESS_LENGTH]
+}
+
+impl OdraAddress for Address {
+    fn is_contract(&self) -> bool {
+        // get first 4 bytes of data
+        let bytes = self.data[0..4].try_into().unwrap();
+        u32::from_be_bytes(bytes) == CONTRACT_ADDRESS_PREFIX
+    }
 }
 
 impl<const N: usize> TryFrom<&[u8; N]> for Address {

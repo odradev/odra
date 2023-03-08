@@ -5,6 +5,7 @@ use casper_types::{
     bytesrepr::{self, FromBytes, ToBytes},
     CLType, CLTyped, ContractPackageHash, Key
 };
+use odra_types::address::OdraAddress;
 use odra_types::AddressError;
 use odra_types::AddressError::ZeroAddress;
 
@@ -35,9 +36,10 @@ impl CasperAddress {
             None
         }
     }
+}
 
-    /// Returns true if `self` is the `Contract` variant.
-    pub fn is_contract(&self) -> bool {
+impl OdraAddress for CasperAddress {
+    fn is_contract(&self) -> bool {
         self.as_contract_package_hash().is_some()
     }
 }
@@ -45,7 +47,9 @@ impl CasperAddress {
 impl TryFrom<ContractPackageHash> for CasperAddress {
     type Error = AddressError;
     fn try_from(contract_package_hash: ContractPackageHash) -> Result<Self, Self::Error> {
-        // TODO: check for zero
+        if contract_package_hash.value().iter().all(|&b| b == 0) {
+            return Err(ZeroAddress);
+        }
         Ok(Self::Contract(contract_package_hash))
     }
 }
@@ -53,7 +57,9 @@ impl TryFrom<ContractPackageHash> for CasperAddress {
 impl TryFrom<AccountHash> for CasperAddress {
     type Error = AddressError;
     fn try_from(account_hash: AccountHash) -> Result<Self, Self::Error> {
-        // TODO: check for zero
+        if account_hash.value().iter().all(|&b| b == 0) {
+            return Err(ZeroAddress);
+        }
         Ok(Self::Account(account_hash))
     }
 }
@@ -73,12 +79,11 @@ impl TryFrom<Key> for CasperAddress {
     type Error = AddressError;
 
     fn try_from(key: Key) -> Result<Self, Self::Error> {
-        // TODO: check for zero
         match key {
-            Key::Account(account_hash) => Ok(CasperAddress::Account(account_hash)),
-            Key::Hash(contract_package_hash) => Ok(CasperAddress::Contract(
-                ContractPackageHash::new(contract_package_hash)
-            )),
+            Key::Account(account_hash) => Self::try_from(account_hash),
+            Key::Hash(contract_package_hash) => {
+                Self::try_from(ContractPackageHash::new(contract_package_hash))
+            }
             _ => Err(AddressError::AddressCreationError)
         }
     }

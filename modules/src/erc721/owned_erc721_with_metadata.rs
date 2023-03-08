@@ -1,4 +1,4 @@
-use odra::types::{Address, U256};
+use odra::types::{Address, Bytes, U256};
 
 pub trait OwnedErc721WithMetadata {
     // Metadata
@@ -10,8 +10,8 @@ pub trait OwnedErc721WithMetadata {
     // Base
     fn balance_of(&self, owner: Address) -> U256;
     fn owner_of(&self, token_id: U256) -> Address;
-    // TODO: what about data?
     fn safe_transfer_from(&mut self, from: Address, to: Address, token_id: U256);
+    fn safe_transfer_from_with_data(&mut self, from: Address, to: Address, token_id: U256, data: Bytes);
     fn transfer_from(&mut self, from: Address, to: Address, token_id: U256);
     fn approve(&mut self, approved: Address, token_id: U256);
     fn set_approval_for_all(&mut self, operator: Address, approved: bool);

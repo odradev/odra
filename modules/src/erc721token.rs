@@ -2,6 +2,7 @@ use crate::erc721::events::Transfer;
 use odra::contract_env::{caller, revert};
 use odra::types::event::OdraEvent;
 use odra::types::Address;
+use odra::types::Bytes;
 use odra::types::U256;
 
 use crate::erc721::erc721_base::Erc721Base;
@@ -48,6 +49,17 @@ impl OwnedErc721WithMetadata for Erc721Token {
 
     pub fn safe_transfer_from(&mut self, from: Address, to: Address, token_id: U256) {
         self.core.safe_transfer_from(from, to, token_id);
+    }
+
+    pub fn safe_transfer_from_with_data(
+        &mut self,
+        from: Address,
+        to: Address,
+        token_id: U256,
+        data: Bytes
+    ) {
+        self.core
+            .safe_transfer_from_with_data(from, to, token_id, data);
     }
 
     pub fn transfer_from(&mut self, from: Address, to: Address, token_id: U256) {
@@ -130,9 +142,12 @@ mod tests {
     use super::{Erc721TokenDeployer, Erc721TokenRef};
     use crate::erc721::errors::Error;
     use crate::extensions::ownable::errors::Error::NotAnOwner;
+    use crate::receiver::ReceiverDeployer;
     use odra::test_env;
     use odra::test_env::assert_exception;
-    use odra::types::{Address, U256};
+    use odra::types::address::OdraAddress;
+    use odra::types::VmError::NoSuchMethod;
+    use odra::types::{Address, OdraError, U256};
 
     const NAME: &str = "PlascoinNFT";
     const SYMBOL: &str = "PLSNFT";
@@ -437,6 +452,9 @@ mod tests {
         // When deploy a contract with the initial supply.
         let mut erc721_env = setup();
 
+        assert!(erc721_env.token.address().is_contract());
+        assert!(!erc721_env.alice.is_contract());
+
         // And mint a token to Alice.
         erc721_env.token.mint(erc721_env.alice, U256::from(1));
 
@@ -450,20 +468,70 @@ mod tests {
         assert_eq!(erc721_env.token.owner_of(U256::from(1)), erc721_env.bob);
     }
 
-    // #[test]
-    // fn safe_transfer_to_contract_which_does_not_support_nft() {
-    //     todo!()
-    // }
-    //
-    // #[test]
-    // fn safe_transfer_to_contract_which_supports_nft() {
-    //     todo!()
-    // }
-    //
-    // #[test]
-    // fn safe_transfer_to_contract_with_data() {
-    //     todo!()
-    // }
+    #[test]
+    fn safe_transfer_to_contract_which_does_not_support_nft() {
+        use crate::erc20::Erc20Deployer;
+        // When deploy a contract with the initial supply
+        let mut erc721_env = setup();
+        // And another contract which does not support nfts
+        let erc20 = Erc20Deployer::init("PLS".to_string(), "PLASCOIN".to_string(), 10, None);
+
+        // And mint a token to Alice.
+        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+
+        // Then safe transfer the token to the contract which does not support nfts throws an error.
+        assert_exception(
+            OdraError::VmError(NoSuchMethod("on_erc721_received".to_string())),
+            || {
+                let mut erc721 = Erc721TokenRef::at(erc721_env.token.address());
+                test_env::set_caller(erc721_env.alice);
+                erc721.safe_transfer_from(erc721_env.alice, erc20.address(), U256::from(1));
+            }
+        )
+    }
+
+    #[test]
+    fn safe_transfer_to_contract_which_supports_nft() {
+        // When deploy a contract with the initial supply
+        let mut erc721_env = setup();
+        // And another contract which does not support nfts
+        let receiver = ReceiverDeployer::default();
+
+        // And mint a token to Alice.
+        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+
+        // And transfer the token to the contract which does support nfts
+        test_env::set_caller(erc721_env.alice);
+        erc721_env
+            .token
+            .safe_transfer_from(erc721_env.alice, receiver.address(), U256::from(1));
+
+        // Then the owner of the token is the contract
+        assert_eq!(erc721_env.token.owner_of(U256::from(1)), receiver.address());
+    }
+
+    #[test]
+    fn safe_transfer_to_contract_with_data() {
+        // When deploy a contract with the initial supply
+        let mut erc721_env = setup();
+        // And another contract which does not support nfts
+        let receiver = ReceiverDeployer::default();
+
+        // And mint a token to Alice.
+        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+
+        // And transfer the token to the contract which does support nfts
+        test_env::set_caller(erc721_env.alice);
+        erc721_env.token.safe_transfer_from_with_data(
+            erc721_env.alice,
+            receiver.address(),
+            U256::from(1),
+            b"data".to_vec().into()
+        );
+
+        // Then the owner of the token is the contract
+        assert_eq!(erc721_env.token.owner_of(U256::from(1)), receiver.address());
+    }
 
     #[test]
     fn burn() {

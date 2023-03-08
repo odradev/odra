@@ -96,7 +96,7 @@ impl GenerateCode for Deploy<'_> {
         }
 
         quote! {
-            struct #deployer_ident;
+            pub struct #deployer_ident;
 
             #[cfg(all(feature = "casper", not(target_arch = "wasm32")))]
             impl #deployer_ident {

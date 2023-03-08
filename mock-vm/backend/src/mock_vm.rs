@@ -1,6 +1,7 @@
 use anyhow::Result;
 use odra_mock_vm_types::{
-    Address, Balance, BlockTime, CallArgs, EventData, MockVMSerializationError, MockVMType
+    Address, Balance, BlockTime, CallArgs, EventData, MockVMSerializationError, MockVMType,
+    CONTRACT_ADDRESS_PREFIX
 };
 use odra_types::{event::EventError, OdraError, VmError};
 use std::collections::HashMap;
@@ -72,6 +73,7 @@ impl MockVm {
                 .read()
                 .unwrap()
                 .call(&address, String::from(entrypoint), args);
+
         let result = self.handle_call_result(result);
         T::deser(result).unwrap()
     }
@@ -318,7 +320,17 @@ impl MockVmState {
 
     fn next_contract_address(&mut self) -> Address {
         self.contract_counter += 1;
-        Address::try_from(&self.contract_counter.to_be_bytes()).unwrap()
+        let contract_address_bytes = CONTRACT_ADDRESS_PREFIX.to_be_bytes();
+        let contract_counter_bytes = self.contract_counter.to_be_bytes();
+        let mut merged: [u8; 8] = [0; 8];
+
+        merged.clone_from_slice(
+            [contract_address_bytes, contract_counter_bytes]
+                .concat()
+                .as_slice()
+        );
+
+        Address::try_from(&merged).unwrap()
     }
 
     fn get_contract_namespace(&self) -> String {
@@ -429,6 +441,7 @@ mod tests {
     use std::collections::HashMap;
 
     use odra_mock_vm_types::{Address, Balance, CallArgs, EventData, MockVMType};
+    use odra_types::address::OdraAddress;
     use odra_types::{ExecutionError, OdraError, VmError};
 
     use crate::{callstack::CallstackElement, EntrypointArgs, EntrypointCall};
@@ -451,6 +464,19 @@ mod tests {
 
         // then addresses are different
         assert_ne!(address1, address2);
+    }
+
+    #[test]
+    fn addresses_have_different_type() {
+        // given an address of a contract and an address of an account
+        let instance = MockVm::default();
+        let (contract_address, _, _) = setup_contract(&instance);
+        let account_address = instance.get_address(0);
+
+        // Then the contract address is a contract
+        assert!(contract_address.is_contract());
+        // And the account address is not a contract
+        assert!(!account_address.is_contract());
     }
 
     #[test]

@@ -2,13 +2,19 @@ pub mod erc721_base;
 pub mod extensions;
 pub mod owned_erc721_with_metadata;
 
-use odra::types::{Address, U256};
+use odra::types::{Address, Bytes, U256};
 
 pub trait Erc721 {
     fn balance_of(&self, owner: Address) -> U256;
     fn owner_of(&self, token_id: U256) -> Address;
-    // TODO: what about data?
     fn safe_transfer_from(&mut self, from: Address, to: Address, token_id: U256);
+    fn safe_transfer_from_with_data(
+        &mut self,
+        from: Address,
+        to: Address,
+        token_id: U256,
+        data: Bytes
+    );
     fn transfer_from(&mut self, from: Address, to: Address, token_id: U256);
     fn approve(&mut self, approved: Option<Address>, token_id: U256);
     fn set_approval_for_all(&mut self, operator: Address, approved: bool);
@@ -50,6 +56,8 @@ pub mod errors {
             NotAnOwnerOrApproved => 30_001,
             ApprovalToCurrentOwner => 30_002,
             ApproveToCaller => 30_003,
+            NoSuchMethod => 30_004,
+            TransferFailed => 30_005,
             StorageError => 30_501,
         }
     }
