@@ -4,7 +4,7 @@ use odra::{
     UnwrapOrRevert, Variable
 };
 
-use crate::{errors::Error, events::{OwnershipTransferred, OwnershipTransferStarted}};
+use super::{errors::Error, events::{OwnershipTransferred, OwnershipTransferStarted}};
 
 /// This module provides a straightforward access control feature that enables 
 /// exclusive access to particular functions by an account, known as the owner. 
