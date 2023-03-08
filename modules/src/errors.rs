@@ -4,5 +4,6 @@ execution_error! {
     pub enum Error {
         OwnerNotSet => 30_000,
         CallerNotTheOwner => 30_001,
+        CallerNotTheNewOwner => 30_002
     }
 }
