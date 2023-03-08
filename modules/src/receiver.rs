@@ -9,13 +9,10 @@ pub struct Receiver {}
 impl Receiver {
     pub fn on_erc721_received(
         &mut self,
-        #[allow(unused_variables)]
-        operator: Address,
-        #[allow(unused_variables)]
-        from: Address,
+        #[allow(unused_variables)] operator: Address,
+        #[allow(unused_variables)] from: Address,
         token_id: U256,
-        #[allow(unused_variables)]
-        data: Option<Vec<u8>>
+        #[allow(unused_variables)] data: Option<Vec<u8>>
     ) -> bool {
         Erc721TokenRef::at(caller()).owner_of(token_id) == self_address()
     }

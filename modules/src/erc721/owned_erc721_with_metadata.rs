@@ -11,7 +11,13 @@ pub trait OwnedErc721WithMetadata {
     fn balance_of(&self, owner: Address) -> U256;
     fn owner_of(&self, token_id: U256) -> Address;
     fn safe_transfer_from(&mut self, from: Address, to: Address, token_id: U256);
-    fn safe_transfer_from_with_data(&mut self, from: Address, to: Address, token_id: U256, data: Bytes);
+    fn safe_transfer_from_with_data(
+        &mut self,
+        from: Address,
+        to: Address,
+        token_id: U256,
+        data: Bytes
+    );
     fn transfer_from(&mut self, from: Address, to: Address, token_id: U256);
     fn approve(&mut self, approved: Address, token_id: U256);
     fn set_approval_for_all(&mut self, operator: Address, approved: bool);
