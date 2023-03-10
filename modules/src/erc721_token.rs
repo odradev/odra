@@ -9,7 +9,7 @@ use crate::erc721::erc721_base::Erc721Base;
 use crate::erc721::errors::Error::NotAnOwnerOrApproved;
 use crate::erc721::extensions::erc721_metadata::{Erc721Metadata, Erc721MetadataExtension};
 use crate::erc721::Erc721;
-use crate::erc721token::errors::Error;
+use crate::erc721_token::errors::Error;
 use crate::extensions::ownable::{Ownable, OwnableExtension};
 
 #[odra::module]
@@ -141,8 +141,8 @@ pub mod errors {
 mod tests {
     use super::{Erc721TokenDeployer, Erc721TokenRef};
     use crate::erc721::errors::Error;
+    use crate::erc721_receiver::Erc721ReceiverDeployer;
     use crate::extensions::ownable::errors::Error::NotAnOwner;
-    use crate::receiver::ReceiverDeployer;
     use odra::test_env;
     use odra::test_env::assert_exception;
     use odra::types::address::OdraAddress;
@@ -495,7 +495,7 @@ mod tests {
         // When deploy a contract with the initial supply
         let mut erc721_env = setup();
         // And another contract which does not support nfts
-        let receiver = ReceiverDeployer::default();
+        let receiver = Erc721ReceiverDeployer::default();
 
         // And mint a token to Alice.
         erc721_env.token.mint(erc721_env.alice, U256::from(1));
@@ -515,7 +515,7 @@ mod tests {
         // When deploy a contract with the initial supply
         let mut erc721_env = setup();
         // And another contract which does not support nfts
-        let receiver = ReceiverDeployer::default();
+        let receiver = Erc721ReceiverDeployer::default();
 
         // And mint a token to Alice.
         erc721_env.token.mint(erc721_env.alice, U256::from(1));

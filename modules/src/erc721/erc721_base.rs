@@ -1,7 +1,7 @@
 use crate::erc721::errors::Error;
 use crate::erc721::events::{Approval, ApprovalForAll, Transfer};
 use crate::erc721::Erc721;
-use crate::receiver::ReceiverRef;
+use crate::erc721_receiver::Erc721ReceiverRef;
 use odra::contract_env::{caller, revert};
 use odra::types::address::OdraAddress;
 use odra::types::event::OdraEvent;
@@ -116,7 +116,8 @@ impl Erc721Base {
     fn safe_transfer(&mut self, from: Address, to: Address, token_id: U256, data: Option<Bytes>) {
         self.transfer(from, to, token_id);
         if to.is_contract() {
-            let response = ReceiverRef::at(to).on_erc721_received(caller(), from, token_id, data);
+            let response =
+                Erc721ReceiverRef::at(to).on_erc721_received(caller(), from, token_id, data);
 
             if !response {
                 revert(Error::TransferFailed)
