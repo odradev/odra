@@ -60,7 +60,7 @@ impl Erc1155 for Erc1155Base {
         to: Address,
         id: U256,
         amount: U256,
-        data: Bytes
+        data: Option<Bytes>
     ) {
         let caller = caller();
         self.assert_approved_or_owner(caller, from);
@@ -83,7 +83,7 @@ impl Erc1155 for Erc1155Base {
         }
         .emit();
 
-        self.safe_transfer_acceptance_check(caller, from, to, id, amount, Some(data));
+        self.safe_transfer_acceptance_check(caller, from, to, id, amount, data);
     }
 
     fn safe_batch_transfer_from(
@@ -92,7 +92,7 @@ impl Erc1155 for Erc1155Base {
         to: Address,
         ids: Vec<U256>,
         amounts: Vec<U256>,
-        data: Bytes
+        data: Option<Bytes>
     ) {
         let caller = caller();
         if !self.is_approved_for_all(from, caller) || from == caller {
@@ -127,7 +127,7 @@ impl Erc1155 for Erc1155Base {
         }
         .emit();
 
-        self.safe_batch_transfer_acceptance_check(caller, from, to, ids, amounts, Some(data));
+        self.safe_batch_transfer_acceptance_check(caller, from, to, ids, amounts, data);
     }
 }
 

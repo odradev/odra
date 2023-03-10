@@ -15,7 +15,7 @@ pub trait Erc1155 {
         to: Address,
         id: U256,
         amount: U256,
-        data: Bytes
+        data: Option<Bytes>
     );
     fn safe_batch_transfer_from(
         &mut self,
@@ -23,7 +23,7 @@ pub trait Erc1155 {
         to: Address,
         ids: Vec<U256>,
         amounts: Vec<U256>,
-        data: Bytes
+        data: Option<Bytes>
     );
 }
 

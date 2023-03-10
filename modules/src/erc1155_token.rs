@@ -41,7 +41,7 @@ impl OwnedErc1155 for Erc1155Token {
         to: Address,
         id: U256,
         amount: U256,
-        data: Bytes
+        data: Option<Bytes>
     ) {
         self.core.safe_transfer_from(from, to, id, amount, data);
     }
@@ -52,7 +52,7 @@ impl OwnedErc1155 for Erc1155Token {
         to: Address,
         ids: Vec<U256>,
         amounts: Vec<U256>,
-        data: Bytes
+        data: Option<Bytes>
     ) {
         self.core
             .safe_batch_transfer_from(from, to, ids, amounts, data);
@@ -181,8 +181,7 @@ impl OwnedErc1155 for Erc1155Token {
 mod tests {
     use crate::erc1155::errors::Error;
     use crate::erc1155::events::{ApprovalForAll, TransferBatch, TransferSingle};
-    use crate::erc1155_receiver::Erc1155ReceiverRef;
-    use crate::erc1155_token::{Erc1155Token, Erc1155TokenDeployer, Erc1155TokenRef};
+    use crate::erc1155_token::{Erc1155TokenDeployer, Erc1155TokenRef};
     use odra::test_env::assert_exception;
     use odra::types::{Address, U256};
     use odra::{assert_events, test_env};
@@ -564,6 +563,101 @@ mod tests {
             // Then approving for self throws an error
             test_env::set_caller(env.alice);
             env.token.set_approval_for_all(env.alice, true);
+        });
+    }
+
+    #[test]
+    fn safe_transfer_from() {
+        // Given a deployed contract
+        let mut env = setup();
+
+        // And some tokens minted
+        env.token.mint(env.alice, U256::one(), 100.into(), None);
+
+        // When we transfer tokens
+        test_env::set_caller(env.alice);
+        env.token
+            .safe_transfer_from(env.alice, env.bob, U256::one(), 50.into(), None);
+
+        // Then the tokens are transferred
+        assert_eq!(env.token.balance_of(env.alice, U256::one()), 50.into());
+        assert_eq!(env.token.balance_of(env.bob, U256::one()), 50.into());
+
+        // And the event is emitted
+        let contract = env.token;
+        assert_events!(
+            contract,
+            TransferSingle {
+                operator: Some(env.alice),
+                from: Some(env.alice),
+                to: Some(env.bob),
+                id: U256::one(),
+                value: 50.into()
+            }
+        );
+    }
+
+    #[test]
+    fn safe_transfer_from_approved() {
+        // Given a deployed contract
+        let mut env = setup();
+
+        // And some tokens minted
+        env.token.mint(env.alice, U256::one(), 100.into(), None);
+
+        // And approval for all set
+        test_env::set_caller(env.alice);
+        env.token.set_approval_for_all(env.bob, true);
+
+        // When we transfer tokens
+        test_env::set_caller(env.bob);
+        env.token
+            .safe_transfer_from(env.alice, env.bob, U256::one(), 50.into(), None);
+
+        // Then the tokens are transferred
+        assert_eq!(env.token.balance_of(env.alice, U256::one()), 50.into());
+        assert_eq!(env.token.balance_of(env.bob, U256::one()), 50.into());
+
+        // And the event is emitted
+        let contract = env.token;
+        assert_events!(
+            contract,
+            TransferSingle {
+                operator: Some(env.bob),
+                from: Some(env.alice),
+                to: Some(env.bob),
+                id: U256::one(),
+                value: 50.into()
+            }
+        );
+    }
+
+    #[test]
+    fn safe_transfer_from_errors() {
+        assert_exception(Error::InsufficientBalance, || {
+            // Given a deployed contract
+            let mut env = setup();
+
+            // And some tokens minted
+            env.token.mint(env.alice, U256::one(), 100.into(), None);
+
+            // When we transfer more tokens than we have it errors out
+            test_env::set_caller(env.alice);
+            env.token
+                .safe_transfer_from(env.alice, env.bob, U256::one(), 200.into(), None);
+        });
+
+        assert_exception(Error::NotAnOwnerOrApproved, || {
+            // Given a deployed contract
+            let mut env = setup();
+
+            // And some tokens minted
+            env.token.mint(env.alice, U256::one(), 100.into(), None);
+
+            // When we transfer not our tokens it errors out
+            test_env::set_caller(env.bob);
+            env.token
+                .safe_transfer_from(env.alice, env.bob, U256::one(), 100.into(), None);
         });
     }
 }
