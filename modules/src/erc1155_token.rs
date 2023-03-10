@@ -180,7 +180,7 @@ impl OwnedErc1155 for Erc1155Token {
 #[cfg(test)]
 mod tests {
     use crate::erc1155::errors::Error;
-    use crate::erc1155::events::{TransferBatch, TransferSingle};
+    use crate::erc1155::events::{ApprovalForAll, TransferBatch, TransferSingle};
     use crate::erc1155_receiver::Erc1155ReceiverRef;
     use crate::erc1155_token::{Erc1155Token, Erc1155TokenDeployer, Erc1155TokenRef};
     use odra::test_env::assert_exception;
@@ -417,6 +417,153 @@ mod tests {
                 vec![U256::one(), U256::from(2)],
                 vec![150.into(), 300.into()]
             );
+        });
+    }
+
+    #[test]
+    fn balance_of() {
+        // Given a deployed contract
+        let mut env = setup();
+
+        // And some tokens minted
+        env.token.mint(env.alice, U256::one(), 100.into(), None);
+        env.token.mint(env.alice, U256::from(2), 200.into(), None);
+        env.token.mint(env.bob, U256::one(), 300.into(), None);
+
+        // Then it returns the correct balance
+        assert_eq!(env.token.balance_of(env.alice, U256::one()), 100.into());
+        assert_eq!(env.token.balance_of(env.alice, U256::from(2)), 200.into());
+        assert_eq!(env.token.balance_of(env.bob, U256::one()), 300.into());
+        assert_eq!(env.token.balance_of(env.bob, U256::from(2)), 0.into());
+    }
+
+    #[test]
+    fn balance_of_batch() {
+        // Given a deployed contract
+        let mut env = setup();
+
+        // And some tokens minted
+        env.token.mint_batch(
+            env.alice,
+            vec![U256::one(), U256::from(2)],
+            vec![100.into(), 200.into()],
+            None
+        );
+        env.token.mint_batch(
+            env.bob,
+            vec![U256::one(), U256::from(2)],
+            vec![300.into(), 400.into()],
+            None
+        );
+
+        // Then it returns the correct balances
+        assert_eq!(
+            env.token.balance_of_batch(
+                vec![env.alice, env.alice, env.alice, env.bob, env.bob, env.bob],
+                vec![
+                    U256::one(),
+                    U256::from(2),
+                    U256::from(3),
+                    U256::one(),
+                    U256::from(2),
+                    U256::from(3)
+                ]
+            ),
+            // TODO: Why it gives deserialization error when mismatched?
+            vec![
+                100.into(),
+                200.into(),
+                0.into(),
+                300.into(),
+                400.into(),
+                0.into()
+            ]
+        );
+    }
+
+    #[test]
+    fn balance_of_batch_errors() {
+        assert_exception(Error::AccountsAndIdsLengthMismatch, || {
+            // Given a deployed contract
+            let mut env = setup();
+
+            // And some tokens minted
+            env.token.mint_batch(
+                env.alice,
+                vec![U256::one(), U256::from(2)],
+                vec![100.into(), 200.into()],
+                None
+            );
+
+            // When we query balances with mismatching ids and addresses it errors out
+            env.token.balance_of_batch(
+                vec![env.alice, env.alice, env.alice],
+                vec![U256::one(), U256::from(2)]
+            );
+        });
+    }
+
+    #[test]
+    fn set_approval_for_all() {
+        // Given a deployed contract
+        let mut env = setup();
+
+        // When we set approval for all
+        test_env::set_caller(env.alice);
+        env.token.set_approval_for_all(env.bob, true);
+
+        // Then the approval is set
+        assert!(env.token.is_approved_for_all(env.alice, env.bob));
+
+        // And the event is emitted
+        let contract = env.token;
+        assert_events!(
+            contract,
+            ApprovalForAll {
+                owner: env.alice,
+                operator: env.bob,
+                approved: true
+            }
+        );
+    }
+
+    #[test]
+    fn unset_approval_for_all() {
+        // Given a deployed contract
+        let mut env = setup();
+
+        // And approval for all set
+        test_env::set_caller(env.alice);
+        env.token.set_approval_for_all(env.bob, true);
+
+        // When we unset approval for all
+        test_env::set_caller(env.alice);
+        env.token.set_approval_for_all(env.bob, false);
+
+        // Then the approval is unset
+        assert!(!env.token.is_approved_for_all(env.alice, env.bob));
+
+        // And the event is emitted
+        let contract = env.token;
+        assert_events!(
+            contract,
+            ApprovalForAll {
+                owner: env.alice,
+                operator: env.bob,
+                approved: false
+            }
+        );
+    }
+
+    #[test]
+    fn set_approval_to_self() {
+        assert_exception(Error::ApprovalForSelf, || {
+            // Given a deployed contract
+            let mut env = setup();
+
+            // Then approving for self throws an error
+            test_env::set_caller(env.alice);
+            env.token.set_approval_for_all(env.alice, true);
         });
     }
 }
