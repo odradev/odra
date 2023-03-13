@@ -1,5 +1,6 @@
 use odra::types::{Address, Bytes, U256};
 
+/// The ERC-1155 interface with the Ownable trait included manually.
 pub trait OwnedErc1155 {
     fn init(&mut self);
 

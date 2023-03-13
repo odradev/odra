@@ -8,6 +8,7 @@ use odra::types::event::OdraEvent;
 use odra::types::{Address, Bytes, U256};
 use odra::{Mapping, UnwrapOrRevert};
 
+/// The ERC721 base implementation.
 #[odra::module]
 pub struct Erc721Base {
     // Erc721 base fields.
@@ -101,7 +102,7 @@ impl Erc721 for Erc721Base {
     fn is_approved_for_all(&self, owner: Address, operator: Address) -> bool {
         self.operator_approvals
             .get(&(owner, operator))
-            .unwrap_or(false)
+            .unwrap_or_default()
     }
 }
 

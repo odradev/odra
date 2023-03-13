@@ -8,6 +8,7 @@ use odra::types::event::OdraEvent;
 use odra::types::{Address, Bytes, U256};
 use odra::Mapping;
 
+/// The ERC1155 base implementation.
 #[odra::module]
 pub struct Erc1155Base {
     pub balances: Mapping<(Address, U256), U256>,

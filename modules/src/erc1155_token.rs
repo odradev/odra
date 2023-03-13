@@ -10,6 +10,8 @@ use odra::types::U256;
 
 use crate::extensions::ownable::{Ownable, OwnableExtension};
 
+/// The ERC1155 token implementation.
+/// It uses the ERC1155 base implementation and the Ownable module.
 #[odra::module]
 pub struct Erc1155Token {
     core: Erc1155Base,
@@ -472,12 +474,12 @@ mod tests {
             ),
             // TODO: Why it gives deserialization error when mismatched?
             vec![
-                100.into(),
-                200.into(),
-                0.into(),
-                300.into(),
-                400.into(),
-                0.into()
+                U256::from(100),
+                U256::from(200),
+                U256::zero(),
+                U256::from(300),
+                U256::from(400),
+                U256::zero()
             ]
         );
     }

@@ -1,5 +1,6 @@
 use odra::types::{Address, Bytes, U256};
 
+/// The ERC721 interface with the Ownable and Metadata traits included manually.
 pub trait OwnedErc721WithMetadata {
     // Metadata
     fn init(&mut self, name: String, symbol: String, base_uri: String);

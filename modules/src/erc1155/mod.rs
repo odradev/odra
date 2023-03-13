@@ -4,6 +4,7 @@ pub mod erc1155_base;
 pub mod extensions;
 pub mod owned_erc1155;
 
+/// The ERC-1155 interface as defined in the standard.
 pub trait Erc1155 {
     fn balance_of(&self, owner: Address, id: U256) -> U256;
     fn balance_of_batch(&self, owners: Vec<Address>, ids: Vec<U256>) -> Vec<U256>;
@@ -41,11 +42,11 @@ pub mod events {
 
     #[derive(odra::Event, PartialEq, Eq, Debug, Clone)]
     pub struct TransferBatch {
-        pub(crate) operator: Option<Address>,
-        pub(crate) from: Option<Address>,
-        pub(crate) to: Option<Address>,
-        pub(crate) ids: Vec<U256>,
-        pub(crate) values: Vec<U256>
+        pub operator: Option<Address>,
+        pub from: Option<Address>,
+        pub to: Option<Address>,
+        pub ids: Vec<U256>,
+        pub values: Vec<U256>
     }
 
     #[derive(odra::Event, PartialEq, Eq, Debug, Clone)]

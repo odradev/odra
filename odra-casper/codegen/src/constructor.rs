@@ -26,7 +26,6 @@ impl ToTokens for WasmConstructor<'_> {
             .collect();
 
         let ref_ident = &self.1;
-        // TODO: is unwrap in 35 safe?
         let constructor_matching: proc_macro2::TokenStream = data
             .iter()
             .flat_map(|(entrypoint_ident, casper_args, fn_args)| {

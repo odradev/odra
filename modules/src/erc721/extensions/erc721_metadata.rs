@@ -1,6 +1,7 @@
 use crate::erc721::extensions::erc721_metadata::errors::Error;
 use odra::{UnwrapOrRevert, Variable};
 
+/// The ERC721 Metadata interface as defined in the standard.
 pub trait Erc721Metadata {
     fn name(&self) -> String;
     fn symbol(&self) -> String;

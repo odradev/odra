@@ -4,6 +4,7 @@ pub mod owned_erc721_with_metadata;
 
 use odra::types::{Address, Bytes, U256};
 
+/// The ERC-721 interface as defined in the standard.
 pub trait Erc721 {
     fn balance_of(&self, owner: Address) -> U256;
     fn owner_of(&self, token_id: U256) -> Address;
@@ -34,16 +35,16 @@ pub mod events {
 
     #[derive(odra::Event)]
     pub struct Approval {
-        pub(crate) owner: Address,
-        pub(crate) approved: Option<Address>,
-        pub(crate) token_id: U256
+        pub owner: Address,
+        pub approved: Option<Address>,
+        pub token_id: U256
     }
 
     #[derive(odra::Event)]
     pub struct ApprovalForAll {
-        pub(crate) owner: Address,
-        pub(crate) operator: Address,
-        pub(crate) approved: bool
+        pub owner: Address,
+        pub operator: Address,
+        pub approved: bool
     }
 }
 

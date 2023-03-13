@@ -12,6 +12,8 @@ use crate::erc721::Erc721;
 use crate::erc721_token::errors::Error;
 use crate::extensions::ownable::{Ownable, OwnableExtension};
 
+/// The ERC721 token implementation.
+/// It uses the ERC721 base implementation, the ERC721 metadata extension and the Ownable module.
 #[odra::module]
 pub struct Erc721Token {
     core: Erc721Base,

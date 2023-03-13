@@ -3,6 +3,7 @@ use crate::erc721_token::Erc721TokenRef;
 use odra::contract_env::{caller, self_address};
 use odra::types::{event::OdraEvent, Address, Bytes, U256};
 
+/// The ERC721 receiver implementation.
 #[odra::module]
 pub struct Erc721Receiver {}
 

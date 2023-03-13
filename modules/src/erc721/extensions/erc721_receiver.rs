@@ -1,5 +1,6 @@
 use odra::types::{Address, U256};
 
+/// The ERC721 receiver interface.
 pub trait Erc721Receiver {
     fn on_erc721_received(
         &mut self,
