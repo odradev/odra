@@ -6,7 +6,6 @@ use odra::types::Bytes;
 use odra::types::U256;
 
 use crate::erc721::erc721_base::Erc721Base;
-use crate::erc721::errors::Error::NotAnOwnerOrApproved;
 use crate::erc721::extensions::erc721_metadata::{Erc721Metadata, Erc721MetadataExtension};
 use crate::erc721::Erc721;
 use crate::erc721_token::errors::Error;
@@ -109,9 +108,7 @@ impl OwnedErc721WithMetadata for Erc721Token {
 
     pub fn burn(&mut self, token_id: U256) {
         self.core.assert_exists(&token_id);
-        if !self.core.is_approved_or_owner(caller(), token_id) {
-            revert(NotAnOwnerOrApproved);
-        }
+        self.ownable.assert_owner(caller());
 
         let owner = self.core.owner_of(token_id);
         self.core
@@ -565,12 +562,26 @@ mod tests {
         erc721_env.token.mint(erc721_env.alice, U256::from(1));
 
         // And burn the token.
-        test_env::set_caller(erc721_env.alice);
         erc721_env.token.burn(U256::from(1));
 
         // Then the owner of throws an error.
         assert_exception(Error::InvalidTokenId, || {
             erc721_env.token.owner_of(U256::from(1));
+        });
+    }
+
+    #[test]
+    fn burn_error() {
+        assert_exception(NotAnOwner, || {
+            // When deploy a contract with the initial supply.
+            let mut erc721_env = setup();
+
+            // And mint a token to Alice.
+            erc721_env.token.mint(erc721_env.alice, U256::from(1));
+
+            // Then burn the token as Alice errors out
+            test_env::set_caller(erc721_env.alice);
+            erc721_env.token.burn(U256::from(1));
         });
     }
 

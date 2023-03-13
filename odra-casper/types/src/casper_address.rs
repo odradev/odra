@@ -121,13 +121,18 @@ impl FromBytes for CasperAddress {
     }
 }
 
-impl<const N: usize> TryFrom<&[u8; N]> for CasperAddress {
+impl TryFrom<&[u8; 32]> for CasperAddress {
     type Error = AddressError;
-    fn try_from(value: &[u8; N]) -> Result<Self, Self::Error> {
+    fn try_from(value: &[u8; 32]) -> Result<Self, Self::Error> {
         let address = CasperAddress::from_bytes(value)
             .map(|(address, _)| address)
             .map_err(|_| AddressError::AddressCreationError)?;
-        if address.to_bytes().unwrap().iter().all(|&x| x == 0) {
+        if address
+            .to_bytes()
+            .map_err(|_| AddressError::AddressCreationError)?
+            .iter()
+            .all(|&x| x == 0)
+        {
             Err(ZeroAddress)
         } else {
             Ok(address)
