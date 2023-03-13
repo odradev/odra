@@ -170,8 +170,8 @@ impl OwnedErc1155 for Erc1155Token {
             operator: Some(caller),
             from: Some(from),
             to: None,
-            ids: ids.clone(),
-            values: amounts.clone()
+            ids,
+            values: amounts
         }
         .emit();
     }
@@ -181,9 +181,13 @@ impl OwnedErc1155 for Erc1155Token {
 mod tests {
     use crate::erc1155::errors::Error;
     use crate::erc1155::events::{ApprovalForAll, TransferBatch, TransferSingle};
+    use crate::erc1155_receiver::events::{BatchReceived, SingleReceived};
+    use crate::erc1155_receiver::Erc1155ReceiverDeployer;
     use crate::erc1155_token::{Erc1155TokenDeployer, Erc1155TokenRef};
+    use crate::wrapped_native::WrappedNativeTokenDeployer;
     use odra::test_env::assert_exception;
-    use odra::types::{Address, U256};
+    use odra::types::VmError::NoSuchMethod;
+    use odra::types::{Address, Bytes, OdraError, U256};
     use odra::{assert_events, test_env};
 
     // const NAME: &str = "PlascoinMultiNFT";
@@ -194,7 +198,6 @@ mod tests {
         token: Erc1155TokenRef,
         alice: Address,
         bob: Address,
-        carol: Address,
         owner: Address
     }
 
@@ -203,7 +206,6 @@ mod tests {
             token: Erc1155TokenDeployer::init(),
             alice: test_env::get_account(1),
             bob: test_env::get_account(2),
-            carol: test_env::get_account(3),
             owner: test_env::get_account(0)
         }
     }
@@ -659,5 +661,344 @@ mod tests {
             env.token
                 .safe_transfer_from(env.alice, env.bob, U256::one(), 100.into(), None);
         });
+    }
+
+    #[test]
+    fn safe_batch_transfer_from() {
+        // Given a deployed contract
+        let mut env = setup();
+
+        // And some tokens minted
+        env.token.mint(env.alice, U256::one(), 100.into(), None);
+        env.token.mint(env.alice, U256::from(2), 200.into(), None);
+
+        // When we transfer tokens
+        test_env::set_caller(env.alice);
+        env.token.safe_batch_transfer_from(
+            env.alice,
+            env.bob,
+            vec![U256::one(), U256::from(2)],
+            vec![50.into(), 100.into()],
+            None
+        );
+
+        // Then the tokens are transferred
+        assert_eq!(env.token.balance_of(env.alice, U256::one()), 50.into());
+        assert_eq!(env.token.balance_of(env.alice, U256::from(2)), 100.into());
+        assert_eq!(env.token.balance_of(env.bob, U256::one()), 50.into());
+        assert_eq!(env.token.balance_of(env.bob, U256::from(2)), 100.into());
+
+        // And the event is emitted
+        let contract = env.token;
+        assert_events!(
+            contract,
+            TransferBatch {
+                operator: Some(env.alice),
+                from: Some(env.alice),
+                to: Some(env.bob),
+                ids: vec![U256::one(), U256::from(2)],
+                values: vec![50.into(), 100.into()]
+            }
+        );
+    }
+
+    #[test]
+    fn safe_batch_transfer_from_approved() {
+        // Given a deployed contract
+        let mut env = setup();
+
+        // And some tokens minted
+        env.token.mint(env.alice, U256::one(), 100.into(), None);
+        env.token.mint(env.alice, U256::from(2), 200.into(), None);
+
+        // And approval for all set
+        test_env::set_caller(env.alice);
+        env.token.set_approval_for_all(env.bob, true);
+
+        // When we transfer tokens
+        test_env::set_caller(env.bob);
+        env.token.safe_batch_transfer_from(
+            env.alice,
+            env.bob,
+            vec![U256::one(), U256::from(2)],
+            vec![50.into(), 100.into()],
+            None
+        );
+
+        // Then the tokens are transferred
+        assert_eq!(env.token.balance_of(env.alice, U256::one()), 50.into());
+        assert_eq!(env.token.balance_of(env.alice, U256::from(2)), 100.into());
+        assert_eq!(env.token.balance_of(env.bob, U256::one()), 50.into());
+        assert_eq!(env.token.balance_of(env.bob, U256::from(2)), 100.into());
+
+        // And the event is emitted
+        let contract = env.token;
+        assert_events!(
+            contract,
+            TransferBatch {
+                operator: Some(env.bob),
+                from: Some(env.alice),
+                to: Some(env.bob),
+                ids: vec![U256::one(), U256::from(2)],
+                values: vec![50.into(), 100.into()]
+            }
+        );
+    }
+
+    #[test]
+    fn safe_batch_transfer_errors() {
+        assert_exception(Error::InsufficientBalance, || {
+            // Given a deployed contract
+            let mut env = setup();
+
+            // And some tokens minted
+            env.token.mint(env.alice, U256::one(), 100.into(), None);
+            env.token.mint(env.alice, U256::from(2), 200.into(), None);
+
+            // When we transfer more tokens than we have it errors out
+            test_env::set_caller(env.alice);
+            env.token.safe_batch_transfer_from(
+                env.alice,
+                env.bob,
+                vec![U256::one(), U256::from(2)],
+                vec![50.into(), 300.into()],
+                None
+            );
+        });
+
+        assert_exception(Error::NotAnOwnerOrApproved, || {
+            // Given a deployed contract
+            let mut env = setup();
+
+            // And some tokens minted
+            env.token.mint(env.alice, U256::one(), 100.into(), None);
+            env.token.mint(env.alice, U256::from(2), 200.into(), None);
+
+            // When we transfer not our tokens it errors out
+            test_env::set_caller(env.bob);
+            env.token.safe_batch_transfer_from(
+                env.alice,
+                env.bob,
+                vec![U256::one(), U256::from(2)],
+                vec![50.into(), 100.into()],
+                None
+            );
+        });
+    }
+
+    #[test]
+    fn safe_transfer_to_valid_receiver() {
+        // Given a deployed contract
+        let mut env = setup();
+        // And a valid receiver
+        let receiver = Erc1155ReceiverDeployer::default();
+        // And some tokens minted
+        env.token.mint(env.alice, U256::one(), 100.into(), None);
+
+        // When we transfer tokens to a valid receiver
+        test_env::set_caller(env.alice);
+        env.token
+            .safe_transfer_from(env.alice, receiver.address(), U256::one(), 100.into(), None);
+
+        // Then the tokens are transferred
+        assert_eq!(env.token.balance_of(env.alice, U256::one()), 0.into());
+        assert_eq!(
+            env.token.balance_of(receiver.address(), U256::one()),
+            100.into()
+        );
+
+        // And receiver contract is aware of received tokens
+        assert_events!(
+            receiver,
+            SingleReceived {
+                operator: Some(env.alice),
+                from: Some(env.alice),
+                token_id: U256::one(),
+                amount: 100.into(),
+                data: None
+            }
+        );
+    }
+
+    #[test]
+    fn safe_transfer_to_valid_receiver_with_data() {
+        // Given a deployed contract
+        let mut env = setup();
+        // And a valid receiver
+        let receiver = Erc1155ReceiverDeployer::default();
+        // And some tokens minted
+        env.token.mint(env.alice, U256::one(), 100.into(), None);
+
+        // When we transfer tokens to a valid receiver
+        test_env::set_caller(env.alice);
+        env.token.safe_transfer_from(
+            env.alice,
+            receiver.address(),
+            U256::one(),
+            100.into(),
+            Some(Bytes::from(b"data".to_vec()))
+        );
+
+        // Then the tokens are transferred
+        assert_eq!(env.token.balance_of(env.alice, U256::one()), 0.into());
+        assert_eq!(
+            env.token.balance_of(receiver.address(), U256::one()),
+            100.into()
+        );
+
+        // And receiver contract is aware of received tokens and data
+        assert_events!(
+            receiver,
+            SingleReceived {
+                operator: Some(env.alice),
+                from: Some(env.alice),
+                token_id: U256::one(),
+                amount: 100.into(),
+                data: Some(Bytes::from(b"data".to_vec()))
+            }
+        );
+    }
+
+    #[test]
+    fn safe_transfer_to_invalid_receiver() {
+        assert_exception(
+            OdraError::VmError(NoSuchMethod("on_erc1155_received".to_string())),
+            || {
+                // Given a deployed contract
+                let mut env = setup();
+                // And an invalid receiver
+                let receiver = WrappedNativeTokenDeployer::init();
+                // And some tokens minted
+                env.token.mint(env.alice, U256::one(), 100.into(), None);
+
+                // When we transfer tokens to an invalid receiver
+                // Then it errors out
+                test_env::set_caller(env.alice);
+                env.token.safe_transfer_from(
+                    env.alice,
+                    receiver.address(),
+                    U256::one(),
+                    100.into(),
+                    None
+                );
+            }
+        );
+    }
+
+    #[test]
+    fn safe_batch_transfer_to_valid_receiver() {
+        // Given a deployed contract
+        let mut env = setup();
+        // And a valid receiver
+        let receiver = Erc1155ReceiverDeployer::default();
+        // And some tokens minted
+        env.token.mint(env.alice, U256::one(), 100.into(), None);
+        env.token.mint(env.alice, U256::from(2), 100.into(), None);
+
+        // When we transfer tokens to a valid receiver
+        test_env::set_caller(env.alice);
+        env.token.safe_batch_transfer_from(
+            env.alice,
+            receiver.address(),
+            vec![U256::one(), U256::from(2)],
+            vec![100.into(), 100.into()],
+            None
+        );
+
+        // Then the tokens are transferred
+        assert_eq!(env.token.balance_of(env.alice, U256::one()), 0.into());
+        assert_eq!(
+            env.token.balance_of(receiver.address(), U256::one()),
+            100.into()
+        );
+        assert_eq!(env.token.balance_of(env.alice, U256::from(2)), 0.into());
+        assert_eq!(
+            env.token.balance_of(receiver.address(), U256::from(2)),
+            100.into()
+        );
+
+        // And receiver contract is aware of received tokens
+        assert_events!(
+            receiver,
+            BatchReceived {
+                operator: Some(env.alice),
+                from: Some(env.alice),
+                token_ids: vec![U256::one(), U256::from(2)],
+                amounts: vec![100.into(), 100.into()],
+                data: None
+            }
+        );
+    }
+
+    #[test]
+    fn safe_batch_transfer_to_valid_receiver_with_data() {
+        // Given a deployed contract
+        let mut env = setup();
+        // And a valid receiver
+        let receiver = Erc1155ReceiverDeployer::default();
+        // And some tokens minted
+        env.token.mint(env.alice, U256::one(), 100.into(), None);
+        env.token.mint(env.alice, U256::from(2), 100.into(), None);
+
+        // When we transfer tokens to a valid receiver
+        test_env::set_caller(env.alice);
+        env.token.safe_batch_transfer_from(
+            env.alice,
+            receiver.address(),
+            vec![U256::one(), U256::from(2)],
+            vec![100.into(), 100.into()],
+            Some(Bytes::from(b"data".to_vec()))
+        );
+
+        // Then the tokens are transferred
+        assert_eq!(env.token.balance_of(env.alice, U256::one()), 0.into());
+        assert_eq!(
+            env.token.balance_of(receiver.address(), U256::one()),
+            100.into()
+        );
+        assert_eq!(env.token.balance_of(env.alice, U256::from(2)), 0.into());
+        assert_eq!(
+            env.token.balance_of(receiver.address(), U256::from(2)),
+            100.into()
+        );
+
+        // And receiver contract is aware of received tokens and data
+        assert_events!(
+            receiver,
+            BatchReceived {
+                operator: Some(env.alice),
+                from: Some(env.alice),
+                token_ids: vec![U256::one(), U256::from(2)],
+                amounts: vec![100.into(), 100.into()],
+                data: Some(Bytes::from(b"data".to_vec()))
+            }
+        );
+    }
+
+    #[test]
+    fn safe_batch_transfer_to_invalid_receiver() {
+        assert_exception(
+            OdraError::VmError(NoSuchMethod("on_erc1155_batch_received".to_string())),
+            || {
+                // Given a deployed contract
+                let mut env = setup();
+                // And an invalid receiver
+                let receiver = WrappedNativeTokenDeployer::init();
+                // And some tokens minted
+                env.token.mint(env.alice, U256::one(), 100.into(), None);
+                env.token.mint(env.alice, U256::from(2), 100.into(), None);
+
+                // When we transfer tokens to an invalid receiver
+                // Then it errors out
+                test_env::set_caller(env.alice);
+                env.token.safe_batch_transfer_from(
+                    env.alice,
+                    receiver.address(),
+                    vec![U256::one(), U256::from(2)],
+                    vec![100.into(), 100.into()],
+                    None
+                );
+            }
+        );
     }
 }

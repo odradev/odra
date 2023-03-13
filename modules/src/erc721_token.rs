@@ -141,13 +141,14 @@ pub mod errors {
 mod tests {
     use super::{Erc721TokenDeployer, Erc721TokenRef};
     use crate::erc721::errors::Error;
+    use crate::erc721_receiver::events::Received;
     use crate::erc721_receiver::Erc721ReceiverDeployer;
     use crate::extensions::ownable::errors::Error::NotAnOwner;
-    use odra::test_env;
     use odra::test_env::assert_exception;
     use odra::types::address::OdraAddress;
     use odra::types::VmError::NoSuchMethod;
     use odra::types::{Address, OdraError, U256};
+    use odra::{assert_events, test_env};
 
     const NAME: &str = "PlascoinNFT";
     const SYMBOL: &str = "PLSNFT";
@@ -508,6 +509,16 @@ mod tests {
 
         // Then the owner of the token is the contract
         assert_eq!(erc721_env.token.owner_of(U256::from(1)), receiver.address());
+        // And the receiver contract is aware of the transfer
+        assert_events!(
+            receiver,
+            Received {
+                operator: Some(erc721_env.alice),
+                from: Some(erc721_env.alice),
+                token_id: U256::from(1),
+                data: None
+            }
+        );
     }
 
     #[test]
@@ -531,6 +542,16 @@ mod tests {
 
         // Then the owner of the token is the contract
         assert_eq!(erc721_env.token.owner_of(U256::from(1)), receiver.address());
+        // And the receiver contract is aware of the transfer
+        assert_events!(
+            receiver,
+            Received {
+                operator: Some(erc721_env.alice),
+                from: Some(erc721_env.alice),
+                token_id: U256::from(1),
+                data: Some(b"data".to_vec().into())
+            }
+        );
     }
 
     #[test]

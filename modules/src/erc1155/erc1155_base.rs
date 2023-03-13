@@ -95,9 +95,7 @@ impl Erc1155 for Erc1155Base {
         data: Option<Bytes>
     ) {
         let caller = caller();
-        if !self.is_approved_for_all(from, caller) || from == caller {
-            revert(Error::NotAnOwnerOrApproved);
-        }
+        self.assert_approved_or_owner(caller, from);
 
         if ids.len() != amounts.len() {
             revert(Error::IdsAndAmountsLengthMismatch);

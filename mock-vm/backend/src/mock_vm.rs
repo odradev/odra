@@ -75,8 +75,6 @@ impl MockVm {
                 .call(&address, String::from(entrypoint), args);
 
         let result = self.handle_call_result(result);
-        dbg!(entrypoint);
-        dbg!(result.clone());
         T::deser(result).unwrap()
     }
 

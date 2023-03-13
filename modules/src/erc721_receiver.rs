@@ -1,6 +1,7 @@
+use crate::erc721_receiver::events::Received;
 use crate::erc721_token::Erc721TokenRef;
 use odra::contract_env::{caller, self_address};
-use odra::types::{Address, Bytes, U256};
+use odra::types::{event::OdraEvent, Address, Bytes, U256};
 
 #[odra::module]
 pub struct Erc721Receiver {}
@@ -14,6 +15,25 @@ impl Erc721Receiver {
         token_id: U256,
         #[allow(unused_variables)] data: Option<Bytes>
     ) -> bool {
+        Received {
+            operator: Some(operator),
+            from: Some(from),
+            token_id,
+            data
+        }
+        .emit();
         Erc721TokenRef::at(caller()).owner_of(token_id) == self_address()
+    }
+}
+
+pub mod events {
+    use odra::types::{Address, Bytes, U256};
+
+    #[derive(odra::Event, PartialEq, Eq, Debug, Clone)]
+    pub struct Received {
+        pub operator: Option<Address>,
+        pub from: Option<Address>,
+        pub token_id: U256,
+        pub data: Option<Bytes>
     }
 }

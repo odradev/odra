@@ -1,4 +1,5 @@
-use odra::types::{Address, Bytes, U256};
+use crate::erc1155_receiver::events::{BatchReceived, SingleReceived};
+use odra::types::{event::OdraEvent, Address, Bytes, U256};
 
 #[odra::module]
 pub struct Erc1155Receiver {}
@@ -13,7 +14,15 @@ impl Erc1155Receiver {
         #[allow(unused_variables)] amount: U256,
         #[allow(unused_variables)] data: Option<Bytes>
     ) -> bool {
-        // TODO: Fix this
+        SingleReceived {
+            operator: Some(operator),
+            from: Some(from),
+            token_id,
+            amount,
+            data
+        }
+        .emit();
+
         true
     }
 
@@ -25,7 +34,37 @@ impl Erc1155Receiver {
         #[allow(unused_variables)] amounts: Vec<U256>,
         #[allow(unused_variables)] data: Option<Bytes>
     ) -> bool {
-        // TODO: Fix this
+        BatchReceived {
+            operator: Some(operator),
+            from: Some(from),
+            token_ids,
+            amounts,
+            data
+        }
+        .emit();
+
         true
+    }
+}
+
+pub mod events {
+    use odra::types::{Address, Bytes, U256};
+
+    #[derive(odra::Event, PartialEq, Eq, Debug, Clone)]
+    pub struct SingleReceived {
+        pub operator: Option<Address>,
+        pub from: Option<Address>,
+        pub token_id: U256,
+        pub amount: U256,
+        pub data: Option<Bytes>
+    }
+
+    #[derive(odra::Event, PartialEq, Eq, Debug, Clone)]
+    pub struct BatchReceived {
+        pub operator: Option<Address>,
+        pub from: Option<Address>,
+        pub token_ids: Vec<U256>,
+        pub amounts: Vec<U256>,
+        pub data: Option<Bytes>
     }
 }
