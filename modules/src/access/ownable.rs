@@ -4,18 +4,21 @@ use odra::{
     UnwrapOrRevert, Variable
 };
 
-use super::{errors::Error, events::{OwnershipTransferred, OwnershipTransferStarted}};
+use super::{
+    errors::Error,
+    events::{OwnershipTransferStarted, OwnershipTransferred}
+};
 
-/// This module provides a straightforward access control feature that enables 
-/// exclusive access to particular functions by an account, known as the owner. 
-/// The account that initiates contract deployment is automatically assigned as 
-/// the owner. However, ownership can be transferred later by using the 
+/// This module provides a straightforward access control feature that enables
+/// exclusive access to particular functions by an account, known as the owner.
+/// The account that initiates contract deployment is automatically assigned as
+/// the owner. However, ownership can be transferred later by using the
 /// `transfer_ownership()` function.
 ///
-/// You can use this module as a standalone contract or integrate it into 
-/// a custom module by adding it as a field. 
-/// 
-/// When used in a custom module, the `only_owner()` function is available, 
+/// You can use this module as a standalone contract or integrate it into
+/// a custom module by adding it as a field.
+///
+/// When used in a custom module, the `only_owner()` function is available,
 /// allowing you to restrict function usage to the owner.
 #[odra::module]
 pub struct Ownable {
@@ -31,18 +34,18 @@ impl Ownable {
         self.unchecked_transfer_ownership(initial_owner);
     }
 
-    /// Transfers ownership of the module to `new_owner`. This function can only 
+    /// Transfers ownership of the module to `new_owner`. This function can only
     /// be accessed by the current owner of the module.
     pub fn transfer_ownership(&mut self, new_owner: Address) {
         let action = |o: &mut Ownable| o.unchecked_transfer_ownership(Some(new_owner));
         self.only_owner(action);
     }
 
-    /// If the contract's owner chooses to renounce their ownership, the contract 
-    /// will no longer have an owner. This means that any functions that can only 
-    /// be accessed by the owner will no longer be available. 
-    /// 
-    /// The function can only be called by the current owner, and it will permanently 
+    /// If the contract's owner chooses to renounce their ownership, the contract
+    /// will no longer have an owner. This means that any functions that can only
+    /// be accessed by the owner will no longer be available.
+    ///
+    /// The function can only be called by the current owner, and it will permanently
     /// remove the owner's privileges.
     pub fn renounce_ownership(&mut self) {
         let action = |o: &mut Ownable| o.unchecked_transfer_ownership(None);
@@ -57,7 +60,7 @@ impl Ownable {
 }
 
 impl Ownable {
-    /// Reverts with [`Error::CallerNotTheOwner`] if the function called by 
+    /// Reverts with [`Error::CallerNotTheOwner`] if the function called by
     /// any account other than the owner.
     pub fn only_owner<T: OdraType>(&mut self, mut f: impl FnMut(&mut Self) -> T) -> T {
         if Some(contract_env::caller()) != self.get_optional_owner() {
@@ -83,16 +86,16 @@ impl Ownable {
     }
 }
 
-/// This module provides a straightforward access control feature that enables 
-/// exclusive access to particular functions by an account, known as the owner. 
-/// The account that initiates contract deployment is automatically assigned as 
-/// the owner. However, ownership can be transferred later by using the 
+/// This module provides a straightforward access control feature that enables
+/// exclusive access to particular functions by an account, known as the owner.
+/// The account that initiates contract deployment is automatically assigned as
+/// the owner. However, ownership can be transferred later by using the
 /// `transfer_ownership()` and `accept_ownership()` functions.
 ///
-/// You can use this module as a standalone contract or integrate it into 
-/// a custom module by adding it as a field. 
-/// 
-/// When used in a custom module, the `only_owner()` function is available, 
+/// You can use this module as a standalone contract or integrate it into
+/// a custom module by adding it as a field.
+///
+/// When used in a custom module, the `only_owner()` function is available,
 /// allowing you to restrict function usage to the owner.
 #[odra::module]
 pub struct Ownable2Step {
@@ -107,7 +110,7 @@ impl Ownable2Step {
     pub fn init(&mut self) {
         self.ownable.init();
     }
- 
+
     /// Returns the address of the current owner.
     pub fn get_owner(&self) -> Address {
         self.ownable.get_owner()
@@ -117,27 +120,28 @@ impl Ownable2Step {
     pub fn get_pending_owner(&self) -> Option<Address> {
         self.pending_owner.get().flatten()
     }
- 
+
     /// Starts the ownership transfer of the module to a `new_owner`.
     /// Replaces the `pending_owner`if there is one.
-    /// 
+    ///
     /// This function can only be accessed by the current owner of the module.
     pub fn transfer_ownership(&mut self, new_owner: Address) {
         let previous_owner = self.ownable.get_optional_owner();
         let new_owner = Some(new_owner);
         self.only_owner(|o: &mut Ownable2Step| o.pending_owner.set(new_owner));
-        
+
         OwnershipTransferStarted {
             previous_owner,
-            new_owner,
-        }.emit();
+            new_owner
+        }
+        .emit();
     }
- 
-    /// If the contract's owner chooses to renounce their ownership, the contract 
-    /// will no longer have an owner. This means that any functions that can only 
-    /// be accessed by the owner will no longer be available. 
-    /// 
-    /// The function can only be called by the current owner, and it will permanently 
+
+    /// If the contract's owner chooses to renounce their ownership, the contract
+    /// will no longer have an owner. This means that any functions that can only
+    /// be accessed by the owner will no longer be available.
+    ///
+    /// The function can only be called by the current owner, and it will permanently
     /// remove the owner's privileges.
     pub fn renounce_ownership(&mut self) {
         self.ownable.renounce_ownership()
@@ -157,7 +161,7 @@ impl Ownable2Step {
 }
 
 impl Ownable2Step {
-    /// Reverts with [`Error::CallerNotTheOwner`] if the function called by 
+    /// Reverts with [`Error::CallerNotTheOwner`] if the function called by
     /// any account other than the owner.
     pub fn only_owner<T: OdraType>(&mut self, mut f: impl FnMut(&mut Self) -> T) -> T {
         if Some(contract_env::caller()) != self.ownable.get_optional_owner() {
@@ -166,11 +170,11 @@ impl Ownable2Step {
 
         f(self)
     }
-} 
+}
 
 #[cfg(test)]
 mod test {
-    use odra::{test_env, assert_events, external_contract};
+    use odra::{assert_events, external_contract, test_env};
 
     use super::*;
 
@@ -184,10 +188,10 @@ mod test {
             assert_eq!(deployer, contract.get_owner());
             // then a OwnershipTransferred event was emitted
             assert_events!(
-                contract, 
-                OwnershipTransferred { 
-                    previous_owner: None, 
-                    new_owner: Some(deployer) 
+                contract,
+                OwnershipTransferred {
+                    previous_owner: None,
+                    new_owner: Some(deployer)
                 }
             );
         });
@@ -206,10 +210,10 @@ mod test {
         assert_eq!(new_owner, contract.get_owner());
         // then a OwnershipTransferred event was emitted
         assert_events!(
-            contract, 
-            OwnershipTransferred { 
-                previous_owner: Some(initial_owner), 
-                new_owner: Some(new_owner) 
+            contract,
+            OwnershipTransferred {
+                previous_owner: Some(initial_owner),
+                new_owner: Some(new_owner)
             }
         );
     }
@@ -233,23 +237,23 @@ mod test {
         assert_eq!(None, contract.get_pending_owner());
         // then OwnershipTransferStarted and OwnershipTransferred events were emitted
         assert_events!(
-            contract, 
-            OwnershipTransferStarted { 
-                previous_owner: Some(initial_owner), 
-                new_owner: Some(new_owner) 
+            contract,
+            OwnershipTransferStarted {
+                previous_owner: Some(initial_owner),
+                new_owner: Some(new_owner)
             },
-            OwnershipTransferred { 
-                previous_owner: Some(initial_owner), 
-                new_owner: Some(new_owner) 
+            OwnershipTransferred {
+                previous_owner: Some(initial_owner),
+                new_owner: Some(new_owner)
             }
         );
     }
 
     #[test]
     fn failing_plain_ownership_transfer() {
-        // given a new contract 
+        // given a new contract
         let (contract, _) = setup_ownable();
-        
+
         // when a non-owner account is the caller
         let (caller, new_owner) = (test_env::get_account(1), test_env::get_account(2));
         test_env::set_caller(caller);
@@ -295,38 +299,40 @@ mod test {
 
     #[test]
     fn renounce_ownership() {
-        // given new contracts 
+        // given new contracts
         let (mut contracts, initial_owner) = setup_renounceable();
 
-        contracts.iter_mut().for_each(|contract: &mut RenounceableRef| {
-            // when the current owner renounce ownership
-            contract.renounce_ownership();
-
-            // then an event is emitted
-            assert_events!(
-                contract, 
-                OwnershipTransferred { 
-                    previous_owner: Some(initial_owner), 
-                    new_owner: None 
-                }
-            );
-            // then the owner is not set
-            test_env::assert_exception(Error::OwnerNotSet, || {
-                contract.get_owner();
-            });
-            // then cannot renounce ownership again
-            test_env::assert_exception(Error::CallerNotTheOwner, || {
-                let mut contract = OwnableRef::at(contract.address());
+        contracts
+            .iter_mut()
+            .for_each(|contract: &mut RenounceableRef| {
+                // when the current owner renounce ownership
                 contract.renounce_ownership();
+
+                // then an event is emitted
+                assert_events!(
+                    contract,
+                    OwnershipTransferred {
+                        previous_owner: Some(initial_owner),
+                        new_owner: None
+                    }
+                );
+                // then the owner is not set
+                test_env::assert_exception(Error::OwnerNotSet, || {
+                    contract.get_owner();
+                });
+                // then cannot renounce ownership again
+                test_env::assert_exception(Error::CallerNotTheOwner, || {
+                    let mut contract = OwnableRef::at(contract.address());
+                    contract.renounce_ownership();
+                });
             });
-        });
     }
 
     #[test]
     fn renounce_ownership_fail() {
-        // given new contracts 
+        // given new contracts
         let (contracts, _) = setup_renounceable();
-        
+
         contracts.iter().for_each(|contract| {
             // when a non-owner account is the caller
             let caller = test_env::get_account(1);
@@ -365,7 +371,7 @@ mod test {
             vec![
                 RenounceableRef::at(ownable.address()),
                 RenounceableRef::at(ownable_2_step.address()),
-            ], 
+            ],
             test_env::get_account(0)
         )
     }
@@ -377,7 +383,7 @@ mod test {
             vec![
                 OwnedRef::at(ownable.address()),
                 OwnedRef::at(ownable_2_step.address()),
-            ], 
+            ],
             test_env::get_account(0)
         )
     }
