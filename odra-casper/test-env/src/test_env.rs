@@ -2,6 +2,7 @@
 //!
 //! Depending on the selected feature, the actual test env is dynamically loaded in the runtime or the Odra local MockVM is used.
 use crate::env::ENV;
+use casper_types::account::{AccountHash, ACCOUNT_HASH_LENGTH};
 use odra_casper_shared::native_token::NativeTokenMetadata;
 use odra_casper_types::{Address, Balance, CallArgs, OdraType};
 use odra_types::{
@@ -24,7 +25,7 @@ pub fn register_contract(name: &str, args: CallArgs) -> Address {
         let contract_package_hash = env
             .borrow()
             .contract_package_hash_from_name(&contract_package_hash);
-        contract_package_hash.into()
+        contract_package_hash.try_into().unwrap()
     })
 }
 
@@ -80,6 +81,11 @@ pub fn token_balance(address: Address) -> Balance {
 /// 1 CSPR = 1,000,000,000 Motes.
 pub fn one_token() -> Balance {
     Balance::from(1_000_000_000)
+}
+
+/// Returns zero address for an account.
+pub fn zero_address() -> Address {
+    Address::Account(AccountHash::new([0; ACCOUNT_HASH_LENGTH]))
 }
 
 /// Expects the `block` execution will fail with the specific error.

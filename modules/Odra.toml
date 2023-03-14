@@ -3,5 +3,21 @@ name = "erc20"
 fqn = "odra_modules::erc20::Erc20"
 
 [[contracts]]
+name = "erc721_token"
+fqn = "odra_modules::erc721_token::Erc721Token"
+
+[[contracts]]
+name = "erc721_receiver"
+fqn = "odra_modules::erc721_receiver::Erc721Receiver"
+
+[[contracts]]
+name = "erc1155_token"
+fqn = "odra_modules::erc1155_token::Erc1155Token"
+
+[[contracts]]
+name = "erc1155_receiver"
+fqn = "odra_modules::erc1155_receiver::Erc1155Receiver"
+
+[[contracts]]
 name = "wrapped_native_token"
 fqn = "odra_modules::wrapped_native::WrappedNativeToken"

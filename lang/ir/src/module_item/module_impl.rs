@@ -24,7 +24,8 @@ use super::impl_item::ImplItem;
 /// ```
 pub struct ModuleImpl {
     impl_items: Vec<ImplItem>,
-    ident: Ident
+    ident: Ident,
+    is_trait_implementation: bool
 }
 
 impl ModuleImpl {
@@ -48,7 +49,7 @@ impl ModuleImpl {
             .iter()
             .filter(|item| match item {
                 ImplItem::Constructor(_) => true,
-                ImplItem::Method(m) => m.is_public(),
+                ImplItem::Method(m) => self.is_trait_implementation || m.is_public(),
                 ImplItem::Other(_) => false
             })
             .collect::<Vec<_>>()
@@ -59,6 +60,7 @@ impl TryFrom<syn::ItemImpl> for ModuleImpl {
     type Error = syn::Error;
 
     fn try_from(item_impl: syn::ItemImpl) -> Result<Self, Self::Error> {
+        let is_trait_implementation = item_impl.trait_.is_some();
         let path = match &*item_impl.self_ty {
             syn::Type::Path(path) => path,
             _ => todo!()
@@ -72,7 +74,8 @@ impl TryFrom<syn::ItemImpl> for ModuleImpl {
 
         Ok(Self {
             impl_items: items,
-            ident: contract_ident
+            ident: contract_ident,
+            is_trait_implementation
         })
     }
 }

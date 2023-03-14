@@ -1,6 +1,7 @@
 use anyhow::Result;
 use odra_mock_vm_types::{
-    Address, Balance, BlockTime, CallArgs, EventData, MockVMSerializationError, MockVMType
+    Address, Balance, BlockTime, CallArgs, EventData, MockVMSerializationError, MockVMType,
+    CONTRACT_ADDRESS_PREFIX
 };
 use odra_types::{event::EventError, OdraError, VmError};
 use std::collections::HashMap;
@@ -72,6 +73,7 @@ impl MockVm {
                 .read()
                 .unwrap()
                 .call(&address, String::from(entrypoint), args);
+
         let result = self.handle_call_result(result);
         T::deser(result).unwrap()
     }
@@ -317,9 +319,18 @@ impl MockVmState {
     }
 
     fn next_contract_address(&mut self) -> Address {
-        let address = Address::new(&self.contract_counter.to_be_bytes());
         self.contract_counter += 1;
-        address
+        let contract_address_bytes = CONTRACT_ADDRESS_PREFIX.to_be_bytes();
+        let contract_counter_bytes = self.contract_counter.to_be_bytes();
+        let mut merged: [u8; 8] = [0; 8];
+
+        merged.clone_from_slice(
+            [contract_address_bytes, contract_counter_bytes]
+                .concat()
+                .as_slice()
+        );
+
+        Address::try_from(&merged).unwrap()
     }
 
     fn get_contract_namespace(&self) -> String {
@@ -395,15 +406,15 @@ impl MockVmState {
 impl Default for MockVmState {
     fn default() -> Self {
         let addresses = vec![
-            Address::new(b"alice"),
-            Address::new(b"bob"),
-            Address::new(b"cab"),
-            Address::new(b"dan"),
-            Address::new(b"ed"),
-            Address::new(b"frank"),
-            Address::new(b"garry"),
-            Address::new(b"harry"),
-            Address::new(b"ivan"),
+            Address::try_from(b"alice").unwrap(),
+            Address::try_from(b"bob").unwrap(),
+            Address::try_from(b"cab").unwrap(),
+            Address::try_from(b"dan").unwrap(),
+            Address::try_from(b"ed").unwrap(),
+            Address::try_from(b"frank").unwrap(),
+            Address::try_from(b"garry").unwrap(),
+            Address::try_from(b"harry").unwrap(),
+            Address::try_from(b"ivan").unwrap(),
         ];
 
         let mut balances = HashMap::<Address, AccountBalance>::new();
@@ -430,6 +441,7 @@ mod tests {
     use std::collections::HashMap;
 
     use odra_mock_vm_types::{Address, Balance, CallArgs, EventData, MockVMType};
+    use odra_types::address::OdraAddress;
     use odra_types::{ExecutionError, OdraError, VmError};
 
     use crate::{callstack::CallstackElement, EntrypointArgs, EntrypointCall};
@@ -455,6 +467,19 @@ mod tests {
     }
 
     #[test]
+    fn addresses_have_different_type() {
+        // given an address of a contract and an address of an account
+        let instance = MockVm::default();
+        let (contract_address, _, _) = setup_contract(&instance);
+        let account_address = instance.get_address(0);
+
+        // Then the contract address is a contract
+        assert!(contract_address.is_contract());
+        // And the account address is not a contract
+        assert!(!account_address.is_contract());
+    }
+
+    #[test]
     fn test_contract_call() {
         // given an instance with a registered contract having one entrypoint
         let instance = MockVm::default();
@@ -474,7 +499,7 @@ mod tests {
         // given an empty vm
         let instance = MockVm::default();
 
-        let address = Address::new(b"random");
+        let address = Address::try_from(b"random").unwrap();
 
         // when call a contract
         instance.call_contract::<()>(address, "abc", CallArgs::new(), None);
@@ -511,7 +536,7 @@ mod tests {
         let instance = MockVm::default();
 
         // when set a new caller
-        let new_caller = Address::new(b"new caller");
+        let new_caller = Address::try_from(b"new caller").unwrap();
         instance.set_caller(new_caller);
         // put a fake contract on stack
         push_address(&instance, &new_caller);
@@ -572,7 +597,7 @@ mod tests {
         // given an empty instance
         let instance = MockVm::default();
 
-        let first_contract_address = Address::new(b"abc");
+        let first_contract_address = Address::try_from(b"abc").unwrap();
         // put a contract on stack
         push_address(&instance, &first_contract_address);
 
@@ -581,7 +606,7 @@ mod tests {
         instance.emit_event(&first_event);
         instance.emit_event(&second_event);
 
-        let second_contract_address = Address::new(b"bca");
+        let second_contract_address = Address::try_from(b"bca").unwrap();
         // put a next contract on stack
         push_address(&instance, &second_contract_address);
 
@@ -615,7 +640,7 @@ mod tests {
         let instance = MockVm::default();
 
         // when push a contract into the stack
-        let contract_address = Address::new(b"contract");
+        let contract_address = Address::try_from(b"contract").unwrap();
         push_address(&instance, &contract_address);
 
         // then the contract address in the callee
