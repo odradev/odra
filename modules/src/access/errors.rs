@@ -2,8 +2,8 @@ use odra::execution_error;
 
 execution_error! {
     pub enum Error {
-        OwnerNotSet => 30_000,
-        CallerNotTheOwner => 30_001,
-        CallerNotTheNewOwner => 30_002
+        OwnerNotSet => 20_000,
+        CallerNotTheOwner => 20_001,
+        CallerNotTheNewOwner => 20_002
     }
 }

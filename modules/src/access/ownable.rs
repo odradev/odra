@@ -1,6 +1,6 @@
 use odra::{
     contract_env,
-    types::{event::OdraEvent, Address, OdraType},
+    types::{event::OdraEvent, Address},
     UnwrapOrRevert, Variable
 };
 
@@ -37,8 +37,8 @@ impl Ownable {
     /// Transfers ownership of the module to `new_owner`. This function can only
     /// be accessed by the current owner of the module.
     pub fn transfer_ownership(&mut self, new_owner: Address) {
-        let action = |o: &mut Ownable| o.unchecked_transfer_ownership(Some(new_owner));
-        self.only_owner(action);
+        self.assert_owner(contract_env::caller());
+        self.unchecked_transfer_ownership(Some(new_owner));
     }
 
     /// If the contract's owner chooses to renounce their ownership, the contract
@@ -48,8 +48,8 @@ impl Ownable {
     /// The function can only be called by the current owner, and it will permanently
     /// remove the owner's privileges.
     pub fn renounce_ownership(&mut self) {
-        let action = |o: &mut Ownable| o.unchecked_transfer_ownership(None);
-        self.only_owner(action);
+        self.assert_owner(contract_env::caller());
+        self.unchecked_transfer_ownership(None);
     }
 
     /// Returns the address of the current owner.
@@ -62,12 +62,10 @@ impl Ownable {
 impl Ownable {
     /// Reverts with [`Error::CallerNotTheOwner`] if the function called by
     /// any account other than the owner.
-    pub fn only_owner<T: OdraType>(&mut self, mut f: impl FnMut(&mut Self) -> T) -> T {
-        if Some(contract_env::caller()) != self.get_optional_owner() {
+    pub fn assert_owner(&self, address: Address) {
+        if Some(address) != self.get_optional_owner() {
             contract_env::revert(Error::CallerNotTheOwner)
         }
-
-        f(self)
     }
 
     fn get_optional_owner(&self) -> Option<Address> {
@@ -126,9 +124,11 @@ impl Ownable2Step {
     ///
     /// This function can only be accessed by the current owner of the module.
     pub fn transfer_ownership(&mut self, new_owner: Address) {
+        self.ownable.assert_owner(contract_env::caller());
+
         let previous_owner = self.ownable.get_optional_owner();
         let new_owner = Some(new_owner);
-        self.only_owner(|o: &mut Ownable2Step| o.pending_owner.set(new_owner));
+        self.pending_owner.set(new_owner);
 
         OwnershipTransferStarted {
             previous_owner,
@@ -157,18 +157,6 @@ impl Ownable2Step {
         }
         self.pending_owner.set(None);
         self.ownable.unchecked_transfer_ownership(caller);
-    }
-}
-
-impl Ownable2Step {
-    /// Reverts with [`Error::CallerNotTheOwner`] if the function called by
-    /// any account other than the owner.
-    pub fn only_owner<T: OdraType>(&mut self, mut f: impl FnMut(&mut Self) -> T) -> T {
-        if Some(contract_env::caller()) != self.ownable.get_optional_owner() {
-            contract_env::revert(Error::CallerNotTheOwner)
-        }
-
-        f(self)
     }
 }
 
