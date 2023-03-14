@@ -73,7 +73,7 @@ pub fn derive_instance(input: TokenStream) -> TokenStream {
 ///     fn get(&self) -> u32;
 /// }
 ///
-/// let contract_address = odra::types::Address::new(b"address");
+/// let contract_address = odra::types::Address::try_from(b"address").unwrap();
 /// // in your contract
 /// let getter = GetterRef::at(contract_address);
 /// // let value = getter.get();

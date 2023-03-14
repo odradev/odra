@@ -1,11 +1,12 @@
 //! Blockchain-agnostic types used by Odra Framework.
 
+pub mod address;
 pub mod arithmetic;
 pub mod contract_def;
 mod error;
 pub mod event;
 
-pub use error::{CollectionError, ExecutionError, OdraError, VmError};
+pub use error::{AddressError, CollectionError, ExecutionError, OdraError, VmError};
 
 /// Types accepted by Odra framework, these types can be stored and manipulated by smart contracts.
 #[derive(Debug, Clone)]
