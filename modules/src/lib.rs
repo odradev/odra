@@ -1,4 +1,5 @@
 pub mod access;
+mod crypto;
 pub mod erc1155;
 pub mod erc1155_receiver;
 pub mod erc1155_token;

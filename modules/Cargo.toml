@@ -11,8 +11,15 @@ categories = ["wasm"]
 
 [dependencies]
 odra = { version = "0.2.0", path = "../core", default-features = false }
+keccak = "0.1.3"
+sha3 = "0.10.6"
+
+[dev-dependencies]
+hex = "0.4.3"
+
 
 [features]
 default = [ "mock-vm" ]
 mock-vm = [ "odra/mock-vm" ]
 casper = [ "odra/casper" ]
+
