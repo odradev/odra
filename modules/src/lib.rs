@@ -1,4 +1,5 @@
 pub mod access;
+#[cfg(test)]
 mod crypto;
 pub mod erc1155;
 pub mod erc1155_receiver;
