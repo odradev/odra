@@ -16,7 +16,7 @@ pub struct OwnershipTransferStarted {
 
 /// Informs `new_admin_role` is set as `role`'s admin role, replacing `previous_admin_role`.
 ///
-/// [`DEFAULT_ADMIN_ROLE`](super::access_control::DEFAULT_ADMIN_ROLE) is the starting admin for all roles, 
+/// [`DEFAULT_ADMIN_ROLE`](super::access_control::DEFAULT_ADMIN_ROLE) is the starting admin for all roles,
 /// but `RoleAdminChanged` not being emitted signaling this.
 #[derive(Event, PartialEq, Eq, Debug)]
 pub struct RoleAdminChanged {

@@ -12,21 +12,21 @@ pub type Role = [u8; 32];
 
 pub const DEFAULT_ADMIN_ROLE: Role = [0u8; 32];
 
-/// This contract module enables the implementation of role-based access control mechanisms for children 
+/// This contract module enables the implementation of role-based access control mechanisms for children
 /// modules.
 ///
-/// Roles are identified by their 32-bytes identifier, which should be unique and exposed in the external API. 
-/// 
+/// Roles are identified by their 32-bytes identifier, which should be unique and exposed in the external API.
+///
 /// Roles can be used to represent a set of permissions, and the hasRole function is used to restrict
 /// access to a function call.
-/// 
-/// Roles can be granted and revoked dynamically using the [`grant_role()`] and [`revoke_role()`] functions, 
-/// respectively. Each role has an associated admin role, and only accounts that have the role's admin role 
+///
+/// Roles can be granted and revoked dynamically using the [`grant_role()`] and [`revoke_role()`] functions,
+/// respectively. Each role has an associated admin role, and only accounts that have the role's admin role
 /// can call grant_role and revoke_role.
 ///
-/// By default, the admin role for all roles is [`DEFAULT_ADMIN_ROLE`], which means that only accounts with 
-/// this role can grant or revoke other roles. 
-/// 
+/// By default, the admin role for all roles is [`DEFAULT_ADMIN_ROLE`], which means that only accounts with
+/// this role can grant or revoke other roles.
+///
 /// More complex role relationships can be established using the `set_role_admin()` function.
 #[odra::module]
 pub struct AccessControl {
@@ -54,10 +54,10 @@ impl AccessControl {
     }
 
     /// Grants `role` to `address`.
-    /// 
+    ///
     /// If the role has been already granted - nothing happens,
     /// otherwise [`RoleGranted`] event is emitted.
-    /// 
+    ///
     /// The caller must have `role`'s admin role.
     pub fn grant_role(&mut self, role: Role, address: Address) {
         self.check_role(self.get_role_admin(role), contract_env::caller());
@@ -65,24 +65,23 @@ impl AccessControl {
     }
 
     /// Grants `role` to `address`.
-    /// 
+    ///
     /// If the role has been already revoked - nothing happens,
     /// otherwise [`RoleRevoked`] event is emitted.
-    /// 
+    ///
     /// The caller must have `role`'s admin role.
     pub fn revoke_role(&mut self, role: Role, address: Address) {
         self.check_role(self.get_role_admin(role), contract_env::caller());
         self.unchecked_revoke_role(role, address);
     }
 
-
-    /// The function is used to remove a role from the account that initiated the call. 
-    /// 
-    /// One common way of managing roles is by using [`grant_role()`](Self::grant_role()) 
-    /// and [`revoke_role()`](Self::revoke_role()). 
-    /// The purpose of revokeRole is to provide a mechanism for revoking privileges from an account 
+    /// The function is used to remove a role from the account that initiated the call.
+    ///
+    /// One common way of managing roles is by using [`grant_role()`](Self::grant_role())
+    /// and [`revoke_role()`](Self::revoke_role()).
+    /// The purpose of revokeRole is to provide a mechanism for revoking privileges from an account
     /// in case it gets compromised.
-    /// 
+    ///
     /// If the account had previously been granted the role, the function will trigger a `RoleRevoked` event.
     ///
     /// Note that only `address` is authorized to call this function.
@@ -117,10 +116,10 @@ impl AccessControl {
     }
 
     /// Grants `role` to `address`.
-    /// 
+    ///
     /// Internal function without access restriction.
     /// This function should be used to setup the initial access control.
-    /// 
+    ///
     /// May emit a `RoleGranted` event.
     pub fn unchecked_grant_role(&mut self, role: Role, address: Address) {
         if !self.has_role(role, address) {
@@ -135,10 +134,10 @@ impl AccessControl {
     }
 
     /// Revokes `role` from `address`.
-    /// 
+    ///
     /// Internal function without access restriction.
     /// This function should be used to setup the initial access control.
-    /// 
+    ///
     /// May emit a `RoleRevoked` event.
     pub fn unchecked_revoke_role(&mut self, role: Role, address: Address) {
         if self.has_role(role, address) {
@@ -154,9 +153,9 @@ impl AccessControl {
 }
 
 pub mod mock {
-    use odra::{types::Address, contract_env};
+    use odra::{contract_env, types::Address};
 
-    use super::{AccessControl, DEFAULT_ADMIN_ROLE, Role};
+    use super::{AccessControl, Role, DEFAULT_ADMIN_ROLE};
 
     pub const ROLE_MODERATOR: &str = "moderator";
     pub const ROLE_MODERATOR_ADMIN: &str = "moderator_admin";
@@ -226,8 +225,11 @@ pub mod mock {
 #[cfg(test)]
 pub mod test {
     use crate::access::{
+        access_control::mock::{
+            MockModeratedDeployer, MockModeratedRef, ROLE_MODERATOR, ROLE_MODERATOR_ADMIN
+        },
         errors::Error,
-        events::{RoleGranted, RoleRevoked}, access_control::mock::{MockModeratedDeployer, MockModeratedRef, ROLE_MODERATOR, ROLE_MODERATOR_ADMIN}
+        events::{RoleGranted, RoleRevoked}
     };
     use odra::{assert_events, test_env, types::Address};
 
