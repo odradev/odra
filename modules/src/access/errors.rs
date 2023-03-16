@@ -7,5 +7,6 @@ execution_error! {
         CallerNotTheNewOwner => 20_002,
         MissingRole => 20_003,
         RoleRenounceForAnotherAddress => 20_004,
+        NotAllowed => 20_005,
     }
 }

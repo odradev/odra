@@ -40,3 +40,17 @@ pub struct RoleRevoked {
     pub address: Address,
     pub sender: Address
 }
+
+/// Informs `address` has been added to the allow list by `sender`.
+#[derive(Event, PartialEq, Eq, Debug)]
+pub struct AddedToAllowList {
+    pub address: Address,
+    pub sender: Address
+}
+
+/// Informs `address` has been removed from the allow list by `sender`.
+#[derive(Event, PartialEq, Eq, Debug)]
+pub struct RemovedFromAllowList {
+    pub address: Address,
+    pub sender: Address
+}

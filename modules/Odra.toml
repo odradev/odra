@@ -31,5 +31,13 @@ name = "ownable2_step"
 fqn = "odra_modules::access::Ownable2Step"
 
 [[contracts]]
+name = "allow_list"
+fqn = "odra_modules::access::AllowList"
+
+[[contracts]]
+name = "protected_allow_list"
+fqn = "odra_modules::access::ProtectedAllowList"
+
+[[contracts]]
 name = "mock_moderated"
 fqn = "odra_modules::access::mock::MockModerated"

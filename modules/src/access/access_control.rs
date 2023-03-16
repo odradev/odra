@@ -12,7 +12,7 @@ pub type Role = [u8; 32];
 
 pub const DEFAULT_ADMIN_ROLE: Role = [0u8; 32];
 
-/// This contract module enables the implementation of role-based access control mechanisms for children
+/// This module enables the implementation of role-based access control mechanisms for children
 /// modules.
 ///
 /// Roles are identified by their 32-bytes identifier, which should be unique and exposed in the external API.
@@ -22,7 +22,7 @@ pub const DEFAULT_ADMIN_ROLE: Role = [0u8; 32];
 ///
 /// Roles can be granted and revoked dynamically using the [`grant_role()`] and [`revoke_role()`] functions,
 /// respectively. Each role has an associated admin role, and only accounts that have the role's admin role
-/// can call grant_role and revoke_role.
+/// can call `grant_role` and `revoke_role`.
 ///
 /// By default, the admin role for all roles is [`DEFAULT_ADMIN_ROLE`], which means that only accounts with
 /// this role can grant or revoke other roles.
