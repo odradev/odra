@@ -153,21 +153,16 @@ impl AccessControl {
     }
 }
 
-#[cfg(test)]
-mod test {
-    use crate::access::{
-        errors::Error,
-        events::{RoleGranted, RoleRevoked}
-    };
-    use odra::{assert_events, contract_env, test_env, types::Address};
+pub mod mock {
+    use odra::{types::Address, contract_env};
 
-    use super::{AccessControl, Role, DEFAULT_ADMIN_ROLE};
+    use super::{AccessControl, DEFAULT_ADMIN_ROLE, Role};
 
-    const ROLE_MODERATOR: &str = "moderator";
-    const ROLE_MODERATOR_ADMIN: &str = "moderator_admin";
+    pub const ROLE_MODERATOR: &str = "moderator";
+    pub const ROLE_MODERATOR_ADMIN: &str = "moderator_admin";
 
     #[odra::module]
-    struct MockModerated {
+    pub struct MockModerated {
         access_control: AccessControl
     }
 
@@ -226,6 +221,15 @@ mod test {
                 .set_admin_role(Self::role(ROLE_MODERATOR), role);
         }
     }
+}
+
+#[cfg(test)]
+pub mod test {
+    use crate::access::{
+        errors::Error,
+        events::{RoleGranted, RoleRevoked}, access_control::mock::{MockModeratedDeployer, MockModeratedRef, ROLE_MODERATOR, ROLE_MODERATOR_ADMIN}
+    };
+    use odra::{assert_events, test_env, types::Address};
 
     #[test]
     fn deploy_works() {
@@ -253,7 +257,7 @@ mod test {
         // when a non-admin adds a moderator.
         test_env::assert_exception(Error::MissingRole, || {
             test_env::set_caller(user1);
-            MockModeratedRef::at(contract.address).add_moderator(user2);
+            MockModeratedRef::at(contract.address()).add_moderator(user2);
         });
         // then the User2 is not a moderator.
         assert!(!contract.is_moderator(user2));
@@ -280,7 +284,7 @@ mod test {
         // when User removes the role - it fails.
         test_env::assert_exception(Error::MissingRole, || {
             test_env::set_caller(user);
-            MockModeratedRef::at(contract.address).remove_moderator(moderator);
+            MockModeratedRef::at(contract.address()).remove_moderator(moderator);
         });
         // then Moderator still is a moderator.
         assert!(contract.is_moderator(moderator));
@@ -296,7 +300,7 @@ mod test {
         // Moderator revoke his role - fails because is not an admin.
         test_env::assert_exception(Error::MissingRole, || {
             test_env::set_caller(moderator);
-            MockModeratedRef::at(contract.address).remove_moderator(moderator);
+            MockModeratedRef::at(contract.address()).remove_moderator(moderator);
         });
         // then Moderator still is a moderator.
         assert!(contract.is_moderator(moderator));
@@ -328,7 +332,7 @@ mod test {
 
         // when Admin renounces the role on moderator's behalf - it fails.
         test_env::assert_exception(Error::RoleRenounceForAnotherAddress, || {
-            MockModeratedRef::at(contract.address).renounce_moderator_role(moderator);
+            MockModeratedRef::at(contract.address()).renounce_moderator_role(moderator);
         });
 
         // when Moderator renounces the role.
