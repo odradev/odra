@@ -1,5 +1,6 @@
 //! A set of utility functions encapsulating some common interactions with the current runtime.
 
+use casper_contract::contract_api::{runtime, system};
 use casper_types::{URef, U512};
 use odra_casper_shared::consts;
 use odra_casper_types::Balance;
@@ -43,12 +44,11 @@ pub fn clear_attached_value() {
 /// Transfers attached value to the currently executing contract.
 pub fn handle_attached_value() {
     if named_arg_exists(consts::CARGO_PURSE_ARG) {
-        let cargo_purse =
-            casper_contract::contract_api::runtime::get_named_arg(consts::CARGO_PURSE_ARG);
-        let amount = casper_contract::contract_api::system::get_purse_balance(cargo_purse);
+        let cargo_purse = runtime::get_named_arg(consts::CARGO_PURSE_ARG);
+        let amount = system::get_purse_balance(cargo_purse);
         if let Some(amount) = amount {
             let contract_purse = get_main_purse();
-            let _ = casper_contract::contract_api::system::transfer_from_purse_to_purse(
+            let _ = system::transfer_from_purse_to_purse(
                 cargo_purse,
                 contract_purse,
                 amount,
@@ -62,11 +62,22 @@ pub fn handle_attached_value() {
 /// Reverts with an [ExecutionError] if some value is attached to the call.
 pub fn assert_no_attached_value() {
     if named_arg_exists(consts::CARGO_PURSE_ARG) {
-        let cargo_purse =
-            casper_contract::contract_api::runtime::get_named_arg(consts::CARGO_PURSE_ARG);
+        let cargo_purse = runtime::get_named_arg(consts::CARGO_PURSE_ARG);
         let amount = casper_contract::contract_api::system::get_purse_balance(cargo_purse);
         if amount.is_some() && !amount.unwrap().is_zero() {
             revert(ExecutionError::non_payable());
         }
     }
+}
+
+pub fn non_reentrant_before() {
+    let status: bool = casper_env::get_key(consts::REENTRANCY_GUARD).unwrap_or_default();
+    if status {
+        revert(ExecutionError::reentrant_call())
+    };
+    casper_env::set_key(consts::REENTRANCY_GUARD, true);
+}
+
+pub fn non_reentrant_after() {
+    casper_env::set_key(consts::REENTRANCY_GUARD, false);
 }

@@ -17,3 +17,7 @@ fqn = "odra_examples::erc20::Erc20"
 [[contracts]]
 name = "time_lock_wallet"
 fqn = "odra_examples::tlw::TimeLockWallet"
+
+[[contracts]]
+name = "reentrancy_mock"
+fqn = "odra_examples::reentrancy::ReentrancyMock"

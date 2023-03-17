@@ -27,6 +27,7 @@ pub struct Constructor {
 
 impl ToTokens for Constructor {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let is_non_reentrant = self.attrs.iter().any(OdraAttribute::is_non_reentrant);
         let is_mut = utils::is_mut(&self.full_sig);
         let name = &self.ident.to_string();
         let args = &self
@@ -50,7 +51,7 @@ impl ToTokens for Constructor {
                 args: vec![#args],
                 is_mut: #is_mut,
                 ret: odra::types::Type::Unit,
-                ty: odra::types::contract_def::EntrypointType::Constructor,
+                ty: odra::types::contract_def::EntrypointType::Constructor { non_reentrant: #is_non_reentrant },
             },
         };
 
@@ -100,7 +101,7 @@ mod test {
     #[test]
     fn test_attrs() {
         let item: syn::ImplItemMethod = syn::parse_quote! {
-            #[odra(init)]
+            #[odra(init, non_reentrant)]
             #[some(a)]
             pub fn set_initial_value(&self, value: u32) {
                 self.set_value(value);

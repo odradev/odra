@@ -335,6 +335,8 @@ fn parse_error(err: engine_state::Error) -> OdraError {
             CasperExecutionError::Revert(ApiError::User(id)) => {
                 if id == ExecutionError::non_payable().code() {
                     OdraError::ExecutionError(ExecutionError::non_payable())
+                } else if id == ExecutionError::reentrant_call().code() { 
+                    OdraError::ExecutionError(ExecutionError::reentrant_call())
                 } else {
                     OdraError::ExecutionError(ExecutionError::new(id, ""))
                 }

@@ -102,7 +102,7 @@ mod tests {
                 ty: Type::I32
             }],
             ret: Type::Unit,
-            ty: EntrypointType::Constructor,
+            ty: EntrypointType::Constructor { non_reentrant: false},
             is_mut: false
         };
         let path: Path = syn::parse2(
