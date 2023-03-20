@@ -1,14 +1,13 @@
-use odra::{Variable, contract_env};
+use odra::{contract_env, Variable};
 use odra_modules::security::ReentrancyGuard;
 
 #[odra::module]
 pub struct ReentrancyMock {
-    counter: Variable<u32>,
+    counter: Variable<u32>
 }
 
 #[odra::module]
 impl ReentrancyMock {
-
     #[odra(non_reentrant)]
     pub fn count_local_recursive(&mut self, n: u32) {
         if n > 0 {
@@ -35,7 +34,7 @@ impl ReentrancyMock {
     }
 
     #[odra(non_reentrant)]
-    pub fn non_reentrant_count(&mut self)  {
+    pub fn non_reentrant_count(&mut self) {
         self.count();
     }
 
@@ -51,10 +50,9 @@ impl ReentrancyMock {
     }
 }
 
-
 #[cfg(test)]
 mod test {
-    use odra::{types::ExecutionError, test_env};
+    use odra::{test_env, types::ExecutionError};
 
     use super::ReentrancyMockDeployer;
 
