@@ -32,4 +32,8 @@ fqn = "odra_modules::access::Ownable2Step"
 
 [[contracts]]
 name = "mock_moderated"
-fqn = "odra_modules::access::mock::MockModerated"
+fqn = "odra_modules::mock::MockModerated"
+
+[[contracts]]
+name = "pauseable_counter"
+fqn = "odra_modules::mock::PauseableCounter"
