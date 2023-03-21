@@ -1,3 +1,4 @@
+use crate::access::Ownable;
 use crate::erc1155::erc1155_base::Erc1155Base;
 use crate::erc1155::errors::Error;
 use crate::erc1155::events::{TransferBatch, TransferSingle};
@@ -8,21 +9,19 @@ use odra::types::Address;
 use odra::types::Bytes;
 use odra::types::U256;
 
-use crate::extensions::ownable::{Ownable, OwnableExtension};
-
 /// The ERC1155 token implementation.
 /// It uses the ERC1155 base implementation and the Ownable module.
 #[odra::module]
 pub struct Erc1155Token {
     core: Erc1155Base,
-    ownable: OwnableExtension
+    ownable: Ownable
 }
 
 #[odra::module]
 impl OwnedErc1155 for Erc1155Token {
     #[odra(init)]
     pub fn init(&mut self) {
-        self.ownable.init(Some(caller()));
+        self.ownable.init();
     }
 
     pub fn balance_of(&self, owner: Address, id: U256) -> U256 {
@@ -65,12 +64,12 @@ impl OwnedErc1155 for Erc1155Token {
         self.ownable.renounce_ownership();
     }
 
-    pub fn transfer_ownership(&mut self, new_owner: Option<Address>) {
+    pub fn transfer_ownership(&mut self, new_owner: Address) {
         self.ownable.transfer_ownership(new_owner);
     }
 
-    pub fn owner(&self) -> Option<Address> {
-        self.ownable.owner()
+    pub fn owner(&self) -> Address {
+        self.ownable.get_owner()
     }
 
     pub fn mint(&mut self, to: Address, id: U256, amount: U256, data: Option<Bytes>) {
@@ -191,10 +190,6 @@ mod tests {
     use odra::types::VmError::NoSuchMethod;
     use odra::types::{Address, Bytes, OdraError, U256};
     use odra::{assert_events, test_env};
-
-    // const NAME: &str = "PlascoinMultiNFT";
-    // const SYMBOL: &str = "PLSMNFT";
-    // const BASE_URI: &str = "https://plascoin.org/";
 
     struct TokenEnv {
         token: Erc1155TokenRef,

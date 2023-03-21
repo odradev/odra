@@ -1,3 +1,4 @@
+use crate::access::Ownable;
 use crate::erc721::events::Transfer;
 use odra::contract_env::{caller, revert};
 use odra::types::event::OdraEvent;
@@ -9,7 +10,6 @@ use crate::erc721::erc721_base::Erc721Base;
 use crate::erc721::extensions::erc721_metadata::{Erc721Metadata, Erc721MetadataExtension};
 use crate::erc721::Erc721;
 use crate::erc721_token::errors::Error;
-use crate::extensions::ownable::{Ownable, OwnableExtension};
 
 /// The ERC721 token implementation.
 /// It uses the ERC721 base implementation, the ERC721 metadata extension and the Ownable module.
@@ -17,7 +17,7 @@ use crate::extensions::ownable::{Ownable, OwnableExtension};
 pub struct Erc721Token {
     core: Erc721Base,
     metadata: Erc721MetadataExtension,
-    ownable: OwnableExtension
+    ownable: Ownable
 }
 
 #[odra::module]
@@ -25,7 +25,7 @@ impl OwnedErc721WithMetadata for Erc721Token {
     #[odra(init)]
     pub fn init(&mut self, name: String, symbol: String, base_uri: String) {
         self.metadata.init(name, symbol, base_uri);
-        self.ownable.init(Some(caller()));
+        self.ownable.init();
     }
 
     pub fn name(&self) -> String {
@@ -87,12 +87,12 @@ impl OwnedErc721WithMetadata for Erc721Token {
         self.ownable.renounce_ownership();
     }
 
-    pub fn transfer_ownership(&mut self, new_owner: Option<Address>) {
+    pub fn transfer_ownership(&mut self, new_owner: Address) {
         self.ownable.transfer_ownership(new_owner);
     }
 
-    pub fn owner(&self) -> Option<Address> {
-        self.ownable.owner()
+    pub fn owner(&self) -> Address {
+        self.ownable.get_owner()
     }
 
     pub fn mint(&mut self, to: Address, token_id: U256) {
@@ -139,10 +139,10 @@ pub mod errors {
 #[cfg(test)]
 mod tests {
     use super::{Erc721TokenDeployer, Erc721TokenRef};
+    use crate::access::errors::Error as AccessError;
     use crate::erc721::errors::Error;
     use crate::erc721_receiver::events::Received;
     use crate::erc721_receiver::Erc721ReceiverDeployer;
-    use crate::extensions::ownable::errors::Error::NotAnOwner;
     use odra::test_env::assert_exception;
     use odra::types::address::OdraAddress;
     use odra::types::VmError::NoSuchMethod;
@@ -572,7 +572,7 @@ mod tests {
 
     #[test]
     fn burn_error() {
-        assert_exception(NotAnOwner, || {
+        assert_exception(AccessError::CallerNotTheOwner, || {
             // When deploy a contract with the initial supply.
             let mut erc721_env = setup();
 
@@ -614,7 +614,7 @@ mod tests {
         let erc721_env = setup();
 
         // Then minting a token by not an owner throws an error.
-        assert_exception(NotAnOwner, || {
+        assert_exception(AccessError::CallerNotTheOwner, || {
             test_env::set_caller(erc721_env.bob);
             let mut erc721 = Erc721TokenRef::at(erc721_env.token.address());
             erc721.mint(erc721_env.alice, U256::from(1));
