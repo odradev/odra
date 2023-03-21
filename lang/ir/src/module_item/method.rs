@@ -2,7 +2,7 @@ use quote::{quote, ToTokens};
 
 use crate::attrs::{partition_attributes, OdraAttribute};
 
-use super::utils;
+use super::{utils, module_impl::DelegatedFunction};
 
 /// Odra method definition.
 ///
@@ -105,5 +105,91 @@ impl From<syn::ImplItemMethod> for Method {
             full_sig,
             visibility
         }
+    }
+}
+
+pub struct DelegatedMethod {
+    pub attrs: Vec<OdraAttribute>,
+    pub ident: syn::Ident,
+    pub args: syn::punctuated::Punctuated<syn::PatType, syn::token::Comma>,
+    pub ret: syn::ReturnType,
+    pub full_sig: syn::Signature,
+    pub visibility: syn::Visibility
+}
+
+impl From<DelegatedFunction> for DelegatedMethod {
+    fn from(function: DelegatedFunction) -> Self {
+        let (odra_attrs, attrs) = partition_attributes(function.clone().attrs).unwrap();
+        let ident = function.fn_item.sig.ident.to_owned();
+        let args = function.fn_item
+            .sig
+            .inputs
+            .iter()
+            .filter_map(|arg| match arg {
+                syn::FnArg::Receiver(_) => None,
+                syn::FnArg::Typed(pat) => Some(pat.clone())
+            })
+            .collect::<syn::punctuated::Punctuated<_, _>>();
+        let ret = function.fn_item.clone().sig.output;
+        let full_sig = function.fn_item.clone().sig;
+        let visibility = function.visibility.clone();
+
+        Self {
+            attrs: odra_attrs,
+            ident,
+            args,
+            ret,
+            full_sig,
+            visibility
+        }
+    }
+}
+
+impl ToTokens for DelegatedMethod {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let name = &self.ident.to_string();
+        let args = &self
+            .args
+            .iter()
+            .map(|arg| {
+                let name = &*arg.pat;
+                let ty = &*arg.ty;
+                let ty = quote!(<#ty as odra::types::Typed>::ty());
+                quote! {
+                    odra::types::contract_def::Argument {
+                        ident: String::from(stringify!(#name)),
+                        ty: #ty,
+                    },
+                }
+            })
+            .collect::<proc_macro2::TokenStream>();
+
+        let ret = match &self.ret {
+            syn::ReturnType::Default => quote!(odra::types::Type::Unit),
+            syn::ReturnType::Type(_, ty) => quote!(<#ty as odra::types::Typed>::ty())
+        };
+
+        let ty = match self.attrs.iter().any(|attr| attr.is_payable()) {
+            true => {
+                quote!(odra::types::contract_def::EntrypointType::PublicPayable)
+            }
+            false => {
+                quote!(odra::types::contract_def::EntrypointType::Public)
+            }
+        };
+
+        let is_mut = utils::is_mut(&self.full_sig);
+
+        let ep = quote! {
+            odra::types::contract_def::Entrypoint {
+                ident: String::from(#name),
+                args: vec![#args],
+                is_mut: #is_mut,
+                ret: #ret,
+                ty: #ty,
+            },
+        };
+
+        tokens.extend(ep)
     }
 }

@@ -4,7 +4,7 @@ use proc_macro2::Ident;
 
 use crate::attrs::partition_attributes;
 
-use super::{constructor::Constructor, method::Method};
+use super::{constructor::Constructor, method::{Method, DelegatedMethod}};
 
 /// An item within an implementation block
 ///
@@ -14,6 +14,7 @@ pub enum ImplItem {
     Constructor(Constructor),
     /// Unmarked function.
     Method(Method),
+    DelegatedMethod(DelegatedMethod),
     /// Any other implementation block item.
     Other(syn::ImplItem)
 }
@@ -23,7 +24,8 @@ impl quote::ToTokens for ImplItem {
         match self {
             Self::Constructor(constructor) => constructor.to_tokens(tokens),
             Self::Method(message) => message.to_tokens(tokens),
-            Self::Other(other) => other.to_tokens(tokens)
+            Self::DelegatedMethod(_) => todo!(),
+            Self::Other(other) => other.to_tokens(tokens),
         }
     }
 }
