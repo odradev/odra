@@ -29,3 +29,7 @@ fqn = "odra_modules::access::Ownable"
 [[contracts]]
 name = "ownable2_step"
 fqn = "odra_modules::access::Ownable2Step"
+
+[[contracts]]
+name = "mock_moderated"
+fqn = "odra_modules::access::mock::MockModerated"
