@@ -29,6 +29,7 @@ impl OwnedToken {
             pub fn symbol(&self) -> String;
             pub fn decimals(&self) -> u8;
             pub fn total_supply(&self) -> U256;
+            pub fn balance_of(&self, owner: Address) -> U256;
         }
 
         to self.ownable {

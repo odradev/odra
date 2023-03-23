@@ -1,5 +1,5 @@
 use derive_more::From;
-use odra_ir::module::{ImplItem, ModuleImpl};
+use odra_ir::module::{Entrypoint, ImplItem, ModuleImpl};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 
@@ -44,14 +44,27 @@ fn build_entrypoints(methods: &[&ImplItem]) -> TokenStream {
     methods
         .iter()
         .filter_map(|item| match item {
-            ImplItem::Method(method) => Some(method),
+            ImplItem::Method(method) => Some(vec![method as &dyn Entrypoint]),
+            ImplItem::DelegationStatement(stmt) => {
+                let entrypoints: Vec<&dyn Entrypoint> = stmt
+                    .delegation_block
+                    .functions
+                    .iter()
+                    .map(|f| f as &dyn Entrypoint)
+                    .collect();
+                Some(entrypoints)
+            },
             _ => None
         })
+        .flatten()
         .map(|entrypoint| {
-            let sig = &entrypoint.full_sig;
-            let entrypoint_name = &entrypoint.ident.to_string();
-            let fn_body =
-                common::generate_fn_body(entrypoint.args.clone(), entrypoint_name, &entrypoint.ret);
+            let sig = &entrypoint.full_sig();
+            let entrypoint_name = &entrypoint.ident().to_string();
+            let fn_body = common::generate_fn_body(
+                entrypoint.args().clone(),
+                entrypoint_name,
+                &entrypoint.ret()
+            );
 
             quote! {
                 pub #sig {

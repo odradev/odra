@@ -1,5 +1,5 @@
 use derive_more::From;
-use odra_ir::module::{Constructor, ImplItem, Method, ModuleImpl};
+use odra_ir::module::{Constructor, Entrypoint, ImplItem, ModuleImpl};
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, TokenStreamExt};
 use syn::{punctuated::Punctuated, token::Comma, ReturnType, Type, TypePath};
@@ -26,9 +26,19 @@ impl GenerateCode for Deploy<'_> {
                 .methods()
                 .iter()
                 .filter_map(|item| match item {
-                    ImplItem::Method(method) => Some(method),
+                    ImplItem::Method(method) => Some(vec![method as &dyn Entrypoint]),
+                    ImplItem::DelegationStatement(stmt) => {
+                        let entrypoints: Vec<&dyn Entrypoint> = stmt
+                            .delegation_block
+                            .functions
+                            .iter()
+                            .map(|f| f as &dyn Entrypoint)
+                            .collect();
+                        Some(entrypoints)
+                    }
                     _ => None
-                }),
+                })
+                .flatten(),
             struct_ident
         );
 
@@ -222,20 +232,20 @@ where
 
 fn build_entrypoints<'a, T>(methods: T, struct_ident: &Ident) -> TokenStream
 where
-    T: Iterator<Item = &'a Method>
+    T: Iterator<Item = &'a dyn Entrypoint>
 {
     methods
         .map(|entrypoint| {
-            let ident = &entrypoint.ident;
+            let ident = &entrypoint.ident();
             let name = quote!(stringify!(#ident).to_string());
-            let return_value = match &entrypoint.ret {
+            let return_value = match &entrypoint.ret() {
                 ReturnType::Default => quote!(Vec::new()),
                 ReturnType::Type(_, _) => quote! {
                     odra::types::MockVMType::ser(&result).unwrap()
                 }
             };
-            let args = args_to_fn_args(&entrypoint.args);
-            let arg_names = args_to_arg_names_stream(&entrypoint.args);
+            let args = args_to_fn_args(entrypoint.args());
+            let arg_names = args_to_arg_names_stream(entrypoint.args());
             let attached_value_check = match entrypoint.is_payable() {
                 true => quote!(),
                 false => quote! {

@@ -1,6 +1,5 @@
 use derive_more::From;
 use odra_ir::module::ImplItem;
-use proc_macro2::TokenStream;
 use quote::ToTokens;
 
 use crate::{poet::OdraPoetUsingImpl, GenerateCode};
@@ -25,54 +24,38 @@ impl GenerateCode for ModuleImpl<'_> {
             ImplItem::Constructor(item) => item.impl_item.to_token_stream(),
             ImplItem::Method(item) => item.impl_item.to_token_stream(),
             ImplItem::Other(item) => item.to_token_stream(),
-            ImplItem::DelegatedMethod(_) => todo!(),
+            ImplItem::DelegationStatement(stmt) => {
+                let to = &stmt.delegate_to;
+                stmt.delegation_block
+                    .functions
+                    .iter()
+                    .map(|func| {
+                        let sig = &func.full_sig;
+                        let vis = &func.visibility;
+                        let ident = &func.ident;
+                        let args = &func
+                            .args
+                            .iter()
+                            .map(|ty| ty.pat.clone())
+                            .collect::<Vec<_>>();
+
+                        quote::quote! {
+                            #vis #sig {
+                                #to.#ident(#(#args),*)
+                            }
+                        }
+                    })
+                    .collect::<proc_macro2::TokenStream>()
+            }
         });
 
         let contract_def = self.generate_code_using::<ContractDef>();
         let deploy = self.generate_code_using::<Deploy>();
         let contract_ref = self.generate_code_using::<ContractReference>();
 
-        let delegated_functions = self
-            .contract
-            .delegation_stmts()
-            .iter()
-            .map(|stmt| {
-                let expr = &stmt.delegate_to;
-                let block = &stmt.delegation_block;
-                block
-                    .functions
-                    .iter()
-                    .map(|f| {
-                        let vis = &f.visibility;
-                        let fn_item = &f.fn_item;
-                        let sig = fn_item.sig.clone();
-
-                        let ident = sig.ident.clone();
-
-                        let args = fn_item
-                            .sig
-                            .inputs
-                            .iter()
-                            .filter_map(|arg| match arg {
-                                syn::FnArg::Receiver(_) => None,
-                                syn::FnArg::Typed(arg) => Some(arg.pat.clone())
-                            })
-                            .collect::<Vec<_>>();
-                        quote::quote! {
-                            #vis #sig {
-                                #expr.#ident(#(#args),*)
-                            }
-                        }
-                    })
-                    .collect::<TokenStream>()
-            })
-            .collect::<TokenStream>();
-
         quote::quote! {
             impl #ident {
                 # (#original_item_impls)*
-
-                #delegated_functions
             }
 
             #[cfg(feature = "casper")]
