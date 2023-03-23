@@ -1,44 +1,37 @@
-use odra_ir::module::{Constructor, ImplItem, ModuleImpl, Method};
+use odra_ir::module::{Constructor, ImplItem, Method, ModuleImpl};
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
 use syn::{punctuated::Punctuated, ReturnType, Type, TypePath};
 
-use crate::generator::module_impl::deploy::{args_to_runtime_args_stream, args_to_fn_args, args_to_arg_names_stream};
+use crate::generator::module_impl::deploy::{
+    args_to_arg_names_stream, args_to_fn_args, args_to_runtime_args_stream
+};
 
 pub fn build_constructors(contract: &ModuleImpl) -> TokenStream {
     let struct_ident = contract.ident();
     let ref_ident = format_ident!("{}Ref", struct_ident);
 
     let entrypoints = build_entrypoints(
-        contract
-            .methods()
-            .iter()
-            .filter_map(|item| match item {
-                ImplItem::Method(method) => Some(method),
-                _ => None
-            }),
+        contract.methods().iter().filter_map(|item| match item {
+            ImplItem::Method(method) => Some(method),
+            _ => None
+        }),
         struct_ident
     );
 
     let constructors = _build_constructors(
-        contract
-            .methods()
-            .iter()
-            .filter_map(|item| match item {
-                ImplItem::Constructor(constructor) => Some(constructor),
-                _ => None
-            }),
+        contract.methods().iter().filter_map(|item| match item {
+            ImplItem::Constructor(constructor) => Some(constructor),
+            _ => None
+        }),
         struct_ident
     );
-    
+
     let mut constructors_mock_vm = build_constructors_mock_vm(
-        contract
-            .methods()
-            .iter()
-            .filter_map(|item| match item {
-                ImplItem::Constructor(constructor) => Some(constructor),
-                _ => None
-            }),
+        contract.methods().iter().filter_map(|item| match item {
+            ImplItem::Constructor(constructor) => Some(constructor),
+            _ => None
+        }),
         entrypoints.clone(),
         constructors.clone(),
         struct_ident,
@@ -195,7 +188,7 @@ where
             let arg_names = args_to_arg_names_stream(&constructor.args);
             quote! {
                 constructors.insert(
-                    stringify!(#ident).to_string(), 
+                    stringify!(#ident).to_string(),
                     (
                         #arg_names,
                         |name, args| {

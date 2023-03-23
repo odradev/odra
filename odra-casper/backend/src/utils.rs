@@ -48,12 +48,7 @@ pub fn handle_attached_value() {
         let amount = system::get_purse_balance(cargo_purse);
         if let Some(amount) = amount {
             let contract_purse = get_main_purse();
-            let _ = system::transfer_from_purse_to_purse(
-                cargo_purse,
-                contract_purse,
-                amount,
-                None
-            );
+            let _ = system::transfer_from_purse_to_purse(cargo_purse, contract_purse, amount, None);
             set_attached_value(amount.into());
         }
     }

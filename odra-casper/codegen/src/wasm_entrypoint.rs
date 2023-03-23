@@ -103,7 +103,9 @@ mod tests {
                 ty: Type::I32
             }],
             ret: Type::Unit,
-            ty: EntrypointType::Public { non_reentrant: false },
+            ty: EntrypointType::Public {
+                non_reentrant: false
+            },
             is_mut: false
         };
         let path: Path = syn::parse2(
@@ -137,7 +139,9 @@ mod tests {
             ident: String::from("pay_me"),
             args: vec![],
             ret: Type::Unit,
-            ty: EntrypointType::PublicPayable { non_reentrant: false },
+            ty: EntrypointType::PublicPayable {
+                non_reentrant: false
+            },
             is_mut: false
         };
         let path: Path = syn::parse_quote!(a::b::c::Contract);
@@ -163,7 +167,9 @@ mod tests {
             ident: String::from("pay_me"),
             args: vec![],
             ret: Type::Unit,
-            ty: EntrypointType::PublicPayable { non_reentrant: false },
+            ty: EntrypointType::PublicPayable {
+                non_reentrant: false
+            },
             is_mut: true
         };
         let path: Path = syn::parse_quote!(a::b::c::Contract);

@@ -38,12 +38,11 @@ pub enum EntrypointType {
 }
 
 impl EntrypointType {
-
     pub fn is_non_reentrant(&self) -> bool {
         match self {
             EntrypointType::Constructor { non_reentrant } => *non_reentrant,
             EntrypointType::Public { non_reentrant } => *non_reentrant,
-            EntrypointType::PublicPayable { non_reentrant } => *non_reentrant,
+            EntrypointType::PublicPayable { non_reentrant } => *non_reentrant
         }
     }
 }

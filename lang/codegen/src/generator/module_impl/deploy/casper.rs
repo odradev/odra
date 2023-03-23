@@ -12,13 +12,10 @@ pub fn build_constructors(contract: &ModuleImpl) -> TokenStream {
     let struct_snake_case = odra_utils::camel_to_snake(&struct_name);
 
     let mut constructors_wasm_test = build_constructors_wasm_test(
-        contract
-            .methods()
-            .iter()
-            .filter_map(|item| match item {
-                ImplItem::Constructor(constructor) => Some(constructor),
-                _ => None
-            }),
+        contract.methods().iter().filter_map(|item| match item {
+            ImplItem::Constructor(constructor) => Some(constructor),
+            _ => None
+        }),
         struct_ident,
         ref_ident.clone()
     );

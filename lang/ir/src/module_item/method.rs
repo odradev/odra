@@ -60,8 +60,12 @@ impl ToTokens for Method {
         };
 
         let ty = match self.attrs.iter().any(|attr| attr.is_payable()) {
-            true => quote!(odra::types::contract_def::EntrypointType::PublicPayable { non_reentrant: #is_non_reentrant }),
-            false => quote!(odra::types::contract_def::EntrypointType::Public { non_reentrant: #is_non_reentrant })
+            true => {
+                quote!(odra::types::contract_def::EntrypointType::PublicPayable { non_reentrant: #is_non_reentrant })
+            }
+            false => {
+                quote!(odra::types::contract_def::EntrypointType::Public { non_reentrant: #is_non_reentrant })
+            }
         };
 
         let is_mut = utils::is_mut(&self.full_sig);

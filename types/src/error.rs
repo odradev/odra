@@ -99,10 +99,7 @@ impl ExecutionError {
     }
 
     pub fn reentrant_call() -> Self {
-        Self::internal(
-            CODE_REENTRANT_CALL,
-            "Reentrant call."
-        )
+        Self::internal(CODE_REENTRANT_CALL, "Reentrant call.")
     }
 
     fn internal(code: u16, msg: &str) -> Self {

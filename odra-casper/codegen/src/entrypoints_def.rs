@@ -90,7 +90,9 @@ mod test {
                 ty: Type::I32
             }],
             ret: Type::Bool,
-            ty: EntrypointType::Public { non_reentrant: false },
+            ty: EntrypointType::Public {
+                non_reentrant: false
+            },
             is_mut: false
         }];
         let ep = ContractEntrypoints(&a);
