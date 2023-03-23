@@ -123,7 +123,7 @@ impl syn::parse::Parse for DelegatedFunction {
             })
             .collect::<syn::punctuated::Punctuated<_, _>>();
         let ret = fn_item.clone().sig.output;
-        let full_sig = fn_item.clone().sig;
+        let full_sig = fn_item.sig;
 
         Ok(Self {
             attrs: odra_attrs,

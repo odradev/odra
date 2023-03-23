@@ -4,7 +4,7 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, TokenStreamExt};
 use syn::{punctuated::Punctuated, token::Comma, ReturnType, Type, TypePath};
 
-use crate::GenerateCode;
+use crate::{generator::module_impl::common::to_entrypoints, GenerateCode};
 
 #[derive(From)]
 pub struct Deploy<'a> {
@@ -20,27 +20,7 @@ impl GenerateCode for Deploy<'_> {
         let ref_ident = format_ident!("{}Ref", struct_ident);
         let deployer_ident = format_ident!("{}Deployer", struct_ident);
         let struct_snake_case = odra_utils::camel_to_snake(&struct_name);
-
-        let entrypoints = build_entrypoints(
-            self.contract
-                .methods()
-                .iter()
-                .filter_map(|item| match item {
-                    ImplItem::Method(method) => Some(vec![method as &dyn Entrypoint]),
-                    ImplItem::DelegationStatement(stmt) => {
-                        let entrypoints: Vec<&dyn Entrypoint> = stmt
-                            .delegation_block
-                            .functions
-                            .iter()
-                            .map(|f| f as &dyn Entrypoint)
-                            .collect();
-                        Some(entrypoints)
-                    }
-                    _ => None
-                })
-                .flatten(),
-            struct_ident
-        );
+        let entrypoints = build_entrypoints(to_entrypoints(&self.contract.methods()), struct_ident);
 
         let constructors = build_constructors(
             self.contract

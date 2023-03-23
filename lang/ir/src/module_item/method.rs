@@ -87,7 +87,7 @@ impl ToTokens for dyn Entrypoint {
             false => quote!(odra::types::contract_def::EntrypointType::Public)
         };
 
-        let is_mut = utils::is_mut(&self.full_sig());
+        let is_mut = utils::is_mut(self.full_sig());
 
         let ep = quote! {
             odra::types::contract_def::Entrypoint {

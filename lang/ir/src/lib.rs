@@ -24,6 +24,7 @@ pub use {
 pub mod module {
     pub use crate::module_item::{
         constructor::Constructor,
+        delegate::{DelegatedFunction, DelegationBlock, DelegationStatement},
         impl_item::{Entrypoint, ImplItem},
         method::Method,
         module_impl::ModuleImpl,

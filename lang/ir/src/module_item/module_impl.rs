@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::Ident;
 
 use super::{
     delegate::Delegate,
@@ -90,14 +90,13 @@ impl TryFrom<syn::ItemImpl> for ModuleImpl {
                 syn::ImplItem::Macro(macro_item) => Some(macro_item),
                 _ => None
             })
-            .map(|macro_item| syn::parse2::<Delegate>(TokenStream::from(macro_item.mac.tokens)))
+            .map(|macro_item| syn::parse2::<Delegate>(macro_item.mac.tokens))
             .collect::<Result<Vec<_>, syn::Error>>()?;
 
         let delegation_stmts = delegation_stmts
             .into_iter()
-            .map(|d| d.stmts)
-            .flatten()
-            .map(|stmt| ImplItem::DelegationStatement(stmt))
+            .flat_map(|d| d.stmts)
+            .map(ImplItem::DelegationStatement)
             .collect::<Vec<_>>();
 
         let mut items = item_impl

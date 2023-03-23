@@ -14,6 +14,7 @@ pub enum ImplItem {
     Constructor(Constructor),
     /// Unmarked function.
     Method(Method),
+    /// A group of functions delegated to another module.
     DelegationStatement(DelegationStatement),
     /// Any other implementation block item.
     Other(syn::ImplItem)
