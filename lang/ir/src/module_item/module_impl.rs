@@ -40,7 +40,7 @@ impl ModuleImpl {
         &self.ident
     }
 
-    pub fn methods(&self) -> Vec<&ImplItem> {
+    pub fn custom_impl_items(&self) -> Vec<&ImplItem> {
         self.impl_items
             .iter()
             .filter(|i| {
@@ -54,7 +54,7 @@ impl ModuleImpl {
             .collect::<Vec<_>>()
     }
 
-    pub fn public_methods(&self) -> Vec<&ImplItem> {
+    pub fn public_custom_impl_items(&self) -> Vec<&ImplItem> {
         self.impl_items
             .iter()
             .filter(|item| match item {
@@ -144,7 +144,7 @@ mod test {
         };
         let module_impl = ModuleImpl::try_from(item_impl).unwrap();
 
-        assert_eq!(module_impl.methods().len(), 4);
-        assert_eq!(module_impl.public_methods().len(), 2);
+        assert_eq!(module_impl.custom_impl_items().len(), 5);
+        assert_eq!(module_impl.public_custom_impl_items().len(), 3);
     }
 }
