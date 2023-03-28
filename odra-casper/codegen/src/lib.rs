@@ -7,7 +7,7 @@ use self::{
     wasm_entrypoint::WasmEntrypoint
 };
 use odra_types::contract_def::{Entrypoint, EntrypointType, Event};
-use proc_macro2::{TokenStream as TokenStream2, Span};
+use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote, ToTokens};
 use syn::{punctuated::Punctuated, token::Comma, Path, PathSegment, Token};
 
