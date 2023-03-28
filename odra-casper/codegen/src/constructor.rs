@@ -9,7 +9,7 @@ pub struct WasmConstructor<'a>(pub Vec<&'a Entrypoint>, pub &'a Path);
 
 impl ToTokens for WasmConstructor<'_> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let data: Vec<(Ident, CasperArgs, FnArgs)> = self
+        let data: Vec<(Ident, CasperArgs, FnArgs, bool)> = self
             .0
             .iter()
             .map(|ep| {
@@ -21,18 +21,22 @@ impl ToTokens for WasmConstructor<'_> {
                     .iter()
                     .for_each(|arg| fn_args.push(format_ident!("{}", arg.ident)));
 
-                (entrypoint_ident, casper_args, fn_args)
+                (entrypoint_ident, casper_args, fn_args, ep.is_mut)
             })
             .collect();
 
         let ref_ident = &self.1;
         let constructor_matching: proc_macro2::TokenStream = data
             .iter()
-            .flat_map(|(entrypoint_ident, casper_args, fn_args)| {
+            .flat_map(|(entrypoint_ident, casper_args, fn_args, is_mut)| {
+                let contract_ref = match is_mut {
+                    true => quote!(let mut contract_ref = #ref_ident::at(odra_address);),
+                    false => quote!(let contract_ref = #ref_ident::at(odra_address);)
+                };
                 quote! {
                     stringify!(#entrypoint_ident) => {
                         let odra_address = odra::types::Address::from(contract_package_hash);
-                        let mut contract_ref = #ref_ident::at(odra_address);
+                        #contract_ref
                         #casper_args
                         contract_ref.#entrypoint_ident( #fn_args );
                     },
