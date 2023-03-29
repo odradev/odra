@@ -21,10 +21,7 @@ impl GenerateCode for ModuleStruct<'_> {
         let fields = item_struct
             .fields
             .iter()
-            .filter_map(|f| match &f.ident {
-                Some(ident) => Some(ident.clone()),
-                None => None
-            })
+            .filter_map(|f| f.ident.as_ref().cloned())
             .collect::<Vec<_>>();
 
         let mock_serde = common::mock_vm::serialize_struct(item_ident, &fields);
