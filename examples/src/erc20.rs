@@ -12,7 +12,7 @@ pub struct Erc20 {
     name: Variable<String>,
     total_supply: Variable<U256>,
     balances: Mapping<Address, U256>,
-    allowances: Mapping<(Address, Address), U256>
+    allowances: Mapping<Address, Mapping<Address, U256>>
 }
 
 #[odra::module]
@@ -39,7 +39,7 @@ impl Erc20 {
 
     pub fn approve(&mut self, spender: Address, amount: U256) {
         let owner = contract_env::caller();
-        self.allowances.set(&(owner, spender), amount);
+        self.allowances.set_nested(&owner, &spender, amount);
         Approval {
             owner,
             spender,
@@ -69,7 +69,7 @@ impl Erc20 {
     }
 
     pub fn allowance(&self, owner: Address, spender: Address) -> U256 {
-        self.allowances.get_or_default(&(owner, spender))
+        self.allowances.get_nested(&owner, &spender).unwrap_or_default()
     }
 }
 
@@ -90,12 +90,11 @@ impl Erc20 {
     }
 
     fn spend_allowance(&mut self, owner: Address, spender: Address, amount: U256) {
-        let key = (owner, spender);
-        let allowance = self.allowances.get_or_default(&key);
+        let allowance = self.allowances.get_nested(&owner, &spender).unwrap_or_default();
         if allowance < amount {
             contract_env::revert(Error::InsufficientAllowance)
         }
-        self.allowances.set(&key, allowance - amount);
+        self.allowances.set_nested(&owner, &spender, allowance - amount);
         Approval {
             owner,
             spender,

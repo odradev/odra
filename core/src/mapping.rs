@@ -39,6 +39,59 @@ impl<K: OdraType + Hash, V: OdraType> Mapping<K, V> {
     }
 }
 
+impl<PK: OdraType + Hash, SK: OdraType + Hash, V: OdraType> Mapping<PK, Mapping<SK, V>> {
+    /// Reads the `primary_key`'s nested `secondary_key` from the storage or returns `None`.
+    ///
+    /// If the nested mapping doesn't exist, `None` is returned.
+    pub fn get_nested(&self, primary_key: &PK, secondary_key: &SK) -> Option<V> {
+        match self.get(primary_key) {
+            Some(mapping) => mapping.get(secondary_key),
+            None => None
+        }
+    }
+
+    /// Sets `value` in the `primary_key`'s nested mapping under `secondary_key` to the storage.
+    /// It overrides by default.
+    ///
+    /// If the nested mapping doesn't exist, it will be created.
+    pub fn set_nested(&mut self, primary_key: &PK, secondary_key: &SK, value: V) {
+        let mut mapping = match self.get(primary_key) {
+            Some(mapping) => mapping,
+            None => {
+                #[cfg(feature = "casper")]
+                {
+                    use odra_casper_backend::casper_contract::unwrap_or_revert::UnwrapOrRevert;
+
+                    let preimage = secondary_key.to_bytes().unwrap_or_revert();
+                    let bytes =
+                        odra_casper_backend::casper_contract::contract_api::runtime::blake2b(
+                            preimage
+                        );
+                    self.init_nested(bytes, primary_key);
+                }
+                #[cfg(feature = "mock-vm")]
+                {
+                    use std::collections::hash_map::DefaultHasher;
+                    use std::hash::Hasher;
+
+                    let mut hasher = DefaultHasher::new();
+                    hasher.write(secondary_key.ser().unwrap().as_slice());
+                    let hash = hasher.finish().to_le_bytes();
+                    self.init_nested(hash, primary_key);
+                }
+                self.get(primary_key).unwrap_or_revert()
+            }
+        };
+        mapping.set(secondary_key, value);
+    }
+
+    fn init_nested<T: AsRef<[u8]>>(&mut self, data: T, primary_key: &PK) {
+        let key_hash = hex::encode(data);
+        let mapping = Mapping::new(format!("{}_{}", key_hash, self.name));
+        self.set(primary_key, mapping);
+    }
+}
+
 impl<K: OdraType + Hash, V: OdraType + Default> Mapping<K, V> {
     /// Reads `key` from the storage or the default value is returned.
     pub fn get_or_default(&self, key: &K) -> V {
