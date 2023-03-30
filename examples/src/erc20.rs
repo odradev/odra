@@ -69,7 +69,9 @@ impl Erc20 {
     }
 
     pub fn allowance(&self, owner: Address, spender: Address) -> U256 {
-        self.allowances.get_nested(&owner, &spender).unwrap_or_default()
+        self.allowances
+            .get_nested(&owner, &spender)
+            .unwrap_or_default()
     }
 }
 
@@ -90,11 +92,15 @@ impl Erc20 {
     }
 
     fn spend_allowance(&mut self, owner: Address, spender: Address, amount: U256) {
-        let allowance = self.allowances.get_nested(&owner, &spender).unwrap_or_default();
+        let allowance = self
+            .allowances
+            .get_nested(&owner, &spender)
+            .unwrap_or_default();
         if allowance < amount {
             contract_env::revert(Error::InsufficientAllowance)
         }
-        self.allowances.set_nested(&owner, &spender, allowance - amount);
+        self.allowances
+            .set_nested(&owner, &spender, allowance - amount);
         Approval {
             owner,
             spender,
