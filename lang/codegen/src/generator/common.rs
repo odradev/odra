@@ -130,7 +130,7 @@ pub(crate) mod casper {
 
         let deserialize_fields = fields
         .iter()
-        .map(|ident| quote!(let (#ident, bytes) = odra::casper::casper_types::bytesrepr::FromBytes::from_vec(bytes.to_vec())?;))
+        .map(|ident| quote!(let (#ident, bytes) = odra::casper::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;))
         .collect::<TokenStream>();
 
         let construct_struct = fields
@@ -156,12 +156,12 @@ pub(crate) mod casper {
             #[cfg(feature = "casper")]
             impl odra::casper::casper_types::bytesrepr::FromBytes for #struct_ident {
                 fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper::casper_types::bytesrepr::Error> {
-                    let (_, bytes): (String, Vec<u8>) = odra::casper::casper_types::bytesrepr::FromBytes::from_vec(bytes.to_vec())?;
+                    let (_, bytes): (String, _) = odra::casper::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
                     #deserialize_fields
                     let value = #struct_ident {
                         #construct_struct
                     };
-                    Ok((value, &[]))
+                    Ok((value, bytes))
                 }
             }
 
