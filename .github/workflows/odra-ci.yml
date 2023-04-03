@@ -23,9 +23,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
           components: rustfmt, clippy
-          override: true
       - run: just check-lint
       - run: just prepare-test-env
       - run: just test
