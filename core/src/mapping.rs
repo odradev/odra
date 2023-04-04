@@ -58,36 +58,15 @@ impl<PK: OdraType + Hash, SK: OdraType + Hash, V: OdraType> Mapping<PK, Mapping<
         let mut mapping = match self.get(primary_key) {
             Some(mapping) => mapping,
             None => {
-                #[cfg(feature = "casper")]
-                {
-                    use odra_casper_backend::casper_contract::unwrap_or_revert::UnwrapOrRevert;
-
-                    let preimage = secondary_key.to_bytes().unwrap_or_revert();
-                    let bytes =
-                        odra_casper_backend::casper_contract::contract_api::runtime::blake2b(
-                            preimage
-                        );
-                    self.init_nested(bytes, primary_key);
-                }
-                #[cfg(feature = "mock-vm")]
-                {
-                    use std::collections::hash_map::DefaultHasher;
-                    use std::hash::Hasher;
-
-                    let mut hasher = DefaultHasher::new();
-                    hasher.write(secondary_key.ser().unwrap().as_slice());
-                    let hash = hasher.finish().to_le_bytes();
-                    self.init_nested(hash, primary_key);
-                }
+                self.init_nested(primary_key);
                 self.get(primary_key).unwrap_or_revert()
             }
         };
         mapping.set(secondary_key, value);
     }
 
-    fn init_nested<T: AsRef<[u8]>>(&mut self, data: T, primary_key: &PK) {
-        let key_hash = hex::encode(data);
-        let mapping = Mapping::new(format!("{}_{}", key_hash, self.name));
+    fn init_nested(&mut self, primary_key: &PK) {
+        let mapping = Mapping::new(format!("mapping_{}", self.name));
         self.set(primary_key, mapping);
     }
 }
