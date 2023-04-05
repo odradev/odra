@@ -2,7 +2,7 @@ use quote::{quote, ToTokens};
 
 use crate::attrs::{partition_attributes, OdraAttribute};
 
-use super::{impl_item::Entrypoint, utils};
+use super::utils;
 
 /// Odra method definition.
 ///
@@ -24,45 +24,21 @@ pub struct Method {
     pub visibility: syn::Visibility
 }
 
-impl Entrypoint for Method {
-    fn ident(&self) -> &proc_macro2::Ident {
-        &self.ident
-    }
-
-    fn attrs(&self) -> &[OdraAttribute] {
-        &self.attrs
-    }
-
-    fn args(&self) -> &syn::punctuated::Punctuated<syn::PatType, syn::token::Comma> {
-        &self.args
-    }
-
-    fn ret(&self) -> &syn::ReturnType {
-        &self.ret
-    }
-
-    fn full_sig(&self) -> &syn::Signature {
-        &self.full_sig
-    }
-
-    fn visibility(&self) -> &syn::Visibility {
-        &self.visibility
-    }
-
-    fn is_public(&self) -> bool {
+impl Method {
+    pub fn is_public(&self) -> bool {
         matches!(self.visibility, syn::Visibility::Public(_))
     }
 
-    fn is_payable(&self) -> bool {
+    pub fn is_payable(&self) -> bool {
         self.attrs.iter().any(|attr| attr.is_payable())
     }
 }
 
-impl ToTokens for dyn Entrypoint {
+impl ToTokens for Method {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let name = &self.ident().to_string();
+        let name = &self.ident.to_string();
         let args = &self
-            .args()
+            .args
             .iter()
             .map(|arg| {
                 let name = &*arg.pat;
@@ -77,17 +53,17 @@ impl ToTokens for dyn Entrypoint {
             })
             .collect::<proc_macro2::TokenStream>();
 
-        let ret = match &self.ret() {
+        let ret = match &self.ret {
             syn::ReturnType::Default => quote!(odra::types::Type::Unit),
             syn::ReturnType::Type(_, ty) => quote!(<#ty as odra::types::Typed>::ty())
         };
 
-        let ty = match self.attrs().iter().any(|attr| attr.is_payable()) {
+        let ty = match self.attrs.iter().any(|attr| attr.is_payable()) {
             true => quote!(odra::types::contract_def::EntrypointType::PublicPayable),
             false => quote!(odra::types::contract_def::EntrypointType::Public)
         };
 
-        let is_mut = utils::is_mut(self.full_sig());
+        let is_mut = utils::is_mut(&self.full_sig);
 
         let ep = quote! {
             odra::types::contract_def::Entrypoint {

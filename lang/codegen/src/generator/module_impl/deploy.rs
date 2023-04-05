@@ -1,10 +1,10 @@
 use derive_more::From;
-use odra_ir::module::{Constructor, Entrypoint, ImplItem, ModuleImpl};
+use odra_ir::module::{Constructor, Method, ModuleImpl};
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, TokenStreamExt};
 use syn::{punctuated::Punctuated, token::Comma, ReturnType, Type, TypePath};
 
-use crate::{generator::module_impl::common::to_entrypoints, GenerateCode};
+use crate::GenerateCode;
 
 #[derive(From)]
 pub struct Deploy<'a> {
@@ -20,30 +20,13 @@ impl GenerateCode for Deploy<'_> {
         let ref_ident = format_ident!("{}Ref", struct_ident);
         let deployer_ident = format_ident!("{}Deployer", struct_ident);
         let struct_snake_case = odra_utils::camel_to_snake(&struct_name);
-        let entrypoints = build_entrypoints(
-            to_entrypoints(&self.contract.custom_impl_items()),
-            struct_ident
-        );
 
-        let constructors = build_constructors(
-            self.contract
-                .custom_impl_items()
-                .iter()
-                .filter_map(|item| match item {
-                    ImplItem::Constructor(constructor) => Some(constructor),
-                    _ => None
-                }),
-            struct_ident
-        );
+        let entrypoints = build_entrypoints(self.contract.get_method_iter(), struct_ident);
+
+        let constructors = build_constructors(self.contract.get_constructor_iter(), struct_ident);
 
         let mut constructors_mock_vm = build_constructors_mock_vm(
-            self.contract
-                .custom_impl_items()
-                .iter()
-                .filter_map(|item| match item {
-                    ImplItem::Constructor(constructor) => Some(constructor),
-                    _ => None
-                }),
+            self.contract.get_constructor_iter(),
             entrypoints.clone(),
             constructors.clone(),
             struct_ident,
@@ -69,13 +52,7 @@ impl GenerateCode for Deploy<'_> {
         }
 
         let mut constructors_wasm_test = build_constructors_wasm_test(
-            self.contract
-                .custom_impl_items()
-                .iter()
-                .filter_map(|item| match item {
-                    ImplItem::Constructor(constructor) => Some(constructor),
-                    _ => None
-                }),
+            self.contract.get_constructor_iter(),
             struct_ident,
             ref_ident.clone()
         );
@@ -215,20 +192,20 @@ where
 
 fn build_entrypoints<'a, T>(methods: T, struct_ident: &Ident) -> TokenStream
 where
-    T: Iterator<Item = &'a dyn Entrypoint>
+    T: Iterator<Item = &'a Method>
 {
     methods
         .map(|entrypoint| {
-            let ident = &entrypoint.ident();
+            let ident = &entrypoint.ident;
             let name = quote!(stringify!(#ident).to_string());
-            let return_value = match &entrypoint.ret() {
+            let return_value = match &entrypoint.ret {
                 ReturnType::Default => quote!(Vec::new()),
                 ReturnType::Type(_, _) => quote! {
                     odra::types::MockVMType::ser(&result).unwrap()
                 }
             };
-            let args = args_to_fn_args(entrypoint.args());
-            let arg_names = args_to_arg_names_stream(entrypoint.args());
+            let args = args_to_fn_args(&entrypoint.args);
+            let arg_names = args_to_arg_names_stream(&entrypoint.args);
             let attached_value_check = match entrypoint.is_payable() {
                 true => quote!(),
                 false => quote! {

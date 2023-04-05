@@ -1,11 +1,11 @@
 use std::convert::TryFrom;
 
 use proc_macro2::Ident;
+use syn::parse_quote;
 
-use super::{
-    delegate::Delegate,
-    impl_item::{Entrypoint, ImplItem}
-};
+use crate::module::{Constructor, Method};
+
+use super::{delegate::Delegate, impl_item::ImplItem};
 
 /// Odra module implementation block.
 ///
@@ -43,15 +43,22 @@ impl ModuleImpl {
     pub fn custom_impl_items(&self) -> Vec<&ImplItem> {
         self.impl_items
             .iter()
-            .filter(|i| {
-                matches!(
-                    i,
-                    ImplItem::Method(_)
-                        | ImplItem::Constructor(_)
-                        | ImplItem::DelegationStatement(_)
-                )
-            })
+            .filter(|i| matches!(i, ImplItem::Method(_) | ImplItem::Constructor(_)))
             .collect::<Vec<_>>()
+    }
+
+    pub fn get_method_iter(&self) -> impl Iterator<Item = &Method> {
+        self.impl_items.iter().filter_map(|item| match item {
+            ImplItem::Method(method) => Some(method),
+            _ => None
+        })
+    }
+
+    pub fn get_constructor_iter(&self) -> impl Iterator<Item = &Constructor> {
+        self.impl_items.iter().filter_map(|item| match item {
+            ImplItem::Constructor(c) => Some(c),
+            _ => None
+        })
     }
 
     pub fn public_custom_impl_items(&self) -> Vec<&ImplItem> {
@@ -60,8 +67,7 @@ impl ModuleImpl {
             .filter(|item| match item {
                 ImplItem::Constructor(_) => true,
                 ImplItem::Method(m) => self.is_trait_implementation || m.is_public(),
-                ImplItem::Other(_) => false,
-                ImplItem::DelegationStatement(_) => true
+                ImplItem::Other(_) => false
             })
             .collect::<Vec<_>>()
     }
@@ -96,8 +102,31 @@ impl TryFrom<syn::ItemImpl> for ModuleImpl {
         let delegation_stmts = delegation_stmts
             .into_iter()
             .flat_map(|d| d.stmts)
-            .map(ImplItem::DelegationStatement)
             .collect::<Vec<_>>();
+
+        let delegated_items = delegation_stmts
+            .into_iter()
+            .flat_map(|stmt| {
+                let to = stmt.delegate_to;
+                stmt.delegation_block
+                    .functions
+                    .iter()
+                    .map(|func| {
+                        let sig = &func.full_sig;
+                        let vis = &func.visibility;
+                        let ident = &func.ident;
+                        let args = &func
+                            .args
+                            .iter()
+                            .map(|ty| ty.pat.clone())
+                            .collect::<Vec<_>>();
+
+                        parse_quote!(#vis #sig { #to.#ident(#(#args),*) })
+                    })
+                    .collect::<Vec<syn::ImplItem>>()
+            })
+            .map(<ImplItem as TryFrom<_>>::try_from)
+            .collect::<Result<Vec<_>, syn::Error>>()?;
 
         let mut items = item_impl
             .items
@@ -106,7 +135,7 @@ impl TryFrom<syn::ItemImpl> for ModuleImpl {
             .map(<ImplItem as TryFrom<_>>::try_from)
             .collect::<Result<Vec<_>, syn::Error>>()?;
 
-        items.extend(delegation_stmts);
+        items.extend(delegated_items);
 
         Ok(Self {
             impl_items: items,
@@ -144,7 +173,7 @@ mod test {
         };
         let module_impl = ModuleImpl::try_from(item_impl).unwrap();
 
-        assert_eq!(module_impl.custom_impl_items().len(), 5);
-        assert_eq!(module_impl.public_custom_impl_items().len(), 3);
+        assert_eq!(module_impl.custom_impl_items().len(), 6);
+        assert_eq!(module_impl.public_custom_impl_items().len(), 4);
     }
 }

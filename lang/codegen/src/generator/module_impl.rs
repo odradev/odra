@@ -1,13 +1,11 @@
 use derive_more::From;
-use odra_ir::module::{DelegatedFunction, DelegationStatement, ImplItem};
+use odra_ir::module::ImplItem;
 use quote::ToTokens;
-use syn::ExprField;
 
 use crate::{poet::OdraPoetUsingImpl, GenerateCode};
 
 use self::{def::ContractDef, deploy::Deploy, reference::ContractReference};
 
-mod common;
 mod def;
 mod deploy;
 mod reference;
@@ -25,8 +23,7 @@ impl GenerateCode for ModuleImpl<'_> {
         let original_item_impls = self.contract.impl_items().iter().map(|item| match item {
             ImplItem::Constructor(item) => item.impl_item.to_token_stream(),
             ImplItem::Method(item) => item.impl_item.to_token_stream(),
-            ImplItem::Other(item) => item.to_token_stream(),
-            ImplItem::DelegationStatement(stmt) => statement_to_tokens(stmt)
+            ImplItem::Other(item) => item.to_token_stream()
         });
 
         let contract_def = self.generate_code_using::<ContractDef>();
@@ -44,32 +41,6 @@ impl GenerateCode for ModuleImpl<'_> {
             #deploy
 
             #contract_ref
-        }
-    }
-}
-
-fn statement_to_tokens(stmt: &DelegationStatement) -> proc_macro2::TokenStream {
-    let to = &stmt.delegate_to;
-    stmt.delegation_block
-        .functions
-        .iter()
-        .map(|func| function_to_tokens(to, func))
-        .collect::<proc_macro2::TokenStream>()
-}
-
-fn function_to_tokens(to: &ExprField, func: &DelegatedFunction) -> proc_macro2::TokenStream {
-    let sig = &func.full_sig;
-    let vis = &func.visibility;
-    let ident = &func.ident;
-    let args = &func
-        .args
-        .iter()
-        .map(|ty| ty.pat.clone())
-        .collect::<Vec<_>>();
-
-    quote::quote! {
-        #vis #sig {
-            #to.#ident(#(#args),*)
         }
     }
 }

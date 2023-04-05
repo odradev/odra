@@ -1,7 +1,5 @@
 use crate::attrs::{partition_attributes, OdraAttribute};
 
-use super::impl_item::Entrypoint;
-
 mod kw {
     syn::custom_keyword!(to);
 }
@@ -31,40 +29,6 @@ pub struct DelegatedFunction {
     pub ret: syn::ReturnType,
     pub full_sig: syn::Signature,
     pub visibility: syn::Visibility
-}
-
-impl Entrypoint for DelegatedFunction {
-    fn ident(&self) -> &proc_macro2::Ident {
-        &self.ident
-    }
-
-    fn attrs(&self) -> &[OdraAttribute] {
-        &self.attrs
-    }
-
-    fn args(&self) -> &syn::punctuated::Punctuated<syn::PatType, syn::token::Comma> {
-        &self.args
-    }
-
-    fn ret(&self) -> &syn::ReturnType {
-        &self.ret
-    }
-
-    fn full_sig(&self) -> &syn::Signature {
-        &self.full_sig
-    }
-
-    fn visibility(&self) -> &syn::Visibility {
-        &self.visibility
-    }
-
-    fn is_public(&self) -> bool {
-        matches!(self.visibility, syn::Visibility::Public(_))
-    }
-
-    fn is_payable(&self) -> bool {
-        self.attrs.iter().any(|attr| attr.is_payable())
-    }
 }
 
 impl syn::parse::Parse for Delegate {

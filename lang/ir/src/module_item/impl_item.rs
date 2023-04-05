@@ -2,9 +2,9 @@ use std::convert::TryFrom;
 
 use proc_macro2::Ident;
 
-use crate::attrs::{partition_attributes, OdraAttribute};
+use crate::attrs::partition_attributes;
 
-use super::{constructor::Constructor, delegate::DelegationStatement, method::Method};
+use super::{constructor::Constructor, method::Method};
 
 /// An item within an implementation block
 ///
@@ -14,37 +14,15 @@ pub enum ImplItem {
     Constructor(Constructor),
     /// Unmarked function.
     Method(Method),
-    /// A group of functions delegated to another module.
-    DelegationStatement(DelegationStatement),
     /// Any other implementation block item.
     Other(syn::ImplItem)
-}
-
-pub trait Entrypoint {
-    fn ident(&self) -> &Ident;
-    fn attrs(&self) -> &[OdraAttribute];
-    fn args(&self) -> &syn::punctuated::Punctuated<syn::PatType, syn::token::Comma>;
-    fn ret(&self) -> &syn::ReturnType;
-    fn full_sig(&self) -> &syn::Signature;
-    fn visibility(&self) -> &syn::Visibility;
-    fn is_public(&self) -> bool;
-    fn is_payable(&self) -> bool;
 }
 
 impl quote::ToTokens for ImplItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         match self {
             Self::Constructor(constructor) => constructor.to_tokens(tokens),
-            Self::Method(message) => {
-                let ep: &dyn Entrypoint = message;
-                ep.to_tokens(tokens)
-            }
-            Self::DelegationStatement(stmt) => {
-                stmt.delegation_block.functions.iter().for_each(|func| {
-                    let ep: &dyn Entrypoint = func;
-                    ep.to_tokens(tokens)
-                });
-            }
+            Self::Method(method) => method.to_tokens(tokens),
             Self::Other(other) => other.to_tokens(tokens)
         }
     }
