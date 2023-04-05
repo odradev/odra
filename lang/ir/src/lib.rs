@@ -23,7 +23,12 @@ pub use {
 /// Odra module-related abstractions.
 pub mod module {
     pub use crate::module_item::{
-        constructor::Constructor, impl_item::ImplItem, method::Method, module_impl::ModuleImpl,
-        module_struct::ModuleStruct, ModuleItem
+        constructor::Constructor,
+        delegate::{DelegatedFunction, DelegationBlock, DelegationStatement},
+        impl_item::ImplItem,
+        method::Method,
+        module_impl::ModuleImpl,
+        module_struct::ModuleStruct,
+        ModuleItem
     };
 }

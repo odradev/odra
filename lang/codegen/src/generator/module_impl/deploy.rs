@@ -1,5 +1,5 @@
 use derive_more::From;
-use odra_ir::module::{Constructor, ImplItem, Method, ModuleImpl};
+use odra_ir::module::{Constructor, Method, ModuleImpl};
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, TokenStreamExt};
 use syn::{punctuated::Punctuated, token::Comma, ReturnType, Type, TypePath};
@@ -21,36 +21,12 @@ impl GenerateCode for Deploy<'_> {
         let deployer_ident = format_ident!("{}Deployer", struct_ident);
         let struct_snake_case = odra_utils::camel_to_snake(&struct_name);
 
-        let entrypoints = build_entrypoints(
-            self.contract
-                .methods()
-                .iter()
-                .filter_map(|item| match item {
-                    ImplItem::Method(method) => Some(method),
-                    _ => None
-                }),
-            struct_ident
-        );
+        let entrypoints = build_entrypoints(self.contract.get_method_iter(), struct_ident);
 
-        let constructors = build_constructors(
-            self.contract
-                .methods()
-                .iter()
-                .filter_map(|item| match item {
-                    ImplItem::Constructor(constructor) => Some(constructor),
-                    _ => None
-                }),
-            struct_ident
-        );
+        let constructors = build_constructors(self.contract.get_constructor_iter(), struct_ident);
 
         let mut constructors_mock_vm = build_constructors_mock_vm(
-            self.contract
-                .methods()
-                .iter()
-                .filter_map(|item| match item {
-                    ImplItem::Constructor(constructor) => Some(constructor),
-                    _ => None
-                }),
+            self.contract.get_constructor_iter(),
             entrypoints.clone(),
             constructors.clone(),
             struct_ident,
@@ -76,13 +52,7 @@ impl GenerateCode for Deploy<'_> {
         }
 
         let mut constructors_wasm_test = build_constructors_wasm_test(
-            self.contract
-                .methods()
-                .iter()
-                .filter_map(|item| match item {
-                    ImplItem::Constructor(constructor) => Some(constructor),
-                    _ => None
-                }),
+            self.contract.get_constructor_iter(),
             struct_ident,
             ref_ident.clone()
         );
