@@ -46,3 +46,8 @@ test-modules-on-casper:
 test-modules: test-modules-on-mockvm test-modules-on-casper
 
 test: test-odra test-examples test-modules
+
+clean:
+    cargo clean
+    cd examples && cargo odra clean
+    cd modules && cargo odra clean
