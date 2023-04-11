@@ -39,38 +39,6 @@ impl<K: OdraType + Hash, V: OdraType> Mapping<K, V> {
     }
 }
 
-impl<PK: OdraType + Hash, SK: OdraType + Hash, V: OdraType> Mapping<PK, Mapping<SK, V>> {
-    /// Reads the `primary_key`'s nested `secondary_key` from the storage or returns `None`.
-    ///
-    /// If the nested mapping doesn't exist, `None` is returned.
-    pub fn get_nested(&self, primary_key: &PK, secondary_key: &SK) -> Option<V> {
-        match self.get(primary_key) {
-            Some(mapping) => mapping.get(secondary_key),
-            None => None
-        }
-    }
-
-    /// Sets `value` in the `primary_key`'s nested mapping under `secondary_key` to the storage.
-    /// It overrides by default.
-    ///
-    /// If the nested mapping doesn't exist, it will be created.
-    pub fn set_nested(&mut self, primary_key: &PK, secondary_key: &SK, value: V) {
-        let mut mapping = match self.get(primary_key) {
-            Some(mapping) => mapping,
-            None => {
-                self.init_nested(primary_key);
-                self.get(primary_key).unwrap_or_revert()
-            }
-        };
-        mapping.set(secondary_key, value);
-    }
-
-    fn init_nested(&mut self, primary_key: &PK) {
-        let mapping = Mapping::new(format!("mapping_{}", self.name));
-        self.set(primary_key, mapping);
-    }
-}
-
 impl<K: OdraType + Hash, V: OdraType + Default> Mapping<K, V> {
     /// Reads `key` from the storage or the default value is returned.
     pub fn get_or_default(&self, key: &K) -> V {
@@ -84,7 +52,6 @@ impl<K: OdraType + Hash, V: OdraType + Instance> Mapping<K, V> {
         #[cfg(feature = "mock-vm")] {
             let key_hash = hex::encode(key.ser().unwrap());
             let namespace = format!("{}_{}", key_hash, self.name);
-            dbg!(namespace.clone());
             V::instance(&namespace)
         }
 

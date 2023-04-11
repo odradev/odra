@@ -39,7 +39,7 @@ impl Erc20 {
 
     pub fn approve(&mut self, spender: Address, amount: U256) {
         let owner = contract_env::caller();
-        self.allowances.set_nested(&owner, &spender, amount);
+        self.allowances.get_instance(&owner).set(&spender, amount);
         Approval {
             owner,
             spender,
@@ -70,8 +70,8 @@ impl Erc20 {
 
     pub fn allowance(&self, owner: Address, spender: Address) -> U256 {
         self.allowances
-            .get_nested(&owner, &spender)
-            .unwrap_or_default()
+            .get_instance(&owner)
+            .get_or_default(&spender)
     }
 }
 
@@ -94,13 +94,14 @@ impl Erc20 {
     fn spend_allowance(&mut self, owner: Address, spender: Address, amount: U256) {
         let allowance = self
             .allowances
-            .get_nested(&owner, &spender)
-            .unwrap_or_default();
+            .get_instance(&owner)
+            .get_or_default(&spender);
         if allowance < amount {
             contract_env::revert(Error::InsufficientAllowance)
         }
         self.allowances
-            .set_nested(&owner, &spender, allowance - amount);
+            .get_instance(&owner)
+            .set(&spender, allowance - amount);
         Approval {
             owner,
             spender,
