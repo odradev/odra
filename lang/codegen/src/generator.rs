@@ -3,6 +3,7 @@ pub mod errors;
 pub mod event_item;
 pub mod external_contract_item;
 pub mod instance_item;
+pub mod mapping;
 pub mod module_impl;
 pub mod module_item;
 

@@ -1,6 +1,7 @@
 use odra::{
+    map,
     types::{Address, U256},
-    Mapping, Variable, map, Instance
+    Instance, Mapping, Variable
 };
 
 use crate::owned_token::OwnedToken;
@@ -8,7 +9,7 @@ use crate::owned_token::OwnedToken;
 #[odra::module]
 pub struct NestedMapping {
     value: Mapping<String, Mapping<u32, Mapping<String, String>>>,
-    value2: Mapping<String, Mapping<u32, Mapping<String, OwnedToken>>>,
+    value2: Mapping<String, Mapping<u32, Mapping<String, OwnedToken>>>
 }
 
 #[odra::module]
@@ -18,16 +19,26 @@ impl NestedMapping {
         map!(self.value2[key1][key2][key3] = OwnedToken::instance(&value));
     }
 
-    pub fn set_token(&mut self, key1: String, key2: u32, key3: String, token_name: String, decimals: u8, symbol: String, initial_supply: U256) {
+    #[allow(clippy::too_many_arguments)]
+    pub fn set_token(
+        &mut self,
+        key1: String,
+        key2: u32,
+        key3: String,
+        token_name: String,
+        decimals: u8,
+        symbol: String,
+        initial_supply: U256
+    ) {
         let mut token = OwnedToken::instance(&token_name);
-        token.init(token_name.clone(), symbol, decimals, initial_supply);
+        token.init(token_name, symbol, decimals, initial_supply);
         map!(self.value2[key1][key2][key3] = token);
     }
 
     pub fn get(&self, key1: String, key2: u32, key3: String) -> String {
         map!(self.value[key1][key2][key3])
     }
-    
+
     pub fn get_manually(&self, key1: String, key2: u32, key3: String) -> String {
         let lvl1 = self.value.get_instance(&key1);
         let lvl2 = lvl1.get_instance(&key2);
@@ -191,18 +202,26 @@ mod test {
         contract.set(key1.clone(), key2, key3.clone(), value.clone());
         // then the value can be retrieved using both get and get_manually
         assert_eq!(contract.get(key1.clone(), key2, key3.clone()), value);
-        assert_eq!(contract.get_manually(key1.clone(), key2, key3.clone()), value);
+        assert_eq!(
+            contract.get_manually(key1.clone(), key2, key3.clone()),
+            value
+        );
 
         // when create a token
         let token_name = String::from("token");
         let decimals = 10;
         let symbol = String::from("SYM");
         let initial_supply = 100.into();
-        contract.set_token(key1.clone(), key2, key3.clone(), token_name, decimals, symbol, initial_supply);
-        // then the total supply is set
-        assert_eq!(
-            contract.total_supply(key1, key2, key3),
+        contract.set_token(
+            key1.clone(),
+            key2,
+            key3.clone(),
+            token_name,
+            decimals,
+            symbol,
             initial_supply
         );
+        // then the total supply is set
+        assert_eq!(contract.total_supply(key1, key2, key3), initial_supply);
     }
 }
