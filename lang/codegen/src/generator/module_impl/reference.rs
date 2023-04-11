@@ -66,7 +66,7 @@ where
 {
     constructors
         .map(|constructor| {
-            let attrs = &entrypoint.impl_item.attrs;
+            let attrs = &constructor.impl_item.attrs;
             let sig = &constructor.full_sig;
             let constructor_name = constructor.ident.to_string();
             let fn_body = common::generate_fn_body(
