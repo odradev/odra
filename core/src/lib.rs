@@ -14,7 +14,7 @@ pub use {
     instance::Instance,
     list::List,
     mapping::Mapping,
-    odra_proc_macros::{execution_error, external_contract, module, odra_error, Event, Instance},
+    odra_proc_macros::{execution_error, external_contract, module, odra_error, map, Event, Instance},
     odra_utils as utils,
     unwrap_or_revert::UnwrapOrRevert,
     variable::Variable

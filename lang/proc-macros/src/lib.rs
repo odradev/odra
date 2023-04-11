@@ -1,6 +1,8 @@
 extern crate proc_macro;
 
+use map::MapExpr;
 use proc_macro::TokenStream;
+use quote::ToTokens;
 use syn::{parse_macro_input, DeriveInput};
 
 mod event;
@@ -9,6 +11,7 @@ mod external_contract;
 mod instance;
 mod module;
 mod odra_error;
+mod map;
 
 /// Core element of the Odra framework, entry point for writing smart contracts.
 ///
@@ -176,4 +179,14 @@ pub fn execution_error(item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn odra_error(_attr: TokenStream, item: TokenStream) -> TokenStream {
     odra_error::generate_code(item).into()
+}
+
+
+#[proc_macro]
+pub fn map(item: TokenStream) -> TokenStream {
+    let map = syn::parse::<MapExpr>(item);
+    match map {
+        Ok(map) => map.to_token_stream().into(),
+        Err(e) => e.to_compile_error().into(),
+    }
 }
