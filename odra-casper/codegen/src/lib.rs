@@ -159,10 +159,9 @@ mod tests {
 
                     #expected_entrypoints
 
-                    odra::casper::casper_contract::contract_api::storage::add_contract_version(
+                    odra::casper::utils::add_contract_version(
                         contract_package_hash,
-                        entry_points,
-                        odra::casper::casper_types::contracts::NamedKeys::new()
+                        entry_points
                     );
 
                     #expected_constructor_if
