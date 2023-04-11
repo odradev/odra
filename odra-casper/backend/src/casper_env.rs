@@ -263,5 +263,5 @@ pub fn save_value<T: OdraType>(key: &str, value: T) {
 
 pub fn read_value<T: OdraType>(key: &str) -> Option<T> {
     let state_uref = get_state_uref();
-    storage::dictionary_get(state_uref, &key).unwrap_or_revert()
+    storage::dictionary_get(state_uref, key).unwrap_or_revert()
 }
