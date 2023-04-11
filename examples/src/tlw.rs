@@ -129,7 +129,7 @@ mod test {
             let balance = test_env::token_balance(account);
             test_env::set_caller(account);
             contract.with_tokens(deposit).deposit();
-            let gas_used = test_env::last_call_contract_gas_cost();
+            let gas_used = test_env::last_call_contract_gas_used();
             let balance_after = test_env::token_balance(account);
             assert_eq!(balance_after + gas_used + deposit, balance);
         };
@@ -187,9 +187,9 @@ mod test {
         let first_withdrawal_amount: Balance = 50.into();
         let second_withdrawal_amount: Balance = 40.into();
         contract.withdraw(first_withdrawal_amount);
-        let mut gas_used = test_env::last_call_contract_gas_cost();
+        let mut gas_used = test_env::last_call_contract_gas_used();
         contract.withdraw(second_withdrawal_amount);
-        gas_used = gas_used + test_env::last_call_contract_gas_cost();
+        gas_used = gas_used + test_env::last_call_contract_gas_used();
 
         // Then the native token balance is updated.
         assert_eq!(

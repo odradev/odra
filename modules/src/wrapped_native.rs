@@ -160,7 +160,7 @@ mod tests {
         token.with_tokens(deposit_amount).deposit();
 
         // Then native tokens are correctly deducted.
-        let gas_used = test_env::last_call_contract_gas_cost();
+        let gas_used = test_env::last_call_contract_gas_used();
         assert_eq!(
             account_balance - gas_used - deposit_amount,
             test_env::token_balance(account)
@@ -231,7 +231,7 @@ mod tests {
         token.withdraw(withdrawal_amount);
 
         // Then the user has the withdrawn tokens back.
-        let gas_used = test_env::last_call_contract_gas_cost();
+        let gas_used = test_env::last_call_contract_gas_used();
         assert_eq!(
             account_balance - gas_used + withdrawal_amount.to_balance().unwrap(),
             test_env::token_balance(account)

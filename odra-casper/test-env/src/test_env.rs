@@ -104,7 +104,7 @@ where
     assert_eq!(error, expected);
 }
 
-/// Returns CSPR token metadata
+/// Returns CSPR token metadata.
 pub fn native_token_metadata() -> NativeTokenMetadata {
     NativeTokenMetadata::new()
 }
@@ -112,4 +112,9 @@ pub fn native_token_metadata() -> NativeTokenMetadata {
 /// Returns last call gas cost.
 pub fn last_call_contract_gas_cost() -> Balance {
     ENV.with(|env| env.borrow().last_call_contract_gas_cost().into())
+}
+
+/// Returns the amount of gas paid for last call.
+pub fn last_call_contract_gas_used() -> Balance {
+    ENV.with(|env| env.borrow().last_call_contract_gas_used().into())
 }
