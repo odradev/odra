@@ -1,6 +1,6 @@
 //! A set of utility functions encapsulating some common interactions with the current runtime.
 
-use casper_types::{URef, U512, ContractPackageHash, EntryPoints};
+use casper_types::{ContractPackageHash, EntryPoints, URef, U512};
 use odra_casper_shared::consts;
 use odra_casper_types::Balance;
 use odra_types::ExecutionError;

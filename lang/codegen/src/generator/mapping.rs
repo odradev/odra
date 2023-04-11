@@ -15,19 +15,21 @@ impl GenerateCode for OdraMapping<'_> {
         let root = &self.item.root_mapping;
         let init_root = quote!(let v = &#root;);
         let segments_count = self.item.segments.len();
-        
+
         let value = self.item.segments.last().unwrap();
 
         if self.item.assign_token.is_some() && self.item.assigned_value.is_some() {
             let assigned_value = self.item.assigned_value.as_ref().unwrap();
-            let dest_mapping_discovery = self.item.segments
+            let dest_mapping_discovery = self
+                .item
+                .segments
                 .iter()
                 .take(segments_count - 1)
                 .rev()
                 .enumerate()
                 .map(|(idx, e)| match idx {
                     0 => quote!(let mut v = v.get_instance(&#e);),
-                    _ => quote!(let v = v.get_instance(&#e);),
+                    _ => quote!(let v = v.get_instance(&#e);)
                 })
                 .rev()
                 .collect::<TokenStream>();
@@ -39,7 +41,9 @@ impl GenerateCode for OdraMapping<'_> {
                 #value_assign;
             }
         } else {
-            let value_discovery = self.item.segments
+            let value_discovery = self
+                .item
+                .segments
                 .iter()
                 .take(segments_count - 1)
                 .map(|e| quote!(let v = v.get_instance(&#e);))

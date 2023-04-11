@@ -1,16 +1,21 @@
-use casper_types::{bytesrepr::{FromBytes, ToBytes, self}, EntryPoints, api_error};
+use casper_types::{
+    api_error,
+    bytesrepr::{self, FromBytes, ToBytes},
+    EntryPoints
+};
 use lazy_static::lazy_static;
 use odra_casper_types::{Address, OdraType};
 use odra_types::event::OdraEvent;
-use std::{collections::BTreeMap, sync::Mutex, mem::MaybeUninit};
+use std::{collections::BTreeMap, mem::MaybeUninit, sync::Mutex};
 
 use casper_contract::{
     contract_api::{
-        runtime,
+        self, runtime,
         storage::{self, dictionary_put},
-        system::{create_purse, get_purse_balance, transfer_from_purse_to_purse}, self
+        system::{create_purse, get_purse_balance, transfer_from_purse_to_purse}
     },
-    unwrap_or_revert::UnwrapOrRevert, ext_ffi
+    ext_ffi,
+    unwrap_or_revert::UnwrapOrRevert
 };
 
 use casper_types::{
@@ -28,10 +33,7 @@ const STATE_KEY: &str = "state";
 
 pub fn add_contract_version(contract_package_hash: ContractPackageHash, entry_points: EntryPoints) {
     let mut named_keys = casper_types::contracts::NamedKeys::new();
-    named_keys.insert(
-        String::from(STATE_KEY),
-        Key::URef(get_new_dict_uref()),
-    );
+    named_keys.insert(String::from(STATE_KEY), Key::URef(get_new_dict_uref()));
     casper_contract::contract_api::storage::add_contract_version(
         contract_package_hash,
         entry_points,
@@ -247,7 +249,7 @@ fn get_new_dict_uref() -> URef {
     };
     api_error::result_from(ret).unwrap_or_revert();
     unsafe { bytes_written.assume_init() };
-    
+
     bytesrepr::deserialize(dest).unwrap_or_revert()
 }
 

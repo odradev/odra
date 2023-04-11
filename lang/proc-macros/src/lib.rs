@@ -179,7 +179,6 @@ pub fn odra_error(_attr: TokenStream, item: TokenStream) -> TokenStream {
     odra_error::generate_code(item).into()
 }
 
-
 #[proc_macro]
 pub fn map(item: TokenStream) -> TokenStream {
     map::generate_code(item).into()

@@ -49,13 +49,15 @@ impl<K: OdraType + Hash, V: OdraType + Default> Mapping<K, V> {
 impl<K: OdraType + Hash, V: OdraType + Instance> Mapping<K, V> {
     /// Reads `key` from the storage or the default value is returned.
     pub fn get_instance(&self, key: &K) -> V {
-        #[cfg(feature = "mock-vm")] {
+        #[cfg(feature = "mock-vm")]
+        {
             let key_hash = hex::encode(key.ser().unwrap());
             let namespace = format!("{}_{}", key_hash, self.name);
             V::instance(&namespace)
         }
 
-        #[cfg(feature = "casper")] {
+        #[cfg(feature = "casper")]
+        {
             use odra_casper_backend::casper_contract::unwrap_or_revert::UnwrapOrRevert;
             let key_hash = hex::encode(key.to_bytes().unwrap_or_revert());
             V::instance(&format!("{}_{}", key_hash, self.name))
