@@ -37,6 +37,7 @@ pub fn add_contract_version(contract_package_hash: ContractPackageHash, entry_po
         entry_points,
         named_keys
     );
+    runtime::remove_key(STATE_KEY);
 }
 
 /// Save value to the storage.
@@ -227,7 +228,6 @@ fn is_purse_empty(purse: URef) -> bool {
         .unwrap_or_else(|| true)
 }
 
-
 fn get_new_dict_uref() -> URef {
     let value_size = {
         let mut value_size = MaybeUninit::uninit();
@@ -255,7 +255,6 @@ fn get_state_uref() -> URef {
     let key = runtime::get_key(STATE_KEY).unwrap_or_revert();
     key.try_into().unwrap_or_revert()
 }
-
 
 pub fn save_value<T: OdraType>(key: &str, value: T) {
     let state_uref = get_state_uref();
