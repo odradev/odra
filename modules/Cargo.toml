@@ -18,3 +18,4 @@ sha3 = "0.10.6"
 default = [ "mock-vm" ]
 mock-vm = [ "odra/mock-vm" ]
 casper = [ "odra/casper" ]
+casper-livenet = ["odra/casper-livenet"]

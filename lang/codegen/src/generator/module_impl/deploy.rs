@@ -95,6 +95,30 @@ impl GenerateCode for Deploy<'_> {
             };
         }
 
+        let casper_livenet_entrypoints = build_entrypoints_livenet(
+            self.contract
+                .methods()
+                .iter()
+                .filter_map(|item| match item {
+                    ImplItem::Method(method) => Some(method),
+                    _ => None
+                }),
+            struct_ident
+        );
+
+        let register_livenet_contract = quote! {
+            pub fn register(address: odra::types::Address) -> #ref_ident {
+                use std::collections::HashMap;
+                use odra::types::CallArgs;
+
+                let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Vec<u8>)>::new();
+                #casper_livenet_entrypoints
+
+                odra::test_env::register_contract(address, entrypoints);
+                #ref_ident::at(address)
+            }
+        };
+
         quote! {
             pub struct #deployer_ident;
 
@@ -106,6 +130,11 @@ impl GenerateCode for Deploy<'_> {
             #[cfg(feature = "mock-vm")]
             impl #deployer_ident {
                 #constructors_mock_vm
+            }
+
+            #[cfg(feature = "casper-livenet")]
+            impl #deployer_ident {
+                #register_livenet_contract
             }
         }
     }
@@ -256,6 +285,28 @@ where
         .collect::<TokenStream>()
 }
 
+fn build_entrypoints_livenet<'a, T>(methods: T, struct_ident: &Ident) -> TokenStream
+where
+    T: Iterator<Item = &'a Method>
+{
+    methods
+        .map(|entrypoint| {
+            let ident = &entrypoint.ident;
+            let name = quote!(stringify!(#ident).to_string());
+            let args = args_to_fn_args2(&entrypoint.args);
+            let arg_names = args_to_arg_names_stream(&entrypoint.args);
+            quote! {
+                entrypoints.insert(#name, (#arg_names, |name, args| {
+                    let mut instance = <#struct_ident as odra::Instance>::instance(name.as_str());
+                    let result = instance.#ident(#args);
+                    let clvalue = odra::casper::casper_types::CLValue::from_t(result).unwrap();
+                    odra::casper::casper_types::bytesrepr::ToBytes::into_bytes(clvalue).unwrap()
+                }));
+            }
+        })
+        .collect::<TokenStream>()
+}
+
 fn build_constructors<'a, T>(constructors: T, struct_ident: &Ident) -> TokenStream
 where
     T: Iterator<Item = &'a Constructor>
@@ -287,6 +338,23 @@ where
         .map(|arg| {
             let pat = &*arg.pat;
             quote!(args.get(stringify!(#pat)))
+        })
+        .collect::<Punctuated<TokenStream, Comma>>()
+}
+
+fn args_to_fn_args2<'a, T>(args: T) -> Punctuated<TokenStream, Comma>
+where
+    T: IntoIterator<Item = &'a syn::PatType>
+{
+    args.into_iter()
+        .map(|arg| {
+            let pat = &*arg.pat;
+            quote!(args
+                .get(stringify!(#pat))
+                .cloned()
+                .unwrap()
+                .into_t()
+                .unwrap())
         })
         .collect::<Punctuated<TokenStream, Comma>>()
 }

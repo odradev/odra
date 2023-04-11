@@ -11,3 +11,9 @@ odra-modules = { path = "../modules", default-features = false }
 default = ["mock-vm"]
 mock-vm = ["odra/mock-vm", "odra-modules/mock-vm"]
 casper = ["odra/casper", "odra-modules/casper"]
+casper-livenet = ["odra/casper-livenet", "odra-modules/casper-livenet"]
+
+[[bin]]
+name = "token-reader"
+path = "bin/token_reader.rs"
+required-features = ["casper-livenet"]

@@ -131,14 +131,14 @@ impl<K: OdraType + Hash, V: OdraType> crate::types::BorshSerialize for Mapping<K
     }
 }
 
-#[cfg(feature = "casper")]
+#[cfg(any(feature = "casper", feature = "casper-livenet"))]
 impl<K: OdraType + Hash, V: OdraType> crate::casper::casper_types::CLTyped for Mapping<K, V> {
     fn cl_type() -> crate::casper::casper_types::CLType {
         crate::casper::casper_types::CLType::Any
     }
 }
 
-#[cfg(feature = "casper")]
+#[cfg(any(feature = "casper", feature = "casper-livenet"))]
 impl<K: OdraType + Hash, V: OdraType> crate::casper::casper_types::bytesrepr::ToBytes
     for Mapping<K, V>
 {
@@ -154,7 +154,7 @@ impl<K: OdraType + Hash, V: OdraType> crate::casper::casper_types::bytesrepr::To
     }
 }
 
-#[cfg(feature = "casper")]
+#[cfg(any(feature = "casper", feature = "casper-livenet"))]
 impl<K: OdraType + Hash, V: OdraType> crate::casper::casper_types::bytesrepr::FromBytes
     for Mapping<K, V>
 {
