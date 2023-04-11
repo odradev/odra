@@ -181,11 +181,10 @@ mod test {
     }
 
     #[test]
-    #[ignore]
     fn many_tokens_works() {
         let mut contract = TokenManagerDeployer::default();
         let (user, balance) = (get_account(0), 111.into());
-        for i in 0..500 {
+        for i in 0..20 {
             contract.add_token(i.to_string(), DECIMALS, i.to_string());
             contract.mint(i.to_string(), user, balance);
             assert_eq!(contract.balance_of(i.to_string(), user), balance);

@@ -48,12 +48,14 @@ fn build_entrypoints(methods: &[&ImplItem]) -> TokenStream {
             _ => None
         })
         .map(|entrypoint| {
+            let attrs = &entrypoint.impl_item.attrs;
             let sig = &entrypoint.full_sig;
             let entrypoint_name = &entrypoint.ident.to_string();
             let fn_body =
                 common::generate_fn_body(entrypoint.args.clone(), entrypoint_name, &entrypoint.ret);
 
             quote! {
+                #(#attrs)*
                 pub #sig {
                     #fn_body
                 }
@@ -70,6 +72,7 @@ fn build_constructors(methods: &[&ImplItem]) -> TokenStream {
             _ => None
         })
         .map(|entrypoint| {
+            let attrs = &entrypoint.impl_item.attrs;
             let sig = &entrypoint.full_sig;
             let entrypoint_name = entrypoint.ident.to_string();
             let fn_body = common::generate_fn_body(
@@ -79,6 +82,7 @@ fn build_constructors(methods: &[&ImplItem]) -> TokenStream {
             );
 
             quote! {
+                #(#attrs)*
                 pub #sig {
                     #fn_body
                 }
