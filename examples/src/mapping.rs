@@ -8,15 +8,15 @@ use crate::owned_token::OwnedToken;
 
 #[odra::module]
 pub struct NestedMapping {
-    value: Mapping<String, Mapping<u32, Mapping<String, String>>>,
-    value2: Mapping<String, Mapping<u32, Mapping<String, OwnedToken>>>
+    strings: Mapping<String, Mapping<u32, Mapping<String, String>>>,
+    tokens: Mapping<String, Mapping<u32, Mapping<String, OwnedToken>>>
 }
 
 #[odra::module]
 impl NestedMapping {
-    pub fn set(&mut self, key1: String, key2: u32, key3: String, value: String) {
-        map!(self.value[key1][key2][key3] = value.clone());
-        map!(self.value2[key1][key2][key3] = OwnedToken::instance(&value));
+    pub fn set_string(&mut self, key1: String, key2: u32, key3: String, value: String) {
+        map!(self.strings[key1][key2][key3] = value.clone());
+        map!(self.tokens[key1][key2][key3] = OwnedToken::instance(&value));
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -32,21 +32,21 @@ impl NestedMapping {
     ) {
         let mut token = OwnedToken::instance(&token_name);
         token.init(token_name, symbol, decimals, initial_supply);
-        map!(self.value2[key1][key2][key3] = token);
+        map!(self.tokens[key1][key2][key3] = token);
     }
 
-    pub fn get(&self, key1: String, key2: u32, key3: String) -> String {
-        map!(self.value[key1][key2][key3])
+    pub fn get_string_macro(&self, key1: String, key2: u32, key3: String) -> String {
+        map!(self.strings[key1][key2][key3])
     }
 
-    pub fn get_manually(&self, key1: String, key2: u32, key3: String) -> String {
-        let lvl1 = self.value.get_instance(&key1);
+    pub fn get_string_api(&self, key1: String, key2: u32, key3: String) -> String {
+        let lvl1 = self.strings.get_instance(&key1);
         let lvl2 = lvl1.get_instance(&key2);
         odra::UnwrapOrRevert::unwrap_or_revert(lvl2.get(&key3))
     }
 
     pub fn total_supply(&self, key1: String, key2: u32, key3: String) -> U256 {
-        map!(self.value2[key1][key2][key3]).total_supply()
+        map!(self.tokens[key1][key2][key3]).total_supply()
     }
 }
 
@@ -198,11 +198,14 @@ mod test {
         let (key1, key2, key3) = (String::from("a"), 1, String::from("b"));
         // when set a value
         let value = String::from("value");
-        contract.set(key1.clone(), key2, key3.clone(), value.clone());
-        // then the value can be retrieved using both get and get_manually
-        assert_eq!(contract.get(key1.clone(), key2, key3.clone()), value);
+        contract.set_string(key1.clone(), key2, key3.clone(), value.clone());
+        // then the value can be retrieved using both get_string_macro and get_string_api
         assert_eq!(
-            contract.get_manually(key1.clone(), key2, key3.clone()),
+            contract.get_string_macro(key1.clone(), key2, key3.clone()),
+            value
+        );
+        assert_eq!(
+            contract.get_string_api(key1.clone(), key2, key3.clone()),
             value
         );
 
