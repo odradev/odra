@@ -272,8 +272,14 @@ impl CasperTestEnv {
     }
 
     /// Returns the cost of the last deploy.
-    /// Currently it is always Casper's DEFAULT_PAYMENT, but in future it might change.
+    /// Keep in mind that this may be different from the cost of the deploy on the live network.
+    /// This is NOT the amount of gas charged - see [last_call_contract_gas_used].
     pub fn last_call_contract_gas_cost(&self) -> U512 {
+        self.context.last_exec_gas_cost().value()
+    }
+
+    /// Returns the amount of gas used for last call.
+    pub fn last_call_contract_gas_used(&self) -> U512 {
         *DEFAULT_PAYMENT
     }
 }
