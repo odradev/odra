@@ -27,13 +27,13 @@ pub use {
     variable::Variable
 };
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(any(target_arch = "wasm32", feature = "casper-livenet")))]
 pub mod test_utils;
 
 #[cfg(all(feature = "casper", target_arch = "wasm32"))]
 pub use odra_casper_backend::contract_env;
 #[cfg(feature = "casper-livenet")]
-pub use odra_casper_livenet::{contract_env, test_env};
+pub use odra_casper_livenet::{client_env, contract_env, test_env};
 #[cfg(all(feature = "casper", not(target_arch = "wasm32")))]
 pub use odra_casper_test_env::{dummy_contract_env as contract_env, test_env};
 #[cfg(feature = "mock-vm")]
@@ -86,7 +86,7 @@ where
         }  else if #[cfg(all(feature = "casper", target_arch = "wasm32"))] {
             contract_env::call_contract(address, entrypoint, args, amount)
         } else if #[cfg(feature = "casper-livenet")] {
-            test_env::call_contract(address, entrypoint, args, amount)
+            client_env::call_contract(address, entrypoint, args, amount)
         } else {
             compile_error!("Unknown feature")
         }

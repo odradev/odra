@@ -27,12 +27,12 @@ pub fn register_contract(
 
 /// Call contract under a given address.
 pub fn call_contract<T: OdraType>(
-    addr: Address,
-    entrypoint: &str,
-    args: CallArgs,
+    _addr: Address,
+    _entrypoint: &str,
+    _args: CallArgs,
     _amount: Option<Balance>
 ) -> T {
-    client_env::call_contract(addr, entrypoint, args)
+    unimplemented!()
 }
 
 /// Set the caller address for the next [call_contract].

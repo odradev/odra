@@ -1,4 +1,4 @@
-mod client_env;
+pub mod client_env;
 pub mod contract_env;
 pub mod test_env;
 

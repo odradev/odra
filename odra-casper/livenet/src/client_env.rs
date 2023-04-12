@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use casper_types::{bytesrepr::FromBytes, CLValue};
-use odra_casper_types::{Address, CallArgs, OdraType};
+use odra_casper_types::{Address, Balance, CallArgs, OdraType};
 use ref_thread_local::RefThreadLocal;
 
 use crate::{EntrypointArgs, EntrypointCall};
@@ -68,7 +68,12 @@ pub fn register_contract(
     ClientEnv::instance_mut().register_contract(contract);
 }
 
-pub fn call_contract<T: OdraType>(addr: Address, entrypoint: &str, args: CallArgs) -> T {
+pub fn call_contract<T: OdraType>(
+    addr: Address,
+    entrypoint: &str,
+    args: CallArgs,
+    _amount: Option<Balance>
+) -> T {
     {
         ClientEnv::instance_mut().push_on_stack(addr);
     }
