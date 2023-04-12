@@ -9,7 +9,7 @@ use odra::types::{Address, Bytes, U256};
 use odra::{Mapping, UnwrapOrRevert};
 
 /// The ERC721 base implementation.
-#[odra::module]
+#[odra::module(events = [Approval, ApprovalForAll, Transfer])]
 pub struct Erc721Base {
     // Erc721 base fields.
     pub balances: Mapping<Address, U256>,

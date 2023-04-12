@@ -1,11 +1,21 @@
 use crate::attrs::partition_attributes;
 
+use super::ModuleEvents;
+
 /// Odra module struct.
 ///
 /// Wraps up [syn::ItemStruct].
 pub struct ModuleStruct {
     pub is_instantiable: bool,
-    pub item: syn::ItemStruct
+    pub item: syn::ItemStruct,
+    pub events: ModuleEvents,
+}
+
+impl ModuleStruct {
+    pub fn with_events(mut self, events: ModuleEvents) -> Self {
+        self.events = events;
+        self
+    }
 }
 
 impl From<syn::ItemStruct> for ModuleStruct {
@@ -16,7 +26,8 @@ impl From<syn::ItemStruct> for ModuleStruct {
             item: syn::ItemStruct {
                 attrs: other_attrs,
                 ..item
-            }
+            },
+            events: Default::default(),
         }
     }
 }

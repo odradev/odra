@@ -1,6 +1,7 @@
 use std::convert::TryFrom;
 
 use proc_macro2::TokenStream;
+use syn::{parse::Parse, Token, punctuated::Punctuated};
 
 use self::{module_impl::ModuleImpl, module_struct::ModuleStruct};
 
@@ -26,11 +27,14 @@ pub enum ModuleItem {
 
 impl ModuleItem {
     pub fn parse(_attr: TokenStream, item: TokenStream) -> Result<Self, syn::Error> {
+        let events = syn::parse2::<ModuleEvents>(_attr)?;
+        
         let item_struct = syn::parse2::<syn::ItemStruct>(item.clone());
         let item_impl = syn::parse2::<syn::ItemImpl>(item.clone());
 
         if let Ok(item) = item_struct {
-            return Ok(ModuleItem::Struct(Box::new(ModuleStruct::from(item))));
+            let module_struct = ModuleStruct::from(item).with_events(events);
+            return Ok(ModuleItem::Struct(Box::new(module_struct)));
         }
 
         if let Ok(item) = item_impl {
@@ -42,6 +46,43 @@ impl ModuleItem {
             item,
             "ContractItem is neither a struct nor an impl block."
         ))
+    }
+}
+
+mod kw {
+    syn::custom_keyword!(events);
+}
+
+#[derive(Debug, Default)]
+pub struct ModuleEvents {
+    pub events: Punctuated<ModuleEvent, Token![,]>
+}
+
+impl Parse for ModuleEvents {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        // a sample input: events = [Event1, Event2, Event3]
+        if input.is_empty() {
+            return Ok(Self { events: Punctuated::new() });
+        }
+        input.parse::<kw::events>()?;
+        input.parse::<Token![=]>()?;
+
+        let content;
+        let _brace_token = syn::bracketed!(content in input);
+        let events = content.parse_terminated::<ModuleEvent, Token![,]>(ModuleEvent::parse)?;
+        Ok(Self { events })
+    }
+}
+
+#[derive(Debug)]
+pub struct ModuleEvent {
+    pub name: syn::Ident,
+}
+
+impl Parse for ModuleEvent {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let name = input.parse::<syn::Ident>()?;
+        Ok(ModuleEvent { name })
     }
 }
 

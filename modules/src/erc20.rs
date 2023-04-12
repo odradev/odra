@@ -9,7 +9,7 @@ use self::{
     events::{Approval, Transfer}
 };
 
-#[odra::module]
+#[odra::module(events = [Approval, Transfer])]
 pub struct Erc20 {
     decimals: Variable<u8>,
     symbol: Variable<String>,
