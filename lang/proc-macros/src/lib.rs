@@ -179,6 +179,32 @@ pub fn odra_error(_attr: TokenStream, item: TokenStream) -> TokenStream {
     odra_error::generate_code(item).into()
 }
 
+/// Implements the boilerplate code required to read/write a value from/to a map.
+///
+/// To access the value in the nested map, it would be required to use a chain
+/// of `get_instance` calls. This macro provides a convenient syntax for that.
+///
+/// # Examples
+///
+/// ```
+/// use odra::{self, Mapping};
+///
+/// #[odra::module]
+/// pub struct NestedMapping {
+///     value: Mapping<String, Mapping<String, Mapping<String, u32>>>,
+/// }
+///
+/// #[odra::module]
+/// impl NestedMapping {
+///     pub fn set(&mut self, k1: String, k2: String, k3: String, value: u32) {
+///         odra::map!(self.value[k1][k2][k3] = value);
+///     }
+///
+///     pub fn get(&self, k1: String, k2: String, k3: String) -> u32 {
+///         odra::map!(self.value[k1][k2][k3])
+///     }
+/// }
+/// ```
 #[proc_macro]
 pub fn map(item: TokenStream) -> TokenStream {
     map::generate_code(item).into()
