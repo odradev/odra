@@ -21,7 +21,9 @@ pub use {
     instance::Instance,
     list::List,
     mapping::Mapping,
-    odra_proc_macros::{execution_error, external_contract, module, odra_error, Event, Instance},
+    odra_proc_macros::{
+        execution_error, external_contract, map, module, odra_error, Event, Instance
+    },
     odra_utils as utils,
     unwrap_or_revert::UnwrapOrRevert,
     variable::Variable
@@ -33,7 +35,7 @@ pub mod test_utils;
 #[cfg(all(feature = "casper", target_arch = "wasm32"))]
 pub use odra_casper_backend::contract_env;
 #[cfg(feature = "casper-livenet")]
-pub use odra_casper_livenet::{client_env, contract_env, test_env};
+pub use odra_casper_livenet::{client_env, contract_env};
 #[cfg(all(feature = "casper", not(target_arch = "wasm32")))]
 pub use odra_casper_test_env::{dummy_contract_env as contract_env, test_env};
 #[cfg(feature = "mock-vm")]

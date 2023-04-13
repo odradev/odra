@@ -1,15 +1,20 @@
-use casper_types::bytesrepr::FromBytes;
+use casper_types::{
+    api_error,
+    bytesrepr::{self, FromBytes, ToBytes},
+    EntryPoints
+};
 use lazy_static::lazy_static;
 use odra_casper_types::{Address, OdraType};
 use odra_types::event::OdraEvent;
-use std::{collections::BTreeMap, sync::Mutex};
+use std::{collections::BTreeMap, mem::MaybeUninit, sync::Mutex};
 
 use casper_contract::{
     contract_api::{
-        runtime,
+        self, runtime,
         storage::{self, dictionary_put},
         system::{create_purse, get_purse_balance, transfer_from_purse_to_purse}
     },
+    ext_ffi,
     unwrap_or_revert::UnwrapOrRevert
 };
 
@@ -24,40 +29,35 @@ lazy_static! {
     static ref SEEDS: Mutex<BTreeMap<String, URef>> = Mutex::new(BTreeMap::new());
 }
 
+const STATE_KEY: &str = "state";
+
+pub fn add_contract_version(contract_package_hash: ContractPackageHash, entry_points: EntryPoints) {
+    let mut named_keys = casper_types::contracts::NamedKeys::new();
+    named_keys.insert(String::from(STATE_KEY), Key::URef(get_new_dict_uref()));
+    casper_contract::contract_api::storage::add_contract_version(
+        contract_package_hash,
+        entry_points,
+        named_keys
+    );
+    runtime::remove_key(STATE_KEY);
+}
+
 /// Save value to the storage.
 pub fn set_key<T: OdraType>(name: &str, value: T) {
-    match runtime::get_key(name) {
-        Some(key) => {
-            let key_ref = key.try_into().unwrap_or_revert();
-            storage::write(key_ref, value);
-        }
-        None => {
-            let key = storage::new_uref(value).into();
-            runtime::put_key(name, key);
-        }
-    }
+    save_value(&to_variable_key(name), value);
 }
 
 /// Read value from the storage.
 pub fn get_key<T: OdraType>(name: &str) -> Option<T> {
-    match runtime::get_key(name) {
-        None => None,
-        Some(value) => {
-            let key = value.try_into().unwrap_or_revert();
-            let value = storage::read(key).unwrap_or_revert().unwrap_or_revert();
-            Some(value)
-        }
-    }
+    read_value(&to_variable_key(name))
 }
 
 pub fn set_dict_value<K: OdraType, V: OdraType>(seed: &str, key: &K, value: V) {
-    let seed = get_seed(seed);
-    storage::dictionary_put(seed, &to_dictionary_key(key), value);
+    save_value(&to_dictionary_key(seed, key), value);
 }
 
 pub fn get_dict_value<K: OdraType, V: OdraType>(seed: &str, key: &K) -> Option<V> {
-    let seed = get_seed(seed);
-    storage::dictionary_get(seed, &to_dictionary_key(key)).unwrap_or_revert()
+    read_value(&to_dictionary_key(seed, key))
 }
 
 /// Returns address based on a [`CallStackElement`].
@@ -130,8 +130,20 @@ where
 }
 
 /// Convert any key to hash.
-fn to_dictionary_key<T: OdraType>(key: &T) -> String {
+fn to_variable_key<T: ToBytes>(key: T) -> String {
     let preimage = key.to_bytes().unwrap_or_revert();
+    let bytes = runtime::blake2b(preimage);
+    hex::encode(bytes)
+}
+
+/// Convert any key to hash.
+fn to_dictionary_key<T: ToBytes>(seed: &str, key: &T) -> String {
+    let seed_bytes = seed.as_bytes();
+    let key_bytes = key.to_bytes().unwrap_or_revert();
+
+    let mut preimage = Vec::with_capacity(seed_bytes.len() + key_bytes.len());
+    preimage.extend_from_slice(seed_bytes);
+    preimage.extend_from_slice(&key_bytes);
     let bytes = runtime::blake2b(preimage);
     hex::encode(bytes)
 }
@@ -216,4 +228,42 @@ fn is_purse_empty(purse: URef) -> bool {
     get_purse_balance(purse)
         .map(|balance| balance.is_zero())
         .unwrap_or_else(|| true)
+}
+
+fn get_new_dict_uref() -> URef {
+    let value_size = {
+        let mut value_size = MaybeUninit::uninit();
+        let ret = unsafe { ext_ffi::casper_new_dictionary(value_size.as_mut_ptr()) };
+        api_error::result_from(ret).unwrap_or_revert();
+        unsafe { value_size.assume_init() }
+    };
+
+    let mut dest: Vec<u8> = {
+        let bytes_non_null_ptr = contract_api::alloc_bytes(value_size);
+        unsafe { Vec::from_raw_parts(bytes_non_null_ptr.as_ptr(), value_size, value_size) }
+    };
+
+    let mut bytes_written = MaybeUninit::uninit();
+    let ret = unsafe {
+        ext_ffi::casper_read_host_buffer(dest.as_mut_ptr(), dest.len(), bytes_written.as_mut_ptr())
+    };
+    api_error::result_from(ret).unwrap_or_revert();
+    unsafe { bytes_written.assume_init() };
+
+    bytesrepr::deserialize(dest).unwrap_or_revert()
+}
+
+fn get_state_uref() -> URef {
+    let key = runtime::get_key(STATE_KEY).unwrap_or_revert();
+    key.try_into().unwrap_or_revert()
+}
+
+pub fn save_value<T: OdraType>(key: &str, value: T) {
+    let state_uref = get_state_uref();
+    storage::dictionary_put(state_uref, key, value);
+}
+
+pub fn read_value<T: OdraType>(key: &str) -> Option<T> {
+    let state_uref = get_state_uref();
+    storage::dictionary_get(state_uref, key).unwrap_or_revert()
 }

@@ -33,6 +33,11 @@ impl CallArgs {
             .map(|arg| arg.name().to_string())
             .collect()
     }
+
+    /// Return Casper's RuntimeArgs.
+    pub fn as_casper_runtime_args(&self) -> &casper_types::RuntimeArgs {
+        &self.0
+    }
 }
 
 impl ToBytes for CallArgs {

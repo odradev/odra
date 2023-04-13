@@ -1,5 +1,5 @@
 use derive_more::From;
-use odra_ir::module::{Constructor, ImplItem, Method, ModuleImpl};
+use odra_ir::module::{Constructor, Method, ModuleImpl};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, TokenStreamExt};
 use syn::{punctuated::Punctuated, token::Comma};
@@ -15,30 +15,6 @@ pub struct Deploy<'a> {
     contract: &'a ModuleImpl
 }
 
-impl<'a> Deploy<'a> {
-    fn methods(&self) -> Vec<&Method> {
-        self.contract
-            .methods()
-            .iter()
-            .filter_map(|item| match item {
-                ImplItem::Method(method) => Some(method),
-                _ => None
-            })
-            .collect()
-    }
-
-    fn constructors(&self) -> Vec<&Constructor> {
-        self.contract
-            .methods()
-            .iter()
-            .filter_map(|item| match item {
-                ImplItem::Constructor(constructor) => Some(constructor),
-                _ => None
-            })
-            .collect()
-    }
-}
-
 as_ref_for_contract_impl_generator!(Deploy);
 
 impl GenerateCode for Deploy<'_> {
@@ -47,8 +23,8 @@ impl GenerateCode for Deploy<'_> {
         let ref_ident = format_ident!("{}Ref", struct_ident);
         let deployer_ident = format_ident!("{}Deployer", struct_ident);
 
-        let method_defs = self.methods();
-        let constructor_defs = self.constructors();
+        let method_defs: Vec<&Method> = self.contract.get_method_iter().collect();
+        let constructor_defs: Vec<&Constructor> = self.contract.get_constructor_iter().collect();
 
         let mock_vm_deployer_impl = deployer_mock_vm::generate_code(
             struct_ident,

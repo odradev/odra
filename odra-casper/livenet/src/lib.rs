@@ -1,6 +1,6 @@
 pub mod client_env;
 pub mod contract_env;
-pub mod test_env;
+pub mod casper_client;
 
 use odra_casper_types::CallArgs;
 

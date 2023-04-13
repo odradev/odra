@@ -7,6 +7,7 @@ mod event;
 mod execution_error;
 mod external_contract;
 mod instance;
+mod map;
 mod module;
 mod odra_error;
 
@@ -176,4 +177,9 @@ pub fn execution_error(item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn odra_error(_attr: TokenStream, item: TokenStream) -> TokenStream {
     odra_error::generate_code(item).into()
+}
+
+#[proc_macro]
+pub fn map(item: TokenStream) -> TokenStream {
+    map::generate_code(item).into()
 }

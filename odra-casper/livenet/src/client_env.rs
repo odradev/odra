@@ -1,10 +1,10 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr, sync::Mutex};
 
 use casper_types::{bytesrepr::FromBytes, CLValue};
 use odra_casper_types::{Address, Balance, CallArgs, OdraType};
 use ref_thread_local::RefThreadLocal;
 
-use crate::{EntrypointArgs, EntrypointCall};
+use crate::{EntrypointArgs, EntrypointCall, casper_client::CasperClient};
 
 use self::{
     callstack::Callstack, contract_container::ContractContainer,
@@ -12,14 +12,14 @@ use self::{
 };
 
 mod callstack;
-mod casper_client;
 mod contract_container;
 mod contract_register;
 
 #[derive(Default)]
 struct ClientEnv {
     contracts: ContractRegister,
-    callstack: Callstack
+    callstack: Callstack,
+    gas: Mutex<Option<Balance>>
 }
 
 impl ClientEnv {
@@ -53,6 +53,24 @@ impl ClientEnv {
     pub fn current_contract(&self) -> Address {
         self.callstack.current()
     }
+
+    pub fn set_gas<T: Into<Balance>>(&self, gas: T) {
+        let new_gas: Balance = gas.into();
+        println!("set_gas: {:?}", new_gas);
+        let mut gas = self.gas.lock().unwrap();
+        *gas = Some(new_gas);
+    }
+
+    pub fn get_gas(&self) -> Balance {
+        let gas = {
+            let mut gas = self.gas.lock().unwrap();
+            println!("gas: {:?}", gas);
+            let current_gas: Balance = gas.expect("Gas not set");
+            *gas = None;
+            current_gas
+        };
+        gas
+    }
 }
 
 ref_thread_local::ref_thread_local!(
@@ -60,7 +78,7 @@ ref_thread_local::ref_thread_local!(
 );
 
 /// Deploy WASM file with arguments.
-pub fn register_contract(
+pub fn register_existing_contract(
     address: Address,
     entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>
 ) {
@@ -68,7 +86,46 @@ pub fn register_contract(
     ClientEnv::instance_mut().register_contract(contract);
 }
 
+pub fn deploy_new_contract(name: &str, args: CallArgs, entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>) -> Address {
+    let gas = get_gas();
+    let wasm_name = format!("{}.wasm", name);
+    let address = CasperClient::intergration_testnet().deploy_wasm(&wasm_name, args, gas);
+    
+    let contract = ContractContainer::new(address, entrypoints);
+    ClientEnv::instance_mut().register_contract(contract);
+
+    address
+}
+
 pub fn call_contract<T: OdraType>(
+    addr: Address,
+    entrypoint: &str,
+    args: CallArgs,
+    _amount: Option<Balance>
+) -> T {
+    match T::cl_type() {
+        casper_types::CLType::Unit => {
+            call_contract_deploy(addr, entrypoint, args, _amount);
+            T::from_bytes(&[]).unwrap().0
+        }
+        _ => call_contract_getter_entrypoint(addr, entrypoint, args, _amount)
+    }
+}
+
+pub fn get_var_from_current_contract<T: OdraType>(key: &str) -> Option<T> {
+    let address = ClientEnv::instance().current_contract();
+    CasperClient::intergration_testnet().get_var(address, key)
+}
+
+pub fn set_gas<T: Into<Balance>>(gas: T) {
+    ClientEnv::instance_mut().set_gas(gas);
+}
+
+fn get_gas() -> Balance {
+    ClientEnv::instance().get_gas()
+}
+
+fn call_contract_getter_entrypoint<T: OdraType>(
     addr: Address,
     entrypoint: &str,
     args: CallArgs,
@@ -84,7 +141,7 @@ pub fn call_contract<T: OdraType>(
     result
 }
 
-pub fn get_var_from_current_contract<T: OdraType>(key: &str) -> Option<T> {
-    let address = ClientEnv::instance().current_contract();
-    casper_client::CasperClient::intergration_testnet().get_var(address, key)
+fn call_contract_deploy(addr: Address, entrypoint: &str, args: CallArgs, amount: Option<Balance>) {
+    let gas = get_gas();
+    CasperClient::intergration_testnet().put_deploy(addr, entrypoint, args, amount, gas);
 }
