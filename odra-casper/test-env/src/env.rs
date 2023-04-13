@@ -1,6 +1,6 @@
 //! Implementation of [CasperTestEnv].
 
-use std::{cell::RefCell, path::PathBuf};
+use std::{cell::RefCell, env, path::PathBuf};
 
 use casper_engine_test_support::{
     DeployItemBuilder, ExecuteRequestBuilder, InMemoryWasmTestBuilder, ARG_AMOUNT,
@@ -28,6 +28,8 @@ thread_local! {
     /// Thread local instance of [CasperTestEnv].
     pub static ENV: RefCell<CasperTestEnv> = RefCell::new(CasperTestEnv::new());
 }
+
+const ODRA_WASM_PATH_ENV_KEY: &str = "ODRA_WASM_PATH";
 
 /// Wrapper for InMemoryWasmTestBuilder.
 pub struct CasperTestEnv {
@@ -85,7 +87,15 @@ impl CasperTestEnv {
 
     /// Deploy WASM file with args.
     pub fn deploy_contract(&mut self, wasm_path: &str, args: CallArgs) {
-        let session_code = PathBuf::from(wasm_path);
+        let mut session_code = PathBuf::from(wasm_path);
+        if let Ok(path) = env::var(ODRA_WASM_PATH_ENV_KEY) {
+            let mut path = PathBuf::from(path);
+            path.push(wasm_path);
+            if path.exists() {
+                session_code = path;
+            }
+        }
+
         let deploy_item = DeployItemBuilder::new()
             .with_empty_payment_bytes(runtime_args! {ARG_AMOUNT => *DEFAULT_PAYMENT})
             .with_authorization_keys(&[self.active_account_hash()])
