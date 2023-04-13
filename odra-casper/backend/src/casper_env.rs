@@ -25,6 +25,7 @@ use odra_types::ExecutionError;
 
 lazy_static! {
     static ref SEEDS: Mutex<BTreeMap<String, URef>> = Mutex::new(BTreeMap::new());
+    static ref KEYS: Mutex<BTreeMap<Vec<u8>, String>> = Mutex::new(BTreeMap::new());
 }
 
 const STATE_KEY: &str = "state";
@@ -149,14 +150,27 @@ fn to_variable_key<T: ToBytes>(key: T) -> String {
 
 /// Convert any key to hash.
 fn to_dictionary_key<T: ToBytes>(seed: &str, key: &T) -> String {
-    let seed_bytes = seed.as_bytes();
-    let key_bytes = key.to_bytes().unwrap_or_revert();
+    match KEYS.lock() {
+        Ok(mut keys) => {
+            let seed_bytes = seed.as_bytes();
+            let key_bytes = key.to_bytes().unwrap_or_revert();
 
-    let mut preimage = Vec::with_capacity(seed_bytes.len() + key_bytes.len());
-    preimage.extend_from_slice(seed_bytes);
-    preimage.extend_from_slice(&key_bytes);
-    let bytes = runtime::blake2b(preimage);
-    hex::encode(bytes)
+            let mut preimage = Vec::with_capacity(seed_bytes.len() + key_bytes.len());
+            preimage.extend_from_slice(seed_bytes);
+            preimage.extend_from_slice(&key_bytes);
+
+            match keys.get(&preimage) {
+                Some(key) => key.to_owned(),
+                None => {
+                    let bytes = runtime::blake2b(&preimage);
+                    let key = hex::encode(bytes);
+                    keys.insert(preimage, key.clone());
+                    key
+                }
+            }
+        }
+        Err(_) => runtime::revert(ApiError::ValueNotFound)
+    }
 }
 
 /// Calls a contract method by Address
