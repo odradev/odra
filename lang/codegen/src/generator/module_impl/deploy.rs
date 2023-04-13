@@ -23,7 +23,7 @@ impl GenerateCode for Deploy<'_> {
         let ref_ident = format_ident!("{}Ref", struct_ident);
         let deployer_ident = format_ident!("{}Deployer", struct_ident);
 
-        let method_defs: Vec<&Method> = self.contract.get_method_iter().collect();
+        let method_defs: Vec<&Method> = self.contract.get_public_method_iter().collect();
         let constructor_defs: Vec<&Constructor> = self.contract.get_constructor_iter().collect();
 
         let mock_vm_deployer_impl = deployer_mock_vm::generate_code(

@@ -16,7 +16,7 @@ fqn = "odra_examples::erc20::Erc20"
 
 [[contracts]]
 name = "token_manager"
-fqn = "odra_examples::mapping::TokenManager"
+fqn = "odra_examples::token_manager::TokenManager"
 
 [[contracts]]
 name = "nested_mapping"

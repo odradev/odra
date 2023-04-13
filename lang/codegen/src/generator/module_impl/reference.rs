@@ -20,7 +20,7 @@ impl GenerateCode for ContractReference<'_> {
         let struct_ident = self.contract.ident();
         let ref_ident = format_ident!("{}Ref", struct_ident);
 
-        let ref_entrypoints = build_entrypoints(self.contract.get_method_iter());
+        let ref_entrypoints = build_entrypoints(self.contract.get_public_method_iter());
 
         let ref_constructors = build_constructors(self.contract.get_constructor_iter());
 

@@ -1,6 +1,5 @@
 use casper_types::{
-    api_error,
-    bytesrepr::{self, FromBytes, ToBytes},
+    bytesrepr::{FromBytes, ToBytes},
     EntryPoints
 };
 use lazy_static::lazy_static;
@@ -27,13 +26,17 @@ use odra_types::ExecutionError;
 
 lazy_static! {
     static ref SEEDS: Mutex<BTreeMap<String, URef>> = Mutex::new(BTreeMap::new());
+    static ref KEYS: Mutex<BTreeMap<Vec<u8>, String>> = Mutex::new(BTreeMap::new());
 }
 
 const STATE_KEY: &str = "state";
 
 pub fn add_contract_version(contract_package_hash: ContractPackageHash, entry_points: EntryPoints) {
     let mut named_keys = casper_types::contracts::NamedKeys::new();
-    named_keys.insert(String::from(STATE_KEY), Key::URef(get_new_dict_uref()));
+    named_keys.insert(
+        String::from(STATE_KEY),
+        Key::URef(storage::new_dictionary(STATE_KEY).unwrap_or_revert())
+    );
     casper_contract::contract_api::storage::add_contract_version(
         contract_package_hash,
         entry_points,
@@ -124,7 +127,17 @@ where
             (value, key)
         }
     };
-    let events_seed: URef = get_seed(consts::EVENTS);
+
+    let events_seed: URef = get_seed(consts::EVENTS, || {
+        let key: Key = match runtime::get_key(consts::EVENTS) {
+            Some(key) => key,
+            None => {
+                storage::new_dictionary(consts::EVENTS).unwrap_or_revert();
+                runtime::get_key(consts::EVENTS).unwrap_or_revert()
+            }
+        };
+        *key.as_uref().unwrap_or_revert()
+    });
     dictionary_put(events_seed, &events_length.to_string(), event);
     storage::write(key, events_length + 1);
 }
@@ -138,14 +151,27 @@ fn to_variable_key<T: ToBytes>(key: T) -> String {
 
 /// Convert any key to hash.
 fn to_dictionary_key<T: ToBytes>(seed: &str, key: &T) -> String {
-    let seed_bytes = seed.as_bytes();
-    let key_bytes = key.to_bytes().unwrap_or_revert();
+    match KEYS.lock() {
+        Ok(mut keys) => {
+            let seed_bytes = seed.as_bytes();
+            let key_bytes = key.to_bytes().unwrap_or_revert();
 
-    let mut preimage = Vec::with_capacity(seed_bytes.len() + key_bytes.len());
-    preimage.extend_from_slice(seed_bytes);
-    preimage.extend_from_slice(&key_bytes);
-    let bytes = runtime::blake2b(preimage);
-    hex::encode(bytes)
+            let mut preimage = Vec::with_capacity(seed_bytes.len() + key_bytes.len());
+            preimage.extend_from_slice(seed_bytes);
+            preimage.extend_from_slice(&key_bytes);
+
+            match keys.get(&preimage) {
+                Some(key) => key.to_owned(),
+                None => {
+                    let bytes = runtime::blake2b(&preimage);
+                    let key = hex::encode(bytes);
+                    keys.insert(preimage, key.clone());
+                    key
+                }
+            }
+        }
+        Err(_) => runtime::revert(ApiError::ValueNotFound)
+    }
 }
 
 /// Calls a contract method by Address
@@ -204,58 +230,35 @@ pub fn self_balance() -> U512 {
     get_purse_balance(purse).unwrap_or_default()
 }
 
-fn get_seed(name: &str) -> URef {
-    let mut seeds = SEEDS.lock().unwrap();
-    let maybe_seed = seeds.get(name);
-    match maybe_seed {
-        Some(seed) => *seed,
-        None => {
-            let key: Key = match runtime::get_key(name) {
-                Some(key) => key,
-                None => {
-                    storage::new_dictionary(name).unwrap_or_revert();
-                    runtime::get_key(name).unwrap_or_revert()
-                }
-            };
-            let seed: URef = *key.as_uref().unwrap_or_revert();
-            seeds.insert(String::from(name), seed);
-            seed
-        }
-    }
-}
-
 fn is_purse_empty(purse: URef) -> bool {
     get_purse_balance(purse)
         .map(|balance| balance.is_zero())
         .unwrap_or_else(|| true)
 }
 
-fn get_new_dict_uref() -> URef {
-    let value_size = {
-        let mut value_size = MaybeUninit::uninit();
-        let ret = unsafe { ext_ffi::casper_new_dictionary(value_size.as_mut_ptr()) };
-        api_error::result_from(ret).unwrap_or_revert();
-        unsafe { value_size.assume_init() }
-    };
-
-    let mut dest: Vec<u8> = {
-        let bytes_non_null_ptr = contract_api::alloc_bytes(value_size);
-        unsafe { Vec::from_raw_parts(bytes_non_null_ptr.as_ptr(), value_size, value_size) }
-    };
-
-    let mut bytes_written = MaybeUninit::uninit();
-    let ret = unsafe {
-        ext_ffi::casper_read_host_buffer(dest.as_mut_ptr(), dest.len(), bytes_written.as_mut_ptr())
-    };
-    api_error::result_from(ret).unwrap_or_revert();
-    unsafe { bytes_written.assume_init() };
-
-    bytesrepr::deserialize(dest).unwrap_or_revert()
+fn get_state_uref() -> URef {
+    get_seed(STATE_KEY, || {
+        let key = runtime::get_key(STATE_KEY).unwrap_or_revert();
+        let state_uref: URef = *key.as_uref().unwrap_or_revert();
+        state_uref
+    })
 }
 
-fn get_state_uref() -> URef {
-    let key = runtime::get_key(STATE_KEY).unwrap_or_revert();
-    key.try_into().unwrap_or_revert()
+fn get_seed<F>(name: &str, initializer: F) -> URef
+where
+    F: FnOnce() -> URef
+{
+    match SEEDS.lock() {
+        Ok(mut seeds) => match seeds.get(name) {
+            Some(seed) => *seed,
+            None => {
+                let seed = initializer();
+                seeds.insert(String::from(name), seed);
+                seed
+            }
+        },
+        Err(_) => runtime::revert(ApiError::ValueNotFound)
+    }
 }
 
 pub fn save_value<T: OdraType>(key: &str, value: T) {
