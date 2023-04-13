@@ -20,7 +20,7 @@ impl GenerateCode for ContractReference<'_> {
         let struct_ident = self.contract.ident();
         let ref_ident = format_ident!("{}Ref", struct_ident);
 
-        let ref_entrypoints = build_entrypoints(self.contract.get_method_iter());
+        let ref_entrypoints = build_entrypoints(self.contract.get_public_method_iter());
 
         let ref_constructors = build_constructors(self.contract.get_constructor_iter());
 
@@ -44,12 +44,14 @@ where
 {
     methods
         .map(|entrypoint| {
+            let attrs = &entrypoint.impl_item.attrs;
             let sig = &entrypoint.full_sig;
             let entrypoint_name = &entrypoint.ident.to_string();
             let fn_body =
                 common::generate_fn_body(entrypoint.args.clone(), entrypoint_name, &entrypoint.ret);
 
             quote! {
+                #(#attrs)*
                 pub #sig {
                     #fn_body
                 }
@@ -64,6 +66,7 @@ where
 {
     constructors
         .map(|constructor| {
+            let attrs = &constructor.impl_item.attrs;
             let sig = &constructor.full_sig;
             let constructor_name = constructor.ident.to_string();
             let fn_body = common::generate_fn_body(
@@ -73,6 +76,7 @@ where
             );
 
             quote! {
+                #(#attrs)*
                 pub #sig {
                     #fn_body
                 }

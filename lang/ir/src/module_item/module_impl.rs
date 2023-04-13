@@ -47,11 +47,14 @@ impl ModuleImpl {
             .collect::<Vec<_>>()
     }
 
-    pub fn get_method_iter(&self) -> impl Iterator<Item = &Method> {
-        self.impl_items.iter().filter_map(|item| match item {
-            ImplItem::Method(method) => Some(method),
-            _ => None
-        })
+    pub fn get_public_method_iter(&self) -> impl Iterator<Item = &Method> {
+        self.impl_items
+            .iter()
+            .filter_map(|item| match item {
+                ImplItem::Method(method) => Some(method),
+                _ => None
+            })
+            .filter(|m| self.is_trait_implementation || m.is_public())
     }
 
     pub fn get_constructor_iter(&self) -> impl Iterator<Item = &Constructor> {

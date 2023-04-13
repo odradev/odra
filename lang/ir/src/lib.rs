@@ -13,11 +13,12 @@ mod event_item;
 mod execution_error;
 mod external_contract_item;
 mod instance_item;
+mod mapping;
 mod module_item;
 
 pub use {
     event_item::EventItem, execution_error::error_enum::ErrorEnumItem,
-    external_contract_item::ExternalContractItem, instance_item::InstanceItem
+    external_contract_item::ExternalContractItem, instance_item::InstanceItem, mapping::MapExpr
 };
 
 /// Odra module-related abstractions.

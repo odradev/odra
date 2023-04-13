@@ -1,15 +1,25 @@
 use derive_more::From;
-use quote::ToTokens;
+use quote::quote;
 
 use crate::GenerateCode;
 
 #[derive(From)]
 pub struct ModuleStruct<'a> {
-    contract: &'a odra_ir::module::ModuleStruct
+    pub contract: &'a odra_ir::module::ModuleStruct
 }
 
 impl GenerateCode for ModuleStruct<'_> {
     fn generate_code(&self) -> proc_macro2::TokenStream {
-        self.contract.to_token_stream()
+        let item_struct = &self.contract.item;
+        let span = item_struct.ident.span();
+        let instance = match &self.contract.is_instantiable {
+            true => quote::quote_spanned!(span => #[derive(odra::Instance)]),
+            false => quote!()
+        };
+
+        quote! {
+            #instance
+            #item_struct
+        }
     }
 }

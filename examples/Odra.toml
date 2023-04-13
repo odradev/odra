@@ -15,5 +15,13 @@ name = "erc20"
 fqn = "odra_examples::erc20::Erc20"
 
 [[contracts]]
+name = "token_manager"
+fqn = "odra_examples::token_manager::TokenManager"
+
+[[contracts]]
+name = "nested_mapping"
+fqn = "odra_examples::mapping::NestedMapping"
+
+[[contracts]]
 name = "time_lock_wallet"
 fqn = "odra_examples::tlw::TimeLockWallet"

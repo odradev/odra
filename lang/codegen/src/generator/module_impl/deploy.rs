@@ -21,7 +21,7 @@ impl GenerateCode for Deploy<'_> {
         let deployer_ident = format_ident!("{}Deployer", struct_ident);
         let struct_snake_case = odra_utils::camel_to_snake(&struct_name);
 
-        let entrypoints = build_entrypoints(self.contract.get_method_iter(), struct_ident);
+        let entrypoints = build_entrypoints(self.contract.get_public_method_iter(), struct_ident);
 
         let constructors = build_constructors(self.contract.get_constructor_iter(), struct_ident);
 
