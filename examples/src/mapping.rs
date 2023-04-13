@@ -1,7 +1,7 @@
 use odra::{
     map,
     types::{Address, U256},
-    Instance, Mapping, Variable
+    Mapping, UnwrapOrRevert, Variable
 };
 
 use crate::owned_token::OwnedToken;
@@ -15,8 +15,7 @@ pub struct NestedMapping {
 #[odra::module]
 impl NestedMapping {
     pub fn set_string(&mut self, key1: String, key2: u32, key3: String, value: String) {
-        map!(self.strings[key1][key2][key3] = value.clone());
-        map!(self.tokens[key1][key2][key3] = OwnedToken::instance(&value));
+        map!(self.strings[key1][key2][key3] = value);
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -30,9 +29,11 @@ impl NestedMapping {
         symbol: String,
         initial_supply: U256
     ) {
-        let mut token = OwnedToken::instance(&token_name);
-        token.init(token_name, symbol, decimals, initial_supply);
-        map!(self.tokens[key1][key2][key3] = token);
+        self.tokens
+            .get_instance(&key1)
+            .get_instance(&key2)
+            .get_instance(&key3)
+            .init(token_name, symbol, decimals, initial_supply);
     }
 
     pub fn get_string_macro(&self, key1: String, key2: u32, key3: String) -> String {
@@ -40,13 +41,16 @@ impl NestedMapping {
     }
 
     pub fn get_string_api(&self, key1: String, key2: u32, key3: String) -> String {
-        let lvl1 = self.strings.get_instance(&key1);
-        let lvl2 = lvl1.get_instance(&key2);
-        odra::UnwrapOrRevert::unwrap_or_revert(lvl2.get(&key3))
+        let mapping = self.strings.get_instance(&key1).get_instance(&key2);
+        mapping.get(&key3).unwrap_or_revert()
     }
 
     pub fn total_supply(&self, key1: String, key2: u32, key3: String) -> U256 {
-        map!(self.tokens[key1][key2][key3]).total_supply()
+        self.tokens
+            .get_instance(&key1)
+            .get_instance(&key2)
+            .get_instance(&key3)
+            .total_supply()
     }
 }
 
@@ -59,23 +63,19 @@ pub struct TokenManager {
 #[odra::module]
 impl TokenManager {
     pub fn add_token(&mut self, name: String, decimals: u8, symbol: String) {
-        let count = self.count.get_or_default();
+        self.tokens
+            .get_instance(&name)
+            .init(name.clone(), symbol, decimals, U256::from(0));
 
-        let mut module = self.tokens.get_instance(&name);
-        module.init(name.clone(), symbol, decimals, U256::from(0));
-
-        self.tokens.set(&name, module);
-        self.count.set(count + 1);
+        self.count.set(self.count.get_or_default() + 1);
     }
 
     pub fn balance_of(&self, token_name: String, owner: Address) -> U256 {
-        let token = self.get_token(token_name);
-        token.balance_of(owner)
+        self.get_token(token_name).balance_of(owner)
     }
 
     pub fn mint(&mut self, token_name: String, account: Address, amount: U256) {
-        let mut token = self.get_token(token_name);
-        token.mint(account, amount);
+        self.get_token(token_name).mint(account, amount);
     }
 
     pub fn tokens_count(&self) -> u32 {
@@ -83,13 +83,11 @@ impl TokenManager {
     }
 
     pub fn get_owner(&self, token_name: String) -> Address {
-        let token = self.get_token(token_name);
-        token.get_owner()
+        self.get_token(token_name).get_owner()
     }
 
     pub fn set_owner(&mut self, token_name: String, new_owner: Address) {
-        let mut token = self.get_token(token_name);
-        token.change_ownership(new_owner);
+        self.get_token(token_name).change_ownership(new_owner);
     }
 
     fn get_token(&self, token_name: String) -> OwnedToken {
