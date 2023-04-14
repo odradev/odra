@@ -7,6 +7,11 @@ use uint::construct_uint;
 
 construct_uint! {
     #[derive(BorshSerialize, BorshDeserialize)]
+    pub struct U128(2);
+}
+
+construct_uint! {
+    #[derive(BorshSerialize, BorshDeserialize)]
     pub struct U256(4);
 }
 

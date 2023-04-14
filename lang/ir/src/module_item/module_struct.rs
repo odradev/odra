@@ -8,7 +8,7 @@ use super::ModuleEvents;
 pub struct ModuleStruct {
     pub is_instantiable: bool,
     pub item: syn::ItemStruct,
-    pub events: ModuleEvents,
+    pub events: ModuleEvents
 }
 
 impl ModuleStruct {
@@ -27,7 +27,7 @@ impl From<syn::ItemStruct> for ModuleStruct {
                 attrs: other_attrs,
                 ..item
             },
-            events: Default::default(),
+            events: Default::default()
         }
     }
 }
