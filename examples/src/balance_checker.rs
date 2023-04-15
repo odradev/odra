@@ -20,6 +20,7 @@ mod tests {
     use super::*;
     use crate::erc20;
     use odra::test_env;
+    use odra::IsModule;
 
     #[test]
     fn balance_checker() {
@@ -35,5 +36,11 @@ mod tests {
         // Different account should have zero balance.
         let balance = balance_checker.check_balance(token.address(), second_account);
         assert!(balance.is_zero());
+    }
+
+    #[test]
+    fn is_module() {
+        assert!(BalanceChecker::is_module());
+        assert!(!U256::is_module());
     }
 }
