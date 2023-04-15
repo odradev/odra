@@ -5,15 +5,14 @@ use casper_types::{
 use lazy_static::lazy_static;
 use odra_casper_types::{Address, OdraType};
 use odra_types::event::OdraEvent;
-use std::{collections::BTreeMap, mem::MaybeUninit, sync::Mutex};
+use std::{collections::BTreeMap, sync::Mutex};
 
 use casper_contract::{
     contract_api::{
-        self, runtime,
+        runtime,
         storage::{self, dictionary_put},
         system::{create_purse, get_purse_balance, transfer_from_purse_to_purse}
     },
-    ext_ffi,
     unwrap_or_revert::UnwrapOrRevert
 };
 

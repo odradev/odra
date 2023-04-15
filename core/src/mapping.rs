@@ -70,7 +70,6 @@ impl<K: OdraType + Hash, V: Instance> Mapping<K, V> {
             let key_hash = hex::encode(key.to_bytes().unwrap());
             V::instance(&format!("{}_{}", key_hash, self.name))
         }
-
     }
 }
 

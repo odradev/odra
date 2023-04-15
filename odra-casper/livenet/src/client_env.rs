@@ -56,7 +56,6 @@ impl ClientEnv {
 
     pub fn set_gas<T: Into<Balance>>(&self, gas: T) {
         let new_gas: Balance = gas.into();
-        println!("set_gas: {:?}", new_gas);
         let mut gas = self.gas.lock().unwrap();
         *gas = Some(new_gas);
     }
@@ -64,7 +63,6 @@ impl ClientEnv {
     pub fn get_gas(&self) -> Balance {
         let gas = {
             let mut gas = self.gas.lock().unwrap();
-            println!("gas: {:?}", gas);
             let current_gas: Balance = gas.expect("Gas not set");
             *gas = None;
             current_gas

@@ -1,9 +1,13 @@
-use std::{time::Duration, path::PathBuf, fs::{File, self}, sync::{Arc, Mutex}};
+use std::{time::Duration, path::PathBuf, fs::{File, self}};
 
-use casper_client::{self, GlobalStateStrParams};
+use blake2::{
+    digest::{Update, VariableOutput},
+    VarBlake2b,
+};
+use casper_client::{self, GlobalStateStrParams, DictionaryItemStrParams};
 use casper_execution_engine::core::engine_state::ExecutableDeployItem;
-use casper_node::{types::{Deploy, Timestamp, TimeDiff, DeployHash, json_compatibility::Account}, crypto::AsymmetricKeyExt, rpcs::{info::GetDeployResult, account::PutDeployResult}};
-use casper_types::{bytesrepr::FromBytes, runtime_args, RuntimeArgs, U512, SecretKey, PublicKey, ContractPackageHash};
+use casper_node::{types::{Deploy, Timestamp, TimeDiff, DeployHash}, crypto::AsymmetricKeyExt, rpcs::{info::GetDeployResult, account::PutDeployResult}};
+use casper_types::{bytesrepr::{FromBytes, ToBytes}, runtime_args, RuntimeArgs, U512, SecretKey, PublicKey, ContractPackageHash};
 use jsonrpc_lite::JsonRpc;
 use odra_casper_types::{Address, OdraType, Balance, CallArgs, Bytes};
 use serde::de::DeserializeOwned;
@@ -61,27 +65,39 @@ impl CasperClient {
             let contract_hash = contract_hash.replace("contract-", "hash-");
 
             // Query contract.
-            let state_root = GlobalStateStrParams {
-                is_block_hash: false,
-                hash_value: &state_root_hash
+            let key = &to_variable_key(key);
+            println!("key: {}", &key);
+            let dictionary_str_params = DictionaryItemStrParams::ContractNamedKey {
+                key: &contract_hash,
+                dictionary_name: "state",
+                dictionary_item_key: &key
             };
-            let response = casper_client::query_global_state(
-                "",
-                &self.node_address,
-                0,
-                state_root,
-                &contract_hash,
-                key
-            )
-            .await;
-            let response = response.unwrap();
-            let response: &Value = response.get_result().unwrap();
-            let bytes: &str = response["stored_value"]["CLValue"]["bytes"]
-                .as_str()
-                .unwrap();
-            let bytes = hex::decode(bytes).unwrap();
-            let (value, _) = FromBytes::from_bytes(&bytes).unwrap();
-            Some(value)
+
+            let response = casper_client::get_dictionary_item(
+                "", &self.node_address, 0, &state_root_hash, dictionary_str_params).await;
+
+            println!("{:#?}", response);
+            panic!("Asd")
+            // let response = casper_client::query_global_state(
+            //     "",
+            //     &self.node_address,
+            //     0,
+            //     state_root,
+            //     &contract_hash,
+            //     key
+            // )
+            // .await;
+
+
+
+            // let response = response.unwrap();
+            // let response: &Value = response.get_result().unwrap();
+            // let bytes: &str = response["stored_value"]["CLValue"]["bytes"]
+            //     .as_str()
+            //     .unwrap();
+            // let bytes = hex::decode(bytes).unwrap();
+            // let (value, _) = FromBytes::from_bytes(&bytes).unwrap();
+            // Some(value)
         })
     }
 
@@ -168,9 +184,10 @@ impl CasperClient {
                 "id": 1,
             }
         );
-        let response: PutDeployResult = self.post_request(request);
-        let deploy_hash = response.deploy_hash;
-        self.wait_for_deploy_hash(deploy_hash);
+
+        // let response: PutDeployResult = self.post_request(request);
+        // let deploy_hash = response.deploy_hash;
+        // self.wait_for_deploy_hash(deploy_hash);
 
         let address = self.get_contract_address(wasm_file_name.strip_suffix(".wasm").unwrap());
         println!("Contract address: {:?}", &address);
@@ -259,6 +276,32 @@ fn find_wasm_file_path(wasm_file_name: &str) -> PathBuf {
     }
     panic!("Could not find wasm under {:?}", checked_paths);
 }
+
+fn to_variable_key<T: ToBytes>(key: T) -> String {
+    let preimage = key.to_bytes().unwrap();
+    let bytes = blake2b(preimage);
+    hex::encode(bytes)
+}
+
+// fn blake2b<T: AsRef<[u8]>>(data: T) -> [u8; 32] {
+//     let mut result = [0; 32];
+//     let mut hasher: Blake2bVar = Blake2bVar::new(32).expect("should create hasher");
+//     hasher.update(data.as_ref());
+//     let _: () = hasher.finalize_variable(&mut result).unwrap();
+//     result
+// }
+
+fn blake2b<T: AsRef<[u8]>>(data: T) -> [u8; 32] {
+    let mut result = [0; 32];
+    let mut hasher = VarBlake2b::new(32).expect("should create hasher");
+
+    hasher.update(data);
+    hasher.finalize_variable(|slice| {
+        result.copy_from_slice(slice);
+    });
+    result
+}
+
 
 #[cfg(test)]
 mod tests {
