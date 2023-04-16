@@ -24,8 +24,8 @@ pub fn set_dict_value<K: OdraType, V: OdraType>(_: &str, _: &K, _: V) {
     unimplemented!()
 }
 
-pub fn get_dict_value<K: OdraType, T: OdraType>(_: &str, _: &K) -> Option<T> {
-    unimplemented!()
+pub fn get_dict_value<K: OdraType, T: OdraType>(seed: &str, key: &K) -> Option<T> {
+    client_env::get_dict_value_from_current_contract(seed, key)
 }
 
 pub fn emit_event<T>(_: T)

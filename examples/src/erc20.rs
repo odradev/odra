@@ -163,7 +163,7 @@ pub mod tests {
     }
 
     #[test]
-    fn initialization() {
+    fn initialization2() {
         let erc20 = setup();
 
         assert_eq!(&erc20.symbol(), SYMBOL);

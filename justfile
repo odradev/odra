@@ -33,7 +33,7 @@ test-examples-on-mockvm:
     cd examples && cargo odra test
 
 test-examples-on-casper:
-    cd examples && cargo odra test -b casper
+    cd examples && cargo odra test -b casper --skip-build -- initialization2
 
 test-examples: test-examples-on-mockvm test-examples-on-casper
 

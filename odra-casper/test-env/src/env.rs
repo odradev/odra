@@ -282,6 +282,17 @@ impl CasperTestEnv {
     pub fn last_call_contract_gas_used(&self) -> U512 {
         *DEFAULT_PAYMENT
     }
+
+    pub fn get_var<T: OdraType>(&self, contract_address: ContractPackageHash, name: &str) -> T {
+        let contract_hash: ContractHash = self.get_contract_package_hash(contract_address);
+        let contract: Contract = self.context.get_contract(contract_hash).unwrap();
+        
+        let key: &Key = contract.named_keys().get("state").unwrap();
+        let state_uref = key.as_uref().unwrap();
+        let result = self.context.query_dictionary_item(None, *state_uref, &to_variable_key(name));
+        dbg!(result.clone());
+        result.unwrap().as_cl_value().unwrap().clone().into_t().unwrap()
+    }
 }
 
 impl CasperTestEnv {
@@ -360,4 +371,26 @@ fn parse_error(err: engine_state::Error) -> OdraError {
     } else {
         OdraError::VmError(VmError::Other(format!("Casper EngineStateError: {}", err)))
     }
+}
+
+use blake2::{
+    digest::{Update, VariableOutput},
+    VarBlake2b,
+};
+
+fn to_variable_key<T: ToBytes>(key: T) -> String {
+    let preimage = key.to_bytes().unwrap();
+    let bytes = blake2b(preimage);
+    hex::encode(bytes)
+}
+
+fn blake2b<T: AsRef<[u8]>>(data: T) -> [u8; 32] {
+    let mut result = [0; 32];
+    let mut hasher = VarBlake2b::new(32).expect("should create hasher");
+
+    hasher.update(data);
+    hasher.finalize_variable(|slice| {
+        result.copy_from_slice(slice);
+    });
+    result
 }

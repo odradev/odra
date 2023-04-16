@@ -8,7 +8,7 @@ odra = { path = "../core", default-features = false }
 odra-modules = { path = "../modules", default-features = false }
 
 [features]
-default = ["mock-vm"]
+default = ["casper"]
 mock-vm = ["odra/mock-vm", "odra-modules/mock-vm"]
 casper = ["odra/casper", "odra-modules/casper"]
 casper-livenet = ["odra/casper-livenet", "odra-modules/casper-livenet"]

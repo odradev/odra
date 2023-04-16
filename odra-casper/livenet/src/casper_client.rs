@@ -40,9 +40,6 @@ impl CasperClient {
         let contract_hash = address.to_string();
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async {
-            // Turn contract_package_hash into a contract_hash so it can be queried.
-            // let response = casper_client::get_item("",
-            //     &self.node_address, 0, &state_root_hash, &contract_hash, "").await;
             let state_root = GlobalStateStrParams {
                 is_block_hash: false,
                 hash_value: &state_root_hash
@@ -66,7 +63,7 @@ impl CasperClient {
 
             // Query contract.
             let key = &to_variable_key(key);
-            println!("key: {}", &key);
+            // println!("key: {}", &key);
             let dictionary_str_params = DictionaryItemStrParams::ContractNamedKey {
                 key: &contract_hash,
                 dictionary_name: "state",
@@ -76,29 +73,68 @@ impl CasperClient {
             let response = casper_client::get_dictionary_item(
                 "", &self.node_address, 0, &state_root_hash, dictionary_str_params).await;
 
-            println!("{:#?}", response);
-            panic!("Asd")
-            // let response = casper_client::query_global_state(
-            //     "",
-            //     &self.node_address,
-            //     0,
-            //     state_root,
-            //     &contract_hash,
-            //     key
-            // )
-            // .await;
-
-
-
-            // let response = response.unwrap();
-            // let response: &Value = response.get_result().unwrap();
-            // let bytes: &str = response["stored_value"]["CLValue"]["bytes"]
-            //     .as_str()
-            //     .unwrap();
-            // let bytes = hex::decode(bytes).unwrap();
-            // let (value, _) = FromBytes::from_bytes(&bytes).unwrap();
-            // Some(value)
+            let response = response.unwrap();
+            let response: &Value = response.get_result().unwrap();
+            let bytes: &str = response["stored_value"]["CLValue"]["bytes"]
+                .as_str()
+                .unwrap();
+            let bytes = hex::decode(bytes).unwrap();
+            let (value, _) = FromBytes::from_bytes(&bytes).unwrap();
+            Some(value)
         })
+    }
+
+    pub fn get_dict_value<K: OdraType, V: OdraType>(&self, address: Address, seed: &str, key: &K) -> Option<V> {
+        let state_root_hash = self.get_state_root_hash();
+        let contract_hash = address.to_string();
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async {
+            let state_root = GlobalStateStrParams {
+                is_block_hash: false,
+                hash_value: &state_root_hash
+            };
+            let response = casper_client::query_global_state(
+                "",
+                &self.node_address,
+                0,
+                state_root,
+                &contract_hash,
+                ""
+            )
+            .await;
+            let response = response.unwrap();
+            let response: &Value = response.get_result().unwrap();
+            let contract_hash: &str = response["stored_value"]["ContractPackage"]["versions"][0]
+                ["contract_hash"]
+                .as_str()
+                .unwrap();
+            let contract_hash = contract_hash.replace("contract-", "hash-");
+
+            // Query contract.
+            println!("seed: {:?}", seed);
+            println!("key: {:?}", key.to_bytes());
+            let key = &to_dictionary_key(seed, key);
+            println!("dictionary_key: {:?}", key);
+            // println!("key: {}", &key);
+            let dictionary_str_params = DictionaryItemStrParams::ContractNamedKey {
+                key: &contract_hash,
+                dictionary_name: "state",
+                dictionary_item_key: &key
+            };
+
+            let response = casper_client::get_dictionary_item(
+                "", &self.node_address, 0, &state_root_hash, dictionary_str_params).await;
+            
+            let response = response.unwrap();
+            let response: &Value = response.get_result().unwrap();
+            let bytes: &str = response["stored_value"]["CLValue"]["bytes"]
+                .as_str()
+                .unwrap();
+            let bytes = hex::decode(bytes).unwrap();
+            let (value, _) = FromBytes::from_bytes(&bytes).unwrap();
+            Some(value)
+        })
+
     }
 
     pub fn get_state_root_hash(&self) -> String {
@@ -185,9 +221,9 @@ impl CasperClient {
             }
         );
 
-        // let response: PutDeployResult = self.post_request(request);
-        // let deploy_hash = response.deploy_hash;
-        // self.wait_for_deploy_hash(deploy_hash);
+        let response: PutDeployResult = self.post_request(request);
+        let deploy_hash = response.deploy_hash;
+        self.wait_for_deploy_hash(deploy_hash);
 
         let address = self.get_contract_address(wasm_file_name.strip_suffix(".wasm").unwrap());
         println!("Contract address: {:?}", &address);
@@ -282,6 +318,19 @@ fn to_variable_key<T: ToBytes>(key: T) -> String {
     let bytes = blake2b(preimage);
     hex::encode(bytes)
 }
+
+fn to_dictionary_key<T: ToBytes>(seed: &str, key: &T) -> String {
+    let seed_bytes = seed.as_bytes();
+    let key_bytes = key.to_bytes().unwrap();
+
+    let mut preimage = Vec::with_capacity(seed_bytes.len() + key_bytes.len());
+    preimage.extend_from_slice(seed_bytes);
+    preimage.extend_from_slice(&key_bytes);
+
+    let bytes = blake2b(&preimage);
+    hex::encode(bytes)
+}
+
 
 // fn blake2b<T: AsRef<[u8]>>(data: T) -> [u8; 32] {
 //     let mut result = [0; 32];

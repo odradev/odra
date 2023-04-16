@@ -115,6 +115,11 @@ pub fn get_var_from_current_contract<T: OdraType>(key: &str) -> Option<T> {
     CasperClient::intergration_testnet().get_var(address, key)
 }
 
+pub fn get_dict_value_from_current_contract<K: OdraType, T: OdraType>(seed: &str, key: &K) -> Option<T> {
+    let address = ClientEnv::instance().current_contract();
+    CasperClient::intergration_testnet().get_dict_value(address, seed, key)
+}
+
 pub fn set_gas<T: Into<Balance>>(gas: T) {
     ClientEnv::instance_mut().set_gas(gas);
 }

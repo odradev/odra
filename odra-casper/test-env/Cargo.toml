@@ -17,3 +17,5 @@ odra-casper-shared = { version = "0.2.0", path = "../shared" }
 odra-casper-types = { version = "0.2.0", path = "../types" }
 odra-types = { version = "0.2.0", path = "../../types" }
 odra-utils = { version = "0.2.0", path = "../../utils" }
+blake2 = { version = "0.9.0", default-features = false }
+hex = "*"
