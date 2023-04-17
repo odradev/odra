@@ -1,7 +1,7 @@
 use derive_more::From;
 use quote::quote;
 
-use crate::{generator::common, GenerateCode};
+use crate::GenerateCode;
 
 #[derive(From)]
 pub struct ModuleStruct<'a> {

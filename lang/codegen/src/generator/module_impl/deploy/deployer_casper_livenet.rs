@@ -1,7 +1,7 @@
 use odra_ir::module::{Constructor, Method};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use syn::{Type, TypePath, punctuated::Punctuated, ReturnType};
+use syn::{punctuated::Punctuated, ReturnType, Type, TypePath};
 
 use super::{args_to_arg_names_stream, args_to_fn_args2, args_to_runtime_args_stream};
 
@@ -67,12 +67,18 @@ fn build_constructors(
     } else {
         constructors
             .iter()
-            .map(|constructor| build_constructor(constructor, struct_ident, ref_ident, entrypoint_calls))
+            .map(|constructor| {
+                build_constructor(constructor, struct_ident, ref_ident, entrypoint_calls)
+            })
             .collect::<TokenStream>()
     }
 }
 
-fn build_default_constructor(struct_ident: &Ident, ref_ident: &Ident, entrypoint_calls: &TokenStream) -> TokenStream {
+fn build_default_constructor(
+    struct_ident: &Ident,
+    ref_ident: &Ident,
+    entrypoint_calls: &TokenStream
+) -> TokenStream {
     let struct_name = struct_ident.to_string();
     let struct_name_snake_case = odra_utils::camel_to_snake(&struct_name);
 

@@ -47,8 +47,8 @@ test-modules: test-modules-on-mockvm test-modules-on-casper
 
 test: test-odra test-examples test-modules
 
-run-example-token-reader:
-    cd examples && cargo run --bin token-reader --features casper-livenet --no-default-features
+run-example-erc20-on-livenet:
+    cd examples && cargo run --bin erc20-on-livenet --features casper-livenet --no-default-features
 
 clean:
     cargo clean

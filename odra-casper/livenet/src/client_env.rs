@@ -1,10 +1,10 @@
-use std::{collections::HashMap, str::FromStr, sync::Mutex};
+use std::{collections::HashMap, sync::Mutex};
 
 use casper_types::{bytesrepr::FromBytes, CLValue};
 use odra_casper_types::{Address, Balance, CallArgs, OdraType};
 use ref_thread_local::RefThreadLocal;
 
-use crate::{EntrypointArgs, EntrypointCall, casper_client::CasperClient};
+use crate::{casper_client::CasperClient, EntrypointArgs, EntrypointCall};
 
 use self::{
     callstack::Callstack, contract_container::ContractContainer,
@@ -84,11 +84,15 @@ pub fn register_existing_contract(
     ClientEnv::instance_mut().register_contract(contract);
 }
 
-pub fn deploy_new_contract(name: &str, args: CallArgs, entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>) -> Address {
+pub fn deploy_new_contract(
+    name: &str,
+    args: CallArgs,
+    entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>
+) -> Address {
     let gas = get_gas();
     let wasm_name = format!("{}.wasm", name);
     let address = CasperClient::intergration_testnet().deploy_wasm(&wasm_name, args, gas);
-    
+
     let contract = ContractContainer::new(address, entrypoints);
     ClientEnv::instance_mut().register_contract(contract);
 
@@ -112,10 +116,13 @@ pub fn call_contract<T: OdraType>(
 
 pub fn get_var_from_current_contract<T: OdraType>(key: &str) -> Option<T> {
     let address = ClientEnv::instance().current_contract();
-    CasperClient::intergration_testnet().get_var(address, key)
+    CasperClient::intergration_testnet().get_variable_value(address, key)
 }
 
-pub fn get_dict_value_from_current_contract<K: OdraType, T: OdraType>(seed: &str, key: &K) -> Option<T> {
+pub fn get_dict_value_from_current_contract<K: OdraType, T: OdraType>(
+    seed: &str,
+    key: &K
+) -> Option<T> {
     let address = ClientEnv::instance().current_contract();
     CasperClient::intergration_testnet().get_dict_value(address, seed, key)
 }
@@ -146,5 +153,6 @@ fn call_contract_getter_entrypoint<T: OdraType>(
 
 fn call_contract_deploy(addr: Address, entrypoint: &str, args: CallArgs, amount: Option<Balance>) {
     let gas = get_gas();
-    CasperClient::intergration_testnet().put_deploy(addr, entrypoint, args, amount, gas);
+    CasperClient::intergration_testnet()
+        .deploy_entrypoint_call(addr, entrypoint, args, amount, gas);
 }

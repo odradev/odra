@@ -166,16 +166,6 @@ impl MockVm {
         }
     }
 
-    pub fn get_var_from_contract<T: MockVMType>(&self, address: &Address, key: &str) -> Option<T> {
-        let result = { self.state.read().unwrap().get_var_from_contract(address, key) };
-        match result {
-            Ok(result) => result,
-            Err(error) => {
-                None
-            }
-        }
-    }
-
     pub fn set_dict_value<T: MockVMType>(&self, dict: &str, key: &[u8], value: T) {
         self.state.write().unwrap().set_dict_value(dict, key, value);
     }
@@ -279,10 +269,6 @@ impl MockVmState {
     fn get_var<T: MockVMType>(&self, key: &str) -> Result<Option<T>, MockVMSerializationError> {
         let ctx = &self.callstack.current().address;
         self.storage.get_value(ctx, key)
-    }
-
-    fn get_var_from_contract<T: MockVMType>(&self, contract_address: &Address, key: &str) -> Result<Option<T>, MockVMSerializationError> {
-        self.storage.get_value(contract_address, key)
     }
 
     fn set_dict_value<T: MockVMType>(&mut self, dict: &str, key: &[u8], value: T) {

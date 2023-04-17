@@ -110,10 +110,6 @@ pub fn last_call_contract_gas_used() -> Balance {
     Balance::zero()
 }
 
-pub fn get_var<T: MockVMType>(contract_address: &Address, name: &str) -> Option<T> {
-    crate::borrow_env().get_var_from_contract(contract_address, name)
-}
-
 fn extract_event_name(mut bytes: &[u8]) -> Result<String, EventError> {
     let name = BorshDeserialize::deserialize(&mut bytes).map_err(|_| EventError::Formatting)?;
     Ok(name)

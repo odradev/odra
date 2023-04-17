@@ -14,6 +14,6 @@ casper = ["odra/casper", "odra-modules/casper"]
 casper-livenet = ["odra/casper-livenet", "odra-modules/casper-livenet"]
 
 [[bin]]
-name = "token-reader"
-path = "bin/token_reader.rs"
+name = "erc20-on-livenet"
+path = "bin/erc20_on_livenet.rs"
 required-features = ["casper-livenet"]

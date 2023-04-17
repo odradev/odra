@@ -118,8 +118,3 @@ pub fn last_call_contract_gas_cost() -> Balance {
 pub fn last_call_contract_gas_used() -> Balance {
     ENV.with(|env| env.borrow().last_call_contract_gas_used().into())
 }
-
-pub fn get_var<T: OdraType>(contract_address: &Address, name: &str) -> T {
-    let contract_address = contract_address.as_contract_package_hash().unwrap().clone();
-    ENV.with(|env| env.borrow().get_var(contract_address, name))
-}
