@@ -1,6 +1,7 @@
 use std::convert::TryFrom;
 
 use proc_macro2::TokenStream;
+use quote::ToTokens;
 use syn::{parse::Parse, punctuated::Punctuated, Token};
 
 use self::{module_impl::ModuleImpl, module_struct::ModuleStruct};
@@ -33,7 +34,7 @@ impl ModuleItem {
         let item_impl = syn::parse2::<syn::ItemImpl>(item.clone());
 
         if let Ok(item) = item_struct {
-            let module_struct = ModuleStruct::from(item).with_events(events);
+            let module_struct = ModuleStruct::from(item).with_events(events)?;
             return Ok(ModuleItem::Struct(Box::new(module_struct)));
         }
 
@@ -55,16 +56,16 @@ mod kw {
 
 #[derive(Debug, Default)]
 pub struct ModuleEvents {
-    pub events: Punctuated<ModuleEvent, Token![,]>
+    pub events: Punctuated<ModuleEvent, Token![,]>,
+    pub submodules_events: Punctuated<ModuleEvent, Token![,]>,
+    pub mappings_events: Punctuated<ModuleEvent, Token![,]>
 }
 
 impl Parse for ModuleEvents {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         // a sample input: events = [Event1, Event2, Event3]
         if input.is_empty() {
-            return Ok(Self {
-                events: Punctuated::new()
-            });
+            return Ok(Self::default());
         }
         input.parse::<kw::events>()?;
         input.parse::<Token![=]>()?;
@@ -72,11 +73,11 @@ impl Parse for ModuleEvents {
         let content;
         let _brace_token = syn::bracketed!(content in input);
         let events = content.parse_terminated::<ModuleEvent, Token![,]>(ModuleEvent::parse)?;
-        Ok(Self { events })
+        Ok(Self { events, submodules_events: Default::default(), mappings_events: Default::default() })
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct ModuleEvent {
     pub name: syn::Ident
 }
@@ -85,6 +86,12 @@ impl Parse for ModuleEvent {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let name = input.parse::<syn::Ident>()?;
         Ok(ModuleEvent { name })
+    }
+}
+
+impl ToTokens for ModuleEvent {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.name.to_tokens(tokens);
     }
 }
 

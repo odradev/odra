@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use crate::types::OdraType;
 use odra_types::contract_def::Event;
 
 use crate::types::{Address, U256, U512};
@@ -7,7 +8,9 @@ use crate::types::{Address, U256, U512};
 pub trait OdraItem {
     fn is_module() -> bool;
 
-    fn events() -> Vec<Event>;
+    fn events() -> Vec<Event> {
+        vec![]
+    }
 }
 
 macro_rules! impl_odra_item_for_types {
@@ -52,42 +55,45 @@ impl_odra_item_for_array_types!(
 
 impl_odra_item_for_types!(Address, String, bool, i32, i64, u8, u32, u64, u128, U256, U512, ());
 
-impl<T> OdraItem for Option<T> {
+impl<T: OdraType> OdraItem for Option<T> {
     fn is_module() -> bool {
         false
-    }
-
-    fn events() -> Vec<Event> {
-        vec![]
     }
 }
 
-impl<T, E> OdraItem for Result<T, E> {
+impl<T: OdraType, E: OdraType> OdraItem for Result<T, E> {
     fn is_module() -> bool {
         false
-    }
-
-    fn events() -> Vec<Event> {
-        vec![]
     }
 }
 
-impl<T, E> OdraItem for BTreeMap<T, E> {
+impl<T: OdraType, E: OdraType> OdraItem for BTreeMap<T, E> {
     fn is_module() -> bool {
         false
-    }
-
-    fn events() -> Vec<Event> {
-        vec![]
     }
 }
 
-impl<T> OdraItem for Vec<T> {
+impl<T: OdraType> OdraItem for Vec<T> {
     fn is_module() -> bool {
         false
     }
+}
 
-    fn events() -> Vec<Event> {
-        vec![]
+
+impl<T1: OdraType> OdraItem for (T1,) {
+    fn is_module() -> bool {
+        false
+    }
+}
+
+impl<T1: OdraType, T2: OdraType> OdraItem for (T1, T2) {
+    fn is_module() -> bool {
+        false
+    }
+}
+
+impl<T1: OdraType, T2: OdraType, T3: OdraType> OdraItem for (T1, T2, T3) {
+    fn is_module() -> bool {
+        false
     }
 }

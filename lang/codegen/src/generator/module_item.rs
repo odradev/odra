@@ -1,6 +1,5 @@
 use derive_more::From;
-use proc_macro2::Ident;
-use quote::{format_ident, quote, quote_spanned};
+use quote::{quote, quote_spanned};
 
 use crate::GenerateCode;
 
@@ -12,28 +11,12 @@ pub struct ModuleStruct<'a> {
 impl GenerateCode for ModuleStruct<'_> {
     fn generate_code(&self) -> proc_macro2::TokenStream {
         let events = &self.contract.events;
-        let events = events.events.iter().map(|ev| &ev.name).collect::<Vec<_>>();
+        let module_events = events.events.iter().collect::<Vec<_>>();
+        let submodules_events = events.submodules_events.iter().collect::<Vec<_>>();
+        let mappings_events = events.mappings_events.iter().collect::<Vec<_>>();
 
         let item_struct = &self.contract.item;
-        let submodules = item_struct
-            .fields
-            .iter()
-            .filter(|field| field.ident.is_some())
-            .filter_map(|f| match &f.ty {
-                syn::Type::Path(path) => {
-                    let path = &path.path;
-                    if path.segments.len() != 0 {
-                        let segment = &path.segments.last().unwrap();
-                        if segment.ident != "Variable" && segment.ident != "Mapping" {
-                            return Some(segment.ident.clone());
-                        }
-                    }
-                    None
-                }
-                _ => None
-            })
-            .collect::<Vec<_>>();
-        let mappings: Vec<Ident> = vec![format_ident!("String")];
+
         let struct_ident = &item_struct.ident;
         let span = item_struct.ident.span();
         let instance = match &self.contract.is_instantiable {
@@ -44,23 +27,74 @@ impl GenerateCode for ModuleStruct<'_> {
             #instance
             #item_struct
 
-            // #[cfg(feature = "casper")]
             impl odra::types::contract_def::HasEvents for #struct_ident {
                 fn events() -> Vec<odra::types::contract_def::Event> {
                     let mut events = vec![];
                     #(
-                        events.extend(<#events as odra::types::event::OdraEvent>::schema());
+                        events.extend(<#module_events as odra::types::event::OdraEvent>::schema());
                     )*
                     #(
-                        events.extend(<#submodules as odra::types::contract_def::HasEvents>::events());
+                        events.extend(<#submodules_events as odra::OdraItem>::events());
                     )*
-
                     #(
-                        events.extend(<#mappings as odra::OdraItem>::events());
+                        events.extend(<#mappings_events as odra::OdraItem>::events());
                     )*
+                    events.dedup();
                     events
                 }
             }
         }
+    }
+}
+
+
+#[cfg(test)]
+mod test {
+    use odra_ir::module::ModuleEvents;
+
+    use crate::generator::GenerateCode;
+
+    #[test]
+    fn test() {
+        let input = quote::quote! {
+            pub struct Module {
+                pub variable: Variable<u32>,
+                pub mapping: Mapping<u32, Mapping<u32, MappedModule>>,
+                pub mapping2: Mapping<u32, String>,
+                pub submodule: Submodule
+            }
+        };
+        let events_input = quote::quote!(events = [A, B, C]);
+        let events = syn::parse2::<ModuleEvents>(events_input).unwrap();
+        
+        let item_struct = syn::parse2::<syn::ItemStruct>(input.clone()).unwrap();
+        let module_struct = odra_ir::module::ModuleStruct::from(item_struct);
+        let module_struct = module_struct.with_events(events).unwrap();
+
+        let expected = quote::quote! {
+            #[derive(odra::Instance)]
+            pub struct Module {
+                pub variable: Variable<u32>,
+                pub mapping: Mapping<u32, Mapping<u32, MappedModule> >,
+                pub mapping2: Mapping<u32, String>,
+                pub submodule: Submodule
+            }
+
+            impl odra::types::contract_def::HasEvents for Module {
+                fn events() -> Vec<odra::types::contract_def::Event> {
+                    let mut events = vec![];
+                    events.extend(<A as odra::types::event::OdraEvent>::schema());
+                    events.extend(<B as odra::types::event::OdraEvent>::schema());
+                    events.extend(<C as odra::types::event::OdraEvent>::schema());
+                    events.extend(<Submodule as odra::OdraItem>::events());
+                    events.extend(<MappedModule as odra::OdraItem>::events());
+                    events.extend(<String as odra::OdraItem>::events());
+                    events.dedup();
+                    events
+                }
+            }
+        };
+        let actual = super::ModuleStruct::from(&module_struct).generate_code();
+        pretty_assertions::assert_eq!(actual.to_string(), expected.to_string());
     }
 }
