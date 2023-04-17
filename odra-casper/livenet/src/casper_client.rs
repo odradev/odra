@@ -46,21 +46,12 @@ pub struct CasperClient {
 }
 
 impl CasperClient {
-    pub fn intergration_testnet() -> Self {
+    pub fn new() -> Self {
         dotenv::dotenv().ok();
-        let secret_key_path = get_env_variable(ENV_SECRET_KEY);
-
-        // let secret_key_path =
-        //     "/home/ziel/workspace/dao/testnet-dao/integration-keys/secret_key.pem";
-        // CasperClient {
-        //     node_address: String::from("http://3.140.179.157:7777"),
-        //     chain_name: String::from("integration-test"),
-        //     secret_key: SecretKey::from_file(secret_key_path).unwrap()
-        // }
         CasperClient {
             node_address: get_env_variable(ENV_NODE_ADDRESS),
             chain_name: get_env_variable(ENV_CHAIN_NAME),
-            secret_key: SecretKey::from_file(secret_key_path).unwrap()
+            secret_key: SecretKey::from_file(get_env_variable(ENV_SECRET_KEY)).unwrap()
         }
     }
 
@@ -393,11 +384,11 @@ mod tests {
     pub fn client_works() {
         let contract_hash = Address::from_str(CONTRACT_PACKAGE_HASH).unwrap();
         let result: Option<String> =
-            CasperClient::intergration_testnet().get_variable_value(contract_hash, "name_contract");
+            CasperClient::new().get_variable_value(contract_hash, "name_contract");
         assert_eq!(result.unwrap().as_str(), "Plascoin");
 
         let account = Address::from_str(ACCOUNT_HASH).unwrap();
-        let balance: Option<U256> = CasperClient::intergration_testnet().get_dict_value(
+        let balance: Option<U256> = CasperClient::new().get_dict_value(
             contract_hash,
             "balances_contract",
             &account
@@ -408,7 +399,7 @@ mod tests {
     #[test]
     #[ignore]
     pub fn state_root_hash() {
-        CasperClient::intergration_testnet().get_state_root_hash();
+        CasperClient::new().get_state_root_hash();
     }
 
     #[test]
@@ -418,9 +409,9 @@ mod tests {
             Digest::from_hex("98de69b3515fbefcd416e09b57642f721db354509c6d298f5f7cfa8b42714dba")
                 .unwrap()
         );
-        let result = CasperClient::intergration_testnet().get_deploy(hash);
+        let result = CasperClient::new().get_deploy(hash);
         assert_eq!(result.deploy.id(), &hash);
-        CasperClient::intergration_testnet().wait_for_deploy_hash(hash);
+        CasperClient::new().wait_for_deploy_hash(hash);
     }
 
     #[test]
@@ -428,13 +419,13 @@ mod tests {
     pub fn query_global_state_for_contract() {
         let addr = Address::from_str(CONTRACT_PACKAGE_HASH).unwrap();
         let _result: Option<String> =
-            CasperClient::intergration_testnet().query_dictionary(addr, "name_contract");
+            CasperClient::new().query_dictionary(addr, "name_contract");
     }
 
     #[test]
     #[ignore]
     pub fn discover_contract_address() {
-        let address = CasperClient::intergration_testnet().get_contract_address("erc20");
+        let address = CasperClient::new().get_contract_address("erc20");
         let contract_hash = Address::from_str(CONTRACT_PACKAGE_HASH).unwrap();
         assert_eq!(address, contract_hash);
     }
