@@ -29,6 +29,10 @@ impl GenerateCode for EventItem<'_> {
                 fn name() -> String {
                     String::from(stringify!(#struct_ident))
                 }
+
+                fn schema() -> Vec<odra::types::contract_def::Event> {
+                    vec![]
+                }
             }
 
             #casper_code

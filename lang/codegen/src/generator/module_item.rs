@@ -1,6 +1,6 @@
 use derive_more::From;
 use proc_macro2::Ident;
-use quote::{quote, quote_spanned, format_ident};
+use quote::{format_ident, quote, quote_spanned};
 
 use crate::GenerateCode;
 
@@ -44,21 +44,19 @@ impl GenerateCode for ModuleStruct<'_> {
             #instance
             #item_struct
 
-            impl odra::types::OdraItem for #struct_ident {
-                const IS_MODULE: bool = true;
-
-                fn events() -> Vec<String> {
+            // #[cfg(feature = "casper")]
+            impl odra::types::contract_def::HasEvents for #struct_ident {
+                fn events() -> Vec<odra::types::contract_def::Event> {
                     let mut events = vec![];
                     #(
-                        events.push(<#events as odra::types::event::OdraEvent>::name());
+                        events.extend(<#events as odra::types::event::OdraEvent>::schema());
                     )*
                     #(
-                        events.extend(#submodules::events());
+                        events.extend(<#submodules as odra::types::contract_def::HasEvents>::events());
                     )*
+
                     #(
-                        if <#mappings as odra::types::OdraItem>::IS_MODULE {
-                            events.extend(#mappings::events());
-                        }
+                        events.extend(<#mappings as odra::OdraItem>::events());
                     )*
                     events
                 }

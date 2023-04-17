@@ -4,8 +4,8 @@ use self::{
     constructor::WasmConstructor, entrypoints_def::ContractEntrypoints,
     wasm_entrypoint::WasmEntrypoint
 };
-use odra_types::contract_def::{ContractDef, EntrypointType};
-use proc_macro2::TokenStream as TokenStream2;
+use odra_types::contract_def::{EntrypointType, Entrypoint, Event};
+use proc_macro2::{TokenStream as TokenStream2};
 use quote::{format_ident, quote, ToTokens};
 use syn::{punctuated::Punctuated, Path, PathSegment, Token};
 
@@ -16,9 +16,9 @@ mod ty;
 mod wasm_entrypoint;
 
 /// Given the ContractDef from Odra, generate Casper contract.
-pub fn gen_contract(contract_def: ContractDef, fqn: String) -> TokenStream2 {
-    let entrypoints = generate_entrypoints(&contract_def, fqn.clone());
-    let call_fn = generate_call(&contract_def, fqn + "Ref");
+pub fn gen_contract(contract_ident: String, contract_entrypoints: Vec<Entrypoint>, events: Vec<Event>, fqn: String) -> TokenStream2 {
+    let entrypoints = generate_entrypoints(&contract_entrypoints, fqn.clone());
+    let call_fn = generate_call(&contract_ident, &contract_entrypoints, fqn + "Ref");
 
     quote! {
         #![no_main]
@@ -31,22 +31,20 @@ pub fn gen_contract(contract_def: ContractDef, fqn: String) -> TokenStream2 {
     }
 }
 
-fn generate_entrypoints(contract_def: &ContractDef, fqn: String) -> TokenStream2 {
+fn generate_entrypoints(entrypoints: &Vec<Entrypoint>, fqn: String) -> TokenStream2 {
     let path = &fqn_to_path(fqn);
-    contract_def
-        .entrypoints
+    entrypoints
         .iter()
         .flat_map(|ep| WasmEntrypoint(ep, path).to_token_stream())
         .collect::<TokenStream2>()
 }
 
-fn generate_call(contract_def: &ContractDef, ref_fqn: String) -> TokenStream2 {
-    let entrypoints = ContractEntrypoints(&contract_def.entrypoints);
-    let contract_def_name_snake = odra_utils::camel_to_snake(&contract_def.ident);
+fn generate_call(contract_ident: &str, contract_entrypoints: &Vec<Entrypoint>, ref_fqn: String) -> TokenStream2 {
+    let entrypoints = ContractEntrypoints(contract_entrypoints);
+    let contract_def_name_snake = odra_utils::camel_to_snake(contract_ident);
     let package_hash = format!("{}_package_hash", contract_def_name_snake);
 
-    let constructors = contract_def
-        .entrypoints
+    let constructors = contract_entrypoints
         .iter()
         .filter(|ep| ep.ty == EntrypointType::Constructor)
         .collect::<Vec<_>>();
@@ -96,7 +94,7 @@ fn assert_eq_tokens<A: ToTokens, B: ToTokens>(left: A, right: B) {
 
 #[cfg(test)]
 mod tests {
-    use odra_types::contract_def::{Argument, ContractDef, Entrypoint, EntrypointType};
+    use odra_types::contract_def::{Argument, Entrypoint, EntrypointType};
     use odra_types::Type;
     use quote::{quote, ToTokens};
 
@@ -130,12 +128,11 @@ mod tests {
 
         let fqn = path.to_token_stream().to_string().replace(' ', "");
 
-        let contract_def = ContractDef {
-            ident: String::from("MyContract"),
-            entrypoints: vec![constructor.clone(), entrypoint.clone()]
-        };
+        let contract_ident = String::from("MyContract");
+        let entrypoints = vec![constructor.clone(), entrypoint.clone()];
+        let events = vec![];
 
-        let result = gen_contract(contract_def, fqn);
+        let result = gen_contract(contract_ident, entrypoints, events, fqn);
 
         let expected_constructor_no_mangle = WasmEntrypoint(&constructor, &path);
         let expected_entrypoint_no_mangle = WasmEntrypoint(&entrypoint, &path);

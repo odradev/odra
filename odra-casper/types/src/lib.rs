@@ -1,6 +1,5 @@
 mod args;
 mod casper_address;
-mod is_module;
 mod ty;
 mod uints;
 pub use args::CallArgs;
@@ -22,5 +21,3 @@ use casper_types::{
 pub trait OdraType: CLTyped + ToBytes + FromBytes {}
 
 impl<T: CLTyped + ToBytes + FromBytes> OdraType for T {}
-
-pub use is_module::OdraItem;

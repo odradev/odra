@@ -35,16 +35,19 @@ impl GenerateCode for ModuleImpl<'_> {
                 # (#original_item_impls)*
             }
 
-            #[cfg(feature = "casper")]
             #contract_def
 
             #deploy
 
             #contract_ref
 
-            impl odra::IsModule for #ident {
+            impl odra::OdraItem for #ident {
                 fn is_module() -> bool {
                     true
+                }
+
+                fn events() -> Vec<odra::types::contract_def::Event> {
+                    <Self as odra::types::contract_def::HasEvents>::events()
                 }
             }
         }

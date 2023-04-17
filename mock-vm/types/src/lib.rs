@@ -2,7 +2,6 @@ extern crate core;
 
 mod address;
 mod call_args;
-mod is_module;
 mod mock_vm_type;
 mod ty;
 #[allow(clippy::assign_op_pattern)]
@@ -36,5 +35,3 @@ impl From<Vec<u8>> for Bytes {
         Self(vec)
     }
 }
-
-pub use is_module::OdraItem;

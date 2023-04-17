@@ -2,13 +2,6 @@
 
 use crate::Type;
 
-/// Top-level contract abstraction.
-#[derive(Debug, Clone)]
-pub struct ContractDef {
-    pub ident: String,
-    pub entrypoints: Vec<Entrypoint>
-}
-
 /// Contract's entrypoint.
 #[derive(Debug, Clone)]
 pub struct Entrypoint {
@@ -37,9 +30,25 @@ pub enum EntrypointType {
     PublicPayable
 }
 
+/// Defines an event.
+#[derive(Debug, Clone)]
+pub struct Event {
+    pub ident: String,
+    pub args: Vec<Argument>
+}
+
 /// A trait that should be implemented by each smart contract to allow the backend
 /// to generate blockchain-specific code.
-pub trait HasContractDef {
+pub trait HasEntrypoints {
     /// Returns an abstract contract definition.
-    fn contract_def() -> ContractDef;
+    fn entrypoints() -> Vec<Entrypoint>;
+}
+
+/// A trait that should be implemented by each smart contract to allow the backend.
+pub trait HasIdent {
+    fn ident() -> String;
+}
+/// A trait that should be implemented by each smart contract to allow the backend.
+pub trait HasEvents {
+    fn events() -> Vec<Event>;
 }
