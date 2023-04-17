@@ -9,7 +9,7 @@ contract/
 examples/target
 examples/.builder_casper
 examples/wasm
-# examples/.env
+examples/.env
 modules/target
 modules/.builder_casper
 modules/wasm
