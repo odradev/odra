@@ -5,7 +5,7 @@ use odra::{
     Event, Mapping, Variable
 };
 
-#[odra::module]
+#[odra::module(events = [Transfer, Approval])]
 pub struct Erc20 {
     decimals: Variable<u8>,
     symbol: Variable<String>,

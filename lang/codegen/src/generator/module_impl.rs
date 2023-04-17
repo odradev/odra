@@ -40,16 +40,6 @@ impl GenerateCode for ModuleImpl<'_> {
             #deploy
 
             #contract_ref
-
-            impl odra::OdraItem for #ident {
-                fn is_module() -> bool {
-                    true
-                }
-
-                fn events() -> Vec<odra::types::contract_def::Event> {
-                    <Self as odra::types::contract_def::HasEvents>::events()
-                }
-            }
         }
     }
 }

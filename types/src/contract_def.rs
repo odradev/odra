@@ -13,7 +13,7 @@ pub struct Entrypoint {
 }
 
 /// Defines an argument passed to an entrypoint.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Argument {
     pub ident: String,
     pub ty: Type
@@ -31,7 +31,7 @@ pub enum EntrypointType {
 }
 
 /// Defines an event.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Event {
     pub ident: String,
     pub args: Vec<Argument>
