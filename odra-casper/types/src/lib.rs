@@ -16,6 +16,7 @@ use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
     CLTyped
 };
+
 /// A type that can be written to the storage and read from the storage.
 pub trait OdraType: CLTyped + ToBytes + FromBytes {}
 
