@@ -12,6 +12,7 @@ compile_error!(
 );
 
 mod instance;
+mod is_module;
 mod list;
 mod mapping;
 mod unwrap_or_revert;
@@ -19,6 +20,7 @@ mod variable;
 
 pub use {
     instance::Instance,
+    is_module::IsModule,
     list::List,
     mapping::Mapping,
     odra_proc_macros::{
