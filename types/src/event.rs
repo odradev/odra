@@ -1,6 +1,6 @@
 //! Events interface and errors.
 
-use crate::contract_def::Event;
+use crate::contract_def::Event as Schema;
 
 /// Event interface
 pub trait OdraEvent {
@@ -9,7 +9,7 @@ pub trait OdraEvent {
     /// Returns the event name.
     fn name() -> String;
     /// Returns the event schema.
-    fn schema() -> Vec<Event>;
+    fn schema() -> Schema;
 }
 
 /// Event-related errors.

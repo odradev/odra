@@ -5,7 +5,7 @@ use crate::generator::common::casper;
 
 pub fn generate_code(event: &IrEventItem) -> TokenStream {
     let struct_ident = event.struct_ident();
-    let fields = event.fields();
+    let fields = event.fields_iter().map(|f| f.ident.clone().unwrap()).collect::<Vec<_>>();
 
-    casper::serialize_struct(struct_ident, fields)
+    casper::serialize_struct(struct_ident, &fields)
 }

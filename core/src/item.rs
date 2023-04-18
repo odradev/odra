@@ -1,14 +1,14 @@
 use std::collections::BTreeMap;
 
 use crate::types::OdraType;
-use odra_types::contract_def::Event;
 
 use crate::types::{Address, U256, U512};
 
 pub trait OdraItem {
     fn is_module() -> bool;
 
-    fn events() -> Vec<Event> {
+    #[cfg(feature = "casper")]
+    fn events() -> Vec<odra_types::contract_def::Event> {
         vec![]
     }
 }
@@ -19,10 +19,6 @@ macro_rules! impl_odra_item_for_types {
             impl OdraItem for $t {
                 fn is_module() -> bool {
                     false
-                }
-
-                fn events() -> Vec<Event> {
-                    vec![]
                 }
             }
         )+
@@ -35,10 +31,6 @@ macro_rules! impl_odra_item_for_array_types {
             impl<T> OdraItem for [T; $n] {
                 fn is_module() -> bool {
                     false
-                }
-
-                fn events() -> Vec<Event> {
-                    vec![]
                 }
             }
         )+

@@ -31,17 +31,17 @@ impl GenerateCode for ModuleStruct<'_> {
                 fn is_module() -> bool {
                     true
                 }
-
+                #[cfg(feature = "casper")]
                 fn events() -> Vec<odra::types::contract_def::Event> {
                     <Self as odra::types::contract_def::HasEvents>::events()
                 }
             }
-
+            #[cfg(feature = "casper")]
             impl odra::types::contract_def::HasEvents for #struct_ident {
                 fn events() -> Vec<odra::types::contract_def::Event> {
                     let mut events = vec![];
                     #(
-                        events.extend(<#module_events as odra::types::event::OdraEvent>::schema());
+                        events.push(<#module_events as odra::types::event::OdraEvent>::schema());
                     )*
                     #(
                         events.extend(<#submodules_events as odra::OdraItem>::events());
