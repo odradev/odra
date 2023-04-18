@@ -26,10 +26,7 @@ impl DogContract2 {
     }
 
     pub fn visits(&self, friend_name: FriendName) -> u32 {
-        match self.friends.get(&friend_name) {
-            None => 0,
-            Some(v) => v
-        }
+        self.friends.get_or_default(&friend_name)
     }
 }
 
