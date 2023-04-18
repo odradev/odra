@@ -7,6 +7,9 @@ compile_error!("casper and casper-livenet are mutually exclusive features.");
 #[cfg(all(feature = "mock-vm", feature = "casper-livenet"))]
 compile_error!("mock-vm and casper-livenet are mutually exclusive features.");
 
+#[cfg(all(feature = "casper", feature = "mock-vm", feature = "casper-livenet"))]
+compile_error!("mock-vm, casper and casper-livenet are mutually exclusive features.");
+
 #[cfg(not(any(feature = "casper", feature = "mock-vm", feature = "casper-livenet")))]
 compile_error!(
     "Exactly one of these features must be selected: `casper`, `mock-vm`, `casper-livenet`."
