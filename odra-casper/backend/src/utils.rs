@@ -1,6 +1,8 @@
 //! A set of utility functions encapsulating some common interactions with the current runtime.
 
-use casper_types::{ContractPackageHash, EntryPoints, URef, U512};
+use casper_contract::contract_api::runtime;
+use casper_event_standard::Schema;
+use casper_types::{ContractPackageHash, EntryPoints, URef, U512, CLType};
 use odra_casper_shared::consts;
 use odra_casper_types::Balance;
 use odra_types::ExecutionError;
@@ -73,4 +75,27 @@ pub fn assert_no_attached_value() {
             revert(ExecutionError::non_payable());
         }
     }
+}
+
+
+pub fn register_events(events: Vec<(String, Schema)>) {
+    let mut schemas = casper_event_standard::Schemas::new();
+    events.iter().for_each(|(name, schema)| {
+        schemas.0.insert(name.to_owned(), schema.clone());
+    });
+    
+    casper_event_standard::init(schemas);
+    runtime::remove_key(casper_event_standard::EVENTS_DICT);
+    runtime::remove_key(casper_event_standard::EVENTS_LENGTH);
+    runtime::remove_key(casper_event_standard::EVENTS_SCHEMA);
+    runtime::remove_key(casper_event_standard::CES_VERSION);
+    runtime::remove_key(casper_event_standard::CES_VERSION_KEY);
+}
+
+pub fn build_event(name: &str, fields: Vec<(&str, CLType)>) -> (String, Schema) {
+    let mut s = Schema::new();
+    fields.iter().for_each(|(name, cl_type)| {
+        s.with_elem(name, cl_type.clone());
+    });
+    (name.to_owned(), s)
 }

@@ -10,7 +10,7 @@ use std::{collections::BTreeMap, sync::Mutex};
 use casper_contract::{
     contract_api::{
         runtime,
-        storage::{self, dictionary_put},
+        storage,
         system::{create_purse, get_purse_balance, transfer_from_purse_to_purse}
     },
     unwrap_or_revert::UnwrapOrRevert
@@ -114,31 +114,7 @@ pub fn emit_event<T>(event: T)
 where
     T: OdraType + OdraEvent
 {
-    let (events_length, key): (u32, URef) = match runtime::get_key(consts::EVENTS_LENGTH) {
-        None => {
-            let key = storage::new_uref(0u32);
-            runtime::put_key(consts::EVENTS_LENGTH, Key::from(key));
-            (0u32, key)
-        }
-        Some(value) => {
-            let key = value.try_into().unwrap_or_revert();
-            let value = storage::read(key).unwrap_or_revert().unwrap_or_revert();
-            (value, key)
-        }
-    };
-
-    let events_seed: URef = get_seed(consts::EVENTS, || {
-        let key: Key = match runtime::get_key(consts::EVENTS) {
-            Some(key) => key,
-            None => {
-                storage::new_dictionary(consts::EVENTS).unwrap_or_revert();
-                runtime::get_key(consts::EVENTS).unwrap_or_revert()
-            }
-        };
-        *key.as_uref().unwrap_or_revert()
-    });
-    dictionary_put(events_seed, &events_length.to_string(), event);
-    storage::write(key, events_length + 1);
+    casper_event_standard::emit(event);
 }
 
 /// Convert any key to hash.

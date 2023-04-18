@@ -123,10 +123,11 @@ pub(crate) mod mock_vm {
 pub(crate) mod casper {
 
     use proc_macro2::{Ident, TokenStream};
-    use quote::{quote, TokenStreamExt};
+    use quote::{quote, TokenStreamExt, format_ident};
 
     pub fn serialize_struct(struct_ident: &Ident, fields: &[Ident]) -> TokenStream {
-        let name_literal = quote! { stringify!(#struct_ident) };
+        let name_literal = format_ident!("event_{struct_ident}");
+        let name_literal = quote! { stringify!(#name_literal) };
 
         let deserialize_fields = fields
         .iter()
@@ -149,7 +150,10 @@ pub(crate) mod casper {
 
         let append_bytes = fields
             .iter()
-            .flat_map(|ident| quote!(vec.extend(&self.#ident.to_bytes()?);))
+            .flat_map(|ident| quote! {
+                odra::types::validate_type(&self.#ident)?;
+                vec.extend(&self.#ident.to_bytes()?);
+            })
             .collect::<TokenStream>();
 
         quote! {

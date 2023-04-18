@@ -8,3 +8,6 @@ repository = "https://github.com/odradev/odra"
 description = "Utilites uses by the Odra Casper-related crates."
 keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm", "smart contracts"]
+
+[dependencies]
+casper-event-standard = "0.2.0"

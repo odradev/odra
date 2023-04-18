@@ -12,3 +12,4 @@ categories = ["wasm", "smart contracts"]
 [dependencies]
 casper-types = "1.5.0"
 odra-types = { version = "0.2.0", path = "../../types" }
+casper-event-standard = "0.2.0"

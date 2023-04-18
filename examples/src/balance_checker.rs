@@ -19,8 +19,7 @@ trait Token {
 mod tests {
     use super::*;
     use crate::erc20;
-    use odra::test_env;
-    use odra::IsModule;
+    use odra::{test_env, OdraItem};
 
     #[test]
     fn balance_checker() {

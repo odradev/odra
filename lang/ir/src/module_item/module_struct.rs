@@ -106,7 +106,6 @@ fn filter_ident(field: &syn::Field, exclusions: &'static [&str]) -> Option<syn::
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;

@@ -1,5 +1,7 @@
 //! Set of functions to generate Casper contract.
 
+use crate::ty::WrappedType;
+
 use self::{
     constructor::WasmConstructor, entrypoints_def::ContractEntrypoints,
     wasm_entrypoint::WasmEntrypoint
@@ -18,7 +20,7 @@ mod wasm_entrypoint;
 /// Given the ContractDef from Odra, generate Casper contract.
 pub fn gen_contract(contract_ident: String, contract_entrypoints: Vec<Entrypoint>, events: Vec<Event>, fqn: String) -> TokenStream2 {
     let entrypoints = generate_entrypoints(&contract_entrypoints, fqn.clone());
-    let call_fn = generate_call(&contract_ident, &contract_entrypoints, fqn + "Ref");
+    let call_fn = generate_call(&contract_ident, contract_entrypoints, events, fqn + "Ref");
 
     quote! {
         #![no_main]
@@ -39,8 +41,8 @@ fn generate_entrypoints(entrypoints: &Vec<Entrypoint>, fqn: String) -> TokenStre
         .collect::<TokenStream2>()
 }
 
-fn generate_call(contract_ident: &str, contract_entrypoints: &Vec<Entrypoint>, ref_fqn: String) -> TokenStream2 {
-    let entrypoints = ContractEntrypoints(contract_entrypoints);
+fn generate_call(contract_ident: &str, contract_entrypoints: Vec<Entrypoint>, events: Vec<Event>, ref_fqn: String) -> TokenStream2 {
+    let entrypoints = ContractEntrypoints(&contract_entrypoints);
     let contract_def_name_snake = odra_utils::camel_to_snake(contract_ident);
     let package_hash = format!("{}_package_hash", contract_def_name_snake);
 
@@ -51,6 +53,24 @@ fn generate_call(contract_ident: &str, contract_entrypoints: &Vec<Entrypoint>, r
 
     let ref_path = &fqn_to_path(ref_fqn);
     let call_constructor = WasmConstructor(constructors, ref_path);
+
+    let events_schema = events.iter().map(|ev| {
+        let ident = &ev.ident;
+        
+        let fields = ev.args.iter().map(|arg| {
+            let field = &arg.ident;
+            let ty = WrappedType(&arg.ty);
+            quote! {
+                fields.push((stringify!(#field), #ty));
+            }
+        }).collect::<TokenStream2>();
+
+        quote! {
+            let mut fields = vec![];
+            #fields
+            schemas.push(odra::casper::utils::build_event(stringify!(#ident), fields));
+        }
+    }).collect::<TokenStream2>();
 
     quote! {
         #[no_mangle]
@@ -64,6 +84,9 @@ fn generate_call(contract_ident: &str, contract_entrypoints: &Vec<Entrypoint>, r
                 contract_package_hash,
                 entry_points
             );
+            let mut schemas = vec![];
+            #events_schema
+            odra::casper::utils::register_events(schemas); 
 
             #call_constructor
         }
