@@ -1,10 +1,11 @@
-// TODO: Make sure it is only one.
-
 #[cfg(all(feature = "casper", feature = "mock-vm"))]
 compile_error!("casper and mock-vm are mutually exclusive features.");
 
-#[cfg(not(any(feature = "casper", feature = "mock-vm", feature = "casper-livenet")))]
-compile_error!("Exactly one of these features must be selected: `casper`, `mock-vm`.");
+#[cfg(all(feature = "casper", feature = "casper-livenet"))]
+compile_error!("casper and casper-livenet are mutually exclusive features.");
+
+#[cfg(all(feature = "mock-vm", feature = "casper-livenet"))]
+compile_error!("mock-vm and casper-livenet are mutually exclusive features.");
 
 #[cfg(not(any(feature = "casper", feature = "mock-vm", feature = "casper-livenet")))]
 compile_error!(
@@ -17,6 +18,9 @@ mod list;
 mod mapping;
 mod unwrap_or_revert;
 mod variable;
+
+#[cfg(not(any(target_arch = "wasm32", feature = "casper-livenet")))]
+pub mod test_utils;
 
 pub use {
     instance::Instance,
@@ -31,68 +35,57 @@ pub use {
     variable::Variable
 };
 
-#[cfg(not(any(target_arch = "wasm32", feature = "casper-livenet")))]
-pub mod test_utils;
-
-#[cfg(all(feature = "casper", target_arch = "wasm32"))]
-pub use odra_casper_backend::contract_env;
-#[cfg(feature = "casper-livenet")]
-pub use odra_casper_livenet::{client_env, contract_env};
-#[cfg(all(feature = "casper", not(target_arch = "wasm32")))]
-pub use odra_casper_test_env::{dummy_contract_env as contract_env, test_env};
 #[cfg(feature = "mock-vm")]
-pub use odra_mock_vm::{contract_env, test_env};
-
-/// Types that are used in Odra framework.
-///
-/// Re-exports all the platform-agnostic types and depending on the selected feature, re-exports platform-specific types.
-pub mod types {
-    #[cfg(feature = "casper")]
-    pub use odra_casper_backend::types::*;
-    #[cfg(feature = "casper-livenet")]
-    pub use odra_casper_types::*;
-    #[cfg(feature = "mock-vm")]
-    pub use odra_mock_vm::types::*;
-    pub use odra_types::*;
+mod env {
+    pub use odra_mock_vm::{contract_env, test_env};
+    pub mod types {
+        pub use odra_mock_vm::types::*;
+        pub use odra_types::*;
+    }
+    pub use test_env::call_contract;
 }
 
-#[cfg(feature = "casper")]
-pub mod casper {
-    pub use odra_casper_backend::casper_types;
-    #[cfg(target_arch = "wasm32")]
-    pub use odra_casper_backend::{casper_contract, runtime, storage, utils};
-    #[cfg(not(target_arch = "wasm32"))]
-    pub use odra_casper_codegen as codegen;
+// Casper WASM.
+#[cfg(all(feature = "casper", target_arch = "wasm32"))]
+mod env {
+    pub use odra_casper_backend::contract_env;
+    pub mod types {
+        pub use odra_casper_types::*;
+        pub use odra_types::*;
+    }
+    pub mod casper {
+        pub use odra_casper_backend::{casper_contract, contract_env, runtime, storage, utils};
+        pub use odra_casper_types::casper_types;
+    }
+    pub use contract_env::call_contract;
+}
+
+// Casper Test.
+#[cfg(all(feature = "casper", not(target_arch = "wasm32")))]
+mod env {
+    pub use odra_casper_test_env::{dummy_contract_env as contract_env, test_env};
+    pub mod types {
+        pub use odra_casper_types::*;
+        pub use odra_types::*;
+    }
+    pub mod casper {
+        pub use odra_casper_codegen as codegen;
+        pub use odra_casper_types::casper_types;
+    }
+    pub use test_env::call_contract;
 }
 
 #[cfg(feature = "casper-livenet")]
-pub mod casper {
-    pub use odra_casper_types::casper_types;
+mod env {
+    pub use odra_casper_livenet::{client_env, contract_env};
+    pub mod types {
+        pub use odra_casper_types::*;
+        pub use odra_types::*;
+    }
+    pub mod casper {
+        pub use odra_casper_types::casper_types;
+    }
+    pub use client_env::call_contract;
 }
 
-/// Calls contract at `address` invoking the `entrypoint` with `args`.
-///
-/// Returns already parsed result.
-pub fn call_contract<T>(
-    address: types::Address,
-    entrypoint: &str,
-    args: types::CallArgs,
-    amount: Option<types::Balance>
-) -> T
-where
-    T: types::OdraType
-{
-    cfg_if::cfg_if! {
-        if #[cfg(feature = "mock-vm")] {
-            test_env::call_contract(address, entrypoint, args, amount)
-        } else if #[cfg(all(feature = "casper", not(target_arch = "wasm32")))] {
-            test_env::call_contract(address, entrypoint, args, amount)
-        }  else if #[cfg(all(feature = "casper", target_arch = "wasm32"))] {
-            contract_env::call_contract(address, entrypoint, args, amount)
-        } else if #[cfg(feature = "casper-livenet")] {
-            client_env::call_contract(address, entrypoint, args, amount)
-        } else {
-            compile_error!("Unknown feature")
-        }
-    }
-}
+pub use env::*;
