@@ -1,0 +1,2 @@
+pub mod #contract_name;
+pub use #contract_name::{#module_name, #module_nameRef};

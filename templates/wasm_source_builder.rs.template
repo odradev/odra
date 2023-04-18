@@ -1,0 +1,9 @@
+fn main() {
+    let contract_def = <#contract_fqn as odra::types::contract_def::HasContractDef>::contract_def();
+    let code = odra::#backend_name::codegen::gen_contract(contract_def, "#contract_fqn".to_string());
+
+    use std::fs::File;
+    use std::io::prelude::*;
+    let mut file = File::create("src/#contract_name_wasm.rs").unwrap();
+    file.write_all(&code.to_string().into_bytes()).unwrap();
+}
