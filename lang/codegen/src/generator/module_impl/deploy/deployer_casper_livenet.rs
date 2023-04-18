@@ -3,7 +3,7 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{punctuated::Punctuated, ReturnType, Type, TypePath};
 
-use super::{args_to_arg_names_stream, args_to_fn_args2, args_to_runtime_args_stream};
+use super::{args_to_arg_names_stream, args_to_fn_cl_values, args_to_runtime_args_stream};
 
 pub fn generate_code(
     struct_ident: &Ident,
@@ -44,7 +44,7 @@ fn build_entrypoint_calls(methods: &[&Method], struct_ident: &Ident) -> TokenStr
 fn build_entrypoint_call(entrypoint: &Method, struct_ident: &Ident) -> TokenStream {
     let ident = &entrypoint.ident;
     let name = quote!(stringify!(#ident).to_string());
-    let args = args_to_fn_args2(&entrypoint.args);
+    let args = args_to_fn_cl_values(&entrypoint.args);
     let arg_names = args_to_arg_names_stream(&entrypoint.args);
     quote! {
         entrypoints.insert(#name, (#arg_names, |name, args| {

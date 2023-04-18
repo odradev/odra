@@ -74,7 +74,7 @@ where
         .collect::<Punctuated<TokenStream, Comma>>()
 }
 
-fn args_to_fn_args2<'a, T>(args: T) -> Punctuated<TokenStream, Comma>
+fn args_to_fn_cl_values<'a, T>(args: T) -> Punctuated<TokenStream, Comma>
 where
     T: IntoIterator<Item = &'a syn::PatType>
 {

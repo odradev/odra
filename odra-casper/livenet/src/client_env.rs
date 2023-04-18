@@ -15,6 +15,7 @@ mod callstack;
 mod contract_container;
 mod contract_register;
 
+/// Casper Lievent client environment.
 #[derive(Default)]
 struct ClientEnv {
     contracts: ContractRegister,
@@ -23,26 +24,32 @@ struct ClientEnv {
 }
 
 impl ClientEnv {
+    /// Returns a singleton instance of a client environment.
     pub fn instance<'a>() -> ref_thread_local::Ref<'a, ClientEnv> {
         ENV.borrow()
     }
 
+    /// Returns a mutable singleton instance of a client environment.
     pub fn instance_mut<'a>() -> ref_thread_local::RefMut<'a, ClientEnv> {
         ENV.borrow_mut()
     }
 
+    /// Register new contract.
     pub fn register_contract(&mut self, contract: ContractContainer) {
         self.contracts.add(contract);
     }
 
+    /// Push address to callstack.
     pub fn push_on_stack(&mut self, addr: Address) {
         self.callstack.push(addr);
     }
 
+    /// Pop address from callstack.
     pub fn pull_from_stack(&mut self) -> Option<Address> {
         self.callstack.pop()
     }
 
+    /// Call contract.
     pub fn call_contract<T: OdraType>(&self, addr: Address, entrypoint: &str, args: CallArgs) -> T {
         let result = self.contracts.call(&addr, String::from(entrypoint), args);
         let bytes = result.unwrap();
@@ -50,24 +57,24 @@ impl ClientEnv {
         clvalue.into_t().unwrap()
     }
 
+    /// Get current contract address.
     pub fn current_contract(&self) -> Address {
         self.callstack.current()
     }
 
+    /// Set gas.
     pub fn set_gas<T: Into<Balance>>(&self, gas: T) {
         let new_gas: Balance = gas.into();
         let mut gas = self.gas.lock().unwrap();
         *gas = Some(new_gas);
     }
 
+    /// Get gas and reset it, so it is not used twice.
     pub fn get_gas(&self) -> Balance {
-        let gas = {
-            let mut gas = self.gas.lock().unwrap();
-            let current_gas: Balance = gas.expect("Gas not set");
-            *gas = None;
-            current_gas
-        };
-        gas
+        let mut gas = self.gas.lock().unwrap();
+        let current_gas: Balance = gas.expect("Gas not set");
+        *gas = None;
+        current_gas
     }
 }
 
@@ -75,7 +82,7 @@ ref_thread_local::ref_thread_local!(
     static managed ENV: ClientEnv = ClientEnv::default();
 );
 
-/// Deploy WASM file with arguments.
+/// Register existing contract.
 pub fn register_existing_contract(
     address: Address,
     entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>
@@ -84,6 +91,7 @@ pub fn register_existing_contract(
     ClientEnv::instance_mut().register_contract(contract);
 }
 
+/// Deploy WASM file with arguments.
 pub fn deploy_new_contract(
     name: &str,
     args: CallArgs,
@@ -99,6 +107,7 @@ pub fn deploy_new_contract(
     address
 }
 
+/// Call contract's entrypoint.
 pub fn call_contract<T: OdraType>(
     addr: Address,
     entrypoint: &str,
@@ -114,11 +123,13 @@ pub fn call_contract<T: OdraType>(
     }
 }
 
+/// Query current contract for a variable's value.
 pub fn get_var_from_current_contract<T: OdraType>(key: &str) -> Option<T> {
     let address = ClientEnv::instance().current_contract();
     CasperClient::new().get_variable_value(address, key)
 }
 
+/// Query current contract for a dictionary's value.
 pub fn get_dict_value_from_current_contract<K: OdraType, T: OdraType>(
     seed: &str,
     key: &K
@@ -127,6 +138,12 @@ pub fn get_dict_value_from_current_contract<K: OdraType, T: OdraType>(
     CasperClient::new().get_dict_value(address, seed, key)
 }
 
+/// Current caller.
+pub fn caller() -> Address {
+    CasperClient::new().caller()
+}
+
+/// Set gas for the next call.
 pub fn set_gas<T: Into<Balance>>(gas: T) {
     ClientEnv::instance_mut().set_gas(gas);
 }

@@ -5,7 +5,7 @@ use std::str::FromStr;
 use casper_types::{
     account::AccountHash,
     bytesrepr::{self, FromBytes, ToBytes},
-    CLType, CLTyped, ContractPackageHash, Key
+    CLType, CLTyped, ContractPackageHash, Key, PublicKey
 };
 use odra_types::AddressError;
 use odra_types::AddressError::ZeroAddress;
@@ -88,6 +88,12 @@ impl TryFrom<Key> for CasperAddress {
             }
             _ => Err(AddressError::AddressCreationError)
         }
+    }
+}
+
+impl From<PublicKey> for CasperAddress {
+    fn from(public_key: PublicKey) -> Self {
+        Self::Account(public_key.to_account_hash())
     }
 }
 

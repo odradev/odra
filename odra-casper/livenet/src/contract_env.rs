@@ -1,3 +1,7 @@
+//! Casper backend for Livenet.
+//!
+//! It provides all the required functions to communicate between Odra and Casper Livenets.
+
 use odra_casper_shared::native_token::NativeTokenMetadata;
 use odra_casper_types::{Address, Balance, BlockTime, OdraType};
 use odra_types::{event::OdraEvent, ExecutionError};

@@ -31,15 +31,23 @@ use odra_casper_types::{Address, Balance, Bytes, CallArgs, OdraType};
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 
+use crate::log;
+
 pub const ENV_SECRET_KEY: &str = "ODRA_CASPER_LIVENET_SECRET_KEY_PATH";
 pub const ENV_NODE_ADDRESS: &str = "ODRA_CASPER_LIVENET_NODE_ADDRESS";
 pub const ENV_CHAIN_NAME: &str = "ODRA_CASPER_LIVENET_CHAIN_NAME";
 
 fn get_env_variable(name: &str) -> String {
-    std::env::var(name)
-        .unwrap_or_else(|_| panic!("{} must be set. Have you setup your .env file?", name))
+    std::env::var(name).unwrap_or_else(|err| {
+        log::error(format!(
+            "{} must be set. Have you setup your .env file?",
+            name
+        ));
+        panic!("{}", err)
+    })
 }
 
+/// Client for interacting with Casper node.
 pub struct CasperClient {
     node_address: String,
     chain_name: String,
@@ -47,6 +55,7 @@ pub struct CasperClient {
 }
 
 impl CasperClient {
+    /// Creates new CasperClient.
     pub fn new() -> Self {
         dotenv::dotenv().ok();
         CasperClient {
@@ -56,18 +65,27 @@ impl CasperClient {
         }
     }
 
+    /// Node address.
     pub fn node_address_rpc(&self) -> String {
         format!("{}/rpc", self.node_address)
     }
 
+    /// Chain name.
     pub fn chain_name(&self) -> &str {
         &self.chain_name
     }
 
+    /// Public key of the client account.
     pub fn public_key(&self) -> PublicKey {
         PublicKey::from(&self.secret_key)
     }
 
+    /// Address of the client account.
+    pub fn caller(&self) -> Address {
+        Address::from(self.public_key())
+    }
+
+    /// Query the node for the current state root hash.
     pub fn get_state_root_hash(&self) -> Digest {
         let request = json!(
             {
@@ -80,6 +98,7 @@ impl CasperClient {
         result.state_root_hash.unwrap()
     }
 
+    /// Query the node for the deploy state.
     pub fn get_deploy(&self, deploy_hash: DeployHash) -> GetDeployResult {
         let params = GetDeployParams {
             deploy_hash,
@@ -97,11 +116,13 @@ impl CasperClient {
         self.post_request(request)
     }
 
+    /// Query the contract for the variable.
     pub fn get_variable_value<T: OdraType>(&self, address: Address, key: &str) -> Option<T> {
         let key = LivenetKeyMaker::to_variable_key(key).unwrap();
         self.query_dictionary(address, &key)
     }
 
+    /// Query the contract for the dictionary value.
     pub fn get_dict_value<K: OdraType, V: OdraType>(
         &self,
         address: Address,
@@ -112,6 +133,7 @@ impl CasperClient {
         self.query_dictionary(address, &key)
     }
 
+    /// Discover the contract address by name.
     pub fn get_contract_address(&self, key_name: &str) -> Address {
         let key_name = format!("{}_package_hash", key_name);
         let account_hash = self.public_key().to_account_hash();
@@ -129,9 +151,14 @@ impl CasperClient {
                 return Address::try_from(contract_hash).unwrap();
             }
         }
-        panic!("Contract {:?} not found in {:#?}", key_name, result_as_json);
+        log::error(format!(
+            "Contract {:?} not found in {:#?}",
+            key_name, result_as_json
+        ));
+        panic!("get_contract_address failed");
     }
 
+    /// Find the contract hash by the contract package hash.
     pub fn query_global_state_for_contract_hash(&self, address: Address) -> ContractHash {
         let key = Key::Hash(address.as_contract_package_hash().unwrap().value());
         let result = self.query_global_state(&key);
@@ -143,8 +170,9 @@ impl CasperClient {
         ContractHash::from_formatted_str(contract_hash).unwrap()
     }
 
+    /// Deploy the contract.
     pub fn deploy_wasm(&self, wasm_file_name: &str, args: CallArgs, gas: Balance) -> Address {
-        println!("Deploying new wasm file {}", wasm_file_name);
+        log::info(format!("Deploying \"{}\".", wasm_file_name));
         let wasm_path = find_wasm_file_path(wasm_file_name);
         let wasm_bytes = fs::read(wasm_path).unwrap();
         let session = ExecutableDeployItem::ModuleBytes {
@@ -168,10 +196,11 @@ impl CasperClient {
         self.wait_for_deploy_hash(deploy_hash);
 
         let address = self.get_contract_address(wasm_file_name.strip_suffix(".wasm").unwrap());
-        println!("Contract address: {:?}", &address);
+        log::info(format!("Contract {:?} deployed.", &address.to_string()));
         address
     }
 
+    /// Deploy the entrypoint call.
     pub fn deploy_entrypoint_call(
         &self,
         addr: Address,
@@ -180,10 +209,11 @@ impl CasperClient {
         _amount: Option<Balance>,
         gas: Balance
     ) {
-        println!(
-            "Calling {:?} contract with entrypoint '{}'",
-            addr, entrypoint
-        );
+        log::info(format!(
+            "Calling {:?} with entrypoint \"{}\".",
+            addr.to_string(),
+            entrypoint
+        ));
         let session = ExecutableDeployItem::StoredVersionedContractByHash {
             hash: *addr.as_contract_package_hash().unwrap(),
             version: None,
@@ -264,7 +294,10 @@ impl CasperClient {
         let final_result;
 
         loop {
-            println!("Waiting {:?} for {:?}", &time_diff, &deploy_hash_str);
+            log::wait(format!(
+                "Waiting {:?} for {:?}.",
+                &time_diff, &deploy_hash_str
+            ));
             std::thread::sleep(time_diff);
             let result: GetDeployResult = self.get_deploy(deploy_hash);
             if !result.execution_results.is_empty() {
@@ -280,17 +313,21 @@ impl CasperClient {
                 cost: _,
                 error_message
             } => {
-                panic!(
-                    "Deploy {:?} failed with error: {:?}",
+                log::error(format!(
+                    "Deploy {:?} failed with error: {:?}.",
                     deploy_hash_str, error_message
-                );
+                ));
+                panic!("Deploy failed");
             }
             casper_types::ExecutionResult::Success {
                 effect: _,
                 transfers: _,
                 cost: _
             } => {
-                println!("Deploy {:?} successfully executed", deploy_hash_str);
+                log::info(format!(
+                    "Deploy {:?} successfully executed.",
+                    deploy_hash_str
+                ));
             }
         }
     }
@@ -340,19 +377,21 @@ impl Default for CasperClient {
     }
 }
 
+/// Search for the wasm file in the current directory and in the parent directory.
 fn find_wasm_file_path(wasm_file_name: &str) -> PathBuf {
     let mut path = PathBuf::from("wasm").join(wasm_file_name);
     let mut checked_paths = vec![];
     for _ in 0..2 {
         if path.exists() {
-            println!("Found wasm under {:?}", path);
+            log::info(format!("Found wasm under {:?}.", path));
             return path;
         } else {
             checked_paths.push(path.clone());
             path = path.parent().unwrap().to_path_buf();
         }
     }
-    panic!("Could not find wasm under {:?}", checked_paths);
+    log::error(format!("Could not find wasm under {:?}.", checked_paths));
+    panic!("Wasm not found");
 }
 
 struct LivenetKeyMaker;
