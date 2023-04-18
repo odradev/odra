@@ -22,10 +22,11 @@ fn main() {
         INITIAL_SUPPLY.into()
     );
 
-    // let token_address =
-    //     Address::from_str("hash-40dd2fef4e994d2b0d3d415ce515446d7a1e389d2e6fc7c51319a70acf6f42d0")
-    //         .unwrap();
-    // let mut token = Erc20Deployer::register(token_address);
+    // Uncomment to use already deployed contract.
+    //
+    // let address = "hash-40dd2fef4e994d2b0d3d415ce515446d7a1e389d2e6fc7c51319a70acf6f42d0";
+    // let address = Address::from_str(address).unwrap();
+    // let mut token = Erc20Deployer::register(address);
 
     let name = token.name();
     assert_eq!(name, NAME);
@@ -33,13 +34,6 @@ fn main() {
     odra::client_env::set_gas(5_000_000_000u64);
     token.transfer(recipient, 100.into());
 
-    println!("owner balance: {:?}", token.balance_of(owner));
-    println!("recipient balance: {:?}", token.balance_of(recipient));
-
-    // for i in 0..10 {
-    //     odra::client_env::set_gas(5_000_000_000u64);
-    //     token.transfer(recipient, 100.into());
-    //     println!("owner balance: {:?}", token.balance_of(owner));
-    //     println!("recipient balance: {:?}", token.balance_of(recipient));
-    // }
+    println!("Owner's balance: {:?}", token.balance_of(owner));
+    println!("Recipient's balance: {:?}", token.balance_of(recipient));
 }

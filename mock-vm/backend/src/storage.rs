@@ -50,7 +50,6 @@ impl Storage {
     ) -> Result<Option<T>, MockVMSerializationError> {
         let hash = Storage::hashed_key(address, key);
         let result = self.state.get(&hash).cloned().map(|bytes| T::deser(bytes));
-        println!("{:?}", result.is_none());
 
         match result {
             Some(res) => res.map(|data| Some(data)),

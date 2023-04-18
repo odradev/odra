@@ -36,7 +36,8 @@ pub const ENV_NODE_ADDRESS: &str = "ODRA_CASPER_LIVENET_NODE_ADDRESS";
 pub const ENV_CHAIN_NAME: &str = "ODRA_CASPER_LIVENET_CHAIN_NAME";
 
 fn get_env_variable(name: &str) -> String {
-    std::env::var(name).expect(&format!("{} must be set. Have you setup your .env file?", name))
+    std::env::var(name)
+        .unwrap_or_else(|_| panic!("{} must be set. Have you setup your .env file?", name))
 }
 
 pub struct CasperClient {
@@ -179,7 +180,10 @@ impl CasperClient {
         _amount: Option<Balance>,
         gas: Balance
     ) {
-        println!("Calling {:?} contract with entrypoint '{}'", addr, entrypoint);
+        println!(
+            "Calling {:?} contract with entrypoint '{}'",
+            addr, entrypoint
+        );
         let session = ExecutableDeployItem::StoredVersionedContractByHash {
             hash: *addr.as_contract_package_hash().unwrap(),
             version: None,
@@ -330,6 +334,12 @@ impl CasperClient {
     }
 }
 
+impl Default for CasperClient {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 fn find_wasm_file_path(wasm_file_name: &str) -> PathBuf {
     let mut path = PathBuf::from("wasm").join(wasm_file_name);
     let mut checked_paths = vec![];
@@ -388,11 +398,8 @@ mod tests {
         assert_eq!(result.unwrap().as_str(), "Plascoin");
 
         let account = Address::from_str(ACCOUNT_HASH).unwrap();
-        let balance: Option<U256> = CasperClient::new().get_dict_value(
-            contract_hash,
-            "balances_contract",
-            &account
-        );
+        let balance: Option<U256> =
+            CasperClient::new().get_dict_value(contract_hash, "balances_contract", &account);
         assert!(balance.is_some());
     }
 
@@ -418,8 +425,7 @@ mod tests {
     #[ignore]
     pub fn query_global_state_for_contract() {
         let addr = Address::from_str(CONTRACT_PACKAGE_HASH).unwrap();
-        let _result: Option<String> =
-            CasperClient::new().query_dictionary(addr, "name_contract");
+        let _result: Option<String> = CasperClient::new().query_dictionary(addr, "name_contract");
     }
 
     #[test]

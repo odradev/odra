@@ -153,6 +153,5 @@ fn call_contract_getter_entrypoint<T: OdraType>(
 
 fn call_contract_deploy(addr: Address, entrypoint: &str, args: CallArgs, amount: Option<Balance>) {
     let gas = get_gas();
-    CasperClient::new()
-        .deploy_entrypoint_call(addr, entrypoint, args, amount, gas);
+    CasperClient::new().deploy_entrypoint_call(addr, entrypoint, args, amount, gas);
 }

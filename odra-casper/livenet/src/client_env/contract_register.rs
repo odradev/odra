@@ -21,9 +21,7 @@ impl ContractRegister {
         entrypoint: String,
         args: CallArgs
     ) -> Result<Vec<u8>, OdraError> {
-        self.internal_call(addr, |container| {
-            container.call(entrypoint, args)
-        })
+        self.internal_call(addr, |container| container.call(entrypoint, args))
     }
 
     fn internal_call<F: FnOnce(&ContractContainer) -> Result<Vec<u8>, OdraError>>(
