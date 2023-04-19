@@ -10,8 +10,7 @@ use std::{collections::BTreeMap, sync::Mutex};
 
 use casper_contract::{
     contract_api::{
-        runtime,
-        storage,
+        runtime, storage,
         system::{create_purse, get_purse_balance, transfer_from_purse_to_purse}
     },
     unwrap_or_revert::UnwrapOrRevert
@@ -31,31 +30,35 @@ lazy_static! {
 
 const STATE_KEY: &str = "state";
 
-pub fn add_contract_version(contract_package_hash: ContractPackageHash, entry_points: EntryPoints, events: Vec<(String, Schema)>) {
+pub fn add_contract_version(
+    contract_package_hash: ContractPackageHash,
+    entry_points: EntryPoints,
+    events: Vec<(String, Schema)>
+) {
     let mut schemas = casper_event_standard::Schemas::new();
     events.iter().for_each(|(name, schema)| {
         schemas.0.insert(name.to_owned(), schema.clone());
     });
-    
+
     let mut named_keys = casper_types::contracts::NamedKeys::new();
     named_keys.insert(
         String::from(STATE_KEY),
         Key::URef(storage::new_dictionary(STATE_KEY).unwrap_or_revert())
     );
     named_keys.insert(
-        String::from(casper_event_standard::EVENTS_DICT), 
+        String::from(casper_event_standard::EVENTS_DICT),
         Key::URef(storage::new_dictionary(casper_event_standard::EVENTS_DICT).unwrap_or_revert())
     );
     named_keys.insert(
-        String::from(casper_event_standard::EVENTS_LENGTH), 
+        String::from(casper_event_standard::EVENTS_LENGTH),
         Key::URef(storage::new_uref(0u32))
     );
     named_keys.insert(
-        String::from(casper_event_standard::CES_VERSION_KEY), 
+        String::from(casper_event_standard::CES_VERSION_KEY),
         Key::URef(storage::new_uref(casper_event_standard::CES_VERSION))
     );
     named_keys.insert(
-        String::from(casper_event_standard::EVENTS_SCHEMA), 
+        String::from(casper_event_standard::EVENTS_SCHEMA),
         Key::URef(storage::new_uref(schemas))
     );
 

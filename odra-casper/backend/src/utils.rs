@@ -1,7 +1,7 @@
 //! A set of utility functions encapsulating some common interactions with the current runtime.
 
 use casper_event_standard::Schema;
-use casper_types::{ContractPackageHash, EntryPoints, URef, U512, CLType};
+use casper_types::{CLType, ContractPackageHash, EntryPoints, URef, U512};
 use odra_casper_shared::consts;
 use odra_casper_types::Balance;
 use odra_types::ExecutionError;
@@ -11,7 +11,11 @@ use crate::{
     contract_env::{revert, ATTACHED_VALUE}
 };
 
-pub fn add_contract_version(contract_package_hash: ContractPackageHash, entry_points: EntryPoints, events: Vec<(String, Schema)>) {
+pub fn add_contract_version(
+    contract_package_hash: ContractPackageHash,
+    entry_points: EntryPoints,
+    events: Vec<(String, Schema)>
+) {
     casper_env::add_contract_version(contract_package_hash, entry_points, events);
 }
 

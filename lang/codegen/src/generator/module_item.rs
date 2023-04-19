@@ -57,7 +57,6 @@ impl GenerateCode for ModuleStruct<'_> {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use odra_ir::module::ModuleEvents;
@@ -76,8 +75,8 @@ mod test {
         };
         let events_input = quote::quote!(events = [A, B, C]);
         let events = syn::parse2::<ModuleEvents>(events_input).unwrap();
-        
-        let item_struct = syn::parse2::<syn::ItemStruct>(input.clone()).unwrap();
+
+        let item_struct = syn::parse2::<syn::ItemStruct>(input).unwrap();
         let module_struct = odra_ir::module::ModuleStruct::from(item_struct);
         let module_struct = module_struct.with_events(events).unwrap();
 

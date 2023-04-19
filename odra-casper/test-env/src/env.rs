@@ -232,7 +232,12 @@ impl CasperTestEnv {
             &event_position.to_string()
         ) {
             Ok(val) => {
-                let bytes = val.as_cl_value().unwrap().clone().into_t::<Bytes>().unwrap();
+                let bytes = val
+                    .as_cl_value()
+                    .unwrap()
+                    .clone()
+                    .into_t::<Bytes>()
+                    .unwrap();
                 let event_type = CasperTestEnv::get_event_name(bytes.as_slice())?;
                 if event_type != format!("event_{}", T::name()) {
                     return Err(EventError::UnexpectedType(event_type));

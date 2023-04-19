@@ -6,10 +6,10 @@ use self::{
     constructor::WasmConstructor, entrypoints_def::ContractEntrypoints,
     wasm_entrypoint::WasmEntrypoint
 };
-use odra_types::contract_def::{EntrypointType, Entrypoint, Event};
-use proc_macro2::{TokenStream as TokenStream2};
+use odra_types::contract_def::{Entrypoint, EntrypointType, Event};
+use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote, ToTokens};
-use syn::{punctuated::Punctuated, Path, PathSegment, Token, token::Comma};
+use syn::{punctuated::Punctuated, token::Comma, Path, PathSegment, Token};
 
 mod arg;
 mod constructor;
@@ -18,7 +18,12 @@ mod ty;
 mod wasm_entrypoint;
 
 /// Given the ContractDef from Odra, generate Casper contract.
-pub fn gen_contract(contract_ident: String, contract_entrypoints: Vec<Entrypoint>, events: Vec<Event>, fqn: String) -> TokenStream2 {
+pub fn gen_contract(
+    contract_ident: String,
+    contract_entrypoints: Vec<Entrypoint>,
+    events: Vec<Event>,
+    fqn: String
+) -> TokenStream2 {
     let entrypoints = generate_entrypoints(&contract_entrypoints, fqn.clone());
     let call_fn = generate_call(&contract_ident, contract_entrypoints, events, fqn + "Ref");
 
@@ -33,7 +38,7 @@ pub fn gen_contract(contract_ident: String, contract_entrypoints: Vec<Entrypoint
     }
 }
 
-fn generate_entrypoints(entrypoints: &Vec<Entrypoint>, fqn: String) -> TokenStream2 {
+fn generate_entrypoints(entrypoints: &[Entrypoint], fqn: String) -> TokenStream2 {
     let path = &fqn_to_path(fqn);
     entrypoints
         .iter()
@@ -41,7 +46,12 @@ fn generate_entrypoints(entrypoints: &Vec<Entrypoint>, fqn: String) -> TokenStre
         .collect::<TokenStream2>()
 }
 
-fn generate_call(contract_ident: &str, contract_entrypoints: Vec<Entrypoint>, events: Vec<Event>, ref_fqn: String) -> TokenStream2 {
+fn generate_call(
+    contract_ident: &str,
+    contract_entrypoints: Vec<Entrypoint>,
+    events: Vec<Event>,
+    ref_fqn: String
+) -> TokenStream2 {
     let entrypoints = ContractEntrypoints(&contract_entrypoints);
     let contract_def_name_snake = odra_utils::camel_to_snake(contract_ident);
     let package_hash = format!("{}_package_hash", contract_def_name_snake);
@@ -54,24 +64,31 @@ fn generate_call(contract_ident: &str, contract_entrypoints: Vec<Entrypoint>, ev
     let ref_path = &fqn_to_path(ref_fqn);
     let call_constructor = WasmConstructor(constructors, ref_path);
 
-    let events_schema = events.iter().map(|ev| {
-        let ident = &ev.ident;
-        
-        let fields = ev.args.iter().map(|arg| {
-            let field = &arg.ident;
-            let ty = WrappedType(&arg.ty);
-            quote! {
-                (stringify!(#field), #ty)
-            }
-        }).collect::<Punctuated<TokenStream2, Comma>>();
+    let events_schema = events
+        .iter()
+        .map(|ev| {
+            let ident = &ev.ident;
 
-        quote! {
-            odra::casper::utils::build_event(
-                stringify!(#ident),
-                vec![#fields]
-            )
-        }
-    }).collect::<Punctuated<TokenStream2, Comma>>();
+            let fields = ev
+                .args
+                .iter()
+                .map(|arg| {
+                    let field = &arg.ident;
+                    let ty = WrappedType(&arg.ty);
+                    quote! {
+                        (stringify!(#field), #ty)
+                    }
+                })
+                .collect::<Punctuated<TokenStream2, Comma>>();
+
+            quote! {
+                odra::casper::utils::build_event(
+                    stringify!(#ident),
+                    vec![#fields]
+                )
+            }
+        })
+        .collect::<Punctuated<TokenStream2, Comma>>();
 
     quote! {
         #[no_mangle]

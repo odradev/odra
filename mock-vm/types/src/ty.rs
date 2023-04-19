@@ -1,6 +1,6 @@
 use odra_types::Type;
 
-use crate::{Address, Bytes, U256, U512, uints::U128};
+use crate::{Address, Bytes, U128, U256, U512};
 
 /// A trait that adds [Type] description for a given type.
 pub trait Typed {
@@ -20,19 +20,32 @@ macro_rules! impl_typed {
 }
 
 impl_typed!(
-    i32, Type::I32,
-    i64, Type::I64,
-    u8, Type::U8,
-    u32, Type::U32,
-    u64, Type::U64,
-    U128, Type::U128,
-    U256, Type::U256,
-    U512, Type::U512,
-    bool, Type::Bool,
-    (), Type::Unit,
-    String, Type::String,
-    Address, Type::Address,
-    Bytes, Type::Vec(Box::new(Type::U8))
+    i32,
+    Type::I32,
+    i64,
+    Type::I64,
+    u8,
+    Type::U8,
+    u32,
+    Type::U32,
+    u64,
+    Type::U64,
+    U128,
+    Type::U128,
+    U256,
+    Type::U256,
+    U512,
+    Type::U512,
+    bool,
+    Type::Bool,
+    (),
+    Type::Unit,
+    String,
+    Type::String,
+    Address,
+    Type::Address,
+    Bytes,
+    Type::Vec(Box::new(Type::U8))
 );
 
 macro_rules! impl_typed_for_array {

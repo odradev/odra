@@ -30,4 +30,4 @@ impl U256 {
     }
 }
 
-impl_overflowing_add_sub!(U256, U512);
+impl_overflowing_add_sub!(U128, U256, U512);

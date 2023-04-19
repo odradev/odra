@@ -1,5 +1,5 @@
 use proc_macro2::Ident;
-use syn::{Data, DataStruct, DeriveInput, Fields, FieldsNamed, Field};
+use syn::{Data, DataStruct, DeriveInput, Field, Fields, FieldsNamed};
 
 /// Odra event definition.
 pub struct EventItem {

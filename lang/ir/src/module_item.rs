@@ -73,7 +73,11 @@ impl Parse for ModuleEvents {
         let content;
         let _brace_token = syn::bracketed!(content in input);
         let events = content.parse_terminated::<ModuleEvent, Token![,]>(ModuleEvent::parse)?;
-        Ok(Self { events, submodules_events: Default::default(), mappings_events: Default::default() })
+        Ok(Self {
+            events,
+            submodules_events: Default::default(),
+            mappings_events: Default::default()
+        })
     }
 }
 

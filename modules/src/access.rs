@@ -4,7 +4,7 @@ pub mod events;
 mod ownable;
 
 pub use access_control::{
-    AccessControl, AccessControlDeployer, AccessControlRef, DEFAULT_ADMIN_ROLE, Role
+    AccessControl, AccessControlDeployer, AccessControlRef, Role, DEFAULT_ADMIN_ROLE
 };
 pub use ownable::*;
 

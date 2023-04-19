@@ -45,7 +45,20 @@ impl_odra_item_for_array_types!(
     64 128 256 512
 );
 
-impl_odra_item_for_types!(Address, String, bool, i32, i64, u8, u32, u64, u128, U256, U512, ());
+impl_odra_item_for_types!(
+    Address,
+    String,
+    bool,
+    i32,
+    i64,
+    u8,
+    u32,
+    u64,
+    u128,
+    U256,
+    U512,
+    ()
+);
 
 impl<T: OdraType> OdraItem for Option<T> {
     fn is_module() -> bool {
@@ -70,7 +83,6 @@ impl<T: OdraType> OdraItem for Vec<T> {
         false
     }
 }
-
 
 impl<T1: OdraType> OdraItem for (T1,) {
     fn is_module() -> bool {

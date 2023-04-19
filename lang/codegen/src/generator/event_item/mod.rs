@@ -30,7 +30,7 @@ impl GenerateCode for EventItem<'_> {
                 fn name() -> String {
                     String::from(stringify!(#struct_ident))
                 }
-                
+
                 fn schema() -> odra::types::contract_def::Event {
                     #event_def
                 }
@@ -43,19 +43,21 @@ impl GenerateCode for EventItem<'_> {
     }
 }
 
-
 fn to_event_def(event: &IrEventItem) -> TokenStream {
     let struct_ident = event.struct_ident();
-    let fields = event.fields_iter().map(|field| {
-        let field_ident = field.ident.as_ref().unwrap();
-        let ty = &field.ty;
-        quote! {
-            odra::types::contract_def::Argument {
-                ident: String::from(stringify!(#field_ident)),
-                ty: <#ty as odra::types::Typed>::ty()
-            },
-        }
-    }).collect::<TokenStream>();
+    let fields = event
+        .fields_iter()
+        .map(|field| {
+            let field_ident = field.ident.as_ref().unwrap();
+            let ty = &field.ty;
+            quote! {
+                odra::types::contract_def::Argument {
+                    ident: String::from(stringify!(#field_ident)),
+                    ty: <#ty as odra::types::Typed>::ty()
+                },
+            }
+        })
+        .collect::<TokenStream>();
     quote! {
         odra::types::contract_def::Event {
             ident: String::from(stringify!(#struct_ident)),

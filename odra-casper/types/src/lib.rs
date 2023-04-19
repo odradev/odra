@@ -5,7 +5,7 @@ mod uints;
 pub use args::CallArgs;
 pub use casper_types::bytesrepr::Bytes;
 pub use ty::Typed;
-pub use uints::{U256, U512};
+pub use uints::{U128, U256, U512};
 
 pub use casper_address::CasperAddress as Address;
 /// A type representing the amount of native tokens.
@@ -23,6 +23,8 @@ pub trait OdraType: CLTyped + ToBytes + FromBytes {}
 impl<T: CLTyped + ToBytes + FromBytes> OdraType for T {}
 
 /// Make sure the type of a value is not [`CLType::Any`](casper_types::CLType::Any).
-pub fn validate_type<T: casper_types::CLTyped>(t: &T) -> Result<(), casper_types::bytesrepr::Error> {
+pub fn validate_type<T: casper_types::CLTyped>(
+    t: &T
+) -> Result<(), casper_types::bytesrepr::Error> {
     casper_event_standard::validate_type(t)
 }

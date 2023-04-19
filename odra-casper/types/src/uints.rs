@@ -140,7 +140,7 @@ macro_rules! impl_casper_type_numeric_wrapper {
     };
 }
 
-impl_casper_type_numeric_wrapper!(U256, U512);
+impl_casper_type_numeric_wrapper!(U128, U256, U512);
 
 impl U512 {
     pub fn to_u256(self) -> Result<U256, ArithmeticsError> {

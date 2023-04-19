@@ -1,8 +1,8 @@
 use crate::attrs::partition_attributes;
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use proc_macro2::Ident;
 
-use super::{ModuleEvents, ModuleEvent};
+use super::{ModuleEvent, ModuleEvents};
 
 /// Odra module struct.
 ///
@@ -15,7 +15,8 @@ pub struct ModuleStruct {
 
 impl ModuleStruct {
     pub fn with_events(mut self, mut events: ModuleEvents) -> Result<Self, syn::Error> {
-        let submodules = self.item
+        let submodules = self
+            .item
             .fields
             .iter()
             .filter(|field| field.ident.is_some())
@@ -23,7 +24,8 @@ impl ModuleStruct {
             .map(|ident| ModuleEvent { name: ident })
             .collect::<Vec<_>>();
 
-        let mut mappings = self.item
+        let mut mappings = self
+            .item
             .fields
             .iter()
             .filter(|field| field.ident.is_some())
@@ -60,9 +62,17 @@ impl From<syn::ItemStruct> for ModuleStruct {
 
 fn extract_mapping_value_ident_from_path(path: &syn::TypePath) -> Result<Ident> {
     // Eg. odra::type::Mapping<String, Mapping<String, Mapping<u8, String>>>
-    let mut segment = path.path.segments.last().cloned().context("At least one segment expected")?;
+    let mut segment = path
+        .path
+        .segments
+        .last()
+        .cloned()
+        .context("At least one segment expected")?;
     if segment.ident != "Mapping" {
-        return Err(anyhow::anyhow!("Mapping expected but found {}", segment.ident));
+        return Err(anyhow::anyhow!(
+            "Mapping expected but found {}",
+            segment.ident
+        ));
     }
     loop {
         let args = &segment.arguments;
@@ -70,18 +80,34 @@ fn extract_mapping_value_ident_from_path(path: &syn::TypePath) -> Result<Ident> 
             break;
         }
         if let syn::PathArguments::AngleBracketed(args) = args {
-            match args.args.last().context("syn::GenericArgument expected but not found")? {
-                syn::GenericArgument::Type(syn::Type::Path(path))  => {
+            match args
+                .args
+                .last()
+                .context("syn::GenericArgument expected but not found")?
+            {
+                syn::GenericArgument::Type(syn::Type::Path(path)) => {
                     let path = &path.path;
-                    segment = path.segments.last().cloned().context("At least one segment expected")?;
-                },
-                other => return Err(anyhow::anyhow!("syn::TypePath expected but found {:?}", other))
+                    segment = path
+                        .segments
+                        .last()
+                        .cloned()
+                        .context("At least one segment expected")?;
+                }
+                other => {
+                    return Err(anyhow::anyhow!(
+                        "syn::TypePath expected but found {:?}",
+                        other
+                    ))
+                }
             }
         } else {
-            return Err(anyhow::anyhow!("syn::AngleBracketedGenericArguments expected but found {:?}", args));
+            return Err(anyhow::anyhow!(
+                "syn::AngleBracketedGenericArguments expected but found {:?}",
+                args
+            ));
         }
     }
-    Ok(segment.ident.clone())
+    Ok(segment.ident)
 }
 
 fn filter_ident_excluding_variable_and_mapping(field: &syn::Field) -> Option<syn::Ident> {
@@ -112,7 +138,10 @@ mod test {
 
     #[test]
     fn test() {
-        let path = syn::parse_str::<syn::TypePath>("Mapping<String, Mapping<String, Mapping<u8, String>>>").unwrap();
+        let path = syn::parse_str::<syn::TypePath>(
+            "Mapping<String, Mapping<String, Mapping<u8, String>>>"
+        )
+        .unwrap();
         let ident = extract_mapping_value_ident_from_path(&path);
         assert_eq!(ident.unwrap().to_string(), "String");
 
@@ -120,14 +149,20 @@ mod test {
         let path = syn::parse_str::<syn::TypePath>("String<i32, u8, u16>").unwrap();
         let ident = extract_mapping_value_ident_from_path(&path);
         assert!(ident.is_err());
-        
+
         // Invalid Mapping - parenthesized arguments instead of angle bracketed
-        let path = syn::parse_str::<syn::TypePath>("Mapping<String, Mapping<String, Mapping(u8, String)>>").unwrap();
+        let path = syn::parse_str::<syn::TypePath>(
+            "Mapping<String, Mapping<String, Mapping(u8, String)>>"
+        )
+        .unwrap();
         let ident = extract_mapping_value_ident_from_path(&path);
         assert!(ident.is_err());
-        
+
         // Invalid Mapping - function type instead of type
-        let path = syn::parse_str::<syn::TypePath>("Mapping<String, Mapping<String, Mapping<fn(usize) -> bool>>>").unwrap();
+        let path = syn::parse_str::<syn::TypePath>(
+            "Mapping<String, Mapping<String, Mapping<fn(usize) -> bool>>>"
+        )
+        .unwrap();
         let ident = extract_mapping_value_ident_from_path(&path);
         assert!(ident.is_err());
     }
