@@ -12,5 +12,6 @@ cargo publish -p odra-casper-types && sleep 100
 cargo publish -p odra-casper-test-env && sleep 100
 cargo publish -p odra-casper-codegen && sleep 100
 cargo publish -p odra-casper-backend && sleep 100
+cargo publish -p odra-casper-livenet && sleep 100
 cargo publish -p odra && sleep 100
 cd modules && cargo publish

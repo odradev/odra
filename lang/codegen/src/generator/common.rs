@@ -159,7 +159,7 @@ pub(crate) mod casper {
             .collect::<TokenStream>();
 
         quote! {
-            #[cfg(feature = "casper")]
+            #[cfg(any(feature = "casper", feature = "casper-livenet"))]
             impl odra::casper::casper_types::bytesrepr::FromBytes for #struct_ident {
                 fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper::casper_types::bytesrepr::Error> {
                     let (_, bytes): (String, _) = odra::casper::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
@@ -171,7 +171,7 @@ pub(crate) mod casper {
                 }
             }
 
-            #[cfg(feature = "casper")]
+            #[cfg(any(feature = "casper", feature = "casper-livenet"))]
             impl odra::casper::casper_types::bytesrepr::ToBytes for #struct_ident {
                 fn to_bytes(&self) -> Result<Vec<u8>, odra::casper::casper_types::bytesrepr::Error> {
                     let mut vec = Vec::with_capacity(self.serialized_length());
@@ -187,7 +187,7 @@ pub(crate) mod casper {
                 }
             }
 
-            #[cfg(feature = "casper")]
+            #[cfg(any(feature = "casper", feature = "casper-livenet"))]
             impl odra::casper::casper_types::CLTyped for #struct_ident {
                 fn cl_type() -> odra::casper::casper_types::CLType {
                     odra::casper::casper_types::CLType::Any

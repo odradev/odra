@@ -15,6 +15,8 @@ odra-types = { version = "0.2.0", path = "../types" }
 odra-proc-macros = { version = "0.2.0", path = "../lang/proc-macros" }
 odra-mock-vm = { version = "0.2.0", path = "../mock-vm/backend", optional = true }
 odra-casper-backend = { version = "0.2.0", path = "../odra-casper/backend", optional = true }
+odra-casper-livenet = { version = "0.2.0", path = "../odra-casper/livenet", optional = true }
+odra-casper-types = { version = "0.2.0", path = "../odra-casper/types", optional = true }
 ref_thread_local = "0.1.1"
 cfg-if = "1.0.0"
 hex = "0.4.3"
@@ -26,4 +28,5 @@ odra-casper-codegen = { version = "0.2.0", path = "../odra-casper/codegen", opti
 [features]
 default = [ "mock-vm" ]
 mock-vm = [ "odra-mock-vm" ]
-casper = [ "odra-casper-backend", "odra-casper-test-env", "odra-casper-codegen"]
+casper = [ "odra-casper-backend", "odra-casper-test-env", "odra-casper-codegen", "odra-casper-types" ]
+casper-livenet = [ "odra-casper-livenet", "odra-casper-types" ]
