@@ -1,6 +1,5 @@
 //! A set of utility functions encapsulating some common interactions with the current runtime.
 
-use casper_contract::contract_api::runtime;
 use casper_event_standard::Schema;
 use casper_types::{ContractPackageHash, EntryPoints, URef, U512, CLType};
 use odra_casper_shared::consts;
@@ -12,8 +11,8 @@ use crate::{
     contract_env::{revert, ATTACHED_VALUE}
 };
 
-pub fn add_contract_version(contract_package_hash: ContractPackageHash, entry_points: EntryPoints) {
-    casper_env::add_contract_version(contract_package_hash, entry_points);
+pub fn add_contract_version(contract_package_hash: ContractPackageHash, entry_points: EntryPoints, events: Vec<(String, Schema)>) {
+    casper_env::add_contract_version(contract_package_hash, entry_points, events);
 }
 
 /// Checks if given named argument exists.
@@ -75,21 +74,6 @@ pub fn assert_no_attached_value() {
             revert(ExecutionError::non_payable());
         }
     }
-}
-
-
-pub fn register_events(events: Vec<(String, Schema)>) {
-    let mut schemas = casper_event_standard::Schemas::new();
-    events.iter().for_each(|(name, schema)| {
-        schemas.0.insert(name.to_owned(), schema.clone());
-    });
-    
-    casper_event_standard::init(schemas);
-    runtime::remove_key(casper_event_standard::EVENTS_DICT);
-    runtime::remove_key(casper_event_standard::EVENTS_LENGTH);
-    runtime::remove_key(casper_event_standard::EVENTS_SCHEMA);
-    runtime::remove_key(casper_event_standard::CES_VERSION);
-    runtime::remove_key(casper_event_standard::CES_VERSION_KEY);
 }
 
 pub fn build_event(name: &str, fields: Vec<(&str, CLType)>) -> (String, Schema) {

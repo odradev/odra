@@ -9,7 +9,7 @@ use self::{
 use odra_types::contract_def::{EntrypointType, Entrypoint, Event};
 use proc_macro2::{TokenStream as TokenStream2};
 use quote::{format_ident, quote, ToTokens};
-use syn::{punctuated::Punctuated, Path, PathSegment, Token};
+use syn::{punctuated::Punctuated, Path, PathSegment, Token, token::Comma};
 
 mod arg;
 mod constructor;
@@ -61,16 +61,17 @@ fn generate_call(contract_ident: &str, contract_entrypoints: Vec<Entrypoint>, ev
             let field = &arg.ident;
             let ty = WrappedType(&arg.ty);
             quote! {
-                fields.push((stringify!(#field), #ty));
+                (stringify!(#field), #ty)
             }
-        }).collect::<TokenStream2>();
+        }).collect::<Punctuated<TokenStream2, Comma>>();
 
         quote! {
-            let mut fields = vec![];
-            #fields
-            schemas.push(odra::casper::utils::build_event(stringify!(#ident), fields));
+            odra::casper::utils::build_event(
+                stringify!(#ident),
+                vec![#fields]
+            )
         }
-    }).collect::<TokenStream2>();
+    }).collect::<Punctuated<TokenStream2, Comma>>();
 
     quote! {
         #[no_mangle]
@@ -80,13 +81,14 @@ fn generate_call(contract_ident: &str, contract_entrypoints: Vec<Entrypoint>, ev
 
             #entrypoints
 
+            let schemas = vec![
+                #events_schema
+            ];
             odra::casper::utils::add_contract_version(
                 contract_package_hash,
-                entry_points
+                entry_points,
+                schemas
             );
-            let mut schemas = vec![];
-            #events_schema
-            odra::casper::utils::register_events(schemas); 
 
             #call_constructor
         }
