@@ -7,7 +7,6 @@ use blake2::{
 use casper_execution_engine::core::engine_state::ExecutableDeployItem;
 use casper_hashing::Digest;
 use casper_node::{
-    crypto::AsymmetricKeyExt,
     rpcs::{
         account::{PutDeploy, PutDeployResult},
         chain::{GetStateRootHash, GetStateRootHashResult},
@@ -19,11 +18,11 @@ use casper_node::{
         },
         RpcWithOptionalParams, RpcWithParams
     },
-    types::{Deploy, DeployHash, TimeDiff, Timestamp}
+    types::{Deploy, DeployHash}
 };
 use casper_types::{
     bytesrepr::FromBytes, runtime_args, ContractHash, ContractPackageHash, Key, PublicKey,
-    RuntimeArgs, SecretKey
+    RuntimeArgs, SecretKey, TimeDiff, Timestamp
 };
 use jsonrpc_lite::JsonRpc;
 use odra_casper_shared::key_maker::KeyMaker;
@@ -334,7 +333,7 @@ impl CasperClient {
 
     fn new_deploy(&self, session: ExecutableDeployItem, gas: Balance) -> Deploy {
         let timestamp = Timestamp::now();
-        let ttl = TimeDiff::from(10000000);
+        let ttl = TimeDiff::from_seconds(1000);
         let gas_price = 1;
         let dependencies = vec![];
         let chain_name = String::from(self.chain_name());

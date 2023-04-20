@@ -10,9 +10,9 @@ keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm", "smart contracts"]
 
 [dependencies]
-casper-types = "1.5.0"
-casper-node = "1.4"
-casper-execution-engine = "3.0.0"
+casper-types = "1.6.0"
+casper-node = "1.4.14"
+casper-execution-engine.workspace = true
 casper-hashing = "1.4.3"
 odra-casper-shared = { version = "0.2.0", path = "../shared" }
 odra-casper-types = { version = "0.2.0", path = "../types" }
