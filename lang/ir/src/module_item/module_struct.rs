@@ -111,7 +111,7 @@ fn extract_mapping_value_ident_from_path(path: &syn::TypePath) -> Result<Ident> 
 }
 
 fn filter_ident_excluding_variable_and_mapping(field: &syn::Field) -> Option<syn::Ident> {
-    filter_ident(field, &["Variable", "Mapping"])
+    filter_ident(field, &["Variable", "Mapping", "List"])
 }
 
 fn filter_ident(field: &syn::Field, exclusions: &'static [&str]) -> Option<syn::Ident> {

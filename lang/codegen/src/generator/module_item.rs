@@ -89,12 +89,24 @@ mod test {
                 pub submodule: Submodule
             }
 
+            impl odra::OdraItem for Module {
+                fn is_module() -> bool {
+                    true
+                }
+
+                #[cfg (feature = "casper")]
+                fn events () -> Vec<odra::types::contract_def::Event> {
+                    <Self as odra::types::contract_def::HasEvents>::events()
+                }
+            }
+
+            #[cfg (feature = "casper")]
             impl odra::types::contract_def::HasEvents for Module {
                 fn events() -> Vec<odra::types::contract_def::Event> {
                     let mut events = vec![];
-                    events.extend(<A as odra::types::event::OdraEvent>::schema());
-                    events.extend(<B as odra::types::event::OdraEvent>::schema());
-                    events.extend(<C as odra::types::event::OdraEvent>::schema());
+                    events.push(<A as odra::types::event::OdraEvent>::schema());
+                    events.push(<B as odra::types::event::OdraEvent>::schema());
+                    events.push(<C as odra::types::event::OdraEvent>::schema());
                     events.extend(<Submodule as odra::OdraItem>::events());
                     events.extend(<MappedModule as odra::OdraItem>::events());
                     events.extend(<String as odra::OdraItem>::events());

@@ -140,9 +140,6 @@ mod tests {
     use odra_types::Type;
     use quote::{quote, ToTokens};
 
-    use super::constructor::WasmConstructor;
-    use super::entrypoints_def::ContractEntrypoints;
-    use super::wasm_entrypoint::WasmEntrypoint;
     use super::{assert_eq_tokens, gen_contract};
 
     #[test]
@@ -166,21 +163,14 @@ mod tests {
         };
 
         let path: syn::Path = syn::parse_str("my_contract::MyContract").unwrap();
-        let ref_path: syn::Path = syn::parse_str("my_contract::MyContractRef").unwrap();
 
         let fqn = path.to_token_stream().to_string().replace(' ', "");
 
         let contract_ident = String::from("MyContract");
-        let entrypoints = vec![constructor.clone(), entrypoint.clone()];
+        let entrypoints = vec![constructor, entrypoint];
         let events = vec![];
 
         let result = gen_contract(contract_ident, entrypoints, events, fqn);
-
-        let expected_constructor_no_mangle = WasmEntrypoint(&constructor, &path);
-        let expected_entrypoint_no_mangle = WasmEntrypoint(&entrypoint, &path);
-        let entrypoints = vec![constructor.clone(), entrypoint.clone()];
-        let expected_entrypoints = ContractEntrypoints(&entrypoints);
-        let expected_constructor_if = WasmConstructor(vec![&constructor], &ref_path);
 
         assert_eq_tokens(
             result,
@@ -196,19 +186,97 @@ mod tests {
                         contract_package_hash.into()
                     );
 
-                    #expected_entrypoints
-
+                    let mut entry_points = odra::casper::casper_types::EntryPoints::new();
+                    entry_points.add_entry_point(odra::casper::casper_types::EntryPoint::new(
+                        stringify!(construct_me),
+                        {
+                            let mut params: Vec<odra::casper::casper_types::Parameter> = Vec::new();
+                            params.push(odra::casper::casper_types::Parameter::new(
+                                stringify!(value),
+                                odra::casper::casper_types::CLType::I32
+                            ));
+                            params
+                        },
+                        odra::casper::casper_types::CLType::Unit,
+                        odra::casper::casper_types::EntryPointAccess::Groups(vec![
+                            odra::casper::casper_types::Group::new("constructor")
+                        ]),
+                        odra::casper::casper_types::EntryPointType::Contract,
+                    ));
+                    entry_points.add_entry_point(odra::casper::casper_types::EntryPoint::new(
+                        stringify!(call_me),
+                        Vec::<odra::casper::casper_types::Parameter>::new(),
+                        odra::casper::casper_types::CLType::Bool,
+                        odra::casper::casper_types::EntryPointAccess::Public,
+                        odra::casper::casper_types::EntryPointType::Contract,
+                    ));
+                    let schemas = vec![];
                     odra::casper::utils::add_contract_version(
                         contract_package_hash,
-                        entry_points
+                        entry_points,
+                        schemas
                     );
 
-                    #expected_constructor_if
+                    if odra::casper::utils::named_arg_exists("constructor") {
+                        use odra::casper::casper_contract::unwrap_or_revert::UnwrapOrRevert;
+                        let constructor_access: odra::casper::casper_types::URef =
+                            odra::casper::casper_contract::contract_api::storage::create_contract_user_group(
+                                contract_package_hash,
+                                "constructor",
+                                1,
+                                Default::default()
+                            )
+                            .unwrap_or_revert()
+                            .pop()
+                            .unwrap_or_revert();
+                        let constructor_name = odra::casper::casper_contract::contract_api::runtime::get_named_arg::<
+                            String
+                        >("constructor");
+                        let constructor_name = constructor_name.as_str();
+                        match constructor_name {
+                            stringify!(construct_me) => {
+                                let odra_address = odra::types::Address::try_from(contract_package_hash)
+                                    .map_err(|err| {
+                                        let code = odra::types::ExecutionError::from(err).code();
+                                        odra::casper::casper_types::ApiError::User(code)
+                                    })
+                                    .unwrap_or_revert();
+                                let mut contract_ref = my_contract::MyContractRef::at(odra_address);
+                                let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg(
+                                    stringify!(value)
+                                );
+                                contract_ref.construct_me(value);
+                            },
+                            _ => {}
+                        };
+                        let mut urefs = std::collections::BTreeSet::new();
+                        urefs.insert(constructor_access);
+                        odra::casper::casper_contract::contract_api::storage::remove_contract_user_group_urefs(
+                            contract_package_hash,
+                            "constructor",
+                            urefs
+                        )
+                        .unwrap_or_revert();
+                    }
                 }
 
-                #expected_constructor_no_mangle
-
-                #expected_entrypoint_no_mangle
+                #[no_mangle]
+                fn construct_me() {
+                    odra::casper::utils::assert_no_attached_value();
+                    let contract = my_contract::MyContract::instance("contract");
+                    let value =
+                        odra::casper::casper_contract::contract_api::runtime::get_named_arg(stringify!(value));
+                    contract.construct_me(value);
+                }
+                #[no_mangle]
+                fn call_me() {
+                    odra::casper::utils::assert_no_attached_value();
+                    let contract = my_contract::MyContract::instance("contract");
+                    use odra::casper::casper_contract::unwrap_or_revert::UnwrapOrRevert;
+                    let result = contract.call_me();
+                    let result = odra::casper::casper_types::CLValue::from_t(result).unwrap_or_revert();
+                    odra::casper::casper_contract::contract_api::runtime::ret(result);
+                }
             }
         );
     }
