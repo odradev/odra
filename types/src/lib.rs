@@ -50,5 +50,7 @@ pub enum Type {
     /// Unspecified type.
     Any,
     /// Vector of a `Type`.
-    Vec(Box<Type>)
+    Vec(Box<Type>),
+    /// Fixed-length list of a single `Type`
+    ByteArray(u32)
 }

@@ -75,6 +75,9 @@ impl ToTokens for WrappedType<'_> {
                     odra::casper::casper_types::CLType::Tuple2([#t1, #t2, #t3])
                 }
             }
+            Type::ByteArray(b) => quote! {
+                odra::casper::casper_types::CLType::ByteArray(#b)
+            }
         };
         tokens.extend(stream);
     }
