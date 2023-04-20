@@ -1,12 +1,14 @@
 use derive_more::From;
-use odra_ir::module::ModuleImpl;
+use odra_ir::module::{Constructor, Method, ModuleImpl};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, TokenStreamExt};
 use syn::{punctuated::Punctuated, token::Comma};
 
 use crate::GenerateCode;
-mod casper;
-mod mock_vm;
+
+mod deployer_casper_livenet;
+mod deployer_casper_test;
+mod deployer_mock_vm;
 
 #[derive(From)]
 pub struct Deploy<'a> {
@@ -18,23 +20,44 @@ as_ref_for_contract_impl_generator!(Deploy);
 impl GenerateCode for Deploy<'_> {
     fn generate_code(&self) -> TokenStream {
         let struct_ident = self.contract.ident();
+        let ref_ident = format_ident!("{}Ref", struct_ident);
         let deployer_ident = format_ident!("{}Deployer", struct_ident);
 
-        let constructors_mock_vm = mock_vm::build_constructors(self.contract);
-        let constructors_wasm_test = casper::build_constructors(self.contract);
+        let method_defs: Vec<&Method> = self.contract.get_public_method_iter().collect();
+        let constructor_defs: Vec<&Constructor> = self.contract.get_constructor_iter().collect();
+
+        let mock_vm_deployer_impl = deployer_mock_vm::generate_code(
+            struct_ident,
+            &deployer_ident,
+            &ref_ident,
+            &constructor_defs,
+            &method_defs
+        );
+        let casper_test_deployer_impl = deployer_casper_test::generate_code(
+            struct_ident,
+            &deployer_ident,
+            &ref_ident,
+            &constructor_defs
+        );
+        let casper_livenet_deployer_impl = deployer_casper_livenet::generate_code(
+            struct_ident,
+            &deployer_ident,
+            &ref_ident,
+            &constructor_defs,
+            &method_defs
+        );
 
         quote! {
             pub struct #deployer_ident;
 
             #[cfg(all(feature = "casper", not(target_arch = "wasm32")))]
-            impl #deployer_ident {
-                #constructors_wasm_test
-            }
+            #casper_test_deployer_impl
 
             #[cfg(feature = "mock-vm")]
-            impl #deployer_ident {
-                #constructors_mock_vm
-            }
+            #mock_vm_deployer_impl
+
+            #[cfg(feature = "casper-livenet")]
+            #casper_livenet_deployer_impl
         }
     }
 }
@@ -47,6 +70,23 @@ where
         .map(|arg| {
             let pat = &*arg.pat;
             quote!(args.get(stringify!(#pat)))
+        })
+        .collect::<Punctuated<TokenStream, Comma>>()
+}
+
+fn args_to_fn_cl_values<'a, T>(args: T) -> Punctuated<TokenStream, Comma>
+where
+    T: IntoIterator<Item = &'a syn::PatType>
+{
+    args.into_iter()
+        .map(|arg| {
+            let pat = &*arg.pat;
+            quote!(args
+                .get(stringify!(#pat))
+                .cloned()
+                .unwrap()
+                .into_t()
+                .unwrap())
         })
         .collect::<Punctuated<TokenStream, Comma>>()
 }

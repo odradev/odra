@@ -3,6 +3,7 @@ mod casper_address;
 mod ty;
 mod uints;
 pub use args::CallArgs;
+pub use casper_types;
 pub use casper_types::bytesrepr::Bytes;
 pub use ty::Typed;
 pub use uints::{U256, U512};
@@ -16,6 +17,7 @@ use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
     CLTyped
 };
+
 /// A type that can be written to the storage and read from the storage.
 pub trait OdraType: CLTyped + ToBytes + FromBytes {}
 

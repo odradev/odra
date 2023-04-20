@@ -34,6 +34,10 @@ impl<'a> OdraPoet for &'a syn::ItemEnum {
     type Poet = generator::errors::OdraErrorItem<'a>;
 }
 
+impl<'a> OdraPoet for &'a odra_ir::MapExpr {
+    type Poet = generator::mapping::OdraMapping<'a>;
+}
+
 pub trait OdraPoetUsingImpl: AsRef<odra_ir::module::ModuleImpl> {
     fn generate_code_using<'a, G>(&'a self) -> proc_macro2::TokenStream
     where

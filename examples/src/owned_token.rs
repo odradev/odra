@@ -5,7 +5,7 @@ use odra::{
 
 use crate::{erc20::Erc20, ownable::Ownable};
 
-#[odra::module]
+#[odra::module(skip_instance)]
 pub struct OwnedToken {
     ownable: Ownable,
     erc20: Erc20
@@ -20,48 +20,23 @@ impl OwnedToken {
         self.erc20.init(name, symbol, decimals, initial_supply);
     }
 
-    pub fn name(&self) -> String {
-        self.erc20.name()
-    }
+    delegate! {
+        to self.erc20 {
+            pub fn transfer(&mut self, recipient: Address, amount: U256);
+            pub fn transfer_from(&mut self, owner: Address, recipient: Address, amount: U256);
+            pub fn approve(&mut self, spender: Address, amount: U256);
+            pub fn name(&self) -> String;
+            pub fn symbol(&self) -> String;
+            pub fn decimals(&self) -> u8;
+            pub fn total_supply(&self) -> U256;
+            pub fn balance_of(&self, owner: Address) -> U256;
+            pub fn allowance(&self, owner: Address, spender: Address) -> U256;
+        }
 
-    pub fn symbol(&self) -> String {
-        self.erc20.symbol()
-    }
-
-    pub fn decimals(&self) -> u8 {
-        self.erc20.decimals()
-    }
-
-    pub fn total_supply(&self) -> U256 {
-        self.erc20.total_supply()
-    }
-
-    pub fn balance_of(&self, address: Address) -> U256 {
-        self.erc20.balance_of(address)
-    }
-
-    pub fn allowance(&self, owner: Address, spender: Address) -> U256 {
-        self.erc20.allowance(owner, spender)
-    }
-
-    pub fn transfer(&mut self, recipient: Address, amount: U256) {
-        self.erc20.transfer(recipient, amount);
-    }
-
-    pub fn transfer_from(&mut self, owner: Address, recipient: Address, amount: U256) {
-        self.erc20.transfer_from(owner, recipient, amount);
-    }
-
-    pub fn approve(&mut self, spender: Address, amount: U256) {
-        self.erc20.approve(spender, amount);
-    }
-
-    pub fn get_owner(&self) -> Address {
-        self.ownable.get_owner()
-    }
-
-    pub fn change_ownership(&mut self, new_owner: Address) {
-        self.ownable.change_ownership(new_owner);
+        to self.ownable {
+            pub fn get_owner(&self) -> Address;
+            pub fn change_ownership(&mut self, new_owner: Address);
+        }
     }
 
     pub fn mint(&mut self, address: Address, amount: U256) {

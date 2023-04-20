@@ -13,7 +13,7 @@ pub struct Mapping<K, V> {
     value_ty: PhantomData<V>
 }
 
-impl<K: OdraType + Hash, V: OdraType> Mapping<K, V> {
+impl<K: OdraType + Hash, V> Mapping<K, V> {
     /// Creates a new Mapping instance.
     pub fn new(name: String) -> Self {
         Mapping {
@@ -22,7 +22,9 @@ impl<K: OdraType + Hash, V: OdraType> Mapping<K, V> {
             value_ty: PhantomData::<V>::default()
         }
     }
+}
 
+impl<K: OdraType + Hash, V: OdraType> Mapping<K, V> {
     /// Reads `key` from the storage or returns `None`.
     pub fn get(&self, key: &K) -> Option<V> {
         contract_env::get_dict_value(&self.name, key)
@@ -32,12 +34,42 @@ impl<K: OdraType + Hash, V: OdraType> Mapping<K, V> {
     pub fn set(&mut self, key: &K, value: V) {
         contract_env::set_dict_value(&self.name, key, value);
     }
+
+    /// Return the named key path to the variable.
+    pub fn path(&self) -> &str {
+        &self.name
+    }
 }
 
 impl<K: OdraType + Hash, V: OdraType + Default> Mapping<K, V> {
     /// Reads `key` from the storage or the default value is returned.
     pub fn get_or_default(&self, key: &K) -> V {
         self.get(key).unwrap_or_default()
+    }
+}
+
+impl<K: OdraType + Hash, V: Instance> Mapping<K, V> {
+    /// Reads `key` from the storage or the default value is returned.
+    pub fn get_instance(&self, key: &K) -> V {
+        #[cfg(feature = "mock-vm")]
+        {
+            let key_hash = hex::encode(key.ser().unwrap());
+            let namespace = format!("{}_{}", key_hash, self.name);
+            V::instance(&namespace)
+        }
+
+        #[cfg(feature = "casper")]
+        {
+            use odra_casper_backend::casper_contract::unwrap_or_revert::UnwrapOrRevert;
+            let key_hash = hex::encode(key.to_bytes().unwrap_or_revert());
+            V::instance(&format!("{}_{}", key_hash, self.name))
+        }
+
+        #[cfg(feature = "casper-livenet")]
+        {
+            let key_hash = hex::encode(key.to_bytes().unwrap());
+            V::instance(&format!("{}_{}", key_hash, self.name))
+        }
     }
 }
 
@@ -67,15 +99,67 @@ impl<K: OdraType + Hash, V: OdraType + OverflowingSub + Default + Debug + Partia
     }
 }
 
-impl<K: OdraType + Hash, V: OdraType> From<&str> for Mapping<K, V> {
+impl<K: OdraType + Hash, V> From<&str> for Mapping<K, V> {
     fn from(name: &str) -> Self {
         Mapping::new(name.to_string())
     }
 }
 
-impl<K: OdraType + Hash, V: OdraType> Instance for Mapping<K, V> {
+impl<K: OdraType + Hash, V> Instance for Mapping<K, V> {
     fn instance(namespace: &str) -> Self {
         namespace.into()
+    }
+}
+
+#[cfg(feature = "mock-vm")]
+impl<K: OdraType + Hash, V: OdraType> crate::types::BorshDeserialize for Mapping<K, V> {
+    fn deserialize(buf: &mut &[u8]) -> Result<Self, std::io::Error> {
+        Ok(Self::new(crate::types::BorshDeserialize::deserialize(buf)?))
+    }
+}
+
+#[cfg(feature = "mock-vm")]
+impl<K: OdraType + Hash, V: OdraType> crate::types::BorshSerialize for Mapping<K, V> {
+    fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+        crate::types::BorshSerialize::serialize(&self.path(), writer)?;
+        Ok(())
+    }
+}
+
+#[cfg(any(feature = "casper", feature = "casper-livenet"))]
+impl<K: OdraType + Hash, V: OdraType> crate::casper::casper_types::CLTyped for Mapping<K, V> {
+    fn cl_type() -> crate::casper::casper_types::CLType {
+        crate::casper::casper_types::CLType::Any
+    }
+}
+
+#[cfg(any(feature = "casper", feature = "casper-livenet"))]
+impl<K: OdraType + Hash, V: OdraType> crate::casper::casper_types::bytesrepr::ToBytes
+    for Mapping<K, V>
+{
+    fn to_bytes(&self) -> Result<Vec<u8>, crate::casper::casper_types::bytesrepr::Error> {
+        let mut result = Vec::with_capacity(self.serialized_length());
+        result.extend("mapping".to_bytes()?);
+        result.extend(&self.path().to_bytes()?);
+        Ok(result)
+    }
+
+    fn serialized_length(&self) -> usize {
+        "mapping".serialized_length() + self.path().serialized_length()
+    }
+}
+
+#[cfg(any(feature = "casper", feature = "casper-livenet"))]
+impl<K: OdraType + Hash, V: OdraType> crate::casper::casper_types::bytesrepr::FromBytes
+    for Mapping<K, V>
+{
+    fn from_bytes(
+        bytes: &[u8]
+    ) -> Result<(Self, &[u8]), crate::casper::casper_types::bytesrepr::Error> {
+        let (_, bytes): (String, _) =
+            crate::casper::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
+        let (name, bytes) = crate::casper::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
+        Ok((Mapping::new(name), bytes))
     }
 }
 

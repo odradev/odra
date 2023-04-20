@@ -46,3 +46,11 @@ test-modules-on-casper:
 test-modules: test-modules-on-mockvm test-modules-on-casper
 
 test: test-odra test-examples test-modules
+
+run-example-erc20-on-livenet:
+    cd examples && cargo run --bin erc20-on-livenet --features casper-livenet --no-default-features
+
+clean:
+    cargo clean
+    cd examples && cargo odra clean
+    cd modules && cargo odra clean

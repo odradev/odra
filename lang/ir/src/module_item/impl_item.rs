@@ -22,7 +22,7 @@ impl quote::ToTokens for ImplItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         match self {
             Self::Constructor(constructor) => constructor.to_tokens(tokens),
-            Self::Method(message) => message.to_tokens(tokens),
+            Self::Method(method) => method.to_tokens(tokens),
             Self::Other(other) => other.to_tokens(tokens)
         }
     }

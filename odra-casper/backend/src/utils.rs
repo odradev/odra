@@ -1,7 +1,7 @@
 //! A set of utility functions encapsulating some common interactions with the current runtime.
 
 use casper_contract::contract_api::{runtime, system};
-use casper_types::{URef, U512};
+use casper_types::{ContractPackageHash, EntryPoints, URef, U512};
 use odra_casper_shared::consts;
 use odra_casper_types::Balance;
 use odra_types::ExecutionError;
@@ -10,6 +10,10 @@ use crate::{
     casper_env,
     contract_env::{revert, ATTACHED_VALUE}
 };
+
+pub fn add_contract_version(contract_package_hash: ContractPackageHash, entry_points: EntryPoints) {
+    casper_env::add_contract_version(contract_package_hash, entry_points);
+}
 
 /// Checks if given named argument exists.
 pub fn named_arg_exists(name: &str) -> bool {

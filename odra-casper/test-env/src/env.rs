@@ -1,6 +1,6 @@
 //! Implementation of [CasperTestEnv].
 
-use std::{cell::RefCell, path::PathBuf};
+use std::{cell::RefCell, env, path::PathBuf};
 
 use casper_engine_test_support::{
     DeployItemBuilder, ExecuteRequestBuilder, InMemoryWasmTestBuilder, ARG_AMOUNT,
@@ -28,6 +28,8 @@ thread_local! {
     /// Thread local instance of [CasperTestEnv].
     pub static ENV: RefCell<CasperTestEnv> = RefCell::new(CasperTestEnv::new());
 }
+
+const ODRA_WASM_PATH_ENV_KEY: &str = "ODRA_WASM_PATH";
 
 /// Wrapper for InMemoryWasmTestBuilder.
 pub struct CasperTestEnv {
@@ -85,7 +87,15 @@ impl CasperTestEnv {
 
     /// Deploy WASM file with args.
     pub fn deploy_contract(&mut self, wasm_path: &str, args: CallArgs) {
-        let session_code = PathBuf::from(wasm_path);
+        let mut session_code = PathBuf::from(wasm_path);
+        if let Ok(path) = env::var(ODRA_WASM_PATH_ENV_KEY) {
+            let mut path = PathBuf::from(path);
+            path.push(wasm_path);
+            if path.exists() {
+                session_code = path;
+            }
+        }
+
         let deploy_item = DeployItemBuilder::new()
             .with_empty_payment_bytes(runtime_args! {ARG_AMOUNT => *DEFAULT_PAYMENT})
             .with_authorization_keys(&[self.active_account_hash()])
@@ -272,8 +282,14 @@ impl CasperTestEnv {
     }
 
     /// Returns the cost of the last deploy.
-    /// Currently it is always Casper's DEFAULT_PAYMENT, but in future it might change.
+    /// Keep in mind that this may be different from the cost of the deploy on the live network.
+    /// This is NOT the amount of gas charged - see [last_call_contract_gas_used].
     pub fn last_call_contract_gas_cost(&self) -> U512 {
+        self.context.last_exec_gas_cost().value()
+    }
+
+    /// Returns the amount of gas used for last call.
+    pub fn last_call_contract_gas_used(&self) -> U512 {
         *DEFAULT_PAYMENT
     }
 }

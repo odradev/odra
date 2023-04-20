@@ -41,6 +41,12 @@ impl GenerateCode for ModuleImpl<'_> {
             #deploy
 
             #contract_ref
+
+            impl odra::IsModule for #ident {
+                fn is_module() -> bool {
+                    true
+                }
+            }
         }
     }
 }

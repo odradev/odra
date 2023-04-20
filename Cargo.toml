@@ -13,7 +13,12 @@ members = [
     "odra-casper/shared",
     "odra-casper/test-env",
     "odra-casper/types",
-    "odra-casper/test-env/getter_proxy"
+    "odra-casper/test-env/getter_proxy",
+    "odra-casper/livenet"
 ]
 
 exclude = [ "contract", "contract/builder", "examples", "modules" ]
+
+[workspace.dependencies]
+casper-types = "1.6.0"
+casper-execution-engine = "3.1.0"

@@ -5,6 +5,7 @@ use proc_macro2::TokenStream;
 use self::{module_impl::ModuleImpl, module_struct::ModuleStruct};
 
 pub mod constructor;
+pub mod delegate;
 pub mod impl_item;
 pub mod method;
 pub mod module_impl;
