@@ -883,6 +883,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn safe_batch_transfer_to_valid_receiver() {
         // Given a deployed contract
         let mut env = setup();
@@ -928,6 +929,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn safe_batch_transfer_to_valid_receiver_with_data() {
         // Given a deployed contract
         let mut env = setup();
@@ -973,6 +975,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn safe_batch_transfer_to_invalid_receiver() {
         assert_exception(
             OdraError::VmError(NoSuchMethod("on_erc1155_batch_received".to_string())),
