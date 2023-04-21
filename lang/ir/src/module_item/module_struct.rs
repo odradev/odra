@@ -9,7 +9,7 @@ use super::ModuleConfiguration;
 pub struct ModuleStruct {
     pub is_instantiable: bool,
     pub item: syn::ItemStruct,
-    pub skip_instance: bool,
+    pub skip_instance: bool
 }
 
 impl ModuleStruct {
@@ -29,7 +29,7 @@ impl From<syn::ItemStruct> for ModuleStruct {
                 attrs: other_attrs,
                 ..item
             },
-            skip_instance: false,
+            skip_instance: false
         }
     }
 }

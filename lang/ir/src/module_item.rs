@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use proc_macro2::TokenStream;
 use quote::ToTokens;
-use syn::{parse::Parse, Token, punctuated::Punctuated};
+use syn::{parse::Parse, punctuated::Punctuated, Token};
 
 use self::{module_impl::ModuleImpl, module_struct::ModuleStruct};
 
@@ -29,11 +29,10 @@ pub enum ModuleItem {
 impl ModuleItem {
     pub fn parse(_attr: TokenStream, item: TokenStream) -> Result<Self, syn::Error> {
         let config = syn::parse2::<ModuleConfiguration>(_attr)?;
-        
+
         let item_struct = syn::parse2::<syn::ItemStruct>(item.clone());
         let item_impl = syn::parse2::<syn::ItemImpl>(item.clone());
 
-        
         if let Ok(item) = item_struct {
             let module_struct = ModuleStruct::from(item).with_config(config.clone())?;
             return Ok(ModuleItem::Struct(Box::new(module_struct)));
@@ -59,7 +58,7 @@ mod kw {
 #[derive(Debug, Default, Clone)]
 pub struct ModuleConfiguration {
     pub events: ModuleEvents,
-    pub skip_instance: bool,
+    pub skip_instance: bool
 }
 
 impl Parse for ModuleConfiguration {
@@ -78,7 +77,6 @@ impl Parse for ModuleConfiguration {
 
             if skip_instance.is_none() {
                 if input.peek(kw::skip_instance) {
-                    dbg!("skip_instance");
                     input.parse::<kw::skip_instance>()?;
                     skip_instance = Some(true);
                     let _ = input.parse::<Token![,]>();
@@ -95,7 +93,6 @@ impl Parse for ModuleConfiguration {
         })
     }
 }
-
 
 #[derive(Debug, Default, Clone)]
 pub struct ModuleEvents {
@@ -116,7 +113,11 @@ impl Parse for ModuleEvents {
         let content;
         let _brace_token = syn::bracketed!(content in input);
         let events = content.parse_terminated::<ModuleEvent, Token![,]>(ModuleEvent::parse)?;
-        Ok(Self { events, submodules_events: Default::default(), mappings_events: Default::default() })
+        Ok(Self {
+            events,
+            submodules_events: Default::default(),
+            mappings_events: Default::default()
+        })
     }
 }
 

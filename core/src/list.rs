@@ -5,6 +5,7 @@ use odra_types::CollectionError;
 use crate::{contract_env, Instance, Mapping, UnwrapOrRevert, Variable};
 
 /// Data structure for an indexed, iterable collection.
+#[derive(Clone)]
 pub struct List<T> {
     values: Mapping<u32, T>,
     index: Variable<u32>

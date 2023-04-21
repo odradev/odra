@@ -1,6 +1,5 @@
-use odra::{types::{Address, U256}, Mapping, Variable, Instance};
+use odra::{Variable, Instance};
 
-#[derive(Clone)]
 #[odra::module]
 pub struct SharedStorage {
     pub value: Variable<String>,
@@ -35,11 +34,12 @@ impl ComposableContract {
     }
 }
 
+
 impl Instance for ComposableContract {
     fn instance(namespace: &str) -> Self {
-        let shared = SharedStorageComposer::new(&format!("shared_{}", namespace)).compose();
-        let storage = MyStorageComposer::new(&format!("storage_{}", namespace))
-            .with_shared(shared.clone())
+        let shared = SharedStorageComposer::new(namespace, "shared").compose();
+        let storage = MyStorageComposer::new(namespace, "storage")
+            .with_shared(&shared)
             .compose();
         Self {
             shared,

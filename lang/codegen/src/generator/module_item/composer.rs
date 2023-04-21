@@ -11,12 +11,6 @@ pub struct ModuleComposer<'a> {
     module: &'a ModuleStruct
 }
 
-impl AsRef<ModuleStruct> for ModuleComposer<'_> {
-    fn as_ref(&self) -> &ModuleStruct {
-        self.module
-    }
-}
-
 impl GenerateCode for ModuleComposer<'_> {
     fn generate_code(&self) -> TokenStream {
         let composer_ident = format_ident!("{}Composer", self.module.item.ident);
@@ -27,14 +21,17 @@ impl GenerateCode for ModuleComposer<'_> {
             _ => panic!("ModuleComposer can only be generated for named fields")
         };
 
-        let struct_fields = fields.named.iter()
+        let struct_fields = fields
+            .named
+            .iter()
             .map(|field| {
                 let field_ident = field.ident.as_ref().unwrap();
                 let field_type = &field.ty;
                 quote! {
                     #field_ident: core::option::Option<#field_type>
                 }
-        }).collect::<Punctuated<TokenStream, Comma>>();
+            })
+            .collect::<Punctuated<TokenStream, Comma>>();
 
         let init_fields = fields.named.iter()
             .map(|field| {
@@ -45,50 +42,55 @@ impl GenerateCode for ModuleComposer<'_> {
                 }
         }).collect::<Punctuated<TokenStream, Comma>>();
 
-        let empty_fields = fields.named.iter()
+        let empty_fields = fields
+            .named
+            .iter()
             .map(|field| {
                 let field_ident = field.ident.as_ref().unwrap();
                 quote! {
                     #field_ident: None
                 }
-        }).collect::<Punctuated<TokenStream, Comma>>();
+            })
+            .collect::<Punctuated<TokenStream, Comma>>();
 
-        let functions = fields.named.iter()
+        let functions = fields
+            .named
+            .iter()
             .map(|field| {
                 let field_ident = field.ident.as_ref().unwrap();
                 let field_type = &field.ty;
                 let function_name = format_ident!("with_{}", field_ident);
                 quote! {
-                    pub fn #function_name(mut self, #field_ident: #field_type) -> Self {
-                        self.#field_ident = Some(#field_ident);
+                    pub fn #function_name(mut self, #field_ident: &#field_type) -> Self {
+                        self.#field_ident = Some(#field_ident.clone());
                         self
                     }
                 }
-        }).collect::<TokenStream>();
-       
-       quote! {
-            pub struct #composer_ident {
-                namespace: String,
-                #struct_fields
-            }
+            })
+            .collect::<TokenStream>();
 
-            impl #composer_ident {
-                pub fn new(namespace: &str) -> Self {
-                    Self {
-                        namespace: namespace.to_string(),
-                        #empty_fields
-                    }
-                }
+        quote! {
+             pub struct #composer_ident {
+                 namespace: String,
+                 #struct_fields
+             }
 
-                #functions
+             impl #composer_ident {
+                 pub fn new(namespace: &str, name: &str) -> Self {
+                     Self {
+                         namespace: format!("{}_{}", name, namespace),
+                         #empty_fields
+                     }
+                 }
 
-                pub fn compose(self) -> #module_ident {
-                    #module_ident {
-                        #init_fields
-                    }
-                }
-            }
-       }
+                 #functions
+
+                 pub fn compose(self) -> #module_ident {
+                     #module_ident {
+                         #init_fields
+                     }
+                 }
+             }
+        }
     }
 }
-

@@ -1,7 +1,7 @@
 use derive_more::From;
 use quote::{quote, quote_spanned};
 
-use crate::{GenerateCode, generator::module_item::composer::ModuleComposer};
+use crate::{generator::module_item::composer::ModuleComposer, GenerateCode};
 
 mod composer;
 
@@ -15,12 +15,13 @@ impl GenerateCode for ModuleStruct<'_> {
         let item_struct = &self.contract.item;
         let span = item_struct.ident.span();
         let instance = if self.contract.is_instantiable && !self.contract.skip_instance {
-            quote_spanned!(span => #[derive(odra::Instance)])
+            quote_spanned!(span => #[derive(odra::Instance, Clone)])
         } else {
-            quote!()
+            quote!(#[derive(Clone)])
         };
 
-        let composer = <ModuleComposer as GenerateCode>::generate_code(&ModuleComposer::from(self.contract));
+        let composer =
+            <ModuleComposer as GenerateCode>::generate_code(&ModuleComposer::from(self.contract));
 
         quote! {
             #instance
