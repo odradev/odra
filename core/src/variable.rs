@@ -6,7 +6,7 @@ use odra_types::arithmetic::{OverflowingAdd, OverflowingSub};
 use crate::{contract_env, instance::Instance, UnwrapOrRevert};
 
 /// Data structure for storing a single value.
-#[derive(PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Variable<T> {
     name: String,
     ty: PhantomData<T>

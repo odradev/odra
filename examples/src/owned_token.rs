@@ -1,14 +1,23 @@
 use odra::{
     contract_env,
-    types::{Address, U256}
+    types::{Address, U256}, Instance
 };
 
-use crate::{erc20::Erc20, ownable::Ownable};
+use crate::{erc20::{Erc20, Erc20Composer}, ownable::{Ownable, OwnableComposer}};
 
 #[odra::module(skip_instance)]
 pub struct OwnedToken {
     ownable: Ownable,
     erc20: Erc20
+}
+
+impl Instance for OwnedToken {
+    fn instance(namespace: &str) -> Self {
+        Self {
+            ownable: OwnableComposer::new(namespace).compose(),
+            erc20: Erc20Composer::new(namespace).compose(),
+        }
+    }
 }
 
 #[odra::module]

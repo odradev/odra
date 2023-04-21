@@ -42,15 +42,14 @@ impl ToTokens for WrappedField {
         let ident = &self.0.ident.as_ref().unwrap();
         tokens.extend(quote! {
             #ident: odra::Instance::instance(
-                [stringify!(#ident), namespace]
+                &[stringify!(#ident), namespace]
                     .iter()
                     .filter_map(|str| match str.is_empty() {
                         true => None,
-                        false => Some(str.to_string()),
+                        false => Some(*str),
                     })
-                    .collect::<Vec<String>>()
+                    .collect::<Vec<_>>()
                     .join("_")
-                    .as_str()
             ),
         });
     }
