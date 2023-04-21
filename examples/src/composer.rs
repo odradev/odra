@@ -2,53 +2,47 @@ use odra::{types::{Address, U256}, Mapping, Variable, Instance};
 
 #[derive(Clone)]
 #[odra::module]
-pub struct Refs {
-    pub values: Mapping<String, Address>,
-    pub metadata: RefsMetadata
-}
-
-#[derive(Clone)]
-#[odra::module]
-pub struct RefsMetadata {
-    pub version: Variable<String>
+pub struct SharedStorage {
+    pub value: Variable<String>,
 }
 
 #[odra::module]
-pub struct TokenStorage {
-    pub refs: Refs,
-    pub total_supply: Variable<U256>
+pub struct MyStorage {
+    pub shared: SharedStorage,
+    pub version: Variable<u8>
 }
 
 #[odra::module(skip_instance)]
-pub struct Token {
-    pub refs: Refs,
-    pub storage: TokenStorage
+pub struct ComposableContract {
+    pub shared: SharedStorage,
+    pub storage: MyStorage
 }
 
 #[odra::module]
-impl Token {
+impl ComposableContract {
     #[odra(init)]
-    pub fn init(&mut self) {
-        self.storage.total_supply.set(U256::from(100));
+    pub fn init(&mut self, version: u8, value: String) {
+        self.storage.version.set(version);
+        self.shared.value.set(value);
     }
 
-    pub fn namespace(&self) -> String {
-        self.storage.total_supply.path().to_string()
+    pub fn get_value(&self) -> String {
+        self.shared.value.get_or_default()
+    }
+
+    pub fn get_value_via_storage(&self) -> String {
+        self.storage.shared.value.get_or_default()
     }
 }
 
-impl Instance for Token {
+impl Instance for ComposableContract {
     fn instance(namespace: &str) -> Self {
-        let refs = RefsComposer::new(&format!("refs_{}", namespace))
-            .with_metadata(RefsMetadataComposer::new(namespace)
-                .with_version(Instance::instance("ver"))
-                .compose())
-            .compose();
-        let storage = TokenStorageComposer::new(&format!("storage_{}", namespace))
-            // .with_refs(refs.clone())
+        let shared = SharedStorageComposer::new(&format!("shared_{}", namespace)).compose();
+        let storage = MyStorageComposer::new(&format!("storage_{}", namespace))
+            .with_shared(shared.clone())
             .compose();
         Self {
-            refs,
+            shared,
             storage
         }
     }
@@ -56,19 +50,21 @@ impl Instance for Token {
 
 #[cfg(test)]
 mod test {
-    use crate::composer::TokenDeployer;
+    use crate::composer::ComposableContractDeployer;
 
     #[test]
     fn t() {
-        let token = TokenDeployer::init();
-        dbg!(token.namespace());
+        let shared_value = "shared_value".to_string();
+        let token = ComposableContractDeployer::init(1, shared_value.clone());
 
-        // let a = &[stringify!("s"), "ss"]
-        //     .iter()
-        //     .filter(|str| str.is_empty())
-        //     .collect::<Vec<_>>()
-        //     .()
-        //     .join("_");
-        assert!(false);
+        assert_eq!(
+            token.get_value(),
+            shared_value
+        );
+
+        assert_eq!(
+            token.get_value_via_storage(),
+            shared_value
+        );
     }
 }

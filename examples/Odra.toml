@@ -27,6 +27,10 @@ name = "time_lock_wallet"
 fqn = "odra_examples::tlw::TimeLockWallet"
 
 [[contracts]]
+name = "composable_contract"
+fqn = "odra_examples::composer::ComposableContract"
+
+[[contracts]]
 name = "dog_contract"
 fqn = "odra_examples::docs::variable::DogContract"
 
@@ -69,3 +73,4 @@ fqn = "odra_examples::docs::modules::ModulesContract"
 [[contracts]]
 name = "public_wallet"
 fqn = "odra_examples::docs::native_token::PublicWallet"
+
