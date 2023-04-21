@@ -287,7 +287,8 @@ macro_rules! gen_contract {
     ($contract:path, $name:literal) => {
         fn main() {
             let ident = <$contract as odra::types::contract_def::HasIdent>::ident();
-            let entrypoints = <$contract as odra::types::contract_def::HasEntrypoints>::entrypoints();
+            let entrypoints =
+                <$contract as odra::types::contract_def::HasEntrypoints>::entrypoints();
             let events = <$contract as odra::types::contract_def::HasEvents>::events();
             let code = odra::casper::codegen::gen_contract(
                 ident,
@@ -295,7 +296,7 @@ macro_rules! gen_contract {
                 events,
                 stringify!($contract).to_string()
             );
-        
+
             use std::fs::File;
             use std::io::prelude::*;
             let mut file = File::create(&format!("src/{}_wasm.rs", $name)).unwrap();
