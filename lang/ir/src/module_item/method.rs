@@ -18,6 +18,7 @@ pub struct Method {
     pub attrs: Vec<OdraAttribute>,
     pub impl_item: syn::ImplItemMethod,
     pub ident: syn::Ident,
+    pub is_mut: bool,
     pub args: syn::punctuated::Punctuated<syn::PatType, syn::token::Comma>,
     pub ret: syn::ReturnType,
     pub full_sig: syn::Signature,
@@ -63,7 +64,7 @@ impl ToTokens for Method {
             false => quote!(odra::types::contract_def::EntrypointType::Public)
         };
 
-        let is_mut = utils::is_mut(&self.full_sig);
+        let is_mut = self.is_mut;
 
         let ep = quote! {
             odra::types::contract_def::Entrypoint {
@@ -95,11 +96,13 @@ impl From<syn::ImplItemMethod> for Method {
         let ret = method.clone().sig.output;
         let full_sig = method.clone().sig;
         let visibility = method.vis.clone();
+        let is_mut = utils::is_mut(&full_sig);
 
         Self {
             attrs: odra_attrs,
             impl_item: syn::ImplItemMethod { attrs, ..method },
             ident,
+            is_mut,
             args,
             ret,
             full_sig,

@@ -96,14 +96,14 @@ impl<V: OdraType> crate::types::BorshSerialize for Variable<V> {
     }
 }
 
-#[cfg(feature = "casper")]
+#[cfg(any(feature = "casper", feature = "casper-livenet"))]
 impl<V: OdraType> crate::casper::casper_types::CLTyped for Variable<V> {
     fn cl_type() -> crate::casper::casper_types::CLType {
         crate::casper::casper_types::CLType::Any
     }
 }
 
-#[cfg(feature = "casper")]
+#[cfg(any(feature = "casper", feature = "casper-livenet"))]
 impl<V: OdraType> crate::casper::casper_types::bytesrepr::ToBytes for Variable<V> {
     fn to_bytes(&self) -> Result<Vec<u8>, crate::casper::casper_types::bytesrepr::Error> {
         let mut result = Vec::with_capacity(self.serialized_length());
@@ -117,7 +117,7 @@ impl<V: OdraType> crate::casper::casper_types::bytesrepr::ToBytes for Variable<V
     }
 }
 
-#[cfg(feature = "casper")]
+#[cfg(any(feature = "casper", feature = "casper-livenet"))]
 impl<V: OdraType> crate::casper::casper_types::bytesrepr::FromBytes for Variable<V> {
     fn from_bytes(
         bytes: &[u8]

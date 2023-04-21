@@ -174,3 +174,21 @@ mod tests {
         );
     }
 }
+
+#[macro_export]
+macro_rules! gen_contract {
+    ($contract:path, $name:literal) => {
+        fn main() {
+            let contract_def =
+                <$contract as odra::types::contract_def::HasContractDef>::contract_def();
+            let code = odra::casper::codegen::gen_contract(
+                contract_def,
+                stringify!($contract).to_string()
+            );
+            use std::fs::File;
+            use std::io::prelude::*;
+            let mut file = File::create(&format!("src/{}_wasm.rs", $name)).unwrap();
+            file.write_all(&code.to_string().into_bytes()).unwrap();
+        }
+    };
+}

@@ -3,6 +3,7 @@ mod casper_address;
 mod ty;
 mod uints;
 pub use args::CallArgs;
+pub use casper_types;
 pub use casper_types::bytesrepr::Bytes;
 pub use ty::Typed;
 pub use uints::{U256, U512};

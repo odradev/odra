@@ -1,10 +1,14 @@
 use derive_more::From;
 use odra_ir::module::{Constructor, Method, ModuleImpl};
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::TokenStream;
 use quote::{format_ident, quote, TokenStreamExt};
-use syn::{punctuated::Punctuated, token::Comma, ReturnType, Type, TypePath};
+use syn::{punctuated::Punctuated, token::Comma};
 
 use crate::GenerateCode;
+
+mod deployer_casper_livenet;
+mod deployer_casper_test;
+mod deployer_mock_vm;
 
 #[derive(From)]
 pub struct Deploy<'a> {
@@ -16,237 +20,46 @@ as_ref_for_contract_impl_generator!(Deploy);
 impl GenerateCode for Deploy<'_> {
     fn generate_code(&self) -> TokenStream {
         let struct_ident = self.contract.ident();
-        let struct_name = struct_ident.to_string();
         let ref_ident = format_ident!("{}Ref", struct_ident);
         let deployer_ident = format_ident!("{}Deployer", struct_ident);
-        let struct_snake_case = odra_utils::camel_to_snake(&struct_name);
 
-        let entrypoints = build_entrypoints(self.contract.get_public_method_iter(), struct_ident);
+        let method_defs: Vec<&Method> = self.contract.get_public_method_iter().collect();
+        let constructor_defs: Vec<&Constructor> = self.contract.get_constructor_iter().collect();
 
-        let constructors = build_constructors(self.contract.get_constructor_iter(), struct_ident);
-
-        let mut constructors_mock_vm = build_constructors_mock_vm(
-            self.contract.get_constructor_iter(),
-            entrypoints.clone(),
-            constructors.clone(),
+        let mock_vm_deployer_impl = deployer_mock_vm::generate_code(
             struct_ident,
-            ref_ident.clone()
+            &deployer_ident,
+            &ref_ident,
+            &constructor_defs,
+            &method_defs
         );
-
-        if constructors_mock_vm.is_empty() {
-            constructors_mock_vm = quote! {
-                pub fn default() -> #ref_ident {
-                    use std::collections::HashMap;
-                    use odra::types::CallArgs;
-
-                    let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Vec<u8>)>::new();
-                    #entrypoints
-
-                    let mut constructors = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Vec<u8>)>::new();
-                    #constructors
-
-                    let address = odra::test_env::register_contract(None, constructors, entrypoints);
-                    #ref_ident::at(address)
-                }
-            };
-        }
-
-        let mut constructors_wasm_test = build_constructors_wasm_test(
-            self.contract.get_constructor_iter(),
+        let casper_test_deployer_impl = deployer_casper_test::generate_code(
             struct_ident,
-            ref_ident.clone()
+            &deployer_ident,
+            &ref_ident,
+            &constructor_defs
         );
-        if constructors_wasm_test.is_empty() {
-            constructors_wasm_test = quote! {
-                pub fn default() -> #ref_ident {
-                    let address = odra::test_env::register_contract(&#struct_snake_case, odra::types::CallArgs::new());
-                    #ref_ident::at(address)
-                }
-            };
-        }
+        let casper_livenet_deployer_impl = deployer_casper_livenet::generate_code(
+            struct_ident,
+            &deployer_ident,
+            &ref_ident,
+            &constructor_defs,
+            &method_defs
+        );
 
         quote! {
             pub struct #deployer_ident;
 
             #[cfg(all(feature = "casper", not(target_arch = "wasm32")))]
-            impl #deployer_ident {
-                #constructors_wasm_test
-            }
+            #casper_test_deployer_impl
 
             #[cfg(feature = "mock-vm")]
-            impl #deployer_ident {
-                #constructors_mock_vm
-            }
+            #mock_vm_deployer_impl
+
+            #[cfg(feature = "casper-livenet")]
+            #casper_livenet_deployer_impl
         }
     }
-}
-
-fn build_constructors_mock_vm<'a, C>(
-    constructors: C,
-    entrypoints_stream: TokenStream,
-    constructors_stream: TokenStream,
-    struct_ident: &Ident,
-    ref_ident: Ident
-) -> TokenStream
-where
-    C: Iterator<Item = &'a Constructor>
-{
-    constructors.map(|constructor| {
-        let ty = Type::Path(TypePath { qself: None, path: From::from(ref_ident.clone()) });
-        let sig = constructor.full_sig.clone();
-        let constructor_ident = &constructor.ident;
-
-        let inputs = sig.inputs.into_iter().filter(|i| match i {
-            syn::FnArg::Receiver(_) => false,
-            syn::FnArg::Typed(_) => true,
-        }).collect::<Punctuated<_, _>>();
-
-        let fn_sig = syn::Signature {
-            output: ReturnType::Type(Default::default(), Box::new(ty)),
-            inputs,
-            ..sig
-        };
-
-        let args = args_to_runtime_args_stream(&constructor.args);
-
-        let fn_args = args_to_fn_args(&constructor.args);
-
-        quote! {
-            pub #fn_sig {
-                use std::collections::HashMap;
-                use odra::types::{CallArgs};
-
-                let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Vec<u8>)>::new();
-                #entrypoints_stream
-
-                let mut constructors = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Vec<u8>)>::new();
-                #constructors_stream
-
-                let args = {
-                    #args
-                };
-                let constructor: Option<(String, CallArgs, fn(String, CallArgs) -> Vec<u8>)> = Some((
-                    stringify!(#constructor_ident).to_string(),
-                    args,
-                    |name, args| {
-                        let mut instance = <#struct_ident as odra::Instance>::instance(name.as_str());
-                        instance.#constructor_ident( #fn_args );
-                        Vec::new()
-                    }
-                ));
-                let address = odra::test_env::register_contract(constructor, constructors, entrypoints);
-                #ref_ident::at(address)
-            }
-        }
-    }).collect::<TokenStream>()
-}
-
-fn build_constructors_wasm_test<'a, C>(
-    constructors: C,
-    struct_ident: &Ident,
-    ref_ident: Ident
-) -> TokenStream
-where
-    C: Iterator<Item = &'a Constructor>
-{
-    let struct_name = struct_ident.to_string();
-    let struct_name_snake_case = odra_utils::camel_to_snake(&struct_name);
-
-    constructors
-        .map(|constructor| {
-            let ty = Type::Path(TypePath {
-                qself: None,
-                path: From::from(ref_ident.clone())
-            });
-            let sig = constructor.full_sig.clone();
-            let constructor_ident = &constructor.ident;
-
-            let inputs = sig
-                .inputs
-                .into_iter()
-                .filter(|i| match i {
-                    syn::FnArg::Receiver(_) => false,
-                    syn::FnArg::Typed(_) => true
-                })
-                .collect::<Punctuated<_, _>>();
-
-            let fn_sig = syn::Signature {
-                output: ReturnType::Type(Default::default(), Box::new(ty)),
-                inputs,
-                ..sig
-            };
-
-            let args = args_to_runtime_args_stream(&constructor.args);
-
-            quote! {
-                pub #fn_sig {
-                    let mut args = { #args };
-                    args.insert("constructor", stringify!(#constructor_ident));
-                    let address = odra::test_env::register_contract(#struct_name_snake_case, args);
-                    #ref_ident::at(address)
-                }
-            }
-        })
-        .collect::<TokenStream>()
-}
-
-fn build_entrypoints<'a, T>(methods: T, struct_ident: &Ident) -> TokenStream
-where
-    T: Iterator<Item = &'a Method>
-{
-    methods
-        .map(|entrypoint| {
-            let ident = &entrypoint.ident;
-            let name = quote!(stringify!(#ident).to_string());
-            let return_value = match &entrypoint.ret {
-                ReturnType::Default => quote!(Vec::new()),
-                ReturnType::Type(_, _) => quote! {
-                    odra::types::MockVMType::ser(&result).unwrap()
-                }
-            };
-            let args = args_to_fn_args(&entrypoint.args);
-            let arg_names = args_to_arg_names_stream(&entrypoint.args);
-            let attached_value_check = match entrypoint.is_payable() {
-                true => quote!(),
-                false => quote! {
-                    if odra::contract_env::attached_value() > odra::types::Balance::zero() {
-                        odra::contract_env::revert(odra::types::ExecutionError::non_payable());
-                    }
-                }
-            };
-            quote! {
-                entrypoints.insert(#name, (#arg_names, |name, args| {
-                    #attached_value_check
-                    let mut instance = <#struct_ident as odra::Instance>::instance(name.as_str());
-                    let result = instance.#ident(#args);
-                    #return_value
-                }));
-            }
-        })
-        .collect::<TokenStream>()
-}
-
-fn build_constructors<'a, T>(constructors: T, struct_ident: &Ident) -> TokenStream
-where
-    T: Iterator<Item = &'a Constructor>
-{
-    constructors
-        .map(|constructor| {
-            let ident = &constructor.ident;
-            let args = args_to_fn_args(&constructor.args);
-            let arg_names = args_to_arg_names_stream(&constructor.args);
-
-            quote! {
-                constructors.insert(stringify!(#ident).to_string(), (#arg_names,
-                    |name, args| {
-                        let mut instance = <#struct_ident as odra::Instance>::instance(name.as_str());
-                        instance.#ident( #args );
-                        Vec::new()
-                    }
-                ));
-            }
-        })
-        .collect::<TokenStream>()
 }
 
 fn args_to_fn_args<'a, T>(args: T) -> Punctuated<TokenStream, Comma>
@@ -257,6 +70,23 @@ where
         .map(|arg| {
             let pat = &*arg.pat;
             quote!(args.get(stringify!(#pat)))
+        })
+        .collect::<Punctuated<TokenStream, Comma>>()
+}
+
+fn args_to_fn_cl_values<'a, T>(args: T) -> Punctuated<TokenStream, Comma>
+where
+    T: IntoIterator<Item = &'a syn::PatType>
+{
+    args.into_iter()
+        .map(|arg| {
+            let pat = &*arg.pat;
+            quote!(args
+                .get(stringify!(#pat))
+                .cloned()
+                .unwrap()
+                .into_t()
+                .unwrap())
         })
         .collect::<Punctuated<TokenStream, Comma>>()
 }
