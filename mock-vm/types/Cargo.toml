@@ -15,3 +15,4 @@ odra-utils = { version = "0.2.0", path = "../../utils" }
 hex = "0.4.3"
 uint = "0.9.4"
 borsh = "0.9.3"
+num-traits = "0.2.14"
