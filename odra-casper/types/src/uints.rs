@@ -1,10 +1,13 @@
 use crate::{CLTyped, FromBytes, ToBytes};
+use num_traits::{
+    Bounded, CheckedMul, CheckedSub, Num, One, Unsigned, WrappingAdd, WrappingSub, Zero
+};
 use odra_types::{
     arithmetic::{ArithmeticsError, OverflowingAdd, OverflowingSub},
     ExecutionError
 };
 use std::hash::{Hash, Hasher};
-use std::ops::{Add, Sub};
+use std::ops::{Add, Div, Mul, Rem, Sub};
 
 macro_rules! impl_casper_type_numeric_wrapper {
     ( $( $ty:ident ),+ ) => {
@@ -16,26 +19,6 @@ macro_rules! impl_casper_type_numeric_wrapper {
             }
 
             impl $ty {
-                pub fn zero() -> Self {
-                    Self {
-                        inner: casper_types::$ty::zero()
-                    }
-                }
-
-                pub fn one() -> Self {
-                    Self {
-                        inner: casper_types::$ty::one()
-                    }
-                }
-
-                pub fn inner(&self) -> casper_types::$ty {
-                    self.inner
-                }
-
-                pub fn is_zero(&self) -> bool {
-                    self.inner.is_zero()
-                }
-
                 pub fn as_u32(&self) -> u32 {
                     self.inner.as_u32()
                 }
@@ -44,6 +27,97 @@ macro_rules! impl_casper_type_numeric_wrapper {
                     Self {
                         inner: casper_types::$ty::MAX
                     }
+                }
+
+                pub fn inner(&self) -> casper_types::$ty {
+                    self.inner
+                }
+
+                pub fn zero() -> Self {
+                    Zero::zero()
+                }
+
+                pub fn one() -> Self {
+                    One::one()
+                }
+
+                pub fn is_zero(&self) -> bool {
+                    <Self as Zero>::is_zero(self)
+                }
+            }
+
+            // Trait implementations for unifying U* as numeric types
+            impl Zero for $ty {
+                fn zero() -> Self {
+                    Self {
+                        inner: casper_types::$ty::zero()
+                    }
+                }
+
+                fn is_zero(&self) -> bool {
+                    self.inner.is_zero()
+                }
+            }
+
+            impl One for $ty {
+                fn one() -> Self {
+                    Self {
+                        inner: casper_types::$ty::one()
+                    }
+                }
+            }
+
+            // Requires Zero and One to be implemented
+            impl Num for $ty {
+                type FromStrRadixErr = String;
+                fn from_str_radix(str: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> {
+                    if radix == 10 {
+                       casper_types::$ty::from_dec_str(str)
+                            .map(|inner| Self { inner })
+                            .map_err(|_| String::from("FromDecStr"))
+                    } else {
+                        Err(String::from("InvalidRadix"))
+                    }
+                }
+            }
+
+            // Requires Num to be implemented
+            impl Unsigned for $ty {}
+
+            // Additional numeric trait, which also holds for these types
+            impl Bounded for $ty {
+                fn min_value() -> Self {
+                    $ty::zero()
+                }
+
+                fn max_value() -> Self {
+                    Self { inner: casper_types::$ty::MAX }
+                }
+            }
+
+            // Instead of implementing arbitrary methods we can use existing traits from num_trait
+            // crate.
+            impl WrappingAdd for $ty {
+                fn wrapping_add(&self, other: &$ty) -> $ty {
+                    Self { inner: self.inner.overflowing_add(other.inner).0 }
+                }
+            }
+
+            impl WrappingSub for $ty {
+                fn wrapping_sub(&self, other: &$ty) -> $ty {
+                    Self { inner: self.inner.overflowing_sub(other.inner).0 }
+                }
+            }
+
+            impl CheckedMul for $ty {
+                fn checked_mul(&self, v: &$ty) -> Option<$ty> {
+                    casper_types::$ty::checked_mul(self.inner, v.inner).map(|inner| $ty { inner })
+                }
+            }
+
+            impl CheckedSub for $ty {
+                fn checked_sub(&self, v: &$ty) -> Option<$ty> {
+                    casper_types::$ty::checked_sub(self.inner, v.inner).map(|inner| $ty { inner })
                 }
             }
 
@@ -136,6 +210,37 @@ macro_rules! impl_casper_type_numeric_wrapper {
                     }
                 }
             }
+
+            impl Mul for $ty {
+                type Output = Self;
+
+                fn mul(self, rhs: Self) -> Self::Output {
+                    Self {
+                        inner: self.inner * rhs.inner,
+                    }
+                }
+            }
+
+            impl Rem for $ty {
+                type Output = Self;
+
+                fn rem(self, rhs: Self) -> Self::Output {
+                    Self {
+                        inner: self.inner % rhs.inner,
+                    }
+                }
+            }
+
+            impl Div for $ty {
+                type Output = Self;
+
+                fn div(self, rhs: Self) -> Self::Output {
+                    Self {
+                        inner: self.inner / rhs.inner,
+                    }
+                }
+            }
+
         )+
     };
 }

@@ -12,3 +12,4 @@ categories = ["wasm", "smart contracts"]
 [dependencies]
 casper-types.workspace = true
 odra-types = { version = "0.2.0", path = "../../types" }
+num-traits = "0.2.14"

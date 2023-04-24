@@ -19,6 +19,7 @@ mod instance;
 mod is_module;
 mod list;
 mod mapping;
+mod sequence;
 mod unwrap_or_revert;
 mod variable;
 
@@ -34,6 +35,7 @@ pub use {
         execution_error, external_contract, map, module, odra_error, Event, Instance
     },
     odra_utils as utils,
+    sequence::Sequence,
     unwrap_or_revert::UnwrapOrRevert,
     variable::Variable
 };
