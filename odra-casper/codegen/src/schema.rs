@@ -105,4 +105,3 @@ fn type_to_cl_type(ty: &Type) -> CLType {
         Type::ByteArray(v) => CLType::ByteArray(*v)
     }
 }
-
