@@ -242,12 +242,17 @@ impl CasperTestEnv {
             &event_position.to_string()
         ) {
             Ok(val) => {
-                let bytes = val.as_cl_value().unwrap().inner_bytes();
-                let event_type = CasperTestEnv::get_event_name(bytes)?;
-                if event_type != T::name() {
+                let bytes = val
+                    .as_cl_value()
+                    .unwrap()
+                    .clone()
+                    .into_t::<Bytes>()
+                    .unwrap();
+                let event_type = CasperTestEnv::get_event_name(bytes.as_slice())?;
+                if event_type != format!("event_{}", T::name()) {
                     return Err(EventError::UnexpectedType(event_type));
                 }
-                let value: T = val.as_cl_value().unwrap().clone().into_t::<T>().unwrap();
+                let value: T = T::from_bytes(bytes.as_slice()).unwrap().0;
                 Ok(value)
             }
             Err(_) => Err(EventError::IndexOutOfBounds)

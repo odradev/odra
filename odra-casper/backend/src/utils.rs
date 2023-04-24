@@ -1,6 +1,7 @@
 //! A set of utility functions encapsulating some common interactions with the current runtime.
 
-use casper_types::{ContractPackageHash, EntryPoints, URef, U512};
+use casper_event_standard::Schema;
+use casper_types::{CLType, ContractPackageHash, EntryPoints, URef, U512};
 use odra_casper_shared::consts;
 use odra_casper_types::Balance;
 use odra_types::ExecutionError;
@@ -10,8 +11,12 @@ use crate::{
     contract_env::{revert, ATTACHED_VALUE}
 };
 
-pub fn add_contract_version(contract_package_hash: ContractPackageHash, entry_points: EntryPoints) {
-    casper_env::add_contract_version(contract_package_hash, entry_points);
+pub fn add_contract_version(
+    contract_package_hash: ContractPackageHash,
+    entry_points: EntryPoints,
+    events: Vec<(String, Schema)>
+) {
+    casper_env::add_contract_version(contract_package_hash, entry_points, events);
 }
 
 /// Checks if given named argument exists.
@@ -73,4 +78,12 @@ pub fn assert_no_attached_value() {
             revert(ExecutionError::non_payable());
         }
     }
+}
+
+pub fn build_event(name: &str, fields: Vec<(&str, CLType)>) -> (String, Schema) {
+    let mut s = Schema::new();
+    fields.iter().for_each(|(name, cl_type)| {
+        s.with_elem(name, cl_type.clone());
+    });
+    (name.to_owned(), s)
 }

@@ -9,7 +9,7 @@ pub mod event;
 pub use error::{AddressError, CollectionError, ExecutionError, OdraError, VmError};
 
 /// Types accepted by Odra framework, these types can be stored and manipulated by smart contracts.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Type {
     /// Address type.
     Address,
@@ -50,5 +50,7 @@ pub enum Type {
     /// Unspecified type.
     Any,
     /// Vector of a `Type`.
-    Vec(Box<Type>)
+    Vec(Box<Type>),
+    /// Fixed-length list of a single `Type`
+    ByteArray(u32)
 }

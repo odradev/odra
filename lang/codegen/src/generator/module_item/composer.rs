@@ -48,7 +48,7 @@ impl GenerateCode for ModuleComposer<'_> {
             .map(|field| {
                 let field_ident = field.ident.as_ref().unwrap();
                 quote! {
-                    #field_ident: None
+                    #field_ident: core::option::Option::None
                 }
             })
             .collect::<Punctuated<TokenStream, Comma>>();
@@ -62,7 +62,7 @@ impl GenerateCode for ModuleComposer<'_> {
                 let function_name = format_ident!("with_{}", field_ident);
                 quote! {
                     pub fn #function_name(mut self, #field_ident: &#field_type) -> Self {
-                        self.#field_ident = Some(#field_ident.clone());
+                        self.#field_ident = core::option::Option::Some(#field_ident.clone());
                         self
                     }
                 }

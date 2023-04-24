@@ -33,7 +33,7 @@ impl U256 {
     }
 }
 
-impl_overflowing_add_sub!(U256, U512);
+impl_overflowing_add_sub!(U128, U256, U512);
 
 macro_rules! impl_traits_for_uint {
     ($type:ident, $total_bytes:expr) => {

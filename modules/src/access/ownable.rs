@@ -20,7 +20,7 @@ use super::{
 ///
 /// When used in a custom module, the `only_owner()` function is available,
 /// allowing you to restrict function usage to the owner.
-#[odra::module]
+#[odra::module(events = [OwnershipTransferred])]
 pub struct Ownable {
     owner: Variable<Option<Address>>
 }
@@ -95,7 +95,7 @@ impl Ownable {
 ///
 /// When used in a custom module, the `only_owner()` function is available,
 /// allowing you to restrict function usage to the owner.
-#[odra::module]
+#[odra::module(events = [OwnershipTransferStarted])]
 pub struct Ownable2Step {
     ownable: Ownable,
     pending_owner: Variable<Option<Address>>

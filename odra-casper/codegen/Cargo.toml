@@ -17,4 +17,5 @@ pretty_assertions = "1.2.1"
 odra-casper-types = { version = "0.2.0", path = "../types" }
 odra-types = { version = "0.2.0", path = "../../types" }
 odra-utils = { version = "0.2.0", path = "../../utils" }
-casper-types.workspace = true
+casper-types = { workspace = true }
+casper-event-standard = "0.2.0"

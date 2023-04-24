@@ -1,3 +1,4 @@
+use casper_event_standard::Schema;
 use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
     EntryPoints
@@ -9,8 +10,7 @@ use std::{collections::BTreeMap, sync::Mutex};
 
 use casper_contract::{
     contract_api::{
-        runtime,
-        storage::{self, dictionary_put},
+        runtime, storage,
         system::{create_purse, get_purse_balance, transfer_from_purse_to_purse}
     },
     unwrap_or_revert::UnwrapOrRevert
@@ -30,18 +30,48 @@ lazy_static! {
 
 const STATE_KEY: &str = "state";
 
-pub fn add_contract_version(contract_package_hash: ContractPackageHash, entry_points: EntryPoints) {
+pub fn add_contract_version(
+    contract_package_hash: ContractPackageHash,
+    entry_points: EntryPoints,
+    events: Vec<(String, Schema)>
+) {
+    let mut schemas = casper_event_standard::Schemas::new();
+    events.iter().for_each(|(name, schema)| {
+        schemas.0.insert(name.to_owned(), schema.clone());
+    });
+
     let mut named_keys = casper_types::contracts::NamedKeys::new();
     named_keys.insert(
         String::from(STATE_KEY),
         Key::URef(storage::new_dictionary(STATE_KEY).unwrap_or_revert())
     );
+    named_keys.insert(
+        String::from(casper_event_standard::EVENTS_DICT),
+        Key::URef(storage::new_dictionary(casper_event_standard::EVENTS_DICT).unwrap_or_revert())
+    );
+    named_keys.insert(
+        String::from(casper_event_standard::EVENTS_LENGTH),
+        Key::URef(storage::new_uref(0u32))
+    );
+    named_keys.insert(
+        String::from(casper_event_standard::CES_VERSION_KEY),
+        Key::URef(storage::new_uref(casper_event_standard::CES_VERSION))
+    );
+    named_keys.insert(
+        String::from(casper_event_standard::EVENTS_SCHEMA),
+        Key::URef(storage::new_uref(schemas))
+    );
+
     casper_contract::contract_api::storage::add_contract_version(
         contract_package_hash,
         entry_points,
         named_keys
     );
     runtime::remove_key(STATE_KEY);
+    runtime::remove_key(casper_event_standard::EVENTS_DICT);
+    runtime::remove_key(casper_event_standard::EVENTS_LENGTH);
+    runtime::remove_key(casper_event_standard::EVENTS_SCHEMA);
+    runtime::remove_key(casper_event_standard::CES_VERSION_KEY);
 }
 
 /// Save value to the storage.
@@ -114,31 +144,7 @@ pub fn emit_event<T>(event: T)
 where
     T: OdraType + OdraEvent
 {
-    let (events_length, key): (u32, URef) = match runtime::get_key(consts::EVENTS_LENGTH) {
-        None => {
-            let key = storage::new_uref(0u32);
-            runtime::put_key(consts::EVENTS_LENGTH, Key::from(key));
-            (0u32, key)
-        }
-        Some(value) => {
-            let key = value.try_into().unwrap_or_revert();
-            let value = storage::read(key).unwrap_or_revert().unwrap_or_revert();
-            (value, key)
-        }
-    };
-
-    let events_seed: URef = get_seed(consts::EVENTS, || {
-        let key: Key = match runtime::get_key(consts::EVENTS) {
-            Some(key) => key,
-            None => {
-                storage::new_dictionary(consts::EVENTS).unwrap_or_revert();
-                runtime::get_key(consts::EVENTS).unwrap_or_revert()
-            }
-        };
-        *key.as_uref().unwrap_or_revert()
-    });
-    dictionary_put(events_seed, &events_length.to_string(), event);
-    storage::write(key, events_length + 1);
+    casper_event_standard::emit(event);
 }
 
 /// Convert any key to hash.

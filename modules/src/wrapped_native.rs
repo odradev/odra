@@ -6,7 +6,7 @@ use odra::{
     UnwrapOrRevert
 };
 
-#[odra::module]
+#[odra::module(events = [Deposit, Withdrawal])]
 pub struct WrappedNativeToken {
     erc20: Erc20
 }

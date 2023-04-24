@@ -16,7 +16,7 @@ compile_error!(
 );
 
 mod instance;
-mod is_module;
+mod item;
 mod list;
 mod mapping;
 mod sequence;
@@ -28,7 +28,7 @@ pub mod test_utils;
 
 pub use {
     instance::Instance,
-    is_module::IsModule,
+    item::OdraItem,
     list::List,
     mapping::Mapping,
     odra_proc_macros::{

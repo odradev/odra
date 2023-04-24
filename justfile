@@ -1,5 +1,5 @@
 CARGO_ODRA_GIT := "https://github.com/odradev/cargo-odra"
-CARGO_ODRA_BRANCH := "0.0.4"
+CARGO_ODRA_BRANCH := "feature/workspaces"
 
 default:
     just --list

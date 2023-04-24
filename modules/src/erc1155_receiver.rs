@@ -2,7 +2,7 @@ use crate::erc1155_receiver::events::{BatchReceived, SingleReceived};
 use odra::types::{event::OdraEvent, Address, Bytes, U256};
 
 /// The ERC1155 receiver implementation.
-#[odra::module]
+#[odra::module(events = [SingleReceived, BatchReceived])]
 pub struct Erc1155Receiver {}
 
 #[odra::module]
