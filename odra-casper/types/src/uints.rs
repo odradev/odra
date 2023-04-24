@@ -33,6 +33,17 @@ macro_rules! impl_casper_type_numeric_wrapper {
                     self.inner
                 }
 
+                pub fn zero() -> Self {
+                    Zero::zero()
+                }
+
+                pub fn one() -> Self {
+                    One::one()
+                }
+
+                pub fn is_zero(&self) -> bool {
+                    <Self as Zero>::is_zero(self)
+                }
             }
 
             // Trait implementations for unifying U* as numeric types
@@ -281,7 +292,6 @@ fn exceeds_u256(value: casper_types::U512) -> bool {
 #[cfg(test)]
 mod tests {
     use casper_types::bytesrepr::{FromBytes, ToBytes};
-    use num_traits::One;
     use odra_types::arithmetic::ArithmeticsError;
 
     use crate::{U256, U512};
