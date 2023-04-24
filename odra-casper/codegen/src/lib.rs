@@ -14,18 +14,22 @@ use syn::{punctuated::Punctuated, token::Comma, Path, PathSegment, Token};
 mod arg;
 mod constructor;
 mod entrypoints_def;
+mod schema;
 mod ty;
 mod wasm_entrypoint;
 
+pub use schema::gen_schema;
+
 /// Given the ContractDef from Odra, generate Casper contract.
 pub fn gen_contract(
-    contract_ident: String,
-    contract_entrypoints: Vec<Entrypoint>,
-    events: Vec<Event>,
-    fqn: String
+    contract_ident: &str,
+    contract_entrypoints: &[Entrypoint],
+    events: &[Event],
+    fqn: &str
 ) -> TokenStream2 {
-    let entrypoints = generate_entrypoints(&contract_entrypoints, fqn.clone());
-    let call_fn = generate_call(&contract_ident, contract_entrypoints, events, fqn + "Ref");
+    let entrypoints = generate_entrypoints(contract_entrypoints, fqn);
+    let ref_fqn = fqn.to_string() + "Ref";
+    let call_fn = generate_call(contract_ident, contract_entrypoints, events, &ref_fqn);
 
     quote! {
         #![no_main]
@@ -38,7 +42,7 @@ pub fn gen_contract(
     }
 }
 
-fn generate_entrypoints(entrypoints: &[Entrypoint], fqn: String) -> TokenStream2 {
+fn generate_entrypoints(entrypoints: &[Entrypoint], fqn: &str) -> TokenStream2 {
     let path = &fqn_to_path(fqn);
     entrypoints
         .iter()
@@ -48,11 +52,11 @@ fn generate_entrypoints(entrypoints: &[Entrypoint], fqn: String) -> TokenStream2
 
 fn generate_call(
     contract_ident: &str,
-    contract_entrypoints: Vec<Entrypoint>,
-    events: Vec<Event>,
-    ref_fqn: String
+    contract_entrypoints: &[Entrypoint],
+    events: &[Event],
+    ref_fqn: &str
 ) -> TokenStream2 {
-    let entrypoints = ContractEntrypoints(&contract_entrypoints);
+    let entrypoints = ContractEntrypoints(contract_entrypoints);
     let contract_def_name_snake = odra_utils::camel_to_snake(contract_ident);
     let package_hash = format!("{}_package_hash", contract_def_name_snake);
 
@@ -112,7 +116,7 @@ fn generate_call(
     }
 }
 
-fn fqn_to_path(fqn: String) -> Path {
+fn fqn_to_path(fqn: &str) -> Path {
     let paths = fqn.split("::").collect::<Vec<_>>();
 
     let segments = Punctuated::<PathSegment, Token![::]>::from_iter(
@@ -170,7 +174,7 @@ mod tests {
         let entrypoints = vec![constructor, entrypoint];
         let events = vec![];
 
-        let result = gen_contract(contract_ident, entrypoints, events, fqn);
+        let result = gen_contract(&contract_ident, &entrypoints, &events, &fqn);
 
         assert_eq_tokens(
             result,
@@ -291,16 +295,27 @@ macro_rules! gen_contract {
                 <$contract as odra::types::contract_def::HasEntrypoints>::entrypoints();
             let events = <$contract as odra::types::contract_def::HasEvents>::events();
             let code = odra::casper::codegen::gen_contract(
-                ident,
-                entrypoints,
-                events,
-                stringify!($contract).to_string()
+                &ident,
+                &entrypoints,
+                &events,
+                stringify!($contract)
             );
 
-            use std::fs::File;
+            let schema = odra::casper::codegen::gen_schema(&ident, &entrypoints, &events);
+
             use std::io::prelude::*;
-            let mut file = File::create(&format!("src/{}_wasm.rs", $name)).unwrap();
-            file.write_all(&code.to_string().into_bytes()).unwrap();
+            let mut source_file = std::fs::File::create(&format!("src/{}_wasm.rs", $name)).unwrap();
+            source_file
+                .write_all(&code.to_string().into_bytes())
+                .unwrap();
+
+            if !std::path::Path::new("../resources").exists() {
+                std::fs::create_dir("../resources").unwrap();
+            }
+
+            let mut schema_file =
+                std::fs::File::create(&format!("../resources/{}_schema.json", $name)).unwrap();
+            schema_file.write_all(&schema.into_bytes()).unwrap();
         }
     };
 }
