@@ -34,7 +34,7 @@ impl ModuleItem {
         let item_impl = syn::parse2::<syn::ItemImpl>(item.clone());
 
         if let Ok(item) = item_struct {
-            let module_struct = ModuleStruct::from(item).with_config(config.clone())?;
+            let module_struct = ModuleStruct::from(item).with_config(config)?;
             return Ok(ModuleItem::Struct(Box::new(module_struct)));
         }
 
@@ -67,21 +67,17 @@ impl Parse for ModuleConfiguration {
         let mut skip_instance = None;
 
         while !input.is_empty() {
-            if events.is_none() {
-                if input.peek(kw::events) {
-                    events = Some(input.parse::<ModuleEvents>()?);
-                    let _ = input.parse::<Token![,]>(); // optional comma
-                    continue;
-                }
+            if events.is_none() && input.peek(kw::events) {
+                events = Some(input.parse::<ModuleEvents>()?);
+                let _ = input.parse::<Token![,]>(); // optional comma
+                continue;
             }
 
-            if skip_instance.is_none() {
-                if input.peek(kw::skip_instance) {
-                    input.parse::<kw::skip_instance>()?;
-                    skip_instance = Some(true);
-                    let _ = input.parse::<Token![,]>();
-                    continue;
-                }
+            if skip_instance.is_none() && input.peek(kw::skip_instance) {
+                input.parse::<kw::skip_instance>()?;
+                skip_instance = Some(true);
+                let _ = input.parse::<Token![,]>();
+                continue;
             }
 
             return Err(input.error("Unexpected token"));

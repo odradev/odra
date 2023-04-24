@@ -12,7 +12,7 @@ pub struct Erc20 {
     name: Variable<String>,
     total_supply: Variable<U256>,
     balances: Mapping<Address, U256>,
-    allowances: Mapping<Address, Mapping<Address, U256>>,
+    allowances: Mapping<Address, Mapping<Address, U256>>
 }
 
 #[odra::module]
