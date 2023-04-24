@@ -1,4 +1,5 @@
 pub mod balance_checker;
+pub mod composer;
 pub mod docs;
 pub mod erc20;
 pub mod mapping;

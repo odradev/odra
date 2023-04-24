@@ -1,0 +1,1 @@
+odra::#backend_name::codegen::gen_contract!(#contract_fqn, "#contract_name");

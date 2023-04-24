@@ -27,14 +27,14 @@ pub enum ModuleItem {
 }
 
 impl ModuleItem {
-    pub fn parse(_attr: TokenStream, item: TokenStream) -> Result<Self, syn::Error> {
-        let events = syn::parse2::<ModuleEvents>(_attr)?;
+    pub fn parse(attr: TokenStream, item: TokenStream) -> Result<Self, syn::Error> {
+        let config = syn::parse2::<ModuleConfiguration>(attr)?;
 
         let item_struct = syn::parse2::<syn::ItemStruct>(item.clone());
         let item_impl = syn::parse2::<syn::ItemImpl>(item.clone());
 
         if let Ok(item) = item_struct {
-            let module_struct = ModuleStruct::from(item).with_events(events)?;
+            let module_struct = ModuleStruct::from(item).with_config(config)?;
             return Ok(ModuleItem::Struct(Box::new(module_struct)));
         }
 
@@ -52,9 +52,45 @@ impl ModuleItem {
 
 mod kw {
     syn::custom_keyword!(events);
+    syn::custom_keyword!(skip_instance);
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
+pub struct ModuleConfiguration {
+    pub events: ModuleEvents,
+    pub skip_instance: bool
+}
+
+impl Parse for ModuleConfiguration {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let mut events = None;
+        let mut skip_instance = None;
+
+        while !input.is_empty() {
+            if events.is_none() && input.peek(kw::events) {
+                events = Some(input.parse::<ModuleEvents>()?);
+                let _ = input.parse::<Token![,]>(); // optional comma
+                continue;
+            }
+
+            if skip_instance.is_none() && input.peek(kw::skip_instance) {
+                input.parse::<kw::skip_instance>()?;
+                skip_instance = Some(true);
+                let _ = input.parse::<Token![,]>();
+                continue;
+            }
+
+            return Err(input.error("Unexpected token"));
+        }
+
+        Ok(Self {
+            events: events.unwrap_or_default(),
+            skip_instance: skip_instance.unwrap_or_default()
+        })
+    }
+}
+
+#[derive(Debug, Default, Clone)]
 pub struct ModuleEvents {
     pub events: Punctuated<ModuleEvent, Token![,]>,
     pub submodules_events: Punctuated<ModuleEvent, Token![,]>,
@@ -81,7 +117,7 @@ impl Parse for ModuleEvents {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ModuleEvent {
     pub name: syn::Ident
 }

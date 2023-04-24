@@ -1,7 +1,9 @@
 use derive_more::From;
 use quote::{quote, quote_spanned};
 
-use crate::GenerateCode;
+use crate::{generator::module_item::composer::ModuleComposer, GenerateCode};
+
+mod composer;
 
 #[derive(From)]
 pub struct ModuleStruct<'a> {
@@ -19,10 +21,15 @@ impl GenerateCode for ModuleStruct<'_> {
 
         let struct_ident = &item_struct.ident;
         let span = item_struct.ident.span();
-        let instance = match &self.contract.is_instantiable {
-            true => quote_spanned!(span => #[derive(odra::Instance)]),
-            false => quote!()
+        let instance = if self.contract.is_instantiable && !self.contract.skip_instance {
+            quote_spanned!(span => #[derive(odra::Instance, Clone)])
+        } else {
+            quote!(#[derive(Clone)])
         };
+
+        let composer =
+            <ModuleComposer as GenerateCode>::generate_code(&ModuleComposer::from(self.contract));
+
         quote! {
             #instance
             #item_struct
@@ -53,13 +60,14 @@ impl GenerateCode for ModuleStruct<'_> {
                     events
                 }
             }
+            #composer
         }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use odra_ir::module::ModuleEvents;
+    use odra_ir::module::{ModuleConfiguration, ModuleEvents};
 
     use crate::generator::GenerateCode;
 
@@ -75,10 +83,14 @@ mod test {
         };
         let events_input = quote::quote!(events = [A, B, C]);
         let events = syn::parse2::<ModuleEvents>(events_input).unwrap();
+        let config = ModuleConfiguration {
+            events,
+            ..Default::default()
+        };
 
         let item_struct = syn::parse2::<syn::ItemStruct>(input).unwrap();
         let module_struct = odra_ir::module::ModuleStruct::from(item_struct);
-        let module_struct = module_struct.with_events(events).unwrap();
+        let module_struct = module_struct.with_config(config).unwrap();
 
         let expected = quote::quote! {
             #[derive(odra::Instance)]

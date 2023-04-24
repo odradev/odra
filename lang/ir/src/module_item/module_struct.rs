@@ -1,8 +1,9 @@
+use super::{ModuleEvent, ModuleEvents};
 use crate::attrs::partition_attributes;
 use anyhow::{Context, Result};
 use proc_macro2::Ident;
 
-use super::{ModuleEvent, ModuleEvents};
+use super::ModuleConfiguration;
 
 /// Odra module struct.
 ///
@@ -10,11 +11,12 @@ use super::{ModuleEvent, ModuleEvents};
 pub struct ModuleStruct {
     pub is_instantiable: bool,
     pub item: syn::ItemStruct,
-    pub events: ModuleEvents
+    pub events: ModuleEvents,
+    pub skip_instance: bool
 }
 
 impl ModuleStruct {
-    pub fn with_events(mut self, mut events: ModuleEvents) -> Result<Self, syn::Error> {
+    pub fn with_config(mut self, mut config: ModuleConfiguration) -> Result<Self, syn::Error> {
         let submodules = self
             .item
             .fields
@@ -37,10 +39,11 @@ impl ModuleStruct {
             .collect::<Vec<_>>();
         mappings.dedup();
 
-        events.submodules_events.extend(submodules);
-        events.mappings_events.extend(mappings);
+        config.events.submodules_events.extend(submodules);
+        config.events.mappings_events.extend(mappings);
 
-        self.events = events;
+        self.events = config.events;
+        self.skip_instance = config.skip_instance;
 
         Ok(self)
     }
@@ -55,7 +58,8 @@ impl From<syn::ItemStruct> for ModuleStruct {
                 attrs: other_attrs,
                 ..item
             },
-            events: Default::default()
+            events: Default::default(),
+            skip_instance: false
         }
     }
 }
