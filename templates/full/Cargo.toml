@@ -1,0 +1,12 @@
+[package]
+name = "{{project-name}}"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+#odra_dependency
+
+[features]
+default = ["mock-vm"]
+mock-vm = ["odra/mock-vm"]
+casper = ["odra/casper"]
