@@ -27,8 +27,8 @@ pub enum ModuleItem {
 }
 
 impl ModuleItem {
-    pub fn parse(_attr: TokenStream, item: TokenStream) -> Result<Self, syn::Error> {
-        let config = syn::parse2::<ModuleConfiguration>(_attr)?;
+    pub fn parse(attr: TokenStream, item: TokenStream) -> Result<Self, syn::Error> {
+        let config = syn::parse2::<ModuleConfiguration>(attr)?;
 
         let item_struct = syn::parse2::<syn::ItemStruct>(item.clone());
         let item_impl = syn::parse2::<syn::ItemImpl>(item.clone());
