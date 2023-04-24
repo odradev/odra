@@ -36,12 +36,12 @@ impl TryFrom<syn::ImplItem> for ImplItem {
             syn::ImplItem::Method(method) => {
                 let (odra_attrs, _) = partition_attributes(method.attrs.clone())?;
                 if odra_attrs.is_empty() {
-                    return Ok(ImplItem::Method(method.into()));
+                    return Ok(ImplItem::Method(method.try_into()?));
                 }
                 let is_constructor = odra_attrs.iter().any(|attr| attr.is_constructor());
                 match is_constructor {
                     true => Ok(ImplItem::Constructor(Constructor::try_from(method)?)),
-                    false => Ok(ImplItem::Method(method.into()))
+                    false => Ok(ImplItem::Method(method.try_into()?))
                 }
             }
             other_item => Ok(ImplItem::Other(other_item))

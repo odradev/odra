@@ -80,9 +80,13 @@ impl ToTokens for Method {
     }
 }
 
-impl From<syn::ImplItemMethod> for Method {
-    fn from(method: syn::ImplItemMethod) -> Self {
-        let (odra_attrs, attrs) = partition_attributes(method.clone().attrs).unwrap();
+impl TryFrom<syn::ImplItemMethod> for Method {
+    type Error = syn::Error;
+
+    fn try_from(method: syn::ImplItemMethod) -> Result<Self, Self::Error> {
+        validate_args(&method)?;
+
+        let (odra_attrs, attrs) = partition_attributes(method.clone().attrs)?;
         let ident = method.sig.ident.to_owned();
         let args = method
             .sig
@@ -98,7 +102,7 @@ impl From<syn::ImplItemMethod> for Method {
         let visibility = method.vis.clone();
         let is_mut = utils::is_mut(&full_sig);
 
-        Self {
+        Ok(Self {
             attrs: odra_attrs,
             impl_item: syn::ImplItemMethod { attrs, ..method },
             ident,
@@ -107,6 +111,28 @@ impl From<syn::ImplItemMethod> for Method {
             ret,
             full_sig,
             visibility
-        }
+        })
     }
+}
+
+fn validate_args(method: &syn::ImplItemMethod) -> Result<(), syn::Error> {
+    let invalid_arg = method.sig.inputs
+        .iter()
+        .filter_map(|arg| match arg {
+            syn::FnArg::Receiver(_) => None,
+            syn::FnArg::Typed(pat) => Some(pat.clone())
+        })
+        .find(|pat| {
+            match &*pat.ty {
+                syn::Type::Reference(_) => false,
+                _ => true
+            }
+        });
+    if let Some(arg) = invalid_arg {
+        return Err(syn::Error::new_spanned(
+            arg,
+            "argument must be a reference",
+        ));
+    }
+    Ok(())
 }
