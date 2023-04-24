@@ -5,7 +5,7 @@ use odra::{
 
 use crate::{erc20::Erc20, ownable::Ownable};
 
-#[odra::module(skip_instance)]
+#[odra::module]
 pub struct OwnedToken {
     ownable: Ownable,
     erc20: Erc20

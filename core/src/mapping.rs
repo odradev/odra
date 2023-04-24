@@ -6,7 +6,7 @@ use crate::{contract_env, UnwrapOrRevert};
 use odra_types::arithmetic::{OverflowingAdd, OverflowingSub};
 
 /// Data structure for storing key-value pairs.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Mapping<K, V> {
     name: String,
     key_ty: PhantomData<K>,
