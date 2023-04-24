@@ -93,7 +93,7 @@ mod test {
         let module_struct = module_struct.with_config(config).unwrap();
 
         let expected = quote::quote! {
-            #[derive(odra::Instance)]
+            #[derive(odra::Instance, Clone)]
             pub struct Module {
                 pub variable: Variable<u32>,
                 pub mapping: Mapping<u32, Mapping<u32, MappedModule> >,
@@ -124,6 +124,55 @@ mod test {
                     events.extend(<String as odra::OdraItem>::events());
                     events.dedup();
                     events
+                }
+            }
+
+            pub struct ModuleComposer {
+                namespace: String,
+                variable: core::option::Option<Variable<u32> >,
+                mapping: core::option::Option<Mapping<u32, Mapping<u32, MappedModule> > >,
+                mapping2: core::option::Option<Mapping<u32, String> >,
+                submodule: core::option::Option<Submodule>
+            }
+
+            impl ModuleComposer {
+                pub fn new(namespace: &str, name: &str) -> Self {
+                    Self {
+                        namespace: format!("{}_{}", name, namespace),
+                        variable: core::option::Option::None,
+                        mapping: core::option::Option::None,
+                        mapping2: core::option::Option::None,
+                        submodule: core::option::Option::None
+                    }
+                }
+
+                pub fn with_variable(mut self, variable: &Variable<u32>) -> Self {
+                    self.variable = core::option::Option::Some(variable.clone());
+                    self
+                }
+
+                pub fn with_mapping(mut self, mapping: &Mapping<u32, Mapping<u32, MappedModule> >) -> Self {
+                    self.mapping = core::option::Option::Some(mapping.clone());
+                    self
+                }
+
+                pub fn with_mapping2(mut self, mapping2: &Mapping<u32, String>) -> Self {
+                    self.mapping2 = core::option::Option::Some(mapping2.clone());
+                    self
+                }
+
+                pub fn with_submodule(mut self, submodule: &Submodule) -> Self {
+                    self.submodule = core::option::Option::Some(submodule.clone());
+                    self
+                }
+
+                pub fn compose(self) -> Module {
+                    Module {
+                        variable: self.variable.unwrap_or_else(|| odra::Instance::instance(&format!("{}_{}", stringify!(variable), &self.namespace))),
+                        mapping: self.mapping.unwrap_or_else(|| odra::Instance::instance(&format!("{}_{}", stringify!(mapping), &self.namespace))),
+                        mapping2: self.mapping2.unwrap_or_else(|| odra::Instance::instance(&format!("{}_{}", stringify!(mapping2), &self.namespace))),
+                        submodule: self.submodule.unwrap_or_else(|| odra::Instance::instance(&format!("{}_{}", stringify!(submodule), &self.namespace)))
+                    }
                 }
             }
         };
