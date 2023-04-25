@@ -108,7 +108,6 @@ impl CasperTestEnv {
             .with_block_time(self.block_time)
             .build();
         self.context.exec(execute_request).commit().expect_success();
-        self.active_account = self.get_account(0);
     }
 
     /// Call contract.
