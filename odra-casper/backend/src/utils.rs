@@ -1,6 +1,9 @@
 //! A set of utility functions encapsulating some common interactions with the current runtime.
 
-use casper_contract::contract_api::{runtime, system};
+use casper_contract::{
+    contract_api::{runtime, system},
+    unwrap_or_revert::UnwrapOrRevert
+};
 use casper_types::{ContractPackageHash, EntryPoints, URef, U512};
 use odra_casper_shared::consts;
 use odra_casper_types::Balance;
@@ -52,7 +55,8 @@ pub fn handle_attached_value() {
         let amount = system::get_purse_balance(cargo_purse);
         if let Some(amount) = amount {
             let contract_purse = get_main_purse();
-            let _ = system::transfer_from_purse_to_purse(cargo_purse, contract_purse, amount, None);
+            system::transfer_from_purse_to_purse(cargo_purse, contract_purse, amount, None)
+                .unwrap_or_revert();
             set_attached_value(amount.into());
         }
     }
