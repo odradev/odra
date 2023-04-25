@@ -16,9 +16,10 @@ compile_error!(
 );
 
 mod instance;
-mod is_module;
+mod item;
 mod list;
 mod mapping;
+mod sequence;
 mod unwrap_or_revert;
 mod variable;
 
@@ -27,13 +28,14 @@ pub mod test_utils;
 
 pub use {
     instance::Instance,
-    is_module::IsModule,
+    item::OdraItem,
     list::List,
     mapping::Mapping,
     odra_proc_macros::{
         execution_error, external_contract, map, module, odra_error, Event, Instance
     },
     odra_utils as utils,
+    sequence::Sequence,
     unwrap_or_revert::UnwrapOrRevert,
     variable::Variable
 };

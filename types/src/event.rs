@@ -1,11 +1,15 @@
 //! Events interface and errors.
 
+use crate::contract_def::Event as Schema;
+
 /// Event interface
 pub trait OdraEvent {
     /// Emits &self in the current environment.
     fn emit(self);
     /// Returns the event name.
     fn name() -> String;
+    /// Returns the event schema.
+    fn schema() -> Schema;
 }
 
 /// Event-related errors.

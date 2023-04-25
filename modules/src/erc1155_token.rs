@@ -11,7 +11,7 @@ use odra::types::U256;
 
 /// The ERC1155 token implementation.
 /// It uses the ERC1155 base implementation and the Ownable module.
-#[odra::module]
+#[odra::module(events = [TransferBatch, TransferSingle])]
 pub struct Erc1155Token {
     core: Erc1155Base,
     ownable: Ownable

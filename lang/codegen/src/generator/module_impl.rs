@@ -35,18 +35,11 @@ impl GenerateCode for ModuleImpl<'_> {
                 # (#original_item_impls)*
             }
 
-            #[cfg(feature = "casper")]
             #contract_def
 
             #deploy
 
             #contract_ref
-
-            impl odra::IsModule for #ident {
-                fn is_module() -> bool {
-                    true
-                }
-            }
         }
     }
 }

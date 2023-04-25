@@ -19,14 +19,16 @@ impl GenerateCode for ContractDef<'_> {
         let entrypoints = self.contract.public_custom_impl_items();
 
         quote! {
-            impl odra::types::contract_def::HasContractDef for #struct_ident {
-                fn contract_def() -> odra::types::contract_def::ContractDef {
-                    odra::types::contract_def::ContractDef {
-                        ident: String::from(#struct_name),
-                        entrypoints: vec![
-                            # (#entrypoints)*
-                        ],
-                    }
+            #[cfg(feature = "casper")]
+            impl odra::types::contract_def::HasIdent for #struct_ident {
+                fn ident() -> String {
+                    String::from(#struct_name)
+                }
+            }
+            #[cfg(feature = "casper")]
+            impl odra::types::contract_def::HasEntrypoints for #struct_ident {
+                fn entrypoints() -> Vec<odra::types::contract_def::Entrypoint> {
+                    vec![# (#entrypoints)*]
                 }
             }
         }

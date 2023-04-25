@@ -30,6 +30,6 @@ pub mod module {
         method::Method,
         module_impl::ModuleImpl,
         module_struct::ModuleStruct,
-        ModuleItem
+        ModuleConfiguration, ModuleEvents, ModuleItem
     };
 }

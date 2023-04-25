@@ -7,7 +7,6 @@ pub(super) struct CasperArgs<'a>(pub &'a Vec<Argument>);
 impl ToTokens for CasperArgs<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let args = self.0;
-
         args.iter().for_each(|arg| {
             let arg_ident = format_ident!("{}", arg.ident);
 

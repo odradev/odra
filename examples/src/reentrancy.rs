@@ -1,5 +1,4 @@
 use odra::{contract_env, Variable};
-use odra_modules::security::ReentrancyGuard;
 
 #[odra::module]
 pub struct ReentrancyMock {
@@ -25,15 +24,6 @@ impl ReentrancyMock {
     }
 
     #[odra(non_reentrant)]
-    pub fn guarded_check_entered(&self) -> bool {
-        ReentrancyGuard::reentrancy_guard_entered()
-    }
-
-    pub fn unguarded_check_not_entered(&self) -> bool {
-        ReentrancyGuard::reentrancy_guard_entered()
-    }
-
-    #[odra(non_reentrant)]
     pub fn non_reentrant_count(&mut self) {
         self.count();
     }
@@ -55,13 +45,6 @@ mod test {
     use odra::{test_env, types::ExecutionError};
 
     use super::ReentrancyMockDeployer;
-
-    #[test]
-    fn guard_status() {
-        let contract = ReentrancyMockDeployer::default();
-        assert!(contract.guarded_check_entered());
-        assert!(!contract.unguarded_check_not_entered());
-    }
 
     #[test]
     fn non_reentrant_function_can_be_called() {

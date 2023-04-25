@@ -4,7 +4,7 @@ use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 
 use super::ty::WrappedType;
 
-pub(crate) struct ContractEntrypoints<'a>(pub &'a Vec<Entrypoint>);
+pub(crate) struct ContractEntrypoints<'a>(pub &'a [Entrypoint]);
 
 impl ToTokens for ContractEntrypoints<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
