@@ -30,8 +30,9 @@ impl Ownable {
     /// Initializes the module setting the caller as the initial owner.
     #[odra(init)]
     pub fn init(&mut self) {
-        let initial_owner = Some(contract_env::caller());
-        self.unchecked_transfer_ownership(initial_owner.as_ref());
+        let caller = contract_env::caller();
+        let initial_owner = Some(&caller);
+        self.unchecked_transfer_ownership(initial_owner);
     }
 
     /// Transfers ownership of the module to `new_owner`. This function can only
@@ -74,11 +75,11 @@ impl Ownable {
 
     fn unchecked_transfer_ownership(&mut self, new_owner: Option<&Address>) {
         let previous_owner = self.get_optional_owner();
-        self.owner.set(new_owner);
+        self.owner.set(&new_owner.cloned());
 
         OwnershipTransferred {
             previous_owner,
-            new_owner
+            new_owner: new_owner.cloned()
         }
         .emit();
     }
@@ -127,12 +128,12 @@ impl Ownable2Step {
         self.ownable.assert_owner(&contract_env::caller());
 
         let previous_owner = self.ownable.get_optional_owner();
-        let new_owner = Some(new_owner);
+        let new_owner = &Some(*new_owner);
         self.pending_owner.set(new_owner);
 
         OwnershipTransferStarted {
             previous_owner,
-            new_owner
+            new_owner: *new_owner
         }
         .emit();
     }
@@ -150,9 +151,10 @@ impl Ownable2Step {
     /// The new owner accepts the ownership transfer. Replaces the current owner and clears
     /// the pending owner.
     pub fn accept_ownership(&mut self) {
-        let caller = Some(contract_env::caller());
+        let caller = &contract_env::caller();
+        let caller = Some(caller);
         let pending_owner = self.pending_owner.get().flatten();
-        if pending_owner != caller {
+        if pending_owner.as_ref() != caller {
             contract_env::revert(Error::CallerNotTheNewOwner)
         }
         self.pending_owner.set(&None);

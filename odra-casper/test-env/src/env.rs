@@ -71,7 +71,8 @@ impl CasperTestEnv {
             genesis_config.take_ee_config()
         );
 
-        let mut builder = InMemoryWasmTestBuilder::default();
+        let mut builder = InMemoryWasmTestBuilder::new_with_chainspec("../resources/chainspec.toml", None);
+        // let mut builder = InMemoryWasmTestBuilder::default();
         builder.run_genesis(&run_genesis_request).commit();
 
         Self {
@@ -337,6 +338,7 @@ impl CasperTestEnv {
         let bytes: casper_types::bytesrepr::Bytes = self
             .get_account_value(active_account, "result")
             .unwrap_or_default();
+        dbg!(bytes.clone());
         T::from_bytes(bytes.inner_bytes()).unwrap().0
     }
 }

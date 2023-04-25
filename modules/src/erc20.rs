@@ -27,7 +27,7 @@ impl Erc20 {
         symbol: &String,
         name: &String,
         decimals: &u8,
-        initial_supply: Option<U256>
+        initial_supply: &Option<U256>
     ) {
         let caller = contract_env::caller();
 
@@ -36,40 +36,40 @@ impl Erc20 {
         self.decimals.set(decimals);
 
         if let Some(initial_supply) = initial_supply {
-            self.total_supply.set(initial_supply);
-            self.balances.set(&caller, initial_supply);
+            self.total_supply.set(&initial_supply);
+            self.balances.set(&caller, &initial_supply);
 
-            if initial_supply > U256::zero() {
+            if *initial_supply > U256::zero() {
                 Transfer {
                     from: None,
                     to: Some(caller),
-                    amount: initial_supply
+                    amount: *initial_supply
                 }
                 .emit();
             }
         }
     }
 
-    pub fn transfer(&mut self, recipient: Address, amount: U256) {
+    pub fn transfer(&mut self, recipient: &Address, amount: &U256) {
         let caller = contract_env::caller();
-        self.raw_transfer(caller, recipient, amount);
+        self.raw_transfer(&caller, recipient, amount);
     }
 
-    pub fn transfer_from(&mut self, owner: Address, recipient: Address, amount: U256) {
+    pub fn transfer_from(&mut self, owner: &Address, recipient: &Address, amount: &U256) {
         let spender = contract_env::caller();
 
-        self.spend_allowance(owner, spender, amount);
+        self.spend_allowance(owner, &spender, amount);
         self.raw_transfer(owner, recipient, amount);
     }
 
-    pub fn approve(&mut self, spender: Address, amount: U256) {
+    pub fn approve(&mut self, spender: &Address, amount: &U256) {
         let owner = contract_env::caller();
 
-        self.allowances.set(&(owner, spender), amount);
+        self.allowances.set(&(owner, *spender), amount);
         Approval {
             owner,
-            spender,
-            value: amount
+            spender: *spender,
+            value: *amount
         }
         .emit();
     }
@@ -92,45 +92,45 @@ impl Erc20 {
         self.total_supply.get_or_default()
     }
 
-    pub fn balance_of(&self, address: Address) -> U256 {
+    pub fn balance_of(&self, address: &Address) -> U256 {
         self.balances.get_or_default(&address)
     }
 
-    pub fn allowance(&self, owner: Address, spender: Address) -> U256 {
-        self.allowances.get_or_default(&(owner, spender))
+    pub fn allowance(&self, owner: &Address, spender: &Address) -> U256 {
+        self.allowances.get_or_default(&(*owner, *spender))
     }
 
-    pub fn mint(&mut self, address: Address, amount: U256) {
+    pub fn mint(&mut self, address: &Address, amount: &U256) {
         self.total_supply.add(amount);
         self.balances.add(&address, amount);
 
         Transfer {
             from: None,
-            to: Some(address),
-            amount
+            to: Some(*address),
+            amount: *amount
         }
         .emit();
     }
 
-    pub fn burn(&mut self, address: Address, amount: U256) {
-        if self.balance_of(address) < amount {
+    pub fn burn(&mut self, address: &Address, amount: &U256) {
+        if self.balance_of(address) < *amount {
             contract_env::revert(Error::InsufficientBalance);
         }
         self.total_supply.subtract(amount);
         self.balances.subtract(&address, amount);
 
         Transfer {
-            from: Some(address),
+            from: Some(*address),
             to: None,
-            amount
+            amount: *amount
         }
         .emit();
     }
 }
 
 impl Erc20 {
-    fn raw_transfer(&mut self, owner: Address, recipient: Address, amount: U256) {
-        if amount > self.balances.get_or_default(&owner) {
+    fn raw_transfer(&mut self, owner: &Address, recipient: &Address, amount: &U256) {
+        if *amount > self.balances.get_or_default(owner) {
             contract_env::revert(Error::InsufficientBalance)
         }
 
@@ -138,24 +138,24 @@ impl Erc20 {
         self.balances.add(&recipient, amount);
 
         Transfer {
-            from: Some(owner),
-            to: Some(recipient),
-            amount
+            from: Some(*owner),
+            to: Some(*recipient),
+            amount: *amount
         }
         .emit();
     }
 
-    fn spend_allowance(&mut self, owner: Address, spender: Address, amount: U256) {
-        let key = (owner, spender);
+    fn spend_allowance(&mut self, owner: &Address, spender: &Address, amount: &U256) {
+        let key = (*owner, *spender);
         let allowance = self.allowances.get_or_default(&key);
-        if allowance < amount {
+        if allowance < *amount {
             contract_env::revert(Error::InsufficientAllowance)
         }
         self.allowances.subtract(&key, amount);
         Approval {
-            owner,
-            spender,
-            value: allowance - amount
+            owner: key.0,
+            spender: key.1,
+            value: allowance - *amount
         }
         .emit();
     }
@@ -210,10 +210,10 @@ mod tests {
 
     fn setup() -> Erc20Ref {
         Erc20Deployer::init(
-            SYMBOL.to_string(),
-            NAME.to_string(),
-            DECIMALS,
-            Some(INITIAL_SUPPLY.into())
+            &SYMBOL.to_string(),
+            &NAME.to_string(),
+            &DECIMALS,
+            &Some(INITIAL_SUPPLY.into())
         )
     }
 
@@ -250,16 +250,16 @@ mod tests {
         let sender = test_env::get_account(0);
         let recipient = test_env::get_account(1);
         let amount = 1_000.into();
-        erc20.transfer(recipient, amount);
+        erc20.transfer(&recipient, &amount);
 
         // Then the sender balance is deducted.
         assert_eq!(
-            erc20.balance_of(sender),
+            erc20.balance_of(&sender),
             U256::from(INITIAL_SUPPLY) - amount
         );
 
         // Then the recipient balance is updated.
-        assert_eq!(erc20.balance_of(recipient), amount);
+        assert_eq!(erc20.balance_of(&recipient), amount);
 
         // Then Transfer event was emitted.
         assert_events!(
@@ -283,7 +283,7 @@ mod tests {
             let amount = U256::from(INITIAL_SUPPLY) + U256::one();
 
             // Then an error occurs.
-            erc20.transfer(recipient, amount)
+            erc20.transfer(&recipient, &amount)
         });
     }
 
@@ -298,13 +298,13 @@ mod tests {
         let approved_amount = 3_000.into();
         let transfer_amount = 1_000.into();
 
-        assert_eq!(erc20.balance_of(owner), U256::from(INITIAL_SUPPLY));
+        assert_eq!(erc20.balance_of(&owner), U256::from(INITIAL_SUPPLY));
 
         // Owner approves Spender.
-        erc20.approve(spender, approved_amount);
+        erc20.approve(&spender, &approved_amount);
 
         // Allowance was recorded.
-        assert_eq!(erc20.allowance(owner, spender), approved_amount);
+        assert_eq!(erc20.allowance(&owner, &spender), approved_amount);
         assert_events!(
             erc20,
             Approval {
@@ -316,14 +316,14 @@ mod tests {
 
         // Spender transfers tokens from Owner to Recipient.
         test_env::set_caller(spender);
-        erc20.transfer_from(owner, recipient, transfer_amount);
+        erc20.transfer_from(&owner, &recipient, &transfer_amount);
 
         // Tokens are transferred and allowance decremented.
         assert_eq!(
-            erc20.balance_of(owner),
+            erc20.balance_of(&owner),
             U256::from(INITIAL_SUPPLY) - transfer_amount
         );
-        assert_eq!(erc20.balance_of(recipient), transfer_amount);
+        assert_eq!(erc20.balance_of(&recipient), transfer_amount);
         assert_events!(
             erc20,
             Approval {
@@ -355,7 +355,7 @@ mod tests {
             test_env::set_caller(spender);
 
             // Then transfer fails.
-            erc20.transfer_from(owner, recipient, amount)
+            erc20.transfer_from(&owner, &recipient, &amount)
         });
     }
 }

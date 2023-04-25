@@ -11,16 +11,16 @@ pub struct Erc721Receiver {}
 impl Erc721Receiver {
     pub fn on_erc721_received(
         &mut self,
-        #[allow(unused_variables)] operator: Address,
-        #[allow(unused_variables)] from: Address,
-        token_id: U256,
-        #[allow(unused_variables)] data: Option<Bytes>
+        #[allow(unused_variables)] operator: &Address,
+        #[allow(unused_variables)] from: &Address,
+        token_id: &U256,
+        #[allow(unused_variables)] data: &Option<Bytes>
     ) -> bool {
         Received {
-            operator: Some(operator),
-            from: Some(from),
-            token_id,
-            data
+            operator: Some(*operator),
+            from: Some(*from),
+            token_id: *token_id,
+            data: data.clone()
         }
         .emit();
         Erc721TokenRef::at(caller()).owner_of(token_id) == self_address()

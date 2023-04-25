@@ -98,7 +98,7 @@ where
     let mut tokens = quote!(let mut args = odra::types::CallArgs::new(););
     tokens.append_all(args.into_iter().map(|arg| {
         let pat = &*arg.pat;
-        quote! { args.insert(stringify!(#pat), *#pat); }
+        quote! { args.insert(stringify!(#pat), #pat.clone()); }
     }));
     tokens.extend(quote!(args));
     tokens

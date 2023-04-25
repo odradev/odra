@@ -18,7 +18,7 @@ impl WrappedNativeToken {
         let metadata = contract_env::native_token_metadata();
         let symbol = format!("W{}", metadata.symbol);
         let name = format!("Wrapped {}", metadata.name);
-        self.erc20.init(symbol, name, metadata.decimals, None);
+        self.erc20.init(&symbol, &name, &metadata.decimals, &None);
     }
 
     #[odra(payable)]
@@ -26,7 +26,7 @@ impl WrappedNativeToken {
         let caller = contract_env::caller();
         let amount = contract_env::attached_value().to_u256().unwrap_or_revert();
 
-        self.erc20.mint(caller, amount);
+        self.erc20.mint(&caller, &amount);
 
         Deposit {
             account: caller,
@@ -35,25 +35,25 @@ impl WrappedNativeToken {
         .emit();
     }
 
-    pub fn withdraw(&mut self, amount: U256) {
+    pub fn withdraw(&mut self, amount: &U256) {
         let caller = contract_env::caller();
 
-        self.erc20.burn(caller, amount);
+        self.erc20.burn(&caller, amount);
         let balance = amount.to_balance().unwrap_or_revert();
         contract_env::transfer_tokens(caller, balance);
 
         Withdrawal {
             account: caller,
-            value: amount
+            value: *amount
         }
         .emit()
     }
 
-    pub fn allowance(&self, owner: Address, spender: Address) -> U256 {
+    pub fn allowance(&self, owner: &Address, spender: &Address) -> U256 {
         self.erc20.allowance(owner, spender)
     }
 
-    pub fn balance_of(&self, address: Address) -> U256 {
+    pub fn balance_of(&self, address: &Address) -> U256 {
         self.erc20.balance_of(address)
     }
 
@@ -73,15 +73,15 @@ impl WrappedNativeToken {
         self.erc20.name()
     }
 
-    pub fn approve(&mut self, spender: Address, amount: U256) {
+    pub fn approve(&mut self, spender: &Address, amount: &U256) {
         self.erc20.approve(spender, amount)
     }
 
-    pub fn transfer_from(&mut self, owner: Address, recipient: Address, amount: U256) {
+    pub fn transfer_from(&mut self, owner: &Address, recipient: &Address, amount: &U256) {
         self.erc20.transfer_from(owner, recipient, amount)
     }
 
-    pub fn transfer(&mut self, recipient: Address, amount: U256) {
+    pub fn transfer(&mut self, recipient: &Address, amount: &U256) {
         self.erc20.transfer(recipient, amount)
     }
 }
@@ -167,7 +167,7 @@ mod tests {
         );
 
         // Then the contract balance is updated.
-        assert_eq!(token.balance_of(account), deposit_amount.into());
+        assert_eq!(token.balance_of(&account), deposit_amount.into());
 
         // The events were emitted.
         assert_events!(
@@ -228,7 +228,7 @@ mod tests {
 
         // When withdraw some tokens.
         let withdrawal_amount: U256 = 1_000.into();
-        token.withdraw(withdrawal_amount);
+        token.withdraw(&withdrawal_amount);
 
         // Then the user has the withdrawn tokens back.
         let gas_used = test_env::last_call_contract_gas_used();
@@ -238,7 +238,7 @@ mod tests {
         );
         // Then the balance in the contract is deducted.
         assert_eq!(
-            token.balance_of(account),
+            token.balance_of(&account),
             deposit_amount.to_u256().unwrap() - withdrawal_amount
         );
         // Then events were emitted.
@@ -263,7 +263,7 @@ mod tests {
             let (mut token, _, _, _, _) = setup();
             // When the user withdraws amount exceeds the user's deposit
             // Then an error occurs.
-            token.withdraw(U256::one());
+            token.withdraw(&U256::one());
         });
     }
 }

@@ -6,21 +6,21 @@ use odra::types::{Address, Bytes, U256};
 
 /// The ERC-721 interface as defined in the standard.
 pub trait Erc721 {
-    fn balance_of(&self, owner: Address) -> U256;
-    fn owner_of(&self, token_id: U256) -> Address;
-    fn safe_transfer_from(&mut self, from: Address, to: Address, token_id: U256);
+    fn balance_of(&self, owner: &Address) -> U256;
+    fn owner_of(&self, token_id: &U256) -> Address;
+    fn safe_transfer_from(&mut self, from: &Address, to: &Address, token_id: &U256);
     fn safe_transfer_from_with_data(
         &mut self,
-        from: Address,
-        to: Address,
-        token_id: U256,
-        data: Bytes
+        from: &Address,
+        to: &Address,
+        token_id: &U256,
+        data: &Bytes
     );
-    fn transfer_from(&mut self, from: Address, to: Address, token_id: U256);
-    fn approve(&mut self, approved: Option<Address>, token_id: U256);
-    fn set_approval_for_all(&mut self, operator: Address, approved: bool);
-    fn get_approved(&self, token_id: U256) -> Option<Address>;
-    fn is_approved_for_all(&self, owner: Address, operator: Address) -> bool;
+    fn transfer_from(&mut self, from: &Address, to: &Address, token_id: &U256);
+    fn approve(&mut self, approved: &Option<Address>, token_id: &U256);
+    fn set_approval_for_all(&mut self, operator: &Address, approved: &bool);
+    fn get_approved(&self, token_id: &U256) -> Option<Address>;
+    fn is_approved_for_all(&self, owner: &Address, operator: &Address) -> bool;
 }
 
 pub mod events {

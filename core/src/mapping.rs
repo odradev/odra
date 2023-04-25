@@ -26,11 +26,13 @@ impl<K: OdraType + Hash, V> Mapping<K, V> {
 
 impl<K: OdraType + Hash, V: OdraType> Mapping<K, V> {
     /// Reads `key` from the storage or returns `None`.
+    #[inline(always)]
     pub fn get(&self, key: &K) -> Option<V> {
         contract_env::get_dict_value(&self.name, key)
     }
 
     /// Sets `value` under `key` to the storage. It overrides by default.
+    #[inline(always)]
     pub fn set(&mut self, key: &K, value: &V) {
         contract_env::set_dict_value(&self.name, key, value);
     }

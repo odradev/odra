@@ -54,11 +54,13 @@ impl<T: OdraType> Variable<T> {
     }
 
     /// Reads from the storage or returns `None` or reverts something unexpected happens.
+    #[inline(always)]
     pub fn get(&self) -> Option<T> {
         contract_env::get_var(&self.name)
     }
 
     /// Stores `value` to the storage.
+    #[inline(always)]
     pub fn set(&mut self, value: &T) {
         contract_env::set_var(&self.name, value);
     }

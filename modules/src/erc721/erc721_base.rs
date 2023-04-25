@@ -19,53 +19,53 @@ pub struct Erc721Base {
 }
 
 impl Erc721 for Erc721Base {
-    fn balance_of(&self, owner: Address) -> U256 {
+    fn balance_of(&self, owner: &Address) -> U256 {
         self.balances.get_or_default(&owner)
     }
 
-    fn owner_of(&self, token_id: U256) -> Address {
+    fn owner_of(&self, token_id: &U256) -> Address {
         self.owners
             .get(&token_id)
             .unwrap_or_revert_with(Error::InvalidTokenId)
             .unwrap_or_revert_with(Error::InvalidTokenId)
     }
 
-    fn safe_transfer_from(&mut self, from: Address, to: Address, token_id: U256) {
-        if !self.is_approved_or_owner(caller(), token_id) {
+    fn safe_transfer_from(&mut self, from: &Address, to: &Address, token_id: &U256) {
+        if !self.is_approved_or_owner(&caller(), token_id) {
             revert(Error::NotAnOwnerOrApproved);
         }
-        self.safe_transfer(from, to, token_id, None);
+        self.safe_transfer(from, to, token_id, &None);
     }
 
     fn safe_transfer_from_with_data(
         &mut self,
-        from: Address,
-        to: Address,
-        token_id: U256,
-        data: Bytes
+        from: &Address,
+        to: &Address,
+        token_id: &U256,
+        data: &Bytes
     ) {
-        if !self.is_approved_or_owner(caller(), token_id) {
+        if !self.is_approved_or_owner(&caller(), token_id) {
             revert(Error::NotAnOwnerOrApproved);
         }
-        self.safe_transfer(from, to, token_id, Some(data));
+        self.safe_transfer(from, to, token_id, &Some(data.clone()));
     }
 
-    fn transfer_from(&mut self, from: Address, to: Address, token_id: U256) {
-        if !self.is_approved_or_owner(caller(), token_id) {
+    fn transfer_from(&mut self, from: &Address, to: &Address, token_id: &U256) {
+        if !self.is_approved_or_owner(&caller(), token_id) {
             revert(Error::NotAnOwnerOrApproved);
         }
         self.transfer(from, to, token_id);
     }
 
-    fn approve(&mut self, approved: Option<Address>, token_id: U256) {
+    fn approve(&mut self, approved: &Option<Address>, token_id: &U256) {
         let owner = self.owner_of(token_id);
         let caller = caller();
 
-        if Some(owner) == approved {
+        if &Some(owner) == approved {
             revert(Error::ApprovalToCurrentOwner);
         }
 
-        if caller != owner && !self.is_approved_for_all(owner, caller) {
+        if caller != owner && !self.is_approved_for_all(&owner, &caller) {
             revert(Error::NotAnOwnerOrApproved);
         }
 
@@ -73,52 +73,52 @@ impl Erc721 for Erc721Base {
 
         Approval {
             owner,
-            approved,
-            token_id
+            approved: *approved,
+            token_id: *token_id
         }
         .emit();
     }
 
-    fn set_approval_for_all(&mut self, operator: Address, approved: bool) {
+    fn set_approval_for_all(&mut self, operator: &Address, approved: &bool) {
         let caller = caller();
-        if caller == operator {
+        if &caller == operator {
             revert(Error::ApproveToCaller)
         }
 
-        self.operator_approvals.set(&(caller, operator), approved);
+        self.operator_approvals.set(&(caller, *operator), approved);
         ApprovalForAll {
             owner: caller,
-            operator,
-            approved
+            operator: *operator,
+            approved: *approved
         }
         .emit();
     }
 
-    fn get_approved(&self, token_id: U256) -> Option<Address> {
+    fn get_approved(&self, token_id: &U256) -> Option<Address> {
         self.assert_exists(&token_id);
         self.token_approvals.get(&token_id).unwrap_or_default()
     }
 
-    fn is_approved_for_all(&self, owner: Address, operator: Address) -> bool {
+    fn is_approved_for_all(&self, owner: &Address, operator: &Address) -> bool {
         self.operator_approvals
-            .get(&(owner, operator))
+            .get(&(*owner, *operator))
             .unwrap_or_default()
     }
 }
 
 impl Erc721Base {
-    pub fn is_approved_or_owner(&self, spender: Address, token_id: U256) -> bool {
-        let owner = self.owner_of(token_id);
+    pub fn is_approved_or_owner(&self, spender: &Address, token_id: &U256) -> bool {
+        let owner = &self.owner_of(token_id);
         (spender == owner)
-            || self.get_approved(token_id) == Some(spender)
+            || self.get_approved(token_id) == Some(*spender)
             || self.is_approved_for_all(owner, spender)
     }
 
-    fn safe_transfer(&mut self, from: Address, to: Address, token_id: U256, data: Option<Bytes>) {
+    fn safe_transfer(&mut self, from: &Address, to: &Address, token_id: &U256, data: &Option<Bytes>) {
         self.transfer(from, to, token_id);
         if to.is_contract() {
             let response =
-                Erc721ReceiverRef::at(to).on_erc721_received(caller(), from, token_id, data);
+                Erc721ReceiverRef::at(*to).on_erc721_received(&caller(), from, token_id, data);
 
             if !response {
                 revert(Error::TransferFailed)
@@ -126,23 +126,23 @@ impl Erc721Base {
         }
     }
 
-    fn transfer(&mut self, from: Address, to: Address, token_id: U256) {
+    fn transfer(&mut self, from: &Address, to: &Address, token_id: &U256) {
         self.clear_approval(token_id);
-        self.balances.set(&from, self.balance_of(from) - 1);
-        self.balances.set(&to, self.balance_of(to) + 1);
-        self.owners.set(&token_id, Some(to));
+        self.balances.set(&from, &(self.balance_of(from) - 1));
+        self.balances.set(&to, &(self.balance_of(to) + 1));
+        self.owners.set(&token_id, &Some(*to));
 
         Transfer {
-            from: Some(from),
-            to: Some(to),
-            token_id
+            from: Some(*from),
+            to: Some(*to),
+            token_id: *token_id
         }
         .emit();
     }
 
-    pub fn clear_approval(&mut self, token_id: U256) {
+    pub fn clear_approval(&mut self, token_id: &U256) {
         if self.token_approvals.get_or_default(&token_id).is_some() {
-            self.token_approvals.set(&token_id, None);
+            self.token_approvals.set(&token_id, &None);
         }
     }
 

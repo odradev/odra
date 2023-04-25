@@ -15,41 +15,49 @@ use crate::{casper_env, utils::get_main_purse};
 pub(crate) static mut ATTACHED_VALUE: U512 = U512::zero();
 
 /// Returns blocktime.
+#[inline(always)]
 pub fn get_block_time() -> BlockTime {
     casper_env::get_block_time()
 }
 
 /// Returns contract caller.
+#[inline(always)]
 pub fn caller() -> Address {
     casper_env::caller()
 }
 
 /// Returns current contract address.
+#[inline(always)]
 pub fn self_address() -> Address {
     casper_env::self_address()
 }
 
 /// Store a value into the storage.
+#[inline(always)]
 pub fn set_var<T: OdraType>(key: &str, value: &T) {
     casper_env::set_key(key, value);
 }
 
 /// Read value from the storage.
+#[inline(always)]
 pub fn get_var<T: OdraType>(key: &str) -> Option<T> {
     casper_env::get_key(key)
 }
 
 /// Store the mapping value under a given key.
+#[inline(always)]
 pub fn set_dict_value<K: OdraType, V: OdraType>(dict: &str, key: &K, value: &V) {
     casper_env::set_dict_value(dict, key, value);
 }
 
 /// Read value from the mapping.
+#[inline(always)]
 pub fn get_dict_value<K: OdraType, T: OdraType>(dict: &str, key: &K) -> Option<T> {
     casper_env::get_dict_value(dict, key)
 }
 
 /// Revert the execution.
+#[inline(always)]
 pub fn revert<E>(error: E) -> !
 where
     E: Into<ExecutionError>
@@ -58,6 +66,7 @@ where
 }
 
 /// Emits event.
+#[inline(always)]
 pub fn emit_event<T>(event: T)
 where
     T: OdraType + OdraEvent
@@ -66,6 +75,7 @@ where
 }
 
 /// Call another contract.
+#[inline(always)]
 pub fn call_contract<T: OdraType>(
     address: Address,
     entrypoint: &str,

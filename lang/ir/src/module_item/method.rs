@@ -89,7 +89,7 @@ impl TryFrom<syn::ImplItemMethod> for Method {
     type Error = syn::Error;
 
     fn try_from(method: syn::ImplItemMethod) -> Result<Self, Self::Error> {
-        validate_args(&method)?;
+        // validate_args(&method)?;
 
         let (odra_attrs, attrs) = partition_attributes(method.clone().attrs)?;
         let ident = method.sig.ident.to_owned();
