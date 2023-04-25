@@ -151,7 +151,7 @@ impl MockVm {
         self.state.write().unwrap().set_caller(caller);
     }
 
-    pub fn set_var<T: MockVMType>(&self, key: &str, value: T) {
+    pub fn set_var<T: MockVMType>(&self, key: &str, value: &T) {
         self.state.write().unwrap().set_var(key, value);
     }
 
@@ -166,7 +166,7 @@ impl MockVm {
         }
     }
 
-    pub fn set_dict_value<T: MockVMType>(&self, dict: &str, key: &[u8], value: T) {
+    pub fn set_dict_value<T: MockVMType>(&self, dict: &str, key: &[u8], value: &T) {
         self.state.write().unwrap().set_dict_value(dict, key, value);
     }
 
@@ -259,7 +259,7 @@ impl MockVmState {
         self.push_callstack_element(CallstackElement::new(address, None));
     }
 
-    fn set_var<T: MockVMType>(&mut self, key: &str, value: T) {
+    fn set_var<T: MockVMType>(&mut self, key: &str, value: &T) {
         let ctx = &self.callstack.current().address;
         if let Err(err) = self.storage.set_value(ctx, key, value) {
             self.set_error(err);
@@ -271,7 +271,7 @@ impl MockVmState {
         self.storage.get_value(ctx, key)
     }
 
-    fn set_dict_value<T: MockVMType>(&mut self, dict: &str, key: &[u8], value: T) {
+    fn set_dict_value<T: MockVMType>(&mut self, dict: &str, key: &[u8], value: &T) {
         let ctx = &self.callstack.current().address;
         if let Err(err) = self.storage.insert_dict_value(ctx, dict, key, value) {
             self.set_error(err);
@@ -565,7 +565,7 @@ mod tests {
         // when set a value
         let key = "key";
         let value = 32u8;
-        instance.set_var(key, value);
+        instance.set_var(key, &value);
 
         // then the value can be read
         assert_eq!(instance.get_var(key), Some(value));
@@ -582,7 +582,7 @@ mod tests {
         let dict = "dict";
         let key: [u8; 2] = [1, 2];
         let value = 32u8;
-        instance.set_dict_value(dict, &key, value);
+        instance.set_dict_value(dict, &key, &value);
 
         // then the value can be read
         assert_eq!(instance.get_dict_value(dict, &key), Some(value));

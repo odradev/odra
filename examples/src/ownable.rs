@@ -10,31 +10,31 @@ pub struct Ownable {
 #[odra::module]
 impl Ownable {
     #[odra(init)]
-    pub fn init(&mut self, owner: Address) {
+    pub fn init(&mut self, owner: &Address) {
         if self.owner.get().is_some() {
             contract_env::revert(Error::OwnerIsAlreadyInitialized)
         }
         self.owner.set(owner);
         OwnershipChanged {
             prev_owner: None,
-            new_owner: owner
+            new_owner: *owner
         }
         .emit();
     }
 
-    pub fn change_ownership(&mut self, new_owner: Address) {
-        self.ensure_ownership(contract_env::caller());
+    pub fn change_ownership(&mut self, new_owner: &Address) {
+        self.ensure_ownership(&contract_env::caller());
         let current_owner = self.get_owner();
         self.owner.set(new_owner);
         OwnershipChanged {
             prev_owner: Some(current_owner),
-            new_owner
+            new_owner: *new_owner
         }
         .emit();
     }
 
-    pub fn ensure_ownership(&self, address: Address) {
-        if Some(address) != self.owner.get() {
+    pub fn ensure_ownership(&self, address: &Address) {
+        if Some(address) != self.owner.get().as_ref() {
             contract_env::revert(Error::NotOwner)
         }
     }
@@ -68,7 +68,7 @@ mod tests {
 
     fn setup() -> (Address, OwnableRef) {
         let owner = test_env::get_account(0);
-        let ownable = OwnableDeployer::init(owner);
+        let ownable = OwnableDeployer::init(&owner);
         (owner, ownable)
     }
 
@@ -90,7 +90,7 @@ mod tests {
         let (owner, mut ownable) = setup();
         let new_owner = test_env::get_account(1);
         test_env::set_caller(owner);
-        ownable.change_ownership(new_owner);
+        ownable.change_ownership(&new_owner);
         assert_eq!(ownable.get_owner(), new_owner);
         assert_events!(
             ownable,
@@ -105,12 +105,12 @@ mod tests {
     fn non_owner_cannot_change_ownership() {
         let (_, mut ownable) = setup();
         let new_owner = test_env::get_account(1);
-        ownable.change_ownership(new_owner);
+        ownable.change_ownership(&new_owner);
         test_env::assert_exception(Error::NotOwner, || {
             // TODO: If we don't create a new ref, an error occurs:
             // cannot borrow `ownable` as mutable, as it is a captured variable in a `Fn` closure cannot borrow as mutable
             let mut ownable = OwnableRef::at(ownable.address());
-            ownable.change_ownership(new_owner);
+            ownable.change_ownership(&new_owner);
         });
     }
 }

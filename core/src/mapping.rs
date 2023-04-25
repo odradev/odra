@@ -31,7 +31,7 @@ impl<K: OdraType + Hash, V: OdraType> Mapping<K, V> {
     }
 
     /// Sets `value` under `key` to the storage. It overrides by default.
-    pub fn set(&mut self, key: &K, value: V) {
+    pub fn set(&mut self, key: &K, value: &V) {
         contract_env::set_dict_value(&self.name, key, value);
     }
 
@@ -78,10 +78,10 @@ impl<K: OdraType + Hash, V: OdraType + OverflowingAdd + Default> Mapping<K, V> {
     /// and sets the new value to the storage.
     ///
     /// If the operation fails due to overflow, the currently executing contract reverts.
-    pub fn add(&mut self, key: &K, value: V) {
+    pub fn add(&mut self, key: &K, value: &V) {
         let current_value = self.get(key).unwrap_or_default();
-        let new_value = current_value.overflowing_add(value).unwrap_or_revert();
-        contract_env::set_dict_value(&self.name, key, new_value);
+        let new_value = current_value.overflowing_add(&value).unwrap_or_revert();
+        contract_env::set_dict_value(&self.name, key, &new_value);
     }
 }
 
@@ -92,10 +92,10 @@ impl<K: OdraType + Hash, V: OdraType + OverflowingSub + Default + Debug + Partia
     /// and sets the new value to the storage.
     ///
     /// If the operation fails due to overflow, the currently executing contract reverts.
-    pub fn subtract(&mut self, key: &K, value: V) {
+    pub fn subtract(&mut self, key: &K, value: &V) {
         let current_value = self.get(key).unwrap_or_default();
-        let new_value = current_value.overflowing_sub(value).unwrap_or_revert();
-        contract_env::set_dict_value(&self.name, key, new_value);
+        let new_value = current_value.overflowing_sub(&value).unwrap_or_revert();
+        contract_env::set_dict_value(&self.name, key, &new_value);
     }
 }
 
@@ -178,14 +178,14 @@ mod tests {
         let mut map = Mapping::<String, u8>::default();
 
         // When set a value.
-        map.set(&key, value);
+        map.set(&key, &value);
 
         // The the value can be returned.
         assert_eq!(map.get(&key).unwrap(), value);
 
         // When override.
         let value = 200;
-        map.set(&key, value);
+        map.set(&key, &value);
 
         // Then the value is updated
         assert_eq!(map.get(&key).unwrap(), value);
@@ -211,7 +211,7 @@ mod tests {
         let mut map = Mapping::<String, u8>::init(&key, initial_value);
 
         // When add 1.
-        map.add(&key, 1);
+        map.add(&key, &1);
 
         // Then the value should be u8::MAX.
         assert_eq!(map.get_or_default(&key), initial_value + 1);
@@ -220,7 +220,7 @@ mod tests {
         // Then should revert.
         test_env::assert_exception(ArithmeticsError::AdditionOverflow, || {
             let mut map = Mapping::<String, u8>::default();
-            map.add(&key, 1);
+            map.add(&key, &1);
         });
     }
 
@@ -231,7 +231,7 @@ mod tests {
         let key = String::from("k");
         let mut map = Mapping::<String, u8>::init(&key, initial_value);
         // When subtract 1
-        map.subtract(&key, 1);
+        map.subtract(&key, &1);
 
         // Then the value should be reduced by 1.
         assert_eq!(map.get_or_default(&key), initial_value - 1);
@@ -240,7 +240,7 @@ mod tests {
         // Then it reverts.
         test_env::assert_exception(ArithmeticsError::SubtractingOverflow, || {
             let mut map = Mapping::<String, u8>::default();
-            map.subtract(&key, 2);
+            map.subtract(&key, &2);
         });
     }
 
@@ -254,7 +254,7 @@ mod tests {
         let y = Mapping::<String, u8>::instance(namespace);
 
         // When set a value for the first variable.
-        x.set(&key, value);
+        x.set(&key, &value);
 
         // Then both returns the same value.
         assert_eq!(y.get_or_default(&key), value);
@@ -278,7 +278,7 @@ mod tests {
     {
         pub fn init(key: &K, value: V) -> Self {
             let mut var = Self::default();
-            var.set(key, value);
+            var.set(key, &value);
             var
         }
     }

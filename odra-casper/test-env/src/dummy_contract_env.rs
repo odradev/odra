@@ -10,7 +10,7 @@ pub fn caller() -> Address {
     unimplemented!()
 }
 
-pub fn set_var<T: OdraType>(_: &str, _: T) {
+pub fn set_var<T: OdraType>(_: &str, _: &T) {
     unimplemented!()
 }
 
@@ -18,7 +18,7 @@ pub fn get_var<T: OdraType>(_: &str) -> Option<T> {
     unimplemented!()
 }
 
-pub fn set_dict_value<K: OdraType, V: OdraType>(_: &str, _: &K, _: V) {
+pub fn set_dict_value<K: OdraType, V: OdraType>(_: &str, _: &K, _: &V) {
     unimplemented!()
 }
 

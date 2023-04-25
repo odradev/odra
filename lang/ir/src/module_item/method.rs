@@ -43,7 +43,12 @@ impl ToTokens for Method {
             .iter()
             .map(|arg| {
                 let name = &*arg.pat;
-                let ty = &*arg.ty;
+
+                let ty = match &*arg.ty {
+                    syn::Type::Reference(r) => &r.elem,
+                    other => other
+                };
+                // let ty = &*arg.ty;
                 let ty = quote!(<#ty as odra::types::Typed>::ty());
                 quote! {
                     odra::types::contract_def::Argument {

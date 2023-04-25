@@ -21,7 +21,7 @@ pub fn self_address() -> Address {
 }
 
 /// Stores the `value` under `key`.
-pub fn set_var<T: MockVMType>(key: &str, value: T) {
+pub fn set_var<T: MockVMType>(key: &str, value: &T) {
     borrow_env().set_var(key, value)
 }
 
@@ -31,7 +31,7 @@ pub fn get_var<T: OdraType>(key: &str) -> Option<T> {
 }
 
 /// Puts a key-value into a collection.
-pub fn set_dict_value<K: MockVMType, V: MockVMType>(dict: &str, key: &K, value: V) {
+pub fn set_dict_value<K: MockVMType, V: MockVMType>(dict: &str, key: &K, value: &V) {
     borrow_env().set_dict_value(dict, key.ser().unwrap().as_slice(), value)
 }
 

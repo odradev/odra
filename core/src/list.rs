@@ -30,14 +30,15 @@ impl<T: OdraType> List<T> {
     }
 
     /// Pushes the `value` to the storage.
-    pub fn push(&mut self, value: T) {
+    pub fn push(&mut self, value: &T) {
         let current_index = self.index.get_or_default();
         self.values.set(&current_index, value);
-        self.index.set(current_index + 1);
+        let new_value = current_index + 1;
+        self.index.set(&new_value);
     }
 
     /// Replaces the current value with the `value` and returns it.
-    pub fn replace(&mut self, index: u32, value: T) -> T {
+    pub fn replace(&mut self, index: u32, value: &T) -> T {
         let current_index = self.index.get_or_default();
         if current_index < index {
             contract_env::revert(CollectionError::IndexOutOfBounds);
@@ -163,13 +164,13 @@ mod tests {
         assert_eq!(list.len(), 0);
 
         // When push a first item
-        list.push(0u8);
+        list.push(&0u8);
         // Then a value at index 0 is available
         assert_eq!(list.get(0).unwrap(), 0);
 
         // When push next two items
-        list.push(1u8);
-        list.push(3u8);
+        list.push(&1u8);
+        list.push(&3u8);
 
         // Then these values are accessible at indexes 1 and 2
         assert_eq!(list.get(1).unwrap(), 1);
@@ -186,11 +187,11 @@ mod tests {
         // Given a list with 5 items
         let mut list = List::<u8>::default();
         for i in 0..5 {
-            list.push(i);
+            list.push(&i);
         }
 
         // When replace last item
-        let result = list.replace(4, 10);
+        let result = list.replace(4, &10);
 
         // Then the previous value is returned
         assert_eq!(result, 4);
@@ -200,7 +201,7 @@ mod tests {
         // When replaces nonexistent value then reverts
         test_env::assert_exception(CollectionError::IndexOutOfBounds, || {
             let mut list = List::<u8>::default();
-            list.replace(100, 99);
+            list.replace(100, &99);
         });
     }
 
@@ -211,9 +212,9 @@ mod tests {
 
         // When push 3 elements
         assert_eq!(list.len(), 0);
-        list.push(0u8);
-        list.push(1u8);
-        list.push(3u8);
+        list.push(&0u8);
+        list.push(&1u8);
+        list.push(&3u8);
 
         // Then the length should be 3
         assert_eq!(list.len(), 3);
@@ -226,7 +227,7 @@ mod tests {
         assert!(list.is_empty());
 
         // When push an element
-        list.push(9u8);
+        list.push(&9u8);
 
         // Then the list should not be empty
         assert!(!list.is_empty());
@@ -237,7 +238,7 @@ mod tests {
         // Given a list with 5 items
         let mut list = List::<u8>::default();
         for i in 0..5 {
-            list.push(i);
+            list.push(&i);
         }
 
         let mut iter = list.iter();
@@ -255,7 +256,7 @@ mod tests {
         // Given a list with 3 items
         let mut list = List::<u8>::default();
         for i in 0..3 {
-            list.push(i);
+            list.push(&i);
         }
 
         // When iterate over all the elements
@@ -276,7 +277,7 @@ mod tests {
         // Given a list with 10 items
         let mut list = List::<u8>::default();
         for i in 0..10 {
-            list.push(i);
+            list.push(&i);
         }
 
         let mut iter = list.iter();

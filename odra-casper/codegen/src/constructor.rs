@@ -1,9 +1,10 @@
 use odra_types::contract_def::Entrypoint;
+use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use syn::{punctuated::Punctuated, token::Comma, Ident, Path};
 
 use super::arg::CasperArgs;
-type FnArgs = Punctuated<Ident, Comma>;
+type FnArgs = Punctuated<TokenStream, Comma>;
 
 pub struct WasmConstructor<'a>(pub Vec<&'a Entrypoint>, pub &'a Path);
 
@@ -16,10 +17,11 @@ impl ToTokens for WasmConstructor<'_> {
                 let entrypoint_ident = format_ident!("{}", &ep.ident);
                 let casper_args = CasperArgs(&ep.args);
 
-                let mut fn_args = Punctuated::<Ident, Comma>::new();
+                let mut fn_args = FnArgs::new();
                 ep.args
                     .iter()
-                    .for_each(|arg| fn_args.push(format_ident!("{}", arg.ident)));
+                    .map(|arg| format_ident!("{}", arg.ident))
+                    .for_each(|ident| fn_args.push(quote!(&#ident)));
 
                 (entrypoint_ident, casper_args, fn_args)
             })

@@ -31,13 +31,13 @@ impl Ownable {
     #[odra(init)]
     pub fn init(&mut self) {
         let initial_owner = Some(contract_env::caller());
-        self.unchecked_transfer_ownership(initial_owner);
+        self.unchecked_transfer_ownership(initial_owner.as_ref());
     }
 
     /// Transfers ownership of the module to `new_owner`. This function can only
     /// be accessed by the current owner of the module.
-    pub fn transfer_ownership(&mut self, new_owner: Address) {
-        self.assert_owner(contract_env::caller());
+    pub fn transfer_ownership(&mut self, new_owner: &Address) {
+        self.assert_owner(&contract_env::caller());
         self.unchecked_transfer_ownership(Some(new_owner));
     }
 
@@ -48,7 +48,7 @@ impl Ownable {
     /// The function can only be called by the current owner, and it will permanently
     /// remove the owner's privileges.
     pub fn renounce_ownership(&mut self) {
-        self.assert_owner(contract_env::caller());
+        self.assert_owner(&contract_env::caller());
         self.unchecked_transfer_ownership(None);
     }
 
@@ -62,8 +62,8 @@ impl Ownable {
 impl Ownable {
     /// Reverts with [`Error::CallerNotTheOwner`] if the function called by
     /// any account other than the owner.
-    pub fn assert_owner(&self, address: Address) {
-        if Some(address) != self.get_optional_owner() {
+    pub fn assert_owner(&self, address: &Address) {
+        if Some(address) != self.get_optional_owner().as_ref() {
             contract_env::revert(Error::CallerNotTheOwner)
         }
     }
@@ -72,7 +72,7 @@ impl Ownable {
         self.owner.get().flatten()
     }
 
-    fn unchecked_transfer_ownership(&mut self, new_owner: Option<Address>) {
+    fn unchecked_transfer_ownership(&mut self, new_owner: Option<&Address>) {
         let previous_owner = self.get_optional_owner();
         self.owner.set(new_owner);
 
@@ -123,8 +123,8 @@ impl Ownable2Step {
     /// Replaces the `pending_owner`if there is one.
     ///
     /// This function can only be accessed by the current owner of the module.
-    pub fn transfer_ownership(&mut self, new_owner: Address) {
-        self.ownable.assert_owner(contract_env::caller());
+    pub fn transfer_ownership(&mut self, new_owner: &Address) {
+        self.ownable.assert_owner(&contract_env::caller());
 
         let previous_owner = self.ownable.get_optional_owner();
         let new_owner = Some(new_owner);
@@ -155,7 +155,7 @@ impl Ownable2Step {
         if pending_owner != caller {
             contract_env::revert(Error::CallerNotTheNewOwner)
         }
-        self.pending_owner.set(None);
+        self.pending_owner.set(&None);
         self.ownable.unchecked_transfer_ownership(caller);
     }
 }
@@ -192,7 +192,7 @@ mod test {
 
         // when the current owner transfers ownership
         let new_owner = test_env::get_account(1);
-        contract.transfer_ownership(new_owner);
+        contract.transfer_ownership(&new_owner);
 
         // then the new owner is set
         assert_eq!(new_owner, contract.get_owner());
@@ -213,7 +213,7 @@ mod test {
 
         // when the current owner transfers ownership
         let new_owner = test_env::get_account(1);
-        contract.transfer_ownership(new_owner);
+        contract.transfer_ownership(&new_owner);
 
         // when the pending owner accepts the transfer
         test_env::set_caller(new_owner);
@@ -248,7 +248,7 @@ mod test {
 
         // then ownership transfer fails
         test_env::assert_exception(Error::CallerNotTheOwner, || {
-            OwnableRef::at(contract.address()).transfer_ownership(new_owner);
+            OwnableRef::at(contract.address()).transfer_ownership(&new_owner);
         });
     }
 
@@ -263,12 +263,12 @@ mod test {
 
         // then ownership transfer fails
         test_env::assert_exception(Error::CallerNotTheOwner, || {
-            Ownable2StepRef::at(contract.address()).transfer_ownership(new_owner);
+            Ownable2StepRef::at(contract.address()).transfer_ownership(&new_owner);
         });
 
         // when the owner is the caller
         test_env::set_caller(initial_owner);
-        contract.transfer_ownership(new_owner);
+        contract.transfer_ownership(&new_owner);
 
         // then the pending owner is set
         assert_eq!(contract.get_pending_owner(), Some(new_owner));

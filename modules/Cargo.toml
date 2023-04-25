@@ -15,7 +15,7 @@ hex = "0.4.3"
 sha3 = "0.10.6"
 
 [features]
-default = [ "mock-vm" ]
+default = [ "casper" ]
 mock-vm = [ "odra/mock-vm" ]
 casper = [ "odra/casper" ]
 casper-livenet = ["odra/casper-livenet"]

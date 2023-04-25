@@ -21,12 +21,12 @@ where
     pub fn next_value(&mut self) -> T {
         match self.value.get() {
             None => {
-                self.value.set(T::zero());
+                self.value.set(&T::zero());
                 T::zero()
             }
             Some(value) => {
                 let next = value + T::one();
-                self.value.set(next);
+                self.value.set(&next);
                 next
             }
         }

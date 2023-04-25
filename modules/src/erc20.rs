@@ -24,9 +24,9 @@ impl Erc20 {
     #[odra(init)]
     pub fn init(
         &mut self,
-        symbol: String,
-        name: String,
-        decimals: u8,
+        symbol: &String,
+        name: &String,
+        decimals: &u8,
         initial_supply: Option<U256>
     ) {
         let caller = contract_env::caller();

@@ -1,7 +1,7 @@
 use casper_event_standard::Schema;
 use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
-    EntryPoints
+    EntryPoints, CLValue, api_error
 };
 use lazy_static::lazy_static;
 use odra_casper_types::{Address, OdraType};
@@ -75,7 +75,8 @@ pub fn add_contract_version(
 }
 
 /// Save value to the storage.
-pub fn set_key<T: OdraType>(name: &str, value: T) {
+pub fn set_key<T: OdraType>(name: &str, value: &T) {
+    runtime::print(name);
     save_value(&to_variable_key(name), value);
 }
 
@@ -84,7 +85,7 @@ pub fn get_key<T: OdraType>(name: &str) -> Option<T> {
     read_value(&to_variable_key(name))
 }
 
-pub fn set_dict_value<K: OdraType, V: OdraType>(seed: &str, key: &K, value: V) {
+pub fn set_dict_value<K: OdraType, V: OdraType>(seed: &str, key: &K, value: &V) {
     save_value(&to_dictionary_key(seed, key), value);
 }
 
@@ -265,13 +266,53 @@ where
         Err(_) => runtime::revert(ApiError::ValueNotFound)
     }
 }
+pub const DICTIONARY_ITEM_KEY_MAX_LENGTH: usize = 64;
 
-pub fn save_value<T: OdraType>(key: &str, value: T) {
+pub fn save_value<T: OdraType>(key: &str, value: &T) {
     let state_uref = get_state_uref();
-    storage::dictionary_put(state_uref, key, value);
+
+    let (uref_ptr, uref_size, _bytes1) = to_ptr(state_uref);
+    let (dictionary_item_key_ptr, dictionary_item_key_size) =
+        dictionary_item_key_to_ptr(key);
+
+    if dictionary_item_key_size > DICTIONARY_ITEM_KEY_MAX_LENGTH {
+        runtime::revert(ApiError::DictionaryItemKeyExceedsLength)
+    }
+
+    let cl_value = CLValue::from_components(<T as CLTyped>::cl_type(), value.to_bytes().unwrap_or_revert());
+    let (cl_value_ptr, cl_value_size, _bytes) = to_ptr(cl_value);
+
+    let result = unsafe {
+        let ret = casper_contract::ext_ffi::casper_dictionary_put(
+            uref_ptr,
+            uref_size,
+            dictionary_item_key_ptr,
+            dictionary_item_key_size,
+            cl_value_ptr,
+            cl_value_size,
+        );
+        api_error::result_from(ret)
+    };
+
+    result.unwrap_or_revert()
 }
 
 pub fn read_value<T: OdraType>(key: &str) -> Option<T> {
     let state_uref = get_state_uref();
     storage::dictionary_get(state_uref, key).unwrap_or_revert()
+}
+
+
+fn to_ptr<T: ToBytes>(t: T) -> (*const u8, usize, Vec<u8>) {
+    let bytes = t.into_bytes().unwrap_or_revert();
+    let ptr = bytes.as_ptr();
+    let size = bytes.len();
+    (ptr, size, bytes)
+}
+
+fn dictionary_item_key_to_ptr(dictionary_item_key: &str) -> (*const u8, usize) {
+    let bytes = dictionary_item_key.as_bytes();
+    let ptr = bytes.as_ptr();
+    let size = bytes.len();
+    (ptr, size)
 }

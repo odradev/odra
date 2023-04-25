@@ -34,7 +34,10 @@ impl ToTokens for Constructor {
             .iter()
             .flat_map(|arg| {
                 let name = &*arg.pat;
-                let ty = &*arg.ty;
+                let ty = match &*arg.ty {
+                    syn::Type::Reference(r) => &r.elem,
+                    other => other
+                };
                 let ty = quote!(<#ty as odra::types::Typed>::ty());
                 quote! {
                     odra::types::contract_def::Argument {

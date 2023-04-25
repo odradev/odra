@@ -4,13 +4,13 @@ use crate::ExecutionError;
 /// Overflowing addition, returning the result of addition or [ArithmeticsError::AdditionOverflow].
 pub trait OverflowingAdd: Sized {
     /// Overflowing addition. Compute `self + rhs`, returns the result or error if overflowed.
-    fn overflowing_add(self, rhs: Self) -> Result<Self, ExecutionError>;
+    fn overflowing_add(self, rhs: &Self) -> Result<Self, ExecutionError>;
 }
 
 /// Overflowing subtraction, returning the result of addition or [ArithmeticsError::SubtractingOverflow].
 pub trait OverflowingSub: Sized {
     /// Overflowing subtraction. Compute `self - rhs`, returns the result or error if overflowed.
-    fn overflowing_sub(self, rhs: Self) -> Result<Self, ExecutionError>;
+    fn overflowing_sub(self, rhs: &Self) -> Result<Self, ExecutionError>;
 }
 
 /// Computation result error.
@@ -28,8 +28,8 @@ macro_rules! impl_overflowing_add_sub {
     ( $( $ty:ty ),+ ) => {
         $(
             impl OverflowingAdd for $ty {
-                fn overflowing_add(self, rhs: Self) -> Result<Self, ExecutionError> {
-                    let (res, is_overflowed)  = self.overflowing_add(rhs);
+                fn overflowing_add(self, rhs: &Self) -> Result<Self, ExecutionError> {
+                    let (res, is_overflowed)  = self.overflowing_add(*rhs);
                     match is_overflowed {
                         true => Err(ArithmeticsError::AdditionOverflow.into()),
                         false => Ok(res)
@@ -38,8 +38,8 @@ macro_rules! impl_overflowing_add_sub {
             }
 
             impl OverflowingSub for $ty {
-                fn overflowing_sub(self, rhs: Self) -> Result<Self, ExecutionError> {
-                    let (res, is_overflowed)  = self.overflowing_sub(rhs);
+                fn overflowing_sub(self, rhs: &Self) -> Result<Self, ExecutionError> {
+                    let (res, is_overflowed)  = self.overflowing_sub(*rhs);
                     match is_overflowed {
                         true => Err(ArithmeticsError::SubtractingOverflow.into()),
                         false => Ok(res)
@@ -60,18 +60,18 @@ mod test {
 
     #[test]
     fn test_add() {
-        assert_eq!(<u8 as OverflowingAdd>::overflowing_add(2u8, 1u8), Ok(3u8));
+        assert_eq!(<u8 as OverflowingAdd>::overflowing_add(2u8, &1u8), Ok(3u8));
         assert_eq!(
-            <u8 as OverflowingAdd>::overflowing_add(u8::MAX, 1u8),
+            <u8 as OverflowingAdd>::overflowing_add(u8::MAX, &1u8),
             Err(ArithmeticsError::AdditionOverflow.into())
         );
     }
 
     #[test]
     fn test_sub() {
-        assert_eq!(<u8 as OverflowingSub>::overflowing_sub(2u8, 1u8), Ok(1u8));
+        assert_eq!(<u8 as OverflowingSub>::overflowing_sub(2u8, &1u8), Ok(1u8));
         assert_eq!(
-            <u8 as OverflowingSub>::overflowing_sub(u8::MIN, 1u8),
+            <u8 as OverflowingSub>::overflowing_sub(u8::MIN, &1u8),
             Err(ArithmeticsError::SubtractingOverflow.into())
         );
     }

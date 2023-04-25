@@ -27,7 +27,7 @@ odra-casper-test-env = { version = "0.2.0", path = "../odra-casper/test-env", op
 odra-casper-codegen = { version = "0.2.0", path = "../odra-casper/codegen", optional = true }
 
 [features]
-default = [ "mock-vm" ]
+default = [ "casper" ]
 mock-vm = [ "odra-mock-vm" ]
 casper = [ "odra-casper-backend", "odra-casper-test-env", "odra-casper-codegen", "odra-casper-types" ]
 casper-livenet = [ "odra-casper-livenet", "odra-casper-types" ]

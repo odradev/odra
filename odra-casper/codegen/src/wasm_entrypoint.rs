@@ -2,8 +2,9 @@ use odra_types::{
     contract_def::{Entrypoint, EntrypointType},
     Type
 };
+use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
-use syn::{self, punctuated::Punctuated, token::Comma, Ident, Path};
+use syn::{self, punctuated::Punctuated, token::Comma, Path};
 
 use super::arg::CasperArgs;
 
@@ -14,11 +15,12 @@ impl ToTokens for WasmEntrypoint<'_> {
         let entrypoint_ident = format_ident!("{}", &self.0.ident);
         let args = CasperArgs(&self.0.args).to_token_stream();
 
-        let mut fn_args = Punctuated::<Ident, Comma>::new();
+        let mut fn_args = Punctuated::<TokenStream, Comma>::new();
         self.0
             .args
             .iter()
-            .for_each(|arg| fn_args.push(format_ident!("{}", arg.ident)));
+            .map(|arg| format_ident!("{}", arg.ident))
+            .for_each(|ident| fn_args.push(quote!(&#ident)));
 
         let payable = match self.0.ty {
             EntrypointType::PublicPayable => quote! {
