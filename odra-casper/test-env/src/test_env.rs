@@ -20,11 +20,12 @@ pub fn register_contract(name: &str, args: CallArgs) -> Address {
     ENV.with(|env| {
         let wasm_name = format!("{}.wasm", name);
         env.borrow_mut().deploy_contract(&wasm_name, args);
-
         let contract_package_hash = format!("{}_package_hash", name);
         let contract_package_hash = env
             .borrow()
             .contract_package_hash_from_name(&contract_package_hash);
+        let default_account = env.borrow().get_account(0);
+        env.borrow_mut().set_caller(default_account);
         contract_package_hash.try_into().unwrap()
     })
 }
