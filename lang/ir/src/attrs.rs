@@ -37,6 +37,12 @@ impl OdraAttribute {
             .iter()
             .any(|attr_kind| matches!(attr_kind, &AttrKind::Payable))
     }
+
+    pub fn is_non_reentrant(&self) -> bool {
+        self.kinds
+            .iter()
+            .any(|attr_kind| matches!(attr_kind, &AttrKind::NonReentrant))
+    }
 }
 
 impl From<OdraAttribute> for Attribute {
@@ -76,7 +82,8 @@ impl TryFrom<syn::Attribute> for OdraAttribute {
 enum AttrKind {
     Constructor,
     Entrypoint,
-    Payable
+    Payable,
+    NonReentrant
 }
 
 impl TryFrom<syn::NestedMeta> for AttrKind {
@@ -95,6 +102,7 @@ impl TryFrom<syn::NestedMeta> for AttrKind {
                         "init" => Ok(AttrKind::Constructor),
                         "payable" => Ok(AttrKind::Payable),
                         "entrypoint" => Ok(AttrKind::Entrypoint),
+                        "non_reentrant" => Ok(AttrKind::NonReentrant),
                         _ => Err(syn::Error::new_spanned(
                             meta,
                             "unknown Odra attribute argument (path)"

@@ -159,11 +159,27 @@ fn build_entrypoints_calls(methods: &[&Method], struct_ident: &Ident) -> TokenSt
                     }
                 }
             };
+            let non_reentrant = entrypoint.attrs.iter().any(|a| a.is_non_reentrant());
+            let reentrancy_check = match non_reentrant {
+                true => quote! {
+                    if odra::contract_env::get_var("__reentrancy_guard").unwrap_or_default(){
+                        odra::contract_env::revert(odra::types::ExecutionError::reentrant_call());
+                    }
+                    odra::contract_env::set_var("__reentrancy_guard", true);
+                },
+                false => quote!()
+            };
+            let reentrancy_cleanup = match non_reentrant {
+                true => quote!(odra::contract_env::set_var("__reentrancy_guard", false);),
+                false => quote!()
+            };
             quote! {
                 entrypoints.insert(#name, (#arg_names, |name, args| {
+                    #reentrancy_check
                     #attached_value_check
                     let mut instance = <#struct_ident as odra::Instance>::instance(name.as_str());
                     let result = instance.#ident(#args);
+                    #reentrancy_cleanup
                     #return_value
                 }));
             }

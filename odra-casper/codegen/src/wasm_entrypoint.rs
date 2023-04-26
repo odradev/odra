@@ -21,7 +21,7 @@ impl ToTokens for WasmEntrypoint<'_> {
             .for_each(|arg| fn_args.push(format_ident!("{}", arg.ident)));
 
         let payable = match self.0.ty {
-            EntrypointType::PublicPayable => quote! {
+            EntrypointType::PublicPayable { .. } => quote! {
                 odra::casper::utils::handle_attached_value();
             },
             _ => quote! {
@@ -30,10 +30,22 @@ impl ToTokens for WasmEntrypoint<'_> {
         };
 
         let payable_cleanup = match self.0.ty {
-            EntrypointType::PublicPayable => quote! {
+            EntrypointType::PublicPayable { .. } => quote! {
                 odra::casper::utils::clear_attached_value();
             },
             _ => quote!()
+        };
+
+        let non_reentrant_before = if self.0.ty.is_non_reentrant() {
+            quote!(odra::casper::utils::non_reentrant_before();)
+        } else {
+            quote!()
+        };
+
+        let non_reentrant_after = if self.0.ty.is_non_reentrant() {
+            quote!(odra::casper::utils::non_reentrant_after();)
+        } else {
+            quote!()
         };
 
         let contract_call = match self.0.ret {
@@ -46,8 +58,12 @@ impl ToTokens for WasmEntrypoint<'_> {
                 #args
                 let result = contract.#entrypoint_ident(#fn_args);
                 let result = odra::casper::casper_types::CLValue::from_t(result).unwrap_or_revert();
-                odra::casper::casper_contract::contract_api::runtime::ret(result);
             }
+        };
+
+        let return_stmt = match self.0.ret {
+            Type::Unit => quote!(),
+            _ => quote!(odra::casper::casper_contract::contract_api::runtime::ret(result);)
         };
 
         let contract_path = &self.1;
@@ -59,10 +75,13 @@ impl ToTokens for WasmEntrypoint<'_> {
         tokens.extend(quote! {
             #[no_mangle]
             fn #entrypoint_ident() {
+                #non_reentrant_before
                 #payable
                 #contract_instance
                 #contract_call
                 #payable_cleanup
+                #non_reentrant_after
+                #return_stmt
             }
         });
     }
@@ -84,7 +103,9 @@ mod tests {
                 ty: Type::I32
             }],
             ret: Type::Unit,
-            ty: EntrypointType::Public,
+            ty: EntrypointType::Public {
+                non_reentrant: false
+            },
             is_mut: false
         };
         let path: Path = syn::parse2(
@@ -118,7 +139,9 @@ mod tests {
             ident: String::from("pay_me"),
             args: vec![],
             ret: Type::Unit,
-            ty: EntrypointType::PublicPayable,
+            ty: EntrypointType::PublicPayable {
+                non_reentrant: false
+            },
             is_mut: false
         };
         let path: Path = syn::parse_quote!(a::b::c::Contract);
@@ -144,7 +167,9 @@ mod tests {
             ident: String::from("pay_me"),
             args: vec![],
             ret: Type::Unit,
-            ty: EntrypointType::PublicPayable,
+            ty: EntrypointType::PublicPayable {
+                non_reentrant: false
+            },
             is_mut: true
         };
         let path: Path = syn::parse_quote!(a::b::c::Contract);

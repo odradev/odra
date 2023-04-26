@@ -20,13 +20,13 @@ impl ContractEntrypoints<'_> {
         let params = EntrypointParams(&entrypoint.args);
         let ret = WrappedType(&entrypoint.ret);
         let access = match &entrypoint.ty {
-            EntrypointType::Constructor => quote! {
+            EntrypointType::Constructor { .. } => quote! {
                 odra::casper::casper_types::EntryPointAccess::Groups(vec![odra::casper::casper_types::Group::new("constructor")])
             },
-            EntrypointType::Public => {
+            EntrypointType::Public { .. } => {
                 quote! { odra::casper::casper_types::EntryPointAccess::Public }
             }
-            EntrypointType::PublicPayable => {
+            EntrypointType::PublicPayable { .. } => {
                 quote! { odra::casper::casper_types::EntryPointAccess::Public }
             }
         };
@@ -90,7 +90,9 @@ mod test {
                 ty: Type::I32
             }],
             ret: Type::Bool,
-            ty: EntrypointType::Public,
+            ty: EntrypointType::Public {
+                non_reentrant: false
+            },
             is_mut: false
         }];
         let ep = ContractEntrypoints(&a);

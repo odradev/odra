@@ -62,7 +62,7 @@ fn generate_call(
 
     let constructors = contract_entrypoints
         .iter()
-        .filter(|ep| ep.ty == EntrypointType::Constructor)
+        .filter(|ep| matches!(ep.ty, EntrypointType::Constructor { .. }))
         .collect::<Vec<_>>();
 
     let ref_path = &fqn_to_path(ref_fqn);
@@ -155,14 +155,18 @@ mod tests {
                 ty: Type::I32
             }],
             ret: Type::Unit,
-            ty: EntrypointType::Constructor,
+            ty: EntrypointType::Constructor {
+                non_reentrant: false
+            },
             is_mut: false
         };
         let entrypoint = Entrypoint {
             ident: String::from("call_me"),
             args: vec![],
             ret: Type::Bool,
-            ty: EntrypointType::Public,
+            ty: EntrypointType::Public {
+                non_reentrant: false
+            },
             is_mut: false
         };
 

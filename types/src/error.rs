@@ -14,6 +14,7 @@ const CODE_ADDITION_OVERFLOW: u16 = 7;
 const CODE_SUBTRACTION_OVERFLOW: u16 = 8;
 const CODE_NON_PAYABLE: u16 = 9;
 const CODE_TRANSFER_TO_CONTRACT: u16 = 10;
+const CODE_REENTRANT_CALL: u16 = 11;
 
 /// General error type in Odra framework
 #[derive(Clone, Debug, PartialEq)]
@@ -95,6 +96,10 @@ impl ExecutionError {
             CODE_TRANSFER_TO_CONTRACT,
             "Can't transfer tokens to contract."
         )
+    }
+
+    pub fn reentrant_call() -> Self {
+        Self::internal(CODE_REENTRANT_CALL, "Reentrant call.")
     }
 
     fn internal(code: u16, msg: &str) -> Self {

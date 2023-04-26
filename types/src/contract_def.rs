@@ -23,11 +23,21 @@ pub struct Argument {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum EntrypointType {
     /// A special entrypoint that can be called just once on the contract initialization.
-    Constructor,
+    Constructor { non_reentrant: bool },
     /// A regular entrypoint.
-    Public,
+    Public { non_reentrant: bool },
     /// A payable entrypoint.
-    PublicPayable
+    PublicPayable { non_reentrant: bool }
+}
+
+impl EntrypointType {
+    pub fn is_non_reentrant(&self) -> bool {
+        match self {
+            EntrypointType::Constructor { non_reentrant } => *non_reentrant,
+            EntrypointType::Public { non_reentrant } => *non_reentrant,
+            EntrypointType::PublicPayable { non_reentrant } => *non_reentrant
+        }
+    }
 }
 
 /// Defines an event.
