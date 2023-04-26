@@ -32,7 +32,7 @@ pub use {
     list::List,
     mapping::Mapping,
     odra_proc_macros::{
-        execution_error, external_contract, map, module, odra_error, Event, Instance
+        execution_error, external_contract, map, module, odra_error, Event, Instance, OdraType
     },
     odra_utils as utils,
     sequence::Sequence,

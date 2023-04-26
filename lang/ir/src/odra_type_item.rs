@@ -3,13 +3,13 @@ use syn::{DeriveInput, Field, FieldsNamed};
 
 use crate::utils;
 
-/// Odra event definition.
-pub struct EventItem {
+/// Odra Type definition.
+pub struct OdraTypeItem {
     struct_ident: Ident,
     named_fields: FieldsNamed
 }
 
-impl EventItem {
+impl OdraTypeItem {
     pub fn parse(input: DeriveInput) -> Result<Self, syn::Error> {
         let struct_ident = input.ident.clone();
         let named_fields = utils::extract_fields(input)?;

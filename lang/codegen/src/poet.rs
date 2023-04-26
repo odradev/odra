@@ -18,6 +18,10 @@ impl<'a> OdraPoet for &'a odra_ir::EventItem {
     type Poet = generator::event_item::EventItem<'a>;
 }
 
+impl<'a> OdraPoet for &'a odra_ir::OdraTypeItem {
+    type Poet = generator::odra_type_item::OdraTypeItem<'a>;
+}
+
 impl<'a> OdraPoet for &'a odra_ir::InstanceItem {
     type Poet = generator::instance_item::InstanceItem<'a>;
 }

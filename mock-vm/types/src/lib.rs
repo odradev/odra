@@ -20,7 +20,12 @@ pub type Balance = U256;
 pub type BlockTime = u64;
 
 /// A type that can be written to the storage and read from the storage.
-pub trait OdraType: MockVMType {}
+pub trait OdraType: MockVMType {
+    /// Serializes the value.
+    fn as_bytes(&self) -> Option<Vec<u8>> {
+        self.ser().ok()
+    }
+}
 
 impl<T: MockVMType> OdraType for T {}
 
