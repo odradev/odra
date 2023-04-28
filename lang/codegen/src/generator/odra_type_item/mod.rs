@@ -21,12 +21,16 @@ impl GenerateCode for OdraTypeItem<'_> {
 
         let struct_ident = self.item.struct_ident();
 
-        let clone_fields = self.item.fields_iter().map(|field| {
-            let field_ident = field.ident.as_ref().unwrap();
-            quote! {
-                #field_ident: ::core::clone::Clone::clone(&self.#field_ident)
-            }
-        }).collect::<Punctuated<TokenStream, Comma>>();
+        let clone_fields = self
+            .item
+            .fields_iter()
+            .map(|field| {
+                let field_ident = field.ident.as_ref().unwrap();
+                quote! {
+                    #field_ident: ::core::clone::Clone::clone(&self.#field_ident)
+                }
+            })
+            .collect::<Punctuated<TokenStream, Comma>>();
 
         quote! {
             #casper_code
