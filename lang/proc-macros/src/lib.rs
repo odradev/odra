@@ -121,6 +121,10 @@ pub fn derive_event(input: TokenStream) -> TokenStream {
     event::generate_code(parse_macro_input!(input as DeriveInput)).into()
 }
 
+/// Implements boilerplate code required by an OdraType.
+///
+/// Implements [OdraType](../odra/types/trait.OdraType.html) trait,
+/// [OdraItem](../odra/trait.OdraItem.html) trait, and serialization/deserialization.
 #[proc_macro_derive(OdraType)]
 pub fn derive_odra_type(input: TokenStream) -> TokenStream {
     odra_type::generate_code(parse_macro_input!(input as DeriveInput)).into()
