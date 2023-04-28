@@ -14,7 +14,7 @@ pub struct TimeLockWallet {
 #[odra::module]
 impl TimeLockWallet {
     #[odra(init)]
-    pub fn init(&mut self, lock_duration: BlockTime) {
+    pub fn init(&mut self, lock_duration: &BlockTime) {
         self.lock_duration.set(lock_duration);
     }
 
@@ -31,9 +31,9 @@ impl TimeLockWallet {
         }
 
         // Update state, emit event
-        self.balances.set(&caller, amount);
+        self.balances.set(&caller, &amount);
         self.lock_expiration_map
-            .set(&caller, current_block_time + self.lock_duration());
+            .set(&caller, &(current_block_time + self.lock_duration()));
         Deposit {
             address: caller,
             amount
@@ -41,14 +41,14 @@ impl TimeLockWallet {
         .emit();
     }
 
-    pub fn withdraw(&mut self, amount: Balance) {
+    pub fn withdraw(&mut self, amount: &Balance) {
         // Extract values
         let caller: Address = contract_env::caller();
         let current_block_time: BlockTime = contract_env::get_block_time();
         let balance: Balance = self.balances.get_or_default(&caller);
 
         // Balance check
-        if amount > balance {
+        if *amount > balance {
             contract_env::revert(Error::InsufficientBalance)
         }
 
@@ -59,16 +59,16 @@ impl TimeLockWallet {
         }
 
         // Transfer tokens, emit event
-        contract_env::transfer_tokens(caller, amount);
+        contract_env::transfer_tokens(caller, *amount);
         self.balances.subtract(&caller, amount);
         Withdrawal {
             address: caller,
-            amount
+            amount: *amount
         }
         .emit();
     }
 
-    pub fn get_balance(&self, address: Address) -> Balance {
+    pub fn get_balance(&self, address: &Address) -> Balance {
         self.balances.get_or_default(&address)
     }
 
@@ -113,7 +113,7 @@ mod test {
 
     fn setup() -> (TimeLockWalletRef, Address, Address) {
         (
-            TimeLockWalletDeployer::init(ONE_DAY_IN_SECONDS),
+            TimeLockWalletDeployer::init(&ONE_DAY_IN_SECONDS),
             test_env::get_account(0),
             test_env::get_account(1)
         )
@@ -142,8 +142,8 @@ mod test {
         single_deposit(user_2, user_2_deposit);
 
         // Then the users' balance is the contract is equal to the deposited amount.
-        assert_eq!(contract.get_balance(user_1), user_1_deposit);
-        assert_eq!(contract.get_balance(user_2), user_2_deposit);
+        assert_eq!(contract.get_balance(&user_1), user_1_deposit);
+        assert_eq!(contract.get_balance(&user_2), user_2_deposit);
 
         // Then two deposit event were emitted.
         assert_events!(
@@ -186,9 +186,9 @@ mod test {
         let balance_before_withdrawals = test_env::token_balance(user);
         let first_withdrawal_amount: Balance = 50.into();
         let second_withdrawal_amount: Balance = 40.into();
-        contract.withdraw(first_withdrawal_amount);
+        contract.withdraw(&first_withdrawal_amount);
         let mut gas_used = test_env::last_call_contract_gas_used();
-        contract.withdraw(second_withdrawal_amount);
+        contract.withdraw(&second_withdrawal_amount);
         gas_used = gas_used + test_env::last_call_contract_gas_used();
 
         // Then the native token balance is updated.
@@ -201,7 +201,7 @@ mod test {
 
         // Then the user balance in the contract is deducted.
         assert_eq!(
-            contract.get_balance(user),
+            contract.get_balance(&user),
             deposit_amount - first_withdrawal_amount - second_withdrawal_amount
         );
 
@@ -227,7 +227,7 @@ mod test {
             contract.with_tokens(100).deposit();
 
             // When the user withdraws tokens before the lock is released, an error occurs.
-            contract.withdraw(100.into());
+            contract.withdraw(&100.into());
         });
     }
 
@@ -242,7 +242,7 @@ mod test {
             // When the user withdraws more tokens than has in the deposit, an error occurs.
             test_env::advance_block_time_by(ONE_DAY_IN_SECONDS + 1);
             let withdrawal = deposit + 1;
-            contract.withdraw(withdrawal.into());
+            contract.withdraw(&withdrawal.into());
         });
     }
 }

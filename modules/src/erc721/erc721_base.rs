@@ -20,7 +20,7 @@ pub struct Erc721Base {
 
 impl Erc721 for Erc721Base {
     fn balance_of(&self, owner: &Address) -> U256 {
-        self.balances.get_or_default(&owner)
+        self.balances.get_or_default(owner)
     }
 
     fn owner_of(&self, token_id: &U256) -> Address {
@@ -69,7 +69,7 @@ impl Erc721 for Erc721Base {
             revert(Error::NotAnOwnerOrApproved);
         }
 
-        self.token_approvals.set(&token_id, approved);
+        self.token_approvals.set(token_id, approved);
 
         Approval {
             owner,
@@ -95,8 +95,8 @@ impl Erc721 for Erc721Base {
     }
 
     fn get_approved(&self, token_id: &U256) -> Option<Address> {
-        self.assert_exists(&token_id);
-        self.token_approvals.get(&token_id).unwrap_or_default()
+        self.assert_exists(token_id);
+        self.token_approvals.get(token_id).unwrap_or_default()
     }
 
     fn is_approved_for_all(&self, owner: &Address, operator: &Address) -> bool {
@@ -128,9 +128,9 @@ impl Erc721Base {
 
     fn transfer(&mut self, from: &Address, to: &Address, token_id: &U256) {
         self.clear_approval(token_id);
-        self.balances.set(&from, &(self.balance_of(from) - 1));
-        self.balances.set(&to, &(self.balance_of(to) + 1));
-        self.owners.set(&token_id, &Some(*to));
+        self.balances.set(from, &(self.balance_of(from) - 1));
+        self.balances.set(to, &(self.balance_of(to) + 1));
+        self.owners.set(token_id, &Some(*to));
 
         Transfer {
             from: Some(*from),
@@ -141,8 +141,8 @@ impl Erc721Base {
     }
 
     pub fn clear_approval(&mut self, token_id: &U256) {
-        if self.token_approvals.get_or_default(&token_id).is_some() {
-            self.token_approvals.set(&token_id, &None);
+        if self.token_approvals.get_or_default(token_id).is_some() {
+            self.token_approvals.set(token_id, &None);
         }
     }
 

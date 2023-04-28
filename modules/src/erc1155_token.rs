@@ -76,8 +76,8 @@ impl OwnedErc1155 for Erc1155Token {
         let caller = caller();
         self.ownable.assert_owner(&caller);
 
-        let current_balance = self.core.balances.get(&(*to, *id)).unwrap_or_default();
-        self.core.balances.set(&(*to, *id), &(*amount + current_balance));
+        let current_balance = self.core.balances.get_instance(to).get_or_default(&id);
+        self.core.balances.get_instance(to).set(&id, &(*amount + current_balance));
 
         TransferSingle {
             operator: Some(caller),
@@ -107,18 +107,16 @@ impl OwnedErc1155 for Erc1155Token {
         self.ownable.assert_owner(&caller);
 
         for (id, amount) in ids.iter().zip(amounts.iter()) {
-            let current_balance = self.core.balances.get(&(*to, *id)).unwrap_or_default();
-            self.core
-                .balances
-                .set(&(*to, *id), &(*amount + current_balance));
+            let current_balance = self.core.balances.get_instance(to).get_or_default(&id);
+            self.core.balances.get_instance(to).set(&id, &(*amount + current_balance));
         }
 
         TransferBatch {
             operator: Some(caller),
             from: None,
             to: Some(*to),
-            ids: ids.clone(),
-            values: amounts.clone()
+            ids: ids.to_vec(),
+            values: amounts.to_vec()
         }
         .emit();
 
@@ -130,14 +128,15 @@ impl OwnedErc1155 for Erc1155Token {
         let caller = caller();
         self.ownable.assert_owner(&caller);
 
-        let current_balance = self.core.balances.get(&(*from, *id)).unwrap_or_default();
+        let current_balance = self.core.balances.get_instance(from).get_or_default(&id);
         if current_balance < *amount {
             revert(Error::InsufficientBalance)
         }
 
         self.core
             .balances
-            .set(&(*from, *id), &(current_balance - *amount));
+            .get_instance(from)
+            .set(&id, &(current_balance - *amount));
 
         TransferSingle {
             operator: Some(caller),
@@ -158,21 +157,22 @@ impl OwnedErc1155 for Erc1155Token {
         self.ownable.assert_owner(&caller);
 
         for (id, amount) in ids.iter().zip(amounts.iter()) {
-            let current_balance = self.core.balances.get(&(*from, *id)).unwrap_or_default();
+            let current_balance = self.core.balances.get_instance(from).get_or_default(&id);
             if current_balance < *amount {
                 revert(Error::InsufficientBalance)
             }
             self.core
                 .balances
-                .set(&(*from, *id), &(current_balance - *amount));
+                .get_instance(from)
+                .set(id, &(current_balance - *amount));
         }
 
         TransferBatch {
             operator: Some(caller),
             from: Some(*from),
             to: None,
-            ids: ids.clone(),
-            values: amounts.clone()
+            ids: ids.to_vec(),
+            values: amounts.to_vec()
         }
         .emit();
     }
@@ -883,7 +883,6 @@ mod tests {
     }
 
     #[test]
-    // #[ignore]
     fn safe_batch_transfer_to_valid_receiver() {
         // Given a deployed contract
         let mut env = setup();
@@ -929,7 +928,6 @@ mod tests {
     }
 
     #[test]
-    // #[ignore]
     fn safe_batch_transfer_to_valid_receiver_with_data() {
         // Given a deployed contract
         let mut env = setup();
@@ -975,7 +973,6 @@ mod tests {
     }
 
     #[test]
-    // #[ignore]
     fn safe_batch_transfer_to_invalid_receiver() {
         assert_exception(
             OdraError::VmError(NoSuchMethod("on_erc1155_batch_received".to_string())),
@@ -995,7 +992,7 @@ mod tests {
                     &env.alice,
                     &receiver.address(),
                     &vec![U256::one(), U256::from(2)],
-                    &vec![100.into(), 100.into()],
+                   &vec![100.into(), 100.into()],
                     &None
                 );
             }

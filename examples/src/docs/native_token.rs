@@ -9,8 +9,8 @@ impl PublicWallet {
     #[odra(payable)]
     pub fn deposit(&mut self) {}
 
-    pub fn withdraw(&mut self, amount: Balance) {
-        contract_env::transfer_tokens(contract_env::caller(), amount);
+    pub fn withdraw(&mut self, amount: &Balance) {
+        contract_env::transfer_tokens(contract_env::caller(), *amount);
     }
 }
 
@@ -34,7 +34,7 @@ mod tests {
             Balance::from(100)
         );
 
-        my_contract.withdraw(Balance::from(25));
+        my_contract.withdraw(&Balance::from(25));
         assert_eq!(
             test_env::token_balance(my_contract.address()),
             Balance::from(75)

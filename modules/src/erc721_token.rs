@@ -98,16 +98,16 @@ impl OwnedErc721WithMetadata for Erc721Token {
     pub fn mint(&mut self, to: &Address, token_id: &U256) {
         self.ownable.assert_owner(&caller());
 
-        if self.core.exists(&token_id) {
+        if self.core.exists(token_id) {
             revert(Error::TokenAlreadyExists)
         }
 
-        self.core.balances.add(&to, &U256::from(1));
-        self.core.owners.set(&token_id, &Some(*to));
+        self.core.balances.add(to, &U256::from(1));
+        self.core.owners.set(token_id, &Some(*to));
     }
 
     pub fn burn(&mut self, token_id: &U256) {
-        self.core.assert_exists(&token_id);
+        self.core.assert_exists(token_id);
         self.ownable.assert_owner(&caller());
 
         let owner = self.core.owner_of(token_id);

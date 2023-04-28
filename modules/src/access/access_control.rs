@@ -30,7 +30,7 @@ pub const DEFAULT_ADMIN_ROLE: Role = [0u8; 32];
 /// More complex role relationships can be established using the `set_role_admin()` function.
 #[odra::module(events = [RoleAdminChanged, RoleGranted, RoleRevoked])]
 pub struct AccessControl {
-    roles: Mapping<(Role, Address), bool>,
+    roles: Mapping<Role, Mapping<Address, bool>>,
     role_admin: Mapping<Role, Role>
 }
 
@@ -38,14 +38,14 @@ pub struct AccessControl {
 impl AccessControl {
     /// Returns true if account has been granted `role`.
     pub fn has_role(&self, role: &Role, address: &Address) -> bool {
-        self.roles.get(&(*role, *address)).unwrap_or_default()
+        self.roles.get_instance(role).get_or_default(address)
     }
 
     /// Returns the admin role that controls `role`.
     ///
     /// The admin role may be changed using [set_admin_role()](Self::set_admin_role()).
     pub fn get_role_admin(&self, role: &Role) -> Role {
-        let admin_role = self.role_admin.get(&role);
+        let admin_role = self.role_admin.get(role);
         if let Some(admin) = admin_role {
             admin
         } else {
@@ -106,7 +106,7 @@ impl AccessControl {
     /// Emits a `RoleAdminChanged` event.
     pub fn set_admin_role(&mut self, role: &Role, admin_role: &Role) {
         let previous_admin_role = self.get_role_admin(role);
-        self.role_admin.set(&role, admin_role);
+        self.role_admin.set(role, admin_role);
         RoleAdminChanged {
             role: *role,
             previous_admin_role,
@@ -123,7 +123,7 @@ impl AccessControl {
     /// May emit a `RoleGranted` event.
     pub fn unchecked_grant_role(&mut self, role: &Role, address: &Address) {
         if !self.has_role(role, address) {
-            self.roles.set(&(*role, *address), &true);
+            self.roles.get_instance(role).set(address, &true);
             RoleGranted {
                 role: *role,
                 address: *address,
@@ -141,7 +141,7 @@ impl AccessControl {
     /// May emit a `RoleRevoked` event.
     pub fn unchecked_revoke_role(&mut self, role: &Role, address: &Address) {
         if self.has_role(role, address) {
-            self.roles.set(&(*role, *address), &false);
+            self.roles.get_instance(role).set(address, &false);
             RoleRevoked {
                 role: *role,
                 address: *address,

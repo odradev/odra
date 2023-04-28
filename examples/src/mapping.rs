@@ -10,42 +10,42 @@ pub struct NestedMapping {
 
 #[odra::module]
 impl NestedMapping {
-    pub fn set_string(&mut self, key1: String, key2: u32, key3: String, value: String) {
+    pub fn set_string(&mut self, key1: &String, key2: &u32, key3: &String, value: &String) {
         map!(self.strings[key1][key2][key3] = value);
     }
 
     #[allow(clippy::too_many_arguments)]
     pub fn set_token(
         &mut self,
-        key1: String,
-        key2: u32,
-        key3: String,
-        token_name: String,
-        decimals: u8,
-        symbol: String,
-        initial_supply: U256
+        key1: &String,
+        key2: &u32,
+        key3: &String,
+        token_name: &String,
+        decimals: &u8,
+        symbol: &String,
+        initial_supply: &U256
     ) {
         self.tokens
-            .get_instance(&key1)
-            .get_instance(&key2)
-            .get_instance(&key3)
+            .get_instance(key1)
+            .get_instance(key2)
+            .get_instance(key3)
             .init(token_name, symbol, decimals, initial_supply);
     }
 
-    pub fn get_string_macro(&self, key1: String, key2: u32, key3: String) -> String {
+    pub fn get_string_macro(&self, key1: &String, key2: &u32, key3: &String) -> String {
         map!(self.strings[key1][key2][key3])
     }
 
-    pub fn get_string_api(&self, key1: String, key2: u32, key3: String) -> String {
-        let mapping = self.strings.get_instance(&key1).get_instance(&key2);
-        mapping.get(&key3).unwrap_or_revert()
+    pub fn get_string_api(&self, key1: &String, key2: &u32, key3: &String) -> String {
+        let mapping = self.strings.get_instance(key1).get_instance(key2);
+        mapping.get(key3).unwrap_or_revert()
     }
 
-    pub fn total_supply(&self, key1: String, key2: u32, key3: String) -> U256 {
+    pub fn total_supply(&self, key1: &String, key2: &u32, key3: &String) -> U256 {
         self.tokens
-            .get_instance(&key1)
-            .get_instance(&key2)
-            .get_instance(&key3)
+            .get_instance(key1)
+            .get_instance(key2)
+            .get_instance(key3)
             .total_supply()
     }
 }
@@ -61,14 +61,14 @@ mod test {
         let (key1, key2, key3) = (String::from("a"), 1, String::from("b"));
         // when set a value
         let value = String::from("value");
-        contract.set_string(key1.clone(), key2, key3.clone(), value.clone());
+        contract.set_string(&key1, &key2, &key3, &value);
         // then the value can be retrieved using both get_string_macro and get_string_api
         assert_eq!(
-            contract.get_string_macro(key1.clone(), key2, key3.clone()),
+            contract.get_string_macro(&key1, &key2, &key3),
             value
         );
         assert_eq!(
-            contract.get_string_api(key1.clone(), key2, key3.clone()),
+            contract.get_string_api(&key1, &key2, &key3),
             value
         );
 
@@ -78,15 +78,15 @@ mod test {
         let symbol = String::from("SYM");
         let initial_supply = 100.into();
         contract.set_token(
-            key1.clone(),
-            key2,
-            key3.clone(),
-            token_name,
-            decimals,
-            symbol,
-            initial_supply
+            &key1,
+            &key2,
+            &key3,
+            &token_name,
+            &decimals,
+            &symbol,
+            &initial_supply
         );
         // then the total supply is set
-        assert_eq!(contract.total_supply(key1, key2, key3), initial_supply);
+        assert_eq!(contract.total_supply(&key1, &key2, &key3), initial_supply);
     }
 }

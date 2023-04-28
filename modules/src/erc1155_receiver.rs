@@ -185,7 +185,7 @@ impl Erc1155ReceiverDeployer {
                 }
             )
         );
-        let mut constructors =
+        let constructors =
             HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Vec<u8>)>::new();
         let address = odra::test_env::register_contract(None, constructors, entrypoints);
         Erc1155ReceiverRef::at(address)

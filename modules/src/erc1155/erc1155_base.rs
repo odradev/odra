@@ -11,13 +11,13 @@ use odra::Mapping;
 /// The ERC1155 base implementation.
 #[odra::module(events = [ApprovalForAll, TransferBatch, TransferSingle])]
 pub struct Erc1155Base {
-    pub balances: Mapping<(Address, U256), U256>,
-    pub approvals: Mapping<(Address, Address), bool>
+    pub balances: Mapping<Address, Mapping<U256, U256>>,
+    pub approvals: Mapping<Address, Mapping<Address, bool>>,
 }
 
 impl Erc1155 for Erc1155Base {
     fn balance_of(&self, owner: &Address, id: &U256) -> U256 {
-        self.balances.get_or_default(&(*owner, *id))
+        self.balances.get_instance(owner).get_or_default(id)
     }
 
     fn balance_of_batch(&self, owners: &Vec<Address>, ids: &Vec<U256>) -> Vec<U256> {
@@ -41,7 +41,7 @@ impl Erc1155 for Erc1155Base {
             revert(Error::ApprovalForSelf);
         }
 
-        self.approvals.set(&(*owner, *operator), approved);
+        self.approvals.get_instance(owner).set(operator, approved);
 
         ApprovalForAll {
             owner: *owner,
@@ -52,7 +52,9 @@ impl Erc1155 for Erc1155Base {
     }
 
     fn is_approved_for_all(&self, owner: &Address, operator: &Address) -> bool {
-        self.approvals.get_or_default(&(*owner, *operator))
+        self.approvals
+            .get_instance(owner)
+            .get_or_default(operator)
     }
 
     fn safe_transfer_from(
@@ -70,10 +72,8 @@ impl Erc1155 for Erc1155Base {
         if from_balance < *amount {
             revert(Error::InsufficientBalance);
         }
-
-        self.balances.set(&(*from, *id), &(from_balance - *amount));
-        self.balances
-            .set(&(*to, *id), &(self.balance_of(to, id) + *amount));
+        self.balances.get_instance(from).set(id, &(from_balance - *amount));
+        self.balances.get_instance(to).set(id, &(self.balance_of(to, id) + *amount));
 
         TransferSingle {
             operator: Some(caller),
@@ -112,17 +112,16 @@ impl Erc1155 for Erc1155Base {
                 revert(Error::InsufficientBalance);
             }
 
-            self.balances.set(&(*from, id), &(from_balance - amount));
-            self.balances
-                .set(&(*to, id), &(self.balance_of(to, &id) + amount));
+            self.balances.get_instance(from).set(&id, &(from_balance - amount));
+            self.balances.get_instance(to).set(&id, &(self.balance_of(to, &id) + amount));
         }
 
         TransferBatch {
             operator: Some(caller),
             from: Some(*from),
             to: Some(*to),
-            ids: ids.clone(),
-            values: amounts.clone()
+            ids: ids.to_vec(),
+            values: amounts.to_vec()
         }
         .emit();
 

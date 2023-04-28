@@ -89,7 +89,7 @@ impl TryFrom<syn::ImplItemMethod> for Method {
     type Error = syn::Error;
 
     fn try_from(method: syn::ImplItemMethod) -> Result<Self, Self::Error> {
-        // validate_args(&method)?;
+        validate_args(&method)?;
 
         let (odra_attrs, attrs) = partition_attributes(method.clone().attrs)?;
         let ident = method.sig.ident.to_owned();
@@ -127,12 +127,7 @@ fn validate_args(method: &syn::ImplItemMethod) -> Result<(), syn::Error> {
             syn::FnArg::Receiver(_) => None,
             syn::FnArg::Typed(pat) => Some(pat.clone())
         })
-        .find(|pat| {
-            match &*pat.ty {
-                syn::Type::Reference(_) => false,
-                _ => true
-            }
-        });
+        .find(|pat| !matches!(&*pat.ty, syn::Type::Reference(_)));
     if let Some(arg) = invalid_arg {
         return Err(syn::Error::new_spanned(
             arg,

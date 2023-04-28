@@ -16,7 +16,7 @@ pub struct Erc20 {
     name: Variable<String>,
     total_supply: Variable<U256>,
     balances: Mapping<Address, U256>,
-    allowances: Mapping<(Address, Address), U256>
+    allowances: Mapping<Address, Mapping<Address, U256>>
 }
 
 #[odra::module]
@@ -36,8 +36,8 @@ impl Erc20 {
         self.decimals.set(decimals);
 
         if let Some(initial_supply) = initial_supply {
-            self.total_supply.set(&initial_supply);
-            self.balances.set(&caller, &initial_supply);
+            self.total_supply.set(initial_supply);
+            self.balances.set(&caller, initial_supply);
 
             if *initial_supply > U256::zero() {
                 Transfer {
@@ -65,7 +65,7 @@ impl Erc20 {
     pub fn approve(&mut self, spender: &Address, amount: &U256) {
         let owner = contract_env::caller();
 
-        self.allowances.set(&(owner, *spender), amount);
+        self.allowances.get_instance(&owner).set(spender, amount);
         Approval {
             owner,
             spender: *spender,
@@ -93,11 +93,11 @@ impl Erc20 {
     }
 
     pub fn balance_of(&self, address: &Address) -> U256 {
-        self.balances.get_or_default(&address)
+        self.balances.get_or_default(address)
     }
 
     pub fn allowance(&self, owner: &Address, spender: &Address) -> U256 {
-        self.allowances.get_or_default(&(*owner, *spender))
+        self.allowances.get_instance(owner).get_or_default(spender)
     }
 
     pub fn mint(&mut self, address: &Address, amount: &U256) {
@@ -134,8 +134,8 @@ impl Erc20 {
             contract_env::revert(Error::InsufficientBalance)
         }
 
-        self.balances.subtract(&owner, amount);
-        self.balances.add(&recipient, amount);
+        self.balances.subtract(owner, amount);
+        self.balances.add(recipient, amount);
 
         Transfer {
             from: Some(*owner),
@@ -146,15 +146,14 @@ impl Erc20 {
     }
 
     fn spend_allowance(&mut self, owner: &Address, spender: &Address, amount: &U256) {
-        let key = (*owner, *spender);
-        let allowance = self.allowances.get_or_default(&key);
+        let allowance = self.allowances.get_instance(owner).get_or_default(spender);
         if allowance < *amount {
             contract_env::revert(Error::InsufficientAllowance)
         }
-        self.allowances.subtract(&key, amount);
+        self.allowances.get_instance(owner).subtract(spender, amount);
         Approval {
-            owner: key.0,
-            spender: key.1,
+            owner: *owner,
+            spender: *spender,
             value: allowance - *amount
         }
         .emit();

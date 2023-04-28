@@ -147,7 +147,7 @@ pub fn self_address() -> Address {
 }
 
 /// Record event to the contract's storage.
-#[inline(always)]
+// #[inline(always)]
 pub fn emit_event<T>(event: T)
 where
     T: OdraType + OdraEvent
