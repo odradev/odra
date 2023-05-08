@@ -125,8 +125,8 @@ pub(crate) mod casper {
     use proc_macro2::{Ident, TokenStream};
     use quote::{format_ident, quote, TokenStreamExt};
 
-    pub fn serialize_struct(struct_ident: &Ident, fields: &[Ident]) -> TokenStream {
-        let name_literal = format_ident!("event_{struct_ident}");
+    pub fn serialize_struct(prefix: &str, struct_ident: &Ident, fields: &[Ident]) -> TokenStream {
+        let name_literal = format_ident!("{prefix}{struct_ident}");
         let name_literal = quote! { stringify!(#name_literal) };
 
         let deserialize_fields = fields

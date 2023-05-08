@@ -15,10 +15,13 @@ mod external_contract_item;
 mod instance_item;
 mod mapping;
 mod module_item;
+mod odra_type_item;
+mod utils;
 
 pub use {
     event_item::EventItem, execution_error::error_enum::ErrorEnumItem,
-    external_contract_item::ExternalContractItem, instance_item::InstanceItem, mapping::MapExpr
+    external_contract_item::ExternalContractItem, instance_item::InstanceItem, mapping::MapExpr,
+    odra_type_item::OdraTypeItem
 };
 
 /// Odra module-related abstractions.

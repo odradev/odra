@@ -52,7 +52,7 @@ impl ToTokens for WrappedType<'_> {
                 let ty = ty.get(0).unwrap();
                 let ty = WrappedType(ty).to_token_stream();
                 quote! {
-                    odra::casper::casper_types::CLType::Tuple1([#ty])
+                    odra::casper::casper_types::CLType::Tuple1([Box::new(#ty)])
                 }
             }
             Type::Tuple2(ty) => {
@@ -61,7 +61,7 @@ impl ToTokens for WrappedType<'_> {
                 let t2 = ty.get(1).unwrap();
                 let t2 = WrappedType(t2).to_token_stream();
                 quote! {
-                    odra::casper::casper_types::CLType::Tuple2([#t1, #t2])
+                    odra::casper::casper_types::CLType::Tuple2([Box::new(#t1), Box::new(#t2)])
                 }
             }
             Type::Tuple3(ty) => {
@@ -72,7 +72,7 @@ impl ToTokens for WrappedType<'_> {
                 let t3 = ty.get(2).unwrap();
                 let t3 = WrappedType(t3).to_token_stream();
                 quote! {
-                    odra::casper::casper_types::CLType::Tuple2([#t1, #t2, #t3])
+                    odra::casper::casper_types::CLType::Tuple2([Box::new(#t1), Box::new(#t2), Box::new(#t3)])
                 }
             }
             Type::ByteArray(b) => quote! {
@@ -109,8 +109,8 @@ mod tests {
             wrapped_type,
             quote!(odra::casper::casper_types::CLType::Option(Box::new(
                 odra::casper::casper_types::CLType::Tuple2([
-                    odra::casper::casper_types::CLType::Bool,
-                    odra::casper::casper_types::CLType::I32
+                    Box::new(odra::casper::casper_types::CLType::Bool),
+                    Box::new(odra::casper::casper_types::CLType::I32)
                 ])
             )))
         );

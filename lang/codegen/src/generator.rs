@@ -6,6 +6,7 @@ pub mod instance_item;
 pub mod mapping;
 pub mod module_impl;
 pub mod module_item;
+pub mod odra_type_item;
 
 pub use {module_impl::ModuleImpl, module_item::ModuleStruct};
 
