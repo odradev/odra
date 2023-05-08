@@ -21,7 +21,7 @@ pub fn generate_code(
                 use std::collections::HashMap;
                 use odra::types::CallArgs;
 
-                let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Vec<u8>)>::new();
+                let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, &CallArgs) -> Vec<u8>)>::new();
                 #entrypoint_calls
 
                 odra::client_env::register_existing_contract(address, entrypoints);
@@ -86,7 +86,7 @@ fn build_default_constructor(
         pub fn default() -> #ref_ident {
             use std::collections::HashMap;
             use odra::types::CallArgs;
-            let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Vec<u8>)>::new();
+            let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, &CallArgs) -> Vec<u8>)>::new();
             #entrypoint_calls
 
             let address = odra::client_env::deploy_new_contract(&#struct_name_snake_case, odra::types::CallArgs::new(), entrypoints);
@@ -132,7 +132,7 @@ fn build_constructor(
             use std::collections::HashMap;
             use odra::types::CallArgs;
 
-            let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Vec<u8>)>::new();
+            let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, &CallArgs) -> Vec<u8>)>::new();
             #entrypoint_calls
 
             let mut args = { #args };

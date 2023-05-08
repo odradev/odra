@@ -30,7 +30,7 @@ macro_rules! delegate_to_env {
 delegate_to_env! {
     /// Registers the contract in the test environment.
     fn register_contract(
-        constructor: Option<(String, CallArgs, EntrypointCall)>,
+        constructor: Option<(String, &CallArgs, EntrypointCall)>,
         constructors: HashMap<String, (EntrypointArgs, EntrypointCall)>,
         entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>
     ) -> Address
@@ -75,7 +75,7 @@ pub fn one_token() -> Balance {
 pub fn call_contract<T: MockVMType>(
     address: Address,
     entrypoint: &str,
-    args: CallArgs,
+    args: &CallArgs,
     amount: Option<Balance>
 ) -> T {
     crate::borrow_env().call_contract(address, entrypoint, args, amount)
