@@ -80,14 +80,14 @@ fn generate_call(
                     let field = &arg.ident;
                     let ty = WrappedType(&arg.ty);
                     quote! {
-                        (stringify!(#field), #ty)
+                        (#field, #ty)
                     }
                 })
                 .collect::<Punctuated<TokenStream2, Comma>>();
 
             quote! {
                 odra::casper::utils::build_event(
-                    stringify!(#ident),
+                    #ident,
                     vec![#fields]
                 )
             }
