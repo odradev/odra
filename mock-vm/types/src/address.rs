@@ -9,7 +9,7 @@ pub const ADDRESS_LENGTH: usize = 8;
 pub const CONTRACT_ADDRESS_PREFIX: u32 = 0x0000cadd;
 
 /// Blockchain-agnostic address representation.
-#[derive(Clone, Copy, PartialEq, Hash, Eq, BorshSerialize, BorshDeserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, BorshSerialize, BorshDeserialize)]
 pub struct Address {
     data: [u8; ADDRESS_LENGTH]
 }
