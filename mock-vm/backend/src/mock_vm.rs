@@ -22,7 +22,7 @@ pub struct MockVm {
 impl MockVm {
     pub fn register_contract(
         &self,
-        constructor: Option<(String, CallArgs, EntrypointCall)>,
+        constructor: Option<(String, &CallArgs, EntrypointCall)>,
         constructors: HashMap<String, (EntrypointArgs, EntrypointCall)>,
         entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>
     ) -> Address {
@@ -54,7 +54,7 @@ impl MockVm {
         &self,
         address: Address,
         entrypoint: &str,
-        args: CallArgs,
+        args: &CallArgs,
         amount: Option<Balance>
     ) -> T {
         self.prepare_call(address, amount);
@@ -78,7 +78,7 @@ impl MockVm {
         T::deser(result).unwrap()
     }
 
-    fn call_constructor(&self, address: Address, entrypoint: &str, args: CallArgs) -> Vec<u8> {
+    fn call_constructor(&self, address: Address, entrypoint: &str, args: &CallArgs) -> Vec<u8> {
         self.prepare_call(address, None);
         // Call contract from register.
         let register = self.contract_register.read().unwrap();
@@ -488,7 +488,7 @@ mod tests {
 
         // when call an existing entrypoint
         let result =
-            instance.call_contract::<u32>(contract_address, &entrypoint, CallArgs::new(), None);
+            instance.call_contract::<u32>(contract_address, &entrypoint, &CallArgs::new(), None);
 
         // then returns the expected value
         assert_eq!(result, call_result);
@@ -502,7 +502,7 @@ mod tests {
         let address = Address::try_from(b"random").unwrap();
 
         // when call a contract
-        instance.call_contract::<()>(address, "abc", CallArgs::new(), None);
+        instance.call_contract::<()>(address, "abc", &CallArgs::new(), None);
 
         // then the vm is in error state
         assert_eq!(
@@ -519,7 +519,12 @@ mod tests {
 
         // when call non-existing entrypoint
         let invalid_entrypoint = entrypoint.chars().take(1).collect::<String>();
-        instance.call_contract::<()>(contract_address, &invalid_entrypoint, CallArgs::new(), None);
+        instance.call_contract::<()>(
+            contract_address,
+            &invalid_entrypoint,
+            &CallArgs::new(),
+            None
+        );
 
         // then the vm is in error state
         assert_eq!(
@@ -660,7 +665,7 @@ mod tests {
         instance.call_contract::<u32>(
             contract_address,
             &entrypoint_name,
-            CallArgs::new(),
+            &CallArgs::new(),
             Some(caller_balance)
         );
 
@@ -682,7 +687,7 @@ mod tests {
         instance.call_contract::<()>(
             contract_address,
             &entrypoint_name,
-            CallArgs::new(),
+            &CallArgs::new(),
             Some(caller_balance + 1)
         );
 

@@ -91,18 +91,18 @@ fn build_constructor(
             use std::collections::HashMap;
             use odra::types::{CallArgs};
 
-            let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Vec<u8>)>::new();
+            let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, &CallArgs) -> Vec<u8>)>::new();
             #entrypoints_stream
 
-            let mut constructors = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Vec<u8>)>::new();
+            let mut constructors = HashMap::<String, (Vec<String>, fn(String, &CallArgs) -> Vec<u8>)>::new();
             #constructors_stream
 
             let args = {
                 #args
             };
-            let constructor: Option<(String, CallArgs, fn(String, CallArgs) -> Vec<u8>)> = Some((
+            let constructor: Option<(String, &CallArgs, fn(String, &CallArgs) -> Vec<u8>)> = Some((
                 stringify!(#constructor_ident).to_string(),
-                args,
+                &args,
                 |name, args| {
                     let mut instance = <#struct_ident as odra::Instance>::instance(name.as_str());
                     instance.#constructor_ident( #fn_args );
@@ -125,10 +125,10 @@ fn build_default_constructor(
             use std::collections::HashMap;
             use odra::types::CallArgs;
 
-            let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Vec<u8>)>::new();
+            let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, &CallArgs) -> Vec<u8>)>::new();
             #entrypoints_stream
 
-            let mut constructors = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Vec<u8>)>::new();
+            let mut constructors = HashMap::<String, (Vec<String>, fn(String, &CallArgs) -> Vec<u8>)>::new();
             #constructors_stream
 
             let address = odra::test_env::register_contract(None, constructors, entrypoints);

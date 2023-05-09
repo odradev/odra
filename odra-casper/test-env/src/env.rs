@@ -86,7 +86,7 @@ impl CasperTestEnv {
     }
 
     /// Deploy WASM file with args.
-    pub fn deploy_contract(&mut self, wasm_path: &str, args: CallArgs) {
+    pub fn deploy_contract(&mut self, wasm_path: &str, args: &CallArgs) {
         let mut session_code = PathBuf::from(wasm_path);
         if let Ok(path) = env::var(ODRA_WASM_PATH_ENV_KEY) {
             let mut path = PathBuf::from(path);
@@ -100,7 +100,7 @@ impl CasperTestEnv {
             .with_empty_payment_bytes(runtime_args! {ARG_AMOUNT => *DEFAULT_PAYMENT})
             .with_authorization_keys(&[self.active_account_hash()])
             .with_address(self.active_account_hash())
-            .with_session_code(session_code, args.to_owned())
+            .with_session_code(session_code, args.as_casper_runtime_args().clone())
             .with_deploy_hash(self.next_hash())
             .build();
 
@@ -115,7 +115,7 @@ impl CasperTestEnv {
         &mut self,
         hash: ContractPackageHash,
         entry_point: &str,
-        args: CallArgs
+        args: &CallArgs
     ) -> T {
         self.error = None;
 

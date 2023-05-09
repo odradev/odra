@@ -69,7 +69,7 @@ where
 pub fn call_contract<T: OdraType>(
     address: Address,
     entrypoint: &str,
-    args: CallArgs,
+    args: &CallArgs,
     amount: Option<Balance>
 ) -> T {
     let contract_package_hash = *address.as_contract_package_hash().unwrap_or_revert();
