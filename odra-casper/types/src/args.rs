@@ -2,13 +2,13 @@ use std::ops::{Deref, DerefMut};
 
 use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
-    CLTyped
+    CLType, CLTyped
 };
 
 /// Represents a collection of arguments passed to a smart contract entrypoint call.
 ///
 /// Wraps casper's [RuntimeArgs](casper_types::RuntimeArgs).
-#[derive(Default)]
+#[derive(Default, Debug, Clone)]
 pub struct CallArgs(casper_types::RuntimeArgs);
 
 impl CallArgs {
@@ -54,6 +54,12 @@ impl FromBytes for CallArgs {
     fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), casper_types::bytesrepr::Error> {
         casper_types::RuntimeArgs::from_bytes(bytes)
             .map(|(args, leftovers)| (CallArgs(args), leftovers))
+    }
+}
+
+impl CLTyped for CallArgs {
+    fn cl_type() -> CLType {
+        CLType::Any
     }
 }
 
