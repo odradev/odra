@@ -2,7 +2,7 @@ use crate::{types::OdraType, Instance, UnwrapOrRevert, Variable};
 use num_traits::{Num, One, Zero};
 
 /// A module that stores a single value in the storage that can be read or incremented.
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Sequence<T>
 where
     T: Num + One + OdraType
