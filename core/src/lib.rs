@@ -29,7 +29,7 @@ pub mod test_utils;
 pub use {
     instance::Instance,
     item::OdraItem,
-    list::List,
+    list::{Iter, List},
     mapping::Mapping,
     odra_proc_macros::{
         execution_error, external_contract, map, module, odra_error, Event, Instance, OdraType
