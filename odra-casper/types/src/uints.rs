@@ -1,7 +1,5 @@
 use crate::{CLTyped, FromBytes, ToBytes};
-use num_traits::{
-    Bounded, CheckedMul, CheckedSub, Num, One, Unsigned, WrappingAdd, WrappingSub, Zero
-};
+use num_traits::{Bounded, CheckedSub, Num, One, Unsigned, WrappingAdd, WrappingSub, Zero};
 use odra_types::{
     arithmetic::{ArithmeticsError, OverflowingAdd, OverflowingSub},
     ExecutionError
@@ -23,7 +21,7 @@ macro_rules! impl_casper_type_numeric_wrapper {
                     self.inner.as_u32()
                 }
 
-                pub fn max() -> Self {
+                pub fn max_value() -> Self {
                     Self {
                         inner: casper_types::$ty::MAX
                     }
@@ -43,6 +41,14 @@ macro_rules! impl_casper_type_numeric_wrapper {
 
                 pub fn is_zero(&self) -> bool {
                     <Self as Zero>::is_zero(self)
+                }
+
+                pub fn checked_mul(&self, v: $ty) -> Option<$ty> {
+                    casper_types::$ty::checked_mul(self.inner, v.inner).map(|inner| $ty { inner })
+                }
+
+                pub fn checked_div(&self, v: $ty) -> Option<$ty> {
+                    casper_types::$ty::checked_div(self.inner, v.inner).map(|inner| $ty { inner })
                 }
             }
 
@@ -108,12 +114,12 @@ macro_rules! impl_casper_type_numeric_wrapper {
                     Self { inner: self.inner.overflowing_sub(other.inner).0 }
                 }
             }
-
-            impl CheckedMul for $ty {
-                fn checked_mul(&self, v: &$ty) -> Option<$ty> {
-                    casper_types::$ty::checked_mul(self.inner, v.inner).map(|inner| $ty { inner })
-                }
-            }
+            // TODO: FIX Everything regarding uints in casper
+            // impl CheckedMul for $ty {
+            //     fn checked_mul(&self, v: &$ty) -> Option<$ty> {
+            //         casper_types::$ty::checked_mul(self.inner, v.inner).map(|inner| $ty { inner })
+            //     }
+            // }
 
             impl CheckedSub for $ty {
                 fn checked_sub(&self, v: &$ty) -> Option<$ty> {
@@ -289,6 +295,12 @@ fn exceeds_u256(value: casper_types::U512) -> bool {
     value > max_u256
 }
 
+impl From<U512> for u32 {
+    fn from(value: U512) -> Self {
+        value.inner().0[0] as u32
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use casper_types::bytesrepr::{FromBytes, ToBytes};
@@ -301,11 +313,11 @@ mod tests {
         let value = U512::from(100);
         assert_eq!(value.to_u256().unwrap(), U256::from(100));
 
-        let value = U256::max();
+        let value = U256::max_value();
         let bytes = value.to_bytes().unwrap();
         let (value, remainder) = U512::from_bytes(&bytes).unwrap();
         assert!(remainder.is_empty());
-        assert_eq!(value.to_u256().unwrap(), U256::max());
+        assert_eq!(value.to_u256().unwrap(), U256::max_value());
 
         let more_then_max = value + U512::one();
         assert_eq!(
@@ -319,7 +331,7 @@ mod tests {
         let value = U256::one();
         assert_eq!(value.to_u512().unwrap(), U512::one());
 
-        let value = U256::max();
+        let value = U256::max_value();
         let max_u256 = (casper_types::U512::one() << 256) - 1;
         let max_u256 = U512::from(max_u256);
         assert_eq!(value.to_u512().unwrap(), max_u256);
