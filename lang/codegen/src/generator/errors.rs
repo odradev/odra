@@ -30,6 +30,7 @@ impl GenerateCode for ErrorEnumItem<'_> {
 
         quote::quote! {
             #[odra::odra_error]
+            #[derive(Debug, PartialEq, Eq, Clone, Copy)]
             #item_enum
 
             impl From<#enum_ident> for odra::types::ExecutionError {
