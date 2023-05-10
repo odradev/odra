@@ -82,7 +82,8 @@ where
 
 pub(crate) mod mock_vm {
     use proc_macro2::{Ident, TokenStream};
-    use quote::quote;
+    use quote::{format_ident, quote};
+    use syn::DataEnum;
 
     pub fn serialize_struct(struct_ident: &Ident, fields: &[Ident]) -> TokenStream {
         let fields_serialization = fields
@@ -114,6 +115,118 @@ pub(crate) mod mock_vm {
                     Ok(Self {
                         #fields_deserialization
                     })
+                }
+            }
+        }
+    }
+
+    pub fn serialize_enum(struct_ident: &Ident, data: &DataEnum) -> TokenStream {
+        let variants = &data.variants;
+        let variant_idx = variants
+            .iter()
+            .enumerate()
+            .map(|(idx, v)| {
+                let ident = &v.ident;
+                let idx = idx as u8;
+                match &v.fields {
+                    syn::Fields::Named(_) => quote!(#struct_ident::#ident { .. } => #idx,),
+                    syn::Fields::Unnamed(_) => quote!(#struct_ident::#ident(..) => #idx,),
+                    syn::Fields::Unit => quote!(#struct_ident::#ident => #idx,)
+                }
+            })
+            .collect::<TokenStream>();
+
+        let variant_idx_serialization = quote! {
+            let variant_idx: u8 = match self {
+                #variant_idx
+            };
+            writer.write_all(&variant_idx.to_le_bytes())?;
+        };
+
+        let fields_serialization_matching = variants
+            .iter()
+            .map(|v| {
+                let ident = &v.ident;
+                let fields = v
+                    .fields
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, field)| match &field.ident {
+                        Some(ident) => ident.clone(),
+                        None => format_ident!("f{}", idx)
+                    })
+                    .collect::<Vec<_>>();
+                let serialized_fields = fields
+                    .iter()
+                    .map(|ident| quote!(odra::types::BorshSerialize::serialize(#ident, writer)?;))
+                    .collect::<TokenStream>();
+                match &v.fields {
+                    syn::Fields::Named(_) => quote!(#struct_ident::#ident { #(#fields,)*  } => {
+                        #serialized_fields
+                    },),
+                    syn::Fields::Unnamed(_) => quote!(#struct_ident::#ident( #(#fields,)* ) => {
+                        #serialized_fields
+                    },),
+                    syn::Fields::Unit => quote!(#struct_ident::#ident => {},)
+                }
+            })
+            .collect::<TokenStream>();
+
+        let fields_serialization = quote! {
+            match self {
+                #fields_serialization_matching
+            }
+        };
+
+        let fields_deserialization = variants
+            .iter()
+            .enumerate()
+            .map(|(idx, v)| {
+                let ident = &v.ident;
+                let idx = idx as u8;
+                let fields = v
+                    .fields
+                    .iter()
+                    .map(|field| match &field.ident {
+                        Some(ident) => {
+                            quote!(#ident: odra::types::BorshDeserialize::deserialize(buf)?,)
+                        }
+                        None => quote!(odra::types::BorshDeserialize::deserialize(buf)?,)
+                    })
+                    .collect::<TokenStream>();
+                match &v.fields {
+                    syn::Fields::Named(_) => quote!(#idx => #struct_ident::#ident { #fields  },),
+                    syn::Fields::Unnamed(_) => quote!(#idx => #struct_ident::#ident( #fields ),),
+                    syn::Fields::Unit => quote!(#idx => #struct_ident::#ident,)
+                }
+            })
+            .collect::<TokenStream>();
+
+        quote! {
+            #[cfg(feature = "mock-vm")]
+            impl odra::types::BorshSerialize for #struct_ident {
+                fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+                    #variant_idx_serialization
+
+                    #fields_serialization
+                    Ok(())
+                }
+            }
+
+            #[cfg(feature = "mock-vm")]
+            impl odra::types::BorshDeserialize for #struct_ident {
+                fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
+                    let variant_idx: u8 = odra::types::BorshDeserialize::deserialize(buf)?;
+                    let return_value = match variant_idx {
+                        #fields_deserialization
+                        _ => {
+                            return Err(
+                                std::io::Error::new(
+                                    std::io::ErrorKind::InvalidInput, "Unexpected variant index"
+                            ));
+                        }
+                    };
+                    Ok(return_value)
                 }
             }
         }
