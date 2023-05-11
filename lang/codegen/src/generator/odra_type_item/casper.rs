@@ -17,7 +17,7 @@ pub fn generate_code(item: &OdraTypeItem) -> TokenStream {
     }
 
     if let Some(data) = item.data_enum() {
-        // return casper::serialize_enum("", struct_ident, &fields)
+        return casper::serialize_enum(struct_ident, data);
     }
 
     TokenStream::new()

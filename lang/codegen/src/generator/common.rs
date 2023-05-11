@@ -237,15 +237,16 @@ pub(crate) mod casper {
 
     use proc_macro2::{Ident, TokenStream};
     use quote::{format_ident, quote, TokenStreamExt};
+    use syn::{punctuated::Punctuated, token::Comma, DataEnum};
 
     pub fn serialize_struct(prefix: &str, struct_ident: &Ident, fields: &[Ident]) -> TokenStream {
         let name_literal = format_ident!("{prefix}{struct_ident}");
         let name_literal = quote! { stringify!(#name_literal) };
 
         let deserialize_fields = fields
-        .iter()
-        .map(|ident| quote!(let (#ident, bytes) = odra::casper::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;))
-        .collect::<TokenStream>();
+            .iter()
+            .map(|ident| quote!(let (#ident, bytes) = odra::casper::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;))
+            .collect::<TokenStream>();
 
         let construct_struct = fields
             .iter()
@@ -270,6 +271,8 @@ pub(crate) mod casper {
                 }
             })
             .collect::<TokenStream>();
+
+        let cl_type_code = cl_type(struct_ident);
 
         quote! {
             #[cfg(any(feature = "casper", feature = "casper-livenet"))]
@@ -300,11 +303,91 @@ pub(crate) mod casper {
                 }
             }
 
+            #cl_type_code
+        }
+    }
+
+    pub fn serialize_enum(enum_ident: &Ident, data: &DataEnum) -> TokenStream {
+        let cl_type_code = cl_type(enum_ident);
+        let from_bytes_code = enum_from_bytes(enum_ident, data);
+        let to_bytes_code = enum_to_bytes(enum_ident, data);
+
+        quote! {
+            #[cfg(any(feature = "casper", feature = "casper-livenet"))]
+            impl odra::casper::casper_types::bytesrepr::FromBytes for #enum_ident {
+                #from_bytes_code
+            }
+
+            #[cfg(any(feature = "casper", feature = "casper-livenet"))]
+            impl odra::casper::casper_types::bytesrepr::ToBytes for #enum_ident {
+                #to_bytes_code
+            }
+
+            #cl_type_code
+        }
+    }
+
+    fn cl_type(struct_ident: &Ident) -> TokenStream {
+        quote! {
             #[cfg(any(feature = "casper", feature = "casper-livenet"))]
             impl odra::casper::casper_types::CLTyped for #struct_ident {
                 fn cl_type() -> odra::casper::casper_types::CLType {
                     odra::casper::casper_types::CLType::Any
                 }
+            }
+        }
+    }
+
+    fn enum_from_bytes(enum_ident: &Ident, data: &DataEnum) -> TokenStream {
+        let append_bytes = data
+            .variants
+            .iter()
+            .enumerate()
+            .map(|(index, ident)| {
+                let index = index as u8;
+                quote! {
+                  #index => std::result::Result::Ok((#enum_ident::#ident, bytes))
+                }
+            })
+            .collect::<Punctuated<TokenStream, Comma>>();
+
+        quote! {
+            fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper::casper_types::bytesrepr::Error> {
+                let (variant, bytes): (u8, _) = odra::casper::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
+                match variant {
+                    #append_bytes
+                    _ => std::result::Result::Err(odra::casper::casper_types::bytesrepr::Error::Formatting),
+                }
+            }
+        }
+    }
+
+    fn enum_to_bytes(enum_ident: &Ident, data: &DataEnum) -> TokenStream {
+        let append_bytes = data
+            .variants
+            .iter()
+            .enumerate()
+            .map(|(index, ident)| {
+                let index = index as u8;
+                quote! {
+                  #enum_ident::#ident => #index,
+                }
+            })
+            .collect::<TokenStream>();
+
+        quote! {
+            fn serialized_length(&self) -> usize {
+                1
+            }
+
+            fn to_bytes(&self) -> Result<Vec<u8>, odra::casper::casper_types::bytesrepr::Error> {
+                let mut vec = std::vec::Vec::with_capacity(self.serialized_length());
+                vec.append(
+                    &mut match self {
+                        #append_bytes
+                    }.to_bytes()?,
+                );
+                std::result::Result::Ok(vec)
             }
         }
     }
