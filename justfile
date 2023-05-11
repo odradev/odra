@@ -54,3 +54,6 @@ clean:
     cargo clean
     cd examples && cargo odra clean
     cd modules && cargo odra clean
+    rm Cargo.lock
+    cd examples && rm Cargo.lock
+    cd modules && rm Cargo.lock

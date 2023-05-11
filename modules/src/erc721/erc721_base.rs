@@ -79,17 +79,17 @@ impl Erc721 for Erc721Base {
         .emit();
     }
 
-    fn set_approval_for_all(&mut self, operator: &Address, approved: &bool) {
+    fn set_approval_for_all(&mut self, operator: &Address, approved: bool) {
         let caller = caller();
         if &caller == operator {
             revert(Error::ApproveToCaller)
         }
 
-        self.operator_approvals.set(&(caller, *operator), approved);
+        self.operator_approvals.set(&(caller, *operator), &approved);
         ApprovalForAll {
             owner: caller,
             operator: *operator,
-            approved: *approved
+            approved
         }
         .emit();
     }

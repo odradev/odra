@@ -8,7 +8,7 @@ pub struct ModulesContract {
 #[odra::module]
 impl ModulesContract {
     pub fn add_using_module(&self) -> u32 {
-        self.math_engine.add(&3, &5)
+        self.math_engine.add(3, 5)
     }
 }
 

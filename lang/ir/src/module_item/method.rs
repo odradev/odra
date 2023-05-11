@@ -48,12 +48,13 @@ impl ToTokens for Method {
                     syn::Type::Reference(r) => &r.elem,
                     other => other
                 };
-                // let ty = &*arg.ty;
+                let is_ref = matches!(&*arg.ty, syn::Type::Reference(_));
                 let ty = quote!(<#ty as odra::types::Typed>::ty());
                 quote! {
                     odra::types::contract_def::Argument {
                         ident: String::from(stringify!(#name)),
                         ty: #ty,
+                        is_ref: #is_ref,
                     },
                 }
             })
@@ -89,7 +90,7 @@ impl TryFrom<syn::ImplItemMethod> for Method {
     type Error = syn::Error;
 
     fn try_from(method: syn::ImplItemMethod) -> Result<Self, Self::Error> {
-        validate_args(&method)?;
+        // validate_args(&method)?;
 
         let (odra_attrs, attrs) = partition_attributes(method.clone().attrs)?;
         let ident = method.sig.ident.to_owned();
@@ -118,21 +119,4 @@ impl TryFrom<syn::ImplItemMethod> for Method {
             visibility
         })
     }
-}
-
-fn validate_args(method: &syn::ImplItemMethod) -> Result<(), syn::Error> {
-    let invalid_arg = method.sig.inputs
-        .iter()
-        .filter_map(|arg| match arg {
-            syn::FnArg::Receiver(_) => None,
-            syn::FnArg::Typed(pat) => Some(pat.clone())
-        })
-        .find(|pat| !matches!(&*pat.ty, syn::Type::Reference(_)));
-    if let Some(arg) = invalid_arg {
-        return Err(syn::Error::new_spanned(
-            arg,
-            "argument must be a reference",
-        ));
-    }
-    Ok(())
 }

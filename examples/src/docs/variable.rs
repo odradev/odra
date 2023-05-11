@@ -11,10 +11,10 @@ pub struct DogContract {
 #[odra::module]
 impl DogContract {
     #[odra(init)]
-    pub fn init(&mut self, barks: &bool, weight: &u32, name: &String) {
-        self.barks.set(barks);
-        self.weight.set(weight);
-        self.name.set(name);
+    pub fn init(&mut self, barks: bool, weight: u32, name: String) {
+        self.barks.set(&barks);
+        self.weight.set(&weight);
+        self.name.set(&name);
         self.walks.set(&Vec::<u32>::default());
     }
 
@@ -47,7 +47,7 @@ mod tests {
 
     #[test]
     fn init_test() {
-        let dog_contract = DogContractDeployer::init(&true, &10, &"Mantus".to_string());
+        let dog_contract = DogContractDeployer::init(true, 10, "Mantus".to_string());
         assert!(dog_contract.barks());
         assert_eq!(dog_contract.weight(), 10);
         assert_eq!(dog_contract.name(), "Mantus".to_string());

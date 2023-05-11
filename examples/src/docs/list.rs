@@ -9,8 +9,8 @@ pub struct DogContract3 {
 #[odra::module]
 impl DogContract3 {
     #[odra(init)]
-    pub fn init(&mut self, name: &String) {
-        self.name.set(name);
+    pub fn init(&mut self, name: String) {
+        self.name.set(&name);
     }
 
     pub fn name(&self) -> String {
@@ -25,8 +25,8 @@ impl DogContract3 {
         self.walks.iter().sum()
     }
 
-    pub fn walk_the_dog(&mut self, length: &u32) {
-        self.walks.push(length);
+    pub fn walk_the_dog(&mut self, length: u32) {
+        self.walks.push(&length);
     }
 }
 
@@ -36,11 +36,11 @@ mod tests {
 
     #[test]
     fn init_test() {
-        let mut dog_contract = DogContract3Deployer::init(&"Mantus".to_string());
+        let mut dog_contract = DogContract3Deployer::init("Mantus".to_string());
         assert_eq!(dog_contract.walks_amount(), 0);
         assert_eq!(dog_contract.walks_total_length(), 0);
-        dog_contract.walk_the_dog(&5);
-        dog_contract.walk_the_dog(&10);
+        dog_contract.walk_the_dog(5);
+        dog_contract.walk_the_dog(10);
         assert_eq!(dog_contract.walks_amount(), 2);
         assert_eq!(dog_contract.walks_total_length(), 15);
     }

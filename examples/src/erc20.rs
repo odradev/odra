@@ -18,11 +18,11 @@ pub struct Erc20 {
 #[odra::module]
 impl Erc20 {
     #[odra(init)]
-    pub fn init(&mut self, name: &String, symbol: &String, decimals: &u8, initial_supply: &U256) {
+    pub fn init(&mut self, name: String, symbol: String, decimals: u8, initial_supply: &U256) {
         let caller = contract_env::caller();
-        self.name.set(name);
-        self.symbol.set(symbol);
-        self.decimals.set(decimals);
+        self.name.set(&name);
+        self.symbol.set(&symbol);
+        self.decimals.set(&decimals);
         self.mint(&caller, initial_supply);
     }
 
@@ -156,9 +156,9 @@ pub mod tests {
 
     pub fn setup() -> Erc20Ref {
         Erc20Deployer::init(
-            &String::from(NAME),
-            &String::from(SYMBOL),
-            &DECIMALS,
+            String::from(NAME),
+            String::from(SYMBOL),
+            DECIMALS,
             &INITIAL_SUPPLY.into()
         )
     }

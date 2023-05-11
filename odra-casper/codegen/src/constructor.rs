@@ -20,8 +20,15 @@ impl ToTokens for WasmConstructor<'_> {
                 let mut fn_args = FnArgs::new();
                 ep.args
                     .iter()
-                    .map(|arg| format_ident!("{}", arg.ident))
-                    .for_each(|ident| fn_args.push(quote!(&#ident)));
+                    .map(|arg| {
+                        let ident = format_ident!("{}", arg.ident);
+                        if arg.is_ref {
+                            quote!(&#ident)
+                        } else {
+                            quote!(#ident)
+                        }
+                    })
+                    .for_each(|stream: TokenStream| fn_args.push(stream));
 
                 (entrypoint_ident, casper_args, fn_args)
             })

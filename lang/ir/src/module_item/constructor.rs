@@ -38,11 +38,13 @@ impl ToTokens for Constructor {
                     syn::Type::Reference(r) => &r.elem,
                     other => other
                 };
+                let is_ref = matches!(&*arg.ty, syn::Type::Reference(_));
                 let ty = quote!(<#ty as odra::types::Typed>::ty());
                 quote! {
                     odra::types::contract_def::Argument {
                         ident: String::from(stringify!(#name)),
                         ty: #ty,
+                        is_ref: #is_ref,
                     },
                 }
             })

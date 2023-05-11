@@ -30,7 +30,7 @@ impl OwnedErc1155 for Erc1155Token {
     pub fn balance_of_batch(&self, owners: &Vec<Address>, ids: &Vec<U256>) -> Vec<U256> {
         self.core.balance_of_batch(owners, ids)
     }
-    pub fn set_approval_for_all(&mut self, operator: &Address, approved: &bool) {
+    pub fn set_approval_for_all(&mut self, operator: &Address, approved: bool) {
         self.core.set_approval_for_all(operator, approved);
     }
     pub fn is_approved_for_all(&self, owner: &Address, operator: &Address) -> bool {
@@ -508,7 +508,7 @@ mod tests {
 
         // When we set approval for all
         test_env::set_caller(env.alice);
-        env.token.set_approval_for_all(&env.bob, &true);
+        env.token.set_approval_for_all(&env.bob, true);
 
         // Then the approval is set
         assert!(env.token.is_approved_for_all(&env.alice, &env.bob));
@@ -532,11 +532,11 @@ mod tests {
 
         // And approval for all set
         test_env::set_caller(env.alice);
-        env.token.set_approval_for_all(&env.bob, &true);
+        env.token.set_approval_for_all(&env.bob, true);
 
         // When we unset approval for all
         test_env::set_caller(env.alice);
-        env.token.set_approval_for_all(&env.bob, &false);
+        env.token.set_approval_for_all(&env.bob, false);
 
         // Then the approval is unset
         assert!(!env.token.is_approved_for_all(&env.alice, &env.bob));
@@ -561,7 +561,7 @@ mod tests {
 
             // Then approving for self throws an error
             test_env::set_caller(env.alice);
-            env.token.set_approval_for_all(&env.alice, &true);
+            env.token.set_approval_for_all(&env.alice, true);
         });
     }
 
@@ -606,7 +606,7 @@ mod tests {
 
         // And approval for all set
         test_env::set_caller(env.alice);
-        env.token.set_approval_for_all(&env.bob, &true);
+        env.token.set_approval_for_all(&env.bob, true);
 
         // When we transfer tokens
         test_env::set_caller(env.bob);
@@ -710,7 +710,7 @@ mod tests {
 
         // And approval for all set
         test_env::set_caller(env.alice);
-        env.token.set_approval_for_all(&env.bob, &true);
+        env.token.set_approval_for_all(&env.bob, true);
 
         // When we transfer tokens
         test_env::set_caller(env.bob);

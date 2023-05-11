@@ -23,7 +23,7 @@ pub struct Erc721Token {
 #[odra::module]
 impl OwnedErc721WithMetadata for Erc721Token {
     #[odra(init)]
-    pub fn init(&mut self, name: &String, symbol: &String, base_uri: &String) {
+    pub fn init(&mut self, name: String, symbol: String, base_uri: String) {
         self.metadata.init(name, symbol, base_uri);
         self.ownable.init();
     }
@@ -71,7 +71,7 @@ impl OwnedErc721WithMetadata for Erc721Token {
         self.core.approve(approved, token_id);
     }
 
-    pub fn set_approval_for_all(&mut self, operator: &Address, approved: &bool) {
+    pub fn set_approval_for_all(&mut self, operator: &Address, approved: bool) {
         self.core.set_approval_for_all(operator, approved);
     }
 
@@ -163,9 +163,9 @@ mod tests {
     fn setup() -> TokenEnv {
         TokenEnv {
             token: Erc721TokenDeployer::init(
-                &NAME.to_string(),
-                &SYMBOL.to_string(),
-                &BASE_URI.to_string()
+                NAME.to_string(),
+                SYMBOL.to_string(),
+                BASE_URI.to_string()
             ),
             alice: test_env::get_account(1),
             bob: test_env::get_account(2),
@@ -325,7 +325,7 @@ mod tests {
 
         // And set Bob as an operator.
         test_env::set_caller(erc721_env.alice);
-        erc721_env.token.set_approval_for_all(&erc721_env.bob, &true);
+        erc721_env.token.set_approval_for_all(&erc721_env.bob, true);
 
         // Then Bob is an operator.
         assert!(erc721_env
@@ -343,11 +343,11 @@ mod tests {
 
         // And set Bob as an operator.
         test_env::set_caller(erc721_env.alice);
-        erc721_env.token.set_approval_for_all(&erc721_env.bob, &true);
+        erc721_env.token.set_approval_for_all(&erc721_env.bob, true);
 
         // And cancel Bob as an operator.
         test_env::set_caller(erc721_env.alice);
-        erc721_env.token.set_approval_for_all(&erc721_env.bob, &false);
+        erc721_env.token.set_approval_for_all(&erc721_env.bob, false);
 
         // Then Bob is not an operator.
         assert!(!erc721_env
@@ -407,7 +407,7 @@ mod tests {
 
         // And set Bob as an operator.
         test_env::set_caller(erc721_env.alice);
-        erc721_env.token.set_approval_for_all(&erc721_env.bob, &true);
+        erc721_env.token.set_approval_for_all(&erc721_env.bob, true);
 
         // And transfer the token to Carol.
         test_env::set_caller(erc721_env.bob);
@@ -474,7 +474,7 @@ mod tests {
         // When deploy a contract with the initial supply
         let mut erc721_env = setup();
         // And another contract which does not support nfts
-        let erc20 = Erc20Deployer::init(&"PLS".to_string(), &"PLASCOIN".to_string(), &10, &None);
+        let erc20 = Erc20Deployer::init("PLS".to_string(), "PLASCOIN".to_string(), 10, &None);
 
         // And mint a token to Alice.
         erc721_env.token.mint(&erc721_env.alice, &U256::from(1));

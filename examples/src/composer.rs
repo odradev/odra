@@ -20,9 +20,9 @@ pub struct ComposableContract {
 #[odra::module]
 impl ComposableContract {
     #[odra(init)]
-    pub fn init(&mut self, version: &u8, value: &String) {
-        self.storage.version.set(version);
-        self.shared.value.set(value);
+    pub fn init(&mut self, version: u8, value: String) {
+        self.storage.version.set(&version);
+        self.shared.value.set(&value);
     }
 
     pub fn get_value(&self) -> String {
@@ -51,7 +51,7 @@ mod test {
     #[test]
     fn t() {
         let shared_value = "shared_value".to_string();
-        let token = ComposableContractDeployer::init(&1, &shared_value);
+        let token = ComposableContractDeployer::init(1, shared_value.clone());
 
         assert_eq!(token.get_value(), shared_value);
 

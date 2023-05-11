@@ -14,7 +14,7 @@ pub struct OwnedToken {
 #[odra::module]
 impl OwnedToken {
     #[odra(init)]
-    pub fn init(&mut self, name: &String, symbol: &String, decimals: &u8, initial_supply: &U256) {
+    pub fn init(&mut self, name: String, symbol: String, decimals: u8, initial_supply: &U256) {
         let deployer = contract_env::caller();
         self.ownable.init(&deployer);
         self.erc20.init(name, symbol, decimals, initial_supply);
@@ -58,9 +58,9 @@ mod tests {
 
     fn setup() -> OwnedTokenRef {
         OwnedTokenDeployer::init(
-            &String::from(NAME),
-            &String::from(SYMBOL),
-            &DECIMALS,
+            String::from(NAME),
+            String::from(SYMBOL),
+            DECIMALS,
             &INITIAL_SUPPLY.into()
         )
     }

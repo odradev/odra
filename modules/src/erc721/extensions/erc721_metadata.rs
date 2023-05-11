@@ -32,10 +32,10 @@ impl Erc721Metadata for Erc721MetadataExtension {
 }
 
 impl Erc721MetadataExtension {
-    pub fn init(&mut self, name: &String, symbol: &String, base_uri: &String) {
-        self.name.set(name);
-        self.symbol.set(symbol);
-        self.base_uri.set(base_uri);
+    pub fn init(&mut self, name: String, symbol: String, base_uri: String) {
+        self.name.set(&name);
+        self.symbol.set(&symbol);
+        self.base_uri.set(&base_uri);
     }
 }
 

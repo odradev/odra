@@ -18,7 +18,7 @@ impl WrappedNativeToken {
         let metadata = contract_env::native_token_metadata();
         let symbol = format!("W{}", metadata.symbol);
         let name = format!("Wrapped {}", metadata.name);
-        self.erc20.init(&symbol, &name, &metadata.decimals, &None);
+        self.erc20.init(symbol, name, metadata.decimals, &None);
     }
 
     #[odra(payable)]

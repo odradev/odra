@@ -8,7 +8,7 @@ pub mod owned_erc1155;
 pub trait Erc1155 {
     fn balance_of(&self, owner: &Address, id: &U256) -> U256;
     fn balance_of_batch(&self, owners: &Vec<Address>, ids: &Vec<U256>) -> Vec<U256>;
-    fn set_approval_for_all(&mut self, operator: &Address, approved: &bool);
+    fn set_approval_for_all(&mut self, operator: &Address, approved: bool);
     fn is_approved_for_all(&self, owner: &Address, operator: &Address) -> bool;
     fn safe_transfer_from(
         &mut self,

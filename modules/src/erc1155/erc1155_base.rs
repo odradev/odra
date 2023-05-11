@@ -35,18 +35,18 @@ impl Erc1155 for Erc1155Base {
         balances
     }
 
-    fn set_approval_for_all(&mut self, operator: &Address, approved: &bool) {
+    fn set_approval_for_all(&mut self, operator: &Address, approved: bool) {
         let owner = &caller();
         if owner == operator {
             revert(Error::ApprovalForSelf);
         }
 
-        self.approvals.get_instance(owner).set(operator, approved);
+        self.approvals.get_instance(owner).set(operator, &approved);
 
         ApprovalForAll {
             owner: *owner,
             operator: *operator,
-            approved: *approved
+            approved
         }
         .emit();
     }

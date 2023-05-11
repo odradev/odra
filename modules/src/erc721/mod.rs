@@ -18,7 +18,7 @@ pub trait Erc721 {
     );
     fn transfer_from(&mut self, from: &Address, to: &Address, token_id: &U256);
     fn approve(&mut self, approved: &Option<Address>, token_id: &U256);
-    fn set_approval_for_all(&mut self, operator: &Address, approved: &bool);
+    fn set_approval_for_all(&mut self, operator: &Address, approved: bool);
     fn get_approved(&self, token_id: &U256) -> Option<Address>;
     fn is_approved_for_all(&self, owner: &Address, operator: &Address) -> bool;
 }

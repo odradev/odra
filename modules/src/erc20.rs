@@ -24,16 +24,16 @@ impl Erc20 {
     #[odra(init)]
     pub fn init(
         &mut self,
-        symbol: &String,
-        name: &String,
-        decimals: &u8,
+        symbol: String,
+        name: String,
+        decimals: u8,
         initial_supply: &Option<U256>
     ) {
         let caller = contract_env::caller();
 
-        self.symbol.set(symbol);
-        self.name.set(name);
-        self.decimals.set(decimals);
+        self.symbol.set(&symbol);
+        self.name.set(&name);
+        self.decimals.set(&decimals);
 
         if let Some(initial_supply) = initial_supply {
             self.total_supply.set(initial_supply);
@@ -209,9 +209,9 @@ mod tests {
 
     fn setup() -> Erc20Ref {
         Erc20Deployer::init(
-            &SYMBOL.to_string(),
-            &NAME.to_string(),
-            &DECIMALS,
+            SYMBOL.to_string(),
+            NAME.to_string(),
+            DECIMALS,
             &Some(INITIAL_SUPPLY.into())
         )
     }

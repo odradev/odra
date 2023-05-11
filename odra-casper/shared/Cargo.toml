@@ -10,6 +10,6 @@ keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm", "smart contracts"]
 
 [dependencies]
-casper-event-standard = "0.2.0"
+casper-event-standard = { workspace = true }
 odra-casper-types = { version = "0.2.0", path = "../types" }
 hex = "0.4.3"

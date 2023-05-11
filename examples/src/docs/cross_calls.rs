@@ -15,7 +15,7 @@ impl CrossContract {
 
     pub fn add_using_another(&self) -> u32 {
         let math_engine_address = self.math_engine.get().unwrap_or_revert();
-        MathEngineRef::at(math_engine_address).add(&3, &5)
+        MathEngineRef::at(math_engine_address).add(3, 5)
     }
 }
 
@@ -24,7 +24,7 @@ pub struct MathEngine {}
 
 #[odra::module]
 impl MathEngine {
-    pub fn add(&self, n1: &u32, n2: &u32) -> u32 {
+    pub fn add(&self, n1: u32, n2: u32) -> u32 {
         n1 + n2
     }
 }
