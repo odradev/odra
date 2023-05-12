@@ -4,12 +4,6 @@ use odra::{
     Mapping, Variable
 };
 
-#[derive(odra::OdraType)]
-enum A {
-    B,
-    C
-}
-
 #[odra::module]
 pub struct TimeLockWallet {
     balances: Mapping<Address, Balance>,

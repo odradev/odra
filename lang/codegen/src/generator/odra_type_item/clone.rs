@@ -1,72 +1,40 @@
 use odra_ir::OdraTypeItem;
-use proc_macro2::{Ident, TokenStream};
-use quote::{format_ident, quote};
+use proc_macro2::TokenStream;
+use quote::quote;
 use syn::{punctuated::Punctuated, token::Comma};
 
-pub fn generate_code(item: &OdraTypeItem, struct_ident: &Ident) -> TokenStream {
-    let clone_struct = item.data_struct().map(|data| {
-        data.fields
-            .iter()
-            .map(|field| {
-                let field_ident = field.ident.as_ref().unwrap();
-                quote!(#field_ident: ::core::clone::Clone::clone(&self.#field_ident))
+pub fn generate_code(item: &OdraTypeItem) -> TokenStream {
+    let ident = item.ident();
+    let clone = match item {
+        OdraTypeItem::Struct(s) => {
+            let code = s
+                .fields()
+                .iter()
+                .map(|field| quote!(#field: ::core::clone::Clone::clone(#field)))
+                .collect::<Punctuated<TokenStream, Comma>>();
+            quote!(#ident {
+                #code
             })
-            .collect::<Punctuated<TokenStream, Comma>>()
-    });
-
-    let clone_enum = item
-        .data_enum()
-        .map(|data|
-            data.variants
-            .iter()
-            .map(|variant| {
-                let ident = &variant.ident;
-                let cloned_fields = variant.fields.iter().enumerate().map(|(idx, f)| {
-                    let field_ident = match &f.ident {
-                        Some(ident) => ident.clone(),
-                        None => format_ident!("f{}", idx),
-                    };
-                    quote!(::core::clone::Clone::clone(#field_ident))
-                }).collect::<Vec<_>>();
-
-                let fields = variant.fields.iter().enumerate().map(|(idx, f)| {
-                    let field_ident = match &f.ident {
-                        Some(ident) => ident.clone(),
-                        None => format_ident!("f{}", idx),
-                    };
-                    quote!(#field_ident)
-                }).collect::<Vec<_>>();
-                match &variant.fields {
-                    syn::Fields::Named(_) => quote! {
-                        #struct_ident::#ident { #(#fields),* } => #struct_ident::#ident {
-                            #(#fields: #cloned_fields),*
-                        }
-                    },
-                    syn::Fields::Unnamed(_) => quote! {
-                        #struct_ident::#ident(#(#fields),*) => #struct_ident::#ident( #(#cloned_fields),*)
-                    },
-                    syn::Fields::Unit => quote!(#struct_ident::#ident => #struct_ident::#ident)
-                }
+        }
+        OdraTypeItem::Enum(e) => {
+            let code = e
+                .variants()
+                .iter()
+                .map(|variant| {
+                    let variant_ident = &variant.ident;
+                    quote!(#ident::#variant_ident => #ident::#variant_ident)
+                })
+                .collect::<Punctuated<TokenStream, Comma>>();
+            quote!(match self {
+                #code
             })
-            .collect::<Punctuated<TokenStream, Comma>>());
-
-    let mut clone = TokenStream::new();
-    if let Some(code) = clone_enum {
-        clone = quote!(match self {
-            #code
-        });
-    }
-
-    if let Some(code) = clone_struct {
-        clone = quote!(#struct_ident {
-            #code
-        });
-    }
+        }
+    };
 
     quote! {
-        impl ::core::clone::Clone for #struct_ident {
+        impl ::core::clone::Clone for #ident {
             #[inline]
-            fn clone(&self) -> #struct_ident {
+            fn clone(&self) -> #ident {
                 #clone
             }
         }

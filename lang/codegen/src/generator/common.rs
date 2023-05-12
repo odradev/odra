@@ -82,8 +82,8 @@ where
 
 pub(crate) mod mock_vm {
     use proc_macro2::{Ident, TokenStream};
-    use quote::{format_ident, quote};
-    use syn::DataEnum;
+    use quote::quote;
+    use syn::{punctuated::Punctuated, token::Comma, Variant};
 
     pub fn serialize_struct(struct_ident: &Ident, fields: &[Ident]) -> TokenStream {
         let fields_serialization = fields
@@ -120,21 +120,14 @@ pub(crate) mod mock_vm {
         }
     }
 
-    pub fn serialize_enum(struct_ident: &Ident, data: &DataEnum) -> TokenStream {
-        let variants = &data.variants;
+    pub fn serialize_enum(struct_ident: &Ident, variants: &[Variant]) -> TokenStream {
         let variant_idx = variants
             .iter()
-            .enumerate()
-            .map(|(idx, v)| {
-                let ident = &v.ident;
-                let idx = idx as u8;
-                match &v.fields {
-                    syn::Fields::Named(_) => quote!(#struct_ident::#ident { .. } => #idx,),
-                    syn::Fields::Unnamed(_) => quote!(#struct_ident::#ident(..) => #idx,),
-                    syn::Fields::Unit => quote!(#struct_ident::#ident => #idx,)
-                }
+            .map(|variant| {
+                let ident = &variant.ident;
+                quote!(#struct_ident::#ident => #struct_ident::#ident as u8)
             })
-            .collect::<TokenStream>();
+            .collect::<Punctuated<TokenStream, Comma>>();
 
         let variant_idx_serialization = quote! {
             let variant_idx: u8 = match self {
@@ -143,72 +136,19 @@ pub(crate) mod mock_vm {
             writer.write_all(&variant_idx.to_le_bytes())?;
         };
 
-        let fields_serialization_matching = variants
-            .iter()
-            .map(|v| {
-                let ident = &v.ident;
-                let fields = v
-                    .fields
-                    .iter()
-                    .enumerate()
-                    .map(|(idx, field)| match &field.ident {
-                        Some(ident) => ident.clone(),
-                        None => format_ident!("f{}", idx)
-                    })
-                    .collect::<Vec<_>>();
-                let serialized_fields = fields
-                    .iter()
-                    .map(|ident| quote!(odra::types::BorshSerialize::serialize(#ident, writer)?;))
-                    .collect::<TokenStream>();
-                match &v.fields {
-                    syn::Fields::Named(_) => quote!(#struct_ident::#ident { #(#fields,)*  } => {
-                        #serialized_fields
-                    },),
-                    syn::Fields::Unnamed(_) => quote!(#struct_ident::#ident( #(#fields,)* ) => {
-                        #serialized_fields
-                    },),
-                    syn::Fields::Unit => quote!(#struct_ident::#ident => {},)
-                }
-            })
-            .collect::<TokenStream>();
-
-        let fields_serialization = quote! {
-            match self {
-                #fields_serialization_matching
-            }
-        };
-
         let fields_deserialization = variants
             .iter()
-            .enumerate()
-            .map(|(idx, v)| {
-                let ident = &v.ident;
-                let idx = idx as u8;
-                let fields = v
-                    .fields
-                    .iter()
-                    .map(|field| match &field.ident {
-                        Some(ident) => {
-                            quote!(#ident: odra::types::BorshDeserialize::deserialize(buf)?,)
-                        }
-                        None => quote!(odra::types::BorshDeserialize::deserialize(buf)?,)
-                    })
-                    .collect::<TokenStream>();
-                match &v.fields {
-                    syn::Fields::Named(_) => quote!(#idx => #struct_ident::#ident { #fields  },),
-                    syn::Fields::Unnamed(_) => quote!(#idx => #struct_ident::#ident( #fields ),),
-                    syn::Fields::Unit => quote!(#idx => #struct_ident::#ident,)
-                }
+            .map(|variant| {
+                let ident = &variant.ident;
+                quote!(x if x == #struct_ident::#ident as u8 => #struct_ident::#ident)
             })
-            .collect::<TokenStream>();
+            .collect::<Punctuated<TokenStream, Comma>>();
 
         quote! {
             #[cfg(feature = "mock-vm")]
             impl odra::types::BorshSerialize for #struct_ident {
                 fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
                     #variant_idx_serialization
-
-                    #fields_serialization
                     Ok(())
                 }
             }
@@ -218,13 +158,11 @@ pub(crate) mod mock_vm {
                 fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
                     let variant_idx: u8 = odra::types::BorshDeserialize::deserialize(buf)?;
                     let return_value = match variant_idx {
-                        #fields_deserialization
-                        _ => {
-                            return Err(
-                                std::io::Error::new(
-                                    std::io::ErrorKind::InvalidInput, "Unexpected variant index"
-                            ));
-                        }
+                        #fields_deserialization,
+                        _ => return Err(
+                            std::io::Error::new(
+                                std::io::ErrorKind::InvalidInput, "Unexpected variant index"
+                        ))
                     };
                     Ok(return_value)
                 }
@@ -237,7 +175,7 @@ pub(crate) mod casper {
 
     use proc_macro2::{Ident, TokenStream};
     use quote::{format_ident, quote, TokenStreamExt};
-    use syn::{punctuated::Punctuated, token::Comma, DataEnum};
+    use syn::{punctuated::Punctuated, token::Comma, Variant};
 
     pub fn serialize_struct(prefix: &str, struct_ident: &Ident, fields: &[Ident]) -> TokenStream {
         let name_literal = format_ident!("{prefix}{struct_ident}");
@@ -272,8 +210,6 @@ pub(crate) mod casper {
             })
             .collect::<TokenStream>();
 
-        let cl_type_code = cl_type(struct_ident);
-
         quote! {
             #[cfg(any(feature = "casper", feature = "casper-livenet"))]
             impl odra::casper::casper_types::bytesrepr::FromBytes for #struct_ident {
@@ -303,14 +239,18 @@ pub(crate) mod casper {
                 }
             }
 
-            #cl_type_code
+            #[cfg(any(feature = "casper", feature = "casper-livenet"))]
+            impl odra::casper::casper_types::CLTyped for #struct_ident {
+                fn cl_type() -> odra::casper::casper_types::CLType {
+                    odra::casper::casper_types::CLType::Any
+                }
+            }
         }
     }
 
-    pub fn serialize_enum(enum_ident: &Ident, data: &DataEnum) -> TokenStream {
-        let cl_type_code = cl_type(enum_ident);
-        let from_bytes_code = enum_from_bytes(enum_ident, data);
-        let to_bytes_code = enum_to_bytes(enum_ident, data);
+    pub fn serialize_enum(enum_ident: &Ident, variants: &[Variant]) -> TokenStream {
+        let from_bytes_code = enum_from_bytes(enum_ident, variants);
+        let to_bytes_code = enum_to_bytes(enum_ident, variants);
 
         quote! {
             #[cfg(any(feature = "casper", feature = "casper-livenet"))]
@@ -323,30 +263,22 @@ pub(crate) mod casper {
                 #to_bytes_code
             }
 
-            #cl_type_code
-        }
-    }
-
-    fn cl_type(struct_ident: &Ident) -> TokenStream {
-        quote! {
             #[cfg(any(feature = "casper", feature = "casper-livenet"))]
-            impl odra::casper::casper_types::CLTyped for #struct_ident {
+            impl odra::casper::casper_types::CLTyped for #enum_ident {
                 fn cl_type() -> odra::casper::casper_types::CLType {
-                    odra::casper::casper_types::CLType::Any
+                    odra::casper::casper_types::CLType::U8
                 }
             }
         }
     }
 
-    fn enum_from_bytes(enum_ident: &Ident, data: &DataEnum) -> TokenStream {
-        let append_bytes = data
-            .variants
+    fn enum_from_bytes(enum_ident: &Ident, variants: &[Variant]) -> TokenStream {
+        let append_bytes = variants
             .iter()
-            .enumerate()
-            .map(|(index, ident)| {
-                let index = index as u8;
+            .map(|variant| {
+                let ident = &variant.ident;
                 quote! {
-                  #index => std::result::Result::Ok((#enum_ident::#ident, bytes))
+                    x if x == #enum_ident::#ident as u8 => std::result::Result::Ok((#enum_ident::#ident, bytes))
                 }
             })
             .collect::<Punctuated<TokenStream, Comma>>();
@@ -355,23 +287,19 @@ pub(crate) mod casper {
             fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper::casper_types::bytesrepr::Error> {
                 let (variant, bytes): (u8, _) = odra::casper::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
                 match variant {
-                    #append_bytes
+                    #append_bytes,
                     _ => std::result::Result::Err(odra::casper::casper_types::bytesrepr::Error::Formatting),
                 }
             }
         }
     }
 
-    fn enum_to_bytes(enum_ident: &Ident, data: &DataEnum) -> TokenStream {
-        let append_bytes = data
-            .variants
+    fn enum_to_bytes(enum_ident: &Ident, variants: &[Variant]) -> TokenStream {
+        let append_bytes = variants
             .iter()
-            .enumerate()
-            .map(|(index, ident)| {
-                let index = index as u8;
-                quote! {
-                  #enum_ident::#ident => #index,
-                }
+            .map(|variant| {
+                let ident = &variant.ident;
+                quote!(#enum_ident::#ident => #enum_ident::#ident as u8,)
             })
             .collect::<TokenStream>();
 

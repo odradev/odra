@@ -16,11 +16,11 @@ pub struct OdraTypeItem<'a> {
 
 impl GenerateCode for OdraTypeItem<'_> {
     fn generate_code(&self) -> TokenStream {
-        let struct_ident = self.item.struct_ident();
+        let ident = self.item.ident();
 
         let casper_code = casper::generate_code(self.item);
         let mock_vm_code = mock_vm::generate_code(self.item);
-        let clone_code = clone::generate_code(self.item, &struct_ident);
+        let clone_code = clone::generate_code(self.item);
 
         quote! {
             #casper_code
@@ -29,7 +29,7 @@ impl GenerateCode for OdraTypeItem<'_> {
 
             #clone_code
 
-            impl odra::OdraItem for #struct_ident {
+            impl odra::OdraItem for #ident {
                 fn is_module() -> bool {
                     false
                 }

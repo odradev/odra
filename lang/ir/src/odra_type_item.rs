@@ -1,48 +1,84 @@
 use proc_macro2::Ident;
-use syn::{DataEnum, DataStruct, DeriveInput};
+use syn::{DataEnum, DataStruct, DeriveInput, Fields, Variant};
 
 /// Odra Type definition.
-pub struct OdraTypeItem {
-    struct_ident: Ident,
-    data_struct: Option<DataStruct>,
-    data_enum: Option<DataEnum>
+pub enum OdraTypeItem {
+    Struct(OdraStruct),
+    Enum(OdraEnum)
 }
 
-impl OdraTypeItem {
-    pub fn parse(input: DeriveInput) -> Result<Self, syn::Error> {
-        let struct_ident = input.ident.clone();
-        let data_struct = match &input.data {
-            syn::Data::Struct(data_struct) => Some(data_struct.clone()),
-            _ => None
-        };
-        let data_enum = match &input.data {
-            syn::Data::Enum(data_enum) => Some(data_enum.clone()),
-            _ => None
-        };
+pub struct OdraStruct {
+    struct_ident: Ident,
+    fields: Vec<Ident>
+}
 
-        if data_enum.is_none() && data_struct.is_none() {
-            return Err(syn::Error::new_spanned(
-                input,
-                "Expected a struct or enum with named fields."
-            ));
-        }
-
-        Ok(Self {
-            struct_ident,
-            data_struct,
-            data_enum
-        })
-    }
-
+impl OdraStruct {
     pub fn struct_ident(&self) -> &Ident {
         &self.struct_ident
     }
 
-    pub fn data_struct(&self) -> Option<&DataStruct> {
-        self.data_struct.as_ref()
+    pub fn fields(&self) -> &[Ident] {
+        self.fields.as_ref()
+    }
+}
+
+pub struct OdraEnum {
+    enum_ident: Ident,
+    variants: Vec<Variant>
+}
+
+impl OdraEnum {
+    pub fn enum_ident(&self) -> &Ident {
+        &self.enum_ident
     }
 
-    pub fn data_enum(&self) -> Option<&DataEnum> {
-        self.data_enum.as_ref()
+    pub fn variants(&self) -> &[Variant] {
+        &self.variants
+    }
+}
+
+impl OdraTypeItem {
+    pub fn parse(input: DeriveInput) -> Result<Self, syn::Error> {
+        let ident = input.ident.clone();
+        match &input.data {
+            syn::Data::Struct(DataStruct {
+                fields: Fields::Named(named_fields),
+                ..
+            }) => Ok(OdraTypeItem::Struct(OdraStruct {
+                struct_ident: ident,
+                fields: named_fields
+                    .named
+                    .iter()
+                    .map(|f| f.ident.clone().unwrap())
+                    .collect()
+            })),
+            syn::Data::Enum(DataEnum { variants, .. }) => {
+                let is_valid = variants
+                    .iter()
+                    .all(|v| matches!(v.fields, syn::Fields::Unit));
+                if is_valid {
+                    Ok(OdraTypeItem::Enum(OdraEnum {
+                        enum_ident: ident,
+                        variants: variants.iter().map(Clone::clone).collect()
+                    }))
+                } else {
+                    Err(syn::Error::new_spanned(
+                        input,
+                        "Expected a struct or enum with named fields."
+                    ))
+                }
+            }
+            _ => Err(syn::Error::new_spanned(
+                input,
+                "Expected a struct or enum with named fields."
+            ))
+        }
+    }
+
+    pub fn ident(&self) -> &Ident {
+        match self {
+            OdraTypeItem::Struct(s) => s.struct_ident(),
+            OdraTypeItem::Enum(e) => e.enum_ident()
+        }
     }
 }
