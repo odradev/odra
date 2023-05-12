@@ -10,7 +10,7 @@ pub fn generate_code(item: &OdraTypeItem) -> TokenStream {
             let code = s
                 .fields()
                 .iter()
-                .map(|field| quote!(#field: ::core::clone::Clone::clone(self.#field)))
+                .map(|field| quote!(#field: ::core::clone::Clone::clone(&self.#field)))
                 .collect::<Punctuated<TokenStream, Comma>>();
             quote!(#ident {
                 #code
