@@ -20,5 +20,6 @@ members = [
 exclude = [ "contract", "contract/builder", "examples", "modules" ]
 
 [workspace.dependencies]
-casper-types = "1.6.0"
-casper-execution-engine = "3.1.0"
+casper-types = "2.0.0"
+casper-execution-engine = "4.0.0"
+casper-event-standard = "0.3.0"
