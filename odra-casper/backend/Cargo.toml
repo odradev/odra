@@ -13,9 +13,9 @@ categories = ["wasm", "smart contracts"]
 odra-casper-shared = { version = "0.2.0", path = "../shared" }
 odra-casper-types = { version = "0.2.0", path = "../types" }
 odra-types = { version = "0.2.0", path = "../../types" }
-casper-contract = { version = "1.4.4", default-features = false, features = ["std", "test-support"] }
+casper-contract = { version = "2.0.0", default-features = false, features = ["std", "test-support"] }
 casper-types = { workspace = true }
 syn = "1.0.96"
 hex = "0.4.3"
 lazy_static = "1.4.0"
-casper-event-standard = "0.2.0"
+casper-event-standard = { workspace = true }

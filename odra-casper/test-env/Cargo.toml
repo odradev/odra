@@ -10,7 +10,7 @@ keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm", "smart contracts"]
 
 [dependencies]
-casper-engine-test-support = { version = "3.1.0", features = ["test-support"] }
+casper-engine-test-support = { version = "4.0.0", features = ["test-support"] }
 casper-execution-engine = { workspace = true }
 casper-types = { workspace = true }
 odra-casper-shared = { version = "0.2.0", path = "../shared" }

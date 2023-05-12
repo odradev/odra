@@ -11,7 +11,7 @@ categories = ["wasm", "smart contracts"]
 
 [dependencies]
 casper-types = { workspace = true }
-casper-node = "1.4.14"
+casper-node = "=1.4.15-alt"
 casper-execution-engine = { workspace = true }
 casper-hashing = "1.4.3"
 odra-casper-shared = { version = "0.2.0", path = "../shared" }
