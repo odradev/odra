@@ -250,7 +250,6 @@ pub(crate) mod casper {
 
     pub fn serialize_enum(enum_ident: &Ident, variants: &[Variant]) -> TokenStream {
         let from_bytes_code = enum_from_bytes(enum_ident, variants);
-        let to_bytes_code = enum_to_bytes(enum_ident, variants);
 
         quote! {
             #[cfg(any(feature = "casper", feature = "casper-livenet"))]
@@ -260,13 +259,19 @@ pub(crate) mod casper {
 
             #[cfg(any(feature = "casper", feature = "casper-livenet"))]
             impl odra::casper::casper_types::bytesrepr::ToBytes for #enum_ident {
-                #to_bytes_code
+                fn serialized_length(&self) -> usize {
+                    u32::serialized_length()
+                }
+
+                fn to_bytes(&self) -> Result<Vec<u8>, odra::casper::casper_types::bytesrepr::Error> {
+                    (self as u32).to_bytes()
+                }
             }
 
             #[cfg(any(feature = "casper", feature = "casper-livenet"))]
             impl odra::casper::casper_types::CLTyped for #enum_ident {
                 fn cl_type() -> odra::casper::casper_types::CLType {
-                    odra::casper::casper_types::CLType::U8
+                    odra::casper::casper_types::CLType::U32
                 }
             }
         }
@@ -278,7 +283,7 @@ pub(crate) mod casper {
             .map(|variant| {
                 let ident = &variant.ident;
                 quote! {
-                    x if x == #enum_ident::#ident as u8 => std::result::Result::Ok((#enum_ident::#ident, bytes))
+                    x if x == #enum_ident::#ident as u32 => std::result::Result::Ok((#enum_ident::#ident, bytes))
                 }
             })
             .collect::<Punctuated<TokenStream, Comma>>();
@@ -290,32 +295,6 @@ pub(crate) mod casper {
                     #append_bytes,
                     _ => std::result::Result::Err(odra::casper::casper_types::bytesrepr::Error::Formatting),
                 }
-            }
-        }
-    }
-
-    fn enum_to_bytes(enum_ident: &Ident, variants: &[Variant]) -> TokenStream {
-        let append_bytes = variants
-            .iter()
-            .map(|variant| {
-                let ident = &variant.ident;
-                quote!(#enum_ident::#ident => #enum_ident::#ident as u8,)
-            })
-            .collect::<TokenStream>();
-
-        quote! {
-            fn serialized_length(&self) -> usize {
-                1
-            }
-
-            fn to_bytes(&self) -> Result<Vec<u8>, odra::casper::casper_types::bytesrepr::Error> {
-                let mut vec = std::vec::Vec::with_capacity(self.serialized_length());
-                vec.append(
-                    &mut match self {
-                        #append_bytes
-                    }.to_bytes()?,
-                );
-                std::result::Result::Ok(vec)
             }
         }
     }

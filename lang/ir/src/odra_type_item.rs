@@ -64,7 +64,7 @@ impl OdraTypeItem {
                 } else {
                     Err(syn::Error::new_spanned(
                         input,
-                        "Expected a struct or enum with named fields."
+                        "Expected a unit enum variant."
                     ))
                 }
             }
