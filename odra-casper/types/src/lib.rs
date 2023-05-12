@@ -19,7 +19,24 @@ use casper_types::{
 };
 
 /// A type that can be written to the storage and read from the storage.
-pub trait OdraType: CLTyped + ToBytes + FromBytes {}
+pub trait OdraType: CLTyped + ToBytes + FromBytes {
+    fn serialize(&self) -> Option<Vec<u8>> {
+        self.to_bytes().ok()
+    }
+
+    fn deserialize(bytes: &[u8]) -> Option<Self> {
+        match Self::from_bytes(bytes) {
+            Ok((result, leftover)) => {
+                if leftover.is_empty() {
+                    Some(result)
+                } else {
+                    None
+                }
+            }
+            Err(_) => None
+        }
+    }
+}
 
 impl<T: CLTyped + ToBytes + FromBytes> OdraType for T {}
 

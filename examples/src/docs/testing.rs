@@ -33,8 +33,7 @@ impl TestingContract {
 #[cfg(test)]
 mod tests {
     use super::TestingContractDeployer;
-    // Ignored due to a bug in Casper backend
-    #[ignore]
+
     #[test]
     fn test_env() {
         odra::test_env::set_caller(odra::test_env::get_account(0));

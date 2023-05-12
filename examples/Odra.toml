@@ -27,6 +27,10 @@ name = "time_lock_wallet"
 fqn = "odra_examples::tlw::TimeLockWallet"
 
 [[contracts]]
+name = "reentrancy_mock"
+fqn = "odra_examples::reentrancy::ReentrancyMock"
+
+[[contracts]]
 name = "composable_contract"
 fqn = "odra_examples::composer::ComposableContract"
 

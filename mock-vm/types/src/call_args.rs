@@ -1,9 +1,10 @@
+use borsh::{BorshDeserialize, BorshSerialize};
 use std::collections::BTreeMap;
 
 use crate::MockVMType;
 
 /// Represents a collection of arguments passed to a smart contract entrypoint call.
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone, BorshSerialize, BorshDeserialize)]
 pub struct CallArgs {
     data: BTreeMap<String, Vec<u8>>
 }

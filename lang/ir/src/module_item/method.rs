@@ -37,6 +37,7 @@ impl Method {
 
 impl ToTokens for Method {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let is_non_reentrant = self.attrs.iter().any(OdraAttribute::is_non_reentrant);
         let name = &self.ident.to_string();
         let args = &self
             .args
@@ -66,8 +67,12 @@ impl ToTokens for Method {
         };
 
         let ty = match self.attrs.iter().any(|attr| attr.is_payable()) {
-            true => quote!(odra::types::contract_def::EntrypointType::PublicPayable),
-            false => quote!(odra::types::contract_def::EntrypointType::Public)
+            true => {
+                quote!(odra::types::contract_def::EntrypointType::PublicPayable { non_reentrant: #is_non_reentrant })
+            }
+            false => {
+                quote!(odra::types::contract_def::EntrypointType::Public { non_reentrant: #is_non_reentrant })
+            }
         };
 
         let is_mut = self.is_mut;

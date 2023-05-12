@@ -87,7 +87,7 @@ impl CasperTestEnv {
     }
 
     /// Deploy WASM file with args.
-    pub fn deploy_contract(&mut self, wasm_path: &str, args: CallArgs) {
+    pub fn deploy_contract(&mut self, wasm_path: &str, args: &CallArgs) {
         let mut session_code = PathBuf::from(wasm_path);
         if let Ok(path) = env::var(ODRA_WASM_PATH_ENV_KEY) {
             let mut path = PathBuf::from(path);
@@ -101,7 +101,7 @@ impl CasperTestEnv {
             .with_empty_payment_bytes(runtime_args! {ARG_AMOUNT => *DEFAULT_PAYMENT})
             .with_authorization_keys(&[self.active_account_hash()])
             .with_address(self.active_account_hash())
-            .with_session_code(session_code, args.to_owned())
+            .with_session_code(session_code, args.as_casper_runtime_args().clone())
             .with_deploy_hash(self.next_hash())
             .build();
 
@@ -109,7 +109,6 @@ impl CasperTestEnv {
             .with_block_time(self.block_time)
             .build();
         self.context.exec(execute_request).commit().expect_success();
-        self.active_account = self.get_account(0);
     }
 
     /// Call contract.
@@ -117,7 +116,7 @@ impl CasperTestEnv {
         &mut self,
         hash: ContractPackageHash,
         entry_point: &str,
-        args: CallArgs
+        args: &CallArgs
     ) -> T {
         self.error = None;
 
@@ -358,6 +357,8 @@ fn parse_error(err: engine_state::Error) -> OdraError {
             CasperExecutionError::Revert(ApiError::User(id)) => {
                 if id == ExecutionError::non_payable().code() {
                     OdraError::ExecutionError(ExecutionError::non_payable())
+                } else if id == ExecutionError::reentrant_call().code() {
+                    OdraError::ExecutionError(ExecutionError::reentrant_call())
                 } else {
                     OdraError::ExecutionError(ExecutionError::new(id, ""))
                 }

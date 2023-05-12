@@ -91,18 +91,18 @@ fn build_constructor(
             use std::collections::HashMap;
             use odra::types::{CallArgs};
 
-            let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Vec<u8>)>::new();
+            let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, &CallArgs) -> Vec<u8>)>::new();
             #entrypoints_stream
 
-            let mut constructors = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Vec<u8>)>::new();
+            let mut constructors = HashMap::<String, (Vec<String>, fn(String, &CallArgs) -> Vec<u8>)>::new();
             #constructors_stream
 
             let args = {
                 #args
             };
-            let constructor: Option<(String, CallArgs, fn(String, CallArgs) -> Vec<u8>)> = Some((
+            let constructor: Option<(String, &CallArgs, fn(String, &CallArgs) -> Vec<u8>)> = Some((
                 stringify!(#constructor_ident).to_string(),
-                args,
+                &args,
                 |name, args| {
                     let mut instance = <#struct_ident as odra::Instance>::instance(name.as_str());
                     instance.#constructor_ident( #fn_args );
@@ -125,10 +125,10 @@ fn build_default_constructor(
             use std::collections::HashMap;
             use odra::types::CallArgs;
 
-            let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Vec<u8>)>::new();
+            let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, &CallArgs) -> Vec<u8>)>::new();
             #entrypoints_stream
 
-            let mut constructors = HashMap::<String, (Vec<String>, fn(String, CallArgs) -> Vec<u8>)>::new();
+            let mut constructors = HashMap::<String, (Vec<String>, fn(String, &CallArgs) -> Vec<u8>)>::new();
             #constructors_stream
 
             let address = odra::test_env::register_contract(None, constructors, entrypoints);
@@ -159,11 +159,27 @@ fn build_entrypoints_calls(methods: &[&Method], struct_ident: &Ident) -> TokenSt
                     }
                 }
             };
+            let non_reentrant = entrypoint.attrs.iter().any(|a| a.is_non_reentrant());
+            let reentrancy_check = match non_reentrant {
+                true => quote! {
+                    if odra::contract_env::get_var("__reentrancy_guard").unwrap_or_default(){
+                        odra::contract_env::revert(odra::types::ExecutionError::reentrant_call());
+                    }
+                    odra::contract_env::set_var("__reentrancy_guard", true);
+                },
+                false => quote!()
+            };
+            let reentrancy_cleanup = match non_reentrant {
+                true => quote!(odra::contract_env::set_var("__reentrancy_guard", false);),
+                false => quote!()
+            };
             quote! {
                 entrypoints.insert(#name, (#arg_names, |name, args| {
+                    #reentrancy_check
                     #attached_value_check
                     let mut instance = <#struct_ident as odra::Instance>::instance(name.as_str());
                     let result = instance.#ident(#args);
+                    #reentrancy_cleanup
                     #return_value
                 }));
             }
