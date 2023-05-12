@@ -83,11 +83,11 @@ pub fn non_reentrant_before() {
     if status {
         revert(ExecutionError::reentrant_call())
     };
-    casper_env::set_key(consts::REENTRANCY_GUARD, true);
+    casper_env::set_key(consts::REENTRANCY_GUARD, &true);
 }
 
 pub fn non_reentrant_after() {
-    casper_env::set_key(consts::REENTRANCY_GUARD, false);
+    casper_env::set_key(consts::REENTRANCY_GUARD, &false);
 }
 
 pub fn build_event(name: &str, fields: Vec<(&str, CLType)>) -> (String, Schema) {

@@ -147,7 +147,7 @@ pub fn self_address() -> Address {
 }
 
 /// Record event to the contract's storage.
-// #[inline(always)]
+#[inline(always)]
 pub fn emit_event<T>(event: T)
 where
     T: OdraType + OdraEvent
@@ -196,6 +196,7 @@ pub fn call_contract<T: CLTyped + FromBytes>(
 ) -> T {
     runtime::call_versioned_contract(contract_package_hash, None, entry_point, args)
 }
+
 #[inline(always)]
 pub fn call_contract_with_amount<T: CLTyped + FromBytes>(
     contract_package_hash: ContractPackageHash,
@@ -219,10 +220,12 @@ pub fn call_contract_with_amount<T: CLTyped + FromBytes>(
 
     result
 }
+
 #[inline(always)]
 pub fn get_block_time() -> u64 {
     runtime::get_blocktime().into()
 }
+
 #[inline(always)]
 pub fn revert(error: u16) -> ! {
     runtime::revert(ApiError::User(error))

@@ -71,8 +71,7 @@ impl CasperTestEnv {
             genesis_config.take_ee_config()
         );
 
-        let mut builder = InMemoryWasmTestBuilder::new_with_chainspec("../resources/chainspec.toml", None);
-        // let mut builder = InMemoryWasmTestBuilder::default();
+        let mut builder = InMemoryWasmTestBuilder::default();
         builder.run_genesis(&run_genesis_request).commit();
 
         Self {

@@ -109,7 +109,8 @@ mod tests {
             ident: String::from("construct_me"),
             args: vec![Argument {
                 ident: String::from("value"),
-                ty: Type::I32
+                ty: Type::I32,
+                is_ref: true,
             }],
             ret: Type::Unit,
             ty: EntrypointType::Public {
@@ -134,7 +135,7 @@ mod tests {
                     odra::casper::utils::assert_no_attached_value();
                     let contract = my_contract::MyContract::instance("contract");
                     let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg(
-                        stringify!(value)
+                        &stringify!(value)
                     );
                     contract.construct_me(value);
                 }

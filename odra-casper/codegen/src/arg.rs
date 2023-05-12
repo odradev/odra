@@ -36,11 +36,13 @@ mod tests {
         let args = vec![
             Argument {
                 ident: String::from("a"),
-                ty: Type::Bool
+                ty: Type::Bool,
+                is_ref: false,
             },
             Argument {
                 ident: String::from("b_c"),
-                ty: Type::String
+                ty: Type::String,
+                is_ref: false,
             },
         ];
         let args = CasperArgs(&args);

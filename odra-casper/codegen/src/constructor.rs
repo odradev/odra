@@ -108,7 +108,8 @@ mod tests {
             ident: String::from("construct_me"),
             args: vec![Argument {
                 ident: String::from("value"),
-                ty: Type::I32
+                ty: Type::I32,
+                is_ref: false,
             }],
             ret: Type::Unit,
             ty: EntrypointType::Constructor {

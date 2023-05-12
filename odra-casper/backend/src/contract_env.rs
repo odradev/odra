@@ -66,7 +66,7 @@ where
 }
 
 /// Emits event.
-// #[inline(always)]
+#[inline(always)]
 pub fn emit_event<T>(event: T)
 where
     T: OdraType + OdraEvent

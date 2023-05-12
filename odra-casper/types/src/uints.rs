@@ -253,26 +253,6 @@ macro_rules! impl_casper_type_numeric_wrapper {
 
 impl_casper_type_numeric_wrapper!(U128, U256, U512);
 
-// impl OverflowingAdd for U128 {
-//     fn overflowing_add(self, rhs: &Self) -> Result<Self, ExecutionError> {
-//         let (res, is_overflowed)  = self.inner.overflowing_add(rhs.inner);
-//         match is_overflowed {
-//             true => Err(ArithmeticsError::AdditionOverflow.into()),
-//             false => Ok(Self { inner: res })
-//         }
-//     }
-// }
-
-// impl OverflowingSub for U128 {
-//     fn overflowing_sub(self, rhs: &Self) -> Result<Self, ExecutionError> {
-//         let (res, is_overflowed)  = self.inner.overflowing_sub(rhs.inner);
-//         match is_overflowed {
-//             true => Err(ArithmeticsError::SubtractingOverflow.into()),
-//             false => Ok(Self { inner: res })
-//         }
-//     }
-// }
-
 impl U512 {
     pub fn to_u256(self) -> Result<U256, ArithmeticsError> {
         let inner = self.inner();
