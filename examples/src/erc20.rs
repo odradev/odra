@@ -12,7 +12,8 @@ pub struct Erc20 {
     name: Variable<String>,
     total_supply: Variable<U256>,
     balances: Mapping<Address, U256>,
-    allowances: Mapping<Address, Mapping<Address, U256>>
+    allowances: Mapping<Address, Mapping<Address, U256>>,
+    contract: Variable<Address>
 }
 
 #[odra::module]
@@ -210,8 +211,6 @@ pub mod tests {
         let amount = U256::from(INITIAL_SUPPLY) + U256::from(1);
 
         test_env::assert_exception(Error::InsufficientBalance, || {
-            // TODO: If we don't create a new ref, an error occurs:
-            // cannot borrow `erc20` as mutable, as it is a captured variable in a `Fn` closure cannot borrow as mutable
             let mut erc20 = Erc20Ref::at(erc20.address());
             erc20.transfer(recipient, amount)
         });
@@ -275,8 +274,6 @@ pub mod tests {
 
         test_env::set_caller(spender);
         test_env::assert_exception(Error::InsufficientAllowance, || {
-            // TODO: If we don't create a new ref, an error occurs:
-            // cannot borrow `erc20` as mutable, as it is a captured variable in a `Fn` closure cannot borrow as mutable
             let mut erc20 = Erc20Ref::at(erc20.address());
             erc20.transfer_from(owner, spender, amount)
         });

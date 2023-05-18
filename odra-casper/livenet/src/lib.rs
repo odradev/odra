@@ -6,7 +6,7 @@ pub mod contract_env;
 
 use odra_casper_types::CallArgs;
 
-pub type EntrypointCall = fn(String, CallArgs) -> Vec<u8>;
+pub type EntrypointCall = fn(String, &CallArgs) -> Vec<u8>;
 pub type EntrypointArgs = Vec<String>;
 
 mod log {

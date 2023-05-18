@@ -1,0 +1,145 @@
+{
+  "name": "TokenManager",
+  "entrypoints": [
+    {
+      "name": "add_token",
+      "is_mutable": true,
+      "args": [
+        {
+          "name": "name",
+          "ty": "String"
+        },
+        {
+          "name": "decimals",
+          "ty": "U8"
+        },
+        {
+          "name": "symbol",
+          "ty": "String"
+        }
+      ],
+      "return_ty": "Unit"
+    },
+    {
+      "name": "balance_of",
+      "is_mutable": false,
+      "args": [
+        {
+          "name": "token_name",
+          "ty": "String"
+        },
+        {
+          "name": "owner",
+          "ty": "Key"
+        }
+      ],
+      "return_ty": "U256"
+    },
+    {
+      "name": "mint",
+      "is_mutable": true,
+      "args": [
+        {
+          "name": "token_name",
+          "ty": "String"
+        },
+        {
+          "name": "account",
+          "ty": "Key"
+        },
+        {
+          "name": "amount",
+          "ty": "U256"
+        }
+      ],
+      "return_ty": "Unit"
+    },
+    {
+      "name": "tokens_count",
+      "is_mutable": false,
+      "args": [],
+      "return_ty": "U32"
+    },
+    {
+      "name": "get_owner",
+      "is_mutable": false,
+      "args": [
+        {
+          "name": "token_name",
+          "ty": "String"
+        }
+      ],
+      "return_ty": "Key"
+    },
+    {
+      "name": "set_owner",
+      "is_mutable": true,
+      "args": [
+        {
+          "name": "token_name",
+          "ty": "String"
+        },
+        {
+          "name": "new_owner",
+          "ty": "Key"
+        }
+      ],
+      "return_ty": "Unit"
+    }
+  ],
+  "events": [
+    {
+      "name": "OwnershipChanged",
+      "fields": [
+        {
+          "name": "prev_owner",
+          "ty": {
+            "Option": "Key"
+          }
+        },
+        {
+          "name": "new_owner",
+          "ty": "Key"
+        }
+      ]
+    },
+    {
+      "name": "Transfer",
+      "fields": [
+        {
+          "name": "from",
+          "ty": {
+            "Option": "Key"
+          }
+        },
+        {
+          "name": "to",
+          "ty": {
+            "Option": "Key"
+          }
+        },
+        {
+          "name": "amount",
+          "ty": "U256"
+        }
+      ]
+    },
+    {
+      "name": "Approval",
+      "fields": [
+        {
+          "name": "owner",
+          "ty": "Key"
+        },
+        {
+          "name": "spender",
+          "ty": "Key"
+        },
+        {
+          "name": "value",
+          "ty": "U256"
+        }
+      ]
+    }
+  ]
+}

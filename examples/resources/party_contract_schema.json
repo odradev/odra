@@ -1,0 +1,12 @@
+{
+  "name": "PartyContract",
+  "entrypoints": [
+    {
+      "name": "init",
+      "is_mutable": false,
+      "args": [],
+      "return_ty": "Unit"
+    }
+  ],
+  "events": []
+}
