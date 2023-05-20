@@ -13,3 +13,5 @@ path = "bin/getter_proxy.rs"
 bench = false
 doctest = false
 test = false
+
+[workspace]
