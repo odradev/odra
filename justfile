@@ -22,6 +22,9 @@ check-lint: clippy
 install-cargo-odra:
     cargo install --git {{CARGO_ODRA_GIT}} --branch {{CARGO_ODRA_BRANCH}}
 
+build-getter-proxy:
+    cd odra-casper/test-env/getter_proxy && cargo build --release -Z unstable-options --out-dir ..
+
 prepare-test-env: install-cargo-odra
     rustup target add wasm32-unknown-unknown
     sudo apt install wabt
