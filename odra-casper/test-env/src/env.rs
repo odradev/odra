@@ -8,7 +8,7 @@ use casper_engine_test_support::{
     DEFAULT_PAYMENT
 };
 use casper_execution_engine::core::engine_state::{
-    self, run_genesis_request::RunGenesisRequest, GenesisAccount
+    self, run_genesis_request::RunGenesisRequest, GenesisAccount, ChainspecRegistry
 };
 pub use casper_execution_engine::core::execution::Error as CasperExecutionError;
 use casper_types::{
@@ -66,7 +66,8 @@ impl CasperTestEnv {
         let run_genesis_request = RunGenesisRequest::new(
             *DEFAULT_GENESIS_CONFIG_HASH,
             genesis_config.protocol_version(),
-            genesis_config.take_ee_config()
+            genesis_config.take_ee_config(),
+            ChainspecRegistry::new_with_genesis(&[], &[]),
         );
 
         let mut builder = InMemoryWasmTestBuilder::default();
