@@ -1,6 +1,9 @@
 #![no_std]
 #![no_main]
 
+#[cfg(not(target_arch = "wasm32"))]
+compile_error!("target arch should be wasm32");
+
 extern crate alloc;
 
 use core::convert::TryInto;
