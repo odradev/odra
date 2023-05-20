@@ -4,8 +4,8 @@ version = "0.0.1"
 edition = "2021"
 
 [dependencies]
-casper-contract = { version = "1.4.3" }
-casper-types = "1.4.6"
+casper-contract = { version = "3.0.0" }
+casper-types = "3.0.0"
 
 [[bin]]
 name = "getter_proxy"
