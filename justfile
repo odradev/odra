@@ -1,5 +1,5 @@
 CARGO_ODRA_GIT := "https://github.com/odradev/cargo-odra"
-CARGO_ODRA_BRANCH := "release/0.0.6"
+CARGO_ODRA_BRANCH := "release/0.0.7"
 
 default:
     just --list
