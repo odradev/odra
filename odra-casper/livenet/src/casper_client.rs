@@ -204,7 +204,7 @@ impl CasperClient {
         &self,
         addr: Address,
         entrypoint: &str,
-        args: CallArgs,
+        args: &CallArgs,
         _amount: Option<Balance>,
         gas: Balance
     ) {
@@ -381,7 +381,7 @@ fn find_wasm_file_path(wasm_file_name: &str) -> PathBuf {
     let mut path = PathBuf::from("wasm").join(wasm_file_name);
     let mut checked_paths = vec![];
     for _ in 0..2 {
-        if path.exists() {
+        if path.exists() && path.is_file() {
             log::info(format!("Found wasm under {:?}.", path));
             return path;
         } else {

@@ -1,0 +1,40 @@
+{
+  "name": "OwnedContract",
+  "entrypoints": [
+    {
+      "name": "init",
+      "is_mutable": true,
+      "args": [
+        {
+          "name": "name",
+          "ty": "String"
+        }
+      ],
+      "return_ty": "Unit"
+    },
+    {
+      "name": "name",
+      "is_mutable": false,
+      "args": [],
+      "return_ty": "String"
+    },
+    {
+      "name": "owner",
+      "is_mutable": false,
+      "args": [],
+      "return_ty": "Key"
+    },
+    {
+      "name": "change_name",
+      "is_mutable": true,
+      "args": [
+        {
+          "name": "name",
+          "ty": "String"
+        }
+      ],
+      "return_ty": "Unit"
+    }
+  ],
+  "events": []
+}
