@@ -50,7 +50,12 @@ impl ClientEnv {
     }
 
     /// Call contract.
-    pub fn call_contract<T: OdraType>(&self, addr: Address, entrypoint: &str, args: &CallArgs) -> T {
+    pub fn call_contract<T: OdraType>(
+        &self,
+        addr: Address,
+        entrypoint: &str,
+        args: &CallArgs
+    ) -> T {
         let result = self.contracts.call(&addr, String::from(entrypoint), args);
         let bytes = result.unwrap();
         let (clvalue, _) = CLValue::from_bytes(&bytes).unwrap();

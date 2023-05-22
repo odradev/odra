@@ -3,6 +3,14 @@ name = "owned_token"
 fqn = "odra_examples::owned_token::OwnedToken"
 
 [[contracts]]
+name = "balance_checker"
+fqn = "odra_examples::balance_checker::BalanceChecker"
+
+[[contracts]]
+name = "ownable"
+fqn = "odra_examples::ownable::Ownable"
+
+[[contracts]]
 name = "erc20"
 fqn = "odra_examples::erc20::Erc20"
 
@@ -11,5 +19,62 @@ name = "token_manager"
 fqn = "odra_examples::token_manager::TokenManager"
 
 [[contracts]]
+name = "nested_mapping"
+fqn = "odra_examples::mapping::NestedMapping"
+
+[[contracts]]
 name = "time_lock_wallet"
 fqn = "odra_examples::tlw::TimeLockWallet"
+
+[[contracts]]
+name = "reentrancy_mock"
+fqn = "odra_examples::reentrancy::ReentrancyMock"
+
+[[contracts]]
+name = "composable_contract"
+fqn = "odra_examples::composer::ComposableContract"
+
+[[contracts]]
+name = "dog_contract"
+fqn = "odra_examples::docs::variable::DogContract"
+
+[[contracts]]
+name = "dog_contract2"
+fqn = "odra_examples::docs::mapping::DogContract2"
+
+[[contracts]]
+name = "dog_contract3"
+fqn = "odra_examples::docs::list::DogContract3"
+
+[[contracts]]
+name = "testing_contract"
+fqn = "odra_examples::docs::testing::TestingContract"
+
+[[contracts]]
+name = "host_contract"
+fqn = "odra_examples::docs::host::HostContract"
+
+[[contracts]]
+name = "owned_contract"
+fqn = "odra_examples::docs::errors::OwnedContract"
+
+[[contracts]]
+name = "party_contract"
+fqn = "odra_examples::docs::events::PartyContract"
+
+[[contracts]]
+name = "cross_contract"
+fqn = "odra_examples::docs::cross_calls::CrossContract"
+
+[[contracts]]
+name = "math_engine"
+fqn = "odra_examples::docs::cross_calls::MathEngine"
+
+[[contracts]]
+name = "modules_contract"
+fqn = "odra_examples::docs::modules::ModulesContract"
+
+[[contracts]]
+name = "public_wallet"
+fqn = "odra_examples::docs::native_token::PublicWallet"
+

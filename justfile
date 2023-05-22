@@ -20,7 +20,7 @@ check-lint: clippy
     cd modules && cargo fmt -- --check
 
 install-cargo-odra:
-    cargo install --git {{CARGO_ODRA_GIT}} --branch {{CARGO_ODRA_BRANCH}}
+    cargo install --git {{CARGO_ODRA_GIT}} --branch {{CARGO_ODRA_BRANCH}} --locked
 
 prepare-test-env: install-cargo-odra
     rustup target add wasm32-unknown-unknown
