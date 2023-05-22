@@ -2,11 +2,11 @@ use derive_more::From;
 use odra_ir::OdraTypeItem as IrOdraTypeItem;
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{punctuated::Punctuated, token::Comma};
 
 use crate::GenerateCode;
 
 mod casper;
+mod clone;
 mod mock_vm;
 
 #[derive(From)]
@@ -16,37 +16,20 @@ pub struct OdraTypeItem<'a> {
 
 impl GenerateCode for OdraTypeItem<'_> {
     fn generate_code(&self) -> TokenStream {
+        let ident = self.item.ident();
+
         let casper_code = casper::generate_code(self.item);
         let mock_vm_code = mock_vm::generate_code(self.item);
-
-        let struct_ident = self.item.struct_ident();
-
-        let clone_fields = self
-            .item
-            .fields_iter()
-            .map(|field| {
-                let field_ident = field.ident.as_ref().unwrap();
-                quote! {
-                    #field_ident: ::core::clone::Clone::clone(&self.#field_ident)
-                }
-            })
-            .collect::<Punctuated<TokenStream, Comma>>();
+        let clone_code = clone::generate_code(self.item);
 
         quote! {
             #casper_code
 
             #mock_vm_code
 
-            impl ::core::clone::Clone for #struct_ident {
-                #[inline]
-                fn clone(&self) -> #struct_ident {
-                    #struct_ident {
-                        #clone_fields
-                    }
-                }
-            }
+            #clone_code
 
-            impl odra::OdraItem for #struct_ident {
+            impl odra::OdraItem for #ident {
                 fn is_module() -> bool {
                     false
                 }

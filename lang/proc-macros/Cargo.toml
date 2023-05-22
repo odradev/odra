@@ -1,6 +1,6 @@
 [package]
 name = "odra-proc-macros"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
 license = "MIT"
@@ -13,11 +13,11 @@ categories = ["wasm"]
 proc-macro2 = "1.0.40"
 quote = "1.0.19"
 syn =  { version = "1.0.89", features = ["full", "extra-traits"] }
-odra-ir = { version = "0.2.0", path = "../ir" }
-odra-codegen = { version = "0.2.0", path = "../codegen" }
+odra-ir = { version = "0.3.0", path = "../ir" }
+odra-codegen = { version = "0.3.0", path = "../codegen" }
 
 [dev-dependencies]
-odra = { version = "0.2.0", path = "../../core" }
+odra = { version = "0.3.0", path = "../../core" }
 
 [lib]
 proc-macro = true

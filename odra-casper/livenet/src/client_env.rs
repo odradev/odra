@@ -50,7 +50,12 @@ impl ClientEnv {
     }
 
     /// Call contract.
-    pub fn call_contract<T: OdraType>(&self, addr: Address, entrypoint: &str, args: CallArgs) -> T {
+    pub fn call_contract<T: OdraType>(
+        &self,
+        addr: Address,
+        entrypoint: &str,
+        args: &CallArgs
+    ) -> T {
         let result = self.contracts.call(&addr, String::from(entrypoint), args);
         let bytes = result.unwrap();
         let (clvalue, _) = CLValue::from_bytes(&bytes).unwrap();
@@ -111,7 +116,7 @@ pub fn deploy_new_contract(
 pub fn call_contract<T: OdraType>(
     addr: Address,
     entrypoint: &str,
-    args: CallArgs,
+    args: &CallArgs,
     _amount: Option<Balance>
 ) -> T {
     match T::cl_type() {
@@ -155,7 +160,7 @@ fn get_gas() -> Balance {
 fn call_contract_getter_entrypoint<T: OdraType>(
     addr: Address,
     entrypoint: &str,
-    args: CallArgs,
+    args: &CallArgs,
     _amount: Option<Balance>
 ) -> T {
     {
@@ -168,7 +173,7 @@ fn call_contract_getter_entrypoint<T: OdraType>(
     result
 }
 
-fn call_contract_deploy(addr: Address, entrypoint: &str, args: CallArgs, amount: Option<Balance>) {
+fn call_contract_deploy(addr: Address, entrypoint: &str, args: &CallArgs, amount: Option<Balance>) {
     let gas = get_gas();
     CasperClient::new().deploy_entrypoint_call(addr, entrypoint, args, amount, gas);
 }

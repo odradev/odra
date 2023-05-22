@@ -1,6 +1,6 @@
 [package]
 name = "odra-casper-shared"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
 license = "MIT"
@@ -10,6 +10,6 @@ keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm", "smart contracts"]
 
 [dependencies]
-casper-event-standard = "0.2.0"
-odra-casper-types = { version = "0.2.0", path = "../types" }
+casper-event-standard = { workspace = true }
+odra-casper-types = { version = "0.3.0", path = "../types" }
 hex = "0.4.3"
