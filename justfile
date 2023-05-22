@@ -1,5 +1,5 @@
 CARGO_ODRA_GIT := "https://github.com/odradev/cargo-odra"
-CARGO_ODRA_BRANCH := "feature/workspaces"
+CARGO_ODRA_BRANCH := "release/0.0.6"
 
 default:
     just --list
@@ -25,6 +25,10 @@ install-cargo-odra:
 prepare-test-env: install-cargo-odra
     rustup target add wasm32-unknown-unknown
     sudo apt install wabt
+
+build-getter-proxy:
+    cargo build -p odra-casper-getter-proxy --release --target wasm32-unknown-unknown
+    cp target/wasm32-unknown-unknown/release/getter_proxy.wasm odra-casper/test-env/getter_proxy.wasm
 
 test-odra:
     cargo test
