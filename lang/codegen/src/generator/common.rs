@@ -117,6 +117,13 @@ pub(crate) mod mock_vm {
                     })
                 }
             }
+
+            #[cfg(feature = "mock-vm")]
+            impl odra::types::Typed for #struct_ident {
+                fn ty() -> odra::types::Type {
+                    odra::types::Type::Any
+                }
+            }
         }
     }
 
@@ -165,6 +172,13 @@ pub(crate) mod mock_vm {
                         ))
                     };
                     Ok(return_value)
+                }
+            }
+
+            #[cfg(feature = "mock-vm")]
+            impl odra::types::Typed for #struct_ident {
+                fn ty() -> odra::types::Type {
+                    odra::types::Type::U8
                 }
             }
         }
@@ -260,11 +274,11 @@ pub(crate) mod casper {
             #[cfg(any(feature = "casper", feature = "casper-livenet"))]
             impl odra::casper::casper_types::bytesrepr::ToBytes for #enum_ident {
                 fn serialized_length(&self) -> usize {
-                    u32::serialized_length()
+                    (*self as u32).serialized_length()
                 }
 
                 fn to_bytes(&self) -> Result<Vec<u8>, odra::casper::casper_types::bytesrepr::Error> {
-                    (self as u32).to_bytes()
+                    (*self as u32).to_bytes()
                 }
             }
 
@@ -290,7 +304,7 @@ pub(crate) mod casper {
 
         quote! {
             fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper::casper_types::bytesrepr::Error> {
-                let (variant, bytes): (u8, _) = odra::casper::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
+                let (variant, bytes): (u32, _) = odra::casper::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
                 match variant {
                     #append_bytes,
                     _ => std::result::Result::Err(odra::casper::casper_types::bytesrepr::Error::Formatting),
