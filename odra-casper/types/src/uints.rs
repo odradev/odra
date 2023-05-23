@@ -88,6 +88,10 @@ macro_rules! impl_casper_type_numeric_wrapper {
                         inner: casper_types::$ty::saturating_sub(self.inner, v.inner)
                     }
                 }
+
+                pub fn from_dec_str(s: &str) -> Result<Self, String> {
+                    Self::from_str_radix(s, 10)
+                }
             }
 
             // Trait implementations for unifying U* as numeric types
