@@ -29,9 +29,9 @@ impl U256 {
     }
 
     pub fn to_u512(self) -> Result<U512, ArithmeticsError> {
-        let mut bytes = Vec::new();
-        self.to_big_endian(&mut bytes);
-        Ok(U512::from_big_endian(&bytes))
+        let mut bytes = [0u8; 32];
+        self.to_little_endian(&mut bytes);
+        Ok(U512::from_little_endian(&bytes))
     }
 
     pub fn to_balance(self) -> Result<U256, ArithmeticsError> {
