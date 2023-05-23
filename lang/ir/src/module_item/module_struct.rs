@@ -22,7 +22,7 @@ impl ModuleStruct {
             .fields
             .iter()
             .filter(|field| field.ident.is_some())
-            .filter_map(filter_ident_excluding_variable_and_mapping)
+            .filter_map(filter_primitives)
             .map(|ident| ModuleEvent { name: ident })
             .collect::<Vec<_>>();
 
@@ -114,7 +114,7 @@ fn extract_mapping_value_ident_from_path(path: &syn::TypePath) -> Result<Ident> 
     Ok(segment.ident)
 }
 
-fn filter_ident_excluding_variable_and_mapping(field: &syn::Field) -> Option<syn::Ident> {
+fn filter_primitives(field: &syn::Field) -> Option<syn::Ident> {
     filter_ident(field, &["Variable", "Mapping", "List", "Sequence"])
 }
 
