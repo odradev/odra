@@ -93,6 +93,8 @@ impl CasperTestEnv {
             path.push(wasm_path);
             if path.exists() {
                 session_code = path;
+            } else {
+                panic!("WASM file not found: {:?}", path);
             }
         }
 
