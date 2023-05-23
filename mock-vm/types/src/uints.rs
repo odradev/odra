@@ -28,6 +28,12 @@ impl U256 {
         Ok(self)
     }
 
+    pub fn to_u512(self) -> Result<U512, ArithmeticsError> {
+        let mut bytes = [0u8; 32];
+        self.to_little_endian(&mut bytes);
+        Ok(U512::from_little_endian(&bytes))
+    }
+
     pub fn to_balance(self) -> Result<U256, ArithmeticsError> {
         Ok(self)
     }

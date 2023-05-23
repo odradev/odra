@@ -274,11 +274,11 @@ pub(crate) mod casper {
             #[cfg(any(feature = "casper", feature = "casper-livenet"))]
             impl odra::casper::casper_types::bytesrepr::ToBytes for #enum_ident {
                 fn serialized_length(&self) -> usize {
-                    (*self as u32).serialized_length()
+                    (self.clone() as u32).serialized_length()
                 }
 
                 fn to_bytes(&self) -> Result<Vec<u8>, odra::casper::casper_types::bytesrepr::Error> {
-                    (*self as u32).to_bytes()
+                    (self.clone() as u32).to_bytes()
                 }
             }
 

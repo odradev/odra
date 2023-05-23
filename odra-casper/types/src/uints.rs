@@ -1,17 +1,19 @@
 use crate::{CLTyped, FromBytes, ToBytes};
-use num_traits::{Bounded, CheckedSub, Num, One, Unsigned, WrappingAdd, WrappingSub, Zero};
+use num_traits::{
+    Bounded, CheckedMul, CheckedSub, Num, One, Unsigned, WrappingAdd, WrappingSub, Zero
+};
 use odra_types::{
     arithmetic::{ArithmeticsError, OverflowingAdd, OverflowingSub},
     ExecutionError
 };
 use std::hash::{Hash, Hasher};
-use std::ops::{Add, Div, Mul, Rem, Sub};
+use std::ops::{Add, AddAssign, Div, Mul, Rem, Sub, SubAssign};
 
 macro_rules! impl_casper_type_numeric_wrapper {
     ( $( $ty:ident ),+ ) => {
         $(
             /// Little-endian large integer type
-            #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Clone, Copy)]
+            #[derive(Debug, Default, PartialEq, Eq, Ord, PartialOrd, Clone, Copy)]
             pub struct $ty {
                 inner: casper_types::$ty
             }
@@ -43,12 +45,52 @@ macro_rules! impl_casper_type_numeric_wrapper {
                     <Self as Zero>::is_zero(self)
                 }
 
+                pub fn checked_add(&self, v: $ty) -> Option<$ty> {
+                    casper_types::$ty::checked_add(self.inner, v.inner).map(|inner| $ty { inner })
+                }
+
+                pub fn checked_sub(&self, v: $ty) -> Option<$ty> {
+                    casper_types::$ty::checked_sub(self.inner, v.inner).map(|inner| $ty { inner })
+                }
+
                 pub fn checked_mul(&self, v: $ty) -> Option<$ty> {
                     casper_types::$ty::checked_mul(self.inner, v.inner).map(|inner| $ty { inner })
                 }
 
                 pub fn checked_div(&self, v: $ty) -> Option<$ty> {
                     casper_types::$ty::checked_div(self.inner, v.inner).map(|inner| $ty { inner })
+                }
+
+                pub fn overflowing_add(&self, v: $ty) -> ($ty, bool) {
+                    let (inner, is_overflowed) = casper_types::$ty::overflowing_add(self.inner, v.inner);
+                    ($ty { inner }, is_overflowed)
+                }
+
+                pub fn overflowing_sub(&self, v: $ty) -> ($ty, bool) {
+                    let (inner, is_overflowed) = casper_types::$ty::overflowing_sub(self.inner, v.inner);
+                    ($ty { inner }, is_overflowed)
+                }
+
+                pub fn abs_diff(&self, v: $ty) -> $ty {
+                    Self {
+                        inner: casper_types::$ty::abs_diff(self.inner, v.inner)
+                    }
+                }
+
+                pub fn saturating_mul(&self, v: $ty) -> $ty {
+                    Self {
+                        inner: casper_types::$ty::saturating_mul(self.inner, v.inner)
+                    }
+                }
+
+                pub fn saturating_sub(&self, v: $ty) -> $ty {
+                    Self {
+                        inner: casper_types::$ty::saturating_sub(self.inner, v.inner)
+                    }
+                }
+
+                pub fn from_dec_str(s: &str) -> Result<Self, String> {
+                    Self::from_str_radix(s, 10)
                 }
             }
 
@@ -114,12 +156,12 @@ macro_rules! impl_casper_type_numeric_wrapper {
                     Self { inner: self.inner.overflowing_sub(other.inner).0 }
                 }
             }
-            // TODO: FIX Everything regarding uints in casper
-            // impl CheckedMul for $ty {
-            //     fn checked_mul(&self, v: &$ty) -> Option<$ty> {
-            //         casper_types::$ty::checked_mul(self.inner, v.inner).map(|inner| $ty { inner })
-            //     }
-            // }
+
+            impl CheckedMul for $ty {
+                fn checked_mul(&self, v: &$ty) -> Option<$ty> {
+                    casper_types::$ty::checked_mul(self.inner, v.inner).map(|inner| $ty { inner })
+                }
+            }
 
             impl CheckedSub for $ty {
                 fn checked_sub(&self, v: &$ty) -> Option<$ty> {
@@ -187,6 +229,12 @@ macro_rules! impl_casper_type_numeric_wrapper {
                 }
             }
 
+            impl AddAssign for $ty {
+                fn add_assign(&mut self, rhs: Self) {
+                    self.inner += rhs.inner;
+                }
+            }
+
             impl Sub for $ty {
                 type Output = Self;
 
@@ -194,6 +242,12 @@ macro_rules! impl_casper_type_numeric_wrapper {
                     Self {
                         inner: self.inner - rhs.inner,
                     }
+                }
+            }
+
+            impl SubAssign for $ty {
+                fn sub_assign(&mut self, rhs: Self) {
+                    self.inner -= rhs.inner;
                 }
             }
 
@@ -244,6 +298,12 @@ macro_rules! impl_casper_type_numeric_wrapper {
                     Self {
                         inner: self.inner / rhs.inner,
                     }
+                }
+            }
+
+            impl std::fmt::Display for $ty {
+                fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                    std::fmt::Display::fmt(&self.inner, f)
                 }
             }
 
