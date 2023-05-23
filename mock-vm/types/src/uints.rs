@@ -23,6 +23,12 @@ construct_uint! {
     pub struct U512(8);
 }
 
+impl From<U256> for U512 {
+    fn from(val: U256) -> Self {
+        val.to_u512().unwrap()
+    }
+}
+
 impl U256 {
     pub fn to_u256(self) -> Result<U256, ArithmeticsError> {
         Ok(self)
