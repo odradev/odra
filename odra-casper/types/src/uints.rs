@@ -332,11 +332,7 @@ impl U512 {
 
 impl U256 {
     pub fn to_u512(self) -> Result<U512, ArithmeticsError> {
-        let inner = self.inner();
-        let mut bytes = [0u8; 32];
-        inner.to_little_endian(&mut bytes);
-        let balance = casper_types::U512::from_little_endian(&bytes);
-        Ok(U512 { inner: balance })
+        Ok(self.into())
     }
 
     pub fn to_balance(self) -> Result<U512, ArithmeticsError> {
@@ -358,6 +354,16 @@ fn exceeds_u256(value: casper_types::U512) -> bool {
 impl From<U512> for u32 {
     fn from(value: U512) -> Self {
         value.inner().0[0] as u32
+    }
+}
+
+impl From<U256> for U512 {
+    fn from(val: U256) -> Self {
+        let inner = val.inner();
+        let mut bytes = [0u8; 32];
+        inner.to_little_endian(&mut bytes);
+        let balance = casper_types::U512::from_little_endian(&bytes);
+        U512 { inner: balance }
     }
 }
 
