@@ -268,8 +268,8 @@ impl CasperTestEnv {
     }
 
     /// Increases the current value of block_time.
-    pub fn advance_block_time_by(&mut self, seconds: BlockTime) {
-        self.block_time += seconds;
+    pub fn advance_block_time_by(&mut self, milliseconds: BlockTime) {
+        self.block_time += milliseconds;
     }
 
     /// Sets the value that will be attached to the next contract call.
