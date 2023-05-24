@@ -193,7 +193,10 @@ impl MockVm {
     }
 
     pub fn advance_block_time_by(&self, milliseconds: BlockTime) {
-        self.state.write().unwrap().advance_block_time_by(milliseconds)
+        self.state
+            .write()
+            .unwrap()
+            .advance_block_time_by(milliseconds)
     }
 
     pub fn attached_value(&self) -> Balance {

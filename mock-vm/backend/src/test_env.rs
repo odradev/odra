@@ -59,10 +59,6 @@ where
     assert_eq!(exec_err, err.into());
 }
 
-pub fn err() -> Option<OdraError> {
-    crate::borrow_env().error()
-}
-
 /// Returns nth test user account.
 pub fn get_account(n: usize) -> Address {
     crate::borrow_env().get_address(n)
