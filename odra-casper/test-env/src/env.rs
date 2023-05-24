@@ -30,6 +30,7 @@ thread_local! {
 }
 
 const ODRA_WASM_PATH_ENV_KEY: &str = "ODRA_WASM_PATH";
+const MILLIS_PER_SEC: u64 = 1_000;
 
 /// Wrapper for InMemoryWasmTestBuilder.
 pub struct CasperTestEnv {
@@ -269,7 +270,7 @@ impl CasperTestEnv {
 
     /// Increases the current value of block_time.
     pub fn advance_block_time_by(&mut self, seconds: BlockTime) {
-        self.block_time += seconds;
+        self.block_time += seconds * MILLIS_PER_SEC;
     }
 
     /// Sets the value that will be attached to the next contract call.

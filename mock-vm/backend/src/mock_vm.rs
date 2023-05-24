@@ -13,6 +13,8 @@ use crate::contract_container::{ContractContainer, EntrypointArgs, EntrypointCal
 use crate::contract_register::ContractRegister;
 use crate::storage::Storage;
 
+const MILLIS_PER_SEC: u64 = 1_000;
+
 #[derive(Default)]
 pub struct MockVm {
     state: Arc<RwLock<MockVmState>>,
@@ -60,10 +62,9 @@ impl MockVm {
         self.prepare_call(address, amount);
         // Call contract from register.
         if let Some(amount) = amount {
-            let success = self.transfer_tokens(self.caller(), address, amount);
-            if !success {
-                let bytes =
-                    self.handle_call_result(Err(OdraError::VmError(VmError::BalanceExceeded)));
+            let status = self.checked_transfer_tokens(self.caller(), address, amount);
+            if let Err(err) = status {
+                let bytes = self.handle_call_result(Err(err));
                 return T::deser(bytes).unwrap();
             }
         }
@@ -209,19 +210,38 @@ impl MockVm {
         self.state.read().unwrap().get_balance(address)
     }
 
-    pub fn transfer_tokens(&self, from: Address, to: Address, amount: Balance) -> bool {
+    pub fn transfer_tokens(&self, from: Address, to: Address, amount: Balance) {
         if amount == Balance::zero() {
-            return true;
+            self.revert(OdraError::VmError(VmError::BalanceExceeded))
         }
 
         let mut state = self.state.write().unwrap();
         if state.reduce_balance(from, amount).is_err() {
-            return false;
+            self.revert(OdraError::VmError(VmError::BalanceExceeded))
         }
         if state.increase_balance(to, amount).is_err() {
-            return false;
+            self.revert(OdraError::VmError(VmError::BalanceExceeded))
         }
-        true
+    }
+
+    pub fn checked_transfer_tokens(
+        &self,
+        from: Address,
+        to: Address,
+        amount: Balance
+    ) -> Result<(), OdraError> {
+        if amount == Balance::zero() {
+            return Err(OdraError::VmError(VmError::BalanceExceeded));
+        }
+
+        let mut state = self.state.write().unwrap();
+        if state.reduce_balance(from, amount).is_err() {
+            return Err(OdraError::VmError(VmError::BalanceExceeded));
+        }
+        if state.increase_balance(to, amount).is_err() {
+            return Err(OdraError::VmError(VmError::BalanceExceeded));
+        }
+        Ok(())
     }
 
     pub fn self_balance(&self) -> Balance {
@@ -379,7 +399,7 @@ impl MockVmState {
     }
 
     fn advance_block_time_by(&mut self, seconds: u64) {
-        self.block_time += seconds;
+        self.block_time += seconds * MILLIS_PER_SEC;
     }
 
     fn get_balance(&self, address: Address) -> Balance {
@@ -415,6 +435,17 @@ impl Default for MockVmState {
             Address::try_from(b"garry").unwrap(),
             Address::try_from(b"harry").unwrap(),
             Address::try_from(b"ivan").unwrap(),
+            Address::try_from(b"jack").unwrap(),
+            Address::try_from(b"kai").unwrap(),
+            Address::try_from(b"lilly").unwrap(),
+            Address::try_from(b"molly").unwrap(),
+            Address::try_from(b"olivia").unwrap(),
+            Address::try_from(b"paige").unwrap(),
+            Address::try_from(b"quinn").unwrap(),
+            Address::try_from(b"ruby").unwrap(),
+            Address::try_from(b"stella").unwrap(),
+            Address::try_from(b"tessa").unwrap(),
+            Address::try_from(b"uma").unwrap(),
         ];
 
         let mut balances = HashMap::<Address, AccountBalance>::new();

@@ -23,6 +23,14 @@ macro_rules! impl_casper_type_numeric_wrapper {
                     self.inner.as_u32()
                 }
 
+                pub fn as_u64(&self) -> u64 {
+                    self.inner.as_u64()
+                }
+
+                pub fn as_u128(&self) -> u128 {
+                    self.inner.as_u128()
+                }
+
                 pub fn max_value() -> Self {
                     Self {
                         inner: casper_types::$ty::MAX
