@@ -168,10 +168,10 @@ mod test {
 
                 pub fn compose(self) -> Module {
                     Module {
-                        variable: self.variable.unwrap_or_else(|| odra::Instance::instance(&format!("{}_{}", stringify!(variable), &self.namespace))),
-                        mapping: self.mapping.unwrap_or_else(|| odra::Instance::instance(&format!("{}_{}", stringify!(mapping), &self.namespace))),
-                        mapping2: self.mapping2.unwrap_or_else(|| odra::Instance::instance(&format!("{}_{}", stringify!(mapping2), &self.namespace))),
-                        submodule: self.submodule.unwrap_or_else(|| odra::Instance::instance(&format!("{}_{}", stringify!(submodule), &self.namespace)))
+                        variable: self.variable.unwrap_or_else(|| odra::Instance::instance(&format!("{}_{}", &self.namespace, stringify!(variable)))),
+                        mapping: self.mapping.unwrap_or_else(|| odra::Instance::instance(&format!("{}_{}", &self.namespace, stringify!(mapping)))),
+                        mapping2: self.mapping2.unwrap_or_else(|| odra::Instance::instance(&format!("{}_{}", &self.namespace, stringify!(mapping2)))),
+                        submodule: self.submodule.unwrap_or_else(|| odra::Instance::instance(&format!("{}_{}", &self.namespace, stringify!(submodule))))
                     }
                 }
             }
