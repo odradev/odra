@@ -212,7 +212,7 @@ impl MockVm {
 
     pub fn transfer_tokens(&self, from: Address, to: Address, amount: Balance) {
         if amount == Balance::zero() {
-            self.revert(OdraError::VmError(VmError::BalanceExceeded))
+            return;
         }
 
         let mut state = self.state.write().unwrap();
@@ -231,7 +231,7 @@ impl MockVm {
         amount: Balance
     ) -> Result<(), OdraError> {
         if amount == Balance::zero() {
-            return Err(OdraError::VmError(VmError::BalanceExceeded));
+            return Ok(());
         }
 
         let mut state = self.state.write().unwrap();
