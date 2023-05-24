@@ -35,7 +35,7 @@ delegate_to_env! {
         entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>
     ) -> Address
     /// Increases the current value of block_time.
-    fn advance_block_time_by(seconds: BlockTime)
+    fn advance_block_time_by(milliseconds: BlockTime)
     /// Returns the backend name.
     fn get_backend_name() -> String
     /// Replaces the current caller.
@@ -59,6 +59,10 @@ where
     assert_eq!(exec_err, err.into());
 }
 
+pub fn err() -> Option<OdraError> {
+    crate::borrow_env().error()
+}
+
 /// Returns nth test user account.
 pub fn get_account(n: usize) -> Address {
     crate::borrow_env().get_address(n)
@@ -79,6 +83,20 @@ pub fn call_contract<T: MockVMType>(
     amount: Option<Balance>
 ) -> T {
     crate::borrow_env().call_contract(address, entrypoint, args, amount)
+}
+
+pub fn try_call_contract<T: MockVMType>(
+    addr: Address,
+    entrypoint: &str,
+    args: &CallArgs,
+    amount: Option<Balance>
+) -> Result<T, OdraError> {
+    let result = call_contract(addr, entrypoint, args, amount);
+    if let Some(err) = crate::borrow_env().error() {
+        Err(err)
+    } else {
+        Ok(result)
+    }
 }
 
 /// Gets nth event emitted by the contract at `address`.

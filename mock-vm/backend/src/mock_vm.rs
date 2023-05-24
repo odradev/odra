@@ -13,8 +13,6 @@ use crate::contract_container::{ContractContainer, EntrypointArgs, EntrypointCal
 use crate::contract_register::ContractRegister;
 use crate::storage::Storage;
 
-const MILLIS_PER_SEC: u64 = 1_000;
-
 #[derive(Default)]
 pub struct MockVm {
     state: Arc<RwLock<MockVmState>>,
@@ -194,8 +192,8 @@ impl MockVm {
         self.state.read().unwrap().block_time()
     }
 
-    pub fn advance_block_time_by(&self, seconds: BlockTime) {
-        self.state.write().unwrap().advance_block_time_by(seconds)
+    pub fn advance_block_time_by(&self, milliseconds: BlockTime) {
+        self.state.write().unwrap().advance_block_time_by(milliseconds)
     }
 
     pub fn attached_value(&self) -> Balance {
@@ -398,8 +396,8 @@ impl MockVmState {
         self.block_time
     }
 
-    fn advance_block_time_by(&mut self, seconds: u64) {
-        self.block_time += seconds * MILLIS_PER_SEC;
+    fn advance_block_time_by(&mut self, milliseconds: u64) {
+        self.block_time += milliseconds;
     }
 
     fn get_balance(&self, address: Address) -> Balance {

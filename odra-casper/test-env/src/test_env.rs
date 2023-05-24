@@ -68,8 +68,8 @@ pub fn get_event<T: OdraType + OdraEvent>(address: Address, index: i32) -> Resul
 }
 
 /// Increases the current value of block_time.
-pub fn advance_block_time_by(seconds: u64) {
-    ENV.with(|env| env.borrow_mut().advance_block_time_by(seconds))
+pub fn advance_block_time_by(milliseconds: u64) {
+    ENV.with(|env| env.borrow_mut().advance_block_time_by(milliseconds))
 }
 
 /// Returns the balance of the account associated with the given address.
