@@ -38,7 +38,7 @@ impl GenerateCode for ModuleComposer<'_> {
                 let field_ident = field.ident.as_ref().unwrap();
 
                 quote! {
-                    #field_ident: self.#field_ident.unwrap_or_else(|| odra::Instance::instance(&format!("{}_{}", stringify!(#field_ident), &self.namespace)))
+                    #field_ident: self.#field_ident.unwrap_or_else(|| odra::Instance::instance(&format!("{}_{}", &self.namespace, stringify!(#field_ident))))
                 }
         }).collect::<Punctuated<TokenStream, Comma>>();
 

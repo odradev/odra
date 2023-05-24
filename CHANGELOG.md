@@ -2,6 +2,10 @@
 
 Changelog for `odra`.
 
+## [0.3.1] - XXXX-XX-XX
+### Added
+- `Composer` - a tool for composing Odra components.
+
 ## [0.3.0] - 2022-05-22
 ### Added
 - new module - `Sequence` - for storing single value in the storage that can be incremented.
