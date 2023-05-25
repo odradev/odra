@@ -294,7 +294,9 @@ mod tests {
 
         // Then approving a non existing token throws an error.
         assert_exception(Error::InvalidTokenId, || {
-            erc721_env.token.approve(Some(erc721_env.bob), U256::from(1));
+            erc721_env
+                .token
+                .approve(Some(erc721_env.bob), U256::from(1));
         });
     }
 
@@ -308,7 +310,9 @@ mod tests {
 
         // Then approving a token that is not owned by the caller throws an error.
         assert_exception(Error::NotAnOwnerOrApproved, || {
-            erc721_env.token.approve(Some(erc721_env.bob), U256::from(1));
+            erc721_env
+                .token
+                .approve(Some(erc721_env.bob), U256::from(1));
         });
     }
 
@@ -427,7 +431,9 @@ mod tests {
         // Then transferring a token that is not owned by the caller throws an error.
         assert_exception(Error::NotAnOwnerOrApproved, || {
             test_env::set_caller(erc721_env.bob);
-            erc721_env.token.transfer_from(erc721_env.alice, erc721_env.carol, U256::from(1));
+            erc721_env
+                .token
+                .transfer_from(erc721_env.alice, erc721_env.carol, U256::from(1));
         });
     }
 
@@ -438,7 +444,9 @@ mod tests {
 
         // Then transferring a token that does not exist throws an error.
         assert_exception(Error::InvalidTokenId, || {
-            erc721_env.token.transfer_from(erc721_env.alice, erc721_env.carol, U256::from(1));
+            erc721_env
+                .token
+                .transfer_from(erc721_env.alice, erc721_env.carol, U256::from(1));
         });
     }
 
@@ -479,7 +487,11 @@ mod tests {
             OdraError::VmError(NoSuchMethod("on_erc721_received".to_string())),
             || {
                 test_env::set_caller(erc721_env.alice);
-                erc721_env.token.safe_transfer_from(erc721_env.alice, erc20.address(), U256::from(1));
+                erc721_env.token.safe_transfer_from(
+                    erc721_env.alice,
+                    erc20.address(),
+                    U256::from(1)
+                );
             }
         )
     }

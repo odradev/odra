@@ -1,4 +1,3 @@
-#![feature(panic_info_message)]
 use ref_thread_local::RefThreadLocal;
 
 mod balance;
@@ -6,6 +5,7 @@ mod callstack;
 mod contract_container;
 pub mod contract_env;
 mod contract_register;
+mod debug;
 mod mock_vm;
 mod native_token;
 mod storage;

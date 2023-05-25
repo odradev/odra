@@ -73,8 +73,6 @@ impl MockVm {
                 .unwrap()
                 .call(&address, String::from(entrypoint), args);
 
-        dbg!("handle result", entrypoint);
-
         let result = self.handle_call_result(result);
         T::deser(result).unwrap()
     }
@@ -280,11 +278,11 @@ impl MockVmState {
     }
 
     fn callee(&self) -> Address {
-        self.callstack.current().address().clone()
+        *self.callstack.current().address()
     }
 
     fn caller(&self) -> Address {
-        self.callstack.previous().address().clone()
+        *self.callstack.previous().address()
     }
 
     fn callstack_tip(&self) -> &CallstackElement {

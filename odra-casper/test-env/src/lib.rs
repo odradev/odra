@@ -1,5 +1,5 @@
 //! TestEnv bindings for Casper's InMemoryWasmTestBuilder.
-#![feature(panic_info_message)]
+mod debug;
 #[doc(hidden)]
 pub mod dummy_contract_env;
 mod env;

@@ -1,9 +1,12 @@
 //! Exposes the public API to communicate with the host.
 
+use core::panic;
+use std::backtrace::{Backtrace, BacktraceStatus};
+
 use odra_mock_vm_types::{Address, Balance, BlockTime, MockVMType, OdraType};
 use odra_types::{event::OdraEvent, ExecutionError, OdraError};
 
-use crate::{borrow_env, native_token::NativeTokenMetadata};
+use crate::{borrow_env, debug, native_token::NativeTokenMetadata};
 
 /// Returns the current block time.
 pub fn get_block_time() -> BlockTime {
@@ -49,19 +52,21 @@ where
 {
     let execution_error: ExecutionError = error.into();
     let odra_error: OdraError = execution_error.clone().into();
+    let callstack_tip = borrow_env().callstack_tip();
+
     borrow_env().revert(odra_error);
 
     std::panic::set_hook(Box::new(|info| {
-        eprintln!("{:?}", info.message().unwrap());
+        let backtrace = Backtrace::capture();
+        if matches!(backtrace.status(), BacktraceStatus::Captured) {
+            debug::print_first_n_frames(&backtrace, 30);
+        }
+        debug::print_panic_error(info);
     }));
-
-    match borrow_env().callstack_tip() {
-        crate::callstack::CallstackElement::Account(_) => panic!("Panic {:?}", execution_error),
-        crate::callstack::CallstackElement::Entrypoint(ep) => panic!(
-            "Contract panicked in entrypoint {} with {:?}",
-            ep.entrypoint, execution_error
-        )
-    }
+    panic!(
+        "{}",
+        debug::format_panic_message(&execution_error, &callstack_tip)
+    );
 }
 
 /// Sends an event to the execution environment.

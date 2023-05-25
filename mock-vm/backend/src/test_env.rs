@@ -82,20 +82,6 @@ pub fn call_contract<T: MockVMType>(
     crate::borrow_env().call_contract(address, entrypoint, args, amount)
 }
 
-pub fn try_call_contract<T: MockVMType>(
-    addr: Address,
-    entrypoint: &str,
-    args: &CallArgs,
-    amount: Option<Balance>
-) -> Result<T, OdraError> {
-    let result = call_contract(addr, entrypoint, args, amount);
-    if let Some(err) = crate::borrow_env().error() {
-        Err(err)
-    } else {
-        Ok(result)
-    }
-}
-
 /// Gets nth event emitted by the contract at `address`.
 pub fn get_event<T: MockVMType + OdraEvent>(address: Address, index: i32) -> Result<T, EventError> {
     let bytes = crate::borrow_env().get_event(address, index);

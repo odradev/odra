@@ -749,7 +749,7 @@ mod tests {
         env.token.mint(env.alice, U256::one(), 100.into(), None);
         env.token.mint(env.alice, U256::from(2), 200.into(), None);
         assert_exception(Error::InsufficientBalance, || {
-        //     // When we transfer more tokens than we have it errors out
+            // When we transfer more tokens than we have it errors out
             test_env::set_caller(env.alice);
             env.token.safe_batch_transfer_from(
                 env.alice,
