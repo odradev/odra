@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use crate::balance::AccountBalance;
-use crate::callstack::{Callstack, CallstackElement};
+use crate::callstack::{Callstack, CallstackElement, Entrypoint};
 use crate::contract_container::{ContractContainer, EntrypointArgs, EntrypointCall};
 use crate::contract_register::ContractRegister;
 use crate::storage::Storage;
@@ -57,7 +57,7 @@ impl MockVm {
         args: &CallArgs,
         amount: Option<Balance>
     ) -> T {
-        self.prepare_call(address, amount);
+        self.prepare_call(address, entrypoint, amount);
         // Call contract from register.
         if let Some(amount) = amount {
             let status = self.checked_transfer_tokens(self.caller(), address, amount);
@@ -73,19 +73,21 @@ impl MockVm {
                 .unwrap()
                 .call(&address, String::from(entrypoint), args);
 
+        dbg!("handle result", entrypoint);
+
         let result = self.handle_call_result(result);
         T::deser(result).unwrap()
     }
 
     fn call_constructor(&self, address: Address, entrypoint: &str, args: &CallArgs) -> Vec<u8> {
-        self.prepare_call(address, None);
+        self.prepare_call(address, entrypoint, None);
         // Call contract from register.
         let register = self.contract_register.read().unwrap();
         let result = register.call_constructor(&address, String::from(entrypoint), args);
         self.handle_call_result(result)
     }
 
-    fn prepare_call(&self, address: Address, amount: Option<Balance>) {
+    fn prepare_call(&self, address: Address, entrypoint: &str, amount: Option<Balance>) {
         let mut state = self.state.write().unwrap();
         // If only one address on the call_stack, record snapshot.
         if state.is_in_caller_context() {
@@ -93,7 +95,8 @@ impl MockVm {
             state.clear_error();
         }
         // Put the address on stack.
-        let element = CallstackElement::new(address, amount);
+
+        let element = CallstackElement::Entrypoint(Entrypoint::new(address, entrypoint, amount));
         state.push_callstack_element(element);
     }
 
@@ -126,7 +129,12 @@ impl MockVm {
     }
 
     pub fn revert(&self, error: OdraError) {
-        self.state.write().unwrap().set_error(error);
+        let mut state = self.state.write().unwrap();
+        state.set_error(error);
+        state.pop_callstack_element();
+        if state.is_in_caller_context() {
+            state.drop_snapshot();
+        }
     }
 
     pub fn error(&self) -> Option<OdraError> {
@@ -144,6 +152,10 @@ impl MockVm {
 
     pub fn caller(&self) -> Address {
         self.state.read().unwrap().caller()
+    }
+
+    pub fn callstack_tip(&self) -> CallstackElement {
+        self.state.read().unwrap().callstack_tip().clone()
     }
 
     pub fn set_caller(&self, caller: Address) {
@@ -268,32 +280,36 @@ impl MockVmState {
     }
 
     fn callee(&self) -> Address {
-        self.callstack.current().address
+        self.callstack.current().address().clone()
     }
 
     fn caller(&self) -> Address {
-        self.callstack.previous().address
+        self.callstack.previous().address().clone()
+    }
+
+    fn callstack_tip(&self) -> &CallstackElement {
+        self.callstack.current()
     }
 
     fn set_caller(&mut self, address: Address) {
         self.pop_callstack_element();
-        self.push_callstack_element(CallstackElement::new(address, None));
+        self.push_callstack_element(CallstackElement::Account(address));
     }
 
     fn set_var<T: MockVMType>(&mut self, key: &str, value: T) {
-        let ctx = &self.callstack.current().address;
+        let ctx = &self.callstack.current().address();
         if let Err(err) = self.storage.set_value(ctx, key, value) {
             self.set_error(err);
         }
     }
 
     fn get_var<T: MockVMType>(&self, key: &str) -> Result<Option<T>, MockVMSerializationError> {
-        let ctx = &self.callstack.current().address;
+        let ctx = &self.callstack.current().address();
         self.storage.get_value(ctx, key)
     }
 
     fn set_dict_value<T: MockVMType>(&mut self, dict: &str, key: &[u8], value: T) {
-        let ctx = &self.callstack.current().address;
+        let ctx = &self.callstack.current().address();
         if let Err(err) = self.storage.insert_dict_value(ctx, dict, key, value) {
             self.set_error(err);
         }
@@ -304,12 +320,12 @@ impl MockVmState {
         dict: &str,
         key: &[u8]
     ) -> Result<Option<T>, MockVMSerializationError> {
-        let ctx = &self.callstack.current().address;
+        let ctx = &self.callstack.current().address();
         self.storage.get_dict_value(ctx, dict, key)
     }
 
     fn emit_event(&mut self, event_data: &EventData) {
-        let contract_address = &self.callstack.current().address;
+        let contract_address = self.callstack.current().address();
         let events = self.events.get_mut(contract_address).map(|events| {
             events.push(event_data.clone());
             events
@@ -463,10 +479,47 @@ impl Default for MockVmState {
             block_time: 0,
             accounts: addresses.clone()
         };
-        backend.push_callstack_element(CallstackElement::new(*addresses.first().unwrap(), None));
+        backend.push_callstack_element(CallstackElement::Account(*addresses.first().unwrap()));
         backend
     }
 }
+
+// pub fn call_with_suppressed_panic_hook<C, R>(closure: C) -> std::thread::Result<R>
+//     where
+//         C: FnOnce() -> R + std::panic::UnwindSafe,
+//     {
+//     thread_local! {
+//         static TEST_CONTRACT_CALL_COUNT: std::cell::Cell<u64>  = std::cell::Cell::new(0);
+//     }
+
+//     static WRAP_PANIC_HOOK: std::sync::Once = std::sync::Once::new();
+
+//     WRAP_PANIC_HOOK.call_once(|| {
+//         let existing_panic_hook = std::panic::take_hook();
+//         std::panic::set_hook(Box::new(move |info| {
+//             let calling_test_contract = TEST_CONTRACT_CALL_COUNT.with(|c| c.get() != 0);
+//             if !calling_test_contract {
+//                 existing_panic_hook(info)
+//             }
+//         }))
+//     });
+
+//     TEST_CONTRACT_CALL_COUNT.with(|c| {
+//         let old_count = c.get();
+//         let new_count = old_count.checked_add(1).expect("overflow");
+//         c.set(new_count);
+//     });
+
+//     let res = std::panic::catch_unwind(closure);
+
+//     TEST_CONTRACT_CALL_COUNT.with(|c| {
+//         let old_count = c.get();
+//         let new_count = old_count.checked_sub(1).expect("overflow");
+//         c.set(new_count);
+//     });
+
+//     res
+// }
 
 #[cfg(test)]
 mod tests {
@@ -731,7 +784,7 @@ mod tests {
     }
 
     fn push_address(vm: &MockVm, address: &Address) {
-        let element = CallstackElement::new(*address, None);
+        let element = CallstackElement::Account(*address);
         vm.state.write().unwrap().push_callstack_element(element);
     }
 

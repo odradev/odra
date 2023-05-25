@@ -308,21 +308,19 @@ mod tests {
 
     #[test]
     fn burn_errors() {
+        // Given a deployed contract
+        let mut env = setup();
+
+        // And some tokens minted
+        env.token.mint(env.alice, U256::one(), 100.into(), None);
         assert_exception(Error::InsufficientBalance, || {
-            // Given a deployed contract
-            let mut env = setup();
-
-            // And some tokens minted
-            env.token.mint(env.alice, U256::one(), 100.into(), None);
-
             // When we burn more tokens than we have it errors out
             env.token.burn(env.alice, U256::one(), 150.into());
         });
 
+        // Given a deployed contract
+        let mut env = setup();
         assert_exception(Error::InsufficientBalance, || {
-            // Given a deployed contract
-            let mut env = setup();
-
             // When we burn non-existing tokens it errors out
             env.token.burn(env.alice, U256::one(), 150.into());
         });
@@ -648,8 +646,8 @@ mod tests {
 
         assert_exception(Error::NotAnOwnerOrApproved, || {
             // Given a deployed contract
+            // test_env::set_caller(test_env::get_account(0));
             let mut env = setup();
-
             // And some tokens minted
             env.token.mint(env.alice, U256::one(), 100.into(), None);
 
@@ -744,15 +742,14 @@ mod tests {
 
     #[test]
     fn safe_batch_transfer_errors() {
+        // Given a deployed contract
+        let mut env = setup();
+
+        // And some tokens minted
+        env.token.mint(env.alice, U256::one(), 100.into(), None);
+        env.token.mint(env.alice, U256::from(2), 200.into(), None);
         assert_exception(Error::InsufficientBalance, || {
-            // Given a deployed contract
-            let mut env = setup();
-
-            // And some tokens minted
-            env.token.mint(env.alice, U256::one(), 100.into(), None);
-            env.token.mint(env.alice, U256::from(2), 200.into(), None);
-
-            // When we transfer more tokens than we have it errors out
+        //     // When we transfer more tokens than we have it errors out
             test_env::set_caller(env.alice);
             env.token.safe_batch_transfer_from(
                 env.alice,
@@ -763,14 +760,13 @@ mod tests {
             );
         });
 
+        // Given a deployed contract
+        let mut env = setup();
+
+        // And some tokens minted
+        env.token.mint(env.alice, U256::one(), 100.into(), None);
+        env.token.mint(env.alice, U256::from(2), 200.into(), None);
         assert_exception(Error::NotAnOwnerOrApproved, || {
-            // Given a deployed contract
-            let mut env = setup();
-
-            // And some tokens minted
-            env.token.mint(env.alice, U256::one(), 100.into(), None);
-            env.token.mint(env.alice, U256::from(2), 200.into(), None);
-
             // When we transfer not our tokens it errors out
             test_env::set_caller(env.bob);
             env.token.safe_batch_transfer_from(

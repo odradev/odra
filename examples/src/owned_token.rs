@@ -99,16 +99,11 @@ mod tests {
 
     #[test]
     fn mint_error() {
-        let token = setup();
+        let mut token = setup();
         let recipient = test_env::get_account(1);
         let amount = 10.into();
         test_env::set_caller(recipient);
-        test_env::assert_exception(ownable::Error::NotOwner, || {
-            // TODO: If we don't create a new ref, an error occurs:
-            // cannot borrow `token` as mutable, as it is a captured variable in a `Fn` closure cannot borrow as mutable
-            let mut token = OwnedTokenRef::at(token.address());
-            token.mint(recipient, amount);
-        });
+        test_env::assert_exception(ownable::Error::NotOwner, || token.mint(recipient, amount));
     }
 
     #[test]
@@ -121,13 +116,10 @@ mod tests {
 
     #[test]
     fn change_ownership_error() {
-        let token = setup();
+        let mut token = setup();
         let new_owner = test_env::get_account(1);
         test_env::set_caller(new_owner);
         test_env::assert_exception(ownable::Error::NotOwner, || {
-            // TODO: If we don't create a new ref, an error occurs:
-            // cannot borrow `token` as mutable, as it is a captured variable in a `Fn` closure cannot borrow as mutable
-            let mut token = OwnedTokenRef::at(token.address());
             token.change_ownership(new_owner)
         });
     }

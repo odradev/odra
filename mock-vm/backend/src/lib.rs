@@ -1,3 +1,4 @@
+#![feature(panic_info_message)]
 use ref_thread_local::RefThreadLocal;
 
 mod balance;

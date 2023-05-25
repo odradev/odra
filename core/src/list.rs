@@ -199,7 +199,6 @@ mod tests {
 
         // When replaces nonexistent value then reverts
         test_env::assert_exception(CollectionError::IndexOutOfBounds, || {
-            let mut list = List::<u8>::default();
             list.replace(100, 99);
         });
     }

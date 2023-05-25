@@ -20,9 +20,7 @@ impl ContractRegister {
         entrypoint: String,
         args: &CallArgs
     ) -> Result<Vec<u8>, OdraError> {
-        self.internal_call(addr, |container| {
-            std::panic::catch_unwind(|| container.call(entrypoint, args))?
-        })
+        self.internal_call(addr, |container| container.call(entrypoint, args))
     }
 
     pub fn call_constructor(
@@ -32,7 +30,7 @@ impl ContractRegister {
         args: &CallArgs
     ) -> Result<Vec<u8>, OdraError> {
         self.internal_call(addr, |container| {
-            std::panic::catch_unwind(|| container.call_constructor(entrypoint, args))?
+            container.call_constructor(entrypoint, args)
         })
     }
 

@@ -106,9 +106,6 @@ mod tests {
         let (_, mut ownable) = setup();
         let new_owner = test_env::get_account(1);
         ownable.change_ownership(new_owner);
-        test_env::assert_exception(Error::NotOwner, || {
-            let mut ownable = OwnableRef::at(ownable.address());
-            ownable.change_ownership(new_owner);
-        });
+        test_env::assert_exception(Error::NotOwner, || ownable.change_ownership(new_owner));
     }
 }

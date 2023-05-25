@@ -87,6 +87,9 @@ impl CasperTestEnv {
 
     /// Deploy WASM file with args.
     pub fn deploy_contract(&mut self, wasm_path: &str, args: &CallArgs) {
+        self.error = None;
+        dbg!(&self.error);
+
         let mut session_code = PathBuf::from(wasm_path);
         if let Ok(path) = env::var(ODRA_WASM_PATH_ENV_KEY) {
             let mut path = PathBuf::from(path);
@@ -145,17 +148,27 @@ impl CasperTestEnv {
         self.context.exec(execute_request).commit();
 
         self.attached_value = None;
-        if self.context.is_error() {
-            self.error = Some(parse_error(self.context.get_error().unwrap()));
-            self.get_active_account_result()
+        if let Some(error) = self.context.get_error() {
+            let odra_error = parse_error(error);
+            self.error = Some(odra_error.clone());
+            self.panic_with_error(odra_error, entry_point);
         } else {
             self.get_active_account_result()
         }
     }
 
+    fn panic_with_error(&self, error: OdraError, entry_point: &str) -> ! {
+        std::panic::set_hook(Box::new(|info| eprintln!("{:?}", info.message().unwrap())));
+        panic!(
+            "Contract panicked in entrypoint {} with {:?}",
+            entry_point, error
+        )
+    }
+
     /// Set caller.
     pub fn set_caller(&mut self, account: Address) {
         self.active_account = account;
+        dbg!(self.active_account);
     }
 
     /// Get one of the predefined accounts.

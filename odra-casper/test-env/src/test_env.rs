@@ -1,6 +1,8 @@
 //! Describes test environment API. Delegates methods to the underlying env implementation.
 //!
 //! Depending on the selected feature, the actual test env is dynamically loaded in the runtime or the Odra local MockVM is used.
+use std::panic::AssertUnwindSafe;
+
 use crate::env::ENV;
 use casper_types::account::{AccountHash, ACCOUNT_HASH_LENGTH};
 use odra_casper_shared::native_token::NativeTokenMetadata;
@@ -18,6 +20,9 @@ pub fn backend_name() -> String {
 /// Deploy WASM file with arguments.
 pub fn register_contract(name: &str, args: &CallArgs) -> Address {
     ENV.with(|env| {
+        let default_account = env.borrow().get_account(0);
+        env.borrow_mut().set_caller(default_account);
+
         let wasm_name = format!("{}.wasm", name);
         env.borrow_mut().deploy_contract(&wasm_name, args);
         let contract_package_hash = format!("{}_package_hash", name);
@@ -93,11 +98,11 @@ pub fn zero_address() -> Address {
 pub fn assert_exception<E, F>(err: E, block: F)
 where
     E: Into<OdraError>,
-    F: Fn() + std::panic::RefUnwindSafe
+    F: FnOnce()
 {
-    let _ = std::panic::catch_unwind(|| {
+    let _ = std::panic::catch_unwind(AssertUnwindSafe(|| {
         block();
-    });
+    }));
 
     let expected: OdraError = err.into();
     let msg = format!("Expected {:?} error.", expected);

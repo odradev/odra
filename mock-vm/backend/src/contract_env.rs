@@ -1,7 +1,7 @@
 //! Exposes the public API to communicate with the host.
 
 use odra_mock_vm_types::{Address, Balance, BlockTime, MockVMType, OdraType};
-use odra_types::{event::OdraEvent, ExecutionError};
+use odra_types::{event::OdraEvent, ExecutionError, OdraError};
 
 use crate::{borrow_env, native_token::NativeTokenMetadata};
 
@@ -48,8 +48,20 @@ where
     E: Into<ExecutionError>
 {
     let execution_error: ExecutionError = error.into();
-    borrow_env().revert(execution_error.into());
-    panic!("OdraRevert")
+    let odra_error: OdraError = execution_error.clone().into();
+    borrow_env().revert(odra_error);
+
+    std::panic::set_hook(Box::new(|info| {
+        eprintln!("{:?}", info.message().unwrap());
+    }));
+
+    match borrow_env().callstack_tip() {
+        crate::callstack::CallstackElement::Account(_) => panic!("Panic {:?}", execution_error),
+        crate::callstack::CallstackElement::Entrypoint(ep) => panic!(
+            "Contract panicked in entrypoint {} with {:?}",
+            ep.entrypoint, execution_error
+        )
+    }
 }
 
 /// Sends an event to the execution environment.
