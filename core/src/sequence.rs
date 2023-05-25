@@ -1,4 +1,4 @@
-use crate::{types::OdraType, Instance, UnwrapOrRevert, Variable};
+use crate::{types::OdraType, Instance, Variable};
 use num_traits::{Num, One, Zero};
 
 /// A module that stores a single value in the storage that can be read or incremented.
@@ -15,7 +15,7 @@ where
     T: Num + One + Zero + Default + Copy + OdraType
 {
     pub fn get_current_value(&self) -> T {
-        self.value.get().unwrap_or_revert()
+        self.value.get().unwrap_or_default()
     }
 
     pub fn next_value(&mut self) -> T {
