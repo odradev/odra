@@ -482,43 +482,6 @@ impl Default for MockVmState {
     }
 }
 
-// pub fn call_with_suppressed_panic_hook<C, R>(closure: C) -> std::thread::Result<R>
-//     where
-//         C: FnOnce() -> R + std::panic::UnwindSafe,
-//     {
-//     thread_local! {
-//         static TEST_CONTRACT_CALL_COUNT: std::cell::Cell<u64>  = std::cell::Cell::new(0);
-//     }
-
-//     static WRAP_PANIC_HOOK: std::sync::Once = std::sync::Once::new();
-
-//     WRAP_PANIC_HOOK.call_once(|| {
-//         let existing_panic_hook = std::panic::take_hook();
-//         std::panic::set_hook(Box::new(move |info| {
-//             let calling_test_contract = TEST_CONTRACT_CALL_COUNT.with(|c| c.get() != 0);
-//             if !calling_test_contract {
-//                 existing_panic_hook(info)
-//             }
-//         }))
-//     });
-
-//     TEST_CONTRACT_CALL_COUNT.with(|c| {
-//         let old_count = c.get();
-//         let new_count = old_count.checked_add(1).expect("overflow");
-//         c.set(new_count);
-//     });
-
-//     let res = std::panic::catch_unwind(closure);
-
-//     TEST_CONTRACT_CALL_COUNT.with(|c| {
-//         let old_count = c.get();
-//         let new_count = old_count.checked_sub(1).expect("overflow");
-//         c.set(new_count);
-//     });
-
-//     res
-// }
-
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
