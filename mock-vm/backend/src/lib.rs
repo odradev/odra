@@ -5,6 +5,7 @@ mod callstack;
 mod contract_container;
 pub mod contract_env;
 mod contract_register;
+mod debug;
 mod mock_vm;
 mod native_token;
 mod storage;

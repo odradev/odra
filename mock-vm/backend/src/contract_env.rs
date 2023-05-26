@@ -1,9 +1,12 @@
 //! Exposes the public API to communicate with the host.
 
-use odra_mock_vm_types::{Address, Balance, BlockTime, MockVMType, OdraType};
-use odra_types::{event::OdraEvent, ExecutionError};
+use core::panic;
+use std::backtrace::{Backtrace, BacktraceStatus};
 
-use crate::{borrow_env, native_token::NativeTokenMetadata};
+use odra_mock_vm_types::{Address, Balance, BlockTime, MockVMType, OdraType};
+use odra_types::{event::OdraEvent, ExecutionError, OdraError};
+
+use crate::{borrow_env, debug, native_token::NativeTokenMetadata};
 
 /// Returns the current block time.
 pub fn get_block_time() -> BlockTime {
@@ -48,8 +51,22 @@ where
     E: Into<ExecutionError>
 {
     let execution_error: ExecutionError = error.into();
-    borrow_env().revert(execution_error.into());
-    panic!("OdraRevert")
+    let odra_error: OdraError = execution_error.clone().into();
+    let callstack_tip = borrow_env().callstack_tip();
+
+    borrow_env().revert(odra_error);
+
+    std::panic::set_hook(Box::new(|info| {
+        let backtrace = Backtrace::capture();
+        if matches!(backtrace.status(), BacktraceStatus::Captured) {
+            debug::print_first_n_frames(&backtrace, 30);
+        }
+        debug::print_panic_error(info);
+    }));
+    panic!(
+        "{}",
+        debug::format_panic_message(&execution_error, &callstack_tip)
+    );
 }
 
 /// Sends an event to the execution environment.

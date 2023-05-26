@@ -101,7 +101,7 @@ pub mod test {
         // when a non-admin adds a moderator.
         test_env::assert_exception(Error::MissingRole, || {
             test_env::set_caller(user1);
-            MockModeratedRef::at(contract.address()).add_moderator(user2);
+            contract.add_moderator(user2);
         });
         // then the User2 is not a moderator.
         assert!(!contract.is_moderator(user2));
@@ -126,10 +126,8 @@ pub mod test {
         let (mut contract, admin, moderator, user) = setup(true);
 
         // when User removes the role - it fails.
-        test_env::assert_exception(Error::MissingRole, || {
-            test_env::set_caller(user);
-            MockModeratedRef::at(contract.address()).remove_moderator(moderator);
-        });
+        test_env::set_caller(user);
+        test_env::assert_exception(Error::MissingRole, || contract.remove_moderator(moderator));
         // then Moderator still is a moderator.
         assert!(contract.is_moderator(moderator));
 
@@ -142,10 +140,8 @@ pub mod test {
         // Re-grant the role.
         contract.add_moderator(moderator);
         // Moderator revoke his role - fails because is not an admin.
-        test_env::assert_exception(Error::MissingRole, || {
-            test_env::set_caller(moderator);
-            MockModeratedRef::at(contract.address()).remove_moderator(moderator);
-        });
+        test_env::set_caller(moderator);
+        test_env::assert_exception(Error::MissingRole, || contract.remove_moderator(moderator));
         // then Moderator still is a moderator.
         assert!(contract.is_moderator(moderator));
 
@@ -176,7 +172,7 @@ pub mod test {
 
         // when Admin renounces the role on moderator's behalf - it fails.
         test_env::assert_exception(Error::RoleRenounceForAnotherAddress, || {
-            MockModeratedRef::at(contract.address()).renounce_moderator_role(moderator);
+            contract.renounce_moderator_role(moderator)
         });
 
         // when Moderator renounces the role.

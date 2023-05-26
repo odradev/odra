@@ -217,8 +217,7 @@ mod tests {
 
         // Then minting the same token again throws an error.
         assert_exception(super::Error::TokenAlreadyExists, || {
-            let mut erc721 = Erc721TokenRef::at(erc721_env.token.address());
-            erc721.mint(erc721_env.alice, U256::from(1));
+            erc721_env.token.mint(erc721_env.alice, U256::from(1));
         });
     }
 
@@ -291,12 +290,13 @@ mod tests {
     #[test]
     fn approve_non_existing_token() {
         // When deploy a contract with the initial supply.
-        let erc721_env = setup();
+        let mut erc721_env = setup();
 
         // Then approving a non existing token throws an error.
         assert_exception(Error::InvalidTokenId, || {
-            let mut erc721 = Erc721TokenRef::at(erc721_env.token.address());
-            erc721.approve(Some(erc721_env.bob), U256::from(1));
+            erc721_env
+                .token
+                .approve(Some(erc721_env.bob), U256::from(1));
         });
     }
 
@@ -310,8 +310,9 @@ mod tests {
 
         // Then approving a token that is not owned by the caller throws an error.
         assert_exception(Error::NotAnOwnerOrApproved, || {
-            let mut erc721 = Erc721TokenRef::at(erc721_env.token.address());
-            erc721.approve(Some(erc721_env.bob), U256::from(1));
+            erc721_env
+                .token
+                .approve(Some(erc721_env.bob), U256::from(1));
         });
     }
 
@@ -430,20 +431,22 @@ mod tests {
         // Then transferring a token that is not owned by the caller throws an error.
         assert_exception(Error::NotAnOwnerOrApproved, || {
             test_env::set_caller(erc721_env.bob);
-            let mut erc721 = Erc721TokenRef::at(erc721_env.token.address());
-            erc721.transfer_from(erc721_env.alice, erc721_env.carol, U256::from(1));
+            erc721_env
+                .token
+                .transfer_from(erc721_env.alice, erc721_env.carol, U256::from(1));
         });
     }
 
     #[test]
     fn transferring_invalid_nft() {
         // When deploy a contract with the initial supply.
-        let erc721_env = setup();
+        let mut erc721_env = setup();
 
         // Then transferring a token that does not exist throws an error.
         assert_exception(Error::InvalidTokenId, || {
-            let mut erc721 = Erc721TokenRef::at(erc721_env.token.address());
-            erc721.transfer_from(erc721_env.alice, erc721_env.carol, U256::from(1));
+            erc721_env
+                .token
+                .transfer_from(erc721_env.alice, erc721_env.carol, U256::from(1));
         });
     }
 
@@ -483,9 +486,12 @@ mod tests {
         assert_exception(
             OdraError::VmError(NoSuchMethod("on_erc721_received".to_string())),
             || {
-                let mut erc721 = Erc721TokenRef::at(erc721_env.token.address());
                 test_env::set_caller(erc721_env.alice);
-                erc721.safe_transfer_from(erc721_env.alice, erc20.address(), U256::from(1));
+                erc721_env.token.safe_transfer_from(
+                    erc721_env.alice,
+                    erc20.address(),
+                    U256::from(1)
+                );
             }
         )
     }
@@ -588,12 +594,11 @@ mod tests {
     #[test]
     fn burn_non_existing_nft() {
         // When deploy a contract with the initial supply.
-        let erc721_env = setup();
+        let mut erc721_env = setup();
 
         // Then burning a token that does not exist throws an error.
         assert_exception(Error::InvalidTokenId, || {
-            let mut erc721 = Erc721TokenRef::at(erc721_env.token.address());
-            erc721.burn(U256::from(1));
+            erc721_env.token.burn(U256::from(1));
         });
     }
 
@@ -611,13 +616,12 @@ mod tests {
     #[test]
     fn minting_by_not_an_owner() {
         // When deploy a contract with the initial supply.
-        let erc721_env = setup();
+        let mut erc721_env = setup();
 
         // Then minting a token by not an owner throws an error.
         assert_exception(AccessError::CallerNotTheOwner, || {
             test_env::set_caller(erc721_env.bob);
-            let mut erc721 = Erc721TokenRef::at(erc721_env.token.address());
-            erc721.mint(erc721_env.alice, U256::from(1));
+            erc721_env.token.mint(erc721_env.alice, U256::from(1));
         });
     }
 }

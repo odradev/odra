@@ -1,15 +1,32 @@
 use odra_mock_vm_types::{Address, Balance};
 
 #[derive(Clone)]
-pub struct CallstackElement {
-    pub address: Address,
-    pub attached_value: Option<Balance>
+pub enum CallstackElement {
+    Account(Address),
+    Entrypoint(Entrypoint)
 }
 
 impl CallstackElement {
-    pub fn new(address: Address, value: Option<Balance>) -> Self {
+    pub fn address(&self) -> &Address {
+        match self {
+            CallstackElement::Account(address) => address,
+            CallstackElement::Entrypoint(entrypoint) => &entrypoint.address
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct Entrypoint {
+    pub address: Address,
+    pub entrypoint: String,
+    pub attached_value: Option<Balance>
+}
+
+impl Entrypoint {
+    pub fn new(address: Address, entrypoint: &str, value: Option<Balance>) -> Self {
         Self {
             address,
+            entrypoint: entrypoint.to_string(),
             attached_value: value
         }
     }
@@ -30,7 +47,10 @@ impl Callstack {
     pub fn current_amount(&self) -> Balance {
         self.0
             .last()
-            .and_then(|e| e.attached_value)
+            .and_then(|e| match e {
+                CallstackElement::Account(_) => None,
+                CallstackElement::Entrypoint(e) => e.attached_value
+            })
             .unwrap_or_default()
     }
 

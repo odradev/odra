@@ -167,7 +167,6 @@ mod tests {
         // When add 1 to max value.
         // Then should revert.
         test_env::assert_exception(ArithmeticsError::AdditionOverflow, || {
-            let mut map = Mapping::<String, u8>::default();
             map.add(&key, 1);
         });
     }
@@ -187,7 +186,6 @@ mod tests {
         // When subtraction causes overflow.
         // Then it reverts.
         test_env::assert_exception(ArithmeticsError::SubtractingOverflow, || {
-            let mut map = Mapping::<String, u8>::default();
             map.subtract(&key, 2);
         });
     }

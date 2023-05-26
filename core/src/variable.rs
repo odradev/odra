@@ -133,7 +133,6 @@ mod tests {
         // When add 1 to max value.
         // Then should revert.
         test_env::assert_exception(ArithmeticsError::AdditionOverflow, || {
-            let mut var = Variable::<u8>::default();
             var.add(1);
         });
     }
@@ -152,7 +151,6 @@ mod tests {
         // When subtraction causes overflow.
         // Then it reverts.
         test_env::assert_exception(ArithmeticsError::SubtractingOverflow, || {
-            let mut var = Variable::<u8>::default();
             var.subtract(2);
         });
     }
