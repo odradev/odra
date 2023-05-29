@@ -733,6 +733,7 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "VmError(BalanceExceeded)")]
     fn test_call_contract_with_amount_exceeding_balance() {
         // given an instance with a registered contract having one entrypoint
         let instance = MockVm::default();
