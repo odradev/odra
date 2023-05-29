@@ -37,6 +37,7 @@ where
 
 pub(crate) fn build_ref(ref_ident: &Ident) -> TokenStream {
     quote! {
+        #[derive(Clone)]
         pub struct #ref_ident {
             address: odra::types::Address,
             attached_value: Option<odra::types::Balance>,
