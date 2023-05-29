@@ -46,3 +46,9 @@ impl From<u32> for AccountBalance {
         Self::new(value.into())
     }
 }
+
+impl From<u64> for AccountBalance {
+    fn from(value: u64) -> Self {
+        Self::new(value.into())
+    }
+}
