@@ -62,8 +62,8 @@ impl MockVm {
         if let Some(amount) = amount {
             let status = self.checked_transfer_tokens(self.caller(), address, amount);
             if let Err(err) = status {
-                let bytes = self.handle_call_result(Err(err));
-                return T::deser(bytes).unwrap();
+                self.revert(err.clone());
+                panic!("{:?}", err);
             }
         }
 
@@ -477,7 +477,7 @@ impl Default for MockVmState {
 
         let mut balances = HashMap::<Address, AccountBalance>::new();
         for address in addresses.clone() {
-            balances.insert(address, 100_000.into());
+            balances.insert(address, 100_000_000_000_000u64.into());
         }
 
         let mut backend = MockVmState {
