@@ -1,4 +1,4 @@
-use crate::attrs::{partition_attributes, OdraAttribute};
+use syn::Attribute;
 
 mod kw {
     syn::custom_keyword!(to);
@@ -23,7 +23,7 @@ pub struct DelegationBlock {
 
 #[derive(Debug, Clone)]
 pub struct DelegatedFunction {
-    pub attrs: Vec<OdraAttribute>,
+    pub attrs: Vec<Attribute>,
     pub ident: syn::Ident,
     pub args: syn::punctuated::Punctuated<syn::PatType, syn::token::Comma>,
     pub ret: syn::ReturnType,
@@ -75,7 +75,6 @@ impl syn::parse::Parse for DelegatedFunction {
         let visibility = input.parse::<syn::Visibility>()?;
         let fn_item = input.parse::<syn::TraitItemMethod>()?;
 
-        let (odra_attrs, _) = partition_attributes(attrs).unwrap();
         let ident = fn_item.sig.ident.to_owned();
         let args = fn_item
             .sig
@@ -90,7 +89,7 @@ impl syn::parse::Parse for DelegatedFunction {
         let full_sig = fn_item.sig;
 
         Ok(Self {
-            attrs: odra_attrs,
+            attrs,
             visibility,
             ident,
             args,
