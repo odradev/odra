@@ -129,7 +129,7 @@ impl MockVm {
     pub fn revert(&self, error: OdraError) {
         let mut state = self.state.write().unwrap();
         state.set_error(error);
-        state.pop_callstack_element();
+        state.clear_callstack();
         if state.is_in_caller_context() {
             state.drop_snapshot();
         }
@@ -351,6 +351,18 @@ impl MockVmState {
 
     fn pop_callstack_element(&mut self) {
         self.callstack.pop();
+    }
+
+    fn clear_callstack(&mut self) {
+        let mut element = self.callstack.pop();
+        while element.is_some() {
+            let new_element = self.callstack.pop();
+            if new_element.is_none() {
+                self.callstack.push(element.unwrap());
+                return;
+            }
+            element = new_element;
+        }
     }
 
     fn next_contract_address(&mut self) -> Address {
