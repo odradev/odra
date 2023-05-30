@@ -119,6 +119,8 @@ mod tests {
         let mut token = setup();
         let new_owner = test_env::get_account(1);
         test_env::set_caller(new_owner);
-        test_env::assert_exception(ownable::Error::NotOwner, || token.change_ownership(&new_owner));
+        test_env::assert_exception(ownable::Error::NotOwner, || {
+            token.change_ownership(&new_owner)
+        });
     }
 }

@@ -92,10 +92,7 @@ impl Erc20 {
     }
 
     fn spend_allowance(&mut self, owner: &Address, spender: &Address, amount: &U256) {
-        let allowance = self
-            .allowances
-            .get_instance(owner)
-            .get_or_default(spender);
+        let allowance = self.allowances.get_instance(owner).get_or_default(spender);
         if allowance < *amount {
             contract_env::revert(Error::InsufficientAllowance)
         }
@@ -210,7 +207,9 @@ pub mod tests {
         let recipient = test_env::get_account(1);
         let amount = U256::from(INITIAL_SUPPLY) + U256::from(1);
 
-        test_env::assert_exception(Error::InsufficientBalance, || erc20.transfer(&recipient, &amount));
+        test_env::assert_exception(Error::InsufficientBalance, || {
+            erc20.transfer(&recipient, &amount)
+        });
     }
 
     #[test]
@@ -270,6 +269,8 @@ pub mod tests {
         let amount = 1_000.into();
 
         test_env::set_caller(spender);
-        test_env::assert_exception(Error::InsufficientAllowance, || erc20.transfer_from(&owner, &spender, &amount));
+        test_env::assert_exception(Error::InsufficientAllowance, || {
+            erc20.transfer_from(&owner, &spender, &amount)
+        });
     }
 }

@@ -1,10 +1,11 @@
 use std::convert::TryFrom;
 
 use proc_macro2::Ident;
+use syn::{punctuated::Punctuated, token::Comma};
 
-use crate::attrs::partition_attributes;
+use crate::{attrs::partition_attributes,};
 
-use super::{constructor::Constructor, method::Method};
+use super::{constructor::Constructor, method::Method, utils};
 
 /// An item within an implementation block
 ///
@@ -51,7 +52,7 @@ impl TryFrom<syn::ImplItem> for ImplItem {
 
 pub struct ContractEntrypoint {
     pub ident: Ident,
-    pub args: Vec<syn::PatType>,
+    pub args: Punctuated<syn::PatType, Comma>,
     pub ret: syn::ReturnType,
     pub full_sig: syn::Signature
 }
@@ -59,15 +60,7 @@ pub struct ContractEntrypoint {
 impl From<syn::ImplItemMethod> for ContractEntrypoint {
     fn from(method: syn::ImplItemMethod) -> Self {
         let ident = method.sig.ident.to_owned();
-        let args = method
-            .sig
-            .inputs
-            .iter()
-            .filter_map(|arg| match arg {
-                syn::FnArg::Receiver(_) => None,
-                syn::FnArg::Typed(pat) => Some(pat.clone())
-            })
-            .collect::<Vec<_>>();
+        let args = utils::extract_typed_inputs(&method.sig);
         let ret = method.clone().sig.output;
         let full_sig = method.sig;
         Self {

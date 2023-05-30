@@ -1,5 +1,6 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, TokenStreamExt};
+use syn::{FnArg, PatType};
 
 pub(crate) fn generate_fn_body<T>(
     args: T,
@@ -28,10 +29,7 @@ where
     T: IntoIterator<Item = &'a syn::FnArg>
 {
     args.into_iter()
-        .filter_map(|arg| match arg {
-            syn::FnArg::Receiver(_) => None,
-            syn::FnArg::Typed(pat) => Some(pat.clone())
-        })
+        .filter_map(typed_arg)
         .collect::<Vec<_>>()
 }
 
@@ -78,6 +76,13 @@ where
         let args = {
             #tokens
         };
+    }
+}
+
+pub fn typed_arg(arg: &FnArg) -> Option<PatType> {
+    match arg {
+        syn::FnArg::Receiver(_) => None,
+        syn::FnArg::Typed(pat) => Some(pat.clone())
     }
 }
 

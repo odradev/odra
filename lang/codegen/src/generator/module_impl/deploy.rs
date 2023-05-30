@@ -6,6 +6,7 @@ use syn::{punctuated::Punctuated, token::Comma};
 
 use crate::GenerateCode;
 
+pub(super) mod common;
 mod deployer_casper_livenet;
 mod deployer_casper_test;
 mod deployer_mock_vm;

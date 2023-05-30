@@ -45,11 +45,8 @@ impl ToTokens for Method {
             .map(|arg| {
                 let name = &*arg.pat;
 
-                let ty = match &*arg.ty {
-                    syn::Type::Reference(r) => &r.elem,
-                    other => other
-                };
-                let is_ref = matches!(&*arg.ty, syn::Type::Reference(_));
+                let ty = utils::ty(arg);
+                let is_ref = utils::is_ref(arg);
                 let ty = quote!(<#ty as odra::types::Typed>::ty());
                 quote! {
                     odra::types::contract_def::Argument {
@@ -95,19 +92,9 @@ impl TryFrom<syn::ImplItemMethod> for Method {
     type Error = syn::Error;
 
     fn try_from(method: syn::ImplItemMethod) -> Result<Self, Self::Error> {
-        // validate_args(&method)?;
-
         let (odra_attrs, attrs) = partition_attributes(method.clone().attrs)?;
         let ident = method.sig.ident.to_owned();
-        let args = method
-            .sig
-            .inputs
-            .iter()
-            .filter_map(|arg| match arg {
-                syn::FnArg::Receiver(_) => None,
-                syn::FnArg::Typed(pat) => Some(pat.clone())
-            })
-            .collect::<syn::punctuated::Punctuated<_, _>>();
+        let args = utils::extract_typed_inputs(&method.sig);
         let ret = method.clone().sig.output;
         let full_sig = method.clone().sig;
         let visibility = method.vis.clone();

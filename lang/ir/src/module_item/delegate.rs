@@ -1,5 +1,7 @@
 use syn::Attribute;
 
+use super::utils;
+
 mod kw {
     syn::custom_keyword!(to);
 }
@@ -76,15 +78,7 @@ impl syn::parse::Parse for DelegatedFunction {
         let fn_item = input.parse::<syn::TraitItemMethod>()?;
 
         let ident = fn_item.sig.ident.to_owned();
-        let args = fn_item
-            .sig
-            .inputs
-            .iter()
-            .filter_map(|arg| match arg {
-                syn::FnArg::Receiver(_) => None,
-                syn::FnArg::Typed(pat) => Some(pat.clone())
-            })
-            .collect::<syn::punctuated::Punctuated<_, _>>();
+        let args = utils::extract_typed_inputs(&fn_item.sig);
         let ret = fn_item.clone().sig.output;
         let full_sig = fn_item.sig;
 
