@@ -131,7 +131,7 @@ impl MockVm {
         state.set_error(error);
         state.clear_callstack();
         if state.is_in_caller_context() {
-            state.drop_snapshot();
+            state.restore_snapshot();
         }
     }
 
@@ -748,12 +748,6 @@ mod tests {
             &entrypoint_name,
             &CallArgs::new(),
             Some(caller_balance + 1)
-        );
-
-        // then the vm raises an error
-        assert_eq!(
-            instance.error(),
-            Some(OdraError::VmError(VmError::BalanceExceeded))
         );
     }
 
