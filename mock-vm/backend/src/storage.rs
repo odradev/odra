@@ -163,9 +163,7 @@ mod test {
 
         // when the next value is set under the same key
         let next_value = String::from("new_value");
-        storage
-            .set_value(&address, &key, &next_value)
-            .unwrap();
+        storage.set_value(&address, &key, &next_value).unwrap();
 
         // then the previous value is replaced
         assert_eq!(storage.get_value(&address, &key).unwrap(), Some(next_value));

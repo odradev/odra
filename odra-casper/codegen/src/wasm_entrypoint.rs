@@ -110,7 +110,7 @@ mod tests {
             args: vec![Argument {
                 ident: String::from("value"),
                 ty: Type::I32,
-                is_ref: true,
+                is_ref: true
             }],
             ret: Type::Unit,
             ty: EntrypointType::Public {

@@ -88,7 +88,7 @@ mod test {
             args: vec![Argument {
                 ident: String::from("value"),
                 ty: Type::I32,
-                is_ref: false,
+                is_ref: false
             }],
             ret: Type::Bool,
             ty: EntrypointType::Public {

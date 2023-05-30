@@ -1,4 +1,4 @@
-use syn::{PatType, FnArg};
+use syn::{FnArg, PatType};
 
 pub fn is_mut(sig: &syn::Signature) -> bool {
     let receiver = sig.inputs.iter().find_map(|input| match input {
@@ -16,7 +16,7 @@ pub fn ty<'a>(ty: &'a PatType) -> &'a syn::Type {
     deref_ty(&*ty.ty)
 }
 
-fn deref_ty<'a>(ty: &'a syn::Type) -> &'a syn::Type { 
+fn deref_ty<'a>(ty: &'a syn::Type) -> &'a syn::Type {
     match ty {
         syn::Type::Reference(r) => deref_ty(&r.elem),
         other => other
@@ -30,9 +30,10 @@ pub fn typed_arg(arg: &FnArg) -> Option<PatType> {
     }
 }
 
-pub fn extract_typed_inputs(sig: &syn::Signature) -> syn::punctuated::Punctuated<syn::PatType, syn::token::Comma> {
-    sig
-        .inputs
+pub fn extract_typed_inputs(
+    sig: &syn::Signature
+) -> syn::punctuated::Punctuated<syn::PatType, syn::token::Comma> {
+    sig.inputs
         .iter()
         .filter_map(typed_arg)
         .collect::<syn::punctuated::Punctuated<syn::PatType, syn::token::Comma>>()

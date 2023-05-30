@@ -40,6 +40,7 @@ impl ReentrancyMock {
     }
 }
 
+
 #[cfg(test)]
 mod test {
     use odra::{test_env, types::ExecutionError};

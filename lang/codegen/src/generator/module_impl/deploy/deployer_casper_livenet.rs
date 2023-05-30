@@ -104,7 +104,7 @@ fn build_constructor(
 ) -> TokenStream {
     let struct_name = struct_ident.to_string();
     let struct_name_snake_case = odra_utils::camel_to_snake(&struct_name);
-    
+
     let constructor_ident = &constructor.ident;
 
     let fn_sig = common::constructor_sig(constructor, ref_ident);

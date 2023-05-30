@@ -70,7 +70,10 @@ where
     args.into_iter()
         .map(|arg| {
             let pat = &*arg.pat;
-            quote!(&args.get(stringify!(#pat)))
+            match &*arg.ty {
+                syn::Type::Reference(_) => quote!(&args.get(stringify!(#pat))),
+                _ => quote!(args.get(stringify!(#pat)))
+            }
         })
         .collect::<Punctuated<TokenStream, Comma>>()
 }

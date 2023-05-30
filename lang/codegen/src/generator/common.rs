@@ -28,9 +28,7 @@ pub(crate) fn filter_args<'a, T>(args: T) -> Vec<syn::PatType>
 where
     T: IntoIterator<Item = &'a syn::FnArg>
 {
-    args.into_iter()
-        .filter_map(typed_arg)
-        .collect::<Vec<_>>()
+    args.into_iter().filter_map(typed_arg).collect::<Vec<_>>()
 }
 
 pub(crate) fn build_ref(ref_ident: &Ident) -> TokenStream {

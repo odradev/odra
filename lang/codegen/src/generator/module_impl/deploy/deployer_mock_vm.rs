@@ -132,7 +132,7 @@ fn build_entrypoints_calls(methods: &[&Method], struct_ident: &Ident) -> TokenSt
             let args = args_to_fn_args(&entrypoint.args);
             let attached_value_check = attached_value(&entrypoint);
             let (reentrancy_check, reentrancy_cleanup) = reentrancy_code(entrypoint);
-            
+
             quote! {
                 entrypoints.insert(#name, (#arg_names, |name, args| {
                     #reentrancy_check
@@ -168,7 +168,6 @@ fn build_constructor_calls(constructors: &[&Constructor], struct_ident: &Ident) 
         .collect::<TokenStream>()
 }
 
-
 fn reentrancy_code(entrypoint: &Method) -> (TokenStream, TokenStream) {
     let non_reentrant = entrypoint.attrs.iter().any(|a| a.is_non_reentrant());
     let reentrancy_check = match non_reentrant {
@@ -176,18 +175,15 @@ fn reentrancy_code(entrypoint: &Method) -> (TokenStream, TokenStream) {
             if odra::contract_env::get_var("__reentrancy_guard").unwrap_or_default(){
                 odra::contract_env::revert(odra::types::ExecutionError::reentrant_call());
             }
-            odra::contract_env::set_var("__reentrancy_guard", true);
+            odra::contract_env::set_var("__reentrancy_guard", &true);
         },
         false => quote!()
     };
     let reentrancy_cleanup = match non_reentrant {
-        true => quote!(odra::contract_env::set_var("__reentrancy_guard", false);),
+        true => quote!(odra::contract_env::set_var("__reentrancy_guard", &false);),
         false => quote!()
     };
-    (
-        reentrancy_check,
-        reentrancy_cleanup
-    )
+    (reentrancy_check, reentrancy_cleanup)
 }
 
 fn attached_value(entrypoint: &Method) -> TokenStream {

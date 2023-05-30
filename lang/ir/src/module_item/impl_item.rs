@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use proc_macro2::Ident;
 use syn::{punctuated::Punctuated, token::Comma};
 
-use crate::{attrs::partition_attributes,};
+use crate::attrs::partition_attributes;
 
 use super::{constructor::Constructor, method::Method, utils};
 

@@ -1,6 +1,6 @@
 use odra_ir::module::Constructor;
 use proc_macro2::Ident;
-use syn::{Type, TypePath, punctuated::Punctuated, ReturnType};
+use syn::{punctuated::Punctuated, ReturnType, Type, TypePath};
 
 pub fn constructor_sig(constructor: &Constructor, ref_ident: &Ident) -> syn::Signature {
     let ty = Type::Path(TypePath {
