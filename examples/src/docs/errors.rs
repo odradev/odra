@@ -43,7 +43,7 @@ impl OwnedContract {
 #[cfg(test)]
 mod tests {
     use super::Error;
-    use super::{OwnedContractDeployer, OwnedContractRef};
+    use super::OwnedContractDeployer;
 
     #[test]
     fn test_owner() {
@@ -54,7 +54,9 @@ mod tests {
         let mut owned_contract = OwnedContractDeployer::init("OwnedContract".to_string());
 
         odra::test_env::set_caller(not_an_owner);
-        owned_contract.change_name("NewName".to_string());
+        odra::test_env::assert_exception(Error::NotAnOwner, || {
+            owned_contract.change_name("NewName".to_string());
+        });
         assert!(owned_contract.name() != "NewName");
     }
 
@@ -64,11 +66,10 @@ mod tests {
         let not_an_owner = odra::test_env::get_account(1);
 
         odra::test_env::set_caller(owner);
-        let owned_contract = OwnedContractDeployer::init("OwnedContract".to_string());
+        let mut owned_contract = OwnedContractDeployer::init("OwnedContract".to_string());
 
         odra::test_env::set_caller(not_an_owner);
         odra::test_env::assert_exception(Error::NotAnOwner, || {
-            let mut owned_contract = OwnedContractRef::at(owned_contract.address());
             owned_contract.change_name("NewName".to_string());
         })
     }

@@ -1,0 +1,53 @@
+{
+  "name": "Ownable",
+  "entrypoints": [
+    {
+      "name": "init",
+      "is_mutable": true,
+      "args": [],
+      "return_ty": "Unit"
+    },
+    {
+      "name": "transfer_ownership",
+      "is_mutable": true,
+      "args": [
+        {
+          "name": "new_owner",
+          "ty": "Key"
+        }
+      ],
+      "return_ty": "Unit"
+    },
+    {
+      "name": "renounce_ownership",
+      "is_mutable": true,
+      "args": [],
+      "return_ty": "Unit"
+    },
+    {
+      "name": "get_owner",
+      "is_mutable": false,
+      "args": [],
+      "return_ty": "Key"
+    }
+  ],
+  "events": [
+    {
+      "name": "OwnershipTransferred",
+      "fields": [
+        {
+          "name": "previous_owner",
+          "ty": {
+            "Option": "Key"
+          }
+        },
+        {
+          "name": "new_owner",
+          "ty": {
+            "Option": "Key"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -4,11 +4,10 @@ use proc_macro2::TokenStream;
 use crate::generator::common::casper;
 
 pub fn generate_code(item: &OdraTypeItem) -> TokenStream {
-    let struct_ident = item.struct_ident();
-    let fields = item
-        .fields_iter()
-        .map(|f| f.ident.clone().unwrap())
-        .collect::<Vec<_>>();
+    let ident = item.ident();
 
-    casper::serialize_struct("", struct_ident, &fields)
+    match item {
+        OdraTypeItem::Struct(s) => casper::serialize_struct("", ident, s.fields()),
+        OdraTypeItem::Enum(e) => casper::serialize_enum(ident, e.variants())
+    }
 }

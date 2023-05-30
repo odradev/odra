@@ -23,8 +23,7 @@ fn main() {
     );
 
     // Uncomment to use already deployed contract.
-    //
-    // let address = "hash-40dd2fef4e994d2b0d3d415ce515446d7a1e389d2e6fc7c51319a70acf6f42d0";
+    // let address = "hash-3a20a5cd38e8826346faa673576657b03bbd4d86685e404baf9f1fa406a4f7a7";
     // let address = Address::from_str(address).unwrap();
     // let mut token = Erc20Deployer::register(address);
 

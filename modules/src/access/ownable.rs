@@ -242,7 +242,7 @@ mod test {
     #[test]
     fn failing_plain_ownership_transfer() {
         // given a new contract
-        let (contract, _) = setup_ownable();
+        let (mut contract, _) = setup_ownable();
 
         // when a non-owner account is the caller
         let (caller, new_owner) = (test_env::get_account(1), test_env::get_account(2));
@@ -250,7 +250,7 @@ mod test {
 
         // then ownership transfer fails
         test_env::assert_exception(Error::CallerNotTheOwner, || {
-            OwnableRef::at(contract.address()).transfer_ownership(&new_owner);
+            contract.transfer_ownership(&new_owner);
         });
     }
 
@@ -265,7 +265,7 @@ mod test {
 
         // then ownership transfer fails
         test_env::assert_exception(Error::CallerNotTheOwner, || {
-            Ownable2StepRef::at(contract.address()).transfer_ownership(&new_owner);
+            contract.transfer_ownership(&new_owner);
         });
 
         // when the owner is the caller
@@ -278,7 +278,7 @@ mod test {
         // when someone else than the pending owner accepts the ownership
         // transfer, it should fail
         test_env::assert_exception(Error::CallerNotTheNewOwner, || {
-            Ownable2StepRef::at(contract.address()).accept_ownership();
+            contract.accept_ownership();
         });
 
         // then the owner remain the same
@@ -312,7 +312,6 @@ mod test {
                 });
                 // then cannot renounce ownership again
                 test_env::assert_exception(Error::CallerNotTheOwner, || {
-                    let mut contract = OwnableRef::at(contract.address());
                     contract.renounce_ownership();
                 });
             });
@@ -321,16 +320,16 @@ mod test {
     #[test]
     fn renounce_ownership_fail() {
         // given new contracts
-        let (contracts, _) = setup_renounceable();
+        let (mut contracts, _) = setup_renounceable();
 
-        contracts.iter().for_each(|contract| {
+        contracts.iter_mut().for_each(|contract| {
             // when a non-owner account is the caller
             let caller = test_env::get_account(1);
             test_env::set_caller(caller);
 
             // then renounce ownership fails
             test_env::assert_exception(Error::CallerNotTheOwner, || {
-                Ownable2StepRef::at(contract.address()).renounce_ownership();
+                contract.renounce_ownership();
             });
         });
     }

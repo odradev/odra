@@ -106,11 +106,6 @@ mod tests {
         let (_, mut ownable) = setup();
         let new_owner = test_env::get_account(1);
         ownable.change_ownership(&new_owner);
-        test_env::assert_exception(Error::NotOwner, || {
-            // TODO: If we don't create a new ref, an error occurs:
-            // cannot borrow `ownable` as mutable, as it is a captured variable in a `Fn` closure cannot borrow as mutable
-            let mut ownable = OwnableRef::at(ownable.address());
-            ownable.change_ownership(&new_owner);
-        });
+        test_env::assert_exception(Error::NotOwner, || ownable.change_ownership(&new_owner));
     }
 }

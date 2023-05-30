@@ -1,7 +1,7 @@
 //! Describes test environment API. Delegates methods to the underlying env implementation.
 //!
 //! Depending on the selected feature, the actual test env is dynamically loaded in the runtime or the Odra local MockVM is used.
-use std::collections::HashMap;
+use std::{collections::HashMap, panic::AssertUnwindSafe};
 
 use odra_mock_vm_types::{Address, Balance, BlockTime, BorshDeserialize, CallArgs, MockVMType};
 use odra_types::{
@@ -35,7 +35,7 @@ delegate_to_env! {
         entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>
     ) -> Address
     /// Increases the current value of block_time.
-    fn advance_block_time_by(seconds: BlockTime)
+    fn advance_block_time_by(milliseconds: BlockTime)
     /// Returns the backend name.
     fn get_backend_name() -> String
     /// Replaces the current caller.
@@ -47,15 +47,16 @@ delegate_to_env! {
 /// Expects the `block` execution will fail with the specific error.
 pub fn assert_exception<F, E>(err: E, block: F)
 where
-    F: Fn() + std::panic::RefUnwindSafe,
+    F: FnOnce(),
     E: Into<OdraError>
 {
-    let _ = std::panic::catch_unwind(|| {
+    let _ = std::panic::catch_unwind(AssertUnwindSafe(|| {
         block();
-    });
+    }));
     let exec_err = crate::borrow_env()
         .error()
         .expect("An error expected, but did not occur");
+
     assert_eq!(exec_err, err.into());
 }
 

@@ -206,16 +206,11 @@ pub mod tests {
 
     #[test]
     fn transfer_error() {
-        let erc20 = setup();
+        let mut erc20 = setup();
         let recipient = test_env::get_account(1);
         let amount = U256::from(INITIAL_SUPPLY) + U256::from(1);
 
-        test_env::assert_exception(Error::InsufficientBalance, || {
-            // TODO: If we don't create a new ref, an error occurs:
-            // cannot borrow `erc20` as mutable, as it is a captured variable in a `Fn` closure cannot borrow as mutable
-            let mut erc20 = Erc20Ref::at(erc20.address());
-            erc20.transfer(&recipient, &amount)
-        });
+        test_env::assert_exception(Error::InsufficientBalance, || erc20.transfer(&recipient, &amount));
     }
 
     #[test]
@@ -247,7 +242,7 @@ pub mod tests {
         test_env::set_caller(spender);
         erc20.transfer_from(&owner, &recipient, &transfer_amount);
 
-        // Tokens are transfered and allowance decremented.
+        // Tokens are transferred and allowance decremented.
         assert_eq!(
             erc20.balance_of(&owner),
             U256::from(INITIAL_SUPPLY) - transfer_amount
@@ -270,16 +265,11 @@ pub mod tests {
 
     #[test]
     fn transfer_from_error() {
-        let erc20 = setup();
+        let mut erc20 = setup();
         let (owner, spender) = (test_env::get_account(0), test_env::get_account(1));
         let amount = 1_000.into();
 
         test_env::set_caller(spender);
-        test_env::assert_exception(Error::InsufficientAllowance, || {
-            // TODO: If we don't create a new ref, an error occurs:
-            // cannot borrow `erc20` as mutable, as it is a captured variable in a `Fn` closure cannot borrow as mutable
-            let mut erc20 = Erc20Ref::at(erc20.address());
-            erc20.transfer_from(&owner, &spender, &amount)
-        });
+        test_env::assert_exception(Error::InsufficientAllowance, || erc20.transfer_from(&owner, &spender, &amount));
     }
 }

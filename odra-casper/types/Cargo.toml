@@ -1,6 +1,6 @@
 [package]
 name = "odra-casper-types"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
 license = "MIT"
@@ -11,6 +11,6 @@ categories = ["wasm", "smart contracts"]
 
 [dependencies]
 casper-types = { workspace = true }
-odra-types = { version = "0.2.0", path = "../../types" }
+odra-types = { version = "0.3.0", path = "../../types" }
 casper-event-standard = { workspace = true }
 num-traits = "0.2.14"

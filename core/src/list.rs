@@ -5,7 +5,7 @@ use odra_types::CollectionError;
 use crate::{contract_env, Instance, Mapping, UnwrapOrRevert, Variable};
 
 /// Data structure for an indexed, iterable collection.
-#[derive(Clone)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct List<T> {
     values: Mapping<u32, T>,
     index: Variable<u32>
@@ -200,7 +200,6 @@ mod tests {
 
         // When replaces nonexistent value then reverts
         test_env::assert_exception(CollectionError::IndexOutOfBounds, || {
-            let mut list = List::<u8>::default();
             list.replace(100, &99);
         });
     }

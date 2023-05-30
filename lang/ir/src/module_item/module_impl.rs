@@ -115,6 +115,7 @@ impl TryFrom<syn::ItemImpl> for ModuleImpl {
                     .functions
                     .iter()
                     .map(|func| {
+                        let attrs = &func.attrs;
                         let sig = &func.full_sig;
                         let vis = &func.visibility;
                         let ident = &func.ident;
@@ -124,7 +125,10 @@ impl TryFrom<syn::ItemImpl> for ModuleImpl {
                             .map(|ty| ty.pat.clone())
                             .collect::<Vec<_>>();
 
-                        parse_quote!(#vis #sig { #to.#ident(#(#args),*) })
+                        parse_quote! {
+                            #(#attrs)*
+                            #vis #sig { #to.#ident(#(#args),*) }
+                        }
                     })
                     .collect::<Vec<syn::ImplItem>>()
             })

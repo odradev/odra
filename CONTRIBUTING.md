@@ -7,10 +7,16 @@ The following is a set of rules and guidelines for contributing to this repo. Pl
 If you have questions about how to use Odra, please direct these to the related channels on the [Odra.dev Discord server](https://discord.gg/Mm5ABc9P8k).
 
 ### Guidelines
-* Please search the existing issues first, it's likely that your issue was already reported or even fixed.
-  - Go to the main page of the repository, click "issues" and type any word in the top search/command bar.
-  - You can also filter by appending e. g. "state:open" to the search string.
-  - More info on [search syntax within GitHub](https://help.github.com/articles/searching-issues)
+Please search the existing issues first, it's likely that your issue was already reported or even fixed.
+* Go to the main page of the repository, click "issues" and type any word in the top search/command bar.
+* You can also filter by appending e. g. "state:open" to the search string.
+* More info on [search syntax within GitHub](https://help.github.com/articles/searching-issues)
+
+### Branching model
+Odra uses release-based branching model:
+* There are no `master` and `develop` branches.
+* The active branch is the latest released branch on crates.io.
+* Development happens on the next release branch, and it should be a target for all pull requests.
 
 ## Contributing to Odra
 

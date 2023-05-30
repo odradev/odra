@@ -1,6 +1,11 @@
 //! Implementation of [CasperTestEnv].
 
-use std::{cell::RefCell, env, path::PathBuf};
+use std::{
+    backtrace::{Backtrace, BacktraceStatus},
+    cell::RefCell,
+    env,
+    path::PathBuf
+};
 
 use casper_engine_test_support::{
     DeployItemBuilder, ExecuteRequestBuilder, InMemoryWasmTestBuilder, ARG_AMOUNT,
@@ -23,6 +28,8 @@ use odra_types::{
     event::{EventError, OdraEvent},
     ExecutionError, OdraError, VmError
 };
+
+use crate::debug;
 
 thread_local! {
     /// Thread local instance of [CasperTestEnv].
@@ -87,12 +94,15 @@ impl CasperTestEnv {
 
     /// Deploy WASM file with args.
     pub fn deploy_contract(&mut self, wasm_path: &str, args: &CallArgs) {
+        self.error = None;
         let mut session_code = PathBuf::from(wasm_path);
         if let Ok(path) = env::var(ODRA_WASM_PATH_ENV_KEY) {
             let mut path = PathBuf::from(path);
             path.push(wasm_path);
             if path.exists() {
                 session_code = path;
+            } else {
+                panic!("WASM file not found: {:?}", path);
             }
         }
 
@@ -143,12 +153,33 @@ impl CasperTestEnv {
         self.context.exec(execute_request).commit();
 
         self.attached_value = None;
-        if self.context.is_error() {
-            self.error = Some(parse_error(self.context.get_error().unwrap()));
-            self.get_active_account_result()
+        if let Some(error) = self.context.get_error() {
+            let odra_error = parse_error(error);
+            self.error = Some(odra_error.clone());
+            self.panic_with_error(odra_error, entry_point, hash);
         } else {
             self.get_active_account_result()
         }
+    }
+
+    fn panic_with_error(
+        &self,
+        error: OdraError,
+        entrypoint: &str,
+        contract_package_hash: ContractPackageHash
+    ) -> ! {
+        std::panic::set_hook(Box::new(|info| {
+            let backtrace = Backtrace::capture();
+            if matches!(backtrace.status(), BacktraceStatus::Captured) {
+                debug::print_first_n_frames(&backtrace, 30);
+            }
+            debug::print_panic_error(info);
+        }));
+
+        panic!(
+            "{}",
+            debug::format_panic_message(&error, entrypoint, contract_package_hash)
+        )
     }
 
     /// Set caller.
@@ -266,8 +297,8 @@ impl CasperTestEnv {
     }
 
     /// Increases the current value of block_time.
-    pub fn advance_block_time_by(&mut self, seconds: BlockTime) {
-        self.block_time += seconds;
+    pub fn advance_block_time_by(&mut self, milliseconds: BlockTime) {
+        self.block_time += milliseconds;
     }
 
     /// Sets the value that will be attached to the next contract call.

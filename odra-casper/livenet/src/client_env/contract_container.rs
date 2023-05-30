@@ -26,7 +26,7 @@ impl ContractContainer {
         match self.entrypoints.get(&entrypoint) {
             Some((ep_args, call)) => {
                 self.validate_args(ep_args, &args)?;
-                Ok(call(String::new(), args))
+                Ok(call(String::new(), &args))
             }
             None => Err(OdraError::VmError(VmError::NoSuchMethod(entrypoint)))
         }

@@ -41,7 +41,7 @@ impl PauseableCounter {
 
 #[cfg(test)]
 mod test {
-    use super::{PauseableCounterDeployer, PauseableCounterRef};
+    use super::PauseableCounterDeployer;
     use crate::security::{
         errors::Error,
         events::{Paused, Unpaused}
@@ -71,25 +71,19 @@ mod test {
     #[test]
     fn increment_only_if_unpaused() {
         let mut contract = PauseableCounterDeployer::default();
-
         contract.increment();
-
         contract.pause();
 
-        test_env::assert_exception(Error::UnpausedRequired, || {
-            PauseableCounterRef::at(contract.address()).increment();
-        });
+        test_env::assert_exception(Error::UnpausedRequired, || contract.increment());
 
         assert_eq!(contract.get_value(), 1);
     }
 
     #[test]
     fn cannot_unpause_unpaused() {
-        let contract = PauseableCounterDeployer::default();
+        let mut contract = PauseableCounterDeployer::default();
 
-        test_env::assert_exception(Error::PausedRequired, || {
-            PauseableCounterRef::at(contract.address()).unpause();
-        });
+        test_env::assert_exception(Error::PausedRequired, || contract.unpause());
     }
 
     #[test]
@@ -97,8 +91,6 @@ mod test {
         let mut contract = PauseableCounterDeployer::default();
         contract.pause();
 
-        test_env::assert_exception(Error::UnpausedRequired, || {
-            PauseableCounterRef::at(contract.address()).pause();
-        });
+        test_env::assert_exception(Error::UnpausedRequired, || contract.pause());
     }
 }

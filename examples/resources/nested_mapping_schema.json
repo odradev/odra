@@ -1,0 +1,175 @@
+{
+  "name": "NestedMapping",
+  "entrypoints": [
+    {
+      "name": "set_string",
+      "is_mutable": true,
+      "args": [
+        {
+          "name": "key1",
+          "ty": "String"
+        },
+        {
+          "name": "key2",
+          "ty": "U32"
+        },
+        {
+          "name": "key3",
+          "ty": "String"
+        },
+        {
+          "name": "value",
+          "ty": "String"
+        }
+      ],
+      "return_ty": "Unit"
+    },
+    {
+      "name": "set_token",
+      "is_mutable": true,
+      "args": [
+        {
+          "name": "key1",
+          "ty": "String"
+        },
+        {
+          "name": "key2",
+          "ty": "U32"
+        },
+        {
+          "name": "key3",
+          "ty": "String"
+        },
+        {
+          "name": "token_name",
+          "ty": "String"
+        },
+        {
+          "name": "decimals",
+          "ty": "U8"
+        },
+        {
+          "name": "symbol",
+          "ty": "String"
+        },
+        {
+          "name": "initial_supply",
+          "ty": "U256"
+        }
+      ],
+      "return_ty": "Unit"
+    },
+    {
+      "name": "get_string_macro",
+      "is_mutable": false,
+      "args": [
+        {
+          "name": "key1",
+          "ty": "String"
+        },
+        {
+          "name": "key2",
+          "ty": "U32"
+        },
+        {
+          "name": "key3",
+          "ty": "String"
+        }
+      ],
+      "return_ty": "String"
+    },
+    {
+      "name": "get_string_api",
+      "is_mutable": false,
+      "args": [
+        {
+          "name": "key1",
+          "ty": "String"
+        },
+        {
+          "name": "key2",
+          "ty": "U32"
+        },
+        {
+          "name": "key3",
+          "ty": "String"
+        }
+      ],
+      "return_ty": "String"
+    },
+    {
+      "name": "total_supply",
+      "is_mutable": false,
+      "args": [
+        {
+          "name": "key1",
+          "ty": "String"
+        },
+        {
+          "name": "key2",
+          "ty": "U32"
+        },
+        {
+          "name": "key3",
+          "ty": "String"
+        }
+      ],
+      "return_ty": "U256"
+    }
+  ],
+  "events": [
+    {
+      "name": "OwnershipChanged",
+      "fields": [
+        {
+          "name": "prev_owner",
+          "ty": {
+            "Option": "Key"
+          }
+        },
+        {
+          "name": "new_owner",
+          "ty": "Key"
+        }
+      ]
+    },
+    {
+      "name": "Transfer",
+      "fields": [
+        {
+          "name": "from",
+          "ty": {
+            "Option": "Key"
+          }
+        },
+        {
+          "name": "to",
+          "ty": {
+            "Option": "Key"
+          }
+        },
+        {
+          "name": "amount",
+          "ty": "U256"
+        }
+      ]
+    },
+    {
+      "name": "Approval",
+      "fields": [
+        {
+          "name": "owner",
+          "ty": "Key"
+        },
+        {
+          "name": "spender",
+          "ty": "Key"
+        },
+        {
+          "name": "value",
+          "ty": "U256"
+        }
+      ]
+    }
+  ]
+}

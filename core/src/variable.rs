@@ -6,7 +6,7 @@ use odra_types::arithmetic::{OverflowingAdd, OverflowingSub};
 use crate::{contract_env, instance::Instance, UnwrapOrRevert};
 
 /// Data structure for storing a single value.
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Variable<T> {
     name: String,
     ty: PhantomData<T>
@@ -86,54 +86,6 @@ impl<T: OdraType> Instance for Variable<T> {
     }
 }
 
-#[cfg(feature = "mock-vm")]
-impl<V: OdraType> crate::types::BorshDeserialize for Variable<V> {
-    fn deserialize(buf: &mut &[u8]) -> Result<Self, std::io::Error> {
-        Ok(Self::new(crate::types::BorshDeserialize::deserialize(buf)?))
-    }
-}
-
-#[cfg(feature = "mock-vm")]
-impl<V: OdraType> crate::types::BorshSerialize for Variable<V> {
-    fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
-        crate::types::BorshSerialize::serialize(&self.path(), writer)?;
-        Ok(())
-    }
-}
-
-#[cfg(any(feature = "casper", feature = "casper-livenet"))]
-impl<V: OdraType> crate::casper::casper_types::CLTyped for Variable<V> {
-    fn cl_type() -> crate::casper::casper_types::CLType {
-        crate::casper::casper_types::CLType::Any
-    }
-}
-
-#[cfg(any(feature = "casper", feature = "casper-livenet"))]
-impl<V: OdraType> crate::casper::casper_types::bytesrepr::ToBytes for Variable<V> {
-    fn to_bytes(&self) -> Result<Vec<u8>, crate::casper::casper_types::bytesrepr::Error> {
-        let mut result = Vec::with_capacity(self.serialized_length());
-        result.extend("var".to_bytes()?);
-        result.extend(&self.path().to_bytes()?);
-        Ok(result)
-    }
-
-    fn serialized_length(&self) -> usize {
-        "var".serialized_length() + self.path().serialized_length()
-    }
-}
-
-#[cfg(any(feature = "casper", feature = "casper-livenet"))]
-impl<V: OdraType> crate::casper::casper_types::bytesrepr::FromBytes for Variable<V> {
-    fn from_bytes(
-        bytes: &[u8]
-    ) -> Result<(Self, &[u8]), crate::casper::casper_types::bytesrepr::Error> {
-        let (_, bytes): (String, _) =
-            crate::casper::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
-        let (name, bytes) = crate::casper::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
-        Ok((Variable::new(name), bytes))
-    }
-}
-
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
     use crate::{test_env, Instance, Variable};
@@ -185,10 +137,7 @@ mod tests {
 
         // When add 1 to max value.
         // Then should revert.
-        test_env::assert_exception(ArithmeticsError::AdditionOverflow, || {
-            let mut var = Variable::<u8>::default();
-            var.add(&1);
-        });
+        test_env::assert_exception(ArithmeticsError::AdditionOverflow, || var.add(&1));
     }
 
     #[test]
@@ -204,10 +153,7 @@ mod tests {
 
         // When subtraction causes overflow.
         // Then it reverts.
-        test_env::assert_exception(ArithmeticsError::SubtractingOverflow, || {
-            let mut var = Variable::<u8>::default();
-            var.subtract(&2);
-        });
+        test_env::assert_exception(ArithmeticsError::SubtractingOverflow, || var.subtract(&2));
     }
 
     #[test]

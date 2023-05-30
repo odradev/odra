@@ -2,9 +2,39 @@
 
 Changelog for `odra`.
 
-## [0.2.0] - xxxx-xx-xx
+## [0.3.1] - XXXX-XX-XX
 ### Added
-- Global `CHANGELOG.md`
+- `Composer` - a tool for composing Odra components.
+
+## [0.3.0] - 2022-05-22
+### Added
+- new module - `Sequence` - for storing single value in the storage that can be incremented.
+- Casper contracts now generate schemas automatically.
+containing contract structure and Events schemas following the Casper Event Standard.
+- Modules and Mappings now can be a part of a Mapping allowing to nest them.
+- Namespaces can be generated manually for a finer control over nesting.
+- `#[odra::module(events = [Event1, Event2, ...])]` attribute for modules to generate events.
+- `delegate!` macro for delegating calls to other modules.
+- `#[odra(non_reeentrant)]` attribute for modules to enable reentrancy guard.
+- `#[derive(OdraType)]` for deriving `OdraType` trait for custom types.
+- Unit-type Enums can now be OdraTypes.
+- New Odra Modules:
+  - `Erc721`,
+  - `Erc1155`,
+  - `Ownable`,
+  - `Ownable2Step`,
+  - `AccessControl`.
+
+### Changed
+- `last_call_contract_cost()` is now `last_call_contract_gas_used()`.
+- It is no longer possible to build zero address in casper.
+
+### Removed
+- `new` method for Address.
+
+## [0.2.0] - 2022-11-23
+### Added
+- Global `CHANGELOG.md`.
 - `odra`
   - `List` collection.
   - Add tests for `Variable` and `Mapping`.

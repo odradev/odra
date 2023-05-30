@@ -58,7 +58,7 @@ pub fn one_token() -> Balance {
     unimplemented!()
 }
 
-pub fn transfer_tokens<B: Into<Balance>>(_: Address, _: B) -> bool {
+pub fn transfer_tokens<B: Into<Balance>>(_: Address, _: B) {
     unimplemented!()
 }
 

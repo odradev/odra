@@ -1,0 +1,55 @@
+{
+  "name": "DogContract",
+  "entrypoints": [
+    {
+      "name": "init",
+      "is_mutable": true,
+      "args": [
+        {
+          "name": "barks",
+          "ty": "Bool"
+        },
+        {
+          "name": "weight",
+          "ty": "U32"
+        },
+        {
+          "name": "name",
+          "ty": "String"
+        }
+      ],
+      "return_ty": "Unit"
+    },
+    {
+      "name": "barks",
+      "is_mutable": false,
+      "args": [],
+      "return_ty": "Bool"
+    },
+    {
+      "name": "weight",
+      "is_mutable": false,
+      "args": [],
+      "return_ty": "U32"
+    },
+    {
+      "name": "name",
+      "is_mutable": false,
+      "args": [],
+      "return_ty": "String"
+    },
+    {
+      "name": "walks_amount",
+      "is_mutable": false,
+      "args": [],
+      "return_ty": "U32"
+    },
+    {
+      "name": "walks_total_length",
+      "is_mutable": false,
+      "args": [],
+      "return_ty": "U32"
+    }
+  ],
+  "events": []
+}
