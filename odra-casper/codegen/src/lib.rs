@@ -1,6 +1,6 @@
 //! Set of functions to generate Casper contract.
 
-use crate::ty::WrappedType;
+use crate::ty::CasperType;
 
 use self::{
     constructor::WasmConstructor, entrypoints_def::ContractEntrypoints,
@@ -78,10 +78,8 @@ fn generate_call(
                 .iter()
                 .map(|arg| {
                     let field = &arg.ident;
-                    let ty = WrappedType(&arg.ty);
-                    quote! {
-                        (#field, #ty)
-                    }
+                    let ty = CasperType(&arg.ty);
+                    quote!((#field, #ty))
                 })
                 .collect::<Punctuated<TokenStream2, Comma>>();
 

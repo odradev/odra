@@ -64,11 +64,11 @@ where
     T: IntoIterator<Item = syn::PatType>
 {
     let mut tokens = quote!(let mut args = odra::types::CallArgs::new(););
-    tokens.append_all(syn_args.into_iter().map(|arg| {
-        let pat = &*arg.pat;
-        match &*arg.ty {
-            syn::Type::Reference(ty) => match &*ty.elem {
-                syn::Type::Slice(_) => quote! {
+    tokens.append_all(syn_args.into_iter().map(|ty| {
+        let pat = &*ty.pat;
+        match *ty.ty {
+            syn::Type::Reference(syn::TypeReference { ref elem, .. }) => match **elem {
+                syn::Type::Slice { .. } => quote! {
                     #[cfg(any(feature = "casper", feature = "casper-livenet"))]
                     args.insert(stringify!(#pat), #pat.to_vec());
                     #[cfg(feature = "mock-vm")]
@@ -81,11 +81,7 @@ where
     }));
     tokens.extend(quote!(args));
 
-    quote! {
-        let args = {
-            #tokens
-        };
-    }
+    quote!(let args = { #tokens };)
 }
 
 pub fn typed_arg(arg: &FnArg) -> Option<PatType> {
