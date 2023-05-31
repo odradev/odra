@@ -12,9 +12,9 @@ pub struct HostContract {
 impl HostContract {
     #[odra(init)]
     pub fn init(&mut self, name: String) {
-        self.name.set(&name);
-        self.created_at.set(&odra::contract_env::get_block_time());
-        self.created_by.set(&odra::contract_env::caller())
+        self.name.set(name);
+        self.created_at.set(odra::contract_env::get_block_time());
+        self.created_by.set(odra::contract_env::caller())
     }
 
     pub fn name(&self) -> String {

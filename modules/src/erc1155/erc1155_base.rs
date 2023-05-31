@@ -12,7 +12,7 @@ use odra::Mapping;
 #[odra::module(events = [ApprovalForAll, TransferBatch, TransferSingle])]
 pub struct Erc1155Base {
     pub balances: Mapping<Address, Mapping<U256, U256>>,
-    pub approvals: Mapping<Address, Mapping<Address, bool>>,
+    pub approvals: Mapping<Address, Mapping<Address, bool>>
 }
 
 impl Erc1155 for Erc1155Base {
@@ -20,7 +20,7 @@ impl Erc1155 for Erc1155Base {
         self.balances.get_instance(owner).get_or_default(id)
     }
 
-    fn balance_of_batch(&self, owners: &Vec<Address>, ids: &Vec<U256>) -> Vec<U256> {
+    fn balance_of_batch(&self, owners: &[Address], ids: &[U256]) -> Vec<U256> {
         if owners.len() != ids.len() {
             revert(Error::AccountsAndIdsLengthMismatch);
         }
@@ -41,7 +41,7 @@ impl Erc1155 for Erc1155Base {
             revert(Error::ApprovalForSelf);
         }
 
-        self.approvals.get_instance(owner).set(operator, &approved);
+        self.approvals.get_instance(owner).set(operator, approved);
 
         ApprovalForAll {
             owner: *owner,
@@ -52,9 +52,7 @@ impl Erc1155 for Erc1155Base {
     }
 
     fn is_approved_for_all(&self, owner: &Address, operator: &Address) -> bool {
-        self.approvals
-            .get_instance(owner)
-            .get_or_default(operator)
+        self.approvals.get_instance(owner).get_or_default(operator)
     }
 
     fn safe_transfer_from(
@@ -72,8 +70,12 @@ impl Erc1155 for Erc1155Base {
         if from_balance < *amount {
             revert(Error::InsufficientBalance);
         }
-        self.balances.get_instance(from).set(id, &(from_balance - *amount));
-        self.balances.get_instance(to).set(id, &(self.balance_of(to, id) + *amount));
+        self.balances
+            .get_instance(from)
+            .set(id, from_balance - *amount);
+        self.balances
+            .get_instance(to)
+            .set(id, self.balance_of(to, id) + *amount);
 
         TransferSingle {
             operator: Some(caller),
@@ -91,8 +93,8 @@ impl Erc1155 for Erc1155Base {
         &mut self,
         from: &Address,
         to: &Address,
-        ids: &Vec<U256>,
-        amounts: &Vec<U256>,
+        ids: &[U256],
+        amounts: &[U256],
         data: &Option<Bytes>
     ) {
         let caller = caller();
@@ -112,8 +114,12 @@ impl Erc1155 for Erc1155Base {
                 revert(Error::InsufficientBalance);
             }
 
-            self.balances.get_instance(from).set(&id, &(from_balance - amount));
-            self.balances.get_instance(to).set(&id, &(self.balance_of(to, &id) + amount));
+            self.balances
+                .get_instance(from)
+                .set(&id, from_balance - amount);
+            self.balances
+                .get_instance(to)
+                .set(&id, self.balance_of(to, &id) + amount);
         }
 
         TransferBatch {
@@ -166,8 +172,8 @@ impl Erc1155Base {
         operator: &Address,
         from: &Address,
         to: &Address,
-        ids: &Vec<U256>,
-        amounts: &Vec<U256>,
+        ids: &[U256],
+        amounts: &[U256],
         data: &Option<Bytes>
     ) {
         if to.is_contract() {

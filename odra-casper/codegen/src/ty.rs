@@ -77,6 +77,10 @@ impl ToTokens for WrappedType<'_> {
             }
             Type::ByteArray(b) => quote! {
                 odra::casper::casper_types::CLType::ByteArray(#b)
+            },
+            Type::Slice(ty) => {
+                let value_stream = WrappedType(ty).to_token_stream();
+                quote!(odra::casper::casper_types::CLType::List(Box::new(#value_stream)))
             }
         };
         tokens.extend(stream);

@@ -106,7 +106,7 @@ impl AccessControl {
     /// Emits a `RoleAdminChanged` event.
     pub fn set_admin_role(&mut self, role: &Role, admin_role: &Role) {
         let previous_admin_role = self.get_role_admin(role);
-        self.role_admin.set(role, admin_role);
+        self.role_admin.set(role, *admin_role);
         RoleAdminChanged {
             role: *role,
             previous_admin_role,
@@ -123,7 +123,7 @@ impl AccessControl {
     /// May emit a `RoleGranted` event.
     pub fn unchecked_grant_role(&mut self, role: &Role, address: &Address) {
         if !self.has_role(role, address) {
-            self.roles.get_instance(role).set(address, &true);
+            self.roles.get_instance(role).set(address, true);
             RoleGranted {
                 role: *role,
                 address: *address,
@@ -141,7 +141,7 @@ impl AccessControl {
     /// May emit a `RoleRevoked` event.
     pub fn unchecked_revoke_role(&mut self, role: &Role, address: &Address) {
         if self.has_role(role, address) {
-            self.roles.get_instance(role).set(address, &false);
+            self.roles.get_instance(role).set(address, false);
             RoleRevoked {
                 role: *role,
                 address: *address,

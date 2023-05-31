@@ -1,7 +1,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use std::collections::BTreeMap;
 
-use crate::MockVMType;
+use crate::{MockDeserializable, MockSerializable};
 
 /// Represents a collection of arguments passed to a smart contract entrypoint call.
 #[derive(Default, Debug, Clone, BorshSerialize, BorshDeserialize)]
@@ -16,12 +16,12 @@ impl CallArgs {
     }
 
     /// Inserts a new empty arg into the collection.
-    pub fn insert<K: Into<String>, T: MockVMType>(&mut self, key: K, value: T) {
+    pub fn insert<K: Into<String>, T: MockSerializable>(&mut self, key: K, value: T) {
         self.data.insert(key.into(), value.ser().unwrap());
     }
 
     /// Gets an argument by the name.
-    pub fn get<T: MockVMType>(&self, key: &str) -> T {
+    pub fn get<T: MockSerializable + MockDeserializable>(&self, key: &str) -> T {
         T::deser(self.data.get(key).unwrap().clone()).unwrap()
     }
 

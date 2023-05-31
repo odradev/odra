@@ -29,22 +29,21 @@ impl Erc1155Receiver {
         &mut self,
         #[allow(unused_variables)] operator: &Address,
         #[allow(unused_variables)] from: &Address,
-        #[allow(unused_variables)] token_ids: &Vec<U256>,
-        #[allow(unused_variables)] amounts: &Vec<U256>,
+        #[allow(unused_variables)] token_ids: &[U256],
+        #[allow(unused_variables)] amounts: &[U256],
         #[allow(unused_variables)] data: &Option<Bytes>
     ) -> bool {
         BatchReceived {
             operator: Some(*operator),
             from: Some(*from),
-            token_ids: token_ids.clone(),
-            amounts: amounts.clone(),
+            token_ids: token_ids.to_vec(),
+            amounts: amounts.to_vec(),
             data: data.clone()
         }
         .emit();
         true
     }
 }
-
 
 pub mod events {
     use odra::types::{Address, Bytes, U256};

@@ -254,7 +254,7 @@ mod tests {
                                 let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg(
                                     stringify!(value)
                                 );
-                                contract_ref.construct_me(value);
+                                contract_ref.construct_me(&value);
                             },
                             _ => {}
                         };
@@ -275,7 +275,7 @@ mod tests {
                     let contract = my_contract::MyContract::instance("contract");
                     let value =
                         odra::casper::casper_contract::contract_api::runtime::get_named_arg(stringify!(value));
-                    contract.construct_me(value);
+                    contract.construct_me(&value);
                 }
                 #[no_mangle]
                 fn call_me() {

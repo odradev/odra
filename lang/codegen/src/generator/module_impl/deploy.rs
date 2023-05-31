@@ -71,7 +71,12 @@ where
         .map(|arg| {
             let pat = &*arg.pat;
             match &*arg.ty {
-                syn::Type::Reference(_) => quote!(&args.get(stringify!(#pat))),
+                syn::Type::Reference(ty) => match &*ty.elem {
+                    syn::Type::Array(_) => quote!(&args.get::<Vec<_>>(stringify!(#pat))),
+                    syn::Type::Slice(_) => quote!(&args.get::<Vec<_>>(stringify!(#pat))),
+                    _ => quote!(&args.get(stringify!(#pat)))
+                },
+                syn::Type::Array(_) => quote!(&args.get::<Vec<_>>(stringify!(#pat))),
                 _ => quote!(args.get(stringify!(#pat)))
             }
         })

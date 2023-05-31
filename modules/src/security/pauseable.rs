@@ -43,7 +43,7 @@ impl Pauseable {
     /// Emits Paused event.
     pub fn pause(&mut self) {
         self.require_not_paused();
-        self.is_paused.set(&true);
+        self.is_paused.set(true);
 
         Paused {
             account: contract_env::caller()
@@ -58,7 +58,7 @@ impl Pauseable {
     /// Emits Unpaused event.
     pub fn unpause(&mut self) {
         self.require_paused();
-        self.is_paused.set(&false);
+        self.is_paused.set(false);
 
         Unpaused {
             account: contract_env::caller()

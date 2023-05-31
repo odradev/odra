@@ -135,9 +135,9 @@ mod tests {
                     odra::casper::utils::assert_no_attached_value();
                     let contract = my_contract::MyContract::instance("contract");
                     let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg(
-                        &stringify!(value)
+                        stringify!(value)
                     );
-                    contract.construct_me(value);
+                    contract.construct_me(&value);
                 }
             )
         );

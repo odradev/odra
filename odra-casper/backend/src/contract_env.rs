@@ -34,7 +34,7 @@ pub fn self_address() -> Address {
 
 /// Store a value into the storage.
 #[inline(always)]
-pub fn set_var<T: OdraType>(key: &str, value: &T) {
+pub fn set_var<T: OdraType>(key: &str, value: T) {
     casper_env::set_key(key, value);
 }
 
@@ -46,7 +46,7 @@ pub fn get_var<T: OdraType>(key: &str) -> Option<T> {
 
 /// Store the mapping value under a given key.
 #[inline(always)]
-pub fn set_dict_value<K: OdraType, V: OdraType>(dict: &str, key: &K, value: &V) {
+pub fn set_dict_value<K: OdraType, V: OdraType>(dict: &str, key: &K, value: V) {
     casper_env::set_dict_value(dict, key, value);
 }
 

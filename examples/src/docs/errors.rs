@@ -18,8 +18,8 @@ execution_error! {
 impl OwnedContract {
     #[odra(init)]
     pub fn init(&mut self, name: String) {
-        self.name.set(&name);
-        self.owner.set(&odra::contract_env::caller())
+        self.name.set(name);
+        self.owner.set(odra::contract_env::caller())
     }
 
     pub fn name(&self) -> String {
@@ -36,7 +36,7 @@ impl OwnedContract {
             odra::contract_env::revert(Error::NotAnOwner)
         }
 
-        self.name.set(&name);
+        self.name.set(name);
     }
 }
 

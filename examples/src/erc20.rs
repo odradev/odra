@@ -20,9 +20,9 @@ impl Erc20 {
     #[odra(init)]
     pub fn init(&mut self, name: String, symbol: String, decimals: u8, initial_supply: &U256) {
         let caller = contract_env::caller();
-        self.name.set(&name);
-        self.symbol.set(&symbol);
-        self.decimals.set(&decimals);
+        self.name.set(name);
+        self.symbol.set(symbol);
+        self.decimals.set(decimals);
         self.mint(&caller, initial_supply);
     }
 
@@ -39,7 +39,7 @@ impl Erc20 {
 
     pub fn approve(&mut self, spender: &Address, amount: &U256) {
         let owner = contract_env::caller();
-        self.allowances.get_instance(&owner).set(&spender, amount);
+        self.allowances.get_instance(&owner).set(spender, *amount);
         Approval {
             owner,
             spender: *spender,
@@ -65,24 +65,22 @@ impl Erc20 {
     }
 
     pub fn balance_of(&self, address: &Address) -> U256 {
-        self.balances.get_or_default(&address)
+        self.balances.get_or_default(address)
     }
 
     pub fn allowance(&self, owner: &Address, spender: &Address) -> U256 {
-        self.allowances
-            .get_instance(&owner)
-            .get_or_default(&spender)
+        self.allowances.get_instance(owner).get_or_default(spender)
     }
 }
 
 impl Erc20 {
     fn raw_transfer(&mut self, owner: &Address, recipient: &Address, amount: &U256) {
-        let owner_balance = self.balances.get_or_default(&owner);
+        let owner_balance = self.balances.get_or_default(owner);
         if *amount > owner_balance {
             contract_env::revert(Error::InsufficientBalance)
         }
-        self.balances.set(owner, &(owner_balance - *amount));
-        self.balances.add(recipient, amount);
+        self.balances.set(owner, owner_balance - *amount);
+        self.balances.add(recipient, *amount);
         Transfer {
             from: Some(*owner),
             to: Some(*recipient),
@@ -99,7 +97,7 @@ impl Erc20 {
         let new_allowance = allowance - *amount;
         self.allowances
             .get_instance(owner)
-            .set(spender, &new_allowance);
+            .set(spender, new_allowance);
         Approval {
             owner: *owner,
             spender: *spender,
@@ -109,8 +107,8 @@ impl Erc20 {
     }
 
     pub fn mint(&mut self, address: &Address, amount: &U256) {
-        self.balances.add(address, amount);
-        self.total_supply.add(amount);
+        self.balances.add(address, *amount);
+        self.total_supply.add(*amount);
         Transfer {
             from: None,
             to: Some(*address),

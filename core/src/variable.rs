@@ -27,10 +27,10 @@ impl<V: OdraType + OverflowingAdd + Default> Variable<V> {
     ///
     /// If the operation fails due to overflow, the currently executing contract reverts.
     #[inline(always)]
-    pub fn add(&mut self, value: &V) {
+    pub fn add(&mut self, value: V) {
         let current_value = self.get_or_default();
-        let new_value = current_value.overflowing_add(value).unwrap_or_revert();
-        self.set(&new_value);
+        let new_value = current_value.overflowing_add(&value).unwrap_or_revert();
+        self.set(new_value);
     }
 }
 
@@ -40,10 +40,10 @@ impl<V: OdraType + OverflowingSub + Default> Variable<V> {
     ///
     /// If the operation fails due to overflow, the currently executing contract reverts.
     #[inline(always)]
-    pub fn subtract(&mut self, value: &V) {
+    pub fn subtract(&mut self, value: V) {
         let current_value = self.get().unwrap_or_default();
-        let new_value = current_value.overflowing_sub(value).unwrap_or_revert();
-        self.set(&new_value);
+        let new_value = current_value.overflowing_sub(&value).unwrap_or_revert();
+        self.set(new_value);
     }
 }
 
@@ -64,7 +64,7 @@ impl<T: OdraType> Variable<T> {
 
     /// Stores `value` to the storage.
     #[inline(always)]
-    pub fn set(&mut self, value: &T) {
+    pub fn set(&mut self, value: T) {
         contract_env::set_var(&self.name, value);
     }
 
@@ -99,14 +99,14 @@ mod tests {
         let mut var = Variable::<u8>::default();
 
         // When set a value.
-        var.set(&value);
+        var.set(value);
 
         // The the value can be returned.
         assert_eq!(var.get().unwrap(), value);
 
         // When override.
         let value = 200;
-        var.set(&value);
+        var.set(value);
 
         // Then the value is updated.
         assert_eq!(var.get().unwrap(), value);
@@ -130,14 +130,14 @@ mod tests {
         let mut var = Variable::<u8>::init(initial_value);
 
         // When add 1.
-        var.add(&1);
+        var.add(1);
 
         // Then the value should be u8::MAX.
         assert_eq!(var.get_or_default(), initial_value + 1);
 
         // When add 1 to max value.
         // Then should revert.
-        test_env::assert_exception(ArithmeticsError::AdditionOverflow, || var.add(&1));
+        test_env::assert_exception(ArithmeticsError::AdditionOverflow, || var.add(1));
     }
 
     #[test]
@@ -146,14 +146,14 @@ mod tests {
         let initial_value = 2;
         let mut var = Variable::<u8>::init(initial_value);
         // When subtract 1.
-        var.subtract(&1);
+        var.subtract(1);
 
         // Then the value should be reduced by 1.
         assert_eq!(var.get_or_default(), initial_value - 1);
 
         // When subtraction causes overflow.
         // Then it reverts.
-        test_env::assert_exception(ArithmeticsError::SubtractingOverflow, || var.subtract(&2));
+        test_env::assert_exception(ArithmeticsError::SubtractingOverflow, || var.subtract(2));
     }
 
     #[test]
@@ -165,7 +165,7 @@ mod tests {
         let y = Variable::<u8>::instance(namespace);
 
         // When set a value for the first variable.
-        x.set(&value);
+        x.set(value);
 
         // Then both returns the same value.
         assert_eq!(y.get_or_default(), value);
@@ -181,7 +181,7 @@ mod tests {
     impl<T: OdraType> Variable<T> {
         fn init(value: T) -> Self {
             let mut var = Self::default();
-            var.set(&value);
+            var.set(value);
             var
         }
     }

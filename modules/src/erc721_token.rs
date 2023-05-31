@@ -102,8 +102,8 @@ impl OwnedErc721WithMetadata for Erc721Token {
             revert(Error::TokenAlreadyExists)
         }
 
-        self.core.balances.add(to, &U256::from(1));
-        self.core.owners.set(token_id, &Some(*to));
+        self.core.balances.add(to, U256::from(1));
+        self.core.owners.set(token_id, Some(*to));
     }
 
     pub fn burn(&mut self, token_id: &U256) {
@@ -113,8 +113,8 @@ impl OwnedErc721WithMetadata for Erc721Token {
         let owner = self.core.owner_of(token_id);
         self.core
             .balances
-            .set(&owner, &(self.core.balance_of(&owner) - U256::from(1)));
-        self.core.owners.set(token_id, &None);
+            .set(&owner, self.core.balance_of(&owner) - U256::from(1));
+        self.core.owners.set(token_id, None);
         self.core.clear_approval(token_id);
 
         Transfer {
@@ -182,7 +182,10 @@ mod tests {
         erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
 
         // Then Alice has a balance of 1 and Bob has a balance of 0.
-        assert_eq!(erc721_env.token.balance_of(&erc721_env.alice), U256::from(1));
+        assert_eq!(
+            erc721_env.token.balance_of(&erc721_env.alice),
+            U256::from(1)
+        );
         assert_eq!(erc721_env.token.balance_of(&erc721_env.bob), U256::from(0));
 
         // And the owner of the token is Alice.
@@ -198,13 +201,19 @@ mod tests {
         erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
 
         // Then Alice has a balance of 1 and Bob has a balance of 0.
-        assert_eq!(erc721_env.token.balance_of(&erc721_env.alice), U256::from(1));
+        assert_eq!(
+            erc721_env.token.balance_of(&erc721_env.alice),
+            U256::from(1)
+        );
 
         // When we mint another token to Alice.
         erc721_env.token.mint(&erc721_env.alice, &U256::from(2));
 
         // Then Alice has a balance of 2.
-        assert_eq!(erc721_env.token.balance_of(&erc721_env.alice), U256::from(2));
+        assert_eq!(
+            erc721_env.token.balance_of(&erc721_env.alice),
+            U256::from(2)
+        );
     }
 
     #[test]
@@ -217,7 +226,7 @@ mod tests {
 
         // Then minting the same token again throws an error.
         assert_exception(super::Error::TokenAlreadyExists, || {
-            erc721_env.token.mint(erc721_env.alice, &U256::from(1));
+            erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
         });
     }
 
@@ -296,7 +305,7 @@ mod tests {
         assert_exception(Error::InvalidTokenId, || {
             erc721_env
                 .token
-                .approve(Some(erc721_env.bob), &U256::from(1));
+                .approve(&Some(erc721_env.bob), &U256::from(1));
         });
     }
 
@@ -312,7 +321,7 @@ mod tests {
         assert_exception(Error::NotAnOwnerOrApproved, || {
             erc721_env
                 .token
-                .approve(Some(erc721_env.bob), &U256::from(1));
+                .approve(&Some(erc721_env.bob), &U256::from(1));
         });
     }
 
@@ -348,7 +357,9 @@ mod tests {
 
         // And cancel Bob as an operator.
         test_env::set_caller(erc721_env.alice);
-        erc721_env.token.set_approval_for_all(&erc721_env.bob, false);
+        erc721_env
+            .token
+            .set_approval_for_all(&erc721_env.bob, false);
 
         // Then Bob is not an operator.
         assert!(!erc721_env
@@ -513,7 +524,10 @@ mod tests {
             .safe_transfer_from(&erc721_env.alice, &receiver.address(), &U256::from(1));
 
         // Then the owner of the token is the contract
-        assert_eq!(erc721_env.token.owner_of(&U256::from(1)), receiver.address());
+        assert_eq!(
+            erc721_env.token.owner_of(&U256::from(1)),
+            receiver.address()
+        );
         // And the receiver contract is aware of the transfer
         assert_events!(
             receiver,
@@ -546,7 +560,10 @@ mod tests {
         );
 
         // Then the owner of the token is the contract
-        assert_eq!(erc721_env.token.owner_of(&U256::from(1)), receiver.address());
+        assert_eq!(
+            erc721_env.token.owner_of(&U256::from(1)),
+            receiver.address()
+        );
         // And the receiver contract is aware of the transfer
         assert_events!(
             receiver,

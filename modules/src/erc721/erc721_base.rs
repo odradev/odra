@@ -25,7 +25,7 @@ impl Erc721 for Erc721Base {
 
     fn owner_of(&self, token_id: &U256) -> Address {
         self.owners
-            .get(&token_id)
+            .get(token_id)
             .unwrap_or_revert_with(Error::InvalidTokenId)
             .unwrap_or_revert_with(Error::InvalidTokenId)
     }
@@ -69,7 +69,7 @@ impl Erc721 for Erc721Base {
             revert(Error::NotAnOwnerOrApproved);
         }
 
-        self.token_approvals.set(token_id, approved);
+        self.token_approvals.set(token_id, *approved);
 
         Approval {
             owner,
@@ -85,7 +85,7 @@ impl Erc721 for Erc721Base {
             revert(Error::ApproveToCaller)
         }
 
-        self.operator_approvals.set(&(caller, *operator), &approved);
+        self.operator_approvals.set(&(caller, *operator), approved);
         ApprovalForAll {
             owner: caller,
             operator: *operator,
@@ -114,7 +114,13 @@ impl Erc721Base {
             || self.is_approved_for_all(owner, spender)
     }
 
-    fn safe_transfer(&mut self, from: &Address, to: &Address, token_id: &U256, data: &Option<Bytes>) {
+    fn safe_transfer(
+        &mut self,
+        from: &Address,
+        to: &Address,
+        token_id: &U256,
+        data: &Option<Bytes>
+    ) {
         self.transfer(from, to, token_id);
         if to.is_contract() {
             let response =
@@ -128,9 +134,9 @@ impl Erc721Base {
 
     fn transfer(&mut self, from: &Address, to: &Address, token_id: &U256) {
         self.clear_approval(token_id);
-        self.balances.set(from, &(self.balance_of(from) - 1));
-        self.balances.set(to, &(self.balance_of(to) + 1));
-        self.owners.set(token_id, &Some(*to));
+        self.balances.set(from, self.balance_of(from) - 1);
+        self.balances.set(to, self.balance_of(to) + 1);
+        self.owners.set(token_id, Some(*to));
 
         Transfer {
             from: Some(*from),
@@ -142,7 +148,7 @@ impl Erc721Base {
 
     pub fn clear_approval(&mut self, token_id: &U256) {
         if self.token_approvals.get_or_default(token_id).is_some() {
-            self.token_approvals.set(token_id, &None);
+            self.token_approvals.set(token_id, None);
         }
     }
 

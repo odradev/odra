@@ -14,7 +14,7 @@ impl Ownable {
         if self.owner.get().is_some() {
             contract_env::revert(Error::OwnerIsAlreadyInitialized)
         }
-        self.owner.set(owner);
+        self.owner.set(*owner);
         OwnershipChanged {
             prev_owner: None,
             new_owner: *owner
@@ -25,7 +25,7 @@ impl Ownable {
     pub fn change_ownership(&mut self, new_owner: &Address) {
         self.ensure_ownership(&contract_env::caller());
         let current_owner = self.get_owner();
-        self.owner.set(new_owner);
+        self.owner.set(*new_owner);
         OwnershipChanged {
             prev_owner: Some(current_owner),
             new_owner: *new_owner

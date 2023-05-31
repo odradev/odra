@@ -1,5 +1,7 @@
 use anyhow::{Context, Result};
-use odra_mock_vm_types::{Address, Balance, MockVMSerializationError, MockVMType};
+use odra_mock_vm_types::{
+    Address, Balance, MockDeserializable, MockSerializable, MockVMSerializationError
+};
 use std::{
     collections::{hash_map::DefaultHasher, HashMap},
     hash::{Hash, Hasher}
@@ -43,7 +45,7 @@ impl Storage {
         balance.reduce(amount)
     }
 
-    pub fn get_value<T: MockVMType>(
+    pub fn get_value<T: MockSerializable + MockDeserializable>(
         &self,
         address: &Address,
         key: &str
@@ -57,23 +59,23 @@ impl Storage {
         }
     }
 
-    pub fn set_value<T: MockVMType>(
+    pub fn set_value<T: MockSerializable + MockDeserializable>(
         &mut self,
         address: &Address,
         key: &str,
-        value: &T
+        value: T
     ) -> Result<(), MockVMSerializationError> {
         let hash = Storage::hashed_key(address, key);
         self.state.insert(hash, value.ser()?);
         Ok(())
     }
 
-    pub fn insert_dict_value<T: MockVMType>(
+    pub fn insert_dict_value<T: MockSerializable + MockDeserializable>(
         &mut self,
         address: &Address,
         collection: &str,
         key: &[u8],
-        value: &T
+        value: T
     ) -> Result<(), MockVMSerializationError> {
         let dict_key = [collection.as_bytes(), key].concat();
         let hash = Storage::hashed_key(address, dict_key);
@@ -81,7 +83,7 @@ impl Storage {
         Ok(())
     }
 
-    pub fn get_dict_value<T: MockVMType>(
+    pub fn get_dict_value<T: MockSerializable + MockDeserializable>(
         &self,
         address: &Address,
         collection: &str,
@@ -148,7 +150,7 @@ mod test {
         let (address, key, value) = setup();
 
         // when put a value
-        storage.set_value(&address, &key, &value).unwrap();
+        storage.set_value(&address, &key, value).unwrap();
 
         // then the value can be read
         assert_eq!(storage.get_value(&address, &key).unwrap(), Some(value));
@@ -159,11 +161,13 @@ mod test {
         // given a storage with some stored value
         let mut storage = Storage::default();
         let (address, key, value) = setup();
-        storage.set_value(&address, &key, &value).unwrap();
+        storage.set_value(&address, &key, value).unwrap();
 
         // when the next value is set under the same key
         let next_value = String::from("new_value");
-        storage.set_value(&address, &key, &next_value).unwrap();
+        storage
+            .set_value(&address, &key, next_value.clone())
+            .unwrap();
 
         // then the previous value is replaced
         assert_eq!(storage.get_value(&address, &key).unwrap(), Some(next_value));
@@ -191,7 +195,7 @@ mod test {
 
         // when put a value into a collection
         storage
-            .insert_dict_value(&address, collection, key.as_bytes(), &value)
+            .insert_dict_value(&address, collection, key.as_bytes(), value)
             .unwrap();
 
         // then the value can be read
@@ -210,7 +214,7 @@ mod test {
         let (address, key, value) = setup();
         let collection = "dict";
         storage
-            .insert_dict_value(&address, collection, key.as_bytes(), &value)
+            .insert_dict_value(&address, collection, key.as_bytes(), value)
             .unwrap();
 
         // when read a value from a non exisiting collection
@@ -230,7 +234,7 @@ mod test {
         let (address, key, value) = setup();
         let collection = "dict";
         storage
-            .insert_dict_value(&address, collection, key.as_bytes(), &value)
+            .insert_dict_value(&address, collection, key.as_bytes(), value)
             .unwrap();
 
         // when read a value from a non existing collection
@@ -248,10 +252,10 @@ mod test {
         // given storage with some state and a snapshot of the previous state
         let mut storage = Storage::default();
         let (address, key, initial_value) = setup();
-        storage.set_value(&address, &key, &initial_value).unwrap();
+        storage.set_value(&address, &key, initial_value).unwrap();
         storage.take_snapshot();
         let next_value = String::from("next_value");
-        storage.set_value(&address, &key, &next_value).unwrap();
+        storage.set_value(&address, &key, next_value).unwrap();
 
         // when restore the snapshot
         storage.restore_snapshot();
@@ -272,13 +276,13 @@ mod test {
         let (address, key, initial_value) = setup();
         let second_value = 2_000u32;
         let third_value = 3_000u32;
-        storage.set_value(&address, &key, &initial_value).unwrap();
+        storage.set_value(&address, &key, initial_value).unwrap();
         storage.take_snapshot();
-        storage.set_value(&address, &key, &second_value).unwrap();
+        storage.set_value(&address, &key, second_value).unwrap();
 
         // when take another snapshot and restore it
         storage.take_snapshot();
-        storage.set_value(&address, &key, &third_value).unwrap();
+        storage.set_value(&address, &key, third_value).unwrap();
         storage.restore_snapshot();
 
         // then the most recent snapshot is restored
@@ -294,9 +298,9 @@ mod test {
         let mut storage = Storage::default();
         let (address, key, initial_value) = setup();
         let next_value = 1_000u32;
-        storage.set_value(&address, &key, &initial_value).unwrap();
+        storage.set_value(&address, &key, initial_value).unwrap();
         storage.take_snapshot();
-        storage.set_value(&address, &key, &next_value).unwrap();
+        storage.set_value(&address, &key, next_value).unwrap();
 
         // when the snapshot is dropped
         storage.drop_snapshot();

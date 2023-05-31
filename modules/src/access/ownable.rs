@@ -75,7 +75,7 @@ impl Ownable {
 
     fn unchecked_transfer_ownership(&mut self, new_owner: Option<&Address>) {
         let previous_owner = self.get_optional_owner();
-        self.owner.set(&new_owner.cloned());
+        self.owner.set(new_owner.cloned());
 
         OwnershipTransferred {
             previous_owner,
@@ -129,7 +129,7 @@ impl Ownable2Step {
 
         let previous_owner = self.ownable.get_optional_owner();
         let new_owner = &Some(*new_owner);
-        self.pending_owner.set(new_owner);
+        self.pending_owner.set(*new_owner);
 
         OwnershipTransferStarted {
             previous_owner,
@@ -157,7 +157,7 @@ impl Ownable2Step {
         if pending_owner.as_ref() != caller {
             contract_env::revert(Error::CallerNotTheNewOwner)
         }
-        self.pending_owner.set(&None);
+        self.pending_owner.set(None);
         self.ownable.unchecked_transfer_ownership(caller);
     }
 }

@@ -10,7 +10,7 @@ pub struct CrossContract {
 impl CrossContract {
     #[odra(init)]
     pub fn init(&mut self, math_engine_address: &Address) {
-        self.math_engine.set(math_engine_address);
+        self.math_engine.set(*math_engine_address);
     }
 
     pub fn add_using_another(&self) -> u32 {

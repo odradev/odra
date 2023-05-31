@@ -11,7 +11,7 @@ pub use address::Address;
 pub use address::CONTRACT_ADDRESS_PREFIX;
 pub use borsh::{BorshDeserialize, BorshSerialize};
 pub use call_args::CallArgs;
-pub use mock_vm_type::{MockVMSerializationError, MockVMType};
+pub use mock_vm_type::{MockDeserializable, MockSerializable, MockVMSerializationError};
 pub use ty::Typed;
 pub use uints::{U128, U256, U512};
 /// A type representing the amount of native tokens.
@@ -20,7 +20,7 @@ pub type Balance = U256;
 pub type BlockTime = u64;
 
 /// A type that can be written to the storage and read from the storage.
-pub trait OdraType: MockVMType {
+pub trait OdraType: MockSerializable + MockDeserializable {
     /// Serializes the value.
     fn serialize(&self) -> Option<Vec<u8>> {
         self.ser().ok()
@@ -32,7 +32,7 @@ pub trait OdraType: MockVMType {
     }
 }
 
-impl<T: MockVMType> OdraType for T {}
+impl<T: MockSerializable + MockDeserializable> OdraType for T {}
 
 /// Represents a serialized event.
 pub type EventData = Vec<u8>;

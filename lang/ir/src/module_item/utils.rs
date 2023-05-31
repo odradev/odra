@@ -12,11 +12,11 @@ pub fn is_ref(ty: &PatType) -> bool {
     matches!(&*ty.ty, syn::Type::Reference(_))
 }
 
-pub fn ty<'a>(ty: &'a PatType) -> &'a syn::Type {
-    deref_ty(&*ty.ty)
+pub fn ty(ty: &PatType) -> &syn::Type {
+    deref_ty(&ty.ty)
 }
 
-fn deref_ty<'a>(ty: &'a syn::Type) -> &'a syn::Type {
+fn deref_ty(ty: &syn::Type) -> &syn::Type {
     match ty {
         syn::Type::Reference(r) => deref_ty(&r.elem),
         other => other

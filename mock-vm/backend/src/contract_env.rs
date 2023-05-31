@@ -3,7 +3,9 @@
 use core::panic;
 use std::backtrace::{Backtrace, BacktraceStatus};
 
-use odra_mock_vm_types::{Address, Balance, BlockTime, MockVMType, OdraType};
+use odra_mock_vm_types::{
+    Address, Balance, BlockTime, MockDeserializable, MockSerializable, OdraType
+};
 use odra_types::{event::OdraEvent, ExecutionError, OdraError};
 
 use crate::{borrow_env, debug, native_token::NativeTokenMetadata};
@@ -24,7 +26,7 @@ pub fn self_address() -> Address {
 }
 
 /// Stores the `value` under `key`.
-pub fn set_var<T: MockVMType>(key: &str, value: &T) {
+pub fn set_var<T: MockSerializable + MockDeserializable>(key: &str, value: T) {
     borrow_env().set_var(key, value)
 }
 
@@ -34,12 +36,25 @@ pub fn get_var<T: OdraType>(key: &str) -> Option<T> {
 }
 
 /// Puts a key-value into a collection.
-pub fn set_dict_value<K: MockVMType, V: MockVMType>(dict: &str, key: &K, value: &V) {
+pub fn set_dict_value<
+    K: MockSerializable + MockDeserializable,
+    V: MockSerializable + MockDeserializable
+>(
+    dict: &str,
+    key: &K,
+    value: V
+) {
     borrow_env().set_dict_value(dict, key.ser().unwrap().as_slice(), value)
 }
 
 /// Gets the value from the `dict` collection under `key`.
-pub fn get_dict_value<K: MockVMType, T: MockVMType>(dict: &str, key: &K) -> Option<T> {
+pub fn get_dict_value<
+    K: MockSerializable + MockDeserializable,
+    T: MockSerializable + MockDeserializable
+>(
+    dict: &str,
+    key: &K
+) -> Option<T> {
     let key = key.ser().unwrap();
     let key = key.as_slice();
     borrow_env().get_dict_value(dict, key)

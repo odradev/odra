@@ -10,7 +10,7 @@ pub struct DogContract3 {
 impl DogContract3 {
     #[odra(init)]
     pub fn init(&mut self, name: String) {
-        self.name.set(&name);
+        self.name.set(name);
     }
 
     pub fn name(&self) -> String {
@@ -26,7 +26,7 @@ impl DogContract3 {
     }
 
     pub fn walk_the_dog(&mut self, length: u32) {
-        self.walks.push(&length);
+        self.walks.push(length);
     }
 }
 

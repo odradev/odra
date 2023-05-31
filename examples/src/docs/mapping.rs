@@ -13,7 +13,7 @@ pub struct DogContract2 {
 impl DogContract2 {
     #[odra(init)]
     pub fn init(&mut self, name: String) {
-        self.name.set(&name);
+        self.name.set(name);
     }
 
     pub fn name(&self) -> String {
@@ -22,7 +22,7 @@ impl DogContract2 {
 
     pub fn visit(&mut self, friend_name: FriendName) {
         let visits = self.visits(friend_name.clone());
-        self.friends.set(&friend_name, &(visits + 1));
+        self.friends.set(&friend_name, visits + 1);
     }
 
     pub fn visits(&self, friend_name: FriendName) -> u32 {

@@ -12,10 +12,10 @@ pub struct DogContract {
 impl DogContract {
     #[odra(init)]
     pub fn init(&mut self, barks: bool, weight: u32, name: String) {
-        self.barks.set(&barks);
-        self.weight.set(&weight);
-        self.name.set(&name);
-        self.walks.set(&Vec::<u32>::default());
+        self.barks.set(barks);
+        self.weight.set(weight);
+        self.name.set(name);
+        self.walks.set(Vec::<u32>::default());
     }
 
     pub fn barks(&self) -> bool {

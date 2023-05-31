@@ -130,7 +130,7 @@ fn build_entrypoints_calls(methods: &[&Method], struct_ident: &Ident) -> TokenSt
             let arg_names = args_to_arg_names_stream(&entrypoint.args);
             let return_value = return_value(entrypoint);
             let args = args_to_fn_args(&entrypoint.args);
-            let attached_value_check = attached_value(&entrypoint);
+            let attached_value_check = attached_value(entrypoint);
             let (reentrancy_check, reentrancy_cleanup) = reentrancy_code(entrypoint);
 
             quote! {
@@ -175,12 +175,12 @@ fn reentrancy_code(entrypoint: &Method) -> (TokenStream, TokenStream) {
             if odra::contract_env::get_var("__reentrancy_guard").unwrap_or_default(){
                 odra::contract_env::revert(odra::types::ExecutionError::reentrant_call());
             }
-            odra::contract_env::set_var("__reentrancy_guard", &true);
+            odra::contract_env::set_var("__reentrancy_guard", true);
         },
         false => quote!()
     };
     let reentrancy_cleanup = match non_reentrant {
-        true => quote!(odra::contract_env::set_var("__reentrancy_guard", &false);),
+        true => quote!(odra::contract_env::set_var("__reentrancy_guard", false);),
         false => quote!()
     };
     (reentrancy_check, reentrancy_cleanup)
@@ -200,6 +200,6 @@ fn attached_value(entrypoint: &Method) -> TokenStream {
 fn return_value(entrypoint: &Method) -> TokenStream {
     match &entrypoint.ret {
         ReturnType::Default => quote!(Vec::new()),
-        ReturnType::Type(_, _) => quote!(odra::types::MockVMType::ser(&result).unwrap())
+        ReturnType::Type(_, _) => quote!(odra::types::MockSerializable::ser(&result).unwrap())
     }
 }

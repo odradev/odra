@@ -8,7 +8,7 @@ use super::utils;
 ///
 /// # Examples
 /// ```
-/// # <odra_ir::module::Method as From<syn::ImplItemMethod>>::from(syn::parse_quote! {
+/// # <odra_ir::module::Method as TryFrom<syn::ImplItemMethod>>::try_from(syn::parse_quote! {
 /// pub fn set_value(&self, value: u32) {
 ///    // logic goes here
 /// }

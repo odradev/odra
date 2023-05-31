@@ -19,7 +19,7 @@ impl TokenManager {
             .init(name, symbol, decimals, &U256::from(0));
 
         let new_count = self.count.get_or_default() + 1;
-        self.count.set(&new_count);
+        self.count.set(new_count);
     }
 
     pub fn balance_of(&self, token_name: String, owner: &Address) -> U256 {
@@ -86,10 +86,10 @@ mod test {
 
         assert_eq!(contract.balance_of(plascoin.clone(), &user1), pls_balance1);
         assert_eq!(contract.balance_of(plascoin.clone(), &user2), pls_balance2);
-        assert_eq!(contract.balance_of(plascoin.clone(), &user3), pls_balance3);
+        assert_eq!(contract.balance_of(plascoin, &user3), pls_balance3);
         assert_eq!(contract.balance_of(my_coin.clone(), &user1), mcn_balance1);
         assert_eq!(contract.balance_of(my_coin.clone(), &user2), mcn_balance2);
-        assert_eq!(contract.balance_of(my_coin.clone(), &user3), mcn_balance3);
+        assert_eq!(contract.balance_of(my_coin, &user3), mcn_balance3);
     }
 
     #[test]

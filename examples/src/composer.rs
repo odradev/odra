@@ -21,8 +21,8 @@ pub struct ComposableContract {
 impl ComposableContract {
     #[odra(init)]
     pub fn init(&mut self, version: u8, value: String) {
-        self.storage.version.set(&version);
-        self.shared.value.set(&value);
+        self.storage.version.set(version);
+        self.shared.value.set(value);
     }
 
     pub fn get_value(&self) -> String {

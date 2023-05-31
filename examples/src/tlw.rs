@@ -14,7 +14,7 @@ pub struct TimeLockWallet {
 #[odra::module]
 impl TimeLockWallet {
     #[odra(init)]
-    pub fn init(&mut self, lock_duration: &BlockTime) {
+    pub fn init(&mut self, lock_duration: BlockTime) {
         self.lock_duration.set(lock_duration);
     }
 
@@ -31,9 +31,9 @@ impl TimeLockWallet {
         }
 
         // Update state, emit event
-        self.balances.set(&caller, &amount);
+        self.balances.set(&caller, amount);
         self.lock_expiration_map
-            .set(&caller, &(current_block_time + self.lock_duration()));
+            .set(&caller, current_block_time + self.lock_duration());
         Deposit {
             address: caller,
             amount
@@ -60,7 +60,7 @@ impl TimeLockWallet {
 
         // Transfer tokens, emit event
         contract_env::transfer_tokens(caller, *amount);
-        self.balances.subtract(&caller, amount);
+        self.balances.subtract(&caller, *amount);
         Withdrawal {
             address: caller,
             amount: *amount
@@ -69,7 +69,7 @@ impl TimeLockWallet {
     }
 
     pub fn get_balance(&self, address: &Address) -> Balance {
-        self.balances.get_or_default(&address)
+        self.balances.get_or_default(address)
     }
 
     pub fn lock_duration(&self) -> BlockTime {
@@ -113,7 +113,7 @@ mod test {
 
     fn setup() -> (TimeLockWalletRef, Address, Address) {
         (
-            TimeLockWalletDeployer::init(&ONE_DAY_IN_SECONDS),
+            TimeLockWalletDeployer::init(ONE_DAY_IN_SECONDS),
             test_env::get_account(0),
             test_env::get_account(1)
         )

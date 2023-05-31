@@ -31,13 +31,13 @@ impl Erc20 {
     ) {
         let caller = contract_env::caller();
 
-        self.symbol.set(&symbol);
-        self.name.set(&name);
-        self.decimals.set(&decimals);
+        self.symbol.set(symbol);
+        self.name.set(name);
+        self.decimals.set(decimals);
 
         if let Some(initial_supply) = initial_supply {
-            self.total_supply.set(initial_supply);
-            self.balances.set(&caller, initial_supply);
+            self.total_supply.set(*initial_supply);
+            self.balances.set(&caller, *initial_supply);
 
             if *initial_supply > U256::zero() {
                 Transfer {
@@ -65,7 +65,7 @@ impl Erc20 {
     pub fn approve(&mut self, spender: &Address, amount: &U256) {
         let owner = contract_env::caller();
 
-        self.allowances.get_instance(&owner).set(spender, amount);
+        self.allowances.get_instance(&owner).set(spender, *amount);
         Approval {
             owner,
             spender: *spender,
@@ -101,8 +101,8 @@ impl Erc20 {
     }
 
     pub fn mint(&mut self, address: &Address, amount: &U256) {
-        self.total_supply.add(amount);
-        self.balances.add(&address, amount);
+        self.total_supply.add(*amount);
+        self.balances.add(address, *amount);
 
         Transfer {
             from: None,
@@ -116,8 +116,8 @@ impl Erc20 {
         if self.balance_of(address) < *amount {
             contract_env::revert(Error::InsufficientBalance);
         }
-        self.total_supply.subtract(amount);
-        self.balances.subtract(&address, amount);
+        self.total_supply.subtract(*amount);
+        self.balances.subtract(address, *amount);
 
         Transfer {
             from: Some(*address),
@@ -134,8 +134,8 @@ impl Erc20 {
             contract_env::revert(Error::InsufficientBalance)
         }
 
-        self.balances.subtract(owner, amount);
-        self.balances.add(recipient, amount);
+        self.balances.subtract(owner, *amount);
+        self.balances.add(recipient, *amount);
 
         Transfer {
             from: Some(*owner),
@@ -150,7 +150,9 @@ impl Erc20 {
         if allowance < *amount {
             contract_env::revert(Error::InsufficientAllowance)
         }
-        self.allowances.get_instance(owner).subtract(spender, amount);
+        self.allowances
+            .get_instance(owner)
+            .subtract(spender, *amount);
         Approval {
             owner: *owner,
             spender: *spender,

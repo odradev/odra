@@ -11,7 +11,7 @@ pub struct NestedMapping {
 #[odra::module]
 impl NestedMapping {
     pub fn set_string(&mut self, key1: String, key2: u32, key3: String, value: String) {
-        map!(self.strings[key1][key2][key3] = &value);
+        map!(self.strings[key1][key2][key3] = value);
     }
 
     #[allow(clippy::too_many_arguments)]

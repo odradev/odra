@@ -77,8 +77,7 @@ pub fn add_contract_version(
 
 /// Save value to the storage.
 #[inline(always)]
-pub fn set_key<T: OdraType>(name: &str, value: &T) {
-    runtime::print(name);
+pub fn set_key<T: OdraType>(name: &str, value: T) {
     save_value(&to_variable_key(name), value);
 }
 
@@ -89,7 +88,7 @@ pub fn get_key<T: OdraType>(name: &str) -> Option<T> {
 }
 
 #[inline(always)]
-pub fn set_dict_value<K: OdraType, V: OdraType>(seed: &str, key: &K, value: &V) {
+pub fn set_dict_value<K: OdraType, V: OdraType>(seed: &str, key: &K, value: V) {
     save_value(&to_dictionary_key(seed, key), value);
 }
 
@@ -281,7 +280,7 @@ where
 }
 pub const DICTIONARY_ITEM_KEY_MAX_LENGTH: usize = 64;
 
-pub fn save_value<T: OdraType>(key: &str, value: &T) {
+pub fn save_value<T: OdraType>(key: &str, value: T) {
     let state_uref = get_state_uref();
 
     let (uref_ptr, uref_size, _bytes1) = to_ptr(state_uref);

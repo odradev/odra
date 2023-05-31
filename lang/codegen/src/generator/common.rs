@@ -66,7 +66,18 @@ where
     let mut tokens = quote!(let mut args = odra::types::CallArgs::new(););
     tokens.append_all(syn_args.into_iter().map(|arg| {
         let pat = &*arg.pat;
-        quote! { args.insert(stringify!(#pat), #pat.clone()); }
+        match &*arg.ty {
+            syn::Type::Reference(ty) => match &*ty.elem {
+                syn::Type::Slice(_) => quote! {
+                    #[cfg(any(feature = "casper", feature = "casper-livenet"))]
+                    args.insert(stringify!(#pat), #pat.to_vec());
+                    #[cfg(feature = "mock-vm")]
+                    args.insert(stringify!(#pat), #pat.clone());
+                },
+                _ => quote!(args.insert(stringify!(#pat), #pat.clone());)
+            },
+            _ => quote!(args.insert(stringify!(#pat), #pat.clone());)
+        }
     }));
     tokens.extend(quote!(args));
 
