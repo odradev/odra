@@ -78,7 +78,7 @@ impl CasperTestEnv {
             genesis_config.take_ee_config()
         );
 
-        let mut builder = InMemoryWasmTestBuilder::default();
+        let mut builder = InMemoryWasmTestBuilder::new_with_chainspec("/home/ziel/workspace/odra/odra/resources/chainspec.toml", None);
         builder.run_genesis(&run_genesis_request).commit();
 
         Self {
