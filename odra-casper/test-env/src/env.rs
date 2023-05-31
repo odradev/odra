@@ -4,7 +4,7 @@ use std::{
     backtrace::{Backtrace, BacktraceStatus},
     cell::RefCell,
     env,
-    path::PathBuf
+    path::PathBuf, collections::HashMap
 };
 
 use casper_engine_test_support::{
@@ -46,7 +46,8 @@ pub struct CasperTestEnv {
     block_time: BlockTime,
     calls_counter: u32,
     error: Option<OdraError>,
-    attached_value: Option<U512>
+    attached_value: Option<U512>,
+    gas_used: HashMap<AccountHash, U512>,
 }
 
 impl CasperTestEnv {
@@ -88,7 +89,8 @@ impl CasperTestEnv {
             block_time: 0,
             calls_counter: 0,
             error: None,
-            attached_value: None
+            attached_value: None,
+            gas_used: HashMap::new(),
         }
     }
 
@@ -118,6 +120,7 @@ impl CasperTestEnv {
             .with_block_time(self.block_time)
             .build();
         self.context.exec(execute_request).commit().expect_success();
+        self.collect_gas();
     }
 
     /// Call contract.
@@ -151,6 +154,7 @@ impl CasperTestEnv {
             .with_block_time(self.block_time)
             .build();
         self.context.exec(execute_request).commit();
+        self.collect_gas();
 
         self.attached_value = None;
         if let Some(error) = self.context.get_error() {
@@ -352,9 +356,13 @@ impl CasperTestEnv {
     }
 
     fn get_account_cspr_balance(&self, account_hash: AccountHash) -> U512 {
+        let gas_used = match self.gas_used.get(&account_hash) {
+            Some(value) => *value,
+            None => U512::zero(),
+        };
         let account: Account = self.context.get_account(account_hash).unwrap();
         let purse = account.main_purse();
-        self.context.get_purse_balance(purse)
+        self.context.get_purse_balance(purse) + gas_used
     }
 
     fn active_account_hash(&self) -> AccountHash {
@@ -368,6 +376,13 @@ impl CasperTestEnv {
             .get_account_value(active_account, "result")
             .unwrap_or_default();
         T::from_bytes(bytes.inner_bytes()).unwrap().0
+    }
+
+    fn collect_gas(&mut self) {
+        *self
+            .gas_used
+            .entry(*self.active_account.as_account_hash().unwrap())
+            .or_insert_with(U512::zero) += *DEFAULT_PAYMENT;
     }
 }
 
