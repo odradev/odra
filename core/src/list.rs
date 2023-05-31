@@ -33,8 +33,7 @@ impl<T: OdraType> List<T> {
     pub fn push(&mut self, value: T) {
         let current_index = self.index.get_or_default();
         self.values.set(&current_index, value);
-        let new_value = current_index + 1;
-        self.index.set(new_value);
+        self.index.set(current_index + 1);
     }
 
     /// Replaces the current value with the `value` and returns it.

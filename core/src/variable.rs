@@ -29,7 +29,7 @@ impl<V: OdraType + OverflowingAdd + Default> Variable<V> {
     #[inline(always)]
     pub fn add(&mut self, value: V) {
         let current_value = self.get_or_default();
-        let new_value = current_value.overflowing_add(&value).unwrap_or_revert();
+        let new_value = current_value.overflowing_add(value).unwrap_or_revert();
         self.set(new_value);
     }
 }
@@ -42,7 +42,7 @@ impl<V: OdraType + OverflowingSub + Default> Variable<V> {
     #[inline(always)]
     pub fn subtract(&mut self, value: V) {
         let current_value = self.get().unwrap_or_default();
-        let new_value = current_value.overflowing_sub(&value).unwrap_or_revert();
+        let new_value = current_value.overflowing_sub(value).unwrap_or_revert();
         self.set(new_value);
     }
 }

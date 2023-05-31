@@ -82,7 +82,7 @@ impl<K: OdraType + Hash, V: OdraType + OverflowingAdd + Default> Mapping<K, V> {
     /// If the operation fails due to overflow, the currently executing contract reverts.
     pub fn add(&mut self, key: &K, value: V) {
         let current_value = self.get(key).unwrap_or_default();
-        let new_value = current_value.overflowing_add(&value).unwrap_or_revert();
+        let new_value = current_value.overflowing_add(value).unwrap_or_revert();
         contract_env::set_dict_value(&self.name, key, new_value);
     }
 }
@@ -96,7 +96,7 @@ impl<K: OdraType + Hash, V: OdraType + OverflowingSub + Default + Debug + Partia
     /// If the operation fails due to overflow, the currently executing contract reverts.
     pub fn subtract(&mut self, key: &K, value: V) {
         let current_value = self.get(key).unwrap_or_default();
-        let new_value = current_value.overflowing_sub(&value).unwrap_or_revert();
+        let new_value = current_value.overflowing_sub(value).unwrap_or_revert();
         contract_env::set_dict_value(&self.name, key, new_value);
     }
 }

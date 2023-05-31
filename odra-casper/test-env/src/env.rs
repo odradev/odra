@@ -367,7 +367,6 @@ impl CasperTestEnv {
         let bytes: casper_types::bytesrepr::Bytes = self
             .get_account_value(active_account, "result")
             .unwrap_or_default();
-        dbg!(bytes.clone());
         T::from_bytes(bytes.inner_bytes()).unwrap().0
     }
 }

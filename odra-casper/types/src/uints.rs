@@ -200,7 +200,7 @@ macro_rules! impl_casper_type_numeric_wrapper {
             }
 
             impl OverflowingAdd for $ty {
-                fn overflowing_add(self, rhs: &Self) -> Result<Self, ExecutionError> {
+                fn overflowing_add(self, rhs: Self) -> Result<Self, ExecutionError> {
                     let (res, is_overflowed)  = self.inner.overflowing_add(rhs.inner);
                     match is_overflowed {
                         true => Err(ArithmeticsError::AdditionOverflow.into()),
@@ -210,7 +210,7 @@ macro_rules! impl_casper_type_numeric_wrapper {
             }
 
             impl OverflowingSub for $ty {
-                fn overflowing_sub(self, rhs: &Self) -> Result<Self, ExecutionError> {
+                fn overflowing_sub(self, rhs: Self) -> Result<Self, ExecutionError> {
                     let (res, is_overflowed)  = self.inner.overflowing_sub(rhs.inner);
                     match is_overflowed {
                         true => Err(ArithmeticsError::SubtractingOverflow.into()),

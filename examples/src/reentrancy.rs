@@ -35,8 +35,8 @@ impl ReentrancyMock {
 
 impl ReentrancyMock {
     fn count(&mut self) {
-        let c = self.counter.get_or_default() + 1;
-        self.counter.set(c);
+        let c = self.counter.get_or_default();
+        self.counter.set(c + 1);
     }
 }
 
