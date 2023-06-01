@@ -2,6 +2,15 @@
 
 Changelog for `odra`.
 
+## [0.4.0] - XXXX-XX-XX
+### Added
+
+### Fixed
+
+### Changed
+
+### Removed
+
 ## [0.3.1] - 2023-06-01
 ### Added
 - `Composer` - a tool for composing Odra modules' instances.

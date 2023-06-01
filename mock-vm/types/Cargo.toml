@@ -1,6 +1,6 @@
 [package]
 name = "odra-mock-vm-types"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2021"
 authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
 license = "MIT"
@@ -10,8 +10,8 @@ keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm"]
 
 [dependencies]
-odra-types = { version = "0.3.1", path = "../../types" }
-odra-utils = { version = "0.3.1", path = "../../utils" }
+odra-types = { version = "0.4.0", path = "../../types" }
+odra-utils = { version = "0.4.0", path = "../../utils" }
 hex = "0.4.3"
 uint = "0.9.4"
 borsh = "0.9.3"
