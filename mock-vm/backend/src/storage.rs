@@ -1,5 +1,7 @@
 use anyhow::{Context, Result};
-use odra_mock_vm_types::{Address, Balance, MockVMSerializationError, MockVMType};
+use odra_mock_vm_types::{
+    Address, Balance, MockDeserializable, MockSerializable, MockVMSerializationError
+};
 use std::{
     collections::{hash_map::DefaultHasher, HashMap},
     hash::{Hash, Hasher}
@@ -33,17 +35,17 @@ impl Storage {
         self.balances.insert(address, balance);
     }
 
-    pub fn increase_balance(&mut self, address: &Address, amount: Balance) -> Result<()> {
+    pub fn increase_balance(&mut self, address: &Address, amount: &Balance) -> Result<()> {
         let balance = self.balances.get_mut(address).context("Unknown address")?;
-        balance.increase(amount)
+        balance.increase(*amount)
     }
 
-    pub fn reduce_balance(&mut self, address: &Address, amount: Balance) -> Result<()> {
+    pub fn reduce_balance(&mut self, address: &Address, amount: &Balance) -> Result<()> {
         let balance = self.balances.get_mut(address).context("Unknown address")?;
-        balance.reduce(amount)
+        balance.reduce(*amount)
     }
 
-    pub fn get_value<T: MockVMType>(
+    pub fn get_value<T: MockSerializable + MockDeserializable>(
         &self,
         address: &Address,
         key: &str
@@ -57,7 +59,7 @@ impl Storage {
         }
     }
 
-    pub fn set_value<T: MockVMType>(
+    pub fn set_value<T: MockSerializable + MockDeserializable>(
         &mut self,
         address: &Address,
         key: &str,
@@ -68,7 +70,7 @@ impl Storage {
         Ok(())
     }
 
-    pub fn insert_dict_value<T: MockVMType>(
+    pub fn insert_dict_value<T: MockSerializable + MockDeserializable>(
         &mut self,
         address: &Address,
         collection: &str,
@@ -81,7 +83,7 @@ impl Storage {
         Ok(())
     }
 
-    pub fn get_dict_value<T: MockVMType>(
+    pub fn get_dict_value<T: MockSerializable + MockDeserializable>(
         &self,
         address: &Address,
         collection: &str,

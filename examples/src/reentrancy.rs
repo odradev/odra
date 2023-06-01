@@ -19,7 +19,7 @@ impl ReentrancyMock {
     pub fn count_ref_recursive(&mut self, n: u32) {
         if n > 0 {
             self.count();
-            ReentrancyMockRef::at(contract_env::self_address()).count_ref_recursive(n - 1);
+            ReentrancyMockRef::at(&contract_env::self_address()).count_ref_recursive(n - 1);
         }
     }
 

@@ -9,41 +9,38 @@ pub struct Erc1155Receiver {}
 impl Erc1155Receiver {
     pub fn on_erc1155_received(
         &mut self,
-        #[allow(unused_variables)] operator: Address,
-        #[allow(unused_variables)] from: Address,
-        #[allow(unused_variables)] token_id: U256,
-        #[allow(unused_variables)] amount: U256,
-        #[allow(unused_variables)] data: Option<Bytes>
+        #[allow(unused_variables)] operator: &Address,
+        #[allow(unused_variables)] from: &Address,
+        #[allow(unused_variables)] token_id: &U256,
+        #[allow(unused_variables)] amount: &U256,
+        #[allow(unused_variables)] data: &Option<Bytes>
     ) -> bool {
         SingleReceived {
-            operator: Some(operator),
-            from: Some(from),
-            token_id,
-            amount,
-            data
+            operator: Some(*operator),
+            from: Some(*from),
+            token_id: *token_id,
+            amount: *amount,
+            data: data.clone()
         }
         .emit();
-
         true
     }
-
     pub fn on_erc1155_batch_received(
         &mut self,
-        #[allow(unused_variables)] operator: Address,
-        #[allow(unused_variables)] from: Address,
-        #[allow(unused_variables)] token_ids: Vec<U256>,
-        #[allow(unused_variables)] amounts: Vec<U256>,
-        #[allow(unused_variables)] data: Option<Bytes>
+        #[allow(unused_variables)] operator: &Address,
+        #[allow(unused_variables)] from: &Address,
+        #[allow(unused_variables)] token_ids: &[U256],
+        #[allow(unused_variables)] amounts: &[U256],
+        #[allow(unused_variables)] data: &Option<Bytes>
     ) -> bool {
         BatchReceived {
-            operator: Some(operator),
-            from: Some(from),
-            token_ids,
-            amounts,
-            data
+            operator: Some(*operator),
+            from: Some(*from),
+            token_ids: token_ids.to_vec(),
+            amounts: amounts.to_vec(),
+            data: data.clone()
         }
         .emit();
-
         true
     }
 }

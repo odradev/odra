@@ -30,14 +30,15 @@ impl Ownable {
     /// Initializes the module setting the caller as the initial owner.
     #[odra(init)]
     pub fn init(&mut self) {
-        let initial_owner = Some(contract_env::caller());
+        let caller = contract_env::caller();
+        let initial_owner = Some(&caller);
         self.unchecked_transfer_ownership(initial_owner);
     }
 
     /// Transfers ownership of the module to `new_owner`. This function can only
     /// be accessed by the current owner of the module.
-    pub fn transfer_ownership(&mut self, new_owner: Address) {
-        self.assert_owner(contract_env::caller());
+    pub fn transfer_ownership(&mut self, new_owner: &Address) {
+        self.assert_owner(&contract_env::caller());
         self.unchecked_transfer_ownership(Some(new_owner));
     }
 
@@ -48,7 +49,7 @@ impl Ownable {
     /// The function can only be called by the current owner, and it will permanently
     /// remove the owner's privileges.
     pub fn renounce_ownership(&mut self) {
-        self.assert_owner(contract_env::caller());
+        self.assert_owner(&contract_env::caller());
         self.unchecked_transfer_ownership(None);
     }
 
@@ -62,8 +63,8 @@ impl Ownable {
 impl Ownable {
     /// Reverts with [`Error::CallerNotTheOwner`] if the function called by
     /// any account other than the owner.
-    pub fn assert_owner(&self, address: Address) {
-        if Some(address) != self.get_optional_owner() {
+    pub fn assert_owner(&self, address: &Address) {
+        if Some(address) != self.get_optional_owner().as_ref() {
             contract_env::revert(Error::CallerNotTheOwner)
         }
     }
@@ -72,13 +73,13 @@ impl Ownable {
         self.owner.get().flatten()
     }
 
-    fn unchecked_transfer_ownership(&mut self, new_owner: Option<Address>) {
+    fn unchecked_transfer_ownership(&mut self, new_owner: Option<&Address>) {
         let previous_owner = self.get_optional_owner();
-        self.owner.set(new_owner);
+        self.owner.set(new_owner.cloned());
 
         OwnershipTransferred {
             previous_owner,
-            new_owner
+            new_owner: new_owner.cloned()
         }
         .emit();
     }
@@ -123,16 +124,16 @@ impl Ownable2Step {
     /// Replaces the `pending_owner`if there is one.
     ///
     /// This function can only be accessed by the current owner of the module.
-    pub fn transfer_ownership(&mut self, new_owner: Address) {
-        self.ownable.assert_owner(contract_env::caller());
+    pub fn transfer_ownership(&mut self, new_owner: &Address) {
+        self.ownable.assert_owner(&contract_env::caller());
 
         let previous_owner = self.ownable.get_optional_owner();
-        let new_owner = Some(new_owner);
-        self.pending_owner.set(new_owner);
+        let new_owner = &Some(*new_owner);
+        self.pending_owner.set(*new_owner);
 
         OwnershipTransferStarted {
             previous_owner,
-            new_owner
+            new_owner: *new_owner
         }
         .emit();
     }
@@ -150,9 +151,10 @@ impl Ownable2Step {
     /// The new owner accepts the ownership transfer. Replaces the current owner and clears
     /// the pending owner.
     pub fn accept_ownership(&mut self) {
-        let caller = Some(contract_env::caller());
+        let caller = &contract_env::caller();
+        let caller = Some(caller);
         let pending_owner = self.pending_owner.get().flatten();
-        if pending_owner != caller {
+        if pending_owner.as_ref() != caller {
             contract_env::revert(Error::CallerNotTheNewOwner)
         }
         self.pending_owner.set(None);
@@ -192,7 +194,7 @@ mod test {
 
         // when the current owner transfers ownership
         let new_owner = test_env::get_account(1);
-        contract.transfer_ownership(new_owner);
+        contract.transfer_ownership(&new_owner);
 
         // then the new owner is set
         assert_eq!(new_owner, contract.get_owner());
@@ -213,7 +215,7 @@ mod test {
 
         // when the current owner transfers ownership
         let new_owner = test_env::get_account(1);
-        contract.transfer_ownership(new_owner);
+        contract.transfer_ownership(&new_owner);
 
         // when the pending owner accepts the transfer
         test_env::set_caller(new_owner);
@@ -248,7 +250,7 @@ mod test {
 
         // then ownership transfer fails
         test_env::assert_exception(Error::CallerNotTheOwner, || {
-            contract.transfer_ownership(new_owner);
+            contract.transfer_ownership(&new_owner);
         });
     }
 
@@ -263,12 +265,12 @@ mod test {
 
         // then ownership transfer fails
         test_env::assert_exception(Error::CallerNotTheOwner, || {
-            contract.transfer_ownership(new_owner);
+            contract.transfer_ownership(&new_owner);
         });
 
         // when the owner is the caller
         test_env::set_caller(initial_owner);
-        contract.transfer_ownership(new_owner);
+        contract.transfer_ownership(&new_owner);
 
         // then the pending owner is set
         assert_eq!(contract.get_pending_owner(), Some(new_owner));

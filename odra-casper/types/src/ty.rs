@@ -6,6 +6,12 @@ pub trait Typed {
     fn ty() -> Type;
 }
 
+impl<T: CLTyped> Typed for [T] {
+    fn ty() -> Type {
+        Type::Slice(Box::new(cl_type_to_type(T::cl_type())))
+    }
+}
+
 impl<T: CLTyped> Typed for T {
     fn ty() -> Type {
         cl_type_to_type(T::cl_type())

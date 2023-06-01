@@ -75,19 +75,23 @@ pub fn add_contract_version(
 }
 
 /// Save value to the storage.
+#[inline(always)]
 pub fn set_key<T: OdraType>(name: &str, value: T) {
     save_value(&to_variable_key(name), value);
 }
 
 /// Read value from the storage.
+#[inline(always)]
 pub fn get_key<T: OdraType>(name: &str) -> Option<T> {
     read_value(&to_variable_key(name))
 }
 
+#[inline(always)]
 pub fn set_dict_value<K: OdraType, V: OdraType>(seed: &str, key: &K, value: V) {
     save_value(&to_dictionary_key(seed, key), value);
 }
 
+#[inline(always)]
 pub fn get_dict_value<K: OdraType, V: OdraType>(seed: &str, key: &K) -> Option<V> {
     read_value(&to_dictionary_key(seed, key))
 }
@@ -128,18 +132,21 @@ fn take_call_stack_elem(n: usize) -> CallStackElement {
 ///
 /// This function ensures that only session code can execute this function, and disallows stored
 /// session/stored contracts.
+#[inline(always)]
 pub fn caller() -> Address {
     let second_elem = take_call_stack_elem(1);
     call_stack_element_to_address(second_elem)
 }
 
 /// Gets the address of the currently run contract
+#[inline(always)]
 pub fn self_address() -> Address {
     let first_elem = take_call_stack_elem(0);
     call_stack_element_to_address(first_elem)
 }
 
 /// Record event to the contract's storage.
+#[inline(always)]
 pub fn emit_event<T>(event: T)
 where
     T: OdraType + OdraEvent
@@ -180,6 +187,7 @@ fn to_dictionary_key<T: ToBytes>(seed: &str, key: &T) -> String {
 }
 
 /// Calls a contract method by Address
+#[inline(always)]
 pub fn call_contract<T: CLTyped + FromBytes>(
     contract_package_hash: ContractPackageHash,
     entry_point: &str,
@@ -188,6 +196,7 @@ pub fn call_contract<T: CLTyped + FromBytes>(
     runtime::call_versioned_contract(contract_package_hash, None, entry_point, args)
 }
 
+#[inline(always)]
 pub fn call_contract_with_amount<T: CLTyped + FromBytes>(
     contract_package_hash: ContractPackageHash,
     entry_point: &str,
@@ -211,10 +220,12 @@ pub fn call_contract_with_amount<T: CLTyped + FromBytes>(
     result
 }
 
+#[inline(always)]
 pub fn get_block_time() -> u64 {
     runtime::get_blocktime().into()
 }
 
+#[inline(always)]
 pub fn revert(error: u16) -> ! {
     runtime::revert(ApiError::User(error))
 }
@@ -230,6 +241,7 @@ pub fn get_or_create_purse() -> URef {
     }
 }
 
+#[inline(always)]
 pub fn self_balance() -> U512 {
     let purse = get_or_create_purse();
     get_purse_balance(purse).unwrap_or_default()
@@ -266,11 +278,13 @@ where
     }
 }
 
+#[inline(always)]
 pub fn save_value<T: OdraType>(key: &str, value: T) {
     let state_uref = get_state_uref();
     storage::dictionary_put(state_uref, key, value);
 }
 
+#[inline(always)]
 pub fn read_value<T: OdraType>(key: &str) -> Option<T> {
     let state_uref = get_state_uref();
     storage::dictionary_get(state_uref, key).unwrap_or_revert()

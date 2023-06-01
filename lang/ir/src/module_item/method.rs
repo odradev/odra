@@ -8,7 +8,7 @@ use super::utils;
 ///
 /// # Examples
 /// ```
-/// # <odra_ir::module::Method as From<syn::ImplItemMethod>>::from(syn::parse_quote! {
+/// # <odra_ir::module::Method as TryFrom<syn::ImplItemMethod>>::try_from(syn::parse_quote! {
 /// pub fn set_value(&self, value: u32) {
 ///    // logic goes here
 /// }
@@ -44,12 +44,15 @@ impl ToTokens for Method {
             .iter()
             .map(|arg| {
                 let name = &*arg.pat;
-                let ty = &*arg.ty;
+
+                let ty = utils::ty(arg);
+                let is_ref = utils::is_ref(arg);
                 let ty = quote!(<#ty as odra::types::Typed>::ty());
                 quote! {
                     odra::types::contract_def::Argument {
                         ident: String::from(stringify!(#name)),
                         ty: #ty,
+                        is_ref: #is_ref,
                     },
                 }
             })
@@ -85,25 +88,19 @@ impl ToTokens for Method {
     }
 }
 
-impl From<syn::ImplItemMethod> for Method {
-    fn from(method: syn::ImplItemMethod) -> Self {
-        let (odra_attrs, attrs) = partition_attributes(method.clone().attrs).unwrap();
+impl TryFrom<syn::ImplItemMethod> for Method {
+    type Error = syn::Error;
+
+    fn try_from(method: syn::ImplItemMethod) -> Result<Self, Self::Error> {
+        let (odra_attrs, attrs) = partition_attributes(method.clone().attrs)?;
         let ident = method.sig.ident.to_owned();
-        let args = method
-            .sig
-            .inputs
-            .iter()
-            .filter_map(|arg| match arg {
-                syn::FnArg::Receiver(_) => None,
-                syn::FnArg::Typed(pat) => Some(pat.clone())
-            })
-            .collect::<syn::punctuated::Punctuated<_, _>>();
+        let args = utils::extract_typed_inputs(&method.sig);
         let ret = method.clone().sig.output;
         let full_sig = method.clone().sig;
         let visibility = method.vis.clone();
         let is_mut = utils::is_mut(&full_sig);
 
-        Self {
+        Ok(Self {
             attrs: odra_attrs,
             impl_item: syn::ImplItemMethod { attrs, ..method },
             ident,
@@ -112,6 +109,6 @@ impl From<syn::ImplItemMethod> for Method {
             ret,
             full_sig,
             visibility
-        }
+        })
     }
 }

@@ -1,5 +1,5 @@
 use odra::types::Address;
-use odra::Variable;
+use odra::{UnwrapOrRevert, Variable};
 
 #[odra::module]
 pub struct CrossContract {
@@ -9,13 +9,13 @@ pub struct CrossContract {
 #[odra::module]
 impl CrossContract {
     #[odra(init)]
-    pub fn init(&mut self, math_engine_address: Address) {
-        self.math_engine.set(math_engine_address);
+    pub fn init(&mut self, math_engine_address: &Address) {
+        self.math_engine.set(*math_engine_address);
     }
 
     pub fn add_using_another(&self) -> u32 {
-        let math_engine_address = self.math_engine.get().unwrap();
-        MathEngineRef::at(math_engine_address).add(3, 5)
+        let math_engine_address = self.math_engine.get().unwrap_or_revert();
+        MathEngineRef::at(&math_engine_address).add(3, 5)
     }
 }
 

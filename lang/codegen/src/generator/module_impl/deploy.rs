@@ -6,6 +6,7 @@ use syn::{punctuated::Punctuated, token::Comma};
 
 use crate::GenerateCode;
 
+pub(super) mod common;
 mod deployer_casper_livenet;
 mod deployer_casper_test;
 mod deployer_mock_vm;
@@ -69,7 +70,18 @@ where
     args.into_iter()
         .map(|arg| {
             let pat = &*arg.pat;
-            quote!(args.get(stringify!(#pat)))
+            match &*arg.ty {
+                syn::Type::Reference(ty) => match &*ty.elem {
+                    ty if matches!(ty, syn::Type::Array(_) | syn::Type::Slice(_)) => {
+                        quote!(&args.get::<Vec<_>>(stringify!(#pat)))
+                    }
+                    _ => quote!(&args.get(stringify!(#pat)))
+                },
+                ty if matches!(ty, syn::Type::Array(_) | syn::Type::Slice(_)) => {
+                    quote!(&args.get::<Vec<_>>(stringify!(#pat)))
+                }
+                _ => quote!(args.get(stringify!(#pat)))
+            }
         })
         .collect::<Punctuated<TokenStream, Comma>>()
 }
@@ -98,7 +110,7 @@ where
     let mut tokens = quote!(let mut args = odra::types::CallArgs::new(););
     tokens.append_all(args.into_iter().map(|arg| {
         let pat = &*arg.pat;
-        quote! { args.insert(stringify!(#pat), #pat); }
+        quote! { args.insert(stringify!(#pat), #pat.clone()); }
     }));
     tokens.extend(quote!(args));
     tokens

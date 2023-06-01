@@ -1,10 +1,11 @@
 use std::convert::TryFrom;
 
 use proc_macro2::Ident;
+use syn::{punctuated::Punctuated, token::Comma};
 
 use crate::attrs::partition_attributes;
 
-use super::{constructor::Constructor, method::Method};
+use super::{constructor::Constructor, method::Method, utils};
 
 /// An item within an implementation block
 ///
@@ -36,12 +37,12 @@ impl TryFrom<syn::ImplItem> for ImplItem {
             syn::ImplItem::Method(method) => {
                 let (odra_attrs, _) = partition_attributes(method.attrs.clone())?;
                 if odra_attrs.is_empty() {
-                    return Ok(ImplItem::Method(method.into()));
+                    return Ok(ImplItem::Method(method.try_into()?));
                 }
                 let is_constructor = odra_attrs.iter().any(|attr| attr.is_constructor());
                 match is_constructor {
                     true => Ok(ImplItem::Constructor(Constructor::try_from(method)?)),
-                    false => Ok(ImplItem::Method(method.into()))
+                    false => Ok(ImplItem::Method(method.try_into()?))
                 }
             }
             other_item => Ok(ImplItem::Other(other_item))
@@ -51,7 +52,7 @@ impl TryFrom<syn::ImplItem> for ImplItem {
 
 pub struct ContractEntrypoint {
     pub ident: Ident,
-    pub args: Vec<syn::PatType>,
+    pub args: Punctuated<syn::PatType, Comma>,
     pub ret: syn::ReturnType,
     pub full_sig: syn::Signature
 }
@@ -59,15 +60,7 @@ pub struct ContractEntrypoint {
 impl From<syn::ImplItemMethod> for ContractEntrypoint {
     fn from(method: syn::ImplItemMethod) -> Self {
         let ident = method.sig.ident.to_owned();
-        let args = method
-            .sig
-            .inputs
-            .iter()
-            .filter_map(|arg| match arg {
-                syn::FnArg::Receiver(_) => None,
-                syn::FnArg::Typed(pat) => Some(pat.clone())
-            })
-            .collect::<Vec<_>>();
+        let args = utils::extract_typed_inputs(&method.sig);
         let ret = method.clone().sig.output;
         let full_sig = method.sig;
         Self {

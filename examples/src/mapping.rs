@@ -23,7 +23,7 @@ impl NestedMapping {
         token_name: String,
         decimals: u8,
         symbol: String,
-        initial_supply: U256
+        initial_supply: &U256
     ) {
         self.tokens
             .get_instance(&key1)
@@ -84,7 +84,7 @@ mod test {
             token_name,
             decimals,
             symbol,
-            initial_supply
+            &initial_supply
         );
         // then the total supply is set
         assert_eq!(contract.total_supply(key1, key2, key3), initial_supply);

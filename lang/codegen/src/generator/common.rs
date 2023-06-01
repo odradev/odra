@@ -1,5 +1,6 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, TokenStreamExt};
+use syn::{FnArg, PatType};
 
 pub(crate) fn generate_fn_body<T>(
     args: T,
@@ -27,12 +28,7 @@ pub(crate) fn filter_args<'a, T>(args: T) -> Vec<syn::PatType>
 where
     T: IntoIterator<Item = &'a syn::FnArg>
 {
-    args.into_iter()
-        .filter_map(|arg| match arg {
-            syn::FnArg::Receiver(_) => None,
-            syn::FnArg::Typed(pat) => Some(pat.clone())
-        })
-        .collect::<Vec<_>>()
+    args.into_iter().filter_map(typed_arg).collect::<Vec<_>>()
 }
 
 pub(crate) fn build_ref(ref_ident: &Ident) -> TokenStream {
@@ -44,12 +40,12 @@ pub(crate) fn build_ref(ref_ident: &Ident) -> TokenStream {
         }
 
         impl #ref_ident {
-            pub fn at(address: odra::types::Address) -> Self {
-                Self { address, attached_value: None }
+            pub fn at(address: &odra::types::Address) -> Self {
+                Self { address: *address, attached_value: None }
             }
 
-            pub fn address(&self) -> odra::types::Address {
-                self.address.clone()
+            pub fn address(&self) -> &odra::types::Address {
+                &self.address
             }
 
             pub fn with_tokens<T>(&self, amount: T) -> Self
@@ -68,16 +64,30 @@ where
     T: IntoIterator<Item = syn::PatType>
 {
     let mut tokens = quote!(let mut args = odra::types::CallArgs::new(););
-    tokens.append_all(syn_args.into_iter().map(|arg| {
-        let pat = &*arg.pat;
-        quote! { args.insert(stringify!(#pat), #pat); }
+    tokens.append_all(syn_args.into_iter().map(|ty| {
+        let pat = &*ty.pat;
+        match *ty.ty {
+            syn::Type::Reference(syn::TypeReference { ref elem, .. }) => match **elem {
+                syn::Type::Slice { .. } => quote! {
+                    #[cfg(any(feature = "casper", feature = "casper-livenet"))]
+                    args.insert(stringify!(#pat), #pat.to_vec());
+                    #[cfg(feature = "mock-vm")]
+                    args.insert(stringify!(#pat), #pat.clone());
+                },
+                _ => quote!(args.insert(stringify!(#pat), #pat.clone());)
+            },
+            _ => quote!(args.insert(stringify!(#pat), #pat.clone());)
+        }
     }));
     tokens.extend(quote!(args));
 
-    quote! {
-        let args = {
-            #tokens
-        };
+    quote!(let args = { #tokens };)
+}
+
+pub fn typed_arg(arg: &FnArg) -> Option<PatType> {
+    match arg {
+        syn::FnArg::Receiver(_) => None,
+        syn::FnArg::Typed(pat) => Some(pat.clone())
     }
 }
 

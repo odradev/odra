@@ -1,6 +1,6 @@
 //! Set of functions to generate Casper contract.
 
-use crate::ty::WrappedType;
+use crate::ty::CasperType;
 
 use self::{
     constructor::WasmConstructor, entrypoints_def::ContractEntrypoints,
@@ -78,10 +78,8 @@ fn generate_call(
                 .iter()
                 .map(|arg| {
                     let field = &arg.ident;
-                    let ty = WrappedType(&arg.ty);
-                    quote! {
-                        (#field, #ty)
-                    }
+                    let ty = CasperType(&arg.ty);
+                    quote!((#field, #ty))
                 })
                 .collect::<Punctuated<TokenStream2, Comma>>();
 
@@ -133,8 +131,8 @@ fn fqn_to_path(fqn: &str) -> Path {
 
 #[cfg(test)]
 fn assert_eq_tokens<A: ToTokens, B: ToTokens>(left: A, right: B) {
-    let left = left.to_token_stream().to_string();
-    let right = right.to_token_stream().to_string();
+    let left = left.to_token_stream().to_string().replace(' ', "");
+    let right = right.to_token_stream().to_string().replace(' ', "");
     pretty_assertions::assert_str_eq!(left, right);
 }
 
@@ -152,7 +150,8 @@ mod tests {
             ident: String::from("construct_me"),
             args: vec![Argument {
                 ident: String::from("value"),
-                ty: Type::I32
+                ty: Type::I32,
+                is_ref: true
             }],
             ret: Type::Unit,
             ty: EntrypointType::Constructor {
@@ -249,11 +248,11 @@ mod tests {
                                         odra::casper::casper_types::ApiError::User(code)
                                     })
                                     .unwrap_or_revert();
-                                let mut contract_ref = my_contract::MyContractRef::at(odra_address);
+                                let mut contract_ref = my_contract::MyContractRef::at(&odra_address);
                                 let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg(
                                     stringify!(value)
                                 );
-                                contract_ref.construct_me(value);
+                                contract_ref.construct_me(&value);
                             },
                             _ => {}
                         };
@@ -274,7 +273,7 @@ mod tests {
                     let contract = my_contract::MyContract::instance("contract");
                     let value =
                         odra::casper::casper_contract::contract_api::runtime::get_named_arg(stringify!(value));
-                    contract.construct_me(value);
+                    contract.construct_me(&value);
                 }
                 #[no_mangle]
                 fn call_me() {

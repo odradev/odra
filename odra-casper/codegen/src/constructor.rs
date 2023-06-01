@@ -1,9 +1,10 @@
 use odra_types::contract_def::Entrypoint;
+use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use syn::{punctuated::Punctuated, token::Comma, Ident, Path};
 
 use super::arg::CasperArgs;
-type FnArgs = Punctuated<Ident, Comma>;
+type FnArgs = Punctuated<TokenStream, Comma>;
 
 pub struct WasmConstructor<'a>(pub Vec<&'a Entrypoint>, pub &'a Path);
 
@@ -16,10 +17,18 @@ impl ToTokens for WasmConstructor<'_> {
                 let entrypoint_ident = format_ident!("{}", &ep.ident);
                 let casper_args = CasperArgs(&ep.args);
 
-                let mut fn_args = Punctuated::<Ident, Comma>::new();
+                let mut fn_args = FnArgs::new();
                 ep.args
                     .iter()
-                    .for_each(|arg| fn_args.push(format_ident!("{}", arg.ident)));
+                    .map(|arg| {
+                        let ident = format_ident!("{}", arg.ident);
+                        if arg.is_ref {
+                            quote!(&#ident)
+                        } else {
+                            quote!(#ident)
+                        }
+                    })
+                    .for_each(|stream: TokenStream| fn_args.push(stream));
 
                 (entrypoint_ident, casper_args, fn_args)
             })
@@ -37,7 +46,7 @@ impl ToTokens for WasmConstructor<'_> {
                                 odra::casper::casper_types::ApiError::User(code)
                             })
                             .unwrap_or_revert();
-                        let mut contract_ref = #ref_ident::at(odra_address);
+                        let mut contract_ref = #ref_ident::at(&odra_address);
                         #casper_args
                         contract_ref.#entrypoint_ident( #fn_args );
                     },
@@ -99,7 +108,8 @@ mod tests {
             ident: String::from("construct_me"),
             args: vec![Argument {
                 ident: String::from("value"),
-                ty: Type::I32
+                ty: Type::I32,
+                is_ref: false
             }],
             ret: Type::Unit,
             ty: EntrypointType::Constructor {
@@ -134,7 +144,7 @@ mod tests {
                                     odra::casper::casper_types::ApiError::User(code)
                                 })
                                 .unwrap_or_revert();
-                            let mut contract_ref = my_contract::MyContract::at(odra_address);
+                            let mut contract_ref = my_contract::MyContract::at(&odra_address);
                             let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg (stringify!(value));
                             contract_ref.construct_me(value);
                         },

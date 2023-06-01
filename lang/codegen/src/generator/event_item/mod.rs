@@ -53,7 +53,8 @@ fn to_event_def(event: &IrEventItem) -> TokenStream {
             quote! {
                 odra::types::contract_def::Argument {
                     ident: String::from(stringify!(#field_ident)),
-                    ty: <#ty as odra::types::Typed>::ty()
+                    ty: <#ty as odra::types::Typed>::ty(),
+                    is_ref: false,
                 },
             }
         })

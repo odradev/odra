@@ -3,7 +3,9 @@
 //! Depending on the selected feature, the actual test env is dynamically loaded in the runtime or the Odra local MockVM is used.
 use std::{collections::HashMap, panic::AssertUnwindSafe};
 
-use odra_mock_vm_types::{Address, Balance, BlockTime, BorshDeserialize, CallArgs, MockVMType};
+use odra_mock_vm_types::{
+    Address, Balance, BlockTime, BorshDeserialize, CallArgs, MockDeserializable, MockSerializable
+};
 use odra_types::{
     address::OdraAddress,
     event::{EventError, OdraEvent},
@@ -71,7 +73,7 @@ pub fn one_token() -> Balance {
 /// Calls contract at `address` invoking the `entrypoint` with `args`.
 ///
 /// Returns optional raw bytes to further processing.
-pub fn call_contract<T: MockVMType>(
+pub fn call_contract<T: MockSerializable + MockDeserializable>(
     address: Address,
     entrypoint: &str,
     args: &CallArgs,
@@ -81,7 +83,10 @@ pub fn call_contract<T: MockVMType>(
 }
 
 /// Gets nth event emitted by the contract at `address`.
-pub fn get_event<T: MockVMType + OdraEvent>(address: Address, index: i32) -> Result<T, EventError> {
+pub fn get_event<T: MockSerializable + MockDeserializable + OdraEvent>(
+    address: Address,
+    index: i32
+) -> Result<T, EventError> {
     let bytes = crate::borrow_env().get_event(address, index);
 
     bytes.and_then(|bytes| {

@@ -2,9 +2,9 @@ use odra_types::Type;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
-pub(super) struct WrappedType<'a>(pub &'a Type);
+pub struct CasperType<'a>(pub &'a Type);
 
-impl ToTokens for WrappedType<'_> {
+impl ToTokens for CasperType<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let stream = match &self.0 {
             Type::Bool => quote!(odra::casper::casper_types::CLType::Bool),
@@ -20,63 +20,65 @@ impl ToTokens for WrappedType<'_> {
             Type::String => quote!(odra::casper::casper_types::CLType::String),
             Type::Address => quote!(odra::casper::casper_types::CLType::Key),
             Type::Option(ty) => {
-                let value_stream = WrappedType(ty).to_token_stream();
-                quote!(odra::casper::casper_types::CLType::Option(Box::new(#value_stream)))
+                let ty = CasperType(ty);
+                quote!(odra::casper::casper_types::CLType::Option(Box::new(#ty)))
             }
             Type::Any => quote!(odra::casper::casper_types::CLType::Any),
             Type::Vec(ty) => {
-                let value_stream = WrappedType(ty).to_token_stream();
-                quote!(odra::casper::casper_types::CLType::List(Box::new(#value_stream)))
+                let ty = CasperType(ty);
+                quote!(odra::casper::casper_types::CLType::List(Box::new(#ty)))
             }
             Type::Result { ok, err } => {
-                let ok_stream = WrappedType(ok).to_token_stream();
-                let err_stream = WrappedType(err).to_token_stream();
+                let ok = CasperType(ok);
+                let err = CasperType(err);
                 quote! {
                     odra::casper::casper_types::CLType::Result {
-                        ok: Box::new(#ok_stream),
-                        err: Box::new(#err_stream),
+                        ok: Box::new(#ok),
+                        err: Box::new(#err),
                     }
                 }
             }
             Type::Map { key, value } => {
-                let key_stream = WrappedType(key).to_token_stream();
-                let value_stream = WrappedType(value).to_token_stream();
+                let key = CasperType(key);
+                let value = CasperType(value);
                 quote! {
                     odra::casper::casper_types::CLType::Map {
-                        key: Box::new(#key_stream),
-                        value: Box::new(#value_stream),
+                        key: Box::new(#key),
+                        value: Box::new(#value),
                     }
                 }
             }
             Type::Tuple1(ty) => {
                 let ty = ty.get(0).unwrap();
-                let ty = WrappedType(ty).to_token_stream();
+                let ty = CasperType(ty);
                 quote! {
                     odra::casper::casper_types::CLType::Tuple1([Box::new(#ty)])
                 }
             }
             Type::Tuple2(ty) => {
                 let t1 = ty.get(0).unwrap();
-                let t1 = WrappedType(t1).to_token_stream();
+                let t1 = CasperType(t1);
                 let t2 = ty.get(1).unwrap();
-                let t2 = WrappedType(t2).to_token_stream();
+                let t2 = CasperType(t2);
                 quote! {
                     odra::casper::casper_types::CLType::Tuple2([Box::new(#t1), Box::new(#t2)])
                 }
             }
             Type::Tuple3(ty) => {
                 let t1 = ty.get(0).unwrap();
-                let t1 = WrappedType(t1).to_token_stream();
+                let t1 = CasperType(t1);
                 let t2 = ty.get(1).unwrap();
-                let t2 = WrappedType(t2).to_token_stream();
+                let t2 = CasperType(t2);
                 let t3 = ty.get(2).unwrap();
-                let t3 = WrappedType(t3).to_token_stream();
+                let t3 = CasperType(t3);
                 quote! {
                     odra::casper::casper_types::CLType::Tuple2([Box::new(#t1), Box::new(#t2), Box::new(#t3)])
                 }
             }
-            Type::ByteArray(b) => quote! {
-                odra::casper::casper_types::CLType::ByteArray(#b)
+            Type::ByteArray(b) => quote!(odra::casper::casper_types::CLType::ByteArray(#b)),
+            Type::Slice(ty) => {
+                let ty = CasperType(ty);
+                quote!(odra::casper::casper_types::CLType::List(Box::new(#ty)))
             }
         };
         tokens.extend(stream);
@@ -91,7 +93,7 @@ mod tests {
     #[test]
     fn test_simple_type() {
         let ty = Type::Bool;
-        let wrapped_type = WrappedType(&ty);
+        let wrapped_type = CasperType(&ty);
         assert_eq_tokens(
             wrapped_type,
             quote!(odra::casper::casper_types::CLType::Bool)
@@ -104,7 +106,7 @@ mod tests {
             Box::new(Type::Bool),
             Box::new(Type::I32)
         ])));
-        let wrapped_type = WrappedType(&ty);
+        let wrapped_type = CasperType(&ty);
         assert_eq_tokens(
             wrapped_type,
             quote!(odra::casper::casper_types::CLType::Option(Box::new(

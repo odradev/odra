@@ -16,16 +16,17 @@ impl TokenManager {
     pub fn add_token(&mut self, name: String, decimals: u8, symbol: String) {
         self.tokens
             .get_instance(&name)
-            .init(name.clone(), symbol, decimals, U256::from(0));
+            .init(name, symbol, decimals, &U256::from(0));
 
-        self.count.set(self.count.get_or_default() + 1);
+        let new_count = self.count.get_or_default() + 1;
+        self.count.set(new_count);
     }
 
-    pub fn balance_of(&self, token_name: String, owner: Address) -> U256 {
+    pub fn balance_of(&self, token_name: String, owner: &Address) -> U256 {
         self.get_token(token_name).balance_of(owner)
     }
 
-    pub fn mint(&mut self, token_name: String, account: Address, amount: U256) {
+    pub fn mint(&mut self, token_name: String, account: &Address, amount: &U256) {
         self.get_token(token_name).mint(account, amount);
     }
 
@@ -37,7 +38,7 @@ impl TokenManager {
         self.get_token(token_name).get_owner()
     }
 
-    pub fn set_owner(&mut self, token_name: String, new_owner: Address) {
+    pub fn set_owner(&mut self, token_name: String, new_owner: &Address) {
         self.get_token(token_name).change_ownership(new_owner);
     }
 
@@ -72,38 +73,23 @@ mod test {
         let (pls_balance1, pls_balance2, pls_balance3) = (100.into(), 200.into(), 300.into());
         let (mcn_balance1, mcn_balance2, mcn_balance3) = (1000.into(), 2000.into(), 3000.into());
 
-        contract.mint(String::from(PLASCOIN), user1, pls_balance1);
-        contract.mint(String::from(PLASCOIN), user2, pls_balance2);
-        contract.mint(String::from(PLASCOIN), user3, pls_balance3);
+        let plascoin = String::from(PLASCOIN);
+        let my_coin = String::from(MY_COIN);
 
-        contract.mint(String::from(MY_COIN), user1, mcn_balance1);
-        contract.mint(String::from(MY_COIN), user2, mcn_balance2);
-        contract.mint(String::from(MY_COIN), user3, mcn_balance3);
+        contract.mint(plascoin.clone(), &user1, &pls_balance1);
+        contract.mint(plascoin.clone(), &user2, &pls_balance2);
+        contract.mint(plascoin.clone(), &user3, &pls_balance3);
 
-        assert_eq!(
-            contract.balance_of(String::from(PLASCOIN), user1),
-            pls_balance1
-        );
-        assert_eq!(
-            contract.balance_of(String::from(PLASCOIN), user2),
-            pls_balance2
-        );
-        assert_eq!(
-            contract.balance_of(String::from(PLASCOIN), user3),
-            pls_balance3
-        );
-        assert_eq!(
-            contract.balance_of(String::from(MY_COIN), user1),
-            mcn_balance1
-        );
-        assert_eq!(
-            contract.balance_of(String::from(MY_COIN), user2),
-            mcn_balance2
-        );
-        assert_eq!(
-            contract.balance_of(String::from(MY_COIN), user3),
-            mcn_balance3
-        );
+        contract.mint(my_coin.clone(), &user1, &mcn_balance1);
+        contract.mint(my_coin.clone(), &user2, &mcn_balance2);
+        contract.mint(my_coin.clone(), &user3, &mcn_balance3);
+
+        assert_eq!(contract.balance_of(plascoin.clone(), &user1), pls_balance1);
+        assert_eq!(contract.balance_of(plascoin.clone(), &user2), pls_balance2);
+        assert_eq!(contract.balance_of(plascoin, &user3), pls_balance3);
+        assert_eq!(contract.balance_of(my_coin.clone(), &user1), mcn_balance1);
+        assert_eq!(contract.balance_of(my_coin.clone(), &user2), mcn_balance2);
+        assert_eq!(contract.balance_of(my_coin, &user3), mcn_balance3);
     }
 
     #[test]
@@ -120,8 +106,8 @@ mod test {
         assert_eq!(contract.get_owner(String::from(PLASCOIN)), owner);
         assert_eq!(contract.get_owner(String::from(MY_COIN)), owner);
 
-        contract.set_owner(String::from(PLASCOIN), user2);
-        contract.set_owner(String::from(MY_COIN), user3);
+        contract.set_owner(String::from(PLASCOIN), &user2);
+        contract.set_owner(String::from(MY_COIN), &user3);
 
         assert_eq!(contract.get_owner(String::from(PLASCOIN)), user2);
         assert_eq!(contract.get_owner(String::from(MY_COIN)), user3);
@@ -133,8 +119,8 @@ mod test {
         let (user, balance) = (get_account(0), 111.into());
         for i in 0..20 {
             contract.add_token(i.to_string(), DECIMALS, i.to_string());
-            contract.mint(i.to_string(), user, balance);
-            assert_eq!(contract.balance_of(i.to_string(), user), balance);
+            contract.mint(i.to_string(), &user, &balance);
+            assert_eq!(contract.balance_of(i.to_string(), &user), balance);
         }
     }
 }

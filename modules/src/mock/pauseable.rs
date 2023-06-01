@@ -34,7 +34,8 @@ impl PauseableCounter {
 
 impl PauseableCounter {
     fn raw_increment(&mut self) {
-        self.value.set(self.value.get_or_default() + 1);
+        let new_value = self.value.get_or_default() + 1;
+        self.value.set(new_value);
     }
 }
 

@@ -16,7 +16,8 @@ pub struct Entrypoint {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Argument {
     pub ident: String,
-    pub ty: Type
+    pub ty: Type,
+    pub is_ref: bool
 }
 
 /// Defines an entrypoint type.

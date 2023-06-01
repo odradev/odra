@@ -51,6 +51,8 @@ pub enum Type {
     Any,
     /// Vector of a `Type`.
     Vec(Box<Type>),
-    /// Fixed-length list of a single `Type`
-    ByteArray(u32)
+    /// Fixed-length list of a single `Type`.
+    ByteArray(u32),
+    /// A slice of a `Type`.
+    Slice(Box<Type>)
 }

@@ -102,6 +102,7 @@ fn type_to_cl_type(ty: &Type) -> CLType {
         Type::Tuple3(v) => CLType::Tuple3(v.clone().map(|v| Box::new(type_to_cl_type(&v)))),
         Type::Any => CLType::Any,
         Type::Vec(v) => CLType::List(Box::new(type_to_cl_type(v))),
-        Type::ByteArray(v) => CLType::ByteArray(*v)
+        Type::ByteArray(v) => CLType::ByteArray(*v),
+        Type::Slice(ty) => CLType::List(Box::new(type_to_cl_type(ty)))
     }
 }

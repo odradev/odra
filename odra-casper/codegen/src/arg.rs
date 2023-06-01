@@ -2,6 +2,8 @@ use odra_types::contract_def::Argument;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 
+use crate::ty::OdraType;
+
 pub(super) struct CasperArgs<'a>(pub &'a Vec<Argument>);
 
 impl ToTokens for CasperArgs<'_> {
@@ -9,10 +11,17 @@ impl ToTokens for CasperArgs<'_> {
         let args = self.0;
         args.iter().for_each(|arg| {
             let arg_ident = format_ident!("{}", arg.ident);
-
-            tokens.append_all(quote! {
-                let #arg_ident = odra::casper::casper_contract::contract_api::runtime::get_named_arg(stringify!(#arg_ident));
-            });
+            match &arg.ty {
+                odra_types::Type::Slice(ty) => {
+                    let odra_type: OdraType = ty.as_ref().into();
+                    tokens.append_all(quote! {
+                        let #arg_ident: Vec<#odra_type> = odra::casper::casper_contract::contract_api::runtime::get_named_arg(stringify!(#arg_ident));
+                    })
+                },
+                _ =>  tokens.append_all(quote! {
+                    let #arg_ident = odra::casper::casper_contract::contract_api::runtime::get_named_arg(stringify!(#arg_ident));
+                })
+            }
         });
     }
 }
@@ -36,11 +45,13 @@ mod tests {
         let args = vec![
             Argument {
                 ident: String::from("a"),
-                ty: Type::Bool
+                ty: Type::Bool,
+                is_ref: false
             },
             Argument {
                 ident: String::from("b_c"),
-                ty: Type::String
+                ty: Type::String,
+                is_ref: false
             },
         ];
         let args = CasperArgs(&args);

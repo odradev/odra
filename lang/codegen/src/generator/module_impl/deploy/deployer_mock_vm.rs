@@ -1,7 +1,9 @@
 use odra_ir::module::{Constructor, Method};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use syn::{punctuated::Punctuated, ReturnType, Type, TypePath};
+use syn::ReturnType;
+
+use crate::generator::module_impl::deploy::common;
 
 use super::{args_to_arg_names_stream, args_to_fn_args, args_to_runtime_args_stream};
 
@@ -61,27 +63,9 @@ fn build_constructor(
     struct_ident: &Ident,
     ref_ident: &Ident
 ) -> TokenStream {
-    let ty = Type::Path(TypePath {
-        qself: None,
-        path: From::from(ref_ident.clone())
-    });
-    let sig = constructor.full_sig.clone();
     let constructor_ident = &constructor.ident;
 
-    let inputs = sig
-        .inputs
-        .into_iter()
-        .filter(|i| match i {
-            syn::FnArg::Receiver(_) => false,
-            syn::FnArg::Typed(_) => true
-        })
-        .collect::<Punctuated<_, _>>();
-
-    let fn_sig = syn::Signature {
-        output: ReturnType::Type(Default::default(), Box::new(ty)),
-        inputs,
-        ..sig
-    };
+    let fn_sig = common::constructor_sig(constructor, ref_ident);
 
     let args = args_to_runtime_args_stream(&constructor.args);
     let fn_args = args_to_fn_args(&constructor.args);
@@ -110,7 +94,7 @@ fn build_constructor(
                 }
             ));
             let address = odra::test_env::register_contract(constructor, constructors, entrypoints);
-            #ref_ident::at(address)
+            #ref_ident::at(&address)
         }
     }
 }
@@ -132,7 +116,7 @@ fn build_default_constructor(
             #constructors_stream
 
             let address = odra::test_env::register_contract(None, constructors, entrypoints);
-            #ref_ident::at(address)
+            #ref_ident::at(&address)
         }
     }
 }
@@ -143,36 +127,12 @@ fn build_entrypoints_calls(methods: &[&Method], struct_ident: &Ident) -> TokenSt
         .map(|entrypoint| {
             let ident = &entrypoint.ident;
             let name = quote!(stringify!(#ident).to_string());
-            let return_value = match &entrypoint.ret {
-                ReturnType::Default => quote!(Vec::new()),
-                ReturnType::Type(_, _) => quote! {
-                    odra::types::MockVMType::ser(&result).unwrap()
-                }
-            };
-            let args = args_to_fn_args(&entrypoint.args);
             let arg_names = args_to_arg_names_stream(&entrypoint.args);
-            let attached_value_check = match entrypoint.is_payable() {
-                true => quote!(),
-                false => quote! {
-                    if odra::contract_env::attached_value() > odra::types::Balance::zero() {
-                        odra::contract_env::revert(odra::types::ExecutionError::non_payable());
-                    }
-                }
-            };
-            let non_reentrant = entrypoint.attrs.iter().any(|a| a.is_non_reentrant());
-            let reentrancy_check = match non_reentrant {
-                true => quote! {
-                    if odra::contract_env::get_var("__reentrancy_guard").unwrap_or_default(){
-                        odra::contract_env::revert(odra::types::ExecutionError::reentrant_call());
-                    }
-                    odra::contract_env::set_var("__reentrancy_guard", true);
-                },
-                false => quote!()
-            };
-            let reentrancy_cleanup = match non_reentrant {
-                true => quote!(odra::contract_env::set_var("__reentrancy_guard", false);),
-                false => quote!()
-            };
+            let return_value = return_value(entrypoint);
+            let args = args_to_fn_args(&entrypoint.args);
+            let attached_value_check = attached_value(entrypoint);
+            let (reentrancy_check, reentrancy_cleanup) = reentrancy_code(entrypoint);
+
             quote! {
                 entrypoints.insert(#name, (#arg_names, |name, args| {
                     #reentrancy_check
@@ -206,4 +166,40 @@ fn build_constructor_calls(constructors: &[&Constructor], struct_ident: &Ident) 
             }
         })
         .collect::<TokenStream>()
+}
+
+fn reentrancy_code(entrypoint: &Method) -> (TokenStream, TokenStream) {
+    let non_reentrant = entrypoint.attrs.iter().any(|a| a.is_non_reentrant());
+    let reentrancy_check = match non_reentrant {
+        true => quote! {
+            if odra::contract_env::get_var("__reentrancy_guard").unwrap_or_default(){
+                odra::contract_env::revert(odra::types::ExecutionError::reentrant_call());
+            }
+            odra::contract_env::set_var("__reentrancy_guard", true);
+        },
+        false => quote!()
+    };
+    let reentrancy_cleanup = match non_reentrant {
+        true => quote!(odra::contract_env::set_var("__reentrancy_guard", false);),
+        false => quote!()
+    };
+    (reentrancy_check, reentrancy_cleanup)
+}
+
+fn attached_value(entrypoint: &Method) -> TokenStream {
+    match entrypoint.is_payable() {
+        true => quote!(),
+        false => quote! {
+            if odra::contract_env::attached_value() > odra::types::Balance::zero() {
+                odra::contract_env::revert(odra::types::ExecutionError::non_payable());
+            }
+        }
+    }
+}
+
+fn return_value(entrypoint: &Method) -> TokenStream {
+    match &entrypoint.ret {
+        ReturnType::Default => quote!(Vec::new()),
+        ReturnType::Type(_, _) => quote!(odra::types::MockSerializable::ser(&result).unwrap())
+    }
 }

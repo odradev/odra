@@ -2,7 +2,7 @@ use odra_types::contract_def::{Argument, Entrypoint, EntrypointType};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 
-use super::ty::WrappedType;
+use crate::ty::CasperType;
 
 pub(crate) struct ContractEntrypoints<'a>(pub &'a [Entrypoint]);
 
@@ -18,7 +18,7 @@ impl ContractEntrypoints<'_> {
     fn build_entry_point(entrypoint: &Entrypoint) -> TokenStream {
         let entrypoint_ident = format_ident!("{}", entrypoint.ident);
         let params = EntrypointParams(&entrypoint.args);
-        let ret = WrappedType(&entrypoint.ret);
+        let ret = CasperType(&entrypoint.ret);
         let access = match &entrypoint.ty {
             EntrypointType::Constructor { .. } => quote! {
                 odra::casper::casper_types::EntryPointAccess::Groups(vec![odra::casper::casper_types::Group::new("constructor")])
@@ -56,7 +56,7 @@ impl ToTokens for EntrypointParams<'_> {
                 .iter()
                 .flat_map(|arg| {
                     let arg_ident = format_ident!("{}", arg.ident);
-                    let ty = WrappedType(&arg.ty);
+                    let ty = CasperType(&arg.ty);
                     quote!(params.push(odra::casper::casper_types::Parameter::new(stringify!(#arg_ident), #ty));)
                 })
                 .collect::<TokenStream>();
@@ -87,7 +87,8 @@ mod test {
             ident: String::from("call_me"),
             args: vec![Argument {
                 ident: String::from("value"),
-                ty: Type::I32
+                ty: Type::I32,
+                is_ref: false
             }],
             ret: Type::Bool,
             ty: EntrypointType::Public {

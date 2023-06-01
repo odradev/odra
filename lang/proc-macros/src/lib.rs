@@ -77,7 +77,7 @@ pub fn derive_instance(input: TokenStream) -> TokenStream {
 ///
 /// let contract_address = odra::types::Address::try_from(b"address").unwrap();
 /// // in your contract
-/// let getter = GetterRef::at(contract_address);
+/// let getter = GetterRef::at(&contract_address);
 /// // let value = getter.get();
 /// ```
 #[proc_macro_attribute]

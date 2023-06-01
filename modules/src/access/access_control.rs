@@ -30,22 +30,22 @@ pub const DEFAULT_ADMIN_ROLE: Role = [0u8; 32];
 /// More complex role relationships can be established using the `set_role_admin()` function.
 #[odra::module(events = [RoleAdminChanged, RoleGranted, RoleRevoked])]
 pub struct AccessControl {
-    roles: Mapping<(Role, Address), bool>,
+    roles: Mapping<Role, Mapping<Address, bool>>,
     role_admin: Mapping<Role, Role>
 }
 
 #[odra::module]
 impl AccessControl {
     /// Returns true if account has been granted `role`.
-    pub fn has_role(&self, role: Role, address: Address) -> bool {
-        self.roles.get(&(role, address)).unwrap_or_default()
+    pub fn has_role(&self, role: &Role, address: &Address) -> bool {
+        self.roles.get_instance(role).get_or_default(address)
     }
 
     /// Returns the admin role that controls `role`.
     ///
     /// The admin role may be changed using [set_admin_role()](Self::set_admin_role()).
-    pub fn get_role_admin(&self, role: Role) -> Role {
-        let admin_role = self.role_admin.get(&role);
+    pub fn get_role_admin(&self, role: &Role) -> Role {
+        let admin_role = self.role_admin.get(role);
         if let Some(admin) = admin_role {
             admin
         } else {
@@ -59,8 +59,8 @@ impl AccessControl {
     /// otherwise [`RoleGranted`] event is emitted.
     ///
     /// The caller must have `role`'s admin role.
-    pub fn grant_role(&mut self, role: Role, address: Address) {
-        self.check_role(self.get_role_admin(role), contract_env::caller());
+    pub fn grant_role(&mut self, role: &Role, address: &Address) {
+        self.check_role(&self.get_role_admin(role), &contract_env::caller());
         self.unchecked_grant_role(role, address);
     }
 
@@ -70,8 +70,8 @@ impl AccessControl {
     /// otherwise [`RoleRevoked`] event is emitted.
     ///
     /// The caller must have `role`'s admin role.
-    pub fn revoke_role(&mut self, role: Role, address: Address) {
-        self.check_role(self.get_role_admin(role), contract_env::caller());
+    pub fn revoke_role(&mut self, role: &Role, address: &Address) {
+        self.check_role(&self.get_role_admin(role), &contract_env::caller());
         self.unchecked_revoke_role(role, address);
     }
 
@@ -85,8 +85,8 @@ impl AccessControl {
     /// If the account had previously been granted the role, the function will trigger a `RoleRevoked` event.
     ///
     /// Note that only `address` is authorized to call this function.
-    pub fn renounce_role(&mut self, role: Role, address: Address) {
-        if address != contract_env::caller() {
+    pub fn renounce_role(&mut self, role: &Role, address: &Address) {
+        if address != &contract_env::caller() {
             contract_env::revert(Error::RoleRenounceForAnotherAddress);
         }
         self.unchecked_revoke_role(role, address);
@@ -95,7 +95,7 @@ impl AccessControl {
 
 impl AccessControl {
     /// Ensures `address` has `role`. If not, reverts with [Error::MissingRole].
-    pub fn check_role(&self, role: Role, address: Address) {
+    pub fn check_role(&self, role: &Role, address: &Address) {
         if !self.has_role(role, address) {
             contract_env::revert(Error::MissingRole);
         }
@@ -104,13 +104,13 @@ impl AccessControl {
     /// Sets `admin_role` as `role`'s admin role.
     ///
     /// Emits a `RoleAdminChanged` event.
-    pub fn set_admin_role(&mut self, role: Role, admin_role: Role) {
+    pub fn set_admin_role(&mut self, role: &Role, admin_role: &Role) {
         let previous_admin_role = self.get_role_admin(role);
-        self.role_admin.set(&role, admin_role);
+        self.role_admin.set(role, *admin_role);
         RoleAdminChanged {
-            role,
+            role: *role,
             previous_admin_role,
-            new_admin_role: admin_role
+            new_admin_role: *admin_role
         }
         .emit();
     }
@@ -121,12 +121,12 @@ impl AccessControl {
     /// This function should be used to setup the initial access control.
     ///
     /// May emit a `RoleGranted` event.
-    pub fn unchecked_grant_role(&mut self, role: Role, address: Address) {
+    pub fn unchecked_grant_role(&mut self, role: &Role, address: &Address) {
         if !self.has_role(role, address) {
-            self.roles.set(&(role, address), true);
+            self.roles.get_instance(role).set(address, true);
             RoleGranted {
-                role,
-                address,
+                role: *role,
+                address: *address,
                 sender: contract_env::caller()
             }
             .emit();
@@ -139,12 +139,12 @@ impl AccessControl {
     /// This function should be used to setup the initial access control.
     ///
     /// May emit a `RoleRevoked` event.
-    pub fn unchecked_revoke_role(&mut self, role: Role, address: Address) {
+    pub fn unchecked_revoke_role(&mut self, role: &Role, address: &Address) {
         if self.has_role(role, address) {
-            self.roles.set(&(role, address), false);
+            self.roles.get_instance(role).set(address, false);
             RoleRevoked {
-                role,
-                address,
+                role: *role,
+                address: *address,
                 sender: contract_env::caller()
             }
             .emit();

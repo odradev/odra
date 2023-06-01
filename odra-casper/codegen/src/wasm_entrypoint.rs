@@ -2,8 +2,9 @@ use odra_types::{
     contract_def::{Entrypoint, EntrypointType},
     Type
 };
+use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
-use syn::{self, punctuated::Punctuated, token::Comma, Ident, Path};
+use syn::{self, punctuated::Punctuated, token::Comma, Path};
 
 use super::arg::CasperArgs;
 
@@ -14,11 +15,19 @@ impl ToTokens for WasmEntrypoint<'_> {
         let entrypoint_ident = format_ident!("{}", &self.0.ident);
         let args = CasperArgs(&self.0.args).to_token_stream();
 
-        let mut fn_args = Punctuated::<Ident, Comma>::new();
+        let mut fn_args = Punctuated::<TokenStream, Comma>::new();
         self.0
             .args
             .iter()
-            .for_each(|arg| fn_args.push(format_ident!("{}", arg.ident)));
+            .map(|arg| {
+                let ident = format_ident!("{}", arg.ident);
+                if arg.is_ref {
+                    quote!(&#ident)
+                } else {
+                    quote!(#ident)
+                }
+            })
+            .for_each(|stream: TokenStream| fn_args.push(stream));
 
         let payable = match self.0.ty {
             EntrypointType::PublicPayable { .. } => quote! {
@@ -100,7 +109,8 @@ mod tests {
             ident: String::from("construct_me"),
             args: vec![Argument {
                 ident: String::from("value"),
-                ty: Type::I32
+                ty: Type::I32,
+                is_ref: true
             }],
             ret: Type::Unit,
             ty: EntrypointType::Public {
@@ -127,7 +137,7 @@ mod tests {
                     let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg(
                         stringify!(value)
                     );
-                    contract.construct_me(value);
+                    contract.construct_me(&value);
                 }
             )
         );

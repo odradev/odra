@@ -35,12 +35,14 @@ impl ToTokens for Constructor {
             .iter()
             .flat_map(|arg| {
                 let name = &*arg.pat;
-                let ty = &*arg.ty;
+                let ty = utils::ty(arg);
+                let is_ref = utils::is_ref(arg);
                 let ty = quote!(<#ty as odra::types::Typed>::ty());
                 quote! {
                     odra::types::contract_def::Argument {
                         ident: String::from(stringify!(#name)),
                         ty: #ty,
+                        is_ref: #is_ref,
                     },
                 }
             })
@@ -65,15 +67,7 @@ impl TryFrom<syn::ImplItemMethod> for Constructor {
     fn try_from(method: syn::ImplItemMethod) -> Result<Self, Self::Error> {
         let (odra_attrs, attrs) = partition_attributes(method.clone().attrs).unwrap();
         let ident = method.sig.ident.to_owned();
-        let args = method
-            .sig
-            .inputs
-            .iter()
-            .filter_map(|arg| match arg {
-                syn::FnArg::Receiver(_) => None,
-                syn::FnArg::Typed(pat) => Some(pat.clone())
-            })
-            .collect::<syn::punctuated::Punctuated<syn::PatType, syn::token::Comma>>();
+        let args = utils::extract_typed_inputs(&method.sig);
         if let syn::ReturnType::Type(_, _) = method.sig.output {
             return Err(syn::Error::new_spanned(
                 method.sig,

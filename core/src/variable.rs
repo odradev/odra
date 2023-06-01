@@ -15,6 +15,7 @@ pub struct Variable<T> {
 // <3
 impl<T: OdraType + Default> Variable<T> {
     /// Reads from the storage, if theres no value in the storage the default value is returned.
+    #[inline(always)]
     pub fn get_or_default(&self) -> T {
         self.get().unwrap_or_default()
     }
@@ -25,10 +26,11 @@ impl<V: OdraType + OverflowingAdd + Default> Variable<V> {
     /// and sets the new value to the storage.
     ///
     /// If the operation fails due to overflow, the currently executing contract reverts.
+    #[inline(always)]
     pub fn add(&mut self, value: V) {
-        let current_value = self.get().unwrap_or_default();
+        let current_value = self.get_or_default();
         let new_value = current_value.overflowing_add(value).unwrap_or_revert();
-        contract_env::set_var(&self.name, new_value);
+        self.set(new_value);
     }
 }
 
@@ -37,10 +39,11 @@ impl<V: OdraType + OverflowingSub + Default> Variable<V> {
     /// and sets the new value to the storage.
     ///
     /// If the operation fails due to overflow, the currently executing contract reverts.
+    #[inline(always)]
     pub fn subtract(&mut self, value: V) {
         let current_value = self.get().unwrap_or_default();
         let new_value = current_value.overflowing_sub(value).unwrap_or_revert();
-        contract_env::set_var(&self.name, new_value);
+        self.set(new_value);
     }
 }
 
@@ -54,11 +57,13 @@ impl<T: OdraType> Variable<T> {
     }
 
     /// Reads from the storage or returns `None` or reverts something unexpected happens.
+    #[inline(always)]
     pub fn get(&self) -> Option<T> {
         contract_env::get_var(&self.name)
     }
 
     /// Stores `value` to the storage.
+    #[inline(always)]
     pub fn set(&mut self, value: T) {
         contract_env::set_var(&self.name, value);
     }
@@ -132,9 +137,7 @@ mod tests {
 
         // When add 1 to max value.
         // Then should revert.
-        test_env::assert_exception(ArithmeticsError::AdditionOverflow, || {
-            var.add(1);
-        });
+        test_env::assert_exception(ArithmeticsError::AdditionOverflow, || var.add(1));
     }
 
     #[test]
@@ -150,9 +153,7 @@ mod tests {
 
         // When subtraction causes overflow.
         // Then it reverts.
-        test_env::assert_exception(ArithmeticsError::SubtractingOverflow, || {
-            var.subtract(2);
-        });
+        test_env::assert_exception(ArithmeticsError::SubtractingOverflow, || var.subtract(2));
     }
 
     #[test]

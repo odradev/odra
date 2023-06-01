@@ -8,16 +8,22 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use odra_types::{OdraError, VmError};
 
 #[doc(hidden)]
-pub trait MockVMType: Sized {
+pub trait MockSerializable {
     fn ser(&self) -> Result<Vec<u8>, MockVMSerializationError>;
+}
+
+#[doc(hidden)]
+pub trait MockDeserializable: Sized {
     fn deser(bytes: Vec<u8>) -> Result<Self, MockVMSerializationError>;
 }
 
-impl<T: BorshSerialize + BorshDeserialize> MockVMType for T {
+impl<T: BorshSerialize> MockSerializable for T {
     fn ser(&self) -> Result<Vec<u8>, MockVMSerializationError> {
         borsh::to_vec(self).map_err(|_| MockVMSerializationError::SerializationError)
     }
+}
 
+impl<T: BorshDeserialize> MockDeserializable for T {
     fn deser(bytes: Vec<u8>) -> Result<Self, MockVMSerializationError> {
         <T as borsh::BorshDeserialize>::try_from_slice(&bytes)
             .map_err(|_| MockVMSerializationError::DeserializationError)
@@ -48,9 +54,13 @@ impl From<MockVMSerializationError> for OdraError {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Address, MockVMType, U256, U512};
+    use crate::{Address, U256, U512};
 
-    pub fn ser_deser<T: MockVMType + PartialEq + std::fmt::Debug>(value: T) {
+    use super::{MockDeserializable, MockSerializable};
+
+    pub fn ser_deser<T: MockSerializable + MockDeserializable + PartialEq + std::fmt::Debug>(
+        value: T
+    ) {
         let bytes = value.ser().unwrap();
         let deserialized = T::deser(bytes).unwrap();
         assert_eq!(deserialized, value);

@@ -11,16 +11,16 @@ use odra::Mapping;
 /// The ERC1155 base implementation.
 #[odra::module(events = [ApprovalForAll, TransferBatch, TransferSingle])]
 pub struct Erc1155Base {
-    pub balances: Mapping<(Address, U256), U256>,
-    pub approvals: Mapping<(Address, Address), bool>
+    pub balances: Mapping<Address, Mapping<U256, U256>>,
+    pub approvals: Mapping<Address, Mapping<Address, bool>>
 }
 
 impl Erc1155 for Erc1155Base {
-    fn balance_of(&self, owner: Address, id: U256) -> U256 {
-        self.balances.get_or_default(&(owner, id))
+    fn balance_of(&self, owner: &Address, id: &U256) -> U256 {
+        self.balances.get_instance(owner).get_or_default(id)
     }
 
-    fn balance_of_batch(&self, owners: Vec<Address>, ids: Vec<U256>) -> Vec<U256> {
+    fn balance_of_batch(&self, owners: &[Address], ids: &[U256]) -> Vec<U256> {
         if owners.len() != ids.len() {
             revert(Error::AccountsAndIdsLengthMismatch);
         }
@@ -28,75 +28,77 @@ impl Erc1155 for Erc1155Base {
         // get balances for each owner and id
         let mut balances = Vec::new();
         for i in 0..owners.len() {
-            let balance = self.balance_of(owners[i], ids[i]);
+            let balance = self.balance_of(&owners[i], &ids[i]);
             balances.push(balance);
         }
 
         balances
     }
 
-    fn set_approval_for_all(&mut self, operator: Address, approved: bool) {
-        let owner = caller();
+    fn set_approval_for_all(&mut self, operator: &Address, approved: bool) {
+        let owner = &caller();
         if owner == operator {
             revert(Error::ApprovalForSelf);
         }
 
-        self.approvals.set(&(owner, operator), approved);
+        self.approvals.get_instance(owner).set(operator, approved);
 
         ApprovalForAll {
-            owner,
-            operator,
+            owner: *owner,
+            operator: *operator,
             approved
         }
         .emit();
     }
 
-    fn is_approved_for_all(&self, owner: Address, operator: Address) -> bool {
-        self.approvals.get_or_default(&(owner, operator))
+    fn is_approved_for_all(&self, owner: &Address, operator: &Address) -> bool {
+        self.approvals.get_instance(owner).get_or_default(operator)
     }
 
     fn safe_transfer_from(
         &mut self,
-        from: Address,
-        to: Address,
-        id: U256,
-        amount: U256,
-        data: Option<Bytes>
+        from: &Address,
+        to: &Address,
+        id: &U256,
+        amount: &U256,
+        data: &Option<Bytes>
     ) {
         let caller = caller();
-        self.assert_approved_or_owner(caller, from);
+        self.assert_approved_or_owner(&caller, from);
 
         let from_balance = self.balance_of(from, id);
-        if from_balance < amount {
+        if from_balance < *amount {
             revert(Error::InsufficientBalance);
         }
-
-        self.balances.set(&(from, id), from_balance - amount);
         self.balances
-            .set(&(to, id), self.balance_of(to, id) + amount);
+            .get_instance(from)
+            .set(id, from_balance - *amount);
+        self.balances
+            .get_instance(to)
+            .set(id, self.balance_of(to, id) + *amount);
 
         TransferSingle {
             operator: Some(caller),
-            from: Some(from),
-            to: Some(to),
-            id,
-            value: amount
+            from: Some(*from),
+            to: Some(*to),
+            id: *id,
+            value: *amount
         }
         .emit();
 
-        self.safe_transfer_acceptance_check(caller, from, to, id, amount, data);
+        self.safe_transfer_acceptance_check(&caller, from, to, id, amount, data);
     }
 
     fn safe_batch_transfer_from(
         &mut self,
-        from: Address,
-        to: Address,
-        ids: Vec<U256>,
-        amounts: Vec<U256>,
-        data: Option<Bytes>
+        from: &Address,
+        to: &Address,
+        ids: &[U256],
+        amounts: &[U256],
+        data: &Option<Bytes>
     ) {
         let caller = caller();
-        self.assert_approved_or_owner(caller, from);
+        self.assert_approved_or_owner(&caller, from);
 
         if ids.len() != amounts.len() {
             revert(Error::IdsAndAmountsLengthMismatch);
@@ -107,38 +109,41 @@ impl Erc1155 for Erc1155Base {
             let id = ids[i];
             let amount = amounts[i];
 
-            let from_balance = self.balance_of(from, id);
+            let from_balance = self.balance_of(from, &id);
             if from_balance < amount {
                 revert(Error::InsufficientBalance);
             }
 
-            self.balances.set(&(from, id), from_balance - amount);
             self.balances
-                .set(&(to, id), self.balance_of(to, id) + amount);
+                .get_instance(from)
+                .set(&id, from_balance - amount);
+            self.balances
+                .get_instance(to)
+                .set(&id, self.balance_of(to, &id) + amount);
         }
 
         TransferBatch {
             operator: Some(caller),
-            from: Some(from),
-            to: Some(to),
-            ids: ids.clone(),
-            values: amounts.clone()
+            from: Some(*from),
+            to: Some(*to),
+            ids: ids.to_vec(),
+            values: amounts.to_vec()
         }
         .emit();
 
-        self.safe_batch_transfer_acceptance_check(caller, from, to, ids, amounts, data);
+        self.safe_batch_transfer_acceptance_check(&caller, from, to, ids, amounts, data);
     }
 }
 
 impl Erc1155Base {
-    fn is_approved_or_owner(&self, spender: Address, owner: Address) -> bool {
+    fn is_approved_or_owner(&self, spender: &Address, owner: &Address) -> bool {
         let spender_is_owner = spender == owner;
         let spender_is_approved = self.is_approved_for_all(owner, spender);
 
         spender_is_owner || spender_is_approved
     }
 
-    fn assert_approved_or_owner(&self, spender: Address, owner: Address) {
+    fn assert_approved_or_owner(&self, spender: &Address, owner: &Address) {
         if !self.is_approved_or_owner(spender, owner) {
             revert(Error::NotAnOwnerOrApproved);
         }
@@ -146,12 +151,12 @@ impl Erc1155Base {
 
     pub fn safe_transfer_acceptance_check(
         &self,
-        operator: Address,
-        from: Address,
-        to: Address,
-        id: U256,
-        amount: U256,
-        data: Option<Bytes>
+        operator: &Address,
+        from: &Address,
+        to: &Address,
+        id: &U256,
+        amount: &U256,
+        data: &Option<Bytes>
     ) {
         if to.is_contract() {
             let response =
@@ -164,12 +169,12 @@ impl Erc1155Base {
 
     pub fn safe_batch_transfer_acceptance_check(
         &self,
-        operator: Address,
-        from: Address,
-        to: Address,
-        ids: Vec<U256>,
-        amounts: Vec<U256>,
-        data: Option<Bytes>
+        operator: &Address,
+        from: &Address,
+        to: &Address,
+        ids: &[U256],
+        amounts: &[U256],
+        data: &Option<Bytes>
     ) {
         if to.is_contract() {
             let response = Erc1155ReceiverRef::at(to)

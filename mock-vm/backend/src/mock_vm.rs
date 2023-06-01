@@ -1,7 +1,7 @@
 use anyhow::Result;
 use odra_mock_vm_types::{
-    Address, Balance, BlockTime, CallArgs, EventData, MockVMSerializationError, MockVMType,
-    CONTRACT_ADDRESS_PREFIX
+    Address, Balance, BlockTime, CallArgs, EventData, MockDeserializable, MockSerializable,
+    MockVMSerializationError, CONTRACT_ADDRESS_PREFIX
 };
 use odra_types::{event::EventError, OdraError, VmError};
 use std::collections::HashMap;
@@ -50,7 +50,7 @@ impl MockVm {
         address
     }
 
-    pub fn call_contract<T: MockVMType>(
+    pub fn call_contract<T: MockSerializable + MockDeserializable>(
         &self,
         address: Address,
         entrypoint: &str,
@@ -60,7 +60,7 @@ impl MockVm {
         self.prepare_call(address, entrypoint, amount);
         // Call contract from register.
         if let Some(amount) = amount {
-            let status = self.checked_transfer_tokens(self.caller(), address, amount);
+            let status = self.checked_transfer_tokens(&self.caller(), &address, &amount);
             if let Err(err) = status {
                 self.revert(err.clone());
                 panic!("{:?}", err);
@@ -160,11 +160,11 @@ impl MockVm {
         self.state.write().unwrap().set_caller(caller);
     }
 
-    pub fn set_var<T: MockVMType>(&self, key: &str, value: T) {
+    pub fn set_var<T: MockSerializable + MockDeserializable>(&self, key: &str, value: T) {
         self.state.write().unwrap().set_var(key, value);
     }
 
-    pub fn get_var<T: MockVMType>(&self, key: &str) -> Option<T> {
+    pub fn get_var<T: MockSerializable + MockDeserializable>(&self, key: &str) -> Option<T> {
         let result = { self.state.read().unwrap().get_var(key) };
         match result {
             Ok(result) => result,
@@ -175,11 +175,20 @@ impl MockVm {
         }
     }
 
-    pub fn set_dict_value<T: MockVMType>(&self, dict: &str, key: &[u8], value: T) {
+    pub fn set_dict_value<T: MockSerializable + MockDeserializable>(
+        &self,
+        dict: &str,
+        key: &[u8],
+        value: T
+    ) {
         self.state.write().unwrap().set_dict_value(dict, key, value);
     }
 
-    pub fn get_dict_value<T: MockVMType>(&self, dict: &str, key: &[u8]) -> Option<T> {
+    pub fn get_dict_value<T: MockSerializable + MockDeserializable>(
+        &self,
+        dict: &str,
+        key: &[u8]
+    ) -> Option<T> {
         let result = { self.state.read().unwrap().get_dict_value(dict, key) };
         match result {
             Ok(result) => result,
@@ -221,8 +230,8 @@ impl MockVm {
         self.state.read().unwrap().get_balance(address)
     }
 
-    pub fn transfer_tokens(&self, from: Address, to: Address, amount: Balance) {
-        if amount == Balance::zero() {
+    pub fn transfer_tokens(&self, from: &Address, to: &Address, amount: &Balance) {
+        if amount.is_zero() {
             return;
         }
 
@@ -237,11 +246,11 @@ impl MockVm {
 
     pub fn checked_transfer_tokens(
         &self,
-        from: Address,
-        to: Address,
-        amount: Balance
+        from: &Address,
+        to: &Address,
+        amount: &Balance
     ) -> Result<(), OdraError> {
-        if amount == Balance::zero() {
+        if amount.is_zero() {
             return Ok(());
         }
 
@@ -294,26 +303,34 @@ impl MockVmState {
         self.push_callstack_element(CallstackElement::Account(address));
     }
 
-    fn set_var<T: MockVMType>(&mut self, key: &str, value: T) {
-        let ctx = &self.callstack.current().address();
+    fn set_var<T: MockSerializable + MockDeserializable>(&mut self, key: &str, value: T) {
+        let ctx = self.callstack.current().address();
         if let Err(err) = self.storage.set_value(ctx, key, value) {
             self.set_error(err);
         }
     }
 
-    fn get_var<T: MockVMType>(&self, key: &str) -> Result<Option<T>, MockVMSerializationError> {
-        let ctx = &self.callstack.current().address();
+    fn get_var<T: MockSerializable + MockDeserializable>(
+        &self,
+        key: &str
+    ) -> Result<Option<T>, MockVMSerializationError> {
+        let ctx = self.callstack.current().address();
         self.storage.get_value(ctx, key)
     }
 
-    fn set_dict_value<T: MockVMType>(&mut self, dict: &str, key: &[u8], value: T) {
-        let ctx = &self.callstack.current().address();
+    fn set_dict_value<T: MockSerializable + MockDeserializable>(
+        &mut self,
+        dict: &str,
+        key: &[u8],
+        value: T
+    ) {
+        let ctx = self.callstack.current().address();
         if let Err(err) = self.storage.insert_dict_value(ctx, dict, key, value) {
             self.set_error(err);
         }
     }
 
-    fn get_dict_value<T: MockVMType>(
+    fn get_dict_value<T: MockSerializable + MockDeserializable>(
         &self,
         dict: &str,
         key: &[u8]
@@ -441,12 +458,12 @@ impl MockVmState {
             .set_balance(address, AccountBalance::new(amount));
     }
 
-    fn increase_balance(&mut self, address: Address, amount: Balance) -> Result<()> {
-        self.storage.increase_balance(&address, amount)
+    fn increase_balance(&mut self, address: &Address, amount: &Balance) -> Result<()> {
+        self.storage.increase_balance(address, amount)
     }
 
-    fn reduce_balance(&mut self, address: Address, amount: Balance) -> Result<()> {
-        self.storage.reduce_balance(&address, amount)
+    fn reduce_balance(&mut self, address: &Address, amount: &Balance) -> Result<()> {
+        self.storage.reduce_balance(address, amount)
     }
 }
 
@@ -498,7 +515,7 @@ impl Default for MockVmState {
 mod tests {
     use std::collections::HashMap;
 
-    use odra_mock_vm_types::{Address, Balance, CallArgs, EventData, MockVMType};
+    use odra_mock_vm_types::{Address, Balance, CallArgs, EventData, MockDeserializable};
     use odra_types::address::OdraAddress;
     use odra_types::{ExecutionError, OdraError, VmError};
 
@@ -774,7 +791,7 @@ mod tests {
         (
             contract_address,
             String::from(entrypoint_name),
-            <u32 as MockVMType>::deser(result).unwrap()
+            <u32 as MockDeserializable>::deser(result).unwrap()
         )
     }
 }
