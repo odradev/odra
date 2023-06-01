@@ -5,6 +5,7 @@ use std::{collections::HashMap, panic::AssertUnwindSafe};
 
 use odra_mock_vm_types::{Address, Balance, BlockTime, BorshDeserialize, CallArgs, MockVMType};
 use odra_types::{
+    address::OdraAddress,
     event::{EventError, OdraEvent},
     OdraError
 };
@@ -42,6 +43,8 @@ delegate_to_env! {
     fn set_caller(address: Address)
     /// Returns the balance of the account associated with the given address.
     fn token_balance(address: Address) -> Balance
+    /// Returns nth test user account.
+    fn get_account(n: usize) -> Address
 }
 
 /// Expects the `block` execution will fail with the specific error.
@@ -58,11 +61,6 @@ where
         .expect("An error expected, but did not occur");
 
     assert_eq!(exec_err, err.into());
-}
-
-/// Returns nth test user account.
-pub fn get_account(n: usize) -> Address {
-    crate::borrow_env().get_address(n)
 }
 
 /// Returns the value that represents one native token.
@@ -108,6 +106,15 @@ pub fn last_call_contract_gas_cost() -> Balance {
 
 /// Returns the amount of gas paid for last call.
 pub fn last_call_contract_gas_used() -> Balance {
+    Balance::zero()
+}
+
+/// Returns the total amount of gas used by the address.
+/// Currently MockVM doesn't charge gas.
+pub fn total_gas_used(address: Address) -> Balance {
+    if address.is_contract() {
+        panic!("Contract {:?} can't burn gas.", address)
+    }
     Balance::zero()
 }
 
