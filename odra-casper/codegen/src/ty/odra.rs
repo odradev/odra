@@ -71,50 +71,45 @@ impl ToTokens for OdraType<'_> {
 
 #[cfg(test)]
 mod tests {
+    use crate::assert_eq_tokens;
+
     use super::*;
-    use proc_macro2::TokenStream;
-    use quote::ToTokens;
 
     #[test]
     fn test_bool() {
         let odra_type = OdraType(&Type::Bool);
-        let mut tokens = TokenStream::new();
-        odra_type.to_tokens(&mut tokens);
-        assert_eq!(tokens.to_string(), "bool");
+        let expected = quote!(bool);
+        assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
     fn test_i32() {
         let odra_type = OdraType(&Type::I32);
-        let mut tokens = TokenStream::new();
-        odra_type.to_tokens(&mut tokens);
-        assert_eq!(tokens.to_string(), "i32");
+        let expected = quote!(i32);
+        assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
     fn test_u256() {
         let odra_type = OdraType(&Type::U256);
-        let mut tokens = TokenStream::new();
-        odra_type.to_tokens(&mut tokens);
-        assert_eq!(tokens.to_string(), "odra :: types :: U256");
+        let expected = quote!(odra::types::U256);
+        assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
     fn test_option() {
         let ty = Type::Option(Box::new(Type::Bool));
         let odra_type = OdraType(&ty);
-        let mut tokens = TokenStream::new();
-        odra_type.to_tokens(&mut tokens);
-        assert_eq!(tokens.to_string(), "Option < bool >");
+        let expected = quote!(Option<bool>);
+        assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
     fn test_vec() {
         let ty = Type::Vec(Box::new(Type::Bool));
         let odra_type = OdraType(&ty);
-        let mut tokens = TokenStream::new();
-        odra_type.to_tokens(&mut tokens);
-        assert_eq!(tokens.to_string(), "Vec < bool >");
+        let expected = quote!(Vec<bool>);
+        assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
@@ -124,9 +119,8 @@ mod tests {
             err: Box::new(Type::U8)
         };
         let odra_type = OdraType(&ty);
-        let mut tokens = TokenStream::new();
-        odra_type.to_tokens(&mut tokens);
-        assert_eq!(tokens.to_string(), "Result < bool , u8 >");
+        let expected = quote!(Result < bool , u8 >);
+        assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
@@ -136,32 +130,24 @@ mod tests {
             value: Box::new(Type::I32)
         };
         let odra_type = OdraType(&ty);
-
-        let mut tokens = TokenStream::new();
-        odra_type.to_tokens(&mut tokens);
-        assert_eq!(
-            tokens.to_string(),
-            "std :: collections :: BTreeMap < String , i32 >"
-        );
+        let expected = quote!(std :: collections :: BTreeMap < String , i32 >);
+        assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
     fn test_tuple1() {
         let ty = Type::Tuple1([Box::new(Type::I32)]);
         let odra_type = OdraType(&ty);
-
-        let mut tokens = TokenStream::new();
-        odra_type.to_tokens(&mut tokens);
-        assert_eq!(tokens.to_string(), "(i32 ,)");
+        let expected = quote!((i32,));
+        assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
     fn test_tuple2() {
         let ty = Type::Tuple2([Box::new(Type::I32), Box::new(Type::Bool)]);
         let odra_type = OdraType(&ty);
-        let mut tokens = TokenStream::new();
-        odra_type.to_tokens(&mut tokens);
-        assert_eq!(tokens.to_string(), "(i32 , bool)");
+        let expected = quote!((i32, bool));
+        assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
@@ -172,26 +158,23 @@ mod tests {
             Box::new(Type::U8)
         ]);
         let odra_type = OdraType(&ty);
-        let mut tokens = TokenStream::new();
-        odra_type.to_tokens(&mut tokens);
-        assert_eq!(tokens.to_string(), "(i32 , bool , u8)");
+        let expected = quote!((i32, bool, u8));
+        assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
     fn test_byte_array() {
         let odra_type = OdraType(&Type::ByteArray(32));
-        let mut tokens = TokenStream::new();
-        odra_type.to_tokens(&mut tokens);
-        assert_eq!(tokens.to_string(), "[u8 ; 32u32]");
+        let expected = quote!([u8; 32u32]);
+        assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
     fn test_slice() {
         let ty = Type::Slice(Box::new(Type::Bool));
         let odra_type = OdraType(&ty);
-        let mut tokens = TokenStream::new();
-        odra_type.to_tokens(&mut tokens);
-        assert_eq!(tokens.to_string(), "Vec < bool >");
+        let expected = quote!(Vec<bool>);
+        assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
@@ -199,19 +182,17 @@ mod tests {
         let ty = Type::Option(Box::new(Type::Vec(Box::new(Type::I32))));
         let odra_type = OdraType(&ty);
 
-        let mut tokens = TokenStream::new();
-        odra_type.to_tokens(&mut tokens);
-        assert_eq!(tokens.to_string(), "Option < Vec < i32 > >");
+        let expected = quote!(Option<Vec<i32>>);
+
+        assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
     fn test_complex_vec() {
         let ty = Type::Vec(Box::new(Type::Option(Box::new(Type::U8))));
         let odra_type = OdraType(&ty);
-
-        let mut tokens = TokenStream::new();
-        odra_type.to_tokens(&mut tokens);
-        assert_eq!(tokens.to_string(), "Vec < Option < u8 > >");
+        let expected = quote!(Vec<Option<u8>>);
+        assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
@@ -221,13 +202,8 @@ mod tests {
             value: Box::new(Type::Option(Box::new(Type::Vec(Box::new(Type::Bool)))))
         };
         let odra_type = OdraType(&ty);
-
-        let mut tokens = TokenStream::new();
-        odra_type.to_tokens(&mut tokens);
-        assert_eq!(
-            tokens.to_string(),
-            "std :: collections :: BTreeMap < String , Option < Vec < bool > > >"
-        );
+        let expected = quote!(std::collections::BTreeMap< String, Option< Vec< bool > > >);
+        assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
@@ -240,9 +216,8 @@ mod tests {
             })
         };
         let odra_type = OdraType(&ty);
-
-        let mut tokens = TokenStream::new();
-        odra_type.to_tokens(&mut tokens);
-        assert_eq!(tokens.to_string(), "Result < Vec < Option < i32 > > , std :: collections :: BTreeMap < String , Vec < bool > > >");
+        let expected =
+            quote!(Result<Vec<Option<i32>>, std::collections::BTreeMap<String, Vec<bool>>>);
+        assert_eq_tokens(odra_type, expected);
     }
 }
