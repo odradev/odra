@@ -144,7 +144,7 @@ mod tests {
                                     odra::casper::casper_types::ApiError::User(code)
                                 })
                                 .unwrap_or_revert();
-                            let mut contract_ref = my_contract::MyContract::at(odra_address);
+                            let mut contract_ref = my_contract::MyContract::at(&odra_address);
                             let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg (stringify!(value));
                             contract_ref.construct_me(value);
                         },
