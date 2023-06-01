@@ -40,7 +40,7 @@ impl WrappedNativeToken {
 
         self.erc20.burn(&caller, amount);
         let balance = amount.to_balance().unwrap_or_revert();
-        contract_env::transfer_tokens(caller, balance);
+        contract_env::transfer_tokens(&caller, balance);
 
         Withdrawal {
             account: caller,

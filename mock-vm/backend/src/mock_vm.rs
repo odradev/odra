@@ -60,7 +60,7 @@ impl MockVm {
         self.prepare_call(address, entrypoint, amount);
         // Call contract from register.
         if let Some(amount) = amount {
-            let status = self.checked_transfer_tokens(self.caller(), address, amount);
+            let status = self.checked_transfer_tokens(&self.caller(), &address, &amount);
             if let Err(err) = status {
                 self.revert(err.clone());
                 panic!("{:?}", err);
@@ -230,8 +230,8 @@ impl MockVm {
         self.state.read().unwrap().get_balance(address)
     }
 
-    pub fn transfer_tokens(&self, from: Address, to: Address, amount: Balance) {
-        if amount == Balance::zero() {
+    pub fn transfer_tokens(&self, from: &Address, to: &Address, amount: &Balance) {
+        if amount.is_zero() {
             return;
         }
 
@@ -246,11 +246,11 @@ impl MockVm {
 
     pub fn checked_transfer_tokens(
         &self,
-        from: Address,
-        to: Address,
-        amount: Balance
+        from: &Address,
+        to: &Address,
+        amount: &Balance
     ) -> Result<(), OdraError> {
-        if amount == Balance::zero() {
+        if amount.is_zero() {
             return Ok(());
         }
 
@@ -458,12 +458,12 @@ impl MockVmState {
             .set_balance(address, AccountBalance::new(amount));
     }
 
-    fn increase_balance(&mut self, address: Address, amount: Balance) -> Result<()> {
-        self.storage.increase_balance(&address, amount)
+    fn increase_balance(&mut self, address: &Address, amount: &Balance) -> Result<()> {
+        self.storage.increase_balance(address, amount)
     }
 
-    fn reduce_balance(&mut self, address: Address, amount: Balance) -> Result<()> {
-        self.storage.reduce_balance(&address, amount)
+    fn reduce_balance(&mut self, address: &Address, amount: &Balance) -> Result<()> {
+        self.storage.reduce_balance(address, amount)
     }
 }
 

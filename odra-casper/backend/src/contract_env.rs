@@ -113,12 +113,12 @@ pub fn attached_value() -> Balance {
 }
 
 /// Transfers native token from the contract caller to the given address.
-pub fn transfer_tokens<B: Into<Balance>>(to: Address, amount: B) {
+pub fn transfer_tokens<B: Into<Balance>>(to: &Address, amount: B) {
     let main_purse = get_main_purse();
 
     match to {
         Address::Account(account) => {
-            transfer_from_purse_to_account(main_purse, account, amount.into().inner(), None)
+            transfer_from_purse_to_account(main_purse, *account, amount.into().inner(), None)
                 .unwrap_or_revert();
         }
         Address::Contract(_) => revert(ExecutionError::can_not_transfer_to_contract())

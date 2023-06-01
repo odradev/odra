@@ -23,7 +23,7 @@ impl Erc721Receiver {
             data: data.clone()
         }
         .emit();
-        Erc721TokenRef::at(caller()).owner_of(token_id) == self_address()
+        Erc721TokenRef::at(&caller()).owner_of(token_id) == self_address()
     }
 }
 

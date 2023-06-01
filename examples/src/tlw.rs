@@ -59,7 +59,7 @@ impl TimeLockWallet {
         }
 
         // Transfer tokens, emit event
-        contract_env::transfer_tokens(caller, *amount);
+        contract_env::transfer_tokens(&caller, *amount);
         self.balances.subtract(&caller, *amount);
         Withdrawal {
             address: caller,

@@ -124,7 +124,7 @@ impl Erc721Base {
         self.transfer(from, to, token_id);
         if to.is_contract() {
             let response =
-                Erc721ReceiverRef::at(*to).on_erc721_received(&caller(), from, token_id, data);
+                Erc721ReceiverRef::at(to).on_erc721_received(&caller(), from, token_id, data);
 
             if !response {
                 revert(Error::TransferFailed)

@@ -40,12 +40,12 @@ pub(crate) fn build_ref(ref_ident: &Ident) -> TokenStream {
         }
 
         impl #ref_ident {
-            pub fn at(address: odra::types::Address) -> Self {
-                Self { address, attached_value: None }
+            pub fn at(address: &odra::types::Address) -> Self {
+                Self { address: *address, attached_value: None }
             }
 
-            pub fn address(&self) -> odra::types::Address {
-                self.address.clone()
+            pub fn address(&self) -> &odra::types::Address {
+                &self.address
             }
 
             pub fn with_tokens<T>(&self, amount: T) -> Self

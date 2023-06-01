@@ -803,7 +803,7 @@ mod tests {
         test_env::set_caller(env.alice);
         env.token.safe_transfer_from(
             &env.alice,
-            &receiver.address(),
+            receiver.address(),
             &U256::one(),
             &100.into(),
             &None
@@ -812,7 +812,7 @@ mod tests {
         // Then the tokens are transferred
         assert_eq!(env.token.balance_of(&env.alice, &U256::one()), 0.into());
         assert_eq!(
-            env.token.balance_of(&receiver.address(), &U256::one()),
+            env.token.balance_of(receiver.address(), &U256::one()),
             100.into()
         );
 
@@ -842,7 +842,7 @@ mod tests {
         test_env::set_caller(env.alice);
         env.token.safe_transfer_from(
             &env.alice,
-            &receiver.address(),
+            receiver.address(),
             &U256::one(),
             &100.into(),
             &Some(Bytes::from(b"data".to_vec()))
@@ -851,7 +851,7 @@ mod tests {
         // Then the tokens are transferred
         assert_eq!(env.token.balance_of(&env.alice, &U256::one()), 0.into());
         assert_eq!(
-            env.token.balance_of(&receiver.address(), &U256::one()),
+            env.token.balance_of(receiver.address(), &U256::one()),
             100.into()
         );
 
@@ -885,7 +885,7 @@ mod tests {
                 test_env::set_caller(env.alice);
                 env.token.safe_transfer_from(
                     &env.alice,
-                    &receiver.address(),
+                    receiver.address(),
                     &U256::one(),
                     &100.into(),
                     &None
@@ -909,7 +909,7 @@ mod tests {
         test_env::set_caller(env.alice);
         env.token.safe_batch_transfer_from(
             &env.alice,
-            &receiver.address(),
+            receiver.address(),
             &[U256::one(), U256::from(2)],
             &[100.into(), 100.into()],
             &None
@@ -918,12 +918,12 @@ mod tests {
         // Then the tokens are transferred
         assert_eq!(env.token.balance_of(&env.alice, &U256::one()), 0.into());
         assert_eq!(
-            env.token.balance_of(&receiver.address(), &U256::one()),
+            env.token.balance_of(receiver.address(), &U256::one()),
             100.into()
         );
         assert_eq!(env.token.balance_of(&env.alice, &U256::from(2)), 0.into());
         assert_eq!(
-            env.token.balance_of(&receiver.address(), &U256::from(2)),
+            env.token.balance_of(receiver.address(), &U256::from(2)),
             100.into()
         );
 
@@ -955,7 +955,7 @@ mod tests {
         test_env::set_caller(env.alice);
         env.token.safe_batch_transfer_from(
             &env.alice,
-            &receiver.address(),
+            receiver.address(),
             &[U256::one(), U256::from(2)],
             &[100.into(), 100.into()],
             &Some(Bytes::from(b"data".to_vec()))
@@ -964,12 +964,12 @@ mod tests {
         // Then the tokens are transferred
         assert_eq!(env.token.balance_of(&env.alice, &U256::one()), 0.into());
         assert_eq!(
-            env.token.balance_of(&receiver.address(), &U256::one()),
+            env.token.balance_of(receiver.address(), &U256::one()),
             100.into()
         );
         assert_eq!(env.token.balance_of(&env.alice, &U256::from(2)), 0.into());
         assert_eq!(
-            env.token.balance_of(&receiver.address(), &U256::from(2)),
+            env.token.balance_of(receiver.address(), &U256::from(2)),
             100.into()
         );
 
@@ -1005,7 +1005,7 @@ mod tests {
                 test_env::set_caller(env.alice);
                 env.token.safe_batch_transfer_from(
                     &env.alice,
-                    &receiver.address(),
+                    receiver.address(),
                     &[U256::one(), U256::from(2)],
                     &[100.into(), 100.into()],
                     &None

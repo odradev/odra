@@ -101,9 +101,10 @@ pub fn one_token() -> Balance {
 }
 
 /// Transfers native token from the contract caller to the given address.
-pub fn transfer_tokens<B: Into<Balance>>(to: Address, amount: B) {
+pub fn transfer_tokens<B: Into<Balance>>(to: &Address, amount: B) {
     let callee = borrow_env().callee();
-    borrow_env().transfer_tokens(callee, to, amount.into());
+    let amount = amount.into();
+    borrow_env().transfer_tokens(&callee, to, &amount);
 }
 
 /// Returns the balance of the account associated with the current contract.

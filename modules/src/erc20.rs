@@ -35,15 +35,15 @@ impl Erc20 {
         self.name.set(name);
         self.decimals.set(decimals);
 
-        if let Some(initial_supply) = initial_supply {
-            self.total_supply.set(*initial_supply);
-            self.balances.set(&caller, *initial_supply);
+        if let Some(initial_supply) = *initial_supply {
+            self.total_supply.set(initial_supply);
+            self.balances.set(&caller, initial_supply);
 
-            if *initial_supply > U256::zero() {
+            if !initial_supply.is_zero() {
                 Transfer {
                     from: None,
                     to: Some(caller),
-                    amount: *initial_supply
+                    amount: initial_supply
                 }
                 .emit();
             }

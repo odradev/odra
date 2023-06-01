@@ -35,14 +35,14 @@ impl Storage {
         self.balances.insert(address, balance);
     }
 
-    pub fn increase_balance(&mut self, address: &Address, amount: Balance) -> Result<()> {
+    pub fn increase_balance(&mut self, address: &Address, amount: &Balance) -> Result<()> {
         let balance = self.balances.get_mut(address).context("Unknown address")?;
-        balance.increase(amount)
+        balance.increase(*amount)
     }
 
-    pub fn reduce_balance(&mut self, address: &Address, amount: Balance) -> Result<()> {
+    pub fn reduce_balance(&mut self, address: &Address, amount: &Balance) -> Result<()> {
         let balance = self.balances.get_mut(address).context("Unknown address")?;
-        balance.reduce(amount)
+        balance.reduce(*amount)
     }
 
     pub fn get_value<T: MockSerializable + MockDeserializable>(

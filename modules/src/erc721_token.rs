@@ -500,7 +500,7 @@ mod tests {
                 test_env::set_caller(erc721_env.alice);
                 erc721_env.token.safe_transfer_from(
                     &erc721_env.alice,
-                    &erc20.address(),
+                    erc20.address(),
                     &U256::from(1)
                 );
             }
@@ -521,12 +521,12 @@ mod tests {
         test_env::set_caller(erc721_env.alice);
         erc721_env
             .token
-            .safe_transfer_from(&erc721_env.alice, &receiver.address(), &U256::from(1));
+            .safe_transfer_from(&erc721_env.alice, receiver.address(), &U256::from(1));
 
         // Then the owner of the token is the contract
         assert_eq!(
             erc721_env.token.owner_of(&U256::from(1)),
-            receiver.address()
+            *receiver.address()
         );
         // And the receiver contract is aware of the transfer
         assert_events!(
@@ -554,7 +554,7 @@ mod tests {
         test_env::set_caller(erc721_env.alice);
         erc721_env.token.safe_transfer_from_with_data(
             &erc721_env.alice,
-            &receiver.address(),
+            receiver.address(),
             &U256::from(1),
             &b"data".to_vec().into()
         );
@@ -562,7 +562,7 @@ mod tests {
         // Then the owner of the token is the contract
         assert_eq!(
             erc721_env.token.owner_of(&U256::from(1)),
-            receiver.address()
+            *receiver.address()
         );
         // And the receiver contract is aware of the transfer
         assert_events!(

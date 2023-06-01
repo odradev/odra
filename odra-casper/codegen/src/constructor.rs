@@ -46,7 +46,7 @@ impl ToTokens for WasmConstructor<'_> {
                                 odra::casper::casper_types::ApiError::User(code)
                             })
                             .unwrap_or_revert();
-                        let mut contract_ref = #ref_ident::at(odra_address);
+                        let mut contract_ref = #ref_ident::at(&odra_address);
                         #casper_args
                         contract_ref.#entrypoint_ident( #fn_args );
                     },

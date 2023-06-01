@@ -26,7 +26,7 @@ pub fn generate_code(
                 #entrypoint_calls
 
                 odra::client_env::register_existing_contract(address, entrypoints);
-                #ref_ident::at(address)
+                #ref_ident::at(&address)
             }
 
             #constructors
@@ -91,7 +91,7 @@ fn build_default_constructor(
             #entrypoint_calls
 
             let address = odra::client_env::deploy_new_contract(&#struct_name_snake_case, odra::types::CallArgs::new(), entrypoints);
-            #ref_ident::at(address)
+            #ref_ident::at(&address)
         }
     }
 }
@@ -122,7 +122,7 @@ fn build_constructor(
             let mut args = { #args };
             args.insert("constructor", stringify!(#constructor_ident));
             let address = odra::client_env::deploy_new_contract(#struct_name_snake_case, args, entrypoints);
-            #ref_ident::at(address)
+            #ref_ident::at(&address)
         }
     }
 }

@@ -10,7 +10,7 @@ impl PublicWallet {
     pub fn deposit(&mut self) {}
 
     pub fn withdraw(&mut self, amount: &Balance) {
-        contract_env::transfer_tokens(contract_env::caller(), *amount);
+        contract_env::transfer_tokens(&contract_env::caller(), *amount);
     }
 }
 
@@ -24,19 +24,19 @@ mod tests {
     fn test_modules() {
         let mut my_contract = PublicWalletDeployer::default();
         assert_eq!(
-            test_env::token_balance(my_contract.address()),
+            test_env::token_balance(*my_contract.address()),
             Balance::zero()
         );
 
         my_contract.with_tokens(Balance::from(100)).deposit();
         assert_eq!(
-            test_env::token_balance(my_contract.address()),
+            test_env::token_balance(*my_contract.address()),
             Balance::from(100)
         );
 
         my_contract.withdraw(&Balance::from(25));
         assert_eq!(
-            test_env::token_balance(my_contract.address()),
+            test_env::token_balance(*my_contract.address()),
             Balance::from(75)
         );
     }

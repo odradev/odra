@@ -160,7 +160,7 @@ impl Erc1155Base {
     ) {
         if to.is_contract() {
             let response =
-                Erc1155ReceiverRef::at(*to).on_erc1155_received(operator, from, id, amount, data);
+                Erc1155ReceiverRef::at(to).on_erc1155_received(operator, from, id, amount, data);
             if !response {
                 revert(Error::TransferRejected);
             }
@@ -177,7 +177,7 @@ impl Erc1155Base {
         data: &Option<Bytes>
     ) {
         if to.is_contract() {
-            let response = Erc1155ReceiverRef::at(*to)
+            let response = Erc1155ReceiverRef::at(to)
                 .on_erc1155_batch_received(operator, from, ids, amounts, data);
             if !response {
                 revert(Error::TransferRejected);

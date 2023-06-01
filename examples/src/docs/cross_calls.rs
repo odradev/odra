@@ -15,7 +15,7 @@ impl CrossContract {
 
     pub fn add_using_another(&self) -> u32 {
         let math_engine_address = self.math_engine.get().unwrap_or_revert();
-        MathEngineRef::at(math_engine_address).add(3, 5)
+        MathEngineRef::at(&math_engine_address).add(3, 5)
     }
 }
 
@@ -36,7 +36,7 @@ mod tests {
     #[test]
     fn test_cross_calls() {
         let math_engine_contract = MathEngineDeployer::default();
-        let cross_contract = CrossContractDeployer::init(&math_engine_contract.address());
+        let cross_contract = CrossContractDeployer::init(math_engine_contract.address());
 
         assert_eq!(cross_contract.add_using_another(), 8);
     }

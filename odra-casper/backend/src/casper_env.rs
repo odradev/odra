@@ -1,8 +1,7 @@
 use casper_event_standard::Schema;
 use casper_types::{
-    api_error,
     bytesrepr::{FromBytes, ToBytes},
-    CLValue, EntryPoints
+    EntryPoints
 };
 use lazy_static::lazy_static;
 use odra_casper_types::{Address, OdraType};
@@ -278,55 +277,15 @@ where
         Err(_) => runtime::revert(ApiError::ValueNotFound)
     }
 }
-pub const DICTIONARY_ITEM_KEY_MAX_LENGTH: usize = 64;
 
+#[inline(always)]
 pub fn save_value<T: OdraType>(key: &str, value: T) {
     let state_uref = get_state_uref();
-
-    let (uref_ptr, uref_size, _bytes1) = to_ptr(state_uref);
-    let (dictionary_item_key_ptr, dictionary_item_key_size) = dictionary_item_key_to_ptr(key);
-
-    if dictionary_item_key_size > DICTIONARY_ITEM_KEY_MAX_LENGTH {
-        runtime::revert(ApiError::DictionaryItemKeyExceedsLength)
-    }
-
-    let cl_value = CLValue::from_components(
-        <T as CLTyped>::cl_type(),
-        value.to_bytes().unwrap_or_revert()
-    );
-    let (cl_value_ptr, cl_value_size, _bytes) = to_ptr(cl_value);
-
-    let result = unsafe {
-        let ret = casper_contract::ext_ffi::casper_dictionary_put(
-            uref_ptr,
-            uref_size,
-            dictionary_item_key_ptr,
-            dictionary_item_key_size,
-            cl_value_ptr,
-            cl_value_size
-        );
-        api_error::result_from(ret)
-    };
-
-    result.unwrap_or_revert()
+    storage::dictionary_put(state_uref, key, value);
 }
 
 #[inline(always)]
 pub fn read_value<T: OdraType>(key: &str) -> Option<T> {
     let state_uref = get_state_uref();
     storage::dictionary_get(state_uref, key).unwrap_or_revert()
-}
-
-fn to_ptr<T: ToBytes>(t: T) -> (*const u8, usize, Vec<u8>) {
-    let bytes = t.into_bytes().unwrap_or_revert();
-    let ptr = bytes.as_ptr();
-    let size = bytes.len();
-    (ptr, size, bytes)
-}
-
-fn dictionary_item_key_to_ptr(dictionary_item_key: &str) -> (*const u8, usize) {
-    let bytes = dictionary_item_key.as_bytes();
-    let ptr = bytes.as_ptr();
-    let size = bytes.len();
-    (ptr, size)
 }

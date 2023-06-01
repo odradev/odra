@@ -94,7 +94,7 @@ fn build_constructor(
                 }
             ));
             let address = odra::test_env::register_contract(constructor, constructors, entrypoints);
-            #ref_ident::at(address)
+            #ref_ident::at(&address)
         }
     }
 }
@@ -116,7 +116,7 @@ fn build_default_constructor(
             #constructors_stream
 
             let address = odra::test_env::register_contract(None, constructors, entrypoints);
-            #ref_ident::at(address)
+            #ref_ident::at(&address)
         }
     }
 }
