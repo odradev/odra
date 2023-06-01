@@ -2,9 +2,25 @@
 
 Changelog for `odra`.
 
-## [0.3.1] - XXXX-XX-XX
+## [0.3.1] - 2023-06-01
 ### Added
-- `Composer` - a tool for composing Odra components.
+- `Composer` - a tool for composing Odra modules' instances.
+- Casper's `chainspec.yaml` added to the repository.
+- Improvements to numeric conversions.
+- `Typed` trait is implemented automatically for `OdraType` types.
+- `test_env` exposes `total_gas_used()` function to allow better native token usage tracking.
+- `RUST_BACKTRACE=-1` will show the backtrace of the contract calls that panicked.
+- Panicked contract calls will print the information about the call.
+
+### Fixed
+- Better handling of call stack in MockVM.
+- Better handling of native transfers in MockVM.
+- Genesis in the MockVM generates more addresses with more tokens.
+- Improved `assert_exception!` macro. It no longer needs new instance of Ref.
+
+### Changed
+- `transfer_tokens()` now reverts if the transfer failed instead of returning false.
+- `advance_block_time_by()` now uses milliseconds instead of seconds.
 
 ## [0.3.0] - 2022-05-22
 ### Added

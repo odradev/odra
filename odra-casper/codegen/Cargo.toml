@@ -1,6 +1,6 @@
 [package]
 name = "odra-casper-codegen"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
 license = "MIT"
@@ -14,9 +14,9 @@ proc-macro2 = "1.0.39"
 quote = "1.0.18"
 syn = "1.0.96"
 pretty_assertions = "1.2.1"
-odra-casper-types = { version = "0.3.0", path = "../types" }
-odra-types = { version = "0.3.0", path = "../../types" }
-odra-utils = { version = "0.3.0", path = "../../utils" }
+odra-casper-types = { version = "0.3.1", path = "../types" }
+odra-types = { version = "0.3.1", path = "../../types" }
+odra-utils = { version = "0.3.1", path = "../../utils" }
 casper-types = { workspace = true }
 casper-event-standard = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
