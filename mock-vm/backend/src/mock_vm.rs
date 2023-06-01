@@ -213,7 +213,7 @@ impl MockVm {
         self.state.read().unwrap().attached_value()
     }
 
-    pub fn get_address(&self, n: usize) -> Address {
+    pub fn get_account(&self, n: usize) -> Address {
         self.state.read().unwrap().accounts.get(n).cloned().unwrap()
     }
 
@@ -529,7 +529,7 @@ mod tests {
         // given an address of a contract and an address of an account
         let instance = MockVm::default();
         let (contract_address, _, _) = setup_contract(&instance);
-        let account_address = instance.get_address(0);
+        let account_address = instance.get_account(0);
 
         // Then the contract address is a contract
         assert!(contract_address.is_contract());
@@ -717,7 +717,7 @@ mod tests {
         let (contract_address, entrypoint_name, _) = setup_contract(&instance);
 
         // when call a contract with the whole balance of the caller
-        let caller = instance.get_address(0);
+        let caller = instance.get_account(0);
         let caller_balance = instance.token_balance(caller);
 
         instance.call_contract::<u32>(
@@ -739,7 +739,7 @@ mod tests {
         let instance = MockVm::default();
         let (contract_address, entrypoint_name, _) = setup_contract(&instance);
 
-        let caller = instance.get_address(0);
+        let caller = instance.get_account(0);
         let caller_balance = instance.token_balance(caller);
 
         // when call a contract with the amount exceeding caller's balance

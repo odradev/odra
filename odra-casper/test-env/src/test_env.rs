@@ -119,3 +119,8 @@ pub fn last_call_contract_gas_cost() -> Balance {
 pub fn last_call_contract_gas_used() -> Balance {
     ENV.with(|env| env.borrow().last_call_contract_gas_used().into())
 }
+
+/// Returns total gas used by the account.
+pub fn total_gas_used(address: Address) -> Balance {
+    ENV.with(|env| env.borrow().total_gas_used(address).into())
+}

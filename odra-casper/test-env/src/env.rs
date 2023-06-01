@@ -3,6 +3,7 @@
 use std::{
     backtrace::{Backtrace, BacktraceStatus},
     cell::RefCell,
+    collections::HashMap,
     env,
     path::PathBuf
 };
@@ -46,7 +47,8 @@ pub struct CasperTestEnv {
     block_time: BlockTime,
     calls_counter: u32,
     error: Option<OdraError>,
-    attached_value: Option<U512>
+    attached_value: Option<U512>,
+    gas_used: HashMap<AccountHash, U512>
 }
 
 impl CasperTestEnv {
@@ -78,7 +80,10 @@ impl CasperTestEnv {
             genesis_config.take_ee_config()
         );
 
-        let mut builder = InMemoryWasmTestBuilder::default();
+        let chainspec_path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/chainspec.toml");
+
+        let mut builder = InMemoryWasmTestBuilder::new_with_chainspec(chainspec_path, None);
         builder.run_genesis(&run_genesis_request).commit();
 
         Self {
@@ -88,7 +93,8 @@ impl CasperTestEnv {
             block_time: 0,
             calls_counter: 0,
             error: None,
-            attached_value: None
+            attached_value: None,
+            gas_used: HashMap::new()
         }
     }
 
@@ -118,6 +124,7 @@ impl CasperTestEnv {
             .with_block_time(self.block_time)
             .build();
         self.context.exec(execute_request).commit().expect_success();
+        self.collect_gas();
     }
 
     /// Call contract.
@@ -151,6 +158,7 @@ impl CasperTestEnv {
             .with_block_time(self.block_time)
             .build();
         self.context.exec(execute_request).commit();
+        self.collect_gas();
 
         self.attached_value = None;
         if let Some(error) = self.context.get_error() {
@@ -289,13 +297,6 @@ impl CasperTestEnv {
         }
     }
 
-    fn get_event_name(bytes: &[u8]) -> Result<String, EventError> {
-        let (event_name, _): (String, _) =
-            FromBytes::from_bytes(bytes).map_err(|_| EventError::Formatting)?;
-
-        Ok(event_name)
-    }
-
     /// Increases the current value of block_time.
     pub fn advance_block_time_by(&mut self, milliseconds: BlockTime) {
         self.block_time += milliseconds;
@@ -327,6 +328,14 @@ impl CasperTestEnv {
     pub fn last_call_contract_gas_used(&self) -> U512 {
         *DEFAULT_PAYMENT
     }
+
+    /// Returns total gas used by the account.
+    pub fn total_gas_used(&self, address: Address) -> U512 {
+        match &address {
+            Address::Account(address) => self.gas_used.get(address).cloned().unwrap_or_default(),
+            Address::Contract(address) => panic!("Contract {} can't burn gas.", address)
+        }
+    }
 }
 
 impl CasperTestEnv {
@@ -340,9 +349,7 @@ impl CasperTestEnv {
 
     fn get_contract_cspr_balance(&self, contract_hash: ContractPackageHash) -> U512 {
         let contract_hash: ContractHash = self.get_contract_package_hash(contract_hash);
-
         let contract: Contract = self.context.get_contract(contract_hash).unwrap();
-
         contract
             .named_keys()
             .get(consts::CONTRACT_MAIN_PURSE)
@@ -357,17 +364,29 @@ impl CasperTestEnv {
         self.context.get_purse_balance(purse)
     }
 
+    fn get_event_name(bytes: &[u8]) -> Result<String, EventError> {
+        let (event_name, _): (String, _) =
+            FromBytes::from_bytes(bytes).map_err(|_| EventError::Formatting)?;
+        Ok(event_name)
+    }
+
     fn active_account_hash(&self) -> AccountHash {
         *self.active_account.as_account_hash().unwrap()
     }
 
     fn get_active_account_result<T: OdraType>(&self) -> T {
         let active_account = self.active_account_hash();
-
         let bytes: casper_types::bytesrepr::Bytes = self
             .get_account_value(active_account, "result")
             .unwrap_or_default();
         T::from_bytes(bytes.inner_bytes()).unwrap().0
+    }
+
+    fn collect_gas(&mut self) {
+        *self
+            .gas_used
+            .entry(*self.active_account.as_account_hash().unwrap())
+            .or_insert_with(U512::zero) += *DEFAULT_PAYMENT;
     }
 }
 
