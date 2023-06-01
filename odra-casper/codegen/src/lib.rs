@@ -131,8 +131,8 @@ fn fqn_to_path(fqn: &str) -> Path {
 
 #[cfg(test)]
 fn assert_eq_tokens<A: ToTokens, B: ToTokens>(left: A, right: B) {
-    let left = left.to_token_stream().to_string();
-    let right = right.to_token_stream().to_string();
+    let left = left.to_token_stream().to_string().replace(' ', "");
+    let right = right.to_token_stream().to_string().replace(' ', "");
     pretty_assertions::assert_str_eq!(left, right);
 }
 
