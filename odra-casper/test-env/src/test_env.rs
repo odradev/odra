@@ -124,3 +124,16 @@ pub fn last_call_contract_gas_used() -> Balance {
 pub fn total_gas_used(address: Address) -> Balance {
     ENV.with(|env| env.borrow().total_gas_used(address).into())
 }
+
+/// Returns the report of entrypoints called, contract deployed and gas used.
+pub fn gas_report() -> Vec<(String, Balance)> {
+    let mut report = Vec::new();
+    ENV.with(|env| {
+        let env = env.borrow();
+        for (_, reason, gas) in env.gas_report() {
+            report.push((reason, gas.into()));
+        }
+    });
+
+    report
+}

@@ -48,7 +48,8 @@ pub struct CasperTestEnv {
     calls_counter: u32,
     error: Option<OdraError>,
     attached_value: Option<U512>,
-    gas_used: HashMap<AccountHash, U512>
+    gas_used: HashMap<AccountHash, U512>,
+    gas_cost: Vec<(AccountHash, String, U512)>
 }
 
 impl CasperTestEnv {
@@ -94,7 +95,8 @@ impl CasperTestEnv {
             calls_counter: 0,
             error: None,
             attached_value: None,
-            gas_used: HashMap::new()
+            gas_used: HashMap::new(),
+            gas_cost: Vec::new()
         }
     }
 
@@ -125,6 +127,11 @@ impl CasperTestEnv {
             .build();
         self.context.exec(execute_request).commit().expect_success();
         self.collect_gas();
+        self.gas_cost.push((
+            self.active_account_hash(),
+            format!("deploy_contract {}", wasm_path),
+            self.last_call_contract_gas_cost()
+        ));
     }
 
     /// Call contract.
@@ -159,6 +166,11 @@ impl CasperTestEnv {
             .build();
         self.context.exec(execute_request).commit();
         self.collect_gas();
+        self.gas_cost.push((
+            self.active_account_hash(),
+            format!("call_entrypoint {}", entry_point),
+            self.last_call_contract_gas_cost()
+        ));
 
         self.attached_value = None;
         if let Some(error) = self.context.get_error() {
@@ -335,6 +347,10 @@ impl CasperTestEnv {
             Address::Account(address) => self.gas_used.get(address).cloned().unwrap_or_default(),
             Address::Contract(address) => panic!("Contract {} can't burn gas.", address)
         }
+    }
+
+    pub fn gas_report(&self) -> Vec<(AccountHash, String, U512)> {
+        self.gas_cost.clone()
     }
 }
 
