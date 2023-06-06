@@ -292,7 +292,7 @@ mod tests {
 #[macro_export]
 macro_rules! gen_contract {
     ($contract:path, $name:literal) => {
-        fn main() {
+        pub fn main() {
             let ident = <$contract as odra::types::contract_def::HasIdent>::ident();
             let entrypoints =
                 <$contract as odra::types::contract_def::HasEntrypoints>::entrypoints();

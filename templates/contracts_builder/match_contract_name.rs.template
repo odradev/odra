@@ -1,0 +1,1 @@
+Some("#contract_name") => #contract_name::main(), 
