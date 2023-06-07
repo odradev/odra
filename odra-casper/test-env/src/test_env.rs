@@ -130,7 +130,7 @@ pub fn gas_report() -> Vec<(String, Balance)> {
     let mut report = Vec::new();
     ENV.with(|env| {
         let env = env.borrow();
-        for (_, reason, gas) in env.gas_report() {
+        for (reason, gas) in env.gas_report() {
             report.push((reason, gas.into()));
         }
     });

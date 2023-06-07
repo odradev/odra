@@ -49,7 +49,7 @@ pub struct CasperTestEnv {
     error: Option<OdraError>,
     attached_value: Option<U512>,
     gas_used: HashMap<AccountHash, U512>,
-    gas_cost: Vec<(AccountHash, String, U512)>
+    gas_cost: Vec<(String, U512)>
 }
 
 impl CasperTestEnv {
@@ -128,7 +128,6 @@ impl CasperTestEnv {
         self.context.exec(execute_request).commit().expect_success();
         self.collect_gas();
         self.gas_cost.push((
-            self.active_account_hash(),
             format!("deploy_contract {}", wasm_path),
             self.last_call_contract_gas_cost()
         ));
@@ -167,7 +166,6 @@ impl CasperTestEnv {
         self.context.exec(execute_request).commit();
         self.collect_gas();
         self.gas_cost.push((
-            self.active_account_hash(),
             format!("call_entrypoint {}", entry_point),
             self.last_call_contract_gas_cost()
         ));
@@ -349,7 +347,7 @@ impl CasperTestEnv {
         }
     }
 
-    pub fn gas_report(&self) -> Vec<(AccountHash, String, U512)> {
+    pub fn gas_report(&self) -> Vec<(String, U512)> {
         self.gas_cost.clone()
     }
 }
