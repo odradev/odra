@@ -1,11 +1,16 @@
 //! Blockchain-agnostic types used by Odra Framework.
 
+#![no_std]
+
+extern crate alloc;
+
 pub mod address;
 pub mod arithmetic;
 pub mod contract_def;
 mod error;
 pub mod event;
 
+use alloc::boxed::Box;
 pub use error::{AddressError, CollectionError, ExecutionError, OdraError, VmError};
 
 /// Types accepted by Odra framework, these types can be stored and manipulated by smart contracts.

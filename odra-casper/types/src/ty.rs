@@ -1,3 +1,4 @@
+use alloc::boxed::Box;
 use casper_types::{CLType, CLTyped};
 use odra_types::Type;
 

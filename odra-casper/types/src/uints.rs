@@ -1,4 +1,6 @@
 use crate::{CLTyped, FromBytes, ToBytes};
+use core::hash::{Hash, Hasher};
+use core::ops::{Add, AddAssign, Div, Mul, Rem, Sub, SubAssign};
 use num_traits::{
     Bounded, CheckedMul, CheckedSub, Num, One, Unsigned, WrappingAdd, WrappingSub, Zero
 };
@@ -6,8 +8,6 @@ use odra_types::{
     arithmetic::{ArithmeticsError, OverflowingAdd, OverflowingSub},
     ExecutionError
 };
-use std::hash::{Hash, Hasher};
-use std::ops::{Add, AddAssign, Div, Mul, Rem, Sub, SubAssign};
 
 macro_rules! impl_casper_type_numeric_wrapper {
     ( $( $ty:ident ),+ ) => {
@@ -97,7 +97,7 @@ macro_rules! impl_casper_type_numeric_wrapper {
                     }
                 }
 
-                pub fn from_dec_str(s: &str) -> Result<Self, String> {
+                pub fn from_dec_str(s: &str) -> Result<Self, alloc::string::String> {
                     Self::from_str_radix(s, 10)
                 }
             }
@@ -125,14 +125,14 @@ macro_rules! impl_casper_type_numeric_wrapper {
 
             // Requires Zero and One to be implemented
             impl Num for $ty {
-                type FromStrRadixErr = String;
+                type FromStrRadixErr = alloc::string::String;
                 fn from_str_radix(str: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> {
                     if radix == 10 {
                        casper_types::$ty::from_dec_str(str)
                             .map(|inner| Self { inner })
-                            .map_err(|_| String::from("FromDecStr"))
+                            .map_err(|_| alloc::string::String::from("FromDecStr"))
                     } else {
-                        Err(String::from("InvalidRadix"))
+                        Err(alloc::string::String::from("InvalidRadix"))
                     }
                 }
             }
@@ -184,7 +184,7 @@ macro_rules! impl_casper_type_numeric_wrapper {
             }
 
             impl ToBytes for $ty {
-                fn to_bytes(&self) -> Result<Vec<u8>, casper_types::bytesrepr::Error> {
+                fn to_bytes(&self) -> Result<alloc::vec::Vec<u8>, casper_types::bytesrepr::Error> {
                     self.inner.to_bytes()
                 }
 
@@ -309,9 +309,9 @@ macro_rules! impl_casper_type_numeric_wrapper {
                 }
             }
 
-            impl std::fmt::Display for $ty {
-                fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                    std::fmt::Display::fmt(&self.inner, f)
+            impl core::fmt::Display for $ty {
+                fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                    core::fmt::Display::fmt(&self.inner, f)
                 }
             }
 

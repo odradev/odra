@@ -4,10 +4,14 @@ Changelog for `odra`.
 
 ## [0.4.0] - XXXX-XX-XX
 ### Added
+- `odra-casper-livenet` has new resource: `proxy_caller.wasm`.
+- `odra-casper-shared`, `odra-casper-types` and `odra-types` are now `no_std`.
 
 ### Fixed
 
 ### Changed
+- `test-env/getter-proxy` is now `proxy-caller`. 
+- `proxy_getter.wasm` is now `proxy_caller_with_result.wasm`.
 
 ### Removed
 

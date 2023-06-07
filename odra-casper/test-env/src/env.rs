@@ -23,7 +23,10 @@ use casper_types::{
     runtime_args, ApiError, Contract, ContractHash, ContractPackageHash, Key, Motes, PublicKey,
     RuntimeArgs, SecretKey, StoredValue, URef, U512
 };
-use odra_casper_shared::consts;
+use odra_casper_shared::consts::{
+    self, AMOUNT_ARG, ARGS_ARG, ATTACHED_VALUE_ARG, CONTRACT_PACKAGE_HASH_ARG, ENTRY_POINT_ARG,
+    RESULT_KEY
+};
 use odra_casper_types::{Address, BlockTime, CallArgs, OdraType};
 use odra_types::{
     event::{EventError, OdraEvent},
@@ -136,14 +139,14 @@ impl CasperTestEnv {
     ) -> T {
         self.error = None;
 
-        let session_code = include_bytes!("../getter_proxy.wasm").to_vec();
+        let session_code = include_bytes!("../resources/proxy_caller_with_return.wasm").to_vec();
         let args_bytes: Vec<u8> = args.to_bytes().unwrap();
         let args = runtime_args! {
-            "contract_package_hash" => hash,
-            "entry_point" => entry_point,
-            "args" => Bytes::from(args_bytes),
-            "attached_value" => self.attached_value,
-            "amount" => self.attached_value.unwrap_or_default(),
+            CONTRACT_PACKAGE_HASH_ARG => hash,
+            ENTRY_POINT_ARG => entry_point,
+            ARGS_ARG => Bytes::from(args_bytes),
+            ATTACHED_VALUE_ARG => self.attached_value,
+            AMOUNT_ARG => self.attached_value.unwrap_or_default(),
         };
 
         let deploy_item = DeployItemBuilder::new()
@@ -377,7 +380,7 @@ impl CasperTestEnv {
     fn get_active_account_result<T: OdraType>(&self) -> T {
         let active_account = self.active_account_hash();
         let bytes: casper_types::bytesrepr::Bytes = self
-            .get_account_value(active_account, "result")
+            .get_account_value(active_account, RESULT_KEY)
             .unwrap_or_default();
         T::from_bytes(bytes.inner_bytes()).unwrap().0
     }

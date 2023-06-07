@@ -13,7 +13,7 @@ pub struct PartyStarted {
 #[odra::module]
 impl PartyContract {
     #[odra(init)]
-    pub fn init(&self) {
+    pub fn init(&mut self) {
         PartyStarted {
             caller: contract_env::caller(),
             block_time: contract_env::get_block_time()
