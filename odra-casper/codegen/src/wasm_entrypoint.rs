@@ -6,6 +6,8 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use syn::{self, punctuated::Punctuated, token::Comma, Path};
 
+use crate::contract_ident;
+
 use super::arg::CasperArgs;
 
 pub(crate) struct WasmEntrypoint<'a>(pub &'a Entrypoint, pub &'a Path);
@@ -45,27 +47,26 @@ impl ToTokens for WasmEntrypoint<'_> {
             _ => quote!()
         };
 
-        let non_reentrant_before = if self.0.ty.is_non_reentrant() {
-            quote!(odra::casper::utils::non_reentrant_before();)
-        } else {
-            quote!()
+        let non_reentrant_before = match self.0.ty.is_non_reentrant() {
+            true => quote!(odra::casper::utils::non_reentrant_before();),
+            false => quote!()
         };
 
-        let non_reentrant_after = if self.0.ty.is_non_reentrant() {
-            quote!(odra::casper::utils::non_reentrant_after();)
-        } else {
-            quote!()
+        let non_reentrant_after = match self.0.ty.is_non_reentrant() {
+            true => quote!(odra::casper::utils::non_reentrant_after();),
+            false => quote!()
         };
+        let contract_ident = contract_ident();
 
         let contract_call = match self.0.ret {
             Type::Unit => quote! {
                 #args
-                contract.#entrypoint_ident(#fn_args);
+                #contract_ident.#entrypoint_ident(#fn_args);
             },
             _ => quote! {
                 use odra::casper::casper_contract::unwrap_or_revert::UnwrapOrRevert;
                 #args
-                let result = contract.#entrypoint_ident(#fn_args);
+                let result = #contract_ident.#entrypoint_ident(#fn_args);
                 let result = odra::casper::casper_types::CLValue::from_t(result).unwrap_or_revert();
             }
         };
@@ -77,8 +78,8 @@ impl ToTokens for WasmEntrypoint<'_> {
 
         let contract_path = &self.1;
         let contract_instance = match self.0.is_mut {
-            true => quote!(let mut contract = #contract_path::instance("contract");),
-            false => quote!(let contract = #contract_path::instance("contract");)
+            true => quote!(let mut #contract_ident = #contract_path::instance("contract");),
+            false => quote!(let #contract_ident = #contract_path::instance("contract");)
         };
 
         tokens.extend(quote! {
@@ -133,11 +134,11 @@ mod tests {
                 #[no_mangle]
                 fn construct_me() {
                     odra::casper::utils::assert_no_attached_value();
-                    let contract = my_contract::MyContract::instance("contract");
+                    let _contract = my_contract::MyContract::instance("contract");
                     let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg(
                         stringify!(value)
                     );
-                    contract.construct_me(&value);
+                    _contract.construct_me(&value);
                 }
             )
         );
@@ -163,8 +164,8 @@ mod tests {
                 #[no_mangle]
                 fn pay_me() {
                     odra::casper::utils::handle_attached_value();
-                    let contract = a::b::c::Contract::instance("contract");
-                    contract.pay_me();
+                    let _contract = a::b::c::Contract::instance("contract");
+                    _contract.pay_me();
                     odra::casper::utils::clear_attached_value();
                 }
             )
@@ -191,8 +192,8 @@ mod tests {
                 #[no_mangle]
                 fn pay_me() {
                     odra::casper::utils::handle_attached_value();
-                    let mut contract = a::b::c::Contract::instance("contract");
-                    contract.pay_me();
+                    let mut _contract = a::b::c::Contract::instance("contract");
+                    _contract.pay_me();
                     odra::casper::utils::clear_attached_value();
                 }
             )
