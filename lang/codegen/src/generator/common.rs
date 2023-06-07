@@ -229,7 +229,7 @@ pub(crate) mod casper {
             .iter()
             .flat_map(|ident| {
                 quote! {
-                    // odra::types::validate_type(&self.#ident)?;
+                    odra::types::validate_type(&self.#ident)?;
                     vec.extend(&self.#ident.to_bytes()?);
                 }
             })
