@@ -1,3 +1,5 @@
+use alloc::string::String;
+
 pub struct NativeTokenMetadata {
     pub name: String,
     pub symbol: String,

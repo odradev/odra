@@ -1,0 +1,23 @@
+[package]
+name = "odra-casper-proxy-caller"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+casper-contract = { version = "2.0.0" }
+casper-types = { workspace = true }
+odra-casper-shared = { version = "0.4.0", path = "../shared" }
+
+[[bin]]
+name = "proxy_caller"
+path = "bin/proxy_caller.rs"
+bench = false
+doctest = false
+test = false
+
+[[bin]]
+name = "proxy_caller_with_return"
+path = "bin/proxy_caller_with_return.rs"
+bench = false
+doctest = false
+test = false

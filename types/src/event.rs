@@ -1,5 +1,7 @@
 //! Events interface and errors.
 
+use alloc::string::String;
+
 use crate::contract_def::Event as Schema;
 
 /// Event interface

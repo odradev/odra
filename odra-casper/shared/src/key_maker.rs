@@ -1,3 +1,5 @@
+use alloc::string::String;
+use alloc::vec::Vec;
 use odra_casper_types::casper_types::bytesrepr::Error;
 use odra_casper_types::casper_types::bytesrepr::ToBytes;
 

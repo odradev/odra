@@ -1,5 +1,7 @@
 //! Encapsulates a set of structures that abstract out a smart contract layout.
 
+use alloc::{string::String, vec::Vec};
+
 use crate::Type;
 
 /// Contract's entrypoint.

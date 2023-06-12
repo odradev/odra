@@ -1,5 +1,9 @@
-use std::ops::{Deref, DerefMut};
+use core::ops::{Deref, DerefMut};
 
+use alloc::{
+    string::{String, ToString},
+    vec::Vec
+};
 use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
     CLType, CLTyped

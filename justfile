@@ -26,9 +26,14 @@ prepare-test-env: install-cargo-odra
     rustup target add wasm32-unknown-unknown
     sudo apt install wabt
 
-build-getter-proxy:
-    cargo build -p odra-casper-getter-proxy --release --target wasm32-unknown-unknown
-    cp target/wasm32-unknown-unknown/release/getter_proxy.wasm odra-casper/test-env/getter_proxy.wasm
+build-proxy-callers:
+    cargo build -p odra-casper-proxy-caller --release --target wasm32-unknown-unknown
+    wasm-strip target/wasm32-unknown-unknown/release/proxy_caller.wasm
+    wasm-strip target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm
+    cp target/wasm32-unknown-unknown/release/proxy_caller.wasm \
+        odra-casper/livenet/resources/proxy_caller.wasm
+    cp target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm \
+        odra-casper/test-env/resources/proxy_caller_with_return.wasm
 
 test-odra:
     cargo test
@@ -58,6 +63,6 @@ clean:
     cargo clean
     cd examples && cargo odra clean
     cd modules && cargo odra clean
-    rm Cargo.lock
-    cd examples && rm Cargo.lock
-    cd modules && rm Cargo.lock
+    rm -f Cargo.lock
+    cd examples && rm -f Cargo.lock
+    cd modules && rm -f Cargo.lock

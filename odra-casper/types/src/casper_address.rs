@@ -1,7 +1,11 @@
 //! Better address representation for Casper.
 
-use std::str::FromStr;
+use core::str::FromStr;
 
+use alloc::{
+    string::{String, ToString},
+    vec::Vec
+};
 use casper_types::{
     account::AccountHash,
     bytesrepr::{self, FromBytes, ToBytes},

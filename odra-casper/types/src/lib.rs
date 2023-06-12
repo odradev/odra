@@ -1,7 +1,12 @@
+#![no_std]
+
+extern crate alloc;
+
 mod args;
 mod casper_address;
 mod ty;
 mod uints;
+use alloc::vec::Vec;
 pub use args::CallArgs;
 pub use casper_types;
 pub use casper_types::bytesrepr::Bytes;

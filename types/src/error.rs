@@ -1,3 +1,7 @@
+use core::any::Any;
+
+use alloc::{boxed::Box, string::String};
+
 use crate::arithmetic::ArithmeticsError;
 
 const MAX_USER_ERROR: u16 = 32767;
@@ -44,8 +48,8 @@ impl From<ArithmeticsError> for OdraError {
     }
 }
 
-impl From<Box<dyn std::any::Any + Send>> for OdraError {
-    fn from(_: Box<dyn std::any::Any + Send>) -> Self {
+impl From<Box<dyn Any + Send>> for OdraError {
+    fn from(_: Box<dyn Any + Send>) -> Self {
         OdraError::VmError(VmError::Panic)
     }
 }
