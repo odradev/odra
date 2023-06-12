@@ -93,12 +93,66 @@ where
     args.into_iter()
         .map(|arg| {
             let pat = &*arg.pat;
-            quote!(args
-                .get(stringify!(#pat))
-                .cloned()
-                .unwrap()
-                .into_t()
-                .unwrap())
+            match &*arg.ty {
+                syn::Type::Reference(ty) => match &*ty.elem {
+                    syn::Type::Array(inner_ty) => {
+                        let inner_ty = &inner_ty.elem;
+                        quote! {
+                            &args.get(stringify!(#pat))
+                                .cloned()
+                                .unwrap()
+                                .into_t::<Vec<#inner_ty>>()
+                                .unwrap()
+                                .as_slice()
+                        }
+                    }
+                    syn::Type::Slice(inner_ty) => {
+                        let inner_ty = &inner_ty.elem;
+                        quote! {
+                            &args.get(stringify!(#pat))
+                                .cloned()
+                                .unwrap()
+                                .into_t::<Vec<#inner_ty>>()
+                                .unwrap()
+                                .as_slice()
+                        }
+                    }
+                    ty => quote! {
+                        &args.get(stringify!(#pat))
+                            .cloned()
+                            .unwrap()
+                            .into_t::<#ty>()
+                            .unwrap()
+                    }
+                },
+                syn::Type::Array(inner_ty) => {
+                    let inner_ty = &inner_ty.elem;
+                    quote! {
+                        args.get(stringify!(#pat))
+                            .cloned()
+                            .unwrap()
+                            .into_t::<Vec<#inner_ty>>()
+                            .unwrap()
+                    }
+                }
+                syn::Type::Slice(inner_ty) => {
+                    let inner_ty = &inner_ty.elem;
+                    quote! {
+                        args.get(stringify!(#pat))
+                            .cloned()
+                            .unwrap()
+                            .into_t::<Vec<#inner_ty>>()
+                            .unwrap()
+                    }
+                }
+                ty => quote! {
+                    args.get(stringify!(#pat))
+                        .cloned()
+                        .unwrap()
+                        .into_t::<#ty>()
+                        .unwrap()
+                }
+            }
         })
         .collect::<Punctuated<TokenStream, Comma>>()
 }
