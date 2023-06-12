@@ -123,6 +123,12 @@ pub fn total_gas_used(address: Address) -> Balance {
     Balance::zero()
 }
 
+/// Returns the report of entrypoints called, contract deployed and gas used.
+/// Currently MockVM doesn't charge gas.
+pub fn gas_report() -> Vec<(String, Balance)> {
+    Vec::new()
+}
+
 fn extract_event_name(mut bytes: &[u8]) -> Result<String, EventError> {
     let name = BorshDeserialize::deserialize(&mut bytes).map_err(|_| EventError::Formatting)?;
     Ok(name)

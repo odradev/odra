@@ -7,7 +7,7 @@ use self::{
     wasm_entrypoint::WasmEntrypoint
 };
 use odra_types::contract_def::{Entrypoint, EntrypointType, Event};
-use proc_macro2::TokenStream as TokenStream2;
+use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote, ToTokens};
 use syn::{punctuated::Punctuated, token::Comma, Path, PathSegment, Token};
 
@@ -19,6 +19,10 @@ mod ty;
 mod wasm_entrypoint;
 
 pub use schema::gen_schema;
+
+pub fn contract_ident() -> proc_macro2::Ident {
+    proc_macro2::Ident::new("_contract", Span::call_site())
+}
 
 /// Given the ContractDef from Odra, generate Casper contract.
 pub fn gen_contract(
@@ -248,7 +252,7 @@ mod tests {
                                         odra::casper::casper_types::ApiError::User(code)
                                     })
                                     .unwrap_or_revert();
-                                let mut contract_ref = my_contract::MyContractRef::at(&odra_address);
+                                let contract_ref = my_contract::MyContractRef::at(&odra_address);
                                 let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg(
                                     stringify!(value)
                                 );
@@ -270,17 +274,17 @@ mod tests {
                 #[no_mangle]
                 fn construct_me() {
                     odra::casper::utils::assert_no_attached_value();
-                    let contract = my_contract::MyContract::instance("contract");
+                    let _contract = my_contract::MyContract::instance("contract");
                     let value =
                         odra::casper::casper_contract::contract_api::runtime::get_named_arg(stringify!(value));
-                    contract.construct_me(&value);
+                        _contract.construct_me(&value);
                 }
                 #[no_mangle]
                 fn call_me() {
                     odra::casper::utils::assert_no_attached_value();
-                    let contract = my_contract::MyContract::instance("contract");
+                    let _contract = my_contract::MyContract::instance("contract");
                     use odra::casper::casper_contract::unwrap_or_revert::UnwrapOrRevert;
-                    let result = contract.call_me();
+                    let result = _contract.call_me();
                     let result = odra::casper::casper_types::CLValue::from_t(result).unwrap_or_revert();
                     odra::casper::casper_contract::contract_api::runtime::ret(result);
                 }
@@ -292,7 +296,7 @@ mod tests {
 #[macro_export]
 macro_rules! gen_contract {
     ($contract:path, $name:literal) => {
-        fn main() {
+        pub fn main() {
             let ident = <$contract as odra::types::contract_def::HasIdent>::ident();
             let entrypoints =
                 <$contract as odra::types::contract_def::HasEntrypoints>::entrypoints();

@@ -10,7 +10,7 @@ pub struct WasmConstructor<'a>(pub Vec<&'a Entrypoint>, pub &'a Path);
 
 impl ToTokens for WasmConstructor<'_> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let data: Vec<(Ident, CasperArgs, FnArgs)> = self
+        let data: Vec<(Ident, CasperArgs, FnArgs, bool)> = self
             .0
             .iter()
             .map(|ep| {
@@ -30,14 +30,18 @@ impl ToTokens for WasmConstructor<'_> {
                     })
                     .for_each(|stream: TokenStream| fn_args.push(stream));
 
-                (entrypoint_ident, casper_args, fn_args)
+                (entrypoint_ident, casper_args, fn_args, ep.is_mut)
             })
             .collect();
 
         let ref_ident = &self.1;
         let constructor_matching: proc_macro2::TokenStream = data
             .iter()
-            .flat_map(|(entrypoint_ident, casper_args, fn_args)| {
+            .flat_map(|(entrypoint_ident, casper_args, fn_args, is_mut)| {
+                let contract_ref = match is_mut {
+                    true => quote!(let mut contract_ref = #ref_ident::at(&odra_address);),
+                    false => quote!(let contract_ref = #ref_ident::at(&odra_address);)
+                };
                 quote! {
                     stringify!(#entrypoint_ident) => {
                         let odra_address = odra::types::Address::try_from(contract_package_hash)
@@ -46,7 +50,7 @@ impl ToTokens for WasmConstructor<'_> {
                                 odra::casper::casper_types::ApiError::User(code)
                             })
                             .unwrap_or_revert();
-                        let mut contract_ref = #ref_ident::at(&odra_address);
+                        #contract_ref
                         #casper_args
                         contract_ref.#entrypoint_ident( #fn_args );
                     },
@@ -144,7 +148,7 @@ mod tests {
                                     odra::casper::casper_types::ApiError::User(code)
                                 })
                                 .unwrap_or_revert();
-                            let mut contract_ref = my_contract::MyContract::at(&odra_address);
+                            let contract_ref = my_contract::MyContract::at(&odra_address);
                             let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg (stringify!(value));
                             contract_ref.construct_me(value);
                         },
