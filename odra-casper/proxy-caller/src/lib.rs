@@ -32,32 +32,32 @@ pub struct ProxyCall {
     pub attached_value: Option<U512>
 }
 
-/// Load proxy call arguments from the runtime.
-pub fn load_args() -> ProxyCall {
-    let contract_package_hash = get_named_arg(CONTRACT_PACKAGE_HASH_ARG);
-    let entry_point_name = get_named_arg(ENTRY_POINT_ARG);
-    let runtime_args: Bytes = get_named_arg(ARGS_ARG);
-    let (runtime_args, bytes) = RuntimeArgs::from_bytes(&runtime_args).unwrap_or_revert();
-    if !bytes.is_empty() {
-        revert(ApiError::Deserialize);
-    };
-    let attached_value: Option<U512> = get_named_arg(ATTACHED_VALUE_ARG);
-    ProxyCall {
-        contract_package_hash,
-        entry_point_name,
-        runtime_args,
-        attached_value
-    }
-}
+impl ProxyCall {
+    /// Load proxy call arguments from the runtime.
+    pub fn load_from_args() -> ProxyCall {
+        let contract_package_hash = get_named_arg(CONTRACT_PACKAGE_HASH_ARG);
+        let entry_point_name = get_named_arg(ENTRY_POINT_ARG);
+        let runtime_args: Bytes = get_named_arg(ARGS_ARG);
+        let (mut runtime_args, bytes) = RuntimeArgs::from_bytes(&runtime_args).unwrap_or_revert();
+        if !bytes.is_empty() {
+            revert(ApiError::Deserialize);
+        };
+        let attached_value: Option<U512> = get_named_arg(ATTACHED_VALUE_ARG);
 
-pub fn attach_cspr(proxy_call: &mut ProxyCall) {
-    if let Some(attached_value) = proxy_call.attached_value {
-        let cargo_purse = get_cargo_purse();
-        top_up_cargo_purse(cargo_purse, attached_value);
-        proxy_call
-            .runtime_args
-            .insert(CARGO_PURSE_ARG, cargo_purse)
-            .unwrap_or_revert();
+        if let Some(attached_value) = attached_value {
+            let cargo_purse = get_cargo_purse();
+            top_up_cargo_purse(cargo_purse, attached_value);
+            runtime_args
+                .insert(CARGO_PURSE_ARG, cargo_purse)
+                .unwrap_or_revert();
+        }
+
+        ProxyCall {
+            contract_package_hash,
+            entry_point_name,
+            runtime_args,
+            attached_value
+        }
     }
 }
 

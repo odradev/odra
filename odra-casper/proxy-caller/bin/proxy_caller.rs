@@ -4,12 +4,11 @@
 extern crate alloc;
 
 use casper_contract::contract_api::runtime::call_versioned_contract;
-use odra_casper_proxy_caller::{attach_cspr, load_args, ProxyCall};
+use odra_casper_proxy_caller::ProxyCall;
 
 #[no_mangle]
 fn call() {
-    let mut proxy_call: ProxyCall = load_args();
-    attach_cspr(&mut proxy_call);
+    let proxy_call = ProxyCall::load_from_args();
     let _: () = call_versioned_contract(
         proxy_call.contract_package_hash,
         None,
