@@ -2,8 +2,12 @@
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    match args.get(1).map(String::as_str) {
-        #contract_matcher
-        _ => println!("Please provide a valid module name!"),
-    }
+    args.iter()
+        .skip(1)
+        .for_each(|arg| {
+            match arg.as_str() {
+                #contract_matcher
+                _ => println!("Please provide a valid module name!")
+            }
+        });
 }
