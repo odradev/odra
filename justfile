@@ -18,6 +18,7 @@ check-lint: clippy
     cargo fmt -- --check
     cd examples && cargo fmt -- --check
     cd modules && cargo fmt -- --check
+    cd examples && cargo check --no-default-features -F casper-livenet
 
 install-cargo-odra:
     cargo install --git {{CARGO_ODRA_GIT}} --branch {{CARGO_ODRA_BRANCH}} --locked
