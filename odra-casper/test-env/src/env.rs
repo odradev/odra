@@ -85,11 +85,6 @@ impl CasperTestEnv {
             DEFAULT_CHAINSPEC_REGISTRY.clone()
         );
 
-        // Uncomment for testing.
-        // let chainspec_path =
-        //     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/chainspec.toml");
-        // let mut builder = InMemoryWasmTestBuilder::new_with_chainspec(chainspec_path, None);
-
         let mut builder = InMemoryWasmTestBuilder::default();
         builder.run_genesis(&run_genesis_request).commit();
 

@@ -61,3 +61,37 @@ pub enum Type {
     /// A slice of a `Type`.
     Slice(Box<Type>)
 }
+
+impl Type {
+    fn has_any(ty: &Type) -> bool {
+        match ty {
+            // Positive if depth is not, which means this is the main structure of the event.
+            Type::Any => true,
+
+            // Negative.
+            Type::Bool
+            | Type::I32
+            | Type::I64
+            | Type::U8
+            | Type::U32
+            | Type::U64
+            | Type::U128
+            | Type::U256
+            | Type::U512
+            | Type::Unit
+            | Type::String
+            | Type::ByteArray(_) 
+            | Type::Address => false,
+
+            // Need recursive check.
+            Type::Option(ty) => Type::has_any(ty),
+            Type::Vec(ty) => Type::has_any(ty),
+            Type::Slice(ty) => Type::has_any(ty),
+            Type::Result { ok, err } => Type::has_any(ok) || Type::has_any(err),
+            Type::Map { key, value } => Type::has_any(key) || Type::has_any(value),
+            Type::Tuple1([ty]) => Type::has_any(ty),
+            Type::Tuple2([ty1, ty2]) => Type::has_any(ty1) || Type::has_any(ty2),
+            Type::Tuple3([ty1, ty2, ty3]) => Type::has_any(ty1) || Type::has_any(ty2) || Type::has_any(ty3),
+        }
+    }
+}
