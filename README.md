@@ -93,7 +93,7 @@ $ just test
 
 ## Links
 
-* [Odra](https://github.com/odradev/odra)
+* [Odra](https://odra.dev/docs)
 * [Documentation](https://docs.rs/odra/latest/odra/)
 * [Cargo Odra](https://github.com/odradev/cargo-odra)
 * [Odra Template](https://github.com/odradev/odra-template)

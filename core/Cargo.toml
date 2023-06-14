@@ -4,6 +4,7 @@ version = "0.4.0"
 edition = "2021"
 authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
 license = "MIT"
+homepage = "https://odra.dev/docs"
 repository = "https://github.com/odradev/odra"
 description = "High-level smart contract framework for Rust."
 keywords = ["wasm", "webassembly", "blockchain"]
