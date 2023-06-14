@@ -5,7 +5,7 @@ use std::panic::AssertUnwindSafe;
 
 use crate::env::ENV;
 use casper_types::account::{AccountHash, ACCOUNT_HASH_LENGTH};
-use odra_casper_shared::native_token::NativeTokenMetadata;
+use odra_casper_shared::{native_token::NativeTokenMetadata, consts};
 use odra_casper_types::{Address, Balance, CallArgs, OdraType};
 use odra_types::{
     event::{EventError, OdraEvent},
@@ -21,11 +21,16 @@ pub fn backend_name() -> String {
 pub fn register_contract(name: &str, args: &CallArgs) -> Address {
     ENV.with(|env| {
         let wasm_name = format!("{}.wasm", name);
-        env.borrow_mut().deploy_contract(&wasm_name, args);
-        let contract_package_hash = format!("{}_package_hash", name);
+        let package_hash_key_name = format!("{}_package_hash", name);
+        let mut args = args.clone();
+        args.insert(consts::PACKAGE_HASH_KEY_NAME_ARG, package_hash_key_name.clone());
+        args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, true);
+        args.insert(consts::IS_UPGRADABLE_ARG, false);
+
+        env.borrow_mut().deploy_contract(&wasm_name, &args);
         let contract_package_hash = env
             .borrow()
-            .contract_package_hash_from_name(&contract_package_hash);
+            .contract_package_hash_from_name(&package_hash_key_name);
         contract_package_hash.try_into().unwrap()
     })
 }

@@ -28,52 +28,6 @@ lazy_static! {
     static ref KEYS: Mutex<BTreeMap<Vec<u8>, String>> = Mutex::new(BTreeMap::new());
 }
 
-const STATE_KEY: &str = "state";
-
-pub fn add_contract_version(
-    contract_package_hash: ContractPackageHash,
-    entry_points: EntryPoints,
-    events: Vec<(String, Schema)>
-) {
-    let mut schemas = casper_event_standard::Schemas::new();
-    events.iter().for_each(|(name, schema)| {
-        schemas.0.insert(name.to_owned(), schema.clone());
-    });
-
-    let mut named_keys = casper_types::contracts::NamedKeys::new();
-    named_keys.insert(
-        String::from(STATE_KEY),
-        Key::URef(storage::new_dictionary(STATE_KEY).unwrap_or_revert())
-    );
-    named_keys.insert(
-        String::from(casper_event_standard::EVENTS_DICT),
-        Key::URef(storage::new_dictionary(casper_event_standard::EVENTS_DICT).unwrap_or_revert())
-    );
-    named_keys.insert(
-        String::from(casper_event_standard::EVENTS_LENGTH),
-        Key::URef(storage::new_uref(0u32))
-    );
-    named_keys.insert(
-        String::from(casper_event_standard::CES_VERSION_KEY),
-        Key::URef(storage::new_uref(casper_event_standard::CES_VERSION))
-    );
-    named_keys.insert(
-        String::from(casper_event_standard::EVENTS_SCHEMA),
-        Key::URef(storage::new_uref(schemas))
-    );
-
-    casper_contract::contract_api::storage::add_contract_version(
-        contract_package_hash,
-        entry_points,
-        named_keys
-    );
-    runtime::remove_key(STATE_KEY);
-    runtime::remove_key(casper_event_standard::EVENTS_DICT);
-    runtime::remove_key(casper_event_standard::EVENTS_LENGTH);
-    runtime::remove_key(casper_event_standard::EVENTS_SCHEMA);
-    runtime::remove_key(casper_event_standard::CES_VERSION_KEY);
-}
-
 /// Save value to the storage.
 #[inline(always)]
 pub fn set_key<T: OdraType>(name: &str, value: T) {
@@ -254,8 +208,8 @@ fn is_purse_empty(purse: URef) -> bool {
 }
 
 fn get_state_uref() -> URef {
-    get_seed(STATE_KEY, || {
-        let key = runtime::get_key(STATE_KEY).unwrap_or_revert();
+    get_seed(consts::STATE_KEY, || {
+        let key = runtime::get_key(consts::STATE_KEY).unwrap_or_revert();
         let state_uref: URef = *key.as_uref().unwrap_or_revert();
         state_uref
     })

@@ -1,3 +1,4 @@
+use odra_casper_shared::consts;
 use odra_types::contract_def::{Argument, Entrypoint, EntrypointType};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens, TokenStreamExt};
@@ -19,9 +20,10 @@ impl ContractEntrypoints<'_> {
         let entrypoint_ident = format_ident!("{}", entrypoint.ident);
         let params = EntrypointParams(&entrypoint.args);
         let ret = CasperType(&entrypoint.ret);
+        let constructor_group_name = consts::CONSTRUCTOR_GROUP_NAME;
         let access = match &entrypoint.ty {
             EntrypointType::Constructor { .. } => quote! {
-                odra::casper::casper_types::EntryPointAccess::Groups(vec![odra::casper::casper_types::Group::new("constructor")])
+                odra::casper::casper_types::EntryPointAccess::Groups(vec![odra::casper::casper_types::Group::new(#constructor_group_name)])
             },
             EntrypointType::Public { .. } => {
                 quote! { odra::casper::casper_types::EntryPointAccess::Public }

@@ -19,6 +19,8 @@ const CODE_SUBTRACTION_OVERFLOW: u16 = 8;
 const CODE_NON_PAYABLE: u16 = 9;
 const CODE_TRANSFER_TO_CONTRACT: u16 = 10;
 const CODE_REENTRANT_CALL: u16 = 11;
+const CODE_CONTRACT_ALREADY_INSTALLED: u16 = 12;
+const CODE_UNKNOWN_CONSTRUCTOR: u16 = 13;
 
 /// General error type in Odra framework
 #[derive(Clone, Debug, PartialEq)]
@@ -104,6 +106,17 @@ impl ExecutionError {
 
     pub fn reentrant_call() -> Self {
         Self::internal(CODE_REENTRANT_CALL, "Reentrant call.")
+    }
+
+    pub fn contract_already_installed() -> Self {
+        Self::internal(
+            CODE_CONTRACT_ALREADY_INSTALLED,
+            "Contract already installed."
+        )
+    }
+
+    pub fn unknown_constructor() -> Self {
+        Self::internal(CODE_UNKNOWN_CONSTRUCTOR, "Unknown constructor.")
     }
 
     fn internal(code: u16, msg: &str) -> Self {

@@ -20,7 +20,7 @@ pub type Balance = U512;
 pub type BlockTime = u64;
 use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
-    CLTyped
+    CLTyped, ApiError
 };
 
 /// A type that can be written to the storage and read from the storage.
@@ -50,4 +50,15 @@ pub fn validate_type<T: casper_types::CLTyped>(
     t: &T
 ) -> Result<(), casper_types::bytesrepr::Error> {
     casper_event_standard::validate_type(t)
+}
+
+pub enum CasperError {
+    ContractPackageHashAlreadyExists = 1
+}
+
+// TODO: what should be the range?
+impl From<CasperError> for ApiError {
+    fn from(error: CasperError) -> Self {
+        ApiError::User(error as u16)
+    }
 }

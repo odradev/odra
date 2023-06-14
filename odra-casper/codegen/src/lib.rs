@@ -1,6 +1,6 @@
 //! Set of functions to generate Casper contract.
 
-use crate::ty::CasperType;
+use crate::{ty::CasperType, call_method::CallMethod};
 
 use self::{
     constructor::WasmConstructor, entrypoints_def::ContractEntrypoints,
@@ -17,6 +17,7 @@ mod entrypoints_def;
 mod schema;
 mod ty;
 mod wasm_entrypoint;
+mod call_method;
 
 pub use schema::gen_schema;
 
@@ -60,64 +61,67 @@ fn generate_call(
     events: &[Event],
     ref_fqn: &str
 ) -> TokenStream2 {
-    let entrypoints = ContractEntrypoints(contract_entrypoints);
-    let contract_def_name_snake = odra_utils::camel_to_snake(contract_ident);
-    let package_hash = format!("{}_package_hash", contract_def_name_snake);
+    CallMethod::new(events.to_vec(), contract_entrypoints.to_vec(), fqn_to_path(ref_fqn)).to_token_stream()
 
-    let constructors = contract_entrypoints
-        .iter()
-        .filter(|ep| matches!(ep.ty, EntrypointType::Constructor { .. }))
-        .collect::<Vec<_>>();
+    // let entrypoints = ContractEntrypoints(contract_entrypoints);
+    // let contract_def_name_snake = odra_utils::camel_to_snake(contract_ident);
+    // let package_hash = format!("{}_package_hash", contract_def_name_snake);
 
-    let ref_path = &fqn_to_path(ref_fqn);
-    let call_constructor = WasmConstructor(constructors, ref_path);
+    // let constructors = contract_entrypoints
+    //     .iter()
+    //     .filter(|ep| matches!(ep.ty, EntrypointType::Constructor { .. }))
+    //     .collect::<Vec<_>>();
 
-    let events_schema = events
-        .iter()
-        .map(|ev| {
-            let ident = &ev.ident;
+    // let ref_path = &fqn_to_path(ref_fqn);
+    // let call_constructor = WasmConstructor(constructors, ref_path);
 
-            let fields = ev
-                .args
-                .iter()
-                .map(|arg| {
-                    let field = &arg.ident;
-                    let ty = CasperType(&arg.ty);
-                    quote!((#field, #ty))
-                })
-                .collect::<Punctuated<TokenStream2, Comma>>();
+    // let events_schema = events
+    //     .iter()
+    //     .map(|ev| {
+    //         let ident = &ev.ident;
 
-            quote! {
-                odra::casper::utils::build_event(
-                    #ident,
-                    vec![#fields]
-                )
-            }
-        })
-        .collect::<Punctuated<TokenStream2, Comma>>();
+    //         let fields = ev
+    //             .args
+    //             .iter()
+    //             .map(|arg| {
+    //                 let field = &arg.ident;
+    //                 let ty = CasperType(&arg.ty);
+    //                 quote!((#field, #ty))
+    //             })
+    //             .collect::<Punctuated<TokenStream2, Comma>>();
 
-    quote! {
-        #[no_mangle]
-        fn call() {
-            let (contract_package_hash, _) = odra::casper::casper_contract::contract_api::storage::create_contract_package_at_hash();
-            odra::casper::casper_contract::contract_api::runtime::put_key(#package_hash, contract_package_hash.into());
+    //         quote! {
+    //             odra::casper::utils::build_event(
+    //                 #ident,
+    //                 vec![#fields]
+    //             )
+    //         }
+    //     })
+    //     .collect::<Punctuated<TokenStream2, Comma>>();
 
-            #entrypoints
+    // quote! {
+    //     #[no_mangle]
+    //     fn call() {
+    //         let (contract_package_hash, _) = odra::casper::casper_contract::contract_api::storage::create_contract_package_at_hash();
+    //         odra::casper::casper_contract::contract_api::runtime::put_key(#package_hash, contract_package_hash.into());
 
-            let schemas = vec![
-                #events_schema
-            ];
-            odra::casper::utils::add_contract_version(
-                contract_package_hash,
-                entry_points,
-                schemas
-            );
+    //         #entrypoints
 
-            #call_constructor
-        }
-    }
+    //         let schemas = vec![
+    //             #events_schema
+    //         ];
+    //         odra::casper::utils::add_contract_version(
+    //             contract_package_hash,
+    //             entry_points,
+    //             schemas
+    //         );
+
+    //         #call_constructor
+    //     }
+    // }
 }
 
+// TODO: Simplify.
 fn fqn_to_path(fqn: &str) -> Path {
     let paths = fqn.split("::").collect::<Vec<_>>();
 
