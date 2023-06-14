@@ -11,7 +11,7 @@ use std::{
 use casper_engine_test_support::{
     DeployItemBuilder, ExecuteRequestBuilder, InMemoryWasmTestBuilder, ARG_AMOUNT,
     DEFAULT_ACCOUNT_INITIAL_BALANCE, DEFAULT_GENESIS_CONFIG, DEFAULT_GENESIS_CONFIG_HASH,
-    DEFAULT_PAYMENT
+    DEFAULT_PAYMENT, DEFAULT_CHAINSPEC_REGISTRY
 };
 use casper_execution_engine::core::engine_state::{
     self, run_genesis_request::RunGenesisRequest, GenesisAccount
@@ -81,13 +81,16 @@ impl CasperTestEnv {
         let run_genesis_request = RunGenesisRequest::new(
             *DEFAULT_GENESIS_CONFIG_HASH,
             genesis_config.protocol_version(),
-            genesis_config.take_ee_config()
+            genesis_config.take_ee_config(),
+            DEFAULT_CHAINSPEC_REGISTRY.clone()
         );
 
-        let chainspec_path =
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/chainspec.toml");
+        // Uncomment for testing.
+        // let chainspec_path =
+        //     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/chainspec.toml");
+        // let mut builder = InMemoryWasmTestBuilder::new_with_chainspec(chainspec_path, None);
 
-        let mut builder = InMemoryWasmTestBuilder::new_with_chainspec(chainspec_path, None);
+        let mut builder = InMemoryWasmTestBuilder::default();
         builder.run_genesis(&run_genesis_request).commit();
 
         Self {
