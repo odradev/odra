@@ -80,7 +80,7 @@ impl Type {
             | Type::U512
             | Type::Unit
             | Type::String
-            | Type::ByteArray(_) 
+            | Type::ByteArray(_)
             | Type::Address => false,
 
             // Need recursive check.
@@ -91,7 +91,9 @@ impl Type {
             Type::Map { key, value } => Type::has_any(key) || Type::has_any(value),
             Type::Tuple1([ty]) => Type::has_any(ty),
             Type::Tuple2([ty1, ty2]) => Type::has_any(ty1) || Type::has_any(ty2),
-            Type::Tuple3([ty1, ty2, ty3]) => Type::has_any(ty1) || Type::has_any(ty2) || Type::has_any(ty3),
+            Type::Tuple3([ty1, ty2, ty3]) => {
+                Type::has_any(ty1) || Type::has_any(ty2) || Type::has_any(ty3)
+            }
         }
     }
 }

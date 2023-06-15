@@ -8,15 +8,13 @@ use casper_execution_engine::core::engine_state::ExecutableDeployItem;
 use casper_hashing::Digest;
 use casper_node::{
     rpcs::{
-        account::{PutDeploy, PutDeployResult},
-        chain::{GetStateRootHash, GetStateRootHashResult},
-        info::{GetDeploy, GetDeployParams, GetDeployResult},
+        account::PutDeployResult,
+        chain::GetStateRootHashResult,
+        info::{GetDeployParams, GetDeployResult},
         state::{
-            DictionaryIdentifier, GetDictionaryItem, GetDictionaryItemParams,
-            GetDictionaryItemResult, GlobalStateIdentifier, QueryGlobalState,
-            QueryGlobalStateParams, QueryGlobalStateResult
-        },
-        RpcWithOptionalParams, RpcWithParams
+            DictionaryIdentifier, GetDictionaryItemParams, GetDictionaryItemResult,
+            GlobalStateIdentifier, QueryGlobalStateParams, QueryGlobalStateResult
+        }
     },
     types::{Deploy, DeployHash}
 };
@@ -89,7 +87,7 @@ impl CasperClient {
         let request = json!(
             {
                 "jsonrpc": "2.0",
-                "method": GetStateRootHash::METHOD,
+                "method": "chain_get_state_root_hash",
                 "id": 1,
             }
         );
@@ -107,7 +105,7 @@ impl CasperClient {
         let request = json!(
             {
                 "jsonrpc": "2.0",
-                "method": GetDeploy::METHOD,
+                "method": "info_get_deploy",
                 "params": params,
                 "id": 1,
             }
@@ -223,7 +221,7 @@ impl CasperClient {
         let request = json!(
             {
                 "jsonrpc": "2.0",
-                "method": PutDeploy::METHOD,
+                "method": "account_put_deploy",
                 "params": {
                     "deploy": deploy
                 },
@@ -245,7 +243,7 @@ impl CasperClient {
         let request = json!(
             {
                 "jsonrpc": "2.0",
-                "method": QueryGlobalState::METHOD,
+                "method": "query_global_state",
                 "params": params,
                 "id": 1,
             }
@@ -271,7 +269,7 @@ impl CasperClient {
         let request = json!(
             {
                 "jsonrpc": "2.0",
-                "method": GetDictionaryItem::METHOD,
+                "method": "state_get_dictionary_item",
                 "params": params,
                 "id": 1,
             }
@@ -455,7 +453,7 @@ mod tests {
                 .unwrap()
         );
         let result = CasperClient::new().get_deploy(hash);
-        assert_eq!(result.deploy.id(), &hash);
+        assert_eq!(result.deploy.hash(), &hash);
         CasperClient::new().wait_for_deploy_hash(hash);
     }
 

@@ -153,7 +153,7 @@ macro_rules! gen_contract {
                     panic!("Event {} can't have Type::Any struct in it.", &event.ident);
                 }
             }
-            
+
             let code = odra::casper::codegen::gen_contract(
                 &ident,
                 &entrypoints,
