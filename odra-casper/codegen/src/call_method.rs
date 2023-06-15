@@ -1,9 +1,9 @@
-use odra_types::contract_def::{Event, Entrypoint, EntrypointType};
+use odra_types::contract_def::{Entrypoint, EntrypointType, Event};
 use proc_macro2::TokenStream;
-use quote::{ToTokens, quote};
+use quote::{quote, ToTokens};
 use syn::{punctuated::Punctuated, token::Comma};
 
-use crate::{ty::CasperType, entrypoints_def::ContractEntrypoints, constructor::{WasmConstructor}};
+use crate::{constructor::WasmConstructor, entrypoints_def::ContractEntrypoints, ty::CasperType};
 
 pub struct CallMethod {
     event_schemas: Vec<Event>,
@@ -12,7 +12,11 @@ pub struct CallMethod {
 }
 
 impl CallMethod {
-    pub fn new(event_schemas: Vec<Event>, entry_points: Vec<Entrypoint>, ref_path: syn::Path) -> Self {
+    pub fn new(
+        event_schemas: Vec<Event>,
+        entry_points: Vec<Entrypoint>,
+        ref_path: syn::Path
+    ) -> Self {
         Self {
             event_schemas,
             entry_points,
@@ -48,7 +52,8 @@ impl CallMethod {
     }
 
     fn constructor_call(&self) -> Option<TokenStream> {
-        let constructors = self.entry_points
+        let constructors = self
+            .entry_points
             .iter()
             .filter(|ep| matches!(ep.ty, EntrypointType::Constructor { .. }))
             .collect::<Vec<_>>();
@@ -68,7 +73,6 @@ impl ToTokens for CallMethod {
         let constructor_call = self.constructor_call();
 
         tokens.extend(quote!{
-            
             #[no_mangle]
             fn call() {
                 let schemas = vec![
@@ -79,8 +83,7 @@ impl ToTokens for CallMethod {
 
                 #[allow(dead_code)]
                 let contract_package_hash = odra::casper::utils::install_contract(entry_points, schemas);
-                
-                // TODO: refactor
+
                 #constructor_call
             }
         });

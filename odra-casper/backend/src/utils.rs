@@ -1,11 +1,13 @@
 //! A set of utility functions encapsulating some common interactions with the current runtime.
 
 use casper_contract::{
-    contract_api::{runtime, system, storage},
+    contract_api::{runtime, storage, system},
     unwrap_or_revert::UnwrapOrRevert
 };
 use casper_event_standard::Schema;
-use casper_types::{CLType, ContractPackageHash, EntryPoints, URef, U512, contracts::NamedKeys, Key};
+use casper_types::{
+    contracts::NamedKeys, CLType, ContractPackageHash, EntryPoints, Key, URef, U512
+};
 use odra_casper_shared::consts;
 use odra_casper_types::Balance;
 use odra_types::ExecutionError;
@@ -90,7 +92,10 @@ pub fn build_event(name: &str, fields: Vec<(&str, CLType)>) -> (String, Schema) 
     (name.to_owned(), s)
 }
 
-pub fn install_contract(entry_points: EntryPoints, events: Vec<(String, Schema)>) -> ContractPackageHash {
+pub fn install_contract(
+    entry_points: EntryPoints,
+    events: Vec<(String, Schema)>
+) -> ContractPackageHash {
     // Read arguments
     let package_hash_key: String = runtime::get_named_arg(consts::PACKAGE_HASH_KEY_NAME_ARG);
     let allow_key_override: bool = runtime::get_named_arg(consts::ALLOW_KEY_OVERRIDE_ARG);
@@ -114,14 +119,27 @@ pub fn install_contract(entry_points: EntryPoints, events: Vec<(String, Schema)>
     // Create new contract.
     if is_upgradable {
         let access_uref_key = format!("{}_access_token", package_hash_key);
-        storage::new_contract(entry_points, Some(named_keys), 
-        Some(package_hash_key.clone()), Some(access_uref_key));
+        storage::new_contract(
+            entry_points,
+            Some(named_keys),
+            Some(package_hash_key.clone()),
+            Some(access_uref_key)
+        );
     } else {
-        storage::new_locked_contract(entry_points, Some(named_keys), Some(package_hash_key.clone()), None);
+        storage::new_locked_contract(
+            entry_points,
+            Some(named_keys),
+            Some(package_hash_key.clone()),
+            None
+        );
     }
 
     // Read contract package hash from the storage.
-    runtime::get_key(&package_hash_key).unwrap_or_revert().into_hash().unwrap_or_revert().into()
+    runtime::get_key(&package_hash_key)
+        .unwrap_or_revert()
+        .into_hash()
+        .unwrap_or_revert()
+        .into()
 }
 
 fn initial_named_keys(schemas: casper_event_standard::Schemas) -> NamedKeys {
@@ -168,14 +186,18 @@ pub fn create_constructor_group(contract_package_hash: ContractPackageHash) -> U
     .unwrap_or_revert()
 }
 
-pub fn revoke_access_to_constructor_group(contract_package_hash: ContractPackageHash, constructor_access: URef) {
+pub fn revoke_access_to_constructor_group(
+    contract_package_hash: ContractPackageHash,
+    constructor_access: URef
+) {
     let mut urefs = std::collections::BTreeSet::new();
     urefs.insert(constructor_access);
     storage::remove_contract_user_group_urefs(
         contract_package_hash,
         consts::CONSTRUCTOR_GROUP_NAME,
         urefs
-    ).unwrap_or_revert();
+    )
+    .unwrap_or_revert();
 }
 
 pub fn load_constructor_name_arg() -> String {

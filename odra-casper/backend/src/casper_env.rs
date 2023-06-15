@@ -1,8 +1,4 @@
-use casper_event_standard::Schema;
-use casper_types::{
-    bytesrepr::{FromBytes, ToBytes},
-    EntryPoints
-};
+use casper_types::bytesrepr::{FromBytes, ToBytes};
 use lazy_static::lazy_static;
 use odra_casper_types::{Address, OdraType};
 use odra_types::event::OdraEvent;
@@ -17,7 +13,7 @@ use casper_contract::{
 };
 
 use casper_types::{
-    system::CallStackElement, ApiError, CLTyped, ContractPackageHash, Key, RuntimeArgs, URef, U512
+    system::CallStackElement, ApiError, CLTyped, ContractPackageHash, RuntimeArgs, URef, U512
 };
 
 use odra_casper_shared::consts;

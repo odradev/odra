@@ -5,7 +5,7 @@ use std::panic::AssertUnwindSafe;
 
 use crate::env::ENV;
 use casper_types::account::{AccountHash, ACCOUNT_HASH_LENGTH};
-use odra_casper_shared::{native_token::NativeTokenMetadata, consts};
+use odra_casper_shared::{consts, native_token::NativeTokenMetadata};
 use odra_casper_types::{Address, Balance, CallArgs, OdraType};
 use odra_types::{
     event::{EventError, OdraEvent},
@@ -23,7 +23,10 @@ pub fn register_contract(name: &str, args: &CallArgs) -> Address {
         let wasm_name = format!("{}.wasm", name);
         let package_hash_key_name = format!("{}_package_hash", name);
         let mut args = args.clone();
-        args.insert(consts::PACKAGE_HASH_KEY_NAME_ARG, package_hash_key_name.clone());
+        args.insert(
+            consts::PACKAGE_HASH_KEY_NAME_ARG,
+            package_hash_key_name.clone()
+        );
         args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, true);
         args.insert(consts::IS_UPGRADABLE_ARG, false);
 

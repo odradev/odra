@@ -20,7 +20,7 @@ pub type Balance = U512;
 pub type BlockTime = u64;
 use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
-    CLTyped, ApiError
+    CLTyped
 };
 
 /// A type that can be written to the storage and read from the storage.
