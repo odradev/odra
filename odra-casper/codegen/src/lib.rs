@@ -144,6 +144,46 @@ fn assert_eq_tokens<A: ToTokens, B: ToTokens>(left: A, right: B) {
     pretty_assertions::assert_str_eq!(left, right);
 }
 
+#[macro_export]
+macro_rules! gen_contract {
+    ($contract:path, $name:literal) => {
+        pub fn main() {
+            let ident = <$contract as odra::types::contract_def::HasIdent>::ident();
+            let entrypoints =
+                <$contract as odra::types::contract_def::HasEntrypoints>::entrypoints();
+            let events = <$contract as odra::types::contract_def::HasEvents>::events();
+            for event in &events {
+                if event.has_any() {
+                    panic!("Event {} can't have Type::Any struct in it.", &event.ident);
+                }
+            }
+
+            let code = odra::casper::codegen::gen_contract(
+                &ident,
+                &entrypoints,
+                &events,
+                stringify!($contract)
+            );
+
+            let schema = odra::casper::codegen::gen_schema(&ident, &entrypoints, &events);
+
+            use std::io::prelude::*;
+            let mut source_file = std::fs::File::create(&format!("src/{}_wasm.rs", $name)).unwrap();
+            source_file
+                .write_all(&code.to_string().into_bytes())
+                .unwrap();
+
+            if !std::path::Path::new("../resources").exists() {
+                std::fs::create_dir("../resources").unwrap();
+            }
+
+            let mut schema_file =
+                std::fs::File::create(&format!("../resources/{}_schema.json", $name)).unwrap();
+            schema_file.write_all(&schema.into_bytes()).unwrap();
+        }
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use odra_types::contract_def::{Argument, Entrypoint, EntrypointType};
@@ -295,38 +335,4 @@ mod tests {
             }
         );
     }
-}
-
-#[macro_export]
-macro_rules! gen_contract {
-    ($contract:path, $name:literal) => {
-        pub fn main() {
-            let ident = <$contract as odra::types::contract_def::HasIdent>::ident();
-            let entrypoints =
-                <$contract as odra::types::contract_def::HasEntrypoints>::entrypoints();
-            let events = <$contract as odra::types::contract_def::HasEvents>::events();
-            let code = odra::casper::codegen::gen_contract(
-                &ident,
-                &entrypoints,
-                &events,
-                stringify!($contract)
-            );
-
-            let schema = odra::casper::codegen::gen_schema(&ident, &entrypoints, &events);
-
-            use std::io::prelude::*;
-            let mut source_file = std::fs::File::create(&format!("src/{}_wasm.rs", $name)).unwrap();
-            source_file
-                .write_all(&code.to_string().into_bytes())
-                .unwrap();
-
-            if !std::path::Path::new("../resources").exists() {
-                std::fs::create_dir("../resources").unwrap();
-            }
-
-            let mut schema_file =
-                std::fs::File::create(&format!("../resources/{}_schema.json", $name)).unwrap();
-            schema_file.write_all(&schema.into_bytes()).unwrap();
-        }
-    };
 }

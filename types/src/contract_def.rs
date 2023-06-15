@@ -50,6 +50,12 @@ pub struct Event {
     pub args: Vec<Argument>
 }
 
+impl Event {
+    pub fn has_any(&self) -> bool {
+        self.args.iter().any(|arg| Type::has_any(&arg.ty))
+    }
+}
+
 /// A trait that should be implemented by each smart contract to allow the backend
 /// to generate blockchain-specific code.
 pub trait HasEntrypoints {

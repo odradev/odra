@@ -44,21 +44,3 @@ pub trait OdraType: CLTyped + ToBytes + FromBytes {
 }
 
 impl<T: CLTyped + ToBytes + FromBytes> OdraType for T {}
-
-/// Make sure the type of a value is not [`CLType::Any`](casper_types::CLType::Any).
-pub fn validate_type<T: casper_types::CLTyped>(
-    t: &T
-) -> Result<(), casper_types::bytesrepr::Error> {
-    casper_event_standard::validate_type(t)
-}
-
-pub enum CasperError {
-    ContractPackageHashAlreadyExists = 1
-}
-
-// TODO: what should be the range?
-impl From<CasperError> for ApiError {
-    fn from(error: CasperError) -> Self {
-        ApiError::User(error as u16)
-    }
-}
