@@ -67,3 +67,11 @@ clean:
     rm -f Cargo.lock
     cd examples && rm -f Cargo.lock
     cd modules && rm -f Cargo.lock
+
+CASPER_NODE_DIR := "`find ~/.cargo/registry/src/ -type d -name \"github*\"`/casper-node-1.5.0-rc.1"
+fix-casper-node:
+    cargo fetch
+    cd {{CASPER_NODE_DIR}} && git init .
+    cd {{CASPER_NODE_DIR}} && git add .
+    cd {{CASPER_NODE_DIR}} && git commit -m "fix: add missing git repo"
+    
