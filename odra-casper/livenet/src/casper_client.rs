@@ -6,18 +6,6 @@ use blake2::{
 };
 use casper_execution_engine::core::engine_state::ExecutableDeployItem;
 use casper_hashing::Digest;
-use casper_node::{
-    rpcs::{
-        account::PutDeployResult,
-        chain::GetStateRootHashResult,
-        info::{GetDeployParams, GetDeployResult},
-        state::{
-            DictionaryIdentifier, GetDictionaryItemParams, GetDictionaryItemResult,
-            GlobalStateIdentifier, QueryGlobalStateParams, QueryGlobalStateResult
-        }
-    },
-    types::{Deploy, DeployHash}
-};
 use casper_types::{
     bytesrepr::FromBytes, runtime_args, ContractHash, ContractPackageHash, Key, PublicKey,
     RuntimeArgs, SecretKey, TimeDiff, Timestamp
@@ -28,7 +16,17 @@ use odra_casper_types::{Address, Balance, Bytes, CallArgs, OdraType};
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 
-use crate::log;
+use crate::{
+    casper_node_port::{
+        rpcs::{
+            DictionaryIdentifier, GetDeployParams, GetDeployResult, GetDictionaryItemParams,
+            GetDictionaryItemResult, GetStateRootHashResult, GlobalStateIdentifier,
+            PutDeployResult, QueryGlobalStateParams, QueryGlobalStateResult
+        },
+        Deploy, DeployHash
+    },
+    log
+};
 
 pub const ENV_SECRET_KEY: &str = "ODRA_CASPER_LIVENET_SECRET_KEY_PATH";
 pub const ENV_NODE_ADDRESS: &str = "ODRA_CASPER_LIVENET_NODE_ADDRESS";
@@ -411,12 +409,13 @@ mod tests {
     use std::str::FromStr;
 
     use casper_hashing::Digest;
-    use casper_node::types::DeployHash;
     use casper_types::{
         bytesrepr::{FromBytes, ToBytes},
         U256
     };
     use odra_casper_types::Address;
+
+    use crate::casper_node_port::DeployHash;
 
     use super::CasperClient;
 
