@@ -41,12 +41,12 @@ impl GenerateCode for ModuleStruct<'_> {
                 fn is_module() -> bool {
                     true
                 }
-                #[cfg(feature = "casper")]
+                #[cfg(not(target_arch = "wasm32"))]
                 fn events() -> Vec<odra::types::contract_def::Event> {
                     <Self as odra::types::contract_def::HasEvents>::events()
                 }
             }
-            #[cfg(feature = "casper")]
+            #[cfg(not(target_arch = "wasm32"))]
             impl odra::types::contract_def::HasEvents for #struct_ident {
                 fn events() -> Vec<odra::types::contract_def::Event> {
                     let mut events = vec![];
@@ -100,6 +100,7 @@ mod test {
                 pub submodule: Submodule
             }
 
+            #[cfg(not(target_arch = "wasm32"))]
             impl odra::types::contract_def::Node for Module {
                 const IS_LEAF: bool = false;
 
@@ -141,13 +142,13 @@ mod test {
                     true
                 }
 
-                #[cfg (feature = "casper")]
+                #[cfg(not(target_arch = "wasm32"))]
                 fn events () -> Vec<odra::types::contract_def::Event> {
                     <Self as odra::types::contract_def::HasEvents>::events()
                 }
             }
 
-            #[cfg (feature = "casper")]
+            #[cfg(not(target_arch = "wasm32"))]
             impl odra::types::contract_def::HasEvents for Module {
                 fn events() -> Vec<odra::types::contract_def::Event> {
                     let mut events = vec![];

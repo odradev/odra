@@ -19,6 +19,7 @@ mod instance;
 mod item;
 mod list;
 mod mapping;
+#[cfg(not(target_arch = "wasm32"))]
 mod node;
 mod sequence;
 mod unwrap_or_revert;

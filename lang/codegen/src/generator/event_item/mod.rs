@@ -31,6 +31,7 @@ impl GenerateCode for EventItem<'_> {
                     String::from(stringify!(#struct_ident))
                 }
 
+                #[cfg(not(target_arch = "wasm32"))]
                 fn schema() -> odra::types::contract_def::Event {
                     #event_def
                 }

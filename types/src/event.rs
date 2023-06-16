@@ -2,6 +2,7 @@
 
 use alloc::string::String;
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::contract_def::Event as Schema;
 
 /// Event interface
@@ -11,6 +12,7 @@ pub trait OdraEvent {
     /// Returns the event name.
     fn name() -> String;
     /// Returns the event schema.
+    #[cfg(not(target_arch = "wasm32"))]
     fn schema() -> Schema;
 }
 

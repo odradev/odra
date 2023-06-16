@@ -6,6 +6,7 @@ extern crate alloc;
 
 pub mod address;
 pub mod arithmetic;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod contract_def;
 mod error;
 pub mod event;
@@ -64,6 +65,7 @@ pub enum Type {
     Slice(Box<Type>)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Type {
     fn has_any(ty: &Type) -> bool {
         match ty {

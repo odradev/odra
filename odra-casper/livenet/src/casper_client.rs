@@ -11,7 +11,7 @@ use casper_types::{
     PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp
 };
 use jsonrpc_lite::JsonRpc;
-use odra_casper_shared::key_maker::KeyMaker;
+use odra_casper_shared::key_maker::{KeyMaker, KEY_LENGTH};
 use odra_casper_types::{Address, Balance, Bytes, CallArgs, OdraType};
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
@@ -113,9 +113,9 @@ impl CasperClient {
 
     /// Query the contract for the variable.
     pub fn get_variable_value<T: OdraType>(&self, address: Address, key: &[u8]) -> Option<T> {
-        let key = LivenetKeyMaker::to_variable_key(key);
-        // SAFETY: we know the key maker creates a string of valid UTF-8 characters.
-        let key = unsafe { from_utf8_unchecked(&key) };
+        let mut hash = [0; KEY_LENGTH];
+        LivenetKeyMaker::to_variable_key(key, &mut hash);
+        let key = unsafe { from_utf8_unchecked(&hash) };
         self.query_dictionary(address, key)
     }
 
@@ -126,9 +126,9 @@ impl CasperClient {
         seed: &[u8],
         key: &K
     ) -> Option<V> {
-        let key = LivenetKeyMaker::to_dictionary_key(seed, key).unwrap();
-        // SAFETY: we know the key maker creates a string of valid UTF-8 characters.
-        let key = unsafe { from_utf8_unchecked(&key) };
+        let mut hash = [0; KEY_LENGTH];
+        LivenetKeyMaker::to_dictionary_key(seed, key, &mut hash).unwrap();
+        let key = unsafe { from_utf8_unchecked(&hash) };
         self.query_dictionary(address, key)
     }
 

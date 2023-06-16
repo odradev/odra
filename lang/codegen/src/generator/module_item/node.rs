@@ -58,6 +58,7 @@ impl GenerateCode for NodeItem<'_> {
             .collect::<TokenStream>();
 
         quote! {
+            #[cfg(not(target_arch = "wasm32"))]
             impl odra::types::contract_def::Node for #struct_ident {
                 const IS_LEAF: bool = false;
                 const COUNT: u32 = #count;
