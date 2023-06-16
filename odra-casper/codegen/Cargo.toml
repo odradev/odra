@@ -15,6 +15,7 @@ quote = "1.0.18"
 syn = "1.0.96"
 pretty_assertions = "1.2.1"
 odra-casper-types = { version = "0.4.0", path = "../types" }
+odra-casper-shared = {version = "0.4.0", path = "../shared"}
 odra-types = { version = "0.4.0", path = "../../types" }
 odra-utils = { version = "0.4.0", path = "../../utils" }
 casper-types = { workspace = true }
