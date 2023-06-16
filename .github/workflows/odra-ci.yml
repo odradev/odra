@@ -24,8 +24,6 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           components: rustfmt, clippy
-      - run: git config --global user.email "you@example.com" && git config --global user.name "Your Name" # remove when it is fixed 
-      - run: just fix-casper-node # remove when it is fixed
       - run: just check-lint
       - run: just prepare-test-env
       - run: just test
