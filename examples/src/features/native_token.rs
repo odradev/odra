@@ -1,5 +1,6 @@
 use odra::contract_env;
 use odra::types::Balance;
+use alloc::{vec::Vec, string::String};
 
 #[odra::module]
 pub struct PublicWallet {}

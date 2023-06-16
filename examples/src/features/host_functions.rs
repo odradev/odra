@@ -1,5 +1,6 @@
 use odra::types::{Address, BlockTime};
 use odra::Variable;
+use alloc::{vec::Vec, string::String};
 
 #[odra::module]
 pub struct HostContract {

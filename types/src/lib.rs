@@ -6,12 +6,15 @@ extern crate alloc;
 
 pub mod address;
 pub mod arithmetic;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod contract_def;
 mod error;
 pub mod event;
 
 use alloc::boxed::Box;
 pub use error::{AddressError, CollectionError, ExecutionError, OdraError, VmError};
+
+pub type EncodedKeyHash = [u8; 16];
 
 /// Types accepted by Odra framework, these types can be stored and manipulated by smart contracts.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -64,6 +67,7 @@ pub enum Type {
     Slice(Box<Type>)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Type {
     fn has_any(ty: &Type) -> bool {
         match ty {

@@ -24,7 +24,7 @@ impl ContractEntrypoints<'_> {
         let constructor_group_name = consts::CONSTRUCTOR_GROUP_NAME;
         let access = match &entrypoint.ty {
             EntrypointType::Constructor { .. } => quote! {
-                odra::casper::casper_types::EntryPointAccess::Groups(vec![odra::casper::casper_types::Group::new(#constructor_group_name)])
+                odra::casper::casper_types::EntryPointAccess::Groups(alloc::vec![odra::casper::casper_types::Group::new(#constructor_group_name)])
             },
             EntrypointType::Public { .. } => {
                 quote! { odra::casper::casper_types::EntryPointAccess::Public }
@@ -61,7 +61,7 @@ impl ToTokens for EntrypointParams<'_> {
             })
             .collect::<Punctuated<TokenStream, Token![,]>>();
 
-        let params = quote!(vec![#params_content]);
+        let params = quote!(alloc::vec![#params_content]);
 
         tokens.extend(params);
     }

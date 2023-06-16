@@ -1,3 +1,4 @@
+use alloc::vec::Vec;
 use odra::types::{Address, U256};
 
 /// The ERC721 receiver interface.

@@ -2,11 +2,11 @@ use odra_mock_vm_types::{Address, CallArgs};
 use odra_types::{OdraError, VmError};
 
 use crate::contract_container::ContractContainer;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 #[derive(Default)]
 pub struct ContractRegister {
-    contracts: HashMap<Address, ContractContainer>
+    contracts: BTreeMap<Address, ContractContainer>
 }
 
 impl ContractRegister {

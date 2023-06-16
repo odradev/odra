@@ -1,4 +1,5 @@
 use crate::features::cross_calls::MathEngine;
+use alloc::{vec::Vec, string::String};
 
 #[odra::module]
 pub struct ModulesContract {

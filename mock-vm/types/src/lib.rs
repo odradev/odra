@@ -9,7 +9,10 @@ mod uints;
 
 pub use address::Address;
 pub use address::CONTRACT_ADDRESS_PREFIX;
-pub use borsh::{BorshDeserialize, BorshSerialize};
+pub use borsh::{
+    maybestd::io::{Error, ErrorKind, Result, Write},
+    BorshDeserialize, BorshSerialize
+};
 pub use call_args::CallArgs;
 pub use mock_vm_type::{MockDeserializable, MockSerializable, MockVMSerializationError};
 use std::ops::Deref;

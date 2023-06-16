@@ -1,3 +1,4 @@
+use alloc::{vec::Vec, string::String};
 use odra::{map, types::U256, Mapping, UnwrapOrRevert};
 
 use crate::contracts::owned_token::OwnedToken;

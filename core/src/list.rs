@@ -2,12 +2,14 @@ use crate::types::OdraType;
 use core::ops::Range;
 use odra_types::CollectionError;
 
-use crate::{contract_env, UnwrapOrRevert};
 use crate::{
+    contract_env,
     instance::{DynamicInstance, StaticInstance},
     mapping::Mapping,
-    variable::Variable
+    variable::Variable,
+    UnwrapOrRevert
 };
+use alloc::vec::Vec;
 
 /// Data structure for an indexed, iterable collection.
 #[derive(Clone)]

@@ -40,7 +40,7 @@ impl ToTokens for Constructor {
                 let ty = quote!(<#ty as odra::types::Typed>::ty());
                 quote! {
                     odra::types::contract_def::Argument {
-                        ident: String::from(stringify!(#name)),
+                        ident: alloc::string::String::from(stringify!(#name)),
                         ty: #ty,
                         is_ref: #is_ref,
                     },
@@ -49,8 +49,8 @@ impl ToTokens for Constructor {
             .collect::<proc_macro2::TokenStream>();
         let ep = quote! {
             odra::types::contract_def::Entrypoint {
-                ident: String::from(#name),
-                args: vec![#args],
+                ident: alloc::string::String::from(#name),
+                args: alloc::vec![#args],
                 is_mut: #is_mut,
                 ret: odra::types::Type::Unit,
                 ty: odra::types::contract_def::EntrypointType::Constructor { non_reentrant: #is_non_reentrant },

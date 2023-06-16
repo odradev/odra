@@ -1,5 +1,6 @@
 use odra::types::{event::OdraEvent, Address, BlockTime};
 use odra::{contract_env, Event};
+use alloc::{vec::Vec, string::String};
 
 #[odra::module]
 pub struct PartyContract {}

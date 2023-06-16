@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use odra_mock_vm_types::CallArgs;
 use odra_types::{OdraError, VmError};
@@ -11,15 +11,15 @@ pub type EntrypointArgs = Vec<String>;
 #[derive(Default, Clone)]
 pub struct ContractContainer {
     name: String,
-    entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>,
-    constructors: HashMap<String, (EntrypointArgs, EntrypointCall)>
+    entrypoints: BTreeMap<String, (EntrypointArgs, EntrypointCall)>,
+    constructors: BTreeMap<String, (EntrypointArgs, EntrypointCall)>
 }
 
 impl ContractContainer {
     pub fn new(
         name: &str,
-        entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>,
-        constructors: HashMap<String, (EntrypointArgs, EntrypointCall)>
+        entrypoints: BTreeMap<String, (EntrypointArgs, EntrypointCall)>,
+        constructors: BTreeMap<String, (EntrypointArgs, EntrypointCall)>
     ) -> Self {
         Self {
             name: String::from(name),
@@ -75,7 +75,7 @@ impl ContractContainer {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::collections::BTreeMap;
 
     use odra_mock_vm_types::CallArgs;
     use odra_types::{OdraError, VmError};
@@ -209,8 +209,8 @@ mod tests {
         fn empty() -> Self {
             Self {
                 name: String::from("contract"),
-                entrypoints: HashMap::new(),
-                constructors: HashMap::new()
+                entrypoints: BTreeMap::new(),
+                constructors: BTreeMap::new()
             }
         }
 
@@ -218,13 +218,13 @@ mod tests {
             let call: EntrypointCall = |_, _| vec![1, 2, 3];
             let args: EntrypointArgs = args.iter().map(|arg| arg.to_string()).collect();
 
-            let mut entrypoints = HashMap::new();
+            let mut entrypoints = BTreeMap::new();
             entrypoints.insert(ep_name, (args, call));
 
             Self {
                 name: String::from("contract"),
                 entrypoints,
-                constructors: HashMap::new()
+                constructors: BTreeMap::new()
             }
         }
 
@@ -232,12 +232,12 @@ mod tests {
             let call: EntrypointCall = |_, _| vec![1, 2, 3];
             let args: EntrypointArgs = args.iter().map(|arg| arg.to_string()).collect();
 
-            let mut constructors = HashMap::new();
+            let mut constructors = BTreeMap::new();
             constructors.insert(ep_name, (args, call));
 
             Self {
                 name: String::from("contract"),
-                entrypoints: HashMap::new(),
+                entrypoints: BTreeMap::new(),
                 constructors
             }
         }

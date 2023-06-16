@@ -7,10 +7,10 @@ use casper_contract::{
 };
 use casper_types::bytesrepr::{Bytes, FromBytes};
 use casper_types::U512;
+use core::ops::Deref;
 use odra_casper_shared::native_token::NativeTokenMetadata;
 use odra_casper_types::{Address, Balance, BlockTime, CallArgs, OdraType};
 use odra_types::{event::OdraEvent, ExecutionError};
-use std::ops::Deref;
 
 use crate::{casper_env, utils::get_main_purse};
 
@@ -144,6 +144,6 @@ pub fn verify_signature(
 }
 
 /// Creates a hash of the given input. Uses default hash for given backend.
-pub fn hash<T: AsRef<[u8]>>(input: T) -> Vec<u8> {
+pub fn hash<T: AsRef<[u8]>>(input: T) -> alloc::vec::Vec<u8> {
     runtime::blake2b(input).to_vec()
 }

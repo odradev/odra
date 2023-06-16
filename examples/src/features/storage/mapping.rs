@@ -1,4 +1,5 @@
 use odra::{Mapping, Variable};
+use alloc::{vec::Vec, string::String};
 
 type FriendName = String;
 type Visits = u32;

@@ -3,6 +3,7 @@ use odra::{
     types::{event::OdraEvent, Address, Balance, BlockTime},
     Mapping, Variable
 };
+use alloc::{vec::Vec, string::String};
 
 #[odra::module]
 pub struct TimeLockWallet {

@@ -18,15 +18,15 @@ odra-mock-vm = { path = "../mock-vm/backend", optional = true }
 odra-casper-backend = { path = "../odra-casper/backend", optional = true }
 odra-casper-livenet = { path = "../odra-casper/livenet", optional = true }
 odra-casper-types = { path = "../odra-casper/types", optional = true }
-cfg-if = "1.0.0"
-num-traits = "0.2.14"
+num-traits = { version = "0.2.14", default-features = false }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 odra-casper-test-env = { path = "../odra-casper/test-env", optional = true }
 odra-casper-codegen = { path = "../odra-casper/codegen", optional = true }
 
 [features]
-default = [ "mock-vm" ]
+default = [ "mock-vm", "std" ]
 mock-vm = [ "odra-mock-vm" ]
 casper = [ "odra-casper-backend", "odra-casper-test-env", "odra-casper-codegen", "odra-casper-types" ]
 casper-livenet = [ "odra-casper-livenet", "odra-casper-types" ]
+std = []

@@ -1,3 +1,7 @@
+#![cfg_attr(all(not(feature = "std"), target_arch = "wasm32"), no_std)]
+
+extern crate alloc;
+
 #[cfg(all(feature = "casper", feature = "mock-vm"))]
 compile_error!("casper and mock-vm are mutually exclusive features.");
 
@@ -19,6 +23,7 @@ mod instance;
 mod item;
 mod list;
 mod mapping;
+#[cfg(not(target_arch = "wasm32"))]
 mod node;
 mod sequence;
 mod unwrap_or_revert;

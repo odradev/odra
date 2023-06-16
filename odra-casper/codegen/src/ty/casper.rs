@@ -22,20 +22,20 @@ impl ToTokens for CasperType<'_> {
             Type::PublicKey => quote!(odra::casper::casper_types::CLType::PublicKey),
             Type::Option(ty) => {
                 let ty = CasperType(ty);
-                quote!(odra::casper::casper_types::CLType::Option(Box::new(#ty)))
+                quote!(odra::casper::casper_types::CLType::Option(alloc::boxed::Box::new(#ty)))
             }
             Type::Any => quote!(odra::casper::casper_types::CLType::Any),
             Type::Vec(ty) => {
                 let ty = CasperType(ty);
-                quote!(odra::casper::casper_types::CLType::List(Box::new(#ty)))
+                quote!(odra::casper::casper_types::CLType::List(alloc::boxed::Box::new(#ty)))
             }
             Type::Result { ok, err } => {
                 let ok = CasperType(ok);
                 let err = CasperType(err);
                 quote! {
                     odra::casper::casper_types::CLType::Result {
-                        ok: Box::new(#ok),
-                        err: Box::new(#err),
+                        ok: alloc::boxed::Box::new(#ok),
+                        err: alloc::boxed::Box::new(#err),
                     }
                 }
             }
@@ -44,8 +44,8 @@ impl ToTokens for CasperType<'_> {
                 let value = CasperType(value);
                 quote! {
                     odra::casper::casper_types::CLType::Map {
-                        key: Box::new(#key),
-                        value: Box::new(#value),
+                        key: alloc::boxed::Box::new(#key),
+                        value: alloc::boxed::Box::new(#value),
                     }
                 }
             }
@@ -53,7 +53,7 @@ impl ToTokens for CasperType<'_> {
                 let ty = ty.get(0).unwrap();
                 let ty = CasperType(ty);
                 quote! {
-                    odra::casper::casper_types::CLType::Tuple1([Box::new(#ty)])
+                    odra::casper::casper_types::CLType::Tuple1([alloc::boxed::Box::new(#ty)])
                 }
             }
             Type::Tuple2(ty) => {
@@ -62,7 +62,7 @@ impl ToTokens for CasperType<'_> {
                 let t2 = ty.get(1).unwrap();
                 let t2 = CasperType(t2);
                 quote! {
-                    odra::casper::casper_types::CLType::Tuple2([Box::new(#t1), Box::new(#t2)])
+                    odra::casper::casper_types::CLType::Tuple2([alloc::boxed::Box::new(#t1), alloc::boxed::Box::new(#t2)])
                 }
             }
             Type::Tuple3(ty) => {
@@ -73,13 +73,13 @@ impl ToTokens for CasperType<'_> {
                 let t3 = ty.get(2).unwrap();
                 let t3 = CasperType(t3);
                 quote! {
-                    odra::casper::casper_types::CLType::Tuple2([Box::new(#t1), Box::new(#t2), Box::new(#t3)])
+                    odra::casper::casper_types::CLType::Tuple2([alloc::boxed::Box::new(#t1), alloc::boxed::Box::new(#t2), alloc::boxed::Box::new(#t3)])
                 }
             }
             Type::ByteArray(b) => quote!(odra::casper::casper_types::CLType::ByteArray(#b)),
             Type::Slice(ty) => {
                 let ty = CasperType(ty);
-                quote!(odra::casper::casper_types::CLType::List(Box::new(#ty)))
+                quote!(odra::casper::casper_types::CLType::List(alloc::boxed::Box::new(#ty)))
             }
         };
         tokens.extend(stream);

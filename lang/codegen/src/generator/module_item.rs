@@ -41,15 +41,15 @@ impl GenerateCode for ModuleStruct<'_> {
                 fn is_module() -> bool {
                     true
                 }
-                #[cfg(feature = "casper")]
-                fn events() -> Vec<odra::types::contract_def::Event> {
+                #[cfg(not(target_arch = "wasm32"))]
+                fn events() -> alloc::vec::Vec<odra::types::contract_def::Event> {
                     <Self as odra::types::contract_def::HasEvents>::events()
                 }
             }
-            #[cfg(feature = "casper")]
+            #[cfg(not(target_arch = "wasm32"))]
             impl odra::types::contract_def::HasEvents for #struct_ident {
-                fn events() -> Vec<odra::types::contract_def::Event> {
-                    let mut events = vec![];
+                fn events() -> alloc::vec::Vec<odra::types::contract_def::Event> {
+                    let mut events = alloc::vec![];
                     #(
                         events.push(<#module_events as odra::types::event::OdraEvent>::schema());
                     )*
@@ -110,8 +110,8 @@ mod test {
                     <Submodule as odra::types::contract_def::Node>::COUNT;
 
 
-                fn __keys() -> Vec<String> {
-                    let mut result = vec![];
+                fn __keys() -> alloc::vec::Vec<alloc::string::String> {
+                    let mut result = alloc::vec![];
                     if <Variable<u32> as odra::types::contract_def::Node>::IS_LEAF {
                         result.push(String::from("variable"));
                     } else {
@@ -142,15 +142,15 @@ mod test {
                 }
 
                 #[cfg (feature = "casper")]
-                fn events () -> Vec<odra::types::contract_def::Event> {
+                fn events () -> alloc::vec::Vec<odra::types::contract_def::Event> {
                     <Self as odra::types::contract_def::HasEvents>::events()
                 }
             }
 
             #[cfg (feature = "casper")]
             impl odra::types::contract_def::HasEvents for Module {
-                fn events() -> Vec<odra::types::contract_def::Event> {
-                    let mut events = vec![];
+                fn events() -> alloc::vec::Vec<odra::types::contract_def::Event> {
+                    let mut events = alloc::vec![];
                     events.push(<A as odra::types::event::OdraEvent>::schema());
                     events.push(<B as odra::types::event::OdraEvent>::schema());
                     events.push(<C as odra::types::event::OdraEvent>::schema());

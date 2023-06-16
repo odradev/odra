@@ -1,4 +1,5 @@
 use odra::types::{Address, U256};
+use alloc::{vec::Vec, string::String};
 
 #[odra::module]
 pub struct BalanceChecker {}

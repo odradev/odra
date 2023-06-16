@@ -3,7 +3,7 @@
 use std::{
     backtrace::{Backtrace, BacktraceStatus},
     cell::RefCell,
-    collections::HashMap,
+    collections::BTreeMap,
     env,
     path::PathBuf
 };
@@ -45,14 +45,14 @@ const ODRA_WASM_PATH_ENV_KEY: &str = "ODRA_WASM_PATH";
 /// Wrapper for InMemoryWasmTestBuilder.
 pub struct CasperTestEnv {
     accounts: Vec<Address>,
-    key_pairs: HashMap<Address, (SecretKey, PublicKey)>,
+    key_pairs: BTreeMap<Address, (SecretKey, PublicKey)>,
     active_account: Address,
     context: InMemoryWasmTestBuilder,
     block_time: BlockTime,
     calls_counter: u32,
     error: Option<OdraError>,
     attached_value: Option<U512>,
-    gas_used: HashMap<AccountHash, U512>,
+    gas_used: BTreeMap<AccountHash, U512>,
     gas_cost: Vec<(String, U512)>
 }
 
@@ -61,7 +61,7 @@ impl CasperTestEnv {
     pub fn new() -> Self {
         let mut genesis_config = DEFAULT_GENESIS_CONFIG.clone();
         let mut accounts: Vec<Address> = Vec::new();
-        let mut key_pairs = HashMap::new();
+        let mut key_pairs = BTreeMap::new();
         for i in 0..20 {
             // Create keypair.
             let secret_key = SecretKey::ed25519_from_bytes([i; 32]).unwrap();
@@ -102,7 +102,7 @@ impl CasperTestEnv {
             calls_counter: 0,
             error: None,
             attached_value: None,
-            gas_used: HashMap::new(),
+            gas_used: BTreeMap::new(),
             gas_cost: Vec::new(),
             key_pairs
         }

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Mutex};
+use std::{collections::BTreeMap, sync::Mutex};
 
 use casper_types::{bytesrepr::FromBytes, CLValue};
 use odra_casper_shared::consts;
@@ -91,7 +91,7 @@ ref_thread_local::ref_thread_local!(
 /// Register existing contract.
 pub fn register_existing_contract(
     address: Address,
-    entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>
+    entrypoints: BTreeMap<String, (EntrypointArgs, EntrypointCall)>
 ) {
     let contract = ContractContainer::new(address, entrypoints);
     ClientEnv::instance_mut().register_contract(contract);
@@ -101,7 +101,7 @@ pub fn register_existing_contract(
 pub fn deploy_new_contract(
     name: &str,
     mut args: CallArgs,
-    entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>,
+    entrypoints: BTreeMap<String, (EntrypointArgs, EntrypointCall)>,
     constructor_name: Option<String>
 ) -> Address {
     let gas = get_gas();

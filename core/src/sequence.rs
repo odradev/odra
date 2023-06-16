@@ -1,7 +1,7 @@
-use crate::{instance::StaticInstance, types::OdraType, Variable};
-use num_traits::{Num, One, Zero};
-
 use super::DynamicInstance;
+use crate::{instance::StaticInstance, types::OdraType, Variable};
+use alloc::vec::Vec;
+use num_traits::{Num, One, Zero};
 
 /// A module that stores a single value in the storage that can be read or incremented.
 #[derive(Clone)]

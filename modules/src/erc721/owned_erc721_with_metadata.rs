@@ -1,3 +1,4 @@
+use alloc::string::String;
 use odra::types::{Address, Bytes, U256};
 
 /// The ERC721 interface with the Ownable and Metadata traits included manually.

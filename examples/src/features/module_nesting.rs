@@ -1,5 +1,6 @@
 use odra::contract_env::emit_event;
 use odra::{Event, List, Mapping, OdraType, UnwrapOrRevert, Variable};
+use alloc::{vec::Vec, string::String};
 
 #[odra::module]
 pub struct ResultsStorage {

@@ -1,7 +1,7 @@
 use derive_more::From;
 use odra_ir::module::{Constructor, Method, ModuleImpl};
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote, TokenStreamExt};
+use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 use syn::{punctuated::Punctuated, token::Comma};
 
 use crate::GenerateCode;
@@ -75,12 +75,12 @@ where
             match &*arg.ty {
                 syn::Type::Reference(ty) => match &*ty.elem {
                     ty if matches!(ty, syn::Type::Array(_) | syn::Type::Slice(_)) => {
-                        quote!(&args.get::<Vec<_>>(stringify!(#pat)))
+                        quote!(&args.get::<alloc::vec::Vec<_>>(stringify!(#pat)))
                     }
                     _ => quote!(&args.get(stringify!(#pat)))
                 },
                 ty if matches!(ty, syn::Type::Array(_) | syn::Type::Slice(_)) => {
-                    quote!(&args.get::<Vec<_>>(stringify!(#pat)))
+                    quote!(&args.get::<alloc::vec::Vec<_>>(stringify!(#pat)))
                 }
                 _ => quote!(args.get(stringify!(#pat)))
             }
@@ -103,7 +103,7 @@ where
                             &args.get(stringify!(#pat))
                                 .cloned()
                                 .unwrap()
-                                .into_t::<Vec<#inner_ty>>()
+                                .into_t::<alloc::vec::Vec<#inner_ty>>()
                                 .unwrap()
                                 .as_slice()
                         }
@@ -114,7 +114,7 @@ where
                             &args.get(stringify!(#pat))
                                 .cloned()
                                 .unwrap()
-                                .into_t::<Vec<#inner_ty>>()
+                                .into_t::<alloc::vec::Vec<#inner_ty>>()
                                 .unwrap()
                                 .as_slice()
                         }
@@ -133,7 +133,7 @@ where
                         args.get(stringify!(#pat))
                             .cloned()
                             .unwrap()
-                            .into_t::<Vec<#inner_ty>>()
+                            .into_t::<alloc::vec::Vec<#inner_ty>>()
                             .unwrap()
                     }
                 }
@@ -143,7 +143,7 @@ where
                         args.get(stringify!(#pat))
                             .cloned()
                             .unwrap()
-                            .into_t::<Vec<#inner_ty>>()
+                            .into_t::<alloc::vec::Vec<#inner_ty>>()
                             .unwrap()
                     }
                 }
@@ -180,13 +180,14 @@ where
         .into_iter()
         .map(|arg| {
             let pat = &*arg.pat;
-            quote! { args.push(stringify!(#pat).to_string()); }
+            let pat = pat.to_token_stream().to_string();
+            quote!(args.push(alloc::string::String::from(#pat));)
         })
         .collect::<TokenStream>();
 
     quote! {
         {
-            let mut args: Vec<String> = vec![];
+            let mut args: alloc::vec::Vec<alloc::string::String> = alloc::vec![];
             #args_stream
             args
         }

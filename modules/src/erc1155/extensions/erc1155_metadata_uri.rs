@@ -1,3 +1,4 @@
+use alloc::string::String;
 use odra::types::U256;
 
 pub trait Erc1155MetadataURI {

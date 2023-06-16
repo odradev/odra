@@ -1,5 +1,6 @@
 use crate::access::Ownable;
 use crate::erc721::events::Transfer;
+use alloc::string::String;
 use odra::contract_env::{caller, revert};
 use odra::types::event::OdraEvent;
 use odra::types::Address;
@@ -143,6 +144,7 @@ mod tests {
     use crate::erc721::errors::Error;
     use crate::erc721_receiver::events::Received;
     use crate::erc721_receiver::Erc721ReceiverDeployer;
+    use alloc::string::ToString;
     use odra::test_env::assert_exception;
     use odra::types::address::OdraAddress;
     use odra::types::VmError::NoSuchMethod;

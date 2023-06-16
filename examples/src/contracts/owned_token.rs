@@ -4,6 +4,7 @@ use odra::{
 };
 use odra_modules::access::Ownable;
 use odra_modules::erc20::Erc20;
+use alloc::{vec::Vec, string::String};
 
 #[odra::module]
 pub struct OwnedToken {

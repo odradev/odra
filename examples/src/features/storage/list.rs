@@ -1,4 +1,5 @@
 use odra::{List, Variable};
+use alloc::{vec::Vec, string::String};
 
 #[odra::module]
 pub struct DogContract3 {

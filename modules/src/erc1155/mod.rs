@@ -1,3 +1,4 @@
+use alloc::vec::Vec;
 use odra::types::{Address, Bytes, U256};
 
 pub mod erc1155_base;
@@ -29,6 +30,7 @@ pub trait Erc1155 {
 }
 
 pub mod events {
+    use alloc::vec::Vec;
     use odra::types::{Address, U256};
 
     #[derive(odra::Event, PartialEq, Eq, Debug, Clone)]

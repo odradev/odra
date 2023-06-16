@@ -1,5 +1,6 @@
 use odra::types::Address;
 use odra::{execution_error, UnwrapOrRevert, Variable};
+use alloc::{vec::Vec, string::String};
 
 #[odra::module]
 pub struct OwnedContract {

@@ -1,5 +1,6 @@
 //! A set of utility functions encapsulating some common interactions with the current runtime.
 
+use alloc::{fmt::format, string::String, vec::Vec};
 use casper_contract::{
     contract_api::{runtime, storage, system},
     unwrap_or_revert::UnwrapOrRevert
@@ -107,7 +108,7 @@ pub fn install_contract(
 
     // Create new contract.
     if is_upgradable {
-        let access_uref_key = format!("{}_access_token", package_hash_key);
+        let access_uref_key = format(format_args!("{}_access_token", package_hash_key));
         storage::new_contract(
             entry_points,
             Some(named_keys),
@@ -179,7 +180,7 @@ pub fn revoke_access_to_constructor_group(
     contract_package_hash: ContractPackageHash,
     constructor_access: URef
 ) {
-    let mut urefs = std::collections::BTreeSet::new();
+    let mut urefs = alloc::collections::BTreeSet::new();
     urefs.insert(constructor_access);
     storage::remove_contract_user_group_urefs(
         contract_package_hash,

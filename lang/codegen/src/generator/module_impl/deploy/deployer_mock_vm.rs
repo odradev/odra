@@ -72,30 +72,29 @@ fn build_constructor(
 
     quote! {
         pub #fn_sig {
-            use std::collections::HashMap;
             use odra::types::{CallArgs};
 
-            let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, &CallArgs) -> Vec<u8>)>::new();
+            let mut entrypoints = alloc::collections::BTreeMap::<alloc::string::String, (alloc::vec::Vec<alloc::string::String>, fn(alloc::string::String, &CallArgs) -> alloc::vec::Vec<u8>)>::new();
             #entrypoints_stream
 
-            let mut constructors = HashMap::<String, (Vec<String>, fn(String, &CallArgs) -> Vec<u8>)>::new();
+            let mut constructors = alloc::collections::BTreeMap::<alloc::string::String, (alloc::vec::Vec<alloc::string::String>, fn(alloc::string::String, &CallArgs) -> alloc::vec::Vec<u8>)>::new();
             #constructors_stream
 
             let args = {
                 #args
             };
-            let constructor: Option<(String, &CallArgs, fn(String, &CallArgs) -> Vec<u8>)> = Some((
-                stringify!(#constructor_ident).to_string(),
+            let constructor: Option<(alloc::string::String, &CallArgs, fn(alloc::string::String, &CallArgs) -> alloc::vec::Vec<u8>)> = Some((
+                alloc::string::String::from(stringify!(#constructor_ident)),
                 &args,
                 |name, args| {
                     let keys = <#struct_ident as odra::types::contract_def::Node>::__keys();
                     let keys = keys
                         .iter()
-                        .map(String::as_str)
-                        .collect::<Vec<_>>();
+                        .map(alloc::string::String::as_str)
+                        .collect::<alloc::vec::Vec<_>>();
                     let (mut instance, _) = <#struct_ident as odra::StaticInstance>::instance(keys.as_slice());
                     instance.#constructor_ident( #fn_args );
-                    Vec::new()
+                    alloc::vec::Vec::new()
                 }
             ));
             let address = odra::test_env::register_contract(constructor, constructors, entrypoints);
@@ -111,13 +110,12 @@ fn build_default_constructor(
 ) -> TokenStream {
     quote! {
         pub fn default() -> #ref_ident {
-            use std::collections::HashMap;
             use odra::types::CallArgs;
 
-            let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, &CallArgs) -> Vec<u8>)>::new();
+            let mut entrypoints = alloc::collections::BTreeMap::<alloc::string::String, (alloc::vec::Vec<alloc::string::String>, fn(alloc::string::String, &CallArgs) -> alloc::vec::Vec<u8>)>::new();
             #entrypoints_stream
 
-            let mut constructors = HashMap::<String, (Vec<String>, fn(String, &CallArgs) -> Vec<u8>)>::new();
+            let mut constructors = alloc::collections::BTreeMap::<alloc::string::String, (alloc::vec::Vec<alloc::string::String>, fn(alloc::string::String, &CallArgs) -> alloc::vec::Vec<u8>)>::new();
             #constructors_stream
 
             let address = odra::test_env::register_contract(None, constructors, entrypoints);
@@ -131,7 +129,7 @@ fn build_entrypoints_calls(methods: &[&Method], struct_ident: &Ident) -> TokenSt
         .iter()
         .map(|entrypoint| {
             let ident = &entrypoint.ident;
-            let name = quote!(stringify!(#ident).to_string());
+            let name = quote!(alloc::string::String::from(stringify!(#ident)));
             let arg_names = args_to_arg_names_stream(&entrypoint.args);
             let return_value = return_value(entrypoint);
             let args = args_to_fn_args(&entrypoint.args);
@@ -145,8 +143,8 @@ fn build_entrypoints_calls(methods: &[&Method], struct_ident: &Ident) -> TokenSt
                     let keys = <#struct_ident as odra::types::contract_def::Node>::__keys();
                     let keys = keys
                         .iter()
-                        .map(String::as_str)
-                        .collect::<Vec<_>>();
+                        .map(alloc::string::String::as_str)
+                        .collect::<alloc::vec::Vec<_>>();
                     let (mut instance, _) = <#struct_ident as odra::StaticInstance>::instance(keys.as_slice());
                     let result = instance.#ident(#args);
                     #reentrancy_cleanup
@@ -166,16 +164,16 @@ fn build_constructor_calls(constructors: &[&Constructor], struct_ident: &Ident) 
             let arg_names = args_to_arg_names_stream(&constructor.args);
 
             quote! {
-                constructors.insert(stringify!(#ident).to_string(), (#arg_names,
+                constructors.insert(alloc::string::String::from(stringify!(#ident)), (#arg_names,
                     |name, args| {
                         let keys = <#struct_ident as odra::types::contract_def::Node>::__keys();
                         let keys = keys
                             .iter()
-                            .map(String::as_str)
-                            .collect::<Vec<_>>();
+                            .map(alloc::string::String::as_str)
+                            .collect::<alloc::vec::Vec<_>>();
                         let (mut instance, _) = <#struct_ident as odra::StaticInstance>::instance(keys.as_slice());
                         instance.#ident( #args );
-                        Vec::new()
+                        alloc::vec::Vec::new()
                     }
                 ));
             }
@@ -211,7 +209,7 @@ fn attached_value(entrypoint: &Method) -> TokenStream {
 
 fn return_value(entrypoint: &Method) -> TokenStream {
     match &entrypoint.ret {
-        ReturnType::Default => quote!(Vec::new()),
+        ReturnType::Default => quote!(alloc::vec::Vec::new()),
         ReturnType::Type(_, _) => quote!(odra::types::MockSerializable::ser(&result).unwrap())
     }
 }

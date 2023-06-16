@@ -11,7 +11,7 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
-odra-utils = { path = "../../utils" }
+odra-utils = { path = "../../utils", features = ["std"] }
 odra-ir = { path = "../ir" }
 proc-macro2 = "1.0.40"
 proc-macro-error = "1.0.4"

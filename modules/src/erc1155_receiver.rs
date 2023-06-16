@@ -46,6 +46,7 @@ impl Erc1155Receiver {
 }
 
 pub mod events {
+    use alloc::vec::Vec;
     use odra::types::{Address, Bytes, U256};
 
     #[derive(odra::Event, PartialEq, Eq, Debug, Clone)]

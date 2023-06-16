@@ -29,8 +29,10 @@ pub fn gen_contract(blueprint: ContractBlueprint) -> TokenStream2 {
     let call_fn = generate_call(&blueprint);
 
     quote! {
+        #![no_std]
         #![no_main]
 
+        extern crate alloc;
         #keys
 
         #call_fn

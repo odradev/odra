@@ -1,11 +1,11 @@
-use std::{fmt::Debug, marker::PhantomData};
+use core::{fmt::Debug, marker::PhantomData};
 
+use super::instance::DynamicInstance;
 use crate::instance::StaticInstance;
 use crate::types::OdraType;
 use crate::{contract_env, UnwrapOrRevert};
+use alloc::vec::Vec;
 use odra_types::arithmetic::{OverflowingAdd, OverflowingSub};
-
-use super::instance::DynamicInstance;
 
 /// Data structure for storing key-value pairs.
 #[derive(Clone)]

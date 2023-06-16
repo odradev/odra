@@ -2,6 +2,7 @@ use odra::{
     types::{Address, U256},
     Mapping, Variable
 };
+use alloc::{vec::Vec, vec, string::String};
 
 use crate::contracts::owned_token::OwnedToken;
 

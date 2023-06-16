@@ -15,5 +15,5 @@ odra-types = { path = "../../types" }
 odra-utils = { path = "../../utils" }
 hex = "0.4.3"
 uint = "0.9.4"
-borsh = "0.9.3"
+borsh = { version = "0.9.3", default-features = false }
 num-traits = "0.2.14"

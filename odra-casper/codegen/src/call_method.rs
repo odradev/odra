@@ -42,8 +42,8 @@ impl CallMethod {
 
                 quote! {
                     odra::casper::utils::build_event(
-                        String::from(#ident),
-                        vec![#fields]
+                        alloc::string::String::from(#ident),
+                        alloc::vec![#fields]
                     )
                 }
             })
@@ -75,7 +75,7 @@ impl ToTokens for CallMethod {
         tokens.extend(quote!{
             #[no_mangle]
             fn call() {
-                let schemas = vec![
+                let schemas = alloc::vec![
                     #event_schemas
                 ];
 

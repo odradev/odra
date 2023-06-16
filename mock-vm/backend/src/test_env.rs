@@ -1,7 +1,7 @@
 //! Describes test environment API. Delegates methods to the underlying env implementation.
 //!
 //! Depending on the selected feature, the actual test env is dynamically loaded in the runtime or the Odra local MockVM is used.
-use std::{collections::HashMap, panic::AssertUnwindSafe};
+use std::{collections::BTreeMap, panic::AssertUnwindSafe};
 
 use odra_mock_vm_types::{
     Address, Balance, BlockTime, BorshDeserialize, Bytes, CallArgs, MockDeserializable,
@@ -35,8 +35,8 @@ delegate_to_env! {
     /// Registers the contract in the test environment.
     fn register_contract(
         constructor: Option<(String, &CallArgs, EntrypointCall)>,
-        constructors: HashMap<String, (EntrypointArgs, EntrypointCall)>,
-        entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>
+        constructors: BTreeMap<String, (EntrypointArgs, EntrypointCall)>,
+        entrypoints: BTreeMap<String, (EntrypointArgs, EntrypointCall)>
     ) -> Address
     /// Increases the current value of block_time.
     fn advance_block_time_by(milliseconds: BlockTime)

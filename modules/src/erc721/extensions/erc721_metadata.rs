@@ -1,4 +1,5 @@
 use crate::erc721::extensions::erc721_metadata::errors::Error;
+use alloc::string::String;
 use odra::{UnwrapOrRevert, Variable};
 
 /// The ERC721 Metadata interface as defined in the standard.

@@ -14,3 +14,8 @@ repository.workspace = true
 casper-event-standard = { workspace = true }
 odra-casper-types = { path = "../types" }
 odra-utils = { path = "../../utils" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+casper-contract = { workspace = true }
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+casper-contract = { version = "3.0.0", default-features = false, features = ["test-support"] }

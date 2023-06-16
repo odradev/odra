@@ -112,7 +112,7 @@ pub(crate) mod mock_vm {
         quote! {
             #[cfg(feature = "mock-vm")]
             impl odra::types::BorshSerialize for #struct_ident {
-                fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+                fn serialize<W: odra::types::Write>(&self, writer: &mut W) -> odra::types::Result<()> {
                     odra::types::BorshSerialize::serialize(stringify!(#struct_ident), writer)?;
 
                     #fields_serialization
@@ -123,8 +123,8 @@ pub(crate) mod mock_vm {
             #[cfg(feature = "mock-vm")]
             impl odra::types::BorshDeserialize for #struct_ident {
 
-                fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
-                    let _ = <String as odra::types::BorshDeserialize>::deserialize(buf)?;
+                fn deserialize(buf: &mut &[u8]) -> odra::types::Result<Self> {
+                    let _ = <alloc::string::String as odra::types::BorshDeserialize>::deserialize(buf)?;
                     Ok(Self {
                         #fields_deserialization
                     })
@@ -167,7 +167,7 @@ pub(crate) mod mock_vm {
         quote! {
             #[cfg(feature = "mock-vm")]
             impl odra::types::BorshSerialize for #struct_ident {
-                fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+                fn serialize<W: odra::types::Write>(&self, writer: &mut W) -> odra::types::Result<()> {
                     #variant_idx_serialization
                     Ok(())
                 }
@@ -175,13 +175,13 @@ pub(crate) mod mock_vm {
 
             #[cfg(feature = "mock-vm")]
             impl odra::types::BorshDeserialize for #struct_ident {
-                fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
+                fn deserialize(buf: &mut &[u8]) -> odra::types::Result<Self> {
                     let variant_idx: u8 = odra::types::BorshDeserialize::deserialize(buf)?;
                     let return_value = match variant_idx {
                         #fields_deserialization,
                         _ => return Err(
-                            std::io::Error::new(
-                                std::io::ErrorKind::InvalidInput, "Unexpected variant index"
+                            odra::types::Error::new(
+                                odra::types::ErrorKind::InvalidInput, "Unexpected variant index"
                         ))
                     };
                     Ok(return_value)
@@ -206,7 +206,7 @@ pub(crate) mod casper {
 
     pub fn serialize_struct(prefix: &str, struct_ident: &Ident, fields: &[Ident]) -> TokenStream {
         let name_literal = format_ident!("{prefix}{struct_ident}");
-        let name_literal = quote! { stringify!(#name_literal) };
+        let name_literal = quote!(stringify!(#name_literal));
 
         let deserialize_fields = fields
             .iter()
@@ -240,7 +240,7 @@ pub(crate) mod casper {
             #[cfg(any(feature = "casper", feature = "casper-livenet"))]
             impl odra::casper::casper_types::bytesrepr::FromBytes for #struct_ident {
                 fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper::casper_types::bytesrepr::Error> {
-                    let (_, bytes): (String, _) = odra::casper::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
+                    let (_, bytes): (alloc::string::String, _) = odra::casper::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
                     #deserialize_fields
                     let value = #struct_ident {
                         #construct_struct
@@ -251,8 +251,8 @@ pub(crate) mod casper {
 
             #[cfg(any(feature = "casper", feature = "casper-livenet"))]
             impl odra::casper::casper_types::bytesrepr::ToBytes for #struct_ident {
-                fn to_bytes(&self) -> Result<Vec<u8>, odra::casper::casper_types::bytesrepr::Error> {
-                    let mut vec = Vec::with_capacity(self.serialized_length());
+                fn to_bytes(&self) -> Result<alloc::vec::Vec<u8>, odra::casper::casper_types::bytesrepr::Error> {
+                    let mut vec = alloc::vec::Vec::with_capacity(self.serialized_length());
                     vec.append(&mut #name_literal.to_bytes()?);
                     #append_bytes
                     Ok(vec)
@@ -289,7 +289,7 @@ pub(crate) mod casper {
                     (self.clone() as u32).serialized_length()
                 }
 
-                fn to_bytes(&self) -> Result<Vec<u8>, odra::casper::casper_types::bytesrepr::Error> {
+                fn to_bytes(&self) -> Result<alloc::vec::Vec<u8>, odra::casper::casper_types::bytesrepr::Error> {
                     (self.clone() as u32).to_bytes()
                 }
             }
@@ -309,7 +309,7 @@ pub(crate) mod casper {
             .map(|variant| {
                 let ident = &variant.ident;
                 quote! {
-                    x if x == #enum_ident::#ident as u32 => std::result::Result::Ok((#enum_ident::#ident, bytes))
+                    x if x == #enum_ident::#ident as u32 => core::result::Result::Ok((#enum_ident::#ident, bytes))
                 }
             })
             .collect::<Punctuated<TokenStream, Comma>>();
@@ -319,7 +319,7 @@ pub(crate) mod casper {
                 let (variant, bytes): (u32, _) = odra::casper::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
                 match variant {
                     #append_bytes,
-                    _ => std::result::Result::Err(odra::casper::casper_types::bytesrepr::Error::Formatting),
+                    _ => core::result::Result::Err(odra::casper::casper_types::bytesrepr::Error::Formatting),
                 }
             }
         }
