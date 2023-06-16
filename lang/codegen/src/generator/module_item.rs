@@ -1,38 +1,43 @@
 use derive_more::From;
 use quote::{quote, quote_spanned};
 
-use crate::{generator::module_item::composer::ModuleComposer, GenerateCode};
+use crate::{generator::module_item::{composer::ModuleComposer, node::Node}, GenerateCode, poet::OdraPoetUsingStruct};
 
+mod node;
 mod composer;
 
 #[derive(From)]
 pub struct ModuleStruct<'a> {
-    pub contract: &'a odra_ir::module::ModuleStruct
+    pub module: &'a odra_ir::module::ModuleStruct
 }
+
+as_ref_for_contract_struct_generator!(ModuleStruct);
 
 impl GenerateCode for ModuleStruct<'_> {
     fn generate_code(&self) -> proc_macro2::TokenStream {
-        let events = &self.contract.events;
+        let events = &self.module.events;
         let module_events = events.events.iter().collect::<Vec<_>>();
         let submodules_events = events.submodules_events.iter().collect::<Vec<_>>();
         let mappings_events = events.mappings_events.iter().collect::<Vec<_>>();
 
-        let item_struct = &self.contract.item;
+        let item_struct = &self.module.item;
 
         let struct_ident = &item_struct.ident;
         let span = item_struct.ident.span();
-        let instance = if self.contract.is_instantiable && !self.contract.skip_instance {
+        let instance = if self.module.is_instantiable && !self.module.skip_instance {
             quote_spanned!(span => #[derive(odra::Instance, Clone)])
         } else {
             quote!(#[derive(Clone)])
         };
 
-        let composer =
-            <ModuleComposer as GenerateCode>::generate_code(&ModuleComposer::from(self.contract));
+        let composer = self.generate_code_using::<ModuleComposer>();
+        let node = self.generate_code_using::<Node>();
 
         quote! {
             #instance
             #item_struct
+
+            #node
 
             impl odra::OdraItem for #struct_ident {
                 fn is_module() -> bool {

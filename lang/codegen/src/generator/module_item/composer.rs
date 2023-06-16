@@ -11,6 +11,8 @@ pub struct ModuleComposer<'a> {
     module: &'a ModuleStruct
 }
 
+as_ref_for_contract_struct_generator!(ModuleComposer);
+
 impl GenerateCode for ModuleComposer<'_> {
     fn generate_code(&self) -> TokenStream {
         let composer_ident = format_ident!("{}Composer", self.module.item.ident);

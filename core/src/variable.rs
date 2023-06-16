@@ -12,6 +12,13 @@ pub struct Variable<T> {
     ty: PhantomData<T>
 }
 
+impl <T> Variable<T> {
+     /// Returns the named key path to the variable.
+     pub fn path(&self) -> &str {
+        &self.name
+    }
+}
+
 // <3
 impl<T: OdraType + Default> Variable<T> {
     /// Reads from the storage, if theres no value in the storage the default value is returned.
@@ -66,11 +73,6 @@ impl<T: OdraType> Variable<T> {
     #[inline(always)]
     pub fn set(&mut self, value: T) {
         contract_env::set_var(&self.name, value);
-    }
-
-    /// Return the named key path to the variable.
-    pub fn path(&self) -> &str {
-        &self.name
     }
 }
 

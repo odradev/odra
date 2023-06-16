@@ -8,6 +8,16 @@ macro_rules! as_ref_for_contract_impl_generator {
     };
 }
 
+macro_rules! as_ref_for_contract_struct_generator {
+    ($struct_ident:ident) => {
+        impl ::core::convert::AsRef<odra_ir::module::ModuleStruct> for $struct_ident<'_> {
+            fn as_ref(&self) -> &odra_ir::module::ModuleStruct {
+                self.module
+            }
+        }
+    };
+}
+
 use generator::GenerateCode;
 mod generator;
 mod poet;

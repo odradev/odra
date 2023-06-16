@@ -18,6 +18,7 @@ compile_error!(
 mod composer;
 mod instance;
 mod item;
+mod node;
 mod list;
 mod mapping;
 mod sequence;
@@ -31,6 +32,7 @@ pub use {
     composer::Composer,
     instance::Instance,
     item::OdraItem,
+    node::Node,
     list::{Iter, List},
     mapping::Mapping,
     odra_proc_macros::{

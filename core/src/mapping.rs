@@ -13,6 +13,13 @@ pub struct Mapping<K, V> {
     value_ty: PhantomData<V>
 }
 
+impl <K, V> Mapping<K, V> {
+     /// Return the named key path to the variable.
+     pub fn path(&self) -> &str {
+        &self.name
+    }
+}
+
 impl<K: OdraType + Hash, V> Mapping<K, V> {
     /// Creates a new Mapping instance.
     pub fn new(name: String) -> Self {
@@ -35,11 +42,6 @@ impl<K: OdraType + Hash, V: OdraType> Mapping<K, V> {
     #[inline(always)]
     pub fn set(&mut self, key: &K, value: V) {
         contract_env::set_dict_value(&self.name, key, value);
-    }
-
-    /// Return the named key path to the variable.
-    pub fn path(&self) -> &str {
-        &self.name
     }
 }
 
