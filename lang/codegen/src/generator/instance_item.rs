@@ -1,7 +1,8 @@
 use derive_more::From;
 use odra_ir::InstanceItem as IrInstanceItem;
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
+use quote::quote;
+use syn::{punctuated::Punctuated, Field, Token};
 
 use crate::GenerateCode;
 
@@ -12,22 +13,47 @@ pub struct InstanceItem<'a> {
 
 impl GenerateCode for InstanceItem<'_> {
     fn generate_code(&self) -> proc_macro2::TokenStream {
-        let item_struct = self.item.data_struct();
-
         let ident = &self.item.ident();
 
-        let fields: TokenStream = item_struct
-            .clone()
-            .fields
-            .into_iter()
-            .flat_map(|field| WrappedField(field).to_token_stream())
+        let static_fields: TokenStream = self
+            .fields_iter()
+            .flat_map(|field| {
+                let ident = field.ident.as_ref().unwrap();
+                quote!(let (#ident, keys) = odra::StaticInstance::instance(&keys);)
+            })
             .collect();
 
+        let init = self
+            .fields_iter()
+            .map(|field| {
+                let ident = field.ident.as_ref().unwrap();
+                quote!(#ident)
+            })
+            .collect::<Punctuated<TokenStream, Token![,]>>();
+
+        let dynamic_fields = self
+            .fields_iter()
+            .map(|field| {
+                let ident = field.ident.as_ref().unwrap();
+                quote!(#ident: odra::DynamicInstance::instance(&[namespace, stringify!(#ident).as_bytes()].concat()))
+            })
+            .collect::<Punctuated<TokenStream, Token![,]>>();
+
         quote! {
-            impl odra::Instance for #ident {
-                fn instance(namespace: &str) -> Self {
+            impl odra::StaticInstance for #ident {
+                fn instance(keys: &'static [&'static str]) -> (Self,  &'static [&'static str]) {
+                    #static_fields
+                    (
+                        Self { #init },
+                        keys
+                    )
+                }
+            }
+
+            impl odra::DynamicInstance for #ident {
+                fn instance(namespace: &[u8]) -> Self {
                     Self {
-                        #fields
+                        #dynamic_fields
                     }
                 }
             }
@@ -35,22 +61,8 @@ impl GenerateCode for InstanceItem<'_> {
     }
 }
 
-struct WrappedField(pub syn::Field);
-
-impl ToTokens for WrappedField {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        let ident = &self.0.ident.as_ref().unwrap();
-        tokens.extend(quote! {
-            #ident: odra::Instance::instance(
-                &[stringify!(#ident), namespace]
-                    .iter()
-                    .filter_map(|str| match str.is_empty() {
-                        true => None,
-                        false => Some(*str),
-                    })
-                    .collect::<Vec<_>>()
-                    .join("_")
-            ),
-        });
+impl<'a> InstanceItem<'a> {
+    fn fields_iter(&'a self) -> impl Iterator<Item = &'a Field> + 'a {
+        self.item.data_struct().fields.iter()
     }
 }

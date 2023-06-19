@@ -11,7 +11,7 @@ pub const EVENTS_LENGTH: &str = casper_event_standard::EVENTS_LENGTH;
 pub const CONTRACT_MAIN_PURSE: &str = "__contract_main_purse";
 
 /// The key under which the reentrancy guard status is stored.
-pub const REENTRANCY_GUARD: &str = "__reentrancy_guard";
+pub const REENTRANCY_GUARD: [u8; 18] = *b"__reentrancy_guard";
 
 /// The key for account's cargo purse.
 pub const CARGO_PURSE_KEY: &str = "__cargo_purse";

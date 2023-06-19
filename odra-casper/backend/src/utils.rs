@@ -73,28 +73,31 @@ pub fn assert_no_attached_value() {
 }
 
 pub fn non_reentrant_before() {
-    let status: bool = casper_env::get_key(consts::REENTRANCY_GUARD).unwrap_or_default();
+    let status: bool = casper_env::get_key(&consts::REENTRANCY_GUARD).unwrap_or_default();
     if status {
         revert(ExecutionError::reentrant_call())
     };
-    casper_env::set_key(consts::REENTRANCY_GUARD, true);
+    casper_env::set_key(&consts::REENTRANCY_GUARD, true);
 }
 
 pub fn non_reentrant_after() {
-    casper_env::set_key(consts::REENTRANCY_GUARD, false);
+    casper_env::set_key(&consts::REENTRANCY_GUARD, false);
 }
 
-pub fn build_event(name: &str, fields: Vec<(&str, CLType)>) -> (String, Schema) {
+pub fn build_event(
+    name: &'static str,
+    fields: &[(&'static str, CLType)]
+) -> (&'static str, Schema) {
     let mut s = Schema::new();
     fields.iter().for_each(|(name, cl_type)| {
         s.with_elem(name, cl_type.clone());
     });
-    (name.to_owned(), s)
+    (name, s)
 }
 
 pub fn install_contract(
     entry_points: EntryPoints,
-    events: Vec<(String, Schema)>
+    events: &[(&'static str, Schema)]
 ) -> ContractPackageHash {
     // Read arguments
     let package_hash_key: String = runtime::get_named_arg(consts::PACKAGE_HASH_KEY_NAME_ARG);
@@ -110,7 +113,7 @@ pub fn install_contract(
     // Parse events.
     let mut schemas = casper_event_standard::Schemas::new();
     events.iter().for_each(|(name, schema)| {
-        schemas.0.insert(name.to_owned(), schema.clone());
+        schemas.0.insert(String::from(*name), schema.to_owned());
     });
 
     // Prepare named keys.

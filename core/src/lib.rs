@@ -18,9 +18,9 @@ compile_error!(
 mod composer;
 mod instance;
 mod item;
-mod node;
 mod list;
 mod mapping;
+mod node;
 mod sequence;
 mod unwrap_or_revert;
 mod variable;
@@ -30,9 +30,8 @@ pub mod test_utils;
 
 pub use {
     composer::Composer,
-    instance::Instance,
+    instance::{DynamicInstance, StaticInstance},
     item::OdraItem,
-    node::Node,
     list::{Iter, List},
     mapping::Mapping,
     odra_proc_macros::{

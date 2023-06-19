@@ -160,11 +160,11 @@ impl MockVm {
         self.state.write().unwrap().set_caller(caller);
     }
 
-    pub fn set_var<T: MockSerializable + MockDeserializable>(&self, key: &str, value: T) {
+    pub fn set_var<T: MockSerializable + MockDeserializable>(&self, key: &[u8], value: T) {
         self.state.write().unwrap().set_var(key, value);
     }
 
-    pub fn get_var<T: MockSerializable + MockDeserializable>(&self, key: &str) -> Option<T> {
+    pub fn get_var<T: MockSerializable + MockDeserializable>(&self, key: &[u8]) -> Option<T> {
         let result = { self.state.read().unwrap().get_var(key) };
         match result {
             Ok(result) => result,
@@ -177,7 +177,7 @@ impl MockVm {
 
     pub fn set_dict_value<T: MockSerializable + MockDeserializable>(
         &self,
-        dict: &str,
+        dict: &[u8],
         key: &[u8],
         value: T
     ) {
@@ -186,7 +186,7 @@ impl MockVm {
 
     pub fn get_dict_value<T: MockSerializable + MockDeserializable>(
         &self,
-        dict: &str,
+        dict: &[u8],
         key: &[u8]
     ) -> Option<T> {
         let result = { self.state.read().unwrap().get_dict_value(dict, key) };
@@ -303,7 +303,7 @@ impl MockVmState {
         self.push_callstack_element(CallstackElement::Account(address));
     }
 
-    fn set_var<T: MockSerializable + MockDeserializable>(&mut self, key: &str, value: T) {
+    fn set_var<T: MockSerializable + MockDeserializable>(&mut self, key: &[u8], value: T) {
         let ctx = self.callstack.current().address();
         if let Err(err) = self.storage.set_value(ctx, key, value) {
             self.set_error(err);
@@ -312,7 +312,7 @@ impl MockVmState {
 
     fn get_var<T: MockSerializable + MockDeserializable>(
         &self,
-        key: &str
+        key: &[u8]
     ) -> Result<Option<T>, MockVMSerializationError> {
         let ctx = self.callstack.current().address();
         self.storage.get_value(ctx, key)
@@ -320,7 +320,7 @@ impl MockVmState {
 
     fn set_dict_value<T: MockSerializable + MockDeserializable>(
         &mut self,
-        dict: &str,
+        dict: &[u8],
         key: &[u8],
         value: T
     ) {
@@ -332,7 +332,7 @@ impl MockVmState {
 
     fn get_dict_value<T: MockSerializable + MockDeserializable>(
         &self,
-        dict: &str,
+        dict: &[u8],
         key: &[u8]
     ) -> Result<Option<T>, MockVMSerializationError> {
         let ctx = &self.callstack.current().address();
@@ -643,14 +643,14 @@ mod tests {
         let instance = MockVm::default();
 
         // when set a value
-        let key = "key";
+        let key = b"key";
         let value = 32u8;
         instance.set_var(key, value);
 
         // then the value can be read
         assert_eq!(instance.get_var(key), Some(value));
         // then the value under unknown key does not exist
-        assert_eq!(instance.get_var::<()>("other_key"), None);
+        assert_eq!(instance.get_var::<()>(b"other_key"), None);
     }
 
     #[test]
@@ -659,7 +659,7 @@ mod tests {
         let instance = MockVm::default();
 
         // when set a value
-        let dict = "dict";
+        let dict = b"dict";
         let key: [u8; 2] = [1, 2];
         let value = 32u8;
         instance.set_dict_value(dict, &key, value);
@@ -667,7 +667,7 @@ mod tests {
         // then the value can be read
         assert_eq!(instance.get_dict_value(dict, &key), Some(value));
         // then the value under the key in unknown dict does not exist
-        assert_eq!(instance.get_dict_value::<()>("other_dict", &key), None);
+        assert_eq!(instance.get_dict_value::<()>(b"other_dict", &key), None);
         // then the value under unknown key does not exist
         assert_eq!(instance.get_dict_value::<()>(dict, &[]), None);
     }

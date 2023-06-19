@@ -1,10 +1,14 @@
 use derive_more::From;
 use quote::{quote, quote_spanned};
 
-use crate::{generator::module_item::{composer::ModuleComposer, node::Node}, GenerateCode, poet::OdraPoetUsingStruct};
+use crate::{
+    generator::module_item::{composer::ModuleComposer, node::Node},
+    poet::OdraPoetUsingStruct,
+    GenerateCode
+};
 
-mod node;
 mod composer;
+mod node;
 
 #[derive(From)]
 pub struct ModuleStruct<'a> {
@@ -106,6 +110,40 @@ mod test {
                 pub submodule: Submodule
             }
 
+            impl odra::types::contract_def::Node for Module {
+                fn count() -> u32 {
+                    <Variable<u32> as odra::types::contract_def::Node>::count() +
+                    <Mapping<u32, Mapping<u32, MappedModule> > as odra::types::contract_def::Node>::count() +
+                    <Mapping<u32, String> as odra::types::contract_def::Node>::count() +
+                    <Submodule as odra::types::contract_def::Node>::count()
+                }
+
+                fn keys() -> Vec<String> {
+                    let mut result = vec![];
+                    match <Variable<u32> as odra::types::contract_def::Node>::is_leaf() {
+                        true => result.push(stringify!(variable).to_string()),
+                        false => result.extend(<Variable<u32> as odra::types::contract_def::Node>::keys().iter().map(|k| format!("{}#{}", stringify!(variable), k)))
+                    }
+                    match <Mapping<u32, Mapping<u32, MappedModule> > as odra::types::contract_def::Node>::is_leaf() {
+                        true => result.push(stringify!(mapping).to_string()),
+                        false => result.extend(<Mapping<u32, Mapping<u32, MappedModule> > as odra::types::contract_def::Node>::keys().iter().map(|k| format!("{}#{}", stringify!(mapping), k)))
+                    }
+                    match <Mapping<u32, String> as odra::types::contract_def::Node>::is_leaf() {
+                        true => result.push(stringify!(mapping2).to_string()),
+                        false => result.extend(<Mapping<u32, String> as odra::types::contract_def::Node>::keys().iter().map(|k| format!("{}#{}", stringify!(mapping2), k)))
+                    }
+                    match <Submodule as odra::types::contract_def::Node>::is_leaf() {
+                        true => result.push(stringify!(submodule).to_string()),
+                        false => result.extend(<Submodule as odra::types::contract_def::Node>::keys().iter().map(|k| format!("{}#{}", stringify!(submodule), k)))
+                    }
+                    result
+                }
+
+                fn is_leaf () -> bool {
+                    false
+                }
+            }
+
             impl odra::OdraItem for Module {
                 fn is_module() -> bool {
                     true
@@ -133,7 +171,7 @@ mod test {
             }
 
             pub struct ModuleComposer {
-                namespace: String,
+                namespace: Vec<u8>,
                 variable: core::option::Option<Variable<u32> >,
                 mapping: core::option::Option<Mapping<u32, Mapping<u32, MappedModule> > >,
                 mapping2: core::option::Option<Mapping<u32, String> >,
@@ -141,9 +179,9 @@ mod test {
             }
 
             impl ModuleComposer {
-                pub fn new(namespace: &str, name: &str) -> Self {
+                pub fn new(namespace: &[u8], name: &str) -> Self {
                     Self {
-                        namespace: format!("{}_{}", name, namespace),
+                        namespace: [namespace, "#".as_bytes(), name.as_bytes()].concat(),
                         variable: core::option::Option::None,
                         mapping: core::option::Option::None,
                         mapping2: core::option::Option::None,
@@ -173,10 +211,10 @@ mod test {
 
                 pub fn compose(self) -> Module {
                     Module {
-                        variable: self.variable.unwrap_or_else(|| odra::Instance::instance(&format!("{}_{}", &self.namespace, stringify!(variable)))),
-                        mapping: self.mapping.unwrap_or_else(|| odra::Instance::instance(&format!("{}_{}", &self.namespace, stringify!(mapping)))),
-                        mapping2: self.mapping2.unwrap_or_else(|| odra::Instance::instance(&format!("{}_{}", &self.namespace, stringify!(mapping2)))),
-                        submodule: self.submodule.unwrap_or_else(|| odra::Instance::instance(&format!("{}_{}", &self.namespace, stringify!(submodule))))
+                        variable: self.variable.unwrap_or_else(|| odra::DynamicInstance::instance(&[&self.namespace, "#".as_bytes(), stringify!(variable).as_bytes()].concat())),
+                        mapping: self.mapping.unwrap_or_else(|| odra::DynamicInstance::instance(&[&self.namespace, "#".as_bytes(), stringify!(mapping).as_bytes()].concat())),
+                        mapping2: self.mapping2.unwrap_or_else(|| odra::DynamicInstance::instance(&[&self.namespace, "#".as_bytes(), stringify!(mapping2).as_bytes()].concat())),
+                        submodule: self.submodule.unwrap_or_else(|| odra::DynamicInstance::instance(&[&self.namespace, "#".as_bytes(), stringify!(submodule).as_bytes()].concat()))
                     }
                 }
             }

@@ -1,47 +1,38 @@
 use std::{fmt::Debug, hash::Hash, marker::PhantomData};
 
-use crate::instance::Instance;
+use crate::instance::StaticInstance;
 use crate::types::OdraType;
 use crate::{contract_env, UnwrapOrRevert};
 use odra_types::arithmetic::{OverflowingAdd, OverflowingSub};
 
+use super::instance::DynamicInstance;
+
 /// Data structure for storing key-value pairs.
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Mapping<K, V> {
-    name: String,
     key_ty: PhantomData<K>,
-    value_ty: PhantomData<V>
+    value_ty: PhantomData<V>,
+    namespace_buffer: Vec<u8>
 }
 
-impl <K, V> Mapping<K, V> {
-     /// Return the named key path to the variable.
-     pub fn path(&self) -> &str {
-        &self.name
-    }
-}
-
-impl<K: OdraType + Hash, V> Mapping<K, V> {
-    /// Creates a new Mapping instance.
-    pub fn new(name: String) -> Self {
-        Mapping {
-            name,
-            key_ty: PhantomData::<K>::default(),
-            value_ty: PhantomData::<V>::default()
-        }
-    }
-}
+// impl<K, V> Mapping<K, V> {
+//     /// Return the named key path to the variable.
+//     pub fn path(&self) -> &str {
+//         &self.name
+//     }
+// }
 
 impl<K: OdraType + Hash, V: OdraType> Mapping<K, V> {
     /// Reads `key` from the storage or returns `None`.
     #[inline(always)]
     pub fn get(&self, key: &K) -> Option<V> {
-        contract_env::get_dict_value(&self.name, key)
+        contract_env::get_dict_value(&self.namespace_buffer, key)
     }
 
     /// Sets `value` under `key` to the storage. It overrides by default.
     #[inline(always)]
     pub fn set(&mut self, key: &K, value: V) {
-        contract_env::set_dict_value(&self.name, key, value);
+        contract_env::set_dict_value(&self.namespace_buffer, key, value);
     }
 }
 
@@ -52,28 +43,14 @@ impl<K: OdraType + Hash, V: OdraType + Default> Mapping<K, V> {
     }
 }
 
-impl<K: OdraType + Hash, V: Instance> Mapping<K, V> {
+impl<K: OdraType + Hash, V: DynamicInstance> Mapping<K, V> {
     /// Reads `key` from the storage or the default value is returned.
     pub fn get_instance(&self, key: &K) -> V {
-        #[cfg(feature = "mock-vm")]
-        {
-            let key_hash = hex::encode(key.ser().unwrap());
-            let namespace = format!("{}_{}", key_hash, self.name);
-            V::instance(&namespace)
-        }
-
-        #[cfg(feature = "casper")]
-        {
-            use odra_casper_backend::casper_contract::unwrap_or_revert::UnwrapOrRevert;
-            let key_hash = hex::encode(key.to_bytes().unwrap_or_revert());
-            V::instance(&format!("{}_{}", key_hash, self.name))
-        }
-
-        #[cfg(feature = "casper-livenet")]
-        {
-            let key_hash = hex::encode(key.to_bytes().unwrap());
-            V::instance(&format!("{}_{}", key_hash, self.name))
-        }
+        let buffer: Vec<u8> = key.serialize().unwrap_or(Vec::new());
+        let mut result = Vec::with_capacity(buffer.len() + self.namespace_buffer.len());
+        result.extend_from_slice(self.namespace_buffer.as_slice());
+        result.extend_from_slice(buffer.as_slice());
+        V::instance(&buffer)
     }
 }
 
@@ -85,7 +62,7 @@ impl<K: OdraType + Hash, V: OdraType + OverflowingAdd + Default> Mapping<K, V> {
     pub fn add(&mut self, key: &K, value: V) {
         let current_value = self.get(key).unwrap_or_default();
         let new_value = current_value.overflowing_add(value).unwrap_or_revert();
-        contract_env::set_dict_value(&self.name, key, new_value);
+        contract_env::set_dict_value(&self.namespace_buffer, key, new_value);
     }
 }
 
@@ -99,28 +76,41 @@ impl<K: OdraType + Hash, V: OdraType + OverflowingSub + Default + Debug + Partia
     pub fn subtract(&mut self, key: &K, value: V) {
         let current_value = self.get(key).unwrap_or_default();
         let new_value = current_value.overflowing_sub(value).unwrap_or_revert();
-        contract_env::set_dict_value(&self.name, key, new_value);
+        contract_env::set_dict_value(&self.namespace_buffer, key, new_value);
     }
 }
 
-impl<K: OdraType + Hash, V> From<&str> for Mapping<K, V> {
-    fn from(name: &str) -> Self {
-        Mapping::new(name.to_string())
+impl<K: OdraType + Hash, V> StaticInstance for Mapping<K, V> {
+    fn instance(keys: &'static [&'static str]) -> (Self, &'static [&'static str]) {
+        (
+            Self {
+                key_ty: PhantomData,
+                value_ty: PhantomData,
+                namespace_buffer: keys[0].as_bytes().to_vec()
+            },
+            &keys[1..]
+        )
     }
 }
 
-impl<K: OdraType + Hash, V> Instance for Mapping<K, V> {
-    fn instance(namespace: &str) -> Self {
-        namespace.into()
+impl<K: OdraType + Hash, V> DynamicInstance for Mapping<K, V> {
+    fn instance(namespace: &[u8]) -> Self {
+        Self {
+            key_ty: PhantomData,
+            value_ty: PhantomData,
+            namespace_buffer: namespace.to_vec()
+        }
     }
 }
 
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
-    use crate::{test_env, Instance, Mapping};
+    use crate::{instance::StaticInstance, mapping::Mapping, test_env};
     use core::hash::Hash;
     use odra_mock_vm::types::OdraType;
     use odra_types::arithmetic::ArithmeticsError;
+
+    const SHARED_VALUE: [&str; 1] = ["shared_value"];
 
     #[test]
     fn test_get() {
@@ -197,11 +187,10 @@ mod tests {
     #[test]
     fn test_instances_with_the_same_namespace() {
         // Given two variables with the same namespace.
-        let namespace = "shared_value";
         let key = String::from("k");
         let value = 42;
-        let mut x = Mapping::<String, u8>::instance(namespace);
-        let y = Mapping::<String, u8>::instance(namespace);
+        let mut x = Mapping::<String, u8>::instance(&SHARED_VALUE).0;
+        let y = Mapping::<String, u8>::instance(&SHARED_VALUE).0;
 
         // When set a value for the first variable.
         x.set(&key, value);
@@ -217,7 +206,7 @@ mod tests {
         V: OdraType
     {
         fn default() -> Self {
-            Instance::instance("m")
+            StaticInstance::instance(&["m"]).0
         }
     }
 

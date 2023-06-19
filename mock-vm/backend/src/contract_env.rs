@@ -26,12 +26,12 @@ pub fn self_address() -> Address {
 }
 
 /// Stores the `value` under `key`.
-pub fn set_var<T: MockSerializable + MockDeserializable>(key: &str, value: T) {
+pub fn set_var<T: MockSerializable + MockDeserializable>(key: &[u8], value: T) {
     borrow_env().set_var(key, value)
 }
 
 /// Gets a value stored under `key`.
-pub fn get_var<T: OdraType>(key: &str) -> Option<T> {
+pub fn get_var<T: OdraType>(key: &[u8]) -> Option<T> {
     borrow_env().get_var(key)
 }
 
@@ -40,7 +40,7 @@ pub fn set_dict_value<
     K: MockSerializable + MockDeserializable,
     V: MockSerializable + MockDeserializable
 >(
-    dict: &str,
+    dict: &[u8],
     key: &K,
     value: V
 ) {
@@ -52,7 +52,7 @@ pub fn get_dict_value<
     K: MockSerializable + MockDeserializable,
     T: MockSerializable + MockDeserializable
 >(
-    dict: &str,
+    dict: &[u8],
     key: &K
 ) -> Option<T> {
     let key = key.ser().unwrap();

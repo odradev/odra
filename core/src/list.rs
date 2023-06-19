@@ -2,7 +2,10 @@ use crate::types::OdraType;
 use core::ops::Range;
 use odra_types::CollectionError;
 
-use crate::{contract_env, Instance, Mapping, UnwrapOrRevert, Variable};
+use crate::{contract_env, UnwrapOrRevert};
+use crate::{instance::StaticInstance, mapping::Mapping, variable::Variable};
+
+use super::DynamicInstance;
 
 /// Data structure for an indexed, iterable collection.
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -12,18 +15,6 @@ pub struct List<T> {
 }
 
 impl<T: OdraType> List<T> {
-    /// Creates a new List instance.
-    pub fn new(name: String) -> Self {
-        let mut name_values = name.clone();
-        name_values.push_str("_values");
-        let mut name_index = name;
-        name_index.push_str("_index");
-        List {
-            values: Mapping::new(name_values),
-            index: Variable::new(name_index)
-        }
-    }
-
     /// Reads collection's n-th value from the storage or returns `None`.
     pub fn get(&self, index: u32) -> Option<T> {
         self.values.get(&index)
@@ -135,15 +126,28 @@ impl<T: OdraType + Default> List<T> {
     }
 }
 
-impl<T: OdraType> From<&str> for List<T> {
-    fn from(name: &str) -> Self {
-        List::new(String::from(name))
+impl<T: OdraType> StaticInstance for List<T> {
+    fn instance(keys: &'static [&'static str]) -> (Self, &'static [&'static str]) {
+        let (values, keys) = StaticInstance::instance(keys);
+        let (index, keys) = StaticInstance::instance(keys);
+        (Self { values, index }, keys)
     }
 }
 
-impl<T: OdraType> Instance for List<T> {
-    fn instance(namespace: &str) -> Self {
-        namespace.into()
+impl<T: OdraType> DynamicInstance for List<T> {
+    fn instance(namespace: &[u8]) -> Self {
+        let mut values_buffer: Vec<u8> = Vec::new();
+        values_buffer.extend_from_slice(namespace);
+        values_buffer.extend_from_slice("values".as_bytes());
+
+        let mut index_buffer: Vec<u8> = Vec::new();
+        index_buffer.extend_from_slice(namespace);
+        index_buffer.extend_from_slice("index".as_bytes());
+
+        Self {
+            values: DynamicInstance::instance(&values_buffer),
+            index: DynamicInstance::instance(&index_buffer)
+        }
     }
 }
 
@@ -152,9 +156,10 @@ mod tests {
     use odra_mock_vm::types::OdraType;
     use odra_types::CollectionError;
 
+    use crate::instance::StaticInstance;
     use crate::test_env;
 
-    use crate::List;
+    use super::List;
 
     #[test]
     fn test_getting_items() {
@@ -297,7 +302,7 @@ mod tests {
 
     impl<T: OdraType> Default for List<T> {
         fn default() -> Self {
-            Self::new(String::from("l"))
+            StaticInstance::instance(&["list_val", "list_idx"]).0
         }
     }
 }

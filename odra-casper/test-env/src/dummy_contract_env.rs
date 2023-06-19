@@ -10,19 +10,19 @@ pub fn caller() -> Address {
     unimplemented!()
 }
 
-pub fn set_var<T: OdraType>(_: &str, _: T) {
+pub fn set_var<T: OdraType>(_: &[u8], _: T) {
     unimplemented!()
 }
 
-pub fn get_var<T: OdraType>(_: &str) -> Option<T> {
+pub fn get_var<T: OdraType>(_: &[u8]) -> Option<T> {
     unimplemented!()
 }
 
-pub fn set_dict_value<K: OdraType, V: OdraType>(_: &str, _: &K, _: V) {
+pub fn set_dict_value<K: OdraType, V: OdraType>(_: &[u8], _: &K, _: V) {
     unimplemented!()
 }
 
-pub fn get_dict_value<K: OdraType, T: OdraType>(_: &str, _: &K) -> Option<T> {
+pub fn get_dict_value<K: OdraType, T: OdraType>(_: &[u8], _: &K) -> Option<T> {
     unimplemented!()
 }
 

@@ -14,6 +14,7 @@ impl Ownable {
         if self.owner.get().is_some() {
             contract_env::revert(Error::OwnerIsAlreadyInitialized)
         }
+
         self.owner.set(*owner);
         OwnershipChanged {
             prev_owner: None,

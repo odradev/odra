@@ -71,3 +71,18 @@ pub trait HasIdent {
 pub trait HasEvents {
     fn events() -> Vec<Event>;
 }
+
+pub trait Node {
+    fn count() -> u32;
+    fn keys() -> Vec<String>;
+    fn is_leaf() -> bool;
+}
+
+#[derive(Debug, Clone)]
+pub struct ContractBlueprint {
+    pub keys: Vec<String>,
+    pub keys_count: u32,
+    pub events: Vec<Event>,
+    pub entrypoints: Vec<Entrypoint>,
+    pub fqn: &'static str
+}

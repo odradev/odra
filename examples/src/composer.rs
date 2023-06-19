@@ -1,4 +1,4 @@
-use odra::{Instance, Variable};
+use odra::Variable;
 
 #[odra::module]
 pub struct SharedStorage {
@@ -34,8 +34,19 @@ impl ComposableContract {
     }
 }
 
-impl Instance for ComposableContract {
-    fn instance(namespace: &str) -> Self {
+impl odra::StaticInstance for ComposableContract {
+    fn instance(keys: &'static [&'static str]) -> (Self, &'static [&'static str]) {
+        let namespace = b"root";
+        let shared = SharedStorageComposer::new(namespace, "shared").compose();
+        let storage = MyStorageComposer::new(namespace, "storage")
+            .with_shared(&shared)
+            .compose();
+        (Self { shared, storage }, keys)
+    }
+}
+
+impl odra::DynamicInstance for ComposableContract {
+    fn instance(namespace: &[u8]) -> Self {
         let shared = SharedStorageComposer::new(namespace, "shared").compose();
         let storage = MyStorageComposer::new(namespace, "storage")
             .with_shared(&shared)

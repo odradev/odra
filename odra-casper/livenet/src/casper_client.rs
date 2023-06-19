@@ -112,7 +112,7 @@ impl CasperClient {
     }
 
     /// Query the contract for the variable.
-    pub fn get_variable_value<T: OdraType>(&self, address: Address, key: &str) -> Option<T> {
+    pub fn get_variable_value<T: OdraType>(&self, address: Address, key: &[u8]) -> Option<T> {
         let key = LivenetKeyMaker::to_variable_key(key).unwrap();
         self.query_dictionary(address, &key)
     }
@@ -121,7 +121,7 @@ impl CasperClient {
     pub fn get_dict_value<K: OdraType, V: OdraType>(
         &self,
         address: Address,
-        seed: &str,
+        seed: &[u8],
         key: &K
     ) -> Option<V> {
         let key = LivenetKeyMaker::to_dictionary_key(seed, key).unwrap();
@@ -429,12 +429,12 @@ mod tests {
     pub fn client_works() {
         let contract_hash = Address::from_str(CONTRACT_PACKAGE_HASH).unwrap();
         let result: Option<String> =
-            CasperClient::new().get_variable_value(contract_hash, "name_contract");
+            CasperClient::new().get_variable_value(contract_hash, b"name_contract");
         assert_eq!(result.unwrap().as_str(), "Plascoin");
 
         let account = Address::from_str(ACCOUNT_HASH).unwrap();
         let balance: Option<U256> =
-            CasperClient::new().get_dict_value(contract_hash, "balances_contract", &account);
+            CasperClient::new().get_dict_value(contract_hash, b"balances_contract", &account);
         assert!(balance.is_some());
     }
 

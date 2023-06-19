@@ -48,7 +48,7 @@ impl Storage {
     pub fn get_value<T: MockSerializable + MockDeserializable>(
         &self,
         address: &Address,
-        key: &str
+        key: &[u8]
     ) -> Result<Option<T>, MockVMSerializationError> {
         let hash = Storage::hashed_key(address, key);
         let result = self.state.get(&hash).cloned().map(|bytes| T::deser(bytes));
@@ -62,7 +62,7 @@ impl Storage {
     pub fn set_value<T: MockSerializable + MockDeserializable>(
         &mut self,
         address: &Address,
-        key: &str,
+        key: &[u8],
         value: T
     ) -> Result<(), MockVMSerializationError> {
         let hash = Storage::hashed_key(address, key);
@@ -73,11 +73,11 @@ impl Storage {
     pub fn insert_dict_value<T: MockSerializable + MockDeserializable>(
         &mut self,
         address: &Address,
-        collection: &str,
+        collection: &[u8],
         key: &[u8],
         value: T
     ) -> Result<(), MockVMSerializationError> {
-        let dict_key = [collection.as_bytes(), key].concat();
+        let dict_key = [collection, key].concat();
         let hash = Storage::hashed_key(address, dict_key);
         self.state.insert(hash, value.ser()?);
         Ok(())
@@ -86,10 +86,10 @@ impl Storage {
     pub fn get_dict_value<T: MockSerializable + MockDeserializable>(
         &self,
         address: &Address,
-        collection: &str,
+        collection: &[u8],
         key: &[u8]
     ) -> Result<Option<T>, MockVMSerializationError> {
-        let dict_key = [collection.as_bytes(), key].concat();
+        let dict_key = [collection, key].concat();
         let hash = Storage::hashed_key(address, dict_key);
         let result = self.state.get(&hash).cloned().map(|bytes| T::deser(bytes));
 
@@ -135,12 +135,12 @@ mod test {
 
     use super::Storage;
 
-    fn setup() -> (Address, String, u8) {
+    fn setup() -> (Address, [u8; 3], u8) {
         let address = Address::try_from(b"address").unwrap();
-        let key = String::from("key");
+        let key = b"key";
         let value = 88u8;
 
-        (address, key, value)
+        (address, *key, value)
     }
 
     #[test]
@@ -191,18 +191,16 @@ mod test {
         // given an empty storage
         let mut storage = Storage::default();
         let (address, key, value) = setup();
-        let collection = "dict";
+        let collection = b"dict";
 
         // when put a value into a collection
         storage
-            .insert_dict_value(&address, collection, key.as_bytes(), value)
+            .insert_dict_value(&address, collection, &key, value)
             .unwrap();
 
         // then the value can be read
         assert_eq!(
-            storage
-                .get_dict_value(&address, collection, key.as_bytes())
-                .unwrap(),
+            storage.get_dict_value(&address, collection, &key).unwrap(),
             Some(value)
         );
     }
@@ -212,15 +210,15 @@ mod test {
         // given storage with some stored value
         let mut storage = Storage::default();
         let (address, key, value) = setup();
-        let collection = "dict";
+        let collection = b"dict";
         storage
-            .insert_dict_value(&address, collection, key.as_bytes(), value)
+            .insert_dict_value(&address, collection, &key, value)
             .unwrap();
 
         // when read a value from a non exisiting collection
-        let non_existing_collection = "collection";
+        let non_existing_collection = b"collection";
         let result: Option<()> = storage
-            .get_dict_value(&address, non_existing_collection, key.as_bytes())
+            .get_dict_value(&address, non_existing_collection, &key)
             .unwrap();
 
         // then None is returned
@@ -232,9 +230,9 @@ mod test {
         // given storage with some stored value
         let mut storage = Storage::default();
         let (address, key, value) = setup();
-        let collection = "dict";
+        let collection = b"dict";
         storage
-            .insert_dict_value(&address, collection, key.as_bytes(), value)
+            .insert_dict_value(&address, collection, &key, value)
             .unwrap();
 
         // when read a value from a non existing collection

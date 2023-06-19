@@ -1,4 +1,4 @@
-use crate::Instance;
+use crate::DynamicInstance;
 
 /// A struct that can be used to compose an instance.
 pub struct Composer {
@@ -13,7 +13,7 @@ impl Composer {
     }
 
     /// Builds an instance with the `namespace`.
-    pub fn compose<T: Instance>(self) -> T {
-        T::instance(&self.namespace)
+    pub fn compose<T: DynamicInstance>(self) -> T {
+        T::instance(self.namespace.as_bytes())
     }
 }

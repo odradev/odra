@@ -76,8 +76,8 @@ where
     where
         G: GenerateCode + From<&'a odra_ir::module::ModuleStruct>
     {
-        <G as GenerateCode>::generate_code(&G::from(
-            <Self as AsRef<odra_ir::module::ModuleStruct>>::as_ref(self)
-        ))
+        <G as GenerateCode>::generate_code(&G::from(<Self as AsRef<
+            odra_ir::module::ModuleStruct
+        >>::as_ref(self)))
     }
 }

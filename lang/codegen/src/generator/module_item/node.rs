@@ -1,8 +1,8 @@
 use derive_more::From;
 use odra_ir::module::ModuleStruct;
-use proc_macro2::{TokenStream, Ident};
+use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{punctuated::Punctuated, Token};
+use syn::{punctuated::Punctuated, Field, Token};
 
 use crate::GenerateCode;
 
@@ -18,75 +18,51 @@ impl GenerateCode for Node<'_> {
         let struct_ident = &self.module.item.ident;
         let count = self
             .fields_iter()
-            .map(|ident| quote!(self.#ident.count()))
+            .map(|field| &field.ty)
+            .map(|ty| quote!(<#ty as odra::types::contract_def::Node>::count()))
             .collect::<Punctuated<TokenStream, Token![+]>>();
 
         let count = match count.is_empty() {
             true => quote!(0),
-            false => quote!(#count),
+            false => quote!(#count)
         };
-
-        let ranges = self.fields_iter()
-            .map(|ident| quote! {
-                let start = ranges.last().map(|r: &core::ops::Range<u32>| r.end).unwrap_or_default();
-                let end = start + self.#ident.count();
-
-                ranges.push(start..end);
-            })
-            .collect::<TokenStream>();
 
         let keys = self
             .fields_iter()
-            .map(|ident| quote! {
-                match self.#ident.is_leaf() {
-                    true => result.push(stringify!(#ident).to_string()),
-                    false => result.extend(self.#ident.keys().iter().map(|k| format!("{}_{}", stringify!(#ident), k)))
+            .map(|field| {
+                let ty = &field.ty;
+                let ident = field.ident.as_ref().unwrap();
+                quote! {
+                    match <#ty as odra::types::contract_def::Node>::is_leaf() {
+                        true => result.push(stringify!(#ident).to_string()),
+                        false => result.extend(<#ty as odra::types::contract_def::Node>::keys().iter().map(|k| format!("{}#{}", stringify!(#ident), k)))
+                    }
                 }
             })
             .collect::<TokenStream>();
 
         quote! {
-            impl odra::Node for #struct_ident {
-                fn count(&self) -> u32 {
+            impl odra::types::contract_def::Node for #struct_ident {
+                fn count() -> u32 {
                     #count
                 }
 
-                fn keys(&self) -> Vec<String> {
-                    let mut result = Vec::with_capacity(self.count() as usize);
+                fn keys() -> Vec<String> {
+                    let mut result = vec![];
                     #keys
                     result
                 }
 
-                fn is_leaf(&self) -> bool {
+                fn is_leaf() -> bool {
                     false
-                }
-
-                fn key_ranges(&self) -> Vec<core::ops::Range<u32>> {
-                    let mut ranges = Vec::with_capacity(self.count() as usize);
-                    #ranges
-                    ranges
-                }
-            
-                fn range(&self) -> core::ops::Range<u32> {
-                    0..self.count()
                 }
             }
         }
     }
-
-
 }
 
-
 impl<'a> Node<'a> {
-    fn fields_iter(&'a self) -> impl Iterator<Item = Ident> + 'a {
-        self.module
-            .item
-            .fields
-            .iter()
-            .filter_map(|f| match &f.ident {
-                Some(i) => Some(i.clone()),
-                None => None,
-            })
+    fn fields_iter(&'a self) -> impl Iterator<Item = &Field> + 'a {
+        self.module.item.fields.iter()
     }
 }

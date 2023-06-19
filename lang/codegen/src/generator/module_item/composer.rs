@@ -40,7 +40,7 @@ impl GenerateCode for ModuleComposer<'_> {
                 let field_ident = field.ident.as_ref().unwrap();
 
                 quote! {
-                    #field_ident: self.#field_ident.unwrap_or_else(|| odra::Instance::instance(&format!("{}_{}", &self.namespace, stringify!(#field_ident))))
+                    #field_ident: self.#field_ident.unwrap_or_else(|| odra::DynamicInstance::instance(&[&self.namespace, "#".as_bytes(), stringify!(#field_ident).as_bytes()].concat()))
                 }
         }).collect::<Punctuated<TokenStream, Comma>>();
 
@@ -73,14 +73,14 @@ impl GenerateCode for ModuleComposer<'_> {
 
         quote! {
              pub struct #composer_ident {
-                 namespace: String,
+                 namespace: Vec<u8>,
                  #struct_fields
              }
 
              impl #composer_ident {
-                 pub fn new(namespace: &str, name: &str) -> Self {
+                 pub fn new(namespace: &[u8], name: &str) -> Self {
                      Self {
-                         namespace: format!("{}_{}", name, namespace),
+                         namespace: [namespace, "#".as_bytes(), name.as_bytes()].concat(),
                          #empty_fields
                      }
                  }
