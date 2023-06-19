@@ -18,7 +18,7 @@ pub fn backend_name() -> String {
 }
 
 /// Deploy WASM file with arguments.
-pub fn register_contract(name: &str, args: &CallArgs) -> Address {
+pub fn register_contract(name: &str, args: &CallArgs, constructor_name: Option<String>) -> Address {
     ENV.with(|env| {
         let wasm_name = format!("{}.wasm", name);
         let package_hash_key_name = format!("{}_package_hash", name);
@@ -29,6 +29,10 @@ pub fn register_contract(name: &str, args: &CallArgs) -> Address {
         );
         args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, true);
         args.insert(consts::IS_UPGRADABLE_ARG, false);
+
+        if let Some(constructor_name) = constructor_name {
+            args.insert(consts::CONSTRUCTOR_NAME_ARG, constructor_name);
+        };
 
         env.borrow_mut().deploy_contract(&wasm_name, &args);
         let contract_package_hash = env

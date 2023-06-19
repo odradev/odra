@@ -42,7 +42,7 @@ fn build_default_constructor(struct_ident: &Ident, ref_ident: &Ident) -> TokenSt
 
     quote! {
         pub fn default() -> #ref_ident {
-            let address = odra::test_env::register_contract(&#struct_name_snake_case, &odra::types::CallArgs::new());
+            let address = odra::test_env::register_contract(&#struct_name_snake_case, &odra::types::CallArgs::new(), None);
             #ref_ident::at(&address)
         }
     }
@@ -62,9 +62,9 @@ fn build_constructor(
 
     quote! {
         pub #fn_sig {
-            let mut args = { #args };
-            args.insert("constructor", stringify!(#constructor_ident));
-            let address = odra::test_env::register_contract(#struct_name_snake_case, &args);
+            let args = { #args };
+            let constructor = String::from(stringify!(#constructor_ident));
+            let address = odra::test_env::register_contract(#struct_name_snake_case, &args, Some(constructor));
             #ref_ident::at(&address)
         }
     }

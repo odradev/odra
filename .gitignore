@@ -10,6 +10,8 @@ examples/target
 examples/.builder_casper
 examples/wasm
 examples/.env
+examples/.env.testnet
+examples/.env.integration
 modules/target
 modules/.builder_casper
 modules/wasm

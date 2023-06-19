@@ -4,7 +4,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::{
+    account::Account,
     block_hash::{BlockHash, BlockHashAndHeight},
+    contract_package::ContractPackage,
     Deploy, DeployHash
 };
 
@@ -230,5 +232,11 @@ struct ValidatorWeight {
 #[serde(deny_unknown_fields)]
 pub enum StoredValue {
     /// A CasperLabs value.
-    CLValue(CLValue)
+    CLValue(CLValue),
+
+    /// An account.
+    Account(Account),
+
+    /// A contract definition, metadata, and security container.
+    ContractPackage(ContractPackage)
 }

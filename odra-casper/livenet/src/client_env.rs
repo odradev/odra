@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Mutex};
 
 use casper_types::{bytesrepr::FromBytes, CLValue};
+use odra_casper_shared::consts;
 use odra_casper_types::{Address, Balance, CallArgs, OdraType};
 use ref_thread_local::RefThreadLocal;
 
@@ -99,13 +100,22 @@ pub fn register_existing_contract(
 /// Deploy WASM file with arguments.
 pub fn deploy_new_contract(
     name: &str,
-    args: CallArgs,
-    entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>
+    mut args: CallArgs,
+    entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>,
+    constructor_name: Option<String>
 ) -> Address {
     let gas = get_gas();
     let wasm_name = format!("{}.wasm", name);
-    let address = CasperClient::new().deploy_wasm(&wasm_name, args, gas);
+    let contract_package_hash_key = format!("{}_package_hash", name);
+    args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, true);
+    args.insert(consts::IS_UPGRADABLE_ARG, false);
+    args.insert(consts::PACKAGE_HASH_KEY_NAME_ARG, contract_package_hash_key);
 
+    if let Some(constructor_name) = constructor_name {
+        args.insert(consts::CONSTRUCTOR_NAME_ARG, constructor_name);
+    };
+
+    let address = CasperClient::new().deploy_wasm(&wasm_name, args, gas);
     let contract = ContractContainer::new(address, entrypoints);
     ClientEnv::instance_mut().register_contract(contract);
 
