@@ -203,7 +203,7 @@ mod tests {
                         odra::casper::casper_types::EntryPointAccess::Public,
                         odra::casper::casper_types::EntryPointType::Contract,
                     ));
-                    #[allow(dead_code)]
+                    #[allow(unused_variables)]
                     let contract_package_hash = odra::casper::utils::install_contract(entry_points, schemas);
                     use odra::casper::casper_contract::unwrap_or_revert::UnwrapOrRevert;
                     let constructor_access = odra::casper::utils::create_constructor_group(contract_package_hash);

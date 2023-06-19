@@ -13,17 +13,17 @@ fn main() {
     let recipient = "hash-2c4a6ce0da5d175e9638ec0830e01dd6cf5f4b1fbb0724f7d2d9de12b1e0f840";
     let recipient = Address::from_str(recipient).unwrap();
 
-    client_env::set_gas(150_000_000_000u64);
+    client_env::set_gas(110_000_000_000u64);
     let mut token = Erc20Deployer::init(name, symbol, decimals, &initial_supply);
 
     // Uncomment to use already deployed contract.
-    // let address = "hash-3a20a5cd38e8826346faa673576657b03bbd4d86685e404baf9f1fa406a4f7a7";
+    // let address = "hash-a12760e3ece51e0f31aa6d5af39660f5ec61185ad61c7551c796cca4592b9498";
     // let address = Address::from_str(address).unwrap();
     // let mut token = Erc20Deployer::register(address);
 
     println!("Token name: {}", token.name());
 
-    client_env::set_gas(5_000_000_000u64);
+    client_env::set_gas(3_000_000_000u64);
     token.transfer(&recipient, &U256::from(1000));
 
     println!("Owner's balance: {:?}", token.balance_of(&owner));

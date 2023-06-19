@@ -284,7 +284,7 @@ impl CasperClient {
     }
 
     fn wait_for_deploy_hash(&self, deploy_hash: DeployHash) {
-        let deploy_hash_str = deploy_hash.inner().to_string();
+        let deploy_hash_str = format!("{:?}", deploy_hash.inner());
         let time_diff = Duration::from_secs(15);
         let final_result;
 
