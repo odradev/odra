@@ -89,7 +89,7 @@ impl CasperClient {
                 "id": 1,
             }
         );
-        let result: GetStateRootHashResult = self.post_request(request);
+        let result: GetStateRootHashResult = self.post_request(request).unwrap();
         result.state_root_hash.unwrap()
     }
 
@@ -108,7 +108,7 @@ impl CasperClient {
                 "id": 1,
             }
         );
-        self.post_request(request)
+        self.post_request(request).unwrap()
     }
 
     /// Query the contract for the variable.
@@ -186,7 +186,7 @@ impl CasperClient {
             }
         );
 
-        let response: PutDeployResult = self.post_request(request);
+        let response: PutDeployResult = self.post_request(request).unwrap();
         let deploy_hash = response.deploy_hash;
         self.wait_for_deploy_hash(deploy_hash);
 
@@ -226,7 +226,7 @@ impl CasperClient {
                 "id": 1,
             }
         );
-        let response: PutDeployResult = self.post_request(request);
+        let response: PutDeployResult = self.post_request(request).unwrap();
         let deploy_hash = response.deploy_hash;
         self.wait_for_deploy_hash(deploy_hash);
     }
@@ -246,7 +246,7 @@ impl CasperClient {
                 "id": 1,
             }
         );
-        self.post_request(request)
+        self.post_request(request).unwrap()
     }
 
     fn query_dictionary<T: OdraType>(&self, address: Address, key: &str) -> Option<T> {
@@ -273,14 +273,16 @@ impl CasperClient {
             }
         );
 
-        let result: GetDictionaryItemResult = self.post_request(request);
-        let result_as_json = serde_json::to_value(result).unwrap();
-        let result = result_as_json["stored_value"]["CLValue"]["bytes"]
-            .as_str()
-            .unwrap();
-        let bytes = hex::decode(result).unwrap();
-        let (value, _) = FromBytes::from_bytes(&bytes).unwrap();
-        Some(value)
+        let result: Option<GetDictionaryItemResult> = self.post_request(request);
+        result.map(|result| {
+            let result_as_json = serde_json::to_value(result).unwrap();
+            let result = result_as_json["stored_value"]["CLValue"]["bytes"]
+                .as_str()
+                .unwrap();
+            let bytes = hex::decode(result).unwrap();
+            let (value, _) = FromBytes::from_bytes(&bytes).unwrap();
+            value
+        })
     }
 
     fn wait_for_deploy_hash(&self, deploy_hash: DeployHash) {
@@ -353,7 +355,7 @@ impl CasperClient {
         )
     }
 
-    fn post_request<T: DeserializeOwned>(&self, request: Value) -> T {
+    fn post_request<T: DeserializeOwned>(&self, request: Value) -> Option<T> {
         let client = reqwest::blocking::Client::new();
         let response = client
             .post(self.node_address_rpc())
@@ -361,8 +363,9 @@ impl CasperClient {
             .send()
             .unwrap();
         let response: JsonRpc = response.json().unwrap();
-        let response = response.get_result().unwrap();
-        serde_json::from_value(response.clone()).unwrap()
+        response
+            .get_result()
+            .map(|result| serde_json::from_value(result.clone()).unwrap())
     }
 }
 
