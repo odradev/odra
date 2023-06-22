@@ -1,5 +1,5 @@
 use odra_casper_shared::native_token::NativeTokenMetadata;
-use odra_casper_types::{Address, Balance, BlockTime, OdraType};
+use odra_casper_types::{Address, Balance, BlockTime, OdraType, Key};
 use odra_types::{event::OdraEvent, ExecutionError};
 
 pub fn self_address() -> Address {
@@ -18,11 +18,11 @@ pub fn get_var<T: OdraType>(_: &[u8]) -> Option<T> {
     unimplemented!()
 }
 
-pub fn set_dict_value<K: OdraType, V: OdraType>(_: &[u8], _: &K, _: V) {
+pub fn set_dict_value<K: OdraType + Key, V: OdraType>(_: &[u8], _: &K, _: V) {
     unimplemented!()
 }
 
-pub fn get_dict_value<K: OdraType, T: OdraType>(_: &[u8], _: &K) -> Option<T> {
+pub fn get_dict_value<K: OdraType + Key, T: OdraType>(_: &[u8], _: &K) -> Option<T> {
     unimplemented!()
 }
 

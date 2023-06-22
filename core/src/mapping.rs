@@ -1,7 +1,7 @@
 use std::{fmt::Debug, hash::Hash, marker::PhantomData};
 
 use crate::instance::StaticInstance;
-use crate::types::OdraType;
+use crate::types::{Key, OdraType};
 use crate::{contract_env, UnwrapOrRevert};
 use odra_types::arithmetic::{OverflowingAdd, OverflowingSub};
 
@@ -22,7 +22,7 @@ pub struct Mapping<K, V> {
 //     }
 // }
 
-impl<K: OdraType + Hash, V: OdraType> Mapping<K, V> {
+impl<K: OdraType + Hash + Key, V: OdraType> Mapping<K, V> {
     /// Reads `key` from the storage or returns `None`.
     #[inline(always)]
     pub fn get(&self, key: &K) -> Option<V> {
@@ -36,7 +36,7 @@ impl<K: OdraType + Hash, V: OdraType> Mapping<K, V> {
     }
 }
 
-impl<K: OdraType + Hash, V: OdraType + Default> Mapping<K, V> {
+impl<K: OdraType + Hash + Key, V: OdraType + Default> Mapping<K, V> {
     /// Reads `key` from the storage or the default value is returned.
     pub fn get_or_default(&self, key: &K) -> V {
         self.get(key).unwrap_or_default()
@@ -54,7 +54,7 @@ impl<K: OdraType + Hash, V: DynamicInstance> Mapping<K, V> {
     }
 }
 
-impl<K: OdraType + Hash, V: OdraType + OverflowingAdd + Default> Mapping<K, V> {
+impl<K: OdraType + Hash + Key, V: OdraType + OverflowingAdd + Default> Mapping<K, V> {
     /// Utility function that gets the current value and adds the passed `value`
     /// and sets the new value to the storage.
     ///
@@ -66,7 +66,7 @@ impl<K: OdraType + Hash, V: OdraType + OverflowingAdd + Default> Mapping<K, V> {
     }
 }
 
-impl<K: OdraType + Hash, V: OdraType + OverflowingSub + Default + Debug + PartialOrd>
+impl<K: OdraType + Hash + Key, V: OdraType + OverflowingSub + Default + Debug + PartialOrd>
     Mapping<K, V>
 {
     /// Utility function that gets the current value and subtracts the passed `value`
@@ -107,7 +107,7 @@ impl<K: OdraType + Hash, V> DynamicInstance for Mapping<K, V> {
 mod tests {
     use crate::{instance::StaticInstance, mapping::Mapping, test_env};
     use core::hash::Hash;
-    use odra_mock_vm::types::OdraType;
+    use odra_mock_vm::types::{OdraType, Key};
     use odra_types::arithmetic::ArithmeticsError;
 
     const SHARED_VALUE: [&str; 1] = ["shared_value"];
@@ -212,7 +212,7 @@ mod tests {
 
     impl<K, V> Mapping<K, V>
     where
-        K: OdraType + Hash,
+        K: OdraType + Hash + Key,
         V: OdraType
     {
         pub fn init(key: &K, value: V) -> Self {

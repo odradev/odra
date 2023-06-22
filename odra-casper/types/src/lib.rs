@@ -6,12 +6,14 @@ mod args;
 mod casper_address;
 mod ty;
 mod uints;
+mod key;
 use alloc::vec::Vec;
 pub use args::CallArgs;
 pub use casper_types;
 pub use casper_types::bytesrepr::Bytes;
 pub use ty::Typed;
 pub use uints::{U128, U256, U512};
+pub use key::Key;
 
 pub use casper_address::CasperAddress as Address;
 /// A type representing the amount of native tokens.

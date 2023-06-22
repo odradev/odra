@@ -1,6 +1,11 @@
+use std::hash::Hasher;
+
 use borsh::{BorshDeserialize, BorshSerialize};
 use odra_types::address::OdraAddress;
 use odra_types::AddressError;
+use twox_hash::XxHash64;
+
+use crate::key::Key;
 
 /// Max bytes of an [`Address`] internal representation.
 pub const ADDRESS_LENGTH: usize = 8;
@@ -47,5 +52,14 @@ impl core::fmt::Debug for Address {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let name = hex::encode(self.data);
         f.debug_struct("Address").field("data", &name).finish()
+    }
+}
+
+impl Key for Address {
+    fn hash(&self) -> [u8; 8] {
+        let mut hasher = XxHash64::with_seed(0);
+        hasher.write(&self.data);
+        let result = hasher.finish();
+        result.to_le_bytes()
     }
 }

@@ -6,7 +6,7 @@ use casper_contract::{
 };
 use casper_types::U512;
 use odra_casper_shared::native_token::NativeTokenMetadata;
-use odra_casper_types::{Address, Balance, BlockTime, CallArgs, OdraType};
+use odra_casper_types::{Address, Balance, BlockTime, CallArgs, OdraType, Key};
 use odra_types::{event::OdraEvent, ExecutionError};
 use std::ops::Deref;
 
@@ -46,13 +46,13 @@ pub fn get_var<T: OdraType>(key: &[u8]) -> Option<T> {
 
 /// Store the mapping value under a given key.
 #[inline(always)]
-pub fn set_dict_value<K: OdraType, V: OdraType>(dict: &[u8], key: &K, value: V) {
+pub fn set_dict_value<K: OdraType + Key, V: OdraType>(dict: &[u8], key: &K, value: V) {
     casper_env::set_dict_value(dict, key, value);
 }
 
 /// Read value from the mapping.
 #[inline(always)]
-pub fn get_dict_value<K: OdraType, T: OdraType>(dict: &[u8], key: &K) -> Option<T> {
+pub fn get_dict_value<K: OdraType + Key, T: OdraType>(dict: &[u8], key: &K) -> Option<T> {
     casper_env::get_dict_value(dict, key)
 }
 

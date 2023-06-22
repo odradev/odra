@@ -6,12 +6,17 @@ mod mock_vm_type;
 mod ty;
 #[allow(clippy::assign_op_pattern, clippy::reversed_empty_ranges)]
 mod uints;
+mod key;
+
+use std::hash::Hasher;
 
 pub use address::Address;
 pub use address::CONTRACT_ADDRESS_PREFIX;
 pub use borsh::{BorshDeserialize, BorshSerialize};
 pub use call_args::CallArgs;
+pub use key::Key;
 pub use mock_vm_type::{MockDeserializable, MockSerializable, MockVMSerializationError};
+use twox_hash::XxHash64;
 pub use ty::Typed;
 pub use uints::{U128, U256, U512};
 /// A type representing the amount of native tokens.
@@ -63,3 +68,12 @@ impl From<Vec<u8>> for Bytes {
         Self(vec)
     }
 }
+
+impl Key for Bytes {
+    fn hash(&self) -> [u8; 8] {
+        let mut hasher = XxHash64::with_seed(0);
+        hasher.write_usize(self.0.len());
+        hasher.write(&self.0);
+        hasher.finish().to_le_bytes()
+    }
+} 

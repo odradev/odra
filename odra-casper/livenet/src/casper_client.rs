@@ -11,7 +11,7 @@ use casper_types::{
     RuntimeArgs, SecretKey, TimeDiff, Timestamp
 };
 use jsonrpc_lite::JsonRpc;
-use odra_casper_shared::key_maker::KeyMaker;
+use odra_casper_shared::key_maker::{Key, KeyMaker};
 use odra_casper_types::{Address, Balance, Bytes, CallArgs, OdraType};
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
@@ -113,8 +113,11 @@ impl CasperClient {
 
     /// Query the contract for the variable.
     pub fn get_variable_value<T: OdraType>(&self, address: Address, key: &[u8]) -> Option<T> {
-        let key = LivenetKeyMaker::to_variable_key(key).unwrap();
-        self.query_dictionary(address, &key)
+        // match LivenetKeyMaker::to_variable_key(key) {
+        //     odra_casper_shared::key_maker::Key::Ref(key) => self.query_dictionary(address, key),
+        //     odra_casper_shared::key_maker::Key::Owned(key) => self.query_dictionary(address, key),
+        // }
+        unimplemented!()
     }
 
     /// Query the contract for the dictionary value.
@@ -392,6 +395,8 @@ fn find_wasm_file_path(wasm_file_name: &str) -> PathBuf {
 struct LivenetKeyMaker;
 
 impl KeyMaker for LivenetKeyMaker {
+    const DICTIONARY_ITEM_KEY_MAX_LENGTH: usize = casper_types::DICTIONARY_ITEM_KEY_MAX_LENGTH;
+    
     fn blake2b(preimage: &[u8]) -> [u8; 32] {
         let mut result = [0; 32];
         let mut hasher = VarBlake2b::new(32).expect("should create hasher");

@@ -3,7 +3,7 @@ use casper_types::{
     DICTIONARY_ITEM_KEY_MAX_LENGTH
 };
 use lazy_static::lazy_static;
-use odra_casper_types::{Address, OdraType};
+use odra_casper_types::{Address, OdraType, Key};
 use odra_types::event::OdraEvent;
 use std::{collections::BTreeMap, sync::Mutex};
 
@@ -19,7 +19,7 @@ use casper_types::{
     system::CallStackElement, ApiError, CLTyped, ContractPackageHash, RuntimeArgs, URef, U512
 };
 
-use odra_casper_shared::consts;
+use odra_casper_shared::{consts, key_maker::KeyMaker};
 use odra_types::ExecutionError;
 
 lazy_static! {
@@ -27,34 +27,44 @@ lazy_static! {
     static ref KEYS: Mutex<BTreeMap<Vec<u8>, String>> = Mutex::new(BTreeMap::new());
 }
 
+struct CasperKeyMaker;
+
+impl KeyMaker for CasperKeyMaker {
+    const DICTIONARY_ITEM_KEY_MAX_LENGTH: usize = casper_types::DICTIONARY_ITEM_KEY_MAX_LENGTH;
+    
+    fn blake2b(preimage: &[u8]) -> [u8; 32] {
+        runtime::blake2b(preimage)
+    }
+}
+
 /// Save value to the storage.
 #[inline(always)]
 pub fn set_key<T: OdraType>(name: &[u8], value: T) {
-    // TODO: check key length
-    save_value(name, value);
+    match CasperKeyMaker::to_variable_key(name) {
+        odra_casper_shared::key_maker::Key::Ref(key) => save_value(key, value),
+        odra_casper_shared::key_maker::Key::Owned(key) => save_value(&key, value),
+    }
 }
 
 /// Read value from the storage.
 #[inline(always)]
 pub fn get_key<T: OdraType>(name: &[u8]) -> Option<T> {
-    // TODO: check key length
-    read_value(name)
+    match CasperKeyMaker::to_variable_key(name) {
+        odra_casper_shared::key_maker::Key::Ref(key) => read_value(key),
+        odra_casper_shared::key_maker::Key::Owned(key) => read_value(&key),
+    }
 }
 
 #[inline(always)]
-pub fn set_dict_value<K: OdraType, V: OdraType>(seed: &[u8], key: &K, value: V) {
-    // TODO: optimize key creation
-
+pub fn set_dict_value<K: OdraType + Key, V: OdraType>(seed: &[u8], key: &K, value: V) {
     let key = to_dictionary_key(seed, key);
-    save_value(key.as_bytes(), value);
+    save_value(&key, value);
 }
 
 #[inline(always)]
-pub fn get_dict_value<K: OdraType, V: OdraType>(seed: &[u8], key: &K) -> Option<V> {
-    // TODO: optimize key creation
-
+pub fn get_dict_value<K: OdraType + Key, V: OdraType>(seed: &[u8], key: &K) -> Option<V> {
     let key = to_dictionary_key(seed, key);
-    read_value(key.as_bytes())
+    read_value(&key)
 }
 
 /// Returns address based on a [`CallStackElement`].
@@ -123,26 +133,18 @@ fn _to_variable_key<T: ToBytes>(key: T) -> String {
 }
 
 /// Convert any key to hash.
-fn to_dictionary_key<T: ToBytes>(seed: &[u8], key: &T) -> String {
-    match KEYS.lock() {
-        Ok(mut keys) => {
-            let key_bytes = key.to_bytes().unwrap_or_revert();
+fn to_dictionary_key<'a, T: Key>(seed: &[u8], key: &T) -> Vec<u8> {
+    let key_bytes = key.hash();
 
-            let mut preimage = Vec::with_capacity(seed.len() + key_bytes.len());
-            preimage.extend_from_slice(seed);
-            preimage.extend_from_slice(&key_bytes);
+    let mut preimage = Vec::with_capacity(seed.len() + key_bytes.len());
+    preimage.extend_from_slice(seed);
+    preimage.extend_from_slice(&key_bytes);
 
-            match keys.get(&preimage) {
-                Some(key) => key.to_owned(),
-                None => {
-                    let bytes = runtime::blake2b(&preimage);
-                    let key = hex::encode(bytes);
-                    keys.insert(preimage, key.clone());
-                    key
-                }
-            }
-        }
-        Err(_) => runtime::revert(ApiError::ValueNotFound)
+    if preimage.len() > CasperKeyMaker::DICTIONARY_ITEM_KEY_MAX_LENGTH {
+        let hash = CasperKeyMaker::blake2b(&preimage);
+        hex::encode(hash).into_bytes()
+    } else {
+        hex::encode(preimage).into_bytes()
     }
 }
 
