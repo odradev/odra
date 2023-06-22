@@ -19,6 +19,7 @@ impl ToTokens for CasperType<'_> {
             Type::Unit => quote!(odra::casper::casper_types::CLType::Unit),
             Type::String => quote!(odra::casper::casper_types::CLType::String),
             Type::Address => quote!(odra::casper::casper_types::CLType::Key),
+            Type::PublicKey => quote!(odra::casper::casper_types::CLType::PublicKey),
             Type::Option(ty) => {
                 let ty = CasperType(ty);
                 quote!(odra::casper::casper_types::CLType::Option(Box::new(#ty)))

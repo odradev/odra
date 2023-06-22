@@ -25,6 +25,7 @@ impl ToTokens for OdraType<'_> {
             Type::Unit => quote!(()),
             Type::String => quote!(String),
             Type::Address => quote!(odra::types::Address),
+            Type::PublicKey => quote!(odra::types::PublicKey),
             Type::Option(ty) => {
                 let ty = OdraType(ty);
                 quote!(Option<#ty>)

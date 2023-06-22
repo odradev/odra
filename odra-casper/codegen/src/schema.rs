@@ -77,6 +77,7 @@ impl From<&Event> for EventDef {
 fn type_to_cl_type(ty: &Type) -> CLType {
     match ty {
         Type::Address => CLType::Key,
+        Type::PublicKey => CLType::PublicKey,
         Type::Bool => CLType::Bool,
         Type::I32 => CLType::I32,
         Type::I64 => CLType::I64,
@@ -103,6 +104,6 @@ fn type_to_cl_type(ty: &Type) -> CLType {
         Type::Any => CLType::Any,
         Type::Vec(v) => CLType::List(Box::new(type_to_cl_type(v))),
         Type::ByteArray(v) => CLType::ByteArray(*v),
-        Type::Slice(ty) => CLType::List(Box::new(type_to_cl_type(ty)))
+        Type::Slice(ty) => CLType::List(Box::new(type_to_cl_type(ty))),
     }
 }

@@ -13,7 +13,7 @@ use odra_types::{
     OdraError
 };
 
-use crate::{native_token::NativeTokenMetadata, EntrypointArgs, EntrypointCall};
+use crate::{native_token::NativeTokenMetadata, EntrypointArgs, EntrypointCall, contract_env};
 
 macro_rules! delegate_to_env {
     (
@@ -130,19 +130,21 @@ pub fn gas_report() -> Vec<(String, Balance)> {
     Vec::new()
 }
 
+/// Returns the name of the passed event
 fn extract_event_name(mut bytes: &[u8]) -> Result<String, EventError> {
     let name = BorshDeserialize::deserialize(&mut bytes).map_err(|_| EventError::Formatting)?;
     Ok(name)
 }
 
-pub fn sign_message(message: Bytes, address: &Address) -> Bytes {
-    Bytes::new()
-}
-
+/// Returns the public key of the account associated with the given address.
 pub fn public_key(address: &Address) -> PublicKey {
-    PublicKey([0; 8])
+    PublicKey(<[u8; 8]>::try_from(address.inner_bytes()).unwrap())
 }
 
-pub fn signature_hash(message: Bytes) -> Bytes {
-    Bytes::new()
+/// Signs the message using the private key associated with the given address.
+pub fn sign_message(message: &Bytes, address: &Address) -> Bytes {
+    let public_key = public_key(address);
+    let mut message = message.inner_bytes().clone();
+    message.extend_from_slice(&public_key.0);
+    contract_env::signature_hash(&Bytes::from(message.to_vec()))
 }

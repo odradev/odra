@@ -6,7 +6,6 @@ use std::panic::AssertUnwindSafe;
 use crate::env::ENV;
 use casper_types::account::{AccountHash, ACCOUNT_HASH_LENGTH};
 use casper_types::bytesrepr::Bytes;
-use casper_types::CLType::PublicKey;
 use casper_types::PublicKey;
 use odra_casper_shared::{consts, native_token::NativeTokenMetadata};
 use odra_casper_types::{Address, Balance, CallArgs, OdraType};

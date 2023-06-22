@@ -3,9 +3,7 @@
 use core::panic;
 use std::backtrace::{Backtrace, BacktraceStatus};
 
-use odra_mock_vm_types::{
-    Address, Balance, BlockTime, MockDeserializable, MockSerializable, OdraType
-};
+use odra_mock_vm_types::{Address, Balance, BlockTime, Bytes, MockDeserializable, MockSerializable, OdraType, PublicKey};
 use odra_types::{event::OdraEvent, ExecutionError, OdraError};
 
 use crate::{borrow_env, debug, native_token::NativeTokenMetadata};
@@ -115,4 +113,23 @@ pub fn self_balance() -> Balance {
 /// Returns the platform native token metadata
 pub fn native_token_metadata() -> NativeTokenMetadata {
     NativeTokenMetadata::new()
+}
+
+pub fn verify_signature(
+    message: &Bytes,
+    signature: &Bytes,
+    public_key: &PublicKey,
+) -> bool {
+    let mut message = message.inner_bytes().clone();
+    message.extend_from_slice(&public_key.0);
+    let mock_signature = signature_hash(&Bytes::from(message.to_vec()));
+    mock_signature == *signature
+}
+
+pub fn signature_hash(subject: &Bytes) -> Bytes {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+    let mut s = DefaultHasher::new();
+    subject.inner_bytes().hash(&mut s);
+    Bytes::from(s.finish().to_le_bytes().to_vec())
 }
