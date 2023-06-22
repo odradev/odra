@@ -134,7 +134,9 @@ fn _to_variable_key<T: ToBytes>(key: T) -> String {
 
 /// Convert any key to hash.
 fn to_dictionary_key<'a, T: Key>(seed: &[u8], key: &T) -> Vec<u8> {
-    let key_bytes = key.hash();
+    let key_hash = key.hash();
+    let key_bytes = hex::encode(key_hash);
+    let key_bytes = key_bytes.as_bytes();
 
     let mut preimage = Vec::with_capacity(seed.len() + key_bytes.len());
     preimage.extend_from_slice(seed);
@@ -144,7 +146,7 @@ fn to_dictionary_key<'a, T: Key>(seed: &[u8], key: &T) -> Vec<u8> {
         let hash = CasperKeyMaker::blake2b(&preimage);
         hex::encode(hash).into_bytes()
     } else {
-        hex::encode(preimage).into_bytes()
+        preimage
     }
 }
 

@@ -43,13 +43,15 @@ impl<K: OdraType + Hash + Key, V: OdraType + Default> Mapping<K, V> {
     }
 }
 
-impl<K: OdraType + Hash, V: DynamicInstance> Mapping<K, V> {
+impl<K: OdraType + Hash + Key, V: DynamicInstance> Mapping<K, V> {
     /// Reads `key` from the storage or the default value is returned.
     pub fn get_instance(&self, key: &K) -> V {
-        let buffer: Vec<u8> = key.serialize().unwrap_or(Vec::new());
+        let key_hash = <K as Key>::hash(key);
+        let encoded_hash = hex::encode(key_hash);
+        let buffer = encoded_hash.as_bytes();
         let mut result = Vec::with_capacity(buffer.len() + self.namespace_buffer.len());
         result.extend_from_slice(self.namespace_buffer.as_slice());
-        result.extend_from_slice(buffer.as_slice());
+        result.extend_from_slice(buffer);
         V::instance(&buffer)
     }
 }
