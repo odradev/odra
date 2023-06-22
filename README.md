@@ -2,6 +2,14 @@
     <img src=".images/odra_logo.png"></img>
     <h3>Odra - High-level smart contract framework for Rust.</h3>
     <p>
+        <a href="https://odra.dev/docs">Docs</a> |
+        <a href="https://odra.dev/docs/getting-started/installation">Installation</a> |
+        <a href="https://odra.dev/docs/category/tutorials">Tutorials</a> |
+        <a href="https://github.com/odradev/cargo-odra">Cargo Odra</a> |
+        <a href="https://discord.com/invite/Mm5ABc9P8k">Discord</a> |
+        <a href="https://odra.dev/blog">Blog</a
+    </p>
+    <p>
         <a href="https://github.com/odradev/odra/actions">
             <img src="https://img.shields.io/github/actions/workflow/status/odradev/odra/odra-ci.yml?branch=release%2F0.3.0" alt="GitHub Workflow Status" />
         </a>
@@ -93,17 +101,15 @@ $ just test
 
 ## Links
 
-* [Odra](https://odra.dev/docs)
-* [Documentation](https://docs.rs/odra/latest/odra/)
+* [Odra Book - Docs and Tutorials](https://odra.dev/docs)
+* [API Documentation](https://docs.rs/odra/latest/odra/)
 * [Cargo Odra](https://github.com/odradev/cargo-odra)
-* [Odra Template](https://github.com/odradev/odra-template)
 * [Example Contracts](https://github.com/odradev/odra/tree/HEAD/examples)
 * [Original Proposal for Odra Framework](https://github.com/odradev/odra-proposal)
 
 ## Contact
 Need some help? Write to **contract@odra.dev**.
 
----
 <div align="center">
     by <a href="https://odra.dev">odra.dev<a>
 </dev>
