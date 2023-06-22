@@ -19,6 +19,9 @@ pub type Balance = U256;
 /// A type representing the block time.
 pub type BlockTime = u64;
 
+/// A type representing the public key. Caution: MockVM does not implement any cryptography!
+pub struct PublicKey(pub [u8; 8]);
+
 /// A type that can be written to the storage and read from the storage.
 pub trait OdraType: MockSerializable + MockDeserializable {
     /// Serializes the value.

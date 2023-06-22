@@ -4,7 +4,8 @@
 use std::{collections::HashMap, panic::AssertUnwindSafe};
 
 use odra_mock_vm_types::{
-    Address, Balance, BlockTime, BorshDeserialize, CallArgs, MockDeserializable, MockSerializable
+    Address, Balance, BlockTime, BorshDeserialize, Bytes, CallArgs, MockDeserializable,
+    MockSerializable, PublicKey
 };
 use odra_types::{
     address::OdraAddress,
@@ -132,4 +133,16 @@ pub fn gas_report() -> Vec<(String, Balance)> {
 fn extract_event_name(mut bytes: &[u8]) -> Result<String, EventError> {
     let name = BorshDeserialize::deserialize(&mut bytes).map_err(|_| EventError::Formatting)?;
     Ok(name)
+}
+
+pub fn sign_message(message: Bytes, address: &Address) -> Bytes {
+    Bytes::new()
+}
+
+pub fn public_key(address: &Address) -> PublicKey {
+    PublicKey([0; 8])
+}
+
+pub fn signature_hash(message: Bytes) -> Bytes {
+    Bytes::new()
 }

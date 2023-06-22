@@ -48,6 +48,7 @@ fn cl_type_to_type(ty: CLType) -> Type {
         CLType::Any => Type::Any,
         CLType::Key => Type::Address,
         CLType::ByteArray(b) => Type::ByteArray(b),
+        CLType::PublicKey => Type::PublicKey,
         _ => panic!("Unsupported type {:?}", ty)
     }
 }

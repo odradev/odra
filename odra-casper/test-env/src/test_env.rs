@@ -5,6 +5,9 @@ use std::panic::AssertUnwindSafe;
 
 use crate::env::ENV;
 use casper_types::account::{AccountHash, ACCOUNT_HASH_LENGTH};
+use casper_types::bytesrepr::Bytes;
+use casper_types::CLType::PublicKey;
+use casper_types::PublicKey;
 use odra_casper_shared::{consts, native_token::NativeTokenMetadata};
 use odra_casper_types::{Address, Balance, CallArgs, OdraType};
 use odra_types::{
@@ -148,4 +151,16 @@ pub fn gas_report() -> Vec<(String, Balance)> {
     });
 
     report
+}
+
+pub fn sign_message(message: Bytes, address: &Address) -> Bytes {
+    todo!()
+}
+
+pub fn public_key(address: &Address) -> PublicKey {
+    todo!()
+}
+
+pub fn signature_hash(message: Bytes) -> Bytes {
+    todo!()
 }
