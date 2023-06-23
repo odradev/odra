@@ -44,6 +44,20 @@ pub fn event_absolute_position(len: usize, index: i32) -> Option<usize> {
     }
 }
 
+static TABLE: &[u8] = b"0123456789abcdef";
+
+#[inline]
+fn hex(byte: u8) -> u8 {
+    TABLE[byte as usize]
+}
+
+pub fn hex_to_slice(src: &[u8], dst: &mut [u8]) {
+    for (byte, slots) in src.iter().zip(dst.chunks_exact_mut(2)) {
+        slots[0] = hex((*byte >> 4) & 0xf);
+        slots[1] = hex(*byte & 0xf);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{camel_to_snake, event_absolute_position};

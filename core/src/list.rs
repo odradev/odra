@@ -8,7 +8,7 @@ use crate::{instance::StaticInstance, mapping::Mapping, variable::Variable};
 use super::DynamicInstance;
 
 /// Data structure for an indexed, iterable collection.
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(Clone)]
 pub struct List<T> {
     values: Mapping<u32, T>,
     index: Variable<u32>
@@ -136,17 +136,22 @@ impl<T: OdraType> StaticInstance for List<T> {
 
 impl<T: OdraType> DynamicInstance for List<T> {
     fn instance(namespace: &[u8]) -> Self {
-        let mut values_buffer: Vec<u8> = Vec::new();
-        values_buffer.extend_from_slice(namespace);
-        values_buffer.extend_from_slice("values".as_bytes());
+        let namespace_len = namespace.len();
+        let max_len = namespace_len + b"values".len();
+        let mut buffer: Vec<u8> = Vec::with_capacity(max_len);
 
-        let mut index_buffer: Vec<u8> = Vec::new();
-        index_buffer.extend_from_slice(namespace);
-        index_buffer.extend_from_slice("index".as_bytes());
+        buffer.extend_from_slice(namespace);
+        buffer.extend_from_slice(b"values");
+        let values = DynamicInstance::instance(&buffer);
+        
+        buffer.clear();
+        buffer.extend_from_slice(namespace);
+        buffer.extend_from_slice(b"index");
+        let index = DynamicInstance::instance(&buffer);
 
         Self {
-            values: DynamicInstance::instance(&values_buffer),
-            index: DynamicInstance::instance(&index_buffer)
+            values,
+            index
         }
     }
 }

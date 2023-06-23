@@ -4,7 +4,7 @@ use num_traits::{Num, One, Zero};
 use super::DynamicInstance;
 
 /// A module that stores a single value in the storage that can be read or incremented.
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(Clone)]
 pub struct Sequence<T>
 where
     T: Num + One + OdraType
@@ -49,9 +49,9 @@ where
     T: Num + One + OdraType
 {
     fn instance(namespace: &[u8]) -> Self {
-        let mut buffer: Vec<u8> = Vec::new();
+        let mut buffer: Vec<u8> = Vec::with_capacity(namespace.len() + b"value".len());
         buffer.extend_from_slice(namespace);
-        buffer.extend_from_slice("value".as_bytes());
+        buffer.extend_from_slice(b"value");
         Self {
             value: DynamicInstance::instance(&buffer)
         }

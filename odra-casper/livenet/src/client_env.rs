@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Mutex};
 
 use casper_types::{bytesrepr::FromBytes, CLValue};
-use odra_casper_types::{Address, Balance, CallArgs, OdraType};
+use odra_casper_types::{Address, Balance, CallArgs, Key, OdraType};
 use ref_thread_local::RefThreadLocal;
 
 use crate::{casper_client::CasperClient, EntrypointArgs, EntrypointCall};
@@ -135,7 +135,7 @@ pub fn get_var_from_current_contract<T: OdraType>(key: &[u8]) -> Option<T> {
 }
 
 /// Query current contract for a dictionary's value.
-pub fn get_dict_value_from_current_contract<K: OdraType, T: OdraType>(
+pub fn get_dict_value_from_current_contract<K: OdraType + Key, T: OdraType>(
     seed: &[u8],
     key: &K
 ) -> Option<T> {

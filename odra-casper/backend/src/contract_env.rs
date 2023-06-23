@@ -6,7 +6,7 @@ use casper_contract::{
 };
 use casper_types::U512;
 use odra_casper_shared::native_token::NativeTokenMetadata;
-use odra_casper_types::{Address, Balance, BlockTime, CallArgs, OdraType, Key};
+use odra_casper_types::{Address, Balance, BlockTime, CallArgs, Key, OdraType};
 use odra_types::{event::OdraEvent, ExecutionError};
 use std::ops::Deref;
 

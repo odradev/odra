@@ -3,7 +3,7 @@
 //! It provides all the required functions to communicate between Odra and Casper Livenets.
 
 use odra_casper_shared::native_token::NativeTokenMetadata;
-use odra_casper_types::{Address, Balance, BlockTime, OdraType};
+use odra_casper_types::{Address, Balance, BlockTime, Key, OdraType};
 use odra_types::{event::OdraEvent, ExecutionError};
 
 use crate::client_env;
@@ -28,7 +28,7 @@ pub fn set_dict_value<K: OdraType, V: OdraType>(_: &[u8], _: &K, _: V) {
     unimplemented!()
 }
 
-pub fn get_dict_value<K: OdraType, T: OdraType>(seed: &[u8], key: &K) -> Option<T> {
+pub fn get_dict_value<K: OdraType + Key, T: OdraType>(seed: &[u8], key: &K) -> Option<T> {
     client_env::get_dict_value_from_current_contract(seed, key)
 }
 

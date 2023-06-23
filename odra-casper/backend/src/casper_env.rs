@@ -1,11 +1,6 @@
-use casper_types::{
-    bytesrepr::{FromBytes, ToBytes},
-    DICTIONARY_ITEM_KEY_MAX_LENGTH
-};
-use lazy_static::lazy_static;
-use odra_casper_types::{Address, OdraType, Key};
+use casper_types::bytesrepr::{FromBytes, ToBytes};
+use odra_casper_types::{Address, Key, OdraType};
 use odra_types::event::OdraEvent;
-use std::{collections::BTreeMap, sync::Mutex};
 
 use casper_contract::{
     contract_api::{
@@ -19,19 +14,29 @@ use casper_types::{
     system::CallStackElement, ApiError, CLTyped, ContractPackageHash, RuntimeArgs, URef, U512
 };
 
-use odra_casper_shared::{consts, key_maker::KeyMaker};
+use odra_casper_shared::{
+    consts,
+    key_maker::{KeyMaker, StorageKey}
+};
 use odra_types::ExecutionError;
 
-lazy_static! {
-    static ref SEEDS: Mutex<BTreeMap<String, URef>> = Mutex::new(BTreeMap::new());
-    static ref KEYS: Mutex<BTreeMap<Vec<u8>, String>> = Mutex::new(BTreeMap::new());
+lazy_static::lazy_static! {
+    static ref STATE: URef = {
+        let key = runtime::get_key(consts::STATE_KEY).unwrap_or_revert();
+        let state_uref: URef = *key.as_uref().unwrap_or_revert();
+        state_uref
+    };
+
+    static ref STATE_BYTES: std::vec::Vec<u8> = {
+        (*STATE).into_bytes().unwrap_or_revert()
+    };
 }
 
 struct CasperKeyMaker;
 
 impl KeyMaker for CasperKeyMaker {
     const DICTIONARY_ITEM_KEY_MAX_LENGTH: usize = casper_types::DICTIONARY_ITEM_KEY_MAX_LENGTH;
-    
+
     fn blake2b(preimage: &[u8]) -> [u8; 32] {
         runtime::blake2b(preimage)
     }
@@ -41,8 +46,8 @@ impl KeyMaker for CasperKeyMaker {
 #[inline(always)]
 pub fn set_key<T: OdraType>(name: &[u8], value: T) {
     match CasperKeyMaker::to_variable_key(name) {
-        odra_casper_shared::key_maker::Key::Ref(key) => save_value(key, value),
-        odra_casper_shared::key_maker::Key::Owned(key) => save_value(&key, value),
+        StorageKey::Ref(key) => save_value(key, value),
+        StorageKey::Owned(key) => save_value(&key, value)
     }
 }
 
@@ -50,21 +55,25 @@ pub fn set_key<T: OdraType>(name: &[u8], value: T) {
 #[inline(always)]
 pub fn get_key<T: OdraType>(name: &[u8]) -> Option<T> {
     match CasperKeyMaker::to_variable_key(name) {
-        odra_casper_shared::key_maker::Key::Ref(key) => read_value(key),
-        odra_casper_shared::key_maker::Key::Owned(key) => read_value(&key),
+        StorageKey::Ref(key) => read_value(key),
+        StorageKey::Owned(key) => read_value(&key)
     }
 }
 
 #[inline(always)]
 pub fn set_dict_value<K: OdraType + Key, V: OdraType>(seed: &[u8], key: &K, value: V) {
-    let key = to_dictionary_key(seed, key);
-    save_value(&key, value);
+    match CasperKeyMaker::to_dictionary_key(seed, key) {
+        StorageKey::Ref(key) => save_value(key, value),
+        StorageKey::Owned(key) => save_value(&key, value)
+    };
 }
 
 #[inline(always)]
 pub fn get_dict_value<K: OdraType + Key, V: OdraType>(seed: &[u8], key: &K) -> Option<V> {
-    let key = to_dictionary_key(seed, key);
-    read_value(&key)
+    match CasperKeyMaker::to_dictionary_key(seed, key) {
+        StorageKey::Ref(key) => read_value(key),
+        StorageKey::Owned(key) => read_value(&key)
+    }
 }
 
 /// Returns address based on a [`CallStackElement`].
@@ -123,31 +132,6 @@ where
     T: OdraType + OdraEvent
 {
     casper_event_standard::emit(event);
-}
-
-/// Convert any key to hash.
-fn _to_variable_key<T: ToBytes>(key: T) -> String {
-    let preimage = key.to_bytes().unwrap_or_revert();
-    let bytes = runtime::blake2b(preimage);
-    hex::encode(bytes)
-}
-
-/// Convert any key to hash.
-fn to_dictionary_key<'a, T: Key>(seed: &[u8], key: &T) -> Vec<u8> {
-    let key_hash = key.hash();
-    let key_bytes = hex::encode(key_hash);
-    let key_bytes = key_bytes.as_bytes();
-
-    let mut preimage = Vec::with_capacity(seed.len() + key_bytes.len());
-    preimage.extend_from_slice(seed);
-    preimage.extend_from_slice(&key_bytes);
-
-    if preimage.len() > CasperKeyMaker::DICTIONARY_ITEM_KEY_MAX_LENGTH {
-        let hash = CasperKeyMaker::blake2b(&preimage);
-        hex::encode(hash).into_bytes()
-    } else {
-        preimage
-    }
 }
 
 /// Calls a contract method by Address
@@ -217,56 +201,12 @@ fn is_purse_empty(purse: URef) -> bool {
         .unwrap_or_else(|| true)
 }
 
-fn get_state_uref() -> URef {
-    get_seed(consts::STATE_KEY, || {
-        let key = runtime::get_key(consts::STATE_KEY).unwrap_or_revert();
-        let state_uref: URef = *key.as_uref().unwrap_or_revert();
-        state_uref
-    })
-}
-
-fn get_seed<F>(name: &str, initializer: F) -> URef
-where
-    F: FnOnce() -> URef
-{
-    match SEEDS.lock() {
-        Ok(mut seeds) => match seeds.get(name) {
-            Some(seed) => *seed,
-            None => {
-                let seed = initializer();
-                seeds.insert(String::from(name), seed);
-                seed
-            }
-        },
-        Err(_) => runtime::revert(ApiError::ValueNotFound)
-    }
-}
-
-#[inline(always)]
 pub fn save_value<T: OdraType>(key: &[u8], value: T) {
-    let state_uref = get_state_uref();
-    dictionary_put(state_uref, key, value);
-}
+    let uref_ptr = (*STATE_BYTES).as_ptr();
+    let uref_size = (*STATE_BYTES).len();
 
-#[inline(always)]
-pub fn read_value<T: OdraType>(key: &[u8]) -> Option<T> {
-    let state_uref = get_state_uref();
-    dictionary_get(state_uref, key).unwrap_or_revert()
-}
-
-pub fn dictionary_put<V: CLTyped + ToBytes>(
-    dictionary_seed_uref: URef,
-    dictionary_item_key: &[u8],
-    value: V
-) {
-    let (uref_ptr, uref_size, _bytes1) = to_ptr(dictionary_seed_uref);
-
-    let dictionary_item_key_ptr = dictionary_item_key.as_ptr();
-    let dictionary_item_key_size = dictionary_item_key.len();
-
-    if dictionary_item_key_size > DICTIONARY_ITEM_KEY_MAX_LENGTH {
-        runtime::revert(ApiError::DictionaryItemKeyExceedsLength)
-    }
+    let dictionary_item_key_ptr = key.as_ptr();
+    let dictionary_item_key_size = key.len();
 
     let cl_value = casper_types::CLValue::from_t(value).unwrap_or_revert();
     let (cl_value_ptr, cl_value_size, _bytes) = to_ptr(cl_value);
@@ -286,17 +226,11 @@ pub fn dictionary_put<V: CLTyped + ToBytes>(
     result.unwrap_or_revert()
 }
 
-fn dictionary_get<V: CLTyped + FromBytes>(
-    dictionary_seed_uref: URef,
-    dictionary_item_key: &[u8]
-) -> Result<Option<V>, casper_types::bytesrepr::Error> {
-    let (uref_ptr, uref_size, _bytes1) = to_ptr(dictionary_seed_uref);
-    let dictionary_item_key_ptr = dictionary_item_key.as_ptr();
-    let dictionary_item_key_size = dictionary_item_key.len();
-
-    if dictionary_item_key_size > DICTIONARY_ITEM_KEY_MAX_LENGTH {
-        runtime::revert(ApiError::DictionaryItemKeyExceedsLength)
-    }
+pub fn read_value<T: OdraType>(key: &[u8]) -> Option<T> {
+    let uref_ptr = (*STATE_BYTES).as_ptr();
+    let uref_size = (*STATE_BYTES).len();
+    let dictionary_item_key_ptr = key.as_ptr();
+    let dictionary_item_key_size = key.len();
 
     let value_size = {
         let mut value_size = std::mem::MaybeUninit::uninit();
@@ -311,13 +245,19 @@ fn dictionary_get<V: CLTyped + FromBytes>(
         };
         match casper_types::api_error::result_from(ret) {
             Ok(_) => unsafe { value_size.assume_init() },
-            Err(ApiError::ValueNotFound) => return Ok(None),
+            Err(ApiError::ValueNotFound) => return None,
             Err(e) => runtime::revert(e)
         }
     };
 
     let value_bytes = read_host_buffer(value_size).unwrap_or_revert();
-    Ok(Some(casper_types::bytesrepr::deserialize(value_bytes)?))
+    
+    let res = match casper_types::bytesrepr::deserialize(value_bytes) {
+        Ok(res) => Ok(Some(res)),
+        Err(e) => Err(e),
+    };
+    res.unwrap_or_revert()
+    // Ok(Some(casper_types::bytesrepr::deserialize(value_bytes)?)).unwrap_or_revert()
 }
 
 fn to_ptr<T: ToBytes>(t: T) -> (*const u8, usize, Vec<u8>) {

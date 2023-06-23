@@ -1,21 +1,15 @@
-use alloc::string::String;
 use alloc::vec::Vec;
-use odra_casper_types::casper_types::bytesrepr::Error;
-use odra_casper_types::casper_types::bytesrepr::ToBytes;
 
-// TODO: Add caching.
-// TODO: Experiment with keys length.
-
-pub enum Key<'a> {
+pub enum StorageKey<'a> {
     Ref(&'a [u8]),
-    Owned(Vec<u8>),
+    Owned(Vec<u8>)
 }
 
-impl<'a> AsRef<[u8]> for Key<'a> {
+impl<'a> AsRef<[u8]> for StorageKey<'a> {
     fn as_ref(&self) -> &[u8] {
         match self {
-            Key::Ref(bytes) => bytes,
-            Key::Owned(vec) => vec.as_slice(),
+            StorageKey::Ref(bytes) => bytes,
+            StorageKey::Owned(vec) => vec.as_slice()
         }
     }
 }
@@ -25,26 +19,39 @@ pub trait KeyMaker {
     const DICTIONARY_ITEM_KEY_MAX_LENGTH: usize;
 
     /// Generate key for variable.
-    fn to_variable_key(key: &[u8]) -> Key {
+    fn to_variable_key(key: &[u8]) -> StorageKey {
         if key.len() > Self::DICTIONARY_ITEM_KEY_MAX_LENGTH {
-            let hash = Self::blake2b(key);
-            Key::Owned(hex::encode(hash).into_bytes())
+            StorageKey::Owned(Self::adjust_key(key))
         } else {
-            Key::Ref(key)
+            StorageKey::Ref(key)
         }
     }
 
     /// Generate key for dictionary.
-    fn to_dictionary_key<T: ToBytes>(seed: &[u8], key: &T) -> Result<String, Error> {
-        // TODO: Chagne to to_bytes when used in backend.
-        let key_bytes = key.to_bytes()?;
+    fn to_dictionary_key<'a, T: odra_casper_types::Key>(
+        seed: &'a [u8],
+        key: &'a T
+    ) -> StorageKey<'a> {
+        let key_hash = key.encoded_hash();
 
-        let mut preimage = Vec::with_capacity(seed.len() + key_bytes.len());
-        preimage.extend_from_slice(seed);
-        preimage.extend_from_slice(&key_bytes);
+        let storage_key_len = seed.len() + key_hash.len();
 
-        let hash = Self::blake2b(&preimage);
-        Ok(hex::encode(hash))
+        let mut storage_key = Vec::with_capacity(storage_key_len);
+        storage_key.extend_from_slice(seed);
+        storage_key.extend_from_slice(&key_hash);
+
+        if storage_key_len > Self::DICTIONARY_ITEM_KEY_MAX_LENGTH {
+            StorageKey::Owned(Self::adjust_key(&storage_key))
+        } else {
+            StorageKey::Owned(storage_key)
+        }
+    }
+
+    fn adjust_key(preimage: &[u8]) -> Vec<u8> {
+        let hash = Self::blake2b(preimage);
+        let mut result  = Vec::with_capacity(64);
+        odra_utils::hex_to_slice(&hash, &mut result);
+        result
     }
 
     /// Hash value.

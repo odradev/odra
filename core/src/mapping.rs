@@ -8,19 +8,12 @@ use odra_types::arithmetic::{OverflowingAdd, OverflowingSub};
 use super::instance::DynamicInstance;
 
 /// Data structure for storing key-value pairs.
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(Clone)]
 pub struct Mapping<K, V> {
     key_ty: PhantomData<K>,
     value_ty: PhantomData<V>,
     namespace_buffer: Vec<u8>
 }
-
-// impl<K, V> Mapping<K, V> {
-//     /// Return the named key path to the variable.
-//     pub fn path(&self) -> &str {
-//         &self.name
-//     }
-// }
 
 impl<K: OdraType + Hash + Key, V: OdraType> Mapping<K, V> {
     /// Reads `key` from the storage or returns `None`.
@@ -46,13 +39,12 @@ impl<K: OdraType + Hash + Key, V: OdraType + Default> Mapping<K, V> {
 impl<K: OdraType + Hash + Key, V: DynamicInstance> Mapping<K, V> {
     /// Reads `key` from the storage or the default value is returned.
     pub fn get_instance(&self, key: &K) -> V {
-        let key_hash = <K as Key>::hash(key);
-        let encoded_hash = hex::encode(key_hash);
-        let buffer = encoded_hash.as_bytes();
-        let mut result = Vec::with_capacity(buffer.len() + self.namespace_buffer.len());
+        let key_hash = <K as Key>::encoded_hash(key);
+
+        let mut result = Vec::with_capacity(key_hash.len() + self.namespace_buffer.len());
         result.extend_from_slice(self.namespace_buffer.as_slice());
-        result.extend_from_slice(buffer);
-        V::instance(&buffer)
+        result.extend_from_slice(&key_hash);
+        V::instance(&result)
     }
 }
 
@@ -109,7 +101,7 @@ impl<K: OdraType + Hash, V> DynamicInstance for Mapping<K, V> {
 mod tests {
     use crate::{instance::StaticInstance, mapping::Mapping, test_env};
     use core::hash::Hash;
-    use odra_mock_vm::types::{OdraType, Key};
+    use odra_mock_vm::types::{Key, OdraType};
     use odra_types::arithmetic::ArithmeticsError;
 
     const SHARED_VALUE: [&str; 1] = ["shared_value"];

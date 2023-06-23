@@ -8,18 +8,11 @@ use crate::{contract_env, UnwrapOrRevert};
 use super::instance::{DynamicInstance, StaticInstance};
 
 /// Data structure for storing a single value.
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(Clone)]
 pub struct Variable<T> {
     ty: PhantomData<T>,
     namespace_buffer: Vec<u8>
 }
-
-// impl<T> Variable<T> {
-//     /// Returns the named key path to the variable.
-//     pub fn path(&self) -> &str {
-//         self.name
-//     }
-// }
 
 // <3
 impl<T: OdraType + Default> Variable<T> {

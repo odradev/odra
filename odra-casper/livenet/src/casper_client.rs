@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf, time::Duration};
+use std::{fs, path::PathBuf, str::from_utf8_unchecked, time::Duration};
 
 use blake2::{
     digest::{Update, VariableOutput},
@@ -7,12 +7,12 @@ use blake2::{
 use casper_execution_engine::core::engine_state::ExecutableDeployItem;
 use casper_hashing::Digest;
 use casper_types::{
-    bytesrepr::FromBytes, runtime_args, ContractHash, ContractPackageHash, Key, PublicKey,
-    RuntimeArgs, SecretKey, TimeDiff, Timestamp
+    bytesrepr::FromBytes, runtime_args, ContractHash, ContractPackageHash, Key as CasperKey,
+    PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp
 };
 use jsonrpc_lite::JsonRpc;
-use odra_casper_shared::key_maker::{Key, KeyMaker};
-use odra_casper_types::{Address, Balance, Bytes, CallArgs, OdraType};
+use odra_casper_shared::key_maker::{KeyMaker, StorageKey};
+use odra_casper_types::{Address, Balance, Bytes, CallArgs, Key, OdraType};
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 
@@ -113,29 +113,42 @@ impl CasperClient {
 
     /// Query the contract for the variable.
     pub fn get_variable_value<T: OdraType>(&self, address: Address, key: &[u8]) -> Option<T> {
-        // match LivenetKeyMaker::to_variable_key(key) {
-        //     odra_casper_shared::key_maker::Key::Ref(key) => self.query_dictionary(address, key),
-        //     odra_casper_shared::key_maker::Key::Owned(key) => self.query_dictionary(address, key),
-        // }
-        unimplemented!()
+        match LivenetKeyMaker::to_variable_key(key) {
+            StorageKey::Ref(v) => {
+                let key = unsafe { from_utf8_unchecked(v) };
+                self.query_dictionary(address, key)
+            }
+            StorageKey::Owned(v) => {
+                let key = unsafe { from_utf8_unchecked(&v) };
+                self.query_dictionary(address, key)
+            }
+        }
     }
 
     /// Query the contract for the dictionary value.
-    pub fn get_dict_value<K: OdraType, V: OdraType>(
+    pub fn get_dict_value<K: OdraType + Key, V: OdraType>(
         &self,
         address: Address,
         seed: &[u8],
         key: &K
     ) -> Option<V> {
-        let key = LivenetKeyMaker::to_dictionary_key(seed, key).unwrap();
-        self.query_dictionary(address, &key)
+        match LivenetKeyMaker::to_dictionary_key(seed, key) {
+            StorageKey::Ref(v) => {
+                let key = unsafe { from_utf8_unchecked(v) };
+                self.query_dictionary(address, key)
+            }
+            StorageKey::Owned(v) => {
+                let key = unsafe { from_utf8_unchecked(&v) };
+                self.query_dictionary(address, key)
+            }
+        }
     }
 
     /// Discover the contract address by name.
     pub fn get_contract_address(&self, key_name: &str) -> Address {
         let key_name = format!("{}_package_hash", key_name);
         let account_hash = self.public_key().to_account_hash();
-        let result = self.query_global_state(&Key::Account(account_hash));
+        let result = self.query_global_state(&CasperKey::Account(account_hash));
         let result_as_json = serde_json::to_value(result.stored_value).unwrap();
 
         let named_keys = result_as_json["Account"]["named_keys"].as_array().unwrap();
@@ -158,7 +171,7 @@ impl CasperClient {
 
     /// Find the contract hash by the contract package hash.
     pub fn query_global_state_for_contract_hash(&self, address: Address) -> ContractHash {
-        let key = Key::Hash(address.as_contract_package_hash().unwrap().value());
+        let key = CasperKey::Hash(address.as_contract_package_hash().unwrap().value());
         let result = self.query_global_state(&key);
         let result_as_json = serde_json::to_value(result).unwrap();
         let contract_hash: &str = result_as_json["stored_value"]["ContractPackage"]["versions"][0]
@@ -234,7 +247,7 @@ impl CasperClient {
         self.wait_for_deploy_hash(deploy_hash);
     }
 
-    fn query_global_state(&self, key: &Key) -> QueryGlobalStateResult {
+    fn query_global_state(&self, key: &CasperKey) -> QueryGlobalStateResult {
         let state_root_hash = self.get_state_root_hash();
         let params = QueryGlobalStateParams {
             state_identifier: GlobalStateIdentifier::StateRootHash(state_root_hash),
@@ -396,7 +409,7 @@ struct LivenetKeyMaker;
 
 impl KeyMaker for LivenetKeyMaker {
     const DICTIONARY_ITEM_KEY_MAX_LENGTH: usize = casper_types::DICTIONARY_ITEM_KEY_MAX_LENGTH;
-    
+
     fn blake2b(preimage: &[u8]) -> [u8; 32] {
         let mut result = [0; 32];
         let mut hasher = VarBlake2b::new(32).expect("should create hasher");
