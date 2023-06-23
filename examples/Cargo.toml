@@ -7,6 +7,11 @@ edition = "2021"
 odra = { path = "../core", default-features = false }
 odra-modules = { path = "../modules", default-features = false }
 
+[dev-dependencies]
+sha256 = "1.1.4"
+hex = "0.4.3"
+casper-types = "3.0.0"
+
 [features]
 default = ["mock-vm"]
 mock-vm = ["odra/mock-vm", "odra-modules/mock-vm"]

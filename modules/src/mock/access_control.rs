@@ -1,4 +1,5 @@
 use odra::{contract_env, types::Address};
+use sha3::{Digest, Keccak256};
 
 use crate::access::{AccessControl, Role, DEFAULT_ADMIN_ROLE};
 
@@ -57,13 +58,19 @@ impl MockModerated {
 
 impl MockModerated {
     fn role(name: &str) -> Role {
-        crate::crypto::keccak256(name)
+        keccak_256(name)
     }
 
     fn set_moderator_admin_role(&mut self, role: &Role) {
         self.access_control
             .set_admin_role(&Self::role(ROLE_MODERATOR), role);
     }
+}
+
+pub fn keccak_256(input: &str) -> Role {
+    let mut hasher = Keccak256::default();
+    hasher.update(input.as_bytes());
+    hasher.finalize().into()
 }
 
 #[cfg(test)]
@@ -73,6 +80,7 @@ pub mod test {
         errors::Error,
         events::{RoleGranted, RoleRevoked}
     };
+    use crate::mock::access_control::keccak_256;
     use odra::{assert_events, test_env, types::Address};
 
     #[test]
@@ -110,7 +118,7 @@ pub mod test {
         assert_events!(
             contract,
             RoleGranted {
-                role: crate::crypto::keccak256(ROLE_MODERATOR),
+                role: keccak_256(ROLE_MODERATOR),
                 address: user1,
                 sender: admin
             }
@@ -148,17 +156,17 @@ pub mod test {
         assert_events!(
             contract,
             RoleGranted {
-                role: crate::crypto::keccak256(ROLE_MODERATOR),
+                role: keccak_256(ROLE_MODERATOR),
                 address: moderator,
                 sender: admin
             },
             RoleRevoked {
-                role: crate::crypto::keccak256(ROLE_MODERATOR),
+                role: keccak_256(ROLE_MODERATOR),
                 address: moderator,
                 sender: admin
             },
             RoleGranted {
-                role: crate::crypto::keccak256(ROLE_MODERATOR),
+                role: keccak_256(ROLE_MODERATOR),
                 address: moderator,
                 sender: admin
             }
@@ -184,7 +192,7 @@ pub mod test {
         assert_events!(
             contract,
             RoleRevoked {
-                role: crate::crypto::keccak256(ROLE_MODERATOR),
+                role: keccak_256(ROLE_MODERATOR),
                 address: moderator,
                 sender: moderator
             }
@@ -213,12 +221,12 @@ pub mod test {
         assert_events!(
             contract,
             RoleGranted {
-                role: crate::crypto::keccak256(ROLE_MODERATOR_ADMIN),
+                role: keccak_256(ROLE_MODERATOR_ADMIN),
                 address: moderator,
                 sender: admin
             },
             RoleGranted {
-                role: crate::crypto::keccak256(ROLE_MODERATOR),
+                role: keccak_256(ROLE_MODERATOR),
                 address: user,
                 sender: moderator
             }

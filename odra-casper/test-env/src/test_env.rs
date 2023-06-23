@@ -152,14 +152,12 @@ pub fn gas_report() -> Vec<(String, Balance)> {
     report
 }
 
-pub fn sign_message(message: Bytes, address: &Address) -> Bytes {
-    todo!()
+/// Signs the message using the private key associated with the given address.
+pub fn sign_message(message: &Bytes, address: &Address) -> Bytes {
+    ENV.with(|env| env.borrow().sign_message(message, address))
 }
 
+/// Returns the public key of the account associated with the given address.
 pub fn public_key(address: &Address) -> PublicKey {
-    todo!()
-}
-
-pub fn signature_hash(message: Bytes) -> Bytes {
-    todo!()
+    ENV.with(|env| env.borrow().public_key(address))
 }

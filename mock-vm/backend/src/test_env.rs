@@ -13,7 +13,7 @@ use odra_types::{
     OdraError
 };
 
-use crate::{native_token::NativeTokenMetadata, EntrypointArgs, EntrypointCall, contract_env};
+use crate::{native_token::NativeTokenMetadata, EntrypointArgs, EntrypointCall};
 
 macro_rules! delegate_to_env {
     (
@@ -136,15 +136,16 @@ fn extract_event_name(mut bytes: &[u8]) -> Result<String, EventError> {
     Ok(name)
 }
 
-/// Returns the public key of the account associated with the given address.
-pub fn public_key(address: &Address) -> PublicKey {
-    PublicKey(<[u8; 8]>::try_from(address.inner_bytes()).unwrap())
-}
-
 /// Signs the message using the private key associated with the given address.
 pub fn sign_message(message: &Bytes, address: &Address) -> Bytes {
     let public_key = public_key(address);
     let mut message = message.inner_bytes().clone();
-    message.extend_from_slice(&public_key.0);
-    contract_env::signature_hash(&Bytes::from(message.to_vec()))
+    message.extend_from_slice(public_key.inner_bytes());
+    let signature_hash = sha256::digest(Bytes::from(message).as_slice());
+    Bytes::from(signature_hash.as_bytes().to_vec())
+}
+
+/// Returns the public key of the account associated with the given address.
+pub fn public_key(address: &Address) -> PublicKey {
+    PublicKey(*address)
 }

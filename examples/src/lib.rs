@@ -6,5 +6,6 @@ pub mod mapping;
 pub mod ownable;
 pub mod owned_token;
 pub mod reentrancy;
+pub mod signature_verifier;
 pub mod tlw;
 pub mod token_manager;
