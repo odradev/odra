@@ -1,18 +1,19 @@
 [package]
 name = "odra-casper-backend"
-version = "0.4.0"
 edition = "2021"
-authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
-license = "MIT"
-repository = "https://github.com/odradev/odra"
 description = "Odra backend bindings for the Casper Blockchain."
 keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm", "smart contracts"]
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
-odra-casper-shared = { version = "0.4.0", path = "../shared" }
-odra-casper-types = { version = "0.4.0", path = "../types" }
-odra-types = { version = "0.4.0", path = "../../types" }
+odra-casper-shared = { path = "../shared" }
+odra-casper-types = { path = "../types" }
+odra-types = { path = "../../types" }
 casper-contract = { version = "3.0.0", default-features = false, features = ["std", "test-support"] }
 casper-types = { workspace = true }
 syn = "1.0.96"

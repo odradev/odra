@@ -1,18 +1,19 @@
 [package]
 name = "odra-mock-vm"
-version = "0.4.0"
 edition = "2021"
-authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
-license = "MIT"
-repository = "https://github.com/odradev/odra"
 description = "Odra's virtual machine for running smart contracts."
 keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm"]
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
-odra-types = { version = "0.4.0", path = "../../types" }
-odra-utils = { version = "0.4.0", path = "../../utils" }
-odra-mock-vm-types = { version = "0.4.0", path = "../types" }
+odra-types = { path = "../../types" }
+odra-utils = { path = "../../utils" }
+odra-mock-vm-types = { path = "../types" }
 ref_thread_local = "0.1.1"
 anyhow = "1.0.65"
 hex = "0.4.3"
