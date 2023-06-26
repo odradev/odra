@@ -77,6 +77,7 @@ impl From<&Event> for EventDef {
 fn type_to_cl_type(ty: &Type) -> CLType {
     match ty {
         Type::Address => CLType::Key,
+        Type::PublicKey => CLType::PublicKey,
         Type::Bool => CLType::Bool,
         Type::I32 => CLType::I32,
         Type::I64 => CLType::I64,

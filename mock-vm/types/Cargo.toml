@@ -12,7 +12,6 @@ repository.workspace = true
 
 [dependencies]
 odra-types = { path = "../../types" }
-odra-utils = { path = "../../utils" }
 hex = "0.4.3"
 uint = "0.9.4"
 borsh = "0.9.3"

@@ -31,6 +31,10 @@ name = "reentrancy_mock"
 fqn = "odra_examples::reentrancy::ReentrancyMock"
 
 [[contracts]]
+name = "signature_verifier"
+fqn = "odra_examples::signature_verifier::SignatureVerifier"
+
+[[contracts]]
 name = "composable_contract"
 fqn = "odra_examples::composer::ComposableContract"
 
@@ -77,4 +81,3 @@ fqn = "odra_examples::docs::modules::ModulesContract"
 [[contracts]]
 name = "public_wallet"
 fqn = "odra_examples::docs::native_token::PublicWallet"
-

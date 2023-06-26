@@ -5,6 +5,8 @@ use std::panic::AssertUnwindSafe;
 
 use crate::env::ENV;
 use casper_types::account::{AccountHash, ACCOUNT_HASH_LENGTH};
+use casper_types::bytesrepr::Bytes;
+use casper_types::PublicKey;
 use odra_casper_shared::{consts, native_token::NativeTokenMetadata};
 use odra_casper_types::{Address, Balance, CallArgs, OdraType};
 use odra_types::{
@@ -148,4 +150,14 @@ pub fn gas_report() -> Vec<(String, Balance)> {
     });
 
     report
+}
+
+/// Signs the message using the private key associated with the given address.
+pub fn sign_message(message: &Bytes, address: &Address) -> Bytes {
+    ENV.with(|env| env.borrow().sign_message(message, address))
+}
+
+/// Returns the public key of the account associated with the given address.
+pub fn public_key(address: &Address) -> PublicKey {
+    ENV.with(|env| env.borrow().public_key(address))
 }
