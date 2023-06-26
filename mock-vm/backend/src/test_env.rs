@@ -141,8 +141,7 @@ pub fn sign_message(message: &Bytes, address: &Address) -> Bytes {
     let public_key = public_key(address);
     let mut message = message.inner_bytes().clone();
     message.extend_from_slice(public_key.inner_bytes());
-    let signature_hash = sha256::digest(Bytes::from(message).as_slice());
-    Bytes::from(signature_hash.as_bytes().to_vec())
+    Bytes::from(message)
 }
 
 /// Returns the public key of the account associated with the given address.

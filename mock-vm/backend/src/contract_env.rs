@@ -121,7 +121,6 @@ pub fn native_token_metadata() -> NativeTokenMetadata {
 pub fn verify_signature(message: &Bytes, signature: &Bytes, public_key: &PublicKey) -> bool {
     let mut message = message.inner_bytes().clone();
     message.extend_from_slice(public_key.inner_bytes());
-    let mock_signature_hash = sha256::digest(Bytes::from(message.to_vec()).as_slice());
-    let mock_signature_bytes = Bytes::from(mock_signature_hash.as_bytes().to_vec());
+    let mock_signature_bytes = Bytes::from(message);
     mock_signature_bytes == *signature
 }

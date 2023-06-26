@@ -41,7 +41,7 @@ mod test {
     #[test]
     #[cfg(feature = "casper")]
     fn verify_signature_casper_wallet() {
-        use casper_types::bytesrepr::FromBytes;
+        use odra::casper::casper_types::bytesrepr::FromBytes;
         // Casper Wallet for the message "Ahoj przygodo!" signed using SECP256K1 key
         // produces the following signature:
         // 1e87e186238fa1df9c222b387a79910388c6ef56285924c7e4f6d7e77ed1d6c61815312cf66a5318db204c693b79e020b1d392dafe8c1b3841e1f6b4c41ca0fa
@@ -59,8 +59,10 @@ mod test {
         // Similar to the above, the public key is tagged:
         let public_key_hex = "02036d9b880e44254afaf34330e57703a63aec53b5918d4470059b67a4a906350105";
         let public_key_decoded = hex::decode(public_key_hex).unwrap();
-        let (public_key, _) =
-            casper_types::crypto::PublicKey::from_bytes(public_key_decoded.as_slice()).unwrap();
+        let (public_key, _) = odra::casper::casper_types::crypto::PublicKey::from_bytes(
+            public_key_decoded.as_slice()
+        )
+        .unwrap();
 
         let signature_verifier = SignatureVerifierDeployer::default();
         assert!(signature_verifier.verify_signature(message_bytes, signature_bytes, &public_key));

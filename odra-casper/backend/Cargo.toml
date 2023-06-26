@@ -20,5 +20,3 @@ syn = "1.0.96"
 hex = "0.4.3"
 lazy_static = "1.4.0"
 casper-event-standard = { workspace = true }
-sha256 = "1.1.4"
-ed25519 = "1.2.0"
