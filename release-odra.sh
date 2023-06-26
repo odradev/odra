@@ -1,17 +1,17 @@
 # Before running, comment out dev-dependencies in odra-proc-macros crate.
 
-cargo publish -p odra-types && sleep 100
-cargo publish -p odra-utils && sleep 100
-cargo publish -p odra-mock-vm-types && sleep 100
-cargo publish -p odra-mock-vm && sleep 100
-cargo publish -p odra-ir && sleep 100
-cargo publish -p odra-codegen && sleep 100
-cargo publish -p odra-proc-macros --allow-dirty && sleep 100
-cargo publish -p odra-casper-types && sleep 100
-cargo publish -p odra-casper-shared && sleep 100
-cargo publish -p odra-casper-test-env && sleep 100
-cargo publish -p odra-casper-codegen && sleep 100
-cargo publish -p odra-casper-backend && sleep 100
-cargo publish -p odra-casper-livenet && sleep 100
-cargo publish -p odra && sleep 100
+cargo publish -p odra-types
+cargo publish -p odra-utils
+cargo publish -p odra-mock-vm-types
+cargo publish -p odra-mock-vm
+cargo publish -p odra-ir
+cargo publish -p odra-codegen
+cargo publish -p odra-proc-macros --allow-dirty
+cargo publish -p odra-casper-types
+cargo publish -p odra-casper-shared
+cargo publish -p odra-casper-test-env
+cargo publish -p odra-casper-codegen
+cargo publish -p odra-casper-backend
+cargo publish -p odra-casper-livenet
+cargo publish -p odra
 cd modules && cargo publish
