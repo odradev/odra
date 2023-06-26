@@ -2,6 +2,14 @@
 
 Changelog for `odra`.
 
+## [0.5.0] - 2023-XX-XX
+### Added
+- Signature verification in contract_env's
+- Signature creation in test_env's
+
+### Removed
+- Crypto module from odra-modules
+
 ## [0.4.0] - 2023-06-26
 ### Added
 - `odra-casper-livenet` has new resource: `proxy_caller.wasm`.
