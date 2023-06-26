@@ -19,6 +19,13 @@ members = [
 
 exclude = [ "contract", "contract/builder", "examples", "modules" ]
 
+[workspace.package]
+version = "0.5.0"
+authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
+license = "MIT"
+homepage = "https://odra.dev/docs"
+repository = "https://github.com/odradev/odra"
+
 [workspace.dependencies]
 casper-contract = "3.0.0"
 casper-types = "3.0.0"
