@@ -5,6 +5,16 @@ pub enum StorageKey<'a> {
     Owned(Vec<u8>)
 }
 
+impl<'a> StorageKey<'a> {
+    #[inline]
+    pub fn to_ptr(&self) -> (*const u8, usize) {
+        match self {
+            StorageKey::Ref(key) => (key.as_ptr(), key.len()),
+            StorageKey::Owned(key) => (key.as_ptr(), key.len()),
+        }
+    }
+} 
+
 impl<'a> AsRef<[u8]> for StorageKey<'a> {
     fn as_ref(&self) -> &[u8] {
         match self {
@@ -49,7 +59,7 @@ pub trait KeyMaker {
 
     fn adjust_key(preimage: &[u8]) -> Vec<u8> {
         let hash = Self::blake2b(preimage);
-        let mut result  = Vec::with_capacity(64);
+        let mut result  = Vec::with_capacity(hash.len() * 2);
         odra_utils::hex_to_slice(&hash, &mut result);
         result
     }

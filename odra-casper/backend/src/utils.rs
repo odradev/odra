@@ -66,8 +66,10 @@ pub fn assert_no_attached_value() {
     if named_arg_exists(consts::CARGO_PURSE_ARG) {
         let cargo_purse = runtime::get_named_arg(consts::CARGO_PURSE_ARG);
         let amount = casper_contract::contract_api::system::get_purse_balance(cargo_purse);
-        if amount.is_some() && !amount.unwrap().is_zero() {
-            revert(ExecutionError::non_payable());
+        if let Some(amount) = amount {
+            if !amount.is_zero() {
+                revert(ExecutionError::non_payable());
+            }
         }
     }
 }

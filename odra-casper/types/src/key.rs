@@ -1,9 +1,10 @@
 use core::hash::{Hash, Hasher};
 use crate::OdraType;
+use odra_types::EncodedKeyHash;
 use twox_hash::XxHash64;
 
 pub trait Key: Hash {
-    fn encoded_hash(&self) -> [u8; 16] {
+    fn encoded_hash(&self) -> EncodedKeyHash {
         let mut hasher = XxHash64::default();
         self.hash(&mut hasher);
         let hash = hasher.finish().to_be_bytes();

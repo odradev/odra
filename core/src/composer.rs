@@ -6,10 +6,12 @@ pub struct Composer {
 }
 impl Composer {
     /// Creates a new composer with the `namespace` and `name`.
-    pub fn new(namespace: &[u8], name: &str) -> Self {
-        Self {
-            namespace: [namespace, "#".as_bytes(), name.as_bytes()].concat()
-        }
+    pub fn new(root_namespace: &[u8], name: &str) -> Self {
+        let mut namespace = Vec::with_capacity(root_namespace.len() + name.len() + 1);
+        namespace.extend_from_slice(root_namespace);
+        namespace.extend_from_slice(b"#");
+        namespace.extend_from_slice(name.as_bytes());
+        Self { namespace }
     }
 
     /// Builds an instance with the `namespace`.

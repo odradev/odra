@@ -80,7 +80,7 @@ impl GenerateCode for ModuleComposer<'_> {
              impl #composer_ident {
                  pub fn new(namespace: &[u8], name: &str) -> Self {
                      Self {
-                         namespace: [namespace, "#".as_bytes(), name.as_bytes()].concat(),
+                         namespace: [namespace, b"#", name.as_bytes()].concat(),
                          #empty_fields
                      }
                  }

@@ -9,7 +9,7 @@ const USER_ERROR_TOO_HIGH: u16 = 32768;
 const UNWRAP_ERROR: u16 = u16::MAX;
 
 // const CODE_EARLY_END_OF_STREAM: u16 = 1;
-const CODE_FORMATTING: u16 = 2;
+// const CODE_FORMATTING: u16 = 2;
 // const CODE_LEFT_OVER_BYTES: u16 = 3;
 // const CODE_OUT_OF_MEMORY: u16 = 4;
 // const CODE_EXCEEDED_RECURSION_DEPTH: u16 = 5;
@@ -102,10 +102,6 @@ impl ExecutionError {
             CODE_TRANSFER_TO_CONTRACT,
             "Can't transfer tokens to contract."
         )
-    }
-
-    pub fn encoding_error() -> Self {
-        Self::internal(CODE_FORMATTING, "Reentrant call.")
     }
 
     pub fn reentrant_call() -> Self {
