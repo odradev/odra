@@ -1,6 +1,3 @@
-CARGO_ODRA_GIT := "https://github.com/odradev/cargo-odra"
-CARGO_ODRA_BRANCH := "release/0.0.7"
-
 default:
     just --list
 
@@ -21,7 +18,7 @@ check-lint: clippy
     cd examples && cargo check --no-default-features -F casper-livenet
 
 install-cargo-odra:
-    cargo install --git {{CARGO_ODRA_GIT}} --branch {{CARGO_ODRA_BRANCH}} --locked
+    cargo install cargo-odra --locked
 
 prepare-test-env: install-cargo-odra
     rustup target add wasm32-unknown-unknown
