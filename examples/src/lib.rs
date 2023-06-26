@@ -3,6 +3,7 @@ pub mod composer;
 pub mod docs;
 pub mod erc20;
 pub mod mapping;
+pub mod odra_types;
 pub mod ownable;
 pub mod owned_token;
 pub mod reentrancy;

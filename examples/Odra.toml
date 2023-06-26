@@ -39,6 +39,10 @@ name = "composable_contract"
 fqn = "odra_examples::composer::ComposableContract"
 
 [[contracts]]
+name = "nested_odra_types"
+fqn = "odra_examples::odra_types::NestedOdraTypes"
+
+[[contracts]]
 name = "dog_contract"
 fqn = "odra_examples::docs::variable::DogContract"
 
