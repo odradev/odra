@@ -2,18 +2,32 @@
 
 Changelog for `odra`.
 
-## [0.4.0] - XXXX-XX-XX
+## [0.5.0] - 2023-XX-XX
+### Added
+- Signature verification in contract_env's
+- Signature creation in test_env's
+
+### Removed
+- Crypto module from odra-modules
+
+## [0.4.0] - 2023-06-26
 ### Added
 - `odra-casper-livenet` has new resource: `proxy_caller.wasm`.
 - `odra-casper-shared`, `odra-casper-types` and `odra-types` are now `no_std`.
+- Modules can have arguments that are references.
+- `odra-casper-test-env` has new `gas_report()` function, that shows gas usages.
 
 ### Fixed
+- Casper gas counting.
 
 ### Changed
 - `test-env/getter-proxy` is now `proxy-caller`. 
 - `proxy_getter.wasm` is now `proxy_caller_with_result.wasm`.
+- Casper's `call` methods for wasm build has a new set of arguments including upgradable contracts.
+- Support for the Casper 1.5.1 version.
 
 ### Removed
+- `casper-node` is no longer a dependency for `odra-casper-livenet`.
 
 ## [0.3.1] - 2023-06-01
 ### Added
@@ -53,6 +67,7 @@ containing contract structure and Events schemas following the Casper Event Stan
   - `Ownable`,
   - `Ownable2Step`,
   - `AccessControl`.
+- Experimental `odra-casper-livenet` crate for deploying contracts to Casper Livenet.
 
 ### Changed
 - `last_call_contract_cost()` is now `last_call_contract_gas_used()`.

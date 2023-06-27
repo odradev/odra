@@ -1,17 +1,17 @@
 [package]
 name = "odra-mock-vm-types"
-version = "0.4.0"
 edition = "2021"
-authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
-license = "MIT"
-repository = "https://github.com/odradev/odra"
 description = "Types used in Odra's virtual machine."
 keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm"]
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
-odra-types = { version = "0.4.0", path = "../../types" }
-odra-utils = { version = "0.4.0", path = "../../utils" }
+odra-types = { path = "../../types" }
 hex = "0.4.3"
 uint = "0.9.4"
 borsh = "0.9.3"

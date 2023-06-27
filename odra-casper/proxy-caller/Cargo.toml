@@ -1,12 +1,16 @@
 [package]
 name = "odra-casper-proxy-caller"
-version = "0.0.1"
 edition = "2021"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
 casper-contract = { workspace = true }
 casper-types = { workspace = true }
-odra-casper-shared = { version = "0.4.0", path = "../shared" }
+odra-casper-shared = { path = "../shared" }
 
 [[bin]]
 name = "proxy_caller"

@@ -45,6 +45,7 @@ const ODRA_WASM_PATH_ENV_KEY: &str = "ODRA_WASM_PATH";
 /// Wrapper for InMemoryWasmTestBuilder.
 pub struct CasperTestEnv {
     accounts: Vec<Address>,
+    key_pairs: HashMap<Address, (SecretKey, PublicKey)>,
     active_account: Address,
     context: InMemoryWasmTestBuilder,
     block_time: BlockTime,
@@ -60,6 +61,7 @@ impl CasperTestEnv {
     pub fn new() -> Self {
         let mut genesis_config = DEFAULT_GENESIS_CONFIG.clone();
         let mut accounts: Vec<Address> = Vec::new();
+        let mut key_pairs = HashMap::new();
         for i in 0..20 {
             // Create keypair.
             let secret_key = SecretKey::ed25519_from_bytes([i; 32]).unwrap();
@@ -70,13 +72,14 @@ impl CasperTestEnv {
 
             // Create a GenesisAccount.
             let account = GenesisAccount::account(
-                public_key,
+                public_key.clone(),
                 Motes::new(U512::from(DEFAULT_ACCOUNT_INITIAL_BALANCE)),
                 None
             );
             genesis_config.ee_config_mut().push_account(account);
 
             accounts.push(account_addr.try_into().unwrap());
+            key_pairs.insert(account_addr.try_into().unwrap(), (secret_key, public_key));
         }
         let run_genesis_request = RunGenesisRequest::new(
             *DEFAULT_GENESIS_CONFIG_HASH,
@@ -100,7 +103,8 @@ impl CasperTestEnv {
             error: None,
             attached_value: None,
             gas_used: HashMap::new(),
-            gas_cost: Vec::new()
+            gas_cost: Vec::new(),
+            key_pairs
         }
     }
 
@@ -351,8 +355,24 @@ impl CasperTestEnv {
         }
     }
 
+    /// Returns the report of the gas used during the whole lifetime of the CasperVM.
     pub fn gas_report(&self) -> Vec<(String, U512)> {
         self.gas_cost.clone()
+    }
+
+    /// Returns the public key that corresponds to the given Account Address.
+    pub fn public_key(&self, address: &Address) -> PublicKey {
+        let (_, public_key) = self.key_pairs.get(address).unwrap();
+        public_key.clone()
+    }
+
+    /// Cryptographically signs a message as a given account.
+    pub fn sign_message(&self, message: &Bytes, address: &Address) -> Bytes {
+        let (secret_key, public_key) = self.key_pairs.get(address).unwrap();
+        let signature = casper_types::crypto::sign(message, secret_key, public_key)
+            .to_bytes()
+            .unwrap();
+        Bytes::from(signature)
     }
 }
 

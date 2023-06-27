@@ -2,6 +2,8 @@
 //!
 //! It provides all the required functions to communicate between Odra and Casper Livenets.
 
+use casper_types::bytesrepr::Bytes;
+use casper_types::PublicKey;
 use odra_casper_shared::native_token::NativeTokenMetadata;
 use odra_casper_types::{Address, Balance, BlockTime, Key, OdraType};
 use odra_types::{event::OdraEvent, ExecutionError};
@@ -68,5 +70,10 @@ pub fn self_balance() -> Balance {
 
 /// Returns the platform native token metadata
 pub fn native_token_metadata() -> NativeTokenMetadata {
+    unimplemented!()
+}
+
+/// Verifies the signature created using the Backend's default signature scheme.
+pub fn verify_signature(_: &Bytes, _: &Bytes, _: &PublicKey) -> bool {
     unimplemented!()
 }

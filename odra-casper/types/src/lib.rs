@@ -16,6 +16,7 @@ pub use ty::Typed;
 pub use uints::{U128, U256, U512};
 
 pub use casper_address::CasperAddress as Address;
+pub use casper_types::PublicKey;
 /// A type representing the amount of native tokens.
 pub type Balance = U512;
 /// A type representing the block time.

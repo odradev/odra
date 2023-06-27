@@ -1,17 +1,18 @@
 [package]
 name = "odra-casper-types"
-version = "0.4.0"
 edition = "2021"
-authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
-license = "MIT"
-repository = "https://github.com/odradev/odra"
 description = "Types used in the Casper enviorment."
 keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm", "smart contracts"]
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
 casper-types = { workspace = true }
-odra-types = { version = "0.4.0", path = "../../types" }
-odra-utils = { version = "0.4.0", path = "../../utils" }
+odra-types = { path = "../../types" }
+odra-utils = { path = "../../utils" }
 num-traits = { version = "0.2.14", default-features = false }
 twox-hash = { version = "1.6.3", default-features = false }

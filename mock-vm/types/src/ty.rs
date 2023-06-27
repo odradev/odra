@@ -1,6 +1,6 @@
 use odra_types::Type;
 
-use crate::{Address, Bytes, U128, U256, U512};
+use crate::{Address, Bytes, PublicKey, U128, U256, U512};
 
 /// A trait that adds [Type] description for a given type.
 pub trait Typed {
@@ -32,6 +32,7 @@ impl_typed!(
     ((), Type::Unit),
     (String, Type::String),
     (Address, Type::Address),
+    (PublicKey, Type::PublicKey),
     (Bytes, Type::Vec(Box::new(Type::U8)))
 );
 

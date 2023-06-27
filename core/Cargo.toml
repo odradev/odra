@@ -1,29 +1,29 @@
 [package]
 name = "odra"
-version = "0.4.0"
 edition = "2021"
-authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
-license = "MIT"
-homepage = "https://odra.dev/docs"
-repository = "https://github.com/odradev/odra"
 description = "High-level smart contract framework for Rust."
 keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm"]
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
-odra-utils = { version = "0.4.0", path = "../utils" }
-odra-types = { version = "0.4.0", path = "../types" }
-odra-proc-macros = { version = "0.4.0", path = "../lang/proc-macros" }
-odra-mock-vm = { version = "0.4.0", path = "../mock-vm/backend", optional = true }
-odra-casper-backend = { version = "0.4.0", path = "../odra-casper/backend", optional = true }
-odra-casper-livenet = { version = "0.4.0", path = "../odra-casper/livenet", optional = true }
-odra-casper-types = { version = "0.4.0", path = "../odra-casper/types", optional = true }
+odra-utils = { path = "../utils" }
+odra-types = { path = "../types" }
+odra-proc-macros = { path = "../lang/proc-macros" }
+odra-mock-vm = { path = "../mock-vm/backend", optional = true }
+odra-casper-backend = { path = "../odra-casper/backend", optional = true }
+odra-casper-livenet = { path = "../odra-casper/livenet", optional = true }
+odra-casper-types = { path = "../odra-casper/types", optional = true }
 cfg-if = "1.0.0"
 num-traits = "0.2.14"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-odra-casper-test-env = { version = "0.4.0", path = "../odra-casper/test-env", optional = true }
-odra-casper-codegen = { version = "0.4.0", path = "../odra-casper/codegen", optional = true }
+odra-casper-test-env = { path = "../odra-casper/test-env", optional = true }
+odra-casper-codegen = { path = "../odra-casper/codegen", optional = true }
 
 [features]
 default = [ "mock-vm" ]

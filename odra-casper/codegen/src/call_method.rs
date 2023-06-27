@@ -81,7 +81,7 @@ impl ToTokens for CallMethod {
 
                 #entry_points
 
-                #[allow(dead_code)]
+                #[allow(unused_variables)]
                 let contract_package_hash = odra::casper::utils::install_contract(entry_points, schemas);
 
                 #constructor_call

@@ -4,6 +4,7 @@
 use casper_contract::{
     contract_api::system::transfer_from_purse_to_account, unwrap_or_revert::UnwrapOrRevert
 };
+use casper_types::bytesrepr::{Bytes, FromBytes};
 use casper_types::U512;
 use odra_casper_shared::native_token::NativeTokenMetadata;
 use odra_casper_types::{Address, Balance, BlockTime, CallArgs, Key, OdraType};
@@ -128,4 +129,15 @@ pub fn transfer_tokens<B: Into<Balance>>(to: &Address, amount: B) {
 /// Returns CSPR token metadata
 pub fn native_token_metadata() -> NativeTokenMetadata {
     NativeTokenMetadata::new()
+}
+
+/// Verifies the signature created using the Backend's default signature scheme.
+pub fn verify_signature(
+    message: &Bytes,
+    signature: &Bytes,
+    public_key: &casper_types::crypto::PublicKey
+) -> bool {
+    let (signature, _) =
+        casper_types::crypto::Signature::from_bytes(signature.as_slice()).unwrap_or_revert();
+    casper_types::crypto::verify(message.as_slice(), &signature, public_key).is_ok()
 }

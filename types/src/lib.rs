@@ -20,6 +20,8 @@ pub type EncodedKeyHash = [u8; 16];
 pub enum Type {
     /// Address type.
     Address,
+    /// Type for holding Public Key.
+    PublicKey,
     /// `bool` primitive.
     Bool,
     /// `i32` primitive.
@@ -83,6 +85,7 @@ impl Type {
             | Type::Unit
             | Type::String
             | Type::ByteArray(_)
+            | Type::PublicKey
             | Type::Address => false,
 
             // Need recursive check.

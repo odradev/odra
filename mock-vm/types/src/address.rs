@@ -16,6 +16,12 @@ pub struct Address {
     data: [u8; ADDRESS_LENGTH]
 }
 
+impl Address {
+    pub fn inner_bytes(&self) -> &[u8] {
+        &self.data
+    }
+}
+
 impl OdraAddress for Address {
     fn is_contract(&self) -> bool {
         // get first 4 bytes of data

@@ -5,6 +5,8 @@ use std::panic::AssertUnwindSafe;
 
 use crate::env::ENV;
 use casper_types::account::{AccountHash, ACCOUNT_HASH_LENGTH};
+use casper_types::bytesrepr::Bytes;
+use casper_types::PublicKey;
 use odra_casper_shared::{consts, native_token::NativeTokenMetadata};
 use odra_casper_types::{Address, Balance, CallArgs, OdraType};
 use odra_types::{
@@ -18,7 +20,7 @@ pub fn backend_name() -> String {
 }
 
 /// Deploy WASM file with arguments.
-pub fn register_contract(name: &str, args: &CallArgs) -> Address {
+pub fn register_contract(name: &str, args: &CallArgs, constructor_name: Option<String>) -> Address {
     ENV.with(|env| {
         let wasm_name = format!("{}.wasm", name);
         let package_hash_key_name = format!("{}_package_hash", name);
@@ -29,6 +31,10 @@ pub fn register_contract(name: &str, args: &CallArgs) -> Address {
         );
         args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, true);
         args.insert(consts::IS_UPGRADABLE_ARG, false);
+
+        if let Some(constructor_name) = constructor_name {
+            args.insert(consts::CONSTRUCTOR_NAME_ARG, constructor_name);
+        };
 
         env.borrow_mut().deploy_contract(&wasm_name, &args);
         let contract_package_hash = env
@@ -144,4 +150,14 @@ pub fn gas_report() -> Vec<(String, Balance)> {
     });
 
     report
+}
+
+/// Signs the message using the private key associated with the given address.
+pub fn sign_message(message: &Bytes, address: &Address) -> Bytes {
+    ENV.with(|env| env.borrow().sign_message(message, address))
+}
+
+/// Returns the public key of the account associated with the given address.
+pub fn public_key(address: &Address) -> PublicKey {
+    ENV.with(|env| env.borrow().public_key(address))
 }

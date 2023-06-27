@@ -90,7 +90,7 @@ fn build_default_constructor(
             let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, &CallArgs) -> Vec<u8>)>::new();
             #entrypoint_calls
 
-            let address = odra::client_env::deploy_new_contract(&#struct_name_snake_case, odra::types::CallArgs::new(), entrypoints);
+            let address = odra::client_env::deploy_new_contract(&#struct_name_snake_case, odra::types::CallArgs::new(), entrypoints, None);
             #ref_ident::at(&address)
         }
     }
@@ -119,9 +119,10 @@ fn build_constructor(
             let mut entrypoints = HashMap::<String, (Vec<String>, fn(String, &CallArgs) -> Vec<u8>)>::new();
             #entrypoint_calls
 
-            let mut args = { #args };
-            args.insert("constructor", stringify!(#constructor_ident));
-            let address = odra::client_env::deploy_new_contract(#struct_name_snake_case, args, entrypoints);
+            let args = { #args };
+
+            let constructor = String::from(stringify!(#constructor_ident));
+            let address = odra::client_env::deploy_new_contract(#struct_name_snake_case, args, entrypoints, Some(constructor));
             #ref_ident::at(&address)
         }
     }

@@ -4,7 +4,7 @@ use core::panic;
 use std::backtrace::{Backtrace, BacktraceStatus};
 
 use odra_mock_vm_types::{
-    Address, Balance, BlockTime, MockDeserializable, MockSerializable, OdraType
+    Address, Balance, BlockTime, Bytes, MockDeserializable, MockSerializable, OdraType, PublicKey
 };
 use odra_types::{event::OdraEvent, ExecutionError, OdraError};
 
@@ -115,4 +115,12 @@ pub fn self_balance() -> Balance {
 /// Returns the platform native token metadata
 pub fn native_token_metadata() -> NativeTokenMetadata {
     NativeTokenMetadata::new()
+}
+
+/// Verifies the signature created using the Backend's default signature scheme.
+pub fn verify_signature(message: &Bytes, signature: &Bytes, public_key: &PublicKey) -> bool {
+    let mut message = message.inner_bytes().clone();
+    message.extend_from_slice(public_key.inner_bytes());
+    let mock_signature_bytes = Bytes::from(message);
+    mock_signature_bytes == *signature
 }
