@@ -11,7 +11,26 @@ pub struct List<T> {
     index: Variable<u32>
 }
 
-impl<T: OdraType> List<T> {
+impl<T: Instance> List<T> {
+    pub fn get_instance(&mut self, index: u32) -> T {
+        let len = self.len();
+        // Clippy doesn't like the following code, but it's the most efficient way to do it.
+        // See https://rust-lang.github.io/rust-clippy/master/index.html#/comparison_chain
+        #[allow(clippy::comparison_chain)]
+        if index == len {
+            self.index.set(index + 1);
+        } else if index > len {
+            contract_env::revert(CollectionError::IndexOutOfBounds);
+        }
+        self.values.get_instance(&index)
+    }
+
+    pub fn next_instance(&mut self) -> T {
+        self.get_instance(self.len())
+    }
+}
+
+impl<T> List<T> {
     /// Creates a new List instance.
     pub fn new(name: String) -> Self {
         let mut name_values = name.clone();
@@ -23,7 +42,9 @@ impl<T: OdraType> List<T> {
             index: Variable::new(name_index)
         }
     }
+}
 
+impl<T: OdraType> List<T> {
     /// Reads collection's n-th value from the storage or returns `None`.
     pub fn get(&self, index: u32) -> Option<T> {
         self.values.get(&index)
@@ -135,13 +156,13 @@ impl<T: OdraType + Default> List<T> {
     }
 }
 
-impl<T: OdraType> From<&str> for List<T> {
+impl<T> From<&str> for List<T> {
     fn from(name: &str) -> Self {
         List::new(String::from(name))
     }
 }
 
-impl<T: OdraType> Instance for List<T> {
+impl<T> Instance for List<T> {
     fn instance(namespace: &str) -> Self {
         namespace.into()
     }

@@ -1,0 +1,49 @@
+{
+  "name": "NestedOdraTypesContract",
+  "entrypoints": [
+    {
+      "name": "save_operation_result",
+      "is_mutable": true,
+      "args": [
+        {
+          "name": "operation_result",
+          "ty": "Any"
+        }
+      ],
+      "return_ty": "Unit"
+    },
+    {
+      "name": "new_generation",
+      "is_mutable": true,
+      "args": [],
+      "return_ty": "Unit"
+    },
+    {
+      "name": "latest_result",
+      "is_mutable": false,
+      "args": [],
+      "return_ty": {
+        "Option": "Any"
+      }
+    },
+    {
+      "name": "current_generation",
+      "is_mutable": false,
+      "args": [],
+      "return_ty": {
+        "List": "Any"
+      }
+    },
+    {
+      "name": "past_generations",
+      "is_mutable": true,
+      "args": [],
+      "return_ty": {
+        "List": {
+          "List": "Any"
+        }
+      }
+    }
+  ],
+  "events": []
+}

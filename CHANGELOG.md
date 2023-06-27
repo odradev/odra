@@ -6,6 +6,7 @@ Changelog for `odra`.
 ### Added
 - Signature verification in contract_env's
 - Signature creation in test_env's
+- `List` now can contain modules
 
 ### Removed
 - Crypto module from odra-modules
