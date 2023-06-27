@@ -51,22 +51,20 @@ fn hex(byte: u8) -> u8 {
     TABLE[byte as usize]
 }
 
-
-
-/// Converts the hexadecimal values from the source byte slice into a more readable form, 
+/// Converts the hexadecimal values from the source byte slice into a more readable form,
 /// representing each byte in hexadecimal form, in the destination byte slice.
-/// 
+///
 /// * It iterates over the source slice `src` and the destination slice `dst` concurrently.
 /// * For each byte in the source, it calculates the hexadecimal representation.
 /// * It splits the byte into two nibbles (4-bit groups): the higher order 4 bits and the lower order 4 bits.
 /// * It converts each nibble into its corresponding hexadecimal representation.
 /// * It stores the two hexadecimal representations in two consecutive slots of the destination slice.
-/// 
+///
 /// # Example
-/// 
+///
 /// ```
 /// # use odra_utils::hex_to_slice;
-/// 
+///
 /// let mut dst = vec![0; 10];
 /// let src = [255, 254, 253, 252, 251];
 /// let result = hex_to_slice(&src, &mut dst);

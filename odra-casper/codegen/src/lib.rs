@@ -185,15 +185,10 @@ mod tests {
                     let schemas = vec![];
                     let mut entry_points = odra::casper::casper_types::EntryPoints::new();
                     entry_points.add_entry_point(odra::casper::casper_types::EntryPoint::new(
-                        stringify!(construct_me),
-                        {
-                            let mut params: Vec<odra::casper::casper_types::Parameter> = Vec::new();
-                            params.push(odra::casper::casper_types::Parameter::new(
-                                stringify!(value),
-                                odra::casper::casper_types::CLType::I32
-                            ));
-                            params
-                        },
+                        "construct_me",
+                        vec![
+                            odra::casper::casper_types::Parameter::new("value", odra::casper::casper_types::CLType::I32)
+                        ],
                         odra::casper::casper_types::CLType::Unit,
                         odra::casper::casper_types::EntryPointAccess::Groups(vec![
                             odra::casper::casper_types::Group::new("constructor_group")
@@ -201,19 +196,19 @@ mod tests {
                         odra::casper::casper_types::EntryPointType::Contract,
                     ));
                     entry_points.add_entry_point(odra::casper::casper_types::EntryPoint::new(
-                        stringify!(call_me),
-                        Vec::<odra::casper::casper_types::Parameter>::new(),
+                        "call_me",
+                        vec![],
                         odra::casper::casper_types::CLType::Bool,
                         odra::casper::casper_types::EntryPointAccess::Public,
                         odra::casper::casper_types::EntryPointType::Contract,
                     ));
                     #[allow(dead_code)]
-                    let contract_package_hash = odra::casper::utils::install_contract(entry_points, &schemas);
+                    let contract_package_hash = odra::casper::utils::install_contract(entry_points, schemas);
                     use odra::casper::casper_contract::unwrap_or_revert::UnwrapOrRevert;
                     let constructor_access = odra::casper::utils::create_constructor_group(contract_package_hash);
                     let constructor_name = odra::casper::utils::load_constructor_name_arg();
                     match constructor_name.as_str() {
-                        stringify!(construct_me) => {
+                        "construct_me" => {
                             let odra_address = odra::types::Address::try_from(contract_package_hash)
                                 .map_err(|err| {
                                     let code = odra::types::ExecutionError::from(err).code();
@@ -221,9 +216,7 @@ mod tests {
                                 })
                                 .unwrap_or_revert();
                             let contract_ref = my_contract::MyContractRef::at(&odra_address);
-                            let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg(
-                                stringify!(value)
-                            );
+                            let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg("value");
                             contract_ref.construct_me(&value);
                         },
                         _ => odra::casper::utils::revert_on_unknown_constructor()
@@ -237,8 +230,7 @@ mod tests {
                 fn construct_me() {
                     odra::casper::utils::assert_no_attached_value();
                     let (_contract, _): (my_contract::MyContract, _) = odra::StaticInstance::instance(&KEYS);
-                    let value =
-                        odra::casper::casper_contract::contract_api::runtime::get_named_arg(stringify!(value));
+                    let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg("value");
                     _contract.construct_me(&value);
                 }
                 #[no_mangle]

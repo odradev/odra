@@ -134,7 +134,7 @@ mod tests {
                     let (_contract, _): (my_contract::MyContract, _) =
                         odra::StaticInstance::instance(&KEYS);
                     let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg(
-                        stringify!(value)
+                        "value"
                     );
                     _contract.construct_me(&value);
                 }

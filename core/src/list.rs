@@ -143,16 +143,13 @@ impl<T: OdraType> DynamicInstance for List<T> {
         buffer.extend_from_slice(namespace);
         buffer.extend_from_slice(b"values");
         let values = DynamicInstance::instance(&buffer);
-        
+
         buffer.clear();
         buffer.extend_from_slice(namespace);
         buffer.extend_from_slice(b"index");
         let index = DynamicInstance::instance(&buffer);
 
-        Self {
-            values,
-            index
-        }
+        Self { values, index }
     }
 }
 

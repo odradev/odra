@@ -1,5 +1,5 @@
-use core::hash::{Hash, Hasher};
 use crate::OdraType;
+use core::hash::{Hash, Hasher};
 use odra_types::EncodedKeyHash;
 use twox_hash::XxHash64;
 

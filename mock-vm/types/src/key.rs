@@ -1,6 +1,6 @@
 use core::hash::{Hash, Hasher};
-use std::collections::hash_map::DefaultHasher;
 use odra_types::EncodedKeyHash;
+use std::collections::hash_map::DefaultHasher;
 
 use crate::OdraType;
 

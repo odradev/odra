@@ -1,5 +1,7 @@
 use alloc::vec::Vec;
 
+const KEY_LENGTH: usize = 64;
+
 pub enum StorageKey<'a> {
     Ref(&'a [u8]),
     Owned(Vec<u8>)
@@ -14,15 +16,6 @@ impl<'a> StorageKey<'a> {
         }
     }
 } 
-
-impl<'a> AsRef<[u8]> for StorageKey<'a> {
-    fn as_ref(&self) -> &[u8] {
-        match self {
-            StorageKey::Ref(bytes) => bytes,
-            StorageKey::Owned(vec) => vec.as_slice()
-        }
-    }
-}
 
 /// Generate keys for storage.
 pub trait KeyMaker {
@@ -59,7 +52,7 @@ pub trait KeyMaker {
 
     fn adjust_key(preimage: &[u8]) -> Vec<u8> {
         let hash = Self::blake2b(preimage);
-        let mut result  = Vec::with_capacity(hash.len() * 2);
+        let mut result = Vec::with_capacity(KEY_LENGTH);
         odra_utils::hex_to_slice(&hash, &mut result);
         result
     }

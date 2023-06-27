@@ -42,8 +42,8 @@ impl CallMethod {
 
                 quote! {
                     odra::casper::utils::build_event(
-                        #ident,
-                        &[#fields]
+                        String::from(#ident),
+                        vec![#fields]
                     )
                 }
             })
@@ -82,7 +82,7 @@ impl ToTokens for CallMethod {
                 #entry_points
 
                 #[allow(dead_code)]
-                let contract_package_hash = odra::casper::utils::install_contract(entry_points, &schemas);
+                let contract_package_hash = odra::casper::utils::install_contract(entry_points, schemas);
 
                 #constructor_call
             }

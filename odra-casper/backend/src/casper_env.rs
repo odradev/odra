@@ -189,12 +189,11 @@ fn is_purse_empty(purse: URef) -> bool {
         .unwrap_or_else(|| true)
 }
 
-pub fn save_value<T: OdraType>(key: StorageKey, value: T) {
+fn save_value<T: OdraType>(key: StorageKey, value: T) {
     let uref_ptr = (*STATE_BYTES).as_ptr();
     let uref_size = (*STATE_BYTES).len();
 
     let (dictionary_item_key_ptr, dictionary_item_key_size) = key.to_ptr();
-
 
     let cl_value = casper_types::CLValue::from_t(value).unwrap_or_revert();
     let (cl_value_ptr, cl_value_size, _bytes) = to_ptr(cl_value);
@@ -214,7 +213,7 @@ pub fn save_value<T: OdraType>(key: StorageKey, value: T) {
     result.unwrap_or_revert()
 }
 
-pub fn read_value<T: OdraType>(key: StorageKey) -> Option<T> {
+fn read_value<T: OdraType>(key: StorageKey) -> Option<T> {
     let uref_ptr = (*STATE_BYTES).as_ptr();
     let uref_size = (*STATE_BYTES).len();
 
@@ -239,10 +238,10 @@ pub fn read_value<T: OdraType>(key: StorageKey) -> Option<T> {
     };
 
     let value_bytes = read_host_buffer(value_size).unwrap_or_revert();
-    
+
     let res = match casper_types::bytesrepr::deserialize(value_bytes) {
         Ok(res) => Ok(Some(res)),
-        Err(e) => Err(e),
+        Err(e) => Err(e)
     };
     res.unwrap_or_revert()
 }
@@ -274,9 +273,6 @@ fn read_host_buffer_into(dest: &mut [u8]) -> Result<usize, ApiError> {
             bytes_written.as_mut_ptr()
         )
     };
-    // NOTE: When rewriting below expression as `result_from(ret).map(|_| unsafe { ... })`, and the
-    // caller ignores the return value, execution of the contract becomes unstable and ultimately
-    // leads to `Unreachable` error.
     casper_types::api_error::result_from(ret)?;
     Ok(unsafe { bytes_written.assume_init() })
 }
