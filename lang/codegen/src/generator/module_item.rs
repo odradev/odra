@@ -181,7 +181,7 @@ mod test {
             impl ModuleComposer {
                 pub fn new(namespace: &[u8], name: &str) -> Self {
                     Self {
-                        namespace: [namespace, "#".as_bytes(), name.as_bytes()].concat(),
+                        namespace: [namespace, b"#", name.as_bytes()].concat(),
                         variable: core::option::Option::None,
                         mapping: core::option::Option::None,
                         mapping2: core::option::Option::None,
