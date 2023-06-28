@@ -2,8 +2,8 @@ use odra::{
     contract_env,
     types::{Address, U256}
 };
-
-use crate::{erc20::Erc20, ownable::Ownable};
+use odra_modules::access::Ownable;
+use odra_modules::erc20::Erc20;
 
 #[odra::module]
 pub struct OwnedToken {
@@ -15,9 +15,9 @@ pub struct OwnedToken {
 impl OwnedToken {
     #[odra(init)]
     pub fn init(&mut self, name: String, symbol: String, decimals: u8, initial_supply: &U256) {
-        let deployer = contract_env::caller();
-        self.ownable.init(&deployer);
-        self.erc20.init(name, symbol, decimals, initial_supply);
+        self.ownable.init();
+        self.erc20
+            .init(symbol, name, decimals, &Some(*initial_supply));
     }
 
     delegate! {
@@ -35,28 +35,28 @@ impl OwnedToken {
 
         to self.ownable {
             pub fn get_owner(&self) -> Address;
-            pub fn change_ownership(&mut self, new_owner: &Address);
+            pub fn transfer_ownership(&mut self, new_owner: &Address);
         }
     }
 
     pub fn mint(&mut self, address: &Address, amount: &U256) {
-        self.ownable.ensure_ownership(&contract_env::caller());
+        self.ownable.assert_owner(&contract_env::caller());
         self.erc20.mint(address, amount);
     }
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
-    use crate::{erc20, ownable};
     use odra::{assert_events, test_env, types::U256};
+    use odra_modules::access::errors::Error;
 
-    const NAME: &str = "Plascoin";
-    const SYMBOL: &str = "PLS";
-    const DECIMALS: u8 = 10;
-    const INITIAL_SUPPLY: u32 = 10_000;
+    pub const NAME: &str = "Plascoin";
+    pub const SYMBOL: &str = "PLS";
+    pub const DECIMALS: u8 = 10;
+    pub const INITIAL_SUPPLY: u32 = 10_000;
 
-    fn setup() -> OwnedTokenRef {
+    pub fn setup() -> OwnedTokenRef {
         OwnedTokenDeployer::init(
             String::from(NAME),
             String::from(SYMBOL),
@@ -75,11 +75,11 @@ mod tests {
         assert_eq!(token.balance_of(&owner), INITIAL_SUPPLY.into());
         assert_events!(
             token,
-            ownable::OwnershipChanged {
-                prev_owner: None,
-                new_owner: owner
+            odra_modules::access::events::OwnershipTransferred {
+                previous_owner: None,
+                new_owner: Some(owner)
             },
-            erc20::Transfer {
+            odra_modules::erc20::events::Transfer {
                 from: None,
                 to: Some(owner),
                 amount: INITIAL_SUPPLY.into()
@@ -103,14 +103,14 @@ mod tests {
         let recipient = test_env::get_account(1);
         let amount = 10.into();
         test_env::set_caller(recipient);
-        test_env::assert_exception(ownable::Error::NotOwner, || token.mint(&recipient, &amount));
+        test_env::assert_exception(Error::CallerNotTheOwner, || token.mint(&recipient, &amount));
     }
 
     #[test]
     fn change_ownership_works() {
         let mut token = setup();
         let new_owner = test_env::get_account(1);
-        token.change_ownership(&new_owner);
+        token.transfer_ownership(&new_owner);
         assert_eq!(token.get_owner(), new_owner);
     }
 
@@ -119,8 +119,8 @@ mod tests {
         let mut token = setup();
         let new_owner = test_env::get_account(1);
         test_env::set_caller(new_owner);
-        test_env::assert_exception(ownable::Error::NotOwner, || {
-            token.change_ownership(&new_owner)
+        test_env::assert_exception(Error::CallerNotTheOwner, || {
+            token.transfer_ownership(&new_owner)
         });
     }
 }

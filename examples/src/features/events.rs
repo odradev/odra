@@ -25,7 +25,7 @@ impl PartyContract {
 #[cfg(test)]
 mod tests {
     use super::PartyContractDeployer;
-    use crate::docs::events::PartyStarted;
+    use crate::features::events::PartyStarted;
     use odra::{assert_events, test_env};
 
     #[test]

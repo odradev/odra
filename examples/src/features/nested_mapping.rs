@@ -1,6 +1,6 @@
 use odra::{map, types::U256, Mapping, UnwrapOrRevert};
 
-use crate::owned_token::OwnedToken;
+use crate::contracts::owned_token::OwnedToken;
 
 #[odra::module]
 pub struct NestedMapping {
@@ -52,7 +52,7 @@ impl NestedMapping {
 
 #[cfg(test)]
 mod test {
-    use crate::mapping::NestedMappingDeployer;
+    use crate::features::nested_mapping::NestedMappingDeployer;
 
     #[test]
     fn nested_mapping_works() {

@@ -18,7 +18,7 @@ impl SignatureVerifier {
 
 #[cfg(test)]
 mod test {
-    use crate::signature_verifier::SignatureVerifierDeployer;
+    use crate::features::signature_verifier::SignatureVerifierDeployer;
     use odra::test_env;
     use odra::types::Bytes;
 
