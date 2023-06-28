@@ -3,7 +3,7 @@ use odra::{
     Mapping, Variable
 };
 
-use crate::owned_token::OwnedToken;
+use crate::contracts::owned_token::OwnedToken;
 
 #[odra::module]
 pub struct TokenManager {
@@ -39,7 +39,7 @@ impl TokenManager {
     }
 
     pub fn set_owner(&mut self, token_name: String, new_owner: &Address) {
-        self.get_token(token_name).change_ownership(new_owner);
+        self.get_token(token_name).transfer_ownership(new_owner);
     }
 
     fn get_token(&self, token_name: String) -> OwnedToken {
