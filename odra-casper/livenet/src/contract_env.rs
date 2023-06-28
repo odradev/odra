@@ -77,3 +77,8 @@ pub fn native_token_metadata() -> NativeTokenMetadata {
 pub fn verify_signature(_: &Bytes, _: &Bytes, _: &PublicKey) -> bool {
     unimplemented!()
 }
+
+/// Creates a hash of the given input. Uses default hash for given backend.
+pub fn hash<T: AsRef<[u8]>>(_: T) -> Bytes {
+    unimplemented!()
+}

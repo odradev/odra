@@ -2,6 +2,8 @@
 
 use core::panic;
 use std::backtrace::{Backtrace, BacktraceStatus};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
 use odra_mock_vm_types::{
     Address, Balance, BlockTime, Bytes, MockDeserializable, MockSerializable, OdraType, PublicKey
@@ -123,4 +125,12 @@ pub fn verify_signature(message: &Bytes, signature: &Bytes, public_key: &PublicK
     message.extend_from_slice(public_key.inner_bytes());
     let mock_signature_bytes = Bytes::from(message);
     mock_signature_bytes == *signature
+}
+
+/// Creates a hash of the given input. Uses default hash for given backend.
+pub fn hash<T: AsRef<[u8]>>(input: T) -> Bytes {
+    let mut s = DefaultHasher::new();
+    input.as_ref().hash(&mut s);
+    let hash = s.finish();
+    Bytes::from(hash.to_le_bytes().to_vec())
 }
