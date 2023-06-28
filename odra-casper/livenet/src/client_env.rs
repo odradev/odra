@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Mutex};
 
 use casper_types::{bytesrepr::FromBytes, CLValue};
+use odra_casper_shared::consts;
 use odra_casper_types::{Address, Balance, CallArgs, Key, OdraType};
 use ref_thread_local::RefThreadLocal;
 

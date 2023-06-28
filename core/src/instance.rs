@@ -4,7 +4,7 @@
 /// It is the default method of an instance creation.
 /// The namespace is passed from the top to the bottom, but probably you don't need to
 /// implement it manually, the default implementation is provided by [odra::module](crate::module) macro.
-/// 
+///
 /// # Example
 ///
 /// ```
@@ -31,7 +31,7 @@
 ///         (Self { c1, c2 }, keys)
 ///     }
 /// }
-/// 
+///
 /// const KEYS: [&'static str; 2usize] = ["key1", "key2"];
 /// let parent: Parent = StaticInstance::instance(&KEYS);
 /// ````
@@ -40,12 +40,11 @@ pub trait StaticInstance: Sized {
     fn instance(keys: &'static [&'static str]) -> (Self, &'static [&'static str]);
 }
 
-
 /// A trait that should be implemented by each smart contract to allow the backend
 /// to instantiate a module.
 ///
 /// This trait allows to take full control over instance creation.
-/// 
+///
 /// # Example
 ///
 /// ```
@@ -83,7 +82,7 @@ pub trait StaticInstance: Sized {
 ///        Self { c1, c2 }
 ///     }
 /// }
-/// 
+///
 /// let parent: Parent = DynamicInstance::instance(b"root");
 /// ````
 pub trait DynamicInstance {

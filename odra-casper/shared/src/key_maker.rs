@@ -10,12 +10,19 @@ pub enum StorageKey<'a> {
 impl<'a> StorageKey<'a> {
     #[inline]
     pub fn to_ptr(&self) -> (*const u8, usize) {
+        let bytes = self.as_ref();
+        (bytes.as_ptr(), bytes.len())
+    }
+}
+
+impl AsRef<[u8]> for StorageKey<'_> {
+    fn as_ref(&self) -> &[u8] {
         match self {
-            StorageKey::Ref(key) => (key.as_ptr(), key.len()),
-            StorageKey::Owned(key) => (key.as_ptr(), key.len()),
+            StorageKey::Ref(bytes) => bytes,
+            StorageKey::Owned(vec) => vec
         }
     }
-} 
+}
 
 /// Generate keys for storage.
 pub trait KeyMaker {
