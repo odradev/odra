@@ -67,7 +67,7 @@ fn hex(byte: u8) -> u8 {
 ///
 /// let mut dst = vec![0; 10];
 /// let src = [255, 254, 253, 252, 251];
-/// let result = hex_to_slice(&src, &mut dst);
+/// hex_to_slice(&src, &mut dst);
 /// assert_eq!(&dst, &[102, 102, 102, 101, 102, 100, 102, 99, 102, 98]);
 /// ```
 pub fn hex_to_slice(src: &[u8], dst: &mut [u8]) {

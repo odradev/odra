@@ -11,8 +11,8 @@ use casper_types::{
     PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp
 };
 use jsonrpc_lite::JsonRpc;
-use odra_casper_shared::key_maker::{KeyMaker, StorageKey};
-use odra_casper_types::{Address, Balance, Bytes, CallArgs, Key, OdraType};
+use odra_casper_shared::key_maker::KeyMaker;
+use odra_casper_types::{Address, Balance, Bytes, CallArgs, OdraType};
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 
@@ -113,35 +113,21 @@ impl CasperClient {
 
     /// Query the contract for the variable.
     pub fn get_variable_value<T: OdraType>(&self, address: Address, key: &[u8]) -> Option<T> {
-        match LivenetKeyMaker::to_variable_key(key) {
-            StorageKey::Ref(v) => {
-                let key = unsafe { from_utf8_unchecked(v) };
-                self.query_dictionary(address, key)
-            }
-            StorageKey::Owned(v) => {
-                let key = unsafe { from_utf8_unchecked(&v) };
-                self.query_dictionary(address, key)
-            }
-        }
+        let key = LivenetKeyMaker::to_variable_key(key);
+        let key = unsafe { from_utf8_unchecked(&key) };
+        self.query_dictionary(address, key)
     }
 
     /// Query the contract for the dictionary value.
-    pub fn get_dict_value<K: OdraType + Key, V: OdraType>(
+    pub fn get_dict_value<K: OdraType, V: OdraType>(
         &self,
         address: Address,
         seed: &[u8],
         key: &K
     ) -> Option<V> {
-        match LivenetKeyMaker::to_dictionary_key(seed, key) {
-            StorageKey::Ref(v) => {
-                let key = unsafe { from_utf8_unchecked(v) };
-                self.query_dictionary(address, key)
-            }
-            StorageKey::Owned(v) => {
-                let key = unsafe { from_utf8_unchecked(&v) };
-                self.query_dictionary(address, key)
-            }
-        }
+        let key = LivenetKeyMaker::to_dictionary_key(seed, key).unwrap();
+        let key = unsafe { from_utf8_unchecked(&key) };
+        self.query_dictionary(address, key)
     }
 
     /// Discover the contract address by name.
@@ -411,8 +397,6 @@ fn find_wasm_file_path(wasm_file_name: &str) -> PathBuf {
 struct LivenetKeyMaker;
 
 impl KeyMaker for LivenetKeyMaker {
-    const DICTIONARY_ITEM_KEY_MAX_LENGTH: usize = casper_types::DICTIONARY_ITEM_KEY_MAX_LENGTH;
-
     fn blake2b(preimage: &[u8]) -> [u8; 32] {
         let mut result = [0; 32];
         let mut hasher = VarBlake2b::new(32).expect("should create hasher");

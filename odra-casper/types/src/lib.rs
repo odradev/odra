@@ -4,14 +4,12 @@ extern crate alloc;
 
 mod args;
 mod casper_address;
-mod key;
 mod ty;
 mod uints;
 use alloc::vec::Vec;
 pub use args::CallArgs;
 pub use casper_types;
 pub use casper_types::bytesrepr::Bytes;
-pub use key::Key;
 pub use ty::Typed;
 pub use uints::{U128, U256, U512};
 

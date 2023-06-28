@@ -44,7 +44,7 @@ pub fn set_dict_value<
     key: &K,
     value: V
 ) {
-    borrow_env().set_dict_value(dict, key.ser().unwrap().as_slice(), value)
+    borrow_env().set_dict_value(dict, key.serialize().unwrap().as_slice(), value)
 }
 
 /// Gets the value from the `dict` collection under `key`.

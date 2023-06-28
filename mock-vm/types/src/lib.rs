@@ -2,7 +2,6 @@ extern crate core;
 
 mod address;
 mod call_args;
-mod key;
 mod mock_vm_type;
 mod ty;
 #[allow(clippy::assign_op_pattern, clippy::reversed_empty_ranges)]
@@ -12,7 +11,6 @@ pub use address::Address;
 pub use address::CONTRACT_ADDRESS_PREFIX;
 pub use borsh::{BorshDeserialize, BorshSerialize};
 pub use call_args::CallArgs;
-pub use key::Key;
 pub use mock_vm_type::{MockDeserializable, MockSerializable, MockVMSerializationError};
 pub use ty::Typed;
 pub use uints::{U128, U256, U512};

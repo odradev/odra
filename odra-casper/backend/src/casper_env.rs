@@ -1,5 +1,5 @@
 use casper_types::bytesrepr::{FromBytes, ToBytes};
-use odra_casper_types::{Address, Key, OdraType};
+use odra_casper_types::{Address, OdraType};
 use odra_types::event::OdraEvent;
 
 use casper_contract::{
@@ -14,10 +14,7 @@ use casper_types::{
     system::CallStackElement, ApiError, CLTyped, ContractPackageHash, RuntimeArgs, URef, U512
 };
 
-use odra_casper_shared::{
-    consts,
-    key_maker::{KeyMaker, StorageKey}
-};
+use odra_casper_shared::{consts, key_maker::KeyMaker};
 use odra_types::ExecutionError;
 
 lazy_static::lazy_static! {
@@ -35,8 +32,6 @@ lazy_static::lazy_static! {
 struct CasperKeyMaker;
 
 impl KeyMaker for CasperKeyMaker {
-    const DICTIONARY_ITEM_KEY_MAX_LENGTH: usize = casper_types::DICTIONARY_ITEM_KEY_MAX_LENGTH;
-
     fn blake2b(preimage: &[u8]) -> [u8; 32] {
         runtime::blake2b(preimage)
     }
@@ -45,23 +40,25 @@ impl KeyMaker for CasperKeyMaker {
 /// Save value to the storage.
 #[inline(always)]
 pub fn set_key<T: OdraType>(name: &[u8], value: T) {
-    save_value(CasperKeyMaker::to_variable_key(name), value)
+    save_value(&CasperKeyMaker::to_variable_key(name), value)
 }
 
 /// Read value from the storage.
 #[inline(always)]
 pub fn get_key<T: OdraType>(name: &[u8]) -> Option<T> {
-    read_value(CasperKeyMaker::to_variable_key(name))
+    read_value(&CasperKeyMaker::to_variable_key(name))
 }
 
 #[inline(always)]
-pub fn set_dict_value<K: OdraType + Key, V: OdraType>(seed: &[u8], key: &K, value: V) {
-    save_value(CasperKeyMaker::to_dictionary_key(seed, key), value)
+pub fn set_dict_value<K: OdraType, V: OdraType>(seed: &[u8], key: &K, value: V) {
+    let key = CasperKeyMaker::to_dictionary_key(seed, key).unwrap_or_revert();
+    save_value(&key, value)
 }
 
 #[inline(always)]
-pub fn get_dict_value<K: OdraType + Key, V: OdraType>(seed: &[u8], key: &K) -> Option<V> {
-    read_value(CasperKeyMaker::to_dictionary_key(seed, key))
+pub fn get_dict_value<K: OdraType, V: OdraType>(seed: &[u8], key: &K) -> Option<V> {
+    let key = CasperKeyMaker::to_dictionary_key(seed, key).unwrap_or_revert();
+    read_value(&key)
 }
 
 /// Returns address based on a [`CallStackElement`].
@@ -189,11 +186,12 @@ fn is_purse_empty(purse: URef) -> bool {
         .unwrap_or_else(|| true)
 }
 
-fn save_value<T: OdraType>(key: StorageKey, value: T) {
+fn save_value<T: OdraType>(key: &[u8], value: T) {
     let uref_ptr = (*STATE_BYTES).as_ptr();
     let uref_size = (*STATE_BYTES).len();
 
-    let (dictionary_item_key_ptr, dictionary_item_key_size) = key.to_ptr();
+    let dictionary_item_key_ptr = key.as_ptr();
+    let dictionary_item_key_size = key.len();
 
     let cl_value = casper_types::CLValue::from_t(value).unwrap_or_revert();
     let (cl_value_ptr, cl_value_size, _bytes) = to_ptr(cl_value);
@@ -213,11 +211,12 @@ fn save_value<T: OdraType>(key: StorageKey, value: T) {
     result.unwrap_or_revert()
 }
 
-fn read_value<T: OdraType>(key: StorageKey) -> Option<T> {
+fn read_value<T: OdraType>(key: &[u8]) -> Option<T> {
     let uref_ptr = (*STATE_BYTES).as_ptr();
     let uref_size = (*STATE_BYTES).len();
 
-    let (dictionary_item_key_ptr, dictionary_item_key_size) = key.to_ptr();
+    let dictionary_item_key_ptr = key.as_ptr();
+    let dictionary_item_key_size = key.len();
 
     let value_size = {
         let mut value_size = std::mem::MaybeUninit::uninit();

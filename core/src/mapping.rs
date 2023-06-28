@@ -1,7 +1,7 @@
-use std::{fmt::Debug, hash::Hash, marker::PhantomData};
+use std::{fmt::Debug, marker::PhantomData};
 
 use crate::instance::StaticInstance;
-use crate::types::{Key, OdraType};
+use crate::types::OdraType;
 use crate::{contract_env, UnwrapOrRevert};
 use odra_types::arithmetic::{OverflowingAdd, OverflowingSub};
 
@@ -15,7 +15,7 @@ pub struct Mapping<K, V> {
     namespace_buffer: Vec<u8>
 }
 
-impl<K: OdraType + Hash + Key, V: OdraType> Mapping<K, V> {
+impl<K: OdraType, V: OdraType> Mapping<K, V> {
     /// Reads `key` from the storage or returns `None`.
     #[inline(always)]
     pub fn get(&self, key: &K) -> Option<V> {
@@ -29,26 +29,26 @@ impl<K: OdraType + Hash + Key, V: OdraType> Mapping<K, V> {
     }
 }
 
-impl<K: OdraType + Hash + Key, V: OdraType + Default> Mapping<K, V> {
+impl<K: OdraType, V: OdraType + Default> Mapping<K, V> {
     /// Reads `key` from the storage or the default value is returned.
     pub fn get_or_default(&self, key: &K) -> V {
         self.get(key).unwrap_or_default()
     }
 }
 
-impl<K: OdraType + Hash + Key, V: DynamicInstance> Mapping<K, V> {
+impl<K: OdraType, V: DynamicInstance> Mapping<K, V> {
     /// Reads `key` from the storage or the default value is returned.
     pub fn get_instance(&self, key: &K) -> V {
-        let key_hash = <K as Key>::encoded_hash(key);
+        let key_hash = key.serialize().unwrap_or_revert();
 
         let mut result = Vec::with_capacity(key_hash.len() + self.namespace_buffer.len());
         result.extend_from_slice(self.namespace_buffer.as_slice());
-        result.extend_from_slice(&key_hash);
+        result.extend_from_slice(key_hash.as_slice());
         V::instance(&result)
     }
 }
 
-impl<K: OdraType + Hash + Key, V: OdraType + OverflowingAdd + Default> Mapping<K, V> {
+impl<K: OdraType, V: OdraType + OverflowingAdd + Default> Mapping<K, V> {
     /// Utility function that gets the current value and adds the passed `value`
     /// and sets the new value to the storage.
     ///
@@ -60,9 +60,7 @@ impl<K: OdraType + Hash + Key, V: OdraType + OverflowingAdd + Default> Mapping<K
     }
 }
 
-impl<K: OdraType + Hash + Key, V: OdraType + OverflowingSub + Default + Debug + PartialOrd>
-    Mapping<K, V>
-{
+impl<K: OdraType, V: OdraType + OverflowingSub + Default + Debug + PartialOrd> Mapping<K, V> {
     /// Utility function that gets the current value and subtracts the passed `value`
     /// and sets the new value to the storage.
     ///
@@ -74,7 +72,7 @@ impl<K: OdraType + Hash + Key, V: OdraType + OverflowingSub + Default + Debug + 
     }
 }
 
-impl<K: OdraType + Hash, V> StaticInstance for Mapping<K, V> {
+impl<K: OdraType, V> StaticInstance for Mapping<K, V> {
     fn instance(keys: &'static [&'static str]) -> (Self, &'static [&'static str]) {
         (
             Self {
@@ -87,7 +85,7 @@ impl<K: OdraType + Hash, V> StaticInstance for Mapping<K, V> {
     }
 }
 
-impl<K: OdraType + Hash, V> DynamicInstance for Mapping<K, V> {
+impl<K: OdraType, V> DynamicInstance for Mapping<K, V> {
     fn instance(namespace: &[u8]) -> Self {
         Self {
             key_ty: PhantomData,
@@ -100,8 +98,7 @@ impl<K: OdraType + Hash, V> DynamicInstance for Mapping<K, V> {
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
     use crate::{instance::StaticInstance, mapping::Mapping, test_env};
-    use core::hash::Hash;
-    use odra_mock_vm::types::{Key, OdraType};
+    use odra_mock_vm::types::OdraType;
     use odra_types::arithmetic::ArithmeticsError;
 
     const SHARED_VALUE: [&str; 1] = ["shared_value"];
@@ -196,7 +193,7 @@ mod tests {
 
     impl<K, V> Default for Mapping<K, V>
     where
-        K: OdraType + Hash,
+        K: OdraType,
         V: OdraType
     {
         fn default() -> Self {
@@ -206,7 +203,7 @@ mod tests {
 
     impl<K, V> Mapping<K, V>
     where
-        K: OdraType + Hash + Key,
+        K: OdraType,
         V: OdraType
     {
         pub fn init(key: &K, value: V) -> Self {
