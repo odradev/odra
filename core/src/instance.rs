@@ -51,7 +51,7 @@
 /// ````
 pub trait StaticInstance: Sized {
     /// Consumes keys required to create an instance, returns the instance with the remaining keys.
-    fn instance(keys: &'static [&'static str]) -> (Self, &'static [&'static str]);
+    fn instance<'a>(keys: &'a [&'a str]) -> (Self, &'a [&'a str]);
 }
 
 /// A trait that should be implemented by each smart contract to allow the backend

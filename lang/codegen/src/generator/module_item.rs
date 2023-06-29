@@ -1,13 +1,8 @@
 use derive_more::From;
 use quote::{quote, quote_spanned};
 
-use crate::{
-    generator::module_item::{composer::ModuleComposer, node::Node},
-    poet::OdraPoetUsingStruct,
-    GenerateCode
-};
+use crate::{generator::module_item::node::Node, poet::OdraPoetUsingStruct, GenerateCode};
 
-mod composer;
 mod node;
 
 #[derive(From)]
@@ -28,13 +23,12 @@ impl GenerateCode for ModuleStruct<'_> {
 
         let struct_ident = &item_struct.ident;
         let span = item_struct.ident.span();
-        let instance = if self.module.is_instantiable && !self.module.skip_instance {
+        let instance = if self.module.is_instantiable {
             quote_spanned!(span => #[derive(odra::Instance, Clone)])
         } else {
             quote!(#[derive(Clone)])
         };
 
-        let composer = self.generate_code_using::<ModuleComposer>();
         let node = self.generate_code_using::<Node>();
 
         quote! {
@@ -69,7 +63,6 @@ impl GenerateCode for ModuleStruct<'_> {
                     events
                 }
             }
-            #composer
         }
     }
 }
@@ -92,10 +85,7 @@ mod test {
         };
         let events_input = quote::quote!(events = [A, B, C]);
         let events = syn::parse2::<ModuleEvents>(events_input).unwrap();
-        let config = ModuleConfiguration {
-            events,
-            ..Default::default()
-        };
+        let config = ModuleConfiguration { events };
 
         let item_struct = syn::parse2::<syn::ItemStruct>(input).unwrap();
         let module_struct = odra_ir::module::ModuleStruct::from(item_struct);
@@ -167,55 +157,6 @@ mod test {
                     events.extend(<String as odra::OdraItem>::events());
                     events.dedup();
                     events
-                }
-            }
-
-            pub struct ModuleComposer {
-                namespace: Vec<u8>,
-                variable: core::option::Option<Variable<u32> >,
-                mapping: core::option::Option<Mapping<u32, Mapping<u32, MappedModule> > >,
-                mapping2: core::option::Option<Mapping<u32, String> >,
-                submodule: core::option::Option<Submodule>
-            }
-
-            impl ModuleComposer {
-                pub fn new(namespace: &[u8], name: &str) -> Self {
-                    Self {
-                        namespace: [namespace, b"#", name.as_bytes()].concat(),
-                        variable: core::option::Option::None,
-                        mapping: core::option::Option::None,
-                        mapping2: core::option::Option::None,
-                        submodule: core::option::Option::None
-                    }
-                }
-
-                pub fn with_variable(mut self, variable: &Variable<u32>) -> Self {
-                    self.variable = core::option::Option::Some(variable.clone());
-                    self
-                }
-
-                pub fn with_mapping(mut self, mapping: &Mapping<u32, Mapping<u32, MappedModule> >) -> Self {
-                    self.mapping = core::option::Option::Some(mapping.clone());
-                    self
-                }
-
-                pub fn with_mapping2(mut self, mapping2: &Mapping<u32, String>) -> Self {
-                    self.mapping2 = core::option::Option::Some(mapping2.clone());
-                    self
-                }
-
-                pub fn with_submodule(mut self, submodule: &Submodule) -> Self {
-                    self.submodule = core::option::Option::Some(submodule.clone());
-                    self
-                }
-
-                pub fn compose(self) -> Module {
-                    Module {
-                        variable: self.variable.unwrap_or_else(|| odra::DynamicInstance::instance(&[&self.namespace, "#".as_bytes(), stringify!(variable).as_bytes()].concat())),
-                        mapping: self.mapping.unwrap_or_else(|| odra::DynamicInstance::instance(&[&self.namespace, "#".as_bytes(), stringify!(mapping).as_bytes()].concat())),
-                        mapping2: self.mapping2.unwrap_or_else(|| odra::DynamicInstance::instance(&[&self.namespace, "#".as_bytes(), stringify!(mapping2).as_bytes()].concat())),
-                        submodule: self.submodule.unwrap_or_else(|| odra::DynamicInstance::instance(&[&self.namespace, "#".as_bytes(), stringify!(submodule).as_bytes()].concat()))
-                    }
                 }
             }
         };

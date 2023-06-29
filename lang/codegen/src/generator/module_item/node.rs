@@ -19,7 +19,7 @@ impl GenerateCode for Node<'_> {
         let count = self
             .fields_iter()
             .map(|field| &field.ty)
-            .map(|ty| quote!(<#ty as odra::types::contract_def::Node>::count()))
+            .map(|ty| quote!(<#ty as odra::types::contract_def::Node>::COUNT))
             .collect::<Punctuated<TokenStream, Token![+]>>();
 
         let count = match count.is_empty() {
@@ -28,14 +28,33 @@ impl GenerateCode for Node<'_> {
         };
 
         let keys = self
-            .fields_iter()
+            .module
+            .delegated_fields
+            .iter()
             .map(|field| {
-                let ty = &field.ty;
-                let ident = field.ident.as_ref().unwrap();
+                let ty = &field.field.ty;
+                let ident = field.field.ident.as_ref().unwrap().to_string();
+                let a = field.delegated_fields.iter().map(|f| quote!(#f)).collect::<Punctuated<TokenStream, Token![,]>>();
+
+                // let key = &String::from("shared#value");
+                // let aa = key.split("#").take(1).last().unwrap();
+
+                let map = if a.is_empty() {
+                    quote!(map(|k| format!("{}#{}", #ident, k)))
+                } else {
+                    quote!(map(|k: &String| if [#a].contains(&k.split("#").take(1).last().unwrap()) {
+                        k.to_owned()
+                    } else {
+                        format!("{}#{}", #ident, k)
+                    }))
+                };
                 quote! {
-                    match <#ty as odra::types::contract_def::Node>::is_leaf() {
-                        true => result.push(stringify!(#ident).to_string()),
-                        false => result.extend(<#ty as odra::types::contract_def::Node>::keys().iter().map(|k| format!("{}#{}", stringify!(#ident), k)))
+                    if <#ty as odra::types::contract_def::Node>::IS_LEAF {
+                        result.push(String::from(#ident));
+                    } else {
+                        result.extend(<#ty as odra::types::contract_def::Node>::_keys()
+                            .iter()
+                            .#map)
                     }
                 }
             })
@@ -43,18 +62,13 @@ impl GenerateCode for Node<'_> {
 
         quote! {
             impl odra::types::contract_def::Node for #struct_ident {
-                fn count() -> u32 {
-                    #count
-                }
+                const IS_LEAF: bool = false;
+                const COUNT: u32 = #count;
 
-                fn keys() -> Vec<String> {
+                fn _keys() -> Vec<String> {
                     let mut result = vec![];
                     #keys
                     result
-                }
-
-                fn is_leaf() -> bool {
-                    false
                 }
             }
         }

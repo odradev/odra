@@ -41,7 +41,7 @@ impl GenerateCode for InstanceItem<'_> {
 
         quote! {
             impl odra::StaticInstance for #ident {
-                fn instance(keys: &'static [&'static str]) -> (Self,  &'static [&'static str]) {
+                fn instance<'a>(keys: &'a [&'a str]) -> (Self, &'a [&'a str]) {
                     #static_fields
                     (
                         Self { #init },

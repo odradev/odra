@@ -64,7 +64,7 @@ impl<T: OdraType> Variable<T> {
 }
 
 impl<T: OdraType> StaticInstance for Variable<T> {
-    fn instance(keys: &'static [&'static str]) -> (Self, &'static [&'static str]) {
+    fn instance<'a>(keys: &'a [&'a str]) -> (Self, &'a [&'a str]) {
         let name = keys[0];
         (
             Variable {

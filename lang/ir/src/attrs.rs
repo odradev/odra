@@ -2,6 +2,8 @@ use std::{collections::HashSet, convert::TryFrom};
 
 use itertools::{Either, Itertools};
 use proc_macro2::{Ident, Span};
+use quote::ToTokens;
+use syn::{Lit, Path};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Attribute {
@@ -43,6 +45,18 @@ impl OdraAttribute {
             .iter()
             .any(|attr_kind| matches!(attr_kind, &AttrKind::NonReentrant))
     }
+
+    pub fn using(&self) -> Vec<String> {
+        self.kinds
+            .iter()
+            .filter_map(|a| match a {
+                AttrKind::Using(fields) => Some(fields.clone()),
+                _ => None
+            })
+            .flatten()
+            .dedup()
+            .collect::<Vec<_>>()
+    }
 }
 
 impl From<OdraAttribute> for Attribute {
@@ -83,7 +97,8 @@ enum AttrKind {
     Constructor,
     Entrypoint,
     Payable,
-    NonReentrant
+    NonReentrant,
+    Using(Vec<String>)
 }
 
 impl TryFrom<syn::NestedMeta> for AttrKind {
@@ -92,36 +107,82 @@ impl TryFrom<syn::NestedMeta> for AttrKind {
     fn try_from(nested_meta: syn::NestedMeta) -> Result<Self, Self::Error> {
         match nested_meta {
             syn::NestedMeta::Meta(meta) => match &meta {
-                syn::Meta::Path(path) => path
-                    .get_ident()
-                    .map(Ident::to_string)
-                    .ok_or_else(|| {
-                        syn::Error::new_spanned(&meta, "unknown Odra attribute argument (path)")
-                    })
-                    .and_then(|ident| match ident.as_str() {
-                        "init" => Ok(AttrKind::Constructor),
-                        "payable" => Ok(AttrKind::Payable),
-                        "entrypoint" => Ok(AttrKind::Entrypoint),
-                        "non_reentrant" => Ok(AttrKind::NonReentrant),
-                        _ => Err(syn::Error::new_spanned(
-                            meta,
-                            "unknown Odra attribute argument (path)"
-                        ))
-                    }),
-                syn::Meta::List(_) => Err(syn::Error::new_spanned(
-                    meta,
-                    "unknown Odra attribute argument (list)"
-                )),
-                syn::Meta::NameValue(_) => Err(syn::Error::new_spanned(
-                    meta,
-                    "unknown Odra attribute argument (name = value)"
-                ))
+                syn::Meta::Path(path) => {
+                    path.try_to_string(&meta)
+                        .and_then(|ident| match ident.as_str() {
+                            "init" => Ok(AttrKind::Constructor),
+                            "payable" => Ok(AttrKind::Payable),
+                            "entrypoint" => Ok(AttrKind::Entrypoint),
+                            "non_reentrant" => Ok(AttrKind::NonReentrant),
+                            _ => Err(AttrKindError::Path(&meta).into())
+                        })
+                }
+                syn::Meta::List(_) => Err(AttrKindError::List(&meta).into()),
+                syn::Meta::NameValue(name_value) => {
+                    let delegated_fields = match &name_value.lit {
+                        Lit::Str(str) => str
+                            .value()
+                            .split(',')
+                            .map(|str| str.trim().to_string())
+                            .collect::<Vec<_>>(),
+                        _ => return Err(AttrKindError::NameValue(&meta).into())
+                    };
+                    name_value
+                        .path
+                        .try_to_string(&meta)
+                        .and_then(|ident| match ident.as_str() {
+                            "using" => Ok(AttrKind::Using(delegated_fields)),
+                            _ => Err(AttrKindError::NameValue(&meta).into())
+                        })
+                }
             },
-            syn::NestedMeta::Lit(_) => Err(syn::Error::new_spanned(
-                nested_meta,
-                "unknown Odra attribute argument (literal)"
-            ))
+            syn::NestedMeta::Lit(_) => Err(AttrKindError::Lit(&nested_meta).into())
         }
+    }
+}
+
+trait TryToString {
+    fn try_to_string<T: ToTokens>(&self, span: &T) -> Result<String, syn::Error>;
+}
+
+impl TryToString for Path {
+    fn try_to_string<T: ToTokens>(&self, span: &T) -> Result<String, syn::Error> {
+        self.get_ident()
+            .map(Ident::to_string)
+            .ok_or_else(|| syn::Error::new_spanned(span, "unknown Odra attribute argument (path)"))
+    }
+}
+
+enum AttrKindError<'a, T> {
+    Lit(&'a T),
+    List(&'a T),
+    Path(&'a T),
+    NameValue(&'a T)
+}
+
+impl<T: ToTokens> AttrKindError<'_, T> {
+    fn span(&self) -> &T {
+        match self {
+            AttrKindError::Lit(span) => span,
+            AttrKindError::List(span) => span,
+            AttrKindError::Path(span) => span,
+            AttrKindError::NameValue(span) => span
+        }
+    }
+}
+
+impl<T: ToTokens> From<AttrKindError<'_, T>> for syn::Error {
+    fn from(value: AttrKindError<'_, T>) -> Self {
+        let ty = match value {
+            AttrKindError::Lit(_) => "literal",
+            AttrKindError::List(_) => "list",
+            AttrKindError::Path(_) => "path",
+            AttrKindError::NameValue(_) => "name = value"
+        };
+        syn::Error::new_spanned(
+            value.span(),
+            format!("unknown Odra attribute argument ({})", ty)
+        )
     }
 }
 
@@ -194,6 +255,22 @@ mod tests {
         assert_attribute_try_from(
             syn::parse_quote! {
                 #[odra(init)]
+            },
+            Ok(expected_value)
+        );
+    }
+
+    #[test]
+    fn using_attr_works() {
+        let expected_value = Attribute::Odra(OdraAttribute {
+            kinds: vec![AttrKind::Using(vec![
+                String::from("self.value"),
+                String::from("self.module"),
+            ])]
+        });
+        assert_attribute_try_from(
+            syn::parse_quote! {
+                #[odra(using = "self.value, self.module")]
             },
             Ok(expected_value)
         );

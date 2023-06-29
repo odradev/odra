@@ -2,6 +2,7 @@ use super::{ModuleEvent, ModuleEvents};
 use crate::attrs::partition_attributes;
 use anyhow::{Context, Result};
 use proc_macro2::Ident;
+use syn::{punctuated::Punctuated, Field, Fields, FieldsNamed, Token};
 
 use super::ModuleConfiguration;
 
@@ -12,7 +13,30 @@ pub struct ModuleStruct {
     pub is_instantiable: bool,
     pub item: syn::ItemStruct,
     pub events: ModuleEvents,
-    pub skip_instance: bool
+    pub delegated_fields: Vec<DelegatedField>
+}
+
+pub struct DelegatedField {
+    pub field: syn::Field,
+    pub delegated_fields: Vec<String>
+}
+
+impl From<syn::Field> for DelegatedField {
+    fn from(value: syn::Field) -> Self {
+        let (odra_attrs, other_attrs) = partition_attributes(value.attrs).unwrap();
+
+        let delegated_fields = odra_attrs
+            .iter()
+            .flat_map(|attr| attr.using())
+            .collect::<Vec<_>>();
+        Self {
+            field: Field {
+                attrs: other_attrs,
+                ..value
+            },
+            delegated_fields
+        }
+    }
 }
 
 impl ModuleStruct {
@@ -43,7 +67,6 @@ impl ModuleStruct {
         config.events.mappings_events.extend(mappings);
 
         self.events = config.events;
-        self.skip_instance = config.skip_instance;
 
         Ok(self)
     }
@@ -52,14 +75,36 @@ impl ModuleStruct {
 impl From<syn::ItemStruct> for ModuleStruct {
     fn from(item: syn::ItemStruct) -> Self {
         let (_, other_attrs) = partition_attributes(item.attrs).unwrap();
+
+        let named = item
+            .fields
+            .clone()
+            .into_iter()
+            .map(|field| {
+                let (_, other_attrs) = partition_attributes(field.attrs).unwrap();
+                Field {
+                    attrs: other_attrs,
+                    ..field
+                }
+            })
+            .collect::<Punctuated<Field, Token![,]>>();
+
+        let fields: Fields = Fields::Named(FieldsNamed {
+            brace_token: Default::default(),
+            named
+        });
+
+        let delegated_fields = item.fields.into_iter().map(Into::into).collect::<Vec<_>>();
+
         Self {
             is_instantiable: true,
             item: syn::ItemStruct {
                 attrs: other_attrs,
+                fields,
                 ..item
             },
             events: Default::default(),
-            skip_instance: false
+            delegated_fields
         }
     }
 }

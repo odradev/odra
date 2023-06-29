@@ -39,7 +39,7 @@ impl<T> StaticInstance for Sequence<T>
 where
     T: Num + One + OdraType
 {
-    fn instance(keys: &'static [&'static str]) -> (Self, &'static [&'static str]) {
+    fn instance<'a>(keys: &'a [&'a str]) -> (Self, &'a [&'a str]) {
         let (value, rem) = StaticInstance::instance(keys);
         (Self { value }, rem)
     }

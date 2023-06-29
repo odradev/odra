@@ -97,8 +97,8 @@ macro_rules! gen_contract {
                     panic!("Event {} can't have Type::Any struct in it.", &event.ident);
                 }
             }
-            let keys = <$contract as odra::types::contract_def::Node>::keys();
-            let keys_count = <$contract as odra::types::contract_def::Node>::count();
+            let keys = <$contract as odra::types::contract_def::Node>::_keys();
+            let keys_count = <$contract as odra::types::contract_def::Node>::COUNT;
 
             let blueprint = odra::types::contract_def::ContractBlueprint {
                 keys,
