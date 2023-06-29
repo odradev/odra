@@ -392,7 +392,7 @@ fn find_wasm_file_path(wasm_file_name: &str) -> PathBuf {
     panic!("Wasm not found");
 }
 
-struct LivenetKeyMaker;
+pub struct LivenetKeyMaker;
 
 impl KeyMaker for LivenetKeyMaker {
     fn blake2b(preimage: &[u8]) -> [u8; 32] {
