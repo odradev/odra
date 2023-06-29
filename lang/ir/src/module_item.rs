@@ -34,7 +34,7 @@ impl ModuleItem {
         let item_impl = syn::parse2::<syn::ItemImpl>(item.clone());
 
         if let Ok(item) = item_struct {
-            let module_struct = ModuleStruct::from(item).with_config(config)?;
+            let module_struct = ModuleStruct::try_from(item)?.with_config(config)?;
             return Ok(ModuleItem::Struct(Box::new(module_struct)));
         }
 

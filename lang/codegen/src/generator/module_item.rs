@@ -88,7 +88,7 @@ mod test {
         let config = ModuleConfiguration { events };
 
         let item_struct = syn::parse2::<syn::ItemStruct>(input).unwrap();
-        let module_struct = odra_ir::module::ModuleStruct::from(item_struct);
+        let module_struct = odra_ir::module::ModuleStruct::try_from(item_struct).unwrap();
         let module_struct = module_struct.with_config(config).unwrap();
 
         let expected = quote::quote! {
@@ -102,7 +102,7 @@ mod test {
 
             impl odra::types::contract_def::Node for Module {
                 const IS_LEAF: bool = false;
-                
+
                 const COUNT: u32 =
                     <Variable<u32> as odra::types::contract_def::Node>::COUNT +
                     <Mapping<u32, Mapping<u32, MappedModule> > as odra::types::contract_def::Node>::COUNT +

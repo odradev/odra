@@ -21,21 +21,47 @@ pub struct DelegatedField {
     pub delegated_fields: Vec<String>
 }
 
-impl From<syn::Field> for DelegatedField {
-    fn from(value: syn::Field) -> Self {
-        let (odra_attrs, other_attrs) = partition_attributes(value.attrs).unwrap();
+impl DelegatedField {
+    pub(crate) fn validate(&self, fields: &syn::Fields) -> Result<(), syn::Error> {
+        let fields = fields
+            .iter()
+            .filter_map(|f| f.ident.clone())
+            .map(|i| i.to_string())
+            .collect::<Vec<_>>();
+        let is_valid = self.delegated_fields.iter().find(|f| !fields.contains(f));
+        if let Some(invalid_ref) = is_valid {
+            let error_msg = format!("Using non-existing field {}", invalid_ref);
+            return Err(syn::Error::new_spanned(&self.field, error_msg));
+        }
+
+        Ok(())
+    }
+}
+
+impl TryFrom<syn::Field> for DelegatedField {
+    type Error = syn::Error;
+
+    fn try_from(value: syn::Field) -> std::result::Result<Self, Self::Error> {
+        let (odra_attrs, other_attrs) = partition_attributes(value.attrs.clone()).unwrap();
 
         let delegated_fields = odra_attrs
             .iter()
             .flat_map(|attr| attr.using())
             .collect::<Vec<_>>();
-        Self {
+
+        let field_ident = value.ident.clone().unwrap().to_string();
+
+        if delegated_fields.contains(&field_ident) {
+            return Err(syn::Error::new_spanned(&value, "Self-using is not allowed"));
+        }
+
+        Ok(Self {
             field: Field {
                 attrs: other_attrs,
                 ..value
             },
             delegated_fields
-        }
+        })
     }
 }
 
@@ -72,11 +98,13 @@ impl ModuleStruct {
     }
 }
 
-impl From<syn::ItemStruct> for ModuleStruct {
-    fn from(item: syn::ItemStruct) -> Self {
-        let (_, other_attrs) = partition_attributes(item.attrs).unwrap();
+impl TryFrom<syn::ItemStruct> for ModuleStruct {
+    type Error = syn::Error;
 
-        let named = item
+    fn try_from(value: syn::ItemStruct) -> std::result::Result<Self, Self::Error> {
+        let (_, other_attrs) = partition_attributes(value.attrs).unwrap();
+
+        let named = value
             .fields
             .clone()
             .into_iter()
@@ -94,18 +122,26 @@ impl From<syn::ItemStruct> for ModuleStruct {
             named
         });
 
-        let delegated_fields = item.fields.into_iter().map(Into::into).collect::<Vec<_>>();
+        let delegated_fields = value
+            .fields
+            .into_iter()
+            .map(TryInto::try_into)
+            .collect::<Result<Vec<DelegatedField>, syn::Error>>()?;
 
-        Self {
+        delegated_fields
+            .iter()
+            .try_for_each(|f| f.validate(&fields))?;
+
+        Ok(Self {
             is_instantiable: true,
             item: syn::ItemStruct {
                 attrs: other_attrs,
                 fields,
-                ..item
+                ..value
             },
             events: Default::default(),
             delegated_fields
-        }
+        })
     }
 }
 
