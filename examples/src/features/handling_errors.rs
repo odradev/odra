@@ -57,7 +57,7 @@ mod tests {
         odra::test_env::assert_exception(Error::NotAnOwner, || {
             owned_contract.change_name("NewName".to_string());
         });
-        assert!(owned_contract.name() != "NewName");
+        assert_ne!(owned_contract.name(), "NewName");
     }
 
     #[test]

@@ -1,4 +1,4 @@
-use crate::docs::cross_calls::MathEngine;
+use crate::features::cross_calls::MathEngine;
 
 #[odra::module]
 pub struct ModulesContract {

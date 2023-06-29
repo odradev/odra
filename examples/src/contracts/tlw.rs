@@ -105,7 +105,7 @@ mod test {
         types::{Address, Balance}
     };
 
-    use crate::tlw::{Deposit, Withdrawal};
+    use crate::contracts::tlw::{Deposit, Withdrawal};
 
     use super::{Error, TimeLockWalletDeployer, TimeLockWalletRef};
 

@@ -1,6 +1,6 @@
 use odra::client_env;
 use odra::types::{Address, U256};
-use odra_examples::erc20::Erc20Deployer;
+use odra_modules::erc20::Erc20Deployer;
 use std::str::FromStr;
 
 fn main() {
@@ -14,7 +14,7 @@ fn main() {
     let recipient = Address::from_str(recipient).unwrap();
 
     client_env::set_gas(110_000_000_000u64);
-    let mut token = Erc20Deployer::init(name, symbol, decimals, &initial_supply);
+    let mut token = Erc20Deployer::init(name, symbol, decimals, &Some(initial_supply));
 
     // Uncomment to use already deployed contract.
     // let address = "hash-a12760e3ece51e0f31aa6d5af39660f5ec61185ad61c7551c796cca4592b9498";
