@@ -21,7 +21,7 @@
 /// }
 ///
 /// impl StaticInstance for C1 {
-///     fn instance(keys: &'static [&'static str]) -> (Self, &'static [&'static str]) {
+///     fn instance<'a>(keys: &'a [&'a str]) -> (Self, &'a [&'a str]) {
 ///         let (value, keys) = StaticInstance::instance(keys);
 ///         (Self { value }, keys)
 ///     }
@@ -32,14 +32,14 @@
 /// }
 ///
 /// impl StaticInstance for C2 {
-///     fn instance(keys: &'static [&'static str]) -> (Self, &'static [&'static str]) {
+///     fn instance<'a>(keys: &'a [&'a str]) -> (Self, &'a [&'a str]) {
 ///         let (value, keys) = StaticInstance::instance(keys);
 ///         (Self { value }, keys)
 ///     }
 /// }
 ///
 /// impl StaticInstance for Parent {
-///     fn instance(keys: &'static [&'static str]) -> (Self, &'static [&'static str]) {
+///     fn instance<'a>(keys: &'a [&'a str]) -> (Self, &'a [&'a str]) {
 ///         let (c1, keys) = StaticInstance::instance(keys);
 ///         let (c2, keys) = StaticInstance::instance(keys);
 ///         (Self { c1, c2 }, keys)

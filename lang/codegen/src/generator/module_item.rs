@@ -101,36 +101,38 @@ mod test {
             }
 
             impl odra::types::contract_def::Node for Module {
-                fn count() -> u32 {
-                    <Variable<u32> as odra::types::contract_def::Node>::count() +
-                    <Mapping<u32, Mapping<u32, MappedModule> > as odra::types::contract_def::Node>::count() +
-                    <Mapping<u32, String> as odra::types::contract_def::Node>::count() +
-                    <Submodule as odra::types::contract_def::Node>::count()
-                }
+                const IS_LEAF: bool = false;
+                
+                const COUNT: u32 =
+                    <Variable<u32> as odra::types::contract_def::Node>::COUNT +
+                    <Mapping<u32, Mapping<u32, MappedModule> > as odra::types::contract_def::Node>::COUNT +
+                    <Mapping<u32, String> as odra::types::contract_def::Node>::COUNT +
+                    <Submodule as odra::types::contract_def::Node>::COUNT;
 
-                fn keys() -> Vec<String> {
+
+                fn _keys() -> Vec<String> {
                     let mut result = vec![];
-                    match <Variable<u32> as odra::types::contract_def::Node>::is_leaf() {
-                        true => result.push(stringify!(variable).to_string()),
-                        false => result.extend(<Variable<u32> as odra::types::contract_def::Node>::keys().iter().map(|k| format!("{}#{}", stringify!(variable), k)))
+                    if <Variable<u32> as odra::types::contract_def::Node>::IS_LEAF {
+                        result.push(String::from("variable"));
+                    } else {
+                        result.extend(<Variable<u32> as odra::types::contract_def::Node>::_keys().iter().map(|k| format!("{}#{}", "variable", k)))
                     }
-                    match <Mapping<u32, Mapping<u32, MappedModule> > as odra::types::contract_def::Node>::is_leaf() {
-                        true => result.push(stringify!(mapping).to_string()),
-                        false => result.extend(<Mapping<u32, Mapping<u32, MappedModule> > as odra::types::contract_def::Node>::keys().iter().map(|k| format!("{}#{}", stringify!(mapping), k)))
+                    if <Mapping<u32, Mapping<u32, MappedModule> > as odra::types::contract_def::Node>::IS_LEAF {
+                        result.push(String::from("mapping"));
+                    } else {
+                        result.extend(<Mapping<u32, Mapping<u32, MappedModule> > as odra::types::contract_def::Node>::_keys().iter().map(|k| format!("{}#{}", "mapping", k)))
                     }
-                    match <Mapping<u32, String> as odra::types::contract_def::Node>::is_leaf() {
-                        true => result.push(stringify!(mapping2).to_string()),
-                        false => result.extend(<Mapping<u32, String> as odra::types::contract_def::Node>::keys().iter().map(|k| format!("{}#{}", stringify!(mapping2), k)))
+                    if <Mapping<u32, String> as odra::types::contract_def::Node>::IS_LEAF {
+                        result.push(String::from("mapping2"));
+                    } else {
+                        result.extend(<Mapping<u32, String> as odra::types::contract_def::Node>::_keys().iter().map(|k| format!("{}#{}", "mapping2", k)))
                     }
-                    match <Submodule as odra::types::contract_def::Node>::is_leaf() {
-                        true => result.push(stringify!(submodule).to_string()),
-                        false => result.extend(<Submodule as odra::types::contract_def::Node>::keys().iter().map(|k| format!("{}#{}", stringify!(submodule), k)))
+                    if <Submodule as odra::types::contract_def::Node>::IS_LEAF {
+                        result.push(String::from("submodule"));
+                    } else {
+                        result.extend(<Submodule as odra::types::contract_def::Node>::_keys().iter().map(|k| format!("{}#{}", "submodule", k)))
                     }
                     result
-                }
-
-                fn is_leaf () -> bool {
-                    false
                 }
             }
 
