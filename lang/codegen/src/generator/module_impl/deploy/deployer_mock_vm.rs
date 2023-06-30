@@ -88,7 +88,7 @@ fn build_constructor(
                 stringify!(#constructor_ident).to_string(),
                 &args,
                 |name, args| {
-                    let keys = <#struct_ident as odra::types::contract_def::Node>::_keys();
+                    let keys = <#struct_ident as odra::types::contract_def::Node>::__keys();
                     let keys = keys
                         .iter()
                         .map(String::as_str)
@@ -142,7 +142,7 @@ fn build_entrypoints_calls(methods: &[&Method], struct_ident: &Ident) -> TokenSt
                 entrypoints.insert(#name, (#arg_names, |name, args| {
                     #reentrancy_check
                     #attached_value_check
-                    let keys = <#struct_ident as odra::types::contract_def::Node>::_keys();
+                    let keys = <#struct_ident as odra::types::contract_def::Node>::__keys();
                     let keys = keys
                         .iter()
                         .map(String::as_str)
@@ -168,7 +168,7 @@ fn build_constructor_calls(constructors: &[&Constructor], struct_ident: &Ident) 
             quote! {
                 constructors.insert(stringify!(#ident).to_string(), (#arg_names,
                     |name, args| {
-                        let keys = <#struct_ident as odra::types::contract_def::Node>::_keys();
+                        let keys = <#struct_ident as odra::types::contract_def::Node>::__keys();
                         let keys = keys
                             .iter()
                             .map(String::as_str)

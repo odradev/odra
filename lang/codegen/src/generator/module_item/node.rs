@@ -36,9 +36,6 @@ impl GenerateCode for Node<'_> {
                 let ident = field.field.ident.as_ref().unwrap().to_string();
                 let a = field.delegated_fields.iter().map(|f| quote!(#f)).collect::<Punctuated<TokenStream, Token![,]>>();
 
-                // let key = &String::from("shared#value");
-                // let aa = key.split("#").take(1).last().unwrap();
-
                 let map = if a.is_empty() {
                     quote!(map(|k| format!("{}#{}", #ident, k)))
                 } else {
@@ -52,7 +49,7 @@ impl GenerateCode for Node<'_> {
                     if <#ty as odra::types::contract_def::Node>::IS_LEAF {
                         result.push(String::from(#ident));
                     } else {
-                        result.extend(<#ty as odra::types::contract_def::Node>::_keys()
+                        result.extend(<#ty as odra::types::contract_def::Node>::__keys()
                             .iter()
                             .#map)
                     }
@@ -65,7 +62,7 @@ impl GenerateCode for Node<'_> {
                 const IS_LEAF: bool = false;
                 const COUNT: u32 = #count;
 
-                fn _keys() -> Vec<String> {
+                fn __keys() -> Vec<String> {
                     let mut result = vec![];
                     #keys
                     result

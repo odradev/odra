@@ -110,27 +110,27 @@ mod test {
                     <Submodule as odra::types::contract_def::Node>::COUNT;
 
 
-                fn _keys() -> Vec<String> {
+                fn __keys() -> Vec<String> {
                     let mut result = vec![];
                     if <Variable<u32> as odra::types::contract_def::Node>::IS_LEAF {
                         result.push(String::from("variable"));
                     } else {
-                        result.extend(<Variable<u32> as odra::types::contract_def::Node>::_keys().iter().map(|k| format!("{}#{}", "variable", k)))
+                        result.extend(<Variable<u32> as odra::types::contract_def::Node>::__keys().iter().map(|k| format!("{}#{}", "variable", k)))
                     }
                     if <Mapping<u32, Mapping<u32, MappedModule> > as odra::types::contract_def::Node>::IS_LEAF {
                         result.push(String::from("mapping"));
                     } else {
-                        result.extend(<Mapping<u32, Mapping<u32, MappedModule> > as odra::types::contract_def::Node>::_keys().iter().map(|k| format!("{}#{}", "mapping", k)))
+                        result.extend(<Mapping<u32, Mapping<u32, MappedModule> > as odra::types::contract_def::Node>::__keys().iter().map(|k| format!("{}#{}", "mapping", k)))
                     }
                     if <Mapping<u32, String> as odra::types::contract_def::Node>::IS_LEAF {
                         result.push(String::from("mapping2"));
                     } else {
-                        result.extend(<Mapping<u32, String> as odra::types::contract_def::Node>::_keys().iter().map(|k| format!("{}#{}", "mapping2", k)))
+                        result.extend(<Mapping<u32, String> as odra::types::contract_def::Node>::__keys().iter().map(|k| format!("{}#{}", "mapping2", k)))
                     }
                     if <Submodule as odra::types::contract_def::Node>::IS_LEAF {
                         result.push(String::from("submodule"));
                     } else {
-                        result.extend(<Submodule as odra::types::contract_def::Node>::_keys().iter().map(|k| format!("{}#{}", "submodule", k)))
+                        result.extend(<Submodule as odra::types::contract_def::Node>::__keys().iter().map(|k| format!("{}#{}", "submodule", k)))
                     }
                     result
                 }

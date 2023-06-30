@@ -49,7 +49,7 @@ impl OdraAttribute {
     pub fn using(&self) -> Vec<String> {
         self.kinds
             .iter()
-            .filter_map(|a| match a {
+            .filter_map(|attr| match attr {
                 AttrKind::Using(fields) => Some(fields.clone()),
                 _ => None
             })

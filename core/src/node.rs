@@ -16,7 +16,7 @@ impl<T> Node for List<T> {
     const COUNT: u32 = 2;
     const IS_LEAF: bool = false;
 
-    fn _keys() -> Vec<String> {
+    fn __keys() -> Vec<String> {
         vec![String::from("values"), String::from("index")]
     }
 }
@@ -25,7 +25,7 @@ impl<T: Num + One + OdraType> Node for Sequence<T> {
     const COUNT: u32 = 1;
     const IS_LEAF: bool = false;
 
-    fn _keys() -> Vec<String> {
+    fn __keys() -> Vec<String> {
         vec![String::from("value")]
     }
 }

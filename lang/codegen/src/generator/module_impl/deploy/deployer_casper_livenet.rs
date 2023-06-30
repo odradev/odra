@@ -49,7 +49,7 @@ fn build_entrypoint_call(entrypoint: &Method, struct_ident: &Ident) -> TokenStre
     let arg_names = args_to_arg_names_stream(&entrypoint.args);
     quote! {
         entrypoints.insert(#name, (#arg_names, |name, args| {
-            let keys = <#struct_ident as odra::types::contract_def::Node>::_keys();
+            let keys = <#struct_ident as odra::types::contract_def::Node>::__keys();
             let keys = keys
                 .iter()
                 .map(String::as_str)
