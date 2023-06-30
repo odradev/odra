@@ -12,6 +12,7 @@ pub use address::CONTRACT_ADDRESS_PREFIX;
 pub use borsh::{BorshDeserialize, BorshSerialize};
 pub use call_args::CallArgs;
 pub use mock_vm_type::{MockDeserializable, MockSerializable, MockVMSerializationError};
+use std::ops::Deref;
 pub use ty::Typed;
 pub use uints::{U128, U256, U512};
 /// A type representing the amount of native tokens.
@@ -68,8 +69,34 @@ impl Bytes {
     }
 }
 
+impl Deref for Bytes {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        self.0.deref()
+    }
+}
+
 impl From<Vec<u8>> for Bytes {
     fn from(vec: Vec<u8>) -> Self {
         Self(vec)
+    }
+}
+
+impl From<Bytes> for Vec<u8> {
+    fn from(bytes: Bytes) -> Self {
+        bytes.0
+    }
+}
+
+impl From<&[u8]> for Bytes {
+    fn from(bytes: &[u8]) -> Self {
+        Self(bytes.to_vec())
+    }
+}
+
+impl AsRef<[u8]> for Bytes {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
     }
 }
