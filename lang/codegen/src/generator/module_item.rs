@@ -127,6 +127,7 @@ mod test {
                 }
             }
 
+            # [doc = "Composer for the [Module] module."]
             pub struct ModuleComposer {
                 namespace: String,
                 variable: core::option::Option<Variable<u32> >,

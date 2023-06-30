@@ -24,7 +24,7 @@ impl GenerateCode for ContractReference<'_> {
 
         let ref_constructors = build_constructors(self.contract.get_constructor_iter());
 
-        let contract_ref = build_ref(&ref_ident);
+        let contract_ref = build_ref(&ref_ident, struct_ident);
 
         quote! {
             #contract_ref

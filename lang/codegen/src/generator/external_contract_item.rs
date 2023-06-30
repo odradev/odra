@@ -40,7 +40,7 @@ impl GenerateCode for ExternalContractItem<'_> {
                 };
                 result
             });
-        let contract_ref = build_ref(ref_ident);
+        let contract_ref = build_ref(ref_ident, trait_ident);
 
         quote::quote! {
             #item_trait

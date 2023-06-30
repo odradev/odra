@@ -31,9 +31,11 @@ where
     args.into_iter().filter_map(typed_arg).collect::<Vec<_>>()
 }
 
-pub(crate) fn build_ref(ref_ident: &Ident) -> TokenStream {
+pub(crate) fn build_ref(ref_ident: &Ident, struct_ident: &Ident) -> TokenStream {
+    let ref_comment = format!("Reference to the [{}] contract instance.", struct_ident);
     quote! {
         #[derive(Clone)]
+        #[doc = #ref_comment]
         pub struct #ref_ident {
             address: odra::types::Address,
             attached_value: Option<odra::types::Balance>,

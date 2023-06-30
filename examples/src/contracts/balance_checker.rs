@@ -11,7 +11,7 @@ impl BalanceChecker {
 }
 
 #[odra::external_contract]
-trait Token {
+pub trait Token {
     fn balance_of(&self, owner: &Address) -> U256;
 }
 

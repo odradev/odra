@@ -23,6 +23,7 @@ impl GenerateCode for Deploy<'_> {
         let struct_ident = self.contract.ident();
         let ref_ident = format_ident!("{}Ref", struct_ident);
         let deployer_ident = format_ident!("{}Deployer", struct_ident);
+        let deployer_comment = format!("Deployer for the [{}] contract.", struct_ident);
 
         let method_defs: Vec<&Method> = self.contract.get_public_method_iter().collect();
         let constructor_defs: Vec<&Constructor> = self.contract.get_constructor_iter().collect();
@@ -49,6 +50,7 @@ impl GenerateCode for Deploy<'_> {
         );
 
         quote! {
+            #[doc = #deployer_comment]
             pub struct #deployer_ident;
 
             #[cfg(all(feature = "casper", not(target_arch = "wasm32")))]
