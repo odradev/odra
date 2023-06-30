@@ -15,6 +15,7 @@ impl GenerateCode for ModuleComposer<'_> {
     fn generate_code(&self) -> TokenStream {
         let composer_ident = format_ident!("{}Composer", self.module.item.ident);
         let module_ident = &self.module.item.ident;
+        let composer_comment = format!("Composer for the [{}] module.", self.module.item.ident);
 
         let fields = match self.module.item.fields {
             syn::Fields::Named(ref fields) => fields,
@@ -70,6 +71,7 @@ impl GenerateCode for ModuleComposer<'_> {
             .collect::<TokenStream>();
 
         quote! {
+             #[doc = #composer_comment]
              pub struct #composer_ident {
                  namespace: String,
                  #struct_fields
