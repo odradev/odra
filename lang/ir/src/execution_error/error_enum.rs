@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use proc_macro2::TokenStream;
-use quote::ToTokens;
+use quote::{ToTokens, TokenStreamExt};
 use syn::{parse::Parse, spanned::Spanned};
 
 use super::variant::Variant;
@@ -9,6 +9,7 @@ use super::variant::Variant;
 ///
 /// The structure is similar to [syn::ItemEnum], but contains custom variants.
 pub struct ErrorEnumItem {
+    pub attrs: Vec<syn::Attribute>,
     pub vis: syn::Visibility,
     pub enum_token: syn::Token![enum],
     pub ident: syn::Ident,
@@ -25,7 +26,7 @@ impl ErrorEnumItem {
 
 impl Parse for ErrorEnumItem {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let _attrs = input.call(syn::Attribute::parse_outer)?;
+        let attrs = input.call(syn::Attribute::parse_outer)?;
         let vis = input.parse::<syn::Visibility>()?;
         let enum_token = input.parse::<syn::Token![enum]>()?;
         let ident = input.parse::<syn::Ident>()?;
@@ -47,6 +48,7 @@ impl Parse for ErrorEnumItem {
         }
 
         Ok(ErrorEnumItem {
+            attrs,
             vis,
             enum_token,
             ident,
@@ -62,6 +64,11 @@ impl Parse for ErrorEnumItem {
 
 impl ToTokens for ErrorEnumItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
+        tokens.append_all(
+            self.attrs
+                .iter()
+                .filter(|attr| matches!(attr.style, syn::AttrStyle::Outer))
+        );
         self.vis.to_tokens(tokens);
         self.enum_token.to_tokens(tokens);
         self.ident.to_tokens(tokens);
