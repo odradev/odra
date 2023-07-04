@@ -23,6 +23,7 @@ mod mapping;
 mod sequence;
 mod unwrap_or_revert;
 mod variable;
+pub mod module;
 
 #[cfg(not(any(target_arch = "wasm32", feature = "casper-livenet")))]
 pub mod test_utils;

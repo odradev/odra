@@ -1,4 +1,6 @@
-use alloc::boxed::Box;
+use std::println;
+
+use alloc::{boxed::Box, vec::Vec};
 use casper_types::{CLType, CLTyped};
 use odra_types::Type;
 
@@ -57,3 +59,23 @@ fn cl_type_to_type(ty: CLType) -> Type {
 fn boxed_cl_type_to_boxed_type(ty: Box<CLType>) -> Box<Type> {
     Box::new(cl_type_to_type(*ty))
 }
+
+pub trait OdraType {
+    fn to_bytes(&self) -> Vec<u8>;
+}
+
+pub fn serialize<S: Serializer<T>, T: OdraType>(value: T) -> Vec<u8> {
+    S::serialize(value);
+    // contract_env::set_var("test", bytes);
+}
+
+pub fn get<S: Serializer<T>, T: OdraType>() -> T {
+    let bytes = [0u8; 32];
+    S::deserialize(&bytes)
+}
+
+pub trait Serializer<T: OdraType> {
+    fn serialize(value: T) -> Vec<u8>;
+    fn deserialize(bytes: &[u8]) -> T;
+}
+
