@@ -1,9 +1,9 @@
-use odra::client_env;
-use odra::types::{Address, U256};
-use odra_modules::erc20::Erc20Deployer;
-use std::str::FromStr;
-
+#[cfg(odra_backend = "casper-livenet")]
 fn main() {
+    use odra::client_env;
+    use odra::types::{Address, U256};
+    use odra_modules::erc20::Erc20Deployer;
+    use std::str::FromStr;
     let name = String::from("Plascoin");
     let symbol = String::from("PLS");
     let decimals = 10u8;
@@ -28,4 +28,9 @@ fn main() {
 
     println!("Owner's balance: {:?}", token.balance_of(&owner));
     println!("Recipient's balance: {:?}", token.balance_of(&recipient));
+}
+
+#[cfg(not(odra_backend = "casper-livenet"))]
+fn main() {
+    println!("This example is only for Casper livenet.");
 }

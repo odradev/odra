@@ -53,13 +53,13 @@ impl GenerateCode for Deploy<'_> {
             #[doc = #deployer_comment]
             pub struct #deployer_ident;
 
-            #[cfg(all(feature = "casper", not(target_arch = "wasm32")))]
+            #[cfg(all(odra_backend = "casper", not(target_arch = "wasm32")))]
             #casper_test_deployer_impl
 
-            #[cfg(feature = "mock-vm")]
+            #[cfg(odra_backend = "mock-vm")]
             #mock_vm_deployer_impl
 
-            #[cfg(feature = "casper-livenet")]
+            #[cfg(odra_backend = "casper-livenet")]
             #casper_livenet_deployer_impl
         }
     }

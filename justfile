@@ -15,7 +15,7 @@ check-lint: clippy
     cargo fmt -- --check
     cd examples && cargo fmt -- --check
     cd modules && cargo fmt -- --check
-    cd examples && cargo check --no-default-features -F casper-livenet
+    cd examples && ODRA_BACKEND=casper-livenet cargo check --no-default-features
 
 install-cargo-odra:
     cargo install cargo-odra --locked
@@ -55,7 +55,7 @@ test-modules: test-modules-on-mockvm test-modules-on-casper
 test: test-odra test-examples test-modules
 
 run-example-erc20-on-livenet:
-    cd examples && cargo run --bin erc20-on-livenet --features casper-livenet --no-default-features
+    cd examples && ODRA_BACKEND=casper-livenet cargo run --bin erc20-on-livenet --no-default-features
 
 clean:
     cargo clean

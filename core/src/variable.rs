@@ -85,7 +85,7 @@ impl<T: OdraType> DynamicInstance for Variable<T> {
     }
 }
 
-#[cfg(all(feature = "mock-vm", test))]
+#[cfg(all(odra_backend = "mock-vm", test))]
 mod tests {
     use crate::{test_env, StaticInstance, Variable};
     use odra_mock_vm::types::OdraType;

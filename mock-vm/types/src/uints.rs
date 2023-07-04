@@ -25,7 +25,8 @@ construct_uint! {
 
 impl From<U256> for U512 {
     fn from(val: U256) -> Self {
-        val.to_u512().unwrap()
+        val.to_u512()
+            .unwrap_or_else(|_| panic!("U256 to U512 conversion failed"))
     }
 }
 

@@ -95,7 +95,7 @@ impl<K: OdraType, V> DynamicInstance for Mapping<K, V> {
     }
 }
 
-#[cfg(all(feature = "mock-vm", test))]
+#[cfg(all(odra_backend = "mock-vm", test))]
 mod tests {
     use crate::{instance::StaticInstance, mapping::Mapping, test_env};
     use odra_mock_vm::types::OdraType;

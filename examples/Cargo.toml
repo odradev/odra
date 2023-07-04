@@ -4,19 +4,15 @@ version = "0.6.0"
 edition = "2021"
 
 [dependencies]
-odra = { path = "../core", default-features = false }
-odra-modules = { path = "../modules", default-features = false }
+odra = { path = "../core" }
+odra-modules = { path = "../modules"}
 
 [dev-dependencies]
 hex = "0.4.3"
 
-[features]
-default = ["mock-vm"]
-mock-vm = ["odra/mock-vm", "odra-modules/mock-vm"]
-casper = ["odra/casper", "odra-modules/casper"]
-casper-livenet = ["odra/casper-livenet", "odra-modules/casper-livenet"]
+[build-dependencies]
+odra-build = { path = "../build" }
 
 [[bin]]
 name = "erc20-on-livenet"
 path = "bin/erc20_on_livenet.rs"
-required-features = ["casper-livenet"]

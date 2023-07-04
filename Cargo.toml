@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "build",
     "core",
     "lang/codegen",
     "lang/ir",
@@ -27,7 +28,7 @@ homepage = "https://odra.dev/docs"
 repository = "https://github.com/odradev/odra"
 
 [workspace.dependencies]
-casper-contract = "3.0.0"
-casper-types = "3.0.0"
+casper-contract = { version = "3.0.0", default-features = false }
+casper-types = { version = "3.0.0", default-features = false }
 casper-execution-engine = "5.0.0"
 casper-event-standard = "0.4.0"

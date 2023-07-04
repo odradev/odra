@@ -1,20 +1,3 @@
-#[cfg(all(feature = "casper", feature = "mock-vm"))]
-compile_error!("casper and mock-vm are mutually exclusive features.");
-
-#[cfg(all(feature = "casper", feature = "casper-livenet"))]
-compile_error!("casper and casper-livenet are mutually exclusive features.");
-
-#[cfg(all(feature = "mock-vm", feature = "casper-livenet"))]
-compile_error!("mock-vm and casper-livenet are mutually exclusive features.");
-
-#[cfg(all(feature = "casper", feature = "mock-vm", feature = "casper-livenet"))]
-compile_error!("mock-vm, casper and casper-livenet are mutually exclusive features.");
-
-#[cfg(not(any(feature = "casper", feature = "mock-vm", feature = "casper-livenet")))]
-compile_error!(
-    "Exactly one of these features must be selected: `casper`, `mock-vm`, `casper-livenet`."
-);
-
 mod instance;
 mod item;
 mod list;
@@ -24,12 +7,12 @@ mod sequence;
 mod unwrap_or_revert;
 mod variable;
 
-#[cfg(not(any(target_arch = "wasm32", feature = "casper-livenet")))]
+#[cfg(not(any(target_arch = "wasm32", odra_backend = "casper-livenet")))]
 pub mod test_utils;
 
 pub use {
-    instance::{DynamicInstance, StaticInstance},
     item::OdraItem,
+    instance::{DynamicInstance, StaticInstance},
     list::{Iter, List},
     mapping::Mapping,
     odra_proc_macros::{
@@ -41,7 +24,7 @@ pub use {
     variable::Variable
 };
 
-#[cfg(feature = "mock-vm")]
+#[cfg(odra_backend = "mock-vm")]
 mod env {
     pub use odra_mock_vm::{contract_env, test_env};
     pub mod types {
@@ -52,7 +35,7 @@ mod env {
 }
 
 // Casper WASM.
-#[cfg(all(feature = "casper", target_arch = "wasm32"))]
+#[cfg(all(odra_backend = "casper", target_arch = "wasm32"))]
 mod env {
     pub use odra_casper_backend::contract_env;
     pub mod types {
@@ -67,7 +50,7 @@ mod env {
 }
 
 // Casper Test.
-#[cfg(all(feature = "casper", not(target_arch = "wasm32")))]
+#[cfg(all(odra_backend = "casper", not(target_arch = "wasm32")))]
 mod env {
     pub use odra_casper_test_env::{dummy_contract_env as contract_env, test_env};
     pub mod types {
@@ -81,7 +64,7 @@ mod env {
     pub use test_env::call_contract;
 }
 
-#[cfg(feature = "casper-livenet")]
+#[cfg(odra_backend = "casper-livenet")]
 mod env {
     pub use odra_casper_livenet::{client_env, contract_env};
     pub mod types {

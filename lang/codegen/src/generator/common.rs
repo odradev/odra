@@ -71,9 +71,9 @@ where
         match *ty.ty {
             syn::Type::Reference(syn::TypeReference { ref elem, .. }) => match **elem {
                 syn::Type::Slice { .. } => quote! {
-                    #[cfg(any(feature = "casper", feature = "casper-livenet"))]
+                    #[cfg(any(odra_backend = "casper", odra_backend = "casper-livenet"))]
                     args.insert(stringify!(#pat), #pat.to_vec());
-                    #[cfg(feature = "mock-vm")]
+                    #[cfg(odra_backend = "mock-vm")]
                     args.insert(stringify!(#pat), #pat.clone());
                 },
                 _ => quote!(args.insert(stringify!(#pat), #pat.clone());)
@@ -110,7 +110,7 @@ pub(crate) mod mock_vm {
             .collect::<TokenStream>();
 
         quote! {
-            #[cfg(feature = "mock-vm")]
+            #[cfg(odra_backend = "mock-vm")]
             impl odra::types::BorshSerialize for #struct_ident {
                 fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
                     odra::types::BorshSerialize::serialize(stringify!(#struct_ident), writer)?;
@@ -120,7 +120,7 @@ pub(crate) mod mock_vm {
                 }
             }
 
-            #[cfg(feature = "mock-vm")]
+            #[cfg(odra_backend = "mock-vm")]
             impl odra::types::BorshDeserialize for #struct_ident {
 
                 fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -131,7 +131,7 @@ pub(crate) mod mock_vm {
                 }
             }
 
-            #[cfg(feature = "mock-vm")]
+            #[cfg(odra_backend = "mock-vm")]
             impl odra::types::Typed for #struct_ident {
                 fn ty() -> odra::types::Type {
                     odra::types::Type::Any
@@ -165,7 +165,7 @@ pub(crate) mod mock_vm {
             .collect::<Punctuated<TokenStream, Comma>>();
 
         quote! {
-            #[cfg(feature = "mock-vm")]
+            #[cfg(odra_backend = "mock-vm")]
             impl odra::types::BorshSerialize for #struct_ident {
                 fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
                     #variant_idx_serialization
@@ -173,7 +173,7 @@ pub(crate) mod mock_vm {
                 }
             }
 
-            #[cfg(feature = "mock-vm")]
+            #[cfg(odra_backend = "mock-vm")]
             impl odra::types::BorshDeserialize for #struct_ident {
                 fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
                     let variant_idx: u8 = odra::types::BorshDeserialize::deserialize(buf)?;
@@ -188,7 +188,7 @@ pub(crate) mod mock_vm {
                 }
             }
 
-            #[cfg(feature = "mock-vm")]
+            #[cfg(odra_backend = "mock-vm")]
             impl odra::types::Typed for #struct_ident {
                 fn ty() -> odra::types::Type {
                     odra::types::Type::U8
@@ -237,7 +237,7 @@ pub(crate) mod casper {
             .collect::<TokenStream>();
 
         quote! {
-            #[cfg(any(feature = "casper", feature = "casper-livenet"))]
+            #[cfg(any(odra_backend = "casper", odra_backend = "casper-livenet"))]
             impl odra::casper::casper_types::bytesrepr::FromBytes for #struct_ident {
                 fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper::casper_types::bytesrepr::Error> {
                     let (_, bytes): (String, _) = odra::casper::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
@@ -249,7 +249,7 @@ pub(crate) mod casper {
                 }
             }
 
-            #[cfg(any(feature = "casper", feature = "casper-livenet"))]
+            #[cfg(any(odra_backend = "casper", odra_backend = "casper-livenet"))]
             impl odra::casper::casper_types::bytesrepr::ToBytes for #struct_ident {
                 fn to_bytes(&self) -> Result<Vec<u8>, odra::casper::casper_types::bytesrepr::Error> {
                     let mut vec = Vec::with_capacity(self.serialized_length());
@@ -265,7 +265,7 @@ pub(crate) mod casper {
                 }
             }
 
-            #[cfg(any(feature = "casper", feature = "casper-livenet"))]
+            #[cfg(any(odra_backend = "casper", odra_backend = "casper-livenet"))]
             impl odra::casper::casper_types::CLTyped for #struct_ident {
                 fn cl_type() -> odra::casper::casper_types::CLType {
                     odra::casper::casper_types::CLType::Any
@@ -278,12 +278,12 @@ pub(crate) mod casper {
         let from_bytes_code = enum_from_bytes(enum_ident, variants);
 
         quote! {
-            #[cfg(any(feature = "casper", feature = "casper-livenet"))]
+            #[cfg(any(odra_backend = "casper", odra_backend = "casper-livenet"))]
             impl odra::casper::casper_types::bytesrepr::FromBytes for #enum_ident {
                 #from_bytes_code
             }
 
-            #[cfg(any(feature = "casper", feature = "casper-livenet"))]
+            #[cfg(any(odra_backend = "casper", odra_backend = "casper-livenet"))]
             impl odra::casper::casper_types::bytesrepr::ToBytes for #enum_ident {
                 fn serialized_length(&self) -> usize {
                     (self.clone() as u32).serialized_length()
@@ -294,7 +294,7 @@ pub(crate) mod casper {
                 }
             }
 
-            #[cfg(any(feature = "casper", feature = "casper-livenet"))]
+            #[cfg(any(odra_backend = "casper", odra_backend = "casper-livenet"))]
             impl odra::casper::casper_types::CLTyped for #enum_ident {
                 fn cl_type() -> odra::casper::casper_types::CLType {
                     odra::casper::casper_types::CLType::U32

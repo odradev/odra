@@ -185,7 +185,7 @@ impl<T> DynamicInstance for List<T> {
     }
 }
 
-#[cfg(all(feature = "mock-vm", test))]
+#[cfg(all(odra_backend = "mock-vm", test))]
 mod tests {
     use odra_mock_vm::types::OdraType;
     use odra_types::CollectionError;

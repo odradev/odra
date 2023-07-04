@@ -58,7 +58,7 @@ where
     }
 }
 
-#[cfg(all(feature = "mock-vm", test))]
+#[cfg(all(odra_backend = "mock-vm", test))]
 mod tests {
     use crate::types::U256;
     use crate::{sequence::Sequence, StaticInstance};

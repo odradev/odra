@@ -6,7 +6,5 @@ edition = "2021"
 [dependencies]
 #odra_dependency
 
-[features]
-default = ["mock-vm"]
-mock-vm = ["odra/mock-vm"]
-casper = ["odra/casper"]
+[build-dependencies]
+#odra_build_dependency

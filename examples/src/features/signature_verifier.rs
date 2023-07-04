@@ -39,7 +39,7 @@ mod test {
     /// The following test checks that the signature verification works with the signature produced
     /// by the casper wallet.
     #[test]
-    #[cfg(feature = "casper")]
+    #[cfg(odra_backend = "casper")]
     fn verify_signature_casper_wallet() {
         use odra::casper::casper_types::bytesrepr::FromBytes;
         // Casper Wallet for the message "Ahoj przygodo!" signed using SECP256K1 key

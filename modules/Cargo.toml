@@ -1,6 +1,6 @@
 [package]
 name = "odra-modules"
-version = "0.6.0"
+version = "0.5.0"
 edition = "2021"
 authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
 license = "MIT"
@@ -10,12 +10,15 @@ keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm"]
 
 [dependencies]
-odra = { path = "../core", version = "0.6.0", default-features = false }
+odra = { path = "../core" }
 hex = "0.4.3"
 sha3 = "0.10.6"
 
-[features]
-default = [ "mock-vm" ]
-mock-vm = [ "odra/mock-vm" ]
-casper = [ "odra/casper" ]
-casper-livenet = ["odra/casper-livenet"]
+[build-dependencies]
+odra-build = { path = "../build" }
+
+#[features]
+#default = [ "mock-vm" ]
+#mock-vm = [ "odra/mock-vm" ]
+#casper = [ "odra/casper" ]
+#casper-livenet = ["odra/casper-livenet"]
