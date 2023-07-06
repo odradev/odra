@@ -49,7 +49,12 @@ fn build_entrypoint_call(entrypoint: &Method, struct_ident: &Ident) -> TokenStre
     let arg_names = args_to_arg_names_stream(&entrypoint.args);
     quote! {
         entrypoints.insert(#name, (#arg_names, |name, args| {
-            let mut instance = <#struct_ident as odra::DynamicInstance>::instance(&[]);
+            let keys = <#struct_ident as odra::types::contract_def::Node>::__keys();
+            let keys = keys
+                .iter()
+                .map(String::as_str)
+                .collect::<Vec<_>>();
+            let (mut instance, _) = <#struct_ident as odra::StaticInstance>::instance(keys.as_slice());
             let result = instance.#ident(#args);
             let clvalue = odra::casper::casper_types::CLValue::from_t(result).unwrap();
             odra::casper::casper_types::bytesrepr::ToBytes::into_bytes(clvalue).unwrap()

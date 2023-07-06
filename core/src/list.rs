@@ -127,7 +127,7 @@ impl<T: OdraType + Default> List<T> {
 }
 
 impl<T: OdraType> StaticInstance for List<T> {
-    fn instance(keys: &'static [&'static str]) -> (Self, &'static [&'static str]) {
+    fn instance<'a>(keys: &'a [&'a str]) -> (Self, &'a [&'a str]) {
         let (values, keys) = StaticInstance::instance(keys);
         let (index, keys) = StaticInstance::instance(keys);
         (Self { values, index }, keys)

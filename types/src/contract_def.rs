@@ -73,9 +73,12 @@ pub trait HasEvents {
 }
 
 pub trait Node {
-    fn count() -> u32;
-    fn keys() -> Vec<String>;
-    fn is_leaf() -> bool;
+    const IS_LEAF: bool = true;
+    const COUNT: u32;
+
+    fn __keys() -> Vec<String> {
+        Vec::new()
+    }
 }
 
 #[derive(Debug, Clone)]

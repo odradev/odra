@@ -73,7 +73,7 @@ impl<K: OdraType, V: OdraType + OverflowingSub + Default + Debug + PartialOrd> M
 }
 
 impl<K: OdraType, V> StaticInstance for Mapping<K, V> {
-    fn instance(keys: &'static [&'static str]) -> (Self, &'static [&'static str]) {
+    fn instance<'a>(keys: &'a [&'a str]) -> (Self, &'a [&'a str]) {
         (
             Self {
                 key_ty: PhantomData,

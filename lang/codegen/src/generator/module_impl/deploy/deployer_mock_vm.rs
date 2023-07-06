@@ -88,7 +88,12 @@ fn build_constructor(
                 stringify!(#constructor_ident).to_string(),
                 &args,
                 |name, args| {
-                    let mut instance = <#struct_ident as odra::DynamicInstance>::instance(&[]);
+                    let keys = <#struct_ident as odra::types::contract_def::Node>::__keys();
+                    let keys = keys
+                        .iter()
+                        .map(String::as_str)
+                        .collect::<Vec<_>>();
+                    let (mut instance, _) = <#struct_ident as odra::StaticInstance>::instance(keys.as_slice());
                     instance.#constructor_ident( #fn_args );
                     Vec::new()
                 }
@@ -137,7 +142,12 @@ fn build_entrypoints_calls(methods: &[&Method], struct_ident: &Ident) -> TokenSt
                 entrypoints.insert(#name, (#arg_names, |name, args| {
                     #reentrancy_check
                     #attached_value_check
-                    let mut instance = <#struct_ident as odra::DynamicInstance>::instance(&[]);
+                    let keys = <#struct_ident as odra::types::contract_def::Node>::__keys();
+                    let keys = keys
+                        .iter()
+                        .map(String::as_str)
+                        .collect::<Vec<_>>();
+                    let (mut instance, _) = <#struct_ident as odra::StaticInstance>::instance(keys.as_slice());
                     let result = instance.#ident(#args);
                     #reentrancy_cleanup
                     #return_value
@@ -158,7 +168,12 @@ fn build_constructor_calls(constructors: &[&Constructor], struct_ident: &Ident) 
             quote! {
                 constructors.insert(stringify!(#ident).to_string(), (#arg_names,
                     |name, args| {
-                        let mut instance = <#struct_ident as odra::DynamicInstance>::instance(&[]);
+                        let keys = <#struct_ident as odra::types::contract_def::Node>::__keys();
+                        let keys = keys
+                            .iter()
+                            .map(String::as_str)
+                            .collect::<Vec<_>>();
+                        let (mut instance, _) = <#struct_ident as odra::StaticInstance>::instance(keys.as_slice());
                         instance.#ident( #args );
                         Vec::new()
                     }
