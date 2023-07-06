@@ -78,9 +78,13 @@ impl TimeLockWallet {
 }
 
 execution_error! {
+    /// Errors that may occur during the contract execution.
     pub enum Error {
+        /// Cannot withdraw funds, the lock period is not over.
         LockIsNotOver => 1,
+        /// A user deposit funds the second and the next time.
         CannotLockTwice => 2,
+        /// A user deposits more funds he/she owns.
         InsufficientBalance => 3
     }
 }
@@ -105,7 +109,7 @@ mod test {
         types::{Address, Balance}
     };
 
-    use crate::tlw::{Deposit, Withdrawal};
+    use crate::contracts::tlw::{Deposit, Withdrawal};
 
     use super::{Error, TimeLockWalletDeployer, TimeLockWalletRef};
 

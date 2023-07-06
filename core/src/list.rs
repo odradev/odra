@@ -3,15 +3,36 @@ use core::ops::Range;
 use odra_types::CollectionError;
 
 use crate::{contract_env, UnwrapOrRevert};
-use crate::{instance::StaticInstance, mapping::Mapping, variable::Variable};
-
-use super::DynamicInstance;
+use crate::{
+    instance::{DynamicInstance, StaticInstance},
+    mapping::Mapping,
+    variable::Variable
+};
 
 /// Data structure for an indexed, iterable collection.
 #[derive(Clone)]
 pub struct List<T> {
     values: Mapping<u32, T>,
     index: Variable<u32>
+}
+
+impl<T: DynamicInstance> List<T> {
+    pub fn get_instance(&mut self, index: u32) -> T {
+        let len = self.len();
+        // Clippy doesn't like the following code, but it's the most efficient way to do it.
+        // See https://rust-lang.github.io/rust-clippy/master/index.html#/comparison_chain
+        #[allow(clippy::comparison_chain)]
+        if index == len {
+            self.index.set(index + 1);
+        } else if index > len {
+            contract_env::revert(CollectionError::IndexOutOfBounds);
+        }
+        self.values.get_instance(&index)
+    }
+
+    pub fn next_instance(&mut self) -> T {
+        self.get_instance(self.len())
+    }
 }
 
 impl<T: OdraType> List<T> {
@@ -126,7 +147,7 @@ impl<T: OdraType + Default> List<T> {
     }
 }
 
-impl<T: OdraType> StaticInstance for List<T> {
+impl<T> StaticInstance for List<T> {
     fn instance<'a>(keys: &'a [&'a str]) -> (Self, &'a [&'a str]) {
         let (values, keys) = StaticInstance::instance(keys);
         let (index, keys) = StaticInstance::instance(keys);
@@ -134,7 +155,7 @@ impl<T: OdraType> StaticInstance for List<T> {
     }
 }
 
-impl<T: OdraType> DynamicInstance for List<T> {
+impl<T> DynamicInstance for List<T> {
     fn instance(namespace: &[u8]) -> Self {
         let namespace_len = namespace.len();
         let max_len = namespace_len + b"values".len();

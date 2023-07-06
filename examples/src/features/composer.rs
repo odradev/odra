@@ -37,7 +37,7 @@ impl ComposableContract {
 
 #[cfg(test)]
 mod test {
-    use crate::composer::ComposableContractDeployer;
+    use crate::features::composer::ComposableContractDeployer;
 
     #[test]
     fn t() {

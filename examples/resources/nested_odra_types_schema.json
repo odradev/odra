@@ -1,0 +1,20 @@
+{
+  "name": "NestedOdraTypes",
+  "entrypoints": [
+    {
+      "name": "perform_operation",
+      "is_mutable": true,
+      "args": [],
+      "return_ty": "Unit"
+    },
+    {
+      "name": "get_operation_result",
+      "is_mutable": false,
+      "args": [],
+      "return_ty": {
+        "Option": "Any"
+      }
+    }
+  ],
+  "events": []
+}

@@ -2,8 +2,10 @@
 //!
 //! It provides all the required functions to communicate between Odra and Casper Livenets.
 
+use crate::casper_client::LivenetKeyMaker;
 use casper_types::bytesrepr::Bytes;
 use casper_types::PublicKey;
+use odra_casper_shared::key_maker::KeyMaker;
 use odra_casper_shared::native_token::NativeTokenMetadata;
 use odra_casper_types::{Address, Balance, BlockTime, OdraType};
 use odra_types::{event::OdraEvent, ExecutionError};
@@ -76,4 +78,9 @@ pub fn native_token_metadata() -> NativeTokenMetadata {
 /// Verifies the signature created using the Backend's default signature scheme.
 pub fn verify_signature(_: &Bytes, _: &Bytes, _: &PublicKey) -> bool {
     unimplemented!()
+}
+
+/// Creates a hash of the given input. Uses default hash for given backend.
+pub fn hash<T: AsRef<[u8]>>(input: T) -> Vec<u8> {
+    LivenetKeyMaker::blake2b(input.as_ref()).to_vec()
 }

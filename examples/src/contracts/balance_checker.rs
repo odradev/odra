@@ -11,22 +11,22 @@ impl BalanceChecker {
 }
 
 #[odra::external_contract]
-trait Token {
-    fn balance_of(&self, address: &Address) -> U256;
+pub trait Token {
+    fn balance_of(&self, owner: &Address) -> U256;
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::erc20;
+    use crate::contracts::owned_token::tests;
     use odra::{test_env, OdraItem};
 
     #[test]
     fn balance_checker() {
         let (owner, second_account) = (test_env::get_account(0), test_env::get_account(1));
         let balance_checker = BalanceCheckerDeployer::default();
-        let token = erc20::tests::setup();
-        let expected_owner_balance = erc20::tests::INITIAL_SUPPLY;
+        let token = tests::setup();
+        let expected_owner_balance = tests::INITIAL_SUPPLY;
 
         // Owner of the token should have positive balance.
         let balance = balance_checker.check_balance(token.address(), &owner);

@@ -8,6 +8,7 @@ Changelog for `odra`.
 - Signature creation in test_env's
 - StaticInstance and DynamicInstance traits
 - Node trait to build static keys at the compilation time
+- `List` now can contain modules
 
 ### Removed
 - Crypto module from odra-modules
