@@ -21,6 +21,7 @@ const CODE_TRANSFER_TO_CONTRACT: u16 = 10;
 const CODE_REENTRANT_CALL: u16 = 11;
 const CODE_CONTRACT_ALREADY_INSTALLED: u16 = 12;
 const CODE_UNKNOWN_CONSTRUCTOR: u16 = 13;
+const CODE_NATIVE_TRANSFER_ERROR: u16 = 14;
 
 /// General error type in Odra framework
 #[derive(Clone, Debug, PartialEq)]
@@ -117,6 +118,10 @@ impl ExecutionError {
 
     pub fn unknown_constructor() -> Self {
         Self::internal(CODE_UNKNOWN_CONSTRUCTOR, "Unknown constructor.")
+    }
+
+    pub fn native_token_transfer_error() -> Self {
+        Self::internal(CODE_NATIVE_TRANSFER_ERROR, "Native token transfer error.")
     }
 
     fn internal(code: u16, msg: &str) -> Self {

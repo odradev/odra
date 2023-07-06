@@ -35,9 +35,7 @@ impl ToTokens for WasmEntrypoint<'_> {
             EntrypointType::PublicPayable { .. } => quote! {
                 odra::casper::utils::handle_attached_value();
             },
-            _ => quote! {
-                odra::casper::utils::assert_no_attached_value();
-            }
+            _ => quote! {}
         };
 
         let payable_cleanup = match self.0.ty {
@@ -133,7 +131,6 @@ mod tests {
             quote!(
                 #[no_mangle]
                 fn construct_me() {
-                    odra::casper::utils::assert_no_attached_value();
                     let _contract = my_contract::MyContract::instance("contract");
                     let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg(
                         stringify!(value)
