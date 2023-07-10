@@ -59,6 +59,10 @@ pub trait Module: Sized {
     fn is_linked(&self) -> bool {
         false
     }
+
+    fn new_instance(keys: &'static[&'static str]) -> ModuleInstance<Self> {
+        ModuleInstance::new(keys)
+    }
 }
 
 pub struct ModuleInstance<T: Module> {
@@ -160,6 +164,8 @@ mod tests {
             fn id(&self) -> ModuleId {
                 ModuleId("adder")
             }
+
+
         }
 
         struct Multiplier {
