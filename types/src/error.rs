@@ -8,20 +8,17 @@ const MAX_USER_ERROR: u16 = 32767;
 const USER_ERROR_TOO_HIGH: u16 = 32768;
 const UNWRAP_ERROR: u16 = u16::MAX;
 
-// const CODE_EARLY_END_OF_STREAM: u16 = 1;
-// const CODE_FORMATTING: u16 = 2;
-// const CODE_LEFT_OVER_BYTES: u16 = 3;
-// const CODE_OUT_OF_MEMORY: u16 = 4;
-// const CODE_EXCEEDED_RECURSION_DEPTH: u16 = 5;
-// const CODE_TYPE_MISMATCH: u16 = 6;
-const CODE_ADDITION_OVERFLOW: u16 = 7;
-const CODE_SUBTRACTION_OVERFLOW: u16 = 8;
-const CODE_NON_PAYABLE: u16 = 9;
-const CODE_TRANSFER_TO_CONTRACT: u16 = 10;
-const CODE_REENTRANT_CALL: u16 = 11;
-const CODE_CONTRACT_ALREADY_INSTALLED: u16 = 12;
-const CODE_UNKNOWN_CONSTRUCTOR: u16 = 13;
-const CODE_NATIVE_TRANSFER_ERROR: u16 = 14;
+const CODE_ADDITION_OVERFLOW: u16 = 100;
+const CODE_SUBTRACTION_OVERFLOW: u16 = 101;
+const CODE_NON_PAYABLE: u16 = 102;
+const CODE_TRANSFER_TO_CONTRACT: u16 = 103;
+const CODE_REENTRANT_CALL: u16 = 104;
+const CODE_CONTRACT_ALREADY_INSTALLED: u16 = 105;
+const CODE_UNKNOWN_CONSTRUCTOR: u16 = 106;
+const CODE_NATIVE_TRANSFER_ERROR: u16 = 107;
+const CODE_INDEX_OUT_OF_BOUNDS: u16 = 108;
+const CODE_ZERO_ADDRESS: u16 = 109;
+const CODE_ADDRESS_CREATION_FAILED: u16 = 110;
 
 /// General error type in Odra framework
 #[derive(Clone, Debug, PartialEq)]
@@ -35,12 +32,8 @@ pub enum OdraError {
 impl From<ArithmeticsError> for ExecutionError {
     fn from(error: ArithmeticsError) -> Self {
         match error {
-            ArithmeticsError::AdditionOverflow => {
-                Self::internal(CODE_ADDITION_OVERFLOW, "Addition overflow")
-            }
-            ArithmeticsError::SubtractingOverflow => {
-                Self::internal(CODE_SUBTRACTION_OVERFLOW, "Subtracting overflow")
-            }
+            ArithmeticsError::AdditionOverflow => Self::addition_overflow(),
+            ArithmeticsError::SubtractingOverflow => Self::subtraction_overflow()
         }
     }
 }
@@ -84,9 +77,9 @@ impl ExecutionError {
         }
     }
 
-    /// Creates a specific type of error, meaning that value unwrapping failed.
-    pub fn unwrap_error() -> Self {
-        Self::new(UNWRAP_ERROR, "Unwrap error")
+    /// Creates an instance of a system error.
+    fn sys(code: u16, msg: &str) -> Self {
+        ExecutionError(code + USER_ERROR_TOO_HIGH, String::from(msg))
     }
 
     /// Return the underlying error code
@@ -94,38 +87,59 @@ impl ExecutionError {
         self.0
     }
 
+    /// Creates a specific type of error, meaning that value unwrapping failed.
+    pub fn unwrap_error() -> Self {
+        Self::sys(UNWRAP_ERROR, "Unwrap error")
+    }
+
     pub fn non_payable() -> Self {
-        Self::internal(CODE_NON_PAYABLE, "Method does not accept deposit")
+        Self::sys(CODE_NON_PAYABLE, "Method does not accept deposit")
     }
 
     pub fn can_not_transfer_to_contract() -> Self {
-        Self::internal(
+        Self::sys(
             CODE_TRANSFER_TO_CONTRACT,
             "Can't transfer tokens to contract."
         )
     }
 
     pub fn reentrant_call() -> Self {
-        Self::internal(CODE_REENTRANT_CALL, "Reentrant call.")
+        Self::sys(CODE_REENTRANT_CALL, "Reentrant call.")
     }
 
     pub fn contract_already_installed() -> Self {
-        Self::internal(
+        Self::sys(
             CODE_CONTRACT_ALREADY_INSTALLED,
             "Contract already installed."
         )
     }
 
     pub fn unknown_constructor() -> Self {
-        Self::internal(CODE_UNKNOWN_CONSTRUCTOR, "Unknown constructor.")
+        Self::sys(CODE_UNKNOWN_CONSTRUCTOR, "Unknown constructor.")
     }
 
     pub fn native_token_transfer_error() -> Self {
-        Self::internal(CODE_NATIVE_TRANSFER_ERROR, "Native token transfer error.")
+        Self::sys(CODE_NATIVE_TRANSFER_ERROR, "Native token transfer error.")
     }
 
-    fn internal(code: u16, msg: &str) -> Self {
-        ExecutionError(code + USER_ERROR_TOO_HIGH, String::from(msg))
+    pub fn addition_overflow() -> Self {
+        Self::sys(CODE_ADDITION_OVERFLOW, "Addition overflow")
+    }
+
+    pub fn subtraction_overflow() -> Self {
+        Self::sys(CODE_SUBTRACTION_OVERFLOW, "Subtraction overflow")
+    }
+
+    pub fn index_out_of_bounds() -> Self {
+        Self::sys(CODE_INDEX_OUT_OF_BOUNDS, "Index out of bounds")
+    }
+
+    pub fn zero_address() -> Self {
+        Self::sys(CODE_ZERO_ADDRESS, "Zero address")
+    }
+
+    pub fn address_creation_failed() -> Self {
+        Self::sys(CODE_ADDRESS_CREATION_FAILED, "Address creation failed")
     }
 }
 
@@ -173,7 +187,7 @@ pub enum CollectionError {
 impl From<CollectionError> for ExecutionError {
     fn from(error: CollectionError) -> Self {
         match error {
-            CollectionError::IndexOutOfBounds => Self::internal(9, "Index out of bounds")
+            CollectionError::IndexOutOfBounds => Self::index_out_of_bounds()
         }
     }
 }
@@ -196,8 +210,8 @@ pub enum AddressError {
 impl From<AddressError> for ExecutionError {
     fn from(error: AddressError) -> Self {
         match error {
-            AddressError::ZeroAddress => Self::internal(10, "Zero address"),
-            AddressError::AddressCreationError => Self::internal(11, "Address creation error")
+            AddressError::ZeroAddress => Self::zero_address(),
+            AddressError::AddressCreationError => Self::address_creation_failed()
         }
     }
 }
