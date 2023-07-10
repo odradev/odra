@@ -228,14 +228,12 @@ mod tests {
                 }
                 #[no_mangle]
                 fn construct_me() {
-                    odra::casper::utils::assert_no_attached_value();
                     let (_contract, _): (my_contract::MyContract, _) = odra::StaticInstance::instance(&KEYS);
                     let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg("value");
                     _contract.construct_me(&value);
                 }
                 #[no_mangle]
                 fn call_me() {
-                    odra::casper::utils::assert_no_attached_value();
                     let (_contract, _): (my_contract::MyContract, _) = odra::StaticInstance::instance(&KEYS);
                     use odra::casper::casper_contract::unwrap_or_revert::UnwrapOrRevert;
                     let result = _contract.call_me();

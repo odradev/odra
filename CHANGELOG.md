@@ -36,6 +36,7 @@ Changelog for `odra`.
 
 ### Removed
 - `casper-node` is no longer a dependency for `odra-casper-livenet`.
+- `Composer`
 
 ## [0.3.1] - 2023-06-01
 ### Added
