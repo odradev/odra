@@ -42,6 +42,16 @@ impl<T> List<T> {
             index: Variable::new(name_index)
         }
     }
+
+    /// Checks if the collection is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Gets the collection length.
+    pub fn len(&self) -> u32 {
+        self.index.get_or_default()
+    }
 }
 
 impl<T: OdraType> List<T> {
@@ -52,15 +62,14 @@ impl<T: OdraType> List<T> {
 
     /// Pushes the `value` to the storage.
     pub fn push(&mut self, value: T) {
-        let current_index = self.index.get_or_default();
-        self.values.set(&current_index, value);
-        self.index.set(current_index + 1);
+        let next_index = self.len();
+        self.values.set(&next_index, value);
+        self.index.set(next_index + 1);
     }
 
     /// Replaces the current value with the `value` and returns it.
     pub fn replace(&mut self, index: u32, value: T) -> T {
-        let current_index = self.index.get_or_default();
-        if current_index < index {
+        if index >= self.len() {
             contract_env::revert(CollectionError::IndexOutOfBounds);
         }
 
@@ -69,21 +78,21 @@ impl<T: OdraType> List<T> {
         prev_value
     }
 
+    /// Pops the last value from the storage or returns `None`.
+    pub fn pop(&mut self) -> Option<T> {
+        let next_index = self.len();
+        if next_index == 0 {
+            return None;
+        }
+        let last = next_index - 1;
+        let value = self.values.get(&last).unwrap_or_revert();
+        self.index.set(last);
+        Some(value)
+    }
+
     /// Returns an iterator.
     pub fn iter(&self) -> Iter<T> {
         Iter::new(self)
-    }
-}
-
-impl<T> List<T> {
-    /// Checks if the collection is empty.
-    pub fn is_empty(&self) -> bool {
-        self.index.get_or_default() == 0
-    }
-
-    /// Gets the collection length.
-    pub fn len(&self) -> u32 {
-        self.index.get_or_default()
     }
 }
 
@@ -250,6 +259,36 @@ mod tests {
 
         // Then the list should not be empty
         assert!(!list.is_empty());
+    }
+
+    #[test]
+    fn test_pop() {
+        // Given list with 2 elements.
+        let mut list = List::<u8>::default();
+        list.push(1u8);
+        list.push(2u8);
+
+        // When pop an element
+        let result = list.pop();
+
+        // Then the result is the last element
+        assert_eq!(result, Some(2));
+        // And the length is 1
+        assert_eq!(list.len(), 1);
+
+        // When pop another element
+        let result = list.pop();
+
+        // Then the result is the last element
+        assert_eq!(result, Some(1));
+        // And the length is 0
+        assert_eq!(list.len(), 0);
+
+        // When pop another element
+        let result = list.pop();
+
+        // Then the result is None
+        assert_eq!(result, None);
     }
 
     #[test]
