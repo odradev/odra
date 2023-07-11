@@ -1,5 +1,5 @@
 use super::{ModuleEvent, ModuleEvents};
-use crate::attrs::partition_attributes;
+use crate::{attrs::partition_attributes, utils::FieldsValidator};
 use anyhow::{Context, Result};
 use proc_macro2::Ident;
 use syn::{punctuated::Punctuated, Field, Fields, FieldsNamed, Token};
@@ -102,6 +102,8 @@ impl TryFrom<syn::ItemStruct> for ModuleStruct {
     type Error = syn::Error;
 
     fn try_from(value: syn::ItemStruct) -> std::result::Result<Self, Self::Error> {
+        FieldsValidator::from(&value).result()?;
+
         let (_, other_attrs) = partition_attributes(value.attrs).unwrap();
 
         let named = value
