@@ -44,6 +44,8 @@ pub fn event_absolute_position(len: usize, index: i32) -> Option<usize> {
     }
 }
 
+pub static KEY_DELIMITER: &str = "#";
+
 static TABLE: &[u8] = b"0123456789abcdef";
 
 #[inline]
@@ -75,6 +77,12 @@ pub fn hex_to_slice(src: &[u8], dst: &mut [u8]) {
         slots[0] = hex((*byte >> 4) & 0xf);
         slots[1] = hex(*byte & 0xf);
     }
+}
+
+/// Joins two parts of a key with the [`KEY_DELIMITER`].
+#[inline]
+pub fn create_key(left: &str, right: &str) -> String {
+    format!("{}{}{}", left, KEY_DELIMITER, right)
 }
 
 #[cfg(test)]

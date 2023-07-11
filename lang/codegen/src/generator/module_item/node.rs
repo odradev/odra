@@ -34,15 +34,15 @@ impl GenerateCode for Node<'_> {
             .map(|field| {
                 let ty = &field.field.ty;
                 let ident = field.field.ident.as_ref().unwrap().to_string();
-                let a = field.delegated_fields.iter().map(|f| quote!(#f)).collect::<Punctuated<TokenStream, Token![,]>>();
+                let fields_collection = field.delegated_fields.iter().map(|f| quote!(#f)).collect::<Punctuated<TokenStream, Token![,]>>();
 
-                let map = if a.is_empty() {
-                    quote!(map(|k| format!("{}#{}", #ident, k)))
+                let map = if fields_collection.is_empty() {
+                    quote!(map(|k| odra::utils::create_key(#ident, k)))
                 } else {
-                    quote!(map(|k: &String| if [#a].contains(&k.split("#").take(1).last().unwrap()) {
+                    quote!(map(|k: &String| if [#fields_collection].contains(&k.split(odra::utils::KEY_DELIMITER).take(1).last().unwrap()) {
                         k.to_owned()
                     } else {
-                        format!("{}#{}", #ident, k)
+                        odra::utils::create_key(#ident, k)
                     }))
                 };
                 quote! {
