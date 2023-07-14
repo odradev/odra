@@ -114,6 +114,7 @@ impl CasperClient {
     /// Query the contract for the variable.
     pub fn get_variable_value<T: OdraType>(&self, address: Address, key: &[u8]) -> Option<T> {
         let key = LivenetKeyMaker::to_variable_key(key);
+        // SAFETY: we know the key maker creates a string of valid UTF-8 characters.
         let key = unsafe { from_utf8_unchecked(&key) };
         self.query_dictionary(address, key)
     }
@@ -126,6 +127,7 @@ impl CasperClient {
         key: &K
     ) -> Option<V> {
         let key = LivenetKeyMaker::to_dictionary_key(seed, key).unwrap();
+        // SAFETY: we know the key maker creates a string of valid UTF-8 characters.
         let key = unsafe { from_utf8_unchecked(&key) };
         self.query_dictionary(address, key)
     }

@@ -183,21 +183,18 @@ fn build_constructor_calls(constructors: &[&Constructor], struct_ident: &Ident) 
         .collect::<TokenStream>()
 }
 
-fn reentrancy_code(entrypoint: &Method) -> (TokenStream, TokenStream) {
+fn reentrancy_code(entrypoint: &Method) -> (Option<TokenStream>, Option<TokenStream>) {
     let non_reentrant = entrypoint.attrs.iter().any(|a| a.is_non_reentrant());
-    let reentrancy_check = match non_reentrant {
-        true => quote! {
+    let reentrancy_check = non_reentrant.then(|| {
+        quote! {
             if odra::contract_env::get_var(b"__reentrancy_guard").unwrap_or_default(){
                 odra::contract_env::revert(odra::types::ExecutionError::reentrant_call());
             }
             odra::contract_env::set_var(b"__reentrancy_guard", true);
-        },
-        false => quote!()
-    };
-    let reentrancy_cleanup = match non_reentrant {
-        true => quote!(odra::contract_env::set_var(b"__reentrancy_guard", false);),
-        false => quote!()
-    };
+        }
+    });
+    let reentrancy_cleanup =
+        non_reentrant.then(|| quote!(odra::contract_env::set_var(b"__reentrancy_guard", false);));
     (reentrancy_check, reentrancy_cleanup)
 }
 

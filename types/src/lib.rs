@@ -13,8 +13,6 @@ pub mod event;
 use alloc::boxed::Box;
 pub use error::{AddressError, CollectionError, ExecutionError, OdraError, VmError};
 
-pub type EncodedKeyHash = [u8; 16];
-
 /// Types accepted by Odra framework, these types can be stored and manipulated by smart contracts.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Type {

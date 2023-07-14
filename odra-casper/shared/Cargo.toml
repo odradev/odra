@@ -14,4 +14,3 @@ repository.workspace = true
 casper-event-standard = { workspace = true }
 odra-casper-types = { path = "../types" }
 odra-utils = { path = "../../utils" }
-casper-contract = { version = "3.0.0", default-features = false, features = ["std", "test-support"] }

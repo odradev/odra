@@ -1,7 +1,7 @@
 use derive_more::From;
 use quote::{quote, quote_spanned};
 
-use crate::{generator::module_item::node::Node, poet::OdraPoetUsingStruct, GenerateCode};
+use crate::{generator::module_item::node::NodeItem, poet::OdraPoetUsingStruct, GenerateCode};
 
 mod node;
 
@@ -29,7 +29,7 @@ impl GenerateCode for ModuleStruct<'_> {
             quote!(#[derive(Clone)])
         };
 
-        let node = self.generate_code_using::<Node>();
+        let node = self.generate_code_using::<NodeItem>();
 
         quote! {
             #instance

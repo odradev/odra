@@ -7,13 +7,13 @@ use syn::{punctuated::Punctuated, Field, Token};
 use crate::GenerateCode;
 
 #[derive(From)]
-pub struct Node<'a> {
+pub struct NodeItem<'a> {
     module: &'a ModuleStruct
 }
 
-as_ref_for_contract_struct_generator!(Node);
+as_ref_for_contract_struct_generator!(NodeItem);
 
-impl GenerateCode for Node<'_> {
+impl GenerateCode for NodeItem<'_> {
     fn generate_code(&self) -> proc_macro2::TokenStream {
         let struct_ident = &self.module.item.ident;
         let count = self
@@ -72,7 +72,7 @@ impl GenerateCode for Node<'_> {
     }
 }
 
-impl<'a> Node<'a> {
+impl<'a> NodeItem<'a> {
     fn fields_iter(&'a self) -> impl Iterator<Item = &Field> + 'a {
         self.module.item.fields.iter()
     }
