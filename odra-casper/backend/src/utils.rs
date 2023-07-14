@@ -27,7 +27,7 @@ pub fn named_arg_exists(name: &str) -> bool {
             &mut arg_size as *mut usize
         )
     };
-    casper_types::api_error::result_from(ret).is_ok()
+    ret == 0
 }
 
 /// Gets the currently executing contract main purse [URef].
@@ -62,23 +62,23 @@ pub fn handle_attached_value() {
 }
 
 pub fn non_reentrant_before() {
-    let status: bool = casper_env::get_key(consts::REENTRANCY_GUARD).unwrap_or_default();
+    let status: bool = casper_env::get_key(&consts::REENTRANCY_GUARD).unwrap_or_default();
     if status {
         revert(ExecutionError::reentrant_call())
     };
-    casper_env::set_key(consts::REENTRANCY_GUARD, true);
+    casper_env::set_key(&consts::REENTRANCY_GUARD, true);
 }
 
 pub fn non_reentrant_after() {
-    casper_env::set_key(consts::REENTRANCY_GUARD, false);
+    casper_env::set_key(&consts::REENTRANCY_GUARD, false);
 }
 
-pub fn build_event(name: &str, fields: Vec<(&str, CLType)>) -> (String, Schema) {
-    let mut s = Schema::new();
-    fields.iter().for_each(|(name, cl_type)| {
-        s.with_elem(name, cl_type.clone());
-    });
-    (name.to_owned(), s)
+pub fn build_event(name: String, fields: Vec<(&'static str, CLType)>) -> (String, Schema) {
+    let mut schema = Schema::new();
+    for (name, cl_type) in fields {
+        schema.with_elem(name, cl_type);
+    }
+    (name, schema)
 }
 
 pub fn install_contract(
@@ -98,9 +98,9 @@ pub fn install_contract(
 
     // Parse events.
     let mut schemas = casper_event_standard::Schemas::new();
-    events.iter().for_each(|(name, schema)| {
-        schemas.0.insert(name.to_owned(), schema.clone());
-    });
+    for (name, schema) in events {
+        schemas.0.insert(name, schema);
+    }
 
     // Prepare named keys.
     let named_keys = initial_named_keys(schemas);

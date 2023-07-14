@@ -13,4 +13,4 @@ repository.workspace = true
 [dependencies]
 casper-event-standard = { workspace = true }
 odra-casper-types = { path = "../types" }
-hex = { version = "0.4.3", default-features = false }
+odra-utils = { path = "../../utils" }

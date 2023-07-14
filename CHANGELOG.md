@@ -6,10 +6,17 @@ Changelog for `odra`.
 ### Added
 - Signature verification in contract_env's
 - Signature creation in test_env's
+- StaticInstance and DynamicInstance traits
+- Node trait to build static keys at the compilation time
 - `List` now can contain modules
 
 ### Removed
 - Crypto module from odra-modules
+- Instance trait
+- derive PartialEq, Eq, Debug from storage building block (Variable, Mapping, List)
+
+### Changed
+- utilize `KeyMaker` to create storage keys in `casper` and `casper-livenet`
 
 ## [0.4.0] - 2023-06-26
 ### Added
@@ -29,6 +36,7 @@ Changelog for `odra`.
 
 ### Removed
 - `casper-node` is no longer a dependency for `odra-casper-livenet`.
+- `Composer`
 
 ## [0.3.1] - 2023-06-01
 ### Added

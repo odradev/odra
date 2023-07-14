@@ -1,4 +1,4 @@
-use odra::{Instance, Variable};
+use odra::Variable;
 
 #[odra::module]
 pub struct SharedStorage {
@@ -11,9 +11,10 @@ pub struct MyStorage {
     pub version: Variable<u8>
 }
 
-#[odra::module(skip_instance)]
+#[odra::module]
 pub struct ComposableContract {
     pub shared: SharedStorage,
+    #[odra(using = "shared")]
     pub storage: MyStorage
 }
 
@@ -31,16 +32,6 @@ impl ComposableContract {
 
     pub fn get_value_via_storage(&self) -> String {
         self.storage.shared.value.get_or_default()
-    }
-}
-
-impl Instance for ComposableContract {
-    fn instance(namespace: &str) -> Self {
-        let shared = SharedStorageComposer::new(namespace, "shared").compose();
-        let storage = MyStorageComposer::new(namespace, "storage")
-            .with_shared(&shared)
-            .compose();
-        Self { shared, storage }
     }
 }
 

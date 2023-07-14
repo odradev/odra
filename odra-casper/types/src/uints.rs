@@ -1,5 +1,5 @@
 use crate::{CLTyped, FromBytes, ToBytes};
-use core::hash::{Hash, Hasher};
+use core::hash::Hash;
 use core::ops::{Add, AddAssign, Div, Mul, Rem, Sub, SubAssign};
 use num_traits::{
     Bounded, CheckedMul, CheckedSub, Num, One, Unsigned, WrappingAdd, WrappingSub, Zero
@@ -13,7 +13,7 @@ macro_rules! impl_casper_type_numeric_wrapper {
     ( $( $ty:ident ),+ ) => {
         $(
             /// Little-endian large integer type
-            #[derive(Debug, Default, PartialEq, Eq, Ord, PartialOrd, Clone, Copy)]
+            #[derive(Debug, Default, PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Hash)]
             pub struct $ty {
                 inner: casper_types::$ty
             }
@@ -345,12 +345,6 @@ impl U256 {
 
     pub fn to_balance(self) -> Result<U512, ArithmeticsError> {
         self.to_u512()
-    }
-}
-
-impl Hash for U256 {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.inner().0.hash(state);
     }
 }
 

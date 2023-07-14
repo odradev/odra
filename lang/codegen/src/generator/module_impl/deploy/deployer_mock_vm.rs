@@ -88,7 +88,12 @@ fn build_constructor(
                 stringify!(#constructor_ident).to_string(),
                 &args,
                 |name, args| {
-                    let mut instance = <#struct_ident as odra::Instance>::instance(name.as_str());
+                    let keys = <#struct_ident as odra::types::contract_def::Node>::__keys();
+                    let keys = keys
+                        .iter()
+                        .map(String::as_str)
+                        .collect::<Vec<_>>();
+                    let (mut instance, _) = <#struct_ident as odra::StaticInstance>::instance(keys.as_slice());
                     instance.#constructor_ident( #fn_args );
                     Vec::new()
                 }
@@ -137,7 +142,12 @@ fn build_entrypoints_calls(methods: &[&Method], struct_ident: &Ident) -> TokenSt
                 entrypoints.insert(#name, (#arg_names, |name, args| {
                     #reentrancy_check
                     #attached_value_check
-                    let mut instance = <#struct_ident as odra::Instance>::instance(name.as_str());
+                    let keys = <#struct_ident as odra::types::contract_def::Node>::__keys();
+                    let keys = keys
+                        .iter()
+                        .map(String::as_str)
+                        .collect::<Vec<_>>();
+                    let (mut instance, _) = <#struct_ident as odra::StaticInstance>::instance(keys.as_slice());
                     let result = instance.#ident(#args);
                     #reentrancy_cleanup
                     #return_value
@@ -158,7 +168,12 @@ fn build_constructor_calls(constructors: &[&Constructor], struct_ident: &Ident) 
             quote! {
                 constructors.insert(stringify!(#ident).to_string(), (#arg_names,
                     |name, args| {
-                        let mut instance = <#struct_ident as odra::Instance>::instance(name.as_str());
+                        let keys = <#struct_ident as odra::types::contract_def::Node>::__keys();
+                        let keys = keys
+                            .iter()
+                            .map(String::as_str)
+                            .collect::<Vec<_>>();
+                        let (mut instance, _) = <#struct_ident as odra::StaticInstance>::instance(keys.as_slice());
                         instance.#ident( #args );
                         Vec::new()
                     }
@@ -168,21 +183,18 @@ fn build_constructor_calls(constructors: &[&Constructor], struct_ident: &Ident) 
         .collect::<TokenStream>()
 }
 
-fn reentrancy_code(entrypoint: &Method) -> (TokenStream, TokenStream) {
+fn reentrancy_code(entrypoint: &Method) -> (Option<TokenStream>, Option<TokenStream>) {
     let non_reentrant = entrypoint.attrs.iter().any(|a| a.is_non_reentrant());
-    let reentrancy_check = match non_reentrant {
-        true => quote! {
-            if odra::contract_env::get_var("__reentrancy_guard").unwrap_or_default(){
+    let reentrancy_check = non_reentrant.then(|| {
+        quote! {
+            if odra::contract_env::get_var(b"__reentrancy_guard").unwrap_or_default(){
                 odra::contract_env::revert(odra::types::ExecutionError::reentrant_call());
             }
-            odra::contract_env::set_var("__reentrancy_guard", true);
-        },
-        false => quote!()
-    };
-    let reentrancy_cleanup = match non_reentrant {
-        true => quote!(odra::contract_env::set_var("__reentrancy_guard", false);),
-        false => quote!()
-    };
+            odra::contract_env::set_var(b"__reentrancy_guard", true);
+        }
+    });
+    let reentrancy_cleanup =
+        non_reentrant.then(|| quote!(odra::contract_env::set_var(b"__reentrancy_guard", false);));
     (reentrancy_check, reentrancy_cleanup)
 }
 

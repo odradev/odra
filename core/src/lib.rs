@@ -15,11 +15,11 @@ compile_error!(
     "Exactly one of these features must be selected: `casper`, `mock-vm`, `casper-livenet`."
 );
 
-mod composer;
 mod instance;
 mod item;
 mod list;
 mod mapping;
+mod node;
 mod sequence;
 mod unwrap_or_revert;
 mod variable;
@@ -28,8 +28,7 @@ mod variable;
 pub mod test_utils;
 
 pub use {
-    composer::Composer,
-    instance::Instance,
+    instance::{DynamicInstance, StaticInstance},
     item::OdraItem,
     list::{Iter, List},
     mapping::Mapping,

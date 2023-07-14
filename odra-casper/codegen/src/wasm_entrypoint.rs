@@ -75,9 +75,10 @@ impl ToTokens for WasmEntrypoint<'_> {
         };
 
         let contract_path = &self.1;
-        let contract_instance = match self.0.is_mut {
-            true => quote!(let mut #contract_ident = #contract_path::instance("contract");),
-            false => quote!(let #contract_ident = #contract_path::instance("contract");)
+
+        let is_mut = self.0.is_mut.then_some(quote!(mut));
+        let contract_instance = quote! {
+            let (#is_mut #contract_ident, _): (#contract_path, _) = odra::StaticInstance::instance(&KEYS);
         };
 
         tokens.extend(quote! {
@@ -99,6 +100,7 @@ impl ToTokens for WasmEntrypoint<'_> {
 mod tests {
     use crate::assert_eq_tokens;
     use odra_types::contract_def::{Argument, EntrypointType};
+    use syn::parse_quote;
 
     use super::*;
 
@@ -117,13 +119,8 @@ mod tests {
             },
             is_mut: false
         };
-        let path: Path = syn::parse2(
-            quote! {
-                my_contract::MyContract
-            }
-            .to_token_stream()
-        )
-        .unwrap();
+
+        let path: Path = parse_quote!(my_contract::MyContract);
 
         let wasm_entrypoint = WasmEntrypoint(&entrypoint, &path);
         assert_eq_tokens(
@@ -131,9 +128,10 @@ mod tests {
             quote!(
                 #[no_mangle]
                 fn construct_me() {
-                    let _contract = my_contract::MyContract::instance("contract");
+                    let (_contract, _): (my_contract::MyContract, _) =
+                        odra::StaticInstance::instance(&KEYS);
                     let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg(
-                        stringify!(value)
+                        "value"
                     );
                     _contract.construct_me(&value);
                 }
@@ -161,7 +159,8 @@ mod tests {
                 #[no_mangle]
                 fn pay_me() {
                     odra::casper::utils::handle_attached_value();
-                    let _contract = a::b::c::Contract::instance("contract");
+                    let (_contract, _): (a::b::c::Contract, _) =
+                        odra::StaticInstance::instance(&KEYS);
                     _contract.pay_me();
                     odra::casper::utils::clear_attached_value();
                 }
@@ -189,7 +188,8 @@ mod tests {
                 #[no_mangle]
                 fn pay_me() {
                     odra::casper::utils::handle_attached_value();
-                    let mut _contract = a::b::c::Contract::instance("contract");
+                    let (mut _contract, _): (a::b::c::Contract, _) =
+                        odra::StaticInstance::instance(&KEYS);
                     _contract.pay_me();
                     odra::casper::utils::clear_attached_value();
                 }

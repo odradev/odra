@@ -1,3 +1,5 @@
+use std::hash::Hash;
+
 use borsh::{BorshDeserialize, BorshSerialize};
 use odra_types::address::OdraAddress;
 use odra_types::AddressError;

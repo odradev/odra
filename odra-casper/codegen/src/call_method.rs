@@ -42,7 +42,7 @@ impl CallMethod {
 
                 quote! {
                     odra::casper::utils::build_event(
-                        #ident,
+                        String::from(#ident),
                         vec![#fields]
                     )
                 }

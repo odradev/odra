@@ -1,7 +1,8 @@
 use odra_casper_shared::consts;
 use odra_types::contract_def::{Argument, Entrypoint, EntrypointType};
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote, ToTokens, TokenStreamExt};
+use quote::{quote, ToTokens, TokenStreamExt};
+use syn::{punctuated::Punctuated, Token};
 
 use crate::ty::CasperType;
 
@@ -17,7 +18,7 @@ impl ToTokens for ContractEntrypoints<'_> {
 
 impl ContractEntrypoints<'_> {
     fn build_entry_point(entrypoint: &Entrypoint) -> TokenStream {
-        let entrypoint_ident = format_ident!("{}", entrypoint.ident);
+        let entrypoint_ident = &entrypoint.ident;
         let params = EntrypointParams(&entrypoint.args);
         let ret = CasperType(&entrypoint.ret);
         let constructor_group_name = consts::CONSTRUCTOR_GROUP_NAME;
@@ -35,7 +36,7 @@ impl ContractEntrypoints<'_> {
         quote! {
             entry_points.add_entry_point(
                 odra::casper::casper_types::EntryPoint::new(
-                    stringify!(#entrypoint_ident),
+                    #entrypoint_ident,
                     #params,
                     #ret,
                     #access,
@@ -50,29 +51,19 @@ struct EntrypointParams<'a>(pub &'a Vec<Argument>);
 
 impl ToTokens for EntrypointParams<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        if self.0.is_empty() {
-            tokens.extend(quote!(Vec::<odra::casper::casper_types::Parameter>::new()));
-        } else {
-            let params_content = self
-                .0
-                .iter()
-                .flat_map(|arg| {
-                    let arg_ident = format_ident!("{}", arg.ident);
-                    let ty = CasperType(&arg.ty);
-                    quote!(params.push(odra::casper::casper_types::Parameter::new(stringify!(#arg_ident), #ty));)
-                })
-                .collect::<TokenStream>();
+        let params_content = self
+            .0
+            .iter()
+            .map(|arg| {
+                let arg_ident = &arg.ident;
+                let ty = CasperType(&arg.ty);
+                quote!(odra::casper::casper_types::Parameter::new(#arg_ident, #ty))
+            })
+            .collect::<Punctuated<TokenStream, Token![,]>>();
 
-            let params = quote! {
-                {
-                    let mut params: Vec<odra::casper::casper_types::Parameter> = Vec::new();
-                    #params_content
-                    params
-                }
-            };
+        let params = quote!(vec![#params_content]);
 
-            tokens.extend(params);
-        };
+        tokens.extend(params);
     }
 }
 
@@ -105,12 +96,8 @@ mod test {
                 let mut entry_points = odra::casper::casper_types::EntryPoints::new();
                 entry_points.add_entry_point(
                     odra::casper::casper_types::EntryPoint::new(
-                        stringify!(call_me),
-                        {
-                            let mut params: Vec<odra::casper::casper_types::Parameter> = Vec::new();
-                            params.push(odra::casper::casper_types::Parameter::new(stringify!(value), odra::casper::casper_types::CLType::I32));
-                            params
-                        },
+                        "call_me",
+                        vec![odra::casper::casper_types::Parameter::new("value", odra::casper::casper_types::CLType::I32)],
                         odra::casper::casper_types::CLType::Bool,
                         odra::casper::casper_types::EntryPointAccess::Public,
                         odra::casper::casper_types::EntryPointType::Contract,

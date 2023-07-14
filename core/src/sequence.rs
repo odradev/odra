@@ -1,8 +1,10 @@
-use crate::{types::OdraType, Instance, Variable};
+use crate::{instance::StaticInstance, types::OdraType, Variable};
 use num_traits::{Num, One, Zero};
 
+use super::DynamicInstance;
+
 /// A module that stores a single value in the storage that can be read or incremented.
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(Clone)]
 pub struct Sequence<T>
 where
     T: Num + One + OdraType
@@ -33,13 +35,25 @@ where
     }
 }
 
-impl<T> Instance for Sequence<T>
+impl<T> StaticInstance for Sequence<T>
 where
     T: Num + One + OdraType
 {
-    fn instance(namespace: &str) -> Self {
+    fn instance<'a>(keys: &'a [&'a str]) -> (Self, &'a [&'a str]) {
+        let (value, rem) = StaticInstance::instance(keys);
+        (Self { value }, rem)
+    }
+}
+impl<T> DynamicInstance for Sequence<T>
+where
+    T: Num + One + OdraType
+{
+    fn instance(namespace: &[u8]) -> Self {
+        let mut buffer: Vec<u8> = Vec::with_capacity(namespace.len() + b"value".len());
+        buffer.extend_from_slice(namespace);
+        buffer.extend_from_slice(b"value");
         Self {
-            value: Instance::instance(format!("{}_{}", "value", namespace).as_str())
+            value: DynamicInstance::instance(&buffer)
         }
     }
 }
@@ -47,18 +61,21 @@ where
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
     use crate::types::U256;
-    use crate::{sequence::Sequence, Instance};
+    use crate::{sequence::Sequence, StaticInstance};
+
+    const KEYS_U8: [&str; 1] = ["u8"];
+    const KEYS_U256: [&str; 1] = ["u256"];
 
     #[test]
     fn it_works() {
-        let mut seq_u8 = Sequence::<u8>::instance("u8");
+        let (mut seq_u8, _) = Sequence::<u8>::instance(&KEYS_U8);
 
         assert_eq!(seq_u8.next_value(), 0u8);
         assert_eq!(seq_u8.next_value(), 1u8);
         assert_eq!(seq_u8.next_value(), 2u8);
         assert_eq!(seq_u8.get_current_value(), 2u8);
 
-        let mut seq_u256 = Sequence::<U256>::instance("u256");
+        let (mut seq_u256, _) = Sequence::<U256>::instance(&KEYS_U256);
 
         assert_eq!(seq_u256.next_value(), U256::zero());
         assert_eq!(seq_u256.next_value(), U256::one());

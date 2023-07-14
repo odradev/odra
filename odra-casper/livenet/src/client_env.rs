@@ -139,14 +139,14 @@ pub fn call_contract<T: OdraType>(
 }
 
 /// Query current contract for a variable's value.
-pub fn get_var_from_current_contract<T: OdraType>(key: &str) -> Option<T> {
+pub fn get_var_from_current_contract<T: OdraType>(key: &[u8]) -> Option<T> {
     let address = ClientEnv::instance().current_contract();
     CasperClient::new().get_variable_value(address, key)
 }
 
 /// Query current contract for a dictionary's value.
 pub fn get_dict_value_from_current_contract<K: OdraType, T: OdraType>(
-    seed: &str,
+    seed: &[u8],
     key: &K
 ) -> Option<T> {
     let address = ClientEnv::instance().current_contract();

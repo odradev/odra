@@ -1,7 +1,8 @@
 use super::{ModuleEvent, ModuleEvents};
-use crate::attrs::partition_attributes;
+use crate::{attrs::partition_attributes, utils::FieldsValidator};
 use anyhow::{Context, Result};
 use proc_macro2::Ident;
+use syn::{punctuated::Punctuated, Field, Fields, FieldsNamed, Token};
 
 use super::ModuleConfiguration;
 
@@ -12,7 +13,56 @@ pub struct ModuleStruct {
     pub is_instantiable: bool,
     pub item: syn::ItemStruct,
     pub events: ModuleEvents,
-    pub skip_instance: bool
+    pub delegated_fields: Vec<DelegatedField>
+}
+
+pub struct DelegatedField {
+    pub field: syn::Field,
+    pub delegated_fields: Vec<String>
+}
+
+impl DelegatedField {
+    pub(crate) fn validate(&self, fields: &syn::Fields) -> Result<(), syn::Error> {
+        let fields = fields
+            .iter()
+            .filter_map(|f| f.ident.clone())
+            .map(|i| i.to_string())
+            .collect::<Vec<_>>();
+        let is_valid = self.delegated_fields.iter().find(|f| !fields.contains(f));
+        if let Some(invalid_ref) = is_valid {
+            let error_msg = format!("Using non-existing field {}", invalid_ref);
+            return Err(syn::Error::new_spanned(&self.field, error_msg));
+        }
+
+        Ok(())
+    }
+}
+
+impl TryFrom<syn::Field> for DelegatedField {
+    type Error = syn::Error;
+
+    fn try_from(value: syn::Field) -> std::result::Result<Self, Self::Error> {
+        let (odra_attrs, other_attrs) = partition_attributes(value.attrs.clone()).unwrap();
+
+        let delegated_fields = odra_attrs
+            .iter()
+            .flat_map(|attr| attr.using())
+            .collect::<Vec<_>>();
+
+        let field_ident = value.ident.clone().unwrap().to_string();
+
+        if delegated_fields.contains(&field_ident) {
+            return Err(syn::Error::new_spanned(&value, "Self-using is not allowed"));
+        }
+
+        Ok(Self {
+            field: Field {
+                attrs: other_attrs,
+                ..value
+            },
+            delegated_fields
+        })
+    }
 }
 
 impl ModuleStruct {
@@ -43,24 +93,57 @@ impl ModuleStruct {
         config.events.mappings_events.extend(mappings);
 
         self.events = config.events;
-        self.skip_instance = config.skip_instance;
 
         Ok(self)
     }
 }
 
-impl From<syn::ItemStruct> for ModuleStruct {
-    fn from(item: syn::ItemStruct) -> Self {
-        let (_, other_attrs) = partition_attributes(item.attrs).unwrap();
-        Self {
+impl TryFrom<syn::ItemStruct> for ModuleStruct {
+    type Error = syn::Error;
+
+    fn try_from(value: syn::ItemStruct) -> std::result::Result<Self, Self::Error> {
+        FieldsValidator::from(&value).result()?;
+
+        let (_, other_attrs) = partition_attributes(value.attrs).unwrap();
+
+        let named = value
+            .fields
+            .clone()
+            .into_iter()
+            .map(|field| {
+                let (_, other_attrs) = partition_attributes(field.attrs).unwrap();
+                Field {
+                    attrs: other_attrs,
+                    ..field
+                }
+            })
+            .collect::<Punctuated<Field, Token![,]>>();
+
+        let fields: Fields = Fields::Named(FieldsNamed {
+            brace_token: Default::default(),
+            named
+        });
+
+        let delegated_fields = value
+            .fields
+            .into_iter()
+            .map(TryInto::try_into)
+            .collect::<Result<Vec<DelegatedField>, syn::Error>>()?;
+
+        delegated_fields
+            .iter()
+            .try_for_each(|f| f.validate(&fields))?;
+
+        Ok(Self {
             is_instantiable: true,
             item: syn::ItemStruct {
                 attrs: other_attrs,
-                ..item
+                fields,
+                ..value
             },
             events: Default::default(),
-            skip_instance: false
-        }
+            delegated_fields
+        })
     }
 }
 

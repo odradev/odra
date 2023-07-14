@@ -3,13 +3,15 @@ use std::marker::PhantomData;
 use crate::types::OdraType;
 use odra_types::arithmetic::{OverflowingAdd, OverflowingSub};
 
-use crate::{contract_env, instance::Instance, UnwrapOrRevert};
+use crate::{contract_env, UnwrapOrRevert};
+
+use super::instance::{DynamicInstance, StaticInstance};
 
 /// Data structure for storing a single value.
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(Clone)]
 pub struct Variable<T> {
-    name: String,
-    ty: PhantomData<T>
+    ty: PhantomData<T>,
+    namespace_buffer: Vec<u8>
 }
 
 // <3
@@ -48,49 +50,47 @@ impl<V: OdraType + OverflowingSub + Default> Variable<V> {
 }
 
 impl<T: OdraType> Variable<T> {
-    /// Creates a new Variable instance.
-    pub fn new(name: String) -> Self {
-        Variable {
-            name,
-            ty: PhantomData::<T>::default()
-        }
-    }
-
     /// Reads from the storage or returns `None` or reverts something unexpected happens.
     #[inline(always)]
     pub fn get(&self) -> Option<T> {
-        contract_env::get_var(&self.name)
+        contract_env::get_var(&self.namespace_buffer)
     }
 
     /// Stores `value` to the storage.
     #[inline(always)]
     pub fn set(&mut self, value: T) {
-        contract_env::set_var(&self.name, value);
-    }
-
-    /// Return the named key path to the variable.
-    pub fn path(&self) -> &str {
-        &self.name
+        contract_env::set_var(&self.namespace_buffer, value);
     }
 }
 
-impl<T: OdraType> From<&str> for Variable<T> {
-    fn from(name: &str) -> Self {
-        Variable::new(name.to_string())
+impl<T: OdraType> StaticInstance for Variable<T> {
+    fn instance<'a>(keys: &'a [&'a str]) -> (Self, &'a [&'a str]) {
+        let name = keys[0];
+        (
+            Variable {
+                ty: PhantomData,
+                namespace_buffer: name.as_bytes().to_vec()
+            },
+            &keys[1..]
+        )
     }
 }
 
-impl<T: OdraType> Instance for Variable<T> {
-    fn instance(namespace: &str) -> Self {
-        namespace.into()
+impl<T: OdraType> DynamicInstance for Variable<T> {
+    fn instance(namespace: &[u8]) -> Self {
+        Variable {
+            ty: PhantomData,
+            namespace_buffer: namespace.to_vec()
+        }
     }
 }
 
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
-    use crate::{test_env, Instance, Variable};
+    use crate::{test_env, StaticInstance, Variable};
     use odra_mock_vm::types::OdraType;
     use odra_types::arithmetic::ArithmeticsError;
+    const SHARED_VALUE: [&str; 1] = ["shared_value"];
 
     #[test]
     fn test_get() {
@@ -159,10 +159,9 @@ mod tests {
     #[test]
     fn test_instances_with_the_same_namespace() {
         // Given two variables with the same namespace.
-        let namespace = "shared_value";
         let value = 42;
-        let mut x = Variable::<u8>::instance(namespace);
-        let y = Variable::<u8>::instance(namespace);
+        let mut x = Variable::<u8>::instance(&SHARED_VALUE).0;
+        let y = Variable::<u8>::instance(&SHARED_VALUE).0;
 
         // When set a value for the first variable.
         x.set(value);
@@ -174,7 +173,7 @@ mod tests {
 
     impl<T: OdraType> Default for Variable<T> {
         fn default() -> Self {
-            Instance::instance("v")
+            StaticInstance::instance(&["v"]).0
         }
     }
 

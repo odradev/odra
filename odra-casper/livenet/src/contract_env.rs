@@ -20,19 +20,19 @@ pub fn caller() -> Address {
     unimplemented!()
 }
 
-pub fn set_var<T: OdraType>(_: &str, _: T) {
+pub fn set_var<T: OdraType>(_: &[u8], _: T) {
     unimplemented!()
 }
 
-pub fn get_var<T: OdraType>(key: &str) -> Option<T> {
+pub fn get_var<T: OdraType>(key: &[u8]) -> Option<T> {
     client_env::get_var_from_current_contract(key)
 }
 
-pub fn set_dict_value<K: OdraType, V: OdraType>(_: &str, _: &K, _: V) {
+pub fn set_dict_value<K: OdraType, V: OdraType>(_: &[u8], _: &K, _: V) {
     unimplemented!()
 }
 
-pub fn get_dict_value<K: OdraType, T: OdraType>(seed: &str, key: &K) -> Option<T> {
+pub fn get_dict_value<K: OdraType, T: OdraType>(seed: &[u8], key: &K) -> Option<T> {
     client_env::get_dict_value_from_current_contract(seed, key)
 }
 

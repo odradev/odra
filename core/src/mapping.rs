@@ -1,81 +1,54 @@
-use std::{fmt::Debug, hash::Hash, marker::PhantomData};
+use std::{fmt::Debug, marker::PhantomData};
 
-use crate::instance::Instance;
+use crate::instance::StaticInstance;
 use crate::types::OdraType;
 use crate::{contract_env, UnwrapOrRevert};
 use odra_types::arithmetic::{OverflowingAdd, OverflowingSub};
 
+use super::instance::DynamicInstance;
+
 /// Data structure for storing key-value pairs.
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(Clone)]
 pub struct Mapping<K, V> {
-    name: String,
     key_ty: PhantomData<K>,
-    value_ty: PhantomData<V>
+    value_ty: PhantomData<V>,
+    namespace_buffer: Vec<u8>
 }
 
-impl<K: OdraType + Hash, V> Mapping<K, V> {
-    /// Creates a new Mapping instance.
-    pub fn new(name: String) -> Self {
-        Mapping {
-            name,
-            key_ty: PhantomData::<K>::default(),
-            value_ty: PhantomData::<V>::default()
-        }
-    }
-}
-
-impl<K: OdraType + Hash, V: OdraType> Mapping<K, V> {
+impl<K: OdraType, V: OdraType> Mapping<K, V> {
     /// Reads `key` from the storage or returns `None`.
     #[inline(always)]
     pub fn get(&self, key: &K) -> Option<V> {
-        contract_env::get_dict_value(&self.name, key)
+        contract_env::get_dict_value(&self.namespace_buffer, key)
     }
 
     /// Sets `value` under `key` to the storage. It overrides by default.
     #[inline(always)]
     pub fn set(&mut self, key: &K, value: V) {
-        contract_env::set_dict_value(&self.name, key, value);
-    }
-
-    /// Return the named key path to the variable.
-    pub fn path(&self) -> &str {
-        &self.name
+        contract_env::set_dict_value(&self.namespace_buffer, key, value);
     }
 }
 
-impl<K: OdraType + Hash, V: OdraType + Default> Mapping<K, V> {
+impl<K: OdraType, V: OdraType + Default> Mapping<K, V> {
     /// Reads `key` from the storage or the default value is returned.
     pub fn get_or_default(&self, key: &K) -> V {
         self.get(key).unwrap_or_default()
     }
 }
 
-impl<K: OdraType + Hash, V: Instance> Mapping<K, V> {
+impl<K: OdraType, V: DynamicInstance> Mapping<K, V> {
     /// Reads `key` from the storage or the default value is returned.
     pub fn get_instance(&self, key: &K) -> V {
-        #[cfg(feature = "mock-vm")]
-        {
-            let key_hash = hex::encode(key.ser().unwrap());
-            let namespace = format!("{}_{}", key_hash, self.name);
-            V::instance(&namespace)
-        }
+        let key_hash = key.serialize().unwrap_or_revert();
 
-        #[cfg(feature = "casper")]
-        {
-            use odra_casper_backend::casper_contract::unwrap_or_revert::UnwrapOrRevert;
-            let key_hash = hex::encode(key.to_bytes().unwrap_or_revert());
-            V::instance(&format!("{}_{}", key_hash, self.name))
-        }
-
-        #[cfg(feature = "casper-livenet")]
-        {
-            let key_hash = hex::encode(key.to_bytes().unwrap());
-            V::instance(&format!("{}_{}", key_hash, self.name))
-        }
+        let mut result = Vec::with_capacity(key_hash.len() + self.namespace_buffer.len());
+        result.extend_from_slice(self.namespace_buffer.as_slice());
+        result.extend_from_slice(key_hash.as_slice());
+        V::instance(&result)
     }
 }
 
-impl<K: OdraType + Hash, V: OdraType + OverflowingAdd + Default> Mapping<K, V> {
+impl<K: OdraType, V: OdraType + OverflowingAdd + Default> Mapping<K, V> {
     /// Utility function that gets the current value and adds the passed `value`
     /// and sets the new value to the storage.
     ///
@@ -87,9 +60,7 @@ impl<K: OdraType + Hash, V: OdraType + OverflowingAdd + Default> Mapping<K, V> {
     }
 }
 
-impl<K: OdraType + Hash, V: OdraType + OverflowingSub + Default + Debug + PartialOrd>
-    Mapping<K, V>
-{
+impl<K: OdraType, V: OdraType + OverflowingSub + Default + Debug + PartialOrd> Mapping<K, V> {
     /// Utility function that gets the current value and subtracts the passed `value`
     /// and sets the new value to the storage.
     ///
@@ -101,24 +72,36 @@ impl<K: OdraType + Hash, V: OdraType + OverflowingSub + Default + Debug + Partia
     }
 }
 
-impl<K: OdraType + Hash, V> From<&str> for Mapping<K, V> {
-    fn from(name: &str) -> Self {
-        Mapping::new(name.to_string())
+impl<K: OdraType, V> StaticInstance for Mapping<K, V> {
+    fn instance<'a>(keys: &'a [&'a str]) -> (Self, &'a [&'a str]) {
+        (
+            Self {
+                key_ty: PhantomData,
+                value_ty: PhantomData,
+                namespace_buffer: keys[0].as_bytes().to_vec()
+            },
+            &keys[1..]
+        )
     }
 }
 
-impl<K: OdraType + Hash, V> Instance for Mapping<K, V> {
-    fn instance(namespace: &str) -> Self {
-        namespace.into()
+impl<K: OdraType, V> DynamicInstance for Mapping<K, V> {
+    fn instance(namespace: &[u8]) -> Self {
+        Self {
+            key_ty: PhantomData,
+            value_ty: PhantomData,
+            namespace_buffer: namespace.to_vec()
+        }
     }
 }
 
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
-    use crate::{test_env, Instance, Mapping};
-    use core::hash::Hash;
+    use crate::{instance::StaticInstance, mapping::Mapping, test_env};
     use odra_mock_vm::types::OdraType;
     use odra_types::arithmetic::ArithmeticsError;
+
+    const SHARED_VALUE: [&str; 1] = ["shared_value"];
 
     #[test]
     fn test_get() {
@@ -195,11 +178,10 @@ mod tests {
     #[test]
     fn test_instances_with_the_same_namespace() {
         // Given two variables with the same namespace.
-        let namespace = "shared_value";
         let key = String::from("k");
         let value = 42;
-        let mut x = Mapping::<String, u8>::instance(namespace);
-        let y = Mapping::<String, u8>::instance(namespace);
+        let mut x = Mapping::<String, u8>::instance(&SHARED_VALUE).0;
+        let y = Mapping::<String, u8>::instance(&SHARED_VALUE).0;
 
         // When set a value for the first variable.
         x.set(&key, value);
@@ -211,17 +193,17 @@ mod tests {
 
     impl<K, V> Default for Mapping<K, V>
     where
-        K: OdraType + Hash,
+        K: OdraType,
         V: OdraType
     {
         fn default() -> Self {
-            Instance::instance("m")
+            StaticInstance::instance(&["m"]).0
         }
     }
 
     impl<K, V> Mapping<K, V>
     where
-        K: OdraType + Hash,
+        K: OdraType,
         V: OdraType
     {
         pub fn init(key: &K, value: V) -> Self {

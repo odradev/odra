@@ -9,3 +9,6 @@ authors.workspace = true
 license.workspace = true
 homepage.workspace = true
 repository.workspace = true
+
+[dev-dependencies]
+odra-utils = { path = "../utils" }

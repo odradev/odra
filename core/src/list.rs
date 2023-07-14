@@ -2,16 +2,21 @@ use crate::types::OdraType;
 use core::ops::Range;
 use odra_types::CollectionError;
 
-use crate::{contract_env, Instance, Mapping, UnwrapOrRevert, Variable};
+use crate::{contract_env, UnwrapOrRevert};
+use crate::{
+    instance::{DynamicInstance, StaticInstance},
+    mapping::Mapping,
+    variable::Variable
+};
 
 /// Data structure for an indexed, iterable collection.
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(Clone)]
 pub struct List<T> {
     values: Mapping<u32, T>,
     index: Variable<u32>
 }
 
-impl<T: Instance> List<T> {
+impl<T: DynamicInstance> List<T> {
     pub fn get_instance(&mut self, index: u32) -> T {
         let len = self.len();
         // Clippy doesn't like the following code, but it's the most efficient way to do it.
@@ -31,18 +36,6 @@ impl<T: Instance> List<T> {
 }
 
 impl<T> List<T> {
-    /// Creates a new List instance.
-    pub fn new(name: String) -> Self {
-        let mut name_values = name.clone();
-        name_values.push_str("_values");
-        let mut name_index = name;
-        name_index.push_str("_index");
-        List {
-            values: Mapping::new(name_values),
-            index: Variable::new(name_index)
-        }
-    }
-
     /// Checks if the collection is empty.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
@@ -165,15 +158,30 @@ impl<T: OdraType + Default> List<T> {
     }
 }
 
-impl<T> From<&str> for List<T> {
-    fn from(name: &str) -> Self {
-        List::new(String::from(name))
+impl<T> StaticInstance for List<T> {
+    fn instance<'a>(keys: &'a [&'a str]) -> (Self, &'a [&'a str]) {
+        let (values, keys) = StaticInstance::instance(keys);
+        let (index, keys) = StaticInstance::instance(keys);
+        (Self { values, index }, keys)
     }
 }
 
-impl<T> Instance for List<T> {
-    fn instance(namespace: &str) -> Self {
-        namespace.into()
+impl<T> DynamicInstance for List<T> {
+    fn instance(namespace: &[u8]) -> Self {
+        let namespace_len = namespace.len();
+        let max_len = namespace_len + b"values".len();
+        let mut buffer: Vec<u8> = Vec::with_capacity(max_len);
+
+        buffer.extend_from_slice(namespace);
+        buffer.extend_from_slice(b"values");
+        let values = DynamicInstance::instance(&buffer);
+
+        buffer.clear();
+        buffer.extend_from_slice(namespace);
+        buffer.extend_from_slice(b"index");
+        let index = DynamicInstance::instance(&buffer);
+
+        Self { values, index }
     }
 }
 
@@ -182,9 +190,10 @@ mod tests {
     use odra_mock_vm::types::OdraType;
     use odra_types::CollectionError;
 
+    use crate::instance::StaticInstance;
     use crate::test_env;
 
-    use crate::List;
+    use super::List;
 
     #[test]
     fn test_getting_items() {
@@ -357,7 +366,7 @@ mod tests {
 
     impl<T: OdraType> Default for List<T> {
         fn default() -> Self {
-            Self::new(String::from("l"))
+            StaticInstance::instance(&["list_val", "list_idx"]).0
         }
     }
 }

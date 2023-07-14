@@ -34,7 +34,7 @@ impl ModuleItem {
         let item_impl = syn::parse2::<syn::ItemImpl>(item.clone());
 
         if let Ok(item) = item_struct {
-            let module_struct = ModuleStruct::from(item).with_config(config)?;
+            let module_struct = ModuleStruct::try_from(item)?.with_config(config)?;
             return Ok(ModuleItem::Struct(Box::new(module_struct)));
         }
 
@@ -52,19 +52,16 @@ impl ModuleItem {
 
 mod kw {
     syn::custom_keyword!(events);
-    syn::custom_keyword!(skip_instance);
 }
 
 #[derive(Debug, Default, Clone)]
 pub struct ModuleConfiguration {
-    pub events: ModuleEvents,
-    pub skip_instance: bool
+    pub events: ModuleEvents
 }
 
 impl Parse for ModuleConfiguration {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let mut events = None;
-        let mut skip_instance = None;
 
         while !input.is_empty() {
             if events.is_none() && input.peek(kw::events) {
@@ -72,20 +69,11 @@ impl Parse for ModuleConfiguration {
                 let _ = input.parse::<Token![,]>(); // optional comma
                 continue;
             }
-
-            if skip_instance.is_none() && input.peek(kw::skip_instance) {
-                input.parse::<kw::skip_instance>()?;
-                skip_instance = Some(true);
-                let _ = input.parse::<Token![,]>();
-                continue;
-            }
-
             return Err(input.error("Unexpected token"));
         }
 
         Ok(Self {
-            events: events.unwrap_or_default(),
-            skip_instance: skip_instance.unwrap_or_default()
+            events: events.unwrap_or_default()
         })
     }
 }

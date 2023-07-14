@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf, time::Duration};
+use std::{fs, path::PathBuf, str::from_utf8_unchecked, time::Duration};
 
 use blake2::{
     digest::{Update, VariableOutput},
@@ -7,8 +7,8 @@ use blake2::{
 use casper_execution_engine::core::engine_state::ExecutableDeployItem;
 use casper_hashing::Digest;
 use casper_types::{
-    bytesrepr::FromBytes, runtime_args, ContractHash, ContractPackageHash, Key, PublicKey,
-    RuntimeArgs, SecretKey, TimeDiff, Timestamp
+    bytesrepr::FromBytes, runtime_args, ContractHash, ContractPackageHash, Key as CasperKey,
+    PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp
 };
 use jsonrpc_lite::JsonRpc;
 use odra_casper_shared::key_maker::KeyMaker;
@@ -112,27 +112,31 @@ impl CasperClient {
     }
 
     /// Query the contract for the variable.
-    pub fn get_variable_value<T: OdraType>(&self, address: Address, key: &str) -> Option<T> {
-        let key = LivenetKeyMaker::to_variable_key(key).unwrap();
-        self.query_dictionary(address, &key)
+    pub fn get_variable_value<T: OdraType>(&self, address: Address, key: &[u8]) -> Option<T> {
+        let key = LivenetKeyMaker::to_variable_key(key);
+        // SAFETY: we know the key maker creates a string of valid UTF-8 characters.
+        let key = unsafe { from_utf8_unchecked(&key) };
+        self.query_dictionary(address, key)
     }
 
     /// Query the contract for the dictionary value.
     pub fn get_dict_value<K: OdraType, V: OdraType>(
         &self,
         address: Address,
-        seed: &str,
+        seed: &[u8],
         key: &K
     ) -> Option<V> {
         let key = LivenetKeyMaker::to_dictionary_key(seed, key).unwrap();
-        self.query_dictionary(address, &key)
+        // SAFETY: we know the key maker creates a string of valid UTF-8 characters.
+        let key = unsafe { from_utf8_unchecked(&key) };
+        self.query_dictionary(address, key)
     }
 
     /// Discover the contract address by name.
     pub fn get_contract_address(&self, key_name: &str) -> Address {
         let key_name = format!("{}_package_hash", key_name);
         let account_hash = self.public_key().to_account_hash();
-        let result = self.query_global_state(&Key::Account(account_hash));
+        let result = self.query_global_state(&CasperKey::Account(account_hash));
         let result_as_json = serde_json::to_value(result.stored_value).unwrap();
 
         let named_keys = result_as_json["Account"]["named_keys"].as_array().unwrap();
@@ -155,7 +159,7 @@ impl CasperClient {
 
     /// Find the contract hash by the contract package hash.
     pub fn query_global_state_for_contract_hash(&self, address: Address) -> ContractHash {
-        let key = Key::Hash(address.as_contract_package_hash().unwrap().value());
+        let key = CasperKey::Hash(address.as_contract_package_hash().unwrap().value());
         let result = self.query_global_state(&key);
         let result_as_json = serde_json::to_value(result).unwrap();
         let contract_hash: &str = result_as_json["stored_value"]["ContractPackage"]["versions"][0]
@@ -231,7 +235,7 @@ impl CasperClient {
         self.wait_for_deploy_hash(deploy_hash);
     }
 
-    fn query_global_state(&self, key: &Key) -> QueryGlobalStateResult {
+    fn query_global_state(&self, key: &CasperKey) -> QueryGlobalStateResult {
         let state_root_hash = self.get_state_root_hash();
         let params = QueryGlobalStateParams {
             state_identifier: GlobalStateIdentifier::StateRootHash(state_root_hash),
@@ -432,12 +436,12 @@ mod tests {
     pub fn client_works() {
         let contract_hash = Address::from_str(CONTRACT_PACKAGE_HASH).unwrap();
         let result: Option<String> =
-            CasperClient::new().get_variable_value(contract_hash, "name_contract");
+            CasperClient::new().get_variable_value(contract_hash, b"name_contract");
         assert_eq!(result.unwrap().as_str(), "Plascoin");
 
         let account = Address::from_str(ACCOUNT_HASH).unwrap();
         let balance: Option<U256> =
-            CasperClient::new().get_dict_value(contract_hash, "balances_contract", &account);
+            CasperClient::new().get_dict_value(contract_hash, b"balances_contract", &account);
         assert!(balance.is_some());
     }
 

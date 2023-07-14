@@ -61,3 +61,23 @@ where
         ))
     }
 }
+
+pub trait OdraPoetUsingStruct: AsRef<odra_ir::module::ModuleStruct> {
+    fn generate_code_using<'a, G>(&'a self) -> proc_macro2::TokenStream
+    where
+        G: GenerateCode + From<&'a odra_ir::module::ModuleStruct>;
+}
+
+impl<T> OdraPoetUsingStruct for T
+where
+    T: AsRef<odra_ir::module::ModuleStruct>
+{
+    fn generate_code_using<'a, G>(&'a self) -> proc_macro2::TokenStream
+    where
+        G: GenerateCode + From<&'a odra_ir::module::ModuleStruct>
+    {
+        <G as GenerateCode>::generate_code(&G::from(<Self as AsRef<
+            odra_ir::module::ModuleStruct
+        >>::as_ref(self)))
+    }
+}

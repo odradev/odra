@@ -1,32 +1,38 @@
-use alloc::string::String;
 use alloc::vec::Vec;
-use odra_casper_types::casper_types::bytesrepr::Error;
-use odra_casper_types::casper_types::bytesrepr::ToBytes;
+use casper_event_standard::casper_types::bytesrepr::Error;
+use odra_casper_types::OdraType;
 
-// TODO: Add caching.
-// TODO: Experiment with keys length.
+const KEY_LENGTH: usize = 64;
 
 /// Generate keys for storage.
 pub trait KeyMaker {
     /// Generate key for variable.
-    fn to_variable_key(key: &str) -> Result<String, Error> {
-        let preimage = key.to_bytes()?;
-        let hash = Self::blake2b(&preimage);
-        Ok(hex::encode(hash))
+    fn to_variable_key(key: &[u8]) -> [u8; KEY_LENGTH] {
+        Self::adjust_key(key)
     }
 
     /// Generate key for dictionary.
-    fn to_dictionary_key<T: ToBytes>(seed: &str, key: &T) -> Result<String, Error> {
-        // TODO: Chagne to to_bytes when used in backend.
-        let seed_bytes = seed.as_bytes();
-        let key_bytes = key.to_bytes()?;
+    fn to_dictionary_key<'a, T: OdraType>(
+        seed: &'a [u8],
+        key: &'a T
+    ) -> Result<[u8; KEY_LENGTH], Error> {
+        let key_hash = key.to_bytes()?;
 
-        let mut preimage = Vec::with_capacity(seed_bytes.len() + key_bytes.len());
-        preimage.extend_from_slice(seed_bytes);
-        preimage.extend_from_slice(&key_bytes);
+        let storage_key_len = seed.len() + key_hash.len();
 
-        let hash = Self::blake2b(&preimage);
-        Ok(hex::encode(hash))
+        let mut storage_key = Vec::with_capacity(storage_key_len);
+        storage_key.extend_from_slice(seed);
+        storage_key.extend_from_slice(&key_hash);
+
+        Ok(Self::adjust_key(&storage_key))
+    }
+
+    #[inline]
+    fn adjust_key(preimage: &[u8]) -> [u8; KEY_LENGTH] {
+        let hash: [u8; 32] = Self::blake2b(preimage);
+        let mut result = [0; KEY_LENGTH];
+        odra_utils::hex_to_slice(&hash, &mut result);
+        result
     }
 
     /// Hash value.

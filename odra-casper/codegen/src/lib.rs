@@ -3,10 +3,10 @@
 use crate::call_method::CallMethod;
 
 use self::wasm_entrypoint::WasmEntrypoint;
-use odra_types::contract_def::{Entrypoint, Event};
+use odra_types::contract_def::ContractBlueprint;
 use proc_macro2::{Span, TokenStream as TokenStream2};
-use quote::{format_ident, quote, ToTokens};
-use syn::{punctuated::Punctuated, Path, PathSegment, Token};
+use quote::{quote, ToTokens};
+use syn::{punctuated::Punctuated, Path, Token};
 
 mod arg;
 mod call_method;
@@ -23,20 +23,15 @@ pub fn contract_ident() -> proc_macro2::Ident {
 }
 
 /// Given the ContractDef from Odra, generate Casper contract.
-pub fn gen_contract(
-    _contract_ident: &str,
-    contract_entrypoints: &[Entrypoint],
-    events: &[Event],
-    fqn: &str
-) -> TokenStream2 {
-    let entrypoints = generate_entrypoints(contract_entrypoints, fqn);
-    let ref_fqn = fqn.to_string() + "Ref";
-    let call_fn = generate_call(contract_entrypoints, events, &ref_fqn);
+pub fn gen_contract(blueprint: ContractBlueprint) -> TokenStream2 {
+    let keys = generate_storage_keys(&blueprint);
+    let entrypoints = generate_entrypoints(&blueprint);
+    let call_fn = generate_call(&blueprint);
 
     quote! {
         #![no_main]
 
-        use odra::Instance;
+        #keys
 
         #call_fn
 
@@ -44,41 +39,42 @@ pub fn gen_contract(
     }
 }
 
-fn generate_entrypoints(entrypoints: &[Entrypoint], fqn: &str) -> TokenStream2 {
-    let path = &fqn_to_path(fqn);
-    entrypoints
+fn generate_storage_keys(blueprint: &ContractBlueprint) -> TokenStream2 {
+    let keys_count = blueprint.keys_count as usize;
+    let keys_literals = blueprint
+        .keys
         .iter()
-        .flat_map(|ep| WasmEntrypoint(ep, path).to_token_stream())
+        .map(|k| quote!(#k))
+        .collect::<Punctuated<TokenStream2, Token![,]>>();
+    quote! {
+        const KEYS: [&'static str; #keys_count] = [
+            #keys_literals
+        ];
+    }
+}
+
+fn generate_entrypoints(blueprint: &ContractBlueprint) -> TokenStream2 {
+    let path = fqn_to_path(blueprint.fqn);
+    blueprint
+        .entrypoints
+        .iter()
+        .flat_map(|ep| WasmEntrypoint(ep, &path).to_token_stream())
         .collect::<TokenStream2>()
 }
 
-fn generate_call(
-    contract_entrypoints: &[Entrypoint],
-    events: &[Event],
-    ref_fqn: &str
-) -> TokenStream2 {
+fn generate_call(blueprint: &ContractBlueprint) -> TokenStream2 {
+    let ref_fqn = blueprint.fqn.to_string() + "Ref";
+
     CallMethod::new(
-        events.to_vec(),
-        contract_entrypoints.to_vec(),
-        fqn_to_path(ref_fqn)
+        blueprint.events.to_vec(),
+        blueprint.entrypoints.to_vec(),
+        fqn_to_path(ref_fqn.as_str())
     )
     .to_token_stream()
 }
 
-// TODO: Simplify.
 fn fqn_to_path(fqn: &str) -> Path {
-    let paths = fqn.split("::").collect::<Vec<_>>();
-
-    let segments = Punctuated::<PathSegment, Token![::]>::from_iter(
-        paths
-            .iter()
-            .map(|ident| PathSegment::from(format_ident!("{}", ident)))
-    );
-
-    syn::Path {
-        leading_colon: None,
-        segments
-    }
+    syn::parse_str(fqn).expect("Invalid fqn")
 }
 
 #[cfg(test)]
@@ -101,13 +97,17 @@ macro_rules! gen_contract {
                     panic!("Event {} can't have Type::Any struct in it.", &event.ident);
                 }
             }
+            let keys = <$contract as odra::types::contract_def::Node>::__keys();
+            let keys_count = <$contract as odra::types::contract_def::Node>::COUNT;
 
-            let code = odra::casper::codegen::gen_contract(
-                &ident,
-                &entrypoints,
-                &events,
-                stringify!($contract)
-            );
+            let blueprint = odra::types::contract_def::ContractBlueprint {
+                keys,
+                keys_count,
+                events: events.clone(),
+                entrypoints: entrypoints.clone(),
+                fqn: stringify!($contract)
+            };
+            let code = odra::casper::codegen::gen_contract(blueprint);
 
             let schema = odra::casper::codegen::gen_schema(&ident, &entrypoints, &events);
 
@@ -130,9 +130,9 @@ macro_rules! gen_contract {
 
 #[cfg(test)]
 mod tests {
-    use odra_types::contract_def::{Argument, Entrypoint, EntrypointType};
+    use odra_types::contract_def::{Argument, ContractBlueprint, Entrypoint, EntrypointType};
     use odra_types::Type;
-    use quote::{quote, ToTokens};
+    use quote::quote;
 
     use super::{assert_eq_tokens, gen_contract};
 
@@ -161,35 +161,34 @@ mod tests {
             is_mut: false
         };
 
-        let path: syn::Path = syn::parse_str("my_contract::MyContract").unwrap();
-
-        let fqn = path.to_token_stream().to_string().replace(' ', "");
-
-        let contract_ident = String::from("MyContract");
-        let entrypoints = vec![constructor, entrypoint];
-        let events = vec![];
-
-        let result = gen_contract(&contract_ident, &entrypoints, &events, &fqn);
+        let blueprint = ContractBlueprint {
+            keys: vec!["key".to_string(), "a_b_c".to_string()],
+            keys_count: 2,
+            events: vec![],
+            entrypoints: vec![constructor, entrypoint],
+            fqn: "my_contract::MyContract"
+        };
+        let result = gen_contract(blueprint);
 
         assert_eq_tokens(
             result,
             quote! {
                 #![no_main]
-                use odra::Instance;
+
+                const KEYS: [&'static str; 2usize] = [
+                    "key",
+                    "a_b_c"
+                ];
+
                 #[no_mangle]
                 fn call() {
                     let schemas = vec![];
                     let mut entry_points = odra::casper::casper_types::EntryPoints::new();
                     entry_points.add_entry_point(odra::casper::casper_types::EntryPoint::new(
-                        stringify!(construct_me),
-                        {
-                            let mut params: Vec<odra::casper::casper_types::Parameter> = Vec::new();
-                            params.push(odra::casper::casper_types::Parameter::new(
-                                stringify!(value),
-                                odra::casper::casper_types::CLType::I32
-                            ));
-                            params
-                        },
+                        "construct_me",
+                        vec![
+                            odra::casper::casper_types::Parameter::new("value", odra::casper::casper_types::CLType::I32)
+                        ],
                         odra::casper::casper_types::CLType::Unit,
                         odra::casper::casper_types::EntryPointAccess::Groups(vec![
                             odra::casper::casper_types::Group::new("constructor_group")
@@ -197,8 +196,8 @@ mod tests {
                         odra::casper::casper_types::EntryPointType::Contract,
                     ));
                     entry_points.add_entry_point(odra::casper::casper_types::EntryPoint::new(
-                        stringify!(call_me),
-                        Vec::<odra::casper::casper_types::Parameter>::new(),
+                        "call_me",
+                        vec![],
                         odra::casper::casper_types::CLType::Bool,
                         odra::casper::casper_types::EntryPointAccess::Public,
                         odra::casper::casper_types::EntryPointType::Contract,
@@ -209,7 +208,7 @@ mod tests {
                     let constructor_access = odra::casper::utils::create_constructor_group(contract_package_hash);
                     let constructor_name = odra::casper::utils::load_constructor_name_arg();
                     match constructor_name.as_str() {
-                        stringify!(construct_me) => {
+                        "construct_me" => {
                             let odra_address = odra::types::Address::try_from(contract_package_hash)
                                 .map_err(|err| {
                                     let code = odra::types::ExecutionError::from(err).code();
@@ -217,9 +216,7 @@ mod tests {
                                 })
                                 .unwrap_or_revert();
                             let contract_ref = my_contract::MyContractRef::at(&odra_address);
-                            let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg(
-                                stringify!(value)
-                            );
+                            let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg("value");
                             contract_ref.construct_me(&value);
                         },
                         _ => odra::casper::utils::revert_on_unknown_constructor()
@@ -231,14 +228,13 @@ mod tests {
                 }
                 #[no_mangle]
                 fn construct_me() {
-                    let _contract = my_contract::MyContract::instance("contract");
-                    let value =
-                        odra::casper::casper_contract::contract_api::runtime::get_named_arg(stringify!(value));
+                    let (_contract, _): (my_contract::MyContract, _) = odra::StaticInstance::instance(&KEYS);
+                    let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg("value");
                     _contract.construct_me(&value);
                 }
                 #[no_mangle]
                 fn call_me() {
-                    let _contract = my_contract::MyContract::instance("contract");
+                    let (_contract, _): (my_contract::MyContract, _) = odra::StaticInstance::instance(&KEYS);
                     use odra::casper::casper_contract::unwrap_or_revert::UnwrapOrRevert;
                     let result = _contract.call_me();
                     let result = odra::casper::casper_types::CLValue::from_t(result).unwrap_or_revert();

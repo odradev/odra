@@ -11,15 +11,16 @@ impl ToTokens for CasperArgs<'_> {
         let args = self.0;
         args.iter().for_each(|arg| {
             let arg_ident = format_ident!("{}", arg.ident);
+            let arg_name = &arg.ident;
             match &arg.ty {
                 odra_types::Type::Slice(ty) => {
                     let odra_type: OdraType = ty.as_ref().into();
                     tokens.append_all(quote! {
-                        let #arg_ident: Vec<#odra_type> = odra::casper::casper_contract::contract_api::runtime::get_named_arg(stringify!(#arg_ident));
+                        let #arg_ident: Vec<#odra_type> = odra::casper::casper_contract::contract_api::runtime::get_named_arg(#arg_name);
                     })
                 },
                 _ =>  tokens.append_all(quote! {
-                    let #arg_ident = odra::casper::casper_contract::contract_api::runtime::get_named_arg(stringify!(#arg_ident));
+                    let #arg_ident = odra::casper::casper_contract::contract_api::runtime::get_named_arg(#arg_name);
                 })
             }
         });
@@ -58,8 +59,8 @@ mod tests {
         assert_eq_tokens(
             args,
             quote!(
-                let a = odra::casper::casper_contract::contract_api::runtime::get_named_arg(stringify!(a));
-                let b_c = odra::casper::casper_contract::contract_api::runtime::get_named_arg(stringify!(b_c));
+                let a = odra::casper::casper_contract::contract_api::runtime::get_named_arg("a");
+                let b_c = odra::casper::casper_contract::contract_api::runtime::get_named_arg("b_c");
             )
         );
     }
