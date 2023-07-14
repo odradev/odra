@@ -93,9 +93,9 @@ pub struct ContractBlueprint {
 #[cfg(test)]
 #[allow(dead_code)]
 mod test {
+    use super::Node;
     use alloc::{string::String, vec::Vec};
     use core::marker::PhantomData;
-    use super::Node;
 
     #[test]
     fn key_collection_works() {
