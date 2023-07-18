@@ -17,6 +17,7 @@ Changelog for `odra`.
 
 ### Changed
 - utilize `KeyMaker` to create storage keys in `casper` and `casper-livenet`
+- Only `payable` entrypoints checks incoming Casper purse and it is optional.
 
 ## [0.4.0] - 2023-06-26
 ### Added
