@@ -49,6 +49,13 @@ pub fn clear_attached_value() {
 
 /// Transfers attached value to the currently executing contract.
 pub fn handle_attached_value() {
+    // If the cargo purse argument is not present, do nothing.
+    // Attached value is set to zero by default.
+    if !named_arg_exists(consts::CARGO_PURSE_ARG) {
+        return;
+    }
+
+    // Handle attached value.
     let cargo_purse = runtime::get_named_arg(consts::CARGO_PURSE_ARG);
     let amount = system::get_purse_balance(cargo_purse);
     if let Some(amount) = amount {
