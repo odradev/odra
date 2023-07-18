@@ -1,4 +1,4 @@
-use alloc::{vec::Vec,vec, string::String};
+use alloc::string::String;
 use odra::types::{Address, BlockTime};
 use odra::Variable;
 
@@ -34,6 +34,7 @@ impl TestingContract {
 #[cfg(test)]
 mod tests {
     use super::TestingContractDeployer;
+    use crate::alloc::string::ToString;
 
     #[test]
     fn test_env() {

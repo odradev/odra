@@ -1,4 +1,4 @@
-use alloc::{vec::Vec, string::String};
+use alloc::string::String;
 use odra::{map, types::U256, Mapping, UnwrapOrRevert};
 
 use crate::contracts::owned_token::OwnedToken;
@@ -54,6 +54,7 @@ impl NestedMapping {
 #[cfg(test)]
 mod test {
     use crate::features::nested_mapping::NestedMappingDeployer;
+    use alloc::string::String;
 
     #[test]
     fn nested_mapping_works() {

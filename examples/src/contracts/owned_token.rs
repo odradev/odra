@@ -1,10 +1,10 @@
+use alloc::string::String;
 use odra::{
     contract_env,
     types::{Address, U256}
 };
 use odra_modules::access::Ownable;
 use odra_modules::erc20::Erc20;
-use alloc::{vec::Vec, string::String};
 
 #[odra::module]
 pub struct OwnedToken {

@@ -1,5 +1,4 @@
 use odra::{contract_env, Variable};
-use alloc::{vec::Vec, string::String};
 
 #[odra::module]
 pub struct ReentrancyMock {

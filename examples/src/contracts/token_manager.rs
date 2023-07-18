@@ -1,8 +1,8 @@
+use alloc::string::String;
 use odra::{
     types::{Address, U256},
     Mapping, Variable
 };
-use alloc::{vec::Vec, vec, string::String};
 
 use crate::contracts::owned_token::OwnedToken;
 
@@ -51,6 +51,7 @@ impl TokenManager {
 #[cfg(test)]
 mod test {
     use super::{TokenManagerDeployer, TokenManagerRef};
+    use alloc::string::{String, ToString};
     use odra::test_env::get_account;
 
     const PLS: &str = "PLS";

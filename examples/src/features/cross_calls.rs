@@ -1,6 +1,5 @@
 use odra::types::Address;
 use odra::{UnwrapOrRevert, Variable};
-use alloc::{vec::Vec, string::String};
 
 #[odra::module]
 pub struct CrossContract {

@@ -1,6 +1,6 @@
+use alloc::string::String;
 use odra::types::{Address, BlockTime};
 use odra::Variable;
-use alloc::{vec::Vec, string::String};
 
 #[odra::module]
 pub struct HostContract {
@@ -26,6 +26,7 @@ impl HostContract {
 #[cfg(test)]
 mod tests {
     use super::HostContractDeployer;
+    use crate::alloc::string::ToString;
 
     #[test]
     fn host_test() {
