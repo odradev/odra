@@ -1,16 +1,17 @@
 [package]
 name = "odra-casper-proxy-caller"
 edition = "2021"
-version.workspace = true
-authors.workspace = true
-license.workspace = true
-homepage.workspace = true
-repository.workspace = true
+version = "0.5.0"
+authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
+license = "MIT"
+homepage = "https://odra.dev/docs"
+repository = "https://github.com/odradev/odra"
 
 [dependencies]
-casper-contract = "3.0.0"
-casper-types = { workspace = true }
+casper-contract = { version = "3.0.0", default-features = false }
+casper-types = "3.0.0"
 odra-casper-shared = { path = "../shared" }
+ink_allocator = { version = "4.2.1", default-features = false }
 
 [[bin]]
 name = "proxy_caller"

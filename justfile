@@ -2,17 +2,20 @@ default:
     just --list
 
 clippy:
-    cargo clippy --all-targets -- -D warnings
+    cargo clippy --all-targets -- -D warnings 
+    cd odra-casper/proxy-caller && cargo clippy --target=wasm32-unknown-unknown -- -D warnings -A clippy::single-component-path-imports
     cd examples && cargo clippy --all-targets -- -D warnings -A clippy::assign-op-pattern
     cd modules && cargo clippy --all-targets -- -D warnings
 
 lint: clippy
     cargo fmt
+    cd odra-casper/proxy-caller && cargo fmt
     cd examples && cargo fmt
     cd modules && cargo fmt
 
 check-lint: clippy
     cargo fmt -- --check
+    cd odra-casper/proxy-caller && cargo fmt -- --check 
     cd examples && cargo fmt -- --check
     cd modules && cargo fmt -- --check
     cd examples && cargo check --no-default-features -F casper-livenet
