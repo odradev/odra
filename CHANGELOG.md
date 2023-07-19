@@ -4,20 +4,21 @@ Changelog for `odra`.
 
 ## [0.5.0] - 2023-XX-XX
 ### Added
-- Signature verification in contract_env's
-- Signature creation in test_env's
-- StaticInstance and DynamicInstance traits
-- Node trait to build static keys at the compilation time
-- `List` now can contain modules
+- Signature verification in contract_envs.
+- Signature creation in test_envs.
+- StaticInstance and DynamicInstance traits.
+- Node trait to build static keys at the compilation time.
+- `List` now can contain modules.
 
 ### Removed
-- Crypto module from odra-modules
-- Instance trait
-- derive PartialEq, Eq, Debug from storage building block (Variable, Mapping, List)
+- Crypto module from odra-modules.
+- Instance trait.
+- derive PartialEq, Eq, Debug from storage building block (Variable, Mapping, List).
 
 ### Changed
-- utilize `KeyMaker` to create storage keys in `casper` and `casper-livenet`
+- utilize `KeyMaker` to create storage keys in `casper` and `casper-livenet`.
 - Only `payable` entrypoints checks incoming Casper purse and it is optional.
+- Casper contract's `cargo_purse` is now created just once and reused.
 
 ## [0.4.0] - 2023-06-26
 ### Added

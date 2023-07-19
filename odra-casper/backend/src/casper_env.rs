@@ -136,8 +136,8 @@ pub fn call_contract_with_amount<T: CLTyped + FromBytes>(
     args: RuntimeArgs,
     amount: U512
 ) -> T {
-    let cargo_purse = create_purse();
-    let main_purse = get_or_create_purse();
+    let cargo_purse = get_or_create_cargo_purse();
+    let main_purse = get_main_purse().unwrap_or_revert();
 
     let mut args = args;
     transfer_from_purse_to_purse(main_purse, cargo_purse, amount, None)
@@ -163,9 +163,9 @@ pub fn revert(error: u16) -> ! {
     runtime::revert(ApiError::User(error))
 }
 
-pub fn get_or_create_purse() -> URef {
-    match runtime::get_key(consts::CONTRACT_MAIN_PURSE) {
-        Some(purse_key) => *purse_key.as_uref().unwrap_or_revert(),
+pub fn get_or_create_main_purse() -> URef {
+    match get_main_purse() {
+        Some(purse) => purse,
         None => {
             let purse = create_purse();
             runtime::put_key(consts::CONTRACT_MAIN_PURSE, purse.into());
@@ -174,9 +174,13 @@ pub fn get_or_create_purse() -> URef {
     }
 }
 
+pub fn get_main_purse() -> Option<URef> {
+    runtime::get_key(consts::CONTRACT_MAIN_PURSE).map(|key| *key.as_uref().unwrap_or_revert())
+}
+
 #[inline(always)]
 pub fn self_balance() -> U512 {
-    let purse = get_or_create_purse();
+    let purse = get_or_create_main_purse();
     get_purse_balance(purse).unwrap_or_default()
 }
 
@@ -274,4 +278,15 @@ fn read_host_buffer_into(dest: &mut [u8]) -> Result<usize, ApiError> {
     };
     casper_types::api_error::result_from(ret)?;
     Ok(unsafe { bytes_written.assume_init() })
+}
+
+fn get_or_create_cargo_purse() -> URef {
+    match runtime::get_key(consts::CONTRACT_CARGO_PURSE) {
+        Some(key) => *key.as_uref().unwrap_or_revert(),
+        None => {
+            let purse = create_purse();
+            runtime::put_key(consts::CONTRACT_CARGO_PURSE, purse.into());
+            purse
+        }
+    }
 }

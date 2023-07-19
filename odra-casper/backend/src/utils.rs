@@ -32,7 +32,7 @@ pub fn named_arg_exists(name: &str) -> bool {
 
 /// Gets the currently executing contract main purse [URef].
 pub fn get_main_purse() -> URef {
-    casper_env::get_or_create_purse()
+    casper_env::get_or_create_main_purse()
 }
 
 /// Stores in memory the amount attached to the current call.
