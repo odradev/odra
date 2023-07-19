@@ -12,7 +12,7 @@ use odra_casper_types::{Address, Balance, BlockTime, CallArgs, OdraType};
 use odra_types::{event::OdraEvent, ExecutionError};
 use std::ops::Deref;
 
-use crate::{casper_env, utils::get_main_purse};
+use crate::{casper_env, utils::get_or_create_main_purse};
 
 pub(crate) static mut ATTACHED_VALUE: U512 = U512::zero();
 
@@ -116,7 +116,7 @@ pub fn attached_value() -> Balance {
 
 /// Transfers native token from the contract caller to the given address.
 pub fn transfer_tokens<B: Into<Balance>>(to: &Address, amount: B) {
-    let main_purse = get_main_purse();
+    let main_purse = get_or_create_main_purse();
 
     match to {
         Address::Account(account) => {

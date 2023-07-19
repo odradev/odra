@@ -174,6 +174,7 @@ pub fn get_or_create_main_purse() -> URef {
     }
 }
 
+#[inline(always)]
 pub fn get_main_purse() -> Option<URef> {
     runtime::get_key(consts::CONTRACT_MAIN_PURSE).map(|key| *key.as_uref().unwrap_or_revert())
 }
