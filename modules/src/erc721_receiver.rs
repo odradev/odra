@@ -1,3 +1,5 @@
+//! A pluggable Odra module implementing Erc721Receiver.
+
 use crate::erc721_receiver::events::Received;
 use crate::erc721_token::Erc721TokenRef;
 use odra::contract_env::{caller, self_address};
@@ -5,10 +7,10 @@ use odra::types::{event::OdraEvent, Address, Bytes, U256};
 
 /// The ERC721 receiver implementation.
 #[odra::module]
-pub struct Erc721Receiver {}
+pub struct Erc721Receiver;
 
 #[odra::module]
-impl Erc721Receiver {
+impl erc721::extensions::erc721_receiver::Erc721Receiver for Erc721Receiver {
     pub fn on_erc721_received(
         &mut self,
         #[allow(unused_variables)] operator: &Address,
@@ -27,9 +29,11 @@ impl Erc721Receiver {
     }
 }
 
+/// Erc721Receiver-related events.
 pub mod events {
     use odra::types::{Address, Bytes, U256};
 
+    /// Emitted when the transfer is accepted by the contract.
     #[derive(odra::Event, PartialEq, Eq, Debug, Clone)]
     pub struct Received {
         pub operator: Option<Address>,

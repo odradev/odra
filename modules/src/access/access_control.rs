@@ -20,14 +20,15 @@ pub const DEFAULT_ADMIN_ROLE: Role = [0u8; 32];
 /// Roles can be used to represent a set of permissions, and the hasRole function is used to restrict
 /// access to a function call.
 ///
-/// Roles can be granted and revoked dynamically using the [`grant_role()`] and [`revoke_role()`] functions,
+/// Roles can be granted and revoked dynamically using the [`grant_role()`](AccessControl::grant_role) and
+/// [`revoke_role()`](AccessControl::revoke_role) functions,
 /// respectively. Each role has an associated admin role, and only accounts that have the role's admin role
 /// can call grant_role and revoke_role.
 ///
 /// By default, the admin role for all roles is [`DEFAULT_ADMIN_ROLE`], which means that only accounts with
 /// this role can grant or revoke other roles.
 ///
-/// More complex role relationships can be established using the `set_role_admin()` function.
+/// More complex role relationships can be established using the [set_admin_role()](AccessControl::set_admin_role) function.
 #[odra::module(events = [RoleAdminChanged, RoleGranted, RoleRevoked])]
 pub struct AccessControl {
     roles: Mapping<Role, Mapping<Address, bool>>,
@@ -43,7 +44,7 @@ impl AccessControl {
 
     /// Returns the admin role that controls `role`.
     ///
-    /// The admin role may be changed using [set_admin_role()](Self::set_admin_role()).
+    /// The admin role may be changed using [set_admin_role()](AccessControl::set_admin_role).
     pub fn get_role_admin(&self, role: &Role) -> Role {
         let admin_role = self.role_admin.get(role);
         if let Some(admin) = admin_role {

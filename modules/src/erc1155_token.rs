@@ -1,3 +1,4 @@
+//! A pluggable Odra module implementing Erc1155 token with ownership.
 use crate::access::Ownable;
 use crate::erc1155::erc1155_base::Erc1155Base;
 use crate::erc1155::errors::Error;
@@ -10,7 +11,7 @@ use odra::types::Bytes;
 use odra::types::U256;
 
 /// The ERC1155 token implementation.
-/// It uses the ERC1155 base implementation and the Ownable module.
+/// It uses the [ERC1155](Erc1155Base) base implementation and the [Ownable] module.
 #[odra::module(events = [TransferBatch, TransferSingle])]
 pub struct Erc1155Token {
     core: Erc1155Base,

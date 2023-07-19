@@ -1,10 +1,15 @@
+//! Erc721 metadata.
+
 use crate::erc721::extensions::erc721_metadata::errors::Error;
 use odra::{UnwrapOrRevert, Variable};
 
 /// The ERC721 Metadata interface as defined in the standard.
 pub trait Erc721Metadata {
+    /// Returns the token collection name.
     fn name(&self) -> String;
+    /// Returns the token collection symbol.
     fn symbol(&self) -> String;
+    /// Returns the base URI for the token collection.
     fn base_uri(&self) -> String;
 }
 

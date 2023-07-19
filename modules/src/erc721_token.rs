@@ -1,3 +1,5 @@
+//! A pluggable Odra module implementing Erc721 token with metadata and ownership.
+
 use crate::access::Ownable;
 use crate::erc721::events::Transfer;
 use odra::contract_env::{caller, revert};
@@ -12,7 +14,9 @@ use crate::erc721::Erc721;
 use crate::erc721_token::errors::Error;
 
 /// The ERC721 token implementation.
-/// It uses the ERC721 base implementation, the ERC721 metadata extension and the Ownable module.
+///
+/// It uses the [ERC721](Erc721Base) base implementation, the [ERC721 metadata](Erc721MetadataExtension) extension
+/// and the [Ownable] module.
 #[odra::module(events = [Transfer])]
 pub struct Erc721Token {
     core: Erc721Base,
@@ -126,11 +130,14 @@ impl OwnedErc721WithMetadata for Erc721Token {
     }
 }
 
+/// Erc721 errors.
 pub mod errors {
     use odra::execution_error;
 
     execution_error! {
+        /// Erc721 errors.
         pub enum Error {
+            /// Token with a given id already exists.
             TokenAlreadyExists => 35_000,
         }
     }
