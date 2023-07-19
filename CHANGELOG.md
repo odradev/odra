@@ -2,7 +2,9 @@
 
 Changelog for `odra`.
 
-## [0.5.0] - 2023-XX-XX
+## [0.6.0] - 2023-XX-XX
+
+## [0.5.0] - 2023-07-19
 ### Added
 - Signature verification in contract_envs.
 - Signature creation in test_envs.
