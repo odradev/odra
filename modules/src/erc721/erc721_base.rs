@@ -1,3 +1,5 @@
+//! Odra module implementing Erc721 core.
+
 use crate::erc721::errors::Error;
 use crate::erc721::events::{Approval, ApprovalForAll, Transfer};
 use crate::erc721::Erc721;
@@ -107,6 +109,7 @@ impl Erc721 for Erc721Base {
 }
 
 impl Erc721Base {
+    /// Returns true if the `spender` is the owner or an operator of the `token_id` token.
     pub fn is_approved_or_owner(&self, spender: &Address, token_id: &U256) -> bool {
         let owner = &self.owner_of(token_id);
         (spender == owner)
@@ -146,16 +149,19 @@ impl Erc721Base {
         .emit();
     }
 
+    /// Revokes permission to transfer the `token_id` token.
     pub fn clear_approval(&mut self, token_id: &U256) {
         if self.token_approvals.get_or_default(token_id).is_some() {
             self.token_approvals.set(token_id, None);
         }
     }
 
+    /// Returns true if the `token_id` token exists.
     pub fn exists(&self, token_id: &U256) -> bool {
         self.owners.get(token_id).is_some()
     }
 
+    /// Reverts with [Error::InvalidTokenId] if the `token_id` token does not exist.
     pub fn assert_exists(&self, token_id: &U256) {
         if !self.exists(token_id) {
             revert(Error::InvalidTokenId);
