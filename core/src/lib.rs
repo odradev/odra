@@ -1,4 +1,4 @@
-#![cfg_attr(all(not(feature = "std"), target_arch = "wasm32"), no_std)]
+#![no_std]
 
 extern crate alloc;
 

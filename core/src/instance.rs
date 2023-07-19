@@ -34,6 +34,7 @@
 /// impl StaticInstance for C2 {
 ///     fn instance<'a>(keys: &'a [&'a str]) -> (Self, &'a [&'a str]) {
 ///         let (value, keys) = StaticInstance::instance(keys);
+///         (Self { value }, keys)
 ///     }
 /// }
 ///

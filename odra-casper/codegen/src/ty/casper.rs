@@ -110,12 +110,12 @@ mod tests {
         let wrapped_type = CasperType(&ty);
         assert_eq_tokens(
             wrapped_type,
-            quote!(odra::casper::casper_types::CLType::Option(Box::new(
-                odra::casper::casper_types::CLType::Tuple2([
-                    Box::new(odra::casper::casper_types::CLType::Bool),
-                    Box::new(odra::casper::casper_types::CLType::I32)
-                ])
-            )))
+            quote!(odra::casper::casper_types::CLType::Option(
+                alloc::boxed::Box::new(odra::casper::casper_types::CLType::Tuple2([
+                    alloc::boxed::Box::new(odra::casper::casper_types::CLType::Bool),
+                    alloc::boxed::Box::new(odra::casper::casper_types::CLType::I32)
+                ]))
+            ))
         );
     }
 }

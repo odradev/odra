@@ -97,7 +97,7 @@ mod test {
                 entry_points.add_entry_point(
                     odra::casper::casper_types::EntryPoint::new(
                         "call_me",
-                        vec![odra::casper::casper_types::Parameter::new("value", odra::casper::casper_types::CLType::I32)],
+                        alloc::vec![odra::casper::casper_types::Parameter::new("value", odra::casper::casper_types::CLType::I32)],
                         odra::casper::casper_types::CLType::Bool,
                         odra::casper::casper_types::EntryPointAccess::Public,
                         odra::casper::casper_types::EntryPointType::Contract,

@@ -175,7 +175,10 @@ mod tests {
         assert_eq_tokens(
             result,
             quote! {
+                #![no_std]
                 #![no_main]
+
+                extern crate alloc;
 
                 const KEYS: [&'static str; 2usize] = [
                     "key",
@@ -184,22 +187,22 @@ mod tests {
 
                 #[no_mangle]
                 fn call() {
-                    let schemas = vec![];
+                    let schemas = alloc::vec![];
                     let mut entry_points = odra::casper::casper_types::EntryPoints::new();
                     entry_points.add_entry_point(odra::casper::casper_types::EntryPoint::new(
                         "construct_me",
-                        vec![
+                        alloc::vec![
                             odra::casper::casper_types::Parameter::new("value", odra::casper::casper_types::CLType::I32)
                         ],
                         odra::casper::casper_types::CLType::Unit,
-                        odra::casper::casper_types::EntryPointAccess::Groups(vec![
+                        odra::casper::casper_types::EntryPointAccess::Groups(alloc::vec![
                             odra::casper::casper_types::Group::new("constructor_group")
                         ]),
                         odra::casper::casper_types::EntryPointType::Contract,
                     ));
                     entry_points.add_entry_point(odra::casper::casper_types::EntryPoint::new(
                         "call_me",
-                        vec![],
+                        alloc::vec![],
                         odra::casper::casper_types::CLType::Bool,
                         odra::casper::casper_types::EntryPointAccess::Public,
                         odra::casper::casper_types::EntryPointType::Contract,
