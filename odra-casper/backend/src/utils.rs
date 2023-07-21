@@ -32,8 +32,9 @@ pub fn named_arg_exists(name: &str) -> bool {
 }
 
 /// Gets the currently executing contract main purse [URef].
-pub fn get_main_purse() -> URef {
-    casper_env::get_or_create_purse()
+/// It creates a new purse if it doesn't exist.
+pub fn get_or_create_main_purse() -> URef {
+    casper_env::get_or_create_main_purse()
 }
 
 /// Stores in memory the amount attached to the current call.
@@ -50,10 +51,17 @@ pub fn clear_attached_value() {
 
 /// Transfers attached value to the currently executing contract.
 pub fn handle_attached_value() {
+    // If the cargo purse argument is not present, do nothing.
+    // Attached value is set to zero by default.
+    if !named_arg_exists(consts::CARGO_PURSE_ARG) {
+        return;
+    }
+
+    // Handle attached value.
     let cargo_purse = runtime::get_named_arg(consts::CARGO_PURSE_ARG);
     let amount = system::get_purse_balance(cargo_purse);
     if let Some(amount) = amount {
-        let contract_purse = get_main_purse();
+        let contract_purse = get_or_create_main_purse();
         system::transfer_from_purse_to_purse(cargo_purse, contract_purse, amount, None)
             .unwrap_or_revert();
         set_attached_value(amount.into());

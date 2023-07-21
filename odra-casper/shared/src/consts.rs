@@ -10,6 +10,9 @@ pub const EVENTS_LENGTH: &str = casper_event_standard::EVENTS_LENGTH;
 /// The key under which the contract main purse URef is stored.
 pub const CONTRACT_MAIN_PURSE: &str = "__contract_main_purse";
 
+/// The key under which the contract cargo purse URef is stored.
+pub const CONTRACT_CARGO_PURSE: &str = "__contract_cargo_purse";
+
 /// The key under which the reentrancy guard status is stored.
 pub const REENTRANCY_GUARD: [u8; 18] = *b"__reentrancy_guard";
 

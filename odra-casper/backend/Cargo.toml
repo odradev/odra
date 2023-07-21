@@ -11,9 +11,9 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
-odra-casper-shared = { path = "../shared" }
-odra-casper-types = { path = "../types" }
-odra-types = { path = "../../types" }
+odra-casper-shared = { path = "../shared", version = "0.6.0" }
+odra-casper-types = { path = "../types", version = "0.6.0" }
+odra-types = { path = "../../types", version = "0.6.0" }
 casper-types = { workspace = true }
 lazy_static = { version = "1.4.0", features = [ "spin_no_std" ] }
 casper-event-standard = { workspace = true }

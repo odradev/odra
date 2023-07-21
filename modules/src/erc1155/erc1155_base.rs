@@ -1,3 +1,4 @@
+//! Odra module implementing Erc1155 core.
 use crate::erc1155::errors::Error;
 use crate::erc1155::events::{ApprovalForAll, TransferBatch, TransferSingle};
 use crate::erc1155::Erc1155;
@@ -71,6 +72,7 @@ impl Erc1155 for Erc1155Base {
         if from_balance < *amount {
             revert(Error::InsufficientBalance);
         }
+
         self.balances
             .get_instance(from)
             .set(id, from_balance - *amount);
@@ -87,6 +89,7 @@ impl Erc1155 for Erc1155Base {
         }
         .emit();
 
+        // verify the recipient
         self.safe_transfer_acceptance_check(&caller, from, to, id, amount, data);
     }
 
@@ -110,11 +113,13 @@ impl Erc1155 for Erc1155Base {
             let id = ids[i];
             let amount = amounts[i];
 
+            // balance check - if a single transfer is incorrect the whole transaction reverts.
             let from_balance = self.balance_of(from, &id);
             if from_balance < amount {
                 revert(Error::InsufficientBalance);
             }
 
+            // update balance
             self.balances
                 .get_instance(from)
                 .set(&id, from_balance - amount);
@@ -132,6 +137,7 @@ impl Erc1155 for Erc1155Base {
         }
         .emit();
 
+        // verify the recipient
         self.safe_batch_transfer_acceptance_check(&caller, from, to, ids, amounts, data);
     }
 }
@@ -150,6 +156,8 @@ impl Erc1155Base {
         }
     }
 
+    /// If the recipient `to` is a contract, must be a Erc1155Receiver, otherwise the transaction
+    /// reverts with (TransferRejected)[Error::TransferRejected] error.
     pub fn safe_transfer_acceptance_check(
         &self,
         operator: &Address,
@@ -168,6 +176,8 @@ impl Erc1155Base {
         }
     }
 
+    /// If the recipient `to` is a contract, must be a Erc1155Receiver, otherwise the transaction
+    /// reverts with (TransferRejected)[Error::TransferRejected] error.
     pub fn safe_batch_transfer_acceptance_check(
         &self,
         operator: &Address,

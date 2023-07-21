@@ -19,7 +19,7 @@ members = [
 exclude = [ "examples", "modules", "odra-casper/proxy-caller" ]
 
 [workspace.package]
-version = "0.5.0"
+version = "0.6.0"
 authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
 license = "MIT"
 homepage = "https://odra.dev/docs"

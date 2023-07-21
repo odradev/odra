@@ -11,9 +11,9 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
-odra-types = { path = "../../types" }
-odra-utils = { path = "../../utils" }
-odra-mock-vm-types = { path = "../types" }
+odra-types = { path = "../../types", version = "0.6.0" }
+odra-utils = { path = "../../utils", version = "0.6.0" }
+odra-mock-vm-types = { path = "../types", version = "0.6.0" }
 ref_thread_local = "0.1.1"
 anyhow = "1.0.65"
 hex = "0.4.3"

@@ -1,12 +1,18 @@
+//! A pluggable Odra module implementing Erc1155Receiver.
+
 use crate::erc1155_receiver::events::{BatchReceived, SingleReceived};
 use odra::types::{event::OdraEvent, Address, Bytes, U256};
 
 /// The ERC1155 receiver implementation.
 #[odra::module(events = [SingleReceived, BatchReceived])]
-pub struct Erc1155Receiver {}
+pub struct Erc1155Receiver;
 
 #[odra::module]
 impl Erc1155Receiver {
+    /// This function is called at the end of a [safe_transfer_from](crate::erc1155::Erc1155::safe_transfer_from),
+    /// after the balance has been updated.  To accept the transfer, this must return true.
+    ///
+    /// Emits [SingleReceived].
     pub fn on_erc1155_received(
         &mut self,
         #[allow(unused_variables)] operator: &Address,
@@ -25,6 +31,11 @@ impl Erc1155Receiver {
         .emit();
         true
     }
+
+    /// This function is called at the end of a [safe_batch_transfer_from](crate::erc1155::Erc1155::safe_batch_transfer_from)
+    /// after the balances have been updated. To accept the transfer(s), this must return true.
+    ///
+    /// Emits [BatchReceived].
     pub fn on_erc1155_batch_received(
         &mut self,
         #[allow(unused_variables)] operator: &Address,
@@ -45,10 +56,12 @@ impl Erc1155Receiver {
     }
 }
 
+/// Erc1155Receiver-related events
 pub mod events {
     use alloc::vec::Vec;
     use odra::types::{Address, Bytes, U256};
 
+    /// Emitted when the transferred token is accepted by the contract.
     #[derive(odra::Event, PartialEq, Eq, Debug, Clone)]
     pub struct SingleReceived {
         pub operator: Option<Address>,
@@ -58,6 +71,7 @@ pub mod events {
         pub data: Option<Bytes>
     }
 
+    /// Emitted when the transferred tokens are accepted by the contract.
     #[derive(odra::Event, PartialEq, Eq, Debug, Clone)]
     pub struct BatchReceived {
         pub operator: Option<Address>,
