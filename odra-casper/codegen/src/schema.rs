@@ -19,28 +19,28 @@ pub fn gen_schema(
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct Schema {
-    name: String,
-    entrypoints: Vec<EntrypointDef>,
-    events: Vec<EventDef>
+pub struct Schema {
+    pub name: String,
+    pub entrypoints: Vec<EntrypointDef>,
+    pub events: Vec<EventDef>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct EntrypointDef {
-    name: String,
+pub struct EntrypointDef {
+    pub name: String,
     is_mutable: bool,
     args: Vec<ElemDef>,
     return_ty: CLType
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct EventDef {
+pub struct EventDef {
     name: String,
     fields: Vec<ElemDef>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct ElemDef {
+pub struct ElemDef {
     name: String,
     ty: CLType
 }

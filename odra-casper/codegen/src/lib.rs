@@ -12,7 +12,7 @@ mod arg;
 mod call_method;
 mod constructor;
 mod entrypoints_def;
-mod schema;
+pub mod schema;
 mod ty;
 mod wasm_entrypoint;
 
@@ -124,6 +124,11 @@ macro_rules! gen_contract {
             let mut schema_file =
                 std::fs::File::create(&format!("../resources/{}_schema.json", $name)).unwrap();
             schema_file.write_all(&schema.into_bytes()).unwrap();
+
+            // let mut contracts_file = std::fs::read_to_string("../resources/contracts.json").unwrap();
+            // if let Ok(contracts) = contracts_file {
+            //
+            // }
         }
     };
 }

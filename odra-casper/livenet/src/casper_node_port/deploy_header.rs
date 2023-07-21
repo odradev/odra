@@ -1,17 +1,15 @@
-use std::fmt::{self, Display, Formatter};
-
 use datasize::DataSize;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use casper_hashing::Digest;
 use casper_types::{
     bytesrepr::{self, FromBytes, ToBytes},
-    PublicKey, TimeDiff, Timestamp
+    PublicKey
 };
+use crate::casper_node_port::hashing::Digest;
+use crate::casper_types_port::timestamp::{TimeDiff, Timestamp};
 
 use super::deploy_hash::DeployHash;
-use super::utils::DisplayIter;
 
 /// The header portion of a [`Deploy`].
 #[derive(
@@ -145,18 +143,3 @@ impl FromBytes for DeployHeader {
     }
 }
 
-impl Display for DeployHeader {
-    fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
-        write!(
-            formatter,
-            "deploy-header[account: {}, timestamp: {}, ttl: {}, gas_price: {}, body_hash: {}, dependencies: [{}], chain_name: {}]",
-            self.account,
-            self.timestamp,
-            self.ttl,
-            self.gas_price,
-            self.body_hash,
-            DisplayIter::new(self.dependencies.iter()),
-            self.chain_name,
-        )
-    }
-}
