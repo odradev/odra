@@ -41,13 +41,13 @@ impl KeyMaker for CasperKeyMaker {
 /// Save value to the storage.
 #[inline(always)]
 pub fn set_key<T: OdraType>(name: &[u8], value: T) {
-    save_value(&CasperKeyMaker::to_variable_key(name), value)
+    save_value(name, value)
 }
 
 /// Read value from the storage.
 #[inline(always)]
 pub fn get_key<T: OdraType>(name: &[u8]) -> Option<T> {
-    read_value(&CasperKeyMaker::to_variable_key(name))
+    read_value(name)
 }
 
 #[inline(always)]

@@ -28,9 +28,12 @@ mod node;
 mod sequence;
 mod unwrap_or_revert;
 mod variable;
+mod storage;
 
 #[cfg(not(any(target_arch = "wasm32", feature = "casper-livenet")))]
 pub mod test_utils;
+
+pub use storage::{KeyResolver, Readable, Writeable};
 
 pub use {
     instance::{DynamicInstance, StaticInstance},

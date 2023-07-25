@@ -1,8 +1,10 @@
 use alloc::string::String;
 use odra::{
     contract_env,
-    types::{event::OdraEvent, Address, U256},
-    Mapping, UnwrapOrRevert, Variable
+    types::{event::OdraEvent, Address, U256,},
+    Readable,
+    Writeable,
+    UnwrapOrRevert
 };
 
 use self::{
@@ -10,15 +12,15 @@ use self::{
     events::{Approval, Transfer}
 };
 
+const DECIMALS: &[u8] = b"decimals";
+const SYMBOL: &[u8] = b"symbol";
+const TOTAL_SUPPLY: &[u8] = b"total_supply";
+const NAME: &[u8] = b"name";
+const BALANCES: &[u8] = b"balances";
+const ALLOWANCES: &[u8] = b"allowances";
+
 #[odra::module(events = [Approval, Transfer])]
-pub struct Erc20 {
-    decimals: Variable<u8>,
-    symbol: Variable<String>,
-    name: Variable<String>,
-    total_supply: Variable<U256>,
-    balances: Mapping<Address, U256>,
-    allowances: Mapping<Address, Mapping<Address, U256>>
-}
+pub struct Erc20; 
 
 #[odra::module]
 impl Erc20 {
@@ -32,13 +34,13 @@ impl Erc20 {
     ) {
         let caller = contract_env::caller();
 
-        self.symbol.set(symbol);
-        self.name.set(name);
-        self.decimals.set(decimals);
+        SYMBOL.write(symbol);
+        NAME.write(name);
+        DECIMALS.write(decimals);
 
         if let Some(initial_supply) = *initial_supply {
-            self.total_supply.set(initial_supply);
-            self.balances.set(&caller, initial_supply);
+            TOTAL_SUPPLY.write(initial_supply);
+            (BALANCES, &caller).write(initial_supply);
 
             if !initial_supply.is_zero() {
                 Transfer {
@@ -65,8 +67,8 @@ impl Erc20 {
 
     pub fn approve(&mut self, spender: &Address, amount: &U256) {
         let owner = contract_env::caller();
+        (ALLOWANCES, &owner, spender).write(*amount);
 
-        self.allowances.get_instance(&owner).set(spender, *amount);
         Approval {
             owner,
             spender: *spender,
@@ -76,34 +78,35 @@ impl Erc20 {
     }
 
     pub fn name(&self) -> String {
-        self.name.get().unwrap_or_revert_with(Error::NameNotSet)
+        NAME.read().unwrap_or_revert_with(Error::NameNotSet)
     }
 
     pub fn symbol(&self) -> String {
-        self.symbol.get().unwrap_or_revert_with(Error::SymbolNotSet)
+        SYMBOL.read().unwrap_or_revert_with(Error::NameNotSet)
     }
 
     pub fn decimals(&self) -> u8 {
-        self.decimals
-            .get()
-            .unwrap_or_revert_with(Error::DecimalsNotSet)
+        DECIMALS.read().unwrap_or_revert_with(Error::NameNotSet)
     }
 
     pub fn total_supply(&self) -> U256 {
-        self.total_supply.get_or_default()
+        TOTAL_SUPPLY.read().unwrap_or_revert_with(Error::NameNotSet)
     }
 
     pub fn balance_of(&self, address: &Address) -> U256 {
-        self.balances.get_or_default(address)
+        (BALANCES, address).read().unwrap_or_default()
     }
 
     pub fn allowance(&self, owner: &Address, spender: &Address) -> U256 {
-        self.allowances.get_instance(owner).get_or_default(spender)
+        (ALLOWANCES, owner, spender).read().unwrap_or_default()
     }
 
     pub fn mint(&mut self, address: &Address, amount: &U256) {
-        self.total_supply.add(*amount);
-        self.balances.add(address, *amount);
+        let total_supply: U256 = TOTAL_SUPPLY.read().unwrap_or_default();
+        TOTAL_SUPPLY.write(total_supply + *amount);
+
+        let balance: U256 = (BALANCES, address).read().unwrap_or_default();
+        (BALANCES, address).write(balance + *amount);
 
         Transfer {
             from: None,
@@ -117,8 +120,11 @@ impl Erc20 {
         if self.balance_of(address) < *amount {
             contract_env::revert(Error::InsufficientBalance);
         }
-        self.total_supply.subtract(*amount);
-        self.balances.subtract(address, *amount);
+        let total_supply: U256 = TOTAL_SUPPLY.read().unwrap_or_default();
+        TOTAL_SUPPLY.write(total_supply + *amount);
+
+        let balance: U256 = (BALANCES, address).read().unwrap_or_default();
+        (BALANCES, address).write(balance - *amount);
 
         Transfer {
             from: Some(*address),
@@ -131,12 +137,14 @@ impl Erc20 {
 
 impl Erc20 {
     fn raw_transfer(&mut self, owner: &Address, recipient: &Address, amount: &U256) {
-        if *amount > self.balances.get_or_default(owner) {
+        let balance: U256 = (BALANCES, owner).read().unwrap_or_default();
+        if *amount > balance {
             contract_env::revert(Error::InsufficientBalance)
         }
+        (BALANCES, owner).write(balance - *amount);
 
-        self.balances.subtract(owner, *amount);
-        self.balances.add(recipient, *amount);
+        let balance: U256 = (BALANCES, recipient).read().unwrap_or_default();
+        (BALANCES, recipient).write(balance + *amount);
 
         Transfer {
             from: Some(*owner),
@@ -147,13 +155,12 @@ impl Erc20 {
     }
 
     fn spend_allowance(&mut self, owner: &Address, spender: &Address, amount: &U256) {
-        let allowance = self.allowances.get_instance(owner).get_or_default(spender);
+        let allowance: U256 = (ALLOWANCES, owner, spender).read().unwrap_or_default();
         if allowance < *amount {
             contract_env::revert(Error::InsufficientAllowance)
         }
-        self.allowances
-            .get_instance(owner)
-            .subtract(spender, *amount);
+        (ALLOWANCES, owner, spender).write(allowance - *amount);
+
         Approval {
             owner: *owner,
             spender: *spender,
