@@ -47,18 +47,15 @@ fn get_env_variable(name: &str) -> String {
 pub struct CasperClient {
     node_address: String,
     chain_name: String,
-    // TODO: Remove secret key from here, signing should be done outside of the client
-    secret_key: Option<SecretKey>
 }
 
 impl CasperClient {
     /// Creates new CasperClient.
-    pub fn new(node_address: String, chain_name: String, secret_key: Option<SecretKey>) -> Self {
+    pub fn new(node_address: String, chain_name: String) -> Self {
         // dotenv::dotenv().ok();
         CasperClient {
             node_address,
             chain_name,
-            secret_key,
         }
     }
 
@@ -74,8 +71,7 @@ impl CasperClient {
 
     /// Public key of the client account.
     pub fn public_key(&self) -> PublicKey {
-        let sk = self.secret_key.as_ref().unwrap();
-        PublicKey::from(sk)
+        todo!("implement public_key")
     }
 
     /// Address of the client account.
@@ -84,16 +80,17 @@ impl CasperClient {
     }
 
     /// Query the node for the current state root hash.
-    pub async fn get_state_root_hash(&self) -> Digest {
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": "chain_get_state_root_hash",
-                "id": 1,
-            }
-        );
-        let result: GetStateRootHashResult = self.post_request(request).await.unwrap();
-        result.state_root_hash.unwrap()
+    pub async fn get_state_root_hash(&self) -> String {
+        "papapa".to_string()
+        // let request = json!(
+        //     {
+        //         "jsonrpc": "2.0",
+        //         "method": "chain_get_state_root_hash",
+        //         "id": 1,
+        //     }
+        // );
+        // let result: GetStateRootHashResult = self.post_request(request).await.unwrap();
+        // result.state_root_hash.unwrap()
     }
 
     /// Query the node for the deploy state.
@@ -333,7 +330,8 @@ impl CasperClient {
         }
     }
 
-    fn new_deploy(&self, session: ExecutableDeployItem, gas: Balance) -> Deploy {
+    /// Creates a new, unsigned Deploy.
+    pub fn new_deploy(&self, session: ExecutableDeployItem, gas: Balance) -> Deploy {
         // TODO: Get the timestamp from the host.
         let timestamp = Timestamp::zero();
         let ttl = TimeDiff::from_seconds(1000);
@@ -347,7 +345,7 @@ impl CasperClient {
             }
         };
 
-        Deploy::new(
+        Deploy::new_unsigned(
             timestamp,
             ttl,
             gas_price,
@@ -355,8 +353,7 @@ impl CasperClient {
             chain_name,
             payment,
             session,
-            self.secret_key.as_ref().unwrap(),
-            Some(self.public_key())
+            self.public_key(),
         )
     }
 

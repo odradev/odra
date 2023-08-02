@@ -37,9 +37,8 @@ pub struct Deploy {
 }
 
 impl Deploy {
-    /// Constructs a new signed `Deploy`.
     #[allow(clippy::too_many_arguments)]
-    pub fn new(
+    pub fn new_unsigned(
         timestamp: Timestamp,
         ttl: TimeDiff,
         gas_price: u64,
@@ -47,13 +46,10 @@ impl Deploy {
         chain_name: String,
         payment: ExecutableDeployItem,
         session: ExecutableDeployItem,
-        secret_key: &SecretKey,
-        account: Option<PublicKey>
+        account: PublicKey,
     ) -> Deploy {
         let serialized_body = serialize_body(&payment, &session);
         let body_hash = Digest::hash(serialized_body);
-
-        let account = account.unwrap_or_else(|| PublicKey::from(secret_key));
 
         // Remove duplicates.
         let dependencies = dependencies.into_iter().unique().collect();
@@ -69,14 +65,41 @@ impl Deploy {
         let serialized_header = serialize_header(&header);
         let hash = DeployHash::new(Digest::hash(serialized_header));
 
-        let mut deploy = Deploy {
+        Deploy {
             hash,
             header,
             payment,
             session,
             approvals: BTreeSet::new(),
             is_valid: OnceCell::new()
-        };
+        }
+    }
+
+    /// Constructs a new signed `Deploy`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        timestamp: Timestamp,
+        ttl: TimeDiff,
+        gas_price: u64,
+        dependencies: Vec<DeployHash>,
+        chain_name: String,
+        payment: ExecutableDeployItem,
+        session: ExecutableDeployItem,
+        secret_key: &SecretKey,
+        account: Option<PublicKey>
+    ) -> Deploy {
+        let account = account.unwrap_or_else(|| PublicKey::from(secret_key));
+
+        let mut deploy = Self::new_unsigned(
+            timestamp,
+            ttl,
+            gas_price,
+            dependencies,
+            chain_name,
+            payment,
+            session,
+            account
+        );
 
         deploy.sign(secret_key);
         deploy

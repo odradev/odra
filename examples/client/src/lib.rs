@@ -1,11 +1,15 @@
+mod imports;
+
 use std::collections::HashMap;
-use casper_types::{DeployHash, Key, U256};
-use casper_types::bytesrepr::ToBytes;
-use serde_json::Value;
+use casper_types::{Key};
+use casper_types::bytesrepr::Bytes;
+use casper_types::KeyTag::Balance;
+
 use wasm_bindgen::prelude::*;
 use odra_casper_codegen::schema::Schema;
 use odra_casper_livenet::casper_client::CasperClient;
-use odra_casper_types::{Address};
+use odra_casper_livenet::client_env::build_args;
+use odra_casper_types::{Address, CallArgs};
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
 #[cfg(feature = "wee_alloc")]
@@ -15,10 +19,10 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 const CONTRACT_SCHEMAS: &str = include_str!("../contracts.json");
 const CONTRACT_BINS: &[u8] = include_bytes!("../contracts.bin");
 
-#[wasm_bindgen]
-pub fn erc20_deployer(name: String, symbol: String, decimals: u8, initial_supply: Option<Vec<u8>>) -> Vec<u8> {
-    DeployHash::new([0u8; 32]).as_bytes().to_vec()
-}
+// #[wasm_bindgen]
+// pub fn erc20_deployer(name: String, symbol: String, decimals: u8, initial_supply: Option<Vec<u8>>) -> Vec<u8> {
+//     DeployHash::new([0u8; 32]).as_bytes().to_vec()
+// }
 
 #[wasm_bindgen]
 pub fn setup() {
@@ -40,7 +44,17 @@ pub fn deploy_contract(contract_name: &str) -> Vec<u8> {
         }
     });
 
-    contract_bin
+    let provider = imports::CasperWalletProvider();
+    provider.requestConnection();
+    let mut args = CallArgs::default();
+    build_args(&mut CallArgs::default(), "name", Some("name".to_string())).as_casper_runtime_args().clone();
+    let session = ExecutableDeployItem::ModuleBytes {
+        module_bytes: Bytes::from(contract_bin),
+        args
+    };
+    // contract_bin
+    let deploy = CasperClient::new_deploy(session, 1_000_000.into());
+    "bzium".as_bytes().to_vec()
 }
 
 #[wasm_bindgen]
@@ -76,7 +90,7 @@ pub async fn test_client() -> String {
 fn load_schemas() -> Vec<Schema> {
     let schemas: Vec<Schema> = match serde_json::from_str(CONTRACT_SCHEMAS) {
         Ok(schemas) => schemas,
-        Err(err) => panic!("Error parsing contract schemas"),
+        Err(_) => panic!("Error parsing contract schemas"),
     };
     schemas
 }
@@ -84,7 +98,7 @@ fn load_schemas() -> Vec<Schema> {
 fn load_bins() -> HashMap<String, Vec<u8>> {
     let bins: HashMap<String, Vec<u8>> = match bincode::deserialize(CONTRACT_BINS) {
         Ok(bins) => bins,
-        Err(err) => panic!("Error parsing contract bins"),
+        Err(_) => panic!("Error parsing contract bins"),
     };
     bins
 }
@@ -112,8 +126,6 @@ impl ToSnakeCase for str {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn it_works() {
     }

@@ -18,7 +18,7 @@ mod contract_register;
 
 /// Casper Lievent client environment.
 #[derive(Default)]
-struct ClientEnv {
+pub struct ClientEnv {
     contracts: ContractRegister,
     callstack: Callstack,
     gas: Mutex<Option<Balance>>,
@@ -107,6 +107,11 @@ pub fn register_existing_contract(
     ClientEnv::instance_mut().register_contract(contract);
 }
 
+pub fn unsigned_deploy_json(session_bytes: Vec<u8>) -> String {
+    // TODO: implement
+    "{}".to_string()
+}
+
 /// Deploy WASM file with arguments.
 pub async fn deploy_new_contract(
     name: &str,
@@ -116,6 +121,16 @@ pub async fn deploy_new_contract(
 ) -> Address {
     let gas = get_gas();
     let wasm_name = format!("{}.wasm", name);
+
+    build_args(&mut args, name, constructor_name);
+    let address = ClientEnv::instance().casper_client().deploy_wasm(&wasm_name, args, gas).await;
+    let contract = ContractContainer::new(address, entrypoints);
+    ClientEnv::instance_mut().register_contract(contract);
+
+    address
+}
+
+pub fn build_args(args: &mut CallArgs, name: &str, constructor_name: Option<String>) {
     let contract_package_hash_key = format!("{}_package_hash", name);
     args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, true);
     args.insert(consts::IS_UPGRADABLE_ARG, false);
@@ -124,11 +139,6 @@ pub async fn deploy_new_contract(
     if let Some(constructor_name) = constructor_name {
         args.insert(consts::CONSTRUCTOR_NAME_ARG, constructor_name);
     };
-    let address = ClientEnv::instance().casper_client().deploy_wasm(&wasm_name, args, gas).await;
-    let contract = ContractContainer::new(address, entrypoints);
-    ClientEnv::instance_mut().register_contract(contract);
-
-    address
 }
 
 /// Call contract's entrypoint.

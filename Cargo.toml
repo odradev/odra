@@ -11,6 +11,7 @@ members = [
     "utils",
     "odra-casper/backend",
     "odra-casper/codegen",
+    "odra-casper/wasm-client",
     "odra-casper/shared",
     "odra-casper/test-env",
     "odra-casper/types",
