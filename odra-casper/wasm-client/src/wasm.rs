@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use odra_casper_livenet::casper_node_port::executable_deploy_item::ExecutableDeployItem;
-use odra_casper_livenet::client_env::unsigned_deploy_json;
-use crate::imports::sign_json;
+use odra_casper_livenet::client_env::{build_args, ClientEnv};
+use odra_casper_types::{Bytes, CallArgs};
+use crate::casper_wallet::CasperWalletProvider;
 use crate::schemas::{assert_contract_exists_in_schema, load_schemas};
 use super::utils::ToSnakeCase;
 
@@ -27,12 +28,15 @@ pub fn deploy_wasm(contract_name: &str, contract_schemas: &str, contract_bins: &
     let schemas = load_schemas(contract_schemas)?;
     assert_contract_exists_in_schema(contract_name, schemas)?;
     let wasm_bytes = load_wasm_bytes(contract_name, contract_bins)?;
-    // let session_bytes = ExecutableDeployItem::ModuleBytes {
-    //     module_bytes: wasm_bytes,
-    //     args: args,
-    // };
-    let unsigned_deploy = unsigned_deploy_json(wasm_bytes);
-    let signed_deploy = sign_json(unsigned_deploy);
+    let mut args = CallArgs::new();
+    build_args(&mut args, contract_name, None);
+    let session_bytes = ExecutableDeployItem::ModuleBytes {
+        module_bytes: Bytes::from(wasm_bytes),
+        args: args.as_casper_runtime_args().clone(),
+    };
+    let unsigned_deploy = ClientEnv::instance().casper_client().unwrap().new_deploy(session_bytes, 100.into());
+    let cwp = CasperWalletProvider();
+    let signed_deploy = cwp.signDeploy(serde_json::to_string(&unsigned_deploy).unwrap(), cwp.getActivePublicKey());
     Err(signed_deploy)
 }
 

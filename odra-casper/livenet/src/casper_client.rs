@@ -33,7 +33,7 @@ pub const ENV_SECRET_KEY: &str = "ODRA_CASPER_LIVENET_SECRET_KEY_PATH";
 pub const ENV_NODE_ADDRESS: &str = "ODRA_CASPER_LIVENET_NODE_ADDRESS";
 pub const ENV_CHAIN_NAME: &str = "ODRA_CASPER_LIVENET_CHAIN_NAME";
 
-fn get_env_variable(name: &str) -> String {
+fn _get_env_variable(name: &str) -> String {
     std::env::var(name).unwrap_or_else(|err| {
         log::error(format!(
             "{} must be set. Have you setup your .env file?",
@@ -193,7 +193,7 @@ impl CasperClient {
 
         let response: PutDeployResult = self.post_request(request).await.unwrap();
         let deploy_hash = response.deploy_hash;
-        self.wait_for_deploy_hash(deploy_hash);
+        self.wait_for_deploy_hash(deploy_hash).await;
 
         let address = self.get_contract_address(wasm_file_name.strip_suffix(".wasm").unwrap()).await;
         log::info(format!("Contract {:?} deployed.", &address.to_string()));
@@ -233,7 +233,7 @@ impl CasperClient {
         );
         let response: PutDeployResult = self.post_request(request).await.unwrap();
         let deploy_hash = response.deploy_hash;
-        self.wait_for_deploy_hash(deploy_hash);
+        self.wait_for_deploy_hash(deploy_hash).await;
     }
 
     async fn query_global_state(&self, key: &CasperKey) -> QueryGlobalStateResult {
@@ -334,7 +334,7 @@ impl CasperClient {
         }
     }
 
-    fn new_deploy(&self, session: ExecutableDeployItem, gas: Balance) -> Deploy {
+    pub fn new_deploy(&self, session: ExecutableDeployItem, gas: Balance) -> Deploy {
         // TODO: use real timestamp from the host
         let timestamp = Timestamp::zero();
         let ttl = TimeDiff::from_seconds(1000);
@@ -429,25 +429,31 @@ mod tests {
         "hash-40dd2fef4e994d2b0d3d415ce515446d7a1e389d2e6fc7c51319a70acf6f42d0";
     const ACCOUNT_HASH: &str =
         "hash-2c4a6ce0da5d175e9638ec0830e01dd6cf5f4b1fbb0724f7d2d9de12b1e0f840";
+    const NODE_ADDRESS: &str = "http://3.140.179.157:7777";
+    const CHAIN_NAME: &str = "integration-test";
+
+    fn client() -> CasperClient {
+        CasperClient::new(NODE_ADDRESS.to_string(), CHAIN_NAME.to_string())
+    }
 
     #[tokio::test]
     #[ignore]
     pub async fn client_works() {
         let contract_hash = Address::from_str(CONTRACT_PACKAGE_HASH).unwrap();
         let result: Option<String> =
-            CasperClient::new().get_variable_value(contract_hash, b"name_contract").await;
+            client().get_variable_value(contract_hash, b"name_contract").await;
         assert_eq!(result.unwrap().as_str(), "Plascoin");
 
         let account = Address::from_str(ACCOUNT_HASH).unwrap();
         let balance: Option<U256> =
-            CasperClient::new().get_dict_value(contract_hash, b"balances_contract", &account).await;
+            client().get_dict_value(contract_hash, b"balances_contract", &account).await;
         assert!(balance.is_some());
     }
 
-    #[test]
+    #[tokio::test]
     #[ignore]
-    pub fn state_root_hash() {
-        CasperClient::new().get_state_root_hash();
+    pub async fn state_root_hash() {
+        client().get_state_root_hash().await;
     }
 
     #[tokio::test]
@@ -457,22 +463,22 @@ mod tests {
             Digest::from_hex("98de69b3515fbefcd416e09b57642f721db354509c6d298f5f7cfa8b42714dba")
                 .unwrap()
         );
-        let result = CasperClient::new().get_deploy(hash).await;
+        let result = client().get_deploy(hash).await;
         assert_eq!(result.deploy.hash(), &hash);
-        CasperClient::new().wait_for_deploy_hash(hash);
+        client().wait_for_deploy_hash(hash).await;
     }
 
     #[tokio::test]
     #[ignore]
     pub async fn query_global_state_for_contract() {
         let addr = Address::from_str(CONTRACT_PACKAGE_HASH).unwrap();
-        let _result: Option<String> = CasperClient::new().query_dictionary(addr, "name_contract").await;
+        let _result: Option<String> = client().query_dictionary(addr, "name_contract").await;
     }
 
     #[tokio::test]
     #[ignore]
     pub async fn discover_contract_address() {
-        let address = CasperClient::new().get_contract_address("erc20").await;
+        let address = client().get_contract_address("erc20").await;
         let contract_hash = Address::from_str(CONTRACT_PACKAGE_HASH).unwrap();
         assert_eq!(address, contract_hash);
     }

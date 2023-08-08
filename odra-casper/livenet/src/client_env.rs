@@ -108,11 +108,6 @@ pub fn register_existing_contract(
     ClientEnv::instance_mut().register_contract(contract);
 }
 
-pub fn unsigned_deploy_json(session_bytes: Vec<u8>) -> String {
-    // TODO: implement
-    "{}".to_string()
-}
-
 /// Deploy WASM file with arguments.
 pub async fn deploy_new_contract(
     name: &str,

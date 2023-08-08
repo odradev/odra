@@ -13,4 +13,7 @@ extern "C" {
 
     #[wasm_bindgen(method)]
     pub fn signDeploy(this: &CasperWalletProvider, deployJson: String, signingPublicKeyHex: String) -> String;
+
+    #[wasm_bindgen(method)]
+    pub fn getActivePublicKey(this: &CasperWalletProvider) -> String;
 }
