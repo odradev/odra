@@ -26,11 +26,11 @@ pub fn load_wasm_bytes(contract_name: &str, contract_bins: &[u8]) -> Result<Vec<
 pub fn deploy_wasm(contract_name: &str, contract_schemas: &str, contract_bins: &[u8]) -> Result<(), String>{
     let schemas = load_schemas(contract_schemas)?;
     assert_contract_exists_in_schema(contract_name, schemas)?;
-    let wasm_bytes = load_bin(contract_name, contract_bins)?;
-    let session_bytes = ExecutableDeployItem::ModuleBytes {
-        module_bytes: wasm_bytes,
-        args: args,
-    };
+    let wasm_bytes = load_wasm_bytes(contract_name, contract_bins)?;
+    // let session_bytes = ExecutableDeployItem::ModuleBytes {
+    //     module_bytes: wasm_bytes,
+    //     args: args,
+    // };
     let unsigned_deploy = unsigned_deploy_json(wasm_bytes);
     let signed_deploy = sign_json(unsigned_deploy);
     Err(signed_deploy)

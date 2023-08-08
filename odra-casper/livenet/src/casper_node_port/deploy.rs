@@ -1,6 +1,6 @@
 #![allow(clippy::field_reassign_with_default)]
 
-use std::{cell::OnceCell, cmp, collections::BTreeSet, fmt, hash};
+use std::{cell::OnceCell, cmp, collections::BTreeSet, hash};
 
 use casper_types::{
     bytesrepr::{self, FromBytes, ToBytes},
@@ -13,8 +13,6 @@ use serde::{Deserialize, Serialize};
 use crate::casper_node_port::deploy_item::DeployItem;
 use crate::casper_node_port::executable_deploy_item::ExecutableDeployItem;
 use crate::casper_node_port::hashing::Digest;
-
-use crate::casper_node_port::utils::DisplayIter;
 use crate::casper_types_port::timestamp::{TimeDiff, Timestamp};
 
 use super::{
