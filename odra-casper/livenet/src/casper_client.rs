@@ -80,17 +80,17 @@ impl CasperClient {
     }
 
     /// Query the node for the current state root hash.
-    pub async fn get_state_root_hash(&self) -> String {
-        "papapa".to_string()
-        // let request = json!(
-        //     {
-        //         "jsonrpc": "2.0",
-        //         "method": "chain_get_state_root_hash",
-        //         "id": 1,
-        //     }
-        // );
-        // let result: GetStateRootHashResult = self.post_request(request).await.unwrap();
-        // result.state_root_hash.unwrap()
+    pub async fn get_state_root_hash(&self) -> Digest {
+        // "papapa".to_string()
+        let request = json!(
+            {
+                "jsonrpc": "2.0",
+                "method": "chain_get_state_root_hash",
+                "id": 1,
+            }
+        );
+        let result: GetStateRootHashResult = self.post_request(request).await.unwrap();
+        result.state_root_hash.unwrap()
     }
 
     /// Query the node for the deploy state.
@@ -229,7 +229,7 @@ impl CasperClient {
         );
         let response: PutDeployResult = self.post_request(request).await.unwrap();
         let deploy_hash = response.deploy_hash;
-        self.wait_for_deploy_hash(deploy_hash);
+        self.wait_for_deploy_hash(deploy_hash).await;
     }
 
     async fn query_global_state(&self, key: &Key) -> QueryGlobalStateResult {
@@ -462,17 +462,17 @@ mod tests {
         client.wait_for_deploy_hash(hash);
     }
 
-    #[test]
+    #[tokio::test]
     #[ignore]
-    pub fn query_global_state_for_contract() {
+    pub async fn query_global_state_for_contract() {
         let addr = Address::from_str(CONTRACT_PACKAGE_HASH).unwrap();
-        let _result: Option<String> = client().query_dictionary(addr, "name_contract");
+        let _result: Option<String> = client().query_dictionary(addr, "name_contract").await;
     }
 
-    #[test]
+    #[tokio::test]
     #[ignore]
-    pub fn discover_contract_address() {
-        let address = client().get_contract_address("erc20");
+    pub async fn discover_contract_address() {
+        let address = client().get_contract_address("erc20").await;
         let contract_hash = Address::from_str(CONTRACT_PACKAGE_HASH).unwrap();
         assert_eq!(address, contract_hash);
     }

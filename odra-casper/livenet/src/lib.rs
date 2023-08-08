@@ -3,7 +3,7 @@
 #![feature(once_cell)]
 
 pub mod casper_client;
-mod casper_node_port;
+pub mod casper_node_port;
 mod casper_types_port;
 pub mod client_env;
 pub mod contract_env;

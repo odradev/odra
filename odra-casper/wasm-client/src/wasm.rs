@@ -1,10 +1,11 @@
 use std::collections::HashMap;
+use odra_casper_livenet::casper_node_port::executable_deploy_item::ExecutableDeployItem;
 use odra_casper_livenet::client_env::unsigned_deploy_json;
 use crate::imports::sign_json;
 use crate::schemas::{assert_contract_exists_in_schema, load_schemas};
 use super::utils::ToSnakeCase;
 
-pub fn load_bin(contract_name: &str, contract_bins: &[u8]) -> Result<Vec<u8>, String> {
+pub fn load_wasm_bytes(contract_name: &str, contract_bins: &[u8]) -> Result<Vec<u8>, String> {
     let bins = load_bins(contract_bins);
     let filename = format!("{}.wasm", contract_name.to_snake_case());
 
@@ -25,8 +26,12 @@ pub fn load_bin(contract_name: &str, contract_bins: &[u8]) -> Result<Vec<u8>, St
 pub fn deploy_wasm(contract_name: &str, contract_schemas: &str, contract_bins: &[u8]) -> Result<(), String>{
     let schemas = load_schemas(contract_schemas)?;
     assert_contract_exists_in_schema(contract_name, schemas)?;
-    let bin = load_bin(contract_name, contract_bins)?;
-    let unsigned_deploy = unsigned_deploy_json(bin);
+    let wasm_bytes = load_bin(contract_name, contract_bins)?;
+    let session_bytes = ExecutableDeployItem::ModuleBytes {
+        module_bytes: wasm_bytes,
+        args: args,
+    };
+    let unsigned_deploy = unsigned_deploy_json(wasm_bytes);
     let signed_deploy = sign_json(unsigned_deploy);
     Err(signed_deploy)
 }

@@ -2,14 +2,11 @@ mod imports;
 
 use std::collections::HashMap;
 use casper_types::{Key};
-use casper_types::bytesrepr::Bytes;
-use casper_types::KeyTag::Balance;
 
 use wasm_bindgen::prelude::*;
 use odra_casper_codegen::schema::Schema;
 use odra_casper_livenet::casper_client::CasperClient;
-use odra_casper_livenet::client_env::build_args;
-use odra_casper_types::{Address, CallArgs};
+use odra_casper_types::Address;
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
 #[cfg(feature = "wee_alloc")]
@@ -31,6 +28,8 @@ pub fn setup() {
 
 #[wasm_bindgen]
 pub fn deploy_contract(contract_name: &str) -> Vec<u8> {
+
+    return "bzium".as_bytes().to_vec();
     let schemas = load_schemas();
     schemas.iter().find(|s| s.name == contract_name).unwrap();
     let filename = format!("{}.wasm", contract_name.to_snake_case());
@@ -43,17 +42,17 @@ pub fn deploy_contract(contract_name: &str) -> Vec<u8> {
             contract_bin = bin.clone();
         }
     });
-
-    let provider = imports::CasperWalletProvider();
-    provider.requestConnection();
-    let mut args = CallArgs::default();
-    build_args(&mut CallArgs::default(), "name", Some("name".to_string())).as_casper_runtime_args().clone();
-    let session = ExecutableDeployItem::ModuleBytes {
-        module_bytes: Bytes::from(contract_bin),
-        args
-    };
-    // contract_bin
-    let deploy = CasperClient::new_deploy(session, 1_000_000.into());
+    //
+    // let provider = imports::CasperWalletProvider();
+    // provider.requestConnection();
+    // let mut args = CallArgs::default();
+    // build_args(&mut CallArgs::default(), "name", Some("name".to_string())).as_casper_runtime_args().clone();
+    // let session = ExecutableDeployItem::ModuleBytes {
+    //     module_bytes: Bytes::from(contract_bin),
+    //     args
+    // };
+    // // contract_bin
+    // let deploy = CasperClient::new_deploy(session, 1_000_000.into());
     "bzium".as_bytes().to_vec()
 }
 
@@ -71,7 +70,7 @@ pub async fn test_client() -> String {
         "hash-2c4a6ce0da5d175e9638ec0830e01dd6cf5f4b1fbb0724f7d2d9de12b1e0f840";
     const NODE_ADDRESS: &str = "http://localhost:30800/http://3.140.179.157:7777";
     const CHAIN_NAME: &str = "integration-test";
-    let client = CasperClient::new(NODE_ADDRESS.to_string(), CHAIN_NAME.to_string(), None);
+    let client = CasperClient::new(NODE_ADDRESS.to_string(), CHAIN_NAME.to_string());
 
     let key = Key::from_formatted_str(CONTRACT_PACKAGE_HASH).unwrap();
     let contract_hash = Address::try_from(key).unwrap();

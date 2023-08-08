@@ -10,7 +10,19 @@ pub fn configure_env(node_address: String, chain_name: String) {
 
 #[wasm_bindgen]
 pub async fn get_state_root_hash() -> String {
-    let digest = ClientEnv::instance().casper_client().get_state_root_hash().await;
-    "dupa".to_string()
+    let client = ClientEnv::instance();
+
+    return match client.casper_client() {
+        None => {
+            "Nie umiem skonstruować casper clienta".to_string()
+        }
+        Some(client) => {
+            client.get_state_root_hash().await.to_string()
+        }
+    }
+
+    //
+    // let digest = client.get_state_root_hash().await;
+    // // "dupa".to_string()
     // digest.to_string()
 }
