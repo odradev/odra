@@ -20,6 +20,7 @@ odra-casper-livenet = { path = "../livenet" }
 odra-casper-types = { path = "../types" }
 hex = "0.4.3"
 serde_json = "1.0.104"
+js-sys = "0.3.64"
 
 [build-dependencies]
 serde_json = "1.0.103"

@@ -1,10 +1,14 @@
 use wasm_bindgen::prelude::wasm_bindgen;
 use odra_casper_livenet::casper_client::CasperClient;
 use odra_casper_livenet::client_env::ClientEnv;
+use crate::casper_wallet::CasperWalletProvider;
 
 #[wasm_bindgen]
-pub fn configure_env(node_address: String, chain_name: String) {
-    let client = CasperClient::new(node_address, chain_name);
+pub async fn configure_env(node_address: String, chain_name: String) {
+    let cwp = CasperWalletProvider();
+    cwp.requestConnection().await;
+    let public_key = cwp.getActivePublicKey().await;
+    let client = CasperClient::new(node_address, chain_name, public_key.as_string().unwrap());
     ClientEnv::instance_mut().setup_casper_client(client);
 }
 

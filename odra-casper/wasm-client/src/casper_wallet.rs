@@ -9,11 +9,11 @@ extern "C" {
     pub fn CasperWalletProvider() -> CasperWalletProvider;
 
     #[wasm_bindgen(method)]
-    pub fn requestConnection(this: &CasperWalletProvider);
+    pub async fn requestConnection(this: &CasperWalletProvider);
 
     #[wasm_bindgen(method)]
-    pub fn signDeploy(this: &CasperWalletProvider, deployJson: String, signingPublicKeyHex: String) -> String;
+    pub async fn signDeploy(this: &CasperWalletProvider, deployJson: String, signingPublicKeyHex: String) -> JsValue;
 
     #[wasm_bindgen(method)]
-    pub fn getActivePublicKey(this: &CasperWalletProvider) -> String;
+    pub async fn getActivePublicKey(this: &CasperWalletProvider) -> JsValue;
 }

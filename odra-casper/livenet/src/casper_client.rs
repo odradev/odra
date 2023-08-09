@@ -4,10 +4,7 @@ use blake2::{
     digest::{Update, VariableOutput},
     VarBlake2b
 };
-use casper_types::{
-    bytesrepr::FromBytes, runtime_args, ContractHash, ContractPackageHash, Key as CasperKey,
-    PublicKey, RuntimeArgs
-};
+use casper_types::{bytesrepr::FromBytes, runtime_args, ContractHash, ContractPackageHash, Key as CasperKey, PublicKey, RuntimeArgs, AsymmetricType};
 
 use odra_casper_shared::key_maker::KeyMaker;
 use odra_casper_types::{Address, Balance, Bytes, CallArgs, OdraType};
@@ -47,16 +44,16 @@ fn _get_env_variable(name: &str) -> String {
 pub struct CasperClient {
     node_address: String,
     chain_name: String,
-    public_key: Option<PublicKey>,
+    public_key: PublicKey,
 }
 
 impl CasperClient {
     /// Creates new CasperClient.
-    pub fn new(node_address: String, chain_name: String) -> Self {
+    pub fn new(node_address: String, chain_name: String, public_key: String) -> Self {
         CasperClient {
             node_address,
             chain_name,
-            public_key: None,
+            public_key: PublicKey::from_hex(&public_key).unwrap(),
         }
     }
 
@@ -72,8 +69,7 @@ impl CasperClient {
 
     /// Public key of the client account.
     pub fn public_key(&self) -> PublicKey {
-        // TODO: handle the unwrap
-        self.public_key.clone().unwrap()
+        self.public_key.clone()
     }
 
     /// Address of the client account.

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use wasm_bindgen::JsValue;
 use odra_casper_livenet::casper_node_port::executable_deploy_item::ExecutableDeployItem;
 use odra_casper_livenet::client_env::{build_args, ClientEnv};
 use odra_casper_types::{Bytes, CallArgs};
@@ -24,7 +25,7 @@ pub fn load_wasm_bytes(contract_name: &str, contract_bins: &[u8]) -> Result<Vec<
     Err(format!("Couldn't find {filename} in contract binaries."))
 }
 
-pub fn deploy_wasm(contract_name: &str, contract_schemas: &str, contract_bins: &[u8]) -> Result<(), String>{
+pub async fn deploy_wasm(contract_name: &str, contract_schemas: &str, contract_bins: &[u8]) -> Result<JsValue, String>{
     let schemas = load_schemas(contract_schemas)?;
     assert_contract_exists_in_schema(contract_name, schemas)?;
     let wasm_bytes = load_wasm_bytes(contract_name, contract_bins)?;
@@ -34,10 +35,13 @@ pub fn deploy_wasm(contract_name: &str, contract_schemas: &str, contract_bins: &
         module_bytes: Bytes::from(wasm_bytes),
         args: args.as_casper_runtime_args().clone(),
     };
-    let unsigned_deploy = ClientEnv::instance().casper_client().unwrap().new_deploy(session_bytes, 100.into());
     let cwp = CasperWalletProvider();
-    let signed_deploy = cwp.signDeploy(serde_json::to_string(&unsigned_deploy).unwrap(), cwp.getActivePublicKey());
-    Err(signed_deploy)
+    cwp.requestConnection().await;
+    let Some(public_key) = cwp.getActivePublicKey().await.as_string() else { return Err("Couldn't get public key".to_string()) };
+
+    let unsigned_deploy = ClientEnv::instance().casper_client().unwrap().new_deploy(session_bytes, 100.into());
+    let signed_deploy = cwp.signDeploy(serde_json::to_string(&unsigned_deploy).unwrap(), public_key).await;
+    Ok(signed_deploy)
 }
 
 fn load_bins(contract_bins: &[u8]) -> HashMap<String, Vec<u8>> {

@@ -138,7 +138,7 @@ pub fn build_args(args: &mut CallArgs, name: &str, constructor_name: Option<Stri
 }
 
 /// Call contract's entrypoint.
-pub fn call_contract<T: OdraType>(
+pub async fn call_contract<T: OdraType>(
     addr: Address,
     entrypoint: &str,
     args: &CallArgs,
@@ -146,7 +146,7 @@ pub fn call_contract<T: OdraType>(
 ) -> T {
     match T::cl_type() {
         casper_types::CLType::Unit => {
-            call_contract_deploy(addr, entrypoint, args, _amount);
+            call_contract_deploy(addr, entrypoint, args, _amount).await;
             T::from_bytes(&[]).unwrap().0
         }
         _ => call_contract_getter_entrypoint(addr, entrypoint, args, _amount)
@@ -198,7 +198,7 @@ fn call_contract_getter_entrypoint<T: OdraType>(
     result
 }
 
-fn call_contract_deploy(addr: Address, entrypoint: &str, args: &CallArgs, amount: Option<Balance>) {
+async fn call_contract_deploy(addr: Address, entrypoint: &str, args: &CallArgs, amount: Option<Balance>) {
     let gas = get_gas();
-    ClientEnv::instance().casper_client().unwrap().deploy_entrypoint_call(addr, entrypoint, args, amount, gas);
+    ClientEnv::instance().casper_client().unwrap().deploy_entrypoint_call(addr, entrypoint, args, amount, gas).await;
 }

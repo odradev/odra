@@ -5,7 +5,6 @@ mod imports;
 mod casper_wallet;
 mod client;
 
-use wasm_bindgen::prelude::*;
 pub use wasm::deploy_wasm;
 
 #[cfg(feature = "wee_alloc")]
