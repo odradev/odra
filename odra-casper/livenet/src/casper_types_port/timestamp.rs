@@ -1,22 +1,28 @@
 extern crate alloc;
 use alloc::vec::Vec;
-use core::{
-    ops::{Add, AddAssign, Div, Mul, Rem, Shl, Shr, Sub, SubAssign},
-    time::Duration,
-};
-use std::u64;
 use casper_types::bytesrepr;
 use casper_types::bytesrepr::{FromBytes, ToBytes};
+use core::{
+    ops::{Add, AddAssign, Div, Mul, Rem, Shl, Shr, Sub, SubAssign},
+    time::Duration
+};
+use std::u64;
+use chrono::{DateTime, NaiveDateTime, Utc};
 
 use datasize::DataSize;
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_with::serde_as;
 
-
-/// A timestamp type, representing a concrete moment in time.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, JsonSchema, DataSize)]
-#[schemars(with = "String", description = "Timestamp formatted as per RFC 3339")]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, DataSize, JsonSchema)]
 pub struct Timestamp(u64);
+
+impl ToString for Timestamp {
+    fn to_string(&self) -> String {
+        let dt = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp_millis(self.0.clone() as i64).unwrap(), Utc);
+        dt.to_rfc3339()
+    }
+}
 
 impl Timestamp {
     /// The maximum value a timestamp can have.
@@ -56,7 +62,6 @@ impl Timestamp {
     }
 }
 
-
 impl Add<TimeDiff> for Timestamp {
     type Output = Timestamp;
 
@@ -90,7 +95,7 @@ impl Rem<TimeDiff> for Timestamp {
 
 impl<T> Shl<T> for Timestamp
 where
-    u64: Shl<T, Output = u64>,
+    u64: Shl<T, Output = u64>
 {
     type Output = Timestamp;
 
@@ -101,7 +106,7 @@ where
 
 impl<T> Shr<T> for Timestamp
 where
-    u64: Shr<T, Output = u64>,
+    u64: Shr<T, Output = u64>
 {
     type Output = Timestamp;
 
@@ -112,11 +117,13 @@ where
 
 impl Serialize for Timestamp {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        if serializer.is_human_readable() {
-            self.millis().serialize(serializer)
-        } else {
-            self.0.serialize(serializer)
-        }
+        // if serializer.is_human_readable() {
+        let dt = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp_millis(self.0.clone() as i64).unwrap(), Utc);
+        dt.to_rfc3339().serialize(serializer)
+
+        // } else {
+        //     self.0.serialize(serializer)
+        // }
     }
 }
 
@@ -150,7 +157,9 @@ impl From<u64> for Timestamp {
 }
 
 /// A time difference between two timestamps.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, DataSize, JsonSchema)]
+#[derive(
+    Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, DataSize, JsonSchema,
+)]
 #[schemars(with = "String", description = "Human-readable duration.")]
 pub struct TimeDiff(u64);
 
@@ -237,11 +246,11 @@ impl From<TimeDiff> for Duration {
 
 impl Serialize for TimeDiff {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        if serializer.is_human_readable() {
+        // if serializer.is_human_readable() {
             self.millis().serialize(serializer)
-        } else {
-            self.0.serialize(serializer)
-        }
+        // } else {
+        //     self.0.serialize(serializer)
+        // }
     }
 }
 
@@ -271,5 +280,18 @@ impl FromBytes for TimeDiff {
 impl From<Duration> for TimeDiff {
     fn from(duration: Duration) -> TimeDiff {
         TimeDiff(duration.as_millis() as u64)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn timestamp_serialization_roundtrip() {
+        let timestamp = Timestamp::zero();
+
+        let serialized = serde_json::to_string(&timestamp).unwrap();
+        assert_eq!(serialized, "dupa");
     }
 }

@@ -1,10 +1,10 @@
 use std::fmt;
 
+use crate::casper_node_port::hashing::Digest;
 use casper_types::bytesrepr::{self, FromBytes, ToBytes};
 use datasize::DataSize;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use crate::casper_node_port::hashing::Digest;
 
 #[derive(
     Copy,

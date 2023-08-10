@@ -5,6 +5,7 @@ use odra_casper_shared::consts;
 use odra_casper_types::{Address, Balance, CallArgs, OdraType};
 use ref_thread_local::RefThreadLocal;
 
+use crate::casper_types_port::timestamp::Timestamp;
 use crate::{casper_client::CasperClient, EntrypointArgs, EntrypointCall};
 
 use self::{
@@ -16,13 +17,13 @@ mod callstack;
 mod contract_container;
 mod contract_register;
 
-/// Casper Lievent client environment.
+/// Casper Livenet client environment.
 #[derive(Default)]
 pub struct ClientEnv {
     contracts: ContractRegister,
     callstack: Callstack,
     gas: Mutex<Option<Balance>>,
-    casper_client: Option<CasperClient>,
+    casper_client: Option<CasperClient>
 }
 
 impl ClientEnv {
@@ -113,13 +114,18 @@ pub async fn deploy_new_contract(
     name: &str,
     mut args: CallArgs,
     entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>,
-    constructor_name: Option<String>
+    constructor_name: Option<String>,
+    timestamp: Timestamp
 ) -> Address {
     let gas = get_gas();
     let wasm_name = format!("{}.wasm", name);
 
     build_args(&mut args, name, constructor_name);
-    let address = ClientEnv::instance().casper_client().unwrap().deploy_wasm(&wasm_name, args, gas).await;
+    let address = ClientEnv::instance()
+        .casper_client()
+        .unwrap()
+        .deploy_wasm(&wasm_name, args, gas, timestamp)
+        .await;
     let contract = ContractContainer::new(address, entrypoints);
     ClientEnv::instance_mut().register_contract(contract);
 
@@ -142,11 +148,12 @@ pub async fn call_contract<T: OdraType>(
     addr: Address,
     entrypoint: &str,
     args: &CallArgs,
-    _amount: Option<Balance>
+    _amount: Option<Balance>,
+    timestamp: Timestamp
 ) -> T {
     match T::cl_type() {
         casper_types::CLType::Unit => {
-            call_contract_deploy(addr, entrypoint, args, _amount).await;
+            call_contract_deploy(addr, entrypoint, args, _amount, timestamp).await;
             T::from_bytes(&[]).unwrap().0
         }
         _ => call_contract_getter_entrypoint(addr, entrypoint, args, _amount)
@@ -156,7 +163,11 @@ pub async fn call_contract<T: OdraType>(
 /// Query current contract for a variable's value.
 pub async fn get_var_from_current_contract<T: OdraType>(key: &[u8]) -> Option<T> {
     let address = ClientEnv::instance().current_contract();
-    ClientEnv::instance().casper_client().unwrap().get_variable_value(address, key).await
+    ClientEnv::instance()
+        .casper_client()
+        .unwrap()
+        .get_variable_value(address, key)
+        .await
 }
 
 /// Query current contract for a dictionary's value.
@@ -165,7 +176,11 @@ pub async fn get_dict_value_from_current_contract<K: OdraType, T: OdraType>(
     key: &K
 ) -> Option<T> {
     let address = ClientEnv::instance().current_contract();
-    ClientEnv::instance().casper_client().unwrap().get_dict_value(address, seed, key).await
+    ClientEnv::instance()
+        .casper_client()
+        .unwrap()
+        .get_dict_value(address, seed, key)
+        .await
 }
 
 /// Current caller.
@@ -198,7 +213,17 @@ fn call_contract_getter_entrypoint<T: OdraType>(
     result
 }
 
-async fn call_contract_deploy(addr: Address, entrypoint: &str, args: &CallArgs, amount: Option<Balance>) {
+async fn call_contract_deploy(
+    addr: Address,
+    entrypoint: &str,
+    args: &CallArgs,
+    amount: Option<Balance>,
+    timestamp: Timestamp
+) {
     let gas = get_gas();
-    ClientEnv::instance().casper_client().unwrap().deploy_entrypoint_call(addr, entrypoint, args, amount, gas).await;
+    ClientEnv::instance()
+        .casper_client()
+        .unwrap()
+        .deploy_entrypoint_call(addr, entrypoint, args, amount, gas, timestamp)
+        .await;
 }

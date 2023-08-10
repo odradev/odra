@@ -1,9 +1,10 @@
-mod schemas;
-mod wasm;
-mod utils;
-mod imports;
 mod casper_wallet;
 mod client;
+mod imports;
+mod odra_client;
+mod schemas;
+mod utils;
+mod wasm;
 
 pub use wasm::deploy_wasm;
 

@@ -1,30 +1,30 @@
 use std::{
     array::TryFromSliceError,
     convert::{TryFrom, TryInto},
-    fmt::{self, Debug, Display, Formatter},
+    fmt::{self, Debug, Display, Formatter}
 };
 
 use blake2::{
     digest::{Update, VariableOutput},
-    VarBlake2b,
+    VarBlake2b
 };
 use datasize::DataSize;
 use schemars::JsonSchema;
 use serde::{de::Error as SerdeError, Deserialize, Deserializer, Serialize, Serializer};
 
-use casper_types::{
-    checksummed_hex, CLType, CLTyped, bytesrepr::{self, ToBytes},
-};
-use casper_types::bytesrepr::FromBytes;
-use hex_fmt::HexFmt;
 use crate::casper_node_port::error::HashingError;
+use casper_types::bytesrepr::FromBytes;
+use casper_types::{
+    bytesrepr::{self, ToBytes},
+    checksummed_hex, CLType, CLTyped
+};
+use hex_fmt::HexFmt;
 
 /// The output of the hash function.
 #[derive(Copy, Clone, DataSize, Ord, PartialOrd, Eq, PartialEq, Hash, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
 #[schemars(with = "String", description = "Hex-encoded hash digest.")]
 pub struct Digest(#[schemars(skip, with = "String")] [u8; Digest::LENGTH]);
-
 
 impl Digest {
     /// The number of bytes in a `Digest`.

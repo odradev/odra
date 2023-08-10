@@ -4,7 +4,7 @@
 
 pub mod casper_client;
 pub mod casper_node_port;
-mod casper_types_port;
+pub mod casper_types_port;
 pub mod client_env;
 pub mod contract_env;
 

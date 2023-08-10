@@ -2,9 +2,8 @@
 
 use std::collections::BTreeSet;
 
-use casper_types::{account::AccountHash, DeployHash};
 use crate::casper_node_port::executable_deploy_item::ExecutableDeployItem;
-
+use casper_types::{account::AccountHash, DeployHash};
 
 type GasPrice = u64;
 
@@ -25,7 +24,7 @@ pub struct DeployItem {
     pub authorization_keys: BTreeSet<AccountHash>,
     /// A unique identifier of the deploy.
     /// Currently it is the hash of the deploy header (see `DeployHeader` in the `types` crate).
-    pub deploy_hash: DeployHash,
+    pub deploy_hash: DeployHash
 }
 
 impl DeployItem {
@@ -36,7 +35,7 @@ impl DeployItem {
         payment: ExecutableDeployItem,
         gas_price: GasPrice,
         authorization_keys: BTreeSet<AccountHash>,
-        deploy_hash: DeployHash,
+        deploy_hash: DeployHash
     ) -> Self {
         DeployItem {
             address,
@@ -44,7 +43,7 @@ impl DeployItem {
             payment,
             gas_price,
             authorization_keys,
-            deploy_hash,
+            deploy_hash
         }
     }
 }

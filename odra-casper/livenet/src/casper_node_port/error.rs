@@ -1,9 +1,9 @@
-use casper_types::{U512};
+use crate::casper_node_port::hashing::Digest;
+use crate::casper_types_port::timestamp::TimeDiff;
+use casper_types::U512;
 use datasize::DataSize;
 use serde::Serialize;
 use thiserror::Error;
-use crate::casper_node_port::hashing::Digest;
-use crate::casper_types_port::timestamp::TimeDiff;
 
 /// A representation of the way in which a deploy failed validation checks.
 #[allow(dead_code)]
@@ -141,5 +141,5 @@ pub enum HashingError {
     IncorrectDigestLength(usize),
     /// There was a decoding error.
     #[error("Base16 decode error {0}.")]
-    Base16DecodeError(base16::DecodeError),
+    Base16DecodeError(base16::DecodeError)
 }

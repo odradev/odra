@@ -1,7 +1,7 @@
-use wasm_bindgen::prelude::wasm_bindgen;
+use crate::casper_wallet::CasperWalletProvider;
 use odra_casper_livenet::casper_client::CasperClient;
 use odra_casper_livenet::client_env::ClientEnv;
-use crate::casper_wallet::CasperWalletProvider;
+use wasm_bindgen::prelude::wasm_bindgen;
 
 #[wasm_bindgen]
 pub async fn configure_env(node_address: String, chain_name: String) {
@@ -17,13 +17,9 @@ pub async fn get_state_root_hash() -> String {
     let client = ClientEnv::instance();
 
     return match client.casper_client() {
-        None => {
-            "Nie umiem skonstruować casper clienta".to_string()
-        }
-        Some(client) => {
-            client.get_state_root_hash().await.to_string()
-        }
-    }
+        None => "Nie umiem skonstruować casper clienta".to_string(),
+        Some(client) => client.get_state_root_hash().await.to_string()
+    };
 
     //
     // let digest = client.get_state_root_hash().await;

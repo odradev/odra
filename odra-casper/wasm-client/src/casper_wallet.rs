@@ -12,7 +12,11 @@ extern "C" {
     pub async fn requestConnection(this: &CasperWalletProvider);
 
     #[wasm_bindgen(method)]
-    pub async fn signDeploy(this: &CasperWalletProvider, deployJson: String, signingPublicKeyHex: String) -> JsValue;
+    pub async fn sign(
+        this: &CasperWalletProvider,
+        deployJson: String,
+        signingPublicKeyHex: String
+    ) -> JsValue;
 
     #[wasm_bindgen(method)]
     pub async fn getActivePublicKey(this: &CasperWalletProvider) -> JsValue;

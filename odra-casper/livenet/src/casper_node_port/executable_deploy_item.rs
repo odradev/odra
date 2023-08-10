@@ -2,10 +2,10 @@
 // TODO - remove once schemars stops causing warning.
 #![allow(clippy::field_reassign_with_default)]
 
-use std::fmt::{self, Debug, Display, Formatter};
 use datasize::DataSize;
 use hex_buffer_serde::{Hex, HexForm};
 use hex_fmt::HexFmt;
+use std::fmt::{self, Debug, Display, Formatter};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -13,8 +13,8 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use casper_types::{
     bytesrepr::{self, Bytes, FromBytes, ToBytes, U8_SERIALIZED_LENGTH},
     contracts::{ContractVersion, DEFAULT_ENTRY_POINT_NAME},
-    system::mint::ARG_AMOUNT, ContractHash, ContractPackageHash, Gas,
-    Motes, Phase, RuntimeArgs, U512,
+    system::mint::ARG_AMOUNT,
+    ContractHash, ContractPackageHash, Gas, Motes, Phase, RuntimeArgs, U512
 };
 
 const TAG_LENGTH: usize = U8_SERIALIZED_LENGTH;
@@ -36,7 +36,7 @@ pub enum ExecutableDeployItemIdentifier {
     /// The deploy item is a variation of a stored contract package.
     Package(ContractPackageIdentifier),
     /// The deploy item is a native transfer.
-    Transfer,
+    Transfer
 }
 
 /// Possible ways to identify the contract object within an `ExecutableDeployItem`.
@@ -47,7 +47,7 @@ pub enum ContractIdentifier {
     /// The contract object within the deploy item is identified by name.
     Name(String),
     /// The contract object within the deploy item is identified by its hash.
-    Hash(ContractHash),
+    Hash(ContractHash)
 }
 
 /// Possible ways to identify the contract package object within an `ExecutableDeployItem`.
@@ -60,15 +60,15 @@ pub enum ContractPackageIdentifier {
         /// Name of the contract package.
         name: String,
         /// The version specified in the deploy item.
-        version: Option<ContractVersion>,
+        version: Option<ContractVersion>
     },
     /// The stored contract package within the deploy item is identified by hash.
     Hash {
         /// Hash of the contract package.
         contract_package_hash: ContractPackageHash,
         /// The version specified in the deploy item.
-        version: Option<ContractVersion>,
-    },
+        version: Option<ContractVersion>
+    }
 }
 
 impl ContractPackageIdentifier {
@@ -76,7 +76,7 @@ impl ContractPackageIdentifier {
     pub fn version(&self) -> Option<ContractVersion> {
         match self {
             ContractPackageIdentifier::Name { version, .. } => *version,
-            ContractPackageIdentifier::Hash { version, .. } => *version,
+            ContractPackageIdentifier::Hash { version, .. } => *version
         }
     }
 }
@@ -97,7 +97,7 @@ pub enum ExecutableDeployItem {
         #[schemars(with = "String", description = "Hex-encoded raw Wasm bytes.")]
         module_bytes: Bytes,
         /// Runtime arguments.
-        args: RuntimeArgs,
+        args: RuntimeArgs
     },
     /// Stored contract referenced by its [`ContractHash`], entry point and an instance of
     /// [`RuntimeArgs`].
@@ -109,7 +109,7 @@ pub enum ExecutableDeployItem {
         /// Name of an entry point.
         entry_point: String,
         /// Runtime arguments.
-        args: RuntimeArgs,
+        args: RuntimeArgs
     },
     /// Stored contract referenced by a named key existing in the signer's account context, entry
     /// point and an instance of [`RuntimeArgs`].
@@ -119,7 +119,7 @@ pub enum ExecutableDeployItem {
         /// Name of an entry point.
         entry_point: String,
         /// Runtime arguments.
-        args: RuntimeArgs,
+        args: RuntimeArgs
     },
     /// Stored versioned contract referenced by its [`ContractPackageHash`], entry point and an
     /// instance of [`RuntimeArgs`].
@@ -134,7 +134,7 @@ pub enum ExecutableDeployItem {
         /// Entry point name.
         entry_point: String,
         /// Runtime arguments.
-        args: RuntimeArgs,
+        args: RuntimeArgs
     },
     /// Stored versioned contract referenced by a named key existing in the signer's account
     /// context, entry point and an instance of [`RuntimeArgs`].
@@ -147,28 +147,28 @@ pub enum ExecutableDeployItem {
         /// Entry point name.
         entry_point: String,
         /// Runtime arguments.
-        args: RuntimeArgs,
+        args: RuntimeArgs
     },
     /// A native transfer which does not contain or reference a WASM code.
     Transfer {
         /// Runtime arguments.
-        args: RuntimeArgs,
-    },
+        args: RuntimeArgs
+    }
 }
 
 mod contract_hash_as_digest {
-    use crate::casper_node_port::hashing::Digest;
     use super::*;
+    use crate::casper_node_port::hashing::Digest;
 
     pub(super) fn serialize<S: Serializer>(
         contract_hash: &ContractHash,
-        serializer: S,
+        serializer: S
     ) -> Result<S::Ok, S::Error> {
         Digest::from(contract_hash.value()).serialize(serializer)
     }
 
     pub(super) fn deserialize<'de, D: Deserializer<'de>>(
-        deserializer: D,
+        deserializer: D
     ) -> Result<ContractHash, D::Error> {
         let digest = Digest::deserialize(deserializer)?;
         Ok(ContractHash::new(digest.value()))
@@ -176,18 +176,18 @@ mod contract_hash_as_digest {
 }
 
 mod contract_package_hash_as_digest {
-    use crate::casper_node_port::hashing::Digest;
     use super::*;
+    use crate::casper_node_port::hashing::Digest;
 
     pub(super) fn serialize<S: Serializer>(
         contract_package_hash: &ContractPackageHash,
-        serializer: S,
+        serializer: S
     ) -> Result<S::Ok, S::Error> {
         Digest::from(contract_package_hash.value()).serialize(serializer)
     }
 
     pub(super) fn deserialize<'de, D: Deserializer<'de>>(
-        deserializer: D,
+        deserializer: D
     ) -> Result<ContractPackageHash, D::Error> {
         let digest = Digest::deserialize(deserializer)?;
         Ok(ContractPackageHash::new(digest.value()))
@@ -204,7 +204,7 @@ impl ExecutableDeployItem {
             ExecutableDeployItem::StoredVersionedContractByName { entry_point, .. }
             | ExecutableDeployItem::StoredVersionedContractByHash { entry_point, .. }
             | ExecutableDeployItem::StoredContractByHash { entry_point, .. }
-            | ExecutableDeployItem::StoredContractByName { entry_point, .. } => entry_point,
+            | ExecutableDeployItem::StoredContractByName { entry_point, .. } => entry_point
         }
     }
 
@@ -221,16 +221,16 @@ impl ExecutableDeployItem {
             ExecutableDeployItem::StoredVersionedContractByHash { hash, version, .. } => {
                 ExecutableDeployItemIdentifier::Package(ContractPackageIdentifier::Hash {
                     contract_package_hash: *hash,
-                    version: *version,
+                    version: *version
                 })
             }
             ExecutableDeployItem::StoredVersionedContractByName { name, version, .. } => {
                 ExecutableDeployItemIdentifier::Package(ContractPackageIdentifier::Name {
                     name: name.to_string(),
-                    version: *version,
+                    version: *version
                 })
             }
-            ExecutableDeployItem::Transfer { .. } => ExecutableDeployItemIdentifier::Transfer,
+            ExecutableDeployItem::Transfer { .. } => ExecutableDeployItemIdentifier::Transfer
         }
     }
 
@@ -262,13 +262,13 @@ impl ExecutableDeployItem {
             ExecutableDeployItem::StoredVersionedContractByName { name, version, .. } => {
                 Some(ContractPackageIdentifier::Name {
                     name: name.clone(),
-                    version: *version,
+                    version: *version
                 })
             }
             ExecutableDeployItem::StoredVersionedContractByHash { hash, version, .. } => {
                 Some(ContractPackageIdentifier::Hash {
                     contract_package_hash: *hash,
-                    version: *version,
+                    version: *version
                 })
             }
         }
@@ -282,7 +282,7 @@ impl ExecutableDeployItem {
             | ExecutableDeployItem::StoredContractByName { args, .. }
             | ExecutableDeployItem::StoredVersionedContractByHash { args, .. }
             | ExecutableDeployItem::StoredVersionedContractByName { args, .. }
-            | ExecutableDeployItem::Transfer { args } => args,
+            | ExecutableDeployItem::Transfer { args } => args
         }
     }
 
@@ -290,7 +290,7 @@ impl ExecutableDeployItem {
     pub fn payment_amount(&self, conv_rate: u64) -> Option<Gas> {
         match self.args().get(ARG_AMOUNT) {
             Some(val) => Gas::from_motes(Motes::new(val.clone().into_t::<U512>().ok()?), conv_rate),
-            None => None,
+            None => None
         }
     }
 
@@ -331,7 +331,7 @@ impl ExecutableDeployItem {
             ExecutableDeployItem::ModuleBytes { .. }
             | ExecutableDeployItem::StoredContractByHash { .. }
             | ExecutableDeployItem::StoredVersionedContractByHash { .. }
-            | ExecutableDeployItem::Transfer { .. } => None,
+            | ExecutableDeployItem::Transfer { .. } => None
         }
     }
 
@@ -372,7 +372,7 @@ impl ToBytes for ExecutableDeployItem {
             ExecutableDeployItem::StoredContractByHash {
                 hash,
                 entry_point,
-                args,
+                args
             } => {
                 buffer.insert(0, STORED_CONTRACT_BY_HASH_TAG);
                 buffer.extend(hash.to_bytes()?);
@@ -382,7 +382,7 @@ impl ToBytes for ExecutableDeployItem {
             ExecutableDeployItem::StoredContractByName {
                 name,
                 entry_point,
-                args,
+                args
             } => {
                 buffer.insert(0, STORED_CONTRACT_BY_NAME_TAG);
                 buffer.extend(name.to_bytes()?);
@@ -393,7 +393,7 @@ impl ToBytes for ExecutableDeployItem {
                 hash,
                 version,
                 entry_point,
-                args,
+                args
             } => {
                 buffer.insert(0, STORED_VERSIONED_CONTRACT_BY_HASH_TAG);
                 buffer.extend(hash.to_bytes()?);
@@ -405,7 +405,7 @@ impl ToBytes for ExecutableDeployItem {
                 name,
                 version,
                 entry_point,
-                args,
+                args
             } => {
                 buffer.insert(0, STORED_VERSIONED_CONTRACT_BY_NAME_TAG);
                 buffer.extend(name.to_bytes()?);
@@ -430,7 +430,7 @@ impl ToBytes for ExecutableDeployItem {
                 ExecutableDeployItem::StoredContractByHash {
                     hash,
                     entry_point,
-                    args,
+                    args
                 } => {
                     hash.serialized_length()
                         + entry_point.serialized_length()
@@ -439,7 +439,7 @@ impl ToBytes for ExecutableDeployItem {
                 ExecutableDeployItem::StoredContractByName {
                     name,
                     entry_point,
-                    args,
+                    args
                 } => {
                     name.serialized_length()
                         + entry_point.serialized_length()
@@ -449,7 +449,7 @@ impl ToBytes for ExecutableDeployItem {
                     hash,
                     version,
                     entry_point,
-                    args,
+                    args
                 } => {
                     hash.serialized_length()
                         + version.serialized_length()
@@ -460,14 +460,14 @@ impl ToBytes for ExecutableDeployItem {
                     name,
                     version,
                     entry_point,
-                    args,
+                    args
                 } => {
                     name.serialized_length()
                         + version.serialized_length()
                         + entry_point.serialized_length()
                         + args.serialized_length()
                 }
-                ExecutableDeployItem::Transfer { args } => args.serialized_length(),
+                ExecutableDeployItem::Transfer { args } => args.serialized_length()
             }
     }
 }
@@ -481,7 +481,7 @@ impl FromBytes for ExecutableDeployItem {
                 let (args, remainder) = FromBytes::from_bytes(remainder)?;
                 Ok((
                     ExecutableDeployItem::ModuleBytes { module_bytes, args },
-                    remainder,
+                    remainder
                 ))
             }
             STORED_CONTRACT_BY_HASH_TAG => {
@@ -492,9 +492,9 @@ impl FromBytes for ExecutableDeployItem {
                     ExecutableDeployItem::StoredContractByHash {
                         hash,
                         entry_point,
-                        args,
+                        args
                     },
-                    remainder,
+                    remainder
                 ))
             }
             STORED_CONTRACT_BY_NAME_TAG => {
@@ -505,9 +505,9 @@ impl FromBytes for ExecutableDeployItem {
                     ExecutableDeployItem::StoredContractByName {
                         name,
                         entry_point,
-                        args,
+                        args
                     },
-                    remainder,
+                    remainder
                 ))
             }
             STORED_VERSIONED_CONTRACT_BY_HASH_TAG => {
@@ -520,9 +520,9 @@ impl FromBytes for ExecutableDeployItem {
                         hash,
                         version,
                         entry_point,
-                        args,
+                        args
                     },
-                    remainder,
+                    remainder
                 ))
             }
             STORED_VERSIONED_CONTRACT_BY_NAME_TAG => {
@@ -535,16 +535,16 @@ impl FromBytes for ExecutableDeployItem {
                         name,
                         version,
                         entry_point,
-                        args,
+                        args
                     },
-                    remainder,
+                    remainder
                 ))
             }
             TRANSFER_TAG => {
                 let (args, remainder) = FromBytes::from_bytes(remainder)?;
                 Ok((ExecutableDeployItem::Transfer { args }, remainder))
             }
-            _ => Err(bytesrepr::Error::Formatting),
+            _ => Err(bytesrepr::Error::Formatting)
         }
     }
 }
@@ -607,7 +607,7 @@ impl Display for ExecutableDeployItem {
                 "stored-versioned-contract: {}, version: latest, entry-point: {}",
                 name, entry_point,
             ),
-            ExecutableDeployItem::Transfer { .. } => write!(f, "transfer"),
+            ExecutableDeployItem::Transfer { .. } => write!(f, "transfer")
         }
     }
 }

@@ -4,13 +4,19 @@ use blake2::{
     digest::{Update, VariableOutput},
     VarBlake2b
 };
-use casper_types::{bytesrepr::FromBytes, runtime_args, ContractHash, ContractPackageHash, Key as CasperKey, PublicKey, RuntimeArgs, AsymmetricType};
+use casper_types::{
+    bytesrepr::FromBytes, runtime_args, AsymmetricType, ContractHash, ContractPackageHash,
+    Key as CasperKey, PublicKey, RuntimeArgs
+};
 
 use odra_casper_shared::key_maker::KeyMaker;
 use odra_casper_types::{Address, Balance, Bytes, CallArgs, OdraType};
 use serde::de::DeserializeOwned;
 use serde_json::{from_value, json, Value};
 
+use crate::casper_node_port::executable_deploy_item::ExecutableDeployItem;
+use crate::casper_node_port::hashing::Digest;
+use crate::casper_types_port::timestamp::{TimeDiff, Timestamp};
 use crate::{
     casper_node_port::{
         rpcs::{
@@ -22,9 +28,6 @@ use crate::{
     },
     log
 };
-use crate::casper_node_port::executable_deploy_item::ExecutableDeployItem;
-use crate::casper_node_port::hashing::Digest;
-use crate::casper_types_port::timestamp::{TimeDiff, Timestamp};
 
 pub const ENV_SECRET_KEY: &str = "ODRA_CASPER_LIVENET_SECRET_KEY_PATH";
 pub const ENV_NODE_ADDRESS: &str = "ODRA_CASPER_LIVENET_NODE_ADDRESS";
@@ -44,7 +47,7 @@ fn _get_env_variable(name: &str) -> String {
 pub struct CasperClient {
     node_address: String,
     chain_name: String,
-    public_key: PublicKey,
+    public_key: PublicKey
 }
 
 impl CasperClient {
@@ -53,7 +56,7 @@ impl CasperClient {
         CasperClient {
             node_address,
             chain_name,
-            public_key: PublicKey::from_hex(&public_key).unwrap(),
+            public_key: PublicKey::from_hex(&public_key).unwrap()
         }
     }
 
@@ -133,7 +136,9 @@ impl CasperClient {
     pub async fn get_contract_address(&self, key_name: &str) -> Address {
         let key_name = format!("{}_package_hash", key_name);
         let account_hash = self.public_key().to_account_hash();
-        let result = self.query_global_state(&CasperKey::Account(account_hash)).await;
+        let result = self
+            .query_global_state(&CasperKey::Account(account_hash))
+            .await;
         let result_as_json = serde_json::to_value(result.stored_value).unwrap();
 
         let named_keys = result_as_json["Account"]["named_keys"].as_array().unwrap();
@@ -167,7 +172,13 @@ impl CasperClient {
     }
 
     /// Deploy the contract.
-    pub async fn deploy_wasm(&self, wasm_file_name: &str, args: CallArgs, gas: Balance) -> Address {
+    pub async fn deploy_wasm(
+        &self,
+        wasm_file_name: &str,
+        args: CallArgs,
+        gas: Balance,
+        timestamp: Timestamp
+    ) -> Address {
         log::info(format!("Deploying \"{}\".", wasm_file_name));
         let wasm_path = find_wasm_file_path(wasm_file_name);
         let wasm_bytes = fs::read(wasm_path).unwrap();
@@ -175,7 +186,7 @@ impl CasperClient {
             module_bytes: Bytes::from(wasm_bytes),
             args: args.as_casper_runtime_args().clone()
         };
-        let deploy = self.new_deploy(session, gas);
+        let deploy = self.new_deploy(session, gas, timestamp);
         let request = json!(
             {
                 "jsonrpc": "2.0",
@@ -191,7 +202,9 @@ impl CasperClient {
         let deploy_hash = response.deploy_hash;
         self.wait_for_deploy_hash(deploy_hash).await;
 
-        let address = self.get_contract_address(wasm_file_name.strip_suffix(".wasm").unwrap()).await;
+        let address = self
+            .get_contract_address(wasm_file_name.strip_suffix(".wasm").unwrap())
+            .await;
         log::info(format!("Contract {:?} deployed.", &address.to_string()));
         address
     }
@@ -203,7 +216,8 @@ impl CasperClient {
         entrypoint: &str,
         args: &CallArgs,
         _amount: Option<Balance>,
-        gas: Balance
+        gas: Balance,
+        timestamp: Timestamp
     ) {
         log::info(format!(
             "Calling {:?} with entrypoint \"{}\".",
@@ -216,7 +230,7 @@ impl CasperClient {
             entry_point: String::from(entrypoint),
             args: args.as_casper_runtime_args().clone()
         };
-        let deploy = self.new_deploy(session, gas);
+        let deploy = self.new_deploy(session, gas, timestamp);
         let request = json!(
             {
                 "jsonrpc": "2.0",
@@ -330,9 +344,12 @@ impl CasperClient {
         }
     }
 
-    pub fn new_deploy(&self, session: ExecutableDeployItem, gas: Balance) -> Deploy {
-        // TODO: use real timestamp from the host
-        let timestamp = Timestamp::zero();
+    pub fn new_deploy(
+        &self,
+        session: ExecutableDeployItem,
+        gas: Balance,
+        timestamp: Timestamp
+    ) -> Deploy {
         let ttl = TimeDiff::from_seconds(1000);
         let gas_price = 1;
         let dependencies = vec![];
@@ -371,7 +388,6 @@ impl CasperClient {
         from_value(response_value["result"].clone()).ok()
         // web_sys::console::log_1(&e.to_string().as_str().into());
     }
-
 }
 
 /// Search for the wasm file in the current directory and in the parent directory.
@@ -416,8 +432,8 @@ mod tests {
     };
     use odra_casper_types::Address;
 
-    use crate::casper_node_port::DeployHash;
     use crate::casper_node_port::hashing::Digest;
+    use crate::casper_node_port::DeployHash;
 
     use super::CasperClient;
 
@@ -429,20 +445,22 @@ mod tests {
     const CHAIN_NAME: &str = "integration-test";
 
     fn client() -> CasperClient {
-        CasperClient::new(NODE_ADDRESS.to_string(), CHAIN_NAME.to_string())
+        CasperClient::new(NODE_ADDRESS.to_string(), CHAIN_NAME.to_string(), "".to_string())
     }
 
     #[tokio::test]
     #[ignore]
     pub async fn client_works() {
         let contract_hash = Address::from_str(CONTRACT_PACKAGE_HASH).unwrap();
-        let result: Option<String> =
-            client().get_variable_value(contract_hash, b"name_contract").await;
+        let result: Option<String> = client()
+            .get_variable_value(contract_hash, b"name_contract")
+            .await;
         assert_eq!(result.unwrap().as_str(), "Plascoin");
 
         let account = Address::from_str(ACCOUNT_HASH).unwrap();
-        let balance: Option<U256> =
-            client().get_dict_value(contract_hash, b"balances_contract", &account).await;
+        let balance: Option<U256> = client()
+            .get_dict_value(contract_hash, b"balances_contract", &account)
+            .await;
         assert!(balance.is_some());
     }
 

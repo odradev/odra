@@ -11,8 +11,8 @@ mod variable;
 pub mod test_utils;
 
 pub use {
-    item::OdraItem,
     instance::{DynamicInstance, StaticInstance},
+    item::OdraItem,
     list::{Iter, List},
     mapping::Mapping,
     odra_proc_macros::{

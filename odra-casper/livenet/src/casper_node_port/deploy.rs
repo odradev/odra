@@ -2,6 +2,10 @@
 
 use std::{cell::OnceCell, cmp, collections::BTreeSet, hash};
 
+use crate::casper_node_port::deploy_item::DeployItem;
+use crate::casper_node_port::executable_deploy_item::ExecutableDeployItem;
+use crate::casper_node_port::hashing::Digest;
+use crate::casper_types_port::timestamp::{TimeDiff, Timestamp};
 use casper_types::{
     bytesrepr::{self, FromBytes, ToBytes},
     PublicKey, SecretKey
@@ -10,10 +14,6 @@ use datasize::DataSize;
 use itertools::Itertools;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use crate::casper_node_port::deploy_item::DeployItem;
-use crate::casper_node_port::executable_deploy_item::ExecutableDeployItem;
-use crate::casper_node_port::hashing::Digest;
-use crate::casper_types_port::timestamp::{TimeDiff, Timestamp};
 
 use super::{
     approval::Approval, deploy_hash::DeployHash, deploy_header::DeployHeader,
@@ -44,7 +44,7 @@ impl Deploy {
         chain_name: String,
         payment: ExecutableDeployItem,
         session: ExecutableDeployItem,
-        account: PublicKey,
+        account: PublicKey
     ) -> Deploy {
         let serialized_body = serialize_body(&payment, &session);
         let body_hash = Digest::hash(serialized_body);
@@ -245,7 +245,6 @@ impl FromBytes for Deploy {
         Ok((maybe_valid_deploy, remainder))
     }
 }
-
 
 impl From<Deploy> for DeployItem {
     fn from(deploy: Deploy) -> Self {
