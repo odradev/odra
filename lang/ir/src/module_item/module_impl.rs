@@ -138,7 +138,7 @@ impl TryFrom<syn::ItemImpl> for ModuleImpl {
         let mut items = item_impl
             .items
             .into_iter()
-            .filter(|item| matches!(item, syn::ImplItem::Method(_)))
+            .filter(|item| !matches!(item, syn::ImplItem::Macro(_)))
             .map(<ImplItem as TryFrom<_>>::try_from)
             .collect::<Result<Vec<_>, syn::Error>>()?;
 

@@ -19,6 +19,8 @@ macro_rules! impl_casper_type_numeric_wrapper {
             }
 
             impl $ty {
+                pub const MAX: $ty = $ty { inner: casper_types::$ty::MAX };
+
                 pub fn as_u32(&self) -> u32 {
                     self.inner.as_u32()
                 }
@@ -99,6 +101,18 @@ macro_rules! impl_casper_type_numeric_wrapper {
 
                 pub fn from_dec_str(s: &str) -> Result<Self, alloc::string::String> {
                     Self::from_str_radix(s, 10)
+                }
+
+                pub fn from_big_endian(slice: &[u8]) -> Self {
+                    Self {
+                        inner: casper_types::$ty::from_big_endian(slice)
+                    }
+                }
+
+                pub fn from_little_endian(slice: &[u8]) -> Self {
+                    Self {
+                        inner: casper_types::$ty::from_little_endian(slice)
+                    }
                 }
             }
 

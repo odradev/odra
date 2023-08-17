@@ -1,8 +1,7 @@
 use super::{ModuleEvent, ModuleEvents};
 use crate::{attrs::partition_attributes, utils::FieldsValidator};
 use anyhow::{Context, Result};
-use proc_macro2::Ident;
-use syn::{punctuated::Punctuated, Field, Fields, FieldsNamed, Token};
+use syn::{parse_quote, punctuated::Punctuated, Field, Fields, FieldsNamed, Token};
 
 use super::ModuleConfiguration;
 
@@ -73,7 +72,7 @@ impl ModuleStruct {
             .iter()
             .filter(|field| field.ident.is_some())
             .filter_map(filter_primitives)
-            .map(|ident| ModuleEvent { name: ident })
+            .map(|ident| ModuleEvent { ty: ident })
             .collect::<Vec<_>>();
 
         let mut mappings = self
@@ -85,7 +84,7 @@ impl ModuleStruct {
                 syn::Type::Path(path) => extract_mapping_value_ident_from_path(path).ok(),
                 _ => None
             })
-            .map(|ident| ModuleEvent { name: ident })
+            .map(|ty| ModuleEvent { ty })
             .collect::<Vec<_>>();
         mappings.dedup();
 
@@ -147,7 +146,7 @@ impl TryFrom<syn::ItemStruct> for ModuleStruct {
     }
 }
 
-fn extract_mapping_value_ident_from_path(path: &syn::TypePath) -> Result<Ident> {
+fn extract_mapping_value_ident_from_path(path: &syn::TypePath) -> Result<syn::Type> {
     // Eg. odra::type::Mapping<String, Mapping<String, Mapping<u8, String>>>
     let mut segment = path
         .path
@@ -161,6 +160,7 @@ fn extract_mapping_value_ident_from_path(path: &syn::TypePath) -> Result<Ident> 
             segment.ident
         ));
     }
+    let mut result: Option<syn::Type> = None;
     loop {
         let args = &segment.arguments;
         if args.is_empty() {
@@ -173,6 +173,7 @@ fn extract_mapping_value_ident_from_path(path: &syn::TypePath) -> Result<Ident> 
                 .context("syn::GenericArgument expected but not found")?
             {
                 syn::GenericArgument::Type(syn::Type::Path(path)) => {
+                    result = Some(parse_quote!(#path));
                     let path = &path.path;
                     segment = path
                         .segments
@@ -194,14 +195,14 @@ fn extract_mapping_value_ident_from_path(path: &syn::TypePath) -> Result<Ident> 
             ));
         }
     }
-    Ok(segment.ident)
+    Ok(result.unwrap())
 }
 
-fn filter_primitives(field: &syn::Field) -> Option<syn::Ident> {
+fn filter_primitives(field: &syn::Field) -> Option<syn::Type> {
     filter_ident(field, &["Variable", "Mapping", "List", "Sequence"])
 }
 
-fn filter_ident(field: &syn::Field, exclusions: &'static [&str]) -> Option<syn::Ident> {
+fn filter_ident(field: &syn::Field, exclusions: &'static [&str]) -> Option<syn::Type> {
     match &field.ty {
         syn::Type::Path(path) => {
             let path = &path.path;
@@ -210,7 +211,7 @@ fn filter_ident(field: &syn::Field, exclusions: &'static [&str]) -> Option<syn::
                     if exclusions.contains(&segment.ident.to_string().as_str()) {
                         return None;
                     }
-                    Some(segment.ident.clone())
+                    Some(field.ty.clone())
                 }
                 _ => None
             }
@@ -221,16 +222,21 @@ fn filter_ident(field: &syn::Field, exclusions: &'static [&str]) -> Option<syn::
 
 #[cfg(test)]
 mod test {
+    use quote::ToTokens;
+
     use super::*;
 
     #[test]
     fn test() {
         let path = syn::parse_str::<syn::TypePath>(
-            "Mapping<String, Mapping<String, Mapping<u8, String>>>"
+            "Mapping<String, Mapping<String, Mapping<u8, a::b::String>>>"
         )
         .unwrap();
         let ident = extract_mapping_value_ident_from_path(&path);
-        assert_eq!(ident.unwrap().to_string(), "String");
+        assert_eq!(
+            ident.unwrap().into_token_stream().to_string(),
+            "a :: b :: String"
+        );
 
         // Mapping expected but found String
         let path = syn::parse_str::<syn::TypePath>("String<i32, u8, u16>").unwrap();
