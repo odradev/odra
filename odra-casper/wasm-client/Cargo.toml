@@ -19,13 +19,15 @@ odra-casper-codegen = { path = "../codegen" }
 odra-casper-livenet = { path = "../livenet" }
 odra-casper-types = { path = "../types" }
 hex = "0.4.3"
-serde_json = "1.0.104"
 js-sys = "0.3.64"
 web-sys = "0.3.64"
 gloo-utils = { version = "0.1.7", features = ["serde"] }
 regex = "1.4.2"
 chrono = "0.4.19"
-
+serde = { version = "1.0.183", features = ["derive"] }
+serde_derive = "1.0.183"
+serde_json = { version = "1.0", features = ["raw_value"] }
+schemars = { version = "0.8.5", features = ["preserve_order"] }
 
 [build-dependencies]
 serde_json = "1.0.103"

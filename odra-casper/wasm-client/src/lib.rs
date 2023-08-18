@@ -5,6 +5,7 @@ mod odra_client;
 mod schemas;
 mod utils;
 mod wasm;
+mod deploy_util;
 
 pub use wasm::deploy_wasm;
 

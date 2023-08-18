@@ -350,7 +350,7 @@ impl CasperClient {
         gas: Balance,
         timestamp: Timestamp
     ) -> Deploy {
-        let ttl = TimeDiff::from_seconds(1000);
+        let ttl = TimeDiff::from_seconds(1800);
         let gas_price = 1;
         let dependencies = vec![];
         let chain_name = String::from(self.chain_name());

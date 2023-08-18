@@ -17,13 +17,6 @@ use serde_with::serde_as;
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, DataSize, JsonSchema)]
 pub struct Timestamp(u64);
 
-impl ToString for Timestamp {
-    fn to_string(&self) -> String {
-        let dt = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp_millis(self.0.clone() as i64).unwrap(), Utc);
-        dt.to_rfc3339()
-    }
-}
-
 impl Timestamp {
     /// The maximum value a timestamp can have.
     pub const MAX: Timestamp = Timestamp(u64::MAX);
@@ -247,10 +240,27 @@ impl From<TimeDiff> for Duration {
 impl Serialize for TimeDiff {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         // if serializer.is_human_readable() {
-            self.millis().serialize(serializer)
-        // } else {
-        //     self.0.serialize(serializer)
-        // }
+        let duration = Duration::from_millis(self.0);
+        let hours = duration.as_secs() / 3600;
+        let minutes = (duration.as_secs() % 3600) / 60;
+        let seconds = duration.as_secs() % 60;
+        let millis = duration.subsec_millis();
+
+        let mut s = String::new();
+        if hours > 0 {
+            s.push_str(&format!("{}h", hours));
+        }
+        if minutes > 0 {
+            s.push_str(&format!("{}m", minutes));
+        }
+        if seconds > 0 {
+            s.push_str(&format!("{}s", seconds));
+        }
+        if millis > 0 {
+            s.push_str(&format!("{}ms", millis));
+        }
+        s.serialize(serializer)
+
     }
 }
 
@@ -293,5 +303,13 @@ mod tests {
 
         let serialized = serde_json::to_string(&timestamp).unwrap();
         assert_eq!(serialized, "dupa");
+    }
+
+    #[test]
+    fn timediff_serialization() {
+        let timediff = TimeDiff::from_millis(1_800_000);
+
+        let serialized = serde_json::to_string(&timediff).unwrap();
+        assert_eq!(serialized, "30m");
     }
 }
