@@ -107,19 +107,19 @@ impl Parse for ModuleEvents {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ModuleEvent {
-    pub name: syn::Ident
+    pub ty: syn::Type
 }
 
 impl Parse for ModuleEvent {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let name = input.parse::<syn::Ident>()?;
-        Ok(ModuleEvent { name })
+        let ty = input.parse::<syn::Type>()?;
+        Ok(ModuleEvent { ty })
     }
 }
 
 impl ToTokens for ModuleEvent {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.name.to_tokens(tokens);
+        self.ty.to_tokens(tokens);
     }
 }
 

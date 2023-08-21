@@ -6,7 +6,7 @@ use crate::arithmetic::ArithmeticsError;
 
 const MAX_USER_ERROR: u16 = 32767;
 const USER_ERROR_TOO_HIGH: u16 = 32768;
-const UNWRAP_ERROR: u16 = u16::MAX;
+const UNWRAP_ERROR: u16 = 1;
 
 const CODE_ADDITION_OVERFLOW: u16 = 100;
 const CODE_SUBTRACTION_OVERFLOW: u16 = 101;

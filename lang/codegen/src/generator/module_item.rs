@@ -80,6 +80,7 @@ mod test {
                 pub variable: Variable<u32>,
                 pub mapping: Mapping<u32, Mapping<u32, MappedModule>>,
                 pub mapping2: Mapping<u32, alloc::string::String>,
+                pub mapping3: Mapping<u32, odra::types::U256>,
                 pub submodule: Submodule
             }
         };
@@ -97,6 +98,7 @@ mod test {
                 pub variable: Variable<u32>,
                 pub mapping: Mapping<u32, Mapping<u32, MappedModule> >,
                 pub mapping2: Mapping<u32, alloc::string::String>,
+                pub mapping3: Mapping<u32, odra::types::U256>,
                 pub submodule: Submodule
             }
 
@@ -108,6 +110,7 @@ mod test {
                     <Variable<u32> as odra::types::contract_def::Node>::COUNT +
                     <Mapping<u32, Mapping<u32, MappedModule> > as odra::types::contract_def::Node>::COUNT +
                     <Mapping<u32, alloc::string::String> as odra::types::contract_def::Node>::COUNT +
+                    <Mapping<u32, odra::types::U256> as odra::types::contract_def::Node>::COUNT +
                     <Submodule as odra::types::contract_def::Node>::COUNT;
 
 
@@ -127,6 +130,11 @@ mod test {
                         result.push(alloc::string::String::from("mapping2"));
                     } else {
                         result.extend(<Mapping<u32, alloc::string::String> as odra::types::contract_def::Node>::__keys().iter().map(|k| odra::utils::create_key("mapping2" , k)))
+                    }
+                    if <Mapping<u32, odra::types::U256> as odra::types::contract_def::Node>::IS_LEAF {
+                        result.push(alloc::string::String::from("mapping3"));
+                    } else {
+                        result.extend(<Mapping<u32, odra::types::U256> as odra::types::contract_def::Node>::__keys().iter().map(|k| odra::utils::create_key("mapping3" , k)))
                     }
                     if <Submodule as odra::types::contract_def::Node>::IS_LEAF {
                         result.push(alloc::string::String::from("submodule"));
@@ -157,7 +165,8 @@ mod test {
                     events.push(<C as odra::types::event::OdraEvent>::schema());
                     events.extend(<Submodule as odra::OdraItem>::events());
                     events.extend(<MappedModule as odra::OdraItem>::events());
-                    events.extend(<String as odra::OdraItem>::events());
+                    events.extend(<alloc::string::String as odra::OdraItem>::events());
+                    events.extend(<odra::types::U256 as odra::OdraItem>::events());
                     events.dedup();
                     events
                 }
