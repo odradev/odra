@@ -27,8 +27,8 @@ impl GenerateCode for EventItem<'_> {
                     odra::contract_env::emit_event(self);
                 }
 
-                fn name() -> alloc::string::String {
-                    alloc::string::String::from(stringify!(#struct_ident))
+                fn name() -> odra::prelude::string::String {
+                    odra::prelude::string::String::from(stringify!(#struct_ident))
                 }
 
                 #[cfg(not(target_arch = "wasm32"))]
@@ -53,7 +53,7 @@ fn to_event_def(event: &IrEventItem) -> TokenStream {
             let ty = &field.ty;
             quote! {
                 odra::types::contract_def::Argument {
-                    ident: alloc::string::String::from(stringify!(#field_ident)),
+                    ident: odra::prelude::string::String::from(stringify!(#field_ident)),
                     ty: <#ty as odra::types::Typed>::ty(),
                     is_ref: false,
                 },
@@ -62,8 +62,8 @@ fn to_event_def(event: &IrEventItem) -> TokenStream {
         .collect::<TokenStream>();
     quote! {
         odra::types::contract_def::Event {
-            ident: alloc::string::String::from(stringify!(#struct_ident)),
-            args: alloc::vec![#fields]
+            ident: odra::prelude::string::String::from(stringify!(#struct_ident)),
+            args: odra::prelude::vec![#fields]
         }
     }
 }

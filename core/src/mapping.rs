@@ -1,10 +1,12 @@
 use core::{fmt::Debug, marker::PhantomData};
 
-use super::instance::DynamicInstance;
-use crate::instance::StaticInstance;
-use crate::types::OdraType;
-use crate::{contract_env, UnwrapOrRevert};
-use alloc::vec::Vec;
+use crate::{
+    contract_env,
+    instance::{DynamicInstance, StaticInstance},
+    prelude::vec::Vec,
+    types::OdraType,
+    UnwrapOrRevert
+};
 use odra_types::arithmetic::{OverflowingAdd, OverflowingSub};
 
 /// Data structure for storing key-value pairs.
@@ -97,8 +99,7 @@ impl<K: OdraType, V> DynamicInstance for Mapping<K, V> {
 
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
-    use crate::{instance::StaticInstance, mapping::Mapping, test_env};
-    use alloc::string::String;
+    use crate::{instance::StaticInstance, mapping::Mapping, prelude::string::String, test_env};
     use odra_mock_vm::types::OdraType;
     use odra_types::arithmetic::ArithmeticsError;
 

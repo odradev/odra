@@ -21,9 +21,9 @@ pub fn generate_code(
             pub fn register(address: odra::types::Address) -> #ref_ident {
                 use odra::types::CallArgs;
 
-                let mut entrypoints = alloc::collections::BTreeMap::<
-                    alloc::string::String,
-                    (alloc::vec::Vec<alloc::string::String>, fn(alloc::string::String, &CallArgs) -> alloc::vec::Vec<u8>)
+                let mut entrypoints = odra::prelude::collections::BTreeMap::<
+                    odra::prelude::string::String,
+                    (odra::prelude::vec::Vec<odra::prelude::string::String>, fn(odra::prelude::string::String, &CallArgs) -> odra::prelude::vec::Vec<u8>)
                 >::new();
                 #entrypoint_calls
 
@@ -46,7 +46,7 @@ fn build_entrypoint_calls(methods: &[&Method], struct_ident: &Ident) -> TokenStr
 
 fn build_entrypoint_call(entrypoint: &Method, struct_ident: &Ident) -> TokenStream {
     let ident = &entrypoint.ident;
-    let name = quote!(alloc::string::String::from(stringify!(#ident)));
+    let name = quote!(odra::prelude::string::String::from(stringify!(#ident)));
     let args = args_to_fn_cl_values(&entrypoint.args);
     let arg_names = args_to_arg_names_stream(&entrypoint.args);
     quote! {
@@ -54,8 +54,8 @@ fn build_entrypoint_call(entrypoint: &Method, struct_ident: &Ident) -> TokenStre
             let keys = <#struct_ident as odra::types::contract_def::Node>::__keys();
             let keys = keys
                 .iter()
-                .map(alloc::string::String::as_str)
-                .collect::<alloc::vec::Vec<_>>();
+                .map(odra::prelude::string::String::as_str)
+                .collect::<odra::prelude::vec::Vec<_>>();
             let (mut instance, _) = <#struct_ident as odra::StaticInstance>::instance(keys.as_slice());
             let result = instance.#ident(#args);
             let clvalue = odra::casper::casper_types::CLValue::from_t(result).unwrap();
@@ -93,7 +93,10 @@ fn build_default_constructor(
     quote! {
         pub fn default() -> #ref_ident {
             use odra::types::CallArgs;
-            let mut entrypoints = alloc::collections::BTreeMap::<alloc::string::String, (alloc::vec::Vec<alloc::string::String>, fn(alloc::string::String, &CallArgs) -> alloc::vec::Vec<u8>)>::new();
+            let mut entrypoints = odra::prelude::collections::BTreeMap::<
+                odra::prelude::string::String,
+                (odra::prelude::vec::Vec<odra::prelude::string::String>, fn(odra::prelude::string::String, &CallArgs) -> odra::prelude::vec::Vec<u8>)
+            >::new();
             #entrypoint_calls
 
             let address = odra::client_env::deploy_new_contract(&#struct_name_snake_case, odra::types::CallArgs::new(), entrypoints, None);
@@ -121,12 +124,15 @@ fn build_constructor(
         pub #fn_sig {
             use odra::types::CallArgs;
 
-            let mut entrypoints = alloc::collections::BTreeMap::<alloc::string::String, (alloc::vec::Vec<alloc::string::String>, fn(alloc::string::String, &CallArgs) -> alloc::vec::Vec<u8>)>::new();
+            let mut entrypoints = odra::prelude::collections::BTreeMap::<
+                odra::prelude::string::String,
+                (odra::prelude::vec::Vec<odra::prelude::string::String>, fn(odra::prelude::string::String, &CallArgs) -> odra::prelude::vec::Vec<u8>)
+            >::new();
             #entrypoint_calls
 
             let args = { #args };
 
-            let constructor = alloc::string::String::from(stringify!(#constructor_ident));
+            let constructor = odra::prelude::string::String::from(stringify!(#constructor_ident));
             let address = odra::client_env::deploy_new_contract(#struct_name_snake_case, args, entrypoints, Some(constructor));
             #ref_ident::at(&address)
         }

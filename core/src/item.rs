@@ -1,15 +1,14 @@
-use crate::types::OdraType;
-use alloc::collections::BTreeMap;
-use alloc::vec::Vec;
-
-use crate::types::{Address, U256, U512};
+use crate::{
+    prelude::{collections::BTreeMap, string::String, vec, vec::Vec},
+    types::{Address, OdraType, U256, U512}
+};
 
 pub trait OdraItem {
     fn is_module() -> bool;
 
     #[cfg(not(target_arch = "wasm32"))]
-    fn events() -> alloc::vec::Vec<odra_types::contract_def::Event> {
-        alloc::vec![]
+    fn events() -> Vec<odra_types::contract_def::Event> {
+        vec![]
     }
 }
 
@@ -47,7 +46,7 @@ impl_odra_item_for_array_types!(
 
 impl_odra_item_for_types!(
     Address,
-    alloc::string::String,
+    String,
     bool,
     i32,
     i64,

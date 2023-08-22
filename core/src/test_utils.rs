@@ -66,7 +66,7 @@ macro_rules! assert_events {
         $(
             __idx += 1;
             let __ev = odra::test_utils::get_event::<$event_ty>(*$contract.address(), __idx).unwrap();
-            let __name = stringify!($event_ty).to_string();
+            let __name = odra::prelude::ToString::to_string(stringify!($event_ty));
             let __name = __name.split("::").last().unwrap();
             assert_eq!(
                 <$event_ty as odra::types::event::OdraEvent>::name(), __name

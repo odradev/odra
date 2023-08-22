@@ -50,7 +50,7 @@ impl ToTokens for Method {
                 let ty = quote!(<#ty as odra::types::Typed>::ty());
                 quote! {
                     odra::types::contract_def::Argument {
-                        ident: alloc::string::String::from(stringify!(#name)),
+                        ident: odra::prelude::string::String::from(stringify!(#name)),
                         ty: #ty,
                         is_ref: #is_ref,
                     },
@@ -76,8 +76,8 @@ impl ToTokens for Method {
 
         let ep = quote! {
             odra::types::contract_def::Entrypoint {
-                ident: alloc::string::String::from(#name),
-                args: alloc::vec![#args],
+                ident: odra::prelude::string::String::from(#name),
+                args: odra::prelude::vec![#args],
                 is_mut: #is_mut,
                 ret: #ret,
                 ty: #ty,

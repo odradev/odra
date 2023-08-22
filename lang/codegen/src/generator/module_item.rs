@@ -42,14 +42,14 @@ impl GenerateCode for ModuleStruct<'_> {
                     true
                 }
                 #[cfg(not(target_arch = "wasm32"))]
-                fn events() -> alloc::vec::Vec<odra::types::contract_def::Event> {
+                fn events() -> odra::prelude::vec::Vec<odra::types::contract_def::Event> {
                     <Self as odra::types::contract_def::HasEvents>::events()
                 }
             }
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::types::contract_def::HasEvents for #struct_ident {
-                fn events() -> alloc::vec::Vec<odra::types::contract_def::Event> {
-                    let mut events = alloc::vec![];
+                fn events() -> odra::prelude::vec::Vec<odra::types::contract_def::Event> {
+                    let mut events = odra::prelude::vec![];
                     #(
                         events.push(<#module_events as odra::types::event::OdraEvent>::schema());
                     )*
@@ -79,7 +79,7 @@ mod test {
             pub struct Module {
                 pub variable: Variable<u32>,
                 pub mapping: Mapping<u32, Mapping<u32, MappedModule>>,
-                pub mapping2: Mapping<u32, alloc::string::String>,
+                pub mapping2: Mapping<u32, odra::prelude::string::String>,
                 pub mapping3: Mapping<u32, odra::types::U256>,
                 pub submodule: Submodule
             }
@@ -97,7 +97,7 @@ mod test {
             pub struct Module {
                 pub variable: Variable<u32>,
                 pub mapping: Mapping<u32, Mapping<u32, MappedModule> >,
-                pub mapping2: Mapping<u32, alloc::string::String>,
+                pub mapping2: Mapping<u32, odra::prelude::string::String>,
                 pub mapping3: Mapping<u32, odra::types::U256>,
                 pub submodule: Submodule
             }
@@ -109,35 +109,35 @@ mod test {
                 const COUNT: u32 =
                     <Variable<u32> as odra::types::contract_def::Node>::COUNT +
                     <Mapping<u32, Mapping<u32, MappedModule> > as odra::types::contract_def::Node>::COUNT +
-                    <Mapping<u32, alloc::string::String> as odra::types::contract_def::Node>::COUNT +
+                    <Mapping<u32, odra::prelude::string::String> as odra::types::contract_def::Node>::COUNT +
                     <Mapping<u32, odra::types::U256> as odra::types::contract_def::Node>::COUNT +
                     <Submodule as odra::types::contract_def::Node>::COUNT;
 
 
-                fn __keys() -> alloc::vec::Vec<alloc::string::String> {
-                    let mut result = alloc::vec![];
+                fn __keys() -> odra::prelude::vec::Vec<odra::prelude::string::String> {
+                    let mut result = odra::prelude::vec![];
                     if <Variable<u32> as odra::types::contract_def::Node>::IS_LEAF {
-                        result.push(alloc::string::String::from("variable"));
+                        result.push(odra::prelude::string::String::from("variable"));
                     } else {
                         result.extend(<Variable<u32> as odra::types::contract_def::Node>::__keys().iter().map(|k| odra::utils::create_key("variable" , k)))
                     }
                     if <Mapping<u32, Mapping<u32, MappedModule> > as odra::types::contract_def::Node>::IS_LEAF {
-                        result.push(alloc::string::String::from("mapping"));
+                        result.push(odra::prelude::string::String::from("mapping"));
                     } else {
                         result.extend(<Mapping<u32, Mapping<u32, MappedModule> > as odra::types::contract_def::Node>::__keys().iter().map(|k| odra::utils::create_key("mapping" , k)))
                     }
-                    if <Mapping<u32, alloc::string::String> as odra::types::contract_def::Node>::IS_LEAF {
-                        result.push(alloc::string::String::from("mapping2"));
+                    if <Mapping<u32, odra::prelude::string::String> as odra::types::contract_def::Node>::IS_LEAF {
+                        result.push(odra::prelude::string::String::from("mapping2"));
                     } else {
-                        result.extend(<Mapping<u32, alloc::string::String> as odra::types::contract_def::Node>::__keys().iter().map(|k| odra::utils::create_key("mapping2" , k)))
+                        result.extend(<Mapping<u32, odra::prelude::string::String> as odra::types::contract_def::Node>::__keys().iter().map(|k| odra::utils::create_key("mapping2" , k)))
                     }
                     if <Mapping<u32, odra::types::U256> as odra::types::contract_def::Node>::IS_LEAF {
-                        result.push(alloc::string::String::from("mapping3"));
+                        result.push(odra::prelude::string::String::from("mapping3"));
                     } else {
                         result.extend(<Mapping<u32, odra::types::U256> as odra::types::contract_def::Node>::__keys().iter().map(|k| odra::utils::create_key("mapping3" , k)))
                     }
                     if <Submodule as odra::types::contract_def::Node>::IS_LEAF {
-                        result.push(alloc::string::String::from("submodule"));
+                        result.push(odra::prelude::string::String::from("submodule"));
                     } else {
                         result.extend(<Submodule as odra::types::contract_def::Node>::__keys().iter().map(|k| odra::utils::create_key("submodule" , k)))
                     }
@@ -151,21 +151,21 @@ mod test {
                 }
 
                 #[cfg(not (target_arch = "wasm32"))]
-                fn events () -> alloc::vec::Vec<odra::types::contract_def::Event> {
+                fn events () -> odra::prelude::vec::Vec<odra::types::contract_def::Event> {
                     <Self as odra::types::contract_def::HasEvents>::events()
                 }
             }
 
             #[cfg(not (target_arch = "wasm32"))]
             impl odra::types::contract_def::HasEvents for Module {
-                fn events() -> alloc::vec::Vec<odra::types::contract_def::Event> {
-                    let mut events = alloc::vec![];
+                fn events() -> odra::prelude::vec::Vec<odra::types::contract_def::Event> {
+                    let mut events = odra::prelude::vec![];
                     events.push(<A as odra::types::event::OdraEvent>::schema());
                     events.push(<B as odra::types::event::OdraEvent>::schema());
                     events.push(<C as odra::types::event::OdraEvent>::schema());
                     events.extend(<Submodule as odra::OdraItem>::events());
                     events.extend(<MappedModule as odra::OdraItem>::events());
-                    events.extend(<alloc::string::String as odra::OdraItem>::events());
+                    events.extend(<odra::prelude::string::String as odra::OdraItem>::events());
                     events.extend(<odra::types::U256 as odra::OdraItem>::events());
                     events.dedup();
                     events

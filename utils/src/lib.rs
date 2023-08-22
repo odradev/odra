@@ -2,6 +2,9 @@
 
 extern crate alloc;
 
+#[cfg(not(feature = "std"))]
+use alloc::string::String;
+
 #[cfg(feature = "std")]
 use convert_case::{Boundary, Case, Casing};
 
@@ -87,7 +90,7 @@ pub fn hex_to_slice(src: &[u8], dst: &mut [u8]) {
 
 /// Joins two parts of a key with the [`KEY_DELIMITER`].
 #[inline]
-pub fn create_key(left: &str, right: &str) -> alloc::string::String {
+pub fn create_key(left: &str, right: &str) -> String {
     alloc::format!("{}{}{}", left, KEY_DELIMITER, right)
 }
 

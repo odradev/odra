@@ -3,12 +3,12 @@ use crate::erc1155::errors::Error;
 use crate::erc1155::events::{ApprovalForAll, TransferBatch, TransferSingle};
 use crate::erc1155::Erc1155;
 use crate::erc1155_receiver::Erc1155ReceiverRef;
-use alloc::vec::Vec;
-use odra::contract_env::{caller, revert};
-use odra::types::address::OdraAddress;
-use odra::types::event::OdraEvent;
-use odra::types::{Address, Bytes, U256};
-use odra::Mapping;
+use odra::{
+    contract_env::{caller, revert},
+    prelude::vec::Vec,
+    types::{address::OdraAddress, event::OdraEvent, Address, Bytes, U256},
+    Mapping
+};
 
 /// The ERC1155 base implementation.
 #[odra::module(events = [ApprovalForAll, TransferBatch, TransferSingle])]

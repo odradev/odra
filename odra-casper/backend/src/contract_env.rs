@@ -1,6 +1,7 @@
 //! Casper backend for WASM.
 //!
 //! It provides all the required functions to communicate between Odra and Casper.
+use alloc::vec::Vec;
 use casper_contract::contract_api::runtime;
 use casper_contract::{
     contract_api::system::transfer_from_purse_to_account, unwrap_or_revert::UnwrapOrRevert
@@ -144,6 +145,6 @@ pub fn verify_signature(
 }
 
 /// Creates a hash of the given input. Uses default hash for given backend.
-pub fn hash<T: AsRef<[u8]>>(input: T) -> alloc::vec::Vec<u8> {
+pub fn hash<T: AsRef<[u8]>>(input: T) -> Vec<u8> {
     runtime::blake2b(input).to_vec()
 }

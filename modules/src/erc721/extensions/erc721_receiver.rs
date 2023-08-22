@@ -1,6 +1,8 @@
 //! Erc721 receiver.
-use alloc::vec::Vec;
-use odra::types::{Address, U256};
+use odra::{
+    prelude::vec::Vec,
+    types::{Address, U256}
+};
 
 /// The ERC721 receiver interface.
 pub trait Erc721Receiver {

@@ -21,14 +21,14 @@ impl GenerateCode for ContractDef<'_> {
         quote! {
             #[cfg(all(feature = "casper", not(target_arch = "wasm32")))]
             impl odra::types::contract_def::HasIdent for #struct_ident {
-                fn ident() -> alloc::string::String {
-                    alloc::string::String::from(#struct_name)
+                fn ident() -> odra::prelude::string::String {
+                    odra::prelude::string::String::from(#struct_name)
                 }
             }
             #[cfg(all(feature = "casper", not(target_arch = "wasm32")))]
             impl odra::types::contract_def::HasEntrypoints for #struct_ident {
-                fn entrypoints() -> alloc::vec::Vec<odra::types::contract_def::Entrypoint> {
-                    alloc::vec![# (#entrypoints)*]
+                fn entrypoints() -> odra::prelude::vec::Vec<odra::types::contract_def::Entrypoint> {
+                    odra::prelude::vec![# (#entrypoints)*]
                 }
             }
         }

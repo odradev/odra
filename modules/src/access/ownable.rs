@@ -164,7 +164,7 @@ impl Ownable2Step {
 
 #[cfg(test)]
 mod test {
-    use alloc::vec::Vec;
+    use odra::prelude::{vec, vec::Vec};
     use odra::{assert_events, external_contract, test_env};
 
     use super::*;
@@ -358,7 +358,7 @@ mod test {
         let ownable = OwnableDeployer::init();
         let ownable_2_step = Ownable2StepDeployer::init();
         (
-            alloc::vec![
+            vec![
                 RenounceableRef::at(ownable.address()),
                 RenounceableRef::at(ownable_2_step.address()),
             ],
@@ -370,7 +370,7 @@ mod test {
         let ownable = OwnableDeployer::init();
         let ownable_2_step = Ownable2StepDeployer::init();
         (
-            alloc::vec![
+            vec![
                 OwnedRef::at(ownable.address()),
                 OwnedRef::at(ownable_2_step.address()),
             ],

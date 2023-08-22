@@ -124,7 +124,7 @@ pub(crate) mod mock_vm {
             impl odra::types::BorshDeserialize for #struct_ident {
 
                 fn deserialize(buf: &mut &[u8]) -> odra::types::Result<Self> {
-                    let _ = <alloc::string::String as odra::types::BorshDeserialize>::deserialize(buf)?;
+                    let _ = <odra::prelude::string::String as odra::types::BorshDeserialize>::deserialize(buf)?;
                     Ok(Self {
                         #fields_deserialization
                     })
@@ -240,7 +240,7 @@ pub(crate) mod casper {
             #[cfg(any(feature = "casper", feature = "casper-livenet"))]
             impl odra::casper::casper_types::bytesrepr::FromBytes for #struct_ident {
                 fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper::casper_types::bytesrepr::Error> {
-                    let (_, bytes): (alloc::string::String, _) = odra::casper::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
+                    let (_, bytes): (odra::prelude::string::String, _) = odra::casper::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
                     #deserialize_fields
                     let value = #struct_ident {
                         #construct_struct
@@ -251,8 +251,8 @@ pub(crate) mod casper {
 
             #[cfg(any(feature = "casper", feature = "casper-livenet"))]
             impl odra::casper::casper_types::bytesrepr::ToBytes for #struct_ident {
-                fn to_bytes(&self) -> Result<alloc::vec::Vec<u8>, odra::casper::casper_types::bytesrepr::Error> {
-                    let mut vec = alloc::vec::Vec::with_capacity(self.serialized_length());
+                fn to_bytes(&self) -> Result<odra::prelude::vec::Vec<u8>, odra::casper::casper_types::bytesrepr::Error> {
+                    let mut vec = odra::prelude::vec::Vec::with_capacity(self.serialized_length());
                     vec.append(&mut #name_literal.to_bytes()?);
                     #append_bytes
                     Ok(vec)
@@ -289,7 +289,7 @@ pub(crate) mod casper {
                     (self.clone() as u32).serialized_length()
                 }
 
-                fn to_bytes(&self) -> Result<alloc::vec::Vec<u8>, odra::casper::casper_types::bytesrepr::Error> {
+                fn to_bytes(&self) -> Result<odra::prelude::vec::Vec<u8>, odra::casper::casper_types::bytesrepr::Error> {
                     (self.clone() as u32).to_bytes()
                 }
             }

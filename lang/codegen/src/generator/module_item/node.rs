@@ -39,15 +39,15 @@ impl GenerateCode for NodeItem<'_> {
                 let map = if fields_collection.is_empty() {
                     quote!(map(|k| odra::utils::create_key(#ident, k)))
                 } else {
-                    quote!(map(|k: &alloc::string::String| if [#fields_collection].contains(&k.split(odra::utils::KEY_DELIMITER).take(1).last().unwrap()) {
-                        <crate::alloc::string::String as crate::alloc::borrow::ToOwned>::to_owned(&k)
+                    quote!(map(|k: &odra::prelude::string::String| if [#fields_collection].contains(&k.split(odra::utils::KEY_DELIMITER).take(1).last().unwrap()) {
+                        <odra::prelude::string::String as odra::prelude::borrow::ToOwned>::to_owned(&k)
                     } else {
                         odra::utils::create_key(#ident, k)
                     }))
                 };
                 quote! {
                     if <#ty as odra::types::contract_def::Node>::IS_LEAF {
-                        result.push(alloc::string::String::from(#ident));
+                        result.push(odra::prelude::string::String::from(#ident));
                     } else {
                         result.extend(<#ty as odra::types::contract_def::Node>::__keys()
                             .iter()
@@ -63,8 +63,8 @@ impl GenerateCode for NodeItem<'_> {
                 const IS_LEAF: bool = false;
                 const COUNT: u32 = #count;
 
-                fn __keys() -> alloc::vec::Vec<alloc::string::String> {
-                    let mut result = alloc::vec![];
+                fn __keys() -> odra::prelude::vec::Vec<odra::prelude::string::String> {
+                    let mut result = odra::prelude::vec![];
                     #keys
                     result
                 }

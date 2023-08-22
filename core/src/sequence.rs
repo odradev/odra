@@ -1,6 +1,5 @@
 use super::DynamicInstance;
-use crate::{instance::StaticInstance, types::OdraType, Variable};
-use alloc::vec::Vec;
+use crate::{instance::StaticInstance, prelude::vec::Vec, types::OdraType, Variable};
 use num_traits::{Num, One, Zero};
 
 /// A module that stores a single value in the storage that can be read or incremented.
@@ -60,8 +59,7 @@ where
 
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
-    use crate::types::U256;
-    use crate::{sequence::Sequence, StaticInstance};
+    use crate::{sequence::Sequence, types::U256, StaticInstance};
 
     const KEYS_U8: [&str; 1] = ["u8"];
     const KEYS_U256: [&str; 1] = ["u256"];

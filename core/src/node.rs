@@ -1,6 +1,8 @@
-use crate::types::OdraType;
-use crate::{List, Mapping, Sequence, Variable};
-use alloc::{string::String, vec::Vec};
+use crate::{
+    prelude::{string::String, vec, vec::Vec},
+    types::OdraType,
+    List, Mapping, Sequence, Variable
+};
 use num_traits::{Num, One};
 use odra_types::contract_def::Node;
 
@@ -17,7 +19,7 @@ impl<T> Node for List<T> {
     const IS_LEAF: bool = false;
 
     fn __keys() -> Vec<String> {
-        alloc::vec![String::from("values"), String::from("index")]
+        vec![String::from("values"), String::from("index")]
     }
 }
 
@@ -26,6 +28,6 @@ impl<T: Num + One + OdraType> Node for Sequence<T> {
     const IS_LEAF: bool = false;
 
     fn __keys() -> Vec<String> {
-        alloc::vec![String::from("value")]
+        vec![String::from("value")]
     }
 }

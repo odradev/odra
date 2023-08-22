@@ -63,7 +63,7 @@ fn build_constructor(
     quote! {
         pub #fn_sig {
             let args = { #args };
-            let constructor = alloc::string::String::from(stringify!(#constructor_ident));
+            let constructor = odra::prelude::string::String::from(stringify!(#constructor_ident));
             let address = odra::test_env::register_contract(#struct_name_snake_case, &args, Some(constructor));
             #ref_ident::at(&address)
         }
