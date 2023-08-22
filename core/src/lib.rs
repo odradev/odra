@@ -78,6 +78,13 @@ pub use {
 mod env {
     pub use odra_mock_vm::{contract_env, test_env};
     pub mod types {
+        pub mod mock_vm {
+            pub mod borsh {
+                pub use odra_mock_vm::types::{
+                    BorshDeserialize, BorshSerialize, Error, ErrorKind, Result, Write
+                };
+            }
+        }
         pub use odra_mock_vm::types::*;
         pub use odra_types::*;
     }

@@ -99,18 +99,18 @@ pub fn external_contract(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// }
 ///
 /// # extern crate alloc;
-/// # impl odra::types::BorshSerialize for ValueUpdated {
-/// #    fn serialize<W: odra::types::Write>(&self, writer: &mut W) -> odra::types::Result<()> {
-/// #        odra::types::BorshSerialize::serialize("ValueUpdated", writer)?;
-/// #        odra::types::BorshSerialize::serialize(&self.value, writer)?;
+/// # impl odra::types::mock_vm::borsh::BorshSerialize for ValueUpdated {
+/// #    fn serialize<W: odra::types::mock_vm::borsh::Write>(&self, writer: &mut W) -> odra::types::mock_vm::borsh::Result<()> {
+/// #        odra::types::mock_vm::borsh::BorshSerialize::serialize("ValueUpdated", writer)?;
+/// #        odra::types::mock_vm::borsh::BorshSerialize::serialize(&self.value, writer)?;
 /// #        Ok(())
 /// #    }
 /// # }
-/// # impl odra::types::BorshDeserialize for ValueUpdated {
+/// # impl odra::types::mock_vm::borsh::BorshDeserialize for ValueUpdated {
 /// #    fn deserialize(buf: &mut &[u8]) -> odra::types::Result<Self> {
-/// #        let _ = <String as odra::types::BorshDeserialize>::deserialize(buf)?;
+/// #        let _ = <String as odra::types::mock_vm::borsh::BorshDeserialize>::deserialize(buf)?;
 /// #        Ok(Self {
-/// #            value: odra::types::BorshDeserialize::deserialize(buf)?,
+/// #            value: odra::types::mock_vm::borsh::BorshDeserialize::deserialize(buf)?,
 /// #        })
 /// #    }
 /// # }

@@ -101,19 +101,19 @@ pub(crate) mod mock_vm {
     pub fn serialize_struct(struct_ident: &Ident, fields: &[Ident]) -> TokenStream {
         let fields_serialization = fields
             .iter()
-            .map(|ident| quote!(odra::types::BorshSerialize::serialize(&self.#ident, writer)?;))
+            .map(|ident| quote!(odra::types::mock_vm::borsh::BorshSerialize::serialize(&self.#ident, writer)?;))
             .collect::<TokenStream>();
 
         let fields_deserialization = fields
             .iter()
-            .map(|ident| quote!(#ident: odra::types::BorshDeserialize::deserialize(buf)?,))
+            .map(|ident| quote!(#ident: odra::types::mock_vm::borsh::BorshDeserialize::deserialize(buf)?,))
             .collect::<TokenStream>();
 
         quote! {
             #[cfg(feature = "mock-vm")]
-            impl odra::types::BorshSerialize for #struct_ident {
-                fn serialize<W: odra::types::Write>(&self, writer: &mut W) -> odra::types::Result<()> {
-                    odra::types::BorshSerialize::serialize(stringify!(#struct_ident), writer)?;
+            impl odra::types::mock_vm::borsh::BorshSerialize for #struct_ident {
+                fn serialize<W: odra::types::mock_vm::borsh::Write>(&self, writer: &mut W) -> odra::types::mock_vm::borsh::Result<()> {
+                    odra::types::mock_vm::borsh::BorshSerialize::serialize(stringify!(#struct_ident), writer)?;
 
                     #fields_serialization
                     Ok(())
@@ -121,10 +121,10 @@ pub(crate) mod mock_vm {
             }
 
             #[cfg(feature = "mock-vm")]
-            impl odra::types::BorshDeserialize for #struct_ident {
+            impl odra::types::mock_vm::borsh::BorshDeserialize for #struct_ident {
 
                 fn deserialize(buf: &mut &[u8]) -> odra::types::Result<Self> {
-                    let _ = <odra::prelude::string::String as odra::types::BorshDeserialize>::deserialize(buf)?;
+                    let _ = <odra::prelude::string::String as odra::types::mock_vm::borsh::BorshDeserialize>::deserialize(buf)?;
                     Ok(Self {
                         #fields_deserialization
                     })
@@ -166,7 +166,7 @@ pub(crate) mod mock_vm {
 
         quote! {
             #[cfg(feature = "mock-vm")]
-            impl odra::types::BorshSerialize for #struct_ident {
+            impl odra::types::mock_vm::borsh::BorshSerialize for #struct_ident {
                 fn serialize<W: odra::types::Write>(&self, writer: &mut W) -> odra::types::Result<()> {
                     #variant_idx_serialization
                     Ok(())
@@ -174,9 +174,9 @@ pub(crate) mod mock_vm {
             }
 
             #[cfg(feature = "mock-vm")]
-            impl odra::types::BorshDeserialize for #struct_ident {
+            impl odra::types::mock_vm::borsh::BorshDeserialize for #struct_ident {
                 fn deserialize(buf: &mut &[u8]) -> odra::types::Result<Self> {
-                    let variant_idx: u8 = odra::types::BorshDeserialize::deserialize(buf)?;
+                    let variant_idx: u8 = odra::types::mock_vm::borsh::BorshDeserialize::deserialize(buf)?;
                     let return_value = match variant_idx {
                         #fields_deserialization,
                         _ => return Err(
