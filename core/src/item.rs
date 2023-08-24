@@ -1,13 +1,12 @@
-use std::collections::BTreeMap;
-
-use crate::types::OdraType;
-
-use crate::types::{Address, U256, U512};
+use crate::{
+    prelude::{collections::BTreeMap, string::String, vec, vec::Vec},
+    types::{Address, OdraType, U256, U512}
+};
 
 pub trait OdraItem {
     fn is_module() -> bool;
 
-    #[cfg(feature = "casper")]
+    #[cfg(not(target_arch = "wasm32"))]
     fn events() -> Vec<odra_types::contract_def::Event> {
         vec![]
     }

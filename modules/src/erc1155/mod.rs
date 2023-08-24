@@ -1,5 +1,8 @@
 //! Erc1155 standard implementation.
-use odra::types::{Address, Bytes, U256};
+use odra::{
+    prelude::vec::Vec,
+    types::{Address, Bytes, U256}
+};
 
 pub mod erc1155_base;
 pub mod extensions;
@@ -49,7 +52,10 @@ pub trait Erc1155 {
 
 /// Erc1155-related Odra events.
 pub mod events {
-    use odra::types::{Address, U256};
+    use odra::{
+        prelude::vec::Vec,
+        types::{Address, U256}
+    };
 
     /// Emitted when a single Erc1155 transfer is performed.
     #[derive(odra::Event, PartialEq, Eq, Debug, Clone)]

@@ -1,11 +1,13 @@
-use std::marker::PhantomData;
+use core::marker::PhantomData;
 
-use crate::types::OdraType;
+use crate::{
+    contract_env,
+    instance::{DynamicInstance, StaticInstance},
+    prelude::vec::Vec,
+    types::OdraType,
+    UnwrapOrRevert
+};
 use odra_types::arithmetic::{OverflowingAdd, OverflowingSub};
-
-use crate::{contract_env, UnwrapOrRevert};
-
-use super::instance::{DynamicInstance, StaticInstance};
 
 /// Data structure for storing a single value.
 #[derive(Clone)]

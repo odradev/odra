@@ -1,13 +1,13 @@
 use odra_casper_types::{Address, CallArgs};
 use odra_types::{OdraError, VmError};
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use super::contract_container::ContractContainer;
 
 #[derive(Default)]
 pub struct ContractRegister {
-    contracts: HashMap<Address, ContractContainer>
+    contracts: BTreeMap<Address, ContractContainer>
 }
 
 impl ContractRegister {

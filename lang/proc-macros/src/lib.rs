@@ -26,6 +26,7 @@ mod odra_type;
 ///
 /// ```
 /// use odra;
+/// # extern crate alloc;
 ///
 /// #[odra::module]
 /// pub struct Flipper {
@@ -97,18 +98,19 @@ pub fn external_contract(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///     pub value: u32,
 /// }
 ///
-/// # impl odra::types::BorshSerialize for ValueUpdated {
-/// #    fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
-/// #        odra::types::BorshSerialize::serialize("ValueUpdated", writer)?;
-/// #        odra::types::BorshSerialize::serialize(&self.value, writer)?;
+/// # extern crate alloc;
+/// # impl odra::types::mock_vm::borsh::BorshSerialize for ValueUpdated {
+/// #    fn serialize<W: odra::types::mock_vm::borsh::Write>(&self, writer: &mut W) -> odra::types::mock_vm::borsh::Result<()> {
+/// #        odra::types::mock_vm::borsh::BorshSerialize::serialize("ValueUpdated", writer)?;
+/// #        odra::types::mock_vm::borsh::BorshSerialize::serialize(&self.value, writer)?;
 /// #        Ok(())
 /// #    }
 /// # }
-/// # impl odra::types::BorshDeserialize for ValueUpdated {
-/// #    fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
-/// #        let _ = <String as odra::types::BorshDeserialize>::deserialize(buf)?;
+/// # impl odra::types::mock_vm::borsh::BorshDeserialize for ValueUpdated {
+/// #    fn deserialize(buf: &mut &[u8]) -> odra::types::Result<Self> {
+/// #        let _ = <String as odra::types::mock_vm::borsh::BorshDeserialize>::deserialize(buf)?;
 /// #        Ok(Self {
-/// #            value: odra::types::BorshDeserialize::deserialize(buf)?,
+/// #            value: odra::types::mock_vm::borsh::BorshDeserialize::deserialize(buf)?,
 /// #        })
 /// #    }
 /// # }
@@ -198,6 +200,7 @@ pub fn odra_error(_attr: TokenStream, item: TokenStream) -> TokenStream {
 ///
 /// ```
 /// use odra::{self, Mapping};
+/// # extern crate alloc;
 ///
 /// #[odra::module]
 /// pub struct NestedMapping {

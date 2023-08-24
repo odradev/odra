@@ -4,7 +4,7 @@ use odra_mock_vm_types::{
     MockVMSerializationError, CONTRACT_ADDRESS_PREFIX
 };
 use odra_types::{event::EventError, OdraError, VmError};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::sync::{Arc, RwLock};
 
 use crate::balance::AccountBalance;
@@ -23,8 +23,8 @@ impl MockVm {
     pub fn register_contract(
         &self,
         constructor: Option<(String, &CallArgs, EntrypointCall)>,
-        constructors: HashMap<String, (EntrypointArgs, EntrypointCall)>,
-        entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>
+        constructors: BTreeMap<String, (EntrypointArgs, EntrypointCall)>,
+        entrypoints: BTreeMap<String, (EntrypointArgs, EntrypointCall)>
     ) -> Address {
         // Create a new address.
         let address = { self.state.write().unwrap().next_contract_address() };
@@ -274,7 +274,7 @@ impl MockVm {
 pub struct MockVmState {
     storage: Storage,
     callstack: Callstack,
-    events: HashMap<Address, Vec<EventData>>,
+    events: BTreeMap<Address, Vec<EventData>>,
     contract_counter: u32,
     error: Option<OdraError>,
     block_time: u64,
@@ -492,7 +492,7 @@ impl Default for MockVmState {
             Address::try_from(b"uma").unwrap(),
         ];
 
-        let mut balances = HashMap::<Address, AccountBalance>::new();
+        let mut balances = BTreeMap::<Address, AccountBalance>::new();
         for address in addresses.clone() {
             balances.insert(address, 100_000_000_000_000u64.into());
         }
@@ -513,7 +513,7 @@ impl Default for MockVmState {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::collections::BTreeMap;
 
     use odra_mock_vm_types::{Address, Balance, CallArgs, EventData, MockDeserializable};
     use odra_types::address::OdraAddress;
@@ -531,8 +531,8 @@ mod tests {
         // when register two contracts with the same entrypoints
         let entrypoint: Vec<(String, (EntrypointArgs, EntrypointCall))> =
             vec![(String::from("abc"), (vec![], |_, _| vec![]))];
-        let entrypoints = entrypoint.into_iter().collect::<HashMap<_, _>>();
-        let constructors = HashMap::new();
+        let entrypoints = entrypoint.into_iter().collect::<BTreeMap<_, _>>();
+        let constructors = BTreeMap::new();
 
         let address1 = instance.register_contract(None, constructors.clone(), entrypoints.clone());
         let address2 = instance.register_contract(None, constructors, entrypoints);
@@ -781,11 +781,11 @@ mod tests {
             String::from(entrypoint_name),
             (vec![], |_, _| vec![1, 1, 0, 0])
         )];
-        let constructors = HashMap::new();
+        let constructors = BTreeMap::new();
         let contract_address = instance.register_contract(
             None,
             constructors,
-            entrypoint.into_iter().collect::<HashMap<_, _>>()
+            entrypoint.into_iter().collect::<BTreeMap<_, _>>()
         );
 
         (

@@ -2,6 +2,7 @@ use self::events::{Deposit, Withdrawal};
 use crate::erc20::Erc20;
 use odra::{
     contract_env,
+    prelude::{format, string::String},
     types::{event::OdraEvent, Address, U256},
     UnwrapOrRevert
 };
@@ -107,9 +108,10 @@ pub mod events {
 
 #[cfg(test)]
 mod tests {
-
     use odra::{
-        assert_events, test_env,
+        assert_events,
+        prelude::format,
+        test_env,
         types::{Address, Balance, OdraError, VmError, U256}
     };
 

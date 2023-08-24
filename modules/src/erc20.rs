@@ -1,3 +1,4 @@
+use odra::prelude::string::String;
 use odra::{
     contract_env,
     types::{event::OdraEvent, Address, U256},
@@ -202,6 +203,7 @@ mod tests {
         events::{Approval, Transfer},
         Erc20Deployer, Erc20Ref
     };
+    use odra::prelude::string::ToString;
     use odra::{assert_events, test_env, types::U256};
 
     const NAME: &str = "Plascoin";

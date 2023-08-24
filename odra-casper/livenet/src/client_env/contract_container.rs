@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use odra_casper_types::{Address, CallArgs};
 use odra_types::{OdraError, VmError};
@@ -8,13 +8,13 @@ use crate::{EntrypointArgs, EntrypointCall};
 #[derive(Clone)]
 pub struct ContractContainer {
     address: Address,
-    entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>
+    entrypoints: BTreeMap<String, (EntrypointArgs, EntrypointCall)>
 }
 
 impl ContractContainer {
     pub fn new(
         address: Address,
-        entrypoints: HashMap<String, (EntrypointArgs, EntrypointCall)>
+        entrypoints: BTreeMap<String, (EntrypointArgs, EntrypointCall)>
     ) -> Self {
         Self {
             address,

@@ -1,3 +1,7 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
+extern crate alloc;
+
 pub mod access;
 pub mod erc1155;
 pub mod erc1155_receiver;

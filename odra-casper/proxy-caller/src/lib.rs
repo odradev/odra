@@ -1,4 +1,5 @@
 #![no_std]
+#![cfg_attr(not(test), feature(core_intrinsics))]
 
 extern crate alloc;
 
@@ -23,6 +24,17 @@ use odra_casper_shared::consts::{
     ARGS_ARG, ATTACHED_VALUE_ARG, CARGO_PURSE_ARG, CARGO_PURSE_KEY, CONTRACT_PACKAGE_HASH_ARG,
     ENTRY_POINT_ARG
 };
+
+#[cfg(target_arch = "wasm32")]
+#[allow(unused_imports)]
+use ink_allocator;
+
+#[cfg(target_arch = "wasm32")]
+#[panic_handler]
+#[no_mangle]
+pub fn panic(_info: &core::panic::PanicInfo) -> ! {
+    core::intrinsics::abort();
+}
 
 /// Contract call definition.
 pub struct ProxyCall {

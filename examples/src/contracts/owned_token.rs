@@ -1,3 +1,4 @@
+use alloc::string::String;
 use odra::{
     contract_env,
     types::{Address, U256}

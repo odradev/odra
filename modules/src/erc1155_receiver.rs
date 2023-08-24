@@ -58,6 +58,7 @@ impl Erc1155Receiver {
 
 /// Erc1155Receiver-related events
 pub mod events {
+    use odra::prelude::vec::Vec;
     use odra::types::{Address, Bytes, U256};
 
     /// Emitted when the transferred token is accepted by the contract.

@@ -24,7 +24,7 @@ impl ContractEntrypoints<'_> {
         let constructor_group_name = consts::CONSTRUCTOR_GROUP_NAME;
         let access = match &entrypoint.ty {
             EntrypointType::Constructor { .. } => quote! {
-                odra::casper::casper_types::EntryPointAccess::Groups(vec![odra::casper::casper_types::Group::new(#constructor_group_name)])
+                odra::casper::casper_types::EntryPointAccess::Groups(alloc::vec![odra::casper::casper_types::Group::new(#constructor_group_name)])
             },
             EntrypointType::Public { .. } => {
                 quote! { odra::casper::casper_types::EntryPointAccess::Public }
@@ -61,7 +61,7 @@ impl ToTokens for EntrypointParams<'_> {
             })
             .collect::<Punctuated<TokenStream, Token![,]>>();
 
-        let params = quote!(vec![#params_content]);
+        let params = quote!(alloc::vec![#params_content]);
 
         tokens.extend(params);
     }
@@ -97,7 +97,7 @@ mod test {
                 entry_points.add_entry_point(
                     odra::casper::casper_types::EntryPoint::new(
                         "call_me",
-                        vec![odra::casper::casper_types::Parameter::new("value", odra::casper::casper_types::CLType::I32)],
+                        alloc::vec![odra::casper::casper_types::Parameter::new("value", odra::casper::casper_types::CLType::I32)],
                         odra::casper::casper_types::CLType::Bool,
                         odra::casper::casper_types::EntryPointAccess::Public,
                         odra::casper::casper_types::EntryPointType::Contract,

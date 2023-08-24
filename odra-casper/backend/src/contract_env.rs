@@ -1,16 +1,17 @@
 //! Casper backend for WASM.
 //!
 //! It provides all the required functions to communicate between Odra and Casper.
+use alloc::vec::Vec;
 use casper_contract::contract_api::runtime;
 use casper_contract::{
     contract_api::system::transfer_from_purse_to_account, unwrap_or_revert::UnwrapOrRevert
 };
 use casper_types::bytesrepr::{Bytes, FromBytes};
 use casper_types::U512;
+use core::ops::Deref;
 use odra_casper_shared::native_token::NativeTokenMetadata;
 use odra_casper_types::{Address, Balance, BlockTime, CallArgs, OdraType};
 use odra_types::{event::OdraEvent, ExecutionError};
-use std::ops::Deref;
 
 use crate::{casper_env, utils::get_or_create_main_purse};
 

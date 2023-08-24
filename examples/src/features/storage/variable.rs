@@ -1,3 +1,4 @@
+use alloc::{string::String, vec::Vec};
 use odra::Variable;
 
 #[odra::module]
@@ -44,6 +45,7 @@ impl DogContract {
 #[cfg(test)]
 mod tests {
     use super::DogContractDeployer;
+    use crate::alloc::string::ToString;
 
     #[test]
     fn init_test() {

@@ -1,7 +1,7 @@
 //! Erc721 metadata.
 
 use crate::erc721::extensions::erc721_metadata::errors::Error;
-use odra::{UnwrapOrRevert, Variable};
+use odra::{prelude::string::String, UnwrapOrRevert, Variable};
 
 /// The ERC721 Metadata interface as defined in the standard.
 pub trait Erc721Metadata {

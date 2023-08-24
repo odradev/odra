@@ -14,7 +14,12 @@ repository.workspace = true
 odra-casper-shared = { path = "../shared", version = "0.6.0" }
 odra-casper-types = { path = "../types", version = "0.6.0" }
 odra-types = { path = "../../types", version = "0.6.0" }
-casper-contract = { version = "3.0.0", default-features = false, features = ["std", "test-support"] }
 casper-types = { workspace = true }
-lazy_static = "1.4.0"
+lazy_static = { version = "1.4.0", features = [ "spin_no_std" ] }
 casper-event-standard = { workspace = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+casper-contract = { workspace = true }
+ink_allocator = { version = "4.2.1", default-features = false }
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+casper-contract = { version = "3.0.0", default-features = false, features = ["test-support"] }

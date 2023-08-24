@@ -16,7 +16,7 @@ impl ToTokens for CasperArgs<'_> {
                 odra_types::Type::Slice(ty) => {
                     let odra_type: OdraType = ty.as_ref().into();
                     tokens.append_all(quote! {
-                        let #arg_ident: Vec<#odra_type> = odra::casper::casper_contract::contract_api::runtime::get_named_arg(#arg_name);
+                        let #arg_ident: alloc::vec::Vec<#odra_type> = odra::casper::casper_contract::contract_api::runtime::get_named_arg(#arg_name);
                     })
                 },
                 _ =>  tokens.append_all(quote! {

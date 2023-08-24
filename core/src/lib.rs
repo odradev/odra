@@ -1,3 +1,8 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+
 #[cfg(all(feature = "casper", feature = "mock-vm"))]
 compile_error!("casper and mock-vm are mutually exclusive features.");
 
@@ -19,6 +24,7 @@ mod instance;
 mod item;
 mod list;
 mod mapping;
+#[cfg(not(target_arch = "wasm32"))]
 mod node;
 mod sequence;
 mod unwrap_or_revert;
@@ -26,6 +32,33 @@ mod variable;
 
 #[cfg(not(any(target_arch = "wasm32", feature = "casper-livenet")))]
 pub mod test_utils;
+
+pub mod prelude {
+    #[cfg(feature = "std")]
+    pub use std::{borrow, boxed, format, string, vec};
+
+    #[cfg(feature = "std")]
+    pub use std::string::ToString;
+
+    #[cfg(feature = "std")]
+    pub mod collections {
+        pub use self::{
+            binary_heap::BinaryHeap, btree_map::BTreeMap, btree_set::BTreeSet,
+            linked_list::LinkedList, vec_deque::VecDeque, Bound
+        };
+        pub use std::collections::*;
+    }
+
+    #[cfg(not(feature = "std"))]
+    pub use alloc::{borrow, boxed, format, string, string::ToString, vec};
+
+    #[cfg(not(feature = "std"))]
+    pub mod collections {
+        pub use self::{BTreeMap, BTreeSet, BinaryHeap, LinkedList, VecDeque};
+        pub use alloc::collections::*;
+        pub use core::ops::Bound;
+    }
+}
 
 pub use {
     instance::{DynamicInstance, StaticInstance},
@@ -45,6 +78,13 @@ pub use {
 mod env {
     pub use odra_mock_vm::{contract_env, test_env};
     pub mod types {
+        pub mod mock_vm {
+            pub mod borsh {
+                pub use odra_mock_vm::types::{
+                    BorshDeserialize, BorshSerialize, Error, ErrorKind, Result, Write
+                };
+            }
+        }
         pub use odra_mock_vm::types::*;
         pub use odra_types::*;
     }

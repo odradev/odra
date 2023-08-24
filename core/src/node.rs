@@ -1,8 +1,10 @@
-use crate::types::OdraType;
+use crate::{
+    prelude::{string::String, vec, vec::Vec},
+    types::OdraType,
+    List, Mapping, Sequence, Variable
+};
 use num_traits::{Num, One};
 use odra_types::contract_def::Node;
-
-use crate::{List, Mapping, Sequence, Variable};
 
 impl<T> Node for Variable<T> {
     const COUNT: u32 = 1;

@@ -164,6 +164,7 @@ impl Ownable2Step {
 
 #[cfg(test)]
 mod test {
+    use odra::prelude::{vec, vec::Vec};
     use odra::{assert_events, external_contract, test_env};
 
     use super::*;

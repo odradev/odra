@@ -1,3 +1,4 @@
+use alloc::string::String;
 use odra::types::{Address, BlockTime};
 use odra::Variable;
 
@@ -25,6 +26,7 @@ impl HostContract {
 #[cfg(test)]
 mod tests {
     use super::HostContractDeployer;
+    use crate::alloc::string::ToString;
 
     #[test]
     fn host_test() {

@@ -1,3 +1,4 @@
+use alloc::vec::Vec;
 use casper_types::bytesrepr::{FromBytes, ToBytes};
 use odra_casper_types::{Address, OdraType};
 use odra_types::event::OdraEvent;
@@ -24,7 +25,7 @@ lazy_static::lazy_static! {
         state_uref
     };
 
-    static ref STATE_BYTES: std::vec::Vec<u8> = {
+    static ref STATE_BYTES: Vec<u8> = {
         (*STATE).into_bytes().unwrap_or_revert()
     };
 }
@@ -224,7 +225,7 @@ fn read_value<T: OdraType>(key: &[u8]) -> Option<T> {
     let dictionary_item_key_size = key.len();
 
     let value_size = {
-        let mut value_size = std::mem::MaybeUninit::uninit();
+        let mut value_size = core::mem::MaybeUninit::uninit();
         let ret = unsafe {
             casper_contract::ext_ffi::casper_dictionary_get(
                 uref_ptr,
@@ -269,7 +270,7 @@ fn read_host_buffer(size: usize) -> Result<Vec<u8>, ApiError> {
 }
 
 fn read_host_buffer_into(dest: &mut [u8]) -> Result<usize, ApiError> {
-    let mut bytes_written = std::mem::MaybeUninit::uninit();
+    let mut bytes_written = core::mem::MaybeUninit::uninit();
     let ret = unsafe {
         casper_contract::ext_ffi::casper_read_host_buffer(
             dest.as_mut_ptr(),

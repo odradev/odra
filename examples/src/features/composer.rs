@@ -1,3 +1,4 @@
+use alloc::string::String;
 use odra::Variable;
 
 #[odra::module]
@@ -37,6 +38,7 @@ impl ComposableContract {
 
 #[cfg(test)]
 mod test {
+    use crate::alloc::string::ToString;
     use crate::features::composer::ComposableContractDeployer;
 
     #[test]

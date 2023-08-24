@@ -3,6 +3,7 @@
 use crate::access::Ownable;
 use crate::erc721::events::Transfer;
 use odra::contract_env::{caller, revert};
+use odra::prelude::string::String;
 use odra::types::event::OdraEvent;
 use odra::types::Address;
 use odra::types::Bytes;
@@ -150,6 +151,7 @@ mod tests {
     use crate::erc721::errors::Error;
     use crate::erc721_receiver::events::Received;
     use crate::erc721_receiver::Erc721ReceiverDeployer;
+    use odra::prelude::string::ToString;
     use odra::test_env::assert_exception;
     use odra::types::address::OdraAddress;
     use odra::types::VmError::NoSuchMethod;

@@ -11,11 +11,12 @@ categories = ["wasm"]
 
 [dependencies]
 odra = { path = "../core", version = "0.6.0", default-features = false }
-hex = "0.4.3"
-sha3 = "0.10.6"
+hex = { version = "0.4.3", default-features = false }
+sha3 = { version = "0.10.6", default-features = false }
 
 [features]
 default = [ "mock-vm" ]
 mock-vm = [ "odra/mock-vm" ]
 casper = [ "odra/casper" ]
 casper-livenet = ["odra/casper-livenet"]
+std = []

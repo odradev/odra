@@ -3,7 +3,7 @@ use odra_mock_vm_types::{
     Address, Balance, MockDeserializable, MockSerializable, MockVMSerializationError
 };
 use std::{
-    collections::{hash_map::DefaultHasher, HashMap},
+    collections::{hash_map::DefaultHasher, BTreeMap},
     hash::{Hash, Hasher}
 };
 
@@ -11,14 +11,14 @@ use crate::balance::AccountBalance;
 
 #[derive(Default, Clone)]
 pub struct Storage {
-    state: HashMap<u64, Vec<u8>>,
-    balances: HashMap<Address, AccountBalance>,
-    state_snapshot: Option<HashMap<u64, Vec<u8>>>,
-    balances_snapshot: Option<HashMap<Address, AccountBalance>>
+    state: BTreeMap<u64, Vec<u8>>,
+    balances: BTreeMap<Address, AccountBalance>,
+    state_snapshot: Option<BTreeMap<u64, Vec<u8>>>,
+    balances_snapshot: Option<BTreeMap<Address, AccountBalance>>
 }
 
 impl Storage {
-    pub fn new(balances: HashMap<Address, AccountBalance>) -> Self {
+    pub fn new(balances: BTreeMap<Address, AccountBalance>) -> Self {
         Self {
             state: Default::default(),
             balances,

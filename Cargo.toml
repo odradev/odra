@@ -13,11 +13,10 @@ members = [
     "odra-casper/shared",
     "odra-casper/test-env",
     "odra-casper/types",
-    "odra-casper/proxy-caller",
     "odra-casper/livenet"
 ]
 
-exclude = [ "contract", "contract/builder", "examples", "modules" ]
+exclude = [ "examples", "modules", "odra-casper/proxy-caller" ]
 
 [workspace.package]
 version = "0.6.0"
@@ -27,7 +26,7 @@ homepage = "https://odra.dev/docs"
 repository = "https://github.com/odradev/odra"
 
 [workspace.dependencies]
-casper-contract = "3.0.0"
+casper-contract = { version = "3.0.0", default-features = false }
 casper-types = "3.0.0"
 casper-execution-engine = "5.0.0"
 casper-event-standard = "0.4.0"

@@ -1,3 +1,11 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
+extern crate alloc;
+
+#[cfg(not(feature = "std"))]
+use alloc::string::String;
+
+#[cfg(feature = "std")]
 use convert_case::{Boundary, Case, Casing};
 
 /// Converts a camel-cased &str to String.
@@ -12,6 +20,7 @@ use convert_case::{Boundary, Case, Casing};
 ///
 /// assert_eq!(&result, "contract_name");
 /// ```
+#[cfg(feature = "std")]
 pub fn camel_to_snake(text: &str) -> String {
     text.from_case(Case::UpperCamel)
         .without_boundaries(&[Boundary::UpperDigit, Boundary::LowerDigit])
@@ -82,7 +91,7 @@ pub fn hex_to_slice(src: &[u8], dst: &mut [u8]) {
 /// Joins two parts of a key with the [`KEY_DELIMITER`].
 #[inline]
 pub fn create_key(left: &str, right: &str) -> String {
-    format!("{}{}{}", left, KEY_DELIMITER, right)
+    alloc::format!("{}{}{}", left, KEY_DELIMITER, right)
 }
 
 #[cfg(test)]
