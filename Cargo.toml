@@ -5,6 +5,7 @@ members = [
     "lang/ir",
     "lang/proc-macros",
     "mock-vm/backend",
+    "odra-core",
     "types",
     "utils",
     "odra-casper/backend",

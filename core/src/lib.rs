@@ -49,6 +49,11 @@ pub mod prelude {
         pub use std::collections::*;
     }
 
+    #[cfg(feature = "std")]
+    pub use std::cell::RefCell;
+    #[cfg(feature = "std")]
+    pub use std::rc::Rc;
+
     #[cfg(not(feature = "std"))]
     pub use alloc::{borrow, boxed, format, string, string::ToString, vec};
 
@@ -58,6 +63,11 @@ pub mod prelude {
         pub use alloc::collections::*;
         pub use core::ops::Bound;
     }
+
+    #[cfg(not(feature = "std"))]
+    pub use core::cell::RefCell;
+    #[cfg(not(feature = "std"))]
+    pub use alloc::rc::Rc;
 }
 
 pub use {

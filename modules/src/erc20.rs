@@ -31,7 +31,6 @@ impl Erc20 {
         initial_supply: &Option<U256>
     ) {
         let caller = contract_env::caller();
-
         self.symbol.set(symbol);
         self.name.set(name);
         self.decimals.set(decimals);
