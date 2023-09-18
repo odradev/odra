@@ -7,7 +7,7 @@ use casper_contract::{
 };
 use casper_event_standard::Schema;
 use odra_types::{
-    Balance, ExecutionError,
+    ExecutionError,
     casper_types::{
         contracts::NamedKeys, CLType, ContractPackageHash, EntryPoints, Key, URef, U512
     }
@@ -39,7 +39,7 @@ pub fn get_or_create_main_purse() -> URef {
 }
 
 /// Stores in memory the amount attached to the current call.
-pub fn set_attached_value(amount: Balance) {
+pub fn set_attached_value(amount: U512) {
     unsafe {
         ATTACHED_VALUE = amount;
     }

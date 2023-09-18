@@ -19,11 +19,11 @@ pub fn generate_code(
     quote! {
         impl #deployer_ident {
             pub fn register(address: odra::types::Address) -> #ref_ident {
-                use odra::types::CallArgs;
+                use odra::types::casper_types::RuntimeArgs;
 
                 let mut entrypoints = odra::prelude::collections::BTreeMap::<
                     odra::prelude::string::String,
-                    (odra::prelude::vec::Vec<odra::prelude::string::String>, fn(odra::prelude::string::String, &CallArgs) -> odra::prelude::vec::Vec<u8>)
+                    (odra::prelude::vec::Vec<odra::prelude::string::String>, fn(odra::prelude::string::String, &RuntimeArgs) -> odra::prelude::vec::Vec<u8>)
                 >::new();
                 #entrypoint_calls
 
@@ -92,14 +92,14 @@ fn build_default_constructor(
 
     quote! {
         pub fn default() -> #ref_ident {
-            use odra::types::CallArgs;
+            use odra::types::casper_types::RuntimeArgs;
             let mut entrypoints = odra::prelude::collections::BTreeMap::<
                 odra::prelude::string::String,
-                (odra::prelude::vec::Vec<odra::prelude::string::String>, fn(odra::prelude::string::String, &CallArgs) -> odra::prelude::vec::Vec<u8>)
+                (odra::prelude::vec::Vec<odra::prelude::string::String>, fn(odra::prelude::string::String, &RuntimeArgs) -> odra::prelude::vec::Vec<u8>)
             >::new();
             #entrypoint_calls
 
-            let address = odra::client_env::deploy_new_contract(&#struct_name_snake_case, odra::types::CallArgs::new(), entrypoints, None);
+            let address = odra::client_env::deploy_new_contract(&#struct_name_snake_case, RuntimeArgs::new(), entrypoints, None);
             #ref_ident::at(&address)
         }
     }
@@ -122,11 +122,11 @@ fn build_constructor(
 
     quote! {
         pub #fn_sig {
-            use odra::types::CallArgs;
+            use odra::types::casper_types::RuntimeArgs;
 
             let mut entrypoints = odra::prelude::collections::BTreeMap::<
                 odra::prelude::string::String,
-                (odra::prelude::vec::Vec<odra::prelude::string::String>, fn(odra::prelude::string::String, &CallArgs) -> odra::prelude::vec::Vec<u8>)
+                (odra::prelude::vec::Vec<odra::prelude::string::String>, fn(odra::prelude::string::String, &RuntimeArgs) -> odra::prelude::vec::Vec<u8>)
             >::new();
             #entrypoint_calls
 

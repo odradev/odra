@@ -2,11 +2,9 @@
 //!
 //! Depending on the selected feature, the actual test env is dynamically loaded in the runtime or the Odra local MockVM is used.
 use std::{collections::BTreeMap, panic::AssertUnwindSafe};
-
-use odra_types::casper_types::RuntimeArgs;
-use odra_types::casper_types::bytesrepr::{ToBytes, FromBytes, Bytes};
 use odra_types::{
-    Address, Balance, BlockTime, PublicKey
+    casper_types::{RuntimeArgs, U512, bytesrepr::{ToBytes, FromBytes, Bytes}},
+    Address, BlockTime, PublicKey
 };
 use odra_types::{
     OdraAddress,
@@ -46,7 +44,7 @@ delegate_to_env! {
     /// Replaces the current caller.
     fn set_caller(address: Address)
     /// Returns the balance of the account associated with the given address.
-    fn token_balance(address: Address) -> Balance
+    fn token_balance(address: Address) -> U512
     /// Returns nth test user account.
     fn get_account(n: usize) -> Address
 }
@@ -68,8 +66,8 @@ where
 }
 
 /// Returns the value that represents one native token.
-pub fn one_token() -> Balance {
-    Balance::one()
+pub fn one_token() -> U512 {
+    U512::one()
 }
 
 /// Calls contract at `address` invoking the `entrypoint` with `args`.
@@ -79,7 +77,7 @@ pub fn call_contract<T: ToBytes + FromBytes>(
     address: Address,
     entrypoint: &str,
     args: &RuntimeArgs,
-    amount: Option<Balance>
+    amount: Option<U512>
 ) -> T {
     crate::borrow_env().call_contract(address, entrypoint, args, amount)
 }
@@ -107,27 +105,27 @@ pub fn native_token_metadata() -> NativeTokenMetadata {
 }
 
 /// Returns last call gas cost.
-pub fn last_call_contract_gas_cost() -> Balance {
-    Balance::zero()
+pub fn last_call_contract_gas_cost() -> U512 {
+    U512::zero()
 }
 
 /// Returns the amount of gas paid for last call.
-pub fn last_call_contract_gas_used() -> Balance {
-    Balance::zero()
+pub fn last_call_contract_gas_used() -> U512 {
+    U512::zero()
 }
 
 /// Returns the total amount of gas used by the address.
 /// Currently MockVM doesn't charge gas.
-pub fn total_gas_used(address: Address) -> Balance {
+pub fn total_gas_used(address: Address) -> U512 {
     if address.is_contract() {
         panic!("Contract {:?} can't burn gas.", address)
     }
-    Balance::zero()
+    U512::zero()
 }
 
 /// Returns the report of entrypoints called, contract deployed and gas used.
 /// Currently MockVM doesn't charge gas.
-pub fn gas_report() -> Vec<(String, Balance)> {
+pub fn gas_report() -> Vec<(String, U512)> {
     Vec::new()
 }
 

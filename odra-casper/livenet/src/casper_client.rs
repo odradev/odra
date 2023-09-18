@@ -8,8 +8,8 @@ use casper_execution_engine::core::engine_state::ExecutableDeployItem;
 use casper_hashing::Digest;
 use odra_types::{casper_types::{
     bytesrepr::{FromBytes, ToBytes, Bytes}, runtime_args, ContractHash, ContractPackageHash, Key as CasperKey,
-    PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, ExecutionResult
-}, Address, Balance};
+    PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, ExecutionResult, U512
+}, Address};
 use jsonrpc_lite::JsonRpc;
 use odra_casper_shared::key_maker::KeyMaker;
 use serde::de::DeserializeOwned;
@@ -169,7 +169,7 @@ impl CasperClient {
     }
 
     /// Deploy the contract.
-    pub fn deploy_wasm(&self, wasm_file_name: &str, args: RuntimeArgs, gas: Balance) -> Address {
+    pub fn deploy_wasm(&self, wasm_file_name: &str, args: RuntimeArgs, gas: U512) -> Address {
         log::info(format!("Deploying \"{}\".", wasm_file_name));
         let wasm_path = find_wasm_file_path(wasm_file_name);
         let wasm_bytes = fs::read(wasm_path).unwrap();
@@ -204,8 +204,8 @@ impl CasperClient {
         addr: Address,
         entrypoint: &str,
         args: &RuntimeArgs,
-        _amount: Option<Balance>,
-        gas: Balance
+        _amount: Option<U512>,
+        gas: U512
     ) {
         log::info(format!(
             "Calling {:?} with entrypoint \"{}\".",
@@ -332,7 +332,7 @@ impl CasperClient {
         }
     }
 
-    fn new_deploy(&self, session: ExecutableDeployItem, gas: Balance) -> Deploy {
+    fn new_deploy(&self, session: ExecutableDeployItem, gas: U512) -> Deploy {
         let timestamp = Timestamp::now();
         let ttl = TimeDiff::from_seconds(1000);
         let gas_price = 1;
@@ -412,6 +412,8 @@ impl KeyMaker for LivenetKeyMaker {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use casper_hashing::Digest;
     use odra_types::{casper_types::{
         bytesrepr::{FromBytes, ToBytes},

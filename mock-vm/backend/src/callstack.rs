@@ -1,4 +1,4 @@
-use odra_types::{Address, Balance};
+use odra_types::{Address, casper_types::U512};
 
 #[derive(Clone)]
 pub enum CallstackElement {
@@ -19,11 +19,11 @@ impl CallstackElement {
 pub struct Entrypoint {
     pub address: Address,
     pub entrypoint: String,
-    pub attached_value: Option<Balance>
+    pub attached_value: Option<U512>
 }
 
 impl Entrypoint {
-    pub fn new(address: Address, entrypoint: &str, value: Option<Balance>) -> Self {
+    pub fn new(address: Address, entrypoint: &str, value: Option<U512>) -> Self {
         Self {
             address,
             entrypoint: entrypoint.to_string(),
@@ -44,7 +44,7 @@ impl Callstack {
         self.0.push(element);
     }
 
-    pub fn current_amount(&self) -> Balance {
+    pub fn current_amount(&self) -> U512 {
         self.0
             .last()
             .and_then(|e| match e {

@@ -10,7 +10,7 @@ use odra_types::casper_types::bytesrepr::{ToBytes, FromBytes, Bytes};
 use odra_types::casper_types::{U512, CLTyped, RuntimeArgs, crypto};
 use core::ops::Deref;
 use odra_casper_shared::native_token::NativeTokenMetadata;
-use odra_types::{Address, Balance, BlockTime};
+use odra_types::{Address, BlockTime};
 use odra_types::{event::OdraEvent, ExecutionError};
 
 use crate::{casper_env, utils::get_or_create_main_purse};
@@ -83,7 +83,7 @@ pub fn call_contract<T: CLTyped + FromBytes>(
     address: Address,
     entrypoint: &str,
     args: &RuntimeArgs,
-    amount: Option<Balance>
+    amount: Option<U512>
 ) -> T {
     let contract_package_hash = *address.as_contract_package_hash().unwrap_or_revert();
     if let Some(amount) = amount {
@@ -101,22 +101,22 @@ pub fn call_contract<T: CLTyped + FromBytes>(
 /// Returns the value that represents one CSPR.
 ///
 /// 1 CSPR = 1,000,000,000 Motes.
-pub fn one_token() -> Balance {
-    Balance::from(1_000_000_000)
+pub fn one_token() -> U512 {
+    U512::from(1_000_000_000)
 }
 
 /// Returns the balance of the account associated with the currently executing contract.
-pub fn self_balance() -> Balance {
+pub fn self_balance() -> U512 {
     casper_env::self_balance().into()
 }
 
 /// Returns amount of native token attached to the call.
-pub fn attached_value() -> Balance {
+pub fn attached_value() -> U512 {
     unsafe { ATTACHED_VALUE.into() }
 }
 
 /// Transfers native token from the contract caller to the given address.
-pub fn transfer_tokens<B: Into<Balance>>(to: &Address, amount: B) {
+pub fn transfer_tokens<B: Into<U512>>(to: &Address, amount: B) {
     let main_purse = get_or_create_main_purse();
 
     match to {

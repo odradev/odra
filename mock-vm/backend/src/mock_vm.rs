@@ -1,6 +1,6 @@
 use anyhow::Result;
-use odra_types::{casper_types::{bytesrepr::{Error, ToBytes, FromBytes}, RuntimeArgs, SecretKey, account::AccountHash},
-    Address, Balance, BlockTime, EventData, ExecutionError, PublicKey
+use odra_types::{casper_types::{bytesrepr::{Error, ToBytes, FromBytes}, RuntimeArgs, SecretKey, account::AccountHash, U512},
+    Address, BlockTime, EventData, ExecutionError, PublicKey
 };
 use odra_types::{event::EventError, OdraError, VmError};
 use std::collections::BTreeMap;
@@ -38,7 +38,7 @@ impl MockVm {
             self.state
                 .write()
                 .unwrap()
-                .set_balance(address, Balance::zero());
+                .set_balance(address, U512::zero());
         }
 
         // Call constructor if needed.
@@ -54,7 +54,7 @@ impl MockVm {
         address: Address,
         entrypoint: &str,
         args: &RuntimeArgs,
-        amount: Option<Balance>
+        amount: Option<U512>
     ) -> T {
         self.prepare_call(address, entrypoint, amount);
         // Call contract from register.
@@ -84,7 +84,7 @@ impl MockVm {
         self.handle_call_result(result)
     }
 
-    fn prepare_call(&self, address: Address, entrypoint: &str, amount: Option<Balance>) {
+    fn prepare_call(&self, address: Address, entrypoint: &str, amount: Option<U512>) {
         let mut state = self.state.write().unwrap();
         // If only one address on the call_stack, record snapshot.
         if state.is_in_caller_context() {
@@ -217,7 +217,7 @@ impl MockVm {
             .advance_block_time_by(milliseconds)
     }
 
-    pub fn attached_value(&self) -> Balance {
+    pub fn attached_value(&self) -> U512 {
         self.state.read().unwrap().attached_value()
     }
 
@@ -225,11 +225,11 @@ impl MockVm {
         self.state.read().unwrap().accounts.get(n).cloned().unwrap()
     }
 
-    pub fn token_balance(&self, address: Address) -> Balance {
+    pub fn token_balance(&self, address: Address) -> U512 {
         self.state.read().unwrap().get_balance(address)
     }
 
-    pub fn transfer_tokens(&self, from: &Address, to: &Address, amount: &Balance) {
+    pub fn transfer_tokens(&self, from: &Address, to: &Address, amount: &U512) {
         if amount.is_zero() {
             return;
         }
@@ -247,7 +247,7 @@ impl MockVm {
         &self,
         from: &Address,
         to: &Address,
-        amount: &Balance
+        amount: &U512
     ) -> Result<(), OdraError> {
         if amount.is_zero() {
             return Ok(());
@@ -263,7 +263,7 @@ impl MockVm {
         Ok(())
     }
 
-    pub fn self_balance(&self) -> Balance {
+    pub fn self_balance(&self) -> U512 {
         let address = self.callee();
         self.state.read().unwrap().get_balance(address)
     }
@@ -403,7 +403,7 @@ impl MockVmState {
         }
     }
 
-    fn attached_value(&self) -> Balance {
+    fn attached_value(&self) -> U512 {
         self.callstack.current_amount()
     }
 
@@ -439,23 +439,23 @@ impl MockVmState {
         self.block_time += milliseconds;
     }
 
-    fn get_balance(&self, address: Address) -> Balance {
+    fn get_balance(&self, address: Address) -> U512 {
         self.storage
             .balance_of(&address)
             .map(|b| b.value())
             .unwrap_or_default()
     }
 
-    fn set_balance(&mut self, address: Address, amount: Balance) {
+    fn set_balance(&mut self, address: Address, amount: U512) {
         self.storage
             .set_balance(address, AccountBalance::new(amount));
     }
 
-    fn increase_balance(&mut self, address: &Address, amount: &Balance) -> Result<()> {
+    fn increase_balance(&mut self, address: &Address, amount: &U512) -> Result<()> {
         self.storage.increase_balance(address, amount)
     }
 
-    fn reduce_balance(&mut self, address: &Address, amount: &Balance) -> Result<()> {
+    fn reduce_balance(&mut self, address: &Address, amount: &U512) -> Result<()> {
         self.storage.reduce_balance(address, amount)
     }
 
@@ -505,9 +505,9 @@ impl Default for MockVmState {
 mod tests {
     use std::collections::BTreeMap;
 
-    use odra_types::casper_types::RuntimeArgs;
+    use odra_types::casper_types::{RuntimeArgs, U512};
     use odra_types::casper_types::bytesrepr::FromBytes;
-    use odra_types::{Address, Balance, EventData};
+    use odra_types::{Address, EventData};
     use odra_types::OdraAddress;
     use odra_types::{ExecutionError, OdraError, VmError};
 
@@ -737,7 +737,7 @@ mod tests {
 
         // then the contract has the caller tokens and the caller balance is zero
         assert_eq!(instance.token_balance(contract_address), caller_balance);
-        assert_eq!(instance.token_balance(caller), Balance::zero());
+        assert_eq!(instance.token_balance(caller), U512::zero());
     }
 
     #[test]

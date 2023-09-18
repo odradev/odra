@@ -72,17 +72,17 @@ fn build_constructor(
 
     quote! {
         pub #fn_sig {
-            use odra::types::{CallArgs};
+            use odra::types::casper_types::RuntimeArgs;
 
             let mut entrypoints = odra::prelude::collections::BTreeMap::<
                 odra::prelude::string::String,
-                (odra::prelude::vec::Vec<odra::prelude::string::String>, fn(odra::prelude::string::String, &CallArgs) -> odra::prelude::vec::Vec<u8>)
+                (odra::prelude::vec::Vec<odra::prelude::string::String>, fn(odra::prelude::string::String, &RuntimeArgs) -> odra::prelude::vec::Vec<u8>)
             >::new();
             #entrypoints_stream
 
             let mut constructors = odra::prelude::collections::BTreeMap::<
                 odra::prelude::string::String,
-                (odra::prelude::vec::Vec<odra::prelude::string::String>, fn(odra::prelude::string::String, &CallArgs) -> odra::prelude::vec::Vec<u8>)
+                (odra::prelude::vec::Vec<odra::prelude::string::String>, fn(odra::prelude::string::String, &RuntimeArgs) -> odra::prelude::vec::Vec<u8>)
             >::new();
             #constructors_stream
 
@@ -90,8 +90,8 @@ fn build_constructor(
                 #args
             };
             let constructor: Option<(
-                odra::prelude::string::String, &CallArgs,
-                fn(odra::prelude::string::String, &CallArgs) -> odra::prelude::vec::Vec<u8>)
+                odra::prelude::string::String, &RuntimeArgs,
+                fn(odra::prelude::string::String, &RuntimeArgs) -> odra::prelude::vec::Vec<u8>)
             > = Some((
                 odra::prelude::string::String::from(stringify!(#constructor_ident)),
                 &args,
@@ -119,17 +119,17 @@ fn build_default_constructor(
 ) -> TokenStream {
     quote! {
         pub fn default() -> #ref_ident {
-            use odra::types::CallArgs;
+            use odra::types::casper_types::RuntimeArgs;
 
             let mut entrypoints = odra::prelude::collections::BTreeMap::<
                 odra::prelude::string::String,
-                (odra::prelude::vec::Vec<odra::prelude::string::String>, fn(odra::prelude::string::String, &CallArgs) -> odra::prelude::vec::Vec<u8>)
+                (odra::prelude::vec::Vec<odra::prelude::string::String>, fn(odra::prelude::string::String, &RuntimeArgs) -> odra::prelude::vec::Vec<u8>)
             >::new();
             #entrypoints_stream
 
             let mut constructors = odra::prelude::collections::BTreeMap::<
                 odra::prelude::string::String,
-                (odra::prelude::vec::Vec<odra::prelude::string::String>, fn(odra::prelude::string::String, &CallArgs) -> odra::prelude::vec::Vec<u8>)
+                (odra::prelude::vec::Vec<odra::prelude::string::String>, fn(odra::prelude::string::String, &RuntimeArgs) -> odra::prelude::vec::Vec<u8>)
             >::new();
             #constructors_stream
 

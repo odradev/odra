@@ -42,7 +42,7 @@ fn build_default_constructor(struct_ident: &Ident, ref_ident: &Ident) -> TokenSt
 
     quote! {
         pub fn default() -> #ref_ident {
-            let address = odra::test_env::register_contract(&#struct_name_snake_case, &odra::types::CallArgs::new(), None);
+            let address = odra::test_env::register_contract(&#struct_name_snake_case, &odra::types::casper_types::RuntimeArgs::new(), None);
             #ref_ident::at(&address)
         }
     }

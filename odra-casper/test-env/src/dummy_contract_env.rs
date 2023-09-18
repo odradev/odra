@@ -1,6 +1,7 @@
 use odra_casper_shared::native_token::NativeTokenMetadata;
+use odra_types::casper_types::U512;
 use odra_types::casper_types::bytesrepr::{ToBytes, FromBytes, Bytes};
-use odra_types::{Address, Balance, BlockTime, PublicKey};
+use odra_types::{Address, BlockTime, PublicKey};
 use odra_types::{event::OdraEvent, ExecutionError};
 
 pub fn self_address() -> Address {
@@ -45,19 +46,19 @@ pub fn get_block_time() -> BlockTime {
     unimplemented!()
 }
 
-pub fn attached_value() -> Balance {
+pub fn attached_value() -> U512 {
     unimplemented!()
 }
 
-pub fn one_token() -> Balance {
+pub fn one_token() -> U512 {
     unimplemented!()
 }
 
-pub fn transfer_tokens<B: Into<Balance>>(_: &Address, _: B) {
+pub fn transfer_tokens<B: Into<U512>>(_: &Address, _: B) {
     unimplemented!()
 }
 
-pub fn self_balance() -> Balance {
+pub fn self_balance() -> U512 {
     unimplemented!()
 }
 

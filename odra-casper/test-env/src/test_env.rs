@@ -6,9 +6,9 @@ use std::panic::AssertUnwindSafe;
 use crate::env::ENV;
 use odra_casper_shared::{consts, native_token::NativeTokenMetadata};
 use odra_types::{
-    Address, Balance,
+    Address,
     event::{EventError, OdraEvent},
-    OdraError, casper_types::{RuntimeArgs, bytesrepr::{FromBytes, Bytes, ToBytes}, account::{AccountHash, ACCOUNT_HASH_LENGTH}, CLTyped}, PublicKey
+    OdraError, casper_types::{RuntimeArgs, bytesrepr::{FromBytes, Bytes, ToBytes}, account::{AccountHash, ACCOUNT_HASH_LENGTH}, CLTyped, U512}, PublicKey
 };
 
 /// Returns backend name.
@@ -46,7 +46,7 @@ pub fn call_contract<T: CLTyped + ToBytes + FromBytes>(
     addr: Address,
     entrypoint: &str,
     args: &RuntimeArgs,
-    amount: Option<Balance>
+    amount: Option<U512>
 ) -> T {
     ENV.with(|env| {
         let contract_package_hash = addr.as_contract_package_hash().unwrap();
@@ -84,15 +84,15 @@ pub fn advance_block_time_by(milliseconds: u64) {
 }
 
 /// Returns the balance of the account associated with the given address.
-pub fn token_balance(address: Address) -> Balance {
+pub fn token_balance(address: Address) -> U512 {
     ENV.with(|env| env.borrow().token_balance(address).into())
 }
 
 /// Returns the value that represents one CSPR.
 ///
 /// 1 CSPR = 1,000,000,000 Motes.
-pub fn one_token() -> Balance {
-    Balance::from(1_000_000_000)
+pub fn one_token() -> U512 {
+    U512::from(1_000_000_000)
 }
 
 /// Returns zero address for an account.
@@ -122,22 +122,22 @@ pub fn native_token_metadata() -> NativeTokenMetadata {
 }
 
 /// Returns last call gas cost.
-pub fn last_call_contract_gas_cost() -> Balance {
+pub fn last_call_contract_gas_cost() -> U512 {
     ENV.with(|env| env.borrow().last_call_contract_gas_cost().into())
 }
 
 /// Returns the amount of gas paid for last call.
-pub fn last_call_contract_gas_used() -> Balance {
+pub fn last_call_contract_gas_used() -> U512 {
     ENV.with(|env| env.borrow().last_call_contract_gas_used().into())
 }
 
 /// Returns total gas used by the account.
-pub fn total_gas_used(address: Address) -> Balance {
+pub fn total_gas_used(address: Address) -> U512 {
     ENV.with(|env| env.borrow().total_gas_used(address).into())
 }
 
 /// Returns the report of entrypoints called, contract deployed and gas used.
-pub fn gas_report() -> Vec<(String, Balance)> {
+pub fn gas_report() -> Vec<(String, U512)> {
     let mut report = Vec::new();
     ENV.with(|env| {
         let env = env.borrow();

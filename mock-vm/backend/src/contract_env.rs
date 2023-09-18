@@ -5,9 +5,10 @@ use std::backtrace::{Backtrace, BacktraceStatus};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
+use odra_types::casper_types::U512;
 use odra_types::casper_types::bytesrepr::{ToBytes, FromBytes, Bytes};
 use odra_types::{
-    Address, Balance, BlockTime, PublicKey
+    Address, BlockTime, PublicKey
 };
 use odra_types::{event::OdraEvent, ExecutionError, OdraError};
 
@@ -94,24 +95,24 @@ pub fn emit_event<T: ToBytes + OdraEvent>(event: T) {
 }
 
 /// Returns amount of native token attached to the call.
-pub fn attached_value() -> Balance {
+pub fn attached_value() -> U512 {
     borrow_env().attached_value()
 }
 
 /// Returns the value that represents one native token.
-pub fn one_token() -> Balance {
-    Balance::one()
+pub fn one_token() -> U512 {
+    U512::one()
 }
 
 /// Transfers native token from the contract caller to the given address.
-pub fn transfer_tokens<B: Into<Balance>>(to: &Address, amount: B) {
+pub fn transfer_tokens<B: Into<U512>>(to: &Address, amount: B) {
     let callee = borrow_env().callee();
     let amount = amount.into();
     borrow_env().transfer_tokens(&callee, to, &amount);
 }
 
 /// Returns the balance of the account associated with the current contract.
-pub fn self_balance() -> Balance {
+pub fn self_balance() -> U512 {
     borrow_env().self_balance()
 }
 

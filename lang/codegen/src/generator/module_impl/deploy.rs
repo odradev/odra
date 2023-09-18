@@ -163,7 +163,7 @@ fn args_to_runtime_args_stream<'a, T>(args: T) -> TokenStream
 where
     T: IntoIterator<Item = &'a syn::PatType>
 {
-    let mut tokens = quote!(let mut args = odra::types::CallArgs::new(););
+    let mut tokens = quote!(let mut args = odra::types::casper_types::RuntimeArgs::new(););
     tokens.append_all(args.into_iter().map(|arg| {
         let pat = &*arg.pat;
         quote! { args.insert(stringify!(#pat), #pat.clone()); }

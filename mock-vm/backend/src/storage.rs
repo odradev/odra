@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use odra_types::{
-    Address, Balance, casper_types::bytesrepr::{Error, ToBytes, FromBytes}
+    Address, casper_types::{bytesrepr::{Error, ToBytes, FromBytes}, U512}
 };
 use std::{
     collections::{hash_map::DefaultHasher, BTreeMap},
@@ -35,12 +35,12 @@ impl Storage {
         self.balances.insert(address, balance);
     }
 
-    pub fn increase_balance(&mut self, address: &Address, amount: &Balance) -> Result<()> {
+    pub fn increase_balance(&mut self, address: &Address, amount: &U512) -> Result<()> {
         let balance = self.balances.get_mut(address).context("Unknown address")?;
         balance.increase(*amount)
     }
 
-    pub fn reduce_balance(&mut self, address: &Address, amount: &Balance) -> Result<()> {
+    pub fn reduce_balance(&mut self, address: &Address, amount: &U512) -> Result<()> {
         let balance = self.balances.get_mut(address).context("Unknown address")?;
         balance.reduce(*amount)
     }
@@ -131,12 +131,12 @@ impl Storage {
 #[cfg(test)]
 mod test {
 
-    use odra_types::{Address, casper_types::account::AccountHash};
+    use odra_types::Address;
 
     use super::Storage;
 
     fn setup() -> (Address, [u8; 3], u8) {
-        let address = Address::Account(AccountHash::from_formatted_str("address").unwrap());
+        let address = Address::account_from_str("add");
         let key = b"key";
         let value = 88u8;
 

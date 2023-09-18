@@ -5,7 +5,7 @@
 use crate::casper_client::LivenetKeyMaker;
 use odra_casper_shared::key_maker::KeyMaker;
 use odra_casper_shared::native_token::NativeTokenMetadata;
-use odra_types::{Address, Balance, BlockTime, event::OdraEvent, ExecutionError, casper_types::bytesrepr::{ToBytes, FromBytes, Bytes}, PublicKey};
+use odra_types::{Address, BlockTime, event::OdraEvent, ExecutionError, casper_types::{bytesrepr::{ToBytes, FromBytes, Bytes}, U512}, PublicKey};
 
 use crate::client_env;
 
@@ -51,19 +51,19 @@ pub fn get_block_time() -> BlockTime {
     unimplemented!()
 }
 
-pub fn attached_value() -> Balance {
+pub fn attached_value() -> U512 {
     unimplemented!()
 }
 
-pub fn one_token() -> Balance {
+pub fn one_token() -> U512 {
     unimplemented!()
 }
 
-pub fn transfer_tokens<B: Into<Balance>>(_: &Address, _: B) {
+pub fn transfer_tokens<B: Into<U512>>(_: &Address, _: B) {
     unimplemented!()
 }
 
-pub fn self_balance() -> Balance {
+pub fn self_balance() -> U512 {
     unimplemented!()
 }
 

@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, sync::Mutex};
 
 use odra_casper_shared::consts;
-use odra_types::{Address, Balance, casper_types::{RuntimeArgs, CLValue, bytesrepr::{FromBytes, ToBytes}, CLType, CLTyped}};
+use odra_types::{Address, casper_types::{RuntimeArgs, CLValue, bytesrepr::{FromBytes, ToBytes}, CLType, CLTyped, U512}};
 use ref_thread_local::RefThreadLocal;
 
 use crate::{casper_client::CasperClient, EntrypointArgs, EntrypointCall};
@@ -20,7 +20,7 @@ mod contract_register;
 struct ClientEnv {
     contracts: ContractRegister,
     callstack: Callstack,
-    gas: Mutex<Option<Balance>>
+    gas: Mutex<Option<U512>>
 }
 
 impl ClientEnv {
@@ -68,16 +68,16 @@ impl ClientEnv {
     }
 
     /// Set gas.
-    pub fn set_gas<T: Into<Balance>>(&self, gas: T) {
-        let new_gas: Balance = gas.into();
+    pub fn set_gas<T: Into<U512>>(&self, gas: T) {
+        let new_gas: U512 = gas.into();
         let mut gas = self.gas.lock().unwrap();
         *gas = Some(new_gas);
     }
 
     /// Get gas and reset it, so it is not used twice.
-    pub fn get_gas(&self) -> Balance {
+    pub fn get_gas(&self) -> U512 {
         let mut gas = self.gas.lock().unwrap();
-        let current_gas: Balance = gas.expect("Gas not set");
+        let current_gas: U512 = gas.expect("Gas not set");
         *gas = None;
         current_gas
     }
@@ -126,7 +126,7 @@ pub fn call_contract<T: CLTyped + FromBytes>(
     addr: Address,
     entrypoint: &str,
     args: &RuntimeArgs,
-    _amount: Option<Balance>
+    _amount: Option<U512>
 ) -> T {
     match T::cl_type() {
         CLType::Unit => {
@@ -158,11 +158,11 @@ pub fn caller() -> Address {
 }
 
 /// Set gas for the next call.
-pub fn set_gas<T: Into<Balance>>(gas: T) {
+pub fn set_gas<T: Into<U512>>(gas: T) {
     ClientEnv::instance_mut().set_gas(gas);
 }
 
-fn get_gas() -> Balance {
+fn get_gas() -> U512 {
     ClientEnv::instance().get_gas()
 }
 
@@ -170,7 +170,7 @@ fn call_contract_getter_entrypoint<T: CLTyped + FromBytes>(
     addr: Address,
     entrypoint: &str,
     args: &RuntimeArgs,
-    _amount: Option<Balance>
+    _amount: Option<U512>
 ) -> T {
     {
         ClientEnv::instance_mut().push_on_stack(addr);
@@ -182,7 +182,7 @@ fn call_contract_getter_entrypoint<T: CLTyped + FromBytes>(
     result
 }
 
-fn call_contract_deploy(addr: Address, entrypoint: &str, args: &RuntimeArgs, amount: Option<Balance>) {
+fn call_contract_deploy(addr: Address, entrypoint: &str, args: &RuntimeArgs, amount: Option<U512>) {
     let gas = get_gas();
     CasperClient::new().deploy_entrypoint_call(addr, entrypoint, args, amount, gas);
 }

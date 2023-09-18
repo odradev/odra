@@ -65,7 +65,7 @@ fn parse_args<T>(syn_args: T) -> TokenStream
 where
     T: IntoIterator<Item = syn::PatType>
 {
-    let mut tokens = quote!(let mut args = odra::types::CallArgs::new(););
+    let mut tokens = quote!(let mut args = odra::types::casper_types::RuntimeArgs::new(););
     tokens.append_all(syn_args.into_iter().map(|ty| {
         let pat = &*ty.pat;
         match *ty.ty {

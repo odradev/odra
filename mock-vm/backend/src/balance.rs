@@ -1,21 +1,21 @@
 use anyhow::{Context, Result};
-use odra_types::Balance;
+use odra_types::casper_types::U512;
 
 #[derive(Eq, Hash, PartialEq, Clone, Default, Debug)]
 pub struct AccountBalance {
-    value: Balance,
-    prev_value: Balance
+    value: U512,
+    prev_value: U512
 }
 
 impl AccountBalance {
-    pub fn new(amount: Balance) -> Self {
+    pub fn new(amount: U512) -> Self {
         Self {
             value: amount,
-            prev_value: Balance::zero()
+            prev_value: U512::zero()
         }
     }
 
-    pub fn increase(&mut self, amount: Balance) -> Result<()> {
+    pub fn increase(&mut self, amount: U512) -> Result<()> {
         let result = self
             .value
             .checked_add(amount)
@@ -26,7 +26,7 @@ impl AccountBalance {
         Ok(())
     }
 
-    pub fn reduce(&mut self, amount: Balance) -> Result<()> {
+    pub fn reduce(&mut self, amount: U512) -> Result<()> {
         let result = self
             .value
             .checked_sub(amount)
@@ -36,7 +36,7 @@ impl AccountBalance {
         Ok(())
     }
 
-    pub fn value(&self) -> Balance {
+    pub fn value(&self) -> U512 {
         self.value
     }
 }
