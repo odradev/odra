@@ -1,4 +1,4 @@
-use casper_types::{account::AccountHash, NamedKey, URef};
+use odra_types::casper_types::{account::AccountHash, NamedKey, URef};
 use datasize::DataSize;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

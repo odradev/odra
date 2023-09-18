@@ -1,6 +1,6 @@
 use std::fmt;
 
-use casper_types::{
+use odra_types::casper_types::{
     bytesrepr::{self, FromBytes, ToBytes},
     crypto, PublicKey, SecretKey, Signature
 };

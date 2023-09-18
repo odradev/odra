@@ -4,11 +4,11 @@ edition = "2021"
 description = "Code generators for Odra IR."
 keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm"]
-version.workspace = true
-authors.workspace = true
-license.workspace = true
-homepage.workspace = true
-repository.workspace = true
+version = { workspace = true }
+authors = { workspace = true }
+license = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 
 [dependencies]
 odra-utils = { path = "../../utils", version = "0.6.0", features = ["std"]  }

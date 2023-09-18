@@ -1,7 +1,6 @@
-use crate::{
-    prelude::{collections::BTreeMap, string::String, vec, vec::Vec},
-    types::{Address, OdraType, U256, U512}
-};
+use odra_types::{casper_types::{bytesrepr::{ToBytes, FromBytes}, U256, U512, U128}, Address};
+
+use crate::prelude::{collections::BTreeMap, string::String, vec, vec::Vec};
 
 pub trait OdraItem {
     fn is_module() -> bool;
@@ -53,49 +52,49 @@ impl_odra_item_for_types!(
     u8,
     u32,
     u64,
-    u128,
+    U128,
     U256,
     U512,
     ()
 );
 
-impl<T: OdraType> OdraItem for Option<T> {
+impl<T: ToBytes + FromBytes> OdraItem for Option<T> {
     fn is_module() -> bool {
         false
     }
 }
 
-impl<T: OdraType, E: OdraType> OdraItem for Result<T, E> {
+impl<T: ToBytes + FromBytes, E: ToBytes + FromBytes> OdraItem for Result<T, E> {
     fn is_module() -> bool {
         false
     }
 }
 
-impl<T: OdraType, E: OdraType> OdraItem for BTreeMap<T, E> {
+impl<T: ToBytes + FromBytes, E: ToBytes + FromBytes> OdraItem for BTreeMap<T, E> {
     fn is_module() -> bool {
         false
     }
 }
 
-impl<T: OdraType> OdraItem for Vec<T> {
+impl<T: ToBytes + FromBytes> OdraItem for Vec<T> {
     fn is_module() -> bool {
         false
     }
 }
 
-impl<T1: OdraType> OdraItem for (T1,) {
+impl<T1: ToBytes + FromBytes> OdraItem for (T1,) {
     fn is_module() -> bool {
         false
     }
 }
 
-impl<T1: OdraType, T2: OdraType> OdraItem for (T1, T2) {
+impl<T1: ToBytes + FromBytes, T2: ToBytes + FromBytes> OdraItem for (T1, T2) {
     fn is_module() -> bool {
         false
     }
 }
 
-impl<T1: OdraType, T2: OdraType, T3: OdraType> OdraItem for (T1, T2, T3) {
+impl<T1: ToBytes + FromBytes, T2: ToBytes + FromBytes, T3: ToBytes + FromBytes> OdraItem for (T1, T2, T3) {
     fn is_module() -> bool {
         false
     }

@@ -1,8 +1,7 @@
 use std::{collections::BTreeMap, sync::Mutex};
 
-use casper_types::{bytesrepr::FromBytes, CLValue};
 use odra_casper_shared::consts;
-use odra_casper_types::{Address, Balance, CallArgs, OdraType};
+use odra_types::{Address, Balance, casper_types::{RuntimeArgs, CLValue, bytesrepr::{FromBytes, ToBytes}, CLType, CLTyped}};
 use ref_thread_local::RefThreadLocal;
 
 use crate::{casper_client::CasperClient, EntrypointArgs, EntrypointCall};
@@ -51,11 +50,11 @@ impl ClientEnv {
     }
 
     /// Call contract.
-    pub fn call_contract<T: OdraType>(
+    pub fn call_contract<T: CLTyped + FromBytes>(
         &self,
         addr: Address,
         entrypoint: &str,
-        args: &CallArgs
+        args: &RuntimeArgs
     ) -> T {
         let result = self.contracts.call(&addr, String::from(entrypoint), args);
         let bytes = result.unwrap();
@@ -100,19 +99,19 @@ pub fn register_existing_contract(
 /// Deploy WASM file with arguments.
 pub fn deploy_new_contract(
     name: &str,
-    mut args: CallArgs,
+    mut args: RuntimeArgs,
     entrypoints: BTreeMap<String, (EntrypointArgs, EntrypointCall)>,
     constructor_name: Option<String>
 ) -> Address {
     let gas = get_gas();
     let wasm_name = format!("{}.wasm", name);
     let contract_package_hash_key = format!("{}_package_hash", name);
-    args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, true);
-    args.insert(consts::IS_UPGRADABLE_ARG, false);
-    args.insert(consts::PACKAGE_HASH_KEY_NAME_ARG, contract_package_hash_key);
+    args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, true).unwrap();
+    args.insert(consts::IS_UPGRADABLE_ARG, false).unwrap();
+    args.insert(consts::PACKAGE_HASH_KEY_NAME_ARG, contract_package_hash_key).unwrap();
 
     if let Some(constructor_name) = constructor_name {
-        args.insert(consts::CONSTRUCTOR_NAME_ARG, constructor_name);
+        args.insert(consts::CONSTRUCTOR_NAME_ARG, constructor_name).unwrap();
     };
 
     let address = CasperClient::new().deploy_wasm(&wasm_name, args, gas);
@@ -123,14 +122,14 @@ pub fn deploy_new_contract(
 }
 
 /// Call contract's entrypoint.
-pub fn call_contract<T: OdraType>(
+pub fn call_contract<T: CLTyped + FromBytes>(
     addr: Address,
     entrypoint: &str,
-    args: &CallArgs,
+    args: &RuntimeArgs,
     _amount: Option<Balance>
 ) -> T {
     match T::cl_type() {
-        casper_types::CLType::Unit => {
+        CLType::Unit => {
             call_contract_deploy(addr, entrypoint, args, _amount);
             T::from_bytes(&[]).unwrap().0
         }
@@ -139,13 +138,13 @@ pub fn call_contract<T: OdraType>(
 }
 
 /// Query current contract for a variable's value.
-pub fn get_var_from_current_contract<T: OdraType>(key: &[u8]) -> Option<T> {
+pub fn get_var_from_current_contract<T: FromBytes>(key: &[u8]) -> Option<T> {
     let address = ClientEnv::instance().current_contract();
     CasperClient::new().get_variable_value(address, key)
 }
 
 /// Query current contract for a dictionary's value.
-pub fn get_dict_value_from_current_contract<K: OdraType, T: OdraType>(
+pub fn get_dict_value_from_current_contract<K: ToBytes, T: FromBytes>(
     seed: &[u8],
     key: &K
 ) -> Option<T> {
@@ -167,10 +166,10 @@ fn get_gas() -> Balance {
     ClientEnv::instance().get_gas()
 }
 
-fn call_contract_getter_entrypoint<T: OdraType>(
+fn call_contract_getter_entrypoint<T: CLTyped + FromBytes>(
     addr: Address,
     entrypoint: &str,
-    args: &CallArgs,
+    args: &RuntimeArgs,
     _amount: Option<Balance>
 ) -> T {
     {
@@ -183,7 +182,7 @@ fn call_contract_getter_entrypoint<T: OdraType>(
     result
 }
 
-fn call_contract_deploy(addr: Address, entrypoint: &str, args: &CallArgs, amount: Option<Balance>) {
+fn call_contract_deploy(addr: Address, entrypoint: &str, args: &RuntimeArgs, amount: Option<Balance>) {
     let gas = get_gas();
     CasperClient::new().deploy_entrypoint_call(addr, entrypoint, args, amount, gas);
 }

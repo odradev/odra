@@ -3,12 +3,13 @@
 //! Depending on the selected feature, the actual test env is dynamically loaded in the runtime or the Odra local MockVM is used.
 use std::{collections::BTreeMap, panic::AssertUnwindSafe};
 
-use odra_mock_vm_types::{
-    Address, Balance, BlockTime, BorshDeserialize, Bytes, CallArgs, MockDeserializable,
-    MockSerializable, PublicKey
+use odra_types::casper_types::RuntimeArgs;
+use odra_types::casper_types::bytesrepr::{ToBytes, FromBytes, Bytes};
+use odra_types::{
+    Address, Balance, BlockTime, PublicKey
 };
 use odra_types::{
-    address::OdraAddress,
+    OdraAddress,
     event::{EventError, OdraEvent},
     OdraError
 };
@@ -34,7 +35,7 @@ macro_rules! delegate_to_env {
 delegate_to_env! {
     /// Registers the contract in the test environment.
     fn register_contract(
-        constructor: Option<(String, &CallArgs, EntrypointCall)>,
+        constructor: Option<(String, &RuntimeArgs, EntrypointCall)>,
         constructors: BTreeMap<String, (EntrypointArgs, EntrypointCall)>,
         entrypoints: BTreeMap<String, (EntrypointArgs, EntrypointCall)>
     ) -> Address
@@ -74,17 +75,17 @@ pub fn one_token() -> Balance {
 /// Calls contract at `address` invoking the `entrypoint` with `args`.
 ///
 /// Returns optional raw bytes to further processing.
-pub fn call_contract<T: MockSerializable + MockDeserializable>(
+pub fn call_contract<T: ToBytes + FromBytes>(
     address: Address,
     entrypoint: &str,
-    args: &CallArgs,
+    args: &RuntimeArgs,
     amount: Option<Balance>
 ) -> T {
     crate::borrow_env().call_contract(address, entrypoint, args, amount)
 }
 
 /// Gets nth event emitted by the contract at `address`.
-pub fn get_event<T: MockSerializable + MockDeserializable + OdraEvent>(
+pub fn get_event<T: FromBytes + OdraEvent>(
     address: Address,
     index: i32
 ) -> Result<T, EventError> {
@@ -93,7 +94,7 @@ pub fn get_event<T: MockSerializable + MockDeserializable + OdraEvent>(
     bytes.and_then(|bytes| {
         let event_name = extract_event_name(&bytes)?;
         if event_name == T::name() {
-            T::deser(bytes).map_err(|_| EventError::Parsing)
+            T::from_bytes(&bytes).map_err(|_| EventError::Parsing).map(|r| r.0)
         } else {
             Err(EventError::UnexpectedType(event_name))
         }
@@ -131,20 +132,20 @@ pub fn gas_report() -> Vec<(String, Balance)> {
 }
 
 /// Returns the name of the passed event
-fn extract_event_name(mut bytes: &[u8]) -> Result<String, EventError> {
-    let name = BorshDeserialize::deserialize(&mut bytes).map_err(|_| EventError::Formatting)?;
-    Ok(name)
+fn extract_event_name(bytes: &[u8]) -> Result<String, EventError> {
+    let name = FromBytes::from_bytes(&bytes).map_err(|_| EventError::Formatting)?;
+    Ok(name.0)
 }
 
 /// Signs the message using the private key associated with the given address.
 pub fn sign_message(message: &Bytes, address: &Address) -> Bytes {
     let public_key = public_key(address);
     let mut message = message.inner_bytes().clone();
-    message.extend_from_slice(public_key.inner_bytes());
+    message.extend(public_key.into_bytes().unwrap());
     Bytes::from(message)
 }
 
 /// Returns the public key of the account associated with the given address.
 pub fn public_key(address: &Address) -> PublicKey {
-    PublicKey(*address)
+    crate::borrow_env().public_key(address)
 }

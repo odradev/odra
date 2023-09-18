@@ -1,12 +1,11 @@
 use core::ops::Range;
-use odra_types::CollectionError;
+use odra_types::{CollectionError, casper_types::bytesrepr::{ToBytes, FromBytes}};
 
 use crate::{
     contract_env,
     instance::{DynamicInstance, StaticInstance},
     mapping::Mapping,
     prelude::vec::Vec,
-    types::OdraType,
     variable::Variable,
     UnwrapOrRevert
 };
@@ -49,7 +48,7 @@ impl<T> List<T> {
     }
 }
 
-impl<T: OdraType> List<T> {
+impl<T: ToBytes + FromBytes> List<T> {
     /// Reads collection's n-th value from the storage or returns `None`.
     pub fn get(&self, index: u32) -> Option<T> {
         self.values.get(&index)
@@ -116,7 +115,7 @@ impl<'a, T> Iter<'a, T> {
 
 impl<'a, T> core::iter::Iterator for Iter<'a, T>
 where
-    T: OdraType
+    T: ToBytes + FromBytes
 {
     type Item = T;
 
@@ -139,13 +138,13 @@ where
     }
 }
 
-impl<'a, T> core::iter::ExactSizeIterator for Iter<'a, T> where T: OdraType {}
+impl<'a, T> core::iter::ExactSizeIterator for Iter<'a, T> where T: ToBytes + FromBytes {}
 
-impl<'a, T> core::iter::FusedIterator for Iter<'a, T> where T: OdraType {}
+impl<'a, T> core::iter::FusedIterator for Iter<'a, T> where T: ToBytes + FromBytes {}
 
 impl<'a, T> core::iter::DoubleEndedIterator for Iter<'a, T>
 where
-    T: OdraType
+    T: ToBytes + FromBytes
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         let index = self.range.nth_back(0)?;
@@ -153,7 +152,7 @@ where
     }
 }
 
-impl<T: OdraType + Default> List<T> {
+impl<T: ToBytes + FromBytes + Default> List<T> {
     /// Reads `key` from the storage or the default value is returned.
     pub fn get_or_default(&self, index: u32) -> T {
         self.get(index).unwrap_or_default()
@@ -191,8 +190,7 @@ impl<T> DynamicInstance for List<T> {
 mod tests {
     use super::List;
     use crate::{instance::StaticInstance, test_env};
-    use odra_mock_vm::types::OdraType;
-    use odra_types::CollectionError;
+    use odra_types::{CollectionError, casper_types::bytesrepr::{ToBytes, FromBytes}};
 
     #[test]
     fn test_getting_items() {
@@ -363,7 +361,7 @@ mod tests {
         assert_eq!(iter.count(), 5);
     }
 
-    impl<T: OdraType> Default for List<T> {
+    impl<T: ToBytes + FromBytes> Default for List<T> {
         fn default() -> Self {
             StaticInstance::instance(&["list_val", "list_idx"]).0
         }

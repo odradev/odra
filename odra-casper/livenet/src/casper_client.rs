@@ -6,13 +6,12 @@ use blake2::{
 };
 use casper_execution_engine::core::engine_state::ExecutableDeployItem;
 use casper_hashing::Digest;
-use casper_types::{
-    bytesrepr::FromBytes, runtime_args, ContractHash, ContractPackageHash, Key as CasperKey,
-    PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp
-};
+use odra_types::{casper_types::{
+    bytesrepr::{FromBytes, ToBytes, Bytes}, runtime_args, ContractHash, ContractPackageHash, Key as CasperKey,
+    PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, ExecutionResult
+}, Address, Balance};
 use jsonrpc_lite::JsonRpc;
 use odra_casper_shared::key_maker::KeyMaker;
-use odra_casper_types::{Address, Balance, Bytes, CallArgs, OdraType};
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 
@@ -112,7 +111,7 @@ impl CasperClient {
     }
 
     /// Query the contract for the variable.
-    pub fn get_variable_value<T: OdraType>(&self, address: Address, key: &[u8]) -> Option<T> {
+    pub fn get_variable_value<T: FromBytes>(&self, address: Address, key: &[u8]) -> Option<T> {
         let key = LivenetKeyMaker::to_variable_key(key);
         // SAFETY: we know the key maker creates a string of valid UTF-8 characters.
         let key = unsafe { from_utf8_unchecked(&key) };
@@ -120,7 +119,7 @@ impl CasperClient {
     }
 
     /// Query the contract for the dictionary value.
-    pub fn get_dict_value<K: OdraType, V: OdraType>(
+    pub fn get_dict_value<K: ToBytes, V: FromBytes>(
         &self,
         address: Address,
         seed: &[u8],
@@ -170,13 +169,13 @@ impl CasperClient {
     }
 
     /// Deploy the contract.
-    pub fn deploy_wasm(&self, wasm_file_name: &str, args: CallArgs, gas: Balance) -> Address {
+    pub fn deploy_wasm(&self, wasm_file_name: &str, args: RuntimeArgs, gas: Balance) -> Address {
         log::info(format!("Deploying \"{}\".", wasm_file_name));
         let wasm_path = find_wasm_file_path(wasm_file_name);
         let wasm_bytes = fs::read(wasm_path).unwrap();
         let session = ExecutableDeployItem::ModuleBytes {
             module_bytes: Bytes::from(wasm_bytes),
-            args: args.as_casper_runtime_args().clone()
+            args
         };
         let deploy = self.new_deploy(session, gas);
         let request = json!(
@@ -204,7 +203,7 @@ impl CasperClient {
         &self,
         addr: Address,
         entrypoint: &str,
-        args: &CallArgs,
+        args: &RuntimeArgs,
         _amount: Option<Balance>,
         gas: Balance
     ) {
@@ -217,7 +216,7 @@ impl CasperClient {
             hash: *addr.as_contract_package_hash().unwrap(),
             version: None,
             entry_point: String::from(entrypoint),
-            args: args.as_casper_runtime_args().clone()
+            args: args.clone()
         };
         let deploy = self.new_deploy(session, gas);
         let request = json!(
@@ -253,7 +252,7 @@ impl CasperClient {
         self.post_request(request).unwrap()
     }
 
-    fn query_dictionary<T: OdraType>(&self, address: Address, key: &str) -> Option<T> {
+    fn query_dictionary<T: FromBytes>(&self, address: Address, key: &str) -> Option<T> {
         let state_root_hash = self.get_state_root_hash();
         let contract_hash = self.query_global_state_for_contract_hash(address);
         let contract_hash = contract_hash
@@ -308,7 +307,7 @@ impl CasperClient {
         }
 
         match &final_result.execution_results[0].result {
-            casper_types::ExecutionResult::Failure {
+            ExecutionResult::Failure {
                 effect: _,
                 transfers: _,
                 cost: _,
@@ -320,7 +319,7 @@ impl CasperClient {
                 ));
                 panic!("Deploy failed");
             }
-            casper_types::ExecutionResult::Success {
+            ExecutionResult::Success {
                 effect: _,
                 transfers: _,
                 cost: _
@@ -413,14 +412,11 @@ impl KeyMaker for LivenetKeyMaker {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
     use casper_hashing::Digest;
-    use casper_types::{
+    use odra_types::{casper_types::{
         bytesrepr::{FromBytes, ToBytes},
         U256
-    };
-    use odra_casper_types::Address;
+    }, Address};
 
     use crate::casper_node_port::DeployHash;
 

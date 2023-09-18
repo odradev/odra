@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
-use odra_mock_vm_types::{
-    Address, Balance, MockDeserializable, MockSerializable, MockVMSerializationError
+use odra_types::{
+    Address, Balance, casper_types::bytesrepr::{Error, ToBytes, FromBytes}
 };
 use std::{
     collections::{hash_map::DefaultHasher, BTreeMap},
@@ -45,56 +45,56 @@ impl Storage {
         balance.reduce(*amount)
     }
 
-    pub fn get_value<T: MockSerializable + MockDeserializable>(
+    pub fn get_value<T: FromBytes>(
         &self,
         address: &Address,
         key: &[u8]
-    ) -> Result<Option<T>, MockVMSerializationError> {
+    ) -> Result<Option<T>, Error> {
         let hash = Storage::hashed_key(address, key);
-        let result = self.state.get(&hash).cloned().map(|bytes| T::deser(bytes));
+        let result = self.state.get(&hash).cloned().map(T::from_vec);
 
         match result {
-            Some(res) => res.map(|data| Some(data)),
+            Some(res) => res.map(|data| Some(data.0)),
             None => Ok(None)
         }
     }
 
-    pub fn set_value<T: MockSerializable + MockDeserializable>(
+    pub fn set_value<T: ToBytes>(
         &mut self,
         address: &Address,
         key: &[u8],
         value: T
-    ) -> Result<(), MockVMSerializationError> {
+    ) -> Result<(), Error> {
         let hash = Storage::hashed_key(address, key);
-        self.state.insert(hash, value.ser()?);
+        self.state.insert(hash, value.to_bytes()?);
         Ok(())
     }
 
-    pub fn insert_dict_value<T: MockSerializable + MockDeserializable>(
+    pub fn insert_dict_value<T: ToBytes>(
         &mut self,
         address: &Address,
         collection: &[u8],
         key: &[u8],
         value: T
-    ) -> Result<(), MockVMSerializationError> {
+    ) -> Result<(), Error> {
         let dict_key = [collection, key].concat();
         let hash = Storage::hashed_key(address, dict_key);
-        self.state.insert(hash, value.ser()?);
+        self.state.insert(hash, value.to_bytes()?);
         Ok(())
     }
 
-    pub fn get_dict_value<T: MockSerializable + MockDeserializable>(
+    pub fn get_dict_value<T: FromBytes>(
         &self,
         address: &Address,
         collection: &[u8],
         key: &[u8]
-    ) -> Result<Option<T>, MockVMSerializationError> {
+    ) -> Result<Option<T>, Error> {
         let dict_key = [collection, key].concat();
         let hash = Storage::hashed_key(address, dict_key);
-        let result = self.state.get(&hash).cloned().map(|bytes| T::deser(bytes));
+        let result = self.state.get(&hash).cloned().map(T::from_vec);
 
         match result {
-            Some(res) => res.map(|data| Some(data)),
+            Some(res) => res.map(|data| Some(data.0)),
             None => Ok(None)
         }
     }
@@ -131,12 +131,12 @@ impl Storage {
 #[cfg(test)]
 mod test {
 
-    use odra_mock_vm_types::Address;
+    use odra_types::{Address, casper_types::account::AccountHash};
 
     use super::Storage;
 
     fn setup() -> (Address, [u8; 3], u8) {
-        let address = Address::try_from(b"address").unwrap();
+        let address = Address::Account(AccountHash::from_formatted_str("address").unwrap());
         let key = b"key";
         let value = 88u8;
 

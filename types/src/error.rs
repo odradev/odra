@@ -50,6 +50,20 @@ impl From<Box<dyn Any + Send>> for OdraError {
     }
 }
 
+impl From<casper_types::bytesrepr::Error> for ExecutionError {
+    fn from(value: casper_types::bytesrepr::Error) -> Self {
+        match value {
+            casper_types::bytesrepr::Error::EarlyEndOfStream => todo!(),
+            casper_types::bytesrepr::Error::Formatting => todo!(),
+            casper_types::bytesrepr::Error::LeftOverBytes => todo!(),
+            casper_types::bytesrepr::Error::OutOfMemory => todo!(),
+            casper_types::bytesrepr::Error::NotRepresentable => todo!(),
+            casper_types::bytesrepr::Error::ExceededRecursionDepth => todo!(),
+            _ => todo!(),
+        }
+    }
+}
+
 /// An error that can occur during smart contract execution
 ///
 /// It is represented by an error code and a human-readable message.

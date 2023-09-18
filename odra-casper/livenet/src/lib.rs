@@ -7,9 +7,9 @@ mod casper_node_port;
 pub mod client_env;
 pub mod contract_env;
 
-use odra_casper_types::CallArgs;
+use odra_types::casper_types::RuntimeArgs;
 
-pub type EntrypointCall = fn(String, &CallArgs) -> Vec<u8>;
+pub type EntrypointCall = fn(String, &RuntimeArgs) -> Vec<u8>;
 pub type EntrypointArgs = Vec<String>;
 
 mod log {

@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 use casper_event_standard::casper_types::bytesrepr::Error;
-use odra_casper_types::OdraType;
+use odra_types::casper_types::bytesrepr::ToBytes;
 
 const KEY_LENGTH: usize = 64;
 
@@ -12,7 +12,7 @@ pub trait KeyMaker {
     }
 
     /// Generate key for dictionary.
-    fn to_dictionary_key<'a, T: OdraType>(
+    fn to_dictionary_key<'a, T: ToBytes>(
         seed: &'a [u8],
         key: &'a T
     ) -> Result<[u8; KEY_LENGTH], Error> {

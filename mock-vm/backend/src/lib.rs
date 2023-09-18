@@ -20,5 +20,3 @@ ref_thread_local::ref_thread_local!(
 pub(crate) fn borrow_env<'a>() -> ref_thread_local::Ref<'a, mock_vm::MockVm> {
     ENV.borrow()
 }
-
-pub use odra_mock_vm_types as types;

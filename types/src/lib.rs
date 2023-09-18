@@ -4,17 +4,29 @@
 
 extern crate alloc;
 
-pub mod address;
+mod address;
 pub mod arithmetic;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod contract_def;
 mod error;
 pub mod event;
 
-use alloc::boxed::Box;
+use alloc::{boxed::Box, vec::Vec};
 pub use error::{AddressError, CollectionError, ExecutionError, OdraError, VmError};
 
 pub type EncodedKeyHash = [u8; 16];
+
+pub type BlockTime = u64;
+pub type Balance = casper_types::U512;
+pub type EventData = Vec<u8>;
+
+// pub use args::CallArgs;
+pub use casper_types;
+// pub use casper_types::bytesrepr::Bytes;
+// pub use ty::Typed;
+pub use casper_types::PublicKey;
+
+pub use address::{Address, OdraAddress};
 
 /// Types accepted by Odra framework, these types can be stored and manipulated by smart contracts.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]

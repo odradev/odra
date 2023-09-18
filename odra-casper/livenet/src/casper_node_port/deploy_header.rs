@@ -5,7 +5,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use casper_hashing::Digest;
-use casper_types::{
+use odra_types::casper_types::{
     bytesrepr::{self, FromBytes, ToBytes},
     PublicKey, TimeDiff, Timestamp
 };

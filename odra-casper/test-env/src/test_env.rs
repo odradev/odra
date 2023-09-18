@@ -4,14 +4,11 @@
 use std::panic::AssertUnwindSafe;
 
 use crate::env::ENV;
-use casper_types::account::{AccountHash, ACCOUNT_HASH_LENGTH};
-use casper_types::bytesrepr::Bytes;
-use casper_types::PublicKey;
 use odra_casper_shared::{consts, native_token::NativeTokenMetadata};
-use odra_casper_types::{Address, Balance, CallArgs, OdraType};
 use odra_types::{
+    Address, Balance,
     event::{EventError, OdraEvent},
-    OdraError
+    OdraError, casper_types::{RuntimeArgs, bytesrepr::{FromBytes, Bytes, ToBytes}, account::{AccountHash, ACCOUNT_HASH_LENGTH}, CLTyped}, PublicKey
 };
 
 /// Returns backend name.
@@ -20,7 +17,7 @@ pub fn backend_name() -> String {
 }
 
 /// Deploy WASM file with arguments.
-pub fn register_contract(name: &str, args: &CallArgs, constructor_name: Option<String>) -> Address {
+pub fn register_contract(name: &str, args: &RuntimeArgs, constructor_name: Option<String>) -> Address {
     ENV.with(|env| {
         let wasm_name = format!("{}.wasm", name);
         let package_hash_key_name = format!("{}_package_hash", name);
@@ -28,12 +25,12 @@ pub fn register_contract(name: &str, args: &CallArgs, constructor_name: Option<S
         args.insert(
             consts::PACKAGE_HASH_KEY_NAME_ARG,
             package_hash_key_name.clone()
-        );
-        args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, true);
-        args.insert(consts::IS_UPGRADABLE_ARG, false);
+        ).unwrap();
+        args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, true).unwrap();
+        args.insert(consts::IS_UPGRADABLE_ARG, false).unwrap();
 
         if let Some(constructor_name) = constructor_name {
-            args.insert(consts::CONSTRUCTOR_NAME_ARG, constructor_name);
+            args.insert(consts::CONSTRUCTOR_NAME_ARG, constructor_name).unwrap();
         };
 
         env.borrow_mut().deploy_contract(&wasm_name, &args);
@@ -45,16 +42,16 @@ pub fn register_contract(name: &str, args: &CallArgs, constructor_name: Option<S
 }
 
 /// Call contract under a given address.
-pub fn call_contract<T: OdraType>(
+pub fn call_contract<T: CLTyped + ToBytes + FromBytes>(
     addr: Address,
     entrypoint: &str,
-    args: &CallArgs,
+    args: &RuntimeArgs,
     amount: Option<Balance>
 ) -> T {
     ENV.with(|env| {
         let contract_package_hash = addr.as_contract_package_hash().unwrap();
         if let Some(amount) = amount {
-            env.borrow_mut().attach_value(amount.inner());
+            env.borrow_mut().attach_value(amount);
         }
         env.borrow_mut()
             .call_contract(*contract_package_hash, entrypoint, args)
@@ -77,7 +74,7 @@ pub fn get_error() -> Option<OdraError> {
 }
 
 /// Returns an event from the given contract.
-pub fn get_event<T: OdraType + OdraEvent>(address: Address, index: i32) -> Result<T, EventError> {
+pub fn get_event<T: FromBytes + OdraEvent>(address: Address, index: i32) -> Result<T, EventError> {
     ENV.with(|env| env.borrow().get_event(address, index))
 }
 

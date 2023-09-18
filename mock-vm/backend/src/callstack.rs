@@ -1,4 +1,4 @@
-use odra_mock_vm_types::{Address, Balance};
+use odra_types::{Address, Balance};
 
 #[derive(Clone)]
 pub enum CallstackElement {

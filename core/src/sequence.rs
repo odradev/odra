@@ -1,19 +1,20 @@
 use super::DynamicInstance;
-use crate::{instance::StaticInstance, prelude::vec::Vec, types::OdraType, Variable};
+use crate::{instance::StaticInstance, prelude::vec::Vec, Variable};
 use num_traits::{Num, One, Zero};
+use odra_types::casper_types::bytesrepr::{ToBytes, FromBytes};
 
 /// A module that stores a single value in the storage that can be read or incremented.
 #[derive(Clone)]
 pub struct Sequence<T>
 where
-    T: Num + One + OdraType
+    T: Num + One + ToBytes + FromBytes
 {
     value: Variable<T>
 }
 
 impl<T> Sequence<T>
 where
-    T: Num + One + Zero + Default + Copy + OdraType
+    T: Num + One + Zero + Default + Copy + ToBytes + FromBytes
 {
     pub fn get_current_value(&self) -> T {
         self.value.get().unwrap_or_default()
@@ -36,7 +37,7 @@ where
 
 impl<T> StaticInstance for Sequence<T>
 where
-    T: Num + One + OdraType
+    T: Num + One + ToBytes + FromBytes
 {
     fn instance<'a>(keys: &'a [&'a str]) -> (Self, &'a [&'a str]) {
         let (value, rem) = StaticInstance::instance(keys);
@@ -45,7 +46,7 @@ where
 }
 impl<T> DynamicInstance for Sequence<T>
 where
-    T: Num + One + OdraType
+    T: Num + One + ToBytes + FromBytes
 {
     fn instance(namespace: &[u8]) -> Self {
         let mut buffer: Vec<u8> = Vec::with_capacity(namespace.len() + b"value".len());
@@ -59,7 +60,9 @@ where
 
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
-    use crate::{sequence::Sequence, types::U256, StaticInstance};
+    use odra_types::casper_types::U256;
+
+    use crate::{sequence::Sequence, StaticInstance};
 
     const KEYS_U8: [&str; 1] = ["u8"];
     const KEYS_U256: [&str; 1] = ["u256"];

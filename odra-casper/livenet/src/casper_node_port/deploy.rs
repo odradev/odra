@@ -4,9 +4,9 @@ use std::{cell::OnceCell, cmp, collections::BTreeSet, fmt, hash};
 
 use casper_execution_engine::core::engine_state::{DeployItem, ExecutableDeployItem};
 use casper_hashing::Digest;
-use casper_types::{
+use odra_types::casper_types::{
     bytesrepr::{self, FromBytes, ToBytes},
-    PublicKey, SecretKey, TimeDiff, Timestamp
+    PublicKey, SecretKey, TimeDiff, Timestamp, self
 };
 use datasize::DataSize;
 use itertools::Itertools;

@@ -5,8 +5,9 @@ use std::backtrace::{Backtrace, BacktraceStatus};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
-use odra_mock_vm_types::{
-    Address, Balance, BlockTime, Bytes, MockDeserializable, MockSerializable, OdraType, PublicKey
+use odra_types::casper_types::bytesrepr::{ToBytes, FromBytes, Bytes};
+use odra_types::{
+    Address, Balance, BlockTime, PublicKey
 };
 use odra_types::{event::OdraEvent, ExecutionError, OdraError};
 
@@ -28,36 +29,36 @@ pub fn self_address() -> Address {
 }
 
 /// Stores the `value` under `key`.
-pub fn set_var<T: MockSerializable + MockDeserializable>(key: &[u8], value: T) {
+pub fn set_var<T: ToBytes>(key: &[u8], value: T) {
     borrow_env().set_var(key, value)
 }
 
 /// Gets a value stored under `key`.
-pub fn get_var<T: OdraType>(key: &[u8]) -> Option<T> {
+pub fn get_var<T: FromBytes>(key: &[u8]) -> Option<T> {
     borrow_env().get_var(key)
 }
 
 /// Puts a key-value into a collection.
 pub fn set_dict_value<
-    K: MockSerializable + MockDeserializable,
-    V: MockSerializable + MockDeserializable
+    K: ToBytes,
+    V: ToBytes
 >(
     dict: &[u8],
     key: &K,
     value: V
 ) {
-    borrow_env().set_dict_value(dict, key.serialize().unwrap().as_slice(), value)
+    borrow_env().set_dict_value(dict, key.to_bytes().unwrap().as_slice(), value)
 }
 
 /// Gets the value from the `dict` collection under `key`.
 pub fn get_dict_value<
-    K: MockSerializable + MockDeserializable,
-    T: MockSerializable + MockDeserializable
+    K: ToBytes,
+    T: FromBytes
 >(
     dict: &[u8],
     key: &K
 ) -> Option<T> {
-    let key = key.ser().unwrap();
+    let key = key.to_bytes().unwrap();
     let key = key.as_slice();
     borrow_env().get_dict_value(dict, key)
 }
@@ -87,8 +88,8 @@ where
 }
 
 /// Sends an event to the execution environment.
-pub fn emit_event<T: OdraType + OdraEvent>(event: T) {
-    let event_data = event.ser().unwrap();
+pub fn emit_event<T: ToBytes + OdraEvent>(event: T) {
+    let event_data = event.to_bytes().unwrap();
     borrow_env().emit_event(&event_data);
 }
 
@@ -122,7 +123,7 @@ pub fn native_token_metadata() -> NativeTokenMetadata {
 /// Verifies the signature created using the Backend's default signature scheme.
 pub fn verify_signature(message: &Bytes, signature: &Bytes, public_key: &PublicKey) -> bool {
     let mut message = message.inner_bytes().clone();
-    message.extend_from_slice(public_key.inner_bytes());
+    message.extend(public_key.into_bytes().unwrap());
     let mock_signature_bytes = Bytes::from(message);
     mock_signature_bytes == *signature
 }

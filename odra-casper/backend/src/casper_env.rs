@@ -1,7 +1,5 @@
 use alloc::vec::Vec;
-use casper_types::bytesrepr::{FromBytes, ToBytes};
-use odra_casper_types::{Address, OdraType};
-use odra_types::event::OdraEvent;
+use odra_types::{Address, event::OdraEvent, casper_types::{api_error, CLValue, bytesrepr}};
 
 use casper_contract::{
     contract_api::{
@@ -11,12 +9,14 @@ use casper_contract::{
     unwrap_or_revert::UnwrapOrRevert
 };
 
-use casper_types::{
-    system::CallStackElement, ApiError, CLTyped, ContractPackageHash, RuntimeArgs, URef, U512
-};
-
 use odra_casper_shared::{consts, key_maker::KeyMaker};
-use odra_types::ExecutionError;
+use odra_types::{
+    casper_types::{
+        bytesrepr::{FromBytes, ToBytes},
+        system::CallStackElement, ApiError, CLTyped, ContractPackageHash, RuntimeArgs, URef, U512
+    },
+    ExecutionError
+};
 
 lazy_static::lazy_static! {
     static ref STATE: URef = {
@@ -40,24 +40,24 @@ impl KeyMaker for CasperKeyMaker {
 
 /// Save value to the storage.
 #[inline(always)]
-pub fn set_key<T: OdraType>(name: &[u8], value: T) {
+pub fn set_key<T: CLTyped + ToBytes>(name: &[u8], value: T) {
     save_value(&CasperKeyMaker::to_variable_key(name), value)
 }
 
 /// Read value from the storage.
 #[inline(always)]
-pub fn get_key<T: OdraType>(name: &[u8]) -> Option<T> {
+pub fn get_key<T: FromBytes>(name: &[u8]) -> Option<T> {
     read_value(&CasperKeyMaker::to_variable_key(name))
 }
 
 #[inline(always)]
-pub fn set_dict_value<K: OdraType, V: OdraType>(seed: &[u8], key: &K, value: V) {
+pub fn set_dict_value<K: ToBytes, V: CLTyped + ToBytes>(seed: &[u8], key: &K, value: V) {
     let key = CasperKeyMaker::to_dictionary_key(seed, key).unwrap_or_revert();
     save_value(&key, value)
 }
 
 #[inline(always)]
-pub fn get_dict_value<K: OdraType, V: OdraType>(seed: &[u8], key: &K) -> Option<V> {
+pub fn get_dict_value<K: ToBytes, V: FromBytes>(seed: &[u8], key: &K) -> Option<V> {
     let key = CasperKeyMaker::to_dictionary_key(seed, key).unwrap_or_revert();
     read_value(&key)
 }
@@ -115,7 +115,7 @@ pub fn self_address() -> Address {
 #[inline(always)]
 pub fn emit_event<T>(event: T)
 where
-    T: OdraType + OdraEvent
+    T: ToBytes + OdraEvent
 {
     casper_event_standard::emit(event);
 }
@@ -192,14 +192,14 @@ fn is_purse_empty(purse: URef) -> bool {
         .unwrap_or_else(|| true)
 }
 
-fn save_value<T: OdraType>(key: &[u8], value: T) {
+fn save_value<T: CLTyped + ToBytes>(key: &[u8], value: T) {
     let uref_ptr = (*STATE_BYTES).as_ptr();
     let uref_size = (*STATE_BYTES).len();
 
     let dictionary_item_key_ptr = key.as_ptr();
     let dictionary_item_key_size = key.len();
 
-    let cl_value = casper_types::CLValue::from_t(value).unwrap_or_revert();
+    let cl_value = CLValue::from_t(value).unwrap_or_revert();
     let (cl_value_ptr, cl_value_size, _bytes) = to_ptr(cl_value);
 
     let result = unsafe {
@@ -211,13 +211,13 @@ fn save_value<T: OdraType>(key: &[u8], value: T) {
             cl_value_ptr,
             cl_value_size
         );
-        casper_types::api_error::result_from(ret)
+        api_error::result_from(ret)
     };
 
     result.unwrap_or_revert()
 }
 
-fn read_value<T: OdraType>(key: &[u8]) -> Option<T> {
+fn read_value<T: FromBytes>(key: &[u8]) -> Option<T> {
     let uref_ptr = (*STATE_BYTES).as_ptr();
     let uref_size = (*STATE_BYTES).len();
 
@@ -235,7 +235,7 @@ fn read_value<T: OdraType>(key: &[u8]) -> Option<T> {
                 value_size.as_mut_ptr()
             )
         };
-        match casper_types::api_error::result_from(ret) {
+        match api_error::result_from(ret) {
             Ok(_) => unsafe { value_size.assume_init() },
             Err(ApiError::ValueNotFound) => return None,
             Err(e) => runtime::revert(e)
@@ -244,7 +244,7 @@ fn read_value<T: OdraType>(key: &[u8]) -> Option<T> {
 
     let value_bytes = read_host_buffer(value_size).unwrap_or_revert();
 
-    let res = match casper_types::bytesrepr::deserialize(value_bytes) {
+    let res = match bytesrepr::deserialize(value_bytes) {
         Ok(res) => Ok(Some(res)),
         Err(e) => Err(e)
     };
@@ -278,7 +278,7 @@ fn read_host_buffer_into(dest: &mut [u8]) -> Result<usize, ApiError> {
             bytes_written.as_mut_ptr()
         )
     };
-    casper_types::api_error::result_from(ret)?;
+    api_error::result_from(ret)?;
     Ok(unsafe { bytes_written.assume_init() })
 }
 

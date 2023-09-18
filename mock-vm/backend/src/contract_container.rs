@@ -1,10 +1,9 @@
 use std::collections::BTreeMap;
 
-use odra_mock_vm_types::CallArgs;
-use odra_types::{OdraError, VmError};
+use odra_types::{OdraError, VmError, casper_types::{RuntimeArgs, NamedArg}};
 
 #[doc(hidden)]
-pub type EntrypointCall = fn(String, &CallArgs) -> Vec<u8>;
+pub type EntrypointCall = fn(String, &RuntimeArgs) -> Vec<u8>;
 #[doc(hidden)]
 pub type EntrypointArgs = Vec<String>;
 
@@ -28,7 +27,7 @@ impl ContractContainer {
         }
     }
 
-    pub fn call(&self, entrypoint: String, args: &CallArgs) -> Result<Vec<u8>, OdraError> {
+    pub fn call(&self, entrypoint: String, args: &RuntimeArgs) -> Result<Vec<u8>, OdraError> {
         if self.constructors.get(&entrypoint).is_some() {
             return Err(OdraError::VmError(VmError::InvalidContext));
         }
@@ -45,7 +44,7 @@ impl ContractContainer {
     pub fn call_constructor(
         &self,
         entrypoint: String,
-        args: &CallArgs
+        args: &RuntimeArgs
     ) -> Result<Vec<u8>, OdraError> {
         match self.constructors.get(&entrypoint) {
             Some((ep_args, call)) => {
@@ -56,12 +55,12 @@ impl ContractContainer {
         }
     }
 
-    fn validate_args(&self, args: &[String], input_args: &CallArgs) -> Result<(), OdraError> {
-        let named_args = input_args.arg_names();
+    fn validate_args(&self, args: &[String], input_args: &RuntimeArgs) -> Result<(), OdraError> {
+        let named_args = input_args.named_args().map(NamedArg::name).collect::<Vec<_>>();
 
         if args
             .iter()
-            .filter(|arg| !named_args.contains(arg))
+            .filter(|arg| !named_args.contains(&arg.as_str()))
             .map(|arg| arg.to_owned())
             .next()
             .is_none()
@@ -77,8 +76,7 @@ impl ContractContainer {
 mod tests {
     use std::collections::BTreeMap;
 
-    use odra_mock_vm_types::CallArgs;
-    use odra_types::{OdraError, VmError};
+    use odra_types::{OdraError, VmError, casper_types::{RuntimeArgs, runtime_args}};
 
     use crate::{EntrypointArgs, EntrypointCall};
 
@@ -90,7 +88,7 @@ mod tests {
         let instance = ContractContainer::empty();
 
         // When call some entrypoint.
-        let result = instance.call(String::from("ep"), &CallArgs::new());
+        let result = instance.call(String::from("ep"), &RuntimeArgs::new());
 
         // Then an error occurs.
         assert!(result.is_err());
@@ -103,7 +101,7 @@ mod tests {
         let instance = ContractContainer::setup_entrypoint(ep_name.clone(), vec![]);
 
         // When call the registered entrypoint.
-        let result = instance.call(ep_name, &CallArgs::new());
+        let result = instance.call(ep_name, &RuntimeArgs::new());
 
         // Then teh call succeeds.
         assert!(result.is_ok());
@@ -116,8 +114,7 @@ mod tests {
         let instance = ContractContainer::setup_entrypoint(ep_name.clone(), vec!["first"]);
 
         // When call the registered entrypoint with an arg named "second".
-        let mut args = CallArgs::new();
-        args.insert("second", 0);
+        let args = runtime_args! { "second" => 0 };
         let result = instance.call(ep_name, &args);
 
         // Then MissingArg error is returned.
@@ -131,7 +128,7 @@ mod tests {
         let instance = ContractContainer::setup_entrypoint(ep_name.clone(), vec!["first"]);
 
         // When call a valid entrypoint without args.
-        let result = instance.call(ep_name, &CallArgs::new());
+        let result = instance.call(ep_name, &RuntimeArgs::new());
 
         // Then MissingArg error is returned.
         assert_eq!(result.unwrap_err(), OdraError::VmError(VmError::MissingArg));
@@ -146,8 +143,7 @@ mod tests {
             ContractContainer::setup_entrypoint(ep_name.clone(), vec!["first", "second", "third"]);
 
         // When call a valid entrypoint with a single valid args,
-        let mut args = CallArgs::new();
-        args.insert("third", 0);
+        let args = runtime_args! { "third" => 0 };
         let result = instance.call(ep_name, &args);
 
         // Then MissingArg error is returned with the two remaining args.
@@ -161,7 +157,7 @@ mod tests {
         let instance = ContractContainer::setup_constructor(name.clone(), vec![]);
 
         // When call a valid constructor with a single valid args,
-        let result = instance.call_constructor(name, &CallArgs::new());
+        let result = instance.call_constructor(name, &RuntimeArgs::new());
 
         // Then the call succeeds.
         assert!(result.is_ok());
@@ -173,7 +169,7 @@ mod tests {
         let instance = ContractContainer::empty();
 
         // When try to call some constructor.
-        let result = instance.call_constructor(String::from("c"), &CallArgs::new());
+        let result = instance.call_constructor(String::from("c"), &RuntimeArgs::new());
 
         // Then the call fails.
         assert!(result.is_err());
@@ -186,7 +182,7 @@ mod tests {
         let instance = ContractContainer::setup_constructor(name.clone(), vec!["first"]);
 
         // When call a valid constructor, but with no args.
-        let result = instance.call_constructor(name, &CallArgs::new());
+        let result = instance.call_constructor(name, &RuntimeArgs::new());
 
         // Then MissingArgs error is returned.
         assert_eq!(result.unwrap_err(), OdraError::VmError(VmError::MissingArg));
@@ -199,7 +195,7 @@ mod tests {
         let instance = ContractContainer::setup_constructor(name.clone(), vec![]);
 
         // When call the constructor in the entrypoint context.
-        let result = instance.call(name, &CallArgs::new());
+        let result = instance.call(name, &RuntimeArgs::new());
 
         // Then the call fails.
         assert!(result.is_err());

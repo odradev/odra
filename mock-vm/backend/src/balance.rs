@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use odra_mock_vm_types::Balance;
+use odra_types::Balance;
 
 #[derive(Eq, Hash, PartialEq, Clone, Default, Debug)]
 pub struct AccountBalance {

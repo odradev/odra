@@ -1,10 +1,9 @@
 use crate::{
     prelude::{string::String, vec, vec::Vec},
-    types::OdraType,
     List, Mapping, Sequence, Variable
 };
 use num_traits::{Num, One};
-use odra_types::contract_def::Node;
+use odra_types::{contract_def::Node, casper_types::bytesrepr::{ToBytes, FromBytes}};
 
 impl<T> Node for Variable<T> {
     const COUNT: u32 = 1;
@@ -23,7 +22,7 @@ impl<T> Node for List<T> {
     }
 }
 
-impl<T: Num + One + OdraType> Node for Sequence<T> {
+impl<T: Num + One + ToBytes + FromBytes> Node for Sequence<T> {
     const COUNT: u32 = 1;
     const IS_LEAF: bool = false;
 
