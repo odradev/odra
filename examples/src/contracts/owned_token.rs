@@ -1,6 +1,6 @@
-use alloc::string::String;
 use odra::{
     contract_env,
+    prelude::string::String,
     types::{Address, U256}
 };
 use odra_modules::access::Ownable;

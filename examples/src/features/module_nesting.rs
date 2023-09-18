@@ -1,6 +1,8 @@
-use alloc::{string::String, vec::Vec};
-use odra::contract_env::emit_event;
-use odra::{Event, List, Mapping, OdraType, UnwrapOrRevert, Variable};
+use odra::{
+    contract_env::emit_event,
+    prelude::{string::String, vec::Vec},
+    Event, List, Mapping, OdraType, UnwrapOrRevert, Variable
+};
 
 #[odra::module]
 pub struct ResultsStorage {
@@ -118,12 +120,14 @@ pub struct OperationEnded {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::alloc::string::ToString;
-    use odra::assert_events;
+    use odra::{
+        assert_events,
+        prelude::{string::ToString, vec}
+    };
 
     // generate operation results
     fn operation_results() -> Vec<OperationResult> {
-        alloc::vec![
+        vec![
             OperationResult {
                 id: 1,
                 status: Status::Success,
@@ -223,18 +227,18 @@ mod tests {
         );
         assert_eq!(
             nested_odra_types.current_generation(),
-            alloc::vec![operations[6].clone(), operations[7].clone(),]
+            vec![operations[6].clone(), operations[7].clone(),]
         );
 
         assert_eq!(
             nested_odra_types.past_generations(),
-            alloc::vec![
-                alloc::vec![
+            vec![
+                vec![
                     operations[0].clone(),
                     operations[1].clone(),
                     operations[2].clone()
                 ],
-                alloc::vec![
+                vec![
                     operations[3].clone(),
                     operations[4].clone(),
                     operations[5].clone()

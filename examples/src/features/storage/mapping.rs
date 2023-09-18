@@ -1,5 +1,4 @@
-use alloc::string::String;
-use odra::{Mapping, Variable};
+use odra::{prelude::string::String, Mapping, Variable};
 
 type FriendName = String;
 type Visits = u32;
@@ -34,7 +33,7 @@ impl DogContract2 {
 #[cfg(test)]
 mod tests {
     use super::DogContract2Deployer;
-    use crate::alloc::string::ToString;
+    use odra::prelude::string::ToString;
 
     #[test]
     fn visit_test() {

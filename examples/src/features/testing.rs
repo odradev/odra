@@ -1,6 +1,8 @@
-use alloc::string::String;
-use odra::types::{Address, BlockTime};
-use odra::Variable;
+use odra::{
+    prelude::string::String,
+    types::{Address, BlockTime},
+    Variable
+};
 
 #[odra::module]
 pub struct TestingContract {
@@ -34,7 +36,7 @@ impl TestingContract {
 #[cfg(test)]
 mod tests {
     use super::TestingContractDeployer;
-    use crate::alloc::string::ToString;
+    use odra::prelude::string::ToString;
 
     #[test]
     fn test_env() {
