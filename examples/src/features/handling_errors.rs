@@ -1,6 +1,4 @@
-use alloc::string::String;
-use odra::types::Address;
-use odra::{execution_error, UnwrapOrRevert, Variable};
+use odra::{execution_error, prelude::string::String, types::Address, UnwrapOrRevert, Variable};
 
 #[odra::module]
 pub struct OwnedContract {
@@ -45,7 +43,7 @@ impl OwnedContract {
 mod tests {
     use super::Error;
     use super::OwnedContractDeployer;
-    use crate::alloc::string::ToString;
+    use odra::prelude::string::ToString;
 
     #[test]
     fn test_owner() {

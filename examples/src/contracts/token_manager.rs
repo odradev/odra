@@ -1,5 +1,5 @@
-use alloc::string::String;
 use odra::{
+    prelude::string::String,
     types::{Address, U256},
     Mapping, Variable
 };
@@ -51,8 +51,10 @@ impl TokenManager {
 #[cfg(test)]
 mod test {
     use super::{TokenManagerDeployer, TokenManagerRef};
-    use alloc::string::{String, ToString};
-    use odra::test_env::get_account;
+    use odra::{
+        prelude::string::{String, ToString},
+        test_env::get_account
+    };
 
     const PLS: &str = "PLS";
     const MCN: &str = "MCN";

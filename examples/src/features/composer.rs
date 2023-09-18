@@ -1,5 +1,4 @@
-use alloc::string::String;
-use odra::Variable;
+use odra::{prelude::string::String, Variable};
 
 #[odra::module]
 pub struct SharedStorage {
@@ -38,8 +37,8 @@ impl ComposableContract {
 
 #[cfg(test)]
 mod test {
-    use crate::alloc::string::ToString;
     use crate::features::composer::ComposableContractDeployer;
+    use odra::prelude::string::ToString;
 
     #[test]
     fn t() {

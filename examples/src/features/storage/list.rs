@@ -1,5 +1,4 @@
-use alloc::string::String;
-use odra::{List, Variable};
+use odra::{prelude::string::String, List, Variable};
 
 #[odra::module]
 pub struct DogContract3 {
@@ -34,7 +33,7 @@ impl DogContract3 {
 #[cfg(test)]
 mod tests {
     use super::DogContract3Deployer;
-    use crate::alloc::string::ToString;
+    use odra::prelude::string::ToString;
 
     #[test]
     fn init_test() {

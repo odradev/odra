@@ -1,5 +1,7 @@
-use alloc::{string::String, vec::Vec};
-use odra::Variable;
+use odra::{
+    prelude::{string::String, vec::Vec},
+    Variable
+};
 
 #[odra::module]
 pub struct DogContract {
@@ -45,7 +47,7 @@ impl DogContract {
 #[cfg(test)]
 mod tests {
     use super::DogContractDeployer;
-    use crate::alloc::string::ToString;
+    use odra::prelude::string::ToString;
 
     #[test]
     fn init_test() {
