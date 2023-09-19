@@ -1,20 +1,23 @@
 use super::DynamicInstance;
 use crate::{instance::StaticInstance, prelude::vec::Vec, Variable};
 use num_traits::{Num, One, Zero};
-use odra_types::casper_types::bytesrepr::{ToBytes, FromBytes};
+use odra_types::casper_types::{
+    bytesrepr::{FromBytes, ToBytes},
+    CLTyped
+};
 
 /// A module that stores a single value in the storage that can be read or incremented.
 #[derive(Clone)]
 pub struct Sequence<T>
 where
-    T: Num + One + ToBytes + FromBytes
+    T: Num + One + ToBytes + FromBytes + CLTyped
 {
     value: Variable<T>
 }
 
 impl<T> Sequence<T>
 where
-    T: Num + One + Zero + Default + Copy + ToBytes + FromBytes
+    T: Num + One + Zero + Default + Copy + ToBytes + FromBytes + CLTyped
 {
     pub fn get_current_value(&self) -> T {
         self.value.get().unwrap_or_default()
@@ -37,7 +40,7 @@ where
 
 impl<T> StaticInstance for Sequence<T>
 where
-    T: Num + One + ToBytes + FromBytes
+    T: Num + One + ToBytes + FromBytes + CLTyped
 {
     fn instance<'a>(keys: &'a [&'a str]) -> (Self, &'a [&'a str]) {
         let (value, rem) = StaticInstance::instance(keys);
@@ -46,7 +49,7 @@ where
 }
 impl<T> DynamicInstance for Sequence<T>
 where
-    T: Num + One + ToBytes + FromBytes
+    T: Num + One + ToBytes + FromBytes + CLTyped
 {
     fn instance(namespace: &[u8]) -> Self {
         let mut buffer: Vec<u8> = Vec::with_capacity(namespace.len() + b"value".len());

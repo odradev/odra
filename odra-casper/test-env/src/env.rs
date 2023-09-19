@@ -22,15 +22,14 @@ use odra_casper_shared::consts::{
     RESULT_KEY
 };
 use odra_types::{
-    Address, BlockTime,
     casper_types::{
         account::{Account, AccountHash},
         bytesrepr::{Bytes, FromBytes, ToBytes},
-        runtime_args, ApiError, Contract, ContractHash, ContractPackageHash, Key, Motes, PublicKey,
-        RuntimeArgs, SecretKey, StoredValue, URef, U512, CLTyped
+        runtime_args, ApiError, CLTyped, Contract, ContractHash, ContractPackageHash, Key, Motes,
+        PublicKey, RuntimeArgs, SecretKey, StoredValue, URef, U512
     },
     event::{EventError, OdraEvent},
-    ExecutionError, OdraError, VmError
+    Address, BlockTime, ExecutionError, OdraError, VmError
 };
 
 use crate::debug;

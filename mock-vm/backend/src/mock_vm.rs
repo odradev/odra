@@ -1,5 +1,10 @@
 use anyhow::Result;
-use odra_types::{casper_types::{bytesrepr::{Error, ToBytes, FromBytes}, RuntimeArgs, SecretKey, account::AccountHash, U512},
+use odra_types::{
+    casper_types::{
+        account::AccountHash,
+        bytesrepr::{Error, FromBytes, ToBytes},
+        RuntimeArgs, SecretKey, U512
+    },
     Address, BlockTime, EventData, ExecutionError, PublicKey
 };
 use odra_types::{event::EventError, OdraError, VmError};
@@ -168,31 +173,28 @@ impl MockVm {
         match result {
             Ok(result) => result,
             Err(error) => {
-                self.state.write().unwrap().set_error(Into::<ExecutionError>::into(error));
+                self.state
+                    .write()
+                    .unwrap()
+                    .set_error(Into::<ExecutionError>::into(error));
                 None
             }
         }
     }
 
-    pub fn set_dict_value<T: ToBytes>(
-        &self,
-        dict: &[u8],
-        key: &[u8],
-        value: T
-    ) {
+    pub fn set_dict_value<T: ToBytes>(&self, dict: &[u8], key: &[u8], value: T) {
         self.state.write().unwrap().set_dict_value(dict, key, value);
     }
 
-    pub fn get_dict_value<T: FromBytes>(
-        &self,
-        dict: &[u8],
-        key: &[u8]
-    ) -> Option<T> {
+    pub fn get_dict_value<T: FromBytes>(&self, dict: &[u8], key: &[u8]) -> Option<T> {
         let result = { self.state.read().unwrap().get_dict_value(dict, key) };
         match result {
             Ok(result) => result,
             Err(error) => {
-                self.state.write().unwrap().set_error(Into::<ExecutionError>::into(error));
+                self.state
+                    .write()
+                    .unwrap()
+                    .set_error(Into::<ExecutionError>::into(error));
                 None
             }
         }
@@ -281,7 +283,7 @@ pub struct MockVmState {
     error: Option<OdraError>,
     block_time: u64,
     accounts: Vec<Address>,
-    key_pairs: BTreeMap<Address, (SecretKey, PublicKey)>,
+    key_pairs: BTreeMap<Address, (SecretKey, PublicKey)>
 }
 
 impl MockVmState {
@@ -313,31 +315,19 @@ impl MockVmState {
         }
     }
 
-    fn get_var<T: FromBytes>(
-        &self,
-        key: &[u8]
-    ) -> Result<Option<T>, Error> {
+    fn get_var<T: FromBytes>(&self, key: &[u8]) -> Result<Option<T>, Error> {
         let ctx = self.callstack.current().address();
         self.storage.get_value(ctx, key)
     }
 
-    fn set_dict_value<T: ToBytes>(
-        &mut self,
-        dict: &[u8],
-        key: &[u8],
-        value: T
-    ) {
+    fn set_dict_value<T: ToBytes>(&mut self, dict: &[u8], key: &[u8], value: T) {
         let ctx = self.callstack.current().address();
         if let Err(error) = self.storage.insert_dict_value(ctx, dict, key, value) {
             self.set_error(Into::<ExecutionError>::into(error));
         }
     }
 
-    fn get_dict_value<T: FromBytes>(
-        &self,
-        dict: &[u8],
-        key: &[u8]
-    ) -> Result<Option<T>, Error> {
+    fn get_dict_value<T: FromBytes>(&self, dict: &[u8], key: &[u8]) -> Result<Option<T>, Error> {
         let ctx = &self.callstack.current().address();
         self.storage.get_dict_value(ctx, dict, key)
     }
@@ -505,10 +495,10 @@ impl Default for MockVmState {
 mod tests {
     use std::collections::BTreeMap;
 
-    use odra_types::casper_types::{RuntimeArgs, U512};
     use odra_types::casper_types::bytesrepr::FromBytes;
-    use odra_types::{Address, EventData};
+    use odra_types::casper_types::{RuntimeArgs, U512};
     use odra_types::OdraAddress;
+    use odra_types::{Address, EventData};
     use odra_types::{ExecutionError, OdraError, VmError};
 
     use crate::{callstack::CallstackElement, EntrypointArgs, EntrypointCall};

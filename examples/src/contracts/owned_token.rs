@@ -1,7 +1,7 @@
 use odra::{
     contract_env,
     prelude::string::String,
-    types::{Address, U256}
+    types::{casper_types::U256, Address}
 };
 use odra_modules::access::Ownable;
 use odra_modules::erc20::Erc20;
@@ -49,7 +49,7 @@ impl OwnedToken {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use odra::{assert_events, test_env, types::U256};
+    use odra::{assert_events, test_env, types::casper_types::U256};
     use odra_modules::access::errors::Error;
 
     pub const NAME: &str = "Plascoin";

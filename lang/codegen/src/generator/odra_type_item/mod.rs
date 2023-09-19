@@ -5,9 +5,8 @@ use quote::quote;
 
 use crate::GenerateCode;
 
-mod casper;
 mod clone;
-mod mock_vm;
+mod ty;
 
 #[derive(From)]
 pub struct OdraTypeItem<'a> {
@@ -18,14 +17,11 @@ impl GenerateCode for OdraTypeItem<'_> {
     fn generate_code(&self) -> TokenStream {
         let ident = self.item.ident();
 
-        let casper_code = casper::generate_code(self.item);
-        let mock_vm_code = mock_vm::generate_code(self.item);
+        let ty_code = ty::generate_code(self.item);
         let clone_code = clone::generate_code(self.item);
 
         quote! {
-            #casper_code
-
-            #mock_vm_code
+            #ty_code
 
             #clone_code
 

@@ -4,7 +4,10 @@ pub mod erc721_base;
 pub mod extensions;
 pub mod owned_erc721_with_metadata;
 
-use odra::types::{Address, Bytes, U256};
+use odra::types::{
+    casper_types::{bytesrepr::Bytes, U256},
+    Address
+};
 
 /// The ERC-721 interface as defined in the standard.
 pub trait Erc721 {
@@ -52,7 +55,7 @@ pub trait Erc721 {
 
 /// Erc721-related Odra events.
 pub mod events {
-    use odra::types::{Address, U256};
+    use odra::types::{casper_types::U256, Address};
 
     /// Emitted when the `token_id` token is transferred (also minted or burned).
     #[derive(odra::Event)]

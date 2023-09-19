@@ -59,7 +59,7 @@ impl From<casper_types::bytesrepr::Error> for ExecutionError {
             casper_types::bytesrepr::Error::OutOfMemory => todo!(),
             casper_types::bytesrepr::Error::NotRepresentable => todo!(),
             casper_types::bytesrepr::Error::ExceededRecursionDepth => todo!(),
-            _ => todo!(),
+            _ => todo!()
         }
     }
 }

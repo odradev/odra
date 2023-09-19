@@ -1,7 +1,11 @@
 //! Utility functions that allow to write more compact tests.
 
-use crate::types::Address;
-use odra_types::{self, event::OdraEvent, casper_types::bytesrepr::{ToBytes, FromBytes}};
+use odra_types::{
+    self,
+    casper_types::bytesrepr::{FromBytes, ToBytes},
+    event::OdraEvent,
+    Address
+};
 
 /// Gets the nth event emitted by the contract at `address`.
 ///

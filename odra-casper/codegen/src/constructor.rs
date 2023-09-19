@@ -44,7 +44,7 @@ impl ToTokens for WasmConstructor<'_> {
                         let odra_address = odra::types::Address::try_from(contract_package_hash)
                             .map_err(|err| {
                                 let code = odra::types::ExecutionError::from(err).code();
-                                odra::casper::casper_types::ApiError::User(code)
+                                odra::types::casper_types::ApiError::User(code)
                             })
                             .unwrap_or_revert();
                         #contract_ref
@@ -73,8 +73,8 @@ impl ToTokens for WasmConstructor<'_> {
 #[cfg(test)]
 mod tests {
     use odra_types::{
-        contract_def::{Argument, EntrypointType},
-        Type
+        casper_types::CLType,
+        contract_def::{Argument, EntrypointType}
     };
 
     use crate::assert_eq_tokens;
@@ -87,10 +87,11 @@ mod tests {
             ident: String::from("construct_me"),
             args: vec![Argument {
                 ident: String::from("value"),
-                ty: Type::I32,
-                is_ref: false
+                ty: CLType::I32,
+                is_ref: false,
+                is_slice: false
             }],
-            ret: Type::Unit,
+            ret: CLType::Unit,
             ty: EntrypointType::Constructor {
                 non_reentrant: false
             },
@@ -115,7 +116,7 @@ mod tests {
                     "construct_me"=>{
                         let odra_address = odra::types::Address::try_from(contract_package_hash).map_err(|err|{
                             let code = odra::types::ExecutionError::from(err).code();
-                            odra::casper::casper_types::ApiError::User(code)}).unwrap_or_revert();
+                            odra::types::casper_types::ApiError::User(code)}).unwrap_or_revert();
                             let contract_ref = my_contract::MyContract::at(&odra_address);
                             let value = odra::casper::casper_contract::contract_api::runtime::get_named_arg("value");
                             contract_ref.construct_me(value);

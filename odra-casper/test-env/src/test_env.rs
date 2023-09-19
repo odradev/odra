@@ -6,9 +6,13 @@ use std::panic::AssertUnwindSafe;
 use crate::env::ENV;
 use odra_casper_shared::{consts, native_token::NativeTokenMetadata};
 use odra_types::{
-    Address,
+    casper_types::{
+        account::{AccountHash, ACCOUNT_HASH_LENGTH},
+        bytesrepr::{Bytes, FromBytes, ToBytes},
+        CLTyped, RuntimeArgs, U512
+    },
     event::{EventError, OdraEvent},
-    OdraError, casper_types::{RuntimeArgs, bytesrepr::{FromBytes, Bytes, ToBytes}, account::{AccountHash, ACCOUNT_HASH_LENGTH}, CLTyped, U512}, PublicKey
+    Address, OdraError, PublicKey
 };
 
 /// Returns backend name.
@@ -17,7 +21,11 @@ pub fn backend_name() -> String {
 }
 
 /// Deploy WASM file with arguments.
-pub fn register_contract(name: &str, args: &RuntimeArgs, constructor_name: Option<String>) -> Address {
+pub fn register_contract(
+    name: &str,
+    args: &RuntimeArgs,
+    constructor_name: Option<String>
+) -> Address {
     ENV.with(|env| {
         let wasm_name = format!("{}.wasm", name);
         let package_hash_key_name = format!("{}_package_hash", name);
@@ -25,12 +33,14 @@ pub fn register_contract(name: &str, args: &RuntimeArgs, constructor_name: Optio
         args.insert(
             consts::PACKAGE_HASH_KEY_NAME_ARG,
             package_hash_key_name.clone()
-        ).unwrap();
+        )
+        .unwrap();
         args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, true).unwrap();
         args.insert(consts::IS_UPGRADABLE_ARG, false).unwrap();
 
         if let Some(constructor_name) = constructor_name {
-            args.insert(consts::CONSTRUCTOR_NAME_ARG, constructor_name).unwrap();
+            args.insert(consts::CONSTRUCTOR_NAME_ARG, constructor_name)
+                .unwrap();
         };
 
         env.borrow_mut().deploy_contract(&wasm_name, &args);
@@ -85,7 +95,7 @@ pub fn advance_block_time_by(milliseconds: u64) {
 
 /// Returns the balance of the account associated with the given address.
 pub fn token_balance(address: Address) -> U512 {
-    ENV.with(|env| env.borrow().token_balance(address).into())
+    ENV.with(|env| env.borrow().token_balance(address))
 }
 
 /// Returns the value that represents one CSPR.
@@ -123,17 +133,17 @@ pub fn native_token_metadata() -> NativeTokenMetadata {
 
 /// Returns last call gas cost.
 pub fn last_call_contract_gas_cost() -> U512 {
-    ENV.with(|env| env.borrow().last_call_contract_gas_cost().into())
+    ENV.with(|env| env.borrow().last_call_contract_gas_cost())
 }
 
 /// Returns the amount of gas paid for last call.
 pub fn last_call_contract_gas_used() -> U512 {
-    ENV.with(|env| env.borrow().last_call_contract_gas_used().into())
+    ENV.with(|env| env.borrow().last_call_contract_gas_used())
 }
 
 /// Returns total gas used by the account.
 pub fn total_gas_used(address: Address) -> U512 {
-    ENV.with(|env| env.borrow().total_gas_used(address).into())
+    ENV.with(|env| env.borrow().total_gas_used(address))
 }
 
 /// Returns the report of entrypoints called, contract deployed and gas used.
@@ -141,8 +151,8 @@ pub fn gas_report() -> Vec<(String, U512)> {
     let mut report = Vec::new();
     ENV.with(|env| {
         let env = env.borrow();
-        for (reason, gas) in env.gas_report() {
-            report.push((reason, gas.into()));
+        for item in env.gas_report() {
+            report.push(item);
         }
     });
 

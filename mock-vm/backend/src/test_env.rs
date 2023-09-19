@@ -1,16 +1,18 @@
 //! Describes test environment API. Delegates methods to the underlying env implementation.
 //!
 //! Depending on the selected feature, the actual test env is dynamically loaded in the runtime or the Odra local MockVM is used.
-use std::{collections::BTreeMap, panic::AssertUnwindSafe};
 use odra_types::{
-    casper_types::{RuntimeArgs, U512, bytesrepr::{ToBytes, FromBytes, Bytes}},
+    casper_types::{
+        bytesrepr::{Bytes, FromBytes, ToBytes},
+        RuntimeArgs, U512
+    },
     Address, BlockTime, PublicKey
 };
 use odra_types::{
-    OdraAddress,
     event::{EventError, OdraEvent},
-    OdraError
+    OdraAddress, OdraError
 };
+use std::{collections::BTreeMap, panic::AssertUnwindSafe};
 
 use crate::{native_token::NativeTokenMetadata, EntrypointArgs, EntrypointCall};
 
@@ -83,16 +85,17 @@ pub fn call_contract<T: ToBytes + FromBytes>(
 }
 
 /// Gets nth event emitted by the contract at `address`.
-pub fn get_event<T: FromBytes + OdraEvent>(
-    address: Address,
-    index: i32
-) -> Result<T, EventError> {
+pub fn get_event<T: FromBytes + OdraEvent>(address: Address, index: i32) -> Result<T, EventError> {
     let bytes = crate::borrow_env().get_event(address, index);
 
     bytes.and_then(|bytes| {
         let event_name = extract_event_name(&bytes)?;
-        if event_name == T::name() {
-            T::from_bytes(&bytes).map_err(|_| EventError::Parsing).map(|r| r.0)
+        dbg!(&event_name);
+        dbg!(T::name());
+        if event_name == format!("event_{}", T::name()) {
+            T::from_bytes(&bytes)
+                .map_err(|_| EventError::Parsing)
+                .map(|r| r.0)
         } else {
             Err(EventError::UnexpectedType(event_name))
         }
@@ -131,7 +134,7 @@ pub fn gas_report() -> Vec<(String, U512)> {
 
 /// Returns the name of the passed event
 fn extract_event_name(bytes: &[u8]) -> Result<String, EventError> {
-    let name = FromBytes::from_bytes(&bytes).map_err(|_| EventError::Formatting)?;
+    let name = FromBytes::from_bytes(bytes).map_err(|_| EventError::Formatting)?;
     Ok(name.0)
 }
 

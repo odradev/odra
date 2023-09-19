@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use odra_types::{OdraError, VmError, Address, casper_types::RuntimeArgs};
+use odra_types::{casper_types::RuntimeArgs, Address, OdraError, VmError};
 
 use crate::{EntrypointArgs, EntrypointCall};
 
@@ -36,7 +36,10 @@ impl ContractContainer {
     }
 
     fn validate_args(&self, args: &[String], input_args: &RuntimeArgs) -> Result<(), OdraError> {
-        let named_args = input_args.named_args().map(|arg| arg.name().to_owned()).collect::<Vec<_>>();
+        let named_args = input_args
+            .named_args()
+            .map(|arg| arg.name().to_owned())
+            .collect::<Vec<_>>();
 
         if args
             .iter()

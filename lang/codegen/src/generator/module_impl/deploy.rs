@@ -75,14 +75,18 @@ where
             match &*arg.ty {
                 syn::Type::Reference(ty) => match &*ty.elem {
                     ty if matches!(ty, syn::Type::Array(_) | syn::Type::Slice(_)) => {
-                        quote!(&args.get::<odra::prelude::vec::Vec<_>>(stringify!(#pat)))
+                        quote!(&odra::types::UncheckedGetter::get::<
+                            odra::prelude::vec::Vec<_>
+                        >(args, stringify!(#pat)))
                     }
-                    _ => quote!(&args.get(stringify!(#pat)))
+                    _ => quote!(&odra::types::UncheckedGetter::get(args, stringify!(#pat)))
                 },
                 ty if matches!(ty, syn::Type::Array(_) | syn::Type::Slice(_)) => {
-                    quote!(&args.get::<odra::prelude::vec::Vec<_>>(stringify!(#pat)))
+                    quote!(&odra::types::UncheckedGetter::get::<
+                        odra::prelude::vec::Vec<_>
+                    >(args, stringify!(#pat)))
                 }
-                _ => quote!(args.get(stringify!(#pat)))
+                _ => quote!(odra::types::UncheckedGetter::get(args, stringify!(#pat)))
             }
         })
         .collect::<Punctuated<TokenStream, Comma>>()
@@ -166,7 +170,7 @@ where
     let mut tokens = quote!(let mut args = odra::types::casper_types::RuntimeArgs::new(););
     tokens.append_all(args.into_iter().map(|arg| {
         let pat = &*arg.pat;
-        quote! { args.insert(stringify!(#pat), #pat.clone()); }
+        quote! { let _ = args.insert(stringify!(#pat), #pat.clone()); }
     }));
     tokens.extend(quote!(args));
     tokens

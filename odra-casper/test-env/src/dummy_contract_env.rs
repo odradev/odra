@@ -1,8 +1,8 @@
 use odra_casper_shared::native_token::NativeTokenMetadata;
+use odra_types::casper_types::bytesrepr::{Bytes, FromBytes, ToBytes};
 use odra_types::casper_types::U512;
-use odra_types::casper_types::bytesrepr::{ToBytes, FromBytes, Bytes};
-use odra_types::{Address, BlockTime, PublicKey};
 use odra_types::{event::OdraEvent, ExecutionError};
+use odra_types::{Address, BlockTime, PublicKey};
 
 pub fn self_address() -> Address {
     unimplemented!()
@@ -24,7 +24,7 @@ pub fn set_dict_value<K: ToBytes, V: ToBytes>(_: &[u8], _: &K, _: V) {
     unimplemented!()
 }
 
-pub fn get_dict_value<K: FromBytes, T: FromBytes>(_: &[u8], _: &K) -> Option<T> {
+pub fn get_dict_value<K: ToBytes, T: FromBytes>(_: &[u8], _: &K) -> Option<T> {
     unimplemented!()
 }
 

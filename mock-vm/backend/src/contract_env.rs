@@ -5,12 +5,10 @@ use std::backtrace::{Backtrace, BacktraceStatus};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
-use odra_types::casper_types::U512;
-use odra_types::casper_types::bytesrepr::{ToBytes, FromBytes, Bytes};
-use odra_types::{
-    Address, BlockTime, PublicKey
-};
+use odra_types::casper_types::bytesrepr::{Bytes, FromBytes, ToBytes};
+use odra_types::casper_types::{CLTyped, U512};
 use odra_types::{event::OdraEvent, ExecutionError, OdraError};
+use odra_types::{Address, BlockTime, PublicKey};
 
 use crate::{borrow_env, debug, native_token::NativeTokenMetadata};
 
@@ -30,7 +28,7 @@ pub fn self_address() -> Address {
 }
 
 /// Stores the `value` under `key`.
-pub fn set_var<T: ToBytes>(key: &[u8], value: T) {
+pub fn set_var<T: ToBytes + CLTyped>(key: &[u8], value: T) {
     borrow_env().set_var(key, value)
 }
 
@@ -40,25 +38,12 @@ pub fn get_var<T: FromBytes>(key: &[u8]) -> Option<T> {
 }
 
 /// Puts a key-value into a collection.
-pub fn set_dict_value<
-    K: ToBytes,
-    V: ToBytes
->(
-    dict: &[u8],
-    key: &K,
-    value: V
-) {
+pub fn set_dict_value<K: ToBytes, V: ToBytes + CLTyped>(dict: &[u8], key: &K, value: V) {
     borrow_env().set_dict_value(dict, key.to_bytes().unwrap().as_slice(), value)
 }
 
 /// Gets the value from the `dict` collection under `key`.
-pub fn get_dict_value<
-    K: ToBytes,
-    T: FromBytes
->(
-    dict: &[u8],
-    key: &K
-) -> Option<T> {
+pub fn get_dict_value<K: ToBytes, T: FromBytes>(dict: &[u8], key: &K) -> Option<T> {
     let key = key.to_bytes().unwrap();
     let key = key.as_slice();
     borrow_env().get_dict_value(dict, key)

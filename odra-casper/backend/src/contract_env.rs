@@ -6,12 +6,12 @@ use casper_contract::contract_api::runtime;
 use casper_contract::{
     contract_api::system::transfer_from_purse_to_account, unwrap_or_revert::UnwrapOrRevert
 };
-use odra_types::casper_types::bytesrepr::{ToBytes, FromBytes, Bytes};
-use odra_types::casper_types::{U512, CLTyped, RuntimeArgs, crypto};
 use core::ops::Deref;
 use odra_casper_shared::native_token::NativeTokenMetadata;
-use odra_types::{Address, BlockTime};
+use odra_types::casper_types::bytesrepr::{Bytes, FromBytes, ToBytes};
+use odra_types::casper_types::{crypto, CLTyped, RuntimeArgs, U512};
 use odra_types::{event::OdraEvent, ExecutionError};
+use odra_types::{Address, BlockTime};
 
 use crate::{casper_env, utils::get_or_create_main_purse};
 
@@ -107,12 +107,12 @@ pub fn one_token() -> U512 {
 
 /// Returns the balance of the account associated with the currently executing contract.
 pub fn self_balance() -> U512 {
-    casper_env::self_balance().into()
+    casper_env::self_balance()
 }
 
 /// Returns amount of native token attached to the call.
 pub fn attached_value() -> U512 {
-    unsafe { ATTACHED_VALUE.into() }
+    unsafe { ATTACHED_VALUE }
 }
 
 /// Transfers native token from the contract caller to the given address.
@@ -139,8 +139,7 @@ pub fn verify_signature(
     signature: &Bytes,
     public_key: &crypto::PublicKey
 ) -> bool {
-    let (signature, _) =
-        crypto::Signature::from_bytes(signature.as_slice()).unwrap_or_revert();
+    let (signature, _) = crypto::Signature::from_bytes(signature.as_slice()).unwrap_or_revert();
     crypto::verify(message.as_slice(), &signature, public_key).is_ok()
 }
 

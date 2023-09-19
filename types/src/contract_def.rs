@@ -1,8 +1,7 @@
 //! Encapsulates a set of structures that abstract out a smart contract layout.
 
 use alloc::{string::String, vec::Vec};
-
-use crate::Type;
+use casper_types::CLType;
 
 /// Contract's entrypoint.
 #[derive(Debug, Clone)]
@@ -10,7 +9,7 @@ pub struct Entrypoint {
     pub ident: String,
     pub args: Vec<Argument>,
     pub is_mut: bool,
-    pub ret: Type,
+    pub ret: CLType,
     pub ty: EntrypointType
 }
 
@@ -18,8 +17,9 @@ pub struct Entrypoint {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Argument {
     pub ident: String,
-    pub ty: Type,
-    pub is_ref: bool
+    pub ty: CLType,
+    pub is_ref: bool,
+    pub is_slice: bool
 }
 
 /// Defines an entrypoint type.
@@ -52,7 +52,7 @@ pub struct Event {
 
 impl Event {
     pub fn has_any(&self) -> bool {
-        self.args.iter().any(|arg| Type::has_any(&arg.ty))
+        self.args.iter().any(|arg| arg.ty == CLType::Any)
     }
 }
 

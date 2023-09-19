@@ -1,6 +1,9 @@
 use std::collections::BTreeMap;
 
-use odra_types::{OdraError, VmError, casper_types::{RuntimeArgs, NamedArg}};
+use odra_types::{
+    casper_types::{NamedArg, RuntimeArgs},
+    OdraError, VmError
+};
 
 #[doc(hidden)]
 pub type EntrypointCall = fn(String, &RuntimeArgs) -> Vec<u8>;
@@ -56,7 +59,10 @@ impl ContractContainer {
     }
 
     fn validate_args(&self, args: &[String], input_args: &RuntimeArgs) -> Result<(), OdraError> {
-        let named_args = input_args.named_args().map(NamedArg::name).collect::<Vec<_>>();
+        let named_args = input_args
+            .named_args()
+            .map(NamedArg::name)
+            .collect::<Vec<_>>();
 
         if args
             .iter()
@@ -76,7 +82,10 @@ impl ContractContainer {
 mod tests {
     use std::collections::BTreeMap;
 
-    use odra_types::{OdraError, VmError, casper_types::{RuntimeArgs, runtime_args}};
+    use odra_types::{
+        casper_types::{runtime_args, RuntimeArgs},
+        OdraError, VmError
+    };
 
     use crate::{EntrypointArgs, EntrypointCall};
 

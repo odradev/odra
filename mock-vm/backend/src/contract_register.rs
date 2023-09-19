@@ -1,4 +1,4 @@
-use odra_types::{Address, OdraError, VmError, casper_types::RuntimeArgs};
+use odra_types::{casper_types::RuntimeArgs, Address, OdraError, VmError};
 
 use crate::contract_container::ContractContainer;
 use std::collections::BTreeMap;

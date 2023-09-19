@@ -215,7 +215,7 @@ fn attached_value(entrypoint: &Method) -> TokenStream {
     match entrypoint.is_payable() {
         true => quote!(),
         false => quote! {
-            if odra::contract_env::attached_value() > odra::types::Balance::zero() {
+            if odra::contract_env::attached_value() > odra::types::casper_types::U512::zero() {
                 odra::contract_env::revert(odra::types::ExecutionError::non_payable());
             }
         }
@@ -225,6 +225,8 @@ fn attached_value(entrypoint: &Method) -> TokenStream {
 fn return_value(entrypoint: &Method) -> TokenStream {
     match &entrypoint.ret {
         ReturnType::Default => quote!(odra::prelude::vec::Vec::new()),
-        ReturnType::Type(_, _) => quote!(odra::types::MockSerializable::ser(&result).unwrap())
+        ReturnType::Type(_, _) => {
+            quote!(odra::types::casper_types::bytesrepr::ToBytes::into_bytes(result).unwrap())
+        }
     }
 }

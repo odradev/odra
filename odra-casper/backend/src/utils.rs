@@ -6,13 +6,13 @@ use casper_contract::{
     unwrap_or_revert::UnwrapOrRevert
 };
 use casper_event_standard::Schema;
+use odra_casper_shared::consts;
 use odra_types::{
-    ExecutionError,
     casper_types::{
         contracts::NamedKeys, CLType, ContractPackageHash, EntryPoints, Key, URef, U512
-    }
+    },
+    ExecutionError
 };
-use odra_casper_shared::consts;
 
 use crate::{
     casper_env,
@@ -65,7 +65,7 @@ pub fn handle_attached_value() {
         let contract_purse = get_or_create_main_purse();
         system::transfer_from_purse_to_purse(cargo_purse, contract_purse, amount, None)
             .unwrap_or_revert();
-        set_attached_value(amount.into());
+        set_attached_value(amount);
     } else {
         revert(ExecutionError::native_token_transfer_error())
     }

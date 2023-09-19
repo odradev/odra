@@ -1,7 +1,13 @@
 use std::{collections::BTreeMap, sync::Mutex};
 
 use odra_casper_shared::consts;
-use odra_types::{Address, casper_types::{RuntimeArgs, CLValue, bytesrepr::{FromBytes, ToBytes}, CLType, CLTyped, U512}};
+use odra_types::{
+    casper_types::{
+        bytesrepr::{FromBytes, ToBytes},
+        CLType, CLTyped, CLValue, RuntimeArgs, U512
+    },
+    Address
+};
 use ref_thread_local::RefThreadLocal;
 
 use crate::{casper_client::CasperClient, EntrypointArgs, EntrypointCall};
@@ -108,10 +114,12 @@ pub fn deploy_new_contract(
     let contract_package_hash_key = format!("{}_package_hash", name);
     args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, true).unwrap();
     args.insert(consts::IS_UPGRADABLE_ARG, false).unwrap();
-    args.insert(consts::PACKAGE_HASH_KEY_NAME_ARG, contract_package_hash_key).unwrap();
+    args.insert(consts::PACKAGE_HASH_KEY_NAME_ARG, contract_package_hash_key)
+        .unwrap();
 
     if let Some(constructor_name) = constructor_name {
-        args.insert(consts::CONSTRUCTOR_NAME_ARG, constructor_name).unwrap();
+        args.insert(consts::CONSTRUCTOR_NAME_ARG, constructor_name)
+            .unwrap();
     };
 
     let address = CasperClient::new().deploy_wasm(&wasm_name, args, gas);

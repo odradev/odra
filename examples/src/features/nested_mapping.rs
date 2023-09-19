@@ -1,4 +1,4 @@
-use odra::{map, prelude::string::String, types::U256, Mapping, UnwrapOrRevert};
+use odra::{map, prelude::string::String, types::casper_types::U256, Mapping, UnwrapOrRevert};
 
 use crate::contracts::owned_token::OwnedToken;
 

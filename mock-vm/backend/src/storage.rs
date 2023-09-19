@@ -1,6 +1,10 @@
 use anyhow::{Context, Result};
 use odra_types::{
-    Address, casper_types::{bytesrepr::{Error, ToBytes, FromBytes}, U512}
+    casper_types::{
+        bytesrepr::{Error, FromBytes, ToBytes},
+        U512
+    },
+    Address
 };
 use std::{
     collections::{hash_map::DefaultHasher, BTreeMap},

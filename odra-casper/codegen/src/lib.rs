@@ -132,8 +132,8 @@ macro_rules! gen_contract {
 
 #[cfg(test)]
 mod tests {
+    use odra_types::casper_types::CLType;
     use odra_types::contract_def::{Argument, ContractBlueprint, Entrypoint, EntrypointType};
-    use odra_types::Type;
     use quote::quote;
 
     use super::{assert_eq_tokens, gen_contract};
@@ -144,10 +144,11 @@ mod tests {
             ident: String::from("construct_me"),
             args: vec![Argument {
                 ident: String::from("value"),
-                ty: Type::I32,
-                is_ref: true
+                ty: CLType::I32,
+                is_ref: true,
+                is_slice: false
             }],
-            ret: Type::Unit,
+            ret: CLType::Unit,
             ty: EntrypointType::Constructor {
                 non_reentrant: false
             },
@@ -156,7 +157,7 @@ mod tests {
         let entrypoint = Entrypoint {
             ident: String::from("call_me"),
             args: vec![],
-            ret: Type::Bool,
+            ret: CLType::Bool,
             ty: EntrypointType::Public {
                 non_reentrant: false
             },
@@ -188,24 +189,24 @@ mod tests {
                 #[no_mangle]
                 fn call() {
                     let schemas = alloc::vec![];
-                    let mut entry_points = odra::casper::casper_types::EntryPoints::new();
-                    entry_points.add_entry_point(odra::casper::casper_types::EntryPoint::new(
+                    let mut entry_points = odra::types::casper_types::EntryPoints::new();
+                    entry_points.add_entry_point(odra::types::casper_types::EntryPoint::new(
                         "construct_me",
                         alloc::vec![
-                            odra::casper::casper_types::Parameter::new("value", odra::casper::casper_types::CLType::I32)
+                            odra::types::casper_types::Parameter::new("value", odra::types::casper_types::CLType::I32)
                         ],
-                        odra::casper::casper_types::CLType::Unit,
-                        odra::casper::casper_types::EntryPointAccess::Groups(alloc::vec![
-                            odra::casper::casper_types::Group::new("constructor_group")
+                        odra::types::casper_types::CLType::Unit,
+                        odra::types::casper_types::EntryPointAccess::Groups(alloc::vec![
+                            odra::types::casper_types::Group::new("constructor_group")
                         ]),
-                        odra::casper::casper_types::EntryPointType::Contract,
+                        odra::types::casper_types::EntryPointType::Contract,
                     ));
-                    entry_points.add_entry_point(odra::casper::casper_types::EntryPoint::new(
+                    entry_points.add_entry_point(odra::types::casper_types::EntryPoint::new(
                         "call_me",
                         alloc::vec![],
-                        odra::casper::casper_types::CLType::Bool,
-                        odra::casper::casper_types::EntryPointAccess::Public,
-                        odra::casper::casper_types::EntryPointType::Contract,
+                        odra::types::casper_types::CLType::Bool,
+                        odra::types::casper_types::EntryPointAccess::Public,
+                        odra::types::casper_types::EntryPointType::Contract,
                     ));
                     #[allow(unused_variables)]
                     let contract_package_hash = odra::casper::utils::install_contract(entry_points, schemas);
@@ -217,7 +218,7 @@ mod tests {
                             let odra_address = odra::types::Address::try_from(contract_package_hash)
                                 .map_err(|err| {
                                     let code = odra::types::ExecutionError::from(err).code();
-                                    odra::casper::casper_types::ApiError::User(code)
+                                    odra::types::casper_types::ApiError::User(code)
                                 })
                                 .unwrap_or_revert();
                             let contract_ref = my_contract::MyContractRef::at(&odra_address);
@@ -242,7 +243,7 @@ mod tests {
                     let (_contract, _): (my_contract::MyContract, _) = odra::StaticInstance::instance(&KEYS);
                     use odra::casper::casper_contract::unwrap_or_revert::UnwrapOrRevert;
                     let result = _contract.call_me();
-                    let result = odra::casper::casper_types::CLValue::from_t(result).unwrap_or_revert();
+                    let result = odra::types::casper_types::CLValue::from_t(result).unwrap_or_revert();
                     odra::casper::casper_contract::contract_api::runtime::ret(result);
                 }
             }

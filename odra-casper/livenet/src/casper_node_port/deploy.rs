@@ -4,12 +4,13 @@ use std::{cell::OnceCell, cmp, collections::BTreeSet, fmt, hash};
 
 use casper_execution_engine::core::engine_state::{DeployItem, ExecutableDeployItem};
 use casper_hashing::Digest;
-use odra_types::casper_types::{
-    bytesrepr::{self, FromBytes, ToBytes},
-    PublicKey, SecretKey, TimeDiff, Timestamp, self
-};
 use datasize::DataSize;
 use itertools::Itertools;
+use odra_types::casper_types::{
+    self,
+    bytesrepr::{self, FromBytes, ToBytes},
+    PublicKey, SecretKey, TimeDiff, Timestamp
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

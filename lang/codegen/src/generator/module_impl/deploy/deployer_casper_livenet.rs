@@ -58,8 +58,8 @@ fn build_entrypoint_call(entrypoint: &Method, struct_ident: &Ident) -> TokenStre
                 .collect::<odra::prelude::vec::Vec<_>>();
             let (mut instance, _) = <#struct_ident as odra::StaticInstance>::instance(keys.as_slice());
             let result = instance.#ident(#args);
-            let clvalue = odra::casper::casper_types::CLValue::from_t(result).unwrap();
-            odra::casper::casper_types::bytesrepr::ToBytes::into_bytes(clvalue).unwrap()
+            let clvalue = odra::types::casper_types::CLValue::from_t(result).unwrap();
+            odra::types::casper_types::bytesrepr::ToBytes::into_bytes(clvalue).unwrap()
         }));
     }
 }

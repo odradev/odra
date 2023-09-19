@@ -1,5 +1,9 @@
 use alloc::vec::Vec;
-use odra_types::{Address, event::OdraEvent, casper_types::{api_error, CLValue, bytesrepr}};
+use odra_types::{
+    casper_types::{api_error, bytesrepr, CLValue},
+    event::OdraEvent,
+    Address
+};
 
 use casper_contract::{
     contract_api::{
@@ -13,7 +17,8 @@ use odra_casper_shared::{consts, key_maker::KeyMaker};
 use odra_types::{
     casper_types::{
         bytesrepr::{FromBytes, ToBytes},
-        system::CallStackElement, ApiError, CLTyped, ContractPackageHash, RuntimeArgs, URef, U512
+        system::CallStackElement,
+        ApiError, CLTyped, ContractPackageHash, RuntimeArgs, URef, U512
     },
     ExecutionError
 };

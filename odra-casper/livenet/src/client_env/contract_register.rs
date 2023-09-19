@@ -1,4 +1,4 @@
-use odra_types::{OdraError, VmError, Address, casper_types::RuntimeArgs};
+use odra_types::{casper_types::RuntimeArgs, Address, OdraError, VmError};
 
 use std::collections::BTreeMap;
 

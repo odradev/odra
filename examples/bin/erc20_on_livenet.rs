@@ -1,5 +1,5 @@
 use odra::client_env;
-use odra::types::{Address, U256};
+use odra::types::{casper_types::U256, Address};
 use odra_modules::erc20::Erc20Deployer;
 use std::str::FromStr;
 

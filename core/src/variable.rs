@@ -6,7 +6,13 @@ use crate::{
     prelude::vec::Vec,
     UnwrapOrRevert
 };
-use odra_types::{arithmetic::{OverflowingAdd, OverflowingSub}, casper_types::bytesrepr::{ToBytes, FromBytes}};
+use odra_types::{
+    arithmetic::{OverflowingAdd, OverflowingSub},
+    casper_types::{
+        bytesrepr::{FromBytes, ToBytes},
+        CLTyped
+    }
+};
 
 /// Data structure for storing a single value.
 #[derive(Clone)]
@@ -16,7 +22,7 @@ pub struct Variable<T> {
 }
 
 // <3
-impl<T: ToBytes + FromBytes + Default> Variable<T> {
+impl<T: ToBytes + FromBytes + CLTyped + Default> Variable<T> {
     /// Reads from the storage, if theres no value in the storage the default value is returned.
     #[inline(always)]
     pub fn get_or_default(&self) -> T {
@@ -24,7 +30,7 @@ impl<T: ToBytes + FromBytes + Default> Variable<T> {
     }
 }
 
-impl<V: ToBytes + FromBytes + OverflowingAdd + Default> Variable<V> {
+impl<V: ToBytes + FromBytes + CLTyped + OverflowingAdd + Default> Variable<V> {
     /// Utility function that gets the current value and adds the passed `value`
     /// and sets the new value to the storage.
     ///
@@ -37,7 +43,7 @@ impl<V: ToBytes + FromBytes + OverflowingAdd + Default> Variable<V> {
     }
 }
 
-impl<V: ToBytes + FromBytes + OverflowingSub + Default> Variable<V> {
+impl<V: ToBytes + FromBytes + CLTyped + OverflowingSub + Default> Variable<V> {
     /// Utility function that gets the current value and subtracts the passed `value`
     /// and sets the new value to the storage.
     ///
@@ -50,7 +56,7 @@ impl<V: ToBytes + FromBytes + OverflowingSub + Default> Variable<V> {
     }
 }
 
-impl<T: ToBytes + FromBytes> Variable<T> {
+impl<T: ToBytes + FromBytes + CLTyped> Variable<T> {
     /// Reads from the storage or returns `None` or reverts something unexpected happens.
     #[inline(always)]
     pub fn get(&self) -> Option<T> {
@@ -89,7 +95,13 @@ impl<T: ToBytes + FromBytes> DynamicInstance for Variable<T> {
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
     use crate::{test_env, StaticInstance, Variable};
-    use odra_types::{arithmetic::ArithmeticsError, casper_types::bytesrepr::{FromBytes, ToBytes}};
+    use odra_types::{
+        arithmetic::ArithmeticsError,
+        casper_types::{
+            bytesrepr::{FromBytes, ToBytes},
+            CLTyped
+        }
+    };
     const SHARED_VALUE: [&str; 1] = ["shared_value"];
 
     #[test]
@@ -177,7 +189,7 @@ mod tests {
         }
     }
 
-    impl<T: ToBytes + FromBytes> Variable<T> {
+    impl<T: ToBytes + FromBytes + CLTyped> Variable<T> {
         fn init(value: T) -> Self {
             let mut var = Self::default();
             var.set(value);

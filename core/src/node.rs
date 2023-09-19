@@ -3,7 +3,13 @@ use crate::{
     List, Mapping, Sequence, Variable
 };
 use num_traits::{Num, One};
-use odra_types::{contract_def::Node, casper_types::bytesrepr::{ToBytes, FromBytes}};
+use odra_types::{
+    casper_types::{
+        bytesrepr::{FromBytes, ToBytes},
+        CLTyped
+    },
+    contract_def::Node
+};
 
 impl<T> Node for Variable<T> {
     const COUNT: u32 = 1;
@@ -22,7 +28,7 @@ impl<T> Node for List<T> {
     }
 }
 
-impl<T: Num + One + ToBytes + FromBytes> Node for Sequence<T> {
+impl<T: Num + One + ToBytes + FromBytes + CLTyped> Node for Sequence<T> {
     const COUNT: u32 = 1;
     const IS_LEAF: bool = false;
 

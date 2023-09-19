@@ -1,7 +1,7 @@
 use std::{backtrace::Backtrace, panic::PanicInfo};
 
 use colored::Colorize;
-use odra_types::{OdraError, casper_types::ContractPackageHash};
+use odra_types::{casper_types::ContractPackageHash, OdraError};
 
 const ERROR_PREFIX: &str = "Contract panicked!";
 

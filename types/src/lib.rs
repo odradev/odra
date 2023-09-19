@@ -10,16 +10,29 @@ pub mod arithmetic;
 pub mod contract_def;
 mod error;
 pub mod event;
+pub mod uints;
 
 use alloc::vec::Vec;
-pub use error::{AddressError, CollectionError, ExecutionError, OdraError, VmError};
-
-pub type EncodedKeyHash = [u8; 16];
+use casper_types::{bytesrepr::FromBytes, CLTyped, CLValue, RuntimeArgs};
 
 pub type BlockTime = u64;
 pub type EventData = Vec<u8>;
 
+pub use address::{Address, OdraAddress};
 pub use casper_types;
 pub use casper_types::PublicKey;
+pub use error::{AddressError, CollectionError, ExecutionError, OdraError, VmError};
 
-pub use address::{Address, OdraAddress};
+pub trait UncheckedGetter {
+    fn get<T: FromBytes + CLTyped>(&self, key: &str) -> T;
+}
+
+impl UncheckedGetter for RuntimeArgs {
+    fn get<T: FromBytes + CLTyped>(&self, key: &str) -> T {
+        self.get(key)
+            .map(Clone::clone)
+            .map(CLValue::into_t)
+            .unwrap()
+            .unwrap()
+    }
+}

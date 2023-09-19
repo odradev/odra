@@ -88,12 +88,10 @@ mod env {
 mod env {
     pub use odra_casper_backend::contract_env;
     pub mod types {
-        pub use odra_casper_types::*;
         pub use odra_types::*;
     }
     pub mod casper {
         pub use odra_casper_backend::{casper_contract, contract_env, runtime, storage, utils};
-        pub use odra_casper_types::casper_types;
     }
     pub use contract_env::call_contract;
 }
@@ -103,12 +101,10 @@ mod env {
 mod env {
     pub use odra_casper_test_env::{dummy_contract_env as contract_env, test_env};
     pub mod types {
-        pub use odra_casper_types::*;
         pub use odra_types::*;
     }
     pub mod casper {
         pub use odra_casper_codegen as codegen;
-        pub use odra_casper_types::casper_types;
     }
     pub use test_env::call_contract;
 }
@@ -117,11 +113,7 @@ mod env {
 mod env {
     pub use odra_casper_livenet::{client_env, contract_env};
     pub mod types {
-        pub use odra_casper_types::*;
         pub use odra_types::*;
-    }
-    pub mod casper {
-        pub use odra_casper_types::casper_types;
     }
     pub use client_env::call_contract;
 }

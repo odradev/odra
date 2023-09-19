@@ -2,6 +2,9 @@
 
 use core::str::FromStr;
 
+use crate::AddressError;
+use crate::AddressError::ZeroAddress;
+use crate::{OdraError, VmError};
 use alloc::{
     string::{String, ToString},
     vec::Vec
@@ -11,9 +14,6 @@ use casper_types::{
     bytesrepr::{self, FromBytes, ToBytes},
     CLType, CLTyped, ContractPackageHash, Key, PublicKey
 };
-use crate::AddressError;
-use crate::AddressError::ZeroAddress;
-use crate::{OdraError, VmError};
 
 /// An enum representing an [`AccountHash`] or a [`ContractPackageHash`].
 #[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -99,9 +99,7 @@ impl From<Address> for Key {
     fn from(address: Address) -> Self {
         match address {
             Address::Account(account_hash) => Key::Account(account_hash),
-            Address::Contract(contract_package_hash) => {
-                Key::Hash(contract_package_hash.value())
-            }
+            Address::Contract(contract_package_hash) => Key::Hash(contract_package_hash.value())
         }
     }
 }
@@ -158,9 +156,9 @@ impl FromBytes for Address {
     }
 }
 
-impl TryFrom<&[u8; 32]> for Address {
+impl TryFrom<&[u8; 33]> for Address {
     type Error = AddressError;
-    fn try_from(value: &[u8; 32]) -> Result<Self, Self::Error> {
+    fn try_from(value: &[u8; 33]) -> Result<Self, Self::Error> {
         let address = Address::from_bytes(value)
             .map(|(address, _)| address)
             .map_err(|_| AddressError::AddressCreationError)?;
@@ -286,7 +284,6 @@ mod tests {
         )
     }
 }
-
 
 pub trait OdraAddress {
     /// Returns true if the address is a contract address.

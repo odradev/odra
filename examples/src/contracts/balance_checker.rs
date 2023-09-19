@@ -1,4 +1,4 @@
-use odra::types::{Address, U256};
+use odra::types::{casper_types::U256, Address};
 
 #[odra::module]
 pub struct BalanceChecker {}

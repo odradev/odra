@@ -6,12 +6,16 @@ use blake2::{
 };
 use casper_execution_engine::core::engine_state::ExecutableDeployItem;
 use casper_hashing::Digest;
-use odra_types::{casper_types::{
-    bytesrepr::{FromBytes, ToBytes, Bytes}, runtime_args, ContractHash, ContractPackageHash, Key as CasperKey,
-    PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, ExecutionResult, U512
-}, Address};
 use jsonrpc_lite::JsonRpc;
 use odra_casper_shared::key_maker::KeyMaker;
+use odra_types::{
+    casper_types::{
+        bytesrepr::{Bytes, FromBytes, ToBytes},
+        runtime_args, ContractHash, ContractPackageHash, ExecutionResult, Key as CasperKey,
+        PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, U512
+    },
+    Address
+};
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 
@@ -415,10 +419,13 @@ mod tests {
     use std::str::FromStr;
 
     use casper_hashing::Digest;
-    use odra_types::{casper_types::{
-        bytesrepr::{FromBytes, ToBytes},
-        U256
-    }, Address};
+    use odra_types::{
+        casper_types::{
+            bytesrepr::{FromBytes, ToBytes},
+            U256
+        },
+        Address
+    };
 
     use crate::casper_node_port::DeployHash;
 
