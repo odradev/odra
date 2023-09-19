@@ -128,7 +128,8 @@ mod tests {
             value: Box::new(CLType::I32)
         };
         let odra_type = OdraType(&ty);
-        let expected = quote!(odra::prelude::collections::BTreeMap<odra::prelude::string::String, i32>);
+        let expected =
+            quote!(odra::prelude::collections::BTreeMap<odra::prelude::string::String, i32>);
         assert_eq_tokens(odra_type, expected);
     }
 
@@ -210,8 +211,15 @@ mod tests {
             })
         };
         let odra_type = OdraType(&ty);
-        let expected =
-            quote!(Result<odra::prelude::vec::Vec<Option<i32>>, odra::prelude::collections::BTreeMap<odra::prelude::string::String, odra::prelude::vec::Vec<bool>>>);
+        let expected = quote!(
+            Result<
+                odra::prelude::vec::Vec<Option<i32>>,
+                odra::prelude::collections::BTreeMap<
+                    odra::prelude::string::String,
+                    odra::prelude::vec::Vec<bool>
+                >
+            >
+        );
         assert_eq_tokens(odra_type, expected);
     }
 }
