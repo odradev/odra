@@ -19,6 +19,7 @@ const CODE_NATIVE_TRANSFER_ERROR: u16 = 107;
 const CODE_INDEX_OUT_OF_BOUNDS: u16 = 108;
 const CODE_ZERO_ADDRESS: u16 = 109;
 const CODE_ADDRESS_CREATION_FAILED: u16 = 110;
+const CODE_SERIALIZATION_FAILED: u16 = 111;
 
 /// General error type in Odra framework
 #[derive(Clone, Debug, PartialEq)]
@@ -52,15 +53,15 @@ impl From<Box<dyn Any + Send>> for OdraError {
 
 impl From<casper_types::bytesrepr::Error> for ExecutionError {
     fn from(value: casper_types::bytesrepr::Error) -> Self {
-        match value {
-            casper_types::bytesrepr::Error::EarlyEndOfStream => todo!(),
-            casper_types::bytesrepr::Error::Formatting => todo!(),
-            casper_types::bytesrepr::Error::LeftOverBytes => todo!(),
-            casper_types::bytesrepr::Error::OutOfMemory => todo!(),
-            casper_types::bytesrepr::Error::NotRepresentable => todo!(),
-            casper_types::bytesrepr::Error::ExceededRecursionDepth => todo!(),
-            _ => todo!()
-        }
+        Self::sys(CODE_SERIALIZATION_FAILED, match value {
+            casper_types::bytesrepr::Error::EarlyEndOfStream => "Early end of stream",
+            casper_types::bytesrepr::Error::Formatting => "Formatting",
+            casper_types::bytesrepr::Error::LeftOverBytes => "Leftover bytes",
+            casper_types::bytesrepr::Error::OutOfMemory => "Out of memory",
+            casper_types::bytesrepr::Error::NotRepresentable => "Not representable",
+            casper_types::bytesrepr::Error::ExceededRecursionDepth => "Exceeded recursion depth",
+            _ => "Serialization failed"
+        })
     }
 }
 
