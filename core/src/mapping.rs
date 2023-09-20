@@ -22,12 +22,15 @@ pub struct Mapping<K, V> {
     namespace_buffer: Vec<u8>
 }
 
-impl<K: ToBytes, V: ToBytes + FromBytes + CLTyped> Mapping<K, V> {
+impl<K: ToBytes, V: FromBytes + CLTyped> Mapping<K, V> {
     /// Reads `key` from the storage or returns `None`.
     #[inline(always)]
     pub fn get(&self, key: &K) -> Option<V> {
         contract_env::get_dict_value(&self.namespace_buffer, key)
     }
+}
+
+impl<K: ToBytes, V: CLTyped + ToBytes> Mapping<K, V> {
 
     /// Sets `value` under `key` to the storage. It overrides by default.
     #[inline(always)]
@@ -36,7 +39,7 @@ impl<K: ToBytes, V: ToBytes + FromBytes + CLTyped> Mapping<K, V> {
     }
 }
 
-impl<K: ToBytes, V: ToBytes + FromBytes + CLTyped + Default> Mapping<K, V> {
+impl<K: ToBytes, V: FromBytes + CLTyped + Default> Mapping<K, V> {
     /// Reads `key` from the storage or the default value is returned.
     pub fn get_or_default(&self, key: &K) -> V {
         self.get(key).unwrap_or_default()

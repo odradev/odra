@@ -2,7 +2,7 @@
 
 use odra_types::{
     self,
-    casper_types::bytesrepr::{FromBytes, ToBytes},
+    casper_types::bytesrepr::FromBytes,
     event::OdraEvent,
     Address
 };
@@ -11,7 +11,7 @@ use odra_types::{
 ///
 /// If the passed index is out of bounds, or a deserialization error occurs,
 /// an error is returned.
-pub fn get_event<T: ToBytes + FromBytes + OdraEvent>(
+pub fn get_event<T: FromBytes + OdraEvent>(
     contract_address: Address,
     at: i32
 ) -> Result<T, odra_types::event::EventError> {

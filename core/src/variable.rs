@@ -22,7 +22,7 @@ pub struct Variable<T> {
 }
 
 // <3
-impl<T: ToBytes + FromBytes + CLTyped + Default> Variable<T> {
+impl<T: FromBytes + CLTyped + Default> Variable<T> {
     /// Reads from the storage, if theres no value in the storage the default value is returned.
     #[inline(always)]
     pub fn get_or_default(&self) -> T {
@@ -56,13 +56,15 @@ impl<V: ToBytes + FromBytes + CLTyped + OverflowingSub + Default> Variable<V> {
     }
 }
 
-impl<T: ToBytes + FromBytes + CLTyped> Variable<T> {
+impl<T: FromBytes + CLTyped> Variable<T> {
     /// Reads from the storage or returns `None` or reverts something unexpected happens.
     #[inline(always)]
     pub fn get(&self) -> Option<T> {
         contract_env::get_var(&self.namespace_buffer)
     }
+}
 
+impl<T: ToBytes + CLTyped> Variable<T> {
     /// Stores `value` to the storage.
     #[inline(always)]
     pub fn set(&mut self, value: T) {
