@@ -31,7 +31,6 @@ impl<K: ToBytes, V: FromBytes + CLTyped> Mapping<K, V> {
 }
 
 impl<K: ToBytes, V: CLTyped + ToBytes> Mapping<K, V> {
-
     /// Sets `value` under `key` to the storage. It overrides by default.
     #[inline(always)]
     pub fn set(&mut self, key: &K, value: V) {

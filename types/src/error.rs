@@ -53,15 +53,20 @@ impl From<Box<dyn Any + Send>> for OdraError {
 
 impl From<casper_types::bytesrepr::Error> for ExecutionError {
     fn from(value: casper_types::bytesrepr::Error) -> Self {
-        Self::sys(CODE_SERIALIZATION_FAILED, match value {
-            casper_types::bytesrepr::Error::EarlyEndOfStream => "Early end of stream",
-            casper_types::bytesrepr::Error::Formatting => "Formatting",
-            casper_types::bytesrepr::Error::LeftOverBytes => "Leftover bytes",
-            casper_types::bytesrepr::Error::OutOfMemory => "Out of memory",
-            casper_types::bytesrepr::Error::NotRepresentable => "Not representable",
-            casper_types::bytesrepr::Error::ExceededRecursionDepth => "Exceeded recursion depth",
-            _ => "Serialization failed"
-        })
+        Self::sys(
+            CODE_SERIALIZATION_FAILED,
+            match value {
+                casper_types::bytesrepr::Error::EarlyEndOfStream => "Early end of stream",
+                casper_types::bytesrepr::Error::Formatting => "Formatting",
+                casper_types::bytesrepr::Error::LeftOverBytes => "Leftover bytes",
+                casper_types::bytesrepr::Error::OutOfMemory => "Out of memory",
+                casper_types::bytesrepr::Error::NotRepresentable => "Not representable",
+                casper_types::bytesrepr::Error::ExceededRecursionDepth => {
+                    "Exceeded recursion depth"
+                }
+                _ => "Serialization failed"
+            }
+        )
     }
 }
 

@@ -1,11 +1,6 @@
 //! Utility functions that allow to write more compact tests.
 
-use odra_types::{
-    self,
-    casper_types::bytesrepr::FromBytes,
-    event::OdraEvent,
-    Address
-};
+use odra_types::{self, casper_types::bytesrepr::FromBytes, event::OdraEvent, Address};
 
 /// Gets the nth event emitted by the contract at `address`.
 ///
