@@ -1,4 +1,4 @@
-use odra_types::casper_types::CLType;
+use odra_types::CLType;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
@@ -7,33 +7,33 @@ pub struct CasperType<'a>(pub &'a CLType);
 impl ToTokens for CasperType<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let stream = match &self.0 {
-            CLType::Bool => quote!(odra::types::casper_types::CLType::Bool),
-            CLType::I32 => quote!(odra::types::casper_types::CLType::I32),
-            CLType::I64 => quote!(odra::types::casper_types::CLType::I64),
-            CLType::U8 => quote!(odra::types::casper_types::CLType::U8),
-            CLType::U32 => quote!(odra::types::casper_types::CLType::U32),
-            CLType::U64 => quote!(odra::types::casper_types::CLType::U64),
-            CLType::U128 => quote!(odra::types::casper_types::CLType::U128),
-            CLType::U256 => quote!(odra::types::casper_types::CLType::U256),
-            CLType::U512 => quote!(odra::types::casper_types::CLType::U512),
-            CLType::Unit => quote!(odra::types::casper_types::CLType::Unit),
-            CLType::String => quote!(odra::types::casper_types::CLType::String),
-            CLType::Key => quote!(odra::types::casper_types::CLType::Key),
-            CLType::PublicKey => quote!(odra::types::casper_types::CLType::PublicKey),
+            CLType::Bool => quote!(odra::types::CLType::Bool),
+            CLType::I32 => quote!(odra::types::CLType::I32),
+            CLType::I64 => quote!(odra::types::CLType::I64),
+            CLType::U8 => quote!(odra::types::CLType::U8),
+            CLType::U32 => quote!(odra::types::CLType::U32),
+            CLType::U64 => quote!(odra::types::CLType::U64),
+            CLType::U128 => quote!(odra::types::CLType::U128),
+            CLType::U256 => quote!(odra::types::CLType::U256),
+            CLType::U512 => quote!(odra::types::CLType::U512),
+            CLType::Unit => quote!(odra::types::CLType::Unit),
+            CLType::String => quote!(odra::types::CLType::String),
+            CLType::Key => quote!(odra::types::CLType::Key),
+            CLType::PublicKey => quote!(odra::types::CLType::PublicKey),
             CLType::Option(ty) => {
                 let ty = CasperType(ty);
-                quote!(odra::types::casper_types::CLType::Option(odra::prelude::boxed::Box::new(#ty)))
+                quote!(odra::types::CLType::Option(odra::prelude::boxed::Box::new(#ty)))
             }
-            CLType::Any => quote!(odra::types::casper_types::CLType::Any),
+            CLType::Any => quote!(odra::types::CLType::Any),
             CLType::List(ty) => {
                 let ty = CasperType(ty);
-                quote!(odra::types::casper_types::CLType::List(odra::prelude::boxed::Box::new(#ty)))
+                quote!(odra::types::CLType::List(odra::prelude::boxed::Box::new(#ty)))
             }
             CLType::Result { ok, err } => {
                 let ok = CasperType(ok);
                 let err = CasperType(err);
                 quote! {
-                    odra::types::casper_types::CLType::Result {
+                    odra::types::CLType::Result {
                         ok: odra::prelude::boxed::Box::new(#ok),
                         err: odra::prelude::boxed::Box::new(#err),
                     }
@@ -43,7 +43,7 @@ impl ToTokens for CasperType<'_> {
                 let key = CasperType(key);
                 let value = CasperType(value);
                 quote! {
-                    odra::types::casper_types::CLType::Map {
+                    odra::types::CLType::Map {
                         key: odra::prelude::boxed::Box::new(#key),
                         value: odra::prelude::boxed::Box::new(#value),
                     }
@@ -53,7 +53,7 @@ impl ToTokens for CasperType<'_> {
                 let ty = ty.get(0).unwrap();
                 let ty = CasperType(ty);
                 quote! {
-                    odra::types::casper_types::CLType::Tuple1([odra::prelude::boxed::Box::new(#ty)])
+                    odra::types::CLType::Tuple1([odra::prelude::boxed::Box::new(#ty)])
                 }
             }
             CLType::Tuple2(ty) => {
@@ -62,7 +62,7 @@ impl ToTokens for CasperType<'_> {
                 let t2 = ty.get(1).unwrap();
                 let t2 = CasperType(t2);
                 quote! {
-                    odra::types::casper_types::CLType::Tuple2([odra::prelude::boxed::Box::new(#t1), odra::prelude::boxed::Box::new(#t2)])
+                    odra::types::CLType::Tuple2([odra::prelude::boxed::Box::new(#t1), odra::prelude::boxed::Box::new(#t2)])
                 }
             }
             CLType::Tuple3(ty) => {
@@ -73,11 +73,11 @@ impl ToTokens for CasperType<'_> {
                 let t3 = ty.get(2).unwrap();
                 let t3 = CasperType(t3);
                 quote! {
-                    odra::types::casper_types::CLType::Tuple2([odra::prelude::boxed::Box::new(#t1), odra::prelude::boxed::Box::new(#t2), odra::prelude::boxed::Box::new(#t3)])
+                    odra::types::CLType::Tuple2([odra::prelude::boxed::Box::new(#t1), odra::prelude::boxed::Box::new(#t2), odra::prelude::boxed::Box::new(#t3)])
                 }
             }
-            CLType::ByteArray(b) => quote!(odra::types::casper_types::CLType::ByteArray(#b)),
-            CLType::URef => quote!(odra::types::casper_types::CLType::URef)
+            CLType::ByteArray(b) => quote!(odra::types::CLType::ByteArray(#b)),
+            CLType::URef => quote!(odra::types::CLType::URef)
         };
         tokens.extend(stream);
     }
@@ -92,10 +92,7 @@ mod tests {
     fn test_simple_type() {
         let ty = CLType::Bool;
         let wrapped_type = CasperType(&ty);
-        assert_eq_tokens(
-            wrapped_type,
-            quote!(odra::types::casper_types::CLType::Bool)
-        );
+        assert_eq_tokens(wrapped_type, quote!(odra::types::CLType::Bool));
     }
 
     #[test]
@@ -107,12 +104,12 @@ mod tests {
         let wrapped_type = CasperType(&ty);
         assert_eq_tokens(
             wrapped_type,
-            quote!(odra::types::casper_types::CLType::Option(
-                odra::prelude::boxed::Box::new(odra::types::casper_types::CLType::Tuple2([
-                    odra::prelude::boxed::Box::new(odra::types::casper_types::CLType::Bool),
-                    odra::prelude::boxed::Box::new(odra::types::casper_types::CLType::I32)
-                ]))
-            ))
+            quote!(odra::types::CLType::Option(odra::prelude::boxed::Box::new(
+                odra::types::CLType::Tuple2([
+                    odra::prelude::boxed::Box::new(odra::types::CLType::Bool),
+                    odra::prelude::boxed::Box::new(odra::types::CLType::I32)
+                ])
+            )))
         );
     }
 }

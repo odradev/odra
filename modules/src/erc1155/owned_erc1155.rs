@@ -1,5 +1,5 @@
 //! Erc1155 with ownership.
-use odra::types::{casper_types::U256, Address};
+use odra::types::{Address, U256};
 
 use super::Erc1155;
 

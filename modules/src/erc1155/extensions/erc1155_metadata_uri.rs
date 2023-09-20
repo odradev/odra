@@ -1,4 +1,4 @@
-use odra::{prelude::string::String, types::casper_types::U256};
+use odra::{prelude::string::String, types::U256};
 
 /// An optional ERC1155MetadataExtension.
 pub trait Erc1155MetadataURI {

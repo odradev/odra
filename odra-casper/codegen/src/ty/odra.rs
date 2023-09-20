@@ -1,4 +1,4 @@
-use odra_types::casper_types::CLType;
+use odra_types::CLType;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
@@ -19,9 +19,9 @@ impl ToTokens for OdraType<'_> {
             CLType::U8 => quote!(u8),
             CLType::U32 => quote!(u32),
             CLType::U64 => quote!(u64),
-            CLType::U128 => quote!(odra::types::casper_types::U128),
-            CLType::U256 => quote!(odra::types::casper_types::U256),
-            CLType::U512 => quote!(odra::types::casper_types::U512),
+            CLType::U128 => quote!(odra::types::U128),
+            CLType::U256 => quote!(odra::types::U256),
+            CLType::U512 => quote!(odra::types::U512),
             CLType::Unit => quote!(()),
             CLType::String => quote!(odra::prelude::string::String),
             CLType::Key => quote!(odra::types::Address),
@@ -90,7 +90,7 @@ mod tests {
     #[test]
     fn test_u256() {
         let odra_type = OdraType(&CLType::U256);
-        let expected = quote!(odra::types::casper_types::U256);
+        let expected = quote!(odra::types::U256);
         assert_eq_tokens(odra_type, expected);
     }
 

@@ -150,9 +150,9 @@ pub fn serialize_struct(prefix: &str, struct_ident: &Ident, fields: &[Ident]) ->
             }
         }
 
-        impl odra::types::casper_types::CLTyped for #struct_ident {
-            fn cl_type() -> odra::types::casper_types::CLType {
-                odra::types::casper_types::CLType::Any
+        impl odra::types::CLTyped for #struct_ident {
+            fn cl_type() -> odra::types::CLType {
+                odra::types::CLType::Any
             }
         }
     }
@@ -176,9 +176,9 @@ pub fn serialize_enum(enum_ident: &Ident, variants: &[Variant]) -> TokenStream {
             }
         }
 
-        impl odra::types::casper_types::CLTyped for #enum_ident {
-            fn cl_type() -> odra::types::casper_types::CLType {
-                odra::types::casper_types::CLType::U32
+        impl odra::types::CLTyped for #enum_ident {
+            fn cl_type() -> odra::types::CLType {
+                odra::types::CLType::U32
             }
         }
     }

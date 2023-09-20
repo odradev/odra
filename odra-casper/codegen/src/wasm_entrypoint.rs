@@ -1,6 +1,6 @@
 use odra_types::{
-    casper_types::CLType,
-    contract_def::{Entrypoint, EntrypointType}
+    contract_def::{Entrypoint, EntrypointType},
+    CLType
 };
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};

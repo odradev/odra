@@ -63,7 +63,7 @@ where
 
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
-    use odra_types::casper_types::U256;
+    use odra_types::U256;
 
     use crate::{sequence::Sequence, StaticInstance};
 

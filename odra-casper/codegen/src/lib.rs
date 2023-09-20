@@ -132,8 +132,8 @@ macro_rules! gen_contract {
 
 #[cfg(test)]
 mod tests {
-    use odra_types::casper_types::CLType;
     use odra_types::contract_def::{Argument, ContractBlueprint, Entrypoint, EntrypointType};
+    use odra_types::CLType;
     use quote::quote;
 
     use super::{assert_eq_tokens, gen_contract};
@@ -193,9 +193,9 @@ mod tests {
                     entry_points.add_entry_point(odra::types::casper_types::EntryPoint::new(
                         "construct_me",
                         alloc::vec![
-                            odra::types::casper_types::Parameter::new("value", odra::types::casper_types::CLType::I32)
+                            odra::types::casper_types::Parameter::new("value", odra::types::CLType::I32)
                         ],
-                        odra::types::casper_types::CLType::Unit,
+                        odra::types::CLType::Unit,
                         odra::types::casper_types::EntryPointAccess::Groups(alloc::vec![
                             odra::types::casper_types::Group::new("constructor_group")
                         ]),
@@ -204,7 +204,7 @@ mod tests {
                     entry_points.add_entry_point(odra::types::casper_types::EntryPoint::new(
                         "call_me",
                         alloc::vec![],
-                        odra::types::casper_types::CLType::Bool,
+                        odra::types::CLType::Bool,
                         odra::types::casper_types::EntryPointAccess::Public,
                         odra::types::casper_types::EntryPointType::Contract,
                     ));

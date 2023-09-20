@@ -47,7 +47,7 @@ impl ToTokens for Method {
 
                 let (ty, is_slice) = utils::ty(arg);
                 let is_ref = utils::is_ref(arg);
-                let ty = quote!(<#ty as odra::types::casper_types::CLTyped>::cl_type());
+                let ty = quote!(<#ty as odra::types::CLTyped>::cl_type());
                 quote! {
                     odra::types::contract_def::Argument {
                         ident: odra::prelude::string::String::from(stringify!(#name)),
@@ -60,9 +60,9 @@ impl ToTokens for Method {
             .collect::<proc_macro2::TokenStream>();
 
         let ret = match &self.ret {
-            syn::ReturnType::Default => quote!(odra::types::casper_types::CLType::Unit),
+            syn::ReturnType::Default => quote!(odra::types::CLType::Unit),
             syn::ReturnType::Type(_, ty) => {
-                quote!(<#ty as odra::types::casper_types::CLTyped>::cl_type())
+                quote!(<#ty as odra::types::CLTyped>::cl_type())
             }
         };
 

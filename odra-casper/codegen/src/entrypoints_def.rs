@@ -69,7 +69,7 @@ impl ToTokens for EntrypointParams<'_> {
 
 #[cfg(test)]
 mod test {
-    use odra_types::casper_types::CLType;
+    use odra_types::CLType;
 
     use super::*;
     use crate::assert_eq_tokens;
@@ -98,8 +98,8 @@ mod test {
                 entry_points.add_entry_point(
                     odra::types::casper_types::EntryPoint::new(
                         "call_me",
-                        alloc::vec![odra::types::casper_types::Parameter::new("value", odra::types::casper_types::CLType::I32)],
-                        odra::types::casper_types::CLType::Bool,
+                        alloc::vec![odra::types::casper_types::Parameter::new("value", odra::types::CLType::I32)],
+                        odra::types::CLType::Bool,
                         odra::types::casper_types::EntryPointAccess::Public,
                         odra::types::casper_types::EntryPointType::Contract,
                     )

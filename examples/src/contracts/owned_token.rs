@@ -1,7 +1,7 @@
 use odra::{
     contract_env,
     prelude::string::String,
-    types::{casper_types::U256, Address}
+    types::{Address, U256}
 };
 use odra_modules::access::Ownable;
 use odra_modules::erc20::Erc20;

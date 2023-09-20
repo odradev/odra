@@ -20,7 +20,7 @@ impl ToTokens for CasperArgs<'_> {
 
 #[cfg(test)]
 mod tests {
-    use odra_types::casper_types::CLType;
+    use odra_types::CLType;
 
     use super::*;
     use crate::assert_eq_tokens;

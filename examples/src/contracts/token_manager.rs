@@ -1,6 +1,6 @@
 use odra::{
     prelude::string::String,
-    types::{casper_types::U256, Address},
+    types::{Address, U256},
     Mapping, Variable
 };
 

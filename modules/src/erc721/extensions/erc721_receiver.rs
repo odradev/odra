@@ -1,7 +1,7 @@
 //! Erc721 receiver.
 use odra::{
     prelude::vec::Vec,
-    types::{casper_types::U256, Address}
+    types::{Address, U256}
 };
 
 /// The ERC721 receiver interface.

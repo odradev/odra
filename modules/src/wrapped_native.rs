@@ -4,10 +4,9 @@ use odra::{
     contract_env,
     prelude::{format, string::String},
     types::{
-        casper_types::U256,
         event::OdraEvent,
         uints::{ToU256, ToU512},
-        Address
+        Address, U256
     },
     UnwrapOrRevert
 };
@@ -119,9 +118,8 @@ mod tests {
         prelude::format,
         test_env,
         types::{
-            casper_types::{U256, U512},
             uints::{ToU256, ToU512},
-            Address, OdraError, VmError
+            Address, OdraError, VmError, U256, U512
         }
     };
 

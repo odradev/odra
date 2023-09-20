@@ -4,7 +4,7 @@ use crate::erc721_receiver::events::Received;
 use crate::erc721_token::Erc721TokenRef;
 use odra::contract_env::{caller, self_address};
 use odra::types::casper_types::bytesrepr::Bytes;
-use odra::types::casper_types::U256;
+use odra::types::U256;
 use odra::types::{event::OdraEvent, Address};
 
 /// The ERC721 receiver implementation.

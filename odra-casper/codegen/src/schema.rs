@@ -1,6 +1,6 @@
 use odra_types::{
-    casper_types::CLType,
-    contract_def::{Argument, Entrypoint, Event}
+    contract_def::{Argument, Entrypoint, Event},
+    CLType
 };
 use serde::{Deserialize, Serialize};
 

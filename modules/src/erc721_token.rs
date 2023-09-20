@@ -5,9 +5,9 @@ use crate::erc721::events::Transfer;
 use odra::contract_env::{caller, revert};
 use odra::prelude::string::String;
 use odra::types::casper_types::bytesrepr::Bytes;
-use odra::types::casper_types::U256;
 use odra::types::event::OdraEvent;
 use odra::types::Address;
+use odra::types::U256;
 
 use crate::erc721::erc721_base::Erc721Base;
 use crate::erc721::extensions::erc721_metadata::{Erc721Metadata, Erc721MetadataExtension};
@@ -153,8 +153,8 @@ mod tests {
     use crate::erc721_receiver::Erc721ReceiverDeployer;
     use odra::prelude::string::ToString;
     use odra::test_env::assert_exception;
-    use odra::types::casper_types::U256;
     use odra::types::VmError::NoSuchMethod;
+    use odra::types::U256;
     use odra::types::{Address, OdraAddress, OdraError};
     use odra::{assert_events, test_env};
 

@@ -73,8 +73,8 @@ impl ToTokens for WasmConstructor<'_> {
 #[cfg(test)]
 mod tests {
     use odra_types::{
-        casper_types::CLType,
-        contract_def::{Argument, EntrypointType}
+        contract_def::{Argument, EntrypointType},
+        CLType
     };
 
     use crate::assert_eq_tokens;

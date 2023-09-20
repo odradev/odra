@@ -7,10 +7,7 @@ use crate::erc721_receiver::Erc721ReceiverRef;
 use odra::contract_env::{caller, revert};
 use odra::types::event::OdraEvent;
 use odra::types::OdraAddress;
-use odra::types::{
-    casper_types::{bytesrepr::Bytes, U256},
-    Address
-};
+use odra::types::{casper_types::bytesrepr::Bytes, Address, U256};
 use odra::{Mapping, UnwrapOrRevert};
 
 /// The ERC721 base implementation.

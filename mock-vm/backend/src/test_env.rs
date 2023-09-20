@@ -90,8 +90,6 @@ pub fn get_event<T: FromBytes + OdraEvent>(address: Address, index: i32) -> Resu
 
     bytes.and_then(|bytes| {
         let event_name = extract_event_name(&bytes)?;
-        dbg!(&event_name);
-        dbg!(T::name());
         if event_name == format!("event_{}", T::name()) {
             T::from_bytes(&bytes)
                 .map_err(|_| EventError::Parsing)

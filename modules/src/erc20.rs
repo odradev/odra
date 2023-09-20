@@ -1,7 +1,7 @@
 use odra::prelude::string::String;
 use odra::{
     contract_env,
-    types::{casper_types::U256, event::OdraEvent, Address},
+    types::{event::OdraEvent, Address, U256},
     Mapping, UnwrapOrRevert, Variable
 };
 

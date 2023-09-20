@@ -420,11 +420,8 @@ mod tests {
 
     use casper_hashing::Digest;
     use odra_types::{
-        casper_types::{
-            bytesrepr::{FromBytes, ToBytes},
-            U256
-        },
-        Address
+        casper_types::bytesrepr::{FromBytes, ToBytes},
+        Address, U256
     };
 
     use crate::casper_node_port::DeployHash;
