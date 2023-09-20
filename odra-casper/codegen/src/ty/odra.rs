@@ -1,11 +1,11 @@
-use odra_types::Type;
+use odra_types::CLType;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
-pub struct OdraType<'a>(&'a Type);
+pub struct OdraType<'a>(&'a CLType);
 
-impl<'a> From<&'a Type> for OdraType<'a> {
-    fn from(value: &'a Type) -> Self {
+impl<'a> From<&'a CLType> for OdraType<'a> {
+    fn from(value: &'a CLType) -> Self {
         OdraType(value)
     }
 }
@@ -13,58 +13,55 @@ impl<'a> From<&'a Type> for OdraType<'a> {
 impl ToTokens for OdraType<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let stream = match &self.0 {
-            Type::Bool => quote!(bool),
-            Type::I32 => quote!(i32),
-            Type::I64 => quote!(i64),
-            Type::U8 => quote!(u8),
-            Type::U32 => quote!(u32),
-            Type::U64 => quote!(u64),
-            Type::U128 => quote!(odra::types::U128),
-            Type::U256 => quote!(odra::types::U256),
-            Type::U512 => quote!(odra::types::U512),
-            Type::Unit => quote!(()),
-            Type::String => quote!(String),
-            Type::Address => quote!(odra::types::Address),
-            Type::PublicKey => quote!(odra::types::PublicKey),
-            Type::Option(ty) => {
+            CLType::Bool => quote!(bool),
+            CLType::I32 => quote!(i32),
+            CLType::I64 => quote!(i64),
+            CLType::U8 => quote!(u8),
+            CLType::U32 => quote!(u32),
+            CLType::U64 => quote!(u64),
+            CLType::U128 => quote!(odra::types::U128),
+            CLType::U256 => quote!(odra::types::U256),
+            CLType::U512 => quote!(odra::types::U512),
+            CLType::Unit => quote!(()),
+            CLType::String => quote!(odra::prelude::string::String),
+            CLType::Key => quote!(odra::types::Address),
+            CLType::PublicKey => quote!(odra::types::PublicKey),
+            CLType::Option(ty) => {
                 let ty = OdraType(ty);
                 quote!(Option<#ty>)
             }
-            Type::Any => quote!(Any),
-            Type::Vec(ty) => {
+            CLType::Any => quote!(Any),
+            CLType::List(ty) => {
                 let ty = OdraType(ty);
-                quote!(Vec<#ty>)
+                quote!(odra::prelude::vec::Vec<#ty>)
             }
-            Type::Result { ok, err } => {
+            CLType::Result { ok, err } => {
                 let ok = OdraType(ok);
                 let err = OdraType(err);
                 quote!(Result<#ok, #err>)
             }
-            Type::Map { key, value } => {
+            CLType::Map { key, value } => {
                 let key = OdraType(key);
                 let value = OdraType(value);
-                quote!(std::collections::BTreeMap<#key, #value>)
+                quote!(odra::prelude::collections::BTreeMap<#key, #value>)
             }
-            Type::Tuple1(ty) => {
+            CLType::Tuple1(ty) => {
                 let ty = OdraType(ty.get(0).unwrap());
                 quote!((#ty,))
             }
-            Type::Tuple2(ty) => {
+            CLType::Tuple2(ty) => {
                 let t1 = OdraType(ty.get(0).unwrap());
                 let t2 = OdraType(ty.get(1).unwrap());
                 quote!((#t1, #t2))
             }
-            Type::Tuple3(ty) => {
+            CLType::Tuple3(ty) => {
                 let t1 = OdraType(ty.get(0).unwrap());
                 let t2 = OdraType(ty.get(1).unwrap());
                 let t3 = OdraType(ty.get(2).unwrap());
                 quote!((#t1, #t2, #t3))
             }
-            Type::ByteArray(b) => quote!([u8; #b]),
-            Type::Slice(ty) => {
-                let value = OdraType(ty);
-                quote!(Vec<#value>)
-            }
+            CLType::ByteArray(b) => quote!([u8; #b]),
+            CLType::URef => todo!()
         };
         tokens.extend(stream);
     }
@@ -78,28 +75,28 @@ mod tests {
 
     #[test]
     fn test_bool() {
-        let odra_type = OdraType(&Type::Bool);
+        let odra_type = OdraType(&CLType::Bool);
         let expected = quote!(bool);
         assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
     fn test_i32() {
-        let odra_type = OdraType(&Type::I32);
+        let odra_type = OdraType(&CLType::I32);
         let expected = quote!(i32);
         assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
     fn test_u256() {
-        let odra_type = OdraType(&Type::U256);
+        let odra_type = OdraType(&CLType::U256);
         let expected = quote!(odra::types::U256);
         assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
     fn test_option() {
-        let ty = Type::Option(Box::new(Type::Bool));
+        let ty = CLType::Option(Box::new(CLType::Bool));
         let odra_type = OdraType(&ty);
         let expected = quote!(Option<bool>);
         assert_eq_tokens(odra_type, expected);
@@ -107,37 +104,38 @@ mod tests {
 
     #[test]
     fn test_vec() {
-        let ty = Type::Vec(Box::new(Type::Bool));
+        let ty = CLType::List(Box::new(CLType::Bool));
         let odra_type = OdraType(&ty);
-        let expected = quote!(Vec<bool>);
+        let expected = quote!(odra::prelude::vec::Vec<bool>);
         assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
     fn test_result() {
-        let ty = Type::Result {
-            ok: Box::new(Type::Bool),
-            err: Box::new(Type::U8)
+        let ty = CLType::Result {
+            ok: Box::new(CLType::Bool),
+            err: Box::new(CLType::U8)
         };
         let odra_type = OdraType(&ty);
-        let expected = quote!(Result < bool , u8 >);
+        let expected = quote!(Result<bool, u8>);
         assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
     fn test_map() {
-        let ty = Type::Map {
-            key: Box::new(Type::String),
-            value: Box::new(Type::I32)
+        let ty = CLType::Map {
+            key: Box::new(CLType::String),
+            value: Box::new(CLType::I32)
         };
         let odra_type = OdraType(&ty);
-        let expected = quote!(std :: collections :: BTreeMap < String , i32 >);
+        let expected =
+            quote!(odra::prelude::collections::BTreeMap<odra::prelude::string::String, i32>);
         assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
     fn test_tuple1() {
-        let ty = Type::Tuple1([Box::new(Type::I32)]);
+        let ty = CLType::Tuple1([Box::new(CLType::I32)]);
         let odra_type = OdraType(&ty);
         let expected = quote!((i32,));
         assert_eq_tokens(odra_type, expected);
@@ -145,7 +143,7 @@ mod tests {
 
     #[test]
     fn test_tuple2() {
-        let ty = Type::Tuple2([Box::new(Type::I32), Box::new(Type::Bool)]);
+        let ty = CLType::Tuple2([Box::new(CLType::I32), Box::new(CLType::Bool)]);
         let odra_type = OdraType(&ty);
         let expected = quote!((i32, bool));
         assert_eq_tokens(odra_type, expected);
@@ -153,10 +151,10 @@ mod tests {
 
     #[test]
     fn test_tuple3() {
-        let ty = Type::Tuple3([
-            Box::new(Type::I32),
-            Box::new(Type::Bool),
-            Box::new(Type::U8)
+        let ty = CLType::Tuple3([
+            Box::new(CLType::I32),
+            Box::new(CLType::Bool),
+            Box::new(CLType::U8)
         ]);
         let odra_type = OdraType(&ty);
         let expected = quote!((i32, bool, u8));
@@ -165,60 +163,63 @@ mod tests {
 
     #[test]
     fn test_byte_array() {
-        let odra_type = OdraType(&Type::ByteArray(32));
+        let odra_type = OdraType(&CLType::ByteArray(32));
         let expected = quote!([u8; 32u32]);
         assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
-    fn test_slice() {
-        let ty = Type::Slice(Box::new(Type::Bool));
-        let odra_type = OdraType(&ty);
-        let expected = quote!(Vec<bool>);
-        assert_eq_tokens(odra_type, expected);
-    }
-
-    #[test]
     fn test_complex_option() {
-        let ty = Type::Option(Box::new(Type::Vec(Box::new(Type::I32))));
+        let ty = CLType::Option(Box::new(CLType::List(Box::new(CLType::I32))));
         let odra_type = OdraType(&ty);
 
-        let expected = quote!(Option<Vec<i32>>);
+        let expected = quote!(Option<odra::prelude::vec::Vec<i32>>);
 
         assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
     fn test_complex_vec() {
-        let ty = Type::Vec(Box::new(Type::Option(Box::new(Type::U8))));
+        let ty = CLType::List(Box::new(CLType::Option(Box::new(CLType::U8))));
         let odra_type = OdraType(&ty);
-        let expected = quote!(Vec<Option<u8>>);
+        let expected = quote!(odra::prelude::vec::Vec<Option<u8>>);
         assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
     fn test_complex_map() {
-        let ty = Type::Map {
-            key: Box::new(Type::String),
-            value: Box::new(Type::Option(Box::new(Type::Vec(Box::new(Type::Bool)))))
+        let ty = CLType::Map {
+            key: Box::new(CLType::String),
+            value: Box::new(CLType::Option(Box::new(CLType::List(Box::new(
+                CLType::Bool
+            )))))
         };
         let odra_type = OdraType(&ty);
-        let expected = quote!(std::collections::BTreeMap< String, Option< Vec< bool > > >);
+        let expected = quote!(odra::prelude::collections::BTreeMap< odra::prelude::string::String, Option< odra::prelude::vec::Vec< bool > > >);
         assert_eq_tokens(odra_type, expected);
     }
 
     #[test]
     fn test_complex_result() {
-        let ty = Type::Result {
-            ok: Box::new(Type::Vec(Box::new(Type::Option(Box::new(Type::I32))))),
-            err: Box::new(Type::Map {
-                key: Box::new(Type::String),
-                value: Box::new(Type::Vec(Box::new(Type::Bool)))
+        let ty = CLType::Result {
+            ok: Box::new(CLType::List(Box::new(CLType::Option(Box::new(
+                CLType::I32
+            ))))),
+            err: Box::new(CLType::Map {
+                key: Box::new(CLType::String),
+                value: Box::new(CLType::List(Box::new(CLType::Bool)))
             })
         };
         let odra_type = OdraType(&ty);
-        let expected =
-            quote!(Result<Vec<Option<i32>>, std::collections::BTreeMap<String, Vec<bool>>>);
+        let expected = quote!(
+            Result<
+                odra::prelude::vec::Vec<Option<i32>>,
+                odra::prelude::collections::BTreeMap<
+                    odra::prelude::string::String,
+                    odra::prelude::vec::Vec<bool>
+                >
+            >
+        );
         assert_eq_tokens(odra_type, expected);
     }
 }

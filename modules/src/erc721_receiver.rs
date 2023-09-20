@@ -3,7 +3,9 @@
 use crate::erc721_receiver::events::Received;
 use crate::erc721_token::Erc721TokenRef;
 use odra::contract_env::{caller, self_address};
-use odra::types::{event::OdraEvent, Address, Bytes, U256};
+use odra::types::casper_types::bytesrepr::Bytes;
+use odra::types::U256;
+use odra::types::{event::OdraEvent, Address};
 
 /// The ERC721 receiver implementation.
 #[odra::module]
@@ -31,7 +33,10 @@ impl erc721::extensions::erc721_receiver::Erc721Receiver for Erc721Receiver {
 
 /// Erc721Receiver-related events.
 pub mod events {
-    use odra::types::{Address, Bytes, U256};
+    use odra::types::{
+        casper_types::{bytesrepr::Bytes, U256},
+        Address
+    };
 
     /// Emitted when the transfer is accepted by the contract.
     #[derive(odra::Event, PartialEq, Eq, Debug, Clone)]

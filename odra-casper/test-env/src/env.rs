@@ -17,20 +17,19 @@ use casper_execution_engine::core::engine_state::{
     self, run_genesis_request::RunGenesisRequest, GenesisAccount
 };
 pub use casper_execution_engine::core::execution::Error as CasperExecutionError;
-use casper_types::{
-    account::{Account, AccountHash},
-    bytesrepr::{Bytes, FromBytes, ToBytes},
-    runtime_args, ApiError, Contract, ContractHash, ContractPackageHash, Key, Motes, PublicKey,
-    RuntimeArgs, SecretKey, StoredValue, URef, U512
-};
 use odra_casper_shared::consts::{
     self, AMOUNT_ARG, ARGS_ARG, ATTACHED_VALUE_ARG, CONTRACT_PACKAGE_HASH_ARG, ENTRY_POINT_ARG,
     RESULT_KEY
 };
-use odra_casper_types::{Address, BlockTime, CallArgs, OdraType};
 use odra_types::{
+    casper_types::{
+        account::{Account, AccountHash},
+        bytesrepr::{Bytes, FromBytes, ToBytes},
+        runtime_args, ApiError, CLTyped, Contract, ContractHash, ContractPackageHash, Key, Motes,
+        PublicKey, RuntimeArgs, SecretKey, StoredValue, URef, U512
+    },
     event::{EventError, OdraEvent},
-    ExecutionError, OdraError, VmError
+    Address, BlockTime, ExecutionError, OdraError, VmError
 };
 
 use crate::debug;
@@ -109,7 +108,7 @@ impl CasperTestEnv {
     }
 
     /// Deploy WASM file with args.
-    pub fn deploy_contract(&mut self, wasm_path: &str, args: &CallArgs) {
+    pub fn deploy_contract(&mut self, wasm_path: &str, args: &RuntimeArgs) {
         self.error = None;
         let mut session_code = PathBuf::from(wasm_path);
         if let Ok(path) = env::var(ODRA_WASM_PATH_ENV_KEY) {
@@ -126,7 +125,7 @@ impl CasperTestEnv {
             .with_empty_payment_bytes(runtime_args! {ARG_AMOUNT => *DEFAULT_PAYMENT})
             .with_authorization_keys(&[self.active_account_hash()])
             .with_address(self.active_account_hash())
-            .with_session_code(session_code, args.as_casper_runtime_args().clone())
+            .with_session_code(session_code, args.clone())
             .with_deploy_hash(self.next_hash())
             .build();
 
@@ -142,11 +141,11 @@ impl CasperTestEnv {
     }
 
     /// Call contract.
-    pub fn call_contract<T: OdraType>(
+    pub fn call_contract<T: CLTyped + FromBytes + ToBytes>(
         &mut self,
         hash: ContractPackageHash,
         entry_point: &str,
-        args: &CallArgs
+        args: &RuntimeArgs
     ) -> T {
         self.error = None;
 
@@ -228,7 +227,7 @@ impl CasperTestEnv {
     }
 
     /// Read a value from Account's named keys.
-    pub fn get_account_value<T: OdraType>(
+    pub fn get_account_value<T: CLTyped + FromBytes + ToBytes>(
         &self,
         hash: AccountHash,
         name: &str
@@ -256,7 +255,7 @@ impl CasperTestEnv {
     }
 
     /// Returns an event from the given contract.
-    pub fn get_event<T: OdraType + OdraEvent>(
+    pub fn get_event<T: FromBytes + OdraEvent>(
         &self,
         address: Address,
         index: i32
@@ -369,7 +368,7 @@ impl CasperTestEnv {
     /// Cryptographically signs a message as a given account.
     pub fn sign_message(&self, message: &Bytes, address: &Address) -> Bytes {
         let (secret_key, public_key) = self.key_pairs.get(address).unwrap();
-        let signature = casper_types::crypto::sign(message, secret_key, public_key)
+        let signature = odra_types::casper_types::crypto::sign(message, secret_key, public_key)
             .to_bytes()
             .unwrap();
         Bytes::from(signature)
@@ -412,9 +411,9 @@ impl CasperTestEnv {
         *self.active_account.as_account_hash().unwrap()
     }
 
-    fn get_active_account_result<T: OdraType>(&self) -> T {
+    fn get_active_account_result<T: CLTyped + FromBytes>(&self) -> T {
         let active_account = self.active_account_hash();
-        let bytes: casper_types::bytesrepr::Bytes = self
+        let bytes: Bytes = self
             .get_account_value(active_account, RESULT_KEY)
             .unwrap_or_default();
         T::from_bytes(bytes.inner_bytes()).unwrap().0

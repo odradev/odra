@@ -1,5 +1,5 @@
-use casper_types::{ContractHash, URef};
 use datasize::DataSize;
+use odra_types::casper_types::{ContractHash, URef};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

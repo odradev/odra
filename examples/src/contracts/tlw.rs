@@ -1,12 +1,12 @@
 use odra::{
     contract_env, execution_error,
-    types::{event::OdraEvent, Address, Balance, BlockTime},
+    types::{casper_types::U512, event::OdraEvent, Address, BlockTime},
     Mapping, Variable
 };
 
 #[odra::module]
 pub struct TimeLockWallet {
-    balances: Mapping<Address, Balance>,
+    balances: Mapping<Address, U512>,
     lock_expiration_map: Mapping<Address, BlockTime>,
     lock_duration: Variable<BlockTime>
 }
@@ -22,7 +22,7 @@ impl TimeLockWallet {
     pub fn deposit(&mut self) {
         // Extract values
         let caller: Address = contract_env::caller();
-        let amount: Balance = contract_env::attached_value();
+        let amount: U512 = contract_env::attached_value();
         let current_block_time: BlockTime = contract_env::get_block_time();
 
         // Multiple lock check
@@ -41,11 +41,11 @@ impl TimeLockWallet {
         .emit();
     }
 
-    pub fn withdraw(&mut self, amount: &Balance) {
+    pub fn withdraw(&mut self, amount: &U512) {
         // Extract values
         let caller: Address = contract_env::caller();
         let current_block_time: BlockTime = contract_env::get_block_time();
-        let balance: Balance = self.balances.get_or_default(&caller);
+        let balance: U512 = self.balances.get_or_default(&caller);
 
         // Balance check
         if *amount > balance {
@@ -68,7 +68,7 @@ impl TimeLockWallet {
         .emit();
     }
 
-    pub fn get_balance(&self, address: &Address) -> Balance {
+    pub fn get_balance(&self, address: &Address) -> U512 {
         self.balances.get_or_default(address)
     }
 
@@ -93,20 +93,20 @@ execution_error! {
 
 pub struct Deposit {
     pub address: Address,
-    pub amount: Balance
+    pub amount: U512
 }
 
 #[derive(odra::Event, PartialEq, Eq, Debug)]
 pub struct Withdrawal {
     pub address: Address,
-    pub amount: Balance
+    pub amount: U512
 }
 
 #[cfg(test)]
 mod test {
     use odra::{
         assert_events, test_env,
-        types::{Address, Balance}
+        types::{casper_types::U512, Address}
     };
 
     use crate::contracts::tlw::{Deposit, Withdrawal};
@@ -129,7 +129,7 @@ mod test {
         let (contract, user_1, user_2) = setup();
 
         // Helper method for a single deposit.
-        let single_deposit = |account: Address, deposit: Balance| {
+        let single_deposit = |account: Address, deposit: U512| {
             let balance = test_env::token_balance(account);
             test_env::set_caller(account);
             contract.with_tokens(deposit).deposit();
@@ -139,10 +139,10 @@ mod test {
         };
 
         // When two users deposit some tokens.
-        let user_1_deposit: Balance = 100.into();
+        let user_1_deposit: U512 = 100.into();
         single_deposit(user_1, user_1_deposit);
 
-        let user_2_deposit: Balance = 200.into();
+        let user_2_deposit: U512 = 200.into();
         single_deposit(user_2, user_2_deposit);
 
         // Then the users' balance is the contract is equal to the deposited amount.
@@ -170,7 +170,7 @@ mod test {
             let (contract, _, _) = setup();
 
             // The user makes the first deposit.
-            let deposit: Balance = 100.into();
+            let deposit: U512 = 100.into();
             contract.with_tokens(deposit).deposit();
 
             // When the user tries to deposit tokens for the second time, an error occurs.
@@ -182,14 +182,14 @@ mod test {
     fn test_successful_withdrawal() {
         // Given a contract with the user's deposit.
         let (mut contract, user, _) = setup();
-        let deposit_amount: Balance = 100.into();
+        let deposit_amount: U512 = 100.into();
         contract.with_tokens(deposit_amount).deposit();
 
         // When the user makes two token withdrawals after the lock is expired.
         test_env::advance_block_time_by(ONE_DAY_IN_SECONDS + 1);
         let balance_before_withdrawals = test_env::token_balance(user);
-        let first_withdrawal_amount: Balance = 50.into();
-        let second_withdrawal_amount: Balance = 40.into();
+        let first_withdrawal_amount: U512 = 50.into();
+        let second_withdrawal_amount: U512 = 40.into();
         contract.withdraw(&first_withdrawal_amount);
         let mut gas_used = test_env::last_call_contract_gas_used();
         contract.withdraw(&second_withdrawal_amount);

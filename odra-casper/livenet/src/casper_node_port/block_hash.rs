@@ -1,8 +1,8 @@
 use std::fmt;
 
 use casper_hashing::Digest;
-use casper_types::bytesrepr::{self, FromBytes, ToBytes};
 use datasize::DataSize;
+use odra_types::casper_types::bytesrepr::{self, FromBytes, ToBytes};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

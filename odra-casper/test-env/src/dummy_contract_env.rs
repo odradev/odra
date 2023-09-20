@@ -1,8 +1,8 @@
-use casper_types::bytesrepr::Bytes;
-use casper_types::PublicKey;
 use odra_casper_shared::native_token::NativeTokenMetadata;
-use odra_casper_types::{Address, Balance, BlockTime, OdraType};
+use odra_types::casper_types::bytesrepr::{Bytes, FromBytes, ToBytes};
+use odra_types::casper_types::U512;
 use odra_types::{event::OdraEvent, ExecutionError};
+use odra_types::{Address, BlockTime, PublicKey};
 
 pub fn self_address() -> Address {
     unimplemented!()
@@ -12,25 +12,25 @@ pub fn caller() -> Address {
     unimplemented!()
 }
 
-pub fn set_var<T: OdraType>(_: &[u8], _: T) {
+pub fn set_var<T: ToBytes>(_: &[u8], _: T) {
     unimplemented!()
 }
 
-pub fn get_var<T: OdraType>(_: &[u8]) -> Option<T> {
+pub fn get_var<T: FromBytes>(_: &[u8]) -> Option<T> {
     unimplemented!()
 }
 
-pub fn set_dict_value<K: OdraType, V: OdraType>(_: &[u8], _: &K, _: V) {
+pub fn set_dict_value<K: ToBytes, V: ToBytes>(_: &[u8], _: &K, _: V) {
     unimplemented!()
 }
 
-pub fn get_dict_value<K: OdraType, T: OdraType>(_: &[u8], _: &K) -> Option<T> {
+pub fn get_dict_value<K: ToBytes, T: FromBytes>(_: &[u8], _: &K) -> Option<T> {
     unimplemented!()
 }
 
 pub fn emit_event<T>(_: T)
 where
-    T: OdraType + OdraEvent
+    T: ToBytes + OdraEvent
 {
     unimplemented!()
 }
@@ -46,19 +46,19 @@ pub fn get_block_time() -> BlockTime {
     unimplemented!()
 }
 
-pub fn attached_value() -> Balance {
+pub fn attached_value() -> U512 {
     unimplemented!()
 }
 
-pub fn one_token() -> Balance {
+pub fn one_token() -> U512 {
     unimplemented!()
 }
 
-pub fn transfer_tokens<B: Into<Balance>>(_: &Address, _: B) {
+pub fn transfer_tokens<B: Into<U512>>(_: &Address, _: B) {
     unimplemented!()
 }
 
-pub fn self_balance() -> Balance {
+pub fn self_balance() -> U512 {
     unimplemented!()
 }
 

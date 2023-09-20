@@ -1,13 +1,12 @@
 //! Utility functions that allow to write more compact tests.
 
-use crate::types::{Address, OdraType};
-use odra_types::{self, event::OdraEvent};
+use odra_types::{self, casper_types::bytesrepr::FromBytes, event::OdraEvent, Address};
 
 /// Gets the nth event emitted by the contract at `address`.
 ///
 /// If the passed index is out of bounds, or a deserialization error occurs,
 /// an error is returned.
-pub fn get_event<T: OdraType + OdraEvent>(
+pub fn get_event<T: FromBytes + OdraEvent>(
     contract_address: Address,
     at: i32
 ) -> Result<T, odra_types::event::EventError> {

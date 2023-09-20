@@ -76,7 +76,7 @@ pub fn derive_instance(input: TokenStream) -> TokenStream {
 ///     fn get(&self) -> u32;
 /// }
 ///
-/// let contract_address = odra::types::Address::try_from(b"address").unwrap();
+/// let contract_address = odra::types::Address::try_from(&[1u8; 33]).unwrap();
 /// // in your contract
 /// let getter = GetterRef::at(&contract_address);
 /// // let value = getter.get();
@@ -98,22 +98,6 @@ pub fn external_contract(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///     pub value: u32,
 /// }
 ///
-/// # extern crate alloc;
-/// # impl odra::types::mock_vm::borsh::BorshSerialize for ValueUpdated {
-/// #    fn serialize<W: odra::types::mock_vm::borsh::Write>(&self, writer: &mut W) -> odra::types::mock_vm::borsh::Result<()> {
-/// #        odra::types::mock_vm::borsh::BorshSerialize::serialize("ValueUpdated", writer)?;
-/// #        odra::types::mock_vm::borsh::BorshSerialize::serialize(&self.value, writer)?;
-/// #        Ok(())
-/// #    }
-/// # }
-/// # impl odra::types::mock_vm::borsh::BorshDeserialize for ValueUpdated {
-/// #    fn deserialize(buf: &mut &[u8]) -> odra::types::Result<Self> {
-/// #        let _ = <String as odra::types::mock_vm::borsh::BorshDeserialize>::deserialize(buf)?;
-/// #        Ok(Self {
-/// #            value: odra::types::mock_vm::borsh::BorshDeserialize::deserialize(buf)?,
-/// #        })
-/// #    }
-/// # }
 /// let event = ValueUpdated { value: 42 };
 ///
 /// assert_eq!(&<ValueUpdated as odra::types::event::OdraEvent>::name(), "ValueUpdated");

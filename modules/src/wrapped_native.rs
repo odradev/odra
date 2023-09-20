@@ -3,7 +3,11 @@ use crate::erc20::Erc20;
 use odra::{
     contract_env,
     prelude::{format, string::String},
-    types::{event::OdraEvent, Address, U256},
+    types::{
+        event::OdraEvent,
+        uints::{ToU256, ToU512},
+        Address, U256
+    },
     UnwrapOrRevert
 };
 
@@ -25,6 +29,7 @@ impl WrappedNativeToken {
     #[odra(payable)]
     pub fn deposit(&mut self) {
         let caller = contract_env::caller();
+
         let amount = contract_env::attached_value().to_u256().unwrap_or_revert();
 
         self.erc20.mint(&caller, &amount);
@@ -40,7 +45,7 @@ impl WrappedNativeToken {
         let caller = contract_env::caller();
 
         self.erc20.burn(&caller, amount);
-        let balance = amount.to_balance().unwrap_or_revert();
+        let balance = amount.to_u512();
         contract_env::transfer_tokens(&caller, balance);
 
         Withdrawal {
@@ -89,7 +94,7 @@ impl WrappedNativeToken {
 
 pub mod events {
     use odra::{
-        types::{Address, U256},
+        types::{casper_types::U256, Address},
         Event
     };
 
@@ -112,7 +117,10 @@ mod tests {
         assert_events,
         prelude::format,
         test_env,
-        types::{Address, Balance, OdraError, VmError, U256}
+        types::{
+            uints::{ToU256, ToU512},
+            Address, OdraError, VmError, U256, U512
+        }
     };
 
     use crate::{
@@ -123,7 +131,7 @@ mod tests {
         }
     };
 
-    fn setup() -> (WrappedNativeTokenRef, Address, Balance, Address, Balance) {
+    fn setup() -> (WrappedNativeTokenRef, Address, U512, Address, U512) {
         let token: WrappedNativeTokenRef = WrappedNativeTokenDeployer::init();
         let account_1 = test_env::get_account(0);
         let account_1_balance = test_env::token_balance(account_1);
@@ -216,7 +224,7 @@ mod tests {
             let (token, _, balance, _, _) = setup();
             // When the deposit amount exceeds the user's balance
             // Then an error occurs.
-            token.with_tokens(balance + Balance::one()).deposit();
+            token.with_tokens(balance + U512::one()).deposit();
         });
     }
 
@@ -224,7 +232,7 @@ mod tests {
     fn test_withdrawal() {
         // Deposit some tokens in the contract.
         let (mut token, account, _, _, _) = setup();
-        let deposit_amount: Balance = 3_000.into();
+        let deposit_amount: U512 = 3_000.into();
         token.with_tokens(deposit_amount).deposit();
         let account_balance = test_env::token_balance(account);
 
@@ -235,7 +243,7 @@ mod tests {
         // Then the user has the withdrawn tokens back.
         let gas_used = test_env::last_call_contract_gas_used();
         assert_eq!(
-            account_balance - gas_used + withdrawal_amount.to_balance().unwrap(),
+            account_balance - gas_used + withdrawal_amount.to_u512(),
             test_env::token_balance(account)
         );
         // Then the balance in the contract is deducted.

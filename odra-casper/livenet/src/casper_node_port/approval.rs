@@ -1,10 +1,10 @@
 use std::fmt;
 
-use casper_types::{
+use datasize::DataSize;
+use odra_types::casper_types::{
     bytesrepr::{self, FromBytes, ToBytes},
     crypto, PublicKey, SecretKey, Signature
 };
-use datasize::DataSize;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

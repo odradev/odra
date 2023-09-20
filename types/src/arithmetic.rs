@@ -1,4 +1,6 @@
 //! Safe, overflowing addition and subtraction utilities.
+use casper_types::{U128, U256, U512};
+
 use crate::ExecutionError;
 
 /// Overflowing addition, returning the result of addition or [ArithmeticsError::AdditionOverflow].
@@ -50,7 +52,7 @@ macro_rules! impl_overflowing_add_sub {
     };
 }
 
-impl_overflowing_add_sub!(u8, u16, u32, u64, i8, i16, i32, i64);
+impl_overflowing_add_sub!(u8, u16, u32, u64, i8, i16, i32, i64, U128, U256, U512);
 
 #[cfg(test)]
 mod test {

@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
 
-use odra_casper_types::{Address, CallArgs};
-use odra_types::{OdraError, VmError};
+use odra_types::{casper_types::RuntimeArgs, Address, OdraError, VmError};
 
 use crate::{EntrypointArgs, EntrypointCall};
 
@@ -22,7 +21,7 @@ impl ContractContainer {
         }
     }
 
-    pub fn call(&self, entrypoint: String, args: CallArgs) -> Result<Vec<u8>, OdraError> {
+    pub fn call(&self, entrypoint: String, args: RuntimeArgs) -> Result<Vec<u8>, OdraError> {
         match self.entrypoints.get(&entrypoint) {
             Some((ep_args, call)) => {
                 self.validate_args(ep_args, &args)?;
@@ -36,8 +35,11 @@ impl ContractContainer {
         self.address
     }
 
-    fn validate_args(&self, args: &[String], input_args: &CallArgs) -> Result<(), OdraError> {
-        let named_args = input_args.arg_names();
+    fn validate_args(&self, args: &[String], input_args: &RuntimeArgs) -> Result<(), OdraError> {
+        let named_args = input_args
+            .named_args()
+            .map(|arg| arg.name().to_owned())
+            .collect::<Vec<_>>();
 
         if args
             .iter()

@@ -1,6 +1,6 @@
 use odra_types::{
     contract_def::{Entrypoint, EntrypointType},
-    Type
+    CLType
 };
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
@@ -57,7 +57,7 @@ impl ToTokens for WasmEntrypoint<'_> {
         let contract_ident = contract_ident();
 
         let contract_call = match self.0.ret {
-            Type::Unit => quote! {
+            CLType::Unit => quote! {
                 #args
                 #contract_ident.#entrypoint_ident(#fn_args);
             },
@@ -65,12 +65,12 @@ impl ToTokens for WasmEntrypoint<'_> {
                 use odra::casper::casper_contract::unwrap_or_revert::UnwrapOrRevert;
                 #args
                 let result = #contract_ident.#entrypoint_ident(#fn_args);
-                let result = odra::casper::casper_types::CLValue::from_t(result).unwrap_or_revert();
+                let result = odra::types::casper_types::CLValue::from_t(result).unwrap_or_revert();
             }
         };
 
         let return_stmt = match self.0.ret {
-            Type::Unit => quote!(),
+            CLType::Unit => quote!(),
             _ => quote!(odra::casper::casper_contract::contract_api::runtime::ret(result);)
         };
 
@@ -110,10 +110,11 @@ mod tests {
             ident: String::from("construct_me"),
             args: vec![Argument {
                 ident: String::from("value"),
-                ty: Type::I32,
-                is_ref: true
+                ty: CLType::I32,
+                is_ref: true,
+                is_slice: false
             }],
-            ret: Type::Unit,
+            ret: CLType::Unit,
             ty: EntrypointType::Public {
                 non_reentrant: false
             },
@@ -144,7 +145,7 @@ mod tests {
         let entrypoint = Entrypoint {
             ident: String::from("pay_me"),
             args: vec![],
-            ret: Type::Unit,
+            ret: CLType::Unit,
             ty: EntrypointType::PublicPayable {
                 non_reentrant: false
             },
@@ -173,7 +174,7 @@ mod tests {
         let entrypoint = Entrypoint {
             ident: String::from("pay_me"),
             args: vec![],
-            ret: Type::Unit,
+            ret: CLType::Unit,
             ty: EntrypointType::PublicPayable {
                 non_reentrant: false
             },

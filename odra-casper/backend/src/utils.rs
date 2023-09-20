@@ -6,12 +6,13 @@ use casper_contract::{
     unwrap_or_revert::UnwrapOrRevert
 };
 use casper_event_standard::Schema;
-use casper_types::{
-    contracts::NamedKeys, CLType, ContractPackageHash, EntryPoints, Key, URef, U512
-};
 use odra_casper_shared::consts;
-use odra_casper_types::Balance;
-use odra_types::ExecutionError;
+use odra_types::{
+    casper_types::{
+        contracts::NamedKeys, CLType, ContractPackageHash, EntryPoints, Key, URef, U512
+    },
+    ExecutionError
+};
 
 use crate::{
     casper_env,
@@ -38,9 +39,9 @@ pub fn get_or_create_main_purse() -> URef {
 }
 
 /// Stores in memory the amount attached to the current call.
-pub fn set_attached_value(amount: Balance) {
+pub fn set_attached_value(amount: U512) {
     unsafe {
-        ATTACHED_VALUE = amount.inner();
+        ATTACHED_VALUE = amount;
     }
 }
 
@@ -64,7 +65,7 @@ pub fn handle_attached_value() {
         let contract_purse = get_or_create_main_purse();
         system::transfer_from_purse_to_purse(cargo_purse, contract_purse, amount, None)
             .unwrap_or_revert();
-        set_attached_value(amount.into());
+        set_attached_value(amount);
     } else {
         revert(ExecutionError::native_token_transfer_error())
     }
@@ -141,7 +142,7 @@ pub fn install_contract(
 }
 
 fn initial_named_keys(schemas: casper_event_standard::Schemas) -> NamedKeys {
-    let mut named_keys = casper_types::contracts::NamedKeys::new();
+    let mut named_keys = NamedKeys::new();
     named_keys.insert(
         String::from(consts::STATE_KEY),
         Key::URef(storage::new_dictionary(consts::STATE_KEY).unwrap_or_revert())

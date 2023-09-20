@@ -1,7 +1,7 @@
 //! Erc1155 standard implementation.
 use odra::{
     prelude::vec::Vec,
-    types::{Address, Bytes, U256}
+    types::{casper_types::bytesrepr::Bytes, Address, U256}
 };
 
 pub mod erc1155_base;

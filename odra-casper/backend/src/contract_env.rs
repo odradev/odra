@@ -6,12 +6,12 @@ use casper_contract::contract_api::runtime;
 use casper_contract::{
     contract_api::system::transfer_from_purse_to_account, unwrap_or_revert::UnwrapOrRevert
 };
-use casper_types::bytesrepr::{Bytes, FromBytes};
-use casper_types::U512;
 use core::ops::Deref;
 use odra_casper_shared::native_token::NativeTokenMetadata;
-use odra_casper_types::{Address, Balance, BlockTime, CallArgs, OdraType};
+use odra_types::casper_types::bytesrepr::{Bytes, FromBytes, ToBytes};
+use odra_types::casper_types::{crypto, CLTyped, RuntimeArgs, U512};
 use odra_types::{event::OdraEvent, ExecutionError};
+use odra_types::{Address, BlockTime};
 
 use crate::{casper_env, utils::get_or_create_main_purse};
 
@@ -37,25 +37,25 @@ pub fn self_address() -> Address {
 
 /// Store a value into the storage.
 #[inline(always)]
-pub fn set_var<T: OdraType>(key: &[u8], value: T) {
+pub fn set_var<T: CLTyped + ToBytes>(key: &[u8], value: T) {
     casper_env::set_key(key, value);
 }
 
 /// Read value from the storage.
 #[inline(always)]
-pub fn get_var<T: OdraType>(key: &[u8]) -> Option<T> {
+pub fn get_var<T: FromBytes>(key: &[u8]) -> Option<T> {
     casper_env::get_key(key)
 }
 
 /// Store the mapping value under a given key.
 #[inline(always)]
-pub fn set_dict_value<K: OdraType, V: OdraType>(dict: &[u8], key: &K, value: V) {
+pub fn set_dict_value<K: ToBytes, V: CLTyped + ToBytes>(dict: &[u8], key: &K, value: V) {
     casper_env::set_dict_value(dict, key, value);
 }
 
 /// Read value from the mapping.
 #[inline(always)]
-pub fn get_dict_value<K: OdraType, T: OdraType>(dict: &[u8], key: &K) -> Option<T> {
+pub fn get_dict_value<K: ToBytes, T: FromBytes>(dict: &[u8], key: &K) -> Option<T> {
     casper_env::get_dict_value(dict, key)
 }
 
@@ -72,18 +72,18 @@ where
 #[inline(always)]
 pub fn emit_event<T>(event: T)
 where
-    T: OdraType + OdraEvent
+    T: ToBytes + OdraEvent
 {
     casper_env::emit_event(event);
 }
 
 /// Call another contract.
 #[inline(always)]
-pub fn call_contract<T: OdraType>(
+pub fn call_contract<T: CLTyped + FromBytes>(
     address: Address,
     entrypoint: &str,
-    args: &CallArgs,
-    amount: Option<Balance>
+    args: &RuntimeArgs,
+    amount: Option<U512>
 ) -> T {
     let contract_package_hash = *address.as_contract_package_hash().unwrap_or_revert();
     if let Some(amount) = amount {
@@ -91,7 +91,7 @@ pub fn call_contract<T: OdraType>(
             contract_package_hash,
             entrypoint,
             args.deref().clone(),
-            amount.inner()
+            amount
         )
     } else {
         casper_env::call_contract(contract_package_hash, entrypoint, args.deref().clone())
@@ -101,27 +101,27 @@ pub fn call_contract<T: OdraType>(
 /// Returns the value that represents one CSPR.
 ///
 /// 1 CSPR = 1,000,000,000 Motes.
-pub fn one_token() -> Balance {
-    Balance::from(1_000_000_000)
+pub fn one_token() -> U512 {
+    U512::from(1_000_000_000)
 }
 
 /// Returns the balance of the account associated with the currently executing contract.
-pub fn self_balance() -> Balance {
-    casper_env::self_balance().into()
+pub fn self_balance() -> U512 {
+    casper_env::self_balance()
 }
 
 /// Returns amount of native token attached to the call.
-pub fn attached_value() -> Balance {
-    unsafe { ATTACHED_VALUE.into() }
+pub fn attached_value() -> U512 {
+    unsafe { ATTACHED_VALUE }
 }
 
 /// Transfers native token from the contract caller to the given address.
-pub fn transfer_tokens<B: Into<Balance>>(to: &Address, amount: B) {
+pub fn transfer_tokens<B: Into<U512>>(to: &Address, amount: B) {
     let main_purse = get_or_create_main_purse();
 
     match to {
         Address::Account(account) => {
-            transfer_from_purse_to_account(main_purse, *account, amount.into().inner(), None)
+            transfer_from_purse_to_account(main_purse, *account, amount.into(), None)
                 .unwrap_or_revert();
         }
         Address::Contract(_) => revert(ExecutionError::can_not_transfer_to_contract())
@@ -137,11 +137,10 @@ pub fn native_token_metadata() -> NativeTokenMetadata {
 pub fn verify_signature(
     message: &Bytes,
     signature: &Bytes,
-    public_key: &casper_types::crypto::PublicKey
+    public_key: &crypto::PublicKey
 ) -> bool {
-    let (signature, _) =
-        casper_types::crypto::Signature::from_bytes(signature.as_slice()).unwrap_or_revert();
-    casper_types::crypto::verify(message.as_slice(), &signature, public_key).is_ok()
+    let (signature, _) = crypto::Signature::from_bytes(signature.as_slice()).unwrap_or_revert();
+    crypto::verify(message.as_slice(), &signature, public_key).is_ok()
 }
 
 /// Creates a hash of the given input. Uses default hash for given backend.

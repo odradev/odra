@@ -3,12 +3,16 @@
 //! It provides all the required functions to communicate between Odra and Casper Livenets.
 
 use crate::casper_client::LivenetKeyMaker;
-use casper_types::bytesrepr::Bytes;
-use casper_types::PublicKey;
 use odra_casper_shared::key_maker::KeyMaker;
 use odra_casper_shared::native_token::NativeTokenMetadata;
-use odra_casper_types::{Address, Balance, BlockTime, OdraType};
-use odra_types::{event::OdraEvent, ExecutionError};
+use odra_types::{
+    casper_types::{
+        bytesrepr::{Bytes, FromBytes, ToBytes},
+        U512
+    },
+    event::OdraEvent,
+    Address, BlockTime, ExecutionError, PublicKey
+};
 
 use crate::client_env;
 
@@ -20,25 +24,25 @@ pub fn caller() -> Address {
     unimplemented!()
 }
 
-pub fn set_var<T: OdraType>(_: &[u8], _: T) {
+pub fn set_var<T: ToBytes>(_: &[u8], _: T) {
     unimplemented!()
 }
 
-pub fn get_var<T: OdraType>(key: &[u8]) -> Option<T> {
+pub fn get_var<T: FromBytes>(key: &[u8]) -> Option<T> {
     client_env::get_var_from_current_contract(key)
 }
 
-pub fn set_dict_value<K: OdraType, V: OdraType>(_: &[u8], _: &K, _: V) {
+pub fn set_dict_value<K: ToBytes, V: ToBytes>(_: &[u8], _: &K, _: V) {
     unimplemented!()
 }
 
-pub fn get_dict_value<K: OdraType, T: OdraType>(seed: &[u8], key: &K) -> Option<T> {
+pub fn get_dict_value<K: ToBytes, T: FromBytes>(seed: &[u8], key: &K) -> Option<T> {
     client_env::get_dict_value_from_current_contract(seed, key)
 }
 
 pub fn emit_event<T>(_: T)
 where
-    T: OdraType + OdraEvent
+    T: ToBytes + OdraEvent
 {
     unimplemented!()
 }
@@ -54,19 +58,19 @@ pub fn get_block_time() -> BlockTime {
     unimplemented!()
 }
 
-pub fn attached_value() -> Balance {
+pub fn attached_value() -> U512 {
     unimplemented!()
 }
 
-pub fn one_token() -> Balance {
+pub fn one_token() -> U512 {
     unimplemented!()
 }
 
-pub fn transfer_tokens<B: Into<Balance>>(_: &Address, _: B) {
+pub fn transfer_tokens<B: Into<U512>>(_: &Address, _: B) {
     unimplemented!()
 }
 
-pub fn self_balance() -> Balance {
+pub fn self_balance() -> U512 {
     unimplemented!()
 }
 

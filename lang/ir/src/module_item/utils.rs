@@ -1,4 +1,4 @@
-use syn::{FnArg, PatType};
+use syn::{parse_quote, FnArg, PatType};
 
 pub fn is_mut(sig: &syn::Signature) -> bool {
     let receiver = sig.inputs.iter().find_map(|input| match input {
@@ -12,8 +12,15 @@ pub fn is_ref(ty: &PatType) -> bool {
     matches!(&*ty.ty, syn::Type::Reference(_))
 }
 
-pub fn ty(ty: &PatType) -> &syn::Type {
-    deref_ty(&ty.ty)
+pub fn ty(ty: &PatType) -> (syn::Type, bool) {
+    let ty = deref_ty(&ty.ty);
+    match ty {
+        syn::Type::Slice(t) => {
+            let slice_ty = &*t.elem;
+            (parse_quote!(odra::prelude::vec::Vec<#slice_ty>), true)
+        }
+        _ => (ty.clone(), false)
+    }
 }
 
 fn deref_ty(ty: &syn::Type) -> &syn::Type {

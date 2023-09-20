@@ -5,14 +5,12 @@ members = [
     "lang/ir",
     "lang/proc-macros",
     "mock-vm/backend",
-    "mock-vm/types",
     "types",
     "utils",
     "odra-casper/backend",
     "odra-casper/codegen",
     "odra-casper/shared",
     "odra-casper/test-env",
-    "odra-casper/types",
     "odra-casper/livenet"
 ]
 

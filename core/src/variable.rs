@@ -4,10 +4,15 @@ use crate::{
     contract_env,
     instance::{DynamicInstance, StaticInstance},
     prelude::vec::Vec,
-    types::OdraType,
     UnwrapOrRevert
 };
-use odra_types::arithmetic::{OverflowingAdd, OverflowingSub};
+use odra_types::{
+    arithmetic::{OverflowingAdd, OverflowingSub},
+    casper_types::{
+        bytesrepr::{FromBytes, ToBytes},
+        CLTyped
+    }
+};
 
 /// Data structure for storing a single value.
 #[derive(Clone)]
@@ -17,7 +22,7 @@ pub struct Variable<T> {
 }
 
 // <3
-impl<T: OdraType + Default> Variable<T> {
+impl<T: FromBytes + CLTyped + Default> Variable<T> {
     /// Reads from the storage, if theres no value in the storage the default value is returned.
     #[inline(always)]
     pub fn get_or_default(&self) -> T {
@@ -25,7 +30,7 @@ impl<T: OdraType + Default> Variable<T> {
     }
 }
 
-impl<V: OdraType + OverflowingAdd + Default> Variable<V> {
+impl<V: ToBytes + FromBytes + CLTyped + OverflowingAdd + Default> Variable<V> {
     /// Utility function that gets the current value and adds the passed `value`
     /// and sets the new value to the storage.
     ///
@@ -38,7 +43,7 @@ impl<V: OdraType + OverflowingAdd + Default> Variable<V> {
     }
 }
 
-impl<V: OdraType + OverflowingSub + Default> Variable<V> {
+impl<V: ToBytes + FromBytes + CLTyped + OverflowingSub + Default> Variable<V> {
     /// Utility function that gets the current value and subtracts the passed `value`
     /// and sets the new value to the storage.
     ///
@@ -51,13 +56,15 @@ impl<V: OdraType + OverflowingSub + Default> Variable<V> {
     }
 }
 
-impl<T: OdraType> Variable<T> {
+impl<T: FromBytes + CLTyped> Variable<T> {
     /// Reads from the storage or returns `None` or reverts something unexpected happens.
     #[inline(always)]
     pub fn get(&self) -> Option<T> {
         contract_env::get_var(&self.namespace_buffer)
     }
+}
 
+impl<T: ToBytes + CLTyped> Variable<T> {
     /// Stores `value` to the storage.
     #[inline(always)]
     pub fn set(&mut self, value: T) {
@@ -65,7 +72,7 @@ impl<T: OdraType> Variable<T> {
     }
 }
 
-impl<T: OdraType> StaticInstance for Variable<T> {
+impl<T: ToBytes + FromBytes> StaticInstance for Variable<T> {
     fn instance<'a>(keys: &'a [&'a str]) -> (Self, &'a [&'a str]) {
         let name = keys[0];
         (
@@ -78,7 +85,7 @@ impl<T: OdraType> StaticInstance for Variable<T> {
     }
 }
 
-impl<T: OdraType> DynamicInstance for Variable<T> {
+impl<T: ToBytes + FromBytes> DynamicInstance for Variable<T> {
     fn instance(namespace: &[u8]) -> Self {
         Variable {
             ty: PhantomData,
@@ -90,8 +97,13 @@ impl<T: OdraType> DynamicInstance for Variable<T> {
 #[cfg(all(feature = "mock-vm", test))]
 mod tests {
     use crate::{test_env, StaticInstance, Variable};
-    use odra_mock_vm::types::OdraType;
-    use odra_types::arithmetic::ArithmeticsError;
+    use odra_types::{
+        arithmetic::ArithmeticsError,
+        casper_types::{
+            bytesrepr::{FromBytes, ToBytes},
+            CLTyped
+        }
+    };
     const SHARED_VALUE: [&str; 1] = ["shared_value"];
 
     #[test]
@@ -173,13 +185,13 @@ mod tests {
         assert_eq!(x.get(), y.get());
     }
 
-    impl<T: OdraType> Default for Variable<T> {
+    impl<T: ToBytes + FromBytes> Default for Variable<T> {
         fn default() -> Self {
             StaticInstance::instance(&["v"]).0
         }
     }
 
-    impl<T: OdraType> Variable<T> {
+    impl<T: ToBytes + FromBytes + CLTyped> Variable<T> {
         fn init(value: T) -> Self {
             let mut var = Self::default();
             var.set(value);

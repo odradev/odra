@@ -1,7 +1,11 @@
 use anyhow::Result;
-use odra_mock_vm_types::{
-    Address, Balance, BlockTime, CallArgs, EventData, MockDeserializable, MockSerializable,
-    MockVMSerializationError, CONTRACT_ADDRESS_PREFIX
+use odra_types::{
+    casper_types::{
+        account::AccountHash,
+        bytesrepr::{Error, FromBytes, ToBytes},
+        RuntimeArgs, SecretKey, U512
+    },
+    Address, BlockTime, EventData, ExecutionError, PublicKey
 };
 use odra_types::{event::EventError, OdraError, VmError};
 use std::collections::BTreeMap;
@@ -22,7 +26,7 @@ pub struct MockVm {
 impl MockVm {
     pub fn register_contract(
         &self,
-        constructor: Option<(String, &CallArgs, EntrypointCall)>,
+        constructor: Option<(String, &RuntimeArgs, EntrypointCall)>,
         constructors: BTreeMap<String, (EntrypointArgs, EntrypointCall)>,
         entrypoints: BTreeMap<String, (EntrypointArgs, EntrypointCall)>
     ) -> Address {
@@ -39,7 +43,7 @@ impl MockVm {
             self.state
                 .write()
                 .unwrap()
-                .set_balance(address, Balance::zero());
+                .set_balance(address, U512::zero());
         }
 
         // Call constructor if needed.
@@ -50,12 +54,12 @@ impl MockVm {
         address
     }
 
-    pub fn call_contract<T: MockSerializable + MockDeserializable>(
+    pub fn call_contract<T: ToBytes + FromBytes>(
         &self,
         address: Address,
         entrypoint: &str,
-        args: &CallArgs,
-        amount: Option<Balance>
+        args: &RuntimeArgs,
+        amount: Option<U512>
     ) -> T {
         self.prepare_call(address, entrypoint, amount);
         // Call contract from register.
@@ -74,10 +78,10 @@ impl MockVm {
                 .call(&address, String::from(entrypoint), args);
 
         let result = self.handle_call_result(result);
-        T::deser(result).unwrap()
+        T::from_vec(result).unwrap().0
     }
 
-    fn call_constructor(&self, address: Address, entrypoint: &str, args: &CallArgs) -> Vec<u8> {
+    fn call_constructor(&self, address: Address, entrypoint: &str, args: &RuntimeArgs) -> Vec<u8> {
         self.prepare_call(address, entrypoint, None);
         // Call contract from register.
         let register = self.contract_register.read().unwrap();
@@ -85,7 +89,7 @@ impl MockVm {
         self.handle_call_result(result)
     }
 
-    fn prepare_call(&self, address: Address, entrypoint: &str, amount: Option<Balance>) {
+    fn prepare_call(&self, address: Address, entrypoint: &str, amount: Option<U512>) {
         let mut state = self.state.write().unwrap();
         // If only one address on the call_stack, record snapshot.
         if state.is_in_caller_context() {
@@ -160,40 +164,37 @@ impl MockVm {
         self.state.write().unwrap().set_caller(caller);
     }
 
-    pub fn set_var<T: MockSerializable + MockDeserializable>(&self, key: &[u8], value: T) {
+    pub fn set_var<T: ToBytes>(&self, key: &[u8], value: T) {
         self.state.write().unwrap().set_var(key, value);
     }
 
-    pub fn get_var<T: MockSerializable + MockDeserializable>(&self, key: &[u8]) -> Option<T> {
+    pub fn get_var<T: FromBytes>(&self, key: &[u8]) -> Option<T> {
         let result = { self.state.read().unwrap().get_var(key) };
         match result {
             Ok(result) => result,
             Err(error) => {
-                self.state.write().unwrap().set_error(error);
+                self.state
+                    .write()
+                    .unwrap()
+                    .set_error(Into::<ExecutionError>::into(error));
                 None
             }
         }
     }
 
-    pub fn set_dict_value<T: MockSerializable + MockDeserializable>(
-        &self,
-        dict: &[u8],
-        key: &[u8],
-        value: T
-    ) {
+    pub fn set_dict_value<T: ToBytes>(&self, dict: &[u8], key: &[u8], value: T) {
         self.state.write().unwrap().set_dict_value(dict, key, value);
     }
 
-    pub fn get_dict_value<T: MockSerializable + MockDeserializable>(
-        &self,
-        dict: &[u8],
-        key: &[u8]
-    ) -> Option<T> {
+    pub fn get_dict_value<T: FromBytes>(&self, dict: &[u8], key: &[u8]) -> Option<T> {
         let result = { self.state.read().unwrap().get_dict_value(dict, key) };
         match result {
             Ok(result) => result,
             Err(error) => {
-                self.state.write().unwrap().set_error(error);
+                self.state
+                    .write()
+                    .unwrap()
+                    .set_error(Into::<ExecutionError>::into(error));
                 None
             }
         }
@@ -218,7 +219,7 @@ impl MockVm {
             .advance_block_time_by(milliseconds)
     }
 
-    pub fn attached_value(&self) -> Balance {
+    pub fn attached_value(&self) -> U512 {
         self.state.read().unwrap().attached_value()
     }
 
@@ -226,11 +227,11 @@ impl MockVm {
         self.state.read().unwrap().accounts.get(n).cloned().unwrap()
     }
 
-    pub fn token_balance(&self, address: Address) -> Balance {
+    pub fn token_balance(&self, address: Address) -> U512 {
         self.state.read().unwrap().get_balance(address)
     }
 
-    pub fn transfer_tokens(&self, from: &Address, to: &Address, amount: &Balance) {
+    pub fn transfer_tokens(&self, from: &Address, to: &Address, amount: &U512) {
         if amount.is_zero() {
             return;
         }
@@ -248,7 +249,7 @@ impl MockVm {
         &self,
         from: &Address,
         to: &Address,
-        amount: &Balance
+        amount: &U512
     ) -> Result<(), OdraError> {
         if amount.is_zero() {
             return Ok(());
@@ -264,13 +265,16 @@ impl MockVm {
         Ok(())
     }
 
-    pub fn self_balance(&self) -> Balance {
+    pub fn self_balance(&self) -> U512 {
         let address = self.callee();
         self.state.read().unwrap().get_balance(address)
     }
+
+    pub fn public_key(&self, address: &Address) -> PublicKey {
+        self.state.read().unwrap().public_key(address)
+    }
 }
 
-#[derive(Clone)]
 pub struct MockVmState {
     storage: Storage,
     callstack: Callstack,
@@ -278,7 +282,8 @@ pub struct MockVmState {
     contract_counter: u32,
     error: Option<OdraError>,
     block_time: u64,
-    accounts: Vec<Address>
+    accounts: Vec<Address>,
+    key_pairs: BTreeMap<Address, (SecretKey, PublicKey)>
 }
 
 impl MockVmState {
@@ -303,38 +308,26 @@ impl MockVmState {
         self.push_callstack_element(CallstackElement::Account(address));
     }
 
-    fn set_var<T: MockSerializable + MockDeserializable>(&mut self, key: &[u8], value: T) {
+    fn set_var<T: ToBytes>(&mut self, key: &[u8], value: T) {
         let ctx = self.callstack.current().address();
-        if let Err(err) = self.storage.set_value(ctx, key, value) {
-            self.set_error(err);
+        if let Err(error) = self.storage.set_value(ctx, key, value) {
+            self.set_error(Into::<ExecutionError>::into(error));
         }
     }
 
-    fn get_var<T: MockSerializable + MockDeserializable>(
-        &self,
-        key: &[u8]
-    ) -> Result<Option<T>, MockVMSerializationError> {
+    fn get_var<T: FromBytes>(&self, key: &[u8]) -> Result<Option<T>, Error> {
         let ctx = self.callstack.current().address();
         self.storage.get_value(ctx, key)
     }
 
-    fn set_dict_value<T: MockSerializable + MockDeserializable>(
-        &mut self,
-        dict: &[u8],
-        key: &[u8],
-        value: T
-    ) {
+    fn set_dict_value<T: ToBytes>(&mut self, dict: &[u8], key: &[u8], value: T) {
         let ctx = self.callstack.current().address();
-        if let Err(err) = self.storage.insert_dict_value(ctx, dict, key, value) {
-            self.set_error(err);
+        if let Err(error) = self.storage.insert_dict_value(ctx, dict, key, value) {
+            self.set_error(Into::<ExecutionError>::into(error));
         }
     }
 
-    fn get_dict_value<T: MockSerializable + MockDeserializable>(
-        &self,
-        dict: &[u8],
-        key: &[u8]
-    ) -> Result<Option<T>, MockVMSerializationError> {
+    fn get_dict_value<T: FromBytes>(&self, dict: &[u8], key: &[u8]) -> Result<Option<T>, Error> {
         let ctx = &self.callstack.current().address();
         self.storage.get_dict_value(ctx, dict, key)
     }
@@ -384,17 +377,7 @@ impl MockVmState {
 
     fn next_contract_address(&mut self) -> Address {
         self.contract_counter += 1;
-        let contract_address_bytes = CONTRACT_ADDRESS_PREFIX.to_be_bytes();
-        let contract_counter_bytes = self.contract_counter.to_be_bytes();
-        let mut merged: [u8; 8] = [0; 8];
-
-        merged.clone_from_slice(
-            [contract_address_bytes, contract_counter_bytes]
-                .concat()
-                .as_slice()
-        );
-
-        Address::try_from(&merged).unwrap()
+        Address::contract_from_u32(self.contract_counter)
     }
 
     fn get_contract_namespace(&self) -> String {
@@ -410,7 +393,7 @@ impl MockVmState {
         }
     }
 
-    fn attached_value(&self) -> Balance {
+    fn attached_value(&self) -> U512 {
         self.callstack.current_amount()
     }
 
@@ -446,51 +429,47 @@ impl MockVmState {
         self.block_time += milliseconds;
     }
 
-    fn get_balance(&self, address: Address) -> Balance {
+    fn get_balance(&self, address: Address) -> U512 {
         self.storage
             .balance_of(&address)
             .map(|b| b.value())
             .unwrap_or_default()
     }
 
-    fn set_balance(&mut self, address: Address, amount: Balance) {
+    fn set_balance(&mut self, address: Address, amount: U512) {
         self.storage
             .set_balance(address, AccountBalance::new(amount));
     }
 
-    fn increase_balance(&mut self, address: &Address, amount: &Balance) -> Result<()> {
+    fn increase_balance(&mut self, address: &Address, amount: &U512) -> Result<()> {
         self.storage.increase_balance(address, amount)
     }
 
-    fn reduce_balance(&mut self, address: &Address, amount: &Balance) -> Result<()> {
+    fn reduce_balance(&mut self, address: &Address, amount: &U512) -> Result<()> {
         self.storage.reduce_balance(address, amount)
+    }
+
+    fn public_key(&self, address: &Address) -> PublicKey {
+        let (_, public_key) = self.key_pairs.get(address).unwrap();
+        public_key.clone()
     }
 }
 
 impl Default for MockVmState {
     fn default() -> Self {
-        let addresses = vec![
-            Address::try_from(b"alice").unwrap(),
-            Address::try_from(b"bob").unwrap(),
-            Address::try_from(b"cab").unwrap(),
-            Address::try_from(b"dan").unwrap(),
-            Address::try_from(b"ed").unwrap(),
-            Address::try_from(b"frank").unwrap(),
-            Address::try_from(b"garry").unwrap(),
-            Address::try_from(b"harry").unwrap(),
-            Address::try_from(b"ivan").unwrap(),
-            Address::try_from(b"jack").unwrap(),
-            Address::try_from(b"kai").unwrap(),
-            Address::try_from(b"lilly").unwrap(),
-            Address::try_from(b"molly").unwrap(),
-            Address::try_from(b"olivia").unwrap(),
-            Address::try_from(b"paige").unwrap(),
-            Address::try_from(b"quinn").unwrap(),
-            Address::try_from(b"ruby").unwrap(),
-            Address::try_from(b"stella").unwrap(),
-            Address::try_from(b"tessa").unwrap(),
-            Address::try_from(b"uma").unwrap(),
-        ];
+        let mut addresses: Vec<Address> = Vec::new();
+        let mut key_pairs = BTreeMap::<Address, (SecretKey, PublicKey)>::new();
+        for i in 0..20 {
+            // Create keypair.
+            let secret_key = SecretKey::ed25519_from_bytes([i; 32]).unwrap();
+            let public_key = PublicKey::from(&secret_key);
+
+            // Create an AccountHash from a public key.
+            let account_addr = AccountHash::from(&public_key);
+
+            addresses.push(account_addr.try_into().unwrap());
+            key_pairs.insert(account_addr.try_into().unwrap(), (secret_key, public_key));
+        }
 
         let mut balances = BTreeMap::<Address, AccountBalance>::new();
         for address in addresses.clone() {
@@ -504,7 +483,8 @@ impl Default for MockVmState {
             contract_counter: 0,
             error: None,
             block_time: 0,
-            accounts: addresses.clone()
+            accounts: addresses.clone(),
+            key_pairs
         };
         backend.push_callstack_element(CallstackElement::Account(*addresses.first().unwrap()));
         backend
@@ -515,8 +495,10 @@ impl Default for MockVmState {
 mod tests {
     use std::collections::BTreeMap;
 
-    use odra_mock_vm_types::{Address, Balance, CallArgs, EventData, MockDeserializable};
-    use odra_types::address::OdraAddress;
+    use odra_types::casper_types::bytesrepr::FromBytes;
+    use odra_types::casper_types::{RuntimeArgs, U512};
+    use odra_types::OdraAddress;
+    use odra_types::{Address, EventData};
     use odra_types::{ExecutionError, OdraError, VmError};
 
     use crate::{callstack::CallstackElement, EntrypointArgs, EntrypointCall};
@@ -527,7 +509,6 @@ mod tests {
     fn contracts_have_different_addresses() {
         // given a new instance
         let instance = MockVm::default();
-
         // when register two contracts with the same entrypoints
         let entrypoint: Vec<(String, (EntrypointArgs, EntrypointCall))> =
             vec![(String::from("abc"), (vec![], |_, _| vec![]))];
@@ -563,7 +544,7 @@ mod tests {
 
         // when call an existing entrypoint
         let result =
-            instance.call_contract::<u32>(contract_address, &entrypoint, &CallArgs::new(), None);
+            instance.call_contract::<u32>(contract_address, &entrypoint, &RuntimeArgs::new(), None);
 
         // then returns the expected value
         assert_eq!(result, call_result);
@@ -574,10 +555,10 @@ mod tests {
         // given an empty vm
         let instance = MockVm::default();
 
-        let address = Address::try_from(b"random").unwrap();
+        let address = Address::contract_from_u32(42);
 
         // when call a contract
-        instance.call_contract::<()>(address, "abc", &CallArgs::new(), None);
+        instance.call_contract::<()>(address, "abc", &RuntimeArgs::new(), None);
 
         // then the vm is in error state
         assert_eq!(
@@ -597,7 +578,7 @@ mod tests {
         instance.call_contract::<()>(
             contract_address,
             &invalid_entrypoint,
-            &CallArgs::new(),
+            &RuntimeArgs::new(),
             None
         );
 
@@ -616,7 +597,7 @@ mod tests {
         let instance = MockVm::default();
 
         // when set a new caller
-        let new_caller = Address::try_from(b"new caller").unwrap();
+        let new_caller = Address::account_from_str("ff");
         instance.set_caller(new_caller);
         // put a fake contract on stack
         push_address(&instance, &new_caller);
@@ -677,7 +658,7 @@ mod tests {
         // given an empty instance
         let instance = MockVm::default();
 
-        let first_contract_address = Address::try_from(b"abc").unwrap();
+        let first_contract_address = Address::account_from_str("abc");
         // put a contract on stack
         push_address(&instance, &first_contract_address);
 
@@ -686,7 +667,7 @@ mod tests {
         instance.emit_event(&first_event);
         instance.emit_event(&second_event);
 
-        let second_contract_address = Address::try_from(b"bca").unwrap();
+        let second_contract_address = Address::account_from_str("bca");
         // put a next contract on stack
         push_address(&instance, &second_contract_address);
 
@@ -720,7 +701,7 @@ mod tests {
         let instance = MockVm::default();
 
         // when push a contract into the stack
-        let contract_address = Address::try_from(b"contract").unwrap();
+        let contract_address = Address::contract_from_u32(100);
         push_address(&instance, &contract_address);
 
         // then the contract address in the callee
@@ -740,13 +721,13 @@ mod tests {
         instance.call_contract::<u32>(
             contract_address,
             &entrypoint_name,
-            &CallArgs::new(),
+            &RuntimeArgs::new(),
             Some(caller_balance)
         );
 
         // then the contract has the caller tokens and the caller balance is zero
         assert_eq!(instance.token_balance(contract_address), caller_balance);
-        assert_eq!(instance.token_balance(caller), Balance::zero());
+        assert_eq!(instance.token_balance(caller), U512::zero());
     }
 
     #[test]
@@ -763,7 +744,7 @@ mod tests {
         instance.call_contract::<()>(
             contract_address,
             &entrypoint_name,
-            &CallArgs::new(),
+            &RuntimeArgs::new(),
             Some(caller_balance + 1)
         );
     }
@@ -791,7 +772,7 @@ mod tests {
         (
             contract_address,
             String::from(entrypoint_name),
-            <u32 as MockDeserializable>::deser(result).unwrap()
+            <u32 as FromBytes>::from_vec(result).unwrap().0
         )
     }
 }

@@ -4,16 +4,15 @@ edition = "2021"
 description = "Odra's virtual machine for running smart contracts."
 keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm"]
-version.workspace = true
-authors.workspace = true
-license.workspace = true
-homepage.workspace = true
-repository.workspace = true
+version = { workspace = true }
+authors = { workspace = true }
+license = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 
 [dependencies]
-odra-types = { path = "../../types", version = "0.6.0" }
+odra-types = { path = "../../types", version = "0.6.0", features = [ "test-support" ] }
 odra-utils = { path = "../../utils", version = "0.6.0" }
-odra-mock-vm-types = { path = "../types", version = "0.6.0" }
 ref_thread_local = "0.1.1"
 anyhow = "1.0.65"
 hex = "0.4.3"

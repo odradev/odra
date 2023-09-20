@@ -164,7 +164,7 @@ impl Erc20 {
 }
 
 pub mod events {
-    use odra::types::{Address, U256};
+    use odra::types::{casper_types::U256, Address};
     use odra::Event;
 
     #[derive(Event, Eq, PartialEq, Debug)]
@@ -204,7 +204,7 @@ mod tests {
         Erc20Deployer, Erc20Ref
     };
     use odra::prelude::string::ToString;
-    use odra::{assert_events, test_env, types::U256};
+    use odra::{assert_events, test_env, types::casper_types::U256};
 
     const NAME: &str = "Plascoin";
     const SYMBOL: &str = "PLS";

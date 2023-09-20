@@ -1,17 +1,18 @@
 //! Describes test environment API. Delegates methods to the underlying env implementation.
 //!
 //! Depending on the selected feature, the actual test env is dynamically loaded in the runtime or the Odra local MockVM is used.
-use std::{collections::BTreeMap, panic::AssertUnwindSafe};
-
-use odra_mock_vm_types::{
-    Address, Balance, BlockTime, BorshDeserialize, Bytes, CallArgs, MockDeserializable,
-    MockSerializable, PublicKey
+use odra_types::{
+    casper_types::{
+        bytesrepr::{Bytes, FromBytes, ToBytes},
+        RuntimeArgs, U512
+    },
+    Address, BlockTime, PublicKey
 };
 use odra_types::{
-    address::OdraAddress,
     event::{EventError, OdraEvent},
-    OdraError
+    OdraAddress, OdraError
 };
+use std::{collections::BTreeMap, panic::AssertUnwindSafe};
 
 use crate::{native_token::NativeTokenMetadata, EntrypointArgs, EntrypointCall};
 
@@ -34,7 +35,7 @@ macro_rules! delegate_to_env {
 delegate_to_env! {
     /// Registers the contract in the test environment.
     fn register_contract(
-        constructor: Option<(String, &CallArgs, EntrypointCall)>,
+        constructor: Option<(String, &RuntimeArgs, EntrypointCall)>,
         constructors: BTreeMap<String, (EntrypointArgs, EntrypointCall)>,
         entrypoints: BTreeMap<String, (EntrypointArgs, EntrypointCall)>
     ) -> Address
@@ -45,7 +46,7 @@ delegate_to_env! {
     /// Replaces the current caller.
     fn set_caller(address: Address)
     /// Returns the balance of the account associated with the given address.
-    fn token_balance(address: Address) -> Balance
+    fn token_balance(address: Address) -> U512
     /// Returns nth test user account.
     fn get_account(n: usize) -> Address
 }
@@ -67,33 +68,32 @@ where
 }
 
 /// Returns the value that represents one native token.
-pub fn one_token() -> Balance {
-    Balance::one()
+pub fn one_token() -> U512 {
+    U512::one()
 }
 
 /// Calls contract at `address` invoking the `entrypoint` with `args`.
 ///
 /// Returns optional raw bytes to further processing.
-pub fn call_contract<T: MockSerializable + MockDeserializable>(
+pub fn call_contract<T: ToBytes + FromBytes>(
     address: Address,
     entrypoint: &str,
-    args: &CallArgs,
-    amount: Option<Balance>
+    args: &RuntimeArgs,
+    amount: Option<U512>
 ) -> T {
     crate::borrow_env().call_contract(address, entrypoint, args, amount)
 }
 
 /// Gets nth event emitted by the contract at `address`.
-pub fn get_event<T: MockSerializable + MockDeserializable + OdraEvent>(
-    address: Address,
-    index: i32
-) -> Result<T, EventError> {
+pub fn get_event<T: FromBytes + OdraEvent>(address: Address, index: i32) -> Result<T, EventError> {
     let bytes = crate::borrow_env().get_event(address, index);
 
     bytes.and_then(|bytes| {
         let event_name = extract_event_name(&bytes)?;
-        if event_name == T::name() {
-            T::deser(bytes).map_err(|_| EventError::Parsing)
+        if event_name == format!("event_{}", T::name()) {
+            T::from_bytes(&bytes)
+                .map_err(|_| EventError::Parsing)
+                .map(|r| r.0)
         } else {
             Err(EventError::UnexpectedType(event_name))
         }
@@ -106,45 +106,45 @@ pub fn native_token_metadata() -> NativeTokenMetadata {
 }
 
 /// Returns last call gas cost.
-pub fn last_call_contract_gas_cost() -> Balance {
-    Balance::zero()
+pub fn last_call_contract_gas_cost() -> U512 {
+    U512::zero()
 }
 
 /// Returns the amount of gas paid for last call.
-pub fn last_call_contract_gas_used() -> Balance {
-    Balance::zero()
+pub fn last_call_contract_gas_used() -> U512 {
+    U512::zero()
 }
 
 /// Returns the total amount of gas used by the address.
 /// Currently MockVM doesn't charge gas.
-pub fn total_gas_used(address: Address) -> Balance {
+pub fn total_gas_used(address: Address) -> U512 {
     if address.is_contract() {
         panic!("Contract {:?} can't burn gas.", address)
     }
-    Balance::zero()
+    U512::zero()
 }
 
 /// Returns the report of entrypoints called, contract deployed and gas used.
 /// Currently MockVM doesn't charge gas.
-pub fn gas_report() -> Vec<(String, Balance)> {
+pub fn gas_report() -> Vec<(String, U512)> {
     Vec::new()
 }
 
 /// Returns the name of the passed event
-fn extract_event_name(mut bytes: &[u8]) -> Result<String, EventError> {
-    let name = BorshDeserialize::deserialize(&mut bytes).map_err(|_| EventError::Formatting)?;
-    Ok(name)
+fn extract_event_name(bytes: &[u8]) -> Result<String, EventError> {
+    let name = FromBytes::from_bytes(bytes).map_err(|_| EventError::Formatting)?;
+    Ok(name.0)
 }
 
 /// Signs the message using the private key associated with the given address.
 pub fn sign_message(message: &Bytes, address: &Address) -> Bytes {
     let public_key = public_key(address);
     let mut message = message.inner_bytes().clone();
-    message.extend_from_slice(public_key.inner_bytes());
+    message.extend(public_key.into_bytes().unwrap());
     Bytes::from(message)
 }
 
 /// Returns the public key of the account associated with the given address.
 pub fn public_key(address: &Address) -> PublicKey {
-    PublicKey(*address)
+    crate::borrow_env().public_key(address)
 }

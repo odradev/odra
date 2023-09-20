@@ -35,14 +35,15 @@ impl ToTokens for Constructor {
             .iter()
             .flat_map(|arg| {
                 let name = &*arg.pat;
-                let ty = utils::ty(arg);
+                let (ty, is_slice) = utils::ty(arg);
                 let is_ref = utils::is_ref(arg);
-                let ty = quote!(<#ty as odra::types::Typed>::ty());
+                let ty = quote!(<#ty as odra::types::CLTyped>::cl_type());
                 quote! {
                     odra::types::contract_def::Argument {
                         ident: odra::prelude::string::String::from(stringify!(#name)),
                         ty: #ty,
                         is_ref: #is_ref,
+                        is_slice: #is_slice
                     },
                 }
             })
@@ -52,7 +53,7 @@ impl ToTokens for Constructor {
                 ident: odra::prelude::string::String::from(#name),
                 args: odra::prelude::vec![#args],
                 is_mut: #is_mut,
-                ret: odra::types::Type::Unit,
+                ret: odra::types::CLType::Unit,
                 ty: odra::types::contract_def::EntrypointType::Constructor { non_reentrant: #is_non_reentrant },
             },
         };

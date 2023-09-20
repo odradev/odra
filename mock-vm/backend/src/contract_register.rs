@@ -1,5 +1,4 @@
-use odra_mock_vm_types::{Address, CallArgs};
-use odra_types::{OdraError, VmError};
+use odra_types::{casper_types::RuntimeArgs, Address, OdraError, VmError};
 
 use crate::contract_container::ContractContainer;
 use std::collections::BTreeMap;
@@ -18,7 +17,7 @@ impl ContractRegister {
         &self,
         addr: &Address,
         entrypoint: String,
-        args: &CallArgs
+        args: &RuntimeArgs
     ) -> Result<Vec<u8>, OdraError> {
         self.internal_call(addr, |container| container.call(entrypoint, args))
     }
@@ -27,7 +26,7 @@ impl ContractRegister {
         &self,
         addr: &Address,
         entrypoint: String,
-        args: &CallArgs
+        args: &RuntimeArgs
     ) -> Result<Vec<u8>, OdraError> {
         self.internal_call(addr, |container| {
             container.call_constructor(entrypoint, args)

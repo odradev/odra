@@ -45,22 +45,25 @@ impl ToTokens for Method {
             .map(|arg| {
                 let name = &*arg.pat;
 
-                let ty = utils::ty(arg);
+                let (ty, is_slice) = utils::ty(arg);
                 let is_ref = utils::is_ref(arg);
-                let ty = quote!(<#ty as odra::types::Typed>::ty());
+                let ty = quote!(<#ty as odra::types::CLTyped>::cl_type());
                 quote! {
                     odra::types::contract_def::Argument {
                         ident: odra::prelude::string::String::from(stringify!(#name)),
                         ty: #ty,
                         is_ref: #is_ref,
+                        is_slice: #is_slice
                     },
                 }
             })
             .collect::<proc_macro2::TokenStream>();
 
         let ret = match &self.ret {
-            syn::ReturnType::Default => quote!(odra::types::Type::Unit),
-            syn::ReturnType::Type(_, ty) => quote!(<#ty as odra::types::Typed>::ty())
+            syn::ReturnType::Default => quote!(odra::types::CLType::Unit),
+            syn::ReturnType::Type(_, ty) => {
+                quote!(<#ty as odra::types::CLTyped>::cl_type())
+            }
         };
 
         let ty = match self.attrs.iter().any(|attr| attr.is_payable()) {

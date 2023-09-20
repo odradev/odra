@@ -4,7 +4,7 @@ pub mod erc721_base;
 pub mod extensions;
 pub mod owned_erc721_with_metadata;
 
-use odra::types::{Address, Bytes, U256};
+use odra::types::{casper_types::bytesrepr::Bytes, Address, U256};
 
 /// The ERC-721 interface as defined in the standard.
 pub trait Erc721 {

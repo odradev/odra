@@ -6,9 +6,9 @@ use crate::erc1155::events::{TransferBatch, TransferSingle};
 use crate::erc1155::Erc1155;
 use odra::contract_env::{caller, revert};
 use odra::prelude::vec::Vec;
+use odra::types::casper_types::bytesrepr::Bytes;
 use odra::types::event::OdraEvent;
 use odra::types::Address;
-use odra::types::Bytes;
 use odra::types::U256;
 
 /// The ERC1155 token implementation.
@@ -196,8 +196,10 @@ mod tests {
     use crate::wrapped_native::WrappedNativeTokenDeployer;
     use odra::prelude::{string::ToString, vec};
     use odra::test_env::assert_exception;
+    use odra::types::casper_types::bytesrepr::Bytes;
     use odra::types::VmError::NoSuchMethod;
-    use odra::types::{Address, Bytes, OdraError, U256};
+    use odra::types::U256;
+    use odra::types::{Address, OdraError};
     use odra::{assert_events, test_env};
 
     struct TokenEnv {

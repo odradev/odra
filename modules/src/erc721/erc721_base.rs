@@ -5,9 +5,9 @@ use crate::erc721::events::{Approval, ApprovalForAll, Transfer};
 use crate::erc721::Erc721;
 use crate::erc721_receiver::Erc721ReceiverRef;
 use odra::contract_env::{caller, revert};
-use odra::types::address::OdraAddress;
 use odra::types::event::OdraEvent;
-use odra::types::{Address, Bytes, U256};
+use odra::types::OdraAddress;
+use odra::types::{casper_types::bytesrepr::Bytes, Address, U256};
 use odra::{Mapping, UnwrapOrRevert};
 
 /// The ERC721 base implementation.

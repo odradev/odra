@@ -1,5 +1,5 @@
-use casper_types::{TimeDiff, U512};
 use datasize::DataSize;
+use odra_types::casper_types::{TimeDiff, U512};
 use serde::Serialize;
 use thiserror::Error;
 
