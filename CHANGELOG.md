@@ -2,7 +2,13 @@
 
 Changelog for `odra`.
 
-## [0.6.0] - 2023-XX-XX
+## [0.6.0] - 2023-09-20
+### Added
+- `std` feature for `odra` crate.
+- `odra::prelude` reexports basic types and traits based on `std` feature.
+
+### Changed
+- Replace `WeeAlloc` with `ink!`'s `BumpAllocator`.
 
 ## [0.5.0] - 2023-07-19
 ### Added
