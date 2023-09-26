@@ -1,7 +1,8 @@
 use casper_types::bytesrepr::{FromBytes, ToBytes};
+use casper_types::U512;
 use odra::prelude::Rc;
 use odra::prelude::RefCell;
-use odra::types::{Address, Balance, EventData};
+use odra::types::{Address, EventData};
 use odra_types::{ExecutionError, OdraError};
 use odra_types::VmError::Deserialization;
 use crate::call_def::CallDef;
@@ -74,13 +75,13 @@ impl ContractEnv {
 
     pub fn call_contract<T: FromBytes>(&self, address: Address, call: CallDef) -> OdraResult<T> {
         let backend = self.backend.borrow();
-        let bytes = backend.call_contract(self.clone_empty(), address, call)?;
+        let bytes = backend.call_contract(address, call)?;
         Ok(T::from_bytes(&bytes).unwrap().0)
     }
 
-    pub fn new_contract(&mut self, caller: ModuleCaller) -> Address {
+    pub fn new_contract(&mut self, contract_id: &str, caller: ModuleCaller) -> Address {
         let backend = self.backend.borrow();
-        backend.new_contract(caller)
+        backend.new_contract(contract_id, caller)
     }
 
     pub fn self_address(&self) -> Address {
@@ -93,12 +94,12 @@ impl ContractEnv {
         backend.get_block_time()
     }
 
-    pub fn attached_value(&self) -> Option<Balance> {
+    pub fn attached_value(&self) -> Option<U512> {
         let backend = self.backend.borrow();
         backend.attached_value()
     }
 
-    pub fn balance_of(&self, address: &Address) -> Balance {
+    pub fn balance_of(&self, address: &Address) -> U512 {
         let backend = self.backend.borrow();
         backend.balance_of(address)
     }

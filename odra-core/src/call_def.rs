@@ -1,17 +1,17 @@
 use casper_types::bytesrepr::{FromBytes, ToBytes};
-use odra::types::Balance;
+use casper_types::U512;
 
 #[derive(Clone)]
 pub struct CallDef {
-    pub method: String,
+    pub entry_point: String,
     pub args: Args,
-    pub amount: Option<Balance>,
+    pub amount: Option<U512>,
 }
 
 impl CallDef {
-    pub fn new(method: String, args: Args, attached_value: Option<Balance>) -> Self {
+    pub fn new(method: String, args: Args, attached_value: Option<U512>) -> Self {
         CallDef {
-            method,
+            entry_point: method,
             args,
             amount: attached_value,
         }
@@ -22,10 +22,10 @@ impl CallDef {
     }
 
     pub fn method(&self) -> &str {
-        &self.method
+        &self.entry_point
     }
 
-    pub fn attached_value(&self) -> Option<Balance> {
+    pub fn attached_value(&self) -> Option<U512> {
         self.amount
     }
 }

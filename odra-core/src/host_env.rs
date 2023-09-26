@@ -1,6 +1,7 @@
+use casper_types::U512;
 use odra::prelude::Rc;
 use odra::prelude::RefCell;
-use odra::types::{Address, Balance, EventData};
+use odra::types::{Address, EventData};
 use crate::path_stack::PathStack;
 
 pub struct HostEnv {
@@ -13,7 +14,7 @@ pub trait HostContext {
     fn get_account(&self, index: usize) -> Address;
     fn advance_block_time(&self, time_diff: u64);
     fn get_event(&self, contract_address: Address, index: i32) -> Option<EventData>;
-    fn attach_value(&self, amount: Balance);
+    fn attach_value(&self, amount: U512);
 }
 
 impl HostEnv {
@@ -45,7 +46,7 @@ impl HostEnv {
         backend.advance_block_time(time_diff)
     }
 
-    pub fn attach_value(&mut self, amount: Balance) {
+    pub fn attach_value(&mut self, amount: U512) {
         let backend = self.backend.borrow_mut();
         backend.attach_value(amount)
     }

@@ -1,0 +1,21 @@
+[package]
+name = "odra-casper-test-env2"
+edition = "2021"
+description = "Odra test environment for the Casper Blockchain."
+keywords = ["wasm", "webassembly", "blockchain"]
+categories = ["wasm", "smart contracts"]
+version = { workspace = true }
+authors = { workspace = true }
+license = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
+
+[dependencies]
+casper-engine-test-support = { version = "5.0.0", features = ["test-support"] }
+casper-execution-engine = { workspace = true }
+casper-contract = "3.0.0"
+odra-core = { path = "../../odra-core" }
+odra-types = { path = "../../types" }
+odra = { path = "../../core" }
+odra-casper-shared = { path = "../shared" }
+casper-event-standard = "0.4.0"

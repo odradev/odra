@@ -12,6 +12,7 @@ members = [
     "odra-casper/codegen",
     "odra-casper/shared",
     "odra-casper/test-env",
+    "odra-casper/test-env2",
     "odra-casper/livenet"
 ]
 
