@@ -65,9 +65,9 @@ pub mod prelude {
     }
 
     #[cfg(not(feature = "std"))]
-    pub use core::cell::RefCell;
-    #[cfg(not(feature = "std"))]
     pub use alloc::rc::Rc;
+    #[cfg(not(feature = "std"))]
+    pub use core::cell::RefCell;
 }
 
 pub use {

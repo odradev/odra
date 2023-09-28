@@ -3,8 +3,8 @@ use casper_contract::contract_api::system::{create_purse, transfer_from_purse_to
 use casper_contract::unwrap_or_revert::UnwrapOrRevert;
 use odra::contract_env::revert;
 use odra_core::{CallDef, ContractContext};
-use odra_types::{Address, EventData, ExecutionError, U512};
 use odra_types::casper_types::BlockTime;
+use odra_types::{Address, EventData, ExecutionError, U512};
 
 use odra_casper_shared::consts::*;
 
@@ -44,7 +44,9 @@ impl ContractContext for CasperBackend {
     }
 
     fn transfer_tokens(&mut self, from: &Address, to: &Address, amount: U512) {
-        let main_purse = match runtime::get_key(CONTRACT_MAIN_PURSE).map(|key| *key.as_uref().unwrap_or_revert()) {
+        let main_purse = match runtime::get_key(CONTRACT_MAIN_PURSE)
+            .map(|key| *key.as_uref().unwrap_or_revert())
+        {
             Some(purse) => purse,
             None => {
                 let purse = create_purse();

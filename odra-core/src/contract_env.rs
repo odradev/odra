@@ -1,103 +1,131 @@
-use casper_types::bytesrepr::{FromBytes, ToBytes};
-use casper_types::{BlockTime, U512};
-use odra::prelude::Rc;
-use odra::prelude::RefCell;
-use odra::types::{Address, EventData};
-use odra_types::{ExecutionError, OdraError};
-use odra_types::VmError::Deserialization;
-use crate::call_def::CallDef;
+use crate::prelude::*;
+
+use crate::key_maker;
 pub use crate::ContractContext;
-use crate::module::ModuleCaller;
-use crate::odra_result::{OdraResult};
-use crate::path_stack::PathStack;
+use casper_types::bytesrepr::{FromBytes, ToBytes};
+use casper_types::{CLTyped, ContractPackageHash, EntryPoints};
 
 pub struct ContractEnv {
-    path_stack: PathStack,
-    backend: Rc<RefCell<dyn ContractContext>>,
+    index: u32,
+    mapping_data: Vec<u8>,
+    backend: Rc<RefCell<dyn ContractContext>>
 }
 
 impl ContractEnv {
-    pub fn new(backend: Rc<RefCell<dyn ContractContext>>) -> ContractEnv {
-        ContractEnv {
-            path_stack: PathStack::new(),
-            backend,
+    pub const fn new(index: u32, backend: Rc<RefCell<dyn ContractContext>>) -> Self {
+        Self {
+            index,
+            mapping_data: Vec::new(),
+            backend
         }
     }
 
-    // pub fn clone_with<T: OdraType>(&self, key: T) -> Self {
-    //     let mut path_stack = self.path_stack.clone();
-    //     path_stack.push(key);
-    //     Env { path_stack, backend: self.backend.clone() }
+    pub fn duplicate(&self) -> Self {
+        Self {
+            index: self.index,
+            mapping_data: self.mapping_data.clone(),
+            backend: self.backend.clone()
+        }
+    }
+
+    pub fn current_key(&self) -> Vec<u8> {
+        let index_bytes = key_maker::u32_to_hex(self.index);
+        let mut key = Vec::new();
+        key.extend_from_slice(&index_bytes);
+        key.extend_from_slice(&self.mapping_data);
+        key
+    }
+
+    pub fn add_to_mapping_data(&mut self, data: &[u8]) {
+        self.mapping_data.extend_from_slice(data);
+    }
+
+    pub fn child(&self, index: u8) -> Self {
+        Self {
+            index: (self.index << 4) + index as u32,
+            mapping_data: self.mapping_data.clone(),
+            backend: self.backend.clone()
+        }
+    }
+
+    pub fn get_value<T: FromBytes>(&self, key: &[u8]) -> Option<T> {
+        self.backend
+            .borrow()
+            .get_value(key)
+            .map(|bytes| T::from_bytes(&bytes).unwrap().0)
+    }
+
+    pub fn set_value<T: ToBytes + CLTyped>(&self, key: &[u8], value: T) {
+        let bytes = value.to_bytes().unwrap();
+        self.backend.borrow_mut().set_value(key, &bytes);
+    }
+
+    // pub fn install_contract(
+    //     entry_points: EntryPoints,
+    //     // events: Vec<(String, Schema)>
+    // ) -> ContractPackageHash {
+    //     self.backend.borrow_mut().install_contract(entry_points)
+    // }
+    // pub fn get_or_none<T: ToBytes, V: FromBytes>(&self, key: T) -> Option<V> {
+    //     let key = self.path_stack.get_key(Some(key));
+    //     let backend = self.backend.borrow();
+    //     match backend.get(key) {
+    //         Some(bytes) => match V::from_bytes(&bytes) {
+    //             Ok((value, _bytes)) => Some(value),
+    //             Err(_err) => self.revert(16),
+    //         },
+    //         None => None,
+    //     }
     // }
 
-    pub fn clone_empty(&self) -> Self {
-        ContractEnv {
-            path_stack: PathStack::new(),
-            backend: self.backend.clone(),
-        }
-    }
+    // pub fn get<T: ToBytes, V: FromBytes>(&self, key: T) -> V {
+    //     if let Some(result) = self.get_or_none(&key) {
+    //         return result;
+    //     }
 
-    // pub fn module<M: Module, T: OdraType>(&self, path: T) -> M {
-    //     M::new(self.clone_with(path))
+    //     // TODO: resolve the key in a safer way
+    //     self.revert(17)
     // }
 
-    pub fn get_or_none<T: ToBytes, V: FromBytes>(&self, key: T) -> OdraResult<Option<V>> {
-        let key = self.path_stack.get_key(Some(key));
-        let backend = self.backend.borrow();
-        match backend.get(key) {
-            Some(bytes) => match V::from_bytes(&bytes) {
-                Ok((value, _bytes)) => Ok(Some(value)),
-                Err(_err) => Err(OdraError::VmError(Deserialization)),
-            },
-            None => Ok(None),
-        }
-    }
+    // pub fn set<T: ToBytes, V: ToBytes>(&mut self, key: T, value: V) {
+    //     let key = self.path_stack.get_key(Some(key));
+    //     let mut backend = self.backend.borrow_mut();
+    //     backend.set(key, value.to_bytes().unwrap());
+    // }
 
-    pub fn get<T: ToBytes, V: FromBytes>(&self, key: T) -> OdraResult<V> {
-        if let Some(result) = self.get_or_none(&key)? {
-            return Ok(result);
-        }
+    // pub fn caller(&self) -> Address {
+    //     let backend = self.backend.borrow();
+    //     backend.get_caller()
+    // }
 
-        // TODO: resolve the key in a safer way
-        Err(OdraError::ExecutionError(ExecutionError::key_not_found()))
-    }
+    // pub fn call_contract<T: FromBytes>(&self, address: Address, call: CallDef) -> T {
+    //     let mut backend = self.backend.borrow_mut();
+    //     let bytes = backend.call_contract(address, call);
+    //     T::from_bytes(&bytes).unwrap().0
+    // }
 
-    pub fn set<T: ToBytes, V: ToBytes>(&mut self, key: T, value: V) {
-        let key = self.path_stack.get_key(Some(key));
-        let mut backend = self.backend.borrow_mut();
-        backend.set(key, value.to_bytes().unwrap());
-    }
+    // pub fn self_address(&self) -> Address {
+    //     let backend = self.backend.borrow();
+    //     backend.callee()
+    // }
 
-    pub fn caller(&self) -> Address {
-        let backend = self.backend.borrow();
-        backend.get_caller()
-    }
+    // pub fn get_block_time(&self) -> BlockTime {
+    //     let backend = self.backend.borrow();
+    //     backend.get_block_time()
+    // }
 
-    pub fn call_contract<T: FromBytes>(&self, address: Address, call: CallDef) -> OdraResult<T> {
-        let mut backend = self.backend.borrow_mut();
-        let bytes = backend.call_contract(address, call);
-        Ok(T::from_bytes(&bytes).unwrap().0)
-    }
+    // pub fn attached_value(&self) -> Option<U512> {
+    //     let backend = self.backend.borrow();
+    //     backend.attached_value()
+    // }
 
+    // pub fn balance_of(&self, address: &Address) -> U512 {
+    //     let backend = self.backend.borrow();
+    //     backend.balance_of(address)
+    // }
 
-
-    pub fn self_address(&self) -> Address {
-        let backend = self.backend.borrow();
-        backend.callee()
-    }
-
-    pub fn get_block_time(&self) -> BlockTime {
-        let backend = self.backend.borrow();
-        backend.get_block_time()
-    }
-
-    pub fn attached_value(&self) -> Option<U512> {
-        let backend = self.backend.borrow();
-        backend.attached_value()
-    }
-
-    pub fn balance_of(&self, address: &Address) -> U512 {
-        let backend = self.backend.borrow();
-        backend.balance_of(address)
-    }
+    // pub fn revert(&self, code: u16) -> ! {
+    //     let backend = self.backend.borrow();
+    //     backend.revert(code)
+    // }
 }

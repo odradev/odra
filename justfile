@@ -67,3 +67,9 @@ clean:
     rm -f Cargo.lock
     cd examples && rm -f Cargo.lock
     cd modules && rm -f Cargo.lock
+
+build-examples2:
+    cd examples2 && ODRA_MODULE=Counter cargo build --release --target wasm32-unknown-unknown --bin counter
+    wasm-strip examples2/target/wasm32-unknown-unknown/release/counter.wasm
+    mkdir -p examples2/wasm
+    mv examples2/target/wasm32-unknown-unknown/release/counter.wasm examples2/wasm/counter.wasm

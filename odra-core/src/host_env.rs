@@ -1,12 +1,11 @@
-use casper_types::U512;
-use odra::prelude::Rc;
-use odra::prelude::RefCell;
-use odra::types::{Address, EventData};
-use crate::{CallDef, ModuleCaller};
 use crate::host_context::HostContext;
+use crate::prelude::{Rc, RefCell};
+use crate::ModuleCaller;
+use casper_types::U512;
+use odra_types::Address;
 
 pub struct HostEnv {
-    backend: Rc<RefCell<dyn HostContext>>,
+    backend: Rc<RefCell<dyn HostContext>>
 }
 
 impl HostEnv {
@@ -18,7 +17,7 @@ impl HostEnv {
 
     pub fn clone_empty(&self) -> Self {
         HostEnv {
-            backend: self.backend.clone(),
+            backend: self.backend.clone()
         }
     }
 

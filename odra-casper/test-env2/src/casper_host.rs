@@ -2,17 +2,23 @@ use crate::casper_vm::CasperVm;
 use std::env;
 use std::path::PathBuf;
 
-use casper_engine_test_support::{ARG_AMOUNT, DEFAULT_PAYMENT, DEFAULT_ACCOUNT_INITIAL_BALANCE, DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_GENESIS_CONFIG, DEFAULT_GENESIS_CONFIG_HASH, DeployItemBuilder, ExecuteRequestBuilder, InMemoryWasmTestBuilder};
+use casper_engine_test_support::{
+    DeployItemBuilder, ExecuteRequestBuilder, InMemoryWasmTestBuilder, ARG_AMOUNT,
+    DEFAULT_ACCOUNT_INITIAL_BALANCE, DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_GENESIS_CONFIG,
+    DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_PAYMENT
+};
 use casper_execution_engine::core::engine_state::{GenesisAccount, RunGenesisRequest};
-use odra_core::{CallDef, ContractContext, HostContext, ModuleCaller};
-use odra_types::{Address, CLTyped, EventData, ExecutionError, FromBytes, OdraError, PublicKey, U512};
-use odra::prelude::collections::BTreeMap;
 use odra::contract_env::revert;
+use odra::prelude::collections::BTreeMap;
 use odra_casper_shared::consts::*;
+use odra_core::{CallDef, ContractContext, HostContext, ModuleCaller};
 use odra_types::casper_types::account::AccountHash;
-use odra_types::casper_types::{BlockTime, Key, Motes, runtime_args, SecretKey, StoredValue};
-use odra_types::casper_types::bytesrepr::{ToBytes, Bytes};
+use odra_types::casper_types::bytesrepr::{Bytes, ToBytes};
+use odra_types::casper_types::{runtime_args, BlockTime, Key, Motes, SecretKey, StoredValue};
 use odra_types::RuntimeArgs;
+use odra_types::{
+    Address, CLTyped, EventData, ExecutionError, FromBytes, OdraError, PublicKey, U512
+};
 
 impl HostContext for CasperVm {
     fn new() -> Self {

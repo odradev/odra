@@ -201,7 +201,7 @@ pub enum VmError {
     /// Non-specified error with a custom message.
     Other(String),
     /// Unspecified error.
-    Panic,
+    Panic
 }
 
 /// Error that can occur while operating on a collection.

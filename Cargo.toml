@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "core",
+    "odra2",
     "lang/codegen",
     "lang/ir",
     "lang/proc-macros",
@@ -16,8 +17,8 @@ members = [
     "odra-casper/test-env2",
     "odra-casper/livenet"
 ]
-
-exclude = [ "examples", "modules", "odra-casper/proxy-caller" ]
+exclude = [ "examples", "examples2", "modules", "odra-casper/proxy-caller" ]
+resolver = "2"
 
 [workspace.package]
 version = "0.6.0"

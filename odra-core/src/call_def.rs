@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use casper_types::bytesrepr::{FromBytes, ToBytes};
 use casper_types::U512;
 
@@ -5,7 +6,7 @@ use casper_types::U512;
 pub struct CallDef {
     pub entry_point: String,
     pub args: Args,
-    pub amount: Option<U512>,
+    pub amount: Option<U512>
 }
 
 impl CallDef {
@@ -13,7 +14,7 @@ impl CallDef {
         CallDef {
             entry_point: method,
             args,
-            amount: attached_value,
+            amount: attached_value
         }
     }
 
