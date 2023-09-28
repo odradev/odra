@@ -1,21 +1,16 @@
 #![allow(dead_code)]
 
 use odra::{
-    contract_env,
     prelude::string::{String, ToString},
-    types::{event::OdraEvent, BlockTime},
+    types::event::OdraEvent,
     Event, Variable
 };
 
 #[derive(Event, PartialEq, Eq, Debug)]
-struct Start {
-    time: BlockTime
-}
+struct Start;
 
 #[derive(Event, PartialEq, Eq, Debug)]
-struct Stop {
-    time: BlockTime
-}
+struct Stop;
 
 #[derive(Event, PartialEq, Eq, Debug)]
 struct Info {
@@ -29,17 +24,11 @@ struct Engine {
 
 impl Engine {
     pub fn start(&self) {
-        Start {
-            time: contract_env::get_block_time()
-        }
-        .emit();
+        Start.emit();
     }
 
     pub fn stop(&self) {
-        Stop {
-            time: contract_env::get_block_time()
-        }
-        .emit();
+        Stop.emit();
     }
 }
 
@@ -100,28 +89,21 @@ mod test {
     }
 
     fn engine_event(ident: &str) -> Event {
-        let time_arg = Argument {
-            ident: "time".to_string(),
-            ty: CLType::U64,
-            is_ref: false,
-            is_slice: false
-        };
-        event(ident, time_arg)
+        Event {
+            ident: ident.to_string(),
+            args: vec![]
+        }
     }
 
     fn info_event() -> Event {
-        let msg_arg = Argument {
+        let arg = Argument {
             ident: "msg".to_string(),
             ty: CLType::String,
             is_ref: false,
             is_slice: false
         };
-        event("Info", msg_arg)
-    }
-
-    fn event(ident: &str, arg: Argument) -> Event {
         Event {
-            ident: ident.to_string(),
+            ident: "Info".to_string(),
             args: vec![arg]
         }
     }
