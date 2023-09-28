@@ -1,5 +1,5 @@
 use casper_types::bytesrepr::{FromBytes, ToBytes};
-use casper_types::U512;
+use casper_types::{BlockTime, U512};
 use odra::prelude::Rc;
 use odra::prelude::RefCell;
 use odra::types::{Address, EventData};
@@ -64,7 +64,7 @@ impl ContractEnv {
 
     pub fn set<T: ToBytes, V: ToBytes>(&mut self, key: T, value: V) {
         let key = self.path_stack.get_key(Some(key));
-        let backend = self.backend.borrow();
+        let mut backend = self.backend.borrow_mut();
         backend.set(key, value.to_bytes().unwrap());
     }
 
@@ -74,22 +74,19 @@ impl ContractEnv {
     }
 
     pub fn call_contract<T: FromBytes>(&self, address: Address, call: CallDef) -> OdraResult<T> {
-        let backend = self.backend.borrow();
-        let bytes = backend.call_contract(address, call)?;
+        let mut backend = self.backend.borrow_mut();
+        let bytes = backend.call_contract(address, call);
         Ok(T::from_bytes(&bytes).unwrap().0)
     }
 
-    pub fn new_contract(&mut self, contract_id: &str, caller: ModuleCaller) -> Address {
-        let backend = self.backend.borrow();
-        backend.new_contract(contract_id, caller)
-    }
+
 
     pub fn self_address(&self) -> Address {
         let backend = self.backend.borrow();
         backend.callee()
     }
 
-    pub fn get_block_time(&self) -> u64 {
+    pub fn get_block_time(&self) -> BlockTime {
         let backend = self.backend.borrow();
         backend.get_block_time()
     }

@@ -9,6 +9,7 @@ members = [
     "types",
     "utils",
     "odra-casper/backend",
+    "odra-casper/backend2",
     "odra-casper/codegen",
     "odra-casper/shared",
     "odra-casper/test-env",

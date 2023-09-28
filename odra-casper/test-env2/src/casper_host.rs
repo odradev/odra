@@ -15,6 +15,56 @@ use odra_types::casper_types::bytesrepr::{ToBytes, Bytes};
 use odra_types::RuntimeArgs;
 
 impl HostContext for CasperVm {
+    fn new() -> Self {
+        let mut genesis_config = DEFAULT_GENESIS_CONFIG.clone();
+        let mut accounts: Vec<Address> = Vec::new();
+        let mut key_pairs = BTreeMap::new();
+        for i in 0..20 {
+            // Create keypair.
+            let secret_key = SecretKey::ed25519_from_bytes([i; 32]).unwrap();
+            let public_key = PublicKey::from(&secret_key);
+
+            // Create an AccountHash from a public key.
+            let account_addr = AccountHash::from(&public_key);
+
+            // Create a GenesisAccount.
+            let account = GenesisAccount::account(
+                public_key.clone(),
+                Motes::new(U512::from(DEFAULT_ACCOUNT_INITIAL_BALANCE)),
+                None
+            );
+            genesis_config.ee_config_mut().push_account(account);
+
+            accounts.push(account_addr.try_into().unwrap());
+            key_pairs.insert(account_addr.try_into().unwrap(), (secret_key, public_key));
+        }
+        let run_genesis_request = RunGenesisRequest::new(
+            *DEFAULT_GENESIS_CONFIG_HASH,
+            genesis_config.protocol_version(),
+            genesis_config.take_ee_config(),
+            DEFAULT_CHAINSPEC_REGISTRY.clone()
+        );
+
+        let chainspec_path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/chainspec.toml");
+        let mut builder = InMemoryWasmTestBuilder::new_with_chainspec(chainspec_path, None);
+
+        builder.run_genesis(&run_genesis_request).commit();
+
+        Self {
+            active_account: accounts[0],
+            context: builder,
+            accounts,
+            block_time: BlockTime::new(0),
+            calls_counter: 0,
+            error: None,
+            attached_value: None,
+            gas_used: BTreeMap::new(),
+            gas_cost: Vec::new(),
+            key_pairs
+        }
+    }
+
     fn set_caller(&mut self, caller: Address) {
         todo!()
     }

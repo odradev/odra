@@ -8,8 +8,7 @@ mod path_stack;
 mod odra_result;
 
 pub use contract_context::ContractContext;
-pub use host_env::HostContext;
+pub use host_context::HostContext;
 pub use call_def::CallDef;
 pub use odra_result::OdraResult;
 pub use module::ModuleCaller;
-pub use contract_context::InitializeBackend;

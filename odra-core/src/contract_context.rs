@@ -1,4 +1,4 @@
-use casper_types::U512;
+use casper_types::{BlockTime, U512};
 use odra::types::{Address, EventData};
 use crate::call_def::CallDef;
 use crate::contract_env::ContractEnv;
@@ -14,16 +14,12 @@ pub trait ContractContext {
         &mut self,
         address: Address,
         call_def: CallDef,
-    ) -> OdraResult<Vec<u8>>;
-    fn new_contract(&mut self, contract_id: &str, constructor: ModuleCaller) -> Address;
-    fn get_block_time(&self) -> u64;
+    ) -> Vec<u8>;
+    fn get_block_time(&self) -> BlockTime;
     fn callee(&self) -> Address;
     fn attached_value(&self) -> Option<U512>;
     fn emit_event(&mut self, event: EventData);
     fn transfer_tokens(&mut self, from: &Address, to: &Address, amount: U512);
     fn balance_of(&self, address: &Address) -> U512;
-}
-
-pub trait InitializeBackend {
-    fn new() -> Self;
+    
 }

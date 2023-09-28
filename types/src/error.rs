@@ -1,6 +1,7 @@
 use core::any::Any;
 
 use alloc::{boxed::Box, string::String};
+use casper_types::{CLType, CLTyped};
 
 use crate::arithmetic::ArithmeticsError;
 

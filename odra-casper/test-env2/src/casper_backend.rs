@@ -8,9 +8,7 @@ use odra_types::casper_types::BlockTime;
 
 use odra_casper_shared::consts::*;
 
-pub struct CasperBackend {
-
-}
+pub struct CasperBackend;
 
 impl ContractContext for CasperBackend {
     fn get(&self, key: Vec<u8>) -> Option<Vec<u8>> {
