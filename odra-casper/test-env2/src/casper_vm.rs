@@ -1,32 +1,33 @@
 use std::env;
 use std::path::PathBuf;
-use casper_contract::contract_api::runtime;
-use casper_contract::contract_api::runtime::revert;
-use casper_contract::contract_api::system::{create_purse, transfer_from_purse_to_account};
-use casper_contract::unwrap_or_revert::UnwrapOrRevert;
-use casper_engine_test_support::{DEFAULT_ACCOUNT_INITIAL_BALANCE, DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_GENESIS_CONFIG, DEFAULT_GENESIS_CONFIG_HASH, DeployItemBuilder, ExecuteRequestBuilder, InMemoryWasmTestBuilder};
+
+use casper_engine_test_support::{ARG_AMOUNT, DEFAULT_PAYMENT, DEFAULT_ACCOUNT_INITIAL_BALANCE, DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_GENESIS_CONFIG, DEFAULT_GENESIS_CONFIG_HASH, DeployItemBuilder, ExecuteRequestBuilder, InMemoryWasmTestBuilder};
 use casper_execution_engine::core::engine_state::{GenesisAccount, RunGenesisRequest};
-use odra_core::{CallDef, ContractContext, HostContext, InitializeBackend, ModuleCaller, OdraResult};
-use odra_types::{Address, EventData, ExecutionError, OdraError, PublicKey, U512};
+use odra_core::{CallDef, ContractContext, HostContext};
+use odra_types::{Address, CLTyped, EventData, ExecutionError, FromBytes, OdraError, PublicKey, U512};
 use odra::prelude::collections::BTreeMap;
-use odra_casper_shared::consts;
+use odra::contract_env::revert;
+use odra_casper_shared::consts::*;
 use odra_types::casper_types::account::AccountHash;
-use odra_types::casper_types::{BlockTime, Motes, runtime_args, SecretKey};
+use odra_types::casper_types::{BlockTime, Key, Motes, runtime_args, SecretKey, StoredValue};
+use odra_types::casper_types::bytesrepr::{ToBytes, Bytes};
+use odra_types::RuntimeArgs;
 
 pub struct CasperVm {
-    accounts: Vec<Address>,
-    key_pairs: BTreeMap<Address, (SecretKey, PublicKey)>,
-    active_account: Address,
-    context: InMemoryWasmTestBuilder,
-    block_time: BlockTime,
-    calls_counter: u32,
-    error: Option<OdraError>,
-    attached_value: Option<U512>,
-    gas_used: BTreeMap<AccountHash, U512>,
-    gas_cost: Vec<(String, U512)>
+    pub(crate) accounts: Vec<Address>,
+    pub(crate) key_pairs: BTreeMap<Address, (SecretKey, PublicKey)>,
+    pub(crate) active_account: Address,
+    pub(crate) context: InMemoryWasmTestBuilder,
+    pub(crate) block_time: BlockTime,
+    pub(crate) calls_counter: u32,
+    pub(crate) error: Option<OdraError>,
+    pub(crate) attached_value: Option<U512>,
+    pub(crate) gas_used: BTreeMap<AccountHash, U512>,
+    pub(crate) gas_cost: Vec<(String, U512)>
 }
 
-impl InitializeBackend for CasperVm {
+
+impl CasperVm {
     /// Create a new instance with predefined accounts.
     fn new() -> Self {
         let mut genesis_config = DEFAULT_GENESIS_CONFIG.clone();
@@ -77,156 +78,99 @@ impl InitializeBackend for CasperVm {
             key_pairs
         }
     }
-}
 
-impl HostContext for CasperVm {
-    fn set_caller(&self, caller: Address) {
-        todo!()
+    pub fn active_account_hash(&self) -> AccountHash {
+        *self.active_account.as_account_hash().unwrap()
     }
 
-    fn get_account(&self, index: usize) -> Address {
-        todo!()
+    pub fn next_hash(&mut self) -> [u8; 32] {
+        let seed = self.calls_counter;
+        self.calls_counter += 1;
+        let mut hash = [0u8; 32];
+        hash[0] = seed as u8;
+        hash[1] = (seed >> 8) as u8;
+        hash
     }
 
-    fn advance_block_time(&self, time_diff: u64) {
-        todo!()
+    /// Read a value from Account's named keys.
+    pub fn get_account_value<T: CLTyped + FromBytes + ToBytes>(
+        &self,
+        hash: AccountHash,
+        name: &str
+    ) -> Result<T, String> {
+        let result: Result<StoredValue, String> =
+            self.context
+                .query(None, Key::Account(hash), &[name.to_string()]);
+
+        result.map(|value| value.as_cl_value().unwrap().clone().into_t().unwrap())
     }
 
-    fn get_event(&self, contract_address: Address, index: i32) -> Option<odra_types::EventData> {
-        todo!()
+    pub fn get_active_account_result<T: CLTyped + FromBytes>(&self) -> T {
+        let active_account = self.active_account_hash();
+        let bytes: Bytes = self
+            .get_account_value(active_account, RESULT_KEY)
+            .unwrap_or_default();
+        T::from_bytes(bytes.inner_bytes()).unwrap().0
     }
 
-    fn attach_value(&self, amount: U512) {
-        todo!()
-    }
-}
-
-impl ContractContext for CasperVm {
-    fn get(&self, key: Vec<u8>) -> Option<Vec<u8>> {
-        todo!()
+    pub fn collect_gas(&mut self) {
+        *self
+            .gas_used
+            .entry(*self.active_account.as_account_hash().unwrap())
+            .or_insert_with(U512::zero) += *DEFAULT_PAYMENT;
     }
 
-    fn set(&self, key: Vec<u8>, value: Vec<u8>) {
-        todo!()
+    /// Returns the cost of the last deploy.
+    /// Keep in mind that this may be different from the cost of the deploy on the live network.
+    /// This is NOT the amount of gas charged - see [last_call_contract_gas_used].
+    pub fn last_call_contract_gas_cost(&self) -> U512 {
+        self.context.last_exec_gas_cost().value()
     }
 
-    fn get_caller(&self) -> Address {
-        todo!()
+    /// Returns the amount of gas used for last call.
+    pub fn last_call_contract_gas_used(&self) -> U512 {
+        *DEFAULT_PAYMENT
     }
 
-    fn call_contract(&mut self, address: Address, call_def: CallDef) -> OdraResult<Vec<u8>> {
-        self.error = None;
-        // TODO: handle unwrap
-        let hash = address.as_contract_package_hash().unwrap();
-
-        let session_code = include_bytes!("../resources/proxy_caller_with_return.wasm").to_vec();
-        let args = runtime_args! {
-            // TODO: convert call_def to RuntimeArgs
-        };
-        let args_bytes: Vec<u8> = args.to_bytes().unwrap();
-        let args = runtime_args! {
-            CONTRACT_PACKAGE_HASH_ARG => hash,
-            ENTRY_POINT_ARG => entry_point,
-            ARGS_ARG => Bytes::from(args_bytes),
-            ATTACHED_VALUE_ARG => self.attached_value,
-            AMOUNT_ARG => self.attached_value.unwrap_or_default(),
-        };
-
-        let deploy_item = DeployItemBuilder::new()
-            .with_empty_payment_bytes(runtime_args! {ARG_AMOUNT => *DEFAULT_PAYMENT})
-            .with_authorization_keys(&[self.active_account_hash()])
-            .with_address(self.active_account_hash())
-            .with_session_bytes(session_code, args)
-            .with_deploy_hash(self.next_hash())
-            .build();
-
-        let execute_request = ExecuteRequestBuilder::from_deploy_item(deploy_item)
-            .with_block_time(u64::from(self.block_time))
-            .build();
-        self.context.exec(execute_request).commit();
-        self.collect_gas();
-        self.gas_cost.push((
-            format!("call_entrypoint {}", call_def.entry_point),
-            self.last_call_contract_gas_cost()
-        ));
-
-        self.attached_value = None;
-        if let Some(error) = self.context.get_error() {
-            // TODO: handle error
-            // let odra_error = parse_error(error);
-            panic!("Error: {}", error);
-            // self.error = Some(odra_error.clone());
-            // self.panic_with_error(odra_error, call_def.entry_point, hash);
-        } else {
-            self.get_active_account_result()
+    /// Returns total gas used by the account.
+    pub fn total_gas_used(&self, address: Address) -> U512 {
+        match &address {
+            Address::Account(address) => self.gas_used.get(address).cloned().unwrap_or_default(),
+            Address::Contract(address) => panic!("Contract {} can't burn gas.", address)
         }
     }
 
-    fn new_contract(&mut self, contract_id: &str, constructor: ModuleCaller) -> Address {
-        self.error = None;
-        let wasm_path = format!("resources/{}.wasm", contract_id);
-        let session_code = PathBuf::from(wasm_path);
-        let args = runtime_args! {
-            // TODO: convert constructor to RuntimeArgs
-        };
-
-        let deploy_item = DeployItemBuilder::new()
-            .with_empty_payment_bytes(runtime_args! {ARG_AMOUNT => *DEFAULT_PAYMENT})
-            .with_authorization_keys(&[self.active_account_hash()])
-            .with_address(self.active_account_hash())
-            .with_session_code(session_code, args.clone())
-            .with_deploy_hash(self.next_hash())
-            .build();
-
-        let execute_request = ExecuteRequestBuilder::from_deploy_item(deploy_item)
-            .with_block_time(u64::from(self.block_time))
-            .build();
-        self.context.exec(execute_request).commit().expect_success();
-        self.collect_gas();
-        self.gas_cost.push((
-            format!("deploy_contract {}", wasm_path),
-            self.last_call_contract_gas_cost()
-        ));
-        todo!()
+    /// Returns the report of the gas used during the whole lifetime of the CasperVM.
+    pub fn gas_report(&self) -> Vec<(String, U512)> {
+        self.gas_cost.clone()
     }
 
-    fn get_block_time(&self) -> BlockTime {
-        self.block_time
+    /// Returns the public key that corresponds to the given Account Address.
+    pub fn public_key(&self, address: &Address) -> PublicKey {
+        let (_, public_key) = self.key_pairs.get(address).unwrap();
+        public_key.clone()
     }
 
-    fn callee(&self) -> Address {
-        self.active_account
+    /// Cryptographically signs a message as a given account.
+    pub fn sign_message(&self, message: &Bytes, address: &Address) -> Bytes {
+        let (secret_key, public_key) = self.key_pairs.get(address).unwrap();
+        let signature = odra_types::casper_types::crypto::sign(message, secret_key, public_key)
+            .to_bytes()
+            .unwrap();
+        Bytes::from(signature)
     }
+}
 
-    fn attached_value(&self) -> Option<U512> {
-        self.attached_value
-    }
+#[cfg(test)]
+mod tests {
+    use crate::casper_vm::CasperVm;
+    use odra_core::HostContext;
 
-    fn emit_event(&self, event: EventData) {
-        casper_event_standard::emit(event)
-    }
-
-    fn transfer_tokens(&self, from: &Address, to: &Address, amount: U512) {
-
-        let main_purse = match runtime::get_key(consts::CONTRACT_MAIN_PURSE).map(|key| *key.as_uref().unwrap_or_revert()) {
-            Some(purse) => purse,
-            None => {
-                let purse = create_purse();
-                runtime::put_key(consts::CONTRACT_MAIN_PURSE, purse.into());
-                purse
-            }
-        };
-
-    match to {
-        Address::Account(account) => {
-            transfer_from_purse_to_account(main_purse, *account, amount.into(), None)
-                .unwrap_or_revert();
-        }
-        Address::Contract(_) => revert(ExecutionError::can_not_transfer_to_contract())
-    };
-    }
-
-    fn balance_of(&self, address: &Address) -> U512 {
-        todo!()
+    #[test]
+    fn test_initialize() {
+        let vm = CasperVm::new();
+        assert_eq!(vm.accounts.len(), 20);
+        assert_eq!(vm.key_pairs.len(), 20);
+        assert_eq!(vm.active_account, vm.accounts[0]);
     }
 }

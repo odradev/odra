@@ -13,9 +13,14 @@ repository = { workspace = true }
 [dependencies]
 casper-engine-test-support = { version = "5.0.0", features = ["test-support"] }
 casper-execution-engine = { workspace = true }
-casper-contract = "3.0.0"
 odra-core = { path = "../../odra-core" }
 odra-types = { path = "../../types" }
 odra = { path = "../../core" }
 odra-casper-shared = { path = "../shared" }
 casper-event-standard = "0.4.0"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+casper-contract = { workspace = true }
+ink_allocator = { version = "4.2.1", default-features = false }
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+casper-contract = { version = "3.0.0", default-features = false, features = ["test-support"] }
