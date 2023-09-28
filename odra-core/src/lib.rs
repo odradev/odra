@@ -19,5 +19,6 @@ pub use call_def::CallDef;
 pub use contract_context::ContractContext;
 pub use contract_env::ContractEnv;
 pub use host_context::HostContext;
+pub use host_env::HostEnv;
 pub use module::ModuleCaller;
 pub use odra_result::OdraResult;

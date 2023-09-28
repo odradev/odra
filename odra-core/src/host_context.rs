@@ -10,7 +10,7 @@ pub trait HostContext {
     fn attach_value(&mut self, amount: U512);
     fn call_contract(&mut self, address: Address, call_def: CallDef) -> Vec<u8>;
     fn new_contract(&mut self, contract_id: &str, caller: ModuleCaller) -> Address;
-    fn new() -> Self
+    fn new_instance() -> Self
     where
         Self: Sized;
 }

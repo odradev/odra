@@ -172,3 +172,29 @@ mod wasm_exports {
         wasm_parts::execute_increment();
     }
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+mod casper_tests {
+    use odra2::{HostEnv, types::Address};
+
+    pub struct CounterDeployer;
+
+    impl CounterDeployer {
+        pub fn new_contract(env: &HostEnv) -> CounterRef {
+            env.new_contract("counter.wasm")
+        }
+    }
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub use casper_tests::*;
+
+#[cfg(test)]
+mod tests {
+    use super::CounterDeployer;
+
+    #[test]
+    fn counter_works() {
+        let env = odra2::test_env();
+        let counter = CounterDeployer::new_contract(&env);
+    }
+}

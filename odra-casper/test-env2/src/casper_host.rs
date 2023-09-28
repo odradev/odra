@@ -1,6 +1,8 @@
 use crate::casper_vm::CasperVm;
+use std::cell::RefCell;
 use std::env;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 use casper_engine_test_support::{
     DeployItemBuilder, ExecuteRequestBuilder, InMemoryWasmTestBuilder, ARG_AMOUNT,
@@ -11,7 +13,7 @@ use casper_execution_engine::core::engine_state::{GenesisAccount, RunGenesisRequ
 use odra::contract_env::revert;
 use odra::prelude::collections::BTreeMap;
 use odra_casper_shared::consts::*;
-use odra_core::{CallDef, ContractContext, HostContext, ModuleCaller};
+use odra_core::{CallDef, ContractContext, HostContext, ModuleCaller, HostEnv};
 use odra_types::casper_types::account::AccountHash;
 use odra_types::casper_types::bytesrepr::{Bytes, ToBytes};
 use odra_types::casper_types::{runtime_args, BlockTime, Key, Motes, SecretKey, StoredValue};
@@ -21,7 +23,7 @@ use odra_types::{
 };
 
 impl HostContext for CasperVm {
-    fn new() -> Self {
+    fn new_instance() -> Self {
         let mut genesis_config = DEFAULT_GENESIS_CONFIG.clone();
         let mut accounts: Vec<Address> = Vec::new();
         let mut key_pairs = BTreeMap::new();
@@ -142,5 +144,11 @@ impl HostContext for CasperVm {
 
     fn new_contract(&mut self, contract_id: &str, caller: ModuleCaller) -> Address {
         todo!()
+    }
+}
+
+impl CasperVm {
+    pub fn new() -> HostEnv {
+        HostEnv::new(Rc::new(RefCell::new(CasperVm::new_instance())))
     }
 }

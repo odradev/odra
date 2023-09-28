@@ -9,11 +9,11 @@ pub struct HostEnv {
 }
 
 impl HostEnv {
-    // pub fn new(backend: Rc<RefCell<dyn HostContext>>) -> HostEnv {
-    //     HostEnv {
-    //         backend,
-    //     }
-    // }
+    pub fn new(backend: Rc<RefCell<dyn HostContext>>) -> HostEnv {
+        HostEnv {
+            backend,
+        }
+    }
 
     pub fn clone_empty(&self) -> Self {
         HostEnv {
