@@ -4,10 +4,7 @@ use crate::{
     variable::Variable,
     ContractEnv
 };
-use casper_types::{
-    bytesrepr::{FromBytes, ToBytes},
-    CLTyped
-};
+use odra_types::{CLTyped, FromBytes, ToBytes};
 
 pub struct Mapping<const N: u8, K, V> {
     parent_env: Rc<ContractEnv>,

@@ -1,7 +1,7 @@
 use crate::call_def::CallDef;
 use crate::prelude::*;
-use casper_types::{BlockTime, ContractPackageHash, EntryPoints, U512};
-use odra_types::{Address, EventData};
+use odra_types::casper_types::BlockTime;
+use odra_types::{Address, EventData, U512};
 
 pub trait ContractContext {
     fn get_value(&self, key: &[u8]) -> Option<Vec<u8>>;

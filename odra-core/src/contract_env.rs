@@ -1,9 +1,8 @@
 use crate::prelude::*;
+use odra_types::{CLTyped, FromBytes, ToBytes};
 
 use crate::key_maker;
 pub use crate::ContractContext;
-use casper_types::bytesrepr::{FromBytes, ToBytes};
-use casper_types::{CLTyped, ContractPackageHash, EntryPoints};
 
 pub struct ContractEnv {
     index: u32,

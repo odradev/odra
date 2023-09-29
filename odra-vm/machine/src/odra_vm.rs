@@ -20,12 +20,12 @@ use crate::odra_vm_state::OdraVmState;
 use crate::storage::Storage;
 
 #[derive(Default)]
-pub struct MockVm {
+pub struct OdraVmMachine {
     state: Arc<RwLock<OdraVmState>>,
     contract_register: Arc<RwLock<ContractRegister>>
 }
 
-impl MockVm {
+impl OdraVmMachine {
     pub fn register_contract(
         &self,
         constructor: Option<(String, &RuntimeArgs, EntrypointCall)>,
@@ -206,8 +206,8 @@ impl MockVm {
         self.state.write().unwrap().emit_event(event_data);
     }
 
-    pub fn get_event(&self, address: Address, index: i32) -> Result<EventData, EventError> {
-        self.state.read().unwrap().get_event(address, index)
+    pub fn get_event(&self, address: Address, index: i32) -> Option<EventData> {
+        self.state.read().unwrap().get_event(address, index).ok()
     }
 
     pub fn get_block_time(&self) -> BlockTime {
@@ -277,222 +277,6 @@ impl MockVm {
     }
 }
 
-pub struct MockVmState {
-    storage: Storage,
-    callstack: Callstack,
-    events: BTreeMap<Address, Vec<EventData>>,
-    contract_counter: u32,
-    error: Option<OdraError>,
-    block_time: u64,
-    accounts: Vec<Address>,
-    key_pairs: BTreeMap<Address, (SecretKey, PublicKey)>
-}
-
-impl MockVmState {
-    fn get_backend_name(&self) -> String {
-        "MockVM".to_string()
-    }
-
-    fn callee(&self) -> Address {
-        *self.callstack.current().address()
-    }
-
-    fn caller(&self) -> Address {
-        *self.callstack.previous().address()
-    }
-
-    fn callstack_tip(&self) -> &CallstackElement {
-        self.callstack.current()
-    }
-
-    fn set_caller(&mut self, address: Address) {
-        self.pop_callstack_element();
-        self.push_callstack_element(CallstackElement::Account(address));
-    }
-
-    fn set_var<T: ToBytes>(&mut self, key: &[u8], value: T) {
-        let ctx = self.callstack.current().address();
-        if let Err(error) = self.storage.set_value(ctx, key, value) {
-            self.set_error(Into::<ExecutionError>::into(error));
-        }
-    }
-
-    fn get_var<T: FromBytes>(&self, key: &[u8]) -> Result<Option<T>, Error> {
-        let ctx = self.callstack.current().address();
-        self.storage.get_value(ctx, key)
-    }
-
-    fn set_dict_value<T: ToBytes>(&mut self, dict: &[u8], key: &[u8], value: T) {
-        let ctx = self.callstack.current().address();
-        if let Err(error) = self.storage.insert_dict_value(ctx, dict, key, value) {
-            self.set_error(Into::<ExecutionError>::into(error));
-        }
-    }
-
-    fn get_dict_value<T: FromBytes>(&self, dict: &[u8], key: &[u8]) -> Result<Option<T>, Error> {
-        let ctx = &self.callstack.current().address();
-        self.storage.get_dict_value(ctx, dict, key)
-    }
-
-    fn emit_event(&mut self, event_data: &EventData) {
-        let contract_address = self.callstack.current().address();
-        let events = self.events.get_mut(contract_address).map(|events| {
-            events.push(event_data.clone());
-            events
-        });
-        if events.is_none() {
-            self.events
-                .insert(*contract_address, vec![event_data.clone()]);
-        }
-    }
-
-    fn get_event(&self, address: Address, index: i32) -> Result<EventData, EventError> {
-        let events = self.events.get(&address);
-        if events.is_none() {
-            return Err(EventError::IndexOutOfBounds);
-        }
-        let events: &Vec<EventData> = events.unwrap();
-        let event_position = odra_utils::event_absolute_position(events.len(), index)
-            .ok_or(EventError::IndexOutOfBounds)?;
-        Ok(events.get(event_position).unwrap().clone())
-    }
-
-    fn push_callstack_element(&mut self, element: CallstackElement) {
-        self.callstack.push(element);
-    }
-
-    fn pop_callstack_element(&mut self) {
-        self.callstack.pop();
-    }
-
-    fn clear_callstack(&mut self) {
-        let mut element = self.callstack.pop();
-        while element.is_some() {
-            let new_element = self.callstack.pop();
-            if new_element.is_none() {
-                self.callstack.push(element.unwrap());
-                return;
-            }
-            element = new_element;
-        }
-    }
-
-    fn next_contract_address(&mut self) -> Address {
-        self.contract_counter += 1;
-        Address::contract_from_u32(self.contract_counter)
-    }
-
-    fn get_contract_namespace(&self) -> String {
-        self.contract_counter.to_string()
-    }
-
-    fn set_error<E>(&mut self, error: E)
-    where
-        E: Into<OdraError>
-    {
-        if self.error.is_none() {
-            self.error = Some(error.into());
-        }
-    }
-
-    fn attached_value(&self) -> U512 {
-        self.callstack.current_amount()
-    }
-
-    fn clear_error(&mut self) {
-        self.error = None;
-    }
-
-    fn error(&self) -> Option<OdraError> {
-        self.error.clone()
-    }
-
-    fn is_in_caller_context(&self) -> bool {
-        self.callstack.len() == 1
-    }
-
-    fn take_snapshot(&mut self) {
-        self.storage.take_snapshot();
-    }
-
-    fn drop_snapshot(&mut self) {
-        self.storage.drop_snapshot();
-    }
-
-    fn restore_snapshot(&mut self) {
-        self.storage.restore_snapshot();
-    }
-
-    fn block_time(&self) -> u64 {
-        self.block_time
-    }
-
-    fn advance_block_time_by(&mut self, milliseconds: u64) {
-        self.block_time += milliseconds;
-    }
-
-    fn get_balance(&self, address: Address) -> U512 {
-        self.storage
-            .balance_of(&address)
-            .map(|b| b.value())
-            .unwrap_or_default()
-    }
-
-    fn set_balance(&mut self, address: Address, amount: U512) {
-        self.storage
-            .set_balance(address, AccountBalance::new(amount));
-    }
-
-    fn increase_balance(&mut self, address: &Address, amount: &U512) -> Result<()> {
-        self.storage.increase_balance(address, amount)
-    }
-
-    fn reduce_balance(&mut self, address: &Address, amount: &U512) -> Result<()> {
-        self.storage.reduce_balance(address, amount)
-    }
-
-    fn public_key(&self, address: &Address) -> PublicKey {
-        let (_, public_key) = self.key_pairs.get(address).unwrap();
-        public_key.clone()
-    }
-}
-
-impl Default for MockVmState {
-    fn default() -> Self {
-        let mut addresses: Vec<Address> = Vec::new();
-        let mut key_pairs = BTreeMap::<Address, (SecretKey, PublicKey)>::new();
-        for i in 0..20 {
-            // Create keypair.
-            let secret_key = SecretKey::ed25519_from_bytes([i; 32]).unwrap();
-            let public_key = PublicKey::from(&secret_key);
-
-            // Create an AccountHash from a public key.
-            let account_addr = AccountHash::from(&public_key);
-
-            addresses.push(account_addr.try_into().unwrap());
-            key_pairs.insert(account_addr.try_into().unwrap(), (secret_key, public_key));
-        }
-
-        let mut balances = BTreeMap::<Address, AccountBalance>::new();
-        for address in addresses.clone() {
-            balances.insert(address, 100_000_000_000_000u64.into());
-        }
-
-        let mut backend = MockVmState {
-            storage: Storage::new(balances),
-            callstack: Default::default(),
-            events: Default::default(),
-            contract_counter: 0,
-            error: None,
-            block_time: 0,
-            accounts: addresses.clone(),
-            key_pairs
-        };
-        backend.push_callstack_element(CallstackElement::Account(*addresses.first().unwrap()));
-        backend
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
@@ -505,12 +289,12 @@ mod tests {
     use odra_types::{Address, EventData};
     use odra_types::{ExecutionError, OdraError, VmError};
 
-    use super::MockVm;
+    use super::OdraVmMachine;
 
     #[test]
     fn contracts_have_different_addresses() {
         // given a new instance
-        let instance = MockVm::default();
+        let instance = OdraVmMachine::default();
         // when register two contracts with the same entrypoints
         let entrypoint: Vec<(String, (EntrypointArgs, EntrypointCall))> =
             vec![(String::from("abc"), (vec![], |_, _| vec![]))];
@@ -527,7 +311,7 @@ mod tests {
     #[test]
     fn addresses_have_different_type() {
         // given an address of a contract and an address of an account
-        let instance = MockVm::default();
+        let instance = OdraVmMachine::default();
         let (contract_address, _, _) = setup_contract(&instance);
         let account_address = instance.get_account(0);
 
@@ -540,7 +324,7 @@ mod tests {
     #[test]
     fn test_contract_call() {
         // given an instance with a registered contract having one entrypoint
-        let instance = MockVm::default();
+        let instance = OdraVmMachine::default();
 
         let (contract_address, entrypoint, call_result) = setup_contract(&instance);
 
@@ -555,7 +339,7 @@ mod tests {
     #[test]
     fn test_call_non_existing_contract() {
         // given an empty vm
-        let instance = MockVm::default();
+        let instance = OdraVmMachine::default();
 
         let address = Address::contract_from_u32(42);
 
@@ -572,7 +356,7 @@ mod tests {
     #[test]
     fn test_call_non_existing_entrypoint() {
         // given an instance with a registered contract having one entrypoint
-        let instance = MockVm::default();
+        let instance = OdraVmMachine::default();
         let (contract_address, entrypoint, _) = setup_contract(&instance);
 
         // when call non-existing entrypoint
@@ -596,7 +380,7 @@ mod tests {
     #[test]
     fn test_caller_switching() {
         // given an empty instance
-        let instance = MockVm::default();
+        let instance = OdraVmMachine::default();
 
         // when set a new caller
         let new_caller = Address::account_from_str("ff");
@@ -611,7 +395,7 @@ mod tests {
     #[test]
     fn test_revert() {
         // given an empty instance
-        let instance = MockVm::default();
+        let instance = OdraVmMachine::default();
 
         // when revert
         instance.revert(ExecutionError::new(1, "err").into());
@@ -623,7 +407,7 @@ mod tests {
     #[test]
     fn test_read_write_value() {
         // given an empty instance
-        let instance = MockVm::default();
+        let instance = OdraVmMachine::default();
 
         // when set a value
         let key = b"key";
@@ -639,7 +423,7 @@ mod tests {
     #[test]
     fn test_read_write_dict() {
         // given an empty instance
-        let instance = MockVm::default();
+        let instance = OdraVmMachine::default();
 
         // when set a value
         let dict = b"dict";
@@ -658,7 +442,7 @@ mod tests {
     #[test]
     fn events() {
         // given an empty instance
-        let instance = MockVm::default();
+        let instance = OdraVmMachine::default();
 
         let first_contract_address = Address::account_from_str("abc");
         // put a contract on stack
@@ -700,7 +484,7 @@ mod tests {
     #[test]
     fn test_current_contract_address() {
         // given an empty instance
-        let instance = MockVm::default();
+        let instance = OdraVmMachine::default();
 
         // when push a contract into the stack
         let contract_address = Address::contract_from_u32(100);
@@ -713,7 +497,7 @@ mod tests {
     #[test]
     fn test_call_contract_with_amount() {
         // given an instance with a registered contract having one entrypoint
-        let instance = MockVm::default();
+        let instance = OdraVmMachine::default();
         let (contract_address, entrypoint_name, _) = setup_contract(&instance);
 
         // when call a contract with the whole balance of the caller
@@ -736,7 +520,7 @@ mod tests {
     #[should_panic(expected = "VmError(BalanceExceeded)")]
     fn test_call_contract_with_amount_exceeding_balance() {
         // given an instance with a registered contract having one entrypoint
-        let instance = MockVm::default();
+        let instance = OdraVmMachine::default();
         let (contract_address, entrypoint_name, _) = setup_contract(&instance);
 
         let caller = instance.get_account(0);
@@ -751,12 +535,12 @@ mod tests {
         );
     }
 
-    fn push_address(vm: &MockVm, address: &Address) {
+    fn push_address(vm: &OdraVmMachine, address: &Address) {
         let element = CallstackElement::Account(*address);
         vm.state.write().unwrap().push_callstack_element(element);
     }
 
-    fn setup_contract(instance: &MockVm) -> (Address, String, u32) {
+    fn setup_contract(instance: &OdraVmMachine) -> (Address, String, u32) {
         let entrypoint_name = "abc";
         let result = vec![1, 1, 0, 0];
 

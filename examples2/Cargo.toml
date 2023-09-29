@@ -22,6 +22,6 @@ lto = true
 opt-level = 3
 
 [features]
-default = ["mock-vm"]
+default = ["odra-vm"]
 casper = ["odra2/casper"]
-mock-vm = ["odra2/mock-vm"]
+odra-vm = ["odra2/odra-vm"]

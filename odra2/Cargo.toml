@@ -21,6 +21,6 @@ odra-vm-backend = { path = "../odra-vm/backend", optional = true }
 odra-vm-test-env = { path = "../odra-vm/test-env", optional = true }
 
 [features]
-default = ["mock-vm"]
-mock-vm = ["odra-vm-backend", "odra-vm-test-env"]
+default = ["odra-vm"]
+odra-vm = ["odra-vm-backend", "odra-vm-test-env"]
 casper = ["odra-casper-backend2", "odra-casper-test-env2"]

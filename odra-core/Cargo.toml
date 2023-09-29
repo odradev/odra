@@ -5,4 +5,3 @@ edition = "2021"
 
 [dependencies]
 odra-types = { path = "../types" }
-casper-types = "3.0.0"

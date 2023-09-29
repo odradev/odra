@@ -1,8 +1,5 @@
 use crate::prelude::*;
-use casper_types::{
-    bytesrepr::{FromBytes, ToBytes},
-    CLTyped
-};
+use odra_types::{CLTyped, FromBytes, ToBytes};
 
 use crate::contract_env::ContractEnv;
 

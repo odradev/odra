@@ -1,6 +1,7 @@
 use crate::host_context::HostContext;
 use crate::prelude::*;
 use crate::CallDef;
+use odra_types::casper_types::BlockTime;
 use odra_types::Address;
 use odra_types::Bytes;
 use odra_types::{RuntimeArgs, U512};
@@ -30,7 +31,7 @@ impl HostEnv {
         backend.set_caller(address)
     }
 
-    pub fn advance_block_time(&mut self, time_diff: u64) {
+    pub fn advance_block_time(&mut self, time_diff: BlockTime) {
         let mut backend = self.backend.borrow_mut();
         backend.advance_block_time(time_diff)
     }
