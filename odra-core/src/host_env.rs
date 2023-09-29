@@ -1,8 +1,9 @@
 use crate::host_context::HostContext;
-use crate::prelude::{Rc, RefCell};
-use crate::ModuleCaller;
-use casper_types::U512;
+use crate::prelude::*;
+use odra_types::{RuntimeArgs, U512};
+use odra_types::Bytes;
 use odra_types::Address;
+use crate::CallDef;
 
 pub struct HostEnv {
     backend: Rc<RefCell<dyn HostContext>>
@@ -41,8 +42,13 @@ impl HostEnv {
         backend.attach_value(amount)
     }
 
-    pub fn new_contract(&mut self, contract_id: &str, caller: ModuleCaller) -> Address {
+    pub fn new_contract(&mut self, contract_id: &str, args: &RuntimeArgs, constructor: Option<String>) -> Address {
         let mut backend = self.backend.borrow_mut();
-        backend.new_contract(contract_id, caller)
+        backend.new_contract(contract_id, args, constructor)
+    }
+
+    pub fn call_contract(&mut self, address: &Address, call_def: CallDef) -> Bytes {
+        let mut backend = self.backend.borrow_mut();
+        backend.call_contract(address, call_def)
     }
 }

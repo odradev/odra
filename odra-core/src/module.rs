@@ -10,6 +10,7 @@ pub trait Callable {
     fn call(&self, env: ContractEnv, call_def: CallDef) -> OdraResult<Vec<u8>>;
 }
 
+#[derive(Clone)]
 pub struct ModuleCaller(pub fn(env: ContractEnv, call_def: CallDef) -> OdraResult<Vec<u8>>);
 
 impl ModuleCaller {

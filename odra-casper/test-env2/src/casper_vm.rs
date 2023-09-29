@@ -60,12 +60,12 @@ impl CasperVm {
         result.map(|value| value.as_cl_value().unwrap().clone().into_t().unwrap())
     }
 
-    pub fn get_active_account_result<T: CLTyped + FromBytes>(&self) -> T {
+    pub fn get_active_account_result(&self) -> Bytes {
         let active_account = self.active_account_hash();
         let bytes: Bytes = self
             .get_account_value(active_account, RESULT_KEY)
             .unwrap_or_default();
-        T::from_bytes(bytes.inner_bytes()).unwrap().0
+        bytes
     }
 
     pub fn collect_gas(&mut self) {

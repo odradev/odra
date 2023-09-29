@@ -13,14 +13,14 @@ pub mod event;
 pub mod uints;
 
 use alloc::vec::Vec;
-pub use casper_types::{bytesrepr::FromBytes, CLValue, RuntimeArgs};
+pub use casper_types::{bytesrepr::FromBytes, CLValue};
 
 pub type BlockTime = u64;
 pub type EventData = Vec<u8>;
 
 pub use address::{Address, OdraAddress};
 pub use casper_types;
-pub use casper_types::runtime_args;
+pub use casper_types::{runtime_args, RuntimeArgs};
 pub use casper_types::{bytesrepr::Bytes, CLType, CLTyped, PublicKey, U128, U256, U512};
 pub use error::{AddressError, CollectionError, ExecutionError, OdraError, VmError};
 

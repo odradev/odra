@@ -18,3 +18,4 @@ mod casper_test {
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use casper_test::*;
+pub use odra_core::CallDef;

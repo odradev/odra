@@ -10,16 +10,17 @@ use casper_engine_test_support::{
     DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_PAYMENT
 };
 use casper_execution_engine::core::engine_state::{GenesisAccount, RunGenesisRequest};
-use odra::contract_env::revert;
+
 use odra::prelude::collections::BTreeMap;
+use odra_casper_shared::consts;
 use odra_casper_shared::consts::*;
-use odra_core::{CallDef, ContractContext, HostContext, ModuleCaller, HostEnv};
+use odra_core::{CallDef, HostContext, HostEnv};
 use odra_types::casper_types::account::AccountHash;
 use odra_types::casper_types::bytesrepr::{Bytes, ToBytes};
-use odra_types::casper_types::{runtime_args, BlockTime, Key, Motes, SecretKey, StoredValue};
+use odra_types::casper_types::{runtime_args, BlockTime, Motes, SecretKey, ContractPackageHash, Key};
 use odra_types::RuntimeArgs;
 use odra_types::{
-    Address, CLTyped, EventData, ExecutionError, FromBytes, OdraError, PublicKey, U512
+    Address, PublicKey, U512
 };
 
 impl HostContext for CasperVm {
@@ -93,16 +94,13 @@ impl HostContext for CasperVm {
         todo!()
     }
 
-    fn call_contract(&mut self, address: Address, call_def: CallDef) -> Vec<u8> {
+    fn call_contract(&mut self, address: &Address, call_def: CallDef) -> Bytes {
         self.error = None;
         // TODO: handle unwrap
         let hash = *address.as_contract_package_hash().unwrap();
 
         let session_code = include_bytes!("../resources/proxy_caller_with_return.wasm").to_vec();
-        let args = runtime_args! {
-            // TODO: convert call_def to RuntimeArgs
-        };
-        let args_bytes: Vec<u8> = args.to_bytes().unwrap();
+        let args_bytes: Vec<u8> = call_def.args.to_bytes().unwrap();
         let entry_point = call_def.entry_point.clone();
         let args = runtime_args! {
             CONTRACT_PACKAGE_HASH_ARG => hash,
@@ -142,13 +140,75 @@ impl HostContext for CasperVm {
         }
     }
 
-    fn new_contract(&mut self, contract_id: &str, caller: ModuleCaller) -> Address {
-        todo!()
+    fn new_contract(&mut self, contract_id: &str, args: &RuntimeArgs, constructor: Option<String>) -> Address {
+        let wasm_path = format!("{}.wasm", contract_id);
+        let package_hash_key_name = format!("{}_package_hash", contract_id);
+        let mut args = args.clone();
+        args.insert(
+            consts::PACKAGE_HASH_KEY_NAME_ARG,
+            package_hash_key_name.clone()
+        )
+            .unwrap();
+        args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, true).unwrap();
+        args.insert(consts::IS_UPGRADABLE_ARG, false).unwrap();
+
+        if let Some(constructor_name) = constructor {
+            args.insert(consts::CONSTRUCTOR_NAME_ARG, constructor_name)
+                .unwrap();
+        };
+
+        self.deploy_contract(&wasm_path, &args);
+        let contract_package_hash = self
+            .contract_package_hash_from_name(&package_hash_key_name);
+        contract_package_hash.try_into().unwrap()
     }
 }
 
 impl CasperVm {
     pub fn new() -> HostEnv {
         HostEnv::new(Rc::new(RefCell::new(CasperVm::new_instance())))
+    }
+
+    fn deploy_contract(&mut self, wasm_path: &str, args: &RuntimeArgs) {
+        self.error = None;
+        let session_code = PathBuf::from(wasm_path);
+        // if let Ok(path) = env::var(ODRA_WASM_PATH_ENV_KEY) {
+        //     let mut path = PathBuf::from(path);
+        //     path.push(wasm_path);
+        //     if path.exists() {
+        //         session_code = path;
+        //     } else {
+        //         panic!("WASM file not found: {:?}", path);
+        //     }
+        // }
+
+        let deploy_item = DeployItemBuilder::new()
+            .with_empty_payment_bytes(runtime_args! {ARG_AMOUNT => *DEFAULT_PAYMENT})
+            .with_authorization_keys(&[self.active_account_hash()])
+            .with_address(self.active_account_hash())
+            .with_session_code(session_code, args.clone())
+            .with_deploy_hash(self.next_hash())
+            .build();
+
+        let execute_request = ExecuteRequestBuilder::from_deploy_item(deploy_item)
+            .with_block_time(u64::from(self.block_time))
+            .build();
+        self.context.exec(execute_request).commit().expect_success();
+        self.collect_gas();
+        self.gas_cost.push((
+            format!("deploy_contract {}", wasm_path),
+            self.last_call_contract_gas_cost()
+        ));
+    }
+
+
+    /// Read a ContractPackageHash of a given name, from the active account.
+    pub fn contract_package_hash_from_name(&self, name: &str) -> ContractPackageHash {
+        let account = self
+            .context
+            .get_account(self.active_account_hash())
+            .unwrap();
+        let key: &Key = account.named_keys().get(name).unwrap();
+        ContractPackageHash::from(key.into_hash().unwrap())
     }
 }
