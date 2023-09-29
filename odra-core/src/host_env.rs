@@ -1,9 +1,9 @@
 use crate::host_context::HostContext;
 use crate::prelude::*;
-use odra_types::{RuntimeArgs, U512};
-use odra_types::Bytes;
-use odra_types::Address;
 use crate::CallDef;
+use odra_types::Address;
+use odra_types::Bytes;
+use odra_types::{RuntimeArgs, U512};
 
 pub struct HostEnv {
     backend: Rc<RefCell<dyn HostContext>>
@@ -11,9 +11,7 @@ pub struct HostEnv {
 
 impl HostEnv {
     pub fn new(backend: Rc<RefCell<dyn HostContext>>) -> HostEnv {
-        HostEnv {
-            backend,
-        }
+        HostEnv { backend }
     }
 
     pub fn clone_empty(&self) -> Self {
@@ -42,7 +40,12 @@ impl HostEnv {
         backend.attach_value(amount)
     }
 
-    pub fn new_contract(&mut self, contract_id: &str, args: &RuntimeArgs, constructor: Option<String>) -> Address {
+    pub fn new_contract(
+        &mut self,
+        contract_id: &str,
+        args: &RuntimeArgs,
+        constructor: Option<String>
+    ) -> Address {
         let mut backend = self.backend.borrow_mut();
         backend.new_contract(contract_id, args, constructor)
     }

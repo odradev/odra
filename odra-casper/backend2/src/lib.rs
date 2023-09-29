@@ -3,7 +3,7 @@
 
 extern crate alloc;
 
-pub mod wasm_contract_env;
+pub mod casper_contract_env;
 // pub mod types;
 // pub mod env;
 // pub mod variable;

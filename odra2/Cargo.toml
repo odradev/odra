@@ -12,7 +12,15 @@ odra-core = { path = "../odra-core" }
 odra-types = { path = "../types" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-odra-casper-backend2 = { path = "../odra-casper/backend2" }
+odra-casper-backend2 = { path = "../odra-casper/backend2", optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-odra-casper-test-env2 = { path = "../odra-casper/test-env2" }
+odra-casper-test-env2 = { path = "../odra-casper/test-env2", optional = true }
+
+odra-vm-backend = { path = "../odra-vm/backend", optional = true }
+odra-vm-test-env = { path = "../odra-vm/test-env", optional = true }
+
+[features]
+default = ["mock-vm"]
+mock-vm = ["odra-vm-backend", "odra-vm-test-env"]
+casper = ["odra-casper-backend2", "odra-casper-test-env2"]

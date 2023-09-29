@@ -1,27 +1,27 @@
 use crate::casper_vm::CasperVm;
+use odra_core::prelude::{collections::*, *};
 use std::cell::RefCell;
 use std::env;
 use std::path::PathBuf;
-use std::rc::Rc;
 
 use casper_engine_test_support::{
     DeployItemBuilder, ExecuteRequestBuilder, InMemoryWasmTestBuilder, ARG_AMOUNT,
     DEFAULT_ACCOUNT_INITIAL_BALANCE, DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_GENESIS_CONFIG,
     DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_PAYMENT
 };
-use casper_execution_engine::core::engine_state::{GenesisAccount, RunGenesisRequest};
+use std::rc::Rc;
 
-use odra::prelude::collections::BTreeMap;
+use casper_execution_engine::core::engine_state::{GenesisAccount, RunGenesisRequest};
 use odra_casper_shared::consts;
 use odra_casper_shared::consts::*;
 use odra_core::{CallDef, HostContext, HostEnv};
 use odra_types::casper_types::account::AccountHash;
 use odra_types::casper_types::bytesrepr::{Bytes, ToBytes};
-use odra_types::casper_types::{runtime_args, BlockTime, Motes, SecretKey, ContractPackageHash, Key};
-use odra_types::RuntimeArgs;
-use odra_types::{
-    Address, PublicKey, U512
+use odra_types::casper_types::{
+    runtime_args, BlockTime, ContractPackageHash, Key, Motes, SecretKey
 };
+use odra_types::RuntimeArgs;
+use odra_types::{Address, PublicKey, U512};
 
 impl HostContext for CasperVm {
     fn new_instance() -> Self {
@@ -140,7 +140,12 @@ impl HostContext for CasperVm {
         }
     }
 
-    fn new_contract(&mut self, contract_id: &str, args: &RuntimeArgs, constructor: Option<String>) -> Address {
+    fn new_contract(
+        &mut self,
+        contract_id: &str,
+        args: &RuntimeArgs,
+        constructor: Option<String>
+    ) -> Address {
         let wasm_path = format!("{}.wasm", contract_id);
         let package_hash_key_name = format!("{}_package_hash", contract_id);
         let mut args = args.clone();
@@ -148,7 +153,7 @@ impl HostContext for CasperVm {
             consts::PACKAGE_HASH_KEY_NAME_ARG,
             package_hash_key_name.clone()
         )
-            .unwrap();
+        .unwrap();
         args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, true).unwrap();
         args.insert(consts::IS_UPGRADABLE_ARG, false).unwrap();
 
@@ -158,8 +163,7 @@ impl HostContext for CasperVm {
         };
 
         self.deploy_contract(&wasm_path, &args);
-        let contract_package_hash = self
-            .contract_package_hash_from_name(&package_hash_key_name);
+        let contract_package_hash = self.contract_package_hash_from_name(&package_hash_key_name);
         contract_package_hash.try_into().unwrap()
     }
 }
@@ -200,7 +204,6 @@ impl CasperVm {
             self.last_call_contract_gas_cost()
         ));
     }
-
 
     /// Read a ContractPackageHash of a given name, from the active account.
     pub fn contract_package_hash_from_name(&self, name: &str) -> ContractPackageHash {

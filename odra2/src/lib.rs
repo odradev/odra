@@ -1,7 +1,8 @@
 #![no_std]
 
 pub use odra_core::{
-    mapping::Mapping, module, module::ModuleWrapper, prelude, variable::Variable, ContractEnv, HostEnv
+    mapping::Mapping, module, module::ModuleWrapper, prelude, variable::Variable, ContractEnv,
+    HostEnv
 };
 pub use odra_types as types;
 
@@ -9,6 +10,7 @@ pub use odra_types as types;
 pub use odra_casper_backend2;
 
 #[cfg(not(target_arch = "wasm32"))]
+#[cfg(feature = "casper")]
 mod casper_test {
     use odra_casper_test_env2;
     pub fn test_env() -> odra_core::HostEnv {
@@ -17,5 +19,6 @@ mod casper_test {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+#[cfg(feature = "casper")]
 pub use casper_test::*;
 pub use odra_core::CallDef;

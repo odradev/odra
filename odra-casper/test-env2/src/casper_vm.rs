@@ -1,23 +1,12 @@
-use std::env;
-use std::path::PathBuf;
-
-use casper_engine_test_support::{
-    DeployItemBuilder, ExecuteRequestBuilder, InMemoryWasmTestBuilder, ARG_AMOUNT,
-    DEFAULT_ACCOUNT_INITIAL_BALANCE, DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_GENESIS_CONFIG,
-    DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_PAYMENT
-};
-use casper_execution_engine::core::engine_state::{GenesisAccount, RunGenesisRequest};
-use odra::contract_env::revert;
-use odra::prelude::collections::BTreeMap;
+use casper_engine_test_support::InMemoryWasmTestBuilder;
+use casper_engine_test_support::DEFAULT_PAYMENT;
 use odra_casper_shared::consts::*;
-use odra_core::{CallDef, ContractContext, HostContext};
+use odra_core::prelude::{collections::*, *};
+use odra_core::{ContractContext, HostContext};
 use odra_types::casper_types::account::AccountHash;
 use odra_types::casper_types::bytesrepr::{Bytes, ToBytes};
-use odra_types::casper_types::{runtime_args, BlockTime, Key, Motes, SecretKey, StoredValue};
-use odra_types::RuntimeArgs;
-use odra_types::{
-    Address, CLTyped, EventData, ExecutionError, FromBytes, OdraError, PublicKey, U512
-};
+use odra_types::casper_types::{BlockTime, Key, SecretKey, StoredValue};
+use odra_types::{Address, CLTyped, FromBytes, OdraError, PublicKey, U512};
 
 pub struct CasperVm {
     pub(crate) accounts: Vec<Address>,
