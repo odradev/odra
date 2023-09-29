@@ -49,9 +49,9 @@ impl GenerateCode for ModuleStruct<'_> {
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::types::contract_def::HasEvents for #struct_ident {
                 fn events() -> odra::prelude::vec::Vec<odra::types::contract_def::Event> {
-                    let mut events = odra::prelude::vec![];
+                    let mut events = odra::prelude::collections::BTreeSet::new();
                     #(
-                        events.push(<#module_events as odra::types::event::OdraEvent>::schema());
+                        events.insert(<#module_events as odra::types::event::OdraEvent>::schema());
                     )*
                     #(
                         events.extend(<#submodules_events as odra::OdraItem>::events());
@@ -59,8 +59,7 @@ impl GenerateCode for ModuleStruct<'_> {
                     #(
                         events.extend(<#mappings_events as odra::OdraItem>::events());
                     )*
-                    events.dedup();
-                    events
+                    events.iter().map(Clone::clone).collect::<odra::prelude::vec::Vec<_>>()
                 }
             }
         }
@@ -159,16 +158,15 @@ mod test {
             #[cfg(not (target_arch = "wasm32"))]
             impl odra::types::contract_def::HasEvents for Module {
                 fn events() -> odra::prelude::vec::Vec<odra::types::contract_def::Event> {
-                    let mut events = odra::prelude::vec![];
-                    events.push(<A as odra::types::event::OdraEvent>::schema());
-                    events.push(<B as odra::types::event::OdraEvent>::schema());
-                    events.push(<C as odra::types::event::OdraEvent>::schema());
+                    let mut events = odra::prelude::collections::BTreeSet::new();
+                    events.insert(<A as odra::types::event::OdraEvent>::schema());
+                    events.insert(<B as odra::types::event::OdraEvent>::schema());
+                    events.insert(<C as odra::types::event::OdraEvent>::schema());
                     events.extend(<Submodule as odra::OdraItem>::events());
                     events.extend(<MappedModule as odra::OdraItem>::events());
                     events.extend(<odra::prelude::string::String as odra::OdraItem>::events());
                     events.extend(<odra::types::U256 as odra::OdraItem>::events());
-                    events.dedup();
-                    events
+                    events.iter().map(Clone::clone).collect::<odra::prelude::vec::Vec<_>>()
                 }
             }
         };

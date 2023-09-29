@@ -1,3 +1,4 @@
+pub mod collecting_events;
 pub mod composer;
 pub mod cross_calls;
 pub mod events;
