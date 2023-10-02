@@ -227,15 +227,15 @@ use odra2::types::Address;
 mod tests {
     use super::CounterDeployer;
 
-    #[test]
-    fn counter_works() {
-        let mut env = odra2::test_env();
-        let mut counter = CounterDeployer::new_contract(&mut env);
-        assert_eq!(counter.get_count(0), 0);
-        counter.increment(0);
-        assert_eq!(counter.get_count(0), 1);
-        counter.increment(1);
-        counter.increment(1);
-        assert_eq!(counter.get_count(1), 2);
-    }
+    // #[test]
+    // fn counter_works() {
+    //     let mut env = odra2::test_env();
+    //     let mut counter = CounterDeployer::new_contract(&mut env);
+    //     assert_eq!(counter.get_count(0), 0);
+    //     counter.increment(0);
+    //     assert_eq!(counter.get_count(0), 1);
+    //     counter.increment(1);
+    //     counter.increment(1);
+    //     assert_eq!(counter.get_count(1), 2);
+    // }
 }

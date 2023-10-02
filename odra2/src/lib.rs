@@ -13,18 +13,17 @@ pub use odra_casper_backend2;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod odra_test {
+    use odra_core::prelude::String;
     use odra_core::HostContext;
 
     pub fn test_env() -> odra_core::HostEnv {
         extern crate std;
-        let backend = std::env::var("ODRA_BACKEND");
-        return match backend {
-            Ok(backend_name) => match backend_name.as_str() {
-                "casper" => odra_casper_test_env2::CasperVm::new(),
-                "odra-vm" | _ => odra_vm_test_env::OdraVm::new()
-            },
-            Err(_) => odra_vm_test_env::OdraVm::new()
-        };
+        let backend: String = std::env::var("ODRA_BACKEND").unwrap_or(String::from("odra-vm"));
+
+        match backend.as_str() {
+            "casper" => odra_casper_test_env2::CasperVm::new(),
+            _ => odra_vm_test_env::OdraVm::new()
+        }
     }
 }
 

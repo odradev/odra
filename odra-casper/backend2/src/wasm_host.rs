@@ -4,12 +4,13 @@ use alloc::{format, string::String, vec::Vec};
 use casper_contract::contract_api::{runtime, storage};
 use casper_contract::unwrap_or_revert::UnwrapOrRevert;
 use casper_event_standard::{Schema, Schemas};
+use casper_types::system::CallStackElement;
 use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
     contracts::NamedKeys,
     ApiError, CLTyped, ContractPackageHash, EntryPoints, Key, URef
 };
-use odra_types::ExecutionError;
+use odra_types::{Address, ExecutionError};
 
 use crate::consts;
 
@@ -199,4 +200,53 @@ fn to_ptr<T: ToBytes>(t: T) -> (*const u8, usize, Vec<u8>) {
     let ptr = bytes.as_ptr();
     let size = bytes.len();
     (ptr, size, bytes)
+}
+
+/// Gets the immediate session caller of the current execution.
+///
+/// This function ensures that only session code can execute this function, and disallows stored
+/// session/stored contracts.
+#[inline(always)]
+pub fn caller() -> Address {
+    let second_elem = take_call_stack_elem(1);
+    call_stack_element_to_address(second_elem)
+}
+
+/// Gets the address of the currently run contract
+#[inline(always)]
+pub fn self_address() -> Address {
+    let first_elem = take_call_stack_elem(0);
+    call_stack_element_to_address(first_elem)
+}
+
+/// Returns address based on a [`CallStackElement`].
+///
+/// For `Session` and `StoredSession` variants it will return account hash, and for `StoredContract`
+/// case it will use contract hash as the address.
+fn call_stack_element_to_address(call_stack_element: CallStackElement) -> Address {
+    match call_stack_element {
+        CallStackElement::Session { account_hash } => Address::try_from(account_hash)
+            .map_err(|e| ApiError::User(ExecutionError::from(e).code()))
+            .unwrap_or_revert(),
+        CallStackElement::StoredSession { account_hash, .. } => {
+            // Stored session code acts in account's context, so if stored session
+            // wants to interact, caller's address will be used.
+            Address::try_from(account_hash)
+                .map_err(|e| ApiError::User(ExecutionError::from(e).code()))
+                .unwrap_or_revert()
+        }
+        CallStackElement::StoredContract {
+            contract_package_hash,
+            ..
+        } => Address::try_from(contract_package_hash)
+            .map_err(|e| ApiError::User(ExecutionError::from(e).code()))
+            .unwrap_or_revert()
+    }
+}
+
+fn take_call_stack_elem(n: usize) -> CallStackElement {
+    runtime::get_call_stack()
+        .into_iter()
+        .nth_back(n)
+        .unwrap_or_revert()
 }

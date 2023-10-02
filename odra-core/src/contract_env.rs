@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use odra_types::{CLTyped, FromBytes, ToBytes};
+use odra_types::{Address, CLTyped, FromBytes, ToBytes};
 
 use crate::key_maker;
 pub use crate::ContractContext;
@@ -29,9 +29,10 @@ impl ContractEnv {
 
     pub fn current_key(&self) -> Vec<u8> {
         let index_bytes = key_maker::u32_to_hex(self.index);
+        let mapping_data_bytes = key_maker::bytes_to_hex(&self.mapping_data);
         let mut key = Vec::new();
         key.extend_from_slice(&index_bytes);
-        key.extend_from_slice(&self.mapping_data);
+        key.extend_from_slice(&mapping_data_bytes);
         key
     }
 
@@ -92,10 +93,10 @@ impl ContractEnv {
     //     backend.set(key, value.to_bytes().unwrap());
     // }
 
-    // pub fn caller(&self) -> Address {
-    //     let backend = self.backend.borrow();
-    //     backend.get_caller()
-    // }
+    pub fn caller(&self) -> Address {
+        let backend = self.backend.borrow();
+        backend.caller()
+    }
 
     // pub fn call_contract<T: FromBytes>(&self, address: Address, call: CallDef) -> T {
     //     let mut backend = self.backend.borrow_mut();
@@ -123,8 +124,8 @@ impl ContractEnv {
     //     backend.balance_of(address)
     // }
 
-    // pub fn revert(&self, code: u16) -> ! {
-    //     let backend = self.backend.borrow();
-    //     backend.revert(code)
-    // }
+    pub fn revert(&self, code: u16) -> ! {
+        let backend = self.backend.borrow();
+        backend.revert(code)
+    }
 }

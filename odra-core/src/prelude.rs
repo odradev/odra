@@ -27,6 +27,7 @@ mod prelude {
         pub use alloc::collections::*;
         pub use core::ops::Bound;
     }
+    pub use crate::module::Module;
     pub use alloc::string::String;
     pub use alloc::vec;
     pub use alloc::{borrow, boxed, format, string, string::ToString};

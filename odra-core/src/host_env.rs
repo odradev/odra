@@ -3,9 +3,10 @@ use crate::prelude::*;
 use crate::CallDef;
 use odra_types::casper_types::BlockTime;
 use odra_types::Address;
-use odra_types::Bytes;
+use odra_types::FromBytes;
 use odra_types::{RuntimeArgs, U512};
 
+#[derive(Clone)]
 pub struct HostEnv {
     backend: Rc<RefCell<dyn HostContext>>
 }
@@ -26,23 +27,23 @@ impl HostEnv {
         backend.get_account(index)
     }
 
-    pub fn set_caller(&mut self, address: Address) {
+    pub fn set_caller(&self, address: Address) {
         let mut backend = self.backend.borrow_mut();
         backend.set_caller(address)
     }
 
-    pub fn advance_block_time(&mut self, time_diff: BlockTime) {
+    pub fn advance_block_time(&self, time_diff: BlockTime) {
         let mut backend = self.backend.borrow_mut();
         backend.advance_block_time(time_diff)
     }
 
-    pub fn attach_value(&mut self, amount: U512) {
+    pub fn attach_value(&self, amount: U512) {
         let mut backend = self.backend.borrow_mut();
         backend.attach_value(amount)
     }
 
     pub fn new_contract(
-        &mut self,
+        &self,
         contract_id: &str,
         args: &RuntimeArgs,
         constructor: Option<String>
@@ -51,8 +52,9 @@ impl HostEnv {
         backend.new_contract(contract_id, args, constructor)
     }
 
-    pub fn call_contract(&mut self, address: &Address, call_def: CallDef) -> Bytes {
+    pub fn call_contract<T: FromBytes>(&self, address: &Address, call_def: CallDef) -> T {
         let mut backend = self.backend.borrow_mut();
-        backend.call_contract(address, call_def)
+        let result = backend.call_contract(address, call_def);
+        T::from_bytes(&result).unwrap().0
     }
 }

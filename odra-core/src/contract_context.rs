@@ -6,7 +6,7 @@ use odra_types::{Address, EventData, U512};
 pub trait ContractContext {
     fn get_value(&self, key: &[u8]) -> Option<Vec<u8>>;
     fn set_value(&self, key: &[u8], value: &[u8]);
-    fn get_caller(&self) -> Address;
+    fn caller(&self) -> Address;
     fn call_contract(&mut self, address: Address, call_def: CallDef) -> Vec<u8>;
     fn get_block_time(&self) -> BlockTime;
     fn callee(&self) -> Address;

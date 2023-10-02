@@ -25,11 +25,11 @@ use odra_types::{Address, PublicKey, U512};
 
 impl HostContext for CasperVm {
     fn set_caller(&mut self, caller: Address) {
-        todo!()
+        self.active_account = caller;
     }
 
     fn get_account(&self, index: usize) -> Address {
-        todo!()
+        self.accounts[index]
     }
 
     fn advance_block_time(&mut self, time_diff: BlockTime) {

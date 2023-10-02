@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use crate::{CallDef, HostEnv, ModuleCaller};
+use crate::{CallDef, HostEnv};
 use odra_types::casper_types::BlockTime;
 use odra_types::Bytes;
 use odra_types::RuntimeArgs;

@@ -14,8 +14,8 @@ impl ContractContext for WasmContractEnv {
         wasm_host::set_value(key, value);
     }
 
-    fn get_caller(&self) -> odra_types::Address {
-        todo!()
+    fn caller(&self) -> odra_types::Address {
+        wasm_host::caller()
     }
 
     fn call_contract(

@@ -14,6 +14,10 @@ path = "src/lib.rs"
 name = "counter_pack"
 path = "src/lib.rs"
 
+[[bin]]
+name = "erc20"
+path = "src/lib.rs"
+
 [profile.release]
 codegen-units = 1
 lto = true
