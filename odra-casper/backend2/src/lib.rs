@@ -1,5 +1,8 @@
 #![no_std]
 #![cfg_attr(not(test), feature(core_intrinsics))]
+#![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(unused_variables)]
 
 extern crate alloc;
 
