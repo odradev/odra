@@ -71,8 +71,9 @@ clean:
 build-examples2:
     cd examples2 && ODRA_MODULE=Erc20 cargo build --release --target wasm32-unknown-unknown --bin erc20
     wasm-strip examples2/target/wasm32-unknown-unknown/release/erc20.wasm
+    rm -rf examples2/wasm
     mkdir -p examples2/wasm
-    mv examples2/target/wasm32-unknown-unknown/release/erc20.wasm examples2/wasm/erc20.wasm
+    mv examples2/target/wasm32-unknown-unknown/release/erc20.wasm examples2/wasm/
 
 test-examples2: build-examples2
     cd examples2 && ODRA_BACKEND=casper cargo test --lib
