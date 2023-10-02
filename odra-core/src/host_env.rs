@@ -1,6 +1,7 @@
+use crate::entry_point_callback::EntryPointsCaller;
 use crate::host_context::HostContext;
 use crate::prelude::*;
-use crate::CallDef;
+use crate::{CallDef, ContractEnv};
 use odra_types::casper_types::BlockTime;
 use odra_types::Address;
 use odra_types::FromBytes;
@@ -44,17 +45,24 @@ impl HostEnv {
 
     pub fn new_contract(
         &self,
-        contract_id: &str,
-        args: &RuntimeArgs,
-        constructor: Option<String>
+        name: &str,
+        init_args: Option<RuntimeArgs>,
+        entry_points_caller: Option<EntryPointsCaller>
     ) -> Address {
         let mut backend = self.backend.borrow_mut();
-        backend.new_contract(contract_id, args, constructor)
+        backend.new_contract(name, init_args, entry_points_caller)
     }
 
     pub fn call_contract<T: FromBytes>(&self, address: &Address, call_def: CallDef) -> T {
         let mut backend = self.backend.borrow_mut();
-        let result = backend.call_contract(address, call_def);
+        let result = backend.call_contract(address, self.clone_empty(), call_def);
         T::from_bytes(&result).unwrap().0
+    }
+
+    pub fn contract_env(&self) -> ContractEnv {
+        todo!()
+        // let mut backend = self.backend.borrow_mut();
+        // ContractEnv::new(0, )
+        // backend.contract_env()
     }
 }

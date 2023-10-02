@@ -1,5 +1,5 @@
-use crate::prelude::*;
-use odra_types::{RuntimeArgs, U512};
+use alloc::string::String;
+use casper_types::{RuntimeArgs, U512};
 
 #[derive(Clone)]
 pub struct CallDef {

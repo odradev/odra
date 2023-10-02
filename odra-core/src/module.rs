@@ -1,10 +1,10 @@
 use core::cell::OnceCell;
 use core::ops::{Deref, DerefMut};
 
-use crate::call_def::CallDef;
 use crate::contract_env::ContractEnv;
 use crate::odra_result::OdraResult;
 use crate::prelude::*;
+use odra_types::call_def::CallDef;
 
 pub trait Callable {
     fn call(&self, env: ContractEnv, call_def: CallDef) -> OdraResult<Vec<u8>>;

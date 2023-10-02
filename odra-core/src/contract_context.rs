@@ -1,5 +1,5 @@
-use crate::call_def::CallDef;
 use crate::prelude::*;
+use odra_types::call_def::CallDef;
 use odra_types::casper_types::BlockTime;
 use odra_types::{Address, EventData, U512};
 

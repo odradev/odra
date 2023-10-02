@@ -1,3 +1,3 @@
 mod odra_vm_host;
 
-pub use odra_vm_host::OdraVm;
+pub use odra_vm_host::OdraVmEnv;

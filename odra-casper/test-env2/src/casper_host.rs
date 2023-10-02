@@ -14,7 +14,8 @@ use std::rc::Rc;
 use casper_execution_engine::core::engine_state::{GenesisAccount, RunGenesisRequest};
 use odra_casper_shared::consts;
 use odra_casper_shared::consts::*;
-use odra_core::{CallDef, HostContext, HostEnv};
+use odra_core::entry_point_callback::EntryPointsCaller;
+use odra_core::{CallDef, ContractEnv, HostContext, HostEnv};
 use odra_types::casper_types::account::AccountHash;
 use odra_types::casper_types::bytesrepr::{Bytes, ToBytes};
 use odra_types::casper_types::{
@@ -44,7 +45,7 @@ impl HostContext for CasperVm {
         todo!()
     }
 
-    fn call_contract(&mut self, address: &Address, call_def: CallDef) -> Bytes {
+    fn call_contract(&mut self, address: &Address, host_env: HostEnv, call_def: CallDef) -> Bytes {
         self.error = None;
         // TODO: handle unwrap
         let hash = *address.as_contract_package_hash().unwrap();
@@ -92,23 +93,20 @@ impl HostContext for CasperVm {
 
     fn new_contract(
         &mut self,
-        contract_id: &str,
-        args: &RuntimeArgs,
-        constructor: Option<String>
+        name: &str,
+        init_args: Option<RuntimeArgs>,
+        entry_points_caller: Option<EntryPointsCaller>
     ) -> Address {
-        let wasm_path = format!("{}.wasm", contract_id);
-        let package_hash_key_name = format!("{}_package_hash", contract_id);
-        let mut args = args.clone();
-        args.insert(
-            consts::PACKAGE_HASH_KEY_NAME_ARG,
-            package_hash_key_name.clone()
-        )
-        .unwrap();
-        args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, true).unwrap();
-        args.insert(consts::IS_UPGRADABLE_ARG, false).unwrap();
+        let wasm_path = format!("{}.wasm", name);
+        let package_hash_key_name = format!("{}_package_hash", name);
+        let mut args = init_args.clone().unwrap_or(runtime_args! {});
+        args.insert(PACKAGE_HASH_KEY_NAME_ARG, package_hash_key_name.clone())
+            .unwrap();
+        args.insert(ALLOW_KEY_OVERRIDE_ARG, true).unwrap();
+        args.insert(IS_UPGRADABLE_ARG, false).unwrap();
 
-        if let Some(constructor_name) = constructor {
-            args.insert(consts::CONSTRUCTOR_NAME_ARG, constructor_name)
+        if init_args.is_some() {
+            args.insert(CONSTRUCTOR_NAME_ARG, CONSTRUCTOR_NAME.to_string())
                 .unwrap();
         };
 
@@ -165,6 +163,10 @@ impl HostContext for CasperVm {
             gas_cost: Vec::new(),
             key_pairs
         }
+    }
+
+    fn contract_env(&self) -> ContractEnv {
+        todo!()
     }
 }
 

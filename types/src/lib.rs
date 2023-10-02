@@ -4,8 +4,9 @@
 
 extern crate alloc;
 
-mod address;
+pub mod address;
 pub mod arithmetic;
+pub mod call_def;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod contract_def;
 mod error;

@@ -20,9 +20,12 @@ mod odra_test {
         extern crate std;
         let backend: String = std::env::var("ODRA_BACKEND").unwrap_or(String::from("odra-vm"));
 
+        // let backend = OdraVM::new();
+        // let mut contract_env = ContractEnv::new(backend.clone());
+        // let test_env = HostEnv::new(backend, contract_env);
         match backend.as_str() {
             "casper" => odra_casper_test_env2::CasperVm::new(),
-            _ => odra_vm_test_env::OdraVm::new()
+            _ => odra_vm_test_env::OdraVmEnv::new()
         }
     }
 }

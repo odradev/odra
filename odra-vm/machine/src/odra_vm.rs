@@ -2,13 +2,16 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, RwLock};
 
 use anyhow::Result;
+use odra_core::entry_point_callback::EntryPointsCaller;
+use odra_core::HostEnv;
+use odra_types::call_def::CallDef;
 use odra_types::{
     casper_types::{
         account::AccountHash,
         bytesrepr::{Error, FromBytes, ToBytes},
         RuntimeArgs, SecretKey, U512
     },
-    Address, BlockTime, EventData, ExecutionError, PublicKey
+    Address, BlockTime, Bytes, EventData, ExecutionError, PublicKey
 };
 use odra_types::{event::EventError, OdraError, VmError};
 
@@ -26,18 +29,13 @@ pub struct OdraVmMachine {
 }
 
 impl OdraVmMachine {
-    pub fn register_contract(
-        &self,
-        constructor: Option<(String, &RuntimeArgs, EntrypointCall)>,
-        constructors: BTreeMap<String, (EntrypointArgs, EntrypointCall)>,
-        entrypoints: BTreeMap<String, (EntrypointArgs, EntrypointCall)>
-    ) -> Address {
+    pub fn register_contract(&self, name: &str, entry_points_caller: EntryPointsCaller) -> Address {
         // Create a new address.
         let address = { self.state.write().unwrap().next_contract_address() };
         // Register new contract under the new address.
         {
             let contract_namespace = self.state.read().unwrap().get_contract_namespace();
-            let contract = ContractContainer::new(&contract_namespace, entrypoints, constructors);
+            let contract = ContractContainer::new(&contract_namespace, entry_points_caller);
             self.contract_register
                 .write()
                 .unwrap()
@@ -49,23 +47,22 @@ impl OdraVmMachine {
         }
 
         // Call constructor if needed.
-        if let Some(constructor) = constructor {
-            let (constructor_name, args, _) = constructor;
-            self.call_constructor(address, &constructor_name, args);
-        }
+        // if let Some(constructor) = constructor {
+        //     let (constructor_name, args, _) = constructor;
+        //     self.call_constructor(address, &constructor_name, args);
+        // }
         address
     }
 
-    pub fn call_contract<T: ToBytes + FromBytes>(
+    pub fn call_contract<T: FromBytes>(
         &self,
         address: Address,
-        entrypoint: &str,
-        args: &RuntimeArgs,
-        amount: Option<U512>
+        host_env: HostEnv,
+        call_def: CallDef
     ) -> T {
-        self.prepare_call(address, entrypoint, amount);
+        self.prepare_call(address, &call_def.entry_point, call_def.amount);
         // Call contract from register.
-        if let Some(amount) = amount {
+        if let Some(amount) = call_def.amount {
             let status = self.checked_transfer_tokens(&self.caller(), &address, &amount);
             if let Err(err) = status {
                 self.revert(err.clone());
@@ -73,23 +70,23 @@ impl OdraVmMachine {
             }
         }
 
-        let result =
-            self.contract_register
-                .read()
-                .unwrap()
-                .call(&address, String::from(entrypoint), args);
+        let result = self
+            .contract_register
+            .read()
+            .unwrap()
+            .call(&address, call_def);
 
         let result = self.handle_call_result(result);
-        T::from_vec(result).unwrap().0
+        T::from_bytes(&result).unwrap().0
     }
 
-    fn call_constructor(&self, address: Address, entrypoint: &str, args: &RuntimeArgs) -> Vec<u8> {
-        self.prepare_call(address, entrypoint, None);
-        // Call contract from register.
-        let register = self.contract_register.read().unwrap();
-        let result = register.call_constructor(&address, String::from(entrypoint), args);
-        self.handle_call_result(result)
-    }
+    // fn call_constructor(&self, address: Address, entrypoint: &str, args: &RuntimeArgs) -> Vec<u8> {
+    //     self.prepare_call(address, entrypoint, None);
+    //     // Call contract from register.
+    //     let register = self.contract_register.read().unwrap();
+    //     let result = register.call_constructor(&address, String::from(entrypoint), args);
+    //     self.handle_call_result(result)
+    // }
 
     fn prepare_call(&self, address: Address, entrypoint: &str, amount: Option<U512>) {
         let mut state = self.state.write().unwrap();
@@ -104,13 +101,13 @@ impl OdraVmMachine {
         state.push_callstack_element(element);
     }
 
-    fn handle_call_result(&self, result: Result<Vec<u8>, OdraError>) -> Vec<u8> {
+    fn handle_call_result(&self, result: Result<Bytes, OdraError>) -> Bytes {
         let mut state = self.state.write().unwrap();
         let result = match result {
             Ok(data) => data,
             Err(err) => {
                 state.set_error(err);
-                vec![]
+                Bytes::new()
             }
         };
 
@@ -128,7 +125,7 @@ impl OdraVmMachine {
             if state.is_in_caller_context() {
                 state.restore_snapshot();
             };
-            vec![]
+            Bytes::new()
         }
     }
 

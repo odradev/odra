@@ -1,7 +1,10 @@
+use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::prelude::{collections::*, *};
+use odra_core::HostEnv;
+use odra_types::call_def::CallDef;
 use odra_types::{
     casper_types::{NamedArg, RuntimeArgs},
-    OdraError, VmError
+    Bytes, OdraError, VmError
 };
 
 #[doc(hidden)]
@@ -9,55 +12,51 @@ pub type EntrypointCall = fn(String, &RuntimeArgs) -> Vec<u8>;
 #[doc(hidden)]
 pub type EntrypointArgs = Vec<String>;
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct ContractContainer {
     name: String,
-    entrypoints: BTreeMap<String, (EntrypointArgs, EntrypointCall)>,
-    constructors: BTreeMap<String, (EntrypointArgs, EntrypointCall)>
+    entry_points_caller: EntryPointsCaller
 }
 
 impl ContractContainer {
-    pub fn new(
-        name: &str,
-        entrypoints: BTreeMap<String, (EntrypointArgs, EntrypointCall)>,
-        constructors: BTreeMap<String, (EntrypointArgs, EntrypointCall)>
-    ) -> Self {
+    pub fn new(name: &str, entry_points_caller: EntryPointsCaller) -> Self {
         Self {
             name: String::from(name),
-            entrypoints,
-            constructors
+            entry_points_caller
         }
     }
 
-    pub fn call(&self, entrypoint: String, args: &RuntimeArgs) -> Result<Vec<u8>, OdraError> {
-        if self.constructors.get(&entrypoint).is_some() {
-            return Err(OdraError::VmError(VmError::InvalidContext));
-        }
-
-        match self.entrypoints.get(&entrypoint) {
-            Some((ep_args, call)) => {
-                self.validate_args(ep_args, args)?;
-                Ok(call(self.name.clone(), args))
-            }
-            None => Err(OdraError::VmError(VmError::NoSuchMethod(entrypoint)))
-        }
+    pub fn call(&self, call_def: CallDef) -> Result<Bytes, OdraError> {
+        Ok(self.entry_points_caller.call(call_def))
+        //     if self.constructors.get(&entrypoint).is_some() {
+        //         return Err(OdraError::VmError(VmError::InvalidContext));
+        //     }
+        //
+        //     match self.entrypoints.get(&entrypoint) {
+        //         Some((ep_args, call)) => {
+        //             self.validate_args(ep_args, args)?;
+        //             Ok(call(self.name.clone(), args))
+        //         }
+        //         None => Err(OdraError::VmError(VmError::NoSuchMethod(entrypoint)))
+        //     }
+        // }
+        //
+        // pub fn call_constructor(
+        //     &self,
+        //     entrypoint: String,
+        //     args: &RuntimeArgs
+        // ) -> Result<Vec<u8>, OdraError> {
+        //     match self.constructors.get(&entrypoint) {
+        //         Some((ep_args, call)) => {
+        //             self.validate_args(ep_args, args)?;
+        //             Ok(call(self.name.clone(), args))
+        //         }
+        //         None => Err(OdraError::VmError(VmError::NoSuchMethod(entrypoint)))
+        //     }
     }
 
-    pub fn call_constructor(
-        &self,
-        entrypoint: String,
-        args: &RuntimeArgs
-    ) -> Result<Vec<u8>, OdraError> {
-        match self.constructors.get(&entrypoint) {
-            Some((ep_args, call)) => {
-                self.validate_args(ep_args, args)?;
-                Ok(call(self.name.clone(), args))
-            }
-            None => Err(OdraError::VmError(VmError::NoSuchMethod(entrypoint)))
-        }
-    }
-
-    fn validate_args(&self, args: &[String], input_args: &RuntimeArgs) -> Result<(), OdraError> {
+    fn _validate_args(&self, args: &[String], input_args: &RuntimeArgs) -> Result<(), OdraError> {
+        // TODO: What's the purpose of this code? Is it needed?
         let named_args = input_args
             .named_args()
             .map(NamedArg::name)

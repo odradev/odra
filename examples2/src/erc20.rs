@@ -179,8 +179,9 @@ mod __erc20_wasm_parts {
 #[cfg(not(target_arch = "wasm32"))]
 mod __erc20_test_parts {
     use odra2::prelude::*;
-    use odra2::types::{runtime_args, Address, RuntimeArgs, U256};
+    use odra2::types::{runtime_args, Address, RuntimeArgs, U256, Bytes};
     use odra2::{CallDef, HostEnv};
+    use crate::erc20::Erc20;
 
     pub struct Erc20HostRef {
         address: Address,
@@ -227,11 +228,20 @@ mod __erc20_test_parts {
 
     impl Erc20Deployer {
         pub fn init(env: &HostEnv, total_supply: Option<U256>) -> Erc20HostRef {
+
+            // let epc = |call_def: CallDef, host_env| {
+            //     // let erc20 = Erc20::new()
+            //     // match call_def.method() {
+            //     //     "balance_of"
+            //     // }
+            //     Bytes::new()
+            // };
+
             let address = env.new_contract(
                 "erc20",
-                &runtime_args! {
+                Some(runtime_args! {
                     "total_supply" => total_supply
-                },
+                }),
                 None
             );
 
