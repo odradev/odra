@@ -128,7 +128,7 @@ mod wasm_parts {
     use odra2::module::Module;
     use odra2::odra_casper_backend2;
     use odra2::odra_casper_backend2::casper_contract::unwrap_or_revert::UnwrapOrRevert;
-    use odra2::odra_casper_backend2::wasm_contract_env::WasmContractEnv;
+    use odra2::odra_casper_backend2::casper_contract_env::WasmContractEnv;
     use odra2::types::casper_types::{
         CLType, CLValue, EntryPoint, EntryPointAccess, EntryPointType, EntryPoints, Parameter
     };
