@@ -3,7 +3,7 @@ use odra_core::HostEnv;
 use odra_types::call_def::CallDef;
 use odra_types::{casper_types::RuntimeArgs, Address, Bytes, OdraError, VmError};
 
-use crate::contract_container::ContractContainer;
+use super::contract_container::ContractContainer;
 
 #[derive(Default)]
 pub struct ContractRegister {

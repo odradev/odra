@@ -1,13 +1,13 @@
 use crate::prelude::*;
 use odra_types::call_def::CallDef;
 use odra_types::casper_types::BlockTime;
-use odra_types::{Address, EventData, U512};
+use odra_types::{Address, Bytes, EventData, U512};
 
 pub trait ContractContext {
-    fn get_value(&self, key: &[u8]) -> Option<Vec<u8>>;
-    fn set_value(&self, key: &[u8], value: &[u8]);
+    fn get_value(&self, key: &[u8]) -> Option<Bytes>;
+    fn set_value(&self, key: &[u8], value: Bytes);
     fn caller(&self) -> Address;
-    fn call_contract(&mut self, address: Address, call_def: CallDef) -> Vec<u8>;
+    fn call_contract(&mut self, address: Address, call_def: CallDef) -> Bytes;
     fn get_block_time(&self) -> BlockTime;
     fn callee(&self) -> Address;
     fn attached_value(&self) -> Option<U512>;

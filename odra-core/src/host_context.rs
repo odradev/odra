@@ -7,26 +7,17 @@ use odra_types::RuntimeArgs;
 use odra_types::{Address, EventData, U512};
 
 pub trait HostContext {
-    fn set_caller(&mut self, caller: Address);
+    fn set_caller(&self, caller: Address);
     fn get_account(&self, index: usize) -> Address;
-    fn advance_block_time(&mut self, time_diff: BlockTime);
+    fn advance_block_time(&self, time_diff: BlockTime);
     fn get_event(&self, contract_address: Address, index: i32) -> Option<EventData>;
-    fn attach_value(&mut self, amount: U512);
-    fn call_contract(&mut self, address: &Address, host_env: HostEnv, call_def: CallDef) -> Bytes;
+    fn attach_value(&self, amount: U512);
+    fn call_contract(&self, address: &Address, host_env: HostEnv, call_def: CallDef) -> Bytes;
     fn new_contract(
-        &mut self,
+        &self,
         name: &str,
         init_args: Option<RuntimeArgs>,
         entry_points_caller: Option<EntryPointsCaller>
     ) -> Address;
-    fn new_instance() -> Self
-    where
-        Self: Sized;
-    fn new() -> HostEnv
-    where
-        Self: Sized + 'static
-    {
-        HostEnv::new(Rc::new(RefCell::new(Self::new_instance())))
-    }
     fn contract_env(&self) -> ContractEnv;
 }

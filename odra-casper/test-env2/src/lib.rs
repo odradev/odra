@@ -5,4 +5,5 @@
 mod casper_host;
 mod casper_vm;
 
+pub use casper_host::CasperHost;
 pub use casper_vm::CasperVm;

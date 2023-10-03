@@ -4,20 +4,20 @@ use odra_types::{
         bytesrepr::{Error, FromBytes, ToBytes},
         U512
     },
-    Address
+    Address, Bytes
 };
 use std::{
     collections::{hash_map::DefaultHasher, BTreeMap},
     hash::{Hash, Hasher}
 };
 
-use crate::balance::AccountBalance;
+use super::balance::AccountBalance;
 
 #[derive(Default, Clone)]
 pub struct Storage {
-    state: BTreeMap<u64, Vec<u8>>,
+    state: BTreeMap<u64, Bytes>,
     balances: BTreeMap<Address, AccountBalance>,
-    state_snapshot: Option<BTreeMap<u64, Vec<u8>>>,
+    state_snapshot: Option<BTreeMap<u64, Bytes>>,
     balances_snapshot: Option<BTreeMap<Address, AccountBalance>>
 }
 
@@ -49,58 +49,46 @@ impl Storage {
         balance.reduce(*amount)
     }
 
-    pub fn get_value<T: FromBytes>(
-        &self,
-        address: &Address,
-        key: &[u8]
-    ) -> Result<Option<T>, Error> {
+    pub fn get_value(&self, address: &Address, key: &[u8]) -> Result<Option<Bytes>, Error> {
         let hash = Storage::hashed_key(address, key);
-        let result = self.state.get(&hash).cloned().map(T::from_vec);
+        let result = self.state.get(&hash).cloned();
 
         match result {
-            Some(res) => res.map(|data| Some(data.0)),
+            Some(res) => Ok(Some(res)),
             None => Ok(None)
         }
     }
 
-    pub fn set_value<T: ToBytes>(
-        &mut self,
-        address: &Address,
-        key: &[u8],
-        value: T
-    ) -> Result<(), Error> {
+    pub fn set_value(&mut self, address: &Address, key: &[u8], value: Bytes) -> Result<(), Error> {
         let hash = Storage::hashed_key(address, key);
-        self.state.insert(hash, value.to_bytes()?);
+        self.state.insert(hash, value);
         Ok(())
     }
 
-    pub fn insert_dict_value<T: ToBytes>(
+    pub fn insert_dict_value(
         &mut self,
         address: &Address,
         collection: &[u8],
         key: &[u8],
-        value: T
+        value: Bytes
     ) -> Result<(), Error> {
         let dict_key = [collection, key].concat();
         let hash = Storage::hashed_key(address, dict_key);
-        self.state.insert(hash, value.to_bytes()?);
+        self.state.insert(hash, value);
         Ok(())
     }
 
-    pub fn get_dict_value<T: FromBytes>(
+    pub fn get_dict_value(
         &self,
         address: &Address,
         collection: &[u8],
         key: &[u8]
-    ) -> Result<Option<T>, Error> {
+    ) -> Result<Option<Bytes>, Error> {
         let dict_key = [collection, key].concat();
         let hash = Storage::hashed_key(address, dict_key);
-        let result = self.state.get(&hash).cloned().map(T::from_vec);
+        let result = self.state.get(&hash).cloned();
 
-        match result {
-            Some(res) => res.map(|data| Some(data.0)),
-            None => Ok(None)
-        }
+        Ok(result)
     }
 
     pub fn take_snapshot(&mut self) {

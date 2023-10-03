@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use odra_types::{Address, CLTyped, FromBytes, ToBytes};
+use odra_types::{Address, Bytes, CLTyped, FromBytes, ToBytes};
 
 use crate::key_maker;
 pub use crate::ContractContext;
@@ -57,7 +57,7 @@ impl ContractEnv {
 
     pub fn set_value<T: ToBytes + CLTyped>(&self, key: &[u8], value: T) {
         let bytes = value.to_bytes().unwrap();
-        self.backend.borrow_mut().set_value(key, &bytes);
+        self.backend.borrow_mut().set_value(key, Bytes::from(bytes));
     }
 
     // pub fn install_contract(

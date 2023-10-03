@@ -1,4 +1,6 @@
+use std::cell::RefCell;
 use std::collections::BTreeMap;
+use std::rc::Rc;
 use std::sync::{Arc, RwLock};
 
 use anyhow::Result;
@@ -15,20 +17,24 @@ use odra_types::{
 };
 use odra_types::{event::EventError, OdraError, VmError};
 
-use crate::balance::AccountBalance;
-use crate::callstack::{Callstack, CallstackElement, Entrypoint};
-use crate::contract_container::{ContractContainer, EntrypointArgs, EntrypointCall};
-use crate::contract_register::ContractRegister;
-use crate::odra_vm_state::OdraVmState;
-use crate::storage::Storage;
+use super::balance::AccountBalance;
+use super::callstack::{Callstack, CallstackElement, Entrypoint};
+use super::contract_container::{ContractContainer, EntrypointArgs, EntrypointCall};
+use super::contract_register::ContractRegister;
+use super::odra_vm_state::OdraVmState;
+use super::storage::Storage;
 
 #[derive(Default)]
-pub struct OdraVmMachine {
+pub struct OdraVm {
     state: Arc<RwLock<OdraVmState>>,
     contract_register: Arc<RwLock<ContractRegister>>
 }
 
-impl OdraVmMachine {
+impl OdraVm {
+    pub fn new() -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(Self::default()))
+    }
+
     pub fn register_contract(&self, name: &str, entry_points_caller: EntryPointsCaller) -> Address {
         // Create a new address.
         let address = { self.state.write().unwrap().next_contract_address() };
@@ -54,12 +60,7 @@ impl OdraVmMachine {
         address
     }
 
-    pub fn call_contract<T: FromBytes>(
-        &self,
-        address: Address,
-        host_env: HostEnv,
-        call_def: CallDef
-    ) -> T {
+    pub fn call_contract(&self, address: Address, host_env: HostEnv, call_def: CallDef) -> Bytes {
         self.prepare_call(address, &call_def.entry_point, call_def.amount);
         // Call contract from register.
         if let Some(amount) = call_def.amount {
@@ -76,8 +77,7 @@ impl OdraVmMachine {
             .unwrap()
             .call(&address, call_def);
 
-        let result = self.handle_call_result(result);
-        T::from_bytes(&result).unwrap().0
+        self.handle_call_result(result)
     }
 
     // fn call_constructor(&self, address: Address, entrypoint: &str, args: &RuntimeArgs) -> Vec<u8> {
@@ -163,11 +163,11 @@ impl OdraVmMachine {
         self.state.write().unwrap().set_caller(caller);
     }
 
-    pub fn set_var<T: ToBytes>(&self, key: &[u8], value: T) {
+    pub fn set_var(&self, key: &[u8], value: Bytes) {
         self.state.write().unwrap().set_var(key, value);
     }
 
-    pub fn get_var<T: FromBytes>(&self, key: &[u8]) -> Option<T> {
+    pub fn get_var(&self, key: &[u8]) -> Option<Bytes> {
         let result = { self.state.read().unwrap().get_var(key) };
         match result {
             Ok(result) => result,
@@ -181,11 +181,11 @@ impl OdraVmMachine {
         }
     }
 
-    pub fn set_dict_value<T: ToBytes>(&self, dict: &[u8], key: &[u8], value: T) {
+    pub fn set_dict_value(&self, dict: &[u8], key: &[u8], value: Bytes) {
         self.state.write().unwrap().set_dict_value(dict, key, value);
     }
 
-    pub fn get_dict_value<T: FromBytes>(&self, dict: &[u8], key: &[u8]) -> Option<T> {
+    pub fn get_dict_value(&self, dict: &[u8], key: &[u8]) -> Option<Bytes> {
         let result = { self.state.read().unwrap().get_dict_value(dict, key) };
         match result {
             Ok(result) => result,
@@ -278,20 +278,20 @@ impl OdraVmMachine {
 mod tests {
     use std::collections::BTreeMap;
 
-    use crate::callstack::CallstackElement;
-    use crate::contract_container::{EntrypointArgs, EntrypointCall};
+    use super::callstack::CallstackElement;
+    use super::contract_container::{EntrypointArgs, EntrypointCall};
     use odra_types::casper_types::bytesrepr::FromBytes;
     use odra_types::casper_types::{RuntimeArgs, U512};
     use odra_types::OdraAddress;
     use odra_types::{Address, EventData};
     use odra_types::{ExecutionError, OdraError, VmError};
 
-    use super::OdraVmMachine;
+    use super::OdraVm;
 
     #[test]
     fn contracts_have_different_addresses() {
         // given a new instance
-        let instance = OdraVmMachine::default();
+        let instance = OdraVm::default();
         // when register two contracts with the same entrypoints
         let entrypoint: Vec<(String, (EntrypointArgs, EntrypointCall))> =
             vec![(String::from("abc"), (vec![], |_, _| vec![]))];
@@ -308,7 +308,7 @@ mod tests {
     #[test]
     fn addresses_have_different_type() {
         // given an address of a contract and an address of an account
-        let instance = OdraVmMachine::default();
+        let instance = OdraVm::default();
         let (contract_address, _, _) = setup_contract(&instance);
         let account_address = instance.get_account(0);
 
@@ -321,7 +321,7 @@ mod tests {
     #[test]
     fn test_contract_call() {
         // given an instance with a registered contract having one entrypoint
-        let instance = OdraVmMachine::default();
+        let instance = OdraVm::default();
 
         let (contract_address, entrypoint, call_result) = setup_contract(&instance);
 
@@ -336,7 +336,7 @@ mod tests {
     #[test]
     fn test_call_non_existing_contract() {
         // given an empty vm
-        let instance = OdraVmMachine::default();
+        let instance = OdraVm::default();
 
         let address = Address::contract_from_u32(42);
 
@@ -353,7 +353,7 @@ mod tests {
     #[test]
     fn test_call_non_existing_entrypoint() {
         // given an instance with a registered contract having one entrypoint
-        let instance = OdraVmMachine::default();
+        let instance = OdraVm::default();
         let (contract_address, entrypoint, _) = setup_contract(&instance);
 
         // when call non-existing entrypoint
@@ -377,7 +377,7 @@ mod tests {
     #[test]
     fn test_caller_switching() {
         // given an empty instance
-        let instance = OdraVmMachine::default();
+        let instance = OdraVm::default();
 
         // when set a new caller
         let new_caller = Address::account_from_str("ff");
@@ -392,7 +392,7 @@ mod tests {
     #[test]
     fn test_revert() {
         // given an empty instance
-        let instance = OdraVmMachine::default();
+        let instance = OdraVm::default();
 
         // when revert
         instance.revert(ExecutionError::new(1, "err").into());
@@ -404,7 +404,7 @@ mod tests {
     #[test]
     fn test_read_write_value() {
         // given an empty instance
-        let instance = OdraVmMachine::default();
+        let instance = OdraVm::default();
 
         // when set a value
         let key = b"key";
@@ -420,7 +420,7 @@ mod tests {
     #[test]
     fn test_read_write_dict() {
         // given an empty instance
-        let instance = OdraVmMachine::default();
+        let instance = OdraVm::default();
 
         // when set a value
         let dict = b"dict";
@@ -439,7 +439,7 @@ mod tests {
     #[test]
     fn events() {
         // given an empty instance
-        let instance = OdraVmMachine::default();
+        let instance = OdraVm::default();
 
         let first_contract_address = Address::account_from_str("abc");
         // put a contract on stack
@@ -481,7 +481,7 @@ mod tests {
     #[test]
     fn test_current_contract_address() {
         // given an empty instance
-        let instance = OdraVmMachine::default();
+        let instance = OdraVm::default();
 
         // when push a contract into the stack
         let contract_address = Address::contract_from_u32(100);
@@ -494,7 +494,7 @@ mod tests {
     #[test]
     fn test_call_contract_with_amount() {
         // given an instance with a registered contract having one entrypoint
-        let instance = OdraVmMachine::default();
+        let instance = OdraVm::default();
         let (contract_address, entrypoint_name, _) = setup_contract(&instance);
 
         // when call a contract with the whole balance of the caller
@@ -517,7 +517,7 @@ mod tests {
     #[should_panic(expected = "VmError(BalanceExceeded)")]
     fn test_call_contract_with_amount_exceeding_balance() {
         // given an instance with a registered contract having one entrypoint
-        let instance = OdraVmMachine::default();
+        let instance = OdraVm::default();
         let (contract_address, entrypoint_name, _) = setup_contract(&instance);
 
         let caller = instance.get_account(0);
@@ -532,12 +532,12 @@ mod tests {
         );
     }
 
-    fn push_address(vm: &OdraVmMachine, address: &Address) {
+    fn push_address(vm: &OdraVm, address: &Address) {
         let element = CallstackElement::Account(*address);
         vm.state.write().unwrap().push_callstack_element(element);
     }
 
-    fn setup_contract(instance: &OdraVmMachine) -> (Address, String, u32) {
+    fn setup_contract(instance: &OdraVm) -> (Address, String, u32) {
         let entrypoint_name = "abc";
         let result = vec![1, 1, 0, 0];
 

@@ -179,8 +179,9 @@ mod __erc20_wasm_parts {
 #[cfg(not(target_arch = "wasm32"))]
 mod __erc20_test_parts {
     use odra2::prelude::*;
-    use odra2::types::{runtime_args, Address, RuntimeArgs, U256, Bytes};
-    use odra2::{CallDef, HostEnv};
+    use odra2::types::{runtime_args, Address, RuntimeArgs, U256, Bytes, ToBytes};
+    use odra2::{CallDef, EntryPointsCaller, HostEnv};
+    use odra2::types::casper_types::EntryPoints;
     use crate::erc20::Erc20;
 
     pub struct Erc20HostRef {
@@ -237,12 +238,40 @@ mod __erc20_test_parts {
             //     Bytes::new()
             // };
 
+            let epc = EntryPointsCaller::new(env.clone(), |contract_env, call_def| {
+                use odra2::types::ToBytes;
+                let mut erc20 = Erc20::new(Rc::new(contract_env));
+                match call_def.method() {
+                    "init" => {
+                        let total_supply: Option<U256> = call_def.get("total_supply").unwrap();
+                        erc20.init(total_supply);
+                        Bytes::new()
+                    },
+                    "total_supply" => {
+                        let result = erc20.total_supply();
+                        Bytes::from(result.to_bytes().unwrap())
+                    },
+                    "balance_of" => {
+                        let owner: Address = call_def.get("owner").unwrap();
+                        let result = erc20.balance_of(owner);
+                        Bytes::from(result.to_bytes().unwrap())
+                    },
+                    "transfer" => {
+                        let to: Address = call_def.get("to").unwrap();
+                        let value: U256 = call_def.get("value").unwrap();
+                        erc20.transfer(to, value);
+                        Bytes::from(().to_bytes().unwrap())
+                    },
+                    _ => panic!("Unknown method")
+                }
+            });
+
             let address = env.new_contract(
                 "erc20",
                 Some(runtime_args! {
                     "total_supply" => total_supply
                 }),
-                None
+                Some(epc)
             );
 
             let _: () = env.call_contract(

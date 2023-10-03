@@ -17,29 +17,23 @@ impl HostEnv {
         HostEnv { backend }
     }
 
-    pub fn clone_empty(&self) -> Self {
-        HostEnv {
-            backend: self.backend.clone()
-        }
-    }
-
     pub fn get_account(&self, index: usize) -> Address {
         let backend = self.backend.borrow();
         backend.get_account(index)
     }
 
     pub fn set_caller(&self, address: Address) {
-        let mut backend = self.backend.borrow_mut();
+        let backend = self.backend.borrow();
         backend.set_caller(address)
     }
 
     pub fn advance_block_time(&self, time_diff: BlockTime) {
-        let mut backend = self.backend.borrow_mut();
+        let backend = self.backend.borrow();
         backend.advance_block_time(time_diff)
     }
 
     pub fn attach_value(&self, amount: U512) {
-        let mut backend = self.backend.borrow_mut();
+        let backend = self.backend.borrow();
         backend.attach_value(amount)
     }
 
@@ -49,19 +43,19 @@ impl HostEnv {
         init_args: Option<RuntimeArgs>,
         entry_points_caller: Option<EntryPointsCaller>
     ) -> Address {
-        let mut backend = self.backend.borrow_mut();
+        let backend = self.backend.borrow();
         backend.new_contract(name, init_args, entry_points_caller)
     }
 
     pub fn call_contract<T: FromBytes>(&self, address: &Address, call_def: CallDef) -> T {
-        let mut backend = self.backend.borrow_mut();
-        let result = backend.call_contract(address, self.clone_empty(), call_def);
+        let backend = self.backend.borrow();
+        let result = backend.call_contract(address, self.clone(), call_def);
         T::from_bytes(&result).unwrap().0
     }
 
     pub fn contract_env(&self) -> ContractEnv {
-        todo!()
-        // let mut backend = self.backend.borrow_mut();
+        self.backend.borrow().contract_env()
+        // let backend = self.backend.borrow();
         // ContractEnv::new(0, )
         // backend.contract_env()
     }

@@ -1,27 +1,27 @@
+use crate::vm::OdraVm;
 use odra_core::prelude::*;
 use odra_core::{CallDef, ContractContext};
 use odra_types::casper_types::BlockTime;
-use odra_types::{casper_types, Address, U512};
-use odra_vm_machine::OdraVmMachine;
+use odra_types::{casper_types, Address, Bytes, U512};
 
 pub struct OdraVmContractEnv {
-    vm: Rc<RefCell<OdraVmMachine>>
+    vm: Rc<RefCell<OdraVm>>
 }
 
 impl ContractContext for OdraVmContractEnv {
-    fn get_value(&self, key: &[u8]) -> Option<Vec<u8>> {
-        todo!()
+    fn get_value(&self, key: &[u8]) -> Option<Bytes> {
+        self.vm.borrow().get_var(key)
     }
 
-    fn set_value(&self, key: &[u8], value: &[u8]) {
-        todo!()
+    fn set_value(&self, key: &[u8], value: Bytes) {
+        self.vm.borrow().set_var(key, value)
     }
 
     fn caller(&self) -> Address {
-        todo!()
+        self.vm.borrow().caller()
     }
 
-    fn call_contract(&mut self, address: Address, call_def: CallDef) -> Vec<u8> {
+    fn call_contract(&mut self, address: Address, call_def: CallDef) -> Bytes {
         todo!()
     }
 
@@ -51,5 +51,11 @@ impl ContractContext for OdraVmContractEnv {
 
     fn revert(&self, code: u16) -> ! {
         todo!()
+    }
+}
+
+impl OdraVmContractEnv {
+    pub fn new(vm: Rc<RefCell<OdraVm>>) -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(Self { vm }))
     }
 }

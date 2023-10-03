@@ -16,5 +16,4 @@ odra-casper-backend2 = { path = "../odra-casper/backend2" }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 odra-casper-test-env2 = { path = "../odra-casper/test-env2" }
-odra-vm-backend = { path = "../odra-vm/backend" }
-odra-vm-test-env = { path = "../odra-vm/test-env" }
+odra-vm = { path = "../odra-vm" }

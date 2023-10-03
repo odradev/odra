@@ -1,12 +1,13 @@
-use crate::balance::AccountBalance;
-use crate::callstack::{Callstack, CallstackElement};
-use crate::storage::Storage;
+use super::balance::AccountBalance;
+use super::callstack::{Callstack, CallstackElement};
+use super::storage::Storage;
 use anyhow::Result;
 use odra_types::casper_types::account::AccountHash;
 use odra_types::casper_types::bytesrepr::Error;
 use odra_types::event::EventError;
 use odra_types::{
-    Address, EventData, ExecutionError, FromBytes, OdraError, PublicKey, SecretKey, ToBytes, U512
+    Address, Bytes, EventData, ExecutionError, FromBytes, OdraError, PublicKey, SecretKey, ToBytes,
+    U512
 };
 use std::collections::BTreeMap;
 
@@ -43,30 +44,26 @@ impl OdraVmState {
         self.push_callstack_element(CallstackElement::Account(address));
     }
 
-    pub fn set_var<T: ToBytes>(&mut self, key: &[u8], value: T) {
+    pub fn set_var(&mut self, key: &[u8], value: Bytes) {
         let ctx = self.callstack.current().address();
         if let Err(error) = self.storage.set_value(ctx, key, value) {
             self.set_error(Into::<ExecutionError>::into(error));
         }
     }
 
-    pub fn get_var<T: FromBytes>(&self, key: &[u8]) -> Result<Option<T>, Error> {
+    pub fn get_var(&self, key: &[u8]) -> Result<Option<Bytes>, Error> {
         let ctx = self.callstack.current().address();
         self.storage.get_value(ctx, key)
     }
 
-    pub fn set_dict_value<T: ToBytes>(&mut self, dict: &[u8], key: &[u8], value: T) {
+    pub fn set_dict_value(&mut self, dict: &[u8], key: &[u8], value: Bytes) {
         let ctx = self.callstack.current().address();
         if let Err(error) = self.storage.insert_dict_value(ctx, dict, key, value) {
             self.set_error(Into::<ExecutionError>::into(error));
         }
     }
 
-    pub fn get_dict_value<T: FromBytes>(
-        &self,
-        dict: &[u8],
-        key: &[u8]
-    ) -> Result<Option<T>, Error> {
+    pub fn get_dict_value(&self, dict: &[u8], key: &[u8]) -> Result<Option<Bytes>, Error> {
         let ctx = &self.callstack.current().address();
         self.storage.get_dict_value(ctx, dict, key)
     }

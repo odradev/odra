@@ -1,17 +1,19 @@
 extern crate alloc;
+
 use crate::wasm_host;
 use odra_core::{prelude::*, ContractContext, ContractEnv};
+use odra_types::Bytes;
 
 #[derive(Clone)]
 pub struct WasmContractEnv;
 
 impl ContractContext for WasmContractEnv {
-    fn get_value(&self, key: &[u8]) -> Option<alloc::vec::Vec<u8>> {
-        wasm_host::get_value(key)
+    fn get_value(&self, key: &[u8]) -> Option<Bytes> {
+        wasm_host::get_value(key).map(|v| Bytes::from(v))
     }
 
-    fn set_value(&self, key: &[u8], value: &[u8]) {
-        wasm_host::set_value(key, value);
+    fn set_value(&self, key: &[u8], value: Bytes) {
+        wasm_host::set_value(key, value.as_slice());
     }
 
     fn caller(&self) -> odra_types::Address {
@@ -22,7 +24,7 @@ impl ContractContext for WasmContractEnv {
         &mut self,
         address: odra_types::Address,
         call_def: odra_core::CallDef
-    ) -> alloc::vec::Vec<u8> {
+    ) -> Bytes {
         todo!()
     }
 

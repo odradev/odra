@@ -17,6 +17,7 @@ pub mod variable;
 
 pub use contract_context::ContractContext;
 pub use contract_env::ContractEnv;
+pub use entry_point_callback::EntryPointsCaller;
 pub use host_context::HostContext;
 pub use host_env::HostEnv;
 pub use module::ModuleCaller;
