@@ -10,6 +10,7 @@ pub mod arithmetic;
 pub mod contract_def;
 mod error;
 pub mod event;
+mod item;
 pub mod uints;
 
 use alloc::vec::Vec;
@@ -22,6 +23,7 @@ pub use address::{Address, OdraAddress};
 pub use casper_types;
 pub use casper_types::{CLType, CLTyped, PublicKey, U128, U256, U512};
 pub use error::{AddressError, CollectionError, ExecutionError, OdraError, VmError};
+pub use item::OdraItem;
 
 pub trait UncheckedGetter {
     fn get<T: FromBytes + CLTyped>(&self, key: &str) -> T;

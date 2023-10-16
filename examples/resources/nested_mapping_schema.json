@@ -119,23 +119,6 @@
   ],
   "events": [
     {
-      "name": "OwnershipTransferred",
-      "fields": [
-        {
-          "name": "previous_owner",
-          "ty": {
-            "Option": "Key"
-          }
-        },
-        {
-          "name": "new_owner",
-          "ty": {
-            "Option": "Key"
-          }
-        }
-      ]
-    },
-    {
       "name": "Approval",
       "fields": [
         {
@@ -149,6 +132,23 @@
         {
           "name": "value",
           "ty": "U256"
+        }
+      ]
+    },
+    {
+      "name": "OwnershipTransferred",
+      "fields": [
+        {
+          "name": "previous_owner",
+          "ty": {
+            "Option": "Key"
+          }
+        },
+        {
+          "name": "new_owner",
+          "ty": {
+            "Option": "Key"
+          }
         }
       ]
     },

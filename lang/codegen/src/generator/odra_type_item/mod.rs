@@ -25,7 +25,7 @@ impl GenerateCode for OdraTypeItem<'_> {
 
             #clone_code
 
-            impl odra::OdraItem for #ident {
+            impl odra::types::OdraItem for #ident {
                 fn is_module() -> bool {
                     false
                 }

@@ -19,7 +19,7 @@ pub trait Token {
 mod tests {
     use super::*;
     use crate::contracts::owned_token::tests;
-    use odra::{test_env, OdraItem};
+    use odra::{test_env, types::OdraItem};
 
     #[test]
     fn balance_checker() {
