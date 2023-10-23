@@ -4,8 +4,8 @@ extern crate alloc;
 
 pub use odra_core::EntryPointsCaller;
 pub use odra_core::{
-    mapping::Mapping, module, module::ModuleWrapper, prelude, variable::Variable, CallDef,
-    ContractEnv, HostEnv
+    casper_event_standard, mapping::Mapping, module, module::ModuleWrapper, prelude,
+    variable::Variable, CallDef, ContractEnv, HostEnv
 };
 pub use odra_types as types;
 

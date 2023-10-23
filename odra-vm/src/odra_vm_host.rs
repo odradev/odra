@@ -33,8 +33,8 @@ impl HostContext for OdraVmHost {
         todo!()
     }
 
-    fn call_contract(&self, address: &Address, host_env: HostEnv, call_def: CallDef) -> Bytes {
-        self.vm.borrow().call_contract(*address, host_env, call_def)
+    fn call_contract(&self, address: &Address, call_def: CallDef) -> Bytes {
+        self.vm.borrow().call_contract(*address, call_def)
     }
 
     fn new_contract(
@@ -44,18 +44,19 @@ impl HostContext for OdraVmHost {
         entry_points_caller: Option<EntryPointsCaller>
     ) -> Address {
         // TODO: panic in nice way
-        self.vm
+        let address = self
+            .vm
             .borrow()
-            .register_contract(name, entry_points_caller.unwrap())
-        // if init_args.is_some() {
-        //     todo!()
-        //     // self.vm.call_contract(
-        //     //     *address,
-        //     //     &*call_def.entry_point,
-        //     //     &call_def.args,
-        //     //     call_def.amount
-        //     // )
-        // }
+            .register_contract(name, entry_points_caller.unwrap());
+
+        if let Some(init_args) = init_args {
+            let _: Bytes = self.call_contract(
+                &address,
+                CallDef::new(String::from("init"), init_args, None)
+            );
+        }
+
+        address
     }
 
     fn contract_env(&self) -> ContractEnv {

@@ -60,7 +60,7 @@ impl OdraVm {
         address
     }
 
-    pub fn call_contract(&self, address: Address, host_env: HostEnv, call_def: CallDef) -> Bytes {
+    pub fn call_contract(&self, address: Address, call_def: CallDef) -> Bytes {
         self.prepare_call(address, &call_def.entry_point, call_def.amount);
         // Call contract from register.
         if let Some(amount) = call_def.amount {

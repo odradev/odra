@@ -49,10 +49,8 @@ impl HostContext for CasperHost {
         self.vm.borrow_mut().attach_value(amount)
     }
 
-    fn call_contract(&self, address: &Address, host_env: HostEnv, call_def: CallDef) -> Bytes {
-        self.vm
-            .borrow_mut()
-            .call_contract(address, host_env, call_def)
+    fn call_contract(&self, address: &Address, call_def: CallDef) -> Bytes {
+        self.vm.borrow_mut().call_contract(address, call_def)
     }
 
     fn new_contract(

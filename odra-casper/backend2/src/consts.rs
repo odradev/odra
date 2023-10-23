@@ -12,3 +12,6 @@ pub const CONSTRUCTOR_NAME_ARG: &str = "odra_cfg_constructor";
 
 /// The state key name.
 pub const STATE_KEY: &str = "state";
+
+/// Constuctor group name.
+pub const CONSTRUCTOR_GROUP_NAME: &str = "constructor_group";

@@ -49,7 +49,7 @@ impl HostEnv {
 
     pub fn call_contract<T: FromBytes>(&self, address: &Address, call_def: CallDef) -> T {
         let backend = self.backend.borrow();
-        let result = backend.call_contract(address, self.clone(), call_def);
+        let result = backend.call_contract(address, call_def);
         T::from_bytes(&result).unwrap().0
     }
 

@@ -15,6 +15,7 @@ mod odra_result;
 pub mod prelude;
 pub mod variable;
 
+pub use casper_event_standard;
 pub use contract_context::ContractContext;
 pub use contract_env::ContractEnv;
 pub use entry_point_callback::EntryPointsCaller;

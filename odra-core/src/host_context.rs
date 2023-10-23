@@ -1,6 +1,5 @@
 use crate::entry_point_callback::EntryPointsCaller;
-use crate::prelude::*;
-use crate::{CallDef, ContractEnv, HostEnv};
+use crate::{CallDef, ContractEnv};
 use odra_types::casper_types::BlockTime;
 use odra_types::Bytes;
 use odra_types::RuntimeArgs;
@@ -12,7 +11,7 @@ pub trait HostContext {
     fn advance_block_time(&self, time_diff: BlockTime);
     fn get_event(&self, contract_address: Address, index: i32) -> Option<EventData>;
     fn attach_value(&self, amount: U512);
-    fn call_contract(&self, address: &Address, host_env: HostEnv, call_def: CallDef) -> Bytes;
+    fn call_contract(&self, address: &Address, call_def: CallDef) -> Bytes;
     fn new_contract(
         &self,
         name: &str,

@@ -1,8 +1,23 @@
-use odra2::prelude::*;
+use odra2::casper_event_standard::{self, Event};
+use odra2::{prelude::*, ModuleWrapper};
 use odra2::{
     types::{Address, U256},
     ContractEnv, Mapping, Variable
 };
+
+#[derive(Event, Eq, PartialEq, Debug)]
+pub struct Transfer {
+    pub from: Option<Address>,
+    pub to: Option<Address>,
+    pub amount: U256
+}
+
+#[derive(Event, Eq, PartialEq, Debug)]
+pub struct Approval {
+    pub owner: Address,
+    pub spender: Address,
+    pub value: U256
+}
 
 pub struct Erc20 {
     env: Rc<ContractEnv>,
@@ -65,17 +80,19 @@ mod __erc20_module {
 #[cfg(odra_module = "Erc20")]
 #[cfg(target_arch = "wasm32")]
 mod __erc20_wasm_parts {
-    use super::Erc20;
+    use super::{Approval, Erc20, Transfer};
+    use odra2::casper_event_standard::Schemas;
     use odra2::odra_casper_backend2;
     use odra2::odra_casper_backend2::casper_contract::unwrap_or_revert::UnwrapOrRevert;
     use odra2::odra_casper_backend2::WasmContractEnv;
     use odra2::types::casper_types::{
-        CLType, CLTyped, CLValue, EntryPoint, EntryPointAccess, EntryPointType, EntryPoints,
-        Parameter
+        CLType, CLTyped, CLValue, EntryPoint, EntryPointAccess, EntryPointType, EntryPoints, Group,
+        Parameter, RuntimeArgs
     };
-    use odra2::types::{Address, U256};
+    use odra2::types::{runtime_args, Address, U256};
     use odra2::{prelude::*, ContractEnv};
     use odra_casper_backend2::casper_contract::contract_api::runtime;
+
     extern crate alloc;
 
     fn entry_points() -> EntryPoints {
@@ -84,7 +101,7 @@ mod __erc20_wasm_parts {
             "init",
             alloc::vec![Parameter::new("total_supply", Option::<U256>::cl_type()),],
             CLType::Unit,
-            EntryPointAccess::Public,
+            EntryPointAccess::Groups(alloc::vec![Group::new("constructor_group")]),
             EntryPointType::Contract
         ));
         entry_points.add_entry_point(EntryPoint::new(
@@ -115,7 +132,12 @@ mod __erc20_wasm_parts {
     }
 
     pub fn execute_call() {
-        odra_casper_backend2::wasm_host::install_contract(entry_points(), Vec::new());
+        let schemas = Schemas::new().with::<Transfer>().with::<Approval>();
+        let total_supply: Option<U256> = runtime::get_named_arg("total_supply");
+        let init_args = runtime_args! {
+            "total_supply" => total_supply
+        };
+        odra_casper_backend2::wasm_host::install_contract(entry_points(), schemas, Some(init_args));
     }
 
     pub fn execute_init() {
@@ -123,17 +145,16 @@ mod __erc20_wasm_parts {
         let env = WasmContractEnv::new();
         let mut contract: Erc20 = Erc20::new(Rc::new(env));
         contract.init(total_supply);
-        // runtime::ret(CLValue::from_t(()).unwrap_or_revert())
     }
 
-    pub fn execute_total_supply() -> ! {
+    pub fn execute_total_supply() {
         let env = WasmContractEnv::new();
         let contract: Erc20 = Erc20::new(Rc::new(env));
         let result = contract.total_supply();
         runtime::ret(CLValue::from_t(result).unwrap_or_revert())
     }
 
-    pub fn execute_balance_of() -> ! {
+    pub fn execute_balance_of() {
         let owner: Address = runtime::get_named_arg("owner");
         let env = WasmContractEnv::new();
         let contract: Erc20 = Erc20::new(Rc::new(env));
@@ -141,13 +162,12 @@ mod __erc20_wasm_parts {
         runtime::ret(CLValue::from_t(result).unwrap_or_revert())
     }
 
-    pub fn execute_transfer() -> ! {
+    pub fn execute_transfer() {
         let to: Address = runtime::get_named_arg("to");
         let value: U256 = runtime::get_named_arg("value");
         let env = WasmContractEnv::new();
         let mut contract: Erc20 = Erc20::new(Rc::new(env));
         contract.transfer(to, value);
-        runtime::ret(CLValue::from_t(()).unwrap_or_revert())
     }
 
     #[no_mangle]
@@ -178,11 +198,11 @@ mod __erc20_wasm_parts {
 
 #[cfg(not(target_arch = "wasm32"))]
 mod __erc20_test_parts {
-    use odra2::prelude::*;
-    use odra2::types::{runtime_args, Address, RuntimeArgs, U256, Bytes, ToBytes};
-    use odra2::{CallDef, EntryPointsCaller, HostEnv};
-    use odra2::types::casper_types::EntryPoints;
     use crate::erc20::Erc20;
+    use odra2::prelude::*;
+    use odra2::types::casper_types::EntryPoints;
+    use odra2::types::{runtime_args, Address, Bytes, RuntimeArgs, ToBytes, U256};
+    use odra2::{CallDef, EntryPointsCaller, HostEnv};
 
     pub struct Erc20HostRef {
         address: Address,
@@ -229,15 +249,6 @@ mod __erc20_test_parts {
 
     impl Erc20Deployer {
         pub fn init(env: &HostEnv, total_supply: Option<U256>) -> Erc20HostRef {
-
-            // let epc = |call_def: CallDef, host_env| {
-            //     // let erc20 = Erc20::new()
-            //     // match call_def.method() {
-            //     //     "balance_of"
-            //     // }
-            //     Bytes::new()
-            // };
-
             let epc = EntryPointsCaller::new(env.clone(), |contract_env, call_def| {
                 use odra2::types::ToBytes;
                 let mut erc20 = Erc20::new(Rc::new(contract_env));
@@ -246,22 +257,22 @@ mod __erc20_test_parts {
                         let total_supply: Option<U256> = call_def.get("total_supply").unwrap();
                         erc20.init(total_supply);
                         Bytes::new()
-                    },
+                    }
                     "total_supply" => {
                         let result = erc20.total_supply();
                         Bytes::from(result.to_bytes().unwrap())
-                    },
+                    }
                     "balance_of" => {
                         let owner: Address = call_def.get("owner").unwrap();
                         let result = erc20.balance_of(owner);
                         Bytes::from(result.to_bytes().unwrap())
-                    },
+                    }
                     "transfer" => {
                         let to: Address = call_def.get("to").unwrap();
                         let value: U256 = call_def.get("value").unwrap();
                         erc20.transfer(to, value);
                         Bytes::from(().to_bytes().unwrap())
-                    },
+                    }
                     _ => panic!("Unknown method")
                 }
             });
@@ -272,17 +283,6 @@ mod __erc20_test_parts {
                     "total_supply" => total_supply
                 }),
                 Some(epc)
-            );
-
-            let _: () = env.call_contract(
-                &address,
-                CallDef::new(
-                    String::from("init"),
-                    runtime_args! {
-                        "total_supply" => total_supply
-                    },
-                    None
-                )
             );
 
             Erc20HostRef {

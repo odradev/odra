@@ -163,12 +163,7 @@ impl CasperVm {
         todo!()
     }
 
-    pub fn call_contract(
-        &mut self,
-        address: &Address,
-        host_env: HostEnv,
-        call_def: CallDef
-    ) -> Bytes {
+    pub fn call_contract(&mut self, address: &Address, call_def: CallDef) -> Bytes {
         self.error = None;
         // TODO: handle unwrap
         let hash = *address.as_contract_package_hash().unwrap();

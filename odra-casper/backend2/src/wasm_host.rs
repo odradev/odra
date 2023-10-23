@@ -5,6 +5,7 @@ use casper_contract::contract_api::{runtime, storage};
 use casper_contract::unwrap_or_revert::UnwrapOrRevert;
 use casper_event_standard::{Schema, Schemas};
 use casper_types::system::CallStackElement;
+use casper_types::RuntimeArgs;
 use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
     contracts::NamedKeys,
@@ -28,7 +29,8 @@ lazy_static::lazy_static! {
 
 pub fn install_contract(
     entry_points: EntryPoints,
-    events: Vec<(String, Schema)>
+    events: Schemas,
+    init_args: Option<RuntimeArgs>
 ) -> ContractPackageHash {
     // Read arguments
     let package_hash_key: String = runtime::get_named_arg(consts::PACKAGE_HASH_KEY_NAME_ARG);
@@ -41,14 +43,8 @@ pub fn install_contract(
         revert(ExecutionError::contract_already_installed().code()); // TODO: fix
     };
 
-    // Parse events.
-    let mut schemas = Schemas::new();
-    for (name, schema) in events {
-        schemas.0.insert(name, schema);
-    }
-
     // Prepare named keys.
-    let named_keys = initial_named_keys(schemas);
+    let named_keys = initial_named_keys(events);
 
     // Create new contract.
     if is_upgradable {
@@ -69,11 +65,19 @@ pub fn install_contract(
     }
 
     // Read contract package hash from the storage.
-    runtime::get_key(&package_hash_key)
+    let contract_package_hash: ContractPackageHash = runtime::get_key(&package_hash_key)
         .unwrap_or_revert()
         .into_hash()
         .unwrap_or_revert()
-        .into()
+        .into();
+
+    if let Some(args) = init_args {
+        let init_access = create_constructor_group(contract_package_hash);
+        let _: () = runtime::call_versioned_contract(contract_package_hash, None, "init", args);
+        revoke_access_to_constructor_group(contract_package_hash, init_access);
+    }
+
+    contract_package_hash
 }
 
 fn initial_named_keys(schemas: Schemas) -> NamedKeys {
@@ -249,4 +253,30 @@ fn take_call_stack_elem(n: usize) -> CallStackElement {
         .into_iter()
         .nth_back(n)
         .unwrap_or_revert()
+}
+
+fn create_constructor_group(contract_package_hash: ContractPackageHash) -> URef {
+    storage::create_contract_user_group(
+        contract_package_hash,
+        consts::CONSTRUCTOR_GROUP_NAME,
+        1,
+        Default::default()
+    )
+    .unwrap_or_revert()
+    .pop()
+    .unwrap_or_revert()
+}
+
+fn revoke_access_to_constructor_group(
+    contract_package_hash: ContractPackageHash,
+    constructor_access: URef
+) {
+    let mut urefs = alloc::collections::BTreeSet::new();
+    urefs.insert(constructor_access);
+    storage::remove_contract_user_group_urefs(
+        contract_package_hash,
+        consts::CONSTRUCTOR_GROUP_NAME,
+        urefs
+    )
+    .unwrap_or_revert();
 }

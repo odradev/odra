@@ -163,5 +163,34 @@
         }
       ]
     }
-  ]
+  ],
+  "types": [{
+    "name": "Transfer",
+    "fields": [
+      {
+        "name": "from",
+        "ty": {
+          "Option": "Key"
+        }
+      },
+      {
+        "name": "to",
+        "ty": {
+          "Option": "Key"
+        }
+      },
+      {
+        "name": "amount",
+        "ty": "U256"
+      }
+    ]
+  }],
+  "storage_layout": [{
+    "key_name": "STATE",
+    "is_dictionary": true,
+    "dictionary_keys": [
+      { "name": "0", "ty": "Key" },
+      { "name": "1", "ty": "_#Key" }
+    ]
+  }]
 }
