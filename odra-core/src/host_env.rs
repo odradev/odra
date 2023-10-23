@@ -59,4 +59,9 @@ impl HostEnv {
         // ContractEnv::new(0, )
         // backend.contract_env()
     }
+
+    pub fn print_gas_report(&self) {
+        let backend = self.backend.borrow();
+        backend.print_gas_report()
+    }
 }

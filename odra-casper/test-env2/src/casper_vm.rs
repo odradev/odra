@@ -313,4 +313,11 @@ impl CasperVm {
             .unwrap();
         Bytes::from(signature)
     }
+
+    pub fn print_gas_report(&self) {
+        println!("Gas report:");
+        for (name, cost) in self.gas_report() {
+            println!("{}: {}", name, cost);
+        }
+    }
 }

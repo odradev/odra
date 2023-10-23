@@ -14,20 +14,14 @@ pub use odra_casper_backend2;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod odra_test {
-    use alloc::rc::Rc;
-    use core::cell::RefCell;
     use odra_casper_test_env2::{CasperHost, CasperVm};
     use odra_core::prelude::String;
-    use odra_core::{HostContext, HostEnv};
+    use odra_core::HostEnv;
     use odra_vm::{OdraVm, OdraVmHost};
 
     pub fn test_env() -> odra_core::HostEnv {
         extern crate std;
         let backend: String = std::env::var("ODRA_BACKEND").unwrap_or(String::from("odra-vm"));
-
-        // let backend = OdraVM::new();
-        // let mut contract_env = ContractEnv::new(backend.clone());
-        // let test_env = HostEnv::new(backend, contract_env);
         match backend.as_str() {
             "casper" => casper_env(),
             _ => odra_env()

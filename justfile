@@ -76,4 +76,12 @@ build-examples2:
     mv examples2/target/wasm32-unknown-unknown/release/erc20.wasm examples2/wasm/
 
 test-examples2: build-examples2
-    cd examples2 && ODRA_BACKEND=casper cargo test --lib
+    cd examples2 && ODRA_BACKEND=casper cargo test --lib erc20_works -- --nocapture
+
+build-counter-pack:
+    cd examples2 && ODRA_MODULE=CounterPack cargo build --release --target wasm32-unknown-unknown --bin counter_pack
+    wasm-strip examples2/target/wasm32-unknown-unknown/release/counter_pack.wasm
+    cp examples2/target/wasm32-unknown-unknown/release/counter_pack.wasm examples2/wasm/counter_pack.wasm
+
+test-counter-pack: build-counter-pack
+    cd examples2 && ODRA_BACKEND=casper cargo test --lib counter_pack_works -- --nocapture

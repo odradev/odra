@@ -67,6 +67,10 @@ impl HostContext for CasperHost {
     fn contract_env(&self) -> ContractEnv {
         unreachable!()
     }
+
+    fn print_gas_report(&self) {
+        self.vm.borrow().print_gas_report()
+    }
 }
 
 impl CasperHost {

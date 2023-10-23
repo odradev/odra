@@ -19,4 +19,5 @@ pub trait HostContext {
         entry_points_caller: Option<EntryPointsCaller>
     ) -> Address;
     fn contract_env(&self) -> ContractEnv;
+    fn print_gas_report(&self);
 }

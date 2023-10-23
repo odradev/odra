@@ -255,8 +255,8 @@ mod __erc20_test_parts {
                 match call_def.method() {
                     "init" => {
                         let total_supply: Option<U256> = call_def.get("total_supply").unwrap();
-                        erc20.init(total_supply);
-                        Bytes::new()
+                        let result = erc20.init(total_supply);
+                        Bytes::from(result.to_bytes().unwrap())
                     }
                     "total_supply" => {
                         let result = erc20.total_supply();
@@ -270,8 +270,8 @@ mod __erc20_test_parts {
                     "transfer" => {
                         let to: Address = call_def.get("to").unwrap();
                         let value: U256 = call_def.get("value").unwrap();
-                        erc20.transfer(to, value);
-                        Bytes::from(().to_bytes().unwrap())
+                        let result = erc20.transfer(to, value);
+                        Bytes::from(result.to_bytes().unwrap())
                     }
                     _ => panic!("Unknown method")
                 }
@@ -322,5 +322,7 @@ mod tests {
         erc20.transfer(alice, 10.into());
         assert_eq!(erc20.balance_of(alice), 100.into());
         assert_eq!(erc20.balance_of(bob), 0.into());
+
+        env.print_gas_report();
     }
 }

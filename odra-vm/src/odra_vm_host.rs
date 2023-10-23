@@ -62,6 +62,11 @@ impl HostContext for OdraVmHost {
     fn contract_env(&self) -> ContractEnv {
         self.contract_env.duplicate()
     }
+
+    fn print_gas_report(&self) {
+        // For OdraVM there is no gas, so nothing to report.
+        println!("No gas report for OdraVM");
+    }
 }
 
 impl OdraVmHost {
