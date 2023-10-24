@@ -20,12 +20,12 @@ impl ContractContext for WasmContractEnv {
         wasm_host::caller()
     }
 
-    fn call_contract(
-        &mut self,
-        address: odra_types::Address,
-        call_def: odra_core::CallDef
-    ) -> Bytes {
-        todo!()
+    fn call_contract(&self, address: odra_types::Address, call_def: odra_core::CallDef) -> Bytes {
+        wasm_host::call_contract(
+            *address.as_contract_package_hash().unwrap(),
+            call_def.method(),
+            call_def.clone().args
+        )
     }
 
     fn get_block_time(&self) -> casper_types::BlockTime {
@@ -40,12 +40,12 @@ impl ContractContext for WasmContractEnv {
         todo!()
     }
 
-    fn emit_event(&mut self, event: odra_types::EventData) {
+    fn emit_event(&self, event: odra_types::EventData) {
         todo!()
     }
 
     fn transfer_tokens(
-        &mut self,
+        &self,
         from: &odra_types::Address,
         to: &odra_types::Address,
         amount: casper_types::U512

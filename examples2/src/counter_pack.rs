@@ -94,8 +94,8 @@ mod odra_core_module {
             }
         }
 
-        fn env(&self) -> &ContractEnv {
-            &self.env
+        fn env(&self) -> Rc<ContractEnv> {
+            self.env.clone()
         }
     }
 }

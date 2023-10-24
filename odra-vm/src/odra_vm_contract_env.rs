@@ -21,8 +21,8 @@ impl ContractContext for OdraVmContractEnv {
         self.vm.borrow().caller()
     }
 
-    fn call_contract(&mut self, address: Address, call_def: CallDef) -> Bytes {
-        todo!()
+    fn call_contract(&self, address: Address, call_def: CallDef) -> Bytes {
+        self.vm.borrow().call_contract(address, call_def)
     }
 
     fn get_block_time(&self) -> BlockTime {
@@ -37,11 +37,11 @@ impl ContractContext for OdraVmContractEnv {
         todo!()
     }
 
-    fn emit_event(&mut self, event: odra_types::EventData) {
+    fn emit_event(&self, event: odra_types::EventData) {
         todo!()
     }
 
-    fn transfer_tokens(&mut self, from: &Address, to: &Address, amount: U512) {
+    fn transfer_tokens(&self, from: &Address, to: &Address, amount: U512) {
         todo!()
     }
 

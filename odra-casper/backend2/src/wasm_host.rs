@@ -1,16 +1,19 @@
 extern crate alloc;
 
-use alloc::{format, string::String, vec::Vec};
+use alloc::{format, string::String, vec, vec::Vec};
 use casper_contract::contract_api::{runtime, storage};
 use casper_contract::unwrap_or_revert::UnwrapOrRevert;
+use casper_contract::{contract_api, ext_ffi};
 use casper_event_standard::{Schema, Schemas};
+use casper_types::bytesrepr::Bytes;
 use casper_types::system::CallStackElement;
-use casper_types::RuntimeArgs;
+use casper_types::{api_error, ContractVersion, RuntimeArgs};
 use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
     contracts::NamedKeys,
     ApiError, CLTyped, ContractPackageHash, EntryPoints, Key, URef
 };
+use core::mem::MaybeUninit;
 use odra_types::{Address, ExecutionError};
 
 use crate::consts;
@@ -215,6 +218,15 @@ pub fn caller() -> Address {
     let second_elem = take_call_stack_elem(1);
     call_stack_element_to_address(second_elem)
 }
+/// Calls a contract method by Address
+#[inline(always)]
+pub fn call_contract(
+    contract_package_hash: ContractPackageHash,
+    entry_point: &str,
+    args: RuntimeArgs
+) -> Bytes {
+    call_versioned_contract(contract_package_hash, None, entry_point, args)
+}
 
 /// Gets the address of the currently run contract
 #[inline(always)]
@@ -279,4 +291,59 @@ fn revoke_access_to_constructor_group(
         urefs
     )
     .unwrap_or_revert();
+}
+/// Invokes the specified `entry_point_name` of stored logic at a specific `contract_package_hash`
+/// address, for the most current version of a contract package by default or a specific
+/// `contract_version` if one is provided, and passing the provided `runtime_args` to it
+///
+/// If the stored contract calls [`ret`], then that value is returned from
+/// `call_versioned_contract`.  If the stored contract calls [`revert`], then execution stops and
+/// `call_versioned_contract` doesn't return. Otherwise `call_versioned_contract` returns `()`.
+pub fn call_versioned_contract(
+    contract_package_hash: ContractPackageHash,
+    contract_version: Option<ContractVersion>,
+    entry_point_name: &str,
+    runtime_args: RuntimeArgs
+) -> odra_types::Bytes {
+    let (contract_package_hash_ptr, contract_package_hash_size, _bytes) =
+        to_ptr(contract_package_hash);
+    let (contract_version_ptr, contract_version_size, _bytes) = to_ptr(contract_version);
+    let (entry_point_name_ptr, entry_point_name_size, _bytes) = to_ptr(entry_point_name);
+    let (runtime_args_ptr, runtime_args_size, _bytes) = to_ptr(runtime_args);
+
+    let bytes_written = {
+        let mut bytes_written = MaybeUninit::uninit();
+        let ret = unsafe {
+            ext_ffi::casper_call_versioned_contract(
+                contract_package_hash_ptr,
+                contract_package_hash_size,
+                contract_version_ptr,
+                contract_version_size,
+                entry_point_name_ptr,
+                entry_point_name_size,
+                runtime_args_ptr,
+                runtime_args_size,
+                bytes_written.as_mut_ptr()
+            )
+        };
+        api_error::result_from(ret).unwrap_or_revert();
+        unsafe { bytes_written.assume_init() }
+    };
+    odra_types::Bytes::from(deserialize_contract_result(bytes_written))
+}
+fn deserialize_contract_result(bytes_written: usize) -> Vec<u8> {
+    let serialized_result = if bytes_written == 0 {
+        // If no bytes were written, the host buffer hasn't been set and hence shouldn't be read.
+        vec![]
+    } else {
+        // NOTE: this is a copy of the contents of `read_host_buffer()`.  Calling that directly from
+        // here causes several contracts to fail with a Wasmi `Unreachable` error.
+        let bytes_non_null_ptr = contract_api::alloc_bytes(bytes_written);
+        let mut dest: Vec<u8> = unsafe {
+            Vec::from_raw_parts(bytes_non_null_ptr.as_ptr(), bytes_written, bytes_written)
+        };
+        read_host_buffer_into(&mut dest).unwrap_or_revert();
+        dest
+    };
+    serialized_result
 }

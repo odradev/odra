@@ -24,7 +24,7 @@ impl ModuleCaller {
 
 pub trait Module {
     fn new(env: Rc<ContractEnv>) -> Self;
-    fn env(&self) -> &ContractEnv;
+    fn env(&self) -> Rc<ContractEnv>;
 }
 
 pub struct ModuleWrapper<const N: u8, T> {

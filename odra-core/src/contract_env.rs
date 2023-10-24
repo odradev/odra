@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use odra_types::call_def::CallDef;
 use odra_types::{Address, Bytes, CLTyped, FromBytes, ToBytes};
 
 use crate::key_maker;
@@ -57,7 +58,7 @@ impl ContractEnv {
 
     pub fn set_value<T: ToBytes + CLTyped>(&self, key: &[u8], value: T) {
         let bytes = value.to_bytes().unwrap();
-        self.backend.borrow_mut().set_value(key, Bytes::from(bytes));
+        self.backend.borrow().set_value(key, Bytes::from(bytes));
     }
 
     // pub fn install_contract(
@@ -98,11 +99,11 @@ impl ContractEnv {
         backend.caller()
     }
 
-    // pub fn call_contract<T: FromBytes>(&self, address: Address, call: CallDef) -> T {
-    //     let mut backend = self.backend.borrow_mut();
-    //     let bytes = backend.call_contract(address, call);
-    //     T::from_bytes(&bytes).unwrap().0
-    // }
+    pub fn call_contract<T: FromBytes>(&self, address: Address, call: CallDef) -> T {
+        let backend = self.backend.borrow();
+        let bytes = backend.call_contract(address, call);
+        T::from_bytes(&bytes).unwrap().0
+    }
 
     // pub fn self_address(&self) -> Address {
     //     let backend = self.backend.borrow();
