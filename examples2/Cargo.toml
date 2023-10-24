@@ -18,6 +18,10 @@ path = "src/lib.rs"
 name = "erc20"
 path = "src/lib.rs"
 
+[[bin]]
+name = "build_schema"
+path = "bin/build_schema.rs"
+
 [profile.release]
 codegen-units = 1
 lto = true

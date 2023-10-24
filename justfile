@@ -85,3 +85,6 @@ build-counter-pack:
 
 test-counter-pack: build-counter-pack
     cd examples2 && ODRA_BACKEND=casper cargo test --lib counter_pack_works -- --nocapture
+
+build-erc20-schema:
+    cd examples2 && ODRA_MODULE=Erc20 cargo run --bin build_schema

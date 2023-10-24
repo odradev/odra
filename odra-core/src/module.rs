@@ -27,25 +27,24 @@ pub trait Module {
     fn env(&self) -> Rc<ContractEnv>;
 }
 
-pub struct ModuleWrapper<const N: u8, T> {
+pub struct ModuleWrapper<T> {
     env: Rc<ContractEnv>,
-    module: OnceCell<T>
+    module: OnceCell<T>,
+    index: u8
 }
 
-impl<const N: u8, T: Module> ModuleWrapper<N, T> {
-    pub fn new(env: Rc<ContractEnv>) -> Self {
+impl<T: Module> ModuleWrapper<T> {
+    pub fn new(env: Rc<ContractEnv>, index: u8) -> Self {
         Self {
             env,
-            module: OnceCell::new()
+            module: OnceCell::new(),
+            index
         }
     }
 
-    pub fn new_module(env: &ContractEnv) -> T {
-        T::new(Rc::new(env.child(N)))
-    }
-
     pub fn module(&self) -> &T {
-        self.module.get_or_init(|| Self::new_module(&self.env))
+        self.module
+            .get_or_init(|| T::new(Rc::new(self.env.child(self.index))))
     }
 
     pub fn module_mut(&mut self) -> &mut T {
@@ -56,7 +55,7 @@ impl<const N: u8, T: Module> ModuleWrapper<N, T> {
     }
 }
 
-impl<const N: u8, T: Module> Deref for ModuleWrapper<N, T> {
+impl<T: Module> Deref for ModuleWrapper<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -64,7 +63,7 @@ impl<const N: u8, T: Module> Deref for ModuleWrapper<N, T> {
     }
 }
 
-impl<const N: u8, T: Module> DerefMut for ModuleWrapper<N, T> {
+impl<T: Module> DerefMut for ModuleWrapper<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.module_mut()
     }

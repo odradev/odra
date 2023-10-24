@@ -6,18 +6,18 @@ use odra2::ModuleWrapper;
 
 pub struct CounterPack {
     env: Rc<ContractEnv>,
-    counter0: ModuleWrapper<0, Counter>,
-    counter1: ModuleWrapper<1, Counter>,
-    counter2: ModuleWrapper<2, Counter>,
-    counter3: ModuleWrapper<3, Counter>,
-    counter4: ModuleWrapper<4, Counter>,
-    counter5: ModuleWrapper<5, Counter>,
-    counter6: ModuleWrapper<6, Counter>,
-    counter7: ModuleWrapper<7, Counter>,
-    counter8: ModuleWrapper<8, Counter>,
-    counter9: ModuleWrapper<9, Counter>,
-    counters: Mapping<10, (u8, u8), u32>,
-    counters_map: Mapping<11, u8, Counter>
+    counter0: ModuleWrapper<Counter>,
+    counter1: ModuleWrapper<Counter>,
+    counter2: ModuleWrapper<Counter>,
+    counter3: ModuleWrapper<Counter>,
+    counter4: ModuleWrapper<Counter>,
+    counter5: ModuleWrapper<Counter>,
+    counter6: ModuleWrapper<Counter>,
+    counter7: ModuleWrapper<Counter>,
+    counter8: ModuleWrapper<Counter>,
+    counter9: ModuleWrapper<Counter>,
+    counters: Mapping<(u8, u8), u32>,
+    counters_map: Mapping<u8, Counter>
 }
 
 impl CounterPack {
@@ -65,18 +65,18 @@ mod odra_core_module {
 
     impl Module for CounterPack {
         fn new(env: Rc<ContractEnv>) -> Self {
-            let counter0 = ModuleWrapper::new(Rc::clone(&env));
-            let counter1 = ModuleWrapper::new(Rc::clone(&env));
-            let counter2 = ModuleWrapper::new(Rc::clone(&env));
-            let counter3 = ModuleWrapper::new(Rc::clone(&env));
-            let counter4 = ModuleWrapper::new(Rc::clone(&env));
-            let counter5 = ModuleWrapper::new(Rc::clone(&env));
-            let counter6 = ModuleWrapper::new(Rc::clone(&env));
-            let counter7 = ModuleWrapper::new(Rc::clone(&env));
-            let counter8 = ModuleWrapper::new(Rc::clone(&env));
-            let counter9 = ModuleWrapper::new(Rc::clone(&env));
-            let counters = Mapping::new(Rc::clone(&env));
-            let counters_map = Mapping::new(Rc::clone(&env));
+            let counter0 = ModuleWrapper::new(Rc::clone(&env), 0);
+            let counter1 = ModuleWrapper::new(Rc::clone(&env), 1);
+            let counter2 = ModuleWrapper::new(Rc::clone(&env), 2);
+            let counter3 = ModuleWrapper::new(Rc::clone(&env), 3);
+            let counter4 = ModuleWrapper::new(Rc::clone(&env), 4);
+            let counter5 = ModuleWrapper::new(Rc::clone(&env), 5);
+            let counter6 = ModuleWrapper::new(Rc::clone(&env), 6);
+            let counter7 = ModuleWrapper::new(Rc::clone(&env), 7);
+            let counter8 = ModuleWrapper::new(Rc::clone(&env), 8);
+            let counter9 = ModuleWrapper::new(Rc::clone(&env), 9);
+            let counters = Mapping::new(Rc::clone(&env), 10);
+            let counters_map = Mapping::new(Rc::clone(&env), 11);
             Self {
                 env,
                 counter0,
