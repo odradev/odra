@@ -4,17 +4,17 @@ use odra2::{CallDef, ContractEnv, HostEnv, Mapping, Variable};
 
 pub struct Counter {
     env: Rc<ContractEnv>,
-    count0: Variable<0, u32>,
-    count1: Variable<1, u32>,
-    count2: Variable<2, u32>,
-    count3: Variable<3, u32>,
-    count4: Variable<4, u32>,
-    count5: Variable<5, u32>,
-    count6: Variable<6, u32>,
-    count7: Variable<7, u32>,
-    count8: Variable<8, u32>,
-    count9: Variable<9, u32>,
-    counts: Mapping<10, u8, u32>
+    count0: Variable<u32>,
+    count1: Variable<u32>,
+    count2: Variable<u32>,
+    count3: Variable<u32>,
+    count4: Variable<u32>,
+    count5: Variable<u32>,
+    count6: Variable<u32>,
+    count7: Variable<u32>,
+    count8: Variable<u32>,
+    count9: Variable<u32>,
+    counts: Mapping<u8, u32>
 }
 
 impl Counter {
@@ -51,7 +51,7 @@ impl Counter {
     }
 }
 
-fn increment<const N: u8>(count: &mut Variable<N, u32>) {
+fn increment(count: &mut Variable<u32>) {
     let a = count.get_or_default();
     count.set(a + 1);
 }
@@ -60,17 +60,17 @@ mod __counter_pack_module {
     use super::*;
     impl odra2::module::Module for Counter {
         fn new(env: Rc<ContractEnv>) -> Self {
-            let count0 = Variable::new(Rc::clone(&env));
-            let count1 = Variable::new(Rc::clone(&env));
-            let count2 = Variable::new(Rc::clone(&env));
-            let count3 = Variable::new(Rc::clone(&env));
-            let count4 = Variable::new(Rc::clone(&env));
-            let count5 = Variable::new(Rc::clone(&env));
-            let count6 = Variable::new(Rc::clone(&env));
-            let count7 = Variable::new(Rc::clone(&env));
-            let count8 = Variable::new(Rc::clone(&env));
-            let count9 = Variable::new(Rc::clone(&env));
-            let counts = Mapping::new(Rc::clone(&env));
+            let count0 = Variable::new(Rc::clone(&env), 0);
+            let count1 = Variable::new(Rc::clone(&env), 1);
+            let count2 = Variable::new(Rc::clone(&env), 2);
+            let count3 = Variable::new(Rc::clone(&env), 3);
+            let count4 = Variable::new(Rc::clone(&env), 4);
+            let count5 = Variable::new(Rc::clone(&env), 5);
+            let count6 = Variable::new(Rc::clone(&env), 6);
+            let count7 = Variable::new(Rc::clone(&env), 7);
+            let count8 = Variable::new(Rc::clone(&env), 8);
+            let count9 = Variable::new(Rc::clone(&env), 9);
+            let counts = Mapping::new(Rc::clone(&env), 10);
             Self {
                 env,
                 count0,

@@ -21,8 +21,8 @@ pub struct Approval {
 
 pub struct Erc20 {
     env: Rc<ContractEnv>,
-    total_supply: Variable<1, U256>,
-    balances: Mapping<2, Address, U256>
+    total_supply: Variable<U256>,
+    balances: Mapping<Address, U256>
 }
 
 impl Erc20 {
@@ -70,8 +70,8 @@ mod __erc20_module {
 
     impl Module for Erc20 {
         fn new(env: Rc<ContractEnv>) -> Self {
-            let total_supply = Variable::new(Rc::clone(&env));
-            let balances = Mapping::new(Rc::clone(&env));
+            let total_supply = Variable::new(Rc::clone(&env), 1);
+            let balances = Mapping::new(Rc::clone(&env), 2);
             Self {
                 env,
                 total_supply,
