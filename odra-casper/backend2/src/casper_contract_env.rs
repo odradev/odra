@@ -28,7 +28,7 @@ impl ContractContext for WasmContractEnv {
         )
     }
 
-    fn get_block_time(&self) -> casper_types::BlockTime {
+    fn get_block_time(&self) -> u64 {
         todo!()
     }
 
@@ -36,8 +36,8 @@ impl ContractContext for WasmContractEnv {
         todo!()
     }
 
-    fn attached_value(&self) -> Option<casper_types::U512> {
-        todo!()
+    fn attached_value(&self) -> casper_types::U512 {
+        wasm_host::attached_value()
     }
 
     fn emit_event(&self, event: odra_types::EventData) {

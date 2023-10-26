@@ -43,9 +43,8 @@ impl<T: Module> ModuleWrapper<T> {
     }
 
     pub fn module(&self) -> &T {
-        self.module.get_or_init(||{
-            T::new(Rc::new(self.env.child(self.index)))
-        })
+        self.module
+            .get_or_init(|| T::new(Rc::new(self.env.child(self.index))))
     }
 
     pub fn module_mut(&mut self) -> &mut T {

@@ -25,16 +25,16 @@ impl ContractContext for OdraVmContractEnv {
         self.vm.borrow().call_contract(address, call_def)
     }
 
-    fn get_block_time(&self) -> BlockTime {
-        todo!()
+    fn get_block_time(&self) -> u64 {
+        self.vm.borrow().get_block_time()
     }
 
     fn callee(&self) -> Address {
         todo!()
     }
 
-    fn attached_value(&self) -> Option<U512> {
-        todo!()
+    fn attached_value(&self) -> U512 {
+        self.vm.borrow().attached_value()
     }
 
     fn emit_event(&self, event: odra_types::EventData) {

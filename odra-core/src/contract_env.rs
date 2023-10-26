@@ -1,6 +1,6 @@
 use crate::prelude::*;
 use odra_types::call_def::CallDef;
-use odra_types::{Address, Bytes, CLTyped, FromBytes, ToBytes};
+use odra_types::{Address, Bytes, CLTyped, FromBytes, ToBytes, U512};
 
 use crate::key_maker;
 pub use crate::ContractContext;
@@ -110,20 +110,20 @@ impl ContractEnv {
     //     backend.callee()
     // }
 
-    // pub fn get_block_time(&self) -> BlockTime {
-    //     let backend = self.backend.borrow();
-    //     backend.get_block_time()
-    // }
+    pub fn get_block_time(&self) -> u64 {
+        let backend = self.backend.borrow();
+        backend.get_block_time()
+    }
 
-    // pub fn attached_value(&self) -> Option<U512> {
-    //     let backend = self.backend.borrow();
-    //     backend.attached_value()
-    // }
+    pub fn attached_value(&self) -> U512 {
+        let backend = self.backend.borrow();
+        backend.attached_value()
+    }
 
-    // pub fn balance_of(&self, address: &Address) -> U512 {
-    //     let backend = self.backend.borrow();
-    //     backend.balance_of(address)
-    // }
+    pub fn balance_of(&self, address: &Address) -> U512 {
+        let backend = self.backend.borrow();
+        backend.balance_of(address)
+    }
 
     pub fn revert(&self, code: u16) -> ! {
         let backend = self.backend.borrow();

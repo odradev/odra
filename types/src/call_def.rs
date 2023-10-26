@@ -6,16 +6,21 @@ use casper_types::{CLTyped, RuntimeArgs, U512};
 pub struct CallDef {
     pub entry_point: String,
     pub args: RuntimeArgs,
-    pub amount: Option<U512>
+    pub amount: U512
 }
 
 impl CallDef {
-    pub fn new(method: String, args: RuntimeArgs, attached_value: Option<U512>) -> Self {
+    pub fn new(method: String, args: RuntimeArgs) -> Self {
         CallDef {
             entry_point: method,
             args,
-            amount: attached_value
+            amount: U512::zero()
         }
+    }
+
+    pub fn with_amount(mut self, amount: U512) -> Self {
+        self.amount = amount;
+        self
     }
 
     pub fn args(&self) -> &RuntimeArgs {
@@ -33,7 +38,7 @@ impl CallDef {
         &self.entry_point
     }
 
-    pub fn attached_value(&self) -> Option<U512> {
+    pub fn attached_value(&self) -> U512 {
         self.amount
     }
 }

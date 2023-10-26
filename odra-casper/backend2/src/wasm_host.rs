@@ -7,7 +7,7 @@ use casper_contract::{contract_api, ext_ffi};
 use casper_event_standard::{Schema, Schemas};
 use casper_types::bytesrepr::Bytes;
 use casper_types::system::CallStackElement;
-use casper_types::{api_error, ContractVersion, RuntimeArgs};
+use casper_types::{api_error, ContractVersion, RuntimeArgs, U512};
 use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
     contracts::NamedKeys,
@@ -346,4 +346,8 @@ fn deserialize_contract_result(bytes_written: usize) -> Vec<u8> {
         dest
     };
     serialized_result
+}
+
+pub fn attached_value() -> U512 {
+    U512::zero()
 }

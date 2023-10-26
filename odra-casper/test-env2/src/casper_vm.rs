@@ -18,10 +18,11 @@ use odra_casper_shared::consts;
 use odra_casper_shared::consts::*;
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::{CallDef, ContractEnv, HostContext, HostEnv};
-use odra_types::casper_types::account::AccountHash;
+use odra_types::casper_types::account::{Account, AccountHash};
 use odra_types::casper_types::bytesrepr::{Bytes, ToBytes};
 use odra_types::casper_types::{
-    runtime_args, BlockTime, ContractPackageHash, Key, Motes, SecretKey, StoredValue
+    runtime_args, BlockTime, Contract, ContractHash, ContractPackageHash, Key, Motes, SecretKey,
+    StoredValue
 };
 use odra_types::{Address, PublicKey, U512};
 use odra_types::{CLTyped, FromBytes, OdraError, RuntimeArgs};
@@ -31,10 +32,10 @@ pub struct CasperVm {
     pub key_pairs: BTreeMap<Address, (SecretKey, PublicKey)>,
     pub active_account: Address,
     pub context: InMemoryWasmTestBuilder,
-    pub block_time: BlockTime,
+    pub block_time: u64,
     pub calls_counter: u32,
     pub error: Option<OdraError>,
-    pub attached_value: Option<U512>,
+    pub attached_value: U512,
     pub gas_used: BTreeMap<AccountHash, U512>,
     pub gas_cost: Vec<(String, U512)>
 }
@@ -84,18 +85,14 @@ impl CasperVm {
             active_account: accounts[0],
             context: builder,
             accounts,
-            block_time: BlockTime::new(0),
+            block_time: 0u64,
             calls_counter: 0,
             error: None,
-            attached_value: None,
+            attached_value: U512::zero(),
             gas_used: BTreeMap::new(),
             gas_cost: Vec::new(),
             key_pairs
         }
-    }
-
-    fn contract_env(&self) -> ContractEnv {
-        todo!()
     }
 
     fn deploy_contract(&mut self, wasm_path: &str, args: &RuntimeArgs) {
@@ -147,8 +144,8 @@ impl CasperVm {
         self.accounts[index]
     }
 
-    pub fn advance_block_time(&mut self, time_diff: BlockTime) {
-        todo!()
+    pub fn advance_block_time(&mut self, time_diff: u64) {
+        self.block_time += time_diff
     }
 
     pub fn get_event(
@@ -160,7 +157,7 @@ impl CasperVm {
     }
 
     pub fn attach_value(&mut self, amount: U512) {
-        todo!()
+        self.attached_value = amount;
     }
 
     pub fn call_contract(&mut self, address: &Address, call_def: CallDef) -> Bytes {
@@ -176,7 +173,7 @@ impl CasperVm {
             ENTRY_POINT_ARG => entry_point,
             ARGS_ARG => Bytes::from(args_bytes),
             ATTACHED_VALUE_ARG => self.attached_value,
-            AMOUNT_ARG => self.attached_value.unwrap_or_default(),
+            AMOUNT_ARG => self.attached_value,
         };
 
         let deploy_item = DeployItemBuilder::new()
@@ -197,7 +194,7 @@ impl CasperVm {
             self.last_call_contract_gas_cost()
         ));
 
-        self.attached_value = None;
+        self.attached_value = U512::zero();
         if let Some(error) = self.context.get_error() {
             // TODO: handle error
             // let odra_error = parse_error(error);
@@ -244,6 +241,41 @@ impl CasperVm {
         hash[0] = seed as u8;
         hash[1] = (seed >> 8) as u8;
         hash
+    }
+
+    /// Returns the balance of the given address.
+    ///
+    /// The accepted value can be either an [Address::Account] or [Address::Contract].
+    pub fn balance_of(&self, address: &Address) -> U512 {
+        match address {
+            Address::Account(account_hash) => self.get_account_cspr_balance(account_hash),
+            Address::Contract(contract_hash) => self.get_contract_cspr_balance(contract_hash)
+        }
+    }
+
+    fn get_account_cspr_balance(&self, account_hash: &AccountHash) -> U512 {
+        let account: Account = self.context.get_account(account_hash.clone()).unwrap();
+        let purse = account.main_purse();
+        self.context.get_purse_balance(purse)
+    }
+
+    fn get_contract_cspr_balance(&self, contract_hash: &ContractPackageHash) -> U512 {
+        let contract_hash: ContractHash = self.get_contract_package_hash(contract_hash);
+        let contract: Contract = self.context.get_contract(contract_hash).unwrap();
+        contract
+            .named_keys()
+            .get(consts::CONTRACT_MAIN_PURSE)
+            .and_then(|key| key.as_uref())
+            .map(|purse| self.context.get_purse_balance(*purse))
+            .unwrap_or_else(U512::zero)
+    }
+
+    fn get_contract_package_hash(&self, contract_hash: &ContractPackageHash) -> ContractHash {
+        self.context
+            .get_contract_package(contract_hash.clone())
+            .unwrap()
+            .current_contract_hash()
+            .unwrap()
     }
 
     /// Read a value from Account's named keys.

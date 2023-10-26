@@ -15,7 +15,6 @@ pub mod uints;
 
 use alloc::vec::Vec;
 
-pub type BlockTime = u64;
 pub type EventData = Vec<u8>;
 
 pub use address::{Address, OdraAddress};
