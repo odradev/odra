@@ -28,7 +28,7 @@ prepare-test-env: install-cargo-odra
     sudo apt install wabt
 
 build-proxy-callers:
-    cargo build -p odra-casper-proxy-caller --release --target wasm32-unknown-unknown
+    cd odra-casper/proxy-caller && cargo build --release --target wasm32-unknown-unknown --target-dir ../../target
     wasm-strip target/wasm32-unknown-unknown/release/proxy_caller.wasm
     wasm-strip target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm
     cp target/wasm32-unknown-unknown/release/proxy_caller.wasm \

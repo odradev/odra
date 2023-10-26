@@ -172,8 +172,8 @@ impl CasperVm {
             CONTRACT_PACKAGE_HASH_ARG => hash,
             ENTRY_POINT_ARG => entry_point,
             ARGS_ARG => Bytes::from(args_bytes),
-            ATTACHED_VALUE_ARG => self.attached_value,
-            AMOUNT_ARG => self.attached_value,
+            ATTACHED_VALUE_ARG => call_def.amount,
+            AMOUNT_ARG => call_def.amount,
         };
 
         let deploy_item = DeployItemBuilder::new()
@@ -256,7 +256,12 @@ impl CasperVm {
     fn get_account_cspr_balance(&self, account_hash: &AccountHash) -> U512 {
         let account: Account = self.context.get_account(account_hash.clone()).unwrap();
         let purse = account.main_purse();
-        self.context.get_purse_balance(purse)
+        let gas_used = self
+            .gas_used
+            .get(account_hash)
+            .map(|x| *x)
+            .unwrap_or(U512::zero());
+        self.context.get_purse_balance(purse) + gas_used
     }
 
     fn get_contract_cspr_balance(&self, contract_hash: &ContractPackageHash) -> U512 {

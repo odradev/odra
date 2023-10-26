@@ -227,8 +227,10 @@ mod __erc20_wasm_parts {
 
     pub fn execute_pay_to_mint() {
         let env = WasmContractEnv::new();
+        odra_casper_backend2::wasm_host::handle_attached_value();
         let mut contract: Erc20 = Erc20::new(Rc::new(env));
         contract.pay_to_mint();
+        odra_casper_backend2::wasm_host::clear_attached_value();
     }
 
     #[no_mangle]
@@ -443,12 +445,13 @@ mod tests {
         assert_eq!(erc20.cross_total(pobcoin.address.clone()), 200.into());
 
         // Test attaching value and balances
-        let initial_balance = U512::from(100000000000000u64);
+        let initial_balance = U512::from(100000000000000000u64);
         assert_eq!(env.balance_of(&erc20.address), 0.into());
         assert_eq!(env.balance_of(&alice), initial_balance);
 
         env.set_caller(alice);
         pobcoin.with_tokens(100.into()).pay_to_mint();
+        assert_eq!(env.balance_of(&pobcoin.address), 100.into());
         assert_eq!(pobcoin.total_supply(), 200.into());
         assert_eq!(pobcoin.balance_of(alice), 100.into());
         assert_eq!(pobcoin.balance_of(bob), 100.into());

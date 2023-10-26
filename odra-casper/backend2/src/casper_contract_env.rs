@@ -21,11 +21,7 @@ impl ContractContext for WasmContractEnv {
     }
 
     fn call_contract(&self, address: odra_types::Address, call_def: odra_core::CallDef) -> Bytes {
-        wasm_host::call_contract(
-            *address.as_contract_package_hash().unwrap(),
-            call_def.method(),
-            call_def.clone().args
-        )
+        wasm_host::call_contract(address, call_def)
     }
 
     fn get_block_time(&self) -> u64 {

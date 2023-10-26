@@ -223,7 +223,7 @@ impl Default for OdraVmState {
 
         let mut balances = BTreeMap::<Address, AccountBalance>::new();
         for address in addresses.clone() {
-            balances.insert(address, 100_000_000_000_000u64.into());
+            balances.insert(address, 100_000_000_000_000_000u64.into());
         }
 
         let mut backend = OdraVmState {
