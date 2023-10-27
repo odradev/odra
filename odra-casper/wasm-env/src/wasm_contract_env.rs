@@ -1,6 +1,6 @@
 extern crate alloc;
 
-use crate::wasm_host;
+use crate::host_functions;
 use odra_core::{prelude::*, ContractContext, ContractEnv};
 use odra_types::Bytes;
 
@@ -9,19 +9,19 @@ pub struct WasmContractEnv;
 
 impl ContractContext for WasmContractEnv {
     fn get_value(&self, key: &[u8]) -> Option<Bytes> {
-        wasm_host::get_value(key).map(|v| Bytes::from(v))
+        host_functions::get_value(key).map(|v| Bytes::from(v))
     }
 
     fn set_value(&self, key: &[u8], value: Bytes) {
-        wasm_host::set_value(key, value.as_slice());
+        host_functions::set_value(key, value.as_slice());
     }
 
     fn caller(&self) -> odra_types::Address {
-        wasm_host::caller()
+        host_functions::caller()
     }
 
     fn call_contract(&self, address: odra_types::Address, call_def: odra_core::CallDef) -> Bytes {
-        wasm_host::call_contract(address, call_def)
+        host_functions::call_contract(address, call_def)
     }
 
     fn get_block_time(&self) -> u64 {
@@ -33,7 +33,7 @@ impl ContractContext for WasmContractEnv {
     }
 
     fn attached_value(&self) -> casper_types::U512 {
-        wasm_host::attached_value()
+        host_functions::attached_value()
     }
 
     fn emit_event(&self, event: odra_types::EventData) {

@@ -115,16 +115,16 @@ impl Erc20ContractRef {
 mod __erc20_wasm_parts {
     use super::{Approval, Erc20, Transfer};
     use odra2::casper_event_standard::Schemas;
-    use odra2::odra_casper_backend2;
-    use odra2::odra_casper_backend2::casper_contract::unwrap_or_revert::UnwrapOrRevert;
-    use odra2::odra_casper_backend2::WasmContractEnv;
+    use odra2::odra_casper_wasm_env;
+    use odra2::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert;
+    use odra2::odra_casper_wasm_env::WasmContractEnv;
     use odra2::types::casper_types::{
         CLType, CLTyped, CLValue, EntryPoint, EntryPointAccess, EntryPointType, EntryPoints, Group,
         Parameter, RuntimeArgs
     };
     use odra2::types::{runtime_args, Address, U256};
     use odra2::{prelude::*, ContractEnv};
-    use odra_casper_backend2::casper_contract::contract_api::runtime;
+    use odra2::odra_casper_wasm_env::casper_contract::contract_api::runtime;
 
     extern crate alloc;
 
@@ -184,7 +184,7 @@ mod __erc20_wasm_parts {
         let init_args = runtime_args! {
             "total_supply" => total_supply
         };
-        odra_casper_backend2::wasm_host::install_contract(entry_points(), schemas, Some(init_args));
+        odra2::odra_casper_wasm_env::host_functions::install_contract(entry_points(), schemas, Some(init_args));
     }
 
     pub fn execute_init() {
@@ -227,10 +227,10 @@ mod __erc20_wasm_parts {
 
     pub fn execute_pay_to_mint() {
         let env = WasmContractEnv::new();
-        odra_casper_backend2::wasm_host::handle_attached_value();
+        odra2::odra_casper_wasm_env::host_functions::handle_attached_value();
         let mut contract: Erc20 = Erc20::new(Rc::new(env));
         contract.pay_to_mint();
-        odra_casper_backend2::wasm_host::clear_attached_value();
+        odra2::odra_casper_wasm_env::host_functions::clear_attached_value();
     }
 
     #[no_mangle]

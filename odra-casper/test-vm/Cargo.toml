@@ -1,5 +1,5 @@
 [package]
-name = "odra-casper-test-env2"
+name = "odra-casper-test-vm"
 edition = "2021"
 description = "Odra test environment for the Casper Blockchain."
 keywords = ["wasm", "webassembly", "blockchain"]

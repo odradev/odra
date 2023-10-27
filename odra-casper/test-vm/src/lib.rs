@@ -3,7 +3,7 @@
 #![allow(unused_variables)]
 
 mod casper_host;
-mod casper_vm;
+mod vm;
 
 pub use casper_host::CasperHost;
-pub use casper_vm::CasperVm;
+pub use vm::casper_vm::CasperVm;

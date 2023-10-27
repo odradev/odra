@@ -11,11 +11,11 @@ members = [
     "types",
     "utils",
     "odra-casper/backend",
-    "odra-casper/backend2",
+    "odra-casper/wasm-env",
     "odra-casper/codegen",
     "odra-casper/shared",
     "odra-casper/test-env",
-    "odra-casper/test-env2",
+    "odra-casper/test-vm",
     "odra-casper/livenet"
 ]
 exclude = [ "examples", "examples2", "modules", "odra-casper/proxy-caller" ]

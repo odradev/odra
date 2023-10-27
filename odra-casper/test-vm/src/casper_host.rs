@@ -1,4 +1,3 @@
-use crate::casper_vm::CasperVm;
 use odra_core::prelude::{collections::*, *};
 use std::cell::RefCell;
 use std::env;
@@ -11,6 +10,7 @@ use casper_engine_test_support::{
 };
 use std::rc::Rc;
 
+use crate::CasperVm;
 use casper_execution_engine::core::engine_state::{GenesisAccount, RunGenesisRequest};
 use odra_casper_shared::consts;
 use odra_casper_shared::consts::*;

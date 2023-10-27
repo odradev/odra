@@ -165,7 +165,7 @@ impl CasperVm {
         // TODO: handle unwrap
         let hash = *address.as_contract_package_hash().unwrap();
 
-        let session_code = include_bytes!("../resources/proxy_caller_with_return.wasm").to_vec();
+        let session_code = include_bytes!("../../resources/proxy_caller_with_return.wasm").to_vec();
         let args_bytes: Vec<u8> = call_def.args.to_bytes().unwrap();
         let entry_point = call_def.entry_point.clone();
         let args = runtime_args! {
