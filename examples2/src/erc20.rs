@@ -1,7 +1,7 @@
 use odra2::casper_event_standard::{self, Event};
 use odra2::{prelude::*, ModuleWrapper, CallDef};
 use odra2::{
-    types::{Address, U256},
+    types::{Address, U256, U512},
     ContractEnv, Mapping, Variable
 };
 
@@ -68,6 +68,22 @@ impl Erc20 {
         let caller_balance = self.balance_of(caller);
         self.balances.set(caller, caller_balance + U256::from(attached_value.as_u64()));
         self.total_supply.set(self.total_supply() + U256::from(attached_value.as_u64()));
+    }
+
+    pub fn get_current_block_time(&self) -> u64 {
+        self.env().get_block_time()
+    }
+
+    pub fn burn_and_get_paid(&mut self, amount: U256) {
+        let caller = self.env().caller();
+        let caller_balance = self.balance_of(caller);
+        if amount > caller_balance {
+            self.env().revert(1);
+        }
+
+        self.balances.set(caller, caller_balance - amount);
+        self.total_supply.set(self.total_supply() - amount);
+        self.env().transfer_tokens(&caller, &U512::from(amount.as_u64()));
     }
 }
 
@@ -175,6 +191,20 @@ mod __erc20_wasm_parts {
             EntryPointAccess::Public,
             EntryPointType::Contract
         ));
+        entry_points.add_entry_point(EntryPoint::new(
+            "get_current_block_time",
+            alloc::vec![],
+            u64::cl_type(),
+            EntryPointAccess::Public,
+            EntryPointType::Contract
+        ));
+        entry_points.add_entry_point(EntryPoint::new(
+            "burn_and_get_paid",
+            alloc::vec![Parameter::new("amount", U256::cl_type()),],
+            CLType::Unit,
+            EntryPointAccess::Public,
+            EntryPointType::Contract
+        ));
         entry_points
     }
 
@@ -233,6 +263,20 @@ mod __erc20_wasm_parts {
         odra2::odra_casper_wasm_env::host_functions::clear_attached_value();
     }
 
+    pub fn execute_get_current_block_time() {
+        let env = WasmContractEnv::new();
+        let contract: Erc20 = Erc20::new(Rc::new(env));
+        let result = contract.get_current_block_time();
+        runtime::ret(CLValue::from_t(result).unwrap_or_revert())
+    }
+
+    pub fn execute_burn_and_get_paid() {
+        let amount: U256 = runtime::get_named_arg("amount");
+        let env = WasmContractEnv::new();
+        let mut contract: Erc20 = Erc20::new(Rc::new(env));
+        contract.burn_and_get_paid(amount);
+    }
+
     #[no_mangle]
     fn call() {
         execute_call();
@@ -266,6 +310,16 @@ mod __erc20_wasm_parts {
     #[no_mangle]
     fn pay_to_mint() {
         execute_pay_to_mint();
+    }
+
+    #[no_mangle]
+    fn get_current_block_time() {
+        execute_get_current_block_time();
+    }
+
+    #[no_mangle]
+    fn burn_and_get_paid() {
+        execute_burn_and_get_paid();
     }
 }
 
@@ -347,6 +401,28 @@ mod __erc20_test_parts {
                 )
             )
         }
+
+        pub fn get_current_block_time(&self) -> u64 {
+            self.env.call_contract(
+                &self.address,
+                CallDef::new(
+                    String::from("get_current_block_time"),
+                    runtime_args! {},
+                )
+            )
+        }
+
+        pub fn burn_and_get_paid(&self, amount: U256) {
+            self.env.call_contract(
+                &self.address,
+                CallDef::new(
+                    String::from("burn_and_get_paid"),
+                    runtime_args! {
+                        "amount" => amount
+                    },
+                )
+            )
+        }
     }
 
     pub struct Erc20Deployer;
@@ -384,6 +460,15 @@ mod __erc20_test_parts {
                     }
                     "pay_to_mint" => {
                         let result = erc20.pay_to_mint();
+                        Bytes::from(result.to_bytes().unwrap())
+                    }
+                    "get_current_block_time" => {
+                        let result = erc20.get_current_block_time();
+                        Bytes::from(result.to_bytes().unwrap())
+                    }
+                    "burn_and_get_paid" => {
+                        let amount: U256 = call_def.get("amount").unwrap();
+                        let result = erc20.burn_and_get_paid(amount);
                         Bytes::from(result.to_bytes().unwrap())
                     }
                     _ => panic!("Unknown method")
@@ -459,6 +544,18 @@ mod tests {
         assert_eq!(env.balance_of(&alice), initial_balance - U512::from(100));
         assert_eq!(env.balance_of(&pobcoin.address), 100.into());
 
-        env.print_gas_report();
+        // Test block time
+        let block_time = pobcoin.get_current_block_time();
+        env.advance_block_time(12345);
+        let new_block_time = pobcoin.get_current_block_time();
+        assert_eq!(block_time + 12345, new_block_time);
+
+        // Test transfer from contract to account
+        env.set_caller(alice);
+        let current_balance = env.balance_of(&alice);
+        pobcoin.burn_and_get_paid(100.into());
+        assert_eq!(env.balance_of(&alice), current_balance + U512::from(100));
+
+        env.print_gas_report()
     }
 }

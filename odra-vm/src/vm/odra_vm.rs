@@ -147,7 +147,7 @@ impl OdraVm {
     }
 
     /// Returns the callee, i.e. the currently executing contract.
-    pub fn callee(&self) -> Address {
+    pub fn self_address(&self) -> Address {
         self.state.read().unwrap().callee()
     }
 
@@ -234,10 +234,12 @@ impl OdraVm {
         self.state.read().unwrap().balance_of(address)
     }
 
-    pub fn transfer_tokens(&self, from: &Address, to: &Address, amount: &U512) {
+    pub fn transfer_tokens(&self, to: &Address, amount: &U512) {
         if amount.is_zero() {
             return;
         }
+
+        let from = &self.self_address();
 
         let mut state = self.state.write().unwrap();
         if state.reduce_balance(from, amount).is_err() {
@@ -270,7 +272,7 @@ impl OdraVm {
     }
 
     pub fn self_balance(&self) -> U512 {
-        let address = self.callee();
+        let address = self.self_address();
         self.state.read().unwrap().balance_of(&address)
     }
 
@@ -492,7 +494,7 @@ mod tests {
         push_address(&instance, &contract_address);
 
         // then the contract address in the callee
-        assert_eq!(instance.callee(), contract_address);
+        assert_eq!(instance.self_address(), contract_address);
     }
 
     #[test]

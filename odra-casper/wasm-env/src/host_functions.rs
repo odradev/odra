@@ -3,7 +3,7 @@ extern crate alloc;
 use alloc::borrow::ToOwned;
 use alloc::{format, string::String, vec, vec::Vec};
 use casper_contract::contract_api::system::{
-    create_purse, get_purse_balance, transfer_from_purse_to_purse
+    create_purse, get_purse_balance, transfer_from_purse_to_account, transfer_from_purse_to_purse
 };
 use casper_contract::contract_api::{runtime, storage};
 use casper_contract::unwrap_or_revert::UnwrapOrRevert;
@@ -128,6 +128,10 @@ pub fn revert(error: u16) -> ! {
     runtime::revert(ApiError::User(error))
 }
 
+pub fn get_block_time() -> u64 {
+    runtime::get_blocktime().into()
+}
+
 pub fn get_value(key: &[u8]) -> Option<Vec<u8>> {
     let uref_ptr = (*STATE_BYTES).as_ptr();
     let uref_size = (*STATE_BYTES).len();
@@ -156,6 +160,19 @@ pub fn get_value(key: &[u8]) -> Option<Vec<u8>> {
     let value_bytes = read_host_buffer(value_size).unwrap_or_revert();
     let value_bytes = Vec::from_bytes(value_bytes.as_slice()).unwrap_or_revert();
     Some(value_bytes.0)
+}
+
+/// Transfers native token from the contract caller to the given address.
+pub fn transfer_tokens(to: &Address, amount: &U512) {
+    let main_purse = get_or_create_main_purse();
+
+    match to {
+        Address::Account(account) => {
+            transfer_from_purse_to_account(main_purse, *account, *amount, None).unwrap_or_revert();
+        }
+        // todo: Why?
+        Address::Contract(_) => revert(ExecutionError::can_not_transfer_to_contract().code())
+    };
 }
 
 fn read_host_buffer(size: usize) -> Result<Vec<u8>, ApiError> {
@@ -225,6 +242,7 @@ pub fn caller() -> Address {
     let second_elem = take_call_stack_elem(1);
     call_stack_element_to_address(second_elem)
 }
+
 /// Calls a contract method by Address
 #[inline(always)]
 pub fn call_contract(address: Address, call_def: CallDef) -> Bytes {

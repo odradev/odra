@@ -2,7 +2,7 @@ use crate::vm::OdraVm;
 use odra_core::prelude::*;
 use odra_core::{CallDef, ContractContext};
 use odra_types::casper_types::BlockTime;
-use odra_types::{casper_types, Address, Bytes, U512};
+use odra_types::{casper_types, Address, Bytes, EventData, U512};
 
 pub struct OdraVmContractEnv {
     vm: Rc<RefCell<OdraVm>>
@@ -21,6 +21,10 @@ impl ContractContext for OdraVmContractEnv {
         self.vm.borrow().caller()
     }
 
+    fn self_address(&self) -> Address {
+        self.vm.borrow().self_address()
+    }
+
     fn call_contract(&self, address: Address, call_def: CallDef) -> Bytes {
         self.vm.borrow().call_contract(address, call_def)
     }
@@ -29,20 +33,16 @@ impl ContractContext for OdraVmContractEnv {
         self.vm.borrow().get_block_time()
     }
 
-    fn callee(&self) -> Address {
-        todo!()
-    }
-
     fn attached_value(&self) -> U512 {
         self.vm.borrow().attached_value()
     }
 
-    fn emit_event(&self, event: odra_types::EventData) {
+    fn emit_event(&self, event: &EventData) {
         todo!()
     }
 
-    fn transfer_tokens(&self, from: &Address, to: &Address, amount: U512) {
-        todo!()
+    fn transfer_tokens(&self, to: &Address, amount: &U512) {
+        self.vm.borrow().transfer_tokens(to, &amount)
     }
 
     fn balance_of(&self, address: &Address) -> U512 {

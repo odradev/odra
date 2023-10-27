@@ -1,8 +1,9 @@
 extern crate alloc;
 
 use crate::host_functions;
+use casper_types::U512;
 use odra_core::{prelude::*, ContractContext, ContractEnv};
-use odra_types::Bytes;
+use odra_types::{Address, Bytes, EventData};
 
 #[derive(Clone)]
 pub struct WasmContractEnv;
@@ -16,40 +17,35 @@ impl ContractContext for WasmContractEnv {
         host_functions::set_value(key, value.as_slice());
     }
 
-    fn caller(&self) -> odra_types::Address {
+    fn caller(&self) -> Address {
         host_functions::caller()
     }
 
-    fn call_contract(&self, address: odra_types::Address, call_def: odra_core::CallDef) -> Bytes {
+    fn self_address(&self) -> Address {
+        host_functions::self_address()
+    }
+
+    fn call_contract(&self, address: Address, call_def: odra_core::CallDef) -> Bytes {
         host_functions::call_contract(address, call_def)
     }
 
     fn get_block_time(&self) -> u64 {
-        todo!()
+        host_functions::get_block_time()
     }
 
-    fn callee(&self) -> odra_types::Address {
-        todo!()
-    }
-
-    fn attached_value(&self) -> casper_types::U512 {
+    fn attached_value(&self) -> U512 {
         host_functions::attached_value()
     }
 
-    fn emit_event(&self, event: odra_types::EventData) {
+    fn emit_event(&self, event: &EventData) {
         todo!()
     }
 
-    fn transfer_tokens(
-        &self,
-        from: &odra_types::Address,
-        to: &odra_types::Address,
-        amount: casper_types::U512
-    ) {
-        todo!()
+    fn transfer_tokens(&self, to: &Address, amount: &U512) {
+        host_functions::transfer_tokens(to, amount);
     }
 
-    fn balance_of(&self, address: &odra_types::Address) -> casper_types::U512 {
+    fn balance_of(&self, address: &Address) -> U512 {
         todo!()
     }
 
