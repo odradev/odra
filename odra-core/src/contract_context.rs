@@ -11,6 +11,5 @@ pub trait ContractContext {
     fn attached_value(&self) -> U512;
     fn emit_event(&self, event: &EventData);
     fn transfer_tokens(&self, to: &Address, amount: &U512);
-    fn balance_of(&self, address: &Address) -> U512;
     fn revert(&self, code: u16) -> !;
 }

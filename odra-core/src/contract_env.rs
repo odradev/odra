@@ -92,11 +92,6 @@ impl ContractEnv {
         backend.attached_value()
     }
 
-    pub fn balance_of(&self, address: &Address) -> U512 {
-        let backend = self.backend.borrow();
-        backend.balance_of(address)
-    }
-
     pub fn revert(&self, code: u16) -> ! {
         let backend = self.backend.borrow();
         backend.revert(code)

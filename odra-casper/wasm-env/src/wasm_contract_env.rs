@@ -45,10 +45,6 @@ impl ContractContext for WasmContractEnv {
         host_functions::transfer_tokens(to, amount);
     }
 
-    fn balance_of(&self, address: &Address) -> U512 {
-        todo!()
-    }
-
     fn revert(&self, code: u16) -> ! {
         todo!()
     }
