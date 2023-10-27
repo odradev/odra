@@ -13,7 +13,7 @@ use odra_types::{
         bytesrepr::{Error, FromBytes, ToBytes},
         RuntimeArgs, SecretKey, U512
     },
-    Address, BlockTime, Bytes, EventData, ExecutionError, PublicKey
+    Address, Bytes, EventData, ExecutionError, PublicKey
 };
 use odra_types::{event::EventError, OdraError, VmError};
 
@@ -63,8 +63,8 @@ impl OdraVm {
     pub fn call_contract(&self, address: Address, call_def: CallDef) -> Bytes {
         self.prepare_call(address, &call_def.entry_point, call_def.amount);
         // Call contract from register.
-        if let Some(amount) = call_def.amount {
-            let status = self.checked_transfer_tokens(&self.caller(), &address, &amount);
+        if call_def.amount > U512::zero() {
+            let status = self.checked_transfer_tokens(&self.caller(), &address, &call_def.amount);
             if let Err(err) = status {
                 self.revert(err.clone());
                 panic!("{:?}", err);
@@ -88,7 +88,7 @@ impl OdraVm {
     //     self.handle_call_result(result)
     // }
 
-    fn prepare_call(&self, address: Address, entrypoint: &str, amount: Option<U512>) {
+    fn prepare_call(&self, address: Address, entrypoint: &str, amount: U512) {
         let mut state = self.state.write().unwrap();
         // If only one address on the call_stack, record snapshot.
         if state.is_in_caller_context() {
@@ -147,7 +147,7 @@ impl OdraVm {
     }
 
     /// Returns the callee, i.e. the currently executing contract.
-    pub fn callee(&self) -> Address {
+    pub fn self_address(&self) -> Address {
         self.state.read().unwrap().callee()
     }
 
@@ -207,11 +207,15 @@ impl OdraVm {
         self.state.read().unwrap().get_event(address, index).ok()
     }
 
-    pub fn get_block_time(&self) -> BlockTime {
+    pub fn attach_value(&self, amount: U512) {
+        self.state.write().unwrap().attach_value(amount);
+    }
+
+    pub fn get_block_time(&self) -> u64 {
         self.state.read().unwrap().block_time()
     }
 
-    pub fn advance_block_time_by(&self, milliseconds: BlockTime) {
+    pub fn advance_block_time_by(&self, milliseconds: u64) {
         self.state
             .write()
             .unwrap()
@@ -226,14 +230,16 @@ impl OdraVm {
         self.state.read().unwrap().accounts.get(n).cloned().unwrap()
     }
 
-    pub fn token_balance(&self, address: Address) -> U512 {
-        self.state.read().unwrap().get_balance(address)
+    pub fn balance_of(&self, address: &Address) -> U512 {
+        self.state.read().unwrap().balance_of(address)
     }
 
-    pub fn transfer_tokens(&self, from: &Address, to: &Address, amount: &U512) {
+    pub fn transfer_tokens(&self, to: &Address, amount: &U512) {
         if amount.is_zero() {
             return;
         }
+
+        let from = &self.self_address();
 
         let mut state = self.state.write().unwrap();
         if state.reduce_balance(from, amount).is_err() {
@@ -261,12 +267,13 @@ impl OdraVm {
         if state.increase_balance(to, amount).is_err() {
             return Err(OdraError::VmError(VmError::BalanceExceeded));
         }
+
         Ok(())
     }
 
     pub fn self_balance(&self) -> U512 {
-        let address = self.callee();
-        self.state.read().unwrap().get_balance(address)
+        let address = self.self_address();
+        self.state.read().unwrap().balance_of(&address)
     }
 
     pub fn public_key(&self, address: &Address) -> PublicKey {
@@ -278,8 +285,7 @@ impl OdraVm {
 mod tests {
     use std::collections::BTreeMap;
 
-    use super::callstack::CallstackElement;
-    use super::contract_container::{EntrypointArgs, EntrypointCall};
+    use crate::vm::contract_container::{EntrypointArgs, EntrypointCall};
     use odra_types::casper_types::bytesrepr::FromBytes;
     use odra_types::casper_types::{RuntimeArgs, U512};
     use odra_types::OdraAddress;
@@ -488,7 +494,7 @@ mod tests {
         push_address(&instance, &contract_address);
 
         // then the contract address in the callee
-        assert_eq!(instance.callee(), contract_address);
+        assert_eq!(instance.self_address(), contract_address);
     }
 
     #[test]

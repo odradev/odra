@@ -28,7 +28,7 @@ prepare-test-env: install-cargo-odra
     sudo apt install wabt
 
 build-proxy-callers:
-    cargo build -p odra-casper-proxy-caller --release --target wasm32-unknown-unknown
+    cd odra-casper/proxy-caller && cargo build --release --target wasm32-unknown-unknown --target-dir ../../target
     wasm-strip target/wasm32-unknown-unknown/release/proxy_caller.wasm
     wasm-strip target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm
     cp target/wasm32-unknown-unknown/release/proxy_caller.wasm \
@@ -68,14 +68,14 @@ clean:
     cd examples && rm -f Cargo.lock
     cd modules && rm -f Cargo.lock
 
-build-examples2:
-    cd examples2 && ODRA_MODULE=Erc20 cargo build --release --target wasm32-unknown-unknown --bin erc20
-    wasm-strip examples2/target/wasm32-unknown-unknown/release/erc20.wasm
-    rm -rf examples2/wasm
+build-erc20:
+    cd examples2 && ODRA_MODULE=Erc20 cargo build --release --target wasm32-unknown-unknown --bin contract
+    wasm-strip examples2/target/wasm32-unknown-unknown/release/contract.wasm
+    rm -rf examples2/wasm/erc20.wasm
     mkdir -p examples2/wasm
-    mv examples2/target/wasm32-unknown-unknown/release/erc20.wasm examples2/wasm/
+    mv examples2/target/wasm32-unknown-unknown/release/contract.wasm examples2/wasm/erc20.wasm
 
-test-examples2: build-examples2
+test-erc20: build-erc20
     cd examples2 && ODRA_BACKEND=casper cargo test --lib erc20_works -- --nocapture
 
 build-counter-pack:

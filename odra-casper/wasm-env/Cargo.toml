@@ -1,5 +1,5 @@
 [package]
-name = "odra-casper-backend2"
+name = "odra-casper-wasm-env"
 version = "0.1.0"
 edition = "2021"
 

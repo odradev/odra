@@ -1,4 +1,3 @@
-use crate::casper_vm::CasperVm;
 use odra_core::prelude::{collections::*, *};
 use std::cell::RefCell;
 use std::env;
@@ -11,6 +10,7 @@ use casper_engine_test_support::{
 };
 use std::rc::Rc;
 
+use crate::CasperVm;
 use casper_execution_engine::core::engine_state::{GenesisAccount, RunGenesisRequest};
 use odra_casper_shared::consts;
 use odra_casper_shared::consts::*;
@@ -37,16 +37,16 @@ impl HostContext for CasperHost {
         self.vm.borrow().get_account(index)
     }
 
-    fn advance_block_time(&self, time_diff: BlockTime) {
+    fn balance_of(&self, address: &Address) -> U512 {
+        self.vm.borrow().balance_of(address)
+    }
+
+    fn advance_block_time(&self, time_diff: u64) {
         self.vm.borrow_mut().advance_block_time(time_diff)
     }
 
     fn get_event(&self, contract_address: Address, index: i32) -> Option<EventData> {
         self.vm.borrow().get_event(contract_address, index)
-    }
-
-    fn attach_value(&self, amount: U512) {
-        self.vm.borrow_mut().attach_value(amount)
     }
 
     fn call_contract(&self, address: &Address, call_def: CallDef) -> Bytes {

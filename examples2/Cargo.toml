@@ -7,16 +7,8 @@ edition = "2021"
 odra2 = { path = "../odra2" }
 
 [[bin]]
-name = "counter"
-path = "src/lib.rs"
-
-[[bin]]
-name = "counter_pack"
-path = "src/lib.rs"
-
-[[bin]]
-name = "erc20"
-path = "src/lib.rs"
+name = "contract"
+path = "bin/build_contract.rs"
 
 [[bin]]
 name = "build_schema"

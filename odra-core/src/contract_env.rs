@@ -1,6 +1,6 @@
 use crate::prelude::*;
 use odra_types::call_def::CallDef;
-use odra_types::{Address, Bytes, CLTyped, FromBytes, ToBytes};
+use odra_types::{Address, Bytes, CLTyped, FromBytes, ToBytes, U512};
 
 use crate::key_maker;
 pub use crate::ContractContext;
@@ -61,39 +61,6 @@ impl ContractEnv {
         self.backend.borrow().set_value(key, Bytes::from(bytes));
     }
 
-    // pub fn install_contract(
-    //     entry_points: EntryPoints,
-    //     // events: Vec<(String, Schema)>
-    // ) -> ContractPackageHash {
-    //     self.backend.borrow_mut().install_contract(entry_points)
-    // }
-    // pub fn get_or_none<T: ToBytes, V: FromBytes>(&self, key: T) -> Option<V> {
-    //     let key = self.path_stack.get_key(Some(key));
-    //     let backend = self.backend.borrow();
-    //     match backend.get(key) {
-    //         Some(bytes) => match V::from_bytes(&bytes) {
-    //             Ok((value, _bytes)) => Some(value),
-    //             Err(_err) => self.revert(16),
-    //         },
-    //         None => None,
-    //     }
-    // }
-
-    // pub fn get<T: ToBytes, V: FromBytes>(&self, key: T) -> V {
-    //     if let Some(result) = self.get_or_none(&key) {
-    //         return result;
-    //     }
-
-    //     // TODO: resolve the key in a safer way
-    //     self.revert(17)
-    // }
-
-    // pub fn set<T: ToBytes, V: ToBytes>(&mut self, key: T, value: V) {
-    //     let key = self.path_stack.get_key(Some(key));
-    //     let mut backend = self.backend.borrow_mut();
-    //     backend.set(key, value.to_bytes().unwrap());
-    // }
-
     pub fn caller(&self) -> Address {
         let backend = self.backend.borrow();
         backend.caller()
@@ -105,25 +72,25 @@ impl ContractEnv {
         T::from_bytes(&bytes).unwrap().0
     }
 
-    // pub fn self_address(&self) -> Address {
-    //     let backend = self.backend.borrow();
-    //     backend.callee()
-    // }
+    pub fn self_address(&self) -> Address {
+        let backend = self.backend.borrow();
+        backend.self_address()
+    }
 
-    // pub fn get_block_time(&self) -> BlockTime {
-    //     let backend = self.backend.borrow();
-    //     backend.get_block_time()
-    // }
+    pub fn transfer_tokens(&self, to: &Address, amount: &U512) {
+        let backend = self.backend.borrow();
+        backend.transfer_tokens(to, amount)
+    }
 
-    // pub fn attached_value(&self) -> Option<U512> {
-    //     let backend = self.backend.borrow();
-    //     backend.attached_value()
-    // }
+    pub fn get_block_time(&self) -> u64 {
+        let backend = self.backend.borrow();
+        backend.get_block_time()
+    }
 
-    // pub fn balance_of(&self, address: &Address) -> U512 {
-    //     let backend = self.backend.borrow();
-    //     backend.balance_of(address)
-    // }
+    pub fn attached_value(&self) -> U512 {
+        let backend = self.backend.borrow();
+        backend.attached_value()
+    }
 
     pub fn revert(&self, code: u16) -> ! {
         let backend = self.backend.borrow();

@@ -1,19 +1,24 @@
 extern crate alloc;
 
+use alloc::borrow::ToOwned;
 use alloc::{format, string::String, vec, vec::Vec};
+use casper_contract::contract_api::system::{
+    create_purse, get_purse_balance, transfer_from_purse_to_account, transfer_from_purse_to_purse
+};
 use casper_contract::contract_api::{runtime, storage};
 use casper_contract::unwrap_or_revert::UnwrapOrRevert;
 use casper_contract::{contract_api, ext_ffi};
 use casper_event_standard::{Schema, Schemas};
 use casper_types::bytesrepr::Bytes;
 use casper_types::system::CallStackElement;
-use casper_types::{api_error, ContractVersion, RuntimeArgs};
+use casper_types::{api_error, ContractVersion, RuntimeArgs, U512};
 use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
     contracts::NamedKeys,
     ApiError, CLTyped, ContractPackageHash, EntryPoints, Key, URef
 };
 use core::mem::MaybeUninit;
+use odra_types::call_def::CallDef;
 use odra_types::{Address, ExecutionError};
 
 use crate::consts;
@@ -29,6 +34,8 @@ lazy_static::lazy_static! {
         (*STATE).into_bytes().unwrap_or_revert()
     };
 }
+
+pub(crate) static mut ATTACHED_VALUE: U512 = U512::zero();
 
 pub fn install_contract(
     entry_points: EntryPoints,
@@ -121,6 +128,10 @@ pub fn revert(error: u16) -> ! {
     runtime::revert(ApiError::User(error))
 }
 
+pub fn get_block_time() -> u64 {
+    runtime::get_blocktime().into()
+}
+
 pub fn get_value(key: &[u8]) -> Option<Vec<u8>> {
     let uref_ptr = (*STATE_BYTES).as_ptr();
     let uref_size = (*STATE_BYTES).len();
@@ -149,6 +160,19 @@ pub fn get_value(key: &[u8]) -> Option<Vec<u8>> {
     let value_bytes = read_host_buffer(value_size).unwrap_or_revert();
     let value_bytes = Vec::from_bytes(value_bytes.as_slice()).unwrap_or_revert();
     Some(value_bytes.0)
+}
+
+/// Transfers native token from the contract caller to the given address.
+pub fn transfer_tokens(to: &Address, amount: &U512) {
+    let main_purse = get_or_create_main_purse();
+
+    match to {
+        Address::Account(account) => {
+            transfer_from_purse_to_account(main_purse, *account, *amount, None).unwrap_or_revert();
+        }
+        // todo: Why?
+        Address::Contract(_) => revert(ExecutionError::can_not_transfer_to_contract().code())
+    };
 }
 
 fn read_host_buffer(size: usize) -> Result<Vec<u8>, ApiError> {
@@ -218,14 +242,46 @@ pub fn caller() -> Address {
     let second_elem = take_call_stack_elem(1);
     call_stack_element_to_address(second_elem)
 }
+
 /// Calls a contract method by Address
 #[inline(always)]
-pub fn call_contract(
-    contract_package_hash: ContractPackageHash,
-    entry_point: &str,
-    args: RuntimeArgs
-) -> Bytes {
-    call_versioned_contract(contract_package_hash, None, entry_point, args)
+pub fn call_contract(address: Address, call_def: CallDef) -> Bytes {
+    let contract_package_hash = *address.as_contract_package_hash().unwrap_or_revert();
+    let method = call_def.method();
+    let mut args = call_def.args().to_owned();
+    if call_def.amount == U512::zero() {
+        call_versioned_contract(contract_package_hash, None, method, args)
+    } else {
+        let cargo_purse = get_or_create_cargo_purse();
+        let main_purse = get_main_purse().unwrap_or_revert();
+
+        transfer_from_purse_to_purse(main_purse, cargo_purse, call_def.amount, None)
+            .unwrap_or_revert_with(ApiError::Transfer);
+        args.insert(consts::CARGO_PURSE_ARG, cargo_purse)
+            .unwrap_or_revert();
+
+        let result = call_versioned_contract(contract_package_hash, None, method, args);
+        if !is_purse_empty(cargo_purse) {
+            runtime::revert(ApiError::InvalidPurse)
+        }
+        result
+    }
+}
+
+fn is_purse_empty(purse: URef) -> bool {
+    get_purse_balance(purse)
+        .map(|balance| balance.is_zero())
+        .unwrap_or_else(|| true)
+}
+fn get_or_create_cargo_purse() -> URef {
+    match runtime::get_key(consts::CONTRACT_CARGO_PURSE) {
+        Some(key) => *key.as_uref().unwrap_or_revert(),
+        None => {
+            let purse = create_purse();
+            runtime::put_key(consts::CONTRACT_CARGO_PURSE, purse.into());
+            purse
+        }
+    }
 }
 
 /// Gets the address of the currently run contract
@@ -346,4 +402,68 @@ fn deserialize_contract_result(bytes_written: usize) -> Vec<u8> {
         dest
     };
     serialized_result
+}
+
+pub fn attached_value() -> U512 {
+    unsafe { ATTACHED_VALUE }
+}
+
+/// Stores in memory the amount attached to the current call.
+pub fn set_attached_value(amount: U512) {
+    unsafe {
+        ATTACHED_VALUE = amount;
+    }
+}
+
+/// Zeroes the amount attached to the current call.
+pub fn clear_attached_value() {
+    unsafe { ATTACHED_VALUE = U512::zero() }
+}
+/// Checks if given named argument exists.
+pub fn named_arg_exists(name: &str) -> bool {
+    let mut arg_size: usize = 0;
+    let ret = unsafe {
+        casper_contract::ext_ffi::casper_get_named_arg_size(
+            name.as_bytes().as_ptr(),
+            name.len(),
+            &mut arg_size as *mut usize
+        )
+    };
+    ret == 0
+}
+
+/// Transfers attached value to the currently executing contract.
+pub fn handle_attached_value() {
+    // If the cargo purse argument is not present, do nothing.
+    // Attached value is set to zero by default.
+    if !named_arg_exists(consts::CARGO_PURSE_ARG) {
+        return;
+    }
+
+    // Handle attached value.
+    let cargo_purse = runtime::get_named_arg(consts::CARGO_PURSE_ARG);
+    let amount = get_purse_balance(cargo_purse);
+    if let Some(amount) = amount {
+        let contract_purse = get_or_create_main_purse();
+        transfer_from_purse_to_purse(cargo_purse, contract_purse, amount, None).unwrap_or_revert();
+        set_attached_value(amount);
+    } else {
+        revert(ExecutionError::native_token_transfer_error().code())
+    }
+}
+
+pub fn get_or_create_main_purse() -> URef {
+    match get_main_purse() {
+        Some(purse) => purse,
+        None => {
+            let purse = create_purse();
+            runtime::put_key(consts::CONTRACT_MAIN_PURSE, purse.into());
+            purse
+        }
+    }
+}
+
+#[inline(always)]
+pub fn get_main_purse() -> Option<URef> {
+    runtime::get_key(consts::CONTRACT_MAIN_PURSE).map(|key| *key.as_uref().unwrap_or_revert())
 }

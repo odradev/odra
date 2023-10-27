@@ -6,11 +6,12 @@
 
 extern crate alloc;
 
-pub mod casper_contract_env;
 pub mod consts;
-pub mod wasm_host;
+pub mod host_functions;
+pub mod wasm_contract_env;
+
 pub use casper_contract;
-pub use casper_contract_env::WasmContractEnv;
+pub use wasm_contract_env::WasmContractEnv;
 
 #[cfg(target_arch = "wasm32")]
 #[allow(unused_imports)]

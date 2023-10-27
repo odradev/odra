@@ -183,7 +183,7 @@ mod __counter_pack_wasm_parts {
 
 #[cfg(not(target_arch = "wasm32"))]
 mod __counter_pack_test_parts {
-    use odra2::types::{runtime_args, Bytes, RuntimeArgs, ToBytes, U256};
+    use odra2::types::{runtime_args, Bytes, RuntimeArgs, ToBytes, U256, U512};
     use odra2::{prelude::*, EntryPointsCaller};
     use odra2::{types::Address, CallDef, HostEnv};
 
@@ -203,8 +203,7 @@ mod __counter_pack_test_parts {
                     runtime_args! {
                         "index_a" => index_a,
                         "index_b" => index_b
-                    },
-                    None
+                    }
                 )
             )
         }
@@ -218,7 +217,6 @@ mod __counter_pack_test_parts {
                         "index_a" => index_a,
                         "index_b" => index_b
                     },
-                    None
                 )
             )
         }

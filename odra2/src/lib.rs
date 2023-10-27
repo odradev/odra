@@ -10,11 +10,11 @@ pub use odra_core::{
 pub use odra_types as types;
 
 #[cfg(target_arch = "wasm32")]
-pub use odra_casper_backend2;
+pub use odra_casper_wasm_env;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod odra_test {
-    use odra_casper_test_env2::{CasperHost, CasperVm};
+    use odra_casper_test_vm::{CasperHost, CasperVm};
     use odra_core::prelude::String;
     use odra_core::HostEnv;
     use odra_vm::{OdraVm, OdraVmHost};

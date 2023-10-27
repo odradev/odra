@@ -91,6 +91,10 @@ impl OdraVmState {
         Ok(events.get(event_position).unwrap().clone())
     }
 
+    pub fn attach_value(&mut self, amount: U512) {
+        self.callstack.attach_value(amount);
+    }
+
     pub fn push_callstack_element(&mut self, element: CallstackElement) {
         self.callstack.push(element);
     }
@@ -130,7 +134,7 @@ impl OdraVmState {
     }
 
     pub fn attached_value(&self) -> U512 {
-        self.callstack.current_amount()
+        self.callstack.attached_value()
     }
 
     pub fn clear_error(&mut self) {
@@ -165,11 +169,21 @@ impl OdraVmState {
         self.block_time += milliseconds;
     }
 
-    pub fn get_balance(&self, address: Address) -> U512 {
+    pub fn balance_of(&self, address: &Address) -> U512 {
         self.storage
-            .balance_of(&address)
+            .balance_of(address)
             .map(|b| b.value())
             .unwrap_or_default()
+    }
+
+    pub fn all_balances(&self) -> Vec<AccountBalance> {
+        self.storage
+            .balances
+            .iter()
+            .fold(Vec::new(), |mut acc, (_, balance)| {
+                acc.push(balance.clone());
+                acc
+            })
     }
 
     pub fn set_balance(&mut self, address: Address, amount: U512) {
@@ -209,7 +223,7 @@ impl Default for OdraVmState {
 
         let mut balances = BTreeMap::<Address, AccountBalance>::new();
         for address in addresses.clone() {
-            balances.insert(address, 100_000_000_000_000u64.into());
+            balances.insert(address, 100_000_000_000_000_000u64.into());
         }
 
         let mut backend = OdraVmState {

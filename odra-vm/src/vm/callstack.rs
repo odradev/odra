@@ -19,11 +19,11 @@ impl CallstackElement {
 pub struct Entrypoint {
     pub address: Address,
     pub entrypoint: String,
-    pub attached_value: Option<U512>
+    pub attached_value: U512
 }
 
 impl Entrypoint {
-    pub fn new(address: Address, entrypoint: &str, value: Option<U512>) -> Self {
+    pub fn new(address: Address, entrypoint: &str, value: U512) -> Self {
         Self {
             address: address,
             entrypoint: entrypoint.to_string(),
@@ -44,14 +44,18 @@ impl Callstack {
         self.0.push(element);
     }
 
-    pub fn current_amount(&self) -> U512 {
-        self.0
-            .last()
-            .and_then(|e| match e {
-                CallstackElement::Account(_) => None,
-                CallstackElement::Entrypoint(e) => e.attached_value
-            })
-            .unwrap_or_default()
+    pub fn attached_value(&self) -> U512 {
+        let ce = self.0.last().unwrap();
+        match ce {
+            CallstackElement::Account(_) => U512::zero(),
+            CallstackElement::Entrypoint(e) => e.attached_value
+        }
+    }
+
+    pub fn attach_value(&mut self, amount: U512) {
+        if let Some(CallstackElement::Entrypoint(entrypoint)) = self.0.last_mut() {
+            entrypoint.attached_value = amount;
+        }
     }
 
     pub fn current(&self) -> &CallstackElement {

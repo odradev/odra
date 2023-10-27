@@ -16,7 +16,7 @@ use super::balance::AccountBalance;
 #[derive(Default, Clone)]
 pub struct Storage {
     state: BTreeMap<u64, Bytes>,
-    balances: BTreeMap<Address, AccountBalance>,
+    pub balances: BTreeMap<Address, AccountBalance>,
     state_snapshot: Option<BTreeMap<u64, Bytes>>,
     balances_snapshot: Option<BTreeMap<Address, AccountBalance>>
 }
