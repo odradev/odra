@@ -2,11 +2,13 @@
 
 extern crate alloc;
 
+pub use odra_core::event;
 pub use odra_core::EntryPointsCaller;
 pub use odra_core::{
-    casper_event_standard, mapping::Mapping, module, module::ModuleWrapper, prelude,
-    variable::Variable, CallDef, ContractEnv, HostEnv
+    mapping::Mapping, module, module::ModuleWrapper, prelude, variable::Variable, CallDef,
+    ContractEnv, HostEnv
 };
+pub use odra_proc_macros::Event;
 pub use odra_types as types;
 
 #[cfg(target_arch = "wasm32")]

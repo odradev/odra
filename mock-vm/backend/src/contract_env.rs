@@ -1,14 +1,15 @@
 //! Exposes the public API to communicate with the host.
 
 use core::panic;
+use odra_core::event::OdraEvent;
 use std::backtrace::{Backtrace, BacktraceStatus};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
 use odra_types::casper_types::bytesrepr::{Bytes, FromBytes, ToBytes};
 use odra_types::casper_types::{CLTyped, U512};
-use odra_types::{event::OdraEvent, ExecutionError, OdraError};
 use odra_types::{Address, BlockTime, PublicKey};
+use odra_types::{ExecutionError, OdraError};
 
 use crate::{borrow_env, debug, native_token::NativeTokenMetadata};
 

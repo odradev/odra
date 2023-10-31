@@ -6,6 +6,7 @@ extern crate alloc;
 mod contract_context;
 mod contract_env;
 pub mod entry_point_callback;
+pub mod event;
 mod host_context;
 mod host_env;
 mod key_maker;

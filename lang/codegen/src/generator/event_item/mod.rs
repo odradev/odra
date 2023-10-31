@@ -22,17 +22,17 @@ impl GenerateCode for EventItem<'_> {
         let event_def = to_event_def(self.event);
 
         quote! {
-            impl odra::types::event::OdraEvent for #struct_ident {
-                fn emit(self) {
-                    odra::contract_env::emit_event(self);
+            impl odra2::event::OdraEvent for #struct_ident {
+                fn emit(self, env: &odra2::ContractEnv) {
+                    env.emit_event(self);
                 }
 
-                fn name() -> odra::prelude::string::String {
-                    odra::prelude::string::String::from(stringify!(#struct_ident))
+                fn name() -> odra2::prelude::string::String {
+                    odra2::prelude::string::String::from(stringify!(#struct_ident))
                 }
 
                 #[cfg(not(target_arch = "wasm32"))]
-                fn schema() -> odra::types::contract_def::Event {
+                fn schema() -> odra2::types::contract_def::Event {
                     #event_def
                 }
             }
@@ -51,9 +51,9 @@ fn to_event_def(event: &IrEventItem) -> TokenStream {
             let ty = &field.ty;
             let is_slice = matches!(ty, syn::Type::Slice(syn::TypeSlice { .. }));
             quote! {
-                odra::types::contract_def::Argument {
-                    ident: odra::prelude::string::String::from(stringify!(#field_ident)),
-                    ty: <#ty as odra::types::CLTyped>::cl_type(),
+                odra2::types::contract_def::Argument {
+                    ident: odra2::prelude::string::String::from(stringify!(#field_ident)),
+                    ty: <#ty as odra2::types::CLTyped>::cl_type(),
                     is_ref: false,
                     is_slice: #is_slice
                 },
@@ -61,9 +61,9 @@ fn to_event_def(event: &IrEventItem) -> TokenStream {
         })
         .collect::<TokenStream>();
     quote! {
-        odra::types::contract_def::Event {
-            ident: odra::prelude::string::String::from(stringify!(#struct_ident)),
-            args: odra::prelude::vec![#fields]
+        odra2::types::contract_def::Event {
+            ident: odra2::prelude::string::String::from(stringify!(#struct_ident)),
+            args: odra2::prelude::vec![#fields]
         }
     }
 }

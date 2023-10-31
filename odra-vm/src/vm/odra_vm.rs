@@ -1,28 +1,23 @@
 use std::cell::RefCell;
-use std::collections::BTreeMap;
 use std::rc::Rc;
 use std::sync::{Arc, RwLock};
 
 use anyhow::Result;
 use odra_core::entry_point_callback::EntryPointsCaller;
-use odra_core::HostEnv;
 use odra_types::call_def::CallDef;
 use odra_types::{
     casper_types::{
-        account::AccountHash,
-        bytesrepr::{Error, FromBytes, ToBytes},
-        RuntimeArgs, SecretKey, U512
+        bytesrepr::{FromBytes, ToBytes},
+        U512
     },
-    Address, Bytes, EventData, ExecutionError, PublicKey
+    Address, Bytes, ExecutionError, PublicKey
 };
-use odra_types::{event::EventError, OdraError, VmError};
+use odra_types::{OdraError, VmError};
 
-use super::balance::AccountBalance;
-use super::callstack::{Callstack, CallstackElement, Entrypoint};
-use super::contract_container::{ContractContainer, EntrypointArgs, EntrypointCall};
+use super::callstack::{CallstackElement, Entrypoint};
+use super::contract_container::ContractContainer;
 use super::contract_register::ContractRegister;
 use super::odra_vm_state::OdraVmState;
-use super::storage::Storage;
 
 #[derive(Default)]
 pub struct OdraVm {
@@ -199,11 +194,11 @@ impl OdraVm {
         }
     }
 
-    pub fn emit_event(&self, event_data: &EventData) {
+    pub fn emit_event(&self, event_data: &Bytes) {
         self.state.write().unwrap().emit_event(event_data);
     }
 
-    pub fn get_event(&self, address: Address, index: i32) -> Option<EventData> {
+    pub fn get_event(&self, address: &Address, index: i32) -> Option<Bytes> {
         self.state.read().unwrap().get_event(address, index).ok()
     }
 

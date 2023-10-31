@@ -1,7 +1,8 @@
 use odra_casper_shared::native_token::NativeTokenMetadata;
+use odra_core::event::OdraEvent;
 use odra_types::casper_types::bytesrepr::{Bytes, FromBytes, ToBytes};
 use odra_types::casper_types::U512;
-use odra_types::{event::OdraEvent, ExecutionError};
+use odra_types::ExecutionError;
 use odra_types::{Address, BlockTime, PublicKey};
 
 pub fn self_address() -> Address {

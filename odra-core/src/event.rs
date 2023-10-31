@@ -2,13 +2,14 @@
 
 use alloc::string::String;
 
+use crate::ContractEnv;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::contract_def::Event as Schema;
+use odra_types::contract_def::Event as Schema;
 
 /// Event interface
 pub trait OdraEvent {
     /// Emits &self in the current environment.
-    fn emit(self);
+    fn emit(self, env: &ContractEnv);
     /// Returns the event name.
     fn name() -> String;
     #[cfg(not(target_arch = "wasm32"))]

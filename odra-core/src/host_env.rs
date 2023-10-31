@@ -1,4 +1,5 @@
 use crate::entry_point_callback::EntryPointsCaller;
+use crate::event::{EventError, OdraEvent};
 use crate::host_context::HostContext;
 use crate::prelude::*;
 use crate::{CallDef, ContractEnv};
@@ -59,5 +60,30 @@ impl HostEnv {
     pub fn balance_of(&self, address: &Address) -> U512 {
         let backend = self.backend.borrow();
         backend.balance_of(address)
+    }
+
+    pub fn get_event<T: FromBytes + OdraEvent>(
+        &self,
+        contract_address: &Address,
+        index: i32
+    ) -> Result<T, EventError> {
+        let backend = self.backend.borrow();
+
+        let bytes = backend.get_event(contract_address, index).unwrap();
+
+        let event_name = Self::extract_event_name(&bytes)?;
+        if event_name == format!("event_{}", T::name()) {
+            T::from_bytes(&bytes)
+                .map_err(|_| EventError::Parsing)
+                .map(|r| r.0)
+        } else {
+            Err(EventError::UnexpectedType(event_name))
+        }
+    }
+
+    /// Returns the name of the passed event
+    fn extract_event_name(bytes: &[u8]) -> Result<String, EventError> {
+        let name = FromBytes::from_bytes(bytes).map_err(|_| EventError::Formatting)?;
+        Ok(name.0)
     }
 }

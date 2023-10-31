@@ -1,7 +1,6 @@
 use alloc::vec::Vec;
 use odra_types::{
     casper_types::{api_error, bytesrepr, CLValue},
-    event::OdraEvent,
     Address
 };
 
@@ -14,6 +13,7 @@ use casper_contract::{
 };
 
 use odra_casper_shared::{consts, key_maker::KeyMaker};
+use odra_core::event::OdraEvent;
 use odra_types::{
     casper_types::{
         bytesrepr::{FromBytes, ToBytes},

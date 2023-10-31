@@ -1,5 +1,4 @@
-use odra2::casper_event_standard::{self, Event};
-use odra2::{prelude::*, ModuleWrapper, CallDef};
+use odra2::{prelude::*, ModuleWrapper, CallDef, Event};
 use odra2::{
     types::{Address, U256, U512},
     ContractEnv, Mapping, Variable
@@ -51,6 +50,11 @@ impl Erc20 {
         }
         balances.set(caller, from_balance - value);
         balances.set(to, to_balance + value);
+        self.env.emit_event(Transfer {
+            from: Some(caller),
+            to: Some(to),
+            amount: value
+        });
     }
 
     pub fn cross_total(&self, other: Address) -> U256 {
@@ -494,6 +498,7 @@ mod __erc20_test_parts {
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use __erc20_test_parts::*;
+use odra2::event::OdraEvent;
 use odra2::types::RuntimeArgs;
 
 #[cfg(test)]
@@ -555,6 +560,9 @@ mod tests {
         let current_balance = env.balance_of(&alice);
         pobcoin.burn_and_get_paid(100.into());
         assert_eq!(env.balance_of(&alice), current_balance + U512::from(100));
+
+        // Test events
+        let event: Transfer = env.get_event(&erc20.address, 0).unwrap();
 
         env.print_gas_report()
     }

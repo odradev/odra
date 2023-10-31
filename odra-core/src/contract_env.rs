@@ -96,4 +96,9 @@ impl ContractEnv {
         let backend = self.backend.borrow();
         backend.revert(code)
     }
+
+    pub fn emit_event<T: ToBytes>(&self, event: T) {
+        let backend = self.backend.borrow();
+        backend.emit_event(&event.to_bytes().unwrap().into())
+    }
 }

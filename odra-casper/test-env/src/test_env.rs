@@ -5,13 +5,13 @@ use std::panic::AssertUnwindSafe;
 
 use crate::env::ENV;
 use odra_casper_shared::{consts, native_token::NativeTokenMetadata};
+use odra_core::event::{EventError, OdraEvent};
 use odra_types::{
     casper_types::{
         account::{AccountHash, ACCOUNT_HASH_LENGTH},
         bytesrepr::{Bytes, FromBytes, ToBytes},
         CLTyped, RuntimeArgs, U512
     },
-    event::{EventError, OdraEvent},
     Address, OdraError, PublicKey
 };
 

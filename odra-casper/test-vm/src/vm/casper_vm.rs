@@ -148,11 +148,7 @@ impl CasperVm {
         self.block_time += time_diff
     }
 
-    pub fn get_event(
-        &self,
-        contract_address: Address,
-        index: i32
-    ) -> Option<odra_types::EventData> {
+    pub fn get_event(&self, contract_address: &Address, index: i32) -> Option<Bytes> {
         todo!()
     }
 

@@ -16,11 +16,11 @@ where
     match ret {
         syn::ReturnType::Default => quote! {
             #args
-            odra::call_contract::<()>(self.address, #entrypoint_name, &args, self.attached_value);
+            odra2::call_contract::<()>(self.address, #entrypoint_name, &args, self.attached_value);
         },
         syn::ReturnType::Type(_, _) => quote! {
             #args
-            odra::call_contract(self.address, #entrypoint_name, &args, self.attached_value)
+            odra2::call_contract(self.address, #entrypoint_name, &args, self.attached_value)
         }
     }
 }
@@ -38,21 +38,21 @@ pub(crate) fn build_ref(ref_ident: &Ident, struct_ident: &Ident) -> TokenStream 
         #[derive(Clone)]
         #[doc = #ref_comment]
         pub struct #ref_ident {
-            address: odra::types::Address,
-            attached_value: Option<odra::types::casper_types::U512>,
+            address: odra2::types::Address,
+            attached_value: Option<odra2::types::casper_types::U512>,
         }
 
         impl #ref_ident {
-            pub fn at(address: &odra::types::Address) -> Self {
+            pub fn at(address: &odra2::types::Address) -> Self {
                 Self { address: *address, attached_value: None }
             }
 
-            pub fn address(&self) -> &odra::types::Address {
+            pub fn address(&self) -> &odra2::types::Address {
                 &self.address
             }
 
             pub fn with_tokens<T>(&self, amount: T) -> Self
-            where T: Into<odra::types::casper_types::U512> {
+            where T: Into<odra2::types::casper_types::U512> {
                 Self {
                     address: self.address,
                     attached_value: Some(amount.into()),
@@ -66,7 +66,7 @@ fn parse_args<T>(syn_args: T) -> TokenStream
 where
     T: IntoIterator<Item = syn::PatType>
 {
-    let mut tokens = quote!(let mut args = odra::types::casper_types::RuntimeArgs::new(););
+    let mut tokens = quote!(let mut args = odra2::types::casper_types::RuntimeArgs::new(););
     tokens.append_all(syn_args.into_iter().map(|ty| {
         let pat = &*ty.pat;
         match *ty.ty {
@@ -97,7 +97,7 @@ pub fn serialize_struct(prefix: &str, struct_ident: &Ident, fields: &[Ident]) ->
 
     let deserialize_fields = fields
         .iter()
-        .map(|ident| quote!(let (#ident, bytes) = odra::types::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;))
+        .map(|ident| quote!(let (#ident, bytes) = odra2::types::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;))
         .collect::<TokenStream>();
 
     let construct_struct = fields
@@ -124,9 +124,9 @@ pub fn serialize_struct(prefix: &str, struct_ident: &Ident, fields: &[Ident]) ->
         .collect::<TokenStream>();
 
     quote! {
-        impl odra::types::casper_types::bytesrepr::FromBytes for #struct_ident {
-            fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::types::casper_types::bytesrepr::Error> {
-                let (_, bytes): (odra::prelude::string::String, _) = odra::types::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
+        impl odra2::types::casper_types::bytesrepr::FromBytes for #struct_ident {
+            fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra2::types::casper_types::bytesrepr::Error> {
+                let (_, bytes): (odra2::prelude::string::String, _) = odra2::types::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
                 #deserialize_fields
                 let value = #struct_ident {
                     #construct_struct
@@ -135,9 +135,9 @@ pub fn serialize_struct(prefix: &str, struct_ident: &Ident, fields: &[Ident]) ->
             }
         }
 
-        impl odra::types::casper_types::bytesrepr::ToBytes for #struct_ident {
-            fn to_bytes(&self) -> Result<odra::prelude::vec::Vec<u8>, odra::types::casper_types::bytesrepr::Error> {
-                let mut vec = odra::prelude::vec::Vec::with_capacity(self.serialized_length());
+        impl odra2::types::casper_types::bytesrepr::ToBytes for #struct_ident {
+            fn to_bytes(&self) -> Result<odra2::prelude::vec::Vec<u8>, odra2::types::casper_types::bytesrepr::Error> {
+                let mut vec = odra2::prelude::vec::Vec::with_capacity(self.serialized_length());
                 vec.append(&mut #name_literal.to_bytes()?);
                 #append_bytes
                 Ok(vec)
@@ -150,9 +150,9 @@ pub fn serialize_struct(prefix: &str, struct_ident: &Ident, fields: &[Ident]) ->
             }
         }
 
-        impl odra::types::CLTyped for #struct_ident {
-            fn cl_type() -> odra::types::CLType {
-                odra::types::CLType::Any
+        impl odra2::types::CLTyped for #struct_ident {
+            fn cl_type() -> odra2::types::CLType {
+                odra2::types::CLType::Any
             }
         }
     }
@@ -162,23 +162,23 @@ pub fn serialize_enum(enum_ident: &Ident, variants: &[Variant]) -> TokenStream {
     let from_bytes_code = enum_from_bytes(enum_ident, variants);
 
     quote! {
-        impl odra::types::casper_types::bytesrepr::FromBytes for #enum_ident {
+        impl odra2::types::casper_types::bytesrepr::FromBytes for #enum_ident {
             #from_bytes_code
         }
 
-        impl odra::types::casper_types::bytesrepr::ToBytes for #enum_ident {
+        impl odra2::types::casper_types::bytesrepr::ToBytes for #enum_ident {
             fn serialized_length(&self) -> usize {
                 (self.clone() as u32).serialized_length()
             }
 
-            fn to_bytes(&self) -> Result<odra::prelude::vec::Vec<u8>, odra::types::casper_types::bytesrepr::Error> {
+            fn to_bytes(&self) -> Result<odra2::prelude::vec::Vec<u8>, odra2::types::casper_types::bytesrepr::Error> {
                 (self.clone() as u32).to_bytes()
             }
         }
 
-        impl odra::types::CLTyped for #enum_ident {
-            fn cl_type() -> odra::types::CLType {
-                odra::types::CLType::U32
+        impl odra2::types::CLTyped for #enum_ident {
+            fn cl_type() -> odra2::types::CLType {
+                odra2::types::CLType::U32
             }
         }
     }
@@ -196,11 +196,11 @@ fn enum_from_bytes(enum_ident: &Ident, variants: &[Variant]) -> TokenStream {
         .collect::<Punctuated<TokenStream, Comma>>();
 
     quote! {
-        fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::types::casper_types::bytesrepr::Error> {
-            let (variant, bytes): (u32, _) = odra::types::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
+        fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra2::types::casper_types::bytesrepr::Error> {
+            let (variant, bytes): (u32, _) = odra2::types::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
             match variant {
                 #append_bytes,
-                _ => core::result::Result::Err(odra::types::casper_types::bytesrepr::Error::Formatting),
+                _ => core::result::Result::Err(odra2::types::casper_types::bytesrepr::Error::Formatting),
             }
         }
     }

@@ -10,11 +10,11 @@ pub mod call_def;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod contract_def;
 mod error;
-pub mod event;
 pub mod uints;
 
 use alloc::vec::Vec;
 
+// TODO: remove as we'll use Bytes
 pub type EventData = Vec<u8>;
 
 pub use address::{Address, OdraAddress};

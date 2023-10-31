@@ -37,8 +37,8 @@ impl ContractContext for OdraVmContractEnv {
         self.vm.borrow().attached_value()
     }
 
-    fn emit_event(&self, event: &EventData) {
-        todo!()
+    fn emit_event(&self, event: &Bytes) {
+        self.vm.borrow().emit_event(event);
     }
 
     fn transfer_tokens(&self, to: &Address, amount: &U512) {

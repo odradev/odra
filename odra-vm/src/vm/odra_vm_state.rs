@@ -2,9 +2,9 @@ use super::balance::AccountBalance;
 use super::callstack::{Callstack, CallstackElement};
 use super::storage::Storage;
 use anyhow::Result;
+use odra_core::event::EventError;
 use odra_types::casper_types::account::AccountHash;
 use odra_types::casper_types::bytesrepr::Error;
-use odra_types::event::EventError;
 use odra_types::{
     Address, Bytes, EventData, ExecutionError, FromBytes, OdraError, PublicKey, SecretKey, ToBytes,
     U512
@@ -14,7 +14,7 @@ use std::collections::BTreeMap;
 pub struct OdraVmState {
     storage: Storage,
     callstack: Callstack,
-    events: BTreeMap<Address, Vec<EventData>>,
+    events: BTreeMap<Address, Vec<Bytes>>,
     contract_counter: u32,
     pub error: Option<OdraError>,
     block_time: u64,
@@ -68,7 +68,7 @@ impl OdraVmState {
         self.storage.get_dict_value(ctx, dict, key)
     }
 
-    pub fn emit_event(&mut self, event_data: &EventData) {
+    pub fn emit_event(&mut self, event_data: &Bytes) {
         let contract_address = self.callstack.current().address();
         let events = self.events.get_mut(contract_address).map(|events| {
             events.push(event_data.clone());
@@ -80,12 +80,12 @@ impl OdraVmState {
         }
     }
 
-    pub fn get_event(&self, address: Address, index: i32) -> Result<EventData, EventError> {
-        let events = self.events.get(&address);
+    pub fn get_event(&self, address: &Address, index: i32) -> Result<Bytes, EventError> {
+        let events = self.events.get(address);
         if events.is_none() {
             return Err(EventError::IndexOutOfBounds);
         }
-        let events: &Vec<EventData> = events.unwrap();
+        let events: &Vec<Bytes> = events.unwrap();
         let event_position = odra_utils::event_absolute_position(events.len(), index)
             .ok_or(EventError::IndexOutOfBounds)?;
         Ok(events.get(event_position).unwrap().clone())
