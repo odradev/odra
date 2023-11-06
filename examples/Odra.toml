@@ -77,3 +77,11 @@ fqn = "odra_examples::features::modules::ModulesContract"
 [[contracts]]
 name = "public_wallet"
 fqn = "odra_examples::features::native_token::PublicWallet"
+
+[[contracts]]
+name = "mock_moderated"
+fqn = "odra_examples::features::access_control::MockModerated"
+
+[[contracts]]
+name = "pauseable_counter"
+fqn = "odra_examples::features::pauseable::PauseableCounter"

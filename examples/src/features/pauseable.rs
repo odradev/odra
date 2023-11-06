@@ -1,6 +1,6 @@
 use odra::Variable;
 
-use crate::security::Pauseable;
+use odra_modules::security::Pauseable;
 
 #[odra::module]
 pub struct PauseableCounter {
@@ -42,11 +42,11 @@ impl PauseableCounter {
 #[cfg(test)]
 mod test {
     use super::PauseableCounterDeployer;
-    use crate::security::{
+    use odra::{assert_events, test_env};
+    use odra_modules::security::{
         errors::Error,
         events::{Paused, Unpaused}
     };
-    use odra::{assert_events, test_env};
 
     #[test]
     fn pause_works() {
