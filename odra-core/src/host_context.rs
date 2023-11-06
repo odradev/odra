@@ -10,7 +10,7 @@ pub trait HostContext {
     fn balance_of(&self, address: &Address) -> U512;
     fn advance_block_time(&self, time_diff: u64);
     fn get_event(&self, contract_address: Address, index: i32) -> Option<EventData>;
-    fn call_contract(&self, address: &Address, call_def: CallDef) -> Bytes;
+    fn call_contract(&self, address: &Address, call_def: CallDef, use_proxy: bool) -> Bytes;
     fn new_contract(
         &self,
         name: &str,

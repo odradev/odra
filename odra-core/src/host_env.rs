@@ -2,9 +2,9 @@ use crate::entry_point_callback::EntryPointsCaller;
 use crate::host_context::HostContext;
 use crate::prelude::*;
 use crate::{CallDef, ContractEnv};
-use odra_types::FromBytes;
 use odra_types::RuntimeArgs;
 use odra_types::{Address, U512};
+use odra_types::{CLTyped, FromBytes};
 
 #[derive(Clone)]
 pub struct HostEnv {
@@ -41,9 +41,10 @@ impl HostEnv {
         backend.new_contract(name, init_args, entry_points_caller)
     }
 
-    pub fn call_contract<T: FromBytes>(&self, address: &Address, call_def: CallDef) -> T {
+    pub fn call_contract<T: FromBytes + CLTyped>(&self, address: &Address, call_def: CallDef) -> T {
         let backend = self.backend.borrow();
-        let result = backend.call_contract(address, call_def);
+        let use_proxy = T::cl_type() != <()>::cl_type();
+        let result = backend.call_contract(address, call_def, use_proxy);
         T::from_bytes(&result).unwrap().0
     }
 
