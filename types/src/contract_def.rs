@@ -90,6 +90,11 @@ pub struct ContractBlueprint {
     pub fqn: &'static str
 }
 
+#[derive(Debug, Clone)]
+pub struct ContractBlueprint2 {
+    pub name: String
+}
+
 #[cfg(test)]
 #[allow(dead_code)]
 mod test {

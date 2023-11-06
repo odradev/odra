@@ -31,7 +31,7 @@ impl HostContext for OdraVmHost {
         self.vm.borrow().get_event(contract_address, index)
     }
 
-    fn call_contract(&self, address: &Address, call_def: CallDef) -> Bytes {
+    fn call_contract(&self, address: &Address, call_def: CallDef, _use_proxy: bool) -> Bytes {
         self.vm.borrow().call_contract(*address, call_def)
     }
 
@@ -48,8 +48,11 @@ impl HostContext for OdraVmHost {
             .register_contract(name, entry_points_caller.unwrap());
 
         if let Some(init_args) = init_args {
-            let _: Bytes =
-                self.call_contract(&address, CallDef::new(String::from("init"), init_args));
+            let _: Bytes = self.call_contract(
+                &address,
+                CallDef::new(String::from("init"), init_args),
+                false
+            );
         }
 
         address

@@ -156,29 +156,72 @@ impl CasperVm {
         self.attached_value = amount;
     }
 
-    pub fn call_contract(&mut self, address: &Address, call_def: CallDef) -> Bytes {
+    pub fn call_contract(
+        &mut self,
+        address: &Address,
+        call_def: CallDef,
+        use_proxy: bool
+    ) -> Bytes {
         self.error = None;
         // TODO: handle unwrap
         let hash = *address.as_contract_package_hash().unwrap();
 
-        let session_code = include_bytes!("../../resources/proxy_caller_with_return.wasm").to_vec();
-        let args_bytes: Vec<u8> = call_def.args.to_bytes().unwrap();
-        let entry_point = call_def.entry_point.clone();
-        let args = runtime_args! {
-            CONTRACT_PACKAGE_HASH_ARG => hash,
-            ENTRY_POINT_ARG => entry_point,
-            ARGS_ARG => Bytes::from(args_bytes),
-            ATTACHED_VALUE_ARG => call_def.amount,
-            AMOUNT_ARG => call_def.amount,
-        };
+        let deploy_item = if use_proxy {
+            let session_code =
+                include_bytes!("../../resources/proxy_caller_with_return.wasm").to_vec();
+            let args_bytes: Vec<u8> = call_def.args.to_bytes().unwrap();
+            let entry_point = call_def.entry_point.clone();
+            let args = runtime_args! {
+                CONTRACT_PACKAGE_HASH_ARG => hash,
+                ENTRY_POINT_ARG => entry_point,
+                ARGS_ARG => Bytes::from(args_bytes),
+                ATTACHED_VALUE_ARG => call_def.amount,
+                AMOUNT_ARG => call_def.amount,
+            };
 
-        let deploy_item = DeployItemBuilder::new()
-            .with_empty_payment_bytes(runtime_args! { ARG_AMOUNT => *DEFAULT_PAYMENT})
-            .with_authorization_keys(&[self.active_account_hash()])
-            .with_address(self.active_account_hash())
-            .with_session_bytes(session_code, args)
-            .with_deploy_hash(self.next_hash())
-            .build();
+            let deploy_item = DeployItemBuilder::new()
+                .with_empty_payment_bytes(runtime_args! { ARG_AMOUNT => *DEFAULT_PAYMENT})
+                .with_authorization_keys(&[self.active_account_hash()])
+                .with_address(self.active_account_hash())
+                .with_session_bytes(session_code, args)
+                .with_deploy_hash(self.next_hash())
+                .build();
+            deploy_item
+        } else {
+            let deploy_item = DeployItemBuilder::new()
+                .with_empty_payment_bytes(runtime_args! { ARG_AMOUNT => *DEFAULT_PAYMENT})
+                .with_authorization_keys(&[self.active_account_hash()])
+                .with_address(self.active_account_hash())
+                .with_stored_versioned_contract_by_hash(
+                    hash.value(),
+                    None,
+                    &call_def.entry_point,
+                    call_def.args.clone()
+                )
+                .with_deploy_hash(self.next_hash())
+                .build();
+            deploy_item
+
+            // let session_code = include_bytes!("../../resources/proxy_caller_with_return.wasm").to_vec();
+            // let args_bytes: Vec<u8> = call_def.args.to_bytes().unwrap();
+            // let entry_point = call_def.entry_point.clone();
+            // let args = runtime_args! {
+            //     CONTRACT_PACKAGE_HASH_ARG => hash,
+            //     ENTRY_POINT_ARG => entry_point,
+            //     ARGS_ARG => Bytes::from(args_bytes),
+            //     ATTACHED_VALUE_ARG => call_def.amount,
+            //     AMOUNT_ARG => call_def.amount,
+            // };
+
+            // let deploy_item = DeployItemBuilder::new()
+            //     .with_empty_payment_bytes(runtime_args! { ARG_AMOUNT => *DEFAULT_PAYMENT})
+            //     .with_authorization_keys(&[self.active_account_hash()])
+            //     .with_address(self.active_account_hash())
+            //     .with_session_bytes(session_code, args)
+            //     .with_deploy_hash(self.next_hash())
+            //     .build();
+            // deploy_item
+        };
 
         let execute_request = ExecuteRequestBuilder::from_deploy_item(deploy_item)
             .with_block_time(u64::from(self.block_time))
