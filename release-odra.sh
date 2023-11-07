@@ -3,8 +3,8 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
-cargo publish -p odra-types
 cargo publish -p odra-utils
+cargo publish -p odra-types
 cargo publish -p odra-mock-vm
 cargo publish -p odra-ir
 cargo publish -p odra-codegen

@@ -1,6 +1,6 @@
 [package]
 name = "odra-modules"
-version = "0.6.0"
+version = "0.7.0"
 edition = "2021"
 authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
 license = "MIT"
@@ -10,7 +10,7 @@ keywords = ["wasm", "webassembly", "blockchain"]
 categories = ["wasm"]
 
 [dependencies]
-odra = { path = "../core", version = "0.6.0", default-features = false }
+odra = { path = "../core", version = "0.7.0", default-features = false }
 hex = { version = "0.4.3", default-features = false }
 
 [features]
