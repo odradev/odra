@@ -2,21 +2,6 @@
 
 use alloc::string::String;
 
-use crate::ContractEnv;
-#[cfg(not(target_arch = "wasm32"))]
-use odra_types::contract_def::Event as Schema;
-
-/// Event interface
-pub trait OdraEvent {
-    /// Emits &self in the current environment.
-    fn emit(self, env: &ContractEnv);
-    /// Returns the event name.
-    fn name() -> String;
-    #[cfg(not(target_arch = "wasm32"))]
-    /// Returns the event schema.
-    fn schema() -> Schema;
-}
-
 /// Event-related errors.
 #[derive(Debug, PartialEq, Eq, PartialOrd)]
 pub enum EventError {
@@ -27,5 +12,7 @@ pub enum EventError {
     /// Formatting error while deserializing.
     Formatting,
     /// Unexpected error while deserializing.
-    Parsing
+    Parsing,
+    /// Could not extract event name.
+    CouldntExtractName
 }

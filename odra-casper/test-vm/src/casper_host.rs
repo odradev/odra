@@ -15,6 +15,7 @@ use casper_execution_engine::core::engine_state::{GenesisAccount, RunGenesisRequ
 use odra_casper_shared::consts;
 use odra_casper_shared::consts::*;
 use odra_core::entry_point_callback::EntryPointsCaller;
+use odra_core::event::EventError;
 use odra_core::{CallDef, ContractEnv, HostContext, HostEnv};
 use odra_types::casper_types::account::AccountHash;
 use odra_types::casper_types::bytesrepr::{Bytes, ToBytes};
@@ -45,7 +46,7 @@ impl HostContext for CasperHost {
         self.vm.borrow_mut().advance_block_time(time_diff)
     }
 
-    fn get_event(&self, contract_address: &Address, index: i32) -> Option<Bytes> {
+    fn get_event(&self, contract_address: &Address, index: i32) -> Result<Bytes, EventError> {
         self.vm.borrow().get_event(contract_address, index)
     }
 

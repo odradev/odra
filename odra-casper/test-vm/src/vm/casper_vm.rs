@@ -11,18 +11,20 @@ use casper_engine_test_support::{
     DEFAULT_ACCOUNT_INITIAL_BALANCE, DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_GENESIS_CONFIG,
     DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_PAYMENT
 };
+use casper_event_standard::try_full_name_from_bytes;
 use std::rc::Rc;
 
 use casper_execution_engine::core::engine_state::{GenesisAccount, RunGenesisRequest};
 use odra_casper_shared::consts;
 use odra_casper_shared::consts::*;
 use odra_core::entry_point_callback::EntryPointsCaller;
+use odra_core::event::EventError;
 use odra_core::{CallDef, ContractEnv, HostContext, HostEnv};
 use odra_types::casper_types::account::{Account, AccountHash};
 use odra_types::casper_types::bytesrepr::{Bytes, ToBytes};
 use odra_types::casper_types::{
     runtime_args, BlockTime, Contract, ContractHash, ContractPackageHash, Key, Motes, SecretKey,
-    StoredValue
+    StoredValue, URef
 };
 use odra_types::{Address, PublicKey, U512};
 use odra_types::{CLTyped, FromBytes, OdraError, RuntimeArgs};
@@ -148,8 +150,53 @@ impl CasperVm {
         self.block_time += time_diff
     }
 
-    pub fn get_event(&self, contract_address: &Address, index: i32) -> Option<Bytes> {
-        todo!()
+    pub fn get_event(&self, contract_address: &Address, index: i32) -> Result<Bytes, EventError> {
+        let contract_package_hash = contract_address.as_contract_package_hash().unwrap();
+        let contract_hash: ContractHash = self.get_contract_package_hash(contract_package_hash);
+
+        let dictionary_seed_uref: URef = *self
+            .context
+            .get_contract(contract_hash)
+            .unwrap()
+            .named_keys()
+            .get(consts::EVENTS)
+            .unwrap()
+            .as_uref()
+            .unwrap();
+
+        let events_length: u32 = self
+            .context
+            .query(
+                None,
+                Key::Hash(contract_hash.value()),
+                &[String::from(consts::EVENTS_LENGTH)]
+            )
+            .unwrap()
+            .as_cl_value()
+            .unwrap()
+            .clone()
+            .into_t()
+            .unwrap();
+
+        let event_position = odra_utils::event_absolute_position(events_length as usize, index)
+            .ok_or(EventError::IndexOutOfBounds)?;
+
+        match self.context.query_dictionary_item(
+            None,
+            dictionary_seed_uref,
+            &event_position.to_string()
+        ) {
+            Ok(val) => {
+                let bytes = val
+                    .as_cl_value()
+                    .unwrap()
+                    .clone()
+                    .into_t::<Bytes>()
+                    .unwrap();
+                Ok(bytes)
+            }
+            Err(_) => Err(EventError::IndexOutOfBounds)
+        }
     }
 
     pub fn attach_value(&mut self, amount: U512) {
@@ -201,26 +248,6 @@ impl CasperVm {
                 .with_deploy_hash(self.next_hash())
                 .build();
             deploy_item
-
-            // let session_code = include_bytes!("../../resources/proxy_caller_with_return.wasm").to_vec();
-            // let args_bytes: Vec<u8> = call_def.args.to_bytes().unwrap();
-            // let entry_point = call_def.entry_point.clone();
-            // let args = runtime_args! {
-            //     CONTRACT_PACKAGE_HASH_ARG => hash,
-            //     ENTRY_POINT_ARG => entry_point,
-            //     ARGS_ARG => Bytes::from(args_bytes),
-            //     ATTACHED_VALUE_ARG => call_def.amount,
-            //     AMOUNT_ARG => call_def.amount,
-            // };
-
-            // let deploy_item = DeployItemBuilder::new()
-            //     .with_empty_payment_bytes(runtime_args! { ARG_AMOUNT => *DEFAULT_PAYMENT})
-            //     .with_authorization_keys(&[self.active_account_hash()])
-            //     .with_address(self.active_account_hash())
-            //     .with_session_bytes(session_code, args)
-            //     .with_deploy_hash(self.next_hash())
-            //     .build();
-            // deploy_item
         };
 
         let execute_request = ExecuteRequestBuilder::from_deploy_item(deploy_item)

@@ -1,6 +1,8 @@
 extern crate alloc;
 
 use crate::host_functions;
+use alloc::boxed::Box;
+use casper_types::bytesrepr::ToBytes;
 use casper_types::U512;
 use odra_core::{prelude::*, ContractContext, ContractEnv};
 use odra_types::{Address, Bytes, EventData};
@@ -37,8 +39,8 @@ impl ContractContext for WasmContractEnv {
         host_functions::attached_value()
     }
 
-    fn emit_event(&self, event: &EventData) {
-        todo!()
+    fn emit_event(&self, event: &Bytes) {
+        host_functions::emit_event(event);
     }
 
     fn transfer_tokens(&self, to: &Address, amount: &U512) {
@@ -46,7 +48,7 @@ impl ContractContext for WasmContractEnv {
     }
 
     fn revert(&self, code: u16) -> ! {
-        todo!()
+        host_functions::revert(code)
     }
 }
 

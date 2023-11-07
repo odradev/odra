@@ -216,7 +216,7 @@ mod __counter_pack_test_parts {
                     runtime_args! {
                         "index_a" => index_a,
                         "index_b" => index_b
-                    },
+                    }
                 )
             )
         }

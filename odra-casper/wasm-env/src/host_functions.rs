@@ -1,6 +1,7 @@
 extern crate alloc;
 
 use alloc::borrow::ToOwned;
+use alloc::boxed::Box;
 use alloc::{format, string::String, vec, vec::Vec};
 use casper_contract::contract_api::system::{
     create_purse, get_purse_balance, transfer_from_purse_to_account, transfer_from_purse_to_purse
@@ -197,6 +198,10 @@ fn read_host_buffer_into(dest: &mut [u8]) -> Result<usize, ApiError> {
     };
     casper_types::api_error::result_from(ret)?;
     Ok(unsafe { bytes_written.assume_init() })
+}
+
+pub fn emit_event(event: &Bytes) {
+    casper_event_standard::emit(event)
 }
 
 pub fn set_value(key: &[u8], value: &[u8]) {

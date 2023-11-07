@@ -1,4 +1,5 @@
-use odra2::{prelude::*, CallDef, ModuleWrapper, Event};
+use odra2::casper_event_standard;
+use odra2::{prelude::*, CallDef, Event, ModuleWrapper};
 use odra2::{
     types::{Address, U256, U512},
     ContractEnv, Mapping, Variable
@@ -68,10 +69,15 @@ impl Erc20 {
 
     pub fn pay_to_mint(&mut self) {
         let attached_value = self.env().attached_value();
+        if attached_value.is_zero() {
+            self.env.revert(666);
+        }
         let caller = self.env().caller();
         let caller_balance = self.balance_of(caller);
-        self.balances.set(caller, caller_balance + U256::from(attached_value.as_u64()));
-        self.total_supply.set(self.total_supply() + U256::from(attached_value.as_u64()));
+        self.balances
+            .set(caller, caller_balance + U256::from(attached_value.as_u64()));
+        self.total_supply
+            .set(self.total_supply() + U256::from(attached_value.as_u64()));
     }
 
     pub fn get_current_block_time(&self) -> u64 {
@@ -87,7 +93,8 @@ impl Erc20 {
 
         self.balances.set(caller, caller_balance - amount);
         self.total_supply.set(self.total_supply() - amount);
-        self.env().transfer_tokens(&caller, &U512::from(amount.as_u64()));
+        self.env()
+            .transfer_tokens(&caller, &U512::from(amount.as_u64()));
     }
 }
 
@@ -132,6 +139,7 @@ mod __erc20_wasm_parts {
     use super::{Approval, Erc20, Transfer};
     use odra2::casper_event_standard::Schemas;
     use odra2::odra_casper_wasm_env;
+    use odra2::odra_casper_wasm_env::casper_contract::contract_api::runtime;
     use odra2::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert;
     use odra2::odra_casper_wasm_env::WasmContractEnv;
     use odra2::types::casper_types::{
@@ -140,7 +148,6 @@ mod __erc20_wasm_parts {
     };
     use odra2::types::{runtime_args, Address, U256};
     use odra2::{prelude::*, ContractEnv};
-    use odra2::odra_casper_wasm_env::casper_contract::contract_api::runtime;
 
     extern crate alloc;
 
@@ -209,12 +216,16 @@ mod __erc20_wasm_parts {
     }
 
     pub fn execute_call() {
-        let schemas = Schemas::new().with::<Transfer>().with::<Approval>();
+        let schemas = Schemas::new(); //.with::<Transfer>().with::<Approval>();
         let total_supply: Option<U256> = runtime::get_named_arg("total_supply");
         let init_args = runtime_args! {
             "total_supply" => total_supply
         };
-        odra2::odra_casper_wasm_env::host_functions::install_contract(entry_points(), schemas, Some(init_args));
+        odra2::odra_casper_wasm_env::host_functions::install_contract(
+            entry_points(),
+            schemas,
+            Some(init_args)
+        );
     }
 
     pub fn execute_init() {
@@ -356,7 +367,7 @@ mod __erc20_test_parts {
             Self {
                 address: self.address,
                 env: self.env.clone(),
-                attached_value: tokens,
+                attached_value: tokens
             }
         }
 
@@ -387,7 +398,7 @@ mod __erc20_test_parts {
                     runtime_args! {
                         "to" => to,
                         "value" => value
-                    },
+                    }
                 )
             )
         }
@@ -399,7 +410,7 @@ mod __erc20_test_parts {
                     String::from("cross_total"),
                     runtime_args! {
                         "other" => other
-                    },
+                    }
                 )
             )
         }
@@ -409,20 +420,18 @@ mod __erc20_test_parts {
                 &self.address,
                 CallDef::new(
                     String::from("pay_to_mint"),
-                    runtime_args! {},
-                ).with_amount(
-                    self.attached_value
+                    runtime_args! {
+                        "amount" => self.attached_value
+                    }
                 )
+                .with_amount(self.attached_value)
             )
         }
 
         pub fn get_current_block_time(&self) -> u64 {
             self.env.call_contract(
                 &self.address,
-                CallDef::new(
-                    String::from("get_current_block_time"),
-                    runtime_args! {},
-                )
+                CallDef::new(String::from("get_current_block_time"), runtime_args! {})
             )
         }
 
@@ -433,7 +442,7 @@ mod __erc20_test_parts {
                     String::from("burn_and_get_paid"),
                     runtime_args! {
                         "amount" => amount
-                    },
+                    }
                 )
             )
         }
@@ -500,7 +509,7 @@ mod __erc20_test_parts {
             Erc20HostRef {
                 address,
                 env: env.clone(),
-                attached_value: U512::zero(),
+                attached_value: U512::zero()
             }
         }
     }
@@ -508,7 +517,6 @@ mod __erc20_test_parts {
 
 // #[cfg(not(target_arch = "wasm32"))]
 pub use __erc20_test_parts::*;
-use odra2::event::OdraEvent;
 use odra2::types::RuntimeArgs;
 
 #[cfg(test)]
@@ -573,6 +581,9 @@ mod tests {
 
         // Test events
         let event: Transfer = env.get_event(&erc20.address, 0).unwrap();
+        assert_eq!(event.from, Some(alice));
+        assert_eq!(event.to, Some(bob));
+        assert_eq!(event.amount, 10.into());
 
         env.print_gas_report()
     }

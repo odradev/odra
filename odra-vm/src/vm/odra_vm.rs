@@ -4,6 +4,7 @@ use std::sync::{Arc, RwLock};
 
 use anyhow::Result;
 use odra_core::entry_point_callback::EntryPointsCaller;
+use odra_core::event::EventError;
 use odra_types::call_def::CallDef;
 use odra_types::{
     casper_types::{
@@ -198,8 +199,8 @@ impl OdraVm {
         self.state.write().unwrap().emit_event(event_data);
     }
 
-    pub fn get_event(&self, address: &Address, index: i32) -> Option<Bytes> {
-        self.state.read().unwrap().get_event(address, index).ok()
+    pub fn get_event(&self, address: &Address, index: i32) -> Result<Bytes, EventError> {
+        self.state.read().unwrap().get_event(address, index)
     }
 
     pub fn attach_value(&self, amount: U512) {

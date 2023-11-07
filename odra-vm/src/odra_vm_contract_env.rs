@@ -2,7 +2,7 @@ use crate::vm::OdraVm;
 use odra_core::prelude::*;
 use odra_core::{CallDef, ContractContext};
 use odra_types::casper_types::BlockTime;
-use odra_types::{casper_types, Address, Bytes, EventData, U512};
+use odra_types::{casper_types, Address, Bytes, EventData, ToBytes, U512};
 
 pub struct OdraVmContractEnv {
     vm: Rc<RefCell<OdraVm>>

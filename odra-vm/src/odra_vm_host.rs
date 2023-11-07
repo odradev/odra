@@ -1,6 +1,7 @@
 use crate::odra_vm_contract_env::OdraVmContractEnv;
 use crate::OdraVm;
 use odra_core::entry_point_callback::EntryPointsCaller;
+use odra_core::event::EventError;
 use odra_core::prelude::{collections::*, *};
 use odra_core::{CallDef, ContractContext, ContractEnv, HostContext, HostEnv};
 use odra_types::{Address, Bytes, EventData, RuntimeArgs, U512};
@@ -27,7 +28,7 @@ impl HostContext for OdraVmHost {
         self.vm.borrow().advance_block_time_by(time_diff.into())
     }
 
-    fn get_event(&self, contract_address: &Address, index: i32) -> Option<Bytes> {
+    fn get_event(&self, contract_address: &Address, index: i32) -> Result<Bytes, EventError> {
         self.vm.borrow().get_event(contract_address, index)
     }
 
