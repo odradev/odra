@@ -339,8 +339,10 @@ mod __erc20_test_parts {
     use crate::erc20::Erc20;
     use odra2::prelude::*;
     use odra2::types::casper_types::EntryPoints;
-    use odra2::types::{runtime_args, Address, Bytes, RuntimeArgs, ToBytes, U256, U512};
+    use odra2::types::{runtime_args, Address, Bytes, RuntimeArgs, ToBytes, U256, U512, FromBytes};
     use odra2::{CallDef, ContractEnv, EntryPointsCaller, HostEnv};
+    use odra2::casper_event_standard::EventInstance;
+    use odra2::event::EventError;
 
     pub struct Erc20ContractRef {
         pub address: Address,
@@ -445,6 +447,10 @@ mod __erc20_test_parts {
                     }
                 )
             )
+        }
+
+        pub fn get_event<T: FromBytes + EventInstance>(&self, index: i32) -> Result<T, EventError> {
+            self.env.get_event(&self.address, index)
         }
     }
 
@@ -580,7 +586,7 @@ mod tests {
         assert_eq!(env.balance_of(&alice), current_balance + U512::from(100));
 
         // Test events
-        let event: Transfer = env.get_event(&erc20.address, 0).unwrap();
+        let event: Transfer = erc20.get_event(0).unwrap();
         assert_eq!(event.from, Some(alice));
         assert_eq!(event.to, Some(bob));
         assert_eq!(event.amount, 10.into());
