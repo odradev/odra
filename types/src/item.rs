@@ -1,19 +1,17 @@
-use odra_types::{
-    casper_types::{
-        bytesrepr::{FromBytes, ToBytes},
-        U128, U256, U512
-    },
-    Address
+use alloc::{collections::BTreeMap, string::String, vec::Vec};
+use casper_types::{
+    bytesrepr::{FromBytes, ToBytes},
+    U128, U256, U512
 };
 
-use crate::prelude::{collections::BTreeMap, string::String, vec::Vec};
+use crate::Address;
 
 pub trait OdraItem {
     fn is_module() -> bool;
 
     #[cfg(not(target_arch = "wasm32"))]
-    fn events() -> Vec<odra_types::contract_def::Event> {
-        crate::prelude::vec![]
+    fn events() -> Vec<crate::contract_def::Event> {
+        alloc::vec![]
     }
 }
 

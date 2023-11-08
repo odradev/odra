@@ -2,7 +2,24 @@
 
 Changelog for `odra`.
 
-## [0.6.0] - 2023-XX-XX
+## [0.8.0] - 2024-XX-XX
+
+## [0.7.0] - 2023-11-07
+## Changed
+- `no_std` is now the default mode for WASM.
+- `odra-types` are the only types crate.
+
+## Removed
+- Removed `odra-casper-types` and `odra-mock-vm-types`.
+- Removed `OdraType` in favor of `ToBytes` and `FromBytes` traits.
+
+## [0.6.0] - 2023-09-20
+### Added
+- `std` feature for odra crate.
+- `odra::prelude` reexports basic types and traits based on std feature.
+
+### Changed
+- Replace `WeeAlloc` with `ink!`'s `BumpAllocator`.
 
 ## [0.5.0] - 2023-07-19
 ### Added

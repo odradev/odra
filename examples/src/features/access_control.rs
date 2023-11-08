@@ -1,7 +1,7 @@
 use odra::{contract_env, types::Address};
 use sha3::{Digest, Keccak256};
 
-use crate::access::{AccessControl, Role, DEFAULT_ADMIN_ROLE};
+use odra_modules::access::{AccessControl, Role, DEFAULT_ADMIN_ROLE};
 
 pub const ROLE_MODERATOR: &str = "moderator";
 pub const ROLE_MODERATOR_ADMIN: &str = "moderator_admin";
@@ -75,13 +75,14 @@ pub fn keccak_256(input: &str) -> Role {
 
 #[cfg(test)]
 pub mod test {
-    use super::{MockModeratedDeployer, MockModeratedRef, ROLE_MODERATOR, ROLE_MODERATOR_ADMIN};
-    use crate::access::{
+    use super::{
+        keccak_256, MockModeratedDeployer, MockModeratedRef, ROLE_MODERATOR, ROLE_MODERATOR_ADMIN
+    };
+    use odra::{assert_events, test_env, types::Address};
+    use odra_modules::access::{
         errors::Error,
         events::{RoleGranted, RoleRevoked}
     };
-    use crate::mock::access_control::keccak_256;
-    use odra::{assert_events, test_env, types::Address};
 
     #[test]
     fn deploy_works() {

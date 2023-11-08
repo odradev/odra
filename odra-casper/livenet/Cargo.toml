@@ -13,9 +13,9 @@ repository = { workspace = true }
 [dependencies]
 casper-execution-engine = { workspace = true }
 casper-hashing = "2.0.0"
-odra-casper-shared = { path = "../shared", version = "0.6.0" }
-odra-types = { path = "../../types", version = "0.6.0" }
-odra-mock-vm = { path = "../../mock-vm/backend", version = "0.6.0" }
+odra-casper-shared = { path = "../shared", version = "0.7.0" }
+odra-types = { path = "../../types", version = "0.7.0" }
+odra-mock-vm = { path = "../../mock-vm/backend", version = "0.7.0" }
 ref_thread_local = "0.1.1"
 serde = "1.0"
 serde_json = { version = "1.0", features = ["raw_value"] }

@@ -9,6 +9,13 @@ pub fn extract_fields(input: DeriveInput) -> Result<FieldsNamed, syn::Error> {
             fields: Fields::Named(named_fields),
             ..
         }) => named_fields,
+        Data::Struct(DataStruct {
+            fields: Fields::Unit,
+            ..
+        }) => FieldsNamed {
+            brace_token: Default::default(),
+            named: Default::default()
+        },
         _ => {
             return Err(syn::Error::new_spanned(
                 input,

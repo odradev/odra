@@ -21,7 +21,6 @@ compile_error!(
 );
 
 mod instance;
-mod item;
 mod list;
 mod mapping;
 #[cfg(not(target_arch = "wasm32"))]
@@ -72,7 +71,6 @@ pub mod prelude {
 
 pub use {
     instance::{DynamicInstance, StaticInstance},
-    item::OdraItem,
     list::{Iter, List},
     mapping::Mapping,
     odra_proc_macros::{
