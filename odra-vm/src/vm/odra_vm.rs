@@ -64,7 +64,6 @@ impl OdraVm {
             let status = self.checked_transfer_tokens(&self.caller(), &address, &call_def.amount);
             if let Err(err) = status {
                 self.revert(err.clone());
-                panic!("{:?}", err);
             }
         }
 

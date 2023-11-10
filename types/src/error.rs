@@ -35,7 +35,7 @@ impl OdraError {
     pub fn code(&self) -> u16 {
         match self {
             OdraError::ExecutionError(e) => e.code(),
-            OdraError::VmError(e) => 123
+            OdraError::VmError(_e) => 123
         }
     }
 }

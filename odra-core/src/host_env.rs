@@ -5,7 +5,7 @@ use crate::prelude::*;
 use crate::{CallDef, ContractEnv};
 use casper_event_standard::EventInstance;
 use odra_types::{Address, OdraError, U512};
-use odra_types::{Bytes, RuntimeArgs};
+use odra_types::RuntimeArgs;
 use odra_types::{CLTyped, FromBytes};
 
 #[derive(Clone)]
@@ -76,8 +76,6 @@ impl HostEnv {
         let backend = self.backend.borrow();
 
         let bytes = backend.get_event(contract_address, index)?;
-        // TODO: Make following line go away by passing ToBytes insted of Bytes to event.
-        let bytes = Bytes::from_bytes(bytes.as_slice()).unwrap().0;
         let event_name = Self::extract_event_name(&bytes)?;
         if event_name == format!("event_{}", T::name()) {
             T::from_bytes(&bytes)

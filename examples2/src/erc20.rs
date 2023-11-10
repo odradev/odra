@@ -47,7 +47,8 @@ impl Erc20 {
         let from_balance = balances.get_or_default(caller);
         let to_balance = balances.get_or_default(to);
         if from_balance < value {
-            self.env().revert(ExecutionError::new(1, "Insufficient funds").into());
+            self.env()
+                .revert(ExecutionError::new(1, "Insufficient funds").into());
         }
         balances.set(caller, from_balance.saturating_sub(value));
         balances.set(to, to_balance.saturating_add(value));
@@ -85,7 +86,8 @@ impl Erc20 {
         let caller = self.env().caller();
         let caller_balance = self.balance_of(caller);
         if amount > caller_balance {
-            self.env().revert(ExecutionError::new(1, "Insufficient funds").into());
+            self.env()
+                .revert(ExecutionError::new(1, "Insufficient funds").into());
         }
 
         self.balances.set(caller, caller_balance - amount);
@@ -331,32 +333,34 @@ mod __erc20_wasm_parts {
     }
 }
 
-// #[cfg(not(target_arch = "wasm32"))]
+pub struct Erc20ContractRef {
+    pub address: Address,
+    pub env: Rc<ContractEnv>
+}
+
+impl Erc20ContractRef {
+    pub fn total_supply(&self) -> U256 {
+        self.env.call_contract(
+            self.address,
+            CallDef::new(String::from("total_supply"), RuntimeArgs::new())
+        )
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 mod __erc20_test_parts {
+    use crate::erc20::Erc20;
     use core::panic;
     use core::panic::AssertUnwindSafe;
-    use crate::erc20::Erc20;
-    use odra2::prelude::*;
-    use odra2::types::casper_types::EntryPoints;
-    use odra2::types::{runtime_args, Address, Bytes, RuntimeArgs, ToBytes, U256, U512, FromBytes, OdraError};
-    use odra2::{CallDef, ContractEnv, EntryPointsCaller, HostEnv};
     use odra2::casper_event_standard::EventInstance;
     use odra2::event::EventError;
+    use odra2::prelude::*;
+    use odra2::types::casper_types::EntryPoints;
     use odra2::types::OdraError::{ExecutionError, VmError};
-
-    pub struct Erc20ContractRef {
-        pub address: Address,
-        pub env: Rc<ContractEnv>
-    }
-
-    impl Erc20ContractRef {
-        pub fn total_supply(&self) -> U256 {
-            self.env.call_contract(
-                self.address,
-                CallDef::new(String::from("total_supply"), RuntimeArgs::new())
-            )
-        }
-    }
+    use odra2::types::{
+        runtime_args, Address, Bytes, FromBytes, OdraError, RuntimeArgs, ToBytes, U256, U512
+    };
+    use odra2::{CallDef, ContractEnv, EntryPointsCaller, HostEnv};
 
     pub struct Erc20HostRef {
         pub address: Address,
@@ -384,55 +388,47 @@ mod __erc20_test_parts {
             use odra2::types::ExecutionError;
             let mut return_value: Option<U256> = None;
             let _ = std::panic::catch_unwind(AssertUnwindSafe(|| {
-                return_value = Some(
-                    self.env.call_contract::<U256>(
-                        &self.address,
-                        CallDef::new(
-                            String::from("balance_of"),
-                            runtime_args! {
+                return_value = Some(self.env.call_contract::<U256>(
+                    &self.address,
+                    CallDef::new(
+                        String::from("balance_of"),
+                        runtime_args! {
                             "owner" => owner
                         }
-                        )
-                    ));
+                    )
+                ));
             }));
 
             return match return_value {
-                None => {
-                    Err(ExecutionError::new(1, "Insufficient funds").into())
-                }
-                Some(value) => {Ok(value)}
-            }
+                None => Err(ExecutionError::new(1, "Insufficient funds").into()),
+                Some(value) => Ok(value)
+            };
         }
 
         pub fn balance_of(&self, owner: Address) -> U256 {
             self.try_balance_of(owner).unwrap()
         }
 
-
         pub fn try_transfer(&self, to: Address, value: U256) -> Result<(), OdraError> {
             use odra2::types::ExecutionError;
             let mut return_value: Option<()> = None;
             let _ = std::panic::catch_unwind(AssertUnwindSafe(|| {
-                return_value = Some(
-                    self.env.call_contract::<()>(
-                        &self.address,
-
-                        CallDef::new(
-                            String::from("transfer"),
-                            runtime_args! {
+                return_value = Some(self.env.call_contract::<()>(
+                    &self.address,
+                    CallDef::new(
+                        String::from("transfer"),
+                        runtime_args! {
                         "to" => to,
                         "value" => value
                         }
-                        )
-                    ));
+                    )
+                ));
             }));
 
             return match return_value {
-                None => {
-                    Err(ExecutionError::new(1, "Insufficient funds").into())
-                }
-                Some(value) => {Ok(value)}
-            }
+                None => Err(ExecutionError::new(1, "Insufficient funds").into()),
+                Some(value) => Ok(value)
+            };
         }
 
         pub fn transfer(&self, to: Address, value: U256) {
@@ -555,11 +551,13 @@ mod __erc20_test_parts {
     }
 }
 
-// #[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_arch = "wasm32"))]
+use crate::erc20::tests::casper_event_standard::casper_types::system::mint::Error::InsufficientFunds;
+#[cfg(not(target_arch = "wasm32"))]
 pub use __erc20_test_parts::*;
 use odra2::types::{ExecutionError, OdraError, RuntimeArgs};
-use crate::erc20::tests::casper_event_standard::casper_types::system::mint::Error::InsufficientFunds;
 
+#[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests {
     pub use super::*;
@@ -620,7 +618,7 @@ mod tests {
         pobcoin.burn_and_get_paid(100.into());
         assert_eq!(env.balance_of(&alice), current_balance + U512::from(100));
 
-        // Test events
+        // // Test events
         let event: Transfer = erc20.get_event(0).unwrap();
         assert_eq!(event.from, Some(alice));
         assert_eq!(event.to, Some(bob));
@@ -630,8 +628,11 @@ mod tests {
         // Following line panics
         // erc20.transfer(alice, 1_000_000.into());
         // But this one doesn't
-        // let result = erc20.try_transfer(alice, 1_000_000.into());
-        // assert_eq!(result, Err(ExecutionError::new(1, "Insufficient funds").into()));
+        let result = erc20.try_transfer(alice, 1_000_000.into());
+        assert_eq!(
+            result,
+            Err(ExecutionError::new(1, "Insufficient funds").into())
+        );
         //
         // With return value
         // let result = erc20.try_balance_of(alice).unwrap();
