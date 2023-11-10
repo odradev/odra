@@ -5,7 +5,7 @@ use alloc::boxed::Box;
 use casper_types::bytesrepr::ToBytes;
 use casper_types::U512;
 use odra_core::{prelude::*, ContractContext, ContractEnv};
-use odra_types::{Address, Bytes, EventData};
+use odra_types::{Address, Bytes, EventData, OdraError};
 
 #[derive(Clone)]
 pub struct WasmContractEnv;
@@ -47,8 +47,8 @@ impl ContractContext for WasmContractEnv {
         host_functions::transfer_tokens(to, amount);
     }
 
-    fn revert(&self, code: u16) -> ! {
-        host_functions::revert(code)
+    fn revert(&self, error: OdraError) -> ! {
+        host_functions::revert(error.code())
     }
 }
 

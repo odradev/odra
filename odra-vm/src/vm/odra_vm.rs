@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::panic;
 use std::rc::Rc;
 use std::sync::{Arc, RwLock};
 
@@ -125,13 +126,14 @@ impl OdraVm {
         }
     }
 
-    pub fn revert(&self, error: OdraError) {
+    pub fn revert(&self, error: OdraError) -> ! {
         let mut state = self.state.write().unwrap();
-        state.set_error(error);
+        state.set_error(error.clone());
         state.clear_callstack();
         if state.is_in_caller_context() {
             state.restore_snapshot();
         }
+        panic!("Revert: {:?}", error.clone());
     }
 
     pub fn error(&self) -> Option<OdraError> {

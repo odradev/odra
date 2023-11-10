@@ -1,6 +1,6 @@
 use crate::prelude::*;
 use odra_types::call_def::CallDef;
-use odra_types::{Address, Bytes, CLTyped, FromBytes, ToBytes, U512};
+use odra_types::{Address, Bytes, CLTyped, FromBytes, OdraError, ToBytes, U512};
 
 use crate::key_maker;
 pub use crate::ContractContext;
@@ -92,9 +92,9 @@ impl ContractEnv {
         backend.attached_value()
     }
 
-    pub fn revert(&self, code: u16) -> ! {
+    pub fn revert(&self, error: OdraError) -> ! {
         let backend = self.backend.borrow();
-        backend.revert(code)
+        backend.revert(error)
     }
 
     pub fn emit_event<T: ToBytes>(&self, event: T) {

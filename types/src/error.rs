@@ -31,6 +31,15 @@ pub enum OdraError {
     VmError(VmError)
 }
 
+impl OdraError {
+    pub fn code(&self) -> u16 {
+        match self {
+            OdraError::ExecutionError(e) => e.code(),
+            OdraError::VmError(e) => 123
+        }
+    }
+}
+
 impl From<ArithmeticsError> for ExecutionError {
     fn from(error: ArithmeticsError) -> Self {
         match error {

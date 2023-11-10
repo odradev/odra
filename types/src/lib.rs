@@ -9,8 +9,8 @@ pub mod arithmetic;
 pub mod call_def;
 pub mod contract_def;
 mod error;
-pub mod uints;
 mod item;
+pub mod uints;
 
 use alloc::vec::Vec;
 

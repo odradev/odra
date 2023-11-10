@@ -89,7 +89,9 @@ impl OdraVmState {
         let event_position = odra_utils::event_absolute_position(events.len(), index)
             .ok_or(EventError::IndexOutOfBounds)?;
         // TODO: Make following line go away by passing ToBytes insted of Bytes to event.
-        let event = events.get(event_position).ok_or(EventError::IndexOutOfBounds)?;
+        let event = events
+            .get(event_position)
+            .ok_or(EventError::IndexOutOfBounds)?;
         Ok(Bytes::from(event.to_bytes().unwrap()))
     }
 

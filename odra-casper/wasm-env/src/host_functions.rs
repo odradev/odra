@@ -201,7 +201,7 @@ fn read_host_buffer_into(dest: &mut [u8]) -> Result<usize, ApiError> {
 }
 
 pub fn emit_event(event: &Bytes) {
-    casper_event_standard::emit(event)
+    casper_event_standard::emit_bytes(event.clone())
 }
 
 pub fn set_value(key: &[u8], value: &[u8]) {

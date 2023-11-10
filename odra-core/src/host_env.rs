@@ -4,7 +4,7 @@ use crate::host_context::HostContext;
 use crate::prelude::*;
 use crate::{CallDef, ContractEnv};
 use casper_event_standard::EventInstance;
-use odra_types::{Address, U512};
+use odra_types::{Address, OdraError, U512};
 use odra_types::{Bytes, RuntimeArgs};
 use odra_types::{CLTyped, FromBytes};
 
@@ -16,6 +16,10 @@ pub struct HostEnv {
 impl HostEnv {
     pub fn new(backend: Rc<RefCell<dyn HostContext>>) -> HostEnv {
         HostEnv { backend }
+    }
+
+    pub fn error(&self) -> Option<OdraError> {
+        None
     }
 
     pub fn get_account(&self, index: usize) -> Address {

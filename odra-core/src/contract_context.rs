@@ -1,5 +1,5 @@
 use odra_types::call_def::CallDef;
-use odra_types::{Address, Bytes, ToBytes, U512};
+use odra_types::{Address, Bytes, OdraError, U512};
 
 pub trait ContractContext {
     fn get_value(&self, key: &[u8]) -> Option<Bytes>;
@@ -11,5 +11,5 @@ pub trait ContractContext {
     fn attached_value(&self) -> U512;
     fn emit_event(&self, event: &Bytes);
     fn transfer_tokens(&self, to: &Address, amount: &U512);
-    fn revert(&self, code: u16) -> !;
+    fn revert(&self, error: OdraError) -> !;
 }
