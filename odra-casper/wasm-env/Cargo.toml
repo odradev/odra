@@ -1,0 +1,19 @@
+[package]
+name = "odra-casper-wasm-env"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+casper-types = "3.0.0"
+casper-event-standard = { workspace = true }
+lazy_static = { version = "1.4.0", features = [ "spin_no_std" ] }
+odra-types = { path = "../../types" }
+odra-core = { path = "../../odra-core" }
+bytes = "1.5.0"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+casper-contract = { version = "3.0.0", default-features = false, features = ["test-support"] }
+ink_allocator = { version = "4.2.1", default-features = false }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+casper-contract = { version = "3.0.0", features = ["test-support"] }

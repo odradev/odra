@@ -5,12 +5,12 @@
 use crate::casper_client::LivenetKeyMaker;
 use odra_casper_shared::key_maker::KeyMaker;
 use odra_casper_shared::native_token::NativeTokenMetadata;
+use odra_core::event::OdraEvent;
 use odra_types::{
     casper_types::{
         bytesrepr::{Bytes, FromBytes, ToBytes},
         U512
     },
-    event::OdraEvent,
     Address, BlockTime, ExecutionError, PublicKey
 };
 

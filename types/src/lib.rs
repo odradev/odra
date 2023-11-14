@@ -4,24 +4,25 @@
 
 extern crate alloc;
 
-mod address;
+pub mod address;
 pub mod arithmetic;
-#[cfg(not(target_arch = "wasm32"))]
+pub mod call_def;
 pub mod contract_def;
 mod error;
-pub mod event;
-mod item;
 pub mod uints;
+mod item;
 
 use alloc::vec::Vec;
-use casper_types::{bytesrepr::FromBytes, CLValue, RuntimeArgs};
 
-pub type BlockTime = u64;
+// TODO: remove as we'll use Bytes
 pub type EventData = Vec<u8>;
 
 pub use address::{Address, OdraAddress};
 pub use casper_types;
-pub use casper_types::{CLType, CLTyped, PublicKey, U128, U256, U512};
+pub use casper_types::bytesrepr::{Bytes, FromBytes, ToBytes};
+use casper_types::CLValue;
+pub use casper_types::{runtime_args, RuntimeArgs};
+pub use casper_types::{CLType, CLTyped, PublicKey, SecretKey, U128, U256, U512};
 pub use error::{AddressError, CollectionError, ExecutionError, OdraError, VmError};
 pub use item::OdraItem;
 

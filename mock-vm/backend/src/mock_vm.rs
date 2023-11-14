@@ -1,4 +1,5 @@
 use anyhow::Result;
+use odra_core::event::EventError;
 use odra_types::{
     casper_types::{
         account::AccountHash,
@@ -7,7 +8,7 @@ use odra_types::{
     },
     Address, BlockTime, EventData, ExecutionError, PublicKey
 };
-use odra_types::{event::EventError, OdraError, VmError};
+use odra_types::{OdraError, VmError};
 use std::collections::BTreeMap;
 use std::sync::{Arc, RwLock};
 

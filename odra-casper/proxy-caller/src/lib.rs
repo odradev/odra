@@ -41,7 +41,7 @@ pub struct ProxyCall {
     pub contract_package_hash: ContractPackageHash,
     pub entry_point_name: String,
     pub runtime_args: RuntimeArgs,
-    pub attached_value: Option<U512>
+    pub attached_value: U512
 }
 
 impl ProxyCall {
@@ -54,9 +54,9 @@ impl ProxyCall {
         if !bytes.is_empty() {
             revert(ApiError::Deserialize);
         };
-        let attached_value: Option<U512> = get_named_arg(ATTACHED_VALUE_ARG);
+        let attached_value: U512 = get_named_arg(ATTACHED_VALUE_ARG);
 
-        if let Some(attached_value) = attached_value {
+        if attached_value > U512::zero() {
             let cargo_purse = get_cargo_purse();
             top_up_cargo_purse(cargo_purse, attached_value);
             runtime_args

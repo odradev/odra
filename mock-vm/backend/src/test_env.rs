@@ -1,6 +1,7 @@
 //! Describes test environment API. Delegates methods to the underlying env implementation.
 //!
 //! Depending on the selected feature, the actual test env is dynamically loaded in the runtime or the Odra local MockVM is used.
+use odra_core::event::{EventError, OdraEvent};
 use odra_types::{
     casper_types::{
         bytesrepr::{Bytes, FromBytes, ToBytes},
@@ -8,10 +9,7 @@ use odra_types::{
     },
     Address, BlockTime, PublicKey
 };
-use odra_types::{
-    event::{EventError, OdraEvent},
-    OdraAddress, OdraError
-};
+use odra_types::{OdraAddress, OdraError};
 use std::{collections::BTreeMap, panic::AssertUnwindSafe};
 
 use crate::{native_token::NativeTokenMetadata, EntrypointArgs, EntrypointCall};

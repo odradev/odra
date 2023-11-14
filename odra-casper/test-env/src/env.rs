@@ -21,6 +21,7 @@ use odra_casper_shared::consts::{
     self, AMOUNT_ARG, ARGS_ARG, ATTACHED_VALUE_ARG, CONTRACT_PACKAGE_HASH_ARG, ENTRY_POINT_ARG,
     RESULT_KEY
 };
+use odra_core::event::{EventError, OdraEvent};
 use odra_types::{
     casper_types::{
         account::{Account, AccountHash},
@@ -28,7 +29,6 @@ use odra_types::{
         runtime_args, ApiError, CLTyped, Contract, ContractHash, ContractPackageHash, Key, Motes,
         PublicKey, RuntimeArgs, SecretKey, StoredValue, URef, U512
     },
-    event::{EventError, OdraEvent},
     Address, BlockTime, ExecutionError, OdraError, VmError
 };
 

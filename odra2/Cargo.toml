@@ -1,0 +1,20 @@
+[package]
+name = "odra2"
+edition = "2021"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+odra-core = { path = "../odra-core" }
+odra-types = { path = "../types" }
+odra-proc-macros = { path = "../lang/proc-macros" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+odra-casper-wasm-env = { path = "../odra-casper/wasm-env" }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+odra-casper-test-vm = { path = "../odra-casper/test-vm" }
+odra-vm = { path = "../odra-vm" }

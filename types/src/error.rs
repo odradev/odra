@@ -20,6 +20,7 @@ const CODE_INDEX_OUT_OF_BOUNDS: u16 = 108;
 const CODE_ZERO_ADDRESS: u16 = 109;
 const CODE_ADDRESS_CREATION_FAILED: u16 = 110;
 const CODE_SERIALIZATION_FAILED: u16 = 111;
+const CODE_KEY_NOT_FOUND: u16 = 112;
 
 /// General error type in Odra framework
 #[derive(Clone, Debug, PartialEq)]
@@ -160,6 +161,10 @@ impl ExecutionError {
 
     pub fn address_creation_failed() -> Self {
         Self::sys(CODE_ADDRESS_CREATION_FAILED, "Address creation failed")
+    }
+
+    pub fn key_not_found() -> Self {
+        Self::sys(CODE_KEY_NOT_FOUND, "Key not found")
     }
 }
 

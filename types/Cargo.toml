@@ -18,4 +18,5 @@ odra-utils = { path = "../utils", version = "0.7.0" }
 
 [features]
 default = []
+std = []
 test-support = []

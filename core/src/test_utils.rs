@@ -1,6 +1,7 @@
 //! Utility functions that allow to write more compact tests.
 
-use odra_types::{self, casper_types::bytesrepr::FromBytes, event::OdraEvent, Address};
+use odra_core::event::OdraEvent;
+use odra_types::{self, casper_types::bytesrepr::FromBytes, Address};
 
 /// Gets the nth event emitted by the contract at `address`.
 ///
@@ -9,7 +10,7 @@ use odra_types::{self, casper_types::bytesrepr::FromBytes, event::OdraEvent, Add
 pub fn get_event<T: FromBytes + OdraEvent>(
     contract_address: Address,
     at: i32
-) -> Result<T, odra_types::event::EventError> {
+) -> Result<T, odra_core::event::EventError> {
     crate::test_env::get_event(contract_address, at)
 }
 

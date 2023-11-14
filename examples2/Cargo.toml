@@ -1,0 +1,22 @@
+[package]
+name = "examples2"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+odra2 = { path = "../odra2" }
+
+[[bin]]
+name = "contract"
+path = "bin/build_contract.rs"
+
+[[bin]]
+name = "build_schema"
+path = "bin/build_schema.rs"
+
+[profile.release]
+codegen-units = 1
+lto = true
+
+[profile.dev.package."*"]
+opt-level = 3

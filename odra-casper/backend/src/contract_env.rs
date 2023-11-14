@@ -8,9 +8,10 @@ use casper_contract::{
 };
 use core::ops::Deref;
 use odra_casper_shared::native_token::NativeTokenMetadata;
+use odra_core::event::OdraEvent;
 use odra_types::casper_types::bytesrepr::{Bytes, FromBytes, ToBytes};
 use odra_types::casper_types::{crypto, CLTyped, RuntimeArgs, U512};
-use odra_types::{event::OdraEvent, ExecutionError};
+use odra_types::ExecutionError;
 use odra_types::{Address, BlockTime};
 
 use crate::{casper_env, utils::get_or_create_main_purse};

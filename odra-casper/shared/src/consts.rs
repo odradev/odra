@@ -57,3 +57,6 @@ pub const STATE_KEY: &str = "state";
 
 /// Constructor group name.
 pub const CONSTRUCTOR_GROUP_NAME: &str = "constructor_group";
+
+/// Constructor name
+pub const CONSTRUCTOR_NAME: &str = "init";
