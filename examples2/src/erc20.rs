@@ -356,10 +356,7 @@ mod __erc20_test_parts {
     use odra2::event::EventError;
     use odra2::prelude::*;
     use odra2::types::casper_types::EntryPoints;
-    use odra2::types::OdraError::{ExecutionError, VmError};
-    use odra2::types::{
-        runtime_args, Address, Bytes, FromBytes, OdraError, RuntimeArgs, ToBytes, U256, U512
-    };
+    use odra2::types::{runtime_args, Address, Bytes, RuntimeArgs, ToBytes, U256, U512, FromBytes, OdraError};
     use odra2::{CallDef, ContractEnv, EntryPointsCaller, HostEnv};
 
     pub struct Erc20HostRef {
@@ -377,65 +374,51 @@ mod __erc20_test_parts {
             }
         }
 
-        pub fn total_supply(&self) -> U256 {
+        pub fn try_total_supply(&self) -> Result<U256, OdraError> {
             self.env.call_contract(
                 &self.address,
                 CallDef::new(String::from("total_supply"), RuntimeArgs::new())
             )
         }
 
-        pub fn try_balance_of(&self, owner: Address) -> Result<U256, OdraError> {
-            use odra2::types::ExecutionError;
-            let mut return_value: Option<U256> = None;
-            let _ = std::panic::catch_unwind(AssertUnwindSafe(|| {
-                return_value = Some(self.env.call_contract::<U256>(
-                    &self.address,
-                    CallDef::new(
-                        String::from("balance_of"),
-                        runtime_args! {
-                            "owner" => owner
-                        }
-                    )
-                ));
-            }));
-
-            return match return_value {
-                None => Err(ExecutionError::new(1, "Insufficient funds").into()),
-                Some(value) => Ok(value)
-            };
+        pub fn total_supply(&self) -> U256 {
+            self.try_total_supply().unwrap()
         }
-
+        
+        pub fn try_balance_of(&self, owner: Address) -> Result<U256, OdraError> {
+            self.env.call_contract(
+                &self.address,
+                CallDef::new(
+                    String::from("balance_of"),
+                    runtime_args! {
+                        "owner" => owner
+                    }
+                )
+            )
+        }
+        
         pub fn balance_of(&self, owner: Address) -> U256 {
             self.try_balance_of(owner).unwrap()
         }
 
         pub fn try_transfer(&self, to: Address, value: U256) -> Result<(), OdraError> {
-            use odra2::types::ExecutionError;
-            let mut return_value: Option<()> = None;
-            let _ = std::panic::catch_unwind(AssertUnwindSafe(|| {
-                return_value = Some(self.env.call_contract::<()>(
-                    &self.address,
-                    CallDef::new(
-                        String::from("transfer"),
-                        runtime_args! {
+            self.env.call_contract(
+                &self.address,
+                CallDef::new(
+                    String::from("transfer"),
+                    runtime_args! {
                         "to" => to,
                         "value" => value
-                        }
-                    )
-                ));
-            }));
-
-            return match return_value {
-                None => Err(ExecutionError::new(1, "Insufficient funds").into()),
-                Some(value) => Ok(value)
-            };
+                    }
+                )
+            )
         }
 
         pub fn transfer(&self, to: Address, value: U256) {
             self.try_transfer(to, value).unwrap();
         }
 
-        pub fn cross_total(&self, other: Address) -> U256 {
+        pub fn try_cross_total(&self, other: Address) -> Result<U256, OdraError> {
             self.env.call_contract(
                 &self.address,
                 CallDef::new(
@@ -447,7 +430,11 @@ mod __erc20_test_parts {
             )
         }
 
-        pub fn pay_to_mint(&self) {
+        pub fn cross_total(&self, other: Address) -> U256 {
+            self.try_cross_total(other).unwrap()
+        }
+
+        pub fn try_pay_to_mint(&self) -> Result<(), OdraError> {
             self.env.call_contract(
                 &self.address,
                 CallDef::new(
@@ -460,14 +447,22 @@ mod __erc20_test_parts {
             )
         }
 
-        pub fn get_current_block_time(&self) -> u64 {
+        pub fn pay_to_mint(&self) {
+            self.try_pay_to_mint().unwrap()
+        }
+
+        pub fn try_get_current_block_time(&self) -> Result<u64, OdraError> {
             self.env.call_contract(
                 &self.address,
                 CallDef::new(String::from("get_current_block_time"), runtime_args! {})
             )
         }
 
-        pub fn burn_and_get_paid(&self, amount: U256) {
+        pub fn get_current_block_time(&self) -> u64 {
+            self.try_get_current_block_time().unwrap()
+        }
+
+        pub fn try_burn_and_get_paid(&self, amount: U256) -> Result<(), OdraError> {
             self.env.call_contract(
                 &self.address,
                 CallDef::new(
@@ -477,6 +472,10 @@ mod __erc20_test_parts {
                     }
                 )
             )
+        }
+
+        pub fn burn_and_get_paid(&self, amount: U256) {
+            self.try_burn_and_get_paid(amount).unwrap()
         }
 
         pub fn get_event<T: FromBytes + EventInstance>(&self, index: i32) -> Result<T, EventError> {
@@ -561,6 +560,8 @@ use odra2::types::{ExecutionError, OdraError, RuntimeArgs};
 #[cfg(test)]
 mod tests {
     pub use super::*;
+    use odra2::types::ExecutionError;
+    use odra2::types::OdraError;
     use odra2::types::ToBytes;
     use odra2::types::U512;
 

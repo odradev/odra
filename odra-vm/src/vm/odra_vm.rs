@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::panic;
+use std::panic::{self, AssertUnwindSafe};
 use std::rc::Rc;
 use std::sync::{Arc, RwLock};
 
@@ -132,7 +132,9 @@ impl OdraVm {
         if state.is_in_caller_context() {
             state.restore_snapshot();
         }
-        panic!("Revert: {:?}", error.clone());
+        drop(state);
+        // TODO: more verbose error msg: add entrypoint and contract
+        panic!("Revert: {:?}", error);
     }
 
     pub fn error(&self) -> Option<OdraError> {

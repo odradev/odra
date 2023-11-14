@@ -205,7 +205,7 @@ mod __counter_pack_test_parts {
                         "index_b" => index_b
                     }
                 )
-            )
+            ).unwrap()
         }
 
         pub fn increment(&self, index_a: u8, index_b: u8) {
@@ -218,7 +218,7 @@ mod __counter_pack_test_parts {
                         "index_b" => index_b
                     }
                 )
-            )
+            ).unwrap()
         }
     }
 

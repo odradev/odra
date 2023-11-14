@@ -4,7 +4,7 @@ use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::event::EventError;
 use odra_core::prelude::{collections::*, *};
 use odra_core::{CallDef, ContractContext, ContractEnv, HostContext, HostEnv};
-use odra_types::{Address, Bytes, EventData, RuntimeArgs, U512};
+use odra_types::{Address, Bytes, EventData, RuntimeArgs, U512, OdraError, VmError};
 
 pub struct OdraVmHost {
     vm: Rc<RefCell<OdraVm>>,
@@ -32,8 +32,19 @@ impl HostContext for OdraVmHost {
         self.vm.borrow().get_event(contract_address, index)
     }
 
-    fn call_contract(&self, address: &Address, call_def: CallDef, _use_proxy: bool) -> Bytes {
-        self.vm.borrow().call_contract(*address, call_def)
+    fn call_contract(&self, address: &Address, call_def: CallDef, _use_proxy: bool) -> Result<Bytes, OdraError> {
+        let mut opt_result: Option<Bytes> = None;
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            opt_result = Some(self.vm.borrow().call_contract(*address, call_def));
+        }));
+
+        match opt_result {
+            Some(result) => Ok(result),
+            None => {
+                let error = self.vm.borrow().error();
+                Err(error.unwrap_or(OdraError::VmError(VmError::Panic)))
+            },
+        }
     }
 
     fn new_contract(
@@ -49,7 +60,7 @@ impl HostContext for OdraVmHost {
             .register_contract(name, entry_points_caller.unwrap());
 
         if let Some(init_args) = init_args {
-            let _: Bytes = self.call_contract(
+            let _ = self.call_contract(
                 &address,
                 CallDef::new(String::from("init"), init_args),
                 false
