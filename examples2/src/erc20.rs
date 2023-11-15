@@ -629,7 +629,7 @@ mod tests {
         pobcoin.burn_and_get_paid(100.into());
         assert_eq!(env.balance_of(&alice), current_balance + U512::from(100));
 
-        // // Test events
+        // Test events
         let event: Transfer = erc20.get_event(0).unwrap();
         assert_eq!(event.from, Some(alice));
         assert_eq!(event.to, Some(bob));

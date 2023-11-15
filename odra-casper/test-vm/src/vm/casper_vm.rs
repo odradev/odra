@@ -262,7 +262,6 @@ impl CasperVm {
 
         self.attached_value = U512::zero();
         if let Some(error) = self.context.get_error() {
-            // TODO: handle error
             let odra_error = parse_error(error);
             self.error = Some(odra_error.clone());
             self.panic_with_error(odra_error, &call_def.entry_point, hash);
