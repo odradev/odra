@@ -126,6 +126,11 @@ impl OdraVm {
     }
 
     pub fn revert(&self, error: OdraError) -> ! {
+        let mut revert_msg = String::from("");
+        if let CallstackElement::Entrypoint(ep) = self.callstack_tip() {
+            revert_msg = format!("{:?}::{}", ep.address, ep.entrypoint);
+        }
+
         let mut state = self.state.write().unwrap();
         state.set_error(error.clone());
         state.clear_callstack();
@@ -133,8 +138,8 @@ impl OdraVm {
             state.restore_snapshot();
         }
         drop(state);
-        // TODO: more verbose error msg: add entrypoint and contract
-        panic!("Revert: {:?}", error);
+
+        panic!("Revert: {:?} - {}", error, revert_msg);
     }
 
     pub fn error(&self) -> Option<OdraError> {

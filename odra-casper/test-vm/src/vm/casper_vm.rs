@@ -429,7 +429,7 @@ impl CasperVm {
         entrypoint: &str,
         contract_package_hash: ContractPackageHash
     ) -> ! {
-        panic!("{:?} - {:?}::{}", error, contract_package_hash, entrypoint)
+        panic!("Revert: {:?} - {:?}::{}", error, contract_package_hash, entrypoint)
     }
 }
 
@@ -443,12 +443,12 @@ fn parse_error(err: engine_state::Error) -> OdraError {
                 OdraError::VmError(VmError::BalanceExceeded)
             },
             engine_state::ExecError::Revert(ApiError::User(code)) => {
-                if code == ExecutionError::non_payable().code() {
-                    OdraError::ExecutionError(ExecutionError::non_payable())
-                } else if code == ExecutionError::reentrant_call().code() {
-                    OdraError::ExecutionError(ExecutionError::reentrant_call())
+                if code == ExecutionError::NonPayable.code() {
+                    OdraError::ExecutionError(ExecutionError::NonPayable)
+                } else if code == ExecutionError::ReentrantCall.code() {
+                    OdraError::ExecutionError(ExecutionError::ReentrantCall)
                 } else {
-                    OdraError::ExecutionError(ExecutionError::new(code, ""))
+                    OdraError::ExecutionError(ExecutionError::User(code))
                 }
             },
             engine_state::ExecError::InvalidContext => OdraError::VmError(VmError::InvalidContext),

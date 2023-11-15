@@ -92,9 +92,9 @@ impl ContractEnv {
         backend.attached_value()
     }
 
-    pub fn revert(&self, error: OdraError) -> ! {
+    pub fn revert<E: Into<OdraError>>(&self, error: E) -> ! {
         let backend = self.backend.borrow();
-        backend.revert(error)
+        backend.revert(error.into())
     }
 
     pub fn emit_event<T: ToBytes>(&self, event: T) {

@@ -51,7 +51,7 @@ pub fn install_contract(
     // Check if the package hash is already in the storage.
     // Revert if key override is not allowed.
     if !allow_key_override && runtime::has_key(&package_hash_key) {
-        revert(ExecutionError::contract_already_installed().code()); // TODO: fix
+        revert(ExecutionError::ContractAlreadyInstalled.code()); // TODO: fix
     };
 
     // Prepare named keys.
@@ -172,7 +172,7 @@ pub fn transfer_tokens(to: &Address, amount: &U512) {
             transfer_from_purse_to_account(main_purse, *account, *amount, None).unwrap_or_revert();
         }
         // todo: Why?
-        Address::Contract(_) => revert(ExecutionError::can_not_transfer_to_contract().code())
+        Address::Contract(_) => revert(ExecutionError::TransferToContract.code())
     };
 }
 
@@ -453,7 +453,7 @@ pub fn handle_attached_value() {
         transfer_from_purse_to_purse(cargo_purse, contract_purse, amount, None).unwrap_or_revert();
         set_attached_value(amount);
     } else {
-        revert(ExecutionError::native_token_transfer_error().code())
+        revert(ExecutionError::NativeTransferError.code())
     }
 }
 

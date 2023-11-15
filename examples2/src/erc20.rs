@@ -19,6 +19,18 @@ pub struct Approval {
     pub value: U256
 }
 
+#[repr(u16)]
+pub enum Erc20Error {
+    InsufficientBalance = 1,
+    InsufficientAllowance = 2
+}
+
+impl From<Erc20Error> for OdraError {
+    fn from(error: Erc20Error) -> Self {
+        OdraError::user(error as u16)
+    }
+}
+
 pub struct Erc20 {
     env: Rc<ContractEnv>,
     total_supply: Variable<U256>,
@@ -47,8 +59,7 @@ impl Erc20 {
         let from_balance = balances.get_or_default(caller);
         let to_balance = balances.get_or_default(to);
         if from_balance < value {
-            self.env()
-                .revert(ExecutionError::new(1, "Insufficient funds").into());
+            self.env().revert(Erc20Error::InsufficientBalance)
         }
         balances.set(caller, from_balance.saturating_sub(value));
         balances.set(to, to_balance.saturating_add(value));
@@ -86,8 +97,7 @@ impl Erc20 {
         let caller = self.env().caller();
         let caller_balance = self.balance_of(caller);
         if amount > caller_balance {
-            self.env()
-                .revert(ExecutionError::new(1, "Insufficient funds").into());
+            self.env().revert(Erc20Error::InsufficientBalance)
         }
 
         self.balances.set(caller, caller_balance - amount);
@@ -632,12 +642,11 @@ mod tests {
         let result = erc20.try_transfer(alice, 1_000_000.into());
         assert_eq!(
             result,
-            Err(ExecutionError::new(1, "Insufficient funds").into())
+            Err(Erc20Error::InsufficientBalance.into())
         );
-        //
         // With return value
-        // let result = erc20.try_balance_of(alice).unwrap();
-        // assert_eq!(result, 100.into());
+        let result = erc20.try_balance_of(alice);
+        assert_eq!(result, Ok(100.into()));
 
         env.print_gas_report()
     }
