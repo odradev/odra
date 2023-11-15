@@ -76,7 +76,7 @@ build-erc20:
     mv examples2/target/wasm32-unknown-unknown/release/contract.wasm examples2/wasm/erc20.wasm
 
 test-erc20: build-erc20
-    cd examples2 && ODRA_BACKEND=casper cargo test --lib erc20_works -- --nocapture
+    cd examples2 && ODRA_BACKEND=casper cargo test --lib erc20 -- --nocapture
 
 build-counter-pack:
     cd examples2 && ODRA_MODULE=CounterPack cargo build --release --target wasm32-unknown-unknown --bin counter_pack

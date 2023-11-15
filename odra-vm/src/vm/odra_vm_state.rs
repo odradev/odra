@@ -94,6 +94,12 @@ impl OdraVmState {
         Ok(event.clone())
     }
 
+    pub fn get_events_count(&self, address: &Address) -> u32 {
+        self.events
+            .get(address)
+            .map_or(0, |events| events.len() as u32)
+    }
+
     pub fn attach_value(&mut self, amount: U512) {
         self.callstack.attach_value(amount);
     }

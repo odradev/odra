@@ -13,6 +13,14 @@ pub struct Transfer {
 }
 
 #[derive(Event, Eq, PartialEq, Debug)]
+pub struct CrossTransfer {
+    pub from: Option<Address>,
+    pub to: Option<Address>,
+    pub other_contract: Address,
+    pub amount: U256
+}
+
+#[derive(Event, Eq, PartialEq, Debug)]
 pub struct Approval {
     pub owner: Address,
     pub spender: Address,
@@ -43,6 +51,14 @@ impl Erc20 {
             self.total_supply.set(total_supply);
             self.balances.set(self.env().caller(), total_supply);
         }
+    }
+
+    pub fn approve(&mut self, to: Address, amount: U256) {
+        self.env.emit_event(Approval {
+            owner: self.env.caller(),
+            spender: to,
+            value: amount
+        });
     }
 
     pub fn total_supply(&self) -> U256 {
@@ -104,6 +120,23 @@ impl Erc20 {
         self.total_supply.set(self.total_supply() - amount);
         self.env()
             .transfer_tokens(&caller, &U512::from(amount.as_u64()));
+    }
+
+    pub fn cross_transfer(&mut self, other: Address, to: Address, value: U256) {
+        let caller = self.env().caller();
+
+        let other_erc20 = Erc20ContractRef {
+            address: other,
+            env: self.env()
+        };
+
+        other_erc20.transfer(to, value);
+        self.env.emit_event(CrossTransfer {
+            from: Some(self.env.self_address()),
+            to: Some(to),
+            other_contract: other,
+            amount: value
+        });
     }
 }
 
@@ -221,6 +254,27 @@ mod __erc20_wasm_parts {
             EntryPointAccess::Public,
             EntryPointType::Contract
         ));
+        entry_points.add_entry_point(EntryPoint::new(
+            "approve",
+            alloc::vec![
+                Parameter::new("to", Address::cl_type()),
+                Parameter::new("amount", U256::cl_type()),
+            ],
+            CLType::Unit,
+            EntryPointAccess::Public,
+            EntryPointType::Contract
+        ));
+        entry_points.add_entry_point(EntryPoint::new(
+            "cross_transfer",
+            alloc::vec![
+                Parameter::new("other", Address::cl_type()),
+                Parameter::new("to", Address::cl_type()),
+                Parameter::new("value", U256::cl_type()),
+            ],
+            CLType::Unit,
+            EntryPointAccess::Public,
+            EntryPointType::Contract
+        ));
         entry_points
     }
 
@@ -297,6 +351,23 @@ mod __erc20_wasm_parts {
         contract.burn_and_get_paid(amount);
     }
 
+    pub fn execute_approve() {
+        let to: Address = runtime::get_named_arg("to");
+        let amount: U256 = runtime::get_named_arg("amount");
+        let env = WasmContractEnv::new();
+        let mut contract: Erc20 = Erc20::new(Rc::new(env));
+        contract.approve(to, amount);
+    }
+
+    pub fn execute_cross_transfer() {
+        let other: Address = runtime::get_named_arg("other");
+        let to: Address = runtime::get_named_arg("to");
+        let value: U256 = runtime::get_named_arg("value");
+        let env = WasmContractEnv::new();
+        let mut contract: Erc20 = Erc20::new(Rc::new(env));
+        contract.cross_transfer(other, to, value);
+    }
+
     #[no_mangle]
     fn call() {
         execute_call();
@@ -341,6 +412,16 @@ mod __erc20_wasm_parts {
     fn burn_and_get_paid() {
         execute_burn_and_get_paid();
     }
+
+    #[no_mangle]
+    fn approve() {
+        execute_approve();
+    }
+
+    #[no_mangle]
+    fn cross_transfer() {
+        execute_cross_transfer();
+    }
 }
 
 pub struct Erc20ContractRef {
@@ -355,6 +436,19 @@ impl Erc20ContractRef {
             CallDef::new(String::from("total_supply"), RuntimeArgs::new())
         )
     }
+
+    pub fn transfer(&self, to: Address, value: U256) {
+        self.env.call_contract(
+            self.address,
+            CallDef::new(
+                String::from("transfer"),
+                runtime_args! {
+                    "to" => to,
+                    "value" => value
+                }
+            )
+        )
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -366,7 +460,9 @@ mod __erc20_test_parts {
     use odra2::event::EventError;
     use odra2::prelude::*;
     use odra2::types::casper_types::EntryPoints;
-    use odra2::types::{runtime_args, Address, Bytes, RuntimeArgs, ToBytes, U256, U512, FromBytes, OdraError};
+    use odra2::types::{
+        runtime_args, Address, Bytes, FromBytes, OdraError, RuntimeArgs, ToBytes, U256, U512
+    };
     use odra2::{CallDef, ContractEnv, EntryPointsCaller, HostEnv};
 
     pub struct Erc20HostRef {
@@ -394,7 +490,7 @@ mod __erc20_test_parts {
         pub fn total_supply(&self) -> U256 {
             self.try_total_supply().unwrap()
         }
-        
+
         pub fn try_balance_of(&self, owner: Address) -> Result<U256, OdraError> {
             self.env.call_contract(
                 &self.address,
@@ -406,7 +502,7 @@ mod __erc20_test_parts {
                 )
             )
         }
-        
+
         pub fn balance_of(&self, owner: Address) -> U256 {
             self.try_balance_of(owner).unwrap()
         }
@@ -488,8 +584,47 @@ mod __erc20_test_parts {
             self.try_burn_and_get_paid(amount).unwrap()
         }
 
+        pub fn try_approve(&self, to: Address, amount: U256) -> Result<(), OdraError> {
+            self.env.call_contract(
+                &self.address,
+                CallDef::new(
+                    String::from("approve"),
+                    runtime_args! {
+                        "to" => to,
+                        "amount" => amount
+                    }
+                )
+            )
+        }
+
+        pub fn approve(&self, to: Address, amount: U256) {
+            self.try_approve(to, amount).unwrap()
+        }
+
         pub fn get_event<T: FromBytes + EventInstance>(&self, index: i32) -> Result<T, EventError> {
             self.env.get_event(&self.address, index)
+        }
+        pub fn try_cross_transfer(
+            &self,
+            other: Address,
+            to: Address,
+            value: U256
+        ) -> Result<(), OdraError> {
+            self.env.call_contract(
+                &self.address,
+                CallDef::new(
+                    String::from("cross_transfer"),
+                    runtime_args! {
+                        "other" => other,
+                        "to" => to,
+                        "value" => value
+                    }
+                )
+            )
+        }
+
+        pub fn cross_transfer(&self, other: Address, to: Address, value: U256) {
+            self.try_cross_transfer(other, to, value).unwrap()
         }
     }
 
@@ -539,6 +674,19 @@ mod __erc20_test_parts {
                         let result = erc20.burn_and_get_paid(amount);
                         Bytes::from(result.to_bytes().unwrap())
                     }
+                    "approve" => {
+                        let to: Address = call_def.get("to").unwrap();
+                        let amount: U256 = call_def.get("amount").unwrap();
+                        let result = erc20.approve(to, amount);
+                        Bytes::from(result.to_bytes().unwrap())
+                    }
+                    "cross_transfer" => {
+                        let other: Address = call_def.get("other").unwrap();
+                        let to: Address = call_def.get("to").unwrap();
+                        let value: U256 = call_def.get("value").unwrap();
+                        let result = erc20.cross_transfer(other, to, value);
+                        Bytes::from(result.to_bytes().unwrap())
+                    }
                     _ => panic!("Unknown method")
                 }
             });
@@ -561,19 +709,19 @@ mod __erc20_test_parts {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-use crate::erc20::tests::casper_event_standard::casper_types::system::mint::Error::InsufficientFunds;
-#[cfg(not(target_arch = "wasm32"))]
 pub use __erc20_test_parts::*;
-use odra2::types::{ExecutionError, OdraError, RuntimeArgs};
+use odra2::types::{runtime_args, ExecutionError, OdraError, RuntimeArgs};
 
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests {
     pub use super::*;
+    use odra2::types::casper_types::system::mint::Error::InsufficientFunds;
     use odra2::types::ExecutionError;
     use odra2::types::OdraError;
-    use odra2::types::ToBytes;
     use odra2::types::U512;
+    use odra2::types::{Bytes, ToBytes};
+    use odra2::CallResult;
 
     #[test]
     fn erc20_works() {
@@ -629,25 +777,156 @@ mod tests {
         pobcoin.burn_and_get_paid(100.into());
         assert_eq!(env.balance_of(&alice), current_balance + U512::from(100));
 
+        env.print_gas_report()
+    }
+
+    #[test]
+    fn erc20_call_result() {
+        let env = odra2::test_env();
+        let alice = env.get_account(0);
+        let bob = env.get_account(1);
+
+        // Deploy the contract as Alice.
+        let erc20 = Erc20Deployer::init(&env, Some(100.into()));
+        let pobcoin = Erc20Deployer::init(&env, Some(100.into()));
+
+        // Make a call or two
+        erc20.transfer(bob, 10.into());
+        erc20.transfer(bob, 30.into());
+
+        // Test call result
+        assert_eq!(env.get_events_count(&erc20.address), 2);
+
+        let call_result = env.last_call_result();
+        assert!(call_result.result.is_ok());
+        assert_eq!(call_result.contract_address, erc20.address);
+        assert_eq!(call_result.caller, alice);
+        assert_eq!(call_result.get_result(), vec![].into());
+        assert_eq!(
+            call_result.get_events(&erc20.address),
+            vec![Bytes::from(
+                Transfer {
+                    from: Some(alice),
+                    to: Some(bob),
+                    amount: 30.into()
+                }
+                .to_bytes()
+                .unwrap()
+            )]
+        );
+
+        // call with error
+        erc20.try_transfer(bob, 100_000_000.into()).unwrap_err();
+        let call_result = env.last_call_result();
+        assert!(call_result.result.is_err());
+        assert_eq!(call_result.contract_address, erc20.address);
+        assert_eq!(call_result.caller, alice);
+        assert_eq!(call_result.events.get(&erc20.address).unwrap(), &vec![]);
+
+        // cross call
+        pobcoin.transfer(erc20.address, 100.into());
+        erc20.cross_transfer(pobcoin.address, alice, 50.into());
+        let call_result = env.last_call_result();
+
+        assert_eq!(
+            call_result.get_events(&pobcoin.address),
+            vec![Bytes::from(
+                Transfer {
+                    from: Some(erc20.address),
+                    to: Some(alice),
+                    amount: 50.into()
+                }
+                .to_bytes()
+                .unwrap()
+            )]
+        );
+        assert_eq!(
+            call_result.get_events(&erc20.address),
+            vec![Bytes::from(
+                CrossTransfer {
+                    from: Some(erc20.address),
+                    to: Some(alice),
+                    other_contract: pobcoin.address,
+                    amount: 50.into()
+                }
+                .to_bytes()
+                .unwrap()
+            )]
+        );
+    }
+
+    #[test]
+    fn erc20_events_work() {
+        let env = odra2::test_env();
+        let alice = env.get_account(0);
+        let bob = env.get_account(1);
+        let charlie = env.get_account(2);
+
+        // Deploy the contract as Alice.
+        let erc20 = Erc20Deployer::init(&env, Some(100.into()));
+
+        // Emit some events
+        erc20.transfer(bob, 10.into());
+        erc20.approve(bob, 10.into());
+        erc20.transfer(charlie, 20.into());
+
         // Test events
         let event: Transfer = erc20.get_event(0).unwrap();
-        assert_eq!(event.from, Some(alice));
-        assert_eq!(event.to, Some(bob));
-        assert_eq!(event.amount, 10.into());
+        assert_eq!(
+            event,
+            Transfer {
+                from: Some(alice),
+                to: Some(bob),
+                amount: 10.into()
+            }
+        );
+
+        let event: Approval = erc20.get_event(1).unwrap();
+        assert_eq!(
+            event,
+            Approval {
+                owner: alice,
+                spender: bob,
+                value: 10.into()
+            }
+        );
+
+        let event: Transfer = erc20.get_event(2).unwrap();
+        assert_eq!(
+            event,
+            Transfer {
+                from: Some(alice),
+                to: Some(charlie),
+                amount: 20.into()
+            }
+        );
+
+        // Test negative indices
+        let event: Transfer = erc20.get_event(-1).unwrap();
+        assert_eq!(
+            event,
+            Transfer {
+                from: Some(alice),
+                to: Some(charlie),
+                amount: 20.into()
+            }
+        );
+    }
+
+    #[test]
+    fn test_erc20_errors() {
+        let env = odra2::test_env();
+        let alice = env.get_account(0);
+
+        // Deploy the contract as Alice.
+        let erc20 = Erc20Deployer::init(&env, Some(100.into()));
 
         // Test errors
-        // Following line panics
-        // erc20.transfer(alice, 1_000_000.into());
-        // But this one doesn't
         let result = erc20.try_transfer(alice, 1_000_000.into());
-        assert_eq!(
-            result,
-            Err(Erc20Error::InsufficientBalance.into())
-        );
+        assert_eq!(result, Err(Erc20Error::InsufficientBalance.into()));
+
         // With return value
         let result = erc20.try_balance_of(alice);
         assert_eq!(result, Ok(100.into()));
-
-        env.print_gas_report()
     }
 }

@@ -4,7 +4,7 @@ use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::event::EventError;
 use odra_core::prelude::{collections::*, *};
 use odra_core::{CallDef, ContractContext, ContractEnv, HostContext, HostEnv};
-use odra_types::{Address, Bytes, EventData, RuntimeArgs, U512, OdraError, VmError};
+use odra_types::{Address, Bytes, EventData, OdraError, RuntimeArgs, VmError, U512};
 
 pub struct OdraVmHost {
     vm: Rc<RefCell<OdraVm>>,
@@ -14,6 +14,10 @@ pub struct OdraVmHost {
 impl HostContext for OdraVmHost {
     fn set_caller(&self, caller: Address) {
         self.vm.borrow().set_caller(caller)
+    }
+
+    fn caller(&self) -> Address {
+        *self.vm.borrow().callstack_tip().address()
     }
 
     fn get_account(&self, index: usize) -> Address {
@@ -32,8 +36,16 @@ impl HostContext for OdraVmHost {
         self.vm.borrow().get_event(contract_address, index)
     }
 
-    // TODO: has the same logic as CasperHost::call_contract, try to share this logic in HostEnv
-    fn call_contract(&self, address: &Address, call_def: CallDef, _use_proxy: bool) -> Result<Bytes, OdraError> {
+    fn get_events_count(&self, contract_address: &Address) -> u32 {
+        self.vm.borrow().get_events_count(contract_address)
+    }
+
+    fn call_contract(
+        &self,
+        address: &Address,
+        call_def: CallDef,
+        _use_proxy: bool
+    ) -> Result<Bytes, OdraError> {
         let mut opt_result: Option<Bytes> = None;
         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             opt_result = Some(self.vm.borrow().call_contract(*address, call_def));
@@ -44,7 +56,7 @@ impl HostContext for OdraVmHost {
             None => {
                 let error = self.vm.borrow().error();
                 Err(error.unwrap_or(OdraError::VmError(VmError::Panic)))
-            },
+            }
         }
     }
 
@@ -78,6 +90,11 @@ impl HostContext for OdraVmHost {
     fn print_gas_report(&self) {
         // For OdraVM there is no gas, so nothing to report.
         println!("No gas report for OdraVM");
+    }
+
+    fn last_call_gas_cost(&self) -> u64 {
+        // For OdraVM there is no gas, so nothing to report.
+        0
     }
 }
 

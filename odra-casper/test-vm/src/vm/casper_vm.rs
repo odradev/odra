@@ -14,7 +14,7 @@ use casper_engine_test_support::{
 use casper_event_standard::try_full_name_from_bytes;
 use std::rc::Rc;
 
-use casper_execution_engine::core::engine_state::{GenesisAccount, RunGenesisRequest, self};
+use casper_execution_engine::core::engine_state::{self, GenesisAccount, RunGenesisRequest};
 use odra_casper_shared::consts;
 use odra_casper_shared::consts::*;
 use odra_core::entry_point_callback::EntryPointsCaller;
@@ -23,10 +23,10 @@ use odra_core::{CallDef, ContractEnv, HostContext, HostEnv};
 use odra_types::casper_types::account::{Account, AccountHash};
 use odra_types::casper_types::bytesrepr::{Bytes, ToBytes};
 use odra_types::casper_types::{
-    runtime_args, BlockTime, Contract, ContractHash, ContractPackageHash, Key, Motes, SecretKey,
-    StoredValue, URef, ApiError
+    runtime_args, ApiError, BlockTime, Contract, ContractHash, ContractPackageHash, Key, Motes,
+    SecretKey, StoredValue, URef
 };
-use odra_types::{Address, PublicKey, U512, VmError, ExecutionError};
+use odra_types::{Address, ExecutionError, PublicKey, VmError, U512};
 use odra_types::{CLTyped, FromBytes, OdraError, RuntimeArgs};
 
 pub struct CasperVm {
@@ -142,6 +142,10 @@ impl CasperVm {
         self.active_account = caller;
     }
 
+    pub fn get_caller(&self) -> Address {
+        self.active_account
+    }
+
     pub fn get_account(&self, index: usize) -> Address {
         self.accounts[index]
     }
@@ -164,19 +168,7 @@ impl CasperVm {
             .as_uref()
             .unwrap();
 
-        let events_length: u32 = self
-            .context
-            .query(
-                None,
-                Key::Hash(contract_hash.value()),
-                &[String::from(consts::EVENTS_LENGTH)]
-            )
-            .unwrap()
-            .as_cl_value()
-            .unwrap()
-            .clone()
-            .into_t()
-            .unwrap();
+        let events_length = self.events_length(&contract_hash);
 
         let event_position = odra_utils::event_absolute_position(events_length as usize, index)
             .ok_or(EventError::IndexOutOfBounds)?;
@@ -197,6 +189,13 @@ impl CasperVm {
             }
             Err(_) => Err(EventError::IndexOutOfBounds)
         }
+    }
+
+    pub fn get_events_count(&self, contract_address: &Address) -> u32 {
+        let contract_package_hash = contract_address.as_contract_package_hash().unwrap();
+        let contract_hash: ContractHash = self.get_contract_package_hash(contract_package_hash);
+
+        self.events_length(&contract_hash)
     }
 
     pub fn attach_value(&mut self, amount: U512) {
@@ -422,13 +421,37 @@ impl CasperVm {
         }
     }
 
+    pub fn last_call_gas_cost(&self) -> u64 {
+        self.last_call_contract_gas_cost().as_u64()
+    }
+}
+
+impl CasperVm {
+    fn events_length(&self, contract_hash: &ContractHash) -> u32 {
+        self.context
+            .query(
+                None,
+                Key::Hash(contract_hash.value()),
+                &[String::from(consts::EVENTS_LENGTH)]
+            )
+            .unwrap()
+            .as_cl_value()
+            .unwrap()
+            .clone()
+            .into_t()
+            .unwrap()
+    }
+
     fn panic_with_error(
         &self,
         error: OdraError,
         entrypoint: &str,
         contract_package_hash: ContractPackageHash
     ) -> ! {
-        panic!("Revert: {:?} - {:?}::{}", error, contract_package_hash, entrypoint)
+        panic!(
+            "Revert: {:?} - {:?}::{}",
+            error, contract_package_hash, entrypoint
+        )
     }
 }
 
@@ -437,10 +460,10 @@ fn parse_error(err: engine_state::Error) -> OdraError {
         match exec_err {
             engine_state::ExecError::Revert(ApiError::MissingArgument) => {
                 OdraError::VmError(VmError::MissingArg)
-            },
+            }
             engine_state::ExecError::Revert(ApiError::Mint(0)) => {
                 OdraError::VmError(VmError::BalanceExceeded)
-            },
+            }
             engine_state::ExecError::Revert(ApiError::User(code)) => {
                 if code == ExecutionError::NonPayable.code() {
                     OdraError::ExecutionError(ExecutionError::NonPayable)
@@ -449,10 +472,14 @@ fn parse_error(err: engine_state::Error) -> OdraError {
                 } else {
                     OdraError::ExecutionError(ExecutionError::User(code))
                 }
-            },
+            }
             engine_state::ExecError::InvalidContext => OdraError::VmError(VmError::InvalidContext),
-            engine_state::ExecError::NoSuchMethod(name) => OdraError::VmError(VmError::NoSuchMethod(name)),
-            engine_state::ExecError::MissingArgument { name } => OdraError::VmError(VmError::MissingArg),
+            engine_state::ExecError::NoSuchMethod(name) => {
+                OdraError::VmError(VmError::NoSuchMethod(name))
+            }
+            engine_state::ExecError::MissingArgument { name } => {
+                OdraError::VmError(VmError::MissingArg)
+            }
             _ => OdraError::VmError(VmError::Other(format!("Casper ExecError: {}", exec_err)))
         }
     } else {
