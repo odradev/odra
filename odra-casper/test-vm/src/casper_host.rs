@@ -22,7 +22,7 @@ use odra_types::casper_types::bytesrepr::{Bytes, ToBytes};
 use odra_types::casper_types::{
     runtime_args, BlockTime, ContractPackageHash, Key, Motes, SecretKey
 };
-use odra_types::{Address, PublicKey, U512, OdraError, VmError};
+use odra_types::{Address, OdraError, PublicKey, VmError, U512};
 use odra_types::{EventData, RuntimeArgs};
 
 pub struct CasperHost {
@@ -32,6 +32,10 @@ pub struct CasperHost {
 impl HostContext for CasperHost {
     fn set_caller(&self, caller: Address) {
         self.vm.borrow_mut().set_caller(caller)
+    }
+
+    fn caller(&self) -> Address {
+        self.vm.borrow().get_caller()
     }
 
     fn get_account(&self, index: usize) -> Address {
@@ -51,12 +55,19 @@ impl HostContext for CasperHost {
     }
 
     // TODO: has the same logic as OdraVmHost::call_contract, try to share this logic in HostEnv
-    fn call_contract(&self, address: &Address, call_def: CallDef, use_proxy: bool) -> Result<Bytes, OdraError> {
+    fn call_contract(
+        &self,
+        address: &Address,
+        call_def: CallDef,
+        use_proxy: bool
+    ) -> Result<Bytes, OdraError> {
         let mut opt_result: Option<Bytes> = None;
         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            opt_result = Some(self.vm
-                .borrow_mut()
-                .call_contract(address, call_def, use_proxy));
+            opt_result = Some(
+                self.vm
+                    .borrow_mut()
+                    .call_contract(address, call_def, use_proxy)
+            );
         }));
 
         match opt_result {
@@ -64,8 +75,12 @@ impl HostContext for CasperHost {
             None => {
                 let error = self.vm.borrow().error.clone();
                 Err(error.unwrap_or(OdraError::VmError(VmError::Panic)))
-            },
+            }
         }
+    }
+
+    fn get_events_count(&self, contract_address: &Address) -> u32 {
+        self.vm.borrow().get_events_count(contract_address)
     }
 
     fn new_contract(
@@ -85,6 +100,10 @@ impl HostContext for CasperHost {
 
     fn print_gas_report(&self) {
         self.vm.borrow().print_gas_report()
+    }
+
+    fn last_call_gas_cost(&self) -> u64 {
+        self.vm.borrow().last_call_gas_cost()
     }
 }
 

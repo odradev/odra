@@ -196,29 +196,33 @@ mod __counter_pack_test_parts {
 
     impl CounterPackHostRef {
         pub fn get_count(&self, index_a: u8, index_b: u8) -> u32 {
-            self.env.call_contract(
-                &self.address,
-                CallDef::new(
-                    String::from("get_count"),
-                    runtime_args! {
-                        "index_a" => index_a,
-                        "index_b" => index_b
-                    }
+            self.env
+                .call_contract(
+                    &self.address,
+                    CallDef::new(
+                        String::from("get_count"),
+                        runtime_args! {
+                            "index_a" => index_a,
+                            "index_b" => index_b
+                        }
+                    )
                 )
-            ).unwrap()
+                .unwrap()
         }
 
         pub fn increment(&self, index_a: u8, index_b: u8) {
-            self.env.call_contract(
-                &self.address,
-                CallDef::new(
-                    String::from("increment"),
-                    runtime_args! {
-                        "index_a" => index_a,
-                        "index_b" => index_b
-                    }
+            self.env
+                .call_contract(
+                    &self.address,
+                    CallDef::new(
+                        String::from("increment"),
+                        runtime_args! {
+                            "index_a" => index_a,
+                            "index_b" => index_b
+                        }
+                    )
                 )
-            ).unwrap()
+                .unwrap()
         }
     }
 

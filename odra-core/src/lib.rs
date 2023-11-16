@@ -4,6 +4,7 @@
 
 extern crate alloc;
 
+pub mod call_result;
 mod contract_context;
 mod contract_env;
 pub mod entry_point_callback;

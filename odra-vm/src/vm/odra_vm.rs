@@ -211,6 +211,10 @@ impl OdraVm {
         self.state.read().unwrap().get_event(address, index)
     }
 
+    pub fn get_events_count(&self, address: &Address) -> u32 {
+        self.state.read().unwrap().get_events_count(address)
+    }
+
     pub fn attach_value(&self, amount: U512) {
         self.state.write().unwrap().attach_value(amount);
     }
