@@ -8,6 +8,7 @@ members = [
     "mock-vm/backend",
     "odra-vm",
     "odra-core",
+    "odra-macros",
     "types",
     "utils",
     "odra-casper/backend",
