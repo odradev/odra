@@ -32,4 +32,4 @@ repository = "https://github.com/odradev/odra"
 casper-contract = { version = "3.0.0", default-features = false }
 casper-types = "3.0.0"
 casper-execution-engine = "5.0.0"
-casper-event-standard = "0.4.0"
+casper-event-standard = "0.4.1"

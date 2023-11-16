@@ -14,7 +14,7 @@ use casper_engine_test_support::{
 use casper_event_standard::try_full_name_from_bytes;
 use std::rc::Rc;
 
-use casper_execution_engine::core::engine_state::{GenesisAccount, RunGenesisRequest};
+use casper_execution_engine::core::engine_state::{GenesisAccount, RunGenesisRequest, self};
 use odra_casper_shared::consts;
 use odra_casper_shared::consts::*;
 use odra_core::entry_point_callback::EntryPointsCaller;
@@ -24,9 +24,9 @@ use odra_types::casper_types::account::{Account, AccountHash};
 use odra_types::casper_types::bytesrepr::{Bytes, ToBytes};
 use odra_types::casper_types::{
     runtime_args, BlockTime, Contract, ContractHash, ContractPackageHash, Key, Motes, SecretKey,
-    StoredValue, URef
+    StoredValue, URef, ApiError
 };
-use odra_types::{Address, PublicKey, U512};
+use odra_types::{Address, PublicKey, U512, VmError, ExecutionError};
 use odra_types::{CLTyped, FromBytes, OdraError, RuntimeArgs};
 
 pub struct CasperVm {
@@ -262,11 +262,9 @@ impl CasperVm {
 
         self.attached_value = U512::zero();
         if let Some(error) = self.context.get_error() {
-            // TODO: handle error
-            // let odra_error = parse_error(error);
-            panic!("Error: {}", error);
-            // self.error = Some(odra_error.clone());
-            // self.panic_with_error(odra_error, call_def.entry_point, hash);
+            let odra_error = parse_error(error);
+            self.error = Some(odra_error.clone());
+            self.panic_with_error(odra_error, &call_def.entry_point, hash);
         } else {
             self.get_active_account_result()
         }
@@ -422,5 +420,42 @@ impl CasperVm {
         for (name, cost) in self.gas_report() {
             println!("{}: {}", name, cost);
         }
+    }
+
+    fn panic_with_error(
+        &self,
+        error: OdraError,
+        entrypoint: &str,
+        contract_package_hash: ContractPackageHash
+    ) -> ! {
+        panic!("Revert: {:?} - {:?}::{}", error, contract_package_hash, entrypoint)
+    }
+}
+
+fn parse_error(err: engine_state::Error) -> OdraError {
+    if let engine_state::Error::Exec(exec_err) = err {
+        match exec_err {
+            engine_state::ExecError::Revert(ApiError::MissingArgument) => {
+                OdraError::VmError(VmError::MissingArg)
+            },
+            engine_state::ExecError::Revert(ApiError::Mint(0)) => {
+                OdraError::VmError(VmError::BalanceExceeded)
+            },
+            engine_state::ExecError::Revert(ApiError::User(code)) => {
+                if code == ExecutionError::NonPayable.code() {
+                    OdraError::ExecutionError(ExecutionError::NonPayable)
+                } else if code == ExecutionError::ReentrantCall.code() {
+                    OdraError::ExecutionError(ExecutionError::ReentrantCall)
+                } else {
+                    OdraError::ExecutionError(ExecutionError::User(code))
+                }
+            },
+            engine_state::ExecError::InvalidContext => OdraError::VmError(VmError::InvalidContext),
+            engine_state::ExecError::NoSuchMethod(name) => OdraError::VmError(VmError::NoSuchMethod(name)),
+            engine_state::ExecError::MissingArgument { name } => OdraError::VmError(VmError::MissingArg),
+            _ => OdraError::VmError(VmError::Other(format!("Casper ExecError: {}", exec_err)))
+        }
+    } else {
+        OdraError::VmError(VmError::Other(format!("Casper EngineStateError: {}", err)))
     }
 }

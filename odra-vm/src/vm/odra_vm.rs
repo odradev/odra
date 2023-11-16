@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::panic::{self, AssertUnwindSafe};
 use std::rc::Rc;
 use std::sync::{Arc, RwLock};
 
@@ -63,7 +64,6 @@ impl OdraVm {
             let status = self.checked_transfer_tokens(&self.caller(), &address, &call_def.amount);
             if let Err(err) = status {
                 self.revert(err.clone());
-                panic!("{:?}", err);
             }
         }
 
@@ -125,13 +125,21 @@ impl OdraVm {
         }
     }
 
-    pub fn revert(&self, error: OdraError) {
+    pub fn revert(&self, error: OdraError) -> ! {
+        let mut revert_msg = String::from("");
+        if let CallstackElement::Entrypoint(ep) = self.callstack_tip() {
+            revert_msg = format!("{:?}::{}", ep.address, ep.entrypoint);
+        }
+
         let mut state = self.state.write().unwrap();
-        state.set_error(error);
+        state.set_error(error.clone());
         state.clear_callstack();
         if state.is_in_caller_context() {
             state.restore_snapshot();
         }
+        drop(state);
+
+        panic!("Revert: {:?} - {}", error, revert_msg);
     }
 
     pub fn error(&self) -> Option<OdraError> {
