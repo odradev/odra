@@ -18,10 +18,6 @@ impl HostEnv {
         HostEnv { backend }
     }
 
-    pub fn error(&self) -> Option<OdraError> {
-        None
-    }
-
     pub fn get_account(&self, index: usize) -> Address {
         let backend = self.backend.borrow();
         backend.get_account(index)

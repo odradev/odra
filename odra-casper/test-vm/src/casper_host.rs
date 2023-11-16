@@ -50,6 +50,7 @@ impl HostContext for CasperHost {
         self.vm.borrow().get_event(contract_address, index)
     }
 
+    // TODO: has the same logic as OdraVmHost::call_contract, try to share this logic in HostEnv
     fn call_contract(&self, address: &Address, call_def: CallDef, use_proxy: bool) -> Result<Bytes, OdraError> {
         let mut opt_result: Option<Bytes> = None;
         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
