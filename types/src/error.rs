@@ -86,16 +86,16 @@ pub enum ExecutionError {
     MaxUserError = 32767,
     /// User error too high. The code should be in range 0..32767.
     UserErrorTooHigh = 32768,
-    User(u16),
+    User(u16)
 }
 
 impl ExecutionError {
     pub fn code(&self) -> u16 {
-        unsafe { 
+        unsafe {
             match self {
                 ExecutionError::User(code) => *code,
                 ExecutionError::UserErrorTooHigh => 32768,
-                _ => ExecutionError::UserErrorTooHigh.code() + *(self as *const Self as *const u16) 
+                _ => ExecutionError::UserErrorTooHigh.code() + *(self as *const Self as *const u16)
             }
         }
     }
