@@ -1,4 +1,6 @@
-use ir::{ref_item::RefItem, ModuleIR};
+#![feature(box_patterns)]
+
+use ir::{host_ref_item::HostRefItem, ref_item::RefItem, ModuleIR};
 use proc_macro::TokenStream;
 use proc_macro_error::{abort_if_dirty, proc_macro_error};
 
@@ -14,6 +16,7 @@ pub fn module(_attr: TokenStream, item: TokenStream) -> TokenStream {
         Ok(module) => {
             let code = module.self_code();
             let ref_item = RefItem::new(&module);
+            let host_ref_item = HostRefItem::new(&module);
 
             let result = quote::quote! {
                 #code

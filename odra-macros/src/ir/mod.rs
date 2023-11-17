@@ -1,9 +1,12 @@
 use crate::syn_utils;
 use proc_macro2::{Ident, TokenStream};
-use syn::ItemImpl;
+use quote::format_ident;
+use syn::{parse_quote, ItemImpl};
 
 pub mod deployer_item;
+pub mod host_ref_item;
 pub mod ref_item;
+pub(crate) mod ref_utils;
 
 pub struct ModuleIR {
     code: ItemImpl
@@ -51,17 +54,15 @@ impl ModuleIR {
         ))
     }
 
-    pub fn methods(&self) -> Vec<FnIR> {
-        let methods = self
-            .code
+    pub fn functions(&self) -> Vec<FnIR> {
+        self.code
             .items
             .iter()
             .filter_map(|item| match item {
-                syn::ImplItem::Fn(method) => Some(FnIR::new(method.clone())),
+                syn::ImplItem::Fn(func) => Some(FnIR::new(func.clone())),
                 _ => None
             })
-            .collect::<Vec<_>>();
-        methods
+            .collect::<Vec<_>>()
     }
 }
 
@@ -78,6 +79,10 @@ impl FnIR {
         self.code.sig.ident.clone()
     }
 
+    pub fn try_name(&self) -> Ident {
+        format_ident!("try_{}", self.name())
+    }
+
     pub fn name_str(&self) -> String {
         self.name().to_string()
     }
@@ -92,6 +97,13 @@ impl FnIR {
 
     pub fn return_type(&self) -> syn::ReturnType {
         syn_utils::function_return_type(&self.code)
+    }
+
+    pub fn try_return_type(&self) -> syn::ReturnType {
+        match self.return_type() {
+            syn::ReturnType::Default => parse_quote!(-> Result<(), OdraError>),
+            syn::ReturnType::Type(_, box ty) => parse_quote!(-> Result<#ty, OdraError>)
+        }
     }
 
     pub fn typed_args(&self) -> Vec<syn::PatType> {

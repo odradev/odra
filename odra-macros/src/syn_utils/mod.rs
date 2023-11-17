@@ -1,4 +1,4 @@
-use syn::spanned::Spanned;
+use syn::{parse_quote, spanned::Spanned};
 
 pub fn ident_from_impl(impl_code: &syn::ItemImpl) -> Result<syn::Ident, syn::Error> {
     match &*impl_code.self_ty {
@@ -48,4 +48,12 @@ pub fn receiver_arg(function: &syn::ImplItemFn) -> Option<syn::Receiver> {
 
 pub fn function_return_type(function: &syn::ImplItemFn) -> syn::ReturnType {
     function.sig.output.clone()
+}
+
+pub fn type_address() -> syn::Type {
+    parse_quote!(odra2::types::Address)
+}
+
+pub fn type_contract_env() -> syn::Type {
+    parse_quote!(odra2::ContractEnv)
 }

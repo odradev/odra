@@ -1,6 +1,8 @@
 use super::checked_unwrap;
-use crate::ir::{FnIR, ModuleIR};
-use proc_macro2::TokenStream;
+use crate::{
+    ir::{ref_utils, FnIR, ModuleIR},
+    syn_utils
+};
 use quote::{quote, ToTokens};
 use syn::parse_quote;
 
@@ -13,66 +15,44 @@ impl<'a> RefItem<'a> {
         RefItem { module }
     }
 
-    pub fn method(&self, fun: &FnIR) -> syn::ItemFn {
-        let fun_name = fun.name();
-        let fun_name_str = fun.name_str();
-        let args = fun.arg_names();
-        let typed_args = {
-            let args = fun.typed_args();
-            quote!(#(, #args)*)
-        };
+    fn function(fun: &FnIR) -> syn::ItemFn {
+        let signature = ref_utils::function_signature(fun);
+        let call_def = ref_utils::call_def(fun);
 
-        let args = if fun.args_len() == 0 {
-            quote!(odra2::types::RuntimeArgs::new())
-        } else {
-            let args = args
-                .iter()
-                .map(|i| quote!(let _ = named_args.insert(stringify!(#i), #i);))
-                .collect::<TokenStream>();
-            quote!({
-                let mut named_args = odra2::types::RuntimeArgs::new();
-                #args
-                named_args
-            })
-        };
-
-        let return_type = fun.return_type();
-        let mutability = fun.is_mut().then(|| quote!(mut));
         parse_quote!(
-            pub fn #fun_name(& #mutability self #typed_args) #return_type {
+            pub #signature {
                 self.env.call_contract(
                     self.address,
-                    CallDef::new(String::from(#fun_name_str), #args),
+                    #call_def
                 )
             }
         )
     }
 
-    pub fn methods(&self) -> Vec<syn::ItemFn> {
-        self.module
-            .methods()
-            .iter()
-            .map(|f| self.method(f))
-            .collect()
+    fn functions(&self) -> Vec<syn::ItemFn> {
+        self.module.functions().iter().map(Self::function).collect()
     }
 }
 
 impl<'a> ToTokens for RefItem<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let module_ref = checked_unwrap!(self.module.contract_ref_ident());
-        let methods = self.methods();
+        let functions = self.functions();
+        let ty_address = syn_utils::type_address();
+        let ty_contract_env = syn_utils::type_contract_env();
+
         tokens.extend(quote!(
             pub struct #module_ref {
-                env: Rc<odra2::ContractEnv>,
-                address: odra2::types::Address,
+                env: Rc<#ty_contract_env>,
+                address: #ty_address,
             }
 
             impl #module_ref {
-                pub fn address(&self) -> &Address {
+                pub fn address(&self) -> &#ty_address {
                     &self.address
                 }
 
-                #(#methods)*
+                #(#functions)*
             }
         ));
     }
@@ -95,14 +75,14 @@ mod ref_item_tests {
 
             impl Erc20ContractRef {
                 // TODO: this means "address", can't be entrypoint name.
-                pub fn address(&self) -> &Address {
+                pub fn address(&self) -> &odra2::types::Address {
                     &self.address
                 }
 
                 pub fn init(&mut self, total_supply: Option<U256>) {
                     self.env.call_contract(
                         self.address,
-                        CallDef::new(
+                        odra2::CallDef::new(
                             String::from("init"),
                             {
                                 let mut named_args = odra2::types::RuntimeArgs::new();
@@ -116,7 +96,7 @@ mod ref_item_tests {
                 pub fn total_supply(&self) -> U256 {
                     self.env.call_contract(
                         self.address,
-                        CallDef::new(
+                        odra2::CallDef::new(
                             String::from("total_supply"),
                             odra2::types::RuntimeArgs::new(),
                         ),
@@ -129,13 +109,13 @@ mod ref_item_tests {
     }
 
     #[test]
-    fn method() {
+    fn function() {
         let module = test_utils::mock_module();
         let expected = quote! {
             pub fn init(&mut self, total_supply: Option<U256>) {
                 self.env.call_contract(
                     self.address,
-                    CallDef::new(
+                    odra2::CallDef::new(
                         String::from("init"),
                         {
                             let mut named_args = odra2::types::RuntimeArgs::new();
@@ -146,7 +126,7 @@ mod ref_item_tests {
                 )
             }
         };
-        let actual = RefItem::new(&module).method(&module.methods()[0]);
+        let actual = RefItem::function(&module.functions()[0]);
         test_utils::assert_eq(actual, expected);
     }
 }
