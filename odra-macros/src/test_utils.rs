@@ -5,27 +5,19 @@ use crate::ir::ModuleIR;
 pub fn mock_module() -> ModuleIR {
     let module = quote! {
         impl Erc20 {
-            fn init(env: &mut Env, name: String) -> Void {
-                env.set_value(String::from("name"), name)
+            pub fn init(&mut self, total_supply: Option<U256>) {
+                if let Some(total_supply) = total_supply {
+                    self.total_supply.set(total_supply);
+                    self.balances.set(self.env().caller(), total_supply);
+                }
             }
 
-            fn name(env: &Env) -> OdraResult<String> {
-                Ok(env.get_value(String::from("name"))?.unwrap())
-            }
-
-            fn balance_of(env: &Env, address: Address) -> OdraResult<U256> {
-                let key = (String::from("balances"), address);
-                Ok(env.get_value(key)?.unwrap())
-            }
-
-            fn mint(env: &mut Env, address: Address, amount: U256) -> Void {
-                let key = (String::from("balances"), address);
-                let current_balance = Self::balance_of(env, address.clone())?;
-                env.set_value(key, current_balance + amount)
+            pub fn total_supply(&self) -> U256 {
+                self.total_supply.get_or_default()
             }
         }
     };
-    ModuleIR::new(&module)
+    ModuleIR::try_from(&module).unwrap()
 }
 
 pub fn assert_eq<A: ToTokens, B: ToTokens>(a: A, b: B) {

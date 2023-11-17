@@ -37,6 +37,7 @@ pub struct Erc20 {
     balances: Mapping<Address, U256>
 }
 
+#[odra_macros::module]
 impl Erc20 {
     pub fn init(&mut self, total_supply: Option<U256>) {
         if let Some(total_supply) = total_supply {
@@ -340,20 +341,6 @@ mod __erc20_wasm_parts {
     #[no_mangle]
     fn burn_and_get_paid() {
         execute_burn_and_get_paid();
-    }
-}
-
-pub struct Erc20ContractRef {
-    pub address: Address,
-    pub env: Rc<ContractEnv>
-}
-
-impl Erc20ContractRef {
-    pub fn total_supply(&self) -> U256 {
-        self.env.call_contract(
-            self.address,
-            CallDef::new(String::from("total_supply"), RuntimeArgs::new())
-        )
     }
 }
 
