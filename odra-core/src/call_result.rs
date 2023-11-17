@@ -1,6 +1,10 @@
+use crate::HostEnv;
 use alloc::collections::BTreeMap;
+use alloc::string::{String, ToString};
+use alloc::vec;
 use alloc::vec::Vec;
-use odra_types::{Address, Bytes, OdraError};
+use casper_event_standard::EventInstance;
+use odra_types::{Address, Bytes, OdraError, ToBytes};
 
 #[derive(Debug, Clone)]
 pub struct CallResult {
@@ -12,11 +16,7 @@ pub struct CallResult {
 }
 
 impl CallResult {
-    pub fn get_events(&self, address: &Address) -> Vec<Bytes> {
-        self.events.get(address).cloned().unwrap_or_default()
-    }
-
-    pub fn get_result(&self) -> Bytes {
+    pub fn result(&self) -> Bytes {
         match &self.result {
             Ok(result) => result.clone(),
             Err(error) => {
@@ -25,7 +25,7 @@ impl CallResult {
         }
     }
 
-    pub fn get_error(&self) -> OdraError {
+    pub fn error(&self) -> OdraError {
         match &self.result {
             Ok(_) => {
                 panic!("Last call result is not an error");
@@ -34,15 +34,48 @@ impl CallResult {
         }
     }
 
-    pub fn get_caller(&self) -> Address {
+    pub fn caller(&self) -> Address {
         self.caller
     }
 
-    pub fn get_gas_used(&self) -> u64 {
+    pub fn gas_used(&self) -> u64 {
         self.gas_used
     }
 
-    pub fn get_contract_address(&self) -> Address {
+    pub fn contract_address(&self) -> Address {
         self.contract_address
+    }
+
+    pub fn event_names(&self) -> Vec<String> {
+        let mut event_names = vec![];
+        self.events.values().for_each(|val| {
+            val.iter().for_each(|bytes| {
+                event_names.push(HostEnv::extract_event_name(bytes).unwrap());
+            })
+        });
+
+        event_names
+    }
+
+    pub fn events(&self) -> Vec<Bytes> {
+        let mut events = vec![];
+        self.events.values().for_each(|val| {
+            events.append(&mut val.clone());
+        });
+
+        events
+    }
+
+    pub fn contract_events(&self, contract_address: &Address) -> Vec<Bytes> {
+        self.events.get(contract_address).unwrap_or(&vec![]).clone()
+    }
+
+    pub fn emitted(&self, event_name: &str) -> bool {
+        self.event_names().contains(&event_name.to_string())
+    }
+
+    pub fn emitted_event<T: ToBytes + EventInstance>(&self, event: &T) -> bool {
+        self.events()
+            .contains(&Bytes::from(event.to_bytes().unwrap()))
     }
 }
