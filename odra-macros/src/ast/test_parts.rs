@@ -13,10 +13,10 @@ pub struct PartsModuleItem {
     ident: syn::Ident
 }
 
-impl<'a> TryFrom<&'a ModuleIR> for PartsModuleItem {
+impl TryFrom<&'_ ModuleIR> for PartsModuleItem {
     type Error = syn::Error;
 
-    fn try_from(value: &'a ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(value: &'_ ModuleIR) -> Result<Self, Self::Error> {
         let ident = parts_utils::test_parts_mod_ident(value)?;
         let attr = parse_quote!(#[cfg(not(target_arch = "wasm32"))]);
         Ok(Self {
@@ -40,10 +40,10 @@ pub struct TestParts {
     host_ref: HostRefItem
 }
 
-impl<'a> TryFrom<&'a ModuleIR> for TestParts {
+impl TryFrom<&'_ ModuleIR> for TestParts {
     type Error = syn::Error;
 
-    fn try_from(value: &'a ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(value: &'_ ModuleIR) -> Result<Self, Self::Error> {
         Ok(TestParts {
             parts_module: value.try_into()?,
             brace_token: Default::default(),

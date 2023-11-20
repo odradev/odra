@@ -65,10 +65,10 @@ struct ContractRefImplItem {
     functions: Vec<syn::ItemFn>
 }
 
-impl<'a> TryFrom<&'a ModuleIR> for ContractRefImplItem {
+impl TryFrom<&'_ ModuleIR> for ContractRefImplItem {
     type Error = syn::Error;
 
-    fn try_from(value: &'a ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(value: &'_ ModuleIR) -> Result<Self, Self::Error> {
         Ok(Self {
             impl_token: Default::default(),
             ref_ident: value.contract_ref_ident()?,
@@ -101,10 +101,10 @@ pub struct RefItem {
     impl_item: ContractRefImplItem
 }
 
-impl<'a> TryFrom<&'a ModuleIR> for RefItem {
+impl TryFrom<&'_ ModuleIR> for RefItem {
     type Error = syn::Error;
 
-    fn try_from(value: &'a ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(value: &'_ ModuleIR) -> Result<Self, Self::Error> {
         Ok(Self {
             struct_item: value.try_into()?,
             impl_item: value.try_into()?

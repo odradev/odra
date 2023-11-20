@@ -48,10 +48,10 @@ struct HostRefImplItem {
     functions: Vec<syn::ItemFn>
 }
 
-impl<'a> TryFrom<&'a ModuleIR> for HostRefImplItem {
+impl TryFrom<&'_ ModuleIR> for HostRefImplItem {
     type Error = syn::Error;
 
-    fn try_from(value: &'a ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(value: &'_ ModuleIR) -> Result<Self, Self::Error> {
         Ok(Self {
             impl_token: Default::default(),
             ref_ident: value.host_ref_ident()?,
@@ -74,7 +74,14 @@ impl HostRefImplItem {
         let signature = ref_utils::try_function_signature(fun);
         let call_def = ref_utils::call_def(fun);
 
-        Self::function_call(signature, call_def)
+        parse_quote!(
+            pub #signature {
+                self.env.call_contract(
+                    self.address,
+                    #call_def
+                )
+            }
+        )
     }
 
     fn function(fun: &FnIR) -> syn::ItemFn {
@@ -84,17 +91,6 @@ impl HostRefImplItem {
         parse_quote!(
             pub #signature {
                 self.#try_func_name(#(#args),*).unwrap()
-            }
-        )
-    }
-
-    fn function_call(signature: syn::Signature, call_def: syn::Expr) -> syn::ItemFn {
-        parse_quote!(
-            pub #signature {
-                self.env.call_contract(
-                    self.address,
-                    #call_def
-                )
             }
         )
     }
