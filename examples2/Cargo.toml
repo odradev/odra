@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-odra2 = { path = "../odra2" }
+odra = { path = "../odra" }
 odra-macros = { path = "../odra-macros" }
 
 [[bin]]

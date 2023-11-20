@@ -1,31 +1,8 @@
 [package]
-name = "odra"
+name = "odra-core" # Odra Core is new odra.
+version = "0.1.0"
 edition = "2021"
-description = "High-level smart contract framework for Rust."
-keywords = ["wasm", "webassembly", "blockchain"]
-categories = ["wasm"]
-version = { workspace = true }
-authors = { workspace = true }
-license = { workspace = true }
-homepage = { workspace = true }
-repository = { workspace = true }
 
 [dependencies]
-odra-utils = { path = "../utils", version = "0.7.0" }
-odra-types = { path = "../types", version = "0.7.0" }
-odra-proc-macros = { path = "../lang/proc-macros", version = "0.7.0" }
-odra-mock-vm = { path = "../mock-vm/backend", version = "0.7.0", optional = true }
-odra-casper-backend = { path = "../odra-casper/backend", version = "0.7.0", optional = true }
-odra-casper-livenet = { path = "../odra-casper/livenet", version = "0.7.0", optional = true }
-num-traits = { version = "0.2.14", default-features = false }
-
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-odra-casper-test-env = { path = "../odra-casper/test-env", version = "0.7.0", optional = true }
-odra-casper-codegen = { path = "../odra-casper/codegen", version = "0.7.0", optional = true }
-
-[features]
-default = [ "mock-vm" ]
-mock-vm = [ "odra-mock-vm" ]
-casper = [ "odra-casper-backend", "odra-casper-test-env", "odra-casper-codegen"]
-casper-livenet = [ "odra-casper-livenet" ]
-std = []
+odra-types = { path = "../types" }
+casper-event-standard = "0.4.0"

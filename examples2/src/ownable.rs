@@ -1,5 +1,5 @@
 use alloc::rc::Rc;
-use odra2::{ContractEnv, prelude::Module, ModuleWrapper};
+use odra::{ContractEnv, prelude::Module, ModuleWrapper};
 
 pub struct Ownable {
     env: Rc<ContractEnv>,

@@ -23,14 +23,14 @@ impl<'a> RefItem<'a> {
         };
 
         let args = if fun.args_len() == 0 {
-            quote!(odra2::types::RuntimeArgs::new())
+            quote!(odra::types::RuntimeArgs::new())
         } else {
             let args = args
                 .iter()
                 .map(|i| quote!(let _ = named_args.insert(stringify!(#i), #i);))
                 .collect::<TokenStream>();
             quote!({
-                let mut named_args = odra2::types::RuntimeArgs::new();
+                let mut named_args = odra::types::RuntimeArgs::new();
                 #args
                 named_args
             })
@@ -63,8 +63,8 @@ impl<'a> ToTokens for RefItem<'a> {
         let methods = self.methods();
         tokens.extend(quote!(
             pub struct #module_ref {
-                env: Rc<odra2::ContractEnv>,
-                address: odra2::types::Address,
+                env: Rc<odra::ContractEnv>,
+                address: odra::types::Address,
             }
 
             impl #module_ref {
@@ -89,8 +89,8 @@ mod ref_item_tests {
         let module = test_utils::mock_module();
         let expected = quote! {
             pub struct Erc20ContractRef {
-                env: Rc<odra2::ContractEnv>,
-                address: odra2::types::Address,
+                env: Rc<odra::ContractEnv>,
+                address: odra::types::Address,
             }
 
             impl Erc20ContractRef {
@@ -105,7 +105,7 @@ mod ref_item_tests {
                         CallDef::new(
                             String::from("init"),
                             {
-                                let mut named_args = odra2::types::RuntimeArgs::new();
+                                let mut named_args = odra::types::RuntimeArgs::new();
                                 let _ = named_args.insert(stringify!(total_supply), total_supply);
                                 named_args
                             }
@@ -118,7 +118,7 @@ mod ref_item_tests {
                         self.address,
                         CallDef::new(
                             String::from("total_supply"),
-                            odra2::types::RuntimeArgs::new(),
+                            odra::types::RuntimeArgs::new(),
                         ),
                     )
                 }
@@ -138,7 +138,7 @@ mod ref_item_tests {
                     CallDef::new(
                         String::from("init"),
                         {
-                            let mut named_args = odra2::types::RuntimeArgs::new();
+                            let mut named_args = odra::types::RuntimeArgs::new();
                             let _ = named_args.insert(stringify!(total_supply), total_supply);
                             named_args
                         }
