@@ -1,7 +1,6 @@
+use crate::ir::FnIR;
 use proc_macro2::TokenStream;
 use quote::quote;
-
-use super::FnIR;
 
 pub fn call_def(fun: &FnIR) -> syn::Expr {
     let fun_name_str = fun.name_str();

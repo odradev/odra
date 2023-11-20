@@ -1,12 +1,7 @@
-use crate::syn_utils;
+use crate::utils;
 use proc_macro2::{Ident, TokenStream};
 use quote::format_ident;
 use syn::{parse_quote, ItemImpl};
-
-pub mod deployer_item;
-pub mod host_ref_item;
-pub mod ref_item;
-pub(crate) mod ref_utils;
 
 pub struct ModuleIR {
     code: ItemImpl
@@ -28,7 +23,7 @@ impl ModuleIR {
     }
 
     pub fn module_ident(&self) -> Result<Ident, syn::Error> {
-        syn_utils::ident_from_impl(&self.code)
+        utils::syn::ident_from_impl(&self.code)
     }
 
     pub fn host_ref_ident(&self) -> Result<Ident, syn::Error> {
@@ -88,15 +83,15 @@ impl FnIR {
     }
 
     pub fn arg_names(&self) -> Vec<Ident> {
-        syn_utils::function_arg_names(&self.code)
+        utils::syn::function_arg_names(&self.code)
     }
 
     pub fn args_len(&self) -> usize {
-        syn_utils::function_args(&self.code).len()
+        utils::syn::function_args(&self.code).len()
     }
 
     pub fn return_type(&self) -> syn::ReturnType {
-        syn_utils::function_return_type(&self.code)
+        utils::syn::function_return_type(&self.code)
     }
 
     pub fn try_return_type(&self) -> syn::ReturnType {
@@ -107,25 +102,11 @@ impl FnIR {
     }
 
     pub fn typed_args(&self) -> Vec<syn::PatType> {
-        syn_utils::function_args(&self.code)
+        utils::syn::function_args(&self.code)
     }
 
     pub fn is_mut(&self) -> bool {
-        let receiver = syn_utils::receiver_arg(&self.code);
+        let receiver = utils::syn::receiver_arg(&self.code);
         receiver.map(|r| r.mutability.is_some()).unwrap_or_default()
     }
 }
-
-/// Intended to be used in [quote::ToTokens]. Emits error and ends item tokenization.
-macro_rules! checked_unwrap {
-    ($value:expr) => {
-        match $value {
-            Ok(result) => result,
-            Err(e) => {
-                proc_macro_error::emit_error!(e.span(), e.to_string());
-                return;
-            }
-        }
-    };
-}
-pub(crate) use checked_unwrap;
