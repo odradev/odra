@@ -1,6 +1,10 @@
+use crate::utils::extract_event_name;
 use alloc::collections::BTreeMap;
+use alloc::string::{String, ToString};
+use alloc::vec;
 use alloc::vec::Vec;
-use odra_types::{Address, Bytes, OdraError};
+use casper_event_standard::EventInstance;
+use odra_types::{Address, Bytes, OdraError, ToBytes};
 
 #[derive(Debug, Clone)]
 pub struct CallResult {
@@ -12,11 +16,7 @@ pub struct CallResult {
 }
 
 impl CallResult {
-    pub fn get_events(&self, address: &Address) -> Vec<Bytes> {
-        self.events.get(address).cloned().unwrap_or_default()
-    }
-
-    pub fn get_result(&self) -> Bytes {
+    pub fn result(&self) -> Bytes {
         match &self.result {
             Ok(result) => result.clone(),
             Err(error) => {
@@ -25,7 +25,7 @@ impl CallResult {
         }
     }
 
-    pub fn get_error(&self) -> OdraError {
+    pub fn error(&self) -> OdraError {
         match &self.result {
             Ok(_) => {
                 panic!("Last call result is not an error");
@@ -34,15 +34,89 @@ impl CallResult {
         }
     }
 
-    pub fn get_caller(&self) -> Address {
+    pub fn caller(&self) -> Address {
         self.caller
     }
 
-    pub fn get_gas_used(&self) -> u64 {
+    pub fn gas_used(&self) -> u64 {
         self.gas_used
     }
 
-    pub fn get_contract_address(&self) -> Address {
+    pub fn contract_address(&self) -> Address {
         self.contract_address
+    }
+
+    pub fn event_names(&self, contract_address: &Address) -> Vec<String> {
+        self.events
+            .get(contract_address)
+            .unwrap_or(&vec![])
+            .iter()
+            .map(|event_bytes| extract_event_name(event_bytes).unwrap())
+            .collect()
+    }
+
+    pub fn contract_events(&self, contract_address: &Address) -> Vec<Bytes> {
+        self.events.get(contract_address).unwrap_or(&vec![]).clone()
+    }
+
+    pub fn emitted(&self, contract_address: &Address, event_name: &str) -> bool {
+        self.event_names(contract_address)
+            .contains(&event_name.to_string())
+    }
+
+    pub fn emitted_event<T: ToBytes + EventInstance>(
+        &self,
+        contract_address: &Address,
+        event: &T
+    ) -> bool {
+        self.contract_events(contract_address)
+            .contains(&Bytes::from(event.to_bytes().unwrap()))
+    }
+
+    pub fn contract_last_call(self, contract_address: Address) -> ContractCallResult {
+        ContractCallResult {
+            call_result: self.clone(),
+            contract_address
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ContractCallResult {
+    call_result: CallResult,
+    contract_address: Address
+}
+
+impl ContractCallResult {
+    pub fn new(call_result: CallResult, contract_address: Address) -> Self {
+        Self {
+            call_result,
+            contract_address
+        }
+    }
+
+    pub fn contract_address(&self) -> Address {
+        self.contract_address
+    }
+
+    pub fn callee_contract_address(&self) -> Address {
+        self.call_result.contract_address()
+    }
+
+    pub fn event_names(&self) -> Vec<String> {
+        self.call_result.event_names(&self.contract_address)
+    }
+
+    pub fn events(&self) -> Vec<Bytes> {
+        self.call_result.contract_events(&self.contract_address)
+    }
+
+    pub fn emitted(&self, event_name: &str) -> bool {
+        self.call_result.emitted(&self.contract_address, event_name)
+    }
+
+    pub fn emitted_event<T: ToBytes + EventInstance>(&self, event: &T) -> bool {
+        self.call_result
+            .emitted_event(&self.contract_address, event)
     }
 }
