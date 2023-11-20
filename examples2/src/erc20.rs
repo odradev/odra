@@ -45,6 +45,7 @@ pub struct Erc20 {
     balances: Mapping<Address, U256>
 }
 
+#[odra_macros::module]
 impl Erc20 {
     pub fn init(&mut self, total_supply: Option<U256>) {
         if let Some(total_supply) = total_supply {
@@ -125,7 +126,7 @@ impl Erc20 {
     pub fn cross_transfer(&mut self, other: Address, to: Address, value: U256) {
         let caller = self.env().caller();
 
-        let other_erc20 = Erc20ContractRef {
+        let mut other_erc20 = Erc20ContractRef {
             address: other,
             env: self.env()
         };
@@ -421,33 +422,6 @@ mod __erc20_wasm_parts {
     #[no_mangle]
     fn cross_transfer() {
         execute_cross_transfer();
-    }
-}
-
-pub struct Erc20ContractRef {
-    pub address: Address,
-    pub env: Rc<ContractEnv>
-}
-
-impl Erc20ContractRef {
-    pub fn total_supply(&self) -> U256 {
-        self.env.call_contract(
-            self.address,
-            CallDef::new(String::from("total_supply"), RuntimeArgs::new())
-        )
-    }
-
-    pub fn transfer(&self, to: Address, value: U256) {
-        self.env.call_contract(
-            self.address,
-            CallDef::new(
-                String::from("transfer"),
-                runtime_args! {
-                    "to" => to,
-                    "value" => value
-                }
-            )
-        )
     }
 }
 
