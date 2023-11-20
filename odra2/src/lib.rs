@@ -7,8 +7,13 @@ pub use odra_core::casper_event_standard::Event;
 pub use odra_core::event;
 pub use odra_core::EntryPointsCaller;
 pub use odra_core::{
-    call_result::CallResult, mapping::Mapping, module, module::ModuleWrapper, prelude,
-    variable::Variable, CallDef, ContractEnv, HostEnv
+    call_result::{CallResult, ContractCallResult},
+    mapping::Mapping,
+    module,
+    module::ModuleWrapper,
+    prelude,
+    variable::Variable,
+    CallDef, ContractEnv, HostEnv
 };
 pub use odra_types as types;
 
