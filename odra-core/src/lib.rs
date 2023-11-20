@@ -16,6 +16,7 @@ pub mod mapping;
 pub mod module;
 mod odra_result;
 pub mod prelude;
+mod utils;
 pub mod variable;
 
 pub use casper_event_standard;

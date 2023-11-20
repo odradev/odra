@@ -1,4 +1,4 @@
-use crate::HostEnv;
+use crate::utils::extract_event_name;
 use alloc::collections::BTreeMap;
 use alloc::string::{String, ToString};
 use alloc::vec;
@@ -46,36 +46,77 @@ impl CallResult {
         self.contract_address
     }
 
-    pub fn event_names(&self) -> Vec<String> {
-        let mut event_names = vec![];
-        self.events.values().for_each(|val| {
-            val.iter().for_each(|bytes| {
-                event_names.push(HostEnv::extract_event_name(bytes).unwrap());
-            })
-        });
-
-        event_names
-    }
-
-    pub fn events(&self) -> Vec<Bytes> {
-        let mut events = vec![];
-        self.events.values().for_each(|val| {
-            events.append(&mut val.clone());
-        });
-
-        events
+    pub fn event_names(&self, contract_address: &Address) -> Vec<String> {
+        self.events
+            .get(contract_address)
+            .unwrap_or(&vec![])
+            .iter()
+            .map(|event_bytes| extract_event_name(event_bytes).unwrap())
+            .collect()
     }
 
     pub fn contract_events(&self, contract_address: &Address) -> Vec<Bytes> {
         self.events.get(contract_address).unwrap_or(&vec![]).clone()
     }
 
+    pub fn emitted(&self, contract_address: &Address, event_name: &str) -> bool {
+        self.event_names(contract_address)
+            .contains(&event_name.to_string())
+    }
+
+    pub fn emitted_event<T: ToBytes + EventInstance>(
+        &self,
+        contract_address: &Address,
+        event: &T
+    ) -> bool {
+        self.contract_events(contract_address)
+            .contains(&Bytes::from(event.to_bytes().unwrap()))
+    }
+
+    pub fn contract_last_call(self, contract_address: Address) -> ContractCallResult {
+        ContractCallResult {
+            call_result: self.clone(),
+            contract_address
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ContractCallResult {
+    call_result: CallResult,
+    contract_address: Address
+}
+
+impl ContractCallResult {
+    pub fn new(call_result: CallResult, contract_address: Address) -> Self {
+        Self {
+            call_result,
+            contract_address
+        }
+    }
+
+    pub fn contract_address(&self) -> Address {
+        self.contract_address
+    }
+
+    pub fn callee_contract_address(&self) -> Address {
+        self.call_result.contract_address()
+    }
+
+    pub fn event_names(&self) -> Vec<String> {
+        self.call_result.event_names(&self.contract_address)
+    }
+
+    pub fn events(&self) -> Vec<Bytes> {
+        self.call_result.contract_events(&self.contract_address)
+    }
+
     pub fn emitted(&self, event_name: &str) -> bool {
-        self.event_names().contains(&event_name.to_string())
+        self.call_result.emitted(&self.contract_address, event_name)
     }
 
     pub fn emitted_event<T: ToBytes + EventInstance>(&self, event: &T) -> bool {
-        self.events()
-            .contains(&Bytes::from(event.to_bytes().unwrap()))
+        self.call_result
+            .emitted_event(&self.contract_address, event)
     }
 }

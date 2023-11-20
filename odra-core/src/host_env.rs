@@ -3,6 +3,7 @@ use crate::entry_point_callback::EntryPointsCaller;
 use crate::event::EventError;
 use crate::host_context::HostContext;
 use crate::prelude::*;
+use crate::utils::extract_event_name;
 use crate::{CallDef, ContractEnv};
 use alloc::collections::BTreeMap;
 use casper_event_standard::EventInstance;
@@ -145,42 +146,35 @@ impl HostEnv {
         backend.get_event(contract_address, index)
     }
 
-    pub fn contract_event_names(&self, contract_address: &Address) -> Vec<String> {
+    pub fn event_names(&self, contract_address: &Address) -> Vec<String> {
         let backend = self.backend.borrow();
         let events_count = backend.get_events_count(contract_address);
-        let mut event_names = vec![];
-        for event_id in 0..events_count {
-            let bytes = backend
-                .get_event(contract_address, event_id as i32)
-                .unwrap();
-            let event_name = Self::extract_event_name(&bytes).unwrap();
-            event_names.push(event_name);
-        }
-        event_names
+
+        (0..events_count)
+            .map(|event_id| {
+                backend
+                    .get_event(contract_address, event_id as i32)
+                    .and_then(|bytes| extract_event_name(&bytes))
+                    .unwrap_or_else(|e| panic!("Couldn't extract event name: {:?}", e))
+            })
+            .collect()
     }
 
-    pub fn events(&self) -> Vec<Bytes> {
-        let mut events = vec![];
-        self.events_count
-            .borrow()
-            .iter()
-            .for_each(|(contract_address, count)| {
-                for i in 0..*count {
-                    events.push(self.get_event_bytes(contract_address, i as i32).unwrap());
-                }
-            });
-        events
-    }
-
-    pub fn event_names(&self) -> Vec<String> {
-        let mut event_names = vec![];
-        self.events_count
-            .borrow()
-            .iter()
-            .for_each(|(contract_address, _)| {
-                event_names.append(&mut self.contract_event_names(contract_address));
-            });
-        event_names
+    pub fn events(&self, contract_address: &Address) -> Vec<Bytes> {
+        let backend = self.backend.borrow();
+        let events_count = backend.get_events_count(contract_address);
+        (0..events_count)
+            .map(|event_id| {
+                backend
+                    .get_event(contract_address, event_id as i32)
+                    .unwrap_or_else(|e| {
+                        panic!(
+                            "Couldn't get event at address {:?} with id {}: {:?}",
+                            &contract_address, event_id, e
+                        )
+                    })
+            })
+            .collect()
     }
 
     pub fn events_count(&self, contract_address: &Address) -> u32 {
@@ -188,28 +182,51 @@ impl HostEnv {
         backend.get_events_count(contract_address)
     }
 
-    pub fn emitted(&self, event_name: &str) -> bool {
-        self.event_names().contains(&event_name.to_string())
+    pub fn emitted_event<T: ToBytes + EventInstance>(
+        &self,
+        contract_address: &Address,
+        event: &T
+    ) -> bool {
+        let events_count = self.events_count(contract_address);
+        let event_bytes = Bytes::from(
+            event
+                .to_bytes()
+                .unwrap_or_else(|_| panic!("Couldn't serialize event"))
+        );
+        (0..events_count)
+            .map(|event_id| {
+                self.get_event_bytes(contract_address, event_id as i32)
+                    .unwrap_or_else(|e| {
+                        panic!(
+                            "Couldn't get event at address {:?} with id {}: {:?}",
+                            &contract_address, event_id, e
+                        )
+                    })
+            })
+            .any(|bytes| bytes == event_bytes)
     }
 
-    pub fn emitted_event<T: ToBytes + EventInstance>(&self, event: &T) -> bool {
-        self.events()
-            .contains(&Bytes::from(event.to_bytes().unwrap()))
+    pub fn emitted(&self, contract_address: &Address, event_name: &str) -> bool {
+        let events_count = self.events_count(contract_address);
+        (0..events_count)
+            .map(|event_id| {
+                self.get_event_bytes(contract_address, event_id as i32)
+                    .unwrap_or_else(|e| {
+                        panic!(
+                            "Couldn't get event at address {:?} with id {}: {:?}",
+                            &contract_address, event_id, e
+                        )
+                    })
+            })
+            .any(|bytes| {
+                extract_event_name(&bytes)
+                    .unwrap_or_else(|e| panic!("Couldn't extract event name: {:?}", e))
+                    .as_str()
+                    == event_name
+            })
     }
 
     pub fn last_call(&self) -> CallResult {
         self.last_call_result.borrow().clone().unwrap().clone()
-    }
-}
-
-impl HostEnv {
-    /// Returns the name of the passed event
-    pub fn extract_event_name(bytes: &[u8]) -> Result<String, EventError> {
-        let name: String = FromBytes::from_bytes(bytes)
-            .map_err(|_| EventError::CouldntExtractName)?
-            .0;
-        name.strip_prefix("event_")
-            .map(|s| s.to_string())
-            .ok_or(EventError::UnexpectedType(name))
     }
 }

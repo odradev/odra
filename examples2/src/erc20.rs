@@ -463,7 +463,7 @@ mod __erc20_test_parts {
     use odra2::types::{
         runtime_args, Address, Bytes, FromBytes, OdraError, RuntimeArgs, ToBytes, U256, U512
     };
-    use odra2::{CallDef, CallResult, ContractEnv, EntryPointsCaller, HostEnv};
+    use odra2::{CallDef, CallResult, ContractCallResult, ContractEnv, EntryPointsCaller, HostEnv};
 
     pub struct Erc20HostRef {
         pub address: Address,
@@ -624,26 +624,8 @@ mod __erc20_test_parts {
             self.try_cross_transfer(other, to, value).unwrap()
         }
 
-        pub fn get_event<T: FromBytes + EventInstance>(&self, index: i32) -> Result<T, EventError> {
-            self.env.get_event(&self.address, index)
-        }
-
-        pub fn event_names(&self) -> Vec<String> {
-            self.env.contract_event_names(&self.address)
-        }
-
-        pub fn emitted(&self, event_name: &str) -> bool {
-            self.event_names().contains(&String::from(event_name))
-        }
-
-        pub fn last_call(&self) -> CallResult {
-            let mut last_call = self.env.last_call();
-            last_call.events = last_call
-                .events
-                .into_iter()
-                .filter(|event| event.0 == self.address)
-                .collect();
-            last_call
+        pub fn last_call(&self) -> ContractCallResult {
+            self.env.last_call().contract_last_call(self.address)
         }
     }
 
@@ -890,7 +872,7 @@ mod tests {
         erc20.transfer(charlie, 20.into());
 
         // Test events
-        let event: Transfer = erc20.get_event(0).unwrap();
+        let event: Transfer = env.get_event(&erc20.address, 0).unwrap();
         assert_eq!(
             event,
             Transfer {
@@ -900,7 +882,7 @@ mod tests {
             }
         );
 
-        let event: Approval = erc20.get_event(1).unwrap();
+        let event: Approval = env.get_event(&erc20.address, 1).unwrap();
         assert_eq!(
             event,
             Approval {
@@ -910,7 +892,7 @@ mod tests {
             }
         );
 
-        let event: Transfer = erc20.get_event(2).unwrap();
+        let event: Transfer = env.get_event(&erc20.address, 2).unwrap();
         assert_eq!(
             event,
             Transfer {
@@ -921,7 +903,7 @@ mod tests {
         );
 
         // Test negative indices
-        let event: Transfer = erc20.get_event(-1).unwrap();
+        let event: Transfer = env.get_event(&erc20.address, -1).unwrap();
         assert_eq!(
             event,
             Transfer {
@@ -963,46 +945,36 @@ mod tests {
         };
 
         // Then we can check it
-        // contract during whole lifetime
-        assert!(erc20.event_names().contains(&"Transfer".to_string()));
-        // or
-        assert!(erc20.emitted("Transfer"));
+        // If contract emitted a specific event during whole lifetime
+        assert!(env.emitted(&erc20.address, "Transfer"));
+        // or all of them
+        assert_eq!(
+            env.event_names(&erc20.address),
+            vec!["Approval".to_string(), "Transfer".to_string()]
+        );
 
-        // contract's last call
-        assert!(erc20
-            .last_call()
-            .event_names()
-            .contains(&"Transfer".to_string()));
+        // We can limit our checks to a last call
+        assert_eq!(
+            erc20.last_call().event_names(),
+            vec!["Transfer".to_string()]
+        );
         // or
         erc20.last_call().emitted("Transfer");
 
-        // whole env
-        assert!(env.event_names().contains(&"Transfer".to_string()));
-        // or
-        assert!(env.emitted("Transfer"));
-
-        // whole env's last call
-        assert!(env
-            .last_call()
-            .event_names()
-            .contains(&"Transfer".to_string()));
-        // or
-        assert!(env.last_call().emitted("Transfer"));
-
-        // To check whole event:
+        // We can check the whole event, not only names:
         // TODO: change it to hopefully_emitted.into()
-        assert!(env
-            .last_call()
-            .events()
-            .contains(&Bytes::from(emitted_in_second_call.to_bytes().unwrap())));
+        assert_eq!(
+            erc20.last_call().events(),
+            vec![Bytes::from(emitted_in_second_call.to_bytes().unwrap())]
+        );
         // or
-        assert!(env.last_call().emitted_event(&emitted_in_second_call));
+        assert!(erc20.last_call().emitted_event(&emitted_in_second_call));
         // or for whole lifetime
-        assert!(env.emitted_event(&emitted_in_second_call));
+        assert!(env.emitted_event(&erc20.address, &emitted_in_second_call));
 
         // To check the order of events, use the power of vec:
         assert_eq!(
-            env.events()[0..2],
+            env.events(&erc20.address)[0..2],
             [
                 Bytes::from(first_emitted.to_bytes().unwrap()),
                 Bytes::from(emitted_in_second_call.to_bytes().unwrap())
@@ -1011,14 +983,13 @@ mod tests {
         );
 
         assert!(env
-            .event_names()
+            .event_names(&erc20.address)
             .ends_with(vec!["Approval".to_string(), "Transfer".to_string()].as_slice()));
 
         // Counter examples
         assert!(!erc20.last_call().emitted("Approval"));
-        assert!(!env.last_call().emitted("Approval"));
-        assert!(!env.emitted("CrossTransfer"));
-        assert!(!env.emitted_event(&not_emitted));
+        assert!(!env.emitted(&erc20.address, "CrossTransfer"));
+        assert!(!env.emitted_event(&erc20.address, &not_emitted));
     }
 
     #[test]
