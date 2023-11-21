@@ -82,8 +82,7 @@ fn try_function_signature(fun: &FnIR) -> syn::Signature {
 }
 
 fn args_token_stream(fun: &FnIR) -> TokenStream {
-    fun
-        .arg_names()
+    fun.arg_names()
         .iter()
         .map(|i| quote!(let _ = named_args.insert(stringify!(#i), #i);))
         .collect::<TokenStream>()

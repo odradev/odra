@@ -29,7 +29,7 @@ impl HostContext for OdraVmHost {
     }
 
     fn advance_block_time(&self, time_diff: u64) {
-        self.vm.borrow().advance_block_time_by(time_diff.into())
+        self.vm.borrow().advance_block_time_by(time_diff)
     }
 
     fn get_event(&self, contract_address: &Address, index: i32) -> Result<Bytes, EventError> {

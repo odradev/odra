@@ -1,5 +1,3 @@
-#[allow(unused_imports)]
-use examples2;
 use odra::types::contract_def::ContractBlueprint2;
 
 extern "Rust" {

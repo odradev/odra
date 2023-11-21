@@ -42,7 +42,7 @@ impl ContractContext for OdraVmContractEnv {
     }
 
     fn transfer_tokens(&self, to: &Address, amount: &U512) {
-        self.vm.borrow().transfer_tokens(to, &amount)
+        self.vm.borrow().transfer_tokens(to, amount)
     }
 
     fn revert(&self, error: OdraError) -> ! {

@@ -65,13 +65,12 @@ impl TryFrom<&'_ ModuleIR> for HostRefImplItem {
                 .functions()
                 .iter()
                 .filter(|f| f.name_str() != CONSTRUCTOR_NAME)
-                .map(|f| {
+                .flat_map(|f| {
                     vec![
                         ref_utils::host_try_function_item(f),
                         ref_utils::host_function_item(f),
                     ]
                 })
-                .flatten()
                 .collect()
         })
     }

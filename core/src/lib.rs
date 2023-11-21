@@ -28,3 +28,4 @@ pub use host_env::HostEnv;
 pub use module::ModuleCaller;
 pub use odra_result::OdraResult;
 pub use odra_types::call_def::CallDef;
+pub use utils::serialize;
