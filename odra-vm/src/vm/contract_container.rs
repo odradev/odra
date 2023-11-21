@@ -28,6 +28,7 @@ impl ContractContainer {
 
     pub fn call(&self, call_def: CallDef) -> Result<Bytes, OdraError> {
         Ok(self.entry_points_caller.call(call_def))
+        // TODO: Restore validate_args
         //     if self.constructors.get(&entrypoint).is_some() {
         //         return Err(OdraError::VmError(VmError::InvalidContext));
         //     }

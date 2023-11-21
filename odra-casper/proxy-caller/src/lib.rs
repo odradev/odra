@@ -26,7 +26,7 @@ use odra_casper_shared::consts::{
 };
 
 #[cfg(target_arch = "wasm32")]
-#[allow(unused_imports)]
+#[allow(unused_imports, clippy::single_component_path_imports)]
 use ink_allocator;
 
 #[cfg(target_arch = "wasm32")]

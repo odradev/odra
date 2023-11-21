@@ -122,8 +122,8 @@ impl Storage {
 
 #[cfg(test)]
 mod test {
-
-    use odra_types::Address;
+    use odra_core::serialize;
+    use odra_types::{Address, Bytes};
 
     use super::Storage;
 
@@ -288,15 +288,15 @@ mod test {
         let mut storage = Storage::default();
         let (address, key, initial_value) = setup();
         let next_value = 1_000u32;
-        storage.set_value(&address, &key, initial_value).unwrap();
+        storage.set_value(&address, &key, serialize(&initial_value)).unwrap();
         storage.take_snapshot();
-        storage.set_value(&address, &key, next_value).unwrap();
+        storage.set_value(&address, &key, serialize(&next_value)).unwrap();
 
         // when the snapshot is dropped
         storage.drop_snapshot();
 
         // then storage state does not change
-        assert_eq!(storage.get_value(&address, &key).unwrap(), Some(next_value),);
+        assert_eq!(storage.get_value(&address, &key).unwrap(), Some(serialize(&next_value)),);
         // the snapshot is wiped out
         assert_eq!(storage.state_snapshot, None);
     }

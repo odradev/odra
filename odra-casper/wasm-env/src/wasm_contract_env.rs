@@ -53,7 +53,7 @@ impl ContractContext for WasmContractEnv {
 }
 
 impl WasmContractEnv {
-    pub fn new() -> ContractEnv {
+    pub fn new_env() -> ContractEnv {
         ContractEnv::new(0, Rc::new(RefCell::new(WasmContractEnv)))
     }
 }

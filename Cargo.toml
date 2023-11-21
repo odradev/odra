@@ -9,7 +9,8 @@ members = [
     "odra-casper/wasm-env",
     "odra-casper/shared",
     "odra-casper/test-vm",
-    "odra-casper/livenet"
+#    needs a refactor
+#    "odra-casper/livenet"
 ]
 exclude = [ "examples", "examples2", "modules", "odra-casper/proxy-caller" ]
 resolver = "2"

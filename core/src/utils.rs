@@ -1,6 +1,11 @@
+use casper_event_standard::casper_types::bytesrepr::ToBytes;
 use crate::event::EventError;
 use crate::prelude::*;
-use odra_types::FromBytes;
+use odra_types::{Bytes, FromBytes};
+
+pub fn serialize<T: ToBytes>(value: &T) -> Bytes {
+    Bytes::from(value.to_bytes().expect("Coulnd't serialize"))
+}
 
 /// Returns the name of the passed event
 pub(crate) fn extract_event_name(bytes: &[u8]) -> Result<String, EventError> {

@@ -11,6 +11,7 @@ pub mod contract_def;
 mod error;
 mod item;
 pub mod uints;
+mod serialize;
 
 use alloc::vec::Vec;
 
