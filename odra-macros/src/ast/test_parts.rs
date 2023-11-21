@@ -1,9 +1,9 @@
-use syn::parse_quote;
 use crate::ir::ModuleIR;
+use syn::parse_quote;
 
 use super::{
     host_ref_item::HostRefItem,
-    parts_utils::{UsePreludeItem, UseSuperItem, self}
+    parts_utils::{UsePreludeItem, UseSuperItem}
 };
 
 #[derive(syn_derive::ToTokens)]
@@ -17,7 +17,7 @@ impl TryFrom<&'_ ModuleIR> for PartsModuleItem {
     type Error = syn::Error;
 
     fn try_from(value: &'_ ModuleIR) -> Result<Self, Self::Error> {
-        let ident = parts_utils::test_parts_mod_ident(value)?;
+        let ident = value.test_parts_mod_ident()?;
         let attr = parse_quote!(#[cfg(not(target_arch = "wasm32"))]);
         Ok(Self {
             attr,

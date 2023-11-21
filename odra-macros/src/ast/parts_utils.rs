@@ -1,6 +1,4 @@
-use quote::{quote, ToTokens, format_ident};
-
-use crate::{ir::ModuleIR, utils};
+use quote::{quote, ToTokens};
 
 pub struct UsePreludeItem;
 
@@ -20,11 +18,4 @@ impl ToTokens for UseSuperItem {
             use super::*;
         ));
     }
-}
-
-pub fn test_parts_mod_ident(module: &ModuleIR) -> Result<syn::Ident, syn::Error> {
-    module
-        .module_ident()
-        .map(utils::string::to_lower_case)
-        .map(|ident| format_ident!("__{}_test_parts", ident))
 }

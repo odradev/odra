@@ -57,3 +57,7 @@ pub fn type_address() -> syn::Type {
 pub fn type_contract_env() -> syn::Type {
     parse_quote!(odra2::ContractEnv)
 }
+
+pub fn visibility_pub() -> syn::Visibility {
+    parse_quote!(pub)
+}

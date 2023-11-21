@@ -2,13 +2,49 @@ use crate::ir::FnIR;
 use proc_macro2::TokenStream;
 use quote::quote;
 
-pub fn call_def(fun: &FnIR) -> syn::Expr {
+pub fn host_try_function_item(fun: &FnIR) -> syn::ItemFn {
+    let signature = try_function_signature(fun);
+    let call_def_expr = call_def(fun);
+
+    env_call(signature, call_def_expr)
+}
+
+pub fn host_function_item(fun: &FnIR) -> syn::ItemFn {
+    let signature = function_signature(fun);
+    let try_func_name = fun.try_name();
+    let args = fun.arg_names();
+    syn::parse_quote!(
+        pub #signature {
+            self.#try_func_name(#(#args),*).unwrap()
+        }
+    )
+}
+
+pub fn contract_function_item(fun: &FnIR) -> syn::ItemFn {
+    let signature = function_signature(fun);
+    let call_def_expr = call_def(fun);
+
+    env_call(signature, call_def_expr)
+}
+
+fn env_call(sig: syn::Signature, call_def_expr: syn::Expr) -> syn::ItemFn {
+    syn::parse_quote!(
+        pub #sig {
+            self.env.call_contract(
+                self.address,
+                #call_def_expr
+            )
+        }
+    )
+}
+
+fn call_def(fun: &FnIR) -> syn::Expr {
     let fun_name_str = fun.name_str();
     let args = args_token_stream(fun);
     syn::parse_quote!(odra2::CallDef::new(String::from(#fun_name_str), #args))
 }
 
-pub fn function_signature(fun: &FnIR) -> syn::Signature {
+fn function_signature(fun: &FnIR) -> syn::Signature {
     let fun_name = fun.name();
     let args = fun.typed_args();
     let return_type = fun.return_type();
@@ -17,7 +53,7 @@ pub fn function_signature(fun: &FnIR) -> syn::Signature {
     syn::parse_quote!(fn #fun_name(& #mutability self #(, #args)*) #return_type)
 }
 
-pub fn try_function_signature(fun: &FnIR) -> syn::Signature {
+fn try_function_signature(fun: &FnIR) -> syn::Signature {
     let fun_name = fun.try_name();
     let args = fun.typed_args();
     let return_type = fun.try_return_type();

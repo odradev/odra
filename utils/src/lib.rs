@@ -21,8 +21,9 @@ use convert_case::{Boundary, Case, Casing};
 /// assert_eq!(&result, "contract_name");
 /// ```
 #[cfg(feature = "std")]
-pub fn camel_to_snake(text: &str) -> String {
-    text.from_case(Case::UpperCamel)
+pub fn camel_to_snake<T: ToString>(text: T) -> String {
+    text.to_string()
+        .from_case(Case::UpperCamel)
         .without_boundaries(&[Boundary::UpperDigit, Boundary::LowerDigit])
         .to_case(Case::Snake)
 }

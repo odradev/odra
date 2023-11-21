@@ -49,6 +49,12 @@ impl ModuleIR {
         ))
     }
 
+    pub fn test_parts_mod_ident(&self) -> Result<syn::Ident, syn::Error> {
+        self.module_ident()
+            .map(odra_utils::camel_to_snake)
+            .map(|ident| format_ident!("__{}_test_parts", ident))
+    }
+
     pub fn functions(&self) -> Vec<FnIR> {
         self.code
             .items

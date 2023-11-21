@@ -1,9 +1,5 @@
-use crate::{
-    ast::ref_utils,
-    ir::{FnIR, ModuleIR},
-    utils
-};
-use quote::{ToTokens, TokenStreamExt};
+use crate::{ast::ref_utils, ir::ModuleIR, utils};
+use quote::{quote, ToTokens, TokenStreamExt};
 use syn::parse_quote;
 
 #[derive(syn_derive::ToTokens)]
@@ -26,7 +22,7 @@ impl TryFrom<&'_ ModuleIR> for ContractRefStructItem {
         });
 
         Ok(Self {
-            vis: parse_quote!(pub),
+            vis: utils::syn::visibility_pub(),
             struct_token: Default::default(),
             ident: value.contract_ref_ident()?,
             fields: named_fields.into()
@@ -36,19 +32,13 @@ impl TryFrom<&'_ ModuleIR> for ContractRefStructItem {
 
 struct AddressFnItem;
 
-impl AddressFnItem {
-    fn item() -> syn::ItemFn {
-        parse_quote!(
+impl ToTokens for AddressFnItem {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        tokens.extend(quote!(
             pub fn address(&self) -> &odra2::types::Address {
                 &self.address
             }
-        )
-    }
-}
-
-impl ToTokens for AddressFnItem {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        Self::item().to_tokens(tokens)
+        ))
     }
 }
 
@@ -74,24 +64,12 @@ impl TryFrom<&'_ ModuleIR> for ContractRefImplItem {
             ref_ident: value.contract_ref_ident()?,
             brace_token: Default::default(),
             address_fn: AddressFnItem,
-            functions: value.functions().iter().map(Self::function).collect()
+            functions: value
+                .functions()
+                .iter()
+                .map(ref_utils::contract_function_item)
+                .collect()
         })
-    }
-}
-
-impl ContractRefImplItem {
-    fn function(fun: &FnIR) -> syn::ItemFn {
-        let signature = ref_utils::function_signature(fun);
-        let call_def = ref_utils::call_def(fun);
-
-        parse_quote!(
-            pub #signature {
-                self.env.call_contract(
-                    self.address,
-                    #call_def
-                )
-            }
-        )
     }
 }
 

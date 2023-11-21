@@ -1,4 +1,4 @@
-use crate::ir::{FnIR, ModuleIR};
+use crate::{ir::ModuleIR, utils};
 use proc_macro2::Ident;
 use quote::{quote, ToTokens, TokenStreamExt};
 use syn::parse_quote;
@@ -25,7 +25,7 @@ impl TryFrom<&'_ ModuleIR> for HostRefStructItem {
             pub attached_value: odra2::types::U512
         });
         Ok(Self {
-            vis: parse_quote!(pub),
+            vis: utils::syn::visibility_pub(),
             struct_token: Default::default(),
             ident: value.host_ref_ident()?,
             fields: named_fields.into()
@@ -62,37 +62,15 @@ impl TryFrom<&'_ ModuleIR> for HostRefImplItem {
                 .functions()
                 .iter()
                 .filter(|f| f.name_str() != CONSTRUCTOR_NAME)
-                .map(|f| vec![Self::try_function(f), Self::function(f)])
+                .map(|f| {
+                    vec![
+                        ref_utils::host_try_function_item(f),
+                        ref_utils::host_function_item(f),
+                    ]
+                })
                 .flatten()
                 .collect()
         })
-    }
-}
-
-impl HostRefImplItem {
-    fn try_function(fun: &FnIR) -> syn::ItemFn {
-        let signature = ref_utils::try_function_signature(fun);
-        let call_def = ref_utils::call_def(fun);
-
-        parse_quote!(
-            pub #signature {
-                self.env.call_contract(
-                    self.address,
-                    #call_def
-                )
-            }
-        )
-    }
-
-    fn function(fun: &FnIR) -> syn::ItemFn {
-        let signature = ref_utils::function_signature(fun);
-        let try_func_name = fun.try_name();
-        let args = fun.arg_names();
-        parse_quote!(
-            pub #signature {
-                self.#try_func_name(#(#args),*).unwrap()
-            }
-        )
     }
 }
 
