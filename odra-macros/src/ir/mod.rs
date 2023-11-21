@@ -1,9 +1,7 @@
-use crate::syn_utils;
+use crate::utils;
 use proc_macro2::{Ident, TokenStream};
-use syn::ItemImpl;
-
-pub mod deployer_item;
-pub mod ref_item;
+use quote::format_ident;
+use syn::{parse_quote, ItemImpl};
 
 pub struct ModuleIR {
     code: ItemImpl
@@ -25,7 +23,7 @@ impl ModuleIR {
     }
 
     pub fn module_ident(&self) -> Result<Ident, syn::Error> {
-        syn_utils::ident_from_impl(&self.code)
+        utils::syn::ident_from_impl(&self.code)
     }
 
     pub fn host_ref_ident(&self) -> Result<Ident, syn::Error> {
@@ -51,17 +49,21 @@ impl ModuleIR {
         ))
     }
 
-    pub fn methods(&self) -> Vec<FnIR> {
-        let methods = self
-            .code
+    pub fn test_parts_mod_ident(&self) -> Result<syn::Ident, syn::Error> {
+        self.module_ident()
+            .map(odra_utils::camel_to_snake)
+            .map(|ident| format_ident!("__{}_test_parts", ident))
+    }
+
+    pub fn functions(&self) -> Vec<FnIR> {
+        self.code
             .items
             .iter()
             .filter_map(|item| match item {
-                syn::ImplItem::Fn(method) => Some(FnIR::new(method.clone())),
+                syn::ImplItem::Fn(func) => Some(FnIR::new(func.clone())),
                 _ => None
             })
-            .collect::<Vec<_>>();
-        methods
+            .collect::<Vec<_>>()
     }
 }
 
@@ -78,42 +80,39 @@ impl FnIR {
         self.code.sig.ident.clone()
     }
 
+    pub fn try_name(&self) -> Ident {
+        format_ident!("try_{}", self.name())
+    }
+
     pub fn name_str(&self) -> String {
         self.name().to_string()
     }
 
     pub fn arg_names(&self) -> Vec<Ident> {
-        syn_utils::function_arg_names(&self.code)
+        utils::syn::function_arg_names(&self.code)
     }
 
     pub fn args_len(&self) -> usize {
-        syn_utils::function_args(&self.code).len()
+        utils::syn::function_args(&self.code).len()
     }
 
     pub fn return_type(&self) -> syn::ReturnType {
-        syn_utils::function_return_type(&self.code)
+        utils::syn::function_return_type(&self.code)
+    }
+
+    pub fn try_return_type(&self) -> syn::ReturnType {
+        match self.return_type() {
+            syn::ReturnType::Default => parse_quote!(-> Result<(), OdraError>),
+            syn::ReturnType::Type(_, box ty) => parse_quote!(-> Result<#ty, OdraError>)
+        }
     }
 
     pub fn typed_args(&self) -> Vec<syn::PatType> {
-        syn_utils::function_args(&self.code)
+        utils::syn::function_args(&self.code)
     }
 
     pub fn is_mut(&self) -> bool {
-        let receiver = syn_utils::receiver_arg(&self.code);
+        let receiver = utils::syn::receiver_arg(&self.code);
         receiver.map(|r| r.mutability.is_some()).unwrap_or_default()
     }
 }
-
-/// Intended to be used in [quote::ToTokens]. Emits error and ends item tokenization.
-macro_rules! checked_unwrap {
-    ($value:expr) => {
-        match $value {
-            Ok(result) => result,
-            Err(e) => {
-                proc_macro_error::emit_error!(e.span(), e.to_string());
-                return;
-            }
-        }
-    };
-}
-pub(crate) use checked_unwrap;
