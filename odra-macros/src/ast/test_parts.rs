@@ -68,16 +68,16 @@ mod test {
             #[cfg(not(target_arch = "wasm32"))]
             mod __erc20_test_parts {
                 use super::*;
-                use odra2::prelude::*;
+                use odra::prelude::*;
 
                 pub struct Erc20HostRef {
-                    pub address: odra2::types::Address,
-                    pub env: odra2::HostEnv,
-                    pub attached_value: odra2::types::U512
+                    pub address: odra::types::Address,
+                    pub env: odra::HostEnv,
+                    pub attached_value: odra::types::U512
                 }
 
                 impl Erc20HostRef {
-                    pub fn with_tokens(&self, tokens: odra2::types::U512) -> Self {
+                    pub fn with_tokens(&self, tokens: odra::types::U512) -> Self {
                         Self {
                             address: self.address,
                             env: self.env.clone(),
@@ -85,9 +85,9 @@ mod test {
                         }
                     }
 
-                    pub fn get_event<T>(&self, index: i32) -> Result<T, odra2::event::EventError>
+                    pub fn get_event<T>(&self, index: i32) -> Result<T, odra::event::EventError>
                     where
-                        T: odra2::types::FromBytes + odra2::casper_event_standard::EventInstance,
+                        T: odra::types::FromBytes + odra::casper_event_standard::EventInstance,
                     {
                         self.env.get_event(&self.address, index)
                     }
@@ -95,9 +95,9 @@ mod test {
                     pub fn try_total_supply(&self) -> Result<U256, OdraError> {
                         self.env.call_contract(
                             self.address,
-                            odra2::CallDef::new(
+                            odra::CallDef::new(
                                 String::from("total_supply"),
-                                odra2::types::RuntimeArgs::new(),
+                                odra::types::RuntimeArgs::new(),
                             ),
                         )
                     }

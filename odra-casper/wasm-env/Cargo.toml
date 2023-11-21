@@ -8,7 +8,7 @@ casper-types = "3.0.0"
 casper-event-standard = { workspace = true }
 lazy_static = { version = "1.4.0", features = [ "spin_no_std" ] }
 odra-types = { path = "../../types" }
-odra-core = { path = "../../odra-core" }
+odra-core = { path = "../../core" }
 bytes = "1.5.0"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

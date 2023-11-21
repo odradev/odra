@@ -51,11 +51,11 @@ pub fn function_return_type(function: &syn::ImplItemFn) -> syn::ReturnType {
 }
 
 pub fn type_address() -> syn::Type {
-    parse_quote!(odra2::types::Address)
+    parse_quote!(odra::types::Address)
 }
 
 pub fn type_contract_env() -> syn::Type {
-    parse_quote!(odra2::ContractEnv)
+    parse_quote!(odra::ContractEnv)
 }
 
 pub fn visibility_pub() -> syn::Visibility {

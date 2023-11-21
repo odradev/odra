@@ -20,9 +20,9 @@ impl TryFrom<&'_ ModuleIR> for HostRefStructItem {
 
     fn try_from(value: &'_ ModuleIR) -> Result<Self, Self::Error> {
         let named_fields: syn::FieldsNamed = parse_quote!({
-            pub address: odra2::types::Address,
-            pub env: odra2::HostEnv,
-            pub attached_value: odra2::types::U512
+            pub address: odra::types::Address,
+            pub env: odra::HostEnv,
+            pub attached_value: odra::types::U512
         });
         Ok(Self {
             vis: utils::syn::visibility_pub(),
@@ -79,7 +79,7 @@ struct WithTokensFnItem;
 impl ToTokens for WithTokensFnItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         tokens.extend(quote!(
-            pub fn with_tokens(&self, tokens: odra2::types::U512) -> Self {
+            pub fn with_tokens(&self, tokens: odra::types::U512) -> Self {
                 Self {
                     address: self.address,
                     env: self.env.clone(),
@@ -95,9 +95,9 @@ struct GetEventFnItem;
 impl ToTokens for GetEventFnItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         tokens.extend(quote!(
-            pub fn get_event<T>(&self, index: i32) -> Result<T, odra2::event::EventError>
+            pub fn get_event<T>(&self, index: i32) -> Result<T, odra::event::EventError>
             where
-                T: odra2::types::FromBytes + odra2::casper_event_standard::EventInstance
+                T: odra::types::FromBytes + odra::casper_event_standard::EventInstance
             {
                 self.env.get_event(&self.address, index)
             }
@@ -133,13 +133,13 @@ mod ref_item_tests {
         let module = test_utils::mock_module();
         let expected = quote! {
             pub struct Erc20HostRef {
-                pub address: odra2::types::Address,
-                pub env: odra2::HostEnv,
-                pub attached_value: odra2::types::U512
+                pub address: odra::types::Address,
+                pub env: odra::HostEnv,
+                pub attached_value: odra::types::U512
             }
 
             impl Erc20HostRef {
-                pub fn with_tokens(&self, tokens: odra2::types::U512) -> Self {
+                pub fn with_tokens(&self, tokens: odra::types::U512) -> Self {
                     Self {
                         address: self.address,
                         env: self.env.clone(),
@@ -147,9 +147,9 @@ mod ref_item_tests {
                     }
                 }
 
-                pub fn get_event<T>(&self, index: i32) -> Result<T, odra2::event::EventError>
+                pub fn get_event<T>(&self, index: i32) -> Result<T, odra::event::EventError>
                 where
-                    T: odra2::types::FromBytes + odra2::casper_event_standard::EventInstance,
+                    T: odra::types::FromBytes + odra::casper_event_standard::EventInstance,
                 {
                     self.env.get_event(&self.address, index)
                 }
@@ -157,9 +157,9 @@ mod ref_item_tests {
                 pub fn try_total_supply(&self) -> Result<U256, OdraError> {
                     self.env.call_contract(
                         self.address,
-                        odra2::CallDef::new(
+                        odra::CallDef::new(
                             String::from("total_supply"),
-                            odra2::types::RuntimeArgs::new(),
+                            odra::types::RuntimeArgs::new(),
                         ),
                     )
                 }

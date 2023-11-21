@@ -41,7 +41,7 @@ fn env_call(sig: syn::Signature, call_def_expr: syn::Expr) -> syn::ItemFn {
 fn call_def(fun: &FnIR) -> syn::Expr {
     let fun_name_str = fun.name_str();
     let args = args_token_stream(fun);
-    syn::parse_quote!(odra2::CallDef::new(String::from(#fun_name_str), #args))
+    syn::parse_quote!(odra::CallDef::new(String::from(#fun_name_str), #args))
 }
 
 fn function_signature(fun: &FnIR) -> syn::Signature {
@@ -66,14 +66,14 @@ fn args_token_stream(fun: &FnIR) -> TokenStream {
     let args = fun.arg_names();
 
     match fun.args_len() {
-        0 => quote!(odra2::types::RuntimeArgs::new()),
+        0 => quote!(odra::types::RuntimeArgs::new()),
         _ => {
             let args = args
                 .iter()
                 .map(|i| quote!(let _ = named_args.insert(stringify!(#i), #i);))
                 .collect::<TokenStream>();
             quote!({
-                let mut named_args = odra2::types::RuntimeArgs::new();
+                let mut named_args = odra::types::RuntimeArgs::new();
                 #args
                 named_args
             })

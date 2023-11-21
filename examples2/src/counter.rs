@@ -1,6 +1,6 @@
-use odra2::prelude::*;
-use odra2::types::{runtime_args, FromBytes, RuntimeArgs};
-use odra2::{CallDef, ContractEnv, HostEnv, Mapping, Variable};
+use odra::prelude::*;
+use odra::types::{runtime_args, FromBytes, RuntimeArgs};
+use odra::{CallDef, ContractEnv, HostEnv, Mapping, Variable};
 
 pub struct Counter {
     env: Rc<ContractEnv>,
@@ -58,7 +58,7 @@ fn increment(count: &mut Variable<u32>) {
 
 mod __counter_pack_module {
     use super::*;
-    impl odra2::module::Module for Counter {
+    impl odra::module::Module for Counter {
         fn new(env: Rc<ContractEnv>) -> Self {
             let count0 = Variable::new(Rc::clone(&env), 0);
             let count1 = Variable::new(Rc::clone(&env), 1);

@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-odra-core = { path = "../odra-core" }
+odra-core = { path = "../core" }
 odra-types = { path = "../types", features = ["test-support"] }
 odra-utils = { path = "../utils"}
 anyhow = "1.0.75"

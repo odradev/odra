@@ -35,7 +35,7 @@ struct AddressFnItem;
 impl ToTokens for AddressFnItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         tokens.extend(quote!(
-            pub fn address(&self) -> &odra2::types::Address {
+            pub fn address(&self) -> &odra::types::Address {
                 &self.address
             }
         ))
@@ -101,23 +101,23 @@ mod ref_item_tests {
         let module = test_utils::mock_module();
         let expected = quote! {
             pub struct Erc20ContractRef {
-                env: Rc<odra2::ContractEnv>,
-                address: odra2::types::Address,
+                env: Rc<odra::ContractEnv>,
+                address: odra::types::Address,
             }
 
             impl Erc20ContractRef {
                 // TODO: this means "address", can't be entrypoint name.
-                pub fn address(&self) -> &odra2::types::Address {
+                pub fn address(&self) -> &odra::types::Address {
                     &self.address
                 }
 
                 pub fn init(&mut self, total_supply: Option<U256>) {
                     self.env.call_contract(
                         self.address,
-                        odra2::CallDef::new(
+                        odra::CallDef::new(
                             String::from("init"),
                             {
-                                let mut named_args = odra2::types::RuntimeArgs::new();
+                                let mut named_args = odra::types::RuntimeArgs::new();
                                 let _ = named_args.insert(stringify!(total_supply), total_supply);
                                 named_args
                             }
@@ -128,9 +128,9 @@ mod ref_item_tests {
                 pub fn total_supply(&self) -> U256 {
                     self.env.call_contract(
                         self.address,
-                        odra2::CallDef::new(
+                        odra::CallDef::new(
                             String::from("total_supply"),
-                            odra2::types::RuntimeArgs::new(),
+                            odra::types::RuntimeArgs::new(),
                         ),
                     )
                 }

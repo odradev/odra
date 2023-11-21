@@ -1,8 +1,8 @@
 use crate::counter::Counter;
-use odra2::prelude::*;
-use odra2::ContractEnv;
-use odra2::Mapping;
-use odra2::ModuleWrapper;
+use odra::prelude::*;
+use odra::ContractEnv;
+use odra::Mapping;
+use odra::ModuleWrapper;
 
 pub struct CounterPack {
     env: Rc<ContractEnv>,
@@ -103,16 +103,16 @@ mod odra_core_module {
 #[cfg(odra_module = "CounterPack")]
 #[cfg(target_arch = "wasm32")]
 mod __counter_pack_wasm_parts {
-    use odra2::casper_event_standard::Schemas;
-    use odra2::odra_casper_backend2;
-    use odra2::odra_casper_backend2::casper_contract::unwrap_or_revert::UnwrapOrRevert;
-    use odra2::odra_casper_backend2::WasmContractEnv;
-    use odra2::types::casper_types::{
+    use odra::casper_event_standard::Schemas;
+    use odra::odra_casper_backend2;
+    use odra::odra_casper_backend2::casper_contract::unwrap_or_revert::UnwrapOrRevert;
+    use odra::odra_casper_backend2::WasmContractEnv;
+    use odra::types::casper_types::{
         CLType, CLTyped, CLValue, EntryPoint, EntryPointAccess, EntryPointType, EntryPoints, Group,
         Parameter, RuntimeArgs
     };
-    use odra2::types::{runtime_args, Address, U256};
-    use odra2::{prelude::*, ContractEnv};
+    use odra::types::{runtime_args, Address, U256};
+    use odra::{prelude::*, ContractEnv};
     use odra_casper_backend2::casper_contract::contract_api::runtime;
 
     use super::CounterPack;
@@ -183,9 +183,9 @@ mod __counter_pack_wasm_parts {
 
 #[cfg(not(target_arch = "wasm32"))]
 mod __counter_pack_test_parts {
-    use odra2::types::{runtime_args, Bytes, RuntimeArgs, ToBytes, U256, U512};
-    use odra2::{prelude::*, EntryPointsCaller};
-    use odra2::{types::Address, CallDef, HostEnv};
+    use odra::types::{runtime_args, Bytes, RuntimeArgs, ToBytes, U256, U512};
+    use odra::{prelude::*, EntryPointsCaller};
+    use odra::{types::Address, CallDef, HostEnv};
 
     use crate::counter_pack::CounterPack;
 
@@ -231,7 +231,7 @@ mod __counter_pack_test_parts {
     impl CounterPackDeployer {
         pub fn init(env: &HostEnv) -> CounterPackHostRef {
             let epc = EntryPointsCaller::new(env.clone(), |contract_env, call_def| {
-                use odra2::types::ToBytes;
+                use odra::types::ToBytes;
                 let mut counter_pack = CounterPack::new(Rc::new(contract_env));
                 match call_def.method() {
                     "get_count" => {
@@ -269,7 +269,7 @@ mod tests {
 
     #[test]
     fn counter_pack_works() {
-        let env = odra2::test_env();
+        let env = odra::test_env();
         let counter_pack = CounterPackDeployer::init(&env);
 
         let n: u8 = 3;
