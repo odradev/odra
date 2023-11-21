@@ -1,21 +1,15 @@
 [package]
 name = "odra-examples"
-version = "0.7.0"
+version = "0.8.0"
 edition = "2021"
 
 [dependencies]
-odra = { path = "../core", default-features = false }
+odra = { path = "../odra", default-features = false }
 odra-modules = { path = "../modules", default-features = false }
 sha3 = { version = "0.10.6", default-features = false }
 
 [dev-dependencies]
 hex = "0.4.3"
-
-[features]
-default = ["mock-vm"]
-mock-vm = ["odra/mock-vm", "odra-modules/mock-vm"]
-casper = ["odra/casper", "odra-modules/casper"]
-casper-livenet = ["odra/casper-livenet", "odra-modules/casper-livenet"]
 
 [[bin]]
 name = "erc20-on-livenet"
