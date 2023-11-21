@@ -75,7 +75,7 @@ impl CallResult {
 
     pub fn contract_last_call(self, contract_address: Address) -> ContractCallResult {
         ContractCallResult {
-            call_result: self.clone(),
+            call_result: self,
             contract_address
         }
     }

@@ -393,7 +393,8 @@ pub fn call_versioned_contract(
     odra_types::Bytes::from(deserialize_contract_result(bytes_written))
 }
 fn deserialize_contract_result(bytes_written: usize) -> Vec<u8> {
-    let serialized_result = if bytes_written == 0 {
+    
+    if bytes_written == 0 {
         // If no bytes were written, the host buffer hasn't been set and hence shouldn't be read.
         vec![]
     } else {
@@ -405,8 +406,7 @@ fn deserialize_contract_result(bytes_written: usize) -> Vec<u8> {
         };
         read_host_buffer_into(&mut dest).unwrap_or_revert();
         dest
-    };
-    serialized_result
+    }
 }
 
 pub fn attached_value() -> U512 {

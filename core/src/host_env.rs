@@ -54,10 +54,10 @@ impl HostEnv {
         let deployed_contract = backend.new_contract(name, init_args, entry_points_caller);
         self.deployed_contracts
             .borrow_mut()
-            .push(deployed_contract.clone());
+            .push(deployed_contract);
         self.events_count
             .borrow_mut()
-            .insert(deployed_contract.clone(), 0);
+            .insert(deployed_contract, 0);
         deployed_contract
     }
 
@@ -80,7 +80,7 @@ impl HostEnv {
             .iter()
             .for_each(|contract_address| {
                 let events_count = binding.get_mut(contract_address).unwrap();
-                let old_events_last_id = events_count.clone();
+                let old_events_last_id = *events_count;
                 let new_events_count = backend.get_events_count(contract_address);
                 let mut events = vec![];
                 for event_id in old_events_last_id..new_events_count {
@@ -90,13 +90,13 @@ impl HostEnv {
                     events.push(event);
                 }
 
-                events_map.insert(contract_address.clone(), events);
+                events_map.insert(*contract_address, events);
 
                 *events_count = new_events_count;
             });
 
         self.last_call_result.replace(Some(CallResult {
-            contract_address: address.clone(),
+            contract_address: address,
             caller: backend.caller(),
             gas_used: backend.last_call_gas_cost(),
             result: call_result.clone(),
@@ -227,6 +227,6 @@ impl HostEnv {
     }
 
     pub fn last_call(&self) -> CallResult {
-        self.last_call_result.borrow().clone().unwrap().clone()
+        self.last_call_result.borrow().clone().unwrap()
     }
 }

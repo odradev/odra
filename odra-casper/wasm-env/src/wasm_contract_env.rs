@@ -12,7 +12,7 @@ pub struct WasmContractEnv;
 
 impl ContractContext for WasmContractEnv {
     fn get_value(&self, key: &[u8]) -> Option<Bytes> {
-        host_functions::get_value(key).map(|v| Bytes::from(v))
+        host_functions::get_value(key).map(Bytes::from)
     }
 
     fn set_value(&self, key: &[u8], value: Bytes) {

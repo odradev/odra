@@ -119,7 +119,7 @@ impl CasperVm {
             .build();
 
         let execute_request = ExecuteRequestBuilder::from_deploy_item(deploy_item)
-            .with_block_time(u64::from(self.block_time))
+            .with_block_time(self.block_time)
             .build();
         self.context.exec(execute_request).commit().expect_success();
         self.collect_gas();
@@ -225,16 +225,17 @@ impl CasperVm {
                 AMOUNT_ARG => call_def.amount,
             };
 
-            let deploy_item = DeployItemBuilder::new()
+            
+            DeployItemBuilder::new()
                 .with_empty_payment_bytes(runtime_args! { ARG_AMOUNT => *DEFAULT_PAYMENT})
                 .with_authorization_keys(&[self.active_account_hash()])
                 .with_address(self.active_account_hash())
                 .with_session_bytes(session_code, args)
                 .with_deploy_hash(self.next_hash())
-                .build();
-            deploy_item
+                .build()
         } else {
-            let deploy_item = DeployItemBuilder::new()
+            
+            DeployItemBuilder::new()
                 .with_empty_payment_bytes(runtime_args! { ARG_AMOUNT => *DEFAULT_PAYMENT})
                 .with_authorization_keys(&[self.active_account_hash()])
                 .with_address(self.active_account_hash())
@@ -245,12 +246,11 @@ impl CasperVm {
                     call_def.args.clone()
                 )
                 .with_deploy_hash(self.next_hash())
-                .build();
-            deploy_item
+                .build()
         };
 
         let execute_request = ExecuteRequestBuilder::from_deploy_item(deploy_item)
-            .with_block_time(u64::from(self.block_time))
+            .with_block_time(self.block_time)
             .build();
         self.context.exec(execute_request).commit();
         self.collect_gas();
@@ -317,12 +317,11 @@ impl CasperVm {
     }
 
     fn get_account_cspr_balance(&self, account_hash: &AccountHash) -> U512 {
-        let account: Account = self.context.get_account(account_hash.clone()).unwrap();
+        let account: Account = self.context.get_account(*account_hash).unwrap();
         let purse = account.main_purse();
         let gas_used = self
             .gas_used
-            .get(account_hash)
-            .map(|x| *x)
+            .get(account_hash).copied()
             .unwrap_or(U512::zero());
         self.context.get_purse_balance(purse) + gas_used
     }
@@ -340,7 +339,7 @@ impl CasperVm {
 
     fn get_contract_package_hash(&self, contract_hash: &ContractPackageHash) -> ContractHash {
         self.context
-            .get_contract_package(contract_hash.clone())
+            .get_contract_package(*contract_hash)
             .unwrap()
             .current_contract_hash()
             .unwrap()

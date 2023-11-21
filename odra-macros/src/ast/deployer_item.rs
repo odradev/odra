@@ -13,7 +13,7 @@ impl<'a> DeployerItem<'a> {
 }
 
 impl<'a> ToTokens for DeployerItem<'a> {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+    fn to_tokens(&self, _tokens: &mut proc_macro2::TokenStream) {
         // let module = checked_unwrap!(self.module.module_ident());
         // let module_ref = checked_unwrap!(self.module.host_ref_ident());
         // let module_deployer = checked_unwrap!(self.module.deployer_ident());
