@@ -63,13 +63,13 @@ impl HostEnv {
 
     pub fn call_contract<T: FromBytes + CLTyped>(
         &self,
-        address: &Address,
+        address: Address,
         call_def: CallDef
     ) -> Result<T, OdraError> {
         let backend = self.backend.borrow();
 
         let use_proxy = T::cl_type() != <()>::cl_type() || !call_def.attached_value().is_zero();
-        let call_result = backend.call_contract(address, call_def, use_proxy);
+        let call_result = backend.call_contract(&address, call_def, use_proxy);
 
         let mut events_map: BTreeMap<Address, Vec<odra_types::Bytes>> = BTreeMap::new();
         let mut binding = self.events_count.borrow_mut();

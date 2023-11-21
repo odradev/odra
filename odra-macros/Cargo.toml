@@ -11,10 +11,11 @@ homepage = { workspace = true }
 repository = { workspace = true }
 
 [dependencies]
+odra-utils = { path = "../utils", features = ["std"] }
 proc-macro2 = "1.0.69"
-proc-macro-error = "1"
 quote = "1.0.33"
 syn = { version = "2.0.29", features = ["full"] }
+syn_derive = "0.1.8"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"

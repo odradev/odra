@@ -1,5 +1,6 @@
-use super::{checked_unwrap, ModuleIR};
-use quote::{quote, ToTokens};
+use quote::ToTokens;
+
+use crate::ir::ModuleIR;
 
 pub struct DeployerItem<'a> {
     module: &'a ModuleIR
@@ -13,25 +14,25 @@ impl<'a> DeployerItem<'a> {
 
 impl<'a> ToTokens for DeployerItem<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let module = checked_unwrap!(self.module.module_ident());
-        let module_ref = checked_unwrap!(self.module.host_ref_ident());
-        let module_deployer = checked_unwrap!(self.module.deployer_ident());
-        tokens.extend(quote!(
-            pub struct #module_deployer;
-            impl #module_deployer {
-                pub fn deploy(env: &mut Env) -> #module_ref {
-                    let caller = odra::ModuleCaller(|env: Env, call_def: odra::types::CallDef| {
-                        let contract = #module;
-                        odra::Callable::call(&contract, env, call_def)
-                    });
-                    let addr = env.new_contract(caller);
-                    #module_ref {
-                        env: env.clone_empty(),
-                        address: addr,
-                    }
-                }
-            }
-        ));
+        // let module = checked_unwrap!(self.module.module_ident());
+        // let module_ref = checked_unwrap!(self.module.host_ref_ident());
+        // let module_deployer = checked_unwrap!(self.module.deployer_ident());
+        // tokens.extend(quote!(
+        //     pub struct #module_deployer;
+        //     impl #module_deployer {
+        //         pub fn deploy(env: &mut Env) -> #module_ref {
+        //             let caller = odra::ModuleCaller(|env: Env, call_def: odra::types::CallDef| {
+        //                 let contract = #module;
+        //                 odra::Callable::call(&contract, env, call_def)
+        //             });
+        //             let addr = env.new_contract(caller);
+        //             #module_ref {
+        //                 env: env.clone_empty(),
+        //                 address: addr,
+        //             }
+        //         }
+        //     }
+        // ));
     }
 }
 
