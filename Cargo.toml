@@ -1,13 +1,11 @@
 [workspace]
 members = [
     "odra",
-    "mock-vm/backend",
     "odra-vm",
     "core",
     "odra-macros",
     "types",
     "utils",
-    "odra-casper/backend",
     "odra-casper/wasm-env",
     "odra-casper/shared",
     "odra-casper/test-vm",
@@ -25,6 +23,6 @@ repository = "https://github.com/odradev/odra"
 
 [workspace.dependencies]
 casper-contract = { version = "3.0.0", default-features = false }
-casper-types = "3.0.0"
+casper-types = { version = "3.0.0", default-features = false }
 casper-execution-engine = "5.0.0"
 casper-event-standard = "0.4.1"
