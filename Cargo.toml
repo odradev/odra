@@ -1,21 +1,15 @@
 [workspace]
 members = [
-    "core",
-    "odra2",
-    "lang/codegen",
-    "lang/ir",
-    "lang/proc-macros",
+    "odra",
     "mock-vm/backend",
     "odra-vm",
-    "odra-core",
+    "core",
     "odra-macros",
     "types",
     "utils",
     "odra-casper/backend",
     "odra-casper/wasm-env",
-    "odra-casper/codegen",
     "odra-casper/shared",
-    "odra-casper/test-env",
     "odra-casper/test-vm",
     "odra-casper/livenet"
 ]

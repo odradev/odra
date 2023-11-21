@@ -1,6 +1,6 @@
 #[allow(unused_imports)]
 use examples2;
-use odra2::types::contract_def::ContractBlueprint2;
+use odra::types::contract_def::ContractBlueprint2;
 
 extern "Rust" {
     fn module_schema() -> ContractBlueprint2;
