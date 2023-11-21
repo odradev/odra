@@ -44,6 +44,8 @@ struct HostRefImplItem {
     #[syn(in = brace_token)]
     get_event_fn: GetEventFnItem,
     #[syn(in = brace_token)]
+    last_call_fn: LastCallFnItem,
+    #[syn(in = brace_token)]
     #[to_tokens(|tokens, f| tokens.append_all(f))]
     functions: Vec<syn::ItemFn>
 }
@@ -58,6 +60,7 @@ impl TryFrom<&'_ ModuleIR> for HostRefImplItem {
             brace_token: Default::default(),
             with_tokens_fn: WithTokensFnItem,
             get_event_fn: GetEventFnItem,
+            last_call_fn: LastCallFnItem,
             functions: value
                 .functions()
                 .iter()
@@ -102,6 +105,18 @@ impl ToTokens for GetEventFnItem {
                 self.env.get_event(&self.address, index)
             }
         ));
+    }
+}
+
+struct LastCallFnItem;
+
+impl ToTokens for LastCallFnItem {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        tokens.extend(quote!(
+            pub fn last_call(&self) -> odra::ContractCallResult {
+                self.env.last_call().contract_last_call(self.address)
+            }
+        ))
     }
 }
 
@@ -152,6 +167,10 @@ mod ref_item_tests {
                     T: odra::types::FromBytes + odra::casper_event_standard::EventInstance,
                 {
                     self.env.get_event(&self.address, index)
+                }
+
+                pub fn last_call(&self) -> odra::ContractCallResult {
+                    self.env.last_call().contract_last_call(self.address)
                 }
 
                 pub fn try_total_supply(&self) -> Result<U256, OdraError> {

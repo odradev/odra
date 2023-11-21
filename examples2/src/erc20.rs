@@ -724,7 +724,7 @@ mod tests {
         let bob = env.get_account(1);
 
         // Deploy the contract as Alice.
-        let erc20 = Erc20Deployer::init(&env, Some(100.into()));
+        let mut erc20 = Erc20Deployer::init(&env, Some(100.into()));
 
         // When event is emitted
         erc20.approve(bob, 10.into());
