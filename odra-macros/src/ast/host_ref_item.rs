@@ -178,8 +178,14 @@ mod ref_item_tests {
                         self.address,
                         odra::CallDef::new(
                             String::from("total_supply"),
-                            odra::types::RuntimeArgs::new(),
-                        ),
+                            {
+                                let mut named_args = odra::types::RuntimeArgs::new();
+                                if self.attached_value > odra::types::U512::zero() {
+                                    let _ = named_args.insert("amount", self.attached_value);
+                                }
+                                named_args
+                            }
+                        ).with_amount(self.attached_value),
                     )
                 }
 

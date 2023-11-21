@@ -4,7 +4,7 @@ use quote::quote;
 
 pub fn host_try_function_item(fun: &FnIR) -> syn::ItemFn {
     let signature = try_function_signature(fun);
-    let call_def_expr = call_def(fun);
+    let call_def_expr = call_def_with_amount(fun);
 
     env_call(signature, call_def_expr)
 }
@@ -41,7 +41,26 @@ fn env_call(sig: syn::Signature, call_def_expr: syn::Expr) -> syn::ItemFn {
 fn call_def(fun: &FnIR) -> syn::Expr {
     let fun_name_str = fun.name_str();
     let args = args_token_stream(fun);
-    syn::parse_quote!(odra::CallDef::new(String::from(#fun_name_str), #args))
+    let runtime_args = quote!({
+        let mut named_args = odra::types::RuntimeArgs::new();
+        #args
+        named_args
+    });
+    syn::parse_quote!(odra::CallDef::new(String::from(#fun_name_str), #runtime_args))
+}
+
+fn call_def_with_amount(fun: &FnIR) -> syn::Expr {
+    let fun_name_str = fun.name_str();
+    let args = args_token_stream(fun);
+    let runtime_args = quote!({
+        let mut named_args = odra::types::RuntimeArgs::new();
+        if self.attached_value > odra::types::U512::zero() {
+            let _ = named_args.insert("amount", self.attached_value);
+        }
+        #args
+        named_args
+    });
+    syn::parse_quote!(odra::CallDef::new(String::from(#fun_name_str), #runtime_args).with_amount(self.attached_value))
 }
 
 fn function_signature(fun: &FnIR) -> syn::Signature {
@@ -63,20 +82,9 @@ fn try_function_signature(fun: &FnIR) -> syn::Signature {
 }
 
 fn args_token_stream(fun: &FnIR) -> TokenStream {
-    let args = fun.arg_names();
-
-    match fun.args_len() {
-        0 => quote!(odra::types::RuntimeArgs::new()),
-        _ => {
-            let args = args
-                .iter()
-                .map(|i| quote!(let _ = named_args.insert(stringify!(#i), #i);))
-                .collect::<TokenStream>();
-            quote!({
-                let mut named_args = odra::types::RuntimeArgs::new();
-                #args
-                named_args
-            })
-        }
-    }
+    fun
+        .arg_names()
+        .iter()
+        .map(|i| quote!(let _ = named_args.insert(stringify!(#i), #i);))
+        .collect::<TokenStream>()
 }

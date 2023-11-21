@@ -92,13 +92,23 @@ mod test {
                         self.env.get_event(&self.address, index)
                     }
 
+                    pub fn last_call(&self) -> odra::ContractCallResult {
+                        self.env.last_call().contract_last_call(self.address)
+                    }
+
                     pub fn try_total_supply(&self) -> Result<U256, OdraError> {
                         self.env.call_contract(
                             self.address,
                             odra::CallDef::new(
                                 String::from("total_supply"),
-                                odra::types::RuntimeArgs::new(),
-                            ),
+                                {
+                                    let mut named_args = odra::types::RuntimeArgs::new();
+                                    if self.attached_value > odra::types::U512::zero() {
+                                        let _ = named_args.insert("amount", self.attached_value);
+                                    }
+                                    named_args
+                                }
+                            ).with_amount(self.attached_value),
                         )
                     }
 

@@ -130,7 +130,10 @@ mod ref_item_tests {
                         self.address,
                         odra::CallDef::new(
                             String::from("total_supply"),
-                            odra::types::RuntimeArgs::new(),
+                            {
+                                let mut named_args = odra::types::RuntimeArgs::new();
+                                named_args
+                            }
                         ),
                     )
                 }
