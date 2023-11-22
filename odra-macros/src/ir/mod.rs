@@ -41,6 +41,7 @@ impl ModuleIR {
         ))
     }
 
+    #[allow(dead_code)]
     pub fn deployer_ident(&self) -> Result<Ident, syn::Error> {
         let module_ident = self.module_ident()?;
         Ok(Ident::new(
@@ -92,6 +93,7 @@ impl FnIR {
         utils::syn::function_arg_names(&self.code)
     }
 
+    #[allow(dead_code)]
     pub fn args_len(&self) -> usize {
         utils::syn::function_args(&self.code).len()
     }

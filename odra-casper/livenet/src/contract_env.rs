@@ -5,13 +5,12 @@
 use crate::casper_client::LivenetKeyMaker;
 use odra_casper_shared::key_maker::KeyMaker;
 use odra_casper_shared::native_token::NativeTokenMetadata;
-use odra_core::event::OdraEvent;
 use odra_types::{
     casper_types::{
         bytesrepr::{Bytes, FromBytes, ToBytes},
         U512
     },
-    Address, BlockTime, ExecutionError, PublicKey
+    Address, ExecutionError, PublicKey
 };
 
 use crate::client_env;
@@ -42,8 +41,7 @@ pub fn get_dict_value<K: ToBytes, T: FromBytes>(seed: &[u8], key: &K) -> Option<
 
 pub fn emit_event<T>(_: T)
 where
-    T: ToBytes + OdraEvent
-{
+    T: ToBytes {
     unimplemented!()
 }
 

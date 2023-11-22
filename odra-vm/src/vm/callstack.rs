@@ -25,7 +25,7 @@ pub struct Entrypoint {
 impl Entrypoint {
     pub fn new(address: Address, entrypoint: &str, value: U512) -> Self {
         Self {
-            address: address,
+            address,
             entrypoint: entrypoint.to_string(),
             attached_value: value
         }

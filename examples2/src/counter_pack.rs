@@ -243,8 +243,8 @@ mod __counter_pack_test_parts {
                     "increment" => {
                         let index_a: u8 = call_def.get("index_a").unwrap();
                         let index_b: u8 = call_def.get("index_b").unwrap();
-                        let result = counter_pack.increment(index_a, index_b);
-                        Bytes::from(result.to_bytes().unwrap())
+                        counter_pack.increment(index_a, index_b);
+                        Bytes::from(vec![])
                     }
                     _ => panic!("Unknown method")
                 }

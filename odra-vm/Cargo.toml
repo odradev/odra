@@ -10,3 +10,7 @@ odra-core = { path = "../core" }
 odra-types = { path = "../types", features = ["test-support"] }
 odra-utils = { path = "../utils"}
 anyhow = "1.0.75"
+url = "2.4.1"
+
+[dev-dependencies]
+odra = { path = "../odra" }
