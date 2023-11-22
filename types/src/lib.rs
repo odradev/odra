@@ -10,8 +10,8 @@ pub mod call_def;
 pub mod contract_def;
 mod error;
 mod item;
-pub mod uints;
 mod serialize;
+pub mod uints;
 
 use alloc::vec::Vec;
 

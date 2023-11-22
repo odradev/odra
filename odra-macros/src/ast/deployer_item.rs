@@ -3,10 +3,12 @@ use quote::ToTokens;
 use crate::ir::ModuleIR;
 
 pub struct DeployerItem<'a> {
+    #[allow(dead_code)]
     module: &'a ModuleIR
 }
 
 impl<'a> DeployerItem<'a> {
+    #[allow(dead_code)]
     pub fn new(module: &'a ModuleIR) -> Self {
         DeployerItem { module }
     }

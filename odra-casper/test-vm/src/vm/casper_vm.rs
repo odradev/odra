@@ -225,7 +225,6 @@ impl CasperVm {
                 AMOUNT_ARG => call_def.amount,
             };
 
-            
             DeployItemBuilder::new()
                 .with_empty_payment_bytes(runtime_args! { ARG_AMOUNT => *DEFAULT_PAYMENT})
                 .with_authorization_keys(&[self.active_account_hash()])
@@ -234,7 +233,6 @@ impl CasperVm {
                 .with_deploy_hash(self.next_hash())
                 .build()
         } else {
-            
             DeployItemBuilder::new()
                 .with_empty_payment_bytes(runtime_args! { ARG_AMOUNT => *DEFAULT_PAYMENT})
                 .with_authorization_keys(&[self.active_account_hash()])
@@ -321,7 +319,8 @@ impl CasperVm {
         let purse = account.main_purse();
         let gas_used = self
             .gas_used
-            .get(account_hash).copied()
+            .get(account_hash)
+            .copied()
             .unwrap_or(U512::zero());
         self.context.get_purse_balance(purse) + gas_used
     }

@@ -393,7 +393,6 @@ pub fn call_versioned_contract(
     odra_types::Bytes::from(deserialize_contract_result(bytes_written))
 }
 fn deserialize_contract_result(bytes_written: usize) -> Vec<u8> {
-    
     if bytes_written == 0 {
         // If no bytes were written, the host buffer hasn't been set and hence shouldn't be read.
         vec![]

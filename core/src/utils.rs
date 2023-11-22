@@ -1,6 +1,6 @@
-use casper_event_standard::casper_types::bytesrepr::ToBytes;
 use crate::event::EventError;
 use crate::prelude::*;
+use casper_event_standard::casper_types::bytesrepr::ToBytes;
 use odra_types::{Bytes, FromBytes};
 
 pub fn serialize<T: ToBytes>(value: &T) -> Bytes {

@@ -52,12 +52,8 @@ impl HostEnv {
     ) -> Address {
         let backend = self.backend.borrow();
         let deployed_contract = backend.new_contract(name, init_args, entry_points_caller);
-        self.deployed_contracts
-            .borrow_mut()
-            .push(deployed_contract);
-        self.events_count
-            .borrow_mut()
-            .insert(deployed_contract, 0);
+        self.deployed_contracts.borrow_mut().push(deployed_contract);
+        self.events_count.borrow_mut().insert(deployed_contract, 0);
         deployed_contract
     }
 
