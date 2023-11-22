@@ -25,6 +25,6 @@ jobs:
         with:
           target: wasm32-unknown-unknown
           components: rustfmt, clippy
-#      - run: just check-lint
+      - run: just check-lint
 #      - run: just prepare-test-env
 #      - run: just test

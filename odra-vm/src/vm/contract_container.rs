@@ -28,6 +28,7 @@ impl ContractContainer {
 
     pub fn call(&self, call_def: CallDef) -> Result<Bytes, OdraError> {
         Ok(self.entry_points_caller.call(call_def))
+        // TODO: Restore validate_args
         //     if self.constructors.get(&entrypoint).is_some() {
         //         return Err(OdraError::VmError(VmError::InvalidContext));
         //     }
@@ -79,14 +80,14 @@ impl ContractContainer {
 #[cfg(test)]
 mod tests {
     use odra_core::prelude::{collections::*, *};
+    use odra_core::{EntryPointsCaller, HostEnv};
     use odra_types::{
         casper_types::{runtime_args, RuntimeArgs},
         OdraError, VmError
     };
+    use url::Host;
 
-    use crate::contract_container::{EntrypointArgs, EntrypointCall};
-
-    use super::ContractContainer;
+    use super::{ContractContainer, EntrypointArgs, EntrypointCall};
 
     #[test]
     fn test_call_wrong_entrypoint() {
@@ -209,10 +210,11 @@ mod tests {
 
     impl ContractContainer {
         fn empty() -> Self {
+            let env = odra::odra_test::odra_env();
+            let epc = EntryPointsCaller::new(env);
             Self {
                 name: String::from("contract"),
-                entrypoints: BTreeMap::new(),
-                constructors: BTreeMap::new()
+                entry_points_caller: EntryPointsCaller::new()
             }
         }
 
@@ -226,7 +228,8 @@ mod tests {
             Self {
                 name: String::from("contract"),
                 entrypoints,
-                constructors: BTreeMap::new()
+                constructors: BTreeMap::new(),
+                entry_points_caller: ()
             }
         }
 

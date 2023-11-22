@@ -19,6 +19,7 @@ pub use std::cell::RefCell;
 pub use std::rc::Rc;
 
 #[cfg(not(feature = "std"))]
+#[allow(clippy::module_inception)]
 mod prelude {
     pub use alloc::rc::Rc;
     pub use core::cell::RefCell;

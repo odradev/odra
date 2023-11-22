@@ -28,10 +28,7 @@ impl CallDef {
     }
 
     pub fn get<T: CLTyped + FromBytes>(&self, name: &str) -> Option<T> {
-        self.args
-            .get(name)
-            .map(|v| v.clone().into_t().ok())
-            .flatten()
+        self.args.get(name).and_then(|v| v.clone().into_t().ok())
     }
 
     pub fn method(&self) -> &str {

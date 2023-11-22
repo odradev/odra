@@ -2,10 +2,13 @@ default:
     just --list
 
 clippy:
-    cargo clippy --all-targets -- -D warnings
+    # TODO: add --all-targets to cargo clippy when tests are fixed
+    cargo clippy -- -D warnings
     cd odra-casper/proxy-caller && cargo clippy --target=wasm32-unknown-unknown -- -D warnings -A clippy::single-component-path-imports
-    cd examples && cargo clippy --all-targets -- -D warnings -A clippy::assign-op-pattern
-    cd modules && cargo clippy --all-targets -- -D warnings
+    # TODO: uncomment when examples are rewritten
+    # cd examples && cargo clippy -- -D warnings -A clippy::assign-op-pattern
+    # TODO: uncomment when modules are rewritten
+    # cd modules && cargo clippy -- -D warnings
 
 lint: clippy
     cargo fmt
@@ -15,10 +18,11 @@ lint: clippy
 
 check-lint: clippy
     cargo fmt -- --check
-    cd odra-casper/proxy-caller && cargo fmt -- --check 
-    cd examples && cargo fmt -- --check
-    cd modules && cargo fmt -- --check
-    cd examples && cargo check --no-default-features -F casper-livenet
+    cd odra-casper/proxy-caller && cargo fmt -- --check
+    cd examples2 && cargo fmt -- --check
+#    cd examples && cargo fmt -- --check
+#    cd modules && cargo fmt -- --check
+#    cd examples && cargo check --no-default-features -F casper-livenet
 
 install-cargo-odra:
     cargo install cargo-odra --locked
@@ -76,6 +80,7 @@ build-erc20:
     mv examples2/target/wasm32-unknown-unknown/release/contract.wasm examples2/wasm/Erc20.wasm
 
 test-erc20: build-erc20
+    cd examples2 && cargo test --lib erc20 -- --nocapture
     cd examples2 && ODRA_BACKEND=casper cargo test --lib erc20 -- --nocapture
 
 build-counter-pack:

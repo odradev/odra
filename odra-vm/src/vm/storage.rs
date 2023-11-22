@@ -122,8 +122,8 @@ impl Storage {
 
 #[cfg(test)]
 mod test {
-
-    use odra_types::Address;
+    use odra_core::serialize;
+    use odra_types::{Address, Bytes};
 
     use super::Storage;
 
@@ -142,10 +142,15 @@ mod test {
         let (address, key, value) = setup();
 
         // when put a value
-        storage.set_value(&address, &key, value).unwrap();
+        storage
+            .set_value(&address, &key, serialize(&value))
+            .unwrap();
 
         // then the value can be read
-        assert_eq!(storage.get_value(&address, &key).unwrap(), Some(value));
+        assert_eq!(
+            storage.get_value(&address, &key).unwrap(),
+            Some(serialize(&value))
+        );
     }
 
     #[test]
@@ -153,16 +158,21 @@ mod test {
         // given a storage with some stored value
         let mut storage = Storage::default();
         let (address, key, value) = setup();
-        storage.set_value(&address, &key, value).unwrap();
+        storage
+            .set_value(&address, &key, serialize(&value))
+            .unwrap();
 
         // when the next value is set under the same key
         let next_value = String::from("new_value");
         storage
-            .set_value(&address, &key, next_value.clone())
+            .set_value(&address, &key, serialize(&next_value.clone()))
             .unwrap();
 
         // then the previous value is replaced
-        assert_eq!(storage.get_value(&address, &key).unwrap(), Some(next_value));
+        assert_eq!(
+            storage.get_value(&address, &key).unwrap(),
+            Some(serialize(&next_value))
+        );
     }
 
     #[test]
@@ -172,7 +182,7 @@ mod test {
         let (address, key, _) = setup();
 
         // when lookup a key
-        let result: Option<()> = storage.get_value(&address, &key).unwrap();
+        let result: Option<Bytes> = storage.get_value(&address, &key).unwrap();
 
         // then the None value is returned
         assert_eq!(result, None);
@@ -187,13 +197,13 @@ mod test {
 
         // when put a value into a collection
         storage
-            .insert_dict_value(&address, collection, &key, value)
+            .insert_dict_value(&address, collection, &key, serialize(&value))
             .unwrap();
 
         // then the value can be read
         assert_eq!(
             storage.get_dict_value(&address, collection, &key).unwrap(),
-            Some(value)
+            Some(serialize(&value))
         );
     }
 
@@ -204,12 +214,12 @@ mod test {
         let (address, key, value) = setup();
         let collection = b"dict";
         storage
-            .insert_dict_value(&address, collection, &key, value)
+            .insert_dict_value(&address, collection, &key, serialize(&value))
             .unwrap();
 
         // when read a value from a non exisiting collection
         let non_existing_collection = b"collection";
-        let result: Option<()> = storage
+        let result: Option<Bytes> = storage
             .get_dict_value(&address, non_existing_collection, &key)
             .unwrap();
 
@@ -224,12 +234,12 @@ mod test {
         let (address, key, value) = setup();
         let collection = b"dict";
         storage
-            .insert_dict_value(&address, collection, &key, value)
+            .insert_dict_value(&address, collection, &key, serialize(&value))
             .unwrap();
 
         // when read a value from a non existing collection
         let non_existing_key = [2u8];
-        let result: Option<()> = storage
+        let result: Option<Bytes> = storage
             .get_dict_value(&address, collection, &non_existing_key)
             .unwrap();
 
@@ -242,10 +252,14 @@ mod test {
         // given storage with some state and a snapshot of the previous state
         let mut storage = Storage::default();
         let (address, key, initial_value) = setup();
-        storage.set_value(&address, &key, initial_value).unwrap();
+        storage
+            .set_value(&address, &key, serialize(&initial_value))
+            .unwrap();
         storage.take_snapshot();
         let next_value = String::from("next_value");
-        storage.set_value(&address, &key, next_value).unwrap();
+        storage
+            .set_value(&address, &key, serialize(&next_value))
+            .unwrap();
 
         // when restore the snapshot
         storage.restore_snapshot();
@@ -253,7 +267,7 @@ mod test {
         // then the changes are reverted
         assert_eq!(
             storage.get_value(&address, &key).unwrap(),
-            Some(initial_value)
+            Some(serialize(&initial_value))
         );
         // the snapshot is removed
         assert_eq!(storage.state_snapshot, None);
@@ -266,19 +280,25 @@ mod test {
         let (address, key, initial_value) = setup();
         let second_value = 2_000u32;
         let third_value = 3_000u32;
-        storage.set_value(&address, &key, initial_value).unwrap();
+        storage
+            .set_value(&address, &key, serialize(&initial_value))
+            .unwrap();
         storage.take_snapshot();
-        storage.set_value(&address, &key, second_value).unwrap();
+        storage
+            .set_value(&address, &key, serialize(&second_value))
+            .unwrap();
 
         // when take another snapshot and restore it
         storage.take_snapshot();
-        storage.set_value(&address, &key, third_value).unwrap();
+        storage
+            .set_value(&address, &key, serialize(&third_value))
+            .unwrap();
         storage.restore_snapshot();
 
         // then the most recent snapshot is restored
         assert_eq!(
             storage.get_value(&address, &key).unwrap(),
-            Some(second_value),
+            Some(serialize(&second_value)),
         );
     }
 
@@ -288,15 +308,22 @@ mod test {
         let mut storage = Storage::default();
         let (address, key, initial_value) = setup();
         let next_value = 1_000u32;
-        storage.set_value(&address, &key, initial_value).unwrap();
+        storage
+            .set_value(&address, &key, serialize(&initial_value))
+            .unwrap();
         storage.take_snapshot();
-        storage.set_value(&address, &key, next_value).unwrap();
+        storage
+            .set_value(&address, &key, serialize(&next_value))
+            .unwrap();
 
         // when the snapshot is dropped
         storage.drop_snapshot();
 
         // then storage state does not change
-        assert_eq!(storage.get_value(&address, &key).unwrap(), Some(next_value),);
+        assert_eq!(
+            storage.get_value(&address, &key).unwrap(),
+            Some(serialize(&next_value)),
+        );
         // the snapshot is wiped out
         assert_eq!(storage.state_snapshot, None);
     }

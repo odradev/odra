@@ -63,7 +63,7 @@ impl OdraVm {
         if call_def.amount > U512::zero() {
             let status = self.checked_transfer_tokens(&self.caller(), &address, &call_def.amount);
             if let Err(err) = status {
-                self.revert(err.clone());
+                self.revert(err);
             }
         }
 
@@ -291,9 +291,11 @@ impl OdraVm {
 
 #[cfg(test)]
 mod tests {
+    use odra_core::serialize;
     use std::collections::BTreeMap;
 
     use crate::vm::contract_container::{EntrypointArgs, EntrypointCall};
+    use odra_types::call_def::CallDef;
     use odra_types::casper_types::bytesrepr::FromBytes;
     use odra_types::casper_types::{RuntimeArgs, U512};
     use odra_types::OdraAddress;
@@ -340,11 +342,13 @@ mod tests {
         let (contract_address, entrypoint, call_result) = setup_contract(&instance);
 
         // when call an existing entrypoint
-        let result =
-            instance.call_contract::<u32>(contract_address, &entrypoint, &RuntimeArgs::new(), None);
+        let result = instance.call_contract(
+            contract_address,
+            CallDef::new(entrypoint, RuntimeArgs::new())
+        );
 
         // then returns the expected value
-        assert_eq!(result, call_result);
+        assert_eq!(result, serialize(&call_result));
     }
 
     #[test]

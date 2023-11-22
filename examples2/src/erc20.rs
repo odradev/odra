@@ -294,13 +294,13 @@ mod __erc20_wasm_parts {
 
     pub fn execute_init() {
         let total_supply: Option<U256> = runtime::get_named_arg("total_supply");
-        let env = WasmContractEnv::new();
+        let env = WasmContractEnv::new_env();
         let mut contract: Erc20 = Erc20::new(Rc::new(env));
         contract.init(total_supply);
     }
 
     pub fn execute_total_supply() {
-        let env = WasmContractEnv::new();
+        let env = WasmContractEnv::new_env();
         let contract: Erc20 = Erc20::new(Rc::new(env));
         let result = contract.total_supply();
         runtime::ret(CLValue::from_t(result).unwrap_or_revert())
@@ -308,7 +308,7 @@ mod __erc20_wasm_parts {
 
     pub fn execute_balance_of() {
         let owner: Address = runtime::get_named_arg("owner");
-        let env = WasmContractEnv::new();
+        let env = WasmContractEnv::new_env();
         let contract: Erc20 = Erc20::new(Rc::new(env));
         let result = contract.balance_of(owner);
         runtime::ret(CLValue::from_t(result).unwrap_or_revert())
@@ -317,21 +317,21 @@ mod __erc20_wasm_parts {
     pub fn execute_transfer() {
         let to: Address = runtime::get_named_arg("to");
         let value: U256 = runtime::get_named_arg("value");
-        let env = WasmContractEnv::new();
+        let env = WasmContractEnv::new_env();
         let mut contract: Erc20 = Erc20::new(Rc::new(env));
         contract.transfer(to, value);
     }
 
     pub fn execute_cross_total() {
         let other: Address = runtime::get_named_arg("other");
-        let env = WasmContractEnv::new();
+        let env = WasmContractEnv::new_env();
         let contract: Erc20 = Erc20::new(Rc::new(env));
         let result = contract.cross_total(other);
         runtime::ret(CLValue::from_t(result).unwrap_or_revert())
     }
 
     pub fn execute_pay_to_mint() {
-        let env = WasmContractEnv::new();
+        let env = WasmContractEnv::new_env();
         odra::odra_casper_wasm_env::host_functions::handle_attached_value();
         let mut contract: Erc20 = Erc20::new(Rc::new(env));
         contract.pay_to_mint();
@@ -339,7 +339,7 @@ mod __erc20_wasm_parts {
     }
 
     pub fn execute_get_current_block_time() {
-        let env = WasmContractEnv::new();
+        let env = WasmContractEnv::new_env();
         let contract: Erc20 = Erc20::new(Rc::new(env));
         let result = contract.get_current_block_time();
         runtime::ret(CLValue::from_t(result).unwrap_or_revert())
@@ -347,7 +347,7 @@ mod __erc20_wasm_parts {
 
     pub fn execute_burn_and_get_paid() {
         let amount: U256 = runtime::get_named_arg("amount");
-        let env = WasmContractEnv::new();
+        let env = WasmContractEnv::new_env();
         let mut contract: Erc20 = Erc20::new(Rc::new(env));
         contract.burn_and_get_paid(amount);
     }
@@ -355,7 +355,7 @@ mod __erc20_wasm_parts {
     pub fn execute_approve() {
         let to: Address = runtime::get_named_arg("to");
         let amount: U256 = runtime::get_named_arg("amount");
-        let env = WasmContractEnv::new();
+        let env = WasmContractEnv::new_env();
         let mut contract: Erc20 = Erc20::new(Rc::new(env));
         contract.approve(to, amount);
     }
@@ -364,7 +364,7 @@ mod __erc20_wasm_parts {
         let other: Address = runtime::get_named_arg("other");
         let to: Address = runtime::get_named_arg("to");
         let value: U256 = runtime::get_named_arg("value");
-        let env = WasmContractEnv::new();
+        let env = WasmContractEnv::new_env();
         let mut contract: Erc20 = Erc20::new(Rc::new(env));
         contract.cross_transfer(other, to, value);
     }
