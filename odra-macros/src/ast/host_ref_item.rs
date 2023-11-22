@@ -16,7 +16,7 @@ struct HostRefStructItem {
 impl TryFrom<&'_ ModuleIR> for HostRefStructItem {
     type Error = syn::Error;
 
-    fn try_from(value: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
         let vis_pub = utils::syn::visibility_pub();
 
         let address = utils::ident::address();
@@ -35,7 +35,7 @@ impl TryFrom<&'_ ModuleIR> for HostRefStructItem {
         Ok(Self {
             vis: vis_pub,
             struct_token: Default::default(),
-            ident: value.host_ref_ident()?,
+            ident: module.host_ref_ident()?,
             fields: named_fields.into()
         })
     }
@@ -61,15 +61,15 @@ struct HostRefImplItem {
 impl TryFrom<&'_ ModuleIR> for HostRefImplItem {
     type Error = syn::Error;
 
-    fn try_from(value: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
         Ok(Self {
             impl_token: Default::default(),
-            ref_ident: value.host_ref_ident()?,
+            ref_ident: module.host_ref_ident()?,
             brace_token: Default::default(),
             with_tokens_fn: WithTokensFnItem,
             get_event_fn: GetEventFnItem,
             last_call_fn: LastCallFnItem,
-            functions: value
+            functions: module
                 .host_functions()
                 .iter()
                 .flat_map(|f| {
@@ -151,13 +151,13 @@ pub struct HostRefItem {
     impl_item: HostRefImplItem
 }
 
-impl<'a> TryFrom<&'a ModuleIR> for HostRefItem {
+impl TryFrom<&'_ ModuleIR> for HostRefItem {
     type Error = syn::Error;
 
-    fn try_from(value: &'a ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            struct_item: value.try_into()?,
-            impl_item: value.try_into()?
+            struct_item: module.try_into()?,
+            impl_item: module.try_into()?
         })
     }
 }

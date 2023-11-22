@@ -13,7 +13,7 @@ struct ContractRefStructItem {
 impl TryFrom<&'_ ModuleIR> for ContractRefStructItem {
     type Error = syn::Error;
 
-    fn try_from(value: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
         let address = utils::ident::address();
         let env = utils::ident::env();
         let ty_address = utils::ty::address();
@@ -26,7 +26,7 @@ impl TryFrom<&'_ ModuleIR> for ContractRefStructItem {
         Ok(Self {
             vis: utils::syn::visibility_pub(),
             struct_token: Default::default(),
-            ident: value.contract_ref_ident()?,
+            ident: module.contract_ref_ident()?,
             fields: named_fields.into()
         })
     }
@@ -63,13 +63,13 @@ struct ContractRefImplItem {
 impl TryFrom<&'_ ModuleIR> for ContractRefImplItem {
     type Error = syn::Error;
 
-    fn try_from(value: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
         Ok(Self {
             impl_token: Default::default(),
-            ref_ident: value.contract_ref_ident()?,
+            ref_ident: module.contract_ref_ident()?,
             brace_token: Default::default(),
             address_fn: AddressFnItem,
-            functions: value
+            functions: module
                 .functions()
                 .iter()
                 .map(ref_utils::contract_function_item)
@@ -87,10 +87,10 @@ pub struct RefItem {
 impl TryFrom<&'_ ModuleIR> for RefItem {
     type Error = syn::Error;
 
-    fn try_from(value: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            struct_item: value.try_into()?,
-            impl_item: value.try_into()?
+            struct_item: module.try_into()?,
+            impl_item: module.try_into()?
         })
     }
 }

@@ -18,10 +18,10 @@ pub struct DeployerInitSignature {
     output: syn::ReturnType
 }
 
-impl<'a> TryFrom<&'a ModuleIR> for DeployerInitSignature {
+impl TryFrom<&'_ ModuleIR> for DeployerInitSignature {
     type Error = syn::Error;
 
-    fn try_from(module: &'a ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
         let host_ref_ident = module.host_ref_ident()?;
         let ty_host_env = utils::ty::host_env();
         let env = utils::ident::env();
@@ -48,10 +48,10 @@ pub struct EntrypointCallerExpr {
     semi_token: syn::token::Semi
 }
 
-impl<'a> TryFrom<&'a ModuleIR> for EntrypointCallerExpr {
+impl TryFrom<&'_ ModuleIR> for EntrypointCallerExpr {
     type Error = syn::Error;
 
-    fn try_from(module: &'a ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
         Ok(Self {
             let_token: Default::default(),
             ident: utils::ident::caller(),
@@ -95,10 +95,10 @@ pub struct NewContractExpr {
     semi_token: syn::token::Semi
 }
 
-impl<'a> TryFrom<&'a ModuleIR> for NewContractExpr {
+impl TryFrom<&'_ ModuleIR> for NewContractExpr {
     type Error = syn::Error;
 
-    fn try_from(module: &'a ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
         let module_str = module.module_str()?;
         let caller_ident = utils::ident::caller();
         let env_ident = utils::ident::env();
@@ -137,10 +137,10 @@ pub struct HostRefInstanceExpr {
     fields: syn::punctuated::Punctuated<syn::FieldValue, syn::Token![,]>
 }
 
-impl<'a> TryFrom<&'a ModuleIR> for HostRefInstanceExpr {
+impl TryFrom<&'_ ModuleIR> for HostRefInstanceExpr {
     type Error = syn::Error;
 
-    fn try_from(module: &'a ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
         let address_ident = utils::ident::address();
         let env_ident = utils::ident::env();
         let attached_value_ident = utils::ident::attached_value();

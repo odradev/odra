@@ -12,10 +12,10 @@ struct DeployStructItem {
     semi_token: syn::token::Semi
 }
 
-impl<'a> TryFrom<&'a ModuleIR> for DeployStructItem {
+impl TryFrom<&'_ ModuleIR> for DeployStructItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'a ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
         Ok(Self {
             vis: utils::syn::visibility_pub(),
             struct_token: Default::default(),
@@ -35,10 +35,10 @@ struct DeployImplItem {
     init_fn: ContractInitFn
 }
 
-impl<'a> TryFrom<&'a ModuleIR> for DeployImplItem {
+impl TryFrom<&'_ ModuleIR> for DeployImplItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'a ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
         Ok(Self {
             impl_token: Default::default(),
             ident: module.deployer_ident()?,
@@ -62,10 +62,10 @@ struct ContractInitFn {
     host_ref_instance: HostRefInstanceExpr
 }
 
-impl<'a> TryFrom<&'a ModuleIR> for ContractInitFn {
+impl TryFrom<&'_ ModuleIR> for ContractInitFn {
     type Error = syn::Error;
 
-    fn try_from(module: &'a ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
         Ok(Self {
             vis: utils::syn::visibility_pub(),
             sig: module.try_into()?,
@@ -83,10 +83,10 @@ pub struct DeployerItem {
     impl_item: DeployImplItem
 }
 
-impl<'a> TryFrom<&'a ModuleIR> for DeployerItem {
+impl TryFrom<&'_ ModuleIR> for DeployerItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'a ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
         Ok(Self {
             struct_item: module.try_into()?,
             impl_item: module.try_into()?

@@ -146,7 +146,11 @@ mod __counter_pack_wasm_parts {
     }
 
     pub fn execute_call() {
-        odra::odra_casper_wasm_env::host_functions::install_contract(entry_points(), Schemas::new(), None);
+        odra::odra_casper_wasm_env::host_functions::install_contract(
+            entry_points(),
+            Schemas::new(),
+            None
+        );
     }
 
     pub fn execute_get_count() {
