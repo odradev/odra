@@ -1,10 +1,30 @@
-use crate::ir::ModuleIR;
 use syn::parse_quote;
 
+use crate::{ir::ModuleIR, utils};
+
 use super::{
+    deployer_item::DeployerItem,
     host_ref_item::HostRefItem,
     parts_utils::{UsePreludeItem, UseSuperItem}
 };
+
+#[derive(syn_derive::ToTokens)]
+pub struct TestPartsReexport {
+    attr: syn::Attribute,
+    reexport_stmt: syn::Stmt
+}
+
+impl TryFrom<&'_ ModuleIR> for TestPartsReexport {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+        let test_parts_ident = module.test_parts_mod_ident()?;
+        Ok(Self {
+            attr: utils::attr::not_wasm32(),
+            reexport_stmt: parse_quote!(pub use #test_parts_ident::*;)
+        })
+    }
+}
 
 #[derive(syn_derive::ToTokens)]
 pub struct PartsModuleItem {
@@ -16,13 +36,11 @@ pub struct PartsModuleItem {
 impl TryFrom<&'_ ModuleIR> for PartsModuleItem {
     type Error = syn::Error;
 
-    fn try_from(value: &'_ ModuleIR) -> Result<Self, Self::Error> {
-        let ident = value.test_parts_mod_ident()?;
-        let attr = parse_quote!(#[cfg(not(target_arch = "wasm32"))]);
+    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            attr,
+            attr: utils::attr::not_wasm32(),
             mod_token: Default::default(),
-            ident
+            ident: module.test_parts_mod_ident()?
         })
     }
 }
@@ -37,19 +55,22 @@ pub struct TestParts {
     #[syn(in = brace_token)]
     use_prelude: UsePreludeItem,
     #[syn(in = brace_token)]
-    host_ref: HostRefItem
+    host_ref: HostRefItem,
+    #[syn(in = brace_token)]
+    deployer: DeployerItem
 }
 
 impl TryFrom<&'_ ModuleIR> for TestParts {
     type Error = syn::Error;
 
-    fn try_from(value: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
         Ok(TestParts {
-            parts_module: value.try_into()?,
+            parts_module: module.try_into()?,
             brace_token: Default::default(),
             use_prelude: UsePreludeItem,
             use_super: UseSuperItem,
-            host_ref: value.try_into()?
+            host_ref: module.try_into()?,
+            deployer: module.try_into()?
         })
     }
 }
@@ -114,6 +135,42 @@ mod test {
 
                     pub fn total_supply(&self) -> U256 {
                         self.try_total_supply().unwrap()
+                    }
+                }
+
+                pub struct Erc20Deployer;
+
+                impl Erc20Deployer {
+                    pub fn init(env: &odra::HostEnv, total_supply: Option<U256>) -> Erc20HostRef {
+                        let caller = odra::EntryPointsCaller::new(env.clone(), |contract_env, call_def| {
+                            match call_def.method() {
+                                "init" => {
+                                    let result = Erc20::new(Rc::new(contract_env))
+                                        .init(call_def.get("total_supply").expect("arg not found"));
+                                    odra::types::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                                }
+                                "total_supply" => {
+                                    let result = Erc20::new(Rc::new(contract_env)).total_supply();
+                                    odra::types::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                                }
+                                _ => panic!("Unknown method")
+                            }
+                        });
+
+                        let address = env.new_contract(
+                            "Erc20",
+                            Some({
+                                let mut named_args = odra::types::RuntimeArgs::new();
+                                let _ = named_args.insert("total_supply", total_supply);
+                                named_args
+                            }),
+                            Some(caller)
+                        );
+                        Erc20HostRef {
+                            address,
+                            env: env.clone(),
+                            attached_value: odra::types::U512::zero()
+                        }
                     }
                 }
             }

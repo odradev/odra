@@ -1,38 +1,96 @@
-use quote::ToTokens;
+use crate::{ir::ModuleIR, utils};
 
-use crate::ir::ModuleIR;
+use super::deployer_utils::{
+    DeployerInitSignature, EntrypointCallerExpr, HostRefInstanceExpr, NewContractExpr
+};
 
-pub struct DeployerItem<'a> {
-    module: &'a ModuleIR
+#[derive(syn_derive::ToTokens)]
+struct DeployStructItem {
+    vis: syn::Visibility,
+    struct_token: syn::token::Struct,
+    ident: syn::Ident,
+    semi_token: syn::token::Semi
 }
 
-impl<'a> DeployerItem<'a> {
-    pub fn new(module: &'a ModuleIR) -> Self {
-        DeployerItem { module }
+impl<'a> TryFrom<&'a ModuleIR> for DeployStructItem {
+    type Error = syn::Error;
+
+    fn try_from(module: &'a ModuleIR) -> Result<Self, Self::Error> {
+        Ok(Self {
+            vis: utils::syn::visibility_pub(),
+            struct_token: Default::default(),
+            ident: module.deployer_ident()?,
+            semi_token: Default::default()
+        })
     }
 }
 
-impl<'a> ToTokens for DeployerItem<'a> {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        // let module = checked_unwrap!(self.module.module_ident());
-        // let module_ref = checked_unwrap!(self.module.host_ref_ident());
-        // let module_deployer = checked_unwrap!(self.module.deployer_ident());
-        // tokens.extend(quote!(
-        //     pub struct #module_deployer;
-        //     impl #module_deployer {
-        //         pub fn deploy(env: &mut Env) -> #module_ref {
-        //             let caller = odra::ModuleCaller(|env: Env, call_def: odra::types::CallDef| {
-        //                 let contract = #module;
-        //                 odra::Callable::call(&contract, env, call_def)
-        //             });
-        //             let addr = env.new_contract(caller);
-        //             #module_ref {
-        //                 env: env.clone_empty(),
-        //                 address: addr,
-        //             }
-        //         }
-        //     }
-        // ));
+#[derive(syn_derive::ToTokens)]
+struct DeployImplItem {
+    impl_token: syn::token::Impl,
+    ident: syn::Ident,
+    #[syn(braced)]
+    brace_token: syn::token::Brace,
+    #[syn(in = brace_token)]
+    init_fn: ContractInitFn
+}
+
+impl<'a> TryFrom<&'a ModuleIR> for DeployImplItem {
+    type Error = syn::Error;
+
+    fn try_from(module: &'a ModuleIR) -> Result<Self, Self::Error> {
+        Ok(Self {
+            impl_token: Default::default(),
+            ident: module.deployer_ident()?,
+            brace_token: Default::default(),
+            init_fn: module.try_into()?
+        })
+    }
+}
+
+#[derive(syn_derive::ToTokens)]
+struct ContractInitFn {
+    vis: syn::Visibility,
+    sig: DeployerInitSignature,
+    #[syn(braced)]
+    braces: syn::token::Brace,
+    #[syn(in = braces)]
+    caller: EntrypointCallerExpr,
+    #[syn(in = braces)]
+    new_contract: NewContractExpr,
+    #[syn(in = braces)]
+    host_ref_instance: HostRefInstanceExpr
+}
+
+impl<'a> TryFrom<&'a ModuleIR> for ContractInitFn {
+    type Error = syn::Error;
+
+    fn try_from(module: &'a ModuleIR) -> Result<Self, Self::Error> {
+        Ok(Self {
+            vis: utils::syn::visibility_pub(),
+            sig: module.try_into()?,
+            braces: Default::default(),
+            caller: module.try_into()?,
+            new_contract: module.try_into()?,
+            host_ref_instance: module.try_into()?
+        })
+    }
+}
+
+#[derive(syn_derive::ToTokens)]
+pub struct DeployerItem {
+    struct_item: DeployStructItem,
+    impl_item: DeployImplItem
+}
+
+impl<'a> TryFrom<&'a ModuleIR> for DeployerItem {
+    type Error = syn::Error;
+
+    fn try_from(module: &'a ModuleIR) -> Result<Self, Self::Error> {
+        Ok(Self {
+            struct_item: module.try_into()?,
+            impl_item: module.try_into()?
+        })
     }
 }
 
@@ -49,20 +107,40 @@ mod deployer_impl {
             pub struct Erc20Deployer;
 
             impl Erc20Deployer {
-                pub fn deploy(env: &mut Env) -> Erc20Ref {
-                    let caller = odra::ModuleCaller(|env: Env, call_def: odra::types::CallDef| {
-                        let contract = Erc20;
-                        odra::Callable::call(&contract, env, call_def)
+                pub fn init(env: &odra::HostEnv, total_supply: Option<U256>) -> Erc20HostRef {
+                    let caller = odra::EntryPointsCaller::new(env.clone(), |contract_env, call_def| {
+                        match call_def.method() {
+                            "init" => {
+                                let result = Erc20::new(Rc::new(contract_env))
+                                    .init(call_def.get("total_supply").expect("arg not found"));
+                                odra::types::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                            }
+                            "total_supply" => {
+                                let result = Erc20::new(Rc::new(contract_env)).total_supply();
+                                odra::types::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                            }
+                            _ => panic!("Unknown method")
+                        }
                     });
-                    let addr = env.new_contract(caller);
-                    Erc20Ref {
-                        env: env.clone_empty(),
-                        address: addr,
+
+                    let address = env.new_contract(
+                        "Erc20",
+                        Some({
+                            let mut named_args = odra::types::RuntimeArgs::new();
+                            let _ = named_args.insert("total_supply", total_supply);
+                            named_args
+                        }),
+                        Some(caller)
+                    );
+                    Erc20HostRef {
+                        address,
+                        env: env.clone(),
+                        attached_value: odra::types::U512::zero()
                     }
                 }
             }
         };
-        let deployer_item = DeployerItem::new(&module);
+        let deployer_item = DeployerItem::try_from(&module).unwrap();
         test_utils::assert_eq(deployer_item, &expected);
     }
 }

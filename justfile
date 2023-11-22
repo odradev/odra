@@ -73,18 +73,18 @@ build-erc20:
     wasm-strip examples2/target/wasm32-unknown-unknown/release/contract.wasm
     rm -rf examples2/wasm/erc20.wasm
     mkdir -p examples2/wasm
-    mv examples2/target/wasm32-unknown-unknown/release/contract.wasm examples2/wasm/erc20.wasm
+    mv examples2/target/wasm32-unknown-unknown/release/contract.wasm examples2/wasm/Erc20.wasm
 
 test-erc20: build-erc20
     cd examples2 && ODRA_BACKEND=casper cargo test --lib erc20 -- --nocapture
 
 build-counter-pack:
-    cd examples2 && ODRA_MODULE=CounterPack cargo build --release --target wasm32-unknown-unknown --bin counter_pack
-    wasm-strip examples2/target/wasm32-unknown-unknown/release/counter_pack.wasm
-    cp examples2/target/wasm32-unknown-unknown/release/counter_pack.wasm examples2/wasm/counter_pack.wasm
+    cd examples2 && ODRA_MODULE=CounterPack cargo build --release --target wasm32-unknown-unknown --bin contract
+    wasm-strip examples2/target/wasm32-unknown-unknown/release/contract.wasm
+    cp examples2/target/wasm32-unknown-unknown/release/contract.wasm examples2/wasm/CounterPack.wasm
 
 test-counter-pack: build-counter-pack
-    cd examples2 && ODRA_BACKEND=casper cargo test --lib counter_pack_works -- --nocapture
+    cd examples2 && ODRA_BACKEND=casper cargo test --lib counter_pack -- --nocapture
 
 build-erc20-schema:
     cd examples2 && ODRA_MODULE=Erc20 cargo run --bin build_schema

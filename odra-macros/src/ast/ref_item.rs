@@ -14,11 +14,13 @@ impl TryFrom<&'_ ModuleIR> for ContractRefStructItem {
     type Error = syn::Error;
 
     fn try_from(value: &'_ ModuleIR) -> Result<Self, Self::Error> {
-        let ty_address = utils::syn::type_address();
-        let ty_contract_env = utils::syn::type_contract_env();
+        let address = utils::ident::address();
+        let env = utils::ident::env();
+        let ty_address = utils::ty::address();
+        let ty_contract_env = utils::ty::contract_env();
         let named_fields: syn::FieldsNamed = parse_quote!({
-            env: Rc<#ty_contract_env>,
-            address: #ty_address,
+            #env: Rc<#ty_contract_env>,
+            #address: #ty_address,
         });
 
         Ok(Self {
@@ -34,9 +36,12 @@ struct AddressFnItem;
 
 impl ToTokens for AddressFnItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let ty_address = utils::ty::address();
+        let m_address = utils::member::address();
+
         tokens.extend(quote!(
-            pub fn address(&self) -> &odra::types::Address {
-                &self.address
+            pub fn address(&self) -> &#ty_address {
+                &#m_address
             }
         ))
     }
@@ -118,7 +123,7 @@ mod ref_item_tests {
                             String::from("init"),
                             {
                                 let mut named_args = odra::types::RuntimeArgs::new();
-                                let _ = named_args.insert(stringify!(total_supply), total_supply);
+                                let _ = named_args.insert("total_supply", total_supply);
                                 named_args
                             }
                         ),
