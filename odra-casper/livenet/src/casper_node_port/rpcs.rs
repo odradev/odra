@@ -1,5 +1,5 @@
 use casper_hashing::Digest;
-use odra_types::casper_types::{
+use odra_core::casper_types::{
     CLValue, EraId, ExecutionResult, ProtocolVersion, PublicKey, Timestamp, U512
 };
 use schemars::JsonSchema;

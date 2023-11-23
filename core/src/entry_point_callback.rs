@@ -1,6 +1,6 @@
+use crate::call_def::CallDef;
+use crate::Bytes;
 use crate::{ContractEnv, HostEnv};
-use odra_types::call_def::CallDef;
-use odra_types::Bytes;
 
 #[derive(Clone)]
 pub struct EntryPointsCaller {

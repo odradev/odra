@@ -1,5 +1,5 @@
 use odra::prelude::*;
-use odra::types::{runtime_args, FromBytes, RuntimeArgs};
+use odra::{runtime_args, FromBytes, RuntimeArgs};
 use odra::{CallDef, ContractEnv, HostEnv, Mapping, Variable};
 
 pub struct Counter {

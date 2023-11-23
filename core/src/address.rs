@@ -2,9 +2,8 @@
 
 use core::str::FromStr;
 
-use crate::AddressError;
 use crate::AddressError::ZeroAddress;
-use crate::{OdraError, VmError};
+use crate::{AddressError, OdraError, VmError};
 use alloc::{
     string::{String, ToString},
     vec::Vec
@@ -43,7 +42,7 @@ impl Address {
         }
     }
 
-    #[cfg(feature = "test-support")]
+    // TODO: move those methods to odra_vm as they shouldn't be public
     pub fn account_from_str(str: &str) -> Self {
         use alloc::format;
         use casper_types::account::{ACCOUNT_HASH_FORMATTED_STRING_PREFIX, ACCOUNT_HASH_LENGTH};
@@ -55,7 +54,7 @@ impl Address {
         Self::Account(AccountHash::from_formatted_str(account_str.as_str()).unwrap())
     }
 
-    #[cfg(feature = "test-support")]
+    // TODO: move those methods to odra_vm as they shouldn't be public
     pub fn contract_from_u32(i: u32) -> Self {
         use alloc::format;
         use casper_types::KEY_HASH_LENGTH;

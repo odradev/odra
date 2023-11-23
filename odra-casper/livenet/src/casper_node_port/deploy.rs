@@ -6,7 +6,7 @@ use casper_execution_engine::core::engine_state::{DeployItem, ExecutableDeployIt
 use casper_hashing::Digest;
 use datasize::DataSize;
 use itertools::Itertools;
-use odra_types::casper_types::{
+use odra_core::casper_types::{
     self,
     bytesrepr::{self, FromBytes, ToBytes},
     PublicKey, SecretKey, TimeDiff, Timestamp

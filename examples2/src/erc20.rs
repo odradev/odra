@@ -1,9 +1,6 @@
-use odra::casper_event_standard;
+use odra::{casper_event_standard, OdraError};
 use odra::{prelude::*, CallDef, Event, ModuleWrapper};
-use odra::{
-    types::{Address, U256, U512},
-    ContractEnv, Mapping, Variable
-};
+use odra::{Address, ContractEnv, Mapping, Variable, U256, U512};
 
 #[derive(Event, Eq, PartialEq, Debug)]
 pub struct Transfer {
@@ -165,7 +162,7 @@ mod __erc20_module {
 
 #[cfg(odra_module = "Erc20")]
 mod __erc20_schema {
-    use odra::{prelude::String, types::contract_def::ContractBlueprint2};
+    use odra::{contract_def::ContractBlueprint2, prelude::String};
 
     #[no_mangle]
     fn module_schema() -> ContractBlueprint2 {
@@ -181,16 +178,16 @@ mod __erc20_schema {
 mod __erc20_wasm_parts {
     use super::{Approval, Erc20, Transfer};
     use odra::casper_event_standard::Schemas;
+    use odra::casper_types::{
+        CLType, CLTyped, CLValue, EntryPoint, EntryPointAccess, EntryPointType, EntryPoints, Group,
+        Parameter, RuntimeArgs
+    };
     use odra::odra_casper_wasm_env;
     use odra::odra_casper_wasm_env::casper_contract::contract_api::runtime;
     use odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert;
     use odra::odra_casper_wasm_env::WasmContractEnv;
-    use odra::types::casper_types::{
-        CLType, CLTyped, CLValue, EntryPoint, EntryPointAccess, EntryPointType, EntryPoints, Group,
-        Parameter, RuntimeArgs
-    };
-    use odra::types::{runtime_args, Address, U256};
     use odra::{prelude::*, ContractEnv};
+    use odra::{runtime_args, Address, U256};
 
     extern crate alloc;
 
@@ -425,18 +422,18 @@ mod __erc20_wasm_parts {
     }
 }
 
-use odra::types::{runtime_args, ExecutionError, OdraError, RuntimeArgs};
+use odra::{runtime_args, ExecutionError, RuntimeArgs};
 
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests {
     pub use super::*;
-    use odra::types::casper_types::system::mint::Error::InsufficientFunds;
-    use odra::types::ExecutionError;
-    use odra::types::OdraError;
-    use odra::types::U512;
-    use odra::types::{Bytes, ToBytes};
+    use odra::casper_types::system::mint::Error::InsufficientFunds;
     use odra::CallResult;
+    use odra::ExecutionError;
+    use odra::OdraError;
+    use odra::U512;
+    use odra::{Bytes, ToBytes};
 
     #[test]
     fn erc20_works() {

@@ -1,4 +1,4 @@
-use odra::types::contract_def::ContractBlueprint2;
+use odra::contract_def::ContractBlueprint2;
 
 extern "Rust" {
     fn module_schema() -> ContractBlueprint2;

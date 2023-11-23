@@ -2,7 +2,7 @@ use std::fmt;
 
 use casper_hashing::Digest;
 use datasize::DataSize;
-use odra_types::casper_types::bytesrepr::{self, FromBytes, ToBytes};
+use odra_core::casper_types::bytesrepr::{self, FromBytes, ToBytes};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

@@ -1,11 +1,10 @@
-extern crate alloc;
-
 use crate::host_functions;
-use alloc::boxed::Box;
 use casper_types::bytesrepr::ToBytes;
 use casper_types::U512;
+use odra_core::casper_types;
+use odra_core::prelude::boxed::Box;
 use odra_core::{prelude::*, ContractContext, ContractEnv};
-use odra_types::{Address, Bytes, EventData, OdraError};
+use odra_core::{Address, Bytes, OdraError};
 
 #[derive(Clone)]
 pub struct WasmContractEnv;

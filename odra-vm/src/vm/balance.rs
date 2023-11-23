@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use odra_types::casper_types::U512;
+use odra_core::casper_types::U512;
 
 #[derive(Eq, Hash, PartialEq, Clone, Default, Debug)]
 pub struct AccountBalance {

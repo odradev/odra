@@ -1,7 +1,7 @@
+use odra_core::call_def::CallDef;
 use odra_core::prelude::{collections::*, *};
 use odra_core::HostEnv;
-use odra_types::call_def::CallDef;
-use odra_types::{casper_types::RuntimeArgs, Address, Bytes, OdraError, VmError};
+use odra_core::{casper_types::RuntimeArgs, Address, Bytes, OdraError, VmError};
 
 use super::contract_container::ContractContainer;
 

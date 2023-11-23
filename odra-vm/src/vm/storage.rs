@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use odra_types::{
+use odra_core::{
     casper_types::{
         bytesrepr::{Error, FromBytes, ToBytes},
         U512
@@ -123,7 +123,7 @@ impl Storage {
 #[cfg(test)]
 mod test {
     use odra_core::serialize;
-    use odra_types::{Address, Bytes};
+    use odra_core::{Address, Bytes};
 
     use super::Storage;
 

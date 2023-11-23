@@ -1,8 +1,8 @@
+use odra_core::call_def::CallDef;
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::prelude::{collections::*, *};
 use odra_core::HostEnv;
-use odra_types::call_def::CallDef;
-use odra_types::{
+use odra_core::{
     casper_types::{NamedArg, RuntimeArgs},
     Bytes, OdraError, VmError
 };
@@ -80,11 +80,11 @@ impl ContractContainer {
 #[cfg(test)]
 mod tests {
     use odra_core::prelude::{collections::*, *};
-    use odra_core::{EntryPointsCaller, HostEnv};
-    use odra_types::{
+    use odra_core::{
         casper_types::{runtime_args, RuntimeArgs},
         OdraError, VmError
     };
+    use odra_core::{EntryPointsCaller, HostEnv};
     use url::Host;
 
     use super::{ContractContainer, EntrypointArgs, EntrypointCall};

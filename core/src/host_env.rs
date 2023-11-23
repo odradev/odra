@@ -2,14 +2,14 @@ use crate::call_result::CallResult;
 use crate::entry_point_callback::EntryPointsCaller;
 use crate::event::EventError;
 use crate::host_context::HostContext;
+use crate::prelude::collections::BTreeMap;
 use crate::prelude::*;
 use crate::utils::extract_event_name;
+use crate::{Address, OdraError, VmError, U512};
+use crate::{Bytes, RuntimeArgs, ToBytes};
+use crate::{CLTyped, FromBytes};
 use crate::{CallDef, ContractEnv};
-use alloc::collections::BTreeMap;
 use casper_event_standard::EventInstance;
-use odra_types::{Address, OdraError, VmError, U512};
-use odra_types::{Bytes, RuntimeArgs, ToBytes};
-use odra_types::{CLTyped, FromBytes};
 
 #[derive(Clone)]
 pub struct HostEnv {
@@ -67,7 +67,7 @@ impl HostEnv {
         let use_proxy = T::cl_type() != <()>::cl_type() || !call_def.attached_value().is_zero();
         let call_result = backend.call_contract(&address, call_def, use_proxy);
 
-        let mut events_map: BTreeMap<Address, Vec<odra_types::Bytes>> = BTreeMap::new();
+        let mut events_map: BTreeMap<Address, Vec<Bytes>> = BTreeMap::new();
         let mut binding = self.events_count.borrow_mut();
 
         // Go through all contracts and collect their events

@@ -4,10 +4,7 @@ members = [
     "odra-vm",
     "core",
     "odra-macros",
-    "types",
-    "utils",
     "odra-casper/wasm-env",
-    "odra-casper/shared",
     "odra-casper/test-vm",
 #    needs a refactor
 #    "odra-casper/livenet"

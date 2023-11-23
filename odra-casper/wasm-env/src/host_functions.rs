@@ -1,26 +1,26 @@
-extern crate alloc;
-
-use alloc::borrow::ToOwned;
-use alloc::boxed::Box;
-use alloc::{format, string::String, vec, vec::Vec};
 use casper_contract::contract_api::system::{
     create_purse, get_purse_balance, transfer_from_purse_to_account, transfer_from_purse_to_purse
 };
 use casper_contract::contract_api::{runtime, storage};
 use casper_contract::unwrap_or_revert::UnwrapOrRevert;
 use casper_contract::{contract_api, ext_ffi};
-use casper_event_standard::{Schema, Schemas};
-use casper_types::bytesrepr::Bytes;
-use casper_types::system::CallStackElement;
-use casper_types::{api_error, ContractVersion, RuntimeArgs, U512};
-use casper_types::{
+use core::mem::MaybeUninit;
+use odra_core::call_def::CallDef;
+use odra_core::casper_event_standard;
+use odra_core::casper_event_standard::{Schema, Schemas};
+use odra_core::casper_types;
+use odra_core::casper_types::bytesrepr::Bytes;
+use odra_core::casper_types::system::CallStackElement;
+use odra_core::casper_types::{api_error, ContractVersion, RuntimeArgs, U512};
+use odra_core::casper_types::{
     bytesrepr::{FromBytes, ToBytes},
     contracts::NamedKeys,
     ApiError, CLTyped, ContractPackageHash, EntryPoints, Key, URef
 };
-use core::mem::MaybeUninit;
-use odra_types::call_def::CallDef;
-use odra_types::{Address, ExecutionError};
+use odra_core::prelude::borrow::ToOwned;
+use odra_core::prelude::boxed::Box;
+use odra_core::prelude::{format, string::String, vec, vec::Vec};
+use odra_core::{Address, ExecutionError};
 
 use crate::consts;
 
@@ -92,7 +92,7 @@ pub fn install_contract(
 }
 
 fn initial_named_keys(schemas: Schemas) -> NamedKeys {
-    let mut named_keys = casper_types::contracts::NamedKeys::new();
+    let mut named_keys = NamedKeys::new();
     named_keys.insert(
         String::from(consts::STATE_KEY),
         Key::URef(storage::new_dictionary(consts::STATE_KEY).unwrap_or_revert())
@@ -141,9 +141,9 @@ pub fn get_value(key: &[u8]) -> Option<Vec<u8>> {
     let dictionary_item_key_size = key.len();
 
     let value_size = {
-        let mut value_size = core::mem::MaybeUninit::uninit();
+        let mut value_size = MaybeUninit::uninit();
         let ret = unsafe {
-            casper_contract::ext_ffi::casper_dictionary_get(
+            ext_ffi::casper_dictionary_get(
                 uref_ptr,
                 uref_size,
                 dictionary_item_key_ptr,
@@ -151,7 +151,7 @@ pub fn get_value(key: &[u8]) -> Option<Vec<u8>> {
                 value_size.as_mut_ptr()
             )
         };
-        match casper_types::api_error::result_from(ret) {
+        match api_error::result_from(ret) {
             Ok(_) => unsafe { value_size.assume_init() },
             Err(ApiError::ValueNotFound) => return None,
             Err(e) => runtime::revert(e)
@@ -180,7 +180,7 @@ fn read_host_buffer(size: usize) -> Result<Vec<u8>, ApiError> {
     let mut dest: Vec<u8> = if size == 0 {
         Vec::new()
     } else {
-        let bytes_non_null_ptr = casper_contract::contract_api::alloc_bytes(size);
+        let bytes_non_null_ptr = contract_api::alloc_bytes(size);
         unsafe { Vec::from_raw_parts(bytes_non_null_ptr.as_ptr(), size, size) }
     };
     read_host_buffer_into(&mut dest)?;
@@ -188,15 +188,11 @@ fn read_host_buffer(size: usize) -> Result<Vec<u8>, ApiError> {
 }
 
 fn read_host_buffer_into(dest: &mut [u8]) -> Result<usize, ApiError> {
-    let mut bytes_written = core::mem::MaybeUninit::uninit();
+    let mut bytes_written = MaybeUninit::uninit();
     let ret = unsafe {
-        casper_contract::ext_ffi::casper_read_host_buffer(
-            dest.as_mut_ptr(),
-            dest.len(),
-            bytes_written.as_mut_ptr()
-        )
+        ext_ffi::casper_read_host_buffer(dest.as_mut_ptr(), dest.len(), bytes_written.as_mut_ptr())
     };
-    casper_types::api_error::result_from(ret)?;
+    api_error::result_from(ret)?;
     Ok(unsafe { bytes_written.assume_init() })
 }
 
@@ -217,7 +213,7 @@ pub fn set_value(key: &[u8], value: &[u8]) {
     // let value_size = value.len();
 
     let result = unsafe {
-        let ret = casper_contract::ext_ffi::casper_dictionary_put(
+        let ret = ext_ffi::casper_dictionary_put(
             uref_ptr,
             uref_size,
             dictionary_item_key_ptr,
@@ -225,7 +221,7 @@ pub fn set_value(key: &[u8], value: &[u8]) {
             value_ptr,
             value_size
         );
-        casper_types::api_error::result_from(ret)
+        api_error::result_from(ret)
     };
 
     result.unwrap_or_revert();
@@ -344,7 +340,7 @@ fn revoke_access_to_constructor_group(
     contract_package_hash: ContractPackageHash,
     constructor_access: URef
 ) {
-    let mut urefs = alloc::collections::BTreeSet::new();
+    let mut urefs = odra_core::prelude::collections::BTreeSet::new();
     urefs.insert(constructor_access);
     storage::remove_contract_user_group_urefs(
         contract_package_hash,
@@ -365,7 +361,7 @@ pub fn call_versioned_contract(
     contract_version: Option<ContractVersion>,
     entry_point_name: &str,
     runtime_args: RuntimeArgs
-) -> odra_types::Bytes {
+) -> Bytes {
     let (contract_package_hash_ptr, contract_package_hash_size, _bytes) =
         to_ptr(contract_package_hash);
     let (contract_version_ptr, contract_version_size, _bytes) = to_ptr(contract_version);
@@ -390,7 +386,7 @@ pub fn call_versioned_contract(
         api_error::result_from(ret).unwrap_or_revert();
         unsafe { bytes_written.assume_init() }
     };
-    odra_types::Bytes::from(deserialize_contract_result(bytes_written))
+    odra_core::Bytes::from(deserialize_contract_result(bytes_written))
 }
 fn deserialize_contract_result(bytes_written: usize) -> Vec<u8> {
     if bytes_written == 0 {

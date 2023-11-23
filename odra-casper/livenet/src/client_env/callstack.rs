@@ -1,4 +1,4 @@
-use odra_types::Address;
+use odra_core::Address;
 
 #[derive(Clone, Default)]
 pub struct Callstack(Vec<Address>);

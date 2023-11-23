@@ -92,13 +92,13 @@ mod test {
                 use odra::prelude::*;
 
                 pub struct Erc20HostRef {
-                    pub address: odra::types::Address,
+                    pub address: odra::Address,
                     pub env: odra::HostEnv,
-                    pub attached_value: odra::types::U512
+                    pub attached_value: odra::U512
                 }
 
                 impl Erc20HostRef {
-                    pub fn with_tokens(&self, tokens: odra::types::U512) -> Self {
+                    pub fn with_tokens(&self, tokens: odra::U512) -> Self {
                         Self {
                             address: self.address,
                             env: self.env.clone(),
@@ -108,7 +108,7 @@ mod test {
 
                     pub fn get_event<T>(&self, index: i32) -> Result<T, odra::event::EventError>
                     where
-                        T: odra::types::FromBytes + odra::casper_event_standard::EventInstance,
+                        T: odra::FromBytes + odra::casper_event_standard::EventInstance,
                     {
                         self.env.get_event(&self.address, index)
                     }
@@ -123,8 +123,8 @@ mod test {
                             odra::CallDef::new(
                                 String::from("total_supply"),
                                 {
-                                    let mut named_args = odra::types::RuntimeArgs::new();
-                                    if self.attached_value > odra::types::U512::zero() {
+                                    let mut named_args = odra::RuntimeArgs::new();
+                                    if self.attached_value > odra::U512::zero() {
                                         let _ = named_args.insert("amount", self.attached_value);
                                     }
                                     named_args
@@ -147,11 +147,11 @@ mod test {
                                 "init" => {
                                     let result = Erc20::new(Rc::new(contract_env))
                                         .init(call_def.get("total_supply").expect("arg not found"));
-                                    odra::types::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                                    odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
                                 }
                                 "total_supply" => {
                                     let result = Erc20::new(Rc::new(contract_env)).total_supply();
-                                    odra::types::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                                    odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
                                 }
                                 _ => panic!("Unknown method")
                             }
@@ -160,7 +160,7 @@ mod test {
                         let address = env.new_contract(
                             "Erc20",
                             Some({
-                                let mut named_args = odra::types::RuntimeArgs::new();
+                                let mut named_args = odra::RuntimeArgs::new();
                                 let _ = named_args.insert("total_supply", total_supply);
                                 named_args
                             }),
@@ -169,7 +169,7 @@ mod test {
                         Erc20HostRef {
                             address,
                             env: env.clone(),
-                            attached_value: odra::types::U512::zero()
+                            attached_value: odra::U512::zero()
                         }
                     }
                 }

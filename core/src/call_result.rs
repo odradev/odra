@@ -1,10 +1,10 @@
+use crate::prelude::collections::BTreeMap;
+use crate::prelude::string::{String, ToString};
+use crate::prelude::vec;
+use crate::prelude::vec::Vec;
 use crate::utils::extract_event_name;
-use alloc::collections::BTreeMap;
-use alloc::string::{String, ToString};
-use alloc::vec;
-use alloc::vec::Vec;
+use crate::{Address, Bytes, OdraError, ToBytes};
 use casper_event_standard::EventInstance;
-use odra_types::{Address, Bytes, OdraError, ToBytes};
 
 #[derive(Debug, Clone)]
 pub struct CallResult {

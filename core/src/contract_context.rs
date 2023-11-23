@@ -1,5 +1,5 @@
-use odra_types::call_def::CallDef;
-use odra_types::{Address, Bytes, OdraError, U512};
+use crate::call_def::CallDef;
+use crate::{Address, Bytes, OdraError, U512};
 
 pub trait ContractContext {
     fn get_value(&self, key: &[u8]) -> Option<Bytes>;

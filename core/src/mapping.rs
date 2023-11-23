@@ -4,7 +4,7 @@ use crate::{
     variable::Variable,
     ContractEnv
 };
-use odra_types::{CLTyped, FromBytes, ToBytes};
+use crate::{CLTyped, FromBytes, ToBytes};
 
 pub struct Mapping<K, V> {
     parent_env: Rc<ContractEnv>,

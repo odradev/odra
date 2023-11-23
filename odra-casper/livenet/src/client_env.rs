@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, sync::Mutex};
 
 use odra_casper_shared::consts;
-use odra_types::{
+use odra_core::{
     casper_types::{
         bytesrepr::{FromBytes, ToBytes},
         CLType, CLTyped, CLValue, RuntimeArgs, U512

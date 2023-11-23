@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use odra_types::{CLTyped, FromBytes, ToBytes};
+use crate::{CLTyped, FromBytes, ToBytes};
 
 use crate::contract_env::ContractEnv;
 

@@ -1,21 +1,11 @@
 #![no_std]
 
-extern crate alloc;
-
-pub use odra_core::casper_event_standard;
+pub use odra_core::call_result::*;
 pub use odra_core::casper_event_standard::Event;
-pub use odra_core::event;
-pub use odra_core::EntryPointsCaller;
-pub use odra_core::{
-    call_result::{CallResult, ContractCallResult},
-    mapping::Mapping,
-    module,
-    module::ModuleWrapper,
-    prelude,
-    variable::Variable,
-    CallDef, ContractEnv, HostEnv
-};
-pub use odra_types as types;
+pub use odra_core::mapping::*;
+pub use odra_core::module::*;
+pub use odra_core::variable::*;
+pub use odra_core::*;
 
 #[cfg(target_arch = "wasm32")]
 pub use odra_casper_wasm_env;

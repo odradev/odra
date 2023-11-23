@@ -7,8 +7,6 @@ edition = "2021"
 
 [dependencies]
 odra-core = { path = "../core" }
-odra-types = { path = "../types", features = ["test-support"] }
-odra-utils = { path = "../utils"}
 anyhow = "1.0.75"
 url = "2.4.1"
 

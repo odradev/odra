@@ -20,7 +20,7 @@ use casper_types::{
     bytesrepr::{Bytes, FromBytes, ToBytes},
     ApiError, CLTyped, ContractPackageHash, ContractVersion, RuntimeArgs, URef, U512
 };
-use odra_casper_shared::consts::{
+use odra::consts::{
     ARGS_ARG, ATTACHED_VALUE_ARG, CARGO_PURSE_ARG, CARGO_PURSE_KEY, CONTRACT_PACKAGE_HASH_ARG,
     ENTRY_POINT_ARG
 };
@@ -28,13 +28,6 @@ use odra_casper_shared::consts::{
 #[cfg(target_arch = "wasm32")]
 #[allow(unused_imports, clippy::single_component_path_imports)]
 use ink_allocator;
-
-#[cfg(target_arch = "wasm32")]
-#[panic_handler]
-#[no_mangle]
-pub fn panic(_info: &core::panic::PanicInfo) -> ! {
-    core::intrinsics::abort();
-}
 
 /// Contract call definition.
 pub struct ProxyCall {

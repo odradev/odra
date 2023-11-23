@@ -8,7 +8,7 @@ use casper_execution_engine::core::engine_state::ExecutableDeployItem;
 use casper_hashing::Digest;
 use jsonrpc_lite::JsonRpc;
 use odra_casper_shared::key_maker::KeyMaker;
-use odra_types::{
+use odra_core::{
     casper_types::{
         bytesrepr::{Bytes, FromBytes, ToBytes},
         runtime_args, ContractHash, ContractPackageHash, ExecutionResult, Key as CasperKey,
@@ -419,7 +419,7 @@ mod tests {
     use std::str::FromStr;
 
     use casper_hashing::Digest;
-    use odra_types::{
+    use odra_core::{
         casper_types::bytesrepr::{FromBytes, ToBytes},
         Address, U256
     };

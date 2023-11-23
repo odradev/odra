@@ -1,9 +1,9 @@
 use crate::entry_point_callback::EntryPointsCaller;
 use crate::event::EventError;
+use crate::RuntimeArgs;
+use crate::{Address, U512};
+use crate::{Bytes, OdraError};
 use crate::{CallDef, ContractEnv};
-use odra_types::RuntimeArgs;
-use odra_types::{Address, U512};
-use odra_types::{Bytes, OdraError};
 
 pub trait HostContext {
     fn set_caller(&self, caller: Address);
