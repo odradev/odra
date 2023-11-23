@@ -1,26 +1,100 @@
-use crate::utils;
-use proc_macro2::{Ident, TokenStream};
-use quote::format_ident;
-use syn::{parse_quote, ItemImpl};
+use crate::{utils, test_utils};
+use proc_macro2::Ident;
+use quote::{format_ident, ToTokens};
+use syn::{parse_quote, spanned::Spanned};
 
 const CONSTRUCTOR_NAME: &str = "init";
 
-pub struct ModuleIR {
-    code: ItemImpl
+macro_rules! try_parse {
+    ($from:path => $to:ident) => {
+        pub struct $to {
+            code: $from
+        }
+
+        impl TryFrom<&proc_macro2::TokenStream> for $to {
+            type Error = syn::Error;
+
+            fn try_from(stream: &proc_macro2::TokenStream) -> Result<Self, Self::Error> {
+                Ok(Self {
+                    code: syn::parse2::<$from>(stream.clone())?
+                })
+            }
+        }
+    };
 }
 
-impl TryFrom<&TokenStream> for ModuleIR {
-    type Error = syn::Error;
+try_parse!(syn::ItemStruct => StructIR);
 
-    fn try_from(value: &TokenStream) -> Result<Self, Self::Error> {
-        Ok(Self {
-            code: syn::parse2::<syn::ItemImpl>(value.clone())?
-        })
+impl StructIR {
+    pub fn field_names(&self) -> Result<Vec<syn::Ident>, syn::Error> {
+        utils::syn::struct_fields_ident(&self.code)
+    }
+
+    pub fn module_ident(&self) -> syn::Ident {
+        utils::syn::ident_from_struct(&self.code)
+    }
+
+    pub fn module_str(&self) -> String {
+        self.module_ident().to_string()
+    }
+
+    pub fn module_mod_ident(&self) -> syn::Ident {
+        format_ident!(
+            "__{}_module",
+            odra_utils::camel_to_snake(self.module_ident())
+        )
+    }
+
+    pub fn typed_fields(&self) -> Result<Vec<EnumeratedTypedField>, syn::Error> {
+        let fields = utils::syn::struct_fields(&self.code)?;
+        for (_, ty) in &fields {
+            Self::validate_ty(ty)?;
+        }
+
+        fields
+            .into_iter()
+            .enumerate()
+            .map(|(idx, (ident, ty))| Ok(EnumeratedTypedField {
+                idx: idx as u8,
+                ident,
+                ty: utils::syn::clear_generics(&ty)?,
+            }))
+            .collect()
+    }
+
+    fn validate_ty(ty: &syn::Type) -> Result<(), syn::Error> {
+        let non_generic_ty = utils::syn::clear_generics(ty)?;
+
+        let valid_types = vec![
+            utils::ty::module_wrapper(),
+            utils::ty::variable(),
+            utils::ty::mapping(),
+            utils::ty::rc_contract_env(),
+            parse_quote!(Rc<ContractEnv>),
+        ]
+            .iter()
+            .map(|ty| utils::syn::type_to_ident(ty).map(|i| vec![ty.clone(), parse_quote!(#i)]))
+            .collect::<Result<Vec<_>, _>>()?;
+        let valid_types = valid_types.into_iter().flatten().collect::<Vec<_>>();
+
+        if valid_types.iter().find(|t| test_utils::eq(t, &non_generic_ty)).is_some() {
+            return Ok(());
+        }
+
+        Err(syn::Error::new(ty.span(), "message"))
     }
 }
 
+pub struct EnumeratedTypedField {
+    pub idx: u8,
+    pub ident: syn::Ident,
+    pub ty: syn::Type
+}
+
+try_parse!(syn::ItemImpl => ModuleIR);
+
 impl ModuleIR {
-    pub fn self_code(&self) -> &ItemImpl {
+    pub fn self_code(&self) -> &syn::ItemImpl {
         &self.code
     }
 

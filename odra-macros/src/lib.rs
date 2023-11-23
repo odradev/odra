@@ -1,4 +1,4 @@
-#![feature(box_patterns)]
+#![feature(box_patterns, result_flattening)]
 
 use ast::*;
 use ir::ModuleIR;

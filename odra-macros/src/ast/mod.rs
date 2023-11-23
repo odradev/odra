@@ -1,6 +1,7 @@
 mod deployer_item;
 mod deployer_utils;
 mod host_ref_item;
+mod module_item;
 mod parts_utils;
 mod ref_item;
 mod ref_utils;
