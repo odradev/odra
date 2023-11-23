@@ -1,6 +1,6 @@
 use core::any::Any;
 
-use alloc::{boxed::Box, string::String};
+use crate::prelude::{boxed::Box, string::String};
 
 use crate::arithmetic::ArithmeticsError;
 
