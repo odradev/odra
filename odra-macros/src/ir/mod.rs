@@ -3,6 +3,8 @@ use proc_macro2::{Ident, TokenStream};
 use quote::format_ident;
 use syn::{parse_quote, ItemImpl};
 
+const CONSTRUCTOR_NAME: &str = "init";
+
 pub struct ModuleIR {
     code: ItemImpl
 }
@@ -24,6 +26,10 @@ impl ModuleIR {
 
     pub fn module_ident(&self) -> Result<Ident, syn::Error> {
         utils::syn::ident_from_impl(&self.code)
+    }
+
+    pub fn module_str(&self) -> Result<String, syn::Error> {
+        self.module_ident().map(|i| i.to_string())
     }
 
     pub fn host_ref_ident(&self) -> Result<Ident, syn::Error> {
@@ -66,6 +72,35 @@ impl ModuleIR {
             })
             .collect::<Vec<_>>()
     }
+
+    pub fn host_functions(&self) -> Vec<FnIR> {
+        self.functions()
+            .into_iter()
+            .filter(|f| f.name_str() != CONSTRUCTOR_NAME)
+            .collect()
+    }
+
+    pub fn constructor(&self) -> Option<FnIR> {
+        self.functions()
+            .into_iter()
+            .find(|f| f.name_str() == CONSTRUCTOR_NAME)
+    }
+
+    pub fn constructor_args(&self) -> syn::punctuated::Punctuated<syn::FnArg, syn::Token![,]> {
+        self.constructor()
+            .map(|f| {
+                f.named_args()
+                    .into_iter()
+                    .map(|a| a.self_code().clone())
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    pub fn module_instance_expr(&self, env_ident: syn::Ident) -> Result<syn::Expr, syn::Error> {
+        let module_ident = self.module_ident()?;
+        Ok(parse_quote!(#module_ident::new(Rc::new(#env_ident))))
+    }
 }
 
 pub struct FnIR {
@@ -93,9 +128,11 @@ impl FnIR {
         utils::syn::function_arg_names(&self.code)
     }
 
-    #[allow(dead_code)]
-    pub fn args_len(&self) -> usize {
-        utils::syn::function_args(&self.code).len()
+    pub fn named_args(&self) -> Vec<FnArgIR> {
+        utils::syn::function_named_args(&self.code)
+            .into_iter()
+            .map(|arg| FnArgIR::new(arg.to_owned()))
+            .collect()
     }
 
     pub fn return_type(&self) -> syn::ReturnType {
@@ -103,18 +140,47 @@ impl FnIR {
     }
 
     pub fn try_return_type(&self) -> syn::ReturnType {
+        let ty_odra_err = utils::ty::odra_error();
         match self.return_type() {
-            syn::ReturnType::Default => parse_quote!(-> Result<(), OdraError>),
-            syn::ReturnType::Type(_, box ty) => parse_quote!(-> Result<#ty, OdraError>)
+            syn::ReturnType::Default => parse_quote!(-> Result<(), #ty_odra_err>),
+            syn::ReturnType::Type(_, box ty) => parse_quote!(-> Result<#ty, #ty_odra_err>)
         }
     }
 
     pub fn typed_args(&self) -> Vec<syn::PatType> {
-        utils::syn::function_args(&self.code)
+        utils::syn::function_typed_args(&self.code)
     }
 
     pub fn is_mut(&self) -> bool {
         let receiver = utils::syn::receiver_arg(&self.code);
         receiver.map(|r| r.mutability.is_some()).unwrap_or_default()
+    }
+}
+
+pub struct FnArgIR {
+    code: syn::FnArg
+}
+
+impl FnArgIR {
+    pub fn new(code: syn::FnArg) -> Self {
+        FnArgIR { code }
+    }
+
+    pub fn self_code(&self) -> &syn::FnArg {
+        &self.code
+    }
+
+    pub fn name(&self) -> Result<Ident, syn::Error> {
+        match &self.code {
+            syn::FnArg::Typed(syn::PatType {
+                pat: box syn::Pat::Ident(pat),
+                ..
+            }) => Ok(pat.ident.clone()),
+            _ => Err(syn::Error::new_spanned(&self.code, "Unnamed arg"))
+        }
+    }
+
+    pub fn name_str(&self) -> Result<String, syn::Error> {
+        self.name().map(|i| i.to_string())
     }
 }

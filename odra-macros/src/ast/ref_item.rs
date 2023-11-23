@@ -13,18 +13,20 @@ struct ContractRefStructItem {
 impl TryFrom<&'_ ModuleIR> for ContractRefStructItem {
     type Error = syn::Error;
 
-    fn try_from(value: &'_ ModuleIR) -> Result<Self, Self::Error> {
-        let ty_address = utils::syn::type_address();
-        let ty_contract_env = utils::syn::type_contract_env();
+    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+        let address = utils::ident::address();
+        let env = utils::ident::env();
+        let ty_address = utils::ty::address();
+        let ty_contract_env = utils::ty::contract_env();
         let named_fields: syn::FieldsNamed = parse_quote!({
-            env: Rc<#ty_contract_env>,
-            address: #ty_address,
+            #env: Rc<#ty_contract_env>,
+            #address: #ty_address,
         });
 
         Ok(Self {
             vis: utils::syn::visibility_pub(),
             struct_token: Default::default(),
-            ident: value.contract_ref_ident()?,
+            ident: module.contract_ref_ident()?,
             fields: named_fields.into()
         })
     }
@@ -34,9 +36,12 @@ struct AddressFnItem;
 
 impl ToTokens for AddressFnItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let ty_address = utils::ty::address();
+        let m_address = utils::member::address();
+
         tokens.extend(quote!(
-            pub fn address(&self) -> &odra::types::Address {
-                &self.address
+            pub fn address(&self) -> &#ty_address {
+                &#m_address
             }
         ))
     }
@@ -58,13 +63,13 @@ struct ContractRefImplItem {
 impl TryFrom<&'_ ModuleIR> for ContractRefImplItem {
     type Error = syn::Error;
 
-    fn try_from(value: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
         Ok(Self {
             impl_token: Default::default(),
-            ref_ident: value.contract_ref_ident()?,
+            ref_ident: module.contract_ref_ident()?,
             brace_token: Default::default(),
             address_fn: AddressFnItem,
-            functions: value
+            functions: module
                 .functions()
                 .iter()
                 .map(ref_utils::contract_function_item)
@@ -82,10 +87,10 @@ pub struct RefItem {
 impl TryFrom<&'_ ModuleIR> for RefItem {
     type Error = syn::Error;
 
-    fn try_from(value: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            struct_item: value.try_into()?,
-            impl_item: value.try_into()?
+            struct_item: module.try_into()?,
+            impl_item: module.try_into()?
         })
     }
 }
@@ -118,7 +123,7 @@ mod ref_item_tests {
                             String::from("init"),
                             {
                                 let mut named_args = odra::types::RuntimeArgs::new();
-                                let _ = named_args.insert(stringify!(total_supply), total_supply);
+                                let _ = named_args.insert("total_supply", total_supply);
                                 named_args
                             }
                         ),

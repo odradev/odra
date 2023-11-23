@@ -20,6 +20,7 @@ pub struct CounterPack {
     counters_map: Mapping<u8, Counter>
 }
 
+#[odra_macros::module]
 impl CounterPack {
     pub fn get_count(&self, index_a: u8, index_b: u8) -> u32 {
         match index_a {
@@ -104,16 +105,16 @@ mod odra_core_module {
 #[cfg(target_arch = "wasm32")]
 mod __counter_pack_wasm_parts {
     use odra::casper_event_standard::Schemas;
-    use odra::odra_casper_backend2;
-    use odra::odra_casper_backend2::casper_contract::unwrap_or_revert::UnwrapOrRevert;
-    use odra::odra_casper_backend2::WasmContractEnv;
+    use odra::odra_casper_wasm_env;
+    use odra::odra_casper_wasm_env::casper_contract::contract_api::runtime;
+    use odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert;
+    use odra::odra_casper_wasm_env::WasmContractEnv;
     use odra::types::casper_types::{
         CLType, CLTyped, CLValue, EntryPoint, EntryPointAccess, EntryPointType, EntryPoints, Group,
         Parameter, RuntimeArgs
     };
     use odra::types::{runtime_args, Address, U256};
     use odra::{prelude::*, ContractEnv};
-    use odra_casper_backend2::casper_contract::contract_api::runtime;
 
     use super::CounterPack;
 
@@ -145,7 +146,11 @@ mod __counter_pack_wasm_parts {
     }
 
     pub fn execute_call() {
-        odra_casper_backend2::wasm_host::install_contract(entry_points(), Schemas::new(), None);
+        odra::odra_casper_wasm_env::host_functions::install_contract(
+            entry_points(),
+            Schemas::new(),
+            None
+        );
     }
 
     pub fn execute_get_count() {
@@ -181,88 +186,6 @@ mod __counter_pack_wasm_parts {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-mod __counter_pack_test_parts {
-    use odra::types::{runtime_args, Bytes, RuntimeArgs, ToBytes, U256, U512};
-    use odra::{prelude::*, EntryPointsCaller};
-    use odra::{types::Address, CallDef, HostEnv};
-
-    use crate::counter_pack::CounterPack;
-
-    pub struct CounterPackHostRef {
-        address: Address,
-        env: HostEnv
-    }
-
-    impl CounterPackHostRef {
-        pub fn get_count(&self, index_a: u8, index_b: u8) -> u32 {
-            self.env
-                .call_contract(
-                    self.address,
-                    CallDef::new(
-                        String::from("get_count"),
-                        runtime_args! {
-                            "index_a" => index_a,
-                            "index_b" => index_b
-                        }
-                    )
-                )
-                .unwrap()
-        }
-
-        pub fn increment(&self, index_a: u8, index_b: u8) {
-            self.env
-                .call_contract(
-                    self.address,
-                    CallDef::new(
-                        String::from("increment"),
-                        runtime_args! {
-                            "index_a" => index_a,
-                            "index_b" => index_b
-                        }
-                    )
-                )
-                .unwrap()
-        }
-    }
-
-    pub struct CounterPackDeployer;
-
-    impl CounterPackDeployer {
-        pub fn init(env: &HostEnv) -> CounterPackHostRef {
-            let epc = EntryPointsCaller::new(env.clone(), |contract_env, call_def| {
-                use odra::types::ToBytes;
-                let mut counter_pack = CounterPack::new(Rc::new(contract_env));
-                match call_def.method() {
-                    "get_count" => {
-                        let index_a: u8 = call_def.get("index_a").unwrap();
-                        let index_b: u8 = call_def.get("index_b").unwrap();
-                        let result = counter_pack.get_count(index_a, index_b);
-                        Bytes::from(result.to_bytes().unwrap())
-                    }
-                    "increment" => {
-                        let index_a: u8 = call_def.get("index_a").unwrap();
-                        let index_b: u8 = call_def.get("index_b").unwrap();
-                        counter_pack.increment(index_a, index_b);
-                        Bytes::from(vec![])
-                    }
-                    _ => panic!("Unknown method")
-                }
-            });
-
-            let address = env.new_contract("counter_pack", None, Some(epc));
-
-            CounterPackHostRef {
-                address,
-                env: env.clone()
-            }
-        }
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub use __counter_pack_test_parts::*;
-
 #[cfg(test)]
 mod tests {
     pub use super::*;
@@ -270,7 +193,7 @@ mod tests {
     #[test]
     fn counter_pack_works() {
         let env = odra::test_env();
-        let counter_pack = CounterPackDeployer::init(&env);
+        let mut counter_pack = CounterPackDeployer::init(&env);
 
         let n: u8 = 3;
         let m: u8 = 3;

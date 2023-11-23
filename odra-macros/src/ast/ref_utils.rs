@@ -1,6 +1,7 @@
-use crate::ir::FnIR;
-use proc_macro2::TokenStream;
-use quote::quote;
+use crate::{
+    ir::FnIR,
+    utils::{self, syn::visibility_pub}
+};
 
 pub fn host_try_function_item(fun: &FnIR) -> syn::ItemFn {
     let signature = try_function_signature(fun);
@@ -10,11 +11,12 @@ pub fn host_try_function_item(fun: &FnIR) -> syn::ItemFn {
 }
 
 pub fn host_function_item(fun: &FnIR) -> syn::ItemFn {
+    let pub_vis = visibility_pub();
     let signature = function_signature(fun);
     let try_func_name = fun.try_name();
     let args = fun.arg_names();
     syn::parse_quote!(
-        pub #signature {
+        #pub_vis #signature {
             self.#try_func_name(#(#args),*).unwrap()
         }
     )
@@ -28,10 +30,14 @@ pub fn contract_function_item(fun: &FnIR) -> syn::ItemFn {
 }
 
 fn env_call(sig: syn::Signature, call_def_expr: syn::Expr) -> syn::ItemFn {
+    let pub_vis = visibility_pub();
+    let m_env = utils::member::env();
+    let m_address = utils::member::address();
+
     syn::parse_quote!(
-        pub #sig {
-            self.env.call_contract(
-                self.address,
+        #pub_vis #sig {
+            #m_env.call_contract(
+                #m_address,
                 #call_def_expr
             )
         }
@@ -39,28 +45,19 @@ fn env_call(sig: syn::Signature, call_def_expr: syn::Expr) -> syn::ItemFn {
 }
 
 fn call_def(fun: &FnIR) -> syn::Expr {
+    let ty_call_def = utils::ty::call_def();
     let fun_name_str = fun.name_str();
-    let args = args_token_stream(fun);
-    let runtime_args = quote!({
-        let mut named_args = odra::types::RuntimeArgs::new();
-        #args
-        named_args
-    });
-    syn::parse_quote!(odra::CallDef::new(String::from(#fun_name_str), #runtime_args))
+    let args_block = runtime_args_block(fun);
+    syn::parse_quote!(#ty_call_def::new(String::from(#fun_name_str), #args_block))
 }
 
 fn call_def_with_amount(fun: &FnIR) -> syn::Expr {
+    let ty_call_def = utils::ty::call_def();
     let fun_name_str = fun.name_str();
-    let args = args_token_stream(fun);
-    let runtime_args = quote!({
-        let mut named_args = odra::types::RuntimeArgs::new();
-        if self.attached_value > odra::types::U512::zero() {
-            let _ = named_args.insert("amount", self.attached_value);
-        }
-        #args
-        named_args
-    });
-    syn::parse_quote!(odra::CallDef::new(String::from(#fun_name_str), #runtime_args).with_amount(self.attached_value))
+    let args_block = runtime_args_with_amount_block(fun);
+    let attached_value = utils::member::attached_value();
+
+    syn::parse_quote!(#ty_call_def::new(String::from(#fun_name_str), #args_block).with_amount(#attached_value))
 }
 
 fn function_signature(fun: &FnIR) -> syn::Signature {
@@ -81,9 +78,54 @@ fn try_function_signature(fun: &FnIR) -> syn::Signature {
     syn::parse_quote!(fn #fun_name(& #mutability self #(, #args)*) #return_type)
 }
 
-fn args_token_stream(fun: &FnIR) -> TokenStream {
+pub fn runtime_args_block(fun: &FnIR) -> syn::Block {
+    let runtime_args = utils::expr::new_runtime_args();
+    let args = utils::ident::named_args();
+    let insert_args = insert_args_stmts(fun);
+
+    syn::parse_quote!({
+        let mut #args = #runtime_args;
+        #(#insert_args)*
+        #args
+    })
+}
+
+pub fn runtime_args_with_amount_block(fun: &FnIR) -> syn::Block {
+    let runtime_args = utils::expr::new_runtime_args();
+    let args = utils::ident::named_args();
+    let insert_amount = insert_amount_arg_stmt();
+    let insert_args = insert_args_stmts(fun);
+
+    syn::parse_quote!({
+        let mut #args = #runtime_args;
+        #insert_amount
+        #(#insert_args)*
+        #args
+    })
+}
+
+fn insert_args_stmts(fun: &FnIR) -> Vec<syn::Stmt> {
     fun.arg_names()
         .iter()
-        .map(|i| quote!(let _ = named_args.insert(stringify!(#i), #i);))
-        .collect::<TokenStream>()
+        .map(insert_arg_stmt)
+        .collect::<Vec<_>>()
+}
+
+fn insert_arg_stmt(ident: &syn::Ident) -> syn::Stmt {
+    let name = ident.to_string();
+    let args = utils::ident::named_args();
+
+    syn::parse_quote!(let _ = #args.insert(#name, #ident);)
+}
+
+fn insert_amount_arg_stmt() -> syn::Stmt {
+    let ident = utils::ident::named_args();
+    let zero = utils::expr::u512_zero();
+    let attached_value = utils::member::attached_value();
+
+    syn::parse_quote!(
+        if #attached_value > #zero {
+            let _ = #ident.insert("amount", #attached_value);
+        }
+    )
 }

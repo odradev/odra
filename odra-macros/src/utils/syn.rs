@@ -18,16 +18,33 @@ pub fn function_arg_names(function: &syn::ImplItemFn) -> Vec<syn::Ident> {
         .inputs
         .iter()
         .filter_map(|arg| match arg {
-            syn::FnArg::Typed(pat_type) => match &*pat_type.pat {
-                syn::Pat::Ident(pat_ident) => Some(pat_ident.ident.clone()),
-                _ => None
-            },
+            syn::FnArg::Typed(syn::PatType {
+                pat: box syn::Pat::Ident(pat),
+                ..
+            }) => Some(pat.ident.clone()),
             _ => None
         })
         .collect()
 }
 
-pub fn function_args(function: &syn::ImplItemFn) -> Vec<syn::PatType> {
+pub fn function_named_args(function: &syn::ImplItemFn) -> Vec<&syn::FnArg> {
+    function
+        .sig
+        .inputs
+        .iter()
+        .filter(|arg| {
+            matches!(
+                arg,
+                syn::FnArg::Typed(syn::PatType {
+                    pat: box syn::Pat::Ident(_),
+                    ..
+                })
+            )
+        })
+        .collect::<Vec<_>>()
+}
+
+pub fn function_typed_args(function: &syn::ImplItemFn) -> Vec<syn::PatType> {
     function
         .sig
         .inputs
@@ -48,14 +65,6 @@ pub fn receiver_arg(function: &syn::ImplItemFn) -> Option<syn::Receiver> {
 
 pub fn function_return_type(function: &syn::ImplItemFn) -> syn::ReturnType {
     function.sig.output.clone()
-}
-
-pub fn type_address() -> syn::Type {
-    parse_quote!(odra::types::Address)
-}
-
-pub fn type_contract_env() -> syn::Type {
-    parse_quote!(odra::ContractEnv)
 }
 
 pub fn visibility_pub() -> syn::Visibility {

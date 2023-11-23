@@ -5,8 +5,6 @@ use syn::parse_quote;
 
 use super::ref_utils;
 
-const CONSTRUCTOR_NAME: &str = "init";
-
 #[derive(syn_derive::ToTokens)]
 struct HostRefStructItem {
     vis: syn::Visibility,
@@ -18,16 +16,26 @@ struct HostRefStructItem {
 impl TryFrom<&'_ ModuleIR> for HostRefStructItem {
     type Error = syn::Error;
 
-    fn try_from(value: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+        let vis_pub = utils::syn::visibility_pub();
+
+        let address = utils::ident::address();
+        let env = utils::ident::env();
+        let attached_value = utils::ident::attached_value();
+
+        let ty_address = utils::ty::address();
+        let ty_host_env = utils::ty::host_env();
+        let ty_u512 = utils::ty::u512();
+
         let named_fields: syn::FieldsNamed = parse_quote!({
-            pub address: odra::types::Address,
-            pub env: odra::HostEnv,
-            pub attached_value: odra::types::U512
+            #vis_pub #address: #ty_address,
+            #vis_pub #env: #ty_host_env,
+            #vis_pub #attached_value: #ty_u512
         });
         Ok(Self {
-            vis: utils::syn::visibility_pub(),
+            vis: vis_pub,
             struct_token: Default::default(),
-            ident: value.host_ref_ident()?,
+            ident: module.host_ref_ident()?,
             fields: named_fields.into()
         })
     }
@@ -53,18 +61,17 @@ struct HostRefImplItem {
 impl TryFrom<&'_ ModuleIR> for HostRefImplItem {
     type Error = syn::Error;
 
-    fn try_from(value: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
         Ok(Self {
             impl_token: Default::default(),
-            ref_ident: value.host_ref_ident()?,
+            ref_ident: module.host_ref_ident()?,
             brace_token: Default::default(),
             with_tokens_fn: WithTokensFnItem,
             get_event_fn: GetEventFnItem,
             last_call_fn: LastCallFnItem,
-            functions: value
-                .functions()
+            functions: module
+                .host_functions()
                 .iter()
-                .filter(|f| f.name_str() != CONSTRUCTOR_NAME)
                 .flat_map(|f| {
                     vec![
                         ref_utils::host_try_function_item(f),
@@ -80,12 +87,21 @@ struct WithTokensFnItem;
 
 impl ToTokens for WithTokensFnItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let m_address = utils::member::address();
+        let m_env = utils::member::env();
+
+        let ty_u512 = utils::ty::u512();
+
+        let address = utils::ident::address();
+        let attached_value = utils::ident::attached_value();
+        let env = utils::ident::env();
+
         tokens.extend(quote!(
-            pub fn with_tokens(&self, tokens: odra::types::U512) -> Self {
+            pub fn with_tokens(&self, tokens: #ty_u512) -> Self {
                 Self {
-                    address: self.address,
-                    env: self.env.clone(),
-                    attached_value: tokens
+                    #address: #m_address,
+                    #env: #m_env.clone(),
+                    #attached_value: tokens
                 }
             }
         ));
@@ -96,12 +112,19 @@ struct GetEventFnItem;
 
 impl ToTokens for GetEventFnItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let m_env = utils::member::env();
+        let m_address = utils::member::address();
+
+        let ty_ev = utils::ty::event_instance();
+        let ty_from_bytes = utils::ty::from_bytes();
+        let ty_ev_error = utils::ty::event_error();
+
         tokens.extend(quote!(
-            pub fn get_event<T>(&self, index: i32) -> Result<T, odra::event::EventError>
+            pub fn get_event<T>(&self, index: i32) -> Result<T, #ty_ev_error>
             where
-                T: odra::types::FromBytes + odra::casper_event_standard::EventInstance
+                T: #ty_from_bytes + #ty_ev
             {
-                self.env.get_event(&self.address, index)
+                #m_env.get_event(&#m_address, index)
             }
         ));
     }
@@ -111,9 +134,12 @@ struct LastCallFnItem;
 
 impl ToTokens for LastCallFnItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let m_env = utils::member::env();
+        let m_address = utils::member::address();
+        let ty_result = utils::ty::contract_call_result();
         tokens.extend(quote!(
-            pub fn last_call(&self) -> odra::ContractCallResult {
-                self.env.last_call().contract_last_call(self.address)
+            pub fn last_call(&self) -> #ty_result {
+                #m_env.last_call().contract_last_call(#m_address)
             }
         ))
     }
@@ -125,13 +151,13 @@ pub struct HostRefItem {
     impl_item: HostRefImplItem
 }
 
-impl<'a> TryFrom<&'a ModuleIR> for HostRefItem {
+impl TryFrom<&'_ ModuleIR> for HostRefItem {
     type Error = syn::Error;
 
-    fn try_from(value: &'a ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            struct_item: value.try_into()?,
-            impl_item: value.try_into()?
+            struct_item: module.try_into()?,
+            impl_item: module.try_into()?
         })
     }
 }

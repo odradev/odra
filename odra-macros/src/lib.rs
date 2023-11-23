@@ -25,10 +25,12 @@ fn module_impl(item: TokenStream) -> Result<proc_macro2::TokenStream, syn::Error
     let code = module_ir.self_code();
     let ref_item = RefItem::try_from(&module_ir)?;
     let test_parts = TestParts::try_from(&module_ir)?;
+    let test_parts_reexport = TestPartsReexport::try_from(&module_ir)?;
 
     Ok(quote::quote! {
         #code
         #ref_item
         #test_parts
+        #test_parts_reexport
     })
 }
