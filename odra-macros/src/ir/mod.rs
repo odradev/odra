@@ -1,6 +1,6 @@
-use crate::{utils, test_utils};
+use crate::utils;
 use proc_macro2::Ident;
-use quote::{format_ident, ToTokens};
+use quote::format_ident;
 use syn::{parse_quote, spanned::Spanned};
 
 const CONSTRUCTOR_NAME: &str = "init";
@@ -34,54 +34,60 @@ impl StructIR {
         utils::syn::ident_from_struct(&self.code)
     }
 
-    pub fn module_str(&self) -> String {
-        self.module_ident().to_string()
-    }
-
     pub fn module_mod_ident(&self) -> syn::Ident {
         format_ident!(
             "__{}_module",
-            odra_utils::camel_to_snake(self.module_ident())
+            utils::string::camel_to_snake(self.module_ident())
         )
     }
 
     pub fn typed_fields(&self) -> Result<Vec<EnumeratedTypedField>, syn::Error> {
         let fields = utils::syn::struct_fields(&self.code)?;
+        let fields = fields
+            .iter()
+            .filter(|(i, _)| i != &utils::ident::env())
+            .collect::<Vec<_>>();
+
         for (_, ty) in &fields {
             Self::validate_ty(ty)?;
         }
 
         fields
-            .into_iter()
+            .iter()
             .enumerate()
-            .map(|(idx, (ident, ty))| Ok(EnumeratedTypedField {
-                idx: idx as u8,
-                ident,
-                ty: utils::syn::clear_generics(&ty)?,
-            }))
+            .map(|(idx, (ident, ty))| {
+                Ok(EnumeratedTypedField {
+                    idx: idx as u8,
+                    ident: ident.clone(),
+                    ty: utils::syn::clear_generics(&ty)?
+                })
+            })
             .collect()
     }
 
     fn validate_ty(ty: &syn::Type) -> Result<(), syn::Error> {
         let non_generic_ty = utils::syn::clear_generics(ty)?;
 
+        // both odra::Variable and Variable (Mapping, ModuleWrapper) are valid.
         let valid_types = vec![
             utils::ty::module_wrapper(),
             utils::ty::variable(),
             utils::ty::mapping(),
-            utils::ty::rc_contract_env(),
-            parse_quote!(Rc<ContractEnv>),
         ]
-            .iter()
-            .map(|ty| utils::syn::type_to_ident(ty).map(|i| vec![ty.clone(), parse_quote!(#i)]))
-            .collect::<Result<Vec<_>, _>>()?;
+        .iter()
+        .map(|ty| utils::syn::last_segment_ident(ty).map(|i| vec![ty.clone(), parse_quote!(#i)]))
+        .collect::<Result<Vec<_>, _>>()?;
         let valid_types = valid_types.into_iter().flatten().collect::<Vec<_>>();
 
-        if valid_types.iter().find(|t| test_utils::eq(t, &non_generic_ty)).is_some() {
+        if valid_types
+            .iter()
+            .find(|t| utils::string::eq(t, &non_generic_ty))
+            .is_some()
+        {
             return Ok(());
         }
 
-        Err(syn::Error::new(ty.span(), "message"))
+        Err(syn::Error::new(ty.span(), "Invalid module type"))
     }
 }
 

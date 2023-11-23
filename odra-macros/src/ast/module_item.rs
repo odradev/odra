@@ -1,7 +1,10 @@
-use quote::{TokenStreamExt, ToTokens};
+use quote::{ToTokens, TokenStreamExt};
 use syn::parse_quote;
 
-use crate::{ir::{StructIR, EnumeratedTypedField}, utils};
+use crate::{
+    ir::{EnumeratedTypedField, StructIR},
+    utils
+};
 
 use super::parts_utils::UseSuperItem;
 
@@ -116,7 +119,7 @@ struct ModuleInstanceItem {
     #[syn(braced)]
     braces: syn::token::Brace,
     #[syn(in = braces)]
-    values: syn::punctuated::Punctuated<syn::Ident, syn::Token![,]>,
+    values: syn::punctuated::Punctuated<syn::Ident, syn::Token![,]>
 }
 
 impl TryFrom<&'_ StructIR> for ModuleInstanceItem {
@@ -159,7 +162,7 @@ mod test {
         let expected = quote!(
             mod __counter_pack_module {
                 use super::*;
-            
+
                 impl odra::module::Module for CounterPack {
                     fn new(env: Rc<odra::ContractEnv>) -> Self {
                         let counter0 = ModuleWrapper::new(Rc::clone(&env), 0u8);
@@ -176,12 +179,12 @@ mod test {
                             counters_map
                         }
                     }
-            
+
                     fn env(&self) -> Rc<odra::ContractEnv> {
                         self.env.clone()
                     }
                 }
-            }            
+            }
         );
         let actual = ModuleModItem::try_from(&module).unwrap();
         test_utils::assert_eq(actual, expected);

@@ -1,7 +1,7 @@
 use syn::{parse_quote, spanned::Spanned};
 
 pub fn ident_from_impl(impl_code: &syn::ItemImpl) -> Result<syn::Ident, syn::Error> {
-    type_to_ident(&impl_code.self_ty)
+    last_segment_ident(&impl_code.self_ty)
 }
 
 pub fn ident_from_struct(struct_code: &syn::ItemStruct) -> syn::Ident {
@@ -86,7 +86,8 @@ pub fn struct_fields(item: &syn::ItemStruct) -> Result<Vec<(syn::Ident, syn::Typ
             .named
             .iter()
             .map(|f| {
-                f.ident.clone()
+                f.ident
+                    .clone()
                     .ok_or(syn::Error::new_spanned(f, err_msg))
                     .map(|i| (i, f.ty.clone()))
             })
@@ -103,7 +104,7 @@ pub fn visibility_pub() -> syn::Visibility {
     parse_quote!(pub)
 }
 
-pub fn type_to_ident(ty: &syn::Type) -> Result<syn::Ident, syn::Error>{
+pub fn last_segment_ident(ty: &syn::Type) -> Result<syn::Ident, syn::Error> {
     match ty {
         syn::Type::Path(type_path) => type_path
             .path
@@ -131,7 +132,8 @@ pub fn clear_generics(ty: &syn::Type) -> Result<syn::Type, syn::Error> {
 fn clear_path(ty: &syn::TypePath) -> Result<syn::TypePath, syn::Error> {
     let mut owned_ty = ty.to_owned();
 
-    let mut segment = owned_ty.path
+    let mut segment = owned_ty
+        .path
         .segments
         .last_mut()
         .ok_or(syn::Error::new(ty.span(), "Invalid type path"))?;

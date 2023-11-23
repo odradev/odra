@@ -35,15 +35,10 @@ pub fn mock_module_definition() -> StructIR {
 }
 
 pub fn assert_eq<A: ToTokens, B: ToTokens>(a: A, b: B) {
+    fn parse<T: ToTokens>(e: T) -> String {
+        let e = e.to_token_stream().to_string();
+        let e = syn::parse_file(&e).unwrap();
+        prettyplease::unparse(&e)
+    }
     pretty_assertions::assert_eq!(parse(a), parse(b));
-}
-
-pub fn eq<A: ToTokens, B: ToTokens>(a: A, b: B) -> bool {
-    parse(a) == parse(b)
-}
-
-fn parse<T: ToTokens>(e: T) -> String {
-    let e = e.to_token_stream().to_string();
-    let e = syn::parse_file(&e).unwrap();
-    prettyplease::unparse(&e)
 }
