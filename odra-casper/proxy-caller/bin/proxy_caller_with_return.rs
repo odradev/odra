@@ -8,8 +8,8 @@ extern crate alloc;
 
 use alloc::vec::Vec;
 use casper_types::bytesrepr::Bytes;
+use odra::consts::RESULT_KEY;
 use odra_casper_proxy_caller::{call_versioned_contract_ret_bytes, set_key, ProxyCall};
-use odra_casper_shared::consts::RESULT_KEY;
 
 #[no_mangle]
 fn call() {

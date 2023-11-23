@@ -4,17 +4,17 @@ use std::rc::Rc;
 use std::sync::{Arc, RwLock};
 
 use anyhow::Result;
+use odra_core::call_def::CallDef;
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::event::EventError;
-use odra_types::call_def::CallDef;
-use odra_types::{
+use odra_core::{
     casper_types::{
         bytesrepr::{FromBytes, ToBytes},
         U512
     },
     Address, Bytes, ExecutionError, PublicKey
 };
-use odra_types::{OdraError, VmError};
+use odra_core::{OdraError, VmError};
 
 use super::callstack::{CallstackElement, Entrypoint};
 use super::contract_container::ContractContainer;
@@ -295,12 +295,12 @@ mod tests {
     use std::collections::BTreeMap;
 
     use crate::vm::contract_container::{EntrypointArgs, EntrypointCall};
-    use odra_types::call_def::CallDef;
-    use odra_types::casper_types::bytesrepr::FromBytes;
-    use odra_types::casper_types::{RuntimeArgs, U512};
-    use odra_types::OdraAddress;
-    use odra_types::{Address, EventData};
-    use odra_types::{ExecutionError, OdraError, VmError};
+    use odra_core::call_def::CallDef;
+    use odra_core::casper_types::bytesrepr::FromBytes;
+    use odra_core::casper_types::{RuntimeArgs, U512};
+    use odra_core::OdraAddress;
+    use odra_core::{Address, EventData};
+    use odra_core::{ExecutionError, OdraError, VmError};
 
     use super::OdraVm;
 

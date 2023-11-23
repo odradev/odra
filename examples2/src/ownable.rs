@@ -1,4 +1,4 @@
-use alloc::rc::Rc;
+use odra_core::prelude::rc::Rc;
 use odra::{ContractEnv, prelude::Module, ModuleWrapper};
 
 pub struct Ownable {

@@ -1,3 +1,4 @@
+use odra_core::casper_event_standard;
 /// The arg name for the package hash key name.
 pub const PACKAGE_HASH_KEY_NAME_ARG: &str = "odra_cfg_package_hash_key_name";
 

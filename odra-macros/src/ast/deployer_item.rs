@@ -113,11 +113,11 @@ mod deployer_impl {
                             "init" => {
                                 let result = Erc20::new(Rc::new(contract_env))
                                     .init(call_def.get("total_supply").expect("arg not found"));
-                                odra::types::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                                odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
                             }
                             "total_supply" => {
                                 let result = Erc20::new(Rc::new(contract_env)).total_supply();
-                                odra::types::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                                odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
                             }
                             _ => panic!("Unknown method")
                         }
@@ -126,7 +126,7 @@ mod deployer_impl {
                     let address = env.new_contract(
                         "Erc20",
                         Some({
-                            let mut named_args = odra::types::RuntimeArgs::new();
+                            let mut named_args = odra::RuntimeArgs::new();
                             let _ = named_args.insert("total_supply", total_supply);
                             named_args
                         }),
@@ -135,7 +135,7 @@ mod deployer_impl {
                     Erc20HostRef {
                         address,
                         env: env.clone(),
-                        attached_value: odra::types::U512::zero()
+                        attached_value: odra::U512::zero()
                     }
                 }
             }

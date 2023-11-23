@@ -1,7 +1,7 @@
 use syn::parse_quote;
 
 pub fn address() -> syn::Type {
-    parse_quote!(odra::types::Address)
+    parse_quote!(odra::Address)
 }
 
 pub fn contract_env() -> syn::Type {
@@ -9,7 +9,7 @@ pub fn contract_env() -> syn::Type {
 }
 
 pub fn from_bytes() -> syn::Type {
-    parse_quote!(odra::types::FromBytes)
+    parse_quote!(odra::FromBytes)
 }
 
 pub fn event_instance() -> syn::Type {
@@ -21,7 +21,7 @@ pub fn event_error() -> syn::Type {
 }
 
 pub fn u512() -> syn::Type {
-    parse_quote!(odra::types::U512)
+    parse_quote!(odra::U512)
 }
 
 pub fn host_env() -> syn::Type {
@@ -41,5 +41,5 @@ pub fn contract_call_result() -> syn::Type {
 }
 
 pub fn odra_error() -> syn::Type {
-    parse_quote!(odra::types::OdraError)
+    parse_quote!(odra::OdraError)
 }

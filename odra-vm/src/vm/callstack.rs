@@ -1,4 +1,4 @@
-use odra_types::{casper_types::U512, Address};
+use odra_core::{casper_types::U512, Address};
 
 #[derive(Clone)]
 pub enum CallstackElement {

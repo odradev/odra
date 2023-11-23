@@ -1,15 +1,13 @@
-use self::events::{Deposit, Withdrawal};
 use crate::erc20::Erc20;
 use odra::{
     contract_env,
-    prelude::{format, string::String},
     types::{
-        event::OdraEvent,
-        uints::{ToU256, ToU512},
-        Address, U256
+        Address,
+        event::OdraEvent
     },
     UnwrapOrRevert
 };
+use odra_core::uints::{ToU256, ToU512};
 
 #[odra::module(events = [Deposit, Withdrawal])]
 pub struct WrappedNativeToken {
@@ -94,8 +92,8 @@ impl WrappedNativeToken {
 
 pub mod events {
     use odra::{
-        types::{casper_types::U256, Address},
-        Event
+        Event,
+        types::{Address, casper_types::U256}
     };
 
     #[derive(Event, Debug, Eq, PartialEq)]
@@ -118,15 +116,13 @@ mod tests {
         prelude::format,
         test_env,
         types::{
-            uints::{ToU256, ToU512},
-            Address, OdraError, VmError, U256, U512
+            Address, OdraError, U256, U512, VmError
         }
     };
+    use odra_core::uints::{ToU256, ToU512};
 
     use crate::{
-        erc20::events::Transfer,
         wrapped_native::{
-            events::{Deposit, Withdrawal},
             WrappedNativeTokenDeployer, WrappedNativeTokenRef
         }
     };

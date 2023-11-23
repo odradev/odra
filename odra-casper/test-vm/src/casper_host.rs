@@ -12,18 +12,17 @@ use std::rc::Rc;
 
 use crate::CasperVm;
 use casper_execution_engine::core::engine_state::{GenesisAccount, RunGenesisRequest};
-use odra_casper_shared::consts;
-use odra_casper_shared::consts::*;
-use odra_core::entry_point_callback::EntryPointsCaller;
-use odra_core::event::EventError;
-use odra_core::{CallDef, ContractEnv, HostContext, HostEnv};
-use odra_types::casper_types::account::AccountHash;
-use odra_types::casper_types::bytesrepr::{Bytes, ToBytes};
-use odra_types::casper_types::{
+use odra_core::casper_types::account::AccountHash;
+use odra_core::casper_types::bytesrepr::{Bytes, ToBytes};
+use odra_core::casper_types::{
     runtime_args, BlockTime, ContractPackageHash, Key, Motes, SecretKey
 };
-use odra_types::{Address, OdraError, PublicKey, VmError, U512};
-use odra_types::{EventData, RuntimeArgs};
+use odra_core::consts;
+use odra_core::consts::*;
+use odra_core::entry_point_callback::EntryPointsCaller;
+use odra_core::event::EventError;
+use odra_core::{Address, OdraError, PublicKey, RuntimeArgs, VmError, U512};
+use odra_core::{CallDef, ContractEnv, HostContext, HostEnv};
 
 pub struct CasperHost {
     pub vm: Rc<RefCell<CasperVm>>

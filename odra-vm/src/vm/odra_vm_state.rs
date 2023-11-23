@@ -2,12 +2,11 @@ use super::balance::AccountBalance;
 use super::callstack::{Callstack, CallstackElement};
 use super::storage::Storage;
 use anyhow::Result;
+use odra_core::casper_types::account::AccountHash;
+use odra_core::casper_types::bytesrepr::Error;
 use odra_core::event::EventError;
-use odra_types::casper_types::account::AccountHash;
-use odra_types::casper_types::bytesrepr::Error;
-use odra_types::{
-    Address, Bytes, EventData, ExecutionError, FromBytes, OdraError, PublicKey, SecretKey, ToBytes,
-    U512
+use odra_core::{
+    Address, Bytes, ExecutionError, FromBytes, OdraError, PublicKey, SecretKey, ToBytes, U512
 };
 use std::collections::BTreeMap;
 
@@ -86,7 +85,7 @@ impl OdraVmState {
             return Err(EventError::IndexOutOfBounds);
         }
         let events: &Vec<Bytes> = events.unwrap();
-        let event_position = odra_utils::event_absolute_position(events.len(), index)
+        let event_position = odra_core::utils::event_absolute_position(events.len(), index)
             .ok_or(EventError::IndexOutOfBounds)?;
         let event = events
             .get(event_position)

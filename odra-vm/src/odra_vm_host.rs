@@ -3,8 +3,8 @@ use crate::OdraVm;
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::event::EventError;
 use odra_core::prelude::{collections::*, *};
+use odra_core::{Address, Bytes, OdraError, RuntimeArgs, VmError, U512};
 use odra_core::{CallDef, ContractContext, ContractEnv, HostContext, HostEnv};
-use odra_types::{Address, Bytes, EventData, OdraError, RuntimeArgs, VmError, U512};
 
 pub struct OdraVmHost {
     vm: Rc<RefCell<OdraVm>>,

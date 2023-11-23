@@ -1,7 +1,7 @@
 use std::fmt;
 
 use datasize::DataSize;
-use odra_types::casper_types::{
+use odra_core::casper_types::{
     bytesrepr::{self, FromBytes, ToBytes},
     crypto, PublicKey, SecretKey, Signature
 };

@@ -1,6 +1,3 @@
-//! Constants utilizes by the [test_env](../odra_casper_test_env/index.html) and
-//! [contract_env](../odra_casper_backend/contract_env/index.html).
-
 /// The key under which the events are stored.
 pub const EVENTS: &str = casper_event_standard::EVENTS_DICT;
 

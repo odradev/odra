@@ -2,7 +2,7 @@ use std::fmt;
 
 use casper_hashing::Digest;
 use datasize::DataSize;
-use odra_types::casper_types::{
+use odra_core::casper_types::{
     self,
     bytesrepr::{self, FromBytes, ToBytes}
 };

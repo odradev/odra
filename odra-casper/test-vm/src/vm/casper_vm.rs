@@ -1,4 +1,4 @@
-use odra_casper_shared::consts::*;
+use odra_core::consts::*;
 use odra_core::prelude::{collections::*, *};
 
 use odra_core::prelude::{collections::*, *};
@@ -12,22 +12,23 @@ use casper_engine_test_support::{
     DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_PAYMENT
 };
 use casper_event_standard::try_full_name_from_bytes;
+use odra_core::casper_event_standard;
 use std::rc::Rc;
 
 use casper_execution_engine::core::engine_state::{self, GenesisAccount, RunGenesisRequest};
-use odra_casper_shared::consts;
-use odra_casper_shared::consts::*;
-use odra_core::entry_point_callback::EntryPointsCaller;
-use odra_core::event::EventError;
-use odra_core::{CallDef, ContractEnv, HostContext, HostEnv};
-use odra_types::casper_types::account::{Account, AccountHash};
-use odra_types::casper_types::bytesrepr::{Bytes, ToBytes};
-use odra_types::casper_types::{
+use odra_core::casper_types::account::{Account, AccountHash};
+use odra_core::casper_types::bytesrepr::{Bytes, ToBytes};
+use odra_core::casper_types::{
     runtime_args, ApiError, BlockTime, Contract, ContractHash, ContractPackageHash, Key, Motes,
     SecretKey, StoredValue, URef
 };
-use odra_types::{Address, ExecutionError, PublicKey, VmError, U512};
-use odra_types::{CLTyped, FromBytes, OdraError, RuntimeArgs};
+use odra_core::consts;
+use odra_core::consts::*;
+use odra_core::entry_point_callback::EntryPointsCaller;
+use odra_core::event::EventError;
+use odra_core::{Address, ExecutionError, PublicKey, VmError, U512};
+use odra_core::{CLTyped, FromBytes, OdraError, RuntimeArgs};
+use odra_core::{CallDef, ContractEnv, HostContext, HostEnv};
 
 pub struct CasperVm {
     pub accounts: Vec<Address>,
@@ -170,8 +171,9 @@ impl CasperVm {
 
         let events_length = self.events_length(&contract_hash);
 
-        let event_position = odra_utils::event_absolute_position(events_length as usize, index)
-            .ok_or(EventError::IndexOutOfBounds)?;
+        let event_position =
+            odra_core::utils::event_absolute_position(events_length as usize, index)
+                .ok_or(EventError::IndexOutOfBounds)?;
 
         match self.context.query_dictionary_item(
             None,
@@ -406,7 +408,7 @@ impl CasperVm {
     /// Cryptographically signs a message as a given account.
     pub fn sign_message(&self, message: &Bytes, address: &Address) -> Bytes {
         let (secret_key, public_key) = self.key_pairs.get(address).unwrap();
-        let signature = odra_types::casper_types::crypto::sign(message, secret_key, public_key)
+        let signature = odra_core::casper_types::crypto::sign(message, secret_key, public_key)
             .to_bytes()
             .unwrap();
         Bytes::from(signature)

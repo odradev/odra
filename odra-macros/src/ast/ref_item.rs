@@ -107,12 +107,12 @@ mod ref_item_tests {
         let expected = quote! {
             pub struct Erc20ContractRef {
                 env: Rc<odra::ContractEnv>,
-                address: odra::types::Address,
+                address: odra::Address,
             }
 
             impl Erc20ContractRef {
                 // TODO: this means "address", can't be entrypoint name.
-                pub fn address(&self) -> &odra::types::Address {
+                pub fn address(&self) -> &odra::Address {
                     &self.address
                 }
 
@@ -122,7 +122,7 @@ mod ref_item_tests {
                         odra::CallDef::new(
                             String::from("init"),
                             {
-                                let mut named_args = odra::types::RuntimeArgs::new();
+                                let mut named_args = odra::RuntimeArgs::new();
                                 let _ = named_args.insert("total_supply", total_supply);
                                 named_args
                             }
@@ -136,7 +136,7 @@ mod ref_item_tests {
                         odra::CallDef::new(
                             String::from("total_supply"),
                             {
-                                let mut named_args = odra::types::RuntimeArgs::new();
+                                let mut named_args = odra::RuntimeArgs::new();
                                 named_args
                             }
                         ),

@@ -1,6 +1,6 @@
+use crate::call_def::CallDef;
 use crate::prelude::*;
-use odra_types::call_def::CallDef;
-use odra_types::{Address, Bytes, CLTyped, FromBytes, OdraError, ToBytes, U512};
+use crate::{Address, Bytes, CLTyped, FromBytes, OdraError, ToBytes, U512};
 
 use crate::key_maker;
 pub use crate::ContractContext;

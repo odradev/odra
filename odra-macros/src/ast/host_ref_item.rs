@@ -173,13 +173,13 @@ mod ref_item_tests {
         let module = test_utils::mock_module();
         let expected = quote! {
             pub struct Erc20HostRef {
-                pub address: odra::types::Address,
+                pub address: odra::Address,
                 pub env: odra::HostEnv,
-                pub attached_value: odra::types::U512
+                pub attached_value: odra::U512
             }
 
             impl Erc20HostRef {
-                pub fn with_tokens(&self, tokens: odra::types::U512) -> Self {
+                pub fn with_tokens(&self, tokens: odra::U512) -> Self {
                     Self {
                         address: self.address,
                         env: self.env.clone(),
@@ -189,7 +189,7 @@ mod ref_item_tests {
 
                 pub fn get_event<T>(&self, index: i32) -> Result<T, odra::event::EventError>
                 where
-                    T: odra::types::FromBytes + odra::casper_event_standard::EventInstance,
+                    T: odra::FromBytes + odra::casper_event_standard::EventInstance,
                 {
                     self.env.get_event(&self.address, index)
                 }
@@ -204,8 +204,8 @@ mod ref_item_tests {
                         odra::CallDef::new(
                             String::from("total_supply"),
                             {
-                                let mut named_args = odra::types::RuntimeArgs::new();
-                                if self.attached_value > odra::types::U512::zero() {
+                                let mut named_args = odra::RuntimeArgs::new();
+                                if self.attached_value > odra::U512::zero() {
                                     let _ = named_args.insert("amount", self.attached_value);
                                 }
                                 named_args

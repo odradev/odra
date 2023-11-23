@@ -1,6 +1,6 @@
 //! Events interface and errors.
 
-use alloc::string::String;
+use crate::prelude::string::String;
 
 /// Event-related errors.
 #[derive(Debug, PartialEq, Eq, PartialOrd)]
