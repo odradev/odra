@@ -67,7 +67,7 @@ impl HostEnv {
         let use_proxy = T::cl_type() != <()>::cl_type() || !call_def.attached_value().is_zero();
         let call_result = backend.call_contract(&address, call_def, use_proxy);
 
-        let mut events_map: BTreeMap<Address, Vec<crate::Bytes>> = BTreeMap::new();
+        let mut events_map: BTreeMap<Address, Vec<Bytes>> = BTreeMap::new();
         let mut binding = self.events_count.borrow_mut();
 
         // Go through all contracts and collect their events
