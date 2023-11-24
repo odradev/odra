@@ -1,7 +1,4 @@
-use crate::prelude::collections::BTreeMap;
-use crate::prelude::string::{String, ToString};
-use crate::prelude::vec;
-use crate::prelude::vec::Vec;
+use crate::prelude::*;
 use crate::utils::extract_event_name;
 use crate::{Address, Bytes, OdraError, ToBytes};
 use casper_event_standard::EventInstance;

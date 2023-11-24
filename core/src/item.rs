@@ -1,4 +1,4 @@
-use crate::prelude::{collections::BTreeMap, string::String, vec::Vec};
+use crate::prelude::*;
 use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
     U128, U256, U512
@@ -11,7 +11,7 @@ pub trait OdraItem {
 
     #[cfg(not(target_arch = "wasm32"))]
     fn events() -> Vec<crate::contract_def::Event> {
-        crate::prelude::vec![]
+        vec![]
     }
 }
 

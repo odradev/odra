@@ -1,4 +1,4 @@
-use odra::{casper_event_standard, OdraError};
+use odra::{casper_event_standard, Module, OdraError};
 use odra::{prelude::*, CallDef, Event, ModuleWrapper};
 use odra::{Address, ContractEnv, Mapping, Variable, U256, U512};
 
@@ -186,6 +186,7 @@ mod __erc20_wasm_parts {
     use odra::odra_casper_wasm_env::casper_contract::contract_api::runtime;
     use odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert;
     use odra::odra_casper_wasm_env::WasmContractEnv;
+    use odra::Module;
     use odra::{prelude::*, ContractEnv};
     use odra::{runtime_args, Address, U256};
 

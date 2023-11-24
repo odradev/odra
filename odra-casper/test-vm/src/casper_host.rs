@@ -1,4 +1,4 @@
-use odra_core::prelude::{collections::*, *};
+use odra_core::prelude::*;
 use std::cell::RefCell;
 use std::env;
 use std::path::PathBuf;

@@ -1,6 +1,6 @@
 //! Events interface and errors.
 
-use crate::prelude::string::String;
+use crate::prelude::*;
 
 /// Event-related errors.
 #[derive(Debug, PartialEq, Eq, PartialOrd)]

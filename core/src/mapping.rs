@@ -1,6 +1,6 @@
+use crate::prelude::*;
 use crate::{
     module::{Module, ModuleWrapper},
-    prelude::*,
     variable::Variable,
     ContractEnv
 };

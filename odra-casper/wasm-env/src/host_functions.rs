@@ -17,9 +17,7 @@ use odra_core::casper_types::{
     contracts::NamedKeys,
     ApiError, CLTyped, ContractPackageHash, EntryPoints, Key, URef
 };
-use odra_core::prelude::borrow::ToOwned;
-use odra_core::prelude::boxed::Box;
-use odra_core::prelude::{format, string::String, vec, vec::Vec};
+use odra_core::prelude::*;
 use odra_core::{Address, ExecutionError};
 
 use crate::consts;
@@ -340,7 +338,7 @@ fn revoke_access_to_constructor_group(
     contract_package_hash: ContractPackageHash,
     constructor_access: URef
 ) {
-    let mut urefs = odra_core::prelude::collections::BTreeSet::new();
+    let mut urefs = BTreeSet::new();
     urefs.insert(constructor_access);
     storage::remove_contract_user_group_urefs(
         contract_package_hash,

@@ -1,6 +1,6 @@
 //! Encapsulates a set of structures that abstract out a smart contract layout.
 
-use crate::prelude::{string::String, vec::Vec};
+use crate::prelude::*;
 use casper_types::CLType;
 
 /// Contract's entrypoint.

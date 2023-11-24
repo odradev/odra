@@ -1,4 +1,4 @@
-use crate::prelude::string::String;
+use crate::prelude::*;
 use casper_types::bytesrepr::FromBytes;
 use casper_types::{CLTyped, RuntimeArgs, U512};
 

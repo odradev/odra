@@ -2,9 +2,9 @@ use crate::host_functions;
 use casper_types::bytesrepr::ToBytes;
 use casper_types::U512;
 use odra_core::casper_types;
-use odra_core::prelude::boxed::Box;
-use odra_core::{prelude::*, ContractContext, ContractEnv};
+use odra_core::prelude::*;
 use odra_core::{Address, Bytes, OdraError};
+use odra_core::{ContractContext, ContractEnv};
 
 #[derive(Clone)]
 pub struct WasmContractEnv;
