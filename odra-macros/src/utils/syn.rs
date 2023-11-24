@@ -121,7 +121,7 @@ pub fn last_segment_ident(ty: &syn::Type) -> Result<syn::Ident, syn::Error> {
 
 pub fn clear_generics(ty: &syn::Type) -> Result<syn::Type, syn::Error> {
     match ty {
-        syn::Type::Path(type_path) => clear_path(type_path).map(|p| syn::Type::Path(p)),
+        syn::Type::Path(type_path) => clear_path(type_path).map(syn::Type::Path),
         ty => Err(syn::Error::new(
             ty.span(),
             "Only support impl for type path"

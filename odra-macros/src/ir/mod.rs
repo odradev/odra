@@ -26,6 +26,10 @@ macro_rules! try_parse {
 try_parse!(syn::ItemStruct => StructIR);
 
 impl StructIR {
+    pub fn self_code(&self) -> &syn::ItemStruct {
+        &self.code
+    }
+
     pub fn field_names(&self) -> Result<Vec<syn::Ident>, syn::Error> {
         utils::syn::struct_fields_ident(&self.code)
     }
@@ -59,7 +63,7 @@ impl StructIR {
                 Ok(EnumeratedTypedField {
                     idx: idx as u8,
                     ident: ident.clone(),
-                    ty: utils::syn::clear_generics(&ty)?
+                    ty: utils::syn::clear_generics(ty)?
                 })
             })
             .collect()
@@ -81,8 +85,7 @@ impl StructIR {
 
         if valid_types
             .iter()
-            .find(|t| utils::string::eq(t, &non_generic_ty))
-            .is_some()
+            .any(|t| utils::string::eq(t, &non_generic_ty))
         {
             return Ok(());
         }

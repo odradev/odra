@@ -9,7 +9,7 @@ use crate::{
 use super::parts_utils::UseSuperItem;
 
 #[derive(syn_derive::ToTokens)]
-struct ModuleModItem {
+pub struct ModuleModItem {
     mod_token: syn::token::Mod,
     mod_ident: syn::Ident,
     #[syn(braced)]
