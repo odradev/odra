@@ -75,7 +75,7 @@ clean:
 build-erc20:
     cd examples2 && ODRA_MODULE=Erc20 cargo build --release --target wasm32-unknown-unknown --bin contract
     wasm-strip examples2/target/wasm32-unknown-unknown/release/contract.wasm
-    rm -rf examples2/wasm/erc20.wasm
+    rm -rf examples2/wasm/Erc20.wasm
     mkdir -p examples2/wasm
     mv examples2/target/wasm32-unknown-unknown/release/contract.wasm examples2/wasm/Erc20.wasm
 

@@ -1,4 +1,4 @@
-use alloc::string::String;
+use crate::prelude::string::String;
 
 pub struct NativeTokenMetadata {
     pub name: String,

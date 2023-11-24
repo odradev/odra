@@ -1,6 +1,6 @@
 //! Encapsulates a set of structures that abstract out a smart contract layout.
 
-use alloc::{string::String, vec::Vec};
+use crate::prelude::*;
 use casper_types::CLType;
 
 /// Contract's entrypoint.
@@ -99,7 +99,7 @@ pub struct ContractBlueprint2 {
 #[allow(dead_code)]
 mod test {
     use super::Node;
-    use alloc::{string::String, vec, vec::Vec};
+    use crate::prelude::{string::String, vec, vec::Vec};
     use core::marker::PhantomData;
 
     #[test]

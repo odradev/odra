@@ -2,7 +2,7 @@ use crate::odra_vm_contract_env::OdraVmContractEnv;
 use crate::OdraVm;
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::event::EventError;
-use odra_core::prelude::{collections::*, *};
+use odra_core::prelude::*;
 use odra_core::{Address, Bytes, OdraError, RuntimeArgs, VmError, U512};
 use odra_core::{CallDef, ContractContext, ContractEnv, HostContext, HostEnv};
 
