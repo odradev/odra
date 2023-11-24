@@ -1,5 +1,5 @@
 use odra_core::call_def::CallDef;
-use odra_core::prelude::{collections::*, *};
+use odra_core::prelude::*;
 use odra_core::HostEnv;
 use odra_core::{casper_types::RuntimeArgs, Address, Bytes, OdraError, VmError};
 

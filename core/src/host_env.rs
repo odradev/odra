@@ -2,7 +2,6 @@ use crate::call_result::CallResult;
 use crate::entry_point_callback::EntryPointsCaller;
 use crate::event::EventError;
 use crate::host_context::HostContext;
-use crate::prelude::collections::BTreeMap;
 use crate::prelude::*;
 use crate::utils::extract_event_name;
 use crate::{Address, OdraError, VmError, U512};

@@ -1,6 +1,6 @@
 use odra_core::call_def::CallDef;
 use odra_core::entry_point_callback::EntryPointsCaller;
-use odra_core::prelude::{collections::*, *};
+use odra_core::prelude::*;
 use odra_core::HostEnv;
 use odra_core::{
     casper_types::{NamedArg, RuntimeArgs},

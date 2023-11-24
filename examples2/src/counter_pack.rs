@@ -2,6 +2,7 @@ use crate::counter::Counter;
 use odra::prelude::*;
 use odra::ContractEnv;
 use odra::Mapping;
+use odra::Module;
 use odra::ModuleWrapper;
 
 #[odra_macros::module]

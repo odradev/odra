@@ -81,7 +81,7 @@ pub fn hex_to_slice(src: &[u8], dst: &mut [u8]) {
 /// Joins two parts of a key with the [`KEY_DELIMITER`].
 #[inline]
 pub fn create_key(left: &str, right: &str) -> String {
-    alloc::format!("{}{}{}", left, KEY_DELIMITER, right)
+    crate::prelude::format!("{}{}{}", left, KEY_DELIMITER, right)
 }
 
 #[cfg(test)]

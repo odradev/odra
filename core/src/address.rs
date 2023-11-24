@@ -1,13 +1,7 @@
 //! Better address representation for Casper.
-
-use core::str::FromStr;
-
+use crate::prelude::*;
 use crate::AddressError::ZeroAddress;
 use crate::{AddressError, OdraError, VmError};
-use alloc::{
-    string::{String, ToString},
-    vec::Vec
-};
 use casper_types::{
     account::AccountHash,
     bytesrepr::{self, FromBytes, ToBytes},
@@ -44,7 +38,6 @@ impl Address {
 
     // TODO: move those methods to odra_vm as they shouldn't be public
     pub fn account_from_str(str: &str) -> Self {
-        use alloc::format;
         use casper_types::account::{ACCOUNT_HASH_FORMATTED_STRING_PREFIX, ACCOUNT_HASH_LENGTH};
         let desired_length = ACCOUNT_HASH_LENGTH * 2;
         let padding_length = desired_length - str.len();
@@ -56,7 +49,6 @@ impl Address {
 
     // TODO: move those methods to odra_vm as they shouldn't be public
     pub fn contract_from_u32(i: u32) -> Self {
-        use alloc::format;
         use casper_types::KEY_HASH_LENGTH;
         let desired_length = KEY_HASH_LENGTH * 2;
         let padding_length = desired_length - i.to_string().len();
