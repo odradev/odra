@@ -149,6 +149,12 @@ impl ModuleIR {
         ))
     }
 
+    pub fn wasm_parts_mod_ident(&self) -> Result<syn::Ident, syn::Error> {
+        self.module_ident()
+            .map(crate::utils::string::camel_to_snake)
+            .map(|ident| format_ident!("__{}_wasm_parts", ident))
+    }
+
     pub fn functions(&self) -> Vec<FnIR> {
         self.code
             .items
