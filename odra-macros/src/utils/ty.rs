@@ -49,7 +49,7 @@ pub fn module_wrapper() -> syn::Type {
 }
 
 pub fn module() -> syn::Type {
-    parse_quote!(odra::module::Module)
+    parse_quote!(odra::Module)
 }
 
 pub fn variable() -> syn::Type {

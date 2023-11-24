@@ -163,7 +163,7 @@ mod test {
             mod __counter_pack_module {
                 use super::*;
 
-                impl odra::module::Module for CounterPack {
+                impl odra::Module for CounterPack {
                     fn new(env: Rc<odra::ContractEnv>) -> Self {
                         let counter0 = ModuleWrapper::new(Rc::clone(&env), 0u8);
                         let counter1 = ModuleWrapper::new(Rc::clone(&env), 1u8);

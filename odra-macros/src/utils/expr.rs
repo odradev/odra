@@ -14,7 +14,6 @@ pub fn parse_bytes(data_ident: &syn::Ident) -> syn::Expr {
 
 pub fn new_type(ty: &syn::Type, env_ident: &syn::Ident, idx: u8) -> syn::Expr {
     let rc = rc_clone(env_ident);
-    dbg!(quote::quote!(#ty::new(#rc, #idx)).to_string());
     parse_quote!(#ty::new(#rc, #idx))
 }
 
