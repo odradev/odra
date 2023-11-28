@@ -59,3 +59,31 @@ pub fn variable() -> syn::Type {
 pub fn mapping() -> syn::Type {
     parse_quote!(odra::Mapping)
 }
+
+pub fn entry_points() -> syn::Type {
+    parse_quote!(odra::casper_types::EntryPoints)
+}
+
+pub fn entry_point() -> syn::Type {
+    parse_quote!(odra::casper_types::EntryPoint)
+}
+
+pub fn entry_point_access() -> syn::Type {
+    parse_quote!(odra::casper_types::EntryPointAccess)
+}
+
+pub fn entry_point_type() -> syn::Type {
+    parse_quote!(odra::casper_types::EntryPointType)
+}
+
+pub fn parameter() -> syn::Type {
+    parse_quote!(odra::casper_types::Parameter)
+}
+
+pub fn group() -> syn::Type {
+    parse_quote!(odra::casper_types::Group)
+}
+
+pub fn cl_type() -> syn::Type {
+    parse_quote!(odra::casper_types::CLType)
+}
