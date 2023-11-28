@@ -1,0 +1,11 @@
+[book]
+authors = ["Maciej Zieliński"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Odra Book"
+
+[preprocessor]
+
+[preprocessor.mermaid]
+command = "mdbook-mermaid"

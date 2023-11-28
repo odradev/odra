@@ -1,0 +1,36 @@
+flowchart TD
+    prereqs[Install:\n Rust, WASM toolchain, wabt]
+
+    prereqs --> 
+        cargo_odra[cargo-odra:\n install, generate, build, test]
+    
+    cargo_odra -->
+        flipper[Example:\n Flipper]
+
+    base_types[Base types:\n Rust types, U256, U512, Address]
+
+    base_types -->
+        odra_type[OdraType] 
+
+    cargo_odra & odra_type -->
+        module[Module:\n modularity, storage, entrypoints, env]
+
+    module --> 
+        entrypoint[Entrypoint:\n mutability, name, args, ret]
+
+    entrypoint -->
+        contract_env[Contract env]
+
+    entrypoint -->
+        variable[Variable]
+
+    entrypoint & module -->
+        sub_module[Submodule]
+
+    entrypoint & sub_module -->
+        mapping[Mapping]
+
+    entrypoint & contract_env -->
+        event[Event]
+
+    
