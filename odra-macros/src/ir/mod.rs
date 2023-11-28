@@ -130,7 +130,6 @@ impl ModuleIR {
         ))
     }
 
-    #[allow(dead_code)]
     pub fn deployer_ident(&self) -> Result<Ident, syn::Error> {
         let module_ident = self.module_ident()?;
         Ok(Ident::new(
@@ -140,9 +139,11 @@ impl ModuleIR {
     }
 
     pub fn test_parts_mod_ident(&self) -> Result<syn::Ident, syn::Error> {
-        self.module_ident()
-            .map(crate::utils::string::camel_to_snake)
-            .map(|ident| format_ident!("__{}_test_parts", ident))
+        let module_ident = self.module_ident()?;
+        Ok(Ident::new(
+            &format!("__{}_test_parts", crate::utils::string::camel_to_snake(&module_ident)),
+            module_ident.span()
+        ))
     }
 
     pub fn functions(&self) -> Vec<FnIR> {
