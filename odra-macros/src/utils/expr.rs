@@ -34,7 +34,9 @@ pub fn entry_point_public() -> syn::Expr {
 }
 
 pub fn entry_point_group(name: &str) -> syn::Expr {
-    parse_quote!(odra::casper_types::EntryPointAccess::Groups(vec![odra::casper_types::Group::new(#name)]))
+    parse_quote!(odra::casper_types::EntryPointAccess::Groups(
+        vec![odra::casper_types::Group::new(#name)]
+    ))
 }
 
 pub fn new_parameter(name: String, ty: syn::Type) -> syn::Expr {
@@ -45,25 +47,41 @@ pub fn new_parameter(name: String, ty: syn::Type) -> syn::Expr {
 pub fn as_cl_type(ty: &syn::Type) -> syn::Expr {
     let ty = match ty {
         syn::Type::Path(type_path) => {
-            let mut segments: syn::punctuated::Punctuated<syn::PathSegment, syn::Token![::]> = type_path.path.segments.clone();
+            let mut segments: syn::punctuated::Punctuated<syn::PathSegment, syn::Token![::]> =
+                type_path.path.segments.clone();
             // the syntax <Option<U256> as odra::casper_types::CLTyped>::cl_type() is invalid
             // it should be <Option::<U256> as odra::casper_types::CLTyped>::cl_type()
-            segments
-                .first_mut()
-                .map(|ps| if let syn::PathArguments::AngleBracketed(ab) = &ps.arguments {
+            segments.first_mut().map(|ps| {
+                if let syn::PathArguments::AngleBracketed(ab) = &ps.arguments {
                     let generic_arg: syn::AngleBracketedGenericArguments = parse_quote!(::#ab);
                     ps.arguments = syn::PathArguments::AngleBracketed(generic_arg);
-                });
-            syn::Type::Path(syn::TypePath { 
-                path: syn::Path { leading_colon: None, segments },
+                }
+            });
+            syn::Type::Path(syn::TypePath {
+                path: syn::Path {
+                    leading_colon: None,
+                    segments
+                },
                 ..type_path.clone()
             })
-        },
-        _ => ty.clone(),
+        }
+        _ => ty.clone()
     };
     parse_quote!(<#ty as odra::casper_types::CLTyped>::cl_type())
 }
 
 pub fn unit_cl_type() -> syn::Expr {
     parse_quote!(<() as odra::casper_types::CLTyped>::cl_type())
+}
+
+pub fn new_schemas() -> syn::Expr {
+    parse_quote!(odra::casper_event_standard::Schemas::new())
+}
+
+pub fn install_contract(entry_points: syn::Expr, schemas: syn::Expr, args: syn::Expr) -> syn::Expr {
+    parse_quote!(odra::odra_casper_wasm_env::host_functions::install_contract(
+        #entry_points,
+        #schemas,
+        #args
+    ))
 }

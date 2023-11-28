@@ -87,3 +87,7 @@ pub fn group() -> syn::Type {
 pub fn cl_type() -> syn::Type {
     parse_quote!(odra::casper_types::CLType)
 }
+
+pub fn runtime_args() -> syn::Type {
+    parse_quote!(odra::RuntimeArgs)
+}

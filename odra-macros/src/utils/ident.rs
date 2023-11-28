@@ -47,3 +47,7 @@ pub fn add_entry_point() -> syn::Ident {
 pub fn new() -> syn::Ident {
     format_ident!("new")
 }
+
+pub fn schemas() -> syn::Ident {
+    format_ident!("schemas")
+}

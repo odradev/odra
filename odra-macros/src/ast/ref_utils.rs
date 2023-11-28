@@ -1,4 +1,5 @@
 use crate::{
+    ast::fn_utils,
     ir::FnIR,
     utils::{self, syn::visibility_pub}
 };
@@ -47,14 +48,14 @@ fn env_call(sig: syn::Signature, call_def_expr: syn::Expr) -> syn::ItemFn {
 fn call_def(fun: &FnIR) -> syn::Expr {
     let ty_call_def = utils::ty::call_def();
     let fun_name_str = fun.name_str();
-    let args_block = runtime_args_block(fun);
+    let args_block = fn_utils::runtime_args_block(fun, insert_arg_stmt);
     syn::parse_quote!(#ty_call_def::new(String::from(#fun_name_str), #args_block))
 }
 
 fn call_def_with_amount(fun: &FnIR) -> syn::Expr {
     let ty_call_def = utils::ty::call_def();
     let fun_name_str = fun.name_str();
-    let args_block = runtime_args_with_amount_block(fun);
+    let args_block = runtime_args_with_amount_block(fun, insert_arg_stmt);
     let attached_value = utils::member::attached_value();
 
     syn::parse_quote!(#ty_call_def::new(String::from(#fun_name_str), #args_block).with_amount(#attached_value))
@@ -78,23 +79,14 @@ fn try_function_signature(fun: &FnIR) -> syn::Signature {
     syn::parse_quote!(fn #fun_name(& #mutability self #(, #args)*) #return_type)
 }
 
-pub fn runtime_args_block(fun: &FnIR) -> syn::Block {
-    let runtime_args = utils::expr::new_runtime_args();
-    let args = utils::ident::named_args();
-    let insert_args = insert_args_stmts(fun);
-
-    syn::parse_quote!({
-        let mut #args = #runtime_args;
-        #(#insert_args)*
-        #args
-    })
-}
-
-pub fn runtime_args_with_amount_block(fun: &FnIR) -> syn::Block {
+fn runtime_args_with_amount_block<F: FnMut(&syn::Ident) -> syn::Stmt>(
+    fun: &FnIR,
+    insert_arg_fn: F
+) -> syn::Block {
     let runtime_args = utils::expr::new_runtime_args();
     let args = utils::ident::named_args();
     let insert_amount = insert_amount_arg_stmt();
-    let insert_args = insert_args_stmts(fun);
+    let insert_args = fn_utils::insert_args_stmts(fun, insert_arg_fn);
 
     syn::parse_quote!({
         let mut #args = #runtime_args;
@@ -102,20 +94,6 @@ pub fn runtime_args_with_amount_block(fun: &FnIR) -> syn::Block {
         #(#insert_args)*
         #args
     })
-}
-
-fn insert_args_stmts(fun: &FnIR) -> Vec<syn::Stmt> {
-    fun.arg_names()
-        .iter()
-        .map(insert_arg_stmt)
-        .collect::<Vec<_>>()
-}
-
-fn insert_arg_stmt(ident: &syn::Ident) -> syn::Stmt {
-    let name = ident.to_string();
-    let args = utils::ident::named_args();
-
-    syn::parse_quote!(let _ = #args.insert(#name, #ident);)
 }
 
 fn insert_amount_arg_stmt() -> syn::Stmt {
@@ -128,4 +106,11 @@ fn insert_amount_arg_stmt() -> syn::Stmt {
             let _ = #ident.insert("amount", #attached_value);
         }
     )
+}
+
+pub fn insert_arg_stmt(ident: &syn::Ident) -> syn::Stmt {
+    let name = ident.to_string();
+    let args = utils::ident::named_args();
+
+    syn::parse_quote!(let _ = #args.insert(#name, #ident);)
 }

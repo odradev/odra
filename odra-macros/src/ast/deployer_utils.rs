@@ -1,4 +1,4 @@
-use super::ref_utils;
+use super::{fn_utils, ref_utils};
 use crate::{
     ir::{FnArgIR, FnIR, ModuleIR},
     utils
@@ -104,7 +104,7 @@ impl TryFrom<&'_ ModuleIR> for NewContractExpr {
         let env_ident = utils::ident::env();
         let args = module
             .constructor()
-            .map(|f| ref_utils::runtime_args_block(&f))
+            .map(|f| fn_utils::runtime_args_block(&f, ref_utils::insert_arg_stmt))
             .unwrap_or({
                 let args = utils::expr::new_runtime_args();
                 parse_quote!({#args})
