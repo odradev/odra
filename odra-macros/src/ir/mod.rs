@@ -141,7 +141,10 @@ impl ModuleIR {
     pub fn test_parts_mod_ident(&self) -> Result<syn::Ident, syn::Error> {
         let module_ident = self.module_ident()?;
         Ok(Ident::new(
-            &format!("__{}_test_parts", crate::utils::string::camel_to_snake(&module_ident)),
+            &format!(
+                "__{}_test_parts",
+                crate::utils::string::camel_to_snake(&module_ident)
+            ),
             module_ident.span()
         ))
     }
