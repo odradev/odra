@@ -198,7 +198,7 @@ mod ref_item_tests {
                     self.env.last_call().contract_last_call(self.address)
                 }
 
-                pub fn try_total_supply(&self) -> Result<U256, OdraError> {
+                pub fn try_total_supply(&self) -> Result<U256, odra::OdraError> {
                     self.env.call_contract(
                         self.address,
                         odra::CallDef::new(

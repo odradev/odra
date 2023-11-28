@@ -1,6 +1,6 @@
 use quote::{quote, ToTokens};
 
-use crate::ir::ModuleIR;
+use crate::ir::{ModuleIR, StructIR};
 
 pub fn mock_module() -> ModuleIR {
     let module = quote! {
@@ -18,6 +18,20 @@ pub fn mock_module() -> ModuleIR {
         }
     };
     ModuleIR::try_from(&module).unwrap()
+}
+
+pub fn mock_module_definition() -> StructIR {
+    let module = quote!(
+        pub struct CounterPack {
+            env: Rc<ContractEnv>,
+            counter0: ModuleWrapper<Counter>,
+            counter1: ModuleWrapper<Counter>,
+            counter2: ModuleWrapper<Counter>,
+            counters: Variable<u32>,
+            counters_map: Mapping<u8, Counter>
+        }
+    );
+    StructIR::try_from(&module).unwrap()
 }
 
 pub fn assert_eq<A: ToTokens, B: ToTokens>(a: A, b: B) {

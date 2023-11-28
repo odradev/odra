@@ -1,8 +1,10 @@
-#![feature(box_patterns)]
+#![feature(box_patterns, result_flattening)]
 
 use ast::*;
-use ir::ModuleIR;
+use ir::{ModuleIR, StructIR};
 use proc_macro::TokenStream;
+use proc_macro2::TokenStream as TokenStream2;
+use syn::spanned::Spanned;
 
 mod ast;
 mod ir;
@@ -12,20 +14,24 @@ mod utils;
 
 #[proc_macro_attribute]
 pub fn module(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    match module_impl(item) {
-        Ok(result) => result,
-        Err(e) => e.to_compile_error()
+    let stream: TokenStream2 = item.into();
+    if let Ok(ir) = ModuleIR::try_from(&stream) {
+        return handle_result(module_impl(ir));
     }
-    .into()
+    if let Ok(ir) = StructIR::try_from(&stream) {
+        return handle_result(module_struct(ir));
+    }
+    handle_result(Err(syn::Error::new(
+        stream.span(),
+        "Struct or impl block expected"
+    )))
 }
 
-fn module_impl(item: TokenStream) -> Result<proc_macro2::TokenStream, syn::Error> {
-    let module_ir = ModuleIR::try_from(&item.into())?;
-
-    let code = module_ir.self_code();
-    let ref_item = RefItem::try_from(&module_ir)?;
-    let test_parts = TestParts::try_from(&module_ir)?;
-    let test_parts_reexport = TestPartsReexport::try_from(&module_ir)?;
+fn module_impl(ir: ModuleIR) -> Result<TokenStream2, syn::Error> {
+    let code = ir.self_code();
+    let ref_item = RefItem::try_from(&ir)?;
+    let test_parts = TestParts::try_from(&ir)?;
+    let test_parts_reexport = TestPartsReexport::try_from(&ir)?;
 
     Ok(quote::quote! {
         #code
@@ -33,4 +39,22 @@ fn module_impl(item: TokenStream) -> Result<proc_macro2::TokenStream, syn::Error
         #test_parts
         #test_parts_reexport
     })
+}
+
+fn module_struct(ir: StructIR) -> Result<TokenStream2, syn::Error> {
+    let code = ir.self_code();
+    let module_mod = ModuleModItem::try_from(&ir)?;
+
+    Ok(quote::quote!(
+        #code
+        #module_mod
+    ))
+}
+
+fn handle_result(result: Result<TokenStream2, syn::Error>) -> TokenStream {
+    match result {
+        Ok(stream) => stream,
+        Err(e) => e.to_compile_error()
+    }
+    .into()
 }

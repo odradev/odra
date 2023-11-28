@@ -1,26 +1,109 @@
 use crate::utils;
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::Ident;
 use quote::format_ident;
-use syn::{parse_quote, ItemImpl};
+use syn::{parse_quote, spanned::Spanned};
 
 const CONSTRUCTOR_NAME: &str = "init";
 
-pub struct ModuleIR {
-    code: ItemImpl
+macro_rules! try_parse {
+    ($from:path => $to:ident) => {
+        pub struct $to {
+            code: $from
+        }
+
+        impl TryFrom<&proc_macro2::TokenStream> for $to {
+            type Error = syn::Error;
+
+            fn try_from(stream: &proc_macro2::TokenStream) -> Result<Self, Self::Error> {
+                Ok(Self {
+                    code: syn::parse2::<$from>(stream.clone())?
+                })
+            }
+        }
+    };
 }
 
-impl TryFrom<&TokenStream> for ModuleIR {
-    type Error = syn::Error;
+try_parse!(syn::ItemStruct => StructIR);
 
-    fn try_from(value: &TokenStream) -> Result<Self, Self::Error> {
-        Ok(Self {
-            code: syn::parse2::<syn::ItemImpl>(value.clone())?
-        })
+impl StructIR {
+    pub fn self_code(&self) -> &syn::ItemStruct {
+        &self.code
+    }
+
+    pub fn field_names(&self) -> Result<Vec<syn::Ident>, syn::Error> {
+        utils::syn::struct_fields_ident(&self.code)
+    }
+
+    pub fn module_ident(&self) -> syn::Ident {
+        utils::syn::ident_from_struct(&self.code)
+    }
+
+    pub fn module_mod_ident(&self) -> syn::Ident {
+        format_ident!(
+            "__{}_module",
+            utils::string::camel_to_snake(self.module_ident())
+        )
+    }
+
+    pub fn typed_fields(&self) -> Result<Vec<EnumeratedTypedField>, syn::Error> {
+        let fields = utils::syn::struct_fields(&self.code)?;
+        let fields = fields
+            .iter()
+            .filter(|(i, _)| i != &utils::ident::env())
+            .collect::<Vec<_>>();
+
+        for (_, ty) in &fields {
+            Self::validate_ty(ty)?;
+        }
+
+        fields
+            .iter()
+            .enumerate()
+            .map(|(idx, (ident, ty))| {
+                Ok(EnumeratedTypedField {
+                    idx: idx as u8,
+                    ident: ident.clone(),
+                    ty: utils::syn::clear_generics(ty)?
+                })
+            })
+            .collect()
+    }
+
+    fn validate_ty(ty: &syn::Type) -> Result<(), syn::Error> {
+        let non_generic_ty = utils::syn::clear_generics(ty)?;
+
+        // both odra::Variable and Variable (Mapping, ModuleWrapper) are valid.
+        let valid_types = vec![
+            utils::ty::module_wrapper(),
+            utils::ty::variable(),
+            utils::ty::mapping(),
+        ]
+        .iter()
+        .map(|ty| utils::syn::last_segment_ident(ty).map(|i| vec![ty.clone(), parse_quote!(#i)]))
+        .collect::<Result<Vec<_>, _>>()?;
+        let valid_types = valid_types.into_iter().flatten().collect::<Vec<_>>();
+
+        if valid_types
+            .iter()
+            .any(|t| utils::string::eq(t, &non_generic_ty))
+        {
+            return Ok(());
+        }
+
+        Err(syn::Error::new(ty.span(), "Invalid module type"))
     }
 }
 
+pub struct EnumeratedTypedField {
+    pub idx: u8,
+    pub ident: syn::Ident,
+    pub ty: syn::Type
+}
+
+try_parse!(syn::ItemImpl => ModuleIR);
+
 impl ModuleIR {
-    pub fn self_code(&self) -> &ItemImpl {
+    pub fn self_code(&self) -> &syn::ItemImpl {
         &self.code
     }
 
@@ -47,7 +130,6 @@ impl ModuleIR {
         ))
     }
 
-    #[allow(dead_code)]
     pub fn deployer_ident(&self) -> Result<Ident, syn::Error> {
         let module_ident = self.module_ident()?;
         Ok(Ident::new(
@@ -57,9 +139,14 @@ impl ModuleIR {
     }
 
     pub fn test_parts_mod_ident(&self) -> Result<syn::Ident, syn::Error> {
-        self.module_ident()
-            .map(crate::utils::string::camel_to_snake)
-            .map(|ident| format_ident!("__{}_test_parts", ident))
+        let module_ident = self.module_ident()?;
+        Ok(Ident::new(
+            &format!(
+                "__{}_test_parts",
+                crate::utils::string::camel_to_snake(&module_ident)
+            ),
+            module_ident.span()
+        ))
     }
 
     pub fn functions(&self) -> Vec<FnIR> {
