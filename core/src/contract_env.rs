@@ -4,6 +4,8 @@ use crate::{Address, Bytes, CLTyped, FromBytes, OdraError, ToBytes, U512};
 
 use crate::key_maker;
 pub use crate::ContractContext;
+use crate::ExecutionError::ReentrantCall;
+use crate::OdraError::ExecutionError;
 
 pub struct ContractEnv {
     index: u32,
@@ -100,5 +102,19 @@ impl ContractEnv {
     pub fn emit_event<T: ToBytes>(&self, event: T) {
         let backend = self.backend.borrow();
         backend.emit_event(&event.to_bytes().unwrap().into())
+    }
+
+    pub fn non_reentrant_before(&self) {
+        let status: bool = self
+            .get_value(crate::consts::REENTRANCY_GUARD.as_slice())
+            .unwrap_or_default();
+        if status {
+            self.revert(ExecutionError(ReentrantCall));
+        }
+        self.set_value(crate::consts::REENTRANCY_GUARD.as_slice(), true);
+    }
+
+    pub fn non_reentrant_after(&self) {
+        self.set_value(crate::consts::REENTRANCY_GUARD.as_slice(), false);
     }
 }

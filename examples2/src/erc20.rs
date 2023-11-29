@@ -40,7 +40,8 @@ impl From<Erc20Error> for OdraError {
 pub struct Erc20 {
     env: Rc<ContractEnv>,
     total_supply: Variable<U256>,
-    balances: Mapping<Address, U256>
+    balances: Mapping<Address, U256>,
+    counter: Variable<u32>
 }
 
 #[odra_macros::module]
@@ -136,6 +137,45 @@ impl Erc20 {
             other_contract: other,
             amount: value
         });
+    }
+
+    // TODO: macro the next 3 functions with #[odra(non_reentrant)]
+    // It needs to be enabled only for external calls (like in ContractRef)
+    pub fn count_local_recursive(&mut self, n: u32) {
+        self.env.non_reentrant_before();
+        if n > 0 {
+            self.count();
+            self.count_local_recursive(n - 1);
+        }
+        self.env.non_reentrant_after();
+    }
+
+    pub fn count_ref_recursive(&mut self, n: u32) {
+        self.env.non_reentrant_before();
+        if n > 0 {
+            self.count();
+            let mut other_erc20 = Erc20ContractRef {
+                address: self.env.self_address(),
+                env: self.env()
+            };
+            other_erc20.count_ref_recursive(n - 1);
+        }
+        self.env.non_reentrant_after();
+    }
+
+    pub fn non_reentrant_count(&mut self) {
+        self.env.non_reentrant_before();
+        self.count();
+        self.env.non_reentrant_after();
+    }
+
+    pub fn counter_value(&self) -> u32 {
+        self.counter.get_or_default()
+    }
+
+    fn count(&mut self) {
+        let c = self.counter.get_or_default();
+        self.counter.set(c + 1);
     }
 }
 
@@ -698,5 +738,24 @@ mod tests {
         // With return value
         let result = erc20.try_balance_of(alice);
         assert_eq!(result, Ok(100.into()));
+    }
+
+    #[test]
+    fn test_erc20_reentrancy_guard() {
+        let env = odra::test_env();
+        let mut erc20 = Erc20Deployer::init(&env, Some(100.into()));
+
+        // nrf can be called
+        assert_eq!(erc20.counter_value(), 0);
+        erc20.non_reentrant_count();
+        assert_eq!(erc20.counter_value(), 1);
+
+        // nrf recursion is not allowed
+        let result = erc20.try_count_ref_recursive(11);
+        // TODO: check exact error type
+        assert!(result.is_err());
+
+        // nrf local recursion is allowed
+        erc20.count_local_recursive(11);
     }
 }
