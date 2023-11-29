@@ -1,11 +1,13 @@
 use syn::parse_quote;
 
 pub fn new_runtime_args() -> syn::Expr {
-    parse_quote!(odra::RuntimeArgs::new())
+    let ty = super::ty::runtime_args();
+    parse_quote!(#ty::new())
 }
 
 pub fn u512_zero() -> syn::Expr {
-    parse_quote!(odra::U512::zero())
+    let ty = super::ty::u512();
+    parse_quote!(#ty::zero())
 }
 
 pub fn parse_bytes(data_ident: &syn::Ident) -> syn::Expr {
@@ -22,66 +24,44 @@ fn rc_clone(ident: &syn::Ident) -> syn::Expr {
 }
 
 pub fn new_entry_points() -> syn::Expr {
-    parse_quote!(odra::casper_types::EntryPoints::new())
+    let ty = super::ty::entry_points();
+    parse_quote!(#ty::new())
 }
 
 pub fn entry_point_contract() -> syn::Expr {
-    parse_quote!(odra::casper_types::EntryPointType::Contract)
+    let ty = super::ty::entry_point_type();
+    parse_quote!(#ty::Contract)
 }
 
 pub fn entry_point_public() -> syn::Expr {
-    parse_quote!(odra::casper_types::EntryPointAccess::Public)
+    let ty = super::ty::entry_point_access();
+    parse_quote!(#ty::Public)
 }
 
 pub fn entry_point_group(name: &str) -> syn::Expr {
-    parse_quote!(odra::casper_types::EntryPointAccess::Groups(
-        vec![odra::casper_types::Group::new(#name)]
-    ))
+    let ty = super::ty::entry_point_access();
+    let ty_group = super::ty::group();
+    parse_quote!(#ty::Groups(vec![#ty_group::new(#name)]))
 }
 
 pub fn new_parameter(name: String, ty: syn::Type) -> syn::Expr {
+    let ty_param = super::ty::parameter();
     let cl_type = as_cl_type(&ty);
-    parse_quote!(odra::casper_types::Parameter::new(#name, #cl_type))
+    parse_quote!(#ty_param::new(#name, #cl_type))
 }
 
 pub fn as_cl_type(ty: &syn::Type) -> syn::Expr {
-    let ty = match ty {
-        syn::Type::Path(type_path) => {
-            let mut segments: syn::punctuated::Punctuated<syn::PathSegment, syn::Token![::]> =
-                type_path.path.segments.clone();
-            // the syntax <Option<U256> as odra::casper_types::CLTyped>::cl_type() is invalid
-            // it should be <Option::<U256> as odra::casper_types::CLTyped>::cl_type()
-            segments.first_mut().map(|ps| {
-                if let syn::PathArguments::AngleBracketed(ab) = &ps.arguments {
-                    let generic_arg: syn::AngleBracketedGenericArguments = parse_quote!(::#ab);
-                    ps.arguments = syn::PathArguments::AngleBracketed(generic_arg);
-                }
-            });
-            syn::Type::Path(syn::TypePath {
-                path: syn::Path {
-                    leading_colon: None,
-                    segments
-                },
-                ..type_path.clone()
-            })
-        }
-        _ => ty.clone()
-    };
-    parse_quote!(<#ty as odra::casper_types::CLTyped>::cl_type())
+    let ty_cl_typed = super::ty::cl_typed();
+    let ty = super::syn::as_casted_ty_stream(ty, ty_cl_typed);
+    parse_quote!(#ty::cl_type())
 }
 
 pub fn unit_cl_type() -> syn::Expr {
-    parse_quote!(<() as odra::casper_types::CLTyped>::cl_type())
+    let ty_cl_typed = super::ty::cl_typed();
+    parse_quote!(<() as #ty_cl_typed>::cl_type())
 }
 
 pub fn new_schemas() -> syn::Expr {
-    parse_quote!(odra::casper_event_standard::Schemas::new())
-}
-
-pub fn install_contract(entry_points: syn::Expr, schemas: syn::Expr, args: syn::Expr) -> syn::Expr {
-    parse_quote!(odra::odra_casper_wasm_env::host_functions::install_contract(
-        #entry_points,
-        #schemas,
-        #args
-    ))
+    let ty = super::ty::schemas();
+    parse_quote!(#ty::new())
 }

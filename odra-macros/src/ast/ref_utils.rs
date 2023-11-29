@@ -1,6 +1,6 @@
 use crate::{
     ast::fn_utils,
-    ir::FnIR,
+    ir::{FnArgIR, FnIR},
     utils::{self, syn::visibility_pub}
 };
 
@@ -79,7 +79,7 @@ fn try_function_signature(fun: &FnIR) -> syn::Signature {
     syn::parse_quote!(fn #fun_name(& #mutability self #(, #args)*) #return_type)
 }
 
-fn runtime_args_with_amount_block<F: FnMut(&syn::Ident) -> syn::Stmt>(
+fn runtime_args_with_amount_block<F: FnMut(&FnArgIR) -> syn::Stmt>(
     fun: &FnIR,
     insert_arg_fn: F
 ) -> syn::Block {
@@ -108,7 +108,8 @@ fn insert_amount_arg_stmt() -> syn::Stmt {
     )
 }
 
-pub fn insert_arg_stmt(ident: &syn::Ident) -> syn::Stmt {
+pub fn insert_arg_stmt(arg: &FnArgIR) -> syn::Stmt {
+    let ident = arg.name().unwrap();
     let name = ident.to_string();
     let args = utils::ident::named_args();
 

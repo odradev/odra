@@ -1,6 +1,9 @@
-use crate::{ir::FnIR, utils};
+use crate::{
+    ir::{FnArgIR, FnIR},
+    utils
+};
 
-pub fn runtime_args_block<F: FnMut(&syn::Ident) -> syn::Stmt>(
+pub fn runtime_args_block<F: FnMut(&FnArgIR) -> syn::Stmt>(
     fun: &FnIR,
     insert_arg_fn: F
 ) -> syn::Block {
@@ -15,11 +18,11 @@ pub fn runtime_args_block<F: FnMut(&syn::Ident) -> syn::Stmt>(
     })
 }
 
-pub fn insert_args_stmts<F: FnMut(&syn::Ident) -> syn::Stmt>(
+pub fn insert_args_stmts<F: FnMut(&FnArgIR) -> syn::Stmt>(
     fun: &FnIR,
     insert_arg_fn: F
 ) -> Vec<syn::Stmt> {
-    fun.arg_names()
+    fun.named_args()
         .iter()
         .map(insert_arg_fn)
         .collect::<Vec<_>>()

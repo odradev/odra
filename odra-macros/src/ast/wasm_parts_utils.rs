@@ -1,4 +1,7 @@
-use crate::{ir::FnIR, utils};
+use crate::{
+    ir::{FnArgIR, FnIR},
+    utils
+};
 use syn::parse_quote;
 
 pub fn param_parameters(func: &FnIR) -> syn::Expr {
@@ -29,12 +32,12 @@ pub fn param_ret_ty(func: &FnIR) -> syn::Expr {
     }
 }
 
-pub fn insert_arg_stmt(ident: &syn::Ident) -> syn::Stmt {
-    let name = ident.to_string();
+pub fn insert_arg_stmt(arg: &FnArgIR) -> syn::Stmt {
+    let (name, ty) = arg.name_and_ty().unwrap();
     let args = utils::ident::named_args();
 
     syn::parse_quote!(let _ = #args.insert(
-        #name, 
-        odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::get_named_arg(#name)
+        #name,
+        odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::get_named_arg::<#ty>(#name)
     );)
 }

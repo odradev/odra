@@ -51,3 +51,7 @@ pub fn new() -> syn::Ident {
 pub fn schemas() -> syn::Ident {
     format_ident!("schemas")
 }
+
+pub fn contract() -> syn::Ident {
+    format_ident!("contract")
+}

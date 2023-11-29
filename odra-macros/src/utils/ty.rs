@@ -84,8 +84,12 @@ pub fn group() -> syn::Type {
     parse_quote!(odra::casper_types::Group)
 }
 
-pub fn cl_type() -> syn::Type {
-    parse_quote!(odra::casper_types::CLType)
+pub fn schemas() -> syn::Type {
+    parse_quote!(odra::casper_event_standard::Schemas)
+}
+
+pub fn cl_typed() -> syn::Type {
+    parse_quote!(odra::casper_types::CLTyped)
 }
 
 pub fn runtime_args() -> syn::Type {

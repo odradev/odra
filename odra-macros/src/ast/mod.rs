@@ -13,3 +13,4 @@ mod wasm_parts_utils;
 pub(crate) use module_item::ModuleModItem;
 pub(crate) use ref_item::RefItem;
 pub(crate) use test_parts::{TestParts, TestPartsReexport};
+pub(crate) use wasm_parts::WasmPartsModuleItem;

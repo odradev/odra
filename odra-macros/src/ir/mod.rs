@@ -252,7 +252,6 @@ impl FnIR {
     pub fn is_constructor(&self) -> bool {
         self.name_str() == CONSTRUCTOR_NAME
     }
-
 }
 
 pub struct FnArgIR {
@@ -281,12 +280,13 @@ impl FnArgIR {
     pub fn name_str(&self) -> Result<String, syn::Error> {
         self.name().map(|i| i.to_string())
     }
-    
+
     pub fn name_and_ty(&self) -> Result<(String, syn::Type), syn::Error> {
         match &self.code {
-            syn::FnArg::Typed(syn::PatType { 
-                box ty, 
-                pat: box syn::Pat::Ident(pat), .. 
+            syn::FnArg::Typed(syn::PatType {
+                box ty,
+                pat: box syn::Pat::Ident(pat),
+                ..
             }) => Ok((pat.ident.to_string(), ty.clone())),
             _ => Err(syn::Error::new_spanned(&self.code, "Unnamed arg"))
         }

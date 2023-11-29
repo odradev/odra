@@ -15,3 +15,7 @@ pub fn odra_module(name: &str) -> syn::Attribute {
 pub fn no_mangle() -> syn::Attribute {
     parse_quote!(#[no_mangle])
 }
+
+pub fn inline() -> syn::Attribute {
+    parse_quote!(#[inline])
+}

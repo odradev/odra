@@ -27,7 +27,10 @@ pub struct WasmPartsModuleItem {
     #[syn(in = braces)]
     entry_points_fn: EntryPointsFnItem,
     #[syn(in = braces)]
-    call_fn: CallFnItem
+    call_fn: CallFnItem,
+    #[syn(in = braces)]
+    #[to_tokens(|tokens, f| tokens.append_all(f))]
+    entry_points: Vec<NoMangleFnItem>
 }
 
 impl TryFrom<&'_ ModuleIR> for WasmPartsModuleItem {
@@ -35,22 +38,28 @@ impl TryFrom<&'_ ModuleIR> for WasmPartsModuleItem {
 
     fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
         let module_str = module.module_str()?;
-        let ident = module.wasm_parts_mod_ident()?;
         Ok(Self {
             attrs: vec![utils::attr::wasm32(), utils::attr::odra_module(&module_str)],
             mod_token: Default::default(),
-            ident,
+            ident: module.wasm_parts_mod_ident()?,
             braces: Default::default(),
             use_super: UseSuperItem,
             use_prelude: UsePreludeItem,
             entry_points_fn: module.try_into()?,
-            call_fn: module.try_into()?
+            call_fn: module.try_into()?,
+            entry_points: module
+                .functions()
+                .iter()
+                .map(|f| (module, f))
+                .map(TryInto::try_into)
+                .collect::<Result<Vec<_>, _>>()?
         })
     }
 }
 
 #[derive(syn_derive::ToTokens)]
 struct EntryPointsFnItem {
+    inline_attr: syn::Attribute,
     sig: syn::Signature,
     #[syn(braced)]
     braces: syn::token::Brace,
@@ -72,6 +81,7 @@ impl TryFrom<&'_ ModuleIR> for EntryPointsFnItem {
         let expr_entry_points = utils::expr::new_entry_points();
 
         Ok(Self {
+            inline_attr: utils::attr::inline(),
             sig: parse_quote!(fn #ident_entry_points() -> #ty_entry_points),
             braces: Default::default(),
             var_declaration: parse_quote!(let mut #ident_entry_points = #expr_entry_points;),
@@ -115,7 +125,7 @@ impl TryFrom<&'_ ModuleIR> for CallFnItem {
             None => parse_quote!(let #ident_args = Option::<#ty_args>::None)
         };
         let expr_new_schemas = utils::expr::new_schemas();
-        let expr_install = utils::expr::install_contract(
+        let install_contract_stmt = utils::stmt::install_contract(
             parse_quote!(#ident_entry_points()),
             parse_quote!(#ident_schemas),
             parse_quote!(#ident_args)
@@ -127,7 +137,72 @@ impl TryFrom<&'_ ModuleIR> for CallFnItem {
             braces: Default::default(),
             schemas_init_stmt: parse_quote!(let #ident_schemas = #expr_new_schemas;),
             runtime_args_stmt: parse_quote!(#runtime_args_expr;),
-            install_contract_stmt: parse_quote!(#expr_install;)
+            install_contract_stmt
+        })
+    }
+}
+
+#[derive(syn_derive::ToTokens)]
+struct NoMangleFnItem {
+    attr: syn::Attribute,
+    sig: syn::Signature,
+    #[syn(braced)]
+    braces: syn::token::Brace,
+    #[syn(in = braces)]
+    #[to_tokens(|tokens, f| tokens.append_all(f))]
+    read_args_stmts: Vec<syn::Stmt>,
+    #[syn(in = braces)]
+    instantiate_env_stmt: syn::Stmt,
+    #[syn(in = braces)]
+    instantiate_module_stmt: syn::Stmt,
+    #[syn(in = braces)]
+    call_module_stmt: syn::Stmt,
+    #[syn(in = braces)]
+    ret_stmt: Option<syn::Stmt>
+}
+
+impl TryFrom<(&'_ ModuleIR, &'_ FnIR)> for NoMangleFnItem {
+    type Error = syn::Error;
+
+    fn try_from(value: (&'_ ModuleIR, &'_ FnIR)) -> Result<Self, Self::Error> {
+        let (module, func) = value;
+        let module_ident = module.module_ident()?;
+        let contract_ident = utils::ident::contract();
+        let env_ident = utils::ident::env();
+        let fn_ident = func.name();
+        let result_ident = utils::ident::result();
+        let fn_args = func.arg_names();
+
+        let instantiate_module_stmt = match func.is_mut() {
+            true => utils::stmt::new_mut_module(&contract_ident, &module_ident, &env_ident),
+            false => utils::stmt::new_module(&contract_ident, &module_ident, &env_ident)
+        };
+
+        let call_module_stmt = match func.return_type() {
+            syn::ReturnType::Default => parse_quote!(#contract_ident.#fn_ident( #(#fn_args),* );),
+            syn::ReturnType::Type(_, _) => {
+                parse_quote!(let #result_ident = #contract_ident.#fn_ident( #(#fn_args),* );)
+            }
+        };
+
+        let ret_stmt = match func.return_type() {
+            syn::ReturnType::Default => None,
+            syn::ReturnType::Type(_, _) => Some(utils::stmt::runtime_return(&result_ident))
+        };
+
+        Ok(Self {
+            attr: utils::attr::no_mangle(),
+            sig: parse_quote!(fn #fn_ident()),
+            braces: Default::default(),
+            read_args_stmts: func
+                .arg_names()
+                .iter()
+                .map(utils::stmt::read_runtime_arg)
+                .collect(),
+            instantiate_env_stmt: utils::stmt::new_wasm_contract_env(&env_ident),
+            instantiate_module_stmt,
+            call_module_stmt,
+            ret_stmt
         })
     }
 }
@@ -148,12 +223,10 @@ impl TryFrom<&'_ FnIR> for AddEntryPointStmtItem {
     type Error = syn::Error;
 
     fn try_from(func: &'_ FnIR) -> Result<Self, Self::Error> {
-        let var_ident = utils::ident::entry_points();
-        let fn_ident = utils::ident::add_entry_point();
         Ok(Self {
-            var_ident,
+            var_ident: utils::ident::entry_points(),
             dot_token: Default::default(),
-            fn_ident,
+            fn_ident: utils::ident::add_entry_point(),
             paren: Default::default(),
             new_entry_point_expr: func.try_into()?,
             semi_token: Default::default()
@@ -217,6 +290,7 @@ mod test {
                 use super::*;
                 use odra::prelude::*;
 
+                #[inline]
                 fn entry_points() -> odra::casper_types::EntryPoints {
                     let mut entry_points = odra::casper_types::EntryPoints::new();
 
@@ -247,7 +321,7 @@ mod test {
                         let mut named_args = odra::RuntimeArgs::new();
                         let _ = named_args.insert(
                             "total_supply",
-                            odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::get_named_arg("total_supply")
+                            odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::get_named_arg::<Option<U256>>("total_supply")
                         );
                         named_args
                     });
@@ -255,6 +329,26 @@ mod test {
                         entry_points(),
                         schemas,
                         named_args
+                    );
+                }
+
+                #[no_mangle]
+                fn init() {
+                    let total_supply = odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::get_named_arg("total_supply");
+                    let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
+                    let mut contract = Erc20::new(Rc::new(env));
+                    contract.init(total_supply);
+                }
+
+                #[no_mangle]
+                fn total_supply() {
+                    let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
+                    let contract = Erc20::new(Rc::new(env));
+                    let result = contract.total_supply();
+                    odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
+                        odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
+                            odra::casper_types::CLValue::from_t(result)
+                        )
                     );
                 }
             }
