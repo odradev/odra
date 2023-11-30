@@ -36,14 +36,14 @@ impl From<Erc20Error> for OdraError {
     }
 }
 
-#[odra_macros::module]
+#[odra::module]
 pub struct Erc20 {
     env: Rc<ContractEnv>,
     total_supply: Variable<U256>,
     balances: Mapping<Address, U256>
 }
 
-#[odra_macros::module]
+#[odra::module]
 impl Erc20 {
     pub fn init(&mut self, total_supply: Option<U256>) {
         if let Some(total_supply) = total_supply {

@@ -5,7 +5,7 @@ use odra::Mapping;
 use odra::Module;
 use odra::ModuleWrapper;
 
-#[odra_macros::module]
+#[odra::module]
 pub struct CounterPack {
     env: Rc<ContractEnv>,
     counter0: ModuleWrapper<Counter>,
@@ -22,7 +22,7 @@ pub struct CounterPack {
     counters_map: Mapping<u8, Counter>
 }
 
-#[odra_macros::module]
+#[odra::module]
 impl CounterPack {
     pub fn get_count(&self, index_a: u8, index_b: u8) -> u32 {
         match index_a {

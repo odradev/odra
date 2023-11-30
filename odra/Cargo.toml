@@ -9,6 +9,7 @@ repository.workspace = true
 
 [dependencies]
 odra-core = { path = "../core" }
+odra-macros = { path = "../odra-macros" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 odra-casper-wasm-env = { path = "../odra-casper/wasm-env" }
