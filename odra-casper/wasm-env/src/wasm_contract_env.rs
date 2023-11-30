@@ -49,6 +49,10 @@ impl ContractContext for WasmContractEnv {
     fn revert(&self, error: OdraError) -> ! {
         host_functions::revert(error.code())
     }
+
+    fn get_named_arg(&self, name: &str) -> Bytes {
+        host_functions::get_named_arg(name).into()
+    }
 }
 
 impl WasmContractEnv {

@@ -1,6 +1,6 @@
 use super::{fn_utils, ref_utils};
 use crate::{
-    ir::{FnArgIR, FnIR, ModuleIR},
+    ir::{FnIR, ModuleIR},
     utils
 };
 use proc_macro2::TokenStream;
@@ -72,8 +72,8 @@ impl EntrypointCallerExpr {
         let mut branches: Vec<CallerBranch> = module
             .functions()
             .iter()
-            .map(|f| Ok(CallerBranch::Function(FunctionCallBranch::new(module, f)?)))
-            .collect::<Result<_, syn::Error>>()?;
+            .map(|f| CallerBranch::Function(FunctionCallBranch::from(f)))
+            .collect();
         branches.push(CallerBranch::Default(DefaultBranch));
 
         Ok(parse_quote!(
@@ -178,38 +178,24 @@ struct FunctionCallBranch {
     result_expr: syn::Expr
 }
 
-impl<'a> FunctionCallBranch {
-    pub fn new(module: &'a ModuleIR, func: &'a FnIR) -> Result<Self, syn::Error> {
-        let call_stmt = Self::call_stmt(module, func)?;
-        let result_expr = utils::expr::parse_bytes(&utils::ident::result());
-
-        Ok(Self {
+impl From<&'_ FnIR> for FunctionCallBranch {
+    fn from(func: &'_ FnIR) -> Self {
+        Self {
             function_name: func.name_str(),
             arrow_token: Default::default(),
             brace_token: Default::default(),
-            call_stmt,
-            result_expr
-        })
+            call_stmt: Self::call_stmt(func),
+            result_expr: utils::expr::parse_bytes(&utils::ident::result())
+        }
     }
+}
 
-    fn read_call_def_arg_expr(arg: &FnArgIR) -> Result<syn::Expr, syn::Error> {
-        let call_def_ident = utils::ident::call_def();
-        let name = arg.name_str()?;
-        Ok(parse_quote!(#call_def_ident.get(#name).expect("arg not found")))
-    }
-
-    fn call_stmt(module: &'a ModuleIR, func: &'a FnIR) -> Result<syn::Stmt, syn::Error> {
-        let args = func
-            .named_args()
-            .iter()
-            .map(Self::read_call_def_arg_expr)
-            .collect::<Result<syn::punctuated::Punctuated<syn::Expr, syn::Token![,]>, syn::Error>>(
-            )?;
-
+impl<'a> FunctionCallBranch {
+    fn call_stmt(func: &'a FnIR) -> syn::Stmt {
         let result_ident = utils::ident::result();
-        let module_instance = module.module_instance_expr(utils::ident::contract_env())?;
-        let function_ident = func.name();
-        Ok(parse_quote!(let #result_ident = #module_instance.#function_ident(#args);))
+        let function_ident = func.execute_name();
+        let contract_env_ident = utils::ident::contract_env();
+        parse_quote!(let #result_ident =  #function_ident(#contract_env_ident);)
     }
 }
 

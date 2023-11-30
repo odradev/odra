@@ -48,6 +48,10 @@ impl ContractContext for OdraVmContractEnv {
     fn revert(&self, error: OdraError) -> ! {
         self.vm.borrow().revert(error)
     }
+
+    fn get_named_arg(&self, name: &str) -> Bytes {
+        self.vm.borrow().get_named_arg(name).into()
+    }
 }
 
 impl OdraVmContractEnv {

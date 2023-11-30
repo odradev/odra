@@ -1,3 +1,4 @@
+use derive_try_from::TryFromRef;
 use syn::parse_quote;
 
 use crate::{ir::ModuleIR, utils};
@@ -9,12 +10,12 @@ use super::{
 };
 
 #[derive(syn_derive::ToTokens)]
-pub struct TestPartsReexport {
+pub struct TestPartsReexportItem {
     attr: syn::Attribute,
     reexport_stmt: syn::Stmt
 }
 
-impl TryFrom<&'_ ModuleIR> for TestPartsReexport {
+impl TryFrom<&'_ ModuleIR> for TestPartsReexportItem {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
@@ -45,34 +46,23 @@ impl TryFrom<&'_ ModuleIR> for PartsModuleItem {
     }
 }
 
-#[derive(syn_derive::ToTokens)]
-pub struct TestParts {
+#[derive(syn_derive::ToTokens, TryFromRef)]
+#[source(ModuleIR)]
+pub struct TestPartsItem {
     parts_module: PartsModuleItem,
     #[syn(braced)]
+    #[default]
     brace_token: syn::token::Brace,
     #[syn(in = brace_token)]
+    #[expr(UseSuperItem)]
     use_super: UseSuperItem,
     #[syn(in = brace_token)]
+    #[expr(UsePreludeItem)]
     use_prelude: UsePreludeItem,
     #[syn(in = brace_token)]
     host_ref: HostRefItem,
     #[syn(in = brace_token)]
     deployer: DeployerItem
-}
-
-impl TryFrom<&'_ ModuleIR> for TestParts {
-    type Error = syn::Error;
-
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
-        Ok(TestParts {
-            parts_module: module.try_into()?,
-            brace_token: Default::default(),
-            use_prelude: UsePreludeItem,
-            use_super: UseSuperItem,
-            host_ref: module.try_into()?,
-            deployer: module.try_into()?
-        })
-    }
 }
 
 #[cfg(test)]
@@ -83,7 +73,7 @@ mod test {
     #[test]
     fn test_parts() {
         let module = mock_module();
-        let actual = TestParts::try_from(&module).unwrap();
+        let actual = TestPartsItem::try_from(&module).unwrap();
 
         let expected = quote::quote! {
             #[cfg(not(target_arch = "wasm32"))]

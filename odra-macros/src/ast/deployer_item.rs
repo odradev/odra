@@ -1,3 +1,5 @@
+use derive_try_from::TryFromRef;
+
 use crate::{ir::ModuleIR, utils};
 
 use super::deployer_utils::{
@@ -48,11 +50,14 @@ impl TryFrom<&'_ ModuleIR> for DeployImplItem {
     }
 }
 
-#[derive(syn_derive::ToTokens)]
+#[derive(syn_derive::ToTokens, TryFromRef)]
+#[source(ModuleIR)]
 struct ContractInitFn {
+    #[expr(utils::syn::visibility_pub())]
     vis: syn::Visibility,
     sig: DeployerInitSignature,
     #[syn(braced)]
+    #[default]
     braces: syn::token::Brace,
     #[syn(in = braces)]
     caller: EntrypointCallerExpr,
@@ -62,36 +67,11 @@ struct ContractInitFn {
     host_ref_instance: HostRefInstanceExpr
 }
 
-impl TryFrom<&'_ ModuleIR> for ContractInitFn {
-    type Error = syn::Error;
-
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
-        Ok(Self {
-            vis: utils::syn::visibility_pub(),
-            sig: module.try_into()?,
-            braces: Default::default(),
-            caller: module.try_into()?,
-            new_contract: module.try_into()?,
-            host_ref_instance: module.try_into()?
-        })
-    }
-}
-
-#[derive(syn_derive::ToTokens)]
+#[derive(syn_derive::ToTokens, TryFromRef)]
+#[source(ModuleIR)]
 pub struct DeployerItem {
     struct_item: DeployStructItem,
     impl_item: DeployImplItem
-}
-
-impl TryFrom<&'_ ModuleIR> for DeployerItem {
-    type Error = syn::Error;
-
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
-        Ok(Self {
-            struct_item: module.try_into()?,
-            impl_item: module.try_into()?
-        })
-    }
 }
 
 #[cfg(test)]
@@ -111,12 +91,11 @@ mod deployer_impl {
                     let caller = odra::EntryPointsCaller::new(env.clone(), |contract_env, call_def| {
                         match call_def.method() {
                             "init" => {
-                                let result = Erc20::new(Rc::new(contract_env))
-                                    .init(call_def.get("total_supply").expect("arg not found"));
+                                let result = execute_init(contract_env);
                                 odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
                             }
                             "total_supply" => {
-                                let result = Erc20::new(Rc::new(contract_env)).total_supply();
+                                let result = execute_total_supply(contract_env);
                                 odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
                             }
                             _ => panic!("Unknown method")

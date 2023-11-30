@@ -1,4 +1,4 @@
-use odra_core::{casper_types::U512, Address};
+use odra_core::{casper_types::U512, Address, CallDef};
 
 #[derive(Clone)]
 pub enum CallstackElement {
@@ -18,17 +18,12 @@ impl CallstackElement {
 #[derive(Clone)]
 pub struct Entrypoint {
     pub address: Address,
-    pub entrypoint: String,
-    pub attached_value: U512
+    pub call_def: CallDef
 }
 
 impl Entrypoint {
-    pub fn new(address: Address, entrypoint: &str, value: U512) -> Self {
-        Self {
-            address,
-            entrypoint: entrypoint.to_string(),
-            attached_value: value
-        }
+    pub fn new(address: Address, call_def: CallDef) -> Self {
+        Self { address, call_def }
     }
 }
 
@@ -48,13 +43,13 @@ impl Callstack {
         let ce = self.0.last().unwrap();
         match ce {
             CallstackElement::Account(_) => U512::zero(),
-            CallstackElement::Entrypoint(e) => e.attached_value
+            CallstackElement::Entrypoint(e) => e.call_def.amount
         }
     }
 
     pub fn attach_value(&mut self, amount: U512) {
         if let Some(CallstackElement::Entrypoint(entrypoint)) = self.0.last_mut() {
-            entrypoint.attached_value = amount;
+            entrypoint.call_def.amount = amount;
         }
     }
 

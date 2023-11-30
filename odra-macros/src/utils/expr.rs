@@ -65,3 +65,7 @@ pub fn new_schemas() -> syn::Expr {
     let ty = super::ty::schemas();
     parse_quote!(#ty::new())
 }
+
+pub fn new_wasm_contract_env() -> syn::Expr {
+    parse_quote!(odra::odra_casper_wasm_env::WasmContractEnv::new_env())
+}

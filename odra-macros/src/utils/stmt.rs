@@ -1,12 +1,5 @@
 use syn::parse_quote;
 
-pub fn read_runtime_arg(ident: &syn::Ident) -> syn::Stmt {
-    let name_str = ident.to_string();
-    parse_quote!(
-        let #ident = odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::get_named_arg(#name_str);
-    )
-}
-
 pub fn runtime_return(result_ident: &syn::Ident) -> syn::Stmt {
     parse_quote!(
         odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
@@ -14,12 +7,6 @@ pub fn runtime_return(result_ident: &syn::Ident) -> syn::Stmt {
                 odra::casper_types::CLValue::from_t(#result_ident)
             )
         );
-    )
-}
-
-pub fn new_wasm_contract_env(ident: &syn::Ident) -> syn::Stmt {
-    parse_quote!(
-        let #ident = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
     )
 }
 
@@ -49,4 +36,9 @@ pub fn install_contract(entry_points: syn::Expr, schemas: syn::Expr, args: syn::
         #schemas,
         #args
     );)
+}
+
+pub fn get_named_arg(arg_ident: &syn::Ident, env_ident: &syn::Ident) -> syn::Stmt {
+    let arg_name = arg_ident.to_string();
+    parse_quote!(let #arg_ident = #env_ident.get_named_arg(#arg_name);)
 }

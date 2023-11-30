@@ -28,6 +28,11 @@ impl ContractEnv {
         }
     }
 
+    pub fn get_named_arg<T: FromBytes>(&self, name: &str) -> T {
+        let bytes = self.backend.borrow().get_named_arg(name);
+        T::from_bytes(&bytes).unwrap().0
+    }
+
     pub fn current_key(&self) -> Vec<u8> {
         let index_bytes = key_maker::u32_to_hex(self.index);
         let mapping_data_bytes = key_maker::bytes_to_hex(&self.mapping_data);
