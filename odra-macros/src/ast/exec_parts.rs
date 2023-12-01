@@ -63,10 +63,24 @@ struct ExecFunctionItem {
     #[syn(braced)]
     braces: syn::token::Brace,
     #[syn(in = braces)]
+    env_rc_stmt: syn::Stmt,
+    #[syn(in = braces)]
+    exec_env_stmt: Option<syn::Stmt>,
+    #[syn(in = braces)]
+    non_reentrant_before_stmt: Option<ExecEnvStmt>,
+    #[syn(in = braces)]
+    handle_attached_value_stmt: Option<ExecEnvStmt>,
+    #[syn(in = braces)]
     #[to_tokens(|tokens, f| tokens.append_all(f))]
     args: Vec<syn::Stmt>,
     #[syn(in = braces)]
     init_contract_stmt: syn::Stmt,
+    #[syn(in = braces)]
+    call_contract_stmt: syn::Stmt,
+    #[syn(in = braces)]
+    clear_attached_value_stmt: Option<ExecEnvStmt>,
+    #[syn(in = braces)]
+    non_reentrant_after_stmt: Option<ExecEnvStmt>,
     #[syn(in = braces)]
     return_stmt: syn::Stmt
 }
@@ -77,7 +91,12 @@ impl TryFrom<(&'_ ModuleIR, &'_ FnIR)> for ExecFunctionItem {
     fn try_from(value: (&'_ ModuleIR, &'_ FnIR)) -> Result<Self, Self::Error> {
         let (module, func) = value;
         let fn_ident = func.name();
+        let result_ident = utils::ident::result();
+        let env_rc_ident = utils::ident::env_rc();
         let env_ident = utils::ident::env();
+        let exec_env_ident = utils::ident::exec_env();
+        let exec_env_stmt = (func.is_payable() || func.is_non_reentrant() || func.has_args())
+            .then(|| utils::stmt::new_execution_env(&exec_env_ident, &env_rc_ident));
         let contract_ident = utils::ident::contract();
         let module_ident = module.module_ident()?;
         let fn_args = func.arg_names();
@@ -85,21 +104,32 @@ impl TryFrom<(&'_ ModuleIR, &'_ FnIR)> for ExecFunctionItem {
         let args = func
             .arg_names()
             .iter()
-            .map(|ident| utils::stmt::get_named_arg(ident, &env_ident))
+            .map(|ident| utils::stmt::get_named_arg(ident, &exec_env_ident))
             .collect();
 
         let init_contract_stmt = match func.is_mut() {
-            true => utils::stmt::new_mut_module(&contract_ident, &module_ident, &env_ident),
-            false => utils::stmt::new_module(&contract_ident, &module_ident, &env_ident)
+            true => utils::stmt::new_mut_module(&contract_ident, &module_ident, &env_rc_ident),
+            false => utils::stmt::new_module(&contract_ident, &module_ident, &env_rc_ident)
         };
 
         Ok(Self {
             inline_attr: utils::attr::inline(),
             sig: func.try_into()?,
             braces: Default::default(),
+            env_rc_stmt: utils::stmt::new_rc(&env_rc_ident, &env_ident),
+            exec_env_stmt,
+            non_reentrant_before_stmt: func
+                .is_non_reentrant()
+                .then(ExecEnvStmt::non_reentrant_before),
+            handle_attached_value_stmt: func.is_payable().then(ExecEnvStmt::handle_attached_value),
             args,
             init_contract_stmt,
-            return_stmt: parse_quote!(return #contract_ident.#fn_ident( #(#fn_args),* );)
+            call_contract_stmt: parse_quote!(let #result_ident = #contract_ident.#fn_ident(#(#fn_args),*);),
+            clear_attached_value_stmt: func.is_payable().then(ExecEnvStmt::clear_attached_value),
+            non_reentrant_after_stmt: func
+                .is_non_reentrant()
+                .then(ExecEnvStmt::non_reentrant_after),
+            return_stmt: parse_quote!(return #result_ident;)
         })
     }
 }
@@ -146,6 +176,41 @@ struct ExecPartsModuleItem {
     ident: syn::Ident
 }
 
+#[derive(syn_derive::ToTokens)]
+struct ExecEnvStmt {
+    ident: syn::Ident,
+    dot_token: syn::token::Dot,
+    call_expr: syn::ExprCall,
+    semi_token: syn::token::Semi
+}
+
+impl ExecEnvStmt {
+    fn new(call_expr: syn::ExprCall) -> Self {
+        Self {
+            ident: utils::ident::exec_env(),
+            dot_token: Default::default(),
+            call_expr,
+            semi_token: Default::default()
+        }
+    }
+
+    fn non_reentrant_before() -> Self {
+        Self::new(parse_quote!(non_reentrant_before()))
+    }
+
+    fn non_reentrant_after() -> Self {
+        Self::new(parse_quote!(non_reentrant_after()))
+    }
+
+    fn handle_attached_value() -> Self {
+        Self::new(parse_quote!(handle_attached_value()))
+    }
+
+    fn clear_attached_value() -> Self {
+        Self::new(parse_quote!(clear_attached_value()))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -163,15 +228,44 @@ mod test {
 
                 #[inline]
                 pub fn execute_init(env: odra::ContractEnv) {
-                    let total_supply = env.get_named_arg("total_supply");
-                    let mut contract = Erc20::new(Rc::new(env));
-                    return contract.init(total_supply);
+                    let env_rc = Rc::new(env);
+                    let exec_env = odra::ExecutionEnv::new(env_rc.clone());
+                    let total_supply = exec_env.get_named_arg("total_supply");
+                    let mut contract = Erc20::new(env_rc);
+                    let result = contract.init(total_supply);
+                    return result;
                 }
 
                 #[inline]
                 pub fn execute_total_supply(env: odra::ContractEnv) -> U256 {
-                    let contract = Erc20::new(Rc::new(env));
-                    return contract.total_supply();
+                    let env_rc = Rc::new(env);
+                    let contract = Erc20::new(env_rc);
+                    let result = contract.total_supply();
+                    return result;
+                }
+
+                #[inline]
+                pub fn execute_pay_to_mint(env: odra::ContractEnv) {
+                    let env_rc = Rc::new(env);
+                    let exec_env = odra::ExecutionEnv::new(env_rc.clone());
+                    exec_env.handle_attached_value();
+                    let mut contract = Erc20::new(env_rc);
+                    let result = contract.pay_to_mint();
+                    exec_env.clear_attached_value();
+                    return result;
+                }
+
+                #[inline]
+                pub fn execute_approve(env: odra::ContractEnv) {
+                    let env_rc = Rc::new(env);
+                    let exec_env = odra::ExecutionEnv::new(env_rc.clone());
+                    exec_env.non_reentrant_before();
+                    let to = exec_env.get_named_arg("to");
+                    let amount = exec_env.get_named_arg("amount");
+                    let mut contract = Erc20::new(env_rc);
+                    let result = contract.approve(to, amount);
+                    exec_env.non_reentrant_after();
+                    return result;
                 }
             }
         };

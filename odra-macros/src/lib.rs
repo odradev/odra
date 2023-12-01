@@ -31,7 +31,7 @@ pub fn module(_attr: TokenStream, item: TokenStream) -> TokenStream {
 #[derive(syn_derive::ToTokens, TryFromRef)]
 #[source(ModuleIR)]
 struct ModuleImpl {
-    #[expr(item.self_code().clone())]
+    #[expr(item.self_code())]
     self_code: syn::ItemImpl,
     ref_item: RefItem,
     test_parts: TestPartsItem,

@@ -98,6 +98,14 @@ mod deployer_impl {
                                 let result = execute_total_supply(contract_env);
                                 odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
                             }
+                            "pay_to_mint" => {
+                                let result = execute_pay_to_mint(contract_env);
+                                odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                            }
+                            "approve" => {
+                                let result = execute_approve(contract_env);
+                                odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                            }
                             _ => panic!("Unknown method")
                         }
                     });

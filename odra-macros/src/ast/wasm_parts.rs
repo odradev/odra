@@ -287,6 +287,31 @@ mod test {
                         odra::casper_types::EntryPointType::Contract
                     ));
                     entry_points
+                        .add_entry_point(
+                            odra::casper_types::EntryPoint::new(
+                                "pay_to_mint",
+                                vec![],
+                                <() as odra::casper_types::CLTyped>::cl_type(),
+                                odra::casper_types::EntryPointAccess::Public,
+                                odra::casper_types::EntryPointType::Contract,
+                            ),
+                        );
+                    entry_points
+                        .add_entry_point(
+                            odra::casper_types::EntryPoint::new(
+                                "approve",
+                                vec![
+                                    odra::casper_types::Parameter::new("to", < Address as
+                                    odra::casper_types::CLTyped > ::cl_type()),
+                                    odra::casper_types::Parameter::new("amount", < U256 as
+                                    odra::casper_types::CLTyped > ::cl_type())
+                                ],
+                                <() as odra::casper_types::CLTyped>::cl_type(),
+                                odra::casper_types::EntryPointAccess::Public,
+                                odra::casper_types::EntryPointType::Contract,
+                            ),
+                        );
+                    entry_points
                 }
 
                 #[no_mangle]
@@ -320,6 +345,16 @@ mod test {
                             odra::casper_types::CLValue::from_t(result)
                         )
                     );
+                }
+
+                #[no_mangle]
+                fn pay_to_mint() {
+                    execute_pay_to_mint(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                }
+
+                #[no_mangle]
+                fn approve() {
+                    execute_approve(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
             }
         };

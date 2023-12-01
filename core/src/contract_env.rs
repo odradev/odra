@@ -1,9 +1,8 @@
 use crate::call_def::CallDef;
-use crate::prelude::*;
-use crate::{Address, Bytes, CLTyped, FromBytes, OdraError, ToBytes, U512};
-
 use crate::key_maker;
 pub use crate::ContractContext;
+use crate::{prelude::*, ExecutionError};
+use crate::{Address, Bytes, CLTyped, FromBytes, OdraError, ToBytes, U512};
 
 pub struct ContractEnv {
     index: u32,
@@ -20,7 +19,7 @@ impl ContractEnv {
         }
     }
 
-    pub fn duplicate(&self) -> Self {
+    pub fn __duplicate(&self) -> Self {
         Self {
             index: self.index,
             mapping_data: self.mapping_data.clone(),
@@ -28,12 +27,7 @@ impl ContractEnv {
         }
     }
 
-    pub fn get_named_arg<T: FromBytes>(&self, name: &str) -> T {
-        let bytes = self.backend.borrow().get_named_arg(name);
-        T::from_bytes(&bytes).unwrap().0
-    }
-
-    pub fn current_key(&self) -> Vec<u8> {
+    pub(crate) fn current_key(&self) -> Vec<u8> {
         let index_bytes = key_maker::u32_to_hex(self.index);
         let mapping_data_bytes = key_maker::bytes_to_hex(&self.mapping_data);
         let mut key = Vec::new();
@@ -42,11 +36,11 @@ impl ContractEnv {
         key
     }
 
-    pub fn add_to_mapping_data(&mut self, data: &[u8]) {
+    pub(crate) fn add_to_mapping_data(&mut self, data: &[u8]) {
         self.mapping_data.extend_from_slice(data);
     }
 
-    pub fn child(&self, index: u8) -> Self {
+    pub(crate) fn child(&self, index: u8) -> Self {
         Self {
             index: (self.index << 4) + index as u32,
             mapping_data: self.mapping_data.clone(),
@@ -105,5 +99,45 @@ impl ContractEnv {
     pub fn emit_event<T: ToBytes>(&self, event: T) {
         let backend = self.backend.borrow();
         backend.emit_event(&event.to_bytes().unwrap().into())
+    }
+}
+
+pub struct ExecutionEnv {
+    env: Rc<ContractEnv>
+}
+
+impl ExecutionEnv {
+    pub fn new(env: Rc<ContractEnv>) -> Self {
+        Self { env }
+    }
+
+    pub fn non_reentrant_before(&self) {
+        let status: bool = self
+            .env
+            .get_value(crate::consts::REENTRANCY_GUARD.as_slice())
+            .unwrap_or_default();
+        if status {
+            self.env.revert(ExecutionError::ReentrantCall);
+        }
+        self.env
+            .set_value(crate::consts::REENTRANCY_GUARD.as_slice(), true);
+    }
+
+    pub fn non_reentrant_after(&self) {
+        self.env
+            .set_value(crate::consts::REENTRANCY_GUARD.as_slice(), false);
+    }
+
+    pub fn handle_attached_value(&self) {
+        self.env.backend.borrow().handle_attached_value();
+    }
+
+    pub fn clear_attached_value(&self) {
+        self.env.backend.borrow().clear_attached_value();
+    }
+
+    pub fn get_named_arg<T: FromBytes>(&self, name: &str) -> T {
+        let bytes = self.env.backend.borrow().get_named_arg(name);
+        T::from_bytes(&bytes).unwrap().0
     }
 }

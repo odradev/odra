@@ -94,6 +94,7 @@ impl Erc20 {
         self.total_supply() + other_erc20.total_supply()
     }
 
+    #[odra(payable)]
     pub fn pay_to_mint(&mut self) {
         let attached_value = self.env().attached_value();
         let caller = self.env().caller();

@@ -13,4 +13,6 @@ pub trait ContractContext {
     fn transfer_tokens(&self, to: &Address, amount: &U512);
     fn revert(&self, error: OdraError) -> !;
     fn get_named_arg(&self, name: &str) -> Bytes;
+    fn handle_attached_value(&self);
+    fn clear_attached_value(&self);
 }

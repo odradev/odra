@@ -133,6 +133,36 @@ mod ref_item_tests {
                         ),
                     )
                 }
+
+                pub fn pay_to_mint(&mut self) {
+                    self.env
+                        .call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                String::from("pay_to_mint"),
+                                {
+                                    let mut named_args = odra::RuntimeArgs::new();
+                                    named_args
+                                },
+                            ),
+                        )
+                }
+
+                pub fn approve(&mut self, to: Address, amount: U256) {
+                    self.env
+                        .call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                String::from("approve"),
+                                {
+                                    let mut named_args = odra::RuntimeArgs::new();
+                                    let _ = named_args.insert("to", to);
+                                    let _ = named_args.insert("amount", amount);
+                                    named_args
+                                },
+                            ),
+                        )
+                }
             }
         };
         let actual = RefItem::try_from(&module).unwrap();
