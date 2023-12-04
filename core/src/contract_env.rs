@@ -1,5 +1,5 @@
 use crate::call_def::CallDef;
-use crate::prelude::*;
+use crate::{prelude::*, UnwrapOrRevert};
 use crate::{Address, Bytes, CLTyped, FromBytes, OdraError, ToBytes, U512};
 
 use crate::key_maker;
@@ -28,6 +28,22 @@ impl ContractEnv {
         }
     }
 
+    pub fn get_named_arg<T: FromBytes>(&self, name: &str) -> T {
+        let bytes = self.backend.borrow().get_named_arg_bytes(name);
+
+        let opt_result = match T::from_bytes(&bytes) {
+            Ok((value, remainder)) => {
+                if remainder.is_empty() {
+                    Some(value)
+                } else {
+                    None
+                }
+            }
+            Err(_) => None
+        };
+        UnwrapOrRevert::unwrap_or_revert(opt_result, self)
+    }
+
     pub fn current_key(&self) -> Vec<u8> {
         let index_bytes = key_maker::u32_to_hex(self.index);
         let mapping_data_bytes = key_maker::bytes_to_hex(&self.mapping_data);
@@ -53,10 +69,12 @@ impl ContractEnv {
         self.backend
             .borrow()
             .get_value(key)
+            // TODO: remove unwrap
             .map(|bytes| T::from_bytes(&bytes).unwrap().0)
     }
 
     pub fn set_value<T: ToBytes + CLTyped>(&self, key: &[u8], value: T) {
+        // TODO: remove unwrap
         let bytes = value.to_bytes().unwrap();
         self.backend.borrow().set_value(key, Bytes::from(bytes));
     }
@@ -69,6 +87,7 @@ impl ContractEnv {
     pub fn call_contract<T: FromBytes>(&self, address: Address, call: CallDef) -> T {
         let backend = self.backend.borrow();
         let bytes = backend.call_contract(address, call);
+        // TODO: remove unwrap
         T::from_bytes(&bytes).unwrap().0
     }
 
@@ -99,6 +118,7 @@ impl ContractEnv {
 
     pub fn emit_event<T: ToBytes>(&self, event: T) {
         let backend = self.backend.borrow();
+        // TODO: remove unwrap
         backend.emit_event(&event.to_bytes().unwrap().into())
     }
 }

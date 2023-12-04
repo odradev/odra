@@ -1,4 +1,5 @@
 use crate::{ir::ModuleIR, utils};
+use derive_try_from::TryFromRef;
 use proc_macro2::Ident;
 use quote::{quote, ToTokens, TokenStreamExt};
 use syn::parse_quote;
@@ -145,21 +146,11 @@ impl ToTokens for LastCallFnItem {
     }
 }
 
-#[derive(syn_derive::ToTokens)]
+#[derive(syn_derive::ToTokens, TryFromRef)]
+#[source(ModuleIR)]
 pub struct HostRefItem {
     struct_item: HostRefStructItem,
     impl_item: HostRefImplItem
-}
-
-impl TryFrom<&'_ ModuleIR> for HostRefItem {
-    type Error = syn::Error;
-
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
-        Ok(Self {
-            struct_item: module.try_into()?,
-            impl_item: module.try_into()?
-        })
-    }
 }
 
 #[cfg(test)]

@@ -162,6 +162,14 @@ impl ModuleIR {
         ))
     }
 
+    pub fn exec_parts_mod_ident(&self) -> Result<syn::Ident, syn::Error> {
+        let module_ident = self.snake_cased_module_ident()?;
+        Ok(Ident::new(
+            &format!("__{}_exec_parts", module_ident),
+            module_ident.span()
+        ))
+    }
+
     pub fn functions(&self) -> Vec<FnIR> {
         self.code
             .items
@@ -196,11 +204,6 @@ impl ModuleIR {
             })
             .unwrap_or_default()
     }
-
-    pub fn module_instance_expr(&self, env_ident: syn::Ident) -> Result<syn::Expr, syn::Error> {
-        let module_ident = self.module_ident()?;
-        Ok(parse_quote!(#module_ident::new(Rc::new(#env_ident))))
-    }
 }
 
 pub struct FnIR {
@@ -218,6 +221,10 @@ impl FnIR {
 
     pub fn try_name(&self) -> Ident {
         format_ident!("try_{}", self.name())
+    }
+
+    pub fn execute_name(&self) -> Ident {
+        format_ident!("execute_{}", self.name())
     }
 
     pub fn name_str(&self) -> String {
@@ -282,10 +289,6 @@ impl FnArgIR {
             }) => Ok(pat.ident.clone()),
             _ => Err(syn::Error::new_spanned(&self.code, "Unnamed arg"))
         }
-    }
-
-    pub fn name_str(&self) -> Result<String, syn::Error> {
-        self.name().map(|i| i.to_string())
     }
 
     pub fn name_and_ty(&self) -> Result<(String, syn::Type), syn::Error> {

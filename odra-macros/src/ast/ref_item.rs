@@ -1,4 +1,5 @@
 use crate::{ast::ref_utils, ir::ModuleIR, utils};
+use derive_try_from::TryFromRef;
 use quote::{quote, ToTokens, TokenStreamExt};
 use syn::parse_quote;
 
@@ -78,21 +79,11 @@ impl TryFrom<&'_ ModuleIR> for ContractRefImplItem {
     }
 }
 
-#[derive(syn_derive::ToTokens)]
+#[derive(syn_derive::ToTokens, TryFromRef)]
+#[source(ModuleIR)]
 pub struct RefItem {
     struct_item: ContractRefStructItem,
     impl_item: ContractRefImplItem
-}
-
-impl TryFrom<&'_ ModuleIR> for RefItem {
-    type Error = syn::Error;
-
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
-        Ok(Self {
-            struct_item: module.try_into()?,
-            impl_item: module.try_into()?
-        })
-    }
 }
 
 #[cfg(test)]

@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 odra = { path = "../odra" }
-odra-macros = { path = "../odra-macros" }
 
 [[bin]]
 name = "contract"

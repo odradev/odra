@@ -1,9 +1,11 @@
 #![feature(box_patterns, result_flattening)]
 
 use ast::*;
+use derive_try_from::TryFromRef;
 use ir::{ModuleIR, StructIR};
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
+use quote::ToTokens;
 use syn::spanned::Spanned;
 
 mod ast;
@@ -16,47 +18,47 @@ mod utils;
 pub fn module(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let stream: TokenStream2 = item.into();
     if let Ok(ir) = ModuleIR::try_from(&stream) {
-        return handle_result(module_impl(ir));
+        return ModuleImpl::try_from(&ir).into_code();
     }
     if let Ok(ir) = StructIR::try_from(&stream) {
-        return handle_result(module_struct(ir));
+        return ModuleStruct::try_from(&ir).into_code();
     }
-    handle_result(Err(syn::Error::new(
-        stream.span(),
-        "Struct or impl block expected"
-    )))
+    syn::Error::new(stream.span(), "Struct or impl block expected")
+        .to_compile_error()
+        .into()
 }
 
-fn module_impl(ir: ModuleIR) -> Result<TokenStream2, syn::Error> {
-    let code = ir.self_code();
-    let ref_item = RefItem::try_from(&ir)?;
-    let test_parts = TestParts::try_from(&ir)?;
-    let test_parts_reexport = TestPartsReexport::try_from(&ir)?;
-    let wasm_parts = WasmPartsModuleItem::try_from(&ir)?;
-
-    Ok(quote::quote! {
-        #code
-        #ref_item
-        #test_parts
-        #test_parts_reexport
-        #wasm_parts
-    })
+#[derive(syn_derive::ToTokens, TryFromRef)]
+#[source(ModuleIR)]
+struct ModuleImpl {
+    #[expr(item.self_code().clone())]
+    self_code: syn::ItemImpl,
+    ref_item: RefItem,
+    test_parts: TestPartsItem,
+    test_parts_reexport: TestPartsReexportItem,
+    exec_parts: ExecPartsItem,
+    exec_parts_reexport: ExecPartsReexportItem,
+    wasm_parts: WasmPartsModuleItem
 }
 
-fn module_struct(ir: StructIR) -> Result<TokenStream2, syn::Error> {
-    let code = ir.self_code();
-    let module_mod = ModuleModItem::try_from(&ir)?;
-
-    Ok(quote::quote!(
-        #code
-        #module_mod
-    ))
+#[derive(syn_derive::ToTokens, TryFromRef)]
+#[source(StructIR)]
+struct ModuleStruct {
+    #[expr(item.self_code().clone())]
+    self_code: syn::ItemStruct,
+    mod_item: ModuleModItem
 }
 
-fn handle_result(result: Result<TokenStream2, syn::Error>) -> TokenStream {
-    match result {
-        Ok(stream) => stream,
-        Err(e) => e.to_compile_error()
+trait IntoCode {
+    fn into_code(self) -> TokenStream;
+}
+
+impl<T: ToTokens> IntoCode for Result<T, syn::Error> {
+    fn into_code(self) -> TokenStream {
+        match self {
+            Ok(data) => data.to_token_stream(),
+            Err(e) => e.to_compile_error()
+        }
+        .into()
     }
-    .into()
 }

@@ -127,6 +127,42 @@ pub fn revert(error: u16) -> ! {
     runtime::revert(ApiError::User(error))
 }
 
+pub fn get_named_arg(name: &str) -> Vec<u8> {
+    let arg_size = get_named_arg_size(name);
+    if arg_size > 0 {
+        let data_non_null_ptr = contract_api::alloc_bytes(arg_size);
+        let ret = unsafe {
+            ext_ffi::casper_get_named_arg(
+                name.as_bytes().as_ptr(),
+                name.len(),
+                data_non_null_ptr.as_ptr(),
+                arg_size
+            )
+        };
+        if ret != 0 {
+            runtime::revert(ApiError::from(ret as u32))
+        }
+        unsafe { Vec::from_raw_parts(data_non_null_ptr.as_ptr(), arg_size, arg_size) }
+    } else {
+        Vec::new()
+    }
+}
+
+fn get_named_arg_size(name: &str) -> usize {
+    let mut arg_size: usize = 0;
+    let ret = unsafe {
+        ext_ffi::casper_get_named_arg_size(
+            name.as_bytes().as_ptr(),
+            name.len(),
+            &mut arg_size as *mut usize
+        )
+    };
+    match ret {
+        0 => arg_size,
+        _ => runtime::revert(ApiError::from(ret as u32))
+    }
+}
+
 pub fn get_block_time() -> u64 {
     runtime::get_blocktime().into()
 }

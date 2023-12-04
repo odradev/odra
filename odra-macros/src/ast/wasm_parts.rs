@@ -50,7 +50,6 @@ impl TryFrom<&'_ ModuleIR> for WasmPartsModuleItem {
             entry_points: module
                 .functions()
                 .iter()
-                .map(|f| (module, f))
                 .map(TryInto::try_into)
                 .collect::<Result<Vec<_>, _>>()?
         })
@@ -149,40 +148,23 @@ struct NoMangleFnItem {
     #[syn(braced)]
     braces: syn::token::Brace,
     #[syn(in = braces)]
-    #[to_tokens(|tokens, f| tokens.append_all(f))]
-    read_args_stmts: Vec<syn::Stmt>,
-    #[syn(in = braces)]
-    instantiate_env_stmt: syn::Stmt,
-    #[syn(in = braces)]
-    instantiate_module_stmt: syn::Stmt,
-    #[syn(in = braces)]
-    call_module_stmt: syn::Stmt,
+    execute_stmt: syn::Stmt,
     #[syn(in = braces)]
     ret_stmt: Option<syn::Stmt>
 }
 
-impl TryFrom<(&'_ ModuleIR, &'_ FnIR)> for NoMangleFnItem {
+impl TryFrom<&'_ FnIR> for NoMangleFnItem {
     type Error = syn::Error;
 
-    fn try_from(value: (&'_ ModuleIR, &'_ FnIR)) -> Result<Self, Self::Error> {
-        let (module, func) = value;
-        let module_ident = module.module_ident()?;
-        let contract_ident = utils::ident::contract();
-        let env_ident = utils::ident::env();
+    fn try_from(func: &'_ FnIR) -> Result<Self, Self::Error> {
         let fn_ident = func.name();
         let result_ident = utils::ident::result();
-        let fn_args = func.arg_names();
+        let exec_fn = func.execute_name();
+        let new_env = utils::expr::new_wasm_contract_env();
 
-        let instantiate_module_stmt = match func.is_mut() {
-            true => utils::stmt::new_mut_module(&contract_ident, &module_ident, &env_ident),
-            false => utils::stmt::new_module(&contract_ident, &module_ident, &env_ident)
-        };
-
-        let call_module_stmt = match func.return_type() {
-            syn::ReturnType::Default => parse_quote!(#contract_ident.#fn_ident( #(#fn_args),* );),
-            syn::ReturnType::Type(_, _) => {
-                parse_quote!(let #result_ident = #contract_ident.#fn_ident( #(#fn_args),* );)
-            }
+        let execute_stmt = match func.return_type() {
+            syn::ReturnType::Default => parse_quote!(#exec_fn(#new_env);),
+            syn::ReturnType::Type(_, _) => parse_quote!(let #result_ident = #exec_fn(#new_env);)
         };
 
         let ret_stmt = match func.return_type() {
@@ -194,14 +176,7 @@ impl TryFrom<(&'_ ModuleIR, &'_ FnIR)> for NoMangleFnItem {
             attr: utils::attr::no_mangle(),
             sig: parse_quote!(fn #fn_ident()),
             braces: Default::default(),
-            read_args_stmts: func
-                .arg_names()
-                .iter()
-                .map(utils::stmt::read_runtime_arg)
-                .collect(),
-            instantiate_env_stmt: utils::stmt::new_wasm_contract_env(&env_ident),
-            instantiate_module_stmt,
-            call_module_stmt,
+            execute_stmt,
             ret_stmt
         })
     }
@@ -334,17 +309,12 @@ mod test {
 
                 #[no_mangle]
                 fn init() {
-                    let total_supply = odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::get_named_arg("total_supply");
-                    let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
-                    let mut contract = Erc20::new(Rc::new(env));
-                    contract.init(total_supply);
+                    execute_init(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
 
                 #[no_mangle]
                 fn total_supply() {
-                    let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
-                    let contract = Erc20::new(Rc::new(env));
-                    let result = contract.total_supply();
+                    let result = execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
                             odra::casper_types::CLValue::from_t(result)
