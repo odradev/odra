@@ -4,6 +4,7 @@ pub use crate::ContractContext;
 use crate::{prelude::*, ExecutionError};
 use crate::{Address, Bytes, CLTyped, FromBytes, OdraError, ToBytes, U512};
 
+#[derive(Clone)]
 pub struct ContractEnv {
     index: u32,
     mapping_data: Vec<u8>,
@@ -16,14 +17,6 @@ impl ContractEnv {
             index,
             mapping_data: Vec::new(),
             backend
-        }
-    }
-
-    pub fn __duplicate(&self) -> Self {
-        Self {
-            index: self.index,
-            mapping_data: self.mapping_data.clone(),
-            backend: self.backend.clone()
         }
     }
 

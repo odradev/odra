@@ -84,7 +84,7 @@ impl HostContext for OdraVmHost {
     }
 
     fn contract_env(&self) -> ContractEnv {
-        self.contract_env.__duplicate()
+        (*self.contract_env).clone()
     }
 
     fn print_gas_report(&self) {

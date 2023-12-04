@@ -24,7 +24,7 @@ impl<K: ToBytes, V> Mapping<K, V> {
 
 impl<K: ToBytes, V> Mapping<K, V> {
     fn env_for_key(&self, key: K) -> ContractEnv {
-        let mut env = self.parent_env.__duplicate();
+        let mut env = (*self.parent_env).clone();
         let key = key.to_bytes().unwrap_or_default();
         env.add_to_mapping_data(&key);
         env
