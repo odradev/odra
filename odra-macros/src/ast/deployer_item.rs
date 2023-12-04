@@ -111,8 +111,7 @@ mod deployer_impl {
                     let caller = odra::EntryPointsCaller::new(env.clone(), |contract_env, call_def| {
                         match call_def.method() {
                             "init" => {
-                                let result = Erc20::new(Rc::new(contract_env))
-                                    .init(call_def.get("total_supply").expect("arg not found"));
+                                let result = execute_init(Rc::new(contract_env))
                                 odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
                             }
                             "total_supply" => {

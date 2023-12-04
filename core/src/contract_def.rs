@@ -92,7 +92,8 @@ pub struct ContractBlueprint {
 
 #[derive(Debug, Clone)]
 pub struct ContractBlueprint2 {
-    pub name: String
+    pub name: String,
+    // pub events: Vec<Event>,
 }
 
 #[cfg(test)]

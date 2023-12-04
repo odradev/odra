@@ -12,25 +12,28 @@ flowchart TD
     base_types -->
         odra_type[OdraType] 
 
-    cargo_odra & odra_type -->
-        module[Module:\n modularity, storage, entrypoints, env]
+    module[Module:\n modularity, storage, entrypoints, env]
 
-    module --> 
-        entrypoint[Entrypoint:\n mutability, name, args, ret]
-
-    entrypoint -->
+    module -->
         contract_env[Contract env]
 
-    entrypoint -->
+    module -->
+        host_env[Host env]
+
+    host_env -->
+        deployer[Deployer:\n deploy new contract]
+
+    contract_env -->
+        entrypoint[Entrypoint:\n mutability, name, args, ret]
+
+    contract_env & odra_type -->
+        storage[Storage:\n struct, fields]
+
+    storage -->
         variable[Variable]
 
-    entrypoint & module -->
+    storage -->
         sub_module[Submodule]
 
-    entrypoint & sub_module -->
+    storage -->
         mapping[Mapping]
-
-    entrypoint & contract_env -->
-        event[Event]
-
-    

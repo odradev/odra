@@ -271,7 +271,7 @@ impl CasperVm {
         &mut self,
         name: &str,
         init_args: Option<RuntimeArgs>,
-        entry_points_caller: Option<EntryPointsCaller>
+        entry_points_caller: Option<EntryPointsCaller> // TODO: remove
     ) -> Address {
         let wasm_path = format!("{}.wasm", name);
         let package_hash_key_name = format!("{}_package_hash", name);

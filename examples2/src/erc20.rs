@@ -36,11 +36,22 @@ impl From<Erc20Error> for OdraError {
     }
 }
 
+// #[odra::module(events = [Transfer, Approval]])]
 pub struct Erc20 {
     env: Rc<ContractEnv>,
     total_supply: Variable<U256>,
-    balances: Mapping<Address, U256>
+    balances: Mapping<Address, U256>,
+    // ownable: ModuleWrapper<Ownable>
 }
+
+// impl HasEvents for Erc20 {
+//     fn events() -> Vec<Event> {
+//         vec![Event::from_type::<Transfer>(), Event::from_type::<Approval>()]
+//             .concat(Variable<U256>::events())
+//             .concat(Mapping::<Address, U256>::events())
+//             .concat(ModuleWrapper::<Ownable>::events())
+//     }
+// }
 
 #[odra_macros::module]
 impl Erc20 {
@@ -67,6 +78,11 @@ impl Erc20 {
         self.balances.get_or_default(owner)
     }
 
+    pub fn transfer2(&mut self, to: Address, value: U256) {
+        self.transfer(to, value);
+    }
+
+    #[odra::guard]
     pub fn transfer(&mut self, to: Address, value: U256) {
         let caller = self.env().caller();
         let balances = &mut self.balances;
@@ -167,7 +183,8 @@ mod __erc20_schema {
     #[no_mangle]
     fn module_schema() -> ContractBlueprint2 {
         ContractBlueprint2 {
-            name: String::from("Erc20")
+            name: String::from("Erc20"),
+            // events: <Erc20 as HasEvents>::events(),
         }
     }
 }
@@ -278,7 +295,7 @@ mod __erc20_wasm_parts {
     }
 
     pub fn execute_call() {
-        let schemas = Schemas::new(); //.with::<Transfer>().with::<Approval>();
+        let schemas: Schemas = __erc20_schema::events().into(); //.with::<Transfer>().with::<Approval>();
         let total_supply: Option<U256> = runtime::get_named_arg("total_supply");
         let init_args = runtime_args! {
             "total_supply" => total_supply
@@ -295,6 +312,12 @@ mod __erc20_wasm_parts {
         let env = WasmContractEnv::new_env();
         let mut contract: Erc20 = Erc20::new(Rc::new(env));
         contract.init(total_supply);
+    }
+
+    pub fn execute_init(env: Rc<ContractEnv>) -> () {
+        let total_supply: Option<U256> = env.get_named_arg("total_supply");
+        let mut contract: Erc20 = Erc20::new(env);
+        contract.init(total_supply)
     }
 
     pub fn execute_total_supply() {
@@ -374,7 +397,10 @@ mod __erc20_wasm_parts {
 
     #[no_mangle]
     fn init() {
-        execute_init();
+        let env = WasmContractEnv::new_env();
+        let result = execute_init(Rc::new(env));
+        // if returns
+        runtime::ret(CLValue::from_t(result).unwrap_or_revert())
     }
 
     #[no_mangle]
@@ -720,4 +746,25 @@ mod tests {
         let result = erc20.try_balance_of(alice);
         assert_eq!(result, Ok(100.into()));
     }
+
+    #[test]
+    fn erc20_xxx() {
+        let env = odra::test_env();
+        let alice = env.get_account(0);
+        let bob = env.get_account(1);
+
+        // Deploy the contract as Alice.
+        let mut erc20 = Erc20Deployer::init(&env, Some(100.into()));
+        assert_eq!(erc20.total_supply(), 100.into());
+        assert_eq!(erc20.balance_of(alice), 100.into());
+        assert_eq!(erc20.balance_of(bob), 0.into());
+
+        // Transfer 10 tokens from Alice to Bob.
+        erc20.transfer(bob, 10.into());
+        assert_eq!(erc20.balance_of(alice), 90.into());
+        assert_eq!(erc20.balance_of(bob), 10.into());
+
+        env.print_gas_report();
+    }
+
 }
