@@ -16,7 +16,7 @@ pub fn new_module(
     env_rc_ident: &syn::Ident
 ) -> syn::Stmt {
     parse_quote!(
-        let #contract_ident = #module_ident::new(#env_rc_ident);
+        let #contract_ident = <#module_ident as odra::Module>::new(#env_rc_ident);
     )
 }
 
@@ -26,7 +26,7 @@ pub fn new_mut_module(
     env_rc_ident: &syn::Ident
 ) -> syn::Stmt {
     parse_quote!(
-        let mut #contract_ident = #module_ident::new(#env_rc_ident);
+        let mut #contract_ident = <#module_ident as odra::Module>::new(#env_rc_ident);
     )
 }
 
