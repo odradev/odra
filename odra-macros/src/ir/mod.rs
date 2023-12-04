@@ -115,6 +115,14 @@ impl ModuleIR {
         self.module_ident().map(|i| i.to_string())
     }
 
+    pub fn snake_cased_module_ident(&self) -> Result<Ident, syn::Error> {
+        let ident = self.module_ident()?;
+        Ok(Ident::new(
+            utils::string::camel_to_snake(&ident).as_str(),
+            ident.span()
+        ))
+    }
+
     pub fn host_ref_ident(&self) -> Result<Ident, syn::Error> {
         let module_ident = self.module_ident()?;
         Ok(Ident::new(
@@ -139,23 +147,17 @@ impl ModuleIR {
     }
 
     pub fn test_parts_mod_ident(&self) -> Result<syn::Ident, syn::Error> {
-        let module_ident = self.module_ident()?;
+        let module_ident = self.snake_cased_module_ident()?;
         Ok(Ident::new(
-            &format!(
-                "__{}_test_parts",
-                crate::utils::string::camel_to_snake(&module_ident)
-            ),
+            &format!("__{}_test_parts", module_ident),
             module_ident.span()
         ))
     }
 
     pub fn wasm_parts_mod_ident(&self) -> Result<syn::Ident, syn::Error> {
-        let module_ident = self.module_ident()?;
+        let module_ident = self.snake_cased_module_ident()?;
         Ok(Ident::new(
-            &format!(
-                "__{}_wasm_parts",
-                crate::utils::string::camel_to_snake(&module_ident)
-            ),
+            &format!("__{}_wasm_parts", module_ident),
             module_ident.span()
         ))
     }
