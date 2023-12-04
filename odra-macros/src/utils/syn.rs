@@ -1,3 +1,4 @@
+use proc_macro2::TokenStream;
 use syn::{parse_quote, spanned::Spanned};
 
 pub fn ident_from_impl(impl_code: &syn::ItemImpl) -> Result<syn::Ident, syn::Error> {
@@ -127,6 +128,34 @@ pub fn clear_generics(ty: &syn::Type) -> Result<syn::Type, syn::Error> {
             "Only support impl for type path"
         ))
     }
+}
+
+// A path like <Option::<U256> as odra::casper_types::CLTyped>
+pub fn as_casted_ty_stream(ty: &syn::Type, as_ty: syn::Type) -> TokenStream {
+    let ty = match ty {
+        syn::Type::Path(type_path) => {
+            let mut segments: syn::punctuated::Punctuated<syn::PathSegment, syn::Token![::]> =
+                type_path.path.segments.clone();
+            // the syntax <Option<U256> as odra::casper_types::CLTyped>::cl_type() is invalid
+            // it should be <Option::<U256> as odra::casper_types::CLTyped>::cl_type()
+            if let Some(ps) = segments.first_mut() {
+                if let syn::PathArguments::AngleBracketed(ab) = &ps.arguments {
+                    let generic_arg: syn::AngleBracketedGenericArguments = parse_quote!(::#ab);
+                    ps.arguments = syn::PathArguments::AngleBracketed(generic_arg);
+                }
+            }
+            syn::Type::Path(syn::TypePath {
+                path: syn::Path {
+                    leading_colon: None,
+                    segments
+                },
+                ..type_path.clone()
+            })
+        }
+        _ => ty.clone()
+    };
+
+    parse_quote!(<#ty as #as_ty>)
 }
 
 fn clear_path(ty: &syn::TypePath) -> Result<syn::TypePath, syn::Error> {

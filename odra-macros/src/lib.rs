@@ -32,12 +32,14 @@ fn module_impl(ir: ModuleIR) -> Result<TokenStream2, syn::Error> {
     let ref_item = RefItem::try_from(&ir)?;
     let test_parts = TestParts::try_from(&ir)?;
     let test_parts_reexport = TestPartsReexport::try_from(&ir)?;
+    let wasm_parts = WasmPartsModuleItem::try_from(&ir)?;
 
     Ok(quote::quote! {
         #code
         #ref_item
         #test_parts
         #test_parts_reexport
+        #wasm_parts
     })
 }
 

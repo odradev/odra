@@ -35,3 +35,23 @@ pub fn address() -> syn::Ident {
 pub fn attached_value() -> syn::Ident {
     format_ident!("attached_value")
 }
+
+pub fn entry_points() -> syn::Ident {
+    format_ident!("entry_points")
+}
+
+pub fn add_entry_point() -> syn::Ident {
+    format_ident!("add_entry_point")
+}
+
+pub fn new() -> syn::Ident {
+    format_ident!("new")
+}
+
+pub fn schemas() -> syn::Ident {
+    format_ident!("schemas")
+}
+
+pub fn contract() -> syn::Ident {
+    format_ident!("contract")
+}
