@@ -58,7 +58,7 @@ impl OdraVm {
     }
 
     pub fn call_contract(&self, address: Address, call_def: CallDef) -> Bytes {
-        self.prepare_call(address, call_def.clone());
+        self.prepare_call(address, &call_def);
         // Call contract from register.
         if call_def.amount > U512::zero() {
             let status = self.checked_transfer_tokens(&self.caller(), &address, &call_def.amount);
@@ -84,7 +84,7 @@ impl OdraVm {
     //     self.handle_call_result(result)
     // }
 
-    fn prepare_call(&self, address: Address, call_def: CallDef) {
+    fn prepare_call(&self, address: Address, call_def: &CallDef) {
         let mut state = self.state.write().unwrap();
         // If only one address on the call_stack, record snapshot.
         if state.is_in_caller_context() {
@@ -93,7 +93,7 @@ impl OdraVm {
         }
         // Put the address on stack.
 
-        let element = CallstackElement::Entrypoint(Entrypoint::new(address, call_def));
+        let element = CallstackElement::Entrypoint(Entrypoint::new(address, call_def.clone()));
         state.push_callstack_element(element);
     }
 
