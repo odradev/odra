@@ -9,10 +9,7 @@ pub fn param_parameters(func: &FnIR) -> syn::Expr {
         .named_args()
         .iter()
         .map(|arg| arg.name_and_ty())
-        .filter_map(|result| match result {
-            Ok(data) => Some(data),
-            Err(_) => None
-        })
+        .filter_map(Result::ok)
         .map(|(name, ty)| utils::expr::new_parameter(name, ty))
         .collect::<Vec<_>>();
     parse_quote!(vec![#(#params),*])
