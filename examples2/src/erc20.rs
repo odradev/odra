@@ -199,7 +199,6 @@ mod tests {
 
         env.set_caller(alice);
         pobcoin.with_tokens(100.into()).pay_to_mint();
-        // TODO: fails cause the generated code does not handle the attached value - more specifically the `payable` attribute
         assert_eq!(env.balance_of(&pobcoin.address), 100.into());
         assert_eq!(pobcoin.total_supply(), 200.into());
         assert_eq!(pobcoin.balance_of(alice), 100.into());

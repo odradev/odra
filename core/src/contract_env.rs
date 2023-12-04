@@ -1,6 +1,6 @@
 use crate::call_def::CallDef;
-use crate::key_maker;
 pub use crate::ContractContext;
+use crate::{key_maker, UnwrapOrRevert};
 use crate::{prelude::*, ExecutionError};
 use crate::{Address, Bytes, CLTyped, FromBytes, OdraError, ToBytes, U512};
 
@@ -45,12 +45,15 @@ impl ContractEnv {
         self.backend
             .borrow()
             .get_value(key)
-            .map(|bytes| T::from_bytes(&bytes).unwrap().0)
+            .map(|bytes| deserialize_bytes(bytes, self))
     }
 
     pub fn set_value<T: ToBytes + CLTyped>(&self, key: &[u8], value: T) {
-        let bytes = value.to_bytes().unwrap();
-        self.backend.borrow().set_value(key, Bytes::from(bytes));
+        let result = value
+            .to_bytes()
+            .map_err(|_| ExecutionError::SerializationFailed);
+        let bytes = result.unwrap_or_revert(self);
+        self.backend.borrow().set_value(key, bytes.into());
     }
 
     pub fn caller(&self) -> Address {
@@ -61,7 +64,7 @@ impl ContractEnv {
     pub fn call_contract<T: FromBytes>(&self, address: Address, call: CallDef) -> T {
         let backend = self.backend.borrow();
         let bytes = backend.call_contract(address, call);
-        T::from_bytes(&bytes).unwrap().0
+        deserialize_bytes(bytes, self)
     }
 
     pub fn self_address(&self) -> Address {
@@ -91,7 +94,11 @@ impl ContractEnv {
 
     pub fn emit_event<T: ToBytes>(&self, event: T) {
         let backend = self.backend.borrow();
-        backend.emit_event(&event.to_bytes().unwrap().into())
+        let result = event
+            .to_bytes()
+            .map_err(|_| ExecutionError::SerializationFailed);
+        let bytes = result.unwrap_or_revert(self);
+        backend.emit_event(&bytes.into())
     }
 }
 
@@ -130,7 +137,21 @@ impl ExecutionEnv {
     }
 
     pub fn get_named_arg<T: FromBytes>(&self, name: &str) -> T {
-        let bytes = self.env.backend.borrow().get_named_arg(name);
-        T::from_bytes(&bytes).unwrap().0
+        let bytes = self.env.backend.borrow().get_named_arg_bytes(name);
+        deserialize_bytes(bytes, &self.env)
     }
+}
+
+fn deserialize_bytes<T: FromBytes>(bytes: Bytes, env: &ContractEnv) -> T {
+    let opt_result = match T::from_bytes(&bytes) {
+        Ok((value, remainder)) => {
+            if remainder.is_empty() {
+                Some(value)
+            } else {
+                None
+            }
+        }
+        Err(_) => None
+    };
+    UnwrapOrRevert::unwrap_or_revert(opt_result, env)
 }

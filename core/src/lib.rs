@@ -25,6 +25,7 @@ mod odra_result;
 pub mod prelude;
 pub mod uints;
 mod unchecked_getter;
+mod unwrap_or_revert;
 pub mod utils;
 pub mod variable;
 
@@ -41,6 +42,7 @@ pub use item::OdraItem;
 pub use module::ModuleCaller;
 pub use odra_result::OdraResult;
 pub use unchecked_getter::UncheckedGetter;
+pub use unwrap_or_revert::UnwrapOrRevert;
 pub use utils::serialize;
 
 pub use casper_types;

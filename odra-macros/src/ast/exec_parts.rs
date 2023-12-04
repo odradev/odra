@@ -231,7 +231,7 @@ mod test {
                     let env_rc = Rc::new(env);
                     let exec_env = odra::ExecutionEnv::new(env_rc.clone());
                     let total_supply = exec_env.get_named_arg("total_supply");
-                    let mut contract = Erc20::new(env_rc);
+                    let mut contract = <Erc20 as odra::Module>::new(env_rc);
                     let result = contract.init(total_supply);
                     return result;
                 }
@@ -239,7 +239,7 @@ mod test {
                 #[inline]
                 pub fn execute_total_supply(env: odra::ContractEnv) -> U256 {
                     let env_rc = Rc::new(env);
-                    let contract = Erc20::new(env_rc);
+                    let contract = <Erc20 as odra::Module>::new(env_rc);
                     let result = contract.total_supply();
                     return result;
                 }
@@ -249,7 +249,7 @@ mod test {
                     let env_rc = Rc::new(env);
                     let exec_env = odra::ExecutionEnv::new(env_rc.clone());
                     exec_env.handle_attached_value();
-                    let mut contract = Erc20::new(env_rc);
+                    let mut contract = <Erc20 as odra::Module>::new(env_rc);
                     let result = contract.pay_to_mint();
                     exec_env.clear_attached_value();
                     return result;
@@ -262,7 +262,7 @@ mod test {
                     exec_env.non_reentrant_before();
                     let to = exec_env.get_named_arg("to");
                     let amount = exec_env.get_named_arg("amount");
-                    let mut contract = Erc20::new(env_rc);
+                    let mut contract = <Erc20 as odra::Module>::new(env_rc);
                     let result = contract.approve(to, amount);
                     exec_env.non_reentrant_after();
                     return result;
