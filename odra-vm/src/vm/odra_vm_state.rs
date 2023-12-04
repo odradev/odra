@@ -4,6 +4,7 @@ use super::storage::Storage;
 use anyhow::Result;
 use odra_core::casper_types::account::AccountHash;
 use odra_core::casper_types::bytesrepr::Error;
+use odra_core::crypto::generate_key_pairs;
 use odra_core::event::EventError;
 use odra_core::{
     Address, Bytes, ExecutionError, FromBytes, OdraError, PublicKey, SecretKey, ToBytes, U512
@@ -211,26 +212,20 @@ impl OdraVmState {
         let (_, public_key) = self.key_pairs.get(address).unwrap();
         public_key.clone()
     }
+
+    pub fn secret_key(&self, address: &Address) -> &SecretKey {
+        let (secret_key, _) = self.key_pairs.get(address).unwrap();
+        secret_key
+    }
 }
 
 impl Default for OdraVmState {
     fn default() -> Self {
-        let mut addresses: Vec<Address> = Vec::new();
-        let mut key_pairs = BTreeMap::<Address, (SecretKey, PublicKey)>::new();
-        for i in 0..20 {
-            // Create keypair.
-            let secret_key = SecretKey::ed25519_from_bytes([i; 32]).unwrap();
-            let public_key = PublicKey::from(&secret_key);
-
-            // Create an AccountHash from a public key.
-            let account_addr = AccountHash::from(&public_key);
-
-            addresses.push(account_addr.try_into().unwrap());
-            key_pairs.insert(account_addr.try_into().unwrap(), (secret_key, public_key));
-        }
-
+        let accounts: Vec<Address> = Vec::new();
+        let key_pairs = generate_key_pairs(20);
+        let accounts: Vec<Address> = key_pairs.keys().copied().collect();
         let mut balances = BTreeMap::<Address, AccountBalance>::new();
-        for address in addresses.clone() {
+        for address in accounts.clone() {
             balances.insert(address, 100_000_000_000_000_000u64.into());
         }
 
@@ -241,10 +236,10 @@ impl Default for OdraVmState {
             contract_counter: 0,
             error: None,
             block_time: 0,
-            accounts: addresses.clone(),
+            accounts: accounts.clone(),
             key_pairs
         };
-        backend.push_callstack_element(CallstackElement::Account(*addresses.first().unwrap()));
+        backend.push_callstack_element(CallstackElement::Account(*accounts.first().unwrap()));
         backend
     }
 }

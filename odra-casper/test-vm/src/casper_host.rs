@@ -104,6 +104,14 @@ impl HostContext for CasperHost {
     fn last_call_gas_cost(&self) -> u64 {
         self.vm.borrow().last_call_gas_cost()
     }
+
+    fn sign_message(&self, message: &Bytes, address: &Address) -> Bytes {
+        self.vm.borrow().sign_message(message, address)
+    }
+
+    fn public_key(&self, address: &Address) -> PublicKey {
+        self.vm.borrow().public_key(address)
+    }
 }
 
 impl CasperHost {

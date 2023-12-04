@@ -1,9 +1,12 @@
 use crate::call_def::CallDef;
 use crate::{prelude::*, UnwrapOrRevert};
 use crate::{Address, Bytes, CLTyped, FromBytes, OdraError, ToBytes, U512};
+use casper_types::crypto::PublicKey;
 
 use crate::key_maker;
 pub use crate::ContractContext;
+use crate::ExecutionError::CouldntDeserializeSignature;
+use crate::OdraError::ExecutionError;
 
 pub struct ContractEnv {
     index: u32,
@@ -120,5 +123,16 @@ impl ContractEnv {
         let backend = self.backend.borrow();
         // TODO: remove unwrap
         backend.emit_event(&event.to_bytes().unwrap().into())
+    }
+
+    pub fn verify_signature(
+        &self,
+        message: &Bytes,
+        signature: &Bytes,
+        public_key: &PublicKey
+    ) -> bool {
+        let (signature, _) = casper_types::crypto::Signature::from_bytes(signature.as_slice())
+            .unwrap_or_else(|_| self.revert(ExecutionError(CouldntDeserializeSignature)));
+        casper_types::crypto::verify(message.as_slice(), &signature, public_key).is_ok()
     }
 }
