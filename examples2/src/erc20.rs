@@ -383,20 +383,20 @@ mod tests {
 
         // Then we can check it
         // If contract emitted a specific event during whole lifetime
-        assert!(env.emitted(&erc20.address, "Transfer"));
+        assert!(env.emitted(&erc20.address, "OnTransfer"));
         // or all of them
         assert_eq!(
             env.event_names(&erc20.address),
-            vec!["Approval".to_string(), "Transfer".to_string()]
+            vec!["OnApprove".to_string(), "OnTransfer".to_string()]
         );
 
         // We can limit our checks to a last call
         assert_eq!(
             erc20.last_call().event_names(),
-            vec!["Transfer".to_string()]
+            vec!["OnTransfer".to_string()]
         );
         // or
-        erc20.last_call().emitted("Transfer");
+        erc20.last_call().emitted("OnTransfer");
 
         // We can check the whole event, not only names:
         // TODO: change it to hopefully_emitted.into()
@@ -421,11 +421,11 @@ mod tests {
 
         assert!(env
             .event_names(&erc20.address)
-            .ends_with(vec!["Approval".to_string(), "Transfer".to_string()].as_slice()));
+            .ends_with(vec!["OnApprove".to_string(), "OnTransfer".to_string()].as_slice()));
 
         // Counter examples
-        assert!(!erc20.last_call().emitted("Approval"));
-        assert!(!env.emitted(&erc20.address, "CrossTransfer"));
+        assert!(!erc20.last_call().emitted("OnApprove"));
+        assert!(!env.emitted(&erc20.address, "OnCrossTransfer"));
         assert!(!env.emitted_event(&erc20.address, &not_emitted));
     }
 
