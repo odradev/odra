@@ -81,6 +81,7 @@ pub enum ExecutionError {
     AddressCreationFailed = 110,
     SerializationFailed = 111,
     KeyNotFound = 112,
+    CouldntDeserializeSignature = 113,
     MaxUserError = 32767,
     /// User error too high. The code should be in range 0..32767.
     UserErrorTooHigh = 32768,

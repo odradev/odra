@@ -1,4 +1,4 @@
-use odra::{casper_event_standard, Module, OdraError};
+use odra::{casper_event_standard, Bytes, Module, OdraError, PublicKey};
 use odra::{prelude::*, CallDef, Event, ModuleWrapper};
 use odra::{Address, ContractEnv, Mapping, Variable, U256, U512};
 
@@ -136,6 +136,16 @@ impl Erc20 {
             other_contract: other,
             amount: value
         });
+    }
+
+    pub fn verify_signature(
+        &self,
+        message: Bytes,
+        signature: Bytes,
+        public_key: PublicKey
+    ) -> bool {
+        self.env()
+            .verify_signature(&message, &signature, &public_key)
     }
 }
 
@@ -448,5 +458,20 @@ mod tests {
         // With return value
         let result = erc20.try_balance_of(alice);
         assert_eq!(result, Ok(100.into()));
+    }
+
+    #[test]
+    fn test_erc20_signature() {
+        let env = odra::test_env();
+        let alice = env.get_account(0);
+        let message = "Message to be signed";
+        let message_bytes = Bytes::from(message.as_bytes());
+
+        let signature = env.sign_message(&message_bytes, &alice);
+
+        let public_key = env.public_key(&alice);
+
+        let signature_verifier = Erc20Deployer::init(&env, Some(100.into()));
+        assert!(signature_verifier.verify_signature(message_bytes, signature, public_key));
     }
 }

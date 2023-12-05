@@ -22,6 +22,7 @@ use odra_core::casper_types::{
 };
 use odra_core::consts;
 use odra_core::consts::*;
+use odra_core::crypto::generate_key_pairs;
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::event::EventError;
 use odra_core::{Address, ExecutionError, PublicKey, VmError, U512};
@@ -49,26 +50,19 @@ impl CasperVm {
     fn new_instance() -> Self {
         let mut genesis_config = DEFAULT_GENESIS_CONFIG.clone();
         let mut accounts: Vec<Address> = Vec::new();
-        let mut key_pairs = BTreeMap::new();
-        for i in 0..20 {
-            // Create keypair.
-            let secret_key = SecretKey::ed25519_from_bytes([i; 32]).unwrap();
-            let public_key = PublicKey::from(&secret_key);
+        let key_pairs = generate_key_pairs(20);
+        key_pairs
+            .iter()
+            .for_each(|(address, (secret_key, public_key))| {
+                accounts.push(*address);
+                let account = GenesisAccount::account(
+                    public_key.clone(),
+                    Motes::new(U512::from(DEFAULT_ACCOUNT_INITIAL_BALANCE)),
+                    None
+                );
+                genesis_config.ee_config_mut().push_account(account);
+            });
 
-            // Create an AccountHash from a public key.
-            let account_addr = AccountHash::from(&public_key);
-
-            // Create a GenesisAccount.
-            let account = GenesisAccount::account(
-                public_key.clone(),
-                Motes::new(U512::from(DEFAULT_ACCOUNT_INITIAL_BALANCE)),
-                None
-            );
-            genesis_config.ee_config_mut().push_account(account);
-
-            accounts.push(account_addr.try_into().unwrap());
-            key_pairs.insert(account_addr.try_into().unwrap(), (secret_key, public_key));
-        }
         let run_genesis_request = RunGenesisRequest::new(
             *DEFAULT_GENESIS_CONFIG_HASH,
             genesis_config.protocol_version(),
