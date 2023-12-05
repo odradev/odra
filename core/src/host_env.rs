@@ -9,6 +9,7 @@ use crate::{Bytes, RuntimeArgs, ToBytes};
 use crate::{CLTyped, FromBytes};
 use crate::{CallDef, ContractEnv};
 use casper_event_standard::EventInstance;
+use casper_types::PublicKey;
 
 #[derive(Clone)]
 pub struct HostEnv {
@@ -223,5 +224,15 @@ impl HostEnv {
 
     pub fn last_call(&self) -> CallResult {
         self.last_call_result.borrow().clone().unwrap()
+    }
+
+    pub fn sign_message(&self, message: &Bytes, address: &Address) -> Bytes {
+        let backend = self.backend.borrow();
+        backend.sign_message(message, address)
+    }
+
+    pub fn public_key(&self, address: &Address) -> PublicKey {
+        let backend = self.backend.borrow();
+        backend.public_key(address)
     }
 }

@@ -3,6 +3,8 @@ pub use crate::ContractContext;
 use crate::{key_maker, UnwrapOrRevert};
 use crate::{prelude::*, ExecutionError};
 use crate::{Address, Bytes, CLTyped, FromBytes, OdraError, ToBytes, U512};
+use crate::ExecutionError::CouldntDeserializeSignature;
+use casper_types::crypto::PublicKey;
 
 #[derive(Clone)]
 pub struct ContractEnv {
@@ -99,6 +101,17 @@ impl ContractEnv {
             .map_err(|_| ExecutionError::SerializationFailed);
         let bytes = result.unwrap_or_revert(self);
         backend.emit_event(&bytes.into())
+    }
+
+    pub fn verify_signature(
+        &self,
+        message: &Bytes,
+        signature: &Bytes,
+        public_key: &PublicKey
+    ) -> bool {
+        let (signature, _) = casper_types::crypto::Signature::from_bytes(signature.as_slice())
+            .unwrap_or_else(|_| self.revert(CouldntDeserializeSignature));
+        casper_types::crypto::verify(message.as_slice(), &signature, public_key).is_ok()
     }
 }
 

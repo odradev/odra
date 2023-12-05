@@ -4,6 +4,7 @@ use crate::RuntimeArgs;
 use crate::{Address, U512};
 use crate::{Bytes, OdraError};
 use crate::{CallDef, ContractEnv};
+use casper_types::PublicKey;
 
 pub trait HostContext {
     fn set_caller(&self, caller: Address);
@@ -29,4 +30,6 @@ pub trait HostContext {
     fn contract_env(&self) -> ContractEnv;
     fn print_gas_report(&self);
     fn last_call_gas_cost(&self) -> u64;
+    fn sign_message(&self, message: &Bytes, address: &Address) -> Bytes;
+    fn public_key(&self, address: &Address) -> PublicKey;
 }

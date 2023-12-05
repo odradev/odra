@@ -11,6 +11,7 @@ pub mod consts;
 mod contract_context;
 pub mod contract_def;
 mod contract_env;
+pub mod crypto;
 pub mod entry_point_callback;
 pub mod error;
 pub mod event;

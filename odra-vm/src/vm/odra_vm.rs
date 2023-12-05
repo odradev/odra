@@ -12,7 +12,7 @@ use odra_core::{
         bytesrepr::{FromBytes, ToBytes},
         U512
     },
-    Address, Bytes, ExecutionError, PublicKey
+    Address, Bytes, ExecutionError, PublicKey, SecretKey
 };
 use odra_core::{OdraError, VmError};
 
@@ -295,6 +295,18 @@ impl OdraVm {
 
     pub fn public_key(&self, address: &Address) -> PublicKey {
         self.state.read().unwrap().public_key(address)
+    }
+
+    pub fn sign_message(&self, message: &Bytes, address: &Address) -> Bytes {
+        let public_key = self.public_key(address);
+        let signature = odra_core::casper_types::crypto::sign(
+            message,
+            self.state.read().unwrap().secret_key(address),
+            &public_key
+        )
+        .to_bytes()
+        .unwrap();
+        signature.into()
     }
 }
 

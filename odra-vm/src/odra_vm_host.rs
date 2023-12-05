@@ -3,7 +3,7 @@ use crate::OdraVm;
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::event::EventError;
 use odra_core::prelude::*;
-use odra_core::{Address, Bytes, OdraError, RuntimeArgs, VmError, U512};
+use odra_core::{Address, Bytes, OdraError, PublicKey, RuntimeArgs, VmError, U512};
 use odra_core::{CallDef, ContractContext, ContractEnv, HostContext, HostEnv};
 
 pub struct OdraVmHost {
@@ -95,6 +95,14 @@ impl HostContext for OdraVmHost {
     fn last_call_gas_cost(&self) -> u64 {
         // For OdraVM there is no gas, so nothing to report.
         0
+    }
+
+    fn sign_message(&self, message: &Bytes, address: &Address) -> Bytes {
+        self.vm.borrow().sign_message(message, address)
+    }
+
+    fn public_key(&self, address: &Address) -> PublicKey {
+        self.vm.borrow().public_key(address)
     }
 }
 
