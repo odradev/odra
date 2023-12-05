@@ -1,5 +1,9 @@
 use syn::parse_quote;
 
+pub fn from_ident(ident: &syn::Ident) -> syn::Type {
+    parse_quote!(#ident)
+}
+
 pub fn address() -> syn::Type {
     parse_quote!(odra::Address)
 }
@@ -102,4 +106,8 @@ pub fn has_events() -> syn::Type {
 
 pub fn event() -> syn::Type {
     parse_quote!(odra::contract_def::Event)
+}
+
+pub fn contract_blueprint() -> syn::Type {
+    parse_quote!(odra::contract_def::ContractBlueprint)
 }

@@ -1,3 +1,4 @@
+mod blueprint;
 mod deployer_item;
 mod deployer_utils;
 mod events_item;
@@ -12,6 +13,7 @@ mod test_parts;
 mod wasm_parts;
 mod wasm_parts_utils;
 
+pub(crate) use blueprint::BlueprintItem;
 pub(crate) use events_item::HasEventsImplItem;
 pub(crate) use exec_parts::{ExecPartsItem, ExecPartsReexportItem};
 pub(crate) use module_item::ModuleModItem;

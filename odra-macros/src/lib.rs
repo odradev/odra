@@ -39,7 +39,8 @@ struct ModuleImpl {
     test_parts_reexport: TestPartsReexportItem,
     exec_parts: ExecPartsItem,
     exec_parts_reexport: ExecPartsReexportItem,
-    wasm_parts: WasmPartsModuleItem
+    wasm_parts: WasmPartsModuleItem,
+    blueprint: BlueprintItem
 }
 
 #[derive(syn_derive::ToTokens, TryFromRef)]

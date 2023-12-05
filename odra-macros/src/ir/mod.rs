@@ -199,6 +199,14 @@ impl ModuleIR {
         ))
     }
 
+    pub fn schema_mod_ident(&self) -> Result<Ident, syn::Error> {
+        let module_ident = self.snake_cased_module_ident()?;
+        Ok(Ident::new(
+            &format!("__{}_schema", module_ident),
+            module_ident.span()
+        ))
+    }
+
     pub fn deployer_ident(&self) -> Result<Ident, syn::Error> {
         let module_ident = self.module_ident()?;
         Ok(Ident::new(

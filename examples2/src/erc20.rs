@@ -150,23 +150,6 @@ impl Erc20 {
     }
 }
 
-#[cfg(odra_module = "Erc20")]
-mod __erc20_schema {
-    use super::*;
-    use odra::{contract_def::ContractBlueprint, prelude::String};
-
-    #[no_mangle]
-    fn module_schema() -> odra::contract_def::ContractBlueprint {
-        odra::contract_def::ContractBlueprint {
-            name: "Erc20",
-            events: <Erc20 as odra::contract_def::HasEvents>::events(),
-            entrypoints: vec![]
-        }
-    }
-}
-
-use odra::{runtime_args, ExecutionError, RuntimeArgs};
-
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests {

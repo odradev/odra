@@ -42,7 +42,7 @@ impl TryFrom<&'_ StructIR> for EventsFnItem {
         let ev_ty = utils::ty::event();
         let struct_events_stmt = struct_events_stmt(struct_ir);
         let chain_events_expr = chain_events_expr(struct_ir)?;
-        
+
         Ok(Self {
             sig: parse_quote!(fn events() -> Vec<#ev_ty>),
             block: parse_quote!({

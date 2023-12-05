@@ -67,3 +67,15 @@ pub fn env_rc() -> syn::Ident {
 pub fn events() -> syn::Ident {
     format_ident!("events")
 }
+
+pub fn module_schema() -> syn::Ident {
+    format_ident!("module_schema")
+}
+
+pub fn name() -> syn::Ident {
+    format_ident!("name")
+}
+
+pub fn entrypoints() -> syn::Ident {
+    format_ident!("entrypoints")
+}
