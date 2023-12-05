@@ -13,8 +13,13 @@ pub fn generate_key_pairs(amount: u8) -> BTreeMap<Address, (SecretKey, PublicKey
         // Create an AccountHash from a public key.
         let account_addr = AccountHash::from(&public_key);
 
+        let address = match account_addr.try_into() {
+            Ok(address) => address,
+            Err(_) => continue
+        };
+
         // Create a GenesisAccount.
-        accounts.insert(account_addr.try_into().unwrap(), (secret_key, public_key));
+        accounts.insert(address, (secret_key, public_key));
     }
     accounts
 }

@@ -6,7 +6,6 @@ use casper_types::crypto::PublicKey;
 use crate::key_maker;
 pub use crate::ContractContext;
 use crate::ExecutionError::CouldntDeserializeSignature;
-use crate::OdraError::ExecutionError;
 
 pub struct ContractEnv {
     index: u32,
@@ -132,7 +131,7 @@ impl ContractEnv {
         public_key: &PublicKey
     ) -> bool {
         let (signature, _) = casper_types::crypto::Signature::from_bytes(signature.as_slice())
-            .unwrap_or_else(|_| self.revert(ExecutionError(CouldntDeserializeSignature)));
+            .unwrap_or_else(|_| self.revert(CouldntDeserializeSignature));
         casper_types::crypto::verify(message.as_slice(), &signature, public_key).is_ok()
     }
 }
