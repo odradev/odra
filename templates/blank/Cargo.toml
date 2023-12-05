@@ -6,7 +6,17 @@ edition = "2021"
 [dependencies]
 #odra_dependency
 
-[features]
-default = ["mock-vm"]
-mock-vm = ["odra/mock-vm"]
-casper = ["odra/casper"]
+[[bin]]
+name = "build_contract"
+path = "bin/build_contract.rs"
+
+[[bin]]
+name = "build_schema"
+path = "bin/build_schema.rs"
+
+[profile.release]
+codegen-units = 1
+lto = true
+
+[profile.dev.package."*"]
+opt-level = 3
