@@ -69,3 +69,12 @@ pub fn new_schemas() -> syn::Expr {
 pub fn new_wasm_contract_env() -> syn::Expr {
     parse_quote!(odra::odra_casper_wasm_env::WasmContractEnv::new_env())
 }
+
+pub fn into_event(ty: &syn::Type) -> syn::Expr {
+    parse_quote!(<#ty as odra::contract_def::IntoEvent>::into_event())
+}
+
+pub fn events(ty: &syn::Type) -> syn::Expr {
+    let has_events_ty = super::ty::has_events();
+    parse_quote!(<#ty as #has_events_ty>::events())
+}

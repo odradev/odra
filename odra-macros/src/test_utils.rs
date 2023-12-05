@@ -33,7 +33,9 @@ pub fn mock_module() -> ModuleIR {
             }
         }
     };
-    ModuleIR::try_from(&module).unwrap()
+
+    let attr = quote!();
+    ModuleIR::try_from((&attr, &module)).unwrap()
 }
 
 pub fn mock_module_definition() -> StructIR {
@@ -47,7 +49,8 @@ pub fn mock_module_definition() -> StructIR {
             counters_map: Mapping<u8, Counter>
         }
     );
-    StructIR::try_from(&module).unwrap()
+    let attr = quote!(events = [OnTransfer, OnApprove]);
+    StructIR::try_from((&attr, &module)).unwrap()
 }
 
 #[track_caller]

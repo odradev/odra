@@ -95,3 +95,11 @@ pub fn cl_typed() -> syn::Type {
 pub fn runtime_args() -> syn::Type {
     parse_quote!(odra::RuntimeArgs)
 }
+
+pub fn has_events() -> syn::Type {
+    parse_quote!(odra::contract_def::HasEvents)
+}
+
+pub fn event() -> syn::Type {
+    parse_quote!(odra::contract_def::Event)
+}

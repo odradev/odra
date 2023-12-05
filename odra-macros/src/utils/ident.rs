@@ -63,3 +63,7 @@ pub fn contract() -> syn::Ident {
 pub fn env_rc() -> syn::Ident {
     format_ident!("env_rc")
 }
+
+pub fn events() -> syn::Ident {
+    format_ident!("events")
+}

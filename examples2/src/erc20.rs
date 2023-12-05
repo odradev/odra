@@ -3,14 +3,14 @@ use odra::{prelude::*, CallDef, Event, ModuleWrapper};
 use odra::{Address, ContractEnv, Mapping, Variable, U256, U512};
 
 #[derive(Event, Eq, PartialEq, Debug)]
-pub struct Transfer {
+pub struct OnTransfer {
     pub from: Option<Address>,
     pub to: Option<Address>,
     pub amount: U256
 }
 
 #[derive(Event, Eq, PartialEq, Debug)]
-pub struct CrossTransfer {
+pub struct OnCrossTransfer {
     pub from: Option<Address>,
     pub to: Option<Address>,
     pub other_contract: Address,
@@ -18,7 +18,7 @@ pub struct CrossTransfer {
 }
 
 #[derive(Event, Eq, PartialEq, Debug)]
-pub struct Approval {
+pub struct OnApprove {
     pub owner: Address,
     pub spender: Address,
     pub value: U256
@@ -36,7 +36,7 @@ impl From<Erc20Error> for OdraError {
     }
 }
 
-#[odra::module]
+#[odra::module(events = [OnTransfer, OnCrossTransfer, OnApprove])]
 pub struct Erc20 {
     env: Rc<ContractEnv>,
     total_supply: Variable<U256>,
@@ -53,7 +53,7 @@ impl Erc20 {
     }
 
     pub fn approve(&mut self, to: Address, amount: U256) {
-        self.env.emit_event(Approval {
+        self.env.emit_event(OnApprove {
             owner: self.env.caller(),
             spender: to,
             value: amount
@@ -78,7 +78,7 @@ impl Erc20 {
         }
         balances.set(caller, from_balance.saturating_sub(value));
         balances.set(to, to_balance.saturating_add(value));
-        self.env.emit_event(Transfer {
+        self.env.emit_event(OnTransfer {
             from: Some(caller),
             to: Some(to),
             amount: value
@@ -131,7 +131,7 @@ impl Erc20 {
         };
 
         other_erc20.transfer(to, value);
-        self.env.emit_event(CrossTransfer {
+        self.env.emit_event(OnCrossTransfer {
             from: Some(self.env.self_address()),
             to: Some(to),
             other_contract: other,
@@ -152,12 +152,15 @@ impl Erc20 {
 
 #[cfg(odra_module = "Erc20")]
 mod __erc20_schema {
-    use odra::{contract_def::ContractBlueprint2, prelude::String};
+    use super::*;
+    use odra::{contract_def::ContractBlueprint, prelude::String};
 
     #[no_mangle]
-    fn module_schema() -> ContractBlueprint2 {
-        ContractBlueprint2 {
-            name: String::from("Erc20")
+    fn module_schema() -> odra::contract_def::ContractBlueprint {
+        odra::contract_def::ContractBlueprint {
+            name: "Erc20",
+            events: <Erc20 as odra::contract_def::HasEvents>::events(),
+            entrypoints: vec![]
         }
     }
 }
@@ -257,7 +260,7 @@ mod tests {
         assert_eq!(
             call_result.contract_events(&erc20.address),
             vec![Bytes::from(
-                Transfer {
+                OnTransfer {
                     from: Some(alice),
                     to: Some(bob),
                     amount: 30.into()
@@ -283,7 +286,7 @@ mod tests {
         assert_eq!(
             call_result.contract_events(&pobcoin.address),
             vec![Bytes::from(
-                Transfer {
+                OnTransfer {
                     from: Some(erc20.address),
                     to: Some(alice),
                     amount: 50.into()
@@ -295,7 +298,7 @@ mod tests {
         assert_eq!(
             call_result.contract_events(&erc20.address),
             vec![Bytes::from(
-                CrossTransfer {
+                OnCrossTransfer {
                     from: Some(erc20.address),
                     to: Some(alice),
                     other_contract: pobcoin.address,
@@ -323,30 +326,30 @@ mod tests {
         erc20.transfer(charlie, 20.into());
 
         // Test events
-        let event: Transfer = env.get_event(&erc20.address, 0).unwrap();
+        let event: OnTransfer = env.get_event(&erc20.address, 0).unwrap();
         assert_eq!(
             event,
-            Transfer {
+            OnTransfer {
                 from: Some(alice),
                 to: Some(bob),
                 amount: 10.into()
             }
         );
 
-        let event: Approval = env.get_event(&erc20.address, 1).unwrap();
+        let event: OnApprove = env.get_event(&erc20.address, 1).unwrap();
         assert_eq!(
             event,
-            Approval {
+            OnApprove {
                 owner: alice,
                 spender: bob,
                 value: 10.into()
             }
         );
 
-        let event: Transfer = env.get_event(&erc20.address, 2).unwrap();
+        let event: OnTransfer = env.get_event(&erc20.address, 2).unwrap();
         assert_eq!(
             event,
-            Transfer {
+            OnTransfer {
                 from: Some(alice),
                 to: Some(charlie),
                 amount: 20.into()
@@ -354,10 +357,10 @@ mod tests {
         );
 
         // Test negative indices
-        let event: Transfer = env.get_event(&erc20.address, -1).unwrap();
+        let event: OnTransfer = env.get_event(&erc20.address, -1).unwrap();
         assert_eq!(
             event,
-            Transfer {
+            OnTransfer {
                 from: Some(alice),
                 to: Some(charlie),
                 amount: 20.into()
@@ -378,17 +381,17 @@ mod tests {
         // When event is emitted
         erc20.approve(bob, 10.into());
         erc20.transfer(bob, 10.into());
-        let first_emitted = Approval {
+        let first_emitted = OnApprove {
             owner: alice,
             spender: bob,
             value: 10.into()
         };
-        let emitted_in_second_call = Transfer {
+        let emitted_in_second_call = OnTransfer {
             from: Some(alice),
             to: Some(bob),
             amount: 10.into()
         };
-        let not_emitted = CrossTransfer {
+        let not_emitted = OnCrossTransfer {
             from: Some(alice),
             to: Some(bob),
             other_contract: bob,

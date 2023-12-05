@@ -15,15 +15,16 @@ mod test_utils;
 mod utils;
 
 #[proc_macro_attribute]
-pub fn module(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    let stream: TokenStream2 = item.into();
-    if let Ok(ir) = ModuleIR::try_from(&stream) {
+pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let attr: TokenStream2 = attr.into();
+    let item: TokenStream2 = item.into();
+    if let Ok(ir) = ModuleIR::try_from((&attr, &item)) {
         return ModuleImpl::try_from(&ir).into_code();
     }
-    if let Ok(ir) = StructIR::try_from(&stream) {
+    if let Ok(ir) = StructIR::try_from((&attr, &item)) {
         return ModuleStruct::try_from(&ir).into_code();
     }
-    syn::Error::new(stream.span(), "Struct or impl block expected")
+    syn::Error::new(item.span(), "Struct or impl block expected")
         .to_compile_error()
         .into()
 }
@@ -46,7 +47,8 @@ struct ModuleImpl {
 struct ModuleStruct {
     #[expr(item.self_code().clone())]
     self_code: syn::ItemStruct,
-    mod_item: ModuleModItem
+    mod_item: ModuleModItem,
+    has_events_item: HasEventsImplItem
 }
 
 trait IntoCode {

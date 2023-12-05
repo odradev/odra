@@ -1,3 +1,4 @@
+use crate::contract_def::HasEvents;
 use crate::prelude::*;
 use crate::{
     module::{Module, ModuleWrapper},
@@ -49,5 +50,11 @@ impl<K: ToBytes, V: Module> Mapping<K, V> {
     pub fn module(&self, key: K) -> ModuleWrapper<V> {
         let env = self.env_for_key(key);
         ModuleWrapper::new(Rc::new(env), self.index)
+    }
+}
+
+impl<K: ToBytes, V: HasEvents> HasEvents for Mapping<K, V> {
+    fn events() -> Vec<crate::contract_def::Event> {
+        V::events()
     }
 }
