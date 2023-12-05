@@ -53,6 +53,14 @@ impl ContractContext for WasmContractEnv {
     fn get_named_arg_bytes(&self, name: &str) -> Bytes {
         host_functions::get_named_arg(name).into()
     }
+
+    fn handle_attached_value(&self) {
+        host_functions::handle_attached_value();
+    }
+
+    fn clear_attached_value(&self) {
+        host_functions::clear_attached_value();
+    }
 }
 
 impl WasmContractEnv {

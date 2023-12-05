@@ -47,8 +47,16 @@ impl From<Box<dyn Any + Send>> for OdraError {
 }
 
 impl From<casper_types::bytesrepr::Error> for ExecutionError {
-    fn from(_: casper_types::bytesrepr::Error) -> Self {
-        Self::SerializationFailed
+    fn from(error: casper_types::bytesrepr::Error) -> Self {
+        match error {
+            casper_types::bytesrepr::Error::EarlyEndOfStream => Self::EarlyEndOfStream,
+            casper_types::bytesrepr::Error::Formatting => Self::Formatting,
+            casper_types::bytesrepr::Error::LeftOverBytes => Self::LeftOverBytes,
+            casper_types::bytesrepr::Error::OutOfMemory => Self::OutOfMemory,
+            casper_types::bytesrepr::Error::NotRepresentable => Self::NotRepresentable,
+            casper_types::bytesrepr::Error::ExceededRecursionDepth => Self::ExceededRecursionDepth,
+            _ => Self::Formatting
+        }
     }
 }
 
@@ -79,9 +87,14 @@ pub enum ExecutionError {
     IndexOutOfBounds = 108,
     ZeroAddress = 109,
     AddressCreationFailed = 110,
-    SerializationFailed = 111,
-    KeyNotFound = 112,
-    CouldntDeserializeSignature = 113,
+    EarlyEndOfStream = 111,
+    Formatting = 112,
+    LeftOverBytes = 113,
+    OutOfMemory = 114,
+    NotRepresentable = 115,
+    ExceededRecursionDepth = 116,
+    KeyNotFound = 117,
+    CouldNotDeserializeSignature = 118,
     MaxUserError = 32767,
     /// User error too high. The code should be in range 0..32767.
     UserErrorTooHigh = 32768,

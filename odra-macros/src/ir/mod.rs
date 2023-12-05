@@ -3,6 +3,10 @@ use proc_macro2::Ident;
 use quote::format_ident;
 use syn::{parse_quote, spanned::Spanned};
 
+use self::attr::OdraAttribute;
+
+mod attr;
+
 const CONSTRUCTOR_NAME: &str = "init";
 
 macro_rules! try_parse {
@@ -103,8 +107,14 @@ pub struct EnumeratedTypedField {
 try_parse!(syn::ItemImpl => ModuleIR);
 
 impl ModuleIR {
-    pub fn self_code(&self) -> &syn::ItemImpl {
-        &self.code
+    pub fn self_code(&self) -> syn::ItemImpl {
+        let mut code = self.code.clone();
+        code.items.iter_mut().for_each(|item| {
+            if let syn::ImplItem::Fn(func) = item {
+                func.attrs = attr::other_attributes(func.attrs.clone());
+            }
+        });
+        code
     }
 
     pub fn module_ident(&self) -> Result<Ident, syn::Error> {
@@ -231,8 +241,24 @@ impl FnIR {
         self.name().to_string()
     }
 
+    pub fn is_payable(&self) -> bool {
+        let (odra_attrs, _) =
+            attr::partition_attributes(self.code.attrs.clone()).unwrap_or_default();
+        odra_attrs.iter().any(OdraAttribute::is_payable)
+    }
+
+    pub fn is_non_reentrant(&self) -> bool {
+        let (odra_attrs, _) =
+            attr::partition_attributes(self.code.attrs.clone()).unwrap_or_default();
+        odra_attrs.iter().any(OdraAttribute::is_non_reentrant)
+    }
+
     pub fn arg_names(&self) -> Vec<Ident> {
         utils::syn::function_arg_names(&self.code)
+    }
+
+    pub fn has_args(&self) -> bool {
+        !self.arg_names().is_empty()
     }
 
     pub fn named_args(&self) -> Vec<FnArgIR> {

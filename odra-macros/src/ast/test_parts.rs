@@ -126,6 +126,48 @@ mod test {
                     pub fn total_supply(&self) -> U256 {
                         self.try_total_supply().unwrap()
                     }
+
+                    pub fn try_pay_to_mint(&mut self) -> Result<(), odra::OdraError> {
+                        self.env.call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                String::from("pay_to_mint"),
+                                {
+                                    let mut named_args = odra::RuntimeArgs::new();
+                                    if self.attached_value > odra::U512::zero() {
+                                        let _ = named_args.insert("amount", self.attached_value);
+                                    }
+                                    named_args
+                                }
+                            ).with_amount(self.attached_value),
+                        )
+                    }
+
+                    pub fn pay_to_mint(&mut self) {
+                        self.try_pay_to_mint().unwrap()
+                    }
+
+                    pub fn try_approve(&mut self, to: Address, amount: U256) -> Result<(), odra::OdraError> {
+                        self.env.call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                String::from("approve"),
+                                {
+                                    let mut named_args = odra::RuntimeArgs::new();
+                                    if self.attached_value > odra::U512::zero() {
+                                        let _ = named_args.insert("amount", self.attached_value);
+                                    }
+                                    let _ = named_args.insert("to", to);
+                                    let _ = named_args.insert("amount", amount);
+                                    named_args
+                                }
+                            ).with_amount(self.attached_value),
+                        )
+                    }
+
+                    pub fn approve(&mut self, to: Address, amount: U256) {
+                        self.try_approve(to, amount).unwrap()
+                    }
                 }
 
                 pub struct Erc20Deployer;
@@ -140,6 +182,14 @@ mod test {
                                 }
                                 "total_supply" => {
                                     let result = execute_total_supply(contract_env);
+                                    odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                                }
+                                "pay_to_mint" => {
+                                    let result = execute_pay_to_mint(contract_env);
+                                    odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                                }
+                                "approve" => {
+                                    let result = execute_approve(contract_env);
                                     odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
                                 }
                                 _ => panic!("Unknown method")

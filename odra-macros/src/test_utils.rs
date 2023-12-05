@@ -15,6 +15,22 @@ pub fn mock_module() -> ModuleIR {
             pub fn total_supply(&self) -> U256 {
                 self.total_supply.get_or_default()
             }
+
+            #[odra(payable)]
+            pub fn pay_to_mint(&mut self) {
+                let attached_value = self.env().attached_value();
+                self.total_supply
+                    .set(self.total_supply() + U256::from(attached_value.as_u64()));
+            }
+
+            #[odra(non_reentrant)]
+            pub fn approve(&mut self, to: Address, amount: U256) {
+                self.env.emit_event(Approval {
+                    owner: self.env.caller(),
+                    spender: to,
+                    value: amount
+                });
+            }
         }
     };
     ModuleIR::try_from(&module).unwrap()
@@ -34,6 +50,7 @@ pub fn mock_module_definition() -> StructIR {
     StructIR::try_from(&module).unwrap()
 }
 
+#[track_caller]
 pub fn assert_eq<A: ToTokens, B: ToTokens>(a: A, b: B) {
     fn parse<T: ToTokens>(e: T) -> String {
         let e = e.to_token_stream().to_string();

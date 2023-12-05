@@ -24,6 +24,10 @@ pub fn env() -> syn::Ident {
     format_ident!("env")
 }
 
+pub fn exec_env() -> syn::Ident {
+    format_ident!("exec_env")
+}
+
 pub fn init() -> syn::Ident {
     format_ident!("init")
 }
@@ -54,4 +58,8 @@ pub fn schemas() -> syn::Ident {
 
 pub fn contract() -> syn::Ident {
     format_ident!("contract")
+}
+
+pub fn env_rc() -> syn::Ident {
+    format_ident!("env_rc")
 }

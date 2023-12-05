@@ -1,12 +1,11 @@
 use crate::call_def::CallDef;
-use crate::{prelude::*, UnwrapOrRevert};
+pub use crate::ContractContext;
+use crate::{key_maker, UnwrapOrRevert};
+use crate::{prelude::*, ExecutionError};
 use crate::{Address, Bytes, CLTyped, FromBytes, OdraError, ToBytes, U512};
 use casper_types::crypto::PublicKey;
 
-use crate::key_maker;
-pub use crate::ContractContext;
-use crate::ExecutionError::CouldntDeserializeSignature;
-
+#[derive(Clone)]
 pub struct ContractEnv {
     index: u32,
     mapping_data: Vec<u8>,
@@ -22,31 +21,7 @@ impl ContractEnv {
         }
     }
 
-    pub fn duplicate(&self) -> Self {
-        Self {
-            index: self.index,
-            mapping_data: self.mapping_data.clone(),
-            backend: self.backend.clone()
-        }
-    }
-
-    pub fn get_named_arg<T: FromBytes>(&self, name: &str) -> T {
-        let bytes = self.backend.borrow().get_named_arg_bytes(name);
-
-        let opt_result = match T::from_bytes(&bytes) {
-            Ok((value, remainder)) => {
-                if remainder.is_empty() {
-                    Some(value)
-                } else {
-                    None
-                }
-            }
-            Err(_) => None
-        };
-        UnwrapOrRevert::unwrap_or_revert(opt_result, self)
-    }
-
-    pub fn current_key(&self) -> Vec<u8> {
+    pub(crate) fn current_key(&self) -> Vec<u8> {
         let index_bytes = key_maker::u32_to_hex(self.index);
         let mapping_data_bytes = key_maker::bytes_to_hex(&self.mapping_data);
         let mut key = Vec::new();
@@ -55,11 +30,11 @@ impl ContractEnv {
         key
     }
 
-    pub fn add_to_mapping_data(&mut self, data: &[u8]) {
+    pub(crate) fn add_to_mapping_data(&mut self, data: &[u8]) {
         self.mapping_data.extend_from_slice(data);
     }
 
-    pub fn child(&self, index: u8) -> Self {
+    pub(crate) fn child(&self, index: u8) -> Self {
         Self {
             index: (self.index << 4) + index as u32,
             mapping_data: self.mapping_data.clone(),
@@ -71,14 +46,13 @@ impl ContractEnv {
         self.backend
             .borrow()
             .get_value(key)
-            // TODO: remove unwrap
-            .map(|bytes| T::from_bytes(&bytes).unwrap().0)
+            .map(|bytes| deserialize_bytes(bytes, self))
     }
 
     pub fn set_value<T: ToBytes + CLTyped>(&self, key: &[u8], value: T) {
-        // TODO: remove unwrap
-        let bytes = value.to_bytes().unwrap();
-        self.backend.borrow().set_value(key, Bytes::from(bytes));
+        let result = value.to_bytes().map_err(ExecutionError::from);
+        let bytes = result.unwrap_or_revert(self);
+        self.backend.borrow().set_value(key, bytes.into());
     }
 
     pub fn caller(&self) -> Address {
@@ -89,8 +63,7 @@ impl ContractEnv {
     pub fn call_contract<T: FromBytes>(&self, address: Address, call: CallDef) -> T {
         let backend = self.backend.borrow();
         let bytes = backend.call_contract(address, call);
-        // TODO: remove unwrap
-        T::from_bytes(&bytes).unwrap().0
+        deserialize_bytes(bytes, self)
     }
 
     pub fn self_address(&self) -> Address {
@@ -120,8 +93,9 @@ impl ContractEnv {
 
     pub fn emit_event<T: ToBytes>(&self, event: T) {
         let backend = self.backend.borrow();
-        // TODO: remove unwrap
-        backend.emit_event(&event.to_bytes().unwrap().into())
+        let result = event.to_bytes().map_err(ExecutionError::from);
+        let bytes = result.unwrap_or_revert(self);
+        backend.emit_event(&bytes.into())
     }
 
     pub fn verify_signature(
@@ -131,7 +105,60 @@ impl ContractEnv {
         public_key: &PublicKey
     ) -> bool {
         let (signature, _) = casper_types::crypto::Signature::from_bytes(signature.as_slice())
-            .unwrap_or_else(|_| self.revert(CouldntDeserializeSignature));
+            .unwrap_or_else(|_| self.revert(ExecutionError::CouldNotDeserializeSignature));
         casper_types::crypto::verify(message.as_slice(), &signature, public_key).is_ok()
+    }
+}
+
+pub struct ExecutionEnv {
+    env: Rc<ContractEnv>
+}
+
+impl ExecutionEnv {
+    pub fn new(env: Rc<ContractEnv>) -> Self {
+        Self { env }
+    }
+
+    pub fn non_reentrant_before(&self) {
+        let status: bool = self
+            .env
+            .get_value(crate::consts::REENTRANCY_GUARD.as_slice())
+            .unwrap_or_default();
+        if status {
+            self.env.revert(ExecutionError::ReentrantCall);
+        }
+        self.env
+            .set_value(crate::consts::REENTRANCY_GUARD.as_slice(), true);
+    }
+
+    pub fn non_reentrant_after(&self) {
+        self.env
+            .set_value(crate::consts::REENTRANCY_GUARD.as_slice(), false);
+    }
+
+    pub fn handle_attached_value(&self) {
+        self.env.backend.borrow().handle_attached_value();
+    }
+
+    pub fn clear_attached_value(&self) {
+        self.env.backend.borrow().clear_attached_value();
+    }
+
+    pub fn get_named_arg<T: FromBytes>(&self, name: &str) -> T {
+        let bytes = self.env.backend.borrow().get_named_arg_bytes(name);
+        deserialize_bytes(bytes, &self.env)
+    }
+}
+
+fn deserialize_bytes<T: FromBytes>(bytes: Bytes, env: &ContractEnv) -> T {
+    match T::from_bytes(&bytes) {
+        Ok((value, remainder)) => {
+            if remainder.is_empty() {
+                value
+            } else {
+                env.revert(ExecutionError::LeftOverBytes)
+            }
+        }
+        Err(err) => env.revert(ExecutionError::from(err))
     }
 }

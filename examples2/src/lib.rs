@@ -9,3 +9,4 @@ extern crate alloc;
 pub mod counter;
 pub mod counter_pack;
 pub mod erc20;
+pub mod reentrancy_guard;

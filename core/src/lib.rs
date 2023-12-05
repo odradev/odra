@@ -34,7 +34,7 @@ pub use address::{Address, OdraAddress};
 pub use call_def::CallDef;
 pub use casper_event_standard;
 pub use contract_context::ContractContext;
-pub use contract_env::ContractEnv;
+pub use contract_env::{ContractEnv, ExecutionEnv};
 pub use entry_point_callback::EntryPointsCaller;
 pub use error::{AddressError, CollectionError, ExecutionError, OdraError, VmError};
 pub use host_context::HostContext;
