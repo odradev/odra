@@ -3,7 +3,6 @@ pub use crate::ContractContext;
 use crate::{key_maker, UnwrapOrRevert};
 use crate::{prelude::*, ExecutionError};
 use crate::{Address, Bytes, CLTyped, FromBytes, OdraError, ToBytes, U512};
-use crate::ExecutionError::CouldntDeserializeSignature;
 use casper_types::crypto::PublicKey;
 
 #[derive(Clone)]
@@ -51,9 +50,7 @@ impl ContractEnv {
     }
 
     pub fn set_value<T: ToBytes + CLTyped>(&self, key: &[u8], value: T) {
-        let result = value
-            .to_bytes()
-            .map_err(|_| ExecutionError::SerializationFailed);
+        let result = value.to_bytes().map_err(ExecutionError::from);
         let bytes = result.unwrap_or_revert(self);
         self.backend.borrow().set_value(key, bytes.into());
     }
@@ -96,9 +93,7 @@ impl ContractEnv {
 
     pub fn emit_event<T: ToBytes>(&self, event: T) {
         let backend = self.backend.borrow();
-        let result = event
-            .to_bytes()
-            .map_err(|_| ExecutionError::SerializationFailed);
+        let result = event.to_bytes().map_err(ExecutionError::from);
         let bytes = result.unwrap_or_revert(self);
         backend.emit_event(&bytes.into())
     }
@@ -110,7 +105,7 @@ impl ContractEnv {
         public_key: &PublicKey
     ) -> bool {
         let (signature, _) = casper_types::crypto::Signature::from_bytes(signature.as_slice())
-            .unwrap_or_else(|_| self.revert(CouldntDeserializeSignature));
+            .unwrap_or_else(|_| self.revert(ExecutionError::CouldNotDeserializeSignature));
         casper_types::crypto::verify(message.as_slice(), &signature, public_key).is_ok()
     }
 }
@@ -156,15 +151,14 @@ impl ExecutionEnv {
 }
 
 fn deserialize_bytes<T: FromBytes>(bytes: Bytes, env: &ContractEnv) -> T {
-    let opt_result = match T::from_bytes(&bytes) {
+    match T::from_bytes(&bytes) {
         Ok((value, remainder)) => {
             if remainder.is_empty() {
-                Some(value)
+                value
             } else {
-                None
+                env.revert(ExecutionError::LeftOverBytes)
             }
         }
-        Err(_) => None
-    };
-    UnwrapOrRevert::unwrap_or_revert(opt_result, env)
+        Err(err) => env.revert(ExecutionError::from(err))
+    }
 }
