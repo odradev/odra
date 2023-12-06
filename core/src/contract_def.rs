@@ -14,7 +14,8 @@ pub struct Entrypoint {
     pub args: Vec<Argument>,
     pub is_mut: bool,
     pub ret: CLType,
-    pub ty: EntrypointType
+    pub ty: EntrypointType,
+    pub attributes: Vec<EntrypointAttribute>
 }
 
 /// Defines an argument passed to an entrypoint.
@@ -24,16 +25,6 @@ pub struct Argument {
     pub ty: CLType,
     pub is_ref: bool,
     pub is_slice: bool
-}
-
-impl EntrypointType {
-    pub fn is_non_reentrant(&self) -> bool {
-        match self {
-            EntrypointType::Constructor { non_reentrant } => *non_reentrant,
-            EntrypointType::Public { non_reentrant } => *non_reentrant,
-            EntrypointType::PublicPayable { non_reentrant } => *non_reentrant
-        }
-    }
 }
 
 /// Defines an event.
@@ -53,11 +44,15 @@ impl Event {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum EntrypointType {
     /// A special entrypoint that can be called just once on the contract initialization.
-    Constructor { non_reentrant: bool },
+    Constructor,
     /// A regular entrypoint.
-    Public { non_reentrant: bool },
-    /// A payable entrypoint.
-    PublicPayable { non_reentrant: bool }
+    Public
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum EntrypointAttribute {
+    NonReentrant,
+    Payable
 }
 
 /// A trait that should be implemented by each smart contract to allow the backend
@@ -67,10 +62,6 @@ pub trait HasEntrypoints {
     fn entrypoints() -> Vec<Entrypoint>;
 }
 
-/// A trait that should be implemented by each smart contract to allow the backend.
-pub trait HasIdent {
-    fn ident() -> String;
-}
 /// A trait that should be implemented by each smart contract to allow the backend.
 pub trait HasEvents {
     fn events() -> Vec<Event>;

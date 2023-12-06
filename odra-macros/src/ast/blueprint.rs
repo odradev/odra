@@ -57,11 +57,12 @@ impl TryFrom<&'_ ModuleIR> for SchemaFnItem {
 
         let module_name = module.module_str()?;
         let expr_events = utils::expr::events(&ty_module);
+        let expr_entrypoints = utils::expr::entrypoints(&ty_module);
 
-        let expr = parse_quote!(odra::contract_def::ContractBlueprint {
+        let expr = parse_quote!(#ty_blueprint {
             #ident_name: #module_name,
             #ident_events: #expr_events,
-            #ident_entrypoints: vec![]
+            #ident_entrypoints: #expr_entrypoints
         });
 
         Ok(Self {
@@ -94,7 +95,7 @@ mod test {
                     odra::contract_def::ContractBlueprint {
                         name: "Erc20",
                         events: <Erc20 as odra::contract_def::HasEvents>::events(),
-                        entrypoints: vec![]
+                        entrypoints: <Erc20 as odra::contract_def::HasEntrypoints>::entrypoints()
                     }
                 }
             }

@@ -78,3 +78,8 @@ pub fn events(ty: &syn::Type) -> syn::Expr {
     let has_events_ty = super::ty::has_events();
     parse_quote!(<#ty as #has_events_ty>::events())
 }
+
+pub fn entrypoints(ty: &syn::Type) -> syn::Expr {
+    let has_entrypoints_ty = super::ty::has_entrypoints();
+    parse_quote!(<#ty as #has_entrypoints_ty>::entrypoints())
+}

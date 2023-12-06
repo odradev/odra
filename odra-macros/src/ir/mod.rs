@@ -376,6 +376,16 @@ impl FnArgIR {
         }
     }
 
+    pub fn name_str(&self) -> Result<String, syn::Error> {
+        self.name().map(|i| i.to_string())
+    }
+
+    pub fn ty(&self) -> Result<syn::Type, syn::Error> {
+        match &self.code {
+            syn::FnArg::Typed(syn::PatType { box ty, .. }) => Ok(ty.clone()),
+            _ => Err(syn::Error::new_spanned(&self.code, "Unnamed arg"))
+        }
+    }
     pub fn name_and_ty(&self) -> Result<(String, syn::Type), syn::Error> {
         match &self.code {
             syn::FnArg::Typed(syn::PatType {

@@ -34,6 +34,7 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
 struct ModuleImpl {
     #[expr(item.self_code())]
     self_code: syn::ItemImpl,
+    has_entrypoints_item: HasEntrypointsImplItem,
     ref_item: RefItem,
     test_parts: TestPartsItem,
     test_parts_reexport: TestPartsReexportItem,
