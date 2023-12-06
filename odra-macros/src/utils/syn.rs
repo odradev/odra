@@ -158,6 +158,20 @@ pub fn as_casted_ty_stream(ty: &syn::Type, as_ty: syn::Type) -> TokenStream {
     parse_quote!(<#ty as #as_ty>)
 }
 
+pub fn is_ref(ty: &syn::Type) -> bool {
+    match ty {
+        syn::Type::Reference(_) => true,
+        _ => false
+    }
+}
+
+pub fn unreferenced_ty(ty: &syn::Type) -> syn::Type {
+    match ty {
+        syn::Type::Reference(syn::TypeReference { elem, .. }) => *elem.clone(),
+        _ => ty.clone()
+    }
+}
+
 fn clear_path(ty: &syn::TypePath) -> Result<syn::TypePath, syn::Error> {
     let mut owned_ty = ty.to_owned();
 
