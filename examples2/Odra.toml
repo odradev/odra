@@ -1,0 +1,7 @@
+[[contracts]]
+name = "Erc20"
+fqn = "examples2::Erc20"
+
+[[contracts]]
+name = "CounterPack"
+fqn = "examples2::CounterPack"

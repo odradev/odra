@@ -7,7 +7,7 @@ edition = "2021"
 odra = { path = "../odra" }
 
 [[bin]]
-name = "contract"
+name = "build_contract"
 path = "bin/build_contract.rs"
 
 [[bin]]
