@@ -1,5 +1,6 @@
+use casper_event_standard::Event;
 use odra::{casper_event_standard, Bytes, Module, OdraError, PublicKey};
-use odra::{prelude::*, CallDef, Event, ModuleWrapper};
+use odra::{prelude::*, CallDef, ModuleWrapper};
 use odra::{Address, ContractEnv, Mapping, Variable, U256, U512};
 
 #[derive(Event, Eq, PartialEq, Debug)]
@@ -48,7 +49,7 @@ impl Erc20 {
     pub fn init(&mut self, total_supply: Option<U256>) {
         if let Some(total_supply) = total_supply {
             self.total_supply.set(total_supply);
-            self.balances.set(self.env().caller(), total_supply);
+            self.balances.set(&self.env().caller(), total_supply);
         }
     }
 
@@ -65,19 +66,19 @@ impl Erc20 {
     }
 
     pub fn balance_of(&self, owner: Address) -> U256 {
-        self.balances.get_or_default(owner)
+        self.balances.get_or_default(&owner)
     }
 
     pub fn transfer(&mut self, to: Address, value: U256) {
         let caller = self.env().caller();
         let balances = &mut self.balances;
-        let from_balance = balances.get_or_default(caller);
-        let to_balance = balances.get_or_default(to);
+        let from_balance = balances.get_or_default(&caller);
+        let to_balance = balances.get_or_default(&to);
         if from_balance < value {
             self.env().revert(Erc20Error::InsufficientBalance)
         }
-        balances.set(caller, from_balance.saturating_sub(value));
-        balances.set(to, to_balance.saturating_add(value));
+        balances.set(&caller, from_balance.saturating_sub(value));
+        balances.set(&to, to_balance.saturating_add(value));
         self.env.emit_event(OnTransfer {
             from: Some(caller),
             to: Some(to),
@@ -99,8 +100,10 @@ impl Erc20 {
         let attached_value = self.env().attached_value();
         let caller = self.env().caller();
         let caller_balance = self.balance_of(caller);
-        self.balances
-            .set(caller, caller_balance + U256::from(attached_value.as_u64()));
+        self.balances.set(
+            &caller,
+            caller_balance + U256::from(attached_value.as_u64())
+        );
         self.total_supply
             .set(self.total_supply() + U256::from(attached_value.as_u64()));
     }
@@ -116,7 +119,7 @@ impl Erc20 {
             self.env().revert(Erc20Error::InsufficientBalance)
         }
 
-        self.balances.set(caller, caller_balance - amount);
+        self.balances.set(&caller, caller_balance - amount);
         self.total_supply.set(self.total_supply() - amount);
         self.env()
             .transfer_tokens(&caller, &U512::from(amount.as_u64()));
@@ -186,7 +189,7 @@ mod tests {
 
         // Test cross calls
         let mut pobcoin = Erc20Deployer::init(&env, Some(100.into()));
-        assert_eq!(erc20.cross_total(pobcoin.address.clone()), 200.into());
+        assert_eq!(erc20.cross_total(pobcoin.address), 200.into());
 
         // Test attaching value and balances
         let initial_balance = U512::from(100000000000000000u64);

@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use crate::{CLTyped, FromBytes, ToBytes};
+use crate::{CLTyped, FromBytes, OdraError, ToBytes, UnwrapOrRevert};
 
 use crate::contract_env::ContractEnv;
 
@@ -29,6 +29,17 @@ impl<T: FromBytes + Default> Variable<T> {
     pub fn get_or_default(&self) -> T {
         let env = self.env();
         env.get_value(&env.current_key()).unwrap_or_default()
+    }
+
+    pub fn get(&self) -> Option<T> {
+        let env = self.env();
+        env.get_value(&env.current_key())
+    }
+
+    pub fn get_or_revert_with<E: Into<OdraError>>(&self, error: E) -> T {
+        let env = self.env();
+        env.get_value(&env.current_key())
+            .unwrap_or_revert_with(&env, error)
     }
 }
 

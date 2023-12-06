@@ -1,7 +1,6 @@
 #![no_std]
 
 pub use odra_core::call_result::*;
-pub use odra_core::casper_event_standard::Event;
 pub use odra_core::mapping::*;
 pub use odra_core::module::*;
 pub use odra_core::variable::*;
