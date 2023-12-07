@@ -5,11 +5,11 @@ use casper_event_standard::EventInstance;
 
 #[derive(Debug, Clone)]
 pub struct CallResult {
-    pub contract_address: Address,
-    pub caller: Address,
-    pub gas_used: u64,
-    pub result: Result<Bytes, OdraError>,
-    pub events: BTreeMap<Address, Vec<Bytes>>
+    pub(crate) contract_address: Address,
+    pub(crate) caller: Address,
+    pub(crate) gas_used: u64,
+    pub(crate) result: Result<Bytes, OdraError>,
+    pub(crate) events: BTreeMap<Address, Vec<Bytes>>
 }
 
 impl CallResult {

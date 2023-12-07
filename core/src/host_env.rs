@@ -202,7 +202,7 @@ impl HostEnv {
             .any(|bytes| bytes == event_bytes)
     }
 
-    pub fn emitted(&self, contract_address: &Address, event_name: &str) -> bool {
+    pub fn emitted<T: AsRef<str>>(&self, contract_address: &Address, event_name: T) -> bool {
         let events_count = self.events_count(contract_address);
         (0..events_count)
             .map(|event_id| {
@@ -218,7 +218,7 @@ impl HostEnv {
                 extract_event_name(&bytes)
                     .unwrap_or_else(|e| panic!("Couldn't extract event name: {:?}", e))
                     .as_str()
-                    == event_name
+                    == event_name.as_ref()
             })
     }
 

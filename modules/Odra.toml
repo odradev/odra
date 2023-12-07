@@ -17,11 +17,11 @@ fqn = "odra_modules::Erc20"
 #[[contracts]]
 #name = "erc1155_receiver"
 #fqn = "odra_modules::erc1155_receiver::Erc1155Receiver"
-#
-#[[contracts]]
-#name = "wrapped_native_token"
-#fqn = "odra_modules::wrapped_native::WrappedNativeToken"
-#
+
+[[contracts]]
+name = "WrappedNativeToken"
+fqn = "odra_modules::wrapped_native::WrappedNativeToken"
+
 #[[contracts]]
 #name = "ownable"
 #fqn = "odra_modules::access::Ownable"
