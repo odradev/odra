@@ -38,3 +38,9 @@ impl<T: ToBytes + CLTyped> Variable<T> {
         env.set_value(&env.current_key(), value);
     }
 }
+
+impl<T> crate::contract_def::HasEvents for Variable<T> {
+    fn events() -> Vec<crate::contract_def::Event> {
+        vec![]
+    }
+}

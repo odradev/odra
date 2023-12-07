@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{contract_def::HasEvents, prelude::*};
 use core::cell::OnceCell;
 
 use crate::call_def::CallDef;
@@ -66,5 +66,11 @@ impl<T: Module> Deref for ModuleWrapper<T> {
 impl<T: Module> DerefMut for ModuleWrapper<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.module_mut()
+    }
+}
+
+impl<T: HasEvents> HasEvents for ModuleWrapper<T> {
+    fn events() -> Vec<crate::contract_def::Event> {
+        T::events()
     }
 }

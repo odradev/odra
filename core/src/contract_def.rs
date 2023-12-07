@@ -1,7 +1,11 @@
 //! Encapsulates a set of structures that abstract out a smart contract layout.
 
-use crate::prelude::*;
-use casper_types::CLType;
+use crate::{prelude::*, Address};
+use casper_event_standard::EventInstance;
+use casper_types::{
+    bytesrepr::{FromBytes, ToBytes},
+    CLType, Key, PublicKey, URef, U128, U256, U512
+};
 
 /// Contract's entrypoint.
 #[derive(Debug, Clone)]
@@ -10,11 +14,12 @@ pub struct Entrypoint {
     pub args: Vec<Argument>,
     pub is_mut: bool,
     pub ret: CLType,
-    pub ty: EntrypointType
+    pub ty: EntrypointType,
+    pub attributes: Vec<EntrypointAttribute>
 }
 
 /// Defines an argument passed to an entrypoint.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Argument {
     pub ident: String,
     pub ty: CLType,
@@ -22,29 +27,8 @@ pub struct Argument {
     pub is_slice: bool
 }
 
-/// Defines an entrypoint type.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum EntrypointType {
-    /// A special entrypoint that can be called just once on the contract initialization.
-    Constructor { non_reentrant: bool },
-    /// A regular entrypoint.
-    Public { non_reentrant: bool },
-    /// A payable entrypoint.
-    PublicPayable { non_reentrant: bool }
-}
-
-impl EntrypointType {
-    pub fn is_non_reentrant(&self) -> bool {
-        match self {
-            EntrypointType::Constructor { non_reentrant } => *non_reentrant,
-            EntrypointType::Public { non_reentrant } => *non_reentrant,
-            EntrypointType::PublicPayable { non_reentrant } => *non_reentrant
-        }
-    }
-}
-
 /// Defines an event.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Event {
     pub ident: String,
     pub args: Vec<Argument>
@@ -56,6 +40,26 @@ impl Event {
     }
 }
 
+/// Defines an entrypoint type.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum EntrypointType {
+    /// A special entrypoint that can be called just once on the contract initialization.
+    Constructor,
+    /// A regular entrypoint.
+    Public
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum EntrypointAttribute {
+    NonReentrant,
+    Payable
+}
+
+/// A trait that should be implemented by each smart contract to allow the backend.
+pub trait HasIdent {
+    fn ident() -> String;
+}
+
 /// A trait that should be implemented by each smart contract to allow the backend
 /// to generate blockchain-specific code.
 pub trait HasEntrypoints {
@@ -64,111 +68,112 @@ pub trait HasEntrypoints {
 }
 
 /// A trait that should be implemented by each smart contract to allow the backend.
-pub trait HasIdent {
-    fn ident() -> String;
-}
-/// A trait that should be implemented by each smart contract to allow the backend.
 pub trait HasEvents {
     fn events() -> Vec<Event>;
 }
 
-pub trait Node {
-    const IS_LEAF: bool = true;
-    const COUNT: u32;
+#[derive(Debug, Clone)]
+pub struct ContractBlueprint {
+    pub name: String,
+    pub events: Vec<Event>,
+    pub entrypoints: Vec<Entrypoint>
+}
 
-    fn __keys() -> Vec<String> {
-        Vec::new()
+impl ContractBlueprint {
+    pub fn new<T: HasIdent + HasEvents + HasEntrypoints>() -> Self {
+        Self {
+            name: T::ident(),
+            events: T::events(),
+            entrypoints: T::entrypoints()
+        }
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct ContractBlueprint {
-    pub keys: Vec<String>,
-    pub keys_count: u32,
-    pub events: Vec<Event>,
-    pub entrypoints: Vec<Entrypoint>,
-    pub fqn: &'static str
+pub trait IntoEvent {
+    fn into_event() -> Event;
 }
 
-#[derive(Debug, Clone)]
-pub struct ContractBlueprint2 {
-    pub name: String
+impl<T: EventInstance> IntoEvent for T {
+    fn into_event() -> Event {
+        let ident = <T as EventInstance>::name();
+        let schema = <T as EventInstance>::schema();
+        let args = schema
+            .to_vec()
+            .iter()
+            .map(|(name, ty)| Argument {
+                ident: name.clone(),
+                ty: ty.clone().downcast(),
+                is_ref: false,
+                is_slice: false
+            })
+            .collect::<Vec<_>>();
+        Event { ident, args }
+    }
 }
 
-#[cfg(test)]
-#[allow(dead_code)]
-mod test {
-    use super::Node;
-    use crate::prelude::{string::String, vec, vec::Vec};
-    use core::marker::PhantomData;
-
-    #[test]
-    fn key_collection_works() {
-        struct Variable<T> {
-            ty: PhantomData<T>
-        }
-
-        impl<T> Node for Variable<T> {
-            const COUNT: u32 = 1;
-        }
-
-        struct Contract {
-            pub value: Variable<u32>,
-            pub submodule: Submodule
-        }
-
-        impl Node for Contract {
-            const COUNT: u32 = <Variable<u32> as Node>::COUNT + <Submodule as Node>::COUNT;
-            const IS_LEAF: bool = false;
-
-            fn __keys() -> Vec<String> {
-                let mut result = vec![];
-                // The same would be generated by the [odra::module] macro.
-                if <Variable<u32> as Node>::IS_LEAF {
-                    result.push(String::from("value"));
-                } else {
-                    result.extend(
-                        <Variable<u32> as Node>::__keys()
-                            .iter()
-                            .map(|k| odra_utils::create_key("value", k))
-                    )
-                }
-                if <Submodule as Node>::IS_LEAF {
-                    result.push(String::from("submodule"));
-                } else {
-                    result.extend(
-                        <Submodule as Node>::__keys()
-                            .iter()
-                            .map(|k| odra_utils::create_key("submodule", k))
-                    )
-                }
-                result
+macro_rules! impl_has_events {
+    ($($t:ty),*) => {
+        impl HasEvents for () {
+            fn events() -> Vec<Event> {
+                vec![]
             }
         }
 
-        struct Submodule {
-            abc: Variable<u32>
-        }
-
-        impl Node for Submodule {
-            const COUNT: u32 = <Variable<u32> as Node>::COUNT;
-            const IS_LEAF: bool = false;
-
-            fn __keys() -> Vec<String> {
-                let mut result = vec![];
-                if <Variable<u32> as Node>::IS_LEAF {
-                    result.push(String::from("abc"));
-                } else {
-                    result.extend(
-                        <Variable<u32> as Node>::__keys()
-                            .iter()
-                            .map(|k| odra_utils::create_key("abc", k))
-                    )
+        $(
+            impl HasEvents for $t {
+                fn events() -> Vec<Event> {
+                    vec![]
                 }
-                result
             }
-        }
+        )*
+    };
+}
 
-        assert_eq!(Contract::__keys(), ["value", "submodule#abc"])
+impl_has_events!(
+    u8, u16, u32, u64, i8, i16, i32, i64, U128, U256, U512, Address, String, bool, Key, URef,
+    PublicKey
+);
+
+impl<T: ToBytes + FromBytes> HasEvents for Option<T> {
+    fn events() -> Vec<Event> {
+        vec![]
+    }
+}
+
+impl<T: ToBytes + FromBytes, E: ToBytes + FromBytes> HasEvents for Result<T, E> {
+    fn events() -> Vec<Event> {
+        vec![]
+    }
+}
+
+impl<T: ToBytes + FromBytes, E: ToBytes + FromBytes> HasEvents for BTreeMap<T, E> {
+    fn events() -> Vec<Event> {
+        vec![]
+    }
+}
+
+impl<T: ToBytes + FromBytes> HasEvents for Vec<T> {
+    fn events() -> Vec<Event> {
+        vec![]
+    }
+}
+
+impl<T1: ToBytes + FromBytes> HasEvents for (T1,) {
+    fn events() -> Vec<Event> {
+        vec![]
+    }
+}
+
+impl<T1: ToBytes + FromBytes, T2: ToBytes + FromBytes> HasEvents for (T1, T2) {
+    fn events() -> Vec<Event> {
+        vec![]
+    }
+}
+
+impl<T1: ToBytes + FromBytes, T2: ToBytes + FromBytes, T3: ToBytes + FromBytes> HasEvents
+    for (T1, T2, T3)
+{
+    fn events() -> Vec<Event> {
+        vec![]
     }
 }

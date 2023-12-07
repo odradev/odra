@@ -1,5 +1,6 @@
 use quote::{quote, ToTokens};
 
+#[derive(Default)]
 pub struct UsePreludeItem;
 
 impl ToTokens for UsePreludeItem {
@@ -10,6 +11,7 @@ impl ToTokens for UsePreludeItem {
     }
 }
 
+#[derive(Default)]
 pub struct UseSuperItem;
 
 impl ToTokens for UseSuperItem {

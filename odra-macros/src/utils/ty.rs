@@ -95,3 +95,51 @@ pub fn cl_typed() -> syn::Type {
 pub fn runtime_args() -> syn::Type {
     parse_quote!(odra::RuntimeArgs)
 }
+
+pub fn has_events() -> syn::Type {
+    parse_quote!(odra::contract_def::HasEvents)
+}
+
+pub fn has_entrypoints() -> syn::Type {
+    parse_quote!(odra::contract_def::HasEntrypoints)
+}
+
+pub fn has_ident() -> syn::Type {
+    parse_quote!(odra::contract_def::HasIdent)
+}
+
+pub fn event() -> syn::Type {
+    parse_quote!(odra::contract_def::Event)
+}
+
+pub fn contract_blueprint() -> syn::Type {
+    parse_quote!(odra::contract_def::ContractBlueprint)
+}
+
+pub fn entry_point_def() -> syn::Type {
+    parse_quote!(odra::contract_def::Entrypoint)
+}
+
+pub fn entry_point_def_attr_payable() -> syn::Type {
+    parse_quote!(odra::contract_def::EntrypointAttribute::Payable)
+}
+
+pub fn entry_point_def_attr_non_reentrant() -> syn::Type {
+    parse_quote!(odra::contract_def::EntrypointAttribute::NonReentrant)
+}
+
+pub fn entry_point_def_ty_constructor() -> syn::Type {
+    parse_quote!(odra::contract_def::EntrypointType::Constructor)
+}
+
+pub fn entry_point_def_ty_public() -> syn::Type {
+    parse_quote!(odra::contract_def::EntrypointType::Public)
+}
+
+pub fn entry_point_def_arg() -> syn::Type {
+    parse_quote!(odra::contract_def::Argument)
+}
+
+pub fn string() -> syn::Type {
+    parse_quote!(String)
+}

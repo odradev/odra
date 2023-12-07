@@ -17,6 +17,12 @@ pub struct Counter {
     counts: Mapping<u8, u32>
 }
 
+impl odra::contract_def::HasEvents for Counter {
+    fn events() -> Vec<odra::contract_def::Event> {
+        vec![]
+    }
+}
+
 impl Counter {
     pub fn get_count(&self, index: u8) -> u32 {
         match index {

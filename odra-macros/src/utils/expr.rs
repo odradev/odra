@@ -51,8 +51,9 @@ pub fn new_parameter(name: String, ty: syn::Type) -> syn::Expr {
 }
 
 pub fn as_cl_type(ty: &syn::Type) -> syn::Expr {
+    let ty = super::syn::unreferenced_ty(ty);
     let ty_cl_typed = super::ty::cl_typed();
-    let ty = super::syn::as_casted_ty_stream(ty, ty_cl_typed);
+    let ty = super::syn::as_casted_ty_stream(&ty, ty_cl_typed);
     parse_quote!(#ty::cl_type())
 }
 
@@ -68,4 +69,21 @@ pub fn new_schemas() -> syn::Expr {
 
 pub fn new_wasm_contract_env() -> syn::Expr {
     parse_quote!(odra::odra_casper_wasm_env::WasmContractEnv::new_env())
+}
+
+pub fn into_event(ty: &syn::Type) -> syn::Expr {
+    parse_quote!(<#ty as odra::contract_def::IntoEvent>::into_event())
+}
+
+pub fn events(ty: &syn::Type) -> syn::Expr {
+    let has_events_ty = super::ty::has_events();
+    parse_quote!(<#ty as #has_events_ty>::events())
+}
+pub fn new_blueprint(ident: &syn::Ident) -> syn::Expr {
+    let ty = super::ty::contract_blueprint();
+    parse_quote!(#ty::new::<#ident>())
+}
+
+pub fn string_from(string: String) -> syn::Expr {
+    parse_quote!(String::from(#string))
 }

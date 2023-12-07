@@ -1,26 +1,35 @@
+use std::collections::HashSet;
+
 use crate::utils;
+use config::ConfigItem;
 use proc_macro2::Ident;
-use quote::format_ident;
+use quote::{format_ident, ToTokens};
 use syn::{parse_quote, spanned::Spanned};
 
 use self::attr::OdraAttribute;
 
 mod attr;
+mod config;
 
 const CONSTRUCTOR_NAME: &str = "init";
 
 macro_rules! try_parse {
     ($from:path => $to:ident) => {
         pub struct $to {
-            code: $from
+            code: $from,
+            #[allow(dead_code)]
+            config: ConfigItem
         }
 
-        impl TryFrom<&proc_macro2::TokenStream> for $to {
+        impl TryFrom<(&proc_macro2::TokenStream, &proc_macro2::TokenStream)> for $to {
             type Error = syn::Error;
 
-            fn try_from(stream: &proc_macro2::TokenStream) -> Result<Self, Self::Error> {
+            fn try_from(
+                stream: (&proc_macro2::TokenStream, &proc_macro2::TokenStream)
+            ) -> Result<Self, Self::Error> {
                 Ok(Self {
-                    code: syn::parse2::<$from>(stream.clone())?
+                    code: syn::parse2::<$from>(stream.1.clone())?,
+                    config: syn::parse2::<ConfigItem>(stream.0.clone())?
                 })
             }
         }
@@ -40,6 +49,10 @@ impl StructIR {
 
     pub fn module_ident(&self) -> syn::Ident {
         utils::syn::ident_from_struct(&self.code)
+    }
+
+    pub fn module_str(&self) -> String {
+        self.module_ident().to_string()
     }
 
     pub fn module_mod_ident(&self) -> syn::Ident {
@@ -71,6 +84,47 @@ impl StructIR {
                 })
             })
             .collect()
+    }
+
+    pub fn events(&self) -> Vec<syn::Type> {
+        if let ConfigItem::Module(cfg) = &self.config {
+            cfg.events.iter().map(|ev| ev.ty.clone()).collect()
+        } else {
+            vec![]
+        }
+    }
+
+    pub fn unique_fields_ty(&self) -> Result<Vec<syn::Type>, syn::Error> {
+        // A hack to sort types by their string representation. Otherwise, we would get an unstable
+        // order of types in the generated code and tests would fail.
+        #[derive(Eq, PartialEq)]
+        struct OrdType(syn::Type);
+
+        impl PartialOrd for OrdType {
+            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+                Some(self.cmp(other))
+            }
+        }
+
+        impl Ord for OrdType {
+            fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+                self.0
+                    .to_token_stream()
+                    .to_string()
+                    .cmp(&other.0.to_token_stream().to_string())
+            }
+        }
+        let fields = utils::syn::struct_fields(&self.code)?;
+        let set = HashSet::<syn::Type>::from_iter(
+            fields
+                .iter()
+                .filter(|(i, _)| i != &utils::ident::env())
+                .map(|(_, ty)| ty.clone())
+        );
+        let mut fields = set.into_iter().map(OrdType).collect::<Vec<_>>();
+        fields.sort();
+
+        Ok(fields.into_iter().map(|i| i.0).collect())
     }
 
     fn validate_ty(ty: &syn::Type) -> Result<(), syn::Error> {
@@ -106,6 +160,7 @@ pub struct EnumeratedTypedField {
 
 try_parse!(syn::ItemImpl => ModuleIR);
 
+// TODO: change the name
 impl ModuleIR {
     pub fn self_code(&self) -> syn::ItemImpl {
         let mut code = self.code.clone();
@@ -144,6 +199,14 @@ impl ModuleIR {
         let module_ident = self.module_ident()?;
         Ok(Ident::new(
             &format!("{}ContractRef", module_ident),
+            module_ident.span()
+        ))
+    }
+
+    pub fn schema_mod_ident(&self) -> Result<Ident, syn::Error> {
+        let module_ident = self.snake_cased_module_ident()?;
+        Ok(Ident::new(
+            &format!("__{}_schema", module_ident),
             module_ident.span()
         ))
     }
@@ -284,6 +347,16 @@ impl FnIR {
         utils::syn::function_typed_args(&self.code)
     }
 
+    pub fn raw_typed_args(&self) -> Vec<syn::PatType> {
+        self.typed_args()
+            .into_iter()
+            .map(|pat_ty| syn::PatType {
+                ty: Box::new(utils::syn::unreferenced_ty(&pat_ty.ty)),
+                ..pat_ty
+            })
+            .collect()
+    }
+
     pub fn is_mut(&self) -> bool {
         let receiver = utils::syn::receiver_arg(&self.code);
         receiver.map(|r| r.mutability.is_some()).unwrap_or_default()
@@ -317,6 +390,16 @@ impl FnArgIR {
         }
     }
 
+    pub fn name_str(&self) -> Result<String, syn::Error> {
+        self.name().map(|i| i.to_string())
+    }
+
+    pub fn ty(&self) -> Result<syn::Type, syn::Error> {
+        match &self.code {
+            syn::FnArg::Typed(syn::PatType { box ty, .. }) => Ok(ty.clone()),
+            _ => Err(syn::Error::new_spanned(&self.code, "Unnamed arg"))
+        }
+    }
     pub fn name_and_ty(&self) -> Result<(String, syn::Type), syn::Error> {
         match &self.code {
             syn::FnArg::Typed(syn::PatType {
@@ -325,6 +408,13 @@ impl FnArgIR {
                 ..
             }) => Ok((pat.ident.to_string(), ty.clone())),
             _ => Err(syn::Error::new_spanned(&self.code, "Unnamed arg"))
+        }
+    }
+
+    pub fn is_ref(&self) -> bool {
+        match &self.code {
+            syn::FnArg::Typed(syn::PatType { box ty, .. }) => utils::syn::is_ref(ty),
+            _ => false
         }
     }
 }

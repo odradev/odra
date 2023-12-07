@@ -13,7 +13,7 @@ repository = { workspace = true }
 [dependencies]
 proc-macro2 = "1.0.69"
 quote = "1.0.33"
-syn = { version = "2.0.29", features = ["full"] }
+syn = { version = "2.0.29", features = ["full", "extra-traits"] }
 syn_derive = "0.1.8"
 convert_case = { version = "0.5.0" }
 derive-try-from ={ path = "../try-from-macro" }

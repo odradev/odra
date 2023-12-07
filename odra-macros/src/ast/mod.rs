@@ -1,8 +1,12 @@
+mod blueprint;
 mod deployer_item;
 mod deployer_utils;
+mod entrypoints_item;
+mod events_item;
 mod exec_parts;
 mod fn_utils;
 mod host_ref_item;
+mod ident_item;
 mod module_item;
 mod parts_utils;
 mod ref_item;
@@ -11,7 +15,11 @@ mod test_parts;
 mod wasm_parts;
 mod wasm_parts_utils;
 
+pub(crate) use blueprint::BlueprintItem;
+pub(crate) use entrypoints_item::HasEntrypointsImplItem;
+pub(crate) use events_item::HasEventsImplItem;
 pub(crate) use exec_parts::{ExecPartsItem, ExecPartsReexportItem};
+pub(crate) use ident_item::HasIdentImplItem;
 pub(crate) use module_item::ModuleModItem;
 pub(crate) use ref_item::RefItem;
 pub(crate) use test_parts::{TestPartsItem, TestPartsReexportItem};
