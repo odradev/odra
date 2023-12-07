@@ -87,3 +87,13 @@ pub fn new_blueprint(ident: &syn::Ident) -> syn::Expr {
 pub fn string_from(string: String) -> syn::Expr {
     parse_quote!(String::from(#string))
 }
+
+pub trait IntoExpr {
+    fn into_expr(self) -> syn::Expr;
+}
+
+impl IntoExpr for syn::Ident {
+    fn into_expr(self) -> syn::Expr {
+        parse_quote!(#self)
+    }
+}

@@ -7,7 +7,6 @@ use odra::ModuleWrapper;
 
 #[odra::module]
 pub struct CounterPack {
-    env: Rc<ContractEnv>,
     counter0: ModuleWrapper<Counter>,
     counter1: ModuleWrapper<Counter>,
     counter2: ModuleWrapper<Counter>,

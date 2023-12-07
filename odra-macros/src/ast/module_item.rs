@@ -3,7 +3,7 @@ use syn::parse_quote;
 
 use crate::{
     ir::{EnumeratedTypedField, StructIR},
-    utils
+    utils::{self, expr::IntoExpr}
 };
 
 use super::parts_utils::UseSuperItem;
@@ -80,11 +80,11 @@ impl TryFrom<&'_ StructIR> for NewModuleFnItem {
     type Error = syn::Error;
 
     fn try_from(ir: &'_ StructIR) -> Result<Self, Self::Error> {
-        let ty_contract_env = utils::ty::contract_env();
+        let ty_contract_env = utils::ty::rc_contract_env();
         let env = utils::ident::env();
         let fields = ir.typed_fields()?;
         Ok(Self {
-            sig: parse_quote!(fn new(#env: Rc<#ty_contract_env>) -> Self),
+            sig: parse_quote!(fn new(#env: #ty_contract_env) -> Self),
             braces: Default::default(),
             fields: fields.iter().map(Into::into).collect(),
             instance: ir.try_into()?
@@ -119,17 +119,26 @@ struct ModuleInstanceItem {
     #[syn(braced)]
     braces: syn::token::Brace,
     #[syn(in = braces)]
-    values: syn::punctuated::Punctuated<syn::Ident, syn::Token![,]>
+    values: syn::punctuated::Punctuated<ValueInitItem, syn::Token![,]>
 }
 
 impl TryFrom<&'_ StructIR> for ModuleInstanceItem {
     type Error = syn::Error;
 
     fn try_from(ir: &'_ StructIR) -> Result<Self, Self::Error> {
+        let ident_underscored_env = utils::ident::underscored_env();
+        let ident_env = utils::ident::env();
+        let env_init = ValueInitItem::with_init(ident_underscored_env, ident_env.into_expr());
+
         Ok(Self {
             self_token: Default::default(),
             braces: Default::default(),
-            values: ir.field_names()?.into_iter().collect()
+            values: ir
+                .field_names()?
+                .into_iter()
+                .map(ValueInitItem::new)
+                .chain(vec![env_init])
+                .collect()
         })
     }
 }
@@ -138,14 +147,39 @@ struct EnvFnItem;
 
 impl ToTokens for EnvFnItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let ty_contract_env = utils::ty::contract_env();
-        let m_env = utils::member::env();
+        let ty_contract_env = utils::ty::rc_contract_env();
+        let m_env = utils::member::underscored_env();
 
         tokens.extend(quote::quote!(
-            fn env(&self) -> Rc<#ty_contract_env> {
+            fn env(&self) -> #ty_contract_env {
                 #m_env.clone()
             }
         ))
+    }
+}
+
+#[derive(syn_derive::ToTokens)]
+struct ValueInitItem {
+    ident: syn::Ident,
+    colon_token: Option<syn::Token![:]>,
+    init_expr: Option<syn::Expr>
+}
+
+impl ValueInitItem {
+    fn new(ident: syn::Ident) -> Self {
+        Self {
+            ident,
+            colon_token: None,
+            init_expr: None
+        }
+    }
+
+    fn with_init(ident: syn::Ident, init_expr: syn::Expr) -> Self {
+        Self {
+            ident,
+            colon_token: Some(Default::default()),
+            init_expr: Some(init_expr)
+        }
     }
 }
 
@@ -171,17 +205,17 @@ mod test {
                         let counters = Variable::new(Rc::clone(&env), 3u8);
                         let counters_map = Mapping::new(Rc::clone(&env), 4u8);
                         Self {
-                            env,
                             counter0,
                             counter1,
                             counter2,
                             counters,
-                            counters_map
+                            counters_map,
+                            __env: env
                         }
                     }
 
                     fn env(&self) -> Rc<odra::ContractEnv> {
-                        self.env.clone()
+                        self.__env.clone()
                     }
                 }
             }

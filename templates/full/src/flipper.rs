@@ -5,7 +5,6 @@ use odra::{Module, Variable, ContractEnv};
 /// or/and another modules.
 #[odra::module]
 pub struct Flipper {
-    env: Rc<ContractEnv>,
     /// The module itself does not store the value,
     /// it's a proxy that writes/reads value to/from the host.
     value: Variable<bool>,

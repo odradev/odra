@@ -105,6 +105,10 @@ pub fn visibility_pub() -> syn::Visibility {
     parse_quote!(pub)
 }
 
+pub fn visibility_private() -> syn::Visibility {
+    parse_quote!()
+}
+
 pub fn last_segment_ident(ty: &syn::Type) -> Result<syn::Ident, syn::Error> {
     match ty {
         syn::Type::Path(type_path) => type_path

@@ -8,6 +8,10 @@ pub fn contract_env() -> syn::Type {
     parse_quote!(odra::ContractEnv)
 }
 
+pub fn rc_contract_env() -> syn::Type {
+    parse_quote!(Rc<odra::ContractEnv>)
+}
+
 pub fn from_bytes() -> syn::Type {
     parse_quote!(odra::FromBytes)
 }
