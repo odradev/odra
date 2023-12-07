@@ -1,9 +1,5 @@
 use syn::parse_quote;
 
-pub fn from_ident(ident: &syn::Ident) -> syn::Type {
-    parse_quote!(#ident)
-}
-
 pub fn address() -> syn::Type {
     parse_quote!(odra::Address)
 }
@@ -108,6 +104,10 @@ pub fn has_entrypoints() -> syn::Type {
     parse_quote!(odra::contract_def::HasEntrypoints)
 }
 
+pub fn has_ident() -> syn::Type {
+    parse_quote!(odra::contract_def::HasIdent)
+}
+
 pub fn event() -> syn::Type {
     parse_quote!(odra::contract_def::Event)
 }
@@ -138,4 +138,8 @@ pub fn entry_point_def_ty_public() -> syn::Type {
 
 pub fn entry_point_def_arg() -> syn::Type {
     parse_quote!(odra::contract_def::Argument)
+}
+
+pub fn string() -> syn::Type {
+    parse_quote!(String)
 }

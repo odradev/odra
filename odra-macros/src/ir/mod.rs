@@ -51,6 +51,10 @@ impl StructIR {
         utils::syn::ident_from_struct(&self.code)
     }
 
+    pub fn module_str(&self) -> String {
+        self.module_ident().to_string()
+    }
+
     pub fn module_mod_ident(&self) -> syn::Ident {
         format_ident!(
             "__{}_module",

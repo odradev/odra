@@ -55,6 +55,11 @@ pub enum EntrypointAttribute {
     Payable
 }
 
+/// A trait that should be implemented by each smart contract to allow the backend.
+pub trait HasIdent {
+    fn ident() -> String;
+}
+
 /// A trait that should be implemented by each smart contract to allow the backend
 /// to generate blockchain-specific code.
 pub trait HasEntrypoints {
@@ -69,9 +74,19 @@ pub trait HasEvents {
 
 #[derive(Debug, Clone)]
 pub struct ContractBlueprint {
-    pub name: &'static str,
+    pub name: String,
     pub events: Vec<Event>,
     pub entrypoints: Vec<Entrypoint>
+}
+
+impl ContractBlueprint {
+    pub fn new<T: HasIdent + HasEvents + HasEntrypoints>() -> Self {
+        Self {
+            name: T::ident(),
+            events: T::events(),
+            entrypoints: T::entrypoints()
+        }
+    }
 }
 
 pub trait IntoEvent {

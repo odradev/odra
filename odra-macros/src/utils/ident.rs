@@ -72,10 +72,10 @@ pub fn module_schema() -> syn::Ident {
     format_ident!("module_schema")
 }
 
-pub fn name() -> syn::Ident {
-    format_ident!("name")
-}
-
 pub fn entrypoints() -> syn::Ident {
     format_ident!("entrypoints")
+}
+
+pub fn ident() -> syn::Ident {
+    format_ident!("ident")
 }

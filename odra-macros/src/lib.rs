@@ -50,6 +50,7 @@ struct ModuleStruct {
     #[expr(item.self_code().clone())]
     self_code: syn::ItemStruct,
     mod_item: ModuleModItem,
+    has_ident_item: HasIdentImplItem,
     has_events_item: HasEventsImplItem
 }
 
