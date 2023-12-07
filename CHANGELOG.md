@@ -3,6 +3,20 @@
 Changelog for `odra`.
 
 ## [0.8.0] - 2024-XX-XX
+- Removed `#[odra::init]` macro - now only one method can be a constructor and it has to be named `init` and env needs to be passed as a first parameter.
+- Replaced `contract_env::` with `self.env.` in contract context. For example, instead of `contract_env::caller()` use `self.env.caller()`.
+- Removed `emit()` method from events. Use `self.env.emit_event(event)` instead.
+- It is no longer possible to put a Mapping inside of a Mapping. Use tuple keys instead, for example, instead of
+```rust
+allowances: Mapping<Address, Mapping<Address, U256>>
+```
+use
+```rust
+allowances: Mapping<(Address, Address), U256>
+```
+- `Ref` has been divided into two: `HostRef` and `ContractRef` depending on the context.
+- Removed `assert_events!` macro. Use `env.emitted_event` and similar methods instead.
+- Storage keys are constructed differently, keep that in mind when querying the storage outside the contract.
 
 ## [0.7.0] - 2023-11-07
 ## Changed

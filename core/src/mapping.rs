@@ -1,11 +1,13 @@
+use crate::arithmetic::{OverflowingAdd, OverflowingSub};
 use crate::contract_def::HasEvents;
 use crate::prelude::*;
 use crate::{
     module::{Module, ModuleWrapper},
     variable::Variable,
-    ContractEnv
+    ContractEnv, UnwrapOrRevert
 };
 use crate::{CLTyped, FromBytes, ToBytes};
+use core::fmt::Debug;
 
 pub struct Mapping<K, V> {
     parent_env: Rc<ContractEnv>,
@@ -50,6 +52,38 @@ impl<K: ToBytes, V: Module> Mapping<K, V> {
     pub fn module(&self, key: &K) -> ModuleWrapper<V> {
         let env = self.env_for_key(key);
         ModuleWrapper::new(Rc::new(env), self.index)
+    }
+}
+
+impl<K: ToBytes, V: ToBytes + FromBytes + CLTyped + OverflowingAdd + Default> Mapping<K, V> {
+    /// Utility function that gets the current value and adds the passed `value`
+    /// and sets the new value to the storage.
+    ///
+    /// If the operation fails due to overflow, the currently executing contract reverts.
+    pub fn add(&mut self, key: &K, value: V) {
+        let current_value = self.get_or_default(key);
+        let new_value = current_value
+            .overflowing_add(value)
+            .unwrap_or_revert(&self.env_for_key(key));
+        self.set(key, new_value);
+    }
+}
+
+impl<
+        K: ToBytes,
+        V: ToBytes + FromBytes + CLTyped + OverflowingSub + Default + Debug + PartialOrd
+    > Mapping<K, V>
+{
+    /// Utility function that gets the current value and subtracts the passed `value`
+    /// and sets the new value to the storage.
+    ///
+    /// If the operation fails due to overflow, the currently executing contract reverts.
+    pub fn subtract(&mut self, key: &K, value: V) {
+        let current_value = self.get_or_default(key);
+        let new_value = current_value
+            .overflowing_sub(value)
+            .unwrap_or_revert(&self.env_for_key(key));
+        self.set(key, new_value);
     }
 }
 

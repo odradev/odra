@@ -1,6 +1,6 @@
 [[contracts]]
-name = "erc20"
-fqn = "odra_modules::erc20::Erc20"
+name = "Erc20"
+fqn = "odra_modules::Erc20"
 #
 #[[contracts]]
 #name = "erc721_token"
