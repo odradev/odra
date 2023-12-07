@@ -24,7 +24,7 @@ pub fn mock_module() -> ModuleIR {
             }
 
             #[odra(non_reentrant)]
-            pub fn approve(&mut self, to: Address, amount: U256) {
+            pub fn approve(&mut self, to: &Address, amount: &U256) {
                 self.env.emit_event(Approval {
                     owner: self.env.caller(),
                     spender: to,

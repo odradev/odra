@@ -63,7 +63,7 @@ fn call_def_with_amount(fun: &FnIR) -> syn::Expr {
 
 fn function_signature(fun: &FnIR) -> syn::Signature {
     let fun_name = fun.name();
-    let args = fun.typed_args();
+    let args = fun.raw_typed_args();
     let return_type = fun.return_type();
     let mutability = fun.is_mut().then(|| quote::quote!(mut));
 
@@ -72,7 +72,7 @@ fn function_signature(fun: &FnIR) -> syn::Signature {
 
 fn try_function_signature(fun: &FnIR) -> syn::Signature {
     let fun_name = fun.try_name();
-    let args = fun.typed_args();
+    let args = fun.raw_typed_args();
     let return_type = fun.try_return_type();
     let mutability = fun.is_mut().then(|| quote::quote!(mut));
 

@@ -343,6 +343,16 @@ impl FnIR {
         utils::syn::function_typed_args(&self.code)
     }
 
+    pub fn raw_typed_args(&self) -> Vec<syn::PatType> {
+        self.typed_args()
+            .into_iter()
+            .map(|pat_ty| syn::PatType {
+                ty: Box::new(utils::syn::unreferenced_ty(&pat_ty.ty)),
+                ..pat_ty
+            })
+            .collect()
+    }
+
     pub fn is_mut(&self) -> bool {
         let receiver = utils::syn::receiver_arg(&self.code);
         receiver.map(|r| r.mutability.is_some()).unwrap_or_default()
@@ -394,6 +404,13 @@ impl FnArgIR {
                 ..
             }) => Ok((pat.ident.to_string(), ty.clone())),
             _ => Err(syn::Error::new_spanned(&self.code, "Unnamed arg"))
+        }
+    }
+
+    pub fn is_ref(&self) -> bool {
+        match &self.code {
+            syn::FnArg::Typed(syn::PatType { box ty, .. }) => utils::syn::is_ref(ty),
+            _ => false
         }
     }
 }

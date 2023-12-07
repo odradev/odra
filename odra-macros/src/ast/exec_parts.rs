@@ -99,7 +99,12 @@ impl TryFrom<(&'_ ModuleIR, &'_ FnIR)> for ExecFunctionItem {
             .then(|| utils::stmt::new_execution_env(&exec_env_ident, &env_rc_ident));
         let contract_ident = utils::ident::contract();
         let module_ident = module.module_ident()?;
-        let fn_args = func.arg_names();
+        let fn_args = func.named_args().iter().map(|arg| {
+            let ident = arg.name()?;
+            let ref_token = arg.is_ref().then(|| quote::quote!(&));
+            let expr: syn::Expr = parse_quote!(#ref_token #ident);
+            Ok(expr)
+        }).collect::<Result<syn::punctuated::Punctuated<syn::Expr, syn::token::Comma>, syn::Error>>()?;
 
         let args = func
             .arg_names()
@@ -124,7 +129,7 @@ impl TryFrom<(&'_ ModuleIR, &'_ FnIR)> for ExecFunctionItem {
             handle_attached_value_stmt: func.is_payable().then(ExecEnvStmt::handle_attached_value),
             args,
             init_contract_stmt,
-            call_contract_stmt: parse_quote!(let #result_ident = #contract_ident.#fn_ident(#(#fn_args),*);),
+            call_contract_stmt: parse_quote!(let #result_ident = #contract_ident.#fn_ident(#fn_args);),
             clear_attached_value_stmt: func.is_payable().then(ExecEnvStmt::clear_attached_value),
             non_reentrant_after_stmt: func
                 .is_non_reentrant()
@@ -263,7 +268,7 @@ mod test {
                     let to = exec_env.get_named_arg("to");
                     let amount = exec_env.get_named_arg("amount");
                     let mut contract = <Erc20 as odra::Module>::new(env_rc);
-                    let result = contract.approve(to, amount);
+                    let result = contract.approve(&to, &amount);
                     exec_env.non_reentrant_after();
                     return result;
                 }

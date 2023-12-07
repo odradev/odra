@@ -85,9 +85,9 @@ impl Erc20 {
         });
     }
 
-    pub fn cross_total(&self, other: Address) -> U256 {
+    pub fn cross_total(&self, other: &Address) -> U256 {
         let other_erc20 = Erc20ContractRef {
-            address: other,
+            address: *other,
             env: self.env()
         };
 
@@ -109,10 +109,10 @@ impl Erc20 {
         self.env().get_block_time()
     }
 
-    pub fn burn_and_get_paid(&mut self, amount: U256) {
+    pub fn burn_and_get_paid(&mut self, amount: &U256) {
         let caller = self.env().caller();
         let caller_balance = self.balance_of(caller);
-        if amount > caller_balance {
+        if *amount > caller_balance {
             self.env().revert(Erc20Error::InsufficientBalance)
         }
 
