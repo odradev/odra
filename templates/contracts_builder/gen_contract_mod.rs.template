@@ -1,3 +1,0 @@
-mod #contract_name { 
-    odra::#backend_name::codegen::gen_contract!(#fqn, "#contract_name");
-}

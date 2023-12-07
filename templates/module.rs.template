@@ -1,8 +1,10 @@
-use odra::Variable;
+use odra::prelude::*;
+use odra::{Module, Variable, ContractEnv};
 
 /// A #module_name module storage definition.
 #[odra::module]
 pub struct #module_name {
+    env: Rc<ContractEnv>,
     value: Variable<bool>,
 }
 
@@ -11,8 +13,7 @@ pub struct #module_name {
 impl #module_name {
     /// #module_name constructor.
     /// Initializes the contract with the value of value.
-    #[odra(init)]
-    pub fn initial_settings(&mut self) {
+    pub fn init(&mut self) {
         self.value.set(false);
     }
 
@@ -34,7 +35,8 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let mut contract = #module_nameDeployer::initial_settings();
+        let env = odra::test_env();
+        let mut contract = #module_nameDeployer::init(&env);
         assert!(!contract.get());
         contract.set(true);
         assert!(contract.get());
