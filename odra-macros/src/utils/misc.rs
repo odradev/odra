@@ -32,3 +32,12 @@ impl<T: quote::ToTokens> AsStmt for T {
         ::syn::parse_quote!(#self)
     }
 }
+pub trait AsType {
+    fn as_type(&self) -> ::syn::Type;
+}
+
+impl<T: quote::ToTokens> AsType for T {
+    fn as_type(&self) -> ::syn::Type {
+        ::syn::parse_quote!(#self)
+    }
+}

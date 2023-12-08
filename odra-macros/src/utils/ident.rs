@@ -99,3 +99,7 @@ pub fn serialized_length() -> syn::Ident {
 pub fn cl_type() -> syn::Ident {
     format_ident!("cl_type")
 }
+
+pub fn clone() -> syn::Ident {
+    format_ident!("clone")
+}

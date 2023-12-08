@@ -8,6 +8,13 @@ struct MyCounter {
     creator: Address
 }
 
+#[derive(OdraType)]
+enum MyEnum {
+    VariantA,
+    VariantB,
+    Unknown
+}
+
 #[odra::module]
 pub struct Counter {
     env: Rc<ContractEnv>,

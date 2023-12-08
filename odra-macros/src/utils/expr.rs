@@ -107,6 +107,11 @@ pub fn failable_to_bytes<T: ToTokens>(caller: &T) -> syn::Expr {
     parse_quote!(#ty::#fn_ident(&#caller)?)
 }
 
+pub fn to_bytes<T: ToTokens>(caller: &T) -> syn::Expr {
+    let fn_ident = super::ident::to_bytes();
+    parse_quote!(#caller.#fn_ident())
+}
+
 pub fn empty_vec() -> syn::Expr {
     let ty = super::ty::vec();
     parse_quote!(#ty::new())
@@ -114,4 +119,8 @@ pub fn empty_vec() -> syn::Expr {
 
 pub fn vec<T: ToTokens>(content: T) -> syn::Expr {
     parse_quote!(odra::prelude::vec![#content])
+}
+
+pub fn clone<T: ToTokens>(caller: &T) -> syn::Expr {
+    parse_quote!(#caller.clone())
 }

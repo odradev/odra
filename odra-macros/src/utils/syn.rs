@@ -101,6 +101,36 @@ pub fn struct_fields(item: &syn::ItemStruct) -> Result<Vec<(syn::Ident, syn::Typ
     }
 }
 
+pub fn derive_item_variants(item: &syn::DeriveInput) -> Result<Vec<syn::Ident>, syn::Error> {
+    match &item.data {
+        syn::Data::Struct(syn::DataStruct { fields, .. }) => fields
+            .iter()
+            .map(|f| {
+                f.ident
+                    .clone()
+                    .ok_or(syn::Error::new(f.span(), "Unnamed field"))
+            })
+            .collect::<Result<Vec<_>, _>>(),
+        syn::Data::Enum(syn::DataEnum { variants, .. }) => {
+            let is_valid = variants
+                .iter()
+                .all(|v| matches!(v.fields, syn::Fields::Unit));
+            if is_valid {
+                Ok(variants.iter().map(|v| v.ident.clone()).collect::<Vec<_>>())
+            } else {
+                Err(syn::Error::new_spanned(
+                    variants,
+                    "Expected a unit enum variant."
+                ))
+            }
+        }
+        _ => Err(syn::Error::new_spanned(
+            item,
+            "Struct with named fields expected"
+        ))
+    }
+}
+
 pub fn visibility_pub() -> syn::Visibility {
     parse_quote!(pub)
 }

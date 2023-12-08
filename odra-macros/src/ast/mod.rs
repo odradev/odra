@@ -1,4 +1,5 @@
 mod blueprint;
+mod clone;
 mod deployer_item;
 mod deployer_utils;
 mod entrypoints_item;
@@ -13,6 +14,7 @@ mod parts_utils;
 mod ref_item;
 mod ref_utils;
 mod test_parts;
+mod utils;
 mod wasm_parts;
 mod wasm_parts_utils;
 

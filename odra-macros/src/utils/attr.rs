@@ -19,3 +19,7 @@ pub fn no_mangle() -> syn::Attribute {
 pub fn inline() -> syn::Attribute {
     parse_quote!(#[inline])
 }
+
+pub fn automatically_derived() -> syn::Attribute {
+    parse_quote!(#[automatically_derived])
+}

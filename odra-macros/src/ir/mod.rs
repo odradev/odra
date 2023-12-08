@@ -434,25 +434,12 @@ impl TryFrom<&proc_macro2::TokenStream> for TypeIR {
 }
 
 impl TypeIR {
-    pub fn name(&self) -> Ident {
-        self.code.ident.clone()
+    pub fn self_code(&self) -> &syn::DeriveInput {
+        &self.code
     }
 
     pub fn fields(&self) -> Result<Vec<syn::Ident>, syn::Error> {
-        match &self.code.data {
-            Data::Struct(syn::DataStruct { fields, .. }) => fields
-                .into_iter()
-                .map(|f| {
-                    f.ident
-                        .clone()
-                        .ok_or(syn::Error::new(f.span(), "Unnamed field"))
-                })
-                .collect::<Result<Vec<_>, _>>(),
-            _ => Err(syn::Error::new(
-                self.code.span(),
-                "Struct with named fields expected"
-            ))
-        }
+        utils::syn::derive_item_variants(&self.code)
     }
 
     pub fn map_fields<F, R>(&self, func: F) -> Result<Vec<R>, syn::Error>
@@ -460,5 +447,13 @@ impl TypeIR {
         F: FnMut(&syn::Ident) -> R
     {
         Ok(self.fields()?.iter().map(func).collect::<Vec<_>>())
+    }
+
+    pub fn is_enum(&self) -> bool {
+        matches!(self.code.data, Data::Enum(_))
+    }
+
+    pub fn is_struct(&self) -> bool {
+        matches!(self.code.data, Data::Struct(_))
     }
 }

@@ -63,6 +63,16 @@ pub fn mock_struct() -> TypeIR {
     TypeIR::try_from(&ty).unwrap()
 }
 
+pub fn mock_enum() -> TypeIR {
+    let ty = quote!(
+        enum MyType {
+            A,
+            B
+        }
+    );
+    TypeIR::try_from(&ty).unwrap()
+}
+
 #[track_caller]
 pub fn assert_eq<A: ToTokens, B: ToTokens>(a: A, b: B) {
     fn parse<T: ToTokens>(e: T) -> String {

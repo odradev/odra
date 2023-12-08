@@ -108,6 +108,10 @@ pub fn cl_type_any() -> syn::Type {
     parse_quote!(odra::casper_types::CLType::Any)
 }
 
+pub fn cl_type_u32() -> syn::Type {
+    parse_quote!(odra::casper_types::CLType::U32)
+}
+
 pub fn runtime_args() -> syn::Type {
     parse_quote!(odra::RuntimeArgs)
 }
@@ -199,4 +203,12 @@ pub fn bytes_vec() -> syn::Type {
 
 pub fn usize() -> syn::Type {
     parse_quote!(usize)
+}
+
+pub fn u32() -> syn::Type {
+    parse_quote!(u32)
+}
+
+pub fn clone() -> syn::Type {
+    parse_quote!(::core::clone::Clone)
 }

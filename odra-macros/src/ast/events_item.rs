@@ -1,6 +1,7 @@
 use syn::parse_quote;
 
 use crate::ast::fn_utils::FnItem;
+use crate::ast::utils::Named;
 use crate::ir::TypeIR;
 use crate::utils::misc::AsBlock;
 use crate::{ir::StructIR, utils};
@@ -40,7 +41,7 @@ impl TryFrom<&'_ TypeIR> for HasEventsImplItem {
             impl_token: Default::default(),
             has_ident_ty: utils::ty::has_events(),
             for_token: Default::default(),
-            module_ident: ir.name(),
+            module_ident: ir.name()?,
             brace_token: Default::default(),
             events_fn: EventsFnItem::empty()
         })
