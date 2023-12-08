@@ -3,6 +3,7 @@ mod clone;
 mod deployer_item;
 mod deployer_utils;
 mod entrypoints_item;
+mod error_item;
 mod events_item;
 mod exec_parts;
 mod fn_utils;
@@ -20,6 +21,7 @@ mod wasm_parts_utils;
 
 pub(crate) use blueprint::BlueprintItem;
 pub(crate) use entrypoints_item::HasEntrypointsImplItem;
+pub(crate) use error_item::OdraErrorItem;
 pub(crate) use events_item::HasEventsImplItem;
 pub(crate) use exec_parts::{ExecPartsItem, ExecPartsReexportItem};
 pub(crate) use ident_item::HasIdentImplItem;

@@ -25,16 +25,10 @@ pub struct OnApprove {
     pub value: U256
 }
 
-#[repr(u16)]
+#[derive(OdraError)]
 pub enum Erc20Error {
     InsufficientBalance = 1,
     InsufficientAllowance = 2
-}
-
-impl From<Erc20Error> for OdraError {
-    fn from(error: Erc20Error) -> Self {
-        OdraError::user(error as u16)
-    }
 }
 
 #[odra::module(events = [OnTransfer, OnCrossTransfer, OnApprove])]

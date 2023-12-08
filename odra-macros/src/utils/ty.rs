@@ -1,3 +1,4 @@
+use quote::ToTokens;
 use syn::parse_quote;
 
 pub fn address() -> syn::Type {
@@ -211,4 +212,8 @@ pub fn u32() -> syn::Type {
 
 pub fn clone() -> syn::Type {
     parse_quote!(::core::clone::Clone)
+}
+
+pub fn from<T: ToTokens>(ty: &T) -> syn::Type {
+    parse_quote!(::core::convert::From<#ty>)
 }

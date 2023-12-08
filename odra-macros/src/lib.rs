@@ -43,6 +43,15 @@ pub fn derive_odra_type(item: TokenStream) -> TokenStream {
     span_error!(item, "Struct or Enum expected")
 }
 
+#[proc_macro_derive(OdraError)]
+pub fn derive_odra_error(item: TokenStream) -> TokenStream {
+    let item = item.into();
+    if let Ok(ir) = TypeIR::try_from(&item) {
+        return OdraErrorItem::try_from(&ir).into_code();
+    }
+    span_error!(item, "Struct or Enum expected")
+}
+
 #[derive(syn_derive::ToTokens, TryFromRef)]
 #[source(ModuleIR)]
 struct ModuleImpl {

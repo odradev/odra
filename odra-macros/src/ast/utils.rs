@@ -1,12 +1,13 @@
 use crate::ir::{StructIR, TypeIR};
 use crate::utils;
+use crate::utils::misc::AsType;
 
 #[derive(syn_derive::ToTokens)]
 pub struct ImplItem {
     impl_token: syn::Token![impl],
     ty: syn::Type,
     for_token: syn::Token![for],
-    ident: syn::Ident
+    for_ty: syn::Type
 }
 
 impl ImplItem {
@@ -15,7 +16,7 @@ impl ImplItem {
             impl_token: Default::default(),
             ty,
             for_token: Default::default(),
-            ident: named.name()?
+            for_ty: named.name()?.as_type()
         })
     }
 
@@ -33,6 +34,16 @@ impl ImplItem {
 
     pub fn clone<T: Named>(named: &T) -> Result<Self, syn::Error> {
         Self::new(named, utils::ty::clone())
+    }
+
+    pub fn from<T: Named>(named: &T, for_ty: &syn::Type) -> Result<Self, syn::Error> {
+        let ty_from = utils::ty::from(&named.name()?);
+        Ok(Self {
+            impl_token: Default::default(),
+            ty: ty_from,
+            for_token: Default::default(),
+            for_ty: for_ty.clone()
+        })
     }
 }
 

@@ -124,3 +124,8 @@ pub fn vec<T: ToTokens>(content: T) -> syn::Expr {
 pub fn clone<T: ToTokens>(caller: &T) -> syn::Expr {
     parse_quote!(#caller.clone())
 }
+
+pub fn user_error(error: &syn::Ident) -> syn::Expr {
+    let ty = super::ty::odra_error();
+    parse_quote!(#ty::user(#error as u16))
+}
