@@ -47,7 +47,7 @@ pub use unwrap_or_revert::UnwrapOrRevert;
 pub use utils::serialize;
 
 pub use casper_types;
-pub use casper_types::bytesrepr::{Bytes, FromBytes, ToBytes};
+pub use casper_types::bytesrepr::{Bytes, Error as BytesReprError, FromBytes, ToBytes};
 pub use casper_types::CLValue;
 pub use casper_types::{runtime_args, RuntimeArgs};
 pub use casper_types::{CLType, CLTyped, PublicKey, SecretKey, U128, U256, U512};

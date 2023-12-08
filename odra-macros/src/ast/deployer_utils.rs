@@ -1,4 +1,5 @@
 use super::{fn_utils, ref_utils};
+use crate::utils::misc::AsBlock;
 use crate::{
     ir::{FnIR, ModuleIR},
     utils
@@ -105,10 +106,7 @@ impl TryFrom<&'_ ModuleIR> for NewContractExpr {
         let args = module
             .constructor()
             .map(|f| fn_utils::runtime_args_block(&f, ref_utils::insert_arg_stmt))
-            .unwrap_or({
-                let args = utils::expr::new_runtime_args();
-                parse_quote!({#args})
-            });
+            .unwrap_or(utils::expr::new_runtime_args().as_block());
 
         let new_contract_expr = parse_quote!(
             #env_ident.new_contract(

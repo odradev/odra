@@ -4,7 +4,7 @@ use crate::utils;
 use config::ConfigItem;
 use proc_macro2::Ident;
 use quote::{format_ident, ToTokens};
-use syn::{parse_quote, spanned::Spanned};
+use syn::{parse_quote, spanned::Spanned, Data};
 
 use self::attr::OdraAttribute;
 
@@ -416,5 +416,49 @@ impl FnArgIR {
             syn::FnArg::Typed(syn::PatType { box ty, .. }) => utils::syn::is_ref(ty),
             _ => false
         }
+    }
+}
+
+pub struct TypeIR {
+    code: syn::DeriveInput
+}
+
+impl TryFrom<&proc_macro2::TokenStream> for TypeIR {
+    type Error = syn::Error;
+
+    fn try_from(stream: &proc_macro2::TokenStream) -> Result<Self, Self::Error> {
+        Ok(Self {
+            code: syn::parse2::<syn::DeriveInput>(stream.clone())?
+        })
+    }
+}
+
+impl TypeIR {
+    pub fn name(&self) -> Ident {
+        self.code.ident.clone()
+    }
+
+    pub fn fields(&self) -> Result<Vec<syn::Ident>, syn::Error> {
+        match &self.code.data {
+            Data::Struct(syn::DataStruct { fields, .. }) => fields
+                .into_iter()
+                .map(|f| {
+                    f.ident
+                        .clone()
+                        .ok_or(syn::Error::new(f.span(), "Unnamed field"))
+                })
+                .collect::<Result<Vec<_>, _>>(),
+            _ => Err(syn::Error::new(
+                self.code.span(),
+                "Struct with named fields expected"
+            ))
+        }
+    }
+
+    pub fn map_fields<F, R>(&self, func: F) -> Result<Vec<R>, syn::Error>
+    where
+        F: FnMut(&syn::Ident) -> R
+    {
+        Ok(self.fields()?.iter().map(func).collect::<Vec<_>>())
     }
 }

@@ -12,6 +12,14 @@ pub fn from_bytes() -> syn::Type {
     parse_quote!(odra::FromBytes)
 }
 
+pub fn to_bytes() -> syn::Type {
+    parse_quote!(odra::ToBytes)
+}
+
+pub fn bytes_err() -> syn::Type {
+    parse_quote!(odra::BytesReprError)
+}
+
 pub fn event_instance() -> syn::Type {
     parse_quote!(odra::casper_event_standard::EventInstance)
 }
@@ -92,6 +100,14 @@ pub fn cl_typed() -> syn::Type {
     parse_quote!(odra::casper_types::CLTyped)
 }
 
+pub fn cl_type() -> syn::Type {
+    parse_quote!(odra::casper_types::CLType)
+}
+
+pub fn cl_type_any() -> syn::Type {
+    parse_quote!(odra::casper_types::CLType::Any)
+}
+
 pub fn runtime_args() -> syn::Type {
     parse_quote!(odra::RuntimeArgs)
 }
@@ -141,5 +157,46 @@ pub fn entry_point_def_arg() -> syn::Type {
 }
 
 pub fn string() -> syn::Type {
-    parse_quote!(String)
+    parse_quote!(odra::prelude::string::String)
+}
+
+pub fn result(ty: &syn::Type, err_ty: &syn::Type) -> syn::Type {
+    parse_quote!(Result<#ty, #err_ty>)
+}
+
+pub fn bytes_result(ty: &syn::Type) -> syn::Type {
+    result(ty, &bytes_err())
+}
+
+pub fn self_ref() -> syn::Type {
+    parse_quote!(&self)
+}
+
+pub fn bytes_slice() -> syn::Type {
+    parse_quote!(&[u8])
+}
+
+#[allow(non_snake_case)]
+pub fn _Self() -> syn::Type {
+    parse_quote!(Self)
+}
+
+pub fn _self() -> syn::Type {
+    parse_quote!(self)
+}
+
+pub fn vec() -> syn::Type {
+    parse_quote!(odra::prelude::vec::Vec)
+}
+
+pub fn vec_of(ty: &syn::Type) -> syn::Type {
+    parse_quote!(odra::prelude::vec::Vec<#ty>)
+}
+
+pub fn bytes_vec() -> syn::Type {
+    parse_quote!(odra::prelude::vec::Vec<u8>)
+}
+
+pub fn usize() -> syn::Type {
+    parse_quote!(usize)
 }

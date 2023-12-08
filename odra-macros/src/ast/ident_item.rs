@@ -65,8 +65,8 @@ mod test {
         let module = test_utils::mock_module_definition();
         let expected = quote!(
             impl odra::contract_def::HasIdent for CounterPack {
-                fn ident() -> String {
-                    String::from("CounterPack")
+                fn ident() -> odra::prelude::string::String {
+                    odra::prelude::string::String::from("CounterPack")
                 }
             }
         );

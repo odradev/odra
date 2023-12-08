@@ -3,6 +3,11 @@ use odra::{casper_event_standard, Bytes, Module, OdraError, PublicKey};
 use odra::{prelude::*, CallDef, ModuleWrapper};
 use odra::{Address, ContractEnv, Mapping, Variable, U256, U512};
 
+struct MyType {
+    a: u32,
+    b: u32
+}
+
 #[derive(Event, Eq, PartialEq, Debug)]
 pub struct OnTransfer {
     pub from: Option<Address>,

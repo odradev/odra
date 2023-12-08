@@ -1,6 +1,6 @@
 use quote::{quote, ToTokens};
 
-use crate::ir::{ModuleIR, StructIR};
+use crate::ir::{ModuleIR, StructIR, TypeIR};
 
 pub fn mock_module() -> ModuleIR {
     let module = quote! {
@@ -51,6 +51,16 @@ pub fn mock_module_definition() -> StructIR {
     );
     let attr = quote!(events = [OnTransfer, OnApprove]);
     StructIR::try_from((&attr, &module)).unwrap()
+}
+
+pub fn mock_struct() -> TypeIR {
+    let ty = quote!(
+        struct MyType {
+            a: String,
+            b: u32
+        }
+    );
+    TypeIR::try_from(&ty).unwrap()
 }
 
 #[track_caller]

@@ -2,6 +2,8 @@ use crate::{
     ir::{FnArgIR, FnIR},
     utils
 };
+use quote::TokenStreamExt;
+use syn::{parse_quote, FnArg};
 
 pub fn runtime_args_block<F: FnMut(&FnArgIR) -> syn::Stmt>(
     fun: &FnIR,
@@ -26,4 +28,62 @@ pub fn insert_args_stmts<F: FnMut(&FnArgIR) -> syn::Stmt>(
         .iter()
         .map(insert_arg_fn)
         .collect::<Vec<_>>()
+}
+
+#[derive(syn_derive::ToTokens)]
+pub struct FnItem {
+    fn_token: syn::Token![fn],
+    fn_name: syn::Ident,
+    #[syn(parenthesized)]
+    paren_token: syn::token::Paren,
+    #[syn(in = paren_token)]
+    #[to_tokens(| tokens, f | tokens.append_all(f))]
+    args: Vec<syn::FnArg>,
+    ret_ty: syn::ReturnType,
+    block: syn::Block
+}
+
+impl FnItem {
+    pub fn new(
+        name: &syn::Ident,
+        args: Vec<syn::FnArg>,
+        ret_ty: syn::ReturnType,
+        block: syn::Block
+    ) -> Self {
+        Self {
+            fn_token: Default::default(),
+            fn_name: name.clone(),
+            paren_token: Default::default(),
+            args,
+            ret_ty,
+            block
+        }
+    }
+}
+
+#[derive(syn_derive::ToTokens)]
+pub struct SingleArgFnItem {
+    fn_item: FnItem
+}
+
+impl SingleArgFnItem {
+    pub fn new(name: &syn::Ident, arg: FnArg, ret_ty: syn::ReturnType, block: syn::Block) -> Self {
+        Self {
+            fn_item: FnItem::new(name, vec![arg], ret_ty, block)
+        }
+    }
+}
+
+#[derive(syn_derive::ToTokens)]
+pub struct SelfFnItem {
+    fn_item: SingleArgFnItem
+}
+
+impl SelfFnItem {
+    pub fn new(name: &syn::Ident, ret_ty: syn::ReturnType, block: syn::Block) -> Self {
+        let self_ty = utils::ty::self_ref();
+        Self {
+            fn_item: SingleArgFnItem::new(name, parse_quote!(#self_ty), ret_ty, block)
+        }
+    }
 }

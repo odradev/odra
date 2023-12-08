@@ -1,5 +1,8 @@
 use syn::parse_quote;
 
+use crate::ast::fn_utils::FnItem;
+use crate::ir::TypeIR;
+use crate::utils::misc::AsBlock;
 use crate::{ir::StructIR, utils};
 
 #[derive(syn_derive::ToTokens)]
@@ -29,26 +32,59 @@ impl TryFrom<&'_ StructIR> for HasEventsImplItem {
     }
 }
 
+impl TryFrom<&'_ TypeIR> for HasEventsImplItem {
+    type Error = syn::Error;
+
+    fn try_from(ir: &'_ TypeIR) -> Result<Self, Self::Error> {
+        Ok(Self {
+            impl_token: Default::default(),
+            has_ident_ty: utils::ty::has_events(),
+            for_token: Default::default(),
+            module_ident: ir.name(),
+            brace_token: Default::default(),
+            events_fn: EventsFnItem::empty()
+        })
+    }
+}
+
 #[derive(syn_derive::ToTokens)]
 pub struct EventsFnItem {
-    sig: syn::Signature,
-    block: syn::Block
+    fn_item: FnItem
+}
+
+impl EventsFnItem {
+    pub fn empty() -> Self {
+        let ident_events = utils::ident::events();
+        let empty_vec = utils::expr::empty_vec();
+        Self {
+            fn_item: FnItem::new(&ident_events, vec![], Self::ret_ty(), empty_vec.as_block())
+        }
+    }
+
+    fn ret_ty() -> syn::ReturnType {
+        let ev_ty = utils::ty::event();
+        let vec = utils::ty::vec_of(&ev_ty);
+        utils::misc::ret_ty(&vec)
+    }
 }
 
 impl TryFrom<&'_ StructIR> for EventsFnItem {
     type Error = syn::Error;
 
     fn try_from(struct_ir: &'_ StructIR) -> Result<Self, Self::Error> {
-        let ev_ty = utils::ty::event();
+        let ident_events = utils::ident::events();
         let struct_events_stmt = struct_events_stmt(struct_ir);
         let chain_events_expr = chain_events_expr(struct_ir)?;
-
         Ok(Self {
-            sig: parse_quote!(fn events() -> Vec<#ev_ty>),
-            block: parse_quote!({
-                #struct_events_stmt
-                #chain_events_expr
-            })
+            fn_item: FnItem::new(
+                &ident_events,
+                vec![],
+                Self::ret_ty(),
+                parse_quote!({
+                    #struct_events_stmt
+                    #chain_events_expr
+                })
+            )
         })
     }
 }
@@ -61,7 +97,8 @@ fn struct_events_stmt(ir: &StructIR) -> syn::Stmt {
         .iter()
         .map(utils::expr::into_event)
         .collect::<syn::punctuated::Punctuated<_, syn::token::Comma>>();
-    parse_quote!(let #events_ident = vec![#struct_events];)
+    let vec = utils::expr::vec(struct_events);
+    parse_quote!(let #events_ident = #vec;)
 }
 
 fn chain_events_expr(ir: &StructIR) -> Result<syn::Expr, syn::Error> {
@@ -95,8 +132,8 @@ mod test {
         let module = test_utils::mock_module_definition();
         let expected = quote!(
             impl odra::contract_def::HasEvents for CounterPack {
-                fn events() -> Vec<odra::contract_def::Event> {
-                    let events = vec![
+                fn events() -> odra::prelude::vec::Vec<odra::contract_def::Event> {
+                    let events = odra::prelude::vec![
                         <OnTransfer as odra::contract_def::IntoEvent>::into_event(),
                         <OnApprove as odra::contract_def::IntoEvent>::into_event()
                     ];
