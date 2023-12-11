@@ -1,12 +1,12 @@
 use derive_try_from::TryFromRef;
 use syn::parse_quote;
 
-use crate::{ir::ModuleIR, utils};
+use crate::{ir::ModuleImplIR, utils};
 
 use super::parts_utils::UseSuperItem;
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
-#[source(ModuleIR)]
+#[source(ModuleImplIR)]
 pub struct BlueprintItem {
     #[expr(utils::attr::odra_module(&item.module_str()?))]
     attr: syn::Attribute,
@@ -14,7 +14,7 @@ pub struct BlueprintItem {
 }
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
-#[source(ModuleIR)]
+#[source(ModuleImplIR)]
 struct BlueprintModItem {
     #[default]
     mod_token: syn::token::Mod,
@@ -40,10 +40,10 @@ struct SchemaFnItem {
     expr: syn::Expr
 }
 
-impl TryFrom<&'_ ModuleIR> for SchemaFnItem {
+impl TryFrom<&'_ ModuleImplIR> for SchemaFnItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let ty_blueprint = utils::ty::contract_blueprint();
         let ident_module_schema = utils::ident::module_schema();
 

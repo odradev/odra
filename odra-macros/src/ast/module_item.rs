@@ -2,7 +2,7 @@ use quote::{ToTokens, TokenStreamExt};
 use syn::parse_quote;
 
 use crate::{
-    ir::{EnumeratedTypedField, StructIR},
+    ir::{EnumeratedTypedField, ModuleStructIR},
     utils::{self, expr::IntoExpr}
 };
 
@@ -20,10 +20,10 @@ pub struct ModuleModItem {
     item: ModuleImplItem
 }
 
-impl TryFrom<&'_ StructIR> for ModuleModItem {
+impl TryFrom<&'_ ModuleStructIR> for ModuleModItem {
     type Error = syn::Error;
 
-    fn try_from(ir: &'_ StructIR) -> Result<Self, Self::Error> {
+    fn try_from(ir: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
         Ok(Self {
             mod_token: Default::default(),
             mod_ident: ir.module_mod_ident(),
@@ -48,10 +48,10 @@ struct ModuleImplItem {
     env_fn: EnvFnItem
 }
 
-impl TryFrom<&'_ StructIR> for ModuleImplItem {
+impl TryFrom<&'_ ModuleStructIR> for ModuleImplItem {
     type Error = syn::Error;
 
-    fn try_from(ir: &'_ StructIR) -> Result<Self, Self::Error> {
+    fn try_from(ir: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
         Ok(Self {
             impl_token: Default::default(),
             trait_path: utils::ty::module(),
@@ -76,10 +76,10 @@ struct NewModuleFnItem {
     instance: ModuleInstanceItem
 }
 
-impl TryFrom<&'_ StructIR> for NewModuleFnItem {
+impl TryFrom<&'_ ModuleStructIR> for NewModuleFnItem {
     type Error = syn::Error;
 
-    fn try_from(ir: &'_ StructIR) -> Result<Self, Self::Error> {
+    fn try_from(ir: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
         let ty_contract_env = utils::ty::rc_contract_env();
         let env = utils::ident::env();
         let fields = ir.typed_fields()?;
@@ -122,10 +122,10 @@ struct ModuleInstanceItem {
     values: syn::punctuated::Punctuated<ValueInitItem, syn::Token![,]>
 }
 
-impl TryFrom<&'_ StructIR> for ModuleInstanceItem {
+impl TryFrom<&'_ ModuleStructIR> for ModuleInstanceItem {
     type Error = syn::Error;
 
-    fn try_from(ir: &'_ StructIR) -> Result<Self, Self::Error> {
+    fn try_from(ir: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
         let ident_underscored_env = utils::ident::underscored_env();
         let ident_env = utils::ident::env();
         let env_init = ValueInitItem::with_init(ident_underscored_env, ident_env.into_expr());

@@ -1,4 +1,4 @@
-use crate::{ast::ref_utils, ir::ModuleIR, utils};
+use crate::{ast::ref_utils, ir::ModuleImplIR, utils};
 use derive_try_from::TryFromRef;
 use quote::{quote, ToTokens, TokenStreamExt};
 use syn::parse_quote;
@@ -11,10 +11,10 @@ struct ContractRefStructItem {
     fields: syn::Fields
 }
 
-impl TryFrom<&'_ ModuleIR> for ContractRefStructItem {
+impl TryFrom<&'_ ModuleImplIR> for ContractRefStructItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let address = utils::ident::address();
         let env = utils::ident::env();
         let ty_address = utils::ty::address();
@@ -61,10 +61,10 @@ struct ContractRefImplItem {
     functions: Vec<syn::ItemFn>
 }
 
-impl TryFrom<&'_ ModuleIR> for ContractRefImplItem {
+impl TryFrom<&'_ ModuleImplIR> for ContractRefImplItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
             impl_token: Default::default(),
             ref_ident: module.contract_ref_ident()?,
@@ -80,7 +80,7 @@ impl TryFrom<&'_ ModuleIR> for ContractRefImplItem {
 }
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
-#[source(ModuleIR)]
+#[source(ModuleImplIR)]
 pub struct RefItem {
     struct_item: ContractRefStructItem,
     impl_item: ContractRefImplItem

@@ -1,4 +1,4 @@
-use crate::ir::{StructIR, TypeIR};
+use crate::ir::{ModuleStructIR, TypeIR};
 use crate::utils;
 use crate::utils::misc::AsType;
 
@@ -57,7 +57,7 @@ impl Named for TypeIR {
     }
 }
 
-impl Named for StructIR {
+impl Named for ModuleStructIR {
     fn name(&self) -> Result<syn::Ident, syn::Error> {
         Ok(self.module_ident())
     }

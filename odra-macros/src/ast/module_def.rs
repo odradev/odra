@@ -1,4 +1,4 @@
-use crate::ir::StructIR;
+use crate::ir::ModuleStructIR;
 use crate::utils;
 
 #[derive(syn_derive::ToTokens)]
@@ -6,10 +6,10 @@ pub struct ModuleDefItem {
     item_struct: syn::ItemStruct
 }
 
-impl TryFrom<&'_ StructIR> for ModuleDefItem {
+impl TryFrom<&'_ ModuleStructIR> for ModuleDefItem {
     type Error = syn::Error;
 
-    fn try_from(ir: &'_ StructIR) -> Result<Self, Self::Error> {
+    fn try_from(ir: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
         let mut item_struct = ir.self_code().clone();
         let env_field: syn::Field = utils::misc::field(
             &utils::ident::underscored_env(),

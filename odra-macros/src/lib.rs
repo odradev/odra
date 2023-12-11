@@ -2,10 +2,11 @@
 
 use ast::*;
 use derive_try_from::TryFromRef;
-use ir::{ModuleIR, StructIR, TypeIR};
+use ir::{ModuleImplIR, ModuleStructIR, TypeIR};
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::ToTokens;
+use crate::ir::ExternalContractIR;
 
 mod ast;
 mod ir;
@@ -25,10 +26,10 @@ macro_rules! span_error {
 pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
     let attr: TokenStream2 = attr.into();
     let item: TokenStream2 = item.into();
-    if let Ok(ir) = ModuleIR::try_from((&attr, &item)) {
+    if let Ok(ir) = ModuleImplIR::try_from((&attr, &item)) {
         return ModuleImpl::try_from(&ir).into_code();
     }
-    if let Ok(ir) = StructIR::try_from((&attr, &item)) {
+    if let Ok(ir) = ModuleStructIR::try_from((&attr, &item)) {
         return ModuleStruct::try_from(&ir).into_code();
     }
     span_error!(item, "Struct or impl block expected")
@@ -53,7 +54,7 @@ pub fn derive_odra_error(item: TokenStream) -> TokenStream {
 }
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
-#[source(ModuleIR)]
+#[source(ModuleImplIR)]
 struct ModuleImpl {
     #[expr(item.self_code())]
     self_code: syn::ItemImpl,
@@ -68,7 +69,7 @@ struct ModuleImpl {
 }
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
-#[source(StructIR)]
+#[source(ModuleStructIR)]
 struct ModuleStruct {
     self_code: ModuleDefItem,
     mod_item: ModuleModItem,

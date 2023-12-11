@@ -1,9 +1,9 @@
 use derive_try_from::TryFromRef;
 
-use crate::{ir::ModuleIR, utils};
+use crate::{ir::ModuleImplIR, utils};
 
 use super::deployer_utils::{
-    DeployerInitSignature, EntrypointCallerExpr, HostRefInstanceExpr, NewContractExpr
+    DeployerInitSignature, EntrypointCallerExpr, HostRefInstanceExpr, NewContractExpr,
 };
 
 #[derive(syn_derive::ToTokens)]
@@ -11,18 +11,18 @@ struct DeployStructItem {
     vis: syn::Visibility,
     struct_token: syn::token::Struct,
     ident: syn::Ident,
-    semi_token: syn::token::Semi
+    semi_token: syn::token::Semi,
 }
 
-impl TryFrom<&'_ ModuleIR> for DeployStructItem {
+impl TryFrom<&'_ ModuleImplIR> for DeployStructItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
             vis: utils::syn::visibility_pub(),
             struct_token: Default::default(),
             ident: module.deployer_ident()?,
-            semi_token: Default::default()
+            semi_token: Default::default(),
         })
     }
 }
@@ -34,24 +34,24 @@ struct DeployImplItem {
     #[syn(braced)]
     brace_token: syn::token::Brace,
     #[syn(in = brace_token)]
-    init_fn: ContractInitFn
+    init_fn: ContractInitFn,
 }
 
-impl TryFrom<&'_ ModuleIR> for DeployImplItem {
+impl TryFrom<&'_ ModuleImplIR> for DeployImplItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
             impl_token: Default::default(),
             ident: module.deployer_ident()?,
             brace_token: Default::default(),
-            init_fn: module.try_into()?
+            init_fn: module.try_into()?,
         })
     }
 }
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
-#[source(ModuleIR)]
+#[source(ModuleImplIR)]
 struct ContractInitFn {
     #[expr(utils::syn::visibility_pub())]
     vis: syn::Visibility,
@@ -64,14 +64,14 @@ struct ContractInitFn {
     #[syn(in = braces)]
     new_contract: NewContractExpr,
     #[syn(in = braces)]
-    host_ref_instance: HostRefInstanceExpr
+    host_ref_instance: HostRefInstanceExpr,
 }
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
-#[source(ModuleIR)]
+#[source(ModuleImplIR)]
 pub struct DeployerItem {
     struct_item: DeployStructItem,
-    impl_item: DeployImplItem
+    impl_item: DeployImplItem,
 }
 
 #[cfg(test)]

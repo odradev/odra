@@ -1,8 +1,8 @@
 use quote::{quote, ToTokens};
 
-use crate::ir::{ModuleIR, StructIR, TypeIR};
+use crate::ir::{ModuleImplIR, ModuleStructIR, TypeIR};
 
-pub fn mock_module() -> ModuleIR {
+pub fn mock_module() -> ModuleImplIR {
     let module = quote! {
         impl Erc20 {
             pub fn init(&mut self, total_supply: Option<U256>) {
@@ -39,10 +39,10 @@ pub fn mock_module() -> ModuleIR {
     };
 
     let attr = quote!();
-    ModuleIR::try_from((&attr, &module)).unwrap()
+    ModuleImplIR::try_from((&attr, &module)).unwrap()
 }
 
-pub fn mock_module_trait_impl() -> ModuleIR {
+pub fn mock_module_trait_impl() -> ModuleImplIR {
     let module = quote! {
         impl IErc20 for Erc20 {
             fn total_supply(&self) -> U256 {
@@ -59,10 +59,10 @@ pub fn mock_module_trait_impl() -> ModuleIR {
     };
 
     let attr = quote!();
-    ModuleIR::try_from((&attr, &module)).unwrap()
+    ModuleImplIR::try_from((&attr, &module)).unwrap()
 }
 
-pub fn mock_module_definition() -> StructIR {
+pub fn mock_module_definition() -> ModuleStructIR {
     let module = quote!(
         pub struct CounterPack {
             counter0: ModuleWrapper<Counter>,
@@ -73,7 +73,7 @@ pub fn mock_module_definition() -> StructIR {
         }
     );
     let attr = quote!(events = [OnTransfer, OnApprove]);
-    StructIR::try_from((&attr, &module)).unwrap()
+    ModuleStructIR::try_from((&attr, &module)).unwrap()
 }
 
 pub fn mock_struct() -> TypeIR {

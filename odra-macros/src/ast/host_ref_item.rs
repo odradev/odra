@@ -1,4 +1,4 @@
-use crate::{ir::ModuleIR, utils};
+use crate::{ir::ModuleImplIR, utils};
 use derive_try_from::TryFromRef;
 use proc_macro2::Ident;
 use quote::{quote, ToTokens, TokenStreamExt};
@@ -14,10 +14,10 @@ struct HostRefStructItem {
     fields: syn::Fields
 }
 
-impl TryFrom<&'_ ModuleIR> for HostRefStructItem {
+impl TryFrom<&'_ ModuleImplIR> for HostRefStructItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let vis_pub = utils::syn::visibility_pub();
 
         let address = utils::ident::address();
@@ -59,10 +59,10 @@ struct HostRefImplItem {
     functions: Vec<syn::ItemFn>
 }
 
-impl TryFrom<&'_ ModuleIR> for HostRefImplItem {
+impl TryFrom<&'_ ModuleImplIR> for HostRefImplItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
             impl_token: Default::default(),
             ref_ident: module.host_ref_ident()?,
@@ -147,7 +147,7 @@ impl ToTokens for LastCallFnItem {
 }
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
-#[source(ModuleIR)]
+#[source(ModuleImplIR)]
 pub struct HostRefItem {
     struct_item: HostRefStructItem,
     impl_item: HostRefImplItem

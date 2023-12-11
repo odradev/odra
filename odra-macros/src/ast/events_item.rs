@@ -4,7 +4,7 @@ use crate::ast::fn_utils::FnItem;
 use crate::ast::utils::Named;
 use crate::ir::TypeIR;
 use crate::utils::misc::AsBlock;
-use crate::{ir::StructIR, utils};
+use crate::{ir::ModuleStructIR, utils};
 
 #[derive(syn_derive::ToTokens)]
 pub struct HasEventsImplItem {
@@ -18,10 +18,10 @@ pub struct HasEventsImplItem {
     events_fn: EventsFnItem
 }
 
-impl TryFrom<&'_ StructIR> for HasEventsImplItem {
+impl TryFrom<&'_ ModuleStructIR> for HasEventsImplItem {
     type Error = syn::Error;
 
-    fn try_from(struct_ir: &'_ StructIR) -> Result<Self, Self::Error> {
+    fn try_from(struct_ir: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
         Ok(Self {
             impl_token: Default::default(),
             has_ident_ty: utils::ty::has_events(),
@@ -69,10 +69,10 @@ impl EventsFnItem {
     }
 }
 
-impl TryFrom<&'_ StructIR> for EventsFnItem {
+impl TryFrom<&'_ ModuleStructIR> for EventsFnItem {
     type Error = syn::Error;
 
-    fn try_from(struct_ir: &'_ StructIR) -> Result<Self, Self::Error> {
+    fn try_from(struct_ir: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
         let ident_events = utils::ident::events();
         let struct_events_stmt = struct_events_stmt(struct_ir);
         let chain_events_expr = chain_events_expr(struct_ir)?;
@@ -90,7 +90,7 @@ impl TryFrom<&'_ StructIR> for EventsFnItem {
     }
 }
 
-fn struct_events_stmt(ir: &StructIR) -> syn::Stmt {
+fn struct_events_stmt(ir: &ModuleStructIR) -> syn::Stmt {
     let events_ident = utils::ident::events();
 
     let struct_events = ir
@@ -102,7 +102,7 @@ fn struct_events_stmt(ir: &StructIR) -> syn::Stmt {
     parse_quote!(let #events_ident = #vec;)
 }
 
-fn chain_events_expr(ir: &StructIR) -> Result<syn::Expr, syn::Error> {
+fn chain_events_expr(ir: &ModuleStructIR) -> Result<syn::Expr, syn::Error> {
     let ev_ty = utils::ty::event();
     let events_ident = utils::ident::events();
     let fields_events = ir

@@ -36,9 +36,9 @@ macro_rules! try_parse {
     };
 }
 
-try_parse!(syn::ItemStruct => StructIR);
+try_parse!(syn::ItemStruct => ModuleStructIR);
 
-impl StructIR {
+impl ModuleStructIR {
     pub fn self_code(&self) -> &syn::ItemStruct {
         &self.code
     }
@@ -158,10 +158,9 @@ pub struct EnumeratedTypedField {
     pub ty: syn::Type
 }
 
-try_parse!(syn::ItemImpl => ModuleIR);
+try_parse!(syn::ItemImpl => ModuleImplIR);
 
-// TODO: change the name
-impl ModuleIR {
+impl ModuleImplIR {
     pub fn self_code(&self) -> syn::ItemImpl {
         let mut code = self.code.clone();
         code.items.iter_mut().for_each(|item| {
