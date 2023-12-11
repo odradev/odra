@@ -68,7 +68,7 @@ pub struct TestPartsItem {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_utils::{self, mock_module};
+    use crate::test_utils::{self, mock_module, mock_module_trait_impl};
 
     #[test]
     fn test_parts() {
@@ -203,6 +203,120 @@ mod test {
                                 let _ = named_args.insert("total_supply", total_supply);
                                 named_args
                             }),
+                            Some(caller)
+                        );
+                        Erc20HostRef {
+                            address,
+                            env: env.clone(),
+                            attached_value: odra::U512::zero()
+                        }
+                    }
+                }
+            }
+        };
+
+        test_utils::assert_eq(actual, expected);
+    }
+
+    #[test]
+    fn test_trait_impl_parts() {
+        let module = mock_module_trait_impl();
+        let actual = TestPartsItem::try_from(&module).unwrap();
+
+        let expected = quote::quote! {
+            #[cfg(not(target_arch = "wasm32"))]
+            mod __erc20_test_parts {
+                use super::*;
+                use odra::prelude::*;
+
+                pub struct Erc20HostRef {
+                    pub address: odra::Address,
+                    pub env: odra::HostEnv,
+                    pub attached_value: odra::U512
+                }
+
+                impl Erc20HostRef {
+                    pub fn with_tokens(&self, tokens: odra::U512) -> Self {
+                        Self {
+                            address: self.address,
+                            env: self.env.clone(),
+                            attached_value: tokens
+                        }
+                    }
+
+                    pub fn get_event<T>(&self, index: i32) -> Result<T, odra::event::EventError>
+                    where
+                        T: odra::FromBytes + odra::casper_event_standard::EventInstance,
+                    {
+                        self.env.get_event(&self.address, index)
+                    }
+
+                    pub fn last_call(&self) -> odra::ContractCallResult {
+                        self.env.last_call().contract_last_call(self.address)
+                    }
+
+                    pub fn try_total_supply(&self) -> Result<U256, odra::OdraError> {
+                        self.env.call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                String::from("total_supply"),
+                                {
+                                    let mut named_args = odra::RuntimeArgs::new();
+                                    if self.attached_value > odra::U512::zero() {
+                                        let _ = named_args.insert("amount", self.attached_value);
+                                    }
+                                    named_args
+                                }
+                            ).with_amount(self.attached_value),
+                        )
+                    }
+
+                    pub fn total_supply(&self) -> U256 {
+                        self.try_total_supply().unwrap()
+                    }
+
+                    pub fn try_pay_to_mint(&mut self) -> Result<(), odra::OdraError> {
+                        self.env.call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                String::from("pay_to_mint"),
+                                {
+                                    let mut named_args = odra::RuntimeArgs::new();
+                                    if self.attached_value > odra::U512::zero() {
+                                        let _ = named_args.insert("amount", self.attached_value);
+                                    }
+                                    named_args
+                                }
+                            ).with_amount(self.attached_value),
+                        )
+                    }
+
+                    pub fn pay_to_mint(&mut self) {
+                        self.try_pay_to_mint().unwrap()
+                    }
+                }
+
+                pub struct Erc20Deployer;
+
+                impl Erc20Deployer {
+                    pub fn init(env: &odra::HostEnv) -> Erc20HostRef {
+                        let caller = odra::EntryPointsCaller::new(env.clone(), |contract_env, call_def| {
+                            match call_def.method() {
+                                "total_supply" => {
+                                    let result = execute_total_supply(contract_env);
+                                    odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                                }
+                                "pay_to_mint" => {
+                                    let result = execute_pay_to_mint(contract_env);
+                                    odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                                }
+                                _ => panic!("Unknown method")
+                            }
+                        });
+
+                        let address = env.new_contract(
+                            "Erc20",
+                            None,
                             Some(caller)
                         );
                         Erc20HostRef {

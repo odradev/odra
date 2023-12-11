@@ -1,6 +1,8 @@
 use odra::prelude::*;
-use odra::{runtime_args, Address, FromBytes, OdraType, RuntimeArgs};
-use odra::{CallDef, ContractEnv, HostEnv, Mapping, Variable};
+use odra::{
+    runtime_args, Address, CallDef, ContractEnv, FromBytes, HostEnv, Mapping, Module, OdraType,
+    RuntimeArgs, Variable
+};
 
 #[derive(OdraType)]
 struct MyCounter {
@@ -17,7 +19,6 @@ enum MyEnum {
 
 #[odra::module]
 pub struct Counter {
-    env: Rc<ContractEnv>,
     count0: Variable<MyCounter>,
     count1: Variable<MyCounter>,
     count2: Variable<MyCounter>,
@@ -50,16 +51,16 @@ impl Counter {
 
     pub fn increment(&mut self, index: u8) {
         match index {
-            0 => increment(&self.env, &mut self.count0),
-            1 => increment(&self.env, &mut self.count1),
-            2 => increment(&self.env, &mut self.count2),
-            3 => increment(&self.env, &mut self.count3),
-            4 => increment(&self.env, &mut self.count4),
-            5 => increment(&self.env, &mut self.count5),
-            6 => increment(&self.env, &mut self.count6),
-            7 => increment(&self.env, &mut self.count7),
-            8 => increment(&self.env, &mut self.count8),
-            9 => increment(&self.env, &mut self.count9),
+            0 => increment(&self.env(), &mut self.count0),
+            1 => increment(&self.env(), &mut self.count1),
+            2 => increment(&self.env(), &mut self.count2),
+            3 => increment(&self.env(), &mut self.count3),
+            4 => increment(&self.env(), &mut self.count4),
+            5 => increment(&self.env(), &mut self.count5),
+            6 => increment(&self.env(), &mut self.count6),
+            7 => increment(&self.env(), &mut self.count7),
+            8 => increment(&self.env(), &mut self.count8),
+            9 => increment(&self.env(), &mut self.count9),
             _ => unreachable!()
         };
     }

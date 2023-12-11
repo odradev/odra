@@ -1,8 +1,7 @@
-use odra::{prelude::*, ContractEnv, Variable};
+use odra::{prelude::*, ContractEnv, Module, Variable};
 
 #[odra::module]
 pub struct ReentrancyMock {
-    env: Rc<ContractEnv>,
     counter: Variable<u32>
 }
 
@@ -21,8 +20,8 @@ impl ReentrancyMock {
         if n > 0 {
             self.count();
             let other_erc20 = ReentrancyMockContractRef {
-                address: self.env.self_address(),
-                env: self.env.clone()
+                address: self.env().self_address(),
+                env: self.env().clone()
             }
             .count_ref_recursive(n - 1);
         }

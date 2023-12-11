@@ -263,4 +263,81 @@ mod ref_item_tests {
         let actual = HostRefItem::try_from(&module).unwrap();
         test_utils::assert_eq(actual, expected);
     }
+
+    #[test]
+    fn host_trait_impl_ref() {
+        let module = test_utils::mock_module_trait_impl();
+        let expected = quote! {
+            pub struct Erc20HostRef {
+                pub address: odra::Address,
+                pub env: odra::HostEnv,
+                pub attached_value: odra::U512
+            }
+
+            impl Erc20HostRef {
+                pub fn with_tokens(&self, tokens: odra::U512) -> Self {
+                    Self {
+                        address: self.address,
+                        env: self.env.clone(),
+                        attached_value: tokens
+                    }
+                }
+
+                pub fn get_event<T>(&self, index: i32) -> Result<T, odra::event::EventError>
+                where
+                    T: odra::FromBytes + odra::casper_event_standard::EventInstance,
+                {
+                    self.env.get_event(&self.address, index)
+                }
+
+                pub fn last_call(&self) -> odra::ContractCallResult {
+                    self.env.last_call().contract_last_call(self.address)
+                }
+
+                pub fn try_total_supply(&self) -> Result<U256, odra::OdraError> {
+                    self.env.call_contract(
+                        self.address,
+                        odra::CallDef::new(
+                            String::from("total_supply"),
+                            {
+                                let mut named_args = odra::RuntimeArgs::new();
+                                if self.attached_value > odra::U512::zero() {
+                                    let _ = named_args.insert("amount", self.attached_value);
+                                }
+                                named_args
+                            }
+                        ).with_amount(self.attached_value),
+                    )
+                }
+
+                pub fn total_supply(&self) -> U256 {
+                    self.try_total_supply().unwrap()
+                }
+
+                pub fn try_pay_to_mint(&mut self) -> Result<(), odra::OdraError> {
+                    self.env
+                        .call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                    String::from("pay_to_mint"),
+                                    {
+                                        let mut named_args = odra::RuntimeArgs::new();
+                                        if self.attached_value > odra::U512::zero() {
+                                            let _ = named_args.insert("amount", self.attached_value);
+                                        }
+                                        named_args
+                                    },
+                                )
+                                .with_amount(self.attached_value),
+                        )
+                }
+
+                pub fn pay_to_mint(&mut self) {
+                    self.try_pay_to_mint().unwrap()
+                }
+            }
+        };
+        let actual = HostRefItem::try_from(&module).unwrap();
+        test_utils::assert_eq(actual, expected);
+    }
 }

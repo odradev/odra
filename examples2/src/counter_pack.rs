@@ -5,6 +5,10 @@ use odra::Mapping;
 use odra::Module;
 use odra::ModuleWrapper;
 
+pub trait ICounter {
+    fn get_count(&self, index_a: u8, index_b: u8) -> u32;
+    fn increment(&mut self, index_a: u8, index_b: u8);
+}
 #[odra::module]
 pub struct CounterPack {
     counter0: ModuleWrapper<Counter>,
@@ -22,8 +26,8 @@ pub struct CounterPack {
 }
 
 #[odra::module]
-impl CounterPack {
-    pub fn get_count(&self, index_a: u8, index_b: u8) -> u32 {
+impl ICounter for CounterPack {
+    fn get_count(&self, index_a: u8, index_b: u8) -> u32 {
         match index_a {
             0 => self.counter0.get_count(index_b),
             1 => self.counter1.get_count(index_b),
@@ -41,7 +45,7 @@ impl CounterPack {
         // self.counters_map.module(index_a).get_count(index_b)
     }
 
-    pub fn increment(&mut self, index_a: u8, index_b: u8) {
+    fn increment(&mut self, index_a: u8, index_b: u8) {
         match index_a {
             0 => self.counter0.increment(index_b),
             1 => self.counter1.increment(index_b),

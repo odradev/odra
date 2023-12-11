@@ -190,4 +190,35 @@ mod test {
         let actual = HasEntrypointsImplItem::try_from(&module).unwrap();
         test_utils::assert_eq(actual, expected);
     }
+
+    #[test]
+    fn test_trait_impl_entrypoints() {
+        let module = test_utils::mock_module_trait_impl();
+        let expected = quote!(
+            impl odra::contract_def::HasEntrypoints for Erc20 {
+                fn entrypoints() -> Vec<odra::contract_def::Entrypoint> {
+                    vec![
+                        odra::contract_def::Entrypoint {
+                            ident: String::from("total_supply"),
+                            args: vec![],
+                            is_mut: false,
+                            ret: <U256 as odra::casper_types::CLTyped>::cl_type(),
+                            ty: odra::contract_def::EntrypointType::Public,
+                            attributes: vec![]
+                        },
+                        odra::contract_def::Entrypoint {
+                            ident: String::from("pay_to_mint"),
+                            args: vec![],
+                            is_mut: true,
+                            ret: <() as odra::casper_types::CLTyped>::cl_type(),
+                            ty: odra::contract_def::EntrypointType::Public,
+                            attributes: vec![odra::contract_def::EntrypointAttribute::Payable]
+                        }
+                    ]
+                }
+            }
+        );
+        let actual = HasEntrypointsImplItem::try_from(&module).unwrap();
+        test_utils::assert_eq(actual, expected);
+    }
 }

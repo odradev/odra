@@ -1,5 +1,5 @@
 use super::{fn_utils, ref_utils};
-use crate::utils::misc::AsBlock;
+use crate::utils::misc::AsType;
 use crate::{
     ir::{FnIR, ModuleIR},
     utils
@@ -23,7 +23,7 @@ impl TryFrom<&'_ ModuleIR> for DeployerInitSignature {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
-        let host_ref_ident = module.host_ref_ident()?;
+        let host_ref_ident = module.host_ref_ident()?.as_type();
         let ty_host_env = utils::ty::host_env();
         let env = utils::ident::env();
 
@@ -35,7 +35,7 @@ impl TryFrom<&'_ ModuleIR> for DeployerInitSignature {
             init_token: utils::ident::init(),
             paren_token: Default::default(),
             inputs,
-            output: parse_quote!(-> #host_ref_ident)
+            output: utils::misc::ret_ty(&host_ref_ident)
         })
     }
 }
@@ -101,18 +101,19 @@ impl TryFrom<&'_ ModuleIR> for NewContractExpr {
 
     fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
         let module_str = module.module_str()?;
-        let caller_ident = utils::ident::caller();
+        let caller_expr = utils::expr::some(utils::ident::caller());
         let env_ident = utils::ident::env();
         let args = module
             .constructor()
             .map(|f| fn_utils::runtime_args_block(&f, ref_utils::insert_arg_stmt))
-            .unwrap_or(utils::expr::new_runtime_args().as_block());
+            .map(utils::expr::some)
+            .unwrap_or_else(utils::expr::none);
 
         let new_contract_expr = parse_quote!(
             #env_ident.new_contract(
                 #module_str,
-                Some(#args),
-                Some(#caller_ident)
+                #args,
+                #caller_expr
             )
         );
 
@@ -143,10 +144,11 @@ impl TryFrom<&'_ ModuleIR> for HostRefInstanceExpr {
         let env_ident = utils::ident::env();
         let attached_value_ident = utils::ident::attached_value();
         let zero = utils::expr::u512_zero();
+        let env_expr = utils::expr::clone(&env_ident);
 
         let fields = parse_quote!(
             #address_ident,
-            #env_ident: #env_ident.clone(),
+            #env_ident: #env_expr,
             #attached_value_ident: #zero
 
         );

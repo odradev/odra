@@ -219,7 +219,7 @@ impl ExecEnvStmt {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_utils::{self, mock_module};
+    use crate::test_utils::{self, mock_module, mock_module_trait_impl};
 
     #[test]
     fn test_parts() {
@@ -270,6 +270,40 @@ mod test {
                     let mut contract = <Erc20 as odra::Module>::new(env_rc);
                     let result = contract.approve(&to, &amount);
                     exec_env.non_reentrant_after();
+                    return result;
+                }
+            }
+        };
+
+        test_utils::assert_eq(actual, expected);
+    }
+
+    #[test]
+    fn test_trait_impl_parts() {
+        let module = mock_module_trait_impl();
+        let actual = ExecPartsItem::try_from(&module).unwrap();
+
+        let expected = quote::quote! {
+            mod __erc20_exec_parts {
+                use super::*;
+                use odra::prelude::*;
+
+                #[inline]
+                pub fn execute_total_supply(env: odra::ContractEnv) -> U256 {
+                    let env_rc = Rc::new(env);
+                    let contract = <Erc20 as odra::Module>::new(env_rc);
+                    let result = contract.total_supply();
+                    return result;
+                }
+
+                #[inline]
+                pub fn execute_pay_to_mint(env: odra::ContractEnv) {
+                    let env_rc = Rc::new(env);
+                    let exec_env = odra::ExecutionEnv::new(env_rc.clone());
+                    exec_env.handle_attached_value();
+                    let mut contract = <Erc20 as odra::Module>::new(env_rc);
+                    let result = contract.pay_to_mint();
+                    exec_env.clear_attached_value();
                     return result;
                 }
             }

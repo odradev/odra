@@ -251,6 +251,7 @@ impl ModuleIR {
                 syn::ImplItem::Fn(func) => Some(FnIR::new(func.clone())),
                 _ => None
             })
+            .filter(|f| self.is_trait_impl() || f.is_pub())
             .collect::<Vec<_>>()
     }
 
@@ -276,6 +277,10 @@ impl ModuleIR {
                     .collect()
             })
             .unwrap_or_default()
+    }
+
+    fn is_trait_impl(&self) -> bool {
+        self.code.trait_.is_some()
     }
 }
 
@@ -364,6 +369,10 @@ impl FnIR {
 
     pub fn is_constructor(&self) -> bool {
         self.name_str() == CONSTRUCTOR_NAME
+    }
+
+    pub fn is_pub(&self) -> bool {
+        matches!(self.code.vis, syn::Visibility::Public(_))
     }
 }
 
