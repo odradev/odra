@@ -105,7 +105,7 @@ pub fn visibility_pub() -> syn::Visibility {
     parse_quote!(pub)
 }
 
-pub fn visibility_private() -> syn::Visibility {
+pub fn visibility_default() -> syn::Visibility {
     parse_quote!()
 }
 
