@@ -24,6 +24,9 @@ pub fn env() -> syn::Ident {
     format_ident!("env")
 }
 
+pub fn underscored_env() -> syn::Ident {
+    format_ident!("__env")
+}
 pub fn exec_env() -> syn::Ident {
     format_ident!("exec_env")
 }

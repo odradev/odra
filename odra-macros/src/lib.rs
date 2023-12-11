@@ -47,8 +47,7 @@ struct ModuleImpl {
 #[derive(syn_derive::ToTokens, TryFromRef)]
 #[source(StructIR)]
 struct ModuleStruct {
-    #[expr(item.self_code().clone())]
-    self_code: syn::ItemStruct,
+    self_code: ModuleDefItem,
     mod_item: ModuleModItem,
     has_ident_item: HasIdentImplItem,
     has_events_item: HasEventsImplItem
