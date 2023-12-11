@@ -33,7 +33,6 @@ pub enum Erc20Error {
 
 #[odra::module(events = [OnTransfer, OnCrossTransfer, OnApprove])]
 pub struct Erc20 {
-    env: Rc<ContractEnv>,
     total_supply: Variable<U256>,
     balances: Mapping<Address, U256>
 }
@@ -48,8 +47,8 @@ impl Erc20 {
     }
 
     pub fn approve(&mut self, to: Address, amount: U256) {
-        self.env.emit_event(OnApprove {
-            owner: self.env.caller(),
+        self.env().emit_event(OnApprove {
+            owner: self.env().caller(),
             spender: to,
             value: amount
         });
@@ -73,7 +72,7 @@ impl Erc20 {
         }
         balances.set(&caller, from_balance.saturating_sub(value));
         balances.set(&to, to_balance.saturating_add(value));
-        self.env.emit_event(OnTransfer {
+        self.env().emit_event(OnTransfer {
             from: Some(caller),
             to: Some(to),
             amount: value
@@ -128,8 +127,8 @@ impl Erc20 {
         };
 
         other_erc20.transfer(to, value);
-        self.env.emit_event(OnCrossTransfer {
-            from: Some(self.env.self_address()),
+        self.env().emit_event(OnCrossTransfer {
+            from: Some(self.env().self_address()),
             to: Some(to),
             other_contract: other,
             amount: value

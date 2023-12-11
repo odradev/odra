@@ -41,7 +41,6 @@ pub fn mock_module() -> ModuleIR {
 pub fn mock_module_definition() -> StructIR {
     let module = quote!(
         pub struct CounterPack {
-            env: Rc<ContractEnv>,
             counter0: ModuleWrapper<Counter>,
             counter1: ModuleWrapper<Counter>,
             counter2: ModuleWrapper<Counter>,

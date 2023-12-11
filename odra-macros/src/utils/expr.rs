@@ -129,3 +129,13 @@ pub fn user_error(error: &syn::Ident) -> syn::Expr {
     let ty = super::ty::odra_error();
     parse_quote!(#ty::user(#error as u16))
 }
+
+pub trait IntoExpr {
+    fn into_expr(self) -> syn::Expr;
+}
+
+impl IntoExpr for syn::Ident {
+    fn into_expr(self) -> syn::Expr {
+        parse_quote!(#self)
+    }
+}
