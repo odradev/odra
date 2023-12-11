@@ -235,27 +235,6 @@
   ],
   "events": [
     {
-      "name": "Transfer",
-      "fields": [
-        {
-          "name": "from",
-          "ty": {
-            "Option": "Key"
-          }
-        },
-        {
-          "name": "to",
-          "ty": {
-            "Option": "Key"
-          }
-        },
-        {
-          "name": "token_id",
-          "ty": "U256"
-        }
-      ]
-    },
-    {
       "name": "Approval",
       "fields": [
         {
@@ -292,6 +271,23 @@
       ]
     },
     {
+      "name": "OwnershipTransferred",
+      "fields": [
+        {
+          "name": "previous_owner",
+          "ty": {
+            "Option": "Key"
+          }
+        },
+        {
+          "name": "new_owner",
+          "ty": {
+            "Option": "Key"
+          }
+        }
+      ]
+    },
+    {
       "name": "Transfer",
       "fields": [
         {
@@ -309,23 +305,6 @@
         {
           "name": "token_id",
           "ty": "U256"
-        }
-      ]
-    },
-    {
-      "name": "OwnershipTransferred",
-      "fields": [
-        {
-          "name": "previous_owner",
-          "ty": {
-            "Option": "Key"
-          }
-        },
-        {
-          "name": "new_owner",
-          "ty": {
-            "Option": "Key"
-          }
         }
       ]
     }

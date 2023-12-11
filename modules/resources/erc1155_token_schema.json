@@ -265,72 +265,6 @@
   ],
   "events": [
     {
-      "name": "TransferBatch",
-      "fields": [
-        {
-          "name": "operator",
-          "ty": {
-            "Option": "Key"
-          }
-        },
-        {
-          "name": "from",
-          "ty": {
-            "Option": "Key"
-          }
-        },
-        {
-          "name": "to",
-          "ty": {
-            "Option": "Key"
-          }
-        },
-        {
-          "name": "ids",
-          "ty": {
-            "List": "U256"
-          }
-        },
-        {
-          "name": "values",
-          "ty": {
-            "List": "U256"
-          }
-        }
-      ]
-    },
-    {
-      "name": "TransferSingle",
-      "fields": [
-        {
-          "name": "operator",
-          "ty": {
-            "Option": "Key"
-          }
-        },
-        {
-          "name": "from",
-          "ty": {
-            "Option": "Key"
-          }
-        },
-        {
-          "name": "to",
-          "ty": {
-            "Option": "Key"
-          }
-        },
-        {
-          "name": "id",
-          "ty": "U256"
-        },
-        {
-          "name": "value",
-          "ty": "U256"
-        }
-      ]
-    },
-    {
       "name": "ApprovalForAll",
       "fields": [
         {
@@ -348,6 +282,23 @@
       ]
     },
     {
+      "name": "OwnershipTransferred",
+      "fields": [
+        {
+          "name": "previous_owner",
+          "ty": {
+            "Option": "Key"
+          }
+        },
+        {
+          "name": "new_owner",
+          "ty": {
+            "Option": "Key"
+          }
+        }
+      ]
+    },
+    {
       "name": "TransferBatch",
       "fields": [
         {
@@ -410,23 +361,6 @@
         {
           "name": "value",
           "ty": "U256"
-        }
-      ]
-    },
-    {
-      "name": "OwnershipTransferred",
-      "fields": [
-        {
-          "name": "previous_owner",
-          "ty": {
-            "Option": "Key"
-          }
-        },
-        {
-          "name": "new_owner",
-          "ty": {
-            "Option": "Key"
-          }
         }
       ]
     }

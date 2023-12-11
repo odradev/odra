@@ -126,32 +126,6 @@
   ],
   "events": [
     {
-      "name": "Deposit",
-      "fields": [
-        {
-          "name": "account",
-          "ty": "Key"
-        },
-        {
-          "name": "value",
-          "ty": "U256"
-        }
-      ]
-    },
-    {
-      "name": "Withdrawal",
-      "fields": [
-        {
-          "name": "account",
-          "ty": "Key"
-        },
-        {
-          "name": "value",
-          "ty": "U256"
-        }
-      ]
-    },
-    {
       "name": "Approval",
       "fields": [
         {
@@ -160,6 +134,19 @@
         },
         {
           "name": "spender",
+          "ty": "Key"
+        },
+        {
+          "name": "value",
+          "ty": "U256"
+        }
+      ]
+    },
+    {
+      "name": "Deposit",
+      "fields": [
+        {
+          "name": "account",
           "ty": "Key"
         },
         {
@@ -185,6 +172,19 @@
         },
         {
           "name": "amount",
+          "ty": "U256"
+        }
+      ]
+    },
+    {
+      "name": "Withdrawal",
+      "fields": [
+        {
+          "name": "account",
+          "ty": "Key"
+        },
+        {
+          "name": "value",
           "ty": "U256"
         }
       ]

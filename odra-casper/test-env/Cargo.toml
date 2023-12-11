@@ -13,7 +13,7 @@ repository = { workspace = true }
 [dependencies]
 casper-engine-test-support = { version = "5.0.0", features = ["test-support"] }
 casper-execution-engine = { workspace = true }
-odra-casper-shared = { path = "../shared", version = "0.7.0" }
-odra-types = { path = "../../types", version = "0.7.0" }
-odra-utils = { path = "../../utils", version = "0.7.0" }
-colored = "2.0.0"
+odra-casper-shared = { path = "../shared", version = "0.7.1" }
+odra-types = { path = "../../types", version = "0.7.1" }
+odra-utils = { path = "../../utils", version = "0.7.1" }
+colored = "=2.0.4"

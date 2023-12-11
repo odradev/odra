@@ -70,39 +70,6 @@
   ],
   "events": [
     {
-      "name": "SingleReceived",
-      "fields": [
-        {
-          "name": "operator",
-          "ty": {
-            "Option": "Key"
-          }
-        },
-        {
-          "name": "from",
-          "ty": {
-            "Option": "Key"
-          }
-        },
-        {
-          "name": "token_id",
-          "ty": "U256"
-        },
-        {
-          "name": "amount",
-          "ty": "U256"
-        },
-        {
-          "name": "data",
-          "ty": {
-            "Option": {
-              "List": "U8"
-            }
-          }
-        }
-      ]
-    },
-    {
       "name": "BatchReceived",
       "fields": [
         {
@@ -128,6 +95,39 @@
           "ty": {
             "List": "U256"
           }
+        },
+        {
+          "name": "data",
+          "ty": {
+            "Option": {
+              "List": "U8"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SingleReceived",
+      "fields": [
+        {
+          "name": "operator",
+          "ty": {
+            "Option": "Key"
+          }
+        },
+        {
+          "name": "from",
+          "ty": {
+            "Option": "Key"
+          }
+        },
+        {
+          "name": "token_id",
+          "ty": "U256"
+        },
+        {
+          "name": "amount",
+          "ty": "U256"
         },
         {
           "name": "data",

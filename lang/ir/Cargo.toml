@@ -17,4 +17,4 @@ quote = "1.0.19"
 syn = { version = "1.0.89", features = [ "parsing", "full", "visit", "extra-traits", "derive" ] }
 itertools = "0.10.3"
 anyhow = "1.0.70"
-odra-utils = { path = "../../utils", version = "0.7.0" }
+odra-utils = { path = "../../utils", version = "0.7.1" }
