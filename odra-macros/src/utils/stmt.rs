@@ -1,3 +1,4 @@
+use crate::utils::misc::AsExpr;
 use syn::parse_quote;
 
 pub fn runtime_return(result_ident: &syn::Ident) -> syn::Stmt {
@@ -49,4 +50,10 @@ pub fn new_execution_env(ident: &syn::Ident, env_rc_ident: &syn::Ident) -> syn::
 
 pub fn new_rc(var_ident: &syn::Ident, env_ident: &syn::Ident) -> syn::Stmt {
     parse_quote!(let #var_ident = Rc::new(#env_ident);)
+}
+
+pub fn new_mut_vec_with_capacity<E: AsExpr>(ident: &syn::Ident, capacity_expr: &E) -> syn::Stmt {
+    let ty = super::ty::vec();
+    let expr = capacity_expr.as_expr();
+    parse_quote!(let mut #ident = #ty::with_capacity(#expr);)
 }

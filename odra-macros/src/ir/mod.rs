@@ -4,7 +4,7 @@ use crate::utils;
 use config::ConfigItem;
 use proc_macro2::Ident;
 use quote::{format_ident, ToTokens};
-use syn::{parse_quote, spanned::Spanned};
+use syn::{parse_quote, spanned::Spanned, Data};
 
 use self::attr::OdraAttribute;
 
@@ -416,5 +416,44 @@ impl FnArgIR {
             syn::FnArg::Typed(syn::PatType { box ty, .. }) => utils::syn::is_ref(ty),
             _ => false
         }
+    }
+}
+
+pub struct TypeIR {
+    code: syn::DeriveInput
+}
+
+impl TryFrom<&proc_macro2::TokenStream> for TypeIR {
+    type Error = syn::Error;
+
+    fn try_from(stream: &proc_macro2::TokenStream) -> Result<Self, Self::Error> {
+        Ok(Self {
+            code: syn::parse2::<syn::DeriveInput>(stream.clone())?
+        })
+    }
+}
+
+impl TypeIR {
+    pub fn self_code(&self) -> &syn::DeriveInput {
+        &self.code
+    }
+
+    pub fn fields(&self) -> Result<Vec<syn::Ident>, syn::Error> {
+        utils::syn::derive_item_variants(&self.code)
+    }
+
+    pub fn map_fields<F, R>(&self, func: F) -> Result<Vec<R>, syn::Error>
+    where
+        F: FnMut(&syn::Ident) -> R
+    {
+        Ok(self.fields()?.iter().map(func).collect::<Vec<_>>())
+    }
+
+    pub fn is_enum(&self) -> bool {
+        matches!(self.code.data, Data::Enum(_))
+    }
+
+    pub fn is_struct(&self) -> bool {
+        matches!(self.code.data, Data::Struct(_))
     }
 }

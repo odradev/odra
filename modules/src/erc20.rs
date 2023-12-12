@@ -1,7 +1,7 @@
-use odra::prelude::*;
-use odra::{Address, ContractEnv, Mapping, U256, Variable};
 use crate::erc20::errors::Error::{DecimalsNotSet, NameNotSet, SymbolNotSet};
 use crate::erc20::events::*;
+use odra::prelude::*;
+use odra::{Address, ContractEnv, Mapping, Variable, U256};
 
 #[odra::module(events = [Approval, Transfer])]
 pub struct Erc20 {
@@ -33,8 +33,7 @@ impl Erc20 {
             self.balances.set(&caller, initial_supply);
 
             if !initial_supply.is_zero() {
-                self.env.emit_event(
-                Transfer {
+                self.env.emit_event(Transfer {
                     from: None,
                     to: Some(caller),
                     amount: initial_supply
@@ -76,9 +75,7 @@ impl Erc20 {
     }
 
     pub fn decimals(&self) -> u8 {
-        self.decimals
-            .get()
-            .unwrap_or_revert_with(DecimalsNotSet)
+        self.decimals.get().unwrap_or_revert_with(DecimalsNotSet)
     }
 
     pub fn total_supply(&self) -> U256 {
@@ -156,8 +153,8 @@ impl Erc20 {
 }
 
 pub mod events {
-    use odra::{Address, U256};
     use casper_event_standard::Event;
+    use odra::{Address, U256};
 
     #[derive(Event, Eq, PartialEq, Debug)]
     pub struct Transfer {
@@ -178,12 +175,12 @@ pub mod errors {
     use odra::OdraError;
 
     pub enum Error {
-            InsufficientBalance = 30_000,
-            InsufficientAllowance = 30_001,
-            NameNotSet = 30_002,
-            SymbolNotSet = 30_003,
-            DecimalsNotSet = 30_004,
-        }
+        InsufficientBalance = 30_000,
+        InsufficientAllowance = 30_001,
+        NameNotSet = 30_002,
+        SymbolNotSet = 30_003,
+        DecimalsNotSet = 30_004
+    }
 
     impl From<Error> for OdraError {
         fn from(error: Error) -> Self {

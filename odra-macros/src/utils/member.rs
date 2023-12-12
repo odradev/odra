@@ -17,3 +17,7 @@ pub fn underscored_env() -> syn::ExprField {
 fn member(ident: syn::Ident) -> syn::ExprField {
     syn::parse_quote!(self.#ident)
 }
+
+pub fn _self(ident: &syn::Ident) -> syn::Expr {
+    syn::parse_quote!(self.#ident)
+}

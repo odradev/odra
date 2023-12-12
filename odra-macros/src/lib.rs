@@ -2,17 +2,24 @@
 
 use ast::*;
 use derive_try_from::TryFromRef;
-use ir::{ModuleIR, StructIR};
+use ir::{ModuleIR, StructIR, TypeIR};
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::ToTokens;
-use syn::spanned::Spanned;
 
 mod ast;
 mod ir;
 #[cfg(test)]
 mod test_utils;
 mod utils;
+
+macro_rules! span_error {
+    ($span:ident, $msg:expr) => {
+        syn::Error::new(syn::spanned::Spanned::span(&$span), $msg)
+            .to_compile_error()
+            .into()
+    };
+}
 
 #[proc_macro_attribute]
 pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
@@ -24,9 +31,25 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
     if let Ok(ir) = StructIR::try_from((&attr, &item)) {
         return ModuleStruct::try_from(&ir).into_code();
     }
-    syn::Error::new(item.span(), "Struct or impl block expected")
-        .to_compile_error()
-        .into()
+    span_error!(item, "Struct or impl block expected")
+}
+
+#[proc_macro_derive(OdraType)]
+pub fn derive_odra_type(item: TokenStream) -> TokenStream {
+    let item = item.into();
+    if let Ok(ir) = TypeIR::try_from(&item) {
+        return OdraTypeItem::try_from(&ir).into_code();
+    }
+    span_error!(item, "Struct or Enum expected")
+}
+
+#[proc_macro_derive(OdraError)]
+pub fn derive_odra_error(item: TokenStream) -> TokenStream {
+    let item = item.into();
+    if let Ok(ir) = TypeIR::try_from(&item) {
+        return OdraErrorItem::try_from(&ir).into_code();
+    }
+    span_error!(item, "Struct or Enum expected")
 }
 
 #[derive(syn_derive::ToTokens, TryFromRef)]

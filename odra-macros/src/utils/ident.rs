@@ -82,3 +82,35 @@ pub fn entrypoints() -> syn::Ident {
 pub fn ident() -> syn::Ident {
     format_ident!("ident")
 }
+
+pub fn bytes() -> syn::Ident {
+    format_ident!("bytes")
+}
+
+pub fn from_bytes() -> syn::Ident {
+    format_ident!("from_bytes")
+}
+
+pub fn to_bytes() -> syn::Ident {
+    format_ident!("to_bytes")
+}
+
+pub fn serialized_length() -> syn::Ident {
+    format_ident!("serialized_length")
+}
+
+pub fn cl_type() -> syn::Ident {
+    format_ident!("cl_type")
+}
+
+pub fn clone() -> syn::Ident {
+    format_ident!("clone")
+}
+
+pub fn from() -> syn::Ident {
+    format_ident!("from")
+}
+
+pub fn error() -> syn::Ident {
+    format_ident!("error")
+}

@@ -1,3 +1,4 @@
+use quote::ToTokens;
 use syn::parse_quote;
 
 pub fn new_runtime_args() -> syn::Expr {
@@ -85,7 +86,48 @@ pub fn new_blueprint(ident: &syn::Ident) -> syn::Expr {
 }
 
 pub fn string_from(string: String) -> syn::Expr {
-    parse_quote!(String::from(#string))
+    let ty = super::ty::string();
+    parse_quote!(#ty::from(#string))
+}
+
+pub fn failable_from_bytes(arg_ident: &syn::Ident) -> syn::Expr {
+    let ty = super::ty::from_bytes();
+    let fn_ident = super::ident::from_bytes();
+    parse_quote!(#ty::#fn_ident(#arg_ident)?)
+}
+
+pub fn serialized_length<T: ToTokens>(caller: &T) -> syn::Expr {
+    let fn_ident = super::ident::serialized_length();
+    parse_quote!(#caller.#fn_ident())
+}
+
+pub fn failable_to_bytes<T: ToTokens>(caller: &T) -> syn::Expr {
+    let fn_ident = super::ident::to_bytes();
+    let ty = super::ty::to_bytes();
+    parse_quote!(#ty::#fn_ident(&#caller)?)
+}
+
+pub fn to_bytes<T: ToTokens>(caller: &T) -> syn::Expr {
+    let fn_ident = super::ident::to_bytes();
+    parse_quote!(#caller.#fn_ident())
+}
+
+pub fn empty_vec() -> syn::Expr {
+    let ty = super::ty::vec();
+    parse_quote!(#ty::new())
+}
+
+pub fn vec<T: ToTokens>(content: T) -> syn::Expr {
+    parse_quote!(odra::prelude::vec![#content])
+}
+
+pub fn clone<T: ToTokens>(caller: &T) -> syn::Expr {
+    parse_quote!(#caller.clone())
+}
+
+pub fn user_error(error: &syn::Ident) -> syn::Expr {
+    let ty = super::ty::odra_error();
+    parse_quote!(#ty::user(#error as u16))
 }
 
 pub trait IntoExpr {

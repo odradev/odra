@@ -25,12 +25,7 @@ impl<T> Variable<T> {
     }
 }
 
-impl<T: FromBytes + Default> Variable<T> {
-    pub fn get_or_default(&self) -> T {
-        let env = self.env();
-        env.get_value(&env.current_key()).unwrap_or_default()
-    }
-
+impl<T: FromBytes> Variable<T> {
     pub fn get(&self) -> Option<T> {
         let env = self.env();
         env.get_value(&env.current_key())
@@ -38,8 +33,13 @@ impl<T: FromBytes + Default> Variable<T> {
 
     pub fn get_or_revert_with<E: Into<OdraError>>(&self, error: E) -> T {
         let env = self.env();
-        env.get_value(&env.current_key())
-            .unwrap_or_revert_with(&env, error)
+        self.get().unwrap_or_revert_with(&env, error)
+    }
+}
+
+impl<T: FromBytes + Default> Variable<T> {
+    pub fn get_or_default(&self) -> T {
+        self.get().unwrap_or_default()
     }
 }
 

@@ -1,7 +1,7 @@
 use casper_event_standard::Event;
 use odra::{casper_event_standard, Bytes, Module, OdraError, PublicKey};
 use odra::{prelude::*, CallDef, ModuleWrapper};
-use odra::{Address, ContractEnv, Mapping, Variable, U256, U512};
+use odra::{Address, Mapping, Variable, U256, U512};
 
 #[derive(Event, Eq, PartialEq, Debug)]
 pub struct OnTransfer {
@@ -25,16 +25,10 @@ pub struct OnApprove {
     pub value: U256
 }
 
-#[repr(u16)]
+#[derive(OdraError)]
 pub enum Erc20Error {
     InsufficientBalance = 1,
     InsufficientAllowance = 2
-}
-
-impl From<Erc20Error> for OdraError {
-    fn from(error: Erc20Error) -> Self {
-        OdraError::user(error as u16)
-    }
 }
 
 #[odra::module(events = [OnTransfer, OnCrossTransfer, OnApprove])]
