@@ -31,6 +31,30 @@ pub fn mock_module() -> ModuleIR {
                     value: amount
                 });
             }
+
+            fn private_function() {
+
+            }
+        }
+    };
+
+    let attr = quote!();
+    ModuleIR::try_from((&attr, &module)).unwrap()
+}
+
+pub fn mock_module_trait_impl() -> ModuleIR {
+    let module = quote! {
+        impl IErc20 for Erc20 {
+            fn total_supply(&self) -> U256 {
+                self.total_supply.get_or_default()
+            }
+
+            #[odra(payable)]
+            fn pay_to_mint(&mut self) {
+                let attached_value = self.env().attached_value();
+                self.total_supply
+                    .set(self.total_supply() + U256::from(attached_value.as_u64()));
+            }
         }
     };
 

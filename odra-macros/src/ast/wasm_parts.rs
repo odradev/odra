@@ -361,4 +361,70 @@ mod test {
 
         test_utils::assert_eq(actual, expected);
     }
+
+    #[test]
+    fn test_trait_impl() {
+        let module = test_utils::mock_module_trait_impl();
+        let actual = WasmPartsModuleItem::try_from(&module).unwrap();
+
+        let expected = quote::quote! {
+            #[cfg(target_arch = "wasm32")]
+            #[cfg(odra_module = "Erc20")]
+            mod __erc20_wasm_parts {
+                use super::*;
+                use odra::prelude::*;
+
+                #[inline]
+                fn entry_points() -> odra::casper_types::EntryPoints {
+                    let mut entry_points = odra::casper_types::EntryPoints::new();
+                    entry_points.add_entry_point(odra::casper_types::EntryPoint::new(
+                        "total_supply",
+                        vec![],
+                        <U256 as odra::casper_types::CLTyped>::cl_type(),
+                        odra::casper_types::EntryPointAccess::Public,
+                        odra::casper_types::EntryPointType::Contract
+                    ));
+                    entry_points
+                        .add_entry_point(
+                            odra::casper_types::EntryPoint::new(
+                                "pay_to_mint",
+                                vec![],
+                                <() as odra::casper_types::CLTyped>::cl_type(),
+                                odra::casper_types::EntryPointAccess::Public,
+                                odra::casper_types::EntryPointType::Contract,
+                            ),
+                        );
+                    entry_points
+                }
+
+                #[no_mangle]
+                fn call() {
+                    let schemas = odra::casper_event_standard::Schemas::new();
+                    let named_args = Option::<odra::RuntimeArgs>::None;
+                    odra::odra_casper_wasm_env::host_functions::install_contract(
+                        entry_points(),
+                        schemas,
+                        named_args
+                    );
+                }
+
+                #[no_mangle]
+                fn total_supply() {
+                    let result = execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
+                        odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
+                            odra::casper_types::CLValue::from_t(result)
+                        )
+                    );
+                }
+
+                #[no_mangle]
+                fn pay_to_mint() {
+                    execute_pay_to_mint(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                }
+            }
+        };
+
+        test_utils::assert_eq(actual, expected);
+    }
 }

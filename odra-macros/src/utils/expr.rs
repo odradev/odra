@@ -130,6 +130,14 @@ pub fn user_error(error: &syn::Ident) -> syn::Expr {
     parse_quote!(#ty::user(#error as u16))
 }
 
+pub fn some<T: ToTokens>(t: T) -> syn::Expr {
+    parse_quote!(Some(#t))
+}
+
+pub fn none() -> syn::Expr {
+    parse_quote!(None)
+}
+
 pub trait IntoExpr {
     fn into_expr(self) -> syn::Expr;
 }

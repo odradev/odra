@@ -168,4 +168,51 @@ mod ref_item_tests {
         let actual = RefItem::try_from(&module).unwrap();
         test_utils::assert_eq(actual, expected);
     }
+
+    #[test]
+    fn contract_trait_impl_ref() {
+        let module = test_utils::mock_module_trait_impl();
+        let expected = quote! {
+            pub struct Erc20ContractRef {
+                env: Rc<odra::ContractEnv>,
+                address: odra::Address,
+            }
+
+            impl Erc20ContractRef {
+                // TODO: this means "address", can't be entrypoint name.
+                pub fn address(&self) -> &odra::Address {
+                    &self.address
+                }
+
+                pub fn total_supply(&self) -> U256 {
+                    self.env.call_contract(
+                        self.address,
+                        odra::CallDef::new(
+                            String::from("total_supply"),
+                            {
+                                let mut named_args = odra::RuntimeArgs::new();
+                                named_args
+                            }
+                        ),
+                    )
+                }
+
+                pub fn pay_to_mint(&mut self) {
+                    self.env
+                        .call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                String::from("pay_to_mint"),
+                                {
+                                    let mut named_args = odra::RuntimeArgs::new();
+                                    named_args
+                                },
+                            ),
+                        )
+                }
+            }
+        };
+        let actual = RefItem::try_from(&module).unwrap();
+        test_utils::assert_eq(actual, expected);
+    }
 }
