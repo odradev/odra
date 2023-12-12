@@ -1,4 +1,4 @@
-use odra::{prelude::*, ContractEnv, Module, Variable};
+use odra::{prelude::*, Module, Variable};
 
 #[odra::module]
 pub struct ReentrancyMock {

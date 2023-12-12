@@ -1,8 +1,5 @@
 use odra::prelude::*;
-use odra::{
-    runtime_args, Address, CallDef, ContractEnv, FromBytes, HostEnv, Mapping, Module, OdraType,
-    RuntimeArgs, Variable
-};
+use odra::{Address, CallDef, ContractEnv, HostEnv, Mapping, Module, OdraType, Variable};
 
 #[derive(OdraType)]
 struct MyCounter {

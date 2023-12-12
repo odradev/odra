@@ -1,7 +1,7 @@
 use casper_event_standard::Event;
 use odra::{casper_event_standard, Bytes, Module, OdraError, PublicKey};
 use odra::{prelude::*, CallDef, ModuleWrapper};
-use odra::{Address, ContractEnv, Mapping, Variable, U256, U512};
+use odra::{Address, Mapping, Variable, U256, U512};
 
 #[derive(Event, Eq, PartialEq, Debug)]
 pub struct OnTransfer {
