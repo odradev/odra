@@ -61,7 +61,7 @@ impl AccessControl {
     ///
     /// The caller must have `role`'s admin role.
     pub fn grant_role(&mut self, role: &Role, address: &Address) {
-        self.check_role(&self.get_role_admin(role), &contract_env::caller());
+        self.check_role(&self.get_role_admin(role), self.env().caller());
         self.unchecked_grant_role(role, address);
     }
 
@@ -72,7 +72,7 @@ impl AccessControl {
     ///
     /// The caller must have `role`'s admin role.
     pub fn revoke_role(&mut self, role: &Role, address: &Address) {
-        self.check_role(&self.get_role_admin(role), &contract_env::caller());
+        self.check_role(&self.get_role_admin(role), self.env().caller());
         self.unchecked_revoke_role(role, address);
     }
 
@@ -87,8 +87,8 @@ impl AccessControl {
     ///
     /// Note that only `address` is authorized to call this function.
     pub fn renounce_role(&mut self, role: &Role, address: &Address) {
-        if address != &contract_env::caller() {
-            contract_env::revert(Error::RoleRenounceForAnotherAddress);
+        if address != self.env().caller() {
+            self.env().revert(RoleRenounceForAnotherAddress);
         }
         self.unchecked_revoke_role(role, address);
     }
@@ -98,7 +98,7 @@ impl AccessControl {
     /// Ensures `address` has `role`. If not, reverts with [Error::MissingRole].
     pub fn check_role(&self, role: &Role, address: &Address) {
         if !self.has_role(role, address) {
-            contract_env::revert(Error::MissingRole);
+            self.env().revert(MissingRole);
         }
     }
 

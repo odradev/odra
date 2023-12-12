@@ -167,18 +167,13 @@ pub mod events {
 pub mod errors {
     use odra::OdraError;
 
+    #[derive(OdraError)]
     pub enum Error {
         InsufficientBalance = 30_000,
         InsufficientAllowance = 30_001,
         NameNotSet = 30_002,
         SymbolNotSet = 30_003,
         DecimalsNotSet = 30_004
-    }
-
-    impl From<Error> for OdraError {
-        fn from(error: Error) -> Self {
-            OdraError::user(error as u16)
-        }
     }
 }
 

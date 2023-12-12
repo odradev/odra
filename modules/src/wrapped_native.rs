@@ -4,7 +4,7 @@ use odra::prelude::*;
 use odra::uints::{ToU256, ToU512};
 use odra::{Address, Module, ModuleWrapper, UnwrapOrRevert, U256};
 
-#[odra::module] //(events = [Deposit, Withdrawal])]
+#[odra::module(events = [Deposit, Withdrawal])]
 pub struct WrappedNativeToken {
     erc20: ModuleWrapper<Erc20>
 }

@@ -1,8 +1,7 @@
-use super::{
-    errors::Error,
-    events::{Paused, Unpaused}
-};
-use odra::{contract_env, types::event::OdraEvent, Variable};
+use crate::security::errors::Error::{PausedRequired, UnpausedRequired};
+use crate::security::events::{Paused, Unpaused};
+use odra::prelude::*;
+use odra::{Module, Variable};
 
 /// A module allowing to implement an emergency stop mechanism that can be triggered by any account.
 ///
@@ -25,14 +24,14 @@ impl Pauseable {
     /// Reverts with `[Error::UnpausedRequired]` if the contract is paused.
     pub fn require_not_paused(&self) {
         if self.is_paused() {
-            contract_env::revert(Error::UnpausedRequired);
+            self.env().revert(UnpausedRequired);
         }
     }
 
     /// Reverts with `[Error::PausedRequired]` if the contract is paused.
     pub fn require_paused(&self) {
         if !self.is_paused() {
-            contract_env::revert(Error::PausedRequired);
+            self.env().revert(PausedRequired);
         }
     }
 
@@ -45,10 +44,9 @@ impl Pauseable {
         self.require_not_paused();
         self.is_paused.set(true);
 
-        Paused {
-            account: contract_env::caller()
-        }
-        .emit();
+        self.env().emit_event(Paused {
+            account: self.env().caller()
+        });
     }
 
     /// Returns the contract to normal state.
@@ -60,9 +58,8 @@ impl Pauseable {
         self.require_paused();
         self.is_paused.set(false);
 
-        Unpaused {
-            account: contract_env::caller()
-        }
-        .emit();
+        self.env().emit_event(Unpaused {
+            account: self.env().caller()
+        });
     }
 }

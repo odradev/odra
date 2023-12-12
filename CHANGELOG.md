@@ -33,6 +33,8 @@ and it has to be named `init` and env needs to be passed as a first parameter.
 
 ### Added
 - `last_call()` in test env with `CallResult` struct which holds all information about the last call.
+- `odra::prelude::*` module which reexports all basic types and traits. 
+It is recommended to use it in the module code.
 
 ### Very Brief Upgrade Path
 - Copy `bin` folder and `build.rs` files from a freshly generated project

@@ -1,5 +1,6 @@
 //! Erc721 with ownership.
-use odra::{prelude::string::String, types::Address};
+use odra::Address;
+use odra::prelude::*;
 
 use super::{extensions::erc721_metadata::Erc721Metadata, Erc721};
 

@@ -1,14 +1,10 @@
 //! Odra module implementing Erc721 core.
-
-use crate::erc721::errors::Error;
+use odra::prelude::*;
+use odra::{Address, Bytes, Mapping, Module, U256};
 use crate::erc721::events::{Approval, ApprovalForAll, Transfer};
 use crate::erc721::Erc721;
-use crate::erc721_receiver::Erc721ReceiverRef;
-use odra::contract_env::{caller, revert};
-use odra::types::event::OdraEvent;
-use odra::types::OdraAddress;
-use odra::types::{casper_types::bytesrepr::Bytes, Address, U256};
-use odra::{Mapping, UnwrapOrRevert};
+use crate::erc721::errors::Error::{ApprovalToCurrentOwner, ApproveToCaller, InvalidTokenId, NotAnOwnerOrApproved, TransferFailed};
+use crate::erc721_receiver::Erc721ReceiverContractRef;
 
 /// The ERC721 base implementation.
 #[odra::module(events = [Approval, ApprovalForAll, Transfer])]
@@ -28,13 +24,13 @@ impl Erc721 for Erc721Base {
     fn owner_of(&self, token_id: &U256) -> Address {
         self.owners
             .get(token_id)
-            .unwrap_or_revert_with(Error::InvalidTokenId)
-            .unwrap_or_revert_with(Error::InvalidTokenId)
+            .unwrap_or_revert_with(InvalidTokenId)
+            .unwrap_or_revert_with(InvalidTokenId)
     }
 
     fn safe_transfer_from(&mut self, from: &Address, to: &Address, token_id: &U256) {
-        if !self.is_approved_or_owner(&caller(), token_id) {
-            revert(Error::NotAnOwnerOrApproved);
+        if !self.is_approved_or_owner(self.env().caller(), token_id) {
+            self.env().revert(NotAnOwnerOrApproved);
         }
         self.safe_transfer(from, to, token_id, &None);
     }
@@ -46,29 +42,29 @@ impl Erc721 for Erc721Base {
         token_id: &U256,
         data: &Bytes
     ) {
-        if !self.is_approved_or_owner(&caller(), token_id) {
-            revert(Error::NotAnOwnerOrApproved);
+        if !self.is_approved_or_owner(self.env().caller(), token_id) {
+            self.env().revert(NotAnOwnerOrApproved);
         }
         self.safe_transfer(from, to, token_id, &Some(data.clone()));
     }
 
     fn transfer_from(&mut self, from: &Address, to: &Address, token_id: &U256) {
-        if !self.is_approved_or_owner(&caller(), token_id) {
-            revert(Error::NotAnOwnerOrApproved);
+        if !self.is_approved_or_owner(self.env().caller(), token_id) {
+            self.env().revert(NotAnOwnerOrApproved);
         }
         self.transfer(from, to, token_id);
     }
 
     fn approve(&mut self, approved: &Option<Address>, token_id: &U256) {
         let owner = self.owner_of(token_id);
-        let caller = caller();
+        let caller = self.env().caller();
 
         if &Some(owner) == approved {
-            revert(Error::ApprovalToCurrentOwner);
+            self.env().revert(ApprovalToCurrentOwner);
         }
 
         if caller != owner && !self.is_approved_for_all(&owner, &caller) {
-            revert(Error::NotAnOwnerOrApproved);
+            self.env().revert(NotAnOwnerOrApproved);
         }
 
         self.token_approvals.set(token_id, *approved);
@@ -82,18 +78,18 @@ impl Erc721 for Erc721Base {
     }
 
     fn set_approval_for_all(&mut self, operator: &Address, approved: bool) {
-        let caller = caller();
+        let caller = self.env().caller();
         if &caller == operator {
-            revert(Error::ApproveToCaller)
+            self.env().revert(ApproveToCaller)
         }
 
         self.operator_approvals.set(&(caller, *operator), approved);
+        self.env().emit_event(
         ApprovalForAll {
             owner: caller,
             operator: *operator,
             approved
-        }
-        .emit();
+        });
     }
 
     fn get_approved(&self, token_id: &U256) -> Option<Address> {
@@ -127,10 +123,10 @@ impl Erc721Base {
         self.transfer(from, to, token_id);
         if to.is_contract() {
             let response =
-                Erc721ReceiverRef::at(to).on_erc721_received(&caller(), from, token_id, data);
+                Erc721ReceiverContractRef::at(to).on_erc721_received(self.env().caller(), from, token_id, data);
 
             if !response {
-                revert(Error::TransferFailed)
+                self.env().revert(TransferFailed)
             }
         }
     }
@@ -164,7 +160,7 @@ impl Erc721Base {
     /// Reverts with [Error::InvalidTokenId] if the `token_id` token does not exist.
     pub fn assert_exists(&self, token_id: &U256) {
         if !self.exists(token_id) {
-            revert(Error::InvalidTokenId);
+            self.env().revert(InvalidTokenId);
         }
     }
 }

@@ -1,9 +1,6 @@
 //! Erc721 receiver.
-use odra::{
-    prelude::vec::Vec,
-    types::{Address, U256}
-};
-
+use odra::prelude::*;
+use odra::{Address, U256};
 /// The ERC721 receiver interface.
 pub trait Erc721Receiver {
     /// This function is called at the end of a [safe_transfer_from](crate::erc721::Erc721::safe_transfer_from) or

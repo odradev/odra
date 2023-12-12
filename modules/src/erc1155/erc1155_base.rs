@@ -41,7 +41,7 @@ impl Erc1155 for Erc1155Base {
     }
 
     fn set_approval_for_all(&mut self, operator: &Address, approved: bool) {
-        let owner = &caller();
+        let owner = self.caller();
         if owner == operator {
             revert(Error::ApprovalForSelf);
         }

@@ -22,10 +22,10 @@ fqn = "odra_modules::Erc20"
 name = "WrappedNativeToken"
 fqn = "odra_modules::wrapped_native::WrappedNativeToken"
 
-#[[contracts]]
-#name = "ownable"
-#fqn = "odra_modules::access::Ownable"
-#
+[[contracts]]
+name = "ownable"
+fqn = "odra_modules::access::Ownable"
+
 #[[contracts]]
 #name = "ownable2_step"
 #fqn = "odra_modules::access::Ownable2Step"

@@ -1,8 +1,6 @@
 //! Erc1155 standard implementation.
-use odra::{
-    prelude::vec::Vec,
-    types::{casper_types::bytesrepr::Bytes, Address, U256}
-};
+use odra::prelude::*;
+use odra::{Address, Bytes, U256};
 
 pub mod erc1155_base;
 pub mod extensions;
@@ -52,13 +50,12 @@ pub trait Erc1155 {
 
 /// Erc1155-related Odra events.
 pub mod events {
-    use odra::{
-        prelude::vec::Vec,
-        types::{Address, U256}
-    };
+    use casper_event_standard::Event;
+    use odra::prelude::*;
+    use odra::{Address, U256};
 
     /// Emitted when a single Erc1155 transfer is performed.
-    #[derive(odra::Event, PartialEq, Eq, Debug, Clone)]
+    #[derive(Event, PartialEq, Eq, Debug, Clone)]
     pub struct TransferSingle {
         pub operator: Option<Address>,
         pub from: Option<Address>,
@@ -68,7 +65,7 @@ pub mod events {
     }
 
     /// Emitted when a batched Erc1155 transfer is performed.
-    #[derive(odra::Event, PartialEq, Eq, Debug, Clone)]
+    #[derive(Event, PartialEq, Eq, Debug, Clone)]
     pub struct TransferBatch {
         pub operator: Option<Address>,
         pub from: Option<Address>,
@@ -78,7 +75,7 @@ pub mod events {
     }
 
     /// Emitted when the `owner` approves or revokes the `operator`.
-    #[derive(odra::Event, PartialEq, Eq, Debug, Clone)]
+    #[derive(Event, PartialEq, Eq, Debug, Clone)]
     pub struct ApprovalForAll {
         pub owner: Address,
         pub operator: Address,
@@ -88,23 +85,22 @@ pub mod events {
 
 /// Erc1155-related Odra errors.
 pub mod errors {
-    use odra::execution_error;
+    use odra::OdraError;
 
-    execution_error! {
-        /// Possible errors in the context of Erc1155.
-        pub enum Error {
-            /// Collections of addresses and token ids have different length.
-            AccountsAndIdsLengthMismatch => 30_000,
-            /// The owner cannot approve himself.
-            ApprovalForSelf => 30_001,
-            /// The operator is not allowed to perform the action.
-            NotAnOwnerOrApproved => 30_002,
-            /// Insufficient token amount to perform a transaction.
-            InsufficientBalance => 30_003,
-            /// Token transfer finished with an error.
-            TransferRejected => 30_004,
-            /// Collections of token ids and amounts have different length.
-            IdsAndAmountsLengthMismatch => 30_005,
-        }
+    /// Possible errors in the context of Erc1155.
+    #[derive(OdraError)]
+    pub enum Error {
+        /// Collections of addresses and token ids have different length.
+        AccountsAndIdsLengthMismatch = 30_000,
+        /// The owner cannot approve himself.
+        ApprovalForSelf = 30_001,
+        /// The operator is not allowed to perform the action.
+        NotAnOwnerOrApproved = 30_002,
+        /// Insufficient token amount to perform a transaction.
+        InsufficientBalance = 30_003,
+        /// Token transfer finished with an error.
+        TransferRejected = 30_004,
+        /// Collections of token ids and amounts have different length.
+        IdsAndAmountsLengthMismatch = 30_005
     }
 }
