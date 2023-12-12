@@ -70,6 +70,9 @@ pub fn env_rc() -> syn::Ident {
 pub fn events() -> syn::Ident {
     format_ident!("events")
 }
+pub fn event_schemas() -> syn::Ident {
+    format_ident!("event_schemas")
+}
 
 pub fn module_schema() -> syn::Ident {
     format_ident!("module_schema")
