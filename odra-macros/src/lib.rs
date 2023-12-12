@@ -1,12 +1,10 @@
 #![feature(box_patterns, result_flattening)]
 
+use crate::utils::IntoCode;
 use ast::*;
-use derive_try_from::TryFromRef;
 use ir::{ModuleImplIR, ModuleStructIR, TypeIR};
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use quote::ToTokens;
-use crate::ir::ExternalContractIR;
 
 mod ast;
 mod ir;
@@ -27,10 +25,10 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
     let attr: TokenStream2 = attr.into();
     let item: TokenStream2 = item.into();
     if let Ok(ir) = ModuleImplIR::try_from((&attr, &item)) {
-        return ModuleImpl::try_from(&ir).into_code();
+        return ModuleImplItem::try_from(&ir).into_code();
     }
     if let Ok(ir) = ModuleStructIR::try_from((&attr, &item)) {
-        return ModuleStruct::try_from(&ir).into_code();
+        return ModuleStructItem::try_from(&ir).into_code();
     }
     span_error!(item, "Struct or impl block expected")
 }
@@ -53,40 +51,15 @@ pub fn derive_odra_error(item: TokenStream) -> TokenStream {
     span_error!(item, "Struct or Enum expected")
 }
 
-#[derive(syn_derive::ToTokens, TryFromRef)]
-#[source(ModuleImplIR)]
-struct ModuleImpl {
-    #[expr(item.self_code())]
-    self_code: syn::ItemImpl,
-    has_entrypoints_item: HasEntrypointsImplItem,
-    ref_item: RefItem,
-    test_parts: TestPartsItem,
-    test_parts_reexport: TestPartsReexportItem,
-    exec_parts: ExecPartsItem,
-    exec_parts_reexport: ExecPartsReexportItem,
-    wasm_parts: WasmPartsModuleItem,
-    blueprint: BlueprintItem
-}
-
-#[derive(syn_derive::ToTokens, TryFromRef)]
-#[source(ModuleStructIR)]
-struct ModuleStruct {
-    self_code: ModuleDefItem,
-    mod_item: ModuleModItem,
-    has_ident_item: HasIdentImplItem,
-    has_events_item: HasEventsImplItem
-}
-
-trait IntoCode {
-    fn into_code(self) -> TokenStream;
-}
-
-impl<T: ToTokens> IntoCode for Result<T, syn::Error> {
-    fn into_code(self) -> TokenStream {
-        match self {
-            Ok(data) => data.to_token_stream(),
-            Err(e) => e.to_compile_error()
-        }
-        .into()
+#[proc_macro_attribute]
+pub fn external_contract(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let attr: TokenStream2 = attr.into();
+    let item: TokenStream2 = item.into();
+    if let Ok(ir) = ModuleImplIR::try_from((&attr, &item)) {
+        return ExternalContractImpl::try_from(&ir).into_code();
     }
+    span_error!(
+        item,
+        "#[external_contract] can be only applied to trait only"
+    )
 }

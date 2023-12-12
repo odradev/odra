@@ -96,6 +96,16 @@ pub fn mock_enum() -> TypeIR {
     TypeIR::try_from(&ty).unwrap()
 }
 
+pub fn mock_ext_contract() -> ModuleImplIR {
+    let ext = quote!(
+        pub trait Token {
+            fn balance_of(&self, owner: Address) -> U256;
+        }
+    );
+    let attr = quote!();
+    ModuleImplIR::try_from((&attr, &ext)).unwrap()
+}
+
 #[track_caller]
 pub fn assert_eq<A: ToTokens, B: ToTokens>(a: A, b: B) {
     fn parse<T: ToTokens>(e: T) -> String {

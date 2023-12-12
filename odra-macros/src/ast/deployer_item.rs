@@ -3,7 +3,7 @@ use derive_try_from::TryFromRef;
 use crate::{ir::ModuleImplIR, utils};
 
 use super::deployer_utils::{
-    DeployerInitSignature, EntrypointCallerExpr, HostRefInstanceExpr, NewContractExpr,
+    DeployerInitSignature, EntrypointCallerExpr, HostRefInstanceExpr, NewContractExpr
 };
 
 #[derive(syn_derive::ToTokens)]
@@ -11,7 +11,7 @@ struct DeployStructItem {
     vis: syn::Visibility,
     struct_token: syn::token::Struct,
     ident: syn::Ident,
-    semi_token: syn::token::Semi,
+    semi_token: syn::token::Semi
 }
 
 impl TryFrom<&'_ ModuleImplIR> for DeployStructItem {
@@ -22,7 +22,7 @@ impl TryFrom<&'_ ModuleImplIR> for DeployStructItem {
             vis: utils::syn::visibility_pub(),
             struct_token: Default::default(),
             ident: module.deployer_ident()?,
-            semi_token: Default::default(),
+            semi_token: Default::default()
         })
     }
 }
@@ -34,7 +34,7 @@ struct DeployImplItem {
     #[syn(braced)]
     brace_token: syn::token::Brace,
     #[syn(in = brace_token)]
-    init_fn: ContractInitFn,
+    init_fn: ContractInitFn
 }
 
 impl TryFrom<&'_ ModuleImplIR> for DeployImplItem {
@@ -45,7 +45,7 @@ impl TryFrom<&'_ ModuleImplIR> for DeployImplItem {
             impl_token: Default::default(),
             ident: module.deployer_ident()?,
             brace_token: Default::default(),
-            init_fn: module.try_into()?,
+            init_fn: module.try_into()?
         })
     }
 }
@@ -64,14 +64,14 @@ struct ContractInitFn {
     #[syn(in = braces)]
     new_contract: NewContractExpr,
     #[syn(in = braces)]
-    host_ref_instance: HostRefInstanceExpr,
+    host_ref_instance: HostRefInstanceExpr
 }
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
 #[source(ModuleImplIR)]
 pub struct DeployerItem {
     struct_item: DeployStructItem,
-    impl_item: DeployImplItem,
+    impl_item: DeployImplItem
 }
 
 #[cfg(test)]

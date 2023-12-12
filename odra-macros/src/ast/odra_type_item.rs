@@ -1,7 +1,7 @@
 use crate::ast::clone::CloneItem;
+use crate::ast::events_item::HasEventsImplItem;
 use crate::ast::fn_utils::{FnItem, SelfFnItem, SingleArgFnItem};
 use crate::ast::utils::{ImplItem, Named};
-use crate::ast::HasEventsImplItem;
 use crate::ir::TypeIR;
 use crate::utils;
 use crate::utils::misc::AsBlock;

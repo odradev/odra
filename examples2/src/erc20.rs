@@ -31,6 +31,11 @@ pub enum Erc20Error {
     InsufficientAllowance = 2
 }
 
+#[odra::external_contract]
+trait TotalSupply {
+    fn total_supply(&self) -> U256;
+}
+
 #[odra::module(events = [OnTransfer, OnCrossTransfer, OnApprove])]
 pub struct Erc20 {
     total_supply: Variable<U256>,
@@ -80,7 +85,7 @@ impl Erc20 {
     }
 
     pub fn cross_total(&self, other: &Address) -> U256 {
-        let other_erc20 = Erc20ContractRef {
+        let other_erc20 = TotalSupplyContractRef {
             address: *other,
             env: self.env()
         };

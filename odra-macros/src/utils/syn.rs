@@ -9,10 +9,8 @@ pub fn ident_from_struct(struct_code: &syn::ItemStruct) -> syn::Ident {
     struct_code.ident.clone()
 }
 
-pub fn function_arg_names(function: &syn::ImplItemFn) -> Vec<syn::Ident> {
-    function
-        .sig
-        .inputs
+pub fn function_arg_names(sig: &syn::Signature) -> Vec<syn::Ident> {
+    sig.inputs
         .iter()
         .filter_map(|arg| match arg {
             syn::FnArg::Typed(syn::PatType {
@@ -24,10 +22,8 @@ pub fn function_arg_names(function: &syn::ImplItemFn) -> Vec<syn::Ident> {
         .collect()
 }
 
-pub fn function_named_args(function: &syn::ImplItemFn) -> Vec<&syn::FnArg> {
-    function
-        .sig
-        .inputs
+pub fn function_named_args(sig: &syn::Signature) -> Vec<&syn::FnArg> {
+    sig.inputs
         .iter()
         .filter(|arg| {
             matches!(
@@ -41,10 +37,8 @@ pub fn function_named_args(function: &syn::ImplItemFn) -> Vec<&syn::FnArg> {
         .collect::<Vec<_>>()
 }
 
-pub fn function_typed_args(function: &syn::ImplItemFn) -> Vec<syn::PatType> {
-    function
-        .sig
-        .inputs
+pub fn function_typed_args(sig: &syn::Signature) -> Vec<syn::PatType> {
+    sig.inputs
         .iter()
         .filter_map(|arg| match arg {
             syn::FnArg::Typed(pat_type) => Some(pat_type.clone()),
@@ -53,15 +47,15 @@ pub fn function_typed_args(function: &syn::ImplItemFn) -> Vec<syn::PatType> {
         .collect()
 }
 
-pub fn receiver_arg(function: &syn::ImplItemFn) -> Option<syn::Receiver> {
-    function.sig.inputs.iter().find_map(|arg| match arg {
+pub fn receiver_arg(sig: &syn::Signature) -> Option<syn::Receiver> {
+    sig.inputs.iter().find_map(|arg| match arg {
         syn::FnArg::Receiver(receiver) => Some(receiver.clone()),
         _ => None
     })
 }
 
-pub fn function_return_type(function: &syn::ImplItemFn) -> syn::ReturnType {
-    function.sig.output.clone()
+pub fn function_return_type(sig: &syn::Signature) -> syn::ReturnType {
+    sig.output.clone()
 }
 
 pub fn struct_fields_ident(item: &syn::ItemStruct) -> Result<Vec<syn::Ident>, syn::Error> {
