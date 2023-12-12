@@ -2,11 +2,10 @@ use crate::erc20::Erc20;
 use crate::wrapped_native::events::{Deposit, Withdrawal};
 use odra::prelude::*;
 use odra::uints::{ToU256, ToU512};
-use odra::{Address, ContractEnv, ModuleWrapper, UnwrapOrRevert, U256};
+use odra::{Address, Module, ModuleWrapper, UnwrapOrRevert, U256};
 
 #[odra::module] //(events = [Deposit, Withdrawal])]
 pub struct WrappedNativeToken {
-    env: Rc<ContractEnv>,
     erc20: ModuleWrapper<Erc20>
 }
 
@@ -20,26 +19,26 @@ impl WrappedNativeToken {
 
     #[odra(payable)]
     pub fn deposit(&mut self) {
-        let caller = self.env.caller();
+        let caller = self.env().caller();
 
-        let amount = self.env.attached_value();
+        let amount = self.env().attached_value();
 
-        let amount = amount.to_u256().unwrap_or_revert(&self.env);
+        let amount = amount.to_u256().unwrap_or_revert(&self.env());
         self.erc20.mint(&caller, &amount);
 
-        self.env.emit_event(Deposit {
+        self.env().emit_event(Deposit {
             account: caller,
             value: amount
         });
     }
 
     pub fn withdraw(&mut self, amount: &U256) {
-        let caller = self.env.caller();
+        let caller = self.env().caller();
 
         self.erc20.burn(&caller, amount);
-        self.env.transfer_tokens(&caller, &amount.to_u512());
+        self.env().transfer_tokens(&caller, &amount.to_u512());
 
-        self.env.emit_event(Withdrawal {
+        self.env().emit_event(Withdrawal {
             account: caller,
             value: *amount
         });

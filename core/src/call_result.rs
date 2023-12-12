@@ -13,13 +13,17 @@ pub struct CallResult {
 }
 
 impl CallResult {
-    pub fn result(&self) -> Bytes {
+    pub fn bytes(&self) -> Bytes {
         match &self.result {
             Ok(result) => result.clone(),
             Err(error) => {
                 panic!("Last call result is an error: {:?}", error);
             }
         }
+    }
+
+    pub fn result(&self) -> Result<Bytes, OdraError> {
+        self.result.clone()
     }
 
     pub fn error(&self) -> OdraError {

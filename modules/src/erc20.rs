@@ -1,11 +1,10 @@
 use crate::erc20::errors::Error::*;
 use crate::erc20::events::*;
 use odra::prelude::*;
-use odra::{Address, ContractEnv, Mapping, Variable, U256};
+use odra::{Address, Mapping, Module, Variable, U256};
 
 #[odra::module(events = [Approval, Transfer])]
 pub struct Erc20 {
-    env: Rc<ContractEnv>,
     decimals: Variable<u8>,
     symbol: Variable<String>,
     name: Variable<String>,
@@ -23,7 +22,7 @@ impl Erc20 {
         decimals: u8,
         initial_supply: Option<U256>
     ) {
-        let caller = self.env.caller();
+        let caller = self.env().caller();
         self.symbol.set(symbol);
         self.name.set(name);
         self.decimals.set(decimals);
@@ -33,7 +32,7 @@ impl Erc20 {
             self.balances.set(&caller, initial_supply);
 
             if !initial_supply.is_zero() {
-                self.env.emit_event(Transfer {
+                self.env().emit_event(Transfer {
                     from: None,
                     to: Some(caller),
                     amount: initial_supply
@@ -43,22 +42,22 @@ impl Erc20 {
     }
 
     pub fn transfer(&mut self, recipient: &Address, amount: &U256) {
-        let caller = self.env.caller();
+        let caller = self.env().caller();
         self.raw_transfer(&caller, recipient, amount);
     }
 
     pub fn transfer_from(&mut self, owner: &Address, recipient: &Address, amount: &U256) {
-        let spender = self.env.caller();
+        let spender = self.env().caller();
 
         self.spend_allowance(owner, &spender, amount);
         self.raw_transfer(owner, recipient, amount);
     }
 
     pub fn approve(&mut self, spender: &Address, amount: &U256) {
-        let owner = self.env.caller();
+        let owner = self.env().caller();
 
         self.allowances.set(&(owner, *spender), *amount);
-        self.env.emit_event(Approval {
+        self.env().emit_event(Approval {
             owner,
             spender: *spender,
             value: *amount
@@ -93,7 +92,7 @@ impl Erc20 {
         self.total_supply.add(*amount);
         self.balances.add(address, *amount);
 
-        self.env.emit_event(Transfer {
+        self.env().emit_event(Transfer {
             from: None,
             to: Some(*address),
             amount: *amount
@@ -102,12 +101,12 @@ impl Erc20 {
 
     pub fn burn(&mut self, address: &Address, amount: &U256) {
         if self.balance_of(address) < *amount {
-            self.env.revert(InsufficientBalance);
+            self.env().revert(InsufficientBalance);
         }
         self.total_supply.subtract(*amount);
         self.balances.subtract(address, *amount);
 
-        self.env.emit_event(Transfer {
+        self.env().emit_event(Transfer {
             from: Some(*address),
             to: None,
             amount: *amount
@@ -118,13 +117,13 @@ impl Erc20 {
 impl Erc20 {
     fn raw_transfer(&mut self, owner: &Address, recipient: &Address, amount: &U256) {
         if *amount > self.balances.get_or_default(owner) {
-            self.env.revert(InsufficientBalance)
+            self.env().revert(InsufficientBalance)
         }
 
         self.balances.subtract(owner, *amount);
         self.balances.add(recipient, *amount);
 
-        self.env.emit_event(Transfer {
+        self.env().emit_event(Transfer {
             from: Some(*owner),
             to: Some(*recipient),
             amount: *amount
@@ -134,11 +133,11 @@ impl Erc20 {
     fn spend_allowance(&mut self, owner: &Address, spender: &Address, amount: &U256) {
         let allowance = self.allowances.get_or_default(&(*owner, *spender));
         if allowance < *amount {
-            self.env.revert(InsufficientAllowance)
+            self.env().revert(InsufficientAllowance)
         }
         self.allowances.subtract(&(*owner, *spender), *amount);
 
-        self.env.emit_event(Approval {
+        self.env().emit_event(Approval {
             owner: *owner,
             spender: *spender,
             value: allowance - *amount
