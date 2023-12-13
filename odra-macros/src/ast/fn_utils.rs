@@ -2,7 +2,6 @@ use crate::{
     ir::{FnArgIR, FnIR},
     utils
 };
-use quote::TokenStreamExt;
 use syn::{parse_quote, FnArg};
 
 pub fn runtime_args_block<F: FnMut(&FnArgIR) -> syn::Stmt>(
@@ -37,8 +36,7 @@ pub struct FnItem {
     #[syn(parenthesized)]
     paren_token: syn::token::Paren,
     #[syn(in = paren_token)]
-    #[to_tokens(| tokens, f | tokens.append_all(f))]
-    args: Vec<syn::FnArg>,
+    args: syn::punctuated::Punctuated<syn::FnArg, syn::Token![,]>,
     ret_ty: syn::ReturnType,
     block: syn::Block
 }
@@ -54,7 +52,7 @@ impl FnItem {
             fn_token: Default::default(),
             fn_name: name.clone(),
             paren_token: Default::default(),
-            args,
+            args: syn::punctuated::Punctuated::from_iter(args),
             ret_ty,
             block
         }
