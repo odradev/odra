@@ -1,6 +1,7 @@
 use quote::TokenStreamExt;
 use syn::parse_quote;
 
+use crate::utils::misc::AsType;
 use crate::{
     ast::fn_utils,
     ir::{FnIR, ModuleIR},
@@ -112,6 +113,7 @@ impl TryFrom<&'_ ModuleIR> for CallFnItem {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+        let module_ident = module.module_ident()?.as_type();
         let ident_args = utils::ident::named_args();
         let ident_schemas = utils::ident::schemas();
         let ty_args = utils::ty::runtime_args();
@@ -123,7 +125,8 @@ impl TryFrom<&'_ ModuleIR> for CallFnItem {
             }
             None => parse_quote!(let #ident_args = Option::<#ty_args>::None)
         };
-        let expr_new_schemas = utils::expr::new_schemas();
+        let events_expr = utils::expr::event_schemas(&module_ident);
+        let expr_new_schemas = utils::expr::schemas(&events_expr);
         let install_contract_stmt = utils::stmt::install_contract(
             parse_quote!(#ident_entry_points()),
             parse_quote!(#ident_schemas),
@@ -316,7 +319,9 @@ mod test {
 
                 #[no_mangle]
                 fn call() {
-                    let schemas = odra::casper_event_standard::Schemas::new();
+                    let schemas = odra::casper_event_standard::Schemas(
+                        <Erc20 as odra::contract_def::HasEvents>::event_schemas()
+                    );
                     let named_args = Some({
                         let mut named_args = odra::RuntimeArgs::new();
                         let _ = named_args.insert(
@@ -399,7 +404,9 @@ mod test {
 
                 #[no_mangle]
                 fn call() {
-                    let schemas = odra::casper_event_standard::Schemas::new();
+                    let schemas = odra::casper_event_standard::Schemas(
+                        <Erc20 as odra::contract_def::HasEvents>::event_schemas()
+                    );
                     let named_args = Option::<odra::RuntimeArgs>::None;
                     odra::odra_casper_wasm_env::host_functions::install_contract(
                         entry_points(),

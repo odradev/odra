@@ -100,6 +100,9 @@ pub fn group() -> syn::Type {
 pub fn schemas() -> syn::Type {
     parse_quote!(odra::casper_event_standard::Schemas)
 }
+pub fn schema() -> syn::Type {
+    parse_quote!(odra::casper_event_standard::Schema)
+}
 
 pub fn cl_typed() -> syn::Type {
     parse_quote!(odra::casper_types::CLTyped)
@@ -220,4 +223,12 @@ pub fn clone() -> syn::Type {
 
 pub fn from<T: ToTokens>(ty: &T) -> syn::Type {
     parse_quote!(::core::convert::From<#ty>)
+}
+
+pub fn typed_btree_map(key: &syn::Type, value: &syn::Type) -> syn::Type {
+    parse_quote!(odra::prelude::BTreeMap<#key, #value>)
+}
+
+pub fn btree_map() -> syn::Type {
+    parse_quote!(odra::prelude::BTreeMap)
 }
