@@ -36,6 +36,10 @@ impl ImplItem {
         Self::new(named, utils::ty::clone())
     }
 
+    pub fn has_events<T: Named>(named: &T) -> Result<Self, syn::Error> {
+        Self::new(named, utils::ty::has_events())
+    }
+
     pub fn from<T: Named>(named: &T, for_ty: &syn::Type) -> Result<Self, syn::Error> {
         let ty_from = utils::ty::from(&named.name()?);
         Ok(Self {

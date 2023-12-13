@@ -70,6 +70,11 @@ pub trait HasEntrypoints {
 /// A trait that should be implemented by each smart contract to allow the backend.
 pub trait HasEvents {
     fn events() -> Vec<Event>;
+
+    #[cfg(target_arch = "wasm32")]
+    fn event_schemas() -> crate::prelude::BTreeMap<String, casper_event_standard::Schema> {
+        crate::prelude::BTreeMap::new()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -95,6 +100,8 @@ pub trait IntoEvent {
 
 impl<T: EventInstance> IntoEvent for T {
     fn into_event() -> Event {
+        let mut schemas = casper_event_standard::Schemas::new();
+        schemas.add::<T>();
         let ident = <T as EventInstance>::name();
         let schema = <T as EventInstance>::schema();
         let args = schema

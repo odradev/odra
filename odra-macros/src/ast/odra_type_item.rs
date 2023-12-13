@@ -335,6 +335,11 @@ mod tests {
                 fn events() -> odra::prelude::vec::Vec<odra::contract_def::Event> {
                     odra::prelude::vec::Vec::new()
                 }
+
+                #[cfg(target_arch = "wasm32")]
+                fn event_schemas() -> odra::prelude::BTreeMap<odra::prelude::string::String, odra::casper_event_standard::Schema> {
+                    odra::prelude::BTreeMap::new()
+                }
             }
 
             #[automatically_derived]
@@ -387,6 +392,11 @@ mod tests {
             impl odra::contract_def::HasEvents for MyType {
                 fn events() -> odra::prelude::vec::Vec<odra::contract_def::Event> {
                     odra::prelude::vec::Vec::new()
+                }
+
+                #[cfg(target_arch = "wasm32")]
+                fn event_schemas() -> odra::prelude::BTreeMap<odra::prelude::string::String, odra::casper_event_standard::Schema> {
+                    odra::prelude::BTreeMap::new()
                 }
             }
 
