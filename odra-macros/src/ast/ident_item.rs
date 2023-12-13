@@ -1,6 +1,6 @@
 use syn::parse_quote;
 
-use crate::ir::StructIR;
+use crate::ir::ModuleStructIR;
 use crate::utils;
 
 #[derive(syn_derive::ToTokens)]
@@ -15,10 +15,10 @@ pub struct HasIdentImplItem {
     ident_fn: IdentFnItem
 }
 
-impl TryFrom<&'_ StructIR> for HasIdentImplItem {
+impl TryFrom<&'_ ModuleStructIR> for HasIdentImplItem {
     type Error = syn::Error;
 
-    fn try_from(ir: &'_ StructIR) -> Result<Self, Self::Error> {
+    fn try_from(ir: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
         Ok(Self {
             impl_token: Default::default(),
             has_ident_ty: utils::ty::has_ident(),
@@ -39,10 +39,10 @@ pub struct IdentFnItem {
     expr: syn::Expr
 }
 
-impl TryFrom<&'_ StructIR> for IdentFnItem {
+impl TryFrom<&'_ ModuleStructIR> for IdentFnItem {
     type Error = syn::Error;
 
-    fn try_from(ir: &'_ StructIR) -> Result<Self, Self::Error> {
+    fn try_from(ir: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
         let ident = utils::ident::ident();
         let ret_ty = utils::ty::string();
 

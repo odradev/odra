@@ -1,6 +1,6 @@
 use super::parts_utils::{UsePreludeItem, UseSuperItem};
 use crate::{
-    ir::{FnIR, ModuleIR},
+    ir::{FnIR, ModuleImplIR},
     utils
 };
 use derive_try_from::TryFromRef;
@@ -12,10 +12,10 @@ pub struct ExecPartsReexportItem {
     reexport_stmt: syn::Stmt
 }
 
-impl TryFrom<&'_ ModuleIR> for ExecPartsReexportItem {
+impl TryFrom<&'_ ModuleImplIR> for ExecPartsReexportItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let test_parts_ident = module.exec_parts_mod_ident()?;
         Ok(Self {
             reexport_stmt: parse_quote!(pub use #test_parts_ident::*;)
@@ -37,10 +37,10 @@ pub struct ExecPartsItem {
     exec_functions: Vec<ExecFunctionItem>
 }
 
-impl TryFrom<&'_ ModuleIR> for ExecPartsItem {
+impl TryFrom<&'_ ModuleImplIR> for ExecPartsItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
             parts_module: module.try_into()?,
             brace_token: Default::default(),
@@ -85,10 +85,10 @@ struct ExecFunctionItem {
     return_stmt: syn::Stmt
 }
 
-impl TryFrom<(&'_ ModuleIR, &'_ FnIR)> for ExecFunctionItem {
+impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for ExecFunctionItem {
     type Error = syn::Error;
 
-    fn try_from(value: (&'_ ModuleIR, &'_ FnIR)) -> Result<Self, Self::Error> {
+    fn try_from(value: (&'_ ModuleImplIR, &'_ FnIR)) -> Result<Self, Self::Error> {
         let (module, func) = value;
         let fn_ident = func.name();
         let result_ident = utils::ident::result();
@@ -173,7 +173,7 @@ impl TryFrom<&'_ FnIR> for ExecFnSignature {
 }
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
-#[source(ModuleIR)]
+#[source(ModuleImplIR)]
 struct ExecPartsModuleItem {
     #[default]
     mod_token: syn::token::Mod,

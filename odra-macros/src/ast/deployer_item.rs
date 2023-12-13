@@ -1,6 +1,6 @@
 use derive_try_from::TryFromRef;
 
-use crate::{ir::ModuleIR, utils};
+use crate::{ir::ModuleImplIR, utils};
 
 use super::deployer_utils::{
     DeployerInitSignature, EntrypointCallerExpr, HostRefInstanceExpr, NewContractExpr
@@ -14,10 +14,10 @@ struct DeployStructItem {
     semi_token: syn::token::Semi
 }
 
-impl TryFrom<&'_ ModuleIR> for DeployStructItem {
+impl TryFrom<&'_ ModuleImplIR> for DeployStructItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
             vis: utils::syn::visibility_pub(),
             struct_token: Default::default(),
@@ -37,10 +37,10 @@ struct DeployImplItem {
     init_fn: ContractInitFn
 }
 
-impl TryFrom<&'_ ModuleIR> for DeployImplItem {
+impl TryFrom<&'_ ModuleImplIR> for DeployImplItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
             impl_token: Default::default(),
             ident: module.deployer_ident()?,
@@ -51,7 +51,7 @@ impl TryFrom<&'_ ModuleIR> for DeployImplItem {
 }
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
-#[source(ModuleIR)]
+#[source(ModuleImplIR)]
 struct ContractInitFn {
     #[expr(utils::syn::visibility_pub())]
     vis: syn::Visibility,
@@ -68,7 +68,7 @@ struct ContractInitFn {
 }
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
-#[source(ModuleIR)]
+#[source(ModuleImplIR)]
 pub struct DeployerItem {
     struct_item: DeployStructItem,
     impl_item: DeployImplItem

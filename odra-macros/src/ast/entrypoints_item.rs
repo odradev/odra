@@ -1,7 +1,7 @@
 use syn::parse_quote;
 
 use crate::ir::FnIR;
-use crate::{ir::ModuleIR, utils};
+use crate::{ir::ModuleImplIR, utils};
 
 #[derive(syn_derive::ToTokens)]
 pub struct HasEntrypointsImplItem {
@@ -15,10 +15,10 @@ pub struct HasEntrypointsImplItem {
     events_fn: EntrypointsFnItem
 }
 
-impl TryFrom<&'_ ModuleIR> for HasEntrypointsImplItem {
+impl TryFrom<&'_ ModuleImplIR> for HasEntrypointsImplItem {
     type Error = syn::Error;
 
-    fn try_from(struct_ir: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(struct_ir: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
             impl_token: Default::default(),
             has_ident_ty: utils::ty::has_entrypoints(),
@@ -39,10 +39,10 @@ pub struct EntrypointsFnItem {
     expr: syn::Expr
 }
 
-impl TryFrom<&'_ ModuleIR> for EntrypointsFnItem {
+impl TryFrom<&'_ ModuleImplIR> for EntrypointsFnItem {
     type Error = syn::Error;
 
-    fn try_from(struct_ir: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(struct_ir: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let ident_entrypoints = utils::ident::entrypoints();
         let entrypoint_ty = utils::ty::entry_point_def();
         let expr = struct_entrypoints_expr(struct_ir)?;
@@ -55,7 +55,7 @@ impl TryFrom<&'_ ModuleIR> for EntrypointsFnItem {
     }
 }
 
-fn struct_entrypoints_expr(ir: &ModuleIR) -> Result<syn::Expr, syn::Error> {
+fn struct_entrypoints_expr(ir: &ModuleImplIR) -> Result<syn::Expr, syn::Error> {
     let struct_entrypoints = ir
         .functions()
         .iter()

@@ -1,7 +1,7 @@
 use derive_try_from::TryFromRef;
 use syn::parse_quote;
 
-use crate::{ir::ModuleIR, utils};
+use crate::{ir::ModuleImplIR, utils};
 
 use super::{
     deployer_item::DeployerItem,
@@ -15,10 +15,10 @@ pub struct TestPartsReexportItem {
     reexport_stmt: syn::Stmt
 }
 
-impl TryFrom<&'_ ModuleIR> for TestPartsReexportItem {
+impl TryFrom<&'_ ModuleImplIR> for TestPartsReexportItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let test_parts_ident = module.test_parts_mod_ident()?;
         Ok(Self {
             attr: utils::attr::not_wasm32(),
@@ -34,10 +34,10 @@ pub struct PartsModuleItem {
     ident: syn::Ident
 }
 
-impl TryFrom<&'_ ModuleIR> for PartsModuleItem {
+impl TryFrom<&'_ ModuleImplIR> for PartsModuleItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
             attr: utils::attr::not_wasm32(),
             mod_token: Default::default(),
@@ -47,7 +47,7 @@ impl TryFrom<&'_ ModuleIR> for PartsModuleItem {
 }
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
-#[source(ModuleIR)]
+#[source(ModuleImplIR)]
 pub struct TestPartsItem {
     parts_module: PartsModuleItem,
     #[syn(braced)]

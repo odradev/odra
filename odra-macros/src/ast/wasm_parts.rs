@@ -4,7 +4,7 @@ use syn::parse_quote;
 use crate::utils::misc::AsType;
 use crate::{
     ast::fn_utils,
-    ir::{FnIR, ModuleIR},
+    ir::{FnIR, ModuleImplIR},
     utils
 };
 
@@ -34,10 +34,10 @@ pub struct WasmPartsModuleItem {
     entry_points: Vec<NoMangleFnItem>
 }
 
-impl TryFrom<&'_ ModuleIR> for WasmPartsModuleItem {
+impl TryFrom<&'_ ModuleImplIR> for WasmPartsModuleItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let module_str = module.module_str()?;
         Ok(Self {
             attrs: vec![utils::attr::wasm32(), utils::attr::odra_module(&module_str)],
@@ -72,10 +72,10 @@ struct EntryPointsFnItem {
     ret: syn::Expr
 }
 
-impl TryFrom<&'_ ModuleIR> for EntryPointsFnItem {
+impl TryFrom<&'_ ModuleImplIR> for EntryPointsFnItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let ty_entry_points = utils::ty::entry_points();
         let ident_entry_points = utils::ident::entry_points();
         let expr_entry_points = utils::expr::new_entry_points();
@@ -109,10 +109,10 @@ struct CallFnItem {
     install_contract_stmt: syn::Stmt
 }
 
-impl TryFrom<&'_ ModuleIR> for CallFnItem {
+impl TryFrom<&'_ ModuleImplIR> for CallFnItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let module_ident = module.module_ident()?.as_type();
         let ident_args = utils::ident::named_args();
         let ident_schemas = utils::ident::schemas();

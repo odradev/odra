@@ -36,9 +36,9 @@ macro_rules! try_parse {
     };
 }
 
-try_parse!(syn::ItemStruct => StructIR);
+try_parse!(syn::ItemStruct => ModuleStructIR);
 
-impl StructIR {
+impl ModuleStructIR {
     pub fn self_code(&self) -> &syn::ItemStruct {
         &self.code
     }
@@ -158,22 +158,46 @@ pub struct EnumeratedTypedField {
     pub ty: syn::Type
 }
 
-try_parse!(syn::ItemImpl => ModuleIR);
+pub enum ModuleImplIR {
+    Impl(ModuleIR),
+    Trait(ModuleTraitIR)
+}
 
-// TODO: change the name
-impl ModuleIR {
-    pub fn self_code(&self) -> syn::ItemImpl {
-        let mut code = self.code.clone();
-        code.items.iter_mut().for_each(|item| {
-            if let syn::ImplItem::Fn(func) = item {
-                func.attrs = attr::other_attributes(func.attrs.clone());
-            }
-        });
-        code
+impl TryFrom<(&proc_macro2::TokenStream, &proc_macro2::TokenStream)> for ModuleImplIR {
+    type Error = syn::Error;
+
+    fn try_from(
+        stream: (&proc_macro2::TokenStream, &proc_macro2::TokenStream)
+    ) -> Result<Self, Self::Error> {
+        let config = syn::parse2::<ConfigItem>(stream.0.clone())?;
+        if let Ok(code) = syn::parse2::<syn::ItemImpl>(stream.1.clone()) {
+            return Ok(Self::Impl(ModuleIR { code, config }));
+        }
+
+        if let Ok(code) = syn::parse2::<syn::ItemTrait>(stream.1.clone()) {
+            return Ok(Self::Trait(ModuleTraitIR { code, config }));
+        }
+
+        Err(syn::Error::new_spanned(
+            stream.1,
+            "Impl or Trait block expected"
+        ))
+    }
+}
+
+impl ModuleImplIR {
+    pub fn self_code(&self) -> proc_macro2::TokenStream {
+        match self {
+            ModuleImplIR::Impl(ir) => ir.self_code().into_token_stream(),
+            ModuleImplIR::Trait(ir) => ir.self_code().into_token_stream()
+        }
     }
 
     pub fn module_ident(&self) -> Result<Ident, syn::Error> {
-        utils::syn::ident_from_impl(&self.code)
+        match self {
+            ModuleImplIR::Impl(ir) => utils::syn::ident_from_impl(&ir.code),
+            ModuleImplIR::Trait(ir) => Ok(ir.module_ident())
+        }
     }
 
     pub fn module_str(&self) -> Result<String, syn::Error> {
@@ -243,18 +267,6 @@ impl ModuleIR {
         ))
     }
 
-    pub fn functions(&self) -> Vec<FnIR> {
-        self.code
-            .items
-            .iter()
-            .filter_map(|item| match item {
-                syn::ImplItem::Fn(func) => Some(FnIR::new(func.clone())),
-                _ => None
-            })
-            .filter(|f| self.is_trait_impl() || f.is_pub())
-            .collect::<Vec<_>>()
-    }
-
     pub fn host_functions(&self) -> Vec<FnIR> {
         self.functions()
             .into_iter()
@@ -279,22 +291,93 @@ impl ModuleIR {
             .unwrap_or_default()
     }
 
+    pub fn functions(&self) -> Vec<FnIR> {
+        match self {
+            ModuleImplIR::Impl(ir) => ir.functions(),
+            ModuleImplIR::Trait(ir) => ir.functions()
+        }
+    }
+}
+
+try_parse!(syn::ItemImpl => ModuleIR);
+
+impl ModuleIR {
+    fn self_code(&self) -> syn::ItemImpl {
+        let mut code = self.code.clone();
+        code.items.iter_mut().for_each(|item| {
+            if let syn::ImplItem::Fn(func) = item {
+                func.attrs = attr::other_attributes(func.attrs.clone());
+            }
+        });
+        code
+    }
+
+    fn functions(&self) -> Vec<FnIR> {
+        self.code
+            .items
+            .iter()
+            .filter_map(|item| match item {
+                syn::ImplItem::Fn(func) => Some(FnIR::from(func.clone())),
+                _ => None
+            })
+            .filter(|f| self.is_trait_impl() || f.is_pub())
+            .collect::<Vec<_>>()
+    }
+
     fn is_trait_impl(&self) -> bool {
         self.code.trait_.is_some()
     }
 }
 
-pub struct FnIR {
-    code: syn::ImplItemFn
+try_parse!(syn::ItemTrait => ModuleTraitIR);
+
+impl ModuleTraitIR {
+    fn self_code(&self) -> syn::ItemTrait {
+        let mut code = self.code.clone();
+        code.items.iter_mut().for_each(|item| {
+            if let syn::TraitItem::Fn(func) = item {
+                func.attrs = attr::other_attributes(func.attrs.clone());
+            }
+        });
+        code
+    }
+
+    fn module_ident(&self) -> syn::Ident {
+        self.code.ident.clone()
+    }
+
+    fn functions(&self) -> Vec<FnIR> {
+        self.code
+            .items
+            .iter()
+            .filter_map(|item| match item {
+                syn::TraitItem::Fn(func) => Some(FnIR::from(func.clone())),
+                _ => None
+            })
+            .collect::<Vec<_>>()
+    }
+}
+
+pub enum FnIR {
+    Impl(FnImplIR),
+    Def(FnTraitIR)
+}
+
+impl From<syn::TraitItemFn> for FnIR {
+    fn from(code: syn::TraitItemFn) -> Self {
+        Self::Def(FnTraitIR::new(code))
+    }
+}
+
+impl From<syn::ImplItemFn> for FnIR {
+    fn from(code: syn::ImplItemFn) -> Self {
+        Self::Impl(FnImplIR::new(code))
+    }
 }
 
 impl FnIR {
-    pub fn new(code: syn::ImplItemFn) -> Self {
-        FnIR { code }
-    }
-
     pub fn name(&self) -> Ident {
-        self.code.sig.ident.clone()
+        self.sig().ident.clone()
     }
 
     pub fn try_name(&self) -> Ident {
@@ -310,19 +393,17 @@ impl FnIR {
     }
 
     pub fn is_payable(&self) -> bool {
-        let (odra_attrs, _) =
-            attr::partition_attributes(self.code.attrs.clone()).unwrap_or_default();
+        let (odra_attrs, _) = attr::partition_attributes(self.attrs()).unwrap_or_default();
         odra_attrs.iter().any(OdraAttribute::is_payable)
     }
 
     pub fn is_non_reentrant(&self) -> bool {
-        let (odra_attrs, _) =
-            attr::partition_attributes(self.code.attrs.clone()).unwrap_or_default();
+        let (odra_attrs, _) = attr::partition_attributes(self.attrs()).unwrap_or_default();
         odra_attrs.iter().any(OdraAttribute::is_non_reentrant)
     }
 
     pub fn arg_names(&self) -> Vec<Ident> {
-        utils::syn::function_arg_names(&self.code)
+        utils::syn::function_arg_names(self.sig())
     }
 
     pub fn has_args(&self) -> bool {
@@ -330,14 +411,14 @@ impl FnIR {
     }
 
     pub fn named_args(&self) -> Vec<FnArgIR> {
-        utils::syn::function_named_args(&self.code)
+        utils::syn::function_named_args(self.sig())
             .into_iter()
             .map(|arg| FnArgIR::new(arg.to_owned()))
             .collect()
     }
 
     pub fn return_type(&self) -> syn::ReturnType {
-        utils::syn::function_return_type(&self.code)
+        utils::syn::function_return_type(self.sig())
     }
 
     pub fn try_return_type(&self) -> syn::ReturnType {
@@ -349,7 +430,7 @@ impl FnIR {
     }
 
     pub fn typed_args(&self) -> Vec<syn::PatType> {
-        utils::syn::function_typed_args(&self.code)
+        utils::syn::function_typed_args(self.sig())
     }
 
     pub fn raw_typed_args(&self) -> Vec<syn::PatType> {
@@ -363,7 +444,7 @@ impl FnIR {
     }
 
     pub fn is_mut(&self) -> bool {
-        let receiver = utils::syn::receiver_arg(&self.code);
+        let receiver = utils::syn::receiver_arg(self.sig());
         receiver.map(|r| r.mutability.is_some()).unwrap_or_default()
     }
 
@@ -372,6 +453,64 @@ impl FnIR {
     }
 
     pub fn is_pub(&self) -> bool {
+        match self {
+            FnIR::Impl(ir) => ir.is_pub(),
+            FnIR::Def(_) => true
+        }
+    }
+
+    fn attrs(&self) -> Vec<syn::Attribute> {
+        match self {
+            FnIR::Impl(ir) => ir.attrs(),
+            FnIR::Def(ir) => ir.attrs()
+        }
+        .to_vec()
+    }
+
+    fn sig(&self) -> &syn::Signature {
+        match self {
+            FnIR::Impl(ir) => ir.sig(),
+            FnIR::Def(ir) => ir.sig()
+        }
+    }
+}
+
+pub struct FnTraitIR {
+    code: syn::TraitItemFn
+}
+
+impl FnTraitIR {
+    pub fn new(code: syn::TraitItemFn) -> Self {
+        Self { code }
+    }
+
+    fn sig(&self) -> &syn::Signature {
+        &self.code.sig
+    }
+
+    fn attrs(&self) -> &[syn::Attribute] {
+        &self.code.attrs
+    }
+}
+
+pub struct FnImplIR {
+    code: syn::ImplItemFn
+}
+
+impl FnImplIR {
+    pub fn new(code: syn::ImplItemFn) -> Self {
+        Self { code }
+    }
+
+    fn sig(&self) -> &syn::Signature {
+        &self.code.sig
+    }
+
+    fn attrs(&self) -> &[syn::Attribute] {
+        &self.code.attrs
+    }
+
+    fn is_pub(&self) -> bool {
         matches!(self.code.vis, syn::Visibility::Public(_))
     }
 }

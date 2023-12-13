@@ -1,7 +1,7 @@
 use super::{fn_utils, ref_utils};
 use crate::utils::misc::AsType;
 use crate::{
-    ir::{FnIR, ModuleIR},
+    ir::{FnIR, ModuleImplIR},
     utils
 };
 use proc_macro2::TokenStream;
@@ -19,10 +19,10 @@ pub struct DeployerInitSignature {
     output: syn::ReturnType
 }
 
-impl TryFrom<&'_ ModuleIR> for DeployerInitSignature {
+impl TryFrom<&'_ ModuleImplIR> for DeployerInitSignature {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let host_ref_ident = module.host_ref_ident()?.as_type();
         let ty_host_env = utils::ty::host_env();
         let env = utils::ident::env();
@@ -49,10 +49,10 @@ pub struct EntrypointCallerExpr {
     semi_token: syn::token::Semi
 }
 
-impl TryFrom<&'_ ModuleIR> for EntrypointCallerExpr {
+impl TryFrom<&'_ ModuleImplIR> for EntrypointCallerExpr {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
             let_token: Default::default(),
             ident: utils::ident::caller(),
@@ -64,7 +64,7 @@ impl TryFrom<&'_ ModuleIR> for EntrypointCallerExpr {
 }
 
 impl EntrypointCallerExpr {
-    fn entrypoint_caller(module: &ModuleIR) -> Result<syn::Expr, syn::Error> {
+    fn entrypoint_caller(module: &ModuleImplIR) -> Result<syn::Expr, syn::Error> {
         let env_ident = utils::ident::env();
         let contract_env_ident = utils::ident::contract_env();
         let call_def_ident = utils::ident::call_def();
@@ -96,10 +96,10 @@ pub struct NewContractExpr {
     semi_token: syn::token::Semi
 }
 
-impl TryFrom<&'_ ModuleIR> for NewContractExpr {
+impl TryFrom<&'_ ModuleImplIR> for NewContractExpr {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let module_str = module.module_str()?;
         let caller_expr = utils::expr::some(utils::ident::caller());
         let env_ident = utils::ident::env();
@@ -136,10 +136,10 @@ pub struct HostRefInstanceExpr {
     fields: syn::punctuated::Punctuated<syn::FieldValue, syn::Token![,]>
 }
 
-impl TryFrom<&'_ ModuleIR> for HostRefInstanceExpr {
+impl TryFrom<&'_ ModuleImplIR> for HostRefInstanceExpr {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let address_ident = utils::ident::address();
         let env_ident = utils::ident::env();
         let attached_value_ident = utils::ident::attached_value();

@@ -4,7 +4,7 @@ use crate::ast::fn_utils::FnItem;
 use crate::ast::utils::ImplItem;
 use crate::ir::TypeIR;
 use crate::utils::misc::AsBlock;
-use crate::{ir::StructIR, utils};
+use crate::{ir::ModuleStructIR, utils};
 
 #[derive(syn_derive::ToTokens)]
 pub struct HasEventsImplItem {
@@ -15,10 +15,10 @@ pub struct HasEventsImplItem {
     events_fn: EventsFnsItem
 }
 
-impl TryFrom<&'_ StructIR> for HasEventsImplItem {
+impl TryFrom<&'_ ModuleStructIR> for HasEventsImplItem {
     type Error = syn::Error;
 
-    fn try_from(ir: &'_ StructIR) -> Result<Self, Self::Error> {
+    fn try_from(ir: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
         Ok(Self {
             impl_item: ImplItem::has_events(ir)?,
             brace_token: Default::default(),
@@ -78,7 +78,7 @@ impl EventsFnsItem {
         utils::misc::ret_ty(&btree)
     }
 
-    fn events_fn(ir: &StructIR) -> Result<FnItem, syn::Error> {
+    fn events_fn(ir: &ModuleStructIR) -> Result<FnItem, syn::Error> {
         let ident_events = utils::ident::events();
         let struct_events_stmt = struct_events_stmt(ir);
         let chain_events_expr = chain_events_expr(ir)?;
@@ -93,7 +93,7 @@ impl EventsFnsItem {
         ))
     }
 
-    fn event_schemas_fn(ir: &StructIR) -> Result<FnItem, syn::Error> {
+    fn event_schemas_fn(ir: &ModuleStructIR) -> Result<FnItem, syn::Error> {
         let ident_events = utils::ident::event_schemas();
         let struct_events_stmt = struct_event_schemas_stmt(ir);
         let chain_events_expr = chain_event_schemas_expr(ir)?;
@@ -109,10 +109,10 @@ impl EventsFnsItem {
     }
 }
 
-impl TryFrom<&'_ StructIR> for EventsFnsItem {
+impl TryFrom<&'_ ModuleStructIR> for EventsFnsItem {
     type Error = syn::Error;
 
-    fn try_from(ir: &'_ StructIR) -> Result<Self, Self::Error> {
+    fn try_from(ir: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
         Ok(Self {
             events_fn: Self::events_fn(ir)?,
             wasm_attr: utils::attr::wasm32(),
@@ -121,7 +121,7 @@ impl TryFrom<&'_ StructIR> for EventsFnsItem {
     }
 }
 
-fn struct_events_stmt(ir: &StructIR) -> syn::Stmt {
+fn struct_events_stmt(ir: &ModuleStructIR) -> syn::Stmt {
     let events_ident = utils::ident::events();
 
     let struct_events = ir
@@ -133,7 +133,7 @@ fn struct_events_stmt(ir: &StructIR) -> syn::Stmt {
     parse_quote!(let #events_ident = #vec;)
 }
 
-fn chain_events_expr(ir: &StructIR) -> Result<syn::Expr, syn::Error> {
+fn chain_events_expr(ir: &ModuleStructIR) -> Result<syn::Expr, syn::Error> {
     let ev_ty = utils::ty::event();
     let events_ident = utils::ident::events();
     let fields_events = ir
@@ -152,7 +152,7 @@ fn chain_events_expr(ir: &StructIR) -> Result<syn::Expr, syn::Error> {
     ))
 }
 
-fn struct_event_schemas_stmt(ir: &StructIR) -> syn::Stmt {
+fn struct_event_schemas_stmt(ir: &ModuleStructIR) -> syn::Stmt {
     let result_ident = utils::ident::result();
 
     let events = ir
@@ -169,7 +169,7 @@ fn struct_event_schemas_stmt(ir: &StructIR) -> syn::Stmt {
     parse_quote!(let #result_ident = #new_btree_map;)
 }
 
-fn chain_event_schemas_expr(ir: &StructIR) -> Result<syn::Expr, syn::Error> {
+fn chain_event_schemas_expr(ir: &ModuleStructIR) -> Result<syn::Expr, syn::Error> {
     let result_ident = utils::ident::result();
     let fields_events = ir
         .unique_fields_ty()?
