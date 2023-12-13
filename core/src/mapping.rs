@@ -41,6 +41,13 @@ impl<K: ToBytes, V: FromBytes + CLTyped + Default> Mapping<K, V> {
     }
 }
 
+impl<K: ToBytes, V: FromBytes + CLTyped> Mapping<K, V> {
+    pub fn get(&self, key: &K) -> Option<V> {
+        let env = self.env_for_key(key);
+        Variable::<V>::new(Rc::new(env), self.index).get()
+    }
+}
+
 impl<K: ToBytes, V: ToBytes + CLTyped> Mapping<K, V> {
     pub fn set(&mut self, key: &K, value: V) {
         let env = self.env_for_key(key);

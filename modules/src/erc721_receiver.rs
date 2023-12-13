@@ -1,15 +1,16 @@
 //! A pluggable Odra module implementing Erc721Receiver.
-use odra::prelude::*;
-use odra::{Address, Bytes, Module, U256};
+use crate::erc721::extensions::erc721_receiver::Erc721Receiver as Erc721ReceiverTrait;
 use crate::erc721_receiver::events::Received;
 use crate::erc721_token::Erc721TokenContractRef;
+use odra::prelude::*;
+use odra::{Address, Bytes, Module, U256};
 
 /// The ERC721 receiver implementation.
 #[odra::module]
 pub struct Erc721Receiver {}
 
 #[odra::module]
-impl crate::erc721::extensions::erc721_receiver::Erc721Receiver for Erc721Receiver {
+impl Erc721ReceiverTrait for Erc721Receiver {
     fn on_erc721_received(
         &mut self,
         #[allow(unused_variables)] operator: &Address,
@@ -17,14 +18,18 @@ impl crate::erc721::extensions::erc721_receiver::Erc721Receiver for Erc721Receiv
         token_id: &U256,
         #[allow(unused_variables)] data: &Option<Bytes>
     ) -> bool {
-        self.env().emit_event(
-        Received {
+        self.env().emit_event(Received {
             operator: Some(*operator),
             from: Some(*from),
             token_id: *token_id,
             data: data.clone()
         });
-        Erc721TokenContractRef::at(self.env().caller()).owner_of(token_id) == self.env().self_address()
+        Erc721TokenContractRef {
+            env: self.env(),
+            address: self.env().caller()
+        }
+        .owner_of(*token_id)
+            == self.env().self_address()
     }
 }
 

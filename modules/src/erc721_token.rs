@@ -1,13 +1,14 @@
 //! A pluggable Odra module implementing Erc721 token with metadata and ownership.
 
-use odra::prelude::*;
-use odra::{Address, Bytes, ModuleWrapper};
-use crate::erc721::events::Transfer;
 use crate::access::Ownable;
 use crate::erc721::erc721_base::Erc721Base;
-use crate::erc721::extensions::erc721_metadata::Erc721MetadataExtension;
+use crate::erc721::events::Transfer;
+use crate::erc721::extensions::erc721_metadata::{Erc721Metadata, Erc721MetadataExtension};
 use crate::erc721::owned_erc721_with_metadata::OwnedErc721WithMetadata;
-
+use crate::erc721::Erc721;
+use crate::erc721_token::errors::Error;
+use odra::prelude::*;
+use odra::{Address, Bytes, Module, ModuleWrapper, U256};
 
 /// The ERC721 token implementation.
 ///
@@ -96,7 +97,7 @@ impl OwnedErc721WithMetadata for Erc721Token {
     }
 
     fn mint(&mut self, to: &Address, token_id: &U256) {
-        self.ownable.assert_owner(self.caller());
+        self.ownable.assert_owner(&self.env().caller());
 
         if self.core.exists(token_id) {
             self.env().revert(Error::TokenAlreadyExists)
@@ -108,21 +109,19 @@ impl OwnedErc721WithMetadata for Erc721Token {
 
     fn burn(&mut self, token_id: &U256) {
         self.core.assert_exists(token_id);
-        self.ownable.assert_owner(self.caller());
+        self.ownable.assert_owner(&self.env().caller());
 
         let owner = self.core.owner_of(token_id);
-        self.core
-            .balances
-            .set(&owner, self.core.balance_of(&owner) - U256::from(1));
+        let balance = self.core.balance_of(&owner);
+        self.core.balances.set(&owner, balance - U256::from(1));
         self.core.owners.set(token_id, None);
         self.core.clear_approval(token_id);
 
-        Transfer {
+        self.env().emit_event(Transfer {
             from: Some(owner),
             to: None,
             token_id: *token_id
-        }
-        .emit();
+        });
     }
 }
 
@@ -131,14 +130,10 @@ pub mod errors {
     use odra::OdraError;
 
     /// Erc721 errors.
-        pub enum Error {
-            /// Token with a given id already exists.
-            TokenAlreadyExists = 35_000,
-        }
-    impl From<Error> for OdraError {
-    fn from(error: Error) -> Self {
-        OdraError::user(error as u16)
-    }
+    #[derive(OdraError)]
+    pub enum Error {
+        /// Token with a given id already exists.
+        TokenAlreadyExists = 35_000
     }
 }
 //

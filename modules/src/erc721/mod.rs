@@ -84,24 +84,23 @@ pub mod events {
 pub mod errors {
     use odra::OdraError;
 
-        /// Possible errors in the context of Erc721 token.
-        pub enum Error {
-            /// Token is invalid in the given context or does not exist.
-            InvalidTokenId = 30_000,
-            /// Address in not eligible to operate on the token.
-            NotAnOwnerOrApproved = 30_001,
-            /// The owner cannot be approved.
-            ApprovalToCurrentOwner = 30_002,
-            /// The caller cannot approve self.
-            ApproveToCaller = 30_003,
-            /// Token transfer ends with an error
-            TransferFailed = 30_004,
-        }
+    /// Possible errors in the context of Erc721 token.
+    pub enum Error {
+        /// Token is invalid in the given context or does not exist.
+        InvalidTokenId = 30_000,
+        /// Address in not eligible to operate on the token.
+        NotAnOwnerOrApproved = 30_001,
+        /// The owner cannot be approved.
+        ApprovalToCurrentOwner = 30_002,
+        /// The caller cannot approve self.
+        ApproveToCaller = 30_003,
+        /// Token transfer ends with an error
+        TransferFailed = 30_004
+    }
 
-        impl From<Error> for OdraError {
-            fn from(error: Error) -> Self {
-                OdraError::user(error as u16)
-            }
+    impl From<Error> for OdraError {
+        fn from(error: Error) -> Self {
+            OdraError::user(error as u16)
         }
-
+    }
 }

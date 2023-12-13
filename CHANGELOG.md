@@ -24,6 +24,8 @@ allowances: Mapping<(Address, Address), U256>
 - Spent Gas is taken into account when checking an account balance.
 This means that all calls appear to cost 0 gas to the test accounts,
 but it is still possible to check the costs of the calls.
+- Various changes of method signatures in `odra-modules`, e.g. `&[U256]` changed to `Vec<U256>`
+in `on_erc1155_batch_received` method. 
 ### Removed
 - Removed `#[odra::init]` macro - now only one method can be a constructor,
 and it has to be named `init` and env needs to be passed as a first parameter.

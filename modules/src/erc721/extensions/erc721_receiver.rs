@@ -1,6 +1,5 @@
 //! Erc721 receiver.
-use odra::prelude::*;
-use odra::{Address, U256};
+use odra::{Address, Bytes, U256};
 /// The ERC721 receiver interface.
 pub trait Erc721Receiver {
     /// This function is called at the end of a [safe_transfer_from](crate::erc721::Erc721::safe_transfer_from) or
@@ -12,6 +11,6 @@ pub trait Erc721Receiver {
         operator: &Address,
         from: &Address,
         token_id: &U256,
-        data: &Option<Vec<u8>>
+        data: &Option<Bytes>
     ) -> bool;
 }

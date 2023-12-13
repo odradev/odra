@@ -1,7 +1,7 @@
 use crate::access::errors::Error::{CallerNotTheNewOwner, CallerNotTheOwner, OwnerNotSet};
 use crate::access::events::{OwnershipTransferStarted, OwnershipTransferred};
 use odra::prelude::*;
-use odra::{Address, Module, ModuleWrapper, Variable};
+use odra::{Address, Module, ModuleWrapper, UnwrapOrRevert, Variable};
 
 /// This module provides a straightforward access control feature that enables
 /// exclusive access to particular functions by an account, known as the owner.
@@ -32,7 +32,7 @@ impl Ownable {
     /// Transfers ownership of the module to `new_owner`. This function can only
     /// be accessed by the current owner of the module.
     pub fn transfer_ownership(&mut self, new_owner: &Address) {
-        self.assert_owner(self.env().caller());
+        self.assert_owner(&self.env().caller());
         self.unchecked_transfer_ownership(Some(new_owner));
     }
 
@@ -43,14 +43,14 @@ impl Ownable {
     /// The function can only be called by the current owner, and it will permanently
     /// remove the owner's privileges.
     pub fn renounce_ownership(&mut self) {
-        self.assert_owner(self.env().caller());
+        self.assert_owner(&self.env().caller());
         self.unchecked_transfer_ownership(None);
     }
 
     /// Returns the address of the current owner.
     pub fn get_owner(&self) -> Address {
         self.get_optional_owner()
-            .unwrap_or_revert_with(self.env(), OwnerNotSet)
+            .unwrap_or_revert_with(&self.env(), OwnerNotSet)
     }
 }
 
@@ -118,7 +118,7 @@ impl Ownable2Step {
     ///
     /// This function can only be accessed by the current owner of the module.
     pub fn transfer_ownership(&mut self, new_owner: &Address) {
-        self.ownable.assert_owner(self.env().caller());
+        self.ownable.assert_owner(&self.env().caller());
 
         let previous_owner = self.ownable.get_optional_owner();
         let new_owner = &Some(*new_owner);
@@ -143,7 +143,7 @@ impl Ownable2Step {
     /// the pending owner.
     pub fn accept_ownership(&mut self) {
         let caller = self.env().caller();
-        let caller = Some(caller);
+        let caller = Some(&caller);
         let pending_owner = self.pending_owner.get().flatten();
         if pending_owner.as_ref() != caller {
             self.env().revert(CallerNotTheNewOwner)
@@ -175,8 +175,8 @@ mod test {
             new_owner: Some(deployer)
         };
 
-        env.emitted_event(ownable, event);
-        env.emitted_event(ownable_2step, event);
+        env.emitted_event(&ownable.address, &event);
+        env.emitted_event(&ownable_2step.address, &event);
     }
     //
     // #[test]
@@ -359,8 +359,8 @@ mod test {
 
     fn setup_owned() -> (HostEnv, OwnableHostRef, Ownable2StepHostRef, Address) {
         let env = odra::test_env();
-        let ownable = OwnableDeployer::init(env);
-        let ownable_2_step = Ownable2StepDeployer::init(env);
-        (env, ownable, ownable_2_step, env.get_account(0))
+        let ownable = OwnableDeployer::init(&env);
+        let ownable_2_step = Ownable2StepDeployer::init(&env);
+        (env.clone(), ownable, ownable_2_step, env.get_account(0))
     }
 }

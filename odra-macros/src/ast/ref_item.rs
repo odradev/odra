@@ -20,8 +20,8 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefStructItem {
         let ty_address = utils::ty::address();
         let ty_contract_env = utils::ty::contract_env();
         let named_fields: syn::FieldsNamed = parse_quote!({
-            #env: Rc<#ty_contract_env>,
-            #address: #ty_address,
+            pub #env: Rc<#ty_contract_env>,
+            pub #address: #ty_address,
         });
 
         Ok(Self {
