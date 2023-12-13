@@ -40,7 +40,7 @@ mod test {
 
     #[test]
     fn external_contract_impl() {
-        let ir = test_utils::mock_ext_contract();
+        let ir = test_utils::mock::ext_contract();
         let item = ExternalContractImpl::try_from(&ir).unwrap();
         let expected = quote::quote! {
             pub trait Token {

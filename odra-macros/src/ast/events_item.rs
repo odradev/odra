@@ -195,7 +195,7 @@ mod test {
 
     #[test]
     fn counter_pack() {
-        let module = test_utils::mock_module_definition();
+        let module = test_utils::mock::module_definition();
         let expected = quote!(
             impl odra::contract_def::HasEvents for CounterPack {
                 fn events() -> odra::prelude::vec::Vec<odra::contract_def::Event> {

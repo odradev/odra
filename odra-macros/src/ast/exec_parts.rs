@@ -219,11 +219,11 @@ impl ExecEnvStmt {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_utils::{self, mock_module, mock_module_trait_impl};
+    use crate::test_utils::{self, mock};
 
     #[test]
     fn test_parts() {
-        let module = mock_module();
+        let module = mock::module_impl();
         let actual = ExecPartsItem::try_from(&module).unwrap();
 
         let expected = quote::quote! {
@@ -280,7 +280,7 @@ mod test {
 
     #[test]
     fn test_trait_impl_parts() {
-        let module = mock_module_trait_impl();
+        let module = mock::module_trait_impl();
         let actual = ExecPartsItem::try_from(&module).unwrap();
 
         let expected = quote::quote! {

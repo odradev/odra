@@ -161,7 +161,7 @@ mod ref_item_tests {
 
     #[test]
     fn host_ref() {
-        let module = test_utils::mock_module();
+        let module = test_utils::mock::module_impl();
         let expected = quote! {
             pub struct Erc20HostRef {
                 pub address: odra::Address,
@@ -266,7 +266,7 @@ mod ref_item_tests {
 
     #[test]
     fn host_trait_impl_ref() {
-        let module = test_utils::mock_module_trait_impl();
+        let module = test_utils::mock::module_trait_impl();
         let expected = quote! {
             pub struct Erc20HostRef {
                 pub address: odra::Address,

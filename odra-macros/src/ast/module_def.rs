@@ -34,11 +34,11 @@ impl TryFrom<&'_ ModuleStructIR> for ModuleDefItem {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::{assert_eq, mock_empty_module_definition, mock_module_definition};
+    use crate::test_utils::{assert_eq, mock};
 
     #[test]
     fn test_module_def_item() {
-        let ir = mock_module_definition();
+        let ir = mock::module_definition();
         let def = ModuleDefItem::try_from(&ir).unwrap();
         let expected = quote::quote! {
             pub struct CounterPack {
@@ -56,7 +56,7 @@ mod tests {
 
     #[test]
     fn empty_module() {
-        let ir = mock_empty_module_definition();
+        let ir = mock::empty_module_definition();
         let def = ModuleDefItem::try_from(&ir).unwrap();
         let expected = quote::quote! {
             pub struct CounterPack {

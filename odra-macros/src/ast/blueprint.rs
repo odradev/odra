@@ -64,7 +64,7 @@ mod test {
 
     #[test]
     fn blueprint_item() {
-        let module = test_utils::mock_module();
+        let module = test_utils::mock::module_impl();
         let item = BlueprintItem::try_from(&module).unwrap();
         let expected = quote!(
             #[cfg(odra_module = "Erc20")]

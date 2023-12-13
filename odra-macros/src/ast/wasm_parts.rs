@@ -258,7 +258,7 @@ mod test {
 
     #[test]
     fn test() {
-        let module = test_utils::mock_module();
+        let module = test_utils::mock::module_impl();
         let actual = WasmPartsModuleItem::try_from(&module).unwrap();
 
         let expected = quote::quote! {
@@ -369,7 +369,7 @@ mod test {
 
     #[test]
     fn test_trait_impl() {
-        let module = test_utils::mock_module_trait_impl();
+        let module = test_utils::mock::module_trait_impl();
         let actual = WasmPartsModuleItem::try_from(&module).unwrap();
 
         let expected = quote::quote! {

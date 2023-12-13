@@ -62,7 +62,7 @@ mod test {
 
     #[test]
     fn test_entrypoints() {
-        let module = test_utils::mock_module_definition();
+        let module = test_utils::mock::module_definition();
         let expected = quote!(
             impl odra::contract_def::HasIdent for CounterPack {
                 fn ident() -> odra::prelude::string::String {

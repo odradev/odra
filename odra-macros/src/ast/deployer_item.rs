@@ -82,7 +82,7 @@ mod deployer_impl {
 
     #[test]
     fn deployer_impl() {
-        let module = test_utils::mock_module();
+        let module = test_utils::mock::module_impl();
         let expected = quote! {
             pub struct Erc20Deployer;
 
@@ -133,7 +133,7 @@ mod deployer_impl {
 
     #[test]
     fn deployer_trait_impl() {
-        let module = test_utils::mock_module_trait_impl();
+        let module = test_utils::mock::module_trait_impl();
         let expected = quote! {
             pub struct Erc20Deployer;
 

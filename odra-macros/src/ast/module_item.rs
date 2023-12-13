@@ -192,7 +192,7 @@ mod test {
 
     #[test]
     fn empty_module() {
-        let module = test_utils::mock_empty_module_definition();
+        let module = test_utils::mock::empty_module_definition();
         let expected = quote!(
             mod __counter_pack_module {
                 use super::*;
@@ -214,7 +214,7 @@ mod test {
 
     #[test]
     fn counter_pack() {
-        let module = test_utils::mock_module_definition();
+        let module = test_utils::mock::module_definition();
         let expected = quote!(
             mod __counter_pack_module {
                 use super::*;
