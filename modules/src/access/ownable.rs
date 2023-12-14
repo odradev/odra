@@ -1,5 +1,5 @@
 use crate::access::errors::Error::{CallerNotTheOwner, OwnerNotSet};
-use crate::access::events::{OwnershipTransferred};
+use crate::access::events::OwnershipTransferred;
 use odra::prelude::*;
 use odra::{Address, Module, UnwrapOrRevert, Variable};
 

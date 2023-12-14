@@ -1,8 +1,8 @@
-use odra::prelude::*;
 use crate::access::errors::Error::CallerNotTheNewOwner;
 use crate::access::events::{OwnershipTransferStarted, OwnershipTransferred};
-use odra::{Address, Module, ModuleWrapper, Variable};
 use crate::access::Ownable;
+use odra::prelude::*;
+use odra::{Address, Module, ModuleWrapper, Variable};
 
 /// This module provides a straightforward access control feature that enables
 /// exclusive access to particular functions by an account, known as the owner.
@@ -80,8 +80,8 @@ impl Ownable2Step {
 
 #[cfg(test)]
 mod test {
-    use odra::HostEnv;
     use crate::access::{OwnableDeployer, OwnableHostRef};
+    use odra::HostEnv;
     // use odra::prelude::*;
 
     use super::*;

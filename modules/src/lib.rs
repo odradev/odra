@@ -11,6 +11,6 @@ pub mod erc20;
 pub mod erc721;
 pub mod erc721_receiver;
 pub mod erc721_token;
+pub mod ownable_2step;
 pub mod security;
 pub mod wrapped_native;
-pub mod ownable_2step;

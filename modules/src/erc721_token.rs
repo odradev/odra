@@ -23,6 +23,7 @@ pub struct Erc721Token {
 
 #[odra::module]
 impl OwnedErc721WithMetadata for Erc721Token {
+    #[odra(init)]
     fn init(&mut self, name: String, symbol: String, base_uri: String) {
         self.metadata.init(name, symbol, base_uri);
         self.ownable.init();
@@ -135,511 +136,507 @@ pub mod errors {
         TokenAlreadyExists = 35_000
     }
 }
-//
-// #[cfg(test)]
-// mod tests {
-//     use super::{Erc721TokenDeployer, Erc721TokenRef};
-//     use crate::access::errors::Error as AccessError;
-//     use crate::erc721::errors::Error;
-//     use crate::erc721_receiver::events::Received;
-//     use crate::erc721_receiver::Erc721ReceiverDeployer;
-//     use odra::prelude::string::ToString;
-//     use odra::test_env::assert_exception;
-//     use odra::types::VmError::NoSuchMethod;
-//     use odra::types::U256;
-//     use odra::types::{Address, OdraAddress, OdraError};
-//     use odra::{assert_events, test_env};
-//
-//     const NAME: &str = "PlascoinNFT";
-//     const SYMBOL: &str = "PLSNFT";
-//     const BASE_URI: &str = "https://plascoin.org/";
-//
-//     struct TokenEnv {
-//         token: Erc721TokenRef,
-//         alice: Address,
-//         bob: Address,
-//         carol: Address
-//     }
-//
-//     fn setup() -> TokenEnv {
-//         TokenEnv {
-//             token: Erc721TokenDeployer::init(
-//                 NAME.to_string(),
-//                 SYMBOL.to_string(),
-//                 BASE_URI.to_string()
-//             ),
-//             alice: test_env::get_account(1),
-//             bob: test_env::get_account(2),
-//             carol: test_env::get_account(3)
-//         }
-//     }
-//
-//     #[test]
-//     fn mints_nft() {
-//         // When deploy a contract with the initial supply.
-//         let mut erc721_env = setup();
-//
-//         // And mint a token to Alice.
-//         erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
-//
-//         // Then Alice has a balance of 1 and Bob has a balance of 0.
-//         assert_eq!(
-//             erc721_env.token.balance_of(&erc721_env.alice),
-//             U256::from(1)
-//         );
-//         assert_eq!(erc721_env.token.balance_of(&erc721_env.bob), U256::from(0));
-//
-//         // And the owner of the token is Alice.
-//         assert_eq!(erc721_env.token.owner_of(&U256::from(1)), erc721_env.alice);
-//     }
-//
-//     #[test]
-//     fn balance_of() {
-//         // When deploy a contract with the initial supply.
-//         let mut erc721_env = setup();
-//
-//         // And mint a token to Alice.
-//         erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
-//
-//         // Then Alice has a balance of 1 and Bob has a balance of 0.
-//         assert_eq!(
-//             erc721_env.token.balance_of(&erc721_env.alice),
-//             U256::from(1)
-//         );
-//
-//         // When we mint another token to Alice.
-//         erc721_env.token.mint(&erc721_env.alice, &U256::from(2));
-//
-//         // Then Alice has a balance of 2.
-//         assert_eq!(
-//             erc721_env.token.balance_of(&erc721_env.alice),
-//             U256::from(2)
-//         );
-//     }
-//
-//     #[test]
-//     fn minting_same_id() {
-//         // When deploy a contract with the initial supply.
-//         let mut erc721_env = setup();
-//
-//         // And mint a token to Alice.
-//         erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
-//
-//         // Then minting the same token again throws an error.
-//         assert_exception(super::Error::TokenAlreadyExists, || {
-//             erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
-//         });
-//     }
-//
-//     #[test]
-//     fn finding_owner() {
-//         // When deploy a contract with the initial supply.
-//         let mut erc721_env = setup();
-//
-//         // And mint a token to Alice.
-//         erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
-//
-//         // Then the owner of the token is Alice.
-//         assert_eq!(erc721_env.token.owner_of(&U256::from(1)), erc721_env.alice);
-//     }
-//
-//     #[test]
-//     fn finding_owner_of_non_existing_token() {
-//         // When deploy a contract with the initial supply.
-//         let erc721_env = setup();
-//
-//         // Then the owner of the token is Alice.
-//         assert_exception(Error::InvalidTokenId, || {
-//             erc721_env.token.owner_of(&U256::from(1));
-//         });
-//     }
-//
-//     #[test]
-//     fn approve() {
-//         // When deploy a contract with the initial supply.
-//         let mut erc721_env = setup();
-//
-//         // And mint a token to Alice.
-//         erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
-//
-//         // And approve Bob to transfer the token.
-//         test_env::set_caller(erc721_env.alice);
-//         erc721_env
-//             .token
-//             .approve(&Some(erc721_env.bob), &U256::from(1));
-//
-//         // Then Bob is approved to transfer the token.
-//         assert_eq!(
-//             erc721_env.token.get_approved(&U256::from(1)),
-//             Some(erc721_env.bob)
-//         );
-//     }
-//
-//     #[test]
-//     fn cancel_approve() {
-//         // When deploy a contract with the initial supply.
-//         let mut erc721_env = setup();
-//
-//         // And mint a token to Alice.
-//         erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
-//
-//         // And approve Bob to transfer the token.
-//         test_env::set_caller(erc721_env.alice);
-//         erc721_env
-//             .token
-//             .approve(&Some(erc721_env.bob), &U256::from(1));
-//
-//         // And cancel the approval.
-//         test_env::set_caller(erc721_env.alice);
-//         erc721_env.token.approve(&None, &U256::from(1));
-//
-//         // Then Bob is not approved to transfer the token.
-//         assert_eq!(erc721_env.token.get_approved(&U256::from(1)), None);
-//     }
-//
-//     #[test]
-//     fn approve_non_existing_token() {
-//         // When deploy a contract with the initial supply.
-//         let mut erc721_env = setup();
-//
-//         // Then approving a non existing token throws an error.
-//         assert_exception(Error::InvalidTokenId, || {
-//             erc721_env
-//                 .token
-//                 .approve(&Some(erc721_env.bob), &U256::from(1));
-//         });
-//     }
-//
-//     #[test]
-//     fn approve_not_owned_token() {
-//         // When deploy a contract with the initial supply.
-//         let mut erc721_env = setup();
-//
-//         // And mint a token to Alice.
-//         erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
-//
-//         // Then approving a token that is not owned by the caller throws an error.
-//         assert_exception(Error::NotAnOwnerOrApproved, || {
-//             erc721_env
-//                 .token
-//                 .approve(&Some(erc721_env.bob), &U256::from(1));
-//         });
-//     }
-//
-//     #[test]
-//     fn set_an_operator() {
-//         // When deploy a contract with the initial supply.
-//         let mut erc721_env = setup();
-//
-//         // And mint a token to Alice.
-//         erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
-//
-//         // And set Bob as an operator.
-//         test_env::set_caller(erc721_env.alice);
-//         erc721_env.token.set_approval_for_all(&erc721_env.bob, true);
-//
-//         // Then Bob is an operator.
-//         assert!(erc721_env
-//             .token
-//             .is_approved_for_all(&erc721_env.alice, &erc721_env.bob));
-//     }
-//
-//     #[test]
-//     fn cancel_an_operator() {
-//         // When deploy a contract with the initial supply.
-//         let mut erc721_env = setup();
-//
-//         // And mint a token to Alice.
-//         erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
-//
-//         // And set Bob as an operator.
-//         test_env::set_caller(erc721_env.alice);
-//         erc721_env.token.set_approval_for_all(&erc721_env.bob, true);
-//
-//         // And cancel Bob as an operator.
-//         test_env::set_caller(erc721_env.alice);
-//         erc721_env
-//             .token
-//             .set_approval_for_all(&erc721_env.bob, false);
-//
-//         // Then Bob is not an operator.
-//         assert!(!erc721_env
-//             .token
-//             .is_approved_for_all(&erc721_env.alice, &erc721_env.bob));
-//     }
-//
-//     #[test]
-//     fn transfer_nft() {
-//         // When deploy a contract with the initial supply.
-//         let mut erc721_env = setup();
-//
-//         // And mint a token to Alice.
-//         erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
-//
-//         // And transfer the token to Bob.
-//         test_env::set_caller(erc721_env.alice);
-//         erc721_env
-//             .token
-//             .transfer_from(&erc721_env.alice, &erc721_env.bob, &U256::from(1));
-//
-//         // Then the owner of the token is Bob.
-//         assert_eq!(erc721_env.token.owner_of(&U256::from(1)), erc721_env.bob);
-//     }
-//
-//     #[test]
-//     fn transfer_approved() {
-//         // When deploy a contract with the initial supply.
-//         let mut erc721_env = setup();
-//
-//         // And mint a token to Alice.
-//         erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
-//
-//         // And approve Bob to transfer the token.
-//         test_env::set_caller(erc721_env.alice);
-//         erc721_env
-//             .token
-//             .approve(&Some(erc721_env.bob), &U256::from(1));
-//
-//         // And transfer the token to Carol.
-//         test_env::set_caller(erc721_env.bob);
-//         erc721_env
-//             .token
-//             .transfer_from(&erc721_env.alice, &erc721_env.carol, &U256::from(1));
-//
-//         // Then the owner of the token is Carol.
-//         assert_eq!(erc721_env.token.owner_of(&U256::from(1)), erc721_env.carol);
-//     }
-//
-//     #[test]
-//     fn transfer_operator() {
-//         // When deploy a contract with the initial supply.
-//         let mut erc721_env = setup();
-//
-//         // And mint a token to Alice.
-//         erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
-//
-//         // And set Bob as an operator.
-//         test_env::set_caller(erc721_env.alice);
-//         erc721_env.token.set_approval_for_all(&erc721_env.bob, true);
-//
-//         // And transfer the token to Carol.
-//         test_env::set_caller(erc721_env.bob);
-//         erc721_env
-//             .token
-//             .transfer_from(&erc721_env.alice, &erc721_env.carol, &U256::from(1));
-//
-//         // Then the owner of the token is Carol.
-//         assert_eq!(erc721_env.token.owner_of(&U256::from(1)), erc721_env.carol);
-//     }
-//
-//     #[test]
-//     fn transfer_not_owned() {
-//         // When deploy a contract with the initial supply.
-//         let mut erc721_env = setup();
-//
-//         // And mint a token to Alice.
-//         erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
-//
-//         // Then transferring a token that is not owned by the caller throws an error.
-//         assert_exception(Error::NotAnOwnerOrApproved, || {
-//             test_env::set_caller(erc721_env.bob);
-//             erc721_env
-//                 .token
-//                 .transfer_from(&erc721_env.alice, &erc721_env.carol, &U256::from(1));
-//         });
-//     }
-//
-//     #[test]
-//     fn transferring_invalid_nft() {
-//         // When deploy a contract with the initial supply.
-//         let mut erc721_env = setup();
-//
-//         // Then transferring a token that does not exist throws an error.
-//         assert_exception(Error::InvalidTokenId, || {
-//             erc721_env
-//                 .token
-//                 .transfer_from(&erc721_env.alice, &erc721_env.carol, &U256::from(1));
-//         });
-//     }
-//
-//     #[test]
-//     fn safe_transfer() {
-//         // When deploy a contract with the initial supply.
-//         let mut erc721_env = setup();
-//
-//         assert!(erc721_env.token.address().is_contract());
-//         assert!(!erc721_env.alice.is_contract());
-//
-//         // And mint a token to Alice.
-//         erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
-//
-//         // And safe transfer the token to Bob.
-//         test_env::set_caller(erc721_env.alice);
-//         erc721_env
-//             .token
-//             .safe_transfer_from(&erc721_env.alice, &erc721_env.bob, &U256::from(1));
-//
-//         // Then the owner of the token is Bob.
-//         assert_eq!(erc721_env.token.owner_of(&U256::from(1)), erc721_env.bob);
-//     }
-//
-//     #[test]
-//     fn safe_transfer_to_contract_which_does_not_support_nft() {
-//         use crate::erc20::Erc20Deployer;
-//         // When deploy a contract with the initial supply
-//         let mut erc721_env = setup();
-//         // And another contract which does not support nfts
-//         let erc20 = Erc20Deployer::init("PLS".to_string(), "PLASCOIN".to_string(), 10, &None);
-//
-//         // And mint a token to Alice.
-//         erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
-//
-//         // Then safe transfer the token to the contract which does not support nfts throws an error.
-//         assert_exception(
-//             OdraError::VmError(NoSuchMethod("on_erc721_received".to_string())),
-//             || {
-//                 test_env::set_caller(erc721_env.alice);
-//                 erc721_env.token.safe_transfer_from(
-//                     &erc721_env.alice,
-//                     erc20.address(),
-//                     &U256::from(1)
-//                 );
-//             }
-//         )
-//     }
-//
-//     #[test]
-//     fn safe_transfer_to_contract_which_supports_nft() {
-//         // When deploy a contract with the initial supply
-//         let mut erc721_env = setup();
-//         // And another contract which does not support nfts
-//         let receiver = Erc721ReceiverDeployer::default();
-//
-//         // And mint a token to Alice.
-//         erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
-//
-//         // And transfer the token to the contract which does support nfts
-//         test_env::set_caller(erc721_env.alice);
-//         erc721_env
-//             .token
-//             .safe_transfer_from(&erc721_env.alice, receiver.address(), &U256::from(1));
-//
-//         // Then the owner of the token is the contract
-//         assert_eq!(
-//             erc721_env.token.owner_of(&U256::from(1)),
-//             *receiver.address()
-//         );
-//         // And the receiver contract is aware of the transfer
-//         assert_events!(
-//             receiver,
-//             Received {
-//                 operator: Some(erc721_env.alice),
-//                 from: Some(erc721_env.alice),
-//                 token_id: U256::from(1),
-//                 data: None
-//             }
-//         );
-//     }
-//
-//     #[test]
-//     fn safe_transfer_to_contract_with_data() {
-//         // When deploy a contract with the initial supply
-//         let mut erc721_env = setup();
-//         // And another contract which does not support nfts
-//         let receiver = Erc721ReceiverDeployer::default();
-//
-//         // And mint a token to Alice.
-//         erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
-//
-//         // And transfer the token to the contract which does support nfts
-//         test_env::set_caller(erc721_env.alice);
-//         erc721_env.token.safe_transfer_from_with_data(
-//             &erc721_env.alice,
-//             receiver.address(),
-//             &U256::from(1),
-//             &b"data".to_vec().into()
-//         );
-//
-//         // Then the owner of the token is the contract
-//         assert_eq!(
-//             erc721_env.token.owner_of(&U256::from(1)),
-//             *receiver.address()
-//         );
-//         // And the receiver contract is aware of the transfer
-//         assert_events!(
-//             receiver,
-//             Received {
-//                 operator: Some(erc721_env.alice),
-//                 from: Some(erc721_env.alice),
-//                 token_id: U256::from(1),
-//                 data: Some(b"data".to_vec().into())
-//             }
-//         );
-//     }
-//
-//     #[test]
-//     fn burn() {
-//         // When deploy a contract with the initial supply.
-//         let mut erc721_env = setup();
-//
-//         // And mint a token to Alice.
-//         erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
-//
-//         // And burn the token.
-//         erc721_env.token.burn(&U256::from(1));
-//
-//         // Then the owner of throws an error.
-//         assert_exception(Error::InvalidTokenId, || {
-//             erc721_env.token.owner_of(&U256::from(1));
-//         });
-//     }
-//
-//     #[test]
-//     fn burn_error() {
-//         assert_exception(AccessError::CallerNotTheOwner, || {
-//             // When deploy a contract with the initial supply.
-//             let mut erc721_env = setup();
-//
-//             // And mint a token to Alice.
-//             erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
-//
-//             // Then burn the token as Alice errors out
-//             test_env::set_caller(erc721_env.alice);
-//             erc721_env.token.burn(&U256::from(1));
-//         });
-//     }
-//
-//     #[test]
-//     fn burn_non_existing_nft() {
-//         // When deploy a contract with the initial supply.
-//         let mut erc721_env = setup();
-//
-//         // Then burning a token that does not exist throws an error.
-//         assert_exception(Error::InvalidTokenId, || {
-//             erc721_env.token.burn(&U256::from(1));
-//         });
-//     }
-//
-//     #[test]
-//     fn metadata() {
-//         // When deploy a contract with the initial supply.
-//         let erc721 = setup();
-//
-//         // Then the contract has the metadata set.
-//         assert_eq!(erc721.token.symbol(), SYMBOL.to_string());
-//         assert_eq!(erc721.token.name(), NAME.to_string());
-//         assert_eq!(erc721.token.base_uri(), BASE_URI.to_string());
-//     }
-//
-//     #[test]
-//     fn minting_by_not_an_owner() {
-//         // When deploy a contract with the initial supply.
-//         let mut erc721_env = setup();
-//
-//         // Then minting a token by not an owner throws an error.
-//         assert_exception(AccessError::CallerNotTheOwner, || {
-//             test_env::set_caller(erc721_env.bob);
-//             erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
-//         });
-//     }
-// }
+
+#[cfg(test)]
+mod tests {
+    use super::{Erc721TokenDeployer, Erc721TokenHostRef};
+    use crate::access::errors::Error as AccessError;
+    use crate::erc721::errors::Error::{InvalidTokenId, NotAnOwnerOrApproved};
+    use crate::erc721_receiver::events::Received;
+    use crate::erc721_receiver::Erc721ReceiverDeployer;
+    use crate::erc721_token::errors::Error::TokenAlreadyExists;
+    use odra::prelude::*;
+    use odra::{Address, HostEnv, OdraAddress, U256};
+
+    const NAME: &str = "PlascoinNFT";
+    const SYMBOL: &str = "PLSNFT";
+    const BASE_URI: &str = "https://plascoin.org/";
+
+    struct TokenEnv {
+        env: HostEnv,
+        token: Erc721TokenHostRef,
+        alice: Address,
+        bob: Address,
+        carol: Address
+    }
+
+    fn setup() -> TokenEnv {
+        let env = odra::test_env();
+        TokenEnv {
+            env: env.clone(),
+            token: Erc721TokenDeployer::init(
+                &env,
+                NAME.to_string(),
+                SYMBOL.to_string(),
+                BASE_URI.to_string()
+            ),
+            alice: env.get_account(1),
+            bob: env.get_account(2),
+            carol: env.get_account(3)
+        }
+    }
+
+    #[test]
+    fn mints_nft() {
+        // When deploy a contract with the initial supply.
+        let mut erc721_env = setup();
+
+        // And mint a token to Alice.
+        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+
+        // Then Alice has a balance of 1 and Bob has a balance of 0.
+        assert_eq!(erc721_env.token.balance_of(erc721_env.alice), U256::from(1));
+        assert_eq!(erc721_env.token.balance_of(erc721_env.bob), U256::from(0));
+
+        // And the owner of the token is Alice.
+        assert_eq!(erc721_env.token.owner_of(U256::from(1)), erc721_env.alice);
+    }
+
+    #[test]
+    fn balance_of() {
+        // When deploy a contract with the initial supply.
+        let mut erc721_env = setup();
+
+        // And mint a token to Alice.
+        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+
+        // Then Alice has a balance of 1 and Bob has a balance of 0.
+        assert_eq!(erc721_env.token.balance_of(erc721_env.alice), U256::from(1));
+
+        // When we mint another token to Alice.
+        erc721_env.token.mint(erc721_env.alice, U256::from(2));
+
+        // Then Alice has a balance of 2.
+        assert_eq!(erc721_env.token.balance_of(erc721_env.alice), U256::from(2));
+    }
+
+    #[test]
+    fn minting_same_id() {
+        // When deploy a contract with the initial supply.
+        let mut erc721_env = setup();
+
+        // And mint a token to Alice.
+        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+
+        // Then minting the same token again throws an error.
+        let err = erc721_env
+            .token
+            .try_mint(erc721_env.alice, U256::from(1))
+            .unwrap_err();
+        assert_eq!(err, TokenAlreadyExists.into());
+    }
+
+    #[test]
+    fn finding_owner() {
+        // When deploy a contract with the initial supply.
+        let mut erc721_env = setup();
+
+        // And mint a token to Alice.
+        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+
+        // Then the owner of the token is Alice.
+        assert_eq!(erc721_env.token.owner_of(U256::from(1)), erc721_env.alice);
+    }
+
+    #[test]
+    fn finding_owner_of_non_existing_token() {
+        // When deploy a contract with the initial supply.
+        let erc721_env = setup();
+
+        // Then the owner of the token is Alice.
+        assert_eq!(
+            erc721_env.token.try_owner_of(U256::from(1)).unwrap_err(),
+            InvalidTokenId.into()
+        );
+    }
+
+    #[test]
+    fn approve() {
+        // When deploy a contract with the initial supply.
+        let mut erc721_env = setup();
+
+        // And mint a token to Alice.
+        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+
+        // And approve Bob to transfer the token.
+        erc721_env.env.set_caller(erc721_env.alice);
+        erc721_env
+            .token
+            .approve(Some(erc721_env.bob), U256::from(1));
+
+        // Then Bob is approved to transfer the token.
+        assert_eq!(
+            erc721_env.token.get_approved(U256::from(1)),
+            Some(erc721_env.bob)
+        );
+    }
+
+    #[test]
+    fn cancel_approve() {
+        // When deploy a contract with the initial supply.
+        let mut erc721_env = setup();
+
+        // And mint a token to Alice.
+        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+
+        // And approve Bob to transfer the token.
+        erc721_env.env.set_caller(erc721_env.alice);
+        erc721_env
+            .token
+            .approve(Some(erc721_env.bob), U256::from(1));
+
+        // And cancel the approval.
+        erc721_env.env.set_caller(erc721_env.alice);
+        erc721_env.token.approve(None, U256::from(1));
+
+        // Then Bob is not approved to transfer the token.
+        assert_eq!(erc721_env.token.get_approved(U256::from(1)), None);
+    }
+
+    #[test]
+    fn approve_non_existing_token() {
+        // When deploy a contract with the initial supply.
+        let mut erc721_env = setup();
+
+        // Then approving a non existing token throws an error.
+        assert_eq!(
+            erc721_env
+                .token
+                .try_approve(Some(erc721_env.bob), U256::from(1))
+                .unwrap_err(),
+            InvalidTokenId.into()
+        );
+    }
+
+    #[test]
+    fn approve_not_owned_token() {
+        // When deploy a contract with the initial supply.
+        let mut erc721_env = setup();
+
+        // And mint a token to Alice.
+        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+
+        // Then approving a token that is not owned by the caller throws an error.
+        assert_eq!(
+            erc721_env
+                .token
+                .try_approve(Some(erc721_env.bob), U256::from(1))
+                .unwrap_err(),
+            NotAnOwnerOrApproved.into()
+        );
+    }
+
+    #[test]
+    fn set_an_operator() {
+        // When deploy a contract with the initial supply.
+        let mut erc721_env = setup();
+
+        // And mint a token to Alice.
+        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+
+        // And set Bob as an operator.
+        erc721_env.env.set_caller(erc721_env.alice);
+        erc721_env.token.set_approval_for_all(erc721_env.bob, true);
+
+        // Then Bob is an operator.
+        assert!(erc721_env
+            .token
+            .is_approved_for_all(erc721_env.alice, erc721_env.bob));
+    }
+
+    #[test]
+    fn cancel_an_operator() {
+        // When deploy a contract with the initial supply.
+        let mut erc721_env = setup();
+
+        // And mint a token to Alice.
+        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+
+        // And set Bob as an operator.
+        erc721_env.env.set_caller(erc721_env.alice);
+        erc721_env.token.set_approval_for_all(erc721_env.bob, true);
+
+        // And cancel Bob as an operator.
+        erc721_env.env.set_caller(erc721_env.alice);
+        erc721_env.token.set_approval_for_all(erc721_env.bob, false);
+
+        // Then Bob is not an operator.
+        assert!(!erc721_env
+            .token
+            .is_approved_for_all(erc721_env.alice, erc721_env.bob));
+    }
+
+    #[test]
+    fn transfer_nft() {
+        // When deploy a contract with the initial supply.
+        let mut erc721_env = setup();
+
+        // And mint a token to Alice.
+        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+
+        // And transfer the token to Bob.
+        erc721_env.env.set_caller(erc721_env.alice);
+        erc721_env
+            .token
+            .transfer_from(erc721_env.alice, erc721_env.bob, U256::from(1));
+
+        // Then the owner of the token is Bob.
+        assert_eq!(erc721_env.token.owner_of(U256::from(1)), erc721_env.bob);
+    }
+
+    #[test]
+    fn transfer_approved() {
+        // When deploy a contract with the initial supply.
+        let mut erc721_env = setup();
+
+        // And mint a token to Alice.
+        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+
+        // And approve Bob to transfer the token.
+        erc721_env.env.set_caller(erc721_env.alice);
+        erc721_env
+            .token
+            .approve(Some(erc721_env.bob), U256::from(1));
+
+        // And transfer the token to Carol.
+        erc721_env.env.set_caller(erc721_env.bob);
+        erc721_env
+            .token
+            .transfer_from(erc721_env.alice, erc721_env.carol, U256::from(1));
+
+        // Then the owner of the token is Carol.
+        assert_eq!(erc721_env.token.owner_of(U256::from(1)), erc721_env.carol);
+    }
+
+    #[test]
+    fn transfer_operator() {
+        // When deploy a contract with the initial supply.
+        let mut erc721_env = setup();
+
+        // And mint a token to Alice.
+        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+
+        // And set Bob as an operator.
+        erc721_env.env.set_caller(erc721_env.alice);
+        erc721_env.token.set_approval_for_all(erc721_env.bob, true);
+
+        // And transfer the token to Carol.
+        erc721_env.env.set_caller(erc721_env.bob);
+        erc721_env
+            .token
+            .transfer_from(erc721_env.alice, erc721_env.carol, U256::from(1));
+
+        // Then the owner of the token is Carol.
+        assert_eq!(erc721_env.token.owner_of(U256::from(1)), erc721_env.carol);
+    }
+
+    #[test]
+    fn transfer_not_owned() {
+        // When deploy a contract with the initial supply.
+        let mut erc721_env = setup();
+
+        // And mint a token to Alice.
+        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+
+        // Then transferring a token that is not owned by the caller throws an error.
+        erc721_env.env.set_caller(erc721_env.bob);
+        let err = erc721_env
+            .token
+            .try_transfer_from(erc721_env.alice, erc721_env.carol, U256::from(1))
+            .unwrap_err();
+        assert_eq!(err, NotAnOwnerOrApproved.into());
+    }
+
+    #[test]
+    fn transferring_invalid_nft() {
+        // When deploy a contract with the initial supply.
+        let mut erc721_env = setup();
+
+        // Then transferring a token that does not exist throws an error.
+        let err = erc721_env
+            .token
+            .try_transfer_from(erc721_env.alice, erc721_env.carol, U256::from(1))
+            .unwrap_err();
+        assert_eq!(err, InvalidTokenId.into());
+    }
+
+    #[test]
+    fn safe_transfer() {
+        // When deploy a contract with the initial supply.
+        let mut erc721_env = setup();
+
+        assert!(erc721_env.token.address.is_contract());
+        assert!(!erc721_env.alice.is_contract());
+
+        // And mint a token to Alice.
+        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+
+        // And safe transfer the token to Bob.
+        erc721_env.env.set_caller(erc721_env.alice);
+        erc721_env
+            .token
+            .safe_transfer_from(erc721_env.alice, erc721_env.bob, U256::from(1));
+
+        // Then the owner of the token is Bob.
+        assert_eq!(erc721_env.token.owner_of(U256::from(1)), erc721_env.bob);
+    }
+
+    #[test]
+    fn safe_transfer_to_contract_which_does_not_support_nft() {
+        use crate::erc20::Erc20Deployer;
+        // When deploy a contract with the initial supply
+        let mut erc721_env = setup();
+        // And another contract which does not support nfts
+        let _erc20 = Erc20Deployer::init(
+            &erc721_env.env,
+            "PLS".to_string(),
+            "PLASCOIN".to_string(),
+            10,
+            None
+        );
+
+        // And mint a token to Alice.
+        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+
+        // Then safe transfer the token to the contract which does not support nfts throws an error.
+        erc721_env.env.set_caller(erc721_env.alice);
+
+        // TODO: Enable this after fixing mockvm
+        // assert_eq!(
+        // OdraError::VmError(NoSuchMethod("on_erc721_received".to_string())),
+        //         erc721_env.token.try_safe_transfer_from(
+        //             erc721_env.alice,
+        //             erc20.address,
+        //             U256::from(1)
+        //         ).unwrap_err()
+        // );
+    }
+
+    #[test]
+    fn safe_transfer_to_contract_which_supports_nft() {
+        // When deploy a contract with the initial supply
+        let mut erc721_env = setup();
+        // And another contract which does not support nfts
+        let receiver = Erc721ReceiverDeployer::init(&erc721_env.env);
+
+        // And mint a token to Alice.
+        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+
+        // And transfer the token to the contract which does support nfts
+        erc721_env.env.set_caller(erc721_env.alice);
+        erc721_env
+            .token
+            .safe_transfer_from(erc721_env.alice, receiver.address, U256::from(1));
+
+        // Then the owner of the token is the contract
+        assert_eq!(erc721_env.token.owner_of(U256::from(1)), receiver.address);
+        // And the receiver contract is aware of the transfer
+        erc721_env.env.emitted_event(
+            &receiver.address,
+            &Received {
+                operator: Some(erc721_env.alice),
+                from: Some(erc721_env.alice),
+                token_id: U256::from(1),
+                data: None
+            }
+        );
+    }
+
+    #[test]
+    fn safe_transfer_to_contract_with_data() {
+        // When deploy a contract with the initial supply
+        let mut erc721_env = setup();
+        // And another contract which does not support nfts
+        let receiver = Erc721ReceiverDeployer::init(&erc721_env.env);
+
+        // And mint a token to Alice.
+        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+
+        // And transfer the token to the contract which does support nfts
+        erc721_env.env.set_caller(erc721_env.alice);
+        erc721_env.token.safe_transfer_from_with_data(
+            erc721_env.alice,
+            receiver.address,
+            U256::from(1),
+            b"data".to_vec().into()
+        );
+
+        // Then the owner of the token is the contract
+        assert_eq!(erc721_env.token.owner_of(U256::from(1)), receiver.address);
+        // And the receiver contract is aware of the transfer
+        erc721_env.env.emitted_event(
+            &receiver.address,
+            &Received {
+                operator: Some(erc721_env.alice),
+                from: Some(erc721_env.alice),
+                token_id: U256::from(1),
+                data: Some(b"data".to_vec().into())
+            }
+        );
+    }
+
+    #[test]
+    fn burn() {
+        // When deploy a contract with the initial supply.
+        let mut erc721_env = setup();
+
+        // And mint a token to Alice.
+        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+
+        // And burn the token.
+        erc721_env.token.burn(U256::from(1));
+
+        // Then the owner of throws an error.
+        let err = erc721_env.token.try_owner_of(U256::from(1)).unwrap_err();
+        assert_eq!(err, InvalidTokenId.into());
+    }
+
+    #[test]
+    fn burn_error() {
+        // When deploy a contract with the initial supply.
+        let mut erc721_env = setup();
+
+        // And mint a token to Alice.
+        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+
+        // Then burn the token as Alice errors out
+        erc721_env.env.set_caller(erc721_env.alice);
+        let err = erc721_env.token.try_burn(U256::from(1)).unwrap_err();
+        assert_eq!(err, AccessError::CallerNotTheOwner.into());
+    }
+
+    #[test]
+    fn burn_non_existing_nft() {
+        // When deploy a contract with the initial supply.
+        let mut erc721_env = setup();
+
+        // Then burning a token that does not exist throws an error.
+        let err = erc721_env.token.try_burn(U256::from(1)).unwrap_err();
+        assert_eq!(err, InvalidTokenId.into());
+    }
+
+    #[test]
+    fn metadata() {
+        // When deploy a contract with the initial supply.
+        let erc721 = setup();
+
+        // Then the contract has the metadata set.
+        assert_eq!(erc721.token.symbol(), SYMBOL.to_string());
+        assert_eq!(erc721.token.name(), NAME.to_string());
+        assert_eq!(erc721.token.base_uri(), BASE_URI.to_string());
+    }
+
+    #[test]
+    fn minting_by_not_an_owner() {
+        // When deploy a contract with the initial supply.
+        let mut erc721_env = setup();
+
+        // Then minting a token by not an owner throws an error.
+        erc721_env.env.set_caller(erc721_env.bob);
+        let err = erc721_env
+            .token
+            .try_mint(erc721_env.alice, U256::from(1))
+            .unwrap_err();
+        assert_eq!(err, AccessError::CallerNotTheOwner.into());
+    }
+}
