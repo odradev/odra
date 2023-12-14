@@ -18,7 +18,6 @@ pub struct Erc1155Token {
 
 #[odra::module]
 impl OwnedErc1155 for Erc1155Token {
-    #[odra(init)]
     fn init(&mut self) {
         self.ownable.init();
     }

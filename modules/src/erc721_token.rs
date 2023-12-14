@@ -23,7 +23,6 @@ pub struct Erc721Token {
 
 #[odra::module]
 impl OwnedErc721WithMetadata for Erc721Token {
-    #[odra(init)]
     fn init(&mut self, name: String, symbol: String, base_uri: String) {
         self.metadata.init(name, symbol, base_uri);
         self.ownable.init();
