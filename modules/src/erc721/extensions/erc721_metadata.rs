@@ -55,15 +55,10 @@ impl Erc721MetadataExtension {
 pub mod errors {
     use odra::OdraError;
 
+    #[derive(OdraError)]
     pub enum Error {
         NameNotSet = 31_000,
         SymbolNotSet = 31_001,
         BaseUriNotSet = 31_002
-    }
-
-    impl From<Error> for OdraError {
-        fn from(error: Error) -> Self {
-            OdraError::user(error as u16)
-        }
     }
 }

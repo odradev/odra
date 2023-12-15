@@ -6,6 +6,7 @@ use odra::prelude::*;
 use odra::{Address, Bytes, Module, U256};
 
 /// The ERC721 receiver implementation.
+// TODO: remove {} when #295 is merged
 #[odra::module]
 pub struct Erc721Receiver {}
 

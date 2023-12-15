@@ -85,6 +85,7 @@ pub mod errors {
     use odra::OdraError;
 
     /// Possible errors in the context of Erc721 token.
+    #[derive(OdraError)]
     pub enum Error {
         /// Token is invalid in the given context or does not exist.
         InvalidTokenId = 30_000,
@@ -96,11 +97,5 @@ pub mod errors {
         ApproveToCaller = 30_003,
         /// Token transfer ends with an error
         TransferFailed = 30_004
-    }
-
-    impl From<Error> for OdraError {
-        fn from(error: Error) -> Self {
-            OdraError::user(error as u16)
-        }
     }
 }
