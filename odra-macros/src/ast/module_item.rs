@@ -191,6 +191,28 @@ mod test {
     use super::ModuleModItem;
 
     #[test]
+    fn empty_module() {
+        let module = test_utils::mock_empty_module_definition();
+        let expected = quote!(
+            mod __counter_pack_module {
+                use super::*;
+
+                impl odra::Module for CounterPack {
+                    fn new(env: Rc<odra::ContractEnv>) -> Self {
+                        Self { __env: env }
+                    }
+
+                    fn env(&self) -> Rc<odra::ContractEnv> {
+                        self.__env.clone()
+                    }
+                }
+            }
+        );
+        let actual = ModuleModItem::try_from(&module).unwrap();
+        test_utils::assert_eq(actual, expected);
+    }
+
+    #[test]
     fn counter_pack() {
         let module = test_utils::mock_module_definition();
         let expected = quote!(

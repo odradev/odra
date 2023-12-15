@@ -126,10 +126,7 @@ impl Erc20 {
     pub fn cross_transfer(&mut self, other: Address, to: Address, value: U256) {
         let caller = self.env().caller();
 
-        let mut other_erc20 = Erc20ContractRef {
-            address: other,
-            env: self.env()
-        };
+        let mut other_erc20 = Erc20ContractRef::new(self.env(), other);
 
         other_erc20.transfer(to, value);
         self.env().emit_event(OnCrossTransfer {

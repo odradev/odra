@@ -76,6 +76,14 @@ pub fn mock_module_definition() -> ModuleStructIR {
     ModuleStructIR::try_from((&attr, &module)).unwrap()
 }
 
+pub fn mock_empty_module_definition() -> ModuleStructIR {
+    let module = quote!(
+        pub struct CounterPack;
+    );
+    let attr = quote!();
+    ModuleStructIR::try_from((&attr, &module)).unwrap()
+}
+
 pub fn mock_struct() -> TypeIR {
     let ty = quote!(
         struct MyType {

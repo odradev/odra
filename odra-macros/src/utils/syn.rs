@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream;
 use syn::{parse_quote, spanned::Spanned};
 
-pub fn ident_from_impl(impl_code: &syn::ItemImpl) -> Result<syn::Ident, syn::Error> {
+pub fn ident_from_impl(impl_code: &syn::ItemImpl) -> syn::Result<syn::Ident> {
     last_segment_ident(&impl_code.self_ty)
 }
 
@@ -58,14 +58,36 @@ pub fn function_return_type(sig: &syn::Signature) -> syn::ReturnType {
     sig.output.clone()
 }
 
-pub fn struct_fields_ident(item: &syn::ItemStruct) -> Result<Vec<syn::Ident>, syn::Error> {
+pub fn struct_fields_ident(item: &syn::ItemStruct) -> syn::Result<Vec<syn::Ident>> {
+    map_fields(item, |f| {
+        f.ident.clone().ok_or(syn::Error::new(
+            f.span(),
+            "Invalid field. Module fields must be named"
+        ))
+    })
+}
+
+pub fn struct_typed_fields(item: &syn::ItemStruct) -> syn::Result<Vec<(syn::Ident, syn::Type)>> {
+    map_fields(item, |f| {
+        f.ident
+            .clone()
+            .ok_or(syn::Error::new_spanned(
+                f,
+                "Invalid field. Module fields must be named"
+            ))
+            .map(|i| (i, f.ty.clone()))
+    })
+}
+
+fn map_fields<T, F: FnMut(&syn::Field) -> syn::Result<T>>(
+    item: &syn::ItemStruct,
+    f: F
+) -> syn::Result<Vec<T>> {
+    if item.fields.is_empty() {
+        return Ok(vec![]);
+    }
     if let syn::Fields::Named(named) = &item.fields {
-        let err_msg = "Invalid field. Module fields must be named";
-        named
-            .named
-            .iter()
-            .map(|f| f.ident.clone().ok_or(syn::Error::new(f.span(), err_msg)))
-            .collect::<Result<Vec<syn::Ident>, syn::Error>>()
+        named.named.iter().map(f).collect()
     } else {
         Err(syn::Error::new_spanned(
             &item.fields,
@@ -74,28 +96,7 @@ pub fn struct_fields_ident(item: &syn::ItemStruct) -> Result<Vec<syn::Ident>, sy
     }
 }
 
-pub fn struct_fields(item: &syn::ItemStruct) -> Result<Vec<(syn::Ident, syn::Type)>, syn::Error> {
-    if let syn::Fields::Named(named) = &item.fields {
-        let err_msg = "Invalid field. Module fields must be named";
-        named
-            .named
-            .iter()
-            .map(|f| {
-                f.ident
-                    .clone()
-                    .ok_or(syn::Error::new_spanned(f, err_msg))
-                    .map(|i| (i, f.ty.clone()))
-            })
-            .collect()
-    } else {
-        Err(syn::Error::new_spanned(
-            &item.fields,
-            "Invalid fields. Module fields must be named"
-        ))
-    }
-}
-
-pub fn derive_item_variants(item: &syn::DeriveInput) -> Result<Vec<syn::Ident>, syn::Error> {
+pub fn derive_item_variants(item: &syn::DeriveInput) -> syn::Result<Vec<syn::Ident>> {
     match &item.data {
         syn::Data::Struct(syn::DataStruct { fields, .. }) => fields
             .iter()
@@ -133,7 +134,7 @@ pub fn visibility_default() -> syn::Visibility {
     parse_quote!()
 }
 
-pub fn last_segment_ident(ty: &syn::Type) -> Result<syn::Ident, syn::Error> {
+pub fn last_segment_ident(ty: &syn::Type) -> syn::Result<syn::Ident> {
     match ty {
         syn::Type::Path(type_path) => type_path
             .path
@@ -148,7 +149,7 @@ pub fn last_segment_ident(ty: &syn::Type) -> Result<syn::Ident, syn::Error> {
     }
 }
 
-pub fn clear_generics(ty: &syn::Type) -> Result<syn::Type, syn::Error> {
+pub fn clear_generics(ty: &syn::Type) -> syn::Result<syn::Type> {
     match ty {
         syn::Type::Path(type_path) => clear_path(type_path).map(syn::Type::Path),
         ty => Err(syn::Error::new(
@@ -197,7 +198,7 @@ pub fn unreferenced_ty(ty: &syn::Type) -> syn::Type {
     }
 }
 
-fn clear_path(ty: &syn::TypePath) -> Result<syn::TypePath, syn::Error> {
+fn clear_path(ty: &syn::TypePath) -> syn::Result<syn::TypePath> {
     let mut owned_ty = ty.to_owned();
 
     let mut segment = owned_ty

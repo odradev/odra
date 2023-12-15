@@ -53,6 +53,10 @@ mod test {
             }
 
             impl TokenContractRef {
+                pub fn new(env: Rc<odra::ContractEnv>, address: odra::Address) -> Self {
+                    Self { env, address }
+                }
+
                 pub fn address(&self) -> &odra::Address {
                     &self.address
                 }

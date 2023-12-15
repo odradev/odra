@@ -63,7 +63,7 @@ impl ModuleStructIR {
     }
 
     pub fn typed_fields(&self) -> Result<Vec<EnumeratedTypedField>, syn::Error> {
-        let fields = utils::syn::struct_fields(&self.code)?;
+        let fields = utils::syn::struct_typed_fields(&self.code)?;
         let fields = fields
             .iter()
             .filter(|(i, _)| i != &utils::ident::env())
@@ -114,7 +114,7 @@ impl ModuleStructIR {
                     .cmp(&other.0.to_token_stream().to_string())
             }
         }
-        let fields = utils::syn::struct_fields(&self.code)?;
+        let fields = utils::syn::struct_typed_fields(&self.code)?;
         let set = HashSet::<syn::Type>::from_iter(
             fields
                 .iter()

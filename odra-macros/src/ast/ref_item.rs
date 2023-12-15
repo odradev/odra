@@ -1,6 +1,8 @@
+use crate::ast::fn_utils::{FnItem, SelfFnItem};
+use crate::utils::misc::AsBlock;
 use crate::{ast::ref_utils, ir::ModuleImplIR, utils};
 use derive_try_from::TryFromRef;
-use quote::{quote, ToTokens, TokenStreamExt};
+use quote::TokenStreamExt;
 use syn::parse_quote;
 
 #[derive(syn_derive::ToTokens)]
@@ -33,18 +35,49 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefStructItem {
     }
 }
 
-struct AddressFnItem;
+#[derive(syn_derive::ToTokens)]
+struct AddressFnItem {
+    vis: syn::Visibility,
+    fn_item: SelfFnItem
+}
 
-impl ToTokens for AddressFnItem {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let ty_address = utils::ty::address();
+impl AddressFnItem {
+    pub fn new() -> Self {
         let m_address = utils::member::address();
+        let ret_expr: syn::Expr = parse_quote!(&#m_address);
+        Self {
+            vis: utils::syn::visibility_pub(),
+            fn_item: SelfFnItem::new(
+                &utils::ident::address(),
+                utils::misc::ret_ty(&utils::ty::address_ref()),
+                ret_expr.as_block()
+            )
+        }
+    }
+}
 
-        tokens.extend(quote!(
-            pub fn address(&self) -> &#ty_address {
-                &#m_address
-            }
-        ))
+#[derive(syn_derive::ToTokens)]
+struct NewFnItem {
+    vis: syn::Visibility,
+    fn_item: FnItem
+}
+
+impl NewFnItem {
+    fn new() -> Self {
+        let ty_address = utils::ty::address();
+        let m_env = utils::ident::env();
+        let m_address = utils::ident::address();
+        let ret_ty = utils::misc::ret_ty(&utils::ty::_Self());
+        let ty_rc_contract_env = utils::ty::rc_contract_env();
+        let args = vec![
+            parse_quote!(#m_env: #ty_rc_contract_env),
+            parse_quote!(#m_address: #ty_address),
+        ];
+        let ret_expr: syn::Expr = parse_quote!(Self { #m_env, #m_address });
+        Self {
+            vis: utils::syn::visibility_pub(),
+            fn_item: FnItem::new(&utils::ident::new(), args, ret_ty, ret_expr.as_block())
+        }
     }
 }
 
@@ -54,6 +87,8 @@ struct ContractRefImplItem {
     ref_ident: syn::Ident,
     #[syn(braced)]
     brace_token: syn::token::Brace,
+    #[syn(in = brace_token)]
+    new_fn: NewFnItem,
     #[syn(in = brace_token)]
     address_fn: AddressFnItem,
     #[syn(in = brace_token)]
@@ -69,7 +104,8 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefImplItem {
             impl_token: Default::default(),
             ref_ident: module.contract_ref_ident()?,
             brace_token: Default::default(),
-            address_fn: AddressFnItem,
+            new_fn: NewFnItem::new(),
+            address_fn: AddressFnItem::new(),
             functions: module
                 .functions()
                 .iter()
@@ -102,6 +138,10 @@ mod ref_item_tests {
             }
 
             impl Erc20ContractRef {
+                pub fn new(env: Rc<odra::ContractEnv>, address: odra::Address) -> Self {
+                    Self { env, address }
+                }
+
                 // TODO: this means "address", can't be entrypoint name.
                 pub fn address(&self) -> &odra::Address {
                     &self.address
@@ -179,6 +219,10 @@ mod ref_item_tests {
             }
 
             impl Erc20ContractRef {
+                pub fn new(env: Rc<odra::ContractEnv>, address: odra::Address) -> Self {
+                    Self { env, address }
+                }
+
                 // TODO: this means "address", can't be entrypoint name.
                 pub fn address(&self) -> &odra::Address {
                     &self.address

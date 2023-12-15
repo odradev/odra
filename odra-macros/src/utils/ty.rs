@@ -5,6 +5,10 @@ pub fn address() -> syn::Type {
     parse_quote!(odra::Address)
 }
 
+pub fn address_ref() -> syn::Type {
+    parse_quote!(&odra::Address)
+}
+
 pub fn contract_env() -> syn::Type {
     parse_quote!(odra::ContractEnv)
 }
