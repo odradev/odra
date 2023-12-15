@@ -130,11 +130,11 @@ mod ref_item_tests {
 
     #[test]
     fn contract_ref() {
-        let module = test_utils::mock_module();
+        let module = test_utils::mock::module_impl();
         let expected = quote! {
             pub struct Erc20ContractRef {
-                env: Rc<odra::ContractEnv>,
-                address: odra::Address,
+                pub env: Rc<odra::ContractEnv>,
+                pub address: odra::Address,
             }
 
             impl Erc20ContractRef {
@@ -211,11 +211,11 @@ mod ref_item_tests {
 
     #[test]
     fn contract_trait_impl_ref() {
-        let module = test_utils::mock_module_trait_impl();
+        let module = test_utils::mock::module_trait_impl();
         let expected = quote! {
             pub struct Erc20ContractRef {
-                env: Rc<odra::ContractEnv>,
-                address: odra::Address,
+                pub env: Rc<odra::ContractEnv>,
+                pub address: odra::Address,
             }
 
             impl Erc20ContractRef {

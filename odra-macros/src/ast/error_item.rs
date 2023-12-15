@@ -43,7 +43,7 @@ mod tests {
 
     #[test]
     fn test_odra_error_item() {
-        let ty = test_utils::mock_enum();
+        let ty = test_utils::mock::custom_enum();
         let item = OdraErrorItem::try_from(&ty).unwrap();
         let expected = quote::quote! {
             #[automatically_derived]

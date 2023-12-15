@@ -126,7 +126,7 @@ mod test {
 
     #[test]
     fn test_entrypoints() {
-        let module = test_utils::mock_module();
+        let module = test_utils::mock::module_impl();
         let expected = quote!(
             impl odra::contract_def::HasEntrypoints for Erc20 {
                 fn entrypoints() -> Vec<odra::contract_def::Entrypoint> {
@@ -193,7 +193,7 @@ mod test {
 
     #[test]
     fn test_trait_impl_entrypoints() {
-        let module = test_utils::mock_module_trait_impl();
+        let module = test_utils::mock::module_trait_impl();
         let expected = quote!(
             impl odra::contract_def::HasEntrypoints for Erc20 {
                 fn entrypoints() -> Vec<odra::contract_def::Entrypoint> {

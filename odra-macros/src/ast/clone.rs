@@ -75,7 +75,7 @@ mod tests {
 
     #[test]
     fn test_struct() {
-        let ir = test_utils::mock_struct();
+        let ir = test_utils::mock::custom_struct();
         let item = CloneItem::try_from(&ir).unwrap();
         let expected = quote! {
             #[automatically_derived]
@@ -94,7 +94,7 @@ mod tests {
 
     #[test]
     fn test_enum() {
-        let ir = test_utils::mock_enum();
+        let ir = test_utils::mock::custom_enum();
         let item = CloneItem::try_from(&ir).unwrap();
         let expected = quote! {
             #[automatically_derived]
