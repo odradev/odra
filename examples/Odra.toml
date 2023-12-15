@@ -1,87 +1,87 @@
-[[contracts]]
-name = "owned_token"
-fqn = "odra_examples::contracts::owned_token::OwnedToken"
+#[[contracts]]
+#name = "owned_token"
+#fqn = "odra_examples::contracts::owned_token::OwnedToken"
+#
+#[[contracts]]
+#name = "balance_checker"
+#fqn = "odra_examples::contracts::balance_checker::BalanceChecker"
+#
+#[[contracts]]
+#name = "token_manager"
+#fqn = "odra_examples::contracts::token_manager::TokenManager"
+#
+#[[contracts]]
+#name = "nested_mapping"
+#fqn = "odra_examples::features::nested_mapping::NestedMapping"
+#
+#[[contracts]]
+#name = "time_lock_wallet"
+#fqn = "odra_examples::contracts::tlw::TimeLockWallet"
+#
+#[[contracts]]
+#name = "reentrancy_mock"
+#fqn = "odra_examples::features::reentrancy_guard::ReentrancyMock"
+#
+#[[contracts]]
+#name = "signature_verifier"
+#fqn = "odra_examples::features::signature_verifier::SignatureVerifier"
+#
+#[[contracts]]
+#name = "composable_contract"
+#fqn = "odra_examples::features::composer::ComposableContract"
+#
+#[[contracts]]
+#name = "nested_odra_types_contract"
+#fqn = "odra_examples::features::module_nesting::NestedOdraTypesContract"
+#
+#[[contracts]]
+#name = "dog_contract"
+#fqn = "odra_examples::features::storage::variable::DogContract"
+#
+#[[contracts]]
+#name = "dog_contract2"
+#fqn = "odra_examples::features::storage::mapping::DogContract2"
+#
+#[[contracts]]
+#name = "dog_contract3"
+#fqn = "odra_examples::features::storage::list::DogContract3"
+#
+#[[contracts]]
+#name = "testing_contract"
+#fqn = "odra_examples::features::testing::TestingContract"
+#
+#[[contracts]]
+#name = "host_contract"
+#fqn = "odra_examples::features::host_functions::HostContract"
+#
+#[[contracts]]
+#name = "owned_contract"
+#fqn = "odra_examples::features::handling_errors::OwnedContract"
+#
+#[[contracts]]
+#name = "party_contract"
+#fqn = "odra_examples::features::events::PartyContract"
+#
+#[[contracts]]
+#name = "cross_contract"
+#fqn = "odra_examples::features::cross_calls::CrossContract"
+#
+#[[contracts]]
+#name = "math_engine"
+#fqn = "odra_examples::features::cross_calls::MathEngine"
+#
+#[[contracts]]
+#name = "modules_contract"
+#fqn = "odra_examples::features::modules::ModulesContract"
+#
+#[[contracts]]
+#name = "public_wallet"
+#fqn = "odra_examples::features::native_token::PublicWallet"
 
 [[contracts]]
-name = "balance_checker"
-fqn = "odra_examples::contracts::balance_checker::BalanceChecker"
-
-[[contracts]]
-name = "token_manager"
-fqn = "odra_examples::contracts::token_manager::TokenManager"
-
-[[contracts]]
-name = "nested_mapping"
-fqn = "odra_examples::features::nested_mapping::NestedMapping"
-
-[[contracts]]
-name = "time_lock_wallet"
-fqn = "odra_examples::contracts::tlw::TimeLockWallet"
-
-[[contracts]]
-name = "reentrancy_mock"
-fqn = "odra_examples::features::reentrancy_guard::ReentrancyMock"
-
-[[contracts]]
-name = "signature_verifier"
-fqn = "odra_examples::features::signature_verifier::SignatureVerifier"
-
-[[contracts]]
-name = "composable_contract"
-fqn = "odra_examples::features::composer::ComposableContract"
-
-[[contracts]]
-name = "nested_odra_types_contract"
-fqn = "odra_examples::features::module_nesting::NestedOdraTypesContract"
-
-[[contracts]]
-name = "dog_contract"
-fqn = "odra_examples::features::storage::variable::DogContract"
-
-[[contracts]]
-name = "dog_contract2"
-fqn = "odra_examples::features::storage::mapping::DogContract2"
-
-[[contracts]]
-name = "dog_contract3"
-fqn = "odra_examples::features::storage::list::DogContract3"
-
-[[contracts]]
-name = "testing_contract"
-fqn = "odra_examples::features::testing::TestingContract"
-
-[[contracts]]
-name = "host_contract"
-fqn = "odra_examples::features::host_functions::HostContract"
-
-[[contracts]]
-name = "owned_contract"
-fqn = "odra_examples::features::handling_errors::OwnedContract"
-
-[[contracts]]
-name = "party_contract"
-fqn = "odra_examples::features::events::PartyContract"
-
-[[contracts]]
-name = "cross_contract"
-fqn = "odra_examples::features::cross_calls::CrossContract"
-
-[[contracts]]
-name = "math_engine"
-fqn = "odra_examples::features::cross_calls::MathEngine"
-
-[[contracts]]
-name = "modules_contract"
-fqn = "odra_examples::features::modules::ModulesContract"
-
-[[contracts]]
-name = "public_wallet"
-fqn = "odra_examples::features::native_token::PublicWallet"
-
-[[contracts]]
-name = "mock_moderated"
+name = "MockModerated"
 fqn = "odra_examples::features::access_control::MockModerated"
 
-[[contracts]]
-name = "pauseable_counter"
-fqn = "odra_examples::features::pauseable::PauseableCounter"
+#[[contracts]]
+#name = "pauseable_counter"
+#fqn = "odra_examples::features::pauseable::PauseableCounter"

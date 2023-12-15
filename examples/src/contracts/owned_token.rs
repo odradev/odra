@@ -1,24 +1,21 @@
-use odra::{
-    contract_env,
-    prelude::string::String,
-    types::{Address, U256}
-};
+use odra::{Address, Module, ModuleWrapper, U256};
+use odra::prelude::*;
 use odra_modules::access::Ownable;
 use odra_modules::erc20::Erc20;
 
 #[odra::module]
 pub struct OwnedToken {
-    ownable: Ownable,
-    erc20: Erc20
+    ownable: ModuleWrapper<Ownable>,
+    erc20: ModuleWrapper<Erc20>
 }
 
 #[odra::module]
 impl OwnedToken {
     #[odra(init)]
-    pub fn init(&mut self, name: String, symbol: String, decimals: u8, initial_supply: &U256) {
+    pub fn init(&mut self, name: String, symbol: String, decimals: u8, initial_supply: U256) {
         self.ownable.init();
         self.erc20
-            .init(symbol, name, decimals, &Some(*initial_supply));
+            .init(symbol, name, decimals, Some(initial_supply));
     }
 
     delegate! {
@@ -41,7 +38,7 @@ impl OwnedToken {
     }
 
     pub fn mint(&mut self, address: &Address, amount: &U256) {
-        self.ownable.assert_owner(&contract_env::caller());
+        self.ownable.assert_owner(&self.env().caller());
         self.erc20.mint(address, amount);
     }
 }

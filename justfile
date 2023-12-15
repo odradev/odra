@@ -21,7 +21,7 @@ check-lint: clippy
     cd odra-casper/proxy-caller && cargo fmt -- --check
     cd examples2 && cargo fmt -- --check
     cd modules && cargo fmt -- --check
-#    cd examples && cargo fmt -- --check
+    cd examples && cargo fmt -- --check
 #    cd examples && cargo check --no-default-features -F casper-livenet
 
 install-cargo-odra:
