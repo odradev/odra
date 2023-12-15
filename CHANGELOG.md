@@ -32,6 +32,8 @@ and it has to be named `init` and env needs to be passed as a first parameter.
 - Removed `emit()` method from events. Use `self.env.emit_event(event)` instead.
 - Removed `assert_events!` macro. Use `env.emitted_event` and similar methods instead.
 - Removed `native_token_metadata()` and its respective structs.
+- Removed `assert_exception!` macro. Use `try_` prefix for endpoints instead.
+- Removed `address()` method from `HostRef`. Use `address` field instead.
 
 ### Added
 - `last_call()` in test env with `CallResult` struct which holds all information about the last call.
