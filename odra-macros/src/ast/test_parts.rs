@@ -11,7 +11,7 @@ use super::{
 
 #[derive(syn_derive::ToTokens)]
 pub struct TestPartsReexportItem {
-    attr: syn::Attribute,
+    not_wasm_attr: syn::Attribute,
     reexport_stmt: syn::Stmt
 }
 
@@ -21,7 +21,7 @@ impl TryFrom<&'_ ModuleImplIR> for TestPartsReexportItem {
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let test_parts_ident = module.test_parts_mod_ident()?;
         Ok(Self {
-            attr: utils::attr::not_wasm32(),
+            not_wasm_attr: utils::attr::not_wasm32(),
             reexport_stmt: parse_quote!(pub use #test_parts_ident::*;)
         })
     }
@@ -177,19 +177,19 @@ mod test {
                         let caller = odra::EntryPointsCaller::new(env.clone(), |contract_env, call_def| {
                             match call_def.method() {
                                 "init" => {
-                                    let result = execute_init(contract_env);
+                                    let result = __erc20_exec_parts::execute_init(contract_env);
                                     odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
                                 }
                                 "total_supply" => {
-                                    let result = execute_total_supply(contract_env);
+                                    let result = __erc20_exec_parts::execute_total_supply(contract_env);
                                     odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
                                 }
                                 "pay_to_mint" => {
-                                    let result = execute_pay_to_mint(contract_env);
+                                    let result = __erc20_exec_parts::execute_pay_to_mint(contract_env);
                                     odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
                                 }
                                 "approve" => {
-                                    let result = execute_approve(contract_env);
+                                    let result = __erc20_exec_parts::execute_approve(contract_env);
                                     odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
                                 }
                                 _ => panic!("Unknown method")
@@ -303,11 +303,11 @@ mod test {
                         let caller = odra::EntryPointsCaller::new(env.clone(), |contract_env, call_def| {
                             match call_def.method() {
                                 "total_supply" => {
-                                    let result = execute_total_supply(contract_env);
+                                    let result = __erc20_exec_parts::execute_total_supply(contract_env);
                                     odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
                                 }
                                 "pay_to_mint" => {
-                                    let result = execute_pay_to_mint(contract_env);
+                                    let result = __erc20_exec_parts::execute_pay_to_mint(contract_env);
                                     odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
                                 }
                                 _ => panic!("Unknown method")
