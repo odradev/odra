@@ -80,8 +80,9 @@ impl Ownable2Step {
 
 #[cfg(test)]
 mod test {
+    use crate::access::errors::Error;
     use crate::access::{OwnableDeployer, OwnableHostRef};
-    use odra::HostEnv;
+    use odra::{external_contract, HostEnv};
     // use odra::prelude::*;
 
     use super::*;
@@ -104,184 +105,192 @@ mod test {
         env.emitted_event(&ownable.address, &event);
         env.emitted_event(&ownable_2step.address, &event);
     }
-    //
-    // #[test]
-    // fn plain_ownership_transfer() {
-    //     // given a new contract
-    //     let (mut contract, initial_owner) = setup_ownable();
-    //
-    //     // when the current owner transfers ownership
-    //     let new_owner = test_env::get_account(1);
-    //     contract.transfer_ownership(&new_owner);
-    //
-    //     // then the new owner is set
-    //     assert_eq!(new_owner, contract.get_owner());
-    //     // then a OwnershipTransferred event was emitted
-    //     assert_events!(
-    //         contract,
-    //         OwnershipTransferred {
-    //             previous_owner: Some(initial_owner),
-    //             new_owner: Some(new_owner)
-    //         }
-    //     );
-    // }
-    //
-    // #[test]
-    // fn two_step_ownership_transfer() {
-    //     // given a new contract
-    //     let (mut contract, initial_owner) = setup_ownable_2_step();
-    //
-    //     // when the current owner transfers ownership
-    //     let new_owner = test_env::get_account(1);
-    //     contract.transfer_ownership(&new_owner);
-    //
-    //     // when the pending owner accepts the transfer
-    //     test_env::set_caller(new_owner);
-    //     contract.accept_ownership();
-    //
-    //     // then the new owner is set
-    //     assert_eq!(new_owner, contract.get_owner());
-    //     // then the pending owner is unset
-    //     assert_eq!(None, contract.get_pending_owner());
-    //     // then OwnershipTransferStarted and OwnershipTransferred events were emitted
-    //     assert_events!(
-    //         contract,
-    //         OwnershipTransferStarted {
-    //             previous_owner: Some(initial_owner),
-    //             new_owner: Some(new_owner)
-    //         },
-    //         OwnershipTransferred {
-    //             previous_owner: Some(initial_owner),
-    //             new_owner: Some(new_owner)
-    //         }
-    //     );
-    // }
-    //
-    // #[test]
-    // fn failing_plain_ownership_transfer() {
-    //     // given a new contract
-    //     let (mut contract, _) = setup_ownable();
-    //
-    //     // when a non-owner account is the caller
-    //     let (caller, new_owner) = (test_env::get_account(1), test_env::get_account(2));
-    //     test_env::set_caller(caller);
-    //
-    //     // then ownership transfer fails
-    //     test_env::assert_exception(Error::CallerNotTheOwner, || {
-    //         contract.transfer_ownership(&new_owner);
-    //     });
-    // }
-    //
-    // #[test]
-    // fn failing_two_step_transfer() {
-    //     // given a new contract
-    //     let (mut contract, initial_owner) = setup_ownable_2_step();
-    //
-    //     // when a non-owner account is the caller
-    //     let (caller, new_owner) = (test_env::get_account(1), test_env::get_account(2));
-    //     test_env::set_caller(caller);
-    //
-    //     // then ownership transfer fails
-    //     test_env::assert_exception(Error::CallerNotTheOwner, || {
-    //         contract.transfer_ownership(&new_owner);
-    //     });
-    //
-    //     // when the owner is the caller
-    //     test_env::set_caller(initial_owner);
-    //     contract.transfer_ownership(&new_owner);
-    //
-    //     // then the pending owner is set
-    //     assert_eq!(contract.get_pending_owner(), Some(new_owner));
-    //
-    //     // when someone else than the pending owner accepts the ownership
-    //     // transfer, it should fail
-    //     test_env::assert_exception(Error::CallerNotTheNewOwner, || {
-    //         contract.accept_ownership();
-    //     });
-    //
-    //     // then the owner remain the same
-    //     assert_eq!(contract.get_owner(), initial_owner);
-    //     // then the pending owner remain the same
-    //     assert_eq!(contract.get_pending_owner(), Some(new_owner));
-    // }
-    //
-    // #[test]
-    // fn renounce_ownership() {
-    //     // given new contracts
-    //     let (mut contracts, initial_owner) = setup_renounceable();
-    //
-    //     contracts
-    //         .iter_mut()
-    //         .for_each(|contract: &mut RenounceableRef| {
-    //             // when the current owner renounce ownership
-    //             contract.renounce_ownership();
-    //
-    //             // then an event is emitted
-    //             assert_events!(
-    //                 contract,
-    //                 OwnershipTransferred {
-    //                     previous_owner: Some(initial_owner),
-    //                     new_owner: None
-    //                 }
-    //             );
-    //             // then the owner is not set
-    //             test_env::assert_exception(Error::OwnerNotSet, || {
-    //                 contract.get_owner();
-    //             });
-    //             // then cannot renounce ownership again
-    //             test_env::assert_exception(Error::CallerNotTheOwner, || {
-    //                 contract.renounce_ownership();
-    //             });
-    //         });
-    // }
-    //
-    // #[test]
-    // fn renounce_ownership_fail() {
-    //     // given new contracts
-    //     let (mut contracts, _) = setup_renounceable();
-    //
-    //     contracts.iter_mut().for_each(|contract| {
-    //         // when a non-owner account is the caller
-    //         let caller = test_env::get_account(1);
-    //         test_env::set_caller(caller);
-    //
-    //         // then renounce ownership fails
-    //         test_env::assert_exception(Error::CallerNotTheOwner, || {
-    //             contract.renounce_ownership();
-    //         });
-    //     });
-    // }
-    //
-    // #[external_contract]
-    // trait Owned {
-    //     fn get_owner(&self) -> Address;
-    // }
-    //
-    // #[external_contract]
-    // trait Renounceable {
-    //     fn renounce_ownership(&mut self);
-    //     fn get_owner(&self) -> Address;
-    // }
-    //
-    // fn setup_ownable() -> (OwnableRef, Address) {
-    //     (OwnableDeployer::init(), test_env::get_account(0))
-    // }
-    //
-    // fn setup_ownable_2_step() -> (Ownable2StepRef, Address) {
-    //     (Ownable2StepDeployer::init(), test_env::get_account(0))
-    // }
-    //
-    // fn setup_renounceable() -> (Vec<RenounceableRef>, Address) {
-    //     let ownable = OwnableDeployer::init();
-    //     let ownable_2_step = Ownable2StepDeployer::init();
-    //     (
-    //         vec![
-    //             RenounceableRef::at(ownable.address()),
-    //             RenounceableRef::at(ownable_2_step.address()),
-    //         ],
-    //         test_env::get_account(0)
-    //     )
-    // }
+
+    #[test]
+    fn plain_ownership_transfer() {
+        // given a new contract
+        let (mut contract, initial_owner) = setup_ownable();
+
+        // when the current owner transfers ownership
+        let new_owner = contract.env.get_account(1);
+        contract.transfer_ownership(new_owner);
+
+        // then the new owner is set
+        assert_eq!(new_owner, contract.get_owner());
+        // then a OwnershipTransferred event was emitted
+        contract.env.emitted_event(
+            &contract.address,
+            &OwnershipTransferred {
+                previous_owner: Some(initial_owner),
+                new_owner: Some(new_owner)
+            }
+        );
+    }
+
+    #[test]
+    fn two_step_ownership_transfer() {
+        // given a new contract
+        let (mut contract, initial_owner) = setup_ownable_2_step();
+
+        // when the current owner transfers ownership
+        let new_owner = contract.env.get_account(1);
+        contract.transfer_ownership(new_owner);
+
+        // when the pending owner accepts the transfer
+        contract.env.set_caller(new_owner);
+        contract.accept_ownership();
+
+        // then the new owner is set
+        assert_eq!(new_owner, contract.get_owner());
+        // then the pending owner is unset
+        assert_eq!(None, contract.get_pending_owner());
+        // then OwnershipTransferStarted and OwnershipTransferred events were emitted
+        contract.env.emitted_event(
+            &contract.address,
+            &OwnershipTransferStarted {
+                previous_owner: Some(initial_owner),
+                new_owner: Some(new_owner)
+            }
+        );
+        contract.env.emitted_event(
+            &contract.address,
+            &OwnershipTransferred {
+                previous_owner: Some(initial_owner),
+                new_owner: Some(new_owner)
+            }
+        );
+    }
+
+    #[test]
+    fn failing_plain_ownership_transfer() {
+        // given a new contract
+        let (mut contract, _) = setup_ownable();
+
+        // when a non-owner account is the caller
+        let (caller, new_owner) = (contract.env.get_account(1), contract.env.get_account(2));
+        contract.env.set_caller(caller);
+
+        // then ownership transfer fails
+        let err = contract.try_transfer_ownership(new_owner).unwrap_err();
+        assert_eq!(err, Error::CallerNotTheOwner.into());
+    }
+
+    #[test]
+    fn failing_two_step_transfer() {
+        // given a new contract
+        let (mut contract, initial_owner) = setup_ownable_2_step();
+
+        // when a non-owner account is the caller
+        let (caller, new_owner) = (contract.env.get_account(1), contract.env.get_account(2));
+        contract.env.set_caller(caller);
+
+        // then ownership transfer fails
+        let err = contract.try_transfer_ownership(new_owner).unwrap_err();
+        assert_eq!(err, Error::CallerNotTheOwner.into());
+
+        // when the owner is the caller
+        contract.env.set_caller(initial_owner);
+        contract.transfer_ownership(new_owner);
+
+        // then the pending owner is set
+        assert_eq!(contract.get_pending_owner(), Some(new_owner));
+
+        // when someone else than the pending owner accepts the ownership
+        // transfer, it should fail
+        let err = contract.try_accept_ownership().unwrap_err();
+        assert_eq!(err, Error::CallerNotTheNewOwner.into());
+
+        // then the owner remain the same
+        assert_eq!(contract.get_owner(), initial_owner);
+        // then the pending owner remain the same
+        assert_eq!(contract.get_pending_owner(), Some(new_owner));
+    }
+
+    #[test]
+    fn renounce_ownership() {
+        // given new contracts
+        let (mut contracts, initial_owner) = setup_renounceable();
+
+        contracts
+            .iter_mut()
+            .for_each(|contract: &mut RenounceableHostRef| {
+                // when the current owner renounce ownership
+                contract.renounce_ownership();
+
+                // then an event is emitted
+                contract.env.emitted_event(
+                    &contract.address,
+                    &OwnershipTransferred {
+                        previous_owner: Some(initial_owner),
+                        new_owner: None
+                    }
+                );
+                // then the owner is not set
+                let err = contract.try_get_owner().unwrap_err();
+                assert_eq!(err, Error::OwnerNotSet.into());
+                // then cannot renounce ownership again
+                let err = contract.try_renounce_ownership().unwrap_err();
+                assert_eq!(err, Error::CallerNotTheOwner.into());
+            });
+    }
+
+    #[test]
+    fn renounce_ownership_fail() {
+        // given new contracts
+        let (mut contracts, _) = setup_renounceable();
+
+        contracts.iter_mut().for_each(|contract| {
+            // when a non-owner account is the caller
+            let caller = contract.env.get_account(1);
+            contract.env.set_caller(caller);
+
+            // then renounce ownership fails
+            let err = contract.try_renounce_ownership().unwrap_err();
+            assert_eq!(err, Error::CallerNotTheOwner.into());
+        });
+    }
+
+    #[external_contract]
+    trait Owned {
+        fn get_owner(&self) -> Address;
+    }
+
+    #[external_contract]
+    trait Renounceable {
+        fn renounce_ownership(&mut self);
+        fn get_owner(&self) -> Address;
+    }
+
+    fn setup_ownable() -> (OwnableHostRef, Address) {
+        let env = odra::test_env();
+        (OwnableDeployer::init(&env), env.get_account(0))
+    }
+
+    fn setup_ownable_2_step() -> (Ownable2StepHostRef, Address) {
+        let env = odra::test_env();
+        (Ownable2StepDeployer::init(&env), env.get_account(0))
+    }
+
+    fn setup_renounceable() -> (Vec<RenounceableHostRef>, Address) {
+        let env = odra::test_env();
+        let ownable = OwnableDeployer::init(&env);
+        let ownable_2_step = Ownable2StepDeployer::init(&env);
+        (
+            vec![
+                RenounceableHostRef {
+                    address: ownable.address,
+                    env: env.clone(),
+                    attached_value: Default::default()
+                },
+                RenounceableHostRef {
+                    address: ownable_2_step.address,
+                    env: env.clone(),
+                    attached_value: Default::default()
+                },
+            ],
+            env.get_account(0)
+        )
+    }
 
     fn setup_owned() -> (HostEnv, OwnableHostRef, Ownable2StepHostRef, Address) {
         let env = odra::test_env();
