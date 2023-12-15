@@ -1,4 +1,5 @@
-use odra::types::{Address, U256};
+use odra::{Address, U256};
+use odra::prelude::*;
 
 #[odra::module]
 pub struct BalanceChecker {}
@@ -6,7 +7,7 @@ pub struct BalanceChecker {}
 #[odra::module]
 impl BalanceChecker {
     pub fn check_balance(&self, token: &Address, account: &Address) -> U256 {
-        TokenRef::at(token).balance_of(account)
+        TokenHostRef::at(token).balance_of(account)
     }
 }
 
@@ -18,13 +19,12 @@ pub trait Token {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::contracts::owned_token::tests;
-    use odra::{test_env, types::OdraItem};
 
     #[test]
     fn balance_checker() {
-        let (owner, second_account) = (test_env::get_account(0), test_env::get_account(1));
-        let balance_checker = BalanceCheckerDeployer::default();
+        let env = odra::test_env();
+        let (owner, second_account) = (env.get_account(0), env.get_account(1));
+        let balance_checker = BalanceCheckerDeployer::init(&env);
         let token = tests::setup();
         let expected_owner_balance = tests::INITIAL_SUPPLY;
 
