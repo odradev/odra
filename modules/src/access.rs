@@ -3,7 +3,5 @@ pub mod errors;
 pub mod events;
 mod ownable;
 
-pub use access_control::{
-    AccessControl, AccessControlDeployer, AccessControlRef, Role, DEFAULT_ADMIN_ROLE
-};
+pub use access_control::{AccessControl, AccessControlContractRef, Role, DEFAULT_ADMIN_ROLE};
 pub use ownable::*;

@@ -1,8 +1,6 @@
 //! Erc1155 standard implementation.
-use odra::{
-    prelude::vec::Vec,
-    types::{casper_types::bytesrepr::Bytes, Address, U256}
-};
+use odra::prelude::*;
+use odra::{Address, Bytes, U256};
 
 pub mod erc1155_base;
 pub mod extensions;
@@ -15,7 +13,7 @@ pub trait Erc1155 {
     ///  Batched version of [Erc1155::balance_of](Self::balance_of).
     ///
     /// The length of `owners` and `ids` must be the same.
-    fn balance_of_batch(&self, owners: &[Address], ids: &[U256]) -> Vec<U256>;
+    fn balance_of_batch(&self, owners: Vec<Address>, ids: Vec<U256>) -> Vec<U256>;
     /// Allows or denials the `operator` to transfer the caller’s tokens.
     ///
     /// Emits [crate::erc1155::events::ApprovalForAll].
@@ -44,21 +42,20 @@ pub trait Erc1155 {
         &mut self,
         from: &Address,
         to: &Address,
-        ids: &[U256],
-        amounts: &[U256],
+        ids: Vec<U256>,
+        amounts: Vec<U256>,
         data: &Option<Bytes>
     );
 }
 
 /// Erc1155-related Odra events.
 pub mod events {
-    use odra::{
-        prelude::vec::Vec,
-        types::{Address, U256}
-    };
+    use casper_event_standard::Event;
+    use odra::prelude::*;
+    use odra::{Address, U256};
 
     /// Emitted when a single Erc1155 transfer is performed.
-    #[derive(odra::Event, PartialEq, Eq, Debug, Clone)]
+    #[derive(Event, PartialEq, Eq, Debug, Clone)]
     pub struct TransferSingle {
         pub operator: Option<Address>,
         pub from: Option<Address>,
@@ -68,7 +65,7 @@ pub mod events {
     }
 
     /// Emitted when a batched Erc1155 transfer is performed.
-    #[derive(odra::Event, PartialEq, Eq, Debug, Clone)]
+    #[derive(Event, PartialEq, Eq, Debug, Clone)]
     pub struct TransferBatch {
         pub operator: Option<Address>,
         pub from: Option<Address>,
@@ -78,7 +75,7 @@ pub mod events {
     }
 
     /// Emitted when the `owner` approves or revokes the `operator`.
-    #[derive(odra::Event, PartialEq, Eq, Debug, Clone)]
+    #[derive(Event, PartialEq, Eq, Debug, Clone)]
     pub struct ApprovalForAll {
         pub owner: Address,
         pub operator: Address,
@@ -88,23 +85,22 @@ pub mod events {
 
 /// Erc1155-related Odra errors.
 pub mod errors {
-    use odra::execution_error;
+    use odra::OdraError;
 
-    execution_error! {
-        /// Possible errors in the context of Erc1155.
-        pub enum Error {
-            /// Collections of addresses and token ids have different length.
-            AccountsAndIdsLengthMismatch => 30_000,
-            /// The owner cannot approve himself.
-            ApprovalForSelf => 30_001,
-            /// The operator is not allowed to perform the action.
-            NotAnOwnerOrApproved => 30_002,
-            /// Insufficient token amount to perform a transaction.
-            InsufficientBalance => 30_003,
-            /// Token transfer finished with an error.
-            TransferRejected => 30_004,
-            /// Collections of token ids and amounts have different length.
-            IdsAndAmountsLengthMismatch => 30_005,
-        }
+    /// Possible errors in the context of Erc1155.
+    #[derive(OdraError)]
+    pub enum Error {
+        /// Collections of addresses and token ids have different length.
+        AccountsAndIdsLengthMismatch = 30_000,
+        /// The owner cannot approve himself.
+        ApprovalForSelf = 30_001,
+        /// The operator is not allowed to perform the action.
+        NotAnOwnerOrApproved = 30_002,
+        /// Insufficient token amount to perform a transaction.
+        InsufficientBalance = 30_003,
+        /// Token transfer finished with an error.
+        TransferRejected = 30_004,
+        /// Collections of token ids and amounts have different length.
+        IdsAndAmountsLengthMismatch = 30_005
     }
 }

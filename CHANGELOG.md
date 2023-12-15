@@ -4,12 +4,54 @@ Changelog for `odra`.
 
 ## [0.8.0] - 2024-XX-XX
 
+### Changed
+- Replaced `contract_env::` with `self.env.` in contract context.
+For example, instead of `contract_env::caller()` use `self.env.caller()`.
+- It is no longer possible to put a Mapping inside a Mapping. Use tuple keys instead, for example, instead of
+```rust
+allowances: Mapping<Address, Mapping<Address, U256>>
+```
+use
+```rust
+allowances: Mapping<(Address, Address), U256>
+```
+- `Ref` has been divided into two: `HostRef` and `ContractRef` depending on the context.
+- Storage keys are constructed differently, keep that in mind when querying the storage outside the contract.
+- `token_balance(address: Address)` in test context is now `balance_of(address: &Address)`.
+- Modules needs to be wrapped in ModuleWrapper<> when used in another module.
+- `HostRef` (formerly `Ref`) methods parameters accept values even if endpoints expect references.
+- `unwrap_or_revert` and `unwrap_or_revert_with` now require `&HostEnv` as a first parameter.
+- Spent Gas is taken into account when checking an account balance.
+This means that all calls appear to cost 0 gas to the test accounts,
+but it is still possible to check the costs of the calls.
+- Various changes of method signatures in `odra-modules`, e.g. `&[U256]` changed to `Vec<U256>`
+in `on_erc1155_batch_received` method. 
+### Removed
+- Removed `#[odra::init]` macro - now only one method can be a constructor,
+and it has to be named `init` and env needs to be passed as a first parameter.
+- Removed `emit()` method from events. Use `self.env.emit_event(event)` instead.
+- Removed `assert_events!` macro. Use `env.emitted_event` and similar methods instead.
+- Removed `native_token_metadata()` and its respective structs.
+- Removed `assert_exception!` macro. Use `try_` prefix for endpoints instead.
+- Removed `address()` method from `HostRef`. Use `address` field instead.
+
+### Added
+- `last_call()` in test env with `CallResult` struct which holds all information about the last call.
+- `odra::prelude::*` module which reexports all basic types and traits. 
+It is recommended to use it in the module code.
+
+### Very Brief Upgrade Path
+- Copy `bin` folder and `build.rs` files from a freshly generated project
+using `cargo-odra` at version at least`0.1.0`.
+- Update `Cargo.toml` by removing features and adding [[bin]] sections (See `Cargo.toml` from generated project).
+- Update the code to reflect changes in the framework.
+
 ## [0.7.0] - 2023-11-07
-## Changed
+### Changed
 - `no_std` is now the default mode for WASM.
 - `odra-types` are the only types crate.
 
-## Removed
+### Removed
 - Removed `odra-casper-types` and `odra-mock-vm-types`.
 - Removed `OdraType` in favor of `ToBytes` and `FromBytes` traits.
 

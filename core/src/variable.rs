@@ -50,6 +50,36 @@ impl<T: ToBytes + CLTyped> Variable<T> {
     }
 }
 
+impl<V: ToBytes + FromBytes + CLTyped + OverflowingAdd + Default> Variable<V> {
+    /// Utility function that gets the current value and adds the passed `value`
+    /// and sets the new value to the storage.
+    ///
+    /// If the operation fails due to overflow, the currently executing contract reverts.
+    #[inline(always)]
+    pub fn add(&mut self, value: V) {
+        let current_value = self.get_or_default();
+        let new_value = current_value
+            .overflowing_add(value)
+            .unwrap_or_revert(&self.env());
+        self.set(new_value);
+    }
+}
+
+impl<V: ToBytes + FromBytes + CLTyped + OverflowingSub + Default> Variable<V> {
+    /// Utility function that gets the current value and subtracts the passed `value`
+    /// and sets the new value to the storage.
+    ///
+    /// If the operation fails due to overflow, the currently executing contract reverts.
+    #[inline(always)]
+    pub fn subtract(&mut self, value: V) {
+        let current_value = self.get().unwrap_or_default();
+        let new_value = current_value
+            .overflowing_sub(value)
+            .unwrap_or_revert(&self.env());
+        self.set(new_value);
+    }
+}
+
 impl<T> crate::contract_def::HasEvents for Variable<T> {
     fn events() -> Vec<crate::contract_def::Event> {
         vec![]

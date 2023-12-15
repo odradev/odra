@@ -40,6 +40,7 @@ pub use error::{AddressError, CollectionError, ExecutionError, OdraError, VmErro
 pub use host_context::HostContext;
 pub use host_env::HostEnv;
 pub use item::OdraItem;
+pub use key_maker::bytes_to_hex;
 pub use module::ModuleCaller;
 pub use odra_result::OdraResult;
 pub use unchecked_getter::UncheckedGetter;

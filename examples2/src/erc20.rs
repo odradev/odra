@@ -237,10 +237,10 @@ mod tests {
         assert_eq!(env.events_count(&erc20.address), 2);
 
         let call_result = env.last_call();
-        assert!(call_result.result.is_ok());
-        assert_eq!(call_result.contract_address, erc20.address);
-        assert_eq!(call_result.caller, alice);
-        assert_eq!(call_result.result(), vec![].into());
+        assert!(call_result.result().is_ok());
+        assert_eq!(call_result.contract_address(), erc20.address);
+        assert_eq!(call_result.caller(), alice);
+        assert_eq!(call_result.bytes(), vec![].into());
         assert_eq!(
             call_result.contract_events(&erc20.address),
             vec![Bytes::from(
@@ -257,10 +257,10 @@ mod tests {
         // call with error
         erc20.try_transfer(bob, 100_000_000.into()).unwrap_err();
         let call_result = env.last_call();
-        assert!(call_result.result.is_err());
-        assert_eq!(call_result.contract_address, erc20.address);
-        assert_eq!(call_result.caller, alice);
-        assert_eq!(call_result.events.get(&erc20.address).unwrap(), &vec![]);
+        assert!(call_result.result().is_err());
+        assert_eq!(call_result.contract_address(), erc20.address);
+        assert_eq!(call_result.caller(), alice);
+        assert_eq!(call_result.contract_events(&erc20.address), vec![]);
 
         // cross call
         pobcoin.transfer(erc20.address, 100.into());

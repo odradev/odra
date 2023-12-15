@@ -141,6 +141,12 @@ impl_has_events!(
     PublicKey
 );
 
+impl<T: ToBytes + FromBytes, const N: usize> HasEvents for [T; N] {
+    fn events() -> Vec<Event> {
+        vec![]
+    }
+}
+
 impl<T: ToBytes + FromBytes> HasEvents for Option<T> {
     fn events() -> Vec<Event> {
         vec![]
