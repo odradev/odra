@@ -1,17 +1,16 @@
-use crate::erc20::errors::Error::{DecimalsNotSet, NameNotSet, SymbolNotSet};
+use crate::erc20::errors::Error::*;
 use crate::erc20::events::*;
 use odra::prelude::*;
-use odra::{Address, ContractEnv, Mapping, Variable, U256};
+use odra::{Address, Mapping, Module, Variable, U256};
 
 #[odra::module(events = [Approval, Transfer])]
 pub struct Erc20 {
-    env: Rc<ContractEnv>,
     decimals: Variable<u8>,
     symbol: Variable<String>,
     name: Variable<String>,
     total_supply: Variable<U256>,
     balances: Mapping<Address, U256>,
-    allowances: Mapping<Address, Mapping<Address, U256>>
+    allowances: Mapping<(Address, Address), U256>
 }
 
 #[odra::module]
@@ -23,7 +22,7 @@ impl Erc20 {
         decimals: u8,
         initial_supply: Option<U256>
     ) {
-        let caller = self.env.caller();
+        let caller = self.env().caller();
         self.symbol.set(symbol);
         self.name.set(name);
         self.decimals.set(decimals);
@@ -33,7 +32,7 @@ impl Erc20 {
             self.balances.set(&caller, initial_supply);
 
             if !initial_supply.is_zero() {
-                self.env.emit_event(Transfer {
+                self.env().emit_event(Transfer {
                     from: None,
                     to: Some(caller),
                     amount: initial_supply
@@ -43,39 +42,38 @@ impl Erc20 {
     }
 
     pub fn transfer(&mut self, recipient: &Address, amount: &U256) {
-        let caller = self.env.caller();
+        let caller = self.env().caller();
         self.raw_transfer(&caller, recipient, amount);
     }
 
     pub fn transfer_from(&mut self, owner: &Address, recipient: &Address, amount: &U256) {
-        let spender = self.env.caller();
+        let spender = self.env().caller();
 
         self.spend_allowance(owner, &spender, amount);
         self.raw_transfer(owner, recipient, amount);
     }
 
     pub fn approve(&mut self, spender: &Address, amount: &U256) {
-        let owner = self.env.caller();
+        let owner = self.env().caller();
 
-        self.allowances.get_instance(&owner).set(spender, *amount);
-        Approval {
+        self.allowances.set(&(owner, *spender), *amount);
+        self.env().emit_event(Approval {
             owner,
             spender: *spender,
             value: *amount
-        }
-        .emit();
+        });
     }
 
     pub fn name(&self) -> String {
-        self.name.get_or_default().unwrap_or_revert_with(NameNotSet)
+        self.name.get_or_revert_with(NameNotSet)
     }
 
     pub fn symbol(&self) -> String {
-        self.symbol.get().unwrap_or_revert_with(SymbolNotSet)
+        self.symbol.get_or_revert_with(SymbolNotSet)
     }
 
     pub fn decimals(&self) -> u8 {
-        self.decimals.get().unwrap_or_revert_with(DecimalsNotSet)
+        self.decimals.get_or_revert_with(DecimalsNotSet)
     }
 
     pub fn total_supply(&self) -> U256 {
@@ -87,68 +85,63 @@ impl Erc20 {
     }
 
     pub fn allowance(&self, owner: &Address, spender: &Address) -> U256 {
-        self.allowances.get_instance(owner).get_or_default(spender)
+        self.allowances.get_or_default(&(*owner, *spender))
     }
 
     pub fn mint(&mut self, address: &Address, amount: &U256) {
         self.total_supply.add(*amount);
         self.balances.add(address, *amount);
 
-        Transfer {
+        self.env().emit_event(Transfer {
             from: None,
             to: Some(*address),
             amount: *amount
-        }
-        .emit();
+        });
     }
 
     pub fn burn(&mut self, address: &Address, amount: &U256) {
         if self.balance_of(address) < *amount {
-            self.env.revert(Error::InsufficientBalance);
+            self.env().revert(InsufficientBalance);
         }
         self.total_supply.subtract(*amount);
         self.balances.subtract(address, *amount);
 
-        Transfer {
+        self.env().emit_event(Transfer {
             from: Some(*address),
             to: None,
             amount: *amount
-        }
-        .emit();
+        });
     }
 }
 
 impl Erc20 {
     fn raw_transfer(&mut self, owner: &Address, recipient: &Address, amount: &U256) {
         if *amount > self.balances.get_or_default(owner) {
-            self.env.revert(Error::InsufficientBalance)
+            self.env().revert(InsufficientBalance)
         }
 
         self.balances.subtract(owner, *amount);
         self.balances.add(recipient, *amount);
 
-        Transfer {
+        self.env().emit_event(Transfer {
             from: Some(*owner),
             to: Some(*recipient),
             amount: *amount
-        }
-        .emit();
+        });
     }
 
     fn spend_allowance(&mut self, owner: &Address, spender: &Address, amount: &U256) {
-        let allowance = self.allowances.get_instance(owner).get_or_default(spender);
+        let allowance = self.allowances.get_or_default(&(*owner, *spender));
         if allowance < *amount {
-            self.env.revert(Error::InsufficientAllowance)
+            self.env().revert(InsufficientAllowance)
         }
-        self.allowances
-            .get_instance(owner)
-            .subtract(spender, *amount);
-        Approval {
+        self.allowances.subtract(&(*owner, *spender), *amount);
+
+        self.env().emit_event(Approval {
             owner: *owner,
             spender: *spender,
             value: allowance - *amount
-        }
-        .emit();
+        });
     }
 }
 
@@ -174,18 +167,13 @@ pub mod events {
 pub mod errors {
     use odra::OdraError;
 
+    #[derive(OdraError)]
     pub enum Error {
         InsufficientBalance = 30_000,
         InsufficientAllowance = 30_001,
         NameNotSet = 30_002,
         SymbolNotSet = 30_003,
         DecimalsNotSet = 30_004
-    }
-
-    impl From<Error> for OdraError {
-        fn from(error: Error) -> Self {
-            OdraError::user(error as u16)
-        }
     }
 }
 
@@ -194,29 +182,34 @@ mod tests {
     use super::{
         errors::Error,
         events::{Approval, Transfer},
-        Erc20Deployer, Erc20Ref
+        Erc20Deployer, Erc20HostRef
     };
-    use odra::prelude::string::ToString;
-    use odra::{assert_events, test_env, types::casper_types::U256};
+    use odra::prelude::*;
+    use odra::{HostEnv, U256};
 
     const NAME: &str = "Plascoin";
     const SYMBOL: &str = "PLS";
     const DECIMALS: u8 = 10;
     const INITIAL_SUPPLY: u32 = 10_000;
 
-    fn setup() -> Erc20Ref {
-        Erc20Deployer::init(
-            SYMBOL.to_string(),
-            NAME.to_string(),
-            DECIMALS,
-            &Some(INITIAL_SUPPLY.into())
+    fn setup() -> (HostEnv, Erc20HostRef) {
+        let env = odra::test_env();
+        (
+            env.clone(),
+            Erc20Deployer::init(
+                &env,
+                SYMBOL.to_string(),
+                NAME.to_string(),
+                DECIMALS,
+                Some(INITIAL_SUPPLY.into())
+            )
         )
     }
 
     #[test]
     fn initialization() {
         // When deploy a contract with the initial supply.
-        let erc20 = setup();
+        let (env, erc20) = setup();
 
         // Then the contract has the metadata set.
         assert_eq!(erc20.symbol(), SYMBOL.to_string());
@@ -227,131 +220,128 @@ mod tests {
         assert_eq!(erc20.total_supply(), INITIAL_SUPPLY.into());
 
         // Then a Transfer event was emitted.
-        assert_events!(
-            erc20,
-            Transfer {
+        assert!(env.emitted_event(
+            &erc20.address,
+            &Transfer {
                 from: None,
-                to: Some(test_env::get_account(0)),
+                to: Some(env.get_account(0)),
                 amount: INITIAL_SUPPLY.into()
             }
-        );
+        ));
     }
 
     #[test]
     fn transfer_works() {
         // Given a new contract.
-        let mut erc20 = setup();
+        let (env, mut erc20) = setup();
 
         // When transfer tokens to a recipient.
-        let sender = test_env::get_account(0);
-        let recipient = test_env::get_account(1);
+        let sender = env.get_account(0);
+        let recipient = env.get_account(1);
         let amount = 1_000.into();
-        erc20.transfer(&recipient, &amount);
+        erc20.transfer(recipient, amount);
 
         // Then the sender balance is deducted.
         assert_eq!(
-            erc20.balance_of(&sender),
+            erc20.balance_of(sender),
             U256::from(INITIAL_SUPPLY) - amount
         );
 
         // Then the recipient balance is updated.
-        assert_eq!(erc20.balance_of(&recipient), amount);
+        assert_eq!(erc20.balance_of(recipient), amount);
 
         // Then Transfer event was emitted.
-        assert_events!(
-            erc20,
-            Transfer {
+        assert!(env.emitted_event(
+            &erc20.address,
+            &Transfer {
                 from: Some(sender),
                 to: Some(recipient),
                 amount
             }
-        );
+        ));
     }
 
     #[test]
     fn transfer_error() {
-        test_env::assert_exception(Error::InsufficientBalance, || {
-            // Given a new contract.
-            let mut erc20 = setup();
+        // Given a new contract.
+        let (env, mut erc20) = setup();
 
-            // When the transfer amount exceeds the sender balance.
-            let recipient = test_env::get_account(1);
-            let amount = U256::from(INITIAL_SUPPLY) + U256::one();
+        // When the transfer amount exceeds the sender balance.
+        let recipient = env.get_account(1);
+        let amount = U256::from(INITIAL_SUPPLY) + U256::one();
 
-            // Then an error occurs.
-            erc20.transfer(&recipient, &amount)
-        });
+        // Then an error occurs.
+        assert!(erc20.try_transfer(recipient, amount).is_err());
     }
 
     #[test]
     fn transfer_from_and_approval_work() {
-        let mut erc20 = setup();
-        let (owner, recipient, spender) = (
-            test_env::get_account(0),
-            test_env::get_account(1),
-            test_env::get_account(2)
-        );
+        let (env, mut erc20) = setup();
+
+        let (owner, recipient, spender) =
+            (env.get_account(0), env.get_account(1), env.get_account(2));
         let approved_amount = 3_000.into();
         let transfer_amount = 1_000.into();
 
-        assert_eq!(erc20.balance_of(&owner), U256::from(INITIAL_SUPPLY));
+        assert_eq!(erc20.balance_of(owner), U256::from(INITIAL_SUPPLY));
 
         // Owner approves Spender.
-        erc20.approve(&spender, &approved_amount);
+        erc20.approve(spender, approved_amount);
 
         // Allowance was recorded.
-        assert_eq!(erc20.allowance(&owner, &spender), approved_amount);
-        assert_events!(
-            erc20,
-            Approval {
+        assert_eq!(erc20.allowance(owner, spender), approved_amount);
+        assert!(env.emitted_event(
+            &erc20.address,
+            &Approval {
                 owner,
                 spender,
                 value: approved_amount
             }
-        );
+        ));
 
         // Spender transfers tokens from Owner to Recipient.
-        test_env::set_caller(spender);
-        erc20.transfer_from(&owner, &recipient, &transfer_amount);
+        env.set_caller(spender);
+        erc20.transfer_from(owner, recipient, transfer_amount);
 
         // Tokens are transferred and allowance decremented.
         assert_eq!(
-            erc20.balance_of(&owner),
+            erc20.balance_of(owner),
             U256::from(INITIAL_SUPPLY) - transfer_amount
         );
-        assert_eq!(erc20.balance_of(&recipient), transfer_amount);
-        assert_events!(
-            erc20,
-            Approval {
+        assert_eq!(erc20.balance_of(recipient), transfer_amount);
+        assert!(env.emitted_event(
+            &erc20.address,
+            &Approval {
                 owner,
                 spender,
                 value: approved_amount - transfer_amount
-            },
-            Transfer {
+            }
+        ));
+        assert!(env.emitted_event(
+            &erc20.address,
+            &Transfer {
                 from: Some(owner),
                 to: Some(recipient),
                 amount: transfer_amount
             }
-        );
+        ));
     }
 
     #[test]
     fn transfer_from_error() {
-        test_env::assert_exception(Error::InsufficientAllowance, || {
-            // Given a new instance.
-            let mut erc20 = setup();
+        // Given a new instance.
+        let (env, mut erc20) = setup();
 
-            // When the spender's allowance is zero.
-            let (owner, spender, recipient) = (
-                test_env::get_account(0),
-                test_env::get_account(1),
-                test_env::get_account(2)
-            );
-            let amount = 1_000.into();
-            test_env::set_caller(spender);
+        // When the spender's allowance is zero.
+        let (owner, spender, recipient) =
+            (env.get_account(0), env.get_account(1), env.get_account(2));
+        let amount = 1_000.into();
+        env.set_caller(spender);
 
-            // Then transfer fails.
-            erc20.transfer_from(&owner, &recipient, &amount)
-        });
+        // Then transfer fails.
+        assert_eq!(
+            erc20.try_transfer_from(owner, recipient, amount),
+            Err(Error::InsufficientAllowance.into())
+        );
     }
 }

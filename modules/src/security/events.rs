@@ -1,4 +1,5 @@
-use odra::{types::Address, Event};
+use casper_event_standard::Event;
+use odra::Address;
 
 /// Informs the contract has been stopped by `account`.
 

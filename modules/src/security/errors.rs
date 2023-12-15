@@ -1,8 +1,7 @@
-use odra::execution_error;
+use odra::OdraError;
 
-execution_error! {
-    pub enum Error {
-        PausedRequired => 21_000,
-        UnpausedRequired => 21_001,
-    }
+#[derive(OdraError)]
+pub enum Error {
+    PausedRequired = 21_000,
+    UnpausedRequired = 21_001
 }

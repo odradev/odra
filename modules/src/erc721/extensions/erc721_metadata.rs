@@ -1,7 +1,11 @@
 //! Erc721 metadata.
 
-use crate::erc721::extensions::erc721_metadata::errors::Error;
-use odra::{prelude::string::String, UnwrapOrRevert, Variable};
+use crate::erc721::extensions::erc721_metadata::errors::Error::{
+    BaseUriNotSet, NameNotSet, SymbolNotSet
+};
+use odra::prelude::*;
+use odra::UnwrapOrRevert;
+use odra::{Module, Variable};
 
 /// The ERC721 Metadata interface as defined in the standard.
 pub trait Erc721Metadata {
@@ -22,17 +26,21 @@ pub struct Erc721MetadataExtension {
 
 impl Erc721Metadata for Erc721MetadataExtension {
     fn name(&self) -> String {
-        self.name.get().unwrap_or_revert_with(Error::NameNotSet)
+        self.name
+            .get()
+            .unwrap_or_revert_with(&self.env(), NameNotSet)
     }
 
     fn symbol(&self) -> String {
-        self.symbol.get().unwrap_or_revert_with(Error::SymbolNotSet)
+        self.symbol
+            .get()
+            .unwrap_or_revert_with(&self.env(), SymbolNotSet)
     }
 
     fn base_uri(&self) -> String {
         self.base_uri
             .get()
-            .unwrap_or_revert_with(Error::BaseUriNotSet)
+            .unwrap_or_revert_with(&self.env(), BaseUriNotSet)
     }
 }
 
@@ -45,13 +53,12 @@ impl Erc721MetadataExtension {
 }
 
 pub mod errors {
-    use odra::execution_error;
+    use odra::OdraError;
 
-    execution_error! {
-        pub enum Error {
-            NameNotSet => 31_000,
-            SymbolNotSet => 31_001,
-            BaseUriNotSet => 31_002,
-        }
+    #[derive(OdraError)]
+    pub enum Error {
+        NameNotSet = 31_000,
+        SymbolNotSet = 31_001,
+        BaseUriNotSet = 31_002
     }
 }

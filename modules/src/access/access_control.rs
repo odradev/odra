@@ -1,12 +1,7 @@
-use super::{
-    errors::Error,
-    events::{RoleAdminChanged, RoleGranted, RoleRevoked}
-};
-use odra::{
-    contract_env,
-    types::{event::OdraEvent, Address},
-    Mapping
-};
+use super::events::*;
+use crate::access::errors::Error::{MissingRole, RoleRenounceForAnotherAddress};
+use odra::prelude::*;
+use odra::{Address, Mapping, Module};
 
 pub type Role = [u8; 32];
 
@@ -31,7 +26,7 @@ pub const DEFAULT_ADMIN_ROLE: Role = [0u8; 32];
 /// More complex role relationships can be established using the [set_admin_role()](AccessControl::set_admin_role) function.
 #[odra::module(events = [RoleAdminChanged, RoleGranted, RoleRevoked])]
 pub struct AccessControl {
-    roles: Mapping<Role, Mapping<Address, bool>>,
+    roles: Mapping<(Role, Address), bool>,
     role_admin: Mapping<Role, Role>
 }
 
@@ -39,7 +34,7 @@ pub struct AccessControl {
 impl AccessControl {
     /// Returns true if account has been granted `role`.
     pub fn has_role(&self, role: &Role, address: &Address) -> bool {
-        self.roles.get_instance(role).get_or_default(address)
+        self.roles.get_or_default(&(*role, *address))
     }
 
     /// Returns the admin role that controls `role`.
@@ -61,7 +56,7 @@ impl AccessControl {
     ///
     /// The caller must have `role`'s admin role.
     pub fn grant_role(&mut self, role: &Role, address: &Address) {
-        self.check_role(&self.get_role_admin(role), &contract_env::caller());
+        self.check_role(&self.get_role_admin(role), &self.env().caller());
         self.unchecked_grant_role(role, address);
     }
 
@@ -72,7 +67,7 @@ impl AccessControl {
     ///
     /// The caller must have `role`'s admin role.
     pub fn revoke_role(&mut self, role: &Role, address: &Address) {
-        self.check_role(&self.get_role_admin(role), &contract_env::caller());
+        self.check_role(&self.get_role_admin(role), &self.env().caller());
         self.unchecked_revoke_role(role, address);
     }
 
@@ -87,8 +82,8 @@ impl AccessControl {
     ///
     /// Note that only `address` is authorized to call this function.
     pub fn renounce_role(&mut self, role: &Role, address: &Address) {
-        if address != &contract_env::caller() {
-            contract_env::revert(Error::RoleRenounceForAnotherAddress);
+        if address != &self.env().caller() {
+            self.env().revert(RoleRenounceForAnotherAddress);
         }
         self.unchecked_revoke_role(role, address);
     }
@@ -98,7 +93,7 @@ impl AccessControl {
     /// Ensures `address` has `role`. If not, reverts with [Error::MissingRole].
     pub fn check_role(&self, role: &Role, address: &Address) {
         if !self.has_role(role, address) {
-            contract_env::revert(Error::MissingRole);
+            self.env().revert(MissingRole);
         }
     }
 
@@ -108,12 +103,11 @@ impl AccessControl {
     pub fn set_admin_role(&mut self, role: &Role, admin_role: &Role) {
         let previous_admin_role = self.get_role_admin(role);
         self.role_admin.set(role, *admin_role);
-        RoleAdminChanged {
+        self.env().emit_event(RoleAdminChanged {
             role: *role,
             previous_admin_role,
             new_admin_role: *admin_role
-        }
-        .emit();
+        });
     }
 
     /// Grants `role` to `address`.
@@ -124,13 +118,12 @@ impl AccessControl {
     /// May emit a `RoleGranted` event.
     pub fn unchecked_grant_role(&mut self, role: &Role, address: &Address) {
         if !self.has_role(role, address) {
-            self.roles.get_instance(role).set(address, true);
-            RoleGranted {
+            self.roles.set(&(*role, *address), true);
+            self.env().emit_event(RoleGranted {
                 role: *role,
                 address: *address,
-                sender: contract_env::caller()
-            }
-            .emit();
+                sender: self.env().caller()
+            });
         }
     }
 
@@ -142,13 +135,12 @@ impl AccessControl {
     /// May emit a `RoleRevoked` event.
     pub fn unchecked_revoke_role(&mut self, role: &Role, address: &Address) {
         if self.has_role(role, address) {
-            self.roles.get_instance(role).set(address, false);
-            RoleRevoked {
+            self.roles.set(&(*role, *address), false);
+            self.env().emit_event(RoleRevoked {
                 role: *role,
                 address: *address,
-                sender: contract_env::caller()
-            }
-            .emit();
+                sender: self.env().caller()
+            });
         }
     }
 }

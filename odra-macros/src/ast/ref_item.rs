@@ -22,8 +22,8 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefStructItem {
         let ty_address = utils::ty::address();
         let ty_contract_env = utils::ty::contract_env();
         let named_fields: syn::FieldsNamed = parse_quote!({
-            #env: Rc<#ty_contract_env>,
-            #address: #ty_address,
+            pub #env: Rc<#ty_contract_env>,
+            pub #address: #ty_address,
         });
 
         Ok(Self {
@@ -133,8 +133,8 @@ mod ref_item_tests {
         let module = test_utils::mock::module_impl();
         let expected = quote! {
             pub struct Erc20ContractRef {
-                env: Rc<odra::ContractEnv>,
-                address: odra::Address,
+                pub env: Rc<odra::ContractEnv>,
+                pub address: odra::Address,
             }
 
             impl Erc20ContractRef {
@@ -214,8 +214,8 @@ mod ref_item_tests {
         let module = test_utils::mock::module_trait_impl();
         let expected = quote! {
             pub struct Erc20ContractRef {
-                env: Rc<odra::ContractEnv>,
-                address: odra::Address,
+                pub env: Rc<odra::ContractEnv>,
+                pub address: odra::Address,
             }
 
             impl Erc20ContractRef {

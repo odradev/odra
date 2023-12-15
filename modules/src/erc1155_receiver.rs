@@ -1,15 +1,11 @@
 //! A pluggable Odra module implementing Erc1155Receiver.
-
 use crate::erc1155_receiver::events::{BatchReceived, SingleReceived};
-use odra::types::{
-    casper_types::{bytesrepr::Bytes, U256},
-    event::OdraEvent,
-    Address
-};
+use odra::prelude::*;
+use odra::{Address, Bytes, Module, U256};
 
 /// The ERC1155 receiver implementation.
 #[odra::module(events = [SingleReceived, BatchReceived])]
-pub struct Erc1155Receiver;
+pub struct Erc1155Receiver {}
 
 #[odra::module]
 impl Erc1155Receiver {
@@ -25,14 +21,13 @@ impl Erc1155Receiver {
         #[allow(unused_variables)] amount: &U256,
         #[allow(unused_variables)] data: &Option<Bytes>
     ) -> bool {
-        SingleReceived {
+        self.env().emit_event(SingleReceived {
             operator: Some(*operator),
             from: Some(*from),
             token_id: *token_id,
             amount: *amount,
             data: data.clone()
-        }
-        .emit();
+        });
         true
     }
 
@@ -44,32 +39,29 @@ impl Erc1155Receiver {
         &mut self,
         #[allow(unused_variables)] operator: &Address,
         #[allow(unused_variables)] from: &Address,
-        #[allow(unused_variables)] token_ids: &[U256],
-        #[allow(unused_variables)] amounts: &[U256],
+        #[allow(unused_variables)] token_ids: Vec<U256>,
+        #[allow(unused_variables)] amounts: Vec<U256>,
         #[allow(unused_variables)] data: &Option<Bytes>
     ) -> bool {
-        BatchReceived {
+        self.env().emit_event(BatchReceived {
             operator: Some(*operator),
             from: Some(*from),
             token_ids: token_ids.to_vec(),
             amounts: amounts.to_vec(),
             data: data.clone()
-        }
-        .emit();
+        });
         true
     }
 }
 
 /// Erc1155Receiver-related events
 pub mod events {
-    use odra::prelude::vec::Vec;
-    use odra::types::{
-        casper_types::{bytesrepr::Bytes, U256},
-        Address
-    };
+    use casper_event_standard::Event;
+    use odra::prelude::*;
+    use odra::{Address, Bytes, U256};
 
     /// Emitted when the transferred token is accepted by the contract.
-    #[derive(odra::Event, PartialEq, Eq, Debug, Clone)]
+    #[derive(Event, PartialEq, Eq, Debug, Clone)]
     pub struct SingleReceived {
         pub operator: Option<Address>,
         pub from: Option<Address>,
@@ -79,7 +71,7 @@ pub mod events {
     }
 
     /// Emitted when the transferred tokens are accepted by the contract.
-    #[derive(odra::Event, PartialEq, Eq, Debug, Clone)]
+    #[derive(Event, PartialEq, Eq, Debug, Clone)]
     pub struct BatchReceived {
         pub operator: Option<Address>,
         pub from: Option<Address>,

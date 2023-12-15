@@ -1,5 +1,6 @@
 #[allow(clippy::module_inception)]
 mod prelude {
+    pub use crate::arithmetic::*;
     pub use alloc::borrow::ToOwned;
     pub use alloc::boxed::Box;
     pub use alloc::collections::*;

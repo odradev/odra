@@ -48,8 +48,8 @@ mod test {
             }
 
             pub struct TokenContractRef {
-                env: Rc<odra::ContractEnv>,
-                address: odra::Address,
+                pub env: Rc<odra::ContractEnv>,
+                pub address: odra::Address,
             }
 
             impl TokenContractRef {

@@ -1,10 +1,10 @@
 //! Erc721 standard implementation.
 
+use odra::{Address, Bytes, U256};
+
 pub mod erc721_base;
 pub mod extensions;
 pub mod owned_erc721_with_metadata;
-
-use odra::types::{casper_types::bytesrepr::Bytes, Address, U256};
 
 /// The ERC-721 interface as defined in the standard.
 pub trait Erc721 {
@@ -52,10 +52,11 @@ pub trait Erc721 {
 
 /// Erc721-related Odra events.
 pub mod events {
-    use odra::types::{Address, U256};
+    use casper_event_standard::Event;
+    use odra::{Address, U256};
 
     /// Emitted when the `token_id` token is transferred (also minted or burned).
-    #[derive(odra::Event)]
+    #[derive(Event)]
     pub struct Transfer {
         pub from: Option<Address>,
         pub to: Option<Address>,
@@ -63,7 +64,7 @@ pub mod events {
     }
 
     /// Emitted when the `owner` approves `approved` to operate on the `token_id` token.
-    #[derive(odra::Event)]
+    #[derive(Event)]
     pub struct Approval {
         pub owner: Address,
         pub approved: Option<Address>,
@@ -71,7 +72,7 @@ pub mod events {
     }
 
     /// Emitted when the `owner` approves or revokes `operator`.
-    #[derive(odra::Event)]
+    #[derive(Event)]
     pub struct ApprovalForAll {
         pub owner: Address,
         pub operator: Address,
@@ -81,21 +82,20 @@ pub mod events {
 
 /// Erc721-related Odra errors.
 pub mod errors {
-    use odra::execution_error;
+    use odra::OdraError;
 
-    execution_error! {
-        /// Possible errors in the context of Erc721 token.
-        pub enum Error {
-            /// Token is invalid in the given context or does not exist.
-            InvalidTokenId => 30_000,
-            /// Address in not eligible to operate on the token.
-            NotAnOwnerOrApproved => 30_001,
-            /// The owner cannot be approved.
-            ApprovalToCurrentOwner => 30_002,
-            /// The caller cannot approve self.
-            ApproveToCaller => 30_003,
-            /// Token transfer ends with an error
-            TransferFailed => 30_004,
-        }
+    /// Possible errors in the context of Erc721 token.
+    #[derive(OdraError)]
+    pub enum Error {
+        /// Token is invalid in the given context or does not exist.
+        InvalidTokenId = 30_000,
+        /// Address in not eligible to operate on the token.
+        NotAnOwnerOrApproved = 30_001,
+        /// The owner cannot be approved.
+        ApprovalToCurrentOwner = 30_002,
+        /// The caller cannot approve self.
+        ApproveToCaller = 30_003,
+        /// Token transfer ends with an error
+        TransferFailed = 30_004
     }
 }
