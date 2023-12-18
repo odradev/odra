@@ -168,6 +168,28 @@ mod test {
                     pub fn approve(&mut self, to: Address, amount: U256) {
                         self.try_approve(to, amount).unwrap()
                     }
+
+                    pub fn try_airdrop(&self, to: odra::prelude::vec::Vec<Address>, amount: U256) -> Result<(), odra::OdraError> {
+                        self.env.call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                String::from("airdrop"),
+                                {
+                                    let mut named_args = odra::RuntimeArgs::new();
+                                    if self.attached_value > odra::U512::zero() {
+                                        let _ = named_args.insert("amount", self.attached_value);
+                                    }
+                                    let _ = named_args.insert("to", to);
+                                    let _ = named_args.insert("amount", amount);
+                                    named_args
+                                }
+                            ).with_amount(self.attached_value),
+                        )
+                    }
+
+                    pub fn airdrop(&self, to: odra::prelude::vec::Vec<Address>, amount: U256) {
+                        self.try_airdrop(to, amount).unwrap()
+                    }
                 }
 
                 pub struct Erc20Deployer;
@@ -190,6 +212,10 @@ mod test {
                                 }
                                 "approve" => {
                                     let result = execute_approve(contract_env);
+                                    odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                                }
+                                "airdrop" => {
+                                    let result = execute_airdrop(contract_env);
                                     odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
                                 }
                                 _ => panic!("Unknown method")
