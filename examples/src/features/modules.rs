@@ -1,8 +1,10 @@
 use crate::features::cross_calls::MathEngine;
+use odra::prelude::*;
+use odra::ModuleWrapper;
 
 #[odra::module]
 pub struct ModulesContract {
-    pub math_engine: MathEngine
+    pub math_engine: ModuleWrapper<MathEngine>
 }
 
 #[odra::module]
@@ -18,7 +20,8 @@ mod tests {
 
     #[test]
     fn test_modules() {
-        let modules_contract = ModulesContractDeployer::default();
+        let test_env = odra::test_env();
+        let modules_contract = ModulesContractDeployer::init(&test_env);
         assert_eq!(modules_contract.add_using_module(), 8);
     }
 }

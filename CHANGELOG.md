@@ -26,6 +26,9 @@ This means that all calls appear to cost 0 gas to the test accounts,
 but it is still possible to check the costs of the calls.
 - Various changes of method signatures in `odra-modules`, e.g. `&[U256]` changed to `Vec<U256>`
 in `on_erc1155_batch_received` method. 
+- `get_block_time()` now returns `u64` instead of wrapped type `Blocktime(u64)`.
+- Contract name in `Odra.toml` file now needs to be exact name of the module - e.g. `MyModule` instead of `my_module`.
+
 ### Removed
 - Removed `#[odra::init]` macro - now only one method can be a constructor,
 and it has to be named `init` and env needs to be passed as a first parameter.
@@ -34,6 +37,8 @@ and it has to be named `init` and env needs to be passed as a first parameter.
 - Removed `native_token_metadata()` and its respective structs.
 - Removed `assert_exception!` macro. Use `try_` prefix for endpoints instead.
 - Removed `address()` method from `HostRef`. Use `address` field instead.
+- Removed `odra(using)` macro.
+- Removed `default()` method from `Deployer`. Use `init()` instead.
 
 ### Added
 - `last_call()` in test env with `CallResult` struct which holds all information about the last call.

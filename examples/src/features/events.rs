@@ -1,5 +1,6 @@
-use odra::types::{event::OdraEvent, Address, BlockTime};
-use odra::{contract_env, Event};
+use casper_event_standard::Event;
+use odra::prelude::*;
+use odra::{Address, Module};
 
 #[odra::module]
 pub struct PartyContract {}
@@ -7,34 +8,31 @@ pub struct PartyContract {}
 #[derive(Event, PartialEq, Eq, Debug)]
 pub struct PartyStarted {
     pub caller: Address,
-    pub block_time: BlockTime
+    pub block_time: u64
 }
 
 #[odra::module]
 impl PartyContract {
-    #[odra(init)]
     pub fn init(&self) {
-        PartyStarted {
-            caller: contract_env::caller(),
-            block_time: contract_env::get_block_time()
-        }
-        .emit();
+        self.env().emit_event(PartyStarted {
+            caller: self.env().caller(),
+            block_time: self.env().get_block_time()
+        });
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::PartyContractDeployer;
-    use crate::features::events::PartyStarted;
-    use odra::{assert_events, test_env};
+    use super::{PartyContractDeployer, PartyStarted};
 
     #[test]
     fn test_party() {
-        let party_contract = PartyContractDeployer::init();
-        assert_events!(
-            party_contract,
-            PartyStarted {
-                caller: test_env::get_account(0),
+        let test_env = odra::test_env();
+        let party_contract = PartyContractDeployer::init(&test_env);
+        test_env.emitted_event(
+            &party_contract.address,
+            &PartyStarted {
+                caller: test_env.get_account(0),
                 block_time: 0
             }
         );
