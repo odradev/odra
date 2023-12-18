@@ -1,11 +1,11 @@
-use odra::Variable;
-
+use odra::prelude::*;
+use odra::{ModuleWrapper, Variable};
 use odra_modules::security::Pauseable;
 
 #[odra::module]
 pub struct PauseableCounter {
     value: Variable<u32>,
-    pauseable: Pauseable
+    pauseable: ModuleWrapper<Pauseable>
 }
 
 #[odra::module]
@@ -42,55 +42,65 @@ impl PauseableCounter {
 #[cfg(test)]
 mod test {
     use super::PauseableCounterDeployer;
-    use odra::{assert_events, test_env};
-    use odra_modules::security::{
-        errors::Error,
-        events::{Paused, Unpaused}
-    };
+    use alloc::string::ToString;
+    use odra::ToBytes;
+    use odra_modules::security::errors::Error::UnpausedRequired;
+    use odra_modules::security::events::{Paused, Unpaused};
 
     #[test]
     fn pause_works() {
-        let mut contract = PauseableCounterDeployer::default();
-        let caller = test_env::get_account(0);
+        let test_env = odra::test_env();
+        let mut contract = PauseableCounterDeployer::init(&test_env);
+        let caller = test_env.get_account(0);
 
         assert!(!contract.is_paused());
 
         contract.pause();
         assert!(contract.is_paused());
+        let last_call = contract.last_call();
+        let env_last_call = test_env.last_call();
+        assert_eq!(
+            ["d".to_string()].to_vec(),
+            contract.last_call().event_names()
+        );
+        assert!(contract
+            .last_call()
+            .emitted_event(&Paused { account: caller }));
 
         contract.unpause();
         assert!(!contract.is_paused());
-
-        assert_events!(
-            contract,
-            Paused { account: caller },
-            Unpaused { account: caller }
-        );
+        assert!(contract
+            .last_call()
+            .emitted_event(&Unpaused { account: caller }));
     }
 
     #[test]
     fn increment_only_if_unpaused() {
-        let mut contract = PauseableCounterDeployer::default();
+        let test_env = odra::test_env();
+        let mut contract = PauseableCounterDeployer::init(&test_env);
         contract.increment();
         contract.pause();
 
-        test_env::assert_exception(Error::UnpausedRequired, || contract.increment());
-
+        assert_eq!(
+            contract.try_increment().unwrap_err(),
+            UnpausedRequired.into()
+        );
         assert_eq!(contract.get_value(), 1);
     }
 
     #[test]
     fn cannot_unpause_unpaused() {
-        let mut contract = PauseableCounterDeployer::default();
+        let test_env = odra::test_env();
+        let mut contract = PauseableCounterDeployer::init(&test_env);
 
-        test_env::assert_exception(Error::PausedRequired, || contract.unpause());
+        assert_eq!(contract.try_unpause().unwrap_err(), UnpausedRequired.into());
     }
 
     #[test]
     fn cannot_pause_paused() {
-        let mut contract = PauseableCounterDeployer::default();
+        let test_env = odra::test_env();
+        let mut contract = PauseableCounterDeployer::init(&test_env);
         contract.pause();
-
-        test_env::assert_exception(Error::UnpausedRequired, || contract.pause());
+        assert_eq!(contract.try_pause().unwrap_err(), UnpausedRequired.into());
     }
 }

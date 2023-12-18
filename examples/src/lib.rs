@@ -1,4 +1,6 @@
 #![no_std]
 
-// pub mod contracts;
+extern crate alloc;
+
+pub mod contracts;
 pub mod features;

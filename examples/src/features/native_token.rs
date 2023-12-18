@@ -1,5 +1,5 @@
-use odra::contract_env;
-use odra::types::casper_types::U512;
+use odra::prelude::*;
+use odra::{Module, U512};
 
 #[odra::module]
 pub struct PublicWallet {}
@@ -10,34 +10,25 @@ impl PublicWallet {
     pub fn deposit(&mut self) {}
 
     pub fn withdraw(&mut self, amount: &U512) {
-        contract_env::transfer_tokens(&contract_env::caller(), *amount);
+        self.env().transfer_tokens(&self.env().caller(), amount);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::PublicWalletDeployer;
-    use odra::test_env;
-    use odra::types::casper_types::U512;
+    use odra::U512;
 
     #[test]
     fn test_modules() {
-        let mut my_contract = PublicWalletDeployer::default();
-        assert_eq!(
-            test_env::token_balance(*my_contract.address()),
-            U512::zero()
-        );
+        let test_env = odra::test_env();
+        let mut my_contract = PublicWalletDeployer::init(&test_env);
+        assert_eq!(test_env.balance_of(&my_contract.address), U512::zero());
 
         my_contract.with_tokens(U512::from(100)).deposit();
-        assert_eq!(
-            test_env::token_balance(*my_contract.address()),
-            U512::from(100)
-        );
+        assert_eq!(test_env.balance_of(&my_contract.address), U512::from(100));
 
-        my_contract.withdraw(&U512::from(25));
-        assert_eq!(
-            test_env::token_balance(*my_contract.address()),
-            U512::from(75)
-        );
+        my_contract.withdraw(U512::from(25));
+        assert_eq!(test_env.balance_of(&my_contract.address), U512::from(75));
     }
 }

@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 odra = { path = "../odra", default-features = false }
+casper-event-standard = "0.4.1"
 odra-modules = { path = "../modules", default-features = false }
 sha3 = { version = "0.10.6", default-features = false }
 
