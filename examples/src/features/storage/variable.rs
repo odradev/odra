@@ -1,7 +1,5 @@
-use odra::{
-    prelude::{string::String, vec::Vec},
-    Variable
-};
+use odra::prelude::*;
+use odra::Variable;
 
 #[odra::module]
 pub struct DogContract {
@@ -51,7 +49,8 @@ mod tests {
 
     #[test]
     fn init_test() {
-        let dog_contract = DogContractDeployer::init(true, 10, "Mantus".to_string());
+        let test_env = odra::test_env();
+        let dog_contract = DogContractDeployer::init(&test_env, true, 10, "Mantus".to_string());
         assert!(dog_contract.barks());
         assert_eq!(dog_contract.weight(), 10);
         assert_eq!(dog_contract.name(), "Mantus".to_string());
