@@ -169,4 +169,55 @@ mod deployer_impl {
         let deployer_item = DeployerItem::try_from(&module).unwrap();
         test_utils::assert_eq(deployer_item, &expected);
     }
+
+    #[test]
+    fn deployer_delegated() {
+        let module = test_utils::mock::module_delegation();
+        let expected = quote! {
+            pub struct Erc20Deployer;
+
+            impl Erc20Deployer {
+                pub fn init(env: &odra::HostEnv) -> Erc20HostRef {
+                    let caller = odra::EntryPointsCaller::new(env.clone(), |contract_env, call_def| {
+                        match call_def.method() {
+                            "total_supply" => {
+                                let result = execute_total_supply(contract_env);
+                                odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                            }
+                            "get_owner" => {
+                                let result = execute_get_owner(contract_env);
+                                odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                            }
+                            "set_owner" => {
+                                let result = execute_set_owner(contract_env);
+                                odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                            }
+                            "name" => {
+                                let result = execute_name(contract_env);
+                                odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                            }
+                            "symbol" => {
+                                let result = execute_symbol(contract_env);
+                                odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                            }
+                            _ => panic!("Unknown method")
+                        }
+                    });
+
+                    let address = env.new_contract(
+                        "Erc20",
+                        None,
+                        Some(caller)
+                    );
+                    Erc20HostRef {
+                        address,
+                        env: env.clone(),
+                        attached_value: odra::U512::zero()
+                    }
+                }
+            }
+        };
+        let deployer_item = DeployerItem::try_from(&module).unwrap();
+        test_utils::assert_eq(deployer_item, &expected);
+    }
 }

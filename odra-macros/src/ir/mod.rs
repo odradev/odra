@@ -1,15 +1,17 @@
 use std::collections::HashSet;
 
+use crate::ir::delegate::Delegate;
 use crate::utils;
 use config::ConfigItem;
 use proc_macro2::Ident;
 use quote::{format_ident, ToTokens};
-use syn::{parse_quote, spanned::Spanned, Data};
+use syn::{parse_quote, spanned::Spanned, Data, ImplItem};
 
 use self::attr::OdraAttribute;
 
 mod attr;
 mod config;
+pub mod delegate;
 
 const CONSTRUCTOR_NAME: &str = "init";
 
@@ -304,24 +306,50 @@ try_parse!(syn::ItemImpl => ModuleIR);
 impl ModuleIR {
     fn self_code(&self) -> syn::ItemImpl {
         let mut code = self.code.clone();
+        // include delegated functions
+        code.items.extend(
+            self.delegated_functions()
+                .unwrap_or_default()
+                .into_iter()
+                .map(syn::ImplItem::Fn)
+        );
+        // remove odra attributes
         code.items.iter_mut().for_each(|item| {
             if let syn::ImplItem::Fn(func) = item {
                 func.attrs = attr::other_attributes(func.attrs.clone());
             }
         });
+        // remove inner odra macros
+        code.items
+            .retain(|item| !matches!(item, syn::ImplItem::Macro(_)));
         code
     }
 
     fn functions(&self) -> Vec<FnIR> {
         self.code
             .items
-            .iter()
+            .clone()
+            .into_iter()
             .filter_map(|item| match item {
-                syn::ImplItem::Fn(func) => Some(FnIR::from(func.clone())),
+                syn::ImplItem::Fn(func) => Some(func),
                 _ => None
             })
+            .chain(self.delegated_functions().unwrap_or_default())
+            .map(FnIR::from)
             .filter(|f| self.is_trait_impl() || f.is_pub())
             .collect::<Vec<_>>()
+    }
+
+    fn delegated_functions(&self) -> syn::Result<Vec<syn::ImplItemFn>> {
+        let macro_item = self.code.items.iter().find_map(|item| match item {
+            ImplItem::Macro(m) => Some(m),
+            _ => None
+        });
+        if let Some(item) = macro_item {
+            return Ok(syn::parse2::<Delegate>(item.mac.tokens.clone())?.functions);
+        }
+
+        Ok(vec![])
     }
 
     fn is_trait_impl(&self) -> bool {

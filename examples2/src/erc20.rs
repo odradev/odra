@@ -2,6 +2,7 @@ use casper_event_standard::Event;
 use odra::{casper_event_standard, Bytes, Module, OdraError, PublicKey};
 use odra::{prelude::*, CallDef, ModuleWrapper};
 use odra::{Address, Mapping, Variable, U256, U512};
+use crate::counter::Counter;
 
 #[derive(Event, Eq, PartialEq, Debug)]
 pub struct OnTransfer {
@@ -39,11 +40,17 @@ trait TotalSupply {
 #[odra::module(events = [OnTransfer, OnCrossTransfer, OnApprove])]
 pub struct Erc20 {
     total_supply: Variable<U256>,
-    balances: Mapping<Address, U256>
+    balances: Mapping<Address, U256>,
+    counter: ModuleWrapper<Counter>
 }
 
 #[odra::module]
 impl Erc20 {
+    delegate! {
+        to self.counter {
+            fn get_count(&self, index: u8) -> u32;
+        }
+    }
     pub fn init(&mut self, total_supply: Option<U256>) {
         if let Some(total_supply) = total_supply {
             self.total_supply.set(total_supply);

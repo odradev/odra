@@ -64,6 +64,31 @@ pub mod mock {
         ModuleImplIR::try_from((&attr, &module)).unwrap()
     }
 
+    pub fn module_delegation() -> ModuleImplIR {
+        let module = quote! {
+            impl Erc20 {
+                pub fn total_supply(&self) -> U256 {
+                    self.total_supply.get_or_default()
+                }
+
+                delegate! {
+                    to self.ownable {
+                        fn get_owner(&self) -> Address;
+                        fn set_owner(&mut self, new_owner: Address);
+                    }
+
+                    to self.metadata {
+                        fn name(&self) -> String;
+                        fn symbol(&self) -> String;
+                    }
+                }
+            }
+        };
+
+        let attr = quote!();
+        ModuleImplIR::try_from((&attr, &module)).unwrap()
+    }
+
     pub fn module_definition() -> ModuleStructIR {
         let module = quote!(
             pub struct CounterPack {
