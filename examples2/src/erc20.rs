@@ -33,7 +33,6 @@ pub enum Erc20Error {
     InsufficientBalance = 1,
     InsufficientAllowance = 2
 }
-
 #[odra::external_contract]
 trait TotalSupply {
     fn total_supply(&self) -> U256;
