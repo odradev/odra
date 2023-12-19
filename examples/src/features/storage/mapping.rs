@@ -1,4 +1,5 @@
-use odra::{prelude::string::String, Mapping, Variable};
+use odra::prelude::*;
+use odra::{Mapping, Variable};
 
 type FriendName = String;
 type Visits = u32;
@@ -37,7 +38,8 @@ mod tests {
 
     #[test]
     fn visit_test() {
-        let mut dog_contract = DogContract2Deployer::init("Mantus".to_string());
+        let test_env = odra::test_env();
+        let mut dog_contract = DogContract2Deployer::init(&test_env, "Mantus".to_string());
         assert_eq!(dog_contract.visits("Kuba".to_string()), 0);
         dog_contract.visit("Kuba".to_string());
         assert_eq!(dog_contract.visits("Kuba".to_string()), 1);
