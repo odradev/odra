@@ -13,15 +13,15 @@ fqn = "odra_examples::contracts::owned_token::OwnedToken"
 #[[contracts]]
 #name = "time_lock_wallet"
 #fqn = "odra_examples::contracts::tlw::TimeLockWallet"
-#
-#[[contracts]]
-#name = "reentrancy_mock"
-#fqn = "odra_examples::features::reentrancy_guard::ReentrancyMock"
-#
-#[[contracts]]
-#name = "signature_verifier"
-#fqn = "odra_examples::features::signature_verifier::SignatureVerifier"
-#
+
+[[contracts]]
+name = "ReentrancyMock"
+fqn = "odra_examples::features::reentrancy_guard::ReentrancyMock"
+
+[[contracts]]
+name = "SignatureVerifier"
+fqn = "odra_examples::features::signature_verifier::SignatureVerifier"
+
 #[[contracts]]
 #name = "composable_contract"
 #fqn = "odra_examples::features::composer::ComposableContract"

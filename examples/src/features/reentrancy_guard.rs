@@ -1,4 +1,5 @@
-use odra::{contract_env, Variable};
+use odra::prelude::*;
+use odra::{Module, Variable};
 
 #[odra::module]
 pub struct ReentrancyMock {
@@ -19,7 +20,8 @@ impl ReentrancyMock {
     pub fn count_ref_recursive(&mut self, n: u32) {
         if n > 0 {
             self.count();
-            ReentrancyMockRef::at(&contract_env::self_address()).count_ref_recursive(n - 1);
+            ReentrancyMockContractRef::new(self.env(), self.env().self_address())
+                .count_ref_recursive(n - 1);
         }
     }
 
@@ -42,13 +44,11 @@ impl ReentrancyMock {
 
 #[cfg(test)]
 mod test {
-    use odra::{test_env, types::ExecutionError};
-
     use super::ReentrancyMockDeployer;
 
     #[test]
     fn non_reentrant_function_can_be_called() {
-        let mut contract = ReentrancyMockDeployer::default();
+        let mut contract = ReentrancyMockDeployer::init(&odra::test_env());
         assert_eq!(contract.get_value(), 0);
         contract.non_reentrant_count();
         assert_eq!(contract.get_value(), 1);
@@ -56,15 +56,16 @@ mod test {
 
     #[test]
     fn ref_recursion_not_allowed() {
-        test_env::assert_exception(ExecutionError::reentrant_call(), || {
-            let mut contract = ReentrancyMockDeployer::default();
-            contract.count_ref_recursive(11);
-        });
+        let mut contract = ReentrancyMockDeployer::init(&odra::test_env());
+        assert_eq!(
+            contract.try_count_ref_recursive(11).unwrap_err(),
+            odra::ExecutionError::ReentrantCall.into()
+        );
     }
 
     #[test]
     fn local_recursion_allowed() {
-        let mut contract = ReentrancyMockDeployer::default();
+        let mut contract = ReentrancyMockDeployer::init(&odra::test_env());
         contract.count_local_recursive(11);
         assert_eq!(contract.get_value(), 11);
     }
