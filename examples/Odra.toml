@@ -2,17 +2,17 @@
 name = "OwnedToken"
 fqn = "odra_examples::contracts::owned_token::OwnedToken"
 
-#[[contracts]]
-#name = "balance_checker"
-#fqn = "odra_examples::contracts::balance_checker::BalanceChecker"
-#
+[[contracts]]
+name = "BalanceChecker"
+fqn = "odra_examples::contracts::balance_checker::BalanceChecker"
+
 #[[contracts]]
 #name = "token_manager"
 #fqn = "odra_examples::contracts::token_manager::TokenManager"
-#
-#[[contracts]]
-#name = "time_lock_wallet"
-#fqn = "odra_examples::contracts::tlw::TimeLockWallet"
+
+[[contracts]]
+name = "TimeLockWallet"
+fqn = "odra_examples::contracts::tlw::TimeLockWallet"
 
 [[contracts]]
 name = "ReentrancyMock"

@@ -1,5 +1,5 @@
-use odra::{Address, U256};
 use odra::prelude::*;
+use odra::{Address, Module, U256};
 
 #[odra::module]
 pub struct BalanceChecker {}
@@ -7,7 +7,7 @@ pub struct BalanceChecker {}
 #[odra::module]
 impl BalanceChecker {
     pub fn check_balance(&self, token: &Address, account: &Address) -> U256 {
-        TokenHostRef::at(token).balance_of(account)
+        TokenContractRef::new(self.env(), *token).balance_of(*account)
     }
 }
 
@@ -19,27 +19,22 @@ pub trait Token {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::contracts::owned_token::tests::{setup, INITIAL_SUPPLY};
 
     #[test]
     fn balance_checker() {
-        let env = odra::test_env();
+        let token = setup();
+        let env = token.env.clone();
         let (owner, second_account) = (env.get_account(0), env.get_account(1));
         let balance_checker = BalanceCheckerDeployer::init(&env);
-        let token = tests::setup();
-        let expected_owner_balance = tests::INITIAL_SUPPLY;
+        let expected_owner_balance = INITIAL_SUPPLY;
 
         // Owner of the token should have positive balance.
-        let balance = balance_checker.check_balance(token.address(), &owner);
+        let balance = balance_checker.check_balance(token.address, owner);
         assert_eq!(balance.as_u32(), expected_owner_balance);
 
         // Different account should have zero balance.
-        let balance = balance_checker.check_balance(token.address(), &second_account);
+        let balance = balance_checker.check_balance(token.address, second_account);
         assert!(balance.is_zero());
-    }
-
-    #[test]
-    fn is_module() {
-        assert!(BalanceChecker::is_module());
-        assert!(!U256::is_module());
     }
 }

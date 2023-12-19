@@ -42,9 +42,7 @@ impl PauseableCounter {
 #[cfg(test)]
 mod test {
     use super::PauseableCounterDeployer;
-    use alloc::string::ToString;
-    use odra::ToBytes;
-    use odra_modules::security::errors::Error::UnpausedRequired;
+    use odra_modules::security::errors::Error::{PausedRequired, UnpausedRequired};
     use odra_modules::security::events::{Paused, Unpaused};
 
     #[test]
@@ -56,22 +54,15 @@ mod test {
         assert!(!contract.is_paused());
 
         contract.pause();
-        assert!(contract.is_paused());
-        let last_call = contract.last_call();
-        let env_last_call = test_env.last_call();
-        assert_eq!(
-            ["d".to_string()].to_vec(),
-            contract.last_call().event_names()
-        );
         assert!(contract
             .last_call()
             .emitted_event(&Paused { account: caller }));
 
         contract.unpause();
-        assert!(!contract.is_paused());
         assert!(contract
             .last_call()
             .emitted_event(&Unpaused { account: caller }));
+        assert!(!contract.is_paused());
     }
 
     #[test]
@@ -93,7 +84,7 @@ mod test {
         let test_env = odra::test_env();
         let mut contract = PauseableCounterDeployer::init(&test_env);
 
-        assert_eq!(contract.try_unpause().unwrap_err(), UnpausedRequired.into());
+        assert_eq!(contract.try_unpause().unwrap_err(), PausedRequired.into());
     }
 
     #[test]
