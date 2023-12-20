@@ -1,5 +1,5 @@
 use crate::arithmetic::{OverflowingAdd, OverflowingSub};
-use crate::contract_def::HasEvents;
+use crate::module::ModuleComponent;
 use crate::prelude::*;
 use crate::{
     module::{Module, ModuleWrapper},
@@ -15,8 +15,8 @@ pub struct Mapping<K, V> {
     index: u8
 }
 
-impl<K: ToBytes, V> Mapping<K, V> {
-    pub const fn new(env: Rc<ContractEnv>, index: u8) -> Self {
+impl<K: ToBytes, V> ModuleComponent for Mapping<K, V> {
+    fn instance(env: Rc<ContractEnv>, index: u8) -> Self {
         Self {
             parent_env: env,
             phantom: core::marker::PhantomData,
@@ -37,28 +37,28 @@ impl<K: ToBytes, V> Mapping<K, V> {
 impl<K: ToBytes, V: FromBytes + CLTyped + Default> Mapping<K, V> {
     pub fn get_or_default(&self, key: &K) -> V {
         let env = self.env_for_key(key);
-        Variable::<V>::new(Rc::new(env), self.index).get_or_default()
+        Variable::<V>::instance(Rc::new(env), self.index).get_or_default()
     }
 }
 
 impl<K: ToBytes, V: FromBytes + CLTyped> Mapping<K, V> {
     pub fn get(&self, key: &K) -> Option<V> {
         let env = self.env_for_key(key);
-        Variable::<V>::new(Rc::new(env), self.index).get()
+        Variable::<V>::instance(Rc::new(env), self.index).get()
     }
 }
 
 impl<K: ToBytes, V: ToBytes + CLTyped> Mapping<K, V> {
     pub fn set(&mut self, key: &K, value: V) {
         let env = self.env_for_key(key);
-        Variable::<V>::new(Rc::new(env), self.index).set(value)
+        Variable::<V>::instance(Rc::new(env), self.index).set(value)
     }
 }
 
 impl<K: ToBytes, V: Module> Mapping<K, V> {
     pub fn module(&self, key: &K) -> ModuleWrapper<V> {
         let env = self.env_for_key(key);
-        ModuleWrapper::new(Rc::new(env), self.index)
+        ModuleWrapper::instance(Rc::new(env), self.index)
     }
 }
 
@@ -91,11 +91,5 @@ impl<
             .overflowing_sub(value)
             .unwrap_or_revert(&self.env_for_key(key));
         self.set(key, new_value);
-    }
-}
-
-impl<K: ToBytes, V: HasEvents> HasEvents for Mapping<K, V> {
-    fn events() -> Vec<crate::contract_def::Event> {
-        V::events()
     }
 }

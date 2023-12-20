@@ -149,16 +149,6 @@ pub fn last_segment_ident(ty: &syn::Type) -> syn::Result<syn::Ident> {
     }
 }
 
-pub fn clear_generics(ty: &syn::Type) -> syn::Result<syn::Type> {
-    match ty {
-        syn::Type::Path(type_path) => clear_path(type_path).map(syn::Type::Path),
-        ty => Err(syn::Error::new(
-            ty.span(),
-            "Only support impl for type path"
-        ))
-    }
-}
-
 // A path like <Option::<U256> as odra::casper_types::CLTyped>
 pub fn as_casted_ty_stream(ty: &syn::Type, as_ty: syn::Type) -> TokenStream {
     let ty = match ty {
@@ -196,17 +186,4 @@ pub fn unreferenced_ty(ty: &syn::Type) -> syn::Type {
         syn::Type::Reference(syn::TypeReference { elem, .. }) => *elem.clone(),
         _ => ty.clone()
     }
-}
-
-fn clear_path(ty: &syn::TypePath) -> syn::Result<syn::TypePath> {
-    let mut owned_ty = ty.to_owned();
-
-    let mut segment = owned_ty
-        .path
-        .segments
-        .last_mut()
-        .ok_or(syn::Error::new(ty.span(), "Invalid type path"))?;
-    segment.arguments = syn::PathArguments::None;
-
-    Ok(owned_ty)
 }

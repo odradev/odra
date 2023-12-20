@@ -107,7 +107,11 @@ impl From<&'_ EnumeratedTypedField> for ModuleFieldItem {
             let_token: Default::default(),
             ident: field.ident.clone(),
             assign_token: Default::default(),
-            field_expr: utils::expr::new_type(&field.ty, &utils::ident::env(), field.idx),
+            field_expr: utils::expr::module_component_instnace(
+                &field.ty,
+                &utils::ident::env(),
+                field.idx
+            ),
             semi_token: Default::default()
         }
     }
@@ -221,11 +225,30 @@ mod test {
 
                 impl odra::Module for CounterPack {
                     fn new(env: Rc<odra::ContractEnv>) -> Self {
-                        let counter0 = ModuleWrapper::new(Rc::clone(&env), 0u8);
-                        let counter1 = ModuleWrapper::new(Rc::clone(&env), 1u8);
-                        let counter2 = ModuleWrapper::new(Rc::clone(&env), 2u8);
-                        let counters = Variable::new(Rc::clone(&env), 3u8);
-                        let counters_map = Mapping::new(Rc::clone(&env), 4u8);
+                        let counter0 =
+                            <ModuleWrapper<Counter> as odra::module::ModuleComponent>::instance(
+                                Rc::clone(&env),
+                                0u8
+                            );
+                        let counter1 =
+                            <ModuleWrapper<Counter> as odra::module::ModuleComponent>::instance(
+                                Rc::clone(&env),
+                                1u8
+                            );
+                        let counter2 =
+                            <ModuleWrapper<Counter> as odra::module::ModuleComponent>::instance(
+                                Rc::clone(&env),
+                                2u8
+                            );
+                        let counters = <Variable<u32> as odra::module::ModuleComponent>::instance(
+                            Rc::clone(&env),
+                            3u8
+                        );
+                        let counters_map =
+                            <Mapping<u8, Counter> as odra::module::ModuleComponent>::instance(
+                                Rc::clone(&env),
+                                4u8
+                            );
                         Self {
                             counter0,
                             counter1,

@@ -1,6 +1,8 @@
 use crate::counter::Counter;
 use casper_event_standard::Event;
-use odra::{casper_event_standard, Bytes, Module, OdraError, PublicKey};
+use odra::{
+    casper_event_standard, Bytes, ContractEnv, Module, ModuleComponent, OdraError, PublicKey
+};
 use odra::{prelude::*, CallDef, ModuleWrapper};
 use odra::{Address, Mapping, Variable, U256, U512};
 
@@ -37,9 +39,11 @@ trait TotalSupply {
     fn total_supply(&self) -> U256;
 }
 
+type VarU256 = Variable<U256>;
+
 #[odra::module(events = [OnTransfer, OnCrossTransfer, OnApprove])]
 pub struct Erc20 {
-    total_supply: Variable<U256>,
+    total_supply: VarU256,
     balances: Mapping<Address, U256>,
     counter: ModuleWrapper<Counter>
 }

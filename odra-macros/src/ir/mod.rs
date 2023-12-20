@@ -5,7 +5,7 @@ use crate::utils;
 use config::ConfigItem;
 use proc_macro2::Ident;
 use quote::{format_ident, ToTokens};
-use syn::{parse_quote, spanned::Spanned, Data, ImplItem};
+use syn::{parse_quote, Data, ImplItem};
 
 use self::attr::OdraAttribute;
 
@@ -71,10 +71,6 @@ impl ModuleStructIR {
             .filter(|(i, _)| i != &utils::ident::env())
             .collect::<Vec<_>>();
 
-        for (_, ty) in &fields {
-            Self::validate_ty(ty)?;
-        }
-
         fields
             .iter()
             .enumerate()
@@ -82,7 +78,7 @@ impl ModuleStructIR {
                 Ok(EnumeratedTypedField {
                     idx: idx as u8,
                     ident: ident.clone(),
-                    ty: utils::syn::clear_generics(ty)?
+                    ty: ty.clone()
                 })
             })
             .collect()
@@ -127,30 +123,6 @@ impl ModuleStructIR {
         fields.sort();
 
         Ok(fields.into_iter().map(|i| i.0).collect())
-    }
-
-    fn validate_ty(ty: &syn::Type) -> Result<(), syn::Error> {
-        let non_generic_ty = utils::syn::clear_generics(ty)?;
-
-        // both odra::Variable and Variable (Mapping, ModuleWrapper) are valid.
-        let valid_types = vec![
-            utils::ty::module_wrapper(),
-            utils::ty::variable(),
-            utils::ty::mapping(),
-        ]
-        .iter()
-        .map(|ty| utils::syn::last_segment_ident(ty).map(|i| vec![ty.clone(), parse_quote!(#i)]))
-        .collect::<Result<Vec<_>, _>>()?;
-        let valid_types = valid_types.into_iter().flatten().collect::<Vec<_>>();
-
-        if valid_types
-            .iter()
-            .any(|t| utils::string::eq(t, &non_generic_ty))
-        {
-            return Ok(());
-        }
-
-        Err(syn::Error::new(ty.span(), "Invalid module type"))
     }
 }
 
