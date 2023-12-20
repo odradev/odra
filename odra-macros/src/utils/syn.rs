@@ -9,6 +9,10 @@ pub fn ident_from_struct(struct_code: &syn::ItemStruct) -> syn::Ident {
     struct_code.ident.clone()
 }
 
+pub fn function_name(sig: &syn::Signature) -> String {
+    sig.ident.to_string()
+}
+
 pub fn function_arg_names(sig: &syn::Signature) -> Vec<syn::Ident> {
     sig.inputs
         .iter()

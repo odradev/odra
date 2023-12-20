@@ -71,7 +71,7 @@ impl EntrypointCallerExpr {
         let ty_caller = utils::ty::entry_points_caller();
 
         let mut branches: Vec<CallerBranch> = module
-            .functions()
+            .functions()?
             .iter()
             .map(|f| CallerBranch::Function(FunctionCallBranch::from(f)))
             .collect();

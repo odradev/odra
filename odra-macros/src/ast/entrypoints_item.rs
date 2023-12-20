@@ -55,9 +55,9 @@ impl TryFrom<&'_ ModuleImplIR> for EntrypointsFnItem {
     }
 }
 
-fn struct_entrypoints_expr(ir: &ModuleImplIR) -> Result<syn::Expr, syn::Error> {
+fn struct_entrypoints_expr(ir: &ModuleImplIR) -> syn::Result<syn::Expr> {
     let struct_entrypoints = ir
-        .functions()
+        .functions()?
         .iter()
         .map(|f| {
             let ident = f.name_str();

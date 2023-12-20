@@ -47,7 +47,7 @@ impl TryFrom<&'_ ModuleImplIR> for ExecPartsItem {
             use_prelude: UsePreludeItem,
             use_super: UseSuperItem,
             exec_functions: module
-                .functions()
+                .functions()?
                 .iter()
                 .map(|f| (module, f))
                 .map(TryInto::try_into)

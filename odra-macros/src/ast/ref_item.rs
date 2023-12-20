@@ -107,7 +107,7 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefImplItem {
             new_fn: NewFnItem::new(),
             address_fn: AddressFnItem::new(),
             functions: module
-                .functions()
+                .functions()?
                 .iter()
                 .map(ref_utils::contract_function_item)
                 .collect()

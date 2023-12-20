@@ -49,7 +49,7 @@ impl TryFrom<&'_ ModuleImplIR> for WasmPartsModuleItem {
             entry_points_fn: module.try_into()?,
             call_fn: module.try_into()?,
             entry_points: module
-                .functions()
+                .functions()?
                 .iter()
                 .map(TryInto::try_into)
                 .collect::<Result<Vec<_>, _>>()?
@@ -86,7 +86,7 @@ impl TryFrom<&'_ ModuleImplIR> for EntryPointsFnItem {
             braces: Default::default(),
             var_declaration: parse_quote!(let mut #ident_entry_points = #expr_entry_points;),
             items: module
-                .functions()
+                .functions()?
                 .iter()
                 .map(TryInto::try_into)
                 .collect::<Result<Vec<_>, _>>()?,

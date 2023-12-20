@@ -78,7 +78,7 @@ impl TryFrom<&'_ ModuleImplIR> for HostRefImplItem {
             get_event_fn: GetEventFnItem,
             last_call_fn: LastCallFnItem,
             functions: module
-                .host_functions()
+                .host_functions()?
                 .iter()
                 .flat_map(|f| {
                     vec![

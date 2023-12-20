@@ -55,6 +55,7 @@ impl Erc20 {
             fn get_count(&self, index: u8) -> u32;
         }
     }
+
     pub fn init(&mut self, total_supply: Option<U256>) {
         if let Some(total_supply) = total_supply {
             self.total_supply.set(total_supply);
