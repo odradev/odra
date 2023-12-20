@@ -465,7 +465,7 @@ mod tests {
         // When deploy a contract with the initial supply.
         let mut erc721_env = setup();
 
-        assert!(erc721_env.token.address.is_contract());
+        assert!(erc721_env.token.address().is_contract());
         assert!(!erc721_env.alice.is_contract());
 
         // And mint a token to Alice.
@@ -524,15 +524,20 @@ mod tests {
 
         // And transfer the token to the contract which does support nfts
         erc721_env.env.set_caller(erc721_env.alice);
-        erc721_env
-            .token
-            .safe_transfer_from(erc721_env.alice, receiver.address, U256::from(1));
+        erc721_env.token.safe_transfer_from(
+            erc721_env.alice,
+            receiver.address().clone(),
+            U256::from(1)
+        );
 
         // Then the owner of the token is the contract
-        assert_eq!(erc721_env.token.owner_of(U256::from(1)), receiver.address);
+        assert_eq!(
+            erc721_env.token.owner_of(U256::from(1)),
+            receiver.address().clone()
+        );
         // And the receiver contract is aware of the transfer
         erc721_env.env.emitted_event(
-            &receiver.address,
+            receiver.address(),
             &Received {
                 operator: Some(erc721_env.alice),
                 from: Some(erc721_env.alice),
@@ -556,16 +561,19 @@ mod tests {
         erc721_env.env.set_caller(erc721_env.alice);
         erc721_env.token.safe_transfer_from_with_data(
             erc721_env.alice,
-            receiver.address,
+            receiver.address().clone(),
             U256::from(1),
             b"data".to_vec().into()
         );
 
         // Then the owner of the token is the contract
-        assert_eq!(erc721_env.token.owner_of(U256::from(1)), receiver.address);
+        assert_eq!(
+            erc721_env.token.owner_of(U256::from(1)),
+            receiver.address().clone()
+        );
         // And the receiver contract is aware of the transfer
         erc721_env.env.emitted_event(
-            &receiver.address,
+            receiver.address(),
             &Received {
                 operator: Some(erc721_env.alice),
                 from: Some(erc721_env.alice),

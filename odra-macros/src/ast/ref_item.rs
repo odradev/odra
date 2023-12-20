@@ -22,8 +22,8 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefStructItem {
         let ty_address = utils::ty::address();
         let ty_contract_env = utils::ty::contract_env();
         let named_fields: syn::FieldsNamed = parse_quote!({
-            pub #env: Rc<#ty_contract_env>,
-            pub #address: #ty_address,
+            #env: Rc<#ty_contract_env>,
+            #address: #ty_address,
         });
 
         Ok(Self {
@@ -133,8 +133,8 @@ mod ref_item_tests {
         let module = test_utils::mock::module_impl();
         let expected = quote! {
             pub struct Erc20ContractRef {
-                pub env: Rc<odra::ContractEnv>,
-                pub address: odra::Address,
+                env: Rc<odra::ContractEnv>,
+                address: odra::Address,
             }
 
             impl Erc20ContractRef {
@@ -142,7 +142,6 @@ mod ref_item_tests {
                     Self { env, address }
                 }
 
-                // TODO: this means "address", can't be entrypoint name.
                 pub fn address(&self) -> &odra::Address {
                     &self.address
                 }
@@ -214,8 +213,8 @@ mod ref_item_tests {
         let module = test_utils::mock::module_trait_impl();
         let expected = quote! {
             pub struct Erc20ContractRef {
-                pub env: Rc<odra::ContractEnv>,
-                pub address: odra::Address,
+                env: Rc<odra::ContractEnv>,
+                address: odra::Address,
             }
 
             impl Erc20ContractRef {
@@ -223,7 +222,6 @@ mod ref_item_tests {
                     Self { env, address }
                 }
 
-                // TODO: this means "address", can't be entrypoint name.
                 pub fn address(&self) -> &odra::Address {
                     &self.address
                 }
@@ -265,8 +263,8 @@ mod ref_item_tests {
         let module = test_utils::mock::module_delegation();
         let expected = quote! {
             pub struct Erc20ContractRef {
-                pub env: Rc<odra::ContractEnv>,
-                pub address: odra::Address,
+                env: Rc<odra::ContractEnv>,
+                address: odra::Address,
             }
 
             impl Erc20ContractRef {
@@ -274,7 +272,6 @@ mod ref_item_tests {
                     Self { env, address }
                 }
 
-                // TODO: this means "address", can't be entrypoint name.
                 pub fn address(&self) -> &odra::Address {
                     &self.address
                 }

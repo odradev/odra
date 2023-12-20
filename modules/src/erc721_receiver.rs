@@ -8,7 +8,7 @@ use odra::{Address, Bytes, Module, U256};
 /// The ERC721 receiver implementation.
 // TODO: remove {} when #295 is merged
 #[odra::module]
-pub struct Erc721Receiver {}
+pub struct Erc721Receiver;
 
 #[odra::module]
 impl Erc721ReceiverTrait for Erc721Receiver {
@@ -25,11 +25,7 @@ impl Erc721ReceiverTrait for Erc721Receiver {
             token_id: *token_id,
             data: data.clone()
         });
-        Erc721TokenContractRef {
-            env: self.env(),
-            address: self.env().caller()
-        }
-        .owner_of(*token_id)
+        Erc721TokenContractRef::new(self.env(), self.env().caller()).owner_of(*token_id)
             == self.env().self_address()
     }
 }

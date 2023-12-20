@@ -163,6 +163,10 @@ pub fn btree_from_iter(expr: &syn::Expr) -> syn::Expr {
     parse_quote!(odra::prelude::BTreeMap::from_iter(#expr))
 }
 
+pub fn default() -> syn::Expr {
+    parse_quote!(Default::default())
+}
+
 pub trait IntoExpr {
     fn into_expr(self) -> syn::Expr;
 }

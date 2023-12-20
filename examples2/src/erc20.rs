@@ -195,22 +195,22 @@ mod tests {
 
         // Test cross calls
         let mut pobcoin = Erc20Deployer::init(&env, Some(100.into()));
-        assert_eq!(erc20.cross_total(pobcoin.address), 200.into());
+        assert_eq!(erc20.cross_total(*pobcoin.address()), 200.into());
 
         // Test attaching value and balances
         let initial_balance = U512::from(100000000000000000u64);
-        assert_eq!(env.balance_of(&erc20.address), 0.into());
+        assert_eq!(env.balance_of(erc20.address()), 0.into());
         assert_eq!(env.balance_of(&alice), initial_balance);
 
         env.set_caller(alice);
         pobcoin.with_tokens(100.into()).pay_to_mint();
-        assert_eq!(env.balance_of(&pobcoin.address), 100.into());
+        assert_eq!(env.balance_of(pobcoin.address()), 100.into());
         assert_eq!(pobcoin.total_supply(), 200.into());
         assert_eq!(pobcoin.balance_of(alice), 100.into());
         assert_eq!(pobcoin.balance_of(bob), 100.into());
 
         assert_eq!(env.balance_of(&alice), initial_balance - U512::from(100));
-        assert_eq!(env.balance_of(&pobcoin.address), 100.into());
+        assert_eq!(env.balance_of(pobcoin.address()), 100.into());
 
         // Test block time
         let block_time = pobcoin.get_current_block_time();
@@ -242,15 +242,15 @@ mod tests {
         erc20.transfer(bob, 30.into());
 
         // Test call result
-        assert_eq!(env.events_count(&erc20.address), 2);
+        assert_eq!(env.events_count(erc20.address()), 2);
 
         let call_result = env.last_call();
         assert!(call_result.result().is_ok());
-        assert_eq!(call_result.contract_address(), erc20.address);
+        assert_eq!(call_result.contract_address(), *erc20.address());
         assert_eq!(call_result.caller(), alice);
         assert_eq!(call_result.bytes(), vec![].into());
         assert_eq!(
-            call_result.contract_events(&erc20.address),
+            call_result.contract_events(erc20.address()),
             vec![Bytes::from(
                 OnTransfer {
                     from: Some(alice),
@@ -266,20 +266,20 @@ mod tests {
         erc20.try_transfer(bob, 100_000_000.into()).unwrap_err();
         let call_result = env.last_call();
         assert!(call_result.result().is_err());
-        assert_eq!(call_result.contract_address(), erc20.address);
+        assert_eq!(call_result.contract_address(), *erc20.address());
         assert_eq!(call_result.caller(), alice);
-        assert_eq!(call_result.contract_events(&erc20.address), vec![]);
+        assert_eq!(call_result.contract_events(erc20.address()), vec![]);
 
         // cross call
-        pobcoin.transfer(erc20.address, 100.into());
-        erc20.cross_transfer(pobcoin.address, alice, 50.into());
+        pobcoin.transfer(*erc20.address(), 100.into());
+        erc20.cross_transfer(*pobcoin.address(), alice, 50.into());
         let call_result = env.last_call();
 
         assert_eq!(
-            call_result.contract_events(&pobcoin.address),
+            call_result.contract_events(&pobcoin.address()),
             vec![Bytes::from(
                 OnTransfer {
-                    from: Some(erc20.address),
+                    from: Some(*erc20.address()),
                     to: Some(alice),
                     amount: 50.into()
                 }
@@ -288,12 +288,12 @@ mod tests {
             )]
         );
         assert_eq!(
-            call_result.contract_events(&erc20.address),
+            call_result.contract_events(erc20.address()),
             vec![Bytes::from(
                 OnCrossTransfer {
-                    from: Some(erc20.address),
+                    from: Some(*erc20.address()),
                     to: Some(alice),
-                    other_contract: pobcoin.address,
+                    other_contract: *pobcoin.address(),
                     amount: 50.into()
                 }
                 .to_bytes()
@@ -318,7 +318,7 @@ mod tests {
         erc20.transfer(charlie, 20.into());
 
         // Test events
-        let event: OnTransfer = env.get_event(&erc20.address, 0).unwrap();
+        let event: OnTransfer = env.get_event(erc20.address(), 0).unwrap();
         assert_eq!(
             event,
             OnTransfer {
@@ -328,7 +328,7 @@ mod tests {
             }
         );
 
-        let event: OnApprove = env.get_event(&erc20.address, 1).unwrap();
+        let event: OnApprove = env.get_event(erc20.address(), 1).unwrap();
         assert_eq!(
             event,
             OnApprove {
@@ -338,7 +338,7 @@ mod tests {
             }
         );
 
-        let event: OnTransfer = env.get_event(&erc20.address, 2).unwrap();
+        let event: OnTransfer = env.get_event(erc20.address(), 2).unwrap();
         assert_eq!(
             event,
             OnTransfer {
@@ -349,7 +349,7 @@ mod tests {
         );
 
         // Test negative indices
-        let event: OnTransfer = env.get_event(&erc20.address, -1).unwrap();
+        let event: OnTransfer = env.get_event(erc20.address(), -1).unwrap();
         assert_eq!(
             event,
             OnTransfer {
@@ -392,10 +392,10 @@ mod tests {
 
         // Then we can check it
         // If contract emitted a specific event during whole lifetime
-        assert!(env.emitted(&erc20.address, "OnTransfer"));
+        assert!(env.emitted(erc20.address(), "OnTransfer"));
         // or all of them
         assert_eq!(
-            env.event_names(&erc20.address),
+            env.event_names(erc20.address()),
             vec!["OnApprove".to_string(), "OnTransfer".to_string()]
         );
 
@@ -416,11 +416,11 @@ mod tests {
         // or
         assert!(erc20.last_call().emitted_event(&emitted_in_second_call));
         // or for whole lifetime
-        assert!(env.emitted_event(&erc20.address, &emitted_in_second_call));
+        assert!(env.emitted_event(erc20.address(), &emitted_in_second_call));
 
         // To check the order of events, use the power of vec:
         assert_eq!(
-            env.events(&erc20.address)[0..2],
+            env.events(erc20.address())[0..2],
             [
                 Bytes::from(first_emitted.to_bytes().unwrap()),
                 Bytes::from(emitted_in_second_call.to_bytes().unwrap())
@@ -429,13 +429,13 @@ mod tests {
         );
 
         assert!(env
-            .event_names(&erc20.address)
+            .event_names(erc20.address())
             .ends_with(vec!["OnApprove".to_string(), "OnTransfer".to_string()].as_slice()));
 
         // Counter examples
         assert!(!erc20.last_call().emitted("OnApprove"));
-        assert!(!env.emitted(&erc20.address, "OnCrossTransfer"));
-        assert!(!env.emitted_event(&erc20.address, &not_emitted));
+        assert!(!env.emitted(erc20.address(), "OnCrossTransfer"));
+        assert!(!env.emitted_event(erc20.address(), &not_emitted));
     }
 
     #[test]

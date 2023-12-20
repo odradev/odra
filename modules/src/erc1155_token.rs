@@ -222,7 +222,7 @@ mod tests {
         // And the event is emitted
         let contract = env.token;
         env.env.emitted_event(
-            &contract.address,
+            contract.address(),
             &TransferSingle {
                 operator: Some(env.owner),
                 from: None,
@@ -248,7 +248,7 @@ mod tests {
 
         // Then it emits the event
         env.env.emitted_event(
-            &env.token.address,
+            env.token.address(),
             &TransferBatch {
                 operator: Some(env.owner),
                 from: None,
@@ -297,7 +297,7 @@ mod tests {
         // And the event is emitted
         let contract = env.token;
         env.env.emitted_event(
-            &contract.address,
+            contract.address(),
             &TransferSingle {
                 operator: Some(env.owner),
                 from: Some(env.alice),
@@ -359,7 +359,7 @@ mod tests {
         // And the event is emitted
         let contract = env.token;
         env.env.emitted_event(
-            &contract.address,
+            contract.address(),
             &TransferBatch {
                 operator: Some(env.owner),
                 from: Some(env.alice),
@@ -532,7 +532,7 @@ mod tests {
 
         // And the event is emitted
         env.env.emitted_event(
-            &env.token.address,
+            env.token.address(),
             &ApprovalForAll {
                 owner: env.alice,
                 operator: env.bob,
@@ -560,7 +560,7 @@ mod tests {
         // And the event is emitted
         let contract = env.token;
         env.env.emitted_event(
-            &contract.address,
+            contract.address(),
             &ApprovalForAll {
                 owner: env.alice,
                 operator: env.bob,
@@ -603,7 +603,7 @@ mod tests {
         // And the event is emitted
         let contract = env.token;
         env.env.emitted_event(
-            &contract.address,
+            contract.address(),
             &TransferSingle {
                 operator: Some(env.alice),
                 from: Some(env.alice),
@@ -638,7 +638,7 @@ mod tests {
         // And the event is emitted
         let contract = env.token;
         env.env.emitted_event(
-            &contract.address,
+            contract.address(),
             &TransferSingle {
                 operator: Some(env.bob),
                 from: Some(env.alice),
@@ -708,7 +708,7 @@ mod tests {
         // And the event is emitted
         let contract = env.token;
         env.env.emitted_event(
-            &contract.address,
+            contract.address(),
             &TransferBatch {
                 operator: Some(env.alice),
                 from: Some(env.alice),
@@ -751,7 +751,7 @@ mod tests {
         // And the event is emitted
         let contract = env.token;
         env.env.emitted_event(
-            &contract.address,
+            contract.address(),
             &TransferBatch {
                 operator: Some(env.bob),
                 from: Some(env.alice),
@@ -816,19 +816,24 @@ mod tests {
 
         // When we transfer tokens to a valid receiver
         env.env.set_caller(env.alice);
-        env.token
-            .safe_transfer_from(env.alice, receiver.address, U256::one(), 100.into(), None);
+        env.token.safe_transfer_from(
+            env.alice,
+            *receiver.address(),
+            U256::one(),
+            100.into(),
+            None
+        );
 
         // Then the tokens are transferred
         assert_eq!(env.token.balance_of(env.alice, U256::one()), 0.into());
         assert_eq!(
-            env.token.balance_of(receiver.address, U256::one()),
+            env.token.balance_of(*receiver.address(), U256::one()),
             100.into()
         );
 
         // And receiver contract is aware of received tokens
         env.env.emitted_event(
-            &receiver.address,
+            receiver.address(),
             &SingleReceived {
                 operator: Some(env.alice),
                 from: Some(env.alice),
@@ -852,7 +857,7 @@ mod tests {
         env.env.set_caller(env.alice);
         env.token.safe_transfer_from(
             env.alice,
-            receiver.address,
+            *receiver.address(),
             U256::one(),
             100.into(),
             Some(Bytes::from(b"data".to_vec()))
@@ -861,13 +866,13 @@ mod tests {
         // Then the tokens are transferred
         assert_eq!(env.token.balance_of(env.alice, U256::one()), 0.into());
         assert_eq!(
-            env.token.balance_of(receiver.address, U256::one()),
+            env.token.balance_of(*receiver.address(), U256::one()),
             100.into()
         );
 
         // And receiver contract is aware of received tokens and data
         env.env.emitted_event(
-            &receiver.address,
+            receiver.address(),
             &SingleReceived {
                 operator: Some(env.alice),
                 from: Some(env.alice),
@@ -892,7 +897,7 @@ mod tests {
         env.env.set_caller(env.alice);
         let _err = env.token.try_safe_transfer_from(
             env.alice,
-            receiver.address,
+            *receiver.address(),
             U256::one(),
             100.into(),
             None
@@ -915,7 +920,7 @@ mod tests {
         env.env.set_caller(env.alice);
         env.token.safe_batch_transfer_from(
             env.alice,
-            receiver.address,
+            *receiver.address(),
             [U256::one(), U256::from(2)].to_vec(),
             [100.into(), 100.into()].to_vec(),
             None
@@ -924,18 +929,18 @@ mod tests {
         // Then the tokens are transferred
         assert_eq!(env.token.balance_of(env.alice, U256::one()), 0.into());
         assert_eq!(
-            env.token.balance_of(receiver.address, U256::one()),
+            env.token.balance_of(*receiver.address(), U256::one()),
             100.into()
         );
         assert_eq!(env.token.balance_of(env.alice, U256::from(2)), 0.into());
         assert_eq!(
-            env.token.balance_of(receiver.address, U256::from(2)),
+            env.token.balance_of(*receiver.address(), U256::from(2)),
             100.into()
         );
 
         // And receiver contract is aware of received tokens
         env.env.emitted_event(
-            &receiver.address,
+            receiver.address(),
             &BatchReceived {
                 operator: Some(env.alice),
                 from: Some(env.alice),
@@ -960,7 +965,7 @@ mod tests {
         env.env.set_caller(env.alice);
         env.token.safe_batch_transfer_from(
             env.alice,
-            receiver.address,
+            *receiver.address(),
             [U256::one(), U256::from(2)].to_vec(),
             [100.into(), 100.into()].to_vec(),
             Some(Bytes::from(b"data".to_vec()))
@@ -969,18 +974,18 @@ mod tests {
         // Then the tokens are transferred
         assert_eq!(env.token.balance_of(env.alice, U256::one()), 0.into());
         assert_eq!(
-            env.token.balance_of(receiver.address, U256::one()),
+            env.token.balance_of(*receiver.address(), U256::one()),
             100.into()
         );
         assert_eq!(env.token.balance_of(env.alice, U256::from(2)), 0.into());
         assert_eq!(
-            env.token.balance_of(receiver.address, U256::from(2)),
+            env.token.balance_of(*receiver.address(), U256::from(2)),
             100.into()
         );
 
         // And receiver contract is aware of received tokens and data
         env.env.emitted_event(
-            &receiver.address,
+            receiver.address(),
             &BatchReceived {
                 operator: Some(env.alice),
                 from: Some(env.alice),
@@ -1010,7 +1015,7 @@ mod tests {
             .token
             .try_safe_batch_transfer_from(
                 env.alice,
-                receiver.address,
+                *receiver.address(),
                 [U256::one(), U256::from(2)].to_vec(),
                 [100.into(), 100.into()].to_vec(),
                 None
