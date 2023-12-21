@@ -146,7 +146,7 @@ mod tests {
     use crate::erc721_receiver::Erc721ReceiverDeployer;
     use crate::erc721_token::errors::Error::TokenAlreadyExists;
     use odra::prelude::*;
-    use odra::{Address, HostEnv, OdraAddress, U256};
+    use odra::{Address, HostEnv, OdraAddress, OdraError, VmError, U256};
 
     const NAME: &str = "PlascoinNFT";
     const SYMBOL: &str = "PLSNFT";
@@ -487,7 +487,7 @@ mod tests {
         // When deploy a contract with the initial supply
         let mut erc721_env = setup();
         // And another contract which does not support nfts
-        let _erc20 = Erc20Deployer::init(
+        let erc20 = Erc20Deployer::init(
             &erc721_env.env,
             "PLS".to_string(),
             "PLASCOIN".to_string(),
@@ -502,14 +502,16 @@ mod tests {
         erc721_env.env.set_caller(erc721_env.alice);
 
         // TODO: Enable this after fixing mockvm
-        // assert_eq!(
-        // OdraError::VmError(NoSuchMethod("on_erc721_received".to_string())),
-        //         erc721_env.token.try_safe_transfer_from(
-        //             erc721_env.alice,
-        //             erc20.address,
-        //             U256::from(1)
-        //         ).unwrap_err()
-        // );
+        assert_eq!(
+            Err(OdraError::VmError(VmError::NoSuchMethod(
+                "on_erc721_received".to_string()
+            ))),
+            erc721_env.token.try_safe_transfer_from(
+                erc721_env.alice,
+                *erc20.address(),
+                U256::from(1)
+            )
+        );
     }
 
     #[test]

@@ -186,7 +186,7 @@ mod tests {
     use crate::erc1155_token::{Erc1155TokenDeployer, Erc1155TokenHostRef};
     use crate::wrapped_native::WrappedNativeTokenDeployer;
     use odra::prelude::*;
-    use odra::{Address, Bytes, HostEnv, U256};
+    use odra::{Address, Bytes, HostEnv, OdraError, VmError, U256};
 
     struct TokenEnv {
         env: HostEnv,
@@ -895,15 +895,19 @@ mod tests {
         // When we transfer tokens to an invalid receiver
         // Then it errors out
         env.env.set_caller(env.alice);
-        let _err = env.token.try_safe_transfer_from(
+        let err = env.token.try_safe_transfer_from(
             env.alice,
             *receiver.address(),
             U256::one(),
             100.into(),
             None
         );
-        // TODO: Reenable this assertion after https://github.com/odradev/odra/issues/298 is fixed
-        // assert_eq!(err, Err(OdraError::VmError(NoSuchMethod("on_erc1155_received".to_string()))));
+        assert_eq!(
+            err,
+            Err(OdraError::VmError(VmError::NoSuchMethod(
+                "on_erc1155_received".to_string()
+            )))
+        );
     }
 
     #[test]
@@ -998,8 +1002,6 @@ mod tests {
 
     #[test]
     fn safe_batch_transfer_to_invalid_receiver() {
-        // OdraError::VmError(NoSuchMethod("on_erc1155_batch_received".to_string())),
-        // || {
         // Given a deployed contract
         let mut env = setup();
         // And an invalid receiver
@@ -1011,7 +1013,7 @@ mod tests {
         // When we transfer tokens to an invalid receiver
         // Then it errors out
         env.env.set_caller(env.alice);
-        let _err = env
+        let err = env
             .token
             .try_safe_batch_transfer_from(
                 env.alice,
@@ -1021,7 +1023,11 @@ mod tests {
                 None
             )
             .unwrap_err();
-        // TODO: Reenable this assertion after https://github.com/odradev/odra/issues/298 is fixed
-        // assert_eq!(err, OdraError::VmError(NoSuchMethod("on_erc1155_batch_received".to_string())));
+        assert_eq!(
+            err,
+            OdraError::VmError(VmError::NoSuchMethod(
+                "on_erc1155_batch_received".to_string()
+            ))
+        );
     }
 }

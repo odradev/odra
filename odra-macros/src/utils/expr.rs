@@ -12,7 +12,9 @@ pub fn u512_zero() -> syn::Expr {
 }
 
 pub fn parse_bytes(data_ident: &syn::Ident) -> syn::Expr {
-    parse_quote!(odra::ToBytes::to_bytes(&#data_ident).map(Into::into).unwrap())
+    let ty = super::ty::to_bytes();
+    let ty_err = super::ty::odra_error();
+    parse_quote!(#ty::to_bytes(&#data_ident).map(Into::into).map_err(|err| #ty_err::ExecutionError(err.into())))
 }
 
 pub fn module_component_instnace(ty: &syn::Type, env_ident: &syn::Ident, idx: u8) -> syn::Expr {

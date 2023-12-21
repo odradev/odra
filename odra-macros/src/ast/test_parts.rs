@@ -194,21 +194,23 @@ mod test {
                             match call_def.method() {
                                 "init" => {
                                     let result = execute_init(contract_env);
-                                    odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                                    odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                                 }
                                 "total_supply" => {
                                     let result = execute_total_supply(contract_env);
-                                    odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                                    odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                                 }
                                 "pay_to_mint" => {
                                     let result = execute_pay_to_mint(contract_env);
-                                    odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                                    odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                                 }
                                 "approve" => {
                                     let result = execute_approve(contract_env);
-                                    odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                                    odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                                 }
-                                _ => panic!("Unknown method")
+                                name => Err(odra::OdraError::VmError(
+                                    odra::VmError::NoSuchMethod(odra::prelude::String::from(name))
+                                ))
                             }
                         });
 
@@ -336,13 +338,15 @@ mod test {
                             match call_def.method() {
                                 "total_supply" => {
                                     let result = execute_total_supply(contract_env);
-                                    odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                                    odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                                 }
                                 "pay_to_mint" => {
                                     let result = execute_pay_to_mint(contract_env);
-                                    odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                                    odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                                 }
-                                _ => panic!("Unknown method")
+                                name => Err(odra::OdraError::VmError(
+                                    odra::VmError::NoSuchMethod(odra::prelude::String::from(name)),
+                                ))
                             }
                         });
 
