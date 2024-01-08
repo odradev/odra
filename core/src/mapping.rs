@@ -1,5 +1,5 @@
 use crate::arithmetic::{OverflowingAdd, OverflowingSub};
-use crate::module::ModuleComponent;
+use crate::module::{ModuleComponent, ModulePrimitive};
 use crate::prelude::*;
 use crate::{
     module::{Module, ModuleWrapper},
@@ -24,6 +24,8 @@ impl<K: ToBytes, V> ModuleComponent for Mapping<K, V> {
         }
     }
 }
+
+impl<K: ToBytes, V> ModulePrimitive for Mapping<K, V> {}
 
 impl<K: ToBytes, V> Mapping<K, V> {
     fn env_for_key(&self, key: &K) -> ContractEnv {

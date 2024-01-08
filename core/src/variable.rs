@@ -2,7 +2,7 @@ use crate::prelude::*;
 use crate::{CLTyped, FromBytes, OdraError, ToBytes, UnwrapOrRevert};
 
 use crate::contract_env::ContractEnv;
-use crate::module::ModuleComponent;
+use crate::module::{ModuleComponent, ModulePrimitive};
 
 pub struct Variable<T> {
     env: Rc<ContractEnv>,
@@ -25,6 +25,8 @@ impl<T> ModuleComponent for Variable<T> {
         }
     }
 }
+
+impl<T> ModulePrimitive for Variable<T> {}
 
 impl<T: FromBytes> Variable<T> {
     pub fn get(&self) -> Option<T> {
