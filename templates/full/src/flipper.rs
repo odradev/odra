@@ -1,5 +1,5 @@
 use odra::prelude::*;
-use odra::{Module, Variable, ContractEnv};
+use odra::Variable;
 
 /// A module definition. Each module struct consists Variables and Mappings
 /// or/and another modules.
