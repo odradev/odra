@@ -1,4 +1,4 @@
-# member1
+# {{project-name}}
 
 ## Usage
 It's recommend to install 
