@@ -1,4 +1,4 @@
-use odra::prelude::*;
+use odra::{prelude::*, List, Variable};
 
 #[odra::module]
 pub struct DogContract3 {
