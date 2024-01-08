@@ -51,6 +51,7 @@ impl TryFrom<&'_ ModuleImplIR> for WasmPartsModuleItem {
             entry_points: module
                 .functions()
                 .iter()
+                .map(|f| (module, f))
                 .map(TryInto::try_into)
                 .collect::<Result<Vec<_>, _>>()?
         })
@@ -156,18 +157,22 @@ struct NoMangleFnItem {
     ret_stmt: Option<syn::Stmt>
 }
 
-impl TryFrom<&'_ FnIR> for NoMangleFnItem {
+impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for NoMangleFnItem {
     type Error = syn::Error;
 
-    fn try_from(func: &'_ FnIR) -> Result<Self, Self::Error> {
+    fn try_from(value: (&'_ ModuleImplIR, &'_ FnIR)) -> Result<Self, Self::Error> {
+        let (module, func) = value;
         let fn_ident = func.name();
         let result_ident = utils::ident::result();
+        let exec_parts_ident = module.exec_parts_mod_ident()?;
         let exec_fn = func.execute_name();
         let new_env = utils::expr::new_wasm_contract_env();
 
         let execute_stmt = match func.return_type() {
-            syn::ReturnType::Default => parse_quote!(#exec_fn(#new_env);),
-            syn::ReturnType::Type(_, _) => parse_quote!(let #result_ident = #exec_fn(#new_env);)
+            syn::ReturnType::Default => parse_quote!(#exec_parts_ident::#exec_fn(#new_env);),
+            syn::ReturnType::Type(_, _) => {
+                parse_quote!(let #result_ident = #exec_parts_ident::#exec_fn(#new_env);)
+            }
         };
 
         let ret_stmt = match func.return_type() {
@@ -339,12 +344,12 @@ mod test {
 
                 #[no_mangle]
                 fn init() {
-                    execute_init(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    __erc20_exec_parts::execute_init(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
 
                 #[no_mangle]
                 fn total_supply() {
-                    let result = execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    let result = __erc20_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
                             odra::casper_types::CLValue::from_t(result)
@@ -354,12 +359,12 @@ mod test {
 
                 #[no_mangle]
                 fn pay_to_mint() {
-                    execute_pay_to_mint(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    __erc20_exec_parts::execute_pay_to_mint(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
 
                 #[no_mangle]
                 fn approve() {
-                    execute_approve(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    __erc20_exec_parts::execute_approve(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
             }
         };
@@ -417,7 +422,7 @@ mod test {
 
                 #[no_mangle]
                 fn total_supply() {
-                    let result = execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    let result = __erc20_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
                             odra::casper_types::CLValue::from_t(result)
@@ -427,7 +432,7 @@ mod test {
 
                 #[no_mangle]
                 fn pay_to_mint() {
-                    execute_pay_to_mint(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    __erc20_exec_parts::execute_pay_to_mint(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
             }
         };

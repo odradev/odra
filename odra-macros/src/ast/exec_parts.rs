@@ -8,22 +8,6 @@ use quote::TokenStreamExt;
 use syn::parse_quote;
 
 #[derive(syn_derive::ToTokens)]
-pub struct ExecPartsReexportItem {
-    reexport_stmt: syn::Stmt
-}
-
-impl TryFrom<&'_ ModuleImplIR> for ExecPartsReexportItem {
-    type Error = syn::Error;
-
-    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        let test_parts_ident = module.exec_parts_mod_ident()?;
-        Ok(Self {
-            reexport_stmt: parse_quote!(pub use #test_parts_ident::*;)
-        })
-    }
-}
-
-#[derive(syn_derive::ToTokens)]
 pub struct ExecPartsItem {
     parts_module: ExecPartsModuleItem,
     #[syn(braced)]

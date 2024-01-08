@@ -64,7 +64,7 @@ impl TryFrom<&'_ ModuleImplIR> for EntrypointCallerExpr {
 }
 
 impl EntrypointCallerExpr {
-    fn entrypoint_caller(module: &ModuleImplIR) -> Result<syn::Expr, syn::Error> {
+    fn entrypoint_caller(module: &ModuleImplIR) -> syn::Result<syn::Expr> {
         let env_ident = utils::ident::env();
         let contract_env_ident = utils::ident::contract_env();
         let call_def_ident = utils::ident::call_def();
@@ -73,8 +73,9 @@ impl EntrypointCallerExpr {
         let mut branches: Vec<CallerBranch> = module
             .functions()
             .iter()
-            .map(|f| CallerBranch::Function(FunctionCallBranch::from(f)))
-            .collect();
+            .map(|f| FunctionCallBranch::try_from((module, f)))
+            .map(|r| r.map(CallerBranch::Function))
+            .collect::<syn::Result<_>>()?;
         branches.push(CallerBranch::Default(DefaultBranch));
 
         Ok(parse_quote!(
@@ -178,24 +179,30 @@ struct FunctionCallBranch {
     result_expr: syn::Expr
 }
 
-impl From<&'_ FnIR> for FunctionCallBranch {
-    fn from(func: &'_ FnIR) -> Self {
-        Self {
+impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for FunctionCallBranch {
+    type Error = syn::Error;
+
+    fn try_from(value: (&'_ ModuleImplIR, &'_ FnIR)) -> Result<Self, Self::Error> {
+        let (module, func) = value;
+        Ok(Self {
             function_name: func.name_str(),
             arrow_token: Default::default(),
             brace_token: Default::default(),
-            call_stmt: Self::call_stmt(func),
+            call_stmt: Self::call_stmt(module, func)?,
             result_expr: utils::expr::parse_bytes(&utils::ident::result())
-        }
+        })
     }
 }
 
 impl<'a> FunctionCallBranch {
-    fn call_stmt(func: &'a FnIR) -> syn::Stmt {
+    fn call_stmt(module: &'a ModuleImplIR, func: &'a FnIR) -> syn::Result<syn::Stmt> {
         let result_ident = utils::ident::result();
         let function_ident = func.execute_name();
         let contract_env_ident = utils::ident::contract_env();
-        parse_quote!(let #result_ident =  #function_ident(#contract_env_ident);)
+        let exec_parts_ident = module.exec_parts_mod_ident()?;
+        Ok(
+            parse_quote!(let #result_ident = #exec_parts_ident::#function_ident(#contract_env_ident);)
+        )
     }
 }
 
