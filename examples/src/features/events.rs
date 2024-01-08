@@ -30,7 +30,7 @@ mod tests {
         let test_env = odra::test_env();
         let party_contract = PartyContractDeployer::init(&test_env);
         test_env.emitted_event(
-            &party_contract.address,
+            &party_contract.address(),
             &PartyStarted {
                 caller: test_env.get_account(0),
                 block_time: 0
