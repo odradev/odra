@@ -2,6 +2,7 @@ use crate::prelude::*;
 use crate::{CLTyped, FromBytes, OdraError, ToBytes, UnwrapOrRevert};
 
 use crate::contract_env::ContractEnv;
+use crate::module::ModuleComponent;
 
 pub struct Variable<T> {
     env: Rc<ContractEnv>,
@@ -15,8 +16,8 @@ impl<T> Variable<T> {
     }
 }
 
-impl<T> Variable<T> {
-    pub const fn new(env: Rc<ContractEnv>, index: u8) -> Self {
+impl<T> ModuleComponent for Variable<T> {
+    fn instance(env: Rc<ContractEnv>, index: u8) -> Self {
         Self {
             env,
             phantom: core::marker::PhantomData,
@@ -77,11 +78,5 @@ impl<V: ToBytes + FromBytes + CLTyped + OverflowingSub + Default> Variable<V> {
             .overflowing_sub(value)
             .unwrap_or_revert(&self.env());
         self.set(new_value);
-    }
-}
-
-impl<T> crate::contract_def::HasEvents for Variable<T> {
-    fn events() -> Vec<crate::contract_def::Event> {
-        vec![]
     }
 }

@@ -5,7 +5,7 @@ use odra::{Address, Bytes, Module, U256};
 
 /// The ERC1155 receiver implementation.
 #[odra::module(events = [SingleReceived, BatchReceived])]
-pub struct Erc1155Receiver {}
+pub struct Erc1155Receiver;
 
 #[odra::module]
 impl Erc1155Receiver {

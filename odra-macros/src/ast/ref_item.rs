@@ -22,8 +22,8 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefStructItem {
         let ty_address = utils::ty::address();
         let ty_contract_env = utils::ty::contract_env();
         let named_fields: syn::FieldsNamed = parse_quote!({
-            pub #env: Rc<#ty_contract_env>,
-            pub #address: #ty_address,
+            #env: Rc<#ty_contract_env>,
+            #address: #ty_address,
         });
 
         Ok(Self {
@@ -107,7 +107,7 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefImplItem {
             new_fn: NewFnItem::new(),
             address_fn: AddressFnItem::new(),
             functions: module
-                .functions()
+                .functions()?
                 .iter()
                 .map(ref_utils::contract_function_item)
                 .collect()
@@ -133,8 +133,8 @@ mod ref_item_tests {
         let module = test_utils::mock::module_impl();
         let expected = quote! {
             pub struct Erc20ContractRef {
-                pub env: Rc<odra::ContractEnv>,
-                pub address: odra::Address,
+                env: Rc<odra::ContractEnv>,
+                address: odra::Address,
             }
 
             impl Erc20ContractRef {
@@ -142,7 +142,6 @@ mod ref_item_tests {
                     Self { env, address }
                 }
 
-                // TODO: this means "address", can't be entrypoint name.
                 pub fn address(&self) -> &odra::Address {
                     &self.address
                 }
@@ -230,8 +229,8 @@ mod ref_item_tests {
         let module = test_utils::mock::module_trait_impl();
         let expected = quote! {
             pub struct Erc20ContractRef {
-                pub env: Rc<odra::ContractEnv>,
-                pub address: odra::Address,
+                env: Rc<odra::ContractEnv>,
+                address: odra::Address,
             }
 
             impl Erc20ContractRef {
@@ -239,7 +238,6 @@ mod ref_item_tests {
                     Self { env, address }
                 }
 
-                // TODO: this means "address", can't be entrypoint name.
                 pub fn address(&self) -> &odra::Address {
                     &self.address
                 }
@@ -263,6 +261,99 @@ mod ref_item_tests {
                             self.address,
                             odra::CallDef::new(
                                 String::from("pay_to_mint"),
+                                {
+                                    let mut named_args = odra::RuntimeArgs::new();
+                                    named_args
+                                },
+                            ),
+                        )
+                }
+            }
+        };
+        let actual = RefItem::try_from(&module).unwrap();
+        test_utils::assert_eq(actual, expected);
+    }
+
+    #[test]
+    fn contract_ref_delegate() {
+        let module = test_utils::mock::module_delegation();
+        let expected = quote! {
+            pub struct Erc20ContractRef {
+                env: Rc<odra::ContractEnv>,
+                address: odra::Address,
+            }
+
+            impl Erc20ContractRef {
+                pub fn new(env: Rc<odra::ContractEnv>, address: odra::Address) -> Self {
+                    Self { env, address }
+                }
+
+                pub fn address(&self) -> &odra::Address {
+                    &self.address
+                }
+
+                pub fn total_supply(&self) -> U256 {
+                    self.env.call_contract(
+                        self.address,
+                        odra::CallDef::new(
+                            String::from("total_supply"),
+                            {
+                                let mut named_args = odra::RuntimeArgs::new();
+                                named_args
+                            }
+                        ),
+                    )
+                }
+
+                pub fn get_owner(&self) -> Address {
+                    self.env
+                        .call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                String::from("get_owner"),
+                                {
+                                    let mut named_args = odra::RuntimeArgs::new();
+                                    named_args
+                                },
+                            ),
+                        )
+                }
+
+                pub fn set_owner(&mut self, new_owner: Address) {
+                    self.env
+                        .call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                String::from("set_owner"),
+                                {
+                                    let mut named_args = odra::RuntimeArgs::new();
+                                    let _ = named_args.insert("new_owner", new_owner);
+                                    named_args
+                                },
+                            ),
+                        )
+                }
+
+                pub fn name(&self) -> String {
+                    self.env
+                        .call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                String::from("name"),
+                                {
+                                    let mut named_args = odra::RuntimeArgs::new();
+                                    named_args
+                                },
+                            ),
+                        )
+                }
+
+                pub fn symbol(&self) -> String {
+                    self.env
+                        .call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                String::from("symbol"),
                                 {
                                     let mut named_args = odra::RuntimeArgs::new();
                                     named_args

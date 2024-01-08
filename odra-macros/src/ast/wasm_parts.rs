@@ -49,7 +49,7 @@ impl TryFrom<&'_ ModuleImplIR> for WasmPartsModuleItem {
             entry_points_fn: module.try_into()?,
             call_fn: module.try_into()?,
             entry_points: module
-                .functions()
+                .functions()?
                 .iter()
                 .map(|f| (module, f))
                 .map(TryInto::try_into)
@@ -87,7 +87,7 @@ impl TryFrom<&'_ ModuleImplIR> for EntryPointsFnItem {
             braces: Default::default(),
             var_declaration: parse_quote!(let mut #ident_entry_points = #expr_entry_points;),
             items: module
-                .functions()
+                .functions()?
                 .iter()
                 .map(TryInto::try_into)
                 .collect::<Result<Vec<_>, _>>()?,
@@ -384,7 +384,7 @@ mod test {
 
                 #[no_mangle]
                 fn airdrop() {
-                    execute_airdrop(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    __erc20_exec_parts::execute_airdrop(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
             }
         };
@@ -453,6 +453,143 @@ mod test {
                 #[no_mangle]
                 fn pay_to_mint() {
                     __erc20_exec_parts::execute_pay_to_mint(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                }
+            }
+        };
+
+        test_utils::assert_eq(actual, expected);
+    }
+
+    #[test]
+    fn test_delegate() {
+        let module = test_utils::mock::module_delegation();
+        let actual = WasmPartsModuleItem::try_from(&module).unwrap();
+
+        let expected = quote::quote! {
+            #[cfg(target_arch = "wasm32")]
+            #[cfg(odra_module = "Erc20")]
+            mod __erc20_wasm_parts {
+                use super::*;
+                use odra::prelude::*;
+
+                #[inline]
+                fn entry_points() -> odra::casper_types::EntryPoints {
+                    let mut entry_points = odra::casper_types::EntryPoints::new();
+                    entry_points.add_entry_point(odra::casper_types::EntryPoint::new(
+                        "total_supply",
+                        vec![],
+                        <U256 as odra::casper_types::CLTyped>::cl_type(),
+                        odra::casper_types::EntryPointAccess::Public,
+                        odra::casper_types::EntryPointType::Contract
+                    ));
+                    entry_points
+                        .add_entry_point(
+                            odra::casper_types::EntryPoint::new(
+                                "get_owner",
+                                vec![],
+                                <Address as odra::casper_types::CLTyped>::cl_type(),
+                                odra::casper_types::EntryPointAccess::Public,
+                                odra::casper_types::EntryPointType::Contract,
+                            ),
+                        );
+                    entry_points
+                         .add_entry_point(
+                             odra::casper_types::EntryPoint::new(
+                                "set_owner",
+                                vec![
+                                    odra::casper_types::Parameter::new("new_owner", < Address as
+                                    odra::casper_types::CLTyped > ::cl_type())
+                                ],
+                                <() as odra::casper_types::CLTyped>::cl_type(),
+                                odra::casper_types::EntryPointAccess::Public,
+                                odra::casper_types::EntryPointType::Contract,
+                            ),
+                        );
+                    entry_points
+                        .add_entry_point(
+                            odra::casper_types::EntryPoint::new(
+                                "name",
+                                vec![],
+                                <String as odra::casper_types::CLTyped>::cl_type(),
+                                odra::casper_types::EntryPointAccess::Public,
+                                odra::casper_types::EntryPointType::Contract,
+                            ),
+                        );
+                    entry_points
+                        .add_entry_point(
+                            odra::casper_types::EntryPoint::new(
+                                "symbol",
+                                vec![],
+                                <String as odra::casper_types::CLTyped>::cl_type(),
+                                odra::casper_types::EntryPointAccess::Public,
+                                odra::casper_types::EntryPointType::Contract,
+                            ),
+                        );
+                    entry_points
+                }
+
+                #[no_mangle]
+                fn call() {
+                    let schemas = odra::casper_event_standard::Schemas(
+                        <Erc20 as odra::contract_def::HasEvents>::event_schemas()
+                    );
+                    let named_args = Option::<odra::RuntimeArgs>::None;
+                    odra::odra_casper_wasm_env::host_functions::install_contract(
+                        entry_points(),
+                        schemas,
+                        named_args
+                    );
+                }
+
+                #[no_mangle]
+                fn total_supply() {
+                    let result = __erc20_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
+                        odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
+                            odra::casper_types::CLValue::from_t(result)
+                        )
+                    );
+                }
+
+                #[no_mangle]
+                fn get_owner() {
+                    let result = __erc20_exec_parts::execute_get_owner(
+                        odra::odra_casper_wasm_env::WasmContractEnv::new_env(),
+                    );
+                    odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
+                        odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
+                            odra::casper_types::CLValue::from_t(result),
+                        ),
+                    );
+                }
+
+                #[no_mangle]
+                fn set_owner() {
+                    __erc20_exec_parts::execute_set_owner(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                }
+
+                #[no_mangle]
+                fn name() {
+                    let result = __erc20_exec_parts::execute_name(
+                        odra::odra_casper_wasm_env::WasmContractEnv::new_env(),
+                    );
+                    odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
+                        odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
+                            odra::casper_types::CLValue::from_t(result),
+                        ),
+                    );
+                }
+
+                #[no_mangle]
+                fn symbol() {
+                    let result = __erc20_exec_parts::execute_symbol(
+                        odra::odra_casper_wasm_env::WasmContractEnv::new_env(),
+                    );
+                    odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
+                        odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
+                            odra::casper_types::CLValue::from_t(result),
+                        ),
+                    );
                 }
             }
         };

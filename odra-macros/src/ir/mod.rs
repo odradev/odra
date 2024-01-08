@@ -1,15 +1,17 @@
 use std::collections::HashSet;
 
+use crate::ir::delegate::Delegate;
 use crate::utils;
 use config::ConfigItem;
 use proc_macro2::Ident;
 use quote::{format_ident, ToTokens};
-use syn::{parse_quote, spanned::Spanned, Data};
+use syn::{parse_quote, Data, ImplItem};
 
 use self::attr::OdraAttribute;
 
 mod attr;
 mod config;
+pub mod delegate;
 
 const CONSTRUCTOR_NAME: &str = "init";
 
@@ -69,10 +71,6 @@ impl ModuleStructIR {
             .filter(|(i, _)| i != &utils::ident::env())
             .collect::<Vec<_>>();
 
-        for (_, ty) in &fields {
-            Self::validate_ty(ty)?;
-        }
-
         fields
             .iter()
             .enumerate()
@@ -80,7 +78,7 @@ impl ModuleStructIR {
                 Ok(EnumeratedTypedField {
                     idx: idx as u8,
                     ident: ident.clone(),
-                    ty: utils::syn::clear_generics(ty)?
+                    ty: ty.clone()
                 })
             })
             .collect()
@@ -125,30 +123,6 @@ impl ModuleStructIR {
         fields.sort();
 
         Ok(fields.into_iter().map(|i| i.0).collect())
-    }
-
-    fn validate_ty(ty: &syn::Type) -> Result<(), syn::Error> {
-        let non_generic_ty = utils::syn::clear_generics(ty)?;
-
-        // both odra::Variable and Variable (Mapping, ModuleWrapper) are valid.
-        let valid_types = vec![
-            utils::ty::module_wrapper(),
-            utils::ty::variable(),
-            utils::ty::mapping(),
-        ]
-        .iter()
-        .map(|ty| utils::syn::last_segment_ident(ty).map(|i| vec![ty.clone(), parse_quote!(#i)]))
-        .collect::<Result<Vec<_>, _>>()?;
-        let valid_types = valid_types.into_iter().flatten().collect::<Vec<_>>();
-
-        if valid_types
-            .iter()
-            .any(|t| utils::string::eq(t, &non_generic_ty))
-        {
-            return Ok(());
-        }
-
-        Err(syn::Error::new(ty.span(), "Invalid module type"))
     }
 }
 
@@ -259,7 +233,7 @@ impl ModuleImplIR {
         ))
     }
 
-    pub fn exec_parts_mod_ident(&self) -> Result<syn::Ident, syn::Error> {
+    pub fn exec_parts_mod_ident(&self) -> syn::Result<syn::Ident> {
         let module_ident = self.snake_cased_module_ident()?;
         Ok(Ident::new(
             &format!("__{}_exec_parts", module_ident),
@@ -267,15 +241,17 @@ impl ModuleImplIR {
         ))
     }
 
-    pub fn host_functions(&self) -> Vec<FnIR> {
-        self.functions()
+    pub fn host_functions(&self) -> syn::Result<Vec<FnIR>> {
+        Ok(self
+            .functions()?
             .into_iter()
             .filter(|f| f.name_str() != CONSTRUCTOR_NAME)
-            .collect()
+            .collect())
     }
 
     pub fn constructor(&self) -> Option<FnIR> {
         self.functions()
+            .unwrap_or_default()
             .into_iter()
             .find(|f| f.name_str() == CONSTRUCTOR_NAME)
     }
@@ -291,7 +267,7 @@ impl ModuleImplIR {
             .unwrap_or_default()
     }
 
-    pub fn functions(&self) -> Vec<FnIR> {
+    pub fn functions(&self) -> syn::Result<Vec<FnIR>> {
         match self {
             ModuleImplIR::Impl(ir) => ir.functions(),
             ModuleImplIR::Trait(ir) => ir.functions()
@@ -304,24 +280,50 @@ try_parse!(syn::ItemImpl => ModuleIR);
 impl ModuleIR {
     fn self_code(&self) -> syn::ItemImpl {
         let mut code = self.code.clone();
+        // include delegated functions
+        code.items.extend(
+            self.delegated_functions()
+                .unwrap_or_default()
+                .into_iter()
+                .map(syn::ImplItem::Fn)
+        );
+        // remove odra attributes
         code.items.iter_mut().for_each(|item| {
             if let syn::ImplItem::Fn(func) = item {
                 func.attrs = attr::other_attributes(func.attrs.clone());
             }
         });
+        // remove inner odra macros
+        code.items
+            .retain(|item| !matches!(item, syn::ImplItem::Macro(_)));
         code
     }
 
-    fn functions(&self) -> Vec<FnIR> {
+    fn functions(&self) -> syn::Result<Vec<FnIR>> {
         self.code
             .items
-            .iter()
+            .clone()
+            .into_iter()
             .filter_map(|item| match item {
-                syn::ImplItem::Fn(func) => Some(FnIR::from(func.clone())),
+                syn::ImplItem::Fn(func) => Some(func),
                 _ => None
             })
-            .filter(|f| self.is_trait_impl() || f.is_pub())
-            .collect::<Vec<_>>()
+            .chain(self.delegated_functions().unwrap_or_default())
+            .map(FnIR::try_from)
+            .filter(|r| self.is_trait_impl() || r.as_ref().map(FnIR::is_pub).unwrap_or(true))
+            .collect::<Result<Vec<_>, _>>()
+    }
+
+    fn delegated_functions(&self) -> syn::Result<Vec<syn::ImplItemFn>> {
+        let macro_item = self.code.items.iter().find_map(|item| match item {
+            ImplItem::Macro(m) => Some(m),
+            _ => None
+        });
+        if let Some(item) = macro_item {
+            return Ok(syn::parse2::<Delegate>(item.mac.tokens.clone())?.functions);
+        }
+
+        Ok(vec![])
     }
 
     fn is_trait_impl(&self) -> bool {
@@ -346,15 +348,15 @@ impl ModuleTraitIR {
         self.code.ident.clone()
     }
 
-    fn functions(&self) -> Vec<FnIR> {
+    fn functions(&self) -> syn::Result<Vec<FnIR>> {
         self.code
             .items
             .iter()
             .filter_map(|item| match item {
-                syn::TraitItem::Fn(func) => Some(FnIR::from(func.clone())),
+                syn::TraitItem::Fn(func) => Some(FnIR::try_from(func.clone())),
                 _ => None
             })
-            .collect::<Vec<_>>()
+            .collect()
     }
 }
 
@@ -363,15 +365,35 @@ pub enum FnIR {
     Def(FnTraitIR)
 }
 
-impl From<syn::TraitItemFn> for FnIR {
-    fn from(code: syn::TraitItemFn) -> Self {
-        Self::Def(FnTraitIR::new(code))
+const PROTECTED_FUNCTIONS: [&str; 3] = ["new", "env", "address"];
+
+fn validate_fn_name<T: ToTokens>(name: &str, ctx: T) -> Result<(), syn::Error> {
+    if PROTECTED_FUNCTIONS.contains(&name) {
+        return Err(syn::Error::new_spanned(
+            ctx,
+            format!("Entrypoint name `{}` is reserved", name)
+        ));
+    }
+    Ok(())
+}
+
+impl TryFrom<syn::TraitItemFn> for FnIR {
+    type Error = syn::Error;
+
+    fn try_from(code: syn::TraitItemFn) -> Result<Self, Self::Error> {
+        let fn_name = utils::syn::function_name(&code.sig);
+        validate_fn_name(&fn_name, &code)?;
+        Ok(Self::Def(FnTraitIR::new(code)))
     }
 }
 
-impl From<syn::ImplItemFn> for FnIR {
-    fn from(code: syn::ImplItemFn) -> Self {
-        Self::Impl(FnImplIR::new(code))
+impl TryFrom<syn::ImplItemFn> for FnIR {
+    type Error = syn::Error;
+
+    fn try_from(code: syn::ImplItemFn) -> Result<Self, Self::Error> {
+        let fn_name = utils::syn::function_name(&code.sig);
+        validate_fn_name(&fn_name, &code)?;
+        Ok(Self::Impl(FnImplIR::new(code)))
     }
 }
 

@@ -122,11 +122,12 @@ impl Erc721Base {
     ) {
         self.transfer(from, to, token_id);
         if to.is_contract() {
-            let response = Erc721ReceiverContractRef {
-                env: self.env(),
-                address: *to
-            }
-            .on_erc721_received(self.env().caller(), *from, *token_id, data.clone());
+            let response = Erc721ReceiverContractRef::new(self.env(), *to).on_erc721_received(
+                self.env().caller(),
+                *from,
+                *token_id,
+                data.clone()
+            );
 
             if !response {
                 self.env().revert(TransferFailed)

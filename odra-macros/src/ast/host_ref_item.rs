@@ -18,8 +18,6 @@ impl TryFrom<&'_ ModuleImplIR> for HostRefStructItem {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        let vis_pub = utils::syn::visibility_pub();
-
         let address = utils::ident::address();
         let env = utils::ident::env();
         let attached_value = utils::ident::attached_value();
@@ -29,12 +27,12 @@ impl TryFrom<&'_ ModuleImplIR> for HostRefStructItem {
         let ty_u512 = utils::ty::u512();
 
         let named_fields: syn::FieldsNamed = parse_quote!({
-            #vis_pub #address: #ty_address,
-            #vis_pub #env: #ty_host_env,
-            #vis_pub #attached_value: #ty_u512
+            #address: #ty_address,
+            #env: #ty_host_env,
+            #attached_value: #ty_u512
         });
         Ok(Self {
-            vis: vis_pub,
+            vis: utils::syn::visibility_pub(),
             struct_token: Default::default(),
             ident: module.host_ref_ident()?,
             fields: named_fields.into()
@@ -49,7 +47,13 @@ struct HostRefImplItem {
     #[syn(braced)]
     brace_token: syn::token::Brace,
     #[syn(in = brace_token)]
+    new_fn: NewFnItem,
+    #[syn(in = brace_token)]
     with_tokens_fn: WithTokensFnItem,
+    #[syn(in = brace_token)]
+    address_fn: AddressFnItem,
+    #[syn(in = brace_token)]
+    env_fn: EnvFnItem,
     #[syn(in = brace_token)]
     get_event_fn: GetEventFnItem,
     #[syn(in = brace_token)]
@@ -67,11 +71,14 @@ impl TryFrom<&'_ ModuleImplIR> for HostRefImplItem {
             impl_token: Default::default(),
             ref_ident: module.host_ref_ident()?,
             brace_token: Default::default(),
+            new_fn: NewFnItem,
             with_tokens_fn: WithTokensFnItem,
+            address_fn: AddressFnItem,
+            env_fn: EnvFnItem,
             get_event_fn: GetEventFnItem,
             last_call_fn: LastCallFnItem,
             functions: module
-                .host_functions()
+                .host_functions()?
                 .iter()
                 .flat_map(|f| {
                     vec![
@@ -81,6 +88,30 @@ impl TryFrom<&'_ ModuleImplIR> for HostRefImplItem {
                 })
                 .collect()
         })
+    }
+}
+
+struct NewFnItem;
+
+impl ToTokens for NewFnItem {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let ty_address = utils::ty::address();
+        let ty_env = utils::ty::host_env();
+        let env = utils::ident::env();
+        let address = utils::ident::address();
+        let attached_value = utils::ident::attached_value();
+        let default = utils::expr::default();
+        let ty_self = utils::ty::_Self();
+
+        tokens.extend(quote!(
+            pub fn new(#address: #ty_address, #env: #ty_env) -> #ty_self {
+                #ty_self {
+                    #address,
+                    #env,
+                    #attached_value: #default
+                }
+            }
+        ));
     }
 }
 
@@ -104,6 +135,42 @@ impl ToTokens for WithTokensFnItem {
                     #env: #m_env.clone(),
                     #attached_value: tokens
                 }
+            }
+        ));
+    }
+}
+
+struct AddressFnItem;
+
+impl ToTokens for AddressFnItem {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let vis = utils::syn::visibility_pub();
+        let m_address = utils::member::address();
+        let ident = utils::ident::address();
+        let ty_address_ref = utils::ty::address_ref();
+        let ty_self_ref = utils::ty::self_ref();
+
+        tokens.extend(quote!(
+            #vis fn #ident(#ty_self_ref) -> #ty_address_ref {
+                &#m_address
+            }
+        ));
+    }
+}
+
+struct EnvFnItem;
+
+impl ToTokens for EnvFnItem {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let vis = utils::syn::visibility_pub();
+        let m_env = utils::member::env();
+        let ident = utils::ident::env();
+        let ret_ty = utils::ty::host_env();
+        let ty_self_ref = utils::ty::self_ref();
+
+        tokens.extend(quote!(
+            #vis fn #ident(#ty_self_ref) -> &#ret_ty {
+                &#m_env
             }
         ));
     }
@@ -164,18 +231,34 @@ mod ref_item_tests {
         let module = test_utils::mock::module_impl();
         let expected = quote! {
             pub struct Erc20HostRef {
-                pub address: odra::Address,
-                pub env: odra::HostEnv,
-                pub attached_value: odra::U512
+                address: odra::Address,
+                env: odra::HostEnv,
+                attached_value: odra::U512
             }
 
             impl Erc20HostRef {
+                pub fn new(address: odra::Address, env: odra::HostEnv) -> Self {
+                    Self {
+                        address,
+                        env,
+                        attached_value: Default::default()
+                    }
+                }
+
                 pub fn with_tokens(&self, tokens: odra::U512) -> Self {
                     Self {
                         address: self.address,
                         env: self.env.clone(),
                         attached_value: tokens
                     }
+                }
+
+                pub fn address(&self) -> &odra::Address {
+                    &self.address
+                }
+
+                pub fn env(&self) -> &odra::HostEnv {
+                    &self.env
                 }
 
                 pub fn get_event<T>(&self, index: i32) -> Result<T, odra::event::EventError>
@@ -291,18 +374,34 @@ mod ref_item_tests {
         let module = test_utils::mock::module_trait_impl();
         let expected = quote! {
             pub struct Erc20HostRef {
-                pub address: odra::Address,
-                pub env: odra::HostEnv,
-                pub attached_value: odra::U512
+                address: odra::Address,
+                env: odra::HostEnv,
+                attached_value: odra::U512
             }
 
             impl Erc20HostRef {
+                pub fn new(address: odra::Address, env: odra::HostEnv) -> Self {
+                    Self {
+                        address,
+                        env,
+                        attached_value: Default::default()
+                    }
+                }
+
                 pub fn with_tokens(&self, tokens: odra::U512) -> Self {
                     Self {
                         address: self.address,
                         env: self.env.clone(),
                         attached_value: tokens
                     }
+                }
+
+                pub fn address(&self) -> &odra::Address {
+                    &self.address
+                }
+
+                pub fn env(&self) -> &odra::HostEnv {
+                    &self.env
                 }
 
                 pub fn get_event<T>(&self, index: i32) -> Result<T, odra::event::EventError>
@@ -357,6 +456,166 @@ mod ref_item_tests {
                 pub fn pay_to_mint(&mut self) {
                     self.try_pay_to_mint().unwrap()
                 }
+            }
+        };
+        let actual = HostRefItem::try_from(&module).unwrap();
+        test_utils::assert_eq(actual, expected);
+    }
+
+    #[test]
+    fn host_ref_delegation() {
+        let module = test_utils::mock::module_delegation();
+        let expected = quote! {
+            pub struct Erc20HostRef {
+                address: odra::Address,
+                env: odra::HostEnv,
+                attached_value: odra::U512
+            }
+
+            impl Erc20HostRef {
+                pub fn new(address: odra::Address, env: odra::HostEnv) -> Self {
+                    Self {
+                        address,
+                        env,
+                        attached_value: Default::default()
+                    }
+                }
+
+                pub fn with_tokens(&self, tokens: odra::U512) -> Self {
+                    Self {
+                        address: self.address,
+                        env: self.env.clone(),
+                        attached_value: tokens
+                    }
+                }
+
+                pub fn address(&self) -> &odra::Address {
+                    &self.address
+                }
+
+                pub fn env(&self) -> &odra::HostEnv {
+                    &self.env
+                }
+
+                pub fn get_event<T>(&self, index: i32) -> Result<T, odra::event::EventError>
+                where
+                    T: odra::FromBytes + odra::casper_event_standard::EventInstance,
+                {
+                    self.env.get_event(&self.address, index)
+                }
+
+                pub fn last_call(&self) -> odra::ContractCallResult {
+                    self.env.last_call().contract_last_call(self.address)
+                }
+
+                pub fn try_total_supply(&self) -> Result<U256, odra::OdraError> {
+                    self.env.call_contract(
+                        self.address,
+                        odra::CallDef::new(
+                            String::from("total_supply"),
+                            {
+                                let mut named_args = odra::RuntimeArgs::new();
+                                if self.attached_value > odra::U512::zero() {
+                                    let _ = named_args.insert("amount", self.attached_value);
+                                }
+                                named_args
+                            }
+                        ).with_amount(self.attached_value),
+                    )
+                }
+
+                pub fn total_supply(&self) -> U256 {
+                    self.try_total_supply().unwrap()
+                }
+
+                pub fn try_get_owner(&self) -> Result<Address, odra::OdraError> {
+                    self.env
+                        .call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                    String::from("get_owner"),
+                                    {
+                                        let mut named_args = odra::RuntimeArgs::new();
+                                        if self.attached_value > odra::U512::zero() {
+                                            let _ = named_args.insert("amount", self.attached_value);
+                                        }
+                                        named_args
+                                    },
+                                )
+                                .with_amount(self.attached_value),
+                        )
+                }
+
+                pub fn get_owner(&self) -> Address {
+                    self.try_get_owner().unwrap()
+                }
+
+                pub fn try_set_owner(&mut self, new_owner: Address) -> Result<(), odra::OdraError> {
+                    self.env
+                        .call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                    String::from("set_owner"),
+                                    {
+                                        let mut named_args = odra::RuntimeArgs::new();
+                                        if self.attached_value > odra::U512::zero() {
+                                            let _ = named_args.insert("amount", self.attached_value);
+                                        }
+                                        let _ = named_args.insert("new_owner", new_owner);
+                                        named_args
+                                    },
+                                )
+                                .with_amount(self.attached_value),
+                        )
+                }
+
+                pub fn set_owner(&mut self, new_owner: Address) {
+                    self.try_set_owner(new_owner).unwrap()
+                }
+
+                pub fn try_name(&self) -> Result<String, odra::OdraError> {
+                    self.env
+                        .call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                    String::from("name"),
+                                    {
+                                        let mut named_args = odra::RuntimeArgs::new();
+                                        if self.attached_value > odra::U512::zero() {
+                                            let _ = named_args.insert("amount", self.attached_value);
+                                        }
+                                        named_args
+                                    },
+                                )
+                                .with_amount(self.attached_value),
+                        )
+                }
+
+                pub fn name(&self) -> String {
+                    self.try_name().unwrap()
+                }
+
+                pub fn try_symbol(&self) -> Result<String, odra::OdraError> {
+                    self.env
+                        .call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                    String::from("symbol"),
+                                    {
+                                        let mut named_args = odra::RuntimeArgs::new();
+                                        if self.attached_value > odra::U512::zero() {
+                                            let _ = named_args.insert("amount", self.attached_value);
+                                        }
+                                        named_args
+                                    },
+                                )
+                                .with_amount(self.attached_value),
+                        )
+                }
+
+                pub fn symbol(&self) -> String {
+                    self.try_symbol().unwrap()
+                 }
             }
         };
         let actual = HostRefItem::try_from(&module).unwrap();

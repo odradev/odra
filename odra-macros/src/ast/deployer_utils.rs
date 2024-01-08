@@ -71,7 +71,7 @@ impl EntrypointCallerExpr {
         let ty_caller = utils::ty::entry_points_caller();
 
         let mut branches: Vec<CallerBranch> = module
-            .functions()
+            .functions()?
             .iter()
             .map(|f| FunctionCallBranch::try_from((module, f)))
             .map(|r| r.map(CallerBranch::Function))
@@ -210,6 +210,8 @@ struct DefaultBranch;
 
 impl ToTokens for DefaultBranch {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        tokens.extend(quote::quote!(_ => panic!("Unknown method")))
+        tokens.extend(quote::quote!(name => Err(odra::OdraError::VmError(
+            odra::VmError::NoSuchMethod(odra::prelude::String::from(name))
+        ))))
     }
 }

@@ -146,7 +146,7 @@ mod tests {
     use crate::erc721_receiver::Erc721ReceiverDeployer;
     use crate::erc721_token::errors::Error::TokenAlreadyExists;
     use odra::prelude::*;
-    use odra::{Address, HostEnv, OdraAddress, U256};
+    use odra::{Address, HostEnv, OdraAddress, OdraError, VmError, U256};
 
     const NAME: &str = "PlascoinNFT";
     const SYMBOL: &str = "PLSNFT";
@@ -465,7 +465,7 @@ mod tests {
         // When deploy a contract with the initial supply.
         let mut erc721_env = setup();
 
-        assert!(erc721_env.token.address.is_contract());
+        assert!(erc721_env.token.address().is_contract());
         assert!(!erc721_env.alice.is_contract());
 
         // And mint a token to Alice.
@@ -487,7 +487,7 @@ mod tests {
         // When deploy a contract with the initial supply
         let mut erc721_env = setup();
         // And another contract which does not support nfts
-        let _erc20 = Erc20Deployer::init(
+        let erc20 = Erc20Deployer::init(
             &erc721_env.env,
             "PLS".to_string(),
             "PLASCOIN".to_string(),
@@ -501,15 +501,16 @@ mod tests {
         // Then safe transfer the token to the contract which does not support nfts throws an error.
         erc721_env.env.set_caller(erc721_env.alice);
 
-        // TODO: Enable this after fixing mockvm
-        // assert_eq!(
-        // OdraError::VmError(NoSuchMethod("on_erc721_received".to_string())),
-        //         erc721_env.token.try_safe_transfer_from(
-        //             erc721_env.alice,
-        //             erc20.address,
-        //             U256::from(1)
-        //         ).unwrap_err()
-        // );
+        assert_eq!(
+            Err(OdraError::VmError(VmError::NoSuchMethod(
+                "on_erc721_received".to_string()
+            ))),
+            erc721_env.token.try_safe_transfer_from(
+                erc721_env.alice,
+                *erc20.address(),
+                U256::from(1)
+            )
+        );
     }
 
     #[test]
@@ -526,13 +527,16 @@ mod tests {
         erc721_env.env.set_caller(erc721_env.alice);
         erc721_env
             .token
-            .safe_transfer_from(erc721_env.alice, receiver.address, U256::from(1));
+            .safe_transfer_from(erc721_env.alice, *receiver.address(), U256::from(1));
 
         // Then the owner of the token is the contract
-        assert_eq!(erc721_env.token.owner_of(U256::from(1)), receiver.address);
+        assert_eq!(
+            erc721_env.token.owner_of(U256::from(1)),
+            *receiver.address()
+        );
         // And the receiver contract is aware of the transfer
         erc721_env.env.emitted_event(
-            &receiver.address,
+            receiver.address(),
             &Received {
                 operator: Some(erc721_env.alice),
                 from: Some(erc721_env.alice),
@@ -556,16 +560,19 @@ mod tests {
         erc721_env.env.set_caller(erc721_env.alice);
         erc721_env.token.safe_transfer_from_with_data(
             erc721_env.alice,
-            receiver.address,
+            *receiver.address(),
             U256::from(1),
             b"data".to_vec().into()
         );
 
         // Then the owner of the token is the contract
-        assert_eq!(erc721_env.token.owner_of(U256::from(1)), receiver.address);
+        assert_eq!(
+            erc721_env.token.owner_of(U256::from(1)),
+            receiver.address().clone()
+        );
         // And the receiver contract is aware of the transfer
         erc721_env.env.emitted_event(
-            &receiver.address,
+            receiver.address(),
             &Received {
                 operator: Some(erc721_env.alice),
                 from: Some(erc721_env.alice),

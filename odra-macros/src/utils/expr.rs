@@ -12,12 +12,15 @@ pub fn u512_zero() -> syn::Expr {
 }
 
 pub fn parse_bytes(data_ident: &syn::Ident) -> syn::Expr {
-    parse_quote!(odra::ToBytes::to_bytes(&#data_ident).map(Into::into).unwrap())
+    let ty = super::ty::to_bytes();
+    let ty_err = super::ty::odra_error();
+    parse_quote!(#ty::to_bytes(&#data_ident).map(Into::into).map_err(|err| #ty_err::ExecutionError(err.into())))
 }
 
-pub fn new_type(ty: &syn::Type, env_ident: &syn::Ident, idx: u8) -> syn::Expr {
+pub fn module_component_instnace(ty: &syn::Type, env_ident: &syn::Ident, idx: u8) -> syn::Expr {
     let rc = rc_clone(env_ident);
-    parse_quote!(#ty::new(#rc, #idx))
+    let component = super::ty::module_component();
+    parse_quote!(<#ty as #component>::instance(#rc, #idx))
 }
 
 fn rc_clone(ident: &syn::Ident) -> syn::Expr {
@@ -160,6 +163,10 @@ pub fn none() -> syn::Expr {
 
 pub fn btree_from_iter(expr: &syn::Expr) -> syn::Expr {
     parse_quote!(odra::prelude::BTreeMap::from_iter(#expr))
+}
+
+pub fn default() -> syn::Expr {
+    parse_quote!(Default::default())
 }
 
 pub trait IntoExpr {

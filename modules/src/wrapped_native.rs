@@ -164,7 +164,7 @@ mod tests {
 
         // The events were emitted.
         assert!(env.emitted_event(
-            &token.address,
+            token.address(),
             &Transfer {
                 from: None,
                 to: Some(account),
@@ -173,7 +173,7 @@ mod tests {
         ));
 
         assert!(env.emitted_event(
-            &token.address,
+            token.address(),
             &Deposit {
                 account,
                 value: deposit_amount.into()
@@ -201,7 +201,7 @@ mod tests {
             (deposit_amount + deposit_amount).to_u256().unwrap()
         );
         // Then events were emitted.
-        assert!(env.event_names(&token.address).ends_with(
+        assert!(env.event_names(token.address()).ends_with(
             vec![
                 Transfer::name(),
                 Deposit::name(),
@@ -249,7 +249,7 @@ mod tests {
 
         // Then events were emitted.
         assert!(env.emitted_event(
-            &token.address,
+            token.address(),
             &Transfer {
                 from: Some(account),
                 to: None,
@@ -257,7 +257,7 @@ mod tests {
             }
         ));
         assert!(env.emitted_event(
-            &token.address,
+            token.address(),
             &Withdrawal {
                 account,
                 value: withdrawal_amount

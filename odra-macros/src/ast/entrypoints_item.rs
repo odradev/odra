@@ -55,9 +55,9 @@ impl TryFrom<&'_ ModuleImplIR> for EntrypointsFnItem {
     }
 }
 
-fn struct_entrypoints_expr(ir: &ModuleImplIR) -> Result<syn::Expr, syn::Error> {
+fn struct_entrypoints_expr(ir: &ModuleImplIR) -> syn::Result<syn::Expr> {
     let struct_entrypoints = ir
-        .functions()
+        .functions()?
         .iter()
         .map(|f| {
             let ident = f.name_str();
@@ -234,6 +234,68 @@ mod test {
                             ret: <() as odra::casper_types::CLTyped>::cl_type(),
                             ty: odra::contract_def::EntrypointType::Public,
                             attributes: vec![odra::contract_def::EntrypointAttribute::Payable]
+                        }
+                    ]
+                }
+            }
+        );
+        let actual = HasEntrypointsImplItem::try_from(&module).unwrap();
+        test_utils::assert_eq(actual, expected);
+    }
+
+    #[test]
+    fn test_delegated_entrypoints() {
+        let module = test_utils::mock::module_delegation();
+        let expected = quote!(
+            impl odra::contract_def::HasEntrypoints for Erc20 {
+                fn entrypoints() -> Vec<odra::contract_def::Entrypoint> {
+                    vec![
+                        odra::contract_def::Entrypoint {
+                            ident: String::from("total_supply"),
+                            args: vec![],
+                            is_mut: false,
+                            ret: <U256 as odra::casper_types::CLTyped>::cl_type(),
+                            ty: odra::contract_def::EntrypointType::Public,
+                            attributes: vec![]
+                        },
+                        odra::contract_def::Entrypoint {
+                            ident: String::from("get_owner"),
+                            args: vec![],
+                            is_mut: false,
+                            ret: <Address as odra::casper_types::CLTyped>::cl_type(),
+                            ty: odra::contract_def::EntrypointType::Public,
+                            attributes : vec![]
+                        },
+                        odra::contract_def::Entrypoint {
+                            ident: String::from("set_owner"),
+                            args: vec![
+                                odra::contract_def::Argument {
+                                    ident: String::from("new_owner"),
+                                    ty: <Address as odra::casper_types::CLTyped>::cl_type(),
+                                    is_ref: false,
+                                    is_slice: false
+                                }
+                            ],
+                            is_mut: true,
+                            ret: <() as odra::casper_types::CLTyped>::cl_type(),
+                            ty: odra::contract_def::EntrypointType::Public,
+                            attributes: vec![]
+                        },
+                        odra::contract_def::Entrypoint {
+                            ident: String::from("name"),
+                            args: vec![],
+                            is_mut: false,
+                            ret: <String as odra::casper_types::CLTyped >::cl_type(),
+                            ty: odra::contract_def::EntrypointType::Public,
+                            attributes : vec![]
+                        },
+                        odra::contract_def::Entrypoint {
+                            ident: String::from("symbol"),
+                            args: vec![],
+                            is_mut: false,
+                            ret: <String as odra::casper_types::CLTyped>::cl_type(),
+                            ty: odra::contract_def::EntrypointType::Public,
+                            attributes :vec![]
                         }
                     ]
                 }
