@@ -348,10 +348,7 @@ mod test {
         let renouncable_2_step_ref =
             RenounceableHostRef::new(*ownable_2_step.address(), env.clone());
         (
-            vec![
-                renouncable_ref,
-                renouncable_2_step_ref
-            ],
+            vec![renouncable_ref, renouncable_2_step_ref],
             env.get_account(0)
         )
     }
