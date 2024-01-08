@@ -67,7 +67,7 @@ mod test {
     #[test]
     fn minting_works() {
         let mut contract = setup();
-        let test_env = contract.env.clone();
+        let test_env = contract.env().clone();
         let (user1, user2, user3) = (
             test_env.get_account(0),
             test_env.get_account(1),
@@ -104,7 +104,7 @@ mod test {
     #[test]
     fn get_owner_works() {
         let mut contract = setup();
-        let test_env = contract.env.clone();
+        let test_env = contract.env().clone();
         let (owner, user2, user3) = (
             test_env.get_account(0),
             test_env.get_account(1),

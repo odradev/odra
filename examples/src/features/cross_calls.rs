@@ -36,7 +36,8 @@ mod tests {
     fn test_cross_calls() {
         let test_env = odra::test_env();
         let math_engine_contract = MathEngineDeployer::init(&test_env);
-        let cross_contract = CrossContractDeployer::init(&test_env, math_engine_contract.address);
+        let cross_contract =
+            CrossContractDeployer::init(&test_env, *math_engine_contract.address());
 
         assert_eq!(cross_contract.add_using_another(), 8);
     }

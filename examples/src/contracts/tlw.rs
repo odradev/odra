@@ -117,7 +117,7 @@ mod test {
     fn test_deposit() {
         // Given a new contract.
         let (contract, user_1, user_2) = setup();
-        let test_env = contract.env.clone();
+        let test_env = contract.env().clone();
 
         // Helper method for a single deposit.
         let single_deposit = |account: Address, deposit: U512| {
@@ -141,14 +141,14 @@ mod test {
 
         // Then two deposit event were emitted.
         test_env.emitted_event(
-            &contract.address,
+            &contract.address(),
             &Deposit {
                 address: user_1,
                 amount: user_1_deposit
             }
         );
         test_env.emitted_event(
-            &contract.address,
+            &contract.address(),
             &Deposit {
                 address: user_2,
                 amount: user_2_deposit
@@ -176,7 +176,7 @@ mod test {
     fn test_successful_withdrawal() {
         // Given a contract with the user's deposit.
         let (mut contract, user, _) = setup();
-        let test_env = contract.env.clone();
+        let test_env = contract.env().clone();
         let deposit_amount: U512 = 100.into();
         contract.with_tokens(deposit_amount).deposit();
 
@@ -202,14 +202,14 @@ mod test {
 
         // Then two Withdrawal events were emitted.
         test_env.emitted_event(
-            &contract.address,
+            &contract.address(),
             &Withdrawal {
                 address: user,
                 amount: first_withdrawal_amount
             }
         );
         test_env.emitted_event(
-            &contract.address,
+            &contract.address(),
             &Withdrawal {
                 address: user,
                 amount: second_withdrawal_amount
@@ -238,7 +238,7 @@ mod test {
         contract.with_tokens(deposit.into()).deposit();
 
         // When the user withdraws more tokens than has in the deposit, an error occurs.
-        contract.env.advance_block_time(ONE_DAY_IN_SECONDS + 1);
+        contract.env().advance_block_time(ONE_DAY_IN_SECONDS + 1);
         let withdrawal = deposit + 1;
         assert_eq!(
             contract.try_withdraw(withdrawal.into()).unwrap_err(),

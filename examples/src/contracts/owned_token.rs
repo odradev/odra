@@ -81,21 +81,21 @@ pub mod tests {
     #[test]
     fn init_works() {
         let token = setup();
-        let test_env = token.env.clone();
+        let test_env = token.env().clone();
         let owner = test_env.get_account(0);
         assert_eq!(token.symbol(), SYMBOL);
         assert_eq!(token.decimals(), DECIMALS);
         assert_eq!(token.total_supply(), INITIAL_SUPPLY.into());
         assert_eq!(token.balance_of(owner), INITIAL_SUPPLY.into());
         test_env.emitted_event(
-            &token.address,
+            &token.address(),
             &odra_modules::access::events::OwnershipTransferred {
                 previous_owner: None,
                 new_owner: Some(owner)
             }
         );
         test_env.emitted_event(
-            &token.address,
+            &token.address(),
             &odra_modules::erc20::events::Transfer {
                 from: None,
                 to: Some(owner),
@@ -107,7 +107,7 @@ pub mod tests {
     #[test]
     fn mint_works() {
         let mut token = setup();
-        let recipient = token.env.get_account(1);
+        let recipient = token.env().get_account(1);
         let amount = 10.into();
         token.mint(recipient, amount);
         assert_eq!(token.total_supply(), U256::from(INITIAL_SUPPLY) + amount);
@@ -117,7 +117,7 @@ pub mod tests {
     #[test]
     fn mint_error() {
         let mut token = setup();
-        let test_env = token.env.clone();
+        let test_env = token.env().clone();
         let recipient = test_env.get_account(1);
         let amount = 10.into();
         test_env.set_caller(recipient);
@@ -130,7 +130,7 @@ pub mod tests {
     #[test]
     fn change_ownership_works() {
         let mut token = setup();
-        let new_owner = token.env.get_account(1);
+        let new_owner = token.env().get_account(1);
         token.transfer_ownership(new_owner);
         assert_eq!(token.get_owner(), new_owner);
     }
@@ -138,7 +138,7 @@ pub mod tests {
     #[test]
     fn change_ownership_error() {
         let mut token = setup();
-        let test_env = token.env.clone();
+        let test_env = token.env().clone();
         let new_owner = test_env.get_account(1);
         test_env.set_caller(new_owner);
         assert_eq!(
