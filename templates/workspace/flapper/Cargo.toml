@@ -7,11 +7,11 @@ edition = "2021"
 odra = { path = "../../../odra/odra/odra", features = [], default-features = false }
 
 [[bin]]
-name = "build_contract"
+name = "flapper_build_contract"
 path = "bin/build_contract.rs"
 test = false
 
 [[bin]]
-name = "build_schema"
+name = "flapper_build_schema"
 path = "bin/build_schema.rs"
 test = false

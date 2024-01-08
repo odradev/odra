@@ -344,18 +344,13 @@ mod test {
         let env = odra::test_env();
         let ownable = OwnableDeployer::init(&env);
         let ownable_2_step = Ownable2StepDeployer::init(&env);
+        let renouncable_ref = RenounceableHostRef::new(*ownable.address(), env.clone());
+        let renouncable_2_step_ref =
+            RenounceableHostRef::new(*ownable_2_step.address(), env.clone());
         (
             vec![
-                RenounceableHostRef {
-                    address: *ownable.address(),
-                    env: env.clone(),
-                    attached_value: Default::default()
-                },
-                RenounceableHostRef {
-                    address: *ownable_2_step.address(),
-                    env: env.clone(),
-                    attached_value: Default::default()
-                },
+                renouncable_ref,
+                renouncable_2_step_ref
             ],
             env.get_account(0)
         )

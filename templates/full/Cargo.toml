@@ -7,12 +7,12 @@ edition = "2021"
 #odra_dependency
 
 [[bin]]
-name = "build_contract"
+name = "{{project-name}}_build_contract"
 path = "bin/build_contract.rs"
 test = false
 
 [[bin]]
-name = "build_schema"
+name = "{{project-name}}_build_schema"
 path = "bin/build_schema.rs"
 test = false
 
