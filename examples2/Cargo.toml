@@ -9,10 +9,12 @@ odra = { path = "../odra" }
 [[bin]]
 name = "build_contract"
 path = "bin/build_contract.rs"
+test = false
 
 [[bin]]
 name = "build_schema"
 path = "bin/build_schema.rs"
+test = false
 
 [profile.release]
 codegen-units = 1
