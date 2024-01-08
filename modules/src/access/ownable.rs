@@ -118,11 +118,11 @@ impl Ownable2Step {
         self.ownable.assert_owner(&self.env().caller());
 
         let previous_owner = self.ownable.get_optional_owner();
-        let new_owner = &Some(*new_owner);
-        self.pending_owner.set(*new_owner);
+        let new_owner = Some(*new_owner);
+        self.pending_owner.set(new_owner);
         self.env().emit_event(OwnershipTransferred {
             previous_owner,
-            new_owner: *new_owner
+            new_owner
         });
     }
 
