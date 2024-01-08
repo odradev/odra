@@ -525,11 +525,9 @@ mod tests {
 
         // And transfer the token to the contract which does support nfts
         erc721_env.env.set_caller(erc721_env.alice);
-        erc721_env.token.safe_transfer_from(
-            erc721_env.alice,
-            *receiver.address(),
-            U256::from(1)
-        );
+        erc721_env
+            .token
+            .safe_transfer_from(erc721_env.alice, *receiver.address(), U256::from(1));
 
         // Then the owner of the token is the contract
         assert_eq!(

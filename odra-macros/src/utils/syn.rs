@@ -184,4 +184,3 @@ pub fn as_casted_ty_stream(ty: &syn::Type, as_ty: syn::Type) -> TokenStream {
 pub fn is_ref(ty: &syn::Type) -> bool {
     matches!(ty, syn::Type::Reference(_))
 }
-
