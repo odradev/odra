@@ -34,6 +34,9 @@ pub mod mock {
                     });
                 }
 
+                pub fn airdrop(to: &[Address], amount: &U256) {
+                }
+
                 fn private_function() {
 
                 }

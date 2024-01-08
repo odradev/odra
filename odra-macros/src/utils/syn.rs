@@ -191,13 +191,6 @@ pub fn is_ref(ty: &syn::Type) -> bool {
     matches!(ty, syn::Type::Reference(_))
 }
 
-pub fn unreferenced_ty(ty: &syn::Type) -> syn::Type {
-    match ty {
-        syn::Type::Reference(syn::TypeReference { elem, .. }) => *elem.clone(),
-        _ => ty.clone()
-    }
-}
-
 fn clear_path(ty: &syn::TypePath) -> syn::Result<syn::TypePath> {
     let mut owned_ty = ty.to_owned();
 

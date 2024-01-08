@@ -52,7 +52,7 @@ pub fn new_parameter(name: String, ty: syn::Type) -> syn::Expr {
 }
 
 pub fn as_cl_type(ty: &syn::Type) -> syn::Expr {
-    let ty = super::syn::unreferenced_ty(ty);
+    let ty = super::ty::unreferenced_ty(ty);
     let ty_cl_typed = super::ty::cl_typed();
     let ty = super::syn::as_casted_ty_stream(&ty, ty_cl_typed);
     parse_quote!(#ty::cl_type())

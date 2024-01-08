@@ -320,6 +320,21 @@ mod test {
                             ),
                         );
                     entry_points
+                        .add_entry_point(
+                            odra::casper_types::EntryPoint::new(
+                                "airdrop",
+                                vec![
+                                    odra::casper_types::Parameter::new("to", <odra::prelude::vec::Vec<Address> as
+                                    odra::casper_types::CLTyped > ::cl_type()),
+                                    odra::casper_types::Parameter::new("amount", <U256 as
+                                    odra::casper_types::CLTyped > ::cl_type())
+                                ],
+                                <() as odra::casper_types::CLTyped>::cl_type(),
+                                odra::casper_types::EntryPointAccess::Public,
+                                odra::casper_types::EntryPointType::Contract,
+                            ),
+                        );
+                    entry_points
                 }
 
                 #[no_mangle]
@@ -365,6 +380,11 @@ mod test {
                 #[no_mangle]
                 fn approve() {
                     __erc20_exec_parts::execute_approve(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                }
+
+                #[no_mangle]
+                fn airdrop() {
+                    execute_airdrop(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
             }
         };

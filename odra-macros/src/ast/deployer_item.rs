@@ -106,6 +106,10 @@ mod deployer_impl {
                                 let result = __erc20_exec_parts::execute_approve(contract_env);
                                 odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
                             }
+                            "airdrop" => {
+                                let result = execute_airdrop(contract_env);
+                                odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                            }
                             _ => panic!("Unknown method")
                         }
                     });

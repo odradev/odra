@@ -203,6 +203,22 @@ mod ref_item_tests {
                             ),
                         )
                 }
+
+                pub fn airdrop(&self, to: odra::prelude::vec::Vec<Address>, amount: U256) {
+                    self.env
+                        .call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                String::from("airdrop"),
+                                {
+                                    let mut named_args = odra::RuntimeArgs::new();
+                                    let _ = named_args.insert("to", to);
+                                    let _ = named_args.insert("amount", amount);
+                                    named_args
+                                },
+                            ),
+                        )
+                }
             }
         };
         let actual = RefItem::try_from(&module).unwrap();

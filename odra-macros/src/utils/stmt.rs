@@ -39,9 +39,9 @@ pub fn install_contract(entry_points: syn::Expr, schemas: syn::Expr, args: syn::
     );)
 }
 
-pub fn get_named_arg(arg_ident: &syn::Ident, env_ident: &syn::Ident) -> syn::Stmt {
+pub fn get_named_arg(arg_ident: &syn::Ident, env_ident: &syn::Ident, ty: &syn::Type) -> syn::Stmt {
     let arg_name = arg_ident.to_string();
-    parse_quote!(let #arg_ident = #env_ident.get_named_arg(#arg_name);)
+    parse_quote!(let #arg_ident = #env_ident.get_named_arg::<#ty>(#arg_name);)
 }
 
 pub fn new_execution_env(ident: &syn::Ident, env_rc_ident: &syn::Ident) -> syn::Stmt {

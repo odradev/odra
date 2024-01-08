@@ -91,10 +91,17 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for ExecFunctionItem {
         }).collect::<Result<syn::punctuated::Punctuated<syn::Expr, syn::token::Comma>, syn::Error>>()?;
 
         let args = func
-            .arg_names()
+            .named_args()
             .iter()
-            .map(|ident| utils::stmt::get_named_arg(ident, &exec_env_ident))
-            .collect();
+            .map(|arg| {
+                let ty = utils::ty::unreferenced_ty(&arg.ty()?);
+                Ok(utils::stmt::get_named_arg(
+                    &arg.name()?,
+                    &exec_env_ident,
+                    &ty
+                ))
+            })
+            .collect::<Result<Vec<syn::Stmt>, syn::Error>>()?;
 
         let init_contract_stmt = match func.is_mut() {
             true => utils::stmt::new_mut_module(&contract_ident, &module_ident, &env_rc_ident),
@@ -219,7 +226,7 @@ mod test {
                 pub fn execute_init(env: odra::ContractEnv) {
                     let env_rc = Rc::new(env);
                     let exec_env = odra::ExecutionEnv::new(env_rc.clone());
-                    let total_supply = exec_env.get_named_arg("total_supply");
+                    let total_supply = exec_env.get_named_arg::<Option<U256>>("total_supply");
                     let mut contract = <Erc20 as odra::Module>::new(env_rc);
                     let result = contract.init(total_supply);
                     return result;
@@ -249,11 +256,22 @@ mod test {
                     let env_rc = Rc::new(env);
                     let exec_env = odra::ExecutionEnv::new(env_rc.clone());
                     exec_env.non_reentrant_before();
-                    let to = exec_env.get_named_arg("to");
-                    let amount = exec_env.get_named_arg("amount");
+                    let to = exec_env.get_named_arg::<Address>("to");
+                    let amount = exec_env.get_named_arg::<U256>("amount");
                     let mut contract = <Erc20 as odra::Module>::new(env_rc);
                     let result = contract.approve(&to, &amount);
                     exec_env.non_reentrant_after();
+                    return result;
+                }
+
+                #[inline]
+                pub fn execute_airdrop(env: odra::ContractEnv) {
+                    let env_rc = Rc::new(env);
+                    let exec_env = odra::ExecutionEnv::new(env_rc.clone());
+                    let to = exec_env.get_named_arg::<odra::prelude::vec::Vec<Address>>("to");
+                    let amount = exec_env.get_named_arg::<U256>("amount");
+                    let contract = <Erc20 as odra::Module>::new(env_rc);
+                    let result = contract.airdrop(&to, &amount);
                     return result;
                 }
             }
