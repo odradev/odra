@@ -228,3 +228,23 @@ pub fn btree_map() -> syn::Type {
 pub fn module_component() -> syn::Type {
     parse_quote!(odra::module::ModuleComponent)
 }
+
+fn slice_to_vec(ty: &syn::Type) -> syn::Type {
+    match ty {
+        syn::Type::Slice(ty) => vec_of(ty.elem.as_ref()),
+        _ => ty.clone()
+    }
+}
+
+pub fn unreferenced_ty(ty: &syn::Type) -> syn::Type {
+    match ty {
+        syn::Type::Reference(syn::TypeReference { elem, .. }) => {
+            if matches!(**elem, syn::Type::Reference(_)) {
+                unreferenced_ty(elem)
+            } else {
+                slice_to_vec(elem)
+            }
+        }
+        _ => slice_to_vec(ty)
+    }
+}

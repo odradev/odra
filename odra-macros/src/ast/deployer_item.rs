@@ -91,19 +91,23 @@ mod deployer_impl {
                     let caller = odra::EntryPointsCaller::new(env.clone(), |contract_env, call_def| {
                         match call_def.method() {
                             "init" => {
-                                let result = execute_init(contract_env);
+                                let result = __erc20_exec_parts::execute_init(contract_env);
                                 odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                             }
                             "total_supply" => {
-                                let result = execute_total_supply(contract_env);
+                                let result = __erc20_exec_parts::execute_total_supply(contract_env);
                                 odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                             }
                             "pay_to_mint" => {
-                                let result = execute_pay_to_mint(contract_env);
+                                let result = __erc20_exec_parts::execute_pay_to_mint(contract_env);
                                 odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                             }
                             "approve" => {
-                                let result = execute_approve(contract_env);
+                                let result = __erc20_exec_parts::execute_approve(contract_env);
+                                odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
+                            }
+                            "airdrop" => {
+                                let result = __erc20_exec_parts::execute_airdrop(contract_env);
                                 odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                             }
                             name => Err(odra::OdraError::VmError(
@@ -144,11 +148,11 @@ mod deployer_impl {
                     let caller = odra::EntryPointsCaller::new(env.clone(), |contract_env, call_def| {
                         match call_def.method() {
                             "total_supply" => {
-                                let result = execute_total_supply(contract_env);
+                                let result = __erc20_exec_parts::execute_total_supply(contract_env);
                                 odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                             }
                             "pay_to_mint" => {
-                                let result = execute_pay_to_mint(contract_env);
+                                let result = __erc20_exec_parts::execute_pay_to_mint(contract_env);
                                 odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                             }
                             name => Err(odra::OdraError::VmError(
@@ -185,23 +189,23 @@ mod deployer_impl {
                     let caller = odra::EntryPointsCaller::new(env.clone(), |contract_env, call_def| {
                         match call_def.method() {
                             "total_supply" => {
-                                let result = execute_total_supply(contract_env);
+                                let result = __erc20_exec_parts::execute_total_supply(contract_env);
                                 odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                             }
                             "get_owner" => {
-                                let result = execute_get_owner(contract_env);
+                                let result = __erc20_exec_parts::execute_get_owner(contract_env);
                                 odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                             }
                             "set_owner" => {
-                                let result = execute_set_owner(contract_env);
+                                let result = __erc20_exec_parts::execute_set_owner(contract_env);
                                 odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                             }
                             "name" => {
-                                let result = execute_name(contract_env);
+                                let result = __erc20_exec_parts::execute_name(contract_env);
                                 odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                             }
                             "symbol" => {
-                                let result = execute_symbol(contract_env);
+                                let result = __erc20_exec_parts::execute_symbol(contract_env);
                                 odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                             }
                             name => Err(odra::OdraError::VmError(

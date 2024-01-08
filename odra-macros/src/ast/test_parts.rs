@@ -11,7 +11,7 @@ use super::{
 
 #[derive(syn_derive::ToTokens)]
 pub struct TestPartsReexportItem {
-    attr: syn::Attribute,
+    not_wasm_attr: syn::Attribute,
     reexport_stmt: syn::Stmt
 }
 
@@ -21,7 +21,7 @@ impl TryFrom<&'_ ModuleImplIR> for TestPartsReexportItem {
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let test_parts_ident = module.test_parts_mod_ident()?;
         Ok(Self {
-            attr: utils::attr::not_wasm32(),
+            not_wasm_attr: utils::attr::not_wasm32(),
             reexport_stmt: parse_quote!(pub use #test_parts_ident::*;)
         })
     }
@@ -184,6 +184,28 @@ mod test {
                     pub fn approve(&mut self, to: Address, amount: U256) {
                         self.try_approve(to, amount).unwrap()
                     }
+
+                    pub fn try_airdrop(&self, to: odra::prelude::vec::Vec<Address>, amount: U256) -> Result<(), odra::OdraError> {
+                        self.env.call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                String::from("airdrop"),
+                                {
+                                    let mut named_args = odra::RuntimeArgs::new();
+                                    if self.attached_value > odra::U512::zero() {
+                                        let _ = named_args.insert("amount", self.attached_value);
+                                    }
+                                    let _ = named_args.insert("to", to);
+                                    let _ = named_args.insert("amount", amount);
+                                    named_args
+                                }
+                            ).with_amount(self.attached_value),
+                        )
+                    }
+
+                    pub fn airdrop(&self, to: odra::prelude::vec::Vec<Address>, amount: U256) {
+                        self.try_airdrop(to, amount).unwrap()
+                    }
                 }
 
                 pub struct Erc20Deployer;
@@ -193,19 +215,23 @@ mod test {
                         let caller = odra::EntryPointsCaller::new(env.clone(), |contract_env, call_def| {
                             match call_def.method() {
                                 "init" => {
-                                    let result = execute_init(contract_env);
+                                    let result = __erc20_exec_parts::execute_init(contract_env);
                                     odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                                 }
                                 "total_supply" => {
-                                    let result = execute_total_supply(contract_env);
+                                    let result = __erc20_exec_parts::execute_total_supply(contract_env);
                                     odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                                 }
                                 "pay_to_mint" => {
-                                    let result = execute_pay_to_mint(contract_env);
+                                    let result = __erc20_exec_parts::execute_pay_to_mint(contract_env);
                                     odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                                 }
                                 "approve" => {
-                                    let result = execute_approve(contract_env);
+                                    let result = __erc20_exec_parts::execute_approve(contract_env);
+                                    odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
+                                }
+                                "airdrop" => {
+                                    let result = __erc20_exec_parts::execute_airdrop(contract_env);
                                     odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                                 }
                                 name => Err(odra::OdraError::VmError(
@@ -337,11 +363,11 @@ mod test {
                         let caller = odra::EntryPointsCaller::new(env.clone(), |contract_env, call_def| {
                             match call_def.method() {
                                 "total_supply" => {
-                                    let result = execute_total_supply(contract_env);
+                                    let result = __erc20_exec_parts::execute_total_supply(contract_env);
                                     odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                                 }
                                 "pay_to_mint" => {
-                                    let result = execute_pay_to_mint(contract_env);
+                                    let result = __erc20_exec_parts::execute_pay_to_mint(contract_env);
                                     odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                                 }
                                 name => Err(odra::OdraError::VmError(

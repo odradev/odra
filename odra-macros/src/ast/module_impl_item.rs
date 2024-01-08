@@ -1,6 +1,6 @@
 use crate::ast::blueprint::BlueprintItem;
 use crate::ast::entrypoints_item::HasEntrypointsImplItem;
-use crate::ast::exec_parts::{ExecPartsItem, ExecPartsReexportItem};
+use crate::ast::exec_parts::ExecPartsItem;
 use crate::ast::ref_item::RefItem;
 use crate::ast::test_parts::{TestPartsItem, TestPartsReexportItem};
 use crate::ast::wasm_parts::WasmPartsModuleItem;
@@ -17,7 +17,6 @@ pub struct ModuleImplItem {
     test_parts: TestPartsItem,
     test_parts_reexport: TestPartsReexportItem,
     exec_parts: ExecPartsItem,
-    exec_parts_reexport: ExecPartsReexportItem,
     wasm_parts: WasmPartsModuleItem,
     blueprint: BlueprintItem
 }

@@ -501,7 +501,6 @@ mod tests {
         // Then safe transfer the token to the contract which does not support nfts throws an error.
         erc721_env.env.set_caller(erc721_env.alice);
 
-        // TODO: Enable this after fixing mockvm
         assert_eq!(
             Err(OdraError::VmError(VmError::NoSuchMethod(
                 "on_erc721_received".to_string()
@@ -528,14 +527,14 @@ mod tests {
         erc721_env.env.set_caller(erc721_env.alice);
         erc721_env.token.safe_transfer_from(
             erc721_env.alice,
-            receiver.address().clone(),
+            *receiver.address(),
             U256::from(1)
         );
 
         // Then the owner of the token is the contract
         assert_eq!(
             erc721_env.token.owner_of(U256::from(1)),
-            receiver.address().clone()
+            *receiver.address()
         );
         // And the receiver contract is aware of the transfer
         erc721_env.env.emitted_event(
@@ -563,7 +562,7 @@ mod tests {
         erc721_env.env.set_caller(erc721_env.alice);
         erc721_env.token.safe_transfer_from_with_data(
             erc721_env.alice,
-            receiver.address().clone(),
+            *receiver.address(),
             U256::from(1),
             b"data".to_vec().into()
         );

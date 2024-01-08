@@ -185,9 +185,3 @@ pub fn is_ref(ty: &syn::Type) -> bool {
     matches!(ty, syn::Type::Reference(_))
 }
 
-pub fn unreferenced_ty(ty: &syn::Type) -> syn::Type {
-    match ty {
-        syn::Type::Reference(syn::TypeReference { elem, .. }) => *elem.clone(),
-        _ => ty.clone()
-    }
-}

@@ -18,7 +18,7 @@ impl Erc1155 for Erc1155Base {
         self.balances.get_or_default(&(*owner, *id))
     }
 
-    fn balance_of_batch(&self, owners: Vec<Address>, ids: Vec<U256>) -> Vec<U256> {
+    fn balance_of_batch(&self, owners: &[Address], ids: &[U256]) -> Vec<U256> {
         if owners.len() != ids.len() {
             self.env().revert(Error::AccountsAndIdsLengthMismatch);
         }

@@ -459,7 +459,7 @@ impl FnIR {
         self.typed_args()
             .into_iter()
             .map(|pat_ty| syn::PatType {
-                ty: Box::new(utils::syn::unreferenced_ty(&pat_ty.ty)),
+                ty: Box::new(utils::ty::unreferenced_ty(&pat_ty.ty)),
                 ..pat_ty
             })
             .collect()

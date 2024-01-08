@@ -182,6 +182,27 @@ mod test {
                             ret: <() as odra::casper_types::CLTyped>::cl_type(),
                             ty: odra::contract_def::EntrypointType::Public,
                             attributes: vec![odra::contract_def::EntrypointAttribute::NonReentrant]
+                        },
+                        odra::contract_def::Entrypoint {
+                            ident: String::from("airdrop"),
+                            args: vec![
+                                odra::contract_def::Argument {
+                                    ident: String::from("to"),
+                                    ty: <odra::prelude::vec::Vec<Address> as odra::casper_types::CLTyped>::cl_type(),
+                                    is_ref: false,
+                                    is_slice: false
+                                },
+                                odra::contract_def::Argument {
+                                    ident: String::from("amount"),
+                                    ty: <U256 as odra::casper_types::CLTyped>::cl_type(),
+                                    is_ref: false,
+                                    is_slice: false
+                                }
+                            ],
+                            is_mut: false,
+                            ret: <() as odra::casper_types::CLTyped>::cl_type(),
+                            ty: odra::contract_def::EntrypointType::Public,
+                            attributes: vec![]
                         }
                     ]
                 }
