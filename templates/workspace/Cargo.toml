@@ -1,0 +1,13 @@
+[workspace]
+members = [
+    "flipper",
+    "flapper",
+    ]
+resolver = "2"
+
+[profile.release]
+codegen-units = 1
+lto = true
+
+[profile.dev.package."*"]
+opt-level = 3

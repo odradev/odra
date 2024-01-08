@@ -1,0 +1,3 @@
+[[contracts]]
+name = "flipper"
+fqn = "member1::Flipper"
