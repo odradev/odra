@@ -61,20 +61,8 @@ pub fn odra_error() -> syn::Type {
     parse_quote!(odra::OdraError)
 }
 
-pub fn module_wrapper() -> syn::Type {
-    parse_quote!(odra::ModuleWrapper)
-}
-
 pub fn module() -> syn::Type {
     parse_quote!(odra::Module)
-}
-
-pub fn variable() -> syn::Type {
-    parse_quote!(odra::Variable)
-}
-
-pub fn mapping() -> syn::Type {
-    parse_quote!(odra::Mapping)
 }
 
 pub fn entry_points() -> syn::Type {
@@ -235,4 +223,8 @@ pub fn typed_btree_map(key: &syn::Type, value: &syn::Type) -> syn::Type {
 
 pub fn btree_map() -> syn::Type {
     parse_quote!(odra::prelude::BTreeMap)
+}
+
+pub fn module_component() -> syn::Type {
+    parse_quote!(odra::module::ModuleComponent)
 }

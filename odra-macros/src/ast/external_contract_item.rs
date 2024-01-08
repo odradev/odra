@@ -48,8 +48,8 @@ mod test {
             }
 
             pub struct TokenContractRef {
-                pub env: Rc<odra::ContractEnv>,
-                pub address: odra::Address,
+                env: Rc<odra::ContractEnv>,
+                address: odra::Address,
             }
 
             impl TokenContractRef {
@@ -83,18 +83,34 @@ mod test {
 
 
                 pub struct TokenHostRef {
-                    pub address: odra::Address,
-                    pub env: odra::HostEnv,
-                    pub attached_value: odra::U512
+                    address: odra::Address,
+                    env: odra::HostEnv,
+                    attached_value: odra::U512
                 }
 
                 impl TokenHostRef {
+                    pub fn new(address: odra::Address, env: odra::HostEnv) -> Self {
+                        Self {
+                            address,
+                            env,
+                            attached_value: Default::default()
+                        }
+                    }
+
                     pub fn with_tokens(&self, tokens: odra::U512) -> Self {
                         Self {
                             address: self.address,
                             env: self.env.clone(),
                             attached_value: tokens
                         }
+                    }
+
+                    pub fn address(&self) -> &odra::Address {
+                        &self.address
+                    }
+
+                    pub fn env(&self) -> &odra::HostEnv {
+                        &self.env
                     }
 
                     pub fn get_event<T>(&self, index: i32) -> Result<T, odra::event::EventError>

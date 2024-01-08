@@ -27,21 +27,33 @@ pub trait Module {
     fn env(&self) -> Rc<ContractEnv>;
 }
 
+pub trait ModuleComponent {
+    fn instance(env: Rc<ContractEnv>, index: u8) -> Self;
+}
+
 pub struct ModuleWrapper<T> {
     env: Rc<ContractEnv>,
     module: OnceCell<T>,
     index: u8
 }
 
-impl<T: Module> ModuleWrapper<T> {
-    pub fn new(env: Rc<ContractEnv>, index: u8) -> Self {
+impl<T: Module> ModuleComponent for ModuleWrapper<T> {
+    fn instance(env: Rc<ContractEnv>, index: u8) -> Self {
         Self {
             env,
             module: OnceCell::new(),
             index
         }
     }
+}
 
+impl<M: ModuleComponent> HasEvents for M {
+    fn events() -> Vec<crate::contract_def::Event> {
+        Vec::new()
+    }
+}
+
+impl<T: Module> ModuleWrapper<T> {
     pub fn module(&self) -> &T {
         self.module
             .get_or_init(|| T::new(Rc::new(self.env.child(self.index))))
@@ -66,11 +78,5 @@ impl<T: Module> Deref for ModuleWrapper<T> {
 impl<T: Module> DerefMut for ModuleWrapper<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.module_mut()
-    }
-}
-
-impl<T: HasEvents> HasEvents for ModuleWrapper<T> {
-    fn events() -> Vec<crate::contract_def::Event> {
-        T::events()
     }
 }

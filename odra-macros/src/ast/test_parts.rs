@@ -82,18 +82,34 @@ mod test {
                 use odra::prelude::*;
 
                 pub struct Erc20HostRef {
-                    pub address: odra::Address,
-                    pub env: odra::HostEnv,
-                    pub attached_value: odra::U512
+                    address: odra::Address,
+                    env: odra::HostEnv,
+                    attached_value: odra::U512
                 }
 
                 impl Erc20HostRef {
+                    pub fn new(address: odra::Address, env: odra::HostEnv) -> Self {
+                        Self {
+                            address,
+                            env,
+                            attached_value: Default::default()
+                        }
+                    }
+
                     pub fn with_tokens(&self, tokens: odra::U512) -> Self {
                         Self {
                             address: self.address,
                             env: self.env.clone(),
                             attached_value: tokens
                         }
+                    }
+
+                    pub fn address(&self) -> &odra::Address {
+                        &self.address
+                    }
+
+                    pub fn env(&self) -> &odra::HostEnv {
+                        &self.env
                     }
 
                     pub fn get_event<T>(&self, index: i32) -> Result<T, odra::event::EventError>
@@ -178,21 +194,23 @@ mod test {
                             match call_def.method() {
                                 "init" => {
                                     let result = execute_init(contract_env);
-                                    odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                                    odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                                 }
                                 "total_supply" => {
                                     let result = execute_total_supply(contract_env);
-                                    odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                                    odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                                 }
                                 "pay_to_mint" => {
                                     let result = execute_pay_to_mint(contract_env);
-                                    odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                                    odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                                 }
                                 "approve" => {
                                     let result = execute_approve(contract_env);
-                                    odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                                    odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                                 }
-                                _ => panic!("Unknown method")
+                                name => Err(odra::OdraError::VmError(
+                                    odra::VmError::NoSuchMethod(odra::prelude::String::from(name))
+                                ))
                             }
                         });
 
@@ -230,18 +248,34 @@ mod test {
                 use odra::prelude::*;
 
                 pub struct Erc20HostRef {
-                    pub address: odra::Address,
-                    pub env: odra::HostEnv,
-                    pub attached_value: odra::U512
+                    address: odra::Address,
+                    env: odra::HostEnv,
+                    attached_value: odra::U512
                 }
 
                 impl Erc20HostRef {
+                    pub fn new(address: odra::Address, env: odra::HostEnv) -> Self {
+                        Self {
+                            address,
+                            env,
+                            attached_value: Default::default()
+                        }
+                    }
+
                     pub fn with_tokens(&self, tokens: odra::U512) -> Self {
                         Self {
                             address: self.address,
                             env: self.env.clone(),
                             attached_value: tokens
                         }
+                    }
+
+                    pub fn address(&self) -> &odra::Address {
+                        &self.address
+                    }
+
+                    pub fn env(&self) -> &odra::HostEnv {
+                        &self.env
                     }
 
                     pub fn get_event<T>(&self, index: i32) -> Result<T, odra::event::EventError>
@@ -304,13 +338,15 @@ mod test {
                             match call_def.method() {
                                 "total_supply" => {
                                     let result = execute_total_supply(contract_env);
-                                    odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                                    odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                                 }
                                 "pay_to_mint" => {
                                     let result = execute_pay_to_mint(contract_env);
-                                    odra::ToBytes::to_bytes(&result).map(Into::into).unwrap()
+                                    odra::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
                                 }
-                                _ => panic!("Unknown method")
+                                name => Err(odra::OdraError::VmError(
+                                    odra::VmError::NoSuchMethod(odra::prelude::String::from(name)),
+                                ))
                             }
                         });
 

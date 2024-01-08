@@ -15,6 +15,7 @@ pub type EntrypointArgs = Vec<String>;
 #[derive(Clone)]
 pub struct ContractContainer {
     name: String,
+
     entry_points_caller: EntryPointsCaller
 }
 
@@ -27,36 +28,16 @@ impl ContractContainer {
     }
 
     pub fn call(&self, call_def: CallDef) -> Result<Bytes, OdraError> {
-        Ok(self.entry_points_caller.call(call_def))
-        // TODO: Restore validate_args
-        //     if self.constructors.get(&entrypoint).is_some() {
-        //         return Err(OdraError::VmError(VmError::InvalidContext));
-        //     }
-        //
-        //     match self.entrypoints.get(&entrypoint) {
-        //         Some((ep_args, call)) => {
-        //             self.validate_args(ep_args, args)?;
-        //             Ok(call(self.name.clone(), args))
-        //         }
-        //         None => Err(OdraError::VmError(VmError::NoSuchMethod(entrypoint)))
-        //     }
-        // }
-        //
-        // pub fn call_constructor(
-        //     &self,
-        //     entrypoint: String,
-        //     args: &RuntimeArgs
-        // ) -> Result<Vec<u8>, OdraError> {
-        //     match self.constructors.get(&entrypoint) {
-        //         Some((ep_args, call)) => {
-        //             self.validate_args(ep_args, args)?;
-        //             Ok(call(self.name.clone(), args))
-        //         }
-        //         None => Err(OdraError::VmError(VmError::NoSuchMethod(entrypoint)))
-        //     }
+        // TODO: Restore validate_args - to do so, we need to know names of all args.
+        // The current structure of ContractContainer doesn't allow that - we do not store the required args names.
+        // It makes impossible to mimic the behavior of the CasperVm
+
+        // let registered_args = vec![];
+        // self.validate_args(&registered_args, call_def.args())?;
+        self.entry_points_caller.call(call_def)
     }
 
-    fn _validate_args(&self, args: &[String], input_args: &RuntimeArgs) -> Result<(), OdraError> {
+    fn validate_args(&self, args: &[String], input_args: &RuntimeArgs) -> Result<(), OdraError> {
         // TODO: What's the purpose of this code? Is it needed?
         let named_args = input_args
             .named_args()

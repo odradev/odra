@@ -66,7 +66,6 @@ impl OdraVm {
                 self.revert(err);
             }
         }
-
         let result = self
             .contract_register
             .read()

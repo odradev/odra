@@ -102,8 +102,8 @@ mod test {
             new_owner: Some(deployer)
         };
 
-        env.emitted_event(&ownable.address, &event);
-        env.emitted_event(&ownable_2step.address, &event);
+        env.emitted_event(ownable.address(), &event);
+        env.emitted_event(ownable_2step.address(), &event);
     }
 
     #[test]
@@ -112,14 +112,14 @@ mod test {
         let (mut contract, initial_owner) = setup_ownable();
 
         // when the current owner transfers ownership
-        let new_owner = contract.env.get_account(1);
+        let new_owner = contract.env().get_account(1);
         contract.transfer_ownership(new_owner);
 
         // then the new owner is set
         assert_eq!(new_owner, contract.get_owner());
         // then a OwnershipTransferred event was emitted
-        contract.env.emitted_event(
-            &contract.address,
+        contract.env().emitted_event(
+            contract.address(),
             &OwnershipTransferred {
                 previous_owner: Some(initial_owner),
                 new_owner: Some(new_owner)
@@ -133,11 +133,11 @@ mod test {
         let (mut contract, initial_owner) = setup_ownable_2_step();
 
         // when the current owner transfers ownership
-        let new_owner = contract.env.get_account(1);
+        let new_owner = contract.env().get_account(1);
         contract.transfer_ownership(new_owner);
 
         // when the pending owner accepts the transfer
-        contract.env.set_caller(new_owner);
+        contract.env().set_caller(new_owner);
         contract.accept_ownership();
 
         // then the new owner is set
@@ -145,15 +145,15 @@ mod test {
         // then the pending owner is unset
         assert_eq!(None, contract.get_pending_owner());
         // then OwnershipTransferStarted and OwnershipTransferred events were emitted
-        contract.env.emitted_event(
-            &contract.address,
+        contract.env().emitted_event(
+            contract.address(),
             &OwnershipTransferStarted {
                 previous_owner: Some(initial_owner),
                 new_owner: Some(new_owner)
             }
         );
-        contract.env.emitted_event(
-            &contract.address,
+        contract.env().emitted_event(
+            contract.address(),
             &OwnershipTransferred {
                 previous_owner: Some(initial_owner),
                 new_owner: Some(new_owner)
@@ -167,8 +167,8 @@ mod test {
         let (mut contract, _) = setup_ownable();
 
         // when a non-owner account is the caller
-        let (caller, new_owner) = (contract.env.get_account(1), contract.env.get_account(2));
-        contract.env.set_caller(caller);
+        let (caller, new_owner) = (contract.env().get_account(1), contract.env().get_account(2));
+        contract.env().set_caller(caller);
 
         // then ownership transfer fails
         let err = contract.try_transfer_ownership(new_owner).unwrap_err();
@@ -181,15 +181,15 @@ mod test {
         let (mut contract, initial_owner) = setup_ownable_2_step();
 
         // when a non-owner account is the caller
-        let (caller, new_owner) = (contract.env.get_account(1), contract.env.get_account(2));
-        contract.env.set_caller(caller);
+        let (caller, new_owner) = (contract.env().get_account(1), contract.env().get_account(2));
+        contract.env().set_caller(caller);
 
         // then ownership transfer fails
         let err = contract.try_transfer_ownership(new_owner).unwrap_err();
         assert_eq!(err, Error::CallerNotTheOwner.into());
 
         // when the owner is the caller
-        contract.env.set_caller(initial_owner);
+        contract.env().set_caller(initial_owner);
         contract.transfer_ownership(new_owner);
 
         // then the pending owner is set
@@ -218,8 +218,8 @@ mod test {
                 contract.renounce_ownership();
 
                 // then an event is emitted
-                contract.env.emitted_event(
-                    &contract.address,
+                contract.env().emitted_event(
+                    contract.address(),
                     &OwnershipTransferred {
                         previous_owner: Some(initial_owner),
                         new_owner: None
@@ -241,8 +241,8 @@ mod test {
 
         contracts.iter_mut().for_each(|contract| {
             // when a non-owner account is the caller
-            let caller = contract.env.get_account(1);
-            contract.env.set_caller(caller);
+            let caller = contract.env().get_account(1);
+            contract.env().set_caller(caller);
 
             // then renounce ownership fails
             let err = contract.try_renounce_ownership().unwrap_err();
@@ -277,16 +277,8 @@ mod test {
         let ownable_2_step = Ownable2StepDeployer::init(&env);
         (
             vec![
-                RenounceableHostRef {
-                    address: ownable.address,
-                    env: env.clone(),
-                    attached_value: Default::default()
-                },
-                RenounceableHostRef {
-                    address: ownable_2_step.address,
-                    env: env.clone(),
-                    attached_value: Default::default()
-                },
+                RenounceableHostRef::new(ownable.address().clone(), env.clone()),
+                RenounceableHostRef::new(ownable_2_step.address().clone(), env.clone()),
             ],
             env.get_account(0)
         )

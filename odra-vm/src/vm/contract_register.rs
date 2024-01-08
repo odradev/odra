@@ -16,30 +16,9 @@ impl ContractRegister {
     }
 
     pub fn call(&self, addr: &Address, call_def: CallDef) -> Result<Bytes, OdraError> {
-        // todo: make it better
-        self.contracts.get(addr).unwrap().call(call_def)
+        if let Some(contract) = self.contracts.get(addr) {
+            return contract.call(call_def);
+        }
+        Err(OdraError::VmError(VmError::InvalidContractAddress))
     }
-
-    // pub fn call_constructor(
-    //     &self,
-    //     addr: &Address,
-    //     entrypoint: String,
-    //     args: &RuntimeArgs
-    // ) -> Result<Vec<u8>, OdraError> {
-    //     self.internal_call(addr, |container| {
-    //         container.call_constructor(entrypoint, args)
-    //     })
-    // }
-    //
-    // fn internal_call<F: FnOnce(&ContractContainer) -> Result<Vec<u8>, OdraError>>(
-    //     &self,
-    //     addr: &Address,
-    //     call_fn: F
-    // ) -> Result<Vec<u8>, OdraError> {
-    //     let contract = self.contracts.get(addr);
-    //     match contract {
-    //         Some(container) => call_fn(container),
-    //         None => Err(OdraError::VmError(VmError::InvalidContractAddress))
-    //     }
-    // }
 }

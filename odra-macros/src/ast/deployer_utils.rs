@@ -71,7 +71,7 @@ impl EntrypointCallerExpr {
         let ty_caller = utils::ty::entry_points_caller();
 
         let mut branches: Vec<CallerBranch> = module
-            .functions()
+            .functions()?
             .iter()
             .map(|f| CallerBranch::Function(FunctionCallBranch::from(f)))
             .collect();
@@ -195,7 +195,7 @@ impl<'a> FunctionCallBranch {
         let result_ident = utils::ident::result();
         let function_ident = func.execute_name();
         let contract_env_ident = utils::ident::contract_env();
-        parse_quote!(let #result_ident =  #function_ident(#contract_env_ident);)
+        parse_quote!(let #result_ident = #function_ident(#contract_env_ident);)
     }
 }
 
@@ -203,6 +203,8 @@ struct DefaultBranch;
 
 impl ToTokens for DefaultBranch {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        tokens.extend(quote::quote!(_ => panic!("Unknown method")))
+        tokens.extend(quote::quote!(name => Err(odra::OdraError::VmError(
+            odra::VmError::NoSuchMethod(odra::prelude::String::from(name))
+        ))))
     }
 }
