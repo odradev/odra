@@ -19,6 +19,7 @@ mod host_context;
 mod host_env;
 pub mod item;
 mod key_maker;
+pub mod list;
 pub mod mapping;
 pub mod module;
 pub mod native_token;
