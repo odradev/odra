@@ -1,8 +1,13 @@
 use crate::vm::OdraVm;
+use blake2::digest::VariableOutput;
+use blake2::{Blake2b, Blake2b512, Blake2bVar, Blake2s256, Digest};
 use odra_core::casper_types::BlockTime;
 use odra_core::prelude::*;
 use odra_core::{casper_types, Address, Bytes, OdraError, ToBytes, U512};
 use odra_core::{CallDef, ContractContext};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::Hasher;
+use std::io::Write;
 
 pub struct OdraVmContractEnv {
     vm: Rc<RefCell<OdraVm>>
@@ -59,6 +64,16 @@ impl ContractContext for OdraVmContractEnv {
 
     fn clear_attached_value(&self) {
         // no-op
+    }
+
+    fn hash(&self, bytes: &[u8]) -> [u8; 32] {
+        let mut result = [0u8; 32];
+        let mut hasher = <Blake2bVar as VariableOutput>::new(32).expect("should create hasher");
+        let _ = hasher.write(bytes);
+        hasher
+            .finalize_variable(&mut result)
+            .expect("should copy hash to the result array");
+        result
     }
 }
 

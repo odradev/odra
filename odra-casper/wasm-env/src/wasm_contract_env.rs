@@ -61,6 +61,10 @@ impl ContractContext for WasmContractEnv {
     fn clear_attached_value(&self) {
         host_functions::clear_attached_value();
     }
+
+    fn hash(&self, bytes: &[u8]) -> [u8; 32] {
+        host_functions::blake2b(bytes)
+    }
 }
 
 impl WasmContractEnv {
