@@ -14,6 +14,7 @@ repository = { workspace = true }
 casper-engine-test-support = { version = "5.0.0", features = ["test-support"] }
 casper-execution-engine = { workspace = true }
 odra-core = { path = "../../core" }
+convert_case = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 casper-contract = { workspace = true }

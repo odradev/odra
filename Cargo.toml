@@ -25,3 +25,4 @@ casper-contract = { version = "3.0.0", default-features = false }
 casper-types = { version = "3.0.0", default-features = false }
 casper-execution-engine = "5.0.0"
 casper-event-standard = "0.4.1"
+convert_case = "0.6.0"

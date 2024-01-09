@@ -1,3 +1,4 @@
+use convert_case::{Boundary, Case, Casing};
 use odra_core::consts::*;
 use odra_core::prelude::*;
 use std::cell::RefCell;
@@ -267,7 +268,11 @@ impl CasperVm {
         init_args: Option<RuntimeArgs>,
         entry_points_caller: Option<EntryPointsCaller>
     ) -> Address {
-        let wasm_path = format!("{}.wasm", name);
+        let snake_case_name = name
+            .from_case(Case::UpperCamel)
+            .without_boundaries(&[Boundary::UpperDigit, Boundary::LowerDigit])
+            .to_case(Case::Snake);
+        let wasm_path = format!("{}.wasm", snake_case_name);
         let package_hash_key_name = format!("{}_package_hash", name);
         let mut args = init_args.clone().unwrap_or(runtime_args! {});
         args.insert(PACKAGE_HASH_KEY_NAME_ARG, package_hash_key_name.clone())
