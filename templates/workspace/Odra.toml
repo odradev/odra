@@ -1,7 +1,5 @@
 [[contracts]]
-name = "Flipper"
 fqn = "flipper::Flipper"
 
 [[contracts]]
-name = "Flapper"
 fqn = "flapper::Flapper"
