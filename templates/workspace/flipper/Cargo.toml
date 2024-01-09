@@ -1,0 +1,17 @@
+[package]
+name = "flipper"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+odra = { workspace = true }
+
+[[bin]]
+name = "flipper_build_contract"
+path = "bin/build_contract.rs"
+test = false
+
+[[bin]]
+name = "flipper_build_schema"
+path = "bin/build_schema.rs"
+test = false

@@ -15,12 +15,12 @@ casper-event-standard = "0.4.1"
 hex = { version = "0.4.3", default-features = false }
 
 [[bin]]
-name = "build_contract"
+name = "odra_modules_build_contract"
 path = "bin/build_contract.rs"
 test = false
 
 [[bin]]
-name = "build_schema"
+name = "odra_modules_build_schema"
 path = "bin/build_schema.rs"
 test = false
 

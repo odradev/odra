@@ -1,7 +1,7 @@
 # {{project-name}}
 
 ## Usage
-It's recommend to install 
+It's recommended to install 
 [cargo-odra](https://github.com/odradev/cargo-odra) first.
 
 ### Build
