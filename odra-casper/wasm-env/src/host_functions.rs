@@ -1,4 +1,3 @@
-use casper_contract::contract_api::runtime::blake2b;
 use casper_contract::contract_api::system::{
     create_purse, get_purse_balance, transfer_from_purse_to_account, transfer_from_purse_to_purse
 };
@@ -7,6 +6,7 @@ use casper_contract::unwrap_or_revert::UnwrapOrRevert;
 use casper_contract::{contract_api, ext_ffi};
 use core::mem::MaybeUninit;
 use odra_core::call_def::CallDef;
+use odra_core::casper_event_standard;
 use odra_core::casper_event_standard::{Schema, Schemas};
 use odra_core::casper_types;
 use odra_core::casper_types::bytesrepr::Bytes;
@@ -20,7 +20,6 @@ use odra_core::casper_types::{
     ApiError, CLTyped, ContractPackageHash, EntryPoints, Key, URef
 };
 use odra_core::prelude::*;
-use odra_core::{bytes_to_hex, casper_event_standard};
 use odra_core::{Address, ExecutionError};
 
 use crate::consts;
@@ -170,22 +169,14 @@ pub fn get_block_time() -> u64 {
     runtime::get_blocktime().into()
 }
 
-pub fn get_value(key: &[u8]) -> Option<Vec<u8>> {
-    // TODO: Come up with better way of fixing too long key
-    let hash;
-    let bytes;
-    let mut key = key;
+#[inline(always)]
+pub fn blake2b(input: &[u8]) -> [u8; 32] {
+    casper_contract::contract_api::runtime::blake2b(input)
+}
 
+pub fn get_value(key: &[u8]) -> Option<Vec<u8>> {
     let uref_ptr = (*STATE_BYTES).as_ptr();
     let uref_size = (*STATE_BYTES).len();
-
-    let dictionary_item_key_size = key.len();
-    if dictionary_item_key_size > DICTIONARY_ITEM_KEY_MAX_LENGTH {
-        hash = blake2b(key);
-        let hash_slice = hash.as_slice();
-        bytes = bytes_to_hex(hash_slice);
-        key = bytes.as_slice();
-    }
 
     let dictionary_item_key_size = key.len();
     let dictionary_item_key_ptr = key.as_ptr();
@@ -251,20 +242,8 @@ pub fn emit_event(event: &Bytes) {
 }
 
 pub fn set_value(key: &[u8], value: &[u8]) {
-    // TODO: Come up with better way of fixing too long key
-    let mut key = key;
-    let hash;
-    let bytes;
     let uref_ptr = (*STATE_BYTES).as_ptr();
     let uref_size = (*STATE_BYTES).len();
-
-    let dictionary_item_key_size = key.len();
-    if dictionary_item_key_size > DICTIONARY_ITEM_KEY_MAX_LENGTH {
-        hash = blake2b(key);
-        let hash_slice = hash.as_slice();
-        bytes = bytes_to_hex(hash_slice);
-        key = bytes.as_slice();
-    }
 
     let dictionary_item_key_size = key.len();
     let dictionary_item_key_ptr = key.as_ptr();

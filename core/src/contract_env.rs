@@ -1,9 +1,13 @@
 use crate::call_def::CallDef;
 pub use crate::ContractContext;
-use crate::{key_maker, UnwrapOrRevert};
 use crate::{prelude::*, ExecutionError};
+use crate::{utils, UnwrapOrRevert};
 use crate::{Address, Bytes, CLTyped, FromBytes, OdraError, ToBytes, U512};
 use casper_types::crypto::PublicKey;
+
+const INDEX_SIZE: usize = 4;
+const KEY_LEN: usize = 64;
+pub(crate) type StorageKey = [u8; KEY_LEN];
 
 #[derive(Clone)]
 pub struct ContractEnv {
@@ -21,13 +25,14 @@ impl ContractEnv {
         }
     }
 
-    pub(crate) fn current_key(&self) -> Vec<u8> {
-        let index_bytes = key_maker::u32_to_hex(self.index);
-        let mapping_data_bytes = key_maker::bytes_to_hex(&self.mapping_data);
-        let mut key = Vec::new();
-        key.extend_from_slice(&index_bytes);
-        key.extend_from_slice(&mapping_data_bytes);
-        key
+    pub(crate) fn current_key(&self) -> StorageKey {
+        let mut result = [0u8; KEY_LEN];
+        let mut key = Vec::with_capacity(INDEX_SIZE + self.mapping_data.len());
+        key.extend_from_slice(self.index.to_be_bytes().as_ref());
+        key.extend_from_slice(&self.mapping_data);
+        let hashed_key = self.backend.borrow().hash(&key);
+        utils::hex_to_slice(&hashed_key, &mut result);
+        result
     }
 
     pub(crate) fn add_to_mapping_data(&mut self, data: &[u8]) {
@@ -107,6 +112,14 @@ impl ContractEnv {
         let (signature, _) = casper_types::crypto::Signature::from_bytes(signature.as_slice())
             .unwrap_or_else(|_| self.revert(ExecutionError::CouldNotDeserializeSignature));
         casper_types::crypto::verify(message.as_slice(), &signature, public_key).is_ok()
+    }
+
+    pub fn hash<T: ToBytes>(&self, value: T) -> [u8; 32] {
+        let bytes = value
+            .to_bytes()
+            .map_err(ExecutionError::from)
+            .unwrap_or_revert(self);
+        self.backend.borrow().hash(&bytes)
     }
 }
 

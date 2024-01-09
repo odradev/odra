@@ -15,4 +15,5 @@ pub trait ContractContext {
     fn get_named_arg_bytes(&self, name: &str) -> Bytes;
     fn handle_attached_value(&self);
     fn clear_attached_value(&self);
+    fn hash(&self, bytes: &[u8]) -> [u8; 32];
 }
