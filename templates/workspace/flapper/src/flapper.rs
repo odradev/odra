@@ -18,7 +18,7 @@ pub struct Flapper {
 impl Flapper {
     /// Odra constructor.
     /// 
-    /// Initializes the contract with the value of value.
+    /// Initializes the contract.
     pub fn init(&mut self) {
         self.value.set(false);
     }

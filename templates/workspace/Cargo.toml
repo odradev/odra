@@ -5,6 +5,9 @@ members = [
     ]
 resolver = "2"
 
+[workspace.dependencies]
+#odra_dependency
+
 [profile.release]
 codegen-units = 1
 lto = true

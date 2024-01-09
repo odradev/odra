@@ -1,18 +1,23 @@
 use odra::prelude::*;
-use odra::{Module, Variable, ContractEnv};
+use odra::Variable;
 
-/// A #module_name module storage definition.
+/// A module definition. Each module struct consists Variables and Mappings
+/// or/and another modules.
 #[odra::module]
 pub struct #module_name {
-    env: Rc<ContractEnv>,
+    /// The module itself does not store the value,
+    /// it's a proxy that writes/reads value to/from the host.
     value: Variable<bool>,
 }
 
-/// Module entrypoints implementation.
+/// Module implementation.
+///
+/// To generate entrypoints,
+/// an implementation block must be marked as #[odra::module].
 #[odra::module]
 impl #module_name {
     /// #module_name constructor.
-    /// Initializes the contract with the value of value.
+    /// Initializes the contract.
     pub fn init(&mut self) {
         self.value.set(false);
     }
