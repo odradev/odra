@@ -18,6 +18,8 @@ pub mod event;
 mod host_context;
 mod host_env;
 pub mod item;
+mod key_maker;
+pub mod list;
 pub mod mapping;
 pub mod module;
 pub mod native_token;
@@ -39,6 +41,7 @@ pub use error::{AddressError, CollectionError, ExecutionError, OdraError, VmErro
 pub use host_context::HostContext;
 pub use host_env::HostEnv;
 pub use item::OdraItem;
+pub use key_maker::bytes_to_hex;
 pub use module::ModuleCaller;
 pub use odra_result::OdraResult;
 pub use unchecked_getter::UncheckedGetter;
