@@ -1,102 +1,97 @@
-use odra::{
-    contract_env, execution_error,
-    types::{casper_types::U512, event::OdraEvent, Address, BlockTime},
-    Mapping, Variable
-};
+use casper_event_standard::Event;
+use odra::casper_event_standard;
+use odra::prelude::*;
+use odra::{Address, Mapping, Module, OdraError, Variable, U512};
 
 #[odra::module]
 pub struct TimeLockWallet {
     balances: Mapping<Address, U512>,
-    lock_expiration_map: Mapping<Address, BlockTime>,
-    lock_duration: Variable<BlockTime>
+    lock_expiration_map: Mapping<Address, u64>,
+    lock_duration: Variable<u64>
 }
 
 #[odra::module]
 impl TimeLockWallet {
-    #[odra(init)]
-    pub fn init(&mut self, lock_duration: BlockTime) {
+    pub fn init(&mut self, lock_duration: u64) {
         self.lock_duration.set(lock_duration);
     }
 
     #[odra(payable)]
     pub fn deposit(&mut self) {
         // Extract values
-        let caller: Address = contract_env::caller();
-        let amount: U512 = contract_env::attached_value();
-        let current_block_time: BlockTime = contract_env::get_block_time();
+        let caller: Address = self.env().caller();
+        let amount: U512 = self.env().attached_value();
+        let current_block_time: u64 = self.env().get_block_time();
 
         // Multiple lock check
         if self.balances.get(&caller).is_some() {
-            contract_env::revert(Error::CannotLockTwice)
+            self.env().revert(Error::CannotLockTwice)
         }
 
         // Update state, emit event
         self.balances.set(&caller, amount);
         self.lock_expiration_map
             .set(&caller, current_block_time + self.lock_duration());
-        Deposit {
+        self.env().emit_event(Deposit {
             address: caller,
             amount
-        }
-        .emit();
+        });
     }
 
     pub fn withdraw(&mut self, amount: &U512) {
         // Extract values
-        let caller: Address = contract_env::caller();
-        let current_block_time: BlockTime = contract_env::get_block_time();
+        let caller: Address = self.env().caller();
+        let current_block_time: u64 = self.env().get_block_time();
         let balance: U512 = self.balances.get_or_default(&caller);
 
         // Balance check
         if *amount > balance {
-            contract_env::revert(Error::InsufficientBalance)
+            self.env().revert(Error::InsufficientBalance)
         }
 
         // Lock check
         let lock_expiration_time = self.lock_expiration_map.get_or_default(&caller);
         if current_block_time < lock_expiration_time {
-            contract_env::revert(Error::LockIsNotOver)
+            self.env().revert(Error::LockIsNotOver)
         }
 
         // Transfer tokens, emit event
-        contract_env::transfer_tokens(&caller, *amount);
+        self.env().transfer_tokens(&caller, amount);
         self.balances.subtract(&caller, *amount);
-        Withdrawal {
+        self.env().emit_event(Withdrawal {
             address: caller,
             amount: *amount
-        }
-        .emit();
+        });
     }
 
     pub fn get_balance(&self, address: &Address) -> U512 {
         self.balances.get_or_default(address)
     }
 
-    pub fn lock_duration(&self) -> BlockTime {
+    pub fn lock_duration(&self) -> u64 {
         self.lock_duration.get_or_default()
     }
 }
 
-execution_error! {
-    /// Errors that may occur during the contract execution.
-    pub enum Error {
-        /// Cannot withdraw funds, the lock period is not over.
-        LockIsNotOver => 1,
-        /// A user deposit funds the second and the next time.
-        CannotLockTwice => 2,
-        /// A user deposits more funds he/she owns.
-        InsufficientBalance => 3
-    }
+#[derive(OdraError)]
+/// Errors that may occur during the contract execution.
+pub enum Error {
+    /// Cannot withdraw funds, the lock period is not over.
+    LockIsNotOver = 1,
+    /// A user deposit funds the second and the next time.
+    CannotLockTwice = 2,
+    /// A user deposits more funds he/she owns.
+    InsufficientBalance = 3
 }
 
-#[derive(odra::Event, PartialEq, Eq, Debug)]
+#[derive(Event, PartialEq, Eq, Debug)]
 
 pub struct Deposit {
     pub address: Address,
     pub amount: U512
 }
 
-#[derive(odra::Event, PartialEq, Eq, Debug)]
+#[derive(Event, PartialEq, Eq, Debug)]
 pub struct Withdrawal {
     pub address: Address,
     pub amount: U512
@@ -104,22 +99,18 @@ pub struct Withdrawal {
 
 #[cfg(test)]
 mod test {
-    use odra::{
-        assert_events, test_env,
-        types::{casper_types::U512, Address}
-    };
-
+    use super::*;
     use crate::contracts::tlw::{Deposit, Withdrawal};
-
-    use super::{Error, TimeLockWalletDeployer, TimeLockWalletRef};
+    use odra::Address;
 
     const ONE_DAY_IN_SECONDS: u64 = 60 * 60 * 24;
 
-    fn setup() -> (TimeLockWalletRef, Address, Address) {
+    fn setup() -> (TimeLockWalletHostRef, Address, Address) {
+        let test_env = odra::test_env();
         (
-            TimeLockWalletDeployer::init(ONE_DAY_IN_SECONDS),
-            test_env::get_account(0),
-            test_env::get_account(1)
+            TimeLockWalletDeployer::init(&test_env, ONE_DAY_IN_SECONDS),
+            test_env.get_account(0),
+            test_env.get_account(1)
         )
     }
 
@@ -127,15 +118,15 @@ mod test {
     fn test_deposit() {
         // Given a new contract.
         let (contract, user_1, user_2) = setup();
+        let test_env = contract.env().clone();
 
         // Helper method for a single deposit.
         let single_deposit = |account: Address, deposit: U512| {
-            let balance = test_env::token_balance(account);
-            test_env::set_caller(account);
+            let balance = test_env.balance_of(&account);
+            test_env.set_caller(account);
             contract.with_tokens(deposit).deposit();
-            let gas_used = test_env::last_call_contract_gas_used();
-            let balance_after = test_env::token_balance(account);
-            assert_eq!(balance_after + gas_used + deposit, balance);
+            let balance_after = test_env.balance_of(&account);
+            assert_eq!(balance_after + deposit, balance);
         };
 
         // When two users deposit some tokens.
@@ -146,17 +137,20 @@ mod test {
         single_deposit(user_2, user_2_deposit);
 
         // Then the users' balance is the contract is equal to the deposited amount.
-        assert_eq!(contract.get_balance(&user_1), user_1_deposit);
-        assert_eq!(contract.get_balance(&user_2), user_2_deposit);
+        assert_eq!(contract.get_balance(user_1), user_1_deposit);
+        assert_eq!(contract.get_balance(user_2), user_2_deposit);
 
         // Then two deposit event were emitted.
-        assert_events!(
-            contract,
-            Deposit {
+        test_env.emitted_event(
+            &contract.address(),
+            &Deposit {
                 address: user_1,
                 amount: user_1_deposit
-            },
-            Deposit {
+            }
+        );
+        test_env.emitted_event(
+            &contract.address(),
+            &Deposit {
                 address: user_2,
                 amount: user_2_deposit
             }
@@ -165,58 +159,59 @@ mod test {
 
     #[test]
     fn second_deposit_for_the_same_user_should_fail() {
-        test_env::assert_exception(Error::CannotLockTwice, || {
-            // Given a new contract.
-            let (contract, _, _) = setup();
+        // Given a new contract.
+        let (contract, _, _) = setup();
 
-            // The user makes the first deposit.
-            let deposit: U512 = 100.into();
-            contract.with_tokens(deposit).deposit();
+        // The user makes the first deposit.
+        let deposit: U512 = 100.into();
+        contract.with_tokens(deposit).deposit();
 
-            // When the user tries to deposit tokens for the second time, an error occurs.
-            contract.with_tokens(deposit).deposit();
-        });
+        // When the user tries to deposit tokens for the second time, an error occurs.
+        assert_eq!(
+            contract.with_tokens(deposit).try_deposit().unwrap_err(),
+            Error::CannotLockTwice.into()
+        );
     }
 
     #[test]
     fn test_successful_withdrawal() {
         // Given a contract with the user's deposit.
         let (mut contract, user, _) = setup();
+        let test_env = contract.env().clone();
         let deposit_amount: U512 = 100.into();
         contract.with_tokens(deposit_amount).deposit();
 
         // When the user makes two token withdrawals after the lock is expired.
-        test_env::advance_block_time_by(ONE_DAY_IN_SECONDS + 1);
-        let balance_before_withdrawals = test_env::token_balance(user);
+        test_env.advance_block_time(ONE_DAY_IN_SECONDS + 1);
+        let balance_before_withdrawals = test_env.balance_of(&user);
         let first_withdrawal_amount: U512 = 50.into();
         let second_withdrawal_amount: U512 = 40.into();
-        contract.withdraw(&first_withdrawal_amount);
-        let mut gas_used = test_env::last_call_contract_gas_used();
-        contract.withdraw(&second_withdrawal_amount);
-        gas_used = gas_used + test_env::last_call_contract_gas_used();
+        contract.withdraw(first_withdrawal_amount);
+        contract.withdraw(second_withdrawal_amount);
 
         // Then the native token balance is updated.
         assert_eq!(
-            test_env::token_balance(user),
-            balance_before_withdrawals - gas_used
-                + first_withdrawal_amount
-                + second_withdrawal_amount
+            test_env.balance_of(&user),
+            balance_before_withdrawals + first_withdrawal_amount + second_withdrawal_amount
         );
 
         // Then the user balance in the contract is deducted.
         assert_eq!(
-            contract.get_balance(&user),
+            contract.get_balance(user),
             deposit_amount - first_withdrawal_amount - second_withdrawal_amount
         );
 
         // Then two Withdrawal events were emitted.
-        assert_events!(
-            contract,
-            Withdrawal {
+        test_env.emitted_event(
+            &contract.address(),
+            &Withdrawal {
                 address: user,
                 amount: first_withdrawal_amount
-            },
-            Withdrawal {
+            }
+        );
+        test_env.emitted_event(
+            &contract.address(),
+            &Withdrawal {
                 address: user,
                 amount: second_withdrawal_amount
             }
@@ -225,28 +220,30 @@ mod test {
 
     #[test]
     fn test_too_early_withdrawal() {
-        test_env::assert_exception(Error::LockIsNotOver, || {
-            // Given a contract with the user's deposit.
-            let (mut contract, _, _) = setup();
-            contract.with_tokens(100).deposit();
+        // Given a contract with the user's deposit.
+        let (mut contract, _, _) = setup();
+        contract.with_tokens(100.into()).deposit();
 
-            // When the user withdraws tokens before the lock is released, an error occurs.
-            contract.withdraw(&100.into());
-        });
+        // When the user withdraws tokens before the lock is released, an error occurs.
+        assert_eq!(
+            contract.try_withdraw(100.into()).unwrap_err(),
+            Error::LockIsNotOver.into()
+        );
     }
 
     #[test]
     fn test_withdraw_too_much() {
-        test_env::assert_exception(Error::InsufficientBalance, || {
-            // Given a contract with the user's deposit.
-            let (mut contract, _, _) = setup();
-            let deposit = 100;
-            contract.with_tokens(deposit).deposit();
+        // Given a contract with the user's deposit.
+        let (mut contract, _, _) = setup();
+        let deposit = 100;
+        contract.with_tokens(deposit.into()).deposit();
 
-            // When the user withdraws more tokens than has in the deposit, an error occurs.
-            test_env::advance_block_time_by(ONE_DAY_IN_SECONDS + 1);
-            let withdrawal = deposit + 1;
-            contract.withdraw(&withdrawal.into());
-        });
+        // When the user withdraws more tokens than has in the deposit, an error occurs.
+        contract.env().advance_block_time(ONE_DAY_IN_SECONDS + 1);
+        let withdrawal = deposit + 1;
+        assert_eq!(
+            contract.try_withdraw(withdrawal.into()).unwrap_err(),
+            Error::InsufficientBalance.into()
+        );
     }
 }

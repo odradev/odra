@@ -1,4 +1,5 @@
-use odra::{contract_env, types::Address};
+use odra::prelude::*;
+use odra::{Address, Module, ModuleWrapper};
 use sha3::{Digest, Keccak256};
 
 use odra_modules::access::{AccessControl, Role, DEFAULT_ADMIN_ROLE};
@@ -8,14 +9,13 @@ pub const ROLE_MODERATOR_ADMIN: &str = "moderator_admin";
 
 #[odra::module]
 pub struct MockModerated {
-    access_control: AccessControl
+    access_control: ModuleWrapper<AccessControl>
 }
 
 #[odra::module]
 impl MockModerated {
-    #[odra(init)]
     pub fn init(&mut self) {
-        let admin: Address = contract_env::caller();
+        let admin = self.env().caller();
         self.access_control
             .unchecked_grant_role(&DEFAULT_ADMIN_ROLE, &admin);
         self.access_control
@@ -76,9 +76,10 @@ pub fn keccak_256(input: &str) -> Role {
 #[cfg(test)]
 pub mod test {
     use super::{
-        keccak_256, MockModeratedDeployer, MockModeratedRef, ROLE_MODERATOR, ROLE_MODERATOR_ADMIN
+        keccak_256, MockModeratedDeployer, MockModeratedHostRef, ROLE_MODERATOR,
+        ROLE_MODERATOR_ADMIN
     };
-    use odra::{assert_events, test_env, types::Address};
+    use odra::Address;
     use odra_modules::access::{
         errors::Error,
         events::{RoleGranted, RoleRevoked}
@@ -86,11 +87,12 @@ pub mod test {
 
     #[test]
     fn deploy_works() {
-        let contract = MockModeratedDeployer::init();
-        let admin = test_env::get_account(0);
+        let env = odra::test_env();
+        let contract = MockModeratedDeployer::init(&env);
+        let admin = env.get_account(0);
 
-        assert!(contract.is_moderator(&admin));
-        assert!(contract.is_admin(&admin));
+        assert!(contract.is_moderator(admin));
+        assert!(contract.is_admin(admin));
     }
 
     #[test]
@@ -98,27 +100,27 @@ pub mod test {
         // given Admin is a moderator and an admin.
         // given User1 and User2 that are not moderators.
         let (mut contract, admin, user1, user2) = setup(false);
-        assert!(!contract.is_moderator(&user1));
-        assert!(!contract.is_moderator(&user2));
+        assert!(!contract.is_moderator(user1));
+        assert!(!contract.is_moderator(user2));
 
         // when Admin adds a moderator.
-        test_env::set_caller(admin);
-        contract.add_moderator(&user1);
+        contract.env().set_caller(admin);
+        contract.add_moderator(user1);
         // then the role is granted.
-        assert!(contract.is_moderator(&user1));
+        assert!(contract.is_moderator(user1));
 
         // when a non-admin adds a moderator.
-        test_env::assert_exception(Error::MissingRole, || {
-            test_env::set_caller(user1);
-            contract.add_moderator(&user2);
-        });
+        contract.env().set_caller(user1);
+        let err = contract.try_add_moderator(user2).unwrap_err();
+        assert_eq!(err, Error::MissingRole.into());
+
         // then the User2 is not a moderator.
-        assert!(!contract.is_moderator(&user2));
+        assert!(!contract.is_moderator(user2));
 
         // then two RoleGranted events were emitted.
-        assert_events!(
-            contract,
-            RoleGranted {
+        contract.env().emitted_event(
+            &contract.address(),
+            &RoleGranted {
                 role: keccak_256(ROLE_MODERATOR),
                 address: user1,
                 sender: admin
@@ -135,38 +137,50 @@ pub mod test {
         let (mut contract, admin, moderator, user) = setup(true);
 
         // when User removes the role - it fails.
-        test_env::set_caller(user);
-        test_env::assert_exception(Error::MissingRole, || contract.remove_moderator(&moderator));
+        contract.env().set_caller(user);
+        assert_eq!(
+            contract.try_remove_moderator(moderator).unwrap_err(),
+            Error::MissingRole.into()
+        );
         // then Moderator still is a moderator.
-        assert!(contract.is_moderator(&moderator));
+        assert!(contract.is_moderator(moderator));
 
         // when Admin revokes the Moderator's role.
-        test_env::set_caller(admin);
-        contract.remove_moderator(&moderator);
+        contract.env().set_caller(admin);
+        contract.remove_moderator(moderator);
         // then Moderator no longer is a moderator.
-        assert!(!contract.is_moderator(&moderator));
+        assert!(!contract.is_moderator(moderator));
 
         // Re-grant the role.
-        contract.add_moderator(&moderator);
+        contract.add_moderator(moderator);
         // Moderator revoke his role - fails because is not an admin.
-        test_env::set_caller(moderator);
-        test_env::assert_exception(Error::MissingRole, || contract.remove_moderator(&moderator));
+        contract.env().set_caller(moderator);
+        assert_eq!(
+            contract.try_remove_moderator(moderator).unwrap_err(),
+            Error::MissingRole.into()
+        );
         // then Moderator still is a moderator.
-        assert!(contract.is_moderator(&moderator));
+        assert!(contract.is_moderator(moderator));
 
-        assert_events!(
-            contract,
-            RoleGranted {
+        contract.env().emitted_event(
+            &contract.address(),
+            &RoleGranted {
                 role: keccak_256(ROLE_MODERATOR),
                 address: moderator,
                 sender: admin
-            },
-            RoleRevoked {
+            }
+        );
+        contract.env().emitted_event(
+            &contract.address(),
+            &RoleRevoked {
                 role: keccak_256(ROLE_MODERATOR),
                 address: moderator,
                 sender: admin
-            },
-            RoleGranted {
+            }
+        );
+        contract.env().emitted_event(
+            &contract.address(),
+            &RoleGranted {
                 role: keccak_256(ROLE_MODERATOR),
                 address: moderator,
                 sender: admin
@@ -180,19 +194,20 @@ pub mod test {
         let (mut contract, _, moderator, _) = setup(true);
 
         // when Admin renounces the role on moderator's behalf - it fails.
-        test_env::assert_exception(Error::RoleRenounceForAnotherAddress, || {
-            contract.renounce_moderator_role(&moderator)
-        });
+        assert_eq!(
+            contract.try_renounce_moderator_role(moderator).unwrap_err(),
+            Error::RoleRenounceForAnotherAddress.into()
+        );
 
         // when Moderator renounces the role.
-        test_env::set_caller(moderator);
-        contract.renounce_moderator_role(&moderator);
+        contract.env().set_caller(moderator);
+        contract.renounce_moderator_role(moderator);
         // then is no longer a moderator.
-        assert!(!contract.is_moderator(&moderator));
+        assert!(!contract.is_moderator(moderator));
         // RoleRevoked event was emitted.
-        assert_events!(
-            contract,
-            RoleRevoked {
+        contract.env().emitted_event(
+            &contract.address(),
+            &RoleRevoked {
                 role: keccak_256(ROLE_MODERATOR),
                 address: moderator,
                 sender: moderator
@@ -209,24 +224,27 @@ pub mod test {
         let (mut contract, admin, moderator, user) = setup(true);
 
         // when Admin grants Moderator the admin role.
-        test_env::set_caller(admin);
-        contract.add_admin(&moderator);
+        contract.env().set_caller(admin);
+        contract.add_admin(moderator);
         // then Moderator is an admin.
-        assert!(contract.is_admin(&moderator));
+        assert!(contract.is_admin(moderator));
         // when Moderator grants User the moderator role.
-        test_env::set_caller(moderator);
-        contract.add_moderator(&user);
+        contract.env().set_caller(moderator);
+        contract.add_moderator(user);
         // then User is a moderator.
-        assert!(contract.is_moderator(&user));
+        assert!(contract.is_moderator(user));
 
-        assert_events!(
-            contract,
-            RoleGranted {
+        contract.env().emitted_event(
+            &contract.address(),
+            &RoleGranted {
                 role: keccak_256(ROLE_MODERATOR_ADMIN),
                 address: moderator,
                 sender: admin
-            },
-            RoleGranted {
+            }
+        );
+        contract.env().emitted_event(
+            &contract.address(),
+            &RoleGranted {
                 role: keccak_256(ROLE_MODERATOR),
                 address: user,
                 sender: moderator
@@ -234,17 +252,14 @@ pub mod test {
         );
     }
 
-    fn setup(add_moderator: bool) -> (MockModeratedRef, Address, Address, Address) {
-        let mut contract = MockModeratedDeployer::init();
+    fn setup(add_moderator: bool) -> (MockModeratedHostRef, Address, Address, Address) {
+        let env = odra::test_env();
+        let mut contract = MockModeratedDeployer::init(&env);
         // given admin who is a moderator and two users that are not moderators.
-        let (admin, user1, user2) = (
-            test_env::get_account(0),
-            test_env::get_account(1),
-            test_env::get_account(2)
-        );
+        let (admin, user1, user2) = (env.get_account(0), env.get_account(1), env.get_account(2));
         if add_moderator {
-            contract.add_moderator(&user1);
-            assert!(contract.is_moderator(&user1));
+            contract.add_moderator(user1);
+            assert!(contract.is_moderator(user1));
         }
         (contract, admin, user1, user2)
     }

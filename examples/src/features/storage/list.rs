@@ -1,4 +1,4 @@
-use odra::{prelude::string::String, List, Variable};
+use odra::{prelude::*, List, Variable};
 
 #[odra::module]
 pub struct DogContract3 {
@@ -37,7 +37,8 @@ mod tests {
 
     #[test]
     fn init_test() {
-        let mut dog_contract = DogContract3Deployer::init("Mantus".to_string());
+        let test_env = odra::test_env();
+        let mut dog_contract = DogContract3Deployer::init(&test_env, "Mantus".to_string());
         assert_eq!(dog_contract.walks_amount(), 0);
         assert_eq!(dog_contract.walks_total_length(), 0);
         dog_contract.walk_the_dog(5);

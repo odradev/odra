@@ -12,6 +12,20 @@ sha3 = { version = "0.10.6", default-features = false }
 hex = "0.4.3"
 
 [[bin]]
-name = "erc20-on-livenet"
-path = "bin/erc20_on_livenet.rs"
-required-features = ["casper-livenet"]
+name = "odra_examples_build_contract"
+path = "bin/build_contract.rs"
+
+[[bin]]
+name = "odra_examples_build_schema"
+path = "bin/build_schema.rs"
+
+[profile.release]
+codegen-units = 1
+lto = true
+
+[profile.dev.package."*"]
+opt-level = 3
+#[[bin]]
+#name = "erc20-on-livenet"
+#path = "bin/erc20_on_livenet.rs"
+#required-features = ["casper-livenet"]

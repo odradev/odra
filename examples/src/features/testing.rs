@@ -1,13 +1,10 @@
-use odra::{
-    prelude::string::String,
-    types::{Address, BlockTime},
-    Variable
-};
+use odra::prelude::*;
+use odra::{Address, Module, Variable};
 
 #[odra::module]
 pub struct TestingContract {
     name: Variable<String>,
-    created_at: Variable<BlockTime>,
+    created_at: Variable<u64>,
     created_by: Variable<Address>
 }
 
@@ -16,15 +13,15 @@ impl TestingContract {
     #[odra(init)]
     pub fn init(&mut self, name: String) {
         self.name.set(name);
-        self.created_at.set(odra::contract_env::get_block_time());
-        self.created_by.set(odra::contract_env::caller())
+        self.created_at.set(self.env().get_block_time());
+        self.created_by.set(self.env().caller())
     }
 
     pub fn name(&self) -> String {
         self.name.get_or_default()
     }
 
-    pub fn created_at(&self) -> BlockTime {
+    pub fn created_at(&self) -> u64 {
         self.created_at.get().unwrap()
     }
 
@@ -36,16 +33,17 @@ impl TestingContract {
 #[cfg(test)]
 mod tests {
     use super::TestingContractDeployer;
-    use odra::prelude::string::ToString;
+    use odra::prelude::*;
 
     #[test]
     fn test_env() {
-        odra::test_env::set_caller(odra::test_env::get_account(0));
-        let testing_contract = TestingContractDeployer::init("MyContract".to_string());
+        let test_env = odra::test_env();
+        test_env.set_caller(test_env.get_account(0));
+        let testing_contract = TestingContractDeployer::init(&test_env, "MyContract".to_string());
         let creator = testing_contract.created_by();
-        odra::test_env::set_caller(odra::test_env::get_account(1));
-        let testing_contract2 = TestingContractDeployer::init("MyContract2".to_string());
+        test_env.set_caller(test_env.get_account(1));
+        let testing_contract2 = TestingContractDeployer::init(&test_env, "MyContract2".to_string());
         let creator2 = testing_contract2.created_by();
-        assert!(creator != creator2);
+        assert_ne!(creator, creator2);
     }
 }

@@ -1,4 +1,5 @@
-use odra::{execution_error, prelude::string::String, types::Address, UnwrapOrRevert, Variable};
+use odra::prelude::*;
+use odra::{Address, Module, OdraError, Variable};
 
 #[odra::module]
 pub struct OwnedContract {
@@ -6,19 +7,17 @@ pub struct OwnedContract {
     owner: Variable<Address>
 }
 
-execution_error! {
-    pub enum Error {
-        OwnerNotSet => 1,
-        NotAnOwner => 2,
-    }
+#[derive(OdraError)]
+pub enum Error {
+    OwnerNotSet = 1,
+    NotAnOwner = 2
 }
 
 #[odra::module]
 impl OwnedContract {
-    #[odra(init)]
     pub fn init(&mut self, name: String) {
         self.name.set(name);
-        self.owner.set(odra::contract_env::caller())
+        self.owner.set(self.env().caller())
     }
 
     pub fn name(&self) -> String {
@@ -26,13 +25,13 @@ impl OwnedContract {
     }
 
     pub fn owner(&self) -> Address {
-        self.owner.get().unwrap_or_revert_with(Error::OwnerNotSet)
+        self.owner.get_or_revert_with(Error::OwnerNotSet)
     }
 
     pub fn change_name(&mut self, name: String) {
-        let caller = odra::contract_env::caller();
+        let caller = self.env().caller();
         if caller != self.owner() {
-            odra::contract_env::revert(Error::NotAnOwner)
+            self.env().revert(Error::NotAnOwner)
         }
 
         self.name.set(name);
@@ -43,34 +42,44 @@ impl OwnedContract {
 mod tests {
     use super::Error;
     use super::OwnedContractDeployer;
-    use odra::prelude::string::ToString;
+    use odra::prelude::*;
 
     #[test]
     fn test_owner() {
-        let owner = odra::test_env::get_account(0);
-        let not_an_owner = odra::test_env::get_account(1);
+        let test_env = odra::test_env();
+        let owner = test_env.get_account(0);
+        let not_an_owner = test_env.get_account(1);
 
-        odra::test_env::set_caller(owner);
-        let mut owned_contract = OwnedContractDeployer::init("OwnedContract".to_string());
+        test_env.set_caller(owner);
+        let mut owned_contract =
+            OwnedContractDeployer::init(&test_env, "OwnedContract".to_string());
 
-        odra::test_env::set_caller(not_an_owner);
-        odra::test_env::assert_exception(Error::NotAnOwner, || {
-            owned_contract.change_name("NewName".to_string());
-        });
+        test_env.set_caller(not_an_owner);
+        assert_eq!(
+            owned_contract
+                .try_change_name("NewName".to_string())
+                .unwrap_err(),
+            Error::NotAnOwner.into()
+        );
         assert_ne!(owned_contract.name(), "NewName");
     }
 
     #[test]
     fn test_owner_error() {
-        let owner = odra::test_env::get_account(0);
-        let not_an_owner = odra::test_env::get_account(1);
+        let test_env = odra::test_env();
+        let owner = test_env.get_account(0);
+        let not_an_owner = test_env.get_account(1);
 
-        odra::test_env::set_caller(owner);
-        let mut owned_contract = OwnedContractDeployer::init("OwnedContract".to_string());
+        test_env.set_caller(owner);
+        let mut owned_contract =
+            OwnedContractDeployer::init(&test_env, "OwnedContract".to_string());
 
-        odra::test_env::set_caller(not_an_owner);
-        odra::test_env::assert_exception(Error::NotAnOwner, || {
-            owned_contract.change_name("NewName".to_string());
-        })
+        test_env.set_caller(not_an_owner);
+        assert_eq!(
+            owned_contract
+                .try_change_name("NewName".to_string())
+                .unwrap_err(),
+            Error::NotAnOwner.into()
+        );
     }
 }

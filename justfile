@@ -19,10 +19,9 @@ lint: clippy
 check-lint: clippy
     cargo fmt -- --check
     cd odra-casper/proxy-caller && cargo fmt -- --check
-    cd examples2 && cargo fmt -- --check
     cd modules && cargo fmt -- --check
-#    cd examples && cargo fmt -- --check
-#    cd examples && cargo check --no-default-features -F casper-livenet
+    cd examples && cargo fmt -- --check
+    cd examples && cargo check
 
 install-cargo-odra:
     cargo install cargo-odra --locked
@@ -71,17 +70,6 @@ clean:
     rm -f Cargo.lock
     cd examples && rm -f Cargo.lock
     cd modules && rm -f Cargo.lock
-
-build-erc20:
-    cd examples2 && ODRA_MODULE=Erc20 cargo build --release --target wasm32-unknown-unknown --bin build_contract
-    wasm-strip examples2/target/wasm32-unknown-unknown/release/build_contract.wasm
-    rm -rf examples2/wasm/Erc20.wasm
-    mkdir -p examples2/wasm
-    mv examples2/target/wasm32-unknown-unknown/release/build_contract.wasm examples2/wasm/Erc20.wasm
-
-test-erc20: build-erc20
-    cd examples2 && cargo test --lib erc20 -- --nocapture
-    cd examples2 && ODRA_BACKEND=casper cargo test --lib erc20 -- --nocapture
 
 build-counter-pack:
     cd examples2 && ODRA_MODULE=CounterPack cargo build --release --target wasm32-unknown-unknown --bin build_contract
