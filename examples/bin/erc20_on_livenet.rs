@@ -1,6 +1,3 @@
-use odra::client_env;
-use odra::types::{Address, U256};
-use odra_modules::erc20::Erc20Deployer;
 use std::str::FromStr;
 
 fn main() {

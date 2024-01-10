@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 odra = { path = "../odra", default-features = false }
-casper-event-standard = "0.4.1"
 odra-modules = { path = "../modules", default-features = false }
 sha3 = { version = "0.10.6", default-features = false }
 
@@ -13,11 +12,11 @@ sha3 = { version = "0.10.6", default-features = false }
 hex = "0.4.3"
 
 [[bin]]
-name = "build_contract"
+name = "odra_examples_build_contract"
 path = "bin/build_contract.rs"
 
 [[bin]]
-name = "build_schema"
+name = "odra_examples_build_schema"
 path = "bin/build_schema.rs"
 
 [profile.release]

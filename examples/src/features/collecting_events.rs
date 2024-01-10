@@ -1,6 +1,6 @@
 #![allow(dead_code)]
-
-use odra::casper_event_standard::Event;
+use casper_event_standard::Event;
+use odra::casper_event_standard;
 use odra::prelude::*;
 use odra::{Module, ModuleWrapper, Variable};
 

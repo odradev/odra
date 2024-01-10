@@ -1,4 +1,5 @@
 use casper_event_standard::Event;
+use odra::casper_event_standard;
 use odra::prelude::*;
 use odra::{Address, Mapping, Module, OdraError, Variable, U512};
 

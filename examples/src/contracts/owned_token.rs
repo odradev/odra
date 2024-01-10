@@ -17,39 +17,23 @@ impl OwnedToken {
             .init(symbol, name, decimals, Some(initial_supply));
     }
 
-    pub fn transfer(&mut self, recipient: &Address, amount: &U256) {
-        self.erc20.transfer(recipient, amount);
-    }
-    pub fn transfer_from(&mut self, owner: &Address, recipient: &Address, amount: &U256) {
-        self.erc20.transfer_from(owner, recipient, amount);
-    }
-    pub fn approve(&mut self, spender: &Address, amount: &U256) {
-        self.erc20.approve(spender, amount);
-    }
-    pub fn name(&self) -> String {
-        self.erc20.name()
-    }
-    pub fn symbol(&self) -> String {
-        self.erc20.symbol()
-    }
-    pub fn decimals(&self) -> u8 {
-        self.erc20.decimals()
-    }
-    pub fn total_supply(&self) -> U256 {
-        self.erc20.total_supply()
-    }
-    pub fn balance_of(&self, owner: &Address) -> U256 {
-        self.erc20.balance_of(owner)
-    }
-    pub fn allowance(&self, owner: &Address, spender: &Address) -> U256 {
-        self.erc20.allowance(owner, spender)
-    }
+    delegate! {
+        to self.erc20 {
+            fn transfer(&mut self, recipient: &Address, amount: &U256);
+            fn transfer_from(&mut self, owner: &Address, recipient: &Address, amount: &U256);
+            fn approve(&mut self, spender: &Address, amount: &U256);
+            fn name(&self) -> String;
+            fn symbol(&self) -> String;
+            fn decimals(&self) -> u8;
+            fn total_supply(&self) -> U256;
+            fn balance_of(&self, owner: &Address) -> U256;
+            fn allowance(&self, owner: &Address, spender: &Address) -> U256;
+        }
 
-    pub fn get_owner(&self) -> Address {
-        self.ownable.get_owner()
-    }
-    pub fn transfer_ownership(&mut self, new_owner: &Address) {
-        self.ownable.transfer_ownership(new_owner);
+        to self.ownable {
+            fn get_owner(&self) -> Address;
+            fn transfer_ownership(&mut self, new_owner: &Address);
+        }
     }
 
     pub fn mint(&mut self, address: &Address, amount: &U256) {
