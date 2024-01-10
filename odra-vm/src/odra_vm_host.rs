@@ -16,6 +16,10 @@ impl HostContext for OdraVmHost {
         self.vm.borrow().set_caller(caller)
     }
 
+    fn set_gas(&self, gas: u64) {
+        // Set gas does nothing in this context
+    }
+
     fn caller(&self) -> Address {
         *self.vm.borrow().callstack_tip().address()
     }

@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 odra = { path = "../odra", default-features = false }
 odra-modules = { path = "../modules", default-features = false }
+odra-casper-livenet-env = { path = "../odra-casper/livenet-env" }
 sha3 = { version = "0.10.6", default-features = false }
 
 [dev-dependencies]
@@ -21,6 +22,10 @@ test = false
 name = "odra_examples_build_schema"
 path = "bin/build_schema.rs"
 test = false
+
+[[bin]]
+name = "erc20_on_livenet"
+path = "bin/erc20_on_livenet.rs"
 
 [profile.release]
 codegen-units = 1

@@ -235,4 +235,14 @@ impl HostEnv {
         let backend = self.backend.borrow();
         backend.public_key(address)
     }
+
+    pub fn caller(&self) -> Address {
+        let backend = self.backend.borrow();
+        backend.caller()
+    }
+
+    pub fn set_gas(&self, gas: u64) {
+        let backend = self.backend.borrow();
+        backend.set_gas(gas)
+    }
 }

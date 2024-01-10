@@ -8,6 +8,7 @@ use casper_types::PublicKey;
 
 pub trait HostContext {
     fn set_caller(&self, caller: Address);
+    fn set_gas(&self, gas: u64);
     fn caller(&self) -> Address;
     fn get_account(&self, index: usize) -> Address;
     fn balance_of(&self, address: &Address) -> U512;

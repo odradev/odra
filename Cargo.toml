@@ -4,6 +4,7 @@ members = [
     "odra-vm",
     "core",
     "odra-macros",
+    "odra-casper/livenet-env",
     "odra-casper/wasm-env",
     "odra-casper/test-vm",
     "odra-test",
