@@ -229,6 +229,14 @@ pub fn module_component() -> syn::Type {
     parse_quote!(odra::module::ModuleComponent)
 }
 
+pub fn odra_entry_point() -> syn::Type {
+    parse_quote!(odra::EntryPoint)
+}
+
+pub fn odra_entry_point_arg() -> syn::Type {
+    parse_quote!(odra::EntryPointArgument)
+}
+
 fn slice_to_vec(ty: &syn::Type) -> syn::Type {
     match ty {
         syn::Type::Slice(ty) => vec_of(ty.elem.as_ref()),

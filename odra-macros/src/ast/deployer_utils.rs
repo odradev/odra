@@ -7,6 +7,7 @@ use crate::{
 use proc_macro2::TokenStream;
 use quote::ToTokens;
 use syn::parse_quote;
+use syn::punctuated::Punctuated;
 
 #[derive(syn_derive::ToTokens)]
 pub struct DeployerInitSignature {
@@ -41,6 +42,36 @@ impl TryFrom<&'_ ModuleImplIR> for DeployerInitSignature {
 }
 
 #[derive(syn_derive::ToTokens)]
+pub struct EntrypointsInitExpr {
+    let_token: syn::token::Let,
+    ident: syn::Ident,
+    assign_token: syn::token::Eq,
+    value_expr: syn::Expr,
+    semi_token: syn::token::Semi
+}
+
+impl TryFrom<&'_ ModuleImplIR> for EntrypointsInitExpr {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        let functions = module.functions()?;
+        let entry_points = functions
+            .iter()
+            .map(|f| utils::expr::new_entry_point(f.name_str(), f.raw_typed_args()))
+            .collect::<Punctuated<_, syn::Token![,]>>();
+        let value_expr = utils::expr::vec(entry_points);
+
+        Ok(Self {
+            let_token: Default::default(),
+            ident: utils::ident::entry_points(),
+            assign_token: Default::default(),
+            value_expr,
+            semi_token: Default::default()
+        })
+    }
+}
+
+#[derive(syn_derive::ToTokens)]
 pub struct EntrypointCallerExpr {
     let_token: syn::token::Let,
     ident: syn::Ident,
@@ -66,6 +97,7 @@ impl TryFrom<&'_ ModuleImplIR> for EntrypointCallerExpr {
 impl EntrypointCallerExpr {
     fn entrypoint_caller(module: &ModuleImplIR) -> syn::Result<syn::Expr> {
         let env_ident = utils::ident::env();
+        let entry_points_ident = utils::ident::entry_points();
         let contract_env_ident = utils::ident::contract_env();
         let call_def_ident = utils::ident::call_def();
         let ty_caller = utils::ty::entry_points_caller();
@@ -79,7 +111,7 @@ impl EntrypointCallerExpr {
         branches.push(CallerBranch::Default(DefaultBranch));
 
         Ok(parse_quote!(
-            #ty_caller::new(#env_ident.clone(), |#contract_env_ident, #call_def_ident| {
+            #ty_caller::new(#env_ident.clone(), #entry_points_ident, |#contract_env_ident, #call_def_ident| {
                 match #call_def_ident.method() {
                     #(#branches)*
                 }
