@@ -1,3 +1,5 @@
+use casper_types::CLType;
+
 use crate::arithmetic::ArithmeticsError;
 use crate::prelude::*;
 use core::any::Any;
@@ -136,6 +138,13 @@ pub enum VmError {
     InvalidContext,
     /// Calling a contract with missing entrypoint arguments.
     MissingArg,
+    /// Calling a contract with a wrong argument type.
+    TypeMismatch {
+        /// Expected type.
+        expected: CLType,
+        /// Found type.
+        found: CLType
+    },
     /// Non-specified error with a custom message.
     Other(String),
     /// Unspecified error.

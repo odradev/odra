@@ -49,11 +49,6 @@ impl OdraVm {
                 .set_balance(address, U512::zero());
         }
 
-        // Call constructor if needed.
-        // if let Some(constructor) = constructor {
-        //     let (constructor_name, args, _) = constructor;
-        //     self.call_constructor(address, &constructor_name, args);
-        // }
         address
     }
 
@@ -74,14 +69,6 @@ impl OdraVm {
 
         self.handle_call_result(result)
     }
-
-    // fn call_constructor(&self, address: Address, entrypoint: &str, args: &RuntimeArgs) -> Vec<u8> {
-    //     self.prepare_call(address, entrypoint, None);
-    //     // Call contract from register.
-    //     let register = self.contract_register.read().unwrap();
-    //     let result = register.call_constructor(&address, String::from(entrypoint), args);
-    //     self.handle_call_result(result)
-    // }
 
     fn prepare_call(&self, address: Address, call_def: &CallDef) {
         let mut state = self.state.write().unwrap();
@@ -311,31 +298,30 @@ impl OdraVm {
 
 #[cfg(test)]
 mod tests {
-    use odra_core::serialize;
+    use odra_core::{call_def, serialize, Bytes, EntryPoint, EntryPointsCaller, ToBytes};
     use std::collections::BTreeMap;
+    use std::f32::consts::E;
 
+    use crate::vm::callstack::CallstackElement;
     use crate::vm::contract_container::{EntrypointArgs, EntrypointCall};
     use odra_core::call_def::CallDef;
     use odra_core::casper_types::bytesrepr::FromBytes;
     use odra_core::casper_types::{RuntimeArgs, U512};
+    use odra_core::Address;
     use odra_core::OdraAddress;
-    use odra_core::{Address, EventData};
     use odra_core::{ExecutionError, OdraError, VmError};
 
     use super::OdraVm;
+
+    const TEST_ENTRY_POINT: &'static str = "abc";
 
     #[test]
     fn contracts_have_different_addresses() {
         // given a new instance
         let instance = OdraVm::default();
         // when register two contracts with the same entrypoints
-        let entrypoint: Vec<(String, (EntrypointArgs, EntrypointCall))> =
-            vec![(String::from("abc"), (vec![], |_, _| vec![]))];
-        let entrypoints = entrypoint.into_iter().collect::<BTreeMap<_, _>>();
-        let constructors = BTreeMap::new();
-
-        let address1 = instance.register_contract(None, constructors.clone(), entrypoints.clone());
-        let address2 = instance.register_contract(None, constructors, entrypoints);
+        let address1 = instance.register_contract("A", test_caller(TEST_ENTRY_POINT));
+        let address2 = instance.register_contract("B", test_caller(TEST_ENTRY_POINT));
 
         // then addresses are different
         assert_ne!(address1, address2);
@@ -345,8 +331,9 @@ mod tests {
     fn addresses_have_different_type() {
         // given an address of a contract and an address of an account
         let instance = OdraVm::default();
-        let (contract_address, _, _) = setup_contract(&instance);
+
         let account_address = instance.get_account(0);
+        let contract_address = setup_contract(&instance, TEST_ENTRY_POINT);
 
         // Then the contract address is a contract
         assert!(contract_address.is_contract());
@@ -358,17 +345,17 @@ mod tests {
     fn test_contract_call() {
         // given an instance with a registered contract having one entrypoint
         let instance = OdraVm::default();
-
-        let (contract_address, entrypoint, call_result) = setup_contract(&instance);
+        let contract_address = setup_contract(&instance, TEST_ENTRY_POINT);
 
         // when call an existing entrypoint
         let result = instance.call_contract(
             contract_address,
-            CallDef::new(entrypoint, RuntimeArgs::new())
+            CallDef::new(TEST_ENTRY_POINT, RuntimeArgs::new())
         );
+        let expected_result: Bytes = test_call_result();
 
         // then returns the expected value
-        assert_eq!(result, serialize(&call_result));
+        assert_eq!(result, expected_result);
     }
 
     #[test]
@@ -379,7 +366,8 @@ mod tests {
         let address = Address::contract_from_u32(42);
 
         // when call a contract
-        instance.call_contract::<()>(address, "abc", &RuntimeArgs::new(), None);
+        let call_def = CallDef::new(TEST_ENTRY_POINT, RuntimeArgs::new());
+        instance.call_contract(address, call_def);
 
         // then the vm is in error state
         assert_eq!(
@@ -392,22 +380,19 @@ mod tests {
     fn test_call_non_existing_entrypoint() {
         // given an instance with a registered contract having one entrypoint
         let instance = OdraVm::default();
-        let (contract_address, entrypoint, _) = setup_contract(&instance);
+        let invalid_entry_point_name = "aaa";
+        let contract_address = setup_contract(&instance, TEST_ENTRY_POINT);
 
         // when call non-existing entrypoint
-        let invalid_entrypoint = entrypoint.chars().take(1).collect::<String>();
-        instance.call_contract::<()>(
-            contract_address,
-            &invalid_entrypoint,
-            &RuntimeArgs::new(),
-            None
-        );
+        let call_def = CallDef::new(invalid_entry_point_name, RuntimeArgs::new());
+
+        instance.call_contract(contract_address, call_def);
 
         // then the vm is in error state
         assert_eq!(
             instance.error(),
             Some(OdraError::VmError(VmError::NoSuchMethod(
-                invalid_entrypoint
+                invalid_entry_point_name.to_string()
             )))
         );
     }
@@ -428,15 +413,10 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn test_revert() {
-        // given an empty instance
         let instance = OdraVm::default();
-
-        // when revert
-        instance.revert(ExecutionError::new(1, "err").into());
-
-        // then an error is set
-        assert_eq!(instance.error(), Some(ExecutionError::new(1, "err").into()));
+        instance.revert(ExecutionError::User(1).into());
     }
 
     #[test]
@@ -446,13 +426,13 @@ mod tests {
 
         // when set a value
         let key = b"key";
-        let value = 32u8;
-        instance.set_var(key, value);
+        let value = 32u8.to_bytes().map(Bytes::from).unwrap();
+        instance.set_var(key, value.clone());
 
         // then the value can be read
         assert_eq!(instance.get_var(key), Some(value));
         // then the value under unknown key does not exist
-        assert_eq!(instance.get_var::<()>(b"other_key"), None);
+        assert_eq!(instance.get_var(b"other_key"), None);
     }
 
     #[test]
@@ -463,15 +443,15 @@ mod tests {
         // when set a value
         let dict = b"dict";
         let key: [u8; 2] = [1, 2];
-        let value = 32u8;
-        instance.set_dict_value(dict, &key, value);
+        let value = 32u8.to_bytes().map(Bytes::from).unwrap();
+        instance.set_dict_value(dict, &key, value.clone());
 
         // then the value can be read
         assert_eq!(instance.get_dict_value(dict, &key), Some(value));
         // then the value under the key in unknown dict does not exist
-        assert_eq!(instance.get_dict_value::<()>(b"other_dict", &key), None);
+        assert_eq!(instance.get_dict_value(b"other_dict", &key), None);
         // then the value under unknown key does not exist
-        assert_eq!(instance.get_dict_value::<()>(dict, &[]), None);
+        assert_eq!(instance.get_dict_value(dict, &[]), None);
     }
 
     #[test]
@@ -483,8 +463,8 @@ mod tests {
         // put a contract on stack
         push_address(&instance, &first_contract_address);
 
-        let first_event: EventData = vec![1, 2, 3];
-        let second_event: EventData = vec![4, 5, 6];
+        let first_event: Bytes = vec![1, 2, 3].into();
+        let second_event: Bytes = vec![4, 5, 6].into();
         instance.emit_event(&first_event);
         instance.emit_event(&second_event);
 
@@ -492,26 +472,26 @@ mod tests {
         // put a next contract on stack
         push_address(&instance, &second_contract_address);
 
-        let third_event: EventData = vec![7, 8, 9];
-        let fourth_event: EventData = vec![11, 22, 33];
+        let third_event: Bytes = vec![7, 8, 9].into();
+        let fourth_event: Bytes = vec![11, 22, 33].into();
         instance.emit_event(&third_event);
         instance.emit_event(&fourth_event);
 
         assert_eq!(
-            instance.get_event(first_contract_address, 0),
+            instance.get_event(&first_contract_address, 0),
             Ok(first_event)
         );
         assert_eq!(
-            instance.get_event(first_contract_address, 1),
+            instance.get_event(&first_contract_address, 1),
             Ok(second_event)
         );
 
         assert_eq!(
-            instance.get_event(second_contract_address, 0),
+            instance.get_event(&second_contract_address, 0),
             Ok(third_event)
         );
         assert_eq!(
-            instance.get_event(second_contract_address, 1),
+            instance.get_event(&second_contract_address, 1),
             Ok(fourth_event)
         );
     }
@@ -520,6 +500,7 @@ mod tests {
     fn test_current_contract_address() {
         // given an empty instance
         let instance = OdraVm::default();
+        let contract_address = setup_contract(&instance, TEST_ENTRY_POINT);
 
         // when push a contract into the stack
         let contract_address = Address::contract_from_u32(100);
@@ -533,22 +514,19 @@ mod tests {
     fn test_call_contract_with_amount() {
         // given an instance with a registered contract having one entrypoint
         let instance = OdraVm::default();
-        let (contract_address, entrypoint_name, _) = setup_contract(&instance);
+        let contract_address = setup_contract(&instance, TEST_ENTRY_POINT);
 
         // when call a contract with the whole balance of the caller
         let caller = instance.get_account(0);
-        let caller_balance = instance.token_balance(caller);
+        let caller_balance = instance.balance_of(&caller);
 
-        instance.call_contract::<u32>(
-            contract_address,
-            &entrypoint_name,
-            &RuntimeArgs::new(),
-            Some(caller_balance)
-        );
+        let call_def =
+            CallDef::new(TEST_ENTRY_POINT, RuntimeArgs::new()).with_amount(caller_balance);
+        instance.call_contract(contract_address, call_def);
 
         // then the contract has the caller tokens and the caller balance is zero
-        assert_eq!(instance.token_balance(contract_address), caller_balance);
-        assert_eq!(instance.token_balance(caller), U512::zero());
+        assert_eq!(instance.balance_of(&contract_address), caller_balance);
+        assert_eq!(instance.balance_of(&caller), U512::zero());
     }
 
     #[test]
@@ -556,18 +534,15 @@ mod tests {
     fn test_call_contract_with_amount_exceeding_balance() {
         // given an instance with a registered contract having one entrypoint
         let instance = OdraVm::default();
-        let (contract_address, entrypoint_name, _) = setup_contract(&instance);
+        let contract_address = setup_contract(&instance, TEST_ENTRY_POINT);
 
         let caller = instance.get_account(0);
-        let caller_balance = instance.token_balance(caller);
+        let caller_balance = instance.balance_of(&caller);
 
         // when call a contract with the amount exceeding caller's balance
-        instance.call_contract::<()>(
-            contract_address,
-            &entrypoint_name,
-            &RuntimeArgs::new(),
-            Some(caller_balance + 1)
-        );
+        let call_def =
+            CallDef::new(TEST_ENTRY_POINT, RuntimeArgs::new()).with_amount(caller_balance + 1);
+        instance.call_contract(contract_address, call_def);
     }
 
     fn push_address(vm: &OdraVm, address: &Address) {
@@ -575,25 +550,18 @@ mod tests {
         vm.state.write().unwrap().push_callstack_element(element);
     }
 
-    fn setup_contract(instance: &OdraVm) -> (Address, String, u32) {
-        let entrypoint_name = "abc";
-        let result = vec![1, 1, 0, 0];
+    fn test_call_result() -> Bytes {
+        vec![1, 1, 0, 0].into()
+    }
 
-        let entrypoint: Vec<(String, (EntrypointArgs, EntrypointCall))> = vec![(
-            String::from(entrypoint_name),
-            (vec![], |_, _| vec![1, 1, 0, 0])
-        )];
-        let constructors = BTreeMap::new();
-        let contract_address = instance.register_contract(
-            None,
-            constructors,
-            entrypoint.into_iter().collect::<BTreeMap<_, _>>()
-        );
+    fn setup_contract(instance: &OdraVm, entry_point_name: &str) -> Address {
+        let caller = test_caller(entry_point_name);
+        instance.register_contract("contract", caller)
+    }
 
-        (
-            contract_address,
-            String::from(entrypoint_name),
-            <u32 as FromBytes>::from_vec(result).unwrap().0
-        )
+    fn test_caller(entry_point_name: &str) -> EntryPointsCaller {
+        let env = odra::odra_test::odra_env();
+        let entry_point = EntryPoint::new(String::from(entry_point_name), vec![]);
+        EntryPointsCaller::new(env, vec![entry_point], |_, _| Ok(test_call_result()))
     }
 }

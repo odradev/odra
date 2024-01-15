@@ -1,6 +1,7 @@
 use odra_core::call_def::CallDef;
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::prelude::*;
+use odra_core::EntryPointArgument;
 use odra_core::HostEnv;
 use odra_core::{
     casper_types::{NamedArg, RuntimeArgs},
@@ -15,7 +16,6 @@ pub type EntrypointArgs = Vec<String>;
 #[derive(Clone)]
 pub struct ContractContainer {
     name: String,
-
     entry_points_caller: EntryPointsCaller
 }
 
@@ -28,47 +28,62 @@ impl ContractContainer {
     }
 
     pub fn call(&self, call_def: CallDef) -> Result<Bytes, OdraError> {
-        // TODO: Restore validate_args - to do so, we need to know names of all args.
-        // The current structure of ContractContainer doesn't allow that - we do not store the required args names.
-        // It makes impossible to mimic the behavior of the CasperVm
-
-        // let registered_args = vec![];
-        // self.validate_args(&registered_args, call_def.args())?;
+        let ep = self
+            .entry_points_caller
+            .entry_points()
+            .iter()
+            .find(|ep| ep.name == call_def.method())
+            .ok_or_else(|| {
+                OdraError::VmError(VmError::NoSuchMethod(call_def.method().to_string()))
+            })?;
+        self.validate_args(&ep.args, call_def.args())?;
         self.entry_points_caller.call(call_def)
     }
 
-    fn validate_args(&self, args: &[String], input_args: &RuntimeArgs) -> Result<(), OdraError> {
-        // TODO: What's the purpose of this code? Is it needed?
+    fn validate_args(
+        &self,
+        args: &[EntryPointArgument],
+        input_args: &RuntimeArgs
+    ) -> Result<(), OdraError> {
         let named_args = input_args
             .named_args()
             .map(NamedArg::name)
             .collect::<Vec<_>>();
 
-        if args
-            .iter()
-            .filter(|arg| !named_args.contains(&arg.as_str()))
-            .map(|arg| arg.to_owned())
-            .next()
-            .is_none()
-        {
-            Ok(())
-        } else {
-            Err(OdraError::VmError(VmError::MissingArg))
+        for arg in args {
+            if let Some(input) = input_args
+                .named_args()
+                .find(|input| input.name() == arg.name.as_str())
+            {
+                let input_ty = input.cl_value().cl_type();
+                let expected_ty = &arg.ty;
+                if input_ty != expected_ty {
+                    return Err(OdraError::VmError(VmError::TypeMismatch {
+                        expected: expected_ty.clone(),
+                        found: input_ty.clone()
+                    }));
+                }
+            } else {
+                return Err(OdraError::VmError(VmError::MissingArg));
+            }
         }
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use odra_core::prelude::{collections::*, *};
+    use odra_core::prelude::*;
     use odra_core::{
         casper_types::{runtime_args, RuntimeArgs},
         OdraError, VmError
     };
-    use odra_core::{EntryPointsCaller, HostEnv};
+    use odra_core::{CLType, CallDef, EntryPoint, EntryPointArgument, EntryPointsCaller, HostEnv};
     use url::Host;
 
     use super::{ContractContainer, EntrypointArgs, EntrypointCall};
+
+    const TEST_ENTRYPOINT: &'static str = "ep";
 
     #[test]
     fn test_call_wrong_entrypoint() {
@@ -76,7 +91,8 @@ mod tests {
         let instance = ContractContainer::empty();
 
         // When call some entrypoint.
-        let result = instance.call(String::from("ep"), &RuntimeArgs::new());
+        let call_def = CallDef::new(TEST_ENTRYPOINT, RuntimeArgs::new());
+        let result = instance.call(call_def);
 
         // Then an error occurs.
         assert!(result.is_err());
@@ -85,11 +101,11 @@ mod tests {
     #[test]
     fn test_call_valid_entrypoint() {
         // Given an instance with a single no-args entrypoint.
-        let ep_name = String::from("ep");
-        let instance = ContractContainer::setup_entrypoint(ep_name.clone(), vec![]);
+        let instance = ContractContainer::with_entrypoint(vec![]);
 
         // When call the registered entrypoint.
-        let result = instance.call(ep_name, &RuntimeArgs::new());
+        let call_def = CallDef::new(TEST_ENTRYPOINT, RuntimeArgs::new());
+        let result = instance.call(call_def);
 
         // Then teh call succeeds.
         assert!(result.is_ok());
@@ -98,133 +114,104 @@ mod tests {
     #[test]
     fn test_call_valid_entrypoint_with_wrong_arg_name() {
         // Given an instance with a single entrypoint with one arg named "first".
-        let ep_name = String::from("ep");
-        let instance = ContractContainer::setup_entrypoint(ep_name.clone(), vec!["first"]);
+        let instance = ContractContainer::with_entrypoint(vec![("first", CLType::U32)]);
 
         // When call the registered entrypoint with an arg named "second".
-        let args = runtime_args! { "second" => 0 };
-        let result = instance.call(ep_name, &args);
+        let call_def = CallDef::new(TEST_ENTRYPOINT, runtime_args! { "second" => 0u32 });
+        let result = instance.call(call_def);
 
         // Then MissingArg error is returned.
         assert_eq!(result.unwrap_err(), OdraError::VmError(VmError::MissingArg));
+    }
+
+    #[test]
+    fn test_call_valid_entrypoint_with_wrong_arg_type() {
+        // Given an instance with a single entrypoint with one arg named "first".
+        let instance = ContractContainer::with_entrypoint(vec![("first", CLType::U32)]);
+
+        // When call the registered entrypoint with an arg named "second".
+        let call_def = CallDef::new(TEST_ENTRYPOINT, runtime_args! { "first" => true });
+        let result = instance.call(call_def);
+
+        // Then MissingArg error is returned.
+        assert_eq!(
+            result.unwrap_err(),
+            OdraError::VmError(VmError::TypeMismatch {
+                expected: CLType::U32,
+                found: CLType::Bool
+            })
+        );
     }
 
     #[test]
     fn test_call_valid_entrypoint_with_missing_arg() {
         // Given an instance with a single entrypoint with one arg named "first".
-        let ep_name = String::from("ep");
-        let instance = ContractContainer::setup_entrypoint(ep_name.clone(), vec!["first"]);
+        let instance = ContractContainer::with_entrypoint(vec![("first", CLType::U32)]);
 
         // When call a valid entrypoint without args.
-        let result = instance.call(ep_name, &RuntimeArgs::new());
+        let call_def = CallDef::new(TEST_ENTRYPOINT, RuntimeArgs::new());
+        let result = instance.call(call_def);
 
         // Then MissingArg error is returned.
         assert_eq!(result.unwrap_err(), OdraError::VmError(VmError::MissingArg));
     }
 
     #[test]
-    #[ignore = "At the moment is impossible to find the name of all missing args."]
-    fn test_all_missing_args_are_caught() {
+    fn test_many_missing_args() {
         // Given an instance with a single entrypoint with "first", "second" and "third" args.
-        let ep_name = String::from("ep");
-        let instance =
-            ContractContainer::setup_entrypoint(ep_name.clone(), vec!["first", "second", "third"]);
+        let instance = ContractContainer::with_entrypoint(vec![
+            ("first", CLType::U32),
+            ("second", CLType::U32),
+            ("third", CLType::U32),
+        ]);
 
         // When call a valid entrypoint with a single valid args,
-        let args = runtime_args! { "third" => 0 };
-        let result = instance.call(ep_name, &args);
+        let call_def = CallDef::new(TEST_ENTRYPOINT, runtime_args! { "third" => 0u32 });
+        let result = instance.call(call_def);
 
-        // Then MissingArg error is returned with the two remaining args.
+        // Then MissingArg error is returned.
         assert_eq!(result.unwrap_err(), OdraError::VmError(VmError::MissingArg));
-    }
-
-    #[test]
-    fn test_call_valid_constructor() {
-        // Given an instance with a single no-arg constructor.
-        let name = String::from("init");
-        let instance = ContractContainer::setup_constructor(name.clone(), vec![]);
-
-        // When call a valid constructor with a single valid args,
-        let result = instance.call_constructor(name, &RuntimeArgs::new());
-
-        // Then the call succeeds.
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_call_invalid_constructor() {
-        // Given an instance with no constructors.
-        let instance = ContractContainer::empty();
-
-        // When try to call some constructor.
-        let result = instance.call_constructor(String::from("c"), &RuntimeArgs::new());
-
-        // Then the call fails.
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_call_valid_constructor_with_missing_arg() {
-        // Given an instance with a single constructor with one arg named "first".
-        let name = String::from("init");
-        let instance = ContractContainer::setup_constructor(name.clone(), vec!["first"]);
-
-        // When call a valid constructor, but with no args.
-        let result = instance.call_constructor(name, &RuntimeArgs::new());
-
-        // Then MissingArgs error is returned.
-        assert_eq!(result.unwrap_err(), OdraError::VmError(VmError::MissingArg));
-    }
-
-    #[test]
-    fn test_call_constructor_in_invalid_context() {
-        // Given an instance with a single constructor.
-        let name = String::from("init");
-        let instance = ContractContainer::setup_constructor(name.clone(), vec![]);
-
-        // When call the constructor in the entrypoint context.
-        let result = instance.call(name, &RuntimeArgs::new());
-
-        // Then the call fails.
-        assert!(result.is_err());
     }
 
     impl ContractContainer {
         fn empty() -> Self {
             let env = odra::odra_test::odra_env();
-            let epc = EntryPointsCaller::new(env);
+            let entry_points_caller = EntryPointsCaller::new(env, vec![], |_, call_def| {
+                Err(OdraError::VmError(VmError::NoSuchMethod(
+                    call_def.method().to_string()
+                )))
+            });
             Self {
                 name: String::from("contract"),
-                entry_points_caller: EntryPointsCaller::new()
+                entry_points_caller
             }
         }
 
-        fn setup_entrypoint(ep_name: String, args: Vec<&str>) -> Self {
-            let call: EntrypointCall = |_, _| vec![1, 2, 3];
-            let args: EntrypointArgs = args.iter().map(|arg| arg.to_string()).collect();
+        fn with_entrypoint(args: Vec<(&str, CLType)>) -> Self {
+            let entry_points = vec![EntryPoint::new(
+                String::from(TEST_ENTRYPOINT),
+                args.iter()
+                    .map(|(name, ty)| EntryPointArgument::new(String::from(*name), ty.to_owned()))
+                    .collect()
+            )];
 
-            let mut entrypoints = BTreeMap::new();
-            entrypoints.insert(ep_name, (args, call));
+            let entry_points_caller = EntryPointsCaller::new(
+                odra::odra_test::odra_env(),
+                entry_points,
+                |env, call_def| {
+                    if call_def.method() == TEST_ENTRYPOINT {
+                        Ok(vec![1, 2, 3].into())
+                    } else {
+                        Err(OdraError::VmError(VmError::NoSuchMethod(
+                            call_def.method().to_string()
+                        )))
+                    }
+                }
+            );
 
             Self {
                 name: String::from("contract"),
-                entrypoints,
-                constructors: BTreeMap::new(),
-                entry_points_caller: ()
-            }
-        }
-
-        fn setup_constructor(ep_name: String, args: Vec<&str>) -> Self {
-            let call: EntrypointCall = |_, _| vec![1, 2, 3];
-            let args: EntrypointArgs = args.iter().map(|arg| arg.to_string()).collect();
-
-            let mut constructors = BTreeMap::new();
-            constructors.insert(ep_name, (args, call));
-
-            Self {
-                name: String::from("contract"),
-                entrypoints: BTreeMap::new(),
-                constructors
+                entry_points_caller
             }
         }
     }
