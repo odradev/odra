@@ -15,10 +15,10 @@ use odra_core::{
     Address, Bytes, ExecutionError, PublicKey, SecretKey
 };
 use odra_core::{OdraError, VmError};
+use odra_core::contract_container::ContractContainer;
+use odra_core::contract_register::ContractRegister;
 
 use super::callstack::{CallstackElement, Entrypoint};
-use super::contract_container::ContractContainer;
-use super::contract_register::ContractRegister;
 use super::odra_vm_state::OdraVmState;
 
 #[derive(Default)]

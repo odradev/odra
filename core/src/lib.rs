@@ -29,6 +29,8 @@ mod unchecked_getter;
 mod unwrap_or_revert;
 pub mod utils;
 pub mod variable;
+pub mod contract_container;
+pub mod contract_register;
 
 pub use address::{Address, OdraAddress};
 pub use call_def::CallDef;

@@ -275,11 +275,6 @@ impl CasperVm {
         args.insert(ALLOW_KEY_OVERRIDE_ARG, true).unwrap();
         args.insert(IS_UPGRADABLE_ARG, false).unwrap();
 
-        if init_args.is_some() {
-            args.insert(CONSTRUCTOR_NAME_ARG, CONSTRUCTOR_NAME.to_string())
-                .unwrap();
-        };
-
         self.deploy_contract(&wasm_path, &args);
         let contract_package_hash = self.contract_package_hash_from_name(&package_hash_key_name);
         contract_package_hash.try_into().unwrap()

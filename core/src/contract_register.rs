@@ -1,7 +1,6 @@
-use odra_core::call_def::CallDef;
-use odra_core::prelude::*;
-use odra_core::HostEnv;
-use odra_core::{casper_types::RuntimeArgs, Address, Bytes, OdraError, VmError};
+use crate::call_def::CallDef;
+use crate::prelude::*;
+use crate::{Address, Bytes, OdraError, VmError};
 
 use super::contract_container::ContractContainer;
 

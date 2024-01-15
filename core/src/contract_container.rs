@@ -1,11 +1,7 @@
-use odra_core::call_def::CallDef;
-use odra_core::entry_point_callback::EntryPointsCaller;
-use odra_core::prelude::*;
-use odra_core::HostEnv;
-use odra_core::{
-    casper_types::{NamedArg, RuntimeArgs},
-    Bytes, OdraError, VmError
-};
+use casper_types::bytesrepr::Bytes;
+use casper_types::{NamedArg, RuntimeArgs};
+use crate::{CallDef, EntryPointsCaller, OdraError, VmError};
+use crate::prelude::*;
 
 #[doc(hidden)]
 pub type EntrypointCall = fn(String, &RuntimeArgs) -> Vec<u8>;
@@ -60,14 +56,12 @@ impl ContractContainer {
 
 #[cfg(test)]
 mod tests {
-    use odra_core::prelude::{collections::*, *};
-    use odra_core::{
+    use crate::prelude::{collections::*, *};
+    use crate::{
         casper_types::{runtime_args, RuntimeArgs},
         OdraError, VmError
     };
-    use odra_core::{EntryPointsCaller, HostEnv};
-    use url::Host;
-
+    use crate::{EntryPointsCaller, HostEnv};
     use super::{ContractContainer, EntrypointArgs, EntrypointCall};
 
     #[test]
