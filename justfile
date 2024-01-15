@@ -71,13 +71,3 @@ clean:
     cd examples && rm -f Cargo.lock
     cd modules && rm -f Cargo.lock
 
-build-counter-pack:
-    cd examples2 && ODRA_MODULE=CounterPack cargo build --release --target wasm32-unknown-unknown --bin build_contract
-    wasm-strip examples2/target/wasm32-unknown-unknown/release/build_contract.wasm
-    cp examples2/target/wasm32-unknown-unknown/release/build_contract.wasm examples2/wasm/CounterPack.wasm
-
-test-counter-pack: build-counter-pack
-    cd examples2 && ODRA_BACKEND=casper cargo test --lib counter_pack -- --nocapture
-
-build-erc20-schema:
-    cd examples2 && ODRA_MODULE=Erc20 cargo run --bin build_schema
