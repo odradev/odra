@@ -49,7 +49,7 @@ mod tests {
 
     #[test]
     fn init_test() {
-        let test_env = odra_test::test_env();
+        let test_env = odra_test::env();
         let dog_contract = DogContractDeployer::init(&test_env, true, 10, "Mantus".to_string());
         assert!(dog_contract.barks());
         assert_eq!(dog_contract.weight(), 10);

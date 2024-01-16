@@ -38,7 +38,7 @@ mod tests {
 
     #[test]
     fn visit_test() {
-        let test_env = odra_test::test_env();
+        let test_env = odra_test::env();
         let mut dog_contract = DogContract2Deployer::init(&test_env, "Mantus".to_string());
         assert_eq!(dog_contract.visits("Kuba".to_string()), 0);
         dog_contract.visit("Kuba".to_string());

@@ -9,7 +9,5 @@ repository.workspace = true
 
 [dependencies]
 odra-core = { path = "../core" }
-
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 odra-casper-test-vm = { path = "../odra-casper/test-vm" }
 odra-vm = { path = "../odra-vm" }

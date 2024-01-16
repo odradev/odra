@@ -20,7 +20,7 @@ mod tests {
 
     #[test]
     fn test_modules() {
-        let test_env = odra_test::test_env();
+        let test_env = odra_test::env();
         let modules_contract = ModulesContractDeployer::init(&test_env);
         assert_eq!(modules_contract.add_using_module(), 8);
     }

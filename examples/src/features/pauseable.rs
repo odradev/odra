@@ -47,7 +47,7 @@ mod test {
 
     #[test]
     fn pause_works() {
-        let test_env = odra_test::test_env();
+        let test_env = odra_test::env();
         let mut contract = PauseableCounterDeployer::init(&test_env);
         let caller = test_env.get_account(0);
 
@@ -67,7 +67,7 @@ mod test {
 
     #[test]
     fn increment_only_if_unpaused() {
-        let test_env = odra_test::test_env();
+        let test_env = odra_test::env();
         let mut contract = PauseableCounterDeployer::init(&test_env);
         contract.increment();
         contract.pause();
@@ -81,7 +81,7 @@ mod test {
 
     #[test]
     fn cannot_unpause_unpaused() {
-        let test_env = odra_test::test_env();
+        let test_env = odra_test::env();
         let mut contract = PauseableCounterDeployer::init(&test_env);
 
         assert_eq!(contract.try_unpause().unwrap_err(), PausedRequired.into());
@@ -89,7 +89,7 @@ mod test {
 
     #[test]
     fn cannot_pause_paused() {
-        let test_env = odra_test::test_env();
+        let test_env = odra_test::env();
         let mut contract = PauseableCounterDeployer::init(&test_env);
         contract.pause();
         assert_eq!(contract.try_pause().unwrap_err(), UnpausedRequired.into());

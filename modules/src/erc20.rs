@@ -193,7 +193,7 @@ mod tests {
     const INITIAL_SUPPLY: u32 = 10_000;
 
     fn setup() -> (HostEnv, Erc20HostRef) {
-        let env = odra_test::test_env();
+        let env = odra_test::env();
         (
             env.clone(),
             Erc20Deployer::init(

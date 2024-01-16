@@ -54,7 +54,7 @@ pub mod tests {
 
     pub fn setup() -> OwnedTokenHostRef {
         OwnedTokenDeployer::init(
-            &odra_test::test_env(),
+            &odra_test::env(),
             String::from(NAME),
             String::from(SYMBOL),
             DECIMALS,

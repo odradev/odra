@@ -56,7 +56,7 @@ mod test {
     const DECIMALS: u8 = 10;
 
     fn setup() -> TokenManagerHostRef {
-        let test_env = odra_test::test_env();
+        let test_env = odra_test::env();
         let mut contract = TokenManagerDeployer::init(&test_env);
 
         contract.add_token(String::from(PLASCOIN), DECIMALS, String::from(PLS));
@@ -123,7 +123,7 @@ mod test {
 
     #[test]
     fn many_tokens_works() {
-        let test_env = odra_test::test_env();
+        let test_env = odra_test::env();
         let mut contract = TokenManagerDeployer::init(&test_env);
         let (user, balance) = (test_env.get_account(0), 111.into());
         for i in 0..20 {
