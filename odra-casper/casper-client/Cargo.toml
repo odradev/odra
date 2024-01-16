@@ -22,3 +22,4 @@ blake2 = { version = "0.9.0", default-features = false }
 dotenv = "0.15.0"
 prettycli = "0.1.1"
 thiserror = "1.0.40"
+bytes = "1.5.0"

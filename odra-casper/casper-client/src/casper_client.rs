@@ -7,13 +7,14 @@ use blake2::{
 use casper_execution_engine::core::engine_state::ExecutableDeployItem;
 use casper_hashing::Digest;
 use jsonrpc_lite::JsonRpc;
-use odra_core::{casper_types::{
+use odra_core::{consts::*, casper_types::{
     bytesrepr::{Bytes, FromBytes, ToBytes},
     runtime_args, ContractHash, ContractPackageHash, ExecutionResult, Key as CasperKey,
-    PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, U512
-}, Address, CallDef};
+    PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, U512,
+}, Address, CallDef, OdraError, CLType};
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
+use odra_core::CLType::List;
 
 use crate::{
     casper_node_port::{
@@ -25,6 +26,8 @@ use crate::{
         Deploy, DeployHash
     },
 };
+use crate::casper_node_port::rpcs::DictionaryIdentifier::Dictionary;
+use crate::casper_node_port::rpcs::StoredValue::CLValue;
 
 use crate::log;
 
@@ -118,20 +121,20 @@ impl CasperClient {
     }
 
     /// Query the contract for the variable.
-    pub fn get_variable_value<T: FromBytes>(&self, address: Address, key: &[u8]) -> Option<T> {
+    pub fn get_variable_value(&self, address: Address, key: &str) -> Option<Bytes> {
         // let key = LivenetKeyMaker::to_variable_key(key);
         // SAFETY: we know the key maker creates a string of valid UTF-8 characters.
-        let key = unsafe { from_utf8_unchecked(key) };
+        // let key = unsafe { from_utf8_unchecked(key) };
         self.query_dictionary(address, key)
     }
 
     /// Query the contract for the dictionary value.
-    pub fn get_dict_value<K: ToBytes, V: FromBytes>(
+    pub fn get_dict_value(
         &self,
         address: Address,
         seed: &[u8],
         key: &[u8]
-    ) -> Option<V> {
+    ) -> Option<Bytes> {
         // let key = LivenetKeyMaker::to_dictionary_key(seed, key).unwrap();
         // SAFETY: we know the key maker creates a string of valid UTF-8 characters.
         let key = unsafe { from_utf8_unchecked(key) };
@@ -205,6 +208,61 @@ impl CasperClient {
         address
     }
 
+    pub fn deploy_entrypoint_call_with_proxy(
+        &self,
+        addr: Address,
+        call_def: CallDef
+    ) -> Bytes {
+        log::info(format!(
+            "Calling {:?} with entrypoint \"{}\".",
+            addr.to_string(),
+            call_def.entry_point
+        ));
+        // let session = ExecutableDeployItem::StoredVersionedContractByHash {
+        //     hash: *addr.as_contract_package_hash().unwrap(),
+        //     version: None,
+        //     entry_point: call_def.entry_point,
+        //     args: call_def.args
+        // };
+
+        let args = runtime_args! {
+                CONTRACT_PACKAGE_HASH_ARG => *addr.as_contract_package_hash().unwrap(),
+                ENTRY_POINT_ARG => call_def.entry_point,
+                ARGS_ARG => Bytes::from(call_def.args.to_bytes().unwrap()),
+                ATTACHED_VALUE_ARG => call_def.amount,
+                AMOUNT_ARG => call_def.amount,
+            };
+
+        let session = ExecutableDeployItem::ModuleBytes {
+            module_bytes: include_bytes!("../../test-vm/resources/proxy_caller_with_return.wasm").to_vec().into(),
+            args,
+        };
+
+        let deploy = self.new_deploy(session, self.gas);
+        let request = json!(
+            {
+                "jsonrpc": "2.0",
+                "method": "account_put_deploy",
+                "params": {
+                    "deploy": deploy
+                },
+                "id": 1,
+            }
+        );
+        let response: PutDeployResult = self.post_request(request).unwrap();
+        let deploy_hash = response.deploy_hash;
+        let result = self.wait_for_deploy_hash(deploy_hash);
+
+        let r = self.query_result(&CasperKey::Account(self.public_key().to_account_hash()));
+        let result_as_json = serde_json::to_value(r).unwrap();
+        let result = result_as_json["stored_value"]["CLValue"]["bytes"]
+            .as_str()
+            .unwrap();
+        let bytes = hex::decode(result).unwrap();
+        let (value, _) = FromBytes::from_bytes(&bytes).unwrap();
+        value
+    }
+
     /// Deploy the entrypoint call.
     pub fn deploy_entrypoint_call(
         &self,
@@ -256,7 +314,25 @@ impl CasperClient {
         self.post_request(request).unwrap()
     }
 
-    fn query_dictionary<T: FromBytes>(&self, address: Address, key: &str) -> Option<T> {
+    fn query_result(&self, key: &CasperKey) -> Option<QueryGlobalStateResult> {
+        let state_root_hash = self.get_state_root_hash();
+        let params = QueryGlobalStateParams {
+            state_identifier: GlobalStateIdentifier::StateRootHash(state_root_hash),
+            key: key.to_formatted_string(),
+            path: vec![RESULT_KEY.to_string()]
+        };
+        let request = json!(
+            {
+                "jsonrpc": "2.0",
+                "method": "query_global_state",
+                "params": params,
+                "id": 1,
+            }
+        );
+        self.post_request(request).unwrap()
+    }
+
+    fn query_dictionary(&self, address: Address, key: &str) -> Option<Bytes> {
         let state_root_hash = self.get_state_root_hash();
         let contract_hash = self.query_global_state_for_contract_hash(address);
         let contract_hash = contract_hash
@@ -279,7 +355,6 @@ impl CasperClient {
                 "id": 1,
             }
         );
-
         let result: Option<GetDictionaryItemResult> = self.post_request(request);
         result.map(|result| {
             let result_as_json = serde_json::to_value(result).unwrap();
@@ -292,7 +367,7 @@ impl CasperClient {
         })
     }
 
-    fn wait_for_deploy_hash(&self, deploy_hash: DeployHash) {
+    fn wait_for_deploy_hash(&self, deploy_hash: DeployHash) -> ExecutionResult {
         let deploy_hash_str = format!("{:?}", deploy_hash.inner());
         let time_diff = Duration::from_secs(15);
         let final_result;
@@ -332,6 +407,7 @@ impl CasperClient {
                     "Deploy {:?} successfully executed.",
                     deploy_hash_str
                 ));
+                final_result.execution_results[0].result.clone()
             }
         }
     }

@@ -61,9 +61,15 @@ impl HostContext for LivenetEnv {
         &self,
         address: &Address,
         call_def: CallDef,
-        _use_proxy: bool
+        use_proxy: bool
     ) -> Result<Bytes, OdraError> {
-        todo!()
+        match use_proxy {
+            true => Ok(self.casper_client.borrow_mut().deploy_entrypoint_call_with_proxy(*address, call_def)),
+            false => {
+                self.casper_client.borrow_mut().deploy_entrypoint_call(*address, call_def);
+                return Ok(Default::default());
+            },
+        }
     }
 
     fn new_contract(
@@ -76,6 +82,7 @@ impl HostContext for LivenetEnv {
             None => RuntimeArgs::new(),
             Some(args) => args,
         };
+        // todo: move this up the stack
         args.insert("odra_cfg_is_upgradable", false).unwrap();
         args.insert("odra_cfg_allow_key_override", false).unwrap();
         args.insert("odra_cfg_package_hash_key_name", format!("{}_package_hash", name)).unwrap();
@@ -87,12 +94,13 @@ impl HostContext for LivenetEnv {
     }
 
     fn print_gas_report(&self) {
-        todo!();
-        println!("Gas report:");
+        // Todo: implement
+        println!("Gas report is unavailable for livenet");
     }
 
     fn last_call_gas_cost(&self) -> u64 {
-        todo!()
+        // Todo: implement
+        0
     }
 
     fn sign_message(&self, message: &Bytes, address: &Address) -> Bytes {
