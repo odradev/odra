@@ -23,7 +23,7 @@ mod test {
 
     #[test]
     fn signature_verification_works() {
-        let test_env = odra::test_env();
+        let test_env = odra_test::test_env();
         let message = "Message to be signed";
         let message_bytes = Bytes::from(message.as_bytes());
         let account = test_env.get_account(0);
@@ -59,7 +59,7 @@ mod test {
         let public_key_decoded = hex::decode(public_key_hex).unwrap();
         let (public_key, _) = PublicKey::from_bytes(public_key_decoded.as_slice()).unwrap();
 
-        let signature_verifier = SignatureVerifierDeployer::init(&odra::test_env());
+        let signature_verifier = SignatureVerifierDeployer::init(&odra_test::test_env());
         assert!(signature_verifier.verify_signature(message_bytes, signature_bytes, public_key));
     }
 }

@@ -14,6 +14,9 @@ odra = { path = "../odra", version = "0.8.0", default-features = false }
 casper-event-standard = "0.4.1"
 hex = { version = "0.4.3", default-features = false }
 
+[dev-dependencies]
+odra-test = { path = "../odra-test", version = "0.8.0" }
+
 [[bin]]
 name = "odra_modules_build_contract"
 path = "bin/build_contract.rs"

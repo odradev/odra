@@ -197,7 +197,7 @@ mod tests {
     }
 
     fn setup() -> TokenEnv {
-        let env = odra::test_env();
+        let env = odra_test::test_env();
 
         TokenEnv {
             env: env.clone(),

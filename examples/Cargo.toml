@@ -9,6 +9,7 @@ odra-modules = { path = "../modules", default-features = false }
 sha3 = { version = "0.10.6", default-features = false }
 
 [dev-dependencies]
+odra-test = { path = "../odra-test" }
 hex = "0.4.3"
 
 [[bin]]

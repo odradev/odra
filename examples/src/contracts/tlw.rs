@@ -106,7 +106,7 @@ mod test {
     const ONE_DAY_IN_SECONDS: u64 = 60 * 60 * 24;
 
     fn setup() -> (TimeLockWalletHostRef, Address, Address) {
-        let test_env = odra::test_env();
+        let test_env = odra_test::test_env();
         (
             TimeLockWalletDeployer::init(&test_env, ONE_DAY_IN_SECONDS),
             test_env.get_account(0),

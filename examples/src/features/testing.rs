@@ -37,7 +37,7 @@ mod tests {
 
     #[test]
     fn test_env() {
-        let test_env = odra::test_env();
+        let test_env = odra_test::test_env();
         test_env.set_caller(test_env.get_account(0));
         let testing_contract = TestingContractDeployer::init(&test_env, "MyContract".to_string());
         let creator = testing_contract.created_by();

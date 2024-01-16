@@ -37,7 +37,7 @@ mod tests {
 
     #[test]
     fn init_test() {
-        let test_env = odra::test_env();
+        let test_env = odra_test::test_env();
         let mut dog_contract = DogContract3Deployer::init(&test_env, "Mantus".to_string());
         assert_eq!(dog_contract.walks_amount(), 0);
         assert_eq!(dog_contract.walks_total_length(), 0);

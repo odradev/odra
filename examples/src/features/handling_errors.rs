@@ -46,7 +46,7 @@ mod tests {
 
     #[test]
     fn test_owner() {
-        let test_env = odra::test_env();
+        let test_env = odra_test::test_env();
         let owner = test_env.get_account(0);
         let not_an_owner = test_env.get_account(1);
 
@@ -66,7 +66,7 @@ mod tests {
 
     #[test]
     fn test_owner_error() {
-        let test_env = odra::test_env();
+        let test_env = odra_test::test_env();
         let owner = test_env.get_account(0);
         let not_an_owner = test_env.get_account(1);
 

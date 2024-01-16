@@ -28,7 +28,7 @@ mod tests {
 
     #[test]
     fn host_test() {
-        let test_env = odra::test_env();
+        let test_env = odra_test::test_env();
         let host_contract = HostContractDeployer::init(&test_env, "HostContract".to_string());
         assert_eq!(host_contract.name(), "HostContract".to_string());
     }
