@@ -128,6 +128,7 @@ mod test {
                             self.address,
                             odra::CallDef::new(
                                 String::from("total_supply"),
+                                false,
                                 {
                                     let mut named_args = odra::RuntimeArgs::new();
                                     if self.attached_value > odra::U512::zero() {
@@ -148,6 +149,7 @@ mod test {
                             self.address,
                             odra::CallDef::new(
                                 String::from("pay_to_mint"),
+                                true,
                                 {
                                     let mut named_args = odra::RuntimeArgs::new();
                                     if self.attached_value > odra::U512::zero() {
@@ -168,6 +170,7 @@ mod test {
                             self.address,
                             odra::CallDef::new(
                                 String::from("approve"),
+                                true,
                                 {
                                     let mut named_args = odra::RuntimeArgs::new();
                                     if self.attached_value > odra::U512::zero() {
@@ -190,6 +193,7 @@ mod test {
                             self.address,
                             odra::CallDef::new(
                                 String::from("airdrop"),
+                                false,
                                 {
                                     let mut named_args = odra::RuntimeArgs::new();
                                     if self.attached_value > odra::U512::zero() {
@@ -320,6 +324,7 @@ mod test {
                             self.address,
                             odra::CallDef::new(
                                 String::from("total_supply"),
+                                false,
                                 {
                                     let mut named_args = odra::RuntimeArgs::new();
                                     if self.attached_value > odra::U512::zero() {
@@ -340,6 +345,7 @@ mod test {
                             self.address,
                             odra::CallDef::new(
                                 String::from("pay_to_mint"),
+                                true,
                                 {
                                     let mut named_args = odra::RuntimeArgs::new();
                                     if self.attached_value > odra::U512::zero() {
