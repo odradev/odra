@@ -2,11 +2,12 @@
 members = [
     "flipper",
     "flapper",
-    ]
+]
 resolver = "2"
 
 [workspace.dependencies]
 #odra_dependency
+#odra_test_dependency
 
 [profile.release]
 codegen-units = 1

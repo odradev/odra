@@ -1,5 +1,5 @@
 [package]
-name = "odra"
+name = "odra-test"
 edition = "2021"
 version.workspace = true
 authors.workspace = true
@@ -9,7 +9,5 @@ repository.workspace = true
 
 [dependencies]
 odra-core = { path = "../core" }
-odra-macros = { path = "../odra-macros" }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-odra-casper-wasm-env = { path = "../odra-casper/wasm-env" }
+odra-casper-test-vm = { path = "../odra-casper/test-vm" }
+odra-vm = { path = "../odra-vm" }

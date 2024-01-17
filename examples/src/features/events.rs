@@ -28,7 +28,7 @@ mod tests {
 
     #[test]
     fn test_party() {
-        let test_env = odra::test_env();
+        let test_env = odra_test::env();
         let party_contract = PartyContractDeployer::init(&test_env);
         test_env.emitted_event(
             &party_contract.address(),

@@ -34,7 +34,7 @@ mod tests {
 
     #[test]
     fn test_cross_calls() {
-        let test_env = odra::test_env();
+        let test_env = odra_test::env();
         let math_engine_contract = MathEngineDeployer::init(&test_env);
         let cross_contract =
             CrossContractDeployer::init(&test_env, *math_engine_contract.address());

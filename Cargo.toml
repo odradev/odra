@@ -6,6 +6,7 @@ members = [
     "odra-macros",
     "odra-casper/wasm-env",
     "odra-casper/test-vm",
+    "odra-test",
     "try-from-macro"
 #    needs a refactor
 #    "odra-casper/livenet"

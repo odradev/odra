@@ -21,7 +21,7 @@ check-lint: clippy
     cd odra-casper/proxy-caller && cargo fmt -- --check
     cd modules && cargo fmt -- --check
     cd examples && cargo fmt -- --check
-    cd examples && cargo check
+    cd examples && cargo check --target wasm32-unknown-unknown --bin odra_examples_build_contract
 
 install-cargo-odra:
     cargo install cargo-odra --locked

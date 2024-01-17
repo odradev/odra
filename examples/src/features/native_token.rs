@@ -21,7 +21,7 @@ mod tests {
 
     #[test]
     fn test_modules() {
-        let test_env = odra::test_env();
+        let test_env = odra_test::env();
         let mut my_contract = PublicWalletDeployer::init(&test_env);
         assert_eq!(test_env.balance_of(&my_contract.address()), U512::zero());
 

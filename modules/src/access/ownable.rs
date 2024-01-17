@@ -331,17 +331,17 @@ mod test {
     }
 
     fn setup_ownable() -> (OwnableHostRef, Address) {
-        let env = odra::test_env();
+        let env = odra_test::env();
         (OwnableDeployer::init(&env), env.get_account(0))
     }
 
     fn setup_ownable_2_step() -> (Ownable2StepHostRef, Address) {
-        let env = odra::test_env();
+        let env = odra_test::env();
         (Ownable2StepDeployer::init(&env), env.get_account(0))
     }
 
     fn setup_renounceable() -> (Vec<RenounceableHostRef>, Address) {
-        let env = odra::test_env();
+        let env = odra_test::env();
         let ownable = OwnableDeployer::init(&env);
         let ownable_2_step = Ownable2StepDeployer::init(&env);
         let renouncable_ref = RenounceableHostRef::new(*ownable.address(), env.clone());
@@ -354,7 +354,7 @@ mod test {
     }
 
     fn setup_owned() -> (HostEnv, OwnableHostRef, Ownable2StepHostRef, Address) {
-        let env = odra::test_env();
+        let env = odra_test::env();
         let ownable = OwnableDeployer::init(&env);
         let ownable_2_step = Ownable2StepDeployer::init(&env);
         (env.clone(), ownable, ownable_2_step, env.get_account(0))

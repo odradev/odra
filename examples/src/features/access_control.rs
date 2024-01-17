@@ -87,7 +87,7 @@ pub mod test {
 
     #[test]
     fn deploy_works() {
-        let env = odra::test_env();
+        let env = odra_test::env();
         let contract = MockModeratedDeployer::init(&env);
         let admin = env.get_account(0);
 
@@ -253,7 +253,7 @@ pub mod test {
     }
 
     fn setup(add_moderator: bool) -> (MockModeratedHostRef, Address, Address, Address) {
-        let env = odra::test_env();
+        let env = odra_test::env();
         let mut contract = MockModeratedDeployer::init(&env);
         // given admin who is a moderator and two users that are not moderators.
         let (admin, user1, user2) = (env.get_account(0), env.get_account(1), env.get_account(2));

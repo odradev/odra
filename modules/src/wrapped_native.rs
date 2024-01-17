@@ -118,7 +118,7 @@ mod tests {
         Address,
         U512
     ) {
-        let env = odra::test_env();
+        let env = odra_test::env();
         let token = WrappedNativeTokenDeployer::init(&env);
         let account_1 = env.get_account(0);
         let account_1_balance = env.balance_of(&account_1);

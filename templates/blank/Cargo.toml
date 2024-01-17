@@ -6,6 +6,9 @@ edition = "2021"
 [dependencies]
 #odra_dependency
 
+[dev-dependencies]
+#odra_test_dependency
+
 [[bin]]
 name = "{{project-name}}_build_contract"
 path = "bin/build_contract.rs"

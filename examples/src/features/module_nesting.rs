@@ -134,7 +134,7 @@ mod tests {
 
     #[test]
     fn nested_odra_types() {
-        let test_env = odra::test_env();
+        let test_env = odra_test::env();
         let mut nested_odra_types = NestedOdraTypesContractDeployer::init(&test_env);
 
         // Storage is not set
