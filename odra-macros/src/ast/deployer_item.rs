@@ -1,4 +1,4 @@
-use derive_try_from::TryFromRef;
+use derive_try_from_ref::TryFromRef;
 
 use crate::{ir::ModuleImplIR, utils};
 
@@ -52,6 +52,7 @@ impl TryFrom<&'_ ModuleImplIR> for DeployImplItem {
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
 #[source(ModuleImplIR)]
+#[err(syn::Error)]
 struct ContractInitFn {
     #[expr(utils::syn::visibility_pub())]
     vis: syn::Visibility,
@@ -69,6 +70,7 @@ struct ContractInitFn {
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
 #[source(ModuleImplIR)]
+#[err(syn::Error)]
 pub struct DeployerItem {
     struct_item: DeployStructItem,
     impl_item: DeployImplItem

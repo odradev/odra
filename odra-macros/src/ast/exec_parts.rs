@@ -3,7 +3,7 @@ use crate::{
     ir::{FnIR, ModuleImplIR},
     utils
 };
-use derive_try_from::TryFromRef;
+use derive_try_from_ref::TryFromRef;
 use quote::TokenStreamExt;
 use syn::parse_quote;
 
@@ -165,10 +165,11 @@ impl TryFrom<&'_ FnIR> for ExecFnSignature {
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
 #[source(ModuleImplIR)]
+#[err(syn::Error)]
 struct ExecPartsModuleItem {
     #[default]
     mod_token: syn::token::Mod,
-    #[expr(item.exec_parts_mod_ident()?)]
+    #[expr(input.exec_parts_mod_ident()?)]
     ident: syn::Ident
 }
 

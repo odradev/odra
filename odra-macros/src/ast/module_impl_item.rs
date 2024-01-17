@@ -5,12 +5,13 @@ use crate::ast::ref_item::RefItem;
 use crate::ast::test_parts::{TestPartsItem, TestPartsReexportItem};
 use crate::ast::wasm_parts::WasmPartsModuleItem;
 use crate::ir::ModuleImplIR;
-use derive_try_from::TryFromRef;
+use derive_try_from_ref::TryFromRef;
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
 #[source(ModuleImplIR)]
+#[err(syn::Error)]
 pub struct ModuleImplItem {
-    #[expr(item.self_code())]
+    #[expr(input.self_code())]
     self_code: proc_macro2::TokenStream,
     has_entrypoints_item: HasEntrypointsImplItem,
     ref_item: RefItem,

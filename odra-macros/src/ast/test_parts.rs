@@ -1,4 +1,4 @@
-use derive_try_from::TryFromRef;
+use derive_try_from_ref::TryFromRef;
 use syn::parse_quote;
 
 use crate::{ir::ModuleImplIR, utils};
@@ -48,6 +48,7 @@ impl TryFrom<&'_ ModuleImplIR> for PartsModuleItem {
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
 #[source(ModuleImplIR)]
+#[err(syn::Error)]
 pub struct TestPartsItem {
     parts_module: PartsModuleItem,
     #[syn(braced)]
