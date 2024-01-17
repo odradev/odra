@@ -7,11 +7,14 @@ use odra_core::{
     Address, Bytes, CallDef, ContractEnv, EntryPointsCaller, HostContext, OdraError, PublicKey,
     RuntimeArgs, U512
 };
+use odra_core::contract_container::ContractContainer;
 use odra_core::contract_register::ContractRegister;
+use crate::livenet_contract_env::LivenetContractEnv;
 
 pub struct LivenetEnv {
     casper_client: Rc<RefCell<CasperClient>>,
-    contract_register: Arc<RwLock<ContractRegister>>
+    contract_register: Arc<RwLock<ContractRegister>>,
+    contract_env: Rc<ContractEnv>
 }
 
 impl LivenetEnv {
@@ -20,7 +23,10 @@ impl LivenetEnv {
     }
 
     pub fn new_instance() -> Self {
-        Self { casper_client: Default::default(), contract_register: Default::default() }
+        let casper_client: Rc<RefCell<CasperClient>> = Default::default();
+        let livenet_contract_env = LivenetContractEnv::new(casper_client.clone());
+        let contract_env = Rc::new(ContractEnv::new(0, livenet_contract_env));
+        Self { casper_client, contract_register: Default::default(), contract_env }
     }
 }
 
@@ -54,7 +60,8 @@ impl HostContext for LivenetEnv {
     }
 
     fn get_events_count(&self, contract_address: &Address) -> u32 {
-        todo!()
+        // TODO: implement
+        0
     }
 
     fn call_contract(
@@ -64,15 +71,19 @@ impl HostContext for LivenetEnv {
         use_proxy: bool
     ) -> Result<Bytes, OdraError> {
         if !call_def.is_mut() {
-            return self.casper_client.borrow_mut().call_without_deploy(*address, call_def);
+            return self.contract_register.read().unwrap().call(address, call_def)
         }
         match use_proxy {
             true => Ok(self.casper_client.borrow_mut().deploy_entrypoint_call_with_proxy(*address, call_def)),
             false => {
                 self.casper_client.borrow_mut().deploy_entrypoint_call(*address, call_def);
-                return Ok(Default::default());
+                Ok(Default::default())
             },
         }
+    }
+
+    fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller) {
+        self.contract_register.write().unwrap().add(address, ContractContainer::new(&address.to_string(), entry_points_caller));
     }
 
     fn new_contract(
@@ -93,7 +104,7 @@ impl HostContext for LivenetEnv {
     }
 
     fn contract_env(&self) -> ContractEnv {
-        panic!("Cannot get contract env in LivenetEnv")
+        (*self.contract_env).clone()
     }
 
     fn print_gas_report(&self) {

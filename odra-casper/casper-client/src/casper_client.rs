@@ -64,6 +64,10 @@ impl CasperClient {
             gas: U512::zero(),
         }
     }
+    
+    pub fn get_value(&self, key: &[u8]) -> Option<Bytes> {
+        None
+    }
 
     pub fn set_gas(&mut self, gas: u64) {
         self.gas = gas.into();

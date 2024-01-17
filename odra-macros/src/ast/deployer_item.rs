@@ -2,7 +2,7 @@ use derive_try_from::TryFromRef;
 
 use crate::{ir::ModuleImplIR, utils};
 
-use super::deployer_utils::{CallEpcExpr, EpcSignature, DeployerInitSignature, EntrypointCallerExpr, HostRefInstanceExpr, NewContractExpr};
+use super::deployer_utils::{CallEpcExpr, EpcSignature, DeployerInitSignature, EntrypointCallerExpr, HostRefInstanceExpr, NewContractExpr, DeployerLoadSignature, LoadContractExpr};
 
 #[derive(syn_derive::ToTokens)]
 struct DeployStructItem {
@@ -34,7 +34,9 @@ struct DeployImplItem {
     #[syn(in = brace_token)]
     epc_fn: ContractEpcFn,
     #[syn(in = brace_token)]
-    init_fn: ContractInitFn
+    init_fn: ContractInitFn,
+    #[syn(in = brace_token)]
+    load_fn: ContractLoadFn
 }
 
 impl TryFrom<&'_ ModuleImplIR> for DeployImplItem {
@@ -46,7 +48,8 @@ impl TryFrom<&'_ ModuleImplIR> for DeployImplItem {
             ident: module.deployer_ident()?,
             brace_token: Default::default(),
             epc_fn: module.try_into()?,
-            init_fn: module.try_into()?
+            init_fn: module.try_into()?,
+            load_fn: module.try_into()?
         })
     }
 }
@@ -77,6 +80,23 @@ struct ContractInitFn {
     caller: CallEpcExpr,
     #[syn(in = braces)]
     new_contract: NewContractExpr,
+    #[syn(in = braces)]
+    host_ref_instance: HostRefInstanceExpr
+}
+
+#[derive(syn_derive::ToTokens, TryFromRef)]
+#[source(ModuleImplIR)]
+struct ContractLoadFn {
+    #[expr(utils::syn::visibility_pub())]
+    vis: syn::Visibility,
+    sig: DeployerLoadSignature,
+    #[syn(braced)]
+    #[default]
+    braces: syn::token::Brace,
+    #[syn(in = braces)]
+    caller: CallEpcExpr,
+    #[syn(in = braces)]
+    load_contract: LoadContractExpr,
     #[syn(in = braces)]
     host_ref_instance: HostRefInstanceExpr
 }
@@ -143,6 +163,16 @@ mod deployer_impl {
                         }),
                         Some(caller)
                     );
+                    Erc20HostRef {
+                        address,
+                        env: env.clone(),
+                        attached_value: odra::U512::zero()
+                    }
+                }
+
+                pub fn load(env: &odra:HostEnv, address: Address) -> Erc20HostRef {
+                    let caller = Self::epc(env);
+                    env.register_contract(address, caller);
                     Erc20HostRef {
                         address,
                         env: env.clone(),

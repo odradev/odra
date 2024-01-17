@@ -57,7 +57,9 @@ impl HostEnv {
         deployed_contract
     }
 
-    pub fn register_contract(&self, address: Address) {
+    pub fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller) {
+        let backend = self.backend.borrow();
+        backend.register_contract(address, entry_points_caller);
         self.deployed_contracts.borrow_mut().push(address);
         self.events_count.borrow_mut().insert(address, 0);
     }

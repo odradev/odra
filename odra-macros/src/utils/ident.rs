@@ -39,6 +39,10 @@ pub fn epc() -> syn::Ident {
     format_ident!("epc")
 }
 
+pub fn load() -> syn::Ident {
+    format_ident!("load")
+}
+
 pub fn address() -> syn::Ident {
     format_ident!("address")
 }

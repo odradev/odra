@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 odra-core = { path = "../../core" }
 odra-casper-client = { path = "../casper-client" }
+blake2 = { workspace = true }

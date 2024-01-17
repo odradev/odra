@@ -7,6 +7,7 @@ use crate::{
 use proc_macro2::TokenStream;
 use quote::ToTokens;
 use syn::parse_quote;
+use syn::punctuated::Pair::Punctuated;
 
 #[derive(syn_derive::ToTokens)]
 pub struct DeployerInitSignature {
@@ -39,6 +40,41 @@ impl TryFrom<&'_ ModuleImplIR> for DeployerInitSignature {
         })
     }
 }
+
+#[derive(syn_derive::ToTokens)]
+pub struct DeployerLoadSignature {
+    fn_token: syn::token::Fn,
+    init_token: syn::Ident,
+    #[syn(parenthesized)]
+    paren_token: syn::token::Paren,
+    #[syn(in = paren_token)]
+    inputs: syn::punctuated::Punctuated<syn::FnArg, syn::Token![,]>,
+    output: syn::ReturnType
+}
+
+impl TryFrom<&'_ ModuleImplIR> for DeployerLoadSignature {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        let host_ref_ident = module.host_ref_ident()?.as_type();
+        let ty_host_env = utils::ty::host_env();
+        let env = utils::ident::env();
+        let ty_address = utils::ty::address();
+
+        let mut inputs =  syn::punctuated::Punctuated::new();
+        inputs.push(parse_quote!(#env: &#ty_host_env));
+        inputs.push(parse_quote!(address: #ty_address));
+
+        Ok(Self {
+            fn_token: Default::default(),
+            init_token: utils::ident::load(),
+            paren_token: Default::default(),
+            inputs,
+            output: utils::misc::ret_ty(&host_ref_ident)
+        })
+    }
+}
+
 
 #[derive(syn_derive::ToTokens)]
 pub struct EpcSignature {
@@ -181,6 +217,31 @@ impl TryFrom<&'_ ModuleImplIR> for NewContractExpr {
             ident: utils::ident::address(),
             assign_token: Default::default(),
             new_contract_expr,
+            semi_token: Default::default()
+        })
+    }
+}
+
+#[derive(syn_derive::ToTokens)]
+pub struct LoadContractExpr {
+    load_contract_expr: syn::Expr,
+    semi_token: syn::token::Semi
+}
+
+impl TryFrom<&'_ ModuleImplIR> for LoadContractExpr {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        let env_ident = utils::ident::env();
+        let address_ident = utils::ident::address();
+        let caller_ident = utils::ident::caller();
+
+        let load_contract_expr = parse_quote!(
+            #env_ident.register_contract(#address_ident, #caller_ident)
+        );
+
+        Ok(Self {
+            load_contract_expr,
             semi_token: Default::default()
         })
     }

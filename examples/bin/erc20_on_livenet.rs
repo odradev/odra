@@ -20,12 +20,12 @@ fn main() {
     // Uncomment to use already deployed contract.
     let address = "hash-d26fcbd2106e37be975d2045c580334a6d7b9d0a241c2358a4db970dfd516945";
     let address = Address::from_str(address).unwrap();
-    let mut token = Erc20HostRef::new(address, env.clone());
-    env.set_gas(1_000_000_000u64);
-    token.approve(owner, U256::from(1000));
-    let name = token.name();
+    let mut token = Erc20Deployer::load(&env, address);
+    // env.set_gas(1_000_000_000u64);
+    // token.approve(owner, U256::from(1000));
+    // let name = token.name();
 
-    // println!("Token name: {}", token.symbol());
+    println!("Token name: {}", token.symbol());
 
     // env.set_gas(3_000_000_000u64);
     // token.transfer(recipient, U256::from(1000));

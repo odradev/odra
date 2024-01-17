@@ -28,6 +28,11 @@ pub trait HostContext {
         init_args: Option<RuntimeArgs>,
         entry_points_caller: Option<EntryPointsCaller>
     ) -> Address;
+    fn register_contract(
+        &self,
+        address: Address,
+        entry_points_caller: EntryPointsCaller
+    );
     fn contract_env(&self) -> ContractEnv;
     fn print_gas_report(&self);
     fn last_call_gas_cost(&self) -> u64;
