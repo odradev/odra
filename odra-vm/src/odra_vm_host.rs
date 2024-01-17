@@ -68,7 +68,7 @@ impl HostContext for OdraVmHost {
         &self,
         name: &str,
         init_args: Option<RuntimeArgs>,
-        entry_points_caller: Option<EntryPointsCaller>
+        entry_points_caller: EntryPointsCaller
     ) -> Address {
         // TODO: panic in nice way
         let address = self

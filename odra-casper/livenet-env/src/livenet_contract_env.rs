@@ -12,6 +12,7 @@ use std::io::Write;
 
 pub struct LivenetContractEnv {
     casper_client: Rc<RefCell<CasperClient>>,
+    callstack: Rc<RefCell<Vec<Address>>>,
 }
 
 impl ContractContext for LivenetContractEnv {
@@ -80,7 +81,7 @@ impl ContractContext for LivenetContractEnv {
 }
 
 impl LivenetContractEnv {
-    pub fn new(casper_client: Rc<RefCell<CasperClient>>) -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(Self { casper_client }))
+    pub fn new(casper_client: Rc<RefCell<CasperClient>>, callstack: Rc<RefCell<Vec<Address>>>) -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(Self { casper_client, callstack }))
     }
 }

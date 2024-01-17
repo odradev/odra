@@ -90,7 +90,7 @@ impl HostContext for CasperHost {
         &self,
         name: &str,
         init_args: Option<RuntimeArgs>,
-        entry_points_caller: Option<EntryPointsCaller>
+        entry_points_caller: EntryPointsCaller
     ) -> Address {
         self.vm
             .borrow_mut()

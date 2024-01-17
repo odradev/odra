@@ -196,7 +196,7 @@ impl TryFrom<&'_ ModuleImplIR> for NewContractExpr {
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let module_str = module.module_str()?;
-        let caller_expr = utils::expr::some(utils::ident::caller());
+        let caller_expr = utils::ident::caller();
         let env_ident = utils::ident::env();
         let args = module
             .constructor()

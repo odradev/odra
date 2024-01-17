@@ -161,7 +161,7 @@ mod deployer_impl {
                             let _ = named_args.insert("total_supply", total_supply);
                             named_args
                         }),
-                        Some(caller)
+                        caller
                     );
                     Erc20HostRef {
                         address,
@@ -170,13 +170,13 @@ mod deployer_impl {
                     }
                 }
 
-                pub fn load(env: &odra:HostEnv, address: Address) -> Erc20HostRef {
+                pub fn load(env: &odra::HostEnv, address: odra::Address) -> Erc20HostRef {
                     let caller = Self::epc(env);
                     env.register_contract(address, caller);
                     Erc20HostRef {
                         address,
                         env: env.clone(),
-                        attached_value: odra::U512::zero()
+                        attached_value: odra::U512::zero(),
                     }
                 }
             }

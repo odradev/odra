@@ -14,7 +14,8 @@ use crate::livenet_contract_env::LivenetContractEnv;
 pub struct LivenetEnv {
     casper_client: Rc<RefCell<CasperClient>>,
     contract_register: Arc<RwLock<ContractRegister>>,
-    contract_env: Rc<ContractEnv>
+    contract_env: Rc<ContractEnv>,
+    callstack: Rc<RefCell<Vec<Address>>>,
 }
 
 impl LivenetEnv {
@@ -24,9 +25,10 @@ impl LivenetEnv {
 
     pub fn new_instance() -> Self {
         let casper_client: Rc<RefCell<CasperClient>> = Default::default();
-        let livenet_contract_env = LivenetContractEnv::new(casper_client.clone());
+        let callstack: Rc<RefCell<Vec<Address>>> = Default::default();
+        let livenet_contract_env = LivenetContractEnv::new(casper_client.clone(), callstack.clone());
         let contract_env = Rc::new(ContractEnv::new(0, livenet_contract_env));
-        Self { casper_client, contract_register: Default::default(), contract_env }
+        Self { casper_client, contract_register: Default::default(), contract_env, callstack }
     }
 }
 
@@ -71,7 +73,10 @@ impl HostContext for LivenetEnv {
         use_proxy: bool
     ) -> Result<Bytes, OdraError> {
         if !call_def.is_mut() {
-            return self.contract_register.read().unwrap().call(address, call_def)
+            self.callstack.borrow_mut().push(*address);
+            let result = self.contract_register.read().unwrap().call(address, call_def);
+            self.callstack.borrow_mut().pop();
+            return result
         }
         match use_proxy {
             true => Ok(self.casper_client.borrow_mut().deploy_entrypoint_call_with_proxy(*address, call_def)),
@@ -90,7 +95,7 @@ impl HostContext for LivenetEnv {
         &self,
         name: &str,
         init_args: Option<RuntimeArgs>,
-        entry_points_caller: Option<EntryPointsCaller>
+        entry_points_caller: EntryPointsCaller
     ) -> Address {
         let mut args = match init_args {
             None => RuntimeArgs::new(),
@@ -100,7 +105,9 @@ impl HostContext for LivenetEnv {
         args.insert("odra_cfg_is_upgradable", false).unwrap();
         args.insert("odra_cfg_allow_key_override", false).unwrap();
         args.insert("odra_cfg_package_hash_key_name", format!("{}_package_hash", name)).unwrap();
-        self.casper_client.borrow_mut().deploy_wasm(name, args)
+        let address = self.casper_client.borrow_mut().deploy_wasm(name, args);
+        self.register_contract(address, entry_points_caller);
+        address
     }
 
     fn contract_env(&self) -> ContractEnv {

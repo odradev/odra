@@ -48,7 +48,7 @@ impl HostEnv {
         &self,
         name: &str,
         init_args: Option<RuntimeArgs>,
-        entry_points_caller: Option<EntryPointsCaller>
+        entry_points_caller: EntryPointsCaller
     ) -> Address {
         let backend = self.backend.borrow();
         let deployed_contract = backend.new_contract(name, init_args, entry_points_caller);
