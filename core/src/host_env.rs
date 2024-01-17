@@ -57,6 +57,11 @@ impl HostEnv {
         deployed_contract
     }
 
+    pub fn register_contract(&self, address: Address) {
+        self.deployed_contracts.borrow_mut().push(address);
+        self.events_count.borrow_mut().insert(address, 0);
+    }
+
     pub fn call_contract<T: FromBytes + CLTyped>(
         &self,
         address: Address,

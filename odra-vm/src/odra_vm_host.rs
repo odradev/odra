@@ -79,7 +79,7 @@ impl HostContext for OdraVmHost {
         if let Some(init_args) = init_args {
             let _ = self.call_contract(
                 &address,
-                CallDef::new(String::from("init"), init_args),
+                CallDef::new(String::from("init"), true, init_args),
                 false
             );
         }

@@ -263,6 +263,10 @@ impl CasperClient {
         value
     }
 
+    pub fn call_without_deploy(&self, address: Address, call_def: CallDef) -> Result<Bytes, OdraError> {
+        todo!("call_without_deploy");
+    }
+
     /// Deploy the entrypoint call.
     pub fn deploy_entrypoint_call(
         &self,

@@ -2,9 +2,7 @@ use derive_try_from::TryFromRef;
 
 use crate::{ir::ModuleImplIR, utils};
 
-use super::deployer_utils::{
-    DeployerInitSignature, EntrypointCallerExpr, HostRefInstanceExpr, NewContractExpr
-};
+use super::deployer_utils::{CallEpcExpr, EpcSignature, DeployerInitSignature, EntrypointCallerExpr, HostRefInstanceExpr, NewContractExpr};
 
 #[derive(syn_derive::ToTokens)]
 struct DeployStructItem {
@@ -34,6 +32,8 @@ struct DeployImplItem {
     #[syn(braced)]
     brace_token: syn::token::Brace,
     #[syn(in = brace_token)]
+    epc_fn: ContractEpcFn,
+    #[syn(in = brace_token)]
     init_fn: ContractInitFn
 }
 
@@ -45,9 +45,23 @@ impl TryFrom<&'_ ModuleImplIR> for DeployImplItem {
             impl_token: Default::default(),
             ident: module.deployer_ident()?,
             brace_token: Default::default(),
+            epc_fn: module.try_into()?,
             init_fn: module.try_into()?
         })
     }
+}
+
+#[derive(syn_derive::ToTokens, TryFromRef)]
+#[source(ModuleImplIR)]
+pub struct ContractEpcFn {
+    #[expr(utils::syn::visibility_pub())]
+    vis: syn::Visibility,
+    sig: EpcSignature,
+    #[syn(braced)]
+    #[default]
+    braces: syn::token::Brace,
+    #[syn(in = braces)]
+    caller: EntrypointCallerExpr,
 }
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
@@ -60,7 +74,7 @@ struct ContractInitFn {
     #[default]
     braces: syn::token::Brace,
     #[syn(in = braces)]
-    caller: EntrypointCallerExpr,
+    caller: CallEpcExpr,
     #[syn(in = braces)]
     new_contract: NewContractExpr,
     #[syn(in = braces)]
@@ -87,8 +101,8 @@ mod deployer_impl {
             pub struct Erc20Deployer;
 
             impl Erc20Deployer {
-                pub fn init(env: &odra::HostEnv, total_supply: Option<U256>) -> Erc20HostRef {
-                    let caller = odra::EntryPointsCaller::new(env.clone(), |contract_env, call_def| {
+                pub fn epc(env: &odra::HostEnv) -> odra::EntryPointsCaller {
+                    odra::EntryPointsCaller::new(env.clone(), |contract_env, call_def| {
                         match call_def.method() {
                             "init" => {
                                 let result = __erc20_exec_parts::execute_init(contract_env);
@@ -114,7 +128,11 @@ mod deployer_impl {
                                 odra::VmError::NoSuchMethod(odra::prelude::String::from(name)),
                             ))
                         }
-                    });
+                    })
+                }
+
+                pub fn init(env: &odra::HostEnv, total_supply: Option<U256>) -> Erc20HostRef {
+                    let caller = Self::epc(env);
 
                     let address = env.new_contract(
                         "Erc20",

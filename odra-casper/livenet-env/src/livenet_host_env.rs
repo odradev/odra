@@ -63,6 +63,9 @@ impl HostContext for LivenetEnv {
         call_def: CallDef,
         use_proxy: bool
     ) -> Result<Bytes, OdraError> {
+        if !call_def.is_mut() {
+            return self.casper_client.borrow_mut().call_without_deploy(*address, call_def);
+        }
         match use_proxy {
             true => Ok(self.casper_client.borrow_mut().deploy_entrypoint_call_with_proxy(*address, call_def)),
             false => {

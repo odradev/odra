@@ -22,9 +22,10 @@ fn main() {
     let address = Address::from_str(address).unwrap();
     let mut token = Erc20HostRef::new(address, env.clone());
     env.set_gas(1_000_000_000u64);
-    // token.approve(owner, U256::from(1000));
+    token.approve(owner, U256::from(1000));
+    let name = token.name();
 
-    println!("Token name: {}", token.symbol());
+    // println!("Token name: {}", token.symbol());
 
     // env.set_gas(3_000_000_000u64);
     // token.transfer(recipient, U256::from(1000));

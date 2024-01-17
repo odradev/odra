@@ -41,12 +41,39 @@ impl TryFrom<&'_ ModuleImplIR> for DeployerInitSignature {
 }
 
 #[derive(syn_derive::ToTokens)]
+pub struct EpcSignature {
+    fn_token: syn::token::Fn,
+    epc_token: syn::Ident,
+    #[syn(parenthesized)]
+    paren_token: syn::token::Paren,
+    #[syn(in = paren_token)]
+    input: syn::FnArg,
+    output: syn::ReturnType
+}
+
+impl TryFrom<&'_ ModuleImplIR> for EpcSignature {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        let epc_ident = utils::ty::entry_points_caller();
+        let ty_host_env = utils::ty::host_env();
+        let env = utils::ident::env();
+
+        let input = parse_quote!(#env: &#ty_host_env);
+
+        Ok(Self {
+            fn_token: Default::default(),
+            epc_token: utils::ident::epc(),
+            paren_token: Default::default(),
+            input,
+            output: utils::misc::ret_ty(&epc_ident)
+        })
+    }
+}
+
+#[derive(syn_derive::ToTokens)]
 pub struct EntrypointCallerExpr {
-    let_token: syn::token::Let,
-    ident: syn::Ident,
-    assign_token: syn::token::Eq,
     caller_expr: syn::Expr,
-    semi_token: syn::token::Semi
 }
 
 impl TryFrom<&'_ ModuleImplIR> for EntrypointCallerExpr {
@@ -54,11 +81,7 @@ impl TryFrom<&'_ ModuleImplIR> for EntrypointCallerExpr {
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            let_token: Default::default(),
-            ident: utils::ident::caller(),
-            assign_token: Default::default(),
             caller_expr: Self::entrypoint_caller(module)?,
-            semi_token: Default::default()
         })
     }
 }
@@ -87,6 +110,41 @@ impl EntrypointCallerExpr {
         ))
     }
 }
+
+#[derive(syn_derive::ToTokens)]
+pub struct CallEpcExpr {
+    let_token: syn::token::Let,
+    ident: syn::Ident,
+    assign_token: syn::token::Eq,
+    epc_expression: syn::Expr,
+    semi_token: syn::token::Semi
+}
+
+impl TryFrom<&'_ ModuleImplIR> for CallEpcExpr {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        let epc_ident = utils::ident::epc();
+        let env_ident = utils::ident::env();
+        let args = module
+            .constructor()
+            .map(|f| fn_utils::runtime_args_block(&f, ref_utils::insert_arg_stmt))
+            .map(utils::expr::some)
+            .unwrap_or_else(utils::expr::none);
+
+
+        Ok(Self {
+            let_token: Default::default(),
+            ident: utils::ident::caller(),
+            assign_token: Default::default(),
+            epc_expression: parse_quote!(
+                Self::epc(env)
+            ),
+            semi_token: Default::default()
+        })
+    }
+}
+
 
 #[derive(syn_derive::ToTokens)]
 pub struct NewContractExpr {
