@@ -6,6 +6,9 @@ edition = "2021"
 [dependencies]
 odra = { workspace = true }
 
+[dev-dependencies]
+odra-test = { workspace = true }
+
 [[bin]]
 name = "flapper_build_contract"
 path = "bin/build_contract.rs"
