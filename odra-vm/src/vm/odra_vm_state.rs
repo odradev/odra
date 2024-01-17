@@ -1,5 +1,4 @@
 use super::balance::AccountBalance;
-use super::callstack::{Callstack, CallstackElement};
 use super::storage::Storage;
 use anyhow::Result;
 use odra_core::casper_types::account::AccountHash;
@@ -10,6 +9,7 @@ use odra_core::{
     Address, Bytes, ExecutionError, FromBytes, OdraError, PublicKey, SecretKey, ToBytes, U512
 };
 use std::collections::BTreeMap;
+use odra_core::callstack::{Callstack, CallstackElement};
 
 pub struct OdraVmState {
     storage: Storage,

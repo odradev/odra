@@ -31,6 +31,7 @@ pub mod utils;
 pub mod variable;
 pub mod contract_container;
 pub mod contract_register;
+pub mod callstack;
 
 pub use address::{Address, OdraAddress};
 pub use call_def::CallDef;

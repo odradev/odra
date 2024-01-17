@@ -7,6 +7,7 @@ use odra_core::{
     Address, Bytes, CallDef, ContractEnv, EntryPointsCaller, HostContext, OdraError, PublicKey,
     RuntimeArgs, U512
 };
+use odra_core::callstack::{Callstack, CallstackElement, Entrypoint};
 use odra_core::contract_container::ContractContainer;
 use odra_core::contract_register::ContractRegister;
 use crate::livenet_contract_env::LivenetContractEnv;
@@ -15,7 +16,7 @@ pub struct LivenetEnv {
     casper_client: Rc<RefCell<CasperClient>>,
     contract_register: Arc<RwLock<ContractRegister>>,
     contract_env: Rc<ContractEnv>,
-    callstack: Rc<RefCell<Vec<Address>>>,
+    callstack: Rc<RefCell<Callstack>>,
 }
 
 impl LivenetEnv {
@@ -25,7 +26,7 @@ impl LivenetEnv {
 
     pub fn new_instance() -> Self {
         let casper_client: Rc<RefCell<CasperClient>> = Default::default();
-        let callstack: Rc<RefCell<Vec<Address>>> = Default::default();
+        let callstack: Rc<RefCell<Callstack>> = Default::default();
         let livenet_contract_env = LivenetContractEnv::new(casper_client.clone(), callstack.clone());
         let contract_env = Rc::new(ContractEnv::new(0, livenet_contract_env));
         Self { casper_client, contract_register: Default::default(), contract_env, callstack }
@@ -73,7 +74,7 @@ impl HostContext for LivenetEnv {
         use_proxy: bool
     ) -> Result<Bytes, OdraError> {
         if !call_def.is_mut() {
-            self.callstack.borrow_mut().push(*address);
+            self.callstack.borrow_mut().push(CallstackElement::Entrypoint(Entrypoint::new(*address, call_def.clone())));
             let result = self.contract_register.read().unwrap().call(address, call_def);
             self.callstack.borrow_mut().pop();
             return result

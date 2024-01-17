@@ -1,26 +1,24 @@
 use odra_casper_client::casper_client::CasperClient;
 use blake2::digest::VariableOutput;
-use blake2::{Blake2b, Blake2b512, Blake2bVar, Blake2s256, Digest};
-use odra_core::casper_types::BlockTime;
+use blake2::Blake2bVar;
 use odra_core::prelude::*;
-use odra_core::{casper_types, Address, Bytes, OdraError, ToBytes, U512};
+use odra_core::{Address, Bytes, OdraError, U512};
 use odra_core::{CallDef, ContractContext};
-use std::collections::hash_map::DefaultHasher;
-use std::hash::Hasher;
 use std::io::Write;
+use odra_core::callstack::{Callstack, CallstackElement};
 
 
 pub struct LivenetContractEnv {
     casper_client: Rc<RefCell<CasperClient>>,
-    callstack: Rc<RefCell<Vec<Address>>>,
+    callstack: Rc<RefCell<Callstack>>,
 }
 
 impl ContractContext for LivenetContractEnv {
     fn get_value(&self, key: &[u8]) -> Option<Bytes> {
-        self.casper_client.borrow().get_value(key)
+        self.casper_client.borrow().get_value(self.callstack.borrow().current().address(), key)
     }
 
-    fn set_value(&self, key: &[u8], value: Bytes) {
+    fn set_value(&self, _key: &[u8], _value: Bytes) {
         panic!("Cannot set value in LivenetEnv")
     }
 
@@ -32,7 +30,7 @@ impl ContractContext for LivenetContractEnv {
         todo!()
     }
 
-    fn call_contract(&self, address: Address, call_def: CallDef) -> Bytes {
+    fn call_contract(&self, _address: Address, _call_def: CallDef) -> Bytes {
         todo!()
     }
 
@@ -44,11 +42,11 @@ impl ContractContext for LivenetContractEnv {
         todo!()
     }
 
-    fn emit_event(&self, event: &Bytes) {
+    fn emit_event(&self, _event: &Bytes) {
         panic!("Cannot emit event in LivenetEnv")
     }
 
-    fn transfer_tokens(&self, to: &Address, amount: &U512) {
+    fn transfer_tokens(&self, _to: &Address, _amount: &U512) {
         panic!("Cannot transfer tokens in LivenetEnv")
     }
 
@@ -58,7 +56,12 @@ impl ContractContext for LivenetContractEnv {
     }
 
     fn get_named_arg_bytes(&self, name: &str) -> Bytes {
-        todo!()
+        match self.callstack.borrow().current() {
+            CallstackElement::Account(_) => todo!("get_named_arg_bytes"),
+            CallstackElement::Entrypoint(ep) => {
+                Bytes::from(ep.call_def.args.get(name).unwrap().inner_bytes().to_vec())
+            }
+        }
     }
 
     fn handle_attached_value(&self) {
@@ -81,7 +84,7 @@ impl ContractContext for LivenetContractEnv {
 }
 
 impl LivenetContractEnv {
-    pub fn new(casper_client: Rc<RefCell<CasperClient>>, callstack: Rc<RefCell<Vec<Address>>>) -> Rc<RefCell<Self>> {
+    pub fn new(casper_client: Rc<RefCell<CasperClient>>, callstack: Rc<RefCell<Callstack>>) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(Self { casper_client, callstack }))
     }
 }

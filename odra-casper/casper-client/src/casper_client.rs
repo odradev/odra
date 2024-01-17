@@ -65,8 +65,8 @@ impl CasperClient {
         }
     }
 
-    pub fn get_value(&self, key: &[u8]) -> Option<Bytes> {
-        Some(Bytes::from("todo".to_string().to_bytes().unwrap()))
+    pub fn get_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
+        self.query_dictionary(*address, unsafe { from_utf8_unchecked(key) })
     }
 
     pub fn set_gas(&mut self, gas: u64) {
