@@ -95,8 +95,8 @@ impl ContractBlueprint {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn as_json(self) -> String {
-        serde_json::to_string_pretty(&self).unwrap()
+    pub fn as_json(self) -> Result<String, serde_json::Error> {
+        serde_json::to_string_pretty(&self)
     }
 }
 
