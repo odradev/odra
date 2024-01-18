@@ -6,10 +6,12 @@ use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
     CLType, Key, PublicKey, URef, U128, U256, U512
 };
+#[cfg(not(target_arch = "wasm32"))]
 use serde::{Deserialize, Serialize};
 
 /// Contract's entrypoint.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Serialize, Deserialize))]
 pub struct Entrypoint {
     pub ident: String,
     pub args: Vec<Argument>,
@@ -20,7 +22,8 @@ pub struct Entrypoint {
 }
 
 /// Defines an argument passed to an entrypoint.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Serialize, Deserialize))]
 pub struct Argument {
     pub ident: String,
     pub ty: CLType,
@@ -29,7 +32,8 @@ pub struct Argument {
 }
 
 /// Defines an event.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Serialize, Deserialize))]
 pub struct Event {
     pub ident: String,
     pub args: Vec<Argument>
@@ -42,7 +46,8 @@ impl Event {
 }
 
 /// Defines an entrypoint type.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Serialize, Deserialize))]
 pub enum EntrypointType {
     /// A special entrypoint that can be called just once on the contract initialization.
     Constructor,
@@ -50,7 +55,8 @@ pub enum EntrypointType {
     Public
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Serialize, Deserialize))]
 pub enum EntrypointAttribute {
     NonReentrant,
     Payable
@@ -78,7 +84,8 @@ pub trait HasEvents {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Serialize, Deserialize))]
 pub struct ContractBlueprint {
     pub name: String,
     pub events: Vec<Event>,
