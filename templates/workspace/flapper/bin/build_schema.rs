@@ -11,7 +11,7 @@ fn main() {
     let schema = unsafe { crate::module_schema() };
 
     if !std::path::Path::new("resources").exists() {
-        std::fs::create_dir("resources").unwrap();
+        std::fs::create_dir("resources").expect("Failed to create resources directory");
     }
 
     let module = std::env::var("ODRA_MODULE").expect("ODRA_MODULE environment variable is not set");
