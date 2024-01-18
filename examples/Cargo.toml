@@ -28,6 +28,7 @@ lto = true
 
 [profile.dev.package."*"]
 opt-level = 3
+
 #[[bin]]
 #name = "erc20-on-livenet"
 #path = "bin/erc20_on_livenet.rs"
