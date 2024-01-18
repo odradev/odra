@@ -6,9 +6,10 @@ use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
     CLType, Key, PublicKey, URef, U128, U256, U512
 };
+use serde::{Deserialize, Serialize};
 
 /// Contract's entrypoint.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Entrypoint {
     pub ident: String,
     pub args: Vec<Argument>,
@@ -19,7 +20,7 @@ pub struct Entrypoint {
 }
 
 /// Defines an argument passed to an entrypoint.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Argument {
     pub ident: String,
     pub ty: CLType,
@@ -28,7 +29,7 @@ pub struct Argument {
 }
 
 /// Defines an event.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Event {
     pub ident: String,
     pub args: Vec<Argument>
@@ -41,7 +42,7 @@ impl Event {
 }
 
 /// Defines an entrypoint type.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum EntrypointType {
     /// A special entrypoint that can be called just once on the contract initialization.
     Constructor,
@@ -49,7 +50,7 @@ pub enum EntrypointType {
     Public
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum EntrypointAttribute {
     NonReentrant,
     Payable
@@ -77,7 +78,7 @@ pub trait HasEvents {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContractBlueprint {
     pub name: String,
     pub events: Vec<Event>,
@@ -91,6 +92,11 @@ impl ContractBlueprint {
             events: T::events(),
             entrypoints: T::entrypoints()
         }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn as_json(self) -> String {
+        serde_json::to_string_pretty(&self).unwrap()
     }
 }
 

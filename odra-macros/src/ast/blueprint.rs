@@ -33,7 +33,7 @@ struct BlueprintModItem {
 #[derive(syn_derive::ToTokens)]
 struct SchemaFnItem {
     no_mangle_attr: syn::Attribute,
-    not_wasm32_attr: syn::Attribute,
+    // not_wasm32_attr: syn::Attribute,
     sig: syn::Signature,
     #[syn(braced)]
     brace_token: syn::token::Brace,
@@ -50,7 +50,7 @@ impl TryFrom<&'_ ModuleImplIR> for SchemaFnItem {
 
         Ok(Self {
             no_mangle_attr: utils::attr::no_mangle(),
-            not_wasm32_attr: utils::attr::not_wasm32(),
+            // not_wasm32_attr: utils::attr::not_wasm32(),
             sig: parse_quote!(fn #ident_module_schema() -> #ty_blueprint),
             brace_token: Default::default(),
             expr: utils::expr::new_blueprint(&module.module_ident()?)

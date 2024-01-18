@@ -6,3 +6,5 @@ edition = "2021"
 [dependencies]
 casper-types = "3.0.0"
 casper-event-standard = "0.4.0"
+serde = { version = "1.0.195", default-features = false, features = ["alloc", "derive"] }
+serde_json = { version = "1.0.111", default-features = false, features = ["alloc"] }
