@@ -10,9 +10,9 @@ pub struct CallDef {
 }
 
 impl CallDef {
-    pub fn new(method: String, args: RuntimeArgs) -> Self {
+    pub fn new<T: ToString>(method: T, args: RuntimeArgs) -> Self {
         CallDef {
-            entry_point: method,
+            entry_point: method.to_string(),
             args,
             amount: U512::zero()
         }

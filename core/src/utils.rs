@@ -22,7 +22,7 @@ pub(crate) fn extract_event_name(bytes: &[u8]) -> Result<String, EventError> {
 /// # Examples
 ///
 /// ```
-/// use odra_utils::event_absolute_position;
+/// # use odra_core::utils::event_absolute_position;
 ///
 /// assert_eq!(event_absolute_position(10, 0), Some(0));
 /// assert_eq!(event_absolute_position(10, -1), Some(9));

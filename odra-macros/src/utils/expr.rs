@@ -1,5 +1,5 @@
 use quote::ToTokens;
-use syn::parse_quote;
+use syn::{parse_quote, punctuated::Punctuated};
 
 pub fn new_runtime_args() -> syn::Expr {
     let ty = super::ty::runtime_args();
@@ -167,6 +167,24 @@ pub fn btree_from_iter(expr: &syn::Expr) -> syn::Expr {
 
 pub fn default() -> syn::Expr {
     parse_quote!(Default::default())
+}
+
+pub fn new_entry_point(name: String, args: Vec<syn::PatType>) -> syn::Expr {
+    let ty = super::ty::odra_entry_point();
+    let name = string_from(name);
+    let args_stream = args
+        .iter()
+        .map(new_entry_point_arg)
+        .collect::<Punctuated<_, syn::Token![,]>>();
+    let args = vec(args_stream);
+    parse_quote!(#ty::new(#name, #args))
+}
+
+fn new_entry_point_arg(arg: &syn::PatType) -> syn::Expr {
+    let ty = super::ty::odra_entry_point_arg();
+    let cl_type = as_cl_type(&arg.ty);
+    let name = string_from(arg.pat.to_token_stream().to_string());
+    parse_quote!(#ty::new(#name, #cl_type))
 }
 
 pub trait IntoExpr {
