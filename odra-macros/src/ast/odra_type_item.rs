@@ -5,7 +5,7 @@ use crate::ast::utils::{ImplItem, Named};
 use crate::ir::TypeIR;
 use crate::utils;
 use crate::utils::misc::AsBlock;
-use derive_try_from::TryFromRef;
+use derive_try_from_ref::TryFromRef;
 use syn::parse_quote;
 
 macro_rules! impl_from_ir {
@@ -29,6 +29,7 @@ macro_rules! impl_from_ir {
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
 #[source(TypeIR)]
+#[err(syn::Error)]
 pub struct OdraTypeItem {
     from_bytes_impl: FromBytesItem,
     to_bytes_impl: ToBytesItem,

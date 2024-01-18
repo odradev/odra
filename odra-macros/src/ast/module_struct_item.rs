@@ -3,10 +3,11 @@ use crate::ast::ident_item::HasIdentImplItem;
 use crate::ast::module_def::ModuleDefItem;
 use crate::ast::module_item::ModuleModItem;
 use crate::ir::ModuleStructIR;
-use derive_try_from::TryFromRef;
+use derive_try_from_ref::TryFromRef;
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
 #[source(ModuleStructIR)]
+#[err(syn::Error)]
 pub struct ModuleStructItem {
     self_code: ModuleDefItem,
     mod_item: ModuleModItem,
