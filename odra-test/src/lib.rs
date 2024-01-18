@@ -13,6 +13,7 @@ pub fn env() -> odra_core::HostEnv {
     let backend: String = std::env::var("ODRA_BACKEND").unwrap_or(String::from("odra-vm"));
     match backend.as_str() {
         "casper" => casper_env(),
+        "livenet" => odra_casper_livenet_env::livenet_env(),
         _ => odra_env()
     }
 }

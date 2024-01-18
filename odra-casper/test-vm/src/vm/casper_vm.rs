@@ -265,11 +265,11 @@ impl CasperVm {
         &mut self,
         name: &str,
         init_args: Option<RuntimeArgs>,
-        entry_points_caller: Option<EntryPointsCaller>
+        entry_points_caller: EntryPointsCaller
     ) -> Address {
         let wasm_path = format!("{}.wasm", name);
         let package_hash_key_name = format!("{}_package_hash", name);
-        let mut args = init_args.clone().unwrap_or(runtime_args! {});
+        let mut args = init_args.unwrap_or(runtime_args! {});
         args.insert(PACKAGE_HASH_KEY_NAME_ARG, package_hash_key_name.clone())
             .unwrap();
         args.insert(ALLOW_KEY_OVERRIDE_ARG, true).unwrap();

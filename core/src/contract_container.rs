@@ -1,7 +1,7 @@
+use crate::prelude::*;
+use crate::{CallDef, EntryPointsCaller, OdraError, VmError};
 use casper_types::bytesrepr::Bytes;
 use casper_types::{NamedArg, RuntimeArgs};
-use crate::{CallDef, EntryPointsCaller, OdraError, VmError};
-use crate::prelude::*;
 
 #[doc(hidden)]
 pub type EntrypointCall = fn(String, &RuntimeArgs) -> Vec<u8>;
@@ -10,15 +10,14 @@ pub type EntrypointArgs = Vec<String>;
 
 #[derive(Clone)]
 pub struct ContractContainer {
-    name: String,
-
+    _name: String,
     entry_points_caller: EntryPointsCaller
 }
 
 impl ContractContainer {
     pub fn new(name: &str, entry_points_caller: EntryPointsCaller) -> Self {
         Self {
-            name: String::from(name),
+            _name: String::from(name),
             entry_points_caller
         }
     }
@@ -33,7 +32,7 @@ impl ContractContainer {
         self.entry_points_caller.call(call_def)
     }
 
-    fn validate_args(&self, args: &[String], input_args: &RuntimeArgs) -> Result<(), OdraError> {
+    fn _validate_args(&self, args: &[String], input_args: &RuntimeArgs) -> Result<(), OdraError> {
         // TODO: What's the purpose of this code? Is it needed?
         let named_args = input_args
             .named_args()
@@ -56,13 +55,13 @@ impl ContractContainer {
 
 #[cfg(test)]
 mod tests {
+    use super::{ContractContainer, EntrypointArgs, EntrypointCall};
     use crate::prelude::{collections::*, *};
     use crate::{
         casper_types::{runtime_args, RuntimeArgs},
         OdraError, VmError
     };
     use crate::{EntryPointsCaller, HostEnv};
-    use super::{ContractContainer, EntrypointArgs, EntrypointCall};
 
     #[test]
     fn test_call_wrong_entrypoint() {

@@ -7,7 +7,6 @@ use crate::{
 use proc_macro2::TokenStream;
 use quote::ToTokens;
 use syn::parse_quote;
-use syn::punctuated::Pair::Punctuated;
 
 #[derive(syn_derive::ToTokens)]
 pub struct DeployerInitSignature {
@@ -61,7 +60,7 @@ impl TryFrom<&'_ ModuleImplIR> for DeployerLoadSignature {
         let env = utils::ident::env();
         let ty_address = utils::ty::address();
 
-        let mut inputs =  syn::punctuated::Punctuated::new();
+        let mut inputs = syn::punctuated::Punctuated::new();
         inputs.push(parse_quote!(#env: &#ty_host_env));
         inputs.push(parse_quote!(address: #ty_address));
 
@@ -74,7 +73,6 @@ impl TryFrom<&'_ ModuleImplIR> for DeployerLoadSignature {
         })
     }
 }
-
 
 #[derive(syn_derive::ToTokens)]
 pub struct EpcSignature {
@@ -90,7 +88,7 @@ pub struct EpcSignature {
 impl TryFrom<&'_ ModuleImplIR> for EpcSignature {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+    fn try_from(_: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let epc_ident = utils::ty::entry_points_caller();
         let ty_host_env = utils::ty::host_env();
         let env = utils::ident::env();
@@ -109,7 +107,7 @@ impl TryFrom<&'_ ModuleImplIR> for EpcSignature {
 
 #[derive(syn_derive::ToTokens)]
 pub struct EntrypointCallerExpr {
-    caller_expr: syn::Expr,
+    caller_expr: syn::Expr
 }
 
 impl TryFrom<&'_ ModuleImplIR> for EntrypointCallerExpr {
@@ -117,7 +115,7 @@ impl TryFrom<&'_ ModuleImplIR> for EntrypointCallerExpr {
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            caller_expr: Self::entrypoint_caller(module)?,
+            caller_expr: Self::entrypoint_caller(module)?
         })
     }
 }
@@ -159,28 +157,16 @@ pub struct CallEpcExpr {
 impl TryFrom<&'_ ModuleImplIR> for CallEpcExpr {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        let epc_ident = utils::ident::epc();
-        let env_ident = utils::ident::env();
-        let args = module
-            .constructor()
-            .map(|f| fn_utils::runtime_args_block(&f, ref_utils::insert_arg_stmt))
-            .map(utils::expr::some)
-            .unwrap_or_else(utils::expr::none);
-
-
+    fn try_from(_: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
             let_token: Default::default(),
             ident: utils::ident::caller(),
             assign_token: Default::default(),
-            epc_expression: parse_quote!(
-                Self::epc(env)
-            ),
+            epc_expression: parse_quote!(Self::epc(env)),
             semi_token: Default::default()
         })
     }
 }
-
 
 #[derive(syn_derive::ToTokens)]
 pub struct NewContractExpr {
@@ -231,7 +217,7 @@ pub struct LoadContractExpr {
 impl TryFrom<&'_ ModuleImplIR> for LoadContractExpr {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+    fn try_from(_: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let env_ident = utils::ident::env();
         let address_ident = utils::ident::address();
         let caller_ident = utils::ident::caller();

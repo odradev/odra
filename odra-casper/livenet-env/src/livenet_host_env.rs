@@ -1,22 +1,22 @@
-use std::fmt::format;
-use std::sync::{Arc, RwLock};
+use crate::livenet_contract_env::LivenetContractEnv;
 use odra_casper_client::casper_client::CasperClient;
+use odra_core::callstack::{Callstack, CallstackElement, Entrypoint};
+use odra_core::contract_container::ContractContainer;
+use odra_core::contract_register::ContractRegister;
 use odra_core::event::EventError;
 use odra_core::prelude::*;
 use odra_core::{
     Address, Bytes, CallDef, ContractEnv, EntryPointsCaller, HostContext, OdraError, PublicKey,
     RuntimeArgs, U512
 };
-use odra_core::callstack::{Callstack, CallstackElement, Entrypoint};
-use odra_core::contract_container::ContractContainer;
-use odra_core::contract_register::ContractRegister;
-use crate::livenet_contract_env::LivenetContractEnv;
+use std::sync::{Arc, RwLock};
+use std::thread::sleep;
 
 pub struct LivenetEnv {
     casper_client: Rc<RefCell<CasperClient>>,
     contract_register: Arc<RwLock<ContractRegister>>,
     contract_env: Rc<ContractEnv>,
-    callstack: Rc<RefCell<Callstack>>,
+    callstack: Rc<RefCell<Callstack>>
 }
 
 impl LivenetEnv {
@@ -27,14 +27,20 @@ impl LivenetEnv {
     pub fn new_instance() -> Self {
         let casper_client: Rc<RefCell<CasperClient>> = Default::default();
         let callstack: Rc<RefCell<Callstack>> = Default::default();
-        let livenet_contract_env = LivenetContractEnv::new(casper_client.clone(), callstack.clone());
+        let livenet_contract_env =
+            LivenetContractEnv::new(casper_client.clone(), callstack.clone());
         let contract_env = Rc::new(ContractEnv::new(0, livenet_contract_env));
-        Self { casper_client, contract_register: Default::default(), contract_env, callstack }
+        Self {
+            casper_client,
+            contract_register: Default::default(),
+            contract_env,
+            callstack
+        }
     }
 }
 
 impl HostContext for LivenetEnv {
-    fn set_caller(&self, caller: Address) {
+    fn set_caller(&self, _caller: Address) {
         todo!()
     }
 
@@ -46,23 +52,25 @@ impl HostContext for LivenetEnv {
         self.casper_client.borrow().caller()
     }
 
-    fn get_account(&self, index: usize) -> Address {
+    fn get_account(&self, _index: usize) -> Address {
         todo!()
     }
 
-    fn balance_of(&self, address: &Address) -> U512 {
+    fn balance_of(&self, _address: &Address) -> U512 {
         todo!()
     }
 
     fn advance_block_time(&self, time_diff: u64) {
-        panic!("Cannot advance block time in LivenetEnv")
+        // Todo: implement logging, especially for such cases:
+        // info!("advance_block_time called - Waiting for {} ms", time_diff);
+        sleep(std::time::Duration::from_millis(time_diff));
     }
 
-    fn get_event(&self, contract_address: &Address, index: i32) -> Result<Bytes, EventError> {
+    fn get_event(&self, _contract_address: &Address, _index: i32) -> Result<Bytes, EventError> {
         todo!()
     }
 
-    fn get_events_count(&self, contract_address: &Address) -> u32 {
+    fn get_events_count(&self, _contract_address: &Address) -> u32 {
         // TODO: implement
         0
     }
@@ -74,22 +82,39 @@ impl HostContext for LivenetEnv {
         use_proxy: bool
     ) -> Result<Bytes, OdraError> {
         if !call_def.is_mut() {
-            self.callstack.borrow_mut().push(CallstackElement::Entrypoint(Entrypoint::new(*address, call_def.clone())));
-            let result = self.contract_register.read().unwrap().call(address, call_def);
+            self.callstack
+                .borrow_mut()
+                .push(CallstackElement::Entrypoint(Entrypoint::new(
+                    *address,
+                    call_def.clone()
+                )));
+            let result = self
+                .contract_register
+                .read()
+                .unwrap()
+                .call(address, call_def);
             self.callstack.borrow_mut().pop();
-            return result
+            return result;
         }
         match use_proxy {
-            true => Ok(self.casper_client.borrow_mut().deploy_entrypoint_call_with_proxy(*address, call_def)),
+            true => Ok(self
+                .casper_client
+                .borrow_mut()
+                .deploy_entrypoint_call_with_proxy(*address, call_def)),
             false => {
-                self.casper_client.borrow_mut().deploy_entrypoint_call(*address, call_def);
+                self.casper_client
+                    .borrow_mut()
+                    .deploy_entrypoint_call(*address, call_def);
                 Ok(Default::default())
-            },
+            }
         }
     }
 
     fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller) {
-        self.contract_register.write().unwrap().add(address, ContractContainer::new(&address.to_string(), entry_points_caller));
+        self.contract_register.write().unwrap().add(
+            address,
+            ContractContainer::new(&address.to_string(), entry_points_caller)
+        );
     }
 
     fn new_contract(
@@ -100,12 +125,16 @@ impl HostContext for LivenetEnv {
     ) -> Address {
         let mut args = match init_args {
             None => RuntimeArgs::new(),
-            Some(args) => args,
+            Some(args) => args
         };
         // todo: move this up the stack
         args.insert("odra_cfg_is_upgradable", false).unwrap();
-        args.insert("odra_cfg_allow_key_override", false).unwrap();
-        args.insert("odra_cfg_package_hash_key_name", format!("{}_package_hash", name)).unwrap();
+        args.insert("odra_cfg_allow_key_override", true).unwrap();
+        args.insert(
+            "odra_cfg_package_hash_key_name",
+            format!("{}_package_hash", name)
+        )
+        .unwrap();
         let address = self.casper_client.borrow_mut().deploy_wasm(name, args);
         self.register_contract(address, entry_points_caller);
         address
@@ -125,11 +154,11 @@ impl HostContext for LivenetEnv {
         0
     }
 
-    fn sign_message(&self, message: &Bytes, address: &Address) -> Bytes {
+    fn sign_message(&self, _message: &Bytes, _address: &Address) -> Bytes {
         todo!()
     }
 
-    fn public_key(&self, address: &Address) -> PublicKey {
+    fn public_key(&self, _address: &Address) -> PublicKey {
         todo!()
     }
 }

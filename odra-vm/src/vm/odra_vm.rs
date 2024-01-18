@@ -5,9 +5,14 @@ use std::sync::{Arc, RwLock};
 
 use anyhow::Result;
 use odra_core::call_def::CallDef;
+use odra_core::callstack::CallstackElement;
+use odra_core::callstack::CallstackElement::Entrypoint;
+use odra_core::contract_container::ContractContainer;
+use odra_core::contract_register::ContractRegister;
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::event::EventError;
 use odra_core::{
+    callstack,
     casper_types::{
         bytesrepr::{FromBytes, ToBytes},
         U512
@@ -15,10 +20,7 @@ use odra_core::{
     Address, Bytes, ExecutionError, PublicKey, SecretKey
 };
 use odra_core::{OdraError, VmError};
-use odra_core::contract_container::ContractContainer;
-use odra_core::contract_register::ContractRegister;
 
-use super::callstack::{CallstackElement, Entrypoint};
 use super::odra_vm_state::OdraVmState;
 
 #[derive(Default)]
@@ -92,7 +94,8 @@ impl OdraVm {
         }
         // Put the address on stack.
 
-        let element = CallstackElement::Entrypoint(Entrypoint::new(address, call_def.clone()));
+        let element =
+            CallstackElement::Entrypoint(callstack::Entrypoint::new(address, call_def.clone()));
         state.push_callstack_element(element);
     }
 

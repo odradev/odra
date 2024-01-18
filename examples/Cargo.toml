@@ -27,6 +27,10 @@ test = false
 name = "erc20_on_livenet"
 path = "bin/erc20_on_livenet.rs"
 
+[[bin]]
+name = "nested_modules_on_livenet"
+path = "bin/nested_modules_on_livenet.rs"
+
 [profile.release]
 codegen-units = 1
 lto = true

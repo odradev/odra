@@ -11,3 +11,4 @@ repository.workspace = true
 odra-core = { path = "../core" }
 odra-casper-test-vm = { path = "../odra-casper/test-vm" }
 odra-vm = { path = "../odra-vm" }
+odra-casper-livenet-env = { path = "../odra-casper/livenet-env" }

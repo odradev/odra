@@ -7,7 +7,7 @@ pub struct CallDef {
     pub entry_point: String,
     pub args: RuntimeArgs,
     pub amount: U512,
-    is_mut: bool,
+    is_mut: bool
 }
 
 impl CallDef {
@@ -16,7 +16,7 @@ impl CallDef {
             entry_point: method,
             args,
             amount: U512::zero(),
-            is_mut,
+            is_mut
         }
     }
 

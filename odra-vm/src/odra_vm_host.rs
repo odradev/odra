@@ -74,7 +74,7 @@ impl HostContext for OdraVmHost {
         let address = self
             .vm
             .borrow()
-            .register_contract(name, entry_points_caller.unwrap());
+            .register_contract(name, entry_points_caller);
 
         if let Some(init_args) = init_args {
             let _ = self.call_contract(

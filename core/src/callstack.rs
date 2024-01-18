@@ -32,6 +32,13 @@ impl Entrypoint {
 pub struct Callstack(Vec<CallstackElement>);
 
 impl Callstack {
+    pub fn first(&self) -> CallstackElement {
+        self.0
+            .first()
+            .expect("Not enough elements on callstack")
+            .clone()
+    }
+
     pub fn pop(&mut self) -> Option<CallstackElement> {
         self.0.pop()
     }
@@ -66,5 +73,9 @@ impl Callstack {
 
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 }

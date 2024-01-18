@@ -10,8 +10,6 @@ members = [
     "odra-casper/test-vm",
     "odra-test",
     "try-from-macro"
-#    needs a refactor
-#    "odra-casper/livenet"
 ]
 exclude = [ "examples", "examples2", "modules", "odra-casper/proxy-caller" ]
 resolver = "2"

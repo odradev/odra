@@ -1,6 +1,6 @@
-use std::str::FromStr;
 use odra::{Address, HostEnv, U256};
 use odra_modules::erc20::{Erc20Deployer, Erc20HostRef};
+use std::str::FromStr;
 
 fn main() {
     let env = odra_casper_livenet_env::livenet_env();
@@ -8,7 +8,6 @@ fn main() {
     let owner = env.caller();
     let recipient = "hash-2c4a6ce0da5d175e9638ec0830e01dd6cf5f4b1fbb0724f7d2d9de12b1e0f840";
     let recipient = Address::from_str(recipient).unwrap();
-
 
     // Uncomment to deploy new contract.
     // let token = deploy_new(&env);

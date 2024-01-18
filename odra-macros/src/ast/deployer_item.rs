@@ -2,7 +2,10 @@ use derive_try_from::TryFromRef;
 
 use crate::{ir::ModuleImplIR, utils};
 
-use super::deployer_utils::{CallEpcExpr, EpcSignature, DeployerInitSignature, EntrypointCallerExpr, HostRefInstanceExpr, NewContractExpr, DeployerLoadSignature, LoadContractExpr};
+use super::deployer_utils::{
+    CallEpcExpr, DeployerInitSignature, DeployerLoadSignature, EntrypointCallerExpr, EpcSignature,
+    HostRefInstanceExpr, LoadContractExpr, NewContractExpr
+};
 
 #[derive(syn_derive::ToTokens)]
 struct DeployStructItem {
@@ -64,7 +67,7 @@ pub struct ContractEpcFn {
     #[default]
     braces: syn::token::Brace,
     #[syn(in = braces)]
-    caller: EntrypointCallerExpr,
+    caller: EntrypointCallerExpr
 }
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
