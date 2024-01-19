@@ -83,7 +83,7 @@ mod tests {
 
     use super::{ContractContainer, EntrypointArgs, EntrypointCall};
 
-    const TEST_ENTRYPOINT: &'static str = "ep";
+    const TEST_ENTRYPOINT: &str = "ep";
 
     #[test]
     fn test_call_wrong_entrypoint() {
@@ -175,7 +175,7 @@ mod tests {
 
     impl ContractContainer {
         fn empty() -> Self {
-            let env = odra::odra_test::odra_env();
+            let env = odra_test::env();
             let entry_points_caller = EntryPointsCaller::new(env, vec![], |_, call_def| {
                 Err(OdraError::VmError(VmError::NoSuchMethod(
                     call_def.method().to_string()
@@ -195,10 +195,8 @@ mod tests {
                     .collect()
             )];
 
-            let entry_points_caller = EntryPointsCaller::new(
-                odra::odra_test::odra_env(),
-                entry_points,
-                |env, call_def| {
+            let entry_points_caller =
+                EntryPointsCaller::new(odra_test::env(), entry_points, |env, call_def| {
                     if call_def.method() == TEST_ENTRYPOINT {
                         Ok(vec![1, 2, 3].into())
                     } else {
@@ -206,8 +204,7 @@ mod tests {
                             call_def.method().to_string()
                         )))
                     }
-                }
-            );
+                });
 
             Self {
                 name: String::from("contract"),

@@ -2,13 +2,10 @@ default:
     just --list
 
 clippy:
-    # TODO: add --all-targets to cargo clippy when tests are fixed
-    cargo clippy -- -D warnings
+    cargo clippy --all-targets -- -D warnings
     cd odra-casper/proxy-caller && cargo clippy --target=wasm32-unknown-unknown -- -D warnings -A clippy::single-component-path-imports
-    # TODO: uncomment when examples are rewritten
-    # cd examples && cargo clippy -- -D warnings -A clippy::assign-op-pattern
-    # TODO: uncomment when modules are rewritten
-    # cd modules && cargo clippy -- -D warnings
+    cd examples && cargo clippy --all-targets -- -D warnings 
+    cd modules && cargo clippy --all-targets -- -D warnings 
 
 lint: clippy
     cargo fmt
@@ -20,8 +17,9 @@ check-lint: clippy
     cargo fmt -- --check
     cd odra-casper/proxy-caller && cargo fmt -- --check
     cd modules && cargo fmt -- --check
+    cd modules && cargo check --all-targets
     cd examples && cargo fmt -- --check
-    cd examples && cargo check --target wasm32-unknown-unknown --bin odra_examples_build_contract
+    cd examples && cargo check --all-targets
 
 install-cargo-odra:
     cargo install cargo-odra --locked

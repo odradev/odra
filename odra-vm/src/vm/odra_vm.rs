@@ -313,7 +313,7 @@ mod tests {
 
     use super::OdraVm;
 
-    const TEST_ENTRY_POINT: &'static str = "abc";
+    const TEST_ENTRY_POINT: &str = "abc";
 
     #[test]
     fn contracts_have_different_addresses() {
@@ -560,7 +560,7 @@ mod tests {
     }
 
     fn test_caller(entry_point_name: &str) -> EntryPointsCaller {
-        let env = odra::odra_test::odra_env();
+        let env = odra_test::env();
         let entry_point = EntryPoint::new(String::from(entry_point_name), vec![]);
         EntryPointsCaller::new(env, vec![entry_point], |_, _| Ok(test_call_result()))
     }

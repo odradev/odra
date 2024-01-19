@@ -171,8 +171,8 @@ mod test {
             new_owner: Some(deployer)
         };
 
-        env.emitted_event(&ownable.address(), &event);
-        env.emitted_event(&ownable_2step.address(), &event);
+        env.emitted_event(ownable.address(), &event);
+        env.emitted_event(ownable_2step.address(), &event);
     }
 
     #[test]
@@ -188,7 +188,7 @@ mod test {
         assert_eq!(new_owner, contract.get_owner());
         // then a OwnershipTransferred event was emitted
         contract.env().emitted_event(
-            &contract.address(),
+            contract.address(),
             &OwnershipTransferred {
                 previous_owner: Some(initial_owner),
                 new_owner: Some(new_owner)
@@ -215,14 +215,14 @@ mod test {
         assert_eq!(None, contract.get_pending_owner());
         // then OwnershipTransferStarted and OwnershipTransferred events were emitted
         contract.env().emitted_event(
-            &contract.address(),
+            contract.address(),
             &OwnershipTransferStarted {
                 previous_owner: Some(initial_owner),
                 new_owner: Some(new_owner)
             }
         );
         contract.env().emitted_event(
-            &contract.address(),
+            contract.address(),
             &OwnershipTransferred {
                 previous_owner: Some(initial_owner),
                 new_owner: Some(new_owner)
@@ -288,7 +288,7 @@ mod test {
 
                 // then an event is emitted
                 contract.env().emitted_event(
-                    &contract.address(),
+                    contract.address(),
                     &OwnershipTransferred {
                         previous_owner: Some(initial_owner),
                         new_owner: None
