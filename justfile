@@ -1,3 +1,6 @@
+CARGO_ODRA_GIT_REPO := "https://github.com/odradev/cargo-odra"
+CARGO_ODRA_BRANCH := "feature/cargo-odra-for-odra-0.8.0"
+
 default:
     just --list
 
@@ -22,7 +25,7 @@ check-lint: clippy
     cd examples && cargo check --all-targets
 
 install-cargo-odra:
-    cargo install cargo-odra --locked
+    cargo install cargo-odra --git {{CARGO_ODRA_GIT_REPO}} --branch {{CARGO_ODRA_BRANCH}} 
 
 prepare-test-env: install-cargo-odra
     rustup target add wasm32-unknown-unknown
