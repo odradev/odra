@@ -17,9 +17,9 @@ fn main() {
     let mut token = load(&env);
 
     println!("Token name: {}", token.name());
-
-    env.set_gas(3_000_000_000u64);
-    token.transfer(recipient, U256::from(1000));
+    //
+    // env.set_gas(3_000_000_000u64);
+    // token.transfer(recipient, U256::from(1000));
 
     println!("Owner's balance: {:?}", token.balance_of(owner));
     println!("Recipient's balance: {:?}", token.balance_of(recipient));

@@ -189,9 +189,9 @@ impl CasperClient {
     }
 
     /// Deploy the contract.
-    pub fn deploy_wasm(&self, wasm_file_name: &str, args: RuntimeArgs) -> Address {
-        log::info(format!("Deploying \"{}\".", wasm_file_name));
-        let wasm_path = find_wasm_file_path(wasm_file_name);
+    pub fn deploy_wasm(&self, contract_name: &str, args: RuntimeArgs) -> Address {
+        log::info(format!("Deploying \"{}\".", contract_name));
+        let wasm_path = find_wasm_file_path(contract_name);
         let wasm_bytes = fs::read(wasm_path).unwrap();
         let session = ExecutableDeployItem::ModuleBytes {
             module_bytes: Bytes::from(wasm_bytes),
@@ -213,7 +213,7 @@ impl CasperClient {
         let deploy_hash = response.deploy_hash;
         self.wait_for_deploy_hash(deploy_hash);
 
-        let address = self.get_contract_address(wasm_file_name.strip_suffix(".wasm").unwrap());
+        let address = self.get_contract_address(contract_name);
         log::info(format!("Contract {:?} deployed.", &address.to_string()));
         address
     }
@@ -261,7 +261,7 @@ impl CasperClient {
         let deploy_hash = response.deploy_hash;
         self.wait_for_deploy_hash(deploy_hash);
 
-        let r = self.query_result(&CasperKey::Account(self.public_key().to_account_hash()));
+        let r = self.query_global_state(&CasperKey::Account(self.public_key().to_account_hash()));
         let result_as_json = serde_json::to_value(r).unwrap();
         let result = result_as_json["stored_value"]["CLValue"]["bytes"]
             .as_str()
@@ -300,12 +300,14 @@ impl CasperClient {
         self.wait_for_deploy_hash(deploy_hash);
     }
 
-    fn query_global_state(&self, key: &CasperKey) -> QueryGlobalStateResult {
+    pub fn query_global_state_path(&self, address: Address, path: String) -> Option<QueryGlobalStateResult> {
+        let hash = self.query_global_state_for_contract_hash(address);
+        let key = CasperKey::Hash(hash.value());
         let state_root_hash = self.get_state_root_hash();
         let params = QueryGlobalStateParams {
             state_identifier: GlobalStateIdentifier::StateRootHash(state_root_hash),
             key: key.to_formatted_string(),
-            path: Vec::new()
+            path: vec![]
         };
         let request = json!(
             {
@@ -318,12 +320,12 @@ impl CasperClient {
         self.post_request(request).unwrap()
     }
 
-    fn query_result(&self, key: &CasperKey) -> Option<QueryGlobalStateResult> {
+    pub fn query_global_state(&self, key: &CasperKey) -> QueryGlobalStateResult {
         let state_root_hash = self.get_state_root_hash();
         let params = QueryGlobalStateParams {
             state_identifier: GlobalStateIdentifier::StateRootHash(state_root_hash),
             key: key.to_formatted_string(),
-            path: vec![RESULT_KEY.to_string()]
+            path: Vec::new()
         };
         let request = json!(
             {
@@ -369,6 +371,33 @@ impl CasperClient {
             let (value, _) = FromBytes::from_bytes(&bytes).unwrap();
             value
         })
+    }
+
+    pub fn query_dict_nk(&self, address: Address, key: &str) -> Option<Bytes> {
+        let state_root_hash = self.get_state_root_hash();
+        let contract_hash = self.query_global_state_for_contract_hash(address);
+        let contract_hash = contract_hash
+            .to_formatted_string()
+            .replace("contract-", "hash-");
+        let params = GetDictionaryItemParams {
+            state_root_hash,
+            dictionary_identifier: DictionaryIdentifier::ContractNamedKey {
+                key: contract_hash,
+                dictionary_name: String::from("__events_length"),
+                dictionary_item_key: String::from(key)
+            }
+        };
+
+        let request = json!(
+            {
+                "jsonrpc": "2.0",
+                "method": "state_get_dictionary_item",
+                "params": params,
+                "id": 1,
+            }
+        );
+        let result: Option<GetDictionaryItemResult> = self.post_request(request);
+        None
     }
 
     fn wait_for_deploy_hash(&self, deploy_hash: DeployHash) -> ExecutionResult {

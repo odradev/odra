@@ -10,6 +10,7 @@ pub mod deploy_header;
 pub mod error;
 pub mod rpcs;
 pub mod utils;
+pub mod contract;
 
 pub use deploy::Deploy;
 pub use deploy_hash::DeployHash;

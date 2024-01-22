@@ -4,6 +4,7 @@ use odra_core::casper_types::{
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use crate::casper_node_port::contract::Contract;
 
 use super::{
     account::Account,
@@ -240,5 +241,7 @@ pub enum StoredValue {
     Account(Account),
 
     /// A contract definition, metadata, and security container.
-    ContractPackage(ContractPackage)
+    ContractPackage(ContractPackage),
+
+    Contract(Contract)
 }

@@ -1,15 +1,18 @@
 use blake2::digest::VariableOutput;
 use blake2::Blake2bVar;
 use odra_casper_client::casper_client::CasperClient;
-use odra_core::callstack::{Callstack, CallstackElement};
+use odra_core::callstack::{Callstack, CallstackElement, Entrypoint};
+use odra_core::contract_register::ContractRegister;
 use odra_core::prelude::*;
 use odra_core::{Address, Bytes, OdraError, U512};
 use odra_core::{CallDef, ContractContext};
 use std::io::Write;
+use std::sync::{Arc, RwLock};
 
 pub struct LivenetContractEnv {
     casper_client: Rc<RefCell<CasperClient>>,
-    callstack: Rc<RefCell<Callstack>>
+    callstack: Rc<RefCell<Callstack>>,
+    contract_register: Arc<RwLock<ContractRegister>>
 }
 
 impl ContractContext for LivenetContractEnv {
@@ -31,8 +34,24 @@ impl ContractContext for LivenetContractEnv {
         *self.callstack.borrow().current().address()
     }
 
-    fn call_contract(&self, _address: Address, _call_def: CallDef) -> Bytes {
-        todo!("call_contract")
+    fn call_contract(&self, address: Address, call_def: CallDef) -> Bytes {
+        if call_def.is_mut() {
+            panic!("Cannot cross call mutable entrypoint from non-mutable entrypoint")
+        }
+
+        self.callstack
+            .borrow_mut()
+            .push(CallstackElement::Entrypoint(Entrypoint {
+                address,
+                call_def: call_def.clone()
+            }));
+        let result = self
+            .contract_register
+            .read()
+            .unwrap()
+            .call(&address, call_def);
+        self.callstack.borrow_mut().pop();
+        result.unwrap()
     }
 
     fn get_block_time(&self) -> u64 {
@@ -91,11 +110,13 @@ impl ContractContext for LivenetContractEnv {
 impl LivenetContractEnv {
     pub fn new(
         casper_client: Rc<RefCell<CasperClient>>,
-        callstack: Rc<RefCell<Callstack>>
+        callstack: Rc<RefCell<Callstack>>,
+        contract_register: Arc<RwLock<ContractRegister>>
     ) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(Self {
             casper_client,
-            callstack
+            callstack,
+            contract_register
         }))
     }
 }
