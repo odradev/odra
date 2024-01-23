@@ -48,8 +48,8 @@ impl LivenetEnv {
 }
 
 impl HostContext for LivenetEnv {
-    fn set_caller(&self, _caller: Address) {
-        todo!()
+    fn set_caller(&self, caller: Address) {
+        self.casper_client.borrow_mut().set_caller(caller);
     }
 
     fn set_gas(&self, gas: u64) {
@@ -60,8 +60,8 @@ impl HostContext for LivenetEnv {
         self.casper_client.borrow().caller()
     }
 
-    fn get_account(&self, _index: usize) -> Address {
-        todo!()
+    fn get_account(&self, index: usize) -> Address {
+        self.casper_client.borrow().get_account(index)
     }
 
     fn balance_of(&self, _address: &Address) -> U512 {

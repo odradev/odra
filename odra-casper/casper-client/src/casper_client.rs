@@ -1,7 +1,9 @@
+use std::path::Path;
 use std::{fs, path::PathBuf, str::from_utf8_unchecked, time::Duration};
 
 use casper_execution_engine::core::engine_state::ExecutableDeployItem;
 use casper_hashing::Digest;
+use itertools::Itertools;
 use jsonrpc_lite::JsonRpc;
 use odra_core::casper_types::URef;
 use odra_core::{
@@ -31,6 +33,7 @@ use crate::{casper_node_port, log};
 pub const ENV_SECRET_KEY: &str = "ODRA_CASPER_LIVENET_SECRET_KEY_PATH";
 pub const ENV_NODE_ADDRESS: &str = "ODRA_CASPER_LIVENET_NODE_ADDRESS";
 pub const ENV_CHAIN_NAME: &str = "ODRA_CASPER_LIVENET_CHAIN_NAME";
+pub const ENV_ACCOUNT_PREFIX: &str = "ODRA_CASPER_LIVENET_KEY_";
 
 fn get_env_variable(name: &str) -> String {
     std::env::var(name).unwrap_or_else(|err| {
@@ -46,18 +49,38 @@ fn get_env_variable(name: &str) -> String {
 pub struct CasperClient {
     node_address: String,
     chain_name: String,
-    secret_key: SecretKey,
+    active_account: usize,
+    secret_keys: Vec<SecretKey>,
     gas: U512
 }
 
 impl CasperClient {
     /// Creates new CasperClient.
     pub fn new() -> Self {
+        // Check for additional .env file
+        let additional_env_file = std::env::var("ODRA_CASPER_LIVENET_ENV");
+
+        if let Ok(additional_env_file) = additional_env_file {
+            let filename = PathBuf::from(additional_env_file).with_extension("env");
+            dotenv::from_filename(filename).ok();
+        }
+
+        // Load .env
         dotenv::dotenv().ok();
+
+        let mut secret_keys = vec![];
+        secret_keys.push(SecretKey::from_file(get_env_variable(ENV_SECRET_KEY)).unwrap());
+        let mut i = 0;
+        while let Ok(key_filename) = std::env::var(format!("{}{}", ENV_ACCOUNT_PREFIX, i + 1)) {
+            secret_keys.push(SecretKey::from_file(key_filename).unwrap());
+            i += 1;
+        }
+
         CasperClient {
             node_address: get_env_variable(ENV_NODE_ADDRESS),
             chain_name: get_env_variable(ENV_CHAIN_NAME),
-            secret_key: SecretKey::from_file(get_env_variable(ENV_SECRET_KEY)).unwrap(),
+            active_account: 0,
+            secret_keys,
             gas: U512::zero()
         }
     }
@@ -82,12 +105,36 @@ impl CasperClient {
 
     /// Public key of the client account.
     pub fn public_key(&self) -> PublicKey {
-        PublicKey::from(&self.secret_key)
+        PublicKey::from(&self.secret_keys[self.active_account])
+    }
+
+    pub fn secret_key(&self) -> &SecretKey {
+        &self.secret_keys[self.active_account]
     }
 
     /// Address of the client account.
     pub fn caller(&self) -> Address {
         Address::from(self.public_key())
+    }
+
+    pub fn get_account(&self, index: usize) -> Address {
+        if index >= self.secret_keys.len() {
+            panic!("Key for account with index {} is not loaded", index);
+        }
+        Address::from(PublicKey::from(&self.secret_keys[index]))
+    }
+
+    pub fn set_caller(&mut self, address: Address) {
+        match self
+            .secret_keys
+            .iter()
+            .find_position(|key| Address::from(PublicKey::from(*key)) == address)
+        {
+            Some((index, _)) => {
+                self.active_account = index;
+            }
+            None => panic!("Key for address {:?} is not loaded", address)
+        }
     }
 
     pub fn get_block_time(&self) -> u64 {
@@ -354,7 +401,7 @@ impl CasperClient {
     pub fn query_global_state_path(
         &self,
         address: &Address,
-        path: String
+        _path: String
     ) -> Option<QueryGlobalStateResult> {
         let hash = self.query_global_state_for_contract_hash(address);
         let key = CasperKey::Hash(hash.value());
@@ -505,7 +552,7 @@ impl CasperClient {
             chain_name,
             payment,
             session,
-            &self.secret_key,
+            self.secret_key(),
             Some(self.public_key())
         )
     }
@@ -557,7 +604,7 @@ mod tests {
     use casper_hashing::Digest;
     use odra_core::{
         casper_types::bytesrepr::{FromBytes, ToBytes},
-        Address, U256
+        Address
     };
 
     use crate::casper_node_port::DeployHash;
