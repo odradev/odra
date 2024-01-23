@@ -117,10 +117,10 @@ impl HostContext for LivenetEnv {
             return result;
         }
         match use_proxy {
-            true => Ok(self
+            true => self
                 .casper_client
                 .borrow_mut()
-                .deploy_entrypoint_call_with_proxy(*address, call_def)),
+                .deploy_entrypoint_call_with_proxy(*address, call_def),
             false => {
                 self.casper_client
                     .borrow_mut()
