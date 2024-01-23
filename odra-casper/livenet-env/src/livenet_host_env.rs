@@ -1,17 +1,19 @@
-use crate::livenet_contract_env::LivenetContractEnv;
+use std::sync::{Arc, RwLock};
+use std::thread::sleep;
+
 use odra_casper_client::casper_client::CasperClient;
-use odra_core::callstack::{Callstack, CallstackElement, Entrypoint};
-use odra_core::casper_types::URef;
-use odra_core::contract_container::ContractContainer;
-use odra_core::contract_register::ContractRegister;
-use odra_core::event::EventError;
-use odra_core::prelude::*;
 use odra_core::{
     Address, Bytes, CallDef, ContractEnv, EntryPointsCaller, HostContext, OdraError, PublicKey,
     RuntimeArgs, U512
 };
-use std::sync::{Arc, RwLock};
-use std::thread::sleep;
+use odra_core::callstack::{Callstack, CallstackElement, Entrypoint};
+use odra_core::contract_container::ContractContainer;
+use odra_core::contract_register::ContractRegister;
+use odra_core::event::EventError;
+use odra_core::event::EventError::CouldntExtractEventData;
+use odra_core::prelude::*;
+
+use crate::livenet_contract_env::LivenetContractEnv;
 
 pub struct LivenetEnv {
     casper_client: Rc<RefCell<CasperClient>>,
@@ -72,24 +74,15 @@ impl HostContext for LivenetEnv {
     }
 
     fn get_event(&self, contract_address: &Address, index: i32) -> Result<Bytes, EventError> {
-        let event_bytes: Bytes = self
-            .casper_client
+        // TODO: handle indices < 0
+        self.casper_client
             .borrow()
-            .query_dict(contract_address, "__events".to_string(), index.to_string())
-            .unwrap();
-        Ok(event_bytes)
+            .get_event(contract_address, index)
+            .map_err(|_| CouldntExtractEventData)
     }
 
     fn get_events_count(&self, contract_address: &Address) -> u32 {
-        let uref_str = self
-            .casper_client
-            .borrow()
-            .query_contract_named_key(contract_address, "__events_length")
-            .unwrap();
-        self.casper_client
-            .borrow()
-            .query_uref(URef::from_formatted_str(uref_str.as_str()).unwrap())
-            .unwrap()
+        self.casper_client.borrow().events_count(contract_address)
     }
 
     fn call_contract(
