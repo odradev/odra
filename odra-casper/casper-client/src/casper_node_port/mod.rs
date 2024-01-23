@@ -9,6 +9,7 @@ pub mod deploy;
 pub mod deploy_hash;
 pub mod deploy_header;
 pub mod error;
+pub mod query_balance;
 pub mod rpcs;
 pub mod utils;
 

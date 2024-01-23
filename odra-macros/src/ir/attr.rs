@@ -276,7 +276,7 @@ mod tests {
                         .collect::<Vec<_>>(),
                     other_attrs
                         .into_iter()
-                        .map(|a| Attribute::Other(a))
+                        .map(Attribute::Other)
                         .collect::<Vec<_>>()
                 )
             })

@@ -1,4 +1,3 @@
-use std::path::Path;
 use std::{fs, path::PathBuf, str::from_utf8_unchecked, time::Duration};
 
 use casper_execution_engine::core::engine_state::ExecutableDeployItem;
@@ -28,6 +27,9 @@ use crate::casper_node_port::{
     Deploy, DeployHash
 };
 
+use crate::casper_node_port::query_balance::{
+    PurseIdentifier, QueryBalanceParams, QueryBalanceResult, QUERY_BALANCE_METHOD
+};
 use crate::{casper_node_port, log};
 
 pub const ENV_SECRET_KEY: &str = "ODRA_CASPER_LIVENET_SECRET_KEY_PATH";
@@ -135,6 +137,25 @@ impl CasperClient {
             }
             None => panic!("Key for address {:?} is not loaded", address)
         }
+    }
+
+    pub fn get_balance(&self, address: &Address) -> U512 {
+        let query_balance_params = QueryBalanceParams::new(
+            Some(GlobalStateIdentifier::StateRootHash(
+                self.get_state_root_hash()
+            )),
+            PurseIdentifier::MainPurseUnderAccountHash(*address.as_account_hash().unwrap())
+        );
+        let request = json!(
+            {
+                "jsonrpc": "2.0",
+                "method": QUERY_BALANCE_METHOD,
+                "params": query_balance_params,
+                "id": 1,
+            }
+        );
+        let result: QueryBalanceResult = self.post_request(request).unwrap();
+        result.balance
     }
 
     pub fn get_block_time(&self) -> u64 {

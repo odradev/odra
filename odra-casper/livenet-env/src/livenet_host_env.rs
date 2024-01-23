@@ -1,17 +1,14 @@
 use crate::livenet_contract_env::LivenetContractEnv;
-use casper_node_port::*;
 use odra_casper_client::casper_client::CasperClient;
-use odra_casper_client::casper_node_port;
 use odra_core::callstack::{Callstack, CallstackElement, Entrypoint};
-use odra_core::casper_types::bytesrepr::deserialize;
 use odra_core::casper_types::URef;
 use odra_core::contract_container::ContractContainer;
 use odra_core::contract_register::ContractRegister;
 use odra_core::event::EventError;
 use odra_core::prelude::*;
 use odra_core::{
-    Address, Bytes, CLType, CallDef, ContractEnv, EntryPointsCaller, HostContext, OdraError,
-    PublicKey, RuntimeArgs, U512
+    Address, Bytes, CallDef, ContractEnv, EntryPointsCaller, HostContext, OdraError, PublicKey,
+    RuntimeArgs, U512
 };
 use std::sync::{Arc, RwLock};
 use std::thread::sleep;
@@ -64,8 +61,8 @@ impl HostContext for LivenetEnv {
         self.casper_client.borrow().get_account(index)
     }
 
-    fn balance_of(&self, _address: &Address) -> U512 {
-        todo!()
+    fn balance_of(&self, address: &Address) -> U512 {
+        self.casper_client.borrow().get_balance(address)
     }
 
     fn advance_block_time(&self, time_diff: u64) {
