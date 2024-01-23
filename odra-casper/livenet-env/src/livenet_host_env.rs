@@ -1,7 +1,10 @@
 use crate::livenet_contract_env::LivenetContractEnv;
+use casper_node_port::*;
 use odra_casper_client::casper_client::CasperClient;
+use odra_casper_client::casper_node_port;
 use odra_core::callstack::{Callstack, CallstackElement, Entrypoint};
 use odra_core::casper_types::bytesrepr::deserialize;
+use odra_core::casper_types::URef;
 use odra_core::contract_container::ContractContainer;
 use odra_core::contract_register::ContractRegister;
 use odra_core::event::EventError;
@@ -10,10 +13,8 @@ use odra_core::{
     Address, Bytes, CLType, CallDef, ContractEnv, EntryPointsCaller, HostContext, OdraError,
     PublicKey, RuntimeArgs, U512
 };
-use casper_node_port::*;
 use std::sync::{Arc, RwLock};
 use std::thread::sleep;
-use odra_casper_client::casper_node_port;
 
 pub struct LivenetEnv {
     casper_client: Rc<RefCell<CasperClient>>,
@@ -73,37 +74,25 @@ impl HostContext for LivenetEnv {
         sleep(std::time::Duration::from_millis(time_diff));
     }
 
-    fn get_event(&self, _contract_address: &Address, _index: i32) -> Result<Bytes, EventError> {
-        todo!()
+    fn get_event(&self, contract_address: &Address, index: i32) -> Result<Bytes, EventError> {
+        let event_bytes: Bytes = self
+            .casper_client
+            .borrow()
+            .query_dict(contract_address, "__events".to_string(), index.to_string())
+            .unwrap();
+        Ok(event_bytes)
     }
 
     fn get_events_count(&self, contract_address: &Address) -> u32 {
-        let d = self.casper_client.borrow().query_global_state_path(*contract_address, "__events_count".to_string());
-        let c = d.unwrap().stored_value;
-        let ec_uref = match d.unwrap().stored_value {
-            casper_node_port::rpcs::StoredValue::Contract(contract) => {
-                contract.named_keys().find_map(|named_key |{
-                    if named_key.name == "__events_count" {
-                        Some(named_key.key.clone())
-                    } else {
-                        None
-                    }
-                })
-            },
-            _ => panic!("Not a contract")
-        }.unwrap();
-
-        // next - extract value from uref
-
-        // let bytes = self
-        //     .casper_client
-        //     .borrow()
-        //     .query_global_state_for_contract_hash(contract_address);
-        //     .unwrap()
-        //     .to_vec();
-        // // dbg!(bytes.clone());
-        // deserialize(bytes).unwrap();
-        2
+        let uref_str = self
+            .casper_client
+            .borrow()
+            .query_contract_named_key(contract_address, "__events_length")
+            .unwrap();
+        self.casper_client
+            .borrow()
+            .query_uref(URef::from_formatted_str(uref_str.as_str()).unwrap())
+            .unwrap()
     }
 
     fn call_contract(

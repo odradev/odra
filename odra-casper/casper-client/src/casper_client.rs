@@ -3,6 +3,8 @@ use std::{fs, path::PathBuf, str::from_utf8_unchecked, time::Duration};
 use casper_execution_engine::core::engine_state::ExecutableDeployItem;
 use casper_hashing::Digest;
 use jsonrpc_lite::JsonRpc;
+use odra_core::casper_types::{URef, URefAddr};
+use odra_core::CLType::U32;
 use odra_core::{
     casper_types::{
         bytesrepr::{Bytes, FromBytes, ToBytes},
@@ -10,11 +12,12 @@ use odra_core::{
         PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, U512
     },
     consts::*,
-    Address, CallDef
+    Address, CLTyped, CallDef, ExecutionError, OdraError
 };
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 
+use crate::casper_node_port::rpcs::StoredValue::CLValue;
 use crate::casper_node_port::{
     rpcs::{
         DictionaryIdentifier, GetDeployParams, GetDeployResult, GetDictionaryItemParams,
@@ -24,7 +27,7 @@ use crate::casper_node_port::{
     Deploy, DeployHash
 };
 
-use crate::log;
+use crate::{casper_node_port, log};
 
 pub const ENV_SECRET_KEY: &str = "ODRA_CASPER_LIVENET_SECRET_KEY_PATH";
 pub const ENV_NODE_ADDRESS: &str = "ODRA_CASPER_LIVENET_NODE_ADDRESS";
@@ -61,7 +64,7 @@ impl CasperClient {
     }
 
     pub fn get_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
-        self.query_dictionary(*address, unsafe { from_utf8_unchecked(key) })
+        self.query_state_dictionary(address, unsafe { from_utf8_unchecked(key) })
     }
 
     pub fn set_gas(&mut self, gas: u64) {
@@ -117,6 +120,66 @@ impl CasperClient {
         result.state_root_hash.unwrap()
     }
 
+    pub fn query_dict<T: FromBytes + CLTyped>(
+        &self,
+        contract_address: &Address,
+        dictionary_name: String,
+        dictionary_item_key: String
+    ) -> Result<T, OdraError> {
+        let state_root_hash = self.get_state_root_hash();
+        let contract_hash = self.query_global_state_for_contract_hash(contract_address);
+        let contract_hash = contract_hash
+            .to_formatted_string()
+            .replace("contract-", "hash-");
+        let params = GetDictionaryItemParams {
+            state_root_hash,
+            dictionary_identifier: DictionaryIdentifier::ContractNamedKey {
+                key: contract_hash,
+                dictionary_name,
+                dictionary_item_key
+            }
+        };
+
+        let request = json!(
+            {
+                "jsonrpc": "2.0",
+                "method": "state_get_dictionary_item",
+                "params": params,
+                "id": 1,
+            }
+        );
+        let result: GetDictionaryItemResult = self.post_request(request).unwrap();
+        match result.stored_value {
+            CLValue(value) => {
+                let return_value: T = value.into_t().unwrap();
+                Ok(return_value)
+            }
+            _ => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
+        }
+    }
+
+    pub fn query_contract_named_key<T: AsRef<str>>(
+        &self,
+        contract_address: &Address,
+        key: T
+    ) -> Result<String, OdraError> {
+        let d = self.query_global_state_path(contract_address, key.as_ref().to_string());
+        let c = d.as_ref().unwrap().stored_value.clone();
+        Ok(match d.as_ref().unwrap().stored_value.clone() {
+            casper_node_port::rpcs::StoredValue::Contract(contract) => {
+                contract.named_keys().find_map(|named_key| {
+                    if named_key.name == key.as_ref() {
+                        Some(named_key.key.clone())
+                    } else {
+                        None
+                    }
+                })
+            }
+            _ => panic!("Not a contract")
+        }
+        .unwrap())
+    }
+
     /// Query the node for the deploy state.
     pub fn get_deploy(&self, deploy_hash: DeployHash) -> GetDeployResult {
         let params = GetDeployParams {
@@ -133,22 +196,6 @@ impl CasperClient {
             }
         );
         self.post_request(request).unwrap()
-    }
-
-    /// Query the contract for the variable.
-    pub fn get_variable_value(&self, address: Address, key: &str) -> Option<Bytes> {
-        // let key = LivenetKeyMaker::to_variable_key(key);
-        // SAFETY: we know the key maker creates a string of valid UTF-8 characters.
-        // let key = unsafe { from_utf8_unchecked(key) };
-        self.query_dictionary(address, key)
-    }
-
-    /// Query the contract for the dictionary value.
-    pub fn get_dict_value(&self, address: Address, key: &[u8]) -> Option<Bytes> {
-        // let key = LivenetKeyMaker::to_dictionary_key(seed, key).unwrap();
-        // SAFETY: we know the key maker creates a string of valid UTF-8 characters.
-        let key = unsafe { from_utf8_unchecked(key) };
-        self.query_dictionary(address, key)
     }
 
     /// Discover the contract address by name.
@@ -177,7 +224,7 @@ impl CasperClient {
     }
 
     /// Find the contract hash by the contract package hash.
-    pub fn query_global_state_for_contract_hash(&self, address: Address) -> ContractHash {
+    pub fn query_global_state_for_contract_hash(&self, address: &Address) -> ContractHash {
         let key = CasperKey::Hash(address.as_contract_package_hash().unwrap().value());
         let result = self.query_global_state(&key);
         let result_as_json = serde_json::to_value(result).unwrap();
@@ -224,12 +271,6 @@ impl CasperClient {
             addr.to_string(),
             call_def.entry_point
         ));
-        // let session = ExecutableDeployItem::StoredVersionedContractByHash {
-        //     hash: *addr.as_contract_package_hash().unwrap(),
-        //     version: None,
-        //     entry_point: call_def.entry_point,
-        //     args: call_def.args
-        // };
 
         let args = runtime_args! {
             CONTRACT_PACKAGE_HASH_ARG => *addr.as_contract_package_hash().unwrap(),
@@ -300,7 +341,11 @@ impl CasperClient {
         self.wait_for_deploy_hash(deploy_hash);
     }
 
-    pub fn query_global_state_path(&self, address: Address, path: String) -> Option<QueryGlobalStateResult> {
+    pub fn query_global_state_path(
+        &self,
+        address: &Address,
+        path: String
+    ) -> Option<QueryGlobalStateResult> {
         let hash = self.query_global_state_for_contract_hash(address);
         let key = CasperKey::Hash(hash.value());
         let state_root_hash = self.get_state_root_hash();
@@ -338,7 +383,7 @@ impl CasperClient {
         self.post_request(request).unwrap()
     }
 
-    fn query_dictionary(&self, address: Address, key: &str) -> Option<Bytes> {
+    fn query_state_dictionary(&self, address: &Address, key: &str) -> Option<Bytes> {
         let state_root_hash = self.get_state_root_hash();
         let contract_hash = self.query_global_state_for_contract_hash(address);
         let contract_hash = contract_hash
@@ -373,31 +418,15 @@ impl CasperClient {
         })
     }
 
-    pub fn query_dict_nk(&self, address: Address, key: &str) -> Option<Bytes> {
-        let state_root_hash = self.get_state_root_hash();
-        let contract_hash = self.query_global_state_for_contract_hash(address);
-        let contract_hash = contract_hash
-            .to_formatted_string()
-            .replace("contract-", "hash-");
-        let params = GetDictionaryItemParams {
-            state_root_hash,
-            dictionary_identifier: DictionaryIdentifier::ContractNamedKey {
-                key: contract_hash,
-                dictionary_name: String::from("__events_length"),
-                dictionary_item_key: String::from(key)
+    pub fn query_uref<T: CLTyped + FromBytes>(&self, uref: URef) -> Result<T, OdraError> {
+        let result = self.query_global_state(&CasperKey::URef(uref));
+        match result.stored_value {
+            CLValue(value) => {
+                let return_value: T = value.into_t().unwrap();
+                Ok(return_value)
             }
-        };
-
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": "state_get_dictionary_item",
-                "params": params,
-                "id": 1,
-            }
-        );
-        let result: Option<GetDictionaryItemResult> = self.post_request(request);
-        None
+            _ => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
+        }
     }
 
     fn wait_for_deploy_hash(&self, deploy_hash: DeployHash) -> ExecutionResult {
@@ -472,6 +501,7 @@ impl CasperClient {
     }
 
     fn post_request<T: DeserializeOwned>(&self, request: Value) -> Option<T> {
+        // TODO: change result to Result<T, OdraError>
         let client = reqwest::blocking::Client::new();
         let response = client
             .post(self.node_address_rpc())
@@ -551,7 +581,8 @@ mod tests {
     #[ignore]
     pub fn query_global_state_for_contract() {
         let addr = Address::from_str(CONTRACT_PACKAGE_HASH).unwrap();
-        let _result: Option<String> = CasperClient::new().query_dictionary(addr, "name_contract");
+        let _result: Option<String> =
+            CasperClient::new().query_state_dictionary(addr, "name_contract");
     }
 
     #[test]

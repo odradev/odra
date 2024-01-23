@@ -23,7 +23,7 @@ impl ContractContext for LivenetContractEnv {
     }
 
     fn set_value(&self, _key: &[u8], _value: Bytes) {
-        panic!("Cannot set value in LivenetEnv")
+        panic!("Cannot set value in LivenetEnv without a deploy")
     }
 
     fn caller(&self) -> Address {

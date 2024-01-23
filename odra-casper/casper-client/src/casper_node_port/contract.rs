@@ -1,7 +1,8 @@
+use odra_core::casper_types::{
+    ContractPackageHash, ContractWasmHash, EntryPoint, NamedKey, ProtocolVersion
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use odra_core::casper_types::{ContractPackageHash, ContractWasmHash, EntryPoint, NamedKey, ProtocolVersion};
-
 
 /// Details of a smart contract.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Debug, JsonSchema)]
@@ -11,7 +12,7 @@ pub struct Contract {
     contract_wasm_hash: ContractWasmHash,
     named_keys: Vec<NamedKey>,
     entry_points: Vec<EntryPoint>,
-    protocol_version: ProtocolVersion,
+    protocol_version: ProtocolVersion
 }
 
 impl Contract {

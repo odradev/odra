@@ -1,6 +1,7 @@
 use std::str::FromStr;
 use odra::{Address, HostEnv};
 use odra_examples::features::livenet::{LivenetContractDeployer, LivenetContractHostRef};
+use odra_modules::access::events::OwnershipTransferred;
 
 fn main() {
     let env = odra_casper_livenet_env::livenet_env();
@@ -35,6 +36,12 @@ fn main() {
     // By querying livenet storage
     // - we can also test the events
     assert_eq!(env.events_count(contract.address()), 1);
+
+    let event: OwnershipTransferred  = env.get_event(contract.address(), 0).unwrap();
+    assert_eq!(event.new_owner, Some(owner));
+
+
+
 
     // - we can test immutable crosscalls
 

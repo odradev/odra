@@ -1,10 +1,10 @@
+use crate::casper_node_port::contract::Contract;
 use casper_hashing::Digest;
 use odra_core::casper_types::{
     CLValue, EraId, ExecutionResult, ProtocolVersion, PublicKey, Timestamp, U512
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use crate::casper_node_port::contract::Contract;
 
 use super::{
     account::Account,
