@@ -90,7 +90,7 @@ impl CasperClient {
         let mut i = 1;
         while let Ok(key_filename) = std::env::var(format!("{}{}", ENV_ACCOUNT_PREFIX, i)) {
             secret_keys.push(SecretKey::from_file(key_filename).unwrap());
-            i+= 1;
+            i += 1;
         }
         secret_keys
     }

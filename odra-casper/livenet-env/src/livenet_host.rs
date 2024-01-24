@@ -9,21 +9,18 @@ use odra_core::contract_register::ContractRegister;
 use odra_core::event::EventError;
 use odra_core::event::EventError::CouldntExtractEventData;
 use odra_core::prelude::*;
-use odra_core::{
-    Address, Bytes, CallDef, ContractEnv, EntryPointsCaller, HostContext, OdraError, PublicKey,
-    RuntimeArgs, U512
-};
+use odra_core::{Address, Bytes, CallDef, ContractEnv, EntryPointsCaller, HostContext, OdraError, PublicKey, RuntimeArgs, ToBytes, U512};
 
 use crate::livenet_contract_env::LivenetContractEnv;
 
-pub struct LivenetEnv {
+pub struct LivenetHost {
     casper_client: Rc<RefCell<CasperClient>>,
     contract_register: Arc<RwLock<ContractRegister>>,
     contract_env: Rc<ContractEnv>,
     callstack: Rc<RefCell<Callstack>>
 }
 
-impl LivenetEnv {
+impl LivenetHost {
     pub fn new() -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(Self::new_instance()))
     }
@@ -47,7 +44,7 @@ impl LivenetEnv {
     }
 }
 
-impl HostContext for LivenetEnv {
+impl HostContext for LivenetHost {
     fn set_caller(&self, caller: Address) {
         self.casper_client.borrow_mut().set_caller(caller);
     }
@@ -117,7 +114,7 @@ impl HostContext for LivenetEnv {
                 self.casper_client
                     .borrow_mut()
                     .deploy_entrypoint_call(*address, call_def);
-                Ok(Default::default())
+                Ok(().to_bytes().unwrap().into())
             }
         }
     }

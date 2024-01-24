@@ -5,7 +5,7 @@ use odra_modules::erc20::Erc20Deployer;
 use std::str::FromStr;
 
 fn main() {
-    let env = odra_casper_livenet_env::livenet_env();
+    let env = odra_casper_livenet_env::env();
 
     let owner = env.caller();
 
