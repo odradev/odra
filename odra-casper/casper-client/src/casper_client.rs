@@ -15,7 +15,7 @@ use odra_core::{
         PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, U512
     },
     consts::*,
-    Address, CLTyped, CallDef, ExecutionError, OdraError
+    Address, CLTyped, CallDef, ExecutionError, OdraError, OdraResult
 };
 
 use crate::casper_node_port::query_balance::{
@@ -182,7 +182,7 @@ impl CasperClient {
     }
 
     /// Get the event bytes from storage
-    pub fn get_event(&self, contract_address: &Address, index: i32) -> Result<Bytes, OdraError> {
+    pub fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, OdraError> {
         let event_bytes: Bytes =
             self.query_dict(contract_address, "__events".to_string(), index.to_string())?;
         Ok(event_bytes)
@@ -525,7 +525,7 @@ impl CasperClient {
         })
     }
 
-    fn query_uref<T: CLTyped + FromBytes>(&self, uref: URef) -> Result<T, OdraError> {
+    fn query_uref<T: CLTyped + FromBytes>(&self, uref: URef) -> OdraResult<T> {
         let result = self.query_global_state(&CasperKey::URef(uref));
         match result.stored_value {
             CLValue(value) => {

@@ -205,7 +205,7 @@ impl OdraVm {
         self.state.write().unwrap().emit_event(event_data);
     }
 
-    pub fn get_event(&self, address: &Address, index: i32) -> Result<Bytes, EventError> {
+    pub fn get_event(&self, address: &Address, index: u32) -> Result<Bytes, EventError> {
         self.state.read().unwrap().get_event(address, index)
     }
 

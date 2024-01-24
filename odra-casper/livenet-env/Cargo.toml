@@ -9,3 +9,4 @@ edition = "2021"
 odra-core = { path = "../../core", default-features = false }
 odra-casper-client = { path = "../casper-client" }
 blake2 = { workspace = true }
+log = "0.4.20"

@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use crate::{CallDef, EntryPointsCaller, OdraError, VmError, EntryPointArgument};
+use crate::{CallDef, EntryPointArgument, EntryPointsCaller, OdraError, VmError};
 use casper_types::bytesrepr::Bytes;
 use casper_types::{NamedArg, RuntimeArgs};
 

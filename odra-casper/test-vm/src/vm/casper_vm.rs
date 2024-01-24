@@ -147,7 +147,7 @@ impl CasperVm {
         self.block_time += time_diff
     }
 
-    pub fn get_event(&self, contract_address: &Address, index: i32) -> Result<Bytes, EventError> {
+    pub fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
         let contract_package_hash = contract_address.as_contract_package_hash().unwrap();
         let contract_hash: ContractHash = self.get_contract_package_hash(contract_package_hash);
 
@@ -161,17 +161,10 @@ impl CasperVm {
             .as_uref()
             .unwrap();
 
-        let events_length = self.events_length(&contract_hash);
-
-        let event_position =
-            odra_core::utils::event_absolute_position(events_length as usize, index)
-                .ok_or(EventError::IndexOutOfBounds)?;
-
-        match self.context.query_dictionary_item(
-            None,
-            dictionary_seed_uref,
-            &event_position.to_string()
-        ) {
+        match self
+            .context
+            .query_dictionary_item(None, dictionary_seed_uref, &index.to_string())
+        {
             Ok(val) => {
                 let bytes = val
                     .as_cl_value()

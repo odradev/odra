@@ -87,9 +87,7 @@ impl HostEnv {
                 let new_events_count = backend.get_events_count(contract_address);
                 let mut events = vec![];
                 for event_id in old_events_last_id..new_events_count {
-                    let event = backend
-                        .get_event(contract_address, event_id as i32)
-                        .unwrap();
+                    let event = backend.get_event(contract_address, event_id).unwrap();
                     events.push(event);
                 }
 
@@ -133,8 +131,11 @@ impl HostEnv {
         index: i32
     ) -> Result<T, EventError> {
         let backend = self.backend.borrow();
+        let events_count = self.events_count(contract_address);
+        let event_absolute_position = crate::utils::event_absolute_position(events_count, index)
+            .ok_or(EventError::IndexOutOfBounds)?;
 
-        let bytes = backend.get_event(contract_address, index)?;
+        let bytes = backend.get_event(contract_address, event_absolute_position)?;
         T::from_bytes(&bytes)
             .map_err(|_| EventError::Parsing)
             .map(|r| r.0)
@@ -143,7 +144,7 @@ impl HostEnv {
     pub fn get_event_bytes(
         &self,
         contract_address: &Address,
-        index: i32
+        index: u32
     ) -> Result<Bytes, EventError> {
         let backend = self.backend.borrow();
         backend.get_event(contract_address, index)
@@ -156,7 +157,7 @@ impl HostEnv {
         (0..events_count)
             .map(|event_id| {
                 backend
-                    .get_event(contract_address, event_id as i32)
+                    .get_event(contract_address, event_id)
                     .and_then(|bytes| extract_event_name(&bytes))
                     .unwrap_or_else(|e| panic!("Couldn't extract event name: {:?}", e))
             })
@@ -169,7 +170,7 @@ impl HostEnv {
         (0..events_count)
             .map(|event_id| {
                 backend
-                    .get_event(contract_address, event_id as i32)
+                    .get_event(contract_address, event_id)
                     .unwrap_or_else(|e| {
                         panic!(
                             "Couldn't get event at address {:?} with id {}: {:?}",
@@ -198,7 +199,7 @@ impl HostEnv {
         );
         (0..events_count)
             .map(|event_id| {
-                self.get_event_bytes(contract_address, event_id as i32)
+                self.get_event_bytes(contract_address, event_id)
                     .unwrap_or_else(|e| {
                         panic!(
                             "Couldn't get event at address {:?} with id {}: {:?}",
@@ -213,7 +214,7 @@ impl HostEnv {
         let events_count = self.events_count(contract_address);
         (0..events_count)
             .map(|event_id| {
-                self.get_event_bytes(contract_address, event_id as i32)
+                self.get_event_bytes(contract_address, event_id)
                     .unwrap_or_else(|e| {
                         panic!(
                             "Couldn't get event at address {:?} with id {}: {:?}",

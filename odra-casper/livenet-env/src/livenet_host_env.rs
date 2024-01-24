@@ -2,16 +2,17 @@ use std::sync::{Arc, RwLock};
 use std::thread::sleep;
 
 use odra_casper_client::casper_client::CasperClient;
-use odra_core::{
-    Address, Bytes, CallDef, ContractEnv, EntryPointsCaller, HostContext, OdraError, PublicKey,
-    RuntimeArgs, U512
-};
+use odra_casper_client::log::info;
 use odra_core::callstack::{Callstack, CallstackElement, Entrypoint};
 use odra_core::contract_container::ContractContainer;
 use odra_core::contract_register::ContractRegister;
 use odra_core::event::EventError;
 use odra_core::event::EventError::CouldntExtractEventData;
 use odra_core::prelude::*;
+use odra_core::{
+    Address, Bytes, CallDef, ContractEnv, EntryPointsCaller, HostContext, OdraError, PublicKey,
+    RuntimeArgs, U512
+};
 
 use crate::livenet_contract_env::LivenetContractEnv;
 
@@ -68,13 +69,14 @@ impl HostContext for LivenetEnv {
     }
 
     fn advance_block_time(&self, time_diff: u64) {
-        // Todo: implement logging, especially for such cases:
-        // info!("advance_block_time called - Waiting for {} ms", time_diff);
+        info(format!(
+            "advance_block_time called - Waiting for {} ms",
+            time_diff
+        ));
         sleep(std::time::Duration::from_millis(time_diff));
     }
 
-    fn get_event(&self, contract_address: &Address, index: i32) -> Result<Bytes, EventError> {
-        // TODO: handle indices < 0
+    fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
         self.casper_client
             .borrow()
             .get_event(contract_address, index)

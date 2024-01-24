@@ -36,7 +36,7 @@ impl HostContext for OdraVmHost {
         self.vm.borrow().advance_block_time_by(time_diff)
     }
 
-    fn get_event(&self, contract_address: &Address, index: i32) -> Result<Bytes, EventError> {
+    fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
         self.vm.borrow().get_event(contract_address, index)
     }
 

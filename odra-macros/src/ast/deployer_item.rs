@@ -3,10 +3,8 @@ use derive_try_from_ref::TryFromRef;
 use crate::{ir::ModuleImplIR, utils};
 
 use super::deployer_utils::{
-    CallEpcExpr, DeployerLoadSignature, EpcSignature,
-    LoadContractExpr,
-    DeployerInitSignature, EntrypointCallerExpr, EntrypointsInitExpr, HostRefInstanceExpr,
-    NewContractExpr
+    CallEpcExpr, DeployerInitSignature, DeployerLoadSignature, EntrypointCallerExpr,
+    EntrypointsInitExpr, EpcSignature, HostRefInstanceExpr, LoadContractExpr, NewContractExpr
 };
 
 #[derive(syn_derive::ToTokens)]

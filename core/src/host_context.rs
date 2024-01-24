@@ -14,7 +14,7 @@ pub trait HostContext {
     fn balance_of(&self, address: &Address) -> U512;
     fn advance_block_time(&self, time_diff: u64);
     /// Returns event bytes by contract address and index.
-    fn get_event(&self, contract_address: &Address, index: i32) -> Result<Bytes, EventError>;
+    fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError>;
     fn get_events_count(&self, contract_address: &Address) -> u32;
     fn call_contract(
         &self,
