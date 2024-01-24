@@ -70,13 +70,7 @@ impl CasperClient {
         // Load .env
         dotenv::dotenv().ok();
 
-        let mut secret_keys = vec![];
-        secret_keys.push(SecretKey::from_file(get_env_variable(ENV_SECRET_KEY)).unwrap());
-        let mut i = 0;
-        while let Ok(key_filename) = std::env::var(format!("{}{}", ENV_ACCOUNT_PREFIX, i + 1)) {
-            secret_keys.push(SecretKey::from_file(key_filename).unwrap());
-            i += 1;
-        }
+        let secret_keys = Self::load_secret_keys();
 
         CasperClient {
             node_address: get_env_variable(ENV_NODE_ADDRESS),
@@ -85,6 +79,20 @@ impl CasperClient {
             secret_keys,
             gas: U512::zero()
         }
+    }
+
+    /// Loads secret keys from ENV_SECRET_KEY file and ENV_ACCOUNT_PREFIX files.
+    /// e.g. ENV_SECRET_KEY=secret_key.pem, ENV_ACCOUNT_PREFIX=account_1_key.pem
+    /// This will load secret_key.pem as an account 0 and account_1_key.pem as account 1.
+    fn load_secret_keys() -> Vec<SecretKey> {
+        let mut secret_keys = vec![];
+        secret_keys.push(SecretKey::from_file(get_env_variable(ENV_SECRET_KEY)).unwrap());
+        let mut i = 1;
+        while let Ok(key_filename) = std::env::var(format!("{}{}", ENV_ACCOUNT_PREFIX, i)) {
+            secret_keys.push(SecretKey::from_file(key_filename).unwrap());
+            i+= 1;
+        }
+        secret_keys
     }
 
     /// Gets a value from the storage
