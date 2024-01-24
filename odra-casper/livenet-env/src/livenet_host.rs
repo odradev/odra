@@ -9,7 +9,10 @@ use odra_core::contract_register::ContractRegister;
 use odra_core::event::EventError;
 use odra_core::event::EventError::CouldntExtractEventData;
 use odra_core::prelude::*;
-use odra_core::{Address, Bytes, CallDef, ContractEnv, EntryPointsCaller, HostContext, OdraError, PublicKey, RuntimeArgs, ToBytes, U512};
+use odra_core::{
+    Address, Bytes, CallDef, ContractEnv, EntryPointsCaller, HostContext, OdraError, PublicKey,
+    RuntimeArgs, ToBytes, U512
+};
 
 use crate::livenet_contract_env::LivenetContractEnv;
 
@@ -129,22 +132,10 @@ impl HostContext for LivenetHost {
     fn new_contract(
         &self,
         name: &str,
-        init_args: Option<RuntimeArgs>,
+        init_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> Address {
-        let mut args = match init_args {
-            None => RuntimeArgs::new(),
-            Some(args) => args
-        };
-        // todo: move this up the stack
-        args.insert("odra_cfg_is_upgradable", false).unwrap();
-        args.insert("odra_cfg_allow_key_override", true).unwrap();
-        args.insert(
-            "odra_cfg_package_hash_key_name",
-            format!("{}_package_hash", name)
-        )
-        .unwrap();
-        let address = self.casper_client.borrow_mut().deploy_wasm(name, args);
+        let address = self.casper_client.borrow_mut().deploy_wasm(name, init_args);
         self.register_contract(address, entry_points_caller);
         address
     }

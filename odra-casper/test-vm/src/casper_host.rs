@@ -89,7 +89,7 @@ impl HostContext for CasperHost {
     fn new_contract(
         &self,
         name: &str,
-        init_args: Option<RuntimeArgs>,
+        init_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> Address {
         self.vm

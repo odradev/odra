@@ -1,4 +1,5 @@
 use crate::call_result::CallResult;
+use crate::consts::{ALLOW_KEY_OVERRIDE_ARG, IS_UPGRADABLE_ARG, PACKAGE_HASH_KEY_NAME_ARG};
 use crate::entry_point_callback::EntryPointsCaller;
 use crate::event::EventError;
 use crate::host_context::HostContext;
@@ -51,7 +52,18 @@ impl HostEnv {
         entry_points_caller: EntryPointsCaller
     ) -> Address {
         let backend = self.backend.borrow();
-        let deployed_contract = backend.new_contract(name, init_args, entry_points_caller);
+
+        let mut args = match init_args {
+            None => RuntimeArgs::new(),
+            Some(args) => args
+        };
+        args.insert(IS_UPGRADABLE_ARG, false).unwrap();
+        args.insert(ALLOW_KEY_OVERRIDE_ARG, true).unwrap();
+        args.insert(PACKAGE_HASH_KEY_NAME_ARG, format!("{}_package_hash", name))
+            .unwrap();
+
+        let deployed_contract = backend.new_contract(name, args, entry_points_caller);
+
         self.deployed_contracts.borrow_mut().push(deployed_contract);
         self.events_count.borrow_mut().insert(deployed_contract, 0);
         deployed_contract
@@ -61,7 +73,9 @@ impl HostEnv {
         let backend = self.backend.borrow();
         backend.register_contract(address, entry_points_caller);
         self.deployed_contracts.borrow_mut().push(address);
-        self.events_count.borrow_mut().insert(address, 0);
+        self.events_count
+            .borrow_mut()
+            .insert(address, self.events_count(&address));
     }
 
     pub fn call_contract<T: FromBytes + CLTyped>(

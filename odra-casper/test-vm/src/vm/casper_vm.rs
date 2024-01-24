@@ -257,18 +257,18 @@ impl CasperVm {
     pub fn new_contract(
         &mut self,
         name: &str,
-        init_args: Option<RuntimeArgs>,
+        init_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> Address {
         let wasm_path = format!("{}.wasm", name);
-        let package_hash_key_name = format!("{}_package_hash", name);
-        let mut args = init_args.unwrap_or(runtime_args! {});
-        args.insert(PACKAGE_HASH_KEY_NAME_ARG, package_hash_key_name.clone())
+        let package_hash_key_name: String = init_args
+            .get(PACKAGE_HASH_KEY_NAME_ARG)
+            .unwrap()
+            .clone()
+            .into_t()
             .unwrap();
-        args.insert(ALLOW_KEY_OVERRIDE_ARG, true).unwrap();
-        args.insert(IS_UPGRADABLE_ARG, false).unwrap();
 
-        self.deploy_contract(&wasm_path, &args);
+        self.deploy_contract(&wasm_path, &init_args);
         let contract_package_hash = self.contract_package_hash_from_name(&package_hash_key_name);
         contract_package_hash.try_into().unwrap()
     }

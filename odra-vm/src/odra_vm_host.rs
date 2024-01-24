@@ -67,16 +67,20 @@ impl HostContext for OdraVmHost {
     fn new_contract(
         &self,
         name: &str,
-        init_args: Option<RuntimeArgs>,
+        init_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> Address {
         // TODO: panic in nice way
         let address = self
             .vm
             .borrow()
-            .register_contract(name, entry_points_caller);
+            .register_contract(name, entry_points_caller.clone());
 
-        if let Some(init_args) = init_args {
+        if entry_points_caller
+            .entry_points()
+            .iter()
+            .any(|ep| ep.name == "init")
+        {
             let _ = self.call_contract(
                 &address,
                 CallDef::new(String::from("init"), true, init_args),

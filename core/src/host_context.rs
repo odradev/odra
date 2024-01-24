@@ -25,7 +25,7 @@ pub trait HostContext {
     fn new_contract(
         &self,
         name: &str,
-        init_args: Option<RuntimeArgs>,
+        init_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> Address;
     fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller);
