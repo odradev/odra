@@ -98,7 +98,7 @@ pub enum ExecutionError {
     KeyNotFound = 117,
     CouldNotDeserializeSignature = 118,
     TypeMismatch = 119,
-    CouldnNotSignMessage = 120,
+    CouldNotSignMessage = 120,
     MaxUserError = 32767,
     /// User error too high. The code should be in range 0..32767.
     UserErrorTooHigh = 32768,

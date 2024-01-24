@@ -146,7 +146,7 @@ impl CasperClient {
         let public_key = &PublicKey::from(secret_key);
         let signature = sign(message, secret_key, public_key)
             .to_bytes()
-            .map_err(|_| OdraError::ExecutionError(ExecutionError::CouldnNotSignMessage))?;
+            .map_err(|_| OdraError::ExecutionError(ExecutionError::CouldNotSignMessage))?;
 
         Ok(Bytes::from(signature))
     }
