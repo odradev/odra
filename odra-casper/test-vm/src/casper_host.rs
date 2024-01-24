@@ -33,6 +33,10 @@ impl HostContext for CasperHost {
         self.vm.borrow_mut().set_caller(caller)
     }
 
+    fn set_gas(&self, gas: u64) {
+        // Set gas does nothing in this context
+    }
+
     fn caller(&self) -> Address {
         self.vm.borrow().get_caller()
     }
@@ -49,7 +53,7 @@ impl HostContext for CasperHost {
         self.vm.borrow_mut().advance_block_time(time_diff)
     }
 
-    fn get_event(&self, contract_address: &Address, index: i32) -> Result<Bytes, EventError> {
+    fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
         self.vm.borrow().get_event(contract_address, index)
     }
 
@@ -85,12 +89,16 @@ impl HostContext for CasperHost {
     fn new_contract(
         &self,
         name: &str,
-        init_args: Option<RuntimeArgs>,
-        entry_points_caller: Option<EntryPointsCaller>
+        init_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCaller
     ) -> Address {
         self.vm
             .borrow_mut()
             .new_contract(name, init_args, entry_points_caller)
+    }
+
+    fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller) {
+        panic!("register_contract is not supported in CasperHost");
     }
 
     fn contract_env(&self) -> ContractEnv {

@@ -193,6 +193,7 @@ impl ModuleImplIR {
             module_ident.span()
         ))
     }
+
     pub fn contract_ref_ident(&self) -> Result<Ident, syn::Error> {
         let module_ident = self.module_ident()?;
         Ok(Ident::new(

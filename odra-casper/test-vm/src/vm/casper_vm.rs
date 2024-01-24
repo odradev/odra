@@ -147,7 +147,7 @@ impl CasperVm {
         self.block_time += time_diff
     }
 
-    pub fn get_event(&self, contract_address: &Address, index: i32) -> Result<Bytes, EventError> {
+    pub fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
         let contract_package_hash = contract_address.as_contract_package_hash().unwrap();
         let contract_hash: ContractHash = self.get_contract_package_hash(contract_package_hash);
 
@@ -161,17 +161,10 @@ impl CasperVm {
             .as_uref()
             .unwrap();
 
-        let events_length = self.events_length(&contract_hash);
-
-        let event_position =
-            odra_core::utils::event_absolute_position(events_length as usize, index)
-                .ok_or(EventError::IndexOutOfBounds)?;
-
-        match self.context.query_dictionary_item(
-            None,
-            dictionary_seed_uref,
-            &event_position.to_string()
-        ) {
+        match self
+            .context
+            .query_dictionary_item(None, dictionary_seed_uref, &index.to_string())
+        {
             Ok(val) => {
                 let bytes = val
                     .as_cl_value()
@@ -209,14 +202,14 @@ impl CasperVm {
         let deploy_item = if use_proxy {
             let session_code =
                 include_bytes!("../../resources/proxy_caller_with_return.wasm").to_vec();
-            let args_bytes: Vec<u8> = call_def.args.to_bytes().unwrap();
-            let entry_point = call_def.entry_point.clone();
+            let args_bytes: Vec<u8> = call_def.args().to_bytes().unwrap();
+            let entry_point = call_def.entry_point();
             let args = runtime_args! {
                 CONTRACT_PACKAGE_HASH_ARG => hash,
                 ENTRY_POINT_ARG => entry_point,
                 ARGS_ARG => Bytes::from(args_bytes),
-                ATTACHED_VALUE_ARG => call_def.amount,
-                AMOUNT_ARG => call_def.amount,
+                ATTACHED_VALUE_ARG => call_def.amount(),
+                AMOUNT_ARG => call_def.amount(),
             };
 
             DeployItemBuilder::new()
@@ -234,8 +227,8 @@ impl CasperVm {
                 .with_stored_versioned_contract_by_hash(
                     hash.value(),
                     None,
-                    &call_def.entry_point,
-                    call_def.args.clone()
+                    call_def.entry_point(),
+                    call_def.args().clone()
                 )
                 .with_deploy_hash(self.next_hash())
                 .build()
@@ -247,7 +240,7 @@ impl CasperVm {
         self.context.exec(execute_request).commit();
         self.collect_gas();
         self.gas_cost.push((
-            format!("call_entrypoint {}", call_def.entry_point),
+            format!("call_entrypoint {}", call_def.entry_point()),
             self.last_call_contract_gas_cost()
         ));
 
@@ -255,7 +248,7 @@ impl CasperVm {
         if let Some(error) = self.context.get_error() {
             let odra_error = parse_error(error);
             self.error = Some(odra_error.clone());
-            self.panic_with_error(odra_error, &call_def.entry_point, hash);
+            self.panic_with_error(odra_error, call_def.entry_point(), hash);
         } else {
             self.get_active_account_result()
         }
@@ -264,23 +257,18 @@ impl CasperVm {
     pub fn new_contract(
         &mut self,
         name: &str,
-        init_args: Option<RuntimeArgs>,
-        entry_points_caller: Option<EntryPointsCaller>
+        init_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCaller
     ) -> Address {
         let wasm_path = format!("{}.wasm", name);
-        let package_hash_key_name = format!("{}_package_hash", name);
-        let mut args = init_args.clone().unwrap_or(runtime_args! {});
-        args.insert(PACKAGE_HASH_KEY_NAME_ARG, package_hash_key_name.clone())
+        let package_hash_key_name: String = init_args
+            .get(PACKAGE_HASH_KEY_NAME_ARG)
+            .unwrap()
+            .clone()
+            .into_t()
             .unwrap();
-        args.insert(ALLOW_KEY_OVERRIDE_ARG, true).unwrap();
-        args.insert(IS_UPGRADABLE_ARG, false).unwrap();
 
-        if init_args.is_some() {
-            args.insert(CONSTRUCTOR_NAME_ARG, CONSTRUCTOR_NAME.to_string())
-                .unwrap();
-        };
-
-        self.deploy_contract(&wasm_path, &args);
+        self.deploy_contract(&wasm_path, &init_args);
         let contract_package_hash = self.contract_package_hash_from_name(&package_hash_key_name);
         contract_package_hash.try_into().unwrap()
     }

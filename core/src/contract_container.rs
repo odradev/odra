@@ -1,12 +1,7 @@
-use odra_core::call_def::CallDef;
-use odra_core::entry_point_callback::EntryPointsCaller;
-use odra_core::prelude::*;
-use odra_core::EntryPointArgument;
-use odra_core::HostEnv;
-use odra_core::{
-    casper_types::{NamedArg, RuntimeArgs},
-    Bytes, OdraError, VmError
-};
+use crate::prelude::*;
+use crate::{CallDef, EntryPointArgument, EntryPointsCaller, OdraError, VmError};
+use casper_types::bytesrepr::Bytes;
+use casper_types::{NamedArg, RuntimeArgs};
 
 #[doc(hidden)]
 pub type EntrypointCall = fn(String, &RuntimeArgs) -> Vec<u8>;
@@ -15,14 +10,12 @@ pub type EntrypointArgs = Vec<String>;
 
 #[derive(Clone)]
 pub struct ContractContainer {
-    name: String,
     entry_points_caller: EntryPointsCaller
 }
 
 impl ContractContainer {
-    pub fn new(name: &str, entry_points_caller: EntryPointsCaller) -> Self {
+    pub fn new(entry_points_caller: EntryPointsCaller) -> Self {
         Self {
-            name: String::from(name),
             entry_points_caller
         }
     }
@@ -45,7 +38,7 @@ impl ContractContainer {
         args: &[EntryPointArgument],
         input_args: &RuntimeArgs
     ) -> Result<(), OdraError> {
-        let named_args = input_args
+        let _named_args = input_args
             .named_args()
             .map(NamedArg::name)
             .collect::<Vec<_>>();
@@ -73,15 +66,13 @@ impl ContractContainer {
 
 #[cfg(test)]
 mod tests {
-    use odra_core::prelude::*;
-    use odra_core::{
+    use super::{ContractContainer, EntrypointArgs, EntrypointCall};
+    use crate::prelude::*;
+    use crate::{
         casper_types::{runtime_args, RuntimeArgs},
         OdraError, VmError
     };
-    use odra_core::{CLType, CallDef, EntryPoint, EntryPointArgument, EntryPointsCaller, HostEnv};
-    use url::Host;
-
-    use super::{ContractContainer, EntrypointArgs, EntrypointCall};
+    use crate::{CLType, CallDef, EntryPoint, EntryPointArgument, EntryPointsCaller, HostEnv};
 
     const TEST_ENTRYPOINT: &str = "ep";
 
@@ -91,7 +82,7 @@ mod tests {
         let instance = ContractContainer::empty();
 
         // When call some entrypoint.
-        let call_def = CallDef::new(TEST_ENTRYPOINT, RuntimeArgs::new());
+        let call_def = CallDef::new(TEST_ENTRYPOINT, false, RuntimeArgs::new());
         let result = instance.call(call_def);
 
         // Then an error occurs.
@@ -104,7 +95,7 @@ mod tests {
         let instance = ContractContainer::with_entrypoint(vec![]);
 
         // When call the registered entrypoint.
-        let call_def = CallDef::new(TEST_ENTRYPOINT, RuntimeArgs::new());
+        let call_def = CallDef::new(TEST_ENTRYPOINT, false, RuntimeArgs::new());
         let result = instance.call(call_def);
 
         // Then teh call succeeds.
@@ -149,7 +140,7 @@ mod tests {
         let instance = ContractContainer::with_entrypoint(vec![("first", CLType::U32)]);
 
         // When call a valid entrypoint without args.
-        let call_def = CallDef::new(TEST_ENTRYPOINT, RuntimeArgs::new());
+        let call_def = CallDef::new(TEST_ENTRYPOINT, false, RuntimeArgs::new());
         let result = instance.call(call_def);
 
         // Then MissingArg error is returned.
@@ -166,7 +157,7 @@ mod tests {
         ]);
 
         // When call a valid entrypoint with a single valid args,
-        let call_def = CallDef::new(TEST_ENTRYPOINT, runtime_args! { "third" => 0u32 });
+        let call_def = CallDef::new(TEST_ENTRYPOINT, false, runtime_args! { "third" => 0u32 });
         let result = instance.call(call_def);
 
         // Then MissingArg error is returned.
@@ -182,7 +173,6 @@ mod tests {
                 )))
             });
             Self {
-                name: String::from("contract"),
                 entry_points_caller
             }
         }
@@ -207,7 +197,6 @@ mod tests {
                 });
 
             Self {
-                name: String::from("contract"),
                 entry_points_caller
             }
         }

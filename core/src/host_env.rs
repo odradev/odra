@@ -1,4 +1,5 @@
 use crate::call_result::CallResult;
+use crate::consts::{ALLOW_KEY_OVERRIDE_ARG, IS_UPGRADABLE_ARG, PACKAGE_HASH_KEY_NAME_ARG};
 use crate::entry_point_callback::EntryPointsCaller;
 use crate::event::EventError;
 use crate::host_context::HostContext;
@@ -48,13 +49,33 @@ impl HostEnv {
         &self,
         name: &str,
         init_args: Option<RuntimeArgs>,
-        entry_points_caller: Option<EntryPointsCaller>
+        entry_points_caller: EntryPointsCaller
     ) -> Address {
         let backend = self.backend.borrow();
-        let deployed_contract = backend.new_contract(name, init_args, entry_points_caller);
+
+        let mut args = match init_args {
+            None => RuntimeArgs::new(),
+            Some(args) => args
+        };
+        args.insert(IS_UPGRADABLE_ARG, false).unwrap();
+        args.insert(ALLOW_KEY_OVERRIDE_ARG, true).unwrap();
+        args.insert(PACKAGE_HASH_KEY_NAME_ARG, format!("{}_package_hash", name))
+            .unwrap();
+
+        let deployed_contract = backend.new_contract(name, args, entry_points_caller);
+
         self.deployed_contracts.borrow_mut().push(deployed_contract);
         self.events_count.borrow_mut().insert(deployed_contract, 0);
         deployed_contract
+    }
+
+    pub fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller) {
+        let backend = self.backend.borrow();
+        backend.register_contract(address, entry_points_caller);
+        self.deployed_contracts.borrow_mut().push(address);
+        self.events_count
+            .borrow_mut()
+            .insert(address, self.events_count(&address));
     }
 
     pub fn call_contract<T: FromBytes + CLTyped>(
@@ -80,9 +101,7 @@ impl HostEnv {
                 let new_events_count = backend.get_events_count(contract_address);
                 let mut events = vec![];
                 for event_id in old_events_last_id..new_events_count {
-                    let event = backend
-                        .get_event(contract_address, event_id as i32)
-                        .unwrap();
+                    let event = backend.get_event(contract_address, event_id).unwrap();
                     events.push(event);
                 }
 
@@ -126,8 +145,11 @@ impl HostEnv {
         index: i32
     ) -> Result<T, EventError> {
         let backend = self.backend.borrow();
+        let events_count = self.events_count(contract_address);
+        let event_absolute_position = crate::utils::event_absolute_position(events_count, index)
+            .ok_or(EventError::IndexOutOfBounds)?;
 
-        let bytes = backend.get_event(contract_address, index)?;
+        let bytes = backend.get_event(contract_address, event_absolute_position)?;
         T::from_bytes(&bytes)
             .map_err(|_| EventError::Parsing)
             .map(|r| r.0)
@@ -136,7 +158,7 @@ impl HostEnv {
     pub fn get_event_bytes(
         &self,
         contract_address: &Address,
-        index: i32
+        index: u32
     ) -> Result<Bytes, EventError> {
         let backend = self.backend.borrow();
         backend.get_event(contract_address, index)
@@ -149,7 +171,7 @@ impl HostEnv {
         (0..events_count)
             .map(|event_id| {
                 backend
-                    .get_event(contract_address, event_id as i32)
+                    .get_event(contract_address, event_id)
                     .and_then(|bytes| extract_event_name(&bytes))
                     .unwrap_or_else(|e| panic!("Couldn't extract event name: {:?}", e))
             })
@@ -162,7 +184,7 @@ impl HostEnv {
         (0..events_count)
             .map(|event_id| {
                 backend
-                    .get_event(contract_address, event_id as i32)
+                    .get_event(contract_address, event_id)
                     .unwrap_or_else(|e| {
                         panic!(
                             "Couldn't get event at address {:?} with id {}: {:?}",
@@ -191,7 +213,7 @@ impl HostEnv {
         );
         (0..events_count)
             .map(|event_id| {
-                self.get_event_bytes(contract_address, event_id as i32)
+                self.get_event_bytes(contract_address, event_id)
                     .unwrap_or_else(|e| {
                         panic!(
                             "Couldn't get event at address {:?} with id {}: {:?}",
@@ -206,7 +228,7 @@ impl HostEnv {
         let events_count = self.events_count(contract_address);
         (0..events_count)
             .map(|event_id| {
-                self.get_event_bytes(contract_address, event_id as i32)
+                self.get_event_bytes(contract_address, event_id)
                     .unwrap_or_else(|e| {
                         panic!(
                             "Couldn't get event at address {:?} with id {}: {:?}",
@@ -234,5 +256,15 @@ impl HostEnv {
     pub fn public_key(&self, address: &Address) -> PublicKey {
         let backend = self.backend.borrow();
         backend.public_key(address)
+    }
+
+    pub fn caller(&self) -> Address {
+        let backend = self.backend.borrow();
+        backend.caller()
+    }
+
+    pub fn set_gas(&self, gas: u64) {
+        let backend = self.backend.borrow();
+        backend.set_gas(gas)
     }
 }

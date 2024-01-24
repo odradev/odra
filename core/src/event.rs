@@ -14,5 +14,7 @@ pub enum EventError {
     /// Unexpected error while deserializing.
     Parsing,
     /// Could not extract event name.
-    CouldntExtractName
+    CouldntExtractName,
+    /// Could not extract event data.
+    CouldntExtractEventData
 }

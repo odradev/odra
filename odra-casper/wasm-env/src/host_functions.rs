@@ -289,13 +289,13 @@ pub fn call_contract(address: Address, call_def: CallDef) -> Bytes {
     let contract_package_hash = *address.as_contract_package_hash().unwrap_or_revert();
     let method = call_def.method();
     let mut args = call_def.args().to_owned();
-    if call_def.amount == U512::zero() {
+    if call_def.amount() == U512::zero() {
         call_versioned_contract(contract_package_hash, None, method, args)
     } else {
         let cargo_purse = get_or_create_cargo_purse();
         let main_purse = get_main_purse().unwrap_or_revert();
 
-        transfer_from_purse_to_purse(main_purse, cargo_purse, call_def.amount, None)
+        transfer_from_purse_to_purse(main_purse, cargo_purse, call_def.amount(), None)
             .unwrap_or_revert_with(ApiError::Transfer);
         args.insert(consts::CARGO_PURSE_ARG, cargo_purse)
             .unwrap_or_revert();

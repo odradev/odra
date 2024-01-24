@@ -1,3 +1,4 @@
+use crate::casper_node_port::contract::Contract;
 use casper_hashing::Digest;
 use odra_core::casper_types::{
     CLValue, EraId, ExecutionResult, ProtocolVersion, PublicKey, Timestamp, U512
@@ -240,5 +241,7 @@ pub enum StoredValue {
     Account(Account),
 
     /// A contract definition, metadata, and security container.
-    ContractPackage(ContractPackage)
+    ContractPackage(ContractPackage),
+
+    Contract(Contract)
 }

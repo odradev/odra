@@ -49,16 +49,18 @@ fn call_def(fun: &FnIR) -> syn::Expr {
     let ty_call_def = utils::ty::call_def();
     let fun_name_str = fun.name_str();
     let args_block = fn_utils::runtime_args_block(fun, insert_arg_stmt);
-    syn::parse_quote!(#ty_call_def::new(String::from(#fun_name_str), #args_block))
+    let is_mut = fun.is_mut();
+    syn::parse_quote!(#ty_call_def::new(String::from(#fun_name_str), #is_mut, #args_block))
 }
 
 fn call_def_with_amount(fun: &FnIR) -> syn::Expr {
     let ty_call_def = utils::ty::call_def();
     let fun_name_str = fun.name_str();
     let args_block = runtime_args_with_amount_block(fun, insert_arg_stmt);
+    let is_mut = fun.is_mut();
     let attached_value = utils::member::attached_value();
 
-    syn::parse_quote!(#ty_call_def::new(String::from(#fun_name_str), #args_block).with_amount(#attached_value))
+    syn::parse_quote!(#ty_call_def::new(String::from(#fun_name_str), #is_mut, #args_block).with_amount(#attached_value))
 }
 
 fn function_signature(fun: &FnIR) -> syn::Signature {
