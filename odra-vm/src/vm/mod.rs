@@ -6,4 +6,4 @@ mod odra_vm;
 mod odra_vm_state;
 mod storage;
 
-pub use odra_vm::OdraVm;
+pub use self::odra_vm::OdraVm;

@@ -1,7 +1,7 @@
 use crate::ast::fn_utils::{FnItem, SelfFnItem};
 use crate::utils::misc::AsBlock;
 use crate::{ast::ref_utils, ir::ModuleImplIR, utils};
-use derive_try_from::TryFromRef;
+use derive_try_from_ref::TryFromRef;
 use quote::TokenStreamExt;
 use syn::parse_quote;
 
@@ -117,6 +117,7 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefImplItem {
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
 #[source(ModuleImplIR)]
+#[err(syn::Error)]
 pub struct RefItem {
     struct_item: ContractRefStructItem,
     impl_item: ContractRefImplItem

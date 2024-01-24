@@ -3,12 +3,13 @@ use crate::ast::parts_utils::{UsePreludeItem, UseSuperItem};
 use crate::ast::ref_item::RefItem;
 use crate::ast::test_parts::{PartsModuleItem, TestPartsReexportItem};
 use crate::ir::ModuleImplIR;
-use derive_try_from::TryFromRef;
+use derive_try_from_ref::TryFromRef;
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
 #[source(ModuleImplIR)]
+#[err(syn::Error)]
 pub struct ExternalContractImpl {
-    #[expr(item.self_code())]
+    #[expr(input.self_code())]
     self_code: proc_macro2::TokenStream,
     ref_item: RefItem,
     test_parts: TestPartsItem,
@@ -17,6 +18,7 @@ pub struct ExternalContractImpl {
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
 #[source(ModuleImplIR)]
+#[err(syn::Error)]
 struct TestPartsItem {
     parts_module: PartsModuleItem,
     #[syn(braced)]

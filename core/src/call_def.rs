@@ -11,9 +11,9 @@ pub struct CallDef {
 }
 
 impl CallDef {
-    pub fn new(method: String, is_mut: bool, args: RuntimeArgs) -> Self {
+    pub fn new<T: ToString>(method: T, is_mut: bool, args: RuntimeArgs) -> Self {
         CallDef {
-            entry_point: method,
+            entry_point: method.to_string(),
             args,
             amount: U512::zero(),
             is_mut

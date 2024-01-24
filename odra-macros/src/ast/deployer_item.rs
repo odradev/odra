@@ -1,10 +1,12 @@
-use derive_try_from::TryFromRef;
+use derive_try_from_ref::TryFromRef;
 
 use crate::{ir::ModuleImplIR, utils};
 
 use super::deployer_utils::{
-    CallEpcExpr, DeployerInitSignature, DeployerLoadSignature, EntrypointCallerExpr, EpcSignature,
-    HostRefInstanceExpr, LoadContractExpr, NewContractExpr
+    CallEpcExpr, DeployerLoadSignature, EpcSignature,
+    LoadContractExpr,
+    DeployerInitSignature, EntrypointCallerExpr, EntrypointsInitExpr, HostRefInstanceExpr,
+    NewContractExpr
 };
 
 #[derive(syn_derive::ToTokens)]
@@ -59,6 +61,7 @@ impl TryFrom<&'_ ModuleImplIR> for DeployImplItem {
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
 #[source(ModuleImplIR)]
+#[err(syn::Error)]
 pub struct ContractEpcFn {
     #[expr(utils::syn::visibility_pub())]
     vis: syn::Visibility,
@@ -67,11 +70,14 @@ pub struct ContractEpcFn {
     #[default]
     braces: syn::token::Brace,
     #[syn(in = braces)]
+    entry_points: EntrypointsInitExpr,
+    #[syn(in = braces)]
     caller: EntrypointCallerExpr
 }
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
 #[source(ModuleImplIR)]
+#[err(syn::Error)]
 struct ContractInitFn {
     #[expr(utils::syn::visibility_pub())]
     vis: syn::Visibility,
@@ -89,6 +95,7 @@ struct ContractInitFn {
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
 #[source(ModuleImplIR)]
+#[err(syn::Error)]
 struct ContractLoadFn {
     #[expr(utils::syn::visibility_pub())]
     vis: syn::Visibility,
@@ -106,6 +113,7 @@ struct ContractLoadFn {
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
 #[source(ModuleImplIR)]
+#[err(syn::Error)]
 pub struct DeployerItem {
     struct_item: DeployStructItem,
     impl_item: DeployImplItem
@@ -125,7 +133,7 @@ mod deployer_impl {
 
             impl Erc20Deployer {
                 pub fn epc(env: &odra::HostEnv) -> odra::EntryPointsCaller {
-                    odra::EntryPointsCaller::new(env.clone(), |contract_env, call_def| {
+                    odra::EntryPointsCaller::new(env.clone(), entry_points, |contract_env, call_def| {
                         match call_def.method() {
                             "init" => {
                                 let result = __erc20_exec_parts::execute_init(contract_env);
@@ -196,7 +204,11 @@ mod deployer_impl {
 
             impl Erc20Deployer {
                 pub fn init(env: &odra::HostEnv) -> Erc20HostRef {
-                    let caller = odra::EntryPointsCaller::new(env.clone(), |contract_env, call_def| {
+                    let entry_points = odra::prelude::vec![
+                        odra::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
+                        odra::EntryPoint::new(odra::prelude::string::String::from("pay_to_mint"), odra::prelude::vec![])
+                    ];
+                    let caller = odra::EntryPointsCaller::new(env.clone(), entry_points, |contract_env, call_def| {
                         match call_def.method() {
                             "total_supply" => {
                                 let result = __erc20_exec_parts::execute_total_supply(contract_env);
@@ -237,7 +249,16 @@ mod deployer_impl {
 
             impl Erc20Deployer {
                 pub fn init(env: &odra::HostEnv) -> Erc20HostRef {
-                    let caller = odra::EntryPointsCaller::new(env.clone(), |contract_env, call_def| {
+                    let entry_points = odra::prelude::vec![
+                        odra::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
+                        odra::EntryPoint::new(odra::prelude::string::String::from("get_owner"), odra::prelude::vec![]),
+                        odra::EntryPoint::new(odra::prelude::string::String::from("set_owner"), odra::prelude::vec![
+                            odra::EntryPointArgument::new(odra::prelude::string::String::from("new_owner"), <Address as odra::casper_types::CLTyped>::cl_type())
+                        ]),
+                        odra::EntryPoint::new(odra::prelude::string::String::from("name"), odra::prelude::vec![]),
+                        odra::EntryPoint::new(odra::prelude::string::String::from("symbol"), odra::prelude::vec![])
+                    ];
+                    let caller = odra::EntryPointsCaller::new(env.clone(), entry_points, |contract_env, call_def| {
                         match call_def.method() {
                             "total_supply" => {
                                 let result = __erc20_exec_parts::execute_total_supply(contract_env);
