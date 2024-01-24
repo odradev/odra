@@ -227,7 +227,7 @@ impl CasperVm {
                 .with_stored_versioned_contract_by_hash(
                     hash.value(),
                     None,
-                    &call_def.entry_point(),
+                    call_def.entry_point(),
                     call_def.args().clone()
                 )
                 .with_deploy_hash(self.next_hash())

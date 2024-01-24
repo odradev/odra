@@ -28,7 +28,7 @@ impl LivenetHost {
         Rc::new(RefCell::new(Self::new_instance()))
     }
 
-    pub fn new_instance() -> Self {
+    fn new_instance() -> Self {
         let casper_client: Rc<RefCell<CasperClient>> = Default::default();
         let callstack: Rc<RefCell<Callstack>> = Default::default();
         let contract_register = Arc::new(RwLock::new(Default::default()));
@@ -103,7 +103,7 @@ impl HostContext for LivenetHost {
             let result = self
                 .contract_register
                 .read()
-                .unwrap()
+                .expect("Couldn't read contract register.")
                 .call(address, call_def);
             self.callstack.borrow_mut().pop();
             return result;
@@ -117,7 +117,11 @@ impl HostContext for LivenetHost {
                 self.casper_client
                     .borrow_mut()
                     .deploy_entrypoint_call(*address, call_def);
-                Ok(().to_bytes().unwrap().into())
+                Ok(
+                    ().to_bytes()
+                        .expect("Couldn't serialize (). This shouldn't happen.")
+                        .into()
+                )
             }
         }
     }
@@ -125,7 +129,7 @@ impl HostContext for LivenetHost {
     fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller) {
         self.contract_register
             .write()
-            .unwrap()
+            .expect("Couldn't write contract register.")
             .add(address, ContractContainer::new(entry_points_caller));
     }
 
@@ -154,11 +158,14 @@ impl HostContext for LivenetHost {
         0
     }
 
-    fn sign_message(&self, _message: &Bytes, _address: &Address) -> Bytes {
-        todo!()
+    fn sign_message(&self, message: &Bytes, address: &Address) -> Bytes {
+        self.casper_client
+            .borrow()
+            .sign_message(message, address)
+            .unwrap()
     }
 
-    fn public_key(&self, _address: &Address) -> PublicKey {
-        todo!()
+    fn public_key(&self, address: &Address) -> PublicKey {
+        self.casper_client.borrow().address_public_key(address)
     }
 }

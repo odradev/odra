@@ -7,7 +7,7 @@ use jsonrpc_lite::JsonRpc;
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 
-use odra_core::casper_types::URef;
+use odra_core::casper_types::{sign, URef};
 use odra_core::{
     casper_types::{
         bytesrepr::{Bytes, FromBytes, ToBytes},
@@ -86,10 +86,20 @@ impl CasperClient {
     /// This will load secret_key.pem as an account 0 and account_1_key.pem as account 1.
     fn load_secret_keys() -> Vec<SecretKey> {
         let mut secret_keys = vec![];
-        secret_keys.push(SecretKey::from_file(get_env_variable(ENV_SECRET_KEY)).unwrap());
+        secret_keys.push(
+            SecretKey::from_file(get_env_variable(ENV_SECRET_KEY)).unwrap_or_else(|_| {
+                panic!(
+                    "Couldn't load secret key from file {:?}",
+                    get_env_variable(ENV_SECRET_KEY)
+                )
+            })
+        );
+
         let mut i = 1;
         while let Ok(key_filename) = std::env::var(format!("{}{}", ENV_ACCOUNT_PREFIX, i)) {
-            secret_keys.push(SecretKey::from_file(key_filename).unwrap());
+            secret_keys.push(SecretKey::from_file(&key_filename).unwrap_or_else(|_| {
+                panic!("Couldn't load secret key from file {:?}", key_filename)
+            }));
             i += 1;
         }
         secret_keys
@@ -120,9 +130,25 @@ impl CasperClient {
         PublicKey::from(&self.secret_keys[self.active_account])
     }
 
+    /// Public key of the account address.
+    pub fn address_public_key(&self, address: &Address) -> PublicKey {
+        PublicKey::from(self.address_secret_key(address))
+    }
+
     /// Secret key of the client account.
     pub fn secret_key(&self) -> &SecretKey {
         &self.secret_keys[self.active_account]
+    }
+
+    /// Signs the message using keys associated with an address.
+    pub fn sign_message(&self, message: &Bytes, address: &Address) -> OdraResult<Bytes> {
+        let secret_key = self.address_secret_key(address);
+        let public_key = &PublicKey::from(secret_key);
+        let signature = sign(message, secret_key, public_key)
+            .to_bytes()
+            .map_err(|_| OdraError::ExecutionError(ExecutionError::CouldnNotSignMessage))?;
+
+        Ok(Bytes::from(signature))
     }
 
     /// Address of the client account.
@@ -158,7 +184,11 @@ impl CasperClient {
             Some(GlobalStateIdentifier::StateRootHash(
                 self.get_state_root_hash()
             )),
-            PurseIdentifier::MainPurseUnderAccountHash(*address.as_account_hash().unwrap())
+            PurseIdentifier::MainPurseUnderAccountHash(
+                *address
+                    .as_account_hash()
+                    .unwrap_or_else(|| panic!("Address {:?} is not an account address", address))
+            )
         );
         let request = json!(
             {
@@ -168,7 +198,7 @@ impl CasperClient {
                 "id": 1,
             }
         );
-        let result: QueryBalanceResult = self.post_request(request).unwrap();
+        let result: QueryBalanceResult = self.post_request(request);
         result.balance
     }
 
@@ -181,11 +211,16 @@ impl CasperClient {
                 "id": 1,
             }
         );
-        let result: serde_json::Value = self.post_request(request).unwrap();
+        let result: serde_json::Value = self.post_request(request);
         let result = result["result"]["last_added_block_info"]["timestamp"]
             .as_str()
-            .unwrap();
-        let timestamp: u64 = result.parse().unwrap();
+            .unwrap_or_else(|| {
+                panic!(
+                    "Couldn't get block time - malformed JSON response: {:?}",
+                    result
+                )
+            });
+        let timestamp: u64 = result.parse().expect("Couldn't parse block time");
         timestamp
     }
 
@@ -214,7 +249,7 @@ impl CasperClient {
                 "id": 1,
             }
         );
-        let result: GetStateRootHashResult = self.post_request(request).unwrap();
+        let result: GetStateRootHashResult = self.post_request(request);
         result.state_root_hash.unwrap()
     }
 
@@ -247,7 +282,7 @@ impl CasperClient {
                 "id": 1,
             }
         );
-        let result: GetDictionaryItemResult = self.post_request(request).unwrap();
+        let result: GetDictionaryItemResult = self.post_request(request);
         match result.stored_value {
             CLValue(value) => {
                 let return_value: T = value.into_t().unwrap();
@@ -297,7 +332,7 @@ impl CasperClient {
                 "id": 1,
             }
         );
-        self.post_request(request).unwrap()
+        self.post_request(request)
     }
 
     /// Discover the contract address by name.
@@ -362,7 +397,7 @@ impl CasperClient {
             }
         );
 
-        let response: PutDeployResult = self.post_request(request).unwrap();
+        let response: PutDeployResult = self.post_request(request);
         let deploy_hash = response.deploy_hash;
         self.wait_for_deploy_hash(deploy_hash);
 
@@ -408,7 +443,7 @@ impl CasperClient {
                 "id": 1,
             }
         );
-        let response: PutDeployResult = self.post_request(request).unwrap();
+        let response: PutDeployResult = self.post_request(request);
         let deploy_hash = response.deploy_hash;
         self.wait_for_deploy_hash(deploy_hash);
 
@@ -451,7 +486,7 @@ impl CasperClient {
                 "id": 1,
             }
         );
-        let response: PutDeployResult = self.post_request(request).unwrap();
+        let response: PutDeployResult = self.post_request(request);
         let deploy_hash = response.deploy_hash;
         self.wait_for_deploy_hash(deploy_hash);
     }
@@ -477,7 +512,7 @@ impl CasperClient {
                 "id": 1,
             }
         );
-        self.post_request(request).unwrap()
+        self.post_request(request)
     }
 
     fn query_global_state(&self, key: &CasperKey) -> QueryGlobalStateResult {
@@ -495,7 +530,7 @@ impl CasperClient {
                 "id": 1,
             }
         );
-        self.post_request(request).unwrap()
+        self.post_request(request)
     }
 
     fn query_state_dictionary(&self, address: &Address, key: &str) -> Option<Bytes> {
@@ -615,8 +650,7 @@ impl CasperClient {
         )
     }
 
-    fn post_request<T: DeserializeOwned>(&self, request: Value) -> Option<T> {
-        // TODO: change result to Result<T, OdraError>
+    fn post_request<T: DeserializeOwned>(&self, request: Value) -> T {
         let client = reqwest::blocking::Client::new();
         let response = client
             .post(self.node_address_rpc())
@@ -627,6 +661,18 @@ impl CasperClient {
         response
             .get_result()
             .map(|result| serde_json::from_value(result.clone()).unwrap())
+            .unwrap()
+    }
+
+    fn address_secret_key(&self, address: &Address) -> &SecretKey {
+        match self
+            .secret_keys
+            .iter()
+            .find(|key| Address::from(PublicKey::from(*key)) == *address)
+        {
+            Some(secret_key) => secret_key,
+            None => panic!("Key for address {:?} is not loaded", address)
+        }
     }
 }
 

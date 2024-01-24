@@ -44,7 +44,7 @@ fn main() {
     let event: OwnershipTransferred = env.get_event(contract.address(), 0).unwrap();
     assert_eq!(event.new_owner, Some(owner));
 
-    // - we can test immutable crosscalls without deploying
+    // - we can test immutable crosscalls without deploying (but crosscall contracts needs to be registered)
     assert_eq!(contract.immutable_cross_call(), 10_000.into());
 
     // - mutable crosscalls will require a deploy
@@ -75,5 +75,6 @@ fn erc20_address() -> Address {
 }
 
 fn load(env: &HostEnv, address: Address) -> LivenetContractHostRef {
+    Erc20Deployer::load(env, erc20_address());
     LivenetContractDeployer::load(env, address)
 }
