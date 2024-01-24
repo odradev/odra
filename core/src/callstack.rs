@@ -1,4 +1,5 @@
-use odra_core::{casper_types::U512, Address, CallDef};
+use super::{casper_types::U512, Address, CallDef};
+use crate::prelude::*;
 
 #[derive(Clone)]
 pub enum CallstackElement {
@@ -31,6 +32,13 @@ impl Entrypoint {
 pub struct Callstack(Vec<CallstackElement>);
 
 impl Callstack {
+    pub fn first(&self) -> CallstackElement {
+        self.0
+            .first()
+            .expect("Not enough elements on callstack")
+            .clone()
+    }
+
     pub fn pop(&mut self) -> Option<CallstackElement> {
         self.0.pop()
     }
@@ -43,13 +51,13 @@ impl Callstack {
         let ce = self.0.last().unwrap();
         match ce {
             CallstackElement::Account(_) => U512::zero(),
-            CallstackElement::Entrypoint(e) => e.call_def.amount
+            CallstackElement::Entrypoint(e) => e.call_def.amount()
         }
     }
 
     pub fn attach_value(&mut self, amount: U512) {
         if let Some(CallstackElement::Entrypoint(entrypoint)) = self.0.last_mut() {
-            entrypoint.call_def.amount = amount;
+            entrypoint.call_def = entrypoint.call_def.clone().with_amount(amount);
         }
     }
 
@@ -65,5 +73,9 @@ impl Callstack {
 
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 }

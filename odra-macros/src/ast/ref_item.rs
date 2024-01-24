@@ -152,6 +152,7 @@ mod ref_item_tests {
                         self.address,
                         odra::CallDef::new(
                             String::from("init"),
+                            true,
                             {
                                 let mut named_args = odra::RuntimeArgs::new();
                                 let _ = named_args.insert("total_supply", total_supply);
@@ -166,6 +167,7 @@ mod ref_item_tests {
                         self.address,
                         odra::CallDef::new(
                             String::from("total_supply"),
+                            false,
                             {
                                 let mut named_args = odra::RuntimeArgs::new();
                                 named_args
@@ -180,6 +182,7 @@ mod ref_item_tests {
                             self.address,
                             odra::CallDef::new(
                                 String::from("pay_to_mint"),
+                                true,
                                 {
                                     let mut named_args = odra::RuntimeArgs::new();
                                     named_args
@@ -194,6 +197,7 @@ mod ref_item_tests {
                             self.address,
                             odra::CallDef::new(
                                 String::from("approve"),
+                                true,
                                 {
                                     let mut named_args = odra::RuntimeArgs::new();
                                     let _ = named_args.insert("to", to);
@@ -210,6 +214,7 @@ mod ref_item_tests {
                             self.address,
                             odra::CallDef::new(
                                 String::from("airdrop"),
+                                false,
                                 {
                                     let mut named_args = odra::RuntimeArgs::new();
                                     let _ = named_args.insert("to", to);
@@ -248,6 +253,7 @@ mod ref_item_tests {
                         self.address,
                         odra::CallDef::new(
                             String::from("total_supply"),
+                            false,
                             {
                                 let mut named_args = odra::RuntimeArgs::new();
                                 named_args
@@ -262,6 +268,7 @@ mod ref_item_tests {
                             self.address,
                             odra::CallDef::new(
                                 String::from("pay_to_mint"),
+                                true,
                                 {
                                     let mut named_args = odra::RuntimeArgs::new();
                                     named_args
@@ -298,6 +305,7 @@ mod ref_item_tests {
                         self.address,
                         odra::CallDef::new(
                             String::from("total_supply"),
+                            false,
                             {
                                 let mut named_args = odra::RuntimeArgs::new();
                                 named_args
@@ -312,6 +320,7 @@ mod ref_item_tests {
                             self.address,
                             odra::CallDef::new(
                                 String::from("get_owner"),
+                                false,
                                 {
                                     let mut named_args = odra::RuntimeArgs::new();
                                     named_args
@@ -326,6 +335,7 @@ mod ref_item_tests {
                             self.address,
                             odra::CallDef::new(
                                 String::from("set_owner"),
+                                true,
                                 {
                                     let mut named_args = odra::RuntimeArgs::new();
                                     let _ = named_args.insert("new_owner", new_owner);
@@ -341,6 +351,7 @@ mod ref_item_tests {
                             self.address,
                             odra::CallDef::new(
                                 String::from("name"),
+                                false,
                                 {
                                     let mut named_args = odra::RuntimeArgs::new();
                                     named_args
@@ -355,6 +366,7 @@ mod ref_item_tests {
                             self.address,
                             odra::CallDef::new(
                                 String::from("symbol"),
+                                false,
                                 {
                                     let mut named_args = odra::RuntimeArgs::new();
                                     named_args

@@ -8,12 +8,13 @@ use casper_types::PublicKey;
 
 pub trait HostContext {
     fn set_caller(&self, caller: Address);
+    fn set_gas(&self, gas: u64);
     fn caller(&self) -> Address;
     fn get_account(&self, index: usize) -> Address;
     fn balance_of(&self, address: &Address) -> U512;
     fn advance_block_time(&self, time_diff: u64);
     /// Returns event bytes by contract address and index.
-    fn get_event(&self, contract_address: &Address, index: i32) -> Result<Bytes, EventError>;
+    fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError>;
     fn get_events_count(&self, contract_address: &Address) -> u32;
     fn call_contract(
         &self,
@@ -24,9 +25,10 @@ pub trait HostContext {
     fn new_contract(
         &self,
         name: &str,
-        init_args: Option<RuntimeArgs>,
-        entry_points_caller: Option<EntryPointsCaller>
+        init_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCaller
     ) -> Address;
+    fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller);
     fn contract_env(&self) -> ContractEnv;
     fn print_gas_report(&self);
     fn last_call_gas_cost(&self) -> u64;

@@ -68,6 +68,7 @@ mod test {
                         self.address,
                         odra::CallDef::new(
                             String::from("balance_of"),
+                            false,
                             {
                                 let mut named_args = odra::RuntimeArgs::new();
                                 let _ = named_args.insert("owner", owner);
@@ -131,6 +132,7 @@ mod test {
                             self.address,
                             odra::CallDef::new(
                                 String::from("balance_of"),
+                                false,
                                 {
                                     let mut named_args = odra::RuntimeArgs::new();
                                     if self.attached_value > odra::U512::zero() {

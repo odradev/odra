@@ -3,8 +3,8 @@ use derive_try_from_ref::TryFromRef;
 use crate::{ir::ModuleImplIR, utils};
 
 use super::deployer_utils::{
-    DeployerInitSignature, EntrypointCallerExpr, EntrypointsInitExpr, HostRefInstanceExpr,
-    NewContractExpr
+    CallEpcExpr, DeployerInitSignature, DeployerLoadSignature, EntrypointCallerExpr,
+    EntrypointsInitExpr, EpcSignature, HostRefInstanceExpr, LoadContractExpr, NewContractExpr
 };
 
 #[derive(syn_derive::ToTokens)]
@@ -35,7 +35,11 @@ struct DeployImplItem {
     #[syn(braced)]
     brace_token: syn::token::Brace,
     #[syn(in = brace_token)]
-    init_fn: ContractInitFn
+    epc_fn: ContractEpcFn,
+    #[syn(in = brace_token)]
+    init_fn: ContractInitFn,
+    #[syn(in = brace_token)]
+    load_fn: ContractLoadFn
 }
 
 impl TryFrom<&'_ ModuleImplIR> for DeployImplItem {
@@ -46,9 +50,27 @@ impl TryFrom<&'_ ModuleImplIR> for DeployImplItem {
             impl_token: Default::default(),
             ident: module.deployer_ident()?,
             brace_token: Default::default(),
-            init_fn: module.try_into()?
+            epc_fn: module.try_into()?,
+            init_fn: module.try_into()?,
+            load_fn: module.try_into()?
         })
     }
+}
+
+#[derive(syn_derive::ToTokens, TryFromRef)]
+#[source(ModuleImplIR)]
+#[err(syn::Error)]
+pub struct ContractEpcFn {
+    #[expr(utils::syn::visibility_pub())]
+    vis: syn::Visibility,
+    sig: EpcSignature,
+    #[syn(braced)]
+    #[default]
+    braces: syn::token::Brace,
+    #[syn(in = braces)]
+    entry_points: EntrypointsInitExpr,
+    #[syn(in = braces)]
+    caller: EntrypointCallerExpr
 }
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
@@ -62,11 +84,27 @@ struct ContractInitFn {
     #[default]
     braces: syn::token::Brace,
     #[syn(in = braces)]
-    entry_points: EntrypointsInitExpr,
-    #[syn(in = braces)]
-    caller: EntrypointCallerExpr,
+    caller: CallEpcExpr,
     #[syn(in = braces)]
     new_contract: NewContractExpr,
+    #[syn(in = braces)]
+    host_ref_instance: HostRefInstanceExpr
+}
+
+#[derive(syn_derive::ToTokens, TryFromRef)]
+#[source(ModuleImplIR)]
+#[err(syn::Error)]
+struct ContractLoadFn {
+    #[expr(utils::syn::visibility_pub())]
+    vis: syn::Visibility,
+    sig: DeployerLoadSignature,
+    #[syn(braced)]
+    #[default]
+    braces: syn::token::Brace,
+    #[syn(in = braces)]
+    caller: CallEpcExpr,
+    #[syn(in = braces)]
+    load_contract: LoadContractExpr,
     #[syn(in = braces)]
     host_ref_instance: HostRefInstanceExpr
 }
@@ -92,23 +130,8 @@ mod deployer_impl {
             pub struct Erc20Deployer;
 
             impl Erc20Deployer {
-                pub fn init(env: &odra::HostEnv, total_supply: Option<U256>) -> Erc20HostRef {
-                    let entry_points = odra::prelude::vec![
-                        odra::EntryPoint::new(odra::prelude::string::String::from("init"), odra::prelude::vec![
-                            odra::EntryPointArgument::new(odra::prelude::string::String::from("total_supply"), <Option::<U256> as odra::casper_types::CLTyped>::cl_type())
-                        ]),
-                        odra::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
-                        odra::EntryPoint::new(odra::prelude::string::String::from("pay_to_mint"), odra::prelude::vec![]),
-                        odra::EntryPoint::new(odra::prelude::string::String::from("approve"), odra::prelude::vec![
-                            odra::EntryPointArgument::new(odra::prelude::string::String::from("to"), <Address as odra::casper_types::CLTyped>::cl_type()),
-                            odra::EntryPointArgument::new(odra::prelude::string::String::from("amount"), <U256 as odra::casper_types::CLTyped>::cl_type())
-                        ]),
-                        odra::EntryPoint::new(odra::prelude::string::String::from("airdrop"), odra::prelude::vec![
-                            odra::EntryPointArgument::new(odra::prelude::string::String::from("to"), <odra::prelude::vec::Vec<Address> as odra::casper_types::CLTyped>::cl_type()),
-                            odra::EntryPointArgument::new(odra::prelude::string::String::from("amount"), <U256 as odra::casper_types::CLTyped>::cl_type())
-                        ])
-                    ];
-                    let caller = odra::EntryPointsCaller::new(env.clone(), entry_points, |contract_env, call_def| {
+                pub fn epc(env: &odra::HostEnv) -> odra::EntryPointsCaller {
+                    odra::EntryPointsCaller::new(env.clone(), entry_points, |contract_env, call_def| {
                         match call_def.method() {
                             "init" => {
                                 let result = __erc20_exec_parts::execute_init(contract_env);
@@ -134,7 +157,11 @@ mod deployer_impl {
                                 odra::VmError::NoSuchMethod(odra::prelude::String::from(name)),
                             ))
                         }
-                    });
+                    })
+                }
+
+                pub fn init(env: &odra::HostEnv, total_supply: Option<U256>) -> Erc20HostRef {
+                    let caller = Self::epc(env);
 
                     let address = env.new_contract(
                         "Erc20",
@@ -143,12 +170,22 @@ mod deployer_impl {
                             let _ = named_args.insert("total_supply", total_supply);
                             named_args
                         }),
-                        Some(caller)
+                        caller
                     );
                     Erc20HostRef {
                         address,
                         env: env.clone(),
                         attached_value: odra::U512::zero()
+                    }
+                }
+
+                pub fn load(env: &odra::HostEnv, address: odra::Address) -> Erc20HostRef {
+                    let caller = Self::epc(env);
+                    env.register_contract(address, caller);
+                    Erc20HostRef {
+                        address,
+                        env: env.clone(),
+                        attached_value: odra::U512::zero(),
                     }
                 }
             }

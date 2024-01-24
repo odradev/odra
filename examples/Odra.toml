@@ -77,3 +77,7 @@ fqn = "odra_examples::features::access_control::MockModerated"
 [[contracts]]
 name = "PauseableCounter"
 fqn = "odra_examples::features::pauseable::PauseableCounter"
+
+[[contracts]]
+name = "LivenetContract"
+fqn = "odra_examples::features::livenet::LivenetContract"

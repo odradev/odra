@@ -1,7 +1,7 @@
 use super::balance::AccountBalance;
-use super::callstack::{Callstack, CallstackElement};
 use super::storage::Storage;
 use anyhow::Result;
+use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::account::AccountHash;
 use odra_core::casper_types::bytesrepr::Error;
 use odra_core::crypto::generate_key_pairs;
@@ -80,16 +80,14 @@ impl OdraVmState {
         }
     }
 
-    pub fn get_event(&self, address: &Address, index: i32) -> Result<Bytes, EventError> {
+    pub fn get_event(&self, address: &Address, index: u32) -> Result<Bytes, EventError> {
         let events = self.events.get(address);
         if events.is_none() {
             return Err(EventError::IndexOutOfBounds);
         }
         let events: &Vec<Bytes> = events.unwrap();
-        let event_position = odra_core::utils::event_absolute_position(events.len(), index)
-            .ok_or(EventError::IndexOutOfBounds)?;
         let event = events
-            .get(event_position)
+            .get(index as usize)
             .ok_or(EventError::IndexOutOfBounds)?;
         Ok(event.clone())
     }

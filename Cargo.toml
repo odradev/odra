@@ -4,13 +4,13 @@ members = [
     "odra-vm",
     "core",
     "odra-macros",
+    "odra-casper/livenet-env",
+    "odra-casper/casper-client",
     "odra-casper/wasm-env",
     "odra-casper/test-vm",
     "odra-test"
-#    needs a refactor
-#    "odra-casper/livenet"
 ]
-exclude = [ "examples", "examples2", "modules", "odra-casper/proxy-caller" ]
+exclude = [ "examples", "modules", "odra-casper/proxy-caller" ]
 resolver = "2"
 
 [workspace.package]
@@ -25,3 +25,4 @@ casper-contract = { version = "3.0.0", default-features = false }
 casper-types = { version = "3.0.0", default-features = false }
 casper-execution-engine = "5.0.0"
 casper-event-standard = "0.4.1"
+blake2 = "0.10.6"

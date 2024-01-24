@@ -4,23 +4,33 @@ use casper_types::{CLTyped, RuntimeArgs, U512};
 
 #[derive(Clone, Debug)]
 pub struct CallDef {
-    pub entry_point: String,
-    pub args: RuntimeArgs,
-    pub amount: U512
+    entry_point: String,
+    args: RuntimeArgs,
+    amount: U512,
+    is_mut: bool
 }
 
 impl CallDef {
-    pub fn new<T: ToString>(method: T, args: RuntimeArgs) -> Self {
+    pub fn new<T: ToString>(method: T, is_mut: bool, args: RuntimeArgs) -> Self {
         CallDef {
             entry_point: method.to_string(),
             args,
-            amount: U512::zero()
+            amount: U512::zero(),
+            is_mut
         }
     }
 
-    pub fn with_amount(mut self, amount: U512) -> Self {
+    pub fn with_amount(mut self, amount: U512) -> CallDef {
         self.amount = amount;
         self
+    }
+
+    pub fn entry_point(&self) -> &str {
+        &self.entry_point
+    }
+
+    pub fn amount(&self) -> U512 {
+        self.amount
     }
 
     pub fn args(&self) -> &RuntimeArgs {
@@ -37,5 +47,9 @@ impl CallDef {
 
     pub fn attached_value(&self) -> U512 {
         self.amount
+    }
+
+    pub fn is_mut(&self) -> bool {
+        self.is_mut
     }
 }

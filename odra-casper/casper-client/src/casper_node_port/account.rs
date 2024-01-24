@@ -16,6 +16,12 @@ pub struct Account {
     action_thresholds: ActionThresholds
 }
 
+impl Account {
+    pub fn named_keys(&self) -> impl Iterator<Item = &NamedKey> {
+        self.named_keys.iter()
+    }
+}
+
 #[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize, DataSize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct AssociatedKey {

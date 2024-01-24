@@ -1,15 +1,12 @@
 [package]
-name = "odra-vm"
+name = "odra-casper-livenet-env"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-odra-core = { path = "../core" }
-anyhow = "1.0.75"
-url = "2.4.1"
+odra-core = { path = "../../core", default-features = false }
+odra-casper-client = { path = "../casper-client" }
 blake2 = { workspace = true }
-
-[dev-dependencies]
-odra = { path = "../odra" }
+log = "0.4.20"

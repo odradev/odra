@@ -16,6 +16,10 @@ impl HostContext for OdraVmHost {
         self.vm.borrow().set_caller(caller)
     }
 
+    fn set_gas(&self, gas: u64) {
+        // Set gas does nothing in this context
+    }
+
     fn caller(&self) -> Address {
         *self.vm.borrow().callstack_tip().address()
     }
@@ -32,7 +36,7 @@ impl HostContext for OdraVmHost {
         self.vm.borrow().advance_block_time_by(time_diff)
     }
 
-    fn get_event(&self, contract_address: &Address, index: i32) -> Result<Bytes, EventError> {
+    fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
         self.vm.borrow().get_event(contract_address, index)
     }
 
@@ -63,24 +67,32 @@ impl HostContext for OdraVmHost {
     fn new_contract(
         &self,
         name: &str,
-        init_args: Option<RuntimeArgs>,
-        entry_points_caller: Option<EntryPointsCaller>
+        init_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCaller
     ) -> Address {
         // TODO: panic in nice way
         let address = self
             .vm
             .borrow()
-            .register_contract(name, entry_points_caller.unwrap());
+            .register_contract(name, entry_points_caller.clone());
 
-        if let Some(init_args) = init_args {
+        if entry_points_caller
+            .entry_points()
+            .iter()
+            .any(|ep| ep.name == "init")
+        {
             let _ = self.call_contract(
                 &address,
-                CallDef::new(String::from("init"), init_args),
+                CallDef::new(String::from("init"), true, init_args),
                 false
             );
         }
 
         address
+    }
+
+    fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller) {
+        panic!("register_contract is not supported for OdraVM");
     }
 
     fn contract_env(&self) -> ContractEnv {

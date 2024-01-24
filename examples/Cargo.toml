@@ -7,10 +7,15 @@ edition = "2021"
 odra = { path = "../odra", default-features = false }
 odra-modules = { path = "../modules", default-features = false }
 sha3 = { version = "0.10.6", default-features = false }
+odra-casper-livenet-env = { path = "../odra-casper/livenet-env", optional = true }
 
 [dev-dependencies]
 odra-test = { path = "../odra-test" }
 hex = "0.4.3"
+
+[features]
+default = []
+livenet = ["odra-casper-livenet-env"]
 
 [[bin]]
 name = "odra_examples_build_contract"
@@ -22,14 +27,21 @@ name = "odra_examples_build_schema"
 path = "bin/build_schema.rs"
 test = false
 
+[[bin]]
+name = "erc20_on_livenet"
+path = "bin/erc20_on_livenet.rs"
+required-features = ["livenet"]
+test = false
+
+[[bin]]
+name = "livenet_tests"
+path = "bin/livenet_tests.rs"
+required-features = ["livenet"]
+test = false
+
 [profile.release]
 codegen-units = 1
 lto = true
 
 [profile.dev.package."*"]
 opt-level = 3
-
-#[[bin]]
-#name = "erc20-on-livenet"
-#path = "bin/erc20_on_livenet.rs"
-#required-features = ["casper-livenet"]

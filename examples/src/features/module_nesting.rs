@@ -70,9 +70,9 @@ pub enum Status {
 
 #[derive(OdraType, PartialEq, Debug)]
 pub struct OperationResult {
-    id: u32,
-    status: Status,
-    description: String
+    pub id: u32,
+    pub status: Status,
+    pub description: String
 }
 
 #[derive(Event, PartialEq, Debug)]

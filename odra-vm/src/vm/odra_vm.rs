@@ -5,9 +5,14 @@ use std::sync::{Arc, RwLock};
 
 use anyhow::Result;
 use odra_core::call_def::CallDef;
+use odra_core::callstack::CallstackElement;
+use odra_core::callstack::CallstackElement::Entrypoint;
+use odra_core::contract_container::ContractContainer;
+use odra_core::contract_register::ContractRegister;
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::event::EventError;
 use odra_core::{
+    callstack,
     casper_types::{
         bytesrepr::{FromBytes, ToBytes},
         U512
@@ -16,9 +21,6 @@ use odra_core::{
 };
 use odra_core::{OdraError, VmError};
 
-use super::callstack::{CallstackElement, Entrypoint};
-use super::contract_container::ContractContainer;
-use super::contract_register::ContractRegister;
 use super::odra_vm_state::OdraVmState;
 
 #[derive(Default)]
@@ -37,8 +39,7 @@ impl OdraVm {
         let address = { self.state.write().unwrap().next_contract_address() };
         // Register new contract under the new address.
         {
-            let contract_namespace = self.state.read().unwrap().get_contract_namespace();
-            let contract = ContractContainer::new(&contract_namespace, entry_points_caller);
+            let contract = ContractContainer::new(entry_points_caller);
             self.contract_register
                 .write()
                 .unwrap()
@@ -55,8 +56,8 @@ impl OdraVm {
     pub fn call_contract(&self, address: Address, call_def: CallDef) -> Bytes {
         self.prepare_call(address, &call_def);
         // Call contract from register.
-        if call_def.amount > U512::zero() {
-            let status = self.checked_transfer_tokens(&self.caller(), &address, &call_def.amount);
+        if call_def.amount() > U512::zero() {
+            let status = self.checked_transfer_tokens(&self.caller(), &address, &call_def.amount());
             if let Err(err) = status {
                 self.revert(err);
             }
@@ -79,7 +80,8 @@ impl OdraVm {
         }
         // Put the address on stack.
 
-        let element = CallstackElement::Entrypoint(Entrypoint::new(address, call_def.clone()));
+        let element =
+            CallstackElement::Entrypoint(callstack::Entrypoint::new(address, call_def.clone()));
         state.push_callstack_element(element);
     }
 
@@ -114,7 +116,7 @@ impl OdraVm {
     pub fn revert(&self, error: OdraError) -> ! {
         let mut revert_msg = String::from("");
         if let CallstackElement::Entrypoint(ep) = self.callstack_tip() {
-            revert_msg = format!("{:?}::{}", ep.address, ep.call_def.entry_point);
+            revert_msg = format!("{:?}::{}", ep.address, ep.call_def.entry_point());
         }
 
         let mut state = self.state.write().unwrap();
@@ -153,7 +155,7 @@ impl OdraVm {
         match self.state.read().unwrap().callstack_tip() {
             CallstackElement::Account(_) => todo!(),
             CallstackElement::Entrypoint(ep) => {
-                ep.call_def.args.get(name).unwrap().inner_bytes().to_vec()
+                ep.call_def.args().get(name).unwrap().inner_bytes().to_vec()
             }
         }
     }
@@ -202,7 +204,7 @@ impl OdraVm {
         self.state.write().unwrap().emit_event(event_data);
     }
 
-    pub fn get_event(&self, address: &Address, index: i32) -> Result<Bytes, EventError> {
+    pub fn get_event(&self, address: &Address, index: u32) -> Result<Bytes, EventError> {
         self.state.read().unwrap().get_event(address, index)
     }
 

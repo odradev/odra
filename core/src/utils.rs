@@ -28,18 +28,21 @@ pub(crate) fn extract_event_name(bytes: &[u8]) -> Result<String, EventError> {
 /// assert_eq!(event_absolute_position(10, -1), Some(9));
 /// assert_eq!(event_absolute_position(10, 10), None);
 /// ```
-pub fn event_absolute_position(len: usize, index: i32) -> Option<usize> {
+pub fn event_absolute_position(len: u32, index: i32) -> Option<u32> {
     if index.is_negative() {
-        let abs_idx = index.wrapping_abs() as usize;
-        if abs_idx > len {
+        let abs_idx = index.wrapping_abs();
+        if abs_idx > len as i32 {
             return None;
         }
-        Some(len - abs_idx)
+        Some(
+            len.checked_sub(abs_idx as u32)
+                .expect("Checked sub failed, it shouldn't happen")
+        )
     } else {
-        if index as usize >= len {
+        if index >= len as i32 {
             return None;
         }
-        Some(index as usize)
+        Some(index as u32)
     }
 }
 
