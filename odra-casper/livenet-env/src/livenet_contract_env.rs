@@ -73,7 +73,7 @@ impl ContractContext for LivenetContractEnv {
     fn revert(&self, error: OdraError) -> ! {
         let mut revert_msg = String::from("");
         if let CallstackElement::Entrypoint(ep) = self.callstack.borrow().current() {
-            revert_msg = format!("{:?}::{}", ep.address, ep.call_def.entry_point);
+            revert_msg = format!("{:?}::{}", ep.address, ep.call_def.entry_point());
         }
 
         panic!("Revert: {:?} - {}", error, revert_msg);
@@ -83,7 +83,7 @@ impl ContractContext for LivenetContractEnv {
         match self.callstack.borrow().current() {
             CallstackElement::Account(_) => todo!("get_named_arg_bytes"),
             CallstackElement::Entrypoint(ep) => {
-                Bytes::from(ep.call_def.args.get(name).unwrap().inner_bytes().to_vec())
+                Bytes::from(ep.call_def.args().get(name).unwrap().inner_bytes().to_vec())
             }
         }
     }

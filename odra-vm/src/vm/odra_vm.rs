@@ -39,8 +39,7 @@ impl OdraVm {
         let address = { self.state.write().unwrap().next_contract_address() };
         // Register new contract under the new address.
         {
-            let contract_namespace = self.state.read().unwrap().get_contract_namespace();
-            let contract = ContractContainer::new(&contract_namespace, entry_points_caller);
+            let contract = ContractContainer::new(entry_points_caller);
             self.contract_register
                 .write()
                 .unwrap()
@@ -57,8 +56,8 @@ impl OdraVm {
     pub fn call_contract(&self, address: Address, call_def: CallDef) -> Bytes {
         self.prepare_call(address, &call_def);
         // Call contract from register.
-        if call_def.amount > U512::zero() {
-            let status = self.checked_transfer_tokens(&self.caller(), &address, &call_def.amount);
+        if call_def.amount() > U512::zero() {
+            let status = self.checked_transfer_tokens(&self.caller(), &address, &call_def.amount());
             if let Err(err) = status {
                 self.revert(err);
             }
@@ -117,7 +116,7 @@ impl OdraVm {
     pub fn revert(&self, error: OdraError) -> ! {
         let mut revert_msg = String::from("");
         if let CallstackElement::Entrypoint(ep) = self.callstack_tip() {
-            revert_msg = format!("{:?}::{}", ep.address, ep.call_def.entry_point);
+            revert_msg = format!("{:?}::{}", ep.address, ep.call_def.entry_point());
         }
 
         let mut state = self.state.write().unwrap();
@@ -156,7 +155,7 @@ impl OdraVm {
         match self.state.read().unwrap().callstack_tip() {
             CallstackElement::Account(_) => todo!(),
             CallstackElement::Entrypoint(ep) => {
-                ep.call_def.args.get(name).unwrap().inner_bytes().to_vec()
+                ep.call_def.args().get(name).unwrap().inner_bytes().to_vec()
             }
         }
     }

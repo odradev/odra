@@ -371,15 +371,15 @@ impl CasperClient {
         log::info(format!(
             "Calling {:?} with entrypoint \"{}\" through proxy.",
             addr.to_string(),
-            call_def.entry_point
+            call_def.entry_point()
         ));
 
         let args = runtime_args! {
             CONTRACT_PACKAGE_HASH_ARG => *addr.as_contract_package_hash().unwrap(),
-            ENTRY_POINT_ARG => call_def.entry_point,
-            ARGS_ARG => Bytes::from(call_def.args.to_bytes().unwrap()),
-            ATTACHED_VALUE_ARG => call_def.amount,
-            AMOUNT_ARG => call_def.amount,
+            ENTRY_POINT_ARG => call_def.entry_point(),
+            ARGS_ARG => Bytes::from(call_def.args().to_bytes().unwrap()),
+            ATTACHED_VALUE_ARG => call_def.amount(),
+            AMOUNT_ARG => call_def.amount(),
         };
 
         let session = ExecutableDeployItem::ModuleBytes {
@@ -424,13 +424,13 @@ impl CasperClient {
         log::info(format!(
             "Calling {:?} with entrypoint \"{}\".",
             addr.to_string(),
-            call_def.entry_point
+            call_def.entry_point()
         ));
         let session = ExecutableDeployItem::StoredVersionedContractByHash {
             hash: *addr.as_contract_package_hash().unwrap(),
             version: None,
-            entry_point: call_def.entry_point,
-            args: call_def.args
+            entry_point: call_def.entry_point().to_string(),
+            args: call_def.args().clone()
         };
         let deploy = self.new_deploy(session, self.gas);
         let request = json!(

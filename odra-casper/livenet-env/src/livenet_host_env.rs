@@ -123,10 +123,10 @@ impl HostContext for LivenetEnv {
     }
 
     fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller) {
-        self.contract_register.write().unwrap().add(
-            address,
-            ContractContainer::new(&address.to_string(), entry_points_caller)
-        );
+        self.contract_register
+            .write()
+            .unwrap()
+            .add(address, ContractContainer::new(entry_points_caller));
     }
 
     fn new_contract(

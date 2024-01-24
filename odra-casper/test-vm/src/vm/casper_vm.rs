@@ -202,14 +202,14 @@ impl CasperVm {
         let deploy_item = if use_proxy {
             let session_code =
                 include_bytes!("../../resources/proxy_caller_with_return.wasm").to_vec();
-            let args_bytes: Vec<u8> = call_def.args.to_bytes().unwrap();
-            let entry_point = call_def.entry_point.clone();
+            let args_bytes: Vec<u8> = call_def.args().to_bytes().unwrap();
+            let entry_point = call_def.entry_point();
             let args = runtime_args! {
                 CONTRACT_PACKAGE_HASH_ARG => hash,
                 ENTRY_POINT_ARG => entry_point,
                 ARGS_ARG => Bytes::from(args_bytes),
-                ATTACHED_VALUE_ARG => call_def.amount,
-                AMOUNT_ARG => call_def.amount,
+                ATTACHED_VALUE_ARG => call_def.amount(),
+                AMOUNT_ARG => call_def.amount(),
             };
 
             DeployItemBuilder::new()
@@ -227,8 +227,8 @@ impl CasperVm {
                 .with_stored_versioned_contract_by_hash(
                     hash.value(),
                     None,
-                    &call_def.entry_point,
-                    call_def.args.clone()
+                    &call_def.entry_point(),
+                    call_def.args().clone()
                 )
                 .with_deploy_hash(self.next_hash())
                 .build()
@@ -240,7 +240,7 @@ impl CasperVm {
         self.context.exec(execute_request).commit();
         self.collect_gas();
         self.gas_cost.push((
-            format!("call_entrypoint {}", call_def.entry_point),
+            format!("call_entrypoint {}", call_def.entry_point()),
             self.last_call_contract_gas_cost()
         ));
 
@@ -248,7 +248,7 @@ impl CasperVm {
         if let Some(error) = self.context.get_error() {
             let odra_error = parse_error(error);
             self.error = Some(odra_error.clone());
-            self.panic_with_error(odra_error, &call_def.entry_point, hash);
+            self.panic_with_error(odra_error, call_def.entry_point(), hash);
         } else {
             self.get_active_account_result()
         }

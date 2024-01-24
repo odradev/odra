@@ -10,14 +10,12 @@ pub type EntrypointArgs = Vec<String>;
 
 #[derive(Clone)]
 pub struct ContractContainer {
-    _name: String,
     entry_points_caller: EntryPointsCaller
 }
 
 impl ContractContainer {
-    pub fn new(name: &str, entry_points_caller: EntryPointsCaller) -> Self {
+    pub fn new(entry_points_caller: EntryPointsCaller) -> Self {
         Self {
-            _name: String::from(name),
             entry_points_caller
         }
     }
@@ -175,7 +173,6 @@ mod tests {
                 )))
             });
             Self {
-                _name: String::from("contract"),
                 entry_points_caller
             }
         }
@@ -203,7 +200,6 @@ mod tests {
             );
 
             Self {
-                _name: String::from("contract"),
                 entry_points_caller
             }
         }
