@@ -1,3 +1,4 @@
+//! Livenet implementation of HostContext for HostEnv.
 use std::sync::{Arc, RwLock};
 use std::thread::sleep;
 
@@ -16,6 +17,7 @@ use odra_core::{
 
 use crate::livenet_contract_env::LivenetContractEnv;
 
+/// LivenetHost struct.
 pub struct LivenetHost {
     casper_client: Rc<RefCell<CasperClient>>,
     contract_register: Arc<RwLock<ContractRegister>>,
@@ -24,6 +26,7 @@ pub struct LivenetHost {
 }
 
 impl LivenetHost {
+    /// Creates a new instance of LivenetHost.
     pub fn new() -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(Self::new_instance()))
     }

@@ -1,3 +1,4 @@
+//! Livenet contract environment.
 use blake2::digest::VariableOutput;
 use blake2::Blake2bVar;
 use odra_casper_client::casper_client::CasperClient;
@@ -9,6 +10,7 @@ use odra_core::{CallDef, ContractContext};
 use std::io::Write;
 use std::sync::{Arc, RwLock};
 
+/// Livenet contract environment struct.
 pub struct LivenetContractEnv {
     casper_client: Rc<RefCell<CasperClient>>,
     callstack: Rc<RefCell<Callstack>>,
@@ -108,6 +110,7 @@ impl ContractContext for LivenetContractEnv {
 }
 
 impl LivenetContractEnv {
+    /// Creates a new LivenetContractEnv.
     pub fn new(
         casper_client: Rc<RefCell<CasperClient>>,
         callstack: Rc<RefCell<Callstack>>,
