@@ -78,7 +78,7 @@ impl EventsFnsItem {
         utils::misc::ret_ty(&btree)
     }
 
-    fn events_fn(ir: &ModuleStructIR) -> Result<FnItem, syn::Error> {
+    fn events_fn(ir: &ModuleStructIR) -> syn::Result<FnItem> {
         let ident_events = utils::ident::events();
         let struct_events_stmt = struct_events_stmt(ir);
         let chain_events_expr = chain_events_expr(ir)?;
@@ -133,7 +133,7 @@ fn struct_events_stmt(ir: &ModuleStructIR) -> syn::Stmt {
     parse_quote!(let #events_ident = #vec;)
 }
 
-fn chain_events_expr(ir: &ModuleStructIR) -> Result<syn::Expr, syn::Error> {
+fn chain_events_expr(ir: &ModuleStructIR) -> syn::Result<syn::Expr> {
     let ev_ty = utils::ty::event();
     let events_ident = utils::ident::events();
     let fields_events = ir
@@ -169,7 +169,7 @@ fn struct_event_schemas_stmt(ir: &ModuleStructIR) -> syn::Stmt {
     parse_quote!(let #result_ident = #new_btree_map;)
 }
 
-fn chain_event_schemas_expr(ir: &ModuleStructIR) -> Result<syn::Expr, syn::Error> {
+fn chain_event_schemas_expr(ir: &ModuleStructIR) -> syn::Result<syn::Expr> {
     let result_ident = utils::ident::result();
     let fields_events = ir
         .unique_fields_ty()?

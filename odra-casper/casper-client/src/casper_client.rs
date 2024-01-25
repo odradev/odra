@@ -11,11 +11,11 @@ use odra_core::casper_types::{sign, URef};
 use odra_core::{
     casper_types::{
         bytesrepr::{Bytes, FromBytes, ToBytes},
-        runtime_args, ContractHash, ContractPackageHash, ExecutionResult, Key as CasperKey,
-        PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, U512
+        runtime_args, CLTyped, ContractHash, ContractPackageHash, ExecutionResult,
+        Key as CasperKey, PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, U512
     },
     consts::*,
-    Address, CLTyped, CallDef, ExecutionError, OdraError, OdraResult
+    Address, CallDef, ExecutionError, OdraError, OdraResult
 };
 
 use crate::casper_node_port::query_balance::{

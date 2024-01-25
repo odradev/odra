@@ -8,7 +8,11 @@ use crate::erc721::owned_erc721_with_metadata::OwnedErc721WithMetadata;
 use crate::erc721::Erc721;
 use crate::erc721_token::errors::Error;
 use odra::prelude::*;
-use odra::{Address, Bytes, Module, ModuleWrapper, U256};
+use odra::{
+    casper_types::{bytesrepr::Bytes, U256},
+    module::{Module, ModuleWrapper},
+    Address
+};
 
 /// The ERC721 token implementation.
 ///
@@ -146,7 +150,7 @@ mod tests {
     use crate::erc721_receiver::Erc721ReceiverDeployer;
     use crate::erc721_token::errors::Error::TokenAlreadyExists;
     use odra::prelude::*;
-    use odra::{Address, HostEnv, OdraAddress, OdraError, VmError, U256};
+    use odra::{casper_types::U256, Address, HostEnv, OdraError, VmError};
 
     const NAME: &str = "PlascoinNFT";
     const SYMBOL: &str = "PLSNFT";

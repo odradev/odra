@@ -6,13 +6,15 @@ use odra_casper_client::log::info;
 use odra_core::callstack::{Callstack, CallstackElement, Entrypoint};
 use odra_core::contract_container::ContractContainer;
 use odra_core::contract_register::ContractRegister;
-use odra_core::event::EventError;
-use odra_core::event::EventError::CouldntExtractEventData;
-use odra_core::prelude::*;
+use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::{
-    Address, Bytes, CallDef, ContractEnv, EntryPointsCaller, HostContext, OdraError, PublicKey,
-    RuntimeArgs, ToBytes, U512
+    casper_types::{
+        bytesrepr::{Bytes, ToBytes},
+        PublicKey, RuntimeArgs, U512
+    },
+    Address, CallDef, ContractEnv, HostContext, OdraError
 };
+use odra_core::{prelude::*, EventError};
 
 use crate::livenet_contract_env::LivenetContractEnv;
 
@@ -80,7 +82,7 @@ impl HostContext for LivenetHost {
         self.casper_client
             .borrow()
             .get_event(contract_address, index)
-            .map_err(|_| CouldntExtractEventData)
+            .map_err(|_| EventError::CouldntExtractEventData)
     }
 
     fn get_events_count(&self, contract_address: &Address) -> u32 {

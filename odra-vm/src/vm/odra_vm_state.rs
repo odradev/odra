@@ -4,11 +4,13 @@ use anyhow::Result;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::account::AccountHash;
 use odra_core::casper_types::bytesrepr::Error;
-use odra_core::crypto::generate_key_pairs;
-use odra_core::event::EventError;
-use odra_core::{
-    Address, Bytes, ExecutionError, FromBytes, OdraError, PublicKey, SecretKey, ToBytes, U512
+use odra_core::casper_types::{
+    bytesrepr::{Bytes, FromBytes, ToBytes},
+    PublicKey, SecretKey, U512
 };
+use odra_core::crypto::generate_key_pairs;
+use odra_core::EventError;
+use odra_core::{Address, ExecutionError, OdraError};
 use std::collections::BTreeMap;
 
 pub struct OdraVmState {
@@ -23,10 +25,6 @@ pub struct OdraVmState {
 }
 
 impl OdraVmState {
-    pub fn get_backend_name(&self) -> String {
-        "MockVM".to_string()
-    }
-
     pub fn callee(&self) -> Address {
         *self.callstack.current().address()
     }

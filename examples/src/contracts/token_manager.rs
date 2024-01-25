@@ -1,6 +1,6 @@
 use crate::contracts::owned_token::OwnedToken;
 use odra::prelude::*;
-use odra::{Address, Mapping, ModuleWrapper, Variable, U256};
+use odra::{casper_types::U256, module::ModuleWrapper, Address, Mapping, Variable};
 
 #[odra::module]
 pub struct TokenManager {

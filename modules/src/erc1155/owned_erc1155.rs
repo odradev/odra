@@ -1,6 +1,9 @@
 //! Erc1155 with ownership.
 use odra::prelude::*;
-use odra::{Address, Bytes, U256};
+use odra::{
+    casper_types::{bytesrepr::Bytes, U256},
+    Address
+};
 
 /// The ERC-1155 interface with the Ownable trait included manually.
 pub trait OwnedErc1155 {

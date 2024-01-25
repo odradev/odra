@@ -2,10 +2,12 @@ use crate::host_functions;
 use casper_types::bytesrepr::ToBytes;
 use casper_types::U512;
 use odra_core::casper_types;
+use odra_core::casper_types::bytesrepr::Bytes;
 use odra_core::prelude::*;
-use odra_core::{Address, Bytes, OdraError};
+use odra_core::{Address, OdraError};
 use odra_core::{ContractContext, ContractEnv};
 
+/// ContractContext implementation for Wasm environment.
 #[derive(Clone)]
 pub struct WasmContractEnv;
 
@@ -68,6 +70,7 @@ impl ContractContext for WasmContractEnv {
 }
 
 impl WasmContractEnv {
+    /// Creates new ContractEnv with WasmContractEnv as backend.
     pub fn new_env() -> ContractEnv {
         ContractEnv::new(0, Rc::new(RefCell::new(WasmContractEnv)))
     }

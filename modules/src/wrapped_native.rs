@@ -2,7 +2,11 @@ use crate::erc20::Erc20;
 use crate::wrapped_native::events::{Deposit, Withdrawal};
 use odra::prelude::*;
 use odra::uints::{ToU256, ToU512};
-use odra::{Address, Module, ModuleWrapper, UnwrapOrRevert, U256};
+use odra::{
+    casper_types::U256,
+    module::{Module, ModuleWrapper},
+    Address, UnwrapOrRevert
+};
 
 #[odra::module(events = [Deposit, Withdrawal])]
 pub struct WrappedNativeToken {
@@ -83,7 +87,7 @@ impl WrappedNativeToken {
 
 pub mod events {
     use casper_event_standard::Event;
-    use odra::{Address, U256};
+    use odra::{casper_types::U256, Address};
 
     #[derive(Event, Debug, Eq, PartialEq)]
     pub struct Deposit {
@@ -108,7 +112,10 @@ mod tests {
     use odra::prelude::*;
     use odra::uints::{ToU256, ToU512};
     use odra::VmError::BalanceExceeded;
-    use odra::{Address, HostEnv, OdraError, U256, U512};
+    use odra::{
+        casper_types::{U256, U512},
+        Address, HostEnv, OdraError
+    };
 
     fn setup() -> (
         HostEnv,

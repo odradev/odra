@@ -343,7 +343,7 @@ mod test {
                         <Erc20 as odra::contract_def::HasEvents>::event_schemas()
                     );
                     let named_args = Some({
-                        let mut named_args = odra::RuntimeArgs::new();
+                        let mut named_args = odra::casper_types::RuntimeArgs::new();
                         let _ = named_args.insert(
                             "total_supply",
                             odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::get_named_arg::<Option<U256>>("total_supply")
@@ -432,7 +432,7 @@ mod test {
                     let schemas = odra::casper_event_standard::Schemas(
                         <Erc20 as odra::contract_def::HasEvents>::event_schemas()
                     );
-                    let named_args = Option::<odra::RuntimeArgs>::None;
+                    let named_args = Option::<odra::casper_types::RuntimeArgs>::None;
                     odra::odra_casper_wasm_env::host_functions::install_contract(
                         entry_points(),
                         schemas,
@@ -533,7 +533,7 @@ mod test {
                     let schemas = odra::casper_event_standard::Schemas(
                         <Erc20 as odra::contract_def::HasEvents>::event_schemas()
                     );
-                    let named_args = Option::<odra::RuntimeArgs>::None;
+                    let named_args = Option::<odra::casper_types::RuntimeArgs>::None;
                     odra::odra_casper_wasm_env::host_functions::install_contract(
                         entry_points(),
                         schemas,

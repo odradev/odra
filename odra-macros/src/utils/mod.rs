@@ -12,7 +12,7 @@ pub trait IntoCode {
     fn into_code(self) -> proc_macro::TokenStream;
 }
 
-impl<T: quote::ToTokens> IntoCode for Result<T, ::syn::Error> {
+impl<T: quote::ToTokens> IntoCode for ::syn::Result<T> {
     fn into_code(self) -> proc_macro::TokenStream {
         match self {
             Ok(data) => data.to_token_stream(),

@@ -1,17 +1,22 @@
 use crate::call_result::CallResult;
+use crate::call_result::ContractCallResult;
+use crate::casper_types::bytesrepr::{Bytes, FromBytes, ToBytes};
+use crate::casper_types::{CLTyped, RuntimeArgs, U512};
 use crate::consts::{ALLOW_KEY_OVERRIDE_ARG, IS_UPGRADABLE_ARG, PACKAGE_HASH_KEY_NAME_ARG};
 use crate::entry_point_callback::EntryPointsCaller;
-use crate::event::EventError;
+use crate::error::EventError;
 use crate::host_context::HostContext;
-use crate::prelude::*;
 use crate::utils::extract_event_name;
-use crate::{Address, OdraError, VmError, U512};
-use crate::{Bytes, RuntimeArgs, ToBytes};
-use crate::{CLTyped, FromBytes};
+use crate::{prelude::*, OdraResult};
+use crate::{Address, OdraError, VmError};
 use crate::{CallDef, ContractEnv};
 use casper_event_standard::EventInstance;
 use casper_types::PublicKey;
 
+/// Represents the host environment for executing smart contracts.
+///
+/// It provides methods for interacting with the underlying host context and managing
+/// the execution of contracts.
 #[derive(Clone)]
 pub struct HostEnv {
     backend: Rc<RefCell<dyn HostContext>>,
@@ -21,6 +26,7 @@ pub struct HostEnv {
 }
 
 impl HostEnv {
+    /// Creates a new `HostEnv` instance with the specified backend.
     pub fn new(backend: Rc<RefCell<dyn HostContext>>) -> HostEnv {
         HostEnv {
             backend,
@@ -30,21 +36,25 @@ impl HostEnv {
         }
     }
 
+    /// Returns the account address at the specified index.
     pub fn get_account(&self, index: usize) -> Address {
         let backend = self.backend.borrow();
         backend.get_account(index)
     }
 
+    /// Sets the caller address for the current contract execution.
     pub fn set_caller(&self, address: Address) {
         let backend = self.backend.borrow();
         backend.set_caller(address)
     }
 
+    /// Advances the block time by the specified time difference.
     pub fn advance_block_time(&self, time_diff: u64) {
         let backend = self.backend.borrow();
         backend.advance_block_time(time_diff)
     }
 
+    /// Registers a new contract with the specified name, initialization arguments, and entry points caller.
     pub fn new_contract(
         &self,
         name: &str,
@@ -78,14 +88,15 @@ impl HostEnv {
             .insert(address, self.events_count(&address));
     }
 
+    /// Calls a contract at the specified address with the given call definition.
     pub fn call_contract<T: FromBytes + CLTyped>(
         &self,
         address: Address,
         call_def: CallDef
-    ) -> Result<T, OdraError> {
+    ) -> OdraResult<T> {
         let backend = self.backend.borrow();
 
-        let use_proxy = T::cl_type() != <()>::cl_type() || !call_def.attached_value().is_zero();
+        let use_proxy = T::cl_type() != <()>::cl_type() || !call_def.amount().is_zero();
         let call_result = backend.call_contract(&address, call_def, use_proxy);
 
         let mut events_map: BTreeMap<Address, Vec<Bytes>> = BTreeMap::new();
@@ -110,13 +121,13 @@ impl HostEnv {
                 *events_count = new_events_count;
             });
 
-        self.last_call_result.replace(Some(CallResult {
-            contract_address: address,
-            caller: backend.caller(),
-            gas_used: backend.last_call_gas_cost(),
-            result: call_result.clone(),
-            events: events_map
-        }));
+        self.last_call_result.replace(Some(CallResult::new(
+            address,
+            backend.caller(),
+            backend.last_call_gas_cost(),
+            call_result.clone(),
+            events_map
+        )));
 
         call_result.map(|bytes| {
             T::from_bytes(&bytes)
@@ -125,20 +136,29 @@ impl HostEnv {
         })?
     }
 
+    /// Returns the gas cost of the last contract call.
     pub fn contract_env(&self) -> ContractEnv {
         self.backend.borrow().contract_env()
     }
 
+    /// Prints the gas report for the current contract execution.
     pub fn print_gas_report(&self) {
         let backend = self.backend.borrow();
         backend.print_gas_report()
     }
 
+    /// Returns the CSPR balance of the specified address.
     pub fn balance_of(&self, address: &Address) -> U512 {
         let backend = self.backend.borrow();
         backend.balance_of(address)
     }
 
+    /// Retrieves an event with the specified index from the specified contract.
+    ///
+    /// # Returns
+    ///
+    /// Returns the event as an instance of the specified type, or an error if the event
+    /// couldn't be retrieved or parsed.
     pub fn get_event<T: FromBytes + EventInstance>(
         &self,
         contract_address: &Address,
@@ -244,8 +264,12 @@ impl HostEnv {
             })
     }
 
-    pub fn last_call(&self) -> CallResult {
-        self.last_call_result.borrow().clone().unwrap()
+    pub fn last_call_result(&self, contract_address: Address) -> ContractCallResult {
+        self.last_call_result
+            .borrow()
+            .clone()
+            .unwrap()
+            .contract_last_call(contract_address)
     }
 
     pub fn sign_message(&self, message: &Bytes, address: &Address) -> Bytes {

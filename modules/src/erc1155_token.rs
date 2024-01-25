@@ -6,7 +6,11 @@ use crate::erc1155::events::{TransferBatch, TransferSingle};
 use crate::erc1155::owned_erc1155::OwnedErc1155;
 use crate::erc1155::Erc1155;
 use odra::prelude::*;
-use odra::{Address, Bytes, Module, ModuleWrapper, U256};
+use odra::{
+    casper_types::{bytesrepr::Bytes, U256},
+    module::{Module, ModuleWrapper},
+    Address
+};
 
 /// The ERC1155 token implementation.
 /// It uses the [ERC1155](Erc1155Base) base implementation and the [Ownable] module.
@@ -186,7 +190,10 @@ mod tests {
     use crate::erc1155_token::{Erc1155TokenDeployer, Erc1155TokenHostRef};
     use crate::wrapped_native::WrappedNativeTokenDeployer;
     use odra::prelude::*;
-    use odra::{Address, Bytes, HostEnv, OdraError, VmError, U256};
+    use odra::{
+        casper_types::{bytesrepr::Bytes, U256},
+        Address, HostEnv, OdraError, VmError
+    };
 
     struct TokenEnv {
         env: HostEnv,

@@ -6,9 +6,9 @@
 
 extern crate alloc;
 
-pub mod consts;
+pub(crate) mod consts;
 pub mod host_functions;
-pub mod wasm_contract_env;
+mod wasm_contract_env;
 
 pub use casper_contract;
 pub use wasm_contract_env::WasmContractEnv;

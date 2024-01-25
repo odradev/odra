@@ -1,3 +1,4 @@
+use odra_core::{casper_types::RuntimeArgs, Address, OdraResult, VmError};
 
 use std::collections::BTreeMap;
 
@@ -18,15 +19,15 @@ impl ContractRegister {
         addr: &Address,
         entrypoint: String,
         args: &RuntimeArgs
-    ) -> Result<Vec<u8>, OdraError> {
+    ) -> OdraResult<Vec<u8>> {
         self.internal_call(addr, |container| container.call(entrypoint, args.clone()))
     }
 
-    fn internal_call<F: FnOnce(&ContractContainer) -> Result<Vec<u8>, OdraError>>(
+    fn internal_call<F: FnOnce(&ContractContainer) -> OdraResult<Vec<u8>>>(
         &self,
         addr: &Address,
         call_fn: F
-    ) -> Result<Vec<u8>, OdraError> {
+    ) -> OdraResult<Vec<u8>> {
         let contract = self.contracts.get(addr);
         match contract {
             Some(container) => call_fn(container),

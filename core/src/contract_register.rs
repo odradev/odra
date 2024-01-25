@@ -1,6 +1,6 @@
 use crate::call_def::CallDef;
-use crate::prelude::*;
-use crate::{Address, Bytes, OdraError, VmError};
+use crate::{casper_types::bytesrepr::Bytes, Address, OdraError, VmError};
+use crate::{prelude::*, OdraResult};
 
 use super::contract_container::ContractContainer;
 
@@ -14,7 +14,7 @@ impl ContractRegister {
         self.contracts.insert(addr, container);
     }
 
-    pub fn call(&self, addr: &Address, call_def: CallDef) -> Result<Bytes, OdraError> {
+    pub fn call(&self, addr: &Address, call_def: CallDef) -> OdraResult<Bytes> {
         if let Some(contract) = self.contracts.get(addr) {
             return contract.call(call_def);
         }

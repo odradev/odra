@@ -12,4 +12,4 @@ url = "2.4.1"
 blake2 = { workspace = true }
 
 [dev-dependencies]
-odra = { path = "../odra" }
+odra-test = { path = "../odra-test" }

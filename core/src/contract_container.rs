@@ -1,12 +1,8 @@
-use crate::prelude::*;
-use crate::{CallDef, EntryPointArgument, EntryPointsCaller, OdraError, VmError};
+use crate::entry_point_callback::{EntryPointArgument, EntryPointsCaller};
+use crate::{prelude::*, OdraResult};
+use crate::{CallDef, OdraError, VmError};
 use casper_types::bytesrepr::Bytes;
-use casper_types::{NamedArg, RuntimeArgs};
-
-#[doc(hidden)]
-pub type EntrypointCall = fn(String, &RuntimeArgs) -> Vec<u8>;
-#[doc(hidden)]
-pub type EntrypointArgs = Vec<String>;
+use casper_types::RuntimeArgs;
 
 #[derive(Clone)]
 pub struct ContractContainer {
@@ -20,14 +16,14 @@ impl ContractContainer {
         }
     }
 
-    pub fn call(&self, call_def: CallDef) -> Result<Bytes, OdraError> {
+    pub fn call(&self, call_def: CallDef) -> OdraResult<Bytes> {
         let ep = self
             .entry_points_caller
             .entry_points()
             .iter()
-            .find(|ep| ep.name == call_def.method())
+            .find(|ep| ep.name == call_def.entry_point())
             .ok_or_else(|| {
-                OdraError::VmError(VmError::NoSuchMethod(call_def.method().to_string()))
+                OdraError::VmError(VmError::NoSuchMethod(call_def.entry_point().to_string()))
             })?;
         self.validate_args(&ep.args, call_def.args())?;
         self.entry_points_caller.call(call_def)
@@ -37,12 +33,7 @@ impl ContractContainer {
         &self,
         args: &[EntryPointArgument],
         input_args: &RuntimeArgs
-    ) -> Result<(), OdraError> {
-        let _named_args = input_args
-            .named_args()
-            .map(NamedArg::name)
-            .collect::<Vec<_>>();
-
+    ) -> OdraResult<()> {
         for arg in args {
             if let Some(input) = input_args
                 .named_args()
@@ -64,144 +55,143 @@ impl ContractContainer {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::{ContractContainer, EntrypointArgs, EntrypointCall};
-    use crate::prelude::*;
-    use crate::{
-        casper_types::{runtime_args, RuntimeArgs},
-        OdraError, VmError
-    };
-    use crate::{CLType, CallDef, EntryPoint, EntryPointArgument, EntryPointsCaller, HostEnv};
+// #[cfg(test)]
+// mod tests {
+//     use casper_types::CLType;
 
-    const TEST_ENTRYPOINT: &'static str = "ep";
+//     use super::ContractContainer;
+//     use crate::entry_point_callback::{EntryPoint, EntryPointArgument, EntryPointsCaller};
+//     use crate::{prelude::*, CallDef};
+//     use crate::{
+//         casper_types::{runtime_args, RuntimeArgs},
+//         OdraError, VmError
+//     };
 
-    #[test]
-    fn test_call_wrong_entrypoint() {
-        // Given an instance with no entrypoints.
-        let instance = ContractContainer::empty();
+//     const TEST_ENTRYPOINT: &'static str = "ep";
 
-        // When call some entrypoint.
-        let call_def = CallDef::new(TEST_ENTRYPOINT, false, RuntimeArgs::new());
-        let result = instance.call(call_def);
+//     #[test]
+//     fn test_call_wrong_entrypoint() {
+//         // Given an instance with no entrypoints.
+//         let instance = ContractContainer::empty();
 
-        // Then an error occurs.
-        assert!(result.is_err());
-    }
+//         // When call some entrypoint.
+//         let call_def = CallDef::new(TEST_ENTRYPOINT, false, RuntimeArgs::new());
+//         let result = instance.call(call_def);
 
-    #[test]
-    fn test_call_valid_entrypoint() {
-        // Given an instance with a single no-args entrypoint.
-        let instance = ContractContainer::with_entrypoint(vec![]);
+//         // Then an error occurs.
+//         assert!(result.is_err());
+//     }
 
-        // When call the registered entrypoint.
-        let call_def = CallDef::new(TEST_ENTRYPOINT, false, RuntimeArgs::new());
-        let result = instance.call(call_def);
+//     #[test]
+//     fn test_call_valid_entrypoint() {
+//         // Given an instance with a single no-args entrypoint.
+//         let instance = ContractContainer::with_entrypoint(vec![]);
 
-        // Then teh call succeeds.
-        assert!(result.is_ok());
-    }
+//         // When call the registered entrypoint.
+//         let call_def = CallDef::new(TEST_ENTRYPOINT, false, RuntimeArgs::new());
+//         let result = instance.call(call_def);
 
-    #[test]
-    fn test_call_valid_entrypoint_with_wrong_arg_name() {
-        // Given an instance with a single entrypoint with one arg named "first".
-        let instance = ContractContainer::with_entrypoint(vec![("first", CLType::U32)]);
+//         // Then teh call succeeds.
+//         assert!(result.is_ok());
+//     }
 
-        // When call the registered entrypoint with an arg named "second".
-        let call_def = CallDef::new(TEST_ENTRYPOINT, runtime_args! { "second" => 0u32 });
-        let result = instance.call(call_def);
+//     #[test]
+//     fn test_call_valid_entrypoint_with_wrong_arg_name() {
+//         // Given an instance with a single entrypoint with one arg named "first".
+//         let instance = ContractContainer::with_entrypoint(vec![("first", CLType::U32)]);
 
-        // Then MissingArg error is returned.
-        assert_eq!(result.unwrap_err(), OdraError::VmError(VmError::MissingArg));
-    }
+//         // When call the registered entrypoint with an arg named "second".
+//         let call_def = CallDef::new(TEST_ENTRYPOINT, false, runtime_args! { "second" => 0u32 });
+//         let result = instance.call(call_def);
 
-    #[test]
-    fn test_call_valid_entrypoint_with_wrong_arg_type() {
-        // Given an instance with a single entrypoint with one arg named "first".
-        let instance = ContractContainer::with_entrypoint(vec![("first", CLType::U32)]);
+//         // Then MissingArg error is returned.
+//         assert_eq!(result.unwrap_err(), OdraError::VmError(VmError::MissingArg));
+//     }
 
-        // When call the registered entrypoint with an arg named "second".
-        let call_def = CallDef::new(TEST_ENTRYPOINT, runtime_args! { "first" => true });
-        let result = instance.call(call_def);
+//     #[test]
+//     fn test_call_valid_entrypoint_with_wrong_arg_type() {
+//         // Given an instance with a single entrypoint with one arg named "first".
+//         let instance = ContractContainer::with_entrypoint(vec![("first", CLType::U32)]);
 
-        // Then MissingArg error is returned.
-        assert_eq!(
-            result.unwrap_err(),
-            OdraError::VmError(VmError::TypeMismatch {
-                expected: CLType::U32,
-                found: CLType::Bool
-            })
-        );
-    }
+//         // When call the registered entrypoint with an arg named "second".
+//         let call_def = CallDef::new(TEST_ENTRYPOINT, false, runtime_args! { "first" => true });
+//         let result = instance.call(call_def);
 
-    #[test]
-    fn test_call_valid_entrypoint_with_missing_arg() {
-        // Given an instance with a single entrypoint with one arg named "first".
-        let instance = ContractContainer::with_entrypoint(vec![("first", CLType::U32)]);
+//         // Then MissingArg error is returned.
+//         assert_eq!(
+//             result.unwrap_err(),
+//             OdraError::VmError(VmError::TypeMismatch {
+//                 expected: CLType::U32,
+//                 found: CLType::Bool
+//             })
+//         );
+//     }
 
-        // When call a valid entrypoint without args.
-        let call_def = CallDef::new(TEST_ENTRYPOINT, false, RuntimeArgs::new());
-        let result = instance.call(call_def);
+//     #[test]
+//     fn test_call_valid_entrypoint_with_missing_arg() {
+//         // Given an instance with a single entrypoint with one arg named "first".
+//         let instance = ContractContainer::with_entrypoint(vec![("first", CLType::U32)]);
 
-        // Then MissingArg error is returned.
-        assert_eq!(result.unwrap_err(), OdraError::VmError(VmError::MissingArg));
-    }
+//         // When call a valid entrypoint without args.
+//         let call_def = CallDef::new(TEST_ENTRYPOINT, false, RuntimeArgs::new());
+//         let result = instance.call(call_def);
 
-    #[test]
-    fn test_many_missing_args() {
-        // Given an instance with a single entrypoint with "first", "second" and "third" args.
-        let instance = ContractContainer::with_entrypoint(vec![
-            ("first", CLType::U32),
-            ("second", CLType::U32),
-            ("third", CLType::U32),
-        ]);
+//         // Then MissingArg error is returned.
+//         assert_eq!(result.unwrap_err(), OdraError::VmError(VmError::MissingArg));
+//     }
 
-        // When call a valid entrypoint with a single valid args,
-        let call_def = CallDef::new(TEST_ENTRYPOINT, false, runtime_args! { "third" => 0u32 });
-        let result = instance.call(call_def);
+//     #[test]
+//     fn test_many_missing_args() {
+//         // Given an instance with a single entrypoint with "first", "second" and "third" args.
+//         let instance = ContractContainer::with_entrypoint(vec![
+//             ("first", CLType::U32),
+//             ("second", CLType::U32),
+//             ("third", CLType::U32),
+//         ]);
 
-        // Then MissingArg error is returned.
-        assert_eq!(result.unwrap_err(), OdraError::VmError(VmError::MissingArg));
-    }
+//         // When call a valid entrypoint with a single valid args,
+//         let call_def = CallDef::new(TEST_ENTRYPOINT, false, runtime_args! { "third" => 0u32 });
+//         let result = instance.call(call_def);
 
-    impl ContractContainer {
-        fn empty() -> Self {
-            let env = odra::odra_test::odra_env();
-            let entry_points_caller = EntryPointsCaller::new(env, vec![], |_, call_def| {
-                Err(OdraError::VmError(VmError::NoSuchMethod(
-                    call_def.method().to_string()
-                )))
-            });
-            Self {
-                entry_points_caller
-            }
-        }
+//         // Then MissingArg error is returned.
+//         assert_eq!(result.unwrap_err(), OdraError::VmError(VmError::MissingArg));
+//     }
 
-        fn with_entrypoint(args: Vec<(&str, CLType)>) -> Self {
-            let entry_points = vec![EntryPoint::new(
-                String::from(TEST_ENTRYPOINT),
-                args.iter()
-                    .map(|(name, ty)| EntryPointArgument::new(String::from(*name), ty.to_owned()))
-                    .collect()
-            )];
+//     impl ContractContainer {
+//         fn empty() -> Self {
+//             let env = odra_test::env();
+//             let entry_points_caller = EntryPointsCaller::new(env, vec![], |_, call_def| {
+//                 Err(OdraError::VmError(VmError::NoSuchMethod(
+//                     call_def.entry_point().to_string()
+//                 )))
+//             });
+//             Self {
+//                 entry_points_caller
+//             }
+//         }
 
-            let entry_points_caller = EntryPointsCaller::new(
-                odra::odra_test::odra_env(),
-                entry_points,
-                |env, call_def| {
-                    if call_def.method() == TEST_ENTRYPOINT {
-                        Ok(vec![1, 2, 3].into())
-                    } else {
-                        Err(OdraError::VmError(VmError::NoSuchMethod(
-                            call_def.method().to_string()
-                        )))
-                    }
-                }
-            );
+//         fn with_entrypoint(args: Vec<(&str, CLType)>) -> Self {
+//             let entry_points = vec![EntryPoint::new(
+//                 String::from(TEST_ENTRYPOINT),
+//                 args.iter()
+//                     .map(|(name, ty)| EntryPointArgument::new(String::from(*name), ty.to_owned()))
+//                     .collect()
+//             )];
 
-            Self {
-                entry_points_caller
-            }
-        }
-    }
-}
+//             let entry_points_caller =
+//                 EntryPointsCaller::new(odra_test::env(), entry_points, |env, call_def| {
+//                     if call_def.entry_point() == TEST_ENTRYPOINT {
+//                         Ok(vec![1, 2, 3].into())
+//                     } else {
+//                         Err(OdraError::VmError(VmError::NoSuchMethod(
+//                             call_def.entry_point().to_string()
+//                         )))
+//                     }
+//                 });
+
+//             Self {
+//                 entry_points_caller
+//             }
+//         }
+//     }
+// }

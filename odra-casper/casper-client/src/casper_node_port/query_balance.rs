@@ -1,7 +1,6 @@
 use crate::casper_node_port::rpcs::GlobalStateIdentifier;
 use odra_core::casper_types::account::AccountHash;
-use odra_core::casper_types::{ProtocolVersion, URef};
-use odra_core::{PublicKey, U512};
+use odra_core::casper_types::{ProtocolVersion, PublicKey, URef, U512};
 use serde::{Deserialize, Serialize};
 
 pub(crate) const QUERY_BALANCE_METHOD: &str = "query_balance";

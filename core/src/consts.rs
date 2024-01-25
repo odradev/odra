@@ -1,3 +1,5 @@
+//! Constants used in the system.
+
 /// The key under which the events are stored.
 pub const EVENTS: &str = casper_event_standard::EVENTS_DICT;
 

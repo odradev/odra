@@ -1,5 +1,9 @@
 use odra::prelude::*;
-use odra::{Address, Module, ModuleWrapper, U256};
+use odra::{
+    casper_types::U256,
+    module::{Module, ModuleWrapper},
+    Address
+};
 use odra_modules::access::Ownable;
 use odra_modules::erc20::Erc20;
 

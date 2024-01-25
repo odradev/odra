@@ -91,12 +91,11 @@ fn struct_entrypoints_expr(ir: &ModuleImplIR) -> syn::Result<syn::Expr> {
             });
             Ok(expr)
         })
-        .collect::<Result<syn::punctuated::Punctuated<syn::Expr, syn::token::Comma>, syn::Error>>(
-        )?;
+        .collect::<syn::Result<syn::punctuated::Punctuated<syn::Expr, syn::token::Comma>>>()?;
     Ok(parse_quote!(vec![#struct_entrypoints]))
 }
 
-fn entrypoint_args(f: &FnIR) -> Result<syn::Expr, syn::Error> {
+fn entrypoint_args(f: &FnIR) -> syn::Result<syn::Expr> {
     let args = f
         .named_args()
         .iter()
@@ -113,7 +112,7 @@ fn entrypoint_args(f: &FnIR) -> Result<syn::Expr, syn::Error> {
             });
             Ok(expr)
         })
-        .collect::<Result<Vec<syn::Expr>, syn::Error>>()?;
+        .collect::<syn::Result<Vec<syn::Expr>>>()?;
     Ok(parse_quote!(vec![#(#args),*]))
 }
 

@@ -1,3 +1,7 @@
+//! Common API for `no_std` and `std` to access alloc and core crate types.
+//!
+//! Guarantees a stable API for `no_std` and `std` mode.
+
 #[allow(clippy::module_inception)]
 mod prelude {
     pub use crate::arithmetic::*;

@@ -14,19 +14,19 @@ pub fn contract_env() -> syn::Type {
 }
 
 pub fn rc_contract_env() -> syn::Type {
-    parse_quote!(Rc<odra::ContractEnv>)
+    parse_quote!(odra::prelude::Rc<odra::ContractEnv>)
 }
 
 pub fn from_bytes() -> syn::Type {
-    parse_quote!(odra::FromBytes)
+    parse_quote!(odra::casper_types::bytesrepr::FromBytes)
 }
 
 pub fn to_bytes() -> syn::Type {
-    parse_quote!(odra::ToBytes)
+    parse_quote!(odra::casper_types::bytesrepr::ToBytes)
 }
 
 pub fn bytes_err() -> syn::Type {
-    parse_quote!(odra::BytesReprError)
+    parse_quote!(odra::casper_types::bytesrepr::Error)
 }
 
 pub fn event_instance() -> syn::Type {
@@ -34,11 +34,11 @@ pub fn event_instance() -> syn::Type {
 }
 
 pub fn event_error() -> syn::Type {
-    parse_quote!(odra::event::EventError)
+    parse_quote!(odra::EventError)
 }
 
 pub fn u512() -> syn::Type {
-    parse_quote!(odra::U512)
+    parse_quote!(odra::casper_types::U512)
 }
 
 pub fn host_env() -> syn::Type {
@@ -50,7 +50,7 @@ pub fn call_def() -> syn::Type {
 }
 
 pub fn entry_points_caller() -> syn::Type {
-    parse_quote!(odra::EntryPointsCaller)
+    parse_quote!(odra::entry_point_callback::EntryPointsCaller)
 }
 
 pub fn contract_call_result() -> syn::Type {
@@ -61,8 +61,12 @@ pub fn odra_error() -> syn::Type {
     parse_quote!(odra::OdraError)
 }
 
+pub fn odra_result(ty: syn::Type) -> syn::Type {
+    parse_quote!(odra::OdraResult<#ty>)
+}
+
 pub fn module() -> syn::Type {
-    parse_quote!(odra::Module)
+    parse_quote!(odra::module::Module)
 }
 
 pub fn entry_points() -> syn::Type {
@@ -113,7 +117,7 @@ pub fn cl_type_u32() -> syn::Type {
 }
 
 pub fn runtime_args() -> syn::Type {
-    parse_quote!(odra::RuntimeArgs)
+    parse_quote!(odra::casper_types::RuntimeArgs)
 }
 
 pub fn has_events() -> syn::Type {
@@ -230,11 +234,11 @@ pub fn module_component() -> syn::Type {
 }
 
 pub fn odra_entry_point() -> syn::Type {
-    parse_quote!(odra::EntryPoint)
+    parse_quote!(odra::entry_point_callback::EntryPoint)
 }
 
 pub fn odra_entry_point_arg() -> syn::Type {
-    parse_quote!(odra::EntryPointArgument)
+    parse_quote!(odra::entry_point_callback::EntryPointArgument)
 }
 
 fn slice_to_vec(ty: &syn::Type) -> syn::Type {

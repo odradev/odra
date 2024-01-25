@@ -6,8 +6,8 @@ compile_error!("This binary only supports wasm32 target architecture!");
 
 extern crate alloc;
 
-use casper_contract::contract_api::runtime::call_versioned_contract;
 use odra_casper_proxy_caller::ProxyCall;
+use odra_casper_wasm_env::casper_contract::contract_api::runtime::call_versioned_contract;
 
 #[no_mangle]
 fn call() {

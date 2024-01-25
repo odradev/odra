@@ -1,5 +1,5 @@
 use odra::prelude::*;
-use odra::{Address, Module, Variable};
+use odra::{module::Module, Address, Variable};
 
 #[odra::module]
 pub struct TestingContract {

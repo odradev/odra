@@ -1,7 +1,10 @@
 use crate::access::errors::Error::{CallerNotTheNewOwner, CallerNotTheOwner, OwnerNotSet};
 use crate::access::events::{OwnershipTransferStarted, OwnershipTransferred};
 use odra::prelude::*;
-use odra::{Address, Module, ModuleWrapper, UnwrapOrRevert, Variable};
+use odra::{
+    module::{Module, ModuleWrapper},
+    Address, UnwrapOrRevert, Variable
+};
 
 /// This module provides a straightforward access control feature that enables
 /// exclusive access to particular functions by an account, known as the owner.

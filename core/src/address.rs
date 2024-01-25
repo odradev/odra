@@ -36,6 +36,11 @@ impl Address {
         }
     }
 
+    /// Returns true if the address is a contract address.
+    pub fn is_contract(&self) -> bool {
+        self.as_contract_package_hash().is_some()
+    }
+
     // TODO: move those methods to odra_vm as they shouldn't be public
     pub fn account_from_str(str: &str) -> Self {
         use casper_types::account::{ACCOUNT_HASH_FORMATTED_STRING_PREFIX, ACCOUNT_HASH_LENGTH};
@@ -57,12 +62,6 @@ impl Address {
         let a = i.to_string();
         let account_str = format!("{}{}{}", "contract-package-", a, padding);
         Self::Contract(ContractPackageHash::from_formatted_str(account_str.as_str()).unwrap())
-    }
-}
-
-impl OdraAddress for Address {
-    fn is_contract(&self) -> bool {
-        self.as_contract_package_hash().is_some()
     }
 }
 
@@ -274,9 +273,4 @@ mod tests {
             OdraError::VmError(VmError::Deserialization)
         )
     }
-}
-
-pub trait OdraAddress {
-    /// Returns true if the address is a contract address.
-    fn is_contract(&self) -> bool;
 }

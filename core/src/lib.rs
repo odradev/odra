@@ -3,11 +3,12 @@
 
 extern crate alloc;
 
-pub mod address;
+mod address;
 pub mod arithmetic;
-pub mod call_def;
-pub mod call_result;
+mod call_def;
+mod call_result;
 pub mod callstack;
+#[doc(hidden)]
 pub mod consts;
 pub mod contract_container;
 mod contract_context;
@@ -16,41 +17,33 @@ mod contract_env;
 pub mod contract_register;
 pub mod crypto;
 pub mod entry_point_callback;
-pub mod error;
-pub mod event;
+mod error;
 mod host_context;
 mod host_env;
-pub mod item;
-pub mod list;
-pub mod mapping;
+mod list;
+mod mapping;
 pub mod module;
-pub mod native_token;
-mod odra_result;
 pub mod prelude;
 pub mod uints;
-mod unchecked_getter;
 mod unwrap_or_revert;
 pub mod utils;
-pub mod variable;
+mod variable;
 
-pub use address::{Address, OdraAddress};
+pub use address::Address;
 pub use call_def::CallDef;
+pub use call_result::ContractCallResult;
 pub use casper_event_standard;
 pub use contract_context::ContractContext;
 pub use contract_env::{ContractEnv, ExecutionEnv};
-pub use entry_point_callback::{EntryPoint, EntryPointArgument, EntryPointsCaller};
-pub use error::{AddressError, CollectionError, ExecutionError, OdraError, VmError};
+pub use error::{
+    AddressError, CollectionError, EventError, ExecutionError, OdraError, OdraResult, VmError
+};
 pub use host_context::HostContext;
 pub use host_env::HostEnv;
-pub use item::OdraItem;
-pub use module::ModuleCaller;
-pub use odra_result::OdraResult;
-pub use unchecked_getter::UncheckedGetter;
 pub use unwrap_or_revert::UnwrapOrRevert;
-pub use utils::serialize;
+
+pub use list::{List, ListIter};
+pub use mapping::Mapping;
+pub use variable::Variable;
 
 pub use casper_types;
-pub use casper_types::bytesrepr::{Bytes, Error as BytesReprError, FromBytes, ToBytes};
-pub use casper_types::CLValue;
-pub use casper_types::{runtime_args, RuntimeArgs};
-pub use casper_types::{CLType, CLTyped, PublicKey, SecretKey, U128, U256, U512};

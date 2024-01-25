@@ -1,10 +1,10 @@
 use anyhow::{Context, Result};
 use odra_core::{
     casper_types::{
-        bytesrepr::{Error, FromBytes, ToBytes},
+        bytesrepr::{Bytes, Error, FromBytes, ToBytes},
         U512
     },
-    Address, Bytes
+    Address
 };
 use std::{
     collections::{hash_map::DefaultHasher, BTreeMap},
@@ -122,8 +122,9 @@ impl Storage {
 
 #[cfg(test)]
 mod test {
-    use odra_core::serialize;
-    use odra_core::{Address, Bytes};
+    use odra_core::casper_types::bytesrepr::Bytes;
+    use odra_core::utils::serialize;
+    use odra_core::Address;
 
     use super::Storage;
 

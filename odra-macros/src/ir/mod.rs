@@ -45,7 +45,7 @@ impl ModuleStructIR {
         &self.code
     }
 
-    pub fn field_names(&self) -> Result<Vec<syn::Ident>, syn::Error> {
+    pub fn field_names(&self) -> syn::Result<Vec<syn::Ident>> {
         utils::syn::struct_fields_ident(&self.code)
     }
 
@@ -64,7 +64,7 @@ impl ModuleStructIR {
         )
     }
 
-    pub fn typed_fields(&self) -> Result<Vec<EnumeratedTypedField>, syn::Error> {
+    pub fn typed_fields(&self) -> syn::Result<Vec<EnumeratedTypedField>> {
         let fields = utils::syn::struct_typed_fields(&self.code)?;
         let fields = fields
             .iter()
@@ -92,7 +92,7 @@ impl ModuleStructIR {
         }
     }
 
-    pub fn unique_fields_ty(&self) -> Result<Vec<syn::Type>, syn::Error> {
+    pub fn unique_fields_ty(&self) -> syn::Result<Vec<syn::Type>> {
         // A hack to sort types by their string representation. Otherwise, we would get an unstable
         // order of types in the generated code and tests would fail.
         #[derive(Eq, PartialEq)]
@@ -167,18 +167,18 @@ impl ModuleImplIR {
         }
     }
 
-    pub fn module_ident(&self) -> Result<Ident, syn::Error> {
+    pub fn module_ident(&self) -> syn::Result<Ident> {
         match self {
             ModuleImplIR::Impl(ir) => utils::syn::ident_from_impl(&ir.code),
             ModuleImplIR::Trait(ir) => Ok(ir.module_ident())
         }
     }
 
-    pub fn module_str(&self) -> Result<String, syn::Error> {
+    pub fn module_str(&self) -> syn::Result<String> {
         self.module_ident().map(|i| i.to_string())
     }
 
-    pub fn snake_cased_module_ident(&self) -> Result<Ident, syn::Error> {
+    pub fn snake_cased_module_ident(&self) -> syn::Result<Ident> {
         let ident = self.module_ident()?;
         Ok(Ident::new(
             utils::string::camel_to_snake(&ident).as_str(),
@@ -186,15 +186,14 @@ impl ModuleImplIR {
         ))
     }
 
-    pub fn host_ref_ident(&self) -> Result<Ident, syn::Error> {
+    pub fn host_ref_ident(&self) -> syn::Result<Ident> {
         let module_ident = self.module_ident()?;
         Ok(Ident::new(
             &format!("{}HostRef", module_ident),
             module_ident.span()
         ))
     }
-
-    pub fn contract_ref_ident(&self) -> Result<Ident, syn::Error> {
+    pub fn contract_ref_ident(&self) -> syn::Result<Ident> {
         let module_ident = self.module_ident()?;
         Ok(Ident::new(
             &format!("{}ContractRef", module_ident),
@@ -202,7 +201,7 @@ impl ModuleImplIR {
         ))
     }
 
-    pub fn schema_mod_ident(&self) -> Result<Ident, syn::Error> {
+    pub fn schema_mod_ident(&self) -> syn::Result<Ident> {
         let module_ident = self.snake_cased_module_ident()?;
         Ok(Ident::new(
             &format!("__{}_schema", module_ident),
@@ -210,7 +209,7 @@ impl ModuleImplIR {
         ))
     }
 
-    pub fn deployer_ident(&self) -> Result<Ident, syn::Error> {
+    pub fn deployer_ident(&self) -> syn::Result<Ident> {
         let module_ident = self.module_ident()?;
         Ok(Ident::new(
             &format!("{}Deployer", module_ident),
@@ -218,7 +217,7 @@ impl ModuleImplIR {
         ))
     }
 
-    pub fn test_parts_mod_ident(&self) -> Result<syn::Ident, syn::Error> {
+    pub fn test_parts_mod_ident(&self) -> syn::Result<syn::Ident> {
         let module_ident = self.snake_cased_module_ident()?;
         Ok(Ident::new(
             &format!("__{}_test_parts", module_ident),
@@ -226,7 +225,7 @@ impl ModuleImplIR {
         ))
     }
 
-    pub fn wasm_parts_mod_ident(&self) -> Result<syn::Ident, syn::Error> {
+    pub fn wasm_parts_mod_ident(&self) -> syn::Result<syn::Ident> {
         let module_ident = self.snake_cased_module_ident()?;
         Ok(Ident::new(
             &format!("__{}_wasm_parts", module_ident),
@@ -368,7 +367,7 @@ pub enum FnIR {
 
 const PROTECTED_FUNCTIONS: [&str; 3] = ["new", "env", "address"];
 
-fn validate_fn_name<T: ToTokens>(name: &str, ctx: T) -> Result<(), syn::Error> {
+fn validate_fn_name<T: ToTokens>(name: &str, ctx: T) -> syn::Result<()> {
     if PROTECTED_FUNCTIONS.contains(&name) {
         return Err(syn::Error::new_spanned(
             ctx,
@@ -445,11 +444,12 @@ impl FnIR {
     }
 
     pub fn try_return_type(&self) -> syn::ReturnType {
-        let ty_odra_err = utils::ty::odra_error();
-        match self.return_type() {
-            syn::ReturnType::Default => parse_quote!(-> Result<(), #ty_odra_err>),
-            syn::ReturnType::Type(_, box ty) => parse_quote!(-> Result<#ty, #ty_odra_err>)
-        }
+        let ty = match self.return_type() {
+            syn::ReturnType::Default => parse_quote!(()),
+            syn::ReturnType::Type(_, box ty) => parse_quote!(#ty)
+        };
+        let odra_result = utils::ty::odra_result(ty);
+        utils::misc::ret_ty(&odra_result)
     }
 
     pub fn typed_args(&self) -> Vec<syn::PatType> {
@@ -551,7 +551,7 @@ impl FnArgIR {
         &self.code
     }
 
-    pub fn name(&self) -> Result<Ident, syn::Error> {
+    pub fn name(&self) -> syn::Result<Ident> {
         match &self.code {
             syn::FnArg::Typed(syn::PatType {
                 pat: box syn::Pat::Ident(pat),
@@ -561,17 +561,17 @@ impl FnArgIR {
         }
     }
 
-    pub fn name_str(&self) -> Result<String, syn::Error> {
+    pub fn name_str(&self) -> syn::Result<String> {
         self.name().map(|i| i.to_string())
     }
 
-    pub fn ty(&self) -> Result<syn::Type, syn::Error> {
+    pub fn ty(&self) -> syn::Result<syn::Type> {
         match &self.code {
             syn::FnArg::Typed(syn::PatType { box ty, .. }) => Ok(ty.clone()),
             _ => Err(syn::Error::new_spanned(&self.code, "Unnamed arg"))
         }
     }
-    pub fn name_and_ty(&self) -> Result<(String, syn::Type), syn::Error> {
+    pub fn name_and_ty(&self) -> syn::Result<(String, syn::Type)> {
         match &self.code {
             syn::FnArg::Typed(syn::PatType {
                 box ty,
@@ -609,11 +609,11 @@ impl TypeIR {
         &self.code
     }
 
-    pub fn fields(&self) -> Result<Vec<syn::Ident>, syn::Error> {
+    pub fn fields(&self) -> syn::Result<Vec<syn::Ident>> {
         utils::syn::derive_item_variants(&self.code)
     }
 
-    pub fn map_fields<F, R>(&self, func: F) -> Result<Vec<R>, syn::Error>
+    pub fn map_fields<F, R>(&self, func: F) -> syn::Result<Vec<R>>
     where
         F: FnMut(&syn::Ident) -> R
     {
