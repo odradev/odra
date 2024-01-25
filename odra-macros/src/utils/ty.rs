@@ -238,7 +238,7 @@ pub fn odra_entry_point() -> syn::Type {
 }
 
 pub fn odra_entry_point_arg() -> syn::Type {
-    parse_quote!(odra::entry_point_callback::EntryPointArgument)
+    parse_quote!(odra::entry_point_callback::Argument)
 }
 
 fn slice_to_vec(ty: &syn::Type) -> syn::Type {

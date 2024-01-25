@@ -4,9 +4,7 @@ use std::rc::Rc;
 use std::sync::{Arc, RwLock};
 
 use anyhow::Result;
-use odra_core::callstack::{CallstackElement, Entrypoint};
-use odra_core::contract_container::ContractContainer;
-use odra_core::contract_register::ContractRegister;
+use odra_core::callstack::CallstackElement;
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::EventError;
 use odra_core::{
@@ -18,6 +16,7 @@ use odra_core::{
     Address, ExecutionError
 };
 use odra_core::{CallDef, OdraResult};
+use odra_core::{ContractContainer, ContractRegister};
 use odra_core::{OdraError, VmError};
 
 use super::odra_vm_state::OdraVmState;
@@ -80,8 +79,8 @@ impl OdraVm {
     /// Stops the execution of the virtual machine and reverts all the changes.
     pub fn revert(&self, error: OdraError) -> ! {
         let mut revert_msg = String::from("");
-        if let CallstackElement::Entrypoint(ep) = self.callstack_tip() {
-            revert_msg = format!("{:?}::{}", ep.address, ep.call_def.entry_point());
+        if let CallstackElement::ContractCall { address, call_def } = self.callstack_tip() {
+            revert_msg = format!("{:?}::{}", address, call_def.entry_point());
         }
 
         let mut state = self.state.write().unwrap();
@@ -123,8 +122,8 @@ impl OdraVm {
     pub fn get_named_arg(&self, name: &str) -> Vec<u8> {
         match self.state.read().unwrap().callstack_tip() {
             CallstackElement::Account(_) => todo!(),
-            CallstackElement::Entrypoint(ep) => {
-                ep.call_def.args().get(name).unwrap().inner_bytes().to_vec()
+            CallstackElement::ContractCall { call_def, .. } => {
+                call_def.args().get(name).unwrap().inner_bytes().to_vec()
             }
         }
     }
@@ -317,7 +316,7 @@ impl OdraVm {
         }
         // Put the address on stack.
 
-        let element = CallstackElement::Entrypoint(Entrypoint::new(address, call_def.clone()));
+        let element = CallstackElement::new_contract_call(address, call_def.clone());
         state.push_callstack_element(element);
     }
 

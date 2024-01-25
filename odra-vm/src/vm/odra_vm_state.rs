@@ -151,7 +151,7 @@ impl OdraVmState {
     }
 
     pub fn is_in_caller_context(&self) -> bool {
-        self.callstack.len() == 1
+        self.callstack.size() == 1
     }
 
     pub fn take_snapshot(&mut self) {

@@ -10,11 +10,11 @@ mod call_result;
 pub mod callstack;
 #[doc(hidden)]
 pub mod consts;
-pub mod contract_container;
+mod contract_container;
 mod contract_context;
 pub mod contract_def;
 mod contract_env;
-pub mod contract_register;
+mod contract_register;
 pub mod crypto;
 pub mod entry_point_callback;
 mod error;
@@ -33,8 +33,10 @@ pub use address::Address;
 pub use call_def::CallDef;
 pub use call_result::ContractCallResult;
 pub use casper_event_standard;
+pub use contract_container::ContractContainer;
 pub use contract_context::ContractContext;
 pub use contract_env::{ContractEnv, ExecutionEnv};
+pub use contract_register::ContractRegister;
 pub use error::{
     AddressError, CollectionError, EventError, ExecutionError, OdraError, OdraResult, VmError
 };

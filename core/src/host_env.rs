@@ -79,6 +79,8 @@ impl HostEnv {
         deployed_contract
     }
 
+    /// Registers an existing contract with the specified address and entry points caller. Similar to `new_contract`,
+    /// but skips the deployment phase.
     pub fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller) {
         let backend = self.backend.borrow();
         backend.register_contract(address, entry_points_caller);
@@ -175,6 +177,7 @@ impl HostEnv {
             .map(|r| r.0)
     }
 
+    /// Retrieves a raw event (serialized) with the specified index from the specified contract.
     pub fn get_event_bytes(
         &self,
         contract_address: &Address,
@@ -184,6 +187,7 @@ impl HostEnv {
         backend.get_event(contract_address, index)
     }
 
+    /// Returns the names of all events emitted by the specified contract.
     pub fn event_names(&self, contract_address: &Address) -> Vec<String> {
         let backend = self.backend.borrow();
         let events_count = backend.get_events_count(contract_address);
@@ -198,6 +202,7 @@ impl HostEnv {
             .collect()
     }
 
+    /// Returns all events emitted by the specified contract.
     pub fn events(&self, contract_address: &Address) -> Vec<Bytes> {
         let backend = self.backend.borrow();
         let events_count = backend.get_events_count(contract_address);
@@ -215,11 +220,13 @@ impl HostEnv {
             .collect()
     }
 
+    /// Returns the number of events emitted by the specified contract.
     pub fn events_count(&self, contract_address: &Address) -> u32 {
         let backend = self.backend.borrow();
         backend.get_events_count(contract_address)
     }
 
+    /// Returns true if the specified event was emitted by the specified contract.
     pub fn emitted_event<T: ToBytes + EventInstance>(
         &self,
         contract_address: &Address,
@@ -244,6 +251,7 @@ impl HostEnv {
             .any(|bytes| bytes == event_bytes)
     }
 
+    /// Returns true if an event with the specified name was emitted by the specified contract.
     pub fn emitted<T: AsRef<str>>(&self, contract_address: &Address, event_name: T) -> bool {
         let events_count = self.events_count(contract_address);
         (0..events_count)
@@ -264,6 +272,7 @@ impl HostEnv {
             })
     }
 
+    /// Returns the last call result for the specified contract.
     pub fn last_call_result(&self, contract_address: Address) -> ContractCallResult {
         self.last_call_result
             .borrow()
@@ -272,21 +281,25 @@ impl HostEnv {
             .contract_last_call(contract_address)
     }
 
+    /// Signs the specified message with the private key of the specified address.
     pub fn sign_message(&self, message: &Bytes, address: &Address) -> Bytes {
         let backend = self.backend.borrow();
         backend.sign_message(message, address)
     }
 
+    /// Returns the public key associated with the specified address.
     pub fn public_key(&self, address: &Address) -> PublicKey {
         let backend = self.backend.borrow();
         backend.public_key(address)
     }
 
+    /// Returns the caller address for the current contract execution.
     pub fn caller(&self) -> Address {
         let backend = self.backend.borrow();
         backend.caller()
     }
 
+    /// Sets the gas limit for the current contract execution.
     pub fn set_gas(&self, gas: u64) {
         let backend = self.backend.borrow();
         backend.set_gas(gas)

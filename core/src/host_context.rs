@@ -8,6 +8,8 @@ use casper_types::PublicKey;
 pub trait HostContext {
     /// Sets the caller address for the current contract execution.
     fn set_caller(&self, caller: Address);
+
+    /// Sets the gas limit for the current contract execution.
     fn set_gas(&self, gas: u64);
 
     /// Returns the caller address for the current contract execution.
@@ -44,6 +46,7 @@ pub trait HostContext {
         entry_points_caller: EntryPointsCaller
     ) -> Address;
 
+    /// Registers an existing contract with the specified address and entry points caller.
     fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller);
 
     /// Returns the contract environment.

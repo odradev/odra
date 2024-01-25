@@ -1,22 +1,28 @@
-use crate::entry_point_callback::{EntryPointArgument, EntryPointsCaller};
+use crate::entry_point_callback::{Argument, EntryPointsCaller};
 use crate::{prelude::*, OdraResult};
 use crate::{CallDef, OdraError, VmError};
 use casper_types::bytesrepr::Bytes;
 use casper_types::RuntimeArgs;
 
+/// A wrapper struct for a EntryPointsCaller that is a layer of abstraction between the host and the entry points caller.
+///
+/// The container validates a contract call definition before calling the entry point.
 #[derive(Clone)]
 pub struct ContractContainer {
     entry_points_caller: EntryPointsCaller
 }
 
 impl ContractContainer {
+    /// Creates a new instance of `ContractContainer`.
     pub fn new(entry_points_caller: EntryPointsCaller) -> Self {
         Self {
             entry_points_caller
         }
     }
 
+    /// Calls the entry point with the given call definition.
     pub fn call(&self, call_def: CallDef) -> OdraResult<Bytes> {
+        // find the entry point
         let ep = self
             .entry_points_caller
             .entry_points()
@@ -25,20 +31,19 @@ impl ContractContainer {
             .ok_or_else(|| {
                 OdraError::VmError(VmError::NoSuchMethod(call_def.entry_point().to_string()))
             })?;
+        // validate the args, return an error if the args are invalid
         self.validate_args(&ep.args, call_def.args())?;
         self.entry_points_caller.call(call_def)
     }
 
-    fn validate_args(
-        &self,
-        args: &[EntryPointArgument],
-        input_args: &RuntimeArgs
-    ) -> OdraResult<()> {
+    fn validate_args(&self, args: &[Argument], input_args: &RuntimeArgs) -> OdraResult<()> {
         for arg in args {
+            // check if the input args contain the arg
             if let Some(input) = input_args
                 .named_args()
                 .find(|input| input.name() == arg.name.as_str())
             {
+                // check if the input arg has the expected type
                 let input_ty = input.cl_value().cl_type();
                 let expected_ty = &arg.ty;
                 if input_ty != expected_ty {
@@ -60,7 +65,7 @@ impl ContractContainer {
 //     use casper_types::CLType;
 
 //     use super::ContractContainer;
-//     use crate::entry_point_callback::{EntryPoint, EntryPointArgument, EntryPointsCaller};
+//     use crate::entry_point_callback::{EntryPoint, Argument, EntryPointsCaller};
 //     use crate::{prelude::*, CallDef};
 //     use crate::{
 //         casper_types::{runtime_args, RuntimeArgs},
@@ -174,7 +179,7 @@ impl ContractContainer {
 //             let entry_points = vec![EntryPoint::new(
 //                 String::from(TEST_ENTRYPOINT),
 //                 args.iter()
-//                     .map(|(name, ty)| EntryPointArgument::new(String::from(*name), ty.to_owned()))
+//                     .map(|(name, ty)| Argument::new(String::from(*name), ty.to_owned()))
 //                     .collect()
 //             )];
 

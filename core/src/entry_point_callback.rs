@@ -1,3 +1,5 @@
+//! A module that contains structs representing entry points and entry point callers.
+
 use casper_types::CLType;
 
 use crate::call_def::CallDef;
@@ -25,7 +27,7 @@ impl EntryPointsCaller {
     /// # Arguments
     ///
     /// * `host_env` - The host environment.
-    /// * `entry_points` - A vector of available entry points.
+    /// * `entry_points` - A collection of available entry points.
     /// * `f` - A function pointer that performs a call using a given contract environment and a call definition
     ///         and returns a result in the form of bytes.
     ///
@@ -59,26 +61,30 @@ impl EntryPointsCaller {
 /// A struct representing an entry point.
 #[derive(Clone)]
 pub struct EntryPoint {
+    /// The name of the entry point.
     pub name: String,
-    pub args: Vec<EntryPointArgument>
+    /// The collection of arguments to the entry point.
+    pub args: Vec<Argument>
 }
 
 impl EntryPoint {
     /// Creates a new instance of `EntryPoint`.
-    pub fn new(name: String, args: Vec<EntryPointArgument>) -> Self {
+    pub fn new(name: String, args: Vec<Argument>) -> Self {
         Self { name, args }
     }
 }
 
-/// A struct representing an entry point argument.
+/// A struct representing an argument to entry point.
 #[derive(Clone)]
-pub struct EntryPointArgument {
+pub struct Argument {
+    /// The name of the argument.
     pub name: String,
+    /// The type of the argument.
     pub ty: CLType
 }
 
-impl EntryPointArgument {
-    /// Creates a new instance of `EntryPointArgument`.
+impl Argument {
+    /// Creates a new instance of `Argument`.
     pub fn new(name: String, ty: CLType) -> Self {
         Self { name, ty }
     }

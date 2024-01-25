@@ -1,3 +1,5 @@
+//! General purpose utilities.
+
 use crate::casper_types::bytesrepr::{Bytes, FromBytes};
 use crate::error::EventError;
 use crate::prelude::*;
@@ -71,8 +73,6 @@ pub fn event_absolute_position(len: u32, index: i32) -> Option<u32> {
     }
 }
 
-pub static KEY_DELIMITER: &str = "#";
-
 static TABLE: &[u8] = b"0123456789abcdef";
 
 #[inline]
@@ -104,12 +104,6 @@ pub fn hex_to_slice(src: &[u8], dst: &mut [u8]) {
         slots[0] = hex((*byte >> 4) & 0xf);
         slots[1] = hex(*byte & 0xf);
     }
-}
-
-/// Joins two parts of a key with the [`KEY_DELIMITER`].
-#[inline]
-pub fn create_key(left: &str, right: &str) -> String {
-    crate::prelude::format!("{}{}{}", left, KEY_DELIMITER, right)
 }
 
 #[cfg(test)]

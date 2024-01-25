@@ -3,9 +3,7 @@ use std::thread::sleep;
 
 use odra_casper_client::casper_client::CasperClient;
 use odra_casper_client::log::info;
-use odra_core::callstack::{Callstack, CallstackElement, Entrypoint};
-use odra_core::contract_container::ContractContainer;
-use odra_core::contract_register::ContractRegister;
+use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::{
     casper_types::{
@@ -15,6 +13,7 @@ use odra_core::{
     Address, CallDef, ContractEnv, HostContext, OdraError
 };
 use odra_core::{prelude::*, EventError};
+use odra_core::{ContractContainer, ContractRegister};
 
 use crate::livenet_contract_env::LivenetContractEnv;
 
@@ -98,10 +97,10 @@ impl HostContext for LivenetHost {
         if !call_def.is_mut() {
             self.callstack
                 .borrow_mut()
-                .push(CallstackElement::Entrypoint(Entrypoint::new(
+                .push(CallstackElement::new_contract_call(
                     *address,
                     call_def.clone()
-                )));
+                ));
             let result = self
                 .contract_register
                 .read()
