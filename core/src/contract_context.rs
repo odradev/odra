@@ -1,6 +1,8 @@
 use crate::call_def::CallDef;
 use crate::{Address, Bytes, OdraError, U512};
 
+#[cfg_attr(test, allow(unreachable_code))]
+#[cfg_attr(test, mockall::automock)]
 pub trait ContractContext {
     fn get_value(&self, key: &[u8]) -> Option<Bytes>;
     fn set_value(&self, key: &[u8], value: Bytes);

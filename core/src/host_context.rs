@@ -6,6 +6,7 @@ use crate::{Bytes, OdraError};
 use crate::{CallDef, ContractEnv};
 use casper_types::PublicKey;
 
+#[cfg_attr(test, mockall::automock)]
 pub trait HostContext {
     fn set_caller(&self, caller: Address);
     fn set_gas(&self, gas: u64);

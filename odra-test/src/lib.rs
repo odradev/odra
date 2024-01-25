@@ -8,7 +8,7 @@ use odra_core::prelude::String;
 use odra_core::HostEnv;
 use odra_vm::{OdraVm, OdraVmHost};
 
-pub fn env() -> odra_core::HostEnv {
+pub fn env() -> HostEnv {
     extern crate std;
     let backend: String = std::env::var("ODRA_BACKEND").unwrap_or(String::from("odra-vm"));
     match backend.as_str() {

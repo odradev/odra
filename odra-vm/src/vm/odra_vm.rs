@@ -302,18 +302,16 @@ impl OdraVm {
 mod tests {
     use odra_core::{call_def, serialize, Bytes, EntryPoint, EntryPointsCaller, ToBytes};
     use std::collections::BTreeMap;
-    use std::f32::consts::E;
-
-    use crate::vm::callstack::CallstackElement;
-    use crate::vm::contract_container::{EntrypointArgs, EntrypointCall};
-    use odra_core::call_def::CallDef;
-    use odra_core::casper_types::bytesrepr::FromBytes;
-    use odra_core::casper_types::{RuntimeArgs, U512};
-    use odra_core::Address;
-    use odra_core::OdraAddress;
-    use odra_core::{ExecutionError, OdraError, VmError};
 
     use super::OdraVm;
+    use odra_core::callstack::CallstackElement;
+    use odra_core::casper_types::bytesrepr::FromBytes;
+    use odra_core::casper_types::{RuntimeArgs, U512};
+    use odra_core::contract_container::{EntrypointArgs, EntrypointCall};
+    use odra_core::Address;
+    use odra_core::CallDef;
+    use odra_core::OdraAddress;
+    use odra_core::{ExecutionError, OdraError, VmError};
 
     const TEST_ENTRY_POINT: &str = "abc";
 
@@ -352,7 +350,7 @@ mod tests {
         // when call an existing entrypoint
         let result = instance.call_contract(
             contract_address,
-            CallDef::new(TEST_ENTRY_POINT, RuntimeArgs::new())
+            CallDef::new(TEST_ENTRY_POINT, false, RuntimeArgs::new())
         );
         let expected_result: Bytes = test_call_result();
 
@@ -368,7 +366,7 @@ mod tests {
         let address = Address::contract_from_u32(42);
 
         // when call a contract
-        let call_def = CallDef::new(TEST_ENTRY_POINT, RuntimeArgs::new());
+        let call_def = CallDef::new(TEST_ENTRY_POINT, false, RuntimeArgs::new());
         instance.call_contract(address, call_def);
 
         // then the vm is in error state
@@ -386,7 +384,7 @@ mod tests {
         let contract_address = setup_contract(&instance, TEST_ENTRY_POINT);
 
         // when call non-existing entrypoint
-        let call_def = CallDef::new(invalid_entry_point_name, RuntimeArgs::new());
+        let call_def = CallDef::new(invalid_entry_point_name, false, RuntimeArgs::new());
 
         instance.call_contract(contract_address, call_def);
 
@@ -523,7 +521,7 @@ mod tests {
         let caller_balance = instance.balance_of(&caller);
 
         let call_def =
-            CallDef::new(TEST_ENTRY_POINT, RuntimeArgs::new()).with_amount(caller_balance);
+            CallDef::new(TEST_ENTRY_POINT, false, RuntimeArgs::new()).with_amount(caller_balance);
         instance.call_contract(contract_address, call_def);
 
         // then the contract has the caller tokens and the caller balance is zero
@@ -542,8 +540,8 @@ mod tests {
         let caller_balance = instance.balance_of(&caller);
 
         // when call a contract with the amount exceeding caller's balance
-        let call_def =
-            CallDef::new(TEST_ENTRY_POINT, RuntimeArgs::new()).with_amount(caller_balance + 1);
+        let call_def = CallDef::new(TEST_ENTRY_POINT, false, RuntimeArgs::new())
+            .with_amount(caller_balance + 1);
         instance.call_contract(contract_address, call_def);
     }
 
