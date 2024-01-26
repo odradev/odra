@@ -66,15 +66,17 @@ impl ContractContainer {
 
 #[cfg(test)]
 mod tests {
-    use super::{ContractContainer, EntrypointArgs, EntrypointCall};
-    use crate::prelude::*;
+    use crate::contract_container::ContractContainer;
+    use crate::contract_context::MockContractContext;
+    use crate::host_context::MockHostContext;
     use crate::{
         casper_types::{runtime_args, RuntimeArgs},
         OdraError, VmError
     };
-    use crate::{CLType, CallDef, EntryPoint, EntryPointArgument, EntryPointsCaller, HostEnv};
+    use crate::{prelude::*, ContractEnv, HostEnv};
+    use crate::{CLType, CallDef, EntryPoint, EntryPointArgument, EntryPointsCaller};
 
-    const TEST_ENTRYPOINT: &'static str = "ep";
+    const TEST_ENTRYPOINT: &str = "ep";
 
     #[test]
     fn test_call_wrong_entrypoint() {
@@ -108,7 +110,7 @@ mod tests {
         let instance = ContractContainer::with_entrypoint(vec![("first", CLType::U32)]);
 
         // When call the registered entrypoint with an arg named "second".
-        let call_def = CallDef::new(TEST_ENTRYPOINT, runtime_args! { "second" => 0u32 });
+        let call_def = CallDef::new(TEST_ENTRYPOINT, false, runtime_args! { "second" => 0u32 });
         let result = instance.call(call_def);
 
         // Then MissingArg error is returned.
@@ -121,7 +123,7 @@ mod tests {
         let instance = ContractContainer::with_entrypoint(vec![("first", CLType::U32)]);
 
         // When call the registered entrypoint with an arg named "second".
-        let call_def = CallDef::new(TEST_ENTRYPOINT, runtime_args! { "first" => true });
+        let call_def = CallDef::new(TEST_ENTRYPOINT, false, runtime_args! { "first" => true });
         let result = instance.call(call_def);
 
         // Then MissingArg error is returned.
@@ -166,7 +168,8 @@ mod tests {
 
     impl ContractContainer {
         fn empty() -> Self {
-            let env = odra::odra_test::odra_env();
+            let ctx = Rc::new(RefCell::new(MockHostContext::new()));
+            let env = HostEnv::new(ctx);
             let entry_points_caller = EntryPointsCaller::new(env, vec![], |_, call_def| {
                 Err(OdraError::VmError(VmError::NoSuchMethod(
                     call_def.method().to_string()
@@ -184,20 +187,21 @@ mod tests {
                     .map(|(name, ty)| EntryPointArgument::new(String::from(*name), ty.to_owned()))
                     .collect()
             )];
+            let mut ctx = MockHostContext::new();
+            ctx.expect_contract_env().returning(|| {
+                ContractEnv::new(0, Rc::new(RefCell::new(MockContractContext::new())))
+            });
+            let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
 
-            let entry_points_caller = EntryPointsCaller::new(
-                odra::odra_test::odra_env(),
-                entry_points,
-                |env, call_def| {
-                    if call_def.method() == TEST_ENTRYPOINT {
-                        Ok(vec![1, 2, 3].into())
-                    } else {
-                        Err(OdraError::VmError(VmError::NoSuchMethod(
-                            call_def.method().to_string()
-                        )))
-                    }
+            let entry_points_caller = EntryPointsCaller::new(env, entry_points, |_, call_def| {
+                if call_def.method() == TEST_ENTRYPOINT {
+                    Ok(vec![1, 2, 3].into())
+                } else {
+                    Err(OdraError::VmError(VmError::NoSuchMethod(
+                        call_def.method().to_string()
+                    )))
                 }
-            );
+            });
 
             Self {
                 entry_points_caller

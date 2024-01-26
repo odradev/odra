@@ -119,7 +119,7 @@ pub mod test {
 
         // then two RoleGranted events were emitted.
         contract.env().emitted_event(
-            &contract.address(),
+            contract.address(),
             &RoleGranted {
                 role: keccak_256(ROLE_MODERATOR),
                 address: user1,
@@ -163,7 +163,7 @@ pub mod test {
         assert!(contract.is_moderator(moderator));
 
         contract.env().emitted_event(
-            &contract.address(),
+            contract.address(),
             &RoleGranted {
                 role: keccak_256(ROLE_MODERATOR),
                 address: moderator,
@@ -171,7 +171,7 @@ pub mod test {
             }
         );
         contract.env().emitted_event(
-            &contract.address(),
+            contract.address(),
             &RoleRevoked {
                 role: keccak_256(ROLE_MODERATOR),
                 address: moderator,
@@ -179,7 +179,7 @@ pub mod test {
             }
         );
         contract.env().emitted_event(
-            &contract.address(),
+            contract.address(),
             &RoleGranted {
                 role: keccak_256(ROLE_MODERATOR),
                 address: moderator,
@@ -206,7 +206,7 @@ pub mod test {
         assert!(!contract.is_moderator(moderator));
         // RoleRevoked event was emitted.
         contract.env().emitted_event(
-            &contract.address(),
+            contract.address(),
             &RoleRevoked {
                 role: keccak_256(ROLE_MODERATOR),
                 address: moderator,
@@ -235,7 +235,7 @@ pub mod test {
         assert!(contract.is_moderator(user));
 
         contract.env().emitted_event(
-            &contract.address(),
+            contract.address(),
             &RoleGranted {
                 role: keccak_256(ROLE_MODERATOR_ADMIN),
                 address: moderator,
@@ -243,7 +243,7 @@ pub mod test {
             }
         );
         contract.env().emitted_event(
-            &contract.address(),
+            contract.address(),
             &RoleGranted {
                 role: keccak_256(ROLE_MODERATOR),
                 address: user,

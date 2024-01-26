@@ -3,8 +3,6 @@ name = "odra-vm"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 odra-core = { path = "../core" }
 anyhow = "1.0.75"
@@ -12,4 +10,4 @@ url = "2.4.1"
 blake2 = { workspace = true }
 
 [dev-dependencies]
-odra = { path = "../odra" }
+odra-test = { path = "../odra-test" }
