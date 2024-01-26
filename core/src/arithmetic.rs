@@ -25,7 +25,6 @@ pub enum ArithmeticsError {
 }
 
 /// Implements [OverflowingAdd] and [OverflowingSub] for all the given types.
-#[macro_export]
 macro_rules! impl_overflowing_add_sub {
     ( $( $ty:ty ),+ ) => {
         $(

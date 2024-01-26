@@ -13,7 +13,7 @@ use odra_core::casper_types::{
 use super::deploy_hash::DeployHash;
 use super::utils::DisplayIter;
 
-/// The header portion of a [`Deploy`].
+/// The header portion of a [`Deploy`](super::Deploy).
 #[derive(
     Clone, DataSize, Ord, PartialOrd, Eq, PartialEq, Hash, Serialize, Deserialize, Debug, JsonSchema,
 )]
