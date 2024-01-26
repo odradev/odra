@@ -1,83 +1,62 @@
 [[contracts]]
-name = "OwnedToken"
 fqn = "odra_examples::contracts::owned_token::OwnedToken"
 
 [[contracts]]
-name = "BalanceChecker"
 fqn = "odra_examples::contracts::balance_checker::BalanceChecker"
 
 [[contracts]]
-name = "TokenManager"
 fqn = "odra_examples::contracts::token_manager::TokenManager"
 
 [[contracts]]
-name = "TimeLockWallet"
 fqn = "odra_examples::contracts::tlw::TimeLockWallet"
 
 [[contracts]]
-name = "ReentrancyMock"
 fqn = "odra_examples::features::reentrancy_guard::ReentrancyMock"
 
 [[contracts]]
-name = "SignatureVerifier"
 fqn = "odra_examples::features::signature_verifier::SignatureVerifier"
 
 [[contracts]]
-name = "NestedOdraTypesContract"
 fqn = "odra_examples::features::module_nesting::NestedOdraTypesContract"
 
 [[contracts]]
-name = "DogContract"
 fqn = "odra_examples::features::storage::variable::DogContract"
 
 [[contracts]]
-name = "DogContract2"
 fqn = "odra_examples::features::storage::mapping::DogContract2"
 
 [[contracts]]
-name = "DogContract3"
 fqn = "odra_examples::features::storage::list::DogContract3"
 
 [[contracts]]
-name = "TestingContract"
 fqn = "odra_examples::features::testing::TestingContract"
 
 [[contracts]]
-name = "HostContract"
 fqn = "odra_examples::features::host_functions::HostContract"
 
 [[contracts]]
-name = "OwnedContract"
 fqn = "odra_examples::features::handling_errors::OwnedContract"
 
 [[contracts]]
-name = "PartyContract"
 fqn = "odra_examples::features::events::PartyContract"
 
 [[contracts]]
-name = "CrossContract"
 fqn = "odra_examples::features::cross_calls::CrossContract"
 
 [[contracts]]
-name = "MathEngine"
 fqn = "odra_examples::features::cross_calls::MathEngine"
 
 [[contracts]]
-name = "ModulesContract"
 fqn = "odra_examples::features::modules::ModulesContract"
 
 [[contracts]]
-name = "PublicWallet"
 fqn = "odra_examples::features::native_token::PublicWallet"
 
 [[contracts]]
-name = "MockModerated"
 fqn = "odra_examples::features::access_control::MockModerated"
 
 [[contracts]]
-name = "PauseableCounter"
 fqn = "odra_examples::features::pauseable::PauseableCounter"
 
 [[contracts]]
-name = "LivenetContract"
 fqn = "odra_examples::features::livenet::LivenetContract"
