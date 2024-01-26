@@ -23,12 +23,12 @@ mod tests {
     fn test_modules() {
         let test_env = odra_test::env();
         let mut my_contract = PublicWalletDeployer::init(&test_env);
-        assert_eq!(test_env.balance_of(&my_contract.address()), U512::zero());
+        assert_eq!(test_env.balance_of(my_contract.address()), U512::zero());
 
         my_contract.with_tokens(U512::from(100)).deposit();
-        assert_eq!(test_env.balance_of(&my_contract.address()), U512::from(100));
+        assert_eq!(test_env.balance_of(my_contract.address()), U512::from(100));
 
         my_contract.withdraw(U512::from(25));
-        assert_eq!(test_env.balance_of(&my_contract.address()), U512::from(75));
+        assert_eq!(test_env.balance_of(my_contract.address()), U512::from(75));
     }
 }

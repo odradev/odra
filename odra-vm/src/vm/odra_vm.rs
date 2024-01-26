@@ -359,7 +359,6 @@ mod tests {
     };
 
     use std::collections::BTreeMap;
-    use std::f32::consts::E;
 
     use odra_core::casper_types::bytesrepr::FromBytes;
     use odra_core::casper_types::{RuntimeArgs, U512};
@@ -367,9 +366,9 @@ mod tests {
     use odra_core::CallDef;
     use odra_core::{ExecutionError, OdraError, VmError};
 
-    use super::OdraVm;
+    use crate::OdraVm;
 
-    const TEST_ENTRY_POINT: &'static str = "abc";
+    const TEST_ENTRY_POINT: &str = "abc";
 
     #[test]
     fn contracts_have_different_addresses() {

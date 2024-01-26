@@ -26,7 +26,7 @@ use odra_vm::{OdraVm, OdraVmHost};
 /// Returns the host environment for the testing purpose.
 ///
 /// Two environments are supported: [odra-vm](OdraVmHost) and [casper](CasperHost).
-pub fn env() -> odra_core::HostEnv {
+pub fn env() -> HostEnv {
     extern crate std;
 
     let backend: String = std::env::var("ODRA_BACKEND").unwrap_or_default();

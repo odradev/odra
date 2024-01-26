@@ -5,6 +5,7 @@ use crate::{Address, CallDef, ContractEnv, OdraResult};
 use casper_types::PublicKey;
 
 /// The `HostContext` trait defines the interface for interacting with the host environment.
+#[cfg_attr(test, mockall::automock)]
 pub trait HostContext {
     /// Sets the caller address for the current contract execution.
     fn set_caller(&self, caller: Address);

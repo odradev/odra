@@ -4,6 +4,8 @@ use crate::casper_types::U512;
 use crate::{Address, OdraError};
 
 /// Trait representing the context of a smart contract.
+#[cfg_attr(test, allow(unreachable_code))]
+#[cfg_attr(test, mockall::automock)]
 pub trait ContractContext {
     /// Retrieves from the storage the value associated with the given key.
     ///
