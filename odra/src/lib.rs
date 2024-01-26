@@ -42,7 +42,7 @@ pub use odra_core::{casper_event_standard, casper_types};
 pub use odra_core::{
     Address, AddressError, CallDef, CollectionError, ContractCallResult, ContractContext,
     ContractEnv, EventError, ExecutionEnv, ExecutionError, HostContext, HostEnv, List, ListIter,
-    Mapping, OdraError, OdraResult, UnwrapOrRevert, Variable, VmError
+    Mapping, OdraError, OdraResult, Sequence, UnwrapOrRevert, Variable, VmError
 };
 
 pub use odra_macros::*;

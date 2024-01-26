@@ -25,6 +25,7 @@ mod list;
 mod mapping;
 pub mod module;
 pub mod prelude;
+mod sequence;
 pub mod uints;
 mod unwrap_or_revert;
 pub mod utils;
@@ -47,6 +48,7 @@ pub use unwrap_or_revert::UnwrapOrRevert;
 
 pub use list::{List, ListIter};
 pub use mapping::Mapping;
+pub use sequence::Sequence;
 pub use variable::Variable;
 
 pub use casper_types;
