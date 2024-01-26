@@ -189,6 +189,11 @@ impl ToString for Address {
     }
 }
 
+pub trait OdraAddress {
+    /// Returns true if the address is a contract address.
+    fn is_contract(&self) -> bool;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -274,9 +279,4 @@ mod tests {
             OdraError::VmError(VmError::Deserialization)
         )
     }
-}
-
-pub trait OdraAddress {
-    /// Returns true if the address is a contract address.
-    fn is_contract(&self) -> bool;
 }

@@ -482,7 +482,7 @@ mod tests {
                 .to_vec()
             ),
             // TODO: Why it gives deserialization error when mismatched?
-            vec![
+            [
                 U256::from(100),
                 U256::from(200),
                 U256::zero(),
@@ -948,8 +948,8 @@ mod tests {
             &BatchReceived {
                 operator: Some(env.alice),
                 from: Some(env.alice),
-                token_ids: vec![U256::one(), U256::from(2)].to_vec(),
-                amounts: vec![100.into(), 100.into()].to_vec(),
+                token_ids: [U256::one(), U256::from(2)].to_vec(),
+                amounts: [100.into(), 100.into()].to_vec(),
                 data: None
             }
         );
@@ -993,8 +993,8 @@ mod tests {
             &BatchReceived {
                 operator: Some(env.alice),
                 from: Some(env.alice),
-                token_ids: vec![U256::one(), U256::from(2)].to_vec(),
-                amounts: vec![100.into(), 100.into()].to_vec(),
+                token_ids: [U256::one(), U256::from(2)].to_vec(),
+                amounts: [100.into(), 100.into()].to_vec(),
                 data: Some(Bytes::from(b"data".to_vec()))
             }
         );
