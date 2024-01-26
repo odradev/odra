@@ -1,4 +1,5 @@
 #![no_std]
+#![allow(internal_features)]
 #![cfg_attr(not(test), feature(core_intrinsics))]
 #![allow(dead_code)]
 #![allow(unused_imports)]
