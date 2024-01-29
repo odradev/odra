@@ -30,6 +30,9 @@ install-cargo-odra:
 prepare-test-env: install-cargo-odra
     rustup target add wasm32-unknown-unknown
     sudo apt install wabt
+    wget https://github.com/WebAssembly/binaryen/releases/download/version_116/binaryen-version_116-x86_64-linux.tar.gz
+    tar -xzf binaryen-version_116-x86_64-linux.tar.gz
+    sudo cp binaryen-version_116/bin/wasm-opt /usr/local/bin/wasm-opt
 
 build-proxy-callers:
     cd odra-casper/proxy-caller && cargo build --release --target wasm32-unknown-unknown --target-dir ../../target
