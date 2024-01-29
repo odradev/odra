@@ -7,12 +7,12 @@ use odra_core::prelude::*;
 use odra_core::{Address, Bytes, OdraError, U512};
 use odra_core::{CallDef, ContractContext};
 use std::io::Write;
-use std::sync::{Arc, RwLock};
+use std::sync::RwLock;
 
 pub struct LivenetContractEnv {
     casper_client: Rc<RefCell<CasperClient>>,
     callstack: Rc<RefCell<Callstack>>,
-    contract_register: Arc<RwLock<ContractRegister>>
+    contract_register: Rc<RwLock<ContractRegister>>
 }
 
 impl ContractContext for LivenetContractEnv {
@@ -111,7 +111,7 @@ impl LivenetContractEnv {
     pub fn new(
         casper_client: Rc<RefCell<CasperClient>>,
         callstack: Rc<RefCell<Callstack>>,
-        contract_register: Arc<RwLock<ContractRegister>>
+        contract_register: Rc<RwLock<ContractRegister>>
     ) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(Self {
             casper_client,

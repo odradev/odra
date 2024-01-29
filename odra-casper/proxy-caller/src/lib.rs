@@ -1,5 +1,4 @@
 #![no_std]
-#![cfg_attr(not(test), feature(core_intrinsics))]
 
 extern crate alloc;
 
