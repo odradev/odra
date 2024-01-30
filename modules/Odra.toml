@@ -1,24 +1,24 @@
 [[contracts]]
-fqn = "odra_modules::Erc20"
+fqn = "erc20::Erc20"
 
 [[contracts]]
-fqn = "odra_modules::erc721_token::Erc721Token"
+fqn = "erc721_token::Erc721Token"
 
 [[contracts]]
-fqn = "odra_modules::erc721_receiver::Erc721Receiver"
+fqn = "erc721_receiver::Erc721Receiver"
 
 [[contracts]]
-fqn = "odra_modules::erc1155_token::Erc1155Token"
+fqn = "erc1155_token::Erc1155Token"
 
 [[contracts]]
-fqn = "odra_modules::erc1155_receiver::Erc1155Receiver"
+fqn = "erc1155_receiver::Erc1155Receiver"
 
 [[contracts]]
-fqn = "odra_modules::wrapped_native::WrappedNativeToken"
+fqn = "wrapped_native::WrappedNativeToken"
 
 [[contracts]]
-fqn = "odra_modules::access::Ownable"
+fqn = "access::Ownable"
 
 [[contracts]]
-fqn = "odra_modules::ownable_2step::Ownable2Step"
+fqn = "ownable_2step::Ownable2Step"
 

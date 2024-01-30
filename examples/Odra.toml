@@ -1,62 +1,62 @@
 [[contracts]]
-fqn = "odra_examples::contracts::owned_token::OwnedToken"
+fqn = "contracts::owned_token::OwnedToken"
 
 [[contracts]]
-fqn = "odra_examples::contracts::balance_checker::BalanceChecker"
+fqn = "contracts::balance_checker::BalanceChecker"
 
 [[contracts]]
-fqn = "odra_examples::contracts::token_manager::TokenManager"
+fqn = "contracts::token_manager::TokenManager"
 
 [[contracts]]
-fqn = "odra_examples::contracts::tlw::TimeLockWallet"
+fqn = "contracts::tlw::TimeLockWallet"
 
 [[contracts]]
-fqn = "odra_examples::features::reentrancy_guard::ReentrancyMock"
+fqn = "features::reentrancy_guard::ReentrancyMock"
 
 [[contracts]]
-fqn = "odra_examples::features::signature_verifier::SignatureVerifier"
+fqn = "features::signature_verifier::SignatureVerifier"
 
 [[contracts]]
-fqn = "odra_examples::features::module_nesting::NestedOdraTypesContract"
+fqn = "features::module_nesting::NestedOdraTypesContract"
 
 [[contracts]]
-fqn = "odra_examples::features::storage::variable::DogContract"
+fqn = "features::storage::variable::DogContract"
 
 [[contracts]]
-fqn = "odra_examples::features::storage::mapping::DogContract2"
+fqn = "features::storage::mapping::DogContract2"
 
 [[contracts]]
-fqn = "odra_examples::features::storage::list::DogContract3"
+fqn = "features::storage::list::DogContract3"
 
 [[contracts]]
-fqn = "odra_examples::features::testing::TestingContract"
+fqn = "features::testing::TestingContract"
 
 [[contracts]]
-fqn = "odra_examples::features::host_functions::HostContract"
+fqn = "features::host_functions::HostContract"
 
 [[contracts]]
-fqn = "odra_examples::features::handling_errors::OwnedContract"
+fqn = "features::handling_errors::OwnedContract"
 
 [[contracts]]
-fqn = "odra_examples::features::events::PartyContract"
+fqn = "features::events::PartyContract"
 
 [[contracts]]
-fqn = "odra_examples::features::cross_calls::CrossContract"
+fqn = "features::cross_calls::CrossContract"
 
 [[contracts]]
-fqn = "odra_examples::features::cross_calls::MathEngine"
+fqn = "features::cross_calls::MathEngine"
 
 [[contracts]]
-fqn = "odra_examples::features::modules::ModulesContract"
+fqn = "features::modules::ModulesContract"
 
 [[contracts]]
-fqn = "odra_examples::features::native_token::PublicWallet"
+fqn = "features::native_token::PublicWallet"
 
 [[contracts]]
-fqn = "odra_examples::features::access_control::MockModerated"
+fqn = "features::access_control::MockModerated"
 
 [[contracts]]
-fqn = "odra_examples::features::pauseable::PauseableCounter"
+fqn = "features::pauseable::PauseableCounter"
 
 [[contracts]]
-fqn = "odra_examples::features::livenet::LivenetContract"
+fqn = "features::livenet::LivenetContract"

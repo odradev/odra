@@ -1,2 +1,2 @@
 [[contracts]]
-fqn = "{{project-name}}::Flipper"
+fqn = "flipper::Flipper"
