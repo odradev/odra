@@ -27,6 +27,7 @@ impl CallDef {
     /// let method = "my_method";
     /// let args = RuntimeArgs::new();
     /// let call_def = CallDef::new(method, false, args);
+    /// * `is_mut` - Indicates if the call is mutable.
     /// ```
     pub fn new<T: ToString>(method: T, is_mut: bool, args: RuntimeArgs) -> Self {
         CallDef {
