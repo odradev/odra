@@ -51,21 +51,21 @@ build-proxy-callers:
 test-odra:
     cargo test
 
-test-examples-on-mockvm:
+test-examples-on-odravm:
     cd examples && cargo odra test
 
 test-examples-on-casper:
     cd examples && cargo odra test -b casper
 
-test-examples: test-examples-on-mockvm test-examples-on-casper
+test-examples: test-examples-on-odravm test-examples-on-casper
 
-test-modules-on-mockvm:
+test-modules-on-odravm:
     cd modules && cargo odra test
 
 test-modules-on-casper:
     cd modules && cargo odra test -b casper
 
-test-modules: test-modules-on-mockvm test-modules-on-casper
+test-modules: test-modules-on-odravm test-modules-on-casper
 
 test: test-odra test-examples test-modules
 
