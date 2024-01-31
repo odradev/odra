@@ -40,7 +40,7 @@ and it has to be named `init`.
 - Removed `assert_events!` macro. Use `env.emitted_event` and similar methods instead.
 - Removed `native_token_metadata()` and its respective structs.
 - Removed `assert_exception!` macro. Use `try_` prefix for endpoints instead. It returns a `Result`
-which can used used with a regular `assert_eq!` macro.`
+which can be used with a regular `assert_eq!` macro.`
 - Removed `odra(using)` macro.
 - Removed `default()` method from `Deployer`. Use `init()` instead.
 - Removed `StaticInstance` and `DynamicInstance` traits. Use `Module` instead.
