@@ -5,7 +5,7 @@ Changelog for `odra`.
 ## [0.8.0] - 2024-XX-XX
 
 ### Changed
-- Replaced `contract_env::` with `self.env.` in the contract context (of type `ContractEnv`).
+- Replaced `contract_env::` with `self.env()` in the contract context (of type `ContractEnv`).
 For example, instead of `contract_env::caller()` use `self.env.caller()`.
 - Replaced `test_env` with `odra_test::env()` in the test context (of type `HostEnv`).
 - It is no longer possible to put a Mapping inside a Mapping. Use tuple keys instead, for example, instead of
