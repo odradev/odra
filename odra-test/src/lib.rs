@@ -4,7 +4,7 @@
 //!
 //! # Example
 //!
-//! ```
+//! ```no-run
 //! #[test]
 //! fn test() {
 //!    let env = odra_test::env();
