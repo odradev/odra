@@ -1,5 +1,7 @@
 CARGO_ODRA_GIT_REPO := "https://github.com/odradev/cargo-odra"
 CARGO_ODRA_BRANCH := "release/0.1.0"
+BINARYEN_VERSION := "version_116"
+BINARYEN_CHECKSUM := "c55b74f3109cdae97490faf089b0286d3bba926bb6ea5ed00c8c784fc53718fd"
 
 default:
     just --list
@@ -29,7 +31,13 @@ install-cargo-odra:
 
 prepare-test-env: install-cargo-odra
     rustup target add wasm32-unknown-unknown
+    rustup component add llvm-tools-preview
+    cargo install grcov
     sudo apt install wabt
+    wget https://github.com/WebAssembly/binaryen/releases/download/{{BINARYEN_VERSION}}/binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz || { echo "Download failed"; exit 1; }
+    sha256sum binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz | grep {{BINARYEN_CHECKSUM}} || { echo "Checksum verification failed"; exit 1; }
+    tar -xzf binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz || { echo "Extraction failed"; exit 1; }
+    sudo cp binaryen-{{BINARYEN_VERSION}}/bin/wasm-opt /usr/local/bin/wasm-opt
 
 build-proxy-callers:
     cd odra-casper/proxy-caller && cargo build --release --target wasm32-unknown-unknown --target-dir ../../target
@@ -72,3 +80,12 @@ clean:
     cd examples && rm -f Cargo.lock
     cd modules && rm -f Cargo.lock
 
+coverage:
+    rm -rf target/coverage/
+    mkdir -p target/coverage/
+    CARGO_INCREMENTAL=0 RUSTFLAGS='-Cinstrument-coverage' LLVM_PROFILE_FILE='target/coverage/cargo-test-%p-%m.profraw' cargo test
+    cd examples && CARGO_INCREMENTAL=0 RUSTFLAGS='-Cinstrument-coverage' LLVM_PROFILE_FILE='../target/coverage/cargo-test-%p-%m.profraw' cargo test
+    cd modules && CARGO_INCREMENTAL=0 RUSTFLAGS='-Cinstrument-coverage' LLVM_PROFILE_FILE='../target/coverage/cargo-test-%p-%m.profraw' cargo test
+    # Uncomment the following line to generate local HTML report
+    # grcov . --binary-path ./target/debug/deps/ -s . -t html --branch --ignore '../*' --ignore "/*" -o target/coverage/html
+    grcov . --binary-path ./target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o target/coverage/tests.lcov

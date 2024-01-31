@@ -8,8 +8,7 @@ members = [
     "odra-casper/casper-client",
     "odra-casper/wasm-env",
     "odra-casper/test-vm",
-    "odra-test"
-]
+    "odra-test"]
 exclude = [ "examples", "modules", "odra-casper/proxy-caller" ]
 resolver = "2"
 

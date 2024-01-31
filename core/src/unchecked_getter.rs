@@ -23,7 +23,7 @@ pub trait UncheckedGetter {
 impl UncheckedGetter for RuntimeArgs {
     fn get<T: FromBytes + CLTyped>(&self, key: &str) -> T {
         self.get(key)
-            .map(Clone::clone)
+            .cloned()
             .map(CLValue::into_t)
             .unwrap()
             .unwrap()

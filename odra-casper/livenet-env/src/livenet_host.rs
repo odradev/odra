@@ -1,5 +1,5 @@
 //! Livenet implementation of HostContext for HostEnv.
-use std::sync::{Arc, RwLock};
+use std::sync::RwLock;
 use std::thread::sleep;
 
 use odra_casper_client::casper_client::CasperClient;
@@ -21,7 +21,7 @@ use crate::livenet_contract_env::LivenetContractEnv;
 /// LivenetHost struct.
 pub struct LivenetHost {
     casper_client: Rc<RefCell<CasperClient>>,
-    contract_register: Arc<RwLock<ContractRegister>>,
+    contract_register: Rc<RwLock<ContractRegister>>,
     contract_env: Rc<ContractEnv>,
     callstack: Rc<RefCell<Callstack>>
 }
@@ -35,7 +35,7 @@ impl LivenetHost {
     fn new_instance() -> Self {
         let casper_client: Rc<RefCell<CasperClient>> = Default::default();
         let callstack: Rc<RefCell<Callstack>> = Default::default();
-        let contract_register = Arc::new(RwLock::new(Default::default()));
+        let contract_register = Rc::new(RwLock::new(Default::default()));
         let livenet_contract_env = LivenetContractEnv::new(
             casper_client.clone(),
             callstack.clone(),
