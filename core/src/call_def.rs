@@ -104,11 +104,10 @@ impl CallDef {
     }
 }
 
-
 #[cfg(test)]
 mod test {
-    use casper_types::{runtime_args, RuntimeArgs};
     use crate::CallDef;
+    use casper_types::{runtime_args, RuntimeArgs};
 
     #[test]
     fn test_get_arg() {
@@ -122,7 +121,6 @@ mod test {
         let value: Option<u32> = call_def.get("your_value");
         assert_eq!(value, None);
     }
-
 
     #[test]
     fn test_is_mut() {
