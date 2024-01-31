@@ -180,20 +180,29 @@ impl OwnedErc1155 for Erc1155Token {
     }
 }
 
+impl odra::contract_def::HasIdent for Erc1155TokenHostRef {
+    fn ident() -> String {
+        String::from("Erc1155Token")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::erc1155::errors::Error;
     use crate::erc1155::errors::Error::InsufficientBalance;
     use crate::erc1155::events::{ApprovalForAll, TransferBatch, TransferSingle};
     use crate::erc1155_receiver::events::{BatchReceived, SingleReceived};
-    use crate::erc1155_receiver::Erc1155ReceiverDeployer;
-    use crate::erc1155_token::{Erc1155TokenDeployer, Erc1155TokenHostRef};
-    use crate::wrapped_native::WrappedNativeTokenDeployer;
+    use crate::erc1155_receiver::{Erc1155ReceiverHostRef, Erc1155ReceiverInitArgs};
+    use crate::erc1155_token::Erc1155TokenHostRef;
+    use crate::wrapped_native::{WrappedNativeTokenHostRef, WrappedNativeTokenInitArgs};
+    use odra::experimental::{Deployer, HostRef};
     use odra::prelude::*;
     use odra::{
         casper_types::{bytesrepr::Bytes, U256},
         Address, HostEnv, OdraError, VmError
     };
+
+    use super::Erc1155TokenInitArgs;
 
     struct TokenEnv {
         env: HostEnv,
@@ -208,7 +217,7 @@ mod tests {
 
         TokenEnv {
             env: env.clone(),
-            token: Erc1155TokenDeployer::init(&env),
+            token: Erc1155TokenHostRef::deploy(&env, Erc1155TokenInitArgs {}),
             alice: env.get_account(1),
             bob: env.get_account(2),
             owner: env.get_account(0)
@@ -817,7 +826,8 @@ mod tests {
         // Given a deployed contract
         let mut env = setup();
         // And a valid receiver
-        let receiver = Erc1155ReceiverDeployer::init(&env.env);
+        
+        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, Erc1155TokenInitArgs {});
         // And some tokens minted
         env.token.mint(env.alice, U256::one(), 100.into(), None);
 
@@ -856,7 +866,7 @@ mod tests {
         // Given a deployed contract
         let mut env = setup();
         // And a valid receiver
-        let receiver = Erc1155ReceiverDeployer::init(&env.env);
+        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, Erc1155TokenInitArgs {});
         // And some tokens minted
         env.token.mint(env.alice, U256::one(), 100.into(), None);
 
@@ -895,7 +905,7 @@ mod tests {
         // Given a deployed contract
         let mut env = setup();
         // And an invalid receiver
-        let receiver = WrappedNativeTokenDeployer::init(&env.env);
+        let receiver = WrappedNativeTokenHostRef::deploy(&env.env, WrappedNativeTokenInitArgs {});
         // And some tokens minted
         env.token.mint(env.alice, U256::one(), 100.into(), None);
 
@@ -922,7 +932,7 @@ mod tests {
         // Given a deployed contract
         let mut env = setup();
         // And a valid receiver
-        let receiver = Erc1155ReceiverDeployer::init(&env.env);
+        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, Erc1155ReceiverInitArgs {});
         // And some tokens minted
         env.token.mint(env.alice, U256::one(), 100.into(), None);
         env.token.mint(env.alice, U256::from(2), 100.into(), None);
@@ -967,7 +977,7 @@ mod tests {
         // Given a deployed contract
         let mut env = setup();
         // And a valid receiver
-        let receiver = Erc1155ReceiverDeployer::init(&env.env);
+        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, Erc1155ReceiverInitArgs {});
         // And some tokens minted
         env.token.mint(env.alice, U256::one(), 100.into(), None);
         env.token.mint(env.alice, U256::from(2), 100.into(), None);
@@ -1012,7 +1022,7 @@ mod tests {
         // Given a deployed contract
         let mut env = setup();
         // And an invalid receiver
-        let receiver = WrappedNativeTokenDeployer::init(&env.env);
+        let receiver = WrappedNativeTokenHostRef::deploy(&env.env, WrappedNativeTokenInitArgs {});
         // And some tokens minted
         env.token.mint(env.alice, U256::one(), 100.into(), None);
         env.token.mint(env.alice, U256::from(2), 100.into(), None);

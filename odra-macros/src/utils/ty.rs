@@ -53,6 +53,10 @@ pub fn entry_points_caller() -> syn::Type {
     parse_quote!(odra::entry_point_callback::EntryPointsCaller)
 }
 
+pub fn entry_point_caller_provider() -> syn::Type {
+    parse_quote!(odra::experimental::EntryPointCallerProvider)
+}
+
 pub fn contract_call_result() -> syn::Type {
     parse_quote!(odra::ContractCallResult)
 }
@@ -259,4 +263,8 @@ pub fn unreferenced_ty(ty: &syn::Type) -> syn::Type {
         }
         _ => slice_to_vec(ty)
     }
+}
+
+pub fn host_ref() -> syn::Type {
+    parse_quote!(odra::experimental::HostRef)
 }

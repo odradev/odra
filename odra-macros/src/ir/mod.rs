@@ -201,18 +201,18 @@ impl ModuleImplIR {
         ))
     }
 
-    pub fn schema_mod_ident(&self) -> syn::Result<Ident> {
-        let module_ident = self.snake_cased_module_ident()?;
+    pub fn init_args_ident(&self) -> syn::Result<syn::Ident> {
+        let module_ident = self.module_ident()?;
         Ok(Ident::new(
-            &format!("__{}_schema", module_ident),
+            &format!("{}InitArgs", module_ident),
             module_ident.span()
         ))
     }
 
-    pub fn deployer_ident(&self) -> syn::Result<Ident> {
-        let module_ident = self.module_ident()?;
+    pub fn schema_mod_ident(&self) -> syn::Result<Ident> {
+        let module_ident = self.snake_cased_module_ident()?;
         Ok(Ident::new(
-            &format!("{}Deployer", module_ident),
+            &format!("__{}_schema", module_ident),
             module_ident.span()
         ))
     }

@@ -13,6 +13,12 @@ pub struct WrappedNativeToken {
     erc20: ModuleWrapper<Erc20>
 }
 
+impl odra::contract_def::HasIdent for WrappedNativeTokenHostRef {
+    fn ident() -> String {
+        String::from("WrappedNativeToken")
+    }
+}
+
 #[odra::module]
 impl WrappedNativeToken {
     pub fn init(&mut self) {
@@ -107,8 +113,9 @@ mod tests {
     use crate::erc20::errors::Error::InsufficientBalance;
     use crate::erc20::events::Transfer;
     use crate::wrapped_native::events::{Deposit, Withdrawal};
-    use crate::wrapped_native::{WrappedNativeTokenDeployer, WrappedNativeTokenHostRef};
+    use crate::wrapped_native::WrappedNativeTokenHostRef;
     use casper_event_standard::EventInstance;
+    use odra::experimental::{Deployer, HostRef};
     use odra::prelude::*;
     use odra::uints::{ToU256, ToU512};
     use odra::VmError::BalanceExceeded;
@@ -116,6 +123,8 @@ mod tests {
         casper_types::{U256, U512},
         Address, HostEnv, OdraError
     };
+
+    use super::WrappedNativeTokenInitArgs;
 
     fn setup() -> (
         HostEnv,
@@ -126,7 +135,7 @@ mod tests {
         U512
     ) {
         let env = odra_test::env();
-        let token = WrappedNativeTokenDeployer::init(&env);
+        let token = WrappedNativeTokenHostRef::deploy(&env, WrappedNativeTokenInitArgs {});
         let account_1 = env.get_account(0);
         let account_1_balance = env.balance_of(&account_1);
         let account_2 = env.get_account(1);

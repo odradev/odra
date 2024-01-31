@@ -58,6 +58,12 @@ impl Erc1155Receiver {
     }
 }
 
+impl odra::contract_def::HasIdent for Erc1155ReceiverHostRef {
+    fn ident() -> String {
+        String::from("Erc1155Receiver")
+    }
+}
+
 /// Erc1155Receiver-related events
 pub mod events {
     use casper_event_standard::Event;

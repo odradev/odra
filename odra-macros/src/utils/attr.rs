@@ -23,3 +23,11 @@ pub fn inline() -> syn::Attribute {
 pub fn automatically_derived() -> syn::Attribute {
     parse_quote!(#[automatically_derived])
 }
+
+pub fn derive_into_runtime_args() -> syn::Attribute {
+    parse_quote!(#[derive(odra::IntoRuntimeArgs)])
+}
+
+pub fn is_none() -> syn::Attribute {
+    parse_quote!(#[is_none])
+}

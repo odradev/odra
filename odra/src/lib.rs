@@ -37,7 +37,7 @@
 //! ```
 #![no_std]
 
-pub use odra_core::{arithmetic, contract_def, entry_point_callback, module, prelude, uints};
+pub use odra_core::{arithmetic, contract_def, entry_point_callback, module, prelude, uints, experimental};
 pub use odra_core::{casper_event_standard, casper_types};
 pub use odra_core::{
     Address, AddressError, CallDef, CollectionError, ContractCallResult, ContractContext,

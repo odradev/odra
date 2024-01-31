@@ -177,15 +177,24 @@ pub mod errors {
     }
 }
 
+impl odra::contract_def::HasIdent for Erc20HostRef {
+    fn ident() -> String {
+        String::from("Erc20")
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::{
         errors::Error,
         events::{Approval, Transfer},
-        Erc20Deployer, Erc20HostRef
+        Erc20HostRef, Erc20InitArgs
     };
-    use odra::prelude::*;
+    use odra::{experimental::HostRef, prelude::*};
     use odra::{casper_types::U256, HostEnv};
+    use odra::experimental::Deployer;
+     
 
     const NAME: &str = "Plascoin";
     const SYMBOL: &str = "PLS";
@@ -196,13 +205,12 @@ mod tests {
         let env = odra_test::env();
         (
             env.clone(),
-            Erc20Deployer::init(
-                &env,
-                SYMBOL.to_string(),
-                NAME.to_string(),
-                DECIMALS,
-                Some(INITIAL_SUPPLY.into())
-            )
+            Erc20HostRef::deploy(&env, Erc20InitArgs {
+                symbol: SYMBOL.to_string(),
+                name: NAME.to_string(),
+                decimals: DECIMALS,
+                initial_supply: Some(INITIAL_SUPPLY.into())
+            })
         )
     }
 
