@@ -79,8 +79,8 @@ impl HostEnv {
         deployed_contract
     }
 
-    /// Registers an existing contract with the specified address and entry points caller. Similar to `new_contract`,
-    /// but skips the deployment phase.
+    /// Registers an existing contract with the specified address and entry points caller.
+    /// Similar to `new_contract`, but skips the deployment phase.
     pub fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller) {
         let backend = self.backend.borrow();
         backend.register_contract(address, entry_points_caller);
