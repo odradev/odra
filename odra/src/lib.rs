@@ -1,4 +1,4 @@
-//! A Rust library for writing smart contracts on the Casper Platform
+//! A Rust library for writing smart contracts for the Casper Blockchain.
 //!
 //! # Example
 //!
