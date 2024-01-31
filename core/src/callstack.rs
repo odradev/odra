@@ -8,7 +8,7 @@ use super::{casper_types::U512, Address, CallDef};
 use crate::prelude::*;
 
 /// A struct representing a callstack element.
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CallstackElement {
     /// An account address.
     Account(Address),
@@ -108,5 +108,120 @@ impl Callstack {
     /// Returns `true` if the callstack is empty.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use casper_types::{account::AccountHash, ContractPackageHash, RuntimeArgs};
+
+    use super::*;
+
+    #[test]
+    fn test_first() {
+        let mut callstack = Callstack::default();
+        callstack.push(mock_account_element());
+        callstack.push(mock_contract_element());
+
+        assert_eq!(callstack.first(), mock_account_element());
+    }
+
+    #[test]
+    fn test_pop() {
+        let mut callstack = Callstack::default();
+        callstack.push(mock_account_element());
+        callstack.push(mock_contract_element());
+
+        assert_eq!(callstack.pop(), Some(mock_contract_element()));
+    }
+
+    #[test]
+    fn test_push() {
+        let mut callstack = Callstack::default();
+        callstack.push(mock_account_element());
+        callstack.push(mock_contract_element());
+
+        assert_eq!(callstack.size(), 2);
+    }
+
+    #[test]
+    fn test_attached_value() {
+        let mut callstack = Callstack::default();
+        callstack.push(mock_account_element());
+        assert_eq!(callstack.attached_value(), U512::zero());
+
+        callstack.push(mock_contract_element_with_value(U512::from(100)));
+        assert_eq!(callstack.attached_value(), U512::from(100));
+    }
+
+    #[test]
+    fn test_attach_value() {
+        let mut callstack = Callstack::default();
+        callstack.push(mock_account_element());
+        callstack.push(mock_contract_element());
+
+        callstack.attach_value(U512::from(200));
+
+        assert_eq!(
+            callstack.current(),
+            &mock_contract_element_with_value(U512::from(200))
+        );
+    }
+
+    #[test]
+    fn test_previous() {
+        let mut callstack = Callstack::default();
+        callstack.push(mock_account_element());
+        callstack.push(mock_contract_element());
+
+        assert_eq!(callstack.previous(), &mock_account_element());
+    }
+
+    #[test]
+    fn test_size() {
+        let mut callstack = Callstack::default();
+
+        callstack.push(mock_account_element());
+        callstack.push(mock_contract_element());
+
+        assert_eq!(callstack.size(), 2);
+    }
+
+    #[test]
+    fn test_is_empty() {
+        let mut callstack = Callstack::default();
+        assert!(callstack.is_empty());
+
+        callstack.push(mock_account_element());
+        assert!(!callstack.is_empty());
+    }
+
+    const CONTRACT_PACKAGE_HASH: &str =
+        "contract-package-wasm7ba9daac84bebee8111c186588f21ebca35550b6cf1244e71768bd871938be6a";
+    const ACCOUNT_HASH: &str =
+        "account-hash-3b4ffcfb21411ced5fc1560c3f6ffed86f4885e5ea05cde49d90962a48a14d95";
+
+    fn mock_account_element() -> CallstackElement {
+        CallstackElement::Account(Address::Account(
+            AccountHash::from_formatted_str(ACCOUNT_HASH).unwrap()
+        ))
+    }
+
+    fn mock_contract_element() -> CallstackElement {
+        CallstackElement::new_contract_call(
+            Address::Contract(
+                ContractPackageHash::from_formatted_str(CONTRACT_PACKAGE_HASH).unwrap()
+            ),
+            CallDef::new("a", false, RuntimeArgs::default())
+        )
+    }
+
+    fn mock_contract_element_with_value(amount: U512) -> CallstackElement {
+        CallstackElement::new_contract_call(
+            Address::Contract(
+                ContractPackageHash::from_formatted_str(CONTRACT_PACKAGE_HASH).unwrap()
+            ),
+            CallDef::new("a", false, RuntimeArgs::default()).with_amount(amount)
+        )
     }
 }

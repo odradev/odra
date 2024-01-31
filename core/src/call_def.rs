@@ -3,7 +3,7 @@ use casper_types::bytesrepr::FromBytes;
 use casper_types::{CLTyped, RuntimeArgs, U512};
 
 /// Represents a call definition, which includes the method name, runtime arguments, and attached value.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CallDef {
     entry_point: String,
     args: RuntimeArgs,
