@@ -1,4 +1,4 @@
-//! This crate provides a testing environment for the odra VM.
+//! This crate provides a testing environment for the Odra VM.
 //!
 //! It is meant to be used in the unit tests of the odra contracts.
 //!
