@@ -1,5 +1,6 @@
 use super::balance::AccountBalance;
 use super::storage::Storage;
+use super::utils;
 use anyhow::Result;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::account::AccountHash;
@@ -39,7 +40,7 @@ impl OdraVmState {
 
     pub fn set_caller(&mut self, address: Address) {
         self.pop_callstack_element();
-        self.push_callstack_element(CallstackElement::Account(address));
+        self.push_callstack_element(CallstackElement::new_account(address));
     }
 
     pub fn set_var(&mut self, key: &[u8], value: Bytes) {
@@ -122,7 +123,7 @@ impl OdraVmState {
 
     pub fn next_contract_address(&mut self) -> Address {
         self.contract_counter += 1;
-        Address::contract_from_u32(self.contract_counter)
+        utils::contract_address_from_u32(self.contract_counter)
     }
 
     pub fn get_contract_namespace(&self) -> String {

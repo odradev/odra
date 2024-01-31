@@ -366,6 +366,7 @@ mod tests {
     use odra_core::CallDef;
     use odra_core::{ExecutionError, OdraError, VmError};
 
+    use crate::vm::utils;
     use crate::OdraVm;
 
     const TEST_ENTRY_POINT: &str = "abc";
@@ -418,7 +419,7 @@ mod tests {
         // given an empty vm
         let instance = OdraVm::default();
 
-        let address = Address::contract_from_u32(42);
+        let address = utils::contract_address_from_u32(42);
 
         // when call a contract
         let call_def = CallDef::new(TEST_ENTRY_POINT, false, RuntimeArgs::new());
@@ -458,7 +459,7 @@ mod tests {
         let instance = OdraVm::default();
 
         // when set a new caller
-        let new_caller = Address::account_from_str("ff");
+        let new_caller = utils::account_address_from_str("ff");
         instance.set_caller(new_caller);
         // put a fake contract on stack
         push_address(&instance, &new_caller);
@@ -514,7 +515,7 @@ mod tests {
         // given an empty instance
         let instance = OdraVm::default();
 
-        let first_contract_address = Address::account_from_str("abc");
+        let first_contract_address = utils::account_address_from_str("abc");
         // put a contract on stack
         push_address(&instance, &first_contract_address);
 
@@ -523,7 +524,7 @@ mod tests {
         instance.emit_event(&first_event);
         instance.emit_event(&second_event);
 
-        let second_contract_address = Address::account_from_str("bca");
+        let second_contract_address = utils::account_address_from_str("bca");
         // put a next contract on stack
         push_address(&instance, &second_contract_address);
 
@@ -558,7 +559,7 @@ mod tests {
         let contract_address = setup_contract(&instance, TEST_ENTRY_POINT);
 
         // when push a contract into the stack
-        let contract_address = Address::contract_from_u32(100);
+        let contract_address = utils::contract_address_from_u32(100);
         push_address(&instance, &contract_address);
 
         // then the contract address in the callee
@@ -601,7 +602,7 @@ mod tests {
     }
 
     fn push_address(vm: &OdraVm, address: &Address) {
-        let element = CallstackElement::Account(*address);
+        let element = CallstackElement::new_account(*address);
         vm.state.write().unwrap().push_callstack_element(element);
     }
 

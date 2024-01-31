@@ -40,29 +40,6 @@ impl Address {
     pub fn is_contract(&self) -> bool {
         self.as_contract_package_hash().is_some()
     }
-
-    // TODO: move those methods to odra_vm as they shouldn't be public
-    pub fn account_from_str(str: &str) -> Self {
-        use casper_types::account::{ACCOUNT_HASH_FORMATTED_STRING_PREFIX, ACCOUNT_HASH_LENGTH};
-        let desired_length = ACCOUNT_HASH_LENGTH * 2;
-        let padding_length = desired_length - str.len();
-        let padding = "0".repeat(padding_length);
-
-        let account_str = format!("{}{}{}", ACCOUNT_HASH_FORMATTED_STRING_PREFIX, str, padding);
-        Self::Account(AccountHash::from_formatted_str(account_str.as_str()).unwrap())
-    }
-
-    // TODO: move those methods to odra_vm as they shouldn't be public
-    pub fn contract_from_u32(i: u32) -> Self {
-        use casper_types::KEY_HASH_LENGTH;
-        let desired_length = KEY_HASH_LENGTH * 2;
-        let padding_length = desired_length - i.to_string().len();
-        let padding = "0".repeat(padding_length);
-
-        let a = i.to_string();
-        let account_str = format!("{}{}{}", "contract-package-", a, padding);
-        Self::Contract(ContractPackageHash::from_formatted_str(account_str.as_str()).unwrap())
-    }
 }
 
 impl TryFrom<ContractPackageHash> for Address {
@@ -195,6 +172,8 @@ pub trait OdraAddress {
 
 #[cfg(test)]
 mod tests {
+    use casper_types::EraId;
+
     use super::*;
 
     // TODO: casper-types > 1.5.0 will have prefix fixed.
@@ -277,5 +256,14 @@ mod tests {
             Address::from_str(CONTRACT_PACKAGE_HASH).unwrap_err(),
             OdraError::VmError(VmError::Deserialization)
         )
+    }
+
+    #[test]
+    fn test_from_key_fails() {
+        let key = Key::EraInfo(EraId::from(42));
+        assert_eq!(
+            Address::try_from(key).unwrap_err(),
+            AddressError::AddressCreationError
+        );
     }
 }

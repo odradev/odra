@@ -126,10 +126,12 @@ mod test {
     use odra_core::utils::serialize;
     use odra_core::Address;
 
+    use crate::vm::utils;
+
     use super::Storage;
 
     fn setup() -> (Address, [u8; 3], u8) {
-        let address = Address::account_from_str("add");
+        let address = utils::account_address_from_str("add");
         let key = b"key";
         let value = 88u8;
 
