@@ -5,8 +5,9 @@ Changelog for `odra`.
 ## [0.8.0] - 2024-XX-XX
 
 ### Changed
-- Replaced `contract_env::` with `self.env.` in contract context.
+- Replaced `contract_env::` with `self.env()` in the contract context (of type `ContractEnv`).
 For example, instead of `contract_env::caller()` use `self.env.caller()`.
+- Replaced `test_env` with `odra_test::env()` in the test context (of type `HostEnv`).
 - It is no longer possible to put a Mapping inside a Mapping. Use tuple keys instead, for example, instead of
 ```rust
 allowances: Mapping<Address, Mapping<Address, U256>>
@@ -27,23 +28,34 @@ but it is still possible to check the costs of the calls.
 - Various changes of method signatures in `odra-modules`, e.g. `&[U256]` changed to `Vec<U256>`
 in `on_erc1155_batch_received` method. 
 - `get_block_time()` now returns `u64` instead of wrapped type `Blocktime(u64)`.
-- Contract name in `Odra.toml` file now needs to be exact name of the module - e.g. `MyModule` instead of `my_module`.
+- The `name` property in `Odra.toml` is not required anymore.
+- `odra-casper-backend` crate is now `odra-casper-wasm-env`
+- `odra-mock-vm` crate is now `odra-vm`
+- `odra-proc-macros` is the only code generation point.
 
 ### Removed
 - Removed `#[odra::init]` macro - now only one method can be a constructor,
-and it has to be named `init` and env needs to be passed as a first parameter.
+and it has to be named `init`.
 - Removed `emit()` method from events. Use `self.env.emit_event(event)` instead.
 - Removed `assert_events!` macro. Use `env.emitted_event` and similar methods instead.
 - Removed `native_token_metadata()` and its respective structs.
-- Removed `assert_exception!` macro. Use `try_` prefix for endpoints instead.
-- Removed `address()` method from `HostRef`. Use `address` field instead.
+- Removed `assert_exception!` macro. Use `try_` prefix for endpoints instead. It returns a `Result`
+which can be used with a regular `assert_eq!` macro.`
 - Removed `odra(using)` macro.
 - Removed `default()` method from `Deployer`. Use `init()` instead.
+- Removed `StaticInstance` and `DynamicInstance` traits. Use `Module` instead.
+- Removed `Node` trait.
+- Removed `odra-types`, `odra-ir`, `odra-codegen`, `odra-casper-backend`, `odra-casper-shared`, `odra-utils` crates.
+- Removed `OdraEvent` trait, `odra` reexports `casper_event_standard` crate instead.
 
 ### Added
-- `last_call()` in test env with `CallResult` struct which holds all information about the last call.
+- `last_call()` in test env with `ContractCallResult` struct which holds all information about the last call.
 - `odra::prelude::*` module which reexports all basic types and traits. 
 It is recommended to use it in the module code.
+- `odra-test` crate providing `HostEnv` for testing purposes.
+- `odra-core` crate providing framework core functionalities.
+- `odra-casper-client` crate providing `CasperClient` for interacting with Casper node. 
+- `odra-casper-livenet-env` crate providing a host environment fo for the Casper livenet.
 
 ### Very Brief Upgrade Path
 - Copy `bin` folder and `build.rs` files from a freshly generated project

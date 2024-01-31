@@ -1,7 +1,7 @@
 use crate::erc20::errors::Error::*;
 use crate::erc20::events::*;
 use odra::prelude::*;
-use odra::{Address, Mapping, Module, Variable, U256};
+use odra::{casper_types::U256, module::Module, Address, Mapping, Variable};
 
 #[odra::module(events = [Approval, Transfer])]
 pub struct Erc20 {
@@ -147,7 +147,7 @@ impl Erc20 {
 
 pub mod events {
     use casper_event_standard::Event;
-    use odra::{Address, U256};
+    use odra::{casper_types::U256, Address};
 
     #[derive(Event, Eq, PartialEq, Debug)]
     pub struct Transfer {
@@ -185,7 +185,7 @@ mod tests {
         Erc20Deployer, Erc20HostRef
     };
     use odra::prelude::*;
-    use odra::{HostEnv, U256};
+    use odra::{casper_types::U256, HostEnv};
 
     const NAME: &str = "Plascoin";
     const SYMBOL: &str = "PLS";

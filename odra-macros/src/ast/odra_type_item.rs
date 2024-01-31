@@ -123,7 +123,7 @@ struct FromBytesFnItem {
 impl_from_ir!(FromBytesFnItem);
 
 impl FromBytesFnItem {
-    fn from_enum(ir: &TypeIR) -> Result<Self, syn::Error> {
+    fn from_enum(ir: &TypeIR) -> syn::Result<Self> {
         let ident = ir.name()?;
         let ident_bytes = utils::ident::bytes();
         let ident_from_bytes = utils::ident::from_bytes();
@@ -142,7 +142,7 @@ impl FromBytesFnItem {
             #read_stmt
             match #ident_result {
                 #(#deser,)*
-                _ => Err(odra::BytesReprError::Formatting),
+                _ => Err(odra::casper_types::bytesrepr::Error::Formatting),
             }
         });
         Ok(Self {
@@ -150,7 +150,7 @@ impl FromBytesFnItem {
         })
     }
 
-    fn from_struct(ir: &TypeIR) -> Result<Self, syn::Error> {
+    fn from_struct(ir: &TypeIR) -> syn::Result<Self> {
         let ident_bytes = utils::ident::bytes();
         let ident_from_bytes = utils::ident::from_bytes();
 
@@ -195,7 +195,7 @@ struct ToBytesFnItem {
 impl_from_ir!(ToBytesFnItem);
 
 impl ToBytesFnItem {
-    fn from_struct(ir: &TypeIR) -> Result<Self, syn::Error> {
+    fn from_struct(ir: &TypeIR) -> syn::Result<Self> {
         let ty_bytes_vec = utils::ty::bytes_vec();
         let ty_ret = utils::ty::bytes_result(&ty_bytes_vec);
         let ty_self = utils::ty::_self();
@@ -224,7 +224,7 @@ impl ToBytesFnItem {
         })
     }
 
-    fn from_enum(_ir: &TypeIR) -> Result<Self, syn::Error> {
+    fn from_enum(_ir: &TypeIR) -> syn::Result<Self> {
         let ty_bytes_vec = utils::ty::bytes_vec();
         let ty_ret = utils::ty::bytes_result(&ty_bytes_vec);
         let ty_u32 = utils::ty::u32();
@@ -249,7 +249,7 @@ struct SerializedLengthFnItem {
 impl_from_ir!(SerializedLengthFnItem);
 
 impl SerializedLengthFnItem {
-    fn from_struct(ir: &TypeIR) -> Result<Self, syn::Error> {
+    fn from_struct(ir: &TypeIR) -> syn::Result<Self> {
         let ty_usize = utils::ty::usize();
         let ident_result = utils::ident::result();
 
@@ -272,7 +272,7 @@ impl SerializedLengthFnItem {
         })
     }
 
-    fn from_enum(_ir: &TypeIR) -> Result<Self, syn::Error> {
+    fn from_enum(_ir: &TypeIR) -> syn::Result<Self> {
         let ty_usize = utils::ty::usize();
         let ty_u32 = utils::ty::u32();
         let clone_expr = utils::expr::clone(&utils::ty::_self());
@@ -298,10 +298,10 @@ mod tests {
         let ir = test_utils::mock::custom_struct();
         let item = OdraTypeItem::try_from(&ir).unwrap();
         let expected = quote!(
-            impl odra::FromBytes for MyType {
-                fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::BytesReprError> {
-                    let (a, bytes) = odra::FromBytes::from_bytes(bytes)?;
-                    let (b, bytes) = odra::FromBytes::from_bytes(bytes)?;
+            impl odra::casper_types::bytesrepr::FromBytes for MyType {
+                fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper_types::bytesrepr::Error> {
+                    let (a, bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
+                    let (b, bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
 
                     Ok((Self {
                         a,
@@ -310,11 +310,11 @@ mod tests {
                 }
             }
 
-            impl odra::ToBytes for MyType {
-                fn to_bytes(&self) -> Result<odra::prelude::vec::Vec<u8>, odra::BytesReprError> {
+            impl odra::casper_types::bytesrepr::ToBytes for MyType {
+                fn to_bytes(&self) -> Result<odra::prelude::vec::Vec<u8>, odra::casper_types::bytesrepr::Error> {
                     let mut result = odra::prelude::vec::Vec::with_capacity(self.serialized_length());
-                    result.extend(odra::ToBytes::to_bytes(&self.a)?);
-                    result.extend(odra::ToBytes::to_bytes(&self.b)?);
+                    result.extend(odra::casper_types::bytesrepr::ToBytes::to_bytes(&self.a)?);
+                    result.extend(odra::casper_types::bytesrepr::ToBytes::to_bytes(&self.b)?);
                     Ok(result)
                 }
 
@@ -363,19 +363,19 @@ mod tests {
         let ir = test_utils::mock::custom_enum();
         let item = OdraTypeItem::try_from(&ir).unwrap();
         let expected = quote!(
-            impl odra::FromBytes for MyType {
-                fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::BytesReprError> {
-                    let (result, bytes): (u32, _) = odra::FromBytes::from_bytes(bytes)?;
+            impl odra::casper_types::bytesrepr::FromBytes for MyType {
+                fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper_types::bytesrepr::Error> {
+                    let (result, bytes): (u32, _) = odra::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
                     match result {
                         x if x == MyType::A as u32 => Ok((MyType::A, bytes)),
                         x if x == MyType::B as u32 => Ok((MyType::B, bytes)),
-                        _ => Err(odra::BytesReprError::Formatting),
+                        _ => Err(odra::casper_types::bytesrepr::Error::Formatting),
                     }
                 }
             }
 
-            impl odra::ToBytes for MyType {
-                fn to_bytes(&self) -> Result<odra::prelude::vec::Vec<u8>, odra::BytesReprError> {
+            impl odra::casper_types::bytesrepr::ToBytes for MyType {
+                fn to_bytes(&self) -> Result<odra::prelude::vec::Vec<u8>, odra::casper_types::bytesrepr::Error> {
                     (self.clone() as u32).to_bytes()
                 }
 

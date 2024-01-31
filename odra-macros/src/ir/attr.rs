@@ -114,11 +114,11 @@ impl TryFrom<&'_ syn::Meta> for AttrType {
 }
 
 trait TryToString {
-    fn try_to_string<T: ToTokens>(&self, span: &T) -> Result<String, syn::Error>;
+    fn try_to_string<T: ToTokens>(&self, span: &T) -> syn::Result<String>;
 }
 
 impl TryToString for Path {
-    fn try_to_string<T: ToTokens>(&self, span: &T) -> Result<String, syn::Error> {
+    fn try_to_string<T: ToTokens>(&self, span: &T) -> syn::Result<String> {
         self.get_ident()
             .map(Ident::to_string)
             .ok_or_else(|| syn::Error::new_spanned(span, "unknown Odra attribute argument (path)"))
@@ -155,7 +155,7 @@ impl<T: ToTokens> From<AttrTypeError<'_, T>> for syn::Error {
     }
 }
 
-fn ensure_no_duplicates(types: &[AttrType]) -> Result<(), syn::Error> {
+fn ensure_no_duplicates(types: &[AttrType]) -> syn::Result<()> {
     let mut set: HashSet<&AttrType> = HashSet::new();
 
     let contains_duplicate = types.iter().any(|attr| !set.insert(attr));
@@ -168,16 +168,14 @@ fn ensure_no_duplicates(types: &[AttrType]) -> Result<(), syn::Error> {
     }
 }
 
-pub fn partition_attributes<I>(
-    attrs: I
-) -> Result<(Vec<OdraAttribute>, Vec<syn::Attribute>), syn::Error>
+pub fn partition_attributes<I>(attrs: I) -> syn::Result<(Vec<OdraAttribute>, Vec<syn::Attribute>)>
 where
     I: IntoIterator<Item = syn::Attribute>
 {
     let (odra_attrs, other_attrs): (Vec<OdraAttribute>, Vec<syn::Attribute>) = attrs
         .into_iter()
         .map(<Attribute as TryFrom<_>>::try_from)
-        .collect::<Result<Vec<Attribute>, syn::Error>>()?
+        .collect::<syn::Result<Vec<Attribute>>>()?
         .into_iter()
         .partition_map(|attr| match attr {
             Attribute::Odra(odra_attr) => Either::Left(odra_attr),

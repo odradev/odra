@@ -50,12 +50,12 @@ mod test {
             }
 
             pub struct TokenContractRef {
-                env: Rc<odra::ContractEnv>,
+                env: odra::prelude::Rc<odra::ContractEnv>,
                 address: odra::Address,
             }
 
             impl TokenContractRef {
-                pub fn new(env: Rc<odra::ContractEnv>, address: odra::Address) -> Self {
+                pub fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::Address) -> Self {
                     Self { env, address }
                 }
 
@@ -70,7 +70,7 @@ mod test {
                             String::from("balance_of"),
                             false,
                             {
-                                let mut named_args = odra::RuntimeArgs::new();
+                                let mut named_args = odra::casper_types::RuntimeArgs::new();
                                 let _ = named_args.insert("owner", owner);
                                 named_args
                             }
@@ -84,11 +84,10 @@ mod test {
                 use super::*;
                 use odra::prelude::*;
 
-
                 pub struct TokenHostRef {
                     address: odra::Address,
                     env: odra::HostEnv,
-                    attached_value: odra::U512
+                    attached_value: odra::casper_types::U512
                 }
 
                 impl TokenHostRef {
@@ -100,7 +99,7 @@ mod test {
                         }
                     }
 
-                    pub fn with_tokens(&self, tokens: odra::U512) -> Self {
+                    pub fn with_tokens(&self, tokens: odra::casper_types::U512) -> Self {
                         Self {
                             address: self.address,
                             env: self.env.clone(),
@@ -116,26 +115,26 @@ mod test {
                         &self.env
                     }
 
-                    pub fn get_event<T>(&self, index: i32) -> Result<T, odra::event::EventError>
+                    pub fn get_event<T>(&self, index: i32) -> Result<T, odra::EventError>
                     where
-                        T: odra::FromBytes + odra::casper_event_standard::EventInstance,
+                        T: odra::casper_types::bytesrepr::FromBytes + odra::casper_event_standard::EventInstance,
                     {
                         self.env.get_event(&self.address, index)
                     }
 
                     pub fn last_call(&self) -> odra::ContractCallResult {
-                        self.env.last_call().contract_last_call(self.address)
+                        self.env.last_call_result(self.address)
                     }
 
-                    pub fn try_balance_of(&self, owner: Address) -> Result<U256, odra::OdraError> {
+                    pub fn try_balance_of(&self, owner: Address) -> odra::OdraResult<U256> {
                         self.env.call_contract(
                             self.address,
                             odra::CallDef::new(
                                 String::from("balance_of"),
                                 false,
                                 {
-                                    let mut named_args = odra::RuntimeArgs::new();
-                                    if self.attached_value > odra::U512::zero() {
+                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    if self.attached_value > odra::casper_types::U512::zero() {
                                         let _ = named_args.insert("amount", self.attached_value);
                                     }
                                     let _ = named_args.insert("owner", owner);

@@ -1,53 +1,49 @@
-use crate::prelude::*;
-use crate::{CallDef, EntryPointArgument, EntryPointsCaller, OdraError, VmError};
+use crate::entry_point_callback::{Argument, EntryPointsCaller};
+use crate::{prelude::*, OdraResult};
+use crate::{CallDef, OdraError, VmError};
 use casper_types::bytesrepr::Bytes;
-use casper_types::{NamedArg, RuntimeArgs};
+use casper_types::RuntimeArgs;
 
-#[doc(hidden)]
-pub type EntrypointCall = fn(String, &RuntimeArgs) -> Vec<u8>;
-#[doc(hidden)]
-pub type EntrypointArgs = Vec<String>;
-
+/// A wrapper struct for a EntryPointsCaller that is a layer of abstraction between the host and the entry points caller.
+///
+/// The container validates a contract call definition before calling the entry point.
 #[derive(Clone)]
 pub struct ContractContainer {
     entry_points_caller: EntryPointsCaller
 }
 
 impl ContractContainer {
+    /// Creates a new instance of `ContractContainer`.
     pub fn new(entry_points_caller: EntryPointsCaller) -> Self {
         Self {
             entry_points_caller
         }
     }
 
-    pub fn call(&self, call_def: CallDef) -> Result<Bytes, OdraError> {
+    /// Calls the entry point with the given call definition.
+    pub fn call(&self, call_def: CallDef) -> OdraResult<Bytes> {
+        // find the entry point
         let ep = self
             .entry_points_caller
             .entry_points()
             .iter()
-            .find(|ep| ep.name == call_def.method())
+            .find(|ep| ep.name == call_def.entry_point())
             .ok_or_else(|| {
-                OdraError::VmError(VmError::NoSuchMethod(call_def.method().to_string()))
+                OdraError::VmError(VmError::NoSuchMethod(call_def.entry_point().to_string()))
             })?;
+        // validate the args, return an error if the args are invalid
         self.validate_args(&ep.args, call_def.args())?;
         self.entry_points_caller.call(call_def)
     }
 
-    fn validate_args(
-        &self,
-        args: &[EntryPointArgument],
-        input_args: &RuntimeArgs
-    ) -> Result<(), OdraError> {
-        let _named_args = input_args
-            .named_args()
-            .map(NamedArg::name)
-            .collect::<Vec<_>>();
-
+    fn validate_args(&self, args: &[Argument], input_args: &RuntimeArgs) -> OdraResult<()> {
         for arg in args {
+            // check if the input args contain the arg
             if let Some(input) = input_args
                 .named_args()
                 .find(|input| input.name() == arg.name.as_str())
             {
+                // check if the input arg has the expected type
                 let input_ty = input.cl_value().cl_type();
                 let expected_ty = &arg.ty;
                 if input_ty != expected_ty {
@@ -66,15 +62,17 @@ impl ContractContainer {
 
 #[cfg(test)]
 mod tests {
-    use crate::contract_container::ContractContainer;
+    use casper_types::CLType;
+
+    use super::ContractContainer;
     use crate::contract_context::MockContractContext;
+    use crate::entry_point_callback::{Argument, EntryPoint, EntryPointsCaller};
     use crate::host_context::MockHostContext;
     use crate::{
         casper_types::{runtime_args, RuntimeArgs},
         OdraError, VmError
     };
-    use crate::{prelude::*, ContractEnv, HostEnv};
-    use crate::{CLType, CallDef, EntryPoint, EntryPointArgument, EntryPointsCaller};
+    use crate::{prelude::*, CallDef, ContractEnv, HostEnv};
 
     const TEST_ENTRYPOINT: &str = "ep";
 
@@ -172,7 +170,7 @@ mod tests {
             let env = HostEnv::new(ctx);
             let entry_points_caller = EntryPointsCaller::new(env, vec![], |_, call_def| {
                 Err(OdraError::VmError(VmError::NoSuchMethod(
-                    call_def.method().to_string()
+                    call_def.entry_point().to_string()
                 )))
             });
             Self {
@@ -184,7 +182,7 @@ mod tests {
             let entry_points = vec![EntryPoint::new(
                 String::from(TEST_ENTRYPOINT),
                 args.iter()
-                    .map(|(name, ty)| EntryPointArgument::new(String::from(*name), ty.to_owned()))
+                    .map(|(name, ty)| Argument::new(String::from(*name), ty.to_owned()))
                     .collect()
             )];
             let mut ctx = MockHostContext::new();
@@ -194,11 +192,11 @@ mod tests {
             let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
 
             let entry_points_caller = EntryPointsCaller::new(env, entry_points, |_, call_def| {
-                if call_def.method() == TEST_ENTRYPOINT {
+                if call_def.entry_point() == TEST_ENTRYPOINT {
                     Ok(vec![1, 2, 3].into())
                 } else {
                     Err(OdraError::VmError(VmError::NoSuchMethod(
-                        call_def.method().to_string()
+                        call_def.entry_point().to_string()
                     )))
                 }
             });

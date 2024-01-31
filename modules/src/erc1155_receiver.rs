@@ -1,7 +1,11 @@
 //! A pluggable Odra module implementing Erc1155Receiver.
 use crate::erc1155_receiver::events::{BatchReceived, SingleReceived};
 use odra::prelude::*;
-use odra::{Address, Bytes, Module, U256};
+use odra::{
+    casper_types::{bytesrepr::Bytes, U256},
+    module::Module,
+    Address
+};
 
 /// The ERC1155 receiver implementation.
 #[odra::module(events = [SingleReceived, BatchReceived])]
@@ -58,7 +62,10 @@ impl Erc1155Receiver {
 pub mod events {
     use casper_event_standard::Event;
     use odra::prelude::*;
-    use odra::{Address, Bytes, U256};
+    use odra::{
+        casper_types::{bytesrepr::Bytes, U256},
+        Address
+    };
 
     /// Emitted when the transferred token is accepted by the contract.
     #[derive(Event, PartialEq, Eq, Debug, Clone)]

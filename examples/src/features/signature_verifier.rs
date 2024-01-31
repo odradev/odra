@@ -1,5 +1,8 @@
 use odra::prelude::*;
-use odra::{Bytes, Module, PublicKey};
+use odra::{
+    casper_types::{bytesrepr::Bytes, PublicKey},
+    module::Module
+};
 
 #[odra::module]
 pub struct SignatureVerifier {}
@@ -19,7 +22,10 @@ impl SignatureVerifier {
 #[cfg(test)]
 mod test {
     use crate::features::signature_verifier::SignatureVerifierDeployer;
-    use odra::{Bytes, FromBytes, PublicKey};
+    use odra::casper_types::{
+        bytesrepr::{Bytes, FromBytes},
+        PublicKey
+    };
 
     #[test]
     fn signature_verification_works() {

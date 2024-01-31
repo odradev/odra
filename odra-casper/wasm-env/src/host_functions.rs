@@ -1,26 +1,34 @@
-use casper_contract::contract_api::system::{
-    create_purse, get_purse_balance, transfer_from_purse_to_account, transfer_from_purse_to_purse
+//! Functions that interact with the casper host environment.
+//!
+//! This module provides functions for interacting with the casper host environment, including
+//! installing contracts, reverting contract execution, accessing named arguments, getting the
+//! block time, performing cryptographic operations, manipulating contract storage, transferring
+//! tokens, emitting events, and more.
+//!
+//! Build on top of the [casper_contract] crate.
+
+use casper_contract::{
+    contract_api::{
+        self, runtime, storage,
+        system::{
+            create_purse, get_purse_balance, transfer_from_purse_to_account,
+            transfer_from_purse_to_purse
+        }
+    },
+    ext_ffi,
+    unwrap_or_revert::UnwrapOrRevert
 };
-use casper_contract::contract_api::{runtime, storage};
-use casper_contract::unwrap_or_revert::UnwrapOrRevert;
-use casper_contract::{contract_api, ext_ffi};
 use core::mem::MaybeUninit;
-use odra_core::call_def::CallDef;
-use odra_core::casper_event_standard;
-use odra_core::casper_event_standard::{Schema, Schemas};
-use odra_core::casper_types;
-use odra_core::casper_types::bytesrepr::Bytes;
-use odra_core::casper_types::system::CallStackElement;
+use odra_core::casper_event_standard::{self, Schema, Schemas};
 use odra_core::casper_types::{
-    api_error, ContractVersion, RuntimeArgs, DICTIONARY_ITEM_KEY_MAX_LENGTH, U512
-};
-use odra_core::casper_types::{
-    bytesrepr::{FromBytes, ToBytes},
+    api_error,
+    bytesrepr::{Bytes, FromBytes, ToBytes},
     contracts::NamedKeys,
-    ApiError, CLTyped, ContractPackageHash, EntryPoints, Key, URef
+    system::CallStackElement,
+    ApiError, CLTyped, CLValue, ContractPackageHash, ContractVersion, EntryPoints, Key,
+    RuntimeArgs, URef, DICTIONARY_ITEM_KEY_MAX_LENGTH, U512
 };
-use odra_core::prelude::*;
-use odra_core::{Address, ExecutionError};
+use odra_core::{prelude::*, Address, CallDef, ExecutionError};
 
 use crate::consts;
 
@@ -38,6 +46,15 @@ lazy_static::lazy_static! {
 
 pub(crate) static mut ATTACHED_VALUE: U512 = U512::zero();
 
+/// Installs a contract from a contract package.
+///
+/// Create a locked contract stored under a [Key::Hash]. The contract is upgradeable or not, depending on the
+/// value of `odra_cfg_is_upgradable` argument.
+///
+/// If a contract with the same name already exists, it may be override depending on the value of `odra_cfg_allow_key_override`
+/// argument.
+///
+/// Along with the contract, named keys with events and state are created.
 pub fn install_contract(
     entry_points: EntryPoints,
     events: Schemas,
@@ -91,44 +108,14 @@ pub fn install_contract(
     contract_package_hash
 }
 
-fn initial_named_keys(schemas: Schemas) -> NamedKeys {
-    let mut named_keys = NamedKeys::new();
-    named_keys.insert(
-        String::from(consts::STATE_KEY),
-        Key::URef(storage::new_dictionary(consts::STATE_KEY).unwrap_or_revert())
-    );
-    named_keys.insert(
-        String::from(casper_event_standard::EVENTS_DICT),
-        Key::URef(storage::new_dictionary(casper_event_standard::EVENTS_DICT).unwrap_or_revert())
-    );
-    named_keys.insert(
-        String::from(casper_event_standard::EVENTS_LENGTH),
-        Key::URef(storage::new_uref(0u32))
-    );
-    named_keys.insert(
-        String::from(casper_event_standard::CES_VERSION_KEY),
-        Key::URef(storage::new_uref(casper_event_standard::CES_VERSION))
-    );
-    named_keys.insert(
-        String::from(casper_event_standard::EVENTS_SCHEMA),
-        Key::URef(storage::new_uref(schemas))
-    );
-
-    runtime::remove_key(consts::STATE_KEY);
-    runtime::remove_key(casper_event_standard::EVENTS_DICT);
-    runtime::remove_key(casper_event_standard::EVENTS_LENGTH);
-    runtime::remove_key(casper_event_standard::EVENTS_SCHEMA);
-    runtime::remove_key(casper_event_standard::CES_VERSION_KEY);
-
-    named_keys
-}
-
-/// Revert the execution.
+/// Stops a contract execution and reverts the state with a given error.
 #[inline(always)]
 pub fn revert(error: u16) -> ! {
     runtime::revert(ApiError::User(error))
 }
 
+/// Returns given named argument passed to the host. The result is not deserialized,
+/// is returned as a `Vec<u8>`.
 pub fn get_named_arg(name: &str) -> Vec<u8> {
     let arg_size = get_named_arg_size(name);
     if arg_size > 0 {
@@ -150,30 +137,45 @@ pub fn get_named_arg(name: &str) -> Vec<u8> {
     }
 }
 
-fn get_named_arg_size(name: &str) -> usize {
-    let mut arg_size: usize = 0;
-    let ret = unsafe {
-        ext_ffi::casper_get_named_arg_size(
-            name.as_bytes().as_ptr(),
-            name.len(),
-            &mut arg_size as *mut usize
-        )
-    };
-    match ret {
-        0 => arg_size,
-        _ => runtime::revert(ApiError::from(ret as u32))
-    }
-}
-
+/// Gets the current block time.
+#[inline(always)]
 pub fn get_block_time() -> u64 {
     runtime::get_blocktime().into()
 }
 
+/// Hashes the given bytes using the BLAKE2b hash function.
 #[inline(always)]
 pub fn blake2b(input: &[u8]) -> [u8; 32] {
-    casper_contract::contract_api::runtime::blake2b(input)
+    runtime::blake2b(input)
 }
 
+/// Writes a value under a key to the contract's storage.
+pub fn set_value(key: &[u8], value: &[u8]) {
+    let uref_ptr = (*STATE_BYTES).as_ptr();
+    let uref_size = (*STATE_BYTES).len();
+
+    let dictionary_item_key_size = key.len();
+    let dictionary_item_key_ptr = key.as_ptr();
+
+    let cl_value = CLValue::from_t(value.to_vec()).unwrap_or_revert();
+    let (value_ptr, value_size, _bytes) = to_ptr(cl_value);
+
+    let result = unsafe {
+        let ret = ext_ffi::casper_dictionary_put(
+            uref_ptr,
+            uref_size,
+            dictionary_item_key_ptr,
+            dictionary_item_key_size,
+            value_ptr,
+            value_size
+        );
+        api_error::result_from(ret)
+    };
+
+    result.unwrap_or_revert();
+}
+
+/// Gets a value under a key from the contract's storage.
 pub fn get_value(key: &[u8]) -> Option<Vec<u8>> {
     let uref_ptr = (*STATE_BYTES).as_ptr();
     let uref_size = (*STATE_BYTES).len();
@@ -217,60 +219,9 @@ pub fn transfer_tokens(to: &Address, amount: &U512) {
     };
 }
 
-fn read_host_buffer(size: usize) -> Result<Vec<u8>, ApiError> {
-    let mut dest: Vec<u8> = if size == 0 {
-        Vec::new()
-    } else {
-        let bytes_non_null_ptr = contract_api::alloc_bytes(size);
-        unsafe { Vec::from_raw_parts(bytes_non_null_ptr.as_ptr(), size, size) }
-    };
-    read_host_buffer_into(&mut dest)?;
-    Ok(dest)
-}
-
-fn read_host_buffer_into(dest: &mut [u8]) -> Result<usize, ApiError> {
-    let mut bytes_written = MaybeUninit::uninit();
-    let ret = unsafe {
-        ext_ffi::casper_read_host_buffer(dest.as_mut_ptr(), dest.len(), bytes_written.as_mut_ptr())
-    };
-    api_error::result_from(ret)?;
-    Ok(unsafe { bytes_written.assume_init() })
-}
-
+/// Writes an event to the contract's storage.
 pub fn emit_event(event: &Bytes) {
     casper_event_standard::emit_bytes(event.clone())
-}
-
-pub fn set_value(key: &[u8], value: &[u8]) {
-    let uref_ptr = (*STATE_BYTES).as_ptr();
-    let uref_size = (*STATE_BYTES).len();
-
-    let dictionary_item_key_size = key.len();
-    let dictionary_item_key_ptr = key.as_ptr();
-
-    let cl_value = casper_types::CLValue::from_t(value.to_vec()).unwrap_or_revert();
-    let (value_ptr, value_size, _bytes) = to_ptr(cl_value);
-
-    let result = unsafe {
-        let ret = ext_ffi::casper_dictionary_put(
-            uref_ptr,
-            uref_size,
-            dictionary_item_key_ptr,
-            dictionary_item_key_size,
-            value_ptr,
-            value_size
-        );
-        api_error::result_from(ret)
-    };
-
-    result.unwrap_or_revert();
-}
-
-fn to_ptr<T: ToBytes>(t: T) -> (*const u8, usize, Vec<u8>) {
-    let bytes = t.into_bytes().unwrap_or_revert();
-    let ptr = bytes.as_ptr();
-    let size = bytes.len();
-    (ptr, size, bytes)
 }
 
 /// Gets the immediate session caller of the current execution.
@@ -287,7 +238,7 @@ pub fn caller() -> Address {
 #[inline(always)]
 pub fn call_contract(address: Address, call_def: CallDef) -> Bytes {
     let contract_package_hash = *address.as_contract_package_hash().unwrap_or_revert();
-    let method = call_def.method();
+    let method = call_def.entry_point();
     let mut args = call_def.args().to_owned();
     if call_def.amount() == U512::zero() {
         call_versioned_contract(contract_package_hash, None, method, args)
@@ -308,22 +259,6 @@ pub fn call_contract(address: Address, call_def: CallDef) -> Bytes {
     }
 }
 
-fn is_purse_empty(purse: URef) -> bool {
-    get_purse_balance(purse)
-        .map(|balance| balance.is_zero())
-        .unwrap_or_else(|| true)
-}
-fn get_or_create_cargo_purse() -> URef {
-    match runtime::get_key(consts::CONTRACT_CARGO_PURSE) {
-        Some(key) => *key.as_uref().unwrap_or_revert(),
-        None => {
-            let purse = create_purse();
-            runtime::put_key(consts::CONTRACT_CARGO_PURSE, purse.into());
-            purse
-        }
-    }
-}
-
 /// Gets the address of the currently run contract
 #[inline(always)]
 pub fn self_address() -> Address {
@@ -331,28 +266,164 @@ pub fn self_address() -> Address {
     call_stack_element_to_address(first_elem)
 }
 
-/// Returns address based on a [`CallStackElement`].
+/// Invokes the specified `entry_point_name` of stored logic at a specific `contract_package_hash`
+/// address, for the most current version of a contract package by default or a specific
+/// `contract_version` if one is provided, and passing the provided `runtime_args` to it.
+pub fn call_versioned_contract(
+    contract_package_hash: ContractPackageHash,
+    contract_version: Option<ContractVersion>,
+    entry_point_name: &str,
+    runtime_args: RuntimeArgs
+) -> Bytes {
+    let (contract_package_hash_ptr, contract_package_hash_size, _bytes) =
+        to_ptr(contract_package_hash);
+    let (contract_version_ptr, contract_version_size, _bytes) = to_ptr(contract_version);
+    let (entry_point_name_ptr, entry_point_name_size, _bytes) = to_ptr(entry_point_name);
+    let (runtime_args_ptr, runtime_args_size, _bytes) = to_ptr(runtime_args);
+
+    let bytes_written = {
+        let mut bytes_written = MaybeUninit::uninit();
+        let ret = unsafe {
+            ext_ffi::casper_call_versioned_contract(
+                contract_package_hash_ptr,
+                contract_package_hash_size,
+                contract_version_ptr,
+                contract_version_size,
+                entry_point_name_ptr,
+                entry_point_name_size,
+                runtime_args_ptr,
+                runtime_args_size,
+                bytes_written.as_mut_ptr()
+            )
+        };
+        api_error::result_from(ret).unwrap_or_revert();
+        unsafe { bytes_written.assume_init() }
+    };
+    odra_core::casper_types::bytesrepr::Bytes::from(deserialize_contract_result(bytes_written))
+}
+
+/// Reads from memory the amount attached to the current call.
+pub fn attached_value() -> U512 {
+    unsafe { ATTACHED_VALUE }
+}
+
+/// Stores in memory the amount attached to the current call.
+pub fn set_attached_value(amount: U512) {
+    unsafe {
+        ATTACHED_VALUE = amount;
+    }
+}
+
+/// Zeroes the amount attached to the current call.
+pub fn clear_attached_value() {
+    unsafe { ATTACHED_VALUE = U512::zero() }
+}
+
+/// Checks if given named argument exists.
+pub fn named_arg_exists(name: &str) -> bool {
+    let mut arg_size: usize = 0;
+    let ret = unsafe {
+        casper_contract::ext_ffi::casper_get_named_arg_size(
+            name.as_bytes().as_ptr(),
+            name.len(),
+            &mut arg_size as *mut usize
+        )
+    };
+    ret == 0
+}
+
+/// Transfers attached value to the currently executing contract.
+pub fn handle_attached_value() {
+    // If the cargo purse argument is not present, do nothing.
+    // Attached value is set to zero by default.
+    if !named_arg_exists(consts::CARGO_PURSE_ARG) {
+        return;
+    }
+
+    // Handle attached value.
+    let cargo_purse = runtime::get_named_arg(consts::CARGO_PURSE_ARG);
+    let amount = get_purse_balance(cargo_purse);
+    if let Some(amount) = amount {
+        let contract_purse = get_or_create_main_purse();
+        transfer_from_purse_to_purse(cargo_purse, contract_purse, amount, None).unwrap_or_revert();
+        set_attached_value(amount);
+    } else {
+        revert(ExecutionError::NativeTransferError.code())
+    }
+}
+
+/// Creates a new purse under the `__contract_main_purse` key for the currently executing contract
+/// if it doesn't exist, or returns the existing main purse.
 ///
-/// For `Session` and `StoredSession` variants it will return account hash, and for `StoredContract`
-/// case it will use contract hash as the address.
-fn call_stack_element_to_address(call_stack_element: CallStackElement) -> Address {
-    match call_stack_element {
-        CallStackElement::Session { account_hash } => Address::try_from(account_hash)
-            .map_err(|e| ApiError::User(ExecutionError::from(e).code()))
-            .unwrap_or_revert(),
-        CallStackElement::StoredSession { account_hash, .. } => {
-            // Stored session code acts in account's context, so if stored session
-            // wants to interact, caller's address will be used.
-            Address::try_from(account_hash)
-                .map_err(|e| ApiError::User(ExecutionError::from(e).code()))
-                .unwrap_or_revert()
+/// # Returns
+///
+/// The main purse as a [`URef`] if it already exists, otherwise a new purse is created and returned.
+pub fn get_or_create_main_purse() -> URef {
+    match get_main_purse() {
+        Some(purse) => purse,
+        None => {
+            let purse = create_purse();
+            runtime::put_key(consts::CONTRACT_MAIN_PURSE, purse.into());
+            purse
         }
-        CallStackElement::StoredContract {
-            contract_package_hash,
-            ..
-        } => Address::try_from(contract_package_hash)
-            .map_err(|e| ApiError::User(ExecutionError::from(e).code()))
-            .unwrap_or_revert()
+    }
+}
+
+/// Gets the main purse of the currently executing contract.
+///
+/// # Returns
+///
+/// The main purse as a [`URef`] if it exists, otherwise `None` is returned.
+#[inline(always)]
+pub fn get_main_purse() -> Option<URef> {
+    runtime::get_key(consts::CONTRACT_MAIN_PURSE).and_then(|key| key.as_uref().cloned())
+}
+
+fn initial_named_keys(schemas: Schemas) -> NamedKeys {
+    let mut named_keys = NamedKeys::new();
+    named_keys.insert(
+        String::from(consts::STATE_KEY),
+        Key::URef(storage::new_dictionary(consts::STATE_KEY).unwrap_or_revert())
+    );
+    named_keys.insert(
+        String::from(casper_event_standard::EVENTS_DICT),
+        Key::URef(storage::new_dictionary(casper_event_standard::EVENTS_DICT).unwrap_or_revert())
+    );
+    named_keys.insert(
+        String::from(casper_event_standard::EVENTS_LENGTH),
+        Key::URef(storage::new_uref(0u32))
+    );
+    named_keys.insert(
+        String::from(casper_event_standard::CES_VERSION_KEY),
+        Key::URef(storage::new_uref(casper_event_standard::CES_VERSION))
+    );
+    named_keys.insert(
+        String::from(casper_event_standard::EVENTS_SCHEMA),
+        Key::URef(storage::new_uref(schemas))
+    );
+
+    runtime::remove_key(consts::STATE_KEY);
+    runtime::remove_key(casper_event_standard::EVENTS_DICT);
+    runtime::remove_key(casper_event_standard::EVENTS_LENGTH);
+    runtime::remove_key(casper_event_standard::EVENTS_SCHEMA);
+    runtime::remove_key(casper_event_standard::CES_VERSION_KEY);
+
+    named_keys
+}
+
+fn deserialize_contract_result(bytes_written: usize) -> Vec<u8> {
+    if bytes_written == 0 {
+        // If no bytes were written, the host buffer hasn't been set and hence shouldn't be read.
+        vec![]
+    } else {
+        // NOTE: this is a copy of the contents of `read_host_buffer()`.  Calling that directly from
+        // here causes several contracts to fail with a Wasmi `Unreachable` error.
+        let bytes_non_null_ptr = contract_api::alloc_bytes(bytes_written);
+        let mut dest: Vec<u8> = unsafe {
+            Vec::from_raw_parts(bytes_non_null_ptr.as_ptr(), bytes_written, bytes_written)
+        };
+        read_host_buffer_into(&mut dest).unwrap_or_revert();
+        dest
     }
 }
 
@@ -388,121 +459,87 @@ fn revoke_access_to_constructor_group(
     )
     .unwrap_or_revert();
 }
-/// Invokes the specified `entry_point_name` of stored logic at a specific `contract_package_hash`
-/// address, for the most current version of a contract package by default or a specific
-/// `contract_version` if one is provided, and passing the provided `runtime_args` to it
+
+/// Returns address based on a [`CallStackElement`].
 ///
-/// If the stored contract calls [`ret`], then that value is returned from
-/// `call_versioned_contract`.  If the stored contract calls [`revert`], then execution stops and
-/// `call_versioned_contract` doesn't return. Otherwise `call_versioned_contract` returns `()`.
-pub fn call_versioned_contract(
-    contract_package_hash: ContractPackageHash,
-    contract_version: Option<ContractVersion>,
-    entry_point_name: &str,
-    runtime_args: RuntimeArgs
-) -> Bytes {
-    let (contract_package_hash_ptr, contract_package_hash_size, _bytes) =
-        to_ptr(contract_package_hash);
-    let (contract_version_ptr, contract_version_size, _bytes) = to_ptr(contract_version);
-    let (entry_point_name_ptr, entry_point_name_size, _bytes) = to_ptr(entry_point_name);
-    let (runtime_args_ptr, runtime_args_size, _bytes) = to_ptr(runtime_args);
-
-    let bytes_written = {
-        let mut bytes_written = MaybeUninit::uninit();
-        let ret = unsafe {
-            ext_ffi::casper_call_versioned_contract(
-                contract_package_hash_ptr,
-                contract_package_hash_size,
-                contract_version_ptr,
-                contract_version_size,
-                entry_point_name_ptr,
-                entry_point_name_size,
-                runtime_args_ptr,
-                runtime_args_size,
-                bytes_written.as_mut_ptr()
-            )
-        };
-        api_error::result_from(ret).unwrap_or_revert();
-        unsafe { bytes_written.assume_init() }
-    };
-    odra_core::Bytes::from(deserialize_contract_result(bytes_written))
-}
-fn deserialize_contract_result(bytes_written: usize) -> Vec<u8> {
-    if bytes_written == 0 {
-        // If no bytes were written, the host buffer hasn't been set and hence shouldn't be read.
-        vec![]
-    } else {
-        // NOTE: this is a copy of the contents of `read_host_buffer()`.  Calling that directly from
-        // here causes several contracts to fail with a Wasmi `Unreachable` error.
-        let bytes_non_null_ptr = contract_api::alloc_bytes(bytes_written);
-        let mut dest: Vec<u8> = unsafe {
-            Vec::from_raw_parts(bytes_non_null_ptr.as_ptr(), bytes_written, bytes_written)
-        };
-        read_host_buffer_into(&mut dest).unwrap_or_revert();
-        dest
+/// For `Session` and `StoredSession` variants it will return account hash, and for `StoredContract`
+/// case it will use contract hash as the address.
+fn call_stack_element_to_address(call_stack_element: CallStackElement) -> Address {
+    match call_stack_element {
+        CallStackElement::Session { account_hash } => Address::try_from(account_hash)
+            .map_err(|e| ApiError::User(ExecutionError::from(e).code()))
+            .unwrap_or_revert(),
+        CallStackElement::StoredSession { account_hash, .. } => {
+            // Stored session code acts in account's context, so if stored session
+            // wants to interact, caller's address will be used.
+            Address::try_from(account_hash)
+                .map_err(|e| ApiError::User(ExecutionError::from(e).code()))
+                .unwrap_or_revert()
+        }
+        CallStackElement::StoredContract {
+            contract_package_hash,
+            ..
+        } => Address::try_from(contract_package_hash)
+            .map_err(|e| ApiError::User(ExecutionError::from(e).code()))
+            .unwrap_or_revert()
     }
 }
 
-pub fn attached_value() -> U512 {
-    unsafe { ATTACHED_VALUE }
+fn is_purse_empty(purse: URef) -> bool {
+    get_purse_balance(purse)
+        .map(|balance| balance.is_zero())
+        .unwrap_or_else(|| true)
 }
 
-/// Stores in memory the amount attached to the current call.
-pub fn set_attached_value(amount: U512) {
-    unsafe {
-        ATTACHED_VALUE = amount;
-    }
-}
-
-/// Zeroes the amount attached to the current call.
-pub fn clear_attached_value() {
-    unsafe { ATTACHED_VALUE = U512::zero() }
-}
-/// Checks if given named argument exists.
-pub fn named_arg_exists(name: &str) -> bool {
-    let mut arg_size: usize = 0;
-    let ret = unsafe {
-        casper_contract::ext_ffi::casper_get_named_arg_size(
-            name.as_bytes().as_ptr(),
-            name.len(),
-            &mut arg_size as *mut usize
-        )
-    };
-    ret == 0
-}
-
-/// Transfers attached value to the currently executing contract.
-pub fn handle_attached_value() {
-    // If the cargo purse argument is not present, do nothing.
-    // Attached value is set to zero by default.
-    if !named_arg_exists(consts::CARGO_PURSE_ARG) {
-        return;
-    }
-
-    // Handle attached value.
-    let cargo_purse = runtime::get_named_arg(consts::CARGO_PURSE_ARG);
-    let amount = get_purse_balance(cargo_purse);
-    if let Some(amount) = amount {
-        let contract_purse = get_or_create_main_purse();
-        transfer_from_purse_to_purse(cargo_purse, contract_purse, amount, None).unwrap_or_revert();
-        set_attached_value(amount);
-    } else {
-        revert(ExecutionError::NativeTransferError.code())
-    }
-}
-
-pub fn get_or_create_main_purse() -> URef {
-    match get_main_purse() {
-        Some(purse) => purse,
+fn get_or_create_cargo_purse() -> URef {
+    match runtime::get_key(consts::CONTRACT_CARGO_PURSE) {
+        Some(key) => *key.as_uref().unwrap_or_revert(),
         None => {
             let purse = create_purse();
-            runtime::put_key(consts::CONTRACT_MAIN_PURSE, purse.into());
+            runtime::put_key(consts::CONTRACT_CARGO_PURSE, purse.into());
             purse
         }
     }
 }
 
-#[inline(always)]
-pub fn get_main_purse() -> Option<URef> {
-    runtime::get_key(consts::CONTRACT_MAIN_PURSE).map(|key| *key.as_uref().unwrap_or_revert())
+fn to_ptr<T: ToBytes>(t: T) -> (*const u8, usize, Vec<u8>) {
+    let bytes = t.into_bytes().unwrap_or_revert();
+    let ptr = bytes.as_ptr();
+    let size = bytes.len();
+    (ptr, size, bytes)
+}
+
+fn read_host_buffer(size: usize) -> Result<Vec<u8>, ApiError> {
+    let mut dest: Vec<u8> = if size == 0 {
+        Vec::new()
+    } else {
+        let bytes_non_null_ptr = contract_api::alloc_bytes(size);
+        unsafe { Vec::from_raw_parts(bytes_non_null_ptr.as_ptr(), size, size) }
+    };
+    read_host_buffer_into(&mut dest)?;
+    Ok(dest)
+}
+
+fn read_host_buffer_into(dest: &mut [u8]) -> Result<usize, ApiError> {
+    let mut bytes_written = MaybeUninit::uninit();
+    let ret = unsafe {
+        ext_ffi::casper_read_host_buffer(dest.as_mut_ptr(), dest.len(), bytes_written.as_mut_ptr())
+    };
+    api_error::result_from(ret)?;
+    Ok(unsafe { bytes_written.assume_init() })
+}
+
+fn get_named_arg_size(name: &str) -> usize {
+    let mut arg_size: usize = 0;
+    let ret = unsafe {
+        ext_ffi::casper_get_named_arg_size(
+            name.as_bytes().as_ptr(),
+            name.len(),
+            &mut arg_size as *mut usize
+        )
+    };
+    match ret {
+        0 => arg_size,
+        _ => runtime::revert(ApiError::from(ret as u32))
+    }
 }

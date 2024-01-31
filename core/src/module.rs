@@ -1,33 +1,29 @@
+//! Module definition and implementation.
+//!
+//! An Odra module is a composition of [ModuleComponent]s (eg. other modules) and [ModulePrimitive]s
+//! ([Variable](crate::variable::Variable), [Mapping](crate::mapping::Mapping), [List](crate::list::List)).
+//!
+//! In order to create a module, you need to create a struct that implements the [Module] trait.
+//! However, most of the time you will want to use `#[odra::module]` macro to generate the module.
+
 use crate::{contract_def::HasEvents, prelude::*};
 use core::cell::OnceCell;
 
-use crate::call_def::CallDef;
 use crate::contract_env::ContractEnv;
-use crate::odra_result::OdraResult;
 use core::ops::{Deref, DerefMut};
 
-pub trait Callable {
-    fn call(&self, env: ContractEnv, call_def: CallDef) -> OdraResult<Vec<u8>>;
-}
-
-#[derive(Clone)]
-pub struct ModuleCaller(pub fn(env: ContractEnv, call_def: CallDef) -> OdraResult<Vec<u8>>);
-
-impl ModuleCaller {
-    pub fn new(f: fn(env: ContractEnv, call_def: CallDef) -> OdraResult<Vec<u8>>) -> Self {
-        Self(f)
-    }
-    pub fn call_module(&self, env: ContractEnv, call_def: CallDef) -> OdraResult<Vec<u8>> {
-        (self.0)(env, call_def)
-    }
-}
-
+/// Represents a module in the Odra system.
 pub trait Module {
+    /// Creates a new instance of the module with the given contract environment.
     fn new(env: Rc<ContractEnv>) -> Self;
+
+    /// Returns the [contract environment](ContractEnv) associated with the module.
     fn env(&self) -> Rc<ContractEnv>;
 }
 
+/// Represents a component that can be a part of a module.
 pub trait ModuleComponent {
+    /// Creates a new instance of the module component.
     fn instance(env: Rc<ContractEnv>, index: u8) -> Self;
 }
 
@@ -37,6 +33,9 @@ pub trait ModuleComponent {
 /// or any other custom component that does not emit events.
 pub trait ModulePrimitive: ModuleComponent {}
 
+/// A wrapper struct for a module implementing the [Module] trait.
+///
+/// This struct is used to implement an Odra module that is a composition of other modules.
 pub struct ModuleWrapper<T> {
     env: Rc<ContractEnv>,
     module: OnceCell<T>,
@@ -65,12 +64,19 @@ impl<M: HasEvents> HasEvents for ModuleWrapper<M> {
     }
 }
 
+/// Wrapper for a module implementing the `Module` trait.
 impl<T: Module> ModuleWrapper<T> {
+    /// Returns a reference to the module.
+    ///
+    /// If the module is not yet initialized, it will be lazily initialized.
     pub fn module(&self) -> &T {
         self.module
             .get_or_init(|| T::new(Rc::new(self.env.child(self.index))))
     }
 
+    /// Returns a mutable reference to the module.
+    ///
+    /// If the module is not yet initialized, it will be lazily initialized.
     pub fn module_mut(&mut self) -> &mut T {
         if self.module.get().is_none() {
             let _ = self.module();

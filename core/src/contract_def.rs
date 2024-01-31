@@ -40,6 +40,7 @@ pub struct Event {
 }
 
 impl Event {
+    /// Returns `true` if the event has any argument of `CLType::Any` type.
     pub fn has_any(&self) -> bool {
         self.args.iter().any(|arg| arg.ty == CLType::Any)
     }
@@ -55,10 +56,13 @@ pub enum EntrypointType {
     Public
 }
 
+/// Defines an entrypoint attribute.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Serialize, Deserialize))]
 pub enum EntrypointAttribute {
+    /// A non-reentrant entrypoint.
     NonReentrant,
+    /// A payable entrypoint.
     Payable
 }
 
@@ -84,15 +88,32 @@ pub trait HasEvents {
     }
 }
 
+/// Represents a contract blueprint.
+///
+/// A contract blueprint is a set of events and entrypoints defined in a smart contract.
+/// It is used to generate the contract's ABI.
 #[derive(Debug, Clone)]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Serialize, Deserialize))]
 pub struct ContractBlueprint {
+    /// The name of the contract.
     pub name: String,
+    /// The events defined in the contract.
     pub events: Vec<Event>,
+    /// The entrypoints defined in the contract.
     pub entrypoints: Vec<Entrypoint>
 }
 
 impl ContractBlueprint {
+    /// Creates a new instance of `ContractBlueprint` using the provided type parameters.
+    ///
+    /// # Type Parameters
+    ///
+    /// - `T`: A type that implements the `HasIdent`, `HasEvents`, and `HasEntrypoints` traits.
+    ///
+    /// # Returns
+    ///
+    /// A new instance of `ContractBlueprint` with the name, events, and entrypoints
+    /// obtained from the type `T`.
     pub fn new<T: HasIdent + HasEvents + HasEntrypoints>() -> Self {
         Self {
             name: T::ident(),
@@ -102,12 +123,20 @@ impl ContractBlueprint {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    /// Converts the `ContractBlueprint` instance to a JSON string representation.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the JSON string if the conversion is successful,
+    /// or a `serde_json::Error` if an error occurs during serialization.
     pub fn as_json(self) -> Result<String, serde_json::Error> {
         serde_json::to_string_pretty(&self)
     }
 }
 
+/// A trait for converting a type into an [Event].
 pub trait IntoEvent {
+    /// Converts the type into an [Event].
     fn into_event() -> Event;
 }
 

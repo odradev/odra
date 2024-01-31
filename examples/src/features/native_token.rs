@@ -1,5 +1,5 @@
 use odra::prelude::*;
-use odra::{Module, U512};
+use odra::{casper_types::U512, module::Module};
 
 #[odra::module]
 pub struct PublicWallet {}
@@ -17,7 +17,7 @@ impl PublicWallet {
 #[cfg(test)]
 mod tests {
     use super::PublicWalletDeployer;
-    use odra::U512;
+    use odra::casper_types::U512;
 
     #[test]
     fn test_modules() {

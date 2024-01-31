@@ -1,8 +1,20 @@
+//! Cryptographic utilities.
+
 use crate::prelude::*;
 use crate::Address;
 use casper_types::account::AccountHash;
 use casper_types::{PublicKey, SecretKey};
 
+/// Generates a key pair map of the given size.
+/// The key pairs are generated deterministically from the index.
+///
+/// # Arguments
+///
+/// * `size` - The number of key pairs to generate.
+///
+/// # Returns
+///
+/// A map containing the generated key pairs.
 pub fn generate_key_pairs(amount: u8) -> BTreeMap<Address, (SecretKey, PublicKey)> {
     let mut accounts = BTreeMap::new();
     for i in 0..amount {

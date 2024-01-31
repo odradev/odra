@@ -1,14 +1,17 @@
+//! Livenet contract environment.
 use blake2::digest::VariableOutput;
 use blake2::Blake2bVar;
 use odra_casper_client::casper_client::CasperClient;
-use odra_core::callstack::{Callstack, CallstackElement, Entrypoint};
-use odra_core::contract_register::ContractRegister;
+use odra_core::callstack::{Callstack, CallstackElement};
+use odra_core::casper_types::bytesrepr::Bytes;
+use odra_core::casper_types::U512;
 use odra_core::prelude::*;
-use odra_core::{Address, Bytes, OdraError, U512};
-use odra_core::{CallDef, ContractContext};
+use odra_core::{Address, OdraError};
+use odra_core::{CallDef, ContractContext, ContractRegister};
 use std::io::Write;
 use std::sync::RwLock;
 
+/// Livenet contract environment struct.
 pub struct LivenetContractEnv {
     casper_client: Rc<RefCell<CasperClient>>,
     callstack: Rc<RefCell<Callstack>>,
@@ -41,10 +44,10 @@ impl ContractContext for LivenetContractEnv {
 
         self.callstack
             .borrow_mut()
-            .push(CallstackElement::Entrypoint(Entrypoint {
+            .push(CallstackElement::new_contract_call(
                 address,
-                call_def: call_def.clone()
-            }));
+                call_def.clone()
+            ));
         let result = self
             .contract_register
             .read()
@@ -72,8 +75,10 @@ impl ContractContext for LivenetContractEnv {
 
     fn revert(&self, error: OdraError) -> ! {
         let mut revert_msg = String::from("");
-        if let CallstackElement::Entrypoint(ep) = self.callstack.borrow().current() {
-            revert_msg = format!("{:?}::{}", ep.address, ep.call_def.entry_point());
+        if let CallstackElement::ContractCall { address, call_def } =
+            self.callstack.borrow().current()
+        {
+            revert_msg = format!("{:?}::{}", address, call_def.entry_point());
         }
 
         panic!("Revert: {:?} - {}", error, revert_msg);
@@ -82,8 +87,8 @@ impl ContractContext for LivenetContractEnv {
     fn get_named_arg_bytes(&self, name: &str) -> Bytes {
         match self.callstack.borrow().current() {
             CallstackElement::Account(_) => todo!("get_named_arg_bytes"),
-            CallstackElement::Entrypoint(ep) => {
-                Bytes::from(ep.call_def.args().get(name).unwrap().inner_bytes().to_vec())
+            CallstackElement::ContractCall { call_def, .. } => {
+                Bytes::from(call_def.args().get(name).unwrap().inner_bytes().to_vec())
             }
         }
     }
@@ -108,6 +113,7 @@ impl ContractContext for LivenetContractEnv {
 }
 
 impl LivenetContractEnv {
+    /// Creates a new LivenetContractEnv.
     pub fn new(
         casper_client: Rc<RefCell<CasperClient>>,
         callstack: Rc<RefCell<Callstack>>,

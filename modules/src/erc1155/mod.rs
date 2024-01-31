@@ -1,6 +1,9 @@
 //! Erc1155 standard implementation.
 use odra::prelude::*;
-use odra::{Address, Bytes, U256};
+use odra::{
+    casper_types::{bytesrepr::Bytes, U256},
+    Address
+};
 
 pub mod erc1155_base;
 pub mod extensions;
@@ -52,7 +55,7 @@ pub trait Erc1155 {
 pub mod events {
     use casper_event_standard::Event;
     use odra::prelude::*;
-    use odra::{Address, U256};
+    use odra::{casper_types::U256, Address};
 
     /// Emitted when a single Erc1155 transfer is performed.
     #[derive(Event, PartialEq, Eq, Debug, Clone)]

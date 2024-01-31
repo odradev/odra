@@ -1,13 +1,40 @@
-use crate::event::EventError;
+//! General purpose utilities.
+
+use crate::casper_types::bytesrepr::{Bytes, FromBytes};
+use crate::error::EventError;
 use crate::prelude::*;
-use crate::{Bytes, FromBytes};
 use casper_event_standard::casper_types::bytesrepr::ToBytes;
 
+/// Serializes a value implementing the `ToBytes` trait into a `Bytes` object.
+///
+/// # Arguments
+///
+/// * `value` - The value to be serialized.
+///
+/// # Returns
+///
+/// Returns a `Bytes` object containing the serialized representation of the value.
+///
+/// # Panics
+///
+/// Panics if serialization fails.
 pub fn serialize<T: ToBytes>(value: &T) -> Bytes {
-    Bytes::from(value.to_bytes().expect("Coulnd't serialize"))
+    Bytes::from(value.to_bytes().expect("Couldn't serialize"))
 }
 
-/// Returns the name of the passed event
+/// Returns the name of the passed event.
+///
+/// # Arguments
+///
+/// * `bytes` - The byte slice containing the event.
+///
+/// # Returns
+///
+/// Returns the name of the event as a `String`.
+///
+/// # Errors
+///
+/// Returns an `EventError` if the name extraction fails or the event name is unexpected.
 pub(crate) fn extract_event_name(bytes: &[u8]) -> Result<String, EventError> {
     let name: String = FromBytes::from_bytes(bytes)
         .map_err(|_| EventError::CouldntExtractName)?
@@ -46,8 +73,6 @@ pub fn event_absolute_position(len: u32, index: i32) -> Option<u32> {
     }
 }
 
-pub static KEY_DELIMITER: &str = "#";
-
 static TABLE: &[u8] = b"0123456789abcdef";
 
 #[inline]
@@ -81,37 +106,19 @@ pub fn hex_to_slice(src: &[u8], dst: &mut [u8]) {
     }
 }
 
-/// Joins two parts of a key with the [`KEY_DELIMITER`].
-#[inline]
-pub fn create_key(left: &str, right: &str) -> String {
-    crate::prelude::format!("{}{}{}", left, KEY_DELIMITER, right)
-}
-
 #[cfg(test)]
 mod tests {
-    // TODO: CLEANUP
-    // use crate::{camel_to_snake, event_absolute_position};
-    //
-    // #[test]
-    // fn camel_to_snake_works() {
-    //     assert_eq!("owned_token", camel_to_snake("OwnedToken"));
-    //     assert_eq!("ownable", camel_to_snake("Ownable"));
-    //     assert_eq!("erc20", camel_to_snake("Erc20"));
-    //     assert_eq!(
-    //         "erc20_implementation",
-    //         camel_to_snake("Erc20Implementation")
-    //     );
-    // }
-    //
-    // #[test]
-    // fn event_absolute_position_works() {
-    //     assert_eq!(event_absolute_position(0, 1), None);
-    //     assert_eq!(event_absolute_position(10, 10), None);
-    //     assert_eq!(event_absolute_position(10, -11), None);
-    //     assert_eq!(event_absolute_position(10, 0), Some(0));
-    //     assert_eq!(event_absolute_position(10, 1), Some(1));
-    //     assert_eq!(event_absolute_position(10, -1), Some(9));
-    //     assert_eq!(event_absolute_position(10, -2), Some(8));
-    //     assert_eq!(event_absolute_position(10, -10), Some(0));
-    // }
+    use super::event_absolute_position;
+
+    #[test]
+    fn event_absolute_position_works() {
+        assert_eq!(event_absolute_position(0, 1), None);
+        assert_eq!(event_absolute_position(10, 10), None);
+        assert_eq!(event_absolute_position(10, -11), None);
+        assert_eq!(event_absolute_position(10, 0), Some(0));
+        assert_eq!(event_absolute_position(10, 1), Some(1));
+        assert_eq!(event_absolute_position(10, -1), Some(9));
+        assert_eq!(event_absolute_position(10, -2), Some(8));
+        assert_eq!(event_absolute_position(10, -10), Some(0));
+    }
 }

@@ -5,7 +5,7 @@ use crate::erc721::extensions::erc721_metadata::errors::Error::{
 };
 use odra::prelude::*;
 use odra::UnwrapOrRevert;
-use odra::{Module, Variable};
+use odra::{module::Module, Variable};
 
 /// The ERC721 Metadata interface as defined in the standard.
 pub trait Erc721Metadata {

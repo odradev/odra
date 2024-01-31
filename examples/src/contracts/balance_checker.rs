@@ -1,5 +1,5 @@
 use odra::prelude::*;
-use odra::{Address, Module, U256};
+use odra::{casper_types::U256, module::Module, Address};
 
 #[odra::module]
 pub struct BalanceChecker {}

@@ -17,14 +17,14 @@ pub fn parse_bytes(data_ident: &syn::Ident) -> syn::Expr {
     parse_quote!(#ty::to_bytes(&#data_ident).map(Into::into).map_err(|err| #ty_err::ExecutionError(err.into())))
 }
 
-pub fn module_component_instnace(ty: &syn::Type, env_ident: &syn::Ident, idx: u8) -> syn::Expr {
+pub fn module_component_instance(ty: &syn::Type, env_ident: &syn::Ident, idx: u8) -> syn::Expr {
     let rc = rc_clone(env_ident);
     let component = super::ty::module_component();
     parse_quote!(<#ty as #component>::instance(#rc, #idx))
 }
 
 fn rc_clone(ident: &syn::Ident) -> syn::Expr {
-    parse_quote!(Rc::clone(&#ident))
+    parse_quote!(odra::prelude::Rc::clone(&#ident))
 }
 
 pub fn new_entry_points() -> syn::Expr {

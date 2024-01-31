@@ -1,6 +1,9 @@
 //! Erc721 standard implementation.
 
-use odra::{Address, Bytes, U256};
+use odra::{
+    casper_types::{bytesrepr::Bytes, U256},
+    Address
+};
 
 pub mod erc721_base;
 pub mod extensions;
@@ -53,7 +56,7 @@ pub trait Erc721 {
 /// Erc721-related Odra events.
 pub mod events {
     use casper_event_standard::Event;
-    use odra::{Address, U256};
+    use odra::{casper_types::U256, Address};
 
     /// Emitted when the `token_id` token is transferred (also minted or burned).
     #[derive(Event)]

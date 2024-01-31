@@ -1,11 +1,13 @@
 use crate::odra_vm_contract_env::OdraVmContractEnv;
 use crate::OdraVm;
+use odra_core::casper_types::{bytesrepr::Bytes, PublicKey, RuntimeArgs, U512};
 use odra_core::entry_point_callback::EntryPointsCaller;
-use odra_core::event::EventError;
 use odra_core::prelude::*;
-use odra_core::{Address, Bytes, OdraError, PublicKey, RuntimeArgs, VmError, U512};
+use odra_core::EventError;
+use odra_core::{Address, OdraError, VmError};
 use odra_core::{CallDef, ContractContext, ContractEnv, HostContext, HostEnv};
 
+/// HostContext utilizing the Odra in-memory virtual machine.
 pub struct OdraVmHost {
     vm: Rc<RefCell<OdraVm>>,
     contract_env: Rc<ContractEnv>
@@ -70,7 +72,6 @@ impl HostContext for OdraVmHost {
         init_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> Address {
-        // TODO: panic in nice way
         let address = self
             .vm
             .borrow()
@@ -119,6 +120,7 @@ impl HostContext for OdraVmHost {
 }
 
 impl OdraVmHost {
+    /// Creates a new `OdraVmHost` instance.
     pub fn new(vm: Rc<RefCell<OdraVm>>) -> Rc<RefCell<Self>> {
         let contract_env = Rc::new(ContractEnv::new(0, OdraVmContractEnv::new(vm.clone())));
         Rc::new(RefCell::new(Self { vm, contract_env }))

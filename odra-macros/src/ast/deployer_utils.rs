@@ -169,7 +169,7 @@ impl EntrypointCallerExpr {
 
         Ok(parse_quote!(
             #ty_caller::new(#env_ident.clone(), #entry_points_ident, |#contract_env_ident, #call_def_ident| {
-                match #call_def_ident.method() {
+                match #call_def_ident.entry_point() {
                     #(#branches)*
                 }
             })

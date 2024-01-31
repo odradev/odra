@@ -1,14 +1,17 @@
 use super::balance::AccountBalance;
 use super::storage::Storage;
+use super::utils;
 use anyhow::Result;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::account::AccountHash;
 use odra_core::casper_types::bytesrepr::Error;
-use odra_core::crypto::generate_key_pairs;
-use odra_core::event::EventError;
-use odra_core::{
-    Address, Bytes, ExecutionError, FromBytes, OdraError, PublicKey, SecretKey, ToBytes, U512
+use odra_core::casper_types::{
+    bytesrepr::{Bytes, FromBytes, ToBytes},
+    PublicKey, SecretKey, U512
 };
+use odra_core::crypto::generate_key_pairs;
+use odra_core::EventError;
+use odra_core::{Address, ExecutionError, OdraError};
 use std::collections::BTreeMap;
 
 pub struct OdraVmState {
@@ -23,10 +26,6 @@ pub struct OdraVmState {
 }
 
 impl OdraVmState {
-    pub fn get_backend_name(&self) -> String {
-        "MockVM".to_string()
-    }
-
     pub fn callee(&self) -> Address {
         *self.callstack.current().address()
     }
@@ -41,7 +40,7 @@ impl OdraVmState {
 
     pub fn set_caller(&mut self, address: Address) {
         self.pop_callstack_element();
-        self.push_callstack_element(CallstackElement::Account(address));
+        self.push_callstack_element(CallstackElement::new_account(address));
     }
 
     pub fn set_var(&mut self, key: &[u8], value: Bytes) {
@@ -124,7 +123,7 @@ impl OdraVmState {
 
     pub fn next_contract_address(&mut self) -> Address {
         self.contract_counter += 1;
-        Address::contract_from_u32(self.contract_counter)
+        utils::contract_address_from_u32(self.contract_counter)
     }
 
     pub fn get_contract_namespace(&self) -> String {
@@ -153,7 +152,7 @@ impl OdraVmState {
     }
 
     pub fn is_in_caller_context(&self) -> bool {
-        self.callstack.len() == 1
+        self.callstack.size() == 1
     }
 
     pub fn take_snapshot(&mut self) {

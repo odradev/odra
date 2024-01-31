@@ -1,5 +1,8 @@
 //! Erc721 receiver.
-use odra::{Address, Bytes, U256};
+use odra::{
+    casper_types::{bytesrepr::Bytes, U256},
+    Address
+};
 /// The ERC721 receiver interface.
 pub trait Erc721Receiver {
     /// This function is called at the end of a [safe_transfer_from](crate::erc721::Erc721::safe_transfer_from) or

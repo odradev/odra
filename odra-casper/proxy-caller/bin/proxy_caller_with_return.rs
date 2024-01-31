@@ -6,10 +6,10 @@ compile_error!("This binary only supports wasm32 target architecture!");
 
 extern crate alloc;
 
-use alloc::vec::Vec;
-use casper_types::bytesrepr::Bytes;
-use odra::consts::RESULT_KEY;
 use odra_casper_proxy_caller::{call_versioned_contract_ret_bytes, set_key, ProxyCall};
+use odra_core::casper_types::bytesrepr::Bytes;
+use odra_core::consts::RESULT_KEY;
+use odra_core::prelude::*;
 
 #[no_mangle]
 fn call() {

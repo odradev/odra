@@ -1,4 +1,4 @@
-use odra_core::prelude::*;
+use odra_core::{prelude::*, OdraError};
 use std::cell::RefCell;
 use std::env;
 use std::path::PathBuf;
@@ -17,13 +17,15 @@ use odra_core::casper_types::bytesrepr::{Bytes, ToBytes};
 use odra_core::casper_types::{
     runtime_args, BlockTime, ContractPackageHash, Key, Motes, SecretKey
 };
+use odra_core::casper_types::{PublicKey, RuntimeArgs, U512};
 use odra_core::consts;
 use odra_core::consts::*;
 use odra_core::entry_point_callback::EntryPointsCaller;
-use odra_core::event::EventError;
-use odra_core::{Address, OdraError, PublicKey, RuntimeArgs, VmError, U512};
+use odra_core::EventError;
+use odra_core::{Address, OdraResult, VmError};
 use odra_core::{CallDef, ContractEnv, HostContext, HostEnv};
 
+/// HostContext utilizing the Casper test virtual machine.
 pub struct CasperHost {
     pub vm: Rc<RefCell<CasperVm>>
 }
@@ -57,13 +59,12 @@ impl HostContext for CasperHost {
         self.vm.borrow().get_event(contract_address, index)
     }
 
-    // TODO: has the same logic as OdraVmHost::call_contract, try to share this logic in HostEnv
     fn call_contract(
         &self,
         address: &Address,
         call_def: CallDef,
         use_proxy: bool
-    ) -> Result<Bytes, OdraError> {
+    ) -> OdraResult<Bytes> {
         let mut opt_result: Option<Bytes> = None;
         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             opt_result = Some(
@@ -76,7 +77,7 @@ impl HostContext for CasperHost {
         match opt_result {
             Some(result) => Ok(result),
             None => {
-                let error = self.vm.borrow().error.clone();
+                let error = self.vm.borrow().error();
                 Err(error.unwrap_or(OdraError::VmError(VmError::Panic)))
             }
         }
@@ -123,6 +124,7 @@ impl HostContext for CasperHost {
 }
 
 impl CasperHost {
+    /// Creates a new instance of the host.
     pub fn new(vm: Rc<RefCell<CasperVm>>) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(Self { vm }))
     }

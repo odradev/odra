@@ -2,7 +2,10 @@
 use casper_event_standard::Event;
 use odra::casper_event_standard;
 use odra::prelude::*;
-use odra::{Module, ModuleWrapper, Variable};
+use odra::{
+    module::{Module, ModuleWrapper},
+    Variable
+};
 
 #[derive(Event, PartialEq, Eq, Debug)]
 struct Start {}
@@ -54,9 +57,9 @@ impl Machine {
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod test {
+    use odra::casper_types::CLType;
     use odra::contract_def::{Argument, Event, HasEvents};
     use odra::prelude::*;
-    use odra::CLType;
 
     use super::{Engine, Machine};
 

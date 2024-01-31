@@ -1,3 +1,4 @@
+//! Client for interacting with Casper node.
 use std::{fs, path::PathBuf, str::from_utf8_unchecked, time::Duration};
 
 use casper_execution_engine::core::engine_state::ExecutableDeployItem;
@@ -11,11 +12,11 @@ use odra_core::casper_types::{sign, URef};
 use odra_core::{
     casper_types::{
         bytesrepr::{Bytes, FromBytes, ToBytes},
-        runtime_args, ContractHash, ContractPackageHash, ExecutionResult, Key as CasperKey,
-        PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, U512
+        runtime_args, CLTyped, ContractHash, ContractPackageHash, ExecutionResult,
+        Key as CasperKey, PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, U512
     },
     consts::*,
-    Address, CLTyped, CallDef, ExecutionError, OdraError, OdraResult
+    Address, CallDef, ExecutionError, OdraError, OdraResult
 };
 
 use crate::casper_node_port::query_balance::{
@@ -32,9 +33,13 @@ use crate::casper_node_port::{
 };
 use crate::{casper_node_port, log};
 
+/// Environment variable holding a path to a secret key of a main account.
 pub const ENV_SECRET_KEY: &str = "ODRA_CASPER_LIVENET_SECRET_KEY_PATH";
+/// Environment variable holding an address of the casper node exposing RPC API.
 pub const ENV_NODE_ADDRESS: &str = "ODRA_CASPER_LIVENET_NODE_ADDRESS";
+/// Environment variable holding a name of the chain.
 pub const ENV_CHAIN_NAME: &str = "ODRA_CASPER_LIVENET_CHAIN_NAME";
+/// Environment variable holding a filename prefix for additional accounts.
 pub const ENV_ACCOUNT_PREFIX: &str = "ODRA_CASPER_LIVENET_KEY_";
 
 fn get_env_variable(name: &str) -> String {
@@ -406,6 +411,9 @@ impl CasperClient {
         address
     }
 
+    /// Deploy the entrypoint call using getter_proxy.
+    /// It runs the getter_proxy contract in an account context and stores the return value of the call
+    /// in under the key RESULT_KEY.
     pub fn deploy_entrypoint_call_with_proxy(
         &self,
         addr: Address,

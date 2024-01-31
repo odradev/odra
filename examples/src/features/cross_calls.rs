@@ -1,5 +1,5 @@
 use odra::prelude::*;
-use odra::{Address, Module, UnwrapOrRevert, Variable};
+use odra::{module::Module, Address, UnwrapOrRevert, Variable};
 
 #[odra::module]
 pub struct CrossContract {

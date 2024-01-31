@@ -93,17 +93,23 @@ impl<T: ToBytes + FromBytes + CLTyped> List<T> {
     }
 
     /// Returns an iterator.
-    pub fn iter(&self) -> Iter<T> {
-        Iter::new(self)
+    pub fn iter(&self) -> ListIter<T> {
+        ListIter::new(self)
     }
 }
 
-pub struct Iter<'a, T> {
+/// An iterator over the elements of a `List`.
+///
+/// This struct is created by the [`iter`] method on [`List`]. See its documentation for more.
+///
+/// [`iter`]: struct.List.html#method.iter
+/// [`List`]: struct.List.html
+pub struct ListIter<'a, T> {
     list: &'a List<T>,
     range: Range<u32>
 }
 
-impl<'a, T> Iter<'a, T> {
+impl<'a, T> ListIter<'a, T> {
     /// Returns a new instance of Iter.
     fn new(list: &'a List<T>) -> Self {
         Self {
@@ -121,7 +127,7 @@ impl<'a, T> Iter<'a, T> {
     }
 }
 
-impl<'a, T> core::iter::Iterator for Iter<'a, T>
+impl<'a, T> core::iter::Iterator for ListIter<'a, T>
 where
     T: ToBytes + FromBytes + CLTyped
 {
@@ -146,11 +152,11 @@ where
     }
 }
 
-impl<'a, T> core::iter::ExactSizeIterator for Iter<'a, T> where T: ToBytes + FromBytes + CLTyped {}
+impl<'a, T> core::iter::ExactSizeIterator for ListIter<'a, T> where T: ToBytes + FromBytes + CLTyped {}
 
-impl<'a, T> core::iter::FusedIterator for Iter<'a, T> where T: ToBytes + FromBytes + CLTyped {}
+impl<'a, T> core::iter::FusedIterator for ListIter<'a, T> where T: ToBytes + FromBytes + CLTyped {}
 
-impl<'a, T> core::iter::DoubleEndedIterator for Iter<'a, T>
+impl<'a, T> core::iter::DoubleEndedIterator for ListIter<'a, T>
 where
     T: ToBytes + FromBytes + CLTyped
 {

@@ -1,12 +1,21 @@
+//! Unsigned integer utilities.
 use casper_types::{U256, U512};
 
 use crate::arithmetic::ArithmeticsError;
 
+/// A trait for converting a value to a U256 type.
 pub trait ToU256 {
+    /// Converts the value to a U256 type.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [ArithmeticsError] if the conversion fails.
     fn to_u256(self) -> Result<U256, ArithmeticsError>;
 }
 
+/// Trait for converting a value to U512.
 pub trait ToU512 {
+    /// Converts the value to U512.
     fn to_u512(self) -> U512;
 }
 

@@ -20,9 +20,10 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefStructItem {
         let address = utils::ident::address();
         let env = utils::ident::env();
         let ty_address = utils::ty::address();
-        let ty_contract_env = utils::ty::contract_env();
+        let ty_rc_contract_env = utils::ty::rc_contract_env();
+
         let named_fields: syn::FieldsNamed = parse_quote!({
-            #env: Rc<#ty_contract_env>,
+            #env: #ty_rc_contract_env,
             #address: #ty_address,
         });
 
@@ -134,12 +135,12 @@ mod ref_item_tests {
         let module = test_utils::mock::module_impl();
         let expected = quote! {
             pub struct Erc20ContractRef {
-                env: Rc<odra::ContractEnv>,
+                env: odra::prelude::Rc<odra::ContractEnv>,
                 address: odra::Address,
             }
 
             impl Erc20ContractRef {
-                pub fn new(env: Rc<odra::ContractEnv>, address: odra::Address) -> Self {
+                pub fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::Address) -> Self {
                     Self { env, address }
                 }
 
@@ -154,7 +155,7 @@ mod ref_item_tests {
                             String::from("init"),
                             true,
                             {
-                                let mut named_args = odra::RuntimeArgs::new();
+                                let mut named_args = odra::casper_types::RuntimeArgs::new();
                                 let _ = named_args.insert("total_supply", total_supply);
                                 named_args
                             }
@@ -169,7 +170,7 @@ mod ref_item_tests {
                             String::from("total_supply"),
                             false,
                             {
-                                let mut named_args = odra::RuntimeArgs::new();
+                                let mut named_args = odra::casper_types::RuntimeArgs::new();
                                 named_args
                             }
                         ),
@@ -184,7 +185,7 @@ mod ref_item_tests {
                                 String::from("pay_to_mint"),
                                 true,
                                 {
-                                    let mut named_args = odra::RuntimeArgs::new();
+                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
                                     named_args
                                 },
                             ),
@@ -199,7 +200,7 @@ mod ref_item_tests {
                                 String::from("approve"),
                                 true,
                                 {
-                                    let mut named_args = odra::RuntimeArgs::new();
+                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
                                     let _ = named_args.insert("to", to);
                                     let _ = named_args.insert("amount", amount);
                                     named_args
@@ -216,7 +217,7 @@ mod ref_item_tests {
                                 String::from("airdrop"),
                                 false,
                                 {
-                                    let mut named_args = odra::RuntimeArgs::new();
+                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
                                     let _ = named_args.insert("to", to);
                                     let _ = named_args.insert("amount", amount);
                                     named_args
@@ -235,12 +236,12 @@ mod ref_item_tests {
         let module = test_utils::mock::module_trait_impl();
         let expected = quote! {
             pub struct Erc20ContractRef {
-                env: Rc<odra::ContractEnv>,
+                env: odra::prelude::Rc<odra::ContractEnv>,
                 address: odra::Address,
             }
 
             impl Erc20ContractRef {
-                pub fn new(env: Rc<odra::ContractEnv>, address: odra::Address) -> Self {
+                pub fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::Address) -> Self {
                     Self { env, address }
                 }
 
@@ -255,7 +256,7 @@ mod ref_item_tests {
                             String::from("total_supply"),
                             false,
                             {
-                                let mut named_args = odra::RuntimeArgs::new();
+                                let mut named_args = odra::casper_types::RuntimeArgs::new();
                                 named_args
                             }
                         ),
@@ -270,7 +271,7 @@ mod ref_item_tests {
                                 String::from("pay_to_mint"),
                                 true,
                                 {
-                                    let mut named_args = odra::RuntimeArgs::new();
+                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
                                     named_args
                                 },
                             ),
@@ -287,12 +288,12 @@ mod ref_item_tests {
         let module = test_utils::mock::module_delegation();
         let expected = quote! {
             pub struct Erc20ContractRef {
-                env: Rc<odra::ContractEnv>,
+                env: odra::prelude::Rc<odra::ContractEnv>,
                 address: odra::Address,
             }
 
             impl Erc20ContractRef {
-                pub fn new(env: Rc<odra::ContractEnv>, address: odra::Address) -> Self {
+                pub fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::Address) -> Self {
                     Self { env, address }
                 }
 
@@ -307,7 +308,7 @@ mod ref_item_tests {
                             String::from("total_supply"),
                             false,
                             {
-                                let mut named_args = odra::RuntimeArgs::new();
+                                let mut named_args = odra::casper_types::RuntimeArgs::new();
                                 named_args
                             }
                         ),
@@ -322,7 +323,7 @@ mod ref_item_tests {
                                 String::from("get_owner"),
                                 false,
                                 {
-                                    let mut named_args = odra::RuntimeArgs::new();
+                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
                                     named_args
                                 },
                             ),
@@ -337,7 +338,7 @@ mod ref_item_tests {
                                 String::from("set_owner"),
                                 true,
                                 {
-                                    let mut named_args = odra::RuntimeArgs::new();
+                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
                                     let _ = named_args.insert("new_owner", new_owner);
                                     named_args
                                 },
@@ -353,7 +354,7 @@ mod ref_item_tests {
                                 String::from("name"),
                                 false,
                                 {
-                                    let mut named_args = odra::RuntimeArgs::new();
+                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
                                     named_args
                                 },
                             ),
@@ -368,7 +369,7 @@ mod ref_item_tests {
                                 String::from("symbol"),
                                 false,
                                 {
-                                    let mut named_args = odra::RuntimeArgs::new();
+                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
                                     named_args
                                 },
                             ),

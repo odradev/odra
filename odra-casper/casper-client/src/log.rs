@@ -1,3 +1,4 @@
+//! Logging utilities.
 /// Info message.
 pub fn info<T: AsRef<str>>(message: T) {
     prettycli::info(message.as_ref());

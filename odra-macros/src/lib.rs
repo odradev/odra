@@ -20,6 +20,14 @@ macro_rules! span_error {
     };
 }
 
+/// Core element of the Odra framework, entry point for writing smart contracts.
+///
+/// Each module consists of two parts:
+/// 1. Module definition - a struct which composition of stored values (Variables and Mappings)
+/// and modules.
+/// 2. Module implementation - an implementation block.
+///
+/// The macro produces all the required code to use the module as a standalone smart contract.
 #[proc_macro_attribute]
 pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
     let attr: TokenStream2 = attr.into();
@@ -33,6 +41,10 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
     span_error!(item, "Struct or impl block expected")
 }
 
+/// Implements boilerplate for a type to be used in an Odra module.
+///
+/// This macro implements serialization and deserialization for the type, as well as
+/// cloning and [HasEvents](../odra_core/contract_def/trait.HasEvents.html) trait.
 #[proc_macro_derive(OdraType)]
 pub fn derive_odra_type(item: TokenStream) -> TokenStream {
     let item = item.into();
@@ -42,6 +54,7 @@ pub fn derive_odra_type(item: TokenStream) -> TokenStream {
     span_error!(item, "Struct or Enum expected")
 }
 
+/// Implements `Into<odra::OdraError>` for an error enum.
 #[proc_macro_derive(OdraError)]
 pub fn derive_odra_error(item: TokenStream) -> TokenStream {
     let item = item.into();
@@ -51,6 +64,11 @@ pub fn derive_odra_error(item: TokenStream) -> TokenStream {
     span_error!(item, "Struct or Enum expected")
 }
 
+/// Provides implementation of a reference to an external contract.
+///
+/// If you don't have access to the contract source code, but want to call it,
+/// you can create a reference to it and interact exactly the same way as with a contract
+/// written using [macro@module] macro.
 #[proc_macro_attribute]
 pub fn external_contract(attr: TokenStream, item: TokenStream) -> TokenStream {
     let attr: TokenStream2 = attr.into();

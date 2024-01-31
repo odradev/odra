@@ -1,10 +1,10 @@
 use anyhow::{Context, Result};
 use odra_core::{
     casper_types::{
-        bytesrepr::{Error, FromBytes, ToBytes},
+        bytesrepr::{Bytes, Error, FromBytes, ToBytes},
         U512
     },
-    Address, Bytes
+    Address
 };
 use std::{
     collections::{hash_map::DefaultHasher, BTreeMap},
@@ -122,13 +122,16 @@ impl Storage {
 
 #[cfg(test)]
 mod test {
-    use odra_core::serialize;
-    use odra_core::{Address, Bytes};
+    use odra_core::casper_types::bytesrepr::Bytes;
+    use odra_core::utils::serialize;
+    use odra_core::Address;
+
+    use crate::vm::utils;
 
     use super::Storage;
 
     fn setup() -> (Address, [u8; 3], u8) {
-        let address = Address::account_from_str("add");
+        let address = utils::account_address_from_str("add");
         let key = b"key";
         let value = 88u8;
 
