@@ -19,7 +19,7 @@ impl CallDef {
     /// * `method` - The method name.
     /// * `is_mut` - Indicates if the call is mutable.
     /// * `args` - The runtime arguments.
-    /// 
+    ///
     /// # Example
     ///
     /// ```
