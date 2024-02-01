@@ -140,8 +140,7 @@ mod tests {
     #[test]
     fn nested_odra_types() {
         let test_env = odra_test::env();
-        let mut nested_odra_types =
-            NestedOdraTypesContractHostRef::deploy(&test_env, NoneInitArgs);
+        let mut nested_odra_types = NestedOdraTypesContractHostRef::deploy(&test_env, NoneInitArgs);
 
         // Storage is not set
         assert_eq!(nested_odra_types.latest_result(), None);

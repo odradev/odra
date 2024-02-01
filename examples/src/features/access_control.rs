@@ -78,11 +78,11 @@ pub fn keccak_256(input: &str) -> Role {
 
 #[cfg(test)]
 pub mod test {
-    use super::{
-        keccak_256, MockModeratedHostRef, ROLE_MODERATOR,
-        ROLE_MODERATOR_ADMIN
+    use super::{keccak_256, MockModeratedHostRef, ROLE_MODERATOR, ROLE_MODERATOR_ADMIN};
+    use odra::{
+        host::{DefaultInitArgs, Deployer, HostRef},
+        Address
     };
-    use odra::{host::{Deployer, DefaultInitArgs, HostRef}, Address};
     use odra_modules::access::{
         errors::Error,
         events::{RoleGranted, RoleRevoked}

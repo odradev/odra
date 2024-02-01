@@ -64,10 +64,7 @@ pub mod tests {
             decimals: DECIMALS,
             initial_supply: INITIAL_SUPPLY.into()
         };
-        OwnedTokenHostRef::deploy(
-            &odra_test::env(),
-            init_args
-        )
+        OwnedTokenHostRef::deploy(&odra_test::env(), init_args)
     }
 
     #[test]

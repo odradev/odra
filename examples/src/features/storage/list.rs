@@ -37,9 +37,12 @@ mod tests {
     #[test]
     fn init_test() {
         let test_env = odra_test::env();
-        let mut dog_contract = DogContract3HostRef::deploy(&test_env, DogContract3InitArgs {
-            name: "DogContract".to_string()
-        });
+        let mut dog_contract = DogContract3HostRef::deploy(
+            &test_env,
+            DogContract3InitArgs {
+                name: "DogContract".to_string()
+            }
+        );
         assert_eq!(dog_contract.walks_amount(), 0);
         assert_eq!(dog_contract.walks_total_length(), 0);
         dog_contract.walk_the_dog(5);

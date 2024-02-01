@@ -44,8 +44,8 @@ impl ReentrancyMock {
 
 #[cfg(test)]
 mod test {
-    use odra::host::{Deployer, NoneInitArgs};
     use super::ReentrancyMockHostRef;
+    use odra::host::{Deployer, NoneInitArgs};
 
     #[test]
     fn non_reentrant_function_can_be_called() {

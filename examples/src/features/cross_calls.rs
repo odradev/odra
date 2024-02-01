@@ -30,8 +30,8 @@ impl MathEngine {
 
 #[cfg(test)]
 mod tests {
-    use odra::host::{Deployer, HostRef, NoneInitArgs};
     use super::{CrossContractHostRef, CrossContractInitArgs, MathEngineHostRef};
+    use odra::host::{Deployer, HostRef, NoneInitArgs};
 
     #[test]
     fn test_cross_calls() {

@@ -818,7 +818,7 @@ mod tests {
         // Given a deployed contract
         let mut env = setup();
         // And a valid receiver
-        
+
         let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoneInitArgs);
         // And some tokens minted
         env.token.mint(env.alice, U256::one(), 100.into(), None);

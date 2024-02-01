@@ -177,7 +177,6 @@ pub mod errors {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::{
@@ -185,8 +184,11 @@ mod tests {
         events::{Approval, Transfer},
         Erc20HostRef, Erc20InitArgs
     };
-    use odra::{casper_types::U256, host::{Deployer, HostEnv, HostRef}, prelude::*};
-     
+    use odra::{
+        casper_types::U256,
+        host::{Deployer, HostEnv, HostRef},
+        prelude::*
+    };
 
     const NAME: &str = "Plascoin";
     const SYMBOL: &str = "PLS";
@@ -197,12 +199,15 @@ mod tests {
         let env = odra_test::env();
         (
             env.clone(),
-            Erc20HostRef::deploy(&env, Erc20InitArgs {
-                symbol: SYMBOL.to_string(),
-                name: NAME.to_string(),
-                decimals: DECIMALS,
-                initial_supply: Some(INITIAL_SUPPLY.into())
-            })
+            Erc20HostRef::deploy(
+                &env,
+                Erc20InitArgs {
+                    symbol: SYMBOL.to_string(),
+                    name: NAME.to_string(),
+                    decimals: DECIMALS,
+                    initial_supply: Some(INITIAL_SUPPLY.into())
+                }
+            )
         )
     }
 

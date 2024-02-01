@@ -101,7 +101,6 @@ impl Ownable2Step {
     /// Initializes the module setting the caller as the initial owner.
     pub fn init(&mut self) {
         self.ownable.init();
-
     }
 
     /// Returns the address of the current owner.
@@ -158,7 +157,10 @@ impl Ownable2Step {
 mod test {
     use super::*;
     use crate::access::errors::Error;
-    use odra::{external_contract, host::{DefaultInitArgs, Deployer, HostEnv, HostRef}};
+    use odra::{
+        external_contract,
+        host::{DefaultInitArgs, Deployer, HostEnv, HostRef}
+    };
 
     #[test]
     fn init() {
@@ -336,12 +338,18 @@ mod test {
 
     fn setup_ownable() -> (OwnableHostRef, Address) {
         let env = odra_test::env();
-        (OwnableHostRef::deploy(&env, DefaultInitArgs), env.get_account(0))
+        (
+            OwnableHostRef::deploy(&env, DefaultInitArgs),
+            env.get_account(0)
+        )
     }
 
     fn setup_ownable_2_step() -> (Ownable2StepHostRef, Address) {
         let env = odra_test::env();
-        (Ownable2StepHostRef::deploy(&env, DefaultInitArgs), env.get_account(0))
+        (
+            Ownable2StepHostRef::deploy(&env, DefaultInitArgs),
+            env.get_account(0)
+        )
     }
 
     fn setup_renounceable() -> (Vec<RenounceableHostRef>, Address) {

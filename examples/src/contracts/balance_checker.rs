@@ -16,8 +16,6 @@ pub trait Token {
     fn balance_of(&self, owner: &Address) -> U256;
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use odra::host::{Deployer, HostRef, NoneInitArgs};

@@ -47,7 +47,10 @@ impl TokenManager {
 #[cfg(test)]
 mod test {
     use super::TokenManagerHostRef;
-    use odra::{host::{Deployer, HostRef, NoneInitArgs}, prelude::*};
+    use odra::{
+        host::{Deployer, HostRef, NoneInitArgs},
+        prelude::*
+    };
 
     const PLS: &str = "PLS";
     const MCN: &str = "MCN";
