@@ -8,7 +8,6 @@ pub struct DogContract3 {
 
 #[odra::module]
 impl DogContract3 {
-    #[odra(init)]
     pub fn init(&mut self, name: String) {
         self.name.set(name);
     }
@@ -32,13 +31,15 @@ impl DogContract3 {
 
 #[cfg(test)]
 mod tests {
-    use super::DogContract3Deployer;
-    use odra::prelude::string::ToString;
+    use super::{DogContract3HostRef, DogContract3InitArgs};
+    use odra::{host::Deployer, prelude::string::ToString};
 
     #[test]
     fn init_test() {
         let test_env = odra_test::env();
-        let mut dog_contract = DogContract3Deployer::init(&test_env, "Mantus".to_string());
+        let mut dog_contract = DogContract3HostRef::deploy(&test_env, DogContract3InitArgs {
+            name: "DogContract".to_string()
+        });
         assert_eq!(dog_contract.walks_amount(), 0);
         assert_eq!(dog_contract.walks_total_length(), 0);
         dog_contract.walk_the_dog(5);

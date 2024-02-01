@@ -14,10 +14,6 @@ struct WithArgs {
 #[derive(IntoRuntimeArgs)]
 struct NoArgs;
 
-#[derive(IntoRuntimeArgs)]
-#[is_none]
-struct IsNone;
-
 #[test]
 fn with_args_works() {
     let result: Option<RuntimeArgs> = WithArgs { a: 1, b: 2 }.into();
@@ -35,11 +31,4 @@ fn no_args_works() {
 
     let expected = Some(RuntimeArgs::new());
     assert_eq!(result, expected);
-}
-
-#[test]
-fn none_works() {
-    let args: Option<RuntimeArgs> = IsNone.into();
-    let expected = None;
-    assert_eq!(args, expected);
 }

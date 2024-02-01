@@ -49,6 +49,7 @@ impl OwnedToken {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use odra::host::{Deployer, HostRef};
     use odra_modules::access::errors::Error::CallerNotTheOwner;
 
     pub const NAME: &str = "Plascoin";
@@ -57,12 +58,15 @@ pub mod tests {
     pub const INITIAL_SUPPLY: u32 = 10_000;
 
     pub fn setup() -> OwnedTokenHostRef {
-        OwnedTokenDeployer::init(
+        let init_args = OwnedTokenInitArgs {
+            name: String::from(NAME),
+            symbol: String::from(SYMBOL),
+            decimals: DECIMALS,
+            initial_supply: INITIAL_SUPPLY.into()
+        };
+        OwnedTokenHostRef::deploy(
             &odra_test::env(),
-            String::from(NAME),
-            String::from(SYMBOL),
-            DECIMALS,
-            INITIAL_SUPPLY.into()
+            init_args
         )
     }
 

@@ -12,7 +12,6 @@ pub struct DogContract2 {
 
 #[odra::module]
 impl DogContract2 {
-    #[odra(init)]
     pub fn init(&mut self, name: String) {
         self.name.set(name);
     }
@@ -33,13 +32,15 @@ impl DogContract2 {
 
 #[cfg(test)]
 mod tests {
-    use super::DogContract2Deployer;
-    use odra::prelude::string::ToString;
+    use super::{DogContract2HostRef, DogContract2InitArgs};
+    use odra::{host::Deployer, prelude::string::ToString};
 
     #[test]
     fn visit_test() {
         let test_env = odra_test::env();
-        let mut dog_contract = DogContract2Deployer::init(&test_env, "Mantus".to_string());
+        let mut dog_contract = DogContract2HostRef::deploy(&test_env, DogContract2InitArgs {
+            name: "Mantus".to_string()
+        });
         assert_eq!(dog_contract.visits("Kuba".to_string()), 0);
         dog_contract.visit("Kuba".to_string());
         assert_eq!(dog_contract.visits("Kuba".to_string()), 1);

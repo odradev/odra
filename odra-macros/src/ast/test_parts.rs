@@ -384,10 +384,6 @@ mod test {
                     }
                 }
 
-                #[derive(odra::IntoRuntimeArgs)]
-                #[is_none]
-                pub struct Erc20InitArgs;
-
                 impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
                     fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
                         let entry_points = odra::prelude::vec![
