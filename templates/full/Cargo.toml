@@ -1,5 +1,5 @@
 [package]
-name = "{{project-name}}"
+name = "project_name"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,12 +10,12 @@ edition = "2021"
 #odra_test_dependency
 
 [[bin]]
-name = "{{project-name}}_build_contract"
+name = "project_name_build_contract"
 path = "bin/build_contract.rs"
 test = false
 
 [[bin]]
-name = "{{project-name}}_build_schema"
+name = "project_name_build_schema"
 path = "bin/build_schema.rs"
 test = false
 
