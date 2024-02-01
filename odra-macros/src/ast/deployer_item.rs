@@ -1,7 +1,14 @@
-use crate::{ir::ModuleImplIR, utils};
+use crate::{
+    ir::ModuleImplIR,
+    utils::{self, misc::AsBlock}
+};
 use derive_try_from_ref::TryFromRef;
+use syn::parse_quote;
 
-use super::deployer_utils::{EntrypointCallerExpr, EntrypointsInitExpr, EpcSignature};
+use super::{
+    deployer_utils::{EntrypointCallerExpr, EntrypointsInitExpr, EpcSignature},
+    fn_utils::FnItem
+};
 
 #[derive(syn_derive::ToTokens)]
 struct DeployImplItem {
@@ -45,17 +52,20 @@ pub struct ContractEpcFn {
 }
 
 struct InitArgsItem {
+    docs: syn::Attribute,
     attr: syn::Attribute,
     vis: syn::Visibility,
     struct_token: syn::token::Struct,
     ident: syn::Ident,
     braces: Option<syn::token::Brace>,
     fields: syn::punctuated::Punctuated<syn::Field, syn::Token![,]>,
-    semi: Option<syn::token::Semi>
+    semi: Option<syn::token::Semi>,
+    init_args_impl_item: InitArgsImplItem
 }
 
-impl ::quote::ToTokens for InitArgsItem {
+impl quote::ToTokens for InitArgsItem {
     fn to_tokens(&self, tokens: &mut ::proc_macro2::TokenStream) {
+        self.docs.to_tokens(tokens);
         self.attr.to_tokens(tokens);
         self.vis.to_tokens(tokens);
         self.struct_token.to_tokens(tokens);
@@ -66,6 +76,7 @@ impl ::quote::ToTokens for InitArgsItem {
             });
         }
         self.semi.to_tokens(tokens);
+        self.init_args_impl_item.to_tokens(tokens);
     }
 }
 
@@ -75,27 +86,79 @@ impl TryFrom<&'_ ModuleImplIR> for InitArgsItem {
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let constructor = module.constructor().unwrap();
         let fields = constructor
-                .named_args()
-                .iter()
-                .map(|arg| {
-                    let ty = arg.ty().unwrap();
-                    let ident = arg.name().unwrap();
-                    let field: syn::Field = syn::parse_quote!(pub #ident: #ty);
-                    field
-                })
-                .collect::<syn::punctuated::Punctuated<syn::Field, syn::Token![,]>>();
+            .named_args()
+            .iter()
+            .map(|arg| {
+                let ty = arg.ty().unwrap();
+                let ident = arg.name().unwrap();
+                let field: syn::Field = syn::parse_quote!(pub #ident: #ty);
+                field
+            })
+            .collect::<syn::punctuated::Punctuated<syn::Field, syn::Token![,]>>();
         let (braces, semi) = match fields.is_empty() {
             true => (None, Some(Default::default())),
             false => (Some(Default::default()), None)
         };
         Ok(Self {
+            docs: utils::attr::init_args_docs(module.module_str()?),
             attr: utils::attr::derive_into_runtime_args(),
             vis: utils::syn::visibility_pub(),
             struct_token: Default::default(),
             ident: module.init_args_ident()?,
             braces,
             fields,
-            semi
+            semi,
+            init_args_impl_item: module.try_into()?
+        })
+    }
+}
+
+#[derive(syn_derive::ToTokens)]
+struct InitArgsImplItem {
+    impl_token: syn::token::Impl,
+    trait_ty: syn::Type,
+    for_token: syn::token::For,
+    ident: syn::Ident,
+    #[syn(braced)]
+    brace_token: syn::token::Brace,
+    #[syn(in = brace_token)]
+    validate_fn: FnItem,
+    #[syn(in = brace_token)]
+    into_runtime_args_fn: FnItem
+}
+
+impl TryFrom<&'_ ModuleImplIR> for InitArgsImplItem {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        let module_str = module.module_str()?;
+        let ident_validate = utils::ident::validate();
+        let ident_expected_ident = utils::ident::expected_ident();
+        let ident_into_runtime_args = utils::ident::into_runtime_args();
+        let ty_self = utils::ty::_self();
+        let ty_string = utils::ty::string_ref();
+        let ty_runtime_args = utils::ty::runtime_args();
+        let validate_expr: syn::Expr = parse_quote!(#module_str == expected_ident);
+        let into_runtime_args_expr: syn::Expr = parse_quote!(self.into());
+
+        Ok(Self {
+            impl_token: Default::default(),
+            trait_ty: utils::ty::init_args(),
+            for_token: Default::default(),
+            ident: module.init_args_ident()?,
+            brace_token: Default::default(),
+            validate_fn: FnItem::new(
+                &ident_validate,
+                vec![parse_quote!(#ident_expected_ident: #ty_string)],
+                parse_quote!(-> bool),
+                validate_expr.as_block()
+            ),
+            into_runtime_args_fn: FnItem::new(
+                &ident_into_runtime_args,
+                vec![parse_quote!(#ty_self)],
+                parse_quote!(-> Option<#ty_runtime_args>),
+                into_runtime_args_expr.as_block()
+            )
         })
     }
 }
@@ -111,7 +174,13 @@ impl TryFrom<&'_ ModuleImplIR> for DeployerItem {
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let args = match module.constructor() {
-            Some(_) => Some(module.try_into()?),
+            Some(f) => {
+                if f.has_args() {
+                    Some(module.try_into()?)
+                } else {
+                    None
+                }
+            }
             None => None
         };
         Ok(Self {
@@ -131,9 +200,20 @@ mod deployer_impl {
     fn deployer_impl() {
         let module = test_utils::mock::module_impl();
         let expected = quote! {
+            /// [Erc20] contract constructor arguments.
             #[derive(odra::IntoRuntimeArgs)]
             pub struct Erc20InitArgs {
                 pub total_supply: Option<U256>
+            }
+
+            impl odra::host::InitArgs for Erc20InitArgs {
+                fn validate(expected_ident: &str) -> bool {
+                    "Erc20" == expected_ident
+                }
+
+                fn into_runtime_args(self) -> Option<odra::casper_types::RuntimeArgs> {
+                    self.into()
+                }
             }
 
             impl odra::host::EntryPointsCallerProvider for Erc20HostRef {

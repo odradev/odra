@@ -11,7 +11,7 @@ use casper_types::{
 
 /// A host side reference to a contract.
 pub trait HostRef {
-    /// Creates a new host reference to a contract.
+    /// Creates a new host side reference to a contract.
     fn new(address: Address, env: HostEnv) -> Self;
     /// Creates a new host reference with attached tokens, based on the current instance.
     fn with_tokens(&self, tokens: U512) -> Self;
@@ -22,7 +22,7 @@ pub trait HostRef {
     /// Returns the n-th event emitted by the contract.
     ///
     /// If the event is not found or the type does not match, returns `EventError::EventNotFound`.
-    fn get_event<T>(&self, index: i32) -> Result<T, EventError>
+    fn get_event<T: 'static>(&self, index: i32) -> Result<T, EventError>
     where
         T: FromBytes + EventInstance;
     /// Returns a detailed information about the last call of the contract.
@@ -53,14 +53,61 @@ pub trait Deployer {
     /// Deploys a contract with given init args.
     ///
     /// If the init args are provided, the contract is deployed and initialized
-    /// by calling the constructor.
-    fn deploy<T: Into<Option<RuntimeArgs>>>(env: &HostEnv, init_args: T) -> Self;
+    /// by calling the constructor. If the init args are not provided, the contract
+    /// is deployed without initialization.
+    ///
+    /// Returns a host reference to the deployed contract.
+    fn deploy<T: InitArgs>(env: &HostEnv, init_args: T) -> Self;
+}
+
+/// A type which can be used as initialization arguments for a contract.
+#[cfg_attr(test, mockall::automock)]
+pub trait InitArgs {
+    /// Validates the args are used to initialized the right contact.
+    ///
+    /// If the args does not match the contract, the method returns `false`.
+    fn validate(expected_ident: &str) -> bool;
+    /// Converts the init args into a [RuntimeArgs] instance.
+    fn into_runtime_args(self) -> Option<RuntimeArgs>;
+}
+
+/// Default implementation of [InitArgs]. Should be used when the contract
+/// has the constructor but does not require any initialization arguments.
+pub struct DefaultInitArgs;
+
+impl InitArgs for DefaultInitArgs {
+    fn validate(_expected_ident: &str) -> bool {
+        true
+    }
+
+    fn into_runtime_args(self) -> Option<RuntimeArgs> {
+        Some(RuntimeArgs::new())
+    }
+}
+
+/// An implementation of [InitArgs]. Should be used when the contract
+/// does not have the constructor.
+pub struct NoneInitArgs;
+
+impl InitArgs for NoneInitArgs {
+    fn validate(_expected_ident: &str) -> bool {
+        true
+    }
+
+    fn into_runtime_args(self) -> Option<RuntimeArgs> {
+        None
+    }
 }
 
 impl<R: HostRef + EntryPointsCallerProvider + HasIdent> Deployer for R {
-    fn deploy<T: Into<Option<RuntimeArgs>>>(env: &HostEnv, init_args: T) -> Self {
+    fn deploy<T: InitArgs>(env: &HostEnv, init_args: T) -> Self {
+        let contract_ident = R::ident();
+        if !T::validate(&contract_ident) {
+            core::panic!("Invalid init args for contract {}.", contract_ident);
+        }
+
         let caller = R::entry_points_caller(env);
-        let address = env.new_contract(&R::ident(), init_args.into(), caller);
+        let address = env.new_contract(&contract_ident, init_args.into_runtime_args(), caller);
         R::new(address, env.clone())
     }
 }
@@ -428,5 +475,108 @@ impl HostEnv {
     pub fn set_gas(&self, gas: u64) {
         let backend = self.backend.borrow();
         backend.set_gas(gas)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use casper_types::account::AccountHash;
+
+    use super::*;
+
+    mockall::mock! {
+        TestRef {}
+        impl HasIdent for TestRef {
+            fn ident() -> String;
+        }
+        impl EntryPointsCallerProvider for TestRef {
+            fn entry_points_caller(env: &HostEnv) -> EntryPointsCaller;
+        }
+        impl HostRef for TestRef {
+            fn new(address: Address, env: HostEnv) -> Self;
+            fn with_tokens(&self, tokens: U512) -> Self;
+            fn address(&self) -> &Address;
+            fn env(&self) -> &HostEnv;
+            fn get_event<T: 'static>(&self, index: i32) -> Result<T, EventError> where T: FromBytes + EventInstance;
+            fn last_call(&self) -> ContractCallResult;
+        }
+    }
+
+    #[test]
+    fn test_deploy_with_default_args() {
+        // stubs
+        let indent_ctx = MockTestRef::ident_context();
+        indent_ctx.expect().returning(|| "TestRef".to_string());
+
+        let epc_ctx = MockTestRef::entry_points_caller_context();
+        epc_ctx
+            .expect()
+            .returning(|h| EntryPointsCaller::new(h.clone(), vec![], |_, _| Ok(Bytes::default())));
+
+        // check if TestRef::new() is called exactly once
+        let instance_ctx = MockTestRef::new_context();
+        instance_ctx
+            .expect()
+            .times(1)
+            .returning(|_, _| MockTestRef::default());
+
+        let mut ctx = MockHostContext::new();
+        ctx.expect_new_contract()
+            .returning(|_, _, _| Address::Account(AccountHash::new([0; 32])));
+        let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+        <MockTestRef as Deployer>::deploy(&env, DefaultInitArgs);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid init args for contract TestRef.")]
+    fn test_deploy_with_invalid_args() {
+        // stubs
+        let args_ctx = MockInitArgs::validate_context();
+        args_ctx.expect().returning(|_| false);
+        let indent_ctx = MockTestRef::ident_context();
+        indent_ctx.expect().returning(|| "TestRef".to_string());
+
+        let env = HostEnv::new(Rc::new(RefCell::new(MockHostContext::new())));
+        let args = MockInitArgs::new();
+        MockTestRef::deploy(&env, args);
+    }
+
+    #[test]
+    fn test_load_ref() {
+        // stubs
+        let args_ctx = MockInitArgs::validate_context();
+        args_ctx.expect().returning(|_| true);
+        let epc_ctx = MockTestRef::entry_points_caller_context();
+        epc_ctx
+            .expect()
+            .returning(|h| EntryPointsCaller::new(h.clone(), vec![], |_, _| Ok(Bytes::default())));
+
+        let mut ctx = MockHostContext::new();
+        ctx.expect_register_contract().returning(|_, _| ());
+        ctx.expect_get_events_count().returning(|_| 0);
+
+        // check if TestRef::new() is called exactly once
+        let instance_ctx = MockTestRef::new_context();
+        instance_ctx
+            .expect()
+            .times(1)
+            .returning(|_, _| MockTestRef::default());
+
+        let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+        let address = Address::Account(AccountHash::new([0; 32]));
+        <MockTestRef as HostRefLoader>::load(&env, address);
+    }
+
+    #[test]
+    fn test_host_env() {
+        let mut ctx = MockHostContext::new();
+        ctx.expect_new_contract()
+            .returning(|_, _, _| Address::Account(AccountHash::new([0; 32])));
+        ctx.expect_caller()
+            .returning(|| Address::Account(AccountHash::new([2; 32])));
+
+        let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+
+        assert_eq!(env.caller(), Address::Account(AccountHash::new([2; 32])));
     }
 }

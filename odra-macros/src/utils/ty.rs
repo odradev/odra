@@ -172,6 +172,10 @@ pub fn string() -> syn::Type {
     parse_quote!(odra::prelude::string::String)
 }
 
+pub fn string_ref() -> syn::Type {
+    parse_quote!(&str)
+}
+
 pub fn result(ty: &syn::Type, err_ty: &syn::Type) -> syn::Type {
     parse_quote!(Result<#ty, #err_ty>)
 }
@@ -267,4 +271,8 @@ pub fn unreferenced_ty(ty: &syn::Type) -> syn::Type {
 
 pub fn host_ref() -> syn::Type {
     parse_quote!(odra::host::HostRef)
+}
+
+pub fn init_args() -> syn::Type {
+    parse_quote!(odra::host::InitArgs)
 }

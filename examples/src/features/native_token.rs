@@ -19,13 +19,13 @@ mod tests {
     use super::PublicWalletHostRef;
     use odra::{
         casper_types::U512,
-        host::{Deployer, HostRef}
+        host::{Deployer, HostRef, NoneInitArgs}
     };
 
     #[test]
     fn test_modules() {
         let test_env = odra_test::env();
-        let mut my_contract = PublicWalletHostRef::deploy(&test_env, None);
+        let mut my_contract = PublicWalletHostRef::deploy(&test_env, NoneInitArgs);
         assert_eq!(test_env.balance_of(my_contract.address()), U512::zero());
 
         my_contract.with_tokens(U512::from(100)).deposit();

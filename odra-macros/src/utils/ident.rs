@@ -125,3 +125,15 @@ pub fn from() -> syn::Ident {
 pub fn error() -> syn::Ident {
     format_ident!("error")
 }
+
+pub fn expected_ident() -> syn::Ident {
+    format_ident!("expected_ident")
+}
+
+pub fn validate() -> syn::Ident {
+    format_ident!("validate")
+}
+
+pub fn into_runtime_args() -> syn::Ident {
+    format_ident!("into_runtime_args")
+}

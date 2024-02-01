@@ -27,7 +27,7 @@ mod test {
             bytesrepr::{Bytes, FromBytes},
             PublicKey
         },
-        host::Deployer
+        host::{Deployer, NoneInitArgs}
     };
 
     #[test]
@@ -42,7 +42,7 @@ mod test {
         let public_key = test_env.public_key(&account);
 
         let signature_verifier =
-            SignatureVerifierHostRef::deploy(&test_env, None);
+            SignatureVerifierHostRef::deploy(&test_env, NoneInitArgs);
         assert!(signature_verifier.verify_signature(message_bytes, signature, public_key));
     }
 
@@ -70,7 +70,7 @@ mod test {
         let (public_key, _) = PublicKey::from_bytes(public_key_decoded.as_slice()).unwrap();
 
         let signature_verifier =
-            SignatureVerifierHostRef::deploy(&odra_test::env(), None);
+            SignatureVerifierHostRef::deploy(&odra_test::env(), NoneInitArgs);
         assert!(signature_verifier.verify_signature(message_bytes, signature_bytes, public_key));
     }
 }

@@ -109,7 +109,7 @@ mod tests {
     use crate::wrapped_native::events::{Deposit, Withdrawal};
     use crate::wrapped_native::WrappedNativeTokenHostRef;
     use casper_event_standard::EventInstance;
-    use odra::host::{Deployer, HostEnv, HostRef};
+    use odra::host::{Deployer, DefaultInitArgs, HostEnv, HostRef};
     use odra::prelude::*;
     use odra::uints::{ToU256, ToU512};
     use odra::VmError::BalanceExceeded;
@@ -117,8 +117,6 @@ mod tests {
         casper_types::{U256, U512},
         Address, OdraError
     };
-
-    use super::WrappedNativeTokenInitArgs;
 
     fn setup() -> (
         HostEnv,
@@ -129,7 +127,7 @@ mod tests {
         U512
     ) {
         let env = odra_test::env();
-        let token = WrappedNativeTokenHostRef::deploy(&env, WrappedNativeTokenInitArgs);
+        let token = WrappedNativeTokenHostRef::deploy(&env, DefaultInitArgs);
         let account_1 = env.get_account(0);
         let account_1_balance = env.balance_of(&account_1);
         let account_2 = env.get_account(1);

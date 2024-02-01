@@ -101,6 +101,7 @@ impl Ownable2Step {
     /// Initializes the module setting the caller as the initial owner.
     pub fn init(&mut self) {
         self.ownable.init();
+
     }
 
     /// Returns the address of the current owner.
@@ -157,7 +158,7 @@ impl Ownable2Step {
 mod test {
     use super::*;
     use crate::access::errors::Error;
-    use odra::{host::{Deployer, HostEnv, HostRef}, external_contract};
+    use odra::{external_contract, host::{DefaultInitArgs, Deployer, HostEnv, HostRef}};
 
     #[test]
     fn init() {
@@ -335,18 +336,18 @@ mod test {
 
     fn setup_ownable() -> (OwnableHostRef, Address) {
         let env = odra_test::env();
-        (OwnableHostRef::deploy(&env, OwnableInitArgs), env.get_account(0))
+        (OwnableHostRef::deploy(&env, DefaultInitArgs), env.get_account(0))
     }
 
     fn setup_ownable_2_step() -> (Ownable2StepHostRef, Address) {
         let env = odra_test::env();
-        (Ownable2StepHostRef::deploy(&env, Ownable2StepInitArgs), env.get_account(0))
+        (Ownable2StepHostRef::deploy(&env, DefaultInitArgs), env.get_account(0))
     }
 
     fn setup_renounceable() -> (Vec<RenounceableHostRef>, Address) {
         let env = odra_test::env();
-        let ownable = OwnableHostRef::deploy(&env, OwnableInitArgs);
-        let ownable_2_step = Ownable2StepHostRef::deploy(&env, Ownable2StepInitArgs);
+        let ownable = OwnableHostRef::deploy(&env, DefaultInitArgs);
+        let ownable_2_step = Ownable2StepHostRef::deploy(&env, DefaultInitArgs);
         let renouncable_ref = RenounceableHostRef::new(*ownable.address(), env.clone());
         let renouncable_2_step_ref =
             RenounceableHostRef::new(*ownable_2_step.address(), env.clone());
@@ -358,8 +359,8 @@ mod test {
 
     fn setup_owned() -> (HostEnv, OwnableHostRef, Ownable2StepHostRef, Address) {
         let env = odra_test::env();
-        let ownable = OwnableHostRef::deploy(&env, OwnableInitArgs);
-        let ownable_2_step = Ownable2StepHostRef::deploy(&env, Ownable2StepInitArgs);
+        let ownable = OwnableHostRef::deploy(&env, DefaultInitArgs);
+        let ownable_2_step = Ownable2StepHostRef::deploy(&env, DefaultInitArgs);
         (env.clone(), ownable, ownable_2_step, env.get_account(0))
     }
 }
