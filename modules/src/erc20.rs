@@ -177,12 +177,6 @@ pub mod errors {
     }
 }
 
-impl odra::contract_def::HasIdent for Erc20HostRef {
-    fn ident() -> String {
-        String::from("Erc20")
-    }
-}
-
 
 #[cfg(test)]
 mod tests {
@@ -191,9 +185,7 @@ mod tests {
         events::{Approval, Transfer},
         Erc20HostRef, Erc20InitArgs
     };
-    use odra::{experimental::HostRef, prelude::*};
-    use odra::{casper_types::U256, HostEnv};
-    use odra::experimental::Deployer;
+    use odra::{casper_types::U256, host::{Deployer, HostEnv, HostRef}, prelude::*};
      
 
     const NAME: &str = "Plascoin";

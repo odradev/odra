@@ -2,7 +2,7 @@
 pub mod livenet_contract_env;
 pub mod livenet_host;
 use livenet_host::LivenetHost;
-use odra_core::HostEnv;
+use odra_core::host::HostEnv;
 
 /// Returns a host environment for the livenet.
 pub fn env() -> HostEnv {

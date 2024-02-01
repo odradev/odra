@@ -36,7 +36,7 @@ pub fn init() -> syn::Ident {
 }
 
 pub fn epc() -> syn::Ident {
-    format_ident!("epc")
+    format_ident!("entry_points_caller")
 }
 
 pub fn load() -> syn::Ident {

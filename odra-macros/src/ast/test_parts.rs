@@ -5,7 +5,7 @@ use crate::{ir::ModuleImplIR, utils};
 
 use super::{
     deployer_item::DeployerItem,
-    host_ref_item::HostRefItem,
+    host_ref_item::{HasIdentTraitImplItem, HostRefItem},
     parts_utils::{UsePreludeItem, UseSuperItem}
 };
 
@@ -63,6 +63,8 @@ pub struct TestPartsItem {
     #[syn(in = brace_token)]
     host_ref: HostRefItem,
     #[syn(in = brace_token)]
+    trait_has_ident_impl_item: HasIdentTraitImplItem,
+    #[syn(in = brace_token)]
     deployer: DeployerItem
 }
 
@@ -84,12 +86,12 @@ mod test {
 
                 pub struct Erc20HostRef {
                     address: odra::Address,
-                    env: odra::HostEnv,
+                    env: odra::host::HostEnv,
                     attached_value: odra::casper_types::U512
                 }
 
-                impl Erc20HostRef {
-                    pub fn new(address: odra::Address, env: odra::HostEnv) -> Self {
+                impl odra::host::HostRef for Erc20HostRef {
+                    fn new(address: odra::Address, env: odra::host::HostEnv) -> Self {
                         Self {
                             address,
                             env,
@@ -97,7 +99,7 @@ mod test {
                         }
                     }
 
-                    pub fn with_tokens(&self, tokens: odra::casper_types::U512) -> Self {
+                    fn with_tokens(&self, tokens: odra::casper_types::U512) -> Self {
                         Self {
                             address: self.address,
                             env: self.env.clone(),
@@ -105,25 +107,27 @@ mod test {
                         }
                     }
 
-                    pub fn address(&self) -> &odra::Address {
+                    fn address(&self) -> &odra::Address {
                         &self.address
                     }
 
-                    pub fn env(&self) -> &odra::HostEnv {
+                    fn env(&self) -> &odra::host::HostEnv {
                         &self.env
                     }
 
-                    pub fn get_event<T>(&self, index: i32) -> Result<T, odra::EventError>
+                    fn get_event<T>(&self, index: i32) -> Result<T, odra::EventError>
                     where
                         T: odra::casper_types::bytesrepr::FromBytes + odra::casper_event_standard::EventInstance,
                     {
                         self.env.get_event(&self.address, index)
                     }
 
-                    pub fn last_call(&self) -> odra::ContractCallResult {
+                    fn last_call(&self) -> odra::ContractCallResult {
                         self.env.last_call_result(self.address)
                     }
+                }
 
+                impl Erc20HostRef {
                     pub fn try_total_supply(&self) -> odra::OdraResult<U256> {
                         self.env.call_contract(
                             self.address,
@@ -213,8 +217,19 @@ mod test {
                     }
                 }
 
-                impl odra::experimental::EntryPointCallerProvider for Erc20HostRef {
-                    fn epc(env: &odra::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
+                impl odra::contract_def::HasIdent for Erc20HostRef {
+                    fn ident() -> odra::prelude::string::String {
+                        Erc20::ident()
+                    }
+                }
+
+                #[derive(odra::IntoRuntimeArgs)]
+                pub struct Erc20InitArgs {
+                    pub total_supply: Option<U256>,
+                }
+
+                impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
+                    fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
                         let entry_points = odra::prelude::vec![
                             odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("init"), odra::prelude::vec![
                                 odra::entry_point_callback::Argument::new(odra::prelude::string::String::from("total_supply"), <Option::<U256> as odra::casper_types::CLTyped>::cl_type())
@@ -278,12 +293,12 @@ mod test {
 
                 pub struct Erc20HostRef {
                     address: odra::Address,
-                    env: odra::HostEnv,
+                    env: odra::host::HostEnv,
                     attached_value: odra::casper_types::U512
                 }
 
-                impl Erc20HostRef {
-                    pub fn new(address: odra::Address, env: odra::HostEnv) -> Self {
+                impl odra::host::HostRef for Erc20HostRef {
+                    fn new(address: odra::Address, env: odra::host::HostEnv) -> Self {
                         Self {
                             address,
                             env,
@@ -291,7 +306,7 @@ mod test {
                         }
                     }
 
-                    pub fn with_tokens(&self, tokens: odra::casper_types::U512) -> Self {
+                    fn with_tokens(&self, tokens: odra::casper_types::U512) -> Self {
                         Self {
                             address: self.address,
                             env: self.env.clone(),
@@ -299,25 +314,27 @@ mod test {
                         }
                     }
 
-                    pub fn address(&self) -> &odra::Address {
+                    fn address(&self) -> &odra::Address {
                         &self.address
                     }
 
-                    pub fn env(&self) -> &odra::HostEnv {
+                    fn env(&self) -> &odra::host::HostEnv {
                         &self.env
                     }
 
-                    pub fn get_event<T>(&self, index: i32) -> Result<T, odra::EventError>
+                    fn get_event<T>(&self, index: i32) -> Result<T, odra::EventError>
                     where
                         T: odra::casper_types::bytesrepr::FromBytes + odra::casper_event_standard::EventInstance,
                     {
                         self.env.get_event(&self.address, index)
                     }
 
-                    pub fn last_call(&self) -> odra::ContractCallResult {
+                    fn last_call(&self) -> odra::ContractCallResult {
                         self.env.last_call_result(self.address)
                     }
+                }
 
+                impl Erc20HostRef {
                     pub fn try_total_supply(&self) -> odra::OdraResult<U256> {
                         self.env.call_contract(
                             self.address,
@@ -361,8 +378,18 @@ mod test {
                     }
                 }
 
-                impl odra::experimental::EntryPointCallerProvider for Erc20HostRef {
-                    fn epc(env: &odra::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
+                impl odra::contract_def::HasIdent for Erc20HostRef {
+                    fn ident() -> odra::prelude::string::String {
+                        Erc20::ident()
+                    }
+                }
+
+                #[derive(odra::IntoRuntimeArgs)]
+                #[is_none]
+                pub struct Erc20InitArgs;
+
+                impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
+                    fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
                         let entry_points = odra::prelude::vec![
                             odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
                             odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("pay_to_mint"), odra::prelude::vec![])

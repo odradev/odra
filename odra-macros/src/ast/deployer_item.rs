@@ -1,11 +1,8 @@
+use crate::{ir::ModuleImplIR, utils};
 use derive_try_from_ref::TryFromRef;
 use quote::TokenStreamExt;
-use crate::{ir::ModuleImplIR, utils};
 
-use super::deployer_utils::{
-    EntrypointCallerExpr,
-    EntrypointsInitExpr, EpcSignature
-};
+use super::deployer_utils::{EntrypointCallerExpr, EntrypointsInitExpr, EpcSignature};
 
 #[derive(syn_derive::ToTokens)]
 struct DeployImplItem {
@@ -29,7 +26,7 @@ impl TryFrom<&'_ ModuleImplIR> for DeployImplItem {
             for_token: Default::default(),
             ident: module.host_ref_ident()?,
             brace_token: Default::default(),
-            epc_fn: module.try_into()?,
+            epc_fn: module.try_into()?
         })
     }
 }
@@ -48,17 +45,29 @@ pub struct ContractEpcFn {
     caller: EntrypointCallerExpr
 }
 
-#[derive(syn_derive::ToTokens)]
 struct InitArgsItem {
-    #[to_tokens(|tokens, f| tokens.append_all(f))]
     attrs: Vec<syn::Attribute>,
     vis: syn::Visibility,
     struct_token: syn::token::Struct,
     ident: syn::Ident,
-    #[syn(braced)]
-    braces: syn::token::Brace,
-    #[syn(in = braces)]
-    fields: syn::punctuated::Punctuated<syn::Field, syn::Token![,]>
+    braces: Option<syn::token::Brace>,
+    fields: syn::punctuated::Punctuated<syn::Field, syn::Token![,]>,
+    semi: Option<syn::token::Semi>
+}
+
+impl ::quote::ToTokens for InitArgsItem {
+    fn to_tokens(&self, tokens: &mut ::proc_macro2::TokenStream) {
+        tokens.append_all(self.attrs.iter());
+        self.vis.to_tokens(tokens);
+        self.struct_token.to_tokens(tokens);
+        self.ident.to_tokens(tokens);
+        if let Some(ref braces) = self.braces {
+            braces.surround(tokens, |tokens| {
+                self.fields.to_tokens(tokens);
+            });
+        }
+        self.semi.to_tokens(tokens);
+    }
 }
 
 impl TryFrom<&'_ ModuleImplIR> for InitArgsItem {
@@ -69,24 +78,36 @@ impl TryFrom<&'_ ModuleImplIR> for InitArgsItem {
 
         let attrs = match constructor {
             Some(_) => vec![utils::attr::derive_into_runtime_args()],
-            None => vec![utils::attr::derive_into_runtime_args(), utils::attr::is_none()],
+            None => vec![
+                utils::attr::derive_into_runtime_args(),
+                utils::attr::is_none(),
+            ]
         };
         let fields = match constructor {
-            Some(constructor) => constructor.named_args().iter().map(|arg| {
-                let ty = arg.ty().unwrap();
-                let ident = arg.name().unwrap();
-                let field: syn::Field = syn::parse_quote!(pub #ident: #ty);
-                field
-            }).collect(),
+            Some(constructor) => constructor
+                .named_args()
+                .iter()
+                .map(|arg| {
+                    let ty = arg.ty().unwrap();
+                    let ident = arg.name().unwrap();
+                    let field: syn::Field = syn::parse_quote!(pub #ident: #ty);
+                    field
+                })
+                .collect::<syn::punctuated::Punctuated<syn::Field, syn::Token![,]>>(),
             None => Default::default()
+        };
+        let (braces, semi) = match fields.is_empty() {
+            true => (None, Some(Default::default())),
+            false => (Some(Default::default()), None)
         };
         Ok(Self {
             attrs,
             vis: utils::syn::visibility_pub(),
             struct_token: Default::default(),
             ident: module.init_args_ident()?,
-            braces: Default::default(),
-            fields
+            braces,
+            fields,
+            semi
         })
     }
 }
@@ -114,8 +135,8 @@ mod deployer_impl {
                 pub total_supply: Option<U256>
             }
 
-            impl odra::experimental::EntryPointCallerProvider for Erc20HostRef {
-                fn epc(env: &odra::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
+            impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
+                fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
                     let entry_points = odra::prelude::vec![
                         odra::entry_point_callback::EntryPoint::new(
                             odra::prelude::string::String::from("init"),
@@ -195,10 +216,10 @@ mod deployer_impl {
         let expected = quote! {
             #[derive(odra::IntoRuntimeArgs)]
             #[is_none]
-            pub struct Erc20InitArgs {}
+            pub struct Erc20InitArgs;
 
-            impl odra::experimental::EntryPointCallerProvider for Erc20HostRef {
-                fn epc(env: &odra::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
+            impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
+                fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
                     let entry_points = odra::prelude::vec![
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("pay_to_mint"), odra::prelude::vec![])
@@ -231,10 +252,10 @@ mod deployer_impl {
         let expected = quote! {
             #[derive(odra::IntoRuntimeArgs)]
             #[is_none]
-            pub struct Erc20InitArgs {}
+            pub struct Erc20InitArgs;
 
-            impl odra::experimental::EntryPointCallerProvider for Erc20HostRef {
-                fn epc(env: &odra::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
+            impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
+                fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
                     let entry_points = odra::prelude::vec![
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("get_owner"), odra::prelude::vec![]),

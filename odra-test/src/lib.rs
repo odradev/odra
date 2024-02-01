@@ -4,7 +4,7 @@
 //!
 //! # Example
 //!
-//! ```no-run
+//! ```no_run
 //! #[test]
 //! fn test() {
 //!    let env = odra_test::env();
@@ -19,8 +19,8 @@
 compile_error!("odra-test is not meant to be compiled for wasm32");
 
 use odra_casper_test_vm::{CasperHost, CasperVm};
+use odra_core::host::HostEnv;
 use odra_core::prelude::String;
-use odra_core::HostEnv;
 use odra_vm::{OdraVm, OdraVmHost};
 
 /// Returns the host environment for the testing purpose.

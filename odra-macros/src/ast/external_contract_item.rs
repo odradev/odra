@@ -86,12 +86,12 @@ mod test {
 
                 pub struct TokenHostRef {
                     address: odra::Address,
-                    env: odra::HostEnv,
+                    env: odra::host::HostEnv,
                     attached_value: odra::casper_types::U512
                 }
 
-                impl TokenHostRef {
-                    pub fn new(address: odra::Address, env: odra::HostEnv) -> Self {
+                impl odra::host::HostRef for TokenHostRef {
+                    fn new(address: odra::Address, env: odra::host::HostEnv) -> Self {
                         Self {
                             address,
                             env,
@@ -99,7 +99,7 @@ mod test {
                         }
                     }
 
-                    pub fn with_tokens(&self, tokens: odra::casper_types::U512) -> Self {
+                    fn with_tokens(&self, tokens: odra::casper_types::U512) -> Self {
                         Self {
                             address: self.address,
                             env: self.env.clone(),
@@ -107,25 +107,27 @@ mod test {
                         }
                     }
 
-                    pub fn address(&self) -> &odra::Address {
+                    fn address(&self) -> &odra::Address {
                         &self.address
                     }
 
-                    pub fn env(&self) -> &odra::HostEnv {
+                    fn env(&self) -> &odra::host::HostEnv {
                         &self.env
                     }
 
-                    pub fn get_event<T>(&self, index: i32) -> Result<T, odra::EventError>
+                    fn get_event<T>(&self, index: i32) -> Result<T, odra::EventError>
                     where
                         T: odra::casper_types::bytesrepr::FromBytes + odra::casper_event_standard::EventInstance,
                     {
                         self.env.get_event(&self.address, index)
                     }
 
-                    pub fn last_call(&self) -> odra::ContractCallResult {
+                    fn last_call(&self) -> odra::ContractCallResult {
                         self.env.last_call_result(self.address)
                     }
+                }
 
+                impl TokenHostRef {
                     pub fn try_balance_of(&self, owner: Address) -> odra::OdraResult<U256> {
                         self.env.call_contract(
                             self.address,

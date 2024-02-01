@@ -42,7 +42,7 @@ pub fn u512() -> syn::Type {
 }
 
 pub fn host_env() -> syn::Type {
-    parse_quote!(odra::HostEnv)
+    parse_quote!(odra::host::HostEnv)
 }
 
 pub fn call_def() -> syn::Type {
@@ -54,7 +54,7 @@ pub fn entry_points_caller() -> syn::Type {
 }
 
 pub fn entry_point_caller_provider() -> syn::Type {
-    parse_quote!(odra::experimental::EntryPointCallerProvider)
+    parse_quote!(odra::host::EntryPointsCallerProvider)
 }
 
 pub fn contract_call_result() -> syn::Type {
@@ -266,5 +266,5 @@ pub fn unreferenced_ty(ty: &syn::Type) -> syn::Type {
 }
 
 pub fn host_ref() -> syn::Type {
-    parse_quote!(odra::experimental::HostRef)
+    parse_quote!(odra::host::HostRef)
 }

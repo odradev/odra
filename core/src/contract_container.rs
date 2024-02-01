@@ -67,12 +67,12 @@ mod tests {
     use super::ContractContainer;
     use crate::contract_context::MockContractContext;
     use crate::entry_point_callback::{Argument, EntryPoint, EntryPointsCaller};
-    use crate::host_context::MockHostContext;
+    use crate::host::{HostEnv, MockHostContext};
     use crate::{
         casper_types::{runtime_args, RuntimeArgs},
         OdraError, VmError
     };
-    use crate::{prelude::*, CallDef, ContractEnv, HostEnv};
+    use crate::{prelude::*, CallDef, ContractEnv};
 
     const TEST_ENTRYPOINT: &str = "ep";
 

@@ -11,7 +11,8 @@ use odra_core::{
         bytesrepr::{Bytes, ToBytes},
         PublicKey, RuntimeArgs, U512
     },
-    Address, CallDef, ContractEnv, HostContext, OdraError
+    host::HostContext,
+    Address, CallDef, ContractEnv, OdraError
 };
 use odra_core::{prelude::*, EventError};
 use odra_core::{ContractContainer, ContractRegister};

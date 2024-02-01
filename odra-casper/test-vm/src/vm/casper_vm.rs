@@ -26,8 +26,11 @@ use odra_core::consts::*;
 use odra_core::crypto::generate_key_pairs;
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::EventError;
+use odra_core::{
+    host::{HostContext, HostEnv},
+    CallDef, ContractEnv
+};
 use odra_core::{Address, ExecutionError, OdraError, VmError};
-use odra_core::{CallDef, ContractEnv, HostContext, HostEnv};
 
 /// Casper virtual machine utilizing [InMemoryWasmTestBuilder].
 pub struct CasperVm {
