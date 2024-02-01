@@ -8,13 +8,23 @@ members = [
     "odra-casper/casper-client",
     "odra-casper/wasm-env",
     "odra-casper/test-vm",
-    "odra-test"]
-exclude = [ "examples", "modules", "odra-casper/proxy-caller" ]
+    "odra-test"
+]
+exclude = [
+    "examples",
+    "modules",
+    "odra-casper/proxy-caller",
+    "templates"
+]
 resolver = "2"
 
 [workspace.package]
 version = "0.8.0"
-authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
+authors = [
+    "Jakub Płaskonka <kuba@odra.dev>",
+    "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
+    "Maciej Zieliński <maciej@odra.dev>"
+]
 license = "MIT"
 homepage = "https://odra.dev/docs"
 repository = "https://github.com/odradev/odra"
