@@ -14,7 +14,7 @@ pub trait HostRef {
     /// Creates a new host side reference to a contract.
     fn new(address: Address, env: HostEnv) -> Self;
     /// Creates a new host reference with attached tokens, based on the current instance.
-    /// 
+    ///
     /// If there are tokens attached to the current instance, the tokens will be attached
     /// to the next contract call.
     fn with_tokens(&self, tokens: U512) -> Self;
