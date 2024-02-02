@@ -480,11 +480,17 @@ impl HostEnv {
 
 #[cfg(test)]
 mod test {
-    use casper_types::account::AccountHash;
+    use core::fmt::Debug;
 
     use super::*;
+    use casper_event_standard::Event;
+    use casper_types::account::AccountHash;
+    use mockall::{mock, predicate};
 
-    mockall::mock! {
+    #[derive(Debug, Event, PartialEq)]
+    struct TestEv {}
+
+    mock! {
         TestRef {}
         impl HasIdent for TestRef {
             fn ident() -> String;
@@ -578,5 +584,37 @@ mod test {
         let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
 
         assert_eq!(env.caller(), Address::Account(AccountHash::new([2; 32])));
+    }
+
+    #[test]
+    fn test_get_event() {
+        let addr = Address::Account(AccountHash::new([0; 32]));
+
+        let mut ctx = MockHostContext::new();
+        // there are 2 events emitted by the contract
+        ctx.expect_get_events_count().returning(|_| 2);
+        // get_event() at index 0 will return an invalid event
+        ctx.expect_get_event()
+            .with(predicate::always(), predicate::eq(0))
+            .returning(|_, _| Ok(vec![1].into()));
+        // get_event() at index 1 will return an valid event
+        ctx.expect_get_event()
+            .with(predicate::always(), predicate::eq(1))
+            .returning(|_, _| Ok(TestEv {}.to_bytes().unwrap().into()));
+
+        let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+
+        assert_eq!(env.get_event::<TestEv>(&addr, 1), Ok(TestEv {}));
+        assert_eq!(env.get_event::<TestEv>(&addr, -1), Ok(TestEv {}));
+        assert_eq!(env.get_event::<TestEv>(&addr, 0), Err(EventError::Parsing));
+        assert_eq!(env.get_event::<TestEv>(&addr, -2), Err(EventError::Parsing));
+        assert_eq!(
+            env.get_event::<TestEv>(&addr, 2),
+            Err(EventError::IndexOutOfBounds)
+        );
+        assert_eq!(
+            env.get_event::<TestEv>(&addr, -3),
+            Err(EventError::IndexOutOfBounds)
+        );
     }
 }
