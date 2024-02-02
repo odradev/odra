@@ -579,11 +579,21 @@ mod test {
         ctx.expect_new_contract()
             .returning(|_, _, _| Address::Account(AccountHash::new([0; 32])));
         ctx.expect_caller()
-            .returning(|| Address::Account(AccountHash::new([2; 32])));
+            .returning(|| Address::Account(AccountHash::new([2; 32])))
+            .times(1);
+        ctx.expect_print_gas_report()
+            .returning(|| ())
+            .times(1);
+        ctx.expect_set_gas()
+            .returning(|_| ())
+            .times(1);
 
         let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
 
         assert_eq!(env.caller(), Address::Account(AccountHash::new([2; 32])));
+        // should call the `HostContext`
+        env.print_gas_report();
+        env.set_gas(1_000u64)
     }
 
     #[test]
@@ -616,5 +626,48 @@ mod test {
             env.get_event::<TestEv>(&addr, -3),
             Err(EventError::IndexOutOfBounds)
         );
+    }
+    
+
+    #[test]
+    fn test_events_works() {
+        let addr = Address::Account(AccountHash::new([0; 32]));
+
+        let mut ctx = MockHostContext::new();
+        // there are 2 events emitted by the contract
+        ctx.expect_get_events_count().returning(|_| 2);
+        // get_event() at index 0 will return an invalid event
+        ctx.expect_get_event()
+            .with(predicate::always(), predicate::eq(0))
+            .returning(|_, _| Ok(vec![1].into()));
+        // get_event() at index 1 will return an valid event
+        ctx.expect_get_event()
+            .with(predicate::always(), predicate::eq(1))
+            .returning(|_, _| Ok(vec![1, 0, 1].into()));
+
+        let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+
+        assert_eq!(
+            env.events(&addr),
+            vec![vec![1].into(), vec![1, 0, 1].into()]
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "Couldn't get event at address Account(AccountHash(0000000000000000000000000000000000000000000000000000000000000000)) with id 0: CouldntExtractEventData")]
+    fn test_events_fails() {
+        let addr = Address::Account(AccountHash::new([0; 32]));
+
+        let mut ctx = MockHostContext::new();
+        // there are 2 events emitted by the contract
+        ctx.expect_get_events_count().returning(|_| 2);
+        // get_event() at index 0 panics
+        ctx.expect_get_event()
+            .with(predicate::always(), predicate::eq(0))
+            .returning(|_, _| Err(EventError::CouldntExtractEventData));
+
+        let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+
+        env.events(&addr);
     }
 }
