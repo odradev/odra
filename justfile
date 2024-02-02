@@ -43,10 +43,12 @@ build-proxy-callers:
     cd odra-casper/proxy-caller && cargo build --release --target wasm32-unknown-unknown --target-dir ../../target
     wasm-strip target/wasm32-unknown-unknown/release/proxy_caller.wasm
     wasm-strip target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm
+    wasm-opt --signext-lowering target/wasm32-unknown-unknown/release/proxy_caller.wasm  -o target/wasm32-unknown-unknown/release/proxy_caller.wasm
+    wasm-opt --signext-lowering target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm  -o target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm
     cp target/wasm32-unknown-unknown/release/proxy_caller.wasm \
-        odra-casper/livenet/resources/proxy_caller.wasm
+        odra-casper/test-vm/resources/proxy_caller.wasm
     cp target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm \
-        odra-casper/test-env/resources/proxy_caller_with_return.wasm
+        odra-casper/test-vm/resources/proxy_caller_with_return.wasm
 
 test-odra:
     cargo test
