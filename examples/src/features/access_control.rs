@@ -80,7 +80,7 @@ pub fn keccak_256(input: &str) -> Role {
 pub mod test {
     use super::{keccak_256, MockModeratedHostRef, ROLE_MODERATOR, ROLE_MODERATOR_ADMIN};
     use odra::{
-        host::{EmptyInitArgs, Deployer, HostRef},
+        host::{Deployer, EmptyInitArgs, HostRef},
         Address
     };
     use odra_modules::access::{

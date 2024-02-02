@@ -25,7 +25,7 @@ impl PartyContract {
 #[cfg(test)]
 mod tests {
     use super::{PartyContractHostRef, PartyStarted};
-    use odra::host::{EmptyInitArgs, Deployer, HostRef};
+    use odra::host::{Deployer, EmptyInitArgs, HostRef};
 
     #[test]
     fn test_party() {

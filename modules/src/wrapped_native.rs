@@ -109,7 +109,7 @@ mod tests {
     use crate::wrapped_native::events::{Deposit, Withdrawal};
     use crate::wrapped_native::WrappedNativeTokenHostRef;
     use casper_event_standard::EventInstance;
-    use odra::host::{EmptyInitArgs, Deployer, HostEnv, HostRef};
+    use odra::host::{Deployer, EmptyInitArgs, HostEnv, HostRef};
     use odra::prelude::*;
     use odra::uints::{ToU256, ToU512};
     use odra::VmError::BalanceExceeded;

@@ -159,7 +159,7 @@ mod test {
     use crate::access::errors::Error;
     use odra::{
         external_contract,
-        host::{EmptyInitArgs, Deployer, HostEnv, HostRef}
+        host::{Deployer, EmptyInitArgs, HostEnv, HostRef}
     };
 
     #[test]

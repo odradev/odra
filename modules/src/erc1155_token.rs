@@ -189,7 +189,7 @@ mod tests {
     use crate::erc1155_receiver::Erc1155ReceiverHostRef;
     use crate::erc1155_token::Erc1155TokenHostRef;
     use crate::wrapped_native::WrappedNativeTokenHostRef;
-    use odra::host::{EmptyInitArgs, Deployer, HostEnv, HostRef, NoneInitArgs};
+    use odra::host::{Deployer, EmptyInitArgs, HostEnv, HostRef, NoneInitArgs};
     use odra::prelude::*;
     use odra::{
         casper_types::{bytesrepr::Bytes, U256},
