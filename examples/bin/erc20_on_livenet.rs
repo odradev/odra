@@ -1,4 +1,5 @@
-use odra::{Address, HostEnv, U256};
+use odra::casper_types::U256;
+use odra::{Address, HostEnv};
 use odra_modules::erc20::{Erc20Deployer, Erc20HostRef};
 use std::str::FromStr;
 
