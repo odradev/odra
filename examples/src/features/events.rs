@@ -25,12 +25,12 @@ impl PartyContract {
 #[cfg(test)]
 mod tests {
     use super::{PartyContractHostRef, PartyStarted};
-    use odra::host::{DefaultInitArgs, Deployer, HostRef};
+    use odra::host::{EmptyInitArgs, Deployer, HostRef};
 
     #[test]
     fn test_party() {
         let test_env = odra_test::env();
-        let party_contract = PartyContractHostRef::deploy(&test_env, DefaultInitArgs);
+        let party_contract = PartyContractHostRef::deploy(&test_env, EmptyInitArgs);
         test_env.emitted_event(
             party_contract.address(),
             &PartyStarted {

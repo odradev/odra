@@ -73,9 +73,9 @@ pub trait InitArgs {
 
 /// Default implementation of [InitArgs]. Should be used when the contract
 /// has the constructor but does not require any initialization arguments.
-pub struct DefaultInitArgs;
+pub struct EmptyInitArgs;
 
-impl InitArgs for DefaultInitArgs {
+impl InitArgs for EmptyInitArgs {
     fn validate(_expected_ident: &str) -> bool {
         true
     }
@@ -530,7 +530,7 @@ mod test {
         ctx.expect_new_contract()
             .returning(|_, _, _| Address::Account(AccountHash::new([0; 32])));
         let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
-        <MockTestRef as Deployer>::deploy(&env, DefaultInitArgs);
+        <MockTestRef as Deployer>::deploy(&env, EmptyInitArgs);
     }
 
     #[test]

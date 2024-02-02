@@ -80,7 +80,7 @@ pub fn keccak_256(input: &str) -> Role {
 pub mod test {
     use super::{keccak_256, MockModeratedHostRef, ROLE_MODERATOR, ROLE_MODERATOR_ADMIN};
     use odra::{
-        host::{DefaultInitArgs, Deployer, HostRef},
+        host::{EmptyInitArgs, Deployer, HostRef},
         Address
     };
     use odra_modules::access::{
@@ -91,7 +91,7 @@ pub mod test {
     #[test]
     fn deploy_works() {
         let env = odra_test::env();
-        let contract = MockModeratedHostRef::deploy(&env, DefaultInitArgs);
+        let contract = MockModeratedHostRef::deploy(&env, EmptyInitArgs);
         let admin = env.get_account(0);
 
         assert!(contract.is_moderator(admin));
@@ -257,7 +257,7 @@ pub mod test {
 
     fn setup(add_moderator: bool) -> (MockModeratedHostRef, Address, Address, Address) {
         let env = odra_test::env();
-        let mut contract = MockModeratedHostRef::deploy(&env, DefaultInitArgs);
+        let mut contract = MockModeratedHostRef::deploy(&env, EmptyInitArgs);
         // given admin who is a moderator and two users that are not moderators.
         let (admin, user1, user2) = (env.get_account(0), env.get_account(1), env.get_account(2));
         if add_moderator {
