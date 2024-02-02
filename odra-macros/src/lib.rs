@@ -83,29 +83,19 @@ pub fn external_contract(attr: TokenStream, item: TokenStream) -> TokenStream {
     )
 }
 
-#[proc_macro_derive(IntoRuntimeArgs, attributes(is_none))]
+/// Implements `Into<Option<odra::casper_types::RuntimeArgs>>` for a struct.
+///
+/// This macro is used to convert a struct into a `RuntimeArgs` object.
+/// If applied to an enum or a union type, it will panic.
+#[proc_macro_derive(IntoRuntimeArgs)]
 pub fn derive_into_runtime_args(item: TokenStream) -> TokenStream {
     let item = syn::parse_macro_input!(item as syn::DeriveInput);
-
     match item {
         syn::DeriveInput {
             ident,
             data: syn::Data::Struct(syn::DataStruct { fields, .. }),
             ..
         } => {
-            if let Some(attr) = item.attrs.first() {
-                if attr.path().is_ident("is_none") {
-                    return quote::quote! {
-                        impl Into<Option<odra::casper_types::RuntimeArgs>> for #ident {
-                            fn into(self) -> Option<odra::casper_types::RuntimeArgs> {
-                                None
-                            }
-                        }
-                    }
-                    .into();
-                }
-            }
-
             let fields = fields
                 .into_iter()
                 .map(|f| {
@@ -117,7 +107,6 @@ pub fn derive_into_runtime_args(item: TokenStream) -> TokenStream {
                 impl Into<Option<odra::casper_types::RuntimeArgs>> for #ident {
                     fn into(self) -> Option<odra::casper_types::RuntimeArgs> {
                         use odra::casper_types::RuntimeArgs;
-
                         Some(odra::casper_types::runtime_args! {
                             #fields
                         })

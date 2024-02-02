@@ -16,10 +16,6 @@ pub fn call_def() -> syn::Ident {
     format_ident!("call_def")
 }
 
-pub fn caller() -> syn::Ident {
-    format_ident!("caller")
-}
-
 pub fn env() -> syn::Ident {
     format_ident!("env")
 }
@@ -27,20 +23,13 @@ pub fn env() -> syn::Ident {
 pub fn underscored_env() -> syn::Ident {
     format_ident!("__env")
 }
+
 pub fn exec_env() -> syn::Ident {
     format_ident!("exec_env")
 }
 
-pub fn init() -> syn::Ident {
-    format_ident!("init")
-}
-
 pub fn epc() -> syn::Ident {
     format_ident!("entry_points_caller")
-}
-
-pub fn load() -> syn::Ident {
-    format_ident!("load")
 }
 
 pub fn address() -> syn::Ident {

@@ -4,6 +4,7 @@ target
 .*
 *.env
 !/.gitignore
+!/.codecov.yml
 Cargo.lock
 .vscode/
 .idea/

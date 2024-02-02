@@ -256,17 +256,6 @@ impl ModuleImplIR {
             .find(|f| f.name_str() == CONSTRUCTOR_NAME)
     }
 
-    pub fn constructor_args(&self) -> syn::punctuated::Punctuated<syn::FnArg, syn::Token![,]> {
-        self.constructor()
-            .map(|f| {
-                f.named_args()
-                    .into_iter()
-                    .map(|a| a.self_code().clone())
-                    .collect()
-            })
-            .unwrap_or_default()
-    }
-
     pub fn functions(&self) -> syn::Result<Vec<FnIR>> {
         match self {
             ModuleImplIR::Impl(ir) => ir.functions(),
@@ -545,10 +534,6 @@ pub struct FnArgIR {
 impl FnArgIR {
     pub fn new(code: syn::FnArg) -> Self {
         FnArgIR { code }
-    }
-
-    pub fn self_code(&self) -> &syn::FnArg {
-        &self.code
     }
 
     pub fn name(&self) -> syn::Result<Ident> {
