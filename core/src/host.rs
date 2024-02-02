@@ -14,6 +14,9 @@ pub trait HostRef {
     /// Creates a new host side reference to a contract.
     fn new(address: Address, env: HostEnv) -> Self;
     /// Creates a new host reference with attached tokens, based on the current instance.
+    /// 
+    /// If there are tokens attached to the current instance, the tokens will be attached
+    /// to the next contract call.
     fn with_tokens(&self, tokens: U512) -> Self;
     /// Returns the address of the contract.
     fn address(&self) -> &Address;
@@ -65,7 +68,7 @@ pub trait Deployer {
 pub trait InitArgs {
     /// Validates the args are used to initialized the right contact.
     ///
-    /// If the args does not match the contract, the method returns `false`.
+    /// If the `expected_ident` does not match the contract ident, the method returns `false`.
     fn validate(expected_ident: &str) -> bool;
     /// Converts the init args into a [RuntimeArgs] instance.
     fn into_runtime_args(self) -> Option<RuntimeArgs>;
