@@ -40,6 +40,10 @@ impl ContractContext for WasmContractEnv {
         host_functions::attached_value()
     }
 
+    fn self_balance(&self) -> U512 {
+        host_functions::self_balance()
+    }
+
     fn emit_event(&self, event: &Bytes) {
         host_functions::emit_event(event);
     }

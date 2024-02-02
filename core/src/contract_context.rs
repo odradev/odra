@@ -58,6 +58,12 @@ pub trait ContractContext {
     /// The attached value as a `U512` value.
     fn attached_value(&self) -> U512;
 
+    /// Retrieves the balance of the current contract.
+    ///
+    /// # Returns
+    /// The balance of the current contract in U512
+    fn self_balance(&self) -> U512;
+
     /// Emits an event with the specified event data.
     ///
     /// # Arguments

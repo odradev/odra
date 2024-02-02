@@ -119,6 +119,12 @@ impl ContractEnv {
         backend.attached_value()
     }
 
+    /// Returns the CSPR balance of the current contract.
+    pub fn self_balance(&self) -> U512 {
+        let backend = self.backend.borrow();
+        backend.self_balance()
+    }
+
     /// Reverts the contract execution with the specified error.
     pub fn revert<E: Into<OdraError>>(&self, error: E) -> ! {
         let backend = self.backend.borrow();

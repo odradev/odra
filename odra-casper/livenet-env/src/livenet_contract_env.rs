@@ -65,6 +65,12 @@ impl ContractContext for LivenetContractEnv {
         self.callstack.borrow().attached_value()
     }
 
+    fn self_balance(&self) -> U512 {
+        self.casper_client
+            .borrow()
+            .get_balance(self.callstack.borrow().current().address())
+    }
+
     fn emit_event(&self, _event: &Bytes) {
         panic!("Cannot emit event in LivenetEnv")
     }
