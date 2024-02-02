@@ -581,12 +581,8 @@ mod test {
         ctx.expect_caller()
             .returning(|| Address::Account(AccountHash::new([2; 32])))
             .times(1);
-        ctx.expect_print_gas_report()
-            .returning(|| ())
-            .times(1);
-        ctx.expect_set_gas()
-            .returning(|_| ())
-            .times(1);
+        ctx.expect_print_gas_report().returning(|| ()).times(1);
+        ctx.expect_set_gas().returning(|_| ()).times(1);
 
         let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
 
@@ -627,7 +623,6 @@ mod test {
             Err(EventError::IndexOutOfBounds)
         );
     }
-    
 
     #[test]
     fn test_events_works() {
@@ -654,7 +649,9 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Couldn't get event at address Account(AccountHash(0000000000000000000000000000000000000000000000000000000000000000)) with id 0: CouldntExtractEventData")]
+    #[should_panic(
+        expected = "Couldn't get event at address Account(AccountHash(0000000000000000000000000000000000000000000000000000000000000000)) with id 0: CouldntExtractEventData"
+    )]
     fn test_events_fails() {
         let addr = Address::Account(AccountHash::new([0; 32]));
 
