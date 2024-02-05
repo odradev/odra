@@ -1,11 +1,11 @@
 use odra::prelude::*;
-use odra::{module::ModuleWrapper, Variable};
+use odra::{module::SubModule, Variable};
 use odra_modules::security::Pauseable;
 
 #[odra::module]
 pub struct PauseableCounter {
     value: Variable<u32>,
-    pauseable: ModuleWrapper<Pauseable>
+    pauseable: SubModule<Pauseable>
 }
 
 #[odra::module]

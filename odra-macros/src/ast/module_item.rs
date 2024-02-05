@@ -226,17 +226,17 @@ mod test {
                 impl odra::module::Module for CounterPack {
                     fn new(env: odra::prelude::Rc<odra::ContractEnv>) -> Self {
                         let counter0 =
-                            <ModuleWrapper<Counter> as odra::module::ModuleComponent>::instance(
+                            <SubModule<Counter> as odra::module::ModuleComponent>::instance(
                                 odra::prelude::Rc::clone(&env),
                                 0u8
                             );
                         let counter1 =
-                            <ModuleWrapper<Counter> as odra::module::ModuleComponent>::instance(
+                            <SubModule<Counter> as odra::module::ModuleComponent>::instance(
                                 odra::prelude::Rc::clone(&env),
                                 1u8
                             );
                         let counter2 =
-                            <ModuleWrapper<Counter> as odra::module::ModuleComponent>::instance(
+                            <SubModule<Counter> as odra::module::ModuleComponent>::instance(
                                 odra::prelude::Rc::clone(&env),
                                 2u8
                             );

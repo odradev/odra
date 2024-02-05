@@ -2,7 +2,7 @@ use crate::access::errors::Error::{CallerNotTheNewOwner, CallerNotTheOwner, Owne
 use crate::access::events::{OwnershipTransferStarted, OwnershipTransferred};
 use odra::prelude::*;
 use odra::{
-    module::{Module, ModuleWrapper},
+    module::{Module, SubModule},
     Address, UnwrapOrRevert, Variable
 };
 
@@ -92,7 +92,7 @@ impl Ownable {
 /// allowing you to restrict function usage to the owner.
 #[odra::module(events = [OwnershipTransferStarted])]
 pub struct Ownable2Step {
-    ownable: ModuleWrapper<Ownable>,
+    ownable: SubModule<Ownable>,
     pending_owner: Variable<Option<Address>>
 }
 

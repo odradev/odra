@@ -1,7 +1,7 @@
 use odra::casper_types::U256;
 use odra::prelude::*;
 use odra::{
-    module::{Module, ModuleWrapper},
+    module::{Module, SubModule},
     Address, List, UnwrapOrRevert, Variable
 };
 use odra_modules::access::Ownable;
@@ -10,7 +10,7 @@ use odra_modules::erc20::Erc20ContractRef;
 #[odra::module]
 pub struct LivenetContract {
     creator: Variable<Address>,
-    ownable: ModuleWrapper<Ownable>,
+    ownable: SubModule<Ownable>,
     stack: List<u64>,
     erc20_address: Variable<Address>
 }

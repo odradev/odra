@@ -6,7 +6,7 @@ use crate::casper_types::{
 use crate::module::{ModuleComponent, ModulePrimitive};
 use crate::prelude::*;
 use crate::{
-    module::{Module, ModuleWrapper},
+    module::{Module, SubModule},
     variable::Variable,
     ContractEnv, UnwrapOrRevert
 };
@@ -71,10 +71,10 @@ impl<K: ToBytes, V: ToBytes + CLTyped> Mapping<K, V> {
 impl<K: ToBytes, V: Module> Mapping<K, V> {
     /// Retrieves the module associated with the given key.
     ///
-    /// A [`ModuleWrapper`] instance containing the module associated with the key.
-    pub fn module(&self, key: &K) -> ModuleWrapper<V> {
+    /// A [`SubModule`] instance containing the module associated with the key.
+    pub fn module(&self, key: &K) -> SubModule<V> {
         let env = self.env_for_key(key);
-        ModuleWrapper::instance(Rc::new(env), self.index)
+        SubModule::instance(Rc::new(env), self.index)
     }
 }
 

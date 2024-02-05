@@ -2,7 +2,7 @@ use casper_event_standard::Event;
 use odra::casper_event_standard;
 use odra::prelude::*;
 use odra::{
-    module::{Module, ModuleWrapper},
+    module::{Module, SubModule},
     Mapping, OdraType, UnwrapOrRevert, Variable
 };
 
@@ -15,7 +15,7 @@ pub struct ResultsStorage {
 #[odra::module]
 pub struct NestedOdraTypesContract {
     latest_result: Variable<OperationResult>,
-    current_generation_storage: ModuleWrapper<ResultsStorage>
+    current_generation_storage: SubModule<ResultsStorage>
 }
 
 #[odra::module]

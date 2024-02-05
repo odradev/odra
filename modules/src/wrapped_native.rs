@@ -4,13 +4,13 @@ use odra::prelude::*;
 use odra::uints::{ToU256, ToU512};
 use odra::{
     casper_types::U256,
-    module::{Module, ModuleWrapper},
+    module::{Module, SubModule},
     Address, UnwrapOrRevert
 };
 
 #[odra::module(events = [Deposit, Withdrawal])]
 pub struct WrappedNativeToken {
-    erc20: ModuleWrapper<Erc20>
+    erc20: SubModule<Erc20>
 }
 
 #[odra::module]

@@ -1,6 +1,6 @@
 use crate::contracts::owned_token::OwnedToken;
 use odra::prelude::*;
-use odra::{casper_types::U256, module::ModuleWrapper, Address, Mapping, Variable};
+use odra::{casper_types::U256, module::SubModule, Address, Mapping, Variable};
 
 #[odra::module]
 pub struct TokenManager {
@@ -39,7 +39,7 @@ impl TokenManager {
         self.get_token(token_name).transfer_ownership(new_owner);
     }
 
-    fn get_token(&self, token_name: String) -> ModuleWrapper<OwnedToken> {
+    fn get_token(&self, token_name: String) -> SubModule<OwnedToken> {
         self.tokens.module(&token_name)
     }
 }

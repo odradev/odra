@@ -1,10 +1,10 @@
 use crate::features::cross_calls::MathEngine;
-use odra::module::ModuleWrapper;
+use odra::module::SubModule;
 use odra::prelude::*;
 
 #[odra::module]
 pub struct ModulesContract {
-    pub math_engine: ModuleWrapper<MathEngine>
+    pub math_engine: SubModule<MathEngine>
 }
 
 #[odra::module]

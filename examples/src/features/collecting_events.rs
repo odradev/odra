@@ -3,7 +3,7 @@ use casper_event_standard::Event;
 use odra::casper_event_standard;
 use odra::prelude::*;
 use odra::{
-    module::{Module, ModuleWrapper},
+    module::{Module, SubModule},
     Variable
 };
 
@@ -35,8 +35,8 @@ impl Engine {
 
 #[odra::module(events = [Info])]
 struct Machine {
-    e1: ModuleWrapper<Engine>,
-    e2: ModuleWrapper<Engine>
+    e1: SubModule<Engine>,
+    e2: SubModule<Engine>
 }
 
 impl Machine {

@@ -36,13 +36,13 @@ pub trait ModulePrimitive: ModuleComponent {}
 /// A wrapper struct for a module implementing the [Module] trait.
 ///
 /// This struct is used to implement an Odra module that is a composition of other modules.
-pub struct ModuleWrapper<T> {
+pub struct SubModule<T> {
     env: Rc<ContractEnv>,
     module: OnceCell<T>,
     index: u8
 }
 
-impl<T: Module> ModuleComponent for ModuleWrapper<T> {
+impl<T: Module> ModuleComponent for SubModule<T> {
     fn instance(env: Rc<ContractEnv>, index: u8) -> Self {
         Self {
             env,
@@ -58,14 +58,14 @@ impl<M: ModulePrimitive> HasEvents for M {
     }
 }
 
-impl<M: HasEvents> HasEvents for ModuleWrapper<M> {
+impl<M: HasEvents> HasEvents for SubModule<M> {
     fn events() -> Vec<crate::contract_def::Event> {
         M::events()
     }
 }
 
 /// Wrapper for a module implementing the `Module` trait.
-impl<T: Module> ModuleWrapper<T> {
+impl<T: Module> SubModule<T> {
     /// Returns a reference to the module.
     ///
     /// If the module is not yet initialized, it will be lazily initialized.
@@ -85,7 +85,7 @@ impl<T: Module> ModuleWrapper<T> {
     }
 }
 
-impl<T: Module> Deref for ModuleWrapper<T> {
+impl<T: Module> Deref for SubModule<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -93,7 +93,7 @@ impl<T: Module> Deref for ModuleWrapper<T> {
     }
 }
 
-impl<T: Module> DerefMut for ModuleWrapper<T> {
+impl<T: Module> DerefMut for SubModule<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.module_mut()
     }

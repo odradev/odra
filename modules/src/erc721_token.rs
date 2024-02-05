@@ -10,7 +10,7 @@ use crate::erc721_token::errors::Error;
 use odra::prelude::*;
 use odra::{
     casper_types::{bytesrepr::Bytes, U256},
-    module::{Module, ModuleWrapper},
+    module::{Module, SubModule},
     Address
 };
 
@@ -20,9 +20,9 @@ use odra::{
 /// and the [Ownable] module.
 #[odra::module(events = [Transfer])]
 pub struct Erc721Token {
-    core: ModuleWrapper<Erc721Base>,
-    metadata: ModuleWrapper<Erc721MetadataExtension>,
-    ownable: ModuleWrapper<Ownable>
+    core: SubModule<Erc721Base>,
+    metadata: SubModule<Erc721MetadataExtension>,
+    ownable: SubModule<Ownable>
 }
 
 #[odra::module]

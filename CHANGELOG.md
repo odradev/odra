@@ -19,7 +19,7 @@ allowances: Mapping<(Address, Address), U256>
 - `Ref` has been divided into two: `HostRef` and `ContractRef` depending on the context.
 - Storage keys are constructed differently, keep that in mind when querying the storage outside the contract.
 - `token_balance(address: Address)` in test context is now `balance_of(address: &Address)`.
-- Modules needs to be wrapped in ModuleWrapper<> when used in another module.
+- Modules needs to be wrapped in SubModule<> when used in another module.
 - `HostRef` (formerly `Ref`) methods parameters accept values even if endpoints expect references.
 - `unwrap_or_revert` and `unwrap_or_revert_with` now require `&HostEnv` as a first parameter.
 - Spent Gas is taken into account when checking an account balance.
