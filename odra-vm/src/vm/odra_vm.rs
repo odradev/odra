@@ -353,6 +353,7 @@ impl OdraVm {
 mod tests {
     use odra_core::callstack::CallstackElement;
     use odra_core::casper_types::bytesrepr::{Bytes, ToBytes};
+    use odra_core::prelude::*;
     use odra_core::{
         entry_point_callback::{EntryPoint, EntryPointsCaller},
         utils::serialize
@@ -362,12 +363,13 @@ mod tests {
 
     use odra_core::casper_types::bytesrepr::FromBytes;
     use odra_core::casper_types::{RuntimeArgs, U512};
+    use odra_core::host::HostEnv;
     use odra_core::Address;
     use odra_core::CallDef;
     use odra_core::{ExecutionError, OdraError, VmError};
 
     use crate::vm::utils;
-    use crate::OdraVm;
+    use crate::{OdraVm, OdraVmHost};
 
     const TEST_ENTRY_POINT: &str = "abc";
 
@@ -616,7 +618,9 @@ mod tests {
     }
 
     fn test_caller(entry_point_name: &str) -> EntryPointsCaller {
-        let env = odra_test::env();
+        let vm = OdraVm::new();
+        let host_env = OdraVmHost::new(vm);
+        let env = HostEnv::new(host_env);
         let entry_point = EntryPoint::new(String::from(entry_point_name), vec![]);
         EntryPointsCaller::new(env, vec![entry_point], |_, _| Ok(test_call_result()))
     }

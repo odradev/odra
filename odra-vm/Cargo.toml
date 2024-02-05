@@ -12,6 +12,3 @@ odra-core = { workspace = true }
 anyhow = "1.0.75"
 url = "2.4.1"
 blake2 = { workspace = true }
-
-[dev-dependencies]
-odra-test = { path = "../odra-test" }
