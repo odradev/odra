@@ -4,7 +4,7 @@ use odra::casper_event_standard;
 use odra::prelude::*;
 use odra::{
     module::{Module, SubModule},
-    Variable
+    Var
 };
 
 #[derive(Event, PartialEq, Eq, Debug)]
@@ -20,7 +20,7 @@ struct Info {
 
 #[odra::module(events = [Start, Stop])]
 struct Engine {
-    name: Variable<String>
+    name: Var<String>
 }
 
 impl Engine {

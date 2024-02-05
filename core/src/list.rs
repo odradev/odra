@@ -9,7 +9,7 @@ use casper_types::{
 use crate::{
     mapping::Mapping,
     module::{ModuleComponent, ModulePrimitive},
-    variable::Variable,
+    variable::Var,
     CollectionError, ContractEnv, UnwrapOrRevert
 };
 
@@ -18,7 +18,7 @@ pub struct List<T> {
     env: Rc<ContractEnv>,
     index: u8,
     values: Mapping<u32, T>,
-    current_index: Variable<u32>
+    current_index: Var<u32>
 }
 
 impl<T> List<T> {
@@ -33,7 +33,7 @@ impl<T> ModuleComponent for List<T> {
             env: env.clone(),
             index,
             values: Mapping::instance(env.child(index).into(), 0),
-            current_index: Variable::instance(env.child(index).into(), 1)
+            current_index: Var::instance(env.child(index).into(), 1)
         }
     }
 }

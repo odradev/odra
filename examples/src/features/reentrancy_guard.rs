@@ -1,9 +1,9 @@
 use odra::prelude::*;
-use odra::{module::Module, Variable};
+use odra::{module::Module, Var};
 
 #[odra::module]
 pub struct ReentrancyMock {
-    counter: Variable<u32>
+    counter: Var<u32>
 }
 
 #[odra::module]

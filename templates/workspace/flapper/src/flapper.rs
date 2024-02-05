@@ -1,13 +1,13 @@
 use odra::prelude::*;
-use odra::Variable;
+use odra::Var;
 
-/// A module definition. Each module struct consists Variables and Mappings
+/// A module definition. Each module struct consists Vars and Mappings
 /// or/and another modules.
 #[odra::module]
 pub struct Flapper {
     /// The module itself does not store the value,
     /// it's a proxy that writes/reads value to/from the host.
-    value: Variable<bool>,
+    value: Var<bool>,
 }
 
 /// Module implementation.

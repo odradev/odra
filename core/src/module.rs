@@ -1,7 +1,7 @@
 //! Module definition and implementation.
 //!
 //! An Odra module is a composition of [ModuleComponent]s (eg. other modules) and [ModulePrimitive]s
-//! ([Variable](crate::variable::Variable), [Mapping](crate::mapping::Mapping), [List](crate::list::List)).
+//! ([Var](crate::variable::Var), [Mapping](crate::mapping::Mapping), [List](crate::list::List)).
 //!
 //! In order to create a module, you need to create a struct that implements the [Module] trait.
 //! However, most of the time you will want to use `#[odra::module]` macro to generate the module.
@@ -29,7 +29,7 @@ pub trait ModuleComponent {
 
 /// A marker trait for a module component that does not emit events.
 ///
-/// This trait allows to implement `HasEvents` for components like Variable, List, Mapping,
+/// This trait allows to implement `HasEvents` for components like Var, List, Mapping,
 /// or any other custom component that does not emit events.
 pub trait ModulePrimitive: ModuleComponent {}
 

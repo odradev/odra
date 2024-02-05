@@ -24,7 +24,7 @@ macro_rules! span_error {
 /// Core element of the Odra framework, entry point for writing smart contracts.
 ///
 /// Each module consists of two parts:
-/// 1. Module definition - a struct which composition of stored values (Variables and Mappings)
+/// 1. Module definition - a struct which composition of stored values (Vars and Mappings)
 /// and modules.
 /// 2. Module implementation - an implementation block.
 ///

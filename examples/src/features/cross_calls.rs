@@ -1,9 +1,9 @@
 use odra::prelude::*;
-use odra::{module::Module, Address, UnwrapOrRevert, Variable};
+use odra::{module::Module, Address, UnwrapOrRevert, Var};
 
 #[odra::module]
 pub struct CrossContract {
-    pub math_engine: Variable<Address>
+    pub math_engine: Var<Address>
 }
 
 #[odra::module]

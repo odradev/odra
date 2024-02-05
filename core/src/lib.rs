@@ -45,6 +45,6 @@ pub use unwrap_or_revert::UnwrapOrRevert;
 pub use list::{List, ListIter};
 pub use mapping::Mapping;
 pub use sequence::Sequence;
-pub use variable::Variable;
+pub use variable::Var;
 
 pub use casper_types;

@@ -97,7 +97,7 @@ using `cargo-odra` at version at least`0.1.0`.
 ### Removed
 - Crypto module from odra-modules.
 - Instance trait.
-- derive PartialEq, Eq, Debug from storage building block (Variable, Mapping, List).
+- derive PartialEq, Eq, Debug from storage building block (Var, Mapping, List).
 
 ### Changed
 - utilize `KeyMaker` to create storage keys in `casper` and `casper-livenet`.
@@ -176,7 +176,7 @@ containing contract structure and Events schemas following the Casper Event Stan
 - Global `CHANGELOG.md`.
 - `odra`
   - `List` collection.
-  - Add tests for `Variable` and `Mapping`.
+  - Add tests for `Var` and `Mapping`.
   - Contract refs (`*Ref` struct) has `with_tokens()` function to attach tokens to the call.
 - `odra-mock-vm`
   - Add `AccountBalance` to store the native token amount associated with the `Address`.
@@ -203,8 +203,8 @@ containing contract structure and Events schemas following the Casper Event Stan
     - Features update: rename `wasm` to `casper`, remove `wasm-test`.
     - Features check: setting `casper` and `mock-vm` causes compile error.
     - `Mapping`'s functions: `set()`, `add()`, `subtract()`.
-    - `Variable`'s functions: `set()`, `add()`, `subtract()`.
-    - `Variable` and `Mapping` are implemented for `OdraType`.
+    - `Var`'s functions: `set()`, `add()`, `subtract()`.
+    - `Var` and `Mapping` are implemented for `OdraType`.
     - Add `amount` parameter to `call_contract`.
     - `contract_env` and `test_env` are modules not structs.
     - To deploy contract in test, structs no longer have `deploy_*` function, `*Deployer` structs are generated.

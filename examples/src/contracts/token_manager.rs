@@ -1,11 +1,11 @@
 use crate::contracts::owned_token::OwnedToken;
 use odra::prelude::*;
-use odra::{casper_types::U256, module::SubModule, Address, Mapping, Variable};
+use odra::{casper_types::U256, module::SubModule, Address, Mapping, Var};
 
 #[odra::module]
 pub struct TokenManager {
     tokens: Mapping<String, OwnedToken>,
-    count: Variable<u32>
+    count: Var<u32>
 }
 
 #[odra::module]

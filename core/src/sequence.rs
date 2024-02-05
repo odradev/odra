@@ -9,7 +9,7 @@ use crate::{
 };
 use num_traits::{Num, One, Zero};
 
-use crate::Variable;
+use crate::Var;
 
 /// A module that stores a single value in the storage that can be read or incremented.
 pub struct Sequence<T>
@@ -18,7 +18,7 @@ where
 {
     env: Rc<ContractEnv>,
     index: u8,
-    value: Variable<T>
+    value: Var<T>
 }
 
 impl<T> Sequence<T>
@@ -61,7 +61,7 @@ impl<T: Num + One + Zero + Default + Copy + ToBytes + FromBytes + CLTyped> Modul
         Self {
             env: env.clone(),
             index,
-            value: Variable::instance(env.child(index).into(), 0)
+            value: Var::instance(env.child(index).into(), 0)
         }
     }
 }

@@ -98,7 +98,7 @@ pub mod mock {
                 counter0: SubModule<Counter>,
                 counter1: SubModule<Counter>,
                 counter2: SubModule<Counter>,
-                counters: Variable<u32>,
+                counters: Var<u32>,
                 counters_map: Mapping<u8, Counter>
             }
         );

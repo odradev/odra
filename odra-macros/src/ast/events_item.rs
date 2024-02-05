@@ -208,7 +208,7 @@ mod test {
                         .chain(events)
                         .chain(<Mapping<u8, Counter> as odra::contract_def::HasEvents>::events())
                         .chain(<SubModule<Counter> as odra::contract_def::HasEvents>::events())
-                        .chain(<Variable<u32> as odra::contract_def::HasEvents>::events())
+                        .chain(<Var<u32> as odra::contract_def::HasEvents>::events())
                         .collect()
                 }
 
@@ -224,7 +224,7 @@ mod test {
                         .into_iter()
                         .chain(<Mapping<u8, Counter> as odra::contract_def::HasEvents>::event_schemas())
                         .chain(<SubModule<Counter> as odra::contract_def::HasEvents>::event_schemas())
-                        .chain(<Variable<u32> as odra::contract_def::HasEvents>::event_schemas())
+                        .chain(<Var<u32> as odra::contract_def::HasEvents>::event_schemas())
                         .collect()
                 }
             }

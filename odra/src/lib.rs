@@ -11,7 +11,7 @@
 //!
 //! #[odra::module]
 //! struct Counter {
-//!     count: odra::Variable<u32>,
+//!     count: odra::Var<u32>,
 //! }
 //!
 //! #[odra::module]
@@ -42,7 +42,7 @@ pub use odra_core::{casper_event_standard, casper_types};
 pub use odra_core::{
     Address, AddressError, CallDef, CollectionError, ContractCallResult, ContractContext,
     ContractEnv, EventError, ExecutionEnv, ExecutionError, List, ListIter, Mapping, OdraError,
-    OdraResult, Sequence, UnwrapOrRevert, Variable, VmError
+    OdraResult, Sequence, UnwrapOrRevert, Var, VmError
 };
 
 pub use odra_macros::*;

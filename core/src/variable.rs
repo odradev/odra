@@ -8,22 +8,22 @@ use crate::prelude::*;
 use crate::{OdraError, UnwrapOrRevert};
 
 /// Data structure for storing a single value.
-pub struct Variable<T> {
+pub struct Var<T> {
     env: Rc<ContractEnv>,
     phantom: core::marker::PhantomData<T>,
     index: u8
 }
 
-impl<T> Variable<T> {
+impl<T> Var<T> {
     /// Returns the contract environment associated with the variable.
     pub fn env(&self) -> ContractEnv {
         self.env.child(self.index)
     }
 }
 
-/// Implements the `ModuleComponent` trait for the `Variable` struct.
-impl<T> ModuleComponent for Variable<T> {
-    /// Creates a new instance of `Variable` with the given environment and index.
+/// Implements the `ModuleComponent` trait for the `Var` struct.
+impl<T> ModuleComponent for Var<T> {
+    /// Creates a new instance of `Var` with the given environment and index.
     fn instance(env: Rc<ContractEnv>, index: u8) -> Self {
         Self {
             env,
@@ -33,9 +33,9 @@ impl<T> ModuleComponent for Variable<T> {
     }
 }
 
-impl<T> ModulePrimitive for Variable<T> {}
+impl<T> ModulePrimitive for Var<T> {}
 
-impl<T: FromBytes> Variable<T> {
+impl<T: FromBytes> Var<T> {
     /// Retrieves the value of the variable.
     ///
     /// Returns `Some(value)` if the variable has a value, or `None` if it is unset.
@@ -53,14 +53,14 @@ impl<T: FromBytes> Variable<T> {
     }
 }
 
-impl<T: FromBytes + Default> Variable<T> {
+impl<T: FromBytes + Default> Var<T> {
     /// Returns the value of the variable, or the default value of the type if the variable is None.
     pub fn get_or_default(&self) -> T {
         self.get().unwrap_or_default()
     }
 }
 
-impl<T: ToBytes + CLTyped> Variable<T> {
+impl<T: ToBytes + CLTyped> Var<T> {
     /// Sets the value of the variable.
     pub fn set(&mut self, value: T) {
         let env = self.env();
@@ -68,7 +68,7 @@ impl<T: ToBytes + CLTyped> Variable<T> {
     }
 }
 
-impl<V: ToBytes + FromBytes + CLTyped + OverflowingAdd + Default> Variable<V> {
+impl<V: ToBytes + FromBytes + CLTyped + OverflowingAdd + Default> Var<V> {
     /// Utility function that gets the current value and adds the passed `value`
     /// and sets the new value to the storage.
     ///
@@ -83,7 +83,7 @@ impl<V: ToBytes + FromBytes + CLTyped + OverflowingAdd + Default> Variable<V> {
     }
 }
 
-impl<V: ToBytes + FromBytes + CLTyped + OverflowingSub + Default> Variable<V> {
+impl<V: ToBytes + FromBytes + CLTyped + OverflowingSub + Default> Var<V> {
     /// Utility function that gets the current value and subtracts the passed `value`
     /// and sets the new value to the storage.
     ///

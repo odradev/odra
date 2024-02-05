@@ -1,10 +1,10 @@
 use odra::prelude::*;
-use odra::{module::Module, Address, OdraError, Variable};
+use odra::{module::Module, Address, OdraError, Var};
 
 #[odra::module]
 pub struct OwnedContract {
-    name: Variable<String>,
-    owner: Variable<Address>
+    name: Var<String>,
+    owner: Var<Address>
 }
 
 #[derive(OdraError)]

@@ -1,12 +1,12 @@
 use odra::prelude::*;
-use odra::{Mapping, Variable};
+use odra::{Mapping, Var};
 
 type FriendName = String;
 type Visits = u32;
 
 #[odra::module]
 pub struct DogContract2 {
-    name: Variable<String>,
+    name: Var<String>,
     friends: Mapping<FriendName, Visits>
 }
 

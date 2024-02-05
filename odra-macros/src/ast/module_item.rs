@@ -240,7 +240,7 @@ mod test {
                                 odra::prelude::Rc::clone(&env),
                                 2u8
                             );
-                        let counters = <Variable<u32> as odra::module::ModuleComponent>::instance(
+                        let counters = <Var<u32> as odra::module::ModuleComponent>::instance(
                             odra::prelude::Rc::clone(&env),
                             3u8
                         );
