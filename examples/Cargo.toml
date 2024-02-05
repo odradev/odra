@@ -4,7 +4,7 @@ version = "0.8.0"
 edition = "2021"
 
 [dependencies]
-odra = { path = "../odra", default-features = false }
+odra = { path = "../odra", version = "0.8.0", default-features = false }
 odra-modules = { path = "../modules", default-features = false }
 sha3 = { version = "0.10.6", default-features = false }
 odra-casper-livenet-env = { path = "../odra-casper/livenet-env", optional = true }
