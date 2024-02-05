@@ -46,6 +46,10 @@ impl ContractContext for OdraVmContractEnv {
         self.vm.borrow().attached_value()
     }
 
+    fn self_balance(&self) -> U512 {
+        self.vm.borrow().self_balance()
+    }
+
     fn emit_event(&self, event: &Bytes) {
         self.vm.borrow().emit_event(event);
     }

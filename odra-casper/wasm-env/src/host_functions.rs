@@ -266,6 +266,13 @@ pub fn self_address() -> Address {
     call_stack_element_to_address(first_elem)
 }
 
+/// Gets the balance of the current contract.
+#[inline(always)]
+pub fn self_balance() -> U512 {
+    let main_purse = get_or_create_main_purse();
+    get_purse_balance(main_purse).unwrap_or_revert()
+}
+
 /// Invokes the specified `entry_point_name` of stored logic at a specific `contract_package_hash`
 /// address, for the most current version of a contract package by default or a specific
 /// `contract_version` if one is provided, and passing the provided `runtime_args` to it.
