@@ -1,3 +1,5 @@
+//! A module that provides the interface for interacting with the host environment.
+
 use crate::{
     call_result::CallResult, contract_def::HasIdent, entry_point_callback::EntryPointsCaller,
     Address, CallDef, ContractCallResult, ContractEnv, EventError, OdraError, OdraResult, VmError
@@ -76,9 +78,9 @@ pub trait InitArgs {
 
 /// Default implementation of [InitArgs]. Should be used when the contract
 /// has the constructor but does not require any initialization arguments.
-pub struct EmptyInitArgs;
+pub struct NoArgs;
 
-impl InitArgs for EmptyInitArgs {
+impl InitArgs for NoArgs {
     fn validate(_expected_ident: &str) -> bool {
         true
     }
@@ -90,9 +92,9 @@ impl InitArgs for EmptyInitArgs {
 
 /// An implementation of [InitArgs]. Should be used when the contract
 /// does not have the constructor.
-pub struct NoneInitArgs;
+pub struct NoInit;
 
-impl InitArgs for NoneInitArgs {
+impl InitArgs for NoInit {
     fn validate(_expected_ident: &str) -> bool {
         true
     }
@@ -533,7 +535,7 @@ mod test {
         ctx.expect_new_contract()
             .returning(|_, _, _| Address::Account(AccountHash::new([0; 32])));
         let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
-        <MockTestRef as Deployer>::deploy(&env, EmptyInitArgs);
+        <MockTestRef as Deployer>::deploy(&env, NoArgs);
     }
 
     #[test]

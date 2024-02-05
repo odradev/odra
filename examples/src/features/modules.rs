@@ -17,12 +17,12 @@ impl ModulesContract {
 #[cfg(test)]
 mod tests {
     use super::ModulesContractHostRef;
-    use odra::host::{Deployer, NoneInitArgs};
+    use odra::host::{Deployer, NoInit};
 
     #[test]
     fn test_modules() {
         let test_env = odra_test::env();
-        let modules_contract = ModulesContractHostRef::deploy(&test_env, NoneInitArgs);
+        let modules_contract = ModulesContractHostRef::deploy(&test_env, NoInit);
         assert_eq!(modules_contract.add_using_module(), 8);
     }
 }

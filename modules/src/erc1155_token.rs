@@ -189,7 +189,7 @@ mod tests {
     use crate::erc1155_receiver::Erc1155ReceiverHostRef;
     use crate::erc1155_token::Erc1155TokenHostRef;
     use crate::wrapped_native::WrappedNativeTokenHostRef;
-    use odra::host::{Deployer, EmptyInitArgs, HostEnv, HostRef, NoneInitArgs};
+    use odra::host::{Deployer, HostEnv, HostRef, NoArgs, NoInit};
     use odra::prelude::*;
     use odra::{
         casper_types::{bytesrepr::Bytes, U256},
@@ -209,7 +209,7 @@ mod tests {
 
         TokenEnv {
             env: env.clone(),
-            token: Erc1155TokenHostRef::deploy(&env, EmptyInitArgs),
+            token: Erc1155TokenHostRef::deploy(&env, NoArgs),
             alice: env.get_account(1),
             bob: env.get_account(2),
             owner: env.get_account(0)
@@ -819,7 +819,7 @@ mod tests {
         let mut env = setup();
         // And a valid receiver
 
-        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoneInitArgs);
+        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoInit);
         // And some tokens minted
         env.token.mint(env.alice, U256::one(), 100.into(), None);
 
@@ -858,7 +858,7 @@ mod tests {
         // Given a deployed contract
         let mut env = setup();
         // And a valid receiver
-        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoneInitArgs);
+        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoInit);
         // And some tokens minted
         env.token.mint(env.alice, U256::one(), 100.into(), None);
 
@@ -897,7 +897,7 @@ mod tests {
         // Given a deployed contract
         let mut env = setup();
         // And an invalid receiver
-        let receiver = WrappedNativeTokenHostRef::deploy(&env.env, EmptyInitArgs);
+        let receiver = WrappedNativeTokenHostRef::deploy(&env.env, NoArgs);
         // And some tokens minted
         env.token.mint(env.alice, U256::one(), 100.into(), None);
 
@@ -924,7 +924,7 @@ mod tests {
         // Given a deployed contract
         let mut env = setup();
         // And a valid receiver
-        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoneInitArgs);
+        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoInit);
         // And some tokens minted
         env.token.mint(env.alice, U256::one(), 100.into(), None);
         env.token.mint(env.alice, U256::from(2), 100.into(), None);
@@ -969,7 +969,7 @@ mod tests {
         // Given a deployed contract
         let mut env = setup();
         // And a valid receiver
-        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoneInitArgs);
+        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoInit);
         // And some tokens minted
         env.token.mint(env.alice, U256::one(), 100.into(), None);
         env.token.mint(env.alice, U256::from(2), 100.into(), None);
@@ -1014,7 +1014,7 @@ mod tests {
         // Given a deployed contract
         let mut env = setup();
         // And an invalid receiver
-        let receiver = WrappedNativeTokenHostRef::deploy(&env.env, EmptyInitArgs);
+        let receiver = WrappedNativeTokenHostRef::deploy(&env.env, NoArgs);
         // And some tokens minted
         env.token.mint(env.alice, U256::one(), 100.into(), None);
         env.token.mint(env.alice, U256::from(2), 100.into(), None);

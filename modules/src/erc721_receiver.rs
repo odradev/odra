@@ -35,7 +35,7 @@ impl Erc721ReceiverTrait for Erc721Receiver {
 
 /// Erc721Receiver-related events.
 pub mod events {
-    use casper_event_standard::Event;
+    use odra::casper_event_standard::{self, Event};
     use odra::{
         casper_types::{bytesrepr::Bytes, U256},
         Address

@@ -1,5 +1,5 @@
 use super::access_control::Role;
-use casper_event_standard::Event;
+use odra::casper_event_standard::{self, Event};
 use odra::Address;
 
 #[derive(Event, PartialEq, Eq, Debug)]

@@ -86,7 +86,7 @@ impl WrappedNativeToken {
 }
 
 pub mod events {
-    use casper_event_standard::Event;
+    use odra::casper_event_standard::{self, Event};
     use odra::{casper_types::U256, Address};
 
     #[derive(Event, Debug, Eq, PartialEq)]
@@ -108,8 +108,8 @@ mod tests {
     use crate::erc20::events::Transfer;
     use crate::wrapped_native::events::{Deposit, Withdrawal};
     use crate::wrapped_native::WrappedNativeTokenHostRef;
-    use casper_event_standard::EventInstance;
-    use odra::host::{Deployer, EmptyInitArgs, HostEnv, HostRef};
+    use odra::casper_event_standard::EventInstance;
+    use odra::host::{Deployer, HostEnv, HostRef, NoArgs};
     use odra::prelude::*;
     use odra::uints::{ToU256, ToU512};
     use odra::VmError::BalanceExceeded;
@@ -127,7 +127,7 @@ mod tests {
         U512
     ) {
         let env = odra_test::env();
-        let token = WrappedNativeTokenHostRef::deploy(&env, EmptyInitArgs);
+        let token = WrappedNativeTokenHostRef::deploy(&env, NoArgs);
         let account_1 = env.get_account(0);
         let account_1_balance = env.balance_of(&account_1);
         let account_2 = env.get_account(1);

@@ -60,7 +60,7 @@ impl Erc1155Receiver {
 
 /// Erc1155Receiver-related events
 pub mod events {
-    use casper_event_standard::Event;
+    use odra::casper_event_standard::{self, Event};
     use odra::prelude::*;
     use odra::{
         casper_types::{bytesrepr::Bytes, U256},

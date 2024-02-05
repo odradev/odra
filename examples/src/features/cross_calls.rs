@@ -31,12 +31,12 @@ impl MathEngine {
 #[cfg(test)]
 mod tests {
     use super::{CrossContractHostRef, CrossContractInitArgs, MathEngineHostRef};
-    use odra::host::{Deployer, HostRef, NoneInitArgs};
+    use odra::host::{Deployer, HostRef, NoInit};
 
     #[test]
     fn test_cross_calls() {
         let test_env = odra_test::env();
-        let math_engine_contract = MathEngineHostRef::deploy(&test_env, NoneInitArgs);
+        let math_engine_contract = MathEngineHostRef::deploy(&test_env, NoInit);
         let cross_contract = CrossContractHostRef::deploy(
             &test_env,
             CrossContractInitArgs {

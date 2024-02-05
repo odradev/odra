@@ -146,7 +146,7 @@ impl Erc20 {
 }
 
 pub mod events {
-    use casper_event_standard::Event;
+    use odra::casper_event_standard::{self, Event};
     use odra::{casper_types::U256, Address};
 
     #[derive(Event, Eq, PartialEq, Debug)]
