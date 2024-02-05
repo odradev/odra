@@ -18,8 +18,7 @@ mod contract_register;
 pub mod crypto;
 pub mod entry_point_callback;
 mod error;
-mod host_context;
-mod host_env;
+pub mod host;
 mod list;
 mod mapping;
 pub mod module;
@@ -41,8 +40,6 @@ pub use contract_register::ContractRegister;
 pub use error::{
     AddressError, CollectionError, EventError, ExecutionError, OdraError, OdraResult, VmError
 };
-pub use host_context::HostContext;
-pub use host_env::HostEnv;
 pub use unwrap_or_revert::UnwrapOrRevert;
 
 pub use list::{List, ListIter};

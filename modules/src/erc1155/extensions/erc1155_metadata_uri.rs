@@ -1,4 +1,4 @@
-use casper_event_standard::casper_types::U256;
+use odra::casper_types::U256;
 use odra::prelude::*;
 
 /// An optional ERC1155MetadataExtension.

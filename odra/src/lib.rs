@@ -37,12 +37,12 @@
 //! ```
 #![no_std]
 
-pub use odra_core::{arithmetic, contract_def, entry_point_callback, module, prelude, uints};
+pub use odra_core::{arithmetic, contract_def, entry_point_callback, host, module, prelude, uints};
 pub use odra_core::{casper_event_standard, casper_types};
 pub use odra_core::{
     Address, AddressError, CallDef, CollectionError, ContractCallResult, ContractContext,
-    ContractEnv, EventError, ExecutionEnv, ExecutionError, HostContext, HostEnv, List, ListIter,
-    Mapping, OdraError, OdraResult, Sequence, UnwrapOrRevert, Variable, VmError
+    ContractEnv, EventError, ExecutionEnv, ExecutionError, List, ListIter, Mapping, OdraError,
+    OdraResult, Sequence, UnwrapOrRevert, Variable, VmError
 };
 
 pub use odra_macros::*;

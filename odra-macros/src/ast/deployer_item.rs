@@ -1,45 +1,25 @@
-use derive_try_from_ref::TryFromRef;
-
-use crate::{ir::ModuleImplIR, utils};
-
-use super::deployer_utils::{
-    CallEpcExpr, DeployerInitSignature, DeployerLoadSignature, EntrypointCallerExpr,
-    EntrypointsInitExpr, EpcSignature, HostRefInstanceExpr, LoadContractExpr, NewContractExpr
+use crate::{
+    ir::ModuleImplIR,
+    utils::{self, misc::AsBlock}
 };
+use derive_try_from_ref::TryFromRef;
+use syn::parse_quote;
 
-#[derive(syn_derive::ToTokens)]
-struct DeployStructItem {
-    vis: syn::Visibility,
-    struct_token: syn::token::Struct,
-    ident: syn::Ident,
-    semi_token: syn::token::Semi
-}
-
-impl TryFrom<&'_ ModuleImplIR> for DeployStructItem {
-    type Error = syn::Error;
-
-    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        Ok(Self {
-            vis: utils::syn::visibility_pub(),
-            struct_token: Default::default(),
-            ident: module.deployer_ident()?,
-            semi_token: Default::default()
-        })
-    }
-}
+use super::{
+    deployer_utils::{EntrypointCallerExpr, EntrypointsInitExpr, EpcSignature},
+    fn_utils::FnItem
+};
 
 #[derive(syn_derive::ToTokens)]
 struct DeployImplItem {
     impl_token: syn::token::Impl,
+    epc_provider_ty: syn::Type,
+    for_token: syn::token::For,
     ident: syn::Ident,
     #[syn(braced)]
     brace_token: syn::token::Brace,
     #[syn(in = brace_token)]
-    epc_fn: ContractEpcFn,
-    #[syn(in = brace_token)]
-    init_fn: ContractInitFn,
-    #[syn(in = brace_token)]
-    load_fn: ContractLoadFn
+    epc_fn: ContractEpcFn
 }
 
 impl TryFrom<&'_ ModuleImplIR> for DeployImplItem {
@@ -48,11 +28,11 @@ impl TryFrom<&'_ ModuleImplIR> for DeployImplItem {
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
             impl_token: Default::default(),
-            ident: module.deployer_ident()?,
+            epc_provider_ty: utils::ty::entry_point_caller_provider(),
+            for_token: Default::default(),
+            ident: module.host_ref_ident()?,
             brace_token: Default::default(),
-            epc_fn: module.try_into()?,
-            init_fn: module.try_into()?,
-            load_fn: module.try_into()?
+            epc_fn: module.try_into()?
         })
     }
 }
@@ -61,8 +41,6 @@ impl TryFrom<&'_ ModuleImplIR> for DeployImplItem {
 #[source(ModuleImplIR)]
 #[err(syn::Error)]
 pub struct ContractEpcFn {
-    #[expr(utils::syn::visibility_pub())]
-    vis: syn::Visibility,
     sig: EpcSignature,
     #[syn(braced)]
     #[default]
@@ -73,48 +51,143 @@ pub struct ContractEpcFn {
     caller: EntrypointCallerExpr
 }
 
-#[derive(syn_derive::ToTokens, TryFromRef)]
-#[source(ModuleImplIR)]
-#[err(syn::Error)]
-struct ContractInitFn {
-    #[expr(utils::syn::visibility_pub())]
+struct InitArgsItem {
+    docs: syn::Attribute,
+    attr: syn::Attribute,
     vis: syn::Visibility,
-    sig: DeployerInitSignature,
-    #[syn(braced)]
-    #[default]
-    braces: syn::token::Brace,
-    #[syn(in = braces)]
-    caller: CallEpcExpr,
-    #[syn(in = braces)]
-    new_contract: NewContractExpr,
-    #[syn(in = braces)]
-    host_ref_instance: HostRefInstanceExpr
+    struct_token: syn::token::Struct,
+    ident: syn::Ident,
+    braces: Option<syn::token::Brace>,
+    fields: syn::punctuated::Punctuated<syn::Field, syn::Token![,]>,
+    semi: Option<syn::token::Semi>,
+    init_args_impl_item: InitArgsImplItem
 }
 
-#[derive(syn_derive::ToTokens, TryFromRef)]
-#[source(ModuleImplIR)]
-#[err(syn::Error)]
-struct ContractLoadFn {
-    #[expr(utils::syn::visibility_pub())]
-    vis: syn::Visibility,
-    sig: DeployerLoadSignature,
-    #[syn(braced)]
-    #[default]
-    braces: syn::token::Brace,
-    #[syn(in = braces)]
-    caller: CallEpcExpr,
-    #[syn(in = braces)]
-    load_contract: LoadContractExpr,
-    #[syn(in = braces)]
-    host_ref_instance: HostRefInstanceExpr
+impl quote::ToTokens for InitArgsItem {
+    fn to_tokens(&self, tokens: &mut ::proc_macro2::TokenStream) {
+        self.docs.to_tokens(tokens);
+        self.attr.to_tokens(tokens);
+        self.vis.to_tokens(tokens);
+        self.struct_token.to_tokens(tokens);
+        self.ident.to_tokens(tokens);
+        if let Some(ref braces) = self.braces {
+            braces.surround(tokens, |tokens| {
+                self.fields.to_tokens(tokens);
+            });
+        }
+        self.semi.to_tokens(tokens);
+        self.init_args_impl_item.to_tokens(tokens);
+    }
 }
 
-#[derive(syn_derive::ToTokens, TryFromRef)]
-#[source(ModuleImplIR)]
-#[err(syn::Error)]
+impl TryFrom<&'_ ModuleImplIR> for InitArgsItem {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        let constructor = module.constructor().unwrap();
+        let fields = constructor
+            .named_args()
+            .iter()
+            .map(|arg| {
+                let ty = arg.ty().unwrap();
+                let ident = arg.name().unwrap();
+                let field: syn::Field = syn::parse_quote!(pub #ident: #ty);
+                field
+            })
+            .collect::<syn::punctuated::Punctuated<syn::Field, syn::Token![,]>>();
+        let (braces, semi) = match fields.is_empty() {
+            true => (None, Some(Default::default())),
+            false => (Some(Default::default()), None)
+        };
+        Ok(Self {
+            docs: utils::attr::init_args_docs(module.module_str()?),
+            attr: utils::attr::derive_into_runtime_args(),
+            vis: utils::syn::visibility_pub(),
+            struct_token: Default::default(),
+            ident: module.init_args_ident()?,
+            braces,
+            fields,
+            semi,
+            init_args_impl_item: module.try_into()?
+        })
+    }
+}
+
+#[derive(syn_derive::ToTokens)]
+struct InitArgsImplItem {
+    impl_token: syn::token::Impl,
+    trait_ty: syn::Type,
+    for_token: syn::token::For,
+    ident: syn::Ident,
+    #[syn(braced)]
+    brace_token: syn::token::Brace,
+    #[syn(in = brace_token)]
+    validate_fn: FnItem,
+    #[syn(in = brace_token)]
+    into_runtime_args_fn: FnItem
+}
+
+impl TryFrom<&'_ ModuleImplIR> for InitArgsImplItem {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        let module_str = module.module_str()?;
+        let ident_validate = utils::ident::validate();
+        let ident_expected_ident = utils::ident::expected_ident();
+        let ident_into_runtime_args = utils::ident::into_runtime_args();
+        let ty_self = utils::ty::_self();
+        let ty_string = utils::ty::string_ref();
+        let ty_runtime_args = utils::ty::runtime_args();
+        let validate_expr: syn::Expr = parse_quote!(#module_str == expected_ident);
+        let into_runtime_args_expr: syn::Expr = parse_quote!(self.into());
+
+        Ok(Self {
+            impl_token: Default::default(),
+            trait_ty: utils::ty::init_args(),
+            for_token: Default::default(),
+            ident: module.init_args_ident()?,
+            brace_token: Default::default(),
+            validate_fn: FnItem::new(
+                &ident_validate,
+                vec![parse_quote!(#ident_expected_ident: #ty_string)],
+                parse_quote!(-> bool),
+                validate_expr.as_block()
+            ),
+            into_runtime_args_fn: FnItem::new(
+                &ident_into_runtime_args,
+                vec![parse_quote!(#ty_self)],
+                parse_quote!(-> Option<#ty_runtime_args>),
+                into_runtime_args_expr.as_block()
+            )
+        })
+    }
+}
+
+#[derive(syn_derive::ToTokens)]
 pub struct DeployerItem {
-    struct_item: DeployStructItem,
+    args: Option<InitArgsItem>,
     impl_item: DeployImplItem
+}
+
+impl TryFrom<&'_ ModuleImplIR> for DeployerItem {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        let args = match module.constructor() {
+            Some(f) => {
+                if f.has_args() {
+                    Some(module.try_into()?)
+                } else {
+                    None
+                }
+            }
+            None => None
+        };
+        Ok(Self {
+            args,
+            impl_item: module.try_into()?
+        })
+    }
 }
 
 #[cfg(test)]
@@ -127,10 +200,24 @@ mod deployer_impl {
     fn deployer_impl() {
         let module = test_utils::mock::module_impl();
         let expected = quote! {
-            pub struct Erc20Deployer;
+            /// [Erc20] contract constructor arguments.
+            #[derive(odra::IntoRuntimeArgs)]
+            pub struct Erc20InitArgs {
+                pub total_supply: Option<U256>
+            }
 
-            impl Erc20Deployer {
-                pub fn epc(env: &odra::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
+            impl odra::host::InitArgs for Erc20InitArgs {
+                fn validate(expected_ident: &str) -> bool {
+                    "Erc20" == expected_ident
+                }
+
+                fn into_runtime_args(self) -> Option<odra::casper_types::RuntimeArgs> {
+                    self.into()
+                }
+            }
+
+            impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
+                fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
                     let entry_points = odra::prelude::vec![
                         odra::entry_point_callback::EntryPoint::new(
                             odra::prelude::string::String::from("init"),
@@ -198,35 +285,6 @@ mod deployer_impl {
                         }
                     })
                 }
-
-                pub fn init(env: &odra::HostEnv, total_supply: Option<U256>) -> Erc20HostRef {
-                    let caller = Self::epc(env);
-
-                    let address = env.new_contract(
-                        "Erc20",
-                        Some({
-                            let mut named_args = odra::casper_types::RuntimeArgs::new();
-                            let _ = named_args.insert("total_supply", total_supply);
-                            named_args
-                        }),
-                        caller
-                    );
-                    Erc20HostRef {
-                        address,
-                        env: env.clone(),
-                        attached_value: odra::casper_types::U512::zero()
-                    }
-                }
-
-                pub fn load(env: &odra::HostEnv, address: odra::Address) -> Erc20HostRef {
-                    let caller = Self::epc(env);
-                    env.register_contract(address, caller);
-                    Erc20HostRef {
-                        address,
-                        env: env.clone(),
-                        attached_value: odra::casper_types::U512::zero(),
-                    }
-                }
             }
         };
         let deployer_item = DeployerItem::try_from(&module).unwrap();
@@ -237,10 +295,8 @@ mod deployer_impl {
     fn deployer_trait_impl() {
         let module = test_utils::mock::module_trait_impl();
         let expected = quote! {
-            pub struct Erc20Deployer;
-
-            impl Erc20Deployer {
-                pub fn epc(env: &odra::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
+            impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
+                fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
                     let entry_points = odra::prelude::vec![
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("pay_to_mint"), odra::prelude::vec![])
@@ -261,31 +317,6 @@ mod deployer_impl {
                         }
                     })
                 }
-
-                pub fn init(env: &odra::HostEnv) -> Erc20HostRef {
-                    let caller = Self::epc(env);
-
-                    let address = env.new_contract(
-                        "Erc20",
-                        None,
-                        caller
-                    );
-                    Erc20HostRef {
-                        address,
-                        env: env.clone(),
-                        attached_value: odra::casper_types::U512::zero()
-                    }
-                }
-
-                pub fn load(env: &odra::HostEnv, address: odra::Address) -> Erc20HostRef {
-                    let caller = Self::epc(env);
-                    env.register_contract(address, caller);
-                    Erc20HostRef {
-                        address,
-                        env: env.clone(),
-                        attached_value: odra::casper_types::U512::zero(),
-                    }
-                }
             }
         };
         let deployer_item = DeployerItem::try_from(&module).unwrap();
@@ -296,10 +327,8 @@ mod deployer_impl {
     fn deployer_delegated() {
         let module = test_utils::mock::module_delegation();
         let expected = quote! {
-            pub struct Erc20Deployer;
-
-            impl Erc20Deployer {
-                pub fn epc(env: &odra::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
+            impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
+                fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
                     let entry_points = odra::prelude::vec![
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("get_owner"), odra::prelude::vec![]),
@@ -336,31 +365,6 @@ mod deployer_impl {
                             ))
                         }
                     })
-                }
-
-                pub fn init(env: &odra::HostEnv) -> Erc20HostRef {
-                    let caller = Self::epc(env);
-
-                    let address = env.new_contract(
-                        "Erc20",
-                        None,
-                        caller
-                    );
-                    Erc20HostRef {
-                        address,
-                        env: env.clone(),
-                        attached_value: odra::casper_types::U512::zero()
-                    }
-                }
-
-                pub fn load(env: &odra::HostEnv, address: odra::Address) -> Erc20HostRef {
-                    let caller = Self::epc(env);
-                    env.register_contract(address, caller);
-                    Erc20HostRef {
-                        address,
-                        env: env.clone(),
-                        attached_value: odra::casper_types::U512::zero(),
-                    }
                 }
             }
         };

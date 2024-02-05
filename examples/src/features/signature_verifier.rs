@@ -5,7 +5,7 @@ use odra::{
 };
 
 #[odra::module]
-pub struct SignatureVerifier {}
+pub struct SignatureVerifier;
 
 #[odra::module]
 impl SignatureVerifier {
@@ -21,10 +21,13 @@ impl SignatureVerifier {
 
 #[cfg(test)]
 mod test {
-    use crate::features::signature_verifier::SignatureVerifierDeployer;
-    use odra::casper_types::{
-        bytesrepr::{Bytes, FromBytes},
-        PublicKey
+    use super::SignatureVerifierHostRef;
+    use odra::{
+        casper_types::{
+            bytesrepr::{Bytes, FromBytes},
+            PublicKey
+        },
+        host::{Deployer, NoInit}
     };
 
     #[test]
@@ -38,7 +41,7 @@ mod test {
 
         let public_key = test_env.public_key(&account);
 
-        let signature_verifier = SignatureVerifierDeployer::init(&test_env);
+        let signature_verifier = SignatureVerifierHostRef::deploy(&test_env, NoInit);
         assert!(signature_verifier.verify_signature(message_bytes, signature, public_key));
     }
 
@@ -65,7 +68,7 @@ mod test {
         let public_key_decoded = hex::decode(public_key_hex).unwrap();
         let (public_key, _) = PublicKey::from_bytes(public_key_decoded.as_slice()).unwrap();
 
-        let signature_verifier = SignatureVerifierDeployer::init(&odra_test::env());
+        let signature_verifier = SignatureVerifierHostRef::deploy(&odra_test::env(), NoInit);
         assert!(signature_verifier.verify_signature(message_bytes, signature_bytes, public_key));
     }
 }

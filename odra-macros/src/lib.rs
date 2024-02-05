@@ -5,6 +5,7 @@ use ast::*;
 use ir::{ModuleImplIR, ModuleStructIR, TypeIR};
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
+use syn::punctuated::Punctuated;
 
 mod ast;
 mod ir;
@@ -80,4 +81,40 @@ pub fn external_contract(attr: TokenStream, item: TokenStream) -> TokenStream {
         item,
         "#[external_contract] can be only applied to trait only"
     )
+}
+
+/// Implements `Into<Option<odra::casper_types::RuntimeArgs>>` for a struct.
+///
+/// This macro is used to convert a struct into a `RuntimeArgs` object.
+/// If applied to an enum or a union type, it will panic.
+#[proc_macro_derive(IntoRuntimeArgs)]
+pub fn derive_into_runtime_args(item: TokenStream) -> TokenStream {
+    let item = syn::parse_macro_input!(item as syn::DeriveInput);
+    match item {
+        syn::DeriveInput {
+            ident,
+            data: syn::Data::Struct(syn::DataStruct { fields, .. }),
+            ..
+        } => {
+            let fields = fields
+                .into_iter()
+                .map(|f| {
+                    let name = f.ident.unwrap();
+                    quote::quote!(stringify!(#name) => self.#name)
+                })
+                .collect::<Punctuated<proc_macro2::TokenStream, syn::token::Comma>>();
+            let res = quote::quote! {
+                impl Into<Option<odra::casper_types::RuntimeArgs>> for #ident {
+                    fn into(self) -> Option<odra::casper_types::RuntimeArgs> {
+                        use odra::casper_types::RuntimeArgs;
+                        Some(odra::casper_types::runtime_args! {
+                            #fields
+                        })
+                    }
+                }
+            };
+            res.into()
+        }
+        _ => panic!("Struct expected")
+    }
 }

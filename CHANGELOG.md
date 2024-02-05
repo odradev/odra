@@ -56,6 +56,12 @@ It is recommended to use it in the module code.
 - `odra-core` crate providing framework core functionalities.
 - `odra-casper-client` crate providing `CasperClient` for interacting with Casper node. 
 - `odra-casper-livenet-env` crate providing a host environment fo for the Casper livenet.
+- `HostRef` trait - a host side reference to a contract.
+- `HostRefLoader` trait for loading a contract from the host environment.
+- `EntryPointsCallerProvider` trait.
+- `Deployer` trait - a struct implementing that trait can deploy a contract.
+- `InitArgs` trait - a struct implementing that trait can be used as a constructor argument.
+- `NoArgs` and `NoInit` structs. Implementations of `InitArgs` for empty and none (no constructor) arguments.
 
 ### Very Brief Upgrade Path
 - Copy `bin` folder and `build.rs` files from a freshly generated project

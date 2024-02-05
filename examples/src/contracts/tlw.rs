@@ -101,14 +101,22 @@ pub struct Withdrawal {
 mod test {
     use super::*;
     use crate::contracts::tlw::{Deposit, Withdrawal};
-    use odra::Address;
+    use odra::{
+        host::{Deployer, HostRef},
+        Address
+    };
 
     const ONE_DAY_IN_SECONDS: u64 = 60 * 60 * 24;
 
     fn setup() -> (TimeLockWalletHostRef, Address, Address) {
         let test_env = odra_test::env();
         (
-            TimeLockWalletDeployer::init(&test_env, ONE_DAY_IN_SECONDS),
+            TimeLockWalletHostRef::deploy(
+                &test_env,
+                TimeLockWalletInitArgs {
+                    lock_duration: ONE_DAY_IN_SECONDS
+                }
+            ),
             test_env.get_account(0),
             test_env.get_account(1)
         )

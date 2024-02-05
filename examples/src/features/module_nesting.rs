@@ -87,6 +87,8 @@ pub struct OperationEnded {
 
 #[cfg(test)]
 mod tests {
+    use odra::host::{Deployer, HostRef, NoInit};
+
     use super::*;
 
     // generate operation results
@@ -138,7 +140,7 @@ mod tests {
     #[test]
     fn nested_odra_types() {
         let test_env = odra_test::env();
-        let mut nested_odra_types = NestedOdraTypesContractDeployer::init(&test_env);
+        let mut nested_odra_types = NestedOdraTypesContractHostRef::deploy(&test_env, NoInit);
 
         // Storage is not set
         assert_eq!(nested_odra_types.latest_result(), None);

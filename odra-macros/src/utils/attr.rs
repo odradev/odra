@@ -23,3 +23,12 @@ pub fn inline() -> syn::Attribute {
 pub fn automatically_derived() -> syn::Attribute {
     parse_quote!(#[automatically_derived])
 }
+
+pub fn derive_into_runtime_args() -> syn::Attribute {
+    parse_quote!(#[derive(odra::IntoRuntimeArgs)])
+}
+
+pub fn init_args_docs(name: String) -> syn::Attribute {
+    let name = format!(" [{}] contract constructor arguments.", name);
+    parse_quote!(#[doc = #name])
+}

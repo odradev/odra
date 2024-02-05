@@ -27,7 +27,6 @@ pub struct Erc721Token {
 
 #[odra::module]
 impl OwnedErc721WithMetadata for Erc721Token {
-    #[odra(init)]
     fn init(&mut self, name: String, symbol: String, base_uri: String) {
         self.metadata.init(name, symbol, base_uri);
         self.ownable.init();
@@ -143,14 +142,16 @@ pub mod errors {
 
 #[cfg(test)]
 mod tests {
-    use super::{Erc721TokenDeployer, Erc721TokenHostRef};
+    use super::{Erc721TokenHostRef, Erc721TokenInitArgs};
     use crate::access::errors::Error as AccessError;
+    use crate::erc20::{Erc20HostRef, Erc20InitArgs};
     use crate::erc721::errors::Error::{InvalidTokenId, NotAnOwnerOrApproved};
     use crate::erc721_receiver::events::Received;
-    use crate::erc721_receiver::Erc721ReceiverDeployer;
+    use crate::erc721_receiver::Erc721ReceiverHostRef;
     use crate::erc721_token::errors::Error::TokenAlreadyExists;
+    use odra::host::{Deployer, HostEnv, HostRef, NoInit};
     use odra::prelude::*;
-    use odra::{casper_types::U256, Address, HostEnv, OdraError, VmError};
+    use odra::{casper_types::U256, Address, OdraError, VmError};
 
     const NAME: &str = "PlascoinNFT";
     const SYMBOL: &str = "PLSNFT";
@@ -168,11 +169,13 @@ mod tests {
         let env = odra_test::env();
         TokenEnv {
             env: env.clone(),
-            token: Erc721TokenDeployer::init(
+            token: Erc721TokenHostRef::deploy(
                 &env,
-                NAME.to_string(),
-                SYMBOL.to_string(),
-                BASE_URI.to_string()
+                Erc721TokenInitArgs {
+                    name: NAME.to_string(),
+                    symbol: SYMBOL.to_string(),
+                    base_uri: BASE_URI.to_string()
+                }
             ),
             alice: env.get_account(1),
             bob: env.get_account(2),
@@ -487,16 +490,17 @@ mod tests {
 
     #[test]
     fn safe_transfer_to_contract_which_does_not_support_nft() {
-        use crate::erc20::Erc20Deployer;
         // When deploy a contract with the initial supply
         let mut erc721_env = setup();
         // And another contract which does not support nfts
-        let erc20 = Erc20Deployer::init(
+        let erc20 = Erc20HostRef::deploy(
             &erc721_env.env,
-            "PLS".to_string(),
-            "PLASCOIN".to_string(),
-            10,
-            None
+            Erc20InitArgs {
+                name: "PLASCOIN".to_string(),
+                symbol: "PLS".to_string(),
+                decimals: 10,
+                initial_supply: None
+            }
         );
 
         // And mint a token to Alice.
@@ -522,7 +526,7 @@ mod tests {
         // When deploy a contract with the initial supply
         let mut erc721_env = setup();
         // And another contract which does not support nfts
-        let receiver = Erc721ReceiverDeployer::init(&erc721_env.env);
+        let receiver = Erc721ReceiverHostRef::deploy(&erc721_env.env, NoInit);
 
         // And mint a token to Alice.
         erc721_env.token.mint(erc721_env.alice, U256::from(1));
@@ -555,7 +559,7 @@ mod tests {
         // When deploy a contract with the initial supply
         let mut erc721_env = setup();
         // And another contract which does not support nfts
-        let receiver = Erc721ReceiverDeployer::init(&erc721_env.env);
+        let receiver = Erc721ReceiverHostRef::deploy(&erc721_env.env, NoInit);
 
         // And mint a token to Alice.
         erc721_env.token.mint(erc721_env.alice, U256::from(1));

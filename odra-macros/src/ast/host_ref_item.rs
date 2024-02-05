@@ -1,10 +1,13 @@
-use crate::{ir::ModuleImplIR, utils};
+use crate::{
+    ir::ModuleImplIR,
+    utils::{self, misc::AsBlock}
+};
 use derive_try_from_ref::TryFromRef;
 use proc_macro2::Ident;
 use quote::{quote, ToTokens, TokenStreamExt};
 use syn::parse_quote;
 
-use super::ref_utils;
+use super::{fn_utils::FnItem, ref_utils};
 
 #[derive(syn_derive::ToTokens)]
 struct HostRefStructItem {
@@ -41,8 +44,37 @@ impl TryFrom<&'_ ModuleImplIR> for HostRefStructItem {
 }
 
 #[derive(syn_derive::ToTokens)]
-struct HostRefImplItem {
+pub struct HasIdentTraitImplItem {
     impl_token: syn::token::Impl,
+    trait_ty: syn::Type,
+    for_token: syn::token::For,
+    ref_ident: Ident,
+    #[syn(braced)]
+    brace_token: syn::token::Brace,
+    #[syn(in = brace_token)]
+    ident_fn: IdentFnItem
+}
+
+impl TryFrom<&'_ ModuleImplIR> for HasIdentTraitImplItem {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        Ok(Self {
+            impl_token: Default::default(),
+            trait_ty: utils::ty::has_ident(),
+            for_token: Default::default(),
+            ref_ident: module.host_ref_ident()?,
+            brace_token: Default::default(),
+            ident_fn: module.try_into()?
+        })
+    }
+}
+
+#[derive(syn_derive::ToTokens)]
+struct HostRefTraitImplItem {
+    impl_token: syn::token::Impl,
+    trait_ty: syn::Type,
+    for_token: syn::token::For,
     ref_ident: Ident,
     #[syn(braced)]
     brace_token: syn::token::Brace,
@@ -57,7 +89,35 @@ struct HostRefImplItem {
     #[syn(in = brace_token)]
     get_event_fn: GetEventFnItem,
     #[syn(in = brace_token)]
-    last_call_fn: LastCallFnItem,
+    last_call_fn: LastCallFnItem
+}
+
+impl TryFrom<&'_ ModuleImplIR> for HostRefTraitImplItem {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        Ok(Self {
+            impl_token: Default::default(),
+            trait_ty: utils::ty::host_ref(),
+            for_token: Default::default(),
+            ref_ident: module.host_ref_ident()?,
+            brace_token: Default::default(),
+            new_fn: NewFnItem,
+            with_tokens_fn: WithTokensFnItem,
+            address_fn: AddressFnItem,
+            env_fn: EnvFnItem,
+            get_event_fn: GetEventFnItem,
+            last_call_fn: LastCallFnItem
+        })
+    }
+}
+
+#[derive(syn_derive::ToTokens)]
+struct HostRefImplItem {
+    impl_token: syn::token::Impl,
+    ref_ident: Ident,
+    #[syn(braced)]
+    brace_token: syn::token::Brace,
     #[syn(in = brace_token)]
     #[to_tokens(|tokens, f| tokens.append_all(f))]
     functions: Vec<syn::ItemFn>
@@ -71,12 +131,6 @@ impl TryFrom<&'_ ModuleImplIR> for HostRefImplItem {
             impl_token: Default::default(),
             ref_ident: module.host_ref_ident()?,
             brace_token: Default::default(),
-            new_fn: NewFnItem,
-            with_tokens_fn: WithTokensFnItem,
-            address_fn: AddressFnItem,
-            env_fn: EnvFnItem,
-            get_event_fn: GetEventFnItem,
-            last_call_fn: LastCallFnItem,
             functions: module
                 .host_functions()?
                 .iter()
@@ -104,7 +158,7 @@ impl ToTokens for NewFnItem {
         let ty_self = utils::ty::_Self();
 
         tokens.extend(quote!(
-            pub fn new(#address: #ty_address, #env: #ty_env) -> #ty_self {
+            fn new(#address: #ty_address, #env: #ty_env) -> #ty_self {
                 #ty_self {
                     #address,
                     #env,
@@ -129,7 +183,7 @@ impl ToTokens for WithTokensFnItem {
         let env = utils::ident::env();
 
         tokens.extend(quote!(
-            pub fn with_tokens(&self, tokens: #ty_u512) -> Self {
+            fn with_tokens(&self, tokens: #ty_u512) -> Self {
                 Self {
                     #address: #m_address,
                     #env: #m_env.clone(),
@@ -144,14 +198,13 @@ struct AddressFnItem;
 
 impl ToTokens for AddressFnItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let vis = utils::syn::visibility_pub();
         let m_address = utils::member::address();
         let ident = utils::ident::address();
         let ty_address_ref = utils::ty::address_ref();
         let ty_self_ref = utils::ty::self_ref();
 
         tokens.extend(quote!(
-            #vis fn #ident(#ty_self_ref) -> #ty_address_ref {
+            fn #ident(#ty_self_ref) -> #ty_address_ref {
                 &#m_address
             }
         ));
@@ -162,14 +215,13 @@ struct EnvFnItem;
 
 impl ToTokens for EnvFnItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let vis = utils::syn::visibility_pub();
         let m_env = utils::member::env();
         let ident = utils::ident::env();
         let ret_ty = utils::ty::host_env();
         let ty_self_ref = utils::ty::self_ref();
 
         tokens.extend(quote!(
-            #vis fn #ident(#ty_self_ref) -> &#ret_ty {
+            fn #ident(#ty_self_ref) -> &#ret_ty {
                 &#m_env
             }
         ));
@@ -188,7 +240,7 @@ impl ToTokens for GetEventFnItem {
         let ty_ev_error = utils::ty::event_error();
 
         tokens.extend(quote!(
-            pub fn get_event<T>(&self, index: i32) -> Result<T, #ty_ev_error>
+            fn get_event<T>(&self, index: i32) -> Result<T, #ty_ev_error>
             where
                 T: #ty_from_bytes + #ty_ev
             {
@@ -206,10 +258,31 @@ impl ToTokens for LastCallFnItem {
         let m_address = utils::member::address();
         let ty_result = utils::ty::contract_call_result();
         tokens.extend(quote!(
-            pub fn last_call(&self) -> #ty_result {
+            fn last_call(&self) -> #ty_result {
                 #m_env.last_call_result(#m_address)
             }
         ))
+    }
+}
+
+#[derive(syn_derive::ToTokens)]
+struct IdentFnItem {
+    fn_item: FnItem
+}
+
+impl TryFrom<&'_ ModuleImplIR> for IdentFnItem {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        let ident = utils::ident::ident();
+        let ty_string = utils::ty::string();
+        let module_ident = module.module_ident()?;
+        let ret_ty: syn::ReturnType = utils::misc::ret_ty(&ty_string);
+        let expr: syn::Expr = parse_quote!(#module_ident::#ident());
+
+        Ok(Self {
+            fn_item: FnItem::new(&ident, vec![], ret_ty, expr.as_block())
+        })
     }
 }
 
@@ -218,6 +291,7 @@ impl ToTokens for LastCallFnItem {
 #[err(syn::Error)]
 pub struct HostRefItem {
     struct_item: HostRefStructItem,
+    trait_impl_item: HostRefTraitImplItem,
     impl_item: HostRefImplItem
 }
 
@@ -233,12 +307,12 @@ mod ref_item_tests {
         let expected = quote! {
             pub struct Erc20HostRef {
                 address: odra::Address,
-                env: odra::HostEnv,
+                env: odra::host::HostEnv,
                 attached_value: odra::casper_types::U512
             }
 
-            impl Erc20HostRef {
-                pub fn new(address: odra::Address, env: odra::HostEnv) -> Self {
+            impl odra::host::HostRef for Erc20HostRef {
+                fn new(address: odra::Address, env: odra::host::HostEnv) -> Self {
                     Self {
                         address,
                         env,
@@ -246,7 +320,7 @@ mod ref_item_tests {
                     }
                 }
 
-                pub fn with_tokens(&self, tokens: odra::casper_types::U512) -> Self {
+                fn with_tokens(&self, tokens: odra::casper_types::U512) -> Self {
                     Self {
                         address: self.address,
                         env: self.env.clone(),
@@ -254,25 +328,27 @@ mod ref_item_tests {
                     }
                 }
 
-                pub fn address(&self) -> &odra::Address {
+                fn address(&self) -> &odra::Address {
                     &self.address
                 }
 
-                pub fn env(&self) -> &odra::HostEnv {
+                fn env(&self) -> &odra::host::HostEnv {
                     &self.env
                 }
 
-                pub fn get_event<T>(&self, index: i32) -> Result<T, odra::EventError>
+                fn get_event<T>(&self, index: i32) -> Result<T, odra::EventError>
                 where
                     T: odra::casper_types::bytesrepr::FromBytes + odra::casper_event_standard::EventInstance,
                 {
                     self.env.get_event(&self.address, index)
                 }
 
-                pub fn last_call(&self) -> odra::ContractCallResult {
+                fn last_call(&self) -> odra::ContractCallResult {
                     self.env.last_call_result(self.address)
                 }
+            }
 
+            impl Erc20HostRef {
                 pub fn try_total_supply(&self) -> odra::OdraResult<U256> {
                     self.env.call_contract(
                         self.address,
@@ -380,12 +456,12 @@ mod ref_item_tests {
         let expected = quote! {
             pub struct Erc20HostRef {
                 address: odra::Address,
-                env: odra::HostEnv,
+                env: odra::host::HostEnv,
                 attached_value: odra::casper_types::U512
             }
 
-            impl Erc20HostRef {
-                pub fn new(address: odra::Address, env: odra::HostEnv) -> Self {
+            impl odra::host::HostRef for Erc20HostRef {
+                fn new(address: odra::Address, env: odra::host::HostEnv) -> Self {
                     Self {
                         address,
                         env,
@@ -393,7 +469,7 @@ mod ref_item_tests {
                     }
                 }
 
-                pub fn with_tokens(&self, tokens: odra::casper_types::U512) -> Self {
+                fn with_tokens(&self, tokens: odra::casper_types::U512) -> Self {
                     Self {
                         address: self.address,
                         env: self.env.clone(),
@@ -401,25 +477,27 @@ mod ref_item_tests {
                     }
                 }
 
-                pub fn address(&self) -> &odra::Address {
+                fn address(&self) -> &odra::Address {
                     &self.address
                 }
 
-                pub fn env(&self) -> &odra::HostEnv {
+                fn env(&self) -> &odra::host::HostEnv {
                     &self.env
                 }
 
-                pub fn get_event<T>(&self, index: i32) -> Result<T, odra::EventError>
+                fn get_event<T>(&self, index: i32) -> Result<T, odra::EventError>
                 where
                     T: odra::casper_types::bytesrepr::FromBytes + odra::casper_event_standard::EventInstance,
                 {
                     self.env.get_event(&self.address, index)
                 }
 
-                pub fn last_call(&self) -> odra::ContractCallResult {
+                fn last_call(&self) -> odra::ContractCallResult {
                     self.env.last_call_result(self.address)
                 }
+            }
 
+            impl Erc20HostRef {
                 pub fn try_total_supply(&self) -> odra::OdraResult<U256> {
                     self.env.call_contract(
                         self.address,
@@ -475,12 +553,12 @@ mod ref_item_tests {
         let expected = quote! {
             pub struct Erc20HostRef {
                 address: odra::Address,
-                env: odra::HostEnv,
+                env: odra::host::HostEnv,
                 attached_value: odra::casper_types::U512
             }
 
-            impl Erc20HostRef {
-                pub fn new(address: odra::Address, env: odra::HostEnv) -> Self {
+            impl odra::host::HostRef for Erc20HostRef {
+                fn new(address: odra::Address, env: odra::host::HostEnv) -> Self {
                     Self {
                         address,
                         env,
@@ -488,7 +566,7 @@ mod ref_item_tests {
                     }
                 }
 
-                pub fn with_tokens(&self, tokens: odra::casper_types::U512) -> Self {
+                fn with_tokens(&self, tokens: odra::casper_types::U512) -> Self {
                     Self {
                         address: self.address,
                         env: self.env.clone(),
@@ -496,25 +574,27 @@ mod ref_item_tests {
                     }
                 }
 
-                pub fn address(&self) -> &odra::Address {
+                fn address(&self) -> &odra::Address {
                     &self.address
                 }
 
-                pub fn env(&self) -> &odra::HostEnv {
+                fn env(&self) -> &odra::host::HostEnv {
                     &self.env
                 }
 
-                pub fn get_event<T>(&self, index: i32) -> Result<T, odra::EventError>
+                fn get_event<T>(&self, index: i32) -> Result<T, odra::EventError>
                 where
-                    T: odra::casper_types::bytesrepr::FromBytes + odra::casper_event_standard::EventInstance,
+                T: odra::casper_types::bytesrepr::FromBytes + odra::casper_event_standard::EventInstance,
                 {
                     self.env.get_event(&self.address, index)
                 }
 
-                pub fn last_call(&self) -> odra::ContractCallResult {
+                fn last_call(&self) -> odra::ContractCallResult {
                     self.env.last_call_result(self.address)
                 }
+            }
 
+            impl Erc20HostRef {
                 pub fn try_total_supply(&self) -> odra::OdraResult<U256> {
                     self.env.call_contract(
                         self.address,

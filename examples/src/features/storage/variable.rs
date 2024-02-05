@@ -11,7 +11,6 @@ pub struct DogContract {
 
 #[odra::module]
 impl DogContract {
-    #[odra(init)]
     pub fn init(&mut self, barks: bool, weight: u32, name: String) {
         self.barks.set(barks);
         self.weight.set(weight);
@@ -44,13 +43,18 @@ impl DogContract {
 
 #[cfg(test)]
 mod tests {
-    use super::DogContractDeployer;
-    use odra::prelude::string::ToString;
+    use super::{DogContractHostRef, DogContractInitArgs};
+    use odra::{host::Deployer, prelude::string::ToString};
 
     #[test]
     fn init_test() {
         let test_env = odra_test::env();
-        let dog_contract = DogContractDeployer::init(&test_env, true, 10, "Mantus".to_string());
+        let init_args = DogContractInitArgs {
+            barks: true,
+            weight: 10,
+            name: "Mantus".to_string()
+        };
+        let dog_contract = DogContractHostRef::deploy(&test_env, init_args);
         assert!(dog_contract.barks());
         assert_eq!(dog_contract.weight(), 10);
         assert_eq!(dog_contract.name(), "Mantus".to_string());

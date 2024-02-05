@@ -2,7 +2,7 @@ use odra::prelude::*;
 use odra::{casper_types::U256, module::Module, Address};
 
 #[odra::module]
-pub struct BalanceChecker {}
+pub struct BalanceChecker;
 
 #[odra::module]
 impl BalanceChecker {
@@ -18,6 +18,8 @@ pub trait Token {
 
 #[cfg(test)]
 mod tests {
+    use odra::host::{Deployer, HostRef, NoInit};
+
     use super::*;
     use crate::contracts::owned_token::tests::{setup, INITIAL_SUPPLY};
 
@@ -26,7 +28,7 @@ mod tests {
         let token = setup();
         let env = token.env().clone();
         let (owner, second_account) = (env.get_account(0), env.get_account(1));
-        let balance_checker = BalanceCheckerDeployer::init(&env);
+        let balance_checker = BalanceCheckerHostRef::deploy(&env, NoInit);
         let expected_owner_balance = INITIAL_SUPPLY;
 
         // Owner of the token should have positive balance.

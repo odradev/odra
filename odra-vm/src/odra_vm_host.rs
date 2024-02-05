@@ -4,8 +4,11 @@ use odra_core::casper_types::{bytesrepr::Bytes, PublicKey, RuntimeArgs, U512};
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::prelude::*;
 use odra_core::EventError;
+use odra_core::{
+    host::{HostContext, HostEnv},
+    CallDef, ContractContext, ContractEnv
+};
 use odra_core::{Address, OdraError, VmError};
-use odra_core::{CallDef, ContractContext, ContractEnv, HostContext, HostEnv};
 
 /// HostContext utilizing the Odra in-memory virtual machine.
 pub struct OdraVmHost {

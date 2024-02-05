@@ -153,14 +153,6 @@ pub fn user_error(error: &syn::Ident) -> syn::Expr {
     parse_quote!(#ty::user(#error as u16))
 }
 
-pub fn some<T: ToTokens>(t: T) -> syn::Expr {
-    parse_quote!(Some(#t))
-}
-
-pub fn none() -> syn::Expr {
-    parse_quote!(None)
-}
-
 pub fn btree_from_iter(expr: &syn::Expr) -> syn::Expr {
     parse_quote!(odra::prelude::BTreeMap::from_iter(#expr))
 }

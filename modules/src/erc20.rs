@@ -146,7 +146,7 @@ impl Erc20 {
 }
 
 pub mod events {
-    use casper_event_standard::Event;
+    use odra::casper_event_standard::{self, Event};
     use odra::{casper_types::U256, Address};
 
     #[derive(Event, Eq, PartialEq, Debug)]
@@ -182,10 +182,13 @@ mod tests {
     use super::{
         errors::Error,
         events::{Approval, Transfer},
-        Erc20Deployer, Erc20HostRef
+        Erc20HostRef, Erc20InitArgs
     };
-    use odra::prelude::*;
-    use odra::{casper_types::U256, HostEnv};
+    use odra::{
+        casper_types::U256,
+        host::{Deployer, HostEnv, HostRef},
+        prelude::*
+    };
 
     const NAME: &str = "Plascoin";
     const SYMBOL: &str = "PLS";
@@ -196,12 +199,14 @@ mod tests {
         let env = odra_test::env();
         (
             env.clone(),
-            Erc20Deployer::init(
+            Erc20HostRef::deploy(
                 &env,
-                SYMBOL.to_string(),
-                NAME.to_string(),
-                DECIMALS,
-                Some(INITIAL_SUPPLY.into())
+                Erc20InitArgs {
+                    symbol: SYMBOL.to_string(),
+                    name: NAME.to_string(),
+                    decimals: DECIMALS,
+                    initial_supply: Some(INITIAL_SUPPLY.into())
+                }
             )
         )
     }

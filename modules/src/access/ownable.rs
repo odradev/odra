@@ -157,7 +157,10 @@ impl Ownable2Step {
 mod test {
     use super::*;
     use crate::access::errors::Error;
-    use odra::{external_contract, HostEnv};
+    use odra::{
+        external_contract,
+        host::{Deployer, HostEnv, HostRef, NoArgs}
+    };
 
     #[test]
     fn init() {
@@ -335,18 +338,21 @@ mod test {
 
     fn setup_ownable() -> (OwnableHostRef, Address) {
         let env = odra_test::env();
-        (OwnableDeployer::init(&env), env.get_account(0))
+        (OwnableHostRef::deploy(&env, NoArgs), env.get_account(0))
     }
 
     fn setup_ownable_2_step() -> (Ownable2StepHostRef, Address) {
         let env = odra_test::env();
-        (Ownable2StepDeployer::init(&env), env.get_account(0))
+        (
+            Ownable2StepHostRef::deploy(&env, NoArgs),
+            env.get_account(0)
+        )
     }
 
     fn setup_renounceable() -> (Vec<RenounceableHostRef>, Address) {
         let env = odra_test::env();
-        let ownable = OwnableDeployer::init(&env);
-        let ownable_2_step = Ownable2StepDeployer::init(&env);
+        let ownable = OwnableHostRef::deploy(&env, NoArgs);
+        let ownable_2_step = Ownable2StepHostRef::deploy(&env, NoArgs);
         let renouncable_ref = RenounceableHostRef::new(*ownable.address(), env.clone());
         let renouncable_2_step_ref =
             RenounceableHostRef::new(*ownable_2_step.address(), env.clone());
@@ -358,8 +364,8 @@ mod test {
 
     fn setup_owned() -> (HostEnv, OwnableHostRef, Ownable2StepHostRef, Address) {
         let env = odra_test::env();
-        let ownable = OwnableDeployer::init(&env);
-        let ownable_2_step = Ownable2StepDeployer::init(&env);
+        let ownable = OwnableHostRef::deploy(&env, NoArgs);
+        let ownable_2_step = Ownable2StepHostRef::deploy(&env, NoArgs);
         (env.clone(), ownable, ownable_2_step, env.get_account(0))
     }
 }

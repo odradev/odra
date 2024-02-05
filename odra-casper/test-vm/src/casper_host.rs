@@ -22,8 +22,11 @@ use odra_core::consts;
 use odra_core::consts::*;
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::EventError;
+use odra_core::{
+    host::{HostContext, HostEnv},
+    CallDef, ContractEnv
+};
 use odra_core::{Address, OdraResult, VmError};
-use odra_core::{CallDef, ContractEnv, HostContext, HostEnv};
 
 /// HostContext utilizing the Casper test virtual machine.
 pub struct CasperHost {

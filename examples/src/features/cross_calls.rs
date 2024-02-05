@@ -19,7 +19,7 @@ impl CrossContract {
 }
 
 #[odra::module]
-pub struct MathEngine {}
+pub struct MathEngine;
 
 #[odra::module]
 impl MathEngine {
@@ -30,15 +30,19 @@ impl MathEngine {
 
 #[cfg(test)]
 mod tests {
-    use super::{CrossContractDeployer, MathEngineDeployer};
+    use super::{CrossContractHostRef, CrossContractInitArgs, MathEngineHostRef};
+    use odra::host::{Deployer, HostRef, NoInit};
 
     #[test]
     fn test_cross_calls() {
         let test_env = odra_test::env();
-        let math_engine_contract = MathEngineDeployer::init(&test_env);
-        let cross_contract =
-            CrossContractDeployer::init(&test_env, *math_engine_contract.address());
-
+        let math_engine_contract = MathEngineHostRef::deploy(&test_env, NoInit);
+        let cross_contract = CrossContractHostRef::deploy(
+            &test_env,
+            CrossContractInitArgs {
+                math_engine_address: *math_engine_contract.address()
+            }
+        );
         assert_eq!(cross_contract.add_using_another(), 8);
     }
 }

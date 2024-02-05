@@ -16,10 +16,6 @@ pub fn call_def() -> syn::Ident {
     format_ident!("call_def")
 }
 
-pub fn caller() -> syn::Ident {
-    format_ident!("caller")
-}
-
 pub fn env() -> syn::Ident {
     format_ident!("env")
 }
@@ -27,20 +23,13 @@ pub fn env() -> syn::Ident {
 pub fn underscored_env() -> syn::Ident {
     format_ident!("__env")
 }
+
 pub fn exec_env() -> syn::Ident {
     format_ident!("exec_env")
 }
 
-pub fn init() -> syn::Ident {
-    format_ident!("init")
-}
-
 pub fn epc() -> syn::Ident {
-    format_ident!("epc")
-}
-
-pub fn load() -> syn::Ident {
-    format_ident!("load")
+    format_ident!("entry_points_caller")
 }
 
 pub fn address() -> syn::Ident {
@@ -124,4 +113,16 @@ pub fn from() -> syn::Ident {
 
 pub fn error() -> syn::Ident {
     format_ident!("error")
+}
+
+pub fn expected_ident() -> syn::Ident {
+    format_ident!("expected_ident")
+}
+
+pub fn validate() -> syn::Ident {
+    format_ident!("validate")
+}
+
+pub fn into_runtime_args() -> syn::Ident {
+    format_ident!("into_runtime_args")
 }

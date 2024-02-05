@@ -55,7 +55,7 @@ pub trait Erc721 {
 
 /// Erc721-related Odra events.
 pub mod events {
-    use casper_event_standard::Event;
+    use odra::casper_event_standard::{self, Event};
     use odra::{casper_types::U256, Address};
 
     /// Emitted when the `token_id` token is transferred (also minted or burned).
