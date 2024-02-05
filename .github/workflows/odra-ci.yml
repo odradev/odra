@@ -27,8 +27,8 @@ jobs:
           components: rustfmt, clippy, llvm-tools-preview
       - run: just check-lint
       - run: just prepare-test-env
-      - run: just test
       - run: just coverage
+      - run: just test
       - uses: codecov/codecov-action@v3
         with:
           files: target/coverage/*.lcov
