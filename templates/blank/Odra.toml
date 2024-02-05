@@ -1,2 +1,2 @@
 #[[contracts]]
-#fqn = "{{project-name}}::Mycontract"
+#fqn = "mycontract::Mycontract"
