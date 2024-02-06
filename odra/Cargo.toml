@@ -13,4 +13,4 @@ odra-core = { workspace = true }
 odra-macros = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-odra-casper-wasm-env = { path = "../odra-casper/wasm-env" }
+odra-casper-wasm-env = { workspace = true }

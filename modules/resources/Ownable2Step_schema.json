@@ -1,6 +1,27 @@
 {
-  "name": "Ownable",
+  "name": "Ownable2Step",
   "events": [
+    {
+      "ident": "OwnershipTransferStarted",
+      "args": [
+        {
+          "ident": "previous_owner",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "new_owner",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false
+        }
+      ]
+    },
     {
       "ident": "OwnershipTransferred",
       "args": [
@@ -33,6 +54,24 @@
       "attributes": []
     },
     {
+      "ident": "get_owner",
+      "args": [],
+      "is_mut": false,
+      "ret": "Key",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "get_pending_owner",
+      "args": [],
+      "is_mut": false,
+      "ret": {
+        "Option": "Key"
+      },
+      "ty": "Public",
+      "attributes": []
+    },
+    {
       "ident": "transfer_ownership",
       "args": [
         {
@@ -56,50 +95,8 @@
       "attributes": []
     },
     {
-      "ident": "get_owner",
+      "ident": "accept_ownership",
       "args": [],
-      "is_mut": false,
-      "ret": "Key",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "ident": "assert_owner",
-      "args": [
-        {
-          "ident": "address",
-          "ty": "Key",
-          "is_ref": false,
-          "is_slice": false
-        }
-      ],
-      "is_mut": false,
-      "ret": "Unit",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "ident": "get_optional_owner",
-      "args": [],
-      "is_mut": false,
-      "ret": {
-        "Option": "Key"
-      },
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "ident": "unchecked_transfer_ownership",
-      "args": [
-        {
-          "ident": "new_owner",
-          "ty": {
-            "Option": "Key"
-          },
-          "is_ref": false,
-          "is_slice": false
-        }
-      ],
       "is_mut": true,
       "ret": "Unit",
       "ty": "Public",

@@ -1,0 +1,449 @@
+{
+  "name": "Erc721Token",
+  "events": [
+    {
+      "ident": "Transfer",
+      "args": [
+        {
+          "ident": "from",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "to",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "token_id",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false
+        }
+      ]
+    },
+    {
+      "ident": "Approval",
+      "args": [
+        {
+          "ident": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "approved",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "token_id",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false
+        }
+      ]
+    },
+    {
+      "ident": "ApprovalForAll",
+      "args": [
+        {
+          "ident": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "operator",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "approved",
+          "ty": "Bool",
+          "is_ref": false,
+          "is_slice": false
+        }
+      ]
+    },
+    {
+      "ident": "Transfer",
+      "args": [
+        {
+          "ident": "from",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "to",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "token_id",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false
+        }
+      ]
+    },
+    {
+      "ident": "OwnershipTransferred",
+      "args": [
+        {
+          "ident": "previous_owner",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "new_owner",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false
+        }
+      ]
+    }
+  ],
+  "entrypoints": [
+    {
+      "ident": "init",
+      "args": [
+        {
+          "ident": "name",
+          "ty": "String",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "symbol",
+          "ty": "String",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "base_uri",
+          "ty": "String",
+          "is_ref": false,
+          "is_slice": false
+        }
+      ],
+      "is_mut": true,
+      "ret": "Unit",
+      "ty": "Constructor",
+      "attributes": []
+    },
+    {
+      "ident": "name",
+      "args": [],
+      "is_mut": false,
+      "ret": "String",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "symbol",
+      "args": [],
+      "is_mut": false,
+      "ret": "String",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "base_uri",
+      "args": [],
+      "is_mut": false,
+      "ret": "String",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "balance_of",
+      "args": [
+        {
+          "ident": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        }
+      ],
+      "is_mut": false,
+      "ret": "U256",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "owner_of",
+      "args": [
+        {
+          "ident": "token_id",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false
+        }
+      ],
+      "is_mut": false,
+      "ret": "Key",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "safe_transfer_from",
+      "args": [
+        {
+          "ident": "from",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "to",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "token_id",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false
+        }
+      ],
+      "is_mut": true,
+      "ret": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "safe_transfer_from_with_data",
+      "args": [
+        {
+          "ident": "from",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "to",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "token_id",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "data",
+          "ty": {
+            "List": "U8"
+          },
+          "is_ref": false,
+          "is_slice": false
+        }
+      ],
+      "is_mut": true,
+      "ret": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "transfer_from",
+      "args": [
+        {
+          "ident": "from",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "to",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "token_id",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false
+        }
+      ],
+      "is_mut": true,
+      "ret": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "approve",
+      "args": [
+        {
+          "ident": "approved",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "token_id",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false
+        }
+      ],
+      "is_mut": true,
+      "ret": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "set_approval_for_all",
+      "args": [
+        {
+          "ident": "operator",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "approved",
+          "ty": "Bool",
+          "is_ref": false,
+          "is_slice": false
+        }
+      ],
+      "is_mut": true,
+      "ret": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "get_approved",
+      "args": [
+        {
+          "ident": "token_id",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false
+        }
+      ],
+      "is_mut": false,
+      "ret": {
+        "Option": "Key"
+      },
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "is_approved_for_all",
+      "args": [
+        {
+          "ident": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "operator",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        }
+      ],
+      "is_mut": false,
+      "ret": "Bool",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "renounce_ownership",
+      "args": [],
+      "is_mut": true,
+      "ret": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "transfer_ownership",
+      "args": [
+        {
+          "ident": "new_owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        }
+      ],
+      "is_mut": true,
+      "ret": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "owner",
+      "args": [],
+      "is_mut": false,
+      "ret": "Key",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "mint",
+      "args": [
+        {
+          "ident": "to",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "token_id",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false
+        }
+      ],
+      "is_mut": true,
+      "ret": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "burn",
+      "args": [
+        {
+          "ident": "token_id",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false
+        }
+      ],
+      "is_mut": true,
+      "ret": "Unit",
+      "ty": "Public",
+      "attributes": []
+    }
+  ]
+}

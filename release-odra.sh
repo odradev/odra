@@ -6,10 +6,10 @@ set -e
 cargo publish -p odra-core
 cargo publish -p odra-macros
 cargo publish -p odra-vm
-cargo publish -p odra-casper-wasm-env
+cargo publish -p odra-casper-wasm-env 
 cargo publish -p odra
 cargo publish -p odra-casper-test-vm
 cargo publish -p odra-test
 cargo publish -p odra-casper-rpc-client
 cargo publish -p odra-casper-livenet-env
-cd modules && cargo publish
+cd modules && cargo publish --allow-dirty --no-verify

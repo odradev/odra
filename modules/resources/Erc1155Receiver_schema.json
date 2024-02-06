@@ -1,0 +1,187 @@
+{
+  "name": "Erc1155Receiver",
+  "events": [
+    {
+      "ident": "SingleReceived",
+      "args": [
+        {
+          "ident": "operator",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "from",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "token_id",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "data",
+          "ty": {
+            "Option": {
+              "List": "U8"
+            }
+          },
+          "is_ref": false,
+          "is_slice": false
+        }
+      ]
+    },
+    {
+      "ident": "BatchReceived",
+      "args": [
+        {
+          "ident": "operator",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "from",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "token_ids",
+          "ty": {
+            "List": "U256"
+          },
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "amounts",
+          "ty": {
+            "List": "U256"
+          },
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "data",
+          "ty": {
+            "Option": {
+              "List": "U8"
+            }
+          },
+          "is_ref": false,
+          "is_slice": false
+        }
+      ]
+    }
+  ],
+  "entrypoints": [
+    {
+      "ident": "on_erc1155_received",
+      "args": [
+        {
+          "ident": "operator",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "from",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "token_id",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "data",
+          "ty": {
+            "Option": {
+              "List": "U8"
+            }
+          },
+          "is_ref": false,
+          "is_slice": false
+        }
+      ],
+      "is_mut": true,
+      "ret": "Bool",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "on_erc1155_batch_received",
+      "args": [
+        {
+          "ident": "operator",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "from",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "token_ids",
+          "ty": {
+            "List": "U256"
+          },
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "amounts",
+          "ty": {
+            "List": "U256"
+          },
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "data",
+          "ty": {
+            "Option": {
+              "List": "U8"
+            }
+          },
+          "is_ref": false,
+          "is_slice": false
+        }
+      ],
+      "is_mut": true,
+      "ret": "Bool",
+      "ty": "Public",
+      "attributes": []
+    }
+  ]
+}
