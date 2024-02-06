@@ -18,7 +18,7 @@ pub trait Token {
 
 #[cfg(test)]
 mod tests {
-    use odra::host::{Deployer, HostRef, NoInit};
+    use odra::host::{Deployer, HostRef, NoArgs};
 
     use super::*;
     use crate::contracts::owned_token::tests::{setup, INITIAL_SUPPLY};
@@ -28,7 +28,7 @@ mod tests {
         let token = setup();
         let env = token.env().clone();
         let (owner, second_account) = (env.get_account(0), env.get_account(1));
-        let balance_checker = BalanceCheckerHostRef::deploy(&env, NoInit);
+        let balance_checker = BalanceCheckerHostRef::deploy(&env, NoArgs);
         let expected_owner_balance = INITIAL_SUPPLY;
 
         // Owner of the token should have positive balance.

@@ -233,10 +233,6 @@ mod test {
                     fn validate(expected_ident: &str) -> bool {
                         "Erc20" == expected_ident
                     }
-
-                    fn into_runtime_args(self) -> Option<odra::casper_types::RuntimeArgs> {
-                        self.into()
-                    }
                 }
 
                 impl odra::host::EntryPointsCallerProvider for Erc20HostRef {

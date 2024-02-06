@@ -188,7 +188,7 @@ mod tests {
     use crate::erc1155_receiver::Erc1155ReceiverHostRef;
     use crate::erc1155_token::Erc1155TokenHostRef;
     use crate::wrapped_native::WrappedNativeTokenHostRef;
-    use odra::host::{Deployer, HostEnv, HostRef, NoArgs, NoInit};
+    use odra::host::{Deployer, HostEnv, HostRef, NoArgs};
     use odra::prelude::*;
     use odra::{
         casper_types::{bytesrepr::Bytes, U256},
@@ -818,7 +818,7 @@ mod tests {
         let mut env = setup();
         // And a valid receiver
 
-        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoInit);
+        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoArgs);
         // And some tokens minted
         env.token.mint(env.alice, U256::one(), 100.into(), None);
 
@@ -857,7 +857,7 @@ mod tests {
         // Given a deployed contract
         let mut env = setup();
         // And a valid receiver
-        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoInit);
+        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoArgs);
         // And some tokens minted
         env.token.mint(env.alice, U256::one(), 100.into(), None);
 
@@ -923,7 +923,7 @@ mod tests {
         // Given a deployed contract
         let mut env = setup();
         // And a valid receiver
-        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoInit);
+        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoArgs);
         // And some tokens minted
         env.token.mint(env.alice, U256::one(), 100.into(), None);
         env.token.mint(env.alice, U256::from(2), 100.into(), None);
@@ -968,7 +968,7 @@ mod tests {
         // Given a deployed contract
         let mut env = setup();
         // And a valid receiver
-        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoInit);
+        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoArgs);
         // And some tokens minted
         env.token.mint(env.alice, U256::one(), 100.into(), None);
         env.token.mint(env.alice, U256::from(2), 100.into(), None);

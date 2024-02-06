@@ -16,19 +16,19 @@ struct NoArgs;
 
 #[test]
 fn with_args_works() {
-    let result: Option<RuntimeArgs> = WithArgs { a: 1, b: 2 }.into();
+    let result: RuntimeArgs = WithArgs { a: 1, b: 2 }.into();
 
-    let expected = Some(runtime_args! {
+    let expected = runtime_args! {
         "a" => 1u32,
         "b" => 2u32
-    });
+    };
     assert_eq!(result, expected);
 }
 
 #[test]
 fn no_args_works() {
-    let result: Option<RuntimeArgs> = NoArgs.into();
+    let result: RuntimeArgs = NoArgs.into();
 
-    let expected = Some(RuntimeArgs::new());
+    let expected = RuntimeArgs::new();
     assert_eq!(result, expected);
 }
