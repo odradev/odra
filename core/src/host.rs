@@ -74,7 +74,7 @@ pub trait InitArgs: Into<RuntimeArgs> {
 }
 
 /// Default implementation of [InitArgs]. Should be used when the contract
-/// has the constructor but does not require any initialization arguments.
+/// does not require initialization arguments.
 ///
 /// Precisely, it means the constructor function has not been defined,
 /// or does not require any arguments.
