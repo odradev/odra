@@ -1,5 +1,6 @@
 [package]
 name = "odra-vm"
+description = "Odra Virtual Machine for testing and development."
 edition = "2021"
 version = { workspace = true }
 authors = { workspace = true }

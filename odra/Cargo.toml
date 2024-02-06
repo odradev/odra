@@ -1,6 +1,7 @@
 [package]
 name = "odra"
 edition = "2021"
+description = "Smart contracts for Casper Network."
 version = { workspace = true }
 authors = { workspace = true }
 license = { workspace = true }
