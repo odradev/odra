@@ -1,6 +1,6 @@
 <div align="center">
     <img src=".images/odra_logo.png"></img>
-    <h3>Odra - High-level smart contract framework for Rust.</h3>
+    <h3>Odra - Smart contracts for Casper Network.</h3>
     <p>
         <a href="https://odra.dev/docs">Docs</a> |
         <a href="https://odra.dev/docs/getting-started/installation">Installation</a> |
@@ -29,7 +29,6 @@
 ## Table of Contents
 - [Usage](#usage)
 - [Example](#example)
-- [Backends](#backends)
 - [Tests](#tests)
 - [Links](#links)
 - [Contact](#contact)
@@ -45,6 +44,7 @@ Use [Cargo Odra](https://github.com/odradev/cargo-odra) to generate, build and t
 ## Example
 
 ```rust
+use odra::prelude::*;
 use odra::Var;
 
 #[odra::module]
@@ -54,6 +54,14 @@ pub struct Flipper {
 
 #[odra::module]
 impl Flipper {
+    pub fn init(&mut self) {
+        self.value.set(false);
+    }
+
+    pub fn set(&mut self, value: bool) {
+        self.value.set(value);
+    }
+
     pub fn flip(&mut self) {
         self.value.set(!self.get());
     }
@@ -65,14 +73,16 @@ impl Flipper {
 
 #[cfg(test)]
 mod tests {
-    use super::FlipperDeployer;
+    use crate::flipper::FlipperHostRef;
+    use odra::host::{Deployer, NoArgs};
 
     #[test]
     fn flipping() {
-        let mut contract = FlipperDeployer::default();
-        assert_eq!(contract.get(), false);
+        let env = odra_test::env();
+        let mut contract = FlipperHostRef::deploy(&env, NoArgs);
+        assert!(!contract.get());
         contract.flip();
-        assert_eq!(contract.get(), true);
+        assert!(contract.get());
     }
 }
 ```
@@ -80,19 +90,11 @@ mod tests {
 Checkout our [examples](https://github.com/odradev/odra/tree/HEAD/examples).
 It shows most of Odra features.
 
-## Backends
-
-Odra is designed to integrate with most WebAssembly-based smart contract systems.
-
-Integrated blockchains:
-* Casper Network.
-
 ## Tests
 
 Before running tests make sure you have following packages installed:
 
 - Rust toolchain (see [rustup.rs](https://rustup.rs/)) with `wasm32-unknown-unknown` target.
-- `wasm-strip` (see [wabt](https://github.com/WebAssembly/wabt))
 - `cargo-odra` (see [Cargo Odra](https://github.com/odradev/cargo-odra))
 - `just` (see [just](https://github.com/casey/just#packages))
 
@@ -108,7 +110,6 @@ $ just test
 * [API Documentation](https://docs.rs/odra/latest/odra/)
 * [Cargo Odra](https://github.com/odradev/cargo-odra)
 * [Example Contracts](https://github.com/odradev/odra/tree/HEAD/examples)
-* [Original Proposal for Odra Framework](https://github.com/odradev/odra-proposal)
 
 ## Contact
 Need some help? Write to **contract@odra.dev**.
