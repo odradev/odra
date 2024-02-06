@@ -1,11 +1,7 @@
 #![allow(dead_code)]
 use casper_event_standard::Event;
-use odra::casper_event_standard;
 use odra::prelude::*;
-use odra::{
-    module::{Module, SubModule},
-    Var
-};
+use odra::{casper_event_standard, Module, SubModule, Var};
 
 #[derive(Event, PartialEq, Eq, Debug)]
 struct Start {}

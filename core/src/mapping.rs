@@ -7,7 +7,7 @@ use crate::module::{ModuleComponent, ModulePrimitive};
 use crate::prelude::*;
 use crate::{
     module::{Module, SubModule},
-    variable::Var,
+    var::Var,
     ContractEnv, UnwrapOrRevert
 };
 use core::fmt::Debug;

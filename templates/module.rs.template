@@ -42,7 +42,7 @@ mod tests {
     #[test]
     fn it_works() {
         let env = odra_test::env();
-        let mut contract = #module_nameHostRef::deploy(&env, NoInit);
+        let mut contract = #module_nameHostRef::deploy(&env, NoArgs);
         assert!(!contract.get());
         contract.set(true);
         assert!(contract.get());

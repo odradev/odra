@@ -1,7 +1,7 @@
 //! Module definition and implementation.
 //!
 //! An Odra module is a composition of [ModuleComponent]s (eg. other modules) and [ModulePrimitive]s
-//! ([Var](crate::variable::Var), [Mapping](crate::mapping::Mapping), [List](crate::list::List)).
+//! ([Var](crate::var::Var), [Mapping](crate::mapping::Mapping), [List](crate::list::List)).
 //!
 //! In order to create a module, you need to create a struct that implements the [Module] trait.
 //! However, most of the time you will want to use `#[odra::module]` macro to generate the module.

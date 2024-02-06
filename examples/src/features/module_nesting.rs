@@ -1,10 +1,7 @@
 use casper_event_standard::Event;
 use odra::casper_event_standard;
 use odra::prelude::*;
-use odra::{
-    module::{Module, SubModule},
-    Mapping, OdraType, UnwrapOrRevert, Var
-};
+use odra::{Mapping, Module, OdraType, SubModule, UnwrapOrRevert, Var};
 
 #[odra::module]
 pub struct ResultsStorage {

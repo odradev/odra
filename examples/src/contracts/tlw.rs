@@ -1,7 +1,7 @@
 use casper_event_standard::Event;
 use odra::casper_event_standard;
 use odra::prelude::*;
-use odra::{casper_types::U512, module::Module, Address, Mapping, OdraError, Var};
+use odra::{casper_types::U512, Address, Mapping, Module, OdraError, Var};
 
 #[odra::module]
 pub struct TimeLockWallet {

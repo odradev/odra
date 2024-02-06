@@ -1,9 +1,6 @@
 use odra::casper_types::U256;
 use odra::prelude::*;
-use odra::{
-    module::{Module, SubModule},
-    Address, List, UnwrapOrRevert, Var
-};
+use odra::{Address, List, Module, SubModule, UnwrapOrRevert, Var};
 use odra_modules::access::Ownable;
 use odra_modules::erc20::Erc20ContractRef;
 

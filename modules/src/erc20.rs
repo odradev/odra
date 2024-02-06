@@ -1,7 +1,7 @@
 use crate::erc20::errors::Error::*;
 use crate::erc20::events::*;
 use odra::prelude::*;
-use odra::{casper_types::U256, module::Module, Address, Mapping, Var};
+use odra::{casper_types::U256, Address, Mapping, Module, Var};
 
 #[odra::module(events = [Approval, Transfer])]
 pub struct Erc20 {

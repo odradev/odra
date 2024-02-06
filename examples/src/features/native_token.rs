@@ -1,5 +1,6 @@
+use odra::casper_types::U512;
+use odra::module::Module;
 use odra::prelude::*;
-use odra::{casper_types::U512, module::Module};
 
 #[odra::module]
 pub struct PublicWallet;

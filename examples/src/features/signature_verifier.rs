@@ -1,7 +1,7 @@
 use odra::prelude::*;
 use odra::{
     casper_types::{bytesrepr::Bytes, PublicKey},
-    module::Module
+    Module
 };
 
 #[odra::module]

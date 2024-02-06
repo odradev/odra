@@ -1,7 +1,7 @@
 //! Livenet contract environment.
 use blake2::digest::VariableOutput;
 use blake2::Blake2bVar;
-use odra_casper_client::casper_client::CasperClient;
+use odra_casper_rpc_client::casper_client::CasperClient;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::bytesrepr::Bytes;
 use odra_core::casper_types::U512;

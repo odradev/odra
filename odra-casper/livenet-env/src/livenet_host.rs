@@ -2,8 +2,8 @@
 use std::sync::RwLock;
 use std::thread::sleep;
 
-use odra_casper_client::casper_client::CasperClient;
-use odra_casper_client::log::info;
+use odra_casper_rpc_client::casper_client::CasperClient;
+use odra_casper_rpc_client::log::info;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::{

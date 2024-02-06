@@ -1,5 +1,5 @@
 [package]
-name = "odra-casper-client"
+name = "odra-casper-rpc-client"
 edition = "2021"
 version = { workspace = true }
 authors = { workspace = true }

@@ -1,7 +1,8 @@
-use odra::{Address, HostEnv};
-use odra_examples::features::livenet::{LivenetContractDeployer, LivenetContractHostRef};
+use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader};
+use odra::Address;
+use odra_examples::features::livenet::{LivenetContractHostRef, LivenetContractInitArgs};
 use odra_modules::access::events::OwnershipTransferred;
-use odra_modules::erc20::Erc20Deployer;
+use odra_modules::erc20::Erc20HostRef;
 use std::str::FromStr;
 
 fn main() {
@@ -48,7 +49,7 @@ fn main() {
     assert_eq!(contract.immutable_cross_call(), 10_000.into());
 
     // - mutable crosscalls will require a deploy
-    let erc20 = Erc20Deployer::load(&env, erc20_address());
+    let erc20 = Erc20HostRef::load(&env, erc20_address());
     let pre_call_balance = erc20.balance_of(env.caller());
     contract.mutable_cross_call();
     let post_call_balance = erc20.balance_of(env.caller());
@@ -63,8 +64,11 @@ fn main() {
 
 fn _deploy_new(env: &HostEnv) -> LivenetContractHostRef {
     env.set_gas(100_000_000_000u64);
-    let livenet_contract = LivenetContractDeployer::init(env, erc20_address());
-    Erc20Deployer::load(env, erc20_address()).transfer(*livenet_contract.address(), 1000.into());
+    let init_args = LivenetContractInitArgs {
+        erc20_address: erc20_address()
+    };
+    let livenet_contract = LivenetContractHostRef::deploy(env, init_args);
+    Erc20HostRef::load(env, erc20_address()).transfer(*livenet_contract.address(), 1000.into());
     livenet_contract
 }
 
@@ -75,6 +79,6 @@ fn erc20_address() -> Address {
 }
 
 fn load(env: &HostEnv, address: Address) -> LivenetContractHostRef {
-    Erc20Deployer::load(env, erc20_address());
-    LivenetContractDeployer::load(env, address)
+    Erc20HostRef::load(env, erc20_address());
+    LivenetContractHostRef::load(env, address)
 }

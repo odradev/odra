@@ -9,7 +9,7 @@ use casper_types::{
 use crate::{
     mapping::Mapping,
     module::{ModuleComponent, ModulePrimitive},
-    variable::Var,
+    var::Var,
     CollectionError, ContractEnv, UnwrapOrRevert
 };
 

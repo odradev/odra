@@ -353,7 +353,6 @@ impl OdraVm {
 mod tests {
     use odra_core::callstack::CallstackElement;
     use odra_core::casper_types::bytesrepr::{Bytes, ToBytes};
-    use odra_core::prelude::*;
     use odra_core::{
         entry_point_callback::{EntryPoint, EntryPointsCaller},
         utils::serialize

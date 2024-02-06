@@ -1,5 +1,5 @@
 use odra::prelude::*;
-use odra::{module::Module, Address, OdraError, Var};
+use odra::{Address, Module, OdraError, Var};
 
 #[odra::module]
 pub struct OwnedContract {

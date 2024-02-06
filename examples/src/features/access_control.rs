@@ -1,8 +1,5 @@
 use odra::prelude::*;
-use odra::{
-    module::{Module, SubModule},
-    Address
-};
+use odra::{Address, Module, SubModule};
 use sha3::{Digest, Keccak256};
 
 use odra_modules::access::{AccessControl, Role, DEFAULT_ADMIN_ROLE};

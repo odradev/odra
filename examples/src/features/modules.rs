@@ -1,6 +1,6 @@
 use crate::features::cross_calls::MathEngine;
-use odra::module::SubModule;
 use odra::prelude::*;
+use odra::SubModule;
 
 #[odra::module]
 pub struct ModulesContract {

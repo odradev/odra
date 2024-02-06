@@ -8,8 +8,7 @@ use crate::erc1155::Erc1155;
 use odra::prelude::*;
 use odra::{
     casper_types::{bytesrepr::Bytes, U256},
-    module::{Module, SubModule},
-    Address
+    Address, Module, SubModule
 };
 
 /// The ERC1155 token implementation.

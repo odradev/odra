@@ -1,6 +1,7 @@
 use odra::casper_types::U256;
-use odra::{Address, HostEnv};
-use odra_modules::erc20::{Erc20Deployer, Erc20HostRef};
+use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader};
+use odra::Address;
+use odra_modules::erc20::{Erc20HostRef, Erc20InitArgs};
 use std::str::FromStr;
 
 fn main() {
@@ -30,14 +31,21 @@ fn deploy_new(env: &HostEnv) -> Erc20HostRef {
     let name = String::from("Plascoin");
     let symbol = String::from("PLS");
     let decimals = 10u8;
-    let initial_supply: U256 = U256::from(10_000);
+    let initial_supply = Some(U256::from(10_000));
+
+    let init_args = Erc20InitArgs {
+        name,
+        symbol,
+        decimals,
+        initial_supply
+    };
 
     env.set_gas(100_000_000_000u64);
-    Erc20Deployer::init(env, name, symbol, decimals, Some(initial_supply))
+    Erc20HostRef::deploy(env, init_args)
 }
 
 fn _load(env: &HostEnv) -> Erc20HostRef {
     let address = "hash-d26fcbd2106e37be975d2045c580334a6d7b9d0a241c2358a4db970dfd516945";
     let address = Address::from_str(address).unwrap();
-    Erc20Deployer::load(env, address)
+    Erc20HostRef::load(env, address)
 }

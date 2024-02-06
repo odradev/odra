@@ -1,7 +1,7 @@
 use casper_event_standard::Event;
 use odra::casper_event_standard;
 use odra::prelude::*;
-use odra::{module::Module, Address};
+use odra::{Address, Module};
 
 #[odra::module]
 pub struct PartyContract {}

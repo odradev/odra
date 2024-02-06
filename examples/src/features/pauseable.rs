@@ -1,5 +1,5 @@
 use odra::prelude::*;
-use odra::{module::SubModule, Var};
+use odra::{SubModule, Var};
 use odra_modules::security::Pauseable;
 
 #[odra::module]

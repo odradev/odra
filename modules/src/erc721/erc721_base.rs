@@ -8,8 +8,7 @@ use crate::erc721_receiver::Erc721ReceiverContractRef;
 use odra::prelude::*;
 use odra::{
     casper_types::{bytesrepr::Bytes, U256},
-    module::Module,
-    Address, Mapping, UnwrapOrRevert
+    Address, Mapping, Module, UnwrapOrRevert
 };
 
 /// The ERC721 base implementation.

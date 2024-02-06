@@ -9,6 +9,6 @@ repository = { workspace = true }
 
 [dependencies]
 odra-core = { workspace = true }
-odra-casper-client = { workspace = true }
+odra-casper-rpc-client = { workspace = true }
 blake2 = { workspace = true }
 log = "0.4.20"
