@@ -7,7 +7,7 @@
         <a href="https://odra.dev/docs/category/tutorials">Tutorials</a> |
         <a href="https://github.com/odradev/cargo-odra">Cargo Odra</a> |
         <a href="https://discord.com/invite/Mm5ABc9P8k">Discord</a> |
-        <a href="https://odra.dev/blog">Blog</a
+        <a href="https://odra.dev/blog">Blog</a>
     </p>
     <p>
         <a href="https://github.com/odradev/odra/actions">
