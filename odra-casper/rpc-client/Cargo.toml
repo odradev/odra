@@ -1,5 +1,6 @@
 [package]
 name = "odra-casper-rpc-client"
+description = "RPC Client for the Casper Node."
 edition = "2021"
 version = { workspace = true }
 authors = { workspace = true }

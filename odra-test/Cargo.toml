@@ -1,5 +1,6 @@
 [package]
 name = "odra-test"
+description = "Test backend for the Odra smart contracts."
 edition = "2021"
 version = { workspace = true }
 authors = { workspace = true }

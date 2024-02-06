@@ -1,5 +1,6 @@
 [package]
 name = "odra-casper-wasm-env"
+description = "Odra Casper WASM backend."
 edition = "2021"
 version = { workspace = true }
 authors = { workspace = true }

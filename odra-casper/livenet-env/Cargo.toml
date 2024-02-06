@@ -1,5 +1,6 @@
 [package]
 name = "odra-casper-livenet-env"
+description = "Odra's backend for interacting with the Casper Node."
 edition = "2021"
 version = { workspace = true }
 authors = { workspace = true }

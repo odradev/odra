@@ -1,5 +1,6 @@
 [package]
-name = "odra-core" # Odra Core is new odra.
+name = "odra-core"
+description = "Core of the Odra Framework"
 edition = "2021"
 version = { workspace = true }
 authors = { workspace = true }

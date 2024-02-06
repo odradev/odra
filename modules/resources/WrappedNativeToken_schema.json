@@ -1,6 +1,40 @@
 {
-  "name": "Erc20",
+  "name": "WrappedNativeToken",
   "events": [
+    {
+      "ident": "Deposit",
+      "args": [
+        {
+          "ident": "account",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "value",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false
+        }
+      ]
+    },
+    {
+      "ident": "Withdrawal",
+      "args": [
+        {
+          "ident": "account",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "value",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false
+        }
+      ]
+    },
     {
       "ident": "Approval",
       "args": [
@@ -55,44 +89,110 @@
   "entrypoints": [
     {
       "ident": "init",
-      "args": [
-        {
-          "ident": "symbol",
-          "ty": "String",
-          "is_ref": false,
-          "is_slice": false
-        },
-        {
-          "ident": "name",
-          "ty": "String",
-          "is_ref": false,
-          "is_slice": false
-        },
-        {
-          "ident": "decimals",
-          "ty": "U8",
-          "is_ref": false,
-          "is_slice": false
-        },
-        {
-          "ident": "initial_supply",
-          "ty": {
-            "Option": "U256"
-          },
-          "is_ref": false,
-          "is_slice": false
-        }
-      ],
+      "args": [],
       "is_mut": true,
       "ret": "Unit",
       "ty": "Constructor",
       "attributes": []
     },
     {
-      "ident": "transfer",
+      "ident": "deposit",
+      "args": [],
+      "is_mut": true,
+      "ret": "Unit",
+      "ty": "Public",
+      "attributes": [
+        "Payable"
+      ]
+    },
+    {
+      "ident": "withdraw",
       "args": [
         {
-          "ident": "recipient",
+          "ident": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false
+        }
+      ],
+      "is_mut": true,
+      "ret": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "allowance",
+      "args": [
+        {
+          "ident": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        },
+        {
+          "ident": "spender",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        }
+      ],
+      "is_mut": false,
+      "ret": "U256",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "balance_of",
+      "args": [
+        {
+          "ident": "address",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false
+        }
+      ],
+      "is_mut": false,
+      "ret": "U256",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "total_supply",
+      "args": [],
+      "is_mut": false,
+      "ret": "U256",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "decimals",
+      "args": [],
+      "is_mut": false,
+      "ret": "U8",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "symbol",
+      "args": [],
+      "is_mut": false,
+      "ret": "String",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "name",
+      "args": [],
+      "is_mut": false,
+      "ret": "String",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "ident": "approve",
+      "args": [
+        {
+          "ident": "spender",
           "ty": "Key",
           "is_ref": false,
           "is_slice": false
@@ -137,120 +237,10 @@
       "attributes": []
     },
     {
-      "ident": "approve",
+      "ident": "transfer",
       "args": [
         {
-          "ident": "spender",
-          "ty": "Key",
-          "is_ref": false,
-          "is_slice": false
-        },
-        {
-          "ident": "amount",
-          "ty": "U256",
-          "is_ref": false,
-          "is_slice": false
-        }
-      ],
-      "is_mut": true,
-      "ret": "Unit",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "ident": "name",
-      "args": [],
-      "is_mut": false,
-      "ret": "String",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "ident": "symbol",
-      "args": [],
-      "is_mut": false,
-      "ret": "String",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "ident": "decimals",
-      "args": [],
-      "is_mut": false,
-      "ret": "U8",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "ident": "total_supply",
-      "args": [],
-      "is_mut": false,
-      "ret": "U256",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "ident": "balance_of",
-      "args": [
-        {
-          "ident": "address",
-          "ty": "Key",
-          "is_ref": false,
-          "is_slice": false
-        }
-      ],
-      "is_mut": false,
-      "ret": "U256",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "ident": "allowance",
-      "args": [
-        {
-          "ident": "owner",
-          "ty": "Key",
-          "is_ref": false,
-          "is_slice": false
-        },
-        {
-          "ident": "spender",
-          "ty": "Key",
-          "is_ref": false,
-          "is_slice": false
-        }
-      ],
-      "is_mut": false,
-      "ret": "U256",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "ident": "mint",
-      "args": [
-        {
-          "ident": "address",
-          "ty": "Key",
-          "is_ref": false,
-          "is_slice": false
-        },
-        {
-          "ident": "amount",
-          "ty": "U256",
-          "is_ref": false,
-          "is_slice": false
-        }
-      ],
-      "is_mut": true,
-      "ret": "Unit",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "ident": "burn",
-      "args": [
-        {
-          "ident": "address",
+          "ident": "recipient",
           "ty": "Key",
           "is_ref": false,
           "is_slice": false

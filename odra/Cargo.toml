@@ -1,6 +1,7 @@
 [package]
 name = "odra"
 edition = "2021"
+description = "Smart contracts for Casper Network."
 version = { workspace = true }
 authors = { workspace = true }
 license = { workspace = true }
@@ -12,4 +13,4 @@ odra-core = { workspace = true }
 odra-macros = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-odra-casper-wasm-env = { path = "../odra-casper/wasm-env" }
+odra-casper-wasm-env = { workspace = true }

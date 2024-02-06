@@ -434,7 +434,7 @@ impl CasperClient {
         };
 
         let session = ExecutableDeployItem::ModuleBytes {
-            module_bytes: include_bytes!("../../test-vm/resources/proxy_caller_with_return.wasm")
+            module_bytes: include_bytes!("../resources/proxy_caller_with_return.wasm")
                 .to_vec()
                 .into(),
             args

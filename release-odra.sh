@@ -3,16 +3,13 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
-cargo publish -p odra-utils
-cargo publish -p odra-types
-cargo publish -p odra-mock-vm
-cargo publish -p odra-ir
-cargo publish -p odra-codegen
-cargo publish -p odra-proc-macros --allow-dirty
-cargo publish -p odra-casper-shared
-cargo publish -p odra-casper-test-env
-cargo publish -p odra-casper-codegen
-cargo publish -p odra-casper-backend
-cargo publish -p odra-casper-livenet
+cargo publish -p odra-core
+cargo publish -p odra-macros
+cargo publish -p odra-vm
+cargo publish -p odra-casper-wasm-env 
 cargo publish -p odra
-cd modules && cargo publish
+cargo publish -p odra-casper-test-vm
+cargo publish -p odra-test
+cargo publish -p odra-casper-rpc-client
+cargo publish -p odra-casper-livenet-env
+cd modules && cargo publish --allow-dirty --no-verify
