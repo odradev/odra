@@ -5,7 +5,6 @@ use crate::erc721_token::Erc721TokenContractRef;
 use odra::prelude::*;
 use odra::{
     casper_types::{bytesrepr::Bytes, U256},
-    module::Module,
     Address
 };
 

@@ -1,13 +1,13 @@
 use odra::prelude::*;
-use odra::Variable;
+use odra::Var;
 
-/// A module definition. Each module struct consists Variables and Mappings
+/// A module definition. Each module struct consists Vars and Mappings
 /// or/and another modules.
 #[odra::module]
 pub struct #module_name {
     /// The module itself does not store the value,
     /// it's a proxy that writes/reads value to/from the host.
-    value: Variable<bool>,
+    value: Var<bool>,
 }
 
 /// Module implementation.
@@ -36,12 +36,13 @@ impl #module_name {
 
 #[cfg(test)]
 mod tests {
-    use super::#module_nameDeployer;
+    use super::*;
+    use odra::host::{Deployer, NoInit};
 
     #[test]
     fn it_works() {
         let env = odra_test::env();
-        let mut contract = #module_nameDeployer::init(&env);
+        let mut contract = #module_nameHostRef::deploy(&env, NoArgs);
         assert!(!contract.get());
         contract.set(true);
         assert!(contract.get());

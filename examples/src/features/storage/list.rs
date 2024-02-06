@@ -1,8 +1,8 @@
-use odra::{prelude::*, List, Variable};
+use odra::{prelude::*, List, Var};
 
 #[odra::module]
 pub struct DogContract3 {
-    name: Variable<String>,
+    name: Var<String>,
     walks: List<u32>
 }
 

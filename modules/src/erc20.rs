@@ -1,14 +1,14 @@
 use crate::erc20::errors::Error::*;
 use crate::erc20::events::*;
 use odra::prelude::*;
-use odra::{casper_types::U256, module::Module, Address, Mapping, Variable};
+use odra::{casper_types::U256, Address, Mapping, Var};
 
 #[odra::module(events = [Approval, Transfer])]
 pub struct Erc20 {
-    decimals: Variable<u8>,
-    symbol: Variable<String>,
-    name: Variable<String>,
-    total_supply: Variable<U256>,
+    decimals: Var<u8>,
+    symbol: Var<String>,
+    name: Var<String>,
+    total_supply: Var<U256>,
     balances: Mapping<Address, U256>,
     allowances: Mapping<(Address, Address), U256>
 }

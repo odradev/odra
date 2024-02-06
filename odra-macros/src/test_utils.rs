@@ -95,10 +95,10 @@ pub mod mock {
     pub fn module_definition() -> ModuleStructIR {
         let module = quote!(
             pub struct CounterPack {
-                counter0: ModuleWrapper<Counter>,
-                counter1: ModuleWrapper<Counter>,
-                counter2: ModuleWrapper<Counter>,
-                counters: Variable<u32>,
+                counter0: SubModule<Counter>,
+                counter1: SubModule<Counter>,
+                counter2: SubModule<Counter>,
+                counters: Var<u32>,
                 counters_map: Mapping<u8, Counter>
             }
         );

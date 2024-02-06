@@ -1,13 +1,13 @@
 [package]
 name = "odra-test"
 edition = "2021"
-version.workspace = true
-authors.workspace = true
-license.workspace = true
-homepage.workspace = true
-repository.workspace = true
+version = { workspace = true }
+authors = { workspace = true }
+license = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 
 [dependencies]
-odra-core = { path = "../core" }
-odra-casper-test-vm = { path = "../odra-casper/test-vm" }
-odra-vm = { path = "../odra-vm" }
+odra-core = { workspace = true }
+odra-casper-test-vm = { workspace = true }
+odra-vm = { workspace = true }

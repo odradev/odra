@@ -5,7 +5,7 @@ use crate::erc721::extensions::erc721_metadata::errors::Error::{
 };
 use odra::prelude::*;
 use odra::UnwrapOrRevert;
-use odra::{module::Module, Variable};
+use odra::Var;
 
 /// The ERC721 Metadata interface as defined in the standard.
 pub trait Erc721Metadata {
@@ -19,9 +19,9 @@ pub trait Erc721Metadata {
 
 #[odra::module]
 pub struct Erc721MetadataExtension {
-    name: Variable<String>,
-    symbol: Variable<String>,
-    base_uri: Variable<String>
+    name: Var<String>,
+    symbol: Var<String>,
+    base_uri: Var<String>
 }
 
 impl Erc721Metadata for Erc721MetadataExtension {

@@ -45,11 +45,11 @@ Use [Cargo Odra](https://github.com/odradev/cargo-odra) to generate, build and t
 ## Example
 
 ```rust
-use odra::Variable;
+use odra::Var;
 
 #[odra::module]
 pub struct Flipper {
-    value: Variable<bool>,
+    value: Var<bool>,
 }
 
 #[odra::module]

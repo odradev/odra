@@ -19,9 +19,10 @@ allowances: Mapping<(Address, Address), U256>
 - `Ref` has been divided into two: `HostRef` and `ContractRef` depending on the context.
 - Storage keys are constructed differently, keep that in mind when querying the storage outside the contract.
 - `token_balance(address: Address)` in test context is now `balance_of(address: &Address)`.
-- Modules needs to be wrapped in ModuleWrapper<> when used in another module.
+- Modules needs to be wrapped in SubModule<> when used in another module.
 - `HostRef` (formerly `Ref`) methods parameters accept values even if endpoints expect references.
 - `unwrap_or_revert` and `unwrap_or_revert_with` now require `&HostEnv` as a first parameter.
+- `Variable` has been renamed to `Var`.
 - Spent Gas is taken into account when checking an account balance.
 This means that all calls appear to cost 0 gas to the test accounts,
 but it is still possible to check the costs of the calls.
@@ -54,14 +55,14 @@ which can be used with a regular `assert_eq!` macro.`
 It is recommended to use it in the module code.
 - `odra-test` crate providing `HostEnv` for testing purposes.
 - `odra-core` crate providing framework core functionalities.
-- `odra-casper-client` crate providing `CasperClient` for interacting with Casper node. 
+- `odra-casper-rcp-client` crate providing `CasperClient` for interacting with Casper node. 
 - `odra-casper-livenet-env` crate providing a host environment fo for the Casper livenet.
 - `HostRef` trait - a host side reference to a contract.
 - `HostRefLoader` trait for loading a contract from the host environment.
 - `EntryPointsCallerProvider` trait.
 - `Deployer` trait - a struct implementing that trait can deploy a contract.
 - `InitArgs` trait - a struct implementing that trait can be used as a constructor argument.
-- `NoArgs` and `NoInit` structs. Implementations of `InitArgs` for empty and none (no constructor) arguments.
+- `NoArgs` struct, an implementation of `InitArgs` for empty/none (no constructor) arguments.
 
 ### Very Brief Upgrade Path
 - Copy `bin` folder and `build.rs` files from a freshly generated project
@@ -97,7 +98,7 @@ using `cargo-odra` at version at least`0.1.0`.
 ### Removed
 - Crypto module from odra-modules.
 - Instance trait.
-- derive PartialEq, Eq, Debug from storage building block (Variable, Mapping, List).
+- derive PartialEq, Eq, Debug from storage building block (Var, Mapping, List).
 
 ### Changed
 - utilize `KeyMaker` to create storage keys in `casper` and `casper-livenet`.
@@ -176,7 +177,7 @@ containing contract structure and Events schemas following the Casper Event Stan
 - Global `CHANGELOG.md`.
 - `odra`
   - `List` collection.
-  - Add tests for `Variable` and `Mapping`.
+  - Add tests for `Var` and `Mapping`.
   - Contract refs (`*Ref` struct) has `with_tokens()` function to attach tokens to the call.
 - `odra-mock-vm`
   - Add `AccountBalance` to store the native token amount associated with the `Address`.
@@ -203,8 +204,8 @@ containing contract structure and Events schemas following the Casper Event Stan
     - Features update: rename `wasm` to `casper`, remove `wasm-test`.
     - Features check: setting `casper` and `mock-vm` causes compile error.
     - `Mapping`'s functions: `set()`, `add()`, `subtract()`.
-    - `Variable`'s functions: `set()`, `add()`, `subtract()`.
-    - `Variable` and `Mapping` are implemented for `OdraType`.
+    - `Var`'s functions: `set()`, `add()`, `subtract()`.
+    - `Var` and `Mapping` are implemented for `OdraType`.
     - Add `amount` parameter to `call_contract`.
     - `contract_env` and `test_env` are modules not structs.
     - To deploy contract in test, structs no longer have `deploy_*` function, `*Deployer` structs are generated.

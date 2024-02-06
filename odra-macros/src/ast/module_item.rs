@@ -201,7 +201,7 @@ mod test {
             mod __counter_pack_module {
                 use super::*;
 
-                impl odra::module::Module for CounterPack {
+                impl odra::prelude::Module for CounterPack {
                     fn new(env: odra::prelude::Rc<odra::ContractEnv>) -> Self {
                         Self { __env: env }
                     }
@@ -223,24 +223,24 @@ mod test {
             mod __counter_pack_module {
                 use super::*;
 
-                impl odra::module::Module for CounterPack {
+                impl odra::prelude::Module for CounterPack {
                     fn new(env: odra::prelude::Rc<odra::ContractEnv>) -> Self {
                         let counter0 =
-                            <ModuleWrapper<Counter> as odra::module::ModuleComponent>::instance(
+                            <SubModule<Counter> as odra::module::ModuleComponent>::instance(
                                 odra::prelude::Rc::clone(&env),
                                 0u8
                             );
                         let counter1 =
-                            <ModuleWrapper<Counter> as odra::module::ModuleComponent>::instance(
+                            <SubModule<Counter> as odra::module::ModuleComponent>::instance(
                                 odra::prelude::Rc::clone(&env),
                                 1u8
                             );
                         let counter2 =
-                            <ModuleWrapper<Counter> as odra::module::ModuleComponent>::instance(
+                            <SubModule<Counter> as odra::module::ModuleComponent>::instance(
                                 odra::prelude::Rc::clone(&env),
                                 2u8
                             );
-                        let counters = <Variable<u32> as odra::module::ModuleComponent>::instance(
+                        let counters = <Var<u32> as odra::module::ModuleComponent>::instance(
                             odra::prelude::Rc::clone(&env),
                             3u8
                         );

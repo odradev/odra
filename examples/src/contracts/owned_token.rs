@@ -1,16 +1,12 @@
 use odra::prelude::*;
-use odra::{
-    casper_types::U256,
-    module::{Module, ModuleWrapper},
-    Address
-};
+use odra::{casper_types::U256, Address, SubModule};
 use odra_modules::access::Ownable;
 use odra_modules::erc20::Erc20;
 
 #[odra::module]
 pub struct OwnedToken {
-    ownable: ModuleWrapper<Ownable>,
-    erc20: ModuleWrapper<Erc20>
+    ownable: SubModule<Ownable>,
+    erc20: SubModule<Erc20>
 }
 
 #[odra::module]

@@ -1,11 +1,11 @@
 use odra::prelude::*;
-use odra::{module::Module, Address, Variable};
+use odra::{Address, Var};
 
 #[odra::module]
 pub struct HostContract {
-    name: Variable<String>,
-    created_at: Variable<u64>,
-    created_by: Variable<Address>
+    name: Var<String>,
+    created_at: Var<u64>,
+    created_by: Var<Address>
 }
 
 #[odra::module]

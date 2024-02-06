@@ -1,11 +1,6 @@
 #![allow(dead_code)]
-use casper_event_standard::Event;
-use odra::casper_event_standard;
 use odra::prelude::*;
-use odra::{
-    module::{Module, ModuleWrapper},
-    Variable
-};
+use odra::{Event, SubModule, Var};
 
 #[derive(Event, PartialEq, Eq, Debug)]
 struct Start {}
@@ -20,7 +15,7 @@ struct Info {
 
 #[odra::module(events = [Start, Stop])]
 struct Engine {
-    name: Variable<String>
+    name: Var<String>
 }
 
 impl Engine {
@@ -35,8 +30,8 @@ impl Engine {
 
 #[odra::module(events = [Info])]
 struct Machine {
-    e1: ModuleWrapper<Engine>,
-    e2: ModuleWrapper<Engine>
+    e1: SubModule<Engine>,
+    e2: SubModule<Engine>
 }
 
 impl Machine {

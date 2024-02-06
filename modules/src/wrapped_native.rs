@@ -2,15 +2,11 @@ use crate::erc20::Erc20;
 use crate::wrapped_native::events::{Deposit, Withdrawal};
 use odra::prelude::*;
 use odra::uints::{ToU256, ToU512};
-use odra::{
-    casper_types::U256,
-    module::{Module, ModuleWrapper},
-    Address, UnwrapOrRevert
-};
+use odra::{casper_types::U256, Address, SubModule, UnwrapOrRevert};
 
 #[odra::module(events = [Deposit, Withdrawal])]
 pub struct WrappedNativeToken {
-    erc20: ModuleWrapper<Erc20>
+    erc20: SubModule<Erc20>
 }
 
 #[odra::module]

@@ -1,10 +1,7 @@
 use crate::access::errors::Error::{CallerNotTheNewOwner, CallerNotTheOwner, OwnerNotSet};
 use crate::access::events::{OwnershipTransferStarted, OwnershipTransferred};
 use odra::prelude::*;
-use odra::{
-    module::{Module, ModuleWrapper},
-    Address, UnwrapOrRevert, Variable
-};
+use odra::{Address, SubModule, UnwrapOrRevert, Var};
 
 /// This module provides a straightforward access control feature that enables
 /// exclusive access to particular functions by an account, known as the owner.
@@ -19,7 +16,7 @@ use odra::{
 /// allowing you to restrict function usage to the owner.
 #[odra::module(events = [OwnershipTransferred])]
 pub struct Ownable {
-    owner: Variable<Option<Address>>
+    owner: Var<Option<Address>>
 }
 
 #[odra::module]
@@ -92,8 +89,8 @@ impl Ownable {
 /// allowing you to restrict function usage to the owner.
 #[odra::module(events = [OwnershipTransferStarted])]
 pub struct Ownable2Step {
-    ownable: ModuleWrapper<Ownable>,
-    pending_owner: Variable<Option<Address>>
+    ownable: SubModule<Ownable>,
+    pending_owner: Var<Option<Address>>
 }
 
 #[odra::module]

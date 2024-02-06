@@ -1,8 +1,5 @@
+use odra::casper_types::{bytesrepr::Bytes, PublicKey};
 use odra::prelude::*;
-use odra::{
-    casper_types::{bytesrepr::Bytes, PublicKey},
-    module::Module
-};
 
 #[odra::module]
 pub struct SignatureVerifier;
@@ -27,7 +24,7 @@ mod test {
             bytesrepr::{Bytes, FromBytes},
             PublicKey
         },
-        host::{Deployer, NoInit}
+        host::{Deployer, NoArgs}
     };
 
     #[test]
@@ -41,7 +38,7 @@ mod test {
 
         let public_key = test_env.public_key(&account);
 
-        let signature_verifier = SignatureVerifierHostRef::deploy(&test_env, NoInit);
+        let signature_verifier = SignatureVerifierHostRef::deploy(&test_env, NoArgs);
         assert!(signature_verifier.verify_signature(message_bytes, signature, public_key));
     }
 
@@ -68,7 +65,7 @@ mod test {
         let public_key_decoded = hex::decode(public_key_hex).unwrap();
         let (public_key, _) = PublicKey::from_bytes(public_key_decoded.as_slice()).unwrap();
 
-        let signature_verifier = SignatureVerifierHostRef::deploy(&odra_test::env(), NoInit);
+        let signature_verifier = SignatureVerifierHostRef::deploy(&odra_test::env(), NoArgs);
         assert!(signature_verifier.verify_signature(message_bytes, signature_bytes, public_key));
     }
 }

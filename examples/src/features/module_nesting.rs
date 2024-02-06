@@ -1,21 +1,18 @@
 use casper_event_standard::Event;
 use odra::casper_event_standard;
 use odra::prelude::*;
-use odra::{
-    module::{Module, ModuleWrapper},
-    Mapping, OdraType, UnwrapOrRevert, Variable
-};
+use odra::{Mapping, OdraType, SubModule, UnwrapOrRevert, Var};
 
 #[odra::module]
 pub struct ResultsStorage {
     results: Mapping<u32, OperationResult>,
-    results_count: Variable<u32>
+    results_count: Var<u32>
 }
 
 #[odra::module]
 pub struct NestedOdraTypesContract {
-    latest_result: Variable<OperationResult>,
-    current_generation_storage: ModuleWrapper<ResultsStorage>
+    latest_result: Var<OperationResult>,
+    current_generation_storage: SubModule<ResultsStorage>
 }
 
 #[odra::module]
@@ -87,7 +84,7 @@ pub struct OperationEnded {
 
 #[cfg(test)]
 mod tests {
-    use odra::host::{Deployer, HostRef, NoInit};
+    use odra::host::{Deployer, HostRef, NoArgs};
 
     use super::*;
 
@@ -140,7 +137,7 @@ mod tests {
     #[test]
     fn nested_odra_types() {
         let test_env = odra_test::env();
-        let mut nested_odra_types = NestedOdraTypesContractHostRef::deploy(&test_env, NoInit);
+        let mut nested_odra_types = NestedOdraTypesContractHostRef::deploy(&test_env, NoArgs);
 
         // Storage is not set
         assert_eq!(nested_odra_types.latest_result(), None);

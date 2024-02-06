@@ -27,7 +27,7 @@ mod sequence;
 pub mod uints;
 mod unwrap_or_revert;
 pub mod utils;
-mod variable;
+mod var;
 
 pub use address::Address;
 pub use call_def::CallDef;
@@ -44,7 +44,8 @@ pub use unwrap_or_revert::UnwrapOrRevert;
 
 pub use list::{List, ListIter};
 pub use mapping::Mapping;
+pub use module::{Module, SubModule};
 pub use sequence::Sequence;
-pub use variable::Variable;
+pub use var::Var;
 
 pub use casper_types;

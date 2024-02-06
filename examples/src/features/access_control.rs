@@ -1,8 +1,5 @@
 use odra::prelude::*;
-use odra::{
-    module::{Module, ModuleWrapper},
-    Address
-};
+use odra::{Address, SubModule};
 use sha3::{Digest, Keccak256};
 
 use odra_modules::access::{AccessControl, Role, DEFAULT_ADMIN_ROLE};
@@ -12,7 +9,7 @@ pub const ROLE_MODERATOR_ADMIN: &str = "moderator_admin";
 
 #[odra::module]
 pub struct MockModerated {
-    access_control: ModuleWrapper<AccessControl>
+    access_control: SubModule<AccessControl>
 }
 
 #[odra::module]

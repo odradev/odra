@@ -1,10 +1,14 @@
 [package]
-name = "odra-casper-client"
-version = "0.1.0"
+name = "odra-casper-rpc-client"
 edition = "2021"
+version = { workspace = true }
+authors = { workspace = true }
+license = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 
 [dependencies]
-odra-core = { path = "../../core" }
+odra-core = { workspace = true }
 casper-execution-engine = { workspace = true }
 casper-hashing = "2.0.0"
 jsonrpc-lite = "0.6.0"

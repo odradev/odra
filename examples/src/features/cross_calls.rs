@@ -1,9 +1,9 @@
 use odra::prelude::*;
-use odra::{module::Module, Address, UnwrapOrRevert, Variable};
+use odra::{Address, UnwrapOrRevert, Var};
 
 #[odra::module]
 pub struct CrossContract {
-    pub math_engine: Variable<Address>
+    pub math_engine: Var<Address>
 }
 
 #[odra::module]
@@ -31,12 +31,12 @@ impl MathEngine {
 #[cfg(test)]
 mod tests {
     use super::{CrossContractHostRef, CrossContractInitArgs, MathEngineHostRef};
-    use odra::host::{Deployer, HostRef, NoInit};
+    use odra::host::{Deployer, HostRef, NoArgs};
 
     #[test]
     fn test_cross_calls() {
         let test_env = odra_test::env();
-        let math_engine_contract = MathEngineHostRef::deploy(&test_env, NoInit);
+        let math_engine_contract = MathEngineHostRef::deploy(&test_env, NoArgs);
         let cross_contract = CrossContractHostRef::deploy(
             &test_env,
             CrossContractInitArgs {

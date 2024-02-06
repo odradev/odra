@@ -6,8 +6,8 @@ use crate::casper_types::{
 use crate::module::{ModuleComponent, ModulePrimitive};
 use crate::prelude::*;
 use crate::{
-    module::{Module, ModuleWrapper},
-    variable::Variable,
+    module::{Module, SubModule},
+    var::Var,
     ContractEnv, UnwrapOrRevert
 };
 use core::fmt::Debug;
@@ -47,7 +47,7 @@ impl<K: ToBytes, V: FromBytes + CLTyped> Mapping<K, V> {
     /// Returns an `Option<V>` representing the value associated with the key, or `None` if the key is not found.
     pub fn get(&self, key: &K) -> Option<V> {
         let env = self.env_for_key(key);
-        Variable::<V>::instance(Rc::new(env), self.index).get()
+        Var::<V>::instance(Rc::new(env), self.index).get()
     }
 }
 
@@ -56,7 +56,7 @@ impl<K: ToBytes, V: FromBytes + CLTyped + Default> Mapping<K, V> {
     /// If the key does not exist, returns the default value of type `V`.
     pub fn get_or_default(&self, key: &K) -> V {
         let env = self.env_for_key(key);
-        Variable::<V>::instance(Rc::new(env), self.index).get_or_default()
+        Var::<V>::instance(Rc::new(env), self.index).get_or_default()
     }
 }
 
@@ -64,17 +64,17 @@ impl<K: ToBytes, V: ToBytes + CLTyped> Mapping<K, V> {
     /// Sets the value associated with the given key in the mapping.
     pub fn set(&mut self, key: &K, value: V) {
         let env = self.env_for_key(key);
-        Variable::<V>::instance(Rc::new(env), self.index).set(value)
+        Var::<V>::instance(Rc::new(env), self.index).set(value)
     }
 }
 
 impl<K: ToBytes, V: Module> Mapping<K, V> {
     /// Retrieves the module associated with the given key.
     ///
-    /// A [`ModuleWrapper`] instance containing the module associated with the key.
-    pub fn module(&self, key: &K) -> ModuleWrapper<V> {
+    /// A [`SubModule`] instance containing the module associated with the key.
+    pub fn module(&self, key: &K) -> SubModule<V> {
         let env = self.env_for_key(key);
-        ModuleWrapper::instance(Rc::new(env), self.index)
+        SubModule::instance(Rc::new(env), self.index)
     }
 }
 

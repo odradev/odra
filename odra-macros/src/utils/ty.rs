@@ -70,7 +70,7 @@ pub fn odra_result(ty: syn::Type) -> syn::Type {
 }
 
 pub fn module() -> syn::Type {
-    parse_quote!(odra::module::Module)
+    parse_quote!(odra::prelude::Module)
 }
 
 pub fn entry_points() -> syn::Type {

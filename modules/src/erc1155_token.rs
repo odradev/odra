@@ -8,16 +8,15 @@ use crate::erc1155::Erc1155;
 use odra::prelude::*;
 use odra::{
     casper_types::{bytesrepr::Bytes, U256},
-    module::{Module, ModuleWrapper},
-    Address
+    Address, SubModule
 };
 
 /// The ERC1155 token implementation.
 /// It uses the [ERC1155](Erc1155Base) base implementation and the [Ownable] module.
 #[odra::module(events = [TransferBatch, TransferSingle])]
 pub struct Erc1155Token {
-    core: ModuleWrapper<Erc1155Base>,
-    ownable: ModuleWrapper<Ownable>
+    core: SubModule<Erc1155Base>,
+    ownable: SubModule<Ownable>
 }
 
 #[odra::module]
@@ -189,7 +188,7 @@ mod tests {
     use crate::erc1155_receiver::Erc1155ReceiverHostRef;
     use crate::erc1155_token::Erc1155TokenHostRef;
     use crate::wrapped_native::WrappedNativeTokenHostRef;
-    use odra::host::{Deployer, HostEnv, HostRef, NoArgs, NoInit};
+    use odra::host::{Deployer, HostEnv, HostRef, NoArgs};
     use odra::prelude::*;
     use odra::{
         casper_types::{bytesrepr::Bytes, U256},
@@ -819,7 +818,7 @@ mod tests {
         let mut env = setup();
         // And a valid receiver
 
-        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoInit);
+        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoArgs);
         // And some tokens minted
         env.token.mint(env.alice, U256::one(), 100.into(), None);
 
@@ -858,7 +857,7 @@ mod tests {
         // Given a deployed contract
         let mut env = setup();
         // And a valid receiver
-        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoInit);
+        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoArgs);
         // And some tokens minted
         env.token.mint(env.alice, U256::one(), 100.into(), None);
 
@@ -924,7 +923,7 @@ mod tests {
         // Given a deployed contract
         let mut env = setup();
         // And a valid receiver
-        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoInit);
+        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoArgs);
         // And some tokens minted
         env.token.mint(env.alice, U256::one(), 100.into(), None);
         env.token.mint(env.alice, U256::from(2), 100.into(), None);
@@ -969,7 +968,7 @@ mod tests {
         // Given a deployed contract
         let mut env = setup();
         // And a valid receiver
-        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoInit);
+        let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoArgs);
         // And some tokens minted
         env.token.mint(env.alice, U256::one(), 100.into(), None);
         env.token.mint(env.alice, U256::from(2), 100.into(), None);

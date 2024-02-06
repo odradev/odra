@@ -1,7 +1,7 @@
 use super::events::*;
 use crate::access::errors::Error::{MissingRole, RoleRenounceForAnotherAddress};
 use odra::prelude::*;
-use odra::{module::Module, Address, Mapping};
+use odra::{Address, Mapping};
 
 pub type Role = [u8; 32];
 

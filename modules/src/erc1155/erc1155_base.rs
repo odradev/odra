@@ -6,7 +6,6 @@ use crate::erc1155_receiver::Erc1155ReceiverContractRef;
 use odra::prelude::*;
 use odra::{
     casper_types::{bytesrepr::Bytes, U256},
-    module::Module,
     Address, Mapping
 };
 

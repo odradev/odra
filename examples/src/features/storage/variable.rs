@@ -1,12 +1,12 @@
 use odra::prelude::*;
-use odra::Variable;
+use odra::Var;
 
 #[odra::module]
 pub struct DogContract {
-    barks: Variable<bool>,
-    weight: Variable<u32>,
-    name: Variable<String>,
-    walks: Variable<Vec<u32>>
+    barks: Var<bool>,
+    weight: Var<u32>,
+    name: Var<String>,
+    walks: Var<Vec<u32>>
 }
 
 #[odra::module]

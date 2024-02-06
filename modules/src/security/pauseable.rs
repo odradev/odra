@@ -1,7 +1,7 @@
 use crate::security::errors::Error::{PausedRequired, UnpausedRequired};
 use crate::security::events::{Paused, Unpaused};
 use odra::prelude::*;
-use odra::{module::Module, Variable};
+use odra::Var;
 
 /// A module allowing to implement an emergency stop mechanism that can be triggered by any account.
 ///
@@ -12,7 +12,7 @@ use odra::{module::Module, Variable};
 /// in the correct state.
 #[odra::module]
 pub struct Pauseable {
-    is_paused: Variable<bool>
+    is_paused: Var<bool>
 }
 
 impl Pauseable {
