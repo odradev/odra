@@ -37,7 +37,7 @@ impl #module_name {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use odra::host::{Deployer, NoInit};
+    use odra::host::{Deployer, NoArgs};
 
     #[test]
     fn it_works() {
