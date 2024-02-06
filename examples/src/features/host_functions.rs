@@ -1,5 +1,5 @@
 use odra::prelude::*;
-use odra::{Address, Module, Var};
+use odra::{Address, Var};
 
 #[odra::module]
 pub struct HostContract {

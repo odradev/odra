@@ -1,5 +1,5 @@
 use odra::prelude::*;
-use odra::{Module, Var};
+use odra::Var;
 
 #[odra::module]
 pub struct ReentrancyMock {

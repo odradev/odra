@@ -10,7 +10,7 @@ use crate::erc721_token::errors::Error;
 use odra::prelude::*;
 use odra::{
     casper_types::{bytesrepr::Bytes, U256},
-    Address, Module, SubModule
+    Address, SubModule
 };
 
 /// The ERC721 token implementation.

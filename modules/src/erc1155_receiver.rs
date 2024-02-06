@@ -3,7 +3,7 @@ use crate::erc1155_receiver::events::{BatchReceived, SingleReceived};
 use odra::prelude::*;
 use odra::{
     casper_types::{bytesrepr::Bytes, U256},
-    Address, Module
+    Address
 };
 
 /// The ERC1155 receiver implementation.

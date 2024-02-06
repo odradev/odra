@@ -22,6 +22,7 @@ allowances: Mapping<(Address, Address), U256>
 - Modules needs to be wrapped in SubModule<> when used in another module.
 - `HostRef` (formerly `Ref`) methods parameters accept values even if endpoints expect references.
 - `unwrap_or_revert` and `unwrap_or_revert_with` now require `&HostEnv` as a first parameter.
+- `Variable` has been renamed to `Var`.
 - Spent Gas is taken into account when checking an account balance.
 This means that all calls appear to cost 0 gas to the test accounts,
 but it is still possible to check the costs of the calls.
@@ -54,7 +55,7 @@ which can be used with a regular `assert_eq!` macro.`
 It is recommended to use it in the module code.
 - `odra-test` crate providing `HostEnv` for testing purposes.
 - `odra-core` crate providing framework core functionalities.
-- `odra-casper-client` crate providing `CasperClient` for interacting with Casper node. 
+- `odra-casper-rcp-client` crate providing `CasperClient` for interacting with Casper node. 
 - `odra-casper-livenet-env` crate providing a host environment fo for the Casper livenet.
 - `HostRef` trait - a host side reference to a contract.
 - `HostRefLoader` trait for loading a contract from the host environment.

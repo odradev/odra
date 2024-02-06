@@ -1,5 +1,4 @@
 use odra::casper_types::U512;
-use odra::module::Module;
 use odra::prelude::*;
 
 #[odra::module]

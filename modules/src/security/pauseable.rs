@@ -1,7 +1,7 @@
 use crate::security::errors::Error::{PausedRequired, UnpausedRequired};
 use crate::security::events::{Paused, Unpaused};
 use odra::prelude::*;
-use odra::{Module, Var};
+use odra::Var;
 
 /// A module allowing to implement an emergency stop mechanism that can be triggered by any account.
 ///

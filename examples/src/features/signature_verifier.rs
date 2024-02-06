@@ -1,8 +1,5 @@
+use odra::casper_types::{bytesrepr::Bytes, PublicKey};
 use odra::prelude::*;
-use odra::{
-    casper_types::{bytesrepr::Bytes, PublicKey},
-    Module
-};
 
 #[odra::module]
 pub struct SignatureVerifier;
