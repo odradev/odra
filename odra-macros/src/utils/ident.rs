@@ -122,7 +122,3 @@ pub fn expected_ident() -> syn::Ident {
 pub fn validate() -> syn::Ident {
     format_ident!("validate")
 }
-
-pub fn into_runtime_args() -> syn::Ident {
-    format_ident!("into_runtime_args")
-}

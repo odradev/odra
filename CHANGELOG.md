@@ -62,7 +62,7 @@ It is recommended to use it in the module code.
 - `EntryPointsCallerProvider` trait.
 - `Deployer` trait - a struct implementing that trait can deploy a contract.
 - `InitArgs` trait - a struct implementing that trait can be used as a constructor argument.
-- `NoArgs` and `NoInit` structs. Implementations of `InitArgs` for empty and none (no constructor) arguments.
+- `NoArgs` struct, an implementation of `InitArgs` for empty/none (no constructor) arguments.
 
 ### Very Brief Upgrade Path
 - Copy `bin` folder and `build.rs` files from a freshly generated project

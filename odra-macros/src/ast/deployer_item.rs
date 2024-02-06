@@ -122,9 +122,7 @@ struct InitArgsImplItem {
     #[syn(braced)]
     brace_token: syn::token::Brace,
     #[syn(in = brace_token)]
-    validate_fn: FnItem,
-    #[syn(in = brace_token)]
-    into_runtime_args_fn: FnItem
+    validate_fn: FnItem
 }
 
 impl TryFrom<&'_ ModuleImplIR> for InitArgsImplItem {
@@ -134,12 +132,8 @@ impl TryFrom<&'_ ModuleImplIR> for InitArgsImplItem {
         let module_str = module.module_str()?;
         let ident_validate = utils::ident::validate();
         let ident_expected_ident = utils::ident::expected_ident();
-        let ident_into_runtime_args = utils::ident::into_runtime_args();
-        let ty_self = utils::ty::_self();
         let ty_string = utils::ty::string_ref();
-        let ty_runtime_args = utils::ty::runtime_args();
         let validate_expr: syn::Expr = parse_quote!(#module_str == expected_ident);
-        let into_runtime_args_expr: syn::Expr = parse_quote!(self.into());
 
         Ok(Self {
             impl_token: Default::default(),
@@ -152,12 +146,6 @@ impl TryFrom<&'_ ModuleImplIR> for InitArgsImplItem {
                 vec![parse_quote!(#ident_expected_ident: #ty_string)],
                 parse_quote!(-> bool),
                 validate_expr.as_block()
-            ),
-            into_runtime_args_fn: FnItem::new(
-                &ident_into_runtime_args,
-                vec![parse_quote!(#ty_self)],
-                parse_quote!(-> Option<#ty_runtime_args>),
-                into_runtime_args_expr.as_block()
             )
         })
     }
@@ -209,10 +197,6 @@ mod deployer_impl {
             impl odra::host::InitArgs for Erc20InitArgs {
                 fn validate(expected_ident: &str) -> bool {
                     "Erc20" == expected_ident
-                }
-
-                fn into_runtime_args(self) -> Option<odra::casper_types::RuntimeArgs> {
-                    self.into()
                 }
             }
 

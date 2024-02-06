@@ -66,41 +66,29 @@ pub trait Deployer {
 }
 
 /// A type which can be used as initialization arguments for a contract.
-#[cfg_attr(test, mockall::automock)]
-pub trait InitArgs {
+pub trait InitArgs: Into<RuntimeArgs> {
     /// Validates the args are used to initialized the right contact.
     ///
     /// If the `expected_ident` does not match the contract ident, the method returns `false`.
     fn validate(expected_ident: &str) -> bool;
-    /// Converts the init args into a [RuntimeArgs] instance.
-    fn into_runtime_args(self) -> Option<RuntimeArgs>;
 }
 
 /// Default implementation of [InitArgs]. Should be used when the contract
-/// has the constructor but does not require any initialization arguments.
+/// does not require initialization arguments.
+///
+/// Precisely, it means the constructor function has not been defined,
+/// or does not require any arguments.
 pub struct NoArgs;
 
 impl InitArgs for NoArgs {
     fn validate(_expected_ident: &str) -> bool {
         true
     }
-
-    fn into_runtime_args(self) -> Option<RuntimeArgs> {
-        Some(RuntimeArgs::new())
-    }
 }
 
-/// An implementation of [InitArgs]. Should be used when the contract
-/// does not have the constructor.
-pub struct NoInit;
-
-impl InitArgs for NoInit {
-    fn validate(_expected_ident: &str) -> bool {
-        true
-    }
-
-    fn into_runtime_args(self) -> Option<RuntimeArgs> {
-        None
+impl From<NoArgs> for RuntimeArgs {
+    fn from(_: NoArgs) -> Self {
+        RuntimeArgs::new()
     }
 }
 
@@ -112,7 +100,7 @@ impl<R: HostRef + EntryPointsCallerProvider + HasIdent> Deployer for R {
         }
 
         let caller = R::entry_points_caller(env);
-        let address = env.new_contract(&contract_ident, init_args.into_runtime_args(), caller);
+        let address = env.new_contract(&contract_ident, init_args.into(), caller);
         R::new(address, env.clone())
     }
 }
@@ -232,24 +220,24 @@ impl HostEnv {
     pub fn new_contract(
         &self,
         name: &str,
-        init_args: Option<RuntimeArgs>,
+        init_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> Address {
         let backend = self.backend.borrow();
 
-        let mut args = match init_args {
-            None => RuntimeArgs::new(),
-            Some(args) => args
-        };
-        args.insert(consts::IS_UPGRADABLE_ARG, false).unwrap();
-        args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, true).unwrap();
-        args.insert(
-            consts::PACKAGE_HASH_KEY_NAME_ARG,
-            format!("{}_package_hash", name)
-        )
-        .unwrap();
+        let mut init_args = init_args;
+        init_args.insert(consts::IS_UPGRADABLE_ARG, false).unwrap();
+        init_args
+            .insert(consts::ALLOW_KEY_OVERRIDE_ARG, true)
+            .unwrap();
+        init_args
+            .insert(
+                consts::PACKAGE_HASH_KEY_NAME_ARG,
+                format!("{}_package_hash", name)
+            )
+            .unwrap();
 
-        let deployed_contract = backend.new_contract(name, args, entry_points_caller);
+        let deployed_contract = backend.new_contract(name, init_args, entry_points_caller);
 
         self.deployed_contracts.borrow_mut().push(deployed_contract);
         self.events_count.borrow_mut().insert(deployed_contract, 0);
@@ -513,6 +501,16 @@ mod test {
         }
     }
 
+    mock! {
+        Ev {}
+        impl InitArgs for Ev {
+            fn validate(expected_ident: &str) -> bool;
+        }
+        impl Into<RuntimeArgs> for Ev {
+            fn into(self) -> RuntimeArgs;
+        }
+    }
+
     #[test]
     fn test_deploy_with_default_args() {
         // stubs
@@ -542,20 +540,20 @@ mod test {
     #[should_panic(expected = "Invalid init args for contract TestRef.")]
     fn test_deploy_with_invalid_args() {
         // stubs
-        let args_ctx = MockInitArgs::validate_context();
+        let args_ctx = MockEv::validate_context();
         args_ctx.expect().returning(|_| false);
         let indent_ctx = MockTestRef::ident_context();
         indent_ctx.expect().returning(|| "TestRef".to_string());
 
         let env = HostEnv::new(Rc::new(RefCell::new(MockHostContext::new())));
-        let args = MockInitArgs::new();
+        let args = MockEv::new();
         MockTestRef::deploy(&env, args);
     }
 
     #[test]
     fn test_load_ref() {
         // stubs
-        let args_ctx = MockInitArgs::validate_context();
+        let args_ctx = MockEv::validate_context();
         args_ctx.expect().returning(|_| true);
         let epc_ctx = MockTestRef::entry_points_caller_context();
         epc_ctx
