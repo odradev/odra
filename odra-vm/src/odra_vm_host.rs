@@ -3,12 +3,12 @@ use crate::OdraVm;
 use odra_core::casper_types::{bytesrepr::Bytes, PublicKey, RuntimeArgs, U512};
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::prelude::*;
-use odra_core::EventError;
 use odra_core::{
     host::{HostContext, HostEnv},
     CallDef, ContractContext, ContractEnv
 };
 use odra_core::{Address, OdraError, VmError};
+use odra_core::{EventError, GasReport};
 
 /// HostContext utilizing the Odra in-memory virtual machine.
 pub struct OdraVmHost {
@@ -103,13 +103,13 @@ impl HostContext for OdraVmHost {
         (*self.contract_env).clone()
     }
 
-    fn print_gas_report(&self) {
-        // For OdraVM there is no gas, so nothing to report.
-        println!("No gas report for OdraVM");
+    fn gas_report(&self) -> GasReport {
+        // For OdraVM there is no gas, so nothing to report.c
+        GasReport::new()
     }
 
     fn last_call_gas_cost(&self) -> u64 {
-        // For OdraVM there is no gas, so nothing to report.
+        // For OdraVM there is no gas, so nothing to return.
         0
     }
 

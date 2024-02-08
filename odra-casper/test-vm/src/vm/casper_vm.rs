@@ -10,7 +10,7 @@ use casper_engine_test_support::{
     DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_PAYMENT
 };
 use casper_event_standard::try_full_name_from_bytes;
-use odra_core::casper_event_standard;
+use odra_core::{casper_event_standard, DeployReport, GasReport};
 use std::rc::Rc;
 
 use casper_execution_engine::core::engine_state::{self, GenesisAccount, RunGenesisRequest};
@@ -43,7 +43,7 @@ pub struct CasperVm {
     error: Option<OdraError>,
     attached_value: U512,
     gas_used: BTreeMap<AccountHash, U512>,
-    gas_cost: Vec<(String, U512)>
+    gas_report: GasReport
 }
 
 impl CasperVm {
@@ -188,10 +188,11 @@ impl CasperVm {
             .build();
         self.context.exec(execute_request).commit();
         self.collect_gas();
-        self.gas_cost.push((
-            format!("call_entrypoint {}", call_def.entry_point()),
-            self.last_call_contract_gas_cost()
-        ));
+        self.gas_report.push(DeployReport::ContractCall {
+            gas: self.last_call_contract_gas_cost(),
+            contract_address: *address,
+            call_def: call_def.clone()
+        });
 
         self.attached_value = U512::zero();
         if let Some(error) = self.context.get_error() {
@@ -272,8 +273,8 @@ impl CasperVm {
     }
 
     /// Returns the report of the gas used during the whole lifetime of the CasperVM.
-    pub fn gas_report(&self) -> Vec<(String, U512)> {
-        self.gas_cost.clone()
+    pub fn gas_report(&self) -> GasReport {
+        self.gas_report.clone()
     }
 
     /// Returns the public key that corresponds to the given Account Address.
@@ -289,14 +290,6 @@ impl CasperVm {
             .to_bytes()
             .unwrap();
         Bytes::from(signature)
-    }
-
-    /// Prints the gas report to the standard output.
-    pub fn print_gas_report(&self) {
-        println!("Gas report:");
-        for (name, cost) in self.gas_report() {
-            println!("{}: {}", name, cost);
-        }
     }
 
     /// Gets the gas cost of the last contract call.
@@ -401,7 +394,7 @@ impl CasperVm {
             error: None,
             attached_value: U512::zero(),
             gas_used: BTreeMap::new(),
-            gas_cost: Vec::new(),
+            gas_report: Vec::new(),
             key_pairs
         }
     }
@@ -423,10 +416,10 @@ impl CasperVm {
             .build();
         self.context.exec(execute_request).commit().expect_success();
         self.collect_gas();
-        self.gas_cost.push((
-            format!("deploy_contract {}", wasm_path),
-            self.last_call_contract_gas_cost()
-        ));
+        self.gas_report.push(DeployReport::WasmDeploy {
+            gas: self.last_call_contract_gas_cost(),
+            file_name: wasm_path.to_string()
+        });
     }
 }
 

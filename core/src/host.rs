@@ -1,5 +1,6 @@
 //! A module that provides the interface for interacting with the host environment.
 
+use crate::gas_report::GasReport;
 use crate::{
     call_result::CallResult, contract_def::HasIdent, entry_point_callback::EntryPointsCaller,
     Address, CallDef, ContractCallResult, ContractEnv, EventError, OdraError, OdraResult, VmError
@@ -162,8 +163,8 @@ pub trait HostContext {
     /// Returns the contract environment.
     fn contract_env(&self) -> ContractEnv;
 
-    /// Prints the gas report for the current contract execution.
-    fn print_gas_report(&self);
+    /// Returns the gas report for the current contract execution.
+    fn gas_report(&self) -> GasReport;
 
     /// Returns the gas cost of the last contract call.
     fn last_call_gas_cost(&self) -> u64;
@@ -262,7 +263,6 @@ impl HostEnv {
         call_def: CallDef
     ) -> OdraResult<T> {
         let backend = self.backend.borrow();
-
         let use_proxy = T::cl_type() != <()>::cl_type() || !call_def.amount().is_zero();
         let call_result = backend.call_contract(&address, call_def, use_proxy);
 
@@ -288,10 +288,12 @@ impl HostEnv {
                 *events_count = new_events_count;
             });
 
+        let last_call_gas_cost = backend.last_call_gas_cost();
+
         self.last_call_result.replace(Some(CallResult::new(
             address,
             backend.caller(),
-            backend.last_call_gas_cost(),
+            last_call_gas_cost,
             call_result.clone(),
             events_map
         )));
@@ -309,9 +311,9 @@ impl HostEnv {
     }
 
     /// Prints the gas report for the current contract execution.
-    pub fn print_gas_report(&self) {
+    pub fn gas_report(&self) -> GasReport {
         let backend = self.backend.borrow();
-        backend.print_gas_report()
+        backend.gas_report()
     }
 
     /// Returns the CSPR balance of the specified address.
@@ -584,14 +586,14 @@ mod test {
         ctx.expect_caller()
             .returning(|| Address::Account(AccountHash::new([2; 32])))
             .times(1);
-        ctx.expect_print_gas_report().returning(|| ()).times(1);
+        ctx.expect_gas_report().returning(GasReport::new).times(1);
         ctx.expect_set_gas().returning(|_| ()).times(1);
 
         let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
 
         assert_eq!(env.caller(), Address::Account(AccountHash::new([2; 32])));
         // should call the `HostContext`
-        env.print_gas_report();
+        env.gas_report();
         env.set_gas(1_000u64)
     }
 
