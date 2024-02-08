@@ -1,0 +1,63 @@
+name: Evaluate benchmark
+
+on:
+  pull_request:
+    branches-ignore:
+      - 'hotfix/**'
+    paths-ignore:
+      - '**.md'
+
+run-name: Evaluating benchmark for ${{ github.head_ref }}
+
+jobs:
+  evaluate-benchmark:
+    name: Evaluate benchmark
+    runs-on: buildjet-8vcpu-ubuntu-2204
+    continue-on-error: true
+    steps:
+      - name: Setup just
+        uses: extractions/setup-just@v1
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Setup toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          target: wasm32-unknown-unknown
+      - name: Cache target
+        uses: actions/cache@v2
+        with:
+          path: target
+          key: odra-target-folder
+      - name: Prepare test environment
+        run: just prepare-test-env
+      - name: Set base benchmark filename
+        id: set-benchmark-filename
+        run: echo "BASE_BENCHMARK=${GITHUB_BASE_REF}" | sed 's:/:-:g' | sed 's:\.:-:g' >> $GITHUB_OUTPUT
+      - name: Download base benchmark report for ${{ github.base_ref }}
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          name: ${{ steps.set-benchmark-filename.outputs.BASE_BENCHMARK }}
+          branch: ${{ github.base_ref }}
+          workflow: benchmark.yml
+          path: benchmark/base/
+      - name: Evaluate benchmark
+        id: evaluate-benchmark
+        run: |
+          set +e
+          just evaluate-benchmark
+          echo "EXIT_CODE=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+      - name: Create comment
+        uses: peter-evans/create-or-update-comment@v4
+        if: steps.evaluate-benchmark.outputs.EXIT_CODE != '0'
+        with:
+          issue-number: ${{ github.event.number }}
+          body-path: benchmark/benchmark_report.txt
+      - name: Upload full report artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: benchmark-report
+          path: benchmark/benchmark_full_report.txt
+      - name: Benchmark evaluation failed
+        if: steps.evaluate-benchmark.outputs.EXIT_CODE != '0'
+        run: exit 1

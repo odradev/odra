@@ -1,0 +1,41 @@
+name: Tests
+
+on:
+  pull_request:
+    branches-ignore:
+      - 'hotfix/**'
+    paths-ignore:
+      - '**.md'
+  push:
+    branches:
+      - 'release/**'
+    paths-ignore:
+      - '**.md'
+
+run-name: Running lints and tests for ${{ github.head_ref }}
+
+jobs:
+  test:
+    name: Test
+    runs-on: buildjet-8vcpu-ubuntu-2204
+    steps:
+      - name: Setup just
+        uses: extractions/setup-just@v1
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Cache target
+        uses: actions/cache@v2
+        with:
+          path: target
+          key: odra-target-folder
+      - name: Setup toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          target: wasm32-unknown-unknown
+          components: rustfmt, clippy, llvm-tools-preview
+      - name: Run lints
+        run: just check-lint
+      - name: Prepare test environment
+        run: just prepare-test-env
+      - name: Run tests
+        run: just test

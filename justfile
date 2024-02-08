@@ -17,6 +17,7 @@ lint: clippy
     cd odra-casper/proxy-caller && cargo fmt
     cd examples && cargo fmt
     cd modules && cargo fmt
+    cd benchmark && cargo fmt
 
 check-lint: clippy
     cargo fmt -- --check
@@ -25,6 +26,8 @@ check-lint: clippy
     cd modules && cargo check --all-targets
     cd examples && cargo fmt -- --check
     cd examples && cargo check --all-targets
+    cd benchmark && cargo fmt -- --check
+    cd benchmark && cargo check --all-targets --features=benchmark
 
 install-cargo-odra:
     cargo install cargo-odra --git {{CARGO_ODRA_GIT_REPO}} --branch {{CARGO_ODRA_BRANCH}} --locked
@@ -105,3 +108,9 @@ coverage:
     # Uncomment the following line to generate local HTML report
     # grcov . --binary-path ./target/debug/deps/ -s . -t html --branch --ignore '../*' --ignore "/*" -o target/coverage/html
     grcov . --binary-path ./target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o target/coverage/tests.lcov
+
+benchmark:
+    cd benchmark && cargo odra build && ODRA_BACKEND=casper cargo run --bin benchmark --features=benchmark
+
+evaluate-benchmark: benchmark
+    cd benchmark && cargo run --bin evaluate_benchmark gas_report.json base/gas_report.json

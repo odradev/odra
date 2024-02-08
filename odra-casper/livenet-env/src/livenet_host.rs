@@ -12,7 +12,7 @@ use odra_core::{
         PublicKey, RuntimeArgs, U512
     },
     host::HostContext,
-    Address, CallDef, ContractEnv, OdraError
+    Address, CallDef, ContractEnv, GasReport, OdraError
 };
 use odra_core::{prelude::*, EventError};
 use odra_core::{ContractContainer, ContractRegister};
@@ -153,9 +153,9 @@ impl HostContext for LivenetHost {
         (*self.contract_env).clone()
     }
 
-    fn print_gas_report(&self) {
-        // Todo: implement
+    fn gas_report(&self) -> GasReport {
         println!("Gas report is unavailable for livenet");
+        todo!()
     }
 
     fn last_call_gas_cost(&self) -> u64 {

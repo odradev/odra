@@ -9,6 +9,10 @@ use casper_types::{
 };
 
 /// An enum representing an [`AccountHash`] or a [`ContractPackageHash`].
+#[cfg_attr(
+    not(target_arch = "wasm32"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
 #[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum Address {
     /// Represents an account hash.

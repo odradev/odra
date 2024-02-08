@@ -16,3 +16,4 @@ examples/.env.testnet
 examples/.env.integration
 modules/.builder_casper
 modules/wasm
+benchmark/gas_report.json

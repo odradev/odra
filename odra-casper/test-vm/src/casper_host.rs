@@ -1,4 +1,4 @@
-use odra_core::{prelude::*, OdraError};
+use odra_core::{prelude::*, GasReport, OdraError};
 use std::cell::RefCell;
 use std::env;
 use std::path::PathBuf;
@@ -109,8 +109,8 @@ impl HostContext for CasperHost {
         unreachable!()
     }
 
-    fn print_gas_report(&self) {
-        self.vm.borrow().print_gas_report()
+    fn gas_report(&self) -> GasReport {
+        self.vm.borrow().gas_report().clone()
     }
 
     fn last_call_gas_cost(&self) -> u64 {
