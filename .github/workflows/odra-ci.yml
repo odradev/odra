@@ -18,6 +18,17 @@ jobs:
   test:
     name: Test
     runs-on: buildjet-8vcpu-ubuntu-2204
+    services:
+      casper-nctl:
+        image: makesoftware/casper-nctl:latest
+        options: --name mynctl
+        env:
+          PREDEFINED_ACCOUNTS: 'true'
+          MINIMUM_ROUND_EXPONENT: '12'
+          MAXIMUM_ROUND_EXPONENT: '14'
+          DEPLOY_DELAY: '12sec'
+        ports:
+          - 11101:11101
     steps:
       - uses: extractions/setup-just@v1
       - uses: actions/checkout@v2
@@ -27,8 +38,9 @@ jobs:
           components: rustfmt, clippy, llvm-tools-preview
       - run: just check-lint
       - run: just prepare-test-env
-      - run: just coverage
       - run: just test
+      - run: just test-livenet
+      - run: just coverage
       - uses: codecov/codecov-action@v3
         with:
           files: target/coverage/*.lcov
