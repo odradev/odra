@@ -1,0 +1,56 @@
+name: Evaluate benchmark
+
+on:
+  pull_request:
+    branches:
+      - 'release/**'
+      - 'feature/**'
+    paths-ignore:
+      - '**.md'
+
+run-name: Evaluating benchmark for ${{ github.head_ref }}
+
+jobs:
+  evaluate-benchmark:
+    name: Evaluate benchmark
+    runs-on: buildjet-8vcpu-ubuntu-2204
+    steps:
+      - uses: extractions/setup-just@v1
+        name: Setup just
+      - uses: actions/checkout@v2
+        name: Checkout code
+      - uses: actions-rs/toolchain@v1
+        name: Setup toolchain
+        with:
+          target: wasm32-unknown-unknown
+      - name: Cache target
+        uses: actions/cache@v2
+        with:
+          path: target
+          key: odra-target-folder
+      - run: just prepare-test-env
+        name: Prepare test environment
+      - name: Set target benchmark filename
+        id: set-benchmark-filename
+        run: echo "TARGET_BENCHMARK=${GITHUB_BASE_REF}" | sed 's:/:-:g' | sed 's:\.:-:g' >> $GITHUB_OUTPUT
+      - name: Download target benchmark report for ${{ github.base_ref }}
+        uses: dawidd6/action-download-artifact@v3
+        with:
+#          name: ${{ steps.set-benchmark-filename.outputs.TARGET_BENCHMARK }}
+#          branch: ${{ github.base_ref }}
+#          branch: ${{ github.base_ref }}
+          name: release
+          workflow: Benchmark
+          branch: ${{ github.base_ref }}
+          search_artifacts: true
+          path: benchmark/target_gas_report.json
+      - name: Evaluate benchmark
+        run: just evaluate-benchmark
+      - name: Set report
+        id: set-report
+        run: echo 'REPORT<<EOF' > $GITHUB_OUTPUT && cat benchmark/benchmark_report.txt >> $GITHUB_OUTPUT && echo 'EOF' >> $GITHUB_OUTPUT
+      - name: Create comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.number }}
+          body: ${{ steps.set-report.outputs.GITHUB_OUTPUT }}
