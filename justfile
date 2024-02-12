@@ -27,17 +27,20 @@ check-lint: clippy
     cd examples && cargo check --all-targets
 
 install-cargo-odra:
-    cargo install cargo-odra --git {{CARGO_ODRA_GIT_REPO}} --branch {{CARGO_ODRA_BRANCH}} --locked
+    cargo install cargo-odra --target-dir target --git {{CARGO_ODRA_GIT_REPO}} --branch {{CARGO_ODRA_BRANCH}} --locked
 
 prepare-test-env: install-cargo-odra
     rustup target add wasm32-unknown-unknown
     rustup component add llvm-tools-preview
-    cargo install grcov
+    cargo install grcov --target-dir target
     sudo apt install wabt
-    wget https://github.com/WebAssembly/binaryen/releases/download/{{BINARYEN_VERSION}}/binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz || { echo "Download failed"; exit 1; }
+    wget -q https://github.com/WebAssembly/binaryen/releases/download/{{BINARYEN_VERSION}}/binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz || { echo "Download failed"; exit 1; }
     sha256sum binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz | grep {{BINARYEN_CHECKSUM}} || { echo "Checksum verification failed"; exit 1; }
     tar -xzf binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz || { echo "Extraction failed"; exit 1; }
     sudo cp binaryen-{{BINARYEN_VERSION}}/bin/wasm-opt /usr/local/bin/wasm-opt
+
+start-casper-node:
+    docker run --rm -it --name mynctl -d -p 11101:11101 -p 14101:14101 -p 18101:18101 makesoftware/casper-nctl
 
 build-proxy-callers:
     cd odra-casper/proxy-caller && cargo build --release --target wasm32-unknown-unknown --target-dir ../../target
@@ -70,6 +73,17 @@ test-modules-on-casper:
 test-modules: test-modules-on-odravm test-modules-on-casper
 
 test: test-odra test-examples test-modules
+
+test-livenet:
+    set shell := bash
+    mkdir -p examples/.node-keys
+    cp modules/wasm/Erc20.wasm examples/wasm/
+    # Extract the secret keys from the local Casper node
+    docker exec mynctl /bin/bash -c "cat /home/casper/casper-node/utils/nctl/assets/net-1/users/user-1/secret_key.pem" > examples/.node-keys/secret_key.pem
+    docker exec mynctl /bin/bash -c "cat /home/casper/casper-node/utils/nctl/assets/net-1/users/user-2/secret_key.pem" > examples/.node-keys/secret_key_1.pem
+    # Run the tests
+    cd examples && ODRA_CASPER_LIVENET_SECRET_KEY_PATH=.node-keys/secret_key.pem ODRA_CASPER_LIVENET_NODE_ADDRESS=http://localhost:11101 ODRA_CASPER_LIVENET_CHAIN_NAME=casper-net-1 ODRA_CASPER_LIVENET_KEY_1=.node-keys/secret_key_1.pem  cargo run --bin livenet_tests --features=livenet
+    rm -rf examples/.node-keys
 
 run-example-erc20-on-livenet:
     cd examples && cargo run --bin erc20-on-livenet --features casper-livenet --no-default-features

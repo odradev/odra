@@ -12,11 +12,11 @@ fn main() {
     let recipient = Address::from_str(recipient).unwrap();
 
     // Deploy new contract.
-    let mut token = deploy_new(&env);
+    let mut token = deploy_erc20(&env);
     println!("Token address: {}", token.address().to_string());
 
     // Uncomment to load existing contract.
-    // let mut token = load(&env);
+    // let mut token = load_erc20(&env);
 
     println!("Token name: {}", token.name());
 
@@ -27,7 +27,13 @@ fn main() {
     println!("Recipient's balance: {:?}", token.balance_of(recipient));
 }
 
-fn deploy_new(env: &HostEnv) -> Erc20HostRef {
+fn _load_erc20(env: &HostEnv) -> Erc20HostRef {
+    let address = "hash-d26fcbd2106e37be975d2045c580334a6d7b9d0a241c2358a4db970dfd516945";
+    let address = Address::from_str(address).unwrap();
+    Erc20HostRef::load(env, address)
+}
+
+pub fn deploy_erc20(env: &HostEnv) -> Erc20HostRef {
     let name = String::from("Plascoin");
     let symbol = String::from("PLS");
     let decimals = 10u8;
@@ -42,10 +48,4 @@ fn deploy_new(env: &HostEnv) -> Erc20HostRef {
 
     env.set_gas(100_000_000_000u64);
     Erc20HostRef::deploy(env, init_args)
-}
-
-fn _load(env: &HostEnv) -> Erc20HostRef {
-    let address = "hash-d26fcbd2106e37be975d2045c580334a6d7b9d0a241c2358a4db970dfd516945";
-    let address = Address::from_str(address).unwrap();
-    Erc20HostRef::load(env, address)
 }
