@@ -1,0 +1,38 @@
+name: Coverage
+
+on:
+  pull_request:
+    branches:
+      - 'release/**'
+    paths-ignore:
+      - '**.md'
+
+run-name: Calculating coverage for ${{ github.head_ref }}
+
+jobs:
+  coverage:
+    name: Calculate test coverage
+    runs-on: buildjet-8vcpu-ubuntu-2204
+    steps:
+      - uses: extractions/setup-just@v1
+        name: Setup just
+      - name: Cache target
+        uses: actions/cache@v2
+        with:
+          path: target
+          key: odra-target-folder
+#      - uses: actions/checkout@v2
+#        name: Checkout code
+#      - uses: actions-rs/toolchain@v1
+#        name: Setup toolchain
+#        with:
+#          target: wasm32-unknown-unknown
+#          components: rustfmt, clippy, llvm-tools-preview
+#      - run: just prepare-test-env
+#        name: Prepare test environment
+#      - run: just coverage
+#        name: Run coverage tests
+#      - uses: codecov/codecov-action@v3
+#        name: Upload coverage report
+#        with:
+#          files: target/coverage/*.lcov
