@@ -39,3 +39,8 @@ jobs:
         with:
           name: ${{ env.BENCHMARK_FILENAME }}
           path: benchmark/gas_report.json
+      - uses: actions/upload-artifact@v4
+        name: Upload benchmark results
+        with:
+          name: release
+          path: benchmark/gas_report.json

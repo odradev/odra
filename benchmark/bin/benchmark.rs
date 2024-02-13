@@ -7,7 +7,8 @@ pub fn main() {
     println!("Running benchmark...");
     let env = odra_test::env();
 
-    let _ = BenchmarkHostRef::deploy(&env, NoArgs);
+    let mut contract = BenchmarkHostRef::deploy(&env, NoArgs);
+    contract.set_value(true);
 
     // convert gas_report to json and dump it into a file
     let gas_report = env.gas_report();

@@ -1,17 +1,18 @@
 use odra::{DeployReport, GasReport};
 use std::fs;
+use std::ops::{Div, Mul};
 use std::path::PathBuf;
 use std::process::exit;
 
 pub fn main() {
     println!("Evaluating benchmark...");
     let current_gas_report_path = PathBuf::from("gas_report.json");
-    let target_gas_report_path = PathBuf::from("target_gas_report.json");
+    let base_gas_report_path = PathBuf::from("base/gas_report.json");
 
     let current_gas_report = load_gas_report(&current_gas_report_path);
-    let target_gas_report = load_gas_report(&target_gas_report_path);
+    let base_gas_report = load_gas_report(&base_gas_report_path);
 
-    exit(compare_gas_reports(&current_gas_report, &target_gas_report));
+    exit(compare_gas_reports(&current_gas_report, &base_gas_report));
 }
 
 fn load_gas_report(file: &PathBuf) -> GasReport {
@@ -19,12 +20,12 @@ fn load_gas_report(file: &PathBuf) -> GasReport {
     serde_json::from_str(String::from_utf8(gas_report_json).unwrap().as_str()).unwrap()
 }
 
-fn compare_gas_reports(current_gas_report: &GasReport, target_gas_report: &GasReport) -> i32 {
+fn compare_gas_reports(current_gas_report: &GasReport, base_gas_report: &GasReport) -> i32 {
     let mut exit_code = 0;
     let mut report: Vec<String> = Vec::new();
     let mut errors: Vec<String> = Vec::new();
     let mut unchanged: Vec<String> = Vec::new();
-    for (current_report, target_report) in current_gas_report.iter().zip(target_gas_report) {
+    for (current_report, target_report) in current_gas_report.iter().zip(base_gas_report) {
         match (current_report, target_report) {
             (
                 DeployReport::WasmDeploy {
@@ -39,14 +40,18 @@ fn compare_gas_reports(current_gas_report: &GasReport, target_gas_report: &GasRe
                 if current_file_name == target_file_name {
                     if current_gas != target_gas {
                         let diff = current_gas.abs_diff(*target_gas);
+                        let percentage = (diff.as_u64() as f64)
+                            .div(target_gas.as_u64() as f64)
+                            .mul(100.0);
+                        let diff = (diff.as_u64() as f64).div(1_000_000_000.0);
                         let symbol = if current_gas > target_gas {
-                            ":red_circle:+"
+                            ":red_circle: +"
                         } else {
-                            ":green_circle:-"
+                            ":green_circle: -"
                         };
                         report.push(format!(
-                            "| Wasm Deploy | Filename: {} | {}{}</span> |",
-                            current_file_name, symbol, diff
+                            "| Wasm Deploy | Filename: {} | {}{} CSPR ({:.2}%)</span> |",
+                            current_file_name, symbol, diff, percentage
                         ));
                     } else {
                         unchanged.push(format!(
@@ -72,71 +77,84 @@ fn compare_gas_reports(current_gas_report: &GasReport, target_gas_report: &GasRe
                     call_def: target_call_def,
                     ..
                 }
-            ) => if current_call_def == target_call_def {
-                if current_gas != target_gas {
-                    let diff = current_gas.abs_diff(*target_gas);
-                    let symbol = if current_gas > target_gas {
-                        ":red_circle:+"
-                    } else {
-                        ":green_circle:-"
-                    };
-                    report.push(
-                        format!(
-                            "| Contract Call | Entry point: {} | {}{}</span> |",
+            ) => {
+                if current_call_def == target_call_def {
+                    if current_gas != target_gas {
+                        let diff = current_gas.abs_diff(*target_gas);
+                        let percentage = (diff.as_u64() as f64)
+                            .div(target_gas.as_u64() as f64)
+                            .mul(100.0);
+                        let diff = (diff.as_u64() as f64).div(1_000_000_000.0);
+                        let symbol = if current_gas > target_gas {
+                            ":red_circle: +"
+                        } else {
+                            ":green_circle: -"
+                        };
+                        report.push(format!(
+                            "| Contract Call | Entry point: {} | {}{} CSPR ({:.2}%)</span> |",
                             current_call_def.entry_point(),
                             symbol,
-                            diff
-                        )
-                    );
+                            diff,
+                            percentage
+                        ));
+                    } else {
+                        unchanged.push(format!(
+                            "Contract call: {}, Cost: {}",
+                            current_call_def.entry_point(),
+                            current_gas
+                        ));
+                    }
                 } else {
-                    unchanged.push(format!(
-                        "Contract call: {}, Cost: {}",
-                        current_call_def.entry_point(),
-                        current_gas
+                    errors.push(format!(
+                        "Contract call changed: current: {:?}, target: {:?}",
+                        current_report, target_report
                     ));
                 }
-            } else {
-                errors.push(format!(
-                    "Contract call changed: current: {:?}, target: {:?}",
-                    current_report, target_report
-                ));
-            },
+            }
 
             _ => {}
         }
     }
 
     if !report.is_empty() {
-        println!("Benchmark report:");
-        println!("| Action | Details | Gas diff |");
-        println!("| --- | --- | --- |");
+        report.insert(0, "### Benchmark report:".to_string());
+        report.insert(1, "| Action | Details | Gas diff |".to_string());
+        report.insert(2, "| --- | --- | --- |".to_string());
         report.iter().for_each(|message| {
             println!("{}", message);
         });
 
-        println!("\nTo see the full report, check the artifacts section.");
         exit_code += 1;
     } else {
-        println!("No differences found in the benchmark.");
+        println!("*No differences found in the benchmarks.*");
     }
 
     if !errors.is_empty() {
-        println!("Errors:");
+        errors.insert(0, "### Errors:".to_string());
         errors.iter().for_each(|error| {
-            println!("{}", error);
+            println!("- {}", error);
         });
 
         exit_code += 2;
     }
 
+    let report = format!("{}\n{}", report.join("\n"), errors.join("\n"),);
+
+    // Write report to file
+    fs::write("benchmark_report.txt", &report).unwrap();
+
     // Write full report to file
     let full_report = format!(
-        "Benchmark report: \n{}\nErrors: \n{}\nUnchanged: \n{}",
-        report.join("\n"),
-        errors.join("\n"),
-        unchanged.join("\n")
+        "{}\n{}\n{}",
+        report,
+        if unchanged.is_empty() {
+            "### Unchanged:"
+        } else {
+            ""
+        },
+        unchanged.join("\n"),
     );
-    fs::write("benchmark_report.txt", full_report).unwrap();
+    fs::write("benchmark_full_report.txt", full_report).unwrap();
 
     exit_code
 }

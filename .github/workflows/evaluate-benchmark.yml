@@ -14,6 +14,7 @@ jobs:
   evaluate-benchmark:
     name: Evaluate benchmark
     runs-on: buildjet-8vcpu-ubuntu-2204
+    continue-on-error: true
     steps:
       - uses: extractions/setup-just@v1
         name: Setup just
@@ -30,27 +31,43 @@ jobs:
           key: odra-target-folder
       - run: just prepare-test-env
         name: Prepare test environment
-      - name: Set target benchmark filename
+      - run: just benchmark
+        name: Run benchmark
+      - run: echo "BENCHMARK_FILENAME=${GITHUB_REF_NAME}" | sed 's:/:-:g' | sed 's:\.:-:g' >> $GITHUB_ENV
+        name: Set benchmark filename
+      - uses: actions/upload-artifact@v4
+        name: Upload benchmark results
+        with:
+          name: ${{ env.BENCHMARK_FILENAME }}
+          path: benchmark/gas_report.json
+      - name: Set base benchmark filename
         id: set-benchmark-filename
-        run: echo "TARGET_BENCHMARK=${GITHUB_HEAD_REF}" | sed 's:/:-:g' | sed 's:\.:-:g' >> $GITHUB_OUTPUT
-      - name: Download target benchmark report for ${{ github.base_ref }}
+        run: echo "BASE_BENCHMARK=${GITHUB_BASE_REF}" | sed 's:/:-:g' | sed 's:\.:-:g' >> $GITHUB_OUTPUT
+      - name: Download base benchmark report for ${{ github.base_ref }}
         uses: dawidd6/action-download-artifact@v3
         with:
-#          name: ${{ steps.set-benchmark-filename.outputs.TARGET_BENCHMARK }}
-#          branch: ${{ github.base_ref }}
-#          branch: ${{ github.base_ref }}
-          name: release
-          workflow: Benchmark
-          branch: ${{ github.head_ref }}
-          search_artifacts: true
-          path: benchmark/target_gas_report.json
+          name: ${{ steps.set-benchmark-filename.outputs.BASE_BENCHMARK }}
+          branch: ${{ github.base_ref }}
+          workflow: benchmark.yml
+          path: benchmark/base/
       - name: Evaluate benchmark
-        run: just evaluate-benchmark
-      - name: Set report
-        id: set-report
-        run: echo 'REPORT<<EOF' > $GITHUB_OUTPUT && cat benchmark/benchmark_report.txt >> $GITHUB_OUTPUT && echo 'EOF' >> $GITHUB_OUTPUT
+        id: evaluate-benchmark
+        run: |
+          set +e
+          just evaluate-benchmark
+          echo "EXIT_CODE=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
       - name: Create comment
         uses: peter-evans/create-or-update-comment@v4
+        if: steps.evaluate-benchmark.outputs.EXIT_CODE != '0'
         with:
           issue-number: ${{ github.event.number }}
-          body: ${{ steps.set-report.outputs.GITHUB_OUTPUT }}
+          body-path: benchmark/benchmark_report.txt
+      - name: Upload full report artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: benchmark-report
+          path: benchmark/benchmark_full_report.txt
+      - name: Benchmark evaluation failed
+        if: steps.evaluate-benchmark.outputs.EXIT_CODE != '0'
+        run: exit 1
