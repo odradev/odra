@@ -14,6 +14,6 @@ impl Benchmark {
     }
 
     pub fn set_value(&mut self, value: bool) {
-        self.value.set(value && self.value.get().unwrap());
+        self.value.set(value);
     }
 }
