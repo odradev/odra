@@ -17,6 +17,7 @@ lint: clippy
     cd odra-casper/proxy-caller && cargo fmt
     cd examples && cargo fmt
     cd modules && cargo fmt
+    cd benchmark && cargo fmt
 
 check-lint: clippy
     cargo fmt -- --check
@@ -25,6 +26,8 @@ check-lint: clippy
     cd modules && cargo check --all-targets
     cd examples && cargo fmt -- --check
     cd examples && cargo check --all-targets
+    cd benchmark && cargo fmt -- --check
+    cd benchmark && cargo check --all-targets --features=benchmark
 
 install-cargo-odra:
     cargo install cargo-odra --target-dir target --git {{CARGO_ODRA_GIT_REPO}} --branch {{CARGO_ODRA_BRANCH}} --locked

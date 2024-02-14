@@ -25,8 +25,8 @@ fn compare_gas_reports(current_gas_report: &GasReport, base_gas_report: &GasRepo
     let mut report: Vec<String> = Vec::new();
     let mut errors: Vec<String> = Vec::new();
     let mut unchanged: Vec<String> = Vec::new();
-    for (current_report, target_report) in current_gas_report.iter().zip(base_gas_report) {
-        match (current_report, target_report) {
+    for (current_report, base_report) in current_gas_report.iter().zip(base_gas_report) {
+        match (current_report, base_report) {
             (
                 DeployReport::WasmDeploy {
                     gas: current_gas,
@@ -34,10 +34,10 @@ fn compare_gas_reports(current_gas_report: &GasReport, base_gas_report: &GasRepo
                 },
                 DeployReport::WasmDeploy {
                     gas: target_gas,
-                    file_name: target_file_name
+                    file_name: base_file_name
                 }
             ) => {
-                if current_file_name == target_file_name {
+                if current_file_name == base_file_name {
                     if current_gas != target_gas {
                         let diff = current_gas.abs_diff(*target_gas);
                         let percentage = (diff.as_u64() as f64)
@@ -62,7 +62,7 @@ fn compare_gas_reports(current_gas_report: &GasReport, base_gas_report: &GasRepo
                 } else {
                     errors.push(format!(
                         "Wasm filename changed: current: {}, target: {}",
-                        current_file_name, target_file_name
+                        current_file_name, base_file_name
                     ));
                 }
             }
@@ -74,11 +74,11 @@ fn compare_gas_reports(current_gas_report: &GasReport, base_gas_report: &GasRepo
                 },
                 DeployReport::ContractCall {
                     gas: target_gas,
-                    call_def: target_call_def,
+                    call_def: base_call_def,
                     ..
                 }
             ) => {
-                if current_call_def == target_call_def {
+                if current_call_def == base_call_def {
                     if current_gas != target_gas {
                         let diff = current_gas.abs_diff(*target_gas);
                         let percentage = (diff.as_u64() as f64)
@@ -106,8 +106,11 @@ fn compare_gas_reports(current_gas_report: &GasReport, base_gas_report: &GasRepo
                     }
                 } else {
                     errors.push(format!(
-                        "Contract call changed: current: {:?}, target: {:?}",
-                        current_report, target_report
+                        "Deploy changed:\n\
+                        | Current | Base | \n\
+                        | --- | --- | \n\
+                        |{}|{}|",
+                        current_report, base_report
                     ));
                 }
             }
@@ -117,7 +120,7 @@ fn compare_gas_reports(current_gas_report: &GasReport, base_gas_report: &GasRepo
     }
 
     if !report.is_empty() {
-        report.insert(0, "### Benchmark report:".to_string());
+        report.insert(0, "### Benchmark report".to_string());
         report.insert(1, "| Action | Details | Gas diff |".to_string());
         report.insert(2, "| --- | --- | --- |".to_string());
         report.iter().for_each(|message| {
@@ -130,7 +133,7 @@ fn compare_gas_reports(current_gas_report: &GasReport, base_gas_report: &GasRepo
     }
 
     if !errors.is_empty() {
-        errors.insert(0, "### Errors:".to_string());
+        errors.insert(0, "### Errors".to_string());
         errors.iter().for_each(|error| {
             println!("- {}", error);
         });
@@ -148,7 +151,7 @@ fn compare_gas_reports(current_gas_report: &GasReport, base_gas_report: &GasRepo
         "{}\n{}\n{}",
         report,
         if unchanged.is_empty() {
-            "### Unchanged:"
+            "### Unchanged"
         } else {
             ""
         },

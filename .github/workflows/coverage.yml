@@ -2,8 +2,8 @@ name: Coverage
 
 on:
   pull_request:
-    branches:
-      - 'release/**'
+    branches-ignore:
+      - 'hotfix/**'
     paths-ignore:
       - '**.md'
 
@@ -14,25 +14,25 @@ jobs:
     name: Calculate test coverage
     runs-on: buildjet-8vcpu-ubuntu-2204
     steps:
-      - uses: extractions/setup-just@v1
-        name: Setup just
+      - name: Setup just
+        uses: extractions/setup-just@v1
       - name: Cache target
         uses: actions/cache@v2
         with:
           path: target
           key: odra-target-folder
-#      - uses: actions/checkout@v2
-#        name: Checkout code
-#      - uses: actions-rs/toolchain@v1
-#        name: Setup toolchain
-#        with:
-#          target: wasm32-unknown-unknown
-#          components: rustfmt, clippy, llvm-tools-preview
-#      - run: just prepare-test-env
-#        name: Prepare test environment
-#      - run: just coverage
-#        name: Run coverage tests
-#      - uses: codecov/codecov-action@v3
-#        name: Upload coverage report
-#        with:
-#          files: target/coverage/*.lcov
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Setup toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          target: wasm32-unknown-unknown
+          components: rustfmt, clippy, llvm-tools-preview
+      - name: Prepare test environment
+        run: just prepare-test-env
+      - name: Run coverage tests
+        run: just coverage
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v3
+        with:
+          files: target/coverage/*.lcov

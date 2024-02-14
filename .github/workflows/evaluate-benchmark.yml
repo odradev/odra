@@ -2,9 +2,8 @@ name: Evaluate benchmark
 
 on:
   pull_request:
-    branches:
-      - 'release/**'
-      - 'feature/**'
+    branches-ignore:
+      - 'hotfix/**'
     paths-ignore:
       - '**.md'
 
@@ -16,12 +15,12 @@ jobs:
     runs-on: buildjet-8vcpu-ubuntu-2204
     continue-on-error: true
     steps:
-      - uses: extractions/setup-just@v1
-        name: Setup just
-      - uses: actions/checkout@v2
-        name: Checkout code
-      - uses: actions-rs/toolchain@v1
-        name: Setup toolchain
+      - name: Setup just
+        uses: extractions/setup-just@v1
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Setup toolchain
+        uses: actions-rs/toolchain@v1
         with:
           target: wasm32-unknown-unknown
       - name: Cache target
@@ -29,17 +28,8 @@ jobs:
         with:
           path: target
           key: odra-target-folder
-      - run: just prepare-test-env
-        name: Prepare test environment
-      - run: just benchmark
-        name: Run benchmark
-      - run: echo "BENCHMARK_FILENAME=${GITHUB_REF_NAME}" | sed 's:/:-:g' | sed 's:\.:-:g' >> $GITHUB_ENV
-        name: Set benchmark filename
-      - uses: actions/upload-artifact@v4
-        name: Upload benchmark results
-        with:
-          name: ${{ env.BENCHMARK_FILENAME }}
-          path: benchmark/gas_report.json
+      - name: Prepare test environment
+        run: just prepare-test-env
       - name: Set base benchmark filename
         id: set-benchmark-filename
         run: echo "BASE_BENCHMARK=${GITHUB_BASE_REF}" | sed 's:/:-:g' | sed 's:\.:-:g' >> $GITHUB_OUTPUT
