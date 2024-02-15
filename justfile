@@ -113,4 +113,4 @@ benchmark:
     cd benchmark && cargo odra build && ODRA_BACKEND=casper cargo run --bin benchmark --features=benchmark
 
 evaluate-benchmark: benchmark
-    cd benchmark && cargo run --bin evaluate_benchmark
+    cd benchmark && cargo run --bin evaluate_benchmark gas_report.json base/gas_report.json

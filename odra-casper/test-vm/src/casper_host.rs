@@ -110,7 +110,7 @@ impl HostContext for CasperHost {
     }
 
     fn gas_report(&self) -> GasReport {
-        self.vm.borrow().gas_report()
+        self.vm.borrow().gas_report().clone()
     }
 
     fn last_call_gas_cost(&self) -> u64 {

@@ -273,8 +273,8 @@ impl CasperVm {
     }
 
     /// Returns the report of the gas used during the whole lifetime of the CasperVM.
-    pub fn gas_report(&self) -> GasReport {
-        self.gas_report.clone()
+    pub fn gas_report(&self) -> &GasReport {
+        &self.gas_report
     }
 
     /// Returns the public key that corresponds to the given Account Address.

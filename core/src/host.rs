@@ -312,8 +312,7 @@ impl HostEnv {
 
     /// Prints the gas report for the current contract execution.
     pub fn gas_report(&self) -> GasReport {
-        let backend = self.backend.borrow();
-        backend.gas_report()
+        self.backend.borrow().gas_report().clone()
     }
 
     /// Returns the CSPR balance of the specified address.
