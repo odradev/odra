@@ -1,3 +1,6 @@
 codecov:
   notify:
     wait_for_ci: yes
+ignore:
+  - "odra-casper/livenet-env"
+  - "odra-casper/wasm-env"
