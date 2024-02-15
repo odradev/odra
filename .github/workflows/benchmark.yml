@@ -1,0 +1,40 @@
+name: Benchmark
+
+on:
+  push:
+    branches:
+      - '**'
+    paths-ignore:
+      - '**.md'
+
+run-name: Benchmarking gas costs for ${{ github.head_ref || github.ref_name }}
+
+jobs:
+  benchmark:
+    name: Benchmark
+    runs-on: buildjet-8vcpu-ubuntu-2204
+    steps:
+      - name: Setup just
+        uses: extractions/setup-just@v1
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Setup toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          target: wasm32-unknown-unknown
+      - name: Cache target
+        uses: actions/cache@v2
+        with:
+          path: target
+          key: odra-target-folder
+      - name: Prepare test environment
+        run: just prepare-test-env
+      - name: Run benchmark
+        run: just benchmark
+      - name: Set benchmark filename
+        run: echo "BENCHMARK_FILENAME=${GITHUB_REF_NAME}" | sed 's:/:-:g' | sed 's:\.:-:g' >> $GITHUB_ENV
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BENCHMARK_FILENAME }}
+          path: benchmark/gas_report.json

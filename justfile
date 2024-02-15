@@ -17,6 +17,7 @@ lint: clippy
     cd odra-casper/proxy-caller && cargo fmt
     cd examples && cargo fmt
     cd modules && cargo fmt
+    cd benchmark && cargo fmt
 
 check-lint: clippy
     cargo fmt -- --check
@@ -25,16 +26,18 @@ check-lint: clippy
     cd modules && cargo check --all-targets
     cd examples && cargo fmt -- --check
     cd examples && cargo check --all-targets
+    cd benchmark && cargo fmt -- --check
+    cd benchmark && cargo check --all-targets --features=benchmark
 
 install-cargo-odra:
-    cargo install cargo-odra --git {{CARGO_ODRA_GIT_REPO}} --branch {{CARGO_ODRA_BRANCH}} --locked
+    cargo install cargo-odra --target-dir target --git {{CARGO_ODRA_GIT_REPO}} --branch {{CARGO_ODRA_BRANCH}} --locked
 
 prepare-test-env: install-cargo-odra
     rustup target add wasm32-unknown-unknown
     rustup component add llvm-tools-preview
-    cargo install grcov
+    cargo install grcov --target-dir target
     sudo apt install wabt
-    wget https://github.com/WebAssembly/binaryen/releases/download/{{BINARYEN_VERSION}}/binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz || { echo "Download failed"; exit 1; }
+    wget -q https://github.com/WebAssembly/binaryen/releases/download/{{BINARYEN_VERSION}}/binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz || { echo "Download failed"; exit 1; }
     sha256sum binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz | grep {{BINARYEN_CHECKSUM}} || { echo "Checksum verification failed"; exit 1; }
     tar -xzf binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz || { echo "Extraction failed"; exit 1; }
     sudo cp binaryen-{{BINARYEN_VERSION}}/bin/wasm-opt /usr/local/bin/wasm-opt
@@ -105,3 +108,9 @@ coverage:
     # Uncomment the following line to generate local HTML report
     # grcov . --binary-path ./target/debug/deps/ -s . -t html --branch --ignore '../*' --ignore "/*" -o target/coverage/html
     grcov . --binary-path ./target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o target/coverage/tests.lcov
+
+benchmark:
+    cd benchmark && cargo odra build && ODRA_BACKEND=casper cargo run --bin benchmark --features=benchmark
+
+evaluate-benchmark: benchmark
+    cd benchmark && cargo run --bin evaluate_benchmark gas_report.json base/gas_report.json

@@ -1,0 +1,43 @@
+[package]
+name = "benchmark"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+odra = { path = "../odra" }
+odra-test = { path = "../odra-test", optional = true }
+odra-modules = { path = "../modules" }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+serde_json = "1.0.113"
+
+[[bin]]
+name = "benchmark_build_contract"
+path = "bin/build_contract.rs"
+test = false
+
+[[bin]]
+name = "benchmark_build_schema"
+path = "bin/build_schema.rs"
+test = false
+
+[[bin]]
+name = "benchmark"
+path = "bin/benchmark.rs"
+test = false
+
+[[bin]]
+name = "evaluate_benchmark"
+path = "bin/evaluate_benchmark.rs"
+test = false
+
+[profile.release]
+codegen-units = 1
+lto = true
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[features]
+default = []
+benchmark = ["odra-test"]
