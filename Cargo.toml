@@ -9,7 +9,7 @@ members = [
     "odra-casper/wasm-env",
     "odra-casper/test-vm",
     "odra-test"]
-exclude = [ "examples", "modules", "benchmark", "odra-casper/proxy-caller", "templates/blank", "templates/full", "templates/workspace"]
+exclude = [ "examples", "modules", "benchmark", "odra-casper/proxy-caller", "templates/blank", "templates/full", "templates/workspace", "tests"]
 resolver = "2"
 
 [workspace.package]
