@@ -28,3 +28,6 @@ casper-types = { workspace = true }
 
 [lib]
 proc-macro = true
+
+[lints.rust]
+missing_docs = "warn"

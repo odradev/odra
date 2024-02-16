@@ -13,3 +13,6 @@ odra-core = { workspace = true }
 odra-casper-rpc-client = { workspace = true }
 blake2 = { workspace = true }
 log = { workspace = true }
+
+[lints.rust]
+missing_docs = "warn"

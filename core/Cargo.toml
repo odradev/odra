@@ -19,3 +19,6 @@ serde_json = { workspace = true, default-features = false, features = ["alloc"] 
 
 [dev-dependencies]
 mockall = { version = "0.11.4" }
+
+[lints.rust]
+missing_docs = "warn"
