@@ -1,15 +1,16 @@
-use crate::security::errors::Error::{PausedRequired, UnpausedRequired};
-use crate::security::events::{Paused, Unpaused};
-use odra::prelude::*;
-use odra::Var;
-
-/// A module allowing to implement an emergency stop mechanism that can be triggered by any account.
+//! A module allowing to implement an emergency stop mechanism that can be triggered by any account.
 ///
 /// You can use this module in a custom module by adding it as a field.
 ///
 /// It will make available `require_not_paused()` and `require_paused()` functions,
 /// which can be used in the functions of your contract to ensure the contract is
 /// in the correct state.
+use crate::security::errors::Error::{PausedRequired, UnpausedRequired};
+use crate::security::events::{Paused, Unpaused};
+use odra::prelude::*;
+use odra::Var;
+
+/// The Pauseable module.
 #[odra::module]
 pub struct Pauseable {
     is_paused: Var<bool>

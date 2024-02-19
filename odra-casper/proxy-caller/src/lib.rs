@@ -1,3 +1,6 @@
+#![doc = "Proxy caller contract used by the Odra Framework."]
+#![doc = "It allows calling other contracts and saving the return values to the named key"]
+#![doc = "of the Proxy Caller."]
 #![no_std]
 
 extern crate alloc;
@@ -26,14 +29,18 @@ use odra_core::prelude::*;
 
 /// Contract call definition.
 pub struct ProxyCall {
+    /// Contract package hash.
     pub contract_package_hash: ContractPackageHash,
+    /// Entry point name.
     pub entry_point_name: String,
+    /// Runtime arguments.
     pub runtime_args: RuntimeArgs,
+    /// Attached value.
     pub attached_value: U512
 }
 
 impl ProxyCall {
-    /// Load proxy call arguments from the runtime.
+    /// Load proxy call arguments from the runtime.
     pub fn load_from_args() -> ProxyCall {
         let contract_package_hash = get_named_arg(CONTRACT_PACKAGE_HASH_ARG);
         let entry_point_name = get_named_arg(ENTRY_POINT_ARG);

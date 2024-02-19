@@ -1,3 +1,4 @@
+#![doc = "Proxy Caller binary - to be compiled into the WASM"]
 #![no_std]
 #![no_main]
 

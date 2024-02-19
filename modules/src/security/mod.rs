@@ -1,3 +1,4 @@
+//! Security module
 pub mod errors;
 pub mod events;
 mod pauseable;

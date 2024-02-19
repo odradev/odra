@@ -30,6 +30,7 @@ use odra_core::{Address, OdraResult, VmError};
 
 /// HostContext utilizing the Casper test virtual machine.
 pub struct CasperHost {
+    /// The Casper VM used by the host.
     pub vm: Rc<RefCell<CasperVm>>
 }
 

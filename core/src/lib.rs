@@ -1,3 +1,4 @@
+#![doc = "Core of the Odra Framework"]
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(test, feature(never_type))]
 

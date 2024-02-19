@@ -15,11 +15,19 @@ pub type GasReport = Vec<DeployReport>;
 #[derive(Clone, Debug)]
 pub enum DeployReport {
     /// Represents a Wasm deploy.
-    WasmDeploy { gas: U512, file_name: String },
+    WasmDeploy {
+        /// The gas used for the deploy.
+        gas: U512,
+        /// The file name of the deployed WASM.
+        file_name: String
+    },
     /// Represents a contract call.
     ContractCall {
+        /// The gas used for the call.
         gas: U512,
+        /// The address of the contract called.
         contract_address: Address,
+        /// The call definition.
         call_def: CallDef
     }
 }

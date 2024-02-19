@@ -1,22 +1,27 @@
+//! Wrapped CSPR token implementation
 use crate::erc20::Erc20;
 use crate::wrapped_native::events::{Deposit, Withdrawal};
 use odra::prelude::*;
 use odra::uints::{ToU256, ToU512};
 use odra::{casper_types::U256, Address, SubModule, UnwrapOrRevert};
 
+/// The WrappedNativeToken module.
 #[odra::module(events = [Deposit, Withdrawal])]
 pub struct WrappedNativeToken {
     erc20: SubModule<Erc20>
 }
 
+/// The WrappedNativeToken module implementation.
 #[odra::module]
 impl WrappedNativeToken {
+    /// Initializes the contract with the metadata.
     pub fn init(&mut self) {
         let symbol = "WCSPR".to_string();
         let name = "Wrapped CSPR".to_string();
         self.erc20.init(symbol, name, 9, None);
     }
 
+    /// Deposits native tokens into the contract.
     #[odra(payable)]
     pub fn deposit(&mut self) {
         let caller = self.env().caller();
@@ -32,6 +37,7 @@ impl WrappedNativeToken {
         });
     }
 
+    /// Withdraws native tokens from the contract.
     pub fn withdraw(&mut self, amount: &U256) {
         let caller = self.env().caller();
 
@@ -44,56 +50,72 @@ impl WrappedNativeToken {
         });
     }
 
+    /// Sets the allowance for `spender` to spend `amount` of the caller's tokens.
     pub fn allowance(&self, owner: &Address, spender: &Address) -> U256 {
         self.erc20.allowance(owner, spender)
     }
 
+    /// Returns the balance of `address`.
     pub fn balance_of(&self, address: &Address) -> U256 {
         self.erc20.balance_of(address)
     }
 
+    /// Returns the total supply of the token.
     pub fn total_supply(&self) -> U256 {
         self.erc20.total_supply()
     }
 
+    /// Returns the number of decimals used by the token.
     pub fn decimals(&self) -> u8 {
         self.erc20.decimals()
     }
 
+    /// Returns the symbol of the token.
     pub fn symbol(&self) -> String {
         self.erc20.symbol()
     }
 
+    /// Returns the name of the token.
     pub fn name(&self) -> String {
         self.erc20.name()
     }
 
+    /// Approves `spender` to spend `amount` of the caller's tokens.
     pub fn approve(&mut self, spender: &Address, amount: &U256) {
         self.erc20.approve(spender, amount)
     }
 
+    /// Transfers `amount` of the owners tokens to `recipient` using allowance.
     pub fn transfer_from(&mut self, owner: &Address, recipient: &Address, amount: &U256) {
         self.erc20.transfer_from(owner, recipient, amount)
     }
 
+    /// Transfers `amount` of the caller's tokens to `recipient`.
     pub fn transfer(&mut self, recipient: &Address, amount: &U256) {
         self.erc20.transfer(recipient, amount)
     }
 }
 
+/// Events emitted by the WrappedNativeToken module.
 pub mod events {
     use odra::casper_event_standard::{self, Event};
     use odra::{casper_types::U256, Address};
 
+    /// Event emitted when native tokens are deposited into the contract.
     #[derive(Event, Debug, Eq, PartialEq)]
     pub struct Deposit {
+        /// An Address of the account that deposited the tokens.
         pub account: Address,
+        /// The amount of tokens deposited.
         pub value: U256
     }
 
+    /// Event emitted when native tokens are withdrawn from the contract.
     #[derive(Event, Debug, Eq, PartialEq)]
     pub struct Withdrawal {
+        /// An Address of the account that withdrew the tokens.
         pub account: Address,
+        /// The amount of tokens withdrawn.
         pub value: U256
     }
 }

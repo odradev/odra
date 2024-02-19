@@ -22,6 +22,7 @@ pub struct List<T> {
 }
 
 impl<T> List<T> {
+    /// Returns the ContractEnv.
     pub fn env(&self) -> ContractEnv {
         self.env.child(self.index)
     }
