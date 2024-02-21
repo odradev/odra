@@ -2,7 +2,8 @@ use crate::{
     ir::{FnArgIR, FnIR},
     utils
 };
-use syn::{parse_quote, FnArg};
+use syn::token::Pub;
+use syn::{parse_quote, Attribute, FnArg};
 
 pub fn runtime_args_block<F: FnMut(&FnArgIR) -> syn::Stmt>(
     fun: &FnIR,
@@ -31,6 +32,8 @@ pub fn insert_args_stmts<F: FnMut(&FnArgIR) -> syn::Stmt>(
 
 #[derive(syn_derive::ToTokens)]
 pub struct FnItem {
+    comment: Option<Attribute>,
+    vis_token: Option<syn::Token![pub]>,
     fn_token: syn::Token![fn],
     fn_name: syn::Ident,
     #[syn(parenthesized)]
@@ -49,6 +52,8 @@ impl FnItem {
         block: syn::Block
     ) -> Self {
         Self {
+            vis_token: None,
+            comment: None,
             fn_token: Default::default(),
             fn_name: name.clone(),
             paren_token: Default::default(),
@@ -56,6 +61,17 @@ impl FnItem {
             ret_ty,
             block
         }
+    }
+
+    pub fn public(mut self, comment: String) -> FnItem {
+        self.comment = Some(parse_quote!(#[doc = #comment]));
+        self.vis_token = Some(Pub::default());
+        self
+    }
+
+    pub fn instanced(mut self) -> FnItem {
+        self.args.insert(0, parse_quote!(&self));
+        self
     }
 }
 
@@ -70,18 +86,14 @@ impl SingleArgFnItem {
             fn_item: FnItem::new(name, vec![arg], ret_ty, block)
         }
     }
-}
 
-#[derive(syn_derive::ToTokens)]
-pub struct SelfFnItem {
-    fn_item: SingleArgFnItem
-}
+    pub fn _make_pub(mut self, comment: String) -> Self {
+        self.fn_item = self.fn_item.public(comment);
+        self
+    }
 
-impl SelfFnItem {
-    pub fn new(name: &syn::Ident, ret_ty: syn::ReturnType, block: syn::Block) -> Self {
-        let self_ty = utils::ty::self_ref();
-        Self {
-            fn_item: SingleArgFnItem::new(name, parse_quote!(#self_ty), ret_ty, block)
-        }
+    pub fn _make_instanced(mut self) -> Self {
+        self.fn_item = self.fn_item.instanced();
+        self
     }
 }

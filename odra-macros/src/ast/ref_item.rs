@@ -1,4 +1,4 @@
-use crate::ast::fn_utils::{FnItem, SelfFnItem};
+use crate::ast::fn_utils::FnItem;
 use crate::utils::misc::AsBlock;
 use crate::{ast::ref_utils, ir::ModuleImplIR, utils};
 use derive_try_from_ref::TryFromRef;
@@ -7,6 +7,7 @@ use syn::parse_quote;
 
 #[derive(syn_derive::ToTokens)]
 struct ContractRefStructItem {
+    doc: syn::Attribute,
     vis: syn::Visibility,
     struct_token: syn::token::Struct,
     ident: syn::Ident,
@@ -27,7 +28,11 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefStructItem {
             #address: #ty_address,
         });
 
+        let comment = format!("[{}] Contract Ref.", module.module_str()?);
+        let doc_attr = parse_quote!(#[doc = #comment]);
+
         Ok(Self {
+            doc: doc_attr,
             vis: utils::syn::visibility_pub(),
             struct_token: Default::default(),
             ident: module.contract_ref_ident()?,
@@ -38,28 +43,28 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefStructItem {
 
 #[derive(syn_derive::ToTokens)]
 struct AddressFnItem {
-    vis: syn::Visibility,
-    fn_item: SelfFnItem
+    fn_item: FnItem
 }
 
 impl AddressFnItem {
     pub fn new() -> Self {
         let m_address = utils::member::address();
         let ret_expr: syn::Expr = parse_quote!(&#m_address);
-        Self {
-            vis: utils::syn::visibility_pub(),
-            fn_item: SelfFnItem::new(
-                &utils::ident::address(),
-                utils::misc::ret_ty(&utils::ty::address_ref()),
-                ret_expr.as_block()
-            )
-        }
+        let fn_item = FnItem::new(
+            &utils::ident::address(),
+            vec![],
+            utils::misc::ret_ty(&utils::ty::address_ref()),
+            ret_expr.as_block()
+        )
+        .public("Returns the address of the contract.".to_string())
+        .instanced();
+
+        Self { fn_item }
     }
 }
 
 #[derive(syn_derive::ToTokens)]
 struct NewFnItem {
-    vis: syn::Visibility,
     fn_item: FnItem
 }
 
@@ -75,10 +80,9 @@ impl NewFnItem {
             parse_quote!(#m_address: #ty_address),
         ];
         let ret_expr: syn::Expr = parse_quote!(Self { #m_env, #m_address });
-        Self {
-            vis: utils::syn::visibility_pub(),
-            fn_item: FnItem::new(&utils::ident::new(), args, ret_ty, ret_expr.as_block())
-        }
+        let fn_item = FnItem::new(&utils::ident::new(), args, ret_ty, ret_expr.as_block())
+            .public("Creates a new instance of the contract reference.".to_string());
+        Self { fn_item }
     }
 }
 

@@ -11,6 +11,7 @@ pub struct OwnedToken {
 
 #[odra::module]
 impl OwnedToken {
+    /// Initializes the contract with the given parameters.
     pub fn init(&mut self, name: String, symbol: String, decimals: u8, initial_supply: U256) {
         self.ownable.init();
         self.erc20
@@ -36,6 +37,7 @@ impl OwnedToken {
         }
     }
 
+    /// Mints new tokens and assigns them to the given address.
     pub fn mint(&mut self, address: &Address, amount: &U256) {
         self.ownable.assert_owner(&self.env().caller());
         self.erc20.mint(address, amount);

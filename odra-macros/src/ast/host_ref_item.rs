@@ -11,6 +11,7 @@ use super::{fn_utils::FnItem, ref_utils};
 
 #[derive(syn_derive::ToTokens)]
 struct HostRefStructItem {
+    doc: syn::Attribute,
     vis: syn::Visibility,
     struct_token: syn::token::Struct,
     ident: syn::Ident,
@@ -34,7 +35,12 @@ impl TryFrom<&'_ ModuleImplIR> for HostRefStructItem {
             #env: #ty_host_env,
             #attached_value: #ty_u512
         });
+
+        let comment = format!(" [{}] Host Ref.", module.module_str()?);
+        let doc = parse_quote!(#[doc = #comment]);
+
         Ok(Self {
+            doc,
             vis: utils::syn::visibility_pub(),
             struct_token: Default::default(),
             ident: module.host_ref_ident()?,
@@ -305,6 +311,7 @@ mod ref_item_tests {
     fn host_ref() {
         let module = test_utils::mock::module_impl();
         let expected = quote! {
+            /// [Erc20] Host Ref.
             pub struct Erc20HostRef {
                 address: odra::Address,
                 env: odra::host::HostEnv,
@@ -349,6 +356,8 @@ mod ref_item_tests {
             }
 
             impl Erc20HostRef {
+                /// Returns the total supply of the token.
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_total_supply(&self) -> odra::OdraResult<U256> {
                     self.env.call_contract(
                         self.address,
@@ -366,10 +375,13 @@ mod ref_item_tests {
                     )
                 }
 
+                /// Returns the total supply of the token.
                 pub fn total_supply(&self) -> U256 {
                     self.try_total_supply().unwrap()
                 }
 
+                /// Pay to mint.
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_pay_to_mint(&mut self) -> odra::OdraResult<()> {
                     self.env
                         .call_contract(
@@ -389,10 +401,13 @@ mod ref_item_tests {
                         )
                 }
 
+                /// Pay to mint.
                 pub fn pay_to_mint(&mut self) {
                     self.try_pay_to_mint().unwrap()
                 }
 
+                /// Approve.
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_approve(
                     &mut self,
                     to: Address,
@@ -418,10 +433,13 @@ mod ref_item_tests {
                         )
                 }
 
+                /// Approve.
                 pub fn approve(&mut self, to: Address, amount: U256) {
                     self.try_approve(to, amount).unwrap()
                 }
 
+                /// Airdrops the given amount to the given addresses.
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_airdrop(&self, to: odra::prelude::vec::Vec<Address>, amount: U256) -> odra::OdraResult<()> {
                     self.env.call_contract(
                         self.address,
@@ -441,6 +459,7 @@ mod ref_item_tests {
                     )
                 }
 
+                /// Airdrops the given amount to the given addresses.
                 pub fn airdrop(&self, to: odra::prelude::vec::Vec<Address>, amount: U256) {
                     self.try_airdrop(to, amount).unwrap()
                 }
@@ -454,6 +473,7 @@ mod ref_item_tests {
     fn host_trait_impl_ref() {
         let module = test_utils::mock::module_trait_impl();
         let expected = quote! {
+            /// [Erc20] Host Ref.
             pub struct Erc20HostRef {
                 address: odra::Address,
                 env: odra::host::HostEnv,
@@ -498,6 +518,7 @@ mod ref_item_tests {
             }
 
             impl Erc20HostRef {
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_total_supply(&self) -> odra::OdraResult<U256> {
                     self.env.call_contract(
                         self.address,
@@ -519,6 +540,7 @@ mod ref_item_tests {
                     self.try_total_supply().unwrap()
                 }
 
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_pay_to_mint(&mut self) -> odra::OdraResult<()>  {
                     self.env
                         .call_contract(

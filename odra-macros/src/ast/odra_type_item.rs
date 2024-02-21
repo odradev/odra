@@ -1,6 +1,6 @@
 use crate::ast::clone::CloneItem;
 use crate::ast::events_item::HasEventsImplItem;
-use crate::ast::fn_utils::{FnItem, SelfFnItem, SingleArgFnItem};
+use crate::ast::fn_utils::{FnItem, SingleArgFnItem};
 use crate::ast::utils::{ImplItem, Named};
 use crate::ir::TypeIR;
 use crate::utils;
@@ -189,7 +189,7 @@ impl FromBytesFnItem {
 
 #[derive(syn_derive::ToTokens)]
 struct ToBytesFnItem {
-    fn_item: SelfFnItem
+    fn_item: FnItem
 }
 
 impl_from_ir!(ToBytesFnItem);
@@ -220,7 +220,7 @@ impl ToBytesFnItem {
             Ok(#ident_result)
         });
         Ok(Self {
-            fn_item: SelfFnItem::new(&name, ret_ty, block)
+            fn_item: FnItem::new(&name, vec![], ret_ty, block).instanced()
         })
     }
 
@@ -236,14 +236,14 @@ impl ToBytesFnItem {
         let block = utils::expr::to_bytes(&as_u32).as_block();
 
         Ok(Self {
-            fn_item: SelfFnItem::new(&name, ret_ty, block)
+            fn_item: FnItem::new(&name, vec![], ret_ty, block).instanced()
         })
     }
 }
 
 #[derive(syn_derive::ToTokens)]
 struct SerializedLengthFnItem {
-    fn_item: SelfFnItem
+    fn_item: FnItem
 }
 
 impl_from_ir!(SerializedLengthFnItem);
@@ -268,7 +268,7 @@ impl SerializedLengthFnItem {
             #ident_result
         });
         Ok(Self {
-            fn_item: SelfFnItem::new(&name, ret_ty, block)
+            fn_item: FnItem::new(&name, vec![], ret_ty, block).instanced()
         })
     }
 
@@ -282,7 +282,7 @@ impl SerializedLengthFnItem {
         let ret_ty = utils::misc::ret_ty(&ty_usize);
         let block = utils::expr::serialized_length(&as_u32).as_block();
         Ok(Self {
-            fn_item: SelfFnItem::new(&name, ret_ty, block)
+            fn_item: FnItem::new(&name, vec![], ret_ty, block).instanced()
         })
     }
 }

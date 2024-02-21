@@ -354,6 +354,15 @@ pub enum FnIR {
     Def(FnTraitIR)
 }
 
+impl FnIR {
+    pub fn attributes(&self) -> &[syn::Attribute] {
+        match self {
+            FnIR::Impl(ir) => ir.attrs(),
+            FnIR::Def(ir) => ir.attrs()
+        }
+    }
+}
+
 const PROTECTED_FUNCTIONS: [&str; 3] = ["new", "env", "address"];
 
 fn validate_fn_name<T: ToTokens>(name: &str, ctx: T) -> syn::Result<()> {
