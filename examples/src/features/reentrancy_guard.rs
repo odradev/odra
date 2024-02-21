@@ -1,6 +1,7 @@
 use odra::prelude::*;
 use odra::Var;
 
+/// Contract used to test reentrancy guard.
 #[odra::module]
 pub struct ReentrancyMock {
     counter: Var<u32>
@@ -8,6 +9,7 @@ pub struct ReentrancyMock {
 
 #[odra::module]
 impl ReentrancyMock {
+    /// Simple recursive function that counts to `n`.
     #[odra(non_reentrant)]
     pub fn count_local_recursive(&mut self, n: u32) {
         if n > 0 {
@@ -16,6 +18,7 @@ impl ReentrancyMock {
         }
     }
 
+    /// Recursive function that counts to `n` using a reference to the contract.
     #[odra(non_reentrant)]
     pub fn count_ref_recursive(&mut self, n: u32) {
         if n > 0 {
@@ -25,11 +28,13 @@ impl ReentrancyMock {
         }
     }
 
+    /// Recursive function that counts to `n` and is protected.
     #[odra(non_reentrant)]
     pub fn non_reentrant_count(&mut self) {
         self.count();
     }
 
+    /// Returns the value of the counter.
     pub fn get_value(&self) -> u32 {
         self.counter.get_or_default()
     }

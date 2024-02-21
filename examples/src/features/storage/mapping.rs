@@ -1,9 +1,11 @@
+//! Module containing DogContract. It is used in docs to explain how to interact with the storage.
 use odra::prelude::*;
 use odra::{Mapping, Var};
 
 type FriendName = String;
 type Visits = u32;
 
+/// A simple contract that represents a second dog.
 #[odra::module]
 pub struct DogContract2 {
     name: Var<String>,
@@ -12,19 +14,23 @@ pub struct DogContract2 {
 
 #[odra::module]
 impl DogContract2 {
+    /// Initializes the contract with the given parameters.
     pub fn init(&mut self, name: String) {
         self.name.set(name);
     }
 
+    /// Returns the dog's name.
     pub fn name(&self) -> String {
         self.name.get_or_default()
     }
 
+    /// Adds a visit to the friend's visits.
     pub fn visit(&mut self, friend_name: FriendName) {
         let visits = self.visits(friend_name.clone());
         self.friends.set(&friend_name, visits + 1);
     }
 
+    /// Returns the total visits of the friend.
     pub fn visits(&self, friend_name: FriendName) -> u32 {
         self.friends.get_or_default(&friend_name)
     }

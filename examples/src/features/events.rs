@@ -1,17 +1,22 @@
 use odra::prelude::*;
 use odra::{Address, Event};
 
+/// Contract that emits an event when initialized.
 #[odra::module]
 pub struct PartyContract {}
 
+/// Event emitted when the contract is initialized.
 #[derive(Event, PartialEq, Eq, Debug)]
 pub struct PartyStarted {
+    /// Address of the caller.
     pub caller: Address,
+    /// Block time when the contract was initialized.
     pub block_time: u64
 }
 
 #[odra::module]
 impl PartyContract {
+    /// Initializes the contract.
     pub fn init(&self) {
         self.env().emit_event(PartyStarted {
             caller: self.env().caller(),

@@ -1,11 +1,13 @@
 use odra::casper_types::{bytesrepr::Bytes, PublicKey};
 use odra::prelude::*;
 
+/// A Contract that verifies signatures.
 #[odra::module]
 pub struct SignatureVerifier;
 
 #[odra::module]
 impl SignatureVerifier {
+    /// Verifies if the message was signed by the owner of the public key.
     pub fn verify_signature(
         &self,
         message: &Bytes,

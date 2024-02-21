@@ -1,6 +1,7 @@
 use odra::prelude::*;
 use odra::{Address, Var};
 
+/// Host contract. It shows the Odra's capabilities regarding host functions.
 #[odra::module]
 pub struct HostContract {
     name: Var<String>,
@@ -10,12 +11,14 @@ pub struct HostContract {
 
 #[odra::module]
 impl HostContract {
+    /// Initializes the contract with the given parameters.
     pub fn init(&mut self, name: String) {
         self.name.set(name);
         self.created_at.set(self.env().get_block_time());
         self.created_by.set(self.env().caller())
     }
 
+    /// Returns the contract's name.
     pub fn name(&self) -> String {
         self.name.get_or_default()
     }

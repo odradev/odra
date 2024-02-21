@@ -75,6 +75,7 @@ pub mod mock {
     pub fn module_delegation() -> ModuleImplIR {
         let module = quote! {
             impl Erc20 {
+                /// Returns the total supply of the token.
                 pub fn total_supply(&self) -> U256 {
                     self.total_supply.get_or_default()
                 }

@@ -3,12 +3,14 @@ use odra::casper_event_standard;
 use odra::prelude::*;
 use odra::{Mapping, OdraType, SubModule, UnwrapOrRevert, Var};
 
+/// Module containing the results storage.
 #[odra::module]
 pub struct ResultsStorage {
     results: Mapping<u32, OperationResult>,
     results_count: Var<u32>
 }
 
+/// Contract that uses a module with nested Odra types.
 #[odra::module]
 pub struct NestedOdraTypesContract {
     latest_result: Var<OperationResult>,
@@ -17,6 +19,7 @@ pub struct NestedOdraTypesContract {
 
 #[odra::module]
 impl NestedOdraTypesContract {
+    /// Saves the operation result in the storage.
     pub fn save_operation_result(&mut self, operation_result: OperationResult) {
         // save it in simple storage
         self.latest_result.set(operation_result.clone());
@@ -41,10 +44,12 @@ impl NestedOdraTypesContract {
         });
     }
 
+    /// Returns the latest operation result.
     pub fn latest_result(&self) -> Option<OperationResult> {
         self.latest_result.get()
     }
 
+    /// Returns the current generation of operation results.
     pub fn current_generation(&self) -> Vec<OperationResult> {
         let keys = self
             .current_generation_storage
@@ -62,19 +67,27 @@ impl NestedOdraTypesContract {
     }
 }
 
+/// Status of the operation.
 #[derive(OdraType, PartialEq, Debug)]
 pub enum Status {
+    /// Operation failed.
     Failure,
+    /// Operation succeeded.
     Success
 }
 
 #[derive(OdraType, PartialEq, Debug)]
+/// Result of the operation.
 pub struct OperationResult {
+    /// Id of the operation.
     pub id: u32,
+    /// Status of the operation.
     pub status: Status,
+    /// Description of the operation.
     pub description: String
 }
 
+/// Event emitted when the operation ends.
 #[derive(Event, PartialEq, Debug)]
 pub struct OperationEnded {
     id: u32,

@@ -4,9 +4,12 @@ use sha3::{Digest, Keccak256};
 
 use odra_modules::access::{AccessControl, Role, DEFAULT_ADMIN_ROLE};
 
+/// Name of the moderator role.
 pub const ROLE_MODERATOR: &str = "moderator";
+/// Name of the moderator admin role.
 pub const ROLE_MODERATOR_ADMIN: &str = "moderator_admin";
 
+/// Contract that uses the access control module.
 #[odra::module]
 pub struct MockModerated {
     access_control: SubModule<AccessControl>
@@ -14,6 +17,7 @@ pub struct MockModerated {
 
 #[odra::module]
 impl MockModerated {
+    /// Initializes the contract.
     pub fn init(&mut self) {
         let admin = self.env().caller();
         self.access_control
@@ -25,31 +29,37 @@ impl MockModerated {
         self.set_moderator_admin_role(&Self::role(ROLE_MODERATOR_ADMIN));
     }
 
+    /// Adds a moderator.
     pub fn add_moderator(&mut self, moderator: &Address) {
         self.access_control
             .grant_role(&Self::role(ROLE_MODERATOR), moderator);
     }
 
+    /// Adds an admin.
     pub fn add_admin(&mut self, admin: &Address) {
         self.access_control
             .grant_role(&Self::role(ROLE_MODERATOR_ADMIN), admin);
     }
 
+    /// Removes a moderator.
     pub fn remove_moderator(&mut self, moderator: &Address) {
         self.access_control
             .revoke_role(&Self::role(ROLE_MODERATOR), moderator);
     }
 
+    /// Renounces the moderator role.
     pub fn renounce_moderator_role(&mut self, address: &Address) {
         let role = Self::role(ROLE_MODERATOR);
         self.access_control.renounce_role(&role, address);
     }
 
+    /// Returns true if the given address is a moderator.
     pub fn is_moderator(&self, address: &Address) -> bool {
         self.access_control
             .has_role(&Self::role(ROLE_MODERATOR), address)
     }
 
+    /// Returns true if the given address is an admin.
     pub fn is_admin(&self, address: &Address) -> bool {
         self.access_control
             .has_role(&Self::role(ROLE_MODERATOR_ADMIN), address)
@@ -67,6 +77,7 @@ impl MockModerated {
     }
 }
 
+/// Calculates the keccak256 hash of the input string.
 pub fn keccak_256(input: &str) -> Role {
     let mut hasher = Keccak256::default();
     hasher.update(input.as_bytes());

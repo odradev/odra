@@ -33,6 +33,7 @@ pub trait Erc721 {
         token_id: &U256,
         data: &Bytes
     );
+    /// Transfers a specific NFT `tokenId` from one account `from` to another `to`.
     fn transfer_from(&mut self, from: &Address, to: &Address, token_id: &U256);
     /// Grants permission to `approved` to transfer `token_id` token. The approval is cleared when the token is transferred.
     ///

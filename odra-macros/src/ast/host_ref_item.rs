@@ -573,6 +573,7 @@ mod ref_item_tests {
     fn host_ref_delegation() {
         let module = test_utils::mock::module_delegation();
         let expected = quote! {
+            /// [Erc20] Host Ref.
             pub struct Erc20HostRef {
                 address: odra::Address,
                 env: odra::host::HostEnv,
@@ -617,6 +618,8 @@ mod ref_item_tests {
             }
 
             impl Erc20HostRef {
+                /// Returns the total supply of the token.
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_total_supply(&self) -> odra::OdraResult<U256> {
                     self.env.call_contract(
                         self.address,
@@ -634,10 +637,12 @@ mod ref_item_tests {
                     )
                 }
 
+                /// Returns the total supply of the token.
                 pub fn total_supply(&self) -> U256 {
                     self.try_total_supply().unwrap()
                 }
 
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_get_owner(&self) -> odra::OdraResult<Address> {
                     self.env
                         .call_contract(
@@ -661,6 +666,7 @@ mod ref_item_tests {
                     self.try_get_owner().unwrap()
                 }
 
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_set_owner(&mut self, new_owner: Address) -> odra::OdraResult<()> {
                     self.env
                         .call_contract(
@@ -685,6 +691,7 @@ mod ref_item_tests {
                     self.try_set_owner(new_owner).unwrap()
                 }
 
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_name(&self) -> odra::OdraResult<String> {
                     self.env
                         .call_contract(
@@ -708,6 +715,7 @@ mod ref_item_tests {
                     self.try_name().unwrap()
                 }
 
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_symbol(&self) -> odra::OdraResult<String> {
                     self.env
                         .call_contract(

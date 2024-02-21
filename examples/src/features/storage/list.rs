@@ -1,5 +1,7 @@
+//! Module containing DogContract. It is used in docs to explain how to interact with the storage.
 use odra::{prelude::*, List, Var};
 
+/// A simple contract that represents a third dog.
 #[odra::module]
 pub struct DogContract3 {
     name: Var<String>,
@@ -8,22 +10,27 @@ pub struct DogContract3 {
 
 #[odra::module]
 impl DogContract3 {
+    /// Initializes the contract with the given parameters.
     pub fn init(&mut self, name: String) {
         self.name.set(name);
     }
 
+    /// Returns the dog's name.
     pub fn name(&self) -> String {
         self.name.get_or_default()
     }
 
+    /// Returns the amount of walks the dog has taken. 
     pub fn walks_amount(&self) -> u32 {
         self.walks.len()
     }
 
+    /// Returns the total length of the dog's walks.
     pub fn walks_total_length(&self) -> u32 {
         self.walks.iter().sum()
     }
 
+    /// Adds a walk to the dog's walks.
     pub fn walk_the_dog(&mut self, length: u32) {
         self.walks.push(length);
     }

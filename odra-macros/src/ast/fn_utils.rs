@@ -64,6 +64,7 @@ impl FnItem {
     }
 
     pub fn public(mut self, comment: String) -> FnItem {
+        let comment = format!(" {}", comment);
         self.comment = Some(parse_quote!(#[doc = #comment]));
         self.vis_token = Some(Pub::default());
         self

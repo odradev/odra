@@ -1,3 +1,4 @@
+//! Module containing DogContract. It is used in docs to explain how to interact with the storage.
 use odra::prelude::*;
 use odra::Var;
 

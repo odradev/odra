@@ -28,7 +28,7 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefStructItem {
             #address: #ty_address,
         });
 
-        let comment = format!("[{}] Contract Ref.", module.module_str()?);
+        let comment = format!(" [{}] Contract Ref.", module.module_str()?);
         let doc_attr = parse_quote!(#[doc = #comment]);
 
         Ok(Self {
@@ -81,7 +81,7 @@ impl NewFnItem {
         ];
         let ret_expr: syn::Expr = parse_quote!(Self { #m_env, #m_address });
         let fn_item = FnItem::new(&utils::ident::new(), args, ret_ty, ret_expr.as_block())
-            .public("Creates a new instance of the contract reference.".to_string());
+            .public("Creates a new instance of the Contract Ref.".to_string());
         Self { fn_item }
     }
 }
@@ -138,20 +138,24 @@ mod ref_item_tests {
     fn contract_ref() {
         let module = test_utils::mock::module_impl();
         let expected = quote! {
+            /// [Erc20] Contract Ref.
             pub struct Erc20ContractRef {
                 env: odra::prelude::Rc<odra::ContractEnv>,
                 address: odra::Address,
             }
 
             impl Erc20ContractRef {
+                /// Creates a new instance of the Contract Ref.
                 pub fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::Address) -> Self {
                     Self { env, address }
                 }
 
+                /// Returns the address of the contract.
                 pub fn address(&self) -> &odra::Address {
                     &self.address
                 }
 
+                /// Initializes the contract with the given parameters.
                 pub fn init(&mut self, total_supply: Option<U256>) {
                     self.env.call_contract(
                         self.address,
@@ -167,6 +171,7 @@ mod ref_item_tests {
                     )
                 }
 
+                /// Returns the total supply of the token.
                 pub fn total_supply(&self) -> U256 {
                     self.env.call_contract(
                         self.address,
@@ -181,6 +186,7 @@ mod ref_item_tests {
                     )
                 }
 
+                /// Pay to mint.
                 pub fn pay_to_mint(&mut self) {
                     self.env
                         .call_contract(
@@ -196,6 +202,7 @@ mod ref_item_tests {
                         )
                 }
 
+                /// Approve.
                 pub fn approve(&mut self, to: Address, amount: U256) {
                     self.env
                         .call_contract(
@@ -213,6 +220,7 @@ mod ref_item_tests {
                         )
                 }
 
+                /// Airdrops the given amount to the given addresses.
                 pub fn airdrop(&self, to: odra::prelude::vec::Vec<Address>, amount: U256) {
                     self.env
                         .call_contract(
@@ -239,16 +247,19 @@ mod ref_item_tests {
     fn contract_trait_impl_ref() {
         let module = test_utils::mock::module_trait_impl();
         let expected = quote! {
+            /// [Erc20] Contract Ref.
             pub struct Erc20ContractRef {
                 env: odra::prelude::Rc<odra::ContractEnv>,
                 address: odra::Address,
             }
 
             impl Erc20ContractRef {
+                /// Creates a new instance of the Contract Ref.
                 pub fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::Address) -> Self {
                     Self { env, address }
                 }
 
+                /// Returns the address of the contract.
                 pub fn address(&self) -> &odra::Address {
                     &self.address
                 }
@@ -291,20 +302,24 @@ mod ref_item_tests {
     fn contract_ref_delegate() {
         let module = test_utils::mock::module_delegation();
         let expected = quote! {
+            /// [Erc20] Contract Ref.
             pub struct Erc20ContractRef {
                 env: odra::prelude::Rc<odra::ContractEnv>,
                 address: odra::Address,
             }
 
             impl Erc20ContractRef {
+                /// Creates a new instance of the Contract Ref.
                 pub fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::Address) -> Self {
                     Self { env, address }
                 }
 
+                /// Returns the address of the contract.
                 pub fn address(&self) -> &odra::Address {
                     &self.address
                 }
 
+                /// Returns the total supply of the token.
                 pub fn total_supply(&self) -> U256 {
                     self.env.call_contract(
                         self.address,
