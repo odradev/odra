@@ -121,6 +121,8 @@ impl TryFrom<&'_ ModuleImplIR> for HostRefTraitImplItem {
 #[derive(syn_derive::ToTokens)]
 struct HostRefImplItem {
     impl_token: syn::token::Impl,
+    trait_name: Option<Ident>,
+    for_token: Option<syn::token::For>,
     ref_ident: Ident,
     #[syn(braced)]
     brace_token: syn::token::Brace,
@@ -133,6 +135,48 @@ impl TryFrom<&'_ ModuleImplIR> for HostRefImplItem {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        // If module implements a trait, set trait name
+        let trait_name = module.impl_trait_ident();
+        let for_token: Option<syn::token::For> = match module.is_trait_impl() {  
+            true => Some(Default::default()),
+            false => None
+        };
+        
+        Ok(Self {
+            impl_token: Default::default(),
+            trait_name,
+            for_token,
+            ref_ident: module.host_ref_ident()?,
+            brace_token: Default::default(),
+            functions: module
+                .host_functions()?
+                .iter()
+                .flat_map(|f| {
+                    vec![
+                        ref_utils::host_function_item(f),
+                    ]
+                })
+                .collect()
+        })
+    }
+}
+
+#[derive(syn_derive::ToTokens)]
+struct HostRefTryImplItem {
+    impl_token: syn::token::Impl,
+    ref_ident: Ident,
+    #[syn(braced)]
+    brace_token: syn::token::Brace,
+    #[syn(in = brace_token)]
+    #[to_tokens(|tokens, f| tokens.append_all(f))]
+    functions: Vec<syn::ItemFn>
+}
+
+impl TryFrom<&'_ ModuleImplIR> for HostRefTryImplItem {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        
         Ok(Self {
             impl_token: Default::default(),
             ref_ident: module.host_ref_ident()?,
@@ -143,14 +187,12 @@ impl TryFrom<&'_ ModuleImplIR> for HostRefImplItem {
                 .flat_map(|f| {
                     vec![
                         ref_utils::host_try_function_item(f),
-                        ref_utils::host_function_item(f),
                     ]
                 })
                 .collect()
         })
     }
 }
-
 struct NewFnItem;
 
 impl ToTokens for NewFnItem {
@@ -298,7 +340,8 @@ impl TryFrom<&'_ ModuleImplIR> for IdentFnItem {
 pub struct HostRefItem {
     struct_item: HostRefStructItem,
     trait_impl_item: HostRefTraitImplItem,
-    impl_item: HostRefImplItem
+    impl_item: HostRefImplItem,
+    try_impl_item: HostRefTryImplItem
 }
 
 #[cfg(test)]

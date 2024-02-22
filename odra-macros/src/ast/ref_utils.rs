@@ -72,7 +72,7 @@ fn call_def_with_amount(fun: &FnIR) -> syn::Expr {
 
 fn function_signature(fun: &FnIR) -> syn::Signature {
     let fun_name = fun.name();
-    let args = fun.raw_typed_args();
+    let args = fun.typed_args();
     let return_type = fun.return_type();
     let mutability = fun.is_mut().then(|| quote::quote!(mut));
 
@@ -89,7 +89,7 @@ fn function_docs(fun: &FnIR) -> Vec<syn::Attribute> {
 
 fn try_function_signature(fun: &FnIR) -> syn::Signature {
     let fun_name = fun.try_name();
-    let args = fun.raw_typed_args();
+    let args = fun.typed_args();
     let return_type = fun.try_return_type();
     let mutability = fun.is_mut().then(|| quote::quote!(mut));
 
@@ -131,5 +131,5 @@ pub fn insert_arg_stmt(arg: &FnArgIR) -> syn::Stmt {
     let name = ident.to_string();
     let args = utils::ident::named_args();
 
-    syn::parse_quote!(let _ = #args.insert(#name, #ident);)
+    syn::parse_quote!(let _ = #args.insert(#name, #ident.clone());)
 }

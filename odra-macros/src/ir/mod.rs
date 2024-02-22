@@ -174,6 +174,24 @@ impl ModuleImplIR {
         }
     }
 
+    pub fn is_trait_impl(&self) -> bool {
+        match self {
+            ModuleImplIR::Impl(ir) => {
+                ir.code.trait_.is_some()
+            }
+            ModuleImplIR::Trait(_) => false
+        }
+    }
+
+    pub fn impl_trait_ident(&self) -> Option<Ident> {
+        match self {
+            ModuleImplIR::Impl(ir) => {
+                ir.code.trait_.clone().map(|(_, path, _)| path.get_ident().unwrap().clone())
+            }
+            ModuleImplIR::Trait(_) => None
+        }
+    }
+
     pub fn module_str(&self) -> syn::Result<String> {
         self.module_ident().map(|i| i.to_string())
     }
