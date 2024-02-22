@@ -69,20 +69,30 @@ pub mod events {
     /// Emitted when the transferred token is accepted by the contract.
     #[derive(Event, PartialEq, Eq, Debug, Clone)]
     pub struct SingleReceived {
+        /// The operator that called the function.
         pub operator: Option<Address>,
+        /// The address of the sender.
         pub from: Option<Address>,
+        /// The token id.
         pub token_id: U256,
+        /// The token amount.
         pub amount: U256,
+        /// The token data.
         pub data: Option<Bytes>
     }
 
     /// Emitted when the transferred tokens are accepted by the contract.
     #[derive(Event, PartialEq, Eq, Debug, Clone)]
     pub struct BatchReceived {
+        /// The operator that called the function.
         pub operator: Option<Address>,
+        /// The address of the sender.
         pub from: Option<Address>,
+        /// The token ids.
         pub token_ids: Vec<U256>,
+        /// The token amounts.
         pub amounts: Vec<U256>,
+        /// The token data.
         pub data: Option<Bytes>
     }
 }

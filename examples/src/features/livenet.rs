@@ -1,3 +1,4 @@
+//! This is an example contract used to showcase and test Livenet Environment.
 use odra::casper_types::U256;
 use odra::prelude::*;
 use odra::{Address, List, SubModule, UnwrapOrRevert, Var};

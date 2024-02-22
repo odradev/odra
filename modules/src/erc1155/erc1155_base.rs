@@ -12,7 +12,9 @@ use odra::{
 /// The ERC1155 base implementation.
 #[odra::module(events = [ApprovalForAll, TransferBatch, TransferSingle])]
 pub struct Erc1155Base {
+    /// The balances of the tokens.
     pub balances: Mapping<(Address, U256), U256>,
+    /// The approvals for the operators.
     pub approvals: Mapping<(Address, Address), bool>
 }
 

@@ -1,3 +1,4 @@
+//! Ownable module.
 use crate::access::errors::Error::{CallerNotTheNewOwner, CallerNotTheOwner, OwnerNotSet};
 use crate::access::events::{OwnershipTransferStarted, OwnershipTransferred};
 use odra::prelude::*;
@@ -22,7 +23,6 @@ pub struct Ownable {
 #[odra::module]
 impl Ownable {
     /// Initializes the module setting the caller as the initial owner.
-    #[odra(init)]
     pub fn init(&mut self) {
         let caller = self.env().caller();
         let initial_owner = Some(caller);
@@ -61,10 +61,13 @@ impl Ownable {
         }
     }
 
+    /// Returns the optional address of the current owner.
     pub fn get_optional_owner(&self) -> Option<Address> {
         self.owner.get().flatten()
     }
 
+    /// Unchecked version of the ownership transfer. It emits an event and sets
+    /// the new owner.
     pub fn unchecked_transfer_ownership(&mut self, new_owner: Option<Address>) {
         let previous_owner = self.get_optional_owner();
         self.owner.set(new_owner);

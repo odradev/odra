@@ -60,28 +60,41 @@ pub mod events {
     /// Emitted when a single Erc1155 transfer is performed.
     #[derive(Event, PartialEq, Eq, Debug, Clone)]
     pub struct TransferSingle {
+        /// The operator that called the function.
         pub operator: Option<Address>,
+        /// The address from which the tokens are transferred.
         pub from: Option<Address>,
+        /// The address to which the tokens are transferred.
         pub to: Option<Address>,
+        /// The token id.
         pub id: U256,
+        /// The token amount.
         pub value: U256
     }
 
     /// Emitted when a batched Erc1155 transfer is performed.
     #[derive(Event, PartialEq, Eq, Debug, Clone)]
     pub struct TransferBatch {
+        /// The operator that called the function.
         pub operator: Option<Address>,
+        /// The address from which the tokens are transferred.
         pub from: Option<Address>,
+        /// The address to which the tokens are transferred.
         pub to: Option<Address>,
+        /// The token ids.
         pub ids: Vec<U256>,
+        /// The token amounts.
         pub values: Vec<U256>
     }
 
     /// Emitted when the `owner` approves or revokes the `operator`.
     #[derive(Event, PartialEq, Eq, Debug, Clone)]
     pub struct ApprovalForAll {
+        /// The owner of the tokens.
         pub owner: Address,
+        /// The operator that is approved.
         pub operator: Address,
+        /// The approval status.
         pub approved: bool
     }
 }

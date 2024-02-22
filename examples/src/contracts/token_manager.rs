@@ -1,7 +1,9 @@
+//! This is an example of a TokenManager contract that manages multiple tokens.
 use crate::contracts::owned_token::OwnedToken;
 use odra::prelude::*;
 use odra::{casper_types::U256, Address, Mapping, SubModule, Var};
 
+/// Contract that manages multiple tokens.
 #[odra::module]
 pub struct TokenManager {
     tokens: Mapping<String, OwnedToken>,
@@ -10,6 +12,7 @@ pub struct TokenManager {
 
 #[odra::module]
 impl TokenManager {
+    /// Adds a new token to the contract.
     pub fn add_token(&mut self, name: String, decimals: u8, symbol: String) {
         self.tokens
             .module(&name)
@@ -19,26 +22,32 @@ impl TokenManager {
         self.count.set(new_count);
     }
 
+    /// Returns the balance of the given account for the given token.
     pub fn balance_of(&self, token_name: String, owner: &Address) -> U256 {
         self.get_token(token_name).balance_of(owner)
     }
 
+    /// Mints new tokens and assigns them to the given address.
     pub fn mint(&mut self, token_name: String, account: &Address, amount: &U256) {
         self.get_token(token_name).mint(account, amount);
     }
 
+    /// Returns the number of tokens managed by the contract.
     pub fn tokens_count(&self) -> u32 {
         self.count.get_or_default()
     }
 
+    /// Returns the owner of the given token.
     pub fn get_owner(&self, token_name: String) -> Address {
         self.get_token(token_name).get_owner()
     }
 
+    /// Transfers the ownership of the given token to the new owner.
     pub fn set_owner(&mut self, token_name: String, new_owner: &Address) {
         self.get_token(token_name).transfer_ownership(new_owner);
     }
 
+    /// Returns the token module for the given token name.
     fn get_token(&self, token_name: String) -> SubModule<OwnedToken> {
         self.tokens.module(&token_name)
     }

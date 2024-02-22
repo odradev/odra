@@ -1,8 +1,10 @@
+//! An example of a OwnedToken contract.
 use odra::prelude::*;
 use odra::{casper_types::U256, Address, SubModule};
 use odra_modules::access::Ownable;
 use odra_modules::erc20::Erc20;
 
+/// OwnedToken contract.
 #[odra::module]
 pub struct OwnedToken {
     ownable: SubModule<Ownable>,

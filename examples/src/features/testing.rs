@@ -1,3 +1,4 @@
+//! This example shows how to test a contract.
 use odra::prelude::*;
 use odra::{Address, Var};
 

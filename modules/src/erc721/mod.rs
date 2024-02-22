@@ -62,24 +62,33 @@ pub mod events {
     /// Emitted when the `token_id` token is transferred (also minted or burned).
     #[derive(Event)]
     pub struct Transfer {
+        /// The address of the sender.
         pub from: Option<Address>,
+        /// The address of the receiver.
         pub to: Option<Address>,
+        /// The token id.
         pub token_id: U256
     }
 
     /// Emitted when the `owner` approves `approved` to operate on the `token_id` token.
     #[derive(Event)]
     pub struct Approval {
+        /// The owner of the tokens.
         pub owner: Address,
+        /// The operator that is approved.
         pub approved: Option<Address>,
+        /// The token id.
         pub token_id: U256
     }
 
     /// Emitted when the `owner` approves or revokes `operator`.
     #[derive(Event)]
     pub struct ApprovalForAll {
+        /// The owner of the tokens.
         pub owner: Address,
+        /// The operator that is approved or revoked.
         pub operator: Address,
+        /// The approval status.
         pub approved: bool
     }
 }

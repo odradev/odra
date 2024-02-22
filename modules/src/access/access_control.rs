@@ -1,10 +1,13 @@
+//! Access Control module.
 use super::events::*;
 use crate::access::errors::Error::{MissingRole, RoleRenounceForAnotherAddress};
 use odra::prelude::*;
 use odra::{Address, Mapping};
 
+/// The role identifier.
 pub type Role = [u8; 32];
 
+/// The default admin role.
 pub const DEFAULT_ADMIN_ROLE: Role = [0u8; 32];
 
 /// This contract module enables the implementation of role-based access control mechanisms for children

@@ -1,3 +1,4 @@
+//! This example demonstrates how to use the reentrancy guard in a contract.
 use odra::prelude::*;
 use odra::Var;
 

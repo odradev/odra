@@ -43,9 +43,13 @@ pub mod events {
     /// Emitted when the transfer is accepted by the contract.
     #[derive(Event, PartialEq, Eq, Debug, Clone)]
     pub struct Received {
+        /// The operator that called the function.
         pub operator: Option<Address>,
+        /// The address of of the sender.
         pub from: Option<Address>,
+        /// The token id.
         pub token_id: U256,
+        /// The token data.
         pub data: Option<Bytes>
     }
 }

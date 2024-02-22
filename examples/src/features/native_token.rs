@@ -1,3 +1,4 @@
+//! This example demonstrates how to handle native CSPR transfers in a contract.
 use odra::casper_types::U512;
 use odra::prelude::*;
 

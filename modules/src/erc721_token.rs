@@ -13,6 +13,7 @@ use odra::{
     Address, SubModule
 };
 
+
 /// The ERC721 token implementation.
 ///
 /// It uses the [ERC721](Erc721Base) base implementation, the [ERC721 metadata](Erc721MetadataExtension) extension

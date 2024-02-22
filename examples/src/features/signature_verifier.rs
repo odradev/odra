@@ -1,3 +1,4 @@
+//! This example shows how to handle signature verification in a contract.
 use odra::casper_types::{bytesrepr::Bytes, PublicKey};
 use odra::prelude::*;
 

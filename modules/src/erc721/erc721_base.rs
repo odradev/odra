@@ -14,10 +14,13 @@ use odra::{
 /// The ERC721 base implementation.
 #[odra::module(events = [Approval, ApprovalForAll, Transfer])]
 pub struct Erc721Base {
-    // Erc721 base fields.
+    /// The token balances.
     pub balances: Mapping<Address, U256>,
+    /// The token owners.
     pub owners: Mapping<U256, Option<Address>>,
+    /// The token approvals.
     pub token_approvals: Mapping<U256, Option<Address>>,
+    /// The operator approvals.
     pub operator_approvals: Mapping<(Address, Address), bool>
 }
 

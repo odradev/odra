@@ -1,3 +1,4 @@
+//! This example is used by the Access Control tutorial.
 use odra::prelude::*;
 use odra::{Address, SubModule};
 use sha3::{Digest, Keccak256};

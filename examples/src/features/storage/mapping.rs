@@ -25,14 +25,14 @@ impl DogContract2 {
     }
 
     /// Adds a visit to the friend's visits.
-    pub fn visit(&mut self, friend_name: FriendName) {
-        let visits = self.visits(friend_name.clone());
+    pub fn visit(&mut self, friend_name: &FriendName) {
+        let visits = self.visits(friend_name);
         self.friends.set(&friend_name, visits + 1);
     }
 
     /// Returns the total visits of the friend.
-    pub fn visits(&self, friend_name: FriendName) -> u32 {
-        self.friends.get_or_default(&friend_name)
+    pub fn visits(&self, friend_name: &FriendName) -> u32 {
+        self.friends.get_or_default(friend_name)
     }
 }
 

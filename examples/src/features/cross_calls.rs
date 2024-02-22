@@ -1,3 +1,4 @@
+//! This example demonstrates how to call a method from another contract.
 use odra::prelude::*;
 use odra::{Address, UnwrapOrRevert, Var};
 

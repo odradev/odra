@@ -1,3 +1,4 @@
+//! This example demonstrates how to handle errors in a contract.
 use odra::prelude::*;
 use odra::{Address, OdraError, Var};
 

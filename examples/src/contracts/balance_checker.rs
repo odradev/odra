@@ -1,18 +1,23 @@
+//! Example of Balance Checker contract.
 use odra::prelude::*;
 use odra::{casper_types::U256, Address};
 
+/// BalanceChecker contract.
 #[odra::module]
 pub struct BalanceChecker;
 
 #[odra::module]
 impl BalanceChecker {
+    /// Checks the balance of the given account for the given token.
     pub fn check_balance(&self, token: &Address, account: &Address) -> U256 {
         TokenContractRef::new(self.env(), *token).balance_of(*account)
     }
 }
 
+/// Token contract interface.
 #[odra::external_contract]
 pub trait Token {
+    /// Returns the balance of the given account.
     fn balance_of(&self, owner: &Address) -> U256;
 }
 
