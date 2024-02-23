@@ -63,7 +63,7 @@ impl FnItem {
         }
     }
 
-    pub fn public(mut self, comment: String) -> FnItem {
+    pub fn _public(mut self, comment: String) -> FnItem {
         let comment = format!(" {}", comment);
         self.comment = Some(parse_quote!(#[doc = #comment]));
         self.vis_token = Some(Pub::default());
@@ -89,7 +89,7 @@ impl SingleArgFnItem {
     }
 
     pub fn _make_pub(mut self, comment: String) -> Self {
-        self.fn_item = self.fn_item.public(comment);
+        self.fn_item = self.fn_item._public(comment);
         self
     }
 

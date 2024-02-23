@@ -6,7 +6,7 @@ use crate::erc1155_receiver::Erc1155ReceiverContractRef;
 use odra::prelude::*;
 use odra::{
     casper_types::{bytesrepr::Bytes, U256},
-    Address, Mapping
+    Address, ContractRef, Mapping
 };
 
 /// The ERC1155 base implementation.

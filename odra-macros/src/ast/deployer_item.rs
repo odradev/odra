@@ -191,6 +191,7 @@ mod deployer_impl {
     fn deployer_impl() {
         let module = test_utils::mock::module_impl();
         let expected = quote! {
+            #[allow(missing_docs)]
             /// [Erc20] contract constructor arguments.
             #[derive(odra::IntoRuntimeArgs)]
             pub struct Erc20InitArgs {

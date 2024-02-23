@@ -1,5 +1,6 @@
 use crate::ast::fn_utils::FnItem;
 use crate::utils::misc::AsBlock;
+use crate::utils::ty::contract_ref;
 use crate::{ast::ref_utils, ir::ModuleImplIR, utils};
 use derive_try_from_ref::TryFromRef;
 use quote::TokenStreamExt;
@@ -56,7 +57,6 @@ impl AddressFnItem {
             utils::misc::ret_ty(&utils::ty::address_ref()),
             ret_expr.as_block()
         )
-        .public("Returns the address of the contract.".to_string())
         .instanced();
 
         Self { fn_item }
@@ -80,8 +80,7 @@ impl NewFnItem {
             parse_quote!(#m_address: #ty_address),
         ];
         let ret_expr: syn::Expr = parse_quote!(Self { #m_env, #m_address });
-        let fn_item = FnItem::new(&utils::ident::new(), args, ret_ty, ret_expr.as_block())
-            .public("Creates a new instance of the Contract Ref.".to_string());
+        let fn_item = FnItem::new(&utils::ident::new(), args, ret_ty, ret_expr.as_block());
         Self { fn_item }
     }
 }
@@ -89,8 +88,8 @@ impl NewFnItem {
 #[derive(syn_derive::ToTokens)]
 struct ContractRefTraitImplItem {
     impl_token: syn::token::Impl,
-    // trait_name: Option<syn::Ident>,
-    // for_token: Option<syn::token::For>,
+    trait_name: syn::Type,
+    for_token: syn::token::For,
     ref_ident: syn::Ident,
     #[syn(braced)]
     brace_token: syn::token::Brace,
@@ -106,8 +105,8 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefTraitImplItem {
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
             impl_token: Default::default(),
-            // trait_name,
-            // for_token,
+            trait_name: contract_ref(),
+            for_token: Default::default(),
             ref_ident: module.contract_ref_ident()?,
             brace_token: Default::default(),
             new_fn: NewFnItem::new(),
@@ -180,17 +179,17 @@ mod ref_item_tests {
                 address: odra::Address,
             }
 
-            impl Erc20ContractRef {
-                /// Creates a new instance of the Contract Ref.
-                pub fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::Address) -> Self {
+            impl odra::ContractRef for Erc20ContractRef {
+                fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::Address) -> Self {
                     Self { env, address }
                 }
 
-                /// Returns the address of the contract.
-                pub fn address(&self) -> &odra::Address {
+                fn address(&self) -> &odra::Address {
                     &self.address
                 }
+            }
 
+            impl Erc20ContractRef {
                 /// Initializes the contract with the given parameters.
                 pub fn init(&mut self, total_supply: Option<U256>) {
                     self.env.call_contract(
@@ -200,7 +199,7 @@ mod ref_item_tests {
                             true,
                             {
                                 let mut named_args = odra::casper_types::RuntimeArgs::new();
-                                let _ = named_args.insert("total_supply", total_supply);
+                                let _ = named_args.insert("total_supply", total_supply.clone());
                                 named_args
                             }
                         ),
@@ -239,7 +238,7 @@ mod ref_item_tests {
                 }
 
                 /// Approve.
-                pub fn approve(&mut self, to: Address, amount: U256) {
+                pub fn approve(&mut self, to: &Address, amount: &U256) {
                     self.env
                         .call_contract(
                             self.address,
@@ -248,8 +247,8 @@ mod ref_item_tests {
                                 true,
                                 {
                                     let mut named_args = odra::casper_types::RuntimeArgs::new();
-                                    let _ = named_args.insert("to", to);
-                                    let _ = named_args.insert("amount", amount);
+                                    let _ = named_args.insert("to", to.clone());
+                                    let _ = named_args.insert("amount", amount.clone());
                                     named_args
                                 },
                             ),
@@ -257,7 +256,7 @@ mod ref_item_tests {
                 }
 
                 /// Airdrops the given amount to the given addresses.
-                pub fn airdrop(&self, to: odra::prelude::vec::Vec<Address>, amount: U256) {
+                pub fn airdrop(&self, to: &[Address], amount: &U256) {
                     self.env
                         .call_contract(
                             self.address,
@@ -266,8 +265,8 @@ mod ref_item_tests {
                                 false,
                                 {
                                     let mut named_args = odra::casper_types::RuntimeArgs::new();
-                                    let _ = named_args.insert("to", to);
-                                    let _ = named_args.insert("amount", amount);
+                                    let _ = named_args.insert("to", to.clone());
+                                    let _ = named_args.insert("amount", amount.clone());
                                     named_args
                                 },
                             ),
@@ -289,18 +288,18 @@ mod ref_item_tests {
                 address: odra::Address,
             }
 
-            impl Erc20ContractRef {
-                /// Creates a new instance of the Contract Ref.
-                pub fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::Address) -> Self {
+            impl odra::ContractRef for Erc20ContractRef {
+                fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::Address) -> Self {
                     Self { env, address }
                 }
 
-                /// Returns the address of the contract.
-                pub fn address(&self) -> &odra::Address {
+                fn address(&self) -> &odra::Address {
                     &self.address
                 }
+            }
 
-                pub fn total_supply(&self) -> U256 {
+            impl IErc20 for Erc20ContractRef {
+                fn total_supply(&self) -> U256 {
                     self.env.call_contract(
                         self.address,
                         odra::CallDef::new(
@@ -314,7 +313,7 @@ mod ref_item_tests {
                     )
                 }
 
-                pub fn pay_to_mint(&mut self) {
+                fn pay_to_mint(&mut self) {
                     self.env
                         .call_contract(
                             self.address,
@@ -344,17 +343,17 @@ mod ref_item_tests {
                 address: odra::Address,
             }
 
-            impl Erc20ContractRef {
-                /// Creates a new instance of the Contract Ref.
-                pub fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::Address) -> Self {
+            impl odra::ContractRef for Erc20ContractRef {
+                fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::Address) -> Self {
                     Self { env, address }
                 }
 
-                /// Returns the address of the contract.
-                pub fn address(&self) -> &odra::Address {
+                fn address(&self) -> &odra::Address {
                     &self.address
                 }
+            }
 
+            impl Erc20ContractRef {
                 /// Returns the total supply of the token.
                 pub fn total_supply(&self) -> U256 {
                     self.env.call_contract(
@@ -370,6 +369,7 @@ mod ref_item_tests {
                     )
                 }
 
+                /// Delegated. See `self.ownable.get_owner()` for details.
                 pub fn get_owner(&self) -> Address {
                     self.env
                         .call_contract(
@@ -385,6 +385,7 @@ mod ref_item_tests {
                         )
                 }
 
+                /// Delegated. See `self.ownable.set_owner()` for details.
                 pub fn set_owner(&mut self, new_owner: Address) {
                     self.env
                         .call_contract(
@@ -394,13 +395,14 @@ mod ref_item_tests {
                                 true,
                                 {
                                     let mut named_args = odra::casper_types::RuntimeArgs::new();
-                                    let _ = named_args.insert("new_owner", new_owner);
+                                    let _ = named_args.insert("new_owner", new_owner.clone());
                                     named_args
                                 },
                             ),
                         )
                 }
 
+                /// Delegated. See `self.metadata.name()` for details.
                 pub fn name(&self) -> String {
                     self.env
                         .call_contract(
@@ -416,6 +418,7 @@ mod ref_item_tests {
                         )
                 }
 
+                /// Delegated. See `self.metadata.symbol()` for details.
                 pub fn symbol(&self) -> String {
                     self.env
                         .call_contract(

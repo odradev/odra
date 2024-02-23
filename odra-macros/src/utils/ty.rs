@@ -273,6 +273,10 @@ pub fn host_ref() -> syn::Type {
     parse_quote!(odra::host::HostRef)
 }
 
+pub fn contract_ref() -> syn::Type {
+    parse_quote!(odra::ContractRef)
+}
+
 pub fn init_args() -> syn::Type {
     parse_quote!(odra::host::InitArgs)
 }

@@ -1,4 +1,5 @@
 use crate::utils;
+use quote::ToTokens;
 
 mod kw {
     syn::custom_keyword!(to);
@@ -30,7 +31,16 @@ impl syn::parse::Parse for Delegate {
                     .collect::<syn::punctuated::Punctuated<syn::Ident, syn::Token![,]>>();
 
                 let mut attrs = fn_item.attrs.clone();
-                attrs.push(syn::parse_quote!(#[allow(missing_docs)]));
+
+                let comment = format!(
+                    " Delegated. See `{}.{}.{}()` for details.",
+                    delegate_to.base.to_token_stream(),
+                    delegate_to.member.to_token_stream(),
+                    fn_ident
+                );
+
+                let attr = syn::parse_quote!(#[doc = #comment]);
+                attrs.push(attr);
 
                 functions.push(syn::ImplItemFn {
                     attrs,

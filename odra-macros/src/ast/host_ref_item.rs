@@ -390,6 +390,56 @@ mod ref_item_tests {
             }
 
             impl Erc20HostRef {
+                /// Initializes the contract with the given parameters.
+                pub fn init(&mut self, total_supply: Option<U256>) {
+                    self.try_init(total_supply).unwrap()
+                }
+
+                /// Returns the total supply of the token.
+                pub fn total_supply(&self) -> U256 {
+                    self.try_total_supply().unwrap()
+                }
+
+                /// Pay to mint.
+                pub fn pay_to_mint(&mut self) {
+                    self.try_pay_to_mint().unwrap()
+                }
+
+                /// Approve.
+                pub fn approve(&mut self, to: &Address, amount: &U256) {
+                    self.try_approve(to, amount).unwrap()
+                }
+
+                /// Airdrops the given amount to the given addresses.
+                pub fn airdrop(&self, to: &[Address], amount: &U256) {
+                    self.try_airdrop(to, amount).unwrap()
+                }
+            }
+
+            impl Erc20HostRef {
+                /// Initializes the contract with the given parameters.
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
+                pub fn try_init(&mut self, total_supply: Option<U256>) -> odra::OdraResult<()> {
+                    self.env
+                        .call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                String::from("init"),
+                                true,
+                                {
+                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    if self.attached_value > odra::casper_types::U512::zero() {
+                                        let _ = named_args.insert("amount", self.attached_value);
+                                    }
+                                    let _ = named_args
+                                        .insert("total_supply", total_supply.clone());
+                                    named_args
+                                },
+                            )
+                            .with_amount(self.attached_value),
+                        )
+                }
+
                 /// Returns the total supply of the token.
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_total_supply(&self) -> odra::OdraResult<U256> {
@@ -408,12 +458,6 @@ mod ref_item_tests {
                         ).with_amount(self.attached_value),
                     )
                 }
-
-                /// Returns the total supply of the token.
-                pub fn total_supply(&self) -> U256 {
-                    self.try_total_supply().unwrap()
-                }
-
                 /// Pay to mint.
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_pay_to_mint(&mut self) -> odra::OdraResult<()> {
@@ -434,18 +478,12 @@ mod ref_item_tests {
                                 .with_amount(self.attached_value),
                         )
                 }
-
-                /// Pay to mint.
-                pub fn pay_to_mint(&mut self) {
-                    self.try_pay_to_mint().unwrap()
-                }
-
                 /// Approve.
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_approve(
                     &mut self,
-                    to: Address,
-                    amount: U256,
+                    to: &Address,
+                    amount: &U256,
                 ) -> odra::OdraResult<()> {
                     self.env
                         .call_contract(
@@ -458,23 +496,17 @@ mod ref_item_tests {
                                         if self.attached_value > odra::casper_types::U512::zero() {
                                             let _ = named_args.insert("amount", self.attached_value);
                                         }
-                                        let _ = named_args.insert("to", to);
-                                        let _ = named_args.insert("amount", amount);
+                                        let _ = named_args.insert("to", to.clone());
+                                        let _ = named_args.insert("amount", amount.clone());
                                         named_args
                                     },
                                 )
                                 .with_amount(self.attached_value),
                         )
                 }
-
-                /// Approve.
-                pub fn approve(&mut self, to: Address, amount: U256) {
-                    self.try_approve(to, amount).unwrap()
-                }
-
                 /// Airdrops the given amount to the given addresses.
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                pub fn try_airdrop(&self, to: odra::prelude::vec::Vec<Address>, amount: U256) -> odra::OdraResult<()> {
+                pub fn try_airdrop(&self, to: &[Address], amount: &U256) -> odra::OdraResult<()> {
                     self.env.call_contract(
                         self.address,
                         odra::CallDef::new(
@@ -485,17 +517,12 @@ mod ref_item_tests {
                                 if self.attached_value > odra::casper_types::U512::zero() {
                                     let _ = named_args.insert("amount", self.attached_value);
                                 }
-                                let _ = named_args.insert("to", to);
-                                let _ = named_args.insert("amount", amount);
+                                let _ = named_args.insert("to", to.clone());
+                                let _ = named_args.insert("amount", amount.clone());
                                 named_args
                             }
                         ).with_amount(self.attached_value),
                     )
-                }
-
-                /// Airdrops the given amount to the given addresses.
-                pub fn airdrop(&self, to: odra::prelude::vec::Vec<Address>, amount: U256) {
-                    self.try_airdrop(to, amount).unwrap()
                 }
             }
         };
@@ -551,6 +578,16 @@ mod ref_item_tests {
                 }
             }
 
+            impl IErc20 for Erc20HostRef {
+                fn total_supply(&self) -> U256 {
+                    self.try_total_supply().unwrap()
+                }
+
+                fn pay_to_mint(&mut self) {
+                    self.try_pay_to_mint().unwrap()
+                }
+            }
+
             impl Erc20HostRef {
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_total_supply(&self) -> odra::OdraResult<U256> {
@@ -570,9 +607,6 @@ mod ref_item_tests {
                     )
                 }
 
-                pub fn total_supply(&self) -> U256 {
-                    self.try_total_supply().unwrap()
-                }
 
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_pay_to_mint(&mut self) -> odra::OdraResult<()>  {
@@ -592,10 +626,6 @@ mod ref_item_tests {
                                 )
                                 .with_amount(self.attached_value),
                         )
-                }
-
-                pub fn pay_to_mint(&mut self) {
-                    self.try_pay_to_mint().unwrap()
                 }
             }
         };
@@ -653,6 +683,33 @@ mod ref_item_tests {
 
             impl Erc20HostRef {
                 /// Returns the total supply of the token.
+                pub fn total_supply(&self) -> U256 {
+                    self.try_total_supply().unwrap()
+                }
+
+                /// Delegated. See `self.ownable.get_owner()` for details.
+                pub fn get_owner(&self) -> Address {
+                    self.try_get_owner().unwrap()
+                }
+
+                /// Delegated. See `self.ownable.set_owner()` for details.
+                pub fn set_owner(&mut self, new_owner: Address) {
+                    self.try_set_owner(new_owner).unwrap()
+                }
+
+                /// Delegated. See `self.metadata.name()` for details.
+                pub fn name(&self) -> String {
+                    self.try_name().unwrap()
+                }
+
+                /// Delegated. See `self.metadata.symbol()` for details.
+                pub fn symbol(&self) -> String {
+                    self.try_symbol().unwrap()
+                 }
+            }
+
+            impl Erc20HostRef {
+                /// Returns the total supply of the token.
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_total_supply(&self) -> odra::OdraResult<U256> {
                     self.env.call_contract(
@@ -671,11 +728,7 @@ mod ref_item_tests {
                     )
                 }
 
-                /// Returns the total supply of the token.
-                pub fn total_supply(&self) -> U256 {
-                    self.try_total_supply().unwrap()
-                }
-
+                /// Delegated. See `self.ownable.get_owner()` for details.
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_get_owner(&self) -> odra::OdraResult<Address> {
                     self.env
@@ -696,10 +749,7 @@ mod ref_item_tests {
                         )
                 }
 
-                pub fn get_owner(&self) -> Address {
-                    self.try_get_owner().unwrap()
-                }
-
+                /// Delegated. See `self.ownable.set_owner()` for details.
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_set_owner(&mut self, new_owner: Address) -> odra::OdraResult<()> {
                     self.env
@@ -713,7 +763,7 @@ mod ref_item_tests {
                                         if self.attached_value > odra::casper_types::U512::zero() {
                                             let _ = named_args.insert("amount", self.attached_value);
                                         }
-                                        let _ = named_args.insert("new_owner", new_owner);
+                                        let _ = named_args.insert("new_owner", new_owner.clone());
                                         named_args
                                     },
                                 )
@@ -721,10 +771,7 @@ mod ref_item_tests {
                         )
                 }
 
-                pub fn set_owner(&mut self, new_owner: Address) {
-                    self.try_set_owner(new_owner).unwrap()
-                }
-
+                /// Delegated. See `self.metadata.name()` for details.
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_name(&self) -> odra::OdraResult<String> {
                     self.env
@@ -745,10 +792,7 @@ mod ref_item_tests {
                         )
                 }
 
-                pub fn name(&self) -> String {
-                    self.try_name().unwrap()
-                }
-
+                /// Delegated. See `self.metadata.symbol()` for details.
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_symbol(&self) -> odra::OdraResult<String> {
                     self.env
@@ -769,9 +813,6 @@ mod ref_item_tests {
                         )
                 }
 
-                pub fn symbol(&self) -> String {
-                    self.try_symbol().unwrap()
-                 }
             }
         };
         let actual = HostRefItem::try_from(&module).unwrap();

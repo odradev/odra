@@ -232,6 +232,7 @@ mod test {
         let actual = ExecPartsItem::try_from(&module).unwrap();
 
         let expected = quote::quote! {
+            #[allow(missing_docs)]
             mod __erc20_exec_parts {
                 use super::*;
                 use odra::prelude::*;
@@ -300,6 +301,7 @@ mod test {
         let actual = ExecPartsItem::try_from(&module).unwrap();
 
         let expected = quote::quote! {
+            #[allow(missing_docs)]
             mod __erc20_exec_parts {
                 use super::*;
                 use odra::prelude::*;
@@ -334,6 +336,7 @@ mod test {
         let actual = ExecPartsItem::try_from(&module).unwrap();
 
         let expected = quote::quote! {
+            #[allow(missing_docs)]
             mod __erc20_exec_parts {
                 use super::*;
                 use odra::prelude::*;
