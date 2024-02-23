@@ -160,13 +160,8 @@ impl Erc1155Base {
         data: &Option<Bytes>
     ) {
         if to.is_contract() {
-            let response = Erc1155ReceiverContractRef::new(self.env(), *to).on_erc1155_received(
-                operator,
-                from,
-                id,
-                amount,
-                data
-            );
+            let response = Erc1155ReceiverContractRef::new(self.env(), *to)
+                .on_erc1155_received(operator, from, id, amount, data);
             if !response {
                 self.env().revert(Error::TransferRejected);
             }
@@ -186,13 +181,7 @@ impl Erc1155Base {
     ) {
         if to.is_contract() {
             let response = Erc1155ReceiverContractRef::new(self.env(), *to)
-                .on_erc1155_batch_received(
-                    operator,
-                    from,
-                    ids.to_vec(),
-                    amounts.to_vec(),
-                    data
-                );
+                .on_erc1155_batch_received(operator, from, ids.to_vec(), amounts.to_vec(), data);
             if !response {
                 self.env().revert(Error::TransferRejected);
             }

@@ -20,7 +20,7 @@ impl DogContract3 {
         self.name.get_or_default()
     }
 
-    /// Returns the amount of walks the dog has taken. 
+    /// Returns the amount of walks the dog has taken.
     pub fn walks_amount(&self) -> u32 {
         self.walks.len()
     }

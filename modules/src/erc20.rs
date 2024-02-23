@@ -274,16 +274,16 @@ mod tests {
         let sender = env.get_account(0);
         let recipient = env.get_account(1);
         let amount = 1_000.into();
-        erc20.transfer(recipient, amount);
+        erc20.transfer(&recipient, &amount);
 
         // Then the sender balance is deducted.
         assert_eq!(
-            erc20.balance_of(sender),
+            erc20.balance_of(&sender),
             U256::from(INITIAL_SUPPLY) - amount
         );
 
         // Then the recipient balance is updated.
-        assert_eq!(erc20.balance_of(recipient), amount);
+        assert_eq!(erc20.balance_of(&recipient), amount);
 
         // Then Transfer event was emitted.
         assert!(env.emitted_event(
@@ -306,7 +306,7 @@ mod tests {
         let amount = U256::from(INITIAL_SUPPLY) + U256::one();
 
         // Then an error occurs.
-        assert!(erc20.try_transfer(recipient, amount).is_err());
+        assert!(erc20.try_transfer(&recipient, &amount).is_err());
     }
 
     #[test]
@@ -318,13 +318,13 @@ mod tests {
         let approved_amount = 3_000.into();
         let transfer_amount = 1_000.into();
 
-        assert_eq!(erc20.balance_of(owner), U256::from(INITIAL_SUPPLY));
+        assert_eq!(erc20.balance_of(&owner), U256::from(INITIAL_SUPPLY));
 
         // Owner approves Spender.
-        erc20.approve(spender, approved_amount);
+        erc20.approve(&spender, &approved_amount);
 
         // Allowance was recorded.
-        assert_eq!(erc20.allowance(owner, spender), approved_amount);
+        assert_eq!(erc20.allowance(&owner, &spender), approved_amount);
         assert!(env.emitted_event(
             erc20.address(),
             &Approval {
@@ -336,14 +336,14 @@ mod tests {
 
         // Spender transfers tokens from Owner to Recipient.
         env.set_caller(spender);
-        erc20.transfer_from(owner, recipient, transfer_amount);
+        erc20.transfer_from(&owner, &recipient, &transfer_amount);
 
         // Tokens are transferred and allowance decremented.
         assert_eq!(
-            erc20.balance_of(owner),
+            erc20.balance_of(&owner),
             U256::from(INITIAL_SUPPLY) - transfer_amount
         );
-        assert_eq!(erc20.balance_of(recipient), transfer_amount);
+        assert_eq!(erc20.balance_of(&recipient), transfer_amount);
         assert!(env.emitted_event(
             erc20.address(),
             &Approval {
@@ -375,7 +375,7 @@ mod tests {
 
         // Then transfer fails.
         assert_eq!(
-            erc20.try_transfer_from(owner, recipient, amount),
+            erc20.try_transfer_from(&owner, &recipient, &amount),
             Err(Error::InsufficientAllowance.into())
         );
     }

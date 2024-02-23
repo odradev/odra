@@ -1,7 +1,7 @@
 //! A pluggable Odra module implementing Erc721Receiver.
 use crate::erc721::extensions::erc721_receiver::Erc721Receiver as Erc721ReceiverTrait;
+use crate::erc721::owned_erc721_with_metadata::OwnedErc721WithMetadata;
 use crate::erc721_receiver::events::Received;
- use crate::erc721::owned_erc721_with_metadata::OwnedErc721WithMetadata;
 use crate::erc721_token::Erc721TokenContractRef;
 use odra::prelude::*;
 use odra::{

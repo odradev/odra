@@ -188,7 +188,7 @@ mod test {
 
         // when the current owner transfers ownership
         let new_owner = contract.env().get_account(1);
-        contract.transfer_ownership(new_owner);
+        contract.transfer_ownership(&new_owner);
 
         // then the new owner is set
         assert_eq!(new_owner, contract.get_owner());
@@ -209,7 +209,7 @@ mod test {
 
         // when the current owner transfers ownership
         let new_owner = contract.env().get_account(1);
-        contract.transfer_ownership(new_owner);
+        contract.transfer_ownership(&new_owner);
 
         // when the pending owner accepts the transfer
         contract.env().set_caller(new_owner);
@@ -246,7 +246,7 @@ mod test {
         contract.env().set_caller(caller);
 
         // then ownership transfer fails
-        let err = contract.try_transfer_ownership(new_owner).unwrap_err();
+        let err = contract.try_transfer_ownership(&new_owner).unwrap_err();
         assert_eq!(err, CallerNotTheOwner.into());
     }
 
@@ -260,12 +260,12 @@ mod test {
         contract.env().set_caller(caller);
 
         // then ownership transfer fails
-        let err = contract.try_transfer_ownership(new_owner).unwrap_err();
+        let err = contract.try_transfer_ownership(&new_owner).unwrap_err();
         assert_eq!(err, CallerNotTheOwner.into());
 
         // when the owner is the caller
         contract.env().set_caller(initial_owner);
-        contract.transfer_ownership(new_owner);
+        contract.transfer_ownership(&new_owner);
 
         // then the pending owner is set
         assert_eq!(contract.get_pending_owner(), Some(new_owner));

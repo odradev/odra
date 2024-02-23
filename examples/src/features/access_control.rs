@@ -207,7 +207,9 @@ pub mod test {
 
         // when Admin renounces the role on moderator's behalf - it fails.
         assert_eq!(
-            contract.try_renounce_moderator_role(&moderator).unwrap_err(),
+            contract
+                .try_renounce_moderator_role(&moderator)
+                .unwrap_err(),
             Error::RoleRenounceForAnotherAddress.into()
         );
 

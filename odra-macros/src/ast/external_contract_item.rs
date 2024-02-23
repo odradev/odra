@@ -1,6 +1,6 @@
+use crate::ast::contract_ref_item::RefItem;
 use crate::ast::host_ref_item::HostRefItem;
 use crate::ast::parts_utils::{UsePreludeItem, UseSuperItem};
-use crate::ast::contract_ref_item::RefItem;
 use crate::ast::test_parts::{PartsModuleItem, TestPartsReexportItem};
 use crate::ir::ModuleImplIR;
 use derive_try_from_ref::TryFromRef;

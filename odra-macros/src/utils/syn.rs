@@ -20,9 +20,7 @@ pub fn function_arg_names(sig: &syn::Signature) -> Vec<syn::Ident> {
             syn::FnArg::Typed(syn::PatType {
                 pat: box syn::Pat::Ident(pat),
                 ..
-            }) => {
-                Some(pat.ident.clone())
-            },
+            }) => Some(pat.ident.clone()),
             _ => None
         })
         .collect()

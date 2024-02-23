@@ -137,11 +137,11 @@ impl TryFrom<&'_ ModuleImplIR> for HostRefImplItem {
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         // If module implements a trait, set trait name
         let trait_name = module.impl_trait_ident();
-        let for_token: Option<syn::token::For> = match module.is_trait_impl() {  
+        let for_token: Option<syn::token::For> = match module.is_trait_impl() {
             true => Some(Default::default()),
             false => None
         };
-        
+
         Ok(Self {
             impl_token: Default::default(),
             trait_name,
@@ -151,11 +151,7 @@ impl TryFrom<&'_ ModuleImplIR> for HostRefImplItem {
             functions: module
                 .host_functions()?
                 .iter()
-                .flat_map(|f| {
-                    vec![
-                        ref_utils::host_function_item(f, module.is_trait_impl()),
-                    ]
-                })
+                .flat_map(|f| vec![ref_utils::host_function_item(f, module.is_trait_impl())])
                 .collect()
         })
     }
@@ -176,7 +172,6 @@ impl TryFrom<&'_ ModuleImplIR> for HostRefTryImplItem {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        
         Ok(Self {
             impl_token: Default::default(),
             ref_ident: module.host_ref_ident()?,
@@ -184,11 +179,7 @@ impl TryFrom<&'_ ModuleImplIR> for HostRefTryImplItem {
             functions: module
                 .host_functions()?
                 .iter()
-                .flat_map(|f| {
-                    vec![
-                        ref_utils::host_try_function_item(f),
-                    ]
-                })
+                .flat_map(|f| vec![ref_utils::host_try_function_item(f)])
                 .collect()
         })
     }

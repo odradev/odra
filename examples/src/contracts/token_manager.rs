@@ -56,11 +56,11 @@ impl TokenManager {
 #[cfg(test)]
 mod test {
     use super::TokenManagerHostRef;
+    use odra::casper_types::U256;
     use odra::{
         host::{Deployer, HostRef, NoArgs},
         prelude::*
     };
-    use odra::casper_types::U256;
 
     const PLS: &str = "PLS";
     const MCN: &str = "MCN";

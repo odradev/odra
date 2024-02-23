@@ -97,7 +97,7 @@ struct ContractRefTraitImplItem {
     #[syn(in = brace_token)]
     new_fn: NewFnItem,
     #[syn(in = brace_token)]
-    address_fn: AddressFnItem,
+    address_fn: AddressFnItem
 }
 
 impl TryFrom<&'_ ModuleImplIR> for ContractRefTraitImplItem {
@@ -111,7 +111,7 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefTraitImplItem {
             ref_ident: module.contract_ref_ident()?,
             brace_token: Default::default(),
             new_fn: NewFnItem::new(),
-            address_fn: AddressFnItem::new(),
+            address_fn: AddressFnItem::new()
         })
     }
 }
@@ -161,7 +161,7 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefImplItem {
 pub struct RefItem {
     struct_item: ContractRefStructItem,
     trait_impl_item: ContractRefTraitImplItem,
-    impl_item: ContractRefImplItem,
+    impl_item: ContractRefImplItem
 }
 
 #[cfg(test)]

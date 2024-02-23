@@ -176,18 +176,18 @@ impl ModuleImplIR {
 
     pub fn is_trait_impl(&self) -> bool {
         match self {
-            ModuleImplIR::Impl(ir) => {
-                ir.code.trait_.is_some()
-            }
+            ModuleImplIR::Impl(ir) => ir.code.trait_.is_some(),
             ModuleImplIR::Trait(_) => false
         }
     }
 
     pub fn impl_trait_ident(&self) -> Option<Ident> {
         match self {
-            ModuleImplIR::Impl(ir) => {
-                ir.code.trait_.clone().map(|(_, path, _)| path.get_ident().unwrap().clone())
-            }
+            ModuleImplIR::Impl(ir) => ir
+                .code
+                .trait_
+                .clone()
+                .map(|(_, path, _)| path.get_ident().unwrap().clone()),
             ModuleImplIR::Trait(_) => None
         }
     }
@@ -260,10 +260,7 @@ impl ModuleImplIR {
     }
 
     pub fn host_functions(&self) -> syn::Result<Vec<FnIR>> {
-        Ok(self
-            .functions()?
-            .into_iter()
-            .collect())
+        Ok(self.functions()?.into_iter().collect())
     }
 
     pub fn constructor(&self) -> Option<FnIR> {

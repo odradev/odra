@@ -1,10 +1,10 @@
+use crate::utils::syn::visibility_default;
 use crate::{
     ast::fn_utils,
     ir::{FnArgIR, FnIR},
     utils::{self, syn::visibility_pub}
 };
 use syn::{parse_quote, Attribute, Visibility};
-use crate::utils::syn::visibility_default;
 
 pub fn host_try_function_item(fun: &FnIR) -> syn::ItemFn {
     let signature = try_function_signature(fun);
@@ -44,7 +44,12 @@ pub fn contract_function_item(fun: &FnIR, is_trait_impl: bool) -> syn::ItemFn {
     env_call(signature, call_def_expr, attrs, vis)
 }
 
-fn env_call(sig: syn::Signature, call_def_expr: syn::Expr, docs: Vec<Attribute>, vis: Visibility) -> syn::ItemFn {
+fn env_call(
+    sig: syn::Signature,
+    call_def_expr: syn::Expr,
+    docs: Vec<Attribute>,
+    vis: Visibility
+) -> syn::ItemFn {
     let m_env = utils::member::env();
     let m_address = utils::member::address();
 
