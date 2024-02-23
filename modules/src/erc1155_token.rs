@@ -28,7 +28,7 @@ impl OwnedErc1155 for Erc1155Token {
     fn balance_of(&self, owner: &Address, id: &U256) -> U256 {
         self.core.balance_of(owner, id)
     }
-    fn balance_of_batch(&self, owners: &[Address], ids: &[U256]) -> Vec<U256> {
+    fn balance_of_batch(&self, owners: Vec<Address>, ids: Vec<U256>) -> Vec<U256> {
         self.core.balance_of_batch(owners, ids)
     }
     fn set_approval_for_all(&mut self, operator: &Address, approved: bool) {

@@ -27,7 +27,7 @@ impl DogContract2 {
     /// Adds a visit to the friend's visits.
     pub fn visit(&mut self, friend_name: &FriendName) {
         let visits = self.visits(friend_name);
-        self.friends.set(&friend_name, visits + 1);
+        self.friends.set(friend_name, visits + 1);
     }
 
     /// Returns the total visits of the friend.
@@ -50,8 +50,8 @@ mod tests {
                 name: "Mantus".to_string()
             }
         );
-        assert_eq!(dog_contract.visits("Kuba".to_string()), 0);
-        dog_contract.visit("Kuba".to_string());
-        assert_eq!(dog_contract.visits("Kuba".to_string()), 1);
+        assert_eq!(dog_contract.visits(&"Kuba".to_string()), 0);
+        dog_contract.visit(&"Kuba".to_string());
+        assert_eq!(dog_contract.visits(&"Kuba".to_string()), 1);
     }
 }

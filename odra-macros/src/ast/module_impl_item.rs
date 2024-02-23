@@ -1,7 +1,7 @@
 use crate::ast::blueprint::BlueprintItem;
 use crate::ast::entrypoints_item::HasEntrypointsImplItem;
 use crate::ast::exec_parts::ExecPartsItem;
-use crate::ast::ref_item::RefItem;
+use crate::ast::contract_ref_item::RefItem;
 use crate::ast::test_parts::{TestPartsItem, TestPartsReexportItem};
 use crate::ast::wasm_parts::WasmPartsModuleItem;
 use crate::ir::ModuleImplIR;

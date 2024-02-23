@@ -10,7 +10,7 @@ pub struct BalanceChecker;
 impl BalanceChecker {
     /// Checks the balance of the given account for the given token.
     pub fn check_balance(&self, token: &Address, account: &Address) -> U256 {
-        TokenContractRef::new(self.env(), *token).balance_of(*account)
+        TokenContractRef::new(self.env(), *token).balance_of(account)
     }
 }
 
@@ -37,11 +37,11 @@ mod tests {
         let expected_owner_balance = INITIAL_SUPPLY;
 
         // Owner of the token should have positive balance.
-        let balance = balance_checker.check_balance(*token.address(), owner);
+        let balance = balance_checker.check_balance(token.address(), &owner);
         assert_eq!(balance.as_u32(), expected_owner_balance);
 
         // Different account should have zero balance.
-        let balance = balance_checker.check_balance(*token.address(), second_account);
+        let balance = balance_checker.check_balance(token.address(), &second_account);
         assert!(balance.is_zero());
     }
 }

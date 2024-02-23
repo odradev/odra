@@ -60,6 +60,7 @@ mod test {
         host::{Deployer, HostRef, NoArgs},
         prelude::*
     };
+    use odra::casper_types::U256;
 
     const PLS: &str = "PLS";
     const MCN: &str = "MCN";
@@ -91,20 +92,20 @@ mod test {
         let plascoin = String::from(PLASCOIN);
         let my_coin = String::from(MY_COIN);
 
-        contract.mint(plascoin.clone(), user1, pls_balance1);
-        contract.mint(plascoin.clone(), user2, pls_balance2);
-        contract.mint(plascoin.clone(), user3, pls_balance3);
+        contract.mint(plascoin.clone(), &user1, &pls_balance1);
+        contract.mint(plascoin.clone(), &user2, &pls_balance2);
+        contract.mint(plascoin.clone(), &user3, &pls_balance3);
 
-        contract.mint(my_coin.clone(), user1, mcn_balance1);
-        contract.mint(my_coin.clone(), user2, mcn_balance2);
-        contract.mint(my_coin.clone(), user3, mcn_balance3);
+        contract.mint(my_coin.clone(), &user1, &mcn_balance1);
+        contract.mint(my_coin.clone(), &user2, &mcn_balance2);
+        contract.mint(my_coin.clone(), &user3, &mcn_balance3);
 
-        assert_eq!(contract.balance_of(plascoin.clone(), user1), pls_balance1);
-        assert_eq!(contract.balance_of(plascoin.clone(), user2), pls_balance2);
-        assert_eq!(contract.balance_of(plascoin, user3), pls_balance3);
-        assert_eq!(contract.balance_of(my_coin.clone(), user1), mcn_balance1);
-        assert_eq!(contract.balance_of(my_coin.clone(), user2), mcn_balance2);
-        assert_eq!(contract.balance_of(my_coin, user3), mcn_balance3);
+        assert_eq!(contract.balance_of(plascoin.clone(), &user1), pls_balance1);
+        assert_eq!(contract.balance_of(plascoin.clone(), &user2), pls_balance2);
+        assert_eq!(contract.balance_of(plascoin, &user3), pls_balance3);
+        assert_eq!(contract.balance_of(my_coin.clone(), &user1), mcn_balance1);
+        assert_eq!(contract.balance_of(my_coin.clone(), &user2), mcn_balance2);
+        assert_eq!(contract.balance_of(my_coin, &user3), mcn_balance3);
     }
 
     #[test]
@@ -126,8 +127,8 @@ mod test {
         assert_eq!(contract.get_owner(String::from(PLASCOIN)), owner);
         assert_eq!(contract.get_owner(String::from(MY_COIN)), owner);
 
-        contract.set_owner(String::from(PLASCOIN), user2);
-        contract.set_owner(String::from(MY_COIN), user3);
+        contract.set_owner(String::from(PLASCOIN), &user2);
+        contract.set_owner(String::from(MY_COIN), &user3);
 
         assert_eq!(contract.get_owner(String::from(PLASCOIN)), user2);
         assert_eq!(contract.get_owner(String::from(MY_COIN)), user3);
@@ -137,11 +138,11 @@ mod test {
     fn many_tokens_works() {
         let test_env = odra_test::env();
         let mut contract = TokenManagerHostRef::deploy(&test_env, NoArgs);
-        let (user, balance) = (test_env.get_account(0), 111.into());
+        let (user, balance) = (test_env.get_account(0), U256::from(111));
         for i in 0..20 {
             contract.add_token(i.to_string(), DECIMALS, i.to_string());
-            contract.mint(i.to_string(), user, balance);
-            assert_eq!(contract.balance_of(i.to_string(), user), balance);
+            contract.mint(i.to_string(), &user, &balance);
+            assert_eq!(contract.balance_of(i.to_string(), &user), balance);
         }
     }
 }

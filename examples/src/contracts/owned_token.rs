@@ -75,7 +75,7 @@ pub mod tests {
         assert_eq!(token.symbol(), SYMBOL);
         assert_eq!(token.decimals(), DECIMALS);
         assert_eq!(token.total_supply(), INITIAL_SUPPLY.into());
-        assert_eq!(token.balance_of(owner), INITIAL_SUPPLY.into());
+        assert_eq!(token.balance_of(&owner), INITIAL_SUPPLY.into());
         test_env.emitted_event(
             token.address(),
             &odra_modules::access::events::OwnershipTransferred {
@@ -98,9 +98,9 @@ pub mod tests {
         let mut token = setup();
         let recipient = token.env().get_account(1);
         let amount = 10.into();
-        token.mint(recipient, amount);
+        token.mint(&recipient, &amount);
         assert_eq!(token.total_supply(), U256::from(INITIAL_SUPPLY) + amount);
-        assert_eq!(token.balance_of(recipient), amount);
+        assert_eq!(&token.balance_of(&recipient), &amount);
     }
 
     #[test]
@@ -111,7 +111,7 @@ pub mod tests {
         let amount = 10.into();
         test_env.set_caller(recipient);
         assert_eq!(
-            token.try_mint(recipient, amount).unwrap_err(),
+            token.try_mint(&recipient, &amount).unwrap_err(),
             CallerNotTheOwner.into()
         );
     }
@@ -120,7 +120,7 @@ pub mod tests {
     fn change_ownership_works() {
         let mut token = setup();
         let new_owner = token.env().get_account(1);
-        token.transfer_ownership(new_owner);
+        token.transfer_ownership(&new_owner);
         assert_eq!(token.get_owner(), new_owner);
     }
 
@@ -131,7 +131,7 @@ pub mod tests {
         let new_owner = test_env.get_account(1);
         test_env.set_caller(new_owner);
         assert_eq!(
-            token.try_transfer_ownership(new_owner).unwrap_err(),
+            token.try_transfer_ownership(&new_owner).unwrap_err(),
             CallerNotTheOwner.into()
         );
     }

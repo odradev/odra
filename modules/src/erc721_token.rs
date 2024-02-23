@@ -146,13 +146,13 @@ mod tests {
     use crate::access::errors::Error as AccessError;
     use crate::erc20::{Erc20HostRef, Erc20InitArgs};
     use crate::erc721::errors::Error::{InvalidTokenId, NotAnOwnerOrApproved};
+    use crate::erc721::owned_erc721_with_metadata::OwnedErc721WithMetadata;
     use crate::erc721_receiver::events::Received;
     use crate::erc721_receiver::Erc721ReceiverHostRef;
     use crate::erc721_token::errors::Error::TokenAlreadyExists;
     use odra::host::{Deployer, HostEnv, HostRef, NoArgs};
     use odra::prelude::*;
     use odra::{casper_types::U256, Address, OdraError, VmError};
-
     const NAME: &str = "PlascoinNFT";
     const SYMBOL: &str = "PLSNFT";
     const BASE_URI: &str = "https://plascoin.org/";
@@ -189,14 +189,14 @@ mod tests {
         let mut erc721_env = setup();
 
         // And mint a token to Alice.
-        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+        erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
 
         // Then Alice has a balance of 1 and Bob has a balance of 0.
-        assert_eq!(erc721_env.token.balance_of(erc721_env.alice), U256::from(1));
-        assert_eq!(erc721_env.token.balance_of(erc721_env.bob), U256::from(0));
+        assert_eq!(erc721_env.token.balance_of(&erc721_env.alice), U256::from(1));
+        assert_eq!(erc721_env.token.balance_of(&erc721_env.bob), U256::from(0));
 
         // And the owner of the token is Alice.
-        assert_eq!(erc721_env.token.owner_of(U256::from(1)), erc721_env.alice);
+        assert_eq!(erc721_env.token.owner_of(&U256::from(1)), erc721_env.alice);
     }
 
     #[test]
@@ -205,16 +205,16 @@ mod tests {
         let mut erc721_env = setup();
 
         // And mint a token to Alice.
-        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+        erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
 
         // Then Alice has a balance of 1 and Bob has a balance of 0.
-        assert_eq!(erc721_env.token.balance_of(erc721_env.alice), U256::from(1));
+        assert_eq!(erc721_env.token.balance_of(&erc721_env.alice), U256::from(1));
 
         // When we mint another token to Alice.
-        erc721_env.token.mint(erc721_env.alice, U256::from(2));
+        erc721_env.token.mint(&erc721_env.alice, &U256::from(2));
 
         // Then Alice has a balance of 2.
-        assert_eq!(erc721_env.token.balance_of(erc721_env.alice), U256::from(2));
+        assert_eq!(erc721_env.token.balance_of(&erc721_env.alice), U256::from(2));
     }
 
     #[test]
@@ -223,12 +223,12 @@ mod tests {
         let mut erc721_env = setup();
 
         // And mint a token to Alice.
-        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+        erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
 
         // Then minting the same token again throws an error.
         let err = erc721_env
             .token
-            .try_mint(erc721_env.alice, U256::from(1))
+            .try_mint(&erc721_env.alice, &U256::from(1))
             .unwrap_err();
         assert_eq!(err, TokenAlreadyExists.into());
     }
@@ -239,10 +239,10 @@ mod tests {
         let mut erc721_env = setup();
 
         // And mint a token to Alice.
-        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+        erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
 
         // Then the owner of the token is Alice.
-        assert_eq!(erc721_env.token.owner_of(U256::from(1)), erc721_env.alice);
+        assert_eq!(erc721_env.token.owner_of(&U256::from(1)), erc721_env.alice);
     }
 
     #[test]
@@ -252,7 +252,7 @@ mod tests {
 
         // Then the owner of the token is Alice.
         assert_eq!(
-            erc721_env.token.try_owner_of(U256::from(1)).unwrap_err(),
+            erc721_env.token.try_owner_of(&U256::from(1)).unwrap_err(),
             InvalidTokenId.into()
         );
     }
@@ -263,17 +263,17 @@ mod tests {
         let mut erc721_env = setup();
 
         // And mint a token to Alice.
-        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+        erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
 
         // And approve Bob to transfer the token.
         erc721_env.env.set_caller(erc721_env.alice);
         erc721_env
             .token
-            .approve(Some(erc721_env.bob), U256::from(1));
+            .approve(&Some(erc721_env.bob), &U256::from(1));
 
         // Then Bob is approved to transfer the token.
         assert_eq!(
-            erc721_env.token.get_approved(U256::from(1)),
+            erc721_env.token.get_approved(&U256::from(1)),
             Some(erc721_env.bob)
         );
     }
@@ -284,20 +284,20 @@ mod tests {
         let mut erc721_env = setup();
 
         // And mint a token to Alice.
-        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+        erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
 
         // And approve Bob to transfer the token.
         erc721_env.env.set_caller(erc721_env.alice);
         erc721_env
             .token
-            .approve(Some(erc721_env.bob), U256::from(1));
+            .approve(&Some(erc721_env.bob), &U256::from(1));
 
         // And cancel the approval.
         erc721_env.env.set_caller(erc721_env.alice);
-        erc721_env.token.approve(None, U256::from(1));
+        erc721_env.token.approve(&None, &U256::from(1));
 
         // Then Bob is not approved to transfer the token.
-        assert_eq!(erc721_env.token.get_approved(U256::from(1)), None);
+        assert_eq!(erc721_env.token.get_approved(&U256::from(1)), None);
     }
 
     #[test]
@@ -309,7 +309,7 @@ mod tests {
         assert_eq!(
             erc721_env
                 .token
-                .try_approve(Some(erc721_env.bob), U256::from(1))
+                .try_approve(&Some(erc721_env.bob), &U256::from(1))
                 .unwrap_err(),
             InvalidTokenId.into()
         );
@@ -321,13 +321,13 @@ mod tests {
         let mut erc721_env = setup();
 
         // And mint a token to Alice.
-        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+        erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
 
         // Then approving a token that is not owned by the caller throws an error.
         assert_eq!(
             erc721_env
                 .token
-                .try_approve(Some(erc721_env.bob), U256::from(1))
+                .try_approve(&Some(erc721_env.bob), &U256::from(1))
                 .unwrap_err(),
             NotAnOwnerOrApproved.into()
         );
@@ -339,16 +339,16 @@ mod tests {
         let mut erc721_env = setup();
 
         // And mint a token to Alice.
-        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+        erc721_env.token.mint(&erc721_env.alice, U256::from(1));
 
         // And set Bob as an operator.
         erc721_env.env.set_caller(erc721_env.alice);
-        erc721_env.token.set_approval_for_all(erc721_env.bob, true);
+        erc721_env.token.set_approval_for_all(&erc721_env.bob, true);
 
         // Then Bob is an operator.
         assert!(erc721_env
             .token
-            .is_approved_for_all(erc721_env.alice, erc721_env.bob));
+            .is_approved_for_all(&erc721_env.alice, erc721_env.bob));
     }
 
     #[test]
@@ -357,20 +357,20 @@ mod tests {
         let mut erc721_env = setup();
 
         // And mint a token to Alice.
-        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+        erc721_env.token.mint(&erc721_env.alice, U256::from(1));
 
         // And set Bob as an operator.
         erc721_env.env.set_caller(erc721_env.alice);
-        erc721_env.token.set_approval_for_all(erc721_env.bob, true);
+        erc721_env.token.set_approval_for_all(&erc721_env.bob, true);
 
         // And cancel Bob as an operator.
         erc721_env.env.set_caller(erc721_env.alice);
-        erc721_env.token.set_approval_for_all(erc721_env.bob, false);
+        erc721_env.token.set_approval_for_all(&erc721_env.bob, false);
 
         // Then Bob is not an operator.
         assert!(!erc721_env
             .token
-            .is_approved_for_all(erc721_env.alice, erc721_env.bob));
+            .is_approved_for_all(&erc721_env.alice, erc721_env.bob));
     }
 
     #[test]
@@ -379,16 +379,16 @@ mod tests {
         let mut erc721_env = setup();
 
         // And mint a token to Alice.
-        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+        erc721_env.token.mint(&erc721_env.alice, U256::from(1));
 
         // And transfer the token to Bob.
         erc721_env.env.set_caller(erc721_env.alice);
         erc721_env
             .token
-            .transfer_from(erc721_env.alice, erc721_env.bob, U256::from(1));
+            .transfer_from(&erc721_env.alice, erc721_env.bob, U256::from(1));
 
         // Then the owner of the token is Bob.
-        assert_eq!(erc721_env.token.owner_of(U256::from(1)), erc721_env.bob);
+        assert_eq!(erc721_env.token.owner_of(&U256::from(1)), erc721_env.bob);
     }
 
     #[test]
@@ -397,22 +397,22 @@ mod tests {
         let mut erc721_env = setup();
 
         // And mint a token to Alice.
-        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+        erc721_env.token.mint(&erc721_env.alice, U256::from(1));
 
         // And approve Bob to transfer the token.
         erc721_env.env.set_caller(erc721_env.alice);
         erc721_env
             .token
-            .approve(Some(erc721_env.bob), U256::from(1));
+            .approve(&Some(erc721_env.bob), U256::from(1));
 
         // And transfer the token to Carol.
         erc721_env.env.set_caller(erc721_env.bob);
         erc721_env
             .token
-            .transfer_from(erc721_env.alice, erc721_env.carol, U256::from(1));
+            .transfer_from(&erc721_env.alice, erc721_env.carol, U256::from(1));
 
         // Then the owner of the token is Carol.
-        assert_eq!(erc721_env.token.owner_of(U256::from(1)), erc721_env.carol);
+        assert_eq!(erc721_env.token.owner_of(&U256::from(1)), erc721_env.carol);
     }
 
     #[test]
@@ -421,20 +421,20 @@ mod tests {
         let mut erc721_env = setup();
 
         // And mint a token to Alice.
-        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+        erc721_env.token.mint(&erc721_env.alice, U256::from(1));
 
         // And set Bob as an operator.
         erc721_env.env.set_caller(erc721_env.alice);
-        erc721_env.token.set_approval_for_all(erc721_env.bob, true);
+        erc721_env.token.set_approval_for_all(&erc721_env.bob, true);
 
         // And transfer the token to Carol.
         erc721_env.env.set_caller(erc721_env.bob);
         erc721_env
             .token
-            .transfer_from(erc721_env.alice, erc721_env.carol, U256::from(1));
+            .transfer_from(&erc721_env.alice, erc721_env.carol, U256::from(1));
 
         // Then the owner of the token is Carol.
-        assert_eq!(erc721_env.token.owner_of(U256::from(1)), erc721_env.carol);
+        assert_eq!(erc721_env.token.owner_of(&U256::from(1)), erc721_env.carol);
     }
 
     #[test]
@@ -443,13 +443,13 @@ mod tests {
         let mut erc721_env = setup();
 
         // And mint a token to Alice.
-        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+        erc721_env.token.mint(&erc721_env.alice, U256::from(1));
 
         // Then transferring a token that is not owned by the caller throws an error.
         erc721_env.env.set_caller(erc721_env.bob);
         let err = erc721_env
             .token
-            .try_transfer_from(erc721_env.alice, erc721_env.carol, U256::from(1))
+            .try_transfer_from(&erc721_env.alice, erc721_env.carol, U256::from(1))
             .unwrap_err();
         assert_eq!(err, NotAnOwnerOrApproved.into());
     }
@@ -462,7 +462,7 @@ mod tests {
         // Then transferring a token that does not exist throws an error.
         let err = erc721_env
             .token
-            .try_transfer_from(erc721_env.alice, erc721_env.carol, U256::from(1))
+            .try_transfer_from(&erc721_env.alice, erc721_env.carol, U256::from(1))
             .unwrap_err();
         assert_eq!(err, InvalidTokenId.into());
     }
@@ -476,16 +476,16 @@ mod tests {
         assert!(!erc721_env.alice.is_contract());
 
         // And mint a token to Alice.
-        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+        erc721_env.token.mint(&erc721_env.alice, U256::from(1));
 
         // And safe transfer the token to Bob.
         erc721_env.env.set_caller(erc721_env.alice);
         erc721_env
             .token
-            .safe_transfer_from(erc721_env.alice, erc721_env.bob, U256::from(1));
+            .safe_transfer_from(&erc721_env.alice, erc721_env.bob, U256::from(1));
 
         // Then the owner of the token is Bob.
-        assert_eq!(erc721_env.token.owner_of(U256::from(1)), erc721_env.bob);
+        assert_eq!(erc721_env.token.owner_of(&U256::from(1)), erc721_env.bob);
     }
 
     #[test]
@@ -504,7 +504,7 @@ mod tests {
         );
 
         // And mint a token to Alice.
-        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+        erc721_env.token.mint(&erc721_env.alice, U256::from(1));
 
         // Then safe transfer the token to the contract which does not support nfts throws an error.
         erc721_env.env.set_caller(erc721_env.alice);
@@ -514,9 +514,9 @@ mod tests {
                 "on_erc721_received".to_string()
             ))),
             erc721_env.token.try_safe_transfer_from(
-                erc721_env.alice,
-                *erc20.address(),
-                U256::from(1)
+                &erc721_env.alice,
+                erc20.address(),
+                &U256::from(1)
             )
         );
     }
@@ -529,17 +529,17 @@ mod tests {
         let receiver = Erc721ReceiverHostRef::deploy(&erc721_env.env, NoArgs);
 
         // And mint a token to Alice.
-        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+        erc721_env.token.mint(&erc721_env.alice, U256::from(1));
 
         // And transfer the token to the contract which does support nfts
         erc721_env.env.set_caller(erc721_env.alice);
         erc721_env
             .token
-            .safe_transfer_from(erc721_env.alice, *receiver.address(), U256::from(1));
+            .safe_transfer_from(&erc721_env.alice, *receiver.address(), U256::from(1));
 
         // Then the owner of the token is the contract
         assert_eq!(
-            erc721_env.token.owner_of(U256::from(1)),
+            erc721_env.token.owner_of(&U256::from(1)),
             *receiver.address()
         );
         // And the receiver contract is aware of the transfer
@@ -562,7 +562,7 @@ mod tests {
         let receiver = Erc721ReceiverHostRef::deploy(&erc721_env.env, NoArgs);
 
         // And mint a token to Alice.
-        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+        erc721_env.token.mint(&erc721_env.alice, U256::from(1));
 
         // And transfer the token to the contract which does support nfts
         erc721_env.env.set_caller(erc721_env.alice);
@@ -602,7 +602,7 @@ mod tests {
         erc721_env.token.burn(U256::from(1));
 
         // Then the owner of throws an error.
-        let err = erc721_env.token.try_owner_of(U256::from(1)).unwrap_err();
+        let err = erc721_env.token.try_owner_of(&U256::from(1)).unwrap_err();
         assert_eq!(err, InvalidTokenId.into());
     }
 
@@ -612,11 +612,11 @@ mod tests {
         let mut erc721_env = setup();
 
         // And mint a token to Alice.
-        erc721_env.token.mint(erc721_env.alice, U256::from(1));
+        erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
 
         // Then burn the token as Alice errors out
         erc721_env.env.set_caller(erc721_env.alice);
-        let err = erc721_env.token.try_burn(U256::from(1)).unwrap_err();
+        let err = erc721_env.token.try_burn(&U256::from(1)).unwrap_err();
         assert_eq!(err, AccessError::CallerNotTheOwner.into());
     }
 
@@ -626,7 +626,7 @@ mod tests {
         let mut erc721_env = setup();
 
         // Then burning a token that does not exist throws an error.
-        let err = erc721_env.token.try_burn(U256::from(1)).unwrap_err();
+        let err = erc721_env.token.try_burn(&U256::from(1)).unwrap_err();
         assert_eq!(err, InvalidTokenId.into());
     }
 
@@ -650,7 +650,7 @@ mod tests {
         erc721_env.env.set_caller(erc721_env.bob);
         let err = erc721_env
             .token
-            .try_mint(erc721_env.alice, U256::from(1))
+            .try_mint(&erc721_env.alice, &U256::from(1))
             .unwrap_err();
         assert_eq!(err, AccessError::CallerNotTheOwner.into());
     }

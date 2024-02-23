@@ -16,7 +16,7 @@ mod module_item;
 mod module_struct_item;
 mod odra_type_item;
 mod parts_utils;
-mod ref_item;
+mod contract_ref_item;
 mod ref_utils;
 mod test_parts;
 mod utils;

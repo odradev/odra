@@ -23,7 +23,7 @@ impl Erc1155 for Erc1155Base {
         self.balances.get_or_default(&(*owner, *id))
     }
 
-    fn balance_of_batch(&self, owners: &[Address], ids: &[U256]) -> Vec<U256> {
+    fn balance_of_batch(&self, owners: Vec<Address>, ids: Vec<U256>) -> Vec<U256> {
         if owners.len() != ids.len() {
             self.env().revert(Error::AccountsAndIdsLengthMismatch);
         }
@@ -161,11 +161,11 @@ impl Erc1155Base {
     ) {
         if to.is_contract() {
             let response = Erc1155ReceiverContractRef::new(self.env(), *to).on_erc1155_received(
-                *operator,
-                *from,
-                *id,
-                *amount,
-                data.clone()
+                operator,
+                from,
+                id,
+                amount,
+                data
             );
             if !response {
                 self.env().revert(Error::TransferRejected);
@@ -187,11 +187,11 @@ impl Erc1155Base {
         if to.is_contract() {
             let response = Erc1155ReceiverContractRef::new(self.env(), *to)
                 .on_erc1155_batch_received(
-                    *operator,
-                    *from,
+                    operator,
+                    from,
                     ids.to_vec(),
                     amounts.to_vec(),
-                    data.clone()
+                    data
                 );
             if !response {
                 self.env().revert(Error::TransferRejected);

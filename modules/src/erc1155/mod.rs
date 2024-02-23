@@ -16,7 +16,7 @@ pub trait Erc1155 {
     ///  Batched version of [Erc1155::balance_of](Self::balance_of).
     ///
     /// The length of `owners` and `ids` must be the same.
-    fn balance_of_batch(&self, owners: &[Address], ids: &[U256]) -> Vec<U256>;
+    fn balance_of_batch(&self, owners: Vec<Address>, ids: Vec<U256>) -> Vec<U256>;
     /// Allows or denials the `operator` to transfer the caller’s tokens.
     ///
     /// Emits [crate::erc1155::events::ApprovalForAll].

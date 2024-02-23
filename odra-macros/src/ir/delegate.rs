@@ -28,9 +28,12 @@ impl syn::parse::Parse for Delegate {
                         _ => None
                     })
                     .collect::<syn::punctuated::Punctuated<syn::Ident, syn::Token![,]>>();
+                
+                let mut attrs = fn_item.attrs.clone();
+                attrs.push(syn::parse_quote!(#[allow(missing_docs)]));
 
                 functions.push(syn::ImplItemFn {
-                    attrs: fn_item.attrs,
+                    attrs,
                     vis: utils::syn::visibility_pub(),
                     defaultness: None,
                     sig: fn_item.sig,

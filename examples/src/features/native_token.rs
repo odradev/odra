@@ -41,7 +41,7 @@ mod tests {
         my_contract.with_tokens(U512::from(100)).deposit();
         assert_eq!(test_env.balance_of(my_contract.address()), U512::from(100));
 
-        my_contract.withdraw(U512::from(25));
+        my_contract.withdraw(&U512::from(25));
         assert_eq!(test_env.balance_of(my_contract.address()), U512::from(75));
 
         let contract_balance = my_contract.balance();

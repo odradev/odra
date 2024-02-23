@@ -263,7 +263,6 @@ impl ModuleImplIR {
         Ok(self
             .functions()?
             .into_iter()
-            .filter(|f| f.name_str() != CONSTRUCTOR_NAME)
             .collect())
     }
 

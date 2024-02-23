@@ -87,8 +87,10 @@ impl NewFnItem {
 }
 
 #[derive(syn_derive::ToTokens)]
-struct ContractRefImplItem {
+struct ContractRefTraitImplItem {
     impl_token: syn::token::Impl,
+    // trait_name: Option<syn::Ident>,
+    // for_token: Option<syn::token::For>,
     ref_ident: syn::Ident,
     #[syn(braced)]
     brace_token: syn::token::Brace,
@@ -96,6 +98,32 @@ struct ContractRefImplItem {
     new_fn: NewFnItem,
     #[syn(in = brace_token)]
     address_fn: AddressFnItem,
+}
+
+impl TryFrom<&'_ ModuleImplIR> for ContractRefTraitImplItem {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        Ok(Self {
+            impl_token: Default::default(),
+            // trait_name,
+            // for_token,
+            ref_ident: module.contract_ref_ident()?,
+            brace_token: Default::default(),
+            new_fn: NewFnItem::new(),
+            address_fn: AddressFnItem::new(),
+        })
+    }
+}
+
+#[derive(syn_derive::ToTokens)]
+struct ContractRefImplItem {
+    impl_token: syn::token::Impl,
+    trait_name: Option<syn::Ident>,
+    for_token: Option<syn::token::For>,
+    ref_ident: syn::Ident,
+    #[syn(braced)]
+    brace_token: syn::token::Brace,
     #[syn(in = brace_token)]
     #[to_tokens(|tokens, val| tokens.append_all(val))]
     functions: Vec<syn::ItemFn>
@@ -105,16 +133,23 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefImplItem {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        // If module implements a trait, set trait name
+        let trait_name = module.impl_trait_ident();
+        let for_token: Option<syn::token::For> = match module.is_trait_impl() {
+            true => Some(Default::default()),
+            false => None
+        };
+
         Ok(Self {
             impl_token: Default::default(),
+            trait_name,
+            for_token,
             ref_ident: module.contract_ref_ident()?,
             brace_token: Default::default(),
-            new_fn: NewFnItem::new(),
-            address_fn: AddressFnItem::new(),
             functions: module
                 .functions()?
                 .iter()
-                .map(ref_utils::contract_function_item)
+                .map(|fun| ref_utils::contract_function_item(fun, module.is_trait_impl()))
                 .collect()
         })
     }
@@ -125,7 +160,8 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefImplItem {
 #[err(syn::Error)]
 pub struct RefItem {
     struct_item: ContractRefStructItem,
-    impl_item: ContractRefImplItem
+    trait_impl_item: ContractRefTraitImplItem,
+    impl_item: ContractRefImplItem,
 }
 
 #[cfg(test)]

@@ -56,6 +56,6 @@ impl LivenetContract {
     /// Transfers 1 token from the ERC20 contract to the caller. This is an example of a mutable cross-contract call.
     pub fn mutable_cross_call(&mut self) {
         Erc20ContractRef::new(self.env(), self.erc20_address.get().unwrap())
-            .transfer(self.env().caller(), 1.into());
+            .transfer(&self.env().caller(), &1.into());
     }
 }

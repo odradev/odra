@@ -155,8 +155,8 @@ mod test {
         single_deposit(user_2, user_2_deposit);
 
         // Then the users' balance is the contract is equal to the deposited amount.
-        assert_eq!(contract.get_balance(user_1), user_1_deposit);
-        assert_eq!(contract.get_balance(user_2), user_2_deposit);
+        assert_eq!(contract.get_balance(&user_1), user_1_deposit);
+        assert_eq!(contract.get_balance(&user_2), user_2_deposit);
 
         // Then two deposit event were emitted.
         test_env.emitted_event(
@@ -204,8 +204,8 @@ mod test {
         let balance_before_withdrawals = test_env.balance_of(&user);
         let first_withdrawal_amount: U512 = 50.into();
         let second_withdrawal_amount: U512 = 40.into();
-        contract.withdraw(first_withdrawal_amount);
-        contract.withdraw(second_withdrawal_amount);
+        contract.withdraw(&first_withdrawal_amount);
+        contract.withdraw(&second_withdrawal_amount);
 
         // Then the native token balance is updated.
         assert_eq!(
@@ -215,7 +215,7 @@ mod test {
 
         // Then the user balance in the contract is deducted.
         assert_eq!(
-            contract.get_balance(user),
+            contract.get_balance(&user),
             deposit_amount - first_withdrawal_amount - second_withdrawal_amount
         );
 
@@ -244,7 +244,7 @@ mod test {
 
         // When the user withdraws tokens before the lock is released, an error occurs.
         assert_eq!(
-            contract.try_withdraw(100.into()).unwrap_err(),
+            contract.try_withdraw(&100.into()).unwrap_err(),
             Error::LockIsNotOver.into()
         );
     }
@@ -260,7 +260,7 @@ mod test {
         contract.env().advance_block_time(ONE_DAY_IN_SECONDS + 1);
         let withdrawal = deposit + 1;
         assert_eq!(
-            contract.try_withdraw(withdrawal.into()).unwrap_err(),
+            contract.try_withdraw(&withdrawal.into()).unwrap_err(),
             Error::InsufficientBalance.into()
         );
     }

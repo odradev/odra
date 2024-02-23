@@ -103,8 +103,8 @@ pub mod test {
         let contract = MockModeratedHostRef::deploy(&env, NoArgs);
         let admin = env.get_account(0);
 
-        assert!(contract.is_moderator(admin));
-        assert!(contract.is_admin(admin));
+        assert!(contract.is_moderator(&admin));
+        assert!(contract.is_admin(&admin));
     }
 
     #[test]
@@ -112,22 +112,22 @@ pub mod test {
         // given Admin is a moderator and an admin.
         // given User1 and User2 that are not moderators.
         let (mut contract, admin, user1, user2) = setup(false);
-        assert!(!contract.is_moderator(user1));
-        assert!(!contract.is_moderator(user2));
+        assert!(!contract.is_moderator(&user1));
+        assert!(!contract.is_moderator(&user2));
 
         // when Admin adds a moderator.
         contract.env().set_caller(admin);
-        contract.add_moderator(user1);
+        contract.add_moderator(&user1);
         // then the role is granted.
-        assert!(contract.is_moderator(user1));
+        assert!(contract.is_moderator(&user1));
 
         // when a non-admin adds a moderator.
         contract.env().set_caller(user1);
-        let err = contract.try_add_moderator(user2).unwrap_err();
+        let err = contract.try_add_moderator(&user2).unwrap_err();
         assert_eq!(err, Error::MissingRole.into());
 
         // then the User2 is not a moderator.
-        assert!(!contract.is_moderator(user2));
+        assert!(!contract.is_moderator(&user2));
 
         // then two RoleGranted events were emitted.
         contract.env().emitted_event(
@@ -151,28 +151,28 @@ pub mod test {
         // when User removes the role - it fails.
         contract.env().set_caller(user);
         assert_eq!(
-            contract.try_remove_moderator(moderator).unwrap_err(),
+            contract.try_remove_moderator(&moderator).unwrap_err(),
             Error::MissingRole.into()
         );
         // then Moderator still is a moderator.
-        assert!(contract.is_moderator(moderator));
+        assert!(contract.is_moderator(&moderator));
 
         // when Admin revokes the Moderator's role.
         contract.env().set_caller(admin);
-        contract.remove_moderator(moderator);
+        contract.remove_moderator(&moderator);
         // then Moderator no longer is a moderator.
-        assert!(!contract.is_moderator(moderator));
+        assert!(!contract.is_moderator(&moderator));
 
         // Re-grant the role.
-        contract.add_moderator(moderator);
+        contract.add_moderator(&moderator);
         // Moderator revoke his role - fails because is not an admin.
         contract.env().set_caller(moderator);
         assert_eq!(
-            contract.try_remove_moderator(moderator).unwrap_err(),
+            contract.try_remove_moderator(&moderator).unwrap_err(),
             Error::MissingRole.into()
         );
         // then Moderator still is a moderator.
-        assert!(contract.is_moderator(moderator));
+        assert!(contract.is_moderator(&moderator));
 
         contract.env().emitted_event(
             contract.address(),
@@ -207,15 +207,15 @@ pub mod test {
 
         // when Admin renounces the role on moderator's behalf - it fails.
         assert_eq!(
-            contract.try_renounce_moderator_role(moderator).unwrap_err(),
+            contract.try_renounce_moderator_role(&moderator).unwrap_err(),
             Error::RoleRenounceForAnotherAddress.into()
         );
 
         // when Moderator renounces the role.
         contract.env().set_caller(moderator);
-        contract.renounce_moderator_role(moderator);
+        contract.renounce_moderator_role(&moderator);
         // then is no longer a moderator.
-        assert!(!contract.is_moderator(moderator));
+        assert!(!contract.is_moderator(&moderator));
         // RoleRevoked event was emitted.
         contract.env().emitted_event(
             contract.address(),
@@ -237,14 +237,14 @@ pub mod test {
 
         // when Admin grants Moderator the admin role.
         contract.env().set_caller(admin);
-        contract.add_admin(moderator);
+        contract.add_admin(&moderator);
         // then Moderator is an admin.
-        assert!(contract.is_admin(moderator));
+        assert!(contract.is_admin(&moderator));
         // when Moderator grants User the moderator role.
         contract.env().set_caller(moderator);
-        contract.add_moderator(user);
+        contract.add_moderator(&user);
         // then User is a moderator.
-        assert!(contract.is_moderator(user));
+        assert!(contract.is_moderator(&user));
 
         contract.env().emitted_event(
             contract.address(),
@@ -270,8 +270,8 @@ pub mod test {
         // given admin who is a moderator and two users that are not moderators.
         let (admin, user1, user2) = (env.get_account(0), env.get_account(1), env.get_account(2));
         if add_moderator {
-            contract.add_moderator(user1);
-            assert!(contract.is_moderator(user1));
+            contract.add_moderator(&user1);
+            assert!(contract.is_moderator(&user1));
         }
         (contract, admin, user1, user2)
     }

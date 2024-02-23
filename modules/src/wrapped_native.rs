@@ -186,7 +186,7 @@ mod tests {
         assert_eq!(account_balance - deposit_amount, env.balance_of(&account));
 
         // Then the contract balance is updated.
-        assert_eq!(token.balance_of(account), deposit_amount.into());
+        assert_eq!(token.balance_of(&account), deposit_amount.into());
 
         // The events were emitted.
         assert!(env.emitted_event(
@@ -260,7 +260,7 @@ mod tests {
 
         // When withdraw some tokens.
         let withdrawal_amount: U256 = 1_000.into();
-        token.withdraw(withdrawal_amount);
+        token.withdraw(&withdrawal_amount);
 
         // Then the user has the withdrawn tokens back.
         assert_eq!(
@@ -269,7 +269,7 @@ mod tests {
         );
         // Then the balance in the contract is deducted.
         assert_eq!(
-            token.balance_of(account),
+            token.balance_of(&account),
             deposit_amount.to_u256().unwrap() - withdrawal_amount
         );
 
@@ -298,7 +298,7 @@ mod tests {
         // When the user withdraws amount exceeds the user's deposit
         // Then an error occurs.
         assert_eq!(
-            token.try_withdraw(U256::one()),
+            token.try_withdraw(&U256::one()),
             Err(InsufficientBalance.into())
         );
     }

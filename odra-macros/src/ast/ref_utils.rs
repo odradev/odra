@@ -3,47 +3,54 @@ use crate::{
     ir::{FnArgIR, FnIR},
     utils::{self, syn::visibility_pub}
 };
-use syn::{parse_quote, Attribute};
+use syn::{parse_quote, Attribute, Visibility};
+use crate::utils::syn::visibility_default;
 
 pub fn host_try_function_item(fun: &FnIR) -> syn::ItemFn {
     let signature = try_function_signature(fun);
     let call_def_expr = call_def_with_amount(fun);
-    let mut docs = function_docs(fun);
-    docs.push(parse_quote!(#[doc = " Does not fail in case of error, returns `odra::OdraResult` instead."]));
+    let mut attrs = function_filtered_attrs(fun);
+    attrs.push(parse_quote!(#[doc = " Does not fail in case of error, returns `odra::OdraResult` instead."]));
 
-    env_call(signature, call_def_expr, docs)
+    env_call(signature, call_def_expr, attrs, visibility_pub())
 }
 
-pub fn host_function_item(fun: &FnIR) -> syn::ItemFn {
-    let pub_vis = visibility_pub();
-    let docs = function_docs(fun);
+pub fn host_function_item(fun: &FnIR, is_trait_impl: bool) -> syn::ItemFn {
+    let pub_vis = match is_trait_impl {
+        true => None,
+        false => Some(visibility_pub())
+    };
+    let attrs = function_filtered_attrs(fun);
     let signature = function_signature(fun);
     let try_func_name = fun.try_name();
     let args = fun.arg_names();
     syn::parse_quote!(
-        #(#docs)*
+        #(#attrs)*
         #pub_vis #signature {
             self.#try_func_name(#(#args),*).unwrap()
         }
     )
 }
 
-pub fn contract_function_item(fun: &FnIR) -> syn::ItemFn {
+pub fn contract_function_item(fun: &FnIR, is_trait_impl: bool) -> syn::ItemFn {
+    let vis = match is_trait_impl {
+        true => visibility_default(),
+        false => visibility_pub()
+    };
     let signature = function_signature(fun);
     let call_def_expr = call_def(fun);
-    let docs = function_docs(fun);
+    let attrs = function_filtered_attrs(fun);
 
-    env_call(signature, call_def_expr, docs)
+    env_call(signature, call_def_expr, attrs, vis)
 }
 
-fn env_call(sig: syn::Signature, call_def_expr: syn::Expr, docs: Vec<Attribute>) -> syn::ItemFn {
-    let pub_vis = visibility_pub();
+fn env_call(sig: syn::Signature, call_def_expr: syn::Expr, docs: Vec<Attribute>, vis: Visibility) -> syn::ItemFn {
     let m_env = utils::member::env();
     let m_address = utils::member::address();
 
     syn::parse_quote!(
         #(#docs)*
-        #pub_vis #sig {
+        #vis #sig {
             #m_env.call_contract(
                 #m_address,
                 #call_def_expr
@@ -79,10 +86,10 @@ fn function_signature(fun: &FnIR) -> syn::Signature {
     syn::parse_quote!(fn #fun_name(& #mutability self #(, #args)*) #return_type)
 }
 
-fn function_docs(fun: &FnIR) -> Vec<syn::Attribute> {
+fn function_filtered_attrs(fun: &FnIR) -> Vec<syn::Attribute> {
     fun.attributes()
         .iter()
-        .filter(|attr| attr.path().is_ident("doc"))
+        .filter(|attr| !attr.path().is_ident("odra"))
         .cloned()
         .collect()
 }

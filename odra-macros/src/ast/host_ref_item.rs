@@ -153,7 +153,7 @@ impl TryFrom<&'_ ModuleImplIR> for HostRefImplItem {
                 .iter()
                 .flat_map(|f| {
                     vec![
-                        ref_utils::host_function_item(f),
+                        ref_utils::host_function_item(f, module.is_trait_impl()),
                     ]
                 })
                 .collect()
