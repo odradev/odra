@@ -17,3 +17,7 @@ odra-casper-wasm-env = { workspace = true }
 
 [lints.rust]
 missing_docs = "warn"
+
+[features]
+default = []
+disable-allocator = ["odra-casper-wasm-env/disable-allocator"]

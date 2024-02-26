@@ -21,3 +21,7 @@ casper-contract = { version = "3.0.0", default-features = false, features = ["te
 
 [lints.rust]
 missing_docs = "warn"
+
+[features]
+default = []
+disable-allocator = []
