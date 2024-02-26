@@ -1,3 +1,4 @@
+//! Ownable module.
 use crate::access::errors::Error::{CallerNotTheNewOwner, CallerNotTheOwner, OwnerNotSet};
 use crate::access::events::{OwnershipTransferStarted, OwnershipTransferred};
 use odra::prelude::*;
@@ -22,7 +23,6 @@ pub struct Ownable {
 #[odra::module]
 impl Ownable {
     /// Initializes the module setting the caller as the initial owner.
-    #[odra(init)]
     pub fn init(&mut self) {
         let caller = self.env().caller();
         let initial_owner = Some(caller);
@@ -61,10 +61,13 @@ impl Ownable {
         }
     }
 
+    /// Returns the optional address of the current owner.
     pub fn get_optional_owner(&self) -> Option<Address> {
         self.owner.get().flatten()
     }
 
+    /// Unchecked version of the ownership transfer. It emits an event and sets
+    /// the new owner.
     pub fn unchecked_transfer_ownership(&mut self, new_owner: Option<Address>) {
         let previous_owner = self.get_optional_owner();
         self.owner.set(new_owner);
@@ -185,7 +188,7 @@ mod test {
 
         // when the current owner transfers ownership
         let new_owner = contract.env().get_account(1);
-        contract.transfer_ownership(new_owner);
+        contract.transfer_ownership(&new_owner);
 
         // then the new owner is set
         assert_eq!(new_owner, contract.get_owner());
@@ -206,7 +209,7 @@ mod test {
 
         // when the current owner transfers ownership
         let new_owner = contract.env().get_account(1);
-        contract.transfer_ownership(new_owner);
+        contract.transfer_ownership(&new_owner);
 
         // when the pending owner accepts the transfer
         contract.env().set_caller(new_owner);
@@ -243,7 +246,7 @@ mod test {
         contract.env().set_caller(caller);
 
         // then ownership transfer fails
-        let err = contract.try_transfer_ownership(new_owner).unwrap_err();
+        let err = contract.try_transfer_ownership(&new_owner).unwrap_err();
         assert_eq!(err, CallerNotTheOwner.into());
     }
 
@@ -257,12 +260,12 @@ mod test {
         contract.env().set_caller(caller);
 
         // then ownership transfer fails
-        let err = contract.try_transfer_ownership(new_owner).unwrap_err();
+        let err = contract.try_transfer_ownership(&new_owner).unwrap_err();
         assert_eq!(err, CallerNotTheOwner.into());
 
         // when the owner is the caller
         contract.env().set_caller(initial_owner);
-        contract.transfer_ownership(new_owner);
+        contract.transfer_ownership(&new_owner);
 
         // then the pending owner is set
         assert_eq!(contract.get_pending_owner(), Some(new_owner));

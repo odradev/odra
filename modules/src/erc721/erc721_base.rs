@@ -3,21 +3,24 @@ use crate::erc721::errors::Error::{
     ApprovalToCurrentOwner, ApproveToCaller, InvalidTokenId, NotAnOwnerOrApproved, TransferFailed
 };
 use crate::erc721::events::{Approval, ApprovalForAll, Transfer};
+use crate::erc721::extensions::erc721_receiver::Erc721Receiver;
 use crate::erc721::Erc721;
 use crate::erc721_receiver::Erc721ReceiverContractRef;
 use odra::prelude::*;
 use odra::{
     casper_types::{bytesrepr::Bytes, U256},
-    Address, Mapping, UnwrapOrRevert
+    Address, ContractRef, Mapping, UnwrapOrRevert
 };
-
 /// The ERC721 base implementation.
 #[odra::module(events = [Approval, ApprovalForAll, Transfer])]
 pub struct Erc721Base {
-    // Erc721 base fields.
+    /// The token balances.
     pub balances: Mapping<Address, U256>,
+    /// The token owners.
     pub owners: Mapping<U256, Option<Address>>,
+    /// The token approvals.
     pub token_approvals: Mapping<U256, Option<Address>>,
+    /// The operator approvals.
     pub operator_approvals: Mapping<(Address, Address), bool>
 }
 
@@ -126,10 +129,10 @@ impl Erc721Base {
         self.transfer(from, to, token_id);
         if to.is_contract() {
             let response = Erc721ReceiverContractRef::new(self.env(), *to).on_erc721_received(
-                self.env().caller(),
-                *from,
-                *token_id,
-                data.clone()
+                &self.env().caller(),
+                from,
+                token_id,
+                data
             );
 
             if !response {

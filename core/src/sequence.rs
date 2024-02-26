@@ -47,6 +47,7 @@ where
 }
 
 impl<T: Num + One + Zero + Default + Copy + ToBytes + FromBytes + CLTyped> Sequence<T> {
+    /// Returns the ContractEnv.
     pub fn env(&self) -> ContractEnv {
         self.env.child(self.index)
     }

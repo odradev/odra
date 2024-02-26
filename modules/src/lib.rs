@@ -1,3 +1,4 @@
+#![doc = "Odra's library of plug and play modules"]
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 

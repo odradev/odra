@@ -12,3 +12,6 @@ repository = { workspace = true }
 odra-core = { workspace = true }
 odra-casper-test-vm = { workspace = true }
 odra-vm = { workspace = true }
+
+[lints.rust]
+missing_docs = "warn"

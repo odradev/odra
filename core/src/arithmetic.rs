@@ -18,9 +18,9 @@ pub trait OverflowingSub: Sized {
 /// Computation result error.
 #[cfg_attr(debug_assertions, derive(Debug, PartialEq, Eq))]
 pub enum ArithmeticsError {
-    // Addition result exceeds the max value.
+    /// Addition result exceeds the max value.
     AdditionOverflow,
-    // Subtraction result is lower than the min value.
+    /// Subtraction result is lower than the min value.
     SubtractingOverflow
 }
 

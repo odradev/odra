@@ -52,6 +52,7 @@ pub struct ContractEpcFn {
 }
 
 struct InitArgsItem {
+    missing_docs: syn::Attribute,
     docs: syn::Attribute,
     attr: syn::Attribute,
     vis: syn::Visibility,
@@ -65,6 +66,7 @@ struct InitArgsItem {
 
 impl quote::ToTokens for InitArgsItem {
     fn to_tokens(&self, tokens: &mut ::proc_macro2::TokenStream) {
+        self.missing_docs.to_tokens(tokens);
         self.docs.to_tokens(tokens);
         self.attr.to_tokens(tokens);
         self.vis.to_tokens(tokens);
@@ -100,6 +102,7 @@ impl TryFrom<&'_ ModuleImplIR> for InitArgsItem {
             false => (Some(Default::default()), None)
         };
         Ok(Self {
+            missing_docs: utils::attr::missing_docs(),
             docs: utils::attr::init_args_docs(module.module_str()?),
             attr: utils::attr::derive_into_runtime_args(),
             vis: utils::syn::visibility_pub(),
@@ -188,6 +191,7 @@ mod deployer_impl {
     fn deployer_impl() {
         let module = test_utils::mock::module_impl();
         let expected = quote! {
+            #[allow(missing_docs)]
             /// [Erc20] contract constructor arguments.
             #[derive(odra::IntoRuntimeArgs)]
             pub struct Erc20InitArgs {

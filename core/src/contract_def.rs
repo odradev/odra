@@ -13,11 +13,17 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone)]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Serialize, Deserialize))]
 pub struct Entrypoint {
+    /// The entrypoint's ident.
     pub ident: String,
+    /// The entrypoint's arguments.
     pub args: Vec<Argument>,
+    /// `true` if the entrypoint is mutable.
     pub is_mut: bool,
+    /// The entrypoint's return type.
     pub ret: CLType,
+    /// The entrypoint's type.
     pub ty: EntrypointType,
+    /// The entrypoint's attributes.
     pub attributes: Vec<EntrypointAttribute>
 }
 
@@ -25,9 +31,13 @@ pub struct Entrypoint {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Serialize, Deserialize))]
 pub struct Argument {
+    /// The argument's ident.
     pub ident: String,
+    /// The argument's type.
     pub ty: CLType,
+    /// `true` if the argument is a reference.
     pub is_ref: bool,
+    /// `true` if the argument is a slice.
     pub is_slice: bool
 }
 
@@ -35,7 +45,9 @@ pub struct Argument {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Serialize, Deserialize))]
 pub struct Event {
+    /// The event's ident.
     pub ident: String,
+    /// The event's arguments.
     pub args: Vec<Argument>
 }
 
@@ -68,20 +80,23 @@ pub enum EntrypointAttribute {
 
 /// A trait that should be implemented by each smart contract to allow the backend.
 pub trait HasIdent {
+    /// Returns the contract's ident.
     fn ident() -> String;
 }
 
 /// A trait that should be implemented by each smart contract to allow the backend
 /// to generate blockchain-specific code.
 pub trait HasEntrypoints {
-    /// Returns an abstract contract definition.
+    /// Returns the list of contract's entrypoints.
     fn entrypoints() -> Vec<Entrypoint>;
 }
 
 /// A trait that should be implemented by each smart contract to allow the backend.
 pub trait HasEvents {
+    /// Returns a list of Events used by the contract.
     fn events() -> Vec<Event>;
 
+    /// Returns a map of event schemas used by the contract.
     #[cfg(target_arch = "wasm32")]
     fn event_schemas() -> crate::prelude::BTreeMap<String, casper_event_standard::Schema> {
         crate::prelude::BTreeMap::new()

@@ -1,3 +1,4 @@
+#![doc = "Examples of usages of Odra Framework"]
 #![no_std]
 extern crate alloc;
 

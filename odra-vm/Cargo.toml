@@ -13,3 +13,6 @@ odra-core = { workspace = true }
 anyhow = "1.0.75"
 url = "2.4.1"
 blake2 = { workspace = true }
+
+[lints.rust]
+missing_docs = "warn"

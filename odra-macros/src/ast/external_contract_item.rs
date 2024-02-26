@@ -1,6 +1,6 @@
+use crate::ast::contract_ref_item::RefItem;
 use crate::ast::host_ref_item::HostRefItem;
 use crate::ast::parts_utils::{UsePreludeItem, UseSuperItem};
-use crate::ast::ref_item::RefItem;
 use crate::ast::test_parts::{PartsModuleItem, TestPartsReexportItem};
 use crate::ir::ModuleImplIR;
 use derive_try_from_ref::TryFromRef;
@@ -49,20 +49,23 @@ mod test {
                 fn balance_of(&self, owner: Address) -> U256;
             }
 
+            /// [Token] Contract Ref.
             pub struct TokenContractRef {
                 env: odra::prelude::Rc<odra::ContractEnv>,
                 address: odra::Address,
             }
 
-            impl TokenContractRef {
-                pub fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::Address) -> Self {
+            impl odra::ContractRef for TokenContractRef {
+                fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::Address) -> Self {
                     Self { env, address }
                 }
 
-                pub fn address(&self) -> &odra::Address {
+                fn address(&self) -> &odra::Address {
                     &self.address
                 }
+            }
 
+            impl TokenContractRef {
                 pub fn balance_of(&self, owner: Address) -> U256 {
                     self.env.call_contract(
                         self.address,
@@ -71,7 +74,7 @@ mod test {
                             false,
                             {
                                 let mut named_args = odra::casper_types::RuntimeArgs::new();
-                                let _ = named_args.insert("owner", owner);
+                                let _ = named_args.insert("owner", owner.clone());
                                 named_args
                             }
                         ),
@@ -84,6 +87,7 @@ mod test {
                 use super::*;
                 use odra::prelude::*;
 
+                /// [Token] Host Ref.
                 pub struct TokenHostRef {
                     address: odra::Address,
                     env: odra::host::HostEnv,
@@ -128,6 +132,13 @@ mod test {
                 }
 
                 impl TokenHostRef {
+                    pub fn balance_of(&self, owner: Address) -> U256 {
+                        self.try_balance_of(owner).unwrap()
+                    }
+                }
+
+                impl TokenHostRef {
+                    /// Does not fail in case of error, returns `odra::OdraResult` instead.
                     pub fn try_balance_of(&self, owner: Address) -> odra::OdraResult<U256> {
                         self.env.call_contract(
                             self.address,
@@ -139,15 +150,11 @@ mod test {
                                     if self.attached_value > odra::casper_types::U512::zero() {
                                         let _ = named_args.insert("amount", self.attached_value);
                                     }
-                                    let _ = named_args.insert("owner", owner);
+                                    let _ = named_args.insert("owner", owner.clone());
                                     named_args
                                 }
                             ).with_amount(self.attached_value),
                         )
-                    }
-
-                    pub fn balance_of(&self, owner: Address) -> U256 {
-                        self.try_balance_of(owner).unwrap()
                     }
                 }
             }

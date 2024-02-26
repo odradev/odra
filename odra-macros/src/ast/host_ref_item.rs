@@ -11,6 +11,7 @@ use super::{fn_utils::FnItem, ref_utils};
 
 #[derive(syn_derive::ToTokens)]
 struct HostRefStructItem {
+    doc: syn::Attribute,
     vis: syn::Visibility,
     struct_token: syn::token::Struct,
     ident: syn::Ident,
@@ -34,7 +35,12 @@ impl TryFrom<&'_ ModuleImplIR> for HostRefStructItem {
             #env: #ty_host_env,
             #attached_value: #ty_u512
         });
+
+        let comment = format!(" [{}] Host Ref.", module.module_str()?);
+        let doc = parse_quote!(#[doc = #comment]);
+
         Ok(Self {
+            doc,
             vis: utils::syn::visibility_pub(),
             struct_token: Default::default(),
             ident: module.host_ref_ident()?,
@@ -115,6 +121,8 @@ impl TryFrom<&'_ ModuleImplIR> for HostRefTraitImplItem {
 #[derive(syn_derive::ToTokens)]
 struct HostRefImplItem {
     impl_token: syn::token::Impl,
+    trait_name: Option<Ident>,
+    for_token: Option<syn::token::For>,
     ref_ident: Ident,
     #[syn(braced)]
     brace_token: syn::token::Brace,
@@ -127,6 +135,43 @@ impl TryFrom<&'_ ModuleImplIR> for HostRefImplItem {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        // If module implements a trait, set trait name
+        let trait_name = module.impl_trait_ident();
+        let for_token: Option<syn::token::For> = match module.is_trait_impl() {
+            true => Some(Default::default()),
+            false => None
+        };
+
+        Ok(Self {
+            impl_token: Default::default(),
+            trait_name,
+            for_token,
+            ref_ident: module.host_ref_ident()?,
+            brace_token: Default::default(),
+            functions: module
+                .host_functions()?
+                .iter()
+                .flat_map(|f| vec![ref_utils::host_function_item(f, module.is_trait_impl())])
+                .collect()
+        })
+    }
+}
+
+#[derive(syn_derive::ToTokens)]
+struct HostRefTryImplItem {
+    impl_token: syn::token::Impl,
+    ref_ident: Ident,
+    #[syn(braced)]
+    brace_token: syn::token::Brace,
+    #[syn(in = brace_token)]
+    #[to_tokens(|tokens, f| tokens.append_all(f))]
+    functions: Vec<syn::ItemFn>
+}
+
+impl TryFrom<&'_ ModuleImplIR> for HostRefTryImplItem {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
             impl_token: Default::default(),
             ref_ident: module.host_ref_ident()?,
@@ -134,17 +179,11 @@ impl TryFrom<&'_ ModuleImplIR> for HostRefImplItem {
             functions: module
                 .host_functions()?
                 .iter()
-                .flat_map(|f| {
-                    vec![
-                        ref_utils::host_try_function_item(f),
-                        ref_utils::host_function_item(f),
-                    ]
-                })
+                .flat_map(|f| vec![ref_utils::host_try_function_item(f)])
                 .collect()
         })
     }
 }
-
 struct NewFnItem;
 
 impl ToTokens for NewFnItem {
@@ -292,7 +331,8 @@ impl TryFrom<&'_ ModuleImplIR> for IdentFnItem {
 pub struct HostRefItem {
     struct_item: HostRefStructItem,
     trait_impl_item: HostRefTraitImplItem,
-    impl_item: HostRefImplItem
+    impl_item: HostRefImplItem,
+    try_impl_item: HostRefTryImplItem
 }
 
 #[cfg(test)]
@@ -305,6 +345,7 @@ mod ref_item_tests {
     fn host_ref() {
         let module = test_utils::mock::module_impl();
         let expected = quote! {
+            /// [Erc20] Host Ref.
             pub struct Erc20HostRef {
                 address: odra::Address,
                 env: odra::host::HostEnv,
@@ -349,6 +390,58 @@ mod ref_item_tests {
             }
 
             impl Erc20HostRef {
+                /// Initializes the contract with the given parameters.
+                pub fn init(&mut self, total_supply: Option<U256>) {
+                    self.try_init(total_supply).unwrap()
+                }
+
+                /// Returns the total supply of the token.
+                pub fn total_supply(&self) -> U256 {
+                    self.try_total_supply().unwrap()
+                }
+
+                /// Pay to mint.
+                pub fn pay_to_mint(&mut self) {
+                    self.try_pay_to_mint().unwrap()
+                }
+
+                /// Approve.
+                pub fn approve(&mut self, to: &Address, amount: &U256) {
+                    self.try_approve(to, amount).unwrap()
+                }
+
+                /// Airdrops the given amount to the given addresses.
+                pub fn airdrop(&self, to: &[Address], amount: &U256) {
+                    self.try_airdrop(to, amount).unwrap()
+                }
+            }
+
+            impl Erc20HostRef {
+                /// Initializes the contract with the given parameters.
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
+                pub fn try_init(&mut self, total_supply: Option<U256>) -> odra::OdraResult<()> {
+                    self.env
+                        .call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                String::from("init"),
+                                true,
+                                {
+                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    if self.attached_value > odra::casper_types::U512::zero() {
+                                        let _ = named_args.insert("amount", self.attached_value);
+                                    }
+                                    let _ = named_args
+                                        .insert("total_supply", total_supply.clone());
+                                    named_args
+                                },
+                            )
+                            .with_amount(self.attached_value),
+                        )
+                }
+
+                /// Returns the total supply of the token.
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_total_supply(&self) -> odra::OdraResult<U256> {
                     self.env.call_contract(
                         self.address,
@@ -365,11 +458,8 @@ mod ref_item_tests {
                         ).with_amount(self.attached_value),
                     )
                 }
-
-                pub fn total_supply(&self) -> U256 {
-                    self.try_total_supply().unwrap()
-                }
-
+                /// Pay to mint.
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_pay_to_mint(&mut self) -> odra::OdraResult<()> {
                     self.env
                         .call_contract(
@@ -388,15 +478,12 @@ mod ref_item_tests {
                                 .with_amount(self.attached_value),
                         )
                 }
-
-                pub fn pay_to_mint(&mut self) {
-                    self.try_pay_to_mint().unwrap()
-                }
-
+                /// Approve.
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_approve(
                     &mut self,
-                    to: Address,
-                    amount: U256,
+                    to: &Address,
+                    amount: &U256,
                 ) -> odra::OdraResult<()> {
                     self.env
                         .call_contract(
@@ -409,20 +496,17 @@ mod ref_item_tests {
                                         if self.attached_value > odra::casper_types::U512::zero() {
                                             let _ = named_args.insert("amount", self.attached_value);
                                         }
-                                        let _ = named_args.insert("to", to);
-                                        let _ = named_args.insert("amount", amount);
+                                        let _ = named_args.insert("to", to.clone());
+                                        let _ = named_args.insert("amount", amount.clone());
                                         named_args
                                     },
                                 )
                                 .with_amount(self.attached_value),
                         )
                 }
-
-                pub fn approve(&mut self, to: Address, amount: U256) {
-                    self.try_approve(to, amount).unwrap()
-                }
-
-                pub fn try_airdrop(&self, to: odra::prelude::vec::Vec<Address>, amount: U256) -> odra::OdraResult<()> {
+                /// Airdrops the given amount to the given addresses.
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
+                pub fn try_airdrop(&self, to: &[Address], amount: &U256) -> odra::OdraResult<()> {
                     self.env.call_contract(
                         self.address,
                         odra::CallDef::new(
@@ -433,16 +517,12 @@ mod ref_item_tests {
                                 if self.attached_value > odra::casper_types::U512::zero() {
                                     let _ = named_args.insert("amount", self.attached_value);
                                 }
-                                let _ = named_args.insert("to", to);
-                                let _ = named_args.insert("amount", amount);
+                                let _ = named_args.insert("to", to.clone());
+                                let _ = named_args.insert("amount", amount.clone());
                                 named_args
                             }
                         ).with_amount(self.attached_value),
                     )
-                }
-
-                pub fn airdrop(&self, to: odra::prelude::vec::Vec<Address>, amount: U256) {
-                    self.try_airdrop(to, amount).unwrap()
                 }
             }
         };
@@ -454,6 +534,7 @@ mod ref_item_tests {
     fn host_trait_impl_ref() {
         let module = test_utils::mock::module_trait_impl();
         let expected = quote! {
+            /// [Erc20] Host Ref.
             pub struct Erc20HostRef {
                 address: odra::Address,
                 env: odra::host::HostEnv,
@@ -497,7 +578,18 @@ mod ref_item_tests {
                 }
             }
 
+            impl IErc20 for Erc20HostRef {
+                fn total_supply(&self) -> U256 {
+                    self.try_total_supply().unwrap()
+                }
+
+                fn pay_to_mint(&mut self) {
+                    self.try_pay_to_mint().unwrap()
+                }
+            }
+
             impl Erc20HostRef {
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_total_supply(&self) -> odra::OdraResult<U256> {
                     self.env.call_contract(
                         self.address,
@@ -515,10 +607,8 @@ mod ref_item_tests {
                     )
                 }
 
-                pub fn total_supply(&self) -> U256 {
-                    self.try_total_supply().unwrap()
-                }
 
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_pay_to_mint(&mut self) -> odra::OdraResult<()>  {
                     self.env
                         .call_contract(
@@ -537,10 +627,6 @@ mod ref_item_tests {
                                 .with_amount(self.attached_value),
                         )
                 }
-
-                pub fn pay_to_mint(&mut self) {
-                    self.try_pay_to_mint().unwrap()
-                }
             }
         };
         let actual = HostRefItem::try_from(&module).unwrap();
@@ -551,6 +637,7 @@ mod ref_item_tests {
     fn host_ref_delegation() {
         let module = test_utils::mock::module_delegation();
         let expected = quote! {
+            /// [Erc20] Host Ref.
             pub struct Erc20HostRef {
                 address: odra::Address,
                 env: odra::host::HostEnv,
@@ -595,6 +682,35 @@ mod ref_item_tests {
             }
 
             impl Erc20HostRef {
+                /// Returns the total supply of the token.
+                pub fn total_supply(&self) -> U256 {
+                    self.try_total_supply().unwrap()
+                }
+
+                /// Delegated. See `self.ownable.get_owner()` for details.
+                pub fn get_owner(&self) -> Address {
+                    self.try_get_owner().unwrap()
+                }
+
+                /// Delegated. See `self.ownable.set_owner()` for details.
+                pub fn set_owner(&mut self, new_owner: Address) {
+                    self.try_set_owner(new_owner).unwrap()
+                }
+
+                /// Delegated. See `self.metadata.name()` for details.
+                pub fn name(&self) -> String {
+                    self.try_name().unwrap()
+                }
+
+                /// Delegated. See `self.metadata.symbol()` for details.
+                pub fn symbol(&self) -> String {
+                    self.try_symbol().unwrap()
+                 }
+            }
+
+            impl Erc20HostRef {
+                /// Returns the total supply of the token.
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_total_supply(&self) -> odra::OdraResult<U256> {
                     self.env.call_contract(
                         self.address,
@@ -612,10 +728,8 @@ mod ref_item_tests {
                     )
                 }
 
-                pub fn total_supply(&self) -> U256 {
-                    self.try_total_supply().unwrap()
-                }
-
+                /// Delegated. See `self.ownable.get_owner()` for details.
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_get_owner(&self) -> odra::OdraResult<Address> {
                     self.env
                         .call_contract(
@@ -635,10 +749,8 @@ mod ref_item_tests {
                         )
                 }
 
-                pub fn get_owner(&self) -> Address {
-                    self.try_get_owner().unwrap()
-                }
-
+                /// Delegated. See `self.ownable.set_owner()` for details.
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_set_owner(&mut self, new_owner: Address) -> odra::OdraResult<()> {
                     self.env
                         .call_contract(
@@ -651,7 +763,7 @@ mod ref_item_tests {
                                         if self.attached_value > odra::casper_types::U512::zero() {
                                             let _ = named_args.insert("amount", self.attached_value);
                                         }
-                                        let _ = named_args.insert("new_owner", new_owner);
+                                        let _ = named_args.insert("new_owner", new_owner.clone());
                                         named_args
                                     },
                                 )
@@ -659,10 +771,8 @@ mod ref_item_tests {
                         )
                 }
 
-                pub fn set_owner(&mut self, new_owner: Address) {
-                    self.try_set_owner(new_owner).unwrap()
-                }
-
+                /// Delegated. See `self.metadata.name()` for details.
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_name(&self) -> odra::OdraResult<String> {
                     self.env
                         .call_contract(
@@ -682,10 +792,8 @@ mod ref_item_tests {
                         )
                 }
 
-                pub fn name(&self) -> String {
-                    self.try_name().unwrap()
-                }
-
+                /// Delegated. See `self.metadata.symbol()` for details.
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_symbol(&self) -> odra::OdraResult<String> {
                     self.env
                         .call_contract(
@@ -705,9 +813,6 @@ mod ref_item_tests {
                         )
                 }
 
-                pub fn symbol(&self) -> String {
-                    self.try_symbol().unwrap()
-                 }
             }
         };
         let actual = HostRefItem::try_from(&module).unwrap();

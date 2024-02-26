@@ -1,11 +1,14 @@
+//! This example shows how to handle signature verification in a contract.
 use odra::casper_types::{bytesrepr::Bytes, PublicKey};
 use odra::prelude::*;
 
+/// A Contract that verifies signatures.
 #[odra::module]
 pub struct SignatureVerifier;
 
 #[odra::module]
 impl SignatureVerifier {
+    /// Verifies if the message was signed by the owner of the public key.
     pub fn verify_signature(
         &self,
         message: &Bytes,
@@ -39,7 +42,7 @@ mod test {
         let public_key = test_env.public_key(&account);
 
         let signature_verifier = SignatureVerifierHostRef::deploy(&test_env, NoArgs);
-        assert!(signature_verifier.verify_signature(message_bytes, signature, public_key));
+        assert!(signature_verifier.verify_signature(&message_bytes, &signature, &public_key));
     }
 
     // The following test checks that the signature verification works with the signature produced
@@ -66,6 +69,6 @@ mod test {
         let (public_key, _) = PublicKey::from_bytes(public_key_decoded.as_slice()).unwrap();
 
         let signature_verifier = SignatureVerifierHostRef::deploy(&odra_test::env(), NoArgs);
-        assert!(signature_verifier.verify_signature(message_bytes, signature_bytes, public_key));
+        assert!(signature_verifier.verify_signature(&message_bytes, &signature_bytes, &public_key));
     }
 }

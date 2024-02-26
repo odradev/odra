@@ -1,7 +1,9 @@
+//! This example demonstrates how to use the pauseable module in a contract.
 use odra::prelude::*;
 use odra::{SubModule, Var};
 use odra_modules::security::Pauseable;
 
+/// Contract showing the capabilities of the pauseable module.
 #[odra::module]
 pub struct PauseableCounter {
     value: Var<u32>,
@@ -10,23 +12,28 @@ pub struct PauseableCounter {
 
 #[odra::module]
 impl PauseableCounter {
+    /// Increments a value.
     pub fn increment(&mut self) {
         self.pauseable.require_not_paused();
         self.raw_increment();
     }
 
+    /// Pauses the contract.
     pub fn pause(&mut self) {
         self.pauseable.pause();
     }
 
+    /// Unpauses the contract.
     pub fn unpause(&mut self) {
         self.pauseable.unpause();
     }
 
+    /// Returns true if the contract is paused, and false otherwise.
     pub fn is_paused(&self) -> bool {
         self.pauseable.is_paused()
     }
 
+    /// Returns the value of the counter.
     pub fn get_value(&self) -> u32 {
         self.value.get_or_default()
     }

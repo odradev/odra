@@ -1,6 +1,8 @@
+//! Module containing DogContract. It is used in docs to explain how to interact with the storage.
 use odra::prelude::*;
 use odra::Var;
 
+/// A simple contract that represents a dog.
 #[odra::module]
 pub struct DogContract {
     barks: Var<bool>,
@@ -11,6 +13,7 @@ pub struct DogContract {
 
 #[odra::module]
 impl DogContract {
+    /// Initializes the contract with the given parameters.
     pub fn init(&mut self, barks: bool, weight: u32, name: String) {
         self.barks.set(barks);
         self.weight.set(weight);
@@ -18,23 +21,28 @@ impl DogContract {
         self.walks.set(Vec::<u32>::default());
     }
 
+    /// Returns true if the dog barks.
     pub fn barks(&self) -> bool {
         self.barks.get_or_default()
     }
 
+    /// Returns the dog's weight.
     pub fn weight(&self) -> u32 {
         self.weight.get_or_default()
     }
 
+    /// Returns the dog's name.
     pub fn name(&self) -> String {
         self.name.get_or_default()
     }
 
+    /// Adds a walk to the dog's walks.
     pub fn walks_amount(&self) -> u32 {
         let walks = self.walks.get_or_default();
         walks.len() as u32
     }
 
+    /// Returns the total length of the dog's walks.
     pub fn walks_total_length(&self) -> u32 {
         let walks = self.walks.get_or_default();
         walks.iter().sum()

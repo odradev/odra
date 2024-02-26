@@ -3,7 +3,6 @@ use crate::{
     ir::{FnIR, ModuleImplIR},
     utils
 };
-use derive_try_from_ref::TryFromRef;
 use quote::TokenStreamExt;
 use syn::parse_quote;
 
@@ -167,14 +166,24 @@ impl TryFrom<&'_ FnIR> for ExecFnSignature {
     }
 }
 
-#[derive(syn_derive::ToTokens, TryFromRef)]
-#[source(ModuleImplIR)]
-#[err(syn::Error)]
+#[derive(syn_derive::ToTokens)]
 struct ExecPartsModuleItem {
-    #[default]
+    missing_docs_attr: syn::Attribute,
     mod_token: syn::token::Mod,
-    #[expr(input.exec_parts_mod_ident()?)]
     ident: syn::Ident
+}
+
+impl TryFrom<&'_ ModuleImplIR> for ExecPartsModuleItem {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        let ident = module.exec_parts_mod_ident()?;
+        Ok(Self {
+            missing_docs_attr: utils::attr::missing_docs(),
+            mod_token: Default::default(),
+            ident
+        })
+    }
 }
 
 #[derive(syn_derive::ToTokens)]
@@ -223,6 +232,7 @@ mod test {
         let actual = ExecPartsItem::try_from(&module).unwrap();
 
         let expected = quote::quote! {
+            #[allow(missing_docs)]
             mod __erc20_exec_parts {
                 use super::*;
                 use odra::prelude::*;
@@ -291,6 +301,7 @@ mod test {
         let actual = ExecPartsItem::try_from(&module).unwrap();
 
         let expected = quote::quote! {
+            #[allow(missing_docs)]
             mod __erc20_exec_parts {
                 use super::*;
                 use odra::prelude::*;
@@ -325,6 +336,7 @@ mod test {
         let actual = ExecPartsItem::try_from(&module).unwrap();
 
         let expected = quote::quote! {
+            #[allow(missing_docs)]
             mod __erc20_exec_parts {
                 use super::*;
                 use odra::prelude::*;

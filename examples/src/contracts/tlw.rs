@@ -1,6 +1,8 @@
+//! This is an example of a TimeLockWallet.
 use odra::prelude::*;
 use odra::{casper_types::U512, Address, Event, Mapping, OdraError, Var};
 
+/// TimeLockWallet contract.
 #[odra::module]
 pub struct TimeLockWallet {
     balances: Mapping<Address, U512>,
@@ -10,10 +12,12 @@ pub struct TimeLockWallet {
 
 #[odra::module]
 impl TimeLockWallet {
+    /// Initializes the contract with the lock duration.
     pub fn init(&mut self, lock_duration: u64) {
         self.lock_duration.set(lock_duration);
     }
 
+    /// Deposits the tokens into the contract.
     #[odra(payable)]
     pub fn deposit(&mut self) {
         // Extract values
@@ -36,6 +40,7 @@ impl TimeLockWallet {
         });
     }
 
+    /// Withdraws the tokens from the contract.
     pub fn withdraw(&mut self, amount: &U512) {
         // Extract values
         let caller: Address = self.env().caller();
@@ -62,10 +67,12 @@ impl TimeLockWallet {
         });
     }
 
+    /// Returns the balance of the given account.
     pub fn get_balance(&self, address: &Address) -> U512 {
         self.balances.get_or_default(address)
     }
 
+    /// Returns the lock duration.
     pub fn lock_duration(&self) -> u64 {
         self.lock_duration.get_or_default()
     }
@@ -82,16 +89,21 @@ pub enum Error {
     InsufficientBalance = 3
 }
 
+/// Deposit event.
 #[derive(Event, PartialEq, Eq, Debug)]
-
 pub struct Deposit {
+    /// The address of the user who deposited the tokens.
     pub address: Address,
+    /// The amount of the deposited tokens.
     pub amount: U512
 }
 
+/// Withdrawal event.
 #[derive(Event, PartialEq, Eq, Debug)]
 pub struct Withdrawal {
+    /// The address of the user who withdrew the tokens.
     pub address: Address,
+    /// The amount of the withdrawn tokens.
     pub amount: U512
 }
 
@@ -143,8 +155,8 @@ mod test {
         single_deposit(user_2, user_2_deposit);
 
         // Then the users' balance is the contract is equal to the deposited amount.
-        assert_eq!(contract.get_balance(user_1), user_1_deposit);
-        assert_eq!(contract.get_balance(user_2), user_2_deposit);
+        assert_eq!(contract.get_balance(&user_1), user_1_deposit);
+        assert_eq!(contract.get_balance(&user_2), user_2_deposit);
 
         // Then two deposit event were emitted.
         test_env.emitted_event(
@@ -192,8 +204,8 @@ mod test {
         let balance_before_withdrawals = test_env.balance_of(&user);
         let first_withdrawal_amount: U512 = 50.into();
         let second_withdrawal_amount: U512 = 40.into();
-        contract.withdraw(first_withdrawal_amount);
-        contract.withdraw(second_withdrawal_amount);
+        contract.withdraw(&first_withdrawal_amount);
+        contract.withdraw(&second_withdrawal_amount);
 
         // Then the native token balance is updated.
         assert_eq!(
@@ -203,7 +215,7 @@ mod test {
 
         // Then the user balance in the contract is deducted.
         assert_eq!(
-            contract.get_balance(user),
+            contract.get_balance(&user),
             deposit_amount - first_withdrawal_amount - second_withdrawal_amount
         );
 
@@ -232,7 +244,7 @@ mod test {
 
         // When the user withdraws tokens before the lock is released, an error occurs.
         assert_eq!(
-            contract.try_withdraw(100.into()).unwrap_err(),
+            contract.try_withdraw(&100.into()).unwrap_err(),
             Error::LockIsNotOver.into()
         );
     }
@@ -248,7 +260,7 @@ mod test {
         contract.env().advance_block_time(ONE_DAY_IN_SECONDS + 1);
         let withdrawal = deposit + 1;
         assert_eq!(
-            contract.try_withdraw(withdrawal.into()).unwrap_err(),
+            contract.try_withdraw(&withdrawal.into()).unwrap_err(),
             Error::InsufficientBalance.into()
         );
     }

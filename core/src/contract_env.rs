@@ -11,6 +11,14 @@ const INDEX_SIZE: usize = 4;
 const KEY_LEN: usize = 64;
 pub(crate) type StorageKey = [u8; KEY_LEN];
 
+/// Trait that needs to be implemented by all contract refs.
+pub trait ContractRef {
+    /// Creates a new instance of the Contract Ref.
+    fn new(env: Rc<ContractEnv>, address: Address) -> Self;
+    /// Returns the address of the contract.
+    fn address(&self) -> &Address;
+}
+
 /// Represents the environment accessible in the contract context.
 ///
 /// The `ContractEnv` struct provides methods for interacting with the contract environment,

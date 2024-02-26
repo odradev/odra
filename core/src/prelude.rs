@@ -6,6 +6,7 @@
 mod prelude {
     pub use crate::arithmetic::*;
     pub use crate::module::Module;
+    pub use crate::ContractRef;
     pub use alloc::borrow::ToOwned;
     pub use alloc::boxed::Box;
     pub use alloc::collections::*;

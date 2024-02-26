@@ -1,33 +1,42 @@
+//! This example demonstrates how to handle errors in a contract.
 use odra::prelude::*;
 use odra::{Address, OdraError, Var};
 
+/// Contract that has an owner.
 #[odra::module]
 pub struct OwnedContract {
     name: Var<String>,
     owner: Var<Address>
 }
 
+/// Errors that can occur in the `OwnedContract` module.
 #[derive(OdraError)]
 pub enum Error {
+    /// The owner is not set.
     OwnerNotSet = 1,
+    /// The caller is not the owner.
     NotAnOwner = 2
 }
 
 #[odra::module]
 impl OwnedContract {
+    /// Initializes the contract with the given name.
     pub fn init(&mut self, name: String) {
         self.name.set(name);
         self.owner.set(self.env().caller())
     }
 
+    /// Returns the contract's name.
     pub fn name(&self) -> String {
         self.name.get_or_default()
     }
 
+    /// Returns the contract's owner.
     pub fn owner(&self) -> Address {
         self.owner.get_or_revert_with(Error::OwnerNotSet)
     }
 
+    /// Changes the contract's name.
     pub fn change_name(&mut self, name: String) {
         let caller = self.env().caller();
         if caller != self.owner() {

@@ -1,6 +1,8 @@
+//! This example shows how to test a contract.
 use odra::prelude::*;
 use odra::{Address, Var};
 
+/// Contract presenting the testing abilities of the Odra Framework
 #[odra::module]
 pub struct TestingContract {
     name: Var<String>,
@@ -8,22 +10,27 @@ pub struct TestingContract {
     created_by: Var<Address>
 }
 
+/// Implementation of the TestingContract
 #[odra::module]
 impl TestingContract {
+    /// Initializes the contract with the name
     pub fn init(&mut self, name: String) {
         self.name.set(name);
         self.created_at.set(self.env().get_block_time());
         self.created_by.set(self.env().caller())
     }
 
+    /// Returns the name of the contract
     pub fn name(&self) -> String {
         self.name.get_or_default()
     }
 
+    /// Returns the creation time of the contract
     pub fn created_at(&self) -> u64 {
         self.created_at.get().unwrap()
     }
 
+    /// Returns the address of the creator of the contract
     pub fn created_by(&self) -> Address {
         self.created_by.get().unwrap()
     }

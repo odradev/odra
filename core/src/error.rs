@@ -15,6 +15,7 @@ pub enum OdraError {
 }
 
 impl OdraError {
+    /// Returns the error code.
     pub fn code(&self) -> u16 {
         match self {
             OdraError::ExecutionError(e) => e.code(),
@@ -22,6 +23,7 @@ impl OdraError {
         }
     }
 
+    /// Creates a new user error with a given code.
     pub fn user(code: u16) -> Self {
         OdraError::ExecutionError(ExecutionError::User(code))
     }
@@ -76,36 +78,58 @@ impl From<casper_types::bytesrepr::Error> for ExecutionError {
 pub enum ExecutionError {
     /// Unwrap error
     UnwrapError = 1,
+    /// Addition overflow
     AdditionOverflow = 100,
+    /// Subtraction overflow
     SubtractionOverflow = 101,
     /// Method does not accept deposit
     NonPayable = 102,
     /// Can't transfer tokens to contract.
     TransferToContract = 103,
+    /// Reentrant call detected
     ReentrantCall = 104,
+    /// Contract already installed
     ContractAlreadyInstalled = 105,
+    /// Unknown constructor
     UnknownConstructor = 106,
+    /// Native transfer error
     NativeTransferError = 107,
+    /// Index out of bounds
     IndexOutOfBounds = 108,
+    /// Tried to construct a zero address.
     ZeroAddress = 109,
+    /// Address creation failed
     AddressCreationFailed = 110,
+    /// Early end of stream - deserialization error
     EarlyEndOfStream = 111,
+    /// Formatting error - deserialization error
     Formatting = 112,
+    /// Left over bytes - deserialization error
     LeftOverBytes = 113,
+    /// Out of memory
     OutOfMemory = 114,
+    /// Not representable
     NotRepresentable = 115,
+    /// Exceeded recursion depth
     ExceededRecursionDepth = 116,
+    /// Key not found
     KeyNotFound = 117,
+    /// Could not deserialize signature
     CouldNotDeserializeSignature = 118,
+    /// Type mismatch
     TypeMismatch = 119,
+    /// Could not sign message
     CouldNotSignMessage = 120,
+    /// Maximum code for user errors
     MaxUserError = 32767,
     /// User error too high. The code should be in range 0..32767.
     UserErrorTooHigh = 32768,
+    /// User error
     User(u16)
 }
 
 impl ExecutionError {
+    /// Returns the error code.
     pub fn code(&self) -> u16 {
         unsafe {
             match self {
@@ -155,7 +179,7 @@ pub enum VmError {
 
 /// Error that can occur while operating on a collection.
 pub enum CollectionError {
-    // The requested index is bigger than the max collection index.
+    /// The requested index is bigger than the max collection index.
     IndexOutOfBounds
 }
 

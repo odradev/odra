@@ -2,6 +2,13 @@
 
 Changelog for `odra`.
 
+## [0.9.0] - 2024-XX-XX
+### Added
+- `ContractRef` trait with `new` and `address` functions. All contract references now implement it.
+
+### Changed
+- Traits implemented by modules are now also implemented by their `ContractRefs` and `HostRefs`.
+
 ## [0.8.0] - 2024-XX-XX
 
 ### Changed

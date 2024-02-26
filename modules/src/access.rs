@@ -1,3 +1,4 @@
+//! Access control module.
 mod access_control;
 pub mod errors;
 pub mod events;

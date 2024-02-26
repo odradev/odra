@@ -24,3 +24,6 @@ path = "bin/proxy_caller_with_return.rs"
 bench = false
 doctest = false
 test = false
+
+[lints.rust]
+missing_docs = "warn"

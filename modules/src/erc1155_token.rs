@@ -28,7 +28,7 @@ impl OwnedErc1155 for Erc1155Token {
     fn balance_of(&self, owner: &Address, id: &U256) -> U256 {
         self.core.balance_of(owner, id)
     }
-    fn balance_of_batch(&self, owners: &[Address], ids: &[U256]) -> Vec<U256> {
+    fn balance_of_batch(&self, owners: Vec<Address>, ids: Vec<U256>) -> Vec<U256> {
         self.core.balance_of_batch(owners, ids)
     }
     fn set_approval_for_all(&mut self, operator: &Address, approved: bool) {
@@ -184,6 +184,7 @@ mod tests {
     use crate::erc1155::errors::Error;
     use crate::erc1155::errors::Error::InsufficientBalance;
     use crate::erc1155::events::{ApprovalForAll, TransferBatch, TransferSingle};
+    use crate::erc1155::owned_erc1155::OwnedErc1155;
     use crate::erc1155_receiver::events::{BatchReceived, SingleReceived};
     use crate::erc1155_receiver::Erc1155ReceiverHostRef;
     use crate::erc1155_token::Erc1155TokenHostRef;
@@ -221,10 +222,10 @@ mod tests {
         let mut env = setup();
 
         // When we mint some tokens
-        env.token.mint(env.alice, U256::one(), 100.into(), None);
+        env.token.mint(&env.alice, &U256::one(), &100.into(), &None);
 
         // Then the balance is updated
-        assert_eq!(env.token.balance_of(env.alice, U256::one()), 100.into());
+        assert_eq!(env.token.balance_of(&env.alice, &U256::one()), 100.into());
 
         // And the event is emitted
         let contract = env.token;
@@ -247,10 +248,10 @@ mod tests {
 
         // When we mint some tokens in batch
         env.token.mint_batch(
-            env.alice,
-            [U256::one(), U256::from(2)].to_vec(),
-            [100.into(), 200.into()].to_vec(),
-            None
+            &env.alice,
+            vec![U256::one(), U256::from(2)],
+            vec![100.into(), 200.into()],
+            &None
         );
 
         // Then it emits the event
@@ -266,8 +267,8 @@ mod tests {
         );
 
         // And the balances are updated
-        assert_eq!(env.token.balance_of(env.alice, U256::one()), 100.into());
-        assert_eq!(env.token.balance_of(env.alice, U256::from(2)), 200.into());
+        assert_eq!(env.token.balance_of(&env.alice, &U256::one()), 100.into());
+        assert_eq!(env.token.balance_of(&env.alice, &U256::from(2)), 200.into());
     }
 
     #[test]
@@ -278,10 +279,10 @@ mod tests {
         let err = env
             .token
             .try_mint_batch(
-                env.alice,
+                &env.alice,
                 [U256::one(), U256::from(2)].to_vec(),
                 [100.into()].to_vec(),
-                None
+                &None
             )
             .unwrap_err();
         assert_eq!(err, Error::IdsAndAmountsLengthMismatch.into());
@@ -293,13 +294,13 @@ mod tests {
         let mut env = setup();
 
         // And some tokens minted
-        env.token.mint(env.alice, U256::one(), 100.into(), None);
+        env.token.mint(&env.alice, &U256::one(), &100.into(), &None);
 
         // When we burn some tokens
-        env.token.burn(env.alice, U256::one(), 50.into());
+        env.token.burn(&env.alice, &U256::one(), &50.into());
 
         // Then the balance is updated
-        assert_eq!(env.token.balance_of(env.alice, U256::one()), 50.into());
+        assert_eq!(env.token.balance_of(&env.alice, &U256::one()), 50.into());
 
         // And the event is emitted
         let contract = env.token;
@@ -321,11 +322,11 @@ mod tests {
         let mut env = setup();
 
         // And some tokens minted
-        env.token.mint(env.alice, U256::one(), 100.into(), None);
+        env.token.mint(&env.alice, &U256::one(), &100.into(), &None);
         // When we burn more tokens than we have it errors out
         let err = env
             .token
-            .try_burn(env.alice, U256::one(), 150.into())
+            .try_burn(&env.alice, &U256::one(), &150.into())
             .unwrap_err();
         assert_eq!(err, InsufficientBalance.into());
 
@@ -334,7 +335,7 @@ mod tests {
         // When we burn non-existing tokens it errors out
         let err = env
             .token
-            .try_burn(env.alice, U256::one(), 150.into())
+            .try_burn(&env.alice, &U256::one(), &150.into())
             .unwrap_err();
         assert_eq!(err, InsufficientBalance.into());
     }
@@ -346,22 +347,22 @@ mod tests {
 
         // And some tokens minted
         env.token.mint_batch(
-            env.alice,
+            &env.alice,
             [U256::one(), U256::from(2)].to_vec(),
             [100.into(), 200.into()].to_vec(),
-            None
+            &None
         );
 
         // When we burn some tokens in batch
         env.token.burn_batch(
-            env.alice,
+            &env.alice,
             [U256::one(), U256::from(2)].to_vec(),
             [50.into(), 100.into()].to_vec()
         );
 
         // Then the balances are updated
-        assert_eq!(env.token.balance_of(env.alice, U256::one()), 50.into());
-        assert_eq!(env.token.balance_of(env.alice, U256::from(2)), 100.into());
+        assert_eq!(env.token.balance_of(&env.alice, &U256::one()), 50.into());
+        assert_eq!(env.token.balance_of(&env.alice, &U256::from(2)), 100.into());
 
         // And the event is emitted
         let contract = env.token;
@@ -384,17 +385,17 @@ mod tests {
 
         // And some tokens minted
         env.token.mint_batch(
-            env.alice,
+            &env.alice,
             [U256::one(), U256::from(2)].to_vec(),
             [100.into(), 200.into()].to_vec(),
-            None
+            &None
         );
 
         // When we burn some tokens in batch with mismatching ids and amounts it errors out
         let err = env
             .token
             .try_burn_batch(
-                env.alice,
+                &env.alice,
                 [U256::one(), U256::from(2)].to_vec(),
                 [50.into()].to_vec()
             )
@@ -406,17 +407,17 @@ mod tests {
 
         // And some tokens minted
         env.token.mint_batch(
-            env.alice,
+            &env.alice,
             [U256::one(), U256::from(2)].to_vec(),
             [100.into(), 200.into()].to_vec(),
-            None
+            &None
         );
 
         // When we burn more tokens than we have it errors out
         let err = env
             .token
             .try_burn_batch(
-                env.alice,
+                &env.alice,
                 [U256::one(), U256::from(2)].to_vec(),
                 [150.into(), 300.into()].to_vec()
             )
@@ -430,7 +431,7 @@ mod tests {
         let err = env
             .token
             .try_burn_batch(
-                env.alice,
+                &env.alice,
                 [U256::one(), U256::from(2)].to_vec(),
                 [150.into(), 300.into()].to_vec()
             )
@@ -444,15 +445,16 @@ mod tests {
         let mut env = setup();
 
         // And some tokens minted
-        env.token.mint(env.alice, U256::one(), 100.into(), None);
-        env.token.mint(env.alice, U256::from(2), 200.into(), None);
-        env.token.mint(env.bob, U256::one(), 300.into(), None);
+        env.token.mint(&env.alice, &U256::one(), &100.into(), &None);
+        env.token
+            .mint(&env.alice, &U256::from(2), &200.into(), &None);
+        env.token.mint(&env.bob, &U256::one(), &300.into(), &None);
 
         // Then it returns the correct balance
-        assert_eq!(env.token.balance_of(env.alice, U256::one()), 100.into());
-        assert_eq!(env.token.balance_of(env.alice, U256::from(2)), 200.into());
-        assert_eq!(env.token.balance_of(env.bob, U256::one()), 300.into());
-        assert_eq!(env.token.balance_of(env.bob, U256::from(2)), 0.into());
+        assert_eq!(env.token.balance_of(&env.alice, &U256::one()), 100.into());
+        assert_eq!(env.token.balance_of(&env.alice, &U256::from(2)), 200.into());
+        assert_eq!(env.token.balance_of(&env.bob, &U256::one()), 300.into());
+        assert_eq!(env.token.balance_of(&env.bob, &U256::from(2)), 0.into());
     }
 
     #[test]
@@ -462,16 +464,16 @@ mod tests {
 
         // And some tokens minted
         env.token.mint_batch(
-            env.alice,
+            &env.alice,
             [U256::one(), U256::from(2)].to_vec(),
             [100.into(), 200.into()].to_vec(),
-            None
+            &None
         );
         env.token.mint_batch(
-            env.bob,
+            &env.bob,
             [U256::one(), U256::from(2)].to_vec(),
             [300.into(), 400.into()].to_vec(),
-            None
+            &None
         );
 
         // Then it returns the correct balances
@@ -508,10 +510,10 @@ mod tests {
 
         // And some tokens minted
         env.token.mint_batch(
-            env.alice,
+            &env.alice,
             [U256::one(), U256::from(2)].to_vec(),
             [100.into(), 200.into()].to_vec(),
-            None
+            &None
         );
 
         // When we query balances with mismatching ids and addresses it errors out
@@ -532,10 +534,10 @@ mod tests {
 
         // When we set approval for all
         env.env.set_caller(env.alice);
-        env.token.set_approval_for_all(env.bob, true);
+        env.token.set_approval_for_all(&env.bob, true);
 
         // Then the approval is set
-        assert!(env.token.is_approved_for_all(env.alice, env.bob));
+        assert!(env.token.is_approved_for_all(&env.alice, &env.bob));
 
         // And the event is emitted
         env.env.emitted_event(
@@ -555,14 +557,14 @@ mod tests {
 
         // And approval for all set
         env.env.set_caller(env.alice);
-        env.token.set_approval_for_all(env.bob, true);
+        env.token.set_approval_for_all(&env.bob, true);
 
         // When we unset approval for all
         env.env.set_caller(env.alice);
-        env.token.set_approval_for_all(env.bob, false);
+        env.token.set_approval_for_all(&env.bob, false);
 
         // Then the approval is unset
-        assert!(!env.token.is_approved_for_all(env.alice, env.bob));
+        assert!(!env.token.is_approved_for_all(&env.alice, &env.bob));
 
         // And the event is emitted
         let contract = env.token;
@@ -585,7 +587,7 @@ mod tests {
         env.env.set_caller(env.alice);
         let err = env
             .token
-            .try_set_approval_for_all(env.alice, true)
+            .try_set_approval_for_all(&env.alice, true)
             .unwrap_err();
         assert_eq!(err, Error::ApprovalForSelf.into());
     }
@@ -596,16 +598,16 @@ mod tests {
         let mut env = setup();
 
         // And some tokens minted
-        env.token.mint(env.alice, U256::one(), 100.into(), None);
+        env.token.mint(&env.alice, &U256::one(), &100.into(), &None);
 
         // When we transfer tokens
         env.env.set_caller(env.alice);
         env.token
-            .safe_transfer_from(env.alice, env.bob, U256::one(), 50.into(), None);
+            .safe_transfer_from(&env.alice, &env.bob, &U256::one(), &50.into(), &None);
 
         // Then the tokens are transferred
-        assert_eq!(env.token.balance_of(env.alice, U256::one()), 50.into());
-        assert_eq!(env.token.balance_of(env.bob, U256::one()), 50.into());
+        assert_eq!(env.token.balance_of(&env.alice, &U256::one()), 50.into());
+        assert_eq!(env.token.balance_of(&env.bob, &U256::one()), 50.into());
 
         // And the event is emitted
         let contract = env.token;
@@ -627,20 +629,20 @@ mod tests {
         let mut env = setup();
 
         // And some tokens minted
-        env.token.mint(env.alice, U256::one(), 100.into(), None);
+        env.token.mint(&env.alice, &U256::one(), &100.into(), &None);
 
         // And approval for all set
         env.env.set_caller(env.alice);
-        env.token.set_approval_for_all(env.bob, true);
+        env.token.set_approval_for_all(&env.bob, true);
 
         // When we transfer tokens
         env.env.set_caller(env.bob);
         env.token
-            .safe_transfer_from(env.alice, env.bob, U256::one(), 50.into(), None);
+            .safe_transfer_from(&env.alice, &env.bob, &U256::one(), &50.into(), &None);
 
         // Then the tokens are transferred
-        assert_eq!(env.token.balance_of(env.alice, U256::one()), 50.into());
-        assert_eq!(env.token.balance_of(env.bob, U256::one()), 50.into());
+        assert_eq!(env.token.balance_of(&env.alice, &U256::one()), 50.into());
+        assert_eq!(env.token.balance_of(&env.bob, &U256::one()), 50.into());
 
         // And the event is emitted
         let contract = env.token;
@@ -662,13 +664,13 @@ mod tests {
         let mut env = setup();
 
         // And some tokens minted
-        env.token.mint(env.alice, U256::one(), 100.into(), None);
+        env.token.mint(&env.alice, &U256::one(), &100.into(), &None);
 
         // When we transfer more tokens than we have it errors out
         env.env.set_caller(env.alice);
         let err = env
             .token
-            .try_safe_transfer_from(env.alice, env.bob, U256::one(), 200.into(), None)
+            .try_safe_transfer_from(&env.alice, &env.bob, &U256::one(), &200.into(), &None)
             .unwrap_err();
         assert_eq!(err, Error::InsufficientBalance.into());
 
@@ -676,13 +678,13 @@ mod tests {
         // env.env.set_caller(test_env::get_account(0));
         let mut env = setup();
         // And some tokens minted
-        env.token.mint(env.alice, U256::one(), 100.into(), None);
+        env.token.mint(&env.alice, &U256::one(), &100.into(), &None);
 
         // When we transfer not our tokens it errors out
         env.env.set_caller(env.bob);
         let err = env
             .token
-            .try_safe_transfer_from(env.alice, env.bob, U256::one(), 100.into(), None)
+            .try_safe_transfer_from(&env.alice, &env.bob, &U256::one(), &100.into(), &None)
             .unwrap_err();
         assert_eq!(err, Error::NotAnOwnerOrApproved.into());
     }
@@ -693,24 +695,25 @@ mod tests {
         let mut env = setup();
 
         // And some tokens minted
-        env.token.mint(env.alice, U256::one(), 100.into(), None);
-        env.token.mint(env.alice, U256::from(2), 200.into(), None);
+        env.token.mint(&env.alice, &U256::one(), &100.into(), &None);
+        env.token
+            .mint(&env.alice, &U256::from(2), &200.into(), &None);
 
         // When we transfer tokens
         env.env.set_caller(env.alice);
         env.token.safe_batch_transfer_from(
-            env.alice,
-            env.bob,
+            &env.alice,
+            &env.bob,
             [U256::one(), U256::from(2)].to_vec(),
             [50.into(), 100.into()].to_vec(),
-            None
+            &None
         );
 
         // Then the tokens are transferred
-        assert_eq!(env.token.balance_of(env.alice, U256::one()), 50.into());
-        assert_eq!(env.token.balance_of(env.alice, U256::from(2)), 100.into());
-        assert_eq!(env.token.balance_of(env.bob, U256::one()), 50.into());
-        assert_eq!(env.token.balance_of(env.bob, U256::from(2)), 100.into());
+        assert_eq!(env.token.balance_of(&env.alice, &U256::one()), 50.into());
+        assert_eq!(env.token.balance_of(&env.alice, &U256::from(2)), 100.into());
+        assert_eq!(env.token.balance_of(&env.bob, &U256::one()), 50.into());
+        assert_eq!(env.token.balance_of(&env.bob, &U256::from(2)), 100.into());
 
         // And the event is emitted
         let contract = env.token;
@@ -732,28 +735,29 @@ mod tests {
         let mut env = setup();
 
         // And some tokens minted
-        env.token.mint(env.alice, U256::one(), 100.into(), None);
-        env.token.mint(env.alice, U256::from(2), 200.into(), None);
+        env.token.mint(&env.alice, &U256::one(), &100.into(), &None);
+        env.token
+            .mint(&env.alice, &U256::from(2), &200.into(), &None);
 
         // And approval for all set
         env.env.set_caller(env.alice);
-        env.token.set_approval_for_all(env.bob, true);
+        env.token.set_approval_for_all(&env.bob, true);
 
         // When we transfer tokens
         env.env.set_caller(env.bob);
         env.token.safe_batch_transfer_from(
-            env.alice,
-            env.bob,
+            &env.alice,
+            &env.bob,
             [U256::one(), U256::from(2)].to_vec(),
             [50.into(), 100.into()].to_vec(),
-            None
+            &None
         );
 
         // Then the tokens are transferred
-        assert_eq!(env.token.balance_of(env.alice, U256::one()), 50.into());
-        assert_eq!(env.token.balance_of(env.alice, U256::from(2)), 100.into());
-        assert_eq!(env.token.balance_of(env.bob, U256::one()), 50.into());
-        assert_eq!(env.token.balance_of(env.bob, U256::from(2)), 100.into());
+        assert_eq!(env.token.balance_of(&env.alice, &U256::one()), 50.into());
+        assert_eq!(env.token.balance_of(&env.alice, &U256::from(2)), 100.into());
+        assert_eq!(env.token.balance_of(&env.bob, &U256::one()), 50.into());
+        assert_eq!(env.token.balance_of(&env.bob, &U256::from(2)), 100.into());
 
         // And the event is emitted
         let contract = env.token;
@@ -775,18 +779,19 @@ mod tests {
         let mut env = setup();
 
         // And some tokens minted
-        env.token.mint(env.alice, U256::one(), 100.into(), None);
-        env.token.mint(env.alice, U256::from(2), 200.into(), None);
+        env.token.mint(&env.alice, &U256::one(), &100.into(), &None);
+        env.token
+            .mint(&env.alice, &U256::from(2), &200.into(), &None);
         // When we transfer more tokens than we have it errors out
         env.env.set_caller(env.alice);
         let err = env
             .token
             .try_safe_batch_transfer_from(
-                env.alice,
-                env.bob,
+                &env.alice,
+                &env.bob,
                 [U256::one(), U256::from(2)].to_vec(),
                 [50.into(), 300.into()].to_vec(),
-                None
+                &None
             )
             .unwrap_err();
         assert_eq!(err, Error::InsufficientBalance.into());
@@ -795,18 +800,19 @@ mod tests {
         let mut env = setup();
 
         // And some tokens minted
-        env.token.mint(env.alice, U256::one(), 100.into(), None);
-        env.token.mint(env.alice, U256::from(2), 200.into(), None);
+        env.token.mint(&env.alice, &U256::one(), &100.into(), &None);
+        env.token
+            .mint(&env.alice, &U256::from(2), &200.into(), &None);
         // When we transfer not our tokens it errors out
         env.env.set_caller(env.bob);
         let err = env
             .token
             .try_safe_batch_transfer_from(
-                env.alice,
-                env.bob,
+                &env.alice,
+                &env.bob,
                 [U256::one(), U256::from(2)].to_vec(),
                 [50.into(), 100.into()].to_vec(),
-                None
+                &None
             )
             .unwrap_err();
         assert_eq!(err, Error::NotAnOwnerOrApproved.into());
@@ -820,22 +826,22 @@ mod tests {
 
         let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoArgs);
         // And some tokens minted
-        env.token.mint(env.alice, U256::one(), 100.into(), None);
+        env.token.mint(&env.alice, &U256::one(), &100.into(), &None);
 
         // When we transfer tokens to a valid receiver
         env.env.set_caller(env.alice);
         env.token.safe_transfer_from(
-            env.alice,
-            *receiver.address(),
-            U256::one(),
-            100.into(),
-            None
+            &env.alice,
+            receiver.address(),
+            &U256::one(),
+            &100.into(),
+            &None
         );
 
         // Then the tokens are transferred
-        assert_eq!(env.token.balance_of(env.alice, U256::one()), 0.into());
+        assert_eq!(env.token.balance_of(&env.alice, &U256::one()), 0.into());
         assert_eq!(
-            env.token.balance_of(*receiver.address(), U256::one()),
+            env.token.balance_of(receiver.address(), &U256::one()),
             100.into()
         );
 
@@ -859,22 +865,22 @@ mod tests {
         // And a valid receiver
         let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoArgs);
         // And some tokens minted
-        env.token.mint(env.alice, U256::one(), 100.into(), None);
+        env.token.mint(&env.alice, &U256::one(), &100.into(), &None);
 
         // When we transfer tokens to a valid receiver
         env.env.set_caller(env.alice);
         env.token.safe_transfer_from(
-            env.alice,
-            *receiver.address(),
-            U256::one(),
-            100.into(),
-            Some(Bytes::from(b"data".to_vec()))
+            &env.alice,
+            receiver.address(),
+            &U256::one(),
+            &100.into(),
+            &Some(Bytes::from(b"data".to_vec()))
         );
 
         // Then the tokens are transferred
-        assert_eq!(env.token.balance_of(env.alice, U256::one()), 0.into());
+        assert_eq!(env.token.balance_of(&env.alice, &U256::one()), 0.into());
         assert_eq!(
-            env.token.balance_of(*receiver.address(), U256::one()),
+            env.token.balance_of(receiver.address(), &U256::one()),
             100.into()
         );
 
@@ -898,17 +904,17 @@ mod tests {
         // And an invalid receiver
         let receiver = WrappedNativeTokenHostRef::deploy(&env.env, NoArgs);
         // And some tokens minted
-        env.token.mint(env.alice, U256::one(), 100.into(), None);
+        env.token.mint(&env.alice, &U256::one(), &100.into(), &None);
 
         // When we transfer tokens to an invalid receiver
         // Then it errors out
         env.env.set_caller(env.alice);
         let err = env.token.try_safe_transfer_from(
-            env.alice,
-            *receiver.address(),
-            U256::one(),
-            100.into(),
-            None
+            &env.alice,
+            receiver.address(),
+            &U256::one(),
+            &100.into(),
+            &None
         );
         assert_eq!(
             err,
@@ -925,28 +931,29 @@ mod tests {
         // And a valid receiver
         let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoArgs);
         // And some tokens minted
-        env.token.mint(env.alice, U256::one(), 100.into(), None);
-        env.token.mint(env.alice, U256::from(2), 100.into(), None);
+        env.token.mint(&env.alice, &U256::one(), &100.into(), &None);
+        env.token
+            .mint(&env.alice, &U256::from(2), &100.into(), &None);
 
         // When we transfer tokens to a valid receiver
         env.env.set_caller(env.alice);
         env.token.safe_batch_transfer_from(
-            env.alice,
-            *receiver.address(),
+            &env.alice,
+            receiver.address(),
             [U256::one(), U256::from(2)].to_vec(),
             [100.into(), 100.into()].to_vec(),
-            None
+            &None
         );
 
         // Then the tokens are transferred
-        assert_eq!(env.token.balance_of(env.alice, U256::one()), 0.into());
+        assert_eq!(env.token.balance_of(&env.alice, &U256::one()), 0.into());
         assert_eq!(
-            env.token.balance_of(*receiver.address(), U256::one()),
+            env.token.balance_of(receiver.address(), &U256::one()),
             100.into()
         );
-        assert_eq!(env.token.balance_of(env.alice, U256::from(2)), 0.into());
+        assert_eq!(env.token.balance_of(&env.alice, &U256::from(2)), 0.into());
         assert_eq!(
-            env.token.balance_of(*receiver.address(), U256::from(2)),
+            env.token.balance_of(receiver.address(), &U256::from(2)),
             100.into()
         );
 
@@ -970,28 +977,29 @@ mod tests {
         // And a valid receiver
         let receiver = Erc1155ReceiverHostRef::deploy(&env.env, NoArgs);
         // And some tokens minted
-        env.token.mint(env.alice, U256::one(), 100.into(), None);
-        env.token.mint(env.alice, U256::from(2), 100.into(), None);
+        env.token.mint(&env.alice, &U256::one(), &100.into(), &None);
+        env.token
+            .mint(&env.alice, &U256::from(2), &100.into(), &None);
 
         // When we transfer tokens to a valid receiver
         env.env.set_caller(env.alice);
         env.token.safe_batch_transfer_from(
-            env.alice,
-            *receiver.address(),
+            &env.alice,
+            receiver.address(),
             [U256::one(), U256::from(2)].to_vec(),
             [100.into(), 100.into()].to_vec(),
-            Some(Bytes::from(b"data".to_vec()))
+            &Some(Bytes::from(b"data".to_vec()))
         );
 
         // Then the tokens are transferred
-        assert_eq!(env.token.balance_of(env.alice, U256::one()), 0.into());
+        assert_eq!(env.token.balance_of(&env.alice, &U256::one()), 0.into());
         assert_eq!(
-            env.token.balance_of(*receiver.address(), U256::one()),
+            env.token.balance_of(receiver.address(), &U256::one()),
             100.into()
         );
-        assert_eq!(env.token.balance_of(env.alice, U256::from(2)), 0.into());
+        assert_eq!(env.token.balance_of(&env.alice, &U256::from(2)), 0.into());
         assert_eq!(
-            env.token.balance_of(*receiver.address(), U256::from(2)),
+            env.token.balance_of(receiver.address(), &U256::from(2)),
             100.into()
         );
 
@@ -1015,8 +1023,9 @@ mod tests {
         // And an invalid receiver
         let receiver = WrappedNativeTokenHostRef::deploy(&env.env, NoArgs);
         // And some tokens minted
-        env.token.mint(env.alice, U256::one(), 100.into(), None);
-        env.token.mint(env.alice, U256::from(2), 100.into(), None);
+        env.token.mint(&env.alice, &U256::one(), &100.into(), &None);
+        env.token
+            .mint(&env.alice, &U256::from(2), &100.into(), &None);
 
         // When we transfer tokens to an invalid receiver
         // Then it errors out
@@ -1024,11 +1033,11 @@ mod tests {
         let err = env
             .token
             .try_safe_batch_transfer_from(
-                env.alice,
-                *receiver.address(),
-                [U256::one(), U256::from(2)].to_vec(),
-                [100.into(), 100.into()].to_vec(),
-                None
+                &env.alice,
+                receiver.address(),
+                vec![U256::one(), U256::from(2)],
+                vec![100.into(), 100.into()],
+                &None
             )
             .unwrap_err();
         assert_eq!(

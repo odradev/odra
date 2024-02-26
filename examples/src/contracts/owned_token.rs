@@ -1,8 +1,10 @@
+//! An example of a OwnedToken contract.
 use odra::prelude::*;
 use odra::{casper_types::U256, Address, SubModule};
 use odra_modules::access::Ownable;
 use odra_modules::erc20::Erc20;
 
+/// OwnedToken contract.
 #[odra::module]
 pub struct OwnedToken {
     ownable: SubModule<Ownable>,
@@ -11,6 +13,7 @@ pub struct OwnedToken {
 
 #[odra::module]
 impl OwnedToken {
+    /// Initializes the contract with the given parameters.
     pub fn init(&mut self, name: String, symbol: String, decimals: u8, initial_supply: U256) {
         self.ownable.init();
         self.erc20
@@ -36,6 +39,7 @@ impl OwnedToken {
         }
     }
 
+    /// Mints new tokens and assigns them to the given address.
     pub fn mint(&mut self, address: &Address, amount: &U256) {
         self.ownable.assert_owner(&self.env().caller());
         self.erc20.mint(address, amount);
@@ -71,7 +75,7 @@ pub mod tests {
         assert_eq!(token.symbol(), SYMBOL);
         assert_eq!(token.decimals(), DECIMALS);
         assert_eq!(token.total_supply(), INITIAL_SUPPLY.into());
-        assert_eq!(token.balance_of(owner), INITIAL_SUPPLY.into());
+        assert_eq!(token.balance_of(&owner), INITIAL_SUPPLY.into());
         test_env.emitted_event(
             token.address(),
             &odra_modules::access::events::OwnershipTransferred {
@@ -94,9 +98,9 @@ pub mod tests {
         let mut token = setup();
         let recipient = token.env().get_account(1);
         let amount = 10.into();
-        token.mint(recipient, amount);
+        token.mint(&recipient, &amount);
         assert_eq!(token.total_supply(), U256::from(INITIAL_SUPPLY) + amount);
-        assert_eq!(token.balance_of(recipient), amount);
+        assert_eq!(&token.balance_of(&recipient), &amount);
     }
 
     #[test]
@@ -107,7 +111,7 @@ pub mod tests {
         let amount = 10.into();
         test_env.set_caller(recipient);
         assert_eq!(
-            token.try_mint(recipient, amount).unwrap_err(),
+            token.try_mint(&recipient, &amount).unwrap_err(),
             CallerNotTheOwner.into()
         );
     }
@@ -116,7 +120,7 @@ pub mod tests {
     fn change_ownership_works() {
         let mut token = setup();
         let new_owner = token.env().get_account(1);
-        token.transfer_ownership(new_owner);
+        token.transfer_ownership(&new_owner);
         assert_eq!(token.get_owner(), new_owner);
     }
 
@@ -127,7 +131,7 @@ pub mod tests {
         let new_owner = test_env.get_account(1);
         test_env.set_caller(new_owner);
         assert_eq!(
-            token.try_transfer_ownership(new_owner).unwrap_err(),
+            token.try_transfer_ownership(&new_owner).unwrap_err(),
             CallerNotTheOwner.into()
         );
     }

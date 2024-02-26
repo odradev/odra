@@ -174,6 +174,24 @@ impl ModuleImplIR {
         }
     }
 
+    pub fn is_trait_impl(&self) -> bool {
+        match self {
+            ModuleImplIR::Impl(ir) => ir.code.trait_.is_some(),
+            ModuleImplIR::Trait(_) => false
+        }
+    }
+
+    pub fn impl_trait_ident(&self) -> Option<Ident> {
+        match self {
+            ModuleImplIR::Impl(ir) => ir
+                .code
+                .trait_
+                .clone()
+                .map(|(_, path, _)| path.get_ident().unwrap().clone()),
+            ModuleImplIR::Trait(_) => None
+        }
+    }
+
     pub fn module_str(&self) -> syn::Result<String> {
         self.module_ident().map(|i| i.to_string())
     }
@@ -242,11 +260,7 @@ impl ModuleImplIR {
     }
 
     pub fn host_functions(&self) -> syn::Result<Vec<FnIR>> {
-        Ok(self
-            .functions()?
-            .into_iter()
-            .filter(|f| f.name_str() != CONSTRUCTOR_NAME)
-            .collect())
+        Ok(self.functions()?.into_iter().collect())
     }
 
     pub fn constructor(&self) -> Option<FnIR> {
@@ -352,6 +366,15 @@ impl ModuleTraitIR {
 pub enum FnIR {
     Impl(FnImplIR),
     Def(FnTraitIR)
+}
+
+impl FnIR {
+    pub fn attributes(&self) -> &[syn::Attribute] {
+        match self {
+            FnIR::Impl(ir) => ir.attrs(),
+            FnIR::Def(ir) => ir.attrs()
+        }
+    }
 }
 
 const PROTECTED_FUNCTIONS: [&str; 3] = ["new", "env", "address"];

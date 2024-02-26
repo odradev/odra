@@ -14,3 +14,6 @@ odra-macros = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 odra-casper-wasm-env = { workspace = true }
+
+[lints.rust]
+missing_docs = "warn"

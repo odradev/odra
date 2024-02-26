@@ -18,11 +18,11 @@ impl Erc1155Receiver {
     /// Emits [SingleReceived].
     pub fn on_erc1155_received(
         &mut self,
-        #[allow(unused_variables)] operator: &Address,
-        #[allow(unused_variables)] from: &Address,
-        #[allow(unused_variables)] token_id: &U256,
-        #[allow(unused_variables)] amount: &U256,
-        #[allow(unused_variables)] data: &Option<Bytes>
+        operator: &Address,
+        from: &Address,
+        token_id: &U256,
+        amount: &U256,
+        data: &Option<Bytes>
     ) -> bool {
         self.env().emit_event(SingleReceived {
             operator: Some(*operator),
@@ -40,11 +40,11 @@ impl Erc1155Receiver {
     /// Emits [BatchReceived].
     pub fn on_erc1155_batch_received(
         &mut self,
-        #[allow(unused_variables)] operator: &Address,
-        #[allow(unused_variables)] from: &Address,
-        #[allow(unused_variables)] token_ids: Vec<U256>,
-        #[allow(unused_variables)] amounts: Vec<U256>,
-        #[allow(unused_variables)] data: &Option<Bytes>
+        operator: &Address,
+        from: &Address,
+        token_ids: Vec<U256>,
+        amounts: Vec<U256>,
+        data: &Option<Bytes>
     ) -> bool {
         self.env().emit_event(BatchReceived {
             operator: Some(*operator),
@@ -69,20 +69,30 @@ pub mod events {
     /// Emitted when the transferred token is accepted by the contract.
     #[derive(Event, PartialEq, Eq, Debug, Clone)]
     pub struct SingleReceived {
+        /// The operator that called the function.
         pub operator: Option<Address>,
+        /// The address of the sender.
         pub from: Option<Address>,
+        /// The token id.
         pub token_id: U256,
+        /// The token amount.
         pub amount: U256,
+        /// The token data.
         pub data: Option<Bytes>
     }
 
     /// Emitted when the transferred tokens are accepted by the contract.
     #[derive(Event, PartialEq, Eq, Debug, Clone)]
     pub struct BatchReceived {
+        /// The operator that called the function.
         pub operator: Option<Address>,
+        /// The address of the sender.
         pub from: Option<Address>,
+        /// The token ids.
         pub token_ids: Vec<U256>,
+        /// The token amounts.
         pub amounts: Vec<U256>,
+        /// The token data.
         pub data: Option<Bytes>
     }
 }

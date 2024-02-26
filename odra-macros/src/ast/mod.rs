@@ -1,5 +1,6 @@
 mod blueprint;
 mod clone;
+mod contract_ref_item;
 mod deployer_item;
 mod deployer_utils;
 mod entrypoints_item;
@@ -16,7 +17,6 @@ mod module_item;
 mod module_struct_item;
 mod odra_type_item;
 mod parts_utils;
-mod ref_item;
 mod ref_utils;
 mod test_parts;
 mod utils;

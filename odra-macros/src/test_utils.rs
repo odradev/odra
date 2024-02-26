@@ -7,6 +7,7 @@ pub mod mock {
     pub fn module_impl() -> ModuleImplIR {
         let module = quote! {
             impl Erc20 {
+                /// Initializes the contract with the given parameters.
                 pub fn init(&mut self, total_supply: Option<U256>) {
                     if let Some(total_supply) = total_supply {
                         self.total_supply.set(total_supply);
@@ -14,10 +15,12 @@ pub mod mock {
                     }
                 }
 
+                /// Returns the total supply of the token.
                 pub fn total_supply(&self) -> U256 {
                     self.total_supply.get_or_default()
                 }
 
+                /// Pay to mint.
                 #[odra(payable)]
                 pub fn pay_to_mint(&mut self) {
                     let attached_value = self.env().attached_value();
@@ -25,6 +28,7 @@ pub mod mock {
                         .set(self.total_supply() + U256::from(attached_value.as_u64()));
                 }
 
+                /// Approve.
                 #[odra(non_reentrant)]
                 pub fn approve(&mut self, to: &Address, amount: &U256) {
                     self.env.emit_event(Approval {
@@ -34,6 +38,7 @@ pub mod mock {
                     });
                 }
 
+                /// Airdrops the given amount to the given addresses.
                 pub fn airdrop(to: &[Address], amount: &U256) {
                 }
 
@@ -70,6 +75,7 @@ pub mod mock {
     pub fn module_delegation() -> ModuleImplIR {
         let module = quote! {
             impl Erc20 {
+                /// Returns the total supply of the token.
                 pub fn total_supply(&self) -> U256 {
                     self.total_supply.get_or_default()
                 }

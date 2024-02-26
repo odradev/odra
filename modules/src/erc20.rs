@@ -1,8 +1,10 @@
+//! ERC20 token standard implementation.
 use crate::erc20::errors::Error::*;
 use crate::erc20::events::*;
 use odra::prelude::*;
 use odra::{casper_types::U256, Address, Mapping, Var};
 
+/// ERC20 token module
 #[odra::module(events = [Approval, Transfer])]
 pub struct Erc20 {
     decimals: Var<u8>,
@@ -15,6 +17,7 @@ pub struct Erc20 {
 
 #[odra::module]
 impl Erc20 {
+    /// Initializes the contract with the given metadata and initial supply.
     pub fn init(
         &mut self,
         symbol: String,
@@ -41,11 +44,13 @@ impl Erc20 {
         }
     }
 
+    /// Transfers tokens from the caller to the recipient.
     pub fn transfer(&mut self, recipient: &Address, amount: &U256) {
         let caller = self.env().caller();
         self.raw_transfer(&caller, recipient, amount);
     }
 
+    /// Transfers tokens from the owner to the recipient using the spender's allowance.
     pub fn transfer_from(&mut self, owner: &Address, recipient: &Address, amount: &U256) {
         let spender = self.env().caller();
 
@@ -53,6 +58,7 @@ impl Erc20 {
         self.raw_transfer(owner, recipient, amount);
     }
 
+    /// Approves the spender to spend the given amount of tokens on behalf of the caller.
     pub fn approve(&mut self, spender: &Address, amount: &U256) {
         let owner = self.env().caller();
 
@@ -64,30 +70,37 @@ impl Erc20 {
         });
     }
 
+    /// Returns the name of the token.
     pub fn name(&self) -> String {
         self.name.get_or_revert_with(NameNotSet)
     }
 
+    /// Returns the symbol of the token.
     pub fn symbol(&self) -> String {
         self.symbol.get_or_revert_with(SymbolNotSet)
     }
 
+    /// Returns the number of decimals the token uses.
     pub fn decimals(&self) -> u8 {
         self.decimals.get_or_revert_with(DecimalsNotSet)
     }
 
+    /// Returns the total supply of the token.
     pub fn total_supply(&self) -> U256 {
         self.total_supply.get_or_default()
     }
 
+    /// Returns the balance of the given address.
     pub fn balance_of(&self, address: &Address) -> U256 {
         self.balances.get_or_default(address)
     }
 
+    /// Returns the amount of tokens the owner has allowed the spender to spend.
     pub fn allowance(&self, owner: &Address, spender: &Address) -> U256 {
         self.allowances.get_or_default(&(*owner, *spender))
     }
 
+    /// Mints new tokens and assigns them to the given address.
     pub fn mint(&mut self, address: &Address, amount: &U256) {
         self.total_supply.add(*amount);
         self.balances.add(address, *amount);
@@ -99,6 +112,7 @@ impl Erc20 {
         });
     }
 
+    /// Burns the given amount of tokens from the given address.
     pub fn burn(&mut self, address: &Address, amount: &U256) {
         if self.balance_of(address) < *amount {
             self.env().revert(InsufficientBalance);
@@ -145,34 +159,50 @@ impl Erc20 {
     }
 }
 
+/// ERC20 Events
 pub mod events {
     use odra::casper_event_standard::{self, Event};
     use odra::{casper_types::U256, Address};
 
+    /// Transfer event
     #[derive(Event, Eq, PartialEq, Debug)]
     pub struct Transfer {
+        /// Sender of the tokens.
         pub from: Option<Address>,
+        /// Recipient of the tokens.
         pub to: Option<Address>,
+        /// Amount of tokens transferred.
         pub amount: U256
     }
 
+    /// Approval event
     #[derive(Event, Eq, PartialEq, Debug)]
     pub struct Approval {
+        /// Owner of the tokens.
         pub owner: Address,
+        /// Spender of the tokens.
         pub spender: Address,
+        /// Amount of tokens approved.
         pub value: U256
     }
 }
 
+/// ERC20 Errors
 pub mod errors {
     use odra::OdraError;
 
+    /// ERC20 errors
     #[derive(OdraError)]
     pub enum Error {
+        /// Insufficient balance
         InsufficientBalance = 30_000,
+        /// Insufficient allowance
         InsufficientAllowance = 30_001,
+        /// Name not set
         NameNotSet = 30_002,
+        /// Symbol not set
         SymbolNotSet = 30_003,
+        /// Decimals not set
         DecimalsNotSet = 30_004
     }
 }
@@ -244,16 +274,16 @@ mod tests {
         let sender = env.get_account(0);
         let recipient = env.get_account(1);
         let amount = 1_000.into();
-        erc20.transfer(recipient, amount);
+        erc20.transfer(&recipient, &amount);
 
         // Then the sender balance is deducted.
         assert_eq!(
-            erc20.balance_of(sender),
+            erc20.balance_of(&sender),
             U256::from(INITIAL_SUPPLY) - amount
         );
 
         // Then the recipient balance is updated.
-        assert_eq!(erc20.balance_of(recipient), amount);
+        assert_eq!(erc20.balance_of(&recipient), amount);
 
         // Then Transfer event was emitted.
         assert!(env.emitted_event(
@@ -276,7 +306,7 @@ mod tests {
         let amount = U256::from(INITIAL_SUPPLY) + U256::one();
 
         // Then an error occurs.
-        assert!(erc20.try_transfer(recipient, amount).is_err());
+        assert!(erc20.try_transfer(&recipient, &amount).is_err());
     }
 
     #[test]
@@ -288,13 +318,13 @@ mod tests {
         let approved_amount = 3_000.into();
         let transfer_amount = 1_000.into();
 
-        assert_eq!(erc20.balance_of(owner), U256::from(INITIAL_SUPPLY));
+        assert_eq!(erc20.balance_of(&owner), U256::from(INITIAL_SUPPLY));
 
         // Owner approves Spender.
-        erc20.approve(spender, approved_amount);
+        erc20.approve(&spender, &approved_amount);
 
         // Allowance was recorded.
-        assert_eq!(erc20.allowance(owner, spender), approved_amount);
+        assert_eq!(erc20.allowance(&owner, &spender), approved_amount);
         assert!(env.emitted_event(
             erc20.address(),
             &Approval {
@@ -306,14 +336,14 @@ mod tests {
 
         // Spender transfers tokens from Owner to Recipient.
         env.set_caller(spender);
-        erc20.transfer_from(owner, recipient, transfer_amount);
+        erc20.transfer_from(&owner, &recipient, &transfer_amount);
 
         // Tokens are transferred and allowance decremented.
         assert_eq!(
-            erc20.balance_of(owner),
+            erc20.balance_of(&owner),
             U256::from(INITIAL_SUPPLY) - transfer_amount
         );
-        assert_eq!(erc20.balance_of(recipient), transfer_amount);
+        assert_eq!(erc20.balance_of(&recipient), transfer_amount);
         assert!(env.emitted_event(
             erc20.address(),
             &Approval {
@@ -345,7 +375,7 @@ mod tests {
 
         // Then transfer fails.
         assert_eq!(
-            erc20.try_transfer_from(owner, recipient, amount),
+            erc20.try_transfer_from(&owner, &recipient, &amount),
             Err(Error::InsufficientAllowance.into())
         );
     }

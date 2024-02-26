@@ -1,4 +1,4 @@
-use crate::ast::fn_utils::SelfFnItem;
+use crate::ast::fn_utils::FnItem;
 use crate::ast::utils::{ImplItem, Named};
 use crate::ir::TypeIR;
 use crate::utils;
@@ -16,7 +16,7 @@ pub struct CloneItem {
     #[syn(in = braces)]
     inline_attr: syn::Attribute,
     #[syn(in = braces)]
-    fn_item: SelfFnItem
+    fn_item: FnItem
 }
 
 impl TryFrom<&'_ TypeIR> for CloneItem {
@@ -50,7 +50,7 @@ impl TryFrom<&'_ TypeIR> for CloneItem {
             impl_item: ImplItem::clone(ir)?,
             braces: Default::default(),
             inline_attr: utils::attr::inline(),
-            fn_item: SelfFnItem::new(&ident_clone, ret_ty(), block)
+            fn_item: FnItem::new(&ident_clone, vec![], ret_ty(), block).instanced()
         })
     }
 }

@@ -48,6 +48,8 @@ pub trait OwnedErc721WithMetadata {
         token_id: &U256,
         data: &Bytes
     );
+    /// Transfers a specific NFT `tokenId` from one account `from` to another `to`.
+    /// Emits a [Transfer](crate::erc721::events::Transfer) event.
     fn transfer_from(&mut self, from: &Address, to: &Address, token_id: &U256);
     /// Grants permission to `approved` to transfer `token_id` token. The approval is cleared when the token is transferred.
     ///

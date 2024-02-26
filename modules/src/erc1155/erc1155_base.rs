@@ -6,13 +6,15 @@ use crate::erc1155_receiver::Erc1155ReceiverContractRef;
 use odra::prelude::*;
 use odra::{
     casper_types::{bytesrepr::Bytes, U256},
-    Address, Mapping
+    Address, ContractRef, Mapping
 };
 
 /// The ERC1155 base implementation.
 #[odra::module(events = [ApprovalForAll, TransferBatch, TransferSingle])]
 pub struct Erc1155Base {
+    /// The balances of the tokens.
     pub balances: Mapping<(Address, U256), U256>,
+    /// The approvals for the operators.
     pub approvals: Mapping<(Address, Address), bool>
 }
 
@@ -21,7 +23,7 @@ impl Erc1155 for Erc1155Base {
         self.balances.get_or_default(&(*owner, *id))
     }
 
-    fn balance_of_batch(&self, owners: &[Address], ids: &[U256]) -> Vec<U256> {
+    fn balance_of_batch(&self, owners: Vec<Address>, ids: Vec<U256>) -> Vec<U256> {
         if owners.len() != ids.len() {
             self.env().revert(Error::AccountsAndIdsLengthMismatch);
         }
@@ -158,13 +160,8 @@ impl Erc1155Base {
         data: &Option<Bytes>
     ) {
         if to.is_contract() {
-            let response = Erc1155ReceiverContractRef::new(self.env(), *to).on_erc1155_received(
-                *operator,
-                *from,
-                *id,
-                *amount,
-                data.clone()
-            );
+            let response = Erc1155ReceiverContractRef::new(self.env(), *to)
+                .on_erc1155_received(operator, from, id, amount, data);
             if !response {
                 self.env().revert(Error::TransferRejected);
             }
@@ -184,13 +181,7 @@ impl Erc1155Base {
     ) {
         if to.is_contract() {
             let response = Erc1155ReceiverContractRef::new(self.env(), *to)
-                .on_erc1155_batch_received(
-                    *operator,
-                    *from,
-                    ids.to_vec(),
-                    amounts.to_vec(),
-                    data.clone()
-                );
+                .on_erc1155_batch_received(operator, from, ids.to_vec(), amounts.to_vec(), data);
             if !response {
                 self.env().revert(Error::TransferRejected);
             }
