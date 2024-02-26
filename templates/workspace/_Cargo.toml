@@ -8,6 +8,7 @@ resolver = "2"
 [workspace.dependencies]
 #odra_dependency
 #odra_test_dependency
+#odra_build_dependency
 
 [profile.release]
 codegen-units = 1
