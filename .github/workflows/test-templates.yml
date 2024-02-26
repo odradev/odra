@@ -1,0 +1,39 @@
+name: Tests
+
+on:
+  pull_request:
+    branches-ignore:
+      - 'hotfix/**'
+    paths:
+      - 'templates/**'
+  push:
+    branches:
+      - 'release/**'
+    paths:
+      - 'templates/**'
+
+run-name: Running templates tests for ${{ github.head_ref }}
+
+jobs:
+  test-templates:
+    name: Test templates
+    runs-on: buildjet-8vcpu-ubuntu-2204
+    steps:
+      - name: Setup just
+        uses: extractions/setup-just@v1
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Cache target
+        uses: actions/cache@v2
+        with:
+          path: target
+          key: odra-target-folder
+      - name: Setup toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          target: wasm32-unknown-unknown
+          components: rustfmt, clippy, llvm-tools-preview
+      - name: Prepare test environment
+        run: just prepare-test-env
+      - name: Run tests
+        run: just test-templates
