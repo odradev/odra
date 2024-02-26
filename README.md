@@ -11,7 +11,7 @@
     </p>
     <p>
         <a href="https://github.com/odradev/odra/actions">
-            <img src="https://img.shields.io/github/actions/workflow/status/odradev/odra/test.yml?branch=release%2F0.3.0" alt="GitHub Workflow Status" />
+            <img src="https://img.shields.io/github/actions/workflow/status/odradev/odra/test.yml?branch=release%2F0.9.0" alt="GitHub Workflow Status" />
         </a>
         <a href="https://codecov.io/gh/odradev/odra">
             <img src="https://codecov.io/gh/odradev/odra/graph/badge.svg?token=8AT1UNOJMS" alt="Code coverage">
