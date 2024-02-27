@@ -240,12 +240,19 @@ impl OdraVm {
 
         let from = &self.self_address();
 
-        let mut state = self.state.write().unwrap();
-        if state.reduce_balance(from, amount).is_err() {
-            self.revert(OdraError::VmError(VmError::BalanceExceeded))
+        let mut result = None;
+        {
+            let mut state = self.state.write().unwrap();
+            if state.reduce_balance(from, amount).is_err() {
+                result = Some(OdraError::VmError(VmError::BalanceExceeded));
+            }
+            if state.increase_balance(to, amount).is_err() {
+                result = Some(OdraError::VmError(VmError::BalanceExceeded));
+            }
         }
-        if state.increase_balance(to, amount).is_err() {
-            self.revert(OdraError::VmError(VmError::BalanceExceeded))
+
+        if let Some(result) = result {
+            self.revert(result);
         }
     }
 
