@@ -240,18 +240,15 @@ impl OdraVm {
 
         let from = &self.self_address();
 
-        let mut result = None;
+        let mut transfer_error = None;
         {
             let mut state = self.state.write().unwrap();
-            if state.reduce_balance(from, amount).is_err() {
-                result = Some(OdraError::VmError(VmError::BalanceExceeded));
-            }
-            if state.increase_balance(to, amount).is_err() {
-                result = Some(OdraError::VmError(VmError::BalanceExceeded));
+            if state.transfer(from, to, amount).is_err() {
+                transfer_error = Some(OdraError::VmError(VmError::BalanceExceeded));
             }
         }
 
-        if let Some(result) = result {
+        if let Some(result) = transfer_error {
             self.revert(result);
         }
     }
@@ -271,10 +268,7 @@ impl OdraVm {
         }
 
         let mut state = self.state.write().unwrap();
-        if state.reduce_balance(from, amount).is_err() {
-            return Err(OdraError::VmError(VmError::BalanceExceeded));
-        }
-        if state.increase_balance(to, amount).is_err() {
+        if state.transfer(from, to, amount).is_err() {
             return Err(OdraError::VmError(VmError::BalanceExceeded));
         }
 
@@ -420,6 +414,39 @@ mod tests {
 
         // then returns the expected value
         assert_eq!(result, expected_result);
+    }
+
+    #[test]
+    fn test_transfer() {
+        // given an empty vm and two addresses
+        let instance = OdraVm::default();
+        let from = instance.get_account(0);
+        let from_balance = instance.balance_of(&from);
+        let to = instance.get_account(1);
+        let to_balance = instance.balance_of(&to);
+        let amount = U512::from(100);
+
+        // when transferring tokens
+        instance.transfer_tokens(&to, &amount);
+
+        // then the balance of the sender is decreased and the balance of the receiver is increased
+        assert_eq!(instance.balance_of(&from), from_balance - amount);
+        assert_eq!(instance.balance_of(&to), to_balance + amount);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_transfer_too_much() {
+        // given an empty vm and two addresses
+        let instance = OdraVm::default();
+        let from = instance.get_account(0);
+        let from_balance = instance.balance_of(&from);
+        let to = instance.get_account(1);
+        let to_balance = instance.balance_of(&to);
+        let amount = from_balance + 1;
+
+        // when transferring tokens the vm should panic
+        instance.transfer_tokens(&to, &amount);
     }
 
     #[test]
