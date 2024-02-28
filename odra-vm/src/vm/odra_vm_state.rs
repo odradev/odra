@@ -197,12 +197,8 @@ impl OdraVmState {
             .set_balance(address, AccountBalance::new(amount));
     }
 
-    pub fn increase_balance(&mut self, address: &Address, amount: &U512) -> Result<()> {
-        self.storage.increase_balance(address, amount)
-    }
-
-    pub fn reduce_balance(&mut self, address: &Address, amount: &U512) -> Result<()> {
-        self.storage.reduce_balance(address, amount)
+    pub fn transfer(&mut self, from: &Address, to: &Address, amount: &U512) -> Result<()> {
+        self.storage.transfer(from, to, amount)
     }
 
     pub fn public_key(&self, address: &Address) -> PublicKey {

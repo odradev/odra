@@ -39,14 +39,11 @@ impl Storage {
         self.balances.insert(address, balance);
     }
 
-    pub fn increase_balance(&mut self, address: &Address, amount: &U512) -> Result<()> {
-        let balance = self.balances.get_mut(address).context("Unknown address")?;
-        balance.increase(*amount)
-    }
-
-    pub fn reduce_balance(&mut self, address: &Address, amount: &U512) -> Result<()> {
-        let balance = self.balances.get_mut(address).context("Unknown address")?;
-        balance.reduce(*amount)
+    pub fn transfer(&mut self, from: &Address, to: &Address, amount: &U512) -> Result<()> {
+        let from_balance = self.balances.get_mut(from).context("Unknown address")?;
+        from_balance.reduce(*amount)?;
+        let to_balance = self.balances.get_mut(to).context("Unknown address")?;
+        to_balance.increase(*amount)
     }
 
     pub fn get_value(&self, address: &Address, key: &[u8]) -> Result<Option<Bytes>, Error> {
