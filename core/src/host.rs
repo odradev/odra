@@ -671,4 +671,18 @@ mod test {
 
         env.events(&addr);
     }
+
+    #[test]
+    fn test_emited() {
+        let addr = Address::Account(AccountHash::new([0; 32]));
+        let mut ctx = MockHostContext::new();
+
+        ctx.expect_get_events_count().returning(|_| 1);
+        ctx.expect_get_event()
+            .returning(|_, _| Ok(TestEv {}.to_bytes().unwrap().into()));
+
+        let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+        assert!(env.emitted(&addr, "TestEv"));
+        assert!(!env.emitted(&addr, "AnotherEvent"));
+    }
 }
