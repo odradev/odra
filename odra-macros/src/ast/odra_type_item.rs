@@ -97,7 +97,7 @@ impl TryFrom<&'_ TypeIR> for CLTypedItem {
 
     fn try_from(ir: &TypeIR) -> Result<Self, Self::Error> {
         let ret_ty_cl_type_any = match ir.is_enum() {
-            true => utils::ty::cl_type_u32(),
+            true => utils::ty::cl_type_u8(),
             false => utils::ty::cl_type_any()
         }
         .as_block();
@@ -128,13 +128,13 @@ impl FromBytesFnItem {
         let ident_bytes = utils::ident::bytes();
         let ident_from_bytes = utils::ident::from_bytes();
         let ident_result = utils::ident::result();
-        let ty_u32 = utils::ty::u32();
+        let ty_u8 = utils::ty::u8();
         let from_bytes_expr = utils::expr::failable_from_bytes(&ident_bytes);
 
         let read_stmt: syn::Stmt =
-            parse_quote!(let (#ident_result, #ident_bytes): (#ty_u32, _) = #from_bytes_expr;);
+            parse_quote!(let (#ident_result, #ident_bytes): (#ty_u8, _) = #from_bytes_expr;);
         let deser = ir.map_fields(
-            |i| quote::quote!(x if x == #ident::#i as #ty_u32 => Ok((#ident::#i, #ident_bytes)))
+            |i| quote::quote!(x if x == #ident::#i as #ty_u8 => Ok((#ident::#i, #ident_bytes)))
         )?;
         let arg = Self::arg();
         let ret_ty = Self::ret_ty();
@@ -227,13 +227,10 @@ impl ToBytesFnItem {
     fn from_enum(_ir: &TypeIR) -> syn::Result<Self> {
         let ty_bytes_vec = utils::ty::bytes_vec();
         let ty_ret = utils::ty::bytes_result(&ty_bytes_vec);
-        let ty_u32 = utils::ty::u32();
-        let clone_expr = utils::expr::clone(&utils::ty::_self());
-        let as_u32 = quote::quote!((#clone_expr as #ty_u32));
-
         let name = utils::ident::to_bytes();
+
         let ret_ty = utils::misc::ret_ty(&ty_ret);
-        let block = utils::expr::to_bytes(&as_u32).as_block();
+        let block = utils::expr::serialize_enum().as_block();
 
         Ok(Self {
             fn_item: FnItem::new(&name, vec![], ret_ty, block).instanced()
@@ -274,13 +271,9 @@ impl SerializedLengthFnItem {
 
     fn from_enum(_ir: &TypeIR) -> syn::Result<Self> {
         let ty_usize = utils::ty::usize();
-        let ty_u32 = utils::ty::u32();
-        let clone_expr = utils::expr::clone(&utils::ty::_self());
-        let as_u32 = quote::quote!((#clone_expr as #ty_u32));
-
         let name = utils::ident::serialized_length();
         let ret_ty = utils::misc::ret_ty(&ty_usize);
-        let block = utils::expr::serialized_length(&as_u32).as_block();
+        let block = utils::expr::u8_serialized_len().as_block();
         Ok(Self {
             fn_item: FnItem::new(&name, vec![], ret_ty, block).instanced()
         })
@@ -365,10 +358,10 @@ mod tests {
         let expected = quote!(
             impl odra::casper_types::bytesrepr::FromBytes for MyType {
                 fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper_types::bytesrepr::Error> {
-                    let (result, bytes): (u32, _) = odra::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
+                    let (result, bytes): (u8, _) = odra::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
                     match result {
-                        x if x == MyType::A as u32 => Ok((MyType::A, bytes)),
-                        x if x == MyType::B as u32 => Ok((MyType::B, bytes)),
+                        x if x == MyType::A as u8 => Ok((MyType::A, bytes)),
+                        x if x == MyType::B as u8 => Ok((MyType::B, bytes)),
                         _ => Err(odra::casper_types::bytesrepr::Error::Formatting),
                     }
                 }
@@ -376,17 +369,17 @@ mod tests {
 
             impl odra::casper_types::bytesrepr::ToBytes for MyType {
                 fn to_bytes(&self) -> Result<odra::prelude::vec::Vec<u8>, odra::casper_types::bytesrepr::Error> {
-                    (self.clone() as u32).to_bytes()
+                    Ok(odra::prelude::vec![self.clone() as u8])
                 }
 
                 fn serialized_length(&self) -> usize {
-                    (self.clone() as u32).serialized_length()
+                    odra::casper_types::bytesrepr::U8_SERIALIZED_LENGTH
                 }
             }
 
             impl odra::casper_types::CLTyped for MyType {
                 fn cl_type() -> odra::casper_types::CLType {
-                    odra::casper_types::CLType::U32
+                    odra::casper_types::CLType::U8
                 }
             }
 
