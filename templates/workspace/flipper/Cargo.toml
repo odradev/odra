@@ -9,6 +9,9 @@ odra = { workspace = true }
 [dev-dependencies]
 odra-test = { workspace = true }
 
+[build-dependencies]
+odra-build = { workspace = true }
+
 [[bin]]
 name = "flipper_build_contract"
 path = "bin/build_contract.rs"

@@ -1,6 +1,6 @@
 [package]
 name = "odra-examples"
-version = "0.8.0"
+version = "0.8.1"
 edition = "2021"
 
 [dependencies]
@@ -12,6 +12,9 @@ odra-casper-livenet-env = { path = "../odra-casper/livenet-env", optional = true
 [dev-dependencies]
 odra-test = { path = "../odra-test" }
 hex = "0.4.3"
+
+[build-dependencies]
+odra-build = { path = "../odra-build" }
 
 [features]
 default = []
