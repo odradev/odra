@@ -1,3 +1,4 @@
+//! Deploys an ERC20 contract and transfers some tokens to another address.
 use odra::casper_types::U256;
 use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader};
 use odra::Address;
@@ -21,18 +22,20 @@ fn main() {
     println!("Token name: {}", token.name());
 
     env.set_gas(3_000_000_000u64);
-    token.transfer(recipient, U256::from(1000));
+    token.transfer(&recipient, &U256::from(1000));
 
-    println!("Owner's balance: {:?}", token.balance_of(owner));
-    println!("Recipient's balance: {:?}", token.balance_of(recipient));
+    println!("Owner's balance: {:?}", token.balance_of(&owner));
+    println!("Recipient's balance: {:?}", token.balance_of(&recipient));
 }
 
+/// Loads an ERC20 contract.
 fn _load_erc20(env: &HostEnv) -> Erc20HostRef {
     let address = "hash-d26fcbd2106e37be975d2045c580334a6d7b9d0a241c2358a4db970dfd516945";
     let address = Address::from_str(address).unwrap();
     Erc20HostRef::load(env, address)
 }
 
+/// Deploys an ERC20 contract.
 pub fn deploy_erc20(env: &HostEnv) -> Erc20HostRef {
     let name = String::from("Plascoin");
     let symbol = String::from("PLS");

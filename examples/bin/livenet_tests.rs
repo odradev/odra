@@ -1,3 +1,4 @@
+//! This example demonstrates how to deploy and interact with a contract on the Livenet environment.
 use odra::casper_types::U256;
 use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader};
 use odra::Address;
@@ -43,9 +44,9 @@ fn main() {
     assert_eq!(contract.immutable_cross_call(), 10_000.into());
 
     // - mutable crosscalls will require a deploy
-    let pre_call_balance = erc20.balance_of(env.caller());
+    let pre_call_balance = erc20.balance_of(&env.caller());
     contract.mutable_cross_call();
-    let post_call_balance = erc20.balance_of(env.caller());
+    let post_call_balance = erc20.balance_of(&env.caller());
     assert_eq!(post_call_balance, pre_call_balance + 1);
 
     // We can change the caller
@@ -62,7 +63,7 @@ fn deploy_new(env: &HostEnv) -> (LivenetContractHostRef, Erc20HostRef) {
         erc20_address: *erc20_contract.address()
     };
     let livenet_contract = LivenetContractHostRef::deploy(env, init_args);
-    erc20_contract.transfer(*livenet_contract.address(), 1000.into());
+    erc20_contract.transfer(livenet_contract.address(), &1000.into());
     (livenet_contract, erc20_contract)
 }
 
@@ -77,6 +78,7 @@ fn load(
     )
 }
 
+/// Deploys an ERC20 contract
 pub fn deploy_erc20(env: &HostEnv) -> Erc20HostRef {
     let name = String::from("Plascoin");
     let symbol = String::from("PLS");
