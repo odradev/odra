@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - '**'
-    paths-ignore:
-      - '**.md'
 
 run-name: Benchmarking gas costs for ${{ github.head_ref || github.ref_name }}
 
