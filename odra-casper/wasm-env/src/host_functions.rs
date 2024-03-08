@@ -19,7 +19,7 @@ use casper_contract::{
     unwrap_or_revert::UnwrapOrRevert
 };
 use core::mem::MaybeUninit;
-use odra_core::casper_event_standard::{self, Schema, Schemas};
+use odra_core::{args::EntrypointArgument, casper_event_standard::{self, Schema, Schemas}};
 use odra_core::casper_types::{
     api_error,
     bytesrepr::{Bytes, FromBytes, ToBytes},
@@ -116,8 +116,8 @@ pub fn revert(error: u16) -> ! {
 
 /// Returns given named argument passed to the host. The result is not deserialized,
 /// is returned as a `Vec<u8>`.
-pub fn get_named_arg(name: &str) -> Vec<u8> {
-    let arg_size = get_named_arg_size(name);
+pub fn get_named_arg(name: &str) -> Result<Vec<u8>, ApiError> {
+    let arg_size = get_named_arg_size(name)?;
     if arg_size > 0 {
         let data_non_null_ptr = contract_api::alloc_bytes(arg_size);
         let ret = unsafe {
@@ -129,11 +129,11 @@ pub fn get_named_arg(name: &str) -> Vec<u8> {
             )
         };
         if ret != 0 {
-            runtime::revert(ApiError::from(ret as u32))
+            return Err(ApiError::from(ret as u32))
         }
-        unsafe { Vec::from_raw_parts(data_non_null_ptr.as_ptr(), arg_size, arg_size) }
+        unsafe { Ok(Vec::from_raw_parts(data_non_null_ptr.as_ptr(), arg_size, arg_size)) }
     } else {
-        Vec::new()
+        Ok(Vec::new())
     }
 }
 
@@ -536,7 +536,7 @@ fn read_host_buffer_into(dest: &mut [u8]) -> Result<usize, ApiError> {
     Ok(unsafe { bytes_written.assume_init() })
 }
 
-fn get_named_arg_size(name: &str) -> usize {
+fn get_named_arg_size(name: &str) -> Result<usize, ApiError> {
     let mut arg_size: usize = 0;
     let ret = unsafe {
         ext_ffi::casper_get_named_arg_size(
@@ -546,7 +546,7 @@ fn get_named_arg_size(name: &str) -> usize {
         )
     };
     match ret {
-        0 => arg_size,
-        _ => runtime::revert(ApiError::from(ret as u32))
+        0 => Ok(arg_size),
+        _ => Err(ApiError::from(ret as u32))
     }
 }

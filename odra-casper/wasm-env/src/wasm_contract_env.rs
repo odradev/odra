@@ -1,4 +1,5 @@
 use crate::host_functions;
+use casper_contract::contract_api::runtime;
 use casper_types::bytesrepr::ToBytes;
 use casper_types::U512;
 use odra_core::casper_types;
@@ -57,7 +58,15 @@ impl ContractContext for WasmContractEnv {
     }
 
     fn get_named_arg_bytes(&self, name: &str) -> Bytes {
-        host_functions::get_named_arg(name).into()
+        let result = host_functions::get_named_arg(name);
+        match result {
+            Ok(bytes) => Bytes::from(bytes),
+            Err(err) => runtime::revert(err)
+        }
+    }
+
+    fn get_opt_named_arg_bytes(&self, name: &str) -> Option<Bytes> {
+        host_functions::get_named_arg(name).ok().map(Bytes::from)
     }
 
     fn handle_attached_value(&self) {

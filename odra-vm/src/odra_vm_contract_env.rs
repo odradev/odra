@@ -63,7 +63,11 @@ impl ContractContext for OdraVmContractEnv {
     }
 
     fn get_named_arg_bytes(&self, name: &str) -> Bytes {
-        self.vm.borrow().get_named_arg(name).into()
+        self.vm.borrow().get_named_arg(name).unwrap().into()
+    }
+       
+    fn get_opt_named_arg_bytes(&self,name: &str) -> Option<Bytes> {
+        self.vm.borrow().get_named_arg(name).map(Into::into)
     }
 
     fn handle_attached_value(&self) {

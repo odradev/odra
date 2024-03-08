@@ -1,5 +1,17 @@
 pub mod odra {
     pub use casper_types;
+
+    pub mod args {
+        pub trait EntrypointArgument {
+            fn insert_runtime_arg(self, name: &str, args: &mut casper_types::RuntimeArgs);
+        }
+
+        impl EntrypointArgument for u32 {
+            fn insert_runtime_arg(self, name: &str, args: &mut casper_types::RuntimeArgs) {
+                let _ = args.insert(name, self);
+            }
+        }
+    }
 }
 
 use casper_types::{runtime_args, RuntimeArgs};

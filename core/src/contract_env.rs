@@ -1,3 +1,4 @@
+use crate::args::EntrypointArgument;
 use crate::call_def::CallDef;
 use crate::casper_types::bytesrepr::{Bytes, FromBytes, ToBytes};
 use crate::casper_types::{CLTyped, U512};
@@ -236,9 +237,15 @@ impl ExecutionEnv {
     ///
     /// The deserialized value of the named argument. If the argument does not exist or deserialization fails,
     /// the contract will revert.
-    pub fn get_named_arg<T: FromBytes>(&self, name: &str) -> T {
-        let bytes = self.env.backend.borrow().get_named_arg_bytes(name);
-        deserialize_bytes(bytes, &self.env)
+    pub fn get_named_arg<T: FromBytes + EntrypointArgument>(&self, name: &str) -> T {
+        if T::is_required() {
+            let bytes = self.env.backend.borrow().get_named_arg_bytes(name);
+            deserialize_bytes(bytes, &self.env)
+        } else {
+            let bytes = self.env.backend.borrow().get_opt_named_arg_bytes(name);
+            let result = bytes.map(|bytes| deserialize_bytes(bytes, &self.env));
+            T::unwrap(result, &self.env)
+        }
     }
 }
 

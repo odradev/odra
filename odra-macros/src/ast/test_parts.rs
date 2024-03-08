@@ -145,8 +145,8 @@ mod test {
                     }
 
                     /// Approve.
-                    pub fn approve(&mut self, to: &Address, amount: &U256) {
-                        self.try_approve(to, amount).unwrap()
+                    pub fn approve(&mut self, to: &Address, amount: &U256, msg: Maybe<String>) {
+                        self.try_approve(to, amount, msg).unwrap()
                     }
 
                     /// Airdrops the given amount to the given addresses.
@@ -170,8 +170,7 @@ mod test {
                                         if self.attached_value > odra::casper_types::U512::zero() {
                                             let _ = named_args.insert("amount", self.attached_value);
                                         }
-                                        let _ = named_args
-                                            .insert("total_supply", total_supply.clone());
+                                        odra::args::EntrypointArgument::insert_runtime_arg(total_supply.clone(), "total_supply", &mut named_args);
                                         named_args
                                     },
                                 )
@@ -223,6 +222,7 @@ mod test {
                         &mut self,
                         to: &Address,
                         amount: &U256,
+                        msg: Maybe<String>,
                     ) -> odra::OdraResult<()> {
                         self.env
                             .call_contract(
@@ -235,8 +235,9 @@ mod test {
                                             if self.attached_value > odra::casper_types::U512::zero() {
                                                 let _ = named_args.insert("amount", self.attached_value);
                                             }
-                                            let _ = named_args.insert("to", to.clone());
-                                            let _ = named_args.insert("amount", amount.clone());
+                                            odra::args::EntrypointArgument::insert_runtime_arg(to.clone(), "to", &mut named_args);
+                                            odra::args::EntrypointArgument::insert_runtime_arg(amount.clone(), "amount", &mut named_args);
+                                            odra::args::EntrypointArgument::insert_runtime_arg(msg.clone(), "msg", &mut named_args);
                                             named_args
                                         },
                                     )
@@ -256,8 +257,8 @@ mod test {
                                     if self.attached_value > odra::casper_types::U512::zero() {
                                         let _ = named_args.insert("amount", self.attached_value);
                                     }
-                                    let _ = named_args.insert("to", to.clone());
-                                    let _ = named_args.insert("amount", amount.clone());
+                                    odra::args::EntrypointArgument::insert_runtime_arg(to.clone(), "to", &mut named_args);
+                                    odra::args::EntrypointArgument::insert_runtime_arg(amount.clone(), "amount", &mut named_args);
                                     named_args
                                 }
                             ).with_amount(self.attached_value),
@@ -288,17 +289,18 @@ mod test {
                     fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
                         let entry_points = odra::prelude::vec![
                             odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("init"), odra::prelude::vec![
-                                odra::entry_point_callback::Argument::new(odra::prelude::string::String::from("total_supply"), <Option::<U256> as odra::casper_types::CLTyped>::cl_type())
+                                odra::entry_point_callback::Argument::new::<Option<U256> >(odra::prelude::string::String::from("total_supply"))
                             ]),
                             odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
                             odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("pay_to_mint"), odra::prelude::vec![]),
                             odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("approve"), odra::prelude::vec![
-                                odra::entry_point_callback::Argument::new(odra::prelude::string::String::from("to"), <Address as odra::casper_types::CLTyped>::cl_type()),
-                                odra::entry_point_callback::Argument::new(odra::prelude::string::String::from("amount"), <U256 as odra::casper_types::CLTyped>::cl_type())
+                                odra::entry_point_callback::Argument::new::<Address>(odra::prelude::string::String::from("to")),
+                                odra::entry_point_callback::Argument::new::<U256>(odra::prelude::string::String::from("amount")),
+                                odra::entry_point_callback::Argument::new::<Maybe<String> >(odra::prelude::string::String::from("msg"))
                             ]),
                             odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("airdrop"), odra::prelude::vec![
-                                odra::entry_point_callback::Argument::new(odra::prelude::string::String::from("to"), <odra::prelude::vec::Vec<Address> as odra::casper_types::CLTyped>::cl_type()),
-                                odra::entry_point_callback::Argument::new(odra::prelude::string::String::from("amount"), <U256 as odra::casper_types::CLTyped>::cl_type())
+                                odra::entry_point_callback::Argument::new::<odra::prelude::vec::Vec<Address> >(odra::prelude::string::String::from("to")),
+                                odra::entry_point_callback::Argument::new::<U256>(odra::prelude::string::String::from("amount"))
                             ])
                         ];
                         odra::entry_point_callback::EntryPointsCaller::new(env.clone(), entry_points, |contract_env, call_def| {

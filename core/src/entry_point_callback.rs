@@ -2,6 +2,7 @@
 
 use casper_types::CLType;
 
+use crate::args::EntrypointArgument;
 use crate::call_def::CallDef;
 use crate::casper_types::bytesrepr::Bytes;
 use crate::{host::HostEnv, prelude::*, ContractEnv, OdraResult};
@@ -80,12 +81,12 @@ pub struct Argument {
     /// The name of the argument.
     pub name: String,
     /// The type of the argument.
-    pub ty: CLType
+    pub ty: CLType,
 }
 
 impl Argument {
     /// Creates a new instance of `Argument`.
-    pub fn new(name: String, ty: CLType) -> Self {
-        Self { name, ty }
+    pub fn new<T: EntrypointArgument>(name: String) -> Self {
+        Self { name, ty: T::cl_type() }
     }
 }

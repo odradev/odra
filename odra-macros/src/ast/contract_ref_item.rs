@@ -199,7 +199,7 @@ mod ref_item_tests {
                             true,
                             {
                                 let mut named_args = odra::casper_types::RuntimeArgs::new();
-                                let _ = named_args.insert("total_supply", total_supply.clone());
+                                odra::args::EntrypointArgument::insert_runtime_arg(total_supply.clone(), "total_supply", &mut named_args);
                                 named_args
                             }
                         ),
@@ -238,7 +238,7 @@ mod ref_item_tests {
                 }
 
                 /// Approve.
-                pub fn approve(&mut self, to: &Address, amount: &U256) {
+                pub fn approve(&mut self, to: &Address, amount: &U256, msg: Maybe<String>) {
                     self.env
                         .call_contract(
                             self.address,
@@ -247,8 +247,9 @@ mod ref_item_tests {
                                 true,
                                 {
                                     let mut named_args = odra::casper_types::RuntimeArgs::new();
-                                    let _ = named_args.insert("to", to.clone());
-                                    let _ = named_args.insert("amount", amount.clone());
+                                    odra::args::EntrypointArgument::insert_runtime_arg(to.clone(), "to", &mut named_args);
+                                    odra::args::EntrypointArgument::insert_runtime_arg(amount.clone(), "amount", &mut named_args);
+                                    odra::args::EntrypointArgument::insert_runtime_arg(msg.clone(), "msg", &mut named_args);
                                     named_args
                                 },
                             ),
@@ -265,8 +266,8 @@ mod ref_item_tests {
                                 false,
                                 {
                                     let mut named_args = odra::casper_types::RuntimeArgs::new();
-                                    let _ = named_args.insert("to", to.clone());
-                                    let _ = named_args.insert("amount", amount.clone());
+                                    odra::args::EntrypointArgument::insert_runtime_arg(to.clone(), "to", &mut named_args);
+                                    odra::args::EntrypointArgument::insert_runtime_arg(amount.clone(), "amount", &mut named_args);
                                     named_args
                                 },
                             ),
@@ -395,7 +396,7 @@ mod ref_item_tests {
                                 true,
                                 {
                                     let mut named_args = odra::casper_types::RuntimeArgs::new();
-                                    let _ = named_args.insert("new_owner", new_owner.clone());
+                                    odra::args::EntrypointArgument::insert_runtime_arg(new_owner.clone(), "new_owner", &mut named_args);
                                     named_args
                                 },
                             ),

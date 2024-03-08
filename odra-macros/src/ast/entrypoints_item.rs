@@ -100,17 +100,9 @@ fn entrypoint_args(f: &FnIR) -> syn::Result<syn::Expr> {
         .named_args()
         .iter()
         .map(|arg| {
-            let ty_arg = utils::ty::entry_point_def_arg();
             let ident = arg.name_str()?;
-            let ty = utils::expr::as_cl_type(&arg.ty()?);
-
-            let expr: syn::Expr = parse_quote!(#ty_arg {
-                ident: String::from(#ident),
-                ty: #ty,
-                is_ref: false,
-                is_slice: false
-            });
-            Ok(expr)
+            let ty = utils::ty::unreferenced_ty(&arg.ty()?);
+            Ok(utils::expr::into_arg(ty, ident))
         })
         .collect::<syn::Result<Vec<syn::Expr>>>()?;
     Ok(parse_quote!(vec![#(#args),*]))
@@ -133,12 +125,7 @@ mod test {
                         odra::contract_def::Entrypoint {
                             ident: String::from("init"),
                             args: vec![
-                                odra::contract_def::Argument {
-                                    ident: String::from("total_supply"),
-                                    ty: <Option::<U256> as odra::casper_types::CLTyped>::cl_type(),
-                                    is_ref: false,
-                                    is_slice: false
-                                }
+                                odra::args::into_argument::<Option<U256> >("total_supply")
                             ],
                             is_mut: true,
                             ret: <() as odra::casper_types::CLTyped>::cl_type(),
@@ -164,18 +151,9 @@ mod test {
                         odra::contract_def::Entrypoint {
                             ident: String::from("approve"),
                             args: vec![
-                                odra::contract_def::Argument {
-                                    ident: String::from("to"),
-                                    ty: <Address as odra::casper_types::CLTyped>::cl_type(),
-                                    is_ref: false,
-                                    is_slice: false
-                                },
-                                odra::contract_def::Argument {
-                                    ident: String::from("amount"),
-                                    ty: <U256 as odra::casper_types::CLTyped>::cl_type(),
-                                    is_ref: false,
-                                    is_slice: false
-                                }
+                                odra::args::into_argument::<Address>("to"),
+                                odra::args::into_argument::<U256>("amount"),
+                                odra::args::into_argument::<Maybe<String> >("msg")
                             ],
                             is_mut: true,
                             ret: <() as odra::casper_types::CLTyped>::cl_type(),
@@ -185,18 +163,8 @@ mod test {
                         odra::contract_def::Entrypoint {
                             ident: String::from("airdrop"),
                             args: vec![
-                                odra::contract_def::Argument {
-                                    ident: String::from("to"),
-                                    ty: <odra::prelude::vec::Vec<Address> as odra::casper_types::CLTyped>::cl_type(),
-                                    is_ref: false,
-                                    is_slice: false
-                                },
-                                odra::contract_def::Argument {
-                                    ident: String::from("amount"),
-                                    ty: <U256 as odra::casper_types::CLTyped>::cl_type(),
-                                    is_ref: false,
-                                    is_slice: false
-                                }
+                                odra::args::into_argument::<odra::prelude::vec::Vec<Address> >("to"),
+                                odra::args::into_argument::<U256>("amount")
                             ],
                             is_mut: false,
                             ret: <() as odra::casper_types::CLTyped>::cl_type(),
@@ -268,12 +236,7 @@ mod test {
                         odra::contract_def::Entrypoint {
                             ident: String::from("set_owner"),
                             args: vec![
-                                odra::contract_def::Argument {
-                                    ident: String::from("new_owner"),
-                                    ty: <Address as odra::casper_types::CLTyped>::cl_type(),
-                                    is_ref: false,
-                                    is_slice: false
-                                }
+                                odra::args::into_argument::<Address>("new_owner")
                             ],
                             is_mut: true,
                             ret: <() as odra::casper_types::CLTyped>::cl_type(),

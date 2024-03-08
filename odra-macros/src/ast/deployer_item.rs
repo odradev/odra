@@ -210,10 +210,7 @@ mod deployer_impl {
                         odra::entry_point_callback::EntryPoint::new(
                             odra::prelude::string::String::from("init"),
                             odra::prelude::vec![
-                                odra::entry_point_callback::Argument::new(
-                                    odra::prelude::string::String::from("total_supply"),
-                                    <Option::<U256> as odra::casper_types::CLTyped>::cl_type()
-                                )
+                                odra::entry_point_callback::Argument::new::<Option<U256> >(odra::prelude::string::String::from("total_supply"))
                             ]
                         ),
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
@@ -221,28 +218,18 @@ mod deployer_impl {
                         odra::entry_point_callback::EntryPoint::new(
                             odra::prelude::string::String::from("approve"),
                             odra::prelude::vec![
-                                odra::entry_point_callback::Argument::new(
-                                    odra::prelude::string::String::from("to"),
-                                    <Address as odra::casper_types::CLTyped>::cl_type()
-                                ),
-                                odra::entry_point_callback::Argument::new(
-                                    odra::prelude::string::String::from("amount"),
-                                    <U256 as odra::casper_types::CLTyped>::cl_type()
-                                )
+                                odra::entry_point_callback::Argument::new::<Address>(odra::prelude::string::String::from("to")),
+                                odra::entry_point_callback::Argument::new::<U256>(odra::prelude::string::String::from("amount")),
+                                odra::entry_point_callback::Argument::new::<Maybe<String> >(odra::prelude::string::String::from("msg"))
                             ]
                         ),
                         odra::entry_point_callback::EntryPoint::new(
                             odra::prelude::string::String::from("airdrop"),
                             odra::prelude::vec![
-                                odra::entry_point_callback::Argument::new(
-                                    odra::prelude::string::String::from("to"),
-                                    <odra::prelude::vec::Vec<Address> as odra::casper_types::CLTyped>::cl_type()
-                                ),
-                                odra::entry_point_callback::Argument::new(
-                                    odra::prelude::string::String::from("amount"),
-                                    <U256 as odra::casper_types::CLTyped>::cl_type()
-                                )
-                            ])
+                                odra::entry_point_callback::Argument::new::<odra::prelude::vec::Vec<Address> >(odra::prelude::string::String::from("to")),
+                                odra::entry_point_callback::Argument::new::<U256>(odra::prelude::string::String::from("amount"))
+                            ]
+                        )
                     ];
 
                     odra::entry_point_callback::EntryPointsCaller::new(env.clone(), entry_points, |contract_env, call_def| {
@@ -321,7 +308,7 @@ mod deployer_impl {
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("get_owner"), odra::prelude::vec![]),
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("set_owner"), odra::prelude::vec![
-                            odra::entry_point_callback::Argument::new(odra::prelude::string::String::from("new_owner"), <Address as odra::casper_types::CLTyped>::cl_type())
+                            odra::entry_point_callback::Argument::new::<Address>(odra::prelude::string::String::from("new_owner"))
                         ]),
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("name"), odra::prelude::vec![]),
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("symbol"), odra::prelude::vec![])

@@ -5,6 +5,7 @@
 extern crate alloc;
 
 mod address;
+pub mod args;
 pub mod arithmetic;
 mod call_def;
 mod call_result;

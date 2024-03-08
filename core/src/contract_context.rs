@@ -101,6 +101,9 @@ pub trait ContractContext {
     /// The value of the named argument as a byte array.
     fn get_named_arg_bytes(&self, name: &str) -> Bytes;
 
+    /// Similar to `get_named_arg_bytes`, but returns `None` if the named argument is not present.
+    fn get_opt_named_arg_bytes(&self, name: &str) -> Option<Bytes>;
+
     /// Handles the value attached to the call. Sets the value in the contract context.
     fn handle_attached_value(&self);
 

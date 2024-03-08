@@ -38,7 +38,9 @@ pub struct Argument {
     /// `true` if the argument is a reference.
     pub is_ref: bool,
     /// `true` if the argument is a slice.
-    pub is_slice: bool
+    pub is_slice: bool,
+    /// `true` if the argument is required.
+    pub is_required: bool
 }
 
 /// Defines an event.
@@ -168,7 +170,8 @@ impl<T: EventInstance> IntoEvent for T {
                 ident: name.clone(),
                 ty: ty.clone().downcast(),
                 is_ref: false,
-                is_slice: false
+                is_slice: false,
+                is_required: true
             })
             .collect::<Vec<_>>();
         Event { ident, args }
