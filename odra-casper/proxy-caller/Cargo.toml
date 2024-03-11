@@ -1,7 +1,7 @@
 [package]
 name = "odra-casper-proxy-caller"
 edition = "2021"
-version = "0.8.0"
+version = "0.8.1"
 authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
 license = "MIT"
 homepage = "https://odra.dev/docs"

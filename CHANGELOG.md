@@ -15,6 +15,7 @@ Changelog for `odra`.
 - `ContractRef` trait with `new` and `address` functions. All contract references now implement it.
 - `disable-allocator` feature for `odra` crate. It allows to disable the allocator used by Odra Framework in
 wasm build.
+- `odra-build` crate for including the code in contract's build.rs file.
 
 ### Changed
 - Traits implemented by modules are now also implemented by their `ContractRefs` and `HostRefs`.
