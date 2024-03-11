@@ -2,7 +2,8 @@
 
 use crate::{contract_def::Argument, prelude::*, ContractEnv, ExecutionError};
 use casper_types::{
-    bytesrepr::{FromBytes, ToBytes}, CLType, CLTyped, Parameter, RuntimeArgs
+    bytesrepr::{FromBytes, ToBytes},
+    CLType, CLTyped, Parameter, RuntimeArgs
 };
 
 /// A type that represents an entrypoint arg that may or may not be present.
@@ -84,10 +85,11 @@ pub trait EntrypointArgument: Sized {
     fn cl_type() -> CLType;
     /// Inserts the argument into the runtime args.
     fn insert_runtime_arg(self, name: &str, args: &mut RuntimeArgs);
+    /// Unwraps the argument from an Option.
     fn unwrap(value: Option<Self>, env: &ContractEnv) -> Self;
 }
 
-impl <T: CLTyped + ToBytes> EntrypointArgument for Maybe<T> {
+impl<T: CLTyped + ToBytes> EntrypointArgument for Maybe<T> {
     fn is_required() -> bool {
         false
     }
@@ -101,8 +103,8 @@ impl <T: CLTyped + ToBytes> EntrypointArgument for Maybe<T> {
             let _ = args.insert(name, v);
         }
     }
-    
-    fn unwrap(value: Option<Self>, env: &ContractEnv) -> Self {
+
+    fn unwrap(value: Option<Self>, _env: &ContractEnv) -> Self {
         match value {
             Some(v) => v,
             None => Maybe::None
@@ -110,7 +112,7 @@ impl <T: CLTyped + ToBytes> EntrypointArgument for Maybe<T> {
     }
 }
 
-impl <T: CLTyped + ToBytes> EntrypointArgument for T {
+impl<T: CLTyped + ToBytes> EntrypointArgument for T {
     fn is_required() -> bool {
         true
     }
@@ -120,19 +122,19 @@ impl <T: CLTyped + ToBytes> EntrypointArgument for T {
     }
 
     fn insert_runtime_arg(self, name: &str, args: &mut RuntimeArgs) {
-        let  _ = args.insert(name, self);
+        let _ = args.insert(name, self);
     }
-    
+
     fn unwrap(value: Option<Self>, env: &ContractEnv) -> Self {
         match value {
             Some(v) => v,
             None => env.revert(ExecutionError::UnwrapError)
-            
         }
     }
 }
 
 /// Converts a type into Casper's entrypoint argument representation.
+/// If the parameter is not required, it returns `None`.
 pub fn into_parameter<T: EntrypointArgument>(name: &str) -> Option<Parameter> {
     match T::is_required() {
         true => Some(Parameter::new(name, T::cl_type())),
@@ -142,10 +144,10 @@ pub fn into_parameter<T: EntrypointArgument>(name: &str) -> Option<Parameter> {
 
 /// Converts a type into Odra's entrypoint argument representation.
 pub fn into_argument<T: EntrypointArgument>(name: &str) -> Argument {
-    Argument { 
-        ident: name.to_string(), 
-        ty: T::cl_type(), 
-        is_ref: false, 
+    Argument {
+        ident: name.to_string(),
+        ty: T::cl_type(),
+        is_ref: false,
         is_slice: false,
         is_required: T::is_required()
     }
@@ -167,13 +169,13 @@ mod tests {
         let ctx = MockContractContext::new();
         let env = ContractEnv::new(0, Rc::new(RefCell::new(ctx)));
 
-        assert_eq!(some.is_some(), true);
-        assert_eq!(some.is_none(), false);
+        assert!(some.is_some());
+        assert!(!some.is_none());
         assert_eq!(some.clone().unwrap(&env), 1);
         assert_eq!(some.unwrap_or_default(), 1);
 
-        assert_eq!(none.is_some(), false);
-        assert_eq!(none.is_none(), true);
+        assert!(!none.is_some());
+        assert!(none.is_none());
         assert_eq!(none.unwrap_or_default(), 0);
     }
 
@@ -190,34 +192,25 @@ mod tests {
 
     #[test]
     fn test_into_args() {
-        let args = vec![
+        let args = [
             into_argument::<Maybe<u32>>("arg1"),
             into_argument::<U256>("arg2"),
-            into_argument::<Option<String>>("arg3"),
+            into_argument::<Option<String>>("arg3")
         ];
 
         assert_eq!(args.len(), 3);
     }
 
-
     #[test]
     fn test_into_casper_parameters() {
-        let params = vec![
+        let params = [
             into_parameter::<Maybe<u32>>("arg1"),
             into_parameter::<Option<u32>>("arg2"),
             into_parameter::<Maybe<Option<u32>>>("arg3"),
-            into_parameter::<Address>("arg4"),
+            into_parameter::<Address>("arg4")
         ]
         .into_iter()
-        .filter_map(|x| x)
-        .collect::<Vec<_>>();
-
-        let params = vec![
-            into_parameter::<String>("name"),
-            into_parameter::<Maybe<String>>("metadata"),
-        ]
-        .into_iter()
-        .filter_map(|x| x)
+        .flatten()
         .collect::<Vec<_>>();
 
         assert_eq!(params.len(), 2);

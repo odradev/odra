@@ -150,11 +150,7 @@ mod tests {
     #[test]
     fn test_many_missing_args() {
         // Given an instance with a single entrypoint with "first", "second" and "third" args.
-        let instance = ContractContainer::with_entrypoint(vec![
-            "first",
-            "second",
-            "third",
-        ]);
+        let instance = ContractContainer::with_entrypoint(vec!["first", "second", "third"]);
 
         // When call a valid entrypoint with a single valid args,
         let call_def = CallDef::new(TEST_ENTRYPOINT, false, runtime_args! { "third" => 0u32 });

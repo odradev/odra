@@ -19,7 +19,6 @@ use casper_contract::{
     unwrap_or_revert::UnwrapOrRevert
 };
 use core::mem::MaybeUninit;
-use odra_core::{args::EntrypointArgument, casper_event_standard::{self, Schema, Schemas}};
 use odra_core::casper_types::{
     api_error,
     bytesrepr::{Bytes, FromBytes, ToBytes},
@@ -27,6 +26,10 @@ use odra_core::casper_types::{
     system::CallStackElement,
     ApiError, CLTyped, CLValue, ContractPackageHash, ContractVersion, EntryPoints, Key,
     RuntimeArgs, URef, DICTIONARY_ITEM_KEY_MAX_LENGTH, U512
+};
+use odra_core::{
+    args::EntrypointArgument,
+    casper_event_standard::{self, Schema, Schemas}
 };
 use odra_core::{prelude::*, Address, CallDef, ExecutionError};
 
@@ -129,9 +132,15 @@ pub fn get_named_arg(name: &str) -> Result<Vec<u8>, ApiError> {
             )
         };
         if ret != 0 {
-            return Err(ApiError::from(ret as u32))
+            return Err(ApiError::from(ret as u32));
         }
-        unsafe { Ok(Vec::from_raw_parts(data_non_null_ptr.as_ptr(), arg_size, arg_size)) }
+        unsafe {
+            Ok(Vec::from_raw_parts(
+                data_non_null_ptr.as_ptr(),
+                arg_size,
+                arg_size
+            ))
+        }
     } else {
         Ok(Vec::new())
     }

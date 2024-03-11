@@ -122,9 +122,10 @@ impl OdraVm {
     pub fn get_named_arg(&self, name: &str) -> Option<Vec<u8>> {
         match self.state.read().unwrap().callstack_tip() {
             CallstackElement::Account(_) => todo!(),
-            CallstackElement::ContractCall { call_def, .. } => {
-                call_def.args().get(name).map(|arg| arg.inner_bytes().to_vec())
-            }
+            CallstackElement::ContractCall { call_def, .. } => call_def
+                .args()
+                .get(name)
+                .map(|arg| arg.inner_bytes().to_vec())
         }
     }
 
