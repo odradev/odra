@@ -285,7 +285,7 @@ mod test {
 
                     entry_points.add_entry_point(odra::casper_types::EntryPoint::new(
                         "init",
-                        vec![odra::args::into_parameter::<Option<U256> >("total_supply")].into_iter().filter_map(|x| x).collect(),
+                        vec![odra::args::parameter::<Option<U256> >("total_supply")].into_iter().filter_map(|x| x).collect(),
                         <() as odra::casper_types::CLTyped>::cl_type(),
                         odra::casper_types::EntryPointAccess::Groups(vec![odra::casper_types::Group::new("constructor_group")]),
                         odra::casper_types::EntryPointType::Contract
@@ -312,9 +312,9 @@ mod test {
                             odra::casper_types::EntryPoint::new(
                                 "approve",
                                 vec![
-                                    odra::args::into_parameter::<Address>("to"),
-                                    odra::args::into_parameter::<U256>("amount"),
-                                    odra::args::into_parameter::<Maybe<String> >("msg")
+                                    odra::args::parameter::<Address>("to"),
+                                    odra::args::parameter::<U256>("amount"),
+                                    odra::args::parameter::<Maybe<String> >("msg")
                                 ].into_iter().filter_map(|x| x).collect(),
                                 <() as odra::casper_types::CLTyped>::cl_type(),
                                 odra::casper_types::EntryPointAccess::Public,
@@ -326,8 +326,8 @@ mod test {
                             odra::casper_types::EntryPoint::new(
                                 "airdrop",
                                 vec![
-                                    odra::args::into_parameter::<odra::prelude::vec::Vec<Address> >("to"),
-                                    odra::args::into_parameter::<U256>("amount")
+                                    odra::args::parameter::<odra::prelude::vec::Vec<Address> >("to"),
+                                    odra::args::parameter::<U256>("amount")
                                 ].into_iter().filter_map(|x| x).collect(),
                                 <() as odra::casper_types::CLTyped>::cl_type(),
                                 odra::casper_types::EntryPointAccess::Public,
@@ -504,7 +504,7 @@ mod test {
                          .add_entry_point(
                              odra::casper_types::EntryPoint::new(
                                 "set_owner",
-                                vec![odra::args::into_parameter::<Address>("new_owner")].into_iter().filter_map(|x| x).collect(),
+                                vec![odra::args::parameter::<Address>("new_owner")].into_iter().filter_map(|x| x).collect(),
                                 <() as odra::casper_types::CLTyped>::cl_type(),
                                 odra::casper_types::EntryPointAccess::Public,
                                 odra::casper_types::EntryPointType::Contract,

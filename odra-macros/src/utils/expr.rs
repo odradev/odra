@@ -51,7 +51,7 @@ pub fn entry_point_group(name: &str) -> syn::Expr {
 pub fn new_parameter(name: String, ty: syn::Type) -> syn::Expr {
     let ty = super::ty::unreferenced_ty(&ty);
 
-    parse_quote!(odra::args::into_parameter::<#ty>(#name))
+    parse_quote!(odra::args::parameter::<#ty>(#name))
 }
 
 pub fn as_cl_type(ty: &syn::Type) -> syn::Expr {
@@ -180,7 +180,7 @@ fn new_entry_point_arg(arg: &syn::PatType) -> syn::Expr {
 }
 
 pub fn into_arg(ty: syn::Type, ident: String) -> syn::Expr {
-    parse_quote!(odra::args::into_argument::<#ty>(#ident))
+    parse_quote!(odra::args::odra_argument::<#ty>(#ident))
 }
 pub trait IntoExpr {
     fn into_expr(self) -> syn::Expr;

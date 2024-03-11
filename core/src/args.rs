@@ -133,17 +133,17 @@ impl<T: CLTyped + ToBytes> EntrypointArgument for T {
     }
 }
 
-/// Converts a type into Casper's entrypoint argument representation.
+/// Returns a Casper entrypoint argument representation.
 /// If the parameter is not required, it returns `None`.
-pub fn into_parameter<T: EntrypointArgument>(name: &str) -> Option<Parameter> {
+pub fn parameter<T: EntrypointArgument>(name: &str) -> Option<Parameter> {
     match T::is_required() {
         true => Some(Parameter::new(name, T::cl_type())),
         false => None
     }
 }
 
-/// Converts a type into Odra's entrypoint argument representation.
-pub fn into_argument<T: EntrypointArgument>(name: &str) -> Argument {
+/// Returns an Odra's entrypoint argument representation.
+pub fn odra_argument<T: EntrypointArgument>(name: &str) -> Argument {
     Argument {
         ident: name.to_string(),
         ty: T::cl_type(),
@@ -193,9 +193,9 @@ mod tests {
     #[test]
     fn test_into_args() {
         let args = [
-            into_argument::<Maybe<u32>>("arg1"),
-            into_argument::<U256>("arg2"),
-            into_argument::<Option<String>>("arg3")
+            odra_argument::<Maybe<u32>>("arg1"),
+            odra_argument::<U256>("arg2"),
+            odra_argument::<Option<String>>("arg3")
         ];
 
         assert_eq!(args.len(), 3);
@@ -204,10 +204,10 @@ mod tests {
     #[test]
     fn test_into_casper_parameters() {
         let params = [
-            into_parameter::<Maybe<u32>>("arg1"),
-            into_parameter::<Option<u32>>("arg2"),
-            into_parameter::<Maybe<Option<u32>>>("arg3"),
-            into_parameter::<Address>("arg4")
+            parameter::<Maybe<u32>>("arg1"),
+            parameter::<Option<u32>>("arg2"),
+            parameter::<Maybe<Option<u32>>>("arg3"),
+            parameter::<Address>("arg4")
         ]
         .into_iter()
         .flatten()

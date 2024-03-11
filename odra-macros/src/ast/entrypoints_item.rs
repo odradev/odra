@@ -125,7 +125,7 @@ mod test {
                         odra::contract_def::Entrypoint {
                             ident: String::from("init"),
                             args: vec![
-                                odra::args::into_argument::<Option<U256> >("total_supply")
+                                odra::args::odra_argument::<Option<U256> >("total_supply")
                             ],
                             is_mut: true,
                             ret: <() as odra::casper_types::CLTyped>::cl_type(),
@@ -151,9 +151,9 @@ mod test {
                         odra::contract_def::Entrypoint {
                             ident: String::from("approve"),
                             args: vec![
-                                odra::args::into_argument::<Address>("to"),
-                                odra::args::into_argument::<U256>("amount"),
-                                odra::args::into_argument::<Maybe<String> >("msg")
+                                odra::args::odra_argument::<Address>("to"),
+                                odra::args::odra_argument::<U256>("amount"),
+                                odra::args::odra_argument::<Maybe<String> >("msg")
                             ],
                             is_mut: true,
                             ret: <() as odra::casper_types::CLTyped>::cl_type(),
@@ -163,8 +163,8 @@ mod test {
                         odra::contract_def::Entrypoint {
                             ident: String::from("airdrop"),
                             args: vec![
-                                odra::args::into_argument::<odra::prelude::vec::Vec<Address> >("to"),
-                                odra::args::into_argument::<U256>("amount")
+                                odra::args::odra_argument::<odra::prelude::vec::Vec<Address> >("to"),
+                                odra::args::odra_argument::<U256>("amount")
                             ],
                             is_mut: false,
                             ret: <() as odra::casper_types::CLTyped>::cl_type(),
@@ -236,7 +236,7 @@ mod test {
                         odra::contract_def::Entrypoint {
                             ident: String::from("set_owner"),
                             args: vec![
-                                odra::args::into_argument::<Address>("new_owner")
+                                odra::args::odra_argument::<Address>("new_owner")
                             ],
                             is_mut: true,
                             ret: <() as odra::casper_types::CLTyped>::cl_type(),
