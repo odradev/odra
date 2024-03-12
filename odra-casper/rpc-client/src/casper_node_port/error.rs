@@ -1,7 +1,9 @@
 use datasize::DataSize;
-use odra_core::casper_types::{TimeDiff, U512};
+use odra_core::casper_types::U512;
 use serde::Serialize;
 use thiserror::Error;
+use crate::casper_node_port::hashing::Digest;
+use crate::casper_types_port::timestamp::TimeDiff;
 
 /// A representation of the way in which a deploy failed validation checks.
 #[allow(dead_code)]
@@ -128,4 +130,16 @@ pub struct ExcessiveSizeError {
     pub max_deploy_size: u32,
     /// The serialized size of the deploy provided, in bytes.
     pub actual_deploy_size: usize
+}
+
+/// Possible hashing errors.
+#[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
+pub enum HashingError {
+    #[error("Incorrect digest length {0}, expected length {}.", Digest::LENGTH)]
+    /// The digest length was an incorrect size.
+    IncorrectDigestLength(usize),
+    /// There was a decoding error.
+    #[error("Base16 decode error {0}.")]
+    Base16DecodeError(base16::DecodeError)
 }

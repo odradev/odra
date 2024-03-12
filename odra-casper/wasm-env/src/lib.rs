@@ -22,7 +22,7 @@ pub use wasm_contract_env::WasmContractEnv;
 use ink_allocator;
 
 /// Panic handler for the WASM target architecture.
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", not(feature = "disable-allocator")))]
 #[panic_handler]
 #[no_mangle]
 pub fn panic(_info: &core::panic::PanicInfo) -> ! {

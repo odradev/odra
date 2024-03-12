@@ -2,8 +2,6 @@
 
 use std::{cell::OnceCell, cmp, collections::BTreeSet, fmt, hash};
 
-use casper_execution_engine::core::engine_state::{DeployItem, ExecutableDeployItem};
-use casper_hashing::Digest;
 use datasize::DataSize;
 use itertools::Itertools;
 use odra_core::casper_types::{
@@ -13,6 +11,9 @@ use odra_core::casper_types::{
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use crate::casper_node_port::deploy_item::DeployItem;
+use crate::casper_node_port::executable_deploy_item::ExecutableDeployItem;
+use crate::casper_node_port::hashing::Digest;
 
 use crate::casper_node_port::utils::DisplayIter;
 

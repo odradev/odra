@@ -4,11 +4,11 @@ use datasize::DataSize;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use casper_hashing::Digest;
 use odra_core::casper_types::{
     bytesrepr::{self, FromBytes, ToBytes},
     PublicKey, TimeDiff, Timestamp
 };
+use crate::casper_node_port::hashing::Digest;
 
 use super::deploy_hash::DeployHash;
 use super::utils::DisplayIter;

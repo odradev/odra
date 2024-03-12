@@ -1,3 +1,4 @@
+workspace = { members = ["client"] }
 [package]
 name = "odra-examples"
 version = "0.8.1"
@@ -19,6 +20,7 @@ odra-build = { path = "../odra-build" }
 [features]
 default = []
 livenet = ["odra-casper-livenet-env"]
+disable-allocator = ["odra/disable-allocator"]
 
 [[bin]]
 name = "odra_examples_build_contract"

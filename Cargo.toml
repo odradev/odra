@@ -29,7 +29,7 @@ odra-casper-rpc-client = { path = "odra-casper/rpc-client", version = "0.8.1" }
 odra-vm = { path = "odra-vm", version = "0.8.1" }
 odra-casper-wasm-env = { path = "odra-casper/wasm-env", version = "0.8.1"}
 casper-contract = { version = "3.0.0", default-features = false }
-casper-types = { version = "3.0.0", default-features = false }
+casper-types = { version = "3.0.0", default-features = false, features = ["json-schema", "datasize"] }
 casper-execution-engine = "5.0.0"
 casper-event-standard = "0.4.1"
 blake2 = "0.10.6"

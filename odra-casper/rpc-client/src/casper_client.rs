@@ -1,8 +1,6 @@
 //! Client for interacting with Casper node.
 use std::{fs, path::PathBuf, str::from_utf8_unchecked, time::Duration};
 
-use casper_execution_engine::core::engine_state::ExecutableDeployItem;
-use casper_hashing::Digest;
 use itertools::Itertools;
 use jsonrpc_lite::JsonRpc;
 use serde::de::DeserializeOwned;
@@ -32,6 +30,8 @@ use crate::casper_node_port::{
     Deploy, DeployHash
 };
 use crate::{casper_node_port, log};
+use crate::casper_node_port::executable_deploy_item::ExecutableDeployItem;
+use crate::casper_node_port::hashing::Digest;
 
 /// Environment variable holding a path to a secret key of a main account.
 pub const ENV_SECRET_KEY: &str = "ODRA_CASPER_LIVENET_SECRET_KEY_PATH";
@@ -386,8 +386,14 @@ impl CasperClient {
         log::info(format!("Deploying \"{}\".", contract_name));
         let wasm_path = find_wasm_file_path(contract_name);
         let wasm_bytes = fs::read(wasm_path).unwrap();
+        self.deploy_wasm_bytes(contract_name, wasm_bytes.into(), args)
+    }
+   
+    /// Deploy the contract by passing bytes.
+    pub fn deploy_wasm_bytes(&self, contract_name: &str, wasm_bytes: Bytes, args: RuntimeArgs) -> Address {
+        log::info(format!("Deploying \"{}\".", contract_name));
         let session = ExecutableDeployItem::ModuleBytes {
-            module_bytes: Bytes::from(wasm_bytes),
+            module_bytes: wasm_bytes,
             args
         };
         let deploy = self.new_deploy(session, self.gas);
@@ -659,7 +665,7 @@ impl CasperClient {
     }
 
     fn post_request<T: DeserializeOwned>(&self, request: Value) -> T {
-        let client = reqwest::blocking::Client::new();
+        let client = reqwest_wasm::Client::new();
         let response = client
             .post(self.node_address_rpc())
             .json(&request)
