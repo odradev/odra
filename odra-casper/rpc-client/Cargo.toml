@@ -20,7 +20,6 @@ datasize = "0.2.14"
 schemars = "0.8.5"
 itertools = "0.10.5"
 blake2 = { version = "0.9.0", default-features = false }
-dotenv = "0.15.0"
 prettycli = "0.1.1"
 thiserror = "1.0.40"
 bytes = "1.5.0"
@@ -29,3 +28,8 @@ hex-buffer-serde = "0.4.0"
 base16 = "0.2.1"
 serde_with = "3.7.0"
 chrono = { version = "0.4.35", features = ["serde"] }
+
+[features]
+default = ["livenet"]
+no-std = []
+livenet = []

@@ -1,13 +1,13 @@
 #![allow(clippy::field_reassign_with_default)]
 
-use std::{cell::OnceCell, cmp, collections::BTreeSet, fmt, hash};
+use std::{cell::OnceCell, cmp, collections::BTreeSet, hash};
 
 use datasize::DataSize;
 use itertools::Itertools;
 use odra_core::casper_types::{
     self,
     bytesrepr::{self, FromBytes, ToBytes},
-    PublicKey, SecretKey, TimeDiff, Timestamp
+    PublicKey, SecretKey,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -15,7 +15,7 @@ use crate::casper_node_port::deploy_item::DeployItem;
 use crate::casper_node_port::executable_deploy_item::ExecutableDeployItem;
 use crate::casper_node_port::hashing::Digest;
 
-use crate::casper_node_port::utils::DisplayIter;
+use crate::casper_types_port::timestamp::{TimeDiff, Timestamp};
 
 use super::{
     approval::Approval, deploy_hash::DeployHash, deploy_header::DeployHeader,
@@ -225,19 +225,6 @@ impl FromBytes for Deploy {
     }
 }
 
-impl fmt::Display for Deploy {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            formatter,
-            "deploy[{}, {}, payment_code: {}, session_code: {}, approvals: {}]",
-            self.hash,
-            self.header,
-            self.payment,
-            self.session,
-            DisplayIter::new(self.approvals.iter())
-        )
-    }
-}
 
 impl From<Deploy> for DeployItem {
     fn from(deploy: Deploy) -> Self {

@@ -11,7 +11,7 @@ use odra_core::{
     casper_types::{
         bytesrepr::{Bytes, FromBytes, ToBytes},
         runtime_args, CLTyped, ContractHash, ContractPackageHash, ExecutionResult,
-        Key as CasperKey, PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, U512
+        Key as CasperKey, PublicKey, RuntimeArgs, SecretKey, U512
     },
     consts::*,
     Address, CallDef, ExecutionError, OdraError, OdraResult
@@ -32,83 +32,34 @@ use crate::casper_node_port::{
 use crate::{casper_node_port, log};
 use crate::casper_node_port::executable_deploy_item::ExecutableDeployItem;
 use crate::casper_node_port::hashing::Digest;
+use crate::casper_types_port::timestamp::{TimeDiff, Timestamp};
 
-/// Environment variable holding a path to a secret key of a main account.
-pub const ENV_SECRET_KEY: &str = "ODRA_CASPER_LIVENET_SECRET_KEY_PATH";
-/// Environment variable holding an address of the casper node exposing RPC API.
-pub const ENV_NODE_ADDRESS: &str = "ODRA_CASPER_LIVENET_NODE_ADDRESS";
-/// Environment variable holding a name of the chain.
-pub const ENV_CHAIN_NAME: &str = "ODRA_CASPER_LIVENET_CHAIN_NAME";
-/// Environment variable holding a filename prefix for additional accounts.
-pub const ENV_ACCOUNT_PREFIX: &str = "ODRA_CASPER_LIVENET_KEY_";
 
-fn get_env_variable(name: &str) -> String {
-    std::env::var(name).unwrap_or_else(|err| {
-        log::error(format!(
-            "{} must be set. Have you setup your .env file?",
-            name
-        ));
-        panic!("{}", err)
-    })
+
+/// Configuration for CasperClient.
+pub struct CasperClientConfiguration {
+    pub node_address: String,
+    pub chain_name: String,
+    pub secret_keys: Vec<SecretKey>
 }
 
 /// Client for interacting with Casper node.
 pub struct CasperClient {
-    node_address: String,
-    chain_name: String,
     active_account: usize,
-    secret_keys: Vec<SecretKey>,
-    gas: U512
+    gas: U512,
+    config: CasperClientConfiguration
 }
 
 impl CasperClient {
     /// Creates new CasperClient.
-    pub fn new() -> Self {
-        // Check for additional .env file
-        let additional_env_file = std::env::var("ODRA_CASPER_LIVENET_ENV");
-
-        if let Ok(additional_env_file) = additional_env_file {
-            let filename = PathBuf::from(additional_env_file).with_extension("env");
-            dotenv::from_filename(filename).ok();
-        }
-
-        // Load .env
-        dotenv::dotenv().ok();
-
-        let secret_keys = Self::load_secret_keys();
-
+    pub fn new(config: CasperClientConfiguration) -> Self {
         CasperClient {
-            node_address: get_env_variable(ENV_NODE_ADDRESS),
-            chain_name: get_env_variable(ENV_CHAIN_NAME),
             active_account: 0,
-            secret_keys,
-            gas: U512::zero()
+            gas: U512::zero(),
+            config
         }
     }
 
-    /// Loads secret keys from ENV_SECRET_KEY file and ENV_ACCOUNT_PREFIX files.
-    /// e.g. ENV_SECRET_KEY=secret_key.pem, ENV_ACCOUNT_PREFIX=account_1_key.pem
-    /// This will load secret_key.pem as an account 0 and account_1_key.pem as account 1.
-    fn load_secret_keys() -> Vec<SecretKey> {
-        let mut secret_keys = vec![];
-        secret_keys.push(
-            SecretKey::from_file(get_env_variable(ENV_SECRET_KEY)).unwrap_or_else(|_| {
-                panic!(
-                    "Couldn't load secret key from file {:?}",
-                    get_env_variable(ENV_SECRET_KEY)
-                )
-            })
-        );
-
-        let mut i = 1;
-        while let Ok(key_filename) = std::env::var(format!("{}{}", ENV_ACCOUNT_PREFIX, i)) {
-            secret_keys.push(SecretKey::from_file(&key_filename).unwrap_or_else(|_| {
-                panic!("Couldn't load secret key from file {:?}", key_filename)
-            }));
-            i += 1;
-        }
-        secret_keys
-    }
 
     /// Gets a value from the storage
     pub fn get_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
@@ -122,17 +73,17 @@ impl CasperClient {
 
     /// Node address.
     pub fn node_address_rpc(&self) -> String {
-        format!("{}/rpc", self.node_address)
+        format!("{}/rpc", self.config.node_address)
     }
 
     /// Chain name.
     pub fn chain_name(&self) -> &str {
-        &self.chain_name
+        &self.config.chain_name
     }
 
     /// Public key of the client account.
     pub fn public_key(&self) -> PublicKey {
-        PublicKey::from(&self.secret_keys[self.active_account])
+        PublicKey::from(&self.config.secret_keys[self.active_account])
     }
 
     /// Public key of the account address.
@@ -142,7 +93,7 @@ impl CasperClient {
 
     /// Secret key of the client account.
     pub fn secret_key(&self) -> &SecretKey {
-        &self.secret_keys[self.active_account]
+        &self.config.secret_keys[self.active_account]
     }
 
     /// Signs the message using keys associated with an address.
@@ -163,15 +114,16 @@ impl CasperClient {
 
     /// Address of the account loaded to the client.
     pub fn get_account(&self, index: usize) -> Address {
-        if index >= self.secret_keys.len() {
+        if index >= self.config.secret_keys.len() {
             panic!("Key for account with index {} is not loaded", index);
         }
-        Address::from(PublicKey::from(&self.secret_keys[index]))
+        Address::from(PublicKey::from(&self.config.secret_keys[index]))
     }
 
     /// Sets the caller account.
     pub fn set_caller(&mut self, address: Address) {
         match self
+            .config
             .secret_keys
             .iter()
             .find_position(|key| Address::from(PublicKey::from(*key)) == address)
@@ -382,21 +334,21 @@ impl CasperClient {
     }
 
     /// Deploy the contract.
-    pub fn deploy_wasm(&self, contract_name: &str, args: RuntimeArgs) -> Address {
+    pub fn deploy_wasm(&self, contract_name: &str, args: RuntimeArgs, timestamp: u64) -> Address {
         log::info(format!("Deploying \"{}\".", contract_name));
         let wasm_path = find_wasm_file_path(contract_name);
         let wasm_bytes = fs::read(wasm_path).unwrap();
-        self.deploy_wasm_bytes(contract_name, wasm_bytes.into(), args)
+        self.deploy_wasm_bytes(contract_name, wasm_bytes.into(), args, timestamp)
     }
    
     /// Deploy the contract by passing bytes.
-    pub fn deploy_wasm_bytes(&self, contract_name: &str, wasm_bytes: Bytes, args: RuntimeArgs) -> Address {
+    pub fn deploy_wasm_bytes(&self, contract_name: &str, wasm_bytes: Bytes, args: RuntimeArgs, timestamp: u64) -> Address {
         log::info(format!("Deploying \"{}\".", contract_name));
         let session = ExecutableDeployItem::ModuleBytes {
             module_bytes: wasm_bytes,
             args
         };
-        let deploy = self.new_deploy(session, self.gas);
+        let deploy = self.new_deploy(session, self.gas, timestamp);
         let request = json!(
             {
                 "jsonrpc": "2.0",
@@ -423,7 +375,8 @@ impl CasperClient {
     pub fn deploy_entrypoint_call_with_proxy(
         &self,
         addr: Address,
-        call_def: CallDef
+        call_def: CallDef,
+        timestamp: u64
     ) -> Result<Bytes, OdraError> {
         log::info(format!(
             "Calling {:?} with entrypoint \"{}\" through proxy.",
@@ -446,7 +399,7 @@ impl CasperClient {
             args
         };
 
-        let deploy = self.new_deploy(session, self.gas);
+        let deploy = self.new_deploy(session, self.gas, timestamp);
         let request = json!(
             {
                 "jsonrpc": "2.0",
@@ -477,7 +430,7 @@ impl CasperClient {
     }
 
     /// Deploy the entrypoint call.
-    pub fn deploy_entrypoint_call(&self, addr: Address, call_def: CallDef) {
+    pub fn deploy_entrypoint_call(&self, addr: Address, call_def: CallDef, timestamp: u64) {
         log::info(format!(
             "Calling {:?} with entrypoint \"{}\".",
             addr.to_string(),
@@ -489,7 +442,7 @@ impl CasperClient {
             entry_point: call_def.entry_point().to_string(),
             args: call_def.args().clone()
         };
-        let deploy = self.new_deploy(session, self.gas);
+        let deploy = self.new_deploy(session, self.gas, timestamp);
         let request = json!(
             {
                 "jsonrpc": "2.0",
@@ -638,12 +591,12 @@ impl CasperClient {
         }
     }
 
-    fn new_deploy(&self, session: ExecutableDeployItem, gas: U512) -> Deploy {
-        let timestamp = Timestamp::now();
+    fn new_deploy(&self, session: ExecutableDeployItem, gas: U512, timestamp: u64) -> Deploy {
         let ttl = TimeDiff::from_seconds(1000);
         let gas_price = 1;
         let dependencies = vec![];
         let chain_name = String::from(self.chain_name());
+        let timestamp = Timestamp::from(timestamp);
         let payment = ExecutableDeployItem::ModuleBytes {
             module_bytes: Default::default(),
             args: runtime_args! {
@@ -665,7 +618,7 @@ impl CasperClient {
     }
 
     fn post_request<T: DeserializeOwned>(&self, request: Value) -> T {
-        let client = reqwest_wasm::Client::new();
+        let client = reqwest_wasm::blocking::Client::new();
         let response = client
             .post(self.node_address_rpc())
             .json(&request)
@@ -680,6 +633,7 @@ impl CasperClient {
 
     fn address_secret_key(&self, address: &Address) -> &SecretKey {
         match self
+            .config
             .secret_keys
             .iter()
             .find(|key| Address::from(PublicKey::from(*key)) == *address)
@@ -687,12 +641,6 @@ impl CasperClient {
             Some(secret_key) => secret_key,
             None => panic!("Key for address {:?} is not loaded", address)
         }
-    }
-}
-
-impl Default for CasperClient {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

@@ -32,7 +32,7 @@ pub enum DeployConfigurationFailure {
     ExcessiveSize(#[from] ExcessiveSizeError),
 
     /// Excessive time-to-live.
-    #[error("time-to-live of {got} exceeds limit of {max_ttl}")]
+    #[error("time-to-live exceeds limit of max_ttl")]
     ExcessiveTimeToLive {
         /// The time-to-live limit.
         max_ttl: TimeDiff,

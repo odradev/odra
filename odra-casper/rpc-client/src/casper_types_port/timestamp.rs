@@ -12,6 +12,7 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use datasize::DataSize;
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_with::serde_as;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, DataSize, JsonSchema)]
 pub struct Timestamp(u64);
