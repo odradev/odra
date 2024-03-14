@@ -82,6 +82,11 @@ impl CasperVm {
         self.block_time += time_diff
     }
 
+    /// Gets the block time.
+    pub fn block_time(&self) -> u64 {
+        self.block_time
+    }
+
     /// Gets the event at the specified index for the given contract address.
     ///
     /// The index may be negative, in which case it is interpreted as an offset from the end of the event list.

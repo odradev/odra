@@ -10,6 +10,7 @@ use odra_core::{Address, OdraError};
 use odra_core::{CallDef, ContractContext, ContractRegister};
 use std::io::Write;
 use std::sync::RwLock;
+use tokio::runtime::Runtime;
 
 /// Livenet contract environment struct.
 pub struct LivenetContractEnv {
@@ -20,9 +21,11 @@ pub struct LivenetContractEnv {
 
 impl ContractContext for LivenetContractEnv {
     fn get_value(&self, key: &[u8]) -> Option<Bytes> {
-        self.casper_client
-            .borrow()
-            .get_value(self.callstack.borrow().current().address(), key)
+        // get value from async code
+        let rt = Runtime::new().unwrap();
+        let client = self.casper_client.borrow();
+        let callstack = self.callstack.borrow();
+        rt.block_on(async { client.get_value(callstack.current().address(), key).await })
     }
 
     fn set_value(&self, _key: &[u8], _value: Bytes) {
@@ -58,7 +61,9 @@ impl ContractContext for LivenetContractEnv {
     }
 
     fn get_block_time(&self) -> u64 {
-        self.casper_client.borrow().get_block_time()
+        let rt = Runtime::new().unwrap();
+        let client = self.casper_client.borrow();
+        rt.block_on(async { client.get_block_time().await })
     }
 
     fn attached_value(&self) -> U512 {
@@ -66,9 +71,10 @@ impl ContractContext for LivenetContractEnv {
     }
 
     fn self_balance(&self) -> U512 {
-        self.casper_client
-            .borrow()
-            .get_balance(self.callstack.borrow().current().address())
+        let rt = Runtime::new().unwrap();
+        let client = self.casper_client.borrow();
+        let callstack = self.callstack.borrow();
+        rt.block_on(async { client.get_balance(callstack.current().address()).await })
     }
 
     fn emit_event(&self, _event: &Bytes) {

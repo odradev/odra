@@ -2,18 +2,18 @@
 
 use std::{cell::OnceCell, cmp, collections::BTreeSet, hash};
 
+use crate::casper_node_port::deploy_item::DeployItem;
+use crate::casper_node_port::executable_deploy_item::ExecutableDeployItem;
+use crate::casper_node_port::hashing::Digest;
 use datasize::DataSize;
 use itertools::Itertools;
 use odra_core::casper_types::{
     self,
     bytesrepr::{self, FromBytes, ToBytes},
-    PublicKey, SecretKey,
+    PublicKey, SecretKey
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use crate::casper_node_port::deploy_item::DeployItem;
-use crate::casper_node_port::executable_deploy_item::ExecutableDeployItem;
-use crate::casper_node_port::hashing::Digest;
 
 use crate::casper_types_port::timestamp::{TimeDiff, Timestamp};
 
@@ -224,7 +224,6 @@ impl FromBytes for Deploy {
         Ok((maybe_valid_deploy, remainder))
     }
 }
-
 
 impl From<Deploy> for DeployItem {
     fn from(deploy: Deploy) -> Self {

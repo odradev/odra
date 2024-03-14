@@ -135,6 +135,9 @@ pub trait HostContext {
     /// Advances the block time by the specified time difference.
     fn advance_block_time(&self, time_diff: u64);
 
+    /// Returns the current block time.
+    fn block_time(&self) -> u64;
+
     /// Returns the event bytes for the specified contract address and index.
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError>;
 
@@ -209,6 +212,12 @@ impl HostEnv {
     pub fn set_caller(&self, address: Address) {
         let backend = self.backend.borrow();
         backend.set_caller(address)
+    }
+
+    /// Returns the current block time.
+    pub fn block_time(&self) -> u64 {
+        let backend = self.backend.borrow();
+        backend.block_time()
     }
 
     /// Advances the block time by the specified time difference.

@@ -23,5 +23,5 @@ casper-contract = { version = "3.0.0", default-features = false, features = ["te
 missing_docs = "warn"
 
 [features]
-default = []
+default = ["disable-allocator"]
 disable-allocator = []

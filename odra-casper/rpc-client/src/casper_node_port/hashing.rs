@@ -12,13 +12,13 @@ use datasize::DataSize;
 use schemars::JsonSchema;
 use serde::{de::Error as SerdeError, Deserialize, Deserializer, Serialize, Serializer};
 
+use crate::casper_node_port::error::HashingError;
+use hex_fmt::HexFmt;
 use odra_core::casper_types::bytesrepr::FromBytes;
 use odra_core::casper_types::{
     bytesrepr::{self, ToBytes},
     checksummed_hex, CLType, CLTyped
 };
-use hex_fmt::HexFmt;
-use crate::casper_node_port::error::HashingError;
 
 /// The output of the hash function.
 #[derive(Copy, Clone, DataSize, Ord, PartialOrd, Eq, PartialEq, Hash, Default, JsonSchema)]

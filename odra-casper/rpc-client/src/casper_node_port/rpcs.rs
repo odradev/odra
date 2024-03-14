@@ -1,11 +1,9 @@
 use crate::casper_node_port::contract::Contract;
-use odra_core::casper_types::{
-    CLValue, EraId, ExecutionResult, ProtocolVersion, PublicKey, U512
-};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use crate::casper_node_port::hashing::Digest;
 use crate::casper_types_port::timestamp::Timestamp;
+use odra_core::casper_types::{CLValue, EraId, ExecutionResult, ProtocolVersion, PublicKey, U512};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 use super::{
     account::Account,

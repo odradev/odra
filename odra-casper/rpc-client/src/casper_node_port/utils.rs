@@ -4,12 +4,6 @@ use std::{cell::RefCell, fmt};
 #[derive(Debug)]
 pub(crate) struct DisplayIter<T>(RefCell<Option<T>>);
 
-impl<T> DisplayIter<T> {
-    pub(crate) fn new(item: T) -> Self {
-        DisplayIter(RefCell::new(Some(item)))
-    }
-}
-
 impl<I, T> fmt::Display for DisplayIter<I>
 where
     I: IntoIterator<Item = T>,

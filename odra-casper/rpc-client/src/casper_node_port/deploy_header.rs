@@ -2,12 +2,12 @@ use datasize::DataSize;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use odra_core::casper_types::{
-    bytesrepr::{self, FromBytes, ToBytes},
-    PublicKey,
-};
 use crate::casper_node_port::hashing::Digest;
 use crate::casper_types_port::timestamp::{TimeDiff, Timestamp};
+use odra_core::casper_types::{
+    bytesrepr::{self, FromBytes, ToBytes},
+    PublicKey
+};
 
 use super::deploy_hash::DeployHash;
 

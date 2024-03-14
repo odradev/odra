@@ -214,6 +214,11 @@ impl OdraVm {
             .advance_block_time_by(milliseconds)
     }
 
+    /// Returns the block time.
+    pub fn block_time(&self) -> u64 {
+        self.state.read().unwrap().block_time()
+    }
+
     /// Gets the value attached to the current call.
     pub fn attached_value(&self) -> U512 {
         self.state.read().unwrap().attached_value()

@@ -3,21 +3,19 @@ use std::path::PathBuf;
 use std::sync::RwLock;
 use std::thread::sleep;
 
+use casper_types::{
+    bytesrepr::{Bytes, ToBytes},
+    PublicKey, RuntimeArgs, U512
+};
 use odra_casper_rpc_client::casper_client::{CasperClient, CasperClientConfiguration};
 use odra_casper_rpc_client::log::info;
 use odra_core::callstack::{Callstack, CallstackElement};
+use odra_core::casper_types::{SecretKey, Timestamp};
 use odra_core::entry_point_callback::EntryPointsCaller;
-use casper_types::{
-bytesrepr::{Bytes, ToBytes},
-PublicKey, RuntimeArgs, U512
-};
-use odra_core::{
-    host::HostContext,
-    Address, CallDef, ContractEnv, GasReport, OdraError
-};
+use odra_core::{host::HostContext, Address, CallDef, ContractEnv, GasReport, OdraError};
 use odra_core::{prelude::*, EventError};
 use odra_core::{ContractContainer, ContractRegister};
-use odra_core::casper_types::{SecretKey, Timestamp};
+use tokio::runtime::Runtime;
 
 use crate::livenet_contract_env::LivenetContractEnv;
 
@@ -48,53 +46,57 @@ pub struct LivenetHost {
     callstack: Rc<RefCell<Callstack>>
 }
 
-        pub fn casper_client_configuration() -> CasperClientConfiguration {
-            // Check for additional .env file
-            let additional_env_file = std::env::var("ODRA_CASPER_LIVENET_ENV");
+/// Creates a new instance of CasperClientConfiguration
+/// by loading configuration from environment variables.
+pub fn casper_client_configuration() -> CasperClientConfiguration {
+    // Check for additional .env file
+    let additional_env_file = std::env::var("ODRA_CASPER_LIVENET_ENV");
 
-            if let Ok(additional_env_file) = additional_env_file {
-                let filename = PathBuf::from(additional_env_file).with_extension("env");
-                dotenv::from_filename(filename).ok();
-            }
+    if let Ok(additional_env_file) = additional_env_file {
+        let filename = PathBuf::from(additional_env_file).with_extension("env");
+        dotenv::from_filename(filename).ok();
+    }
 
-            // Load .env
-            dotenv::dotenv().ok();
+    // Load .env
+    dotenv::dotenv().ok();
 
-            let secret_keys = load_secret_keys();
+    let secret_keys = load_secret_keys();
 
-            let node_address = get_env_variable(ENV_NODE_ADDRESS);
-            let chain_name = get_env_variable(ENV_CHAIN_NAME);
+    let node_address = get_env_variable(ENV_NODE_ADDRESS);
+    let chain_name = get_env_variable(ENV_CHAIN_NAME);
 
-            CasperClientConfiguration {
-                node_address,
-                chain_name,
-                secret_keys
-            }
-        }
+    CasperClientConfiguration {
+        node_address,
+        chain_name,
+        secret_keys
+    }
+}
 
-        /// Loads secret keys from ENV_SECRET_KEY file and ENV_ACCOUNT_PREFIX files.
-        /// e.g. ENV_SECRET_KEY=secret_key.pem, ENV_ACCOUNT_PREFIX=account_1_key.pem
-        /// This will load secret_key.pem as an account 0 and account_1_key.pem as account 1.
-        fn load_secret_keys() -> Vec<SecretKey> {
-            let mut secret_keys = vec![];
-            secret_keys.push(
-                SecretKey::from_file(get_env_variable(ENV_SECRET_KEY)).unwrap_or_else(|_| {
-                    panic!(
-                        "Couldn't load secret key from file {:?}",
-                        get_env_variable(ENV_SECRET_KEY)
-                    )
-                })
-            );
+/// Loads secret keys from ENV_SECRET_KEY file and ENV_ACCOUNT_PREFIX files.
+/// e.g. ENV_SECRET_KEY=secret_key.pem, ENV_ACCOUNT_PREFIX=account_1_key.pem
+/// This will load secret_key.pem as an account 0 and account_1_key.pem as account 1.
+pub fn load_secret_keys() -> Vec<SecretKey> {
+    let mut secret_keys = vec![];
+    secret_keys.push(
+        SecretKey::from_file(get_env_variable(ENV_SECRET_KEY)).unwrap_or_else(|_| {
+            panic!(
+                "Couldn't load secret key from file {:?}",
+                get_env_variable(ENV_SECRET_KEY)
+            )
+        })
+    );
 
-            let mut i = 1;
-            while let Ok(key_filename) = std::env::var(format!("{}{}", ENV_ACCOUNT_PREFIX, i)) {
-                secret_keys.push(SecretKey::from_file(&key_filename).unwrap_or_else(|_| {
-                    panic!("Couldn't load secret key from file {:?}", key_filename)
-                }));
-                i += 1;
-            }
-            secret_keys
-        }
+    let mut i = 1;
+    while let Ok(key_filename) = std::env::var(format!("{}{}", ENV_ACCOUNT_PREFIX, i)) {
+        secret_keys.push(
+            SecretKey::from_file(&key_filename).unwrap_or_else(|_| {
+                panic!("Couldn't load secret key from file {:?}", key_filename)
+            })
+        );
+        i += 1;
+    }
+    secret_keys
+}
 
 impl LivenetHost {
     /// Creates a new instance of LivenetHost.
@@ -104,7 +106,28 @@ impl LivenetHost {
 
     fn new_instance() -> Self {
         let client_config = casper_client_configuration();
-        let casper_client: Rc<RefCell<CasperClient>> = Rc::new(RefCell::new(CasperClient::new(client_config)));
+        let casper_client: Rc<RefCell<CasperClient>> =
+            Rc::new(RefCell::new(CasperClient::new(client_config)));
+        let callstack: Rc<RefCell<Callstack>> = Default::default();
+        let contract_register = Rc::new(RwLock::new(Default::default()));
+        let livenet_contract_env = LivenetContractEnv::new(
+            casper_client.clone(),
+            callstack.clone(),
+            contract_register.clone()
+        );
+        let contract_env = Rc::new(ContractEnv::new(0, livenet_contract_env));
+        Self {
+            casper_client,
+            contract_register,
+            contract_env,
+            callstack
+        }
+    }
+
+    /// Creates a new instance of LivenetHost with a given configuration.
+    pub fn new_instance_with_config(config: CasperClientConfiguration) -> Self {
+        let casper_client: Rc<RefCell<CasperClient>> =
+            Rc::new(RefCell::new(CasperClient::new(config)));
         let callstack: Rc<RefCell<Callstack>> = Default::default();
         let contract_register = Rc::new(RwLock::new(Default::default()));
         let livenet_contract_env = LivenetContractEnv::new(
@@ -140,7 +163,15 @@ impl HostContext for LivenetHost {
     }
 
     fn balance_of(&self, address: &Address) -> U512 {
-        self.casper_client.borrow().get_balance(address)
+        let rt = Runtime::new().unwrap();
+        let client = self.casper_client.borrow();
+        rt.block_on(async { client.get_balance(address).await })
+    }
+
+    fn block_time(&self) -> u64 {
+        let rt = Runtime::new().unwrap();
+        let client = self.casper_client.borrow();
+        rt.block_on(async { client.get_block_time().await })
     }
 
     fn advance_block_time(&self, time_diff: u64) {
@@ -152,14 +183,16 @@ impl HostContext for LivenetHost {
     }
 
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
-        self.casper_client
-            .borrow()
-            .get_event(contract_address, index)
+        let rt = Runtime::new().unwrap();
+        let cleint = self.casper_client.borrow();
+        rt.block_on(async { cleint.get_event(contract_address, index).await })
             .map_err(|_| EventError::CouldntExtractEventData)
     }
 
     fn get_events_count(&self, contract_address: &Address) -> u32 {
-        self.casper_client.borrow().events_count(contract_address)
+        let rt = Runtime::new().unwrap();
+        let client = self.casper_client.borrow();
+        rt.block_on(async { client.events_count(contract_address).await })
     }
 
     fn call_contract(
@@ -184,15 +217,21 @@ impl HostContext for LivenetHost {
             return result;
         }
         let timestamp = Timestamp::now().millis();
+        let rt = Runtime::new().unwrap();
+        let client = self.casper_client.borrow_mut();
         match use_proxy {
-            true => self
-                .casper_client
-                .borrow_mut()
-                .deploy_entrypoint_call_with_proxy(*address, call_def, timestamp),
+            true => rt.block_on(async {
+                client
+                    .deploy_entrypoint_call_with_proxy(*address, call_def, timestamp)
+                    .await
+            }),
             false => {
-                self.casper_client
-                    .borrow_mut()
-                    .deploy_entrypoint_call(*address, call_def, timestamp);
+                let rt = Runtime::new().unwrap();
+                rt.block_on(async {
+                    client
+                        .deploy_entrypoint_call(*address, call_def, timestamp)
+                        .await
+                });
                 Ok(
                     ().to_bytes()
                         .expect("Couldn't serialize (). This shouldn't happen.")
@@ -216,7 +255,13 @@ impl HostContext for LivenetHost {
         entry_points_caller: EntryPointsCaller
     ) -> Address {
         let timestamp = Timestamp::now();
-        let address = self.casper_client.borrow_mut().deploy_wasm(name, init_args, timestamp.millis());
+        let client = self.casper_client.borrow_mut();
+        let rt = Runtime::new().unwrap();
+        let address = rt.block_on(async {
+            client
+                .deploy_wasm(name, init_args, timestamp.millis())
+                .await
+        });
         self.register_contract(address, entry_points_caller);
         address
     }

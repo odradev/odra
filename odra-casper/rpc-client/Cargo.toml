@@ -12,7 +12,7 @@ repository = { workspace = true }
 odra-core = { workspace = true }
 jsonrpc-lite = "0.6.0"
 serde_json = { version = "1.0", features = ["raw_value"] }
-serde = "1.0"
+serde = { version = "1.0", features = ["derive"], default-features = false }
 log = "0.4.20"
 hex = "0.4.3"
 reqwest-wasm = { version = "0.11.16", features = ["blocking", "json"] }
@@ -28,8 +28,14 @@ hex-buffer-serde = "0.4.0"
 base16 = "0.2.1"
 serde_with = "3.7.0"
 chrono = { version = "0.4.35", features = ["serde"] }
+humantime = "2.1.0"
+tokio = { version = "1.36.0", features = ["rt"] }
+
+[dev-dependencies]
+odra-casper-livenet-env = { path = "../livenet-env" }
 
 [features]
 default = ["livenet"]
 no-std = []
 livenet = []
+
