@@ -5,7 +5,7 @@ use odra_modules::access::Ownable;
 use odra_modules::erc20::Erc20;
 
 /// OwnedToken contract.
-#[odra::module]
+#[odra::module(name = "MyTokenContact", version = "1.0.0")]
 pub struct OwnedToken {
     ownable: SubModule<Ownable>,
     erc20: SubModule<Erc20>

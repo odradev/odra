@@ -2,6 +2,7 @@ use crate::ast::blueprint::BlueprintItem;
 use crate::ast::contract_ref_item::RefItem;
 use crate::ast::entrypoints_item::HasEntrypointsImplItem;
 use crate::ast::exec_parts::ExecPartsItem;
+use crate::ast::schema::{SchemaCustomTypesItem, SchemaEntrypointsItem};
 use crate::ast::test_parts::{TestPartsItem, TestPartsReexportItem};
 use crate::ast::wasm_parts::WasmPartsModuleItem;
 use crate::ir::ModuleImplIR;
@@ -19,5 +20,7 @@ pub struct ModuleImplItem {
     test_parts_reexport: TestPartsReexportItem,
     exec_parts: ExecPartsItem,
     wasm_parts: WasmPartsModuleItem,
-    blueprint: BlueprintItem
+    blueprint: BlueprintItem,
+    schema_entrypoints: SchemaEntrypointsItem,
+    schema_custom_types: SchemaCustomTypesItem
 }

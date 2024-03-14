@@ -108,7 +108,11 @@ pub mod mock {
                 counters_map: Mapping<u8, Counter>
             }
         );
-        let attr = quote!(events = [OnTransfer, OnApprove]);
+        let attr = quote!(
+            name = "MyCounterPack",
+            version = "0.1.0",
+            events = [OnTransfer, OnApprove]
+        );
         ModuleStructIR::try_from((&attr, &module)).unwrap()
     }
 
@@ -133,7 +137,7 @@ pub mod mock {
     pub fn custom_enum() -> TypeIR {
         let ty = quote!(
             enum MyType {
-                A,
+                A = 10,
                 B
             }
         );

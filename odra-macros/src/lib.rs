@@ -50,7 +50,12 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn derive_odra_type(item: TokenStream) -> TokenStream {
     let item = item.into();
     if let Ok(ir) = TypeIR::try_from(&item) {
-        return OdraTypeItem::try_from(&ir).into_code();
+        let schema = SchemaCustomTypeItem::try_from(&ir).into_code();
+        let odra_type = OdraTypeItem::try_from(&ir).into_code();
+        let mut tokens = TokenStream::new();
+        tokens.extend(schema);
+        tokens.extend(odra_type);
+        return tokens;
     }
     span_error!(item, "Struct or Enum expected")
 }
@@ -82,6 +87,19 @@ pub fn external_contract(attr: TokenStream, item: TokenStream) -> TokenStream {
         "#[external_contract] can be only applied to trait only"
     )
 }
+
+// #[proc_macro_derive(SchemaElement)]
+// pub fn schema_custom_type(attr: TokenStream, item: TokenStream) -> TokenStream {
+//     let attr: TokenStream2 = attr.into();
+//     let item: TokenStream2 = item.into();
+//     if let Ok(ir) = ModuleImplIR::try_from((&attr, &item)) {
+//         return SchemaCustomTypeItem::try_from(&ir).into_code();
+//     }
+//     span_error!(
+//         item,
+//         "#[external_contract] can be only applied to trait only"
+//     )
+// }
 
 /// Implements `Into<odra::casper_types::RuntimeArgs>` for a struct.
 ///

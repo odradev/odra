@@ -87,9 +87,6 @@ pub struct Argument {
 impl Argument {
     /// Creates a new instance of `Argument`.
     pub fn new<T: EntrypointArgument>(name: String) -> Self {
-        Self {
-            name,
-            ty: T::cl_type()
-        }
+        Self { name, ty: T::ty() }
     }
 }

@@ -14,7 +14,11 @@ struct Info {
     msg: String
 }
 
-#[odra::module(events = [Start, Stop])]
+#[odra::module(
+    name = "EngineContract",
+    version = "1.0.1",
+    events = [Start, Stop])
+]
 struct Engine {
     name: Var<String>
 }
