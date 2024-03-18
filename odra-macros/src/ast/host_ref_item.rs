@@ -688,17 +688,17 @@ mod ref_item_tests {
                     self.try_total_supply().unwrap()
                 }
 
-                /// Delegated. See `self.ownable.get_owner()` for details.
+                /// A
                 pub fn get_owner(&self) -> Address {
                     self.try_get_owner().unwrap()
                 }
 
-                /// Delegated. See `self.ownable.set_owner()` for details.
+                /// C
                 pub fn set_owner(&mut self, new_owner: Address) {
                     self.try_set_owner(new_owner).unwrap()
                 }
 
-                /// Delegated. See `self.metadata.name()` for details.
+                /// W
                 pub fn name(&self) -> String {
                     self.try_name().unwrap()
                 }
@@ -729,7 +729,7 @@ mod ref_item_tests {
                     )
                 }
 
-                /// Delegated. See `self.ownable.get_owner()` for details.
+                /// A
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_get_owner(&self) -> odra::OdraResult<Address> {
                     self.env
@@ -750,7 +750,7 @@ mod ref_item_tests {
                         )
                 }
 
-                /// Delegated. See `self.ownable.set_owner()` for details.
+                /// C
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_set_owner(&mut self, new_owner: Address) -> odra::OdraResult<()> {
                     self.env
@@ -772,7 +772,7 @@ mod ref_item_tests {
                         )
                 }
 
-                /// Delegated. See `self.metadata.name()` for details.
+                /// W
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_name(&self) -> odra::OdraResult<String> {
                     self.env

@@ -43,6 +43,13 @@ impl ToTokens for SchemaCustomTypeItem {
                     Some(#custom_item)
                 }
             }
+
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::NamedCLTyped for #ident {
+                fn ty() -> odra::schema::casper_contract_schema::NamedCLType {
+                    odra::schema::casper_contract_schema::NamedCLType::Custom(String::from(#name))
+                }
+            }
         };
 
         item.to_tokens(tokens);
@@ -163,6 +170,15 @@ mod tests {
                     ))
                 }
             }
+
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::NamedCLTyped for MyType {
+                fn ty() -> odra::schema::casper_contract_schema::NamedCLType {
+                    odra::schema::casper_contract_schema::NamedCLType::Custom(String::from(
+                        "MyType"
+                    ))
+                }
+            }
         );
 
         test_utils::assert_eq(item, expected);
@@ -182,6 +198,15 @@ mod tests {
                             odra::schema::enum_variant("A", 10u8),
                             odra::schema::enum_variant("B", 11u8),
                         ]
+                    ))
+                }
+            }
+
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::NamedCLTyped for MyType {
+                fn ty() -> odra::schema::casper_contract_schema::NamedCLType {
+                    odra::schema::casper_contract_schema::NamedCLType::Custom(String::from(
+                        "MyType"
                     ))
                 }
             }

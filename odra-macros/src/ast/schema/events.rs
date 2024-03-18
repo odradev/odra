@@ -59,7 +59,7 @@ mod test {
                         ),
                         odra::schema::event(
                             &<OnApprove as odra::casper_event_standard::EventInstance>::name()
-                        ),
+                        )
                     ]
                 }
             }

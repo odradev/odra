@@ -370,7 +370,7 @@ mod ref_item_tests {
                     )
                 }
 
-                /// Delegated. See `self.ownable.get_owner()` for details.
+                /// A
                 pub fn get_owner(&self) -> Address {
                     self.env
                         .call_contract(
@@ -386,7 +386,7 @@ mod ref_item_tests {
                         )
                 }
 
-                /// Delegated. See `self.ownable.set_owner()` for details.
+                /// C
                 pub fn set_owner(&mut self, new_owner: Address) {
                     self.env
                         .call_contract(
@@ -403,7 +403,7 @@ mod ref_item_tests {
                         )
                 }
 
-                /// Delegated. See `self.metadata.name()` for details.
+                /// W
                 pub fn name(&self) -> String {
                     self.env
                         .call_contract(

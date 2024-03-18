@@ -27,10 +27,20 @@ impl ToTokens for SchemaItem {
                         "" =>  env!("CARGO_PKG_VERSION"),
                         _ => #version
                     };
+
+                    let authors = env!("CARGO_PKG_AUTHORS").to_string()
+                        .split(":")
+                        .filter_map(|s| if s.is_empty() { None } else { Some(s.trim().to_owned()) })
+                        .collect();
+                    let repository = env!("CARGO_PKG_REPOSITORY");
+                    let homepage = env!("CARGO_PKG_HOMEPAGE");
                     odra::schema::schema::<#ident>(
                         #module_name,
                         #name,
-                        version
+                        version,
+                        authors,
+                        repository,
+                        homepage
                     )
                 }
             }
@@ -72,7 +82,7 @@ mod test {
         let module = test_utils::mock::module_definition();
         let item = SchemaItem::try_from(&module).unwrap();
         let expected = quote!(
-            #[cfg(not(target_arch = "wasm32"), odra_module = "CounterPack")]
+            #[cfg(all(not(target_arch = "wasm32"), odra_module = "CounterPack"))]
             mod __counter_pack_contract_schema {
                 use super::*;
 
@@ -83,7 +93,21 @@ mod test {
                         "" => env!("CARGO_PKG_VERSION"),
                         _ => "0.1.0"
                     };
-                    odra::schema::schema::<CounterPack>("CounterPack", "MyCounterPack", version)
+                    let authors = env!("CARGO_PKG_AUTHORS")
+                        .to_string()
+                        .split(":")
+                        .filter_map(|s| if s.is_empty() { None } else { Some(s.trim().to_owned()) })
+                        .collect();
+                    let repository = env!("CARGO_PKG_REPOSITORY");
+                    let homepage = env!("CARGO_PKG_HOMEPAGE");
+                    odra::schema::schema::<CounterPack>(
+                        "CounterPack",
+                        "MyCounterPack",
+                        version,
+                        authors,
+                        repository,
+                        homepage
+                    )
                 }
             }
         );

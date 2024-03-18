@@ -82,11 +82,14 @@ pub mod mock {
 
                 delegate! {
                     to self.ownable {
+                        /// A
                         fn get_owner(&self) -> Address;
+                        /// C
                         fn set_owner(&mut self, new_owner: Address);
                     }
 
                     to self.metadata {
+                        /// W
                         fn name(&self) -> String;
                         fn symbol(&self) -> String;
                     }

@@ -138,6 +138,14 @@ pub fn visibility_default() -> syn::Visibility {
     parse_quote!()
 }
 
+pub fn docs_attrs(attrs: &[syn::Attribute]) -> Vec<syn::Attribute> {
+    attrs
+        .iter()
+        .filter(|attr| attr.path().is_ident("doc"))
+        .cloned()
+        .collect()
+}
+
 pub fn last_segment_ident(ty: &syn::Type) -> syn::Result<syn::Ident> {
     match ty {
         syn::Type::Path(type_path) => type_path

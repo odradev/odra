@@ -1,20 +1,20 @@
-use std::collections::BTreeSet;
+use std::{collections::BTreeSet, env};
 
 pub use casper_contract_schema;
 use casper_contract_schema::{
     Access, Argument, CallMethod, ContractSchema, CustomType, Entrypoint, EnumVariant, Event,
-    StructMember, Type
+    NamedCLType, StructMember
 };
-use casper_types::CLType;
+
 use odra_core::args::EntrypointArgument;
 
 const CCSV: u8 = 1;
 
 mod custom_type;
-mod element;
+mod ty;
 
 pub use custom_type::SchemaCustomType;
-pub use element::SchemaElement;
+pub use ty::NamedCLTyped;
 
 pub trait SchemaEntrypoints {
     fn schema_entrypoints() -> Vec<Entrypoint>;
@@ -28,40 +28,45 @@ pub trait SchemaCustomTypes {
     fn schema_types() -> Vec<Option<CustomType>>;
 }
 
-pub fn argument<T: SchemaElement + EntrypointArgument>(name: &str) -> Argument {
-    Argument::new(name, "", <T as SchemaElement>::ty(), !T::is_required())
+pub fn argument<T: NamedCLTyped + EntrypointArgument>(name: &str) -> Argument {
+    if T::is_required() {
+        Argument::new(name, "", <T as NamedCLTyped>::ty())
+    } else {
+        Argument::new_opt(name, "", <T as NamedCLTyped>::ty())
+    }
 }
 
-pub fn entry_point<T: SchemaElement>(
+pub fn entry_point<T: NamedCLTyped>(
     name: &str,
+    description: &str,
     is_mutable: bool,
     arguments: Vec<Argument>
 ) -> Entrypoint {
     Entrypoint {
         name: name.into(),
-        description: None,
+        description: Some(description.to_string()),
         is_mutable,
         arguments,
-        return_ty: T::ty(),
+        return_ty: T::ty().into(),
         is_contract_context: true,
         access: Access::Public
     }
 }
 
-pub fn struct_member<T: SchemaElement>(name: &str) -> StructMember {
+pub fn struct_member<T: NamedCLTyped>(name: &str) -> StructMember {
     StructMember {
         name: name.to_string(),
         description: None,
-        ty: T::ty()
+        ty: T::ty().into()
     }
 }
 
-pub fn enum_typed_variant<T: SchemaElement>(name: &str, discriminant: u8) -> EnumVariant {
+pub fn enum_typed_variant<T: NamedCLTyped>(name: &str, discriminant: u8) -> EnumVariant {
     EnumVariant {
         name: name.to_string(),
         description: None,
         discriminant,
-        ty: Some(T::ty())
+        ty: T::ty().into()
     }
 }
 
@@ -70,7 +75,7 @@ pub fn enum_variant(name: &str, discriminant: u8) -> EnumVariant {
         name: name.to_string(),
         description: None,
         discriminant,
-        ty: None
+        ty: NamedCLType::Unit.into()
     }
 }
 
@@ -100,7 +105,10 @@ pub fn event(name: &str) -> Event {
 pub fn schema<T: SchemaEntrypoints + SchemaEvents + SchemaCustomTypes>(
     module_name: &str,
     contract_name: &str,
-    contract_version: &str
+    contract_version: &str,
+    authors: Vec<String>,
+    repository: &str,
+    homepage: &str
 ) -> ContractSchema {
     let entry_points = T::schema_entrypoints();
     let events = T::schema_events();
@@ -109,11 +117,11 @@ pub fn schema<T: SchemaEntrypoints + SchemaEvents + SchemaCustomTypes>(
         .flatten()
         .collect();
 
-    let init_args = entry_points
-        .iter()
-        .find(|e| e.name == "init")
-        .map(|e| e.arguments.clone())
-        .unwrap_or_default();
+    let init_ep = entry_points.iter().find(|e| e.name == "init");
+
+    let init_args = init_ep.map(|e| e.arguments.clone()).unwrap_or_default();
+
+    let init_description = init_ep.and_then(|e| e.description.clone());
 
     let entry_points = entry_points
         .into_iter()
@@ -121,6 +129,16 @@ pub fn schema<T: SchemaEntrypoints + SchemaEvents + SchemaCustomTypes>(
         .collect();
 
     let wasm_file_name = format!("{}.wasm", module_name);
+
+    let repository = match repository {
+        "" => None,
+        _ => Some(repository.to_string())
+    };
+
+    let homepage = match homepage {
+        "" => None,
+        _ => Some(homepage.to_string())
+    };
 
     ContractSchema {
         casper_contract_schema_version: CCSV,
@@ -130,13 +148,17 @@ pub fn schema<T: SchemaEntrypoints + SchemaEvents + SchemaCustomTypes>(
         types,
         entry_points,
         events,
-        call: Some(call_method(wasm_file_name, None, &init_args))
+        call: Some(call_method(wasm_file_name, init_description, &init_args)),
+        authors,
+        repository,
+        homepage,
+        errors: vec![]
     }
 }
 
 fn call_method(
     file_name: String,
-    description: Option<&str>,
+    description: Option<String>,
     constructor_args: &[Argument]
 ) -> CallMethod {
     CallMethod {
@@ -145,20 +167,22 @@ fn call_method(
         arguments: vec![
             Argument {
                 name: odra_core::consts::PACKAGE_HASH_KEY_NAME_ARG.to_string(),
-                description: None,
-                ty: Type::System(CLType::String),
+                description: Some("The arg name for the package hash key name.".to_string()),
+                ty: NamedCLType::String.into(),
                 optional: false
             },
             Argument {
                 name: odra_core::consts::ALLOW_KEY_OVERRIDE_ARG.to_string(),
-                description: None,
-                ty: Type::System(CLType::Bool),
+                description: Some("The arg name for the allow key override.".to_string()),
+                ty: NamedCLType::Bool.into(),
                 optional: false
             },
             Argument {
                 name: odra_core::consts::IS_UPGRADABLE_ARG.to_string(),
-                description: None,
-                ty: Type::System(CLType::Bool),
+                description: Some(
+                    "The arg name for the contract upgradeability setting.".to_string()
+                ),
+                ty: NamedCLType::Bool.into(),
                 optional: false
             },
         ]
