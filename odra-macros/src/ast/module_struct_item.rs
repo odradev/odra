@@ -2,7 +2,7 @@ use crate::ast::events_item::HasEventsImplItem;
 use crate::ast::ident_item::HasIdentImplItem;
 use crate::ast::module_def::ModuleDefItem;
 use crate::ast::module_item::ModuleModItem;
-use crate::ast::schema::{SchemaEventsItem, SchemaItem};
+use crate::ast::schema::{SchemaEventsItem, SchemaItem, SchemaErrorsItem};
 use crate::ir::ModuleStructIR;
 use derive_try_from_ref::TryFromRef;
 
@@ -15,5 +15,6 @@ pub struct ModuleStructItem {
     has_ident_item: HasIdentImplItem,
     has_events_item: HasEventsImplItem,
     schema_item: SchemaItem,
-    schema_events_item: SchemaEventsItem
+    schema_events_item: SchemaEventsItem,
+    schema_errors: SchemaErrorsItem
 }

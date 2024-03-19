@@ -8,6 +8,6 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
-casper-contract-schema = { path = "../../casper-contract-schema/casper-contract-schema" }
+casper-contract-schema = { git = "https://github.com/odradev/casper-contract-schema" }
 casper-types = { workspace = true }
 odra-core = { workspace = true }

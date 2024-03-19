@@ -94,7 +94,15 @@ impl ModuleStructIR {
 
     pub fn events(&self) -> Vec<syn::Type> {
         if let ConfigItem::Module(cfg) = &self.config {
-            cfg.events.iter().map(|ev| ev.ty.clone()).collect()
+            cfg.events.iter().cloned().collect()
+        } else {
+            vec![]
+        }
+    }
+
+    pub fn errors(&self) -> Vec<syn::Type> {
+        if let ConfigItem::Module(cfg) = &self.config {
+            cfg.errors.iter().cloned().collect()
         } else {
             vec![]
         }

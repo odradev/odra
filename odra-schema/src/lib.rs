@@ -3,7 +3,7 @@ use std::{collections::BTreeSet, env};
 pub use casper_contract_schema;
 use casper_contract_schema::{
     Access, Argument, CallMethod, ContractSchema, CustomType, Entrypoint, EnumVariant, Event,
-    NamedCLType, StructMember
+    NamedCLType, StructMember, UserError
 };
 
 use odra_core::args::EntrypointArgument;
@@ -26,6 +26,10 @@ pub trait SchemaEvents {
 
 pub trait SchemaCustomTypes {
     fn schema_types() -> Vec<Option<CustomType>>;
+}
+
+pub trait SchemaErrors {
+    fn schema_errors() -> Vec<UserError>;
 }
 
 pub fn argument<T: NamedCLTyped + EntrypointArgument>(name: &str) -> Argument {
@@ -61,7 +65,7 @@ pub fn struct_member<T: NamedCLTyped>(name: &str) -> StructMember {
     }
 }
 
-pub fn enum_typed_variant<T: NamedCLTyped>(name: &str, discriminant: u8) -> EnumVariant {
+pub fn enum_typed_variant<T: NamedCLTyped>(name: &str, discriminant: u16) -> EnumVariant {
     EnumVariant {
         name: name.to_string(),
         description: None,
@@ -70,7 +74,7 @@ pub fn enum_typed_variant<T: NamedCLTyped>(name: &str, discriminant: u8) -> Enum
     }
 }
 
-pub fn enum_variant(name: &str, discriminant: u8) -> EnumVariant {
+pub fn enum_variant(name: &str, discriminant: u16) -> EnumVariant {
     EnumVariant {
         name: name.to_string(),
         description: None,
@@ -102,7 +106,15 @@ pub fn event(name: &str) -> Event {
     }
 }
 
-pub fn schema<T: SchemaEntrypoints + SchemaEvents + SchemaCustomTypes>(
+pub fn error(name: &str, description: &str, discriminant: u16) -> UserError {
+    UserError {
+        name: name.into(),
+        description: Some(description.into()),
+        discriminant
+    }
+}
+
+pub fn schema<T: SchemaEntrypoints + SchemaEvents + SchemaCustomTypes + SchemaErrors>(
     module_name: &str,
     contract_name: &str,
     contract_version: &str,
@@ -112,6 +124,7 @@ pub fn schema<T: SchemaEntrypoints + SchemaEvents + SchemaCustomTypes>(
 ) -> ContractSchema {
     let entry_points = T::schema_entrypoints();
     let events = T::schema_events();
+    let errors = T::schema_errors();
     let types = BTreeSet::from_iter(T::schema_types())
         .into_iter()
         .flatten()
@@ -152,7 +165,7 @@ pub fn schema<T: SchemaEntrypoints + SchemaEvents + SchemaCustomTypes>(
         authors,
         repository,
         homepage,
-        errors: vec![]
+        errors
     }
 }
 

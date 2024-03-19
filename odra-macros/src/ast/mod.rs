@@ -29,4 +29,4 @@ pub(crate) use external_contract_item::ExternalContractImpl;
 pub(crate) use module_impl_item::ModuleImplItem;
 pub(crate) use module_struct_item::ModuleStructItem;
 pub(crate) use odra_type_item::OdraTypeItem;
-pub(crate) use schema::SchemaCustomTypeItem;
+pub(crate) use schema::{SchemaCustomTypeItem, SchemaErrorItem};

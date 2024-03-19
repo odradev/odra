@@ -114,7 +114,8 @@ pub mod mock {
         let attr = quote!(
             name = "MyCounterPack",
             version = "0.1.0",
-            events = [OnTransfer, OnApprove]
+            events = [OnTransfer, OnApprove],
+            errors = [Erc20Errors, MyErrors]
         );
         ModuleStructIR::try_from((&attr, &module)).unwrap()
     }
@@ -140,7 +141,9 @@ pub mod mock {
     pub fn custom_enum() -> TypeIR {
         let ty = quote!(
             enum MyType {
+                /// Description of A
                 A = 10,
+                /// Description of B
                 B
             }
         );

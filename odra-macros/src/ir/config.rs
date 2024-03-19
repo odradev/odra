@@ -1,7 +1,5 @@
 use std::ops::Deref;
 
-use proc_macro2::TokenStream;
-use quote::ToTokens;
 use syn::{
     parse::{Parse, ParseBuffer},
     punctuated::Punctuated,
@@ -27,11 +25,13 @@ mod kw {
     syn::custom_keyword!(name);
     syn::custom_keyword!(version);
     syn::custom_keyword!(events);
+    syn::custom_keyword!(errors);
 }
 
 #[derive(Default, Clone)]
 pub struct ModuleConfiguration {
     pub events: ModuleEvents,
+    pub errors: ModuleErrors,
     pub name: ModuleName,
     pub version: ModuleVersion
 }
@@ -41,10 +41,17 @@ impl Parse for ModuleConfiguration {
         let mut name = None;
         let mut version = None;
         let mut events = None;
+        let mut errors = None;
 
         while !input.is_empty() {
             if events.is_none() && input.peek(kw::events) {
                 events = Some(input.parse::<ModuleEvents>()?);
+                let _ = input.parse::<Token![,]>(); // optional comma
+                continue;
+            }
+
+            if errors.is_none() && input.peek(kw::errors) {
+                errors = Some(input.parse::<ModuleErrors>()?);
                 let _ = input.parse::<Token![,]>(); // optional comma
                 continue;
             }
@@ -66,7 +73,8 @@ impl Parse for ModuleConfiguration {
         Ok(Self {
             name: name.unwrap_or_default(),
             version: version.unwrap_or_default(),
-            events: events.unwrap_or_default()
+            events: events.unwrap_or_default(),
+            errors: errors.unwrap_or_default()
         })
     }
 }
@@ -114,6 +122,8 @@ impl Parse for ModuleVersion {
 #[derive(Default, Clone, Debug)]
 pub struct ModuleEvents(Punctuated<ModuleEvent, Token![,]>);
 
+pub type ModuleEvent = syn::Type;
+
 impl ModuleEvents {
     pub fn iter(&self) -> impl Iterator<Item = &ModuleEvent> {
         self.0.iter()
@@ -123,33 +133,37 @@ impl ModuleEvents {
 impl Parse for ModuleEvents {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         // a sample input: events = [Event1, Event2, Event3]
-        if input.is_empty() {
-            return Ok(Self::default());
-        }
-        input.parse::<kw::events>()?;
-        input.parse::<Token![=]>()?;
-
-        let content: ParseBuffer;
-        let _brace_token = syn::bracketed!(content in input);
-        let events = Punctuated::parse_terminated(&content)?;
-        Ok(Self(events))
+        parse_list::<kw::events>(input).map(Self)
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct ModuleEvent {
-    pub ty: syn::Type
+#[derive(Default, Clone, Debug)]
+pub struct ModuleErrors(Punctuated<ModuleError, Token![,]>);
+
+pub type ModuleError = syn::Type;
+
+impl ModuleErrors {
+    pub fn iter(&self) -> impl Iterator<Item = &ModuleError> {
+        self.0.iter()
+    }
 }
 
-impl Parse for ModuleEvent {
+impl Parse for ModuleErrors {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let ty = input.parse::<syn::Type>()?;
-        Ok(ModuleEvent { ty })
+        parse_list::<kw::errors>(input).map(Self)
     }
 }
 
-impl ToTokens for ModuleEvent {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.ty.to_tokens(tokens);
+fn parse_list<T: Parse>(
+    input: syn::parse::ParseStream
+) -> syn::Result<Punctuated<syn::Type, Token![,]>> {
+    if input.is_empty() {
+        return Ok(Punctuated::default());
     }
+    input.parse::<T>()?;
+    input.parse::<Token![=]>()?;
+
+    let content: ParseBuffer;
+    let _brace_token = syn::bracketed!(content in input);
+    Punctuated::parse_terminated(&content)
 }

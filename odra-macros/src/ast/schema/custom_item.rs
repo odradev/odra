@@ -1,7 +1,5 @@
 use quote::ToTokens;
-use syn::spanned::Spanned;
-
-use crate::ir::TypeIR;
+use crate::{ir::TypeIR, utils};
 
 pub struct SchemaCustomTypeItem {
     ty_ident: syn::Ident,
@@ -16,24 +14,8 @@ impl ToTokens for SchemaCustomTypeItem {
         let ident = &self.ty_ident;
 
         let custom_item = match self.is_enum {
-            true => {
-                let variants = enum_variants(&self.variants);
-                quote::quote! {
-                    odra::schema::custom_enum(
-                        #name,
-                        #variants
-                    )
-                }
-            }
-            false => {
-                let members = struct_members(&self.fields);
-                quote::quote! {
-                    odra::schema::custom_struct(
-                        #name,
-                        #members
-                    )
-                }
-            }
+            true => custom_enum(name, &self.variants),
+            false => custom_struct(name, &self.fields)
         };
 
         let item = quote::quote! {
@@ -56,30 +38,15 @@ impl ToTokens for SchemaCustomTypeItem {
     }
 }
 
-fn enum_variants(variants: &[syn::Variant]) -> proc_macro2::TokenStream {
-    let mut discriminant = 0u8;
-    let variants = variants.iter().map(|v| {
-        let name = v.ident.to_string();
-        if let Some((_, syn::Expr::Lit(lit))) = &v.discriminant {
-            if let syn::Lit::Int(int) = &lit.lit {
-                discriminant = int.base10_parse().unwrap();
-            }
-        };
-        let result = quote::quote! {
-            odra::schema::enum_variant(#name, #discriminant),
-        };
-        discriminant += 1;
-        result
+fn custom_enum(name: &str, variants: &[syn::Variant]) -> proc_macro2::TokenStream {
+    let variants = utils::syn::transform_variants(variants, |name, discriminant| {
+        quote::quote!(odra::schema::enum_variant(#name, #discriminant),)
     });
 
-    quote::quote! {
-        vec![
-            #(#variants)*
-        ]
-    }
+    quote::quote!(odra::schema::custom_enum(#name, #variants))
 }
 
-fn struct_members(fields: &[syn::Field]) -> proc_macro2::TokenStream {
+fn custom_struct(name: &str, fields: &[syn::Field]) -> proc_macro2::TokenStream {
     let members = fields.iter().map(|f| {
         let name = f.ident.as_ref().unwrap().to_string();
         let ty = &f.ty;
@@ -88,11 +55,7 @@ fn struct_members(fields: &[syn::Field]) -> proc_macro2::TokenStream {
         }
     });
 
-    quote::quote! {
-        vec![
-            #(#members)*
-        ]
-    }
+    quote::quote!(odra::schema::custom_struct(#name, vec![#(#members)*]))
 }
 
 impl TryFrom<&TypeIR> for SchemaCustomTypeItem {
@@ -100,41 +63,13 @@ impl TryFrom<&TypeIR> for SchemaCustomTypeItem {
 
     fn try_from(ir: &TypeIR) -> Result<Self, Self::Error> {
         let item = ir.self_code();
-        let fields = if let syn::Data::Struct(syn::DataStruct { fields, .. }) = &item.data {
-            fields
-                .iter()
-                .map(|f| {
-                    if f.ident.is_none() {
-                        Err(syn::Error::new(f.span(), "Unnamed field"))
-                    } else {
-                        Ok(f.clone())
-                    }
-                })
-                .collect()
-        } else {
-            Ok(vec![])
-        }?;
-
-        let variants = if let syn::Data::Enum(syn::DataEnum { variants, .. }) = &item.data {
-            let is_valid = variants
-                .iter()
-                .all(|v| matches!(v.fields, syn::Fields::Unit));
-            if is_valid {
-                Ok(variants.into_iter().cloned().collect())
-            } else {
-                Err(syn::Error::new_spanned(
-                    variants,
-                    "Expected a unit enum variant."
-                ))
-            }
-        } else {
-            Ok(vec![])
-        }?;
+        let fields = utils::syn::extract_named_field(item)?;
+        let variants = utils::syn::extract_unit_variants(item)?;
 
         if matches!(item.data, syn::Data::Union(_)) {
             return Err(syn::Error::new_spanned(
                 item,
-                "Struct with named fields expected"
+                "Struct with named fields or a unit variants enum expected"
             ));
         }
 
