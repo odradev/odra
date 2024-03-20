@@ -18,11 +18,23 @@ impl ToTokens for SchemaCustomTypeItem {
             false => custom_struct(name, &self.fields)
         };
 
+        let sub_types = self.fields
+            .iter()
+            .map(|f| {
+                let ty = &f.ty;
+                quote::quote!(.chain(<#ty as odra::schema::SchemaCustomTypes>::schema_types()))
+            })
+            .collect::<Vec<_>>();
+
         let item = quote::quote! {
             #[cfg(not(target_arch = "wasm32"))]
-            impl odra::schema::SchemaCustomType for #ident {
-                fn custom_ty() -> Option<odra::schema::casper_contract_schema::CustomType> {
-                    Some(#custom_item)
+            impl odra::schema::SchemaCustomTypes for #ident {
+                fn schema_types() -> odra::prelude::vec::Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
+                    odra::prelude::BTreeSet::<Option<odra::schema::casper_contract_schema::CustomType>>::new()
+                        .into_iter()
+                        .chain(odra::prelude::vec![Some(#custom_item)])
+                        #(#sub_types)*
+                        .collect::<Vec<_>>()
                 }
             }
 
@@ -32,6 +44,9 @@ impl ToTokens for SchemaCustomTypeItem {
                     odra::schema::casper_contract_schema::NamedCLType::Custom(String::from(#name))
                 }
             }
+
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::SchemaCustomElement for #ident {}
         };
 
         item.to_tokens(tokens);
@@ -55,7 +70,7 @@ fn custom_struct(name: &str, fields: &[syn::Field]) -> proc_macro2::TokenStream 
         }
     });
 
-    quote::quote!(odra::schema::custom_struct(#name, vec![#(#members)*]))
+    quote::quote!(odra::schema::custom_struct(#name, odra::prelude::vec![#(#members)*]))
 }
 
 impl TryFrom<&TypeIR> for SchemaCustomTypeItem {
@@ -94,15 +109,22 @@ mod tests {
         let item = SchemaCustomTypeItem::try_from(&ir).unwrap();
         let expected = quote!(
             #[cfg(not(target_arch = "wasm32"))]
-            impl odra::schema::SchemaCustomType for MyType {
-                fn custom_ty() -> Option<odra::schema::casper_contract_schema::CustomType> {
-                    Some(odra::schema::custom_struct(
-                        "MyType",
-                        vec![
-                            odra::schema::struct_member::<String>("a"),
-                            odra::schema::struct_member::<u32>("b"),
-                        ]
-                    ))
+            impl odra::schema::SchemaCustomTypes for MyType {
+                fn schema_types() -> odra::prelude::vec::Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
+                    odra::prelude::BTreeSet::<Option<odra::schema::casper_contract_schema::CustomType>>::new()
+                        .into_iter()
+                        .chain(odra::prelude::vec![
+                            Some(odra::schema::custom_struct(
+                                "MyType",
+                                odra::prelude::vec![
+                                    odra::schema::struct_member::<String>("a"),
+                                    odra::schema::struct_member::<u32>("b"),
+                                ]
+                            ))
+                        ])
+                        .chain(<String as odra::schema::SchemaCustomTypes>::schema_types())
+                        .chain(<u32 as odra::schema::SchemaCustomTypes>::schema_types())
+                        .collect::<Vec<_>>()
                 }
             }
 
@@ -114,6 +136,9 @@ mod tests {
                     ))
                 }
             }
+
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::SchemaCustomElement for MyType {}
         );
 
         test_utils::assert_eq(item, expected);
@@ -125,15 +150,20 @@ mod tests {
         let item = SchemaCustomTypeItem::try_from(&ir).unwrap();
         let expected = quote!(
             #[cfg(not(target_arch = "wasm32"))]
-            impl odra::schema::SchemaCustomType for MyType {
-                fn custom_ty() -> Option<odra::schema::casper_contract_schema::CustomType> {
-                    Some(odra::schema::custom_enum(
-                        "MyType",
-                        vec![
-                            odra::schema::enum_variant("A", 10u8),
-                            odra::schema::enum_variant("B", 11u8),
-                        ]
-                    ))
+            impl odra::schema::SchemaCustomTypes for MyType {
+                fn schema_types() -> odra::prelude::vec::Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
+                    odra::prelude::BTreeSet::<Option<odra::schema::casper_contract_schema::CustomType>>::new()
+                        .into_iter()
+                        .chain(odra::prelude::vec![
+                            Some(odra::schema::custom_enum(
+                                "MyType",
+                                odra::prelude::vec![
+                                    odra::schema::enum_variant("A", 10u16),
+                                    odra::schema::enum_variant("B", 11u16),
+                                ]
+                            ))
+                        ])
+                        .collect::<Vec<_>>()
                 }
             }
 
@@ -145,6 +175,9 @@ mod tests {
                     ))
                 }
             }
+
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::SchemaCustomElement for MyType {}
         );
 
         test_utils::assert_eq(item, expected);

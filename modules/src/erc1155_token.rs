@@ -13,7 +13,7 @@ use odra::{
 
 /// The ERC1155 token implementation.
 /// It uses the [ERC1155](Erc1155Base) base implementation and the [Ownable] module.
-#[odra::module(events = [TransferBatch, TransferSingle])]
+#[odra::module(events = [TransferBatch, TransferSingle], errors = [Error])]
 pub struct Erc1155Token {
     core: SubModule<Erc1155Base>,
     ownable: SubModule<Ownable>

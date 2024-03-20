@@ -29,20 +29,19 @@ impl ToTokens for SchemaCustomTypesItem {
             })
             .collect::<Vec<_>>();
 
-        let types = types
+        let chain = types
             .iter()
-            .map(|t| {
-                quote::quote! {
-                    <#t as odra::schema::SchemaCustomType>::custom_ty()
-                }
-            })
+            .map(|t| quote::quote!(.chain(<#t as odra::schema::SchemaCustomTypes>::schema_types())))
             .collect::<Vec<_>>();
 
         let item = quote::quote! {
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaCustomTypes for #module_ident {
-                fn schema_types() -> Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
-                    vec![ #(#types),* ]
+                fn schema_types() -> odra::prelude::vec::Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
+                    odra::prelude::BTreeSet::<Option<odra::schema::casper_contract_schema::CustomType>>::new()
+                        .into_iter()
+                        #(#chain)*
+                        .collect()
                 }
             }
         };
@@ -74,16 +73,17 @@ mod test {
         let expected = quote::quote!(
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaCustomTypes for Erc20 {
-                fn schema_types() -> Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
-                    vec![
-                        <Option<U256> as odra::schema::SchemaCustomType>::custom_ty(),
-                        <U256 as odra::schema::SchemaCustomType>::custom_ty(),
-                        <Address as odra::schema::SchemaCustomType>::custom_ty(),
-                        <U256 as odra::schema::SchemaCustomType>::custom_ty(),
-                        <Maybe<String> as odra::schema::SchemaCustomType>::custom_ty(),
-                        <odra::prelude::vec::Vec<Address> as odra::schema::SchemaCustomType>::custom_ty(),
-                        <U256 as odra::schema::SchemaCustomType>::custom_ty()
-                    ]
+                fn schema_types() -> odra::prelude::vec::Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
+                    odra::prelude::BTreeSet::<Option<odra::schema::casper_contract_schema::CustomType>>::new()
+                        .into_iter()
+                        .chain(<Option<U256> as odra::schema::SchemaCustomTypes>::schema_types())
+                        .chain(<U256 as odra::schema::SchemaCustomTypes>::schema_types())
+                        .chain(<Address as odra::schema::SchemaCustomTypes>::schema_types())
+                        .chain(<U256 as odra::schema::SchemaCustomTypes>::schema_types())
+                        .chain(<Maybe<String> as odra::schema::SchemaCustomTypes>::schema_types())
+                        .chain(<odra::prelude::vec::Vec<Address> as odra::schema::SchemaCustomTypes>::schema_types())
+                        .chain(<U256 as odra::schema::SchemaCustomTypes>::schema_types())
+                        .collect()
                 }
             }
         );

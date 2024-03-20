@@ -13,7 +13,6 @@ const CCSV: u8 = 1;
 mod custom_type;
 mod ty;
 
-pub use custom_type::SchemaCustomType;
 pub use ty::NamedCLTyped;
 
 pub trait SchemaEntrypoints {
@@ -21,16 +20,27 @@ pub trait SchemaEntrypoints {
 }
 
 pub trait SchemaEvents {
-    fn schema_events() -> Vec<Event>;
+    fn schema_events() -> Vec<Event> {
+        vec![]
+    }
 }
 
 pub trait SchemaCustomTypes {
-    fn schema_types() -> Vec<Option<CustomType>>;
+    fn schema_types() -> Vec<Option<CustomType>> {
+        vec![]
+    }
 }
 
 pub trait SchemaErrors {
-    fn schema_errors() -> Vec<UserError>;
+    fn schema_errors() -> Vec<UserError> {
+        vec![]
+    }
 }
+
+pub trait SchemaCustomElement {}
+
+impl<T: SchemaCustomElement> SchemaErrors for T {}
+impl<T: SchemaCustomElement> SchemaEvents for T {}
 
 pub fn argument<T: NamedCLTyped + EntrypointArgument>(name: &str) -> Argument {
     if T::is_required() {

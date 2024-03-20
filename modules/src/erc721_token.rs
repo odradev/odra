@@ -17,7 +17,7 @@ use odra::{
 ///
 /// It uses the [ERC721](Erc721Base) base implementation, the [ERC721 metadata](Erc721MetadataExtension) extension
 /// and the [Ownable] module.
-#[odra::module(events = [Transfer])]
+#[odra::module(events = [Transfer], errors = [Error])]
 pub struct Erc721Token {
     core: SubModule<Erc721Base>,
     metadata: SubModule<Erc721MetadataExtension>,
@@ -663,5 +663,26 @@ mod tests {
             .try_mint(&erc721_env.alice, &U256::from(1))
             .unwrap_err();
         assert_eq!(err, AccessError::CallerNotTheOwner.into());
+    }
+
+    #[test]
+    fn schema_errors() {
+        let v = odra::prelude::BTreeSet::<odra::schema::casper_contract_schema::Event>::new()
+            .into_iter()
+            .chain(odra::prelude::vec![odra::schema::event("Transfer")])
+            .chain(odra::prelude::vec![odra::schema::event("Transfer")])
+            .chain(odra::prelude::vec![odra::schema::event("Transfer")])
+            .chain(odra::prelude::vec![odra::schema::event("Transfer")])
+            .chain(<odra::SubModule<crate::erc721::erc721_base::Erc721Base> as odra::schema::SchemaEvents>::schema_events())
+            .chain(
+                <odra::SubModule<crate::erc721::extensions::erc721_metadata::Erc721MetadataExtension> as odra::schema::SchemaEvents>::schema_events()
+            )
+            .chain(<odra::SubModule<crate::access::Ownable> as odra::schema::SchemaEvents>::schema_events())
+            .collect::<odra::prelude::BTreeSet<odra::schema::casper_contract_schema::Event>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+
+        dbg!(v.iter().map(|x| x.name.clone()).collect::<Vec<_>>());
+        dbg!(odra::schema::event("Transfer") == odra::schema::event("Transfer"));
     }
 }

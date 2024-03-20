@@ -1,10 +1,11 @@
 use quote::ToTokens;
 
-use crate::ir::ModuleStructIR;
+use crate::ir::{EnumeratedTypedField, ModuleStructIR};
 
 pub struct SchemaEventsItem {
     module_ident: syn::Ident,
-    events: Vec<syn::Type>
+    events: Vec<syn::Type>,
+    fields: Vec<EnumeratedTypedField>
 }
 
 impl ToTokens for SchemaEventsItem {
@@ -16,11 +17,25 @@ impl ToTokens for SchemaEventsItem {
             }
         }).collect::<Vec<_>>();
 
+        let chain = self.fields
+            .iter()
+            .map(|f| {
+                let ty = &f.ty;
+                quote::quote!(.chain(<#ty as odra::schema::SchemaEvents>::schema_events()))
+            })
+            .collect::<Vec<_>>();
+
         let item = quote::quote! {
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaEvents for #module_ident {
                 fn schema_events() -> Vec<odra::schema::casper_contract_schema::Event> {
-                    vec![ #(#events),* ]
+                    odra::prelude::BTreeSet::<odra::schema::casper_contract_schema::Event>::new()
+                        .into_iter()
+                        .chain(odra::prelude::vec![#(#events),*])
+                        #(#chain)*
+                        .collect::<odra::prelude::BTreeSet<odra::schema::casper_contract_schema::Event>>()
+                        .into_iter()
+                        .collect()
                 }
             }
         };
@@ -35,7 +50,8 @@ impl TryFrom<&ModuleStructIR> for SchemaEventsItem {
     fn try_from(ir: &ModuleStructIR) -> Result<Self, Self::Error> {
         Ok(Self {
             module_ident: ir.module_ident(),
-            events: ir.events()
+            events: ir.events(),
+            fields: ir.typed_fields()?
         })
     }
 }
@@ -53,14 +69,24 @@ mod test {
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaEvents for CounterPack {
                 fn schema_events() -> Vec<odra::schema::casper_contract_schema::Event> {
-                    vec![
-                        odra::schema::event(
-                            &<OnTransfer as odra::casper_event_standard::EventInstance>::name()
-                        ),
-                        odra::schema::event(
-                            &<OnApprove as odra::casper_event_standard::EventInstance>::name()
-                        )
-                    ]
+                    odra::prelude::BTreeSet::<odra::schema::casper_contract_schema::Event>::new()
+                        .into_iter()
+                        .chain(odra::prelude::vec![
+                            odra::schema::event(
+                                &<OnTransfer as odra::casper_event_standard::EventInstance>::name()
+                            ),
+                            odra::schema::event(
+                                &<OnApprove as odra::casper_event_standard::EventInstance>::name()
+                            )
+                        ])
+                        .chain(<SubModule<Counter> as odra::schema::SchemaEvents>::schema_events())
+                        .chain(<SubModule<Counter> as odra::schema::SchemaEvents>::schema_events())
+                        .chain(<SubModule<Counter> as odra::schema::SchemaEvents>::schema_events())
+                        .chain(<Var<u32> as odra::schema::SchemaEvents>::schema_events())
+                        .chain(<Mapping<u8, Counter> as odra::schema::SchemaEvents>::schema_events())
+                        .collect::<odra::prelude::BTreeSet<odra::schema::casper_contract_schema::Event>>()
+                        .into_iter()
+                        .collect()
                 }
             }
         );

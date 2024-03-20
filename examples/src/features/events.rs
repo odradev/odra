@@ -3,8 +3,8 @@ use odra::prelude::*;
 use odra::{Address, Event};
 
 /// Contract that emits an event when initialized.
-#[odra::module]
-pub struct PartyContract {}
+#[odra::module(events = [PartyStarted])]
+pub struct PartyContract;
 
 /// Event emitted when the contract is initialized.
 #[derive(Event, PartialEq, Eq, Debug)]

@@ -12,7 +12,7 @@ pub struct ResultsStorage {
 }
 
 /// Contract that uses a module with nested Odra types.
-#[odra::module]
+#[odra::module(events = [OperationEnded])]
 pub struct NestedOdraTypesContract {
     latest_result: Var<OperationResult>,
     current_generation_storage: SubModule<ResultsStorage>

@@ -1,7 +1,7 @@
 //! Erc721 metadata.
 
 use crate::erc721::extensions::erc721_metadata::errors::Error::{
-    BaseUriNotSet, NameNotSet, SymbolNotSet
+    self, BaseUriNotSet, NameNotSet, SymbolNotSet
 };
 use odra::prelude::*;
 use odra::UnwrapOrRevert;
@@ -18,7 +18,7 @@ pub trait Erc721Metadata {
 }
 
 /// The ERC721 Metadata extension.
-#[odra::module]
+#[odra::module(errors = [Error])]
 pub struct Erc721MetadataExtension {
     name: Var<String>,
     symbol: Var<String>,

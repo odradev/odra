@@ -1,6 +1,7 @@
 //! Odra module implementing Erc721 core.
 use crate::erc721::errors::Error::{
-    ApprovalToCurrentOwner, ApproveToCaller, InvalidTokenId, NotAnOwnerOrApproved, TransferFailed
+    self, ApprovalToCurrentOwner, ApproveToCaller, InvalidTokenId, NotAnOwnerOrApproved,
+    TransferFailed
 };
 use crate::erc721::events::{Approval, ApprovalForAll, Transfer};
 use crate::erc721::extensions::erc721_receiver::Erc721Receiver;
@@ -12,7 +13,7 @@ use odra::{
     Address, ContractRef, Mapping, UnwrapOrRevert
 };
 /// The ERC721 base implementation.
-#[odra::module(events = [Approval, ApprovalForAll, Transfer])]
+#[odra::module(events = [Approval, ApprovalForAll, Transfer], errors = [Error])]
 pub struct Erc721Base {
     /// The token balances.
     pub balances: Mapping<Address, U256>,

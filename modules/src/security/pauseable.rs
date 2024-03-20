@@ -5,13 +5,13 @@
 /// It will make available `require_not_paused()` and `require_paused()` functions,
 /// which can be used in the functions of your contract to ensure the contract is
 /// in the correct state.
-use crate::security::errors::Error::{PausedRequired, UnpausedRequired};
+use crate::security::errors::Error::{self, PausedRequired, UnpausedRequired};
 use crate::security::events::{Paused, Unpaused};
 use odra::prelude::*;
 use odra::Var;
 
 /// The Pauseable module.
-#[odra::module]
+#[odra::module(events = [Paused, Unpaused], errors = [Error])]
 pub struct Pauseable {
     is_paused: Var<bool>
 }

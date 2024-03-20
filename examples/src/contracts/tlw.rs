@@ -3,7 +3,7 @@ use odra::prelude::*;
 use odra::{casper_types::U512, Address, Event, Mapping, OdraError, Var};
 
 /// TimeLockWallet contract.
-#[odra::module]
+#[odra::module(errors = [Error], events = [Deposit, Withdrawal])]
 pub struct TimeLockWallet {
     balances: Mapping<Address, U512>,
     lock_expiration_map: Mapping<Address, u64>,
