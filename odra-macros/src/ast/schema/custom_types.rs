@@ -35,6 +35,7 @@ impl ToTokens for SchemaCustomTypesItem {
             .collect::<Vec<_>>();
 
         let item = quote::quote! {
+            #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaCustomTypes for #module_ident {
                 fn schema_types() -> odra::prelude::vec::Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
@@ -72,6 +73,7 @@ mod test {
         let ir = test_utils::mock::module_impl();
         let item = SchemaCustomTypesItem::try_from(&ir).unwrap();
         let expected = quote::quote!(
+            #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaCustomTypes for Erc20 {
                 fn schema_types() -> odra::prelude::vec::Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
@@ -84,6 +86,7 @@ mod test {
                         .chain(<Maybe<String> as odra::schema::SchemaCustomTypes>::schema_types())
                         .chain(<odra::prelude::vec::Vec<Address> as odra::schema::SchemaCustomTypes>::schema_types())
                         .chain(<U256 as odra::schema::SchemaCustomTypes>::schema_types())
+                        .chain(<Self as odra::schema::SchemaEvents>::custom_types())
                         .collect()
                 }
             }

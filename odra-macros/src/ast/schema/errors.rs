@@ -20,6 +20,7 @@ impl ToTokens for SchemaErrorsItem {
             .collect::<Vec<_>>();
 
         let item = quote::quote! {
+            #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaErrors for #module_ident {
                 fn schema_errors() -> odra::prelude::Vec<odra::schema::casper_contract_schema::UserError> {
@@ -109,6 +110,7 @@ mod test {
         let ir = test_utils::mock::module_definition();
         let item = SchemaErrorsItem::try_from(&ir).unwrap();
         let expected = quote::quote!(
+            #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaErrors for CounterPack {
                 fn schema_errors() -> odra::prelude::Vec<odra::schema::casper_contract_schema::UserError> {

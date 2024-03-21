@@ -664,25 +664,4 @@ mod tests {
             .unwrap_err();
         assert_eq!(err, AccessError::CallerNotTheOwner.into());
     }
-
-    #[test]
-    fn schema_errors() {
-        let v = odra::prelude::BTreeSet::<odra::schema::casper_contract_schema::Event>::new()
-            .into_iter()
-            .chain(odra::prelude::vec![odra::schema::event("Transfer")])
-            .chain(odra::prelude::vec![odra::schema::event("Transfer")])
-            .chain(odra::prelude::vec![odra::schema::event("Transfer")])
-            .chain(odra::prelude::vec![odra::schema::event("Transfer")])
-            .chain(<odra::SubModule<crate::erc721::erc721_base::Erc721Base> as odra::schema::SchemaEvents>::schema_events())
-            .chain(
-                <odra::SubModule<crate::erc721::extensions::erc721_metadata::Erc721MetadataExtension> as odra::schema::SchemaEvents>::schema_events()
-            )
-            .chain(<odra::SubModule<crate::access::Ownable> as odra::schema::SchemaEvents>::schema_events())
-            .collect::<odra::prelude::BTreeSet<odra::schema::casper_contract_schema::Event>>()
-            .into_iter()
-            .collect::<Vec<_>>();
-
-        dbg!(v.iter().map(|x| x.name.clone()).collect::<Vec<_>>());
-        dbg!(odra::schema::event("Transfer") == odra::schema::event("Transfer"));
-    }
 }

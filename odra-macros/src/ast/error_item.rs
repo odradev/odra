@@ -52,17 +52,6 @@ mod tests {
                     odra::OdraError::user(error as u16)
                 }
             }
-
-            #[automatically_derived]
-            #[cfg(not(target_arch = "wasm32"))]
-            impl odra::schema::SchemaErrors for MyType {
-                fn schema_errors() -> Vec<odra::schema::casper_contract_schema::UserError> {
-                    vec![
-                        odra::schema::error("A", "Description of A", 10),
-                        odra::schema::error("B", "Description of B", 11),
-                    ]
-                }
-            }
         };
         test_utils::assert_eq(item, expected);
     }

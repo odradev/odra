@@ -27,6 +27,7 @@ impl ToTokens for SchemaCustomTypeItem {
             .collect::<Vec<_>>();
 
         let item = quote::quote! {
+            #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaCustomTypes for #ident {
                 fn schema_types() -> odra::prelude::vec::Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
@@ -38,6 +39,7 @@ impl ToTokens for SchemaCustomTypeItem {
                 }
             }
 
+            #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::NamedCLTyped for #ident {
                 fn ty() -> odra::schema::casper_contract_schema::NamedCLType {
@@ -45,6 +47,7 @@ impl ToTokens for SchemaCustomTypeItem {
                 }
             }
 
+            #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaCustomElement for #ident {}
         };
@@ -108,6 +111,7 @@ mod tests {
         let ir = test_utils::mock::custom_struct();
         let item = SchemaCustomTypeItem::try_from(&ir).unwrap();
         let expected = quote!(
+            #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaCustomTypes for MyType {
                 fn schema_types() -> odra::prelude::vec::Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
@@ -128,6 +132,7 @@ mod tests {
                 }
             }
 
+            #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::NamedCLTyped for MyType {
                 fn ty() -> odra::schema::casper_contract_schema::NamedCLType {
@@ -137,6 +142,7 @@ mod tests {
                 }
             }
 
+            #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaCustomElement for MyType {}
         );
@@ -149,6 +155,7 @@ mod tests {
         let ir = test_utils::mock::custom_enum();
         let item = SchemaCustomTypeItem::try_from(&ir).unwrap();
         let expected = quote!(
+            #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaCustomTypes for MyType {
                 fn schema_types() -> odra::prelude::vec::Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
@@ -167,6 +174,7 @@ mod tests {
                 }
             }
 
+            #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::NamedCLTyped for MyType {
                 fn ty() -> odra::schema::casper_contract_schema::NamedCLType {
@@ -176,6 +184,7 @@ mod tests {
                 }
             }
 
+            #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaCustomElement for MyType {}
         );

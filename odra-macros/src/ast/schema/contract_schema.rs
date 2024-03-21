@@ -17,6 +17,7 @@ impl ToTokens for SchemaItem {
         let mod_ident = &self.mod_ident;
 
         let item = quote::quote! {
+            #[automatically_derived]
             #[cfg(all(not(target_arch = "wasm32"), odra_module = #module_name))]
             mod #mod_ident {
                 use super::*;
@@ -82,6 +83,7 @@ mod test {
         let module = test_utils::mock::module_definition();
         let item = SchemaItem::try_from(&module).unwrap();
         let expected = quote!(
+            #[automatically_derived]
             #[cfg(all(not(target_arch = "wasm32"), odra_module = "CounterPack"))]
             mod __counter_pack_contract_schema {
                 use super::*;

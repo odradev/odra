@@ -41,6 +41,7 @@ impl ToTokens for SchemaEntrypointsItem {
             .collect::<Vec<_>>();
 
         let item = quote::quote! {
+            #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaEntrypoints for #module_ident {
                 fn schema_entrypoints() -> Vec<odra::schema::casper_contract_schema::Entrypoint> {
@@ -85,6 +86,7 @@ mod test {
     fn test_entrypoints() {
         let module = test_utils::mock::module_impl();
         let expected = quote!(
+            #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaEntrypoints for Erc20 {
                 fn schema_entrypoints() -> Vec<odra::schema::casper_contract_schema::Entrypoint> {
@@ -138,6 +140,7 @@ mod test {
     fn test_trait_impl_entrypoints() {
         let module = test_utils::mock::module_trait_impl();
         let expected = quote!(
+            #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaEntrypoints for Erc20 {
                 fn schema_entrypoints() -> Vec<odra::schema::casper_contract_schema::Entrypoint> {
@@ -156,6 +159,7 @@ mod test {
     fn test_delegated_entrypoints() {
         let module = test_utils::mock::module_delegation();
         let expected = quote!(
+            #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaEntrypoints for Erc20 {
                 fn schema_entrypoints() -> Vec<odra::schema::casper_contract_schema::Entrypoint> {
