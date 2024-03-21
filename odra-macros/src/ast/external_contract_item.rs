@@ -74,7 +74,7 @@ mod test {
                             false,
                             {
                                 let mut named_args = odra::casper_types::RuntimeArgs::new();
-                                let _ = named_args.insert("owner", owner.clone());
+                                odra::args::EntrypointArgument::insert_runtime_arg(owner.clone(), "owner", &mut named_args);
                                 named_args
                             }
                         ),
@@ -150,7 +150,7 @@ mod test {
                                     if self.attached_value > odra::casper_types::U512::zero() {
                                         let _ = named_args.insert("amount", self.attached_value);
                                     }
-                                    let _ = named_args.insert("owner", owner.clone());
+                                    odra::args::EntrypointArgument::insert_runtime_arg(owner.clone(), "owner", &mut named_args);
                                     named_args
                                 }
                             ).with_amount(self.attached_value),

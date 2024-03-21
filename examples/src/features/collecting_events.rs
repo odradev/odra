@@ -91,7 +91,8 @@ mod test {
             ident: "msg".to_string(),
             ty: CLType::String,
             is_ref: false,
-            is_slice: false
+            is_slice: false,
+            is_required: true
         };
         Event {
             ident: "Info".to_string(),

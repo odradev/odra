@@ -122,7 +122,13 @@ impl TryFrom<&'_ ModuleImplIR> for CallFnItem {
         let runtime_args_expr: syn::Expr = match module.constructor() {
             Some(f) => {
                 let arg_block = fn_utils::runtime_args_block(&f, wasm_parts_utils::insert_arg_stmt);
-                parse_quote!(let #ident_args = Some(#arg_block))
+                parse_quote!(let #ident_args = {
+                    let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
+                    let env_rc = Rc::new(env);
+                    let exec_env = odra::ExecutionEnv::new(env_rc);
+
+                    Some(#arg_block)
+                })
             }
             None => parse_quote!(let #ident_args = Option::<#ty_args>::None)
         };
@@ -279,10 +285,7 @@ mod test {
 
                     entry_points.add_entry_point(odra::casper_types::EntryPoint::new(
                         "init",
-                        vec![odra::casper_types::Parameter::new(
-                            "total_supply",
-                            <Option::<U256> as odra::casper_types::CLTyped>::cl_type()
-                        )],
+                        vec![odra::args::parameter::<Option<U256> >("total_supply")].into_iter().filter_map(|x| x).collect(),
                         <() as odra::casper_types::CLTyped>::cl_type(),
                         odra::casper_types::EntryPointAccess::Groups(vec![odra::casper_types::Group::new("constructor_group")]),
                         odra::casper_types::EntryPointType::Contract
@@ -309,11 +312,10 @@ mod test {
                             odra::casper_types::EntryPoint::new(
                                 "approve",
                                 vec![
-                                    odra::casper_types::Parameter::new("to", < Address as
-                                    odra::casper_types::CLTyped > ::cl_type()),
-                                    odra::casper_types::Parameter::new("amount", < U256 as
-                                    odra::casper_types::CLTyped > ::cl_type())
-                                ],
+                                    odra::args::parameter::<Address>("to"),
+                                    odra::args::parameter::<U256>("amount"),
+                                    odra::args::parameter::<Maybe<String> >("msg")
+                                ].into_iter().filter_map(|x| x).collect(),
                                 <() as odra::casper_types::CLTyped>::cl_type(),
                                 odra::casper_types::EntryPointAccess::Public,
                                 odra::casper_types::EntryPointType::Contract,
@@ -324,11 +326,9 @@ mod test {
                             odra::casper_types::EntryPoint::new(
                                 "airdrop",
                                 vec![
-                                    odra::casper_types::Parameter::new("to", <odra::prelude::vec::Vec<Address> as
-                                    odra::casper_types::CLTyped > ::cl_type()),
-                                    odra::casper_types::Parameter::new("amount", <U256 as
-                                    odra::casper_types::CLTyped > ::cl_type())
-                                ],
+                                    odra::args::parameter::<odra::prelude::vec::Vec<Address> >("to"),
+                                    odra::args::parameter::<U256>("amount")
+                                ].into_iter().filter_map(|x| x).collect(),
                                 <() as odra::casper_types::CLTyped>::cl_type(),
                                 odra::casper_types::EntryPointAccess::Public,
                                 odra::casper_types::EntryPointType::Contract,
@@ -342,14 +342,22 @@ mod test {
                     let schemas = odra::casper_event_standard::Schemas(
                         <Erc20 as odra::contract_def::HasEvents>::event_schemas()
                     );
-                    let named_args = Some({
-                        let mut named_args = odra::casper_types::RuntimeArgs::new();
-                        let _ = named_args.insert(
-                            "total_supply",
-                            odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::get_named_arg::<Option<U256>>("total_supply")
-                        );
-                        named_args
-                    });
+
+                    let named_args = {
+                        let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
+                        let env_rc = Rc::new(env);
+                        let exec_env = odra::ExecutionEnv::new(env_rc);
+
+                        Some({
+                            let mut named_args = odra::casper_types::RuntimeArgs::new();
+                            odra::args::EntrypointArgument::insert_runtime_arg(
+                                exec_env.get_named_arg::<Option<U256>>("total_supply"),
+                                "total_supply",
+                                &mut named_args
+                            );
+                            named_args
+                        })
+                    };
                     odra::odra_casper_wasm_env::host_functions::install_contract(
                         entry_points(),
                         schemas,
@@ -496,10 +504,7 @@ mod test {
                          .add_entry_point(
                              odra::casper_types::EntryPoint::new(
                                 "set_owner",
-                                vec![
-                                    odra::casper_types::Parameter::new("new_owner", < Address as
-                                    odra::casper_types::CLTyped > ::cl_type())
-                                ],
+                                vec![odra::args::parameter::<Address>("new_owner")].into_iter().filter_map(|x| x).collect(),
                                 <() as odra::casper_types::CLTyped>::cl_type(),
                                 odra::casper_types::EntryPointAccess::Public,
                                 odra::casper_types::EntryPointType::Contract,

@@ -6,7 +6,6 @@ use ast::*;
 use ir::{ModuleImplIR, ModuleStructIR, TypeIR};
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use syn::punctuated::Punctuated;
 
 mod ast;
 mod ir;
@@ -91,6 +90,7 @@ pub fn external_contract(attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_derive(IntoRuntimeArgs)]
 pub fn derive_into_runtime_args(item: TokenStream) -> TokenStream {
     let item = syn::parse_macro_input!(item as syn::DeriveInput);
+    let args_ident = syn::Ident::new("args", item.ident.span());
     match item {
         syn::DeriveInput {
             ident,
@@ -101,16 +101,15 @@ pub fn derive_into_runtime_args(item: TokenStream) -> TokenStream {
                 .into_iter()
                 .map(|f| {
                     let name = f.ident.unwrap();
-                    quote::quote!(stringify!(#name) => self.#name)
+                    quote::quote!(odra::args::EntrypointArgument::insert_runtime_arg(self.#name, stringify!(#name), &mut #args_ident);)
                 })
-                .collect::<Punctuated<proc_macro2::TokenStream, syn::token::Comma>>();
+                .collect::<proc_macro2::TokenStream>();
             let res = quote::quote! {
                 impl Into<odra::casper_types::RuntimeArgs> for #ident {
                     fn into(self) -> odra::casper_types::RuntimeArgs {
-                        use odra::casper_types::RuntimeArgs;
-                        odra::casper_types::runtime_args! {
-                            #fields
-                        }
+                        let mut #args_ident = odra::casper_types::RuntimeArgs::new();
+                        #fields
+                        #args_ident
                     }
                 }
             };

@@ -273,8 +273,9 @@ mod test {
                     exec_env.non_reentrant_before();
                     let to = exec_env.get_named_arg::<Address>("to");
                     let amount = exec_env.get_named_arg::<U256>("amount");
+                    let msg = exec_env.get_named_arg::<Maybe<String>>("msg");
                     let mut contract = <Erc20 as odra::prelude::Module>::new(env_rc);
-                    let result = contract.approve(&to, &amount);
+                    let result = contract.approve(&to, &amount, msg);
                     exec_env.non_reentrant_after();
                     return result;
                 }

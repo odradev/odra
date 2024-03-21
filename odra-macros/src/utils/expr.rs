@@ -49,9 +49,9 @@ pub fn entry_point_group(name: &str) -> syn::Expr {
 }
 
 pub fn new_parameter(name: String, ty: syn::Type) -> syn::Expr {
-    let ty_param = super::ty::parameter();
-    let cl_type = as_cl_type(&ty);
-    parse_quote!(#ty_param::new(#name, #cl_type))
+    let ty = super::ty::unreferenced_ty(&ty);
+
+    parse_quote!(odra::args::parameter::<#ty>(#name))
 }
 
 pub fn as_cl_type(ty: &syn::Type) -> syn::Expr {
@@ -171,17 +171,20 @@ pub fn new_entry_point(name: String, args: Vec<syn::PatType>) -> syn::Expr {
         .iter()
         .map(new_entry_point_arg)
         .collect::<Punctuated<_, syn::Token![,]>>();
-    let args = vec(args_stream);
-    parse_quote!(#ty::new(#name, #args))
+    let args_vec = vec(args_stream);
+    parse_quote!(#ty::new(#name, #args_vec))
 }
 
 fn new_entry_point_arg(arg: &syn::PatType) -> syn::Expr {
     let ty = super::ty::odra_entry_point_arg();
-    let cl_type = as_cl_type(&arg.ty);
+    let arg_ty = super::ty::unreferenced_ty(&arg.ty);
     let name = string_from(arg.pat.to_token_stream().to_string());
-    parse_quote!(#ty::new(#name, #cl_type))
+    parse_quote!(#ty::new::<#arg_ty>(#name))
 }
 
+pub fn into_arg(ty: syn::Type, ident: String) -> syn::Expr {
+    parse_quote!(odra::args::odra_argument::<#ty>(#ident))
+}
 pub trait IntoExpr {
     fn into_expr(self) -> syn::Expr;
 }

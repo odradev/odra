@@ -91,11 +91,17 @@ impl ContractContext for LivenetContractEnv {
     }
 
     fn get_named_arg_bytes(&self, name: &str) -> Bytes {
+        self.get_opt_named_arg_bytes(name).unwrap()
+    }
+
+    fn get_opt_named_arg_bytes(&self, name: &str) -> Option<Bytes> {
         match self.callstack.borrow().current() {
             CallstackElement::Account(_) => todo!("get_named_arg_bytes"),
-            CallstackElement::ContractCall { call_def, .. } => {
-                Bytes::from(call_def.args().get(name).unwrap().inner_bytes().to_vec())
-            }
+            CallstackElement::ContractCall { call_def, .. } => call_def
+                .args()
+                .get(name)
+                .map(|cl_value| cl_value.inner_bytes().to_vec())
+                .map(Bytes::from)
         }
     }
 

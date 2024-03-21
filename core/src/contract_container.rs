@@ -105,7 +105,7 @@ mod tests {
     #[test]
     fn test_call_valid_entrypoint_with_wrong_arg_name() {
         // Given an instance with a single entrypoint with one arg named "first".
-        let instance = ContractContainer::with_entrypoint(vec![("first", CLType::U32)]);
+        let instance = ContractContainer::with_entrypoint(vec!["first"]);
 
         // When call the registered entrypoint with an arg named "second".
         let call_def = CallDef::new(TEST_ENTRYPOINT, false, runtime_args! { "second" => 0u32 });
@@ -118,7 +118,7 @@ mod tests {
     #[test]
     fn test_call_valid_entrypoint_with_wrong_arg_type() {
         // Given an instance with a single entrypoint with one arg named "first".
-        let instance = ContractContainer::with_entrypoint(vec![("first", CLType::U32)]);
+        let instance = ContractContainer::with_entrypoint(vec!["first"]);
 
         // When call the registered entrypoint with an arg named "second".
         let call_def = CallDef::new(TEST_ENTRYPOINT, false, runtime_args! { "first" => true });
@@ -137,7 +137,7 @@ mod tests {
     #[test]
     fn test_call_valid_entrypoint_with_missing_arg() {
         // Given an instance with a single entrypoint with one arg named "first".
-        let instance = ContractContainer::with_entrypoint(vec![("first", CLType::U32)]);
+        let instance = ContractContainer::with_entrypoint(vec!["first"]);
 
         // When call a valid entrypoint without args.
         let call_def = CallDef::new(TEST_ENTRYPOINT, false, RuntimeArgs::new());
@@ -150,11 +150,7 @@ mod tests {
     #[test]
     fn test_many_missing_args() {
         // Given an instance with a single entrypoint with "first", "second" and "third" args.
-        let instance = ContractContainer::with_entrypoint(vec![
-            ("first", CLType::U32),
-            ("second", CLType::U32),
-            ("third", CLType::U32),
-        ]);
+        let instance = ContractContainer::with_entrypoint(vec!["first", "second", "third"]);
 
         // When call a valid entrypoint with a single valid args,
         let call_def = CallDef::new(TEST_ENTRYPOINT, false, runtime_args! { "third" => 0u32 });
@@ -178,11 +174,11 @@ mod tests {
             }
         }
 
-        fn with_entrypoint(args: Vec<(&str, CLType)>) -> Self {
+        fn with_entrypoint(args: Vec<&str>) -> Self {
             let entry_points = vec![EntryPoint::new(
                 String::from(TEST_ENTRYPOINT),
                 args.iter()
-                    .map(|(name, ty)| Argument::new(String::from(*name), ty.to_owned()))
+                    .map(|name| Argument::new::<u32>(String::from(*name)))
                     .collect()
             )];
             let mut ctx = MockHostContext::new();

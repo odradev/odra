@@ -60,3 +60,6 @@ fqn = "features::pauseable::PauseableCounter"
 
 [[contracts]]
 fqn = "features::livenet::LivenetContract"
+
+[[contracts]]
+fqn = "features::optional_args::Token"

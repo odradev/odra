@@ -1,4 +1,5 @@
 use crate::utils::syn::visibility_default;
+use crate::utils::ty;
 use crate::{
     ast::fn_utils,
     ir::{FnArgIR, FnIR},
@@ -142,6 +143,6 @@ pub fn insert_arg_stmt(arg: &FnArgIR) -> syn::Stmt {
     let ident = arg.name().unwrap();
     let name = ident.to_string();
     let args = utils::ident::named_args();
-
-    syn::parse_quote!(let _ = #args.insert(#name, #ident.clone());)
+    let ty = ty::entry_point_arg();
+    syn::parse_quote!(#ty::insert_runtime_arg(#ident.clone(), #name, &mut #args);)
 }

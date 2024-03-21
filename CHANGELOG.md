@@ -2,7 +2,15 @@
 
 Changelog for `odra`.
 
-## [0.8.1] - 2024-XX-XX
+## [0.8.2] - 2024-03-xx
+### Added
+- `Maybe<T>` - a type that represents an entrypoint arg that may or may not be present.
+- `EntrypointArgument` - a trait for types that can be used as entrypoint arguments.
+- an example of using `Maybe<T>` in `odra-examples` crate.
+- `get_opt_named_arg_bytes(&str)` in `ContractEnv`
+- `odra::contract_def::Argument` has a new `is_required` field.
+
+## [0.8.1] - 2024-03-01
 ### Added
 - `ContractRef` trait with `new` and `address` functions. All contract references now implement it.
 - `disable-allocator` feature for `odra` crate. It allows to disable the allocator used by Odra Framework in

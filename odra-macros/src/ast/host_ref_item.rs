@@ -406,8 +406,8 @@ mod ref_item_tests {
                 }
 
                 /// Approve.
-                pub fn approve(&mut self, to: &Address, amount: &U256) {
-                    self.try_approve(to, amount).unwrap()
+                pub fn approve(&mut self, to: &Address, amount: &U256, msg: Maybe<String>) {
+                    self.try_approve(to, amount, msg).unwrap()
                 }
 
                 /// Airdrops the given amount to the given addresses.
@@ -431,8 +431,7 @@ mod ref_item_tests {
                                     if self.attached_value > odra::casper_types::U512::zero() {
                                         let _ = named_args.insert("amount", self.attached_value);
                                     }
-                                    let _ = named_args
-                                        .insert("total_supply", total_supply.clone());
+                                    odra::args::EntrypointArgument::insert_runtime_arg(total_supply.clone(), "total_supply", &mut named_args);
                                     named_args
                                 },
                             )
@@ -484,6 +483,7 @@ mod ref_item_tests {
                     &mut self,
                     to: &Address,
                     amount: &U256,
+                    msg: Maybe<String>,
                 ) -> odra::OdraResult<()> {
                     self.env
                         .call_contract(
@@ -496,8 +496,9 @@ mod ref_item_tests {
                                         if self.attached_value > odra::casper_types::U512::zero() {
                                             let _ = named_args.insert("amount", self.attached_value);
                                         }
-                                        let _ = named_args.insert("to", to.clone());
-                                        let _ = named_args.insert("amount", amount.clone());
+                                        odra::args::EntrypointArgument::insert_runtime_arg(to.clone(), "to", &mut named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(amount.clone(), "amount", &mut named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(msg.clone(), "msg", &mut named_args);
                                         named_args
                                     },
                                 )
@@ -517,8 +518,8 @@ mod ref_item_tests {
                                 if self.attached_value > odra::casper_types::U512::zero() {
                                     let _ = named_args.insert("amount", self.attached_value);
                                 }
-                                let _ = named_args.insert("to", to.clone());
-                                let _ = named_args.insert("amount", amount.clone());
+                                odra::args::EntrypointArgument::insert_runtime_arg(to.clone(), "to", &mut named_args);
+                                odra::args::EntrypointArgument::insert_runtime_arg(amount.clone(), "amount", &mut named_args);
                                 named_args
                             }
                         ).with_amount(self.attached_value),
@@ -763,7 +764,7 @@ mod ref_item_tests {
                                         if self.attached_value > odra::casper_types::U512::zero() {
                                             let _ = named_args.insert("amount", self.attached_value);
                                         }
-                                        let _ = named_args.insert("new_owner", new_owner.clone());
+                                        odra::args::EntrypointArgument::insert_runtime_arg(new_owner.clone(), "new_owner", &mut named_args);
                                         named_args
                                     },
                                 )
