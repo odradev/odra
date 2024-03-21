@@ -82,14 +82,14 @@ pub mod mock {
 
                 delegate! {
                     to self.ownable {
-                        /// A
+                        /// Returns the owner of the contract.
                         fn get_owner(&self) -> Address;
-                        /// C
+                        /// Sets the owner of the contract.
                         fn set_owner(&mut self, new_owner: Address);
                     }
 
                     to self.metadata {
-                        /// W
+                        /// Returns the name of the token.
                         fn name(&self) -> String;
                         fn symbol(&self) -> String;
                     }

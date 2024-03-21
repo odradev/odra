@@ -34,7 +34,7 @@ impl ToTokens for SchemaEntrypointsItem {
                         #name,
                         #desc,
                         #is_mut,
-                        vec![ #(#args),* ]
+                        odra::prelude::vec![ #(#args),* ]
                     )
                 }
             })
@@ -44,8 +44,8 @@ impl ToTokens for SchemaEntrypointsItem {
             #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaEntrypoints for #module_ident {
-                fn schema_entrypoints() -> Vec<odra::schema::casper_contract_schema::Entrypoint> {
-                    vec![ #(#fns),* ]
+                fn schema_entrypoints() -> odra::prelude::vec::Vec<odra::schema::casper_contract_schema::Entrypoint> {
+                    odra::prelude::vec![ #(#fns),* ]
                 }
             }
         };
@@ -89,31 +89,31 @@ mod test {
             #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaEntrypoints for Erc20 {
-                fn schema_entrypoints() -> Vec<odra::schema::casper_contract_schema::Entrypoint> {
-                    vec![
+                fn schema_entrypoints() -> odra::prelude::vec::Vec<odra::schema::casper_contract_schema::Entrypoint> {
+                    odra::prelude::vec![
                         odra::schema::entry_point::<()>(
                             "init",
                             "Initializes the contract with the given parameters.",
                             true,
-                            vec![odra::schema::argument::<Option<U256> >("total_supply")]
+                            odra::prelude::vec![odra::schema::argument::<Option<U256> >("total_supply")]
                         ),
                         odra::schema::entry_point::<U256>(
                             "total_supply",
                             "Returns the total supply of the token.",
                             false,
-                            vec![]
+                            odra::prelude::vec![]
                         ),
                         odra::schema::entry_point::<()>(
                             "pay_to_mint",
                             "Pay to mint.",
                             true,
-                            vec![]
+                            odra::prelude::vec![]
                         ),
                         odra::schema::entry_point::<()>(
                             "approve",
                             "Approve.",
                             true,
-                            vec![
+                            odra::prelude::vec![
                                 odra::schema::argument::<Address>("to"),
                                 odra::schema::argument::<U256>("amount"),
                                 odra::schema::argument::<Maybe<String> >("msg")
@@ -123,7 +123,7 @@ mod test {
                             "airdrop",
                             "Airdrops the given amount to the given addresses.",
                             false,
-                            vec![
+                            odra::prelude::vec![
                                 odra::schema::argument::<odra::prelude::vec::Vec<Address> >("to"),
                                 odra::schema::argument::<U256>("amount")
                             ]
@@ -143,10 +143,10 @@ mod test {
             #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaEntrypoints for Erc20 {
-                fn schema_entrypoints() -> Vec<odra::schema::casper_contract_schema::Entrypoint> {
-                    vec![
-                        odra::schema::entry_point::<U256>("total_supply", "", false, vec![]),
-                        odra::schema::entry_point::<()>("pay_to_mint", "", true, vec![])
+                fn schema_entrypoints() -> odra::prelude::vec::Vec<odra::schema::casper_contract_schema::Entrypoint> {
+                    odra::prelude::vec![
+                        odra::schema::entry_point::<U256>("total_supply", "", false, odra::prelude::vec![]),
+                        odra::schema::entry_point::<()>("pay_to_mint", "", true, odra::prelude::vec![])
                     ]
                 }
             }
@@ -162,27 +162,37 @@ mod test {
             #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaEntrypoints for Erc20 {
-                fn schema_entrypoints() -> Vec<odra::schema::casper_contract_schema::Entrypoint> {
-                    vec![
+                fn schema_entrypoints() -> odra::prelude::vec::Vec<odra::schema::casper_contract_schema::Entrypoint> {
+                    odra::prelude::vec![
                         odra::schema::entry_point::<U256>(
                             "total_supply",
                             "Returns the total supply of the token.",
                             false,
-                            vec![]
+                            odra::prelude::vec![]
                         ),
-                        odra::schema::entry_point::<Address>("get_owner", "A", false, vec![]),
+                        odra::schema::entry_point::<Address>(
+                            "get_owner", 
+                            "Returns the owner of the contract.", 
+                            false, 
+                            odra::prelude::vec![]
+                        ),
                         odra::schema::entry_point::<()>(
                             "set_owner",
-                            "C",
+                            "Sets the owner of the contract.",
                             true,
-                            vec![odra::schema::argument::<Address>("new_owner")]
+                            odra::prelude::vec![odra::schema::argument::<Address>("new_owner")]
                         ),
-                        odra::schema::entry_point::<String>("name", "W", false, vec![]),
+                        odra::schema::entry_point::<String>(
+                            "name",
+                            "Returns the name of the token.",
+                            false, 
+                            odra::prelude::vec![]
+                        ),
                         odra::schema::entry_point::<String>(
                             "symbol",
                             "Delegated. See `self.metadata.symbol()` for details.",
                             false,
-                            vec![]
+                            odra::prelude::vec![]
                         )
                     ]
                 }

@@ -165,7 +165,7 @@ impl<M: SchemaEvents> SchemaEvents for SubModule<M> {
     fn schema_events() -> Vec<casper_contract_schema::Event> {
         M::schema_events()
     }
-    
+
     fn custom_types() -> Vec<Option<CustomType>> {
         M::custom_types()
     }
