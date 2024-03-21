@@ -370,7 +370,7 @@ mod ref_item_tests {
                     )
                 }
 
-                /// A
+                /// Returns the owner of the contract.
                 pub fn get_owner(&self) -> Address {
                     self.env
                         .call_contract(
@@ -386,7 +386,7 @@ mod ref_item_tests {
                         )
                 }
 
-                /// C
+                /// Sets the owner of the contract.
                 pub fn set_owner(&mut self, new_owner: Address) {
                     self.env
                         .call_contract(
@@ -403,7 +403,7 @@ mod ref_item_tests {
                         )
                 }
 
-                /// W
+                /// Returns the name of the token.
                 pub fn name(&self) -> String {
                     self.env
                         .call_contract(
