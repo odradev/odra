@@ -1,15 +1,15 @@
 //! This example demonstrates how to collect events from a module and its submodules.
 #![allow(dead_code)]
 use odra::prelude::*;
-use odra::{Event, SubModule, Var};
+use odra::{SubModule, Var};
 
-#[derive(Event, PartialEq, Eq, Debug)]
+#[odra::event]
 struct Start {}
 
-#[derive(Event, PartialEq, Eq, Debug)]
+#[odra::event]
 struct Stop {}
 
-#[derive(Event, PartialEq, Eq, Debug)]
+#[odra::event]
 struct Info {
     msg: String
 }

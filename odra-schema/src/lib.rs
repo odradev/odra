@@ -23,6 +23,10 @@ pub trait SchemaEvents {
     fn schema_events() -> Vec<Event> {
         vec![]
     }
+
+    fn custom_types() -> Vec<Option<CustomType>> {
+        vec![]
+    }
 }
 
 pub trait SchemaCustomTypes {

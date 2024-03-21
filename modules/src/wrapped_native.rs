@@ -98,11 +98,11 @@ impl WrappedNativeToken {
 
 /// Events emitted by the WrappedNativeToken module.
 pub mod events {
-    use odra::casper_event_standard::{self, Event};
+    use odra::casper_event_standard;
     use odra::{casper_types::U256, Address};
 
     /// Event emitted when native tokens are deposited into the contract.
-    #[derive(Event, Debug, Eq, PartialEq)]
+    #[odra::event]
     pub struct Deposit {
         /// An Address of the account that deposited the tokens.
         pub account: Address,
@@ -111,7 +111,7 @@ pub mod events {
     }
 
     /// Event emitted when native tokens are withdrawn from the contract.
-    #[derive(Event, Debug, Eq, PartialEq)]
+    #[odra::event]
     pub struct Withdrawal {
         /// An Address of the account that withdrew the tokens.
         pub account: Address,

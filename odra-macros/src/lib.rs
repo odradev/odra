@@ -128,3 +128,10 @@ pub fn derive_into_runtime_args(item: TokenStream) -> TokenStream {
         _ => panic!("Struct expected")
     }
 }
+
+/// This macro is used to implement the boilerplate code for the event and contract schema.
+#[proc_macro_attribute]
+pub fn event(_attr: TokenStream, input: TokenStream) -> TokenStream {
+    let input: TokenStream2 = input.into();
+    OdraEventItem::try_from(&input).into_code()
+}

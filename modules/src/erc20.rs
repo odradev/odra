@@ -162,11 +162,11 @@ impl Erc20 {
 
 /// ERC20 Events
 pub mod events {
-    use odra::casper_event_standard::{self, Event};
+    use odra::casper_event_standard;
     use odra::{casper_types::U256, Address};
 
     /// Transfer event
-    #[derive(Event, Eq, PartialEq, Debug)]
+    #[odra::event]
     pub struct Transfer {
         /// Sender of the tokens.
         pub from: Option<Address>,
@@ -177,7 +177,7 @@ pub mod events {
     }
 
     /// Approval event
-    #[derive(Event, Eq, PartialEq, Debug)]
+    #[odra::event]
     pub struct Approval {
         /// Owner of the tokens.
         pub owner: Address,

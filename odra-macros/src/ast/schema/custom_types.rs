@@ -41,6 +41,7 @@ impl ToTokens for SchemaCustomTypesItem {
                     odra::prelude::BTreeSet::<Option<odra::schema::casper_contract_schema::CustomType>>::new()
                         .into_iter()
                         #(#chain)*
+                        .chain(<Self as odra::schema::SchemaEvents>::custom_types())
                         .collect()
                 }
             }

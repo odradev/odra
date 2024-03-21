@@ -11,13 +11,15 @@ pub struct SchemaEventsItem {
 impl ToTokens for SchemaEventsItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let module_ident = &self.module_ident;
-        let events = self.events.iter().map(|event| {
-            quote::quote! {
-                odra::schema::event(&<#event as odra::casper_event_standard::EventInstance>::name())
-            }
+        let events = self.events.iter().map(|ty| {
+            quote::quote!(odra::schema::event(&<#ty as odra::casper_event_standard::EventInstance>::name()))
+        }).collect::<Vec<_>>();
+        
+        let types = self.events.iter().map(|event| {
+            quote::quote!(.chain(<#event as odra::schema::SchemaCustomTypes>::schema_types()))
         }).collect::<Vec<_>>();
 
-        let chain = self.fields
+        let events_chain = self.fields
             .iter()
             .map(|f| {
                 let ty = &f.ty;
@@ -25,15 +27,34 @@ impl ToTokens for SchemaEventsItem {
             })
             .collect::<Vec<_>>();
 
+        let types_chain = self.fields
+            .iter()
+            .map(|f| {
+                let ty = &f.ty;
+                quote::quote!(.chain(<#ty as odra::schema::SchemaEvents>::custom_types()))
+            })
+            .collect::<Vec<_>>();
+
         let item = quote::quote! {
+            #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaEvents for #module_ident {
-                fn schema_events() -> Vec<odra::schema::casper_contract_schema::Event> {
-                    odra::prelude::BTreeSet::<odra::schema::casper_contract_schema::Event>::new()
+                fn schema_events() -> odra::prelude::Vec<odra::schema::casper_contract_schema::Event> {
+                    odra::prelude::vec::Vec::<odra::schema::casper_contract_schema::Event>::new()
                         .into_iter()
                         .chain(odra::prelude::vec![#(#events),*])
-                        #(#chain)*
+                        #(#events_chain)*
                         .collect::<odra::prelude::BTreeSet<odra::schema::casper_contract_schema::Event>>()
+                        .into_iter()
+                        .collect()
+                }
+
+                fn custom_types() -> odra::prelude::Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
+                    odra::prelude::vec::Vec::<Option<odra::schema::casper_contract_schema::CustomType>>::new()
+                        .into_iter()
+                        #(#types)*
+                        #(#types_chain)*
+                        .collect::<odra::prelude::BTreeSet<Option<odra::schema::casper_contract_schema::CustomType>>>()
                         .into_iter()
                         .collect()
                 }
@@ -66,10 +87,11 @@ mod test {
         let ir = test_utils::mock::module_definition();
         let item = SchemaEventsItem::try_from(&ir).unwrap();
         let expected = quote::quote!(
+            #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaEvents for CounterPack {
-                fn schema_events() -> Vec<odra::schema::casper_contract_schema::Event> {
-                    odra::prelude::BTreeSet::<odra::schema::casper_contract_schema::Event>::new()
+                fn schema_events() -> odra::prelude::Vec<odra::schema::casper_contract_schema::Event> {
+                    odra::prelude::vec::Vec::<odra::schema::casper_contract_schema::Event>::new()
                         .into_iter()
                         .chain(odra::prelude::vec![
                             odra::schema::event(
@@ -85,6 +107,21 @@ mod test {
                         .chain(<Var<u32> as odra::schema::SchemaEvents>::schema_events())
                         .chain(<Mapping<u8, Counter> as odra::schema::SchemaEvents>::schema_events())
                         .collect::<odra::prelude::BTreeSet<odra::schema::casper_contract_schema::Event>>()
+                        .into_iter()
+                        .collect()
+                }
+
+                fn custom_types() -> odra::prelude::Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
+                    odra::prelude::vec::Vec::<Option<odra::schema::casper_contract_schema::CustomType>>::new()
+                        .into_iter()
+                        .chain(<OnTransfer as odra::schema::SchemaCustomTypes>::schema_types())
+                        .chain(<OnApprove as odra::schema::SchemaCustomTypes>::schema_types())
+                        .chain(<SubModule<Counter> as odra::schema::SchemaEvents>::custom_types())
+                        .chain(<SubModule<Counter> as odra::schema::SchemaEvents>::custom_types())
+                        .chain(<SubModule<Counter> as odra::schema::SchemaEvents>::custom_types())
+                        .chain(<Var<u32> as odra::schema::SchemaEvents>::custom_types())
+                        .chain(<Mapping<u8, Counter> as odra::schema::SchemaEvents>::custom_types())
+                        .collect::<odra::prelude::BTreeSet<Option<odra::schema::casper_contract_schema::CustomType>>>()
                         .into_iter()
                         .collect()
                 }

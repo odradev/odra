@@ -56,11 +56,11 @@ pub trait Erc721 {
 
 /// Erc721-related Odra events.
 pub mod events {
-    use odra::casper_event_standard::{self, Event};
+    use odra::casper_event_standard;
     use odra::{casper_types::U256, Address};
 
     /// Emitted when the `token_id` token is transferred (also minted or burned).
-    #[derive(Event)]
+    #[odra::event]
     pub struct Transfer {
         /// The address of the sender.
         pub from: Option<Address>,
@@ -71,7 +71,7 @@ pub mod events {
     }
 
     /// Emitted when the `owner` approves `approved` to operate on the `token_id` token.
-    #[derive(Event)]
+    #[odra::event]
     pub struct Approval {
         /// The owner of the tokens.
         pub owner: Address,
@@ -82,7 +82,7 @@ pub mod events {
     }
 
     /// Emitted when the `owner` approves or revokes `operator`.
-    #[derive(Event)]
+    #[odra::event]
     pub struct ApprovalForAll {
         /// The owner of the tokens.
         pub owner: Address,

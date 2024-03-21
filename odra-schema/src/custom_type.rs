@@ -165,6 +165,10 @@ impl<M: SchemaEvents> SchemaEvents for SubModule<M> {
     fn schema_events() -> Vec<casper_contract_schema::Event> {
         M::schema_events()
     }
+    
+    fn custom_types() -> Vec<Option<CustomType>> {
+        M::custom_types()
+    }
 }
 // I don't like it, but it's the only way to make it work
 // If it was implemented it `core`, SchemaEvents would be implemented for ModulePrimitive
