@@ -1,5 +1,5 @@
 //! Ownable module.
-use crate::access::errors::Error::{self, CallerNotTheNewOwner, CallerNotTheOwner, OwnerNotSet};
+use crate::access::errors::Error;
 use crate::access::events::{OwnershipTransferStarted, OwnershipTransferred};
 use odra::prelude::*;
 use odra::{Address, SubModule, UnwrapOrRevert, Var};
@@ -50,14 +50,14 @@ impl Ownable {
     /// Returns the address of the current owner.
     pub fn get_owner(&self) -> Address {
         self.get_optional_owner()
-            .unwrap_or_revert_with(&self.env(), OwnerNotSet)
+            .unwrap_or_revert_with(&self.env(), Error::OwnerNotSet)
     }
 
     /// Reverts with [`Error::CallerNotTheOwner`] if the function called by
     /// any account other than the owner.
     pub fn assert_owner(&self, address: &Address) {
         if Some(address) != self.get_optional_owner().as_ref() {
-            self.env().revert(CallerNotTheOwner)
+            self.env().revert(Error::CallerNotTheOwner)
         }
     }
 
@@ -146,7 +146,7 @@ impl Ownable2Step {
         let caller = Some(caller);
         let pending_owner = self.pending_owner.get().flatten();
         if pending_owner != caller {
-            self.env().revert(CallerNotTheNewOwner)
+            self.env().revert(Error::CallerNotTheNewOwner)
         }
         self.pending_owner.set(None);
         self.ownable.unchecked_transfer_ownership(caller);
@@ -247,7 +247,7 @@ mod test {
 
         // then ownership transfer fails
         let err = contract.try_transfer_ownership(&new_owner).unwrap_err();
-        assert_eq!(err, CallerNotTheOwner.into());
+        assert_eq!(err, Error::CallerNotTheOwner.into());
     }
 
     #[test]
@@ -261,7 +261,7 @@ mod test {
 
         // then ownership transfer fails
         let err = contract.try_transfer_ownership(&new_owner).unwrap_err();
-        assert_eq!(err, CallerNotTheOwner.into());
+        assert_eq!(err, Error::CallerNotTheOwner.into());
 
         // when the owner is the caller
         contract.env().set_caller(initial_owner);

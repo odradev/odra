@@ -5,7 +5,7 @@
 /// It will make available `require_not_paused()` and `require_paused()` functions,
 /// which can be used in the functions of your contract to ensure the contract is
 /// in the correct state.
-use crate::security::errors::Error::{self, PausedRequired, UnpausedRequired};
+use crate::security::errors::Error;
 use crate::security::events::{Paused, Unpaused};
 use odra::prelude::*;
 use odra::Var;
@@ -25,14 +25,14 @@ impl Pauseable {
     /// Reverts with `[Error::UnpausedRequired]` if the contract is paused.
     pub fn require_not_paused(&self) {
         if self.is_paused() {
-            self.env().revert(UnpausedRequired);
+            self.env().revert(Error::UnpausedRequired);
         }
     }
 
     /// Reverts with `[Error::PausedRequired]` if the contract is paused.
     pub fn require_paused(&self) {
         if !self.is_paused() {
-            self.env().revert(PausedRequired);
+            self.env().revert(Error::PausedRequired);
         }
     }
 

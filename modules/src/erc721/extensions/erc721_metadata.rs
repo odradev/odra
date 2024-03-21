@@ -1,8 +1,6 @@
 //! Erc721 metadata.
 
-use crate::erc721::extensions::erc721_metadata::errors::Error::{
-    self, BaseUriNotSet, NameNotSet, SymbolNotSet
-};
+use crate::erc721::extensions::erc721_metadata::errors::Error;
 use odra::prelude::*;
 use odra::UnwrapOrRevert;
 use odra::Var;
@@ -29,19 +27,19 @@ impl Erc721Metadata for Erc721MetadataExtension {
     fn name(&self) -> String {
         self.name
             .get()
-            .unwrap_or_revert_with(&self.env(), NameNotSet)
+            .unwrap_or_revert_with(&self.env(), Error::NameNotSet)
     }
 
     fn symbol(&self) -> String {
         self.symbol
             .get()
-            .unwrap_or_revert_with(&self.env(), SymbolNotSet)
+            .unwrap_or_revert_with(&self.env(), Error::SymbolNotSet)
     }
 
     fn base_uri(&self) -> String {
         self.base_uri
             .get()
-            .unwrap_or_revert_with(&self.env(), BaseUriNotSet)
+            .unwrap_or_revert_with(&self.env(), Error::BaseUriNotSet)
     }
 }
 

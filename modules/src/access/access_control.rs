@@ -1,6 +1,6 @@
 //! Access Control module.
 use super::events::*;
-use crate::access::errors::Error::{self, MissingRole, RoleRenounceForAnotherAddress};
+use crate::access::errors::Error;
 use odra::prelude::*;
 use odra::{Address, Mapping};
 
@@ -86,7 +86,7 @@ impl AccessControl {
     /// Note that only `address` is authorized to call this function.
     pub fn renounce_role(&mut self, role: &Role, address: &Address) {
         if address != &self.env().caller() {
-            self.env().revert(RoleRenounceForAnotherAddress);
+            self.env().revert(Error::RoleRenounceForAnotherAddress);
         }
         self.unchecked_revoke_role(role, address);
     }
@@ -96,7 +96,7 @@ impl AccessControl {
     /// Ensures `address` has `role`. If not, reverts with [Error::MissingRole].
     pub fn check_role(&self, role: &Role, address: &Address) {
         if !self.has_role(role, address) {
-            self.env().revert(MissingRole);
+            self.env().revert(Error::MissingRole);
         }
     }
 

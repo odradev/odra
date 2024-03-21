@@ -11,6 +11,8 @@ repository = { workspace = true }
 [dependencies]
 odra-core = { workspace = true }
 odra-macros = { workspace = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 odra-schema = { path = "../odra-schema" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
