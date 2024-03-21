@@ -82,7 +82,7 @@ pub trait EntrypointArgument: Sized {
     /// Returns `true` if the argument is required.
     fn is_required() -> bool;
     /// Returns the CLType of the argument.
-    fn ty() -> CLType;
+    fn cl_type() -> CLType;
     /// Inserts the argument into the runtime args.
     fn insert_runtime_arg(self, name: &str, args: &mut RuntimeArgs);
     /// Unwraps the argument from an Option.
@@ -94,7 +94,7 @@ impl<T: CLTyped + ToBytes> EntrypointArgument for Maybe<T> {
         false
     }
 
-    fn ty() -> CLType {
+    fn cl_type() -> CLType {
         T::cl_type()
     }
 
@@ -117,7 +117,7 @@ impl<T: CLTyped + ToBytes> EntrypointArgument for T {
         true
     }
 
-    fn ty() -> CLType {
+    fn cl_type() -> CLType {
         T::cl_type()
     }
 
@@ -137,7 +137,7 @@ impl<T: CLTyped + ToBytes> EntrypointArgument for T {
 /// If the parameter is not required, it returns `None`.
 pub fn parameter<T: EntrypointArgument>(name: &str) -> Option<Parameter> {
     match T::is_required() {
-        true => Some(Parameter::new(name, T::ty())),
+        true => Some(Parameter::new(name, T::cl_type())),
         false => None
     }
 }
@@ -146,7 +146,7 @@ pub fn parameter<T: EntrypointArgument>(name: &str) -> Option<Parameter> {
 pub fn odra_argument<T: EntrypointArgument>(name: &str) -> Argument {
     Argument {
         ident: name.to_string(),
-        ty: T::ty(),
+        ty: T::cl_type(),
         is_ref: false,
         is_slice: false,
         is_required: T::is_required()
