@@ -85,21 +85,21 @@ mod test {
 
     fn engine_event(ident: &str) -> Event {
         Event {
-            ident: ident.to_string(),
+            name: ident.to_string(),
             args: vec![]
         }
     }
 
     fn info_event() -> Event {
         let arg = Argument {
-            ident: "msg".to_string(),
+            name: "msg".to_string(),
             ty: CLType::String,
             is_ref: false,
             is_slice: false,
             is_required: true
         };
         Event {
-            ident: "Info".to_string(),
+            name: "Info".to_string(),
             args: vec![arg]
         }
     }
