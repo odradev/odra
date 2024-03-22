@@ -9,6 +9,12 @@ Changelog for `odra`.
 - an example of using `Maybe<T>` in `odra-examples` crate.
 - `get_opt_named_arg_bytes(&str)` in `ContractEnv`
 - `odra::contract_def::Argument` has a new `is_required` field.
+- `odra-schema` crate for generating contract schema that aligns with Casper Contract Schema.
+- `odra::event` proc macro that combines Casper Event Standard and Casper Contract Schema boilerplate code.
+- `odra::module` accepts `error` attribute to generate custom error in the schema.
+  
+### Changed
+- update modules and examples to reflect the changes.
 
 ## [0.8.1] - 2024-03-01
 ### Added
