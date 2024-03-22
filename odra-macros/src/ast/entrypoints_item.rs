@@ -82,10 +82,10 @@ fn struct_entrypoints_expr(ir: &ModuleImplIR) -> syn::Result<syn::Expr> {
             let ty_entrypoint = utils::ty::entry_point_def();
 
             let expr: syn::Expr = parse_quote!(#ty_entrypoint {
-                ident: String::from(#ident),
+                name: String::from(#ident),
                 args: #args,
-                is_mut: #is_mut,
-                ret: #ret,
+                is_mutable: #is_mut,
+                return_ty: #ret,
                 ty: #ty,
                 attributes: vec![#(#attributes),*]
             });

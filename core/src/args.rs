@@ -145,7 +145,7 @@ pub fn parameter<T: EntrypointArgument>(name: &str) -> Option<Parameter> {
 /// Returns an Odra's entrypoint argument representation.
 pub fn odra_argument<T: EntrypointArgument>(name: &str) -> Argument {
     Argument {
-        ident: name.to_string(),
+        name: name.to_string(),
         ty: T::cl_type(),
         is_ref: false,
         is_slice: false,
