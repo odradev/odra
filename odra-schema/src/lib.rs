@@ -1,5 +1,5 @@
 //! A module providing functionality for defining the Casper Contract Schema.
-//! 
+//!
 //! It includes traits for defining entrypoints, events, custom types, and errors, as well as functions
 //! for creating various schema elements such as arguments, entrypoints, struct members, enum variants, custom types,
 //! events, and errors.
@@ -21,12 +21,14 @@ mod ty;
 pub use ty::NamedCLTyped;
 
 /// Trait representing schema entrypoints.
+#[cfg_attr(test, mockall::automock)]
 pub trait SchemaEntrypoints {
     /// Returns a vector of [Entrypoint]s.
     fn schema_entrypoints() -> Vec<Entrypoint>;
 }
 
 /// Trait representing schema events.
+#[cfg_attr(test, mockall::automock)]
 pub trait SchemaEvents {
     /// Returns a vector of [Event]s.
     fn schema_events() -> Vec<Event> {
@@ -43,6 +45,7 @@ pub trait SchemaEvents {
 }
 
 /// Trait for defining custom types in a schema.
+#[cfg_attr(test, mockall::automock)]
 pub trait SchemaCustomTypes {
     /// Returns a vector of optional [CustomType]s.
     fn schema_types() -> Vec<Option<CustomType>> {
@@ -51,6 +54,7 @@ pub trait SchemaCustomTypes {
 }
 
 /// A trait for defining schema user errors.
+#[cfg_attr(test, mockall::automock)]
 pub trait SchemaErrors {
     /// Returns a vector of [UserError]s.
     fn schema_errors() -> Vec<UserError> {
@@ -59,6 +63,7 @@ pub trait SchemaErrors {
 }
 
 /// Represents a custom element in the schema.
+#[cfg_attr(test, mockall::automock)]
 pub trait SchemaCustomElement {}
 
 impl<T: SchemaCustomElement> SchemaErrors for T {}
@@ -248,5 +253,177 @@ fn call_method(
         .chain(constructor_args.iter())
         .cloned()
         .collect()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use odra_core::{args::Maybe, Address};
+
+    use super::*;
+
+    #[test]
+    fn test_argument() {
+        let arg = super::argument::<u32>("arg1");
+        assert_eq!(arg.name, "arg1");
+        assert_eq!(arg.ty, casper_contract_schema::NamedCLType::U32.into());
+    }
+
+    #[test]
+    fn test_opt_argument() {
+        let arg = super::argument::<Maybe<u32>>("arg1");
+        assert_eq!(arg.name, "arg1");
+        assert_eq!(arg.ty, casper_contract_schema::NamedCLType::U32.into());
+    }
+
+    #[test]
+    fn test_entry_point() {
+        let arg = super::argument::<u32>("arg1");
+        let entry_point = super::entry_point::<u32>("entry1", "description", true, vec![arg]);
+        assert_eq!(entry_point.name, "entry1");
+        assert_eq!(entry_point.description, Some("description".to_string()));
+        assert!(entry_point.is_mutable);
+        assert_eq!(entry_point.arguments.len(), 1);
+        assert_eq!(
+            entry_point.return_ty,
+            casper_contract_schema::NamedCLType::U32.into()
+        );
+    }
+
+    #[test]
+    fn test_struct_member() {
+        let member = super::struct_member::<u32>("member1");
+        assert_eq!(member.name, "member1");
+        assert_eq!(member.ty, casper_contract_schema::NamedCLType::U32.into());
+    }
+
+    #[test]
+    fn test_enum_typed_variant() {
+        let variant = super::enum_typed_variant::<Address>("variant1", 1);
+        assert_eq!(variant.name, "variant1");
+        assert_eq!(variant.discriminant, 1);
+        assert_eq!(variant.ty, casper_contract_schema::NamedCLType::Key.into());
+    }
+
+    #[test]
+    fn test_enum_variant() {
+        let variant = super::enum_variant("variant1", 1);
+        assert_eq!(variant.name, "variant1");
+        assert_eq!(variant.discriminant, 1);
+        assert_eq!(variant.ty, casper_contract_schema::NamedCLType::Unit.into());
+    }
+
+    #[test]
+    fn test_custom_struct() {
+        let member = super::struct_member::<u32>("member1");
+        let custom_struct = super::custom_struct("struct1", vec![member]);
+        match custom_struct {
+            casper_contract_schema::CustomType::Struct { name, members, .. } => {
+                assert_eq!(name, "struct1".into());
+                assert_eq!(members.len(), 1);
+            }
+            _ => panic!("Expected CustomType::Struct")
+        }
+    }
+
+    #[test]
+    fn test_custom_enum() {
+        let variant = super::enum_variant("variant1", 1);
+        let custom_enum = super::custom_enum("enum1", vec![variant]);
+        match custom_enum {
+            casper_contract_schema::CustomType::Enum { name, variants, .. } => {
+                assert_eq!(name, "enum1".into());
+                assert_eq!(variants.len(), 1);
+            }
+            _ => panic!("Expected CustomType::Enum")
+        }
+    }
+
+    #[test]
+    fn test_event() {
+        let event = super::event("event1");
+        assert_eq!(event.name, "event1");
+    }
+
+    #[test]
+    fn test_error() {
+        let error = super::error("error1", "description", 1);
+        assert_eq!(error.name, "error1");
+        assert_eq!(error.description, Some("description".to_string()));
+        assert_eq!(error.discriminant, 1);
+    }
+
+    mockall::mock! {
+        TestSchema {}
+        impl SchemaEntrypoints for TestSchema {
+            fn schema_entrypoints() -> Vec<Entrypoint>;
+        }
+
+        impl SchemaEvents for TestSchema {
+            fn schema_events() -> Vec<Event>;
+            fn custom_types() -> Vec<Option<CustomType>>;
+        }
+
+        impl SchemaCustomTypes for TestSchema {
+            fn schema_types() -> Vec<Option<CustomType>>;
+        }
+
+        impl SchemaErrors for TestSchema {
+            fn schema_errors() -> Vec<UserError>;
+        }
+    }
+
+    #[test]
+    fn test_schema() {
+        let entry_points_ctx = MockTestSchema::schema_entrypoints_context();
+        entry_points_ctx.expect().returning(|| {
+            vec![super::entry_point::<u32>(
+                "entry1",
+                "description",
+                true,
+                vec![super::argument::<u32>("arg1")]
+            )]
+        });
+
+        let events_ctx = MockTestSchema::schema_events_context();
+        events_ctx
+            .expect()
+            .returning(|| vec![super::event("event1")]);
+
+        let custom_types_ctx = MockTestSchema::schema_types_context();
+        custom_types_ctx.expect().returning(|| {
+            vec![
+                Some(super::custom_struct(
+                    "struct1",
+                    vec![super::struct_member::<u32>("member1")]
+                )),
+                Some(super::custom_enum(
+                    "struct1",
+                    vec![super::enum_variant("variant1", 1)]
+                )),
+            ]
+        });
+
+        let errors_ctx = MockTestSchema::schema_errors_context();
+        errors_ctx.expect().returning(Vec::new);
+
+        let schema = super::schema::<MockTestSchema>(
+            "module_name",
+            "contract_name",
+            "contract_version",
+            vec!["author".to_string()],
+            "repository",
+            "homepage"
+        );
+
+        assert_eq!(schema.contract_name, "contract_name");
+        assert_eq!(schema.contract_version, "contract_version");
+        assert_eq!(schema.authors, vec!["author".to_string()]);
+        assert_eq!(schema.repository, Some("repository".to_string()));
+        assert_eq!(schema.homepage, Some("homepage".to_string()));
+        assert_eq!(schema.entry_points.len(), 1);
+        assert_eq!(schema.types.len(), 2);
+        assert_eq!(schema.errors.len(), 0);
+        assert_eq!(schema.events.len(), 1);
     }
 }
