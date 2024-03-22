@@ -1,3 +1,8 @@
+//! A module providing functionality for defining the Casper Contract Schema.
+//! 
+//! It includes traits for defining entrypoints, events, custom types, and errors, as well as functions
+//! for creating various schema elements such as arguments, entrypoints, struct members, enum variants, custom types,
+//! events, and errors.
 use std::{collections::BTreeSet, env};
 
 pub use casper_contract_schema;
@@ -15,37 +20,51 @@ mod ty;
 
 pub use ty::NamedCLTyped;
 
+/// Trait representing schema entrypoints.
 pub trait SchemaEntrypoints {
+    /// Returns a vector of [Entrypoint]s.
     fn schema_entrypoints() -> Vec<Entrypoint>;
 }
 
+/// Trait representing schema events.
 pub trait SchemaEvents {
+    /// Returns a vector of [Event]s.
     fn schema_events() -> Vec<Event> {
         vec![]
     }
 
+    /// Returns a vector of [CustomType]s.
+    ///
+    /// This method is used to define custom types that are used in the events.
+    /// An event itself is a [CustomType] and can have a custom type as its payload.
     fn custom_types() -> Vec<Option<CustomType>> {
         vec![]
     }
 }
 
+/// Trait for defining custom types in a schema.
 pub trait SchemaCustomTypes {
+    /// Returns a vector of optional [CustomType]s.
     fn schema_types() -> Vec<Option<CustomType>> {
         vec![]
     }
 }
 
+/// A trait for defining schema user errors.
 pub trait SchemaErrors {
+    /// Returns a vector of [UserError]s.
     fn schema_errors() -> Vec<UserError> {
         vec![]
     }
 }
 
+/// Represents a custom element in the schema.
 pub trait SchemaCustomElement {}
 
 impl<T: SchemaCustomElement> SchemaErrors for T {}
 impl<T: SchemaCustomElement> SchemaEvents for T {}
 
+/// Creates a new argument.
 pub fn argument<T: NamedCLTyped + EntrypointArgument>(name: &str) -> Argument {
     if T::is_required() {
         Argument::new(name, "", <T as NamedCLTyped>::ty())
@@ -54,6 +73,7 @@ pub fn argument<T: NamedCLTyped + EntrypointArgument>(name: &str) -> Argument {
     }
 }
 
+/// Creates a new entrypoint.
 pub fn entry_point<T: NamedCLTyped>(
     name: &str,
     description: &str,
@@ -71,6 +91,7 @@ pub fn entry_point<T: NamedCLTyped>(
     }
 }
 
+/// Creates a new struct member.
 pub fn struct_member<T: NamedCLTyped>(name: &str) -> StructMember {
     StructMember {
         name: name.to_string(),
@@ -79,6 +100,7 @@ pub fn struct_member<T: NamedCLTyped>(name: &str) -> StructMember {
     }
 }
 
+/// Creates a new enum variant.
 pub fn enum_typed_variant<T: NamedCLTyped>(name: &str, discriminant: u16) -> EnumVariant {
     EnumVariant {
         name: name.to_string(),
@@ -88,6 +110,7 @@ pub fn enum_typed_variant<T: NamedCLTyped>(name: &str, discriminant: u16) -> Enu
     }
 }
 
+/// Creates a new enum variant of type [NamedCLType::Unit].
 pub fn enum_variant(name: &str, discriminant: u16) -> EnumVariant {
     EnumVariant {
         name: name.to_string(),
@@ -97,6 +120,7 @@ pub fn enum_variant(name: &str, discriminant: u16) -> EnumVariant {
     }
 }
 
+/// Creates a new [CustomType] of type struct.
 pub fn custom_struct(name: &str, members: Vec<StructMember>) -> CustomType {
     CustomType::Struct {
         name: name.into(),
@@ -105,6 +129,7 @@ pub fn custom_struct(name: &str, members: Vec<StructMember>) -> CustomType {
     }
 }
 
+/// Creates a new [CustomType] of type enum.
 pub fn custom_enum(name: &str, variants: Vec<EnumVariant>) -> CustomType {
     CustomType::Enum {
         name: name.into(),
@@ -113,6 +138,7 @@ pub fn custom_enum(name: &str, variants: Vec<EnumVariant>) -> CustomType {
     }
 }
 
+/// Creates a new [Event].  
 pub fn event(name: &str) -> Event {
     Event {
         name: name.into(),
@@ -120,6 +146,7 @@ pub fn event(name: &str) -> Event {
     }
 }
 
+/// Creates a new [UserError].
 pub fn error(name: &str, description: &str, discriminant: u16) -> UserError {
     UserError {
         name: name.into(),
@@ -128,6 +155,10 @@ pub fn error(name: &str, description: &str, discriminant: u16) -> UserError {
     }
 }
 
+/// Creates an instance of [ContractSchema].
+///
+/// A contract schema is a representation of a smart contract's schema. It includes information about
+/// the contract's metadata, entrypoints, events, custom types, and errors.
 pub fn schema<T: SchemaEntrypoints + SchemaEvents + SchemaCustomTypes + SchemaErrors>(
     module_name: &str,
     contract_name: &str,

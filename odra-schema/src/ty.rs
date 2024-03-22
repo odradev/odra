@@ -5,7 +5,9 @@ use casper_contract_schema::NamedCLType;
 use casper_types::{bytesrepr::Bytes, Key, PublicKey, URef, U128, U256, U512};
 use odra_core::{args::Maybe, Address};
 
+/// Trait for types that can be represented as a NamedCLType.
 pub trait NamedCLTyped {
+    /// Returns the NamedCLType of the implementing type.
     fn ty() -> NamedCLType;
 }
 
