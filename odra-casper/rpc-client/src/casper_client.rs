@@ -666,6 +666,7 @@ impl CasperClient {
             .send()
             .unwrap();
         let response: JsonRpc = response.json().unwrap();
+        dbg!(response.clone());
         response
             .get_result()
             .map(|result| serde_json::from_value(result.clone()).unwrap())
