@@ -12,5 +12,5 @@ repository.workspace = true
 
 [dependencies]
 casper-types = { workspace = true }
-odra-types = { path = "../../types", version = "0.6.0" }
+odra-types = { path = "../../types", version = "0.6.1" }
 num-traits = { version = "0.2.14", default-features = false }

@@ -21,7 +21,7 @@ check-lint: clippy
     cd examples && cargo check --no-default-features -F casper-livenet
 
 install-cargo-odra:
-    cargo install cargo-odra --locked
+    cargo install --version 0.0.9 --force --locked cargo-odra
 
 prepare-test-env: install-cargo-odra
     rustup target add wasm32-unknown-unknown
