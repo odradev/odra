@@ -6,6 +6,7 @@ use ast::*;
 use ir::{ModuleImplIR, ModuleStructIR, TypeIR};
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
+use quote::ToTokens;
 
 mod ast;
 mod ir;
@@ -46,13 +47,15 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///
 /// This macro implements serialization and deserialization for the type, as well as
 /// cloning and [HasEvents](../odra_core/contract_def/trait.HasEvents.html) trait.
-#[proc_macro_derive(OdraType)]
-pub fn derive_odra_type(item: TokenStream) -> TokenStream {
+#[proc_macro_attribute]
+pub fn odra_type(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let item = item.into();
     if let Ok(ir) = TypeIR::try_from(&item) {
         let schema = SchemaCustomTypeItem::try_from(&ir).into_code();
         let odra_type = OdraTypeItem::try_from(&ir).into_code();
         let mut tokens = TokenStream::new();
+        let code: TokenStream = ir.self_code().to_token_stream().into();
+        tokens.extend(code);
         tokens.extend(schema);
         tokens.extend(odra_type);
         return tokens;
@@ -61,13 +64,15 @@ pub fn derive_odra_type(item: TokenStream) -> TokenStream {
 }
 
 /// Implements `Into<odra::OdraError>` for an error enum.
-#[proc_macro_derive(OdraError)]
-pub fn derive_odra_error(item: TokenStream) -> TokenStream {
+#[proc_macro_attribute]
+pub fn odra_error(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let item = item.into();
     if let Ok(ir) = TypeIR::try_from(&item) {
         let schema = SchemaErrorItem::try_from(&ir).into_code();
         let odra_error = OdraErrorItem::try_from(&ir).into_code();
         let mut tokens = TokenStream::new();
+        let code: TokenStream = ir.self_code().to_token_stream().into();
+        tokens.extend(code);
         tokens.extend(schema);
         tokens.extend(odra_error);
         return tokens;

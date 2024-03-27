@@ -1,5 +1,5 @@
 use quote::ToTokens;
-use crate::{ir::TypeIR, utils};
+use crate::{ast::utils::Named, ir::TypeIR, utils};
 
 pub struct SchemaCustomTypeItem {
     ty_ident: syn::Ident,
@@ -81,22 +81,31 @@ impl TryFrom<&TypeIR> for SchemaCustomTypeItem {
 
     fn try_from(ir: &TypeIR) -> Result<Self, Self::Error> {
         let item = ir.self_code();
-        let fields = utils::syn::extract_named_field(item)?;
-        let variants = utils::syn::extract_unit_variants(item)?;
+        if matches!(item, syn::Item::Struct(_) | syn::Item::Enum(_)) {
+            let fields = if let syn::Item::Struct(s) = item {
+                utils::syn::extract_named_field(s)?
+            } else {
+                vec![]
+            };
 
-        if matches!(item.data, syn::Data::Union(_)) {
-            return Err(syn::Error::new_spanned(
+            let variants = if let syn::Item::Enum(e) = item {
+                utils::syn::extract_unit_variants(e)?
+            } else {
+                vec![]
+            };
+
+            Ok(Self {
+                ty_ident: ir.name()?,
+                is_enum: ir.is_enum(),
+                fields,
+                variants
+            })
+        } else {
+            Err(syn::Error::new_spanned(
                 item,
                 "Struct with named fields or a unit variants enum expected"
-            ));
+            ))
         }
-
-        Ok(Self {
-            ty_ident: item.ident.clone(),
-            is_enum: ir.is_enum(),
-            fields,
-            variants
-        })
     }
 }
 

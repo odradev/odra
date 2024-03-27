@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use syn::{parse_quote, spanned::Spanned, DeriveInput};
+use syn::{parse_quote, spanned::Spanned};
 
 pub fn ident_from_impl(impl_code: &syn::ItemImpl) -> syn::Result<syn::Ident> {
     last_segment_ident(&impl_code.self_ty)
@@ -100,9 +100,9 @@ fn map_fields<T, F: FnMut(&syn::Field) -> syn::Result<T>>(
     }
 }
 
-pub fn derive_item_variants(item: &syn::DeriveInput) -> syn::Result<Vec<syn::Ident>> {
-    match &item.data {
-        syn::Data::Struct(syn::DataStruct { fields, .. }) => fields
+pub fn derive_item_variants(item: &syn::Item) -> syn::Result<Vec<syn::Ident>> {
+    match &item {
+        syn::Item::Struct(syn::ItemStruct { fields, .. }) => fields
             .iter()
             .map(|f| {
                 f.ident
@@ -110,7 +110,7 @@ pub fn derive_item_variants(item: &syn::DeriveInput) -> syn::Result<Vec<syn::Ide
                     .ok_or(syn::Error::new(f.span(), "Unnamed field"))
             })
             .collect::<Result<Vec<_>, _>>(),
-        syn::Data::Enum(syn::DataEnum { variants, .. }) => {
+        syn::Item::Enum(syn::ItemEnum { variants, .. }) => {
             let is_valid = variants
                 .iter()
                 .all(|v| matches!(v.fields, syn::Fields::Unit));
@@ -193,38 +193,32 @@ pub fn is_ref(ty: &syn::Type) -> bool {
     matches!(ty, syn::Type::Reference(_))
 }
 
-pub fn extract_named_field(input: &DeriveInput) -> syn::Result<Vec<syn::Field>> {
-    if let syn::Data::Struct(syn::DataStruct { fields, .. }) = &input.data {
-        fields
-            .iter()
-            .map(|f| {
-                if f.ident.is_none() {
-                    Err(syn::Error::new(f.span(), "Unnamed field"))
-                } else {
-                    Ok(f.clone())
-                }
-            })
-            .collect()
-    } else {
-        Ok(vec![])
-    }
+pub fn extract_named_field(input: &syn::ItemStruct) -> syn::Result<Vec<syn::Field>> {
+    let fields = &input.fields;
+    fields
+        .iter()
+        .map(|f| {
+            if f.ident.is_none() {
+                Err(syn::Error::new(f.span(), "Unnamed field"))
+            } else {
+                Ok(f.clone())
+            }
+        })
+        .collect()
 }
 
-pub fn extract_unit_variants(input: &DeriveInput) -> syn::Result<Vec<syn::Variant>> {
-    if let syn::Data::Enum(syn::DataEnum { variants, .. }) = &input.data {
-        let is_valid = variants
-            .iter()
-            .all(|v| matches!(v.fields, syn::Fields::Unit));
-        if is_valid {
-            Ok(variants.into_iter().cloned().collect())
-        } else {
-            Err(syn::Error::new_spanned(
-                variants,
-                "Expected a unit enum variant."
-            ))
-        }
+pub fn extract_unit_variants(input: &syn::ItemEnum) -> syn::Result<Vec<syn::Variant>> {
+    let variants = &input.variants;
+    let is_valid = variants
+        .iter()
+        .all(|v| matches!(v.fields, syn::Fields::Unit));
+    if is_valid {
+        Ok(variants.into_iter().cloned().collect())
     } else {
-        Ok(vec![])
+        Err(syn::Error::new_spanned(
+            variants,
+            "Expected a unit enum variant."
+        ))
     }
 }
 

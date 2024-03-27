@@ -129,10 +129,8 @@ impl OwnedErc721WithMetadata for Erc721Token {
 
 /// Erc721 errors.
 pub mod errors {
-    use odra::OdraError;
-
     /// Erc721 errors.
-    #[derive(OdraError)]
+    #[odra::odra_error]
     pub enum Error {
         /// Token with a given id already exists.
         TokenAlreadyExists = 35_000

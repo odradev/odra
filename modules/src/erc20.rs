@@ -189,10 +189,8 @@ pub mod events {
 
 /// ERC20 Errors
 pub mod errors {
-    use odra::OdraError;
-
     /// ERC20 errors
-    #[derive(OdraError)]
+    #[odra::odra_error]
     pub enum Error {
         /// Insufficient balance
         InsufficientBalance = 30_000,

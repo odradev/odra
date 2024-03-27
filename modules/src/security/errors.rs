@@ -1,8 +1,7 @@
 //! Errors implementation for the security module.
-use odra::OdraError;
 
 /// Errors for the security module.
-#[derive(OdraError)]
+#[odra::odra_error]
 pub enum Error {
     /// Contract needs to be paused first.
     PausedRequired = 21_000,

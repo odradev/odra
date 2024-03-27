@@ -1,3 +1,5 @@
+use syn::spanned::Spanned;
+
 use crate::ir::{ModuleStructIR, TypeIR};
 use crate::utils;
 use crate::utils::misc::AsType;
@@ -57,7 +59,14 @@ pub trait Named {
 
 impl Named for TypeIR {
     fn name(&self) -> syn::Result<syn::Ident> {
-        Ok(self.self_code().ident.clone())
+        match self.self_code() {
+            syn::Item::Struct(i) => Ok(i.ident.clone()),
+            syn::Item::Enum(i) => Ok(i.ident.clone()),
+            _ => Err(syn::Error::new(
+                self.self_code().span(),
+                "Invalid type. Only structs and enums are supported"
+            ))
+        }
     }
 }
 

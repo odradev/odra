@@ -5,7 +5,7 @@ use crate::utils;
 use config::ConfigItem;
 use proc_macro2::Ident;
 use quote::{format_ident, ToTokens};
-use syn::{parse_quote, Data, ImplItem};
+use syn::{parse_quote, ImplItem};
 
 use self::attr::OdraAttribute;
 
@@ -649,7 +649,7 @@ impl FnArgIR {
 }
 
 pub struct TypeIR {
-    code: syn::DeriveInput
+    code: syn::Item
 }
 
 impl TryFrom<&proc_macro2::TokenStream> for TypeIR {
@@ -657,13 +657,13 @@ impl TryFrom<&proc_macro2::TokenStream> for TypeIR {
 
     fn try_from(stream: &proc_macro2::TokenStream) -> Result<Self, Self::Error> {
         Ok(Self {
-            code: syn::parse2::<syn::DeriveInput>(stream.clone())?
+            code: syn::parse2::<syn::Item>(stream.clone())?
         })
     }
 }
 
 impl TypeIR {
-    pub fn self_code(&self) -> &syn::DeriveInput {
+    pub fn self_code(&self) -> &syn::Item {
         &self.code
     }
 
@@ -679,10 +679,10 @@ impl TypeIR {
     }
 
     pub fn is_enum(&self) -> bool {
-        matches!(self.code.data, Data::Enum(_))
+        matches!(self.code, syn::Item::Enum(_))
     }
 
     pub fn is_struct(&self) -> bool {
-        matches!(self.code.data, Data::Struct(_))
+        matches!(self.code, syn::Item::Struct(_))
     }
 }

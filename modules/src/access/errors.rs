@@ -1,8 +1,7 @@
 //! Errors for Access Control module.
-use odra::OdraError;
 
 /// Access Control-related errors.
-#[derive(OdraError)]
+#[odra::odra_error]
 pub enum Error {
     /// The owner is not set.
     OwnerNotSet = 20_000,

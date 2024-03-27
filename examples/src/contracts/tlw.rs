@@ -78,8 +78,8 @@ impl TimeLockWallet {
     }
 }
 
-#[derive(OdraError)]
 /// Errors that may occur during the contract execution.
+#[odra::odra_error]
 pub enum Error {
     /// Cannot withdraw funds, the lock period is not over.
     LockIsNotOver = 1,
