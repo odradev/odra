@@ -27,7 +27,7 @@ pub const DEFAULT_ADMIN_ROLE: Role = [0u8; 32];
 /// this role can grant or revoke other roles.
 ///
 /// More complex role relationships can be established using the [set_admin_role()](AccessControl::set_admin_role) function.
-#[odra::module(events = [RoleAdminChanged, RoleGranted, RoleRevoked], errors = [Error])]
+#[odra::module(events = [RoleAdminChanged, RoleGranted, RoleRevoked], errors = Error)]
 pub struct AccessControl {
     roles: Mapping<(Role, Address), bool>,
     role_admin: Mapping<Role, Role>

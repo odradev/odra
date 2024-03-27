@@ -16,7 +16,7 @@ pub trait Erc721Metadata {
 }
 
 /// The ERC721 Metadata extension.
-#[odra::module(errors = [Error])]
+#[odra::module(errors = Error)]
 pub struct Erc721MetadataExtension {
     name: Var<String>,
     symbol: Var<String>,

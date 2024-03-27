@@ -10,10 +10,6 @@ extern "Rust" {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
-    if !std::path::Path::new("resources").exists() {
-        std::fs::create_dir("resources").expect("Failed to create resources directory");
-    }
-
     let module = std::env::var("ODRA_MODULE").expect("ODRA_MODULE environment variable is not set");
     let module = to_snake_case(&module);
 
@@ -21,21 +17,27 @@ fn main() {
     let module_schema = unsafe { crate::module_schema() };
 
     write_schema_file(
-        format!("resources/{}_contract_schema.json", module),
+        "resources/casper_contract_schemas",
+        &module,
         contract_schema
             .as_json()
             .expect("Failed to convert schema to JSON")
     );
 
     write_schema_file(
-        format!("resources/{}_schema.json", module),
+        "resources/legacy",
+        &module,
         module_schema
             .as_json()
             .expect("Failed to convert schema to JSON")
     );
 }
 
-fn write_schema_file(filename: String, json: String) {
+fn write_schema_file(path: &str, module: &str, json: String) {
+    if !std::path::Path::new(path).exists() {
+        std::fs::create_dir_all(path).expect("Failed to create resources directory");
+    }
+    let filename = format!("{}/{}_schema.json", path, module);
     let mut schema_file = std::fs::File::create(filename).expect("Failed to create schema file");
 
     std::io::Write::write_all(&mut schema_file, &json.into_bytes())

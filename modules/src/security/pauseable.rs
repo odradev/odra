@@ -11,7 +11,7 @@ use odra::prelude::*;
 use odra::Var;
 
 /// The Pauseable module.
-#[odra::module(events = [Paused, Unpaused], errors = [Error])]
+#[odra::module(events = [Paused, Unpaused], errors = Error)]
 pub struct Pauseable {
     is_paused: Var<bool>
 }

@@ -10,7 +10,7 @@ use odra::{
     Address, ContractRef, Mapping, UnwrapOrRevert
 };
 /// The ERC721 base implementation.
-#[odra::module(events = [Approval, ApprovalForAll, Transfer], errors = [Error])]
+#[odra::module(events = [Approval, ApprovalForAll, Transfer], errors = Error)]
 pub struct Erc721Base {
     /// The token balances.
     pub balances: Mapping<Address, U256>,

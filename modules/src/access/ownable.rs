@@ -15,7 +15,7 @@ use odra::{Address, SubModule, UnwrapOrRevert, Var};
 ///
 /// When used in a custom module, the `only_owner()` function is available,
 /// allowing you to restrict function usage to the owner.
-#[odra::module(events = [OwnershipTransferred], errors = [Error])]
+#[odra::module(events = [OwnershipTransferred], errors = Error)]
 pub struct Ownable {
     owner: Var<Option<Address>>
 }
@@ -90,7 +90,7 @@ impl Ownable {
 ///
 /// When used in a custom module, the `only_owner()` function is available,
 /// allowing you to restrict function usage to the owner.
-#[odra::module(events = [OwnershipTransferStarted], errors = [Error])]
+#[odra::module(events = [OwnershipTransferStarted], errors = Error)]
 pub struct Ownable2Step {
     ownable: SubModule<Ownable>,
     pending_owner: Var<Option<Address>>

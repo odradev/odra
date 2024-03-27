@@ -1,5 +1,3 @@
-
-
 use quote::ToTokens;
 
 pub struct OdraEventItem {

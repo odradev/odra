@@ -5,7 +5,7 @@ use odra::prelude::*;
 use odra::{casper_types::U256, Address, Mapping, Var};
 
 /// ERC20 token module
-#[odra::module(events = [Approval, Transfer], errors = [Error])]
+#[odra::module(events = [Approval, Transfer], errors = Error)]
 pub struct Erc20 {
     decimals: Var<u8>,
     symbol: Var<String>,

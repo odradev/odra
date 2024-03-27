@@ -3,7 +3,7 @@ use odra::prelude::*;
 use odra::{Address, OdraError, Var};
 
 /// Contract that has an owner.
-#[odra::module(errors = [Error])]
+#[odra::module(errors = Error)]
 pub struct OwnedContract {
     name: Var<String>,
     owner: Var<Address>

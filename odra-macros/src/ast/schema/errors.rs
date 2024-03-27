@@ -3,7 +3,7 @@ use crate::{ir::{EnumeratedTypedField, ModuleStructIR, TypeIR}, utils};
 
 pub struct SchemaErrorsItem {
     module_ident: syn::Ident,
-    errors: Vec<syn::Type>,
+    errors: Option<syn::Type>,
     fields: Vec<EnumeratedTypedField>
 }
 
@@ -117,7 +117,6 @@ mod test {
                     odra::prelude::BTreeSet::<odra::schema::casper_contract_schema::UserError>::new()
                         .into_iter()
                         .chain(<Erc20Errors as odra::schema::SchemaErrors>::schema_errors())
-                        .chain(<MyErrors as odra::schema::SchemaErrors>::schema_errors())
                         .chain(<SubModule<Counter> as odra::schema::SchemaErrors>::schema_errors())
                         .chain(<SubModule<Counter> as odra::schema::SchemaErrors>::schema_errors())
                         .chain(<SubModule<Counter> as odra::schema::SchemaErrors>::schema_errors())

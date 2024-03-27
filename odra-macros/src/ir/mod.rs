@@ -100,11 +100,11 @@ impl ModuleStructIR {
         }
     }
 
-    pub fn errors(&self) -> Vec<syn::Type> {
+    pub fn errors(&self) -> Option<syn::Type> {
         if let ConfigItem::Module(cfg) = &self.config {
-            cfg.errors.iter().cloned().collect()
+            (*cfg.errors).clone()
         } else {
-            vec![]
+            None
         }
     }
 

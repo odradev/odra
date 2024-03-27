@@ -138,19 +138,25 @@ impl Parse for ModuleEvents {
 }
 
 #[derive(Default, Clone, Debug)]
-pub struct ModuleErrors(Punctuated<ModuleError, Token![,]>);
+pub struct ModuleErrors(Option<syn::Type>);
 
-pub type ModuleError = syn::Type;
+impl Deref for ModuleErrors {
+    type Target = Option<syn::Type>;
 
-impl ModuleErrors {
-    pub fn iter(&self) -> impl Iterator<Item = &ModuleError> {
-        self.0.iter()
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
 impl Parse for ModuleErrors {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        parse_list::<kw::errors>(input).map(Self)
+        if input.is_empty() {
+            return Ok(ModuleErrors::default());
+        }
+        input.parse::<kw::errors>()?;
+        input.parse::<Token![=]>()?;
+    
+        Ok(ModuleErrors(Some(input.parse::<syn::Type>()?)))
     }
 }
 

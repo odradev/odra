@@ -115,7 +115,7 @@ pub mod mock {
             name = "MyCounterPack",
             version = "0.1.0",
             events = [OnTransfer, OnApprove],
-            errors = [Erc20Errors, MyErrors]
+            errors = Erc20Errors
         );
         ModuleStructIR::try_from((&attr, &module)).unwrap()
     }

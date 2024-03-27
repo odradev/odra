@@ -17,7 +17,7 @@ use odra::{
 ///
 /// It uses the [ERC721](Erc721Base) base implementation, the [ERC721 metadata](Erc721MetadataExtension) extension
 /// and the [Ownable] module.
-#[odra::module(events = [Transfer], errors = [Error])]
+#[odra::module(events = [Transfer], errors = Error)]
 pub struct Erc721Token {
     core: SubModule<Erc721Base>,
     metadata: SubModule<Erc721MetadataExtension>,
