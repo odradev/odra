@@ -21,14 +21,12 @@ mod ty;
 pub use ty::NamedCLTyped;
 
 /// Trait representing schema entrypoints.
-#[cfg_attr(test, mockall::automock)]
 pub trait SchemaEntrypoints {
     /// Returns a vector of [Entrypoint]s.
     fn schema_entrypoints() -> Vec<Entrypoint>;
 }
 
 /// Trait representing schema events.
-#[cfg_attr(test, mockall::automock)]
 pub trait SchemaEvents {
     /// Returns a vector of [Event]s.
     fn schema_events() -> Vec<Event> {
@@ -45,7 +43,6 @@ pub trait SchemaEvents {
 }
 
 /// Trait for defining custom types in a schema.
-#[cfg_attr(test, mockall::automock)]
 pub trait SchemaCustomTypes {
     /// Returns a vector of optional [CustomType]s.
     fn schema_types() -> Vec<Option<CustomType>> {
@@ -54,7 +51,6 @@ pub trait SchemaCustomTypes {
 }
 
 /// A trait for defining schema user errors.
-#[cfg_attr(test, mockall::automock)]
 pub trait SchemaErrors {
     /// Returns a vector of [UserError]s.
     fn schema_errors() -> Vec<UserError> {
@@ -63,7 +59,6 @@ pub trait SchemaErrors {
 }
 
 /// Represents a custom element in the schema.
-#[cfg_attr(test, mockall::automock)]
 pub trait SchemaCustomElement {}
 
 impl<T: SchemaCustomElement> SchemaErrors for T {}
@@ -353,61 +348,46 @@ mod test {
         assert_eq!(error.discriminant, 1);
     }
 
-    mockall::mock! {
-        TestSchema {}
+    #[test]
+    fn test_schema() {
+        struct TestSchema;
+
         impl SchemaEntrypoints for TestSchema {
-            fn schema_entrypoints() -> Vec<Entrypoint>;
+            fn schema_entrypoints() -> Vec<Entrypoint> {
+                vec![entry_point::<u32>(
+                    "entry1",
+                    "description",
+                    true,
+                    vec![super::argument::<u32>("arg1")]
+                )]
+            }
         }
 
         impl SchemaEvents for TestSchema {
-            fn schema_events() -> Vec<Event>;
-            fn custom_types() -> Vec<Option<CustomType>>;
+            fn schema_events() -> Vec<Event> {
+                vec![event("event1")]
+            }
         }
 
         impl SchemaCustomTypes for TestSchema {
-            fn schema_types() -> Vec<Option<CustomType>>;
+            fn schema_types() -> Vec<Option<CustomType>> {
+                vec![
+                    Some(custom_struct(
+                        "struct1",
+                        vec![struct_member::<u32>("member1")]
+                    )),
+                    Some(custom_enum("struct1", vec![enum_variant("variant1", 1)])),
+                ]
+            }
         }
 
         impl SchemaErrors for TestSchema {
-            fn schema_errors() -> Vec<UserError>;
+            fn schema_errors() -> Vec<UserError> {
+                vec![]
+            }
         }
-    }
 
-    #[test]
-    fn test_schema() {
-        let entry_points_ctx = MockTestSchema::schema_entrypoints_context();
-        entry_points_ctx.expect().returning(|| {
-            vec![super::entry_point::<u32>(
-                "entry1",
-                "description",
-                true,
-                vec![super::argument::<u32>("arg1")]
-            )]
-        });
-
-        let events_ctx = MockTestSchema::schema_events_context();
-        events_ctx
-            .expect()
-            .returning(|| vec![super::event("event1")]);
-
-        let custom_types_ctx = MockTestSchema::schema_types_context();
-        custom_types_ctx.expect().returning(|| {
-            vec![
-                Some(super::custom_struct(
-                    "struct1",
-                    vec![super::struct_member::<u32>("member1")]
-                )),
-                Some(super::custom_enum(
-                    "struct1",
-                    vec![super::enum_variant("variant1", 1)]
-                )),
-            ]
-        });
-
-        let errors_ctx = MockTestSchema::schema_errors_context();
-        errors_ctx.expect().returning(Vec::new);
-
-        let schema = super::schema::<MockTestSchema>(
+        let schema = super::schema::<TestSchema>(
             "module_name",
             "contract_name",
             "contract_version",
