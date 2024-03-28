@@ -103,10 +103,6 @@ pub fn cl_type() -> syn::Ident {
     format_ident!("cl_type")
 }
 
-pub fn clone() -> syn::Ident {
-    format_ident!("clone")
-}
-
 pub fn from() -> syn::Ident {
     format_ident!("from")
 }

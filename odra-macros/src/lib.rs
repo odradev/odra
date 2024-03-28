@@ -6,7 +6,6 @@ use ast::*;
 use ir::{ModuleImplIR, ModuleStructIR, TypeIR};
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use quote::ToTokens;
 
 mod ast;
 mod ir;
@@ -51,14 +50,7 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn odra_type(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let item = item.into();
     if let Ok(ir) = TypeIR::try_from(&item) {
-        let schema = SchemaCustomTypeItem::try_from(&ir).into_code();
-        let odra_type = OdraTypeItem::try_from(&ir).into_code();
-        let mut tokens = TokenStream::new();
-        let code: TokenStream = ir.self_code().to_token_stream().into();
-        tokens.extend(code);
-        tokens.extend(schema);
-        tokens.extend(odra_type);
-        return tokens;
+        return OdraTypeAttrItem::try_from(&ir).into_code();
     }
     span_error!(item, "Struct or Enum expected")
 }
@@ -68,12 +60,7 @@ pub fn odra_type(_attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn odra_error(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let item = item.into();
     if let Ok(ir) = TypeIR::try_from(&item) {
-        let schema = SchemaErrorItem::try_from(&ir).into_code();
-        let odra_error = OdraErrorItem::try_from(&ir).into_code();
-        let mut tokens = TokenStream::new();
-        tokens.extend(schema);
-        tokens.extend(odra_error);
-        return tokens;
+        return OdraErrorAttrItem::try_from(&ir).into_code();
     }
     span_error!(item, "Struct or Enum expected")
 }
@@ -94,6 +81,13 @@ pub fn external_contract(attr: TokenStream, item: TokenStream) -> TokenStream {
         item,
         "#[external_contract] can be only applied to trait only"
     )
+}
+
+/// This macro is used to implement the boilerplate code for the event and contract schema.
+#[proc_macro_attribute]
+pub fn event(_attr: TokenStream, input: TokenStream) -> TokenStream {
+    let input: TokenStream2 = input.into();
+    OdraEventItem::try_from(&input).into_code()
 }
 
 /// Implements `Into<odra::casper_types::RuntimeArgs>` for a struct.
@@ -130,11 +124,4 @@ pub fn derive_into_runtime_args(item: TokenStream) -> TokenStream {
         }
         _ => panic!("Struct expected")
     }
-}
-
-/// This macro is used to implement the boilerplate code for the event and contract schema.
-#[proc_macro_attribute]
-pub fn event(_attr: TokenStream, input: TokenStream) -> TokenStream {
-    let input: TokenStream2 = input.into();
-    OdraEventItem::try_from(&input).into_code()
 }

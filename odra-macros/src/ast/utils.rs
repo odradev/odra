@@ -34,10 +34,6 @@ impl ImplItem {
         Self::new(ir, utils::ty::cl_typed())
     }
 
-    pub fn clone<T: Named>(named: &T) -> syn::Result<Self> {
-        Self::new(named, utils::ty::clone())
-    }
-
     pub fn has_events<T: Named>(named: &T) -> syn::Result<Self> {
         Self::new(named, utils::ty::has_events())
     }
