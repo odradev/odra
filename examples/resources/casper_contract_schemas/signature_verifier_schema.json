@@ -1,0 +1,70 @@
+{
+  "casper_contract_schema_version": 1,
+  "toolchain": "rustc 1.77.0-nightly (5bd5d214e 2024-01-25)",
+  "authors": [],
+  "repository": null,
+  "homepage": null,
+  "contract_name": "SignatureVerifier",
+  "contract_version": "0.8.1",
+  "types": [],
+  "errors": [],
+  "entry_points": [
+    {
+      "name": "verify_signature",
+      "description": "Verifies if the message was signed by the owner of the public key.",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "message",
+          "description": null,
+          "ty": {
+            "List": "U8"
+          },
+          "optional": false
+        },
+        {
+          "name": "signature",
+          "description": null,
+          "ty": {
+            "List": "U8"
+          },
+          "optional": false
+        },
+        {
+          "name": "public_key",
+          "description": null,
+          "ty": "PublicKey",
+          "optional": false
+        }
+      ],
+      "return_ty": "Bool",
+      "is_contract_context": true,
+      "access": "public"
+    }
+  ],
+  "events": [],
+  "call": {
+    "wasm_file_name": "SignatureVerifier.wasm",
+    "description": null,
+    "arguments": [
+      {
+        "name": "odra_cfg_package_hash_key_name",
+        "description": "The arg name for the package hash key name.",
+        "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_allow_key_override",
+        "description": "The arg name for the allow key override.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_is_upgradable",
+        "description": "The arg name for the contract upgradeability setting.",
+        "ty": "Bool",
+        "optional": false
+      }
+    ]
+  }
+}

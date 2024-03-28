@@ -1,0 +1,30 @@
+{
+  "name": "CrossContract",
+  "events": [],
+  "entrypoints": [
+    {
+      "name": "init",
+      "args": [
+        {
+          "name": "math_engine_address",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Constructor",
+      "attributes": []
+    },
+    {
+      "name": "add_using_another",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U32",
+      "ty": "Public",
+      "attributes": []
+    }
+  ]
+}

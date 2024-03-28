@@ -1,0 +1,40 @@
+{
+  "name": "PublicWallet",
+  "events": [],
+  "entrypoints": [
+    {
+      "name": "deposit",
+      "args": [],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": [
+        "Payable"
+      ]
+    },
+    {
+      "name": "withdraw",
+      "args": [
+        {
+          "name": "amount",
+          "ty": "U512",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "balance",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U512",
+      "ty": "Public",
+      "attributes": []
+    }
+  ]
+}

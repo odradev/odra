@@ -1,0 +1,156 @@
+{
+  "casper_contract_schema_version": 1,
+  "toolchain": "rustc 1.77.0-nightly (5bd5d214e 2024-01-25)",
+  "authors": [],
+  "repository": null,
+  "homepage": null,
+  "contract_name": "TimeLockWallet",
+  "contract_version": "0.8.1",
+  "types": [
+    {
+      "struct": {
+        "name": "Deposit",
+        "description": null,
+        "members": [
+          {
+            "name": "address",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U512"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "Withdrawal",
+        "description": null,
+        "members": [
+          {
+            "name": "address",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U512"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "name": "CannotLockTwice",
+      "description": "A user deposit funds the second and the next time.",
+      "discriminant": 2
+    },
+    {
+      "name": "InsufficientBalance",
+      "description": "A user deposits more funds he/she owns.",
+      "discriminant": 3
+    },
+    {
+      "name": "LockIsNotOver",
+      "description": "Cannot withdraw funds, the lock period is not over.",
+      "discriminant": 1
+    }
+  ],
+  "entry_points": [
+    {
+      "name": "deposit",
+      "description": "Deposits the tokens into the contract.",
+      "is_mutable": true,
+      "arguments": [],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "withdraw",
+      "description": "Withdraws the tokens from the contract.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U512",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_balance",
+      "description": "Returns the balance of the given account.",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "address",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "U512",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "lock_duration",
+      "description": "Returns the lock duration.",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U64",
+      "is_contract_context": true,
+      "access": "public"
+    }
+  ],
+  "events": [
+    {
+      "name": "Deposit",
+      "ty": "Deposit"
+    },
+    {
+      "name": "Withdrawal",
+      "ty": "Withdrawal"
+    }
+  ],
+  "call": {
+    "wasm_file_name": "TimeLockWallet.wasm",
+    "description": "Initializes the contract with the lock duration.",
+    "arguments": [
+      {
+        "name": "odra_cfg_package_hash_key_name",
+        "description": "The arg name for the package hash key name.",
+        "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_allow_key_override",
+        "description": "The arg name for the allow key override.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_is_upgradable",
+        "description": "The arg name for the contract upgradeability setting.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "lock_duration",
+        "description": null,
+        "ty": "U64",
+        "optional": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,603 @@
+{
+  "casper_contract_schema_version": 1,
+  "toolchain": "rustc 1.77.0-nightly (5bd5d214e 2024-01-25)",
+  "authors": [
+    "Jakub Płaskonka <kuba@odra.dev>",
+    "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
+    "Maciej Zieliński <maciej@odra.dev>"
+  ],
+  "repository": "https://github.com/odradev/odra",
+  "homepage": null,
+  "contract_name": "Erc1155Token",
+  "contract_version": "0.8.1",
+  "types": [
+    {
+      "struct": {
+        "name": "ApprovalForAll",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "operator",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "approved",
+            "description": null,
+            "ty": "Bool"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "OwnershipTransferred",
+        "description": null,
+        "members": [
+          {
+            "name": "previous_owner",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "new_owner",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "TransferBatch",
+        "description": null,
+        "members": [
+          {
+            "name": "operator",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "from",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "to",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "ids",
+            "description": null,
+            "ty": {
+              "List": "U256"
+            }
+          },
+          {
+            "name": "values",
+            "description": null,
+            "ty": {
+              "List": "U256"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "TransferSingle",
+        "description": null,
+        "members": [
+          {
+            "name": "operator",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "from",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "to",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "id",
+            "description": null,
+            "ty": "U256"
+          },
+          {
+            "name": "value",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "name": "AccountsAndIdsLengthMismatch",
+      "description": "Collections of addresses and token ids have different length.",
+      "discriminant": 30000
+    },
+    {
+      "name": "ApprovalForSelf",
+      "description": "The owner cannot approve himself.",
+      "discriminant": 30001
+    },
+    {
+      "name": "CallerNotTheNewOwner",
+      "description": "The caller is not the new owner.",
+      "discriminant": 20002
+    },
+    {
+      "name": "CallerNotTheOwner",
+      "description": "The caller is not the owner.",
+      "discriminant": 20001
+    },
+    {
+      "name": "IdsAndAmountsLengthMismatch",
+      "description": "Collections of token ids and amounts have different length.",
+      "discriminant": 30005
+    },
+    {
+      "name": "InsufficientBalance",
+      "description": "Insufficient token amount to perform a transaction.",
+      "discriminant": 30003
+    },
+    {
+      "name": "MissingRole",
+      "description": "The role is missing.",
+      "discriminant": 20003
+    },
+    {
+      "name": "NotAnOwnerOrApproved",
+      "description": "The operator is not allowed to perform the action.",
+      "discriminant": 30002
+    },
+    {
+      "name": "OwnerNotSet",
+      "description": "The owner is not set.",
+      "discriminant": 20000
+    },
+    {
+      "name": "RoleRenounceForAnotherAddress",
+      "description": "The role cannot be renounced for another address.",
+      "discriminant": 20004
+    },
+    {
+      "name": "TransferRejected",
+      "description": "Token transfer finished with an error.",
+      "discriminant": 30004
+    }
+  ],
+  "entry_points": [
+    {
+      "name": "balance_of",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "id",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "U256",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "balance_of_batch",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "owners",
+          "description": null,
+          "ty": {
+            "List": "Key"
+          },
+          "optional": false
+        },
+        {
+          "name": "ids",
+          "description": null,
+          "ty": {
+            "List": "U256"
+          },
+          "optional": false
+        }
+      ],
+      "return_ty": {
+        "List": "U256"
+      },
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "set_approval_for_all",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "operator",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "approved",
+          "description": null,
+          "ty": "Bool",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "is_approved_for_all",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "operator",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "Bool",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "safe_transfer_from",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "from",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "to",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "id",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        },
+        {
+          "name": "data",
+          "description": null,
+          "ty": {
+            "Option": {
+              "List": "U8"
+            }
+          },
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "safe_batch_transfer_from",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "from",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "to",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "ids",
+          "description": null,
+          "ty": {
+            "List": "U256"
+          },
+          "optional": false
+        },
+        {
+          "name": "amounts",
+          "description": null,
+          "ty": {
+            "List": "U256"
+          },
+          "optional": false
+        },
+        {
+          "name": "data",
+          "description": null,
+          "ty": {
+            "Option": {
+              "List": "U8"
+            }
+          },
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "renounce_ownership",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "transfer_ownership",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "new_owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "owner",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "Key",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "mint",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "to",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "id",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        },
+        {
+          "name": "data",
+          "description": null,
+          "ty": {
+            "Option": {
+              "List": "U8"
+            }
+          },
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "mint_batch",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "to",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "ids",
+          "description": null,
+          "ty": {
+            "List": "U256"
+          },
+          "optional": false
+        },
+        {
+          "name": "amounts",
+          "description": null,
+          "ty": {
+            "List": "U256"
+          },
+          "optional": false
+        },
+        {
+          "name": "data",
+          "description": null,
+          "ty": {
+            "Option": {
+              "List": "U8"
+            }
+          },
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "burn",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "from",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "id",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "burn_batch",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "from",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "ids",
+          "description": null,
+          "ty": {
+            "List": "U256"
+          },
+          "optional": false
+        },
+        {
+          "name": "amounts",
+          "description": null,
+          "ty": {
+            "List": "U256"
+          },
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    }
+  ],
+  "events": [
+    {
+      "name": "ApprovalForAll",
+      "ty": "ApprovalForAll"
+    },
+    {
+      "name": "OwnershipTransferred",
+      "ty": "OwnershipTransferred"
+    },
+    {
+      "name": "TransferBatch",
+      "ty": "TransferBatch"
+    },
+    {
+      "name": "TransferSingle",
+      "ty": "TransferSingle"
+    }
+  ],
+  "call": {
+    "wasm_file_name": "Erc1155Token.wasm",
+    "description": "",
+    "arguments": [
+      {
+        "name": "odra_cfg_package_hash_key_name",
+        "description": "The arg name for the package hash key name.",
+        "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_allow_key_override",
+        "description": "The arg name for the allow key override.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_is_upgradable",
+        "description": "The arg name for the contract upgradeability setting.",
+        "ty": "Bool",
+        "optional": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "ModulesContract",
+  "events": [],
+  "entrypoints": [
+    {
+      "name": "add_using_module",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U32",
+      "ty": "Public",
+      "attributes": []
+    }
+  ]
+}

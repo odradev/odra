@@ -1,0 +1,130 @@
+{
+  "casper_contract_schema_version": 1,
+  "toolchain": "rustc 1.77.0-nightly (5bd5d214e 2024-01-25)",
+  "authors": [],
+  "repository": null,
+  "homepage": null,
+  "contract_name": "PauseableCounter",
+  "contract_version": "0.8.1",
+  "types": [
+    {
+      "struct": {
+        "name": "Paused",
+        "description": null,
+        "members": [
+          {
+            "name": "account",
+            "description": null,
+            "ty": "Key"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "Unpaused",
+        "description": null,
+        "members": [
+          {
+            "name": "account",
+            "description": null,
+            "ty": "Key"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "name": "PausedRequired",
+      "description": "Contract needs to be paused first.",
+      "discriminant": 21000
+    },
+    {
+      "name": "UnpausedRequired",
+      "description": "Contract needs to be unpaused first.",
+      "discriminant": 21001
+    }
+  ],
+  "entry_points": [
+    {
+      "name": "increment",
+      "description": "Increments a value.",
+      "is_mutable": true,
+      "arguments": [],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "pause",
+      "description": "Pauses the contract.",
+      "is_mutable": true,
+      "arguments": [],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "unpause",
+      "description": "Unpauses the contract.",
+      "is_mutable": true,
+      "arguments": [],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "is_paused",
+      "description": "Returns true if the contract is paused, and false otherwise.",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "Bool",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_value",
+      "description": "Returns the value of the counter.",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U32",
+      "is_contract_context": true,
+      "access": "public"
+    }
+  ],
+  "events": [
+    {
+      "name": "Paused",
+      "ty": "Paused"
+    },
+    {
+      "name": "Unpaused",
+      "ty": "Unpaused"
+    }
+  ],
+  "call": {
+    "wasm_file_name": "PauseableCounter.wasm",
+    "description": null,
+    "arguments": [
+      {
+        "name": "odra_cfg_package_hash_key_name",
+        "description": "The arg name for the package hash key name.",
+        "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_allow_key_override",
+        "description": "The arg name for the allow key override.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_is_upgradable",
+        "description": "The arg name for the contract upgradeability setting.",
+        "ty": "Bool",
+        "optional": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "name": "NestedOdraTypesContract",
+  "events": [
+    {
+      "name": "OperationEnded",
+      "args": [
+        {
+          "name": "id",
+          "ty": "U32",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "status",
+          "ty": "U8",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "description",
+          "ty": "String",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    }
+  ],
+  "entrypoints": [
+    {
+      "name": "save_operation_result",
+      "args": [
+        {
+          "name": "operation_result",
+          "ty": "Any",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "latest_result",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": {
+        "Option": "Any"
+      },
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "current_generation",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": {
+        "List": "Any"
+      },
+      "ty": "Public",
+      "attributes": []
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "casper_contract_schema_version": 1,
+  "toolchain": "rustc 1.77.0-nightly (5bd5d214e 2024-01-25)",
+  "authors": [],
+  "repository": null,
+  "homepage": null,
+  "contract_name": "TestingContract",
+  "contract_version": "0.8.1",
+  "types": [],
+  "errors": [],
+  "entry_points": [
+    {
+      "name": "name",
+      "description": "Returns the name of the contract",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "String",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "created_at",
+      "description": "Returns the creation time of the contract",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U64",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "created_by",
+      "description": "Returns the address of the creator of the contract",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "Key",
+      "is_contract_context": true,
+      "access": "public"
+    }
+  ],
+  "events": [],
+  "call": {
+    "wasm_file_name": "TestingContract.wasm",
+    "description": "Initializes the contract with the name",
+    "arguments": [
+      {
+        "name": "odra_cfg_package_hash_key_name",
+        "description": "The arg name for the package hash key name.",
+        "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_allow_key_override",
+        "description": "The arg name for the allow key override.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_is_upgradable",
+        "description": "The arg name for the contract upgradeability setting.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "name",
+        "description": null,
+        "ty": "String",
+        "optional": false
+      }
+    ]
+  }
+}

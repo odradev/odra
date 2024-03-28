@@ -1,0 +1,61 @@
+{
+  "casper_contract_schema_version": 1,
+  "toolchain": "rustc 1.77.0-nightly (5bd5d214e 2024-01-25)",
+  "authors": [],
+  "repository": null,
+  "homepage": null,
+  "contract_name": "PartyContract",
+  "contract_version": "0.8.1",
+  "types": [
+    {
+      "struct": {
+        "name": "PartyStarted",
+        "description": null,
+        "members": [
+          {
+            "name": "caller",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "block_time",
+            "description": null,
+            "ty": "U64"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [],
+  "entry_points": [],
+  "events": [
+    {
+      "name": "PartyStarted",
+      "ty": "PartyStarted"
+    }
+  ],
+  "call": {
+    "wasm_file_name": "PartyContract.wasm",
+    "description": "Initializes the contract.",
+    "arguments": [
+      {
+        "name": "odra_cfg_package_hash_key_name",
+        "description": "The arg name for the package hash key name.",
+        "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_allow_key_override",
+        "description": "The arg name for the allow key override.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_is_upgradable",
+        "description": "The arg name for the contract upgradeability setting.",
+        "ty": "Bool",
+        "optional": false
+      }
+    ]
+  }
+}
