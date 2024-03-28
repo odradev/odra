@@ -14,13 +14,13 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(not(target_arch = "wasm32"), derive(Serialize, Deserialize))]
 pub struct Entrypoint {
     /// The entrypoint's ident.
-    pub ident: String,
+    pub name: String,
     /// The entrypoint's arguments.
     pub args: Vec<Argument>,
     /// `true` if the entrypoint is mutable.
-    pub is_mut: bool,
+    pub is_mutable: bool,
     /// The entrypoint's return type.
-    pub ret: CLType,
+    pub return_ty: CLType,
     /// The entrypoint's type.
     pub ty: EntrypointType,
     /// The entrypoint's attributes.
@@ -32,7 +32,7 @@ pub struct Entrypoint {
 #[cfg_attr(not(target_arch = "wasm32"), derive(Serialize, Deserialize))]
 pub struct Argument {
     /// The argument's ident.
-    pub ident: String,
+    pub name: String,
     /// The argument's type.
     pub ty: CLType,
     /// `true` if the argument is a reference.
@@ -48,7 +48,7 @@ pub struct Argument {
 #[cfg_attr(not(target_arch = "wasm32"), derive(Serialize, Deserialize))]
 pub struct Event {
     /// The event's ident.
-    pub ident: String,
+    pub name: String,
     /// The event's arguments.
     pub args: Vec<Argument>
 }
@@ -161,20 +161,20 @@ impl<T: EventInstance> IntoEvent for T {
     fn into_event() -> Event {
         let mut schemas = casper_event_standard::Schemas::new();
         schemas.add::<T>();
-        let ident = <T as EventInstance>::name();
+        let name = <T as EventInstance>::name();
         let schema = <T as EventInstance>::schema();
         let args = schema
             .to_vec()
             .iter()
             .map(|(name, ty)| Argument {
-                ident: name.clone(),
+                name: name.clone(),
                 ty: ty.clone().downcast(),
                 is_ref: false,
                 is_slice: false,
                 is_required: true
             })
             .collect::<Vec<_>>();
-        Event { ident, args }
+        Event { name, args }
     }
 }
 

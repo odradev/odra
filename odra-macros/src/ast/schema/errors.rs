@@ -95,8 +95,9 @@ impl TryFrom<&TypeIR> for SchemaErrorItem {
 }
 
 fn enum_variants(variants: &[syn::Variant]) -> proc_macro2::TokenStream {
-    utils::syn::transform_variants(variants, |name, discriminant| {
-        quote::quote!(odra::schema::error(#name, "", #discriminant),)
+    utils::syn::transform_variants(variants, |name, discriminant, docs| {
+        let description = docs.first().cloned().unwrap_or_default().trim().to_string();
+        quote::quote!(odra::schema::error(#name, #description, #discriminant),)
     })
 }
 
@@ -142,8 +143,8 @@ mod test {
             impl odra::schema::SchemaErrors for MyType {
                 fn schema_errors() -> odra::prelude::Vec<odra::schema::casper_contract_schema::UserError> {
                     odra::prelude::vec![
-                        odra::schema::error("A", "", 10u16),
-                        odra::schema::error("B", "", 11u16),
+                        odra::schema::error("A", "Description of A", 10u16),
+                        odra::schema::error("B", "Description of B", 11u16),
                     ]
                 }
             }

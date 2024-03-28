@@ -409,21 +409,7 @@ impl FnIR {
     }
 
     pub fn docs(&self) -> Vec<String> {
-        let attrs = utils::syn::docs_attrs(self.attributes());
-
-        let mut docs = Vec::new();
-        for attr in attrs {
-            if let syn::Meta::NameValue(nv) = &attr.meta {
-                if let syn::Expr::Lit(syn::ExprLit {
-                    lit: syn::Lit::Str(str),
-                    ..
-                }) = &nv.value
-                {
-                    docs.push(str.value());
-                }
-            }
-        }
-        docs
+        utils::syn::string_docs(self.attributes())
     }
 }
 
