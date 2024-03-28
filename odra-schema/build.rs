@@ -1,4 +1,4 @@
-//! This build script is used to set the `RUSTC_VERSION` environment variable to the current Rust
+//! This build script is used to set the `RUSTC_VERSION` environment variable to the current Rust.
 use std::process::Command;
 
 fn main() {
