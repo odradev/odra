@@ -1,0 +1,60 @@
+{
+  "name": "ReentrancyMock",
+  "events": [],
+  "entrypoints": [
+    {
+      "name": "count_local_recursive",
+      "args": [
+        {
+          "name": "n",
+          "ty": "U32",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": [
+        "NonReentrant"
+      ]
+    },
+    {
+      "name": "count_ref_recursive",
+      "args": [
+        {
+          "name": "n",
+          "ty": "U32",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": [
+        "NonReentrant"
+      ]
+    },
+    {
+      "name": "non_reentrant_count",
+      "args": [],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": [
+        "NonReentrant"
+      ]
+    },
+    {
+      "name": "get_value",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U32",
+      "ty": "Public",
+      "attributes": []
+    }
+  ]
+}

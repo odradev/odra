@@ -1,0 +1,34 @@
+{
+  "name": "PartyContract",
+  "events": [
+    {
+      "name": "PartyStarted",
+      "args": [
+        {
+          "name": "caller",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "block_time",
+          "ty": "U64",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    }
+  ],
+  "entrypoints": [
+    {
+      "name": "init",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "Unit",
+      "ty": "Constructor",
+      "attributes": []
+    }
+  ]
+}

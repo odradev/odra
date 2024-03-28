@@ -1,0 +1,148 @@
+{
+  "casper_contract_schema_version": 1,
+  "toolchain": "rustc 1.77.0-nightly (5bd5d214e 2024-01-25)",
+  "authors": [],
+  "repository": null,
+  "homepage": null,
+  "contract_name": "NestedOdraTypesContract",
+  "contract_version": "0.8.1",
+  "types": [
+    {
+      "struct": {
+        "name": "OperationEnded",
+        "description": null,
+        "members": [
+          {
+            "name": "id",
+            "description": null,
+            "ty": "U32"
+          },
+          {
+            "name": "status",
+            "description": null,
+            "ty": "Status"
+          },
+          {
+            "name": "description",
+            "description": null,
+            "ty": "String"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "OperationResult",
+        "description": null,
+        "members": [
+          {
+            "name": "id",
+            "description": null,
+            "ty": "U32"
+          },
+          {
+            "name": "status",
+            "description": null,
+            "ty": "Status"
+          },
+          {
+            "name": "description",
+            "description": null,
+            "ty": "String"
+          }
+        ]
+      }
+    },
+    {
+      "enum": {
+        "name": "Status",
+        "description": null,
+        "variants": [
+          {
+            "name": "Failure",
+            "description": null,
+            "discriminant": 0,
+            "ty": "Unit"
+          },
+          {
+            "name": "Success",
+            "description": null,
+            "discriminant": 1,
+            "ty": "Unit"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [],
+  "entry_points": [
+    {
+      "name": "save_operation_result",
+      "description": "Saves the operation result in the storage.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "operation_result",
+          "description": null,
+          "ty": "OperationResult",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "latest_result",
+      "description": "Returns the latest operation result.",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": {
+        "Option": "OperationResult"
+      },
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "current_generation",
+      "description": "Returns the current generation of operation results.",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": {
+        "List": "OperationResult"
+      },
+      "is_contract_context": true,
+      "access": "public"
+    }
+  ],
+  "events": [
+    {
+      "name": "OperationEnded",
+      "ty": "OperationEnded"
+    }
+  ],
+  "call": {
+    "wasm_file_name": "NestedOdraTypesContract.wasm",
+    "description": null,
+    "arguments": [
+      {
+        "name": "odra_cfg_package_hash_key_name",
+        "description": "The arg name for the package hash key name.",
+        "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_allow_key_override",
+        "description": "The arg name for the allow key override.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_is_upgradable",
+        "description": "The arg name for the contract upgradeability setting.",
+        "ty": "Bool",
+        "optional": false
+      }
+    ]
+  }
+}

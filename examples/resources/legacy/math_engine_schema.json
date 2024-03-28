@@ -1,0 +1,29 @@
+{
+  "name": "MathEngine",
+  "events": [],
+  "entrypoints": [
+    {
+      "name": "add",
+      "args": [
+        {
+          "name": "n1",
+          "ty": "U32",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "n2",
+          "ty": "U32",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": false,
+      "return_ty": "U32",
+      "ty": "Public",
+      "attributes": []
+    }
+  ]
+}

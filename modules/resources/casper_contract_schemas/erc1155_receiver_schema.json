@@ -1,0 +1,230 @@
+{
+  "casper_contract_schema_version": 1,
+  "toolchain": "rustc 1.77.0-nightly (5bd5d214e 2024-01-25)",
+  "authors": [
+    "Jakub Płaskonka <kuba@odra.dev>",
+    "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
+    "Maciej Zieliński <maciej@odra.dev>"
+  ],
+  "repository": "https://github.com/odradev/odra",
+  "homepage": null,
+  "contract_name": "Erc1155Receiver",
+  "contract_version": "0.8.1",
+  "types": [
+    {
+      "struct": {
+        "name": "BatchReceived",
+        "description": null,
+        "members": [
+          {
+            "name": "operator",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "from",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "token_ids",
+            "description": null,
+            "ty": {
+              "List": "U256"
+            }
+          },
+          {
+            "name": "amounts",
+            "description": null,
+            "ty": {
+              "List": "U256"
+            }
+          },
+          {
+            "name": "data",
+            "description": null,
+            "ty": {
+              "Option": {
+                "List": "U8"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "SingleReceived",
+        "description": null,
+        "members": [
+          {
+            "name": "operator",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "from",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "token_id",
+            "description": null,
+            "ty": "U256"
+          },
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U256"
+          },
+          {
+            "name": "data",
+            "description": null,
+            "ty": {
+              "Option": {
+                "List": "U8"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [],
+  "entry_points": [
+    {
+      "name": "on_erc1155_received",
+      "description": "This function is called at the end of a [safe_transfer_from](crate::erc1155::Erc1155::safe_transfer_from),",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "operator",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "from",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        },
+        {
+          "name": "data",
+          "description": null,
+          "ty": {
+            "Option": {
+              "List": "U8"
+            }
+          },
+          "optional": false
+        }
+      ],
+      "return_ty": "Bool",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "on_erc1155_batch_received",
+      "description": "This function is called at the end of a [safe_batch_transfer_from](crate::erc1155::Erc1155::safe_batch_transfer_from)",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "operator",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "from",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "token_ids",
+          "description": null,
+          "ty": {
+            "List": "U256"
+          },
+          "optional": false
+        },
+        {
+          "name": "amounts",
+          "description": null,
+          "ty": {
+            "List": "U256"
+          },
+          "optional": false
+        },
+        {
+          "name": "data",
+          "description": null,
+          "ty": {
+            "Option": {
+              "List": "U8"
+            }
+          },
+          "optional": false
+        }
+      ],
+      "return_ty": "Bool",
+      "is_contract_context": true,
+      "access": "public"
+    }
+  ],
+  "events": [
+    {
+      "name": "BatchReceived",
+      "ty": "BatchReceived"
+    },
+    {
+      "name": "SingleReceived",
+      "ty": "SingleReceived"
+    }
+  ],
+  "call": {
+    "wasm_file_name": "Erc1155Receiver.wasm",
+    "description": null,
+    "arguments": [
+      {
+        "name": "odra_cfg_package_hash_key_name",
+        "description": "The arg name for the package hash key name.",
+        "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_allow_key_override",
+        "description": "The arg name for the allow key override.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_is_upgradable",
+        "description": "The arg name for the contract upgradeability setting.",
+        "ty": "Bool",
+        "optional": false
+      }
+    ]
+  }
+}
