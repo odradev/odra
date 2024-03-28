@@ -91,7 +91,7 @@ impl TryFrom<&'_ ModuleImplIR> for InitArgsItem {
             .named_args()
             .iter()
             .map(|arg| {
-                let ty = arg.ty().unwrap();
+                let ty = utils::ty::unreferenced_ty(&arg.ty().unwrap());
                 let ident = arg.name().unwrap();
                 let field: syn::Field = syn::parse_quote!(pub #ident: #ty);
                 field
