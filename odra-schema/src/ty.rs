@@ -5,7 +5,9 @@ use casper_contract_schema::NamedCLType;
 use casper_types::{bytesrepr::Bytes, Key, PublicKey, URef, U128, U256, U512};
 use odra_core::{args::Maybe, Address};
 
+/// Trait for types that can be represented as a NamedCLType.
 pub trait NamedCLTyped {
+    /// Returns the NamedCLType of the implementing type.
     fn ty() -> NamedCLType;
 }
 
@@ -153,7 +155,7 @@ impl<T1: NamedCLTyped, T2: NamedCLTyped, T3: NamedCLTyped> NamedCLTyped for (T1,
 
 impl NamedCLTyped for PublicKey {
     fn ty() -> NamedCLType {
-        NamedCLType::Key
+        NamedCLType::PublicKey
     }
 }
 
@@ -166,5 +168,69 @@ impl NamedCLTyped for Address {
 impl<T: NamedCLTyped> NamedCLTyped for Maybe<T> {
     fn ty() -> NamedCLType {
         T::ty()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_named_cl_type() {
+        assert_eq!(bool::ty(), NamedCLType::Bool);
+        assert_eq!(i32::ty(), NamedCLType::I32);
+        assert_eq!(i64::ty(), NamedCLType::I64);
+        assert_eq!(u8::ty(), NamedCLType::U8);
+        assert_eq!(u32::ty(), NamedCLType::U32);
+        assert_eq!(u64::ty(), NamedCLType::U64);
+        assert_eq!(U128::ty(), NamedCLType::U128);
+        assert_eq!(U256::ty(), NamedCLType::U256);
+        assert_eq!(U512::ty(), NamedCLType::U512);
+        assert_eq!(<() as NamedCLTyped>::ty(), NamedCLType::Unit);
+        assert_eq!(String::ty(), NamedCLType::String);
+        assert_eq!(Key::ty(), NamedCLType::Key);
+        assert_eq!(URef::ty(), NamedCLType::URef);
+        assert_eq!(PublicKey::ty(), NamedCLType::PublicKey);
+        assert_eq!(<&str as NamedCLTyped>::ty(), NamedCLType::String);
+        assert_eq!(Bytes::ty(), NamedCLType::List(Box::new(NamedCLType::U8)));
+        assert_eq!(
+            Option::<u32>::ty(),
+            NamedCLType::Option(Box::new(NamedCLType::U32))
+        );
+        assert_eq!(
+            Vec::<u32>::ty(),
+            NamedCLType::List(Box::new(NamedCLType::U32))
+        );
+        assert_eq!(<[u8; 32] as NamedCLTyped>::ty(), NamedCLType::ByteArray(32));
+        assert_eq!(
+            Result::<u32, u64>::ty(),
+            NamedCLType::Result {
+                ok: Box::new(NamedCLType::U32),
+                err: Box::new(NamedCLType::U64)
+            }
+        );
+        assert_eq!(
+            BTreeMap::<u32, u64>::ty(),
+            NamedCLType::Map {
+                key: Box::new(NamedCLType::U32),
+                value: Box::new(NamedCLType::U64)
+            }
+        );
+        assert_eq!(
+            <(u32,) as NamedCLTyped>::ty(),
+            NamedCLType::Tuple1([Box::new(NamedCLType::U32)])
+        );
+        assert_eq!(
+            <(u32, u64) as NamedCLTyped>::ty(),
+            NamedCLType::Tuple2([Box::new(NamedCLType::U32), Box::new(NamedCLType::U64)])
+        );
+        assert_eq!(
+            <(u32, u64, u8) as NamedCLTyped>::ty(),
+            NamedCLType::Tuple3([
+                Box::new(NamedCLType::U32),
+                Box::new(NamedCLType::U64),
+                Box::new(NamedCLType::U8)
+            ])
+        );
     }
 }

@@ -155,7 +155,7 @@ impl Parse for ModuleErrors {
         }
         input.parse::<kw::errors>()?;
         input.parse::<Token![=]>()?;
-    
+
         Ok(ModuleErrors(Some(input.parse::<syn::Type>()?)))
     }
 }

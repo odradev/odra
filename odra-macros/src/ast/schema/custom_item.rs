@@ -57,7 +57,7 @@ impl ToTokens for SchemaCustomTypeItem {
 }
 
 fn custom_enum(name: &str, variants: &[syn::Variant]) -> proc_macro2::TokenStream {
-    let variants = utils::syn::transform_variants(variants, |name, discriminant| {
+    let variants = utils::syn::transform_variants(variants, |name, discriminant, _| {
         quote::quote!(odra::schema::enum_variant(#name, #discriminant),)
     });
 

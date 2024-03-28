@@ -12,3 +12,6 @@ casper-contract-schema = { git = "https://github.com/odradev/casper-contract-sch
 casper-types = { workspace = true }
 odra-core = { workspace = true }
 num-traits = { workspace = true }
+
+[lints.rust]
+missing_docs = "warn"

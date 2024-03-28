@@ -71,8 +71,6 @@ pub fn odra_error(_attr: TokenStream, item: TokenStream) -> TokenStream {
         let schema = SchemaErrorItem::try_from(&ir).into_code();
         let odra_error = OdraErrorItem::try_from(&ir).into_code();
         let mut tokens = TokenStream::new();
-        let code: TokenStream = ir.self_code().to_token_stream().into();
-        tokens.extend(code);
         tokens.extend(schema);
         tokens.extend(odra_error);
         return tokens;

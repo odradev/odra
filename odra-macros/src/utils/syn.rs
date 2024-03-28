@@ -146,6 +146,24 @@ pub fn docs_attrs(attrs: &[syn::Attribute]) -> Vec<syn::Attribute> {
         .collect()
 }
 
+pub fn string_docs(attrs: &[syn::Attribute]) -> Vec<String> {
+    let attrs = docs_attrs(attrs);
+
+    let mut docs = Vec::new();
+    for attr in attrs {
+        if let syn::Meta::NameValue(nv) = &attr.meta {
+            if let syn::Expr::Lit(syn::ExprLit {
+                lit: syn::Lit::Str(str),
+                ..
+            }) = &nv.value
+            {
+                docs.push(str.value());
+            }
+        }
+    }
+    docs
+}
+
 pub fn last_segment_ident(ty: &syn::Type) -> syn::Result<syn::Ident> {
     match ty {
         syn::Type::Path(type_path) => type_path
@@ -222,19 +240,20 @@ pub fn extract_unit_variants(input: &syn::ItemEnum) -> syn::Result<Vec<syn::Vari
     }
 }
 
-pub fn transform_variants<F: Fn(String, u16) -> TokenStream>(
+pub fn transform_variants<F: Fn(String, u16, Vec<String>) -> TokenStream>(
     variants: &[syn::Variant],
     f: F
 ) -> TokenStream {
     let mut discriminant = 0u16;
     let variants = variants.iter().map(|v| {
+        let docs = string_docs(&v.attrs);
         let name = v.ident.to_string();
         if let Some((_, syn::Expr::Lit(lit))) = &v.discriminant {
             if let syn::Lit::Int(int) = &lit.lit {
                 discriminant = int.base10_parse().unwrap();
             }
         };
-        let result = f(name, discriminant);
+        let result = f(name, discriminant, docs);
         discriminant += 1;
         result
     });
