@@ -1,20 +1,24 @@
 //! This example demonstrates how to collect events from a module and its submodules.
 #![allow(dead_code)]
 use odra::prelude::*;
-use odra::{Event, SubModule, Var};
+use odra::{SubModule, Var};
 
-#[derive(Event, PartialEq, Eq, Debug)]
+#[odra::event]
 struct Start {}
 
-#[derive(Event, PartialEq, Eq, Debug)]
+#[odra::event]
 struct Stop {}
 
-#[derive(Event, PartialEq, Eq, Debug)]
+#[odra::event]
 struct Info {
     msg: String
 }
 
-#[odra::module(events = [Start, Stop])]
+#[odra::module(
+    name = "EngineContract",
+    version = "1.0.1",
+    events = [Start, Stop])
+]
 struct Engine {
     name: Var<String>
 }
@@ -81,21 +85,21 @@ mod test {
 
     fn engine_event(ident: &str) -> Event {
         Event {
-            ident: ident.to_string(),
+            name: ident.to_string(),
             args: vec![]
         }
     }
 
     fn info_event() -> Event {
         let arg = Argument {
-            ident: "msg".to_string(),
+            name: "msg".to_string(),
             ty: CLType::String,
             is_ref: false,
             is_slice: false,
             is_required: true
         };
         Event {
-            ident: "Info".to_string(),
+            name: "Info".to_string(),
             args: vec![arg]
         }
     }

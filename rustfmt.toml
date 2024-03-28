@@ -1,1 +1,2 @@
 trailing_comma = "Never"
+ignore = ["odra-macros/src/ast/*"] # cargo fmt incorectly formats the code under `quote!` macro adding trailing commas

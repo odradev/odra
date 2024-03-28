@@ -1,6 +1,6 @@
 //! Access Control module.
 use super::events::*;
-use crate::access::errors::Error::{MissingRole, RoleRenounceForAnotherAddress};
+use crate::access::errors::Error;
 use odra::prelude::*;
 use odra::{Address, Mapping};
 
@@ -27,7 +27,7 @@ pub const DEFAULT_ADMIN_ROLE: Role = [0u8; 32];
 /// this role can grant or revoke other roles.
 ///
 /// More complex role relationships can be established using the [set_admin_role()](AccessControl::set_admin_role) function.
-#[odra::module(events = [RoleAdminChanged, RoleGranted, RoleRevoked])]
+#[odra::module(events = [RoleAdminChanged, RoleGranted, RoleRevoked], errors = Error)]
 pub struct AccessControl {
     roles: Mapping<(Role, Address), bool>,
     role_admin: Mapping<Role, Role>
@@ -86,7 +86,7 @@ impl AccessControl {
     /// Note that only `address` is authorized to call this function.
     pub fn renounce_role(&mut self, role: &Role, address: &Address) {
         if address != &self.env().caller() {
-            self.env().revert(RoleRenounceForAnotherAddress);
+            self.env().revert(Error::RoleRenounceForAnotherAddress);
         }
         self.unchecked_revoke_role(role, address);
     }
@@ -96,7 +96,7 @@ impl AccessControl {
     /// Ensures `address` has `role`. If not, reverts with [Error::MissingRole].
     pub fn check_role(&self, role: &Role, address: &Address) {
         if !self.has_role(role, address) {
-            self.env().revert(MissingRole);
+            self.env().revert(Error::MissingRole);
         }
     }
 

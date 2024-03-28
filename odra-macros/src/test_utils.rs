@@ -82,11 +82,14 @@ pub mod mock {
 
                 delegate! {
                     to self.ownable {
+                        /// Returns the owner of the contract.
                         fn get_owner(&self) -> Address;
+                        /// Sets the owner of the contract.
                         fn set_owner(&mut self, new_owner: Address);
                     }
 
                     to self.metadata {
+                        /// Returns the name of the token.
                         fn name(&self) -> String;
                         fn symbol(&self) -> String;
                     }
@@ -108,7 +111,12 @@ pub mod mock {
                 counters_map: Mapping<u8, Counter>
             }
         );
-        let attr = quote!(events = [OnTransfer, OnApprove]);
+        let attr = quote!(
+            name = "MyCounterPack",
+            version = "0.1.0",
+            events = [OnTransfer, OnApprove],
+            errors = Erc20Errors
+        );
         ModuleStructIR::try_from((&attr, &module)).unwrap()
     }
 
@@ -133,7 +141,9 @@ pub mod mock {
     pub fn custom_enum() -> TypeIR {
         let ty = quote!(
             enum MyType {
-                A,
+                /// Description of A
+                A = 10,
+                /// Description of B
                 B
             }
         );

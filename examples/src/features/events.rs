@@ -1,13 +1,13 @@
 //! This examples shows how to handle events in a contract.
 use odra::prelude::*;
-use odra::{Address, Event};
+use odra::Address;
 
 /// Contract that emits an event when initialized.
-#[odra::module]
-pub struct PartyContract {}
+#[odra::module(events = [PartyStarted])]
+pub struct PartyContract;
 
 /// Event emitted when the contract is initialized.
-#[derive(Event, PartialEq, Eq, Debug)]
+#[odra::event]
 pub struct PartyStarted {
     /// Address of the caller.
     pub caller: Address,

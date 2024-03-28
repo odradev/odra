@@ -50,7 +50,12 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn derive_odra_type(item: TokenStream) -> TokenStream {
     let item = item.into();
     if let Ok(ir) = TypeIR::try_from(&item) {
-        return OdraTypeItem::try_from(&ir).into_code();
+        let schema = SchemaCustomTypeItem::try_from(&ir).into_code();
+        let odra_type = OdraTypeItem::try_from(&ir).into_code();
+        let mut tokens = TokenStream::new();
+        tokens.extend(schema);
+        tokens.extend(odra_type);
+        return tokens;
     }
     span_error!(item, "Struct or Enum expected")
 }
@@ -60,7 +65,12 @@ pub fn derive_odra_type(item: TokenStream) -> TokenStream {
 pub fn derive_odra_error(item: TokenStream) -> TokenStream {
     let item = item.into();
     if let Ok(ir) = TypeIR::try_from(&item) {
-        return OdraErrorItem::try_from(&ir).into_code();
+        let schema = SchemaErrorItem::try_from(&ir).into_code();
+        let odra_error = OdraErrorItem::try_from(&ir).into_code();
+        let mut tokens = TokenStream::new();
+        tokens.extend(schema);
+        tokens.extend(odra_error);
+        return tokens;
     }
     span_error!(item, "Struct or Enum expected")
 }
@@ -117,4 +127,11 @@ pub fn derive_into_runtime_args(item: TokenStream) -> TokenStream {
         }
         _ => panic!("Struct expected")
     }
+}
+
+/// This macro is used to implement the boilerplate code for the event and contract schema.
+#[proc_macro_attribute]
+pub fn event(_attr: TokenStream, input: TokenStream) -> TokenStream {
+    let input: TokenStream2 = input.into();
+    OdraEventItem::try_from(&input).into_code()
 }

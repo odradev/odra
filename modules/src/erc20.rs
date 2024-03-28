@@ -1,11 +1,11 @@
 //! ERC20 token standard implementation.
-use crate::erc20::errors::Error::*;
+use crate::erc20::errors::Error;
 use crate::erc20::events::*;
 use odra::prelude::*;
 use odra::{casper_types::U256, Address, Mapping, Var};
 
 /// ERC20 token module
-#[odra::module(events = [Approval, Transfer])]
+#[odra::module(events = [Approval, Transfer], errors = Error)]
 pub struct Erc20 {
     decimals: Var<u8>,
     symbol: Var<String>,
@@ -72,17 +72,17 @@ impl Erc20 {
 
     /// Returns the name of the token.
     pub fn name(&self) -> String {
-        self.name.get_or_revert_with(NameNotSet)
+        self.name.get_or_revert_with(Error::NameNotSet)
     }
 
     /// Returns the symbol of the token.
     pub fn symbol(&self) -> String {
-        self.symbol.get_or_revert_with(SymbolNotSet)
+        self.symbol.get_or_revert_with(Error::SymbolNotSet)
     }
 
     /// Returns the number of decimals the token uses.
     pub fn decimals(&self) -> u8 {
-        self.decimals.get_or_revert_with(DecimalsNotSet)
+        self.decimals.get_or_revert_with(Error::DecimalsNotSet)
     }
 
     /// Returns the total supply of the token.
@@ -115,7 +115,7 @@ impl Erc20 {
     /// Burns the given amount of tokens from the given address.
     pub fn burn(&mut self, address: &Address, amount: &U256) {
         if self.balance_of(address) < *amount {
-            self.env().revert(InsufficientBalance);
+            self.env().revert(Error::InsufficientBalance);
         }
         self.total_supply.subtract(*amount);
         self.balances.subtract(address, *amount);
@@ -131,7 +131,7 @@ impl Erc20 {
 impl Erc20 {
     fn raw_transfer(&mut self, owner: &Address, recipient: &Address, amount: &U256) {
         if *amount > self.balances.get_or_default(owner) {
-            self.env().revert(InsufficientBalance)
+            self.env().revert(Error::InsufficientBalance)
         }
 
         self.balances.subtract(owner, *amount);
@@ -147,7 +147,7 @@ impl Erc20 {
     fn spend_allowance(&mut self, owner: &Address, spender: &Address, amount: &U256) {
         let allowance = self.allowances.get_or_default(&(*owner, *spender));
         if allowance < *amount {
-            self.env().revert(InsufficientAllowance)
+            self.env().revert(Error::InsufficientAllowance)
         }
         self.allowances.subtract(&(*owner, *spender), *amount);
 
@@ -161,11 +161,11 @@ impl Erc20 {
 
 /// ERC20 Events
 pub mod events {
-    use odra::casper_event_standard::{self, Event};
+    use odra::casper_event_standard;
     use odra::{casper_types::U256, Address};
 
     /// Transfer event
-    #[derive(Event, Eq, PartialEq, Debug)]
+    #[odra::event]
     pub struct Transfer {
         /// Sender of the tokens.
         pub from: Option<Address>,
@@ -176,7 +176,7 @@ pub mod events {
     }
 
     /// Approval event
-    #[derive(Event, Eq, PartialEq, Debug)]
+    #[odra::event]
     pub struct Approval {
         /// Owner of the tokens.
         pub owner: Address,

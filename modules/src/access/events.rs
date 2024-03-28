@@ -1,10 +1,10 @@
 //! Events emitted by the AccessControl module.
 use super::access_control::Role;
 use odra::prelude::*;
-use odra::{Address, Event};
+use odra::Address;
 
 /// Emitted when ownership of the contract is transferred.
-#[derive(Event, PartialEq, Eq, Debug)]
+#[odra::event]
 pub struct OwnershipTransferred {
     /// The previous owner.
     pub previous_owner: Option<Address>,
@@ -13,7 +13,7 @@ pub struct OwnershipTransferred {
 }
 
 /// Emitted when the ownership transfer is started.
-#[derive(Event, PartialEq, Eq, Debug)]
+#[odra::event]
 pub struct OwnershipTransferStarted {
     /// The previous owner.
     pub previous_owner: Option<Address>,
@@ -25,7 +25,7 @@ pub struct OwnershipTransferStarted {
 ///
 /// [`DEFAULT_ADMIN_ROLE`](super::access_control::DEFAULT_ADMIN_ROLE) is the starting admin for all roles,
 /// but `RoleAdminChanged` not being emitted signaling this.
-#[derive(Event, PartialEq, Eq, Debug)]
+#[odra::event]
 pub struct RoleAdminChanged {
     /// The role whose admin role is changed.
     pub role: Role,
@@ -36,7 +36,7 @@ pub struct RoleAdminChanged {
 }
 
 /// Informs `address` is granted `role`.
-#[derive(Event, PartialEq, Eq, Debug)]
+#[odra::event]
 pub struct RoleGranted {
     /// The role granted.
     pub role: Role,
@@ -47,7 +47,7 @@ pub struct RoleGranted {
 }
 
 /// Informs `address` is revoked `role`.
-#[derive(Event, PartialEq, Eq, Debug)]
+#[odra::event]
 pub struct RoleRevoked {
     /// The role revoked.
     pub role: Role,

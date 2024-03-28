@@ -1,5 +1,4 @@
 //! This example demonstrates how to use nested Odra types in a contract.
-use casper_event_standard::Event;
 use odra::casper_event_standard;
 use odra::prelude::*;
 use odra::{Mapping, OdraType, SubModule, UnwrapOrRevert, Var};
@@ -12,7 +11,7 @@ pub struct ResultsStorage {
 }
 
 /// Contract that uses a module with nested Odra types.
-#[odra::module]
+#[odra::module(events = [OperationEnded])]
 pub struct NestedOdraTypesContract {
     latest_result: Var<OperationResult>,
     current_generation_storage: SubModule<ResultsStorage>
@@ -69,7 +68,7 @@ impl NestedOdraTypesContract {
 }
 
 /// Status of the operation.
-#[derive(OdraType, PartialEq, Debug)]
+#[derive(OdraType, PartialEq, Eq, Debug)]
 pub enum Status {
     /// Operation failed.
     Failure,
@@ -77,7 +76,7 @@ pub enum Status {
     Success
 }
 
-#[derive(OdraType, PartialEq, Debug)]
+#[derive(OdraType, PartialEq, Eq, Debug)]
 /// Result of the operation.
 pub struct OperationResult {
     /// Id of the operation.
@@ -89,7 +88,7 @@ pub struct OperationResult {
 }
 
 /// Event emitted when the operation ends.
-#[derive(Event, PartialEq, Debug)]
+#[odra::event]
 pub struct OperationEnded {
     id: u32,
     status: Status,

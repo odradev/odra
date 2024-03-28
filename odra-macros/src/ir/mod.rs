@@ -64,6 +64,14 @@ impl ModuleStructIR {
         )
     }
 
+    pub fn contract_schema_mod_ident(&self) -> Ident {
+        let ident = self.module_ident();
+        Ident::new(
+            utils::string::camel_to_snake(format!("__{}_contract_schema", ident)).as_str(),
+            ident.span()
+        )
+    }
+
     pub fn typed_fields(&self) -> syn::Result<Vec<EnumeratedTypedField>> {
         let fields = utils::syn::struct_typed_fields(&self.code)?;
         let fields = fields
@@ -86,9 +94,33 @@ impl ModuleStructIR {
 
     pub fn events(&self) -> Vec<syn::Type> {
         if let ConfigItem::Module(cfg) = &self.config {
-            cfg.events.iter().map(|ev| ev.ty.clone()).collect()
+            cfg.events.iter().cloned().collect()
         } else {
             vec![]
+        }
+    }
+
+    pub fn errors(&self) -> Option<syn::Type> {
+        if let ConfigItem::Module(cfg) = &self.config {
+            (*cfg.errors).clone()
+        } else {
+            None
+        }
+    }
+
+    pub fn contract_name(&self) -> String {
+        if let ConfigItem::Module(cfg) = &self.config {
+            (*cfg.name).clone()
+        } else {
+            String::from("")
+        }
+    }
+
+    pub fn contract_version(&self) -> String {
+        if let ConfigItem::Module(cfg) = &self.config {
+            (*cfg.version).clone()
+        } else {
+            String::from("")
         }
     }
 
@@ -374,6 +406,10 @@ impl FnIR {
             FnIR::Impl(ir) => ir.attrs(),
             FnIR::Def(ir) => ir.attrs()
         }
+    }
+
+    pub fn docs(&self) -> Vec<String> {
+        utils::syn::string_docs(self.attributes())
     }
 }
 

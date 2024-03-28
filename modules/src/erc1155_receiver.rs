@@ -59,7 +59,6 @@ impl Erc1155Receiver {
 
 /// Erc1155Receiver-related events
 pub mod events {
-    use odra::casper_event_standard::{self, Event};
     use odra::prelude::*;
     use odra::{
         casper_types::{bytesrepr::Bytes, U256},
@@ -67,7 +66,7 @@ pub mod events {
     };
 
     /// Emitted when the transferred token is accepted by the contract.
-    #[derive(Event, PartialEq, Eq, Debug, Clone)]
+    #[odra::event]
     pub struct SingleReceived {
         /// The operator that called the function.
         pub operator: Option<Address>,
@@ -82,7 +81,7 @@ pub mod events {
     }
 
     /// Emitted when the transferred tokens are accepted by the contract.
-    #[derive(Event, PartialEq, Eq, Debug, Clone)]
+    #[odra::event]
     pub struct BatchReceived {
         /// The operator that called the function.
         pub operator: Option<Address>,

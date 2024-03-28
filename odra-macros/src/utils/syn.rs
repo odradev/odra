@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use syn::{parse_quote, spanned::Spanned};
+use syn::{parse_quote, spanned::Spanned, DeriveInput};
 
 pub fn ident_from_impl(impl_code: &syn::ItemImpl) -> syn::Result<syn::Ident> {
     last_segment_ident(&impl_code.self_ty)
@@ -138,6 +138,32 @@ pub fn visibility_default() -> syn::Visibility {
     parse_quote!()
 }
 
+pub fn docs_attrs(attrs: &[syn::Attribute]) -> Vec<syn::Attribute> {
+    attrs
+        .iter()
+        .filter(|attr| attr.path().is_ident("doc"))
+        .cloned()
+        .collect()
+}
+
+pub fn string_docs(attrs: &[syn::Attribute]) -> Vec<String> {
+    let attrs = docs_attrs(attrs);
+
+    let mut docs = Vec::new();
+    for attr in attrs {
+        if let syn::Meta::NameValue(nv) = &attr.meta {
+            if let syn::Expr::Lit(syn::ExprLit {
+                lit: syn::Lit::Str(str),
+                ..
+            }) = &nv.value
+            {
+                docs.push(str.value());
+            }
+        }
+    }
+    docs
+}
+
 pub fn last_segment_ident(ty: &syn::Type) -> syn::Result<syn::Ident> {
     match ty {
         syn::Type::Path(type_path) => type_path
@@ -183,4 +209,60 @@ pub fn as_casted_ty_stream(ty: &syn::Type, as_ty: syn::Type) -> TokenStream {
 
 pub fn is_ref(ty: &syn::Type) -> bool {
     matches!(ty, syn::Type::Reference(_))
+}
+
+pub fn extract_named_field(input: &DeriveInput) -> syn::Result<Vec<syn::Field>> {
+    if let syn::Data::Struct(syn::DataStruct { fields, .. }) = &input.data {
+        fields
+            .iter()
+            .map(|f| {
+                if f.ident.is_none() {
+                    Err(syn::Error::new(f.span(), "Unnamed field"))
+                } else {
+                    Ok(f.clone())
+                }
+            })
+            .collect()
+    } else {
+        Ok(vec![])
+    }
+}
+
+pub fn extract_unit_variants(input: &DeriveInput) -> syn::Result<Vec<syn::Variant>> {
+    if let syn::Data::Enum(syn::DataEnum { variants, .. }) = &input.data {
+        let is_valid = variants
+            .iter()
+            .all(|v| matches!(v.fields, syn::Fields::Unit));
+        if is_valid {
+            Ok(variants.into_iter().cloned().collect())
+        } else {
+            Err(syn::Error::new_spanned(
+                variants,
+                "Expected a unit enum variant."
+            ))
+        }
+    } else {
+        Ok(vec![])
+    }
+}
+
+pub fn transform_variants<F: Fn(String, u16, Vec<String>) -> TokenStream>(
+    variants: &[syn::Variant],
+    f: F
+) -> TokenStream {
+    let mut discriminant = 0u16;
+    let variants = variants.iter().map(|v| {
+        let docs = string_docs(&v.attrs);
+        let name = v.ident.to_string();
+        if let Some((_, syn::Expr::Lit(lit))) = &v.discriminant {
+            if let syn::Lit::Int(int) = &lit.lit {
+                discriminant = int.base10_parse().unwrap();
+            }
+        };
+        let result = f(name, discriminant, docs);
+        discriminant += 1;
+        result
+    });
+
+    quote::quote!(odra::prelude::vec![#(#variants)*])
 }

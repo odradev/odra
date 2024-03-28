@@ -20,10 +20,7 @@ mod test {
         assert_eq!(flags.len(), 2);
         assert_eq!(flags[0], "cargo:rerun-if-env-changed=ODRA_MODULE");
         assert_eq!(flags[1], "cargo:rustc-cfg=odra_module=\"\"");
-    }
 
-    #[test]
-    fn test_flags_with_env() {
         std::env::set_var("ODRA_MODULE", "test");
         let flags = super::flags();
         assert_eq!(flags.len(), 2);

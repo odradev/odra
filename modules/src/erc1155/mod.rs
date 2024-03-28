@@ -53,12 +53,11 @@ pub trait Erc1155 {
 
 /// Erc1155-related Odra events.
 pub mod events {
-    use odra::casper_event_standard::{self, Event};
     use odra::prelude::*;
     use odra::{casper_types::U256, Address};
 
     /// Emitted when a single Erc1155 transfer is performed.
-    #[derive(Event, PartialEq, Eq, Debug, Clone)]
+    #[odra::event]
     pub struct TransferSingle {
         /// The operator that called the function.
         pub operator: Option<Address>,
@@ -73,7 +72,7 @@ pub mod events {
     }
 
     /// Emitted when a batched Erc1155 transfer is performed.
-    #[derive(Event, PartialEq, Eq, Debug, Clone)]
+    #[odra::event]
     pub struct TransferBatch {
         /// The operator that called the function.
         pub operator: Option<Address>,
@@ -88,7 +87,7 @@ pub mod events {
     }
 
     /// Emitted when the `owner` approves or revokes the `operator`.
-    #[derive(Event, PartialEq, Eq, Debug, Clone)]
+    #[odra::event]
     pub struct ApprovalForAll {
         /// The owner of the tokens.
         pub owner: Address,
