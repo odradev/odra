@@ -2,7 +2,7 @@
 
 Changelog for `odra`.
 
-## [0.8.2] - 2024-03-xx
+## [0.9.0] - 2024-03-xx
 ### Added
 - `Maybe<T>` - a type that represents an entrypoint arg that may or may not be present.
 - `EntrypointArgument` - a trait for types that can be used as entrypoint arguments.
@@ -15,6 +15,11 @@ Changelog for `odra`.
   
 ### Changed
 - update modules and examples to reflect the changes.
+- `OdraType` derive macro is now an attribute macro `[odra::odra_type]`.
+- `OdraError` derive macro is now an attribute macro `[odra::odra_error]`.
+
+### Fixed
+- https://github.com/odradev/odra/issues/391 - compile error when using a type reference in the constructor signature.
 
 ## [0.8.1] - 2024-03-01
 ### Added
