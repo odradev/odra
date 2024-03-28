@@ -95,10 +95,8 @@ pub mod events {
 
 /// Erc721-related Odra errors.
 pub mod errors {
-    use odra::OdraError;
-
     /// Possible errors in the context of Erc721 token.
-    #[derive(OdraError)]
+    #[odra::odra_error]
     pub enum Error {
         /// Token is invalid in the given context or does not exist.
         InvalidTokenId = 30_000,

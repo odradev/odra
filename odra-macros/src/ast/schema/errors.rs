@@ -1,5 +1,5 @@
 use quote::ToTokens;
-use crate::{ir::{EnumeratedTypedField, ModuleStructIR, TypeIR}, utils};
+use crate::{ast::utils::Named, ir::{EnumeratedTypedField, ModuleStructIR, TypeIR}, utils};
 
 pub struct SchemaErrorsItem {
     module_ident: syn::Ident,
@@ -77,20 +77,18 @@ impl TryFrom<&TypeIR> for SchemaErrorItem {
     type Error = syn::Error;
 
     fn try_from(ir: &TypeIR) -> Result<Self, Self::Error> {
-        let item = ir.self_code();
-        let variants = utils::syn::extract_unit_variants(item)?;
-
-        if matches!(item.data, syn::Data::Union(_)) || matches!(item.data, syn::Data::Struct(_)) {
-            return Err(syn::Error::new_spanned(
-                item,
+        if let syn::Item::Enum(e) = ir.self_code() {
+            let variants = utils::syn::extract_unit_variants(e)?;
+            Ok(Self {
+                ty_ident: ir.name()?,
+                errors: variants
+            })
+        } else {
+            Err(syn::Error::new_spanned(
+                ir.self_code(),
                 "An enum expected."
-            ));
+            ))
         }
-
-        Ok(Self {
-            ty_ident: item.ident.clone(),
-            errors: variants
-        })
     }
 }
 

@@ -1,6 +1,6 @@
 //! This is an example of a TimeLockWallet.
 use odra::prelude::*;
-use odra::{casper_types::U512, Address, Mapping, OdraError, Var};
+use odra::{casper_types::U512, Address, Mapping, Var};
 
 /// TimeLockWallet contract.
 #[odra::module(errors = Error, events = [Deposit, Withdrawal])]
@@ -78,8 +78,8 @@ impl TimeLockWallet {
     }
 }
 
-#[derive(OdraError)]
 /// Errors that may occur during the contract execution.
+#[odra::odra_error]
 pub enum Error {
     /// Cannot withdraw funds, the lock period is not over.
     LockIsNotOver = 1,

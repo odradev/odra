@@ -1,6 +1,6 @@
 //! This example demonstrates how to handle errors in a contract.
 use odra::prelude::*;
-use odra::{Address, OdraError, Var};
+use odra::{Address, Var};
 
 /// Contract that has an owner.
 #[odra::module(errors = Error)]
@@ -10,7 +10,7 @@ pub struct OwnedContract {
 }
 
 /// Errors that can occur in the `OwnedContract` module.
-#[derive(OdraError)]
+#[odra::odra_error]
 pub enum Error {
     /// The owner is not set.
     OwnerNotSet = 1,

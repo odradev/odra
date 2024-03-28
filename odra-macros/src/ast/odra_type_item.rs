@@ -1,4 +1,3 @@
-use crate::ast::clone::CloneItem;
 use crate::ast::events_item::HasEventsImplItem;
 use crate::ast::fn_utils::{FnItem, SingleArgFnItem};
 use crate::ast::utils::{ImplItem, Named};
@@ -7,6 +6,7 @@ use crate::utils;
 use crate::utils::misc::AsBlock;
 use derive_try_from_ref::TryFromRef;
 use syn::parse_quote;
+use crate::ast::schema::SchemaCustomTypeItem;
 
 macro_rules! impl_from_ir {
     ($ty:path) => {
@@ -30,12 +30,33 @@ macro_rules! impl_from_ir {
 #[derive(syn_derive::ToTokens, TryFromRef)]
 #[source(TypeIR)]
 #[err(syn::Error)]
+pub struct OdraTypeAttrItem {
+    item: OdraTypeItem,
+    schema: SchemaCustomTypeItem
+}
+
+#[derive(syn_derive::ToTokens)]
 pub struct OdraTypeItem {
+    attr: syn::Attribute,
+    item: syn::Item,
     from_bytes_impl: FromBytesItem,
     to_bytes_impl: ToBytesItem,
     cl_type_impl: CLTypedItem,
-    has_events_impl: HasEventsImplItem,
-    clone_item: CloneItem
+    has_events_impl: HasEventsImplItem
+}
+
+impl TryFrom<&'_ TypeIR> for OdraTypeItem {
+    type Error = syn::Error;
+    fn try_from(input: &'_ TypeIR) -> Result<Self, Self::Error> {
+        Ok(Self {
+            attr: utils::attr::common_derive_attr(),
+            item: input.self_code().clone(),
+            from_bytes_impl: input.try_into()?,
+            to_bytes_impl: input.try_into()?,
+            cl_type_impl: input.try_into()?,
+            has_events_impl: input.try_into()?
+        })
+    }
 }
 
 #[derive(syn_derive::ToTokens)]
@@ -291,6 +312,12 @@ mod tests {
         let ir = test_utils::mock::custom_struct();
         let item = OdraTypeItem::try_from(&ir).unwrap();
         let expected = quote!(
+            #[derive(Clone, PartialEq, Eq, Debug)]
+            struct MyType {
+                a: String,
+                b: u32,
+            }
+
             impl odra::casper_types::bytesrepr::FromBytes for MyType {
                 fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper_types::bytesrepr::Error> {
                     let (a, bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
@@ -335,17 +362,6 @@ mod tests {
                     odra::prelude::BTreeMap::new()
                 }
             }
-
-            #[automatically_derived]
-            impl ::core::clone::Clone for MyType {
-                #[inline]
-                fn clone(&self) -> Self {
-                    Self {
-                        a: ::core::clone::Clone::clone(&self.a),
-                        b: ::core::clone::Clone::clone(&self.b),
-                    }
-                }
-            }
         );
 
         test_utils::assert_eq(item, expected);
@@ -356,6 +372,14 @@ mod tests {
         let ir = test_utils::mock::custom_enum();
         let item = OdraTypeItem::try_from(&ir).unwrap();
         let expected = quote!(
+            #[derive(Clone, PartialEq, Eq, Debug)]
+            enum MyType {
+                /// Description of A
+                A = 10,
+                /// Description of B
+                B
+            }
+
             impl odra::casper_types::bytesrepr::FromBytes for MyType {
                 fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper_types::bytesrepr::Error> {
                     let (result, bytes): (u8, _) = odra::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
@@ -391,17 +415,6 @@ mod tests {
                 #[cfg(target_arch = "wasm32")]
                 fn event_schemas() -> odra::prelude::BTreeMap<odra::prelude::string::String, odra::casper_event_standard::Schema> {
                     odra::prelude::BTreeMap::new()
-                }
-            }
-
-            #[automatically_derived]
-            impl ::core::clone::Clone for MyType {
-                #[inline]
-                fn clone(&self) -> Self {
-                    match self {
-                        MyType::A => MyType::A,
-                        MyType::B => MyType::B,
-                    }
                 }
             }
         );

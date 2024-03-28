@@ -1,5 +1,4 @@
 mod blueprint;
-mod clone;
 mod contract_ref_item;
 mod deployer_item;
 mod deployer_utils;
@@ -25,10 +24,9 @@ mod utils;
 mod wasm_parts;
 mod wasm_parts_utils;
 
-pub(crate) use error_item::OdraErrorItem;
+pub(crate) use error_item::OdraErrorAttrItem;
 pub(crate) use external_contract_item::ExternalContractImpl;
 pub(crate) use module_impl_item::ModuleImplItem;
 pub(crate) use module_struct_item::ModuleStructItem;
-pub(crate) use odra_type_item::OdraTypeItem;
-pub(crate) use schema::{SchemaCustomTypeItem, SchemaErrorItem};
+pub(crate) use odra_type_item::OdraTypeAttrItem;
 pub(crate) use event::OdraEventItem;

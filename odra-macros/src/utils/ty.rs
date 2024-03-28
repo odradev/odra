@@ -217,10 +217,6 @@ pub fn u8() -> syn::Type {
     parse_quote!(u8)
 }
 
-pub fn clone() -> syn::Type {
-    parse_quote!(::core::clone::Clone)
-}
-
 pub fn from<T: ToTokens>(ty: &T) -> syn::Type {
     parse_quote!(::core::convert::From<#ty>)
 }

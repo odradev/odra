@@ -100,10 +100,8 @@ pub mod events {
 
 /// Erc1155-related Odra errors.
 pub mod errors {
-    use odra::OdraError;
-
     /// Possible errors in the context of Erc1155.
-    #[derive(OdraError)]
+    #[odra::odra_error]
     pub enum Error {
         /// Collections of addresses and token ids have different length.
         AccountsAndIdsLengthMismatch = 30_000,

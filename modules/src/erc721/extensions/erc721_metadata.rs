@@ -54,10 +54,8 @@ impl Erc721MetadataExtension {
 
 /// Erc721Metadata-related errors.
 pub mod errors {
-    use odra::OdraError;
-
     /// Possible errors in the context of Erc721 metadata.
-    #[derive(OdraError)]
+    #[odra::odra_error]
     pub enum Error {
         /// The name is not set.
         NameNotSet = 31_000,

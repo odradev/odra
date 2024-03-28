@@ -36,3 +36,7 @@ pub fn init_args_docs(name: String) -> syn::Attribute {
 pub fn missing_docs() -> syn::Attribute {
     parse_quote!(#[allow(missing_docs)])
 }
+
+pub fn common_derive_attr() -> syn::Attribute {
+    parse_quote!(#[derive(Clone, PartialEq, Eq, Debug)])
+}

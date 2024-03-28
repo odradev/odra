@@ -1,6 +1,6 @@
 use odra::casper_types::{U256, U512};
 use odra::prelude::*;
-use odra::{Event, List, Mapping, OdraType, SubModule, Var};
+use odra::{List, Mapping, SubModule, Var};
 use odra_modules::erc20::Erc20;
 
 /// Contract designed to benchmark the Odra framework.
@@ -80,14 +80,15 @@ impl Benchmark {
     }
 }
 
-#[derive(OdraType, Default, PartialEq, Debug)]
+#[odra::odra_type]
+#[derive(Default)]
 pub struct StructVariable {
     pub yes_or_no: bool,
     pub number: u32,
     pub title: String
 }
 
-#[derive(Event, PartialEq, Debug)]
+#[odra::event]
 pub struct SomeEvent {
     pub message: String
 }

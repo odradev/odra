@@ -35,14 +35,14 @@ impl Erc721ReceiverTrait for Erc721Receiver {
 
 /// Erc721Receiver-related events.
 pub mod events {
-    use odra::casper_event_standard::{self, Event};
+    use odra::casper_event_standard;
     use odra::{
         casper_types::{bytesrepr::Bytes, U256},
         Address
     };
 
     /// Emitted when the transfer is accepted by the contract.
-    #[derive(Event, PartialEq, Eq, Debug, Clone)]
+    #[odra::event]
     pub struct Received {
         /// The operator that called the function.
         pub operator: Option<Address>,
