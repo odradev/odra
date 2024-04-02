@@ -8,6 +8,7 @@ cargo publish -p odra-core
 cargo publish -p odra-macros
 cargo publish -p odra-vm
 cargo publish -p odra-casper-wasm-env 
+cargo publish -p odra-schema
 cargo publish -p odra
 cargo publish -p odra-casper-test-vm
 cargo publish -p odra-test
