@@ -1,6 +1,7 @@
 [package]
 name = "odra-schema"
 edition = "2021"
+description = "Generates Casper Contract Schema from Odra contracts."
 version.workspace = true
 authors.workspace = true
 license.workspace = true
