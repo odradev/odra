@@ -2,7 +2,7 @@
 
 Changelog for `odra`.
 
-## [0.9.0] - 2024-03-xx
+## [0.9.0] - 2024-04-02
 ### Added
 - `Maybe<T>` - a type that represents an entrypoint arg that may or may not be present.
 - `EntrypointArgument` - a trait for types that can be used as entrypoint arguments.
