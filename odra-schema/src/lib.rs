@@ -112,12 +112,7 @@ pub fn enum_typed_variant<T: NamedCLTyped>(name: &str, discriminant: u16) -> Enu
 
 /// Creates a new enum variant of type [NamedCLType::Unit].
 pub fn enum_variant(name: &str, discriminant: u16) -> EnumVariant {
-    EnumVariant {
-        name: name.to_string(),
-        description: None,
-        discriminant,
-        ty: NamedCLType::Unit.into()
-    }
+    enum_typed_variant::<()>(name, discriminant)
 }
 
 /// Creates a new [CustomType] of type struct.

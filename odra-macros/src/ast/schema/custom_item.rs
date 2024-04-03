@@ -1,11 +1,9 @@
 use quote::ToTokens;
-use crate::{ast::utils::Named, ir::TypeIR, utils};
+use crate::{ast::utils::Named, ir::{TypeIR, TypeKind}, utils};
 
 pub struct SchemaCustomTypeItem {
     ty_ident: syn::Ident,
-    is_enum: bool,
-    fields: Vec<syn::Field>,
-    variants: Vec<syn::Variant>
+    kind: TypeKind,
 }
 
 impl ToTokens for SchemaCustomTypeItem {
@@ -13,18 +11,21 @@ impl ToTokens for SchemaCustomTypeItem {
         let name = &self.ty_ident.to_string();
         let ident = &self.ty_ident;
 
-        let custom_item = match self.is_enum {
-            true => custom_enum(name, &self.variants),
-            false => custom_struct(name, &self.fields)
+        let custom_item = match &self.kind {
+            TypeKind::UnitEnum { names: _ } => todo!(),
+            TypeKind::Enum { variants } => custom_enum(name, variants),
+            TypeKind::Struct { fields } => custom_struct(name, fields),
         };
 
-        let sub_types = self.fields
-            .iter()
-            .map(|f| {
-                let ty = &f.ty;
-                quote::quote!(.chain(<#ty as odra::schema::SchemaCustomTypes>::schema_types()))
-            })
-            .collect::<Vec<_>>();
+        let sub_types = match &self.kind {
+            TypeKind::Struct { fields } => fields
+                .iter()
+                .map(|(_, ty)| {
+                    quote::quote!(.chain(<#ty as odra::schema::SchemaCustomTypes>::schema_types()))
+                })
+                .collect::<Vec<_>>(),
+            _ => Vec::new(),
+        };
 
         let item = quote::quote! {
             #[automatically_derived]
@@ -64,48 +65,25 @@ fn custom_enum(name: &str, variants: &[syn::Variant]) -> proc_macro2::TokenStrea
     quote::quote!(odra::schema::custom_enum(#name, #variants))
 }
 
-fn custom_struct(name: &str, fields: &[syn::Field]) -> proc_macro2::TokenStream {
-    let members = fields.iter().map(|f| {
-        let name = f.ident.as_ref().unwrap().to_string();
-        let ty = &f.ty;
-        quote::quote! {
-            odra::schema::struct_member::<#ty>(#name),
-        }
-    });
+fn custom_struct(name: &str, fields: &[(syn::Ident, syn::Type)]) -> proc_macro2::TokenStream {
+    let members = fields
+        .iter()
+        .map(|(ident, ty)| {
+            let name = ident.to_string();
+            quote::quote!(odra::schema::struct_member::<#ty>(#name))
+        });
 
-    quote::quote!(odra::schema::custom_struct(#name, odra::prelude::vec![#(#members)*]))
+    quote::quote!(odra::schema::custom_struct(#name, odra::prelude::vec![#(#members,)*]))
 }
 
 impl TryFrom<&TypeIR> for SchemaCustomTypeItem {
     type Error = syn::Error;
 
     fn try_from(ir: &TypeIR) -> Result<Self, Self::Error> {
-        let item = ir.self_code();
-        if matches!(item, syn::Item::Struct(_) | syn::Item::Enum(_)) {
-            let fields = if let syn::Item::Struct(s) = item {
-                utils::syn::extract_named_field(s)?
-            } else {
-                vec![]
-            };
-
-            let variants = if let syn::Item::Enum(e) = item {
-                utils::syn::extract_unit_variants(e)?
-            } else {
-                vec![]
-            };
-
-            Ok(Self {
-                ty_ident: ir.name()?,
-                is_enum: ir.is_enum(),
-                fields,
-                variants
-            })
-        } else {
-            Err(syn::Error::new_spanned(
-                item,
-                "Struct with named fields or a unit variants enum expected"
-            ))
-        }
+        Ok(Self {
+            ty_ident: ir.name()?,
+            kind: ir.kind()?,
+        })
     }
 }
 
