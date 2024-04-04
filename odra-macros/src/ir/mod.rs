@@ -657,14 +657,11 @@ impl TypeIR {
         match &self.code {
             syn::Item::Enum(e) => {
                 let is_unit = e.variants.iter().all(|v| v.fields.is_empty());
+                let variants = e.variants.iter().cloned().collect();
                 if is_unit {
-                    Ok(TypeKind::UnitEnum {
-                        names: e.variants.iter().map(|v| v.ident.clone()).collect()
-                    })
+                    Ok(TypeKind::UnitEnum { variants })
                 } else {
-                    Ok(TypeKind::Enum {
-                        variants: e.variants.iter().cloned().collect()
-                    })
+                    Ok(TypeKind::Enum { variants })
                 }
             }
             syn::Item::Struct(syn::ItemStruct { fields, .. }) => {
@@ -689,7 +686,7 @@ impl TypeIR {
 
 pub enum TypeKind {
     UnitEnum {
-        names: Vec<syn::Ident>
+        variants: Vec<syn::Variant>
     },
     Enum {
         variants: Vec<syn::Variant>

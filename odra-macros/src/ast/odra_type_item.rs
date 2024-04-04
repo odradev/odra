@@ -17,7 +17,7 @@ macro_rules! impl_from_ir {
 
             fn try_from(ir: &TypeIR) -> Result<Self, Self::Error> {
                 match ir.kind()? {
-                    TypeKind::UnitEnum { names } => Self::from_unit_enum(names),
+                    TypeKind::UnitEnum { variants } => Self::from_unit_enum(variants),
                     TypeKind::Enum { variants } => Self::from_enum(variants),
                     TypeKind::Struct { fields } => Self::from_struct(fields),
                 }
@@ -117,7 +117,7 @@ impl TryFrom<&'_ TypeIR> for CLTypedItem {
 
     fn try_from(ir: &TypeIR) -> Result<Self, Self::Error> {
         let ret_ty_cl_type_any = match ir.kind()? {
-            TypeKind::UnitEnum { names: _ } => utils::ty::cl_type_u8(),
+            TypeKind::UnitEnum { variants: _ } => utils::ty::cl_type_u8(),
             TypeKind::Enum { variants: _ } => utils::ty::cl_type_any(),
             TypeKind::Struct { fields: _ } => utils::ty::cl_type_any(),
         }
@@ -198,7 +198,7 @@ impl FromBytesFnItem {
         })
     }
 
-    fn from_unit_enum(names: Vec<syn::Ident>) -> syn::Result<Self> {
+    fn from_unit_enum(variants: Vec<syn::Variant>) -> syn::Result<Self> {
         let ident_bytes = utils::ident::bytes();
         let ident_from_bytes = utils::ident::from_bytes();
         let ident_result = utils::ident::result();
@@ -207,8 +207,16 @@ impl FromBytesFnItem {
 
         let read_stmt: syn::Stmt =
             parse_quote!(let (#ident_result, #ident_bytes): (#ty_u8, _) = #from_bytes_expr;);
-        let deser = names.iter()
-            .map(|i| quote::quote!(x if x == Self::#i as #ty_u8 => Ok((Self::#i, #ident_bytes))))
+        let deser = variants.iter()
+            .map(|v|  {
+                let i = &v.ident;
+                let self_ty = match &v.fields {
+                    syn::Fields::Unit => quote::quote!(Self::#i),
+                    syn::Fields::Named(_) => quote::quote!(Self::#i { }),
+                    syn::Fields::Unnamed(_) => quote::quote!(Self::#i())
+                };
+                quote::quote!(x if x == #self_ty as #ty_u8 => Ok((#self_ty, #ident_bytes)))
+            })
             .collect::<Vec<_>>();
         let arg = Self::arg();
         let ret_ty = Self::ret_ty();
@@ -330,7 +338,7 @@ impl ToBytesFnItem {
         })
     }
 
-    fn from_unit_enum(_names: Vec<syn::Ident>) -> syn::Result<Self> {
+    fn from_unit_enum(_variants: Vec<syn::Variant>) -> syn::Result<Self> {
         let ty_bytes_vec = utils::ty::bytes_vec();
         let ty_ret = utils::ty::bytes_result(&ty_bytes_vec);
         let name = utils::ident::to_bytes();
@@ -398,7 +406,7 @@ impl SerializedLengthFnItem {
         })
     }
 
-    fn from_unit_enum(_names: Vec<syn::Ident>) -> syn::Result<Self> {
+    fn from_unit_enum(_variants: Vec<syn::Variant>) -> syn::Result<Self> {
         let ty_usize = utils::ty::usize();
         let name = utils::ident::serialized_length();
         let ret_ty = utils::misc::ret_ty(&ty_usize);

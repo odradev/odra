@@ -93,7 +93,7 @@ impl TryFrom<&TypeIR> for SchemaErrorItem {
 }
 
 fn enum_variants(variants: &[syn::Variant]) -> proc_macro2::TokenStream {
-    utils::syn::transform_variants(variants, |name, discriminant, docs| {
+    utils::syn::transform_variants(variants, |name, _, discriminant, docs| {
         let description = docs.first().cloned().unwrap_or_default().trim().to_string();
         quote::quote!(odra::schema::error(#name, #description, #discriminant),)
     })
