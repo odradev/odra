@@ -7,6 +7,7 @@ use casper_types::{
     bytesrepr::{Bytes, ToBytes},
     PublicKey, RuntimeArgs, U512
 };
+use casper_types::SecretKey::Ed25519;
 use odra_casper_rpc_client::casper_client::{CasperClient, CasperClientConfiguration};
 use odra_casper_rpc_client::log::info;
 use odra_core::callstack::{Callstack, CallstackElement};
@@ -61,6 +62,10 @@ pub fn casper_client_configuration() -> CasperClientConfiguration {
     dotenv::dotenv().ok();
 
     let secret_keys = load_secret_keys();
+    match &secret_keys[0] {
+        Ed25519(key) => dbg!(key.as_bytes()),
+        _ => panic!(""),
+    };
 
     let node_address = get_env_variable(ENV_NODE_ADDRESS);
     let chain_name = get_env_variable(ENV_CHAIN_NAME);
@@ -289,5 +294,30 @@ impl HostContext for LivenetHost {
 
     fn public_key(&self, address: &Address) -> PublicKey {
         self.casper_client.borrow().address_public_key(address)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use casper_types::SecretKey;
+    use casper_types::SecretKey::Ed25519;
+
+    #[test]
+    fn test_loading_secret_keys() {
+        std::env::set_var(
+            "ODRA_CASPER_LIVENET_SECRET_KEY_PATH",
+            "../../.keys/secret_key.pem"
+        );
+        let secret_keys = super::load_secret_keys();
+        assert_eq!(secret_keys.len(), 1);
+
+        let key_str = "-----BEGIN PRIVATE KEY-----
+MC4CAQAwBQYDK2VwBCIEIHRZr1HEgKVbgchuatwA7dCWDWB7QZe+bpDb5dguIyLE
+-----END PRIVATE KEY-----";
+
+        assert_eq!(
+            secret_keys[0].to_der().unwrap(),
+            secret_key.to_der().unwrap()
+        );
     }
 }

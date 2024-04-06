@@ -90,7 +90,7 @@ test-livenet:
     docker exec mynctl /bin/bash -c "cat /home/casper/casper-node/utils/nctl/assets/net-1/users/user-1/secret_key.pem" > examples/.node-keys/secret_key.pem
     docker exec mynctl /bin/bash -c "cat /home/casper/casper-node/utils/nctl/assets/net-1/users/user-2/secret_key.pem" > examples/.node-keys/secret_key_1.pem
     # Run the tests
-    cd examples && ODRA_CASPER_LIVENET_SECRET_KEY_PATH=.node-keys/secret_key.pem ODRA_CASPER_LIVENET_NODE_ADDRESS=http://localhost:11101 ODRA_CASPER_LIVENET_CHAIN_NAME=casper-net-1 ODRA_CASPER_LIVENET_KEY_1=.node-keys/secret_key_1.pem  cargo run --bin livenet_tests --features=livenet
+    cd examples && cargo run --bin livenet_tests --features=livenet
     rm -rf examples/.node-keys
 
 run-example-erc20-on-livenet:
@@ -119,3 +119,9 @@ benchmark:
 
 evaluate-benchmark: benchmark
     cd benchmark && cargo run --bin evaluate_benchmark gas_report.json base/gas_report.json
+
+build-wasm-client:
+    cd odra-casper/wasm-client && wasm-pack build
+
+run-wasm-client: build-wasm-client
+    cd odra-casper/wasm-client/www && NODE_OPTIONS=--openssl-legacy-provider npm run start

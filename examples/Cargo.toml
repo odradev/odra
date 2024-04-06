@@ -1,4 +1,3 @@
-workspace = { members = ["client"] }
 [package]
 name = "odra-examples"
 version = "0.8.1"

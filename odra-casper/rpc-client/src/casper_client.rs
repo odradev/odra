@@ -363,7 +363,6 @@ impl CasperClient {
         args: RuntimeArgs,
         timestamp: u64
     ) -> Address {
-        log::info(format!("Deploying \"{}\".", contract_name));
         let session = ExecutableDeployItem::ModuleBytes {
             module_bytes: wasm_bytes,
             args
@@ -656,7 +655,7 @@ impl CasperClient {
         response
             .get_result()
             .map(|result| serde_json::from_value(result.clone()).expect("Couldn't parse result"))
-            .expect("Couldn't get result")
+            .expect(format!("Error: {:?}", response.get_error()).as_str())
     }
 
     fn address_secret_key(&self, address: &Address) -> &SecretKey {
