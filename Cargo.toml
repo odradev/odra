@@ -16,19 +16,19 @@ exclude = [ "examples", "modules", "benchmark", "odra-casper/proxy-caller", "tem
 resolver = "2"
 
 [workspace.package]
-version = "0.9.0"
+version = "0.9.1"
 authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
 license = "MIT"
 homepage = "https://odra.dev/docs"
 repository = "https://github.com/odradev/odra"
 
 [workspace.dependencies]
-odra-core = { path = "core", version = "0.9.0" }
-odra-macros = { path = "odra-macros", version = "0.9.0" }
-odra-casper-test-vm = { path = "odra-casper/test-vm", version = "0.9.0" }
-odra-casper-rpc-client = { path = "odra-casper/rpc-client", version = "0.9.0" }
-odra-vm = { path = "odra-vm", version = "0.9.0" }
-odra-casper-wasm-env = { path = "odra-casper/wasm-env", version = "0.9.0"}
+odra-core = { path = "core", version = "0.9.1" }
+odra-macros = { path = "odra-macros", version = "0.9.1" }
+odra-casper-test-vm = { path = "odra-casper/test-vm", version = "0.9.1" }
+odra-casper-rpc-client = { path = "odra-casper/rpc-client", version = "0.9.1" }
+odra-vm = { path = "odra-vm", version = "0.9.1" }
+odra-casper-wasm-env = { path = "odra-casper/wasm-env", version = "0.9.1"}
 casper-contract = { version = "3.0.0", default-features = false }
 casper-types = { version = "3.0.0", default-features = false }
 casper-execution-engine = "5.0.0"
