@@ -192,10 +192,10 @@ impl TryFrom<(&proc_macro2::TokenStream, &proc_macro2::TokenStream)> for ModuleI
 }
 
 impl ModuleImplIR {
-    pub fn self_code(&self) -> proc_macro2::TokenStream {
+    pub fn self_code(&self) -> syn::Result<proc_macro2::TokenStream> {
         match self {
-            ModuleImplIR::Impl(ir) => ir.self_code().into_token_stream(),
-            ModuleImplIR::Trait(ir) => ir.self_code().into_token_stream()
+            ModuleImplIR::Impl(ir) => ir.self_code().map(ToTokens::into_token_stream),
+            ModuleImplIR::Trait(ir) => ir.self_code().map(ToTokens::into_token_stream)
         }
     }
 
@@ -313,12 +313,11 @@ impl ModuleImplIR {
 try_parse!(syn::ItemImpl => ModuleIR);
 
 impl ModuleIR {
-    fn self_code(&self) -> syn::ItemImpl {
+    fn self_code(&self) -> syn::Result<syn::ItemImpl> {
         let mut code = self.code.clone();
         // include delegated functions
         code.items.extend(
-            self.delegated_functions()
-                .unwrap_or_default()
+            self.delegated_functions()?
                 .into_iter()
                 .map(syn::ImplItem::Fn)
         );
@@ -331,7 +330,7 @@ impl ModuleIR {
         // remove inner odra macros
         code.items
             .retain(|item| !matches!(item, syn::ImplItem::Macro(_)));
-        code
+        Ok(code)
     }
 
     fn functions(&self) -> syn::Result<Vec<FnIR>> {
@@ -343,7 +342,7 @@ impl ModuleIR {
                 syn::ImplItem::Fn(func) => Some(func),
                 _ => None
             })
-            .chain(self.delegated_functions().unwrap_or_default())
+            .chain(self.delegated_functions()?)
             .map(FnIR::try_from)
             .filter(|r| self.is_trait_impl() || r.as_ref().map(FnIR::is_pub).unwrap_or(true))
             .collect::<Result<Vec<_>, _>>()
@@ -369,14 +368,14 @@ impl ModuleIR {
 try_parse!(syn::ItemTrait => ModuleTraitIR);
 
 impl ModuleTraitIR {
-    fn self_code(&self) -> syn::ItemTrait {
+    fn self_code(&self) -> syn::Result<syn::ItemTrait> {
         let mut code = self.code.clone();
         code.items.iter_mut().for_each(|item| {
             if let syn::TraitItem::Fn(func) = item {
                 func.attrs = attr::other_attributes(func.attrs.clone());
             }
         });
-        code
+        Ok(code)
     }
 
     fn module_ident(&self) -> syn::Ident {

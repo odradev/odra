@@ -9,7 +9,7 @@ use derive_try_from_ref::TryFromRef;
 #[source(ModuleImplIR)]
 #[err(syn::Error)]
 pub struct ExternalContractImpl {
-    #[expr(input.self_code())]
+    #[expr(input.self_code()?)]
     self_code: proc_macro2::TokenStream,
     ref_item: RefItem,
     test_parts: TestPartsItem,

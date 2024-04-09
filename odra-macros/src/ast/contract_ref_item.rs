@@ -439,4 +439,11 @@ mod ref_item_tests {
         let actual = RefItem::try_from(&module).unwrap();
         test_utils::assert_eq(actual, expected);
     }
+
+    #[test]
+    fn contract_ref_invalid_delegate() {
+        let module = test_utils::mock::module_invalid_delegation();
+        let actual = RefItem::try_from(&module);
+        assert!(actual.is_err());
+    }
 }
