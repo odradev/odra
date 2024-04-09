@@ -255,6 +255,7 @@ mod tests {
                                     odra::schema::enum_custom_type_variant("A", 0u16, "MyType::A"),
                                     odra::schema::enum_typed_variant::<(u32, String,)>("B", 1u16),
                                     odra::schema::enum_variant("C", 2u16),
+                                    odra::schema::enum_variant("D", 3u16),
                                 ]
                             ))
                         ])
@@ -265,7 +266,8 @@ mod tests {
                                     odra::schema::struct_member::<String>("a"),
                                     odra::schema::struct_member::<u32>("b")
                                 ]
-                            ))
+                            )),
+                            Some(odra::schema::custom_struct("MyType::D", odra::prelude::vec![]))
                         ])
                         .collect::<Vec<_>>()
                 }
@@ -287,5 +289,12 @@ mod tests {
         );
 
         test_utils::assert_eq(item, expected);
+    }
+
+    #[test]
+    fn test_union() {
+        let ir = test_utils::mock::custom_union();
+        let item = SchemaCustomTypeItem::try_from(&ir);
+        assert!(item.is_err());
     }
 }

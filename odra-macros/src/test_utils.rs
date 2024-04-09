@@ -158,7 +158,19 @@ pub mod mock {
                 /// Description of B
                 B(u32, String),
                 /// Description of C
-                C()
+                C(),
+                /// Description of D
+                D {}
+            }
+        );
+        TypeIR::try_from(&ty).unwrap()
+    }
+
+    pub fn custom_union() -> TypeIR {
+        let ty = quote!(
+            union MyUnion {
+                f1: u32,
+                f2: f32,
             }
         );
         TypeIR::try_from(&ty).unwrap()

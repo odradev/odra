@@ -566,7 +566,9 @@ mod tests {
                 /// Description of B
                 B(u32, String),
                 /// Description of C
-                C()
+                C(),
+                /// Description of D
+                D {},
             }
 
             impl odra::casper_types::bytesrepr::FromBytes for MyType {
@@ -584,6 +586,7 @@ mod tests {
                             Ok((Self::B(f0, f1), bytes))
                         },
                         2u8 => Ok((Self::C(), bytes)),
+                        3u8 => Ok((Self::D {}, bytes)),
                         _ => Err(odra::casper_types::bytesrepr::Error::Formatting),
                     }
                 }
@@ -607,6 +610,10 @@ mod tests {
                         Self::C() => {
                             let mut result = odra::prelude::vec![2u8];
                             Ok(result)
+                        },
+                        Self::D {} => {
+                            let mut result = odra::prelude::vec![3u8];
+                            Ok(result)
                         }
                     }
                 }
@@ -616,6 +623,7 @@ mod tests {
                         Self::A { a, b } => odra::casper_types::bytesrepr::U8_SERIALIZED_LENGTH + a.serialized_length() + b.serialized_length(),
                         Self::B(f0, f1) => odra::casper_types::bytesrepr::U8_SERIALIZED_LENGTH + f0.serialized_length() + f1.serialized_length(),
                         Self::C() => odra::casper_types::bytesrepr::U8_SERIALIZED_LENGTH,
+                        Self::D {} => odra::casper_types::bytesrepr::U8_SERIALIZED_LENGTH,
                     }
                 }
             }
@@ -639,5 +647,12 @@ mod tests {
         );
 
         test_utils::assert_eq(item, expected);
+    }
+
+    #[test]
+    fn test_union() {
+        let ir = test_utils::mock::custom_union();
+        let item = OdraTypeItem::try_from(&ir);
+        assert!(item.is_err());
     }
 }
