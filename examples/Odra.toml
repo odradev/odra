@@ -63,3 +63,6 @@ fqn = "features::livenet::LivenetContract"
 
 [[contracts]]
 fqn = "features::optional_args::Token"
+
+[[contracts]]
+fqn = "features::custom_types::MyContract"

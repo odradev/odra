@@ -5,7 +5,7 @@ use crate::utils;
 use config::ConfigItem;
 use proc_macro2::Ident;
 use quote::{format_ident, ToTokens};
-use syn::{parse_quote, ImplItem};
+use syn::{parse_quote, spanned::Spanned, ImplItem};
 
 use self::attr::OdraAttribute;
 
@@ -652,22 +652,45 @@ impl TypeIR {
         &self.code
     }
 
-    pub fn fields(&self) -> syn::Result<Vec<syn::Ident>> {
-        utils::syn::derive_item_variants(&self.code)
+    pub fn kind(&self) -> syn::Result<TypeKind> {
+        match &self.code {
+            syn::Item::Enum(e) => {
+                let is_unit = e.variants.iter().all(|v| v.fields.is_empty());
+                let variants = e.variants.iter().cloned().collect();
+                if is_unit {
+                    Ok(TypeKind::UnitEnum { variants })
+                } else {
+                    Ok(TypeKind::Enum { variants })
+                }
+            }
+            syn::Item::Struct(syn::ItemStruct { fields, .. }) => {
+                let fields = fields
+                    .iter()
+                    .map(|f| {
+                        f.ident
+                            .clone()
+                            .map(|i| (i, f.ty.clone()))
+                            .ok_or(syn::Error::new(f.span(), "Unnamed field"))
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(TypeKind::Struct { fields })
+            }
+            _ => Err(syn::Error::new_spanned(
+                &self.code,
+                "Invalid type. Only enums and structs are supported"
+            ))
+        }
     }
+}
 
-    pub fn map_fields<F, R>(&self, func: F) -> syn::Result<Vec<R>>
-    where
-        F: FnMut(&syn::Ident) -> R
-    {
-        Ok(self.fields()?.iter().map(func).collect::<Vec<_>>())
-    }
-
-    pub fn is_enum(&self) -> bool {
-        matches!(self.code, syn::Item::Enum(_))
-    }
-
-    pub fn is_struct(&self) -> bool {
-        matches!(self.code, syn::Item::Struct(_))
+pub enum TypeKind {
+    UnitEnum {
+        variants: Vec<syn::Variant>
+    },
+    Enum {
+        variants: Vec<syn::Variant>
+    },
+    Struct {
+        fields: Vec<(syn::Ident, syn::Type)>
     }
 }

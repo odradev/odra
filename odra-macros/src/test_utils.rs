@@ -173,6 +173,32 @@ pub mod mock {
         TypeIR::try_from(&ty).unwrap()
     }
 
+    pub fn custom_complex_enum() -> TypeIR {
+        let ty = quote!(
+            enum MyType {
+                /// Description of A
+                A { a: String, b: u32 },
+                /// Description of B
+                B(u32, String),
+                /// Description of C
+                C(),
+                /// Description of D
+                D {}
+            }
+        );
+        TypeIR::try_from(&ty).unwrap()
+    }
+
+    pub fn custom_union() -> TypeIR {
+        let ty = quote!(
+            union MyUnion {
+                f1: u32,
+                f2: f32,
+            }
+        );
+        TypeIR::try_from(&ty).unwrap()
+    }
+
     pub fn ext_contract() -> ModuleImplIR {
         let ext = quote!(
             pub trait Token {

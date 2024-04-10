@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use syn::{parse_quote, spanned::Spanned};
+use syn::{parse_quote, spanned::Spanned, Fields};
 
 pub fn ident_from_impl(impl_code: &syn::ItemImpl) -> syn::Result<syn::Ident> {
     last_segment_ident(&impl_code.self_ty)
@@ -100,36 +100,6 @@ fn map_fields<T, F: FnMut(&syn::Field) -> syn::Result<T>>(
     }
 }
 
-pub fn derive_item_variants(item: &syn::Item) -> syn::Result<Vec<syn::Ident>> {
-    match &item {
-        syn::Item::Struct(syn::ItemStruct { fields, .. }) => fields
-            .iter()
-            .map(|f| {
-                f.ident
-                    .clone()
-                    .ok_or(syn::Error::new(f.span(), "Unnamed field"))
-            })
-            .collect::<Result<Vec<_>, _>>(),
-        syn::Item::Enum(syn::ItemEnum { variants, .. }) => {
-            let is_valid = variants
-                .iter()
-                .all(|v| matches!(v.fields, syn::Fields::Unit));
-            if is_valid {
-                Ok(variants.iter().map(|v| v.ident.clone()).collect::<Vec<_>>())
-            } else {
-                Err(syn::Error::new_spanned(
-                    variants,
-                    "Expected a unit enum variant."
-                ))
-            }
-        }
-        _ => Err(syn::Error::new_spanned(
-            item,
-            "Struct with named fields expected"
-        ))
-    }
-}
-
 pub fn visibility_pub() -> syn::Visibility {
     parse_quote!(pub)
 }
@@ -211,20 +181,6 @@ pub fn is_ref(ty: &syn::Type) -> bool {
     matches!(ty, syn::Type::Reference(_))
 }
 
-pub fn extract_named_field(input: &syn::ItemStruct) -> syn::Result<Vec<syn::Field>> {
-    let fields = &input.fields;
-    fields
-        .iter()
-        .map(|f| {
-            if f.ident.is_none() {
-                Err(syn::Error::new(f.span(), "Unnamed field"))
-            } else {
-                Ok(f.clone())
-            }
-        })
-        .collect()
-}
-
 pub fn extract_unit_variants(input: &syn::ItemEnum) -> syn::Result<Vec<syn::Variant>> {
     let variants = &input.variants;
     let is_valid = variants
@@ -240,7 +196,7 @@ pub fn extract_unit_variants(input: &syn::ItemEnum) -> syn::Result<Vec<syn::Vari
     }
 }
 
-pub fn transform_variants<F: Fn(String, u16, Vec<String>) -> TokenStream>(
+pub fn transform_variants<F: Fn(String, Fields, u16, Vec<String>) -> TokenStream>(
     variants: &[syn::Variant],
     f: F
 ) -> TokenStream {
@@ -248,12 +204,14 @@ pub fn transform_variants<F: Fn(String, u16, Vec<String>) -> TokenStream>(
     let variants = variants.iter().map(|v| {
         let docs = string_docs(&v.attrs);
         let name = v.ident.to_string();
+        let fields = v.fields.clone();
+
         if let Some((_, syn::Expr::Lit(lit))) = &v.discriminant {
             if let syn::Lit::Int(int) = &lit.lit {
                 discriminant = int.base10_parse().unwrap();
             }
         };
-        let result = f(name, discriminant, docs);
+        let result = f(name, fields, discriminant, docs);
         discriminant += 1;
         result
     });

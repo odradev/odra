@@ -112,11 +112,16 @@ pub fn enum_typed_variant<T: NamedCLTyped>(name: &str, discriminant: u16) -> Enu
 
 /// Creates a new enum variant of type [NamedCLType::Unit].
 pub fn enum_variant(name: &str, discriminant: u16) -> EnumVariant {
+    enum_typed_variant::<()>(name, discriminant)
+}
+
+/// Creates a new enum variant of type [NamedCLType::Custom].
+pub fn enum_custom_type_variant(name: &str, discriminant: u16, custom_type: &str) -> EnumVariant {
     EnumVariant {
         name: name.to_string(),
         description: None,
         discriminant,
-        ty: NamedCLType::Unit.into()
+        ty: NamedCLType::Custom(custom_type.into()).into()
     }
 }
 
@@ -323,12 +328,17 @@ mod test {
 
     #[test]
     fn test_custom_enum() {
-        let variant = super::enum_variant("variant1", 1);
-        let custom_enum = super::custom_enum("enum1", vec![variant]);
+        let variant1 = super::enum_variant("variant1", 1);
+        let variant2 = super::enum_typed_variant::<String>("v2", 2);
+        let variant3 = super::enum_custom_type_variant("v3", 3, "Type1");
+        let custom_enum = super::custom_enum("enum1", vec![variant1, variant2, variant3]);
         match custom_enum {
             casper_contract_schema::CustomType::Enum { name, variants, .. } => {
                 assert_eq!(name, "enum1".into());
-                assert_eq!(variants.len(), 1);
+                assert_eq!(variants.len(), 3);
+                assert_eq!(variants[0].ty, NamedCLType::Unit.into());
+                assert_eq!(variants[1].ty, NamedCLType::String.into());
+                assert_eq!(variants[2].ty, NamedCLType::Custom("Type1".into()).into());
             }
             _ => panic!("Expected CustomType::Enum")
         }

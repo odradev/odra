@@ -2,6 +2,10 @@
 
 Changelog for `odra`.
 
+## [0.9.1] - 2024-04-xx
+### Changed
+- `#[odra::odra_type]` attribute can be applied to all flavors of enums (before applicable to unit-only enums).
+
 ## [0.9.0] - 2024-04-02
 ### Added
 - `Maybe<T>` - a type that represents an entrypoint arg that may or may not be present.

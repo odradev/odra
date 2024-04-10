@@ -1,11 +1,13 @@
 use crate::ast::events_item::HasEventsImplItem;
 use crate::ast::fn_utils::{FnItem, SingleArgFnItem};
-use crate::ast::utils::{ImplItem, Named};
-use crate::ir::TypeIR;
+use crate::ast::utils::ImplItem;
+use crate::ir::{TypeIR, TypeKind};
 use crate::utils;
 use crate::utils::misc::AsBlock;
 use derive_try_from_ref::TryFromRef;
-use syn::parse_quote;
+use quote::{format_ident, ToTokens};
+use syn::{parse_quote, Token};
+use syn::punctuated::Punctuated;
 use crate::ast::schema::SchemaCustomTypeItem;
 
 macro_rules! impl_from_ir {
@@ -14,13 +16,10 @@ macro_rules! impl_from_ir {
             type Error = syn::Error;
 
             fn try_from(ir: &TypeIR) -> Result<Self, Self::Error> {
-                match ir {
-                    x if x.is_enum() => Self::from_enum(ir),
-                    x if x.is_struct() => Self::from_struct(ir),
-                    _ => Err(syn::Error::new_spanned(
-                        ir.self_code(),
-                        "Only support enum or struct"
-                    ))
+                match ir.kind()? {
+                    TypeKind::UnitEnum { variants } => Self::from_unit_enum(variants),
+                    TypeKind::Enum { variants } => Self::from_enum(variants),
+                    TypeKind::Struct { fields } => Self::from_struct(fields),
                 }
             }
         }
@@ -117,9 +116,10 @@ impl TryFrom<&'_ TypeIR> for CLTypedItem {
     type Error = syn::Error;
 
     fn try_from(ir: &TypeIR) -> Result<Self, Self::Error> {
-        let ret_ty_cl_type_any = match ir.is_enum() {
-            true => utils::ty::cl_type_u8(),
-            false => utils::ty::cl_type_any()
+        let ret_ty_cl_type_any = match ir.kind()? {
+            TypeKind::UnitEnum { variants: _ } => utils::ty::cl_type_u8(),
+            TypeKind::Enum { variants: _ } => utils::ty::cl_type_any(),
+            TypeKind::Struct { fields: _ } => utils::ty::cl_type_any(),
         }
         .as_block();
         let ty_cl_type = utils::ty::cl_type();
@@ -144,8 +144,7 @@ struct FromBytesFnItem {
 impl_from_ir!(FromBytesFnItem);
 
 impl FromBytesFnItem {
-    fn from_enum(ir: &TypeIR) -> syn::Result<Self> {
-        let ident = ir.name()?;
+    fn from_enum(variants: Vec<syn::Variant>)  -> syn::Result<Self> {
         let ident_bytes = utils::ident::bytes();
         let ident_from_bytes = utils::ident::from_bytes();
         let ident_result = utils::ident::result();
@@ -154,9 +153,71 @@ impl FromBytesFnItem {
 
         let read_stmt: syn::Stmt =
             parse_quote!(let (#ident_result, #ident_bytes): (#ty_u8, _) = #from_bytes_expr;);
-        let deser = ir.map_fields(
-            |i| quote::quote!(x if x == #ident::#i as #ty_u8 => Ok((#ident::#i, #ident_bytes)))
-        )?;
+        let arms = variants
+            .iter()
+            .enumerate()
+            .map(|(v_idx, v)| {
+                let v_idx: u8 = v_idx as u8;
+                let ident = &v.ident;
+                let fields = variant_ident_vec(v);
+                let deser = fields.iter()
+                    .map(|f| quote::quote!(let (#f, bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;))
+                    .collect::<Vec<_>>();
+                let code = match &v.fields {
+                    syn::Fields::Unit => {
+                        quote::quote!(Ok((Self::#ident, bytes)))
+                    },
+                    syn::Fields::Named(_) => {
+                        quote::quote!(
+                            #(#deser)*
+                            Ok((Self::#ident { #(#fields,)* }, bytes))
+                        )
+                    },
+                    syn::Fields::Unnamed(_) => {
+                        quote::quote!(
+                            #(#deser)*
+                            Ok((Self::#ident(#(#fields,)*), bytes))
+                        )
+                    }
+                };
+                quote::quote!(#v_idx => { #code })
+            })
+            .collect::<Punctuated<_, Token![,]>>();
+
+        let arg = Self::arg();
+        let ret_ty = Self::ret_ty();
+        let block = parse_quote!({
+            #read_stmt
+            match #ident_result {
+                #arms 
+                _ => Err(odra::casper_types::bytesrepr::Error::Formatting),
+            }
+        });
+        Ok(Self {
+            fn_item: SingleArgFnItem::new(&ident_from_bytes, arg, ret_ty, block)
+        })
+    }
+
+    fn from_unit_enum(variants: Vec<syn::Variant>) -> syn::Result<Self> {
+        let ident_bytes = utils::ident::bytes();
+        let ident_from_bytes = utils::ident::from_bytes();
+        let ident_result = utils::ident::result();
+        let ty_u8 = utils::ty::u8();
+        let from_bytes_expr = utils::expr::failable_from_bytes(&ident_bytes);
+
+        let read_stmt: syn::Stmt =
+            parse_quote!(let (#ident_result, #ident_bytes): (#ty_u8, _) = #from_bytes_expr;);
+        let deser = variants.iter()
+            .map(|v|  {
+                let i = &v.ident;
+                let self_ty = match &v.fields {
+                    syn::Fields::Unit => quote::quote!(Self::#i),
+                    syn::Fields::Named(_) => quote::quote!(Self::#i { }),
+                    syn::Fields::Unnamed(_) => quote::quote!(Self::#i())
+                };
+                quote::quote!(x if x == #self_ty as #ty_u8 => Ok((#self_ty, #ident_bytes)))
+            })
+            .collect::<Vec<_>>();
         let arg = Self::arg();
         let ret_ty = Self::ret_ty();
         let block = parse_quote!({
@@ -171,16 +232,18 @@ impl FromBytesFnItem {
         })
     }
 
-    fn from_struct(ir: &TypeIR) -> syn::Result<Self> {
+    fn from_struct(fields: Vec<(syn::Ident, syn::Type)>) -> syn::Result<Self> {
         let ident_bytes = utils::ident::bytes();
         let ident_from_bytes = utils::ident::from_bytes();
 
         let from_bytes_expr = utils::expr::failable_from_bytes(&ident_bytes);
-        let fields = ir
-            .fields()?
+        let fields = fields
             .into_iter()
+            .map(|(i, _)| i)
             .collect::<syn::punctuated::Punctuated<syn::Ident, syn::Token![,]>>();
-        let deser = ir.map_fields(|i| quote::quote!(let (#i, #ident_bytes) = #from_bytes_expr;))?;
+        let deser = fields.iter()
+            .map(|i| quote::quote!(let (#i, #ident_bytes) = #from_bytes_expr;))
+            .collect::<Vec<_>>();
         let arg = Self::arg();
         let ret_ty = Self::ret_ty();
         let block = parse_quote!({
@@ -216,7 +279,7 @@ struct ToBytesFnItem {
 impl_from_ir!(ToBytesFnItem);
 
 impl ToBytesFnItem {
-    fn from_struct(ir: &TypeIR) -> syn::Result<Self> {
+    fn from_struct(fields: Vec<(syn::Ident, syn::Type)>) -> syn::Result<Self> {
         let ty_bytes_vec = utils::ty::bytes_vec();
         let ty_ret = utils::ty::bytes_result(&ty_bytes_vec);
         let ty_self = utils::ty::_self();
@@ -227,11 +290,11 @@ impl ToBytesFnItem {
         let init_vec_stmt =
             utils::stmt::new_mut_vec_with_capacity(&ident_result, &serialized_length_expr);
 
-        let serialize = ir.map_fields(|i| {
+        let serialize = fields.iter().map(|(i, _)| {
             let member = utils::member::_self(i);
             let expr_to_bytes = utils::expr::failable_to_bytes(&member);
             quote::quote!(#ident_result.extend(#expr_to_bytes);)
-        })?;
+        }).collect::<Vec<_>>();
 
         let name = utils::ident::to_bytes();
         let ret_ty = utils::misc::ret_ty(&ty_ret);
@@ -245,7 +308,37 @@ impl ToBytesFnItem {
         })
     }
 
-    fn from_enum(_ir: &TypeIR) -> syn::Result<Self> {
+    fn from_enum(variants: Vec<syn::Variant>) -> syn::Result<Self> {
+        let ty_bytes_vec = utils::ty::bytes_vec();
+        let ty_ret = utils::ty::bytes_result(&ty_bytes_vec);
+        let name = utils::ident::to_bytes();
+        let ret_ty = utils::misc::ret_ty(&ty_ret);
+        let ident_result = utils::ident::result();
+
+        let arms = variants.iter()
+            .enumerate()
+            .map(|(idx, v)| {
+                let idx = idx as u8;
+                let ident = &v.ident;
+                let fields = variant_ident_vec(v);
+                let left = match &v.fields {
+                    syn::Fields::Unit => quote::quote!(Self::#ident),
+                    syn::Fields::Named(_) => quote::quote!(Self::#ident { #(#fields),* }),
+                    syn::Fields::Unnamed(_) => quote::quote!(Self::#ident( #(#fields),* ))
+                };
+                quote::quote!(#left => {
+                    let mut #ident_result = odra::prelude::vec![#idx];
+                    #(#ident_result.extend_from_slice(&#fields.to_bytes()?);)*
+                    Ok(#ident_result)
+                })
+            })
+            .collect::<Punctuated<_, Token![,]>>();
+        Ok(Self {
+            fn_item: FnItem::new(&name, vec![], ret_ty, match_self_expr(arms).as_block()).instanced()
+        })
+    }
+
+    fn from_unit_enum(_variants: Vec<syn::Variant>) -> syn::Result<Self> {
         let ty_bytes_vec = utils::ty::bytes_vec();
         let ty_ret = utils::ty::bytes_result(&ty_bytes_vec);
         let name = utils::ident::to_bytes();
@@ -267,16 +360,16 @@ struct SerializedLengthFnItem {
 impl_from_ir!(SerializedLengthFnItem);
 
 impl SerializedLengthFnItem {
-    fn from_struct(ir: &TypeIR) -> syn::Result<Self> {
+    fn from_struct(fields: Vec<(syn::Ident, syn::Type)>) -> syn::Result<Self> {
         let ty_usize = utils::ty::usize();
         let ident_result = utils::ident::result();
 
-        let stmts = ir.map_fields(|i| {
+        let stmts = fields.iter().map(|(i, _)| {
             let member = utils::member::_self(i);
             let expr = utils::expr::serialized_length(&member);
             let stmt: syn::Stmt = parse_quote!(#ident_result += #expr;);
             stmt
-        })?;
+        }).collect::<Vec<_>>();
 
         let name = utils::ident::serialized_length();
         let ret_ty = utils::misc::ret_ty(&ty_usize);
@@ -290,7 +383,30 @@ impl SerializedLengthFnItem {
         })
     }
 
-    fn from_enum(_ir: &TypeIR) -> syn::Result<Self> {
+    fn from_enum(variants: Vec<syn::Variant>)  -> syn::Result<Self> {
+        let ty_usize = utils::ty::usize();
+        let name = utils::ident::serialized_length();
+        let ret_ty = utils::misc::ret_ty(&ty_usize);
+        let expr_u8_serialized_len = utils::expr::u8_serialized_len();
+        
+        let arms = variants.iter()
+            .map(|v| {
+                let ident = &v.ident;
+                let fields = variant_ident_vec(v);
+                let left = match &v.fields {
+                    syn::Fields::Unit => quote::quote!(Self::#ident),
+                    syn::Fields::Named(_) => quote::quote!(Self::#ident { #(#fields),* }),
+                    syn::Fields::Unnamed(_) => quote::quote!(Self::#ident( #(#fields),* ))
+                };
+                quote::quote!(#left => #expr_u8_serialized_len #(+ #fields.serialized_length())* )
+            })
+            .collect::<Punctuated<_, Token![,]>>();
+        Ok(Self {
+            fn_item: FnItem::new(&name, vec![], ret_ty, match_self_expr(arms).as_block()).instanced()
+        })
+    }
+
+    fn from_unit_enum(_variants: Vec<syn::Variant>) -> syn::Result<Self> {
         let ty_usize = utils::ty::usize();
         let name = utils::ident::serialized_length();
         let ret_ty = utils::misc::ret_ty(&ty_usize);
@@ -299,6 +415,22 @@ impl SerializedLengthFnItem {
             fn_item: FnItem::new(&name, vec![], ret_ty, block).instanced()
         })
     }
+}
+
+fn variant_ident_vec(variant: &syn::Variant) -> Vec<syn::Ident> {
+    variant.fields
+        .clone()
+        .iter()
+        .enumerate()
+        .map(|(idx, i)| match &i.ident {
+            Some(ident) => ident.clone(),
+            None => format_ident!("f{}", idx)
+        })
+        .collect::<Vec<_>>()
+}
+
+fn match_self_expr<T: ToTokens>(arms: T) -> syn::Expr {
+    parse_quote!(match self { #arms })
 }
 
 #[cfg(test)]
@@ -368,7 +500,7 @@ mod tests {
     }
 
     #[test]
-    fn test_enum() {
+    fn test_unit_enum() {
         let ir = test_utils::mock::custom_enum();
         let item = OdraTypeItem::try_from(&ir).unwrap();
         let expected = quote!(
@@ -384,8 +516,8 @@ mod tests {
                 fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper_types::bytesrepr::Error> {
                     let (result, bytes): (u8, _) = odra::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
                     match result {
-                        x if x == MyType::A as u8 => Ok((MyType::A, bytes)),
-                        x if x == MyType::B as u8 => Ok((MyType::B, bytes)),
+                        x if x == Self::A as u8 => Ok((Self::A, bytes)),
+                        x if x == Self::B as u8 => Ok((Self::B, bytes)),
                         _ => Err(odra::casper_types::bytesrepr::Error::Formatting),
                     }
                 }
@@ -420,5 +552,107 @@ mod tests {
         );
 
         test_utils::assert_eq(item, expected);
+    }
+
+    #[test]
+    fn test_complex_enum() {
+        let ir = test_utils::mock::custom_complex_enum();
+        let item = OdraTypeItem::try_from(&ir).unwrap();
+        let expected = quote!(
+            #[derive(Clone, PartialEq, Eq, Debug)]
+            enum MyType {
+                /// Description of A
+                A { a: String, b: u32 },
+                /// Description of B
+                B(u32, String),
+                /// Description of C
+                C(),
+                /// Description of D
+                D {},
+            }
+
+            impl odra::casper_types::bytesrepr::FromBytes for MyType {
+                fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper_types::bytesrepr::Error> {
+                    let (result, bytes): (u8, _) = odra::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
+                    match result {
+                        0u8 => {
+                            let (a, bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
+                            let (b, bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
+                            Ok((Self::A { a, b }, bytes))
+                        },
+                        1u8 => {
+                            let (f0, bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
+                            let (f1, bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
+                            Ok((Self::B(f0, f1), bytes))
+                        },
+                        2u8 => Ok((Self::C(), bytes)),
+                        3u8 => Ok((Self::D {}, bytes)),
+                        _ => Err(odra::casper_types::bytesrepr::Error::Formatting),
+                    }
+                }
+            }
+
+            impl odra::casper_types::bytesrepr::ToBytes for MyType {
+                fn to_bytes(&self) -> Result<odra::prelude::vec::Vec<u8>, odra::casper_types::bytesrepr::Error> {
+                    match self {
+                        Self::A { a, b } => {
+                            let mut result = odra::prelude::vec![0u8];
+                            result.extend_from_slice(&a.to_bytes()?);
+                            result.extend_from_slice(&b.to_bytes()?);
+                            Ok(result)
+                        },
+                        Self::B(f0, f1) => {
+                            let mut result = odra::prelude::vec![1u8];
+                            result.extend_from_slice(&f0.to_bytes()?);
+                            result.extend_from_slice(&f1.to_bytes()?);
+                            Ok(result)
+                        },
+                        Self::C() => {
+                            let mut result = odra::prelude::vec![2u8];
+                            Ok(result)
+                        },
+                        Self::D {} => {
+                            let mut result = odra::prelude::vec![3u8];
+                            Ok(result)
+                        }
+                    }
+                }
+
+                fn serialized_length(&self) -> usize {
+                    match self {
+                        Self::A { a, b } => odra::casper_types::bytesrepr::U8_SERIALIZED_LENGTH + a.serialized_length() + b.serialized_length(),
+                        Self::B(f0, f1) => odra::casper_types::bytesrepr::U8_SERIALIZED_LENGTH + f0.serialized_length() + f1.serialized_length(),
+                        Self::C() => odra::casper_types::bytesrepr::U8_SERIALIZED_LENGTH,
+                        Self::D {} => odra::casper_types::bytesrepr::U8_SERIALIZED_LENGTH,
+                    }
+                }
+            }
+
+            impl odra::casper_types::CLTyped for MyType {
+                fn cl_type() -> odra::casper_types::CLType {
+                    odra::casper_types::CLType::Any
+                }
+            }
+
+            impl odra::contract_def::HasEvents for MyType {
+                fn events() -> odra::prelude::vec::Vec<odra::contract_def::Event> {
+                    odra::prelude::vec::Vec::new()
+                }
+
+                #[cfg(target_arch = "wasm32")]
+                fn event_schemas() -> odra::prelude::BTreeMap<odra::prelude::string::String, odra::casper_event_standard::Schema> {
+                    odra::prelude::BTreeMap::new()
+                }
+            }
+        );
+
+        test_utils::assert_eq(item, expected);
+    }
+
+    #[test]
+    fn test_union() {
+        let ir = test_utils::mock::custom_union();
+        let item = OdraTypeItem::try_from(&ir);
+        assert!(item.is_err());
     }
 }
