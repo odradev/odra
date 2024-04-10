@@ -12,7 +12,7 @@ use derive_try_from_ref::TryFromRef;
 #[source(ModuleImplIR)]
 #[err(syn::Error)]
 pub struct ModuleImplItem {
-    #[expr(input.self_code())]
+    #[expr(input.self_code()?)]
     self_code: proc_macro2::TokenStream,
     has_entrypoints_item: HasEntrypointsImplItem,
     ref_item: RefItem,

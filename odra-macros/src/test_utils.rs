@@ -101,6 +101,29 @@ pub mod mock {
         ModuleImplIR::try_from((&attr, &module)).unwrap()
     }
 
+    pub fn module_invalid_delegation() -> ModuleImplIR {
+        let module = quote! {
+            impl Erc20 {
+                /// Returns the total supply of the token.
+                pub fn total_supply(&self) -> U256 {
+                    self.total_supply.get_or_default()
+                }
+
+                delegate! {
+                    to self.ownable {
+                        /// Returns the owner of the contract.
+                        pub fn get_owner(&self) -> Address;
+                        /// Sets the owner of the contract.
+                        fn set_owner(&mut self, new_owner: Address);
+                    }
+                }
+            }
+        };
+
+        let attr = quote!();
+        ModuleImplIR::try_from((&attr, &module)).unwrap()
+    }
+
     pub fn module_definition() -> ModuleStructIR {
         let module = quote!(
             pub struct CounterPack {
