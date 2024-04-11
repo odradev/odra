@@ -1,18 +1,18 @@
 //! CEP-18 Casper Fungible Token standard implementation.
+use odra::prelude::*;
+use odra::{casper_types::U256, Address, Mapping, UnwrapOrRevert, Var};
+
 use crate::cep18::errors::errors::Error;
 use crate::cep18::errors::errors::Error::{
-    CannotTargetSelfUser, InvalidBurnTarget, InvalidState, MintBurnDisabled, Overflow
+    CannotTargetSelfUser, InsufficientRights, InvalidBurnTarget, InvalidState, MintBurnDisabled,
+    Overflow
 };
 use crate::cep18::events::{
     Burn, DecreaseAllowance, IncreaseAllowance, Mint, SetAllowance, Transfer
 };
-use crate::cep18::utils::SecurityBadge;
-use core::ptr::read;
-use odra::casper_types::VersionCheckResult::Invalid;
-use odra::prelude::*;
-use odra::{casper_types::U256, Address, Mapping, UnwrapOrRevert, Var};
+use crate::cep18::utils::{Cep18Modality, SecurityBadge};
 
-/// ERC20 token module
+/// CEP-18 token module
 #[odra::module]
 pub struct Cep18 {
     decimals: Var<u8>,
@@ -28,6 +28,7 @@ pub struct Cep18 {
 #[odra::module]
 impl Cep18 {
     /// Initializes the contract with the given metadata, initial supply, security and modality.
+    #[allow(clippy::too_many_arguments)]
     pub fn init(
         &mut self,
         symbol: String,
@@ -66,6 +67,50 @@ impl Cep18 {
         // set the modality
         if let Some(modality) = modality {
             self.modality.set(modality);
+        }
+    }
+
+    /// Admin EntryPoint to manipulate the security access granted to users.
+    /// One user can only possess one access group badge.
+    /// Change strength: None > Admin > Minter
+    /// Change strength meaning by example: If user is added to both Minter and Admin they will be an
+    /// Admin, also if a user is added to Admin and None then they will be removed from having rights.
+    /// Beware: do not remove the last Admin because that will lock out all admin functionality.
+    pub fn change_security(
+        &mut self,
+        admin_list: Vec<Address>,
+        minter_list: Vec<Address>,
+        none_list: Vec<Address>
+    ) {
+        // if mint burn is disabled, revert
+        if self.modality.get_or_default()
+            != <Cep18Modality as Into<u8>>::into(Cep18Modality::MintAndBurn)
+        {
+            self.env().revert(MintBurnDisabled);
+        }
+
+        // check if the caller has the admin badge
+        let caller = self.env().caller();
+        let caller_badge = self
+            .security_badges
+            .get(&caller)
+            .unwrap_or_revert_with(&self.env(), InsufficientRights);
+
+        if !caller_badge.can_admin() {
+            self.env().revert(InsufficientRights);
+        }
+
+        // set the security badges
+        for admin in admin_list {
+            self.security_badges.set(&admin, SecurityBadge::Admin);
+        }
+
+        for minter in minter_list {
+            self.security_badges.set(&minter, SecurityBadge::Minter);
+        }
+
+        for none in none_list {
+            self.security_badges.set(&none, SecurityBadge::None);
         }
     }
 
@@ -192,6 +237,15 @@ impl Cep18 {
             self.env().revert(MintBurnDisabled);
         }
 
+        // check if the caller has the minter badge
+        let security_badge = self
+            .security_badges
+            .get(&self.env().caller())
+            .unwrap_or_revert_with(&self.env(), InsufficientRights);
+        if !security_badge.can_mint() {
+            self.env().revert(InsufficientRights);
+        }
+
         self.total_supply.add(*amount);
         self.balances.add(owner, *amount);
 
@@ -251,5 +305,243 @@ impl Cep18 {
             recipient: *recipient,
             amount: *amount
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use alloc::string::ToString;
+    use alloc::vec;
+
+    use odra::casper_types::account::AccountHash;
+    use odra::casper_types::ContractPackageHash;
+    use odra::casper_types::U256;
+    use odra::host::{Deployer, HostEnv, HostRef};
+    use odra::Address;
+    use odra::ExecutionError::AdditionOverflow;
+
+    use crate::cep18::errors::errors::Error::{
+        InsufficientBalance, InsufficientRights, MintBurnDisabled
+    };
+    use crate::cep18::utils::Cep18Modality;
+    use crate::cep18_token::{Cep18HostRef, Cep18InitArgs};
+
+    pub const TOKEN_NAME: &str = "Plascoin";
+    pub const TOKEN_SYMBOL: &str = "PLS";
+    pub const TOKEN_DECIMALS: u8 = 100;
+    pub const TOKEN_TOTAL_SUPPLY: u64 = 1_000_000_000;
+    pub const TOKEN_OWNER_AMOUNT_1: u64 = 1_000_000;
+    pub const TOKEN_OWNER_AMOUNT_2: u64 = 2_000_000;
+
+    fn setup(enable_mint_and_burn: bool) -> Cep18HostRef {
+        let env = odra_test::env();
+        let modality = if enable_mint_and_burn { Some(1) } else { None };
+        let init_args = Cep18InitArgs {
+            symbol: TOKEN_SYMBOL.to_string(),
+            name: TOKEN_NAME.to_string(),
+            decimals: TOKEN_DECIMALS,
+            initial_supply: TOKEN_TOTAL_SUPPLY.into(),
+            minter_list: vec![],
+            admin_list: vec![],
+            modality
+        };
+        setup_with_args(env, init_args)
+    }
+
+    fn setup_with_args(env: HostEnv, args: Cep18InitArgs) -> Cep18HostRef {
+        Cep18HostRef::deploy(&env, args)
+    }
+
+    fn invert_address(address: Address) -> Address {
+        match address {
+            Address::Account(hash) => Address::Contract(ContractPackageHash::new(hash.value())),
+            Address::Contract(hash) => Address::Account(AccountHash(hash.value()))
+        }
+    }
+
+    #[test]
+    fn should_have_queryable_properties() {
+        let cep18_token = setup(false);
+
+        assert_eq!(cep18_token.name(), TOKEN_NAME);
+        assert_eq!(cep18_token.symbol(), TOKEN_SYMBOL);
+        assert_eq!(cep18_token.decimals(), TOKEN_DECIMALS);
+        assert_eq!(cep18_token.total_supply(), TOKEN_TOTAL_SUPPLY.into());
+
+        let owner_key = cep18_token.env().caller();
+        let owner_balance = cep18_token.balance_of(&owner_key);
+        assert_eq!(owner_balance, TOKEN_TOTAL_SUPPLY.into());
+
+        let contract_balance = cep18_token.balance_of(cep18_token.address());
+        assert_eq!(contract_balance, 0.into());
+
+        // Ensures that Account and Contract ownership is respected and we're not keying ownership under
+        // the raw bytes regardless of variant.
+        let inverted_owner_key = invert_address(owner_key);
+        let inverted_owner_balance = cep18_token.balance_of(&inverted_owner_key);
+        assert_eq!(inverted_owner_balance, 0.into());
+    }
+
+    #[test]
+    fn test_mint_and_burn() {
+        let mut cep18_token = setup(true);
+
+        let alice = cep18_token.env().get_account(1);
+        let bob = cep18_token.env().get_account(2);
+        let owner = cep18_token.env().caller();
+        let initial_supply = cep18_token.total_supply();
+        let amount = 100.into();
+
+        cep18_token.mint(&alice, &amount);
+        assert_eq!(cep18_token.total_supply(), initial_supply + amount);
+
+        cep18_token.mint(&bob, &amount);
+        assert_eq!(cep18_token.total_supply(), initial_supply + amount + amount);
+        assert_eq!(cep18_token.balance_of(&bob), amount);
+        assert_eq!(cep18_token.balance_of(&alice), amount);
+        assert_eq!(cep18_token.balance_of(&owner), initial_supply);
+
+        cep18_token.burn(&owner, &amount);
+        assert_eq!(cep18_token.total_supply(), initial_supply + amount);
+        assert_eq!(cep18_token.balance_of(&alice), amount);
+        assert_eq!(cep18_token.balance_of(&bob), amount);
+        assert_eq!(
+            cep18_token.balance_of(&owner),
+            initial_supply.saturating_sub(amount)
+        );
+    }
+
+    #[test]
+    fn test_should_not_mint_above_limits() {
+        let mut cep18_token = setup(true);
+        let mint_amount = U256::MAX;
+
+        let alice = cep18_token.env().get_account(1);
+        let bob = cep18_token.env().get_account(2);
+
+        cep18_token.mint(&alice, &U256::from(TOKEN_OWNER_AMOUNT_1));
+        cep18_token.mint(&bob, &U256::from(TOKEN_OWNER_AMOUNT_2));
+
+        assert_eq!(
+            cep18_token.balance_of(&alice),
+            U256::from(TOKEN_OWNER_AMOUNT_1)
+        );
+
+        let result = cep18_token.try_mint(&alice, &mint_amount);
+        assert_eq!(result.err().unwrap(), AdditionOverflow.into());
+    }
+
+    #[test]
+    fn should_not_burn_above_balance() {
+        let mut cep18_token = setup(true);
+        let alice = cep18_token.env().get_account(1);
+        let bob = cep18_token.env().get_account(2);
+
+        cep18_token.mint(&alice, &U256::from(TOKEN_OWNER_AMOUNT_1));
+        cep18_token.mint(&bob, &U256::from(TOKEN_OWNER_AMOUNT_2));
+
+        assert_eq!(
+            cep18_token.balance_of(&alice),
+            U256::from(TOKEN_OWNER_AMOUNT_1)
+        );
+
+        cep18_token.env().set_caller(alice);
+        let result = cep18_token.try_burn(&alice, &U256::from(TOKEN_OWNER_AMOUNT_1 + 1));
+        assert_eq!(result.err().unwrap(), InsufficientBalance.into());
+    }
+
+    #[test]
+    fn should_not_mint_or_burn_when_disabled() {
+        let mut cep18_token = setup(false);
+        let alice = cep18_token.env().get_account(1);
+        let amount = 100.into();
+
+        let result = cep18_token.try_mint(&alice, &amount);
+        assert_eq!(result.err().unwrap(), MintBurnDisabled.into());
+
+        let result = cep18_token.try_burn(&alice, &amount);
+        assert_eq!(result.err().unwrap(), MintBurnDisabled.into());
+    }
+
+    #[test]
+    fn test_security_no_rights() {
+        // given a token with mint and burn enabled
+        let mut cep18_token = setup(true);
+        let alice = cep18_token.env().get_account(1);
+        let bob = cep18_token.env().get_account(2);
+        let amount = 100.into();
+
+        // an admin can mint tokens
+        cep18_token.mint(&alice, &amount);
+        cep18_token.mint(&bob, &amount);
+
+        assert_eq!(cep18_token.balance_of(&alice), amount);
+        assert_eq!(cep18_token.balance_of(&bob), amount);
+
+        // user without permissions cannot mint tokens
+        cep18_token.env().set_caller(alice);
+        let result = cep18_token.try_mint(&bob, &amount);
+        assert_eq!(result.err().unwrap(), InsufficientRights.into());
+
+        // but can burn their own tokens
+        cep18_token.burn(&alice, &amount);
+        assert_eq!(cep18_token.balance_of(&alice), 0.into());
+        assert_eq!(cep18_token.balance_of(&bob), amount);
+    }
+
+    #[test]
+    fn test_security_minter_rights() {
+        // given a token with mint and burn enabled, and alice set as minter
+        let env = odra_test::env();
+        let alice = env.get_account(1);
+        let bob = env.get_account(2);
+        let args = Cep18InitArgs {
+            symbol: TOKEN_SYMBOL.to_string(),
+            name: TOKEN_NAME.to_string(),
+            decimals: TOKEN_DECIMALS,
+            initial_supply: TOKEN_TOTAL_SUPPLY.into(),
+            minter_list: vec![alice],
+            admin_list: vec![],
+            modality: Some(1)
+        };
+        let mut cep18_token = setup_with_args(env, args);
+        let amount = 100.into();
+
+        // alice can mint tokens
+        cep18_token.env().set_caller(alice);
+        cep18_token.mint(&bob, &amount);
+        assert_eq!(cep18_token.balance_of(&bob), amount);
+
+        // and bob cannot
+        cep18_token.env().set_caller(bob);
+        let result = cep18_token.try_mint(&alice, &amount);
+        assert_eq!(result.err().unwrap(), InsufficientRights.into());
+    }
+
+    #[test]
+    fn test_change_security() {
+        // given a token with mint and burn enabled, and alice set as an admin
+        let env = odra_test::env();
+        let owner = env.get_account(0);
+        let alice = env.get_account(1);
+        let args = Cep18InitArgs {
+            symbol: TOKEN_SYMBOL.to_string(),
+            name: TOKEN_NAME.to_string(),
+            decimals: TOKEN_DECIMALS,
+            initial_supply: TOKEN_TOTAL_SUPPLY.into(),
+            minter_list: vec![],
+            admin_list: vec![alice],
+            modality: Some(Cep18Modality::MintAndBurn.into())
+        };
+        let mut cep18_token = setup_with_args(env, args);
+
+        // when alice removes an owner from admin list
+        cep18_token.env().set_caller(alice);
+        cep18_token.change_security(vec![], vec![], vec![owner]);
+
+        // then the owner cannot mint tokens
+        cep18_token.env().set_caller(owner);
+        let result = cep18_token.try_mint(&owner, &100.into());
+        assert_eq!(result.err().unwrap(), InsufficientRights.into());
     }
 }
