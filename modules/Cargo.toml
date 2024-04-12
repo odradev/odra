@@ -12,6 +12,10 @@ categories = ["wasm"]
 [dependencies]
 odra = { path = "../odra", version = "0.9.1", default-features = false }
 hex = { version = "0.4.3", default-features = false }
+serde = { version = "1.0.80", default-features = false }
+serde_json = { version = "1.0.59", default-features = false }
+serde-json-wasm = { version = "1.0.1", default-features = false }
+base16 = { version = "0.2.1", default-features = false }
 
 [dev-dependencies]
 odra-test = { path = "../odra-test", version = "0.9.1" }

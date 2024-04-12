@@ -1,8 +1,10 @@
+use core::default;
+
 use odra::prelude::*;
 use super::error::CEP78Error;
 
 #[repr(u8)]
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone)]
 pub enum WhitelistMode {
     Unlocked = 0,
     Locked = 1,
@@ -41,7 +43,7 @@ impl TryFrom<u8> for NFTHolderMode {
     }
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone)]
 #[repr(u8)]
 pub enum MintingMode {
     /// The ability to mint NFTs is restricted to the installing account only.
@@ -66,9 +68,11 @@ impl TryFrom<u8> for MintingMode {
 }
 
 #[repr(u8)]
+#[derive(Default, Clone)]
 pub enum NFTKind {
     /// The NFT represents a real-world physical
     /// like a house.
+    #[default]
     Physical = 0,
     /// The NFT represents a digital asset like a unique
     /// JPEG or digital art.
@@ -116,8 +120,10 @@ impl TryFrom<u8> for Requirement {
 }
 
 #[repr(u8)]
+#[derive(Default, PartialOrd, Ord)]
 #[odra::odra_type]
 pub enum NFTMetadataKind {
+    #[default]
     CEP78 = 0,
     NFT721 = 1,
     Raw = 2,
@@ -139,9 +145,10 @@ impl TryFrom<u8> for NFTMetadataKind {
 }
 
 #[repr(u8)]
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone, Default)]
 pub enum OwnershipMode {
     /// The minter owns it and can never transfer it.
+    #[default]
     Minter = 0,
     /// The minter assigns it to an address and can never be transferred.
     Assigned = 1,
@@ -163,7 +170,7 @@ impl TryFrom<u8> for OwnershipMode {
 }
 
 #[repr(u8)]
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[odra::odra_type]
 pub enum NFTIdentifierMode {
     Ordinal = 0,
     Hash = 1,
@@ -182,7 +189,10 @@ impl TryFrom<u8> for NFTIdentifierMode {
 }
 
 #[repr(u8)]
+#[derive(Default)]
+#[odra::odra_type]
 pub enum MetadataMutability {
+    #[default]
     Immutable = 0,
     Mutable = 1,
 }
@@ -247,6 +257,7 @@ impl ToString for TokenIdentifier {
 
 
 #[repr(u8)]
+#[odra::odra_type]
 pub enum BurnMode {
     Burnable = 0,
     NonBurnable = 1,
@@ -306,11 +317,12 @@ impl TryFrom<u8> for NamedKeyConventionMode {
 }
 
 #[repr(u8)]
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Default)]
 #[allow(clippy::upper_case_acronyms)]
 pub enum EventsMode {
     NoEvents = 0,
     CEP47 = 1,
+    #[default]
     CES = 2,
 }
 
@@ -329,7 +341,7 @@ impl TryFrom<u8> for EventsMode {
 
 #[repr(u8)]
 #[non_exhaustive]
-#[derive(PartialEq, Eq)]
+#[odra::odra_type]
 pub enum TransferFilterContractResult {
     DenyTransfer = 0,
     ProceedTransfer,
