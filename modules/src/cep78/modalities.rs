@@ -1,13 +1,13 @@
-use core::default;
-
-use odra::prelude::*;
 use super::error::CEP78Error;
+use odra::prelude::*;
 
 #[repr(u8)]
-#[derive(PartialEq, Eq, Clone)]
+#[odra::odra_type]
+#[derive(Default)]
 pub enum WhitelistMode {
+    #[default]
     Unlocked = 0,
-    Locked = 1,
+    Locked = 1
 }
 
 impl TryFrom<u8> for WhitelistMode {
@@ -17,17 +17,19 @@ impl TryFrom<u8> for WhitelistMode {
         match value {
             0 => Ok(WhitelistMode::Unlocked),
             1 => Ok(WhitelistMode::Locked),
-            _ => Err(CEP78Error::InvalidWhitelistMode),
+            _ => Err(CEP78Error::InvalidWhitelistMode)
         }
     }
 }
 
 #[repr(u8)]
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[odra::odra_type]
+#[derive(Copy, Default)]
 pub enum NFTHolderMode {
     Accounts = 0,
     Contracts = 1,
-    Mixed = 2,
+    #[default]
+    Mixed = 2
 }
 
 impl TryFrom<u8> for NFTHolderMode {
@@ -38,20 +40,22 @@ impl TryFrom<u8> for NFTHolderMode {
             0 => Ok(NFTHolderMode::Accounts),
             1 => Ok(NFTHolderMode::Contracts),
             2 => Ok(NFTHolderMode::Mixed),
-            _ => Err(CEP78Error::InvalidHolderMode),
+            _ => Err(CEP78Error::InvalidHolderMode)
         }
     }
 }
 
-#[derive(PartialEq, Eq, Clone)]
+#[odra::odra_type]
 #[repr(u8)]
+#[derive(Default)]
 pub enum MintingMode {
     /// The ability to mint NFTs is restricted to the installing account only.
+    #[default]
     Installer = 0,
     /// The ability to mint NFTs is not restricted.
     Public = 1,
     /// The ability to mint NFTs is restricted by an ACL.
-    Acl = 2,
+    Acl = 2
 }
 
 impl TryFrom<u8> for MintingMode {
@@ -62,13 +66,14 @@ impl TryFrom<u8> for MintingMode {
             0 => Ok(MintingMode::Installer),
             1 => Ok(MintingMode::Public),
             2 => Ok(MintingMode::Acl),
-            _ => Err(CEP78Error::InvalidMintingMode),
+            _ => Err(CEP78Error::InvalidMintingMode)
         }
     }
 }
 
 #[repr(u8)]
-#[derive(Default, Clone)]
+#[odra::odra_type]
+#[derive(Default)]
 pub enum NFTKind {
     /// The NFT represents a real-world physical
     /// like a house.
@@ -80,7 +85,7 @@ pub enum NFTKind {
     /// The NFT is the virtual representation
     /// of a physical notion, e.g a patent
     /// or copyright.
-    Virtual = 2,
+    Virtual = 2
 }
 
 impl TryFrom<u8> for NFTKind {
@@ -91,7 +96,7 @@ impl TryFrom<u8> for NFTKind {
             0 => Ok(NFTKind::Physical),
             1 => Ok(NFTKind::Digital),
             2 => Ok(NFTKind::Virtual),
-            _ => Err(CEP78Error::InvalidNftKind),
+            _ => Err(CEP78Error::InvalidNftKind)
         }
     }
 }
@@ -103,7 +108,7 @@ pub type MetadataRequirement = BTreeMap<NFTMetadataKind, Requirement>;
 pub enum Requirement {
     Required = 0,
     Optional = 1,
-    Unneeded = 2,
+    Unneeded = 2
 }
 
 impl TryFrom<u8> for Requirement {
@@ -114,7 +119,7 @@ impl TryFrom<u8> for Requirement {
             0 => Ok(Requirement::Required),
             1 => Ok(Requirement::Optional),
             2 => Ok(Requirement::Unneeded),
-            _ => Err(CEP78Error::InvalidRequirement),
+            _ => Err(CEP78Error::InvalidRequirement)
         }
     }
 }
@@ -127,7 +132,7 @@ pub enum NFTMetadataKind {
     CEP78 = 0,
     NFT721 = 1,
     Raw = 2,
-    CustomValidated = 3,
+    CustomValidated = 3
 }
 
 impl TryFrom<u8> for NFTMetadataKind {
@@ -139,13 +144,14 @@ impl TryFrom<u8> for NFTMetadataKind {
             1 => Ok(NFTMetadataKind::NFT721),
             2 => Ok(NFTMetadataKind::Raw),
             3 => Ok(NFTMetadataKind::CustomValidated),
-            _ => Err(CEP78Error::InvalidNFTMetadataKind),
+            _ => Err(CEP78Error::InvalidNFTMetadataKind)
         }
     }
 }
 
 #[repr(u8)]
-#[derive(PartialEq, Eq, Clone, Default)]
+#[odra::odra_type]
+#[derive(Default, PartialOrd, Ord, Copy)]
 pub enum OwnershipMode {
     /// The minter owns it and can never transfer it.
     #[default]
@@ -153,7 +159,7 @@ pub enum OwnershipMode {
     /// The minter assigns it to an address and can never be transferred.
     Assigned = 1,
     /// The NFT can be transferred even to an recipient that does not exist.
-    Transferable = 2,
+    Transferable = 2
 }
 
 impl TryFrom<u8> for OwnershipMode {
@@ -164,16 +170,17 @@ impl TryFrom<u8> for OwnershipMode {
             0 => Ok(OwnershipMode::Minter),
             1 => Ok(OwnershipMode::Assigned),
             2 => Ok(OwnershipMode::Transferable),
-            _ => Err(CEP78Error::InvalidOwnershipMode),
+            _ => Err(CEP78Error::InvalidOwnershipMode)
         }
     }
 }
 
 #[repr(u8)]
 #[odra::odra_type]
+#[derive(PartialOrd, Ord, Copy)]
 pub enum NFTIdentifierMode {
     Ordinal = 0,
-    Hash = 1,
+    Hash = 1
 }
 
 impl TryFrom<u8> for NFTIdentifierMode {
@@ -183,18 +190,18 @@ impl TryFrom<u8> for NFTIdentifierMode {
         match value {
             0 => Ok(NFTIdentifierMode::Ordinal),
             1 => Ok(NFTIdentifierMode::Hash),
-            _ => Err(CEP78Error::InvalidIdentifierMode),
+            _ => Err(CEP78Error::InvalidIdentifierMode)
         }
     }
 }
 
 #[repr(u8)]
-#[derive(Default)]
+#[derive(Default, PartialOrd, Ord, Copy)]
 #[odra::odra_type]
 pub enum MetadataMutability {
     #[default]
     Immutable = 0,
-    Mutable = 1,
+    Mutable = 1
 }
 
 impl TryFrom<u8> for MetadataMutability {
@@ -204,7 +211,7 @@ impl TryFrom<u8> for MetadataMutability {
         match value {
             0 => Ok(MetadataMutability::Immutable),
             1 => Ok(MetadataMutability::Mutable),
-            _ => Err(CEP78Error::InvalidMetadataMutability),
+            _ => Err(CEP78Error::InvalidMetadataMutability)
         }
     }
 }
@@ -212,7 +219,7 @@ impl TryFrom<u8> for MetadataMutability {
 #[odra::odra_type]
 pub enum TokenIdentifier {
     Index(u64),
-    Hash(String),
+    Hash(String)
 }
 
 impl TokenIdentifier {
@@ -231,9 +238,9 @@ impl TokenIdentifier {
         None
     }
 
-    pub fn get_hash(self) -> Option<String> {
+    pub fn get_hash(&self) -> Option<String> {
         if let Self::Hash(hash) = self {
-            return Some(hash);
+            return Some(hash.to_owned());
         }
         None
     }
@@ -241,7 +248,7 @@ impl TokenIdentifier {
     pub fn get_dictionary_item_key(&self) -> String {
         match self {
             TokenIdentifier::Index(token_index) => token_index.to_string(),
-            TokenIdentifier::Hash(hash) => hash.clone(),
+            TokenIdentifier::Hash(hash) => hash.clone()
         }
     }
 }
@@ -250,17 +257,18 @@ impl ToString for TokenIdentifier {
     fn to_string(&self) -> String {
         match self {
             TokenIdentifier::Index(index) => index.to_string(),
-            TokenIdentifier::Hash(hash) => hash.to_string(),
+            TokenIdentifier::Hash(hash) => hash.to_string()
         }
     }
 }
 
-
 #[repr(u8)]
 #[odra::odra_type]
+#[derive(Default)]
 pub enum BurnMode {
+    #[default]
     Burnable = 0,
-    NonBurnable = 1,
+    NonBurnable = 1
 }
 
 impl TryFrom<u8> for BurnMode {
@@ -270,17 +278,19 @@ impl TryFrom<u8> for BurnMode {
         match value {
             0 => Ok(BurnMode::Burnable),
             1 => Ok(BurnMode::NonBurnable),
-            _ => Err(CEP78Error::InvalidBurnMode),
+            _ => Err(CEP78Error::InvalidBurnMode)
         }
     }
 }
 
 #[repr(u8)]
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, PartialOrd, Ord, Copy)]
+#[odra::odra_type]
 pub enum OwnerReverseLookupMode {
+    #[default]
     NoLookUp = 0,
     Complete = 1,
-    TransfersOnly = 2,
+    TransfersOnly = 2
 }
 
 impl TryFrom<u8> for OwnerReverseLookupMode {
@@ -291,7 +301,7 @@ impl TryFrom<u8> for OwnerReverseLookupMode {
             0 => Ok(OwnerReverseLookupMode::NoLookUp),
             1 => Ok(OwnerReverseLookupMode::Complete),
             2 => Ok(OwnerReverseLookupMode::TransfersOnly),
-            _ => Err(CEP78Error::InvalidReportingMode),
+            _ => Err(CEP78Error::InvalidReportingMode)
         }
     }
 }
@@ -300,7 +310,7 @@ impl TryFrom<u8> for OwnerReverseLookupMode {
 pub enum NamedKeyConventionMode {
     DerivedFromCollectionName = 0,
     V1_0Standard = 1,
-    V1_0Custom = 2,
+    V1_0Custom = 2
 }
 
 impl TryFrom<u8> for NamedKeyConventionMode {
@@ -311,19 +321,20 @@ impl TryFrom<u8> for NamedKeyConventionMode {
             0 => Ok(NamedKeyConventionMode::DerivedFromCollectionName),
             1 => Ok(NamedKeyConventionMode::V1_0Standard),
             2 => Ok(NamedKeyConventionMode::V1_0Custom),
-            _ => Err(CEP78Error::InvalidNamedKeyConvention),
+            _ => Err(CEP78Error::InvalidNamedKeyConvention)
         }
     }
 }
 
 #[repr(u8)]
-#[derive(PartialEq, Eq, Clone, Copy, Default)]
+#[odra::odra_type]
+#[derive(Copy, Default)]
 #[allow(clippy::upper_case_acronyms)]
 pub enum EventsMode {
+    #[default]
     NoEvents = 0,
     CEP47 = 1,
-    #[default]
-    CES = 2,
+    CES = 2
 }
 
 impl TryFrom<u8> for EventsMode {
@@ -334,7 +345,7 @@ impl TryFrom<u8> for EventsMode {
             0 => Ok(EventsMode::NoEvents),
             1 => Ok(EventsMode::CEP47),
             2 => Ok(EventsMode::CES),
-            _ => Err(CEP78Error::InvalidEventsMode),
+            _ => Err(CEP78Error::InvalidEventsMode)
         }
     }
 }
@@ -344,14 +355,14 @@ impl TryFrom<u8> for EventsMode {
 #[odra::odra_type]
 pub enum TransferFilterContractResult {
     DenyTransfer = 0,
-    ProceedTransfer,
+    ProceedTransfer
 }
 
 impl From<u8> for TransferFilterContractResult {
     fn from(value: u8) -> Self {
         match value {
             0 => TransferFilterContractResult::DenyTransfer,
-            _ => TransferFilterContractResult::ProceedTransfer,
+            _ => TransferFilterContractResult::ProceedTransfer
         }
     }
 }

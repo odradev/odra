@@ -1,11 +1,11 @@
-use odra::{prelude::*, Address};
 use super::modalities::TokenIdentifier;
+use odra::{prelude::*, Address};
 
 #[odra::event]
 pub struct Mint {
     recipient: Address,
     token_id: String,
-    data: String,
+    data: String
 }
 
 impl Mint {
@@ -13,7 +13,7 @@ impl Mint {
         Self {
             recipient,
             token_id: token_id.to_string(),
-            data,
+            data
         }
     }
 }
@@ -22,7 +22,7 @@ impl Mint {
 pub struct Burn {
     owner: Address,
     token_id: String,
-    burner: Address,
+    burner: Address
 }
 
 impl Burn {
@@ -30,7 +30,7 @@ impl Burn {
         Self {
             owner,
             token_id: token_id.to_string(),
-            burner,
+            burner
         }
     }
 }
@@ -39,7 +39,7 @@ impl Burn {
 pub struct Approval {
     owner: Address,
     spender: Address,
-    token_id: String,
+    token_id: String
 }
 
 impl Approval {
@@ -47,7 +47,7 @@ impl Approval {
         Self {
             owner,
             spender,
-            token_id: token_id.to_string(),
+            token_id: token_id.to_string()
         }
     }
 }
@@ -55,14 +55,14 @@ impl Approval {
 #[odra::event]
 pub struct ApprovalRevoked {
     owner: Address,
-    token_id: String,
+    token_id: String
 }
 
 impl ApprovalRevoked {
     pub fn new(owner: Address, token_id: TokenIdentifier) -> Self {
         Self {
             owner,
-            token_id: token_id.to_string(),
+            token_id: token_id.to_string()
         }
     }
 }
@@ -70,7 +70,7 @@ impl ApprovalRevoked {
 #[odra::event]
 pub struct ApprovalForAll {
     owner: Address,
-    operator: Address,
+    operator: Address
 }
 
 impl ApprovalForAll {
@@ -82,7 +82,7 @@ impl ApprovalForAll {
 #[odra::event]
 pub struct RevokedForAll {
     owner: Address,
-    operator: Address,
+    operator: Address
 }
 
 impl RevokedForAll {
@@ -96,7 +96,7 @@ pub struct Transfer {
     owner: Address,
     spender: Option<Address>,
     recipient: Address,
-    token_id: String,
+    token_id: String
 }
 
 impl Transfer {
@@ -104,13 +104,13 @@ impl Transfer {
         owner: Address,
         spender: Option<Address>,
         recipient: Address,
-        token_id: TokenIdentifier,
+        token_id: TokenIdentifier
     ) -> Self {
         Self {
             owner,
             spender,
             recipient,
-            token_id: token_id.to_string(),
+            token_id: token_id.to_string()
         }
     }
 }
@@ -118,14 +118,14 @@ impl Transfer {
 #[odra::event]
 pub struct MetadataUpdated {
     token_id: String,
-    data: String,
+    data: String
 }
 
 impl MetadataUpdated {
     pub fn new(token_id: TokenIdentifier, data: String) -> Self {
         Self {
             token_id: token_id.to_string(),
-            data,
+            data
         }
     }
 }

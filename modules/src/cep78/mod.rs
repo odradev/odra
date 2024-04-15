@@ -1,10 +1,14 @@
 #![allow(missing_docs)]
 
-pub mod events;
-pub mod modalities;
-pub mod error;
 pub mod constants;
-pub mod token;
-mod whitelist;
+pub mod error;
+pub mod events;
 mod metadata;
+pub mod modalities;
+mod pagination;
+mod reverse_lookup;
+#[cfg(test)]
+mod tests;
+pub mod token;
 mod utils;
+mod whitelist;

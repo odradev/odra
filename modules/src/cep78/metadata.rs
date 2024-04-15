@@ -1,7 +1,14 @@
 use odra::{args::Maybe, prelude::*, Mapping, UnwrapOrRevert, Var};
 use serde::{Deserialize, Serialize};
 
-use super::{constants::{METADATA_CEP78, METADATA_CUSTOM_VALIDATED, METADATA_NFT721, METADATA_RAW}, error::CEP78Error, modalities::{MetadataMutability, MetadataRequirement, NFTIdentifierMode, NFTMetadataKind, Requirement, TokenIdentifier}, utils::IntoOrRevert};
+use super::{
+    constants::{METADATA_CEP78, METADATA_CUSTOM_VALIDATED, METADATA_NFT721, METADATA_RAW},
+    error::CEP78Error,
+    modalities::{
+        MetadataMutability, MetadataRequirement, NFTIdentifierMode, NFTMetadataKind, Requirement,
+        TokenIdentifier
+    },
+};
 
 #[odra::module]
 pub struct Metadata {
@@ -9,34 +16,31 @@ pub struct Metadata {
     identifier_mode: Var<NFTIdentifierMode>,
     mutability: Var<MetadataMutability>,
     json_schema: Var<String>,
-    validated_metadata: Mapping<String, String>,
+    validated_metadata: Mapping<String, String>
 }
 
 impl Metadata {
     pub fn init(
         &mut self,
-        base_metadata_kind: u8,
-        additional_required_metadata: Maybe<Vec<u8>>,
-        optional_metadata: Maybe<Vec<u8>>,
-        metadata_mutability: u8,
-        identifier_mode: u8,
-        json_schema: Maybe<String>,
+        base_metadata_kind: NFTMetadataKind,
+        additional_required_metadata: Maybe<Vec<NFTMetadataKind>>,
+        optional_metadata: Maybe<Vec<NFTMetadataKind>>,
+        metadata_mutability: MetadataMutability,
+        identifier_mode: NFTIdentifierMode,
+        json_schema: Maybe<String>
     ) {
-        let env = self.env();
-        
         let mut requirements = MetadataRequirement::new();
         for optional in optional_metadata.unwrap_or_default() {
-            requirements.insert(optional.into_or_revert(&env),Requirement::Optional);
+            requirements.insert(optional, Requirement::Optional);
         }
         for required in additional_required_metadata.unwrap_or_default() {
-            requirements.insert(required.into_or_revert(&env),Requirement::Required);
+            requirements.insert(required, Requirement::Required);
         }
-        let base: NFTMetadataKind = base_metadata_kind.into_or_revert(&env);
-        requirements.insert(base, Requirement::Required);
+        requirements.insert(base_metadata_kind, Requirement::Required);
 
         self.requirements.set(requirements);
-        self.identifier_mode.set(identifier_mode.into_or_revert(&env));
-        self.mutability.set(metadata_mutability.into_or_revert(&env));
+        self.identifier_mode.set(identifier_mode);
+        self.mutability.set(metadata_mutability);
         self.json_schema.set(json_schema.unwrap_or_default());
     }
 
@@ -45,32 +49,36 @@ impl Metadata {
     }
 
     pub fn get_identifier_mode(&self) -> NFTIdentifierMode {
-        self.identifier_mode.get_or_revert_with(CEP78Error::InvalidIdentifierMode)
+        self.identifier_mode
+            .get_or_revert_with(CEP78Error::InvalidIdentifierMode)
     }
 
     pub fn get_or_revert(&self, token_identifier: &TokenIdentifier) -> String {
         let env = self.env();
         let metadata_kind_list = self.get_requirements();
-    
+
         for (metadata_kind, required) in metadata_kind_list {
             match required {
                 Requirement::Required => {
                     let id = token_identifier.to_string();
                     let kind = get_metadata_key(&metadata_kind);
                     let key = format!("{}{}", kind, id);
-                    let metadata = self.validated_metadata
+                    let metadata = self
+                        .validated_metadata
                         .get(&key)
                         .unwrap_or_revert_with(&env, CEP78Error::InvalidTokenIdentifier);
                     return metadata;
                 }
-                _ => continue,
+                _ => continue
             }
         }
         env.revert(CEP78Error::MissingTokenMetaData)
     }
 
     pub fn ensure_mutability(&self, error: CEP78Error) {
-        let current_mutability = self.mutability.get_or_revert_with(CEP78Error::InvalidMetadataMutability);
+        let current_mutability = self
+            .mutability
+            .get_or_revert_with(CEP78Error::InvalidMetadataMutability);
         if current_mutability != MetadataMutability::Mutable {
             self.env().revert(error)
         }
@@ -152,7 +160,8 @@ impl Metadata {
                         .map_err(|_| CEP78Error::FailedToParseCustomMetadata)?;
 
                 for (property_name, property_type) in token_schema.properties.iter() {
-                    if property_type.required && custom_metadata.attributes.get(property_name).is_none()
+                    if property_type.required
+                        && custom_metadata.attributes.get(property_name).is_none()
                     {
                         self.env().revert(CEP78Error::InvalidCustomMetadata)
                     }
@@ -166,7 +175,7 @@ impl Metadata {
     fn get_metadata_schema(&self, kind: &NFTMetadataKind) -> CustomMetadataSchema {
         match kind {
             NFTMetadataKind::Raw => CustomMetadataSchema {
-                properties: BTreeMap::new(),
+                properties: BTreeMap::new()
             },
             NFTMetadataKind::NFT721 => {
                 let mut properties = BTreeMap::new();
@@ -175,24 +184,24 @@ impl Metadata {
                     MetadataSchemaProperty {
                         name: "name".to_string(),
                         description: "The name of the NFT".to_string(),
-                        required: true,
-                    },
+                        required: true
+                    }
                 );
                 properties.insert(
                     "symbol".to_string(),
                     MetadataSchemaProperty {
                         name: "symbol".to_string(),
                         description: "The symbol of the NFT collection".to_string(),
-                        required: true,
-                    },
+                        required: true
+                    }
                 );
                 properties.insert(
                     "token_uri".to_string(),
                     MetadataSchemaProperty {
                         name: "token_uri".to_string(),
                         description: "The URI pointing to an off chain resource".to_string(),
-                        required: true,
-                    },
+                        required: true
+                    }
                 );
                 CustomMetadataSchema { properties }
             }
@@ -203,32 +212,32 @@ impl Metadata {
                     MetadataSchemaProperty {
                         name: "name".to_string(),
                         description: "The name of the NFT".to_string(),
-                        required: true,
-                    },
+                        required: true
+                    }
                 );
                 properties.insert(
                     "token_uri".to_string(),
                     MetadataSchemaProperty {
                         name: "token_uri".to_string(),
                         description: "The URI pointing to an off chain resource".to_string(),
-                        required: true,
-                    },
+                        required: true
+                    }
                 );
                 properties.insert(
                     "checksum".to_string(),
                     MetadataSchemaProperty {
                         name: "checksum".to_string(),
                         description: "A SHA256 hash of the content at the token_uri".to_string(),
-                        required: true,
-                    },
+                        required: true
+                    }
                 );
                 CustomMetadataSchema { properties }
             }
-            NFTMetadataKind::CustomValidated => {
-                serde_json_wasm::from_str::<CustomMetadataSchema>(&self.json_schema.get_or_default())
-                    .map_err(|_| CEP78Error::InvalidJsonSchema)
-                    .unwrap_or_revert(&self.env())
-            }
+            NFTMetadataKind::CustomValidated => serde_json_wasm::from_str::<CustomMetadataSchema>(
+                &self.json_schema.get_or_default()
+            )
+            .map_err(|_| CEP78Error::InvalidJsonSchema)
+            .unwrap_or_revert(&self.env())
         }
     }
 }
@@ -238,34 +247,33 @@ impl Metadata {
 pub(crate) struct MetadataSchemaProperty {
     name: String,
     description: String,
-    required: bool,
+    required: bool
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub(crate) struct CustomMetadataSchema {
-    properties: BTreeMap<String, MetadataSchemaProperty>,
+    properties: BTreeMap<String, MetadataSchemaProperty>
 }
-
 
 // Using a structure for the purposes of serialization formatting.
 #[derive(Serialize, Deserialize)]
 pub(crate) struct MetadataNFT721 {
     name: String,
     symbol: String,
-    token_uri: String,
+    token_uri: String
 }
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct MetadataCEP78 {
     name: String,
     token_uri: String,
-    checksum: String,
+    checksum: String
 }
 
 // Using a structure for the purposes of serialization formatting.
 #[derive(Serialize, Deserialize)]
 pub(crate) struct CustomMetadata {
-    attributes: BTreeMap<String, String>,
+    attributes: BTreeMap<String, String>
 }
 
 pub(crate) fn get_metadata_key(metadata_kind: &NFTMetadataKind) -> String {
@@ -273,6 +281,7 @@ pub(crate) fn get_metadata_key(metadata_kind: &NFTMetadataKind) -> String {
         NFTMetadataKind::CEP78 => METADATA_CEP78,
         NFTMetadataKind::NFT721 => METADATA_NFT721,
         NFTMetadataKind::Raw => METADATA_RAW,
-        NFTMetadataKind::CustomValidated => METADATA_CUSTOM_VALIDATED,
-    }.to_string()
+        NFTMetadataKind::CustomValidated => METADATA_CUSTOM_VALIDATED
+    }
+    .to_string()
 }

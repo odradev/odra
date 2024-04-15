@@ -19,6 +19,7 @@ base16 = { version = "0.2.1", default-features = false }
 
 [dev-dependencies]
 odra-test = { path = "../odra-test", version = "0.9.1" }
+derive_builder = "0.20.0"
 
 [build-dependencies]
 odra-build = { path = "../odra-build", version = "0.9.1" }

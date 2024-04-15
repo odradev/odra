@@ -1,6 +1,6 @@
 //! This module provides types and traits for working with entrypoint arguments.
 
-use crate::{contract_def::Argument, prelude::*, ContractEnv, ExecutionError};
+use crate::{contract_def::Argument, prelude::*, ContractEnv, ExecutionEnv, ExecutionError, OdraError};
 use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
     CLType, CLTyped, Parameter, RuntimeArgs
@@ -32,6 +32,14 @@ impl<T> Maybe<T> {
         match self {
             Maybe::Some(value) => value,
             Maybe::None => env.revert(ExecutionError::UnwrapError)
+        }
+    }
+
+    /// Unwraps the value or returns the default value.
+    pub fn unwrap_or(self, default: T) -> T {
+        match self {
+            Maybe::Some(value) => value,
+            Maybe::None => default
         }
     }
 }
