@@ -78,9 +78,18 @@ test-modules: test-modules-on-odravm test-modules-on-casper
 test: test-odra test-examples test-modules
 
 test-templates:
+    rm -rf tests
     mkdir -p tests
-    cd tests && cargo odra new -n full --template full -s ../ && cd full && cargo odra test && cargo odra test -b casper
-    cd tests && cargo odra new -n workspace --template workspace -s ../ && cd workspace && cargo odra test && cargo odra test -b casper
+    cd tests && cargo odra new -n full --template full -s ../ \
+        && cd full \
+        && cargo odra test \
+        && cargo odra test -b casper \
+        && cargo odra schema
+    cd tests && cargo odra new -n workspace --template workspace -s ../ \
+        && cd workspace \
+        && cargo odra test \
+        && cargo odra test -b casper \
+        && cargo odra schema
 
 test-livenet:
     set shell := bash
