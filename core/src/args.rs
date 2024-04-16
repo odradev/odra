@@ -7,11 +7,12 @@ use casper_types::{
 };
 
 /// A type that represents an entrypoint arg that may or may not be present.
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 pub enum Maybe<T> {
     /// A value is present.
     Some(T),
     /// No value is present.
+    #[default]
     None
 }
 
