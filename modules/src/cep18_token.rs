@@ -1,9 +1,9 @@
 //! CEP-18 Casper Fungible Token standard implementation.
+use odra::{Address, casper_types::U256, Mapping, UnwrapOrRevert, Var};
 use odra::prelude::*;
-use odra::{casper_types::U256, Address, Mapping, UnwrapOrRevert, Var};
 
-use crate::cep18::errors::errors::Error;
-use crate::cep18::errors::errors::Error::{
+use crate::cep18::errors::Error;
+use crate::cep18::errors::Error::{
     CannotTargetSelfUser, InsufficientRights, InvalidBurnTarget, InvalidState, MintBurnDisabled,
     Overflow
 };
@@ -309,23 +309,15 @@ impl Cep18 {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use alloc::string::ToString;
     use alloc::vec;
-    use core::ops::Add;
 
+    use odra::Address;
     use odra::casper_types::account::AccountHash;
     use odra::casper_types::ContractPackageHash;
-    use odra::casper_types::U256;
     use odra::host::{Deployer, HostEnv, HostRef};
-    use odra::Address;
-    use odra::ExecutionError::AdditionOverflow;
 
-    use crate::cep18::errors::errors::Error::{
-        CannotTargetSelfUser, InsufficientAllowance, InsufficientBalance, InsufficientRights,
-        MintBurnDisabled
-    };
-    use crate::cep18::utils::Cep18Modality;
     use crate::cep18_token::{Cep18HostRef, Cep18InitArgs};
 
     pub const TOKEN_NAME: &str = "Plascoin";
@@ -335,11 +327,10 @@ mod tests {
     pub const TOKEN_OWNER_AMOUNT_1: u64 = 1_000_000;
     pub const TOKEN_OWNER_AMOUNT_2: u64 = 2_000_000;
     pub const TRANSFER_AMOUNT_1: u64 = 200_001;
-    pub const TRANSFER_AMOUNT_2: u64 = 19_999;
     pub const ALLOWANCE_AMOUNT_1: u64 = 456_789;
     pub const ALLOWANCE_AMOUNT_2: u64 = 87_654;
 
-    fn setup(enable_mint_and_burn: bool) -> Cep18HostRef {
+    pub fn setup(enable_mint_and_burn: bool) -> Cep18HostRef {
         let env = odra_test::env();
         let modality = if enable_mint_and_burn { Some(1) } else { None };
         let init_args = Cep18InitArgs {
@@ -354,51 +345,15 @@ mod tests {
         setup_with_args(&env, init_args)
     }
 
-    fn setup_with_args(env: &HostEnv, args: Cep18InitArgs) -> Cep18HostRef {
+    pub fn setup_with_args(env: &HostEnv, args: Cep18InitArgs) -> Cep18HostRef {
         Cep18HostRef::deploy(env, args)
     }
 
-    fn invert_address(address: Address) -> Address {
+    pub fn invert_address(address: Address) -> Address {
         match address {
             Address::Account(hash) => Address::Contract(ContractPackageHash::new(hash.value())),
             Address::Contract(hash) => Address::Account(AccountHash(hash.value()))
         }
-    }
-
-    fn test_approve_for(
-        cep18_token: &mut Cep18HostRef,
-        sender: Address,
-        owner: Address,
-        spender: Address
-    ) {
-        let amount = TRANSFER_AMOUNT_1.into();
-
-        // initial allowance is zero
-        assert_eq!(cep18_token.allowance(&owner, &spender), 0.into());
-
-        // when the owner approves the spender to spend tokens on their behalf
-        cep18_token.env().set_caller(sender);
-        cep18_token.approve(&spender, &amount);
-
-        // then the allowance is set
-        assert_eq!(cep18_token.allowance(&owner, &spender), amount);
-
-        // when new allowance is set
-        cep18_token.approve(&spender, &(amount.add(U256::one())));
-
-        // then the allowance is updated
-        assert_eq!(
-            cep18_token.allowance(&owner, &spender),
-            amount.add(U256::one())
-        );
-
-        // swapping address types
-        let inverted_owner = invert_address(owner);
-        let inverted_spender = invert_address(spender);
-        assert_eq!(
-            cep18_token.allowance(&inverted_owner, &inverted_spender),
-            U256::zero()
-        );
     }
 
     #[test]
@@ -422,476 +377,5 @@ mod tests {
         let inverted_owner_key = invert_address(owner_key);
         let inverted_owner_balance = cep18_token.balance_of(&inverted_owner_key);
         assert_eq!(inverted_owner_balance, 0.into());
-    }
-
-    #[test]
-    fn test_mint_and_burn() {
-        let mut cep18_token = setup(true);
-
-        let alice = cep18_token.env().get_account(1);
-        let bob = cep18_token.env().get_account(2);
-        let owner = cep18_token.env().caller();
-        let initial_supply = cep18_token.total_supply();
-        let amount = TRANSFER_AMOUNT_1.into();
-
-        cep18_token.mint(&alice, &amount);
-        assert_eq!(cep18_token.total_supply(), initial_supply + amount);
-
-        cep18_token.mint(&bob, &amount);
-        assert_eq!(cep18_token.total_supply(), initial_supply + amount + amount);
-        assert_eq!(cep18_token.balance_of(&bob), amount);
-        assert_eq!(cep18_token.balance_of(&alice), amount);
-        assert_eq!(cep18_token.balance_of(&owner), initial_supply);
-
-        cep18_token.burn(&owner, &amount);
-        assert_eq!(cep18_token.total_supply(), initial_supply + amount);
-        assert_eq!(cep18_token.balance_of(&alice), amount);
-        assert_eq!(cep18_token.balance_of(&bob), amount);
-        assert_eq!(
-            cep18_token.balance_of(&owner),
-            initial_supply.saturating_sub(amount)
-        );
-    }
-
-    #[test]
-    fn test_should_not_mint_above_limits() {
-        let mut cep18_token = setup(true);
-        let mint_amount = U256::MAX;
-
-        let alice = cep18_token.env().get_account(1);
-        let bob = cep18_token.env().get_account(2);
-
-        cep18_token.mint(&alice, &U256::from(TOKEN_OWNER_AMOUNT_1));
-        cep18_token.mint(&bob, &U256::from(TOKEN_OWNER_AMOUNT_2));
-
-        assert_eq!(
-            cep18_token.balance_of(&alice),
-            U256::from(TOKEN_OWNER_AMOUNT_1)
-        );
-
-        let result = cep18_token.try_mint(&alice, &mint_amount);
-        assert_eq!(result.err().unwrap(), AdditionOverflow.into());
-    }
-
-    #[test]
-    fn should_not_burn_above_balance() {
-        let mut cep18_token = setup(true);
-        let alice = cep18_token.env().get_account(1);
-        let bob = cep18_token.env().get_account(2);
-
-        cep18_token.mint(&alice, &U256::from(TOKEN_OWNER_AMOUNT_1));
-        cep18_token.mint(&bob, &U256::from(TOKEN_OWNER_AMOUNT_2));
-
-        assert_eq!(
-            cep18_token.balance_of(&alice),
-            U256::from(TOKEN_OWNER_AMOUNT_1)
-        );
-
-        cep18_token.env().set_caller(alice);
-        let result = cep18_token.try_burn(&alice, &U256::from(TOKEN_OWNER_AMOUNT_1 + 1));
-        assert_eq!(result.err().unwrap(), InsufficientBalance.into());
-    }
-
-    #[test]
-    fn should_not_mint_or_burn_when_disabled() {
-        let mut cep18_token = setup(false);
-        let alice = cep18_token.env().get_account(1);
-        let amount = TRANSFER_AMOUNT_1.into();
-
-        let result = cep18_token.try_mint(&alice, &amount);
-        assert_eq!(result.err().unwrap(), MintBurnDisabled.into());
-
-        let result = cep18_token.try_burn(&alice, &amount);
-        assert_eq!(result.err().unwrap(), MintBurnDisabled.into());
-    }
-
-    #[test]
-    fn test_security_no_rights() {
-        // given a token with mint and burn enabled
-        let mut cep18_token = setup(true);
-        let alice = cep18_token.env().get_account(1);
-        let bob = cep18_token.env().get_account(2);
-        let amount = TRANSFER_AMOUNT_1.into();
-
-        // an admin can mint tokens
-        cep18_token.mint(&alice, &amount);
-        cep18_token.mint(&bob, &amount);
-
-        assert_eq!(cep18_token.balance_of(&alice), amount);
-        assert_eq!(cep18_token.balance_of(&bob), amount);
-
-        // user without permissions cannot mint tokens
-        cep18_token.env().set_caller(alice);
-        let result = cep18_token.try_mint(&bob, &amount);
-        assert_eq!(result.err().unwrap(), InsufficientRights.into());
-
-        // but can burn their own tokens
-        cep18_token.burn(&alice, &amount);
-        assert_eq!(cep18_token.balance_of(&alice), 0.into());
-        assert_eq!(cep18_token.balance_of(&bob), amount);
-    }
-
-    #[test]
-    fn test_security_minter_rights() {
-        // given a token with mint and burn enabled, and alice set as minter
-        let env = odra_test::env();
-        let alice = env.get_account(1);
-        let bob = env.get_account(2);
-        let args = Cep18InitArgs {
-            symbol: TOKEN_SYMBOL.to_string(),
-            name: TOKEN_NAME.to_string(),
-            decimals: TOKEN_DECIMALS,
-            initial_supply: TOKEN_TOTAL_SUPPLY.into(),
-            minter_list: vec![alice],
-            admin_list: vec![],
-            modality: Some(1)
-        };
-        let mut cep18_token = setup_with_args(&env, args);
-        let amount = TRANSFER_AMOUNT_1.into();
-
-        // alice can mint tokens
-        cep18_token.env().set_caller(alice);
-        cep18_token.mint(&bob, &amount);
-        assert_eq!(cep18_token.balance_of(&bob), amount);
-
-        // and bob cannot
-        cep18_token.env().set_caller(bob);
-        let result = cep18_token.try_mint(&alice, &amount);
-        assert_eq!(result.err().unwrap(), InsufficientRights.into());
-    }
-
-    #[test]
-    fn test_change_security() {
-        // given a token with mint and burn enabled, and alice set as an admin
-        let env = odra_test::env();
-        let owner = env.get_account(0);
-        let alice = env.get_account(1);
-        let args = Cep18InitArgs {
-            symbol: TOKEN_SYMBOL.to_string(),
-            name: TOKEN_NAME.to_string(),
-            decimals: TOKEN_DECIMALS,
-            initial_supply: TOKEN_TOTAL_SUPPLY.into(),
-            minter_list: vec![],
-            admin_list: vec![alice],
-            modality: Some(Cep18Modality::MintAndBurn.into())
-        };
-        let mut cep18_token = setup_with_args(&env, args);
-
-        // when alice removes an owner from admin list
-        cep18_token.env().set_caller(alice);
-        cep18_token.change_security(vec![], vec![], vec![owner]);
-
-        // then the owner cannot mint tokens
-        cep18_token.env().set_caller(owner);
-        let result = cep18_token.try_mint(&owner, &100.into());
-        assert_eq!(result.err().unwrap(), InsufficientRights.into());
-    }
-
-    #[test]
-    fn should_approve_funds() {
-        // given a token
-        let mut cep18_token = setup(false);
-        let owner = cep18_token.env().get_account(0);
-        let alice = cep18_token.env().get_account(1);
-        let token_address = *cep18_token.address();
-        let another_token = setup_with_args(
-            cep18_token.env(),
-            Cep18InitArgs {
-                symbol: "PLS".to_string(),
-                name: "Plascoin".to_string(),
-                decimals: 100,
-                initial_supply: 1_000_000_000.into(),
-                minter_list: vec![],
-                admin_list: vec![],
-                modality: Some(1)
-            }
-        );
-        let another_token_address = *another_token.address();
-
-        // account to account
-        test_approve_for(&mut cep18_token, owner, owner, alice);
-
-        // todo: test approves for real contracts
-        // account to contract
-        test_approve_for(&mut cep18_token, owner, owner, another_token_address);
-
-        // contract to contract
-        test_approve_for(
-            &mut cep18_token,
-            token_address,
-            token_address,
-            another_token_address
-        );
-    }
-
-    #[test]
-    fn should_not_transfer_from_without_enough_allowance() {
-        // given a token
-        let mut cep18_token = setup(false);
-        let owner = cep18_token.env().get_account(0);
-        let alice = cep18_token.env().get_account(1);
-
-        // when the owner approves the spender to spend tokens on their behalf
-        cep18_token.approve(&alice, &ALLOWANCE_AMOUNT_1.into());
-
-        // then the allowance is set
-        assert_eq!(
-            cep18_token.allowance(&owner, &alice),
-            ALLOWANCE_AMOUNT_1.into()
-        );
-
-        // and transferring more is not possible
-        cep18_token.env().set_caller(alice);
-        let result =
-            cep18_token.try_transfer_from(&owner, &alice, &U256::from(ALLOWANCE_AMOUNT_1 + 1));
-        assert_eq!(result.err().unwrap(), InsufficientAllowance.into());
-
-        // but transferring less is possible
-        cep18_token.transfer_from(&owner, &alice, &U256::from(ALLOWANCE_AMOUNT_1));
-    }
-
-    #[test]
-    fn test_increase_allowance() {
-        // given a token
-        let mut cep18_token = setup(false);
-        let owner = cep18_token.env().get_account(0);
-        let alice = cep18_token.env().get_account(1);
-
-        // when the owner approves the spender to spend tokens on their behalf
-        cep18_token.approve(&alice, &ALLOWANCE_AMOUNT_1.into());
-
-        // then the allowance is set
-        assert_eq!(
-            cep18_token.allowance(&owner, &alice),
-            ALLOWANCE_AMOUNT_1.into()
-        );
-
-        // when the owner decreases the allowance
-        cep18_token.decrease_allowance(&alice, &ALLOWANCE_AMOUNT_2.into());
-
-        // then the allowance is decreased
-        assert_eq!(
-            cep18_token.allowance(&owner, &alice),
-            (ALLOWANCE_AMOUNT_1 - ALLOWANCE_AMOUNT_2).into()
-        );
-
-        // when the allowance is increased
-        cep18_token.increase_allowance(&alice, &ALLOWANCE_AMOUNT_1.into());
-
-        // then the allowance is increased
-        assert_eq!(
-            cep18_token.allowance(&owner, &alice),
-            ((ALLOWANCE_AMOUNT_1 * 2) - ALLOWANCE_AMOUNT_2).into()
-        );
-    }
-
-    #[test]
-    fn should_transfer_full_owned_amount() {
-        // given a token
-        let mut cep18_token = setup(false);
-        let owner = cep18_token.env().get_account(0);
-        let alice = cep18_token.env().get_account(1);
-        let amount = TOKEN_TOTAL_SUPPLY.into();
-
-        // when the owner transfers the full amount to alice
-        cep18_token.transfer(&alice, &amount);
-
-        // then the owner has no balance
-        assert_eq!(cep18_token.balance_of(&owner), 0.into());
-
-        // and alice has the full amount
-        assert_eq!(cep18_token.balance_of(&alice), amount);
-        assert_eq!(cep18_token.total_supply(), amount);
-    }
-
-    #[test]
-    fn should_not_transfer_more_than_owned_balance() {
-        // given a token
-        let mut cep18_token = setup(false);
-        let owner = cep18_token.env().get_account(0);
-        let alice = cep18_token.env().get_account(1);
-        let amount = TOKEN_TOTAL_SUPPLY.into();
-
-        // when the owner tries to transfer more than they have
-        let result = cep18_token.try_transfer(&alice, &U256::from(amount + 1));
-
-        // then the transfer fails
-        assert_eq!(result.err().unwrap(), InsufficientBalance.into());
-
-        // and the balances remain unchanged
-        assert_eq!(cep18_token.balance_of(&owner), amount);
-        assert_eq!(cep18_token.balance_of(&alice), 0.into());
-        assert_eq!(cep18_token.total_supply(), amount);
-    }
-
-    #[test]
-    fn should_transfer_from_account_to_account() {
-        // given a token
-        let mut cep18_token = setup(false);
-        let owner = cep18_token.env().get_account(0);
-        let alice = cep18_token.env().get_account(1);
-        let transfer_amount = TRANSFER_AMOUNT_1.into();
-        let allowance_amount = ALLOWANCE_AMOUNT_1.into();
-
-        // when the owner approves the spender to spend tokens on their behalf
-        cep18_token.approve(&alice, &allowance_amount);
-
-        // then the allowance is set
-        assert_eq!(cep18_token.allowance(&owner, &alice), allowance_amount);
-
-        // when the spender spends the tokens
-        cep18_token.env().set_caller(alice);
-        cep18_token.transfer_from(&owner, &alice, &transfer_amount);
-
-        // then the owner has less tokens
-        assert_eq!(
-            cep18_token.balance_of(&owner),
-            U256::from(TOKEN_TOTAL_SUPPLY) - transfer_amount
-        );
-
-        // and alice has more tokens
-        assert_eq!(cep18_token.balance_of(&alice), transfer_amount);
-
-        // and the allowance is lowered
-        assert_eq!(
-            cep18_token.allowance(&owner, &alice),
-            allowance_amount - transfer_amount
-        );
-    }
-
-    #[test]
-    fn should_transfer_from_account_by_contract() {
-        // todo: prepare a contract and test it
-    }
-
-    #[test]
-    fn should_not_be_able_to_own_transfer() {
-        // given a token
-        let mut cep18_token = setup(false);
-        let owner = cep18_token.env().get_account(0);
-        let amount = TOKEN_TOTAL_SUPPLY.into();
-
-        // when the owner tries to transfer to themselves
-        let result = cep18_token.try_transfer(&owner, &amount);
-
-        // then the transfer fails
-        assert_eq!(result.err().unwrap(), CannotTargetSelfUser.into());
-
-        // and the balances remain unchanged
-        assert_eq!(cep18_token.balance_of(&owner), amount);
-        assert_eq!(cep18_token.total_supply(), amount);
-    }
-
-    #[test]
-    fn should_not_be_able_to_own_transfer_from() {
-        // given a token
-        let mut cep18_token = setup(false);
-        let owner = cep18_token.env().get_account(0);
-        let amount = TOKEN_TOTAL_SUPPLY.into();
-
-        // when the owner tries to approbve themselves
-        let result = cep18_token.try_approve(&owner, &amount);
-
-        // it fails
-        assert_eq!(result.err().unwrap(), CannotTargetSelfUser.into());
-
-        // when the owner tries to transfer from themselves
-        let result = cep18_token.try_transfer_from(&owner, &owner, &amount);
-
-        // then the transfer fails
-        assert_eq!(result.err().unwrap(), CannotTargetSelfUser.into());
-
-        // and the balances remain unchanged
-        assert_eq!(cep18_token.balance_of(&owner), amount);
-        assert_eq!(cep18_token.total_supply(), amount);
-    }
-
-    #[test]
-    fn should_verify_zero_amount_transfer_is_noop() {
-        // given a token
-        let mut cep18_token = setup(false);
-        let owner = cep18_token.env().get_account(0);
-        let alice = cep18_token.env().get_account(1);
-        let amount = TOKEN_TOTAL_SUPPLY.into();
-
-        // when the owner transfers zero tokens
-        cep18_token.transfer(&alice, &U256::zero());
-
-        // then the balances remain unchanged
-        assert_eq!(cep18_token.balance_of(&owner), amount);
-        assert_eq!(cep18_token.balance_of(&alice), 0.into());
-        assert_eq!(cep18_token.total_supply(), amount);
-    }
-
-    #[test]
-    fn should_verify_zero_amount_transfer_from_is_noop() {
-        // given a token
-        let mut cep18_token = setup(false);
-        let owner = cep18_token.env().get_account(0);
-        let alice = cep18_token.env().get_account(1);
-        let amount = TOKEN_TOTAL_SUPPLY.into();
-
-        // when the owner approves the spender to spend tokens on their behalf
-        cep18_token.approve(&alice, &ALLOWANCE_AMOUNT_1.into());
-
-        // when the owner transfers zero tokens from alice
-        cep18_token.transfer_from(&owner, &alice, &U256::zero());
-
-        // then the balances remain unchanged
-        assert_eq!(cep18_token.balance_of(&owner), amount);
-        assert_eq!(cep18_token.balance_of(&alice), 0.into());
-        assert_eq!(cep18_token.total_supply(), amount);
-    }
-
-    #[test]
-    fn should_transfer() {
-        // given a token
-        let mut cep18_token = setup(false);
-        let owner = cep18_token.env().get_account(0);
-        let another_token = setup_with_args(
-            cep18_token.env(),
-            Cep18InitArgs {
-                symbol: "PLS".to_string(),
-                name: "Plascoin".to_string(),
-                decimals: 100,
-                initial_supply: 1_000_000_000.into(),
-                minter_list: vec![],
-                admin_list: vec![],
-                modality: Some(1)
-            }
-        );
-
-        // when the owner transfers tokens to another token
-        cep18_token.transfer(another_token.address(), &TRANSFER_AMOUNT_1.into());
-
-        // then the balances are updated
-        assert_eq!(
-            cep18_token.balance_of(&owner),
-            (TOKEN_TOTAL_SUPPLY - TRANSFER_AMOUNT_1).into()
-        );
-        assert_eq!(
-            cep18_token.balance_of(another_token.address()),
-            TRANSFER_AMOUNT_1.into()
-        );
-
-        // when the token transfers tokens to yet another token
-        cep18_token.env().set_caller(*another_token.address());
-        cep18_token.transfer(&cep18_token.address().clone(), &TRANSFER_AMOUNT_1.into());
-
-        // then the balances are updated
-        assert_eq!(cep18_token.balance_of(another_token.address()), 0.into());
-        assert_eq!(
-            cep18_token.balance_of(cep18_token.address()),
-            TRANSFER_AMOUNT_1.into()
-        );
-
-        // when the token are transferred back to the original owner
-        cep18_token.env().set_caller(cep18_token.address().clone());
-        cep18_token.transfer(&owner, &TRANSFER_AMOUNT_1.into());
-
-        // then the balances are updated
-        assert_eq!(cep18_token.balance_of(&owner), TOKEN_TOTAL_SUPPLY.into());
-        assert_eq!(cep18_token.balance_of(cep18_token.address()), 0.into());
-        assert_eq!(cep18_token.balance_of(another_token.address()), 0.into());
     }
 }

@@ -3,6 +3,7 @@ use casper_types::CLType;
 use crate::arithmetic::ArithmeticsError;
 use crate::prelude::*;
 use core::any::Any;
+use crate::ExecutionError::User;
 
 /// General error type in Odra framework
 #[repr(u16)]
@@ -143,7 +144,7 @@ impl ExecutionError {
 
 impl From<ExecutionError> for OdraError {
     fn from(error: ExecutionError) -> Self {
-        Self::ExecutionError(error)
+        Self::ExecutionError(User(error.code()))
     }
 }
 

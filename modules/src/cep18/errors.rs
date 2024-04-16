@@ -1,4 +1,4 @@
-pub mod errors {
+    /// Error enum for the CEP-18 contract.
     #[odra::odra_error]
     pub enum Error {
         /// CEP-18 contract called from within an invalid context.
@@ -35,10 +35,13 @@ pub mod errors {
         AlreadyInitialized = 60015,
         ///  The mint and burn mode is disabled.
         MintBurnDisabled = 60016,
+        /// The user cannot target themselves.
         CannotTargetSelfUser = 60017,
+        /// The burn target is invalid.
         InvalidBurnTarget = 60018,
-        MissingPackageHashForUpgrade = 60019,
+        /// The package hash for the upgrade is missing.
+        /// This error is not used by Odra implementation yet.
+        _MissingPackageHashForUpgrade = 60019,
         /// The contract is in an invalid state. This error should never happen.
         InvalidState = 60100
     }
-}
