@@ -177,8 +177,9 @@ impl TryFrom<u8> for OwnershipMode {
 
 #[repr(u8)]
 #[odra::odra_type]
-#[derive(PartialOrd, Ord, Copy)]
+#[derive(Default, PartialOrd, Ord, Copy)]
 pub enum NFTIdentifierMode {
+    #[default]
     Ordinal = 0,
     Hash = 1
 }

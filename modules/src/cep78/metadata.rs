@@ -7,7 +7,7 @@ use super::{
     modalities::{
         MetadataMutability, MetadataRequirement, NFTIdentifierMode, NFTMetadataKind, Requirement,
         TokenIdentifier
-    },
+    }
 };
 
 #[odra::module]

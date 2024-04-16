@@ -1,53 +1,45 @@
 use super::{
+    collection_info::CollectionInfo,
     constants,
     error::CEP78Error,
     events::{
-        Approval, ApprovalForAll, ApprovalRevoked, Burn, MetadataUpdated, Mint, RevokedForAll, Transfer, VariablesSet
+        Approval, ApprovalForAll, ApprovalRevoked, Burn, MetadataUpdated, Mint, RevokedForAll,
+        Transfer, VariablesSet
     },
     metadata::Metadata,
     modalities::{
-        BurnMode, EventsMode, MetadataMutability, MintingMode, NFTHolderMode, NFTIdentifierMode, NFTKind, NFTMetadataKind, OwnerReverseLookupMode, OwnershipMode, TokenIdentifier, TransferFilterContractResult, WhitelistMode
+        BurnMode, EventsMode, MetadataMutability, MintingMode, NFTHolderMode, NFTIdentifierMode,
+        NFTKind, NFTMetadataKind, OwnerReverseLookupMode, OwnershipMode, TokenIdentifier,
+        TransferFilterContractResult, WhitelistMode
     },
     pagination::{Pagination, PAGE_SIZE},
     reverse_lookup::ReverseLookup,
-    utils::{self, GetAs, IntoOrRevert},
+    settings::Settings,
+    utils,
     whitelist::ACLWhitelist
 };
 use odra::{
     args::Maybe,
-    casper_types::{bytesrepr::ToBytes, Key, URef},
+    casper_types::{bytesrepr::ToBytes, URef},
     prelude::*,
     Address, Mapping, Sequence, SubModule, UnwrapOrRevert, Var
 };
 
-#[odra::module(
-    //package_hash_key = "cep78",
-    //access_key = "cep78",
-)]
+#[odra::module]
 pub struct CEP78 {
-    installer: Var<Address>,
-    collection_name: Var<String>,
-    collection_symbol: Var<String>,
-    cap: Var<u64>,
-    allow_minting: Var<bool>,
-    minting_mode: Var<MintingMode>,
-    ownership_mode: Var<OwnershipMode>,
-    nft_kind: Var<NFTKind>,
-    holder_mode: Var<NFTHolderMode>,
-    burn_mode: Var<BurnMode>,
-    events_mode: Var<EventsMode>,
-    counter: Sequence<u64>,
+    whitelist: SubModule<ACLWhitelist>,
+    metadata: SubModule<Metadata>,
+    reverse_lookup: SubModule<ReverseLookup>,
+    pagination: SubModule<Pagination>,
+    info: SubModule<CollectionInfo>,
+    settings: SubModule<Settings>,
     owners: Mapping<String, Address>,
     issuers: Mapping<String, Address>,
     approved: Mapping<String, Option<Address>>,
     token_count: Mapping<Address, u64>,
     burnt_tokens: Mapping<String, ()>,
     operators: Mapping<(Address, Address), bool>,
-    receipt_name: Var<String>,
-    whitelist: SubModule<ACLWhitelist>,
-    metadata: SubModule<Metadata>,
-    reverse_lookup: SubModule<ReverseLookup>,
-    pagination: SubModule<Pagination>,
+    receipt_name: Var<String>
 }
 
 #[odra::module]
@@ -78,32 +70,29 @@ impl CEP78 {
         optional_metadata: Maybe<Vec<NFTMetadataKind>>
     ) {
         let installer = self.env().caller();
-        self.installer.set(installer);
-        self.collection_name.set(collection_name);
-        self.collection_symbol.set(collection_symbol);
+        self.info.init(
+            collection_name,
+            collection_symbol,
+            total_token_supply,
+            installer
+        );
+        self.settings.init(
+            allow_minting.unwrap_or(true),
+            minting_mode.clone().unwrap_or_default(),
+            ownership_mode,
+            nft_kind,
+            holder_mode.unwrap_or_default(),
+            burn_mode.unwrap_or_default(),
+            events_mode.unwrap_or_default()
+        );
 
-        if total_token_supply == 0 {
-            self.env().revert(CEP78Error::CannotInstallWithZeroSupply)
-        }
-
-        if total_token_supply > constants::MAX_TOTAL_TOKEN_SUPPLY {
-            self.env().revert(CEP78Error::ExceededMaxTotalSupply)
-        }
-
-        self.cap.set(total_token_supply);
-        self.allow_minting.set(allow_minting.unwrap_or(true));
-        self.minting_mode.set(minting_mode.clone().unwrap_or_default());
-        self.ownership_mode.set(ownership_mode);
-        self.nft_kind.set(nft_kind);
-        self.holder_mode.set(holder_mode.unwrap_or_default());
-        self.burn_mode.set(burn_mode.unwrap_or_default());
-        self.events_mode.set(events_mode.unwrap_or_default());
-        self.reverse_lookup.init(owner_reverse_lookup_mode.clone().unwrap_or_default());
+        self.reverse_lookup
+            .init(owner_reverse_lookup_mode.clone().unwrap_or_default());
         self.receipt_name.set(receipt_name.unwrap_or_default());
 
         self.whitelist.init(
             acl_white_list.unwrap_or_default(),
-            whitelist_mode.unwrap_or_default(),
+            whitelist_mode.unwrap_or_default()
         );
 
         self.metadata.init(
@@ -115,7 +104,9 @@ impl CEP78 {
             json_schema
         );
 
-        if nft_identifier_mode == NFTIdentifierMode::Hash && metadata_mutability == MetadataMutability::Mutable {
+        if nft_identifier_mode == NFTIdentifierMode::Hash
+            && metadata_mutability == MetadataMutability::Mutable
+        {
             self.env().revert(CEP78Error::InvalidMetadataMutability)
         }
 
@@ -125,8 +116,6 @@ impl CEP78 {
         {
             self.env().revert(CEP78Error::InvalidReportingMode)
         }
-
-        self.counter.next_value();
     }
 
     /// Exposes all variables that can be changed by managing account post
@@ -136,17 +125,14 @@ impl CEP78 {
     pub fn set_variables(
         &mut self,
         allow_minting: Maybe<bool>,
-        acl_whitelist: Maybe<Vec<Address>>,
+        acl_whitelist: Maybe<Vec<Address>>
     ) {
-        let installer = self
-            .installer
-            .get_or_revert_with(CEP78Error::MissingInstaller);
-
+        let installer = self.info.installer();
         // Only the installing account can change the mutable variables.
         self.ensure_not_caller(installer);
 
         if let Maybe::Some(allow_minting) = allow_minting {
-            self.allow_minting.set(allow_minting);
+            self.settings.set_allow_minting(allow_minting);
         }
 
         self.whitelist.update_addresses(acl_whitelist);
@@ -171,26 +157,24 @@ impl CEP78 {
     ) -> (String, Address, String) {
         // The contract owner can toggle the minting behavior on and off over time.
         // The contract is toggled on by default.
-        let allow_minting = self.allow_minting.get_or_default();
+        let allow_minting = self.settings.allow_minting();
 
         // If contract minting behavior is currently toggled off we revert.
         if !allow_minting {
             self.env().revert(CEP78Error::MintingIsPaused);
         }
 
-        let total_token_supply = self
-            .cap
-            .get_or_revert_with(CEP78Error::MissingTotalTokenSupply);
+        let total_token_supply = self.info.total_token_supply();
 
         // The minted_tokens_count is the number of minted tokens so far.
-        let minted_tokens_count = self.counter.get_current_value();
+        let minted_tokens_count = self.info.number_of_minted_tokens();
 
         // Revert if the token supply has been exhausted.
         if minted_tokens_count >= total_token_supply {
             self.env().revert(CEP78Error::TokenSupplyDepleted);
         }
 
-        let minting_mode: MintingMode = self.minting_mode.get_or_default();
+        let minting_mode: MintingMode = self.settings.minting_mode();
 
         let caller = self.env().caller();
 
@@ -198,9 +182,7 @@ impl CEP78 {
         if MintingMode::Installer == minting_mode {
             match caller {
                 Address::Account(_) => {
-                    let installer_account = self
-                        .installer
-                        .get_or_revert_with(CEP78Error::MissingInstaller);
+                    let installer_account = self.info.installer();
                     // Revert if private minting is required and caller is not installer.
                     if caller != installer_account {
                         self.env().revert(CEP78Error::InvalidMinter)
@@ -259,7 +241,7 @@ impl CEP78 {
         self.token_count.add(&token_owner_key, 1);
 
         // Increment number_of_minted_tokens by one
-        self.counter.next_value();
+        self.info.increment_number_of_minted_tokens();
 
         // Emit Mint event.
         self.emit_ces_event(Mint::new(
@@ -416,13 +398,14 @@ impl CEP78 {
             // Update to_account owned_tokens. Revert if owned_tokens list is not found
             let tokens_count = self.reverse_lookup.get_token_index(&token_identifier);
             if OwnerReverseLookupMode::TransfersOnly == reporting_mode {
-                self.pagination.add_page_entry_and_page_record(tokens_count, &source_key, false);
+                self.pagination
+                    .add_page_entry_and_page_record(tokens_count, &source_key, false);
             }
 
             let (page_table_entry, page_uref) = self.pagination.update_page_entry_and_page_record(
                 tokens_count,
                 &source_key,
-                &target_key,
+                &target_key
             );
 
             let receipt_name = self.receipt_name.get_or_default();
@@ -510,7 +493,7 @@ impl CEP78 {
         // Depending on approve_all we either approve all or disapprove all.
         self.operators.set(&(caller, operator), approve_all);
 
-        let events_mode: EventsMode = self.events_mode.get_or_default();
+        let events_mode: EventsMode = self.settings.events_mode();
         if let EventsMode::CES = events_mode {
             if approve_all {
                 env.emit_event(ApprovalForAll::new(caller, operator));
@@ -618,6 +601,18 @@ impl CEP78 {
         }
         todo!()
     }
+
+    pub fn is_whitelisted(&self, address: &Address) -> bool {
+        self.whitelist.is_whitelisted(address)
+    }
+
+    pub fn get_whitelist_mode(&self) -> WhitelistMode {
+        self.whitelist.get_mode()
+    }
+
+    pub fn get_collection_name(&self) -> String {
+        self.info.collection_name()
+    }
 }
 
 impl CEP78 {
@@ -659,7 +654,7 @@ impl CEP78 {
             NFTIdentifierMode::Hash => TokenIdentifier::Hash(token_hash.unwrap(&env))
         };
 
-        let number_of_minted_tokens = self.counter.get_current_value();
+        let number_of_minted_tokens = self.info.number_of_minted_tokens();
         if let NFTIdentifierMode::Ordinal = identifier_mode {
             // Revert if token_id is out of bounds
             if token_identifier.get_index().unwrap_or_revert(&env) >= number_of_minted_tokens {
@@ -718,7 +713,7 @@ impl CEP78 {
 
     #[inline]
     fn emit_ces_event<T: ToBytes>(&self, event: T) {
-        let events_mode: EventsMode = self.events_mode.get_or_default();
+        let events_mode: EventsMode = self.settings.events_mode();
         if let EventsMode::CES = events_mode {
             self.env().emit_event(event);
         }
@@ -726,14 +721,14 @@ impl CEP78 {
 
     #[inline]
     fn ensure_burnable(&self) {
-        if let BurnMode::NonBurnable = self.burn_mode.get_or_default() {
+        if let BurnMode::NonBurnable = self.settings.burn_mode() {
             self.env().revert(CEP78Error::InvalidBurnMode)
         }
     }
 
     #[inline]
     fn ownership_mode(&self) -> OwnershipMode {
-        self.ownership_mode.get_or_default()
+        self.settings.ownership_mode()
     }
 }
 

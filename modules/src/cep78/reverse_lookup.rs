@@ -2,7 +2,7 @@ use odra::{prelude::*, Mapping, UnwrapOrRevert, Var};
 
 use super::{
     error::CEP78Error,
-    modalities::{OwnerReverseLookupMode, TokenIdentifier},
+    modalities::{OwnerReverseLookupMode, TokenIdentifier}
 };
 
 #[odra::module]

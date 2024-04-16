@@ -1,19 +1,17 @@
-use odra::{args::Maybe, prelude::*, Address, List, Var};
+use odra::{args::Maybe, prelude::*, Address, List, Mapping, Var};
 
 use super::{error::CEP78Error, modalities::WhitelistMode};
 
 #[odra::module]
 pub struct ACLWhitelist {
-    addresses: List<Address>,
+    addresses: Var<Vec<Address>>,
     mode: Var<WhitelistMode>,
     package_mode: Var<bool>
 }
 
 impl ACLWhitelist {
     pub fn init(&mut self, addresses: Vec<Address>, mode: WhitelistMode) {
-        for address in addresses {
-            self.addresses.push(address);
-        }
+        self.addresses.set(addresses);
         self.mode.set(mode);
         // Odra does not support version mode.
         self.package_mode.set(true);
@@ -21,12 +19,13 @@ impl ACLWhitelist {
 
     #[inline]
     pub fn get_mode(&self) -> WhitelistMode {
-        self.mode.get_or_default()
+        // self.mode.get_or_default()
+        WhitelistMode::Locked
     }
 
     #[inline]
     pub fn is_whitelisted(&self, address: &Address) -> bool {
-        self.addresses.iter().any(|a| &a == address)
+        self.addresses.get_or_default().contains(address)
     }
 
     pub fn update_addresses(&mut self, new_addresses: Maybe<Vec<Address>>) {
@@ -34,10 +33,7 @@ impl ACLWhitelist {
         if !new_addresses.is_empty() {
             match self.get_mode() {
                 WhitelistMode::Unlocked => {
-                    while let Some(_) = self.addresses.pop() {}
-                    for address in new_addresses {
-                        self.addresses.push(address);
-                    }
+                    self.addresses.set(new_addresses);
                 }
                 WhitelistMode::Locked => self.env().revert(CEP78Error::InvalidWhitelistMode)
             }

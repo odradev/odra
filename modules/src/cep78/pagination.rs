@@ -1,4 +1,8 @@
-use odra::{casper_types::{AccessRights, URef}, prelude::*, Address, Mapping, UnwrapOrRevert};
+use odra::{
+    casper_types::{AccessRights, URef},
+    prelude::*,
+    Address, Mapping, UnwrapOrRevert
+};
 
 use crate::cep78::constants::PREFIX_PAGE_DICTIONARY;
 
@@ -111,8 +115,7 @@ impl Pagination {
 
         let _ = core::mem::replace(&mut target_page[page_address as usize], true);
 
-        self.pages
-            .set(&new_page_key, target_page);
+        self.pages.set(&new_page_key, target_page);
         // (page_table_entry, page_uref)
         let addr_array = [0u8; 32];
         let uref_a = URef::new(addr_array, AccessRights::READ);
@@ -122,42 +125,40 @@ impl Pagination {
 
     pub fn register_owner(&self, owner: &Address) {
         let page = self.page_tables.get_or_default(&owner);
-        
 
+        // let page_table_uref = utils::get_uref(
+        //     PAGE_TABLE,
+        //     NFTCoreError::MissingPageTableURef,
+        //     NFTCoreError::InvalidPageTableURef,
+        // );
 
-         // let page_table_uref = utils::get_uref(
-            //     PAGE_TABLE,
-            //     NFTCoreError::MissingPageTableURef,
-            //     NFTCoreError::InvalidPageTableURef,
-            // );
+        // let owner_item_key = utils::encode_dictionary_item_key(owner_key);
 
-            // let owner_item_key = utils::encode_dictionary_item_key(owner_key);
-
-            // if storage::dictionary_get::<Vec<bool>>(page_table_uref, &owner_item_key)
-            //     .unwrap_or_revert()
-            //     .is_none()
-            // {
-            //     let page_table_width = utils::get_stored_value_with_user_errors::<u64>(
-            //         PAGE_LIMIT,
-            //         NFTCoreError::MissingPageLimit,
-            //         NFTCoreError::InvalidPageLimit,
-            //     );
-            //     storage::dictionary_put(
-            //         page_table_uref,
-            //         &owner_item_key,
-            //         vec![false; page_table_width as usize],
-            //     );
-            // }
-            // let collection_name = utils::get_stored_value_with_user_errors::<String>(
-            //     COLLECTION_NAME,
-            //     NFTCoreError::MissingCollectionName,
-            //     NFTCoreError::InvalidCollectionName,
-            // );
-            // let package_uref = storage::new_uref(utils::get_stored_value_with_user_errors::<String>(
-            //     &format!("{PREFIX_CEP78}_{collection_name}"),
-            //     NFTCoreError::MissingCep78PackageHash,
-            //     NFTCoreError::InvalidCep78InvalidHash,
-            // ));
-            // runtime::ret(CLValue::from_t((collection_name, package_uref)).unwrap_or_revert())
+        // if storage::dictionary_get::<Vec<bool>>(page_table_uref, &owner_item_key)
+        //     .unwrap_or_revert()
+        //     .is_none()
+        // {
+        //     let page_table_width = utils::get_stored_value_with_user_errors::<u64>(
+        //         PAGE_LIMIT,
+        //         NFTCoreError::MissingPageLimit,
+        //         NFTCoreError::InvalidPageLimit,
+        //     );
+        //     storage::dictionary_put(
+        //         page_table_uref,
+        //         &owner_item_key,
+        //         vec![false; page_table_width as usize],
+        //     );
+        // }
+        // let collection_name = utils::get_stored_value_with_user_errors::<String>(
+        //     COLLECTION_NAME,
+        //     NFTCoreError::MissingCollectionName,
+        //     NFTCoreError::InvalidCollectionName,
+        // );
+        // let package_uref = storage::new_uref(utils::get_stored_value_with_user_errors::<String>(
+        //     &format!("{PREFIX_CEP78}_{collection_name}"),
+        //     NFTCoreError::MissingCep78PackageHash,
+        //     NFTCoreError::InvalidCep78InvalidHash,
+        // ));
+        // runtime::ret(CLValue::from_t((collection_name, package_uref)).unwrap_or_revert())
     }
 }

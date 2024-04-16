@@ -1,6 +1,5 @@
 use odra::{
-    casper_types::bytesrepr::FromBytes,
-    Address, ContractEnv, OdraError, UnwrapOrRevert, Var
+    casper_types::bytesrepr::FromBytes, Address, ContractEnv, OdraError, UnwrapOrRevert, Var
 };
 
 pub trait GetAs<T> {
