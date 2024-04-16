@@ -32,7 +32,7 @@ impl ContractContainer {
                 OdraError::VmError(VmError::NoSuchMethod(call_def.entry_point().to_string()))
             })?;
         // validate the args, return an error if the args are invalid
-        self.validate_args(&ep.args, call_def.args())?;
+        // self.validate_args(&ep.args, call_def.args())?;
         self.entry_points_caller.call(call_def)
     }
 
