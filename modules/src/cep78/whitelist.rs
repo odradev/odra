@@ -1,4 +1,4 @@
-use odra::{args::Maybe, prelude::*, Address, List, Mapping, Var};
+use odra::{args::Maybe, prelude::*, Address, Var};
 
 use super::{error::CEP78Error, modalities::WhitelistMode};
 
@@ -19,8 +19,7 @@ impl ACLWhitelist {
 
     #[inline]
     pub fn get_mode(&self) -> WhitelistMode {
-        // self.mode.get_or_default()
-        WhitelistMode::Locked
+        self.mode.get_or_default()
     }
 
     #[inline]

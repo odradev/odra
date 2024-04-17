@@ -68,4 +68,9 @@ impl Settings {
     pub fn minting_mode(&self) -> MintingMode {
         self.minting_mode.get_or_default()
     }
+
+    #[inline]
+    pub fn holder_mode(&self) -> NFTHolderMode {
+        self.holder_mode.get_or_default()
+    }
 }

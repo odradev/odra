@@ -129,7 +129,7 @@ impl CEP78 {
     ) {
         let installer = self.info.installer();
         // Only the installing account can change the mutable variables.
-        self.ensure_not_caller(installer);
+        self.ensure_caller(installer);
 
         if let Maybe::Some(allow_minting) = allow_minting {
             self.settings.set_allow_minting(allow_minting);
@@ -176,7 +176,7 @@ impl CEP78 {
 
         let minting_mode: MintingMode = self.settings.minting_mode();
 
-        let caller = self.env().caller();
+        let caller = self.verified_caller();
 
         // Revert if minting is private and caller is not installer.
         if MintingMode::Installer == minting_mode {
@@ -712,6 +712,13 @@ impl CEP78 {
     }
 
     #[inline]
+    fn ensure_caller(&self, address: Address) {
+        if self.env().caller() != address {
+            self.env().revert(CEP78Error::InvalidAccount);
+        }
+    }
+
+    #[inline]
     fn emit_ces_event<T: ToBytes>(&self, event: T) {
         let events_mode: EventsMode = self.settings.events_mode();
         if let EventsMode::CES = events_mode {
@@ -729,6 +736,20 @@ impl CEP78 {
     #[inline]
     fn ownership_mode(&self) -> OwnershipMode {
         self.settings.ownership_mode()
+    }
+
+    #[inline]
+    fn verified_caller(&self) -> Address {
+        let holder_mode = self.settings.holder_mode();
+        let caller = self.env().caller();
+
+        match (caller, holder_mode) {
+            (Address::Account(_), NFTHolderMode::Contracts)
+            | (Address::Contract(_), NFTHolderMode::Accounts) => {
+                self.env().revert(CEP78Error::InvalidHolderMode);
+            }
+            _ => caller
+        }
     }
 }
 
