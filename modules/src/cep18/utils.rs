@@ -1,5 +1,3 @@
-use odra::prelude::*;
-
 /// Security badge that can be assigned to an account to grant it certain permissions.
 #[odra::odra_type]
 pub enum SecurityBadge {
