@@ -63,6 +63,7 @@ impl CEP78 {
         json_schema: Maybe<String>,
         receipt_name: Maybe<String>,
         burn_mode: Maybe<BurnMode>,
+        operator_burn_mode: Maybe<bool>,
         owner_reverse_lookup_mode: Maybe<OwnerReverseLookupMode>,
         events_mode: Maybe<EventsMode>,
         transfer_filter_contract_contract_key: Maybe<Address>,
@@ -83,7 +84,8 @@ impl CEP78 {
             nft_kind,
             holder_mode.unwrap_or_default(),
             burn_mode.unwrap_or_default(),
-            events_mode.unwrap_or_default()
+            events_mode.unwrap_or_default(),
+            operator_burn_mode.unwrap_or_default()
         );
 
         self.reverse_lookup
@@ -112,7 +114,7 @@ impl CEP78 {
 
         if ownership_mode == OwnershipMode::Minter
             && minting_mode.unwrap_or_default() == MintingMode::Installer
-            && owner_reverse_lookup_mode.unwrap_or_default() == OwnerReverseLookupMode::NoLookUp
+            && owner_reverse_lookup_mode.unwrap_or_default() == OwnerReverseLookupMode::Complete
         {
             self.env().revert(CEP78Error::InvalidReportingMode)
         }
@@ -125,7 +127,8 @@ impl CEP78 {
     pub fn set_variables(
         &mut self,
         allow_minting: Maybe<bool>,
-        acl_whitelist: Maybe<Vec<Address>>
+        acl_whitelist: Maybe<Vec<Address>>,
+        operator_burn_mode: Maybe<bool>
     ) {
         let installer = self.info.installer();
         // Only the installing account can change the mutable variables.
@@ -133,6 +136,10 @@ impl CEP78 {
 
         if let Maybe::Some(allow_minting) = allow_minting {
             self.settings.set_allow_minting(allow_minting);
+        }
+
+        if let Maybe::Some(operator_burn_mode) = operator_burn_mode {
+            self.settings.set_operator_burn_mode(operator_burn_mode);
         }
 
         self.whitelist.update_addresses(acl_whitelist);
@@ -613,6 +620,13 @@ impl CEP78 {
     pub fn get_collection_name(&self) -> String {
         self.info.collection_name()
     }
+
+    pub fn is_minting_allowed(&self) -> bool {
+        self.settings.allow_minting()
+    }
+    pub fn is_operator_burn_mode(&self) -> bool {
+        self.settings.operator_burn_mode()
+    }
 }
 
 impl CEP78 {
@@ -720,7 +734,7 @@ impl CEP78 {
 
     #[inline]
     fn emit_ces_event<T: ToBytes>(&self, event: T) {
-        let events_mode: EventsMode = self.settings.events_mode();
+        let events_mode = self.settings.events_mode();
         if let EventsMode::CES = events_mode {
             self.env().emit_event(event);
         }

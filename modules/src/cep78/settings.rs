@@ -16,7 +16,8 @@ pub struct Settings {
     nft_kind: Var<NFTKind>,
     holder_mode: Var<NFTHolderMode>,
     burn_mode: Var<BurnMode>,
-    events_mode: Var<EventsMode>
+    events_mode: Var<EventsMode>,
+    operator_burn_mode: Var<bool>
 }
 
 impl Settings {
@@ -28,7 +29,8 @@ impl Settings {
         nft_kind: NFTKind,
         holder_mode: NFTHolderMode,
         burn_mode: BurnMode,
-        events_mode: EventsMode
+        events_mode: EventsMode,
+        operator_burn_mode: bool
     ) {
         self.allow_minting.set(allow_minting);
         self.minting_mode.set(minting_mode);
@@ -37,6 +39,7 @@ impl Settings {
         self.holder_mode.set(holder_mode);
         self.burn_mode.set(burn_mode);
         self.events_mode.set(events_mode);
+        self.operator_burn_mode.set(operator_burn_mode);
     }
 
     #[inline]
@@ -72,5 +75,15 @@ impl Settings {
     #[inline]
     pub fn holder_mode(&self) -> NFTHolderMode {
         self.holder_mode.get_or_default()
+    }
+
+    #[inline]
+    pub fn operator_burn_mode(&self) -> bool {
+        self.operator_burn_mode.get_or_default()
+    }
+
+    #[inline]
+    pub fn set_operator_burn_mode(&mut self, value: bool) {
+        self.operator_burn_mode.set(value)
     }
 }

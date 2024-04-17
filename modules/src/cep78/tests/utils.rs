@@ -3,14 +3,9 @@ use crate::cep78::{
         BurnMode, EventsMode, MetadataMutability, MintingMode, NFTHolderMode, NFTIdentifierMode,
         NFTKind, NFTMetadataKind, OwnerReverseLookupMode, OwnershipMode, WhitelistMode
     },
-    token::{CEP78HostRef, CEP78InitArgs}
+    token::CEP78InitArgs
 };
-use derive_builder::Builder;
-use odra::{
-    args::Maybe,
-    casper_types::{runtime_args, RuntimeArgs},
-    Address
-};
+use odra::{args::Maybe, Address};
 
 #[derive(Default)]
 pub struct InitArgsBuilder {
@@ -174,6 +169,7 @@ impl InitArgsBuilder {
             receipt_name: self.receipt_name,
             nft_identifier_mode: self.identifier_mode,
             burn_mode: self.burn_mode,
+            operator_burn_mode: self.operator_burn_mode,
             nft_metadata_kind: self.nft_metadata_kind,
             metadata_mutability: self.metadata_mutability,
             owner_reverse_lookup_mode: self.owner_reverse_lookup_mode,

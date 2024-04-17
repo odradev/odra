@@ -7,16 +7,12 @@ use odra::{
 
 use crate::cep78::{
     error::CEP78Error,
-    modalities::{MintingMode, NFTHolderMode, NFTMetadataKind, OwnershipMode, WhitelistMode},
-    tests::utils::{InitArgsBuilder, TEST_PRETTY_721_META_DATA},
+    modalities::{MintingMode, NFTHolderMode, OwnershipMode, WhitelistMode},
+    tests::utils::TEST_PRETTY_721_META_DATA,
     token::CEP78HostRef
 };
 
-fn default_args_builder() -> InitArgsBuilder {
-    InitArgsBuilder::default()
-        .total_token_supply(100u64)
-        .nft_metadata_kind(NFTMetadataKind::NFT721)
-}
+use super::default_args_builder;
 
 #[odra::module]
 struct DummyContract;
@@ -461,7 +457,8 @@ fn should_be_able_to_update_whitelist_for_minting() {
 
     contract.set_variables(
         Maybe::None,
-        Maybe::Some(vec![minting_contract.address().clone()])
+        Maybe::Some(vec![minting_contract.address().clone()]),
+        Maybe::None
     );
 
     assert!(
