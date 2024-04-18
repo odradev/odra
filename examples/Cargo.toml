@@ -43,6 +43,12 @@ required-features = ["livenet"]
 test = false
 
 [[bin]]
+name = "cep18_on_livenet"
+path = "bin/cep18_on_livenet.rs"
+required-features = ["livenet"]
+test = false
+
+[[bin]]
 name = "livenet_tests"
 path = "bin/livenet_tests.rs"
 required-features = ["livenet"]

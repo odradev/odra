@@ -1,7 +1,9 @@
+use casper_types::CLValue;
+
+use crate::{Address, OdraError};
 use crate::call_def::CallDef;
 use crate::casper_types::bytesrepr::Bytes;
 use crate::casper_types::U512;
-use crate::{Address, OdraError};
 
 /// Trait representing the context of a smart contract.
 #[cfg_attr(test, allow(unreachable_code))]
@@ -25,6 +27,38 @@ pub trait ContractContext {
     /// * `key` - The key to set the value for.
     /// * `value` - The value to be set.
     fn set_value(&self, key: &[u8], value: Bytes);
+    
+    /// Retrieves the value behind a named key.
+    ///
+    /// # Arguments
+    ///  
+    /// * `name` - The name of the key.
+    fn get_named_value(&self, name: &str) -> Option<Bytes>;
+    
+    /// Sets the value behind a named key.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `name` - The name of the key.
+    /// * `value` - The value to set.
+    fn set_named_value(&self, name: &str, value: CLValue);
+    
+    /// Retrieves the key value behind a named dictionary.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `dictionary_name` - The name of the dictionary.
+    /// * `key` - The key to retrieve the value for.
+    fn get_dictionary_value(&self, dictionary_name: &str, key: &str) -> Option<Bytes>;
+    
+    /// Sets the key value behind a named dictionary.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `dictionary_name` - The name of the dictionary.
+    /// * `key` - The key to set the value for.
+    /// * `value` - The value to set.
+    fn set_dictionary_value(&self, dictionary_name: &str, key: &str, value: CLValue);
 
     /// Retrieves the address of the caller.
     fn caller(&self) -> Address;

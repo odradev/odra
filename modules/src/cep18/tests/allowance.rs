@@ -2,20 +2,22 @@
 mod allowance_tests {
     use core::ops::Add;
 
-    use odra::Address;
     use odra::casper_types::U256;
     use odra::host::{Deployer, HostRef, NoArgs};
+    use odra::Address;
 
     use crate::cep18::cep18_client_contract::Cep18ClientContractHostRef;
     use crate::cep18::errors::Error::InsufficientAllowance;
+    use crate::cep18_token::tests::{
+        invert_address, setup, ALLOWANCE_AMOUNT_1, ALLOWANCE_AMOUNT_2, TRANSFER_AMOUNT_1
+    };
     use crate::cep18_token::Cep18HostRef;
-    use crate::cep18_token::tests::{ALLOWANCE_AMOUNT_1, ALLOWANCE_AMOUNT_2, invert_address, setup, TRANSFER_AMOUNT_1};
 
     fn test_approve_for(
         cep18_token: &mut Cep18HostRef,
         sender: Address,
         owner: Address,
-        spender: Address,
+        spender: Address
     ) {
         let amount = TRANSFER_AMOUNT_1.into();
 
@@ -55,7 +57,8 @@ mod allowance_tests {
         let alice = cep18_token.env().get_account(1);
         let token_address = *cep18_token.address();
         let client_contract = Cep18ClientContractHostRef::deploy(&mut cep18_token.env(), NoArgs);
-        let another_client_contract = Cep18ClientContractHostRef::deploy(&mut cep18_token.env(), NoArgs);
+        let another_client_contract =
+            Cep18ClientContractHostRef::deploy(&mut cep18_token.env(), NoArgs);
 
         let client_contract_address = client_contract.address();
         let another_client_contract_address = another_client_contract.address();
@@ -70,18 +73,38 @@ mod allowance_tests {
             ALLOWANCE_AMOUNT_1.into()
         );
 
-        client_contract.transfer_from_as_stored_contract(token_address, owner, *client_contract_address, ALLOWANCE_AMOUNT_1.into());
-        assert_eq!(cep18_token.balance_of(client_contract_address), ALLOWANCE_AMOUNT_1.into());
+        client_contract.transfer_from_as_stored_contract(
+            token_address,
+            owner,
+            *client_contract_address,
+            ALLOWANCE_AMOUNT_1.into()
+        );
+        assert_eq!(
+            cep18_token.balance_of(client_contract_address),
+            ALLOWANCE_AMOUNT_1.into()
+        );
 
         // contract to contract
-        client_contract.approve_as_stored_contract(token_address, *another_client_contract_address, ALLOWANCE_AMOUNT_1.into());
+        client_contract.approve_as_stored_contract(
+            token_address,
+            *another_client_contract_address,
+            ALLOWANCE_AMOUNT_1.into()
+        );
         assert_eq!(
             cep18_token.allowance(client_contract_address, another_client_contract_address),
             ALLOWANCE_AMOUNT_1.into()
         );
 
-        another_client_contract.transfer_from_as_stored_contract(token_address, *client_contract_address, *another_client_contract_address, ALLOWANCE_AMOUNT_1.into());
-        assert_eq!(cep18_token.balance_of(another_client_contract_address), ALLOWANCE_AMOUNT_1.into());
+        another_client_contract.transfer_from_as_stored_contract(
+            token_address,
+            *client_contract_address,
+            *another_client_contract_address,
+            ALLOWANCE_AMOUNT_1.into()
+        );
+        assert_eq!(
+            cep18_token.balance_of(another_client_contract_address),
+            ALLOWANCE_AMOUNT_1.into()
+        );
     }
 
     #[test]

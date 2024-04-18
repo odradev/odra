@@ -1,12 +1,16 @@
+use casper_types::bytesrepr::deserialize_from_slice;
+use casper_types::{BLAKE2B_DIGEST_LENGTH, CLValue};
+use casper_types::crypto::PublicKey;
+
+use crate::{consts, ExecutionError, prelude::*};
+use crate::{UnwrapOrRevert, utils};
+use crate::{Address, OdraError};
 use crate::args::EntrypointArgument;
 use crate::call_def::CallDef;
-use crate::casper_types::bytesrepr::{Bytes, FromBytes, ToBytes};
 use crate::casper_types::{CLTyped, U512};
+use crate::casper_types::bytesrepr::{Bytes, FromBytes, ToBytes};
 pub use crate::ContractContext;
-use crate::{consts, prelude::*, ExecutionError};
-use crate::{utils, UnwrapOrRevert};
-use crate::{Address, OdraError};
-use casper_types::crypto::PublicKey;
+use crate::ExecutionError::Formatting;
 
 const INDEX_SIZE: usize = 4;
 const KEY_LEN: usize = 64;
@@ -49,7 +53,7 @@ impl ContractEnv {
         let mut key = Vec::with_capacity(INDEX_SIZE + self.mapping_data.len());
         key.extend_from_slice(self.index.to_be_bytes().as_ref());
         key.extend_from_slice(&self.mapping_data);
-        let hashed_key = self.backend.borrow().hash(&key);
+        let hashed_key = self.backend.borrow().hash(key.as_slice());
         utils::hex_to_slice(&hashed_key, &mut result);
         result
     }
@@ -77,7 +81,7 @@ impl ContractEnv {
         self.backend
             .borrow()
             .get_value(key)
-            .map(|bytes| deserialize_bytes(bytes, self))
+            .map(|bytes| deserialize_from_slice(bytes).unwrap_or_revert(self))
     }
 
     /// Sets the value associated with the given key in the contract storage.
@@ -85,6 +89,50 @@ impl ContractEnv {
         let result = value.to_bytes().map_err(ExecutionError::from);
         let bytes = result.unwrap_or_revert(self);
         self.backend.borrow().set_value(key, bytes.into());
+    }
+
+    /// Retrieves the value associated with the given named key from the contract storage.
+    pub fn get_named_value<T: FromBytes + CLTyped, U: AsRef<str>>(&self, name: U) -> Option<T> {
+        let key = name.as_ref();
+        let bytes = self.backend.borrow().get_named_value(key);
+        bytes.map(|b| deserialize_from_slice(b).unwrap_or_revert(self))
+    }
+
+    /// Sets the value associated with the given named key in the contract storage.
+    pub fn set_named_value<T: CLTyped + ToBytes, U: AsRef<str>>(&self, name: U, value: T) {
+        let key = name.as_ref();
+        // todo: map errors to correct Odra errors
+        let cl_value = CLValue::from_t(value).unwrap_or_revert(self);
+        self.backend.borrow().set_named_value(key, cl_value);
+    }
+
+    /// Retrieves the value associated with the given named key from the named dictionary in the contract storage.
+pub fn get_dictionary_value<T: FromBytes + CLTyped, U: AsRef<str>, V: AsRef<str>>(
+        &self,
+        dictionary_name: U,
+        key: V
+    ) -> Option<T> {
+        let dictionary_name = dictionary_name.as_ref();
+        let key = key.as_ref();
+        let bytes = self.backend
+            .borrow()
+            .get_dictionary_value(dictionary_name, key);
+        bytes.map(|b| deserialize_from_slice(b).map_err(|_| Formatting).unwrap_or_revert(self))
+    }
+
+    /// Sets the value associated with the given named key in the named dictionary in the contract storage.
+    pub fn set_dictionary_value<T: CLTyped + ToBytes, U: AsRef<str>, V: AsRef<str>>(
+        &self,
+        dictionary_name: U,
+        key: V,
+        value: T
+    ) {
+        let dictionary_name = dictionary_name.as_ref();
+        let key = key.as_ref();
+        let cl_value = CLValue::from_t(value).map_err(|_| Formatting).unwrap_or_revert(self);
+        self.backend
+            .borrow()
+            .set_dictionary_value(dictionary_name, key, cl_value);
     }
 
     /// Returns the address of the caller of the contract.
@@ -101,7 +149,7 @@ impl ContractEnv {
     pub fn call_contract<T: FromBytes>(&self, address: Address, call: CallDef) -> T {
         let backend = self.backend.borrow();
         let bytes = backend.call_contract(address, call);
-        deserialize_bytes(bytes, self)
+        deserialize_from_slice(bytes).unwrap_or_revert(self)
     }
 
     /// Returns the address of the current contract.
@@ -175,18 +223,14 @@ impl ContractEnv {
     /// # Returns
     ///
     /// The hash value as a 32-byte array.
-    pub fn hash<T: ToBytes>(&self, value: T) -> [u8; 32] {
-        let bytes = value
-            .to_bytes()
-            .map_err(ExecutionError::from)
-            .unwrap_or_revert(self);
-        self.backend.borrow().hash(&bytes)
+    pub fn hash<T: AsRef<[u8]>>(&self, value: T) -> [u8; BLAKE2B_DIGEST_LENGTH] {
+        self.backend.borrow().hash(value.as_ref())
     }
 }
 
 /// Represents the environment accessible in the contract execution context.
 ///
-/// `ExecutionEnv` provides pre and post execution methods for the contract, such as performing non-reentrant checks
+/// `ExecutionEnv` provides pre- and post-execution methods for the contract, such as performing non-reentrant checks
 /// and handling the attached value.
 pub struct ExecutionEnv {
     env: Rc<ContractEnv>
@@ -240,24 +284,11 @@ impl ExecutionEnv {
     pub fn get_named_arg<T: FromBytes + EntrypointArgument>(&self, name: &str) -> T {
         if T::is_required() {
             let bytes = self.env.backend.borrow().get_named_arg_bytes(name);
-            deserialize_bytes(bytes, &self.env)
+            deserialize_from_slice(bytes).unwrap_or_revert(&self.env)
         } else {
             let bytes = self.env.backend.borrow().get_opt_named_arg_bytes(name);
-            let result = bytes.map(|bytes| deserialize_bytes(bytes, &self.env));
+            let result = bytes.map(|bytes| deserialize_from_slice(bytes).unwrap_or_revert(&self.env));
             T::unwrap(result, &self.env)
         }
-    }
-}
-
-fn deserialize_bytes<T: FromBytes>(bytes: Bytes, env: &ContractEnv) -> T {
-    match T::from_bytes(&bytes) {
-        Ok((value, remainder)) => {
-            if remainder.is_empty() {
-                value
-            } else {
-                env.revert(ExecutionError::LeftOverBytes)
-            }
-        }
-        Err(err) => env.revert(ExecutionError::from(err))
     }
 }

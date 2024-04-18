@@ -1,26 +1,31 @@
 //! CEP-18 Casper Fungible Token standard implementation.
-use odra::{Address, casper_types::U256, Mapping, UnwrapOrRevert, Var};
 use odra::prelude::*;
+use odra::{casper_types::U256, Address, Mapping, SubModule, UnwrapOrRevert, Var};
 
 use crate::cep18::errors::Error;
 use crate::cep18::errors::Error::{
-    CannotTargetSelfUser, InsufficientRights, InvalidBurnTarget, InvalidState, MintBurnDisabled,
-    Overflow
+    CannotTargetSelfUser, InsufficientRights, InvalidBurnTarget, MintBurnDisabled, Overflow
 };
 use crate::cep18::events::{
-    Burn, DecreaseAllowance, IncreaseAllowance, Mint, SetAllowance, Transfer
+    Burn, ChangeSecurity, DecreaseAllowance, IncreaseAllowance, Mint, SetAllowance, Transfer,
+    TransferFrom
+};
+use crate::cep18::storage::{
+    Cep18AllowancesStorage, Cep18BalancesStorage, Cep18DecimalsStorage, Cep18NameStorage,
+    Cep18SymbolStorage, Cep18TotalSupplyStorage
 };
 use crate::cep18::utils::{Cep18Modality, SecurityBadge};
 
 /// CEP-18 token module
-#[odra::module]
+#[odra::module(events = [Mint, Burn, SetAllowance, IncreaseAllowance, DecreaseAllowance, Transfer,
+    TransferFrom, ChangeSecurity])]
 pub struct Cep18 {
-    decimals: Var<u8>,
-    symbol: Var<String>,
-    name: Var<String>,
-    total_supply: Var<U256>,
-    balances: Mapping<Address, U256>,
-    allowances: Mapping<(Address, Address), U256>,
+    decimals: SubModule<Cep18DecimalsStorage>,
+    symbol: SubModule<Cep18SymbolStorage>,
+    name: SubModule<Cep18NameStorage>,
+    total_supply: SubModule<Cep18TotalSupplyStorage>,
+    balances: SubModule<Cep18BalancesStorage>,
+    allowances: SubModule<Cep18AllowancesStorage>,
     security_badges: Mapping<Address, SecurityBadge>,
     modality: Var<u8>
 }
@@ -100,38 +105,50 @@ impl Cep18 {
             self.env().revert(InsufficientRights);
         }
 
+        let mut badges_map = BTreeMap::new();
+
         // set the security badges
         for admin in admin_list {
             self.security_badges.set(&admin, SecurityBadge::Admin);
+            badges_map.insert(admin, SecurityBadge::Admin);
         }
 
         for minter in minter_list {
             self.security_badges.set(&minter, SecurityBadge::Minter);
+            badges_map.insert(minter, SecurityBadge::Minter);
         }
 
         for none in none_list {
             self.security_badges.set(&none, SecurityBadge::None);
+            badges_map.insert(none, SecurityBadge::None);
         }
+
+        badges_map.remove(&caller);
+
+        self.env().emit_event(ChangeSecurity {
+            admin: caller,
+            sec_change_map: badges_map
+        });
     }
 
     /// Returns the name of the token.
     pub fn name(&self) -> String {
-        self.name.get_or_revert_with(InvalidState)
+        self.name.get()
     }
 
     /// Returns the symbol of the token.
     pub fn symbol(&self) -> String {
-        self.symbol.get_or_revert_with(InvalidState)
+        self.symbol.get()
     }
 
     /// Returns the number of decimals the token uses.
     pub fn decimals(&self) -> u8 {
-        self.decimals.get_or_revert_with(InvalidState)
+        self.decimals.get()
     }
 
     /// Returns the total supply of the token.
     pub fn total_supply(&self) -> U256 {
-        self.total_supply.get_or_default()
+        self.total_supply.get()
     }
 
     /// Returns the balance of the given address.
@@ -141,7 +158,7 @@ impl Cep18 {
 
     /// Returns the amount of tokens the owner has allowed the spender to spend.
     pub fn allowance(&self, owner: &Address, spender: &Address) -> U256 {
-        self.allowances.get_or_default(&(*owner, *spender))
+        self.allowances.get_or_default(owner, spender)
     }
 
     /// Approves the spender to spend the given amount of tokens on behalf of the caller.
@@ -151,7 +168,7 @@ impl Cep18 {
             self.env().revert(CannotTargetSelfUser);
         }
 
-        self.allowances.set(&(owner, *spender), *amount);
+        self.allowances.set(&owner, spender, *amount);
         self.env().emit_event(SetAllowance {
             owner,
             spender: *spender,
@@ -164,7 +181,7 @@ impl Cep18 {
         let owner = self.env().caller();
         let allowance = self.allowance(&owner, spender);
         self.allowances
-            .set(&(owner, *spender), allowance.saturating_sub(*decr_by));
+            .set(&owner, spender, allowance.saturating_sub(*decr_by));
         self.env().emit_event(DecreaseAllowance {
             owner,
             spender: *spender,
@@ -179,10 +196,10 @@ impl Cep18 {
         if owner == *spender {
             self.env().revert(CannotTargetSelfUser);
         }
-        let allowance = self.allowances.get_or_default(&(owner, *spender));
+        let allowance = self.allowances.get_or_default(&owner, spender);
 
         self.allowances
-            .set(&(owner, *spender), allowance.saturating_add(*inc_by));
+            .set(&owner, spender, allowance.saturating_add(*inc_by));
         self.env().emit_event(IncreaseAllowance {
             owner,
             spender: *spender,
@@ -215,16 +232,17 @@ impl Cep18 {
         let allowance = self.allowance(owner, &spender);
 
         self.allowances.set(
-            &(*owner, *recipient),
+            owner,
+            recipient,
             allowance
                 .checked_sub(*amount)
                 .unwrap_or_revert_with(&self.env(), Error::InsufficientAllowance)
         );
-        self.env().emit_event(DecreaseAllowance {
-            owner: *owner,
+        self.env().emit_event(TransferFrom {
             spender,
-            allowance,
-            decr_by: *amount
+            owner: *owner,
+            recipient: *recipient,
+            amount: *amount
         });
 
         self.raw_transfer(owner, recipient, amount);
@@ -269,7 +287,7 @@ impl Cep18 {
         if self.balance_of(owner) < *amount {
             self.env().revert(Error::InsufficientBalance);
         }
-        let total_supply = self.total_supply.get_or_default();
+        let total_supply = self.total_supply.get();
         let balance = self.balance_of(owner);
 
         self.total_supply.set(
@@ -313,10 +331,10 @@ pub(crate) mod tests {
     use alloc::string::ToString;
     use alloc::vec;
 
-    use odra::Address;
     use odra::casper_types::account::AccountHash;
     use odra::casper_types::ContractPackageHash;
     use odra::host::{Deployer, HostEnv, HostRef};
+    use odra::Address;
 
     use crate::cep18_token::{Cep18HostRef, Cep18InitArgs};
 

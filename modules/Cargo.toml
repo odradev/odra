@@ -12,6 +12,7 @@ categories = ["wasm"]
 [dependencies]
 odra = { path = "../odra", version = "0.9.1", default-features = false }
 hex = { version = "0.4.3", default-features = false }
+base64 = { version = "0.22.0", default-features = false, features = ["alloc"] }
 log = "0.4.20"
 
 [dev-dependencies]
