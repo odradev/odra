@@ -20,7 +20,7 @@ use super::{
 };
 use odra::{
     args::Maybe,
-    casper_types::{bytesrepr::ToBytes, URef},
+    casper_types::{bytesrepr::ToBytes, AccessRights, URef},
     prelude::*,
     Address, Mapping, Sequence, SubModule, UnwrapOrRevert, Var
 };
@@ -216,27 +216,27 @@ impl CEP78 {
         let token_identifier: TokenIdentifier = match identifier_mode {
             NFTIdentifierMode::Ordinal => TokenIdentifier::Index(minted_tokens_count),
             NFTIdentifierMode::Hash => TokenIdentifier::Hash(if optional_token_hash.is_empty() {
-                base16::encode_lower(&self.env().hash(token_metadata.clone()))
+                let hash = self.env().hash(token_metadata.clone());
+                base16::encode_lower(&hash)
             } else {
                 optional_token_hash
             })
         };
+        let token_id = token_identifier.to_string();
 
-        self.metadata
-            .update_or_revert(&token_metadata, &token_identifier);
+        self.metadata.update_or_revert(&token_metadata, &token_id);
 
         // The contract's ownership behavior (determined at installation) determines,
         // who owns the NFT we are about to mint.()
-        let token_owner_key =
+        let token_owner =
             if let OwnershipMode::Assigned | OwnershipMode::Transferable = self.ownership_mode() {
                 token_owner
             } else {
                 caller
             };
 
-        let id = token_identifier.to_string();
-        self.owners.set(&id, token_owner_key);
-        self.issuers.set(&id, caller);
+        self.owners.set(&token_id, token_owner);
+        self.issuers.set(&token_id, caller);
 
         if let NFTIdentifierMode::Hash = identifier_mode {
             // Update the forward and reverse trackers
@@ -245,33 +245,35 @@ impl CEP78 {
         }
 
         //Increment the count of owned tokens.
-        self.token_count.add(&token_owner_key, 1);
+        self.token_count.add(&token_owner, 1);
 
         // Increment number_of_minted_tokens by one
         self.info.increment_number_of_minted_tokens();
 
         // Emit Mint event.
         self.emit_ces_event(Mint::new(
-            token_owner_key,
-            token_identifier.clone(),
+            token_owner,
+            token_id.clone(),
             token_metadata.clone()
         ));
 
         if let OwnerReverseLookupMode::Complete = self.reverse_lookup.get_mode() {
             let (page_table_entry, page_uref) = self.pagination.add_page_entry_and_page_record(
                 minted_tokens_count,
-                &token_owner_key,
+                &token_owner,
                 true
             );
+            /*
             let receipt_name = self.receipt_name.get_or_default();
             let receipt_string = format!("{receipt_name}_m_{PAGE_SIZE}_p_{page_table_entry}");
             // TODO: Implement the following
-            // let receipt_address = Key::dictionary(page_uref, owned_tokens_item_key.as_bytes());
+            // let receipt_address = Key::dictionary(page_uref, owned_tokens_item.as_bytes());
             let token_identifier_string = token_identifier.to_string();
             // should not return `token_owner`
             return (receipt_string, token_owner, token_identifier_string);
+            */
         }
-        (id, token_owner_key, token_metadata)
+        ("".to_string(), token_owner, token_id)
     }
 
     /// Burns the token with provided `token_id` argument, after which it is no
@@ -284,8 +286,9 @@ impl CEP78 {
         self.ensure_burnable();
 
         let token_identifier = self.token_identifier(token_id, token_hash);
+        let token_id = token_identifier.to_string();
 
-        let token_owner = self.owner_of_by_id(&token_identifier);
+        let token_owner = self.owner_of_by_id(&token_id);
         let caller = self.env().caller();
 
         // Check if caller is owner
@@ -306,14 +309,14 @@ impl CEP78 {
         // It makes sense to keep this token as owned by the caller. It just happens that the caller
         // owns a burnt token. That's all. Similarly, we should probably also not change the
         // owned_tokens dictionary.
-        self.ensure_not_burned(&token_identifier);
+        self.ensure_not_burned(&token_id);
 
         // Mark the token as burnt by adding the token_id to the burnt tokens dictionary.
-        self.burnt_tokens.set(&token_identifier.to_string(), ());
+        self.burnt_tokens.set(&token_id, ());
         self.token_count.subtract(&token_owner, 1);
 
         // Emit Burn event.
-        self.emit_ces_event(Burn::new(token_owner, token_identifier, caller));
+        self.emit_ces_event(Burn::new(token_owner, token_id, caller));
     }
 
     /// Transfers ownership of the token from one account to another.
@@ -334,12 +337,12 @@ impl CEP78 {
         let token_identifier = self.checked_token_identifier(token_id, token_hash);
         let token_id = token_identifier.to_string();
         // We assume we cannot transfer burnt tokens
-        self.ensure_not_burned(&token_identifier);
-        self.ensure_not_owner(&token_identifier, &source_key);
+        self.ensure_not_burned(&token_id);
+        self.ensure_owner(&token_id, &source_key);
 
         let caller = self.env().caller();
 
-        let owner = self.owner_of_by_id(&token_identifier);
+        let owner = self.owner_of_by_id(&token_id);
         // Check if caller is owner
         let is_owner = owner == caller;
 
@@ -377,7 +380,7 @@ impl CEP78 {
                 if token_actual_owner != source_key {
                     self.env().revert(CEP78Error::InvalidTokenOwner)
                 }
-                self.owners.set(&token_identifier.to_string(), target_key);
+                self.owners.set(&token_id, target_key);
             }
             None => self
                 .env()
@@ -390,12 +393,7 @@ impl CEP78 {
         self.approved.set(&token_id, Option::<Address>::None);
 
         let spender = if caller == owner { None } else { Some(caller) };
-        self.emit_ces_event(Transfer::new(
-            owner,
-            spender,
-            target_key,
-            token_identifier.clone()
-        ));
+        self.emit_ces_event(Transfer::new(owner, spender, target_key, token_id));
 
         let reporting_mode = self.reverse_lookup.get_mode();
 
@@ -421,7 +419,7 @@ impl CEP78 {
             // TODO: should not return `source_key`
             return (receipt_string, source_key);
         }
-        todo!()
+        return ("".to_owned(), source_key);
     }
 
     /// Approves another token holder (an approved account) to transfer tokens. It
@@ -434,8 +432,9 @@ impl CEP78 {
 
         let caller = self.env().caller();
         let token_identifier = self.checked_token_identifier(token_id, token_hash);
+        let token_id = token_identifier.to_string();
 
-        let owner = self.owner_of_by_id(&token_identifier);
+        let owner = self.owner_of_by_id(&token_id);
 
         // Revert if caller is not token owner nor operator.
         // Only the token owner or an operator can approve an account
@@ -447,13 +446,12 @@ impl CEP78 {
         }
 
         // We assume a burnt token cannot be approved
-        self.ensure_not_burned(&token_identifier);
+        self.ensure_not_burned(&token_id);
 
         // If token owner or operator tries to approve itself that's probably a mistake and we revert.
         self.ensure_not_caller(spender);
-        self.approved
-            .set(&token_identifier.to_string(), Some(spender));
-        self.emit_ces_event(Approval::new(owner, spender, token_identifier));
+        self.approved.set(&token_id, Some(spender));
+        self.emit_ces_event(Approval::new(owner, spender, token_id));
     }
 
     /// Revokes an approved account to transfer tokens. It reverts
@@ -467,10 +465,10 @@ impl CEP78 {
 
         let caller = env.caller();
         let token_identifier = self.checked_token_identifier(token_id, token_hash);
-
+        let token_id = token_identifier.to_string();
         // Revert if caller is not the token owner or an operator. Only the token owner / operators can
         // revoke an approved account
-        let owner = self.owner_of_by_id(&token_identifier);
+        let owner = self.owner_of_by_id(&token_id);
         let is_owner = caller == owner;
         let is_operator = !is_owner && self.operators.get_or_default(&(owner, caller));
 
@@ -479,11 +477,10 @@ impl CEP78 {
         }
 
         // We assume a burnt token cannot be revoked
-        self.ensure_not_burned(&token_identifier);
-        self.approved
-            .set(&token_identifier.to_string(), Option::<Address>::None);
+        self.ensure_not_burned(&token_id);
+        self.approved.set(&token_id, Option::<Address>::None);
         // Emit ApprovalRevoked event.
-        self.emit_ces_event(ApprovalRevoked::new(owner, token_identifier));
+        self.emit_ces_event(ApprovalRevoked::new(owner, token_id));
     }
 
     /// Approves all tokens owned by the caller and future to another token holder
@@ -517,9 +514,9 @@ impl CEP78 {
 
     /// Returns the token owner given a token_id. It reverts if token_id
     /// is invalid. A burnt token still has an associated owner.
-    pub fn owner_of(&mut self, token_id: Maybe<u64>, token_hash: Maybe<String>) -> Address {
+    pub fn owner_of(&self, token_id: Maybe<u64>, token_hash: Maybe<String>) -> Address {
         let token_identifier = self.checked_token_identifier(token_id, token_hash);
-        self.owner_of_by_id(&token_identifier)
+        self.owner_of_by_id(&token_identifier.to_string())
     }
 
     /// Returns the approved account (if any) associated with the provided token_id
@@ -530,9 +527,10 @@ impl CEP78 {
         token_hash: Maybe<String>
     ) -> Option<Address> {
         let token_identifier: TokenIdentifier = self.checked_token_identifier(token_id, token_hash);
+        let token_id = token_identifier.to_string();
 
-        self.ensure_not_burned(&token_identifier);
-        self.approved.get(&token_identifier.to_string()).flatten()
+        self.ensure_not_burned(&token_id);
+        self.approved.get(&token_id).flatten()
     }
 
     /// Returns the metadata associated with the provided token_id
@@ -552,14 +550,12 @@ impl CEP78 {
             .ensure_mutability(CEP78Error::ForbiddenMetadataUpdate);
 
         let token_identifier = self.checked_token_identifier(token_id, token_hash);
-        self.ensure_owner_not_caller(&token_identifier);
+        let token_id = token_identifier.to_string();
+        self.ensure_owner_not_caller(&token_id);
         self.metadata
-            .update_or_revert(&updated_token_metadata, &token_identifier);
+            .update_or_revert(&updated_token_metadata, &token_id);
 
-        self.emit_ces_event(MetadataUpdated::new(
-            token_identifier,
-            updated_token_metadata
-        ));
+        self.emit_ces_event(MetadataUpdated::new(token_id, updated_token_metadata));
     }
 
     /// Returns number of owned tokens associated with the provided token holder
@@ -606,7 +602,8 @@ impl CEP78 {
 
             self.pagination.register_owner(&owner);
         }
-        todo!()
+        // TODO: Implement the following
+        ("".to_string(), URef::new([0u8; 32], AccessRights::READ))
     }
 
     pub fn is_whitelisted(&self, address: &Address) -> bool {
@@ -621,11 +618,46 @@ impl CEP78 {
         self.info.collection_name()
     }
 
+    pub fn get_collection_symbol(&self) -> String {
+        self.info.collection_symbol()
+    }
+
     pub fn is_minting_allowed(&self) -> bool {
         self.settings.allow_minting()
     }
+
     pub fn is_operator_burn_mode(&self) -> bool {
         self.settings.operator_burn_mode()
+    }
+
+    pub fn get_total_supply(&self) -> u64 {
+        self.info.total_token_supply()
+    }
+
+    pub fn get_minting_mode(&self) -> MintingMode {
+        self.settings.minting_mode()
+    }
+
+    pub fn get_number_of_minted_tokens(&self) -> u64 {
+        self.info.number_of_minted_tokens()
+    }
+
+    pub fn get_metadata_by_kind(
+        &self,
+        kind: NFTMetadataKind,
+        token_id: Maybe<u64>,
+        token_hash: Maybe<String>
+    ) -> String {
+        let token_identifier = self.checked_token_identifier(token_id, token_hash);
+        self.metadata
+            .get_metadata_by_kind(token_identifier.to_string(), &kind)
+    }
+
+    pub fn get_token_issuer(&self, token_id: Maybe<u64>, token_hash: Maybe<String>) -> Address {
+        let token_identifier = self.checked_token_identifier(token_id, token_hash);
+        self.issuers
+            .get(&token_identifier.to_string())
+            .unwrap_or_revert_with(&self.env(), CEP78Error::InvalidTokenIdentifier)
     }
 }
 
@@ -679,8 +711,8 @@ impl CEP78 {
     }
 
     #[inline]
-    fn owner_of_by_id(&self, id: &TokenIdentifier) -> Address {
-        match self.owners.get(&id.to_string()) {
+    fn owner_of_by_id(&self, id: &String) -> Address {
+        match self.owners.get(id) {
             Some(token_owner) => token_owner,
             None => self
                 .env()
@@ -689,31 +721,29 @@ impl CEP78 {
     }
 
     #[inline]
-    fn is_token_burned(&self, token_identifier: &TokenIdentifier) -> bool {
-        self.burnt_tokens
-            .get(&token_identifier.to_string())
-            .is_some()
+    fn is_token_burned(&self, token_id: &String) -> bool {
+        self.burnt_tokens.get(token_id).is_some()
     }
 
     #[inline]
-    fn ensure_not_owner(&self, token_identifier: &TokenIdentifier, address: &Address) {
-        let owner = self.owner_of_by_id(token_identifier);
-        if address == &owner {
+    fn ensure_owner(&self, token_id: &String, address: &Address) {
+        let owner = self.owner_of_by_id(token_id);
+        if address != &owner {
             self.env().revert(CEP78Error::InvalidAccount);
         }
     }
 
     #[inline]
-    fn ensure_owner_not_caller(&self, token_identifier: &TokenIdentifier) {
-        let owner = self.owner_of_by_id(token_identifier);
+    fn ensure_owner_not_caller(&self, token_id: &String) {
+        let owner = self.owner_of_by_id(token_id);
         if self.env().caller() == owner {
             self.env().revert(CEP78Error::InvalidTokenOwner);
         }
     }
 
     #[inline]
-    fn ensure_not_burned(&self, token_identifier: &TokenIdentifier) {
-        if self.is_token_burned(token_identifier) {
+    fn ensure_not_burned(&self, token_id: &String) {
+        if self.is_token_burned(token_id) {
             self.env().revert(CEP78Error::PreviouslyBurntToken);
         }
     }

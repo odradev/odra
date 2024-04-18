@@ -8,42 +8,11 @@ use odra::{
 use crate::cep78::{
     error::CEP78Error,
     modalities::{MintingMode, NFTHolderMode, OwnershipMode, WhitelistMode},
-    tests::utils::TEST_PRETTY_721_META_DATA,
+    tests::utils::{DummyContractHostRef, TestContractHostRef, TEST_PRETTY_721_META_DATA},
     token::CEP78HostRef
 };
 
 use super::default_args_builder;
-
-#[odra::module]
-struct DummyContract;
-
-#[odra::module]
-impl DummyContract {}
-
-#[odra::module]
-struct TestContract;
-
-#[odra::module]
-impl TestContract {
-    pub fn mint(
-        &mut self,
-        nft_contract_address: &Address,
-        token_metadata: String
-    ) -> (String, Address, String) {
-        NftContractContractRef::new(self.env(), *nft_contract_address)
-            .mint(self.env().self_address(), token_metadata)
-    }
-
-    pub fn mint_for(
-        &mut self,
-        nft_contract_address: &Address,
-        token_owner: Address,
-        token_metadata: String
-    ) -> (String, Address, String) {
-        NftContractContractRef::new(self.env(), *nft_contract_address)
-            .mint(token_owner, token_metadata)
-    }
-}
 
 #[odra::external_contract]
 trait NftContract {

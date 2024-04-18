@@ -9,10 +9,10 @@ pub struct Mint {
 }
 
 impl Mint {
-    pub fn new(recipient: Address, token_id: TokenIdentifier, data: String) -> Self {
+    pub fn new(recipient: Address, token_id: String, data: String) -> Self {
         Self {
             recipient,
-            token_id: token_id.to_string(),
+            token_id,
             data
         }
     }
@@ -26,10 +26,10 @@ pub struct Burn {
 }
 
 impl Burn {
-    pub fn new(owner: Address, token_id: TokenIdentifier, burner: Address) -> Self {
+    pub fn new(owner: Address, token_id: String, burner: Address) -> Self {
         Self {
             owner,
-            token_id: token_id.to_string(),
+            token_id,
             burner
         }
     }
@@ -43,11 +43,11 @@ pub struct Approval {
 }
 
 impl Approval {
-    pub fn new(owner: Address, spender: Address, token_id: TokenIdentifier) -> Self {
+    pub fn new(owner: Address, spender: Address, token_id: String) -> Self {
         Self {
             owner,
             spender,
-            token_id: token_id.to_string()
+            token_id
         }
     }
 }
@@ -59,11 +59,8 @@ pub struct ApprovalRevoked {
 }
 
 impl ApprovalRevoked {
-    pub fn new(owner: Address, token_id: TokenIdentifier) -> Self {
-        Self {
-            owner,
-            token_id: token_id.to_string()
-        }
+    pub fn new(owner: Address, token_id: String) -> Self {
+        Self { owner, token_id }
     }
 }
 
@@ -104,13 +101,13 @@ impl Transfer {
         owner: Address,
         spender: Option<Address>,
         recipient: Address,
-        token_id: TokenIdentifier
+        token_id: String
     ) -> Self {
         Self {
             owner,
             spender,
             recipient,
-            token_id: token_id.to_string()
+            token_id
         }
     }
 }
@@ -122,11 +119,8 @@ pub struct MetadataUpdated {
 }
 
 impl MetadataUpdated {
-    pub fn new(token_id: TokenIdentifier, data: String) -> Self {
-        Self {
-            token_id: token_id.to_string(),
-            data
-        }
+    pub fn new(token_id: String, data: String) -> Self {
+        Self { token_id, data }
     }
 }
 

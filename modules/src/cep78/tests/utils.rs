@@ -5,7 +5,13 @@ use crate::cep78::{
     },
     token::CEP78InitArgs
 };
-use odra::{args::Maybe, Address};
+use blake2::{
+    digest::{Update, VariableOutput},
+    Blake2bVar
+};
+use odra::{args::Maybe, casper_types::BLAKE2B_DIGEST_LENGTH, prelude::*, Address, ContractRef};
+
+use super::acl::NftContractContractRef;
 
 #[derive(Default)]
 pub struct InitArgsBuilder {
@@ -153,6 +159,19 @@ impl InitArgsBuilder {
         self
     }
 
+    pub fn additional_required_metadata(
+        mut self,
+        additional_required_metadata: Vec<NFTMetadataKind>
+    ) -> Self {
+        self.additional_required_metadata = Maybe::Some(additional_required_metadata);
+        self
+    }
+
+    pub fn optional_metadata(mut self, optional_metadata: Vec<NFTMetadataKind>) -> Self {
+        self.optional_metadata = Maybe::Some(optional_metadata);
+        self
+    }
+
     pub fn build(self) -> CEP78InitArgs {
         CEP78InitArgs {
             collection_name: self.collection_name,
@@ -182,29 +201,72 @@ impl InitArgsBuilder {
 }
 
 pub const TEST_PRETTY_721_META_DATA: &str = r#"{
-    "name": "John Doe",
-    "symbol": "abc",
-    "token_uri": "https://www.barfoo.com"
-  }"#;
+  "name": "John Doe",
+  "symbol": "abc",
+  "token_uri": "https://www.barfoo.com"
+}"#;
 pub const TEST_PRETTY_UPDATED_721_META_DATA: &str = r#"{
-    "name": "John Doe",
-    "symbol": "abc",
-    "token_uri": "https://www.foobar.com"
-  }"#;
+  "name": "John Doe",
+  "symbol": "abc",
+  "token_uri": "https://www.foobar.com"
+}"#;
 pub const TEST_PRETTY_CEP78_METADATA: &str = r#"{
-    "name": "John Doe",
-    "token_uri": "https://www.barfoo.com",
-    "checksum": "940bffb3f2bba35f84313aa26da09ece3ad47045c6a1292c2bbd2df4ab1a55fb"
-  }"#;
+  "name": "John Doe",
+  "token_uri": "https://www.barfoo.com",
+  "checksum": "940bffb3f2bba35f84313aa26da09ece3ad47045c6a1292c2bbd2df4ab1a55fb"
+}"#;
 pub const TEST_PRETTY_UPDATED_CEP78_METADATA: &str = r#"{
-    "name": "John Doe",
-    "token_uri": "https://www.foobar.com",
-    "checksum": "fda4feaa137e83972db628e521c92159f5dc253da1565c9da697b8ad845a0788"
-  }"#;
+  "name": "John Doe",
+  "token_uri": "https://www.foobar.com",
+  "checksum": "fda4feaa137e83972db628e521c92159f5dc253da1565c9da697b8ad845a0788"
+}"#;
 pub const TEST_COMPACT_META_DATA: &str =
     r#"{"name": "John Doe","symbol": "abc","token_uri": "https://www.barfoo.com"}"#;
 pub const MALFORMED_META_DATA: &str = r#"{
-    "name": "John Doe",
-    "symbol": abc,
-    "token_uri": "https://www.barfoo.com"
-  }"#;
+  "name": "John Doe",
+  "symbol": abc,
+  "token_uri": "https://www.barfoo.com"
+}"#;
+
+#[odra::module]
+struct DummyContract;
+
+#[odra::module]
+impl DummyContract {}
+
+#[odra::module]
+struct TestContract;
+
+#[odra::module]
+impl TestContract {
+    pub fn mint(
+        &mut self,
+        nft_contract_address: &Address,
+        token_metadata: String
+    ) -> (String, Address, String) {
+        NftContractContractRef::new(self.env(), *nft_contract_address)
+            .mint(self.env().self_address(), token_metadata)
+    }
+
+    pub fn mint_for(
+        &mut self,
+        nft_contract_address: &Address,
+        token_owner: Address,
+        token_metadata: String
+    ) -> (String, Address, String) {
+        NftContractContractRef::new(self.env(), *nft_contract_address)
+            .mint(token_owner, token_metadata)
+    }
+}
+use std::collections::hash_map::DefaultHasher;
+use std::hash::Hasher;
+use std::io::Write;
+pub(crate) fn create_blake2b_hash<T: AsRef<[u8]>>(data: T) -> [u8; BLAKE2B_DIGEST_LENGTH] {
+    let mut result = [0u8; 32];
+    let mut hasher = <Blake2bVar as VariableOutput>::new(32).expect("should create hasher");
+    let _ = hasher.write(data.as_ref());
+    hasher
+        .finalize_variable(&mut result)
+        .expect("should copy hash to the result array");
+    result
+}

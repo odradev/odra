@@ -65,4 +65,9 @@ impl CollectionInfo {
     pub fn collection_name(&self) -> String {
         self.name.get_or_default()
     }
+
+    #[inline]
+    pub fn collection_symbol(&self) -> String {
+        self.symbol.get_or_default()
+    }
 }

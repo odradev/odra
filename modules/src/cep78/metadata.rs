@@ -16,7 +16,7 @@ pub struct Metadata {
     identifier_mode: Var<NFTIdentifierMode>,
     mutability: Var<MetadataMutability>,
     json_schema: Var<String>,
-    validated_metadata: Mapping<String, String>
+    validated_metadata: Mapping<(String, String), String>
 }
 
 impl Metadata {
@@ -62,10 +62,9 @@ impl Metadata {
                 Requirement::Required => {
                     let id = token_identifier.to_string();
                     let kind = get_metadata_key(&metadata_kind);
-                    let key = format!("{}{}", kind, id);
                     let metadata = self
                         .validated_metadata
-                        .get(&key)
+                        .get(&(kind, id))
                         .unwrap_or_revert_with(&env, CEP78Error::InvalidTokenIdentifier);
                     return metadata;
                 }
@@ -73,6 +72,14 @@ impl Metadata {
             }
         }
         env.revert(CEP78Error::MissingTokenMetaData)
+    }
+
+    // test only
+    pub fn get_metadata_by_kind(&self, token_identifier: String, kind: &NFTMetadataKind) -> String {
+        let kind = get_metadata_key(kind);
+        self.validated_metadata
+            .get(&(kind, token_identifier))
+            .unwrap_or_default()
     }
 
     pub fn ensure_mutability(&self, error: CEP78Error) {
@@ -84,7 +91,7 @@ impl Metadata {
         }
     }
 
-    pub fn update_or_revert(&mut self, token_metadata: &str, token_identifier: &TokenIdentifier) {
+    pub fn update_or_revert(&mut self, token_metadata: &str, token_id: &String) {
         let requirements = self.get_requirements();
         for (metadata_kind, required) in requirements {
             if required == Requirement::Unneeded {
@@ -93,10 +100,9 @@ impl Metadata {
             let token_metadata_validation = self.validate(&metadata_kind, token_metadata);
             match token_metadata_validation {
                 Ok(validated_token_metadata) => {
-                    let id = token_identifier.to_string();
                     let kind = get_metadata_key(&metadata_kind);
-                    let key = format!("{}{}", kind, id);
-                    self.validated_metadata.set(&key, validated_token_metadata);
+                    self.validated_metadata
+                        .set(&(kind, token_id.to_owned()), validated_token_metadata);
                 }
                 Err(err) => {
                     self.env().revert(err);
@@ -245,14 +251,14 @@ impl Metadata {
 #[derive(Serialize, Deserialize)]
 #[odra::odra_type]
 pub(crate) struct MetadataSchemaProperty {
-    name: String,
-    description: String,
-    required: bool
+    pub name: String,
+    pub description: String,
+    pub required: bool
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub(crate) struct CustomMetadataSchema {
-    properties: BTreeMap<String, MetadataSchemaProperty>
+    pub properties: BTreeMap<String, MetadataSchemaProperty>
 }
 
 // Using a structure for the purposes of serialization formatting.
