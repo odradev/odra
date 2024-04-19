@@ -123,8 +123,10 @@ impl Pagination {
         (page_table_entry, uref_a)
     }
 
-    pub fn register_owner(&self, owner: &Address) {
-        let page = self.page_tables.get_or_default(&owner);
+    pub fn register_owner(&mut self, owner: &Address) {
+        if self.page_tables.get(&owner).is_none() {
+            self.page_tables.set(owner, vec![false; PAGE_SIZE as usize]);
+        }
 
         // let page_table_uref = utils::get_uref(
         //     PAGE_TABLE,

@@ -2,7 +2,6 @@ use odra::{
     args::Maybe,
     host::{Deployer, HostEnv, HostRef, NoArgs},
     prelude::*,
-    Address
 };
 
 use crate::cep78::{
@@ -13,11 +12,6 @@ use crate::cep78::{
 };
 
 use super::default_args_builder;
-
-#[odra::external_contract]
-trait NftContract {
-    fn mint(&mut self, token_owner: Address, token_metadata: String) -> (String, Address, String);
-}
 
 #[test]
 fn should_install_with_acl_whitelist() {
@@ -203,7 +197,7 @@ fn should_allow_whitelisted_contract_to_mint() {
         .minting_mode(MintingMode::Acl)
         .acl_white_list(contract_whitelist)
         .build();
-    let mut contract = CEP78HostRef::deploy(&env, args);
+    let contract = CEP78HostRef::deploy(&env, args);
     assert!(
         contract.is_whitelisted(minting_contract.address()),
         "acl whitelist is incorrectly set"

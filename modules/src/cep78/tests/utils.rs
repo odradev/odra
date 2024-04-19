@@ -5,13 +5,9 @@ use crate::cep78::{
     },
     token::CEP78InitArgs
 };
-use blake2::{
-    digest::{Update, VariableOutput},
-    Blake2bVar
-};
+use blake2::{digest::VariableOutput, Blake2bVar};
 use odra::{args::Maybe, casper_types::BLAKE2B_DIGEST_LENGTH, prelude::*, Address, ContractRef};
-
-use super::acl::NftContractContractRef;
+use std::io::Write;
 
 #[derive(Default)]
 pub struct InitArgsBuilder {
@@ -248,6 +244,11 @@ impl TestContract {
             .mint(self.env().self_address(), token_metadata)
     }
 
+    pub fn burn(&mut self, nft_contract_address: &Address, token_id: u64) {
+        NftContractContractRef::new(self.env(), *nft_contract_address)
+            .burn(Maybe::Some(token_id), Maybe::None)
+    }
+
     pub fn mint_for(
         &mut self,
         nft_contract_address: &Address,
@@ -258,9 +259,13 @@ impl TestContract {
             .mint(token_owner, token_metadata)
     }
 }
-use std::collections::hash_map::DefaultHasher;
-use std::hash::Hasher;
-use std::io::Write;
+
+#[odra::external_contract]
+trait NftContract {
+    fn mint(&mut self, token_owner: Address, token_metadata: String) -> (String, Address, String);
+    fn burn(&mut self, token_id: Maybe<u64>, token_hash: Maybe<String>);
+}
+
 pub(crate) fn create_blake2b_hash<T: AsRef<[u8]>>(data: T) -> [u8; BLAKE2B_DIGEST_LENGTH] {
     let mut result = [0u8; 32];
     let mut hasher = <Blake2bVar as VariableOutput>::new(32).expect("should create hasher");

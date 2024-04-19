@@ -4,7 +4,7 @@ use odra::{
     host::{Deployer, HostEnv, HostRef, NoArgs},
     DeployReport
 };
-use serde::{de, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::cep78::{
     error::CEP78Error,
@@ -25,8 +25,7 @@ use crate::cep78::{
 
 use super::{
     default_args_builder,
-    utils::{InitArgsBuilder, TEST_PRETTY_721_META_DATA},
-    COLLECTION_NAME
+    utils::TEST_PRETTY_721_META_DATA,
 };
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -509,7 +508,7 @@ fn should_mint_with_hash_identifier_mode() {
         Maybe::None
     );
 
-    let token_id_hash =
+    let _token_id_hash =
         base16::encode_lower(&utils::create_blake2b_hash(TEST_PRETTY_721_META_DATA));
 
     // TODO: Reverse lookup not implemented yet

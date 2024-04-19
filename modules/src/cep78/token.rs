@@ -659,6 +659,12 @@ impl CEP78 {
             .get(&token_identifier.to_string())
             .unwrap_or_revert_with(&self.env(), CEP78Error::InvalidTokenIdentifier)
     }
+
+    pub fn token_burned(&self, token_id: Maybe<u64>, token_hash: Maybe<String>) -> bool {
+        let token_identifier = self.token_identifier(token_id, token_hash);
+        let token_id = token_identifier.to_string();
+        self.is_token_burned(&token_id)
+    }
 }
 
 impl CEP78 {
