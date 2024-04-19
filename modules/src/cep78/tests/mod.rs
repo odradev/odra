@@ -12,12 +12,14 @@ mod acl;
 mod burn;
 mod events;
 mod installer;
+mod metadata;
 mod mint;
 mod set_variables;
 mod utils;
 
 pub(super) const COLLECTION_NAME: &str = "CEP78-Test-Collection";
 pub(super) const COLLECTION_SYMBOL: &str = "CEP78";
+pub const TOKEN_HASH: &str = "token_hash";
 
 pub(super) fn default_args_builder() -> InitArgsBuilder {
     InitArgsBuilder::default()
@@ -31,6 +33,14 @@ pub(super) static TEST_CUSTOM_METADATA: Lazy<BTreeMap<String, String>> = Lazy::n
     let mut attributes = BTreeMap::new();
     attributes.insert("deity_name".to_string(), "Baldur".to_string());
     attributes.insert("mythology".to_string(), "Nordic".to_string());
+    attributes
+});
+
+pub(crate) static TEST_CUSTOM_UPDATED_METADATA: Lazy<BTreeMap<String, String>> = Lazy::new(|| {
+    let mut attributes = BTreeMap::new();
+    attributes.insert("deity_name".to_string(), "Baldur".to_string());
+    attributes.insert("mythology".to_string(), "Nordic".to_string());
+    attributes.insert("enemy".to_string(), "Loki".to_string());
     attributes
 });
 

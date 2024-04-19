@@ -240,8 +240,24 @@ impl TestContract {
         nft_contract_address: &Address,
         token_metadata: String
     ) -> (String, Address, String) {
-        NftContractContractRef::new(self.env(), *nft_contract_address)
-            .mint(self.env().self_address(), token_metadata)
+        NftContractContractRef::new(self.env(), *nft_contract_address).mint(
+            self.env().self_address(),
+            token_metadata,
+            Maybe::None
+        )
+    }
+
+    pub fn mint_with_hash(
+        &mut self,
+        nft_contract_address: &Address,
+        token_metadata: String,
+        token_hash: String
+    ) -> (String, Address, String) {
+        NftContractContractRef::new(self.env(), *nft_contract_address).mint(
+            self.env().self_address(),
+            token_metadata,
+            Maybe::Some(token_hash)
+        )
     }
 
     pub fn burn(&mut self, nft_contract_address: &Address, token_id: u64) {
@@ -255,14 +271,22 @@ impl TestContract {
         token_owner: Address,
         token_metadata: String
     ) -> (String, Address, String) {
-        NftContractContractRef::new(self.env(), *nft_contract_address)
-            .mint(token_owner, token_metadata)
+        NftContractContractRef::new(self.env(), *nft_contract_address).mint(
+            token_owner,
+            token_metadata,
+            Maybe::None
+        )
     }
 }
 
 #[odra::external_contract]
 trait NftContract {
-    fn mint(&mut self, token_owner: Address, token_metadata: String) -> (String, Address, String);
+    fn mint(
+        &mut self,
+        token_owner: Address,
+        token_metadata: String,
+        token_hash: Maybe<String>
+    ) -> (String, Address, String);
     fn burn(&mut self, token_id: Maybe<u64>, token_hash: Maybe<String>);
 }
 

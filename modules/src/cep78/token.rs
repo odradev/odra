@@ -551,7 +551,7 @@ impl CEP78 {
 
         let token_identifier = self.checked_token_identifier(token_id, token_hash);
         let token_id = token_identifier.to_string();
-        self.ensure_owner_not_caller(&token_id);
+        self.ensure_caller_is_owner(&token_id);
         self.metadata
             .update_or_revert(&updated_token_metadata, &token_id);
 
@@ -740,9 +740,9 @@ impl CEP78 {
     }
 
     #[inline]
-    fn ensure_owner_not_caller(&self, token_id: &String) {
+    fn ensure_caller_is_owner(&self, token_id: &String) {
         let owner = self.owner_of_by_id(token_id);
-        if self.env().caller() == owner {
+        if self.env().caller() != owner {
             self.env().revert(CEP78Error::InvalidTokenOwner);
         }
     }
