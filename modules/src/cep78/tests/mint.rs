@@ -23,10 +23,7 @@ use crate::cep78::{
     token::CEP78HostRef
 };
 
-use super::{
-    default_args_builder,
-    utils::TEST_PRETTY_721_META_DATA,
-};
+use super::{default_args_builder, utils::TEST_PRETTY_721_META_DATA};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Metadata {

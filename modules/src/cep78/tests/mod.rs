@@ -10,6 +10,7 @@ use super::{
 
 mod acl;
 mod burn;
+mod events;
 mod installer;
 mod mint;
 mod set_variables;

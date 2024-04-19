@@ -1,7 +1,7 @@
 use odra::{
     args::Maybe,
     host::{Deployer, HostEnv, HostRef, NoArgs},
-    prelude::*,
+    prelude::*
 };
 
 use crate::cep78::{
