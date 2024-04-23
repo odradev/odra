@@ -1,4 +1,3 @@
-use super::modalities::TokenIdentifier;
 use odra::{prelude::*, Address};
 
 #[odra::event]

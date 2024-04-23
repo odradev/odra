@@ -270,6 +270,7 @@ fn should_get_metadata_using_token_id() {
         .acl_white_list(contract_whitelist)
         .build();
     let mut contract = CEP78HostRef::deploy(&env, args);
+    minting_contract.set_address(contract.address());
     let token_id = 0u64;
 
     assert!(
@@ -277,7 +278,7 @@ fn should_get_metadata_using_token_id() {
         "acl whitelist is incorrectly set"
     );
 
-    minting_contract.mint(contract.address(), TEST_PRETTY_721_META_DATA.to_string());
+    minting_contract.mint(TEST_PRETTY_721_META_DATA.to_string(), false);
 
     let minted_metadata = contract.metadata(Maybe::Some(token_id), Maybe::None);
     assert_eq!(minted_metadata, TEST_PRETTY_721_META_DATA);
@@ -299,13 +300,14 @@ fn should_get_metadata_using_token_metadata_hash() {
         .acl_white_list(contract_whitelist)
         .build();
     let mut contract = CEP78HostRef::deploy(&env, args);
+    minting_contract.set_address(contract.address());
 
     assert!(
         contract.is_whitelisted(minting_contract.address()),
         "acl whitelist is incorrectly set"
     );
 
-    minting_contract.mint(contract.address(), TEST_PRETTY_721_META_DATA.to_string());
+    minting_contract.mint(TEST_PRETTY_721_META_DATA.to_string(), false);
 
     let blake2b_hash = utils::create_blake2b_hash(TEST_PRETTY_721_META_DATA.to_bytes().unwrap());
     let token_hash = base16::encode_lower(&blake2b_hash);
@@ -335,7 +337,7 @@ fn should_revert_minting_token_metadata_hash_twice() {
         contract.is_whitelisted(minting_contract.address()),
         "acl whitelist is incorrectly set"
     );
-    minting_contract.mint(contract.address(), TEST_PRETTY_721_META_DATA.to_string());
+    minting_contract.mint(TEST_PRETTY_721_META_DATA.to_string(), false);
 
     let blake2b_hash = utils::create_blake2b_hash(TEST_PRETTY_721_META_DATA.to_bytes().unwrap());
     let token_hash = base16::encode_lower(&blake2b_hash);
@@ -344,7 +346,7 @@ fn should_revert_minting_token_metadata_hash_twice() {
     assert_eq!(minted_metadata, TEST_PRETTY_721_META_DATA);
 
     assert_eq!(
-        minting_contract.try_mint(contract.address(), TEST_PRETTY_721_META_DATA.to_string(),),
+        minting_contract.try_mint(TEST_PRETTY_721_META_DATA.to_string(), false),
         Err(CEP78Error::DuplicateIdentifier.into())
     );
 }
@@ -365,13 +367,13 @@ fn should_get_metadata_using_custom_token_hash() {
         .acl_white_list(contract_whitelist)
         .build();
     let mut contract = CEP78HostRef::deploy(&env, args);
+    minting_contract.set_address(contract.address());
 
     assert!(
         contract.is_whitelisted(minting_contract.address()),
         "acl whitelist is incorrectly set"
     );
     minting_contract.mint_with_hash(
-        contract.address(),
         TEST_PRETTY_721_META_DATA.to_string(),
         TOKEN_HASH.to_string()
     );
@@ -397,13 +399,13 @@ fn should_revert_minting_custom_token_hash_identifier_twice() {
         .acl_white_list(contract_whitelist)
         .build();
     let mut contract = CEP78HostRef::deploy(&env, args);
+    minting_contract.set_address(contract.address());
 
     assert!(
         contract.is_whitelisted(minting_contract.address()),
         "acl whitelist is incorrectly set"
     );
     minting_contract.mint_with_hash(
-        contract.address(),
         TEST_PRETTY_721_META_DATA.to_string(),
         TOKEN_HASH.to_string()
     );
@@ -414,7 +416,6 @@ fn should_revert_minting_custom_token_hash_identifier_twice() {
 
     assert_eq!(
         minting_contract.try_mint_with_hash(
-            contract.address(),
             TEST_PRETTY_721_META_DATA.to_string(),
             TOKEN_HASH.to_string()
         ),

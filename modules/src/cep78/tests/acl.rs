@@ -202,8 +202,8 @@ fn should_allow_whitelisted_contract_to_mint() {
         contract.is_whitelisted(minting_contract.address()),
         "acl whitelist is incorrectly set"
     );
-
-    minting_contract.mint(contract.address(), TEST_PRETTY_721_META_DATA.to_string());
+    minting_contract.set_address(contract.address());
+    minting_contract.mint(TEST_PRETTY_721_META_DATA.to_string(), false);
 
     let token_id = 0u64;
     let actual_token_owner = contract.owner_of(Maybe::Some(token_id), Maybe::None);
@@ -225,9 +225,10 @@ fn should_disallow_unlisted_contract_from_minting() {
         .acl_white_list(contract_whitelist)
         .build();
     let contract = CEP78HostRef::deploy(&env, args);
+    minting_contract.set_address(contract.address());
 
     assert_eq!(
-        minting_contract.try_mint(contract.address(), TEST_PRETTY_721_META_DATA.to_string(),),
+        minting_contract.try_mint(TEST_PRETTY_721_META_DATA.to_string(), false),
         Err(CEP78Error::UnlistedContractHash.into()),
         "Unlisted account hash should not be permitted to mint"
     );
@@ -249,13 +250,14 @@ fn should_allow_mixed_account_contract_to_mint() {
         .acl_white_list(mixed_whitelist)
         .build();
     let mut contract = CEP78HostRef::deploy(&env, args);
+    minting_contract.set_address(contract.address());
 
     assert!(
         contract.is_whitelisted(minting_contract.address()),
         "acl whitelist is incorrectly set"
     );
 
-    minting_contract.mint(contract.address(), TEST_PRETTY_721_META_DATA.to_string());
+    minting_contract.mint(TEST_PRETTY_721_META_DATA.to_string(), false);
 
     let token_id = 0u64;
     let actual_token_owner = contract.owner_of(Maybe::Some(token_id), Maybe::None);
@@ -296,9 +298,10 @@ fn should_disallow_unlisted_contract_from_minting_with_mixed_account_contract() 
         .acl_white_list(mixed_whitelist)
         .build();
     let contract = CEP78HostRef::deploy(&env, args);
+    minting_contract.set_address(contract.address());
 
     assert_eq!(
-        minting_contract.try_mint(contract.address(), TEST_PRETTY_721_META_DATA.to_string(),),
+        minting_contract.try_mint(TEST_PRETTY_721_META_DATA.to_string(), false),
         Err(CEP78Error::UnlistedContractHash.into()),
         "Unlisted contract should not be permitted to mint"
     );
@@ -403,6 +406,7 @@ fn should_be_able_to_update_whitelist_for_minting() {
         .acl_white_list(contract_whitelist)
         .build();
     let mut contract = CEP78HostRef::deploy(&env, args);
+    minting_contract.set_address(contract.address());
 
     assert!(
         !contract.is_whitelisted(minting_contract.address()),
@@ -410,11 +414,7 @@ fn should_be_able_to_update_whitelist_for_minting() {
     );
 
     assert_eq!(
-        minting_contract.try_mint_for(
-            contract.address(),
-            env.get_account(0),
-            TEST_PRETTY_721_META_DATA.to_string(),
-        ),
+        minting_contract.try_mint_for(env.get_account(0), TEST_PRETTY_721_META_DATA.to_string(),),
         Err(CEP78Error::UnlistedContractHash.into()),
     );
 
@@ -430,11 +430,7 @@ fn should_be_able_to_update_whitelist_for_minting() {
     );
 
     assert!(minting_contract
-        .try_mint_for(
-            contract.address(),
-            env.get_account(0),
-            TEST_PRETTY_721_META_DATA.to_string(),
-        )
+        .try_mint_for(env.get_account(0), TEST_PRETTY_721_META_DATA.to_string(),)
         .is_ok());
 }
 

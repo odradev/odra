@@ -167,12 +167,9 @@ fn should_allow_contract_to_burn_token() {
         .acl_white_list(contract_whitelist)
         .build();
     let mut contract = CEP78HostRef::deploy(&env, args);
+    minting_contract.set_address(contract.address());
     let token_owner = env.get_account(0);
-    minting_contract.mint_for(
-        contract.address(),
-        token_owner,
-        TEST_PRETTY_721_META_DATA.to_string()
-    );
+    minting_contract.mint_for(token_owner, TEST_PRETTY_721_META_DATA.to_string());
 
     let current_token_balance = contract.balance_of(token_owner);
     assert_eq!(1u64, current_token_balance);
@@ -262,12 +259,13 @@ fn should_let_contract_operator_burn_tokens_with_operator_burn_mode() {
 
     let token_id = 0u64;
     let mut minting_contract = TestContractHostRef::deploy(&env, NoArgs);
+    minting_contract.set_address(contract.address());
     let operator = minting_contract.address().clone();
     let account_1 = env.get_account(1);
 
     env.set_caller(account_1);
     assert_eq!(
-        minting_contract.try_burn(contract.address(), token_id),
+        minting_contract.try_burn(token_id),
         Err(CEP78Error::InvalidTokenOwner.into()),
         "InvalidTokenOwner should not allow burn by non operator"
     );
@@ -275,9 +273,7 @@ fn should_let_contract_operator_burn_tokens_with_operator_burn_mode() {
     env.set_caller(token_owner);
     contract.set_approval_for_all(true, operator);
     env.set_caller(account_1);
-    assert!(minting_contract
-        .try_burn(contract.address(), token_id)
-        .is_ok());
+    assert!(minting_contract.try_burn(token_id).is_ok());
 
     assert!(contract.token_burned(Maybe::Some(token_id), Maybe::None));
 

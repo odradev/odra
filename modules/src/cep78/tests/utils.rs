@@ -6,7 +6,12 @@ use crate::cep78::{
     token::CEP78InitArgs
 };
 use blake2::{digest::VariableOutput, Blake2bVar};
-use odra::{args::Maybe, casper_types::BLAKE2B_DIGEST_LENGTH, prelude::*, Address, ContractRef};
+use odra::{
+    args::Maybe,
+    casper_types::{URef, BLAKE2B_DIGEST_LENGTH},
+    prelude::*,
+    Address, ContractRef, Var
+};
 use std::io::Write;
 
 #[derive(Default)]
@@ -21,8 +26,6 @@ pub struct InitArgsBuilder {
     holder_mode: Maybe<NFTHolderMode>,
     whitelist_mode: Maybe<WhitelistMode>,
     acl_white_list: Maybe<Vec<Address>>,
-    acl_package_mode: Maybe<Vec<String>>,
-    package_operator_mode: Maybe<Vec<String>>,
     json_schema: Maybe<String>,
     receipt_name: Maybe<String>,
     identifier_mode: NFTIdentifierMode,
@@ -68,11 +71,6 @@ impl InitArgsBuilder {
         self
     }
 
-    pub fn nft_kind(mut self, nft_kind: NFTKind) -> Self {
-        self.nft_kind = nft_kind;
-        self
-    }
-
     pub fn holder_mode(mut self, holder_mode: NFTHolderMode) -> Self {
         self.holder_mode = Maybe::Some(holder_mode);
         self
@@ -88,23 +86,8 @@ impl InitArgsBuilder {
         self
     }
 
-    pub fn acl_package_mode(mut self, acl_package_mode: Vec<String>) -> Self {
-        self.acl_package_mode = Maybe::Some(acl_package_mode);
-        self
-    }
-
-    pub fn package_operator_mode(mut self, package_operator_mode: Vec<String>) -> Self {
-        self.package_operator_mode = Maybe::Some(package_operator_mode);
-        self
-    }
-
     pub fn json_schema(mut self, json_schema: String) -> Self {
         self.json_schema = Maybe::Some(json_schema);
-        self
-    }
-
-    pub fn receipt_name(mut self, receipt_name: String) -> Self {
-        self.receipt_name = Maybe::Some(receipt_name);
         self
     }
 
@@ -189,7 +172,7 @@ impl InitArgsBuilder {
             metadata_mutability: self.metadata_mutability,
             owner_reverse_lookup_mode: self.owner_reverse_lookup_mode,
             events_mode: self.events_mode,
-            transfer_filter_contract_contract_key: self.transfer_filter_contract_contract_key,
+            transfer_filter_contract_contract: self.transfer_filter_contract_contract_key,
             additional_required_metadata: self.additional_required_metadata,
             optional_metadata: self.optional_metadata
         }
@@ -231,16 +214,28 @@ struct DummyContract;
 impl DummyContract {}
 
 #[odra::module]
-struct TestContract;
+struct TestContract {
+    nft_contract: Var<Address>
+}
 
 #[odra::module]
 impl TestContract {
+    pub fn set_address(&mut self, nft_contract: &Address) {
+        self.nft_contract.set(*nft_contract);
+    }
+
     pub fn mint(
         &mut self,
-        nft_contract_address: &Address,
-        token_metadata: String
+        token_metadata: String,
+        is_reverse_lookup_enabled: bool
     ) -> (String, Address, String) {
-        NftContractContractRef::new(self.env(), *nft_contract_address).mint(
+        let nft_contract_address = self.nft_contract.get().unwrap();
+        if is_reverse_lookup_enabled {
+            NftContractContractRef::new(self.env(), nft_contract_address)
+                .register_owner(Maybe::Some(self.env().self_address()));
+        }
+
+        NftContractContractRef::new(self.env(), nft_contract_address).mint(
             self.env().self_address(),
             token_metadata,
             Maybe::None
@@ -249,33 +244,74 @@ impl TestContract {
 
     pub fn mint_with_hash(
         &mut self,
-        nft_contract_address: &Address,
         token_metadata: String,
         token_hash: String
     ) -> (String, Address, String) {
-        NftContractContractRef::new(self.env(), *nft_contract_address).mint(
+        let nft_contract_address = self.nft_contract.get().unwrap();
+        NftContractContractRef::new(self.env(), nft_contract_address).mint(
             self.env().self_address(),
             token_metadata,
             Maybe::Some(token_hash)
         )
     }
 
-    pub fn burn(&mut self, nft_contract_address: &Address, token_id: u64) {
-        NftContractContractRef::new(self.env(), *nft_contract_address)
+    pub fn burn(&mut self, token_id: u64) {
+        let nft_contract_address = self.nft_contract.get().unwrap();
+        NftContractContractRef::new(self.env(), nft_contract_address)
             .burn(Maybe::Some(token_id), Maybe::None)
     }
 
     pub fn mint_for(
         &mut self,
-        nft_contract_address: &Address,
         token_owner: Address,
         token_metadata: String
     ) -> (String, Address, String) {
-        NftContractContractRef::new(self.env(), *nft_contract_address).mint(
+        let nft_contract_address = self.nft_contract.get().unwrap();
+        NftContractContractRef::new(self.env(), nft_contract_address).mint(
             token_owner,
             token_metadata,
             Maybe::None
         )
+    }
+
+    pub fn transfer(&mut self, token_id: u64, target: Address) -> (String, Address) {
+        let address = self.env().self_address();
+        let nft_contract_address = self.nft_contract.get().unwrap();
+        NftContractContractRef::new(self.env(), nft_contract_address).transfer(
+            Maybe::Some(token_id),
+            Maybe::None,
+            address,
+            target
+        )
+    }
+    pub fn transfer_from(
+        &mut self,
+        token_id: u64,
+        source: Address,
+        target: Address
+    ) -> (String, Address) {
+        let nft_contract_address = self.nft_contract.get().unwrap();
+        NftContractContractRef::new(self.env(), nft_contract_address).transfer(
+            Maybe::Some(token_id),
+            Maybe::None,
+            source,
+            target
+        )
+    }
+
+    pub fn approve(&mut self, spender: Address, token_id: u64) {
+        let nft_contract_address = self.nft_contract.get().unwrap();
+        NftContractContractRef::new(self.env(), nft_contract_address).approve(
+            spender,
+            Maybe::Some(token_id),
+            Maybe::None
+        )
+    }
+
+    pub fn revoke(&mut self, token_id: u64) {
+        let nft_contract_address = self.nft_contract.get().unwrap();
+        NftContractContractRef::new(self.env(), nft_contract_address)
+            .revoke(Maybe::Some(token_id), Maybe::None)
     }
 }
 
@@ -288,6 +324,32 @@ trait NftContract {
         token_hash: Maybe<String>
     ) -> (String, Address, String);
     fn burn(&mut self, token_id: Maybe<u64>, token_hash: Maybe<String>);
+    fn register_owner(&mut self, token_owner: Maybe<Address>) -> (String, URef);
+    fn transfer(
+        &mut self,
+        token_id: Maybe<u64>,
+        token_hash: Maybe<String>,
+        source: Address,
+        target: Address
+    ) -> (String, Address);
+    fn approve(&mut self, spender: Address, token_id: Maybe<u64>, token_hash: Maybe<String>);
+    fn revoke(&mut self, token_id: Maybe<u64>, token_hash: Maybe<String>);
+}
+
+#[odra::module]
+pub struct TransferFilterContract {
+    value: Var<u8>
+}
+
+#[odra::module]
+impl TransferFilterContract {
+    pub fn set_return_value(&mut self, return_value: u8) {
+        self.value.set(return_value);
+    }
+
+    pub fn can_transfer(&self) -> u8 {
+        self.value.get_or_default()
+    }
 }
 
 pub(crate) fn create_blake2b_hash<T: AsRef<[u8]>>(data: T) -> [u8; BLAKE2B_DIGEST_LENGTH] {

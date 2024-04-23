@@ -39,7 +39,8 @@ pub struct CEP78 {
     token_count: Mapping<Address, u64>,
     burnt_tokens: Mapping<String, ()>,
     operators: Mapping<(Address, Address), bool>,
-    receipt_name: Var<String>
+    receipt_name: Var<String>,
+    transfer_filter_contract: Var<Address>
 }
 
 #[odra::module]
@@ -66,7 +67,7 @@ impl CEP78 {
         operator_burn_mode: Maybe<bool>,
         owner_reverse_lookup_mode: Maybe<OwnerReverseLookupMode>,
         events_mode: Maybe<EventsMode>,
-        transfer_filter_contract_contract_key: Maybe<Address>,
+        transfer_filter_contract_contract: Maybe<Address>,
         additional_required_metadata: Maybe<Vec<NFTMetadataKind>>,
         optional_metadata: Maybe<Vec<NFTMetadataKind>>
     ) {
@@ -117,6 +118,11 @@ impl CEP78 {
             && owner_reverse_lookup_mode.unwrap_or_default() == OwnerReverseLookupMode::Complete
         {
             self.env().revert(CEP78Error::InvalidReportingMode)
+        }
+
+        if let Maybe::Some(transfer_filter_contract_contract) = transfer_filter_contract_contract {
+            self.transfer_filter_contract
+                .set(transfer_filter_contract_contract);
         }
     }
 
@@ -327,8 +333,8 @@ impl CEP78 {
         &mut self,
         token_id: Maybe<u64>,
         token_hash: Maybe<String>,
-        source_key: Address,
-        target_key: Address
+        source: Address,
+        target: Address
     ) -> (String, Address) {
         // If we are in minter or assigned mode we are not allowed to transfer ownership of token, hence
         // we revert.
@@ -338,7 +344,7 @@ impl CEP78 {
         let token_id = token_identifier.to_string();
         // We assume we cannot transfer burnt tokens
         self.ensure_not_burned(&token_id);
-        self.ensure_owner(&token_id, &source_key);
+        self.ensure_owner(&token_id, &source);
 
         let caller = self.env().caller();
 
@@ -355,14 +361,14 @@ impl CEP78 {
 
         // Check if caller is operator to execute transfer
         let is_operator = if !is_owner && !is_approved {
-            self.operators.get_or_default(&(source_key, caller))
+            self.operators.get_or_default(&(source, caller))
         } else {
             false
         };
 
-        if let Some(filter_contract) = utils::get_transfer_filter_contract() {
+        if let Some(filter_contract) = self.transfer_filter_contract.get() {
             let result = TransferFilterContractContractRef::new(self.env(), filter_contract)
-                .can_transfer(source_key, target_key, token_identifier.clone());
+                .can_transfer(source, target, token_identifier.clone());
 
             if TransferFilterContractResult::DenyTransfer == result {
                 self.env().revert(CEP78Error::TransferFilterContractDenied);
@@ -377,23 +383,23 @@ impl CEP78 {
         // Updated token_owners dictionary. Revert if token_owner not found.
         match self.owners.get(&token_id) {
             Some(token_actual_owner) => {
-                if token_actual_owner != source_key {
+                if token_actual_owner != source {
                     self.env().revert(CEP78Error::InvalidTokenOwner)
                 }
-                self.owners.set(&token_id, target_key);
+                self.owners.set(&token_id, target);
             }
             None => self
                 .env()
                 .revert(CEP78Error::MissingOwnerTokenIdentifierKey)
         }
 
-        self.token_count.subtract(&source_key, 1);
-        self.token_count.add(&target_key, 1);
+        self.token_count.subtract(&source, 1);
+        self.token_count.add(&target, 1);
 
         self.approved.set(&token_id, Option::<Address>::None);
 
         let spender = if caller == owner { None } else { Some(caller) };
-        self.emit_ces_event(Transfer::new(owner, spender, target_key, token_id));
+        self.emit_ces_event(Transfer::new(owner, spender, target, token_id));
 
         let reporting_mode = self.reverse_lookup.get_mode();
 
@@ -401,25 +407,23 @@ impl CEP78 {
             reporting_mode
         {
             // Update to_account owned_tokens. Revert if owned_tokens list is not found
-            let tokens_count = self.reverse_lookup.get_token_index(&token_identifier);
-            if OwnerReverseLookupMode::TransfersOnly == reporting_mode {
-                self.pagination
-                    .add_page_entry_and_page_record(tokens_count, &source_key, false);
-            }
+            // let tokens_count = self.reverse_lookup.get_token_index(&token_identifier);
+            // if OwnerReverseLookupMode::TransfersOnly == reporting_mode {
+            //     self.pagination
+            //         .add_page_entry_and_page_record(tokens_count, &source, false);
+            // }
 
-            let (page_table_entry, page_uref) = self.pagination.update_page_entry_and_page_record(
-                tokens_count,
-                &source_key,
-                &target_key
-            );
+            // let (page_table_entry, page_uref) =
+            //     self.pagination
+            //         .update_page_entry_and_page_record(tokens_count, &source, &target);
 
-            let receipt_name = self.receipt_name.get_or_default();
-            let receipt_string = format!("{receipt_name}_m_{PAGE_SIZE}_p_{page_table_entry}");
+            // let receipt_name = self.receipt_name.get_or_default();
+            // let receipt_string = format!("{receipt_name}_m_{PAGE_SIZE}_p_{page_table_entry}");
             // let receipt_address = Key::dictionary(page_uref, owned_tokens_item_key.as_bytes());
-            // TODO: should not return `source_key`
-            return (receipt_string, source_key);
+            // TODO: should not return `source`
+            // return (receipt_string, source);
         }
-        return ("".to_owned(), source_key);
+        return ("".to_owned(), source);
     }
 
     /// Approves another token holder (an approved account) to transfer tokens. It

@@ -105,13 +105,10 @@ fn mint_should_return_dictionary_key_to_callers_owned_tokens() {
         .build();
     let contract = CEP78HostRef::deploy(&env, args);
     let mut minting_contract = TestContractHostRef::deploy(&env, NoArgs);
+    minting_contract.set_address(contract.address());
 
     assert!(minting_contract
-        .try_mint_for(
-            contract.address(),
-            env.get_account(0),
-            TEST_PRETTY_721_META_DATA.to_string()
-        )
+        .try_mint_for(env.get_account(0), TEST_PRETTY_721_META_DATA.to_string())
         .is_ok());
 
     /*

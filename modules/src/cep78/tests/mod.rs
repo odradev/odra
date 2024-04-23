@@ -15,6 +15,7 @@ mod installer;
 mod metadata;
 mod mint;
 mod set_variables;
+mod transfer;
 mod utils;
 
 pub(super) const COLLECTION_NAME: &str = "CEP78-Test-Collection";

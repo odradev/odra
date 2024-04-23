@@ -1,6 +1,4 @@
-use odra::{
-    casper_types::bytesrepr::FromBytes, Address, ContractEnv, OdraError, UnwrapOrRevert, Var
-};
+use odra::{casper_types::bytesrepr::FromBytes, ContractEnv, OdraError, UnwrapOrRevert, Var};
 
 pub trait GetAs<T> {
     fn get_as(&self, env: &ContractEnv) -> T;
@@ -30,10 +28,6 @@ where
     fn into_or_revert(self, env: &ContractEnv) -> T {
         self.try_into().unwrap_or_revert(env)
     }
-}
-
-pub fn get_transfer_filter_contract() -> Option<Address> {
-    None
 }
 
 // pub fn migrate_owned_tokens_in_ordinal_mode() {
