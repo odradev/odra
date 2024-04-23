@@ -1,7 +1,7 @@
 use core::any::Any;
 
-use casper_types::{CLType, CLValueError};
 use casper_types::bytesrepr::Error as BytesReprError;
+use casper_types::{CLType, CLValueError};
 
 use crate::arithmetic::ArithmeticsError;
 use crate::prelude::*;
@@ -123,6 +123,8 @@ pub enum ExecutionError {
     TypeMismatch = 119,
     /// Could not sign message
     CouldNotSignMessage = 120,
+    /// Empty dictionary name
+    EmptyDictionaryName = 121,
     /// Maximum code for user errors
     MaxUserError = 32767,
     /// User error too high. The code should be in range 0..32767.
@@ -244,19 +246,14 @@ pub enum EventError {
 /// Represents the result of a contract call.
 pub type OdraResult<T> = Result<T, OdraError>;
 
-
 impl From<CLValueError> for OdraError {
     fn from(error: CLValueError) -> Self {
         match error {
-            CLValueError::Serialization(_) => {
-                OdraError::VmError(Serialization)
-            }
-            CLValueError::Type(cl_type_mismatch) => {
-                OdraError::VmError(VmError::TypeMismatch {
-                    expected: cl_type_mismatch.expected.clone(),
-                    found: cl_type_mismatch.found.clone()
-                })
-            }
+            CLValueError::Serialization(_) => OdraError::VmError(Serialization),
+            CLValueError::Type(cl_type_mismatch) => OdraError::VmError(VmError::TypeMismatch {
+                expected: cl_type_mismatch.expected.clone(),
+                found: cl_type_mismatch.found.clone()
+            })
         }
     }
 }
@@ -264,27 +261,13 @@ impl From<CLValueError> for OdraError {
 impl From<BytesReprError> for OdraError {
     fn from(error: BytesReprError) -> Self {
         match error {
-            BytesReprError::EarlyEndOfStream => {
-                ExecutionError::EarlyEndOfStream.into()
-            }
-            BytesReprError::Formatting => {
-                ExecutionError::Formatting.into()
-            }
-            BytesReprError::LeftOverBytes => {
-                ExecutionError::LeftOverBytes.into()
-            }
-            BytesReprError::OutOfMemory => {
-                ExecutionError::OutOfMemory.into()
-            }
-            BytesReprError::NotRepresentable => {
-                ExecutionError::NotRepresentable.into()
-            }
-            BytesReprError::ExceededRecursionDepth => {
-                ExecutionError::ExceededRecursionDepth.into()
-            }
-            _ => {
-                ExecutionError::Formatting.into()
-            }
+            BytesReprError::EarlyEndOfStream => ExecutionError::EarlyEndOfStream.into(),
+            BytesReprError::Formatting => ExecutionError::Formatting.into(),
+            BytesReprError::LeftOverBytes => ExecutionError::LeftOverBytes.into(),
+            BytesReprError::OutOfMemory => ExecutionError::OutOfMemory.into(),
+            BytesReprError::NotRepresentable => ExecutionError::NotRepresentable.into(),
+            BytesReprError::ExceededRecursionDepth => ExecutionError::ExceededRecursionDepth.into(),
+            _ => ExecutionError::Formatting.into()
         }
     }
 }

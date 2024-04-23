@@ -115,6 +115,23 @@ impl CasperClient {
         self.query_state_dictionary(address, unsafe { from_utf8_unchecked(key) })
     }
 
+    /// Gets a value from a named key
+    pub fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes> {
+        let uref = self.query_contract_named_key(address, name).unwrap();
+        self.query_uref_bytes(uref).ok()
+    }
+
+    /// Gets a value from a named dictionary
+    pub fn get_dictionary_value(
+        &self,
+        address: &Address,
+        dictionary_name: &str,
+        key: &str
+    ) -> Option<Bytes> {
+        self.query_dict_bytes(address, dictionary_name.to_string(), key.to_string())
+            .ok()
+    }
+
     /// Sets amount of gas for the next deploy.
     pub fn set_gas(&mut self, gas: u64) {
         self.gas = gas.into();
@@ -238,11 +255,10 @@ impl CasperClient {
 
     /// Get the events count from storage
     pub fn events_count(&self, contract_address: &Address) -> u32 {
-        let uref_str = self
+        let uref = self
             .query_contract_named_key(contract_address, "__events_length")
             .unwrap();
-        self.query_uref(URef::from_formatted_str(uref_str.as_str()).unwrap())
-            .unwrap()
+        self.query_uref(uref).unwrap()
     }
 
     /// Query the node for the current state root hash.
@@ -297,29 +313,64 @@ impl CasperClient {
         }
     }
 
+    fn query_dict_bytes(
+        &self,
+        contract_address: &Address,
+        dictionary_name: String,
+        dictionary_item_key: String
+    ) -> Result<Bytes, OdraError> {
+        let state_root_hash = self.get_state_root_hash();
+        let contract_hash = self.query_global_state_for_contract_hash(contract_address);
+        let contract_hash = contract_hash
+            .to_formatted_string()
+            .replace("contract-", "hash-");
+        let params = GetDictionaryItemParams {
+            state_root_hash,
+            dictionary_identifier: DictionaryIdentifier::ContractNamedKey {
+                key: contract_hash,
+                dictionary_name,
+                dictionary_item_key
+            }
+        };
+
+        let request = json!(
+            {
+                "jsonrpc": "2.0",
+                "method": "state_get_dictionary_item",
+                "params": params,
+                "id": 1,
+            }
+        );
+        let result: GetDictionaryItemResult = self.post_request(request);
+        match result.stored_value {
+            CLValue(value) => {
+                let return_value: Bytes = Bytes::from(value.inner_bytes().as_slice());
+                Ok(return_value)
+            }
+            _ => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
+        }
+    }
+
     /// Query the contract for the direct value of a named key
     pub fn query_contract_named_key<T: AsRef<str>>(
         &self,
         contract_address: &Address,
         key: T
-    ) -> Result<String, OdraError> {
+    ) -> Option<URef> {
         let contract_state =
             self.query_global_state_path(contract_address, key.as_ref().to_string());
-        Ok(
-            match contract_state.as_ref().unwrap().stored_value.clone() {
-                casper_node_port::rpcs::StoredValue::Contract(contract) => {
-                    contract.named_keys().find_map(|named_key| {
-                        if named_key.name == key.as_ref() {
-                            Some(named_key.key.clone())
-                        } else {
-                            None
-                        }
-                    })
+        let uref_str = match contract_state.as_ref().unwrap().stored_value.clone() {
+            Contract(contract) => contract.named_keys().find_map(|named_key| {
+                if named_key.name == key.as_ref() {
+                    Some(named_key.key.clone())
+                } else {
+                    None
                 }
-                _ => panic!("Not a contract")
-            }
-            .unwrap()
-        )
+            }),
+            _ => panic!("Not a contract")
+        }
+        .unwrap();
+        URef::from_formatted_str(&uref_str).ok()
     }
 
     /// Query the node for the deploy state.
@@ -587,6 +638,14 @@ impl CasperClient {
         }
     }
 
+    fn query_uref_bytes(&self, uref: URef) -> OdraResult<Bytes> {
+        let result = self.query_global_state(&CasperKey::URef(uref));
+        match result.stored_value {
+            CLValue(value) => Ok(Bytes::from(value.inner_bytes().as_slice())),
+            _ => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
+        }
+    }
+
     fn wait_for_deploy_hash(&self, deploy_hash: DeployHash) -> ExecutionResult {
         let deploy_hash_str = format!("{:?}", deploy_hash.inner());
         let time_diff = Duration::from_secs(15);
@@ -660,16 +719,29 @@ impl CasperClient {
 
     fn post_request<T: DeserializeOwned>(&self, request: Value) -> T {
         let client = reqwest::blocking::Client::new();
-        let response = client
-            .post(self.node_address_rpc())
-            .json(&request)
-            .send()
-            .unwrap();
-        let response: JsonRpc = response.json().unwrap();
-        response
-            .get_result()
-            .map(|result| serde_json::from_value(result.clone()).unwrap())
-            .unwrap()
+        let response = client.post(self.node_address_rpc()).json(&request).send();
+        let response = match response {
+            Ok(r) => r,
+            Err(e) => {
+                log::error(format!("Couldn't send request: {:?}", e));
+                panic!("Couldn't send request")
+            }
+        };
+        let json: JsonRpc = response.json().unwrap_or_else(|e| {
+            log::error(format!("Couldn't parse response: {:?}", e));
+            panic!("Couldn't parse response")
+        });
+        json.get_result()
+            .map(|result| {
+                serde_json::from_value::<T>(result.clone()).unwrap_or_else(|e| {
+                    log::error(format!("Couldn't parse result: {:?}", e));
+                    panic!("Couldn't parse result")
+                })
+            })
+            .unwrap_or_else(|| {
+                log::error(format!("Couldn't get result: {:?}", json));
+                panic!("Couldn't get result")
+            })
     }
 
     fn address_secret_key(&self, address: &Address) -> &SecretKey {

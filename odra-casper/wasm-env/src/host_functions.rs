@@ -7,6 +7,7 @@
 //!
 //! Build on top of the [casper_contract] crate.
 
+use casper_contract::contract_api::storage::new_uref;
 use casper_contract::{
     contract_api::{
         self, runtime, storage,
@@ -19,14 +20,21 @@ use casper_contract::{
     unwrap_or_revert::UnwrapOrRevert
 };
 use core::mem::MaybeUninit;
-use casper_contract::contract_api::storage::new_uref;
-use odra_core::casper_types::{api_error, bytesrepr::{Bytes, FromBytes, ToBytes}, contracts::NamedKeys, system::CallStackElement, ApiError, CLTyped, CLValue, ContractPackageHash, ContractVersion, EntryPoints, Key, RuntimeArgs, URef, DICTIONARY_ITEM_KEY_MAX_LENGTH, U512, UREF_SERIALIZED_LENGTH, bytesrepr};
+use odra_core::casper_types::bytesrepr::deserialize;
+use odra_core::casper_types::{
+    api_error, bytesrepr,
+    bytesrepr::{Bytes, FromBytes, ToBytes},
+    contracts::NamedKeys,
+    system::CallStackElement,
+    ApiError, CLTyped, CLValue, ContractPackageHash, ContractVersion, EntryPoints, Key,
+    RuntimeArgs, URef, DICTIONARY_ITEM_KEY_MAX_LENGTH, U512, UREF_SERIALIZED_LENGTH
+};
+use odra_core::ExecutionError::EmptyDictionaryName;
 use odra_core::{
     args::EntrypointArgument,
     casper_event_standard::{self, Schema, Schemas}
 };
 use odra_core::{prelude::*, Address, CallDef, ExecutionError};
-use odra_core::casper_types::bytesrepr::deserialize;
 
 use crate::consts;
 
@@ -215,7 +223,7 @@ pub fn set_named_key(name: &str, value: CLValue) {
     match runtime::get_key(name) {
         Some(key) => {
             write(key, value);
-        },
+        }
         None => {
             let new_uref = write_new(value);
             runtime::put_key(name, new_uref.into());
@@ -231,10 +239,9 @@ pub fn get_named_key(name: &str) -> Option<Bytes> {
 
 /// Writes a value under a key in a dictionary to a contract's storage.
 pub fn set_dictionary_value(dictionary_name: &str, key: &str, value: CLValue) {
-    let dictionary_uref = get_named_uref(dictionary_name);
+    let dictionary_uref = get_dictionary(dictionary_name);
     let (uref_ptr, uref_size, _bytes1) = to_ptr(dictionary_uref);
-    let (dictionary_item_key_ptr, dictionary_item_key_size) =
-        dictionary_item_key_to_ptr(key);
+    let (dictionary_item_key_ptr, dictionary_item_key_size) = dictionary_item_key_to_ptr(key);
 
     if dictionary_item_key_size > DICTIONARY_ITEM_KEY_MAX_LENGTH {
         runtime::revert(ApiError::DictionaryItemKeyExceedsLength)
@@ -249,7 +256,7 @@ pub fn set_dictionary_value(dictionary_name: &str, key: &str, value: CLValue) {
             dictionary_item_key_ptr,
             dictionary_item_key_size,
             cl_value_ptr,
-            cl_value_size,
+            cl_value_size
         );
         api_error::result_from(ret)
     };
@@ -259,10 +266,9 @@ pub fn set_dictionary_value(dictionary_name: &str, key: &str, value: CLValue) {
 
 /// Gets a value under a key in a dictionary from the contract's storage.
 pub fn get_dictionary_value(dictionary_name: &str, key: &str) -> Option<Bytes> {
-    let dictionary_uref = get_named_uref(dictionary_name);
+    let dictionary_uref = get_dictionary(dictionary_name);
     let (uref_ptr, uref_size, _bytes1) = to_ptr(dictionary_uref);
-    let (dictionary_item_key_ptr, dictionary_item_key_size) =
-        dictionary_item_key_to_ptr(key);
+    let (dictionary_item_key_ptr, dictionary_item_key_size) = dictionary_item_key_to_ptr(key);
 
     if dictionary_item_key_size > DICTIONARY_ITEM_KEY_MAX_LENGTH {
         runtime::revert(ApiError::DictionaryItemKeyExceedsLength)
@@ -290,13 +296,24 @@ pub fn get_dictionary_value(dictionary_name: &str, key: &str) -> Option<Bytes> {
     Some(Bytes::from(value_bytes))
 }
 
-fn get_named_uref(dictionary_name: &str) -> URef {
-    let dictionary_uref = match runtime::get_key(dictionary_name) {
+fn get_dictionary(name: &str) -> URef {
+    if name.is_empty() {
+        runtime::revert(ApiError::MissingKey)
+    }
+
+    let dictionary_uref = match runtime::get_key(name) {
         Some(dictionary_key) => *dictionary_key.as_uref().unwrap_or_revert(),
         None => {
-            let dictionary_uref = new_uref(dictionary_name);
-            runtime::put_key(dictionary_name, Key::from(dictionary_uref));
-            dictionary_uref
+            let value_size = {
+                let mut value_size = MaybeUninit::uninit();
+                let ret = unsafe { ext_ffi::casper_new_dictionary(value_size.as_mut_ptr()) };
+                api_error::result_from(ret).unwrap_or_revert();
+                unsafe { value_size.assume_init() }
+            };
+            let value_bytes = read_host_buffer(value_size).unwrap_or_revert();
+            let uref: URef = bytesrepr::deserialize(value_bytes).unwrap_or_revert();
+            runtime::put_key(name, Key::from(uref));
+            uref
         }
     };
     dictionary_uref
@@ -623,15 +640,9 @@ fn write(key: Key, value: CLValue) {
     let (key_ptr, key_size, _bytes) = to_ptr(key);
     let (value_ptr, value_size, _bytes) = to_ptr(value);
 
-        unsafe {
-            ext_ffi::casper_write(
-                key_ptr,
-                key_size,
-                value_ptr,
-                value_size
-            );
-        }
-
+    unsafe {
+        ext_ffi::casper_write(key_ptr, key_size, value_ptr, value_size);
+    }
 }
 
 fn write_new(value: CLValue) -> URef {
@@ -642,7 +653,7 @@ fn write_new(value: CLValue) -> URef {
         Vec::from_raw_parts(
             uref_non_null_ptr.as_ptr(),
             UREF_SERIALIZED_LENGTH,
-            UREF_SERIALIZED_LENGTH,
+            UREF_SERIALIZED_LENGTH
         )
     };
     deserialize(bytes).unwrap_or_revert()
@@ -652,13 +663,7 @@ fn read(key: Key) -> Option<Bytes> {
     let (key_ptr, key_size, _bytes) = to_ptr(key);
     let value_size = {
         let mut value_size = MaybeUninit::uninit();
-        let ret = unsafe {
-            ext_ffi::casper_read_value( 
-                key_ptr,
-                key_size,
-                value_size.as_mut_ptr()
-            )
-        };
+        let ret = unsafe { ext_ffi::casper_read_value(key_ptr, key_size, value_size.as_mut_ptr()) };
         match api_error::result_from(ret) {
             Ok(_) => unsafe { value_size.assume_init() },
             Err(e) => runtime::revert(e)

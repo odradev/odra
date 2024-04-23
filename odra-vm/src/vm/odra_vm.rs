@@ -5,6 +5,8 @@ use std::sync::{Arc, RwLock};
 
 use anyhow::Result;
 use odra_core::callstack::CallstackElement;
+use odra_core::casper_types::bytesrepr::{deserialize, deserialize_from_slice, serialize};
+use odra_core::casper_types::{CLType, CLValue};
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::EventError;
 use odra_core::{
@@ -18,8 +20,6 @@ use odra_core::{
 use odra_core::{CallDef, OdraResult};
 use odra_core::{ContractContainer, ContractRegister};
 use odra_core::{OdraError, VmError};
-use odra_core::casper_types::bytesrepr::{deserialize, deserialize_from_slice, serialize};
-use odra_core::casper_types::{CLType, CLValue};
 
 use super::odra_vm_state::OdraVmState;
 const NAMED_KEY_PREFIX: &str = "NAMED_KEY";
@@ -163,23 +163,25 @@ impl OdraVm {
     }
 
     /// Sets the value of the named key.
-    pub fn set_named_key(&self, name: &str, value: CLValue
-    ) {
+    pub fn set_named_key(&self, name: &str, value: CLValue) {
         // create a key by prepending the name with a prefix
         let key = format!("{}_{}", NAMED_KEY_PREFIX, name);
         self.set_var(key.as_bytes(), Bytes::from(value.inner_bytes().as_slice()));
     }
 
     /// Retrieves the value of the named key.
-    pub fn get_named_key(&self, name: &str) -> Option<Bytes>
-    {
+    pub fn get_named_key(&self, name: &str) -> Option<Bytes> {
         let key = format!("{}_{}", NAMED_KEY_PREFIX, name);
         self.get_var(key.as_bytes())
     }
 
     /// Sets the value of the dictionary item.
     pub fn set_dict_value(&self, dict: &str, key: &str, value: CLValue) {
-        self.state.write().unwrap().set_dict_value(dict.as_bytes(), key.as_bytes(), Bytes::from(value.inner_bytes().as_slice()));
+        self.state.write().unwrap().set_dict_value(
+            dict.as_bytes(),
+            key.as_bytes(),
+            Bytes::from(value.inner_bytes().as_slice())
+        );
     }
 
     /// Gets the value of the dictionary item.
@@ -187,7 +189,12 @@ impl OdraVm {
     /// Returns `None` if the dictionary or the key does not exist.
     /// If the dictionary or the key does not exist, the virtual machine is in error state.
     pub fn get_dict_value(&self, dict: &str, key: &str) -> Option<Bytes> {
-        let result = { self.state.read().unwrap().get_dict_value(dict.as_bytes(), key.as_bytes()) };
+        let result = {
+            self.state
+                .read()
+                .unwrap()
+                .get_dict_value(dict.as_bytes(), key.as_bytes())
+        };
         match result {
             Ok(result) => result,
             Err(error) => {
@@ -557,13 +564,16 @@ mod tests {
         instance.set_dict_value(dict, &key, value.clone());
 
         // then the value can be read
-        assert_eq!(instance.get_dict_value(dict, &key), Some(Bytes::from(value.inner_bytes().as_slice())));
+        assert_eq!(
+            instance.get_dict_value(dict, &key),
+            Some(Bytes::from(value.inner_bytes().as_slice()))
+        );
         // then the value under the key in unknown dict does not exist
         assert_eq!(instance.get_dict_value("other_dict", &key), None);
         // then the value under unknown key does not exist
         assert_eq!(instance.get_dict_value(dict, "other_key"), None);
     }
-    
+
     #[test]
     fn test_named_key() {
         // given an empty instance
@@ -575,7 +585,10 @@ mod tests {
         instance.set_named_key(name, value.clone());
 
         // then the value can be read
-        assert_eq!(instance.get_named_key(name), Some(Bytes::from(value.inner_bytes().as_slice())));
+        assert_eq!(
+            instance.get_named_key(name),
+            Some(Bytes::from(value.inner_bytes().as_slice()))
+        );
         // then the value under unknown name does not exist
         assert_eq!(instance.get_named_key("other_name"), None);
     }

@@ -1,11 +1,11 @@
 use crate::vm::OdraVm;
 use blake2::digest::VariableOutput;
 use blake2::{Blake2b, Blake2b512, Blake2bVar, Blake2s256, Digest};
-use odra_core::casper_types::{BlockTime, CLType, CLValue};
 use odra_core::casper_types::{
     bytesrepr::{Bytes, ToBytes},
     U512
 };
+use odra_core::casper_types::{BlockTime, CLType, CLValue};
 use odra_core::prelude::*;
 use odra_core::{casper_types, Address, OdraError};
 use odra_core::{CallDef, ContractContext};

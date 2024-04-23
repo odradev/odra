@@ -1,16 +1,16 @@
 use casper_types::bytesrepr::deserialize_from_slice;
-use casper_types::{BLAKE2B_DIGEST_LENGTH, CLValue};
 use casper_types::crypto::PublicKey;
+use casper_types::{CLValue, BLAKE2B_DIGEST_LENGTH};
 
-use crate::{consts, ExecutionError, prelude::*};
-use crate::{UnwrapOrRevert, utils};
-use crate::{Address, OdraError};
 use crate::args::EntrypointArgument;
 use crate::call_def::CallDef;
-use crate::casper_types::{CLTyped, U512};
 use crate::casper_types::bytesrepr::{Bytes, FromBytes, ToBytes};
+use crate::casper_types::{CLTyped, U512};
 pub use crate::ContractContext;
 use crate::ExecutionError::Formatting;
+use crate::{consts, prelude::*, ExecutionError};
+use crate::{utils, UnwrapOrRevert};
+use crate::{Address, OdraError};
 
 const INDEX_SIZE: usize = 4;
 const KEY_LEN: usize = 64;
@@ -107,17 +107,22 @@ impl ContractEnv {
     }
 
     /// Retrieves the value associated with the given named key from the named dictionary in the contract storage.
-pub fn get_dictionary_value<T: FromBytes + CLTyped, U: AsRef<str>, V: AsRef<str>>(
+    pub fn get_dictionary_value<T: FromBytes + CLTyped, U: AsRef<str>, V: AsRef<str>>(
         &self,
         dictionary_name: U,
         key: V
     ) -> Option<T> {
         let dictionary_name = dictionary_name.as_ref();
         let key = key.as_ref();
-        let bytes = self.backend
+        let bytes = self
+            .backend
             .borrow()
             .get_dictionary_value(dictionary_name, key);
-        bytes.map(|b| deserialize_from_slice(b).map_err(|_| Formatting).unwrap_or_revert(self))
+        bytes.map(|b| {
+            deserialize_from_slice(b)
+                .map_err(|_| Formatting)
+                .unwrap_or_revert(self)
+        })
     }
 
     /// Sets the value associated with the given named key in the named dictionary in the contract storage.
@@ -129,7 +134,9 @@ pub fn get_dictionary_value<T: FromBytes + CLTyped, U: AsRef<str>, V: AsRef<str>
     ) {
         let dictionary_name = dictionary_name.as_ref();
         let key = key.as_ref();
-        let cl_value = CLValue::from_t(value).map_err(|_| Formatting).unwrap_or_revert(self);
+        let cl_value = CLValue::from_t(value)
+            .map_err(|_| Formatting)
+            .unwrap_or_revert(self);
         self.backend
             .borrow()
             .set_dictionary_value(dictionary_name, key, cl_value);
@@ -287,7 +294,8 @@ impl ExecutionEnv {
             deserialize_from_slice(bytes).unwrap_or_revert(&self.env)
         } else {
             let bytes = self.env.backend.borrow().get_opt_named_arg_bytes(name);
-            let result = bytes.map(|bytes| deserialize_from_slice(bytes).unwrap_or_revert(&self.env));
+            let result =
+                bytes.map(|bytes| deserialize_from_slice(bytes).unwrap_or_revert(&self.env));
             T::unwrap(result, &self.env)
         }
     }

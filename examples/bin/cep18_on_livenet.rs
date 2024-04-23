@@ -4,6 +4,8 @@ use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader};
 use odra::Address;
 use odra_modules::cep18_token::{Cep18HostRef, Cep18InitArgs};
 use std::str::FromStr;
+use base64::Engine;
+use odra::casper_types::bytesrepr::ToBytes;
 
 fn main() {
     let env = odra_casper_livenet_env::env();
@@ -17,22 +19,26 @@ fn main() {
     println!("Token address: {}", token.address().to_string());
 
     // Uncomment to load existing contract.
-    // let mut token = load_erc20(&env);
+    // let mut token = _load_cep18(&env);
 
-    // println!("Token name: {}", token.name());
+    println!("Token name: {}", token.name());
 
     env.set_gas(3_000_000_000u64);
     token.transfer(&recipient, &U256::from(1000));
     
     token.approve(&recipient, &U256::from(3500));
-    //
-    // println!("Owner's balance: {:?}", token.balance_of(&owner));
-    // println!("Recipient's balance: {:?}", token.balance_of(&recipient));
+    println!("Owner's key: {:?}", base64::prelude::BASE64_STANDARD.encode(owner.to_bytes().unwrap()));
+    let another = "hash-164dfbcead27821298a39df518c56354ed6d6284f28cd0a7dd5c8be98f25f8f8";
+    let another = Address::from_str(another).unwrap();
+    println!("Another's key: {:?}", base64::prelude::BASE64_STANDARD.encode(another.to_bytes().unwrap()));
+
+    println!("Owner's balance: {:?}", token.balance_of(&owner));
+    println!("Recipient's balance: {:?}", token.balance_of(&recipient));
 }
 
 /// Loads an ERC20 contract.
 fn _load_cep18(env: &HostEnv) -> Cep18HostRef {
-    let address = "hash-d26fcbd2106e37be975d2045c580334a6d7b9d0a241c2358a4db970dfd516945";
+    let address = "hash-69977ed7e406045d542f78a30fbee6dd676438a5570aaea219a924ce0be35153";
     let address = Address::from_str(address).unwrap();
     Cep18HostRef::load(env, address)
 }
@@ -54,6 +60,6 @@ let init_args = Cep18InitArgs {
         modality: Some(1)
     };
 
-    env.set_gas(200_000_000_000u64);
+    env.set_gas(300_000_000_000u64);
     Cep18HostRef::deploy(env, init_args)
 }
