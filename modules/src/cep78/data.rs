@@ -1,7 +1,6 @@
 use odra::prelude::*;
 use odra::Address;
 use odra::Mapping;
-use odra::Sequence;
 use odra::UnwrapOrRevert;
 use odra::Var;
 
@@ -13,7 +12,7 @@ pub struct CollectionData {
     name: Var<String>,
     symbol: Var<String>,
     total_token_supply: Var<u64>,
-    counter: Sequence<u64>,
+    counter: Var<u64>,
     installer: Var<Address>,
     owners: Mapping<String, Address>,
     issuers: Mapping<String, Address>,
@@ -43,8 +42,6 @@ impl CollectionData {
         self.symbol.set(symbol);
         self.total_token_supply.set(total_token_supply);
         self.installer.set(installer);
-
-        self.counter.next_value();
     }
 
     #[inline]
@@ -60,12 +57,12 @@ impl CollectionData {
 
     #[inline]
     pub fn increment_number_of_minted_tokens(&mut self) {
-        self.counter.next_value();
+        self.counter.add(1);
     }
 
     #[inline]
     pub fn number_of_minted_tokens(&self) -> u64 {
-        self.counter.get_current_value()
+        self.counter.get_or_default()
     }
 
     #[inline]
@@ -85,7 +82,7 @@ impl CollectionData {
 
     #[inline]
     pub fn set_issuer(&mut self, token_id: &String, issuer: Address) {
-        self.owners.set(token_id, issuer);
+        self.issuers.set(token_id, issuer);
     }
 
     #[inline]

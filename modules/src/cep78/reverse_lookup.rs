@@ -145,7 +145,7 @@ impl ReverseLookup {
         &mut self,
         token_identifier: TokenIdentifier,
         source: Address,
-        target: Address
+        _target: Address
     ) -> (String, Address) {
         let mode = self.get_mode();
         if let OwnerReverseLookupMode::Complete | OwnerReverseLookupMode::TransfersOnly = mode {
@@ -154,13 +154,12 @@ impl ReverseLookup {
             if OwnerReverseLookupMode::TransfersOnly == mode {
                 self.add_page_entry_and_page_record(tokens_count, &source, false);
             }
-
-            let (page_table_entry, _page_uref) =
-                self.update_page_entry_and_page_record(tokens_count, &source, &target);
-
-            let receipt_name = self.receipt_name.get_or_default();
-            let _receipt_string = format!("{receipt_name}_m_{PAGE_SIZE}_p_{page_table_entry}");
             // TODO: Implement the following
+
+            // let (page_table_entry, _page_uref) =
+            //     self.update_page_entry_and_page_record(tokens_count, &source, &target);
+            // let receipt_name = self.receipt_name.get_or_default();
+            // let _receipt_string = format!("{receipt_name}_m_{PAGE_SIZE}_p_{page_table_entry}");
             // let receipt_address = Key::dictionary(page_uref, owned_tokens_item_key.as_bytes());
             // return (receipt_string, source);
         }
@@ -214,7 +213,7 @@ impl ReverseLookup {
         (page_table_entry, uref_a)
     }
 
-    fn update_page_entry_and_page_record(
+    fn _update_page_entry_and_page_record(
         &mut self,
         tokens_count: u64,
         old_item_key: &Address,

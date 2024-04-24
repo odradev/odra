@@ -1,8 +1,7 @@
-use crate::entry_point_callback::{Argument, EntryPointsCaller};
-use crate::{prelude::*, OdraResult};
-use crate::{CallDef, OdraError, VmError};
+use crate::entry_point_callback::EntryPointsCaller;
+use crate::CallDef;
+use crate::OdraResult;
 use casper_types::bytesrepr::Bytes;
-use casper_types::RuntimeArgs;
 
 /// A wrapper struct for a EntryPointsCaller that is a layer of abstraction between the host and the entry points caller.
 ///
@@ -22,41 +21,7 @@ impl ContractContainer {
 
     /// Calls the entry point with the given call definition.
     pub fn call(&self, call_def: CallDef) -> OdraResult<Bytes> {
-        // find the entry point
-        let ep = self
-            .entry_points_caller
-            .entry_points()
-            .iter()
-            .find(|ep| ep.name == call_def.entry_point())
-            .ok_or_else(|| {
-                OdraError::VmError(VmError::NoSuchMethod(call_def.entry_point().to_string()))
-            })?;
-        // validate the args, return an error if the args are invalid
-        // self.validate_args(&ep.args, call_def.args())?;
         self.entry_points_caller.call(call_def)
-    }
-
-    fn validate_args(&self, args: &[Argument], input_args: &RuntimeArgs) -> OdraResult<()> {
-        for arg in args {
-            // check if the input args contain the arg
-            if let Some(input) = input_args
-                .named_args()
-                .find(|input| input.name() == arg.name.as_str())
-            {
-                // check if the input arg has the expected type
-                let input_ty = input.cl_value().cl_type();
-                let expected_ty = &arg.ty;
-                if input_ty != expected_ty {
-                    return Err(OdraError::VmError(VmError::TypeMismatch {
-                        expected: expected_ty.clone(),
-                        found: input_ty.clone()
-                    }));
-                }
-            } else {
-                return Err(OdraError::VmError(VmError::MissingArg));
-            }
-        }
-        Ok(())
     }
 }
 

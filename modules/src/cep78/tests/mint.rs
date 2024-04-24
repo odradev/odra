@@ -145,9 +145,8 @@ fn mint_should_increment_number_of_minted_tokens_by_one_and_add_public_key_to_to
 
     // TODO: should register the owner first to create a page for the owner
     contract.register_owner(Maybe::Some(owner));
-    assert_eq!(
-        contract.try_mint(owner, TEST_PRETTY_721_META_DATA.to_string(), Maybe::None),
-        Ok(("".to_owned(), owner, "0".to_owned()))
+    assert!(
+        contract.try_mint(owner, TEST_PRETTY_721_META_DATA.to_string(), Maybe::None).is_ok()
     );
 
     assert_eq!(

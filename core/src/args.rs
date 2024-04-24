@@ -1,6 +1,6 @@
 //! This module provides types and traits for working with entrypoint arguments.
 
-use crate::{contract_def::Argument, prelude::*, ContractEnv, ExecutionEnv, ExecutionError, OdraError};
+use crate::{contract_def::Argument, prelude::*, ContractEnv, ExecutionError};
 use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
     CLType, CLTyped, Parameter, RuntimeArgs
