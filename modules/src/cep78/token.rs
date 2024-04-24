@@ -1,3 +1,4 @@
+#![allow(clippy::too_many_arguments)]
 use super::{
     data::CollectionData,
     error::CEP78Error,
@@ -203,12 +204,10 @@ impl CEP78 {
             }
         }
 
-        if MintingMode::Acl == minting_mode {
-            if !self.whitelist.is_whitelisted(&caller) {
-                match caller {
-                    Address::Contract(_) => self.revert(CEP78Error::UnlistedContractHash),
-                    Address::Account(_) => self.revert(CEP78Error::InvalidMinter)
-                }
+        if MintingMode::Acl == minting_mode && !self.whitelist.is_whitelisted(&caller) {
+            match caller {
+                Address::Contract(_) => self.revert(CEP78Error::UnlistedContractHash),
+                Address::Account(_) => self.revert(CEP78Error::InvalidMinter)
             }
         }
 

@@ -16,11 +16,8 @@ use super::default_args_builder;
 #[test]
 fn should_install_with_acl_whitelist() {
     let env = odra_test::env();
-
     let test_contract_address = TestContractHostRef::deploy(&env, NoArgs);
-
-    let contract_whitelist = vec![test_contract_address.address().clone()];
-
+    let contract_whitelist = vec![*test_contract_address.address()];
     let args = default_args_builder()
         .holder_mode(NFTHolderMode::Contracts)
         .whitelist_mode(WhitelistMode::Locked)
@@ -189,7 +186,7 @@ fn should_allow_whitelisted_contract_to_mint() {
 
     let mut minting_contract = TestContractHostRef::deploy(&env, NoArgs);
 
-    let contract_whitelist = vec![minting_contract.address().clone()];
+    let contract_whitelist = vec![*minting_contract.address()];
     let args = default_args_builder()
         .holder_mode(NFTHolderMode::Contracts)
         .whitelist_mode(WhitelistMode::Locked)
@@ -240,7 +237,7 @@ fn should_allow_mixed_account_contract_to_mint() {
 
     let mut minting_contract = TestContractHostRef::deploy(&env, NoArgs);
     let account_user_1 = env.get_account(1);
-    let mixed_whitelist = vec![minting_contract.address().clone(), account_user_1];
+    let mixed_whitelist = vec![*minting_contract.address(), account_user_1];
 
     let args = default_args_builder()
         .holder_mode(NFTHolderMode::Mixed)
@@ -286,7 +283,7 @@ fn should_disallow_unlisted_contract_from_minting_with_mixed_account_contract() 
     let mut minting_contract = TestContractHostRef::deploy(&env, NoArgs);
     let account_user_1 = env.get_account(1);
     let mixed_whitelist = vec![
-        DummyContractHostRef::deploy(&env, NoArgs).address().clone(),
+        *DummyContractHostRef::deploy(&env, NoArgs).address(),
         account_user_1,
     ];
 
@@ -314,7 +311,7 @@ fn should_disallow_unlisted_account_from_minting_with_mixed_account_contract() {
     let minting_contract = TestContractHostRef::deploy(&env, NoArgs);
     let listed_account = env.get_account(0);
     let unlisted_account = env.get_account(1);
-    let mixed_whitelist = vec![minting_contract.address().clone(), listed_account];
+    let mixed_whitelist = vec![*minting_contract.address(), listed_account];
 
     let args = default_args_builder()
         .holder_mode(NFTHolderMode::Mixed)
@@ -343,7 +340,7 @@ fn should_disallow_listed_account_from_minting_with_nftholder_contract() {
     let minting_contract = TestContractHostRef::deploy(&env, NoArgs);
     let listed_account = env.get_account(0);
 
-    let mixed_whitelist = vec![minting_contract.address().clone(), listed_account];
+    let mixed_whitelist = vec![*minting_contract.address(), listed_account];
 
     let args = default_args_builder()
         .holder_mode(NFTHolderMode::Contracts)
@@ -420,7 +417,7 @@ fn should_be_able_to_update_whitelist_for_minting() {
 
     contract.set_variables(
         Maybe::None,
-        Maybe::Some(vec![minting_contract.address().clone()]),
+        Maybe::Some(vec![*minting_contract.address()]),
         Maybe::None
     );
 

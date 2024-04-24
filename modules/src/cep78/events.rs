@@ -127,6 +127,7 @@ impl MetadataUpdated {
 pub struct VariablesSet {}
 
 impl VariablesSet {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {}
     }
@@ -136,6 +137,7 @@ impl VariablesSet {
 pub struct Migration {}
 
 impl Migration {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {}
     }

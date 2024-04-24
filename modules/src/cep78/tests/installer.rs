@@ -21,7 +21,7 @@ fn should_install_contract() {
     assert_eq!(&contract.get_collection_name(), COLLECTION_NAME);
     assert_eq!(&contract.get_collection_symbol(), COLLECTION_SYMBOL);
     assert_eq!(contract.get_total_supply(), 1u64);
-    assert_eq!(contract.is_minting_allowed(), true);
+    assert!(contract.is_minting_allowed());
     assert_eq!(contract.get_minting_mode(), MintingMode::Installer);
     assert_eq!(contract.get_number_of_minted_tokens(), 0u64);
 
@@ -54,7 +54,7 @@ fn should_install_with_allow_minting_set_to_false() {
 
     let args = default_args_builder().allow_minting(false).build();
     let contract = CEP78HostRef::deploy(&env, args);
-    assert_eq!(contract.is_minting_allowed(), false);
+    assert!(!contract.is_minting_allowed());
 }
 
 #[test]

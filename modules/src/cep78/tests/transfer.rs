@@ -460,7 +460,7 @@ fn should_be_able_to_approve_with_deprecated_operator_argument() {}
 fn should_transfer_between_contract_to_account() {
     let env = odra_test::env();
     let mut minting_contract = TestContractHostRef::deploy(&env, NoArgs);
-    let contract_whitelist = vec![minting_contract.address().clone()];
+    let contract_whitelist = vec![*minting_contract.address()];
     let args = default_args_builder()
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
         .events_mode(EventsMode::CES)
@@ -777,7 +777,7 @@ fn check_transfers_with_transfer_filter_contract_modes() {
     transfer_filter_contract.set_return_value(TransferFilterContractResult::DenyTransfer as u8);
     let args = default_args_builder()
         .ownership_mode(OwnershipMode::Transferable)
-        .transfer_filter_contract_contract_key(transfer_filter_contract.address().clone())
+        .transfer_filter_contract_contract_key(*transfer_filter_contract.address())
         .build();
     let mut contract = CEP78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
@@ -898,7 +898,7 @@ fn should_allow_transfer_from_contract_with_package_operator_mode_with_operator(
     contract.register_owner(Maybe::Some(token_receiver));
 
     let token_id = 0u64;
-    contract.set_approval_for_all(true, minting_contract.address().clone());
+    contract.set_approval_for_all(true, *minting_contract.address());
     assert!(minting_contract
         .try_transfer_from(token_id, token_owner, token_receiver)
         .is_ok());
@@ -931,7 +931,7 @@ fn should_allow_package_operator_to_approve_with_package_operator_mode() {
 
     let token_receiver = env.get_account(1);
     contract.register_owner(Maybe::Some(token_receiver));
-    contract.set_approval_for_all(true, minting_contract.address().clone());
+    contract.set_approval_for_all(true, *minting_contract.address());
 
     let token_id = 0u64;
     let spender = env.get_account(2);
@@ -968,7 +968,7 @@ fn should_allow_account_to_approve_spender_with_package_operator() {
 
     let token_receiver = env.get_account(1);
     contract.register_owner(Maybe::Some(token_receiver));
-    contract.set_approval_for_all(true, minting_contract.address().clone());
+    contract.set_approval_for_all(true, *minting_contract.address());
 
     let token_id = 0u64;
     let spender = env.get_account(2);
@@ -1006,7 +1006,7 @@ fn should_allow_package_operator_to_revoke_with_package_operator_mode() {
 
     let token_receiver = env.get_account(1);
     contract.register_owner(Maybe::Some(token_receiver));
-    contract.set_approval_for_all(true, minting_contract.address().clone());
+    contract.set_approval_for_all(true, *minting_contract.address());
 
     let token_id = 0u64;
     let spender = env.get_account(2);

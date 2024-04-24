@@ -158,7 +158,7 @@ fn should_return_expected_error_burning_of_others_users_token() {
 fn should_allow_contract_to_burn_token() {
     let env = odra_test::env();
     let mut minting_contract = TestContractHostRef::deploy(&env, NoArgs);
-    let contract_whitelist = vec![minting_contract.address().clone()];
+    let contract_whitelist = vec![*minting_contract.address()];
     let args = default_args_builder()
         .holder_mode(NFTHolderMode::Contracts)
         .ownership_mode(OwnershipMode::Minter)
@@ -260,7 +260,7 @@ fn should_let_contract_operator_burn_tokens_with_operator_burn_mode() {
     let token_id = 0u64;
     let mut minting_contract = TestContractHostRef::deploy(&env, NoArgs);
     minting_contract.set_address(contract.address());
-    let operator = minting_contract.address().clone();
+    let operator = *minting_contract.address();
     let account_1 = env.get_account(1);
 
     env.set_caller(account_1);

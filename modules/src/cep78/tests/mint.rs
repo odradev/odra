@@ -145,9 +145,9 @@ fn mint_should_increment_number_of_minted_tokens_by_one_and_add_public_key_to_to
 
     // TODO: should register the owner first to create a page for the owner
     contract.register_owner(Maybe::Some(owner));
-    assert!(
-        contract.try_mint(owner, TEST_PRETTY_721_META_DATA.to_string(), Maybe::None).is_ok()
-    );
+    assert!(contract
+        .try_mint(owner, TEST_PRETTY_721_META_DATA.to_string(), Maybe::None)
+        .is_ok());
 
     assert_eq!(
         contract.get_number_of_minted_tokens(),
@@ -585,7 +585,7 @@ fn should_mint_without_returning_receipts_and_flat_gas_cost() {
 
     // In this case there is no first time allocation of a page.
     // Therefore the second and first mints must have equivalent gas costs.
-    assert_eq!(costs.get(0), costs.get(1))
+    assert_eq!(costs.first(), costs.get(1))
 }
 
 // A test to ensure that the page table allocation is preserved
@@ -830,5 +830,5 @@ fn should_approve_all_with_flat_gas_cost() {
 
     // Operator approval should have flat gas costs
     // Therefore the second and first set_approve_for_all must have equivalent gas costs.
-    assert_eq!(costs.get(0), costs.get(1));
+    assert_eq!(costs.first(), costs.get(1));
 }

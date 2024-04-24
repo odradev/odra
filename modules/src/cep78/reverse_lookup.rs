@@ -69,9 +69,9 @@ impl ReverseLookup {
         ownership_mode: OwnershipMode
     ) -> (String, URef) {
         let mode = self.get_mode();
-        if vec![
+        if [
             OwnerReverseLookupMode::Complete,
-            OwnerReverseLookupMode::TransfersOnly,
+            OwnerReverseLookupMode::TransfersOnly
         ]
         .contains(&mode)
         {
@@ -163,7 +163,7 @@ impl ReverseLookup {
             // let receipt_address = Key::dictionary(page_uref, owned_tokens_item_key.as_bytes());
             // return (receipt_string, source);
         }
-        return ("".to_owned(), source);
+        ("".to_owned(), source)
     }
 
     fn add_page_entry_and_page_record(
@@ -248,7 +248,7 @@ impl ReverseLookup {
 
         let mut target_page_table = self
             .page_table
-            .get(&new_item_key)
+            .get(new_item_key)
             .unwrap_or_revert_with(&self.env(), CEP78Error::UnregisteredOwnerInTransfer);
 
         let mut target_page = if !target_page_table[page_table_entry as usize] {

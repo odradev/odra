@@ -112,10 +112,10 @@ impl Metadata {
     }
 
     fn validate(&self, kind: &NFTMetadataKind, metadata: &str) -> Result<String, CEP78Error> {
-        let token_schema = self.get_metadata_schema(&kind);
+        let token_schema = self.get_metadata_schema(kind);
         match kind {
             NFTMetadataKind::CEP78 => {
-                let metadata = serde_json_wasm::from_str::<MetadataCEP78>(&metadata)
+                let metadata = serde_json_wasm::from_str::<MetadataCEP78>(metadata)
                     .map_err(|_| CEP78Error::FailedToParseCep78Metadata)?;
 
                 if let Some(name_property) = token_schema.properties.get("name") {
@@ -137,7 +137,7 @@ impl Metadata {
                     .map_err(|_| CEP78Error::FailedToJsonifyCEP78Metadata)
             }
             NFTMetadataKind::NFT721 => {
-                let metadata = serde_json_wasm::from_str::<MetadataNFT721>(&metadata)
+                let metadata = serde_json_wasm::from_str::<MetadataNFT721>(metadata)
                     .map_err(|_| CEP78Error::FailedToParse721Metadata)?;
 
                 if let Some(name_property) = token_schema.properties.get("name") {
@@ -161,7 +161,7 @@ impl Metadata {
             NFTMetadataKind::Raw => Ok(metadata.to_owned()),
             NFTMetadataKind::CustomValidated => {
                 let custom_metadata =
-                    serde_json_wasm::from_str::<BTreeMap<String, String>>(&metadata)
+                    serde_json_wasm::from_str::<BTreeMap<String, String>>(metadata)
                         .map(|attributes| CustomMetadata { attributes })
                         .map_err(|_| CEP78Error::FailedToParseCustomMetadata)?;
 

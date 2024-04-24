@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 
-mod data;
 mod constants;
+mod data;
 pub mod error;
 pub mod events;
 mod metadata;

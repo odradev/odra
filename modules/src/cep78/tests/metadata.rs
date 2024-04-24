@@ -109,7 +109,7 @@ fn should_prevent_metadata_update_by_non_owner_key() {
         .ownership_mode(OwnershipMode::Transferable)
         .build();
     let mut contract = CEP78HostRef::deploy(&env, args);
-    let token_owner = contract.address().clone();
+    let token_owner = *contract.address();
     contract.mint(
         token_owner,
         TEST_PRETTY_721_META_DATA.to_string(),
@@ -260,8 +260,7 @@ fn should_update_metadata_for_custom_validated_using_token_id() {
 fn should_get_metadata_using_token_id() {
     let env = odra_test::env();
     let mut minting_contract = TestContractHostRef::deploy(&env, NoArgs);
-    let minting_contract_address = minting_contract.address().clone();
-    let contract_whitelist = vec![minting_contract_address];
+    let contract_whitelist = vec![*minting_contract.address()];
     let args = default_args_builder()
         .holder_mode(NFTHolderMode::Contracts)
         .whitelist_mode(WhitelistMode::Locked)
@@ -288,8 +287,7 @@ fn should_get_metadata_using_token_id() {
 fn should_get_metadata_using_token_metadata_hash() {
     let env = odra_test::env();
     let mut minting_contract = TestContractHostRef::deploy(&env, NoArgs);
-    let minting_contract_address = minting_contract.address().clone();
-    let contract_whitelist = vec![minting_contract_address];
+    let contract_whitelist = vec![*minting_contract.address()];
     let args = default_args_builder()
         .identifier_mode(NFTIdentifierMode::Hash)
         .holder_mode(NFTHolderMode::Contracts)
@@ -320,8 +318,7 @@ fn should_get_metadata_using_token_metadata_hash() {
 fn should_revert_minting_token_metadata_hash_twice() {
     let env = odra_test::env();
     let mut minting_contract = TestContractHostRef::deploy(&env, NoArgs);
-    let minting_contract_address = minting_contract.address().clone();
-    let contract_whitelist = vec![minting_contract_address];
+    let contract_whitelist = vec![*minting_contract.address()];
     let args = default_args_builder()
         .identifier_mode(NFTIdentifierMode::Hash)
         .holder_mode(NFTHolderMode::Contracts)
@@ -355,8 +352,7 @@ fn should_revert_minting_token_metadata_hash_twice() {
 fn should_get_metadata_using_custom_token_hash() {
     let env = odra_test::env();
     let mut minting_contract = TestContractHostRef::deploy(&env, NoArgs);
-    let minting_contract_address = minting_contract.address().clone();
-    let contract_whitelist = vec![minting_contract_address];
+    let contract_whitelist = vec![*minting_contract.address()];
     let args = default_args_builder()
         .identifier_mode(NFTIdentifierMode::Hash)
         .holder_mode(NFTHolderMode::Contracts)
@@ -387,8 +383,7 @@ fn should_get_metadata_using_custom_token_hash() {
 fn should_revert_minting_custom_token_hash_identifier_twice() {
     let env = odra_test::env();
     let mut minting_contract = TestContractHostRef::deploy(&env, NoArgs);
-    let minting_contract_address = minting_contract.address().clone();
-    let contract_whitelist = vec![minting_contract_address];
+    let contract_whitelist = vec![*minting_contract.address()];
     let args = default_args_builder()
         .identifier_mode(NFTIdentifierMode::Hash)
         .holder_mode(NFTHolderMode::Contracts)
