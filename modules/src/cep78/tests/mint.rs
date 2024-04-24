@@ -185,6 +185,7 @@ fn should_set_meta_data() {
     let (mut contract, env) = default_token();
 
     let token_owner = env.get_account(0);
+    contract.register_owner(Maybe::Some(token_owner));
     contract.mint(
         token_owner,
         TEST_PRETTY_721_META_DATA.to_string(),
@@ -200,6 +201,7 @@ fn should_set_issuer() {
     let (mut contract, env) = default_token();
 
     let token_owner = env.get_account(0);
+    contract.register_owner(Maybe::Some(token_owner));
     contract.mint(
         token_owner,
         TEST_PRETTY_721_META_DATA.to_string(),
@@ -217,6 +219,7 @@ fn should_set_issuer_with_different_owner() {
 
     let token_issuer = env.get_account(0);
     let token_owner = env.get_account(1);
+    contract.register_owner(Maybe::Some(token_owner));
     contract.mint(
         token_owner,
         TEST_PRETTY_721_META_DATA.to_string(),
@@ -233,6 +236,7 @@ fn should_track_token_balance_by_owner() {
     let (mut contract, env) = default_token();
 
     let token_owner = env.get_account(0);
+    contract.register_owner(Maybe::Some(token_owner));
     contract.mint(
         token_owner,
         TEST_PRETTY_721_META_DATA.to_string(),
@@ -416,6 +420,7 @@ fn should_not_mint_with_invalid_nft721_metadata() {
 #[test]
 fn should_mint_with_compactified_metadata() {
     let (mut contract, env) = default_token();
+    contract.register_owner(Maybe::Some(env.get_account(0)));
     contract.mint(
         env.get_account(0),
         TEST_COMPACT_META_DATA.to_string(),
@@ -719,7 +724,7 @@ fn should_not_mint_with_missing_required_metadata() {
             TEST_PRETTY_721_META_DATA.to_string(),
             Maybe::None
         ),
-        Err(CEP78Error::FailedToParseCep99Metadata.into())
+        Err(CEP78Error::FailedToParseCep78Metadata.into())
     );
 }
 

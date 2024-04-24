@@ -116,25 +116,25 @@ impl Metadata {
         match kind {
             NFTMetadataKind::CEP78 => {
                 let metadata = serde_json_wasm::from_str::<MetadataCEP78>(&metadata)
-                    .map_err(|_| CEP78Error::FailedToParseCep99Metadata)?;
+                    .map_err(|_| CEP78Error::FailedToParseCep78Metadata)?;
 
                 if let Some(name_property) = token_schema.properties.get("name") {
                     if name_property.required && metadata.name.is_empty() {
-                        self.env().revert(CEP78Error::InvalidCEP99Metadata)
+                        self.env().revert(CEP78Error::InvalidCEP78Metadata)
                     }
                 }
                 if let Some(token_uri_property) = token_schema.properties.get("token_uri") {
                     if token_uri_property.required && metadata.token_uri.is_empty() {
-                        self.env().revert(CEP78Error::InvalidCEP99Metadata)
+                        self.env().revert(CEP78Error::InvalidCEP78Metadata)
                     }
                 }
                 if let Some(checksum_property) = token_schema.properties.get("checksum") {
                     if checksum_property.required && metadata.checksum.is_empty() {
-                        self.env().revert(CEP78Error::InvalidCEP99Metadata)
+                        self.env().revert(CEP78Error::InvalidCEP78Metadata)
                     }
                 }
                 serde_json::to_string_pretty(&metadata)
-                    .map_err(|_| CEP78Error::FailedToJsonifyCEP99Metadata)
+                    .map_err(|_| CEP78Error::FailedToJsonifyCEP78Metadata)
             }
             NFTMetadataKind::NFT721 => {
                 let metadata = serde_json_wasm::from_str::<MetadataNFT721>(&metadata)

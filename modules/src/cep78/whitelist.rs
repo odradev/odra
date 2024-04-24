@@ -27,7 +27,7 @@ impl ACLWhitelist {
         self.addresses.get_or_default().contains(address)
     }
 
-    pub fn update_addresses(&mut self, new_addresses: Maybe<Vec<Address>>) {
+    pub fn update(&mut self, new_addresses: Maybe<Vec<Address>>) {
         let new_addresses = new_addresses.unwrap_or_default();
         if !new_addresses.is_empty() {
             match self.get_mode() {

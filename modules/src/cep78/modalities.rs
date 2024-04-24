@@ -1,12 +1,16 @@
 use super::error::CEP78Error;
 use odra::prelude::*;
 
+/// The WhitelistMode dictates if the ACL whitelist restricting access to
+/// the mint entry point can be updated.
 #[repr(u8)]
 #[odra::odra_type]
 #[derive(Default)]
 pub enum WhitelistMode {
+    /// The ACL whitelist is unlocked and can be updated via the `set_variables` endpoint.
     #[default]
     Unlocked = 0,
+    /// The ACL whitelist is locked and cannot be updated further.
     Locked = 1
 }
 
@@ -22,12 +26,23 @@ impl TryFrom<u8> for WhitelistMode {
     }
 }
 
+/// The modality dictates which entities on a Casper network can own and mint NFTs.
+///
+/// If the NFTHolderMode is set to Contracts a ContractHash whitelist must be provided.
+/// This whitelist dictates which Contracts are allowed to mint NFTs in the restricted
+/// Installer minting mode.
+///
+/// This modality is an optional installation parameter and will default to the Mixed mode
+/// if not provided. However, this mode cannot be changed once the contract has been installed.
 #[repr(u8)]
 #[odra::odra_type]
 #[derive(Copy, Default)]
 pub enum NFTHolderMode {
+    /// Only Accounts can own and mint NFTs.
     Accounts = 0,
+    /// Only Contracts can own and mint NFTs.
     Contracts = 1,
+    /// Both Accounts and Contracts can own and mint NFTs.
     #[default]
     Mixed = 2
 }
@@ -45,6 +60,11 @@ impl TryFrom<u8> for NFTHolderMode {
     }
 }
 
+/// The minting mode governs the behavior of contract when minting new tokens.
+///
+/// This modality is an optional installation parameter and will default
+/// to the `Installer` mode if not provided. However, this mode cannot be changed
+/// once the contract has been installed.
 #[odra::odra_type]
 #[repr(u8)]
 #[derive(Default)]
@@ -124,14 +144,22 @@ impl TryFrom<u8> for Requirement {
     }
 }
 
+/// This modality dictates the schema for the metadata for NFTs minted
+/// by a given instance of an NFT contract.
 #[repr(u8)]
 #[derive(Default, PartialOrd, Ord)]
 #[odra::odra_type]
 pub enum NFTMetadataKind {
+    /// NFTs must have valid metadata conforming to the CEP-78 schema.
     #[default]
     CEP78 = 0,
+    /// NFTs  must have valid metadata conforming to the NFT-721 metadata schema.
     NFT721 = 1,
+    /// Metadata validation will not occur and raw strings can be passed to
+    /// `token_metadata` runtime argument as part of the call to mint entrypoint.
     Raw = 2,
+    /// Custom schema provided at the time of install will be used when validating
+    /// the metadata as part of the call to mint entrypoint.
     CustomValidated = 3
 }
 
@@ -149,6 +177,11 @@ impl TryFrom<u8> for NFTMetadataKind {
     }
 }
 
+/// This modality specifies the behavior regarding ownership of NFTs and whether
+/// the owner of the NFT can change over the contract's lifetime.
+///
+/// Ownership mode is a required installation parameter and cannot be changed
+/// once the contract has been installed.
 #[repr(u8)]
 #[odra::odra_type]
 #[derive(Default, PartialOrd, Ord, Copy)]
@@ -175,12 +208,30 @@ impl TryFrom<u8> for OwnershipMode {
     }
 }
 
+/// The identifier mode governs the primary identifier for NFTs minted
+/// for a given instance on an installed contract.
+///
+/// Since the default primary identifier in the `Hash` mode is custom or derived by
+/// hashing over the metadata, making it a content-addressed identifier,
+/// the metadata for the minted NFT cannot be updated after the mint.
+///
+/// Attempting to install the contract with the [MetadataMutability] modality set to
+/// `Mutable` in the `Hash` identifier mode will raise an error.
+///
+/// This modality is a required installation parameter and cannot be changed
+/// once the contract has been installed.
 #[repr(u8)]
 #[odra::odra_type]
 #[derive(Default, PartialOrd, Ord, Copy)]
 pub enum NFTIdentifierMode {
+    /// NFTs minted in this modality are identified by a u64 value.
+    /// This value is determined by the number of NFTs minted by
+    /// the contract at the time the NFT is minted.
     #[default]
     Ordinal = 0,
+    /// NFTs minted in this modality are identified by an optional custom
+    /// string identifier or by default a base16 encoded representation of
+    /// the blake2b hash of the metadata provided at the time of mint.
     Hash = 1
 }
 
@@ -196,12 +247,22 @@ impl TryFrom<u8> for NFTIdentifierMode {
     }
 }
 
+/// The metadata mutability mode governs the behavior around updates to a given NFTs metadata.
+///
+/// The Mutable option cannot be used in conjunction with the Hash modality for the NFT identifier;
+/// attempting to install the contract with this configuration raises
+/// [super::error::CEP78Error::InvalidMetadataMutability] error.
+///
+/// This modality is a required installation parameter and cannot be changed
+/// once the contract has been installed.
 #[repr(u8)]
 #[derive(Default, PartialOrd, Ord, Copy)]
 #[odra::odra_type]
 pub enum MetadataMutability {
+    /// Metadata for NFTs minted in this mode cannot be updated once the NFT has been minted.
     #[default]
     Immutable = 0,
+    /// Metadata for NFTs minted in this mode can update the metadata via the `set_token_metadata` entrypoint.
     Mutable = 1
 }
 
@@ -263,12 +324,16 @@ impl ToString for TokenIdentifier {
     }
 }
 
+/// The modality dictates whether tokens minted by a given instance of
+/// an NFT contract can be burnt.
 #[repr(u8)]
 #[odra::odra_type]
 #[derive(Default)]
 pub enum BurnMode {
+    /// Minted tokens can be burnt.
     #[default]
     Burnable = 0,
+    /// Minted tokens cannot be burnt.
     NonBurnable = 1
 }
 
@@ -284,13 +349,46 @@ impl TryFrom<u8> for BurnMode {
     }
 }
 
+/// This modality is set at install and determines if a given contract instance
+/// writes necessary data to allow reverse lookup by owner in addition to by ID.
+///
+/// This modality provides the following options:
+///
+/// `NoLookup`: The reporting and receipt functionality is not supported.
+/// In this option, the contract instance does not maintain a reverse lookup
+/// database of ownership and therefore has more predictable gas costs and greater
+/// scaling.
+/// `Complete`: The reporting and receipt functionality is supported. Token
+/// ownership will be tracked by the contract instance using the system described
+/// [here](https://github.com/casper-ecosystem/cep-78-enhanced-nft/blob/dev/docs/reverse-lookup.md#owner-reverse-lookup-functionality).
+/// `TransfersOnly`: The reporting and receipt functionality is supported like
+/// `Complete`. However, it does not begin tracking until the first transfer.
+/// This modality is for use cases where the majority of NFTs are owned by
+/// a private minter and only NFT's that have been transferred benefit from
+/// reverse lookup tracking. Token ownership will also be tracked by the contract
+/// instance using the system described [here](https://github.com/casper-ecosystem/cep-78-enhanced-nft/blob/dev/docs/reverse-lookup.md#owner-reverse-lookup-functionality).
+///
+/// Additionally, when set to Complete, causes a receipt to be returned by the mint
+/// or transfer entrypoints, which the caller can store in their account or contract
+/// context for later reference.
+///
+/// Further, two special entrypoints are enabled in Complete mode. First,
+/// `register_owner` which when called will allocate the necessary tracking
+/// record for the imputed entity. This allows isolation of the one time gas cost
+/// to do this per owner, which is convenient for accounting purposes. Second,
+/// updated_receipts, which allows an owner of one or more NFTs held by the contract
+/// instance to attain up to date receipt information for the NFTs they currently own.
 #[repr(u8)]
 #[derive(Default, PartialOrd, Ord, Copy)]
 #[odra::odra_type]
 pub enum OwnerReverseLookupMode {
+    /// The reporting and receipt functionality is not supported.
     #[default]
     NoLookUp = 0,
+    /// The reporting and receipt functionality is supported.
     Complete = 1,
+    /// The reporting and receipt functionality is supported, but the tracking
+    /// does not start until the first transfer.
     TransfersOnly = 2
 }
 
@@ -307,34 +405,20 @@ impl TryFrom<u8> for OwnerReverseLookupMode {
     }
 }
 
-#[repr(u8)]
-pub enum NamedKeyConventionMode {
-    DerivedFromCollectionName = 0,
-    V1_0Standard = 1,
-    V1_0Custom = 2
-}
-
-impl TryFrom<u8> for NamedKeyConventionMode {
-    type Error = CEP78Error;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
-            0 => Ok(NamedKeyConventionMode::DerivedFromCollectionName),
-            1 => Ok(NamedKeyConventionMode::V1_0Standard),
-            2 => Ok(NamedKeyConventionMode::V1_0Custom),
-            _ => Err(CEP78Error::InvalidNamedKeyConvention)
-        }
-    }
-}
-
+/// The `EventsMode` modality determines how the installed instance of CEP-78
+/// will handle the recording of events that occur from interacting with
+/// the contract.
+///
+/// Odra does not allow to set the `CEP47` event schema.
 #[repr(u8)]
 #[odra::odra_type]
 #[derive(Copy, Default)]
 #[allow(clippy::upper_case_acronyms)]
 pub enum EventsMode {
+    /// Signals the contract to not record events at all. This is the default mode.
     #[default]
     NoEvents = 0,
-    CEP47 = 1,
+    /// Signals the contract to record events using the Casper Event Standard.
     CES = 2
 }
 
@@ -344,18 +428,24 @@ impl TryFrom<u8> for EventsMode {
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
             0 => Ok(EventsMode::NoEvents),
-            1 => Ok(EventsMode::CEP47),
             2 => Ok(EventsMode::CES),
             _ => Err(CEP78Error::InvalidEventsMode)
         }
     }
 }
 
+/// The transfer filter modality, if enabled, specifies a contract package hash
+/// pointing to a contract that will be called when the transfer method is
+/// invoked on the contract. CEP-78 will call the `can_transfer` method on the
+/// specified callback contract, which is expected to return a value of
+/// `TransferFilterContractResult`, represented as a u8.
 #[repr(u8)]
 #[non_exhaustive]
 #[odra::odra_type]
 pub enum TransferFilterContractResult {
+    /// Blocks the transfer regardless of the outcome of other checks
     DenyTransfer = 0,
+    /// Allows the transfer to proceed if other checks also pass
     ProceedTransfer
 }
 

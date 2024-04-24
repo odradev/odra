@@ -332,7 +332,7 @@ fn should_revert_minting_token_metadata_hash_twice() {
         .acl_white_list(contract_whitelist)
         .build();
     let mut contract = CEP78HostRef::deploy(&env, args);
-
+    minting_contract.set_address(contract.address());
     assert!(
         contract.is_whitelisted(minting_contract.address()),
         "acl whitelist is incorrectly set"

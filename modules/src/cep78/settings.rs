@@ -1,12 +1,7 @@
 use odra::prelude::*;
 use odra::Var;
 
-use super::modalities::BurnMode;
-use super::modalities::EventsMode;
-use super::modalities::MintingMode;
-use super::modalities::NFTHolderMode;
-use super::modalities::NFTKind;
-use super::modalities::OwnershipMode;
+use super::modalities::{BurnMode, EventsMode, MintingMode, NFTHolderMode, NFTKind, OwnershipMode};
 
 #[odra::module]
 pub struct Settings {
