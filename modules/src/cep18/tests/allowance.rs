@@ -56,9 +56,8 @@ mod allowance_tests {
         let owner = cep18_token.env().get_account(0);
         let alice = cep18_token.env().get_account(1);
         let token_address = *cep18_token.address();
-        let client_contract = Cep18ClientContractHostRef::deploy(&mut cep18_token.env(), NoArgs);
-        let another_client_contract =
-            Cep18ClientContractHostRef::deploy(&mut cep18_token.env(), NoArgs);
+        let client_contract = Cep18ClientContractHostRef::deploy(cep18_token.env(), NoArgs);
+        let another_client_contract = Cep18ClientContractHostRef::deploy(cep18_token.env(), NoArgs);
 
         let client_contract_address = client_contract.address();
         let another_client_contract_address = another_client_contract.address();

@@ -35,7 +35,7 @@ impl ContractContext for LivenetContractEnv {
             .get_named_value(self.callstack.borrow().current().address(), name)
     }
 
-    fn set_named_value(&self, name: &str, value: CLValue) {
+    fn set_named_value(&self, _name: &str, _value: CLValue) {
         panic!("Cannot set named value in LivenetEnv without a deploy")
     }
 
@@ -47,7 +47,7 @@ impl ContractContext for LivenetContractEnv {
         )
     }
 
-    fn set_dictionary_value(&self, dictionary_name: &str, key: &str, value: CLValue) {
+    fn set_dictionary_value(&self, _dictionary_name: &str, _key: &str, _value: CLValue) {
         panic!("Cannot set dictionary value in LivenetEnv without a deploy")
     }
 

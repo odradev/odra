@@ -37,7 +37,7 @@ mod transfer_tests {
         let amount = TOKEN_TOTAL_SUPPLY.into();
 
         // when the owner tries to transfer more than they have
-        let result = cep18_token.try_transfer(&alice, &U256::from(amount + 1));
+        let result = cep18_token.try_transfer(&alice, &(amount + 1));
 
         // then the transfer fails
         assert_eq!(result.err().unwrap(), InsufficientBalance.into());

@@ -31,7 +31,7 @@ use crate::casper_node_port::{
     },
     Deploy, DeployHash
 };
-use crate::{casper_node_port, log};
+use crate::log;
 
 /// Environment variable holding a path to a secret key of a main account.
 pub const ENV_SECRET_KEY: &str = "ODRA_CASPER_LIVENET_SECRET_KEY_PATH";
@@ -369,7 +369,13 @@ impl CasperClient {
             }),
             _ => panic!("Not a contract")
         }
-        .unwrap();
+        .unwrap_or_else(|| {
+            panic!(
+                "Couldn't get named key {} from contract state at address {:?}",
+                key.as_ref(),
+                contract_address
+            )
+        });
         URef::from_formatted_str(&uref_str).ok()
     }
 
