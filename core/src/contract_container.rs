@@ -1,4 +1,5 @@
 use crate::entry_point_callback::EntryPointsCaller;
+use crate::prelude::ToOwned;
 use crate::CallDef;
 use crate::OdraError;
 use crate::OdraResult;
@@ -23,14 +24,13 @@ impl ContractContainer {
 
     /// Calls the entry point with the given call definition.
     pub fn call(&self, call_def: CallDef) -> OdraResult<Bytes> {
-         // find the entry point
-         self
-            .entry_points_caller
+        // find the entry point
+        self.entry_points_caller
             .entry_points()
             .iter()
             .find(|ep| ep.name == call_def.entry_point())
             .ok_or_else(|| {
-                OdraError::VmError(VmError::NoSuchMethod(call_def.entry_point().to_string()))
+                OdraError::VmError(VmError::NoSuchMethod(call_def.entry_point().to_owned()))
             })?;
         self.entry_points_caller.call(call_def)
     }
@@ -42,10 +42,7 @@ mod tests {
     use crate::contract_context::MockContractContext;
     use crate::entry_point_callback::{Argument, EntryPoint, EntryPointsCaller};
     use crate::host::{HostEnv, MockHostContext};
-    use crate::{
-        casper_types::RuntimeArgs,
-        OdraError, VmError
-    };
+    use crate::{casper_types::RuntimeArgs, OdraError, VmError};
     use crate::{prelude::*, CallDef, ContractEnv};
 
     const TEST_ENTRYPOINT: &str = "ep";
