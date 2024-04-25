@@ -58,7 +58,7 @@ fn should_reject_non_numerical_total_token_supply_value() {}
 fn should_install_with_contract_holder_mode() {
     let env = odra_test::env();
     let whitelisted_contract = MockDummyContractHostRef::deploy(&env, NoArgs);
-    let contract_whitelist = vec![whitelisted_contract.address().clone()];
+    let contract_whitelist = vec![*whitelisted_contract.address()];
     let args = default_args_builder()
         .holder_mode(NFTHolderMode::Contracts)
         .whitelist_mode(WhitelistMode::Unlocked)

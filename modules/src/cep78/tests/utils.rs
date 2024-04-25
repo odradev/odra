@@ -6,7 +6,13 @@ use crate::cep78::{
     token::Cep78InitArgs
 };
 use blake2::{digest::VariableOutput, Blake2bVar};
-use odra::{args::Maybe, casper_types::{BLAKE2B_DIGEST_LENGTH, U512}, host::HostEnv, prelude::*, Address, DeployReport};
+use odra::{
+    args::Maybe,
+    casper_types::{BLAKE2B_DIGEST_LENGTH, U512},
+    host::HostEnv,
+    prelude::*,
+    Address, DeployReport
+};
 use std::io::Write;
 
 #[derive(Default)]
@@ -211,7 +217,6 @@ pub(crate) fn create_blake2b_hash<T: AsRef<[u8]>>(data: T) -> [u8; BLAKE2B_DIGES
         .expect("should copy hash to the result array");
     result
 }
-
 
 pub(crate) fn get_gas_cost_of(env: &HostEnv, entry_point: &str) -> Vec<U512> {
     let gas_report = env.gas_report();

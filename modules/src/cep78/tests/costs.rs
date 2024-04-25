@@ -1,6 +1,12 @@
 use odra::{args::Maybe, host::Deployer};
 
-use crate::cep78::{modalities::{NFTHolderMode, NFTMetadataKind, OwnerReverseLookupMode, OwnershipMode, WhitelistMode}, tests::{default_args_builder, utils}, token::Cep78HostRef};
+use crate::cep78::{
+    modalities::{
+        NFTHolderMode, NFTMetadataKind, OwnerReverseLookupMode, OwnershipMode, WhitelistMode
+    },
+    tests::{default_args_builder, utils},
+    token::Cep78HostRef
+};
 
 #[test]
 #[ignore = "Reverse lookup is not implemented yet"]
@@ -29,7 +35,7 @@ fn transfer_costs_should_remain_stable() {
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
     let receiver = env.get_account(1);
-  
+
     for _ in 0..3 {
         contract.mint(token_owner, "".to_string(), Maybe::None);
     }
@@ -57,7 +63,7 @@ fn should_cost_less_when_installing_without_reverse_lookup(reporting: OwnerRever
     Cep78HostRef::deploy(&env, args);
     // let page_dictionary_lookup = builder.query(None, no_lookup_hash, &["page_0".to_string()]);
     // assert!(page_dictionary_lookup.is_err());
-    
+
     let args = default_args_builder()
         .owner_reverse_lookup_mode(reporting)
         .nft_metadata_kind(NFTMetadataKind::Raw)
@@ -69,7 +75,7 @@ fn should_cost_less_when_installing_without_reverse_lookup(reporting: OwnerRever
     // assert!(page_dictionary_lookup.is_ok());
 
     let costs = utils::get_deploy_gas_cost(&env);
-    if let Some(no_lookup_gas_cost) = costs.get(0) {
+    if let Some(no_lookup_gas_cost) = costs.first() {
         if let Some(reverse_lookup_gas_cost) = costs.get(1) {
             assert!(no_lookup_gas_cost < reverse_lookup_gas_cost);
         }

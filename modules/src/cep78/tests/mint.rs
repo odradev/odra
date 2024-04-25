@@ -1,7 +1,7 @@
 use odra::{
     args::Maybe,
     casper_types::bytesrepr::ToBytes,
-    host::{Deployer, HostEnv, HostRef, NoArgs},
+    host::{Deployer, HostEnv, HostRef, NoArgs}
 };
 use serde::{Deserialize, Serialize};
 
