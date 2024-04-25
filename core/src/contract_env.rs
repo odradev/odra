@@ -1,11 +1,8 @@
-use casper_types::bytesrepr::deserialize_from_slice;
-use casper_types::crypto::PublicKey;
-use casper_types::{CLValue, BLAKE2B_DIGEST_LENGTH};
-
 use crate::args::EntrypointArgument;
 use crate::call_def::CallDef;
-use crate::casper_types::bytesrepr::{Bytes, FromBytes, ToBytes};
-use crate::casper_types::{CLTyped, U512};
+use crate::casper_types::bytesrepr::{Bytes, FromBytes, ToBytes, deserialize_from_slice};
+use crate::casper_types::{CLTyped, CLValue, BLAKE2B_DIGEST_LENGTH, U512};
+use crate::casper_types::crypto::PublicKey;
 pub use crate::ContractContext;
 use crate::ExecutionError::Formatting;
 use crate::{consts, prelude::*, ExecutionError};

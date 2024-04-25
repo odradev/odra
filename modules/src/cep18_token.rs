@@ -3,9 +3,7 @@ use odra::prelude::*;
 use odra::{casper_types::U256, Address, Mapping, SubModule, UnwrapOrRevert, Var};
 
 use crate::cep18::errors::Error;
-use crate::cep18::errors::Error::{
-    CannotTargetSelfUser, InsufficientRights, InvalidBurnTarget, MintBurnDisabled, Overflow
-};
+
 use crate::cep18::events::{
     Burn, ChangeSecurity, DecreaseAllowance, IncreaseAllowance, Mint, SetAllowance, Transfer,
     TransferFrom
@@ -27,7 +25,7 @@ pub struct Cep18 {
     balances: SubModule<Cep18BalancesStorage>,
     allowances: SubModule<Cep18AllowancesStorage>,
     security_badges: Mapping<Address, SecurityBadge>,
-    modality: Var<u8>
+    modality: Var<Cep18Modality>
 }
 
 #[odra::module]
@@ -42,7 +40,7 @@ impl Cep18 {
         initial_supply: U256,
         minter_list: Vec<Address>,
         admin_list: Vec<Address>,
-        modality: Option<u8>
+        modality: Option<Cep18Modality>
     ) {
         let caller = self.env().caller();
         // set the metadata
@@ -88,10 +86,8 @@ impl Cep18 {
         none_list: Vec<Address>
     ) {
         // if mint burn is disabled, revert
-        if self.modality.get_or_default()
-            != <Cep18Modality as Into<u8>>::into(Cep18Modality::MintAndBurn)
-        {
-            self.env().revert(MintBurnDisabled);
+        if self.modality.get_or_default() != Cep18Modality::MintAndBurn {
+            self.env().revert(Error::MintBurnDisabled);
         }
 
         // check if the caller has the admin badge
@@ -99,10 +95,10 @@ impl Cep18 {
         let caller_badge = self
             .security_badges
             .get(&caller)
-            .unwrap_or_revert_with(&self.env(), InsufficientRights);
+            .unwrap_or_revert_with(&self.env(), Error::InsufficientRights);
 
         if !caller_badge.can_admin() {
-            self.env().revert(InsufficientRights);
+            self.env().revert(Error::InsufficientRights);
         }
 
         let mut badges_map = BTreeMap::new();
@@ -165,7 +161,7 @@ impl Cep18 {
     pub fn approve(&mut self, spender: &Address, amount: &U256) {
         let owner = self.env().caller();
         if owner == *spender {
-            self.env().revert(CannotTargetSelfUser);
+            self.env().revert(Error::CannotTargetSelfUser);
         }
 
         self.allowances.set(&owner, spender, *amount);
@@ -194,7 +190,7 @@ impl Cep18 {
     pub fn increase_allowance(&mut self, spender: &Address, inc_by: &U256) {
         let owner = self.env().caller();
         if owner == *spender {
-            self.env().revert(CannotTargetSelfUser);
+            self.env().revert(Error::CannotTargetSelfUser);
         }
         let allowance = self.allowances.get_or_default(&owner, spender);
 
@@ -212,7 +208,7 @@ impl Cep18 {
     pub fn transfer(&mut self, recipient: &Address, amount: &U256) {
         let caller = self.env().caller();
         if caller == *recipient {
-            self.env().revert(CannotTargetSelfUser);
+            self.env().revert(Error::CannotTargetSelfUser);
         }
         self.raw_transfer(&caller, recipient, amount);
     }
@@ -221,8 +217,8 @@ impl Cep18 {
     pub fn transfer_from(&mut self, owner: &Address, recipient: &Address, amount: &U256) {
         let spender = self.env().caller();
 
-        if *owner == *recipient {
-            self.env().revert(CannotTargetSelfUser);
+        if owner == recipient {
+            self.env().revert(Error::CannotTargetSelfUser);
         }
 
         if amount.is_zero() {
@@ -251,17 +247,17 @@ impl Cep18 {
     /// Mints new tokens and assigns them to the given address.
     pub fn mint(&mut self, owner: &Address, amount: &U256) {
         // check if mint_burn is enabled
-        if self.modality.get_or_default() == 0 {
-            self.env().revert(MintBurnDisabled);
+        if self.modality.get_or_default() == Cep18Modality::None {
+            self.env().revert(Error::MintBurnDisabled);
         }
 
         // check if the caller has the minter badge
         let security_badge = self
             .security_badges
             .get(&self.env().caller())
-            .unwrap_or_revert_with(&self.env(), InsufficientRights);
+            .unwrap_or_revert_with(&self.env(), Error::InsufficientRights);
         if !security_badge.can_mint() {
-            self.env().revert(InsufficientRights);
+            self.env().revert(Error::InsufficientRights);
         }
 
         self.total_supply.add(*amount);
@@ -276,12 +272,12 @@ impl Cep18 {
     /// Burns the given amount of tokens from the given address.
     pub fn burn(&mut self, owner: &Address, amount: &U256) {
         // check if mint_burn is enabled
-        if self.modality.get_or_default() == 0 {
-            self.env().revert(MintBurnDisabled);
+        if self.modality.get_or_default() == Cep18Modality::None {
+            self.env().revert(Error::MintBurnDisabled);
         }
 
         if self.env().caller() != *owner {
-            self.env().revert(InvalidBurnTarget);
+            self.env().revert(Error::InvalidBurnTarget);
         }
 
         if self.balance_of(owner) < *amount {
@@ -293,13 +289,13 @@ impl Cep18 {
         self.total_supply.set(
             total_supply
                 .checked_sub(*amount)
-                .unwrap_or_revert_with(&self.env(), Overflow)
+                .unwrap_or_revert_with(&self.env(), Error::Overflow)
         );
         self.balances.set(
             owner,
             balance
                 .checked_sub(*amount)
-                .unwrap_or_revert_with(&self.env(), Overflow)
+                .unwrap_or_revert_with(&self.env(), Error::Overflow)
         );
 
         self.env().emit_event(Burn {
@@ -331,6 +327,7 @@ pub(crate) mod tests {
     use alloc::string::ToString;
     use alloc::vec;
 
+    use crate::cep18::utils::Cep18Modality;
     use odra::casper_types::account::AccountHash;
     use odra::casper_types::ContractPackageHash;
     use odra::host::{Deployer, HostEnv, HostRef};
@@ -350,7 +347,11 @@ pub(crate) mod tests {
 
     pub fn setup(enable_mint_and_burn: bool) -> Cep18HostRef {
         let env = odra_test::env();
-        let modality = if enable_mint_and_burn { Some(1) } else { None };
+        let modality = if enable_mint_and_burn {
+            Cep18Modality::MintAndBurn
+        } else {
+            Cep18Modality::None
+        };
         let init_args = Cep18InitArgs {
             symbol: TOKEN_SYMBOL.to_string(),
             name: TOKEN_NAME.to_string(),
@@ -358,7 +359,7 @@ pub(crate) mod tests {
             initial_supply: TOKEN_TOTAL_SUPPLY.into(),
             minter_list: vec![],
             admin_list: vec![],
-            modality
+            modality: Some(modality)
         };
         setup_with_args(&env, init_args)
     }

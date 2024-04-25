@@ -21,9 +21,11 @@ impl SecurityBadge {
     }
 }
 /// Modality of the CEP-18 contract.
+#[derive(Default)]
 #[odra::odra_type]
 pub enum Cep18Modality {
     /// No modailities are set.
+    #[default]
     None = 0,
     /// The contract can mint and burn tokens.
     MintAndBurn = 1
