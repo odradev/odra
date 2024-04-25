@@ -6,13 +6,12 @@ use odra::casper_types::bytesrepr::ToBytes;
 use odra::prelude::*;
 use odra::{Address, UnwrapOrRevert};
 
-use crate::cep18::errors::Error::InvalidState;
+use crate::cep18::errors::Error::{InvalidState, Overflow};
 
 use base64::prelude::*;
 
 const ALLOWANCES_KEY: &str = "allowances";
 const BALANCES_KEY: &str = "balances";
-
 const NAME_KEY: &str = "name";
 const DECIMALS_KEY: &str = "decimals";
 const SYMBOL_KEY: &str = "symbol";
@@ -101,6 +100,15 @@ impl Cep18TotalSupplyStorage {
             .unwrap_or_revert_with(&self.env(), AdditionOverflow);
         self.set(new_total_supply);
     }
+
+    /// Subtracts the given amount from the total supply of the token.
+    pub fn subtract(&self, amount: U256) {
+        let total_supply = self.get();
+        let new_total_supply = total_supply
+            .checked_sub(amount)
+            .unwrap_or_revert_with(&self.env(), Overflow);
+        self.set(new_total_supply);
+    }
 }
 
 #[odra::module]
@@ -134,7 +142,7 @@ impl Cep18BalancesStorage {
         let balance = self.get_or_default(account);
         let new_balance = balance
             .checked_sub(amount)
-            .unwrap_or_revert_with(&self.env(), AdditionOverflow);
+            .unwrap_or_revert_with(&self.env(), Overflow);
         self.set(account, new_balance);
     }
 

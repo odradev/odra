@@ -85,10 +85,7 @@ impl Cep18 {
         minter_list: Vec<Address>,
         none_list: Vec<Address>
     ) {
-        // if mint burn is disabled, revert
-        if self.modality.get_or_default() != Cep18Modality::MintAndBurn {
-            self.env().revert(Error::MintBurnDisabled);
-        }
+        self.assert_burn_and_mint_enabled();
 
         // check if the caller has the admin badge
         let caller = self.env().caller();
@@ -210,6 +207,7 @@ impl Cep18 {
         if caller == *recipient {
             self.env().revert(Error::CannotTargetSelfUser);
         }
+
         self.raw_transfer(&caller, recipient, amount);
     }
 
@@ -246,10 +244,7 @@ impl Cep18 {
 
     /// Mints new tokens and assigns them to the given address.
     pub fn mint(&mut self, owner: &Address, amount: &U256) {
-        // check if mint_burn is enabled
-        if self.modality.get_or_default() == Cep18Modality::None {
-            self.env().revert(Error::MintBurnDisabled);
-        }
+        self.assert_burn_and_mint_enabled();
 
         // check if the caller has the minter badge
         let security_badge = self
@@ -271,10 +266,7 @@ impl Cep18 {
 
     /// Burns the given amount of tokens from the given address.
     pub fn burn(&mut self, owner: &Address, amount: &U256) {
-        // check if mint_burn is enabled
-        if self.modality.get_or_default() == Cep18Modality::None {
-            self.env().revert(Error::MintBurnDisabled);
-        }
+        self.assert_burn_and_mint_enabled();
 
         if self.env().caller() != *owner {
             self.env().revert(Error::InvalidBurnTarget);
@@ -283,20 +275,9 @@ impl Cep18 {
         if self.balance_of(owner) < *amount {
             self.env().revert(Error::InsufficientBalance);
         }
-        let total_supply = self.total_supply.get();
-        let balance = self.balance_of(owner);
 
-        self.total_supply.set(
-            total_supply
-                .checked_sub(*amount)
-                .unwrap_or_revert_with(&self.env(), Error::Overflow)
-        );
-        self.balances.set(
-            owner,
-            balance
-                .checked_sub(*amount)
-                .unwrap_or_revert_with(&self.env(), Error::Overflow)
-        );
+        self.total_supply.subtract(*amount);
+        self.balances.subtract(owner, *amount);
 
         self.env().emit_event(Burn {
             owner: *owner,
@@ -311,14 +292,23 @@ impl Cep18 {
             self.env().revert(Error::InsufficientBalance)
         }
 
-        self.balances.subtract(sender, *amount);
-        self.balances.add(recipient, *amount);
+        if amount > &U256::zero() {
+            self.balances.subtract(sender, *amount);
+            self.balances.add(recipient, *amount);
+        }
 
         self.env().emit_event(Transfer {
             sender: *sender,
             recipient: *recipient,
             amount: *amount
         });
+    }
+
+    fn assert_burn_and_mint_enabled(&mut self) {
+        // check if mint_burn is enabled
+        if !self.modality.get_or_default().mint_and_burn_enabled() {
+            self.env().revert(Error::MintBurnDisabled);
+        }
     }
 }
 

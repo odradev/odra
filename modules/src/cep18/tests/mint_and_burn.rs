@@ -164,7 +164,7 @@ mod mint_and_burn_tests {
             initial_supply: TOKEN_TOTAL_SUPPLY.into(),
             minter_list: vec![],
             admin_list: vec![alice],
-            modality: Some(Cep18Modality::MintAndBurn.into())
+            modality: Some(Cep18Modality::MintAndBurn)
         };
         let mut cep18_token = setup_with_args(&env, args);
 

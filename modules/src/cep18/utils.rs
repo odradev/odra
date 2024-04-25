@@ -31,6 +31,13 @@ pub enum Cep18Modality {
     MintAndBurn = 1
 }
 
+impl Cep18Modality {
+    /// Returns true if the mint and burn functionality is enabled.
+    pub fn mint_and_burn_enabled(&self) -> bool {
+        matches!(self, Cep18Modality::MintAndBurn)
+    }
+}
+
 // implement conversion from modality into u8
 impl From<Cep18Modality> for u8 {
     fn from(modality: Cep18Modality) -> u8 {

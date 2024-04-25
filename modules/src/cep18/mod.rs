@@ -1,5 +1,4 @@
-//! # Cep18 Module
-//! A module that allows implementation of CEP-18 token contracts with Odra framework.
+//! # CEP-18 Token implemented in Odra.
 mod cep18_client_contract;
 /// Cep18 module errors.
 pub mod errors;

@@ -261,13 +261,14 @@ impl From<CLValueError> for OdraError {
 impl From<BytesReprError> for OdraError {
     fn from(error: BytesReprError) -> Self {
         match error {
-            BytesReprError::EarlyEndOfStream => ExecutionError::EarlyEndOfStream.into(),
-            BytesReprError::Formatting => ExecutionError::Formatting.into(),
-            BytesReprError::LeftOverBytes => ExecutionError::LeftOverBytes.into(),
-            BytesReprError::OutOfMemory => ExecutionError::OutOfMemory.into(),
-            BytesReprError::NotRepresentable => ExecutionError::NotRepresentable.into(),
-            BytesReprError::ExceededRecursionDepth => ExecutionError::ExceededRecursionDepth.into(),
-            _ => ExecutionError::Formatting.into()
+            BytesReprError::EarlyEndOfStream => ExecutionError::EarlyEndOfStream,
+            BytesReprError::Formatting => ExecutionError::Formatting,
+            BytesReprError::LeftOverBytes => ExecutionError::LeftOverBytes,
+            BytesReprError::OutOfMemory => ExecutionError::OutOfMemory,
+            BytesReprError::NotRepresentable => ExecutionError::NotRepresentable,
+            BytesReprError::ExceededRecursionDepth => ExecutionError::ExceededRecursionDepth,
+            _ => ExecutionError::Formatting
         }
+        .into()
     }
 }

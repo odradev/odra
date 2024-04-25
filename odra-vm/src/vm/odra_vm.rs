@@ -164,14 +164,13 @@ impl OdraVm {
 
     /// Sets the value of the named key.
     pub fn set_named_key(&self, name: &str, value: CLValue) {
-        // create a key by prepending the name with a prefix
-        let key = format!("{}_{}", NAMED_KEY_PREFIX, name);
+        let key = Self::key_of_named_key(name);
         self.set_var(key.as_bytes(), Bytes::from(value.inner_bytes().as_slice()));
     }
 
     /// Retrieves the value of the named key.
     pub fn get_named_key(&self, name: &str) -> Option<Bytes> {
-        let key = format!("{}_{}", NAMED_KEY_PREFIX, name);
+        let key = Self::key_of_named_key(name);
         self.get_var(key.as_bytes())
     }
 
@@ -373,6 +372,11 @@ impl OdraVm {
             };
             Bytes::new()
         }
+    }
+
+    fn key_of_named_key(name: &str) -> String {
+        let key = format!("{}_{}", NAMED_KEY_PREFIX, name);
+        key
     }
 }
 
