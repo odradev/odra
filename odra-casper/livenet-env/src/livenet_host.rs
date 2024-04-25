@@ -143,10 +143,10 @@ impl HostContext for LivenetHost {
         name: &str,
         init_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
-    ) -> Address {
+    ) -> Result<Address, OdraError> {
         let address = self.casper_client.borrow_mut().deploy_wasm(name, init_args);
         self.register_contract(address, entry_points_caller);
-        address
+        Ok(address)
     }
 
     fn contract_env(&self) -> ContractEnv {

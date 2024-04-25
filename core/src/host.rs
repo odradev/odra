@@ -55,7 +55,7 @@ pub trait EntryPointsCallerProvider {
 /// on a virtual machine or on a real blockchain.
 ///
 /// The `Deployer` trait provides a simple way to deploy a contract.
-pub trait Deployer {
+pub trait Deployer: Sized {
     /// Deploys a contract with given init args.
     ///
     /// If the init args are provided, the contract is deployed and initialized
@@ -64,6 +64,11 @@ pub trait Deployer {
     ///
     /// Returns a host reference to the deployed contract.
     fn deploy<T: InitArgs>(env: &HostEnv, init_args: T) -> Self;
+
+    /// Tries to deploy a contract with given init args.
+    ///
+    /// Similar to `deploy`, but returns a result instead of panicking.
+    fn try_deploy<T: InitArgs>(env: &HostEnv, init_args: T) -> OdraResult<Self>;
 }
 
 /// A type which can be used as initialization arguments for a contract.
@@ -96,13 +101,24 @@ impl From<NoArgs> for RuntimeArgs {
 impl<R: HostRef + EntryPointsCallerProvider + HasIdent> Deployer for R {
     fn deploy<T: InitArgs>(env: &HostEnv, init_args: T) -> Self {
         let contract_ident = R::ident();
+        match Self::try_deploy(env, init_args) {
+            Ok(contract) => contract,
+            Err(OdraError::VmError(VmError::MissingArg)) => {
+                core::panic!("Invalid init args for contract {}.", contract_ident)
+            }
+            Err(_) => core::panic!("Contract init failed")
+        }
+    }
+
+    fn try_deploy<T: InitArgs>(env: &HostEnv, init_args: T) -> OdraResult<Self> {
+        let contract_ident = R::ident();
         if !T::validate(&contract_ident) {
-            core::panic!("Invalid init args for contract {}.", contract_ident);
+            return Err(OdraError::VmError(VmError::MissingArg));
         }
 
         let caller = R::entry_points_caller(env);
-        let address = env.new_contract(&contract_ident, init_args.into(), caller);
-        R::new(address, env.clone())
+        let address = env.new_contract(&contract_ident, init_args.into(), caller)?;
+        Ok(R::new(address, env.clone()))
     }
 }
 
@@ -155,7 +171,7 @@ pub trait HostContext {
         name: &str,
         init_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
-    ) -> Address;
+    ) -> OdraResult<Address>;
 
     /// Registers an existing contract with the specified address and entry points caller.
     fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller);
@@ -223,7 +239,7 @@ impl HostEnv {
         name: &str,
         init_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
-    ) -> Address {
+    ) -> OdraResult<Address> {
         let backend = self.backend.borrow();
 
         let mut init_args = init_args;
@@ -238,11 +254,11 @@ impl HostEnv {
             )
             .unwrap();
 
-        let deployed_contract = backend.new_contract(name, init_args, entry_points_caller);
+        let deployed_contract = backend.new_contract(name, init_args, entry_points_caller)?;
 
         self.deployed_contracts.borrow_mut().push(deployed_contract);
         self.events_count.borrow_mut().insert(deployed_contract, 0);
-        deployed_contract
+        Ok(deployed_contract)
     }
 
     /// Registers an existing contract with the specified address and entry points caller.
@@ -532,7 +548,7 @@ mod test {
 
         let mut ctx = MockHostContext::new();
         ctx.expect_new_contract()
-            .returning(|_, _, _| Address::Account(AccountHash::new([0; 32])));
+            .returning(|_, _, _| Ok(Address::Account(AccountHash::new([0; 32]))));
         let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
         <MockTestRef as Deployer>::deploy(&env, NoArgs);
     }
@@ -581,7 +597,7 @@ mod test {
     fn test_host_env() {
         let mut ctx = MockHostContext::new();
         ctx.expect_new_contract()
-            .returning(|_, _, _| Address::Account(AccountHash::new([0; 32])));
+            .returning(|_, _, _| Ok(Address::Account(AccountHash::new([0; 32]))));
         ctx.expect_caller()
             .returning(|| Address::Account(AccountHash::new([2; 32])))
             .times(1);
