@@ -2,11 +2,11 @@ use crate::odra_vm_contract_env::OdraVmContractEnv;
 use crate::OdraVm;
 use odra_core::casper_types::{bytesrepr::Bytes, PublicKey, RuntimeArgs, U512};
 use odra_core::entry_point_callback::EntryPointsCaller;
-use odra_core::prelude::*;
 use odra_core::{
     host::{HostContext, HostEnv},
     CallDef, ContractContext, ContractEnv
 };
+use odra_core::{prelude::*, OdraResult};
 use odra_core::{Address, OdraError, VmError};
 use odra_core::{EventError, GasReport};
 
@@ -54,7 +54,7 @@ impl HostContext for OdraVmHost {
         address: &Address,
         call_def: CallDef,
         _use_proxy: bool
-    ) -> Result<Bytes, OdraError> {
+    ) -> OdraResult<Bytes> {
         let mut opt_result: Option<Bytes> = None;
         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             opt_result = Some(self.vm.borrow().call_contract(*address, call_def));
@@ -74,7 +74,7 @@ impl HostContext for OdraVmHost {
         name: &str,
         init_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
-    ) -> Address {
+    ) -> OdraResult<Address> {
         let address = self
             .vm
             .borrow()
@@ -85,14 +85,14 @@ impl HostContext for OdraVmHost {
             .iter()
             .any(|ep| ep.name == "init")
         {
-            let _ = self.call_contract(
+            self.call_contract(
                 &address,
                 CallDef::new(String::from("init"), true, init_args),
                 false
-            );
+            )?;
         }
 
-        address
+        Ok(address)
     }
 
     fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller) {

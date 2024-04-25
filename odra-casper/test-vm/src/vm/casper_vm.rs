@@ -219,9 +219,16 @@ impl CasperVm {
             .into_t()
             .unwrap();
 
-        self.deploy_contract(&wasm_path, &init_args);
-        let contract_package_hash = self.contract_package_hash_from_name(&package_hash_key_name);
-        contract_package_hash.try_into().unwrap()
+        let result = self.deploy_contract(&wasm_path, &init_args);
+        if let Some(error) = result {
+            let odra_error = parse_error(error.clone());
+            self.error = Some(odra_error.clone());
+            panic!("Revert: Contract deploy failed {:?}", error);
+        } else {
+            let contract_package_hash =
+                self.contract_package_hash_from_name(&package_hash_key_name);
+            contract_package_hash.try_into().unwrap()
+        }
     }
 
     /// Create a new instance with predefined accounts.
@@ -399,7 +406,11 @@ impl CasperVm {
         }
     }
 
-    fn deploy_contract(&mut self, wasm_path: &str, args: &RuntimeArgs) {
+    fn deploy_contract(
+        &mut self,
+        wasm_path: &str,
+        args: &RuntimeArgs
+    ) -> Option<engine_state::Error> {
         self.error = None;
         let session_code = PathBuf::from(wasm_path);
 
@@ -414,12 +425,13 @@ impl CasperVm {
         let execute_request = ExecuteRequestBuilder::from_deploy_item(deploy_item)
             .with_block_time(self.block_time)
             .build();
-        self.context.exec(execute_request).commit().expect_success();
+        let result = self.context.exec(execute_request).commit();
         self.collect_gas();
         self.gas_report.push(DeployReport::WasmDeploy {
             gas: self.last_call_contract_gas_cost(),
             file_name: wasm_path.to_string()
         });
+        self.context.get_error()
     }
 }
 

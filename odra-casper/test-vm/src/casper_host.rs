@@ -96,10 +96,23 @@ impl HostContext for CasperHost {
         name: &str,
         init_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
-    ) -> Address {
-        self.vm
-            .borrow_mut()
-            .new_contract(name, init_args, entry_points_caller)
+    ) -> OdraResult<Address> {
+        let mut opt_result: Option<Address> = None;
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            opt_result = Some(self.vm.borrow_mut().new_contract(
+                name,
+                init_args,
+                entry_points_caller
+            ));
+        }));
+
+        match opt_result {
+            Some(result) => Ok(result),
+            None => {
+                let error = self.vm.borrow().error();
+                Err(error.unwrap_or(OdraError::VmError(VmError::Panic)))
+            }
+        }
     }
 
     fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller) {
