@@ -12,10 +12,7 @@ use crate::cep78::{
         BurnMode, EventsMode, MetadataMutability, MintingMode, NFTHolderMode, NFTIdentifierMode,
         OwnerReverseLookupMode, OwnershipMode, TokenIdentifier
     },
-    tests::{
-        default_args_builder,
-        utils
-    },
+    tests::{default_args_builder, utils},
     token::Cep78HostRef,
     utils::MockContractHostRef
 };

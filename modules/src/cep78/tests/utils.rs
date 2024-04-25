@@ -6,12 +6,7 @@ use crate::cep78::{
     token::Cep78InitArgs
 };
 use blake2::{digest::VariableOutput, Blake2bVar};
-use odra::{
-    args::Maybe,
-    casper_types::BLAKE2B_DIGEST_LENGTH,
-    prelude::*,
-    Address
-};
+use odra::{args::Maybe, casper_types::BLAKE2B_DIGEST_LENGTH, prelude::*, Address};
 use std::io::Write;
 
 #[derive(Default)]

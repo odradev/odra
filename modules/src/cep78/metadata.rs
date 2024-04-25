@@ -27,7 +27,7 @@ impl Metadata {
         optional_metadata: Maybe<Vec<NFTMetadataKind>>,
         metadata_mutability: MetadataMutability,
         identifier_mode: NFTIdentifierMode,
-        json_schema: Maybe<String>
+        json_schema: String
     ) {
         let mut requirements = MetadataRequirement::new();
         for optional in optional_metadata.unwrap_or_default() {
@@ -38,10 +38,20 @@ impl Metadata {
         }
         requirements.insert(base_metadata_kind, Requirement::Required);
 
+        // Attempt to parse the provided schema if the `CustomValidated` metadata kind is required or
+        // optional and fail installation if the schema cannot be parsed.
+        if let Some(req) = requirements.get(&NFTMetadataKind::CustomValidated) {
+            if req == &Requirement::Required || req == &Requirement::Optional {
+                serde_json_wasm::from_str::<CustomMetadataSchema>(&json_schema)
+                    .map_err(|_| CEP78Error::InvalidJsonSchema)
+                    .unwrap_or_revert(&self.env());
+            }
+        }
+
         self.requirements.set(requirements);
         self.identifier_mode.set(identifier_mode);
         self.mutability.set(metadata_mutability);
-        self.json_schema.set(json_schema.unwrap_or_default());
+        self.json_schema.set(json_schema);
     }
 
     pub fn get_requirements(&self) -> MetadataRequirement {

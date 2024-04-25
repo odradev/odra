@@ -7,7 +7,6 @@ struct MockDummyContract;
 #[odra::module]
 impl MockDummyContract {}
 
-
 #[odra::module]
 pub struct MockTransferFilterContract {
     value: Var<u8>

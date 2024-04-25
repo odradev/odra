@@ -13,8 +13,7 @@ use crate::cep78::{
     },
     tests::{
         utils::{
-            MALFORMED_META_DATA, TEST_PRETTY_CEP78_METADATA,
-            TEST_PRETTY_UPDATED_CEP78_METADATA
+            MALFORMED_META_DATA, TEST_PRETTY_CEP78_METADATA, TEST_PRETTY_UPDATED_CEP78_METADATA
         },
         TEST_CUSTOM_METADATA, TEST_CUSTOM_METADATA_SCHEMA, TEST_CUSTOM_UPDATED_METADATA,
         TOKEN_HASH
@@ -59,15 +58,16 @@ fn should_prevent_update_in_immutable_mode() {
 
 #[test]
 fn should_prevent_install_with_hash_identifier_in_mutable_mode() {
-    // let env = odra_test::env();
-    // let args = default_args_builder()
-    //     .nft_metadata_kind(NFTMetadataKind::NFT721)
-    //     .identifier_mode(NFTIdentifierMode::Hash)
-    //     .metadata_mutability(MetadataMutability::Mutable)
-    //     .build();
-    // let _contract = Cep78HostRef::deploy(&env, args);
-    // Should be possible to verify errors at installation time
-    // assert_eq!(Cep78HostRef::deploy(&env, args), Err(CEP78Error::InvalidMetadataMutability));
+    let env = odra_test::env();
+    let args = default_args_builder()
+        .nft_metadata_kind(NFTMetadataKind::NFT721)
+        .identifier_mode(NFTIdentifierMode::Hash)
+        .metadata_mutability(MetadataMutability::Mutable)
+        .build();
+    assert_eq!(
+        Cep78HostRef::try_deploy(&env, args).err(),
+        Some(CEP78Error::InvalidMetadataMutability.into())
+    );
 }
 
 #[test]
@@ -444,10 +444,12 @@ fn should_require_json_schema_when_kind_is_custom_validated() {
         .nft_metadata_kind(nft_metadata_kind)
         .json_schema("".to_string())
         .build();
-    let _contract = Cep78HostRef::deploy(&env, args);
 
-    /*let error = builder.get_error().expect("must have error");
-    support::assert_expected_error(error, 67, "json_schema is required")*/
+    assert_eq!(
+        Cep78HostRef::try_deploy(&env, args).err(),
+        Some(CEP78Error::MissingJsonSchema.into()),
+        "should fail execution since json_schema is required"
+    );
 }
 
 fn should_not_require_json_schema_when_kind_is(nft_metadata_kind: NFTMetadataKind) {

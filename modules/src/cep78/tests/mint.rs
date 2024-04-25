@@ -15,8 +15,8 @@ use crate::cep78::{
     },
     tests::{
         utils::{
-            self, MALFORMED_META_DATA, TEST_COMPACT_META_DATA,
-            TEST_PRETTY_CEP78_METADATA, TEST_PRETTY_UPDATED_CEP78_METADATA
+            self, MALFORMED_META_DATA, TEST_COMPACT_META_DATA, TEST_PRETTY_CEP78_METADATA,
+            TEST_PRETTY_UPDATED_CEP78_METADATA
         },
         TEST_CUSTOM_METADATA, TEST_CUSTOM_METADATA_SCHEMA
     },
@@ -588,7 +588,7 @@ fn should_mint_without_returning_receipts_and_flat_gas_cost() {
 
     // In this case there is no first time allocation of a page.
     // Therefore the second and first mints must have equivalent gas costs.
-    if let (Some(c1), Some(c2)) = (costs.get(0), costs.get(2)) {
+    if let (Some(c1), Some(c2)) = (costs.get(1), costs.get(2)) {
         assert_eq!(c1, c2);
     }
 }
@@ -604,7 +604,6 @@ fn should_maintain_page_table_despite_invoking_register_owner() {
         .build();
     let mut contract = Cep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
-    // TODO: register_owner is not implemented yet
     contract.register_owner(Maybe::Some(token_owner));
     contract.mint(token_owner, "".to_string(), Maybe::None);
 
@@ -647,7 +646,6 @@ fn should_mint_with_two_required_metadata_kind() {
         .additional_required_metadata(vec![NFTMetadataKind::Raw])
         .build();
     let mut contract = Cep78HostRef::deploy(&env, args);
-    // TODO: register_owner is not implemented yet
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
     contract.mint(

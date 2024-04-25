@@ -13,11 +13,9 @@ use crate::cep78::{
         NFTMetadataKind, OwnerReverseLookupMode, OwnershipMode, TokenIdentifier,
         TransferFilterContractResult, WhitelistMode
     },
-    tests::{
-        default_args_builder,
-        utils::TEST_PRETTY_721_META_DATA
-    },
-    token::Cep78HostRef, utils::{MockContractHostRef, MockTransferFilterContractHostRef}
+    tests::{default_args_builder, utils::TEST_PRETTY_721_META_DATA},
+    token::Cep78HostRef,
+    utils::{MockContractHostRef, MockTransferFilterContractHostRef}
 };
 
 use super::utils;

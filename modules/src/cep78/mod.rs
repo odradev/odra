@@ -11,5 +11,5 @@ mod settings;
 #[cfg(test)]
 mod tests;
 pub mod token;
-mod whitelist;
 mod utils;
+mod whitelist;

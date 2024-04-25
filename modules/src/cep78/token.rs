@@ -17,10 +17,8 @@ use super::{
     whitelist::ACLWhitelist
 };
 use odra::{
-    args::Maybe,
-    casper_types::bytesrepr::ToBytes,
-    prelude::*,
-    Address, OdraError, SubModule, UnwrapOrRevert, Var
+    args::Maybe, casper_types::bytesrepr::ToBytes, prelude::*, Address, OdraError, SubModule,
+    UnwrapOrRevert, Var
 };
 
 type MintReceipt = (String, Address, String);
@@ -82,6 +80,57 @@ impl Cep78 {
         optional_metadata: Maybe<Vec<NFTMetadataKind>>
     ) {
         let installer = self.caller();
+        let minting_mode = minting_mode.unwrap_or_default();
+        let owner_reverse_lookup_mode = owner_reverse_lookup_mode.unwrap_or_default();
+        let acl_white_list = acl_white_list.unwrap_or_default();
+        let whitelist_mode = whitelist_mode.unwrap_or_default();
+        let json_schema = json_schema.unwrap_or_default();
+        let is_whitelist_empty = acl_white_list.is_empty();
+
+        // Revert if minting mode is not ACL and acl list is not empty
+        if MintingMode::Acl != minting_mode && !is_whitelist_empty {
+            self.revert(CEP78Error::InvalidMintingMode)
+        }
+
+        // Revert if minting mode is ACL or holder_mode is contracts and acl list is locked and empty
+        if MintingMode::Acl == minting_mode
+            && is_whitelist_empty
+            && WhitelistMode::Locked == whitelist_mode
+        {
+            self.revert(CEP78Error::EmptyACLWhitelist)
+        }
+
+        if nft_identifier_mode == NFTIdentifierMode::Hash
+            && metadata_mutability == MetadataMutability::Mutable
+        {
+            self.revert(CEP78Error::InvalidMetadataMutability)
+        }
+
+        if ownership_mode == OwnershipMode::Minter
+            && minting_mode == MintingMode::Installer
+            && owner_reverse_lookup_mode == OwnerReverseLookupMode::Complete
+        {
+            self.revert(CEP78Error::InvalidReportingMode)
+        }
+
+        // Check if schema is missing before checking its validity
+        if nft_metadata_kind == NFTMetadataKind::CustomValidated && json_schema.is_empty() {
+            self.revert(CEP78Error::MissingJsonSchema)
+        }
+
+        // OwnerReverseLookup TransfersOnly mode should be Transferable
+        if OwnerReverseLookupMode::TransfersOnly == owner_reverse_lookup_mode
+            && OwnershipMode::Transferable != ownership_mode
+        {
+            self.revert(CEP78Error::OwnerReverseLookupModeNotTransferable)
+        }
+
+        if ownership_mode != OwnershipMode::Transferable
+            && transfer_filter_contract_contract.is_some()
+        {
+            self.revert(CEP78Error::TransferFilterContractNeedsTransferableMode)
+        }
+
         self.data.init(
             collection_name,
             collection_symbol,
@@ -90,7 +139,7 @@ impl Cep78 {
         );
         self.settings.init(
             allow_minting.unwrap_or(true),
-            minting_mode.clone().unwrap_or_default(),
+            minting_mode,
             ownership_mode,
             nft_kind,
             holder_mode.unwrap_or_default(),
@@ -99,15 +148,10 @@ impl Cep78 {
             operator_burn_mode.unwrap_or_default()
         );
 
-        self.reverse_lookup.init(
-            owner_reverse_lookup_mode.clone().unwrap_or_default(),
-            receipt_name.unwrap_or_default()
-        );
+        self.reverse_lookup
+            .init(owner_reverse_lookup_mode, receipt_name.unwrap_or_default());
 
-        self.whitelist.init(
-            acl_white_list.unwrap_or_default(),
-            whitelist_mode.unwrap_or_default()
-        );
+        self.whitelist.init(acl_white_list.clone(), whitelist_mode);
 
         self.metadata.init(
             nft_metadata_kind,
@@ -117,25 +161,6 @@ impl Cep78 {
             nft_identifier_mode,
             json_schema
         );
-
-        // Revert if minting mode is not ACL and acl list is not empty
-        if MintingMode::Acl != self.settings.minting_mode() && !self.whitelist.is_empty() {
-            self.revert(CEP78Error::InvalidMintingMode)
-        }
-
-
-        if nft_identifier_mode == NFTIdentifierMode::Hash
-            && metadata_mutability == MetadataMutability::Mutable
-        {
-            self.revert(CEP78Error::InvalidMetadataMutability)
-        }
-
-        if ownership_mode == OwnershipMode::Minter
-            && minting_mode.unwrap_or_default() == MintingMode::Installer
-            && owner_reverse_lookup_mode.unwrap_or_default() == OwnerReverseLookupMode::Complete
-        {
-            self.revert(CEP78Error::InvalidReportingMode)
-        }
 
         if let Maybe::Some(transfer_filter_contract_contract) = transfer_filter_contract_contract {
             self.transfer_filter_contract
@@ -527,6 +552,10 @@ impl Cep78 {
 
     pub fn get_minting_mode(&self) -> MintingMode {
         self.settings.minting_mode()
+    }
+
+    pub fn get_holder_mode(&self) -> NFTHolderMode {
+        self.settings.holder_mode()
     }
 
     pub fn get_number_of_minted_tokens(&self) -> u64 {
