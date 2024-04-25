@@ -37,7 +37,7 @@ fn should_install_with_acl_whitelist() {
 fn should_install_with_deprecated_contract_whitelist() {}
 
 #[test]
-#[ignore = "Can't assert init errors in Odra"]
+// #[ignore = "Can't assert init errors in Odra"]
 fn should_not_install_with_minting_mode_not_acl_if_acl_whitelist_provided() {
     let env = odra_test::env();
 
@@ -51,8 +51,12 @@ fn should_not_install_with_minting_mode_not_acl_if_acl_whitelist_provided() {
         .acl_white_list(contract_whitelist)
         .build();
 
-    Cep78HostRef::deploy(&env, args);
-
+    let init_result = Cep78HostRef::try_deploy(&env, args);
+    assert_eq!(
+        init_result.err(),
+        Some(CEP78Error::InvalidMintingMode.into()),
+        "should disallow installing with minting mode not acl if acl whitelist provided"
+    );        
     // builder.exec(install_request).expect_failure();
 
     // let actual_error = builder.get_error().expect("must have error");

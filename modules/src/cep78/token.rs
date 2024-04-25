@@ -118,6 +118,12 @@ impl Cep78 {
             json_schema
         );
 
+        // Revert if minting mode is not ACL and acl list is not empty
+        if MintingMode::Acl != self.settings.minting_mode() && !self.whitelist.is_empty() {
+            self.revert(CEP78Error::InvalidMintingMode)
+        }
+
+
         if nft_identifier_mode == NFTIdentifierMode::Hash
             && metadata_mutability == MetadataMutability::Mutable
         {
