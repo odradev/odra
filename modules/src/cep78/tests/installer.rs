@@ -3,7 +3,7 @@ use odra::host::Deployer;
 use crate::cep78::{
     modalities::MintingMode,
     tests::{default_args_builder, COLLECTION_NAME, COLLECTION_SYMBOL},
-    token::CEP78HostRef
+    token::Cep78HostRef
 };
 
 #[test]
@@ -16,7 +16,7 @@ fn should_install_contract() {
         .total_token_supply(1u64)
         .allow_minting(true)
         .build();
-    let contract = CEP78HostRef::deploy(&env, args);
+    let contract = Cep78HostRef::deploy(&env, args);
 
     assert_eq!(&contract.get_collection_name(), COLLECTION_NAME);
     assert_eq!(&contract.get_collection_symbol(), COLLECTION_SYMBOL);
@@ -53,7 +53,7 @@ fn should_install_with_allow_minting_set_to_false() {
     let env = odra_test::env();
 
     let args = default_args_builder().allow_minting(false).build();
-    let contract = CEP78HostRef::deploy(&env, args);
+    let contract = Cep78HostRef::deploy(&env, args);
     assert!(!contract.is_minting_allowed());
 }
 

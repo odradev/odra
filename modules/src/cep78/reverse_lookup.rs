@@ -67,7 +67,7 @@ impl ReverseLookup {
         &mut self,
         owner: Maybe<Address>,
         ownership_mode: OwnershipMode
-    ) -> (String, URef) {
+    ) -> String {
         let mode = self.get_mode();
         if [
             OwnerReverseLookupMode::Complete,
@@ -118,7 +118,8 @@ impl ReverseLookup {
             // ));
             // runtime::ret(CLValue::from_t((collection_name, package_uref)).unwrap_or_revert())
         }
-        ("".to_string(), URef::new([0u8; 32], AccessRights::READ))
+        // ("".to_string(), URef::new([255; 32], AccessRights::READ_ADD_WRITE))
+        "".to_string()
     }
 
     pub fn on_mint(

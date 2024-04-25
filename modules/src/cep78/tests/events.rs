@@ -6,7 +6,7 @@ use odra::{
 use crate::cep78::{
     modalities::{EventsMode, OwnerReverseLookupMode, OwnershipMode},
     tests::{default_args_builder, utils::TEST_PRETTY_721_META_DATA},
-    token::CEP78HostRef
+    token::Cep78HostRef
 };
 
 // cep47 event style
@@ -49,7 +49,7 @@ fn should_not_have_events_dicts_in_no_events_mode() {
     let args = default_args_builder()
         .events_mode(EventsMode::NoEvents)
         .build();
-    let _contract = CEP78HostRef::deploy(&env, args);
+    let _contract = Cep78HostRef::deploy(&env, args);
 
     // Check dict from EventsMode::CES
     // let events = named_keys.get(EVENTS_DICT);
@@ -64,7 +64,7 @@ fn should_not_record_events_in_no_events_mode() {
         .ownership_mode(OwnershipMode::Transferable)
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
         .build();
-    let mut contract = CEP78HostRef::deploy(&env, args);
+    let mut contract = Cep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
     contract.mint(

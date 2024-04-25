@@ -18,7 +18,7 @@ use super::{
 };
 use odra::{
     args::Maybe,
-    casper_types::{bytesrepr::ToBytes, URef},
+    casper_types::bytesrepr::ToBytes,
     prelude::*,
     Address, OdraError, SubModule, UnwrapOrRevert, Var
 };
@@ -44,7 +44,7 @@ type TransferReceipt = (String, Address);
 /// - `nft_metadata_kind`: The kind of metadata associated with the NFTs in the collection. See [NFTMetadataKind] for more details.
 /// - `metadata_mutability`: The mutability of the metadata associated with the NFTs in the collection. See [MetadataMutability] for more details.
 #[odra::module]
-pub struct CEP78 {
+pub struct Cep78 {
     data: SubModule<CollectionData>,
     metadata: SubModule<Metadata>,
     settings: SubModule<Settings>,
@@ -54,7 +54,7 @@ pub struct CEP78 {
 }
 
 #[odra::module]
-impl CEP78 {
+impl Cep78 {
     /// Initializes the module.
     pub fn init(
         &mut self,
@@ -481,7 +481,7 @@ impl CEP78 {
     /// resulting in more stable gas costs when minting and transferring
     /// Note: This entrypoint MUST be invoked if the reverse lookup is enabled
     /// in order to own NFTs.
-    pub fn register_owner(&mut self, token_owner: Maybe<Address>) -> (String, URef) {
+    pub fn register_owner(&mut self, token_owner: Maybe<Address>) -> String {
         let ownership_mode = self.ownership_mode();
         self.reverse_lookup
             .register_owner(token_owner, ownership_mode)
@@ -550,7 +550,7 @@ impl CEP78 {
     }
 }
 
-impl CEP78 {
+impl Cep78 {
     #[inline]
     fn caller(&self) -> Address {
         self.__env.caller()

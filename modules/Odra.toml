@@ -22,3 +22,15 @@ fqn = "access::Ownable"
 [[contracts]]
 fqn = "ownable_2step::Ownable2Step"
 
+[[contracts]]
+fqn = "cep78::token::Cep78"
+
+[[contracts]]
+fqn = "cep78::utils::MockContract"
+
+[[contracts]]
+fqn = "cep78::utils::MockDummyContract"
+
+[[contracts]]
+fqn = "cep78::utils::MockTransferFilterContract"
+

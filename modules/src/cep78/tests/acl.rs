@@ -7,8 +7,9 @@ use odra::{
 use crate::cep78::{
     error::CEP78Error,
     modalities::{MintingMode, NFTHolderMode, OwnershipMode, WhitelistMode},
-    tests::utils::{DummyContractHostRef, TestContractHostRef, TEST_PRETTY_721_META_DATA},
-    token::CEP78HostRef
+    tests::utils::TEST_PRETTY_721_META_DATA,
+    token::Cep78HostRef,
+    utils::{MockContractHostRef, MockDummyContractHostRef}
 };
 
 use super::default_args_builder;
@@ -16,7 +17,7 @@ use super::default_args_builder;
 #[test]
 fn should_install_with_acl_whitelist() {
     let env = odra_test::env();
-    let test_contract_address = TestContractHostRef::deploy(&env, NoArgs);
+    let test_contract_address = MockContractHostRef::deploy(&env, NoArgs);
     let contract_whitelist = vec![*test_contract_address.address()];
     let args = default_args_builder()
         .holder_mode(NFTHolderMode::Contracts)
@@ -24,7 +25,7 @@ fn should_install_with_acl_whitelist() {
         .minting_mode(MintingMode::Acl)
         .acl_white_list(contract_whitelist)
         .build();
-    let contract = CEP78HostRef::deploy(&env, args);
+    let contract = Cep78HostRef::deploy(&env, args);
 
     assert_eq!(WhitelistMode::Locked, contract.get_whitelist_mode());
     let is_whitelisted_contract = contract.is_whitelisted(test_contract_address.address());
@@ -50,7 +51,7 @@ fn should_not_install_with_minting_mode_not_acl_if_acl_whitelist_provided() {
         .acl_white_list(contract_whitelist)
         .build();
 
-    CEP78HostRef::deploy(&env, args);
+    Cep78HostRef::deploy(&env, args);
 
     // builder.exec(install_request).expect_failure();
 
@@ -72,7 +73,7 @@ fn should_allow_installation_of_contract_with_empty_locked_whitelist_in_public_m
         .minting_mode(MintingMode::Public)
         .build();
 
-    CEP78HostRef::deploy(env, args);
+    Cep78HostRef::deploy(env, args);
 }
 
 #[test]
@@ -107,7 +108,7 @@ fn should_disallow_installation_with_contract_holder_mode_and_installer_mode() {
         .acl_white_list(contract_whitelist)
         .build();
 
-    CEP78HostRef::deploy(&env, args);
+    Cep78HostRef::deploy(&env, args);
     // builder.exec(install_request).expect_failure();
     // let error = builder.get_error().expect("should have an error");
     // assert_expected_error(error, 38, "Invalid MintingMode (not ACL) and NFTHolderMode");
@@ -127,7 +128,7 @@ fn should_allow_whitelisted_account_to_mint() {
         .minting_mode(MintingMode::Acl)
         .acl_white_list(account_whitelist)
         .build();
-    let mut contract = CEP78HostRef::deploy(&env, args);
+    let mut contract = Cep78HostRef::deploy(&env, args);
 
     assert!(
         contract.is_whitelisted(&account_user_1),
@@ -160,7 +161,7 @@ fn should_disallow_unlisted_account_from_minting() {
         .minting_mode(MintingMode::Acl)
         .acl_white_list(account_whitelist)
         .build();
-    let mut contract = CEP78HostRef::deploy(&env, args);
+    let mut contract = Cep78HostRef::deploy(&env, args);
 
     assert!(
         contract.is_whitelisted(&account),
@@ -184,7 +185,7 @@ fn should_disallow_unlisted_account_from_minting() {
 fn should_allow_whitelisted_contract_to_mint() {
     let env = odra_test::env();
 
-    let mut minting_contract = TestContractHostRef::deploy(&env, NoArgs);
+    let mut minting_contract = MockContractHostRef::deploy(&env, NoArgs);
 
     let contract_whitelist = vec![*minting_contract.address()];
     let args = default_args_builder()
@@ -194,7 +195,7 @@ fn should_allow_whitelisted_contract_to_mint() {
         .minting_mode(MintingMode::Acl)
         .acl_white_list(contract_whitelist)
         .build();
-    let contract = CEP78HostRef::deploy(&env, args);
+    let contract = Cep78HostRef::deploy(&env, args);
     assert!(
         contract.is_whitelisted(minting_contract.address()),
         "acl whitelist is incorrectly set"
@@ -211,7 +212,7 @@ fn should_allow_whitelisted_contract_to_mint() {
 fn should_disallow_unlisted_contract_from_minting() {
     let env = odra_test::env();
 
-    let mut minting_contract = TestContractHostRef::deploy(&env, NoArgs);
+    let mut minting_contract = MockContractHostRef::deploy(&env, NoArgs);
 
     let contract_whitelist = vec![env.get_account(1), env.get_account(2), env.get_account(3)];
     let args = default_args_builder()
@@ -221,7 +222,7 @@ fn should_disallow_unlisted_contract_from_minting() {
         .minting_mode(MintingMode::Acl)
         .acl_white_list(contract_whitelist)
         .build();
-    let contract = CEP78HostRef::deploy(&env, args);
+    let contract = Cep78HostRef::deploy(&env, args);
     minting_contract.set_address(contract.address());
 
     assert_eq!(
@@ -235,7 +236,7 @@ fn should_disallow_unlisted_contract_from_minting() {
 fn should_allow_mixed_account_contract_to_mint() {
     let env = odra_test::env();
 
-    let mut minting_contract = TestContractHostRef::deploy(&env, NoArgs);
+    let mut minting_contract = MockContractHostRef::deploy(&env, NoArgs);
     let account_user_1 = env.get_account(1);
     let mixed_whitelist = vec![*minting_contract.address(), account_user_1];
 
@@ -246,7 +247,7 @@ fn should_allow_mixed_account_contract_to_mint() {
         .minting_mode(MintingMode::Acl)
         .acl_white_list(mixed_whitelist)
         .build();
-    let mut contract = CEP78HostRef::deploy(&env, args);
+    let mut contract = Cep78HostRef::deploy(&env, args);
     minting_contract.set_address(contract.address());
 
     assert!(
@@ -280,10 +281,10 @@ fn should_allow_mixed_account_contract_to_mint() {
 fn should_disallow_unlisted_contract_from_minting_with_mixed_account_contract() {
     let env = odra_test::env();
 
-    let mut minting_contract = TestContractHostRef::deploy(&env, NoArgs);
+    let mut minting_contract = MockContractHostRef::deploy(&env, NoArgs);
     let account_user_1 = env.get_account(1);
     let mixed_whitelist = vec![
-        *DummyContractHostRef::deploy(&env, NoArgs).address(),
+        *MockDummyContractHostRef::deploy(&env, NoArgs).address(),
         account_user_1,
     ];
 
@@ -294,7 +295,7 @@ fn should_disallow_unlisted_contract_from_minting_with_mixed_account_contract() 
         .minting_mode(MintingMode::Acl)
         .acl_white_list(mixed_whitelist)
         .build();
-    let contract = CEP78HostRef::deploy(&env, args);
+    let contract = Cep78HostRef::deploy(&env, args);
     minting_contract.set_address(contract.address());
 
     assert_eq!(
@@ -308,7 +309,7 @@ fn should_disallow_unlisted_contract_from_minting_with_mixed_account_contract() 
 fn should_disallow_unlisted_account_from_minting_with_mixed_account_contract() {
     let env = odra_test::env();
 
-    let minting_contract = TestContractHostRef::deploy(&env, NoArgs);
+    let minting_contract = MockContractHostRef::deploy(&env, NoArgs);
     let listed_account = env.get_account(0);
     let unlisted_account = env.get_account(1);
     let mixed_whitelist = vec![*minting_contract.address(), listed_account];
@@ -320,7 +321,7 @@ fn should_disallow_unlisted_account_from_minting_with_mixed_account_contract() {
         .minting_mode(MintingMode::Acl)
         .acl_white_list(mixed_whitelist)
         .build();
-    let mut contract = CEP78HostRef::deploy(&env, args);
+    let mut contract = Cep78HostRef::deploy(&env, args);
     env.set_caller(unlisted_account);
     assert_eq!(
         contract.try_mint(
@@ -337,7 +338,7 @@ fn should_disallow_unlisted_account_from_minting_with_mixed_account_contract() {
 fn should_disallow_listed_account_from_minting_with_nftholder_contract() {
     let env = odra_test::env();
 
-    let minting_contract = TestContractHostRef::deploy(&env, NoArgs);
+    let minting_contract = MockContractHostRef::deploy(&env, NoArgs);
     let listed_account = env.get_account(0);
 
     let mixed_whitelist = vec![*minting_contract.address(), listed_account];
@@ -349,7 +350,7 @@ fn should_disallow_listed_account_from_minting_with_nftholder_contract() {
         .minting_mode(MintingMode::Acl)
         .acl_white_list(mixed_whitelist)
         .build();
-    let mut contract = CEP78HostRef::deploy(&env, args);
+    let mut contract = Cep78HostRef::deploy(&env, args);
 
     assert!(
         contract.is_whitelisted(&listed_account),
@@ -392,7 +393,7 @@ fn should_be_able_to_update_whitelist_for_minting_with_deprecated_arg_contract_w
 fn should_be_able_to_update_whitelist_for_minting() {
     let env = odra_test::env();
 
-    let mut minting_contract = TestContractHostRef::deploy(&env, NoArgs);
+    let mut minting_contract = MockContractHostRef::deploy(&env, NoArgs);
     let contract_whitelist = vec![];
 
     let args = default_args_builder()
@@ -402,7 +403,7 @@ fn should_be_able_to_update_whitelist_for_minting() {
         .minting_mode(MintingMode::Acl)
         .acl_white_list(contract_whitelist)
         .build();
-    let mut contract = CEP78HostRef::deploy(&env, args);
+    let mut contract = Cep78HostRef::deploy(&env, args);
     minting_contract.set_address(contract.address());
 
     assert!(

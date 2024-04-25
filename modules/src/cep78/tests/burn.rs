@@ -14,9 +14,10 @@ use crate::cep78::{
     },
     tests::{
         default_args_builder,
-        utils::{self, TestContractHostRef}
+        utils
     },
-    token::CEP78HostRef
+    token::Cep78HostRef,
+    utils::MockContractHostRef
 };
 
 use super::utils::TEST_PRETTY_721_META_DATA;
@@ -28,7 +29,7 @@ fn should_burn_minted_token(reporting: OwnerReverseLookupMode) {
         .ownership_mode(OwnershipMode::Transferable)
         .events_mode(EventsMode::CES)
         .build();
-    let mut contract = CEP78HostRef::deploy(&env, args);
+    let mut contract = Cep78HostRef::deploy(&env, args);
 
     let token_owner = env.get_account(0);
     let token_id = 0u64;
@@ -62,7 +63,7 @@ fn should_burn_minted_token(reporting: OwnerReverseLookupMode) {
     );
 }
 
-fn mint(contract: &mut CEP78HostRef, reverse_lookup_enabled: bool, token_owner: Address) {
+fn mint(contract: &mut Cep78HostRef, reverse_lookup_enabled: bool, token_owner: Address) {
     if reverse_lookup_enabled {
         contract.register_owner(Maybe::Some(token_owner));
         contract.mint(
@@ -99,7 +100,7 @@ fn should_not_burn_previously_burnt_token() {
         .ownership_mode(OwnershipMode::Transferable)
         .events_mode(EventsMode::CES)
         .build();
-    let mut contract = CEP78HostRef::deploy(&env, args);
+    let mut contract = Cep78HostRef::deploy(&env, args);
 
     let token_owner = env.get_account(0);
     mint(&mut contract, true, token_owner);
@@ -121,7 +122,7 @@ fn should_return_expected_error_when_burning_non_existing_token() {
     let args = default_args_builder()
         .ownership_mode(OwnershipMode::Transferable)
         .build();
-    let mut contract = CEP78HostRef::deploy(&env, args);
+    let mut contract = Cep78HostRef::deploy(&env, args);
 
     let token_id = 0u64;
     assert_eq!(
@@ -138,7 +139,7 @@ fn should_return_expected_error_burning_of_others_users_token() {
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
         .ownership_mode(OwnershipMode::Transferable)
         .build();
-    let mut contract = CEP78HostRef::deploy(&env, args);
+    let mut contract = Cep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     let account_1 = env.get_account(1);
 
@@ -157,7 +158,7 @@ fn should_return_expected_error_burning_of_others_users_token() {
 #[test]
 fn should_allow_contract_to_burn_token() {
     let env = odra_test::env();
-    let mut minting_contract = TestContractHostRef::deploy(&env, NoArgs);
+    let mut minting_contract = MockContractHostRef::deploy(&env, NoArgs);
     let contract_whitelist = vec![*minting_contract.address()];
     let args = default_args_builder()
         .holder_mode(NFTHolderMode::Contracts)
@@ -166,7 +167,7 @@ fn should_allow_contract_to_burn_token() {
         .ownership_mode(OwnershipMode::Transferable)
         .acl_white_list(contract_whitelist)
         .build();
-    let mut contract = CEP78HostRef::deploy(&env, args);
+    let mut contract = Cep78HostRef::deploy(&env, args);
     minting_contract.set_address(contract.address());
     let token_owner = env.get_account(0);
     minting_contract.mint_for(token_owner, TEST_PRETTY_721_META_DATA.to_string());
@@ -188,7 +189,7 @@ fn should_not_burn_in_non_burn_mode() {
         .burn_mode(BurnMode::NonBurnable)
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
         .build();
-    let mut contract = CEP78HostRef::deploy(&env, args);
+    let mut contract = Cep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     mint(&mut contract, true, token_owner);
 
@@ -208,7 +209,7 @@ fn should_let_account_operator_burn_tokens_with_operator_burn_mode() {
         .events_mode(EventsMode::CES)
         .build();
 
-    let mut contract = CEP78HostRef::deploy(&env, args);
+    let mut contract = Cep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     mint(&mut contract, true, token_owner);
 
@@ -253,12 +254,12 @@ fn should_let_contract_operator_burn_tokens_with_operator_burn_mode() {
         .events_mode(EventsMode::CES)
         .build();
 
-    let mut contract = CEP78HostRef::deploy(&env, args);
+    let mut contract = Cep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     mint(&mut contract, true, token_owner);
 
     let token_id = 0u64;
-    let mut minting_contract = TestContractHostRef::deploy(&env, NoArgs);
+    let mut minting_contract = MockContractHostRef::deploy(&env, NoArgs);
     minting_contract.set_address(contract.address());
     let operator = *minting_contract.address();
     let account_1 = env.get_account(1);
@@ -304,7 +305,7 @@ fn should_burn_token_in_hash_identifier_mode() {
         .metadata_mutability(MetadataMutability::Immutable)
         .build();
 
-    let mut contract = CEP78HostRef::deploy(&env, args);
+    let mut contract = Cep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     mint(&mut contract, true, token_owner);
 
