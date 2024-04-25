@@ -1,6 +1,9 @@
 # Changelog
 
 Changelog for `odra`.
+## [1.0.0] - 2024-05-xx
+### Added
+- Add `try_deploy` function to the `Deployer` trait - allows to deploy a contract and return an error if the deployment fails.
 
 ## [0.9.1] - 2024-04-xx
 ### Changed
