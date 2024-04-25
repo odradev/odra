@@ -10,6 +10,7 @@ use super::{
 
 mod acl;
 mod burn;
+mod costs;
 mod events;
 mod installer;
 mod metadata;

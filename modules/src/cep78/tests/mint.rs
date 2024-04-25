@@ -2,7 +2,6 @@ use odra::{
     args::Maybe,
     casper_types::bytesrepr::ToBytes,
     host::{Deployer, HostEnv, HostRef, NoArgs},
-    DeployReport
 };
 use serde::{Deserialize, Serialize};
 
@@ -577,14 +576,7 @@ fn should_mint_without_returning_receipts_and_flat_gas_cost() {
     contract.mint(env.get_account(1), "".to_string(), Maybe::None);
     contract.mint(env.get_account(2), "".to_string(), Maybe::None);
 
-    let costs = env
-        .gas_report()
-        .into_iter()
-        .filter_map(|r| match r {
-            DeployReport::WasmDeploy { .. } => None,
-            DeployReport::ContractCall { gas, .. } => Some(gas)
-        })
-        .collect::<Vec<_>>();
+    let costs = utils::get_gas_cost_of(&env, "mint");
 
     // In this case there is no first time allocation of a page.
     // Therefore the second and first mints must have equivalent gas costs.
@@ -816,20 +808,7 @@ fn should_approve_all_with_flat_gas_cost() {
         is_also_operator,
         "expected other operator to be approved for all"
     );
-    let gas_report = env.gas_report();
-    let costs = gas_report
-        .into_iter()
-        .filter_map(|r| match r {
-            DeployReport::WasmDeploy { .. } => None,
-            DeployReport::ContractCall { gas, call_def, .. } => {
-                if call_def.entry_point() == "set_approval_for_all" {
-                    Some(gas)
-                } else {
-                    None
-                }
-            }
-        })
-        .collect::<Vec<_>>();
+    let costs = utils::get_gas_cost_of(&env, "set_approval_for_all");
 
     // Operator approval should have flat gas costs
     // Therefore the second and first set_approve_for_all must have equivalent gas costs.

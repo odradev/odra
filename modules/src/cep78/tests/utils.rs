@@ -6,7 +6,7 @@ use crate::cep78::{
     token::Cep78InitArgs
 };
 use blake2::{digest::VariableOutput, Blake2bVar};
-use odra::{args::Maybe, casper_types::BLAKE2B_DIGEST_LENGTH, prelude::*, Address};
+use odra::{args::Maybe, casper_types::{BLAKE2B_DIGEST_LENGTH, U512}, host::HostEnv, prelude::*, Address, DeployReport};
 use std::io::Write;
 
 #[derive(Default)]
@@ -210,4 +210,33 @@ pub(crate) fn create_blake2b_hash<T: AsRef<[u8]>>(data: T) -> [u8; BLAKE2B_DIGES
         .finalize_variable(&mut result)
         .expect("should copy hash to the result array");
     result
+}
+
+
+pub(crate) fn get_gas_cost_of(env: &HostEnv, entry_point: &str) -> Vec<U512> {
+    let gas_report = env.gas_report();
+    gas_report
+        .into_iter()
+        .filter_map(|r| match r {
+            DeployReport::WasmDeploy { .. } => None,
+            DeployReport::ContractCall { gas, call_def, .. } => {
+                if call_def.entry_point() == entry_point {
+                    Some(gas)
+                } else {
+                    None
+                }
+            }
+        })
+        .collect::<Vec<_>>()
+}
+
+pub(crate) fn get_deploy_gas_cost(env: &HostEnv) -> Vec<U512> {
+    let gas_report = env.gas_report();
+    gas_report
+        .into_iter()
+        .filter_map(|r| match r {
+            DeployReport::WasmDeploy { gas, .. } => Some(gas),
+            DeployReport::ContractCall { .. } => None
+        })
+        .collect::<Vec<_>>()
 }
