@@ -4,7 +4,7 @@ use blake2::Blake2bVar;
 use odra_casper_rpc_client::casper_client::CasperClient;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::bytesrepr::Bytes;
-use odra_core::casper_types::U512;
+use odra_core::casper_types::{CLValue, U512};
 use odra_core::prelude::*;
 use odra_core::{Address, OdraError};
 use odra_core::{CallDef, ContractContext, ContractRegister};
@@ -27,6 +27,28 @@ impl ContractContext for LivenetContractEnv {
 
     fn set_value(&self, _key: &[u8], _value: Bytes) {
         panic!("Cannot set value in LivenetEnv without a deploy")
+    }
+
+    fn get_named_value(&self, name: &str) -> Option<Bytes> {
+        self.casper_client
+            .borrow()
+            .get_named_value(self.callstack.borrow().current().address(), name)
+    }
+
+    fn set_named_value(&self, _name: &str, _value: CLValue) {
+        panic!("Cannot set named value in LivenetEnv without a deploy")
+    }
+
+    fn get_dictionary_value(&self, dictionary_name: &str, key: &str) -> Option<Bytes> {
+        self.casper_client.borrow().get_dictionary_value(
+            self.callstack.borrow().current().address(),
+            dictionary_name,
+            key
+        )
+    }
+
+    fn set_dictionary_value(&self, _dictionary_name: &str, _key: &str, _value: CLValue) {
+        panic!("Cannot set dictionary value in LivenetEnv without a deploy")
     }
 
     fn caller(&self) -> Address {

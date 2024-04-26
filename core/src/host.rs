@@ -223,6 +223,9 @@ impl HostEnv {
 
     /// Sets the caller address for the current contract execution.
     pub fn set_caller(&self, address: Address) {
+        if address.is_contract() {
+            panic!("Caller cannot be a contract: {:?}", address)
+        }
         let backend = self.backend.borrow();
         backend.set_caller(address)
     }

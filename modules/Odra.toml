@@ -34,3 +34,8 @@ fqn = "cep78::utils::MockDummyContract"
 [[contracts]]
 fqn = "cep78::utils::MockTransferFilterContract"
 
+[[contracts]]
+fqn = "cep18_token::Cep18"
+
+[[contracts]]
+fqn = "cep18::cep18_client_contract::Cep18ClientContract"

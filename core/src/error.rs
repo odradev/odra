@@ -1,8 +1,11 @@
-use casper_types::CLType;
+use core::any::Any;
+
+use casper_types::bytesrepr::Error as BytesReprError;
+use casper_types::{CLType, CLValueError};
 
 use crate::arithmetic::ArithmeticsError;
 use crate::prelude::*;
-use core::any::Any;
+use crate::VmError::Serialization;
 
 /// General error type in Odra framework
 #[repr(u16)]
@@ -120,6 +123,8 @@ pub enum ExecutionError {
     TypeMismatch = 119,
     /// Could not sign message
     CouldNotSignMessage = 120,
+    /// Empty dictionary name
+    EmptyDictionaryName = 121,
     /// Maximum code for user errors
     MaxUserError = 32767,
     /// User error too high. The code should be in range 0..32767.
@@ -143,7 +148,7 @@ impl ExecutionError {
 
 impl From<ExecutionError> for OdraError {
     fn from(error: ExecutionError) -> Self {
-        Self::ExecutionError(error)
+        Self::ExecutionError(ExecutionError::User(error.code()))
     }
 }
 
@@ -240,3 +245,30 @@ pub enum EventError {
 
 /// Represents the result of a contract call.
 pub type OdraResult<T> = Result<T, OdraError>;
+
+impl From<CLValueError> for OdraError {
+    fn from(error: CLValueError) -> Self {
+        match error {
+            CLValueError::Serialization(_) => OdraError::VmError(Serialization),
+            CLValueError::Type(cl_type_mismatch) => OdraError::VmError(VmError::TypeMismatch {
+                expected: cl_type_mismatch.expected.clone(),
+                found: cl_type_mismatch.found.clone()
+            })
+        }
+    }
+}
+
+impl From<BytesReprError> for OdraError {
+    fn from(error: BytesReprError) -> Self {
+        match error {
+            BytesReprError::EarlyEndOfStream => ExecutionError::EarlyEndOfStream,
+            BytesReprError::Formatting => ExecutionError::Formatting,
+            BytesReprError::LeftOverBytes => ExecutionError::LeftOverBytes,
+            BytesReprError::OutOfMemory => ExecutionError::OutOfMemory,
+            BytesReprError::NotRepresentable => ExecutionError::NotRepresentable,
+            BytesReprError::ExceededRecursionDepth => ExecutionError::ExceededRecursionDepth,
+            _ => ExecutionError::Formatting
+        }
+        .into()
+    }
+}

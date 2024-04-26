@@ -1,11 +1,11 @@
 use crate::vm::OdraVm;
 use blake2::digest::VariableOutput;
 use blake2::{Blake2b, Blake2b512, Blake2bVar, Blake2s256, Digest};
-use odra_core::casper_types::BlockTime;
 use odra_core::casper_types::{
     bytesrepr::{Bytes, ToBytes},
     U512
 };
+use odra_core::casper_types::{BlockTime, CLType, CLValue};
 use odra_core::prelude::*;
 use odra_core::{casper_types, Address, OdraError};
 use odra_core::{CallDef, ContractContext};
@@ -24,6 +24,22 @@ impl ContractContext for OdraVmContractEnv {
 
     fn set_value(&self, key: &[u8], value: Bytes) {
         self.vm.borrow().set_var(key, value)
+    }
+
+    fn get_named_value(&self, name: &str) -> Option<Bytes> {
+        self.vm.borrow().get_named_key(name)
+    }
+
+    fn set_named_value(&self, name: &str, value: CLValue) {
+        self.vm.borrow().set_named_key(name, value)
+    }
+
+    fn get_dictionary_value(&self, dictionary_name: &str, key: &str) -> Option<Bytes> {
+        self.vm.borrow().get_dict_value(dictionary_name, key)
+    }
+
+    fn set_dictionary_value(&self, dictionary_name: &str, key: &str, value: CLValue) {
+        self.vm.borrow().set_dict_value(dictionary_name, key, value)
     }
 
     fn caller(&self) -> Address {

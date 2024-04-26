@@ -7,6 +7,7 @@
 //!
 //! Build on top of the [casper_contract] crate.
 
+use casper_contract::contract_api::storage::new_uref;
 use casper_contract::{
     contract_api::{
         self, runtime, storage,
@@ -19,14 +20,16 @@ use casper_contract::{
     unwrap_or_revert::UnwrapOrRevert
 };
 use core::mem::MaybeUninit;
+use odra_core::casper_types::bytesrepr::deserialize;
 use odra_core::casper_types::{
-    api_error,
+    api_error, bytesrepr,
     bytesrepr::{Bytes, FromBytes, ToBytes},
     contracts::NamedKeys,
     system::CallStackElement,
     ApiError, CLTyped, CLValue, ContractPackageHash, ContractVersion, EntryPoints, Key,
-    RuntimeArgs, URef, DICTIONARY_ITEM_KEY_MAX_LENGTH, U512
+    RuntimeArgs, URef, DICTIONARY_ITEM_KEY_MAX_LENGTH, U512, UREF_SERIALIZED_LENGTH
 };
+use odra_core::ExecutionError::EmptyDictionaryName;
 use odra_core::{
     args::EntrypointArgument,
     casper_event_standard::{self, Schema, Schemas}
@@ -213,6 +216,107 @@ pub fn get_value(key: &[u8]) -> Option<Vec<u8>> {
     let value_bytes = read_host_buffer(value_size).unwrap_or_revert();
     let value_bytes = Vec::from_bytes(value_bytes.as_slice()).unwrap_or_revert();
     Some(value_bytes.0)
+}
+
+/// Writes a value under a named key to the contract's storage.
+pub fn set_named_key(name: &str, value: CLValue) {
+    match runtime::get_key(name) {
+        Some(key) => {
+            write(key, value);
+        }
+        None => {
+            let new_uref = write_new(value);
+            runtime::put_key(name, new_uref.into());
+        }
+    };
+}
+
+/// Gets a value under a named key from the contract's storage.
+pub fn get_named_key(name: &str) -> Option<Bytes> {
+    let key = runtime::get_key(name).unwrap_or_revert();
+    read(key)
+}
+
+/// Writes a value under a key in a dictionary to a contract's storage.
+pub fn set_dictionary_value(dictionary_name: &str, key: &str, value: CLValue) {
+    let dictionary_uref = get_dictionary(dictionary_name);
+    let (uref_ptr, uref_size, _bytes1) = to_ptr(dictionary_uref);
+    let (dictionary_item_key_ptr, dictionary_item_key_size) = dictionary_item_key_to_ptr(key);
+
+    if dictionary_item_key_size > DICTIONARY_ITEM_KEY_MAX_LENGTH {
+        runtime::revert(ApiError::DictionaryItemKeyExceedsLength)
+    }
+
+    let (cl_value_ptr, cl_value_size, _bytes) = to_ptr(value);
+
+    let result = unsafe {
+        let ret = ext_ffi::casper_dictionary_put(
+            uref_ptr,
+            uref_size,
+            dictionary_item_key_ptr,
+            dictionary_item_key_size,
+            cl_value_ptr,
+            cl_value_size
+        );
+        api_error::result_from(ret)
+    };
+
+    result.unwrap_or_revert()
+}
+
+/// Gets a value under a key in a dictionary from the contract's storage.
+pub fn get_dictionary_value(dictionary_name: &str, key: &str) -> Option<Bytes> {
+    let dictionary_uref = get_dictionary(dictionary_name);
+    let (uref_ptr, uref_size, _bytes1) = to_ptr(dictionary_uref);
+    let (dictionary_item_key_ptr, dictionary_item_key_size) = dictionary_item_key_to_ptr(key);
+
+    if dictionary_item_key_size > DICTIONARY_ITEM_KEY_MAX_LENGTH {
+        runtime::revert(ApiError::DictionaryItemKeyExceedsLength)
+    }
+
+    let value_size = {
+        let mut value_size = MaybeUninit::uninit();
+        let ret = unsafe {
+            ext_ffi::casper_dictionary_get(
+                uref_ptr,
+                uref_size,
+                dictionary_item_key_ptr,
+                dictionary_item_key_size,
+                value_size.as_mut_ptr()
+            )
+        };
+        match api_error::result_from(ret) {
+            Ok(_) => unsafe { value_size.assume_init() },
+            Err(ApiError::ValueNotFound) => return None,
+            Err(e) => runtime::revert(e)
+        }
+    };
+
+    let value_bytes = read_host_buffer(value_size).unwrap_or_revert();
+    Some(Bytes::from(value_bytes))
+}
+
+fn get_dictionary(name: &str) -> URef {
+    if name.is_empty() {
+        runtime::revert(ApiError::MissingKey)
+    }
+
+    let dictionary_uref = match runtime::get_key(name) {
+        Some(dictionary_key) => *dictionary_key.as_uref().unwrap_or_revert(),
+        None => {
+            let value_size = {
+                let mut value_size = MaybeUninit::uninit();
+                let ret = unsafe { ext_ffi::casper_new_dictionary(value_size.as_mut_ptr()) };
+                api_error::result_from(ret).unwrap_or_revert();
+                unsafe { value_size.assume_init() }
+            };
+            let value_bytes = read_host_buffer(value_size).unwrap_or_revert();
+            let uref: URef = bytesrepr::deserialize(value_bytes).unwrap_or_revert();
+            runtime::put_key(name, Key::from(uref));
+            uref
+        }
+    };
+    dictionary_uref
 }
 
 /// Transfers native token from the contract caller to the given address.
@@ -523,6 +627,51 @@ fn to_ptr<T: ToBytes>(t: T) -> (*const u8, usize, Vec<u8>) {
     let ptr = bytes.as_ptr();
     let size = bytes.len();
     (ptr, size, bytes)
+}
+
+fn dictionary_item_key_to_ptr(dictionary_item_key: &str) -> (*const u8, usize) {
+    let bytes = dictionary_item_key.as_bytes();
+    let ptr = bytes.as_ptr();
+    let size = bytes.len();
+    (ptr, size)
+}
+
+fn write(key: Key, value: CLValue) {
+    let (key_ptr, key_size, _bytes) = to_ptr(key);
+    let (value_ptr, value_size, _bytes) = to_ptr(value);
+
+    unsafe {
+        ext_ffi::casper_write(key_ptr, key_size, value_ptr, value_size);
+    }
+}
+
+fn write_new(value: CLValue) -> URef {
+    let uref_non_null_ptr = contract_api::alloc_bytes(UREF_SERIALIZED_LENGTH);
+    let (cl_value_ptr, cl_value_size, _cl_value_bytes) = to_ptr(value);
+    let bytes = unsafe {
+        ext_ffi::casper_new_uref(uref_non_null_ptr.as_ptr(), cl_value_ptr, cl_value_size); // URef has `READ_ADD_WRITE`
+        Vec::from_raw_parts(
+            uref_non_null_ptr.as_ptr(),
+            UREF_SERIALIZED_LENGTH,
+            UREF_SERIALIZED_LENGTH
+        )
+    };
+    deserialize(bytes).unwrap_or_revert()
+}
+
+fn read(key: Key) -> Option<Bytes> {
+    let (key_ptr, key_size, _bytes) = to_ptr(key);
+    let value_size = {
+        let mut value_size = MaybeUninit::uninit();
+        let ret = unsafe { ext_ffi::casper_read_value(key_ptr, key_size, value_size.as_mut_ptr()) };
+        match api_error::result_from(ret) {
+            Ok(_) => unsafe { value_size.assume_init() },
+            Err(e) => runtime::revert(e)
+        }
+    };
+
+    let value_bytes = read_host_buffer(value_size).unwrap_or_revert();
+    Some(Bytes::from(value_bytes))
 }
 
 fn read_host_buffer(size: usize) -> Result<Vec<u8>, ApiError> {
