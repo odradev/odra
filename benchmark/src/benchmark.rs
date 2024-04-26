@@ -1,3 +1,4 @@
+use crate::storage::{DictionaryStorage, NamedKeyStorage};
 use odra::casper_types::{U256, U512};
 use odra::prelude::*;
 use odra::{List, Mapping, SubModule, Var};
@@ -10,7 +11,9 @@ pub struct Benchmark {
     struct_variable: Var<StructVariable>,
     mapping: Mapping<u32, bool>,
     list: List<u32>,
-    submodule: SubModule<Erc20>
+    submodule: SubModule<Erc20>,
+    named_key: SubModule<NamedKeyStorage>,
+    dictionary: SubModule<DictionaryStorage>
 }
 
 #[odra::module]
@@ -41,6 +44,22 @@ impl Benchmark {
 
     pub fn get_mapping(&self, key: u32) -> bool {
         self.mapping.get_or_default(&key)
+    }
+
+    pub fn set_named_key(&mut self, value: String) {
+        self.named_key.set(value);
+    }
+
+    pub fn get_named_key(&self) -> String {
+        self.named_key.get()
+    }
+
+    pub fn set_dictionary(&mut self, key: String, value: U256) {
+        self.dictionary.set(key, value);
+    }
+
+    pub fn get_dictionary(&self, key: String) -> U256 {
+        self.dictionary.get_or_default(key)
     }
 
     pub fn push_list(&mut self, value: u32) {
