@@ -5,7 +5,7 @@ use crate::{
     call_result::CallResult, contract_def::HasIdent, entry_point_callback::EntryPointsCaller,
     Address, CallDef, ContractCallResult, ContractEnv, EventError, OdraError, OdraResult, VmError
 };
-use crate::{consts, prelude::*, utils};
+use crate::{consts, prelude::*, utils, ExecutionError};
 use casper_event_standard::EventInstance;
 use casper_types::{
     bytesrepr::{Bytes, FromBytes, ToBytes},
@@ -103,17 +103,17 @@ impl<R: HostRef + EntryPointsCallerProvider + HasIdent> Deployer for R {
         let contract_ident = R::ident();
         match Self::try_deploy(env, init_args) {
             Ok(contract) => contract,
-            Err(OdraError::VmError(VmError::MissingArg)) => {
+            Err(OdraError::ExecutionError(ExecutionError::MissingArg)) => {
                 core::panic!("Invalid init args for contract {}.", contract_ident)
             }
-            Err(_) => core::panic!("Contract init failed")
+            Err(e) => core::panic!("Contract init failed {:?}", e)
         }
     }
 
     fn try_deploy<T: InitArgs>(env: &HostEnv, init_args: T) -> OdraResult<Self> {
         let contract_ident = R::ident();
         if !T::validate(&contract_ident) {
-            return Err(OdraError::VmError(VmError::MissingArg));
+            return Err(OdraError::ExecutionError(ExecutionError::MissingArg));
         }
 
         let caller = R::entry_points_caller(env);

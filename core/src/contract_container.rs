@@ -1,5 +1,5 @@
 use crate::entry_point_callback::{Argument, EntryPointsCaller};
-use crate::{prelude::*, OdraResult};
+use crate::{prelude::*, ExecutionError, OdraResult};
 use crate::{CallDef, OdraError, VmError};
 use casper_types::bytesrepr::Bytes;
 use casper_types::RuntimeArgs;
@@ -53,7 +53,7 @@ impl ContractContainer {
                     }));
                 }
             } else {
-                return Err(OdraError::VmError(VmError::MissingArg));
+                return Err(OdraError::ExecutionError(ExecutionError::MissingArg));
             }
         }
         Ok(())
@@ -72,7 +72,7 @@ mod tests {
         casper_types::{runtime_args, RuntimeArgs},
         OdraError, VmError
     };
-    use crate::{prelude::*, CallDef, ContractEnv};
+    use crate::{prelude::*, CallDef, ContractEnv, ExecutionError};
 
     const TEST_ENTRYPOINT: &str = "ep";
 
@@ -112,7 +112,10 @@ mod tests {
         let result = instance.call(call_def);
 
         // Then MissingArg error is returned.
-        assert_eq!(result.unwrap_err(), OdraError::VmError(VmError::MissingArg));
+        assert_eq!(
+            result.unwrap_err(),
+            OdraError::ExecutionError(ExecutionError::MissingArg)
+        );
     }
 
     #[test]
@@ -144,7 +147,10 @@ mod tests {
         let result = instance.call(call_def);
 
         // Then MissingArg error is returned.
-        assert_eq!(result.unwrap_err(), OdraError::VmError(VmError::MissingArg));
+        assert_eq!(
+            result.unwrap_err(),
+            OdraError::ExecutionError(ExecutionError::MissingArg)
+        );
     }
 
     #[test]
@@ -157,7 +163,10 @@ mod tests {
         let result = instance.call(call_def);
 
         // Then MissingArg error is returned.
-        assert_eq!(result.unwrap_err(), OdraError::VmError(VmError::MissingArg));
+        assert_eq!(
+            result.unwrap_err(),
+            OdraError::ExecutionError(ExecutionError::MissingArg)
+        );
     }
 
     impl ContractContainer {

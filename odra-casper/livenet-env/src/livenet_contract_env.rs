@@ -5,7 +5,7 @@ use odra_casper_rpc_client::casper_client::CasperClient;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::bytesrepr::Bytes;
 use odra_core::casper_types::{CLValue, U512};
-use odra_core::prelude::*;
+use odra_core::{prelude::*, ExecutionError, OdraResult};
 use odra_core::{Address, OdraError};
 use odra_core::{CallDef, ContractContext, ContractRegister};
 use std::io::Write;
@@ -112,8 +112,9 @@ impl ContractContext for LivenetContractEnv {
         panic!("Revert: {:?} - {}", error, revert_msg);
     }
 
-    fn get_named_arg_bytes(&self, name: &str) -> Bytes {
-        self.get_opt_named_arg_bytes(name).unwrap()
+    fn get_named_arg_bytes(&self, name: &str) -> OdraResult<Bytes> {
+        self.get_opt_named_arg_bytes(name)
+            .ok_or(OdraError::ExecutionError(ExecutionError::MissingArg))
     }
 
     fn get_opt_named_arg_bytes(&self, name: &str) -> Option<Bytes> {

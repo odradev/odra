@@ -7,7 +7,7 @@ use odra_core::casper_types::{CLType, CLValue, BLAKE2B_DIGEST_LENGTH};
 use odra_core::prelude::*;
 use odra_core::{casper_types, UnwrapOrRevert};
 use odra_core::{Address, OdraError};
-use odra_core::{ContractContext, ContractEnv};
+use odra_core::{ContractContext, ContractEnv, ExecutionError, OdraResult};
 
 /// ContractContext implementation for Wasm environment.
 #[derive(Clone)]
@@ -74,12 +74,10 @@ impl ContractContext for WasmContractEnv {
         host_functions::revert(error.code())
     }
 
-    fn get_named_arg_bytes(&self, name: &str) -> Bytes {
-        let result = host_functions::get_named_arg(name);
-        match result {
-            Ok(bytes) => Bytes::from(bytes),
-            Err(err) => runtime::revert(err)
-        }
+    fn get_named_arg_bytes(&self, name: &str) -> OdraResult<Bytes> {
+        host_functions::get_named_arg(name)
+            .map(Bytes::from)
+            .map_err(|_| OdraError::ExecutionError(ExecutionError::MissingArg))
     }
 
     fn get_opt_named_arg_bytes(&self, name: &str) -> Option<Bytes> {

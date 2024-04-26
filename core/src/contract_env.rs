@@ -287,8 +287,11 @@ impl ExecutionEnv {
     /// the contract will revert.
     pub fn get_named_arg<T: FromBytes + EntrypointArgument>(&self, name: &str) -> T {
         if T::is_required() {
-            let bytes = self.env.backend.borrow().get_named_arg_bytes(name);
-            deserialize_from_slice(bytes).unwrap_or_revert(&self.env)
+            let result = self.env.backend.borrow().get_named_arg_bytes(name);
+            match result {
+                Ok(bytes) => deserialize_from_slice(bytes).unwrap_or_revert(&self.env),
+                Err(err) => self.env.revert(err)
+            }
         } else {
             let bytes = self.env.backend.borrow().get_opt_named_arg_bytes(name);
             let result =

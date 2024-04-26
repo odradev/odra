@@ -3,7 +3,7 @@ use casper_types::CLValue;
 use crate::call_def::CallDef;
 use crate::casper_types::bytesrepr::Bytes;
 use crate::casper_types::U512;
-use crate::{Address, OdraError};
+use crate::{Address, OdraError, OdraResult};
 
 /// Trait representing the context of a smart contract.
 #[cfg_attr(test, allow(unreachable_code))]
@@ -133,7 +133,7 @@ pub trait ContractContext {
     /// # Returns
     ///
     /// The value of the named argument as a byte array.
-    fn get_named_arg_bytes(&self, name: &str) -> Bytes;
+    fn get_named_arg_bytes(&self, name: &str) -> OdraResult<Bytes>;
 
     /// Similar to `get_named_arg_bytes`, but returns `None` if the named argument is not present.
     fn get_opt_named_arg_bytes(&self, name: &str) -> Option<Bytes>;
