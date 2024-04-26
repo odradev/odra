@@ -1,18 +1,33 @@
 use odra::prelude::*;
-use odra::Var;
+use odra::SubModule;
+use odra::UnwrapOrRevert;
 
+use crate::simple_storage;
+
+use super::error::CEP78Error;
 use super::modalities::{BurnMode, EventsMode, MintingMode, NFTHolderMode, NFTKind, OwnershipMode};
+use super::storage::*;
+
+simple_storage!(Cep78AllowMinting, bool, ALLOW_MINTING);
+simple_storage!(Cep78MintingMode, MintingMode, MINTING_MODE, CEP78Error::MissingMintingMode);
+simple_storage!(Cep78OwnershipMode, OwnershipMode, OWNERSHIP_MODE , CEP78Error::MissingOwnershipMode);
+simple_storage!(Cep78NFTKind, NFTKind, NFT_KIND, CEP78Error::MissingNftKind);
+simple_storage!(Cep78HolderMode, NFTHolderMode, HOLDER_MODE, CEP78Error::MissingHolderMode);
+simple_storage!(Cep78BurnMode, BurnMode, BURN_MODE, CEP78Error::MissingBurnMode);
+simple_storage!(Cep78EventsMode, EventsMode, EVENTS_MODE, CEP78Error::MissingEventsMode);
+simple_storage!(Cep78OperatorBurnMode, bool, OPERATOR_BURN_MODE, CEP78Error::MissingOperatorBurnMode);
+
 
 #[odra::module]
 pub struct Settings {
-    allow_minting: Var<bool>,
-    minting_mode: Var<MintingMode>,
-    ownership_mode: Var<OwnershipMode>,
-    nft_kind: Var<NFTKind>,
-    holder_mode: Var<NFTHolderMode>,
-    burn_mode: Var<BurnMode>,
-    events_mode: Var<EventsMode>,
-    operator_burn_mode: Var<bool>
+    allow_minting: SubModule<Cep78AllowMinting>,
+    minting_mode: SubModule<Cep78MintingMode>,
+    ownership_mode: SubModule<Cep78OwnershipMode>,
+    nft_kind: SubModule<Cep78NFTKind>,
+    holder_mode: SubModule<Cep78HolderMode>,
+    burn_mode: SubModule<Cep78BurnMode>,
+    events_mode: SubModule<Cep78EventsMode>,
+    operator_burn_mode: SubModule<Cep78OperatorBurnMode>
 }
 
 impl Settings {
@@ -40,7 +55,7 @@ impl Settings {
 
     #[inline]
     pub fn allow_minting(&self) -> bool {
-        self.allow_minting.get_or_default()
+        self.allow_minting.get().unwrap_or_default()
     }
 
     #[inline]
@@ -50,32 +65,32 @@ impl Settings {
 
     #[inline]
     pub fn events_mode(&self) -> EventsMode {
-        self.events_mode.get_or_default()
+        self.events_mode.get()
     }
 
     #[inline]
     pub fn burn_mode(&self) -> BurnMode {
-        self.burn_mode.get_or_default()
+        self.burn_mode.get()
     }
 
     #[inline]
     pub fn ownership_mode(&self) -> OwnershipMode {
-        self.ownership_mode.get_or_default()
+        self.ownership_mode.get()
     }
 
     #[inline]
     pub fn minting_mode(&self) -> MintingMode {
-        self.minting_mode.get_or_default()
+        self.minting_mode.get()
     }
 
     #[inline]
     pub fn holder_mode(&self) -> NFTHolderMode {
-        self.holder_mode.get_or_default()
+        self.holder_mode.get()
     }
 
     #[inline]
     pub fn operator_burn_mode(&self) -> bool {
-        self.operator_burn_mode.get_or_default()
+        self.operator_burn_mode.get()
     }
 
     #[inline]

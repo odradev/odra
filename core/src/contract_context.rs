@@ -49,7 +49,7 @@ pub trait ContractContext {
     ///
     /// * `dictionary_name` - The name of the dictionary.
     /// * `key` - The key to retrieve the value for.
-    fn get_dictionary_value(&self, dictionary_name: &str, key: &str) -> Option<Bytes>;
+    fn get_dictionary_value(&self, dictionary_name: &str, key: &[u8]) -> Option<Bytes>;
 
     /// Sets the key value behind a named dictionary.
     ///
@@ -58,7 +58,7 @@ pub trait ContractContext {
     /// * `dictionary_name` - The name of the dictionary.
     /// * `key` - The key to set the value for.
     /// * `value` - The value to set.
-    fn set_dictionary_value(&self, dictionary_name: &str, key: &str, value: CLValue);
+    fn set_dictionary_value(&self, dictionary_name: &str, key: &[u8], value: CLValue);
 
     /// Retrieves the address of the caller.
     fn caller(&self) -> Address;

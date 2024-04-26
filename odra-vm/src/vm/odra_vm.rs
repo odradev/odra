@@ -175,10 +175,10 @@ impl OdraVm {
     }
 
     /// Sets the value of the dictionary item.
-    pub fn set_dict_value(&self, dict: &str, key: &str, value: CLValue) {
+    pub fn set_dict_value(&self, dict: &str, key: &[u8], value: CLValue) {
         self.state.write().unwrap().set_dict_value(
             dict.as_bytes(),
-            key.as_bytes(),
+            key,
             Bytes::from(value.inner_bytes().as_slice())
         );
     }
@@ -187,12 +187,12 @@ impl OdraVm {
     ///
     /// Returns `None` if the dictionary or the key does not exist.
     /// If the dictionary or the key does not exist, the virtual machine is in error state.
-    pub fn get_dict_value(&self, dict: &str, key: &str) -> Option<Bytes> {
+    pub fn get_dict_value(&self, dict: &str, key: &[u8]) -> Option<Bytes> {
         let result = {
             self.state
                 .read()
                 .unwrap()
-                .get_dict_value(dict.as_bytes(), key.as_bytes())
+                .get_dict_value(dict.as_bytes(), key)
         };
         match result {
             Ok(result) => result,

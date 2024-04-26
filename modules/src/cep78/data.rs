@@ -1,25 +1,52 @@
+use odra::casper_types::bytesrepr::ToBytes;
 use odra::prelude::*;
+use base64::prelude::*;
 use odra::Address;
-use odra::Mapping;
+use odra::SubModule;
 use odra::UnwrapOrRevert;
-use odra::Var;
+use crate::basic_key_value_storage;
+use crate::compound_key_storage;
+use crate::encoded_key_value_storage;
+use crate::simple_storage;
 
 use super::constants;
 use super::error::CEP78Error;
+use super::storage::*;
+
+simple_storage!(Cep78CollectionName, String, COLLECTION_NAME, CEP78Error::MissingCollectionName);
+simple_storage!(Cep78CollectionSymbol, String, COLLECTION_SYMBOL, CEP78Error::MissingCollectionName);
+simple_storage!(Cep78TotalSupply, u64, TOTAL_TOKEN_SUPPLY, CEP78Error::MissingTotalTokenSupply);
+simple_storage!(Cep78TokenCounter, u64, NUMBER_OF_MINTED_TOKENS);
+
+impl Cep78TokenCounter {
+    pub fn add(&mut self, value: u64) {
+        match self.get() {
+            Some(current_value) => self.set(value + current_value),
+            None => self.set(value)
+        }
+    }
+}
+simple_storage!(Cep78Installer, Address, INSTALLER, CEP78Error::MissingInstaller);
+compound_key_storage!(Cep78Operators, OPERATORS, Address, bool);
+basic_key_value_storage!(Cep78Owners, TOKEN_OWNERS, Address);
+basic_key_value_storage!(Cep78Issuers, TOKEN_ISSUERS, Address);
+basic_key_value_storage!(Cep78BurntTokens, BURNT_TOKENS, ());
+encoded_key_value_storage!(Cep78TokenCount, TOKEN_COUNT, Address, u64);
+encoded_key_value_storage!(Cep78Approved, APPROVED, String, Option<Address>);
 
 #[odra::module]
 pub struct CollectionData {
-    name: Var<String>,
-    symbol: Var<String>,
-    total_token_supply: Var<u64>,
-    counter: Var<u64>,
-    installer: Var<Address>,
-    owners: Mapping<String, Address>,
-    issuers: Mapping<String, Address>,
-    approved: Mapping<String, Option<Address>>,
-    token_count: Mapping<Address, u64>,
-    burnt_tokens: Mapping<String, ()>,
-    operators: Mapping<(Address, Address), bool>
+    name: SubModule<Cep78CollectionName>,
+    symbol: SubModule<Cep78CollectionSymbol>,
+    total_token_supply: SubModule<Cep78TotalSupply>,
+    minted_tokens_count: SubModule<Cep78TokenCounter>,
+    installer: SubModule<Cep78Installer>,
+    owners: SubModule<Cep78Owners>,
+    issuers: SubModule<Cep78Issuers>,
+    approved: SubModule<Cep78Approved>,
+    token_count: SubModule<Cep78TokenCount>,
+    burnt_tokens: SubModule<Cep78BurntTokens>,
+    operators: SubModule<Cep78Operators>
 }
 
 impl CollectionData {
@@ -46,33 +73,32 @@ impl CollectionData {
 
     #[inline]
     pub fn installer(&self) -> Address {
-        self.installer
-            .get_or_revert_with(CEP78Error::MissingInstaller)
+        self.installer.get()
     }
 
     #[inline]
     pub fn total_token_supply(&self) -> u64 {
-        self.total_token_supply.get_or_default()
+        self.total_token_supply.get()
     }
 
     #[inline]
     pub fn increment_number_of_minted_tokens(&mut self) {
-        self.counter.add(1);
+        self.minted_tokens_count.add(1);
     }
 
     #[inline]
     pub fn number_of_minted_tokens(&self) -> u64 {
-        self.counter.get_or_default()
+        self.minted_tokens_count.get().unwrap_or_default()
     }
 
     #[inline]
     pub fn collection_name(&self) -> String {
-        self.name.get_or_default()
+        self.name.get()
     }
 
     #[inline]
     pub fn collection_symbol(&self) -> String {
-        self.symbol.get_or_default()
+        self.symbol.get()
     }
 
     #[inline]
@@ -87,22 +113,24 @@ impl CollectionData {
 
     #[inline]
     pub fn increment_counter(&mut self, token_owner: &Address) {
-        self.token_count.add(token_owner, 1);
+        let value = self.token_count.get(token_owner).unwrap_or_default();
+        self.token_count.set(token_owner, value + 1);
     }
 
     #[inline]
     pub fn decrement_counter(&mut self, token_owner: &Address) {
-        self.token_count.subtract(token_owner, 1);
+        let value = self.token_count.get(token_owner).unwrap_or_default();
+        self.token_count.set(token_owner, value - 1);
     }
 
     #[inline]
     pub fn operator(&self, owner: Address, operator: Address) -> bool {
-        self.operators.get_or_default(&(owner, operator))
+        self.operators.get_or_default(&owner, &operator)
     }
 
     #[inline]
     pub fn set_operator(&mut self, owner: Address, operator: Address, approved: bool) {
-        self.operators.set(&(owner, operator), approved);
+        self.operators.set(&owner, &operator, approved);
     }
 
     #[inline]

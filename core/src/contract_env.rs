@@ -104,13 +104,12 @@ impl ContractEnv {
     }
 
     /// Retrieves the value associated with the given named key from the named dictionary in the contract storage.
-    pub fn get_dictionary_value<T: FromBytes + CLTyped, U: AsRef<str>, V: AsRef<str>>(
+    pub fn get_dictionary_value<T: FromBytes + CLTyped, U: AsRef<str>>(
         &self,
         dictionary_name: U,
-        key: V
+        key: &[u8]
     ) -> Option<T> {
         let dictionary_name = dictionary_name.as_ref();
-        let key = key.as_ref();
         let bytes = self
             .backend
             .borrow()
@@ -123,10 +122,10 @@ impl ContractEnv {
     }
 
     /// Sets the value associated with the given named key in the named dictionary in the contract storage.
-    pub fn set_dictionary_value<T: CLTyped + ToBytes, U: AsRef<str>, V: AsRef<str>>(
+    pub fn set_dictionary_value<T: CLTyped + ToBytes, U: AsRef<str>>(
         &self,
         dictionary_name: U,
-        key: V,
+        key: &[u8],
         value: T
     ) {
         let dictionary_name = dictionary_name.as_ref();

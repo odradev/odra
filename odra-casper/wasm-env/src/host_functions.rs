@@ -238,7 +238,7 @@ pub fn get_named_key(name: &str) -> Option<Bytes> {
 }
 
 /// Writes a value under a key in a dictionary to a contract's storage.
-pub fn set_dictionary_value(dictionary_name: &str, key: &str, value: CLValue) {
+pub fn set_dictionary_value(dictionary_name: &str, key: &[u8], value: CLValue) {
     let dictionary_uref = get_dictionary(dictionary_name);
     let (uref_ptr, uref_size, _bytes1) = to_ptr(dictionary_uref);
     let (dictionary_item_key_ptr, dictionary_item_key_size) = dictionary_item_key_to_ptr(key);
@@ -265,7 +265,7 @@ pub fn set_dictionary_value(dictionary_name: &str, key: &str, value: CLValue) {
 }
 
 /// Gets a value under a key in a dictionary from the contract's storage.
-pub fn get_dictionary_value(dictionary_name: &str, key: &str) -> Option<Bytes> {
+pub fn get_dictionary_value(dictionary_name: &str, key: &[u8]) -> Option<Bytes> {
     let dictionary_uref = get_dictionary(dictionary_name);
     let (uref_ptr, uref_size, _bytes1) = to_ptr(dictionary_uref);
     let (dictionary_item_key_ptr, dictionary_item_key_size) = dictionary_item_key_to_ptr(key);
@@ -629,10 +629,9 @@ fn to_ptr<T: ToBytes>(t: T) -> (*const u8, usize, Vec<u8>) {
     (ptr, size, bytes)
 }
 
-fn dictionary_item_key_to_ptr(dictionary_item_key: &str) -> (*const u8, usize) {
-    let bytes = dictionary_item_key.as_bytes();
-    let ptr = bytes.as_ptr();
-    let size = bytes.len();
+fn dictionary_item_key_to_ptr(dictionary_item_key: &[u8]) -> (*const u8, usize) {
+    let ptr = dictionary_item_key.as_ptr();
+    let size = dictionary_item_key.len();
     (ptr, size)
 }
 
