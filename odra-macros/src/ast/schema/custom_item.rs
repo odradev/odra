@@ -57,7 +57,7 @@ impl ToTokens for SchemaCustomTypeItem {
                         .chain(odra::prelude::vec![Some(#custom_item)])
                         .chain(odra::prelude::vec![#(Some(#enum_sub_types)),*])
                         #(#sub_types)*
-                        .collect::<Vec<_>>()
+                        .collect::<odra::prelude::Vec<_>>()
                 }
             }
 
@@ -65,7 +65,7 @@ impl ToTokens for SchemaCustomTypeItem {
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::NamedCLTyped for #ident {
                 fn ty() -> odra::schema::casper_contract_schema::NamedCLType {
-                    odra::schema::casper_contract_schema::NamedCLType::Custom(String::from(#name))
+                    odra::schema::casper_contract_schema::NamedCLType::Custom(odra::prelude::String::from(#name))
                 }
             }
 
@@ -172,7 +172,7 @@ mod tests {
                         .chain(odra::prelude::vec![])
                         .chain(<String as odra::schema::SchemaCustomTypes>::schema_types())
                         .chain(<u32 as odra::schema::SchemaCustomTypes>::schema_types())
-                        .collect::<Vec<_>>()
+                        .collect::<odra::prelude::Vec<_>>()
                 }
             }
 
@@ -180,7 +180,7 @@ mod tests {
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::NamedCLTyped for MyType {
                 fn ty() -> odra::schema::casper_contract_schema::NamedCLType {
-                    odra::schema::casper_contract_schema::NamedCLType::Custom(String::from(
+                    odra::schema::casper_contract_schema::NamedCLType::Custom(odra::prelude::String::from(
                         "MyType"
                     ))
                 }
@@ -215,7 +215,7 @@ mod tests {
                             ))
                         ])
                         .chain(odra::prelude::vec![])
-                        .collect::<Vec<_>>()
+                        .collect::<odra::prelude::Vec<_>>()
                 }
             }
 
@@ -223,7 +223,7 @@ mod tests {
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::NamedCLTyped for MyType {
                 fn ty() -> odra::schema::casper_contract_schema::NamedCLType {
-                    odra::schema::casper_contract_schema::NamedCLType::Custom(String::from(
+                    odra::schema::casper_contract_schema::NamedCLType::Custom(odra::prelude::String::from(
                         "MyType"
                     ))
                 }
@@ -269,7 +269,7 @@ mod tests {
                             )),
                             Some(odra::schema::custom_struct("MyType::D", odra::prelude::vec![]))
                         ])
-                        .collect::<Vec<_>>()
+                        .collect::<odra::prelude::Vec<_>>()
                 }
             }
 
@@ -277,7 +277,7 @@ mod tests {
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::NamedCLTyped for MyType {
                 fn ty() -> odra::schema::casper_contract_schema::NamedCLType {
-                    odra::schema::casper_contract_schema::NamedCLType::Custom(String::from(
+                    odra::schema::casper_contract_schema::NamedCLType::Custom(odra::prelude::String::from(
                         "MyType"
                     ))
                 }

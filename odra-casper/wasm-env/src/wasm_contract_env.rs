@@ -2,9 +2,10 @@ use crate::host_functions;
 use casper_contract::contract_api::runtime;
 use casper_types::bytesrepr::ToBytes;
 use casper_types::U512;
-use odra_core::casper_types;
 use odra_core::casper_types::bytesrepr::Bytes;
+use odra_core::casper_types::{CLType, CLValue, BLAKE2B_DIGEST_LENGTH};
 use odra_core::prelude::*;
+use odra_core::{casper_types, UnwrapOrRevert};
 use odra_core::{Address, OdraError};
 use odra_core::{ContractContext, ContractEnv};
 
@@ -19,6 +20,22 @@ impl ContractContext for WasmContractEnv {
 
     fn set_value(&self, key: &[u8], value: Bytes) {
         host_functions::set_value(key, value.as_slice());
+    }
+
+    fn get_named_value(&self, name: &str) -> Option<Bytes> {
+        host_functions::get_named_key(name)
+    }
+
+    fn set_named_value(&self, name: &str, value: CLValue) {
+        host_functions::set_named_key(name, value);
+    }
+
+    fn get_dictionary_value(&self, dictionary_name: &str, key: &str) -> Option<Bytes> {
+        host_functions::get_dictionary_value(dictionary_name, key)
+    }
+
+    fn set_dictionary_value(&self, dictionary_name: &str, key: &str, value: CLValue) {
+        host_functions::set_dictionary_value(dictionary_name, key, value);
     }
 
     fn caller(&self) -> Address {
@@ -77,7 +94,7 @@ impl ContractContext for WasmContractEnv {
         host_functions::clear_attached_value();
     }
 
-    fn hash(&self, bytes: &[u8]) -> [u8; 32] {
+    fn hash(&self, bytes: &[u8]) -> [u8; BLAKE2B_DIGEST_LENGTH] {
         host_functions::blake2b(bytes)
     }
 }

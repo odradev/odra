@@ -36,6 +36,14 @@ pub fn main() {
     // Events
     contract.emit_event();
 
+    // Named key
+    contract.set_named_key("Hello, world!".to_string());
+    assert_eq!(contract.get_named_key(), "Hello, world!".to_string());
+
+    // Dictionary
+    contract.set_dictionary("My key".to_string(), 42.into());
+    assert_eq!(contract.get_dictionary("My key".to_string()), 42.into());
+
     // convert gas_report to json and dump it into a file
     let gas_report = env.gas_report();
     let gas_report_json = serde_json::to_string(&gas_report).unwrap();

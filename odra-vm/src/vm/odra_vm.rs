@@ -5,6 +5,8 @@ use std::sync::{Arc, RwLock};
 
 use anyhow::Result;
 use odra_core::callstack::CallstackElement;
+use odra_core::casper_types::bytesrepr::{deserialize, deserialize_from_slice, serialize};
+use odra_core::casper_types::{CLType, CLValue};
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::EventError;
 use odra_core::{
@@ -20,6 +22,7 @@ use odra_core::{ContractContainer, ContractRegister};
 use odra_core::{OdraError, VmError};
 
 use super::odra_vm_state::OdraVmState;
+const NAMED_KEY_PREFIX: &str = "NAMED_KEY";
 
 /// Odra in-memory virtual machine.
 #[derive(Default)]
@@ -159,17 +162,38 @@ impl OdraVm {
         }
     }
 
+    /// Sets the value of the named key.
+    pub fn set_named_key(&self, name: &str, value: CLValue) {
+        let key = Self::key_of_named_key(name);
+        self.set_var(key.as_bytes(), Bytes::from(value.inner_bytes().as_slice()));
+    }
+
+    /// Retrieves the value of the named key.
+    pub fn get_named_key(&self, name: &str) -> Option<Bytes> {
+        let key = Self::key_of_named_key(name);
+        self.get_var(key.as_bytes())
+    }
+
     /// Sets the value of the dictionary item.
-    pub fn set_dict_value(&self, dict: &[u8], key: &[u8], value: Bytes) {
-        self.state.write().unwrap().set_dict_value(dict, key, value);
+    pub fn set_dict_value(&self, dict: &str, key: &str, value: CLValue) {
+        self.state.write().unwrap().set_dict_value(
+            dict.as_bytes(),
+            key.as_bytes(),
+            Bytes::from(value.inner_bytes().as_slice())
+        );
     }
 
     /// Gets the value of the dictionary item.
     ///
     /// Returns `None` if the dictionary or the key does not exist.
     /// If the dictionary or the key does not exist, the virtual machine is in error state.
-    pub fn get_dict_value(&self, dict: &[u8], key: &[u8]) -> Option<Bytes> {
-        let result = { self.state.read().unwrap().get_dict_value(dict, key) };
+    pub fn get_dict_value(&self, dict: &str, key: &str) -> Option<Bytes> {
+        let result = {
+            self.state
+                .read()
+                .unwrap()
+                .get_dict_value(dict.as_bytes(), key.as_bytes())
+        };
         match result {
             Ok(result) => result,
             Err(error) => {
@@ -349,6 +373,11 @@ impl OdraVm {
             Bytes::new()
         }
     }
+
+    fn key_of_named_key(name: &str) -> String {
+        let key = format!("{}_{}", NAMED_KEY_PREFIX, name);
+        key
+    }
 }
 
 #[cfg(test)]
@@ -363,7 +392,7 @@ mod tests {
     use std::collections::BTreeMap;
 
     use odra_core::casper_types::bytesrepr::FromBytes;
-    use odra_core::casper_types::{RuntimeArgs, U512};
+    use odra_core::casper_types::{CLValue, RuntimeArgs, U512};
     use odra_core::host::HostEnv;
     use odra_core::Address;
     use odra_core::CallDef;
@@ -533,17 +562,39 @@ mod tests {
         let instance = OdraVm::default();
 
         // when set a value
-        let dict = b"dict";
-        let key: [u8; 2] = [1, 2];
-        let value = 32u8.to_bytes().map(Bytes::from).unwrap();
-        instance.set_dict_value(dict, &key, value.clone());
+        let dict = "dict";
+        let key = "key";
+        let value = CLValue::from_t("value").unwrap();
+        instance.set_dict_value(dict, key, value.clone());
 
         // then the value can be read
-        assert_eq!(instance.get_dict_value(dict, &key), Some(value));
+        assert_eq!(
+            instance.get_dict_value(dict, key),
+            Some(Bytes::from(value.inner_bytes().as_slice()))
+        );
         // then the value under the key in unknown dict does not exist
-        assert_eq!(instance.get_dict_value(b"other_dict", &key), None);
+        assert_eq!(instance.get_dict_value("other_dict", key), None);
         // then the value under unknown key does not exist
-        assert_eq!(instance.get_dict_value(dict, &[]), None);
+        assert_eq!(instance.get_dict_value(dict, "other_key"), None);
+    }
+
+    #[test]
+    fn test_named_key() {
+        // given an empty instance
+        let instance = OdraVm::default();
+
+        // when set a value
+        let name = "name";
+        let value = CLValue::from_t("value").unwrap();
+        instance.set_named_key(name, value.clone());
+
+        // then the value can be read
+        assert_eq!(
+            instance.get_named_key(name),
+            Some(Bytes::from(value.inner_bytes().as_slice()))
+        );
+        // then the value under unknown name does not exist
+        assert_eq!(instance.get_named_key("other_name"), None);
     }
 
     #[test]
