@@ -36,14 +36,14 @@ fn main() {
     );
 }
 
-/// Loads an ERC20 contract.
+/// Loads a CEP18 contract.
 fn _load_cep18(env: &HostEnv) -> Cep18HostRef {
     let address = "hash-568fd396922fbbc8f8499f9b888795b2155aa60a68ef9cc38752b2771693a9ce";
     let address = Address::from_str(address).unwrap();
     Cep18HostRef::load(env, address)
 }
 
-/// Deploys an ERC20 contract.
+/// Deploys a CEP18 contract.
 pub fn deploy_cep18(env: &HostEnv) -> Cep18HostRef {
     let name = String::from("Plascoin");
     let symbol = String::from("PLS");
