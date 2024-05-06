@@ -148,7 +148,7 @@ impl ExecutionError {
 
 impl From<ExecutionError> for OdraError {
     fn from(error: ExecutionError) -> Self {
-        Self::ExecutionError(ExecutionError::User(error.code()))
+        Self::ExecutionError(error)
     }
 }
 
