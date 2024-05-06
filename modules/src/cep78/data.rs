@@ -1,32 +1,31 @@
-use crate::basic_key_value_storage;
-use crate::compound_key_value_storage;
-use crate::encoded_key_value_storage;
-use crate::simple_storage;
+use crate::{
+    base64_encoded_key_value_storage, compound_key_value_storage, key_value_storage,
+    single_value_storage
+};
 use odra::{casper_types::bytesrepr::ToBytes, prelude::*, Address, SubModule, UnwrapOrRevert};
 
-use super::constants;
 use super::constants::*;
 use super::error::CEP78Error;
 
-simple_storage!(
+single_value_storage!(
     Cep78CollectionName,
     String,
     COLLECTION_NAME,
     CEP78Error::MissingCollectionName
 );
-simple_storage!(
+single_value_storage!(
     Cep78CollectionSymbol,
     String,
     COLLECTION_SYMBOL,
     CEP78Error::MissingCollectionName
 );
-simple_storage!(
+single_value_storage!(
     Cep78TotalSupply,
     u64,
     TOTAL_TOKEN_SUPPLY,
     CEP78Error::MissingTotalTokenSupply
 );
-simple_storage!(Cep78TokenCounter, u64, NUMBER_OF_MINTED_TOKENS);
+single_value_storage!(Cep78TokenCounter, u64, NUMBER_OF_MINTED_TOKENS);
 impl Cep78TokenCounter {
     pub fn add(&mut self, value: u64) {
         match self.get() {
@@ -35,18 +34,18 @@ impl Cep78TokenCounter {
         }
     }
 }
-simple_storage!(
+single_value_storage!(
     Cep78Installer,
     Address,
     INSTALLER,
     CEP78Error::MissingInstaller
 );
 compound_key_value_storage!(Cep78Operators, OPERATORS, Address, bool);
-basic_key_value_storage!(Cep78Owners, TOKEN_OWNERS, Address);
-basic_key_value_storage!(Cep78Issuers, TOKEN_ISSUERS, Address);
-basic_key_value_storage!(Cep78BurntTokens, BURNT_TOKENS, ());
-encoded_key_value_storage!(Cep78TokenCount, TOKEN_COUNT, Address, u64);
-basic_key_value_storage!(Cep78Approved, APPROVED, Option<Address>);
+key_value_storage!(Cep78Owners, TOKEN_OWNERS, Address);
+key_value_storage!(Cep78Issuers, TOKEN_ISSUERS, Address);
+key_value_storage!(Cep78BurntTokens, BURNT_TOKENS, ());
+base64_encoded_key_value_storage!(Cep78TokenCount, TOKEN_COUNT, Address, u64);
+key_value_storage!(Cep78Approved, APPROVED, Option<Address>);
 
 #[odra::module]
 pub struct CollectionData {
@@ -75,7 +74,7 @@ impl CollectionData {
             self.env().revert(CEP78Error::CannotInstallWithZeroSupply)
         }
 
-        if total_token_supply > constants::MAX_TOTAL_TOKEN_SUPPLY {
+        if total_token_supply > MAX_TOTAL_TOKEN_SUPPLY {
             self.env().revert(CEP78Error::ExceededMaxTotalSupply)
         }
 
@@ -116,12 +115,12 @@ impl CollectionData {
     }
 
     #[inline]
-    pub fn set_owner(&mut self, token_id: &String, token_owner: Address) {
+    pub fn set_owner(&mut self, token_id: &str, token_owner: Address) {
         self.owners.set(token_id, token_owner);
     }
 
     #[inline]
-    pub fn set_issuer(&mut self, token_id: &String, issuer: Address) {
+    pub fn set_issuer(&mut self, token_id: &str, issuer: Address) {
         self.issuers.set(token_id, issuer);
     }
 
@@ -148,39 +147,39 @@ impl CollectionData {
     }
 
     #[inline]
-    pub fn mark_burnt(&mut self, token_id: &String) {
+    pub fn mark_burnt(&mut self, token_id: &str) {
         self.burnt_tokens.set(token_id, ());
     }
 
     #[inline]
-    pub fn is_burnt(&self, token_id: &String) -> bool {
+    pub fn is_burnt(&self, token_id: &str) -> bool {
         self.burnt_tokens.get(token_id).is_some()
     }
 
     #[inline]
-    pub fn issuer(&self, token_id: &String) -> Address {
+    pub fn issuer(&self, token_id: &str) -> Address {
         self.issuers
             .get(token_id)
             .unwrap_or_revert_with(&self.env(), CEP78Error::InvalidTokenIdentifier)
     }
 
     #[inline]
-    pub fn approve(&mut self, token_id: &String, operator: Address) {
+    pub fn approve(&mut self, token_id: &str, operator: Address) {
         self.approved.set(token_id, Some(operator));
     }
 
     #[inline]
-    pub fn revoke(&mut self, token_id: &String) {
+    pub fn revoke(&mut self, token_id: &str) {
         self.approved.set(token_id, None);
     }
 
     #[inline]
-    pub fn approved(&self, token_id: &String) -> Option<Address> {
+    pub fn approved(&self, token_id: &str) -> Option<Address> {
         self.approved.get(token_id).flatten()
     }
 
     #[inline]
-    pub fn owner_of(&self, token_id: &String) -> Option<Address> {
+    pub fn owner_of(&self, token_id: &str) -> Option<Address> {
         self.owners.get(token_id)
     }
 

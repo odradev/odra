@@ -183,6 +183,14 @@ impl OdraVm {
         );
     }
 
+    /// Removes the dictionary from the global state.
+    pub fn remove_dictionary(&self, dictionary_name: &str) {
+        self.state
+            .write()
+            .unwrap()
+            .remove_dictionary(dictionary_name.as_bytes());
+    }
+
     /// Gets the value of the dictionary item.
     ///
     /// Returns `None` if the dictionary or the key does not exist.
@@ -563,7 +571,7 @@ mod tests {
 
         // when set a value
         let dict = "dict";
-        let key = "key";
+        let key = b"key";
         let value = CLValue::from_t("value").unwrap();
         instance.set_dict_value(dict, key, value.clone());
 
@@ -575,7 +583,7 @@ mod tests {
         // then the value under the key in unknown dict does not exist
         assert_eq!(instance.get_dict_value("other_dict", key), None);
         // then the value under unknown key does not exist
-        assert_eq!(instance.get_dict_value(dict, "other_key"), None);
+        assert_eq!(instance.get_dict_value(dict, b"other_key"), None);
     }
 
     #[test]

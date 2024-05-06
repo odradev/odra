@@ -1,43 +1,43 @@
-use crate::simple_storage;
+use crate::single_value_storage;
 use odra::{prelude::*, SubModule};
 
 use super::constants::*;
 use super::error::CEP78Error;
 use super::modalities::{BurnMode, EventsMode, MintingMode, NFTHolderMode, NFTKind, OwnershipMode};
 
-simple_storage!(Cep78AllowMinting, bool, ALLOW_MINTING);
-simple_storage!(
+single_value_storage!(Cep78AllowMinting, bool, ALLOW_MINTING);
+single_value_storage!(
     Cep78MintingMode,
     MintingMode,
     MINTING_MODE,
     CEP78Error::MissingMintingMode
 );
-simple_storage!(
+single_value_storage!(
     Cep78OwnershipMode,
     OwnershipMode,
     OWNERSHIP_MODE,
     CEP78Error::MissingOwnershipMode
 );
-simple_storage!(Cep78NFTKind, NFTKind, NFT_KIND, CEP78Error::MissingNftKind);
-simple_storage!(
+single_value_storage!(Cep78NFTKind, NFTKind, NFT_KIND, CEP78Error::MissingNftKind);
+single_value_storage!(
     Cep78HolderMode,
     NFTHolderMode,
     HOLDER_MODE,
     CEP78Error::MissingHolderMode
 );
-simple_storage!(
+single_value_storage!(
     Cep78BurnMode,
     BurnMode,
     BURN_MODE,
     CEP78Error::MissingBurnMode
 );
-simple_storage!(
+single_value_storage!(
     Cep78EventsMode,
     EventsMode,
     EVENTS_MODE,
     CEP78Error::MissingEventsMode
 );
-simple_storage!(
+single_value_storage!(
     Cep78OperatorBurnMode,
     bool,
     OPERATOR_BURN_MODE,
@@ -117,6 +117,11 @@ impl Settings {
     #[inline]
     pub fn operator_burn_mode(&self) -> bool {
         self.operator_burn_mode.get()
+    }
+
+    #[inline]
+    pub fn nft_kind(&self) -> NFTKind {
+        self.nft_kind.get()
     }
 
     #[inline]

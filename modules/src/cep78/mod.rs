@@ -4,12 +4,12 @@ mod constants;
 mod data;
 pub mod error;
 pub mod events;
-mod metadata;
+pub mod metadata;
 pub mod modalities;
 mod reverse_lookup;
-mod settings;
+pub mod settings;
 #[cfg(test)]
 mod tests;
 pub mod token;
 pub mod utils;
-mod whitelist;
+pub mod whitelist;

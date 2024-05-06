@@ -38,13 +38,13 @@ impl DictionaryStorage {
     /// Sets the value.
     pub fn set(&self, key: String, value: U256) {
         self.env()
-            .set_dictionary_value(DICT_KEY, self.key(key), value);
+            .set_dictionary_value(DICT_KEY, self.key(key).as_bytes(), value);
     }
 
     /// Gets the value.
     pub fn get_or_default(&self, key: String) -> U256 {
         self.env()
-            .get_dictionary_value(DICT_KEY, self.key(key))
+            .get_dictionary_value(DICT_KEY, self.key(key).as_bytes())
             .unwrap_or_default()
     }
 

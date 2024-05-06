@@ -38,6 +38,10 @@ impl ContractContext for WasmContractEnv {
         host_functions::set_dictionary_value(dictionary_name, key, value);
     }
 
+    fn remove_dictionary(&self, dictionary_name: &str) {
+        host_functions::remove_dictionary(dictionary_name);
+    }
+
     fn caller(&self) -> Address {
         host_functions::caller()
     }

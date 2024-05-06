@@ -1,7 +1,7 @@
 use odra::{args::Maybe, prelude::*, SubModule, UnwrapOrRevert};
 use serde::{Deserialize, Serialize};
 
-use crate::simple_storage;
+use crate::single_value_storage;
 
 use super::{
     constants::{
@@ -15,31 +15,31 @@ use super::{
     }
 };
 
-simple_storage!(
+single_value_storage!(
     Cep78MetadataRequirement,
     MetadataRequirement,
     NFT_METADATA_KINDS,
     CEP78Error::MissingNFTMetadataKind
 );
-simple_storage!(
+single_value_storage!(
     Cep78NFTMetadataKind,
     NFTMetadataKind,
     NFT_METADATA_KIND,
     CEP78Error::MissingNFTMetadataKind
 );
-simple_storage!(
+single_value_storage!(
     Cep78IdentifierMode,
     NFTIdentifierMode,
     IDENTIFIER_MODE,
     CEP78Error::MissingIdentifierMode
 );
-simple_storage!(
+single_value_storage!(
     Cep78MetadataMutability,
     MetadataMutability,
     METADATA_MUTABILITY,
     CEP78Error::MissingMetadataMutability
 );
-simple_storage!(
+single_value_storage!(
     Cep78JsonSchema,
     String,
     JSON_SCHEMA,
@@ -51,12 +51,13 @@ pub struct Cep78ValidatedMetadata;
 
 #[odra::module]
 impl Cep78ValidatedMetadata {
+    #[allow(clippy::ptr_arg)]
     pub fn set(&self, kind: &NFTMetadataKind, token_id: &String, value: String) {
         let dictionary_name = get_metadata_key(kind);
         self.env()
             .set_dictionary_value(dictionary_name, token_id.as_bytes(), value);
     }
-
+    #[allow(clippy::ptr_arg)]
     pub fn get(&self, kind: &NFTMetadataKind, token_id: &String) -> String {
         let dictionary_name = get_metadata_key(kind);
         let env = self.env();
@@ -138,6 +139,10 @@ impl Metadata {
     // test only
     pub fn get_metadata_by_kind(&self, token_identifier: String, kind: &NFTMetadataKind) -> String {
         self.validated_metadata.get(kind, &token_identifier)
+    }
+
+    pub fn get_metadata_kind(&self) -> NFTMetadataKind {
+        self.nft_metadata_kind.get()
     }
 
     pub fn ensure_mutability(&self, error: CEP78Error) {

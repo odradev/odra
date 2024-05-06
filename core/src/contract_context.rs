@@ -60,6 +60,12 @@ pub trait ContractContext {
     /// * `value` - The value to set.
     fn set_dictionary_value(&self, dictionary_name: &str, key: &[u8], value: CLValue);
 
+    /// Removes the named key from the storage.
+    ///
+    /// # Arguments
+    /// * `dictionary_name` - The name of the dictionary.
+    fn remove_dictionary(&self, dictionary_name: &str);
+
     /// Retrieves the address of the caller.
     fn caller(&self) -> Address;
 

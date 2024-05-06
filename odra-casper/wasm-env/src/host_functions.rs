@@ -264,6 +264,12 @@ pub fn set_dictionary_value(dictionary_name: &str, key: &[u8], value: CLValue) {
     result.unwrap_or_revert()
 }
 
+/// Removes the [`Key`] stored under `dictionary_name` in the current context's named keys.
+#[inline]
+pub fn remove_dictionary(dictionary_name: &str) {
+    runtime::remove_key(dictionary_name);
+}
+
 /// Gets a value under a key in a dictionary from the contract's storage.
 pub fn get_dictionary_value(dictionary_name: &str, key: &[u8]) -> Option<Bytes> {
     let dictionary_uref = get_dictionary(dictionary_name);

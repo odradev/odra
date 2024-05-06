@@ -42,6 +42,10 @@ impl ContractContext for OdraVmContractEnv {
         self.vm.borrow().set_dict_value(dictionary_name, key, value)
     }
 
+    fn remove_dictionary(&self, dictionary_name: &str) {
+        self.vm.borrow().remove_dictionary(dictionary_name);
+    }
+
     fn caller(&self) -> Address {
         self.vm.borrow().caller()
     }

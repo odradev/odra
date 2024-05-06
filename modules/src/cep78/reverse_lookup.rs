@@ -5,7 +5,7 @@ use odra::{
     Address, Mapping, SubModule, UnwrapOrRevert
 };
 
-use crate::simple_storage;
+use crate::single_value_storage;
 
 use super::{
     constants::PREFIX_PAGE_DICTIONARY,
@@ -17,13 +17,13 @@ use super::{
 // to ease the math around addressing newly minted tokens.
 pub const PAGE_SIZE: u64 = 1000;
 
-simple_storage!(
+single_value_storage!(
     Cep78OwnerReverseLookupMode,
     OwnerReverseLookupMode,
     REPORTING_MODE,
     CEP78Error::InvalidReportingMode
 );
-simple_storage!(
+single_value_storage!(
     Cep78ReceiptName,
     String,
     RECEIPT_NAME,

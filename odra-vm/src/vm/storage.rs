@@ -16,8 +16,10 @@ use super::balance::AccountBalance;
 #[derive(Default, Clone)]
 pub struct Storage {
     state: BTreeMap<u64, Bytes>,
+    named_state: BTreeMap<u64, BTreeMap<u64, Bytes>>,
     pub balances: BTreeMap<Address, AccountBalance>,
     state_snapshot: Option<BTreeMap<u64, Bytes>>,
+    named_state_snapshot: Option<BTreeMap<u64, BTreeMap<u64, Bytes>>>,
     balances_snapshot: Option<BTreeMap<Address, AccountBalance>>
 }
 
@@ -25,8 +27,10 @@ impl Storage {
     pub fn new(balances: BTreeMap<Address, AccountBalance>) -> Self {
         Self {
             state: Default::default(),
+            named_state: Default::default(),
             balances,
             state_snapshot: Default::default(),
+            named_state_snapshot: Default::default(),
             balances_snapshot: Default::default()
         }
     }
@@ -69,10 +73,16 @@ impl Storage {
         key: &[u8],
         value: Bytes
     ) -> Result<(), Error> {
-        let dict_key = [collection, key].concat();
-        let hash = Storage::hashed_key(address, dict_key);
-        self.state.insert(hash, value);
+        let dict = Self::hashed_key(address, collection);
+        let hash = Storage::hashed_key(address, key);
+        let dict_values = self.named_state.entry(dict).or_default();
+        dict_values.insert(hash, value);
         Ok(())
+    }
+
+    pub fn remove_dict(&mut self, address: &Address, collection: &[u8]) {
+        let dict = Self::hashed_key(address, collection);
+        self.named_state.remove(&dict);
     }
 
     pub fn get_dict_value(
@@ -81,20 +91,26 @@ impl Storage {
         collection: &[u8],
         key: &[u8]
     ) -> Result<Option<Bytes>, Error> {
-        let dict_key = [collection, key].concat();
-        let hash = Storage::hashed_key(address, dict_key);
-        let result = self.state.get(&hash).cloned();
-
-        Ok(result)
+        let dict = Self::hashed_key(address, collection);
+        let hash = Storage::hashed_key(address, key);
+        let dict_values = self.named_state.get(&dict);
+        if let Some(dict) = dict_values {
+            let result = dict.get(&hash).cloned();
+            Ok(result)
+        } else {
+            Ok(None)
+        }
     }
 
     pub fn take_snapshot(&mut self) {
         self.state_snapshot = Some(self.state.clone());
+        self.named_state_snapshot = Some(self.named_state.clone());
         self.balances_snapshot = Some(self.balances.clone());
     }
 
     pub fn drop_snapshot(&mut self) {
         self.state_snapshot = None;
+        self.named_state_snapshot = None;
         self.balances_snapshot = None;
     }
 
@@ -102,6 +118,10 @@ impl Storage {
         if let Some(snapshot) = self.state_snapshot.clone() {
             self.state = snapshot;
             self.state_snapshot = None;
+        };
+        if let Some(snapshot) = self.named_state_snapshot.clone() {
+            self.named_state = snapshot;
+            self.named_state_snapshot = None;
         };
         if let Some(snapshot) = self.balances_snapshot.clone() {
             self.balances = snapshot;
@@ -248,6 +268,46 @@ mod test {
     }
 
     #[test]
+    fn remove_dict_erases_all_dict_records() {
+        // given storage with some stored value
+        let mut storage = Storage::default();
+        let address = utils::account_address_from_str("add");
+        let key1 = b"key";
+        let key2 = b"key2";
+        let value1 = 88u8;
+        let value2 = 89u8;
+        let collection = b"dict";
+        storage
+            .insert_dict_value(&address, collection, key1, serialize(&value1))
+            .unwrap();
+        storage
+            .insert_dict_value(&address, collection, key2, serialize(&value2))
+            .unwrap();
+
+        assert_eq!(
+            storage.get_dict_value(&address, collection, key1).unwrap(),
+            Some(serialize(&value1))
+        );
+        assert_eq!(
+            storage.get_dict_value(&address, collection, key2).unwrap(),
+            Some(serialize(&value2))
+        );
+
+        // when remove a dictionary
+        storage.remove_dict(&address, collection);
+
+        // then all values from the dictionary are removed
+        assert_eq!(
+            storage.get_dict_value(&address, collection, key1).unwrap(),
+            None
+        );
+        assert_eq!(
+            storage.get_dict_value(&address, collection, key2).unwrap(),
+            None
+        );
+    }
+
+    #[test]
     fn restore_snapshot() {
         // given storage with some state and a snapshot of the previous state
         let mut storage = Storage::default();
@@ -255,10 +315,16 @@ mod test {
         storage
             .set_value(&address, &key, serialize(&initial_value))
             .unwrap();
+        storage
+            .insert_dict_value(&address, b"dict", &key, serialize(&initial_value))
+            .unwrap();
         storage.take_snapshot();
         let next_value = String::from("next_value");
         storage
             .set_value(&address, &key, serialize(&next_value))
+            .unwrap();
+        storage
+            .insert_dict_value(&address, b"dict", &key, serialize(&next_value))
             .unwrap();
 
         // when restore the snapshot
@@ -267,6 +333,10 @@ mod test {
         // then the changes are reverted
         assert_eq!(
             storage.get_value(&address, &key).unwrap(),
+            Some(serialize(&initial_value))
+        );
+        assert_eq!(
+            storage.get_dict_value(&address, b"dict", &key).unwrap(),
             Some(serialize(&initial_value))
         );
         // the snapshot is removed

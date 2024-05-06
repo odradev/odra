@@ -62,6 +62,11 @@ impl OdraVmState {
         }
     }
 
+    pub fn remove_dictionary(&mut self, dict: &[u8]) {
+        let ctx = self.callstack.current().address();
+        self.storage.remove_dict(ctx, dict);
+    }
+
     pub fn get_dict_value(&self, dict: &[u8], key: &[u8]) -> Result<Option<Bytes>, Error> {
         let ctx = &self.callstack.current().address();
         self.storage.get_dict_value(ctx, dict, key)

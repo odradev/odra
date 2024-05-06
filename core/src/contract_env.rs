@@ -129,13 +129,18 @@ impl ContractEnv {
         value: T
     ) {
         let dictionary_name = dictionary_name.as_ref();
-        let key = key.as_ref();
         let cl_value = CLValue::from_t(value)
             .map_err(|_| Formatting)
             .unwrap_or_revert(self);
         self.backend
             .borrow()
             .set_dictionary_value(dictionary_name, key, cl_value);
+    }
+
+    /// Removes the dictionary from the contract storage.
+    pub fn remove_dictionary<U: AsRef<str>>(&self, dictionary_name: U) {
+        let dictionary_name = dictionary_name.as_ref();
+        self.backend.borrow().remove_dictionary(dictionary_name);
     }
 
     /// Returns the address of the caller of the contract.

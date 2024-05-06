@@ -1,5 +1,5 @@
 #![allow(clippy::too_many_arguments)]
-use crate::simple_storage;
+use crate::single_value_storage;
 
 use super::{
     constants::TRANSFER_FILTER_CONTRACT,
@@ -27,7 +27,7 @@ use odra::{
 type MintReceipt = (String, Address, String);
 type TransferReceipt = (String, Address);
 
-simple_storage!(
+single_value_storage!(
     Cep78TransferFilterContract,
     Address,
     TRANSFER_FILTER_CONTRACT
@@ -664,7 +664,7 @@ impl Cep78 {
     }
 
     #[inline]
-    fn owner_of_by_id(&self, id: &String) -> Address {
+    fn owner_of_by_id(&self, id: &str) -> Address {
         match self.data.owner_of(id) {
             Some(token_owner) => token_owner,
             None => self
@@ -674,12 +674,12 @@ impl Cep78 {
     }
 
     #[inline]
-    fn is_token_burned(&self, token_id: &String) -> bool {
+    fn is_token_burned(&self, token_id: &str) -> bool {
         self.data.is_burnt(token_id)
     }
 
     #[inline]
-    fn ensure_owner(&self, token_id: &String, address: &Address) {
+    fn ensure_owner(&self, token_id: &str, address: &Address) {
         let owner = self.owner_of_by_id(token_id);
         if address != &owner {
             self.revert(CEP78Error::InvalidAccount);
@@ -687,7 +687,7 @@ impl Cep78 {
     }
 
     #[inline]
-    fn ensure_caller_is_owner(&self, token_id: &String) {
+    fn ensure_caller_is_owner(&self, token_id: &str) {
         let owner = self.owner_of_by_id(token_id);
         if self.caller() != owner {
             self.revert(CEP78Error::InvalidTokenOwner);
@@ -695,7 +695,7 @@ impl Cep78 {
     }
 
     #[inline]
-    fn ensure_not_burned(&self, token_id: &String) {
+    fn ensure_not_burned(&self, token_id: &str) {
         if self.is_token_burned(token_id) {
             self.revert(CEP78Error::PreviouslyBurntToken);
         }
