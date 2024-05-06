@@ -109,11 +109,13 @@ impl Cep78 {
             self.revert(CEP78Error::EmptyACLWhitelist)
         }
 
-        if identifier_mode == NFTIdentifierMode::Hash
-            && metadata_mutability == MetadataMutability::Mutable
-        {
-            self.revert(CEP78Error::InvalidMetadataMutability)
-        }
+        // NOTE: It is commented out to allow having mutable metadata with hash identifier.
+        // NOTE: It's left for future reference.
+        // if identifier_mode == NFTIdentifierMode::Hash
+        //     && metadata_mutability == MetadataMutability::Mutable
+        // {
+        //     self.revert(CEP78Error::InvalidMetadataMutability)
+        // }
 
         if ownership_mode == OwnershipMode::Minter
             && minting_mode == MintingMode::Installer
