@@ -2,11 +2,14 @@ use odra::{
     args::Maybe,
     casper_types::{AccessRights, URef},
     prelude::*,
-    Address, Mapping, UnwrapOrRevert, Var
+    Address, Mapping, SubModule, UnwrapOrRevert
 };
+
+use crate::simple_storage;
 
 use super::{
     constants::PREFIX_PAGE_DICTIONARY,
+    constants::{RECEIPT_NAME, REPORTING_MODE},
     error::CEP78Error,
     modalities::{OwnerReverseLookupMode, OwnershipMode, TokenIdentifier}
 };
@@ -14,14 +17,27 @@ use super::{
 // to ease the math around addressing newly minted tokens.
 pub const PAGE_SIZE: u64 = 1000;
 
+simple_storage!(
+    Cep78OwnerReverseLookupMode,
+    OwnerReverseLookupMode,
+    REPORTING_MODE,
+    CEP78Error::InvalidReportingMode
+);
+simple_storage!(
+    Cep78ReceiptName,
+    String,
+    RECEIPT_NAME,
+    CEP78Error::InvalidReceiptName
+);
+
 #[odra::module]
 pub struct ReverseLookup {
-    mode: Var<OwnerReverseLookupMode>,
+    mode: SubModule<Cep78OwnerReverseLookupMode>,
     hash_by_index: Mapping<u64, String>,
     index_by_hash: Mapping<String, u64>,
     page_table: Mapping<Address, Vec<bool>>,
     pages: Mapping<(String, u64, Address), Vec<bool>>,
-    receipt_name: Var<String>
+    receipt_name: SubModule<Cep78ReceiptName>
 }
 
 impl ReverseLookup {
@@ -132,7 +148,7 @@ impl ReverseLookup {
             let (page_table_entry, _page_uref) =
                 self.add_page_entry_and_page_record(tokens_count, &token_owner, true);
 
-            let receipt_name = self.receipt_name.get_or_default();
+            let receipt_name = self.receipt_name.get();
             let receipt_string = format!("{receipt_name}_m_{PAGE_SIZE}_p_{page_table_entry}");
             // TODO: Implement the following
             // let receipt_address = Key::dictionary(page_uref, owned_tokens_item.as_bytes());
@@ -283,6 +299,6 @@ impl ReverseLookup {
 
     #[inline]
     fn get_mode(&self) -> OwnerReverseLookupMode {
-        self.mode.get_or_default()
+        self.mode.get()
     }
 }

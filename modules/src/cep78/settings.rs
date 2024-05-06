@@ -1,22 +1,48 @@
-use odra::prelude::*;
-use odra::SubModule;
-use odra::UnwrapOrRevert;
-
 use crate::simple_storage;
+use odra::{prelude::*, SubModule};
 
+use super::constants::*;
 use super::error::CEP78Error;
 use super::modalities::{BurnMode, EventsMode, MintingMode, NFTHolderMode, NFTKind, OwnershipMode};
-use super::storage::*;
 
 simple_storage!(Cep78AllowMinting, bool, ALLOW_MINTING);
-simple_storage!(Cep78MintingMode, MintingMode, MINTING_MODE, CEP78Error::MissingMintingMode);
-simple_storage!(Cep78OwnershipMode, OwnershipMode, OWNERSHIP_MODE , CEP78Error::MissingOwnershipMode);
+simple_storage!(
+    Cep78MintingMode,
+    MintingMode,
+    MINTING_MODE,
+    CEP78Error::MissingMintingMode
+);
+simple_storage!(
+    Cep78OwnershipMode,
+    OwnershipMode,
+    OWNERSHIP_MODE,
+    CEP78Error::MissingOwnershipMode
+);
 simple_storage!(Cep78NFTKind, NFTKind, NFT_KIND, CEP78Error::MissingNftKind);
-simple_storage!(Cep78HolderMode, NFTHolderMode, HOLDER_MODE, CEP78Error::MissingHolderMode);
-simple_storage!(Cep78BurnMode, BurnMode, BURN_MODE, CEP78Error::MissingBurnMode);
-simple_storage!(Cep78EventsMode, EventsMode, EVENTS_MODE, CEP78Error::MissingEventsMode);
-simple_storage!(Cep78OperatorBurnMode, bool, OPERATOR_BURN_MODE, CEP78Error::MissingOperatorBurnMode);
-
+simple_storage!(
+    Cep78HolderMode,
+    NFTHolderMode,
+    HOLDER_MODE,
+    CEP78Error::MissingHolderMode
+);
+simple_storage!(
+    Cep78BurnMode,
+    BurnMode,
+    BURN_MODE,
+    CEP78Error::MissingBurnMode
+);
+simple_storage!(
+    Cep78EventsMode,
+    EventsMode,
+    EVENTS_MODE,
+    CEP78Error::MissingEventsMode
+);
+simple_storage!(
+    Cep78OperatorBurnMode,
+    bool,
+    OPERATOR_BURN_MODE,
+    CEP78Error::MissingOperatorBurnMode
+);
 
 #[odra::module]
 pub struct Settings {
