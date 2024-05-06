@@ -57,17 +57,14 @@ fn should_prevent_update_in_immutable_mode() {
 }
 
 #[test]
-fn should_prevent_install_with_hash_identifier_in_mutable_mode() {
+fn should_allow_install_with_hash_identifier_in_mutable_mode() {
     let env = odra_test::env();
     let args = default_args_builder()
         .nft_metadata_kind(NFTMetadataKind::NFT721)
         .identifier_mode(NFTIdentifierMode::Hash)
         .metadata_mutability(MetadataMutability::Mutable)
         .build();
-    assert_eq!(
-        Cep78HostRef::try_deploy(&env, args).err(),
-        Some(CEP78Error::InvalidMetadataMutability.into())
-    );
+    assert!(Cep78HostRef::try_deploy(&env, args).is_ok());
 }
 
 #[test]
