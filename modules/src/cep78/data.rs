@@ -1,23 +1,32 @@
-use odra::casper_types::bytesrepr::ToBytes;
-use odra::prelude::*;
-use base64::prelude::*;
-use odra::Address;
-use odra::SubModule;
-use odra::UnwrapOrRevert;
 use crate::basic_key_value_storage;
-use crate::compound_key_storage;
+use crate::compound_key_value_storage;
 use crate::encoded_key_value_storage;
 use crate::simple_storage;
+use odra::{casper_types::bytesrepr::ToBytes, prelude::*, Address, SubModule, UnwrapOrRevert};
 
 use super::constants;
+use super::constants::*;
 use super::error::CEP78Error;
-use super::storage::*;
 
-simple_storage!(Cep78CollectionName, String, COLLECTION_NAME, CEP78Error::MissingCollectionName);
-simple_storage!(Cep78CollectionSymbol, String, COLLECTION_SYMBOL, CEP78Error::MissingCollectionName);
-simple_storage!(Cep78TotalSupply, u64, TOTAL_TOKEN_SUPPLY, CEP78Error::MissingTotalTokenSupply);
+simple_storage!(
+    Cep78CollectionName,
+    String,
+    COLLECTION_NAME,
+    CEP78Error::MissingCollectionName
+);
+simple_storage!(
+    Cep78CollectionSymbol,
+    String,
+    COLLECTION_SYMBOL,
+    CEP78Error::MissingCollectionName
+);
+simple_storage!(
+    Cep78TotalSupply,
+    u64,
+    TOTAL_TOKEN_SUPPLY,
+    CEP78Error::MissingTotalTokenSupply
+);
 simple_storage!(Cep78TokenCounter, u64, NUMBER_OF_MINTED_TOKENS);
-
 impl Cep78TokenCounter {
     pub fn add(&mut self, value: u64) {
         match self.get() {
@@ -26,13 +35,18 @@ impl Cep78TokenCounter {
         }
     }
 }
-simple_storage!(Cep78Installer, Address, INSTALLER, CEP78Error::MissingInstaller);
-compound_key_storage!(Cep78Operators, OPERATORS, Address, bool);
+simple_storage!(
+    Cep78Installer,
+    Address,
+    INSTALLER,
+    CEP78Error::MissingInstaller
+);
+compound_key_value_storage!(Cep78Operators, OPERATORS, Address, bool);
 basic_key_value_storage!(Cep78Owners, TOKEN_OWNERS, Address);
 basic_key_value_storage!(Cep78Issuers, TOKEN_ISSUERS, Address);
 basic_key_value_storage!(Cep78BurntTokens, BURNT_TOKENS, ());
 encoded_key_value_storage!(Cep78TokenCount, TOKEN_COUNT, Address, u64);
-encoded_key_value_storage!(Cep78Approved, APPROVED, String, Option<Address>);
+basic_key_value_storage!(Cep78Approved, APPROVED, Option<Address>);
 
 #[odra::module]
 pub struct CollectionData {

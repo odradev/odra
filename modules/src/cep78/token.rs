@@ -1,5 +1,8 @@
 #![allow(clippy::too_many_arguments)]
+use crate::simple_storage;
+
 use super::{
+    constants::TRANSFER_FILTER_CONTRACT,
     data::CollectionData,
     error::CEP78Error,
     events::{
@@ -18,11 +21,17 @@ use super::{
 };
 use odra::{
     args::Maybe, casper_types::bytesrepr::ToBytes, prelude::*, Address, OdraError, SubModule,
-    UnwrapOrRevert, Var
+    UnwrapOrRevert
 };
 
 type MintReceipt = (String, Address, String);
 type TransferReceipt = (String, Address);
+
+simple_storage!(
+    Cep78TransferFilterContract,
+    Address,
+    TRANSFER_FILTER_CONTRACT
+);
 
 /// CEP-78 is a standard for non-fungible tokens (NFTs) on the Casper network.
 /// It defines a set of interfaces that allow for the creation, management, and
@@ -48,7 +57,7 @@ pub struct Cep78 {
     settings: SubModule<Settings>,
     whitelist: SubModule<ACLWhitelist>,
     reverse_lookup: SubModule<ReverseLookup>,
-    transfer_filter_contract: Var<Address>
+    transfer_filter_contract: SubModule<Cep78TransferFilterContract>
 }
 
 #[odra::module]
@@ -61,16 +70,16 @@ impl Cep78 {
         total_token_supply: u64,
         ownership_mode: OwnershipMode,
         nft_kind: NFTKind,
-        nft_identifier_mode: NFTIdentifierMode,
+        identifier_mode: NFTIdentifierMode,
         nft_metadata_kind: NFTMetadataKind,
         metadata_mutability: MetadataMutability,
+        receipt_name: String,
         allow_minting: Maybe<bool>,
         minting_mode: Maybe<MintingMode>,
         holder_mode: Maybe<NFTHolderMode>,
         whitelist_mode: Maybe<WhitelistMode>,
         acl_white_list: Maybe<Vec<Address>>,
         json_schema: Maybe<String>,
-        receipt_name: Maybe<String>,
         burn_mode: Maybe<BurnMode>,
         operator_burn_mode: Maybe<bool>,
         owner_reverse_lookup_mode: Maybe<OwnerReverseLookupMode>,
@@ -100,7 +109,7 @@ impl Cep78 {
             self.revert(CEP78Error::EmptyACLWhitelist)
         }
 
-        if nft_identifier_mode == NFTIdentifierMode::Hash
+        if identifier_mode == NFTIdentifierMode::Hash
             && metadata_mutability == MetadataMutability::Mutable
         {
             self.revert(CEP78Error::InvalidMetadataMutability)
@@ -149,7 +158,7 @@ impl Cep78 {
         );
 
         self.reverse_lookup
-            .init(owner_reverse_lookup_mode, receipt_name.unwrap_or_default());
+            .init(owner_reverse_lookup_mode, receipt_name);
 
         self.whitelist.init(acl_white_list.clone(), whitelist_mode);
 
@@ -158,7 +167,7 @@ impl Cep78 {
             additional_required_metadata,
             optional_metadata,
             metadata_mutability,
-            nft_identifier_mode,
+            identifier_mode,
             json_schema
         );
 

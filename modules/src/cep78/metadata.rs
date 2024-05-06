@@ -1,7 +1,12 @@
-use odra::{args::Maybe, prelude::*, Mapping, UnwrapOrRevert, Var};
+use odra::{args::Maybe, prelude::*, SubModule, UnwrapOrRevert};
 use serde::{Deserialize, Serialize};
 
+use crate::simple_storage;
+
 use super::{
+    constants::{
+        IDENTIFIER_MODE, JSON_SCHEMA, METADATA_MUTABILITY, NFT_METADATA_KIND, NFT_METADATA_KINDS
+    },
     constants::{METADATA_CEP78, METADATA_CUSTOM_VALIDATED, METADATA_NFT721, METADATA_RAW},
     error::CEP78Error,
     modalities::{
@@ -10,13 +15,64 @@ use super::{
     }
 };
 
+simple_storage!(
+    Cep78MetadataRequirement,
+    MetadataRequirement,
+    NFT_METADATA_KINDS,
+    CEP78Error::MissingNFTMetadataKind
+);
+simple_storage!(
+    Cep78NFTMetadataKind,
+    NFTMetadataKind,
+    NFT_METADATA_KIND,
+    CEP78Error::MissingNFTMetadataKind
+);
+simple_storage!(
+    Cep78IdentifierMode,
+    NFTIdentifierMode,
+    IDENTIFIER_MODE,
+    CEP78Error::MissingIdentifierMode
+);
+simple_storage!(
+    Cep78MetadataMutability,
+    MetadataMutability,
+    METADATA_MUTABILITY,
+    CEP78Error::MissingMetadataMutability
+);
+simple_storage!(
+    Cep78JsonSchema,
+    String,
+    JSON_SCHEMA,
+    CEP78Error::MissingJsonSchema
+);
+
+#[odra::module]
+pub struct Cep78ValidatedMetadata;
+
+#[odra::module]
+impl Cep78ValidatedMetadata {
+    pub fn set(&self, kind: &NFTMetadataKind, token_id: &String, value: String) {
+        let dictionary_name = get_metadata_key(kind);
+        self.env()
+            .set_dictionary_value(dictionary_name, token_id.as_bytes(), value);
+    }
+
+    pub fn get(&self, kind: &NFTMetadataKind, token_id: &String) -> String {
+        let dictionary_name = get_metadata_key(kind);
+        let env = self.env();
+        env.get_dictionary_value(dictionary_name, token_id.as_bytes())
+            .unwrap_or_revert_with(&env, CEP78Error::InvalidTokenIdentifier)
+    }
+}
+
 #[odra::module]
 pub struct Metadata {
-    requirements: Var<MetadataRequirement>,
-    identifier_mode: Var<NFTIdentifierMode>,
-    mutability: Var<MetadataMutability>,
-    json_schema: Var<String>,
-    validated_metadata: Mapping<(String, String), String>
+    requirements: SubModule<Cep78MetadataRequirement>,
+    identifier_mode: SubModule<Cep78IdentifierMode>,
+    mutability: SubModule<Cep78MetadataMutability>,
+    json_schema: SubModule<Cep78JsonSchema>,
+    validated_metadata: SubModule<Cep78ValidatedMetadata>,
+    nft_metadata_kind: SubModule<Cep78NFTMetadataKind>
 }
 
 impl Metadata {
@@ -36,7 +92,7 @@ impl Metadata {
         for required in additional_required_metadata.unwrap_or_default() {
             requirements.insert(required, Requirement::Required);
         }
-        requirements.insert(base_metadata_kind, Requirement::Required);
+        requirements.insert(base_metadata_kind.clone(), Requirement::Required);
 
         // Attempt to parse the provided schema if the `CustomValidated` metadata kind is required or
         // optional and fail installation if the schema cannot be parsed.
@@ -47,7 +103,7 @@ impl Metadata {
                     .unwrap_or_revert(&self.env());
             }
         }
-
+        self.nft_metadata_kind.set(base_metadata_kind);
         self.requirements.set(requirements);
         self.identifier_mode.set(identifier_mode);
         self.mutability.set(metadata_mutability);
@@ -55,12 +111,11 @@ impl Metadata {
     }
 
     pub fn get_requirements(&self) -> MetadataRequirement {
-        self.requirements.get_or_default()
+        self.requirements.get()
     }
 
     pub fn get_identifier_mode(&self) -> NFTIdentifierMode {
-        self.identifier_mode
-            .get_or_revert_with(CEP78Error::InvalidIdentifierMode)
+        self.identifier_mode.get()
     }
 
     pub fn get_or_revert(&self, token_identifier: &TokenIdentifier) -> String {
@@ -71,11 +126,7 @@ impl Metadata {
             match required {
                 Requirement::Required => {
                     let id = token_identifier.to_string();
-                    let kind = get_metadata_key(&metadata_kind);
-                    let metadata = self
-                        .validated_metadata
-                        .get(&(kind, id))
-                        .unwrap_or_revert_with(&env, CEP78Error::InvalidTokenIdentifier);
+                    let metadata = self.validated_metadata.get(&metadata_kind, &id);
                     return metadata;
                 }
                 _ => continue
@@ -86,16 +137,11 @@ impl Metadata {
 
     // test only
     pub fn get_metadata_by_kind(&self, token_identifier: String, kind: &NFTMetadataKind) -> String {
-        let kind = get_metadata_key(kind);
-        self.validated_metadata
-            .get(&(kind, token_identifier))
-            .unwrap_or_default()
+        self.validated_metadata.get(kind, &token_identifier)
     }
 
     pub fn ensure_mutability(&self, error: CEP78Error) {
-        let current_mutability = self
-            .mutability
-            .get_or_revert_with(CEP78Error::InvalidMetadataMutability);
+        let current_mutability = self.mutability.get();
         if current_mutability != MetadataMutability::Mutable {
             self.env().revert(error)
         }
@@ -110,9 +156,8 @@ impl Metadata {
             let token_metadata_validation = self.validate(&metadata_kind, token_metadata);
             match token_metadata_validation {
                 Ok(validated_token_metadata) => {
-                    let kind = get_metadata_key(&metadata_kind);
                     self.validated_metadata
-                        .set(&(kind, token_id.to_owned()), validated_token_metadata);
+                        .set(&metadata_kind, token_id, validated_token_metadata);
                 }
                 Err(err) => {
                     self.env().revert(err);
@@ -249,11 +294,11 @@ impl Metadata {
                 );
                 CustomMetadataSchema { properties }
             }
-            NFTMetadataKind::CustomValidated => serde_json_wasm::from_str::<CustomMetadataSchema>(
-                &self.json_schema.get_or_default()
-            )
-            .map_err(|_| CEP78Error::InvalidJsonSchema)
-            .unwrap_or_revert(&self.env())
+            NFTMetadataKind::CustomValidated => {
+                serde_json_wasm::from_str::<CustomMetadataSchema>(&self.json_schema.get())
+                    .map_err(|_| CEP78Error::InvalidJsonSchema)
+                    .unwrap_or_revert(&self.env())
+            }
         }
     }
 }

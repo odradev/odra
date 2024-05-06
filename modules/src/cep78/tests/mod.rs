@@ -1,11 +1,10 @@
 use alloc::collections::BTreeMap;
 use once_cell::sync::Lazy;
 
-use self::utils::InitArgsBuilder;
-
 use super::{
     metadata::{CustomMetadataSchema, MetadataSchemaProperty},
-    modalities::NFTMetadataKind
+    modalities::NFTMetadataKind,
+    utils::InitArgsBuilder
 };
 
 mod acl;
