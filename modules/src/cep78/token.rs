@@ -50,7 +50,10 @@ single_value_storage!(
 /// - `nft_identifier_mode`: The identifier mode of the NFTs in the collection. See [NFTIdentifierMode] for more details.
 /// - `nft_metadata_kind`: The kind of metadata associated with the NFTs in the collection. See [NFTMetadataKind] for more details.
 /// - `metadata_mutability`: The mutability of the metadata associated with the NFTs in the collection. See [MetadataMutability] for more details.
-#[odra::module]
+#[odra::module(
+    version = "1.5.1",
+    events = [Approval, ApprovalForAll, ApprovalRevoked, Burn, MetadataUpdated, Mint, RevokedForAll, Transfer, VariablesSet]
+)]
 pub struct Cep78 {
     data: SubModule<CollectionData>,
     metadata: SubModule<Metadata>,
