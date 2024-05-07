@@ -1,9 +1,6 @@
 use crate::entry_point_callback::EntryPointsCaller;
-use crate::prelude::ToOwned;
-use crate::CallDef;
-use crate::OdraError;
-use crate::OdraResult;
-use crate::VmError;
+use crate::{prelude::*, OdraResult};
+use crate::{CallDef, OdraError, VmError};
 use casper_types::bytesrepr::Bytes;
 
 /// A wrapper struct for a EntryPointsCaller that is a layer of abstraction between the host and the entry points caller.

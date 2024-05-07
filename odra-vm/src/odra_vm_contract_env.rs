@@ -3,11 +3,10 @@ use blake2::digest::VariableOutput;
 use blake2::{Blake2b, Blake2b512, Blake2bVar, Blake2s256, Digest};
 use odra_core::casper_types::{
     bytesrepr::{Bytes, ToBytes},
-    U512
+    CLValue, U512
 };
-use odra_core::casper_types::{BlockTime, CLType, CLValue};
-use odra_core::prelude::*;
 use odra_core::{casper_types, Address, OdraError};
+use odra_core::{prelude::*, OdraResult};
 use odra_core::{CallDef, ContractContext};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
@@ -82,12 +81,12 @@ impl ContractContext for OdraVmContractEnv {
         self.vm.borrow().revert(error)
     }
 
-    fn get_named_arg_bytes(&self, name: &str) -> Bytes {
-        self.vm.borrow().get_named_arg(name).unwrap().into()
+    fn get_named_arg_bytes(&self, name: &str) -> OdraResult<Bytes> {
+        self.vm.borrow().get_named_arg(name).map(Into::into)
     }
 
     fn get_opt_named_arg_bytes(&self, name: &str) -> Option<Bytes> {
-        self.vm.borrow().get_named_arg(name).map(Into::into)
+        self.vm.borrow().get_named_arg(name).ok().map(Into::into)
     }
 
     fn handle_attached_value(&self) {

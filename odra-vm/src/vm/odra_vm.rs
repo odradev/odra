@@ -122,13 +122,14 @@ impl OdraVm {
     /// Gets the value of the named argument.
     ///
     /// The argument must be present in the call definition.
-    pub fn get_named_arg(&self, name: &str) -> Option<Vec<u8>> {
+    pub fn get_named_arg(&self, name: &str) -> OdraResult<Vec<u8>> {
         match self.state.read().unwrap().callstack_tip() {
             CallstackElement::Account(_) => todo!(),
             CallstackElement::ContractCall { call_def, .. } => call_def
                 .args()
                 .get(name)
                 .map(|arg| arg.inner_bytes().to_vec())
+                .ok_or_else(|| OdraError::ExecutionError(ExecutionError::MissingArg))
         }
     }
 
