@@ -81,7 +81,7 @@ impl Cep78 {
         minting_mode: Maybe<MintingMode>,
         holder_mode: Maybe<NFTHolderMode>,
         whitelist_mode: Maybe<WhitelistMode>,
-        acl_white_list: Maybe<Vec<Address>>,
+        acl_whitelist: Maybe<Vec<Address>>,
         json_schema: Maybe<String>,
         burn_mode: Maybe<BurnMode>,
         operator_burn_mode: Maybe<bool>,
@@ -94,7 +94,7 @@ impl Cep78 {
         let installer = self.caller();
         let minting_mode = minting_mode.unwrap_or_default();
         let owner_reverse_lookup_mode = owner_reverse_lookup_mode.unwrap_or_default();
-        let acl_white_list = acl_white_list.unwrap_or_default();
+        let acl_white_list = acl_whitelist.unwrap_or_default();
         let whitelist_mode = whitelist_mode.unwrap_or_default();
         let json_schema = json_schema.unwrap_or_default();
         let is_whitelist_empty = acl_white_list.is_empty();
@@ -220,7 +220,7 @@ impl Cep78 {
     pub fn mint(
         &mut self,
         token_owner: Address,
-        token_metadata: String,
+        token_meta_data: String,
         token_hash: Maybe<String>
     ) -> MintReceipt {
         if !self.settings.allow_minting() {
@@ -261,7 +261,7 @@ impl Cep78 {
         let token_identifier: TokenIdentifier = match identifier_mode {
             NFTIdentifierMode::Ordinal => TokenIdentifier::Index(minted_tokens_count),
             NFTIdentifierMode::Hash => TokenIdentifier::Hash(if optional_token_hash.is_empty() {
-                let hash = self.__env.hash(token_metadata.clone());
+                let hash = self.__env.hash(token_meta_data.clone());
                 base16::encode_lower(&hash)
             } else {
                 optional_token_hash
@@ -269,7 +269,7 @@ impl Cep78 {
         };
         let token_id = token_identifier.to_string();
 
-        self.metadata.update_or_revert(&token_metadata, &token_id);
+        self.metadata.update_or_revert(&token_meta_data, &token_id);
 
         let token_owner = if self.is_transferable_or_assigned() {
             token_owner
@@ -288,7 +288,7 @@ impl Cep78 {
         self.data.increment_counter(&token_owner);
         self.data.increment_number_of_minted_tokens();
 
-        self.emit_ces_event(Mint::new(token_owner, token_id.clone(), token_metadata));
+        self.emit_ces_event(Mint::new(token_owner, token_id.clone(), token_meta_data));
 
         self.reverse_lookup
             .on_mint(minted_tokens_count, token_owner, token_id)
@@ -335,15 +335,15 @@ impl Cep78 {
         &mut self,
         token_id: Maybe<u64>,
         token_hash: Maybe<String>,
-        source: Address,
-        target: Address
+        source_key: Address,
+        target_key: Address
     ) -> TransferReceipt {
-        self.ensure_minter_or_assigned();
+        self.ensure_not_minter_or_assigned();
 
         let token_identifier = self.checked_token_identifier(token_id, token_hash);
         let token_id = token_identifier.to_string();
         self.ensure_not_burned(&token_id);
-        self.ensure_owner(&token_id, &source);
+        self.ensure_owner(&token_id, &source_key);
 
         let caller = self.caller();
         let owner = self.owner_of_by_id(&token_id);
@@ -356,14 +356,14 @@ impl Cep78 {
             };
 
         let is_operator = if !is_owner && !is_approved {
-            self.data.operator(source, caller)
+            self.data.operator(source_key, caller)
         } else {
             false
         };
 
         if let Some(filter_contract) = self.transfer_filter_contract.get() {
             let result = TransferFilterContractContractRef::new(self.env(), filter_contract)
-                .can_transfer(source, target, token_identifier.clone());
+                .can_transfer(source_key, target_key, token_identifier.clone());
 
             if TransferFilterContractResult::DenyTransfer == result {
                 self.revert(CEP78Error::TransferFilterContractDenied);
@@ -376,30 +376,30 @@ impl Cep78 {
 
         match self.data.owner_of(&token_id) {
             Some(token_actual_owner) => {
-                if token_actual_owner != source {
+                if token_actual_owner != source_key {
                     self.revert(CEP78Error::InvalidTokenOwner)
                 }
-                self.data.set_owner(&token_id, target);
+                self.data.set_owner(&token_id, target_key);
             }
             None => self.revert(CEP78Error::MissingOwnerTokenIdentifierKey)
         }
 
-        self.data.decrement_counter(&source);
-        self.data.increment_counter(&target);
+        self.data.decrement_counter(&source_key);
+        self.data.increment_counter(&target_key);
         self.data.revoke(&token_id);
 
         let spender = if caller == owner { None } else { Some(caller) };
-        self.emit_ces_event(Transfer::new(owner, spender, target, token_id));
+        self.emit_ces_event(Transfer::new(owner, spender, target_key, token_id));
 
         self.reverse_lookup
-            .on_transfer(token_identifier, source, target)
+            .on_transfer(token_identifier, source_key, target_key)
     }
 
     /// Approves another token holder (an approved account) to transfer tokens. It
     /// reverts if token_id is invalid, if caller is not the owner nor operator, if token has already
     /// been burnt, or if caller tries to approve themselves as an approved account.
     pub fn approve(&mut self, spender: Address, token_id: Maybe<u64>, token_hash: Maybe<String>) {
-        self.ensure_minter_or_assigned();
+        self.ensure_not_minter_or_assigned();
 
         let caller = self.caller();
         let token_identifier = self.checked_token_identifier(token_id, token_hash);
@@ -425,7 +425,7 @@ impl Cep78 {
     /// if token_id is invalid, if caller is not the owner, if token has already
     /// been burnt, if caller tries to approve itself.
     pub fn revoke(&mut self, token_id: Maybe<u64>, token_hash: Maybe<String>) {
-        self.ensure_minter_or_assigned();
+        self.ensure_not_minter_or_assigned();
 
         let caller = self.caller();
         let token_identifier = self.checked_token_identifier(token_id, token_hash);
@@ -449,7 +449,7 @@ impl Cep78 {
     /// (an operator) to transfer tokens. It reverts if token_id is invalid, if caller is not the
     /// owner, if caller tries to approve itself as an operator.
     pub fn set_approval_for_all(&mut self, approve_all: bool, operator: Address) {
-        self.ensure_minter_or_assigned();
+        self.ensure_not_minter_or_assigned();
         self.ensure_not_caller(operator);
 
         let caller = self.caller();
@@ -501,7 +501,7 @@ impl Cep78 {
         &mut self,
         token_id: Maybe<u64>,
         token_hash: Maybe<String>,
-        updated_token_metadata: String
+        token_meta_data: String
     ) {
         self.metadata
             .ensure_mutability(CEP78Error::ForbiddenMetadataUpdate);
@@ -509,10 +509,9 @@ impl Cep78 {
         let token_identifier = self.checked_token_identifier(token_id, token_hash);
         let token_id = token_identifier.to_string();
         self.ensure_caller_is_owner(&token_id);
-        self.metadata
-            .update_or_revert(&updated_token_metadata, &token_id);
+        self.metadata.update_or_revert(&token_meta_data, &token_id);
 
-        self.emit_ces_event(MetadataUpdated::new(token_id, updated_token_metadata));
+        self.emit_ces_event(MetadataUpdated::new(token_id, token_meta_data));
     }
 
     /// Returns number of owned tokens associated with the provided token holder
@@ -535,7 +534,6 @@ impl Cep78 {
     /*
     Test only getters
     */
-
     pub fn is_whitelisted(&self, address: &Address) -> bool {
         self.whitelist.is_whitelisted(address)
     }
@@ -627,7 +625,7 @@ impl Cep78 {
     }
 
     #[inline]
-    fn ensure_minter_or_assigned(&self) {
+    fn ensure_not_minter_or_assigned(&self) {
         if self.is_minter_or_assigned() {
             self.revert(CEP78Error::InvalidOwnershipMode)
         }

@@ -314,7 +314,7 @@ impl InitArgsBuilder {
             nft_kind: self.nft_kind,
             holder_mode: self.holder_mode,
             whitelist_mode: self.whitelist_mode,
-            acl_white_list: self.acl_white_list,
+            acl_whitelist: self.acl_white_list,
             json_schema: self.json_schema,
             receipt_name: self.receipt_name,
             identifier_mode: self.identifier_mode,
