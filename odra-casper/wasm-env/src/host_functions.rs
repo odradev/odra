@@ -233,8 +233,10 @@ pub fn set_named_key(name: &str, value: CLValue) {
 
 /// Gets a value under a named key from the contract's storage.
 pub fn get_named_key(name: &str) -> Option<Bytes> {
-    let key = runtime::get_key(name).unwrap_or_revert();
-    read(key)
+    match runtime::get_key(name) {
+        Some(key) => read(key),
+        None => None
+    }
 }
 
 /// Writes a value under a key in a dictionary to a contract's storage.

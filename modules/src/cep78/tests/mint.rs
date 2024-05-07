@@ -788,7 +788,8 @@ fn should_approve_all_with_flat_gas_cost() {
     let mut contract = Cep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     let operator = env.get_account(1);
-    let other_operator = env.get_account(2);
+    let operator1 = env.get_account(2);
+    let operator2 = env.get_account(3);
 
     contract.register_owner(Maybe::Some(token_owner));
     contract.mint(
@@ -796,20 +797,22 @@ fn should_approve_all_with_flat_gas_cost() {
         TEST_PRETTY_721_META_DATA.to_string(),
         Maybe::None
     );
-
     contract.set_approval_for_all(true, operator);
-    let is_operator = contract.is_approved_for_all(token_owner, operator);
+
+    contract.set_approval_for_all(true, operator1);
+    let is_operator = contract.is_approved_for_all(token_owner, operator1);
     assert!(is_operator, "expected operator to be approved for all");
 
-    contract.set_approval_for_all(true, other_operator);
-    let is_also_operator = contract.is_approved_for_all(token_owner, other_operator);
+    contract.set_approval_for_all(true, operator2);
+    let is_also_operator = contract.is_approved_for_all(token_owner, operator2);
     assert!(
         is_also_operator,
         "expected other operator to be approved for all"
     );
     let costs = utils::get_gas_cost_of(&env, "set_approval_for_all");
 
-    // Operator approval should have flat gas costs
-    // Therefore the second and first set_approve_for_all must have equivalent gas costs.
-    assert_eq!(costs.first(), costs.get(1));
+    // Operator approval should have flat gas costs.
+    // First call creates necessary named keys.
+    // Therefore the second and third set_approve_for_all must have equivalent gas costs.
+    assert_eq!(costs.get(1), costs.get(2));
 }
