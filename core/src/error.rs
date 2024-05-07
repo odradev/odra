@@ -125,6 +125,8 @@ pub enum ExecutionError {
     CouldNotSignMessage = 120,
     /// Empty dictionary name
     EmptyDictionaryName = 121,
+    /// Calling a contract with missing entrypoint arguments.
+    MissingArg = 122,
     /// Maximum code for user errors
     MaxUserError = 32767,
     /// User error too high. The code should be in range 0..32767.
@@ -148,7 +150,7 @@ impl ExecutionError {
 
 impl From<ExecutionError> for OdraError {
     fn from(error: ExecutionError) -> Self {
-        Self::ExecutionError(ExecutionError::User(error.code()))
+        Self::ExecutionError(error)
     }
 }
 
@@ -167,8 +169,6 @@ pub enum VmError {
     InvalidContractAddress,
     /// Error calling a host function in a wrong context.
     InvalidContext,
-    /// Calling a contract with missing entrypoint arguments.
-    MissingArg,
     /// Calling a contract with a wrong argument type.
     TypeMismatch {
         /// Expected type.

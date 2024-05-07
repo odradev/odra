@@ -221,9 +221,9 @@ impl CasperVm {
 
         let result = self.deploy_contract(&wasm_path, &init_args);
         if let Some(error) = result {
-            let odra_error = parse_error(error.clone());
+            let odra_error = parse_error(error);
             self.error = Some(odra_error.clone());
-            panic!("Revert: Contract deploy failed {:?}", error);
+            panic!("Revert: Contract deploy failed {:?}", odra_error);
         } else {
             let contract_package_hash =
                 self.contract_package_hash_from_name(&package_hash_key_name);
@@ -413,7 +413,6 @@ impl CasperVm {
     ) -> Option<engine_state::Error> {
         self.error = None;
         let session_code = PathBuf::from(wasm_path);
-
         let deploy_item = DeployItemBuilder::new()
             .with_empty_payment_bytes(runtime_args! {ARG_AMOUNT => *DEFAULT_PAYMENT})
             .with_authorization_keys(&[self.active_account_hash()])
@@ -468,26 +467,92 @@ fn parse_error(err: engine_state::Error) -> OdraError {
     if let engine_state::Error::Exec(exec_err) = err {
         match exec_err {
             engine_state::ExecError::Revert(ApiError::MissingArgument) => {
-                OdraError::VmError(VmError::MissingArg)
+                OdraError::ExecutionError(ExecutionError::MissingArg)
             }
             engine_state::ExecError::Revert(ApiError::Mint(0)) => {
                 OdraError::VmError(VmError::BalanceExceeded)
             }
-            engine_state::ExecError::Revert(ApiError::User(code)) => {
-                if code == ExecutionError::NonPayable.code() {
-                    OdraError::ExecutionError(ExecutionError::NonPayable)
-                } else if code == ExecutionError::ReentrantCall.code() {
-                    OdraError::ExecutionError(ExecutionError::ReentrantCall)
-                } else {
-                    OdraError::ExecutionError(ExecutionError::User(code))
+            engine_state::ExecError::Revert(ApiError::User(code)) => match code {
+                x if x == ExecutionError::UnwrapError.code() => {
+                    OdraError::ExecutionError(ExecutionError::UnwrapError)
                 }
-            }
+                x if x == ExecutionError::AdditionOverflow.code() => {
+                    OdraError::ExecutionError(ExecutionError::AdditionOverflow)
+                }
+                x if x == ExecutionError::SubtractionOverflow.code() => {
+                    OdraError::ExecutionError(ExecutionError::SubtractionOverflow)
+                }
+                x if x == ExecutionError::NonPayable.code() => {
+                    OdraError::ExecutionError(ExecutionError::NonPayable)
+                }
+                x if x == ExecutionError::TransferToContract.code() => {
+                    OdraError::ExecutionError(ExecutionError::TransferToContract)
+                }
+                x if x == ExecutionError::ReentrantCall.code() => {
+                    OdraError::ExecutionError(ExecutionError::ReentrantCall)
+                }
+                x if x == ExecutionError::ContractAlreadyInstalled.code() => {
+                    OdraError::ExecutionError(ExecutionError::ContractAlreadyInstalled)
+                }
+                x if x == ExecutionError::UnknownConstructor.code() => {
+                    OdraError::ExecutionError(ExecutionError::UnknownConstructor)
+                }
+                x if x == ExecutionError::NativeTransferError.code() => {
+                    OdraError::ExecutionError(ExecutionError::NativeTransferError)
+                }
+                x if x == ExecutionError::IndexOutOfBounds.code() => {
+                    OdraError::ExecutionError(ExecutionError::IndexOutOfBounds)
+                }
+                x if x == ExecutionError::ZeroAddress.code() => {
+                    OdraError::ExecutionError(ExecutionError::ZeroAddress)
+                }
+                x if x == ExecutionError::AddressCreationFailed.code() => {
+                    OdraError::ExecutionError(ExecutionError::AddressCreationFailed)
+                }
+                x if x == ExecutionError::EarlyEndOfStream.code() => {
+                    OdraError::ExecutionError(ExecutionError::EarlyEndOfStream)
+                }
+                x if x == ExecutionError::Formatting.code() => {
+                    OdraError::ExecutionError(ExecutionError::Formatting)
+                }
+                x if x == ExecutionError::LeftOverBytes.code() => {
+                    OdraError::ExecutionError(ExecutionError::LeftOverBytes)
+                }
+                x if x == ExecutionError::OutOfMemory.code() => {
+                    OdraError::ExecutionError(ExecutionError::OutOfMemory)
+                }
+                x if x == ExecutionError::NotRepresentable.code() => {
+                    OdraError::ExecutionError(ExecutionError::NotRepresentable)
+                }
+                x if x == ExecutionError::ExceededRecursionDepth.code() => {
+                    OdraError::ExecutionError(ExecutionError::ExceededRecursionDepth)
+                }
+                x if x == ExecutionError::KeyNotFound.code() => {
+                    OdraError::ExecutionError(ExecutionError::KeyNotFound)
+                }
+                x if x == ExecutionError::CouldNotDeserializeSignature.code() => {
+                    OdraError::ExecutionError(ExecutionError::CouldNotDeserializeSignature)
+                }
+                x if x == ExecutionError::TypeMismatch.code() => {
+                    OdraError::ExecutionError(ExecutionError::TypeMismatch)
+                }
+                x if x == ExecutionError::CouldNotSignMessage.code() => {
+                    OdraError::ExecutionError(ExecutionError::CouldNotSignMessage)
+                }
+                x if x == ExecutionError::EmptyDictionaryName.code() => {
+                    OdraError::ExecutionError(ExecutionError::EmptyDictionaryName)
+                }
+                x if x == ExecutionError::MissingArg.code() => {
+                    OdraError::ExecutionError(ExecutionError::MissingArg)
+                }
+                _ => OdraError::ExecutionError(ExecutionError::User(code))
+            },
             engine_state::ExecError::InvalidContext => OdraError::VmError(VmError::InvalidContext),
             engine_state::ExecError::NoSuchMethod(name) => {
                 OdraError::VmError(VmError::NoSuchMethod(name))
             }
             engine_state::ExecError::MissingArgument { name } => {
-                OdraError::VmError(VmError::MissingArg)
+                OdraError::ExecutionError(ExecutionError::MissingArg)
             }
             _ => OdraError::VmError(VmError::Other(format!("Casper ExecError: {}", exec_err)))
         }
