@@ -134,13 +134,10 @@ macro_rules! compound_key_value_storage {
 }
 
 pub(crate) fn compound_key(env: &odra::ContractEnv, parts: &[odra::prelude::Vec<u8>]) -> [u8; 64] {
-    use odra::casper_types::bytesrepr::ToBytes;
-    use odra::UnwrapOrRevert;
-
     let mut result = [0u8; 64];
     let mut preimage = odra::prelude::Vec::new();
     for part in parts {
-        preimage.append(&mut part.to_bytes().unwrap_or_revert(env));
+        preimage.extend_from_slice(part);
     }
 
     let key_bytes = env.hash(&preimage);

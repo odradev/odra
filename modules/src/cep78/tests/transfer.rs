@@ -1,6 +1,5 @@
 use odra::{
     args::Maybe,
-    casper_types::bytesrepr::ToBytes,
     host::{Deployer, HostEnv, HostRef, NoArgs},
     Address
 };
@@ -546,7 +545,7 @@ fn should_transfer_token_in_hash_identifier_mode() {
         Maybe::None
     );
 
-    let blake2b_hash = utils::create_blake2b_hash(TEST_PRETTY_721_META_DATA.to_bytes().unwrap());
+    let blake2b_hash = utils::create_blake2b_hash(TEST_PRETTY_721_META_DATA);
     let token_hash = base16::encode_lower(&blake2b_hash);
     contract.register_owner(Maybe::Some(new_owner));
     assert!(contract

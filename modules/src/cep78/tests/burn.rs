@@ -1,6 +1,5 @@
 use odra::{
     args::Maybe,
-    casper_types::bytesrepr::ToBytes,
     host::{Deployer, HostRef, NoArgs},
     Address
 };
@@ -306,7 +305,7 @@ fn should_burn_token_in_hash_identifier_mode() {
     let token_owner = env.get_account(0);
     mint(&mut contract, true, token_owner);
 
-    let blake2b_hash = utils::create_blake2b_hash(TEST_PRETTY_721_META_DATA.to_bytes().unwrap());
+    let blake2b_hash = utils::create_blake2b_hash(TEST_PRETTY_721_META_DATA);
     let token_hash = base16::encode_lower(&blake2b_hash);
 
     assert!(contract

@@ -1,6 +1,5 @@
 use odra::{
     args::Maybe,
-    casper_types::bytesrepr::ToBytes,
     host::{Deployer, HostRef, NoArgs}
 };
 
@@ -43,7 +42,7 @@ fn should_prevent_update_in_immutable_mode() {
         Maybe::None
     );
 
-    let blake2b_hash = utils::create_blake2b_hash(TEST_PRETTY_721_META_DATA.to_bytes().unwrap());
+    let blake2b_hash = utils::create_blake2b_hash(TEST_PRETTY_721_META_DATA);
     let token_hash = base16::encode_lower(&blake2b_hash);
 
     assert_eq!(
@@ -161,7 +160,7 @@ fn should_allow_update_for_valid_metadata_based_on_kind(
 
     contract.mint(token_owner, original_metadata.to_string(), Maybe::None);
 
-    let blake2b_hash = utils::create_blake2b_hash(original_metadata.to_bytes().unwrap());
+    let blake2b_hash = utils::create_blake2b_hash(original_metadata);
     let token_hash = base16::encode_lower(&blake2b_hash);
     let token_id = 0u64;
 
@@ -204,7 +203,7 @@ fn should_allow_update_for_valid_metadata_based_on_kind(
     };
     assert!(update_result.is_ok(), "failed to update metadata");
 
-    let blake2b_hash = utils::create_blake2b_hash(updated_metadata.to_bytes().unwrap());
+    let blake2b_hash = utils::create_blake2b_hash(updated_metadata);
     let token_hash = base16::encode_lower(&blake2b_hash);
 
     let actual_updated_metadata = match identifier_mode {
@@ -305,7 +304,7 @@ fn should_get_metadata_using_token_metadata_hash() {
 
     minting_contract.mint(TEST_PRETTY_721_META_DATA.to_string(), false);
 
-    let blake2b_hash = utils::create_blake2b_hash(TEST_PRETTY_721_META_DATA.to_bytes().unwrap());
+    let blake2b_hash = utils::create_blake2b_hash(TEST_PRETTY_721_META_DATA);
     let token_hash = base16::encode_lower(&blake2b_hash);
 
     let minted_metadata = contract.metadata(Maybe::None, Maybe::Some(token_hash));
@@ -334,7 +333,7 @@ fn should_revert_minting_token_metadata_hash_twice() {
     );
     minting_contract.mint(TEST_PRETTY_721_META_DATA.to_string(), false);
 
-    let blake2b_hash = utils::create_blake2b_hash(TEST_PRETTY_721_META_DATA.to_bytes().unwrap());
+    let blake2b_hash = utils::create_blake2b_hash(TEST_PRETTY_721_META_DATA);
     let token_hash = base16::encode_lower(&blake2b_hash);
 
     let minted_metadata = contract.metadata(Maybe::None, Maybe::Some(token_hash));

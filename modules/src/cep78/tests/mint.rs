@@ -1,6 +1,5 @@
 use odra::{
     args::Maybe,
-    casper_types::bytesrepr::ToBytes,
     host::{Deployer, HostEnv, HostRef, NoArgs}
 };
 use serde::{Deserialize, Serialize};
@@ -554,7 +553,7 @@ fn should_approve_in_hash_identifier_mode() {
         TEST_PRETTY_721_META_DATA.to_string(),
         Maybe::None
     );
-    let blake2b_hash = utils::create_blake2b_hash(TEST_PRETTY_721_META_DATA.to_bytes().unwrap());
+    let blake2b_hash = utils::create_blake2b_hash(TEST_PRETTY_721_META_DATA);
     let token_hash = base16::encode_lower(&blake2b_hash);
     let spender = env.get_account(1);
     contract.approve(spender, Maybe::None, Maybe::Some(token_hash.clone()));
