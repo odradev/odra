@@ -138,7 +138,7 @@ trait NftContract {
     fn mint(
         &mut self,
         token_owner: Address,
-        token_metadata: String,
+        token_meta_data: String,
         token_hash: Maybe<String>
     ) -> (String, Address, String);
     fn burn(&mut self, token_id: Maybe<u64>, token_hash: Maybe<String>);
@@ -147,8 +147,8 @@ trait NftContract {
         &mut self,
         token_id: Maybe<u64>,
         token_hash: Maybe<String>,
-        source: Address,
-        target: Address
+        source_key: Address,
+        target_key: Address
     ) -> (String, Address);
     fn approve(&mut self, spender: Address, token_id: Maybe<u64>, token_hash: Maybe<String>);
     fn revoke(&mut self, token_id: Maybe<u64>, token_hash: Maybe<String>);
