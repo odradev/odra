@@ -11,4 +11,4 @@ homepage.workspace = true
 repository.workspace = true
 
 [dev-dependencies]
-odra-utils = { path = "../utils", version = "0.6.1" }
+odra-utils = { path = "../utils", version = "0.6.2" }

@@ -14,11 +14,11 @@ repository.workspace = true
 proc-macro2 = "1.0.40"
 quote = "1.0.19"
 syn =  { version = "1.0.89", features = ["full", "extra-traits"] }
-odra-ir = { path = "../ir", version = "0.6.1" }
-odra-codegen = { path = "../codegen", version = "0.6.1" }
+odra-ir = { path = "../ir", version = "0.6.2" }
+odra-codegen = { path = "../codegen", version = "0.6.2" }
 
 [dev-dependencies]
-odra = { path = "../../core", version = "0.6.1" }
+odra = { path = "../../core", version = "0.6.2" }
 
 [lib]
 proc-macro = true

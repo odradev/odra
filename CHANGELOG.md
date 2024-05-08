@@ -2,6 +2,10 @@
 
 Changelog for `odra`.
 
+## [0.6.2] - 2024-05-08
+### Fixed
+- Updated dependencies to their latest versions.
+
 ## [0.6.1] - 2024-03-27
 ### Fixed
 - `colored` crate had to be fixed to a version `2.0.4` as `2.1.0` doesn't work with rust 1.69 (backport of 0.7.1 fix)
