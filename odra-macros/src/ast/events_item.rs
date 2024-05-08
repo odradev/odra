@@ -144,7 +144,7 @@ fn chain_events_expr(ir: &ModuleStructIR) -> syn::Result<syn::Expr> {
         .collect::<Vec<_>>();
 
     Ok(parse_quote!(
-        BTreeSet::<#ev_ty>::new()
+        odra::prelude::BTreeSet::<#ev_ty>::new()
             .into_iter()
             .chain(#events_ident)
             #(#fields_events)*
@@ -203,7 +203,7 @@ mod test {
                         <OnTransfer as odra::contract_def::IntoEvent>::into_event(),
                         <OnApprove as odra::contract_def::IntoEvent>::into_event()
                     ];
-                    BTreeSet::<odra::contract_def::Event>::new()
+                    odra::prelude::BTreeSet::<odra::contract_def::Event>::new()
                         .into_iter()
                         .chain(events)
                         .chain(<Mapping<u8, Counter> as odra::contract_def::HasEvents>::events())

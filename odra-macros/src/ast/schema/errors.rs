@@ -29,7 +29,7 @@ impl ToTokens for SchemaErrorsItem {
                         #(#errors)*
                         .collect::<odra::prelude::BTreeSet<odra::schema::casper_contract_schema::UserError>>()
                         .into_iter()
-                        .collect::<Vec<_>>()
+                        .collect::<odra::prelude::Vec<_>>()
                 }
             }
         };
@@ -123,7 +123,7 @@ mod test {
                         .chain(<Mapping<u8, Counter> as odra::schema::SchemaErrors>::schema_errors())
                         .collect::<odra::prelude::BTreeSet<odra::schema::casper_contract_schema::UserError>>()
                         .into_iter()
-                        .collect::<Vec<_>>()
+                        .collect::<odra::prelude::Vec<_>>()
                 }
             }
         );
