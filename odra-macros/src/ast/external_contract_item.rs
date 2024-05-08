@@ -9,8 +9,6 @@ use derive_try_from_ref::TryFromRef;
 #[source(ModuleImplIR)]
 #[err(syn::Error)]
 pub struct ExternalContractImpl {
-    #[expr(input.self_code()?)]
-    self_code: proc_macro2::TokenStream,
     ref_item: RefItem,
     test_parts: TestPartsItem,
     test_parts_reexport: TestPartsReexportItem
@@ -45,10 +43,6 @@ mod test {
         let ir = test_utils::mock::ext_contract();
         let item = ExternalContractImpl::try_from(&ir).unwrap();
         let expected = quote::quote! {
-            pub trait Token {
-                fn balance_of(&self, owner: Address) -> U256;
-            }
-
             /// [Token] Contract Ref.
             pub struct TokenContractRef {
                 env: odra::prelude::Rc<odra::ContractEnv>,
