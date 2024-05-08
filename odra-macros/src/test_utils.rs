@@ -143,6 +143,31 @@ pub mod mock {
         ModuleStructIR::try_from((&attr, &module)).unwrap()
     }
 
+    pub fn invalid_module_definition() -> ModuleStructIR {
+        let module = quote!(
+            pub struct Module {
+                v: Var<u32>,
+                v1: Var<u32>,
+                v2: Var<u32>,
+                v3: Var<u32>,
+                v4: Var<u32>,
+                v5: Var<u32>,
+                v6: Var<u32>,
+                v7: Var<u32>,
+                v8: Var<u32>,
+                v9: Var<u32>,
+                v10: Var<u32>,
+                v11: Var<u32>,
+                v12: Var<u32>,
+                v13: Var<u32>,
+                v14: Var<u32>,
+                v15: Var<u32>
+            }
+        );
+        let attr = quote!();
+        ModuleStructIR::try_from((&attr, &module)).unwrap()
+    }
+
     pub fn empty_module_definition() -> ModuleStructIR {
         let module = quote!(
             pub struct CounterPack;
