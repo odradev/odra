@@ -1,5 +1,6 @@
 #![no_std]
 //! Generate Casper contract and interact with Casper host.
+#![allow(internal_features)]
 #![cfg_attr(not(test), feature(core_intrinsics))]
 
 extern crate alloc;

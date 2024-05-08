@@ -1,7 +1,5 @@
 //! Odra Casper Livenet capabilites.
 
-#![feature(once_cell)]
-
 pub mod casper_client;
 mod casper_node_port;
 pub mod client_env;

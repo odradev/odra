@@ -90,6 +90,7 @@ Before running tests make sure you have following packages installed:
 
 - Rust toolchain (see [rustup.rs](https://rustup.rs/)) with `wasm32-unknown-unknown` target.
 - `wasm-strip` (see [wabt](https://github.com/WebAssembly/wabt))
+- `wasm-opt` (see [binaryen](https://github.com/WebAssembly/binaryen))
 - `cargo-odra` (see [Cargo Odra](https://github.com/odradev/cargo-odra))
 - `just` (see [just](https://github.com/casey/just#packages))
 

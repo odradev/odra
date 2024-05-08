@@ -8,8 +8,8 @@ homepage = "https://odra.dev/docs"
 repository = "https://github.com/odradev/odra"
 
 [dependencies]
-casper-contract = { version = "3.0.0", default-features = false }
-casper-types = "3.0.0"
+casper-contract = { version = "4.0.0", default-features = false }
+casper-types = "4.0.1"
 odra-casper-shared = { path = "../shared" }
 ink_allocator = { version = "4.2.1", default-features = false }
 

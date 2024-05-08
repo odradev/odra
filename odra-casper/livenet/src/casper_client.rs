@@ -52,7 +52,7 @@ pub struct CasperClient {
 impl CasperClient {
     /// Creates new CasperClient.
     pub fn new() -> Self {
-        dotenv::dotenv().ok();
+        dotenvy::dotenv().ok();
         CasperClient {
             node_address: get_env_variable(ENV_NODE_ADDRESS),
             chain_name: get_env_variable(ENV_CHAIN_NAME),

@@ -1,5 +1,5 @@
 use crate::{
-    prelude::{collections::BTreeMap, string::String, vec, vec::Vec},
+    prelude::{collections::BTreeMap, string::String, vec::Vec},
     types::{Address, OdraType, U256, U512}
 };
 
@@ -8,7 +8,7 @@ pub trait OdraItem {
 
     #[cfg(not(target_arch = "wasm32"))]
     fn events() -> Vec<odra_types::contract_def::Event> {
-        vec![]
+        crate::prelude::vec![]
     }
 }
 

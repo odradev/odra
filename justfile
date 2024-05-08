@@ -1,3 +1,6 @@
+BINARYEN_VERSION := "version_116"
+BINARYEN_CHECKSUM := "c55b74f3109cdae97490faf089b0286d3bba926bb6ea5ed00c8c784fc53718fd"
+
 default:
     just --list
 
@@ -21,11 +24,15 @@ check-lint: clippy
     cd examples && cargo check --no-default-features -F casper-livenet
 
 install-cargo-odra:
-    cargo install --version 0.0.9 --force --locked cargo-odra
+    cargo install --version 0.0.9-fixed cargo-odra
 
 prepare-test-env: install-cargo-odra
     rustup target add wasm32-unknown-unknown
     sudo apt install wabt
+    wget https://github.com/WebAssembly/binaryen/releases/download/{{BINARYEN_VERSION}}/binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz || { echo "Download failed"; exit 1; }
+    sha256sum binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz | grep {{BINARYEN_CHECKSUM}} || { echo "Checksum verification failed"; exit 1; }
+    tar -xzf binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz || { echo "Extraction failed"; exit 1; }
+    sudo cp binaryen-{{BINARYEN_VERSION}}/bin/wasm-opt /usr/local/bin/wasm-opt
 
 build-proxy-callers:
     cargo build -p odra-casper-proxy-caller --release --target wasm32-unknown-unknown
@@ -43,7 +50,12 @@ test-examples-on-mockvm:
     cd examples && cargo odra test
 
 test-examples-on-casper:
-    cd examples && cargo odra test -b casper
+    cd examples && cargo odra build -b casper
+    for file in examples/wasm/*.wasm; do \
+        echo "Processing $file"; \
+        wasm-opt "$file" --signext-lowering -o "$file"; \
+    done
+    cd examples && cargo odra test -b casper -s
 
 test-examples: test-examples-on-mockvm test-examples-on-casper
 
@@ -51,7 +63,11 @@ test-modules-on-mockvm:
     cd modules && cargo odra test
 
 test-modules-on-casper:
-    cd modules && cargo odra test -b casper
+    cd modules && cargo odra build -b casper
+    for file in modules/wasm/*.wasm; do \
+        echo "Processing $file"; \
+        wasm-opt "$file" --signext-lowering -o "$file"; \
+    done
 
 test-modules: test-modules-on-mockvm test-modules-on-casper
 

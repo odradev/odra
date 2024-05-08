@@ -87,6 +87,11 @@ impl ExecutionError {
         self.0
     }
 
+    /// Return the underlying error message
+    pub fn message(&self) -> &str {
+        &self.1
+    }
+
     /// Creates a specific type of error, meaning that value unwrapping failed.
     pub fn unwrap_error() -> Self {
         Self::sys(UNWRAP_ERROR, "Unwrap error")
