@@ -33,7 +33,7 @@ impl OwnedToken {
             fn allowance(&self, owner: &Address, spender: &Address) -> U256;
         }
     }
-    
+
     delegate! {
         to self.ownable {
             fn get_owner(&self) -> Address;
