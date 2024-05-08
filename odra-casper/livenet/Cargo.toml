@@ -14,10 +14,10 @@ repository.workspace = true
 casper-types = { workspace = true }
 casper-execution-engine = { workspace = true }
 casper-hashing = "3.0.0"
-odra-casper-shared = { path = "../shared", version = "0.6.1" }
-odra-casper-types = { path = "../types", version = "0.6.1" }
-odra-types = { path = "../../types", version = "0.6.1" }
-odra-mock-vm = { path = "../../mock-vm/backend", version = "0.6.1" }
+odra-casper-shared = { path = "../shared", version = "0.6.2" }
+odra-casper-types = { path = "../types", version = "0.6.2" }
+odra-types = { path = "../../types", version = "0.6.2" }
+odra-mock-vm = { path = "../../mock-vm/backend", version = "0.6.2" }
 ref_thread_local = "0.1.1"
 serde = "1.0"
 serde_json = { version = "1.0", features = ["raw_value"] }

@@ -12,8 +12,8 @@ repository.workspace = true
 
 [dependencies]
 casper-event-standard = { workspace = true }
-odra-casper-types = { path = "../types", version = "0.6.1" }
-odra-utils = { path = "../../utils", version = "0.6.1" }
+odra-casper-types = { path = "../types", version = "0.6.2" }
+odra-utils = { path = "../../utils", version = "0.6.2" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 casper-contract = { workspace = true }

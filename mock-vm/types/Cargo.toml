@@ -11,8 +11,8 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
-odra-types = { path = "../../types", version = "0.6.1" }
-odra-utils = { path = "../../utils", version = "0.6.1" }
+odra-types = { path = "../../types", version = "0.6.2" }
+odra-utils = { path = "../../utils", version = "0.6.2" }
 hex = "0.4.3"
 uint = "0.9.4"
 borsh = { version = "0.9.3", default-features = false }
