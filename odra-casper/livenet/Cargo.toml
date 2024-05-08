@@ -13,7 +13,7 @@ repository.workspace = true
 [dependencies]
 casper-types = { workspace = true }
 casper-execution-engine = { workspace = true }
-casper-hashing = "2.0.0"
+casper-hashing = "3.0.0"
 odra-casper-shared = { path = "../shared", version = "0.6.1" }
 odra-casper-types = { path = "../types", version = "0.6.1" }
 odra-types = { path = "../../types", version = "0.6.1" }
@@ -22,10 +22,10 @@ ref_thread_local = "0.1.1"
 serde = "1.0"
 serde_json = { version = "1.0", features = ["raw_value"] }
 hex = "0.4.3"
-reqwest = { version = "0.11.16", features = ["blocking", "json"] }
+reqwest = { version = "^0.11.16", features = ["blocking", "json"] }
 jsonrpc-lite = "0.6.0"
 blake2 = { version = "0.9.0", default-features = false }
-dotenv = "0.15.0"
+dotenvy = "0.15.7"
 prettycli = "0.1.1"
 schemars = "0.8.5"
 datasize = "0.2.14"

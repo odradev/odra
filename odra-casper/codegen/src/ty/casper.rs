@@ -50,14 +50,14 @@ impl ToTokens for CasperType<'_> {
                 }
             }
             Type::Tuple1(ty) => {
-                let ty = ty.get(0).unwrap();
+                let ty = ty.first().unwrap();
                 let ty = CasperType(ty);
                 quote! {
                     odra::casper::casper_types::CLType::Tuple1([alloc::boxed::Box::new(#ty)])
                 }
             }
             Type::Tuple2(ty) => {
-                let t1 = ty.get(0).unwrap();
+                let t1 = ty.first().unwrap();
                 let t1 = CasperType(t1);
                 let t2 = ty.get(1).unwrap();
                 let t2 = CasperType(t2);
@@ -66,7 +66,7 @@ impl ToTokens for CasperType<'_> {
                 }
             }
             Type::Tuple3(ty) => {
-                let t1 = ty.get(0).unwrap();
+                let t1 = ty.first().unwrap();
                 let t1 = CasperType(t1);
                 let t2 = ty.get(1).unwrap();
                 let t2 = CasperType(t2);

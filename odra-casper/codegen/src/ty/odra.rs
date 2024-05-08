@@ -46,16 +46,16 @@ impl ToTokens for OdraType<'_> {
                 quote!(std::collections::BTreeMap<#key, #value>)
             }
             Type::Tuple1(ty) => {
-                let ty = OdraType(ty.get(0).unwrap());
+                let ty = OdraType(ty.first().unwrap());
                 quote!((#ty,))
             }
             Type::Tuple2(ty) => {
-                let t1 = OdraType(ty.get(0).unwrap());
+                let t1 = OdraType(ty.first().unwrap());
                 let t2 = OdraType(ty.get(1).unwrap());
                 quote!((#t1, #t2))
             }
             Type::Tuple3(ty) => {
-                let t1 = OdraType(ty.get(0).unwrap());
+                let t1 = OdraType(ty.first().unwrap());
                 let t2 = OdraType(ty.get(1).unwrap());
                 let t3 = OdraType(ty.get(2).unwrap());
                 quote!((#t1, #t2, #t3))

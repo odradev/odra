@@ -74,12 +74,12 @@ where
             let pat = &*arg.pat;
             match &*arg.ty {
                 syn::Type::Reference(ty) => match &*ty.elem {
-                    ty if matches!(ty, syn::Type::Array(_) | syn::Type::Slice(_)) => {
+                    syn::Type::Array(_) | syn::Type::Slice(_) => {
                         quote!(&args.get::<odra::prelude::vec::Vec<_>>(stringify!(#pat)))
                     }
                     _ => quote!(&args.get(stringify!(#pat)))
                 },
-                ty if matches!(ty, syn::Type::Array(_) | syn::Type::Slice(_)) => {
+                syn::Type::Array(_) | syn::Type::Slice(_) => {
                     quote!(&args.get::<odra::prelude::vec::Vec<_>>(stringify!(#pat)))
                 }
                 _ => quote!(args.get(stringify!(#pat)))

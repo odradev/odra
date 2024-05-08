@@ -11,8 +11,8 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
-casper-engine-test-support = { version = "5.0.0", features = ["test-support"] }
 casper-execution-engine = { workspace = true }
+casper-engine-test-support = { version = "7.0.1", features = ["test-support"] }
 casper-types = { workspace = true }
 odra-casper-shared = { path = "../shared", version = "0.6.1" }
 odra-casper-types = { path = "../types", version = "0.6.1" }
