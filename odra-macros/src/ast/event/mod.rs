@@ -1,4 +1,5 @@
 use quote::ToTokens;
+use syn::{punctuated::Punctuated, token::Comma};
 
 pub struct OdraEventItem {
     item_struct: syn::ItemStruct,
@@ -9,6 +10,16 @@ impl ToTokens for OdraEventItem {
         let item = &self.item_struct;
         let ident = &item.ident;
         let name = ident.to_string();
+        let fields = item.fields.iter()
+            .map(|f| {
+                let ident = f.ident.as_ref().unwrap();
+                let ty = &f.ty;
+                quote::quote!(#ident: #ty)
+            })
+            .collect::<Punctuated<_, Comma>>();
+        let field_names = item.fields.iter().map(|f| f.ident.as_ref().unwrap()).collect::<Punctuated<_, Comma>>();
+        let comment = format!("Creates a new instance of the {} event.", ident);
+        let doc_attr = quote::quote!(#[doc = #comment]);
 
         let chain = item.fields
             .iter()
@@ -23,6 +34,15 @@ impl ToTokens for OdraEventItem {
         let item = quote::quote! {
             #[derive(odra::Event, PartialEq, Eq, Debug)]
             #item
+
+            impl #ident {
+                #doc_attr
+                pub fn new(#fields) -> Self {
+                    Self {
+                        #field_names
+                    }
+                }
+            }
 
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::NamedCLTyped for #ident {
