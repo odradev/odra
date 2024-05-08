@@ -32,7 +32,9 @@ impl OwnedToken {
             fn balance_of(&self, owner: &Address) -> U256;
             fn allowance(&self, owner: &Address, spender: &Address) -> U256;
         }
-
+    }
+    
+    delegate! {
         to self.ownable {
             fn get_owner(&self) -> Address;
             fn transfer_ownership(&mut self, new_owner: &Address);
