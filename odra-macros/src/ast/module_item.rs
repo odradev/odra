@@ -228,26 +228,26 @@ mod test {
                         let counter0 =
                             <SubModule<Counter> as odra::module::ModuleComponent>::instance(
                                 odra::prelude::Rc::clone(&env),
-                                0u8
+                                1u8
                             );
                         let counter1 =
                             <SubModule<Counter> as odra::module::ModuleComponent>::instance(
                                 odra::prelude::Rc::clone(&env),
-                                1u8
+                                2u8
                             );
                         let counter2 =
                             <SubModule<Counter> as odra::module::ModuleComponent>::instance(
                                 odra::prelude::Rc::clone(&env),
-                                2u8
+                                3u8
                             );
                         let counters = <Var<u32> as odra::module::ModuleComponent>::instance(
                             odra::prelude::Rc::clone(&env),
-                            3u8
+                            4u8
                         );
                         let counters_map =
                             <Mapping<u8, Counter> as odra::module::ModuleComponent>::instance(
                                 odra::prelude::Rc::clone(&env),
-                                4u8
+                                5u8
                             );
                         Self {
                             counter0,

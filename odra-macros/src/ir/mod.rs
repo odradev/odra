@@ -84,7 +84,7 @@ impl ModuleStructIR {
             .enumerate()
             .map(|(idx, (ident, ty))| {
                 Ok(EnumeratedTypedField {
-                    idx: idx as u8,
+                    idx: idx as u8 + 1,
                     ident: ident.clone(),
                     ty: ty.clone()
                 })
