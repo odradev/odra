@@ -1,6 +1,8 @@
 use crate::ir::ModuleStructIR;
 use crate::utils;
 
+const MAX_FIELDS: usize = 15;
+
 #[derive(syn_derive::ToTokens)]
 pub struct ModuleDefItem {
     item_struct: syn::ItemStruct
@@ -15,6 +17,13 @@ impl TryFrom<&'_ ModuleStructIR> for ModuleDefItem {
             &utils::ident::underscored_env(),
             &utils::ty::rc_contract_env()
         );
+
+        if item_struct.fields.len() > MAX_FIELDS {
+            return Err(syn::Error::new_spanned(
+                item_struct.fields,
+                format!("The number of fields in a module definition must be less than or equal to {}", MAX_FIELDS)
+            ));
+        }
 
         let fields = item_struct
             .fields
@@ -64,5 +73,12 @@ mod tests {
             }
         };
         assert_eq(def, expected);
+    }
+
+    #[test]
+    fn test_invalid_module_definition() {
+        let ir = mock::invalid_module_definition();
+        let def = ModuleDefItem::try_from(&ir);
+        assert!(def.is_err());
     }
 }
