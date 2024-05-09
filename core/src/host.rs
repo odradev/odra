@@ -28,9 +28,9 @@ pub trait HostRef {
     /// Returns the n-th event emitted by the contract.
     ///
     /// If the event is not found or the type does not match, returns `EventError::EventNotFound`.
-    fn get_event<T: 'static>(&self, index: i32) -> Result<T, EventError>
+    fn get_event<T>(&self, index: i32) -> Result<T, EventError>
     where
-        T: FromBytes + EventInstance;
+        T: FromBytes + EventInstance + 'static;
     /// Returns a detailed information about the last call of the contract.
     fn last_call(&self) -> ContractCallResult;
 }
@@ -516,7 +516,7 @@ mod test {
             fn with_tokens(&self, tokens: U512) -> Self;
             fn address(&self) -> &Address;
             fn env(&self) -> &HostEnv;
-            fn get_event<T: 'static>(&self, index: i32) -> Result<T, EventError> where T: FromBytes + EventInstance;
+            fn get_event<T>(&self, index: i32) -> Result<T, EventError> where T: FromBytes + EventInstance + 'static;
             fn last_call(&self) -> ContractCallResult;
         }
     }

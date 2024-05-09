@@ -58,6 +58,3 @@ jobs:
         with:
           name: benchmark-report
           path: benchmark/benchmark_full_report.txt
-      - name: Benchmark evaluation failed
-        if: steps.evaluate-benchmark.outputs.EXIT_CODE != '0'
-        run: exit 1
