@@ -30,7 +30,7 @@ check-lint: clippy
     cd benchmark && cargo check --all-targets --features=benchmark
 
 install-cargo-odra:
-    cargo install cargo-odra --git {{CARGO_ODRA_GIT_REPO}} --branch {{CARGO_ODRA_BRANCH}} --locked
+    cargo +stable install cargo-odra --git {{CARGO_ODRA_GIT_REPO}} --branch {{CARGO_ODRA_BRANCH}} --locked
 
 prepare-test-env: install-cargo-odra
     rustup target add wasm32-unknown-unknown
