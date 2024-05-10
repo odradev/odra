@@ -120,13 +120,13 @@ impl Cep18BalancesStorage {
     /// Sets the balance of the given account.
     pub fn set(&self, account: &Address, balance: U256) {
         self.env()
-            .set_dictionary_value(BALANCES_KEY, self.key(account), balance);
+            .set_dictionary_value(BALANCES_KEY, self.key(account).as_bytes(), balance);
     }
 
     /// Gets the balance of the given account.
     pub fn get_or_default(&self, account: &Address) -> U256 {
         self.env()
-            .get_dictionary_value(BALANCES_KEY, self.key(account))
+            .get_dictionary_value(BALANCES_KEY, self.key(account).as_bytes())
             .unwrap_or_default()
     }
 
@@ -168,13 +168,13 @@ impl Cep18AllowancesStorage {
     /// Sets the allowance of the given owner and spender.
     pub fn set(&self, owner: &Address, spender: &Address, amount: U256) {
         self.env()
-            .set_dictionary_value(ALLOWANCES_KEY, self.key(owner, spender), amount);
+            .set_dictionary_value(ALLOWANCES_KEY, &self.key(owner, spender), amount);
     }
 
     /// Gets the allowance of the given owner and spender.
     pub fn get_or_default(&self, owner: &Address, spender: &Address) -> U256 {
         self.env()
-            .get_dictionary_value(ALLOWANCES_KEY, self.key(owner, spender))
+            .get_dictionary_value(ALLOWANCES_KEY, &self.key(owner, spender))
             .unwrap_or_default()
     }
 
@@ -196,12 +196,14 @@ impl Cep18AllowancesStorage {
         self.set(owner, spender, new_allowance);
     }
 
-    fn key(&self, owner: &Address, spender: &Address) -> String {
+    fn key(&self, owner: &Address, spender: &Address) -> [u8; 64] {
+        let mut result = [0u8; 64];
         let mut preimage = Vec::new();
         preimage.append(&mut owner.to_bytes().unwrap_or_revert(&self.env()));
         preimage.append(&mut spender.to_bytes().unwrap_or_revert(&self.env()));
 
         let key_bytes = self.env().hash(&preimage);
-        hex::encode(key_bytes)
+        odra::utils::hex_to_slice(&key_bytes, &mut result);
+        result
     }
 }

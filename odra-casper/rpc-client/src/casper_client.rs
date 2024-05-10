@@ -126,9 +126,10 @@ impl CasperClient {
         &self,
         address: &Address,
         dictionary_name: &str,
-        key: &str
+        key: &[u8]
     ) -> Option<Bytes> {
-        self.query_dict_bytes(address, dictionary_name.to_string(), key.to_string())
+        let key = String::from_utf8(key.to_vec()).unwrap();
+        self.query_dict_bytes(address, dictionary_name.to_string(), key)
             .ok()
     }
 

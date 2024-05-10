@@ -30,12 +30,16 @@ impl ContractContext for WasmContractEnv {
         host_functions::set_named_key(name, value);
     }
 
-    fn get_dictionary_value(&self, dictionary_name: &str, key: &str) -> Option<Bytes> {
+    fn get_dictionary_value(&self, dictionary_name: &str, key: &[u8]) -> Option<Bytes> {
         host_functions::get_dictionary_value(dictionary_name, key)
     }
 
-    fn set_dictionary_value(&self, dictionary_name: &str, key: &str, value: CLValue) {
+    fn set_dictionary_value(&self, dictionary_name: &str, key: &[u8], value: CLValue) {
         host_functions::set_dictionary_value(dictionary_name, key, value);
+    }
+
+    fn remove_dictionary(&self, dictionary_name: &str) {
+        host_functions::remove_dictionary(dictionary_name);
     }
 
     fn caller(&self) -> Address {

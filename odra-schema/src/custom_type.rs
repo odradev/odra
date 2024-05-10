@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use casper_contract_schema::CustomType;
 use casper_types::bytesrepr::{FromBytes, ToBytes};
+use casper_types::URef;
 use casper_types::{bytesrepr::Bytes, CLTyped, PublicKey, U128, U256, U512};
 use num_traits::{Num, One, Zero};
 use odra_core::{args::Maybe, Address};
@@ -50,7 +51,8 @@ impl_schema_custom_types!(
     String,
     (),
     PublicKey,
-    Bytes
+    Bytes,
+    URef
 );
 
 impl<T: CLTyped> SchemaCustomTypes for Option<T> {}

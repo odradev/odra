@@ -176,24 +176,32 @@ impl OdraVm {
     }
 
     /// Sets the value of the dictionary item.
-    pub fn set_dict_value(&self, dict: &str, key: &str, value: CLValue) {
+    pub fn set_dict_value(&self, dict: &str, key: &[u8], value: CLValue) {
         self.state.write().unwrap().set_dict_value(
             dict.as_bytes(),
-            key.as_bytes(),
+            key,
             Bytes::from(value.inner_bytes().as_slice())
         );
+    }
+
+    /// Removes the dictionary from the global state.
+    pub fn remove_dictionary(&self, dictionary_name: &str) {
+        self.state
+            .write()
+            .unwrap()
+            .remove_dictionary(dictionary_name.as_bytes());
     }
 
     /// Gets the value of the dictionary item.
     ///
     /// Returns `None` if the dictionary or the key does not exist.
     /// If the dictionary or the key does not exist, the virtual machine is in error state.
-    pub fn get_dict_value(&self, dict: &str, key: &str) -> Option<Bytes> {
+    pub fn get_dict_value(&self, dict: &str, key: &[u8]) -> Option<Bytes> {
         let result = {
             self.state
                 .read()
                 .unwrap()
-                .get_dict_value(dict.as_bytes(), key.as_bytes())
+                .get_dict_value(dict.as_bytes(), key)
         };
         match result {
             Ok(result) => result,
@@ -564,7 +572,7 @@ mod tests {
 
         // when set a value
         let dict = "dict";
-        let key = "key";
+        let key = b"key";
         let value = CLValue::from_t("value").unwrap();
         instance.set_dict_value(dict, key, value.clone());
 
@@ -576,7 +584,7 @@ mod tests {
         // then the value under the key in unknown dict does not exist
         assert_eq!(instance.get_dict_value("other_dict", key), None);
         // then the value under unknown key does not exist
-        assert_eq!(instance.get_dict_value(dict, "other_key"), None);
+        assert_eq!(instance.get_dict_value(dict, b"other_key"), None);
     }
 
     #[test]

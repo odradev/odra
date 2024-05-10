@@ -33,12 +33,16 @@ impl ContractContext for OdraVmContractEnv {
         self.vm.borrow().set_named_key(name, value)
     }
 
-    fn get_dictionary_value(&self, dictionary_name: &str, key: &str) -> Option<Bytes> {
+    fn get_dictionary_value(&self, dictionary_name: &str, key: &[u8]) -> Option<Bytes> {
         self.vm.borrow().get_dict_value(dictionary_name, key)
     }
 
-    fn set_dictionary_value(&self, dictionary_name: &str, key: &str, value: CLValue) {
+    fn set_dictionary_value(&self, dictionary_name: &str, key: &[u8], value: CLValue) {
         self.vm.borrow().set_dict_value(dictionary_name, key, value)
+    }
+
+    fn remove_dictionary(&self, dictionary_name: &str) {
+        self.vm.borrow().remove_dictionary(dictionary_name);
     }
 
     fn caller(&self) -> Address {

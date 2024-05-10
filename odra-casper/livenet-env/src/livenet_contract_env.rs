@@ -39,7 +39,7 @@ impl ContractContext for LivenetContractEnv {
         panic!("Cannot set named value in LivenetEnv without a deploy")
     }
 
-    fn get_dictionary_value(&self, dictionary_name: &str, key: &str) -> Option<Bytes> {
+    fn get_dictionary_value(&self, dictionary_name: &str, key: &[u8]) -> Option<Bytes> {
         self.casper_client.borrow().get_dictionary_value(
             self.callstack.borrow().current().address(),
             dictionary_name,
@@ -47,8 +47,12 @@ impl ContractContext for LivenetContractEnv {
         )
     }
 
-    fn set_dictionary_value(&self, _dictionary_name: &str, _key: &str, _value: CLValue) {
+    fn set_dictionary_value(&self, _dictionary_name: &str, _key: &[u8], _value: CLValue) {
         panic!("Cannot set dictionary value in LivenetEnv without a deploy")
+    }
+
+    fn remove_dictionary(&self, _dictionary_name: &str) {
+        panic!("Cannot remove dictionary value in LivenetEnv without a deploy")
     }
 
     fn caller(&self) -> Address {
