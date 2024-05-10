@@ -13,11 +13,11 @@ lazy_static = { version = "1.4.0", features = [ "spin_no_std" ] }
 odra-core = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-casper-contract = { version = "3.0.0", default-features = false }
+casper-contract = { version = "4.0.0", default-features = false }
 ink_allocator = { version = "4.2.1", default-features = false }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-casper-contract = { version = "3.0.0", default-features = false, features = ["test-support"] }
+casper-contract = { version = "4.0.0", default-features = false, features = ["test-support"] }
 
 [lints.rust]
 missing_docs = "warn"

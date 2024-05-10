@@ -11,7 +11,7 @@ homepage = { workspace = true }
 repository = { workspace = true }
 
 [dependencies]
-casper-engine-test-support = { version = "5.0.0", features = ["test-support"] }
+casper-engine-test-support = { version = "7.0.1", features = ["test-support"] }
 casper-execution-engine = { workspace = true }
 odra-core = { workspace = true }
 
@@ -19,7 +19,7 @@ odra-core = { workspace = true }
 casper-contract = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-casper-contract = { version = "3.0.0", default-features = false, features = ["test-support"] }
+casper-contract = { version = "4.0.0", default-features = false, features = ["test-support"] }
 
 [lints.rust]
 missing_docs = "warn"
