@@ -268,7 +268,6 @@ impl Cep78 {
             })
         };
         let token_id = token_identifier.to_string();
-
         self.metadata.update_or_revert(&token_meta_data, &token_id);
 
         let token_owner = if self.is_transferable_or_assigned() {
@@ -301,8 +300,6 @@ impl Cep78 {
     /// with error [CEP78Error::InvalidTokenIdentifier]. If the token is listed as already burnt we revert with
     /// error [CEP78Error::PreviouslyBurntToken]. If not the token is then registered as burnt.
     pub fn burn(&mut self, token_id: Maybe<u64>, token_hash: Maybe<String>) {
-        self.ensure_burnable();
-
         let token_identifier = self.token_identifier(token_id, token_hash);
         let token_id = token_identifier.to_string();
 
@@ -320,11 +317,7 @@ impl Cep78 {
             self.revert(CEP78Error::InvalidTokenOwner)
         };
 
-        self.ensure_not_burned(&token_id);
-        self.data.mark_burnt(&token_id);
-        self.data.decrement_counter(&token_owner);
-
-        self.emit_ces_event(Burn::new(token_owner, token_id, caller));
+        self.burn_token_unchecked(token_id, caller);
     }
 
     /// Transfers ownership of the token from one account to another.
@@ -491,7 +484,7 @@ impl Cep78 {
     }
 
     /// Returns the metadata associated with the provided token_id
-    pub fn metadata(&mut self, token_id: Maybe<u64>, token_hash: Maybe<String>) -> String {
+    pub fn metadata(&self, token_id: Maybe<u64>, token_hash: Maybe<String>) -> String {
         let token_identifier = self.checked_token_identifier(token_id, token_hash);
         self.metadata.get_or_revert(&token_identifier)
     }
@@ -503,15 +496,10 @@ impl Cep78 {
         token_hash: Maybe<String>,
         token_meta_data: String
     ) {
-        self.metadata
-            .ensure_mutability(CEP78Error::ForbiddenMetadataUpdate);
-
         let token_identifier = self.checked_token_identifier(token_id, token_hash);
         let token_id = token_identifier.to_string();
         self.ensure_caller_is_owner(&token_id);
-        self.metadata.update_or_revert(&token_meta_data, &token_id);
-
-        self.emit_ces_event(MetadataUpdated::new(token_id, token_meta_data));
+        self.set_token_metadata_unchecked(&token_id, token_meta_data);
     }
 
     /// Returns number of owned tokens associated with the provided token holder
@@ -748,6 +736,32 @@ impl Cep78 {
             }
             _ => caller
         }
+    }
+
+    // TODO: Verify correctness of this function.
+    pub fn token_exists_by_hash(&self, token_id: &str) -> bool {
+        self.data.owner_of(token_id).is_some()
+    }
+
+    // Update metadata without ownership check.
+    pub fn set_token_metadata_unchecked(
+        &mut self,
+        token_id: &String,
+        token_meta_data: String
+    ) {
+        self.metadata.ensure_mutability(CEP78Error::ForbiddenMetadataUpdate);
+        self.metadata.update_or_revert(&token_meta_data, token_id);
+        self.emit_ces_event(MetadataUpdated::new(String::from(token_id), token_meta_data));
+    }
+
+    // Burn token without ownership check.
+    pub fn burn_token_unchecked(&mut self, token_id: String, burner: Address) {
+       self.ensure_burnable();
+       let token_owner = self.owner_of_by_id(&token_id);
+       self.ensure_not_burned(&token_id);
+       self.data.mark_burnt(&token_id);
+       self.data.decrement_counter(&token_owner);
+       self.emit_ces_event(Burn::new(token_owner, token_id, burner));
     }
 }
 
