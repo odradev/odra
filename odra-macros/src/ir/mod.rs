@@ -84,7 +84,7 @@ impl ModuleStructIR {
             .enumerate()
             .map(|(idx, (ident, ty))| {
                 Ok(EnumeratedTypedField {
-                    idx: idx as u8,
+                    idx: idx as u8 + 1,
                     ident: ident.clone(),
                     ty: ty.clone()
                 })
@@ -349,15 +349,21 @@ impl ModuleIR {
     }
 
     fn delegated_functions(&self) -> syn::Result<Vec<syn::ImplItemFn>> {
-        let macro_item = self.code.items.iter().find_map(|item| match item {
-            ImplItem::Macro(m) => Some(m),
-            _ => None
-        });
-        if let Some(item) = macro_item {
-            return Ok(syn::parse2::<Delegate>(item.mac.tokens.clone())?.functions);
-        }
+        let delegate_items = self
+            .code
+            .items
+            .iter()
+            .filter_map(|item| match item {
+                ImplItem::Macro(m) => Some(m),
+                _ => None
+            })
+            .map(|m| syn::parse2::<Delegate>(m.mac.tokens.clone()))
+            .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(vec![])
+        Ok(delegate_items
+            .into_iter()
+            .flat_map(|delegate| delegate.functions)
+            .collect())
     }
 
     fn is_trait_impl(&self) -> bool {

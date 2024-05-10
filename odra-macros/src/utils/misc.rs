@@ -23,15 +23,7 @@ impl<T: quote::ToTokens> AsExpr for T {
         ::syn::parse_quote!(#self)
     }
 }
-pub trait AsStmt {
-    fn as_stmt(&self) -> ::syn::Stmt;
-}
 
-impl<T: quote::ToTokens> AsStmt for T {
-    fn as_stmt(&self) -> ::syn::Stmt {
-        ::syn::parse_quote!(#self)
-    }
-}
 pub trait AsType {
     fn as_type(&self) -> ::syn::Type;
 }
