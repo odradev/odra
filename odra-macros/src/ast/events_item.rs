@@ -42,7 +42,6 @@ impl TryFrom<&'_ TypeIR> for HasEventsImplItem {
 #[derive(syn_derive::ToTokens)]
 pub struct EventsFnsItem {
     events_fn: FnItem,
-    wasm_attr: syn::Attribute,
     event_schemas_fn: FnItem
 }
 
@@ -55,7 +54,6 @@ impl EventsFnsItem {
                 Self::events_ret_ty(),
                 utils::expr::empty_vec().as_block()
             ),
-            wasm_attr: utils::attr::wasm32(),
             event_schemas_fn: FnItem::new(
                 &utils::ident::event_schemas(),
                 vec![],
@@ -115,7 +113,6 @@ impl TryFrom<&'_ ModuleStructIR> for EventsFnsItem {
     fn try_from(ir: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
         Ok(Self {
             events_fn: Self::events_fn(ir)?,
-            wasm_attr: utils::attr::wasm32(),
             event_schemas_fn: Self::event_schemas_fn(ir)?
         })
     }

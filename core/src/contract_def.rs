@@ -99,7 +99,6 @@ pub trait HasEvents {
     fn events() -> Vec<Event>;
 
     /// Returns a map of event schemas used by the contract.
-    #[cfg(target_arch = "wasm32")]
     fn event_schemas() -> crate::prelude::BTreeMap<String, casper_event_standard::Schema> {
         crate::prelude::BTreeMap::new()
     }

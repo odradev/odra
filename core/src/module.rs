@@ -62,6 +62,10 @@ impl<M: HasEvents> HasEvents for SubModule<M> {
     fn events() -> Vec<crate::contract_def::Event> {
         M::events()
     }
+
+    fn event_schemas() -> crate::prelude::BTreeMap<String, casper_event_standard::Schema> {
+        M::event_schemas()
+    }
 }
 
 /// Wrapper for a module implementing the `Module` trait.
