@@ -1,13 +1,10 @@
 use crate::prelude::*;
 use casper_types::bytesrepr::FromBytes;
 use casper_types::{CLTyped, RuntimeArgs, U512};
+use serde::{Deserialize, Serialize};
 
 /// Represents a call definition, which includes the method name, runtime arguments, attached value, and mutability flag.
-#[cfg_attr(
-    not(target_arch = "wasm32"),
-    derive(serde::Serialize, serde::Deserialize)
-)]
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CallDef {
     entry_point: String,
     args: RuntimeArgs,

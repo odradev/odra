@@ -3,16 +3,13 @@ use crate::prelude::*;
 use crate::{Address, CallDef};
 use casper_types::U512;
 use core::fmt::{Debug, Display, Formatter, Result};
+use serde::{Deserialize, Serialize};
 
 /// A Vector of deploy reports makes a full gas report.
 pub type GasReport = Vec<DeployReport>;
 
 /// Represents a deploy report, which includes the gas used and the deploy details.
-#[cfg_attr(
-    not(target_arch = "wasm32"),
-    derive(serde::Serialize, serde::Deserialize)
-)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum DeployReport {
     /// Represents a Wasm deploy.
     WasmDeploy {

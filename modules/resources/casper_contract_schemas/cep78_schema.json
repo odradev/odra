@@ -1,0 +1,1174 @@
+{
+  "casper_contract_schema_version": 1,
+  "toolchain": "rustc 1.78.0-nightly (98aa3624b 2024-02-08)",
+  "authors": [
+    "Jakub Płaskonka <kuba@odra.dev>",
+    "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
+    "Maciej Zieliński <maciej@odra.dev>"
+  ],
+  "repository": "https://github.com/odradev/odra",
+  "homepage": null,
+  "contract_name": "Cep78",
+  "contract_version": "1.5.1",
+  "types": [
+    {
+      "struct": {
+        "name": "Approval",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "spender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "token_id",
+            "description": null,
+            "ty": "String"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "ApprovalForAll",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "operator",
+            "description": null,
+            "ty": "Key"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "ApprovalRevoked",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "token_id",
+            "description": null,
+            "ty": "String"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "Burn",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "token_id",
+            "description": null,
+            "ty": "String"
+          },
+          {
+            "name": "burner",
+            "description": null,
+            "ty": "Key"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "MetadataUpdated",
+        "description": null,
+        "members": [
+          {
+            "name": "token_id",
+            "description": null,
+            "ty": "String"
+          },
+          {
+            "name": "data",
+            "description": null,
+            "ty": "String"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "Mint",
+        "description": null,
+        "members": [
+          {
+            "name": "recipient",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "token_id",
+            "description": null,
+            "ty": "String"
+          },
+          {
+            "name": "data",
+            "description": null,
+            "ty": "String"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "RevokedForAll",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "operator",
+            "description": null,
+            "ty": "Key"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "Transfer",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "spender",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "recipient",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "token_id",
+            "description": null,
+            "ty": "String"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "VariablesSet",
+        "description": null,
+        "members": []
+      }
+    },
+    {
+      "enum": {
+        "name": "BurnMode",
+        "description": null,
+        "variants": [
+          {
+            "name": "Burnable",
+            "description": null,
+            "discriminant": 0,
+            "ty": "Unit"
+          },
+          {
+            "name": "NonBurnable",
+            "description": null,
+            "discriminant": 1,
+            "ty": "Unit"
+          }
+        ]
+      }
+    },
+    {
+      "enum": {
+        "name": "EventsMode",
+        "description": null,
+        "variants": [
+          {
+            "name": "NoEvents",
+            "description": null,
+            "discriminant": 0,
+            "ty": "Unit"
+          },
+          {
+            "name": "CES",
+            "description": null,
+            "discriminant": 2,
+            "ty": "Unit"
+          }
+        ]
+      }
+    },
+    {
+      "enum": {
+        "name": "MetadataMutability",
+        "description": null,
+        "variants": [
+          {
+            "name": "Immutable",
+            "description": null,
+            "discriminant": 0,
+            "ty": "Unit"
+          },
+          {
+            "name": "Mutable",
+            "description": null,
+            "discriminant": 1,
+            "ty": "Unit"
+          }
+        ]
+      }
+    },
+    {
+      "enum": {
+        "name": "MintingMode",
+        "description": null,
+        "variants": [
+          {
+            "name": "Installer",
+            "description": null,
+            "discriminant": 0,
+            "ty": "Unit"
+          },
+          {
+            "name": "Public",
+            "description": null,
+            "discriminant": 1,
+            "ty": "Unit"
+          },
+          {
+            "name": "Acl",
+            "description": null,
+            "discriminant": 2,
+            "ty": "Unit"
+          }
+        ]
+      }
+    },
+    {
+      "enum": {
+        "name": "NFTHolderMode",
+        "description": null,
+        "variants": [
+          {
+            "name": "Accounts",
+            "description": null,
+            "discriminant": 0,
+            "ty": "Unit"
+          },
+          {
+            "name": "Contracts",
+            "description": null,
+            "discriminant": 1,
+            "ty": "Unit"
+          },
+          {
+            "name": "Mixed",
+            "description": null,
+            "discriminant": 2,
+            "ty": "Unit"
+          }
+        ]
+      }
+    },
+    {
+      "enum": {
+        "name": "NFTIdentifierMode",
+        "description": null,
+        "variants": [
+          {
+            "name": "Ordinal",
+            "description": null,
+            "discriminant": 0,
+            "ty": "Unit"
+          },
+          {
+            "name": "Hash",
+            "description": null,
+            "discriminant": 1,
+            "ty": "Unit"
+          }
+        ]
+      }
+    },
+    {
+      "enum": {
+        "name": "NFTKind",
+        "description": null,
+        "variants": [
+          {
+            "name": "Physical",
+            "description": null,
+            "discriminant": 0,
+            "ty": "Unit"
+          },
+          {
+            "name": "Digital",
+            "description": null,
+            "discriminant": 1,
+            "ty": "Unit"
+          },
+          {
+            "name": "Virtual",
+            "description": null,
+            "discriminant": 2,
+            "ty": "Unit"
+          }
+        ]
+      }
+    },
+    {
+      "enum": {
+        "name": "NFTMetadataKind",
+        "description": null,
+        "variants": [
+          {
+            "name": "CEP78",
+            "description": null,
+            "discriminant": 0,
+            "ty": "Unit"
+          },
+          {
+            "name": "NFT721",
+            "description": null,
+            "discriminant": 1,
+            "ty": "Unit"
+          },
+          {
+            "name": "Raw",
+            "description": null,
+            "discriminant": 2,
+            "ty": "Unit"
+          },
+          {
+            "name": "CustomValidated",
+            "description": null,
+            "discriminant": 3,
+            "ty": "Unit"
+          }
+        ]
+      }
+    },
+    {
+      "enum": {
+        "name": "OwnerReverseLookupMode",
+        "description": null,
+        "variants": [
+          {
+            "name": "NoLookUp",
+            "description": null,
+            "discriminant": 0,
+            "ty": "Unit"
+          },
+          {
+            "name": "Complete",
+            "description": null,
+            "discriminant": 1,
+            "ty": "Unit"
+          },
+          {
+            "name": "TransfersOnly",
+            "description": null,
+            "discriminant": 2,
+            "ty": "Unit"
+          }
+        ]
+      }
+    },
+    {
+      "enum": {
+        "name": "OwnershipMode",
+        "description": null,
+        "variants": [
+          {
+            "name": "Minter",
+            "description": null,
+            "discriminant": 0,
+            "ty": "Unit"
+          },
+          {
+            "name": "Assigned",
+            "description": null,
+            "discriminant": 1,
+            "ty": "Unit"
+          },
+          {
+            "name": "Transferable",
+            "description": null,
+            "discriminant": 2,
+            "ty": "Unit"
+          }
+        ]
+      }
+    },
+    {
+      "enum": {
+        "name": "WhitelistMode",
+        "description": null,
+        "variants": [
+          {
+            "name": "Unlocked",
+            "description": null,
+            "discriminant": 0,
+            "ty": "Unit"
+          },
+          {
+            "name": "Locked",
+            "description": null,
+            "discriminant": 1,
+            "ty": "Unit"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [],
+  "entry_points": [
+    {
+      "name": "set_variables",
+      "description": "Exposes all variables that can be changed by managing account post",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "allow_minting",
+          "description": null,
+          "ty": "Bool",
+          "optional": true
+        },
+        {
+          "name": "acl_whitelist",
+          "description": null,
+          "ty": {
+            "List": "Key"
+          },
+          "optional": true
+        },
+        {
+          "name": "operator_burn_mode",
+          "description": null,
+          "ty": "Bool",
+          "optional": true
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "mint",
+      "description": "Mints a new token with provided metadata.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "token_owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "token_meta_data",
+          "description": null,
+          "ty": "String",
+          "optional": false
+        },
+        {
+          "name": "token_hash",
+          "description": null,
+          "ty": "String",
+          "optional": true
+        }
+      ],
+      "return_ty": {
+        "Tuple3": [
+          "String",
+          "Key",
+          "String"
+        ]
+      },
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "burn",
+      "description": "Burns the token with provided `token_id` argument, after which it is no",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U64",
+          "optional": true
+        },
+        {
+          "name": "token_hash",
+          "description": null,
+          "ty": "String",
+          "optional": true
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "transfer",
+      "description": "Transfers ownership of the token from one account to another.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U64",
+          "optional": true
+        },
+        {
+          "name": "token_hash",
+          "description": null,
+          "ty": "String",
+          "optional": true
+        },
+        {
+          "name": "source_key",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "target_key",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": {
+        "Tuple2": [
+          "String",
+          "Key"
+        ]
+      },
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "approve",
+      "description": "Approves another token holder (an approved account) to transfer tokens. It",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "spender",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U64",
+          "optional": true
+        },
+        {
+          "name": "token_hash",
+          "description": null,
+          "ty": "String",
+          "optional": true
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "revoke",
+      "description": "Revokes an approved account to transfer tokens. It reverts",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U64",
+          "optional": true
+        },
+        {
+          "name": "token_hash",
+          "description": null,
+          "ty": "String",
+          "optional": true
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "set_approval_for_all",
+      "description": "Approves all tokens owned by the caller and future to another token holder",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "approve_all",
+          "description": null,
+          "ty": "Bool",
+          "optional": false
+        },
+        {
+          "name": "operator",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "is_approved_for_all",
+      "description": "Returns if an account is operator for a token owner",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "token_owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "operator",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "Bool",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "owner_of",
+      "description": "Returns the token owner given a token_id. It reverts if token_id",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U64",
+          "optional": true
+        },
+        {
+          "name": "token_hash",
+          "description": null,
+          "ty": "String",
+          "optional": true
+        }
+      ],
+      "return_ty": "Key",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_approved",
+      "description": "Returns the approved account (if any) associated with the provided token_id",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U64",
+          "optional": true
+        },
+        {
+          "name": "token_hash",
+          "description": null,
+          "ty": "String",
+          "optional": true
+        }
+      ],
+      "return_ty": {
+        "Option": "Key"
+      },
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "metadata",
+      "description": "Returns the metadata associated with the provided token_id",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U64",
+          "optional": true
+        },
+        {
+          "name": "token_hash",
+          "description": null,
+          "ty": "String",
+          "optional": true
+        }
+      ],
+      "return_ty": "String",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "set_token_metadata",
+      "description": "Updates the metadata if valid.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U64",
+          "optional": true
+        },
+        {
+          "name": "token_hash",
+          "description": null,
+          "ty": "String",
+          "optional": true
+        },
+        {
+          "name": "token_meta_data",
+          "description": null,
+          "ty": "String",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "balance_of",
+      "description": "Returns number of owned tokens associated with the provided token holder",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "token_owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "U64",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "register_owner",
+      "description": "This entrypoint allows users to register with a give CEP-78 instance,",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "token_owner",
+          "description": null,
+          "ty": "Key",
+          "optional": true
+        }
+      ],
+      "return_ty": "String",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "is_whitelisted",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "address",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "Bool",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_whitelist_mode",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "WhitelistMode",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_collection_name",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "String",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_collection_symbol",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "String",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "is_minting_allowed",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "Bool",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "is_operator_burn_mode",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "Bool",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_total_supply",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U64",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_minting_mode",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "MintingMode",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_holder_mode",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "NFTHolderMode",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_number_of_minted_tokens",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U64",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_metadata_by_kind",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "kind",
+          "description": null,
+          "ty": "NFTMetadataKind",
+          "optional": false
+        },
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U64",
+          "optional": true
+        },
+        {
+          "name": "token_hash",
+          "description": null,
+          "ty": "String",
+          "optional": true
+        }
+      ],
+      "return_ty": "String",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_token_issuer",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U64",
+          "optional": true
+        },
+        {
+          "name": "token_hash",
+          "description": null,
+          "ty": "String",
+          "optional": true
+        }
+      ],
+      "return_ty": "Key",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "token_burned",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U64",
+          "optional": true
+        },
+        {
+          "name": "token_hash",
+          "description": null,
+          "ty": "String",
+          "optional": true
+        }
+      ],
+      "return_ty": "Bool",
+      "is_contract_context": true,
+      "access": "public"
+    }
+  ],
+  "events": [
+    {
+      "name": "Approval",
+      "ty": "Approval"
+    },
+    {
+      "name": "ApprovalForAll",
+      "ty": "ApprovalForAll"
+    },
+    {
+      "name": "ApprovalRevoked",
+      "ty": "ApprovalRevoked"
+    },
+    {
+      "name": "Burn",
+      "ty": "Burn"
+    },
+    {
+      "name": "MetadataUpdated",
+      "ty": "MetadataUpdated"
+    },
+    {
+      "name": "Mint",
+      "ty": "Mint"
+    },
+    {
+      "name": "RevokedForAll",
+      "ty": "RevokedForAll"
+    },
+    {
+      "name": "Transfer",
+      "ty": "Transfer"
+    },
+    {
+      "name": "VariablesSet",
+      "ty": "VariablesSet"
+    }
+  ],
+  "call": {
+    "wasm_file_name": "Cep78.wasm",
+    "description": "Initializes the module.",
+    "arguments": [
+      {
+        "name": "odra_cfg_package_hash_key_name",
+        "description": "The arg name for the package hash key name.",
+        "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_allow_key_override",
+        "description": "The arg name for the allow key override.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_is_upgradable",
+        "description": "The arg name for the contract upgradeability setting.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "collection_name",
+        "description": null,
+        "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "collection_symbol",
+        "description": null,
+        "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "total_token_supply",
+        "description": null,
+        "ty": "U64",
+        "optional": false
+      },
+      {
+        "name": "ownership_mode",
+        "description": null,
+        "ty": "OwnershipMode",
+        "optional": false
+      },
+      {
+        "name": "nft_kind",
+        "description": null,
+        "ty": "NFTKind",
+        "optional": false
+      },
+      {
+        "name": "identifier_mode",
+        "description": null,
+        "ty": "NFTIdentifierMode",
+        "optional": false
+      },
+      {
+        "name": "nft_metadata_kind",
+        "description": null,
+        "ty": "NFTMetadataKind",
+        "optional": false
+      },
+      {
+        "name": "metadata_mutability",
+        "description": null,
+        "ty": "MetadataMutability",
+        "optional": false
+      },
+      {
+        "name": "receipt_name",
+        "description": null,
+        "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "allow_minting",
+        "description": null,
+        "ty": "Bool",
+        "optional": true
+      },
+      {
+        "name": "minting_mode",
+        "description": null,
+        "ty": "MintingMode",
+        "optional": true
+      },
+      {
+        "name": "holder_mode",
+        "description": null,
+        "ty": "NFTHolderMode",
+        "optional": true
+      },
+      {
+        "name": "whitelist_mode",
+        "description": null,
+        "ty": "WhitelistMode",
+        "optional": true
+      },
+      {
+        "name": "acl_whitelist",
+        "description": null,
+        "ty": {
+          "List": "Key"
+        },
+        "optional": true
+      },
+      {
+        "name": "json_schema",
+        "description": null,
+        "ty": "String",
+        "optional": true
+      },
+      {
+        "name": "burn_mode",
+        "description": null,
+        "ty": "BurnMode",
+        "optional": true
+      },
+      {
+        "name": "operator_burn_mode",
+        "description": null,
+        "ty": "Bool",
+        "optional": true
+      },
+      {
+        "name": "owner_reverse_lookup_mode",
+        "description": null,
+        "ty": "OwnerReverseLookupMode",
+        "optional": true
+      },
+      {
+        "name": "events_mode",
+        "description": null,
+        "ty": "EventsMode",
+        "optional": true
+      },
+      {
+        "name": "transfer_filter_contract_contract",
+        "description": null,
+        "ty": "Key",
+        "optional": true
+      },
+      {
+        "name": "additional_required_metadata",
+        "description": null,
+        "ty": {
+          "List": "NFTMetadataKind"
+        },
+        "optional": true
+      },
+      {
+        "name": "optional_metadata",
+        "description": null,
+        "ty": {
+          "List": "NFTMetadataKind"
+        },
+        "optional": true
+      }
+    ]
+  }
+}

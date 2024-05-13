@@ -1,6 +1,6 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.77.0-nightly (5bd5d214e 2024-01-25)",
+  "toolchain": "rustc 1.78.0-nightly (98aa3624b 2024-02-08)",
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,7 +9,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": null,
   "contract_name": "Erc20",
-  "contract_version": "0.8.1",
+  "contract_version": "1.0.0-rc.1",
   "types": [
     {
       "struct": {

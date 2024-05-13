@@ -1,50 +1,47 @@
 {
   "casper_contract_schema_version": 1,
   "toolchain": "rustc 1.78.0-nightly (98aa3624b 2024-02-08)",
-  "authors": [],
-  "repository": null,
+  "authors": [
+    "Jakub Płaskonka <kuba@odra.dev>",
+    "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
+    "Maciej Zieliński <maciej@odra.dev>"
+  ],
+  "repository": "https://github.com/odradev/odra",
   "homepage": null,
-  "contract_name": "SignatureVerifier",
+  "contract_name": "MockTransferFilterContract",
   "contract_version": "1.0.0-rc.1",
   "types": [],
   "errors": [],
   "entry_points": [
     {
-      "name": "verify_signature",
-      "description": "Verifies if the message was signed by the owner of the public key.",
-      "is_mutable": false,
+      "name": "set_return_value",
+      "description": "",
+      "is_mutable": true,
       "arguments": [
         {
-          "name": "message",
+          "name": "return_value",
           "description": null,
-          "ty": {
-            "List": "U8"
-          },
-          "optional": false
-        },
-        {
-          "name": "signature",
-          "description": null,
-          "ty": {
-            "List": "U8"
-          },
-          "optional": false
-        },
-        {
-          "name": "public_key",
-          "description": null,
-          "ty": "PublicKey",
+          "ty": "U8",
           "optional": false
         }
       ],
-      "return_ty": "Bool",
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "can_transfer",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U8",
       "is_contract_context": true,
       "access": "public"
     }
   ],
   "events": [],
   "call": {
-    "wasm_file_name": "SignatureVerifier.wasm",
+    "wasm_file_name": "MockTransferFilterContract.wasm",
     "description": null,
     "arguments": [
       {

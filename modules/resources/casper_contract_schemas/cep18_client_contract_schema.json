@@ -1,51 +1,43 @@
 {
   "casper_contract_schema_version": 1,
   "toolchain": "rustc 1.78.0-nightly (98aa3624b 2024-02-08)",
-  "authors": [],
-  "repository": null,
+  "authors": [
+    "Jakub Płaskonka <kuba@odra.dev>",
+    "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
+    "Maciej Zieliński <maciej@odra.dev>"
+  ],
+  "repository": "https://github.com/odradev/odra",
   "homepage": null,
-  "contract_name": "TokenManager",
+  "contract_name": "Cep18ClientContract",
   "contract_version": "1.0.0-rc.1",
   "types": [],
   "errors": [],
   "entry_points": [
     {
-      "name": "add_token",
-      "description": "Adds a new token to the contract.",
-      "is_mutable": true,
+      "name": "check_total_supply",
+      "description": "Calls total_supply method of the token contract at the given address.",
+      "is_mutable": false,
       "arguments": [
         {
-          "name": "name",
+          "name": "address",
           "description": null,
-          "ty": "String",
-          "optional": false
-        },
-        {
-          "name": "decimals",
-          "description": null,
-          "ty": "U8",
-          "optional": false
-        },
-        {
-          "name": "symbol",
-          "description": null,
-          "ty": "String",
+          "ty": "Key",
           "optional": false
         }
       ],
-      "return_ty": "Unit",
+      "return_ty": "U256",
       "is_contract_context": true,
       "access": "public"
     },
     {
-      "name": "balance_of",
-      "description": "Returns the balance of the given account for the given token.",
+      "name": "check_balance_of",
+      "description": "Calls balance_of method of the token contract at the given address.",
       "is_mutable": false,
       "arguments": [
         {
-          "name": "token_name",
+          "name": "address",
           "description": null,
-          "ty": "String",
+          "ty": "Key",
           "optional": false
         },
         {
@@ -60,18 +52,46 @@
       "access": "public"
     },
     {
-      "name": "mint",
-      "description": "Mints new tokens and assigns them to the given address.",
-      "is_mutable": true,
+      "name": "check_allowance_of",
+      "description": "Calls allowance method of the token contract at the given address.",
+      "is_mutable": false,
       "arguments": [
         {
-          "name": "token_name",
+          "name": "address",
           "description": null,
-          "ty": "String",
+          "ty": "Key",
           "optional": false
         },
         {
-          "name": "account",
+          "name": "owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "spender",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "U256",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "transfer_as_stored_contract",
+      "description": "Calls transfer method of the token contract at the given address.",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "address",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "recipient",
           "description": null,
           "ty": "Key",
           "optional": false
@@ -88,45 +108,60 @@
       "access": "public"
     },
     {
-      "name": "tokens_count",
-      "description": "Returns the number of tokens managed by the contract.",
-      "is_mutable": false,
-      "arguments": [],
-      "return_ty": "U32",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "get_owner",
-      "description": "Returns the owner of the given token.",
+      "name": "transfer_from_as_stored_contract",
+      "description": "Calls transfer_from method of the token contract at the given address.",
       "is_mutable": false,
       "arguments": [
         {
-          "name": "token_name",
+          "name": "address",
           "description": null,
-          "ty": "String",
-          "optional": false
-        }
-      ],
-      "return_ty": "Key",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "set_owner",
-      "description": "Transfers the ownership of the given token to the new owner.",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "token_name",
-          "description": null,
-          "ty": "String",
+          "ty": "Key",
           "optional": false
         },
         {
-          "name": "new_owner",
+          "name": "owner",
           "description": null,
           "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "recipient",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "approve_as_stored_contract",
+      "description": "Calls approve method of the token contract at the given address.",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "address",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "spender",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
           "optional": false
         }
       ],
@@ -137,7 +172,7 @@
   ],
   "events": [],
   "call": {
-    "wasm_file_name": "TokenManager.wasm",
+    "wasm_file_name": "Cep18ClientContract.wasm",
     "description": null,
     "arguments": [
       {

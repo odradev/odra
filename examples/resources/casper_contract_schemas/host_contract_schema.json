@@ -1,11 +1,11 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.77.0-nightly (5bd5d214e 2024-01-25)",
+  "toolchain": "rustc 1.78.0-nightly (98aa3624b 2024-02-08)",
   "authors": [],
   "repository": null,
   "homepage": null,
   "contract_name": "HostContract",
-  "contract_version": "0.8.1",
+  "contract_version": "1.0.0-rc.1",
   "types": [],
   "errors": [],
   "entry_points": [
