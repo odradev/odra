@@ -317,7 +317,13 @@ impl Cep78 {
             self.revert(CEP78Error::InvalidTokenOwner)
         };
 
-        self.burn_token_unchecked(token_id, caller);
+        // NOTE: Bellow code is almost the same as in `burn_token_unchecked`
+        // function, but it is copied here to avoid checking owner twice.
+        self.ensure_burnable();
+        self.ensure_not_burned(&token_id);
+        self.data.mark_burnt(&token_id);
+        self.data.decrement_counter(&token_owner);
+        self.emit_ces_event(Burn::new(token_owner, token_id, caller));
     }
 
     /// Transfers ownership of the token from one account to another.
