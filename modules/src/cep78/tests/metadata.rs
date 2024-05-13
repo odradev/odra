@@ -265,7 +265,7 @@ fn should_get_metadata_using_token_id() {
         .minting_mode(MintingMode::Acl)
         .acl_white_list(contract_whitelist)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let contract = Cep78HostRef::deploy(&env, args);
     minting_contract.set_address(contract.address());
     let token_id = 0u64;
 
@@ -294,7 +294,7 @@ fn should_get_metadata_using_token_metadata_hash() {
         .minting_mode(MintingMode::Acl)
         .acl_white_list(contract_whitelist)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let contract = Cep78HostRef::deploy(&env, args);
     minting_contract.set_address(contract.address());
 
     assert!(
@@ -325,7 +325,7 @@ fn should_revert_minting_token_metadata_hash_twice() {
         .minting_mode(MintingMode::Acl)
         .acl_white_list(contract_whitelist)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let contract = Cep78HostRef::deploy(&env, args);
     minting_contract.set_address(contract.address());
     assert!(
         contract.is_whitelisted(minting_contract.address()),
@@ -359,7 +359,7 @@ fn should_get_metadata_using_custom_token_hash() {
         .minting_mode(MintingMode::Acl)
         .acl_white_list(contract_whitelist)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let contract = Cep78HostRef::deploy(&env, args);
     minting_contract.set_address(contract.address());
 
     assert!(
@@ -390,7 +390,7 @@ fn should_revert_minting_custom_token_hash_identifier_twice() {
         .minting_mode(MintingMode::Acl)
         .acl_white_list(contract_whitelist)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let contract = Cep78HostRef::deploy(&env, args);
     minting_contract.set_address(contract.address());
 
     assert!(

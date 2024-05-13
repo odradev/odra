@@ -209,7 +209,6 @@ mod test {
                         .collect()
                 }
 
-                #[cfg(target_arch = "wasm32")]
                 fn event_schemas() -> odra::prelude::BTreeMap<odra::prelude::string::String, odra::casper_event_standard::Schema> {
                     let result = odra::prelude::BTreeMap::from_iter(
                         odra::prelude::vec![

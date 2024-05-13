@@ -744,24 +744,24 @@ impl Cep78 {
     }
 
     // Update metadata without ownership check.
-    pub fn set_token_metadata_unchecked(
-        &mut self,
-        token_id: &String,
-        token_meta_data: String
-    ) {
-        self.metadata.ensure_mutability(CEP78Error::ForbiddenMetadataUpdate);
+    pub fn set_token_metadata_unchecked(&mut self, token_id: &String, token_meta_data: String) {
+        self.metadata
+            .ensure_mutability(CEP78Error::ForbiddenMetadataUpdate);
         self.metadata.update_or_revert(&token_meta_data, token_id);
-        self.emit_ces_event(MetadataUpdated::new(String::from(token_id), token_meta_data));
+        self.emit_ces_event(MetadataUpdated::new(
+            String::from(token_id),
+            token_meta_data
+        ));
     }
 
     // Burn token without ownership check.
     pub fn burn_token_unchecked(&mut self, token_id: String, burner: Address) {
-       self.ensure_burnable();
-       let token_owner = self.owner_of_by_id(&token_id);
-       self.ensure_not_burned(&token_id);
-       self.data.mark_burnt(&token_id);
-       self.data.decrement_counter(&token_owner);
-       self.emit_ces_event(Burn::new(token_owner, token_id, burner));
+        self.ensure_burnable();
+        let token_owner = self.owner_of_by_id(&token_id);
+        self.ensure_not_burned(&token_id);
+        self.data.mark_burnt(&token_id);
+        self.data.decrement_counter(&token_owner);
+        self.emit_ces_event(Burn::new(token_owner, token_id, burner));
     }
 }
 
