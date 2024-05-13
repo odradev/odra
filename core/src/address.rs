@@ -7,13 +7,12 @@ use casper_types::{
     bytesrepr::{self, FromBytes, ToBytes},
     CLType, CLTyped, ContractPackageHash, Key, PublicKey
 };
+use serde::{Deserialize, Serialize};
 
 /// An enum representing an [`AccountHash`] or a [`ContractPackageHash`].
-#[cfg_attr(
-    not(target_arch = "wasm32"),
-    derive(serde::Serialize, serde::Deserialize)
-)]
-#[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, Debug)]
+
+#[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, Debug, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum Address {
     /// Represents an account hash.
     Account(AccountHash),
