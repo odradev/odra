@@ -8,53 +8,14 @@
   ],
   "repository": "https://github.com/odradev/odra",
   "homepage": null,
-  "contract_name": "Erc721Receiver",
+  "contract_name": "MockDummyContract",
   "contract_version": "1.0.0-rc.1",
   "types": [],
   "errors": [],
-  "entry_points": [
-    {
-      "name": "on_erc721_received",
-      "description": "",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "operator",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "from",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "token_id",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        },
-        {
-          "name": "data",
-          "description": null,
-          "ty": {
-            "Option": {
-              "List": "U8"
-            }
-          },
-          "optional": false
-        }
-      ],
-      "return_ty": "Bool",
-      "is_contract_context": true,
-      "access": "public"
-    }
-  ],
+  "entry_points": [],
   "events": [],
   "call": {
-    "wasm_file_name": "Erc721Receiver.wasm",
+    "wasm_file_name": "MockDummyContract.wasm",
     "description": null,
     "arguments": [
       {

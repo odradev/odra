@@ -6,12 +6,10 @@ use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
     CLType, Key, PublicKey, URef, U128, U256, U512
 };
-#[cfg(not(target_arch = "wasm32"))]
 use serde::{Deserialize, Serialize};
 
 /// Contract's entrypoint.
-#[derive(Debug, Clone)]
-#[cfg_attr(not(target_arch = "wasm32"), derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Entrypoint {
     /// The entrypoint's ident.
     pub name: String,
@@ -28,8 +26,7 @@ pub struct Entrypoint {
 }
 
 /// Defines an argument passed to an entrypoint.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(not(target_arch = "wasm32"), derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Argument {
     /// The argument's ident.
     pub name: String,
@@ -44,8 +41,7 @@ pub struct Argument {
 }
 
 /// Defines an event.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(not(target_arch = "wasm32"), derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Event {
     /// The event's ident.
     pub name: String,
@@ -61,8 +57,7 @@ impl Event {
 }
 
 /// Defines an entrypoint type.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(not(target_arch = "wasm32"), derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum EntrypointType {
     /// A special entrypoint that can be called just once on the contract initialization.
     Constructor,
@@ -71,8 +66,7 @@ pub enum EntrypointType {
 }
 
 /// Defines an entrypoint attribute.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(not(target_arch = "wasm32"), derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum EntrypointAttribute {
     /// A non-reentrant entrypoint.
     NonReentrant,
@@ -99,7 +93,6 @@ pub trait HasEvents {
     fn events() -> Vec<Event>;
 
     /// Returns a map of event schemas used by the contract.
-    #[cfg(target_arch = "wasm32")]
     fn event_schemas() -> crate::prelude::BTreeMap<String, casper_event_standard::Schema> {
         crate::prelude::BTreeMap::new()
     }
@@ -109,8 +102,7 @@ pub trait HasEvents {
 ///
 /// A contract blueprint is a set of events and entrypoints defined in a smart contract.
 /// It is used to generate the contract's ABI.
-#[derive(Debug, Clone)]
-#[cfg_attr(not(target_arch = "wasm32"), derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContractBlueprint {
     /// The name of the contract.
     pub name: String,
@@ -139,7 +131,6 @@ impl ContractBlueprint {
         }
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     /// Converts the `ContractBlueprint` instance to a JSON string representation.
     ///
     /// # Returns

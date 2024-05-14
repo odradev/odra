@@ -12,8 +12,6 @@ repository = { workspace = true }
 casper-types = { workspace = true }
 casper-event-standard = { workspace = true }
 num-traits = { workspace = true }
-
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 serde = { workspace = true, default-features = false, features = ["alloc", "derive"] }
 serde_json = { workspace = true, default-features = false, features = ["alloc"] }
 

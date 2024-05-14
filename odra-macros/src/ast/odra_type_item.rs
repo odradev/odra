@@ -489,7 +489,6 @@ mod tests {
                     odra::prelude::vec::Vec::new()
                 }
 
-                #[cfg(target_arch = "wasm32")]
                 fn event_schemas() -> odra::prelude::BTreeMap<odra::prelude::string::String, odra::casper_event_standard::Schema> {
                     odra::prelude::BTreeMap::new()
                 }
@@ -544,7 +543,6 @@ mod tests {
                     odra::prelude::vec::Vec::new()
                 }
 
-                #[cfg(target_arch = "wasm32")]
                 fn event_schemas() -> odra::prelude::BTreeMap<odra::prelude::string::String, odra::casper_event_standard::Schema> {
                     odra::prelude::BTreeMap::new()
                 }
@@ -639,7 +637,6 @@ mod tests {
                     odra::prelude::vec::Vec::new()
                 }
 
-                #[cfg(target_arch = "wasm32")]
                 fn event_schemas() -> odra::prelude::BTreeMap<odra::prelude::string::String, odra::casper_event_standard::Schema> {
                     odra::prelude::BTreeMap::new()
                 }
