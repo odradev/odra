@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 /// An enum representing an [`AccountHash`] or a [`ContractPackageHash`].
 #[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, Debug, Serialize, Deserialize)]
-// #[serde(untagged)]
+#[serde(untagged)]
 pub enum Address {
     /// Represents an account hash.
     Account(AccountHash),
