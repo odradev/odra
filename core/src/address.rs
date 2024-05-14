@@ -10,8 +10,7 @@ use casper_types::{
 use serde::{Deserialize, Serialize};
 
 /// An enum representing an [`AccountHash`] or a [`ContractPackageHash`].
-#[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, Debug, Serialize, Deserialize)]
-#[serde(untagged)]
+#[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum Address {
     /// Represents an account hash.
     Account(AccountHash),
@@ -167,6 +166,20 @@ impl ToString for Address {
     }
 }
 
+impl Serialize for Address {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let s = self.to_string();
+        serializer.serialize_str(&s)
+    }
+}
+
+impl<'de> Deserialize<'de> for Address {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(deserializer)?;
+        Address::from_str(&s).map_err(|_| serde::de::Error::custom("Address deserialization error"))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use casper_types::EraId;
@@ -262,5 +275,38 @@ mod tests {
             Address::try_from(key).unwrap_err(),
             AddressError::AddressCreationError
         );
+    }
+
+    #[test]
+    fn test_address_serde_roundtrip() {
+        // Test Account serialization.
+        let address_json = format!("\"{}\"", ACCOUNT_HASH);
+        let address = Address::from_str(ACCOUNT_HASH).unwrap();
+        let serialized = serde_json::to_string(&address).unwrap();
+        assert_eq!(serialized, address_json);
+
+        // Test Account deserialization.
+        let deserialized: Address = serde_json::from_str(&address_json).unwrap();
+        assert_eq!(deserialized, address);
+
+        // Test Account serialization roundtrip.
+        let serialized = serde_json::to_string(&address).unwrap();
+        let deserialized: Address = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized, address);
+
+        // Test Contract serialization.
+        let address_json = format!("\"{}\"", CONTRACT_HASH);
+        let address = Address::from_str(CONTRACT_HASH).unwrap();
+        let serialized = serde_json::to_string(&address).unwrap();
+        assert_eq!(serialized, address_json);
+
+        // Test Contract deserialization.
+        let deserialized: Address = serde_json::from_str(&address_json).unwrap();
+        assert_eq!(deserialized, address);
+
+        // Test Contract serialization roundtrip.
+        let serialized = serde_json::to_string(&address).unwrap();
+        let deserialized: Address = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized, address);
     }
 }
