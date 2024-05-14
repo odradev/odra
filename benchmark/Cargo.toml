@@ -35,6 +35,9 @@ test = false
 [profile.release]
 codegen-units = 1
 lto = true
+panic = "abort"
+opt-level = "z"
+strip = true
 
 [profile.dev.package."*"]
 opt-level = 3
