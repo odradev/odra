@@ -424,7 +424,7 @@ mod ref_item_tests {
                         .call_contract(
                             self.address,
                             odra::CallDef::new(
-                                String::from("init"),
+                                odra::prelude::string::String::from("init"),
                                 true,
                                 {
                                     let mut named_args = odra::casper_types::RuntimeArgs::new();
@@ -445,7 +445,7 @@ mod ref_item_tests {
                     self.env.call_contract(
                         self.address,
                         odra::CallDef::new(
-                            String::from("total_supply"),
+                            odra::prelude::string::String::from("total_supply"),
                             false,
                             {
                                 let mut named_args = odra::casper_types::RuntimeArgs::new();
@@ -464,7 +464,7 @@ mod ref_item_tests {
                         .call_contract(
                             self.address,
                             odra::CallDef::new(
-                                    String::from("pay_to_mint"),
+                                    odra::prelude::string::String::from("pay_to_mint"),
                                     true,
                                     {
                                         let mut named_args = odra::casper_types::RuntimeArgs::new();
@@ -489,7 +489,7 @@ mod ref_item_tests {
                         .call_contract(
                             self.address,
                             odra::CallDef::new(
-                                    String::from("approve"),
+                                    odra::prelude::string::String::from("approve"),
                                     true,
                                     {
                                         let mut named_args = odra::casper_types::RuntimeArgs::new();
@@ -511,7 +511,7 @@ mod ref_item_tests {
                     self.env.call_contract(
                         self.address,
                         odra::CallDef::new(
-                            String::from("airdrop"),
+                            odra::prelude::string::String::from("airdrop"),
                             false,
                             {
                                 let mut named_args = odra::casper_types::RuntimeArgs::new();
@@ -595,7 +595,7 @@ mod ref_item_tests {
                     self.env.call_contract(
                         self.address,
                         odra::CallDef::new(
-                            String::from("total_supply"),
+                            odra::prelude::string::String::from("total_supply"),
                             false,
                             {
                                 let mut named_args = odra::casper_types::RuntimeArgs::new();
@@ -615,7 +615,7 @@ mod ref_item_tests {
                         .call_contract(
                             self.address,
                             odra::CallDef::new(
-                                    String::from("pay_to_mint"),
+                                    odra::prelude::string::String::from("pay_to_mint"),
                                     true,
                                     {
                                         let mut named_args = odra::casper_types::RuntimeArgs::new();
@@ -716,7 +716,7 @@ mod ref_item_tests {
                     self.env.call_contract(
                         self.address,
                         odra::CallDef::new(
-                            String::from("total_supply"),
+                            odra::prelude::string::String::from("total_supply"),
                             false,
                             {
                                 let mut named_args = odra::casper_types::RuntimeArgs::new();
@@ -736,7 +736,7 @@ mod ref_item_tests {
                         .call_contract(
                             self.address,
                             odra::CallDef::new(
-                                    String::from("get_owner"),
+                                    odra::prelude::string::String::from("get_owner"),
                                     false,
                                     {
                                         let mut named_args = odra::casper_types::RuntimeArgs::new();
@@ -757,7 +757,7 @@ mod ref_item_tests {
                         .call_contract(
                             self.address,
                             odra::CallDef::new(
-                                    String::from("set_owner"),
+                                    odra::prelude::string::String::from("set_owner"),
                                     true,
                                     {
                                         let mut named_args = odra::casper_types::RuntimeArgs::new();
@@ -779,7 +779,7 @@ mod ref_item_tests {
                         .call_contract(
                             self.address,
                             odra::CallDef::new(
-                                    String::from("name"),
+                                    odra::prelude::string::String::from("name"),
                                     false,
                                     {
                                         let mut named_args = odra::casper_types::RuntimeArgs::new();
@@ -800,7 +800,7 @@ mod ref_item_tests {
                         .call_contract(
                             self.address,
                             odra::CallDef::new(
-                                    String::from("symbol"),
+                                    odra::prelude::string::String::from("symbol"),
                                     false,
                                     {
                                         let mut named_args = odra::casper_types::RuntimeArgs::new();
