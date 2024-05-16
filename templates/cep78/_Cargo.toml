@@ -1,0 +1,31 @@
+[package]
+name = "{{project-name}}"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+#odra_dependency
+#odra_modules_dependency
+
+[dev-dependencies]
+#odra_test_dependency
+
+[build-dependencies]
+#odra_build_dependency
+
+[[bin]]
+name = "{{project-name}}_build_contract"
+path = "bin/build_contract.rs"
+test = false
+
+[[bin]]
+name = "{{project-name}}_build_schema"
+path = "bin/build_schema.rs"
+test = false
+
+[profile.release]
+codegen-units = 1
+lto = true
+
+[profile.dev.package."*"]
+opt-level = 3

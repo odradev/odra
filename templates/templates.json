@@ -1,0 +1,44 @@
+[
+  {
+    "name":"flipper",
+    "description":"A simple flipper contract template",
+    "path":"templates/flipper.rs.template",
+    "template_type":"Contract"
+  },
+  {
+    "name":"full",
+    "description":"Project template with a sample contract",
+    "path":"templates/full",
+    "template_type":"Project"
+  },
+  {
+    "name":"blank",
+    "description":"Empty project template",
+    "path":"templates/blank",
+    "template_type":"Project"
+  },
+  {
+    "name":"workspace",
+    "description":"Project template with configured workspace and two crates with contracts",
+    "path":"templates/workspace",
+    "template_type":"Project"
+  },
+  {
+    "name":"cep18",
+    "description":"Project template with a sample CEP-18 contract",
+    "path":"templates/cep18",
+    "template_type":"Project"
+  },
+  {
+    "name":"cep78",
+    "description":"Project template with a sample CEP-78 contract",
+    "path":"templates/cep78",
+    "template_type":"Project"
+  },
+  {
+    "name":"module_register",
+    "description":"Cargo Odra's internal template for module registration",
+    "path":"templates/module_register.rs.template",
+    "template_type":"Internal"
+  }
+]
