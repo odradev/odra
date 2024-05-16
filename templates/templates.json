@@ -24,6 +24,18 @@
     "template_type":"Project"
   },
   {
+    "name":"cep18",
+    "description":"Project template with a sample CEP-18 contract",
+    "path":"templates/cep18",
+    "template_type":"Project"
+  },
+  {
+    "name":"cep78",
+    "description":"Project template with a sample CEP-78 contract",
+    "path":"templates/cep78",
+    "template_type":"Project"
+  },
+  {
     "name":"module_register",
     "description":"Cargo Odra's internal template for module registration",
     "path":"templates/module_register.rs.template",

@@ -24,8 +24,8 @@ use odra::{
     UnwrapOrRevert
 };
 
-type MintReceipt = (String, Address, String);
-type TransferReceipt = (String, Address);
+pub type MintReceipt = (String, Address, String);
+pub type TransferReceipt = (String, Address);
 
 single_value_storage!(
     Cep78TransferFilterContract,
