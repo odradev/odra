@@ -81,6 +81,10 @@ impl HostContext for LivenetHost {
         sleep(std::time::Duration::from_millis(time_diff));
     }
 
+    fn block_time(&self) -> u64 {
+        self.casper_client.borrow().get_block_time()
+    }
+
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
         self.casper_client
             .borrow()

@@ -54,6 +54,12 @@ impl HostEnv {
         backend.advance_block_time(time_diff)
     }
 
+    /// Returns the current block time.
+    pub fn block_time(&self) -> u64 {
+        let backend = self.backend.borrow();
+        backend.block_time()
+    }
+
     /// Registers a new contract with the specified name, initialization arguments, and entry points caller.
     pub fn new_contract(
         &self,
