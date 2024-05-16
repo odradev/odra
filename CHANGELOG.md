@@ -3,14 +3,14 @@
 Changelog for `odra`.
 ## [1.0.0] - 2024-05-xx
 ### Added
-- Add `try_deploy` function to the `Deployer` trait - allows to deploy a contract and return an error if the deployment fails.
+- Add `try_deploy` function to the `Deployer` trait, which allows deploying a contract and returning an error if the deployment fails.
 - Add `Cep18` to `odra-modules` - a standard for fungible tokens.
 - Add `Cep78` to `odra-modules` - a standard for non-fungible tokens.
 - Add `cep18` and `cep78` templates.
 
 ### Changed
 - Update casper crates to the latest versions.
-- Fix minor bus in generated code.
+- Fix minor bugs in generated code.
 - Fix events collection in submodules.
 
 ## [0.9.1] - 2024-04-15
