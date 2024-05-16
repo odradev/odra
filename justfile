@@ -88,10 +88,10 @@ test-template name:
 test-templates:
     rm -rf tests
     mkdir -p tests
-    `just test-template full`
-    `just test-template workspace`
-    `just test-template cep18`
-    `just test-template cep78`
+    just test-template cep18
+    just test-template full
+    just test-template workspace
+    just test-template cep78
 
 test-livenet:
     set shell := bash
