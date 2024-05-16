@@ -163,7 +163,7 @@ mod test {
                             .call_contract(
                                 self.address,
                                 odra::CallDef::new(
-                                    String::from("init"),
+                                    odra::prelude::string::String::from("init"),
                                     true,
                                     {
                                         let mut named_args = odra::casper_types::RuntimeArgs::new();
@@ -184,7 +184,7 @@ mod test {
                         self.env.call_contract(
                             self.address,
                             odra::CallDef::new(
-                                String::from("total_supply"),
+                                odra::prelude::string::String::from("total_supply"),
                                 false,
                                 {
                                     let mut named_args = odra::casper_types::RuntimeArgs::new();
@@ -203,7 +203,7 @@ mod test {
                             .call_contract(
                                 self.address,
                                 odra::CallDef::new(
-                                        String::from("pay_to_mint"),
+                                        odra::prelude::string::String::from("pay_to_mint"),
                                         true,
                                         {
                                             let mut named_args = odra::casper_types::RuntimeArgs::new();
@@ -228,7 +228,7 @@ mod test {
                             .call_contract(
                                 self.address,
                                 odra::CallDef::new(
-                                        String::from("approve"),
+                                        odra::prelude::string::String::from("approve"),
                                         true,
                                         {
                                             let mut named_args = odra::casper_types::RuntimeArgs::new();
@@ -250,7 +250,7 @@ mod test {
                         self.env.call_contract(
                             self.address,
                             odra::CallDef::new(
-                                String::from("airdrop"),
+                                odra::prelude::string::String::from("airdrop"),
                                 false,
                                 {
                                     let mut named_args = odra::casper_types::RuntimeArgs::new();
@@ -410,7 +410,7 @@ mod test {
                         self.env.call_contract(
                             self.address,
                             odra::CallDef::new(
-                                String::from("total_supply"),
+                                odra::prelude::string::String::from("total_supply"),
                                 false,
                                 {
                                     let mut named_args = odra::casper_types::RuntimeArgs::new();
@@ -429,17 +429,17 @@ mod test {
                             .call_contract(
                                 self.address,
                                 odra::CallDef::new(
-                                        String::from("pay_to_mint"),
-                                        true,
-                                        {
-                                            let mut named_args = odra::casper_types::RuntimeArgs::new();
-                                            if self.attached_value > odra::casper_types::U512::zero() {
-                                                let _ = named_args.insert("amount", self.attached_value);
-                                            }
-                                            named_args
-                                        },
-                                    )
-                                    .with_amount(self.attached_value),
+                                    odra::prelude::string::String::from("pay_to_mint"),
+                                    true,
+                                    {
+                                        let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                        if self.attached_value > odra::casper_types::U512::zero() {
+                                            let _ = named_args.insert("amount", self.attached_value);
+                                        }
+                                        named_args
+                                    },
+                                )
+                                .with_amount(self.attached_value),
                             )
                     }
                 }

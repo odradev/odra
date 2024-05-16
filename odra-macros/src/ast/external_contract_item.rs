@@ -64,7 +64,7 @@ mod test {
                     self.env.call_contract(
                         self.address,
                         odra::CallDef::new(
-                            String::from("balance_of"),
+                            odra::prelude::string::String::from("balance_of"),
                             false,
                             {
                                 let mut named_args = odra::casper_types::RuntimeArgs::new();
@@ -137,7 +137,7 @@ mod test {
                         self.env.call_contract(
                             self.address,
                             odra::CallDef::new(
-                                String::from("balance_of"),
+                                odra::prelude::string::String::from("balance_of"),
                                 false,
                                 {
                                     let mut named_args = odra::casper_types::RuntimeArgs::new();

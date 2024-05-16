@@ -1,4 +1,5 @@
 use syn::parse_quote;
+use syn::punctuated::Punctuated;
 
 use crate::ir::FnIR;
 use crate::{ir::ModuleImplIR, utils};
@@ -46,9 +47,10 @@ impl TryFrom<&'_ ModuleImplIR> for EntrypointsFnItem {
         let ident_entrypoints = utils::ident::entrypoints();
         let entrypoint_ty = utils::ty::entry_point_def();
         let expr = struct_entrypoints_expr(struct_ir)?;
+        let vec_ty = utils::ty::vec_of(&entrypoint_ty);
 
         Ok(Self {
-            sig: parse_quote!(fn #ident_entrypoints() -> Vec<#entrypoint_ty>),
+            sig: parse_quote!(fn #ident_entrypoints() -> #vec_ty),
             brace_token: Default::default(),
             expr
         })
@@ -78,21 +80,23 @@ fn struct_entrypoints_expr(ir: &ModuleImplIR) -> syn::Result<syn::Expr> {
             let attributes = vec![is_payable_attr, is_non_reentrant]
                 .into_iter()
                 .flatten()
-                .collect::<Vec<_>>();
+                .collect::<Punctuated<_, syn::token::Comma>>();
+            let attributes = utils::expr::vec(attributes);
             let ty_entrypoint = utils::ty::entry_point_def();
+            let name = utils::expr::string_from(ident);
 
             let expr: syn::Expr = parse_quote!(#ty_entrypoint {
-                name: String::from(#ident),
+                name: #name,
                 args: #args,
                 is_mutable: #is_mut,
                 return_ty: #ret,
                 ty: #ty,
-                attributes: vec![#(#attributes),*]
+                attributes: #attributes
             });
             Ok(expr)
         })
         .collect::<syn::Result<syn::punctuated::Punctuated<syn::Expr, syn::token::Comma>>>()?;
-    Ok(parse_quote!(vec![#struct_entrypoints]))
+    Ok(utils::expr::vec(struct_entrypoints))
 }
 
 fn entrypoint_args(f: &FnIR) -> syn::Result<syn::Expr> {
@@ -104,8 +108,8 @@ fn entrypoint_args(f: &FnIR) -> syn::Result<syn::Expr> {
             let ty = utils::ty::unreferenced_ty(&arg.ty()?);
             Ok(utils::expr::into_arg(ty, ident))
         })
-        .collect::<syn::Result<Vec<syn::Expr>>>()?;
-    Ok(parse_quote!(vec![#(#args),*]))
+        .collect::<syn::Result<Punctuated<syn::Expr, syn::token::Comma>>>()?;
+    Ok(utils::expr::vec(args))
 }
 
 #[cfg(test)]
@@ -120,37 +124,37 @@ mod test {
         let module = test_utils::mock::module_impl();
         let expected = quote!(
             impl odra::contract_def::HasEntrypoints for Erc20 {
-                fn entrypoints() -> Vec<odra::contract_def::Entrypoint> {
-                    vec![
+                fn entrypoints() -> odra::prelude::vec::Vec<odra::contract_def::Entrypoint> {
+                    odra::prelude::vec![
                         odra::contract_def::Entrypoint {
-                            name: String::from("init"),
-                            args: vec![
+                            name: odra::prelude::string::String::from("init"),
+                            args: odra::prelude::vec![
                                 odra::args::odra_argument::<Option<U256> >("total_supply")
                             ],
                             is_mutable: true,
                             return_ty: <() as odra::casper_types::CLTyped>::cl_type(),
                             ty: odra::contract_def::EntrypointType::Constructor,
-                            attributes: vec![]
+                            attributes: odra::prelude::vec![]
                         },
                         odra::contract_def::Entrypoint {
-                            name: String::from("total_supply"),
-                            args: vec![],
+                            name: odra::prelude::string::String::from("total_supply"),
+                            args: odra::prelude::vec![],
                             is_mutable: false,
                             return_ty: <U256 as odra::casper_types::CLTyped>::cl_type(),
                             ty: odra::contract_def::EntrypointType::Public,
-                            attributes: vec![]
+                            attributes: odra::prelude::vec![]
                         },
                         odra::contract_def::Entrypoint {
-                            name: String::from("pay_to_mint"),
-                            args: vec![],
+                            name: odra::prelude::string::String::from("pay_to_mint"),
+                            args: odra::prelude::vec![],
                             is_mutable: true,
                             return_ty: <() as odra::casper_types::CLTyped>::cl_type(),
                             ty: odra::contract_def::EntrypointType::Public,
-                            attributes: vec![odra::contract_def::EntrypointAttribute::Payable]
+                            attributes: odra::prelude::vec![odra::contract_def::EntrypointAttribute::Payable]
                         },
                         odra::contract_def::Entrypoint {
-                            name: String::from("approve"),
-                            args: vec![
+                            name: odra::prelude::string::String::from("approve"),
+                            args: odra::prelude::vec![
                                 odra::args::odra_argument::<Address>("to"),
                                 odra::args::odra_argument::<U256>("amount"),
                                 odra::args::odra_argument::<Maybe<String> >("msg")
@@ -158,18 +162,18 @@ mod test {
                             is_mutable: true,
                             return_ty: <() as odra::casper_types::CLTyped>::cl_type(),
                             ty: odra::contract_def::EntrypointType::Public,
-                            attributes: vec![odra::contract_def::EntrypointAttribute::NonReentrant]
+                            attributes: odra::prelude::vec![odra::contract_def::EntrypointAttribute::NonReentrant]
                         },
                         odra::contract_def::Entrypoint {
-                            name: String::from("airdrop"),
-                            args: vec![
+                            name: odra::prelude::string::String::from("airdrop"),
+                            args: odra::prelude::vec![
                                 odra::args::odra_argument::<odra::prelude::vec::Vec<Address> >("to"),
                                 odra::args::odra_argument::<U256>("amount")
                             ],
                             is_mutable: false,
                             return_ty: <() as odra::casper_types::CLTyped>::cl_type(),
                             ty: odra::contract_def::EntrypointType::Public,
-                            attributes: vec![]
+                            attributes: odra::prelude::vec![]
                         }
                     ]
                 }
@@ -184,23 +188,23 @@ mod test {
         let module = test_utils::mock::module_trait_impl();
         let expected = quote!(
             impl odra::contract_def::HasEntrypoints for Erc20 {
-                fn entrypoints() -> Vec<odra::contract_def::Entrypoint> {
-                    vec![
+                fn entrypoints() -> odra::prelude::vec::Vec<odra::contract_def::Entrypoint> {
+                    odra::prelude::vec![
                         odra::contract_def::Entrypoint {
-                            name: String::from("total_supply"),
-                            args: vec![],
+                            name: odra::prelude::string::String::from("total_supply"),
+                            args: odra::prelude::vec![],
                             is_mutable: false,
                             return_ty: <U256 as odra::casper_types::CLTyped>::cl_type(),
                             ty: odra::contract_def::EntrypointType::Public,
-                            attributes: vec![]
+                            attributes: odra::prelude::vec![]
                         },
                         odra::contract_def::Entrypoint {
-                            name: String::from("pay_to_mint"),
-                            args: vec![],
+                            name: odra::prelude::string::String::from("pay_to_mint"),
+                            args: odra::prelude::vec![],
                             is_mutable: true,
                             return_ty: <() as odra::casper_types::CLTyped>::cl_type(),
                             ty: odra::contract_def::EntrypointType::Public,
-                            attributes: vec![odra::contract_def::EntrypointAttribute::Payable]
+                            attributes: odra::prelude::vec![odra::contract_def::EntrypointAttribute::Payable]
                         }
                     ]
                 }
@@ -215,49 +219,49 @@ mod test {
         let module = test_utils::mock::module_delegation();
         let expected = quote!(
             impl odra::contract_def::HasEntrypoints for Erc20 {
-                fn entrypoints() -> Vec<odra::contract_def::Entrypoint> {
-                    vec![
+                fn entrypoints() -> odra::prelude::vec::Vec<odra::contract_def::Entrypoint> {
+                    odra::prelude::vec![
                         odra::contract_def::Entrypoint {
-                            name: String::from("total_supply"),
-                            args: vec![],
+                            name: odra::prelude::string::String::from("total_supply"),
+                            args: odra::prelude::vec![],
                             is_mutable: false,
                             return_ty: <U256 as odra::casper_types::CLTyped>::cl_type(),
                             ty: odra::contract_def::EntrypointType::Public,
-                            attributes: vec![]
+                            attributes: odra::prelude::vec![]
                         },
                         odra::contract_def::Entrypoint {
-                            name: String::from("get_owner"),
-                            args: vec![],
+                            name: odra::prelude::string::String::from("get_owner"),
+                            args: odra::prelude::vec![],
                             is_mutable: false,
                             return_ty: <Address as odra::casper_types::CLTyped>::cl_type(),
                             ty: odra::contract_def::EntrypointType::Public,
-                            attributes : vec![]
+                            attributes : odra::prelude::vec![]
                         },
                         odra::contract_def::Entrypoint {
-                            name: String::from("set_owner"),
-                            args: vec![
+                            name: odra::prelude::string::String::from("set_owner"),
+                            args: odra::prelude::vec![
                                 odra::args::odra_argument::<Address>("new_owner")
                             ],
                             is_mutable: true,
                             return_ty: <() as odra::casper_types::CLTyped>::cl_type(),
                             ty: odra::contract_def::EntrypointType::Public,
-                            attributes: vec![]
+                            attributes: odra::prelude::vec![]
                         },
                         odra::contract_def::Entrypoint {
-                            name: String::from("name"),
-                            args: vec![],
+                            name: odra::prelude::string::String::from("name"),
+                            args: odra::prelude::vec![],
                             is_mutable: false,
                             return_ty: <String as odra::casper_types::CLTyped >::cl_type(),
                             ty: odra::contract_def::EntrypointType::Public,
-                            attributes : vec![]
+                            attributes : odra::prelude::vec![]
                         },
                         odra::contract_def::Entrypoint {
-                            name: String::from("symbol"),
-                            args: vec![],
+                            name: odra::prelude::string::String::from("symbol"),
+                            args: odra::prelude::vec![],
                             is_mutable: false,
                             return_ty: <String as odra::casper_types::CLTyped>::cl_type(),
                             ty: odra::contract_def::EntrypointType::Public,
-                            attributes :vec![]
+                            attributes: odra::prelude::vec![]
                         }
                     ]
                 }
