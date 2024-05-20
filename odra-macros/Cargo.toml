@@ -3,7 +3,6 @@ name = "odra-macros"
 edition = "2021"
 description = "Macros for Odra-based smart contracts."
 keywords = ["wasm", "webassembly", "blockchain"]
-categories = ["wasm"]
 version = { workspace = true }
 authors = { workspace = true }
 license = { workspace = true }

@@ -5,7 +5,7 @@
   "repository": null,
   "homepage": null,
   "contract_name": "DogContract",
-  "contract_version": "1.0.0-rc.1",
+  "contract_version": "1.0.0",
   "types": [],
   "errors": [],
   "entry_points": [
