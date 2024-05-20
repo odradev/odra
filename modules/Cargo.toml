@@ -7,7 +7,6 @@ license = "MIT"
 repository = "https://github.com/odradev/odra"
 description = "Collection of reusable Odra modules."
 keywords = ["wasm", "webassembly", "blockchain"]
-categories = ["wasm"]
 
 [dependencies]
 odra = { path = "../odra", version = "1.0.0-rc.1", default-features = false }
