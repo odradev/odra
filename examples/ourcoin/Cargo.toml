@@ -1,0 +1,41 @@
+[package]
+name = "ourcoin"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+odra = { path = "../../odra", features = [], default-features = false }
+odra-modules = { path = "../../modules", features = [], default-features = false }
+odra-casper-livenet-env = { path = "../../odra-casper/livenet-env", optional = true }
+
+[dev-dependencies]
+odra-test = { path = "../../odra-test", features = [], default-features = false }
+
+[build-dependencies]
+odra-build = { path = "../../odra-build", features = [], default-features = false }
+
+[features]
+default = []
+livenet = ["odra-casper-livenet-env"]
+
+[[bin]]
+name = "ourcoin_build_contract"
+path = "bin/build_contract.rs"
+test = false
+
+[[bin]]
+name = "ourcoin_build_schema"
+path = "bin/build_schema.rs"
+test = false
+
+[[bin]]
+name = "our_token_livenet"
+path = "bin/our_token_livenet.rs"
+required-features = ["livenet"]
+
+[profile.release]
+codegen-units = 1
+lto = true
+
+[profile.dev.package."*"]
+opt-level = 3

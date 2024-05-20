@@ -62,9 +62,11 @@ test-odra:
 
 test-examples-on-odravm:
     cd examples && cargo odra test
+    cd examples/ourcoin && cargo odra test
 
 test-examples-on-casper:
     cd examples && cargo odra test -b casper
+    cd examples/ourcoin && cargo odra test -b casper
 
 test-examples: test-examples-on-odravm test-examples-on-casper
 
