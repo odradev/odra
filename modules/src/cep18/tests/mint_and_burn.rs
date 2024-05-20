@@ -133,8 +133,8 @@ mod mint_and_burn_tests {
             name: TOKEN_NAME.to_string(),
             decimals: TOKEN_DECIMALS,
             initial_supply: TOKEN_TOTAL_SUPPLY.into(),
-            minter_list: vec![alice],
             admin_list: vec![],
+            minter_list: vec![alice],
             modality: Some(Cep18Modality::MintAndBurn)
         };
         let mut cep18_token = setup_with_args(&env, args);

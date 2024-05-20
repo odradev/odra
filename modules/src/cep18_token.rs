@@ -38,8 +38,8 @@ impl Cep18 {
         name: String,
         decimals: u8,
         initial_supply: U256,
-        minter_list: Vec<Address>,
         admin_list: Vec<Address>,
+        minter_list: Vec<Address>,
         modality: Option<Cep18Modality>
     ) {
         let caller = self.env().caller();
@@ -76,7 +76,7 @@ impl Cep18 {
     /// Admin EntryPoint to manipulate the security access granted to users.
     /// One user can only possess one access group badge.
     /// Change strength: None > Admin > Minter
-    /// Change strength meaning by example: If user is added to both Minter and Admin they will be an
+    /// Change strength meaning by example: If user is added to both Minter and Admin, they will be an
     /// Admin, also if a user is added to Admin and None then they will be removed from having rights.
     /// Beware: do not remove the last Admin because that will lock out all admin functionality.
     pub fn change_security(
@@ -255,13 +255,7 @@ impl Cep18 {
             self.env().revert(Error::InsufficientRights);
         }
 
-        self.total_supply.add(*amount);
-        self.balances.add(owner, *amount);
-
-        self.env().emit_event(Mint {
-            recipient: *owner,
-            amount: *amount
-        });
+        self.raw_mint(owner, amount);
     }
 
     /// Burns the given amount of tokens from the given address.
@@ -276,18 +270,13 @@ impl Cep18 {
             self.env().revert(Error::InsufficientBalance);
         }
 
-        self.total_supply.subtract(*amount);
-        self.balances.subtract(owner, *amount);
-
-        self.env().emit_event(Burn {
-            owner: *owner,
-            amount: *amount
-        });
+        self.raw_burn(owner, amount);
     }
 }
 
 impl Cep18 {
-    fn raw_transfer(&mut self, sender: &Address, recipient: &Address, amount: &U256) {
+    /// Transfers tokens from the sender to the recipient without checking the permissions.
+    pub fn raw_transfer(&mut self, sender: &Address, recipient: &Address, amount: &U256) {
         if *amount > self.balances.get_or_default(sender) {
             self.env().revert(Error::InsufficientBalance)
         }
@@ -301,6 +290,59 @@ impl Cep18 {
             sender: *sender,
             recipient: *recipient,
             amount: *amount
+        });
+    }
+
+    /// Mints new tokens and assigns them to the given address without checking the permissions.
+    pub fn raw_mint(&mut self, owner: &Address, amount: &U256) {
+        self.total_supply.add(*amount);
+        self.balances.add(owner, *amount);
+
+        self.env().emit_event(Mint {
+            recipient: *owner,
+            amount: *amount
+        });
+    }
+
+    /// Burns the given amount of tokens from the given address without checking the permissions.
+    pub fn raw_burn(&mut self, owner: &Address, amount: &U256) {
+        self.total_supply.subtract(*amount);
+        self.balances.subtract(owner, *amount);
+
+        self.env().emit_event(Burn {
+            owner: *owner,
+            amount: *amount
+        });
+    }
+
+    /// Changes the security access granted to users without checking the permissions.
+    pub fn raw_change_security(
+        &mut self,
+        admin_list: Vec<Address>,
+        minter_list: Vec<Address>,
+        none_list: Vec<Address>
+    ) {
+        let mut badges_map = BTreeMap::new();
+
+        // set the security badges
+        for admin in admin_list {
+            self.security_badges.set(&admin, SecurityBadge::Admin);
+            badges_map.insert(admin, SecurityBadge::Admin);
+        }
+
+        for minter in minter_list {
+            self.security_badges.set(&minter, SecurityBadge::Minter);
+            badges_map.insert(minter, SecurityBadge::Minter);
+        }
+
+        for none in none_list {
+            self.security_badges.set(&none, SecurityBadge::None);
+            badges_map.insert(none, SecurityBadge::None);
+        }
+
+        self.env().emit_event(ChangeSecurity {
+            admin: self.env().caller(),
+            sec_change_map: badges_map
         });
     }
 
@@ -347,8 +389,8 @@ pub(crate) mod tests {
             name: TOKEN_NAME.to_string(),
             decimals: TOKEN_DECIMALS,
             initial_supply: TOKEN_TOTAL_SUPPLY.into(),
-            minter_list: vec![],
             admin_list: vec![],
+            minter_list: vec![],
             modality: Some(modality)
         };
         setup_with_args(&env, init_args)
@@ -381,7 +423,7 @@ pub(crate) mod tests {
         let contract_balance = cep18_token.balance_of(cep18_token.address());
         assert_eq!(contract_balance, 0.into());
 
-        // Ensures that Account and Contract ownership is respected and we're not keying ownership under
+        // Ensures that Account and Contract ownership is respected, and we're not keying ownership under
         // the raw bytes regardless of variant.
         let inverted_owner_key = invert_address(owner_key);
         let inverted_owner_balance = cep18_token.balance_of(&inverted_owner_key);

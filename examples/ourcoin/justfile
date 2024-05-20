@@ -1,0 +1,2 @@
+deploy:
+    cargo run --bin our_token_livenet --features=livenet
