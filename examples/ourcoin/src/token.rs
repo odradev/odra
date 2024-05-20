@@ -6,7 +6,7 @@ use odra_modules::cep18_token::Cep18;
 struct Ballot {
     voter: Address,
     choice: bool,
-    amount: U256,
+    amount: U256
 }
 
 /// Errors for the governed token.
@@ -21,7 +21,7 @@ pub enum GovernanceError {
     /// Vote ended
     VoteEnded = 3,
     /// Only the token holders can propose a new mint.
-    OnlyTokenHoldersCanPropose = 4,
+    OnlyTokenHoldersCanPropose = 4
 }
 
 /// A module definition. Each module struct consists of Vars and Mappings
@@ -37,7 +37,7 @@ pub struct OurToken {
     /// Whether a vote is open.
     is_vote_open: Var<bool>,
     /// The time when the vote ends.
-    vote_end_time: Var<u64>,
+    vote_end_time: Var<u64>
 }
 /// Module implementation.
 ///
@@ -146,7 +146,7 @@ impl OurToken {
         self.votes.push(Ballot {
             voter,
             choice,
-            amount,
+            amount
         });
     }
 
@@ -222,31 +222,32 @@ mod tests {
             name: "OurToken".to_string(),
             symbol: "OT".to_string(),
             decimals: 0,
-            initial_supply: U256::from(1_000u64),
+            initial_supply: U256::from(1_000u64)
         };
 
         let mut token = OurTokenHostRef::deploy(&env, init_args);
 
-        // Start a new voting to mint 1000 tokens to account 1.
+        // The deployer, as the only token holder,
+        // starts a new voting to mint 1000 tokens to account 1.
         // There is only 1 token holder, so there is one Ballot cast.
         token.propose_new_mint(env.get_account(1), U256::from(2000));
         token.vote(true, U256::from(1000));
 
         // The tokens should now be staked.
-        assert_eq!(token.balance_of(&env.get_account(0)), 0.into());
+        assert_eq!(token.balance_of(&env.get_account(0)), U256::zero());
 
         // Wait for the vote to end.
-        env.advance_block_time(60 * 60 * 25 * 1000);
+        env.advance_block_time(60 * 11 * 1000);
 
         // Finish the vote.
         token.tally();
 
         // The tokens should now be minted.
-        assert_eq!(token.balance_of(&env.get_account(1)), 2000.into());
+        assert_eq!(token.balance_of(&env.get_account(1)), U256::from(2000));
         assert_eq!(token.total_supply(), 3000.into());
 
         // The stake should be returned.
-        assert_eq!(token.balance_of(&env.get_account(0)), 1000.into());
+        assert_eq!(token.balance_of(&env.get_account(0)), U256::from(1000));
 
         // Now account 1 can mint new tokens with their voting power...
         env.set_caller(env.get_account(1));
@@ -257,11 +258,11 @@ mod tests {
         env.set_caller(env.get_account(0));
         token.vote(false, U256::from(1000));
 
-        env.advance_block_time(60 * 60 * 25 * 1000);
+        env.advance_block_time(60 * 11 * 1000);
 
         token.tally();
 
         // The power of community governance!
-        assert_eq!(token.balance_of(&env.get_account(1)), 4000.into());
+        assert_eq!(token.balance_of(&env.get_account(1)), U256::from(4000));
     }
 }

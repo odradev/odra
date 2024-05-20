@@ -21,7 +21,7 @@ fn main() {
         &module,
         contract_schema
             .as_json()
-            .expect("Failed to convert schema to JSON"),
+            .expect("Failed to convert schema to JSON")
     );
 
     write_schema_file(
@@ -29,7 +29,7 @@ fn main() {
         &module,
         module_schema
             .as_json()
-            .expect("Failed to convert schema to JSON"),
+            .expect("Failed to convert schema to JSON")
     );
 }
 

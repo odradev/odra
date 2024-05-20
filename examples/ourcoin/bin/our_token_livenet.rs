@@ -65,7 +65,7 @@ pub fn deploy_our_token(env: &HostEnv) -> OurTokenHostRef {
         name,
         symbol,
         decimals,
-        initial_supply,
+        initial_supply
     };
 
     env.set_gas(300_000_000_000u64);
