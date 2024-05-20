@@ -2,8 +2,7 @@
 
 This document covers the way we plan further development of the Odra.
 
-If you're looking for the Odra Roadmap,
-visit <https://github.com/odradev/odra/milestones>.
+Visit the the [Odra Roadmap](https://github.com/orgs/odradev/projects/3) for details.
 
 ## Release Schedule
 
@@ -19,5 +18,4 @@ We release new versions approximately every 1-2 months or as needed.
 
 Everyone is encouraged to propose a new Odra feature or enhancement.
 New proposals need to be discussed and approved by the core team.
-First, they are assigned the special Future Release, where they can mature.
 When the feature is ready, we assign it to the one of the future release.
