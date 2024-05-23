@@ -5,7 +5,8 @@ use crate::{AddressError, OdraError, VmError};
 use casper_types::{
     account::AccountHash,
     bytesrepr::{self, FromBytes, ToBytes},
-    CLType, CLTyped, ContractPackageHash, Key, PublicKey
+    contracts::ContractPackageHash,
+    CLType, CLTyped, Key, PackageHash, PublicKey
 };
 use serde::{Deserialize, Serialize};
 
@@ -96,6 +97,12 @@ impl TryFrom<ContractPackageHash> for Address {
     }
 }
 
+impl From<PackageHash> for Address {
+    fn from(package_hash: PackageHash) -> Self {
+        let contract_package_hash = ContractPackageHash::new(package_hash.value());
+        Self::Contract(contract_package_hash)
+    }
+}
 impl TryFrom<AccountHash> for Address {
     type Error = AddressError;
     fn try_from(account_hash: AccountHash) -> Result<Self, Self::Error> {

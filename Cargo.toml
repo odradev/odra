@@ -4,8 +4,8 @@ members = [
     "odra-vm",
     "core",
     "odra-macros",
-    "odra-casper/rpc-client",
-    "odra-casper/livenet-env",
+#    "odra-casper/rpc-client",
+#    "odra-casper/livenet-env",
     "odra-casper/wasm-env",
     "odra-casper/test-vm",
     "odra-schema",
@@ -35,7 +35,8 @@ casper-contract-schema = { git = "https://github.com/odradev/casper-contract-sch
 casper-types = { git = "https://github.com/casper-network/casper-node.git", branch = "feat-2.0", default-features = false }
 casper-execution-engine = { git = "https://github.com/casper-network/casper-node.git", branch = "feat-2.0" }
 casper-engine-test-support = { git = "https://github.com/casper-network/casper-node.git", branch = "feat-2.0" }
-casper-event-standard = "0.5.0"
+casper-storage = { git = "https://github.com/casper-network/casper-node.git", branch = "feat-2.0" }
+casper-event-standard = { path = "../../casper-event-standard/casper-event-standard" }
 blake2 = "0.10.6"
 log = "0.4.20"
 env_logger = "0.11.1"

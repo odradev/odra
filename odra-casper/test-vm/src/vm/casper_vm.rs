@@ -1,3 +1,4 @@
+use odra_core::casper_types::ProtocolVersion;
 use odra_core::consts::*;
 use odra_core::prelude::*;
 use odra_core::OdraResult;
@@ -6,21 +7,24 @@ use std::env;
 use std::path::PathBuf;
 
 use casper_engine_test_support::{
-    DeployItemBuilder, ExecuteRequestBuilder, InMemoryWasmTestBuilder, ARG_AMOUNT,
-    DEFAULT_ACCOUNT_INITIAL_BALANCE, DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_GENESIS_CONFIG,
+    DeployItemBuilder, ExecuteRequestBuilder, LmdbWasmTestBuilder, ARG_AMOUNT, DEFAULT_ACCOUNTS,
+    DEFAULT_ACCOUNT_INITIAL_BALANCE, DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_EXEC_CONFIG,
     DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_PAYMENT
 };
 use casper_event_standard::try_full_name_from_bytes;
+use casper_execution_engine::{engine_state, execution};
+use casper_storage::data_access_layer::GenesisRequest;
 use odra_core::{casper_event_standard, DeployReport, GasReport};
 use std::rc::Rc;
 
-use casper_execution_engine::core::engine_state::{self, GenesisAccount, RunGenesisRequest};
 use odra_core::casper_types::account::{Account, AccountHash};
 use odra_core::casper_types::bytesrepr::{Bytes, ToBytes};
-use odra_core::casper_types::{bytesrepr::FromBytes, CLTyped, PublicKey, RuntimeArgs, U512};
+use odra_core::casper_types::contracts::{ContractHash, ContractPackageHash};
 use odra_core::casper_types::{
-    runtime_args, ApiError, BlockTime, Contract, ContractHash, ContractPackageHash, Key, Motes,
-    SecretKey, StoredValue, URef
+    bytesrepr::FromBytes, CLTyped, GenesisAccount, PublicKey, RuntimeArgs, U512
+};
+use odra_core::casper_types::{
+    runtime_args, ApiError, BlockTime, Contract, Key, Motes, SecretKey, StoredValue, URef
 };
 use odra_core::consts;
 use odra_core::consts::*;
@@ -33,12 +37,12 @@ use odra_core::{
 };
 use odra_core::{Address, ExecutionError, OdraError, VmError};
 
-/// Casper virtual machine utilizing [InMemoryWasmTestBuilder].
+/// Casper virtual machine utilizing [LmdbWasmTestBuilder].
 pub struct CasperVm {
     accounts: Vec<Address>,
     key_pairs: BTreeMap<Address, (SecretKey, PublicKey)>,
     active_account: Address,
-    context: InMemoryWasmTestBuilder,
+    context: LmdbWasmTestBuilder,
     block_time: u64,
     calls_counter: u32,
     error: Option<OdraError>,
@@ -95,14 +99,14 @@ impl CasperVm {
     /// Returns [EventError::IndexOutOfBounds] if the index is out of bounds.
     pub fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
         let contract_package_hash = contract_address.as_contract_package_hash().unwrap();
-        let contract_hash: ContractHash = self.get_contract_package_hash(contract_package_hash);
+        let contract_hash: ContractHash = self.get_contract_hash(contract_package_hash);
 
         let dictionary_seed_uref: URef = *self
             .context
-            .get_contract(contract_hash)
+            .get_legacy_contract(contract_hash)
             .unwrap()
             .named_keys()
-            .get(consts::EVENTS)
+            .get(EVENTS)
             .unwrap()
             .as_uref()
             .unwrap();
@@ -127,7 +131,7 @@ impl CasperVm {
     /// Gets the count of events for the given contract address.
     pub fn get_events_count(&self, contract_address: &Address) -> u32 {
         let contract_package_hash = contract_address.as_contract_package_hash().unwrap();
-        let contract_hash: ContractHash = self.get_contract_package_hash(contract_package_hash);
+        let contract_hash: ContractHash = self.get_contract_hash(contract_package_hash);
 
         self.events_length(&contract_hash)
     }
@@ -168,7 +172,7 @@ impl CasperVm {
             };
 
             DeployItemBuilder::new()
-                .with_empty_payment_bytes(runtime_args! { ARG_AMOUNT => *DEFAULT_PAYMENT})
+                .with_standard_payment(runtime_args! { ARG_AMOUNT => *DEFAULT_PAYMENT})
                 .with_authorization_keys(&[self.active_account_hash()])
                 .with_address(self.active_account_hash())
                 .with_session_bytes(session_code, args)
@@ -176,7 +180,7 @@ impl CasperVm {
                 .build()
         } else {
             DeployItemBuilder::new()
-                .with_empty_payment_bytes(runtime_args! { ARG_AMOUNT => *DEFAULT_PAYMENT})
+                .with_standard_payment(runtime_args! { ARG_AMOUNT => *DEFAULT_PAYMENT})
                 .with_authorization_keys(&[self.active_account_hash()])
                 .with_address(self.active_account_hash())
                 .with_stored_versioned_contract_by_hash(
@@ -189,7 +193,7 @@ impl CasperVm {
                 .build()
         };
 
-        let execute_request = ExecuteRequestBuilder::from_deploy_item(deploy_item)
+        let execute_request = ExecuteRequestBuilder::from_deploy_item(&deploy_item)
             .with_block_time(self.block_time)
             .build();
         self.context.exec(execute_request).commit();
@@ -295,7 +299,7 @@ impl CasperVm {
     }
 
     /// Returns the cost of the last deploy.
-    /// Keep in mind that this may be different from the cost of the deploy on the live network.
+    /// Keep in mind that this may be different from the cost of the transaction on the live network.
     /// This is NOT the amount of gas charged - see [last_call_contract_gas_used()](Self::last_call_contract_gas_used).
     pub fn last_call_contract_gas_cost(&self) -> U512 {
         self.context.last_exec_gas_cost().value()
@@ -380,52 +384,46 @@ impl CasperVm {
     }
 
     fn get_contract_cspr_balance(&self, contract_hash: &ContractPackageHash) -> U512 {
-        let contract_hash: ContractHash = self.get_contract_package_hash(contract_hash);
-        let contract: Contract = self.context.get_contract(contract_hash).unwrap();
+        let contract_hash: ContractHash = self.get_contract_hash(contract_hash);
+        let contract: Contract = self.context.get_legacy_contract(contract_hash).unwrap();
         contract
             .named_keys()
-            .get(consts::CONTRACT_MAIN_PURSE)
+            .get(CONTRACT_MAIN_PURSE)
             .and_then(|key| key.as_uref())
             .map(|purse| self.context.get_purse_balance(*purse))
             .unwrap_or_else(U512::zero)
     }
 
-    fn get_contract_package_hash(&self, contract_hash: &ContractPackageHash) -> ContractHash {
-        self.context
-            .get_contract_package(*contract_hash)
-            .unwrap()
-            .current_contract_hash()
-            .unwrap()
+    fn get_contract_hash(&self, contract_package_hash: &ContractPackageHash) -> ContractHash {
+        ContractHash::new(contract_package_hash.value())
+    }
+
+    fn genesis_accounts() -> Vec<Address> {
+        // TODO: implement own account generation routine to extract private keys for signing
+        let mut accounts = Vec::new();
+        for account in DEFAULT_ACCOUNTS.iter() {
+            accounts.push(account.public_key().into());
+        }
+        accounts
     }
 
     fn new_instance() -> Self {
-        let mut genesis_config = DEFAULT_GENESIS_CONFIG.clone();
-        let mut accounts: Vec<Address> = Vec::new();
-        let key_pairs = generate_key_pairs(20);
-        key_pairs
-            .iter()
-            .for_each(|(address, (secret_key, public_key))| {
-                accounts.push(*address);
-                let account = GenesisAccount::account(
-                    public_key.clone(),
-                    Motes::new(U512::from(DEFAULT_ACCOUNT_INITIAL_BALANCE)),
-                    None
-                );
-                genesis_config.ee_config_mut().push_account(account);
-            });
+        let genesis_config = DEFAULT_EXEC_CONFIG.clone();
+        let accounts = Self::genesis_accounts();
+        let key_pairs = generate_key_pairs(accounts.len() as u8);
 
-        let run_genesis_request = RunGenesisRequest::new(
-            *DEFAULT_GENESIS_CONFIG_HASH,
-            genesis_config.protocol_version(),
-            genesis_config.take_ee_config(),
+        let run_genesis_request = GenesisRequest::new(
+            DEFAULT_GENESIS_CONFIG_HASH,
+            ProtocolVersion::V2_0_0,
+            genesis_config,
             DEFAULT_CHAINSPEC_REGISTRY.clone()
         );
 
         let chainspec_path =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/chainspec.toml");
-        let mut builder = InMemoryWasmTestBuilder::new_with_chainspec(chainspec_path, None);
+        let mut builder = LmdbWasmTestBuilder::new_with_chainspec("", chainspec_path);
 
-        builder.run_genesis(&run_genesis_request).commit();
+        builder.run_genesis(run_genesis_request).commit();
 
         Self {
             active_account: accounts[0],
@@ -449,14 +447,14 @@ impl CasperVm {
         self.error = None;
         let session_code = PathBuf::from(wasm_path);
         let deploy_item = DeployItemBuilder::new()
-            .with_empty_payment_bytes(runtime_args! {ARG_AMOUNT => *DEFAULT_PAYMENT})
+            .with_standard_payment(runtime_args! {ARG_AMOUNT => *DEFAULT_PAYMENT})
             .with_authorization_keys(&[self.active_account_hash()])
             .with_address(self.active_account_hash())
             .with_session_code(session_code, args.clone())
             .with_deploy_hash(self.next_hash())
             .build();
 
-        let execute_request = ExecuteRequestBuilder::from_deploy_item(deploy_item)
+        let execute_request = ExecuteRequestBuilder::from_deploy_item(&deploy_item)
             .with_block_time(self.block_time)
             .build();
         let result = self.context.exec(execute_request).commit();
@@ -475,7 +473,7 @@ impl CasperVm {
             .query(
                 None,
                 Key::Hash(contract_hash.value()),
-                &[String::from(consts::EVENTS_LENGTH)]
+                &[String::from(EVENTS_LENGTH)]
             )
             .unwrap()
             .as_cl_value()
@@ -501,13 +499,13 @@ impl CasperVm {
 fn parse_error(err: engine_state::Error) -> OdraError {
     if let engine_state::Error::Exec(exec_err) = err {
         match exec_err {
-            engine_state::ExecError::Revert(ApiError::MissingArgument) => {
+            execution::ExecError::Revert(ApiError::MissingArgument) => {
                 OdraError::ExecutionError(ExecutionError::MissingArg)
             }
-            engine_state::ExecError::Revert(ApiError::Mint(0)) => {
+            execution::ExecError::Revert(ApiError::Mint(0)) => {
                 OdraError::VmError(VmError::BalanceExceeded)
             }
-            engine_state::ExecError::Revert(ApiError::User(code)) => match code {
+            execution::ExecError::Revert(ApiError::User(code)) => match code {
                 x if x == ExecutionError::UnwrapError.code() => {
                     OdraError::ExecutionError(ExecutionError::UnwrapError)
                 }
@@ -582,11 +580,11 @@ fn parse_error(err: engine_state::Error) -> OdraError {
                 }
                 _ => OdraError::ExecutionError(ExecutionError::User(code))
             },
-            engine_state::ExecError::InvalidContext => OdraError::VmError(VmError::InvalidContext),
-            engine_state::ExecError::NoSuchMethod(name) => {
+            execution::ExecError::InvalidContext => OdraError::VmError(VmError::InvalidContext),
+            execution::ExecError::NoSuchMethod(name) => {
                 OdraError::VmError(VmError::NoSuchMethod(name))
             }
-            engine_state::ExecError::MissingArgument { name } => {
+            execution::ExecError::MissingArgument { name } => {
                 OdraError::ExecutionError(ExecutionError::MissingArg)
             }
             _ => OdraError::VmError(VmError::Other(format!("Casper ExecError: {}", exec_err)))

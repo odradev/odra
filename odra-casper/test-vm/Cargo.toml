@@ -12,6 +12,7 @@ repository = { workspace = true }
 [dependencies]
 casper-engine-test-support = { workspace = true }
 casper-execution-engine = { workspace = true }
+casper-storage = { workspace = true }
 odra-core = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

@@ -4,19 +4,15 @@ use std::env;
 use std::path::PathBuf;
 
 use casper_engine_test_support::{
-    DeployItemBuilder, ExecuteRequestBuilder, InMemoryWasmTestBuilder, ARG_AMOUNT,
-    DEFAULT_ACCOUNT_INITIAL_BALANCE, DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_GENESIS_CONFIG,
-    DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_PAYMENT
+    DeployItemBuilder, ExecuteRequestBuilder, ARG_AMOUNT, DEFAULT_ACCOUNT_INITIAL_BALANCE,
+    DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_PAYMENT
 };
 use std::rc::Rc;
 
 use crate::CasperVm;
-use casper_execution_engine::core::engine_state::{GenesisAccount, RunGenesisRequest};
 use odra_core::casper_types::account::AccountHash;
 use odra_core::casper_types::bytesrepr::{Bytes, ToBytes};
-use odra_core::casper_types::{
-    runtime_args, BlockTime, ContractPackageHash, Key, Motes, SecretKey
-};
+use odra_core::casper_types::{runtime_args, BlockTime, Key, Motes, SecretKey};
 use odra_core::casper_types::{PublicKey, RuntimeArgs, U512};
 use odra_core::consts;
 use odra_core::consts::*;
@@ -67,6 +63,10 @@ impl HostContext for CasperHost {
         self.vm.borrow().get_event(contract_address, index)
     }
 
+    fn get_events_count(&self, contract_address: &Address) -> u32 {
+        self.vm.borrow().get_events_count(contract_address)
+    }
+
     fn call_contract(
         &self,
         address: &Address,
@@ -89,10 +89,6 @@ impl HostContext for CasperHost {
                 Err(error.unwrap_or(OdraError::VmError(VmError::Panic)))
             }
         }
-    }
-
-    fn get_events_count(&self, contract_address: &Address) -> u32 {
-        self.vm.borrow().get_events_count(contract_address)
     }
 
     fn new_contract(
