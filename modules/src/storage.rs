@@ -12,6 +12,7 @@ macro_rules! single_value_storage {
                 self.env().set_named_value($key, value);
             }
 
+            #[allow(dead_code)]
             pub fn get(&self) -> $value_ty {
                 use odra::UnwrapOrRevert;
                 self.env()

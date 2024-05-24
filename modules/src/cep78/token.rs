@@ -21,14 +21,9 @@ use super::{
     whitelist::ACLWhitelist
 };
 use odra::{
-    args::Maybe,
-    casper_types::{bytesrepr::ToBytes, Key},
-    prelude::*,
-    Address, OdraError, SubModule, UnwrapOrRevert
+    args::Maybe, casper_types::bytesrepr::ToBytes, prelude::*, Address, OdraError, SubModule,
+    UnwrapOrRevert
 };
-
-pub type MintReceipt = (String, Key, String);
-pub type TransferReceipt = (String, Key);
 
 single_value_storage!(
     Cep78TransferFilterContract,
@@ -225,7 +220,7 @@ impl Cep78 {
         token_owner: Address,
         token_meta_data: String,
         token_hash: Maybe<String>
-    ) -> MintReceipt {
+    ) {
         if !self.settings.allow_minting() {
             self.revert(CEP78Error::MintingIsPaused);
         }
@@ -339,7 +334,7 @@ impl Cep78 {
         token_hash: Maybe<String>,
         source_key: Address,
         target_key: Address
-    ) -> TransferReceipt {
+    ) {
         self.ensure_not_minter_or_assigned();
 
         let token_identifier = self.checked_token_identifier(token_id, token_hash);
@@ -766,7 +761,7 @@ impl TestCep78 {
                 token_owner: Address,
                 token_meta_data: String,
                 token_hash: Maybe<String>
-            ) -> MintReceipt;
+            );
             fn burn(&mut self, token_id: Maybe<u64>, token_hash: Maybe<String>);
             fn transfer(
                 &mut self,
@@ -774,7 +769,7 @@ impl TestCep78 {
                 token_hash: Maybe<String>,
                 source_key: Address,
                 target_key: Address
-            ) -> TransferReceipt;
+            );
             fn approve(&mut self, spender: Address, token_id: Maybe<u64>, token_hash: Maybe<String>);
             fn revoke(&mut self, token_id: Maybe<u64>, token_hash: Maybe<String>);
             fn set_approval_for_all(&mut self, approve_all: bool, operator: Address);
@@ -837,17 +832,10 @@ impl TestCep78 {
         self.token.data.number_of_minted_tokens()
     }
 
-    pub fn get_page(&self, receipt: String) -> Vec<bool> {
+    pub fn get_page(&self, page_number: u64) -> Vec<bool> {
         let env = self.env();
         let owner = env.caller();
 
-        let parts: Vec<&str> = receipt.split('_').collect();
-        let page_number: u64 = parts
-            .last()
-            .map(|v| v.parse::<u64>())
-            .unwrap_or_revert(&env)
-            .map_err(|_| CEP78Error::InvalidPageNumber)
-            .unwrap_or_revert(&env);
         let owner_key = utils::address_to_key(&owner);
         let page_dict = format!("{PREFIX_PAGE_DICTIONARY}_{}", page_number);
         env.get_dictionary_value(page_dict, owner_key.as_bytes())

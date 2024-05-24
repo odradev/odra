@@ -1,6 +1,6 @@
 use odra::{
     args::Maybe,
-    casper_types::{AccessRights, Key, URef},
+    casper_types::{AccessRights, URef},
     prelude::*,
     Address, Mapping, SubModule, UnwrapOrRevert
 };
@@ -11,7 +11,6 @@ use super::{
     constants::{PAGE_LIMIT, PAGE_TABLE, PREFIX_PAGE_DICTIONARY, RECEIPT_NAME, REPORTING_MODE},
     error::CEP78Error,
     modalities::{OwnerReverseLookupMode, OwnershipMode, TokenIdentifier},
-    token::{MintReceipt, TransferReceipt},
     utils
 };
 // The size of a given page, it is currently set to 1000
@@ -119,23 +118,18 @@ impl ReverseLookup {
         }
     }
 
-    pub fn on_mint(
-        &mut self,
-        tokens_count: u64,
-        token_owner: Address,
-        token_id: String
-    ) -> MintReceipt {
+    pub fn on_mint(&mut self, tokens_count: u64, token_owner: Address, _token_id: String) {
         if self.get_mode() == OwnerReverseLookupMode::Complete {
             let token_owner_key = utils::address_to_key(&token_owner);
-            let (page_table_entry, page_uref) =
+            let (_page_table_entry, _page_uref) =
                 self.add_page_entry_and_page_record(tokens_count, &token_owner_key, true);
+            // Uncomment if deciding to return the receipt
 
-            let receipt_name = self.receipt_name.get();
-            let receipt_string = format!("{receipt_name}_m_{PAGE_SIZE}_p_{page_table_entry}");
-            let receipt_address = Key::dictionary(page_uref, token_owner_key.as_bytes());
-            return (receipt_string, receipt_address, token_id);
+            // let receipt_name = self.receipt_name.get();
+            // let receipt_string = format!("{receipt_name}_m_{PAGE_SIZE}_p_{page_table_entry}");
+            // let receipt_address = Key::dictionary(page_uref, token_owner_key.as_bytes());
+            // return (receipt_string, receipt_address, token_id);
         }
-        ("".to_string(), token_owner.into(), token_id)
     }
 
     pub fn on_transfer(
@@ -143,7 +137,7 @@ impl ReverseLookup {
         token_identifier: TokenIdentifier,
         source: Address,
         target: Address
-    ) -> TransferReceipt {
+    ) {
         let mode = self.get_mode();
         if let OwnerReverseLookupMode::Complete | OwnerReverseLookupMode::TransfersOnly = mode {
             // Update to_account owned_tokens. Revert if owned_tokens list is not found
@@ -154,14 +148,15 @@ impl ReverseLookup {
                 self.add_page_entry_and_page_record(tokens_count, &source_key, false);
             }
 
-            let (page_table_entry, page_uref) =
+            let (_page_table_entry, _page_uref) =
                 self.update_page_entry_and_page_record(tokens_count, &source_key, &target_key);
-            let receipt_name = self.receipt_name.get();
-            let receipt_string = format!("{receipt_name}_m_{PAGE_SIZE}_p_{page_table_entry}");
-            let owned_tokens_actual_key = Key::dictionary(page_uref, source_key.as_bytes());
-            return (receipt_string, owned_tokens_actual_key);
+            // Uncomment if deciding to return the receipt
+
+            // let receipt_name = self.receipt_name.get();
+            // let receipt_string = format!("{receipt_name}_m_{PAGE_SIZE}_p_{page_table_entry}");
+            // let owned_tokens_actual_key = Key::dictionary(page_uref, source_key.as_bytes());
+            // return (receipt_string, owned_tokens_actual_key);
         }
-        ("".to_owned(), source.into())
     }
 
     fn add_page_entry_and_page_record(

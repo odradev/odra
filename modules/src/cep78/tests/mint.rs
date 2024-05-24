@@ -98,13 +98,13 @@ fn mint_should_return_dictionary_key_to_callers_owned_tokens() {
 
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
-    let (receipt_name, _, _) = contract.mint(
+    contract.mint(
         token_owner,
         TEST_PRETTY_721_META_DATA.to_string(),
         Maybe::None
     );
 
-    let actual_page = contract.get_page(receipt_name);
+    let actual_page = contract.get_page(0u64);
     let expected_page = {
         let mut page = vec![false; PAGE_SIZE as usize];
         page[0] = true;
