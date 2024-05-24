@@ -1,6 +1,9 @@
-use odra::{args::Maybe, prelude::*, Address, SubModule};
-
-use crate::{key_value_storage, single_value_storage};
+use odra::{
+    args::Maybe,
+    named_keys::{key_value_storage, single_value_storage},
+    prelude::*,
+    Address, SubModule
+};
 
 use super::{
     constants::{ACL_PACKAGE_MODE, ACL_WHITELIST, WHITELIST_MODE},

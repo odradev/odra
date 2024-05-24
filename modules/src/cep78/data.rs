@@ -1,4 +1,4 @@
-use crate::{
+use odra::named_keys::{
     base64_encoded_key_value_storage, compound_key_value_storage, key_value_storage,
     single_value_storage
 };

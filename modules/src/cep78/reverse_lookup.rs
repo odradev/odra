@@ -5,7 +5,7 @@ use odra::{
     Address, Mapping, SubModule, UnwrapOrRevert
 };
 
-use crate::single_value_storage;
+use odra::named_keys::single_value_storage;
 
 use super::{
     constants::PREFIX_PAGE_DICTIONARY,
