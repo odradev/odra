@@ -13,8 +13,8 @@ use crate::cep78::{
         TransferFilterContractResult, WhitelistMode
     },
     tests::{default_args_builder, utils::TEST_PRETTY_721_META_DATA},
-    token::Cep78HostRef,
-    utils::{MockContractHostRef, MockTransferFilterContractHostRef}
+    token::TestCep78HostRef,
+    utils::{MockCep78OperatorHostRef, MockCep78TransferFilterHostRef}
 };
 
 use super::utils;
@@ -27,7 +27,7 @@ fn should_disallow_transfer_with_minter_or_assigned_ownership_mode() {
         .minting_mode(MintingMode::Installer)
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
 
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
@@ -64,7 +64,7 @@ fn should_transfer_token_from_sender_to_receiver() {
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
         .events_mode(EventsMode::CES)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
 
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
@@ -92,9 +92,9 @@ fn should_transfer_token_from_sender_to_receiver() {
     let actual_token_owner = contract.owner_of(Maybe::Some(token_id), Maybe::None);
     assert_eq!(actual_token_owner, token_receiver);
 
-    // TODO: not implemented yet
-    /*let token_receiver_page = support::get_token_page_by_id(&builder, &nft_contract_key, &token_receiver_key, token_id);
-    assert!(token_receiver_page[0]);*/
+    env.set_caller(token_receiver);
+    let token_receiver_page = contract.get_page_by_token_id(token_id);
+    assert!(token_receiver_page[0]);
 
     let actual_sender_balance = contract.balance_of(token_owner);
     let expected_sender_balance = 0u64;
@@ -123,7 +123,7 @@ fn approve_token_for_transfer_should_add_entry_to_approved_dictionary(
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
         .events_mode(EventsMode::CES)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
 
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
@@ -183,7 +183,7 @@ fn revoke_token_for_transfer_should_remove_entry_to_approved_dictionary(
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
         .events_mode(EventsMode::CES)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
 
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
@@ -242,7 +242,7 @@ fn should_disallow_approving_when_ownership_mode_is_minter_or_assigned() {
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
         .events_mode(EventsMode::CES)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
     contract.mint(
@@ -266,7 +266,7 @@ fn should_be_able_to_transfer_token(env: HostEnv, operator: Option<Address>) {
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
         .events_mode(EventsMode::CES)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
     contract.mint(
@@ -325,7 +325,7 @@ fn should_disallow_same_approved_account_to_transfer_token_twice() {
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
         .events_mode(EventsMode::CES)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
 
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
@@ -381,7 +381,7 @@ fn should_disallow_to_transfer_token_using_revoked_hash(env: HostEnv, operator: 
         .ownership_mode(OwnershipMode::Transferable)
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
 
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
@@ -456,7 +456,7 @@ fn should_be_able_to_approve_with_deprecated_operator_argument() {}
 #[test]
 fn should_transfer_between_contract_to_account() {
     let env = odra_test::env();
-    let mut minting_contract = MockContractHostRef::deploy(&env, NoArgs);
+    let mut minting_contract = MockCep78OperatorHostRef::deploy(&env, NoArgs);
     let contract_whitelist = vec![*minting_contract.address()];
     let args = default_args_builder()
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
@@ -467,7 +467,7 @@ fn should_transfer_between_contract_to_account() {
         .minting_mode(MintingMode::Acl)
         .acl_white_list(contract_whitelist)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     minting_contract.set_address(contract.address());
 
     assert!(
@@ -499,7 +499,7 @@ fn should_prevent_transfer_when_caller_is_not_owner() {
         .ownership_mode(OwnershipMode::Transferable)
         .holder_mode(NFTHolderMode::Accounts)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
 
     let token_owner = env.get_account(0);
     let unauthorized_user = env.get_account(10);
@@ -534,7 +534,7 @@ fn should_transfer_token_in_hash_identifier_mode() {
         .ownership_mode(OwnershipMode::Transferable)
         .metadata_mutability(MetadataMutability::Immutable)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
 
     let token_owner = env.get_account(0);
     let new_owner = env.get_account(1);
@@ -556,13 +556,13 @@ fn should_transfer_token_in_hash_identifier_mode() {
 #[test]
 fn should_not_allow_non_approved_contract_to_transfer() {
     let env = odra_test::env();
-    let mut minting_contract = MockContractHostRef::deploy(&env, NoArgs);
+    let mut minting_contract = MockCep78OperatorHostRef::deploy(&env, NoArgs);
     let args = default_args_builder()
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
         .holder_mode(NFTHolderMode::Mixed)
         .ownership_mode(OwnershipMode::Transferable)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     minting_contract.set_address(contract.address());
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
@@ -599,7 +599,7 @@ fn transfer_should_correctly_track_page_table_entries() {
         .nft_metadata_kind(NFTMetadataKind::Raw)
         .ownership_mode(OwnershipMode::Transferable)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     let new_owner = env.get_account(1);
 
@@ -612,14 +612,9 @@ fn transfer_should_correctly_track_page_table_entries() {
     contract.register_owner(Maybe::Some(new_owner));
     contract.transfer(Maybe::Some(11u64), Maybe::None, token_owner, new_owner);
 
-    /* TODO: not implemented yet
-    let new_owner_page_table = support::get_dictionary_value_from_key::<Vec<bool>>(
-        &builder,
-        &nft_contract_key,
-        PAGE_TABLE,
-        &AccountHash::new(ACCOUNT_USER_1).to_string(),
-    );
-    assert!(account_user_1_page_table[0])*/
+    env.set_caller(new_owner);
+    let token_owner_page_table = contract.get_page_table();
+    assert!(token_owner_page_table[0])
 }
 
 #[test]
@@ -632,14 +627,13 @@ fn should_prevent_transfer_to_unregistered_owner() {
         .identifier_mode(NFTIdentifierMode::Ordinal)
         .metadata_mutability(MetadataMutability::Immutable)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
     contract.mint(token_owner, "".to_string(), Maybe::None);
 
-    let _token_id = 0u64;
-    let _token_receiver = env.get_account(1);
-    /* TODO: not implemented yet
+    let token_id = 0u64;
+    let token_receiver = env.get_account(1);
     assert_eq!(
         contract.try_transfer(
             Maybe::Some(token_id),
@@ -648,7 +642,7 @@ fn should_prevent_transfer_to_unregistered_owner() {
             token_receiver
         ),
         Err(CEP78Error::UnregisteredOwnerInTransfer.into())
-    ); */
+    );
 }
 
 #[test]
@@ -658,7 +652,7 @@ fn should_transfer_token_from_sender_to_receiver_with_transfer_only_reporting() 
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::TransfersOnly)
         .ownership_mode(OwnershipMode::Transferable)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
     env.set_caller(token_owner);
@@ -680,13 +674,9 @@ fn should_transfer_token_from_sender_to_receiver_with_transfer_only_reporting() 
     let actual_token_owner = contract.owner_of(Maybe::Some(0u64), Maybe::None);
     assert_eq!(actual_token_owner, token_receiver);
 
-    /*let token_receiver_page = support::get_token_page_by_id(
-        &builder,
-        &nft_contract_key,
-        &Key::Account(token_receiver),
-        0u64,
-    );
-    assert!(token_receiver_page[0]);*/
+    env.set_caller(token_receiver);
+    let token_receiver_page = contract.get_page_by_token_id(0u64);
+    assert!(token_receiver_page[0]);
 
     let actual_sender_balance = contract.balance_of(token_owner);
     let expected_sender_balance = 0u64;
@@ -703,7 +693,7 @@ fn disallow_owner_to_approve_itself() {
     let args = default_args_builder()
         .ownership_mode(OwnershipMode::Transferable)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
     contract.mint(
@@ -724,7 +714,7 @@ fn disallow_operator_to_approve_itself() {
     let args = default_args_builder()
         .ownership_mode(OwnershipMode::Transferable)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
     contract.mint(
@@ -750,7 +740,7 @@ fn disallow_owner_to_approve_for_all_itself() {
     let args = default_args_builder()
         .ownership_mode(OwnershipMode::Transferable)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
     contract.mint(
@@ -769,13 +759,13 @@ fn disallow_owner_to_approve_for_all_itself() {
 fn check_transfers_with_transfer_filter_contract_modes() {
     let env = odra_test::env();
 
-    let mut transfer_filter_contract = MockTransferFilterContractHostRef::deploy(&env, NoArgs);
+    let mut transfer_filter_contract = MockCep78TransferFilterHostRef::deploy(&env, NoArgs);
     transfer_filter_contract.set_return_value(TransferFilterContractResult::DenyTransfer as u8);
     let args = default_args_builder()
         .ownership_mode(OwnershipMode::Transferable)
         .transfer_filter_contract_contract_key(*transfer_filter_contract.address())
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
     contract.mint(
@@ -842,12 +832,12 @@ fn check_transfers_with_transfer_filter_contract_modes() {
 #[test]
 fn should_disallow_transfer_from_contract_with_package_operator_mode_without_operator() {
     let env = odra_test::env();
-    let mut minting_contract = MockContractHostRef::deploy(&env, NoArgs);
+    let mut minting_contract = MockCep78OperatorHostRef::deploy(&env, NoArgs);
     let args = default_args_builder()
         .ownership_mode(OwnershipMode::Transferable)
         .holder_mode(NFTHolderMode::Mixed)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     minting_contract.set_address(contract.address());
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
@@ -875,12 +865,12 @@ fn should_disallow_transfer_from_contract_without_package_operator_mode_with_pac
 #[test]
 fn should_allow_transfer_from_contract_with_package_operator_mode_with_operator() {
     let env = odra_test::env();
-    let mut minting_contract = MockContractHostRef::deploy(&env, NoArgs);
+    let mut minting_contract = MockCep78OperatorHostRef::deploy(&env, NoArgs);
     let args = default_args_builder()
         .ownership_mode(OwnershipMode::Transferable)
         .holder_mode(NFTHolderMode::Mixed)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     minting_contract.set_address(contract.address());
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
@@ -910,12 +900,12 @@ fn should_disallow_package_operator_to_approve_without_package_operator_mode() {
 #[test]
 fn should_allow_package_operator_to_approve_with_package_operator_mode() {
     let env = odra_test::env();
-    let mut minting_contract = MockContractHostRef::deploy(&env, NoArgs);
+    let mut minting_contract = MockCep78OperatorHostRef::deploy(&env, NoArgs);
     let args = default_args_builder()
         .ownership_mode(OwnershipMode::Transferable)
         .holder_mode(NFTHolderMode::Mixed)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     minting_contract.set_address(contract.address());
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
@@ -948,12 +938,12 @@ fn should_allow_package_operator_to_approve_with_package_operator_mode() {
 #[test]
 fn should_allow_account_to_approve_spender_with_package_operator() {
     let env = odra_test::env();
-    let minting_contract = MockContractHostRef::deploy(&env, NoArgs);
+    let minting_contract = MockCep78OperatorHostRef::deploy(&env, NoArgs);
     let args = default_args_builder()
         .ownership_mode(OwnershipMode::Transferable)
         .holder_mode(NFTHolderMode::Mixed)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
     contract.mint(
@@ -985,12 +975,12 @@ fn should_allow_account_to_approve_spender_with_package_operator() {
 #[test]
 fn should_allow_package_operator_to_revoke_with_package_operator_mode() {
     let env = odra_test::env();
-    let mut minting_contract = MockContractHostRef::deploy(&env, NoArgs);
+    let mut minting_contract = MockCep78OperatorHostRef::deploy(&env, NoArgs);
     let args = default_args_builder()
         .ownership_mode(OwnershipMode::Transferable)
         .holder_mode(NFTHolderMode::Mixed)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     minting_contract.set_address(contract.address());
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));

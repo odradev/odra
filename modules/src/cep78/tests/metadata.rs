@@ -17,8 +17,8 @@ use crate::cep78::{
         TEST_CUSTOM_METADATA, TEST_CUSTOM_METADATA_SCHEMA, TEST_CUSTOM_UPDATED_METADATA,
         TOKEN_HASH
     },
-    token::Cep78HostRef,
-    utils::MockContractHostRef
+    token::TestCep78HostRef,
+    utils::MockCep78OperatorHostRef
 };
 
 use super::{
@@ -35,7 +35,7 @@ fn should_prevent_update_in_immutable_mode() {
         .metadata_mutability(MetadataMutability::Immutable)
         .ownership_mode(OwnershipMode::Transferable)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     contract.mint(
         env.get_account(0),
         TEST_PRETTY_721_META_DATA.to_string(),
@@ -63,7 +63,7 @@ fn should_allow_install_with_hash_identifier_in_mutable_mode() {
         .identifier_mode(NFTIdentifierMode::Hash)
         .metadata_mutability(MetadataMutability::Mutable)
         .build();
-    assert!(Cep78HostRef::try_deploy(&env, args).is_ok());
+    assert!(TestCep78HostRef::try_deploy(&env, args).is_ok());
 }
 
 #[test]
@@ -75,7 +75,7 @@ fn should_prevent_update_for_invalid_metadata() {
         .metadata_mutability(MetadataMutability::Mutable)
         .ownership_mode(OwnershipMode::Transferable)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     contract.mint(
         env.get_account(0),
         TEST_PRETTY_721_META_DATA.to_string(),
@@ -105,7 +105,7 @@ fn should_prevent_metadata_update_by_non_owner_key() {
         .metadata_mutability(MetadataMutability::Mutable)
         .ownership_mode(OwnershipMode::Transferable)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     let token_owner = *contract.address();
     contract.mint(
         token_owner,
@@ -145,7 +145,7 @@ fn should_allow_update_for_valid_metadata_based_on_kind(
         .json_schema(json_schema)
         .events_mode(EventsMode::CES)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
 
     let custom_metadata = serde_json::to_string_pretty(&*TEST_CUSTOM_METADATA)
@@ -256,7 +256,7 @@ fn should_update_metadata_for_custom_validated_using_token_id() {
 #[test]
 fn should_get_metadata_using_token_id() {
     let env = odra_test::env();
-    let mut minting_contract = MockContractHostRef::deploy(&env, NoArgs);
+    let mut minting_contract = MockCep78OperatorHostRef::deploy(&env, NoArgs);
     let contract_whitelist = vec![*minting_contract.address()];
     let args = default_args_builder()
         .holder_mode(NFTHolderMode::Contracts)
@@ -265,7 +265,7 @@ fn should_get_metadata_using_token_id() {
         .minting_mode(MintingMode::Acl)
         .acl_white_list(contract_whitelist)
         .build();
-    let contract = Cep78HostRef::deploy(&env, args);
+    let contract = TestCep78HostRef::deploy(&env, args);
     minting_contract.set_address(contract.address());
     let token_id = 0u64;
 
@@ -283,7 +283,7 @@ fn should_get_metadata_using_token_id() {
 #[test]
 fn should_get_metadata_using_token_metadata_hash() {
     let env = odra_test::env();
-    let mut minting_contract = MockContractHostRef::deploy(&env, NoArgs);
+    let mut minting_contract = MockCep78OperatorHostRef::deploy(&env, NoArgs);
     let contract_whitelist = vec![*minting_contract.address()];
     let args = default_args_builder()
         .identifier_mode(NFTIdentifierMode::Hash)
@@ -294,7 +294,7 @@ fn should_get_metadata_using_token_metadata_hash() {
         .minting_mode(MintingMode::Acl)
         .acl_white_list(contract_whitelist)
         .build();
-    let contract = Cep78HostRef::deploy(&env, args);
+    let contract = TestCep78HostRef::deploy(&env, args);
     minting_contract.set_address(contract.address());
 
     assert!(
@@ -314,7 +314,7 @@ fn should_get_metadata_using_token_metadata_hash() {
 #[test]
 fn should_revert_minting_token_metadata_hash_twice() {
     let env = odra_test::env();
-    let mut minting_contract = MockContractHostRef::deploy(&env, NoArgs);
+    let mut minting_contract = MockCep78OperatorHostRef::deploy(&env, NoArgs);
     let contract_whitelist = vec![*minting_contract.address()];
     let args = default_args_builder()
         .identifier_mode(NFTIdentifierMode::Hash)
@@ -325,7 +325,7 @@ fn should_revert_minting_token_metadata_hash_twice() {
         .minting_mode(MintingMode::Acl)
         .acl_white_list(contract_whitelist)
         .build();
-    let contract = Cep78HostRef::deploy(&env, args);
+    let contract = TestCep78HostRef::deploy(&env, args);
     minting_contract.set_address(contract.address());
     assert!(
         contract.is_whitelisted(minting_contract.address()),
@@ -348,7 +348,7 @@ fn should_revert_minting_token_metadata_hash_twice() {
 #[test]
 fn should_get_metadata_using_custom_token_hash() {
     let env = odra_test::env();
-    let mut minting_contract = MockContractHostRef::deploy(&env, NoArgs);
+    let mut minting_contract = MockCep78OperatorHostRef::deploy(&env, NoArgs);
     let contract_whitelist = vec![*minting_contract.address()];
     let args = default_args_builder()
         .identifier_mode(NFTIdentifierMode::Hash)
@@ -359,7 +359,7 @@ fn should_get_metadata_using_custom_token_hash() {
         .minting_mode(MintingMode::Acl)
         .acl_white_list(contract_whitelist)
         .build();
-    let contract = Cep78HostRef::deploy(&env, args);
+    let contract = TestCep78HostRef::deploy(&env, args);
     minting_contract.set_address(contract.address());
 
     assert!(
@@ -379,7 +379,7 @@ fn should_get_metadata_using_custom_token_hash() {
 #[test]
 fn should_revert_minting_custom_token_hash_identifier_twice() {
     let env = odra_test::env();
-    let mut minting_contract = MockContractHostRef::deploy(&env, NoArgs);
+    let mut minting_contract = MockCep78OperatorHostRef::deploy(&env, NoArgs);
     let contract_whitelist = vec![*minting_contract.address()];
     let args = default_args_builder()
         .identifier_mode(NFTIdentifierMode::Hash)
@@ -390,7 +390,7 @@ fn should_revert_minting_custom_token_hash_identifier_twice() {
         .minting_mode(MintingMode::Acl)
         .acl_white_list(contract_whitelist)
         .build();
-    let contract = Cep78HostRef::deploy(&env, args);
+    let contract = TestCep78HostRef::deploy(&env, args);
     minting_contract.set_address(contract.address());
 
     assert!(
@@ -417,15 +417,19 @@ fn should_revert_minting_custom_token_hash_identifier_twice() {
 
 #[test]
 fn should_require_valid_json_schema_when_kind_is_custom_validated() {
-    let _env = odra_test::env();
-    let _args = default_args_builder()
+    let env = odra_test::env();
+    let args = default_args_builder()
         .identifier_mode(NFTIdentifierMode::Ordinal)
         .ownership_mode(OwnershipMode::Transferable)
+        .metadata_mutability(MetadataMutability::Mutable)
         .nft_metadata_kind(NFTMetadataKind::CustomValidated)
+        .json_schema("test".to_string())
         .build();
-
-    /*let error = builder.get_error().expect("must have error");
-    support::assert_expected_error(error, 68, "valid json_schema is required")*/
+    assert_eq!(
+        TestCep78HostRef::try_deploy(&env, args).err(),
+        Some(CEP78Error::InvalidJsonSchema.into()),
+        "should fail execution since json_schema is required"
+    );
 }
 
 #[test]
@@ -442,7 +446,7 @@ fn should_require_json_schema_when_kind_is_custom_validated() {
         .build();
 
     assert_eq!(
-        Cep78HostRef::try_deploy(&env, args).err(),
+        TestCep78HostRef::try_deploy(&env, args).err(),
         Some(CEP78Error::MissingJsonSchema.into()),
         "should fail execution since json_schema is required"
     );
@@ -457,7 +461,7 @@ fn should_not_require_json_schema_when_kind_is(nft_metadata_kind: NFTMetadataKin
         .nft_metadata_kind(nft_metadata_kind.clone())
         .json_schema("".to_string())
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
 
     let original_metadata = match &nft_metadata_kind {
         NFTMetadataKind::CEP78 => TEST_PRETTY_CEP78_METADATA,
