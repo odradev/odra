@@ -251,6 +251,7 @@ impl TryFrom<&'_ FnIR> for NewEntryPointItem {
             param_ret_ty,
             param_access,
             utils::expr::entry_point_contract(),
+            utils::expr::entry_point_payment(),
         ]);
         Ok(Self {
             ty: utils::ty::entry_point(),
