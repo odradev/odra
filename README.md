@@ -1,5 +1,5 @@
 <div align="center">
-    <img src=".images/odra_logo.png"></img>
+    <img width="600rem" src=".images/odra_logo.png"></img>
     <h3>Odra - Smart contracts for Casper Network.</h3>
     <p>
         <a href="https://odra.dev/docs">Docs</a> |
