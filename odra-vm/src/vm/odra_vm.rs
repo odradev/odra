@@ -715,7 +715,7 @@ mod tests {
         let vm = OdraVm::new();
         let host_env = OdraVmHost::new(vm);
         let env = HostEnv::new(host_env);
-        let entry_point = EntryPoint::new(String::from(entry_point_name), vec![]);
+        let entry_point = EntryPoint::new_payable(String::from(entry_point_name), vec![]);
         EntryPointsCaller::new(env, vec![entry_point], |_, _| Ok(test_call_result()))
     }
 }
