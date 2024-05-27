@@ -57,10 +57,11 @@ mod tests {
 
         contract.with_tokens(U512::from(100)).deposit();
         // call a non-payable function with tokens should fail and tokens should be refunded
-        let _ = contract
+        assert!(contract
             .with_tokens(U512::from(10))
-            .try_withdraw(&U512::from(25));
-
+            .try_withdraw(&U512::from(25))
+            .is_err());
+        // only the `deposit` function should have an effect
         assert_eq!(
             test_env.balance_of(&caller_address),
             original_caller_balance - U512::from(100)
