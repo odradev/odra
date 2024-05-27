@@ -1,4 +1,4 @@
-use odra_core::casper_types::ProtocolVersion;
+use odra_core::casper_types::{AddressableEntity, ProtocolVersion};
 use odra_core::consts::*;
 use odra_core::prelude::*;
 use odra_core::OdraResult;
@@ -59,12 +59,10 @@ impl CasperVm {
 
     /// Read a ContractPackageHash of a given name, from the active account.
     pub fn contract_package_hash_from_name(&self, name: &str) -> ContractPackageHash {
-        let account = self
-            .context
-            .get_account(self.active_account_hash())
-            .unwrap();
-        let key: &Key = account.named_keys().get(name).unwrap();
-        ContractPackageHash::from(key.into_hash().unwrap())
+        let named_keys = self.context.get_named_keys_by_account_hash(self.active_account_hash());
+
+        let key: &Key = named_keys.get(name).unwrap();
+        ContractPackageHash::from(key.into_hash_addr().unwrap())
     }
 
     /// Updates the active account (caller) address.
@@ -373,7 +371,7 @@ impl CasperVm {
     }
 
     fn get_account_cspr_balance(&self, account_hash: &AccountHash) -> U512 {
-        let account: Account = self.context.get_account(*account_hash).unwrap();
+        let account: AddressableEntity = self.context.get_entity_by_account_hash(*account_hash).unwrap();
         let purse = account.main_purse();
         let gas_used = self
             .gas_used
