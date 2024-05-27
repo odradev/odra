@@ -292,7 +292,7 @@ mod test {
                                 odra::entry_point_callback::Argument::new::<Option<U256> >(odra::prelude::string::String::from("total_supply"))
                             ]),
                             odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
-                            odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("pay_to_mint"), odra::prelude::vec![]),
+                            odra::entry_point_callback::EntryPoint::new_payable(odra::prelude::string::String::from("pay_to_mint"), odra::prelude::vec![]),
                             odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("approve"), odra::prelude::vec![
                                 odra::entry_point_callback::Argument::new::<Address>(odra::prelude::string::String::from("to")),
                                 odra::entry_point_callback::Argument::new::<U256>(odra::prelude::string::String::from("amount")),
@@ -454,7 +454,7 @@ mod test {
                     fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
                         let entry_points = odra::prelude::vec![
                             odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
-                            odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("pay_to_mint"), odra::prelude::vec![])
+                            odra::entry_point_callback::EntryPoint::new_payable(odra::prelude::string::String::from("pay_to_mint"), odra::prelude::vec![])
                         ];
                         odra::entry_point_callback::EntryPointsCaller::new(env.clone(), entry_points, |contract_env, call_def| {
                             match call_def.entry_point() {

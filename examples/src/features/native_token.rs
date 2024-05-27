@@ -47,4 +47,18 @@ mod tests {
         let contract_balance = my_contract.balance();
         assert_eq!(contract_balance, original_contract_balance + U512::from(75));
     }
+
+    #[test]
+    fn test_call_non_payable_function_with_tokens() {
+        let test_env = odra_test::env();
+        let contract = PublicWalletHostRef::deploy(&test_env, NoArgs);
+        let caller_address = test_env.get_account(0);
+        let original_caller_balance = test_env.balance_of(&caller_address);
+
+        contract.with_tokens(U512::from(100)).deposit();
+        // call a non-payable function with tokens should fail and tokens should be refunded 
+        let _ = contract.with_tokens(U512::from(10)).try_withdraw(&U512::from(25));
+        
+        assert_eq!(test_env.balance_of(&caller_address), original_caller_balance - U512::from(100));
+    }
 }

@@ -65,13 +65,28 @@ pub struct EntryPoint {
     /// The name of the entry point.
     pub name: String,
     /// The collection of arguments to the entry point.
-    pub args: Vec<Argument>
+    pub args: Vec<Argument>,
+    /// A flag indicating whether the entry point is payable.
+    pub is_payable: bool
 }
 
 impl EntryPoint {
     /// Creates a new instance of `EntryPoint`.
     pub fn new(name: String, args: Vec<Argument>) -> Self {
-        Self { name, args }
+        Self {
+            name,
+            args,
+            is_payable: false
+        }
+    }
+
+    /// Creates a new instance of payable `EntryPoint`.
+    pub fn new_payable(name: String, args: Vec<Argument>) -> Self {
+        Self {
+            name,
+            args,
+            is_payable: true
+        }
     }
 }
 
