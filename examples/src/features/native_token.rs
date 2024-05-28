@@ -32,7 +32,7 @@ mod tests {
     };
 
     #[test]
-    fn test_modules() {
+    fn test_public_wallet() {
         let test_env = odra_test::env();
         let mut my_contract = PublicWalletHostRef::deploy(&test_env, NoArgs);
         let original_contract_balance = test_env.balance_of(&my_contract);

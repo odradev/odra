@@ -1,4 +1,4 @@
-use odra_core::casper_types::{AddressableEntity, ProtocolVersion};
+use odra_core::casper_types::{AddressableEntity, AddressableEntityHash, ProtocolVersion};
 use odra_core::consts::*;
 use odra_core::prelude::*;
 use odra_core::OdraResult;
@@ -7,13 +7,13 @@ use std::env;
 use std::path::PathBuf;
 
 use casper_engine_test_support::{
-    DeployItemBuilder, ExecuteRequestBuilder, LmdbWasmTestBuilder, ARG_AMOUNT, DEFAULT_ACCOUNTS,
-    DEFAULT_ACCOUNT_INITIAL_BALANCE, DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_EXEC_CONFIG,
-    DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_PAYMENT
+    DeployItemBuilder, ExecuteRequestBuilder, LmdbWasmTestBuilder, WasmTestBuilder, ARG_AMOUNT,
+    DEFAULT_ACCOUNTS, DEFAULT_ACCOUNT_INITIAL_BALANCE, DEFAULT_CHAINSPEC_REGISTRY,
+    DEFAULT_EXEC_CONFIG, DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_PAYMENT
 };
 use casper_event_standard::try_full_name_from_bytes;
 use casper_execution_engine::{engine_state, execution};
-use casper_storage::data_access_layer::GenesisRequest;
+use casper_storage::data_access_layer::{DataAccessLayer, GenesisRequest};
 use odra_core::{casper_event_standard, DeployReport, GasReport};
 use std::rc::Rc;
 
@@ -59,10 +59,13 @@ impl CasperVm {
 
     /// Read a ContractPackageHash of a given name, from the active account.
     pub fn contract_package_hash_from_name(&self, name: &str) -> ContractPackageHash {
-        let named_keys = self.context.get_named_keys_by_account_hash(self.active_account_hash());
+        let named_keys = self
+            .context
+            .get_named_keys_by_account_hash(self.active_account_hash());
+        dbg!(named_keys.clone());
 
         let key: &Key = named_keys.get(name).unwrap();
-        ContractPackageHash::from(key.into_hash_addr().unwrap())
+        ContractPackageHash::from(key.into_package_hash().unwrap().value())
     }
 
     /// Updates the active account (caller) address.
@@ -250,7 +253,9 @@ impl CasperVm {
     pub fn balance_of(&self, address: &Address) -> U512 {
         match address {
             Address::Account(account_hash) => self.get_account_cspr_balance(account_hash),
-            Address::Contract(contract_hash) => self.get_contract_cspr_balance(contract_hash)
+            Address::Contract(contract_package_hash) => {
+                self.get_contract_cspr_balance(contract_package_hash)
+            }
         }
     }
 
@@ -371,19 +376,36 @@ impl CasperVm {
     }
 
     fn get_account_cspr_balance(&self, account_hash: &AccountHash) -> U512 {
-        let account: AddressableEntity = self.context.get_entity_by_account_hash(*account_hash).unwrap();
+        let account: AddressableEntity = self
+            .context
+            .get_entity_by_account_hash(*account_hash)
+            .unwrap();
         let purse = account.main_purse();
-        let gas_used = self
-            .gas_used
-            .get(account_hash)
-            .copied()
-            .unwrap_or(U512::zero());
-        self.context.get_purse_balance(purse) + gas_used
+        // TODO: Handle gas used, currently all calls are free
+        // let gas_used = self
+        //     .gas_used
+        //     .get(account_hash)
+        //     .copied()
+        //     .unwrap_or(U512::zero());
+        self.context.get_purse_balance(purse)
     }
 
-    fn get_contract_cspr_balance(&self, contract_hash: &ContractPackageHash) -> U512 {
-        let contract_hash: ContractHash = self.get_contract_hash(contract_hash);
-        let contract: Contract = self.context.get_legacy_contract(contract_hash).unwrap();
+    fn get_contract_cspr_balance(&self, contract_package_hash: &ContractPackageHash) -> U512 {
+        let v = self
+            .context
+            .query(None, Key::Package(contract_package_hash.value()), &[])
+            .unwrap();
+
+        // TODO: Addressable entity has main purse inside it, is it the same as ours for contracts?
+        let aeh = match v {
+            StoredValue::Package(package) => package.current_entity_hash().unwrap(),
+            _ => panic!("Expected Package")
+        };
+        let contract = self
+            .context
+            .get_entity_with_named_keys_by_entity_hash(aeh)
+            .unwrap();
+
         contract
             .named_keys()
             .get(CONTRACT_MAIN_PURSE)
@@ -467,18 +489,20 @@ impl CasperVm {
 
 impl CasperVm {
     fn events_length(&self, contract_hash: &ContractHash) -> u32 {
-        self.context
-            .query(
-                None,
-                Key::Hash(contract_hash.value()),
-                &[String::from(EVENTS_LENGTH)]
-            )
-            .unwrap()
-            .as_cl_value()
-            .unwrap()
-            .clone()
-            .into_t()
-            .unwrap()
+        0
+        // TODO: Implement
+        // self.context
+        //     .query(
+        //         None,
+        //         Key::Hash(contract_hash.value()),
+        //         &[String::from(EVENTS_LENGTH)]
+        //     )
+        //     .unwrap()
+        //     .as_cl_value()
+        //     .unwrap()
+        //     .clone()
+        //     .into_t()
+        //     .unwrap()
     }
 
     fn panic_with_error(
