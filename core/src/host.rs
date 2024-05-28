@@ -508,6 +508,11 @@ mod test {
     use casper_event_standard::Event;
     use casper_types::account::AccountHash;
     use mockall::{mock, predicate};
+    use std::sync::Mutex;
+
+    pub static IDENT_MTX: Mutex<()> = Mutex::new(());
+    pub static EPC_MTX: Mutex<()> = Mutex::new(());
+    pub static VALIDATE_MTX: Mutex<()> = Mutex::new(());
 
     #[derive(Debug, Event, PartialEq)]
     struct TestEv {}
@@ -542,6 +547,9 @@ mod test {
 
     #[test]
     fn test_deploy_with_default_args() {
+        let _i = IDENT_MTX.lock();
+        let _e = EPC_MTX.lock();
+
         // stubs
         let indent_ctx = MockTestRef::ident_context();
         indent_ctx.expect().returning(|| "TestRef".to_string());
@@ -569,6 +577,9 @@ mod test {
     #[should_panic(expected = "Invalid init args for contract TestRef.")]
     fn test_deploy_with_invalid_args() {
         // stubs
+        let _i = IDENT_MTX.lock();
+        let _v = VALIDATE_MTX.lock();
+
         let args_ctx = MockEv::validate_context();
         args_ctx.expect().returning(|_| false);
         let indent_ctx = MockTestRef::ident_context();
@@ -582,6 +593,9 @@ mod test {
     #[test]
     fn test_load_ref() {
         // stubs
+        let _e = EPC_MTX.lock();
+        let _v = VALIDATE_MTX.lock();
+
         let args_ctx = MockEv::validate_context();
         args_ctx.expect().returning(|_| true);
         let epc_ctx = MockTestRef::entry_points_caller_context();
