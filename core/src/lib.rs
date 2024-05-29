@@ -25,6 +25,7 @@ pub mod host;
 mod list;
 mod mapping;
 pub mod module;
+mod named_keys;
 pub mod prelude;
 mod sequence;
 pub mod uints;

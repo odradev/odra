@@ -7,7 +7,9 @@ compile_error!("This binary only supports wasm32 target architecture!");
 
 extern crate alloc;
 
-use odra_casper_proxy_caller::{call_versioned_contract_ret_bytes, set_key, ProxyCall};
+use odra_casper_proxy_caller::{
+    call_versioned_contract_ret_bytes, ensure_cargo_purse_is_empty, set_key, ProxyCall
+};
 use odra_core::casper_types::bytesrepr::Bytes;
 use odra_core::consts::RESULT_KEY;
 use odra_core::prelude::*;
@@ -20,5 +22,6 @@ fn call() {
         proxy_call.entry_point_name.as_str(),
         proxy_call.runtime_args
     );
+    ensure_cargo_purse_is_empty(proxy_call.attached_value);
     set_key(RESULT_KEY, Bytes::from(result));
 }

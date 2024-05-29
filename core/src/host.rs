@@ -508,6 +508,11 @@ mod test {
     use casper_event_standard::Event;
     use casper_types::account::AccountHash;
     use mockall::{mock, predicate};
+    use std::sync::Mutex;
+
+    static IDENT_MTX: Mutex<()> = Mutex::new(());
+    static EPC_MTX: Mutex<()> = Mutex::new(());
+    static VALIDATE_MTX: Mutex<()> = Mutex::new(());
 
     #[derive(Debug, Event, PartialEq)]
     struct TestEv {}
@@ -542,6 +547,13 @@ mod test {
 
     #[test]
     fn test_deploy_with_default_args() {
+        // MockTestRef::ident() and  MockTestRef::entry_points_caller() are static and can't be safely used
+        // from multiple tests at the same time. Should be to protected with a Mutex. Each function has
+        // a separate Mutex.
+        // https://github.com/asomers/mockall/blob/master/mockall/tests/mock_struct_with_static_method.rs
+        let _i = IDENT_MTX.lock();
+        let _e = EPC_MTX.lock();
+
         // stubs
         let indent_ctx = MockTestRef::ident_context();
         indent_ctx.expect().returning(|| "TestRef".to_string());
@@ -568,6 +580,13 @@ mod test {
     #[test]
     #[should_panic(expected = "Invalid init args for contract TestRef.")]
     fn test_deploy_with_invalid_args() {
+        // MockTestRef::ident() and  MockEv::validate() are static and can't be safely used
+        // from multiple tests at the same time. Should be to protected with a Mutex. Each function has
+        // a separate Mutex.
+        // https://github.com/asomers/mockall/blob/master/mockall/tests/mock_struct_with_static_method.rs
+        let _i = IDENT_MTX.lock();
+        let _v = VALIDATE_MTX.lock();
+
         // stubs
         let args_ctx = MockEv::validate_context();
         args_ctx.expect().returning(|_| false);
@@ -581,6 +600,13 @@ mod test {
 
     #[test]
     fn test_load_ref() {
+        // MockTestRef::ident() and  MockEv::validate() are static and can't be safely used
+        // from multiple tests at the same time. Should be to protected with a Mutex. Each function has
+        // a separate Mutex.
+        // https://github.com/asomers/mockall/blob/master/mockall/tests/mock_struct_with_static_method.rs
+        let _e = EPC_MTX.lock();
+        let _v = VALIDATE_MTX.lock();
+
         // stubs
         let args_ctx = MockEv::validate_context();
         args_ctx.expect().returning(|_| true);

@@ -1,5 +1,4 @@
-use crate::single_value_storage;
-use odra::{prelude::*, SubModule};
+use odra::{named_keys::single_value_storage, prelude::*, SubModule};
 
 use super::constants::*;
 use super::error::CEP78Error;

@@ -1,11 +1,10 @@
 use odra::{
     args::Maybe,
     casper_types::{AccessRights, URef},
+    named_keys::{key_value_storage, single_value_storage},
     prelude::*,
     Address, Mapping, SubModule, UnwrapOrRevert
 };
-
-use crate::{key_value_storage, single_value_storage};
 
 use super::{
     constants::{PAGE_LIMIT, PAGE_TABLE, PREFIX_PAGE_DICTIONARY, RECEIPT_NAME, REPORTING_MODE},

@@ -12,7 +12,6 @@ macro_rules! single_value_storage {
                 self.env().set_named_value($key, value);
             }
 
-            #[allow(dead_code)]
             pub fn get(&self) -> $value_ty {
                 use odra::UnwrapOrRevert;
                 self.env()
@@ -108,23 +107,27 @@ macro_rules! compound_key_value_storage {
                 use odra::UnwrapOrRevert;
 
                 let env = self.env();
-                let parts = [
-                    key1.to_bytes().unwrap_or_revert(&env),
-                    key2.to_bytes().unwrap_or_revert(&env)
-                ];
-                let key = $crate::storage::compound_key(&env, &parts);
+                let mut key = [0u8; 64];
+                let mut preimage = odra::prelude::Vec::new();
+                preimage.extend_from_slice(&key1.to_bytes().unwrap_or_revert(&env));
+                preimage.extend_from_slice(&key2.to_bytes().unwrap_or_revert(&env));
+
+                let key_bytes = env.hash(&preimage);
+                odra::utils::hex_to_slice(&key_bytes, &mut key);
                 env.set_dictionary_value($dict, &key, value);
             }
 
             pub fn get_or_default(&self, key1: &$k1_type, key2: &$k2_type) -> $value_type {
                 use odra::UnwrapOrRevert;
-
                 let env = self.env();
-                let parts = [
-                    key1.to_bytes().unwrap_or_revert(&env),
-                    key2.to_bytes().unwrap_or_revert(&env)
-                ];
-                let key = $crate::storage::compound_key(&env, &parts);
+
+                let mut key = [0u8; 64];
+                let mut preimage = odra::prelude::Vec::new();
+                preimage.extend_from_slice(&key1.to_bytes().unwrap_or_revert(&env));
+                preimage.extend_from_slice(&key2.to_bytes().unwrap_or_revert(&env));
+
+                let key_bytes = env.hash(&preimage);
+                odra::utils::hex_to_slice(&key_bytes, &mut key);
                 env.get_dictionary_value($dict, &key).unwrap_or_default()
             }
         }
@@ -132,16 +135,4 @@ macro_rules! compound_key_value_storage {
     ($name:ident, $dict:expr, $k1_type:ty, $value_type:ty) => {
         compound_key_value_storage!($name, $dict, $k1_type, $k1_type, $value_type);
     };
-}
-
-pub(crate) fn compound_key(env: &odra::ContractEnv, parts: &[odra::prelude::Vec<u8>]) -> [u8; 64] {
-    let mut result = [0u8; 64];
-    let mut preimage = odra::prelude::Vec::new();
-    for part in parts {
-        preimage.extend_from_slice(part);
-    }
-
-    let key_bytes = env.hash(&preimage);
-    odra::utils::hex_to_slice(&key_bytes, &mut result);
-    result
 }
