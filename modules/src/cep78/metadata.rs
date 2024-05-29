@@ -1,7 +1,6 @@
+use odra::named_keys::single_value_storage;
 use odra::{args::Maybe, prelude::*, SubModule, UnwrapOrRevert};
 use serde::{Deserialize, Serialize};
-
-use crate::single_value_storage;
 
 use super::{
     constants::{

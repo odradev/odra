@@ -1,5 +1,5 @@
 #![allow(clippy::too_many_arguments)]
-use crate::single_value_storage;
+use odra::named_keys::single_value_storage;
 
 use super::{
     constants::TRANSFER_FILTER_CONTRACT,
