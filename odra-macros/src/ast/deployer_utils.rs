@@ -21,9 +21,10 @@ impl TryFrom<&'_ ModuleImplIR> for EntrypointsInitExpr {
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let functions = module.functions()?;
+        
         let entry_points = functions
             .iter()
-            .map(|f| utils::expr::new_entry_point(f.name_str(), f.raw_typed_args()))
+            .map(|f| utils::expr::new_entry_point(f.name_str(), f.raw_typed_args(), f.is_payable()))
             .collect::<Punctuated<_, syn::Token![,]>>();
         let value_expr = utils::expr::vec(entry_points);
 

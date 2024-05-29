@@ -164,7 +164,7 @@ pub fn default() -> syn::Expr {
     parse_quote!(Default::default())
 }
 
-pub fn new_entry_point(name: String, args: Vec<syn::PatType>) -> syn::Expr {
+pub fn new_entry_point(name: String, args: Vec<syn::PatType>, is_payable: bool) -> syn::Expr {
     let ty = super::ty::odra_entry_point();
     let name = string_from(name);
     let args_stream = args
@@ -172,7 +172,11 @@ pub fn new_entry_point(name: String, args: Vec<syn::PatType>) -> syn::Expr {
         .map(new_entry_point_arg)
         .collect::<Punctuated<_, syn::Token![,]>>();
     let args_vec = vec(args_stream);
-    parse_quote!(#ty::new(#name, #args_vec))
+    if is_payable {
+        parse_quote!(#ty::new_payable(#name, #args_vec))
+    } else {
+        parse_quote!(#ty::new(#name, #args_vec))
+    }
 }
 
 fn new_entry_point_arg(arg: &syn::PatType) -> syn::Expr {

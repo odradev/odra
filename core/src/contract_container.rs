@@ -1,7 +1,8 @@
 use crate::entry_point_callback::EntryPointsCaller;
-use crate::{prelude::*, OdraResult};
+use crate::{prelude::*, ExecutionError, OdraResult};
 use crate::{CallDef, OdraError, VmError};
 use casper_types::bytesrepr::Bytes;
+use casper_types::U512;
 
 /// A wrapper struct for a EntryPointsCaller that is a layer of abstraction between the host and the entry points caller.
 ///
@@ -22,13 +23,17 @@ impl ContractContainer {
     /// Calls the entry point with the given call definition.
     pub fn call(&self, call_def: CallDef) -> OdraResult<Bytes> {
         // find the entry point
-        self.entry_points_caller
+        let ep = self
+            .entry_points_caller
             .entry_points()
             .iter()
             .find(|ep| ep.name == call_def.entry_point())
             .ok_or_else(|| {
                 OdraError::VmError(VmError::NoSuchMethod(call_def.entry_point().to_owned()))
             })?;
+        if !ep.is_payable && call_def.amount() > U512::zero() {
+            return Err(OdraError::ExecutionError(ExecutionError::NonPayable));
+        }
         self.entry_points_caller.call(call_def)
     }
 }

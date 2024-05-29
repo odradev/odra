@@ -76,7 +76,10 @@ impl OdraVm {
             .unwrap()
             .call(&address, call_def);
 
-        self.handle_call_result(result)
+        match result {
+            Err(err) => self.revert(err),
+            Ok(bytes) => self.handle_call_result(bytes)
+        }
     }
 
     /// Stops the execution of the virtual machine and reverts all the changes.
@@ -355,32 +358,17 @@ impl OdraVm {
         state.push_callstack_element(element);
     }
 
-    fn handle_call_result(&self, result: OdraResult<Bytes>) -> Bytes {
+    fn handle_call_result(&self, result: Bytes) -> Bytes {
         let mut state = self.state.write().unwrap();
-        let result = match result {
-            Ok(data) => data,
-            Err(err) => {
-                state.set_error(err);
-                Bytes::new()
-            }
-        };
 
         // Drop the address from stack.
         state.pop_callstack_element();
 
-        if state.error.is_none() {
-            // If only one address on the call_stack, drop the snapshot
-            if state.is_in_caller_context() {
-                state.drop_snapshot();
-            }
-            result
-        } else {
-            // If only one address on the call_stack an an error occurred, restore the snapshot
-            if state.is_in_caller_context() {
-                state.restore_snapshot();
-            };
-            Bytes::new()
+        // If only one address on the call_stack, drop the snapshot
+        if state.is_in_caller_context() {
+            state.drop_snapshot();
         }
+        result
     }
 
     fn key_of_named_key(name: &str) -> String {
@@ -497,7 +485,9 @@ mod tests {
 
         // when call a contract
         let call_def = CallDef::new(TEST_ENTRY_POINT, false, RuntimeArgs::new());
-        instance.call_contract(address, call_def);
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            instance.call_contract(address, call_def)
+        }));
 
         // then the vm is in error state
         assert_eq!(
@@ -515,8 +505,9 @@ mod tests {
 
         // when call non-existing entrypoint
         let call_def = CallDef::new(invalid_entry_point_name, false, RuntimeArgs::new());
-
-        instance.call_contract(contract_address, call_def);
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            instance.call_contract(contract_address, call_def)
+        }));
 
         // then the vm is in error state
         assert_eq!(
@@ -715,7 +706,7 @@ mod tests {
         let vm = OdraVm::new();
         let host_env = OdraVmHost::new(vm);
         let env = HostEnv::new(host_env);
-        let entry_point = EntryPoint::new(String::from(entry_point_name), vec![]);
+        let entry_point = EntryPoint::new_payable(String::from(entry_point_name), vec![]);
         EntryPointsCaller::new(env, vec![entry_point], |_, _| Ok(test_call_result()))
     }
 }
