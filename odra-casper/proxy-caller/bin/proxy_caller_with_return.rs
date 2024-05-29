@@ -22,8 +22,6 @@ fn call() {
         proxy_call.entry_point_name.as_str(),
         proxy_call.runtime_args
     );
-    if proxy_call.attached_value > 0.into() {
-        ensure_cargo_purse_is_empty();
-    }
+    ensure_cargo_purse_is_empty(proxy_call.attached_value);
     set_key(RESULT_KEY, Bytes::from(result));
 }

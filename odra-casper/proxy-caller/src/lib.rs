@@ -116,12 +116,14 @@ pub fn call_versioned_contract_ret_bytes(
     deserialize_contract_result(bytes_written)
 }
 
-/// Ensure that the cargo purse is empty. Reverts if it's not.
-pub fn ensure_cargo_purse_is_empty() {
-    let cargo_purse = get_cargo_purse();
-    let balance = system::get_purse_balance(cargo_purse).unwrap_or_revert();
-    if !balance.is_zero() {
-        revert(ApiError::InvalidPurse);
+/// Ensures that the cargo purse is empty. Reverts if it's not.
+pub fn ensure_cargo_purse_is_empty(value: U512) {
+    if !value.is_zero() {
+        let cargo_purse = get_cargo_purse();
+        let balance = system::get_purse_balance(cargo_purse).unwrap_or_revert();
+        if !balance.is_zero() {
+            revert(ApiError::InvalidPurse);
+        }
     }
 }
 
