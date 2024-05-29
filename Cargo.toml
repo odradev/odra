@@ -8,10 +8,11 @@ members = [
 #    "odra-casper/livenet-env",
     "odra-casper/wasm-env",
     "odra-casper/test-vm",
+    "odra-casper/utils",
     "odra-schema",
     "odra-test",
     "odra-build"
-]
+, "odra-casper/utils"]
 exclude = [ "examples", "modules", "benchmark", "odra-casper/proxy-caller", "templates/blank", "templates/full", "templates/workspace", "tests"]
 resolver = "2"
 

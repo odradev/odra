@@ -1,4 +1,7 @@
-use odra_core::casper_types::{AddressableEntity, AddressableEntityHash, GenesisConfig, GenesisConfigBuilder, Package, ProtocolVersion};
+use odra_core::casper_types::{
+    AddressableEntity, AddressableEntityHash, GenesisConfig, GenesisConfigBuilder, Package,
+    ProtocolVersion
+};
 use odra_core::consts::*;
 use odra_core::prelude::*;
 use odra_core::OdraResult;
@@ -6,7 +9,14 @@ use std::cell::RefCell;
 use std::env;
 use std::path::PathBuf;
 
-use casper_engine_test_support::{DeployItemBuilder, ExecuteRequestBuilder, LmdbWasmTestBuilder, WasmTestBuilder, ARG_AMOUNT, DEFAULT_ACCOUNTS, DEFAULT_ACCOUNT_INITIAL_BALANCE, DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_EXEC_CONFIG, DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_PAYMENT, DEFAULT_WASM_CONFIG, DEFAULT_SYSTEM_CONFIG, DEFAULT_VALIDATOR_SLOTS, DEFAULT_AUCTION_DELAY, DEFAULT_LOCKED_FUNDS_PERIOD_MILLIS, DEFAULT_ROUND_SEIGNIORAGE_RATE, DEFAULT_UNBONDING_DELAY, DEFAULT_GENESIS_TIMESTAMP_MILLIS};
+use casper_engine_test_support::{
+    DeployItemBuilder, EntityWithNamedKeys, ExecuteRequestBuilder, LmdbWasmTestBuilder,
+    WasmTestBuilder, ARG_AMOUNT, DEFAULT_ACCOUNTS, DEFAULT_ACCOUNT_INITIAL_BALANCE,
+    DEFAULT_AUCTION_DELAY, DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_EXEC_CONFIG,
+    DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_GENESIS_TIMESTAMP_MILLIS,
+    DEFAULT_LOCKED_FUNDS_PERIOD_MILLIS, DEFAULT_PAYMENT, DEFAULT_ROUND_SEIGNIORAGE_RATE,
+    DEFAULT_SYSTEM_CONFIG, DEFAULT_UNBONDING_DELAY, DEFAULT_VALIDATOR_SLOTS, DEFAULT_WASM_CONFIG
+};
 use casper_event_standard::try_full_name_from_bytes;
 use casper_execution_engine::{engine_state, execution};
 use casper_storage::data_access_layer::{DataAccessLayer, GenesisRequest};
@@ -98,34 +108,28 @@ impl CasperVm {
         let contract_package_hash = contract_address.as_contract_package_hash().unwrap();
         let contract_hash: ContractHash = self.get_contract_hash(contract_package_hash);
 
-        let dictionary_seed_uref = self.package_named_key(*contract_package_hash, EVENTS);
+        let dictionary_seed_uref = self
+            .package_named_key(*contract_package_hash, EVENTS)
+            .ok_or(EventError::ContractDoesntSupportEvents)?;
 
-        // let dictionary_seed_uref: URef = *self
-        //     .context
-        //     .get_legacy_contract(contract_hash)
-        //     .unwrap()
-        //     .named_keys()
-        //     .get(EVENTS)
-        //     .unwrap()
-        //     .as_uref()
-        //     .unwrap();
-
-        match self.context.query_dictionary_item(
-            None,
-            *dictionary_seed_uref.as_uref().unwrap(),
-            &index.to_string()
-        ) {
-            Ok(val) => {
-                let bytes = val
-                    .as_cl_value()
-                    .unwrap()
-                    .clone()
-                    .into_t::<Bytes>()
-                    .unwrap();
-                Ok(bytes)
-            }
-            Err(_) => Err(EventError::IndexOutOfBounds)
-        }
+        Ok(self.get_dict_value(*dictionary_seed_uref.as_uref().unwrap(), &index.to_string()))
+        // TODO: Handle errors properly...
+        // match self.context.query_dictionary_item(
+        //     None,
+        //     *dictionary_seed_uref.as_uref().unwrap(),
+        //     &index.to_string()
+        // ) {
+        //     Ok(val) => {
+        //         let bytes = val
+        //             .as_cl_value()
+        //             .unwrap()
+        //             .clone()
+        //             .into_t::<Bytes>()
+        //             .unwrap();
+        //         Ok(bytes)
+        //     }
+        //     Err(_) => Err(EventError::IndexOutOfBounds)
+        // }
     }
 
     /// Gets the count of events for the given contract address.
@@ -380,44 +384,33 @@ impl CasperVm {
             .get_entity_by_account_hash(*account_hash)
             .unwrap();
         let purse = account.main_purse();
-        // TODO: Handle gas used, currently all calls are free
-        // let gas_used = self
-        //     .gas_used
-        //     .get(account_hash)
-        //     .copied()
-        //     .unwrap_or(U512::zero());
         self.context.get_purse_balance(purse)
     }
 
     fn get_contract_cspr_balance(&self, contract_package_hash: &ContractPackageHash) -> U512 {
-        let v = self
-            .context
-            .query(None, Key::Package(contract_package_hash.value()), &[])
-            .unwrap();
-
         // TODO: Addressable entity has main purse inside it, is it the same as ours for contracts?
-        let aeh = match v {
-            StoredValue::Package(package) => package.current_entity_hash().unwrap(),
-            _ => panic!("Expected Package")
-        };
-        let contract = self
-            .context
-            .get_entity_with_named_keys_by_entity_hash(aeh)
-            .unwrap();
-
-        contract
-            .named_keys()
-            .get(CONTRACT_MAIN_PURSE)
-            .and_then(|key| key.as_uref())
-            .map(|purse| self.context.get_purse_balance(*purse))
-            .unwrap_or_else(U512::zero)
+        let purse_key = self.package_named_key(*contract_package_hash, CONTRACT_MAIN_PURSE);
+        match purse_key {
+            None => U512::zero(),
+            Some(purse_key) => {
+                let purse_uref = purse_key.as_uref().unwrap_or_else(|| {
+                    panic!(
+                        "Contract doesn't have main purse uref under {} named key",
+                        CONTRACT_MAIN_PURSE
+                    )
+                });
+                self.context.get_purse_balance(*purse_uref)
+            }
+        }
     }
 
     fn get_contract_hash(&self, contract_package_hash: &ContractPackageHash) -> ContractHash {
         ContractHash::new(contract_package_hash.value())
     }
 
-    fn genesis_accounts(key_pairs: &BTreeMap<Address, (SecretKey, PublicKey)>) -> Vec<GenesisAccount> {
+    fn genesis_accounts(
+        key_pairs: &BTreeMap<Address, (SecretKey, PublicKey)>
+    ) -> Vec<GenesisAccount> {
         let mut accounts = Vec::new();
         for (_, (_, public_key)) in key_pairs.iter() {
             accounts.push(GenesisAccount::account(
@@ -428,9 +421,9 @@ impl CasperVm {
         }
         accounts
     }
-    
+
     /// Creates a new genesis config.
-    /// It is the same as the default one, but with the given genesis, 
+    /// It is the same as the default one, but with the given genesis,
     /// so we will know their private keys.
     fn genesis_config(genesis_accounts: Vec<GenesisAccount>) -> GenesisConfig {
         GenesisConfigBuilder::default()
@@ -450,7 +443,7 @@ impl CasperVm {
         let key_pairs = generate_key_pairs(ACCOUNTS_NUMBER);
         let genesis_accounts = Self::genesis_accounts(&key_pairs);
         let accounts: Vec<Address> = key_pairs.keys().copied().collect();
-        
+
         let genesis_config = Self::genesis_config(genesis_accounts);
 
         let run_genesis_request = GenesisRequest::new(
@@ -521,38 +514,73 @@ impl CasperVm {
         }
     }
 
+    fn get_current_contract(
+        &self,
+        contract_package_hash: ContractPackageHash
+    ) -> EntityWithNamedKeys {
+        let package = self.get_package(contract_package_hash);
+        let addressable_entity_hash = package
+            .current_entity_hash()
+            .expect("Package doesn't have current entity hash");
+        self.context
+            .get_entity_with_named_keys_by_entity_hash(addressable_entity_hash)
+            .expect("Couldn't find entity by hash")
+    }
+
     /// Gets current contract from contract package and
     /// returns its named keys.
     fn package_named_keys(&self, contract_package_hash: ContractPackageHash) -> NamedKeys {
         let package = self.get_package(contract_package_hash);
-        let aeh = package
+        let addressable_entity_hash = package
             .current_entity_hash()
             .expect("Package doesn't have current entity hash");
         let contract = self
             .context
-            .get_entity_with_named_keys_by_entity_hash(aeh)
+            .get_entity_with_named_keys_by_entity_hash(addressable_entity_hash)
             .expect("Entity not found");
         contract.named_keys().clone()
     }
 
-    fn package_named_key(&self, contract_package_hash: ContractPackageHash, name: &str) -> Key {
+    fn package_named_key(
+        &self,
+        contract_package_hash: ContractPackageHash,
+        name: &str
+    ) -> Option<Key> {
         let keys = self.package_named_keys(contract_package_hash);
-        let key = keys
-            .get(name)
-            .unwrap_or_else(|| panic!("Contract doesnt have {} named key", name));
-        *key
+        dbg!(keys.clone());
+        let key = keys.get(name);
+        key.map(|key| key.clone())
     }
 
     fn events_length(&self, contract_package_hash: ContractPackageHash) -> u32 {
         let key = self.package_named_key(contract_package_hash, EVENTS_LENGTH);
-        dbg!(key);
+        match key {
+            None => 0,
+            Some(key) => self.get_value(key)
+        }
+    }
+
+    // TODO: Make this return Result
+    fn get_value<T: CLTyped + FromBytes>(&self, key: Key) -> T {
         let value = self.context.query(None, key, &[]);
         value
             .unwrap()
             .as_cl_value()
             .unwrap()
             .clone()
-            .into_t::<u32>()
+            .into_t::<T>()
+            .unwrap()
+    }
+
+    // Make this return Result also
+    fn get_dict_value<T: CLTyped + FromBytes>(&self, uref: URef, name: &str) -> T {
+        let value = self.context.query_dictionary_item(None, uref, name);
+        value
+            .unwrap()
+            .as_cl_value()
+            .unwrap()
+            .clone()
+            .into_t::<T>()
             .unwrap()
     }
 
