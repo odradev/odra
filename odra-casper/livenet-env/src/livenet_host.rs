@@ -93,7 +93,10 @@ impl HostContext for LivenetHost {
     }
 
     fn get_events_count(&self, contract_address: &Address) -> u32 {
-        self.casper_client.borrow().events_count(contract_address)
+        self.casper_client
+            .borrow()
+            .events_count(contract_address)
+            .unwrap_or_default()
     }
 
     fn call_contract(
