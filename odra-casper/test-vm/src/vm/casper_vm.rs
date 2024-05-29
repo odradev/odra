@@ -455,7 +455,7 @@ impl CasperVm {
 
         let chainspec_path =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/chainspec.toml");
-        let mut builder = LmdbWasmTestBuilder::new_with_chainspec("", chainspec_path);
+        let mut builder = LmdbWasmTestBuilder::new_temporary_with_chainspec(chainspec_path);
 
         builder.run_genesis(run_genesis_request).commit();
 
