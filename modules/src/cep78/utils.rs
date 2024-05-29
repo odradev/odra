@@ -1,12 +1,13 @@
 #![allow(dead_code)]
 use super::reverse_lookup::PAGE_SIZE;
-#[cfg(not(target_arch = "wasm32"))]
-use super::token::TestCep78InitArgs;
 
 #[cfg(not(target_arch = "wasm32"))]
-use crate::cep78::modalities::{
-    BurnMode, EventsMode, MetadataMutability, MintingMode, NFTHolderMode, NFTIdentifierMode,
-    NFTKind, NFTMetadataKind, OwnerReverseLookupMode, OwnershipMode, WhitelistMode
+use crate::cep78::{
+    modalities::{
+        BurnMode, EventsMode, MetadataMutability, MintingMode, NFTHolderMode, NFTIdentifierMode,
+        NFTKind, NFTMetadataKind, OwnerReverseLookupMode, OwnershipMode, WhitelistMode
+    },
+    token::TestCep78InitArgs
 };
 use odra::{args::Maybe, prelude::*, Address, Var};
 

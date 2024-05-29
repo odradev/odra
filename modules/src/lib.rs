@@ -17,5 +17,4 @@ pub mod erc721;
 pub mod erc721_receiver;
 pub mod erc721_token;
 pub mod security;
-mod storage;
 pub mod wrapped_native;
