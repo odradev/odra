@@ -1,4 +1,4 @@
-use odra_core::casper_types::{AddressableEntity, AddressableEntityHash, ProtocolVersion};
+use odra_core::casper_types::{AddressableEntity, AddressableEntityHash, Package, ProtocolVersion};
 use odra_core::consts::*;
 use odra_core::prelude::*;
 use odra_core::OdraResult;
@@ -18,6 +18,7 @@ use odra_core::{casper_event_standard, DeployReport, GasReport};
 use std::rc::Rc;
 
 use odra_core::casper_types::account::{Account, AccountHash};
+use odra_core::casper_types::addressable_entity::NamedKeys;
 use odra_core::casper_types::bytesrepr::{Bytes, ToBytes};
 use odra_core::casper_types::contracts::{ContractHash, ContractPackageHash};
 use odra_core::casper_types::{
@@ -62,7 +63,6 @@ impl CasperVm {
         let named_keys = self
             .context
             .get_named_keys_by_account_hash(self.active_account_hash());
-        dbg!(named_keys.clone());
 
         let key: &Key = named_keys.get(name).unwrap();
         ContractPackageHash::from(key.into_package_hash().unwrap().value())
@@ -102,20 +102,23 @@ impl CasperVm {
         let contract_package_hash = contract_address.as_contract_package_hash().unwrap();
         let contract_hash: ContractHash = self.get_contract_hash(contract_package_hash);
 
-        let dictionary_seed_uref: URef = *self
-            .context
-            .get_legacy_contract(contract_hash)
-            .unwrap()
-            .named_keys()
-            .get(EVENTS)
-            .unwrap()
-            .as_uref()
-            .unwrap();
+        let dictionary_seed_uref = self.package_named_key(*contract_package_hash, EVENTS);
 
-        match self
-            .context
-            .query_dictionary_item(None, dictionary_seed_uref, &index.to_string())
-        {
+        // let dictionary_seed_uref: URef = *self
+        //     .context
+        //     .get_legacy_contract(contract_hash)
+        //     .unwrap()
+        //     .named_keys()
+        //     .get(EVENTS)
+        //     .unwrap()
+        //     .as_uref()
+        //     .unwrap();
+
+        match self.context.query_dictionary_item(
+            None,
+            *dictionary_seed_uref.as_uref().unwrap(),
+            &index.to_string()
+        ) {
             Ok(val) => {
                 let bytes = val
                     .as_cl_value()
@@ -131,10 +134,10 @@ impl CasperVm {
 
     /// Gets the count of events for the given contract address.
     pub fn get_events_count(&self, contract_address: &Address) -> u32 {
-        let contract_package_hash = contract_address.as_contract_package_hash().unwrap();
-        let contract_hash: ContractHash = self.get_contract_hash(contract_package_hash);
-
-        self.events_length(&contract_hash)
+        let contract_package_hash = contract_address
+            .as_contract_package_hash()
+            .expect("Events can only be queried for contracts");
+        self.events_length(*contract_package_hash)
     }
 
     /// Attaches a value to the next call.
@@ -488,21 +491,51 @@ impl CasperVm {
 }
 
 impl CasperVm {
-    fn events_length(&self, contract_hash: &ContractHash) -> u32 {
-        0
-        // TODO: Implement
-        // self.context
-        //     .query(
-        //         None,
-        //         Key::Hash(contract_hash.value()),
-        //         &[String::from(EVENTS_LENGTH)]
-        //     )
-        //     .unwrap()
-        //     .as_cl_value()
-        //     .unwrap()
-        //     .clone()
-        //     .into_t()
-        //     .unwrap()
+    fn get_package(&self, contract_package_hash: ContractPackageHash) -> Package {
+        let stored_value = self
+            .context
+            .query(None, Key::Package(contract_package_hash.value()), &[])
+            .unwrap();
+
+        match stored_value {
+            StoredValue::Package(package) => package,
+            _ => panic!("Expected Package")
+        }
+    }
+
+    /// Gets current contract from contract package and
+    /// returns its named keys.
+    fn package_named_keys(&self, contract_package_hash: ContractPackageHash) -> NamedKeys {
+        let package = self.get_package(contract_package_hash);
+        let aeh = package
+            .current_entity_hash()
+            .expect("Package doesn't have current entity hash");
+        let contract = self
+            .context
+            .get_entity_with_named_keys_by_entity_hash(aeh)
+            .expect("Entity not found");
+        contract.named_keys().clone()
+    }
+
+    fn package_named_key(&self, contract_package_hash: ContractPackageHash, name: &str) -> Key {
+        let keys = self.package_named_keys(contract_package_hash);
+        let key = keys
+            .get(name)
+            .expect(format!("Contract doesnt have {} named key", name).as_ref());
+        key.clone()
+    }
+
+    fn events_length(&self, contract_package_hash: ContractPackageHash) -> u32 {
+        let key = self.package_named_key(contract_package_hash, EVENTS_LENGTH);
+        dbg!(key);
+        let value = self.context.query(None, key, &[]);
+        value
+            .unwrap()
+            .as_cl_value()
+            .unwrap()
+            .clone()
+            .into_t::<u32>()
+            .unwrap()
     }
 
     fn panic_with_error(

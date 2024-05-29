@@ -60,10 +60,16 @@ impl HostContext for CasperHost {
     }
 
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
+        if !contract_address.is_contract() {
+            panic!("Events can be retrieved only for contracts, not for accounts.")
+        }
         self.vm.borrow().get_event(contract_address, index)
     }
 
     fn get_events_count(&self, contract_address: &Address) -> u32 {
+        if !contract_address.is_contract() {
+            panic!("Events can be retrieved only for contracts, not for accounts.")
+        }
         self.vm.borrow().get_events_count(contract_address)
     }
 
