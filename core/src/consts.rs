@@ -27,6 +27,9 @@ pub const CARGO_PURSE_ARG: &str = "cargo_purse";
 /// The arg name of the contract package hash.
 pub const CONTRACT_PACKAGE_HASH_ARG: &str = "contract_package_hash";
 
+/// The arg name of the contract package hash.
+pub const PACKAGE_HASH_ARG: &str = "package_hash";
+
 /// The arg name of the entry point.
 pub const ENTRY_POINT_ARG: &str = "entry_point";
 
@@ -59,3 +62,6 @@ pub const CONSTRUCTOR_GROUP_NAME: &str = "constructor_group";
 
 /// Constructor name
 pub const CONSTRUCTOR_NAME: &str = "init";
+
+/// Number of accounts created during spinning up the test environment.
+pub const ACCOUNTS_NUMBER: u8 = 20;

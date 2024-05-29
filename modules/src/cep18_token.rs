@@ -365,7 +365,7 @@ pub(crate) mod tests {
 
     use crate::cep18::utils::Cep18Modality;
     use odra::casper_types::account::AccountHash;
-    use odra::casper_types::ContractPackageHash;
+    use odra::casper_types::contracts::ContractPackageHash;
     use odra::host::{Deployer, HostEnv, HostRef};
     use odra::Address;
 

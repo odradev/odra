@@ -1,4 +1,4 @@
-use odra_core::casper_types::{AddressableEntity, AddressableEntityHash, Package, ProtocolVersion};
+use odra_core::casper_types::{AddressableEntity, AddressableEntityHash, GenesisConfig, GenesisConfigBuilder, Package, ProtocolVersion};
 use odra_core::consts::*;
 use odra_core::prelude::*;
 use odra_core::OdraResult;
@@ -6,11 +6,7 @@ use std::cell::RefCell;
 use std::env;
 use std::path::PathBuf;
 
-use casper_engine_test_support::{
-    DeployItemBuilder, ExecuteRequestBuilder, LmdbWasmTestBuilder, WasmTestBuilder, ARG_AMOUNT,
-    DEFAULT_ACCOUNTS, DEFAULT_ACCOUNT_INITIAL_BALANCE, DEFAULT_CHAINSPEC_REGISTRY,
-    DEFAULT_EXEC_CONFIG, DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_PAYMENT
-};
+use casper_engine_test_support::{DeployItemBuilder, ExecuteRequestBuilder, LmdbWasmTestBuilder, WasmTestBuilder, ARG_AMOUNT, DEFAULT_ACCOUNTS, DEFAULT_ACCOUNT_INITIAL_BALANCE, DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_EXEC_CONFIG, DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_PAYMENT, DEFAULT_WASM_CONFIG, DEFAULT_SYSTEM_CONFIG, DEFAULT_VALIDATOR_SLOTS, DEFAULT_AUCTION_DELAY, DEFAULT_LOCKED_FUNDS_PERIOD_MILLIS, DEFAULT_ROUND_SEIGNIORAGE_RATE, DEFAULT_UNBONDING_DELAY, DEFAULT_GENESIS_TIMESTAMP_MILLIS};
 use casper_event_standard::try_full_name_from_bytes;
 use casper_execution_engine::{engine_state, execution};
 use casper_storage::data_access_layer::{DataAccessLayer, GenesisRequest};
@@ -421,19 +417,41 @@ impl CasperVm {
         ContractHash::new(contract_package_hash.value())
     }
 
-    fn genesis_accounts() -> Vec<Address> {
-        // TODO: implement own account generation routine to extract private keys for signing
+    fn genesis_accounts(key_pairs: &BTreeMap<Address, (SecretKey, PublicKey)>) -> Vec<GenesisAccount> {
         let mut accounts = Vec::new();
-        for account in DEFAULT_ACCOUNTS.iter() {
-            accounts.push(account.public_key().into());
+        for (_, (_, public_key)) in key_pairs.iter() {
+            accounts.push(GenesisAccount::account(
+                public_key.clone(),
+                Motes::new(DEFAULT_ACCOUNT_INITIAL_BALANCE),
+                None
+            ));
         }
         accounts
     }
+    
+    /// Creates a new genesis config.
+    /// It is the same as the default one, but with the given genesis, 
+    /// so we will know their private keys.
+    fn genesis_config(genesis_accounts: Vec<GenesisAccount>) -> GenesisConfig {
+        GenesisConfigBuilder::default()
+            .with_accounts(genesis_accounts)
+            .with_wasm_config(*DEFAULT_WASM_CONFIG)
+            .with_system_config(*DEFAULT_SYSTEM_CONFIG)
+            .with_validator_slots(DEFAULT_VALIDATOR_SLOTS)
+            .with_auction_delay(DEFAULT_AUCTION_DELAY)
+            .with_locked_funds_period_millis(DEFAULT_LOCKED_FUNDS_PERIOD_MILLIS)
+            .with_round_seigniorage_rate(DEFAULT_ROUND_SEIGNIORAGE_RATE)
+            .with_unbonding_delay(DEFAULT_UNBONDING_DELAY)
+            .with_genesis_timestamp_millis(DEFAULT_GENESIS_TIMESTAMP_MILLIS)
+            .build()
+    }
 
     fn new_instance() -> Self {
-        let genesis_config = DEFAULT_EXEC_CONFIG.clone();
-        let accounts = Self::genesis_accounts();
-        let key_pairs = generate_key_pairs(accounts.len() as u8);
+        let key_pairs = generate_key_pairs(ACCOUNTS_NUMBER);
+        let genesis_accounts = Self::genesis_accounts(&key_pairs);
+        let accounts: Vec<Address> = key_pairs.keys().copied().collect();
+        
+        let genesis_config = Self::genesis_config(genesis_accounts);
 
         let run_genesis_request = GenesisRequest::new(
             DEFAULT_GENESIS_CONFIG_HASH,
@@ -521,8 +539,8 @@ impl CasperVm {
         let keys = self.package_named_keys(contract_package_hash);
         let key = keys
             .get(name)
-            .expect(format!("Contract doesnt have {} named key", name).as_ref());
-        key.clone()
+            .unwrap_or_else(|| panic!("Contract doesnt have {} named key", name));
+        *key
     }
 
     fn events_length(&self, contract_package_hash: ContractPackageHash) -> u32 {
