@@ -1,13 +1,36 @@
 #![allow(dead_code)]
+use super::reverse_lookup::PAGE_SIZE;
+
 #[cfg(not(target_arch = "wasm32"))]
 use crate::cep78::{
     modalities::{
         BurnMode, EventsMode, MetadataMutability, MintingMode, NFTHolderMode, NFTIdentifierMode,
         NFTKind, NFTMetadataKind, OwnerReverseLookupMode, OwnershipMode, WhitelistMode
     },
-    token::Cep78InitArgs
+    token::TestCep78InitArgs
 };
 use odra::{args::Maybe, prelude::*, Address, Var};
+
+pub fn address_to_key(address: &Address) -> String {
+    match address {
+        Address::Account(account) => account.to_string(),
+        Address::Contract(contract) => contract.to_string()
+    }
+}
+
+pub fn max_number_of_pages(total_token_supply: u64) -> u64 {
+    if total_token_supply < PAGE_SIZE {
+        1
+    } else {
+        let max_number_of_pages = total_token_supply / PAGE_SIZE;
+        let overflow = total_token_supply % PAGE_SIZE;
+        if overflow == 0 {
+            max_number_of_pages
+        } else {
+            max_number_of_pages + 1
+        }
+    }
+}
 
 #[odra::module]
 struct MockDummyContract;
@@ -16,12 +39,12 @@ struct MockDummyContract;
 impl MockDummyContract {}
 
 #[odra::module]
-pub struct MockTransferFilterContract {
+pub struct MockCep78TransferFilter {
     value: Var<u8>
 }
 
 #[odra::module]
-impl MockTransferFilterContract {
+impl MockCep78TransferFilter {
     pub fn set_return_value(&mut self, return_value: u8) {
         self.value.set(return_value);
     }
@@ -32,21 +55,17 @@ impl MockTransferFilterContract {
 }
 
 #[odra::module]
-struct MockContract {
+struct MockCep78Operator {
     nft_contract: Var<Address>
 }
 
 #[odra::module]
-impl MockContract {
+impl MockCep78Operator {
     pub fn set_address(&mut self, nft_contract: &Address) {
         self.nft_contract.set(*nft_contract);
     }
 
-    pub fn mint(
-        &mut self,
-        token_metadata: String,
-        is_reverse_lookup_enabled: bool
-    ) -> (String, Address, String) {
+    pub fn mint(&mut self, token_metadata: String, is_reverse_lookup_enabled: bool) {
         let nft_contract_address = self.nft_contract.get().unwrap();
         if is_reverse_lookup_enabled {
             NftContractContractRef::new(self.env(), nft_contract_address)
@@ -60,11 +79,7 @@ impl MockContract {
         )
     }
 
-    pub fn mint_with_hash(
-        &mut self,
-        token_metadata: String,
-        token_hash: String
-    ) -> (String, Address, String) {
+    pub fn mint_with_hash(&mut self, token_metadata: String, token_hash: String) {
         let nft_contract_address = self.nft_contract.get().unwrap();
         NftContractContractRef::new(self.env(), nft_contract_address).mint(
             self.env().self_address(),
@@ -79,11 +94,7 @@ impl MockContract {
             .burn(Maybe::Some(token_id), Maybe::None)
     }
 
-    pub fn mint_for(
-        &mut self,
-        token_owner: Address,
-        token_metadata: String
-    ) -> (String, Address, String) {
+    pub fn mint_for(&mut self, token_owner: Address, token_metadata: String) {
         let nft_contract_address = self.nft_contract.get().unwrap();
         NftContractContractRef::new(self.env(), nft_contract_address).mint(
             token_owner,
@@ -92,7 +103,7 @@ impl MockContract {
         )
     }
 
-    pub fn transfer(&mut self, token_id: u64, target: Address) -> (String, Address) {
+    pub fn transfer(&mut self, token_id: u64, target: Address) {
         let address = self.env().self_address();
         let nft_contract_address = self.nft_contract.get().unwrap();
         NftContractContractRef::new(self.env(), nft_contract_address).transfer(
@@ -102,12 +113,7 @@ impl MockContract {
             target
         )
     }
-    pub fn transfer_from(
-        &mut self,
-        token_id: u64,
-        source: Address,
-        target: Address
-    ) -> (String, Address) {
+    pub fn transfer_from(&mut self, token_id: u64, source: Address, target: Address) {
         let nft_contract_address = self.nft_contract.get().unwrap();
         NftContractContractRef::new(self.env(), nft_contract_address).transfer(
             Maybe::Some(token_id),
@@ -135,12 +141,7 @@ impl MockContract {
 
 #[odra::external_contract]
 trait NftContract {
-    fn mint(
-        &mut self,
-        token_owner: Address,
-        token_meta_data: String,
-        token_hash: Maybe<String>
-    ) -> (String, Address, String);
+    fn mint(&mut self, token_owner: Address, token_meta_data: String, token_hash: Maybe<String>);
     fn burn(&mut self, token_id: Maybe<u64>, token_hash: Maybe<String>);
     fn register_owner(&mut self, token_owner: Maybe<Address>) -> String;
     fn transfer(
@@ -149,7 +150,7 @@ trait NftContract {
         token_hash: Maybe<String>,
         source_key: Address,
         target_key: Address
-    ) -> (String, Address);
+    );
     fn approve(&mut self, spender: Address, token_id: Maybe<u64>, token_hash: Maybe<String>);
     fn revoke(&mut self, token_id: Maybe<u64>, token_hash: Maybe<String>);
 }
@@ -303,8 +304,8 @@ impl InitArgsBuilder {
         self
     }
 
-    pub fn build(self) -> Cep78InitArgs {
-        Cep78InitArgs {
+    pub fn build(self) -> TestCep78InitArgs {
+        TestCep78InitArgs {
             collection_name: self.collection_name,
             collection_symbol: self.collection_symbol,
             total_token_supply: self.total_token_supply,

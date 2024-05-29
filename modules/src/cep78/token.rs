@@ -2,7 +2,7 @@
 use odra::named_keys::single_value_storage;
 
 use super::{
-    constants::TRANSFER_FILTER_CONTRACT,
+    constants::{PREFIX_PAGE_DICTIONARY, TRANSFER_FILTER_CONTRACT},
     data::CollectionData,
     error::CEP78Error,
     events::{
@@ -15,17 +15,15 @@ use super::{
         NFTKind, NFTMetadataKind, OwnerReverseLookupMode, OwnershipMode, TokenIdentifier,
         TransferFilterContractResult, WhitelistMode
     },
-    reverse_lookup::ReverseLookup,
+    reverse_lookup::{ReverseLookup, PAGE_SIZE},
     settings::Settings,
+    utils,
     whitelist::ACLWhitelist
 };
 use odra::{
     args::Maybe, casper_types::bytesrepr::ToBytes, prelude::*, Address, OdraError, SubModule,
     UnwrapOrRevert
 };
-
-pub type MintReceipt = (String, Address, String);
-pub type TransferReceipt = (String, Address);
 
 single_value_storage!(
     Cep78TransferFilterContract,
@@ -222,7 +220,7 @@ impl Cep78 {
         token_owner: Address,
         token_meta_data: String,
         token_hash: Maybe<String>
-    ) -> MintReceipt {
+    ) {
         if !self.settings.allow_minting() {
             self.revert(CEP78Error::MintingIsPaused);
         }
@@ -336,7 +334,7 @@ impl Cep78 {
         token_hash: Maybe<String>,
         source_key: Address,
         target_key: Address
-    ) -> TransferReceipt {
+    ) {
         self.ensure_not_minter_or_assigned();
 
         let token_identifier = self.checked_token_identifier(token_id, token_hash);
@@ -522,72 +520,9 @@ impl Cep78 {
     pub fn register_owner(&mut self, token_owner: Maybe<Address>) -> String {
         let ownership_mode = self.ownership_mode();
         self.reverse_lookup
-            .register_owner(token_owner, ownership_mode)
-    }
-
-    /*
-    Test only getters
-    */
-    pub fn is_whitelisted(&self, address: &Address) -> bool {
-        self.whitelist.is_whitelisted(address)
-    }
-
-    pub fn get_whitelist_mode(&self) -> WhitelistMode {
-        self.whitelist.get_mode()
-    }
-
-    pub fn get_collection_name(&self) -> String {
-        self.data.collection_name()
-    }
-
-    pub fn get_collection_symbol(&self) -> String {
-        self.data.collection_symbol()
-    }
-
-    pub fn is_minting_allowed(&self) -> bool {
-        self.settings.allow_minting()
-    }
-
-    pub fn is_operator_burn_mode(&self) -> bool {
-        self.settings.operator_burn_mode()
-    }
-
-    pub fn get_total_supply(&self) -> u64 {
-        self.data.total_token_supply()
-    }
-
-    pub fn get_minting_mode(&self) -> MintingMode {
-        self.settings.minting_mode()
-    }
-
-    pub fn get_holder_mode(&self) -> NFTHolderMode {
-        self.settings.holder_mode()
-    }
-
-    pub fn get_number_of_minted_tokens(&self) -> u64 {
-        self.data.number_of_minted_tokens()
-    }
-
-    pub fn get_metadata_by_kind(
-        &self,
-        kind: NFTMetadataKind,
-        token_id: Maybe<u64>,
-        token_hash: Maybe<String>
-    ) -> String {
-        let token_identifier = self.checked_token_identifier(token_id, token_hash);
-        self.metadata
-            .get_metadata_by_kind(token_identifier.to_string(), &kind)
-    }
-
-    pub fn get_token_issuer(&self, token_id: Maybe<u64>, token_hash: Maybe<String>) -> Address {
-        let token_identifier = self.checked_token_identifier(token_id, token_hash);
-        self.data.issuer(&token_identifier.to_string())
-    }
-
-    pub fn token_burned(&self, token_id: Maybe<u64>, token_hash: Maybe<String>) -> bool {
-        let token_identifier = self.token_identifier(token_id, token_hash);
-        let token_id = token_identifier.to_string();
-        self.is_token_burned(&token_id)
+            .register_owner(token_owner, ownership_mode);
+        // runtime::ret(CLValue::from_t((collection_name, package_uref)).unwrap_or_revert())
+        "".to_string()
     }
 }
 
@@ -779,4 +714,179 @@ pub trait TransferFilterContract {
         target_key: Address,
         token_id: TokenIdentifier
     ) -> TransferFilterContractResult;
+}
+
+#[odra::module]
+pub struct TestCep78 {
+    token: SubModule<Cep78>
+}
+
+#[odra::module]
+impl TestCep78 {
+    delegate! {
+        to self.token {
+            fn init(
+                &mut self,
+                collection_name: String,
+                collection_symbol: String,
+                total_token_supply: u64,
+                ownership_mode: OwnershipMode,
+                nft_kind: NFTKind,
+                identifier_mode: NFTIdentifierMode,
+                nft_metadata_kind: NFTMetadataKind,
+                metadata_mutability: MetadataMutability,
+                receipt_name: String,
+                allow_minting: Maybe<bool>,
+                minting_mode: Maybe<MintingMode>,
+                holder_mode: Maybe<NFTHolderMode>,
+                whitelist_mode: Maybe<WhitelistMode>,
+                acl_whitelist: Maybe<Vec<Address>>,
+                json_schema: Maybe<String>,
+                burn_mode: Maybe<BurnMode>,
+                operator_burn_mode: Maybe<bool>,
+                owner_reverse_lookup_mode: Maybe<OwnerReverseLookupMode>,
+                events_mode: Maybe<EventsMode>,
+                transfer_filter_contract_contract: Maybe<Address>,
+                additional_required_metadata: Maybe<Vec<NFTMetadataKind>>,
+                optional_metadata: Maybe<Vec<NFTMetadataKind>>
+            );
+            fn set_variables(
+                &mut self,
+                allow_minting: Maybe<bool>,
+                acl_whitelist: Maybe<Vec<Address>>,
+                operator_burn_mode: Maybe<bool>
+            );
+            fn mint(
+                &mut self,
+                token_owner: Address,
+                token_meta_data: String,
+                token_hash: Maybe<String>
+            );
+            fn burn(&mut self, token_id: Maybe<u64>, token_hash: Maybe<String>);
+            fn transfer(
+                &mut self,
+                token_id: Maybe<u64>,
+                token_hash: Maybe<String>,
+                source_key: Address,
+                target_key: Address
+            );
+            fn approve(&mut self, spender: Address, token_id: Maybe<u64>, token_hash: Maybe<String>);
+            fn revoke(&mut self, token_id: Maybe<u64>, token_hash: Maybe<String>);
+            fn set_approval_for_all(&mut self, approve_all: bool, operator: Address);
+            fn is_approved_for_all(&mut self, token_owner: Address, operator: Address) -> bool;
+            fn owner_of(&self, token_id: Maybe<u64>, token_hash: Maybe<String>) -> Address;
+            fn get_approved(
+                &mut self,
+                token_id: Maybe<u64>,
+                token_hash: Maybe<String>
+            ) -> Option<Address>;
+            fn metadata(&self, token_id: Maybe<u64>, token_hash: Maybe<String>) -> String;
+            fn set_token_metadata(
+                &mut self,
+                token_id: Maybe<u64>,
+                token_hash: Maybe<String>,
+                token_meta_data: String
+            );
+            fn balance_of(&mut self, token_owner: Address) -> u64;
+            fn register_owner(&mut self, token_owner: Maybe<Address>) -> String;
+        }
+    }
+
+    pub fn is_whitelisted(&self, address: &Address) -> bool {
+        self.token.whitelist.is_whitelisted(address)
+    }
+
+    pub fn get_whitelist_mode(&self) -> WhitelistMode {
+        self.token.whitelist.get_mode()
+    }
+
+    pub fn get_collection_name(&self) -> String {
+        self.token.data.collection_name()
+    }
+
+    pub fn get_collection_symbol(&self) -> String {
+        self.token.data.collection_symbol()
+    }
+
+    pub fn is_minting_allowed(&self) -> bool {
+        self.token.settings.allow_minting()
+    }
+
+    pub fn is_operator_burn_mode(&self) -> bool {
+        self.token.settings.operator_burn_mode()
+    }
+
+    pub fn get_total_supply(&self) -> u64 {
+        self.token.data.total_token_supply()
+    }
+
+    pub fn get_minting_mode(&self) -> MintingMode {
+        self.token.settings.minting_mode()
+    }
+
+    pub fn get_holder_mode(&self) -> NFTHolderMode {
+        self.token.settings.holder_mode()
+    }
+
+    pub fn get_number_of_minted_tokens(&self) -> u64 {
+        self.token.data.number_of_minted_tokens()
+    }
+
+    pub fn get_page(&self, page_number: u64) -> Vec<bool> {
+        let env = self.env();
+        let owner = env.caller();
+
+        let owner_key = utils::address_to_key(&owner);
+        let page_dict = format!("{PREFIX_PAGE_DICTIONARY}_{}", page_number);
+        env.get_dictionary_value(page_dict, owner_key.as_bytes())
+            .unwrap_or_revert_with(&self.env(), CEP78Error::InvalidPageNumber)
+    }
+
+    pub fn get_page_by_token_id(&self, token_id: u64) -> Vec<bool> {
+        let env = self.env();
+        let owner = env.caller();
+        let page_table_entry = token_id / PAGE_SIZE;
+
+        let page_dict = format!("{PREFIX_PAGE_DICTIONARY}_{}", page_table_entry);
+        let owner_key = utils::address_to_key(&owner);
+
+        env.get_dictionary_value(page_dict, owner_key.as_bytes())
+            .unwrap_or_revert_with(&env, CEP78Error::MissingPage)
+    }
+
+    pub fn get_page_by_token_hash(&self, token_hash: String) -> Vec<bool> {
+        let identifier = TokenIdentifier::Hash(token_hash);
+        let token_id = self.token.reverse_lookup.get_token_index(&identifier);
+        self.get_page_by_token_id(token_id)
+    }
+
+    pub fn get_page_table(&self) -> Vec<bool> {
+        self.token
+            .reverse_lookup
+            .get_page_table(self.__env.caller())
+            .unwrap_or_revert_with(&self.__env, CEP78Error::MissingPage)
+    }
+
+    pub fn get_metadata_by_kind(
+        &self,
+        kind: NFTMetadataKind,
+        token_id: Maybe<u64>,
+        token_hash: Maybe<String>
+    ) -> String {
+        let token_identifier = self.token.checked_token_identifier(token_id, token_hash);
+        self.token
+            .metadata
+            .get_metadata_by_kind(token_identifier.to_string(), &kind)
+    }
+
+    pub fn get_token_issuer(&self, token_id: Maybe<u64>, token_hash: Maybe<String>) -> Address {
+        let token_identifier = self.token.checked_token_identifier(token_id, token_hash);
+        self.token.data.issuer(&token_identifier.to_string())
+    }
+
+    pub fn token_burned(&self, token_id: Maybe<u64>, token_hash: Maybe<String>) -> bool {
+        let token_identifier = self.token.token_identifier(token_id, token_hash);
+        let token_id = token_identifier.to_string();
+        self.token.is_token_burned(&token_id)
+    }
 }

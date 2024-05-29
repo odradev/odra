@@ -1,26 +1,29 @@
 use odra::{args::Maybe, host::Deployer};
 
 use crate::cep78::{
-    modalities::{
-        NFTHolderMode, NFTMetadataKind, OwnerReverseLookupMode, OwnershipMode, WhitelistMode
-    },
+    modalities::{NFTMetadataKind, OwnerReverseLookupMode, OwnershipMode},
     tests::{default_args_builder, utils},
-    token::Cep78HostRef
+    token::TestCep78HostRef
 };
 
 #[test]
-#[ignore = "Reverse lookup is not implemented yet"]
 fn mint_cost_should_remain_stable() {
     let env = odra_test::env();
     let args = default_args_builder()
-        .holder_mode(NFTHolderMode::Contracts)
-        .whitelist_mode(WhitelistMode::Unlocked)
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
         .nft_metadata_kind(NFTMetadataKind::Raw)
         .ownership_mode(OwnershipMode::Transferable)
         .build();
 
-    let mut _contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
+    let token_owner = env.get_account(0);
+    contract.register_owner(Maybe::Some(token_owner));
+    contract.mint(token_owner, "".to_string(), Maybe::None);
+    contract.mint(token_owner, "".to_string(), Maybe::None);
+    contract.mint(token_owner, "".to_string(), Maybe::None);
+
+    let costs = utils::get_gas_cost_of(&env, "mint");
+    assert_eq!(costs.get(1), costs.get(2));
 }
 
 #[test]
@@ -31,7 +34,7 @@ fn transfer_costs_should_remain_stable() {
         .nft_metadata_kind(NFTMetadataKind::Raw)
         .ownership_mode(OwnershipMode::Transferable)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract: TestCep78HostRef = TestCep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
     let receiver = env.get_account(1);
@@ -60,19 +63,14 @@ fn should_cost_less_when_installing_without_reverse_lookup(reporting: OwnerRever
         .nft_metadata_kind(NFTMetadataKind::Raw)
         .ownership_mode(OwnershipMode::Transferable)
         .build();
-    Cep78HostRef::deploy(&env, args);
-    // let page_dictionary_lookup = builder.query(None, no_lookup_hash, &["page_0".to_string()]);
-    // assert!(page_dictionary_lookup.is_err());
+    TestCep78HostRef::deploy(&env, args);
 
     let args = default_args_builder()
         .owner_reverse_lookup_mode(reporting)
         .nft_metadata_kind(NFTMetadataKind::Raw)
         .ownership_mode(OwnershipMode::Transferable)
         .build();
-    Cep78HostRef::deploy(&env, args);
-
-    // let page_dictionary_lookup = builder.query(None, reverse_lookup_hash, &["page_0".to_string()]);
-    // assert!(page_dictionary_lookup.is_ok());
+    TestCep78HostRef::deploy(&env, args);
 
     let costs = utils::get_deploy_gas_cost(&env);
     if let Some(no_lookup_gas_cost) = costs.first() {

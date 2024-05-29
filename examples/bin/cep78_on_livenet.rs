@@ -8,7 +8,7 @@ use odra::Address;
 use odra_modules::cep78::modalities::{
     EventsMode, MetadataMutability, NFTIdentifierMode, NFTKind, NFTMetadataKind, OwnershipMode
 };
-use odra_modules::cep78::token::{Cep78HostRef, Cep78InitArgs};
+use odra_modules::cep78::token::{TestCep78HostRef, TestCep78InitArgs};
 use odra_modules::cep78::utils::InitArgsBuilder;
 
 const CEP78_METADATA: &str = r#"{
@@ -50,13 +50,13 @@ fn main() {
 }
 
 /// Loads a Cep78 contract.
-pub fn load_contract(env: &HostEnv, address: &str) -> Cep78HostRef {
+pub fn load_contract(env: &HostEnv, address: &str) -> TestCep78HostRef {
     let address = Address::from_str(address).expect("Should be a valid contract address");
-    Cep78HostRef::load(env, address)
+    TestCep78HostRef::load(env, address)
 }
 
 /// Deploys a Cep78 contract.
-pub fn deploy_contract(env: &HostEnv) -> Cep78HostRef {
+pub fn deploy_contract(env: &HostEnv) -> TestCep78HostRef {
     let name: String = String::from("PlascoinCollection with CES");
     let symbol = String::from("CEP78-PLS-CES");
     let receipt_name = String::from("PlascoinReceipt");
@@ -74,6 +74,6 @@ pub fn deploy_contract(env: &HostEnv) -> Cep78HostRef {
         .events_mode(EventsMode::CES)
         .build();
 
-    env.set_gas(400_000_000_000u64);
-    Cep78HostRef::deploy(env, init_args)
+    env.set_gas(430_000_000_000u64);
+    TestCep78HostRef::deploy(env, init_args)
 }

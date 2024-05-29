@@ -26,13 +26,16 @@ fqn = "ownable_2step::Ownable2Step"
 fqn = "cep78::token::Cep78"
 
 [[contracts]]
-fqn = "cep78::utils::MockContract"
+fqn = "cep78::token::TestCep78"
+
+[[contracts]]
+fqn = "cep78::utils::MockCep78Operator"
 
 [[contracts]]
 fqn = "cep78::utils::MockDummyContract"
 
 [[contracts]]
-fqn = "cep78::utils::MockTransferFilterContract"
+fqn = "cep78::utils::MockCep78TransferFilter"
 
 [[contracts]]
 fqn = "cep18_token::Cep18"

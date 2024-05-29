@@ -29,7 +29,8 @@ pub const TOTAL_TOKEN_SUPPLY: &str = "total_token_supply";
 pub const TRANSFER_FILTER_CONTRACT: &str = "transfer_filter_contract";
 pub const WHITELIST_MODE: &str = "whitelist_mode";
 pub const PREFIX_PAGE_DICTIONARY: &str = "page";
-
+pub const PAGE_TABLE: &str = "page_table";
+pub const PAGE_LIMIT: &str = "page_limit";
 pub const METADATA_CEP78: &str = "metadata_cep78";
 pub const METADATA_CUSTOM_VALIDATED: &str = "metadata_custom_validated";
 pub const METADATA_NFT721: &str = "metadata_nft721";

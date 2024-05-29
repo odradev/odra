@@ -1,6 +1,6 @@
 use odra::{
     args::Maybe,
-    host::{Deployer, HostEnv, HostRef, NoArgs}
+    host::{Deployer, HostEnv, HostRef}
 };
 use serde::{Deserialize, Serialize};
 
@@ -11,6 +11,7 @@ use crate::cep78::{
         EventsMode, MetadataMutability, MintingMode, NFTHolderMode, NFTIdentifierMode,
         NFTMetadataKind, OwnerReverseLookupMode, OwnershipMode, TokenIdentifier, WhitelistMode
     },
+    reverse_lookup::PAGE_SIZE,
     tests::{
         utils::{
             self, MALFORMED_META_DATA, TEST_COMPACT_META_DATA, TEST_PRETTY_CEP78_METADATA,
@@ -18,8 +19,7 @@ use crate::cep78::{
         },
         TEST_CUSTOM_METADATA, TEST_CUSTOM_METADATA_SCHEMA
     },
-    token::Cep78HostRef,
-    utils::MockContractHostRef
+    token::TestCep78HostRef
 };
 
 use super::{default_args_builder, utils::TEST_PRETTY_721_META_DATA};
@@ -31,14 +31,14 @@ struct Metadata {
     token_uri: String
 }
 
-fn default_token() -> (Cep78HostRef, HostEnv) {
+fn default_token() -> (TestCep78HostRef, HostEnv) {
     let env = odra_test::env();
     let args = default_args_builder()
         .total_token_supply(2u64)
         .ownership_mode(OwnershipMode::Transferable)
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
         .build();
-    (Cep78HostRef::deploy(&env, args), env)
+    (TestCep78HostRef::deploy(&env, args), env)
 }
 
 #[test]
@@ -48,7 +48,7 @@ fn should_disallow_minting_when_allow_minting_is_set_to_false() {
         .nft_metadata_kind(NFTMetadataKind::NFT721)
         .allow_minting(false)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
 
     assert_eq!(
         contract.try_mint(
@@ -72,7 +72,7 @@ fn should_mint() {
         .nft_metadata_kind(NFTMetadataKind::CEP78)
         .events_mode(EventsMode::CES)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
 
     let token_owner = env.get_account(0);
     assert!(contract
@@ -93,48 +93,24 @@ fn should_mint() {
 }
 
 #[test]
-#[ignore = "Reverse lookup is not implemented yet"]
 fn mint_should_return_dictionary_key_to_callers_owned_tokens() {
-    let env = odra_test::env();
+    let (mut contract, env) = default_token();
 
-    let args = default_args_builder()
-        .ownership_mode(OwnershipMode::Transferable)
-        .allow_minting(true)
-        .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
-        .build();
-    let contract = Cep78HostRef::deploy(&env, args);
-    let mut minting_contract = MockContractHostRef::deploy(&env, NoArgs);
-    minting_contract.set_address(contract.address());
+    let token_owner = env.get_account(0);
+    contract.register_owner(Maybe::Some(token_owner));
+    contract.mint(
+        token_owner,
+        TEST_PRETTY_721_META_DATA.to_string(),
+        Maybe::None
+    );
 
-    assert!(minting_contract
-        .try_mint_for(env.get_account(0), TEST_PRETTY_721_META_DATA.to_string())
-        .is_ok());
-
-    /*
-    let nft_receipt: String =
-        support::query_stored_value(&builder, nft_contract_key, vec![RECEIPT_NAME.to_string()]);
-
-    let account_receipt = *account
-        .named_keys()
-        .get(&format!("{nft_receipt}_m_{PAGE_SIZE}_p_{}", 0))
-        .expect("must have receipt");
-
-    let actual_page = builder
-        .query(None, account_receipt, &[])
-        .expect("must have stored_value")
-        .as_cl_value()
-        .map(|page_cl_value| CLValue::into_t::<Vec<bool>>(page_cl_value.clone()))
-        .unwrap()
-        .unwrap();
-
+    let actual_page = contract.get_page(0u64);
     let expected_page = {
         let mut page = vec![false; PAGE_SIZE as usize];
-        let _ = std::mem::replace(&mut page[0], true);
+        page[0] = true;
         page
     };
-
     assert_eq!(actual_page, expected_page);
-    */
 }
 
 #[test]
@@ -142,7 +118,6 @@ fn mint_should_increment_number_of_minted_tokens_by_one_and_add_public_key_to_to
     let (mut contract, env) = default_token();
     let owner = env.get_account(0);
 
-    // TODO: should register the owner first to create a page for the owner
     contract.register_owner(Maybe::Some(owner));
     assert!(contract
         .try_mint(owner, TEST_PRETTY_721_META_DATA.to_string(), Maybe::None)
@@ -154,22 +129,17 @@ fn mint_should_increment_number_of_minted_tokens_by_one_and_add_public_key_to_to
         "number_of_minted_tokens initialized at installation should have incremented by one"
     );
 
+    let token_id = 0u64;
+
     let actual_token_meta_data =
-        contract.get_metadata_by_kind(NFTMetadataKind::NFT721, Maybe::Some(0u64), Maybe::None);
+        contract.get_metadata_by_kind(NFTMetadataKind::NFT721, Maybe::Some(token_id), Maybe::None);
     assert_eq!(actual_token_meta_data, TEST_PRETTY_721_META_DATA);
 
-    let actual_token_owner = contract.owner_of(Maybe::Some(0u64), Maybe::None);
+    let actual_token_owner = contract.owner_of(Maybe::Some(token_id), Maybe::None);
     assert_eq!(actual_token_owner, owner);
 
-    // Reverse lookup not implemented yet
-    /* let token_page = support::get_token_page_by_id(
-        &builder,
-        &nft_contract_key,
-        &Key::Account(*DEFAULT_ACCOUNT_ADDR),
-        token_id,
-    );
-
-    assert!(token_page[0]);*/
+    let token_page = contract.get_page_by_token_id(token_id);
+    assert!(token_page[0]);
 
     // If total_token_supply is initialized to 1 the following test should fail.
     // If we set total_token_supply > 1 it should pass
@@ -252,7 +222,7 @@ fn should_allow_public_minting_with_flag_set_to_true() {
     let args = default_args_builder()
         .minting_mode(MintingMode::Public)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
 
     let account_1 = env.get_account(1);
     let minting_mode = contract.get_minting_mode();
@@ -278,7 +248,7 @@ fn should_disallow_public_minting_with_flag_set_to_false() {
     let args = default_args_builder()
         .minting_mode(MintingMode::Installer)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
 
     let account_1 = env.get_account(1);
     let metadata = TEST_PRETTY_721_META_DATA.to_string();
@@ -304,7 +274,7 @@ fn should_allow_minting_for_different_public_key_with_minting_mode_set_to_public
     let args = default_args_builder()
         .minting_mode(MintingMode::Public)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
 
     let account_1 = env.get_account(1);
     let account_2 = env.get_account(2);
@@ -330,7 +300,7 @@ fn should_set_approval_for_all() {
         .ownership_mode(OwnershipMode::Transferable)
         .events_mode(EventsMode::CES)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
 
     let owner = env.get_account(0);
     contract.mint(owner, TEST_PRETTY_721_META_DATA.to_string(), Maybe::None);
@@ -376,7 +346,7 @@ fn should_revoke_approval_for_all() {
         .ownership_mode(OwnershipMode::Transferable)
         .events_mode(EventsMode::CES)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
 
     let owner = env.get_account(0);
     contract.mint(owner, TEST_PRETTY_721_META_DATA.to_string(), Maybe::None);
@@ -437,7 +407,7 @@ fn should_mint_with_valid_cep78_metadata() {
     let args = default_args_builder()
         .nft_metadata_kind(NFTMetadataKind::CEP78)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
 
     contract.mint(
         env.get_account(0),
@@ -460,7 +430,7 @@ fn should_mint_with_custom_metadata_validation() {
         .nft_metadata_kind(NFTMetadataKind::CustomValidated)
         .json_schema(custom_json_schema)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
 
     let metadata =
         serde_json::to_string(&*TEST_CUSTOM_METADATA).expect("must convert to json metadata");
@@ -483,7 +453,7 @@ fn should_mint_with_raw_metadata() {
     let args = default_args_builder()
         .nft_metadata_kind(NFTMetadataKind::Raw)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     contract.mint(env.get_account(0), "raw_string".to_string(), Maybe::None);
 
     let token_id = 0u64;
@@ -497,27 +467,22 @@ fn should_mint_with_hash_identifier_mode() {
     let env = odra_test::env();
     let args = default_args_builder()
         .identifier_mode(NFTIdentifierMode::Hash)
+        .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
+        .ownership_mode(OwnershipMode::Transferable)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
+    let token_owner = env.get_account(0);
+    contract.register_owner(Maybe::Some(token_owner));
     contract.mint(
-        env.get_account(0),
+        token_owner,
         TEST_PRETTY_721_META_DATA.to_string(),
         Maybe::None
     );
-
-    let _token_id_hash =
+    let token_id_hash =
         base16::encode_lower(&utils::create_blake2b_hash(TEST_PRETTY_721_META_DATA));
 
-    // TODO: Reverse lookup not implemented yet
-    /*
-    let token_page = get_token_page_by_hash(
-        &builder,
-        &nft_contract_key,
-        &Key::Account(*DEFAULT_ACCOUNT_ADDR),
-        token_id_hash,
-    );
-
-    assert!(token_page[0])*/
+    let token_page = contract.get_page_by_token_hash(token_id_hash);
+    assert!(token_page[0]);
 }
 
 #[test]
@@ -527,7 +492,7 @@ fn should_fail_to_mint_when_immediate_caller_is_account_in_contract_mode() {
         .holder_mode(NFTHolderMode::Contracts)
         .whitelist_mode(WhitelistMode::Unlocked)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
 
     assert_eq!(
         contract.try_mint(
@@ -547,7 +512,7 @@ fn should_approve_in_hash_identifier_mode() {
         .metadata_mutability(MetadataMutability::Immutable)
         .ownership_mode(OwnershipMode::Transferable)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     contract.mint(
         env.get_account(0),
         TEST_PRETTY_721_META_DATA.to_string(),
@@ -570,7 +535,7 @@ fn should_mint_without_returning_receipts_and_flat_gas_cost() {
         .nft_metadata_kind(NFTMetadataKind::Raw)
         .events_mode(EventsMode::CES)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     contract.mint(env.get_account(0), "".to_string(), Maybe::None);
     contract.mint(env.get_account(1), "".to_string(), Maybe::None);
     contract.mint(env.get_account(2), "".to_string(), Maybe::None);
@@ -592,22 +557,23 @@ fn should_maintain_page_table_despite_invoking_register_owner() {
     let args = default_args_builder()
         .identifier_mode(NFTIdentifierMode::Ordinal)
         .nft_metadata_kind(NFTMetadataKind::Raw)
+        .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
+        .ownership_mode(OwnershipMode::Transferable)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
     contract.mint(token_owner, "".to_string(), Maybe::None);
 
-    // TODO: page table is not implemented yet
-    // let actual_page_table = contract.get_page_table();
-    // assert_eq!(actual_page_table.len(), 1);
+    let actual_page_table = contract.get_page_table();
+    assert_eq!(actual_page_table.len(), 1);
 
     // The mint WASM will register the owner, now we re-invoke the same entry point
     // and ensure that the page table doesn't mutate.
     contract.register_owner(Maybe::Some(token_owner));
 
-    // let table_post_register = contract.get_page_table();
-    // assert_eq!(actual_page_table, table_post_register)
+    let table_post_register = contract.get_page_table();
+    assert_eq!(actual_page_table, table_post_register)
 }
 
 #[test]
@@ -619,7 +585,7 @@ fn should_prevent_mint_to_unregistered_owner() {
         .ownership_mode(OwnershipMode::Transferable)
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     assert_eq!(
         contract.try_mint(env.get_account(0), "".to_string(), Maybe::None),
         Err(CEP78Error::UnregisteredOwnerInMint.into())
@@ -636,7 +602,7 @@ fn should_mint_with_two_required_metadata_kind() {
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
         .additional_required_metadata(vec![NFTMetadataKind::Raw])
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
     contract.mint(
@@ -665,7 +631,7 @@ fn should_mint_with_one_required_one_optional_metadata_kind_without_optional() {
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
         .optional_metadata(vec![NFTMetadataKind::Raw])
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
     contract.mint(
@@ -707,7 +673,7 @@ fn should_not_mint_with_missing_required_metadata() {
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
         .additional_required_metadata(vec![NFTMetadataKind::NFT721])
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
 
     contract.register_owner(Maybe::Some(token_owner));
@@ -729,7 +695,7 @@ fn should_mint_with_transfer_only_reporting() {
         .nft_metadata_kind(NFTMetadataKind::CEP78)
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::TransfersOnly)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     contract.mint(
         token_owner,
@@ -751,7 +717,7 @@ fn should_approve_all_in_hash_identifier_mode() {
         .nft_metadata_kind(NFTMetadataKind::CEP78)
         .events_mode(EventsMode::CES)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     let operator = env.get_account(1);
     contract.mint(
@@ -785,7 +751,7 @@ fn should_approve_all_with_flat_gas_cost() {
         .ownership_mode(OwnershipMode::Transferable)
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
         .build();
-    let mut contract = Cep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78HostRef::deploy(&env, args);
     let token_owner = env.get_account(0);
     let operator = env.get_account(1);
     let operator1 = env.get_account(2);

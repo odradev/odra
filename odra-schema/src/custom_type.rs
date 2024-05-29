@@ -2,8 +2,8 @@ use std::collections::BTreeMap;
 
 use casper_contract_schema::CustomType;
 use casper_types::bytesrepr::{FromBytes, ToBytes};
-use casper_types::URef;
 use casper_types::{bytesrepr::Bytes, CLTyped, PublicKey, U128, U256, U512};
+use casper_types::{Key, URef};
 use num_traits::{Num, One, Zero};
 use odra_core::{args::Maybe, Address};
 use odra_core::{List, Mapping, Sequence, SubModule, Var};
@@ -68,6 +68,8 @@ impl<T1: CLTyped> SchemaCustomTypes for (T1,) {}
 impl<T1: CLTyped, T2: CLTyped> SchemaCustomTypes for (T1, T2) {}
 
 impl<T1: CLTyped, T2: CLTyped, T3: CLTyped> SchemaCustomTypes for (T1, T2, T3) {}
+
+impl SchemaCustomTypes for Key {}
 
 impl<const COUNT: usize> SchemaCustomTypes for [u8; COUNT] {}
 
