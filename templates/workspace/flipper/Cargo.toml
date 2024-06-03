@@ -13,7 +13,7 @@ odra-test = { workspace = true }
 odra-build = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-#odra_build_dependency
+odra-build = { workspace = true }
 
 [[bin]]
 name = "flipper_build_contract"
