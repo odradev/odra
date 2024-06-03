@@ -16,6 +16,9 @@ serde-json-wasm = { version = "1.0.1", default-features = false }
 base16 = { version = "0.2.1", default-features = false }
 base64 = { version = "0.22.0", default-features = false, features = ["alloc"] }
 
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+odra-build = { path = "../odra-build" }
+
 [dev-dependencies]
 odra-test = { path = "../odra-test", version = "1.0.0" }
 once_cell = "1"

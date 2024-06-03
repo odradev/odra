@@ -12,6 +12,9 @@ odra-test = { workspace = true }
 [build-dependencies]
 odra-build = { workspace = true }
 
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+#odra_build_dependency
+
 [[bin]]
 name = "flapper_build_contract"
 path = "bin/build_contract.rs"

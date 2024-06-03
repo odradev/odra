@@ -1,5 +1,59 @@
+use serde::Serialize;
+
 pub fn build() {
     flags().iter().for_each(|flag| println!("{}", flag));
+}
+
+pub fn schema<B, S>(legacy_schema: B, schema: S)
+where
+    B: Serialize,
+    S: Serialize
+{
+    let module = std::env::var("ODRA_MODULE").expect("ODRA_MODULE environment variable is not set");
+    let module = to_snake_case(&module);
+
+    write_schema_file("resources/casper_contract_schemas", &module, schema);
+
+    write_schema_file("resources/legacy", &module, legacy_schema);
+}
+
+fn write_schema_file<T>(path: &str, module: &str, schema: T)
+where
+    T: Serialize
+{
+    let json = serde_json::to_string_pretty(&schema).expect("Failed to serialize schema to JSON");
+    if !std::path::Path::new(path).exists() {
+        std::fs::create_dir_all(path).expect("Failed to create resources directory");
+    }
+    let filename = format!("{}/{}_schema.json", path, module);
+    let mut schema_file = std::fs::File::create(filename).expect("Failed to create schema file");
+
+    std::io::Write::write_all(&mut schema_file, &json.into_bytes())
+        .expect("Failed to write to schema file");
+}
+
+fn to_snake_case(s: &str) -> String {
+    let mut result = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+    let mut is_first = true;
+
+    while let Some(c) = chars.next() {
+        if c.is_uppercase() {
+            if !is_first {
+                if let Some(next) = chars.peek() {
+                    if next.is_lowercase() {
+                        result.push('_');
+                    }
+                }
+            }
+            result.push(c.to_lowercase().next().unwrap());
+        } else {
+            result.push(c);
+        }
+        is_first = false;
+    }
+
+    result
 }
 
 fn flags() -> Vec<String> {

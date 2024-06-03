@@ -9,6 +9,9 @@ odra-modules = { path = "../modules", default-features = false }
 sha3 = { version = "0.10.6", default-features = false }
 odra-casper-livenet-env = { path = "../odra-casper/livenet-env", optional = true }
 
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+odra-build = { path = "../odra-build" }
+
 [dev-dependencies]
 odra-test = { path = "../odra-test" }
 hex = "0.4.3"

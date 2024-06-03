@@ -13,6 +13,9 @@ edition = "2021"
 [build-dependencies]
 #odra_build_dependency
 
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+#odra_build_dependency
+
 [[bin]]
 name = "{{project-name}}_build_contract"
 path = "bin/build_contract.rs"
