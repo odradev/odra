@@ -8,8 +8,8 @@
   ],
   "repository": "https://github.com/odradev/odra",
   "homepage": null,
-  "contract_name": "Cep78",
-  "contract_version": "1.5.1",
+  "contract_name": "TestCep78",
+  "contract_version": "1.0.0",
   "types": [
     {
       "struct": {
@@ -1306,8 +1306,242 @@
   ],
   "entry_points": [
     {
+      "name": "is_whitelisted",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "address",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "Bool",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_whitelist_mode",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "WhitelistMode",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_collection_name",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "String",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_collection_symbol",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "String",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "is_minting_allowed",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "Bool",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "is_operator_burn_mode",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "Bool",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_total_supply",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U64",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_minting_mode",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "MintingMode",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_holder_mode",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "NFTHolderMode",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_number_of_minted_tokens",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U64",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_page",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "page_number",
+          "description": null,
+          "ty": "U64",
+          "optional": false
+        }
+      ],
+      "return_ty": {
+        "List": "Bool"
+      },
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_page_by_token_id",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U64",
+          "optional": false
+        }
+      ],
+      "return_ty": {
+        "List": "Bool"
+      },
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_page_by_token_hash",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "token_hash",
+          "description": null,
+          "ty": "String",
+          "optional": false
+        }
+      ],
+      "return_ty": {
+        "List": "Bool"
+      },
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_page_table",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": {
+        "List": "Bool"
+      },
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_metadata_by_kind",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "kind",
+          "description": null,
+          "ty": "NFTMetadataKind",
+          "optional": false
+        },
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U64",
+          "optional": true
+        },
+        {
+          "name": "token_hash",
+          "description": null,
+          "ty": "String",
+          "optional": true
+        }
+      ],
+      "return_ty": "String",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_token_issuer",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U64",
+          "optional": true
+        },
+        {
+          "name": "token_hash",
+          "description": null,
+          "ty": "String",
+          "optional": true
+        }
+      ],
+      "return_ty": "Key",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "token_burned",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U64",
+          "optional": true
+        },
+        {
+          "name": "token_hash",
+          "description": null,
+          "ty": "String",
+          "optional": true
+        }
+      ],
+      "return_ty": "Bool",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
       "name": "set_variables",
-      "description": "Exposes all variables that can be changed by managing account post",
+      "description": "Delegated. See `self.token.set_variables()` for details.",
       "is_mutable": true,
       "arguments": [
         {
@@ -1337,7 +1571,7 @@
     },
     {
       "name": "mint",
-      "description": "Mints a new token with provided metadata.",
+      "description": "Delegated. See `self.token.mint()` for details.",
       "is_mutable": true,
       "arguments": [
         {
@@ -1365,7 +1599,7 @@
     },
     {
       "name": "burn",
-      "description": "Burns the token with provided `token_id` argument, after which it is no",
+      "description": "Delegated. See `self.token.burn()` for details.",
       "is_mutable": true,
       "arguments": [
         {
@@ -1387,7 +1621,7 @@
     },
     {
       "name": "transfer",
-      "description": "Transfers ownership of the token from one account to another.",
+      "description": "Delegated. See `self.token.transfer()` for details.",
       "is_mutable": true,
       "arguments": [
         {
@@ -1421,7 +1655,7 @@
     },
     {
       "name": "approve",
-      "description": "Approves another token holder (an approved account) to transfer tokens. It",
+      "description": "Delegated. See `self.token.approve()` for details.",
       "is_mutable": true,
       "arguments": [
         {
@@ -1449,7 +1683,7 @@
     },
     {
       "name": "revoke",
-      "description": "Revokes an approved account to transfer tokens. It reverts",
+      "description": "Delegated. See `self.token.revoke()` for details.",
       "is_mutable": true,
       "arguments": [
         {
@@ -1471,7 +1705,7 @@
     },
     {
       "name": "set_approval_for_all",
-      "description": "Approves all tokens owned by the caller and future to another token holder",
+      "description": "Delegated. See `self.token.set_approval_for_all()` for details.",
       "is_mutable": true,
       "arguments": [
         {
@@ -1493,7 +1727,7 @@
     },
     {
       "name": "is_approved_for_all",
-      "description": "Returns if an account is operator for a token owner",
+      "description": "Delegated. See `self.token.is_approved_for_all()` for details.",
       "is_mutable": true,
       "arguments": [
         {
@@ -1515,7 +1749,7 @@
     },
     {
       "name": "owner_of",
-      "description": "Returns the token owner given a token_id. It reverts if token_id",
+      "description": "Delegated. See `self.token.owner_of()` for details.",
       "is_mutable": false,
       "arguments": [
         {
@@ -1537,7 +1771,7 @@
     },
     {
       "name": "get_approved",
-      "description": "Returns the approved account (if any) associated with the provided token_id",
+      "description": "Delegated. See `self.token.get_approved()` for details.",
       "is_mutable": true,
       "arguments": [
         {
@@ -1561,7 +1795,7 @@
     },
     {
       "name": "metadata",
-      "description": "Returns the metadata associated with the provided token_id",
+      "description": "Delegated. See `self.token.metadata()` for details.",
       "is_mutable": false,
       "arguments": [
         {
@@ -1583,7 +1817,7 @@
     },
     {
       "name": "set_token_metadata",
-      "description": "Updates the metadata if valid.",
+      "description": "Delegated. See `self.token.set_token_metadata()` for details.",
       "is_mutable": true,
       "arguments": [
         {
@@ -1611,7 +1845,7 @@
     },
     {
       "name": "balance_of",
-      "description": "Returns number of owned tokens associated with the provided token holder",
+      "description": "Delegated. See `self.token.balance_of()` for details.",
       "is_mutable": true,
       "arguments": [
         {
@@ -1627,7 +1861,7 @@
     },
     {
       "name": "register_owner",
-      "description": "This entrypoint allows users to register with a give CEP-78 instance,",
+      "description": "Delegated. See `self.token.register_owner()` for details.",
       "is_mutable": true,
       "arguments": [
         {
@@ -1681,8 +1915,8 @@
     }
   ],
   "call": {
-    "wasm_file_name": "Cep78.wasm",
-    "description": "Initializes the module.",
+    "wasm_file_name": "TestCep78.wasm",
+    "description": "Delegated. See `self.token.init()` for details.",
     "arguments": [
       {
         "name": "odra_cfg_package_hash_key_name",

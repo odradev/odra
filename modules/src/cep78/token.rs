@@ -50,7 +50,8 @@ single_value_storage!(
 /// - `metadata_mutability`: The mutability of the metadata associated with the NFTs in the collection. See [MetadataMutability] for more details.
 #[odra::module(
     version = "1.5.1",
-    events = [Approval, ApprovalForAll, ApprovalRevoked, Burn, MetadataUpdated, Mint, RevokedForAll, Transfer, VariablesSet]
+    events = [Approval, ApprovalForAll, ApprovalRevoked, Burn, MetadataUpdated, Mint, RevokedForAll, Transfer, VariablesSet],
+    errors = CEP78Error
 )]
 pub struct Cep78 {
     data: SubModule<CollectionData>,

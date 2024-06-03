@@ -1,5 +1,5 @@
 {
-  "name": "Cep78",
+  "name": "TestCep78",
   "events": [
     {
       "name": "Approval",
@@ -196,6 +196,234 @@
     }
   ],
   "entrypoints": [
+    {
+      "name": "is_whitelisted",
+      "args": [
+        {
+          "name": "address",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": false,
+      "return_ty": "Bool",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_whitelist_mode",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U8",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_collection_name",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "String",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_collection_symbol",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "String",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "is_minting_allowed",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "Bool",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "is_operator_burn_mode",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "Bool",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_total_supply",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U64",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_minting_mode",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U8",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_holder_mode",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U8",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_number_of_minted_tokens",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U64",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_page",
+      "args": [
+        {
+          "name": "page_number",
+          "ty": "U64",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": false,
+      "return_ty": {
+        "List": "Bool"
+      },
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_page_by_token_id",
+      "args": [
+        {
+          "name": "token_id",
+          "ty": "U64",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": false,
+      "return_ty": {
+        "List": "Bool"
+      },
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_page_by_token_hash",
+      "args": [
+        {
+          "name": "token_hash",
+          "ty": "String",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": false,
+      "return_ty": {
+        "List": "Bool"
+      },
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_page_table",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": {
+        "List": "Bool"
+      },
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_metadata_by_kind",
+      "args": [
+        {
+          "name": "kind",
+          "ty": "U8",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "token_id",
+          "ty": "U64",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": false
+        },
+        {
+          "name": "token_hash",
+          "ty": "String",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": false
+        }
+      ],
+      "is_mutable": false,
+      "return_ty": "String",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_token_issuer",
+      "args": [
+        {
+          "name": "token_id",
+          "ty": "U64",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": false
+        },
+        {
+          "name": "token_hash",
+          "ty": "String",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": false
+        }
+      ],
+      "is_mutable": false,
+      "return_ty": "Key",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "token_burned",
+      "args": [
+        {
+          "name": "token_id",
+          "ty": "U64",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": false
+        },
+        {
+          "name": "token_hash",
+          "ty": "String",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": false
+        }
+      ],
+      "is_mutable": false,
+      "return_ty": "Bool",
+      "ty": "Public",
+      "attributes": []
+    },
     {
       "name": "init",
       "args": [
