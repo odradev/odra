@@ -1,44 +1,27 @@
 //! Client for interacting with Casper node.
-use std::collections::BTreeMap;
-use std::time::SystemTime;
 use std::{fs, path::PathBuf, str::from_utf8_unchecked, time::Duration};
 
-use anyhow::Context;
 use casper_execution_engine::core::engine_state::ExecutableDeployItem;
 use casper_hashing::Digest;
 use itertools::Itertools;
 use jsonrpc_lite::JsonRpc;
-use odra_core::OdraResult;
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
+use tokio::runtime::Runtime;
 
-use anyhow::Result;
 use odra_core::casper_types::{sign, URef};
 use odra_core::{
     casper_types::{
         bytesrepr::{Bytes, FromBytes, ToBytes},
-        runtime_args, CLTyped, ContractHash, ContractPackageHash, ExecutionResult,
-        Key as CasperKey, PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, U512
+        runtime_args, CLTyped, Key as CasperKey, PublicKey, RuntimeArgs, SecretKey, TimeDiff,
+        Timestamp, U512
     },
     consts::*,
-    Address, CallDef, ExecutionError, OdraError
+    Address, CallDef, ExecutionError, OdraError, OdraResult
 };
 
-use crate::casper_node_port::query_balance::{
-    PurseIdentifier, QueryBalanceParams, QueryBalanceResult, QUERY_BALANCE_METHOD
-};
-use crate::casper_node_port::rpcs::StoredValue::*;
-use crate::casper_node_port::{
-    rpcs::{
-        DictionaryIdentifier, GetDeployParams, GetDeployResult, GetDictionaryItemParams,
-        GetDictionaryItemResult, GetStateRootHashResult, GlobalStateIdentifier, PutDeployResult,
-        QueryGlobalStateParams, QueryGlobalStateResult
-    },
-    Deploy, DeployHash
-};
 use crate::log;
-
-mod error;
+use crate::utils::find_wasm_file_path;
 
 /// Environment variable holding a path to a secret key of a main account.
 pub const ENV_SECRET_KEY: &str = "ODRA_CASPER_LIVENET_SECRET_KEY_PATH";
@@ -74,66 +57,25 @@ fn get_optional_env_variable(name: &str) -> Option<String> {
 pub struct CasperClient {
     node_address: String,
     chain_name: String,
-    cspr_cloud_auth_token: Option<String>,
     active_account: usize,
     secret_keys: Vec<SecretKey>,
-    gas: U512,
-    contracts: BTreeMap<Address, String>
+    gas: U512
 }
 
 impl CasperClient {
     /// Creates new CasperClient.
-    pub fn new() -> Self {
-        // Check for additional .env file
-        let additional_env_file = std::env::var("ODRA_CASPER_LIVENET_ENV");
-
-        if let Ok(additional_env_file) = additional_env_file {
-            let filename = PathBuf::from(additional_env_file).with_extension("env");
-            dotenv::from_filename(filename).ok();
-        }
-
-        // Load .env
-        dotenv::dotenv().ok();
-
-        let secret_keys = Self::load_secret_keys();
-
+    pub fn new(configuration: CasperClientConfiguration) -> Self {
         CasperClient {
             node_address: get_env_variable(ENV_NODE_ADDRESS),
             chain_name: get_env_variable(ENV_CHAIN_NAME),
-            cspr_cloud_auth_token: get_optional_env_variable(ENV_CSPR_CLOUD_AUTH_TOKEN),
             active_account: 0,
             secret_keys,
-            gas: U512::zero(),
-            contracts: Default::default()
+            gas: U512::zero()
         }
-    }
-
-    /// Loads secret keys from ENV_SECRET_KEY file and ENV_ACCOUNT_PREFIX files.
-    /// e.g. ENV_SECRET_KEY=secret_key.pem, ENV_ACCOUNT_PREFIX=account_1_key.pem
-    /// This will load secret_key.pem as an account 0 and account_1_key.pem as account 1.
-    fn load_secret_keys() -> Vec<SecretKey> {
-        let mut secret_keys = vec![];
-        secret_keys.push(
-            SecretKey::from_file(get_env_variable(ENV_SECRET_KEY)).unwrap_or_else(|_| {
-                panic!(
-                    "Couldn't load secret key from file {:?}",
-                    get_env_variable(ENV_SECRET_KEY)
-                )
-            })
-        );
-
-        let mut i = 1;
-        while let Ok(key_filename) = std::env::var(format!("{}{}", ENV_ACCOUNT_PREFIX, i)) {
-            secret_keys.push(SecretKey::from_file(&key_filename).unwrap_or_else(|_| {
-                panic!("Couldn't load secret key from file {:?}", key_filename)
-            }));
-            i += 1;
-        }
-        secret_keys
     }
 
     /// Gets a value from the storage
-    pub fn get_value(&self, address: &Address, key: &[u8]) -> Result<Bytes> {
+    pub fn get_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
         self.query_state_dictionary(address, unsafe { from_utf8_unchecked(key) })
     }
 
@@ -162,17 +104,17 @@ impl CasperClient {
 
     /// Node address.
     pub fn node_address_rpc(&self) -> String {
-        format!("{}/rpc", self.node_address)
+        format!("{}/rpc", self.configuration.node_address)
     }
 
     /// Chain name.
     pub fn chain_name(&self) -> &str {
-        &self.chain_name
+        &self.configuration.chain_name
     }
 
     /// Public key of the client account.
     pub fn public_key(&self) -> PublicKey {
-        PublicKey::from(&self.secret_keys[self.active_account])
+        PublicKey::from(&self.configuration.secret_keys[self.active_account])
     }
 
     /// Public key of the account address.
@@ -182,7 +124,12 @@ impl CasperClient {
 
     /// Secret key of the client account.
     pub fn secret_key(&self) -> &SecretKey {
-        &self.secret_keys[self.active_account]
+        &self.configuration.secret_keys[self.active_account]
+    }
+
+    /// Secret keys of the client.
+    pub fn secret_keys(&self) -> &Vec<SecretKey> {
+        &self.configuration.secret_keys
     }
 
     /// Signs the message using keys associated with an address.
@@ -203,16 +150,16 @@ impl CasperClient {
 
     /// Address of the account loaded to the client.
     pub fn get_account(&self, index: usize) -> Address {
-        if index >= self.secret_keys.len() {
+        if index >= self.secret_keys().len() {
             panic!("Key for account with index {} is not loaded", index);
         }
-        Address::from(PublicKey::from(&self.secret_keys[index]))
+        Address::from(PublicKey::from(&self.secret_keys()[index]))
     }
 
     /// Sets the caller account.
     pub fn set_caller(&mut self, address: Address) {
         match self
-            .secret_keys
+            .secret_keys()
             .iter()
             .find_position(|key| Address::from(PublicKey::from(*key)) == address)
         {
@@ -225,43 +172,41 @@ impl CasperClient {
 
     /// Returns the balance of the account.
     pub fn get_balance(&self, address: &Address) -> U512 {
-        let query_balance_params = QueryBalanceParams::new(
-            Some(GlobalStateIdentifier::StateRootHash(
-                self.get_state_root_hash()
-            )),
-            PurseIdentifier::MainPurseUnderAccountHash(
-                *address
-                    .as_account_hash()
-                    .unwrap_or_else(|| panic!("Address {:?} is not an account address", address))
-            )
-        );
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": QUERY_BALANCE_METHOD,
-                "params": query_balance_params,
-                "id": 1,
-            }
-        );
-        let result: QueryBalanceResult = self.post_request(request);
-        result.balance
-    }
-
-    pub fn transfer(&self, to: Address, amount: U512) -> OdraResult<()> {
-        let session = ExecutableDeployItem::Transfer {
-            args: runtime_args! {
-                "amount" => amount,
-                "target" => to,
-                "id" => Some(0u64),
-            }
-        };
-        let deploy = self.new_deploy(session, self.gas);
-        let request = put_deploy_request(deploy);
-        let response: PutDeployResult = self.post_request(request);
-        let deploy_hash = response.deploy_hash;
-        // TODO: wait_for_deploy_hash should return a result not panic, then this function can return a result
-        self.wait_for_deploy_hash(deploy_hash);
-        Ok(())
+        let rt = Runtime::new().unwrap();
+        let address_string = address.to_string();
+        let balance = rt
+            .block_on(async {
+                query_balance(
+                    "1",
+                    self.configuration.node_address.as_str(),
+                    2,
+                    "",
+                    "",
+                    &address_string
+                )
+                .await
+            })
+            .unwrap();
+        balance.result.balance
+        //     Some(GlobalStateIdentifier::StateRootHash(
+        //         self.get_state_root_hash()
+        //     )),
+        //     PurseIdentifier::MainPurseUnderAccountHash(
+        //         *address
+        //             .as_account_hash()
+        //             .unwrap_or_else(|| panic!("Address {:?} is not an account address", address))
+        //     )
+        // );
+        // let request = json!(
+        //     {
+        //         "jsonrpc": "2.0",
+        //         "method": QUERY_BALANCE_METHOD,
+        //         "params": query_balance_params,
+        //         "id": 1,
+        //     }
+        // );
+        // let result: QueryBalanceResult = self.post_request(request);
+        // result.balance
     }
 
     /// Returns the current block_time
@@ -274,7 +219,7 @@ impl CasperClient {
             }
         );
         let result: serde_json::Value = self.post_request(request);
-        let result = result["last_added_block_info"]["timestamp"]
+        let result = result["result"]["last_added_block_info"]["timestamp"]
             .as_str()
             .unwrap_or_else(|| {
                 panic!(
@@ -282,37 +227,37 @@ impl CasperClient {
                     result
                 )
             });
-        let system_time = humantime::parse_rfc3339_weak(result).expect("Couldn't parse block time");
-        system_time
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap_or_else(|_| panic!("Couldn't parse block time"))
-            .as_millis() as u64
+        let timestamp: u64 = result.parse().expect("Couldn't parse block time");
+        timestamp
     }
 
     /// Get the event bytes from storage
-    pub fn get_event(&self, contract_address: &Address, index: u32) -> OdraResult<Bytes> {
-        self.query_dict(contract_address, "__events".to_string(), index.to_string())
+    pub fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, OdraError> {
+        let event_bytes: Bytes =
+            self.query_dict(contract_address, "__events".to_string(), index.to_string())?;
+        Ok(event_bytes)
     }
 
     /// Get the events count from storage
-    pub fn events_count(&self, contract_address: &Address) -> Option<u32> {
-        match self.query_contract_named_key(contract_address, "__events_length") {
-            Ok(uref) => self.query_uref(uref).ok(),
-            Err(_) => None
-        }
+    pub fn events_count(&self, contract_address: &Address) -> u32 {
+        let uref = self
+            .query_contract_named_key(contract_address, "__events_length")
+            .unwrap();
+        self.query_uref(uref).unwrap()
     }
 
     /// Query the node for the current state root hash.
     fn get_state_root_hash(&self) -> Digest {
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": "chain_get_state_root_hash",
-                "id": 1,
-            }
-        );
-        let result: GetStateRootHashResult = self.post_request(request);
-        result.state_root_hash.unwrap()
+        todo!()
+        // let request = json!(
+        //     {
+        //         "jsonrpc": "2.0",
+        //         "method": "chain_get_state_root_hash",
+        //         "id": 1,
+        //     }
+        // );
+        // let result: GetStateRootHashResult = self.post_request(request);
+        // result.state_root_hash.unwrap()
     }
 
     /// Query the node for the dictionary item of a contract.
@@ -321,11 +266,9 @@ impl CasperClient {
         contract_address: &Address,
         dictionary_name: String,
         dictionary_item_key: String
-    ) -> OdraResult<T> {
+    ) -> Result<T, OdraError> {
         let state_root_hash = self.get_state_root_hash();
-        let contract_hash = self
-            .query_global_state_for_contract_hash(contract_address)
-            .map_err(|_| OdraError::ExecutionError(ExecutionError::TypeMismatch))?;
+        let contract_hash = self.query_global_state_for_contract_hash(contract_address);
         let contract_hash = contract_hash
             .to_formatted_string()
             .replace("contract-", "hash-");
@@ -348,9 +291,10 @@ impl CasperClient {
         );
         let result: GetDictionaryItemResult = self.post_request(request);
         match result.stored_value {
-            CLValue(value) => value
-                .into_t()
-                .map_err(|_| OdraError::ExecutionError(ExecutionError::UnwrapError)),
+            CLValue(value) => {
+                let return_value: T = value.into_t().unwrap();
+                Ok(return_value)
+            }
             _ => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
         }
     }
@@ -360,11 +304,9 @@ impl CasperClient {
         contract_address: &Address,
         dictionary_name: String,
         dictionary_item_key: String
-    ) -> OdraResult<Bytes> {
+    ) -> Result<Bytes, OdraError> {
         let state_root_hash = self.get_state_root_hash();
-        let contract_hash = self
-            .query_global_state_for_contract_hash(contract_address)
-            .map_err(|_| OdraError::ExecutionError(ExecutionError::TypeMismatch))?;
+        let contract_hash = self.query_global_state_for_contract_hash(contract_address);
         let contract_hash = contract_hash
             .to_formatted_string()
             .replace("contract-", "hash-");
@@ -387,7 +329,10 @@ impl CasperClient {
         );
         let result: GetDictionaryItemResult = self.post_request(request);
         match result.stored_value {
-            CLValue(value) => Ok(value.inner_bytes().as_slice().into()),
+            CLValue(value) => {
+                let return_value: Bytes = Bytes::from(value.inner_bytes().as_slice());
+                Ok(return_value)
+            }
             _ => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
         }
     }
@@ -397,10 +342,10 @@ impl CasperClient {
         &self,
         contract_address: &Address,
         key: T
-    ) -> Result<URef> {
+    ) -> Option<URef> {
         let contract_state =
-            self.query_global_state_path(contract_address, key.as_ref().to_string())?;
-        let uref_str = match contract_state.stored_value.clone() {
+            self.query_global_state_path(contract_address, key.as_ref().to_string());
+        let uref_str = match contract_state.as_ref().unwrap().stored_value.clone() {
             Contract(contract) => contract.named_keys().find_map(|named_key| {
                 if named_key.name == key.as_ref() {
                     Some(named_key.key.clone())
@@ -410,81 +355,78 @@ impl CasperClient {
             }),
             _ => panic!("Not a contract")
         }
-        .ok_or_else(|| {
-            anyhow::anyhow!(
+        .unwrap_or_else(|| {
+            panic!(
                 "Couldn't get named key {} from contract state at address {:?}",
                 key.as_ref(),
                 contract_address
             )
-        })?;
-        URef::from_formatted_str(&uref_str).map_err(|_| anyhow::anyhow!("Invalid URef format"))
+        });
+        URef::from_formatted_str(&uref_str).ok()
     }
 
     /// Query the node for the deploy state.
-    pub fn get_deploy(&self, deploy_hash: DeployHash) -> GetDeployResult {
-        let params = GetDeployParams {
-            deploy_hash,
-            finalized_approvals: false
-        };
-
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": "info_get_deploy",
-                "params": params,
-                "id": 1,
-            }
-        );
-        self.post_request(request)
-    }
+    // pub fn get_deploy(&self, deploy_hash: DeployHash) -> GetDeployResult {
+    // let params = GetDeployParams {
+    //     deploy_hash,
+    //     finalized_approvals: false
+    // };
+    //
+    // let request = json!(
+    //     {
+    //         "jsonrpc": "2.0",
+    //         "method": "info_get_deploy",
+    //         "params": params,
+    //         "id": 1,
+    //     }
+    // );
+    // self.post_request(request)
+    // }
 
     /// Discover the contract address by name.
     fn get_contract_address(&self, key_name: &str) -> Address {
-        let key_name = format!("{}_package_hash", key_name);
-        let account_hash = self.public_key().to_account_hash();
-        let result = self.query_global_state(&CasperKey::Account(account_hash));
-        let key = match result.stored_value {
-            Account(account) => account
-                .named_keys()
-                .find(|named_key| named_key.name == key_name)
-                .map_or_else(
-                    || {
-                        panic!(
-                            "Couldn't get contract address from account state at key {}",
-                            key_name
-                        )
-                    },
-                    |named_key| named_key.key.clone()
-                ),
-            _ => panic!(
-                "Couldn't get contract address from account state at key {}",
-                key_name
-            )
-        }
-        .as_str()
-        .replace("hash-", "contract-package-wasm");
-        let contract_hash = ContractPackageHash::from_formatted_str(&key).unwrap();
-        Address::try_from(contract_hash).unwrap()
+        todo!()
+        // let key_name = format!("{}_package_hash", key_name);
+        // let account_hash = self.public_key().to_account_hash();
+        // let result = self.query_global_state(&CasperKey::Account(account_hash));
+        // let key = match result.stored_value {
+        //     Account(account) => account
+        //         .named_keys()
+        //         .find(|named_key| named_key.name == key_name)
+        //         .map_or_else(
+        //             || {
+        //                 panic!(
+        //                     "Couldn't get contract address from account state at key {}",
+        //                     key_name
+        //                 )
+        //             },
+        //             |named_key| named_key.key.clone()
+        //         ),
+        //     _ => panic!(
+        //         "Couldn't get contract address from account state at key {}",
+        //         key_name
+        //     )
+        // }
+        // .as_str()
+        // .replace("hash-", "contract-package-wasm");
+        // let contract_hash = ContractPackageHash::from_formatted_str(&key).unwrap();
+        // Address::try_from(contract_hash).unwrap()
     }
 
     /// Find the contract hash by the contract package hash.
-    fn query_global_state_for_contract_hash(&self, address: &Address) -> Result<ContractHash> {
-        let contract_package_hash = address
-            .as_contract_package_hash()
-            .context("Not a contract package hash")?;
-        let key = CasperKey::Hash(contract_package_hash.value());
+    fn query_global_state_for_contract_hash(&self, address: &Address) -> ContractHash {
+        let key = CasperKey::Hash(address.as_contract_package_hash().unwrap().value());
         let result = self.query_global_state(&key);
-        let result_as_json = serde_json::to_value(result).context("Couldn't parse result")?;
+        let result_as_json = serde_json::to_value(result).unwrap();
         let contract_hash: &str = result_as_json["stored_value"]["ContractPackage"]["versions"][0]
             ["contract_hash"]
             .as_str()
-            .context("Couldn't get contract hash")?;
-        ContractHash::from_formatted_str(contract_hash)
-            .map_err(|_| anyhow::anyhow!("Invalid contract hash format"))
+            .unwrap();
+        ContractHash::from_formatted_str(contract_hash).unwrap()
     }
 
     /// Deploy the contract.
-    pub fn deploy_wasm(&mut self, contract_name: &str, args: RuntimeArgs) -> OdraResult<Address> {
+    pub fn deploy_wasm(&self, contract_name: &str, args: RuntimeArgs) -> Address {
         log::info(format!("Deploying \"{}\".", contract_name));
         let wasm_path = find_wasm_file_path(contract_name);
         let wasm_bytes = fs::read(wasm_path).unwrap();
@@ -493,33 +435,24 @@ impl CasperClient {
             args
         };
         let deploy = self.new_deploy(session, self.gas);
-        let request = put_deploy_request(deploy);
+        let request = json!(
+            {
+                "jsonrpc": "2.0",
+                "method": "account_put_deploy",
+                "params": {
+                    "deploy": deploy
+                },
+                "id": 1,
+            }
+        );
+
         let response: PutDeployResult = self.post_request(request);
         let deploy_hash = response.deploy_hash;
-        let result = self.wait_for_deploy_hash(deploy_hash);
-        self.process_result(
-            result,
-            ContractId::Name(contract_name.to_string()),
-            deploy_hash
-        )?;
+        self.wait_for_deploy_hash(deploy_hash);
 
         let address = self.get_contract_address(contract_name);
         log::info(format!("Contract {:?} deployed.", &address.to_string()));
-        Ok(address)
-    }
-
-    pub fn register_name(&mut self, address: Address, contract_name: String) {
-        self.contracts.insert(address, contract_name);
-    }
-
-    fn find_error(&self, contract_id: ContractId, error_msg: &str) -> Option<(String, OdraError)> {
-        match contract_id {
-            ContractId::Name(contract_name) => error::find(&contract_name, error_msg).ok(),
-            ContractId::Address(addr) => match self.contracts.get(&addr) {
-                Some(contract_name) => error::find(contract_name, error_msg).ok(),
-                None => None
-            }
-        }
+        address
     }
 
     /// Deploy the entrypoint call using getter_proxy.
@@ -529,7 +462,7 @@ impl CasperClient {
         &self,
         addr: Address,
         call_def: CallDef
-    ) -> OdraResult<Bytes> {
+    ) -> Result<Bytes, OdraError> {
         log::info(format!(
             "Calling {:?} with entrypoint \"{}\" through proxy.",
             addr.to_string(),
@@ -545,18 +478,26 @@ impl CasperClient {
         };
 
         let session = ExecutableDeployItem::ModuleBytes {
-            module_bytes: include_bytes!("../resources/proxy_caller_with_return.wasm")
+            module_bytes: include_bytes!("../../test-vm/resources/proxy_caller_with_return.wasm")
                 .to_vec()
                 .into(),
             args
         };
 
         let deploy = self.new_deploy(session, self.gas);
-        let request = put_deploy_request(deploy);
+        let request = json!(
+            {
+                "jsonrpc": "2.0",
+                "method": "account_put_deploy",
+                "params": {
+                    "deploy": deploy
+                },
+                "id": 1,
+            }
+        );
         let response: PutDeployResult = self.post_request(request);
         let deploy_hash = response.deploy_hash;
-        let result = self.wait_for_deploy_hash(deploy_hash);
-        self.process_result(result, ContractId::Address(addr), deploy_hash)?;
+        self.wait_for_deploy_hash(deploy_hash);
 
         let r = self.query_global_state(&CasperKey::Account(self.public_key().to_account_hash()));
         match r.stored_value {
@@ -574,7 +515,7 @@ impl CasperClient {
     }
 
     /// Deploy the entrypoint call.
-    pub fn deploy_entrypoint_call(&self, addr: Address, call_def: CallDef) -> OdraResult<Bytes> {
+    pub fn deploy_entrypoint_call(&self, addr: Address, call_def: CallDef) {
         log::info(format!(
             "Calling {:?} with entrypoint \"{}\".",
             addr.to_string(),
@@ -587,21 +528,27 @@ impl CasperClient {
             args: call_def.args().clone()
         };
         let deploy = self.new_deploy(session, self.gas);
-        let request = put_deploy_request(deploy);
+        let request = json!(
+            {
+                "jsonrpc": "2.0",
+                "method": "account_put_deploy",
+                "params": {
+                    "deploy": deploy
+                },
+                "id": 1,
+            }
+        );
         let response: PutDeployResult = self.post_request(request);
         let deploy_hash = response.deploy_hash;
-        let result = self.wait_for_deploy_hash(deploy_hash);
-
-        self.process_result(result, ContractId::Address(addr), deploy_hash)
-            .map(|_| ().to_bytes().expect("Couldn't serialize (). This shouldn't happen.").into())
+        self.wait_for_deploy_hash(deploy_hash);
     }
 
     fn query_global_state_path(
         &self,
         address: &Address,
         _path: String
-    ) -> Result<QueryGlobalStateResult> {
-        let hash = self.query_global_state_for_contract_hash(address)?;
+    ) -> Option<QueryGlobalStateResult> {
+        let hash = self.query_global_state_for_contract_hash(address);
         let key = CasperKey::Hash(hash.value());
         let state_root_hash = self.get_state_root_hash();
         let params = QueryGlobalStateParams {
@@ -617,30 +564,30 @@ impl CasperClient {
                 "id": 1,
             }
         );
-        Ok(self.post_request(request))
-    }
-
-    fn query_global_state(&self, key: &CasperKey) -> QueryGlobalStateResult {
-        let state_root_hash = self.get_state_root_hash();
-        let params = QueryGlobalStateParams {
-            state_identifier: GlobalStateIdentifier::StateRootHash(state_root_hash),
-            key: key.to_formatted_string(),
-            path: Vec::new()
-        };
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": "query_global_state",
-                "params": params,
-                "id": 1,
-            }
-        );
         self.post_request(request)
     }
 
-    fn query_state_dictionary(&self, address: &Address, key: &str) -> Result<Bytes> {
+    // fn query_global_state(&self, key: &CasperKey) -> QueryGlobalStateResult {
+    //     let state_root_hash = self.get_state_root_hash();
+    //     let params = QueryGlobalStateParams {
+    //         state_identifier: GlobalStateIdentifier::StateRootHash(state_root_hash),
+    //         key: key.to_formatted_string(),
+    //         path: Vec::new()
+    //     };
+    //     let request = json!(
+    //         {
+    //             "jsonrpc": "2.0",
+    //             "method": "query_global_state",
+    //             "params": params,
+    //             "id": 1,
+    //         }
+    //     );
+    //     self.post_request(request)
+    // }
+
+    fn query_state_dictionary(&self, address: &Address, key: &str) -> Option<Bytes> {
         let state_root_hash = self.get_state_root_hash();
-        let contract_hash = self.query_global_state_for_contract_hash(address)?;
+        let contract_hash = self.query_global_state_for_contract_hash(address);
         let contract_hash = contract_hash
             .to_formatted_string()
             .replace("contract-", "hash-");
@@ -662,28 +609,24 @@ impl CasperClient {
             }
         );
         let result: Option<GetDictionaryItemResult> = self.post_request(request);
-        result
-            .context("Couldn't get dictionary item")
-            .and_then(|result| {
-                let result_as_json =
-                    serde_json::to_value(result).context("Couldn't parse result")?;
-                let result = result_as_json["stored_value"]["CLValue"]["bytes"]
-                    .as_str()
-                    .context("Couldn't get bytes")?;
-                let bytes = hex::decode(result).context("Couldn't decode bytes")?;
-                let (value, _) = FromBytes::from_bytes(&bytes)
-                    .map_err(|_| anyhow::anyhow!("Couldn't parse bytes"))?;
-
-                Ok(value)
-            })
+        result.map(|result| {
+            let result_as_json = serde_json::to_value(result).unwrap();
+            let result = result_as_json["stored_value"]["CLValue"]["bytes"]
+                .as_str()
+                .unwrap();
+            let bytes = hex::decode(result).unwrap();
+            let (value, _) = FromBytes::from_bytes(&bytes).unwrap();
+            value
+        })
     }
 
     fn query_uref<T: CLTyped + FromBytes>(&self, uref: URef) -> OdraResult<T> {
         let result = self.query_global_state(&CasperKey::URef(uref));
         match result.stored_value {
-            CLValue(value) => value
-                .into_t()
-                .map_err(|_| OdraError::ExecutionError(ExecutionError::UnwrapError)),
+            CLValue(value) => {
+                let return_value: T = value.into_t().unwrap();
+                Ok(return_value)
+            }
             _ => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
         }
     }
@@ -691,15 +634,28 @@ impl CasperClient {
     fn query_uref_bytes(&self, uref: URef) -> OdraResult<Bytes> {
         let result = self.query_global_state(&CasperKey::URef(uref));
         match result.stored_value {
-            CLValue(value) => Ok(value.inner_bytes().as_slice().into()),
+            CLValue(value) => Ok(Bytes::from(value.inner_bytes().as_slice())),
             _ => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
         }
     }
 
-    fn wait_for_deploy_hash(&self, deploy_hash: DeployHash) -> ExecutionResult {
-        let deploy_hash_str = format!("{:?}", deploy_hash.inner());
-        let time_diff = Duration::from_secs(15);
-        let final_result;
+    // fn wait_for_deploy_hash(&self, deploy_hash: DeployHash) -> ExecutionResult {
+    // let deploy_hash_str = format!("{:?}", deploy_hash.inner());
+    // let time_diff = Duration::from_secs(15);
+    // let final_result;
+    //
+    // loop {
+    //     log::wait(format!(
+    //         "Waiting {:?} for {:?}.",
+    //         &time_diff, &deploy_hash_str
+    //     ));
+    //     std::thread::sleep(time_diff);
+    //     let result: GetDeployResult = self.get_deploy(deploy_hash);
+    //     if !result.execution_results.is_empty() {
+    //         final_result = result;
+    //         break;
+    //     }
+    // }
 
         loop {
             log::wait(format!(
@@ -713,77 +669,63 @@ impl CasperClient {
                 break;
             }
         }
-        final_result.execution_results[0].result.clone()
-    }
 
-    fn process_result(
-        &self,
-        result: ExecutionResult,
-        called_contract_id: ContractId,
-        deploy_hash: DeployHash
-    ) -> OdraResult<()> {
-        let deploy_hash_str = format!("{:?}", deploy_hash.inner());
-        match result {
-            ExecutionResult::Failure { error_message, .. } => {
-                let (error_msg, odra_error) =
-                    match self.find_error(called_contract_id, &error_message) {
-                        Some((contract_error, odra_error)) => (contract_error, odra_error),
-                        None => (
-                            error_message,
-                            OdraError::ExecutionError(ExecutionError::UnexpectedError)
-                        )
-                    };
+        match &final_result.execution_results[0].result {
+            ExecutionResult::Failure {
+                effect: _,
+                transfers: _,
+                cost: _,
+                error_message
+            } => {
                 log::error(format!(
                     "Deploy {:?} failed with error: {:?}.",
-                    deploy_hash_str, error_msg
+                    deploy_hash_str, error_message
                 ));
-                Err(odra_error)
+                panic!("Deploy failed");
             }
-            ExecutionResult::Success { .. } => {
+            ExecutionResult::Success {
+                effect: _,
+                transfers: _,
+                cost: _
+            } => {
                 log::info(format!(
                     "Deploy {:?} successfully executed.",
                     deploy_hash_str
                 ));
-                Ok(())
+                final_result.execution_results[0].result.clone()
             }
         }
     }
 
-    fn new_deploy(&self, session: ExecutableDeployItem, gas: U512) -> Deploy {
-        let timestamp = Timestamp::now();
-        let ttl = TimeDiff::from_seconds(1000);
-        let gas_price = 1;
-        let dependencies = vec![];
-        let chain_name = String::from(self.chain_name());
-        let payment = ExecutableDeployItem::ModuleBytes {
-            module_bytes: Default::default(),
-            args: runtime_args! {
-                "amount" => gas
-            }
-        };
+    // fn new_deploy(&self, session: ExecutableDeployItem, gas: U512) -> Deploy {
+    //     let timestamp = Timestamp::now();
+    //     let ttl = TimeDiff::from_seconds(1000);
+    //     let gas_price = 1;
+    //     let dependencies = vec![];
+    //     let chain_name = String::from(self.chain_name());
+    //     let payment = ExecutableDeployItem::ModuleBytes {
+    //         module_bytes: Default::default(),
+    //         args: runtime_args! {
+    //             "amount" => gas
+    //         }
+    //     };
 
-        Deploy::new(
-            timestamp,
-            ttl,
-            gas_price,
-            dependencies,
-            chain_name,
-            payment,
-            session,
-            self.secret_key(),
-            Some(self.public_key())
-        )
-    }
+    // Deploy::new(
+    //     timestamp,
+    //     ttl,
+    //     gas_price,
+    //     dependencies,
+    //     chain_name,
+    //     payment,
+    //     session,
+    //     self.secret_key(),
+    //     Some(self.public_key())
+    // )
+    // }
 
     fn post_request<T: DeserializeOwned>(&self, request: Value) -> T {
         let client = reqwest::blocking::Client::new();
-
-        let mut client = client.post(self.node_address_rpc());
-        if let Some(token) = &self.cspr_cloud_auth_token {
-            client = client.header("Authorization", token);
-        }
-        let response = client.json(&request).send();
-
+        let response = client.post(self.node_address_rpc()).json(&request).send();
         let response = match response {
             Ok(r) => r,
             Err(e) => {
@@ -810,6 +752,7 @@ impl CasperClient {
 
     fn address_secret_key(&self, address: &Address) -> &SecretKey {
         match self
+            .configuration
             .secret_keys
             .iter()
             .find(|key| Address::from(PublicKey::from(*key)) == *address)
@@ -822,39 +765,29 @@ impl CasperClient {
 
 impl Default for CasperClient {
     fn default() -> Self {
-        Self::new()
+        Self::new(CasperClientConfiguration::from_env())
     }
 }
 
-/// Search for the wasm file in the current directory and in the parent directory.
-fn find_wasm_file_path(wasm_file_name: &str) -> PathBuf {
-    let mut path = PathBuf::from("wasm")
-        .join(wasm_file_name)
-        .with_extension("wasm");
-    let mut checked_paths = vec![];
-    for _ in 0..2 {
-        if path.exists() && path.is_file() {
-            log::info(format!("Found wasm under {:?}.", path));
-            return path;
-        } else {
-            checked_paths.push(path.clone());
-            path = path.parent().unwrap().to_path_buf();
-        }
-    }
-    log::error(format!("Could not find wasm under {:?}.", checked_paths));
-    panic!("Wasm not found");
-}
+#[cfg(test)]
+mod tests {
+    use crate::casper_client::configuration::CasperClientConfiguration;
 
-fn put_deploy_request(deploy: Deploy) -> Value {
-    let request = json!(
-        {
-            "jsonrpc": "2.0",
-            "method": "account_put_deploy",
-            "params": {
-                "deploy": deploy
-            },
-            "id": 1,
-        }
-    );
-    request
+    #[test]
+    fn test_client_setup() {
+        let configuration = CasperClientConfiguration {
+            node_address: "http://localhost:7777".to_string(),
+            chain_name: "casper-test".to_string(),
+            secret_keys: vec![]
+        };
+
+        let client = super::CasperClient::default();
+        let caller = client.get_account(0);
+
+        let balance = client.get_balance(&caller);
+
+        assert_eq!(balance, 0.into());
+
+        // Test your contract here.
+    }
 }

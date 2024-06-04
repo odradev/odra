@@ -95,6 +95,9 @@ test-templates:
     just test-template workspace
     just test-template cep78
 
+run-nctl:
+    docker run --rm -it --name mynctl -d -p 11101:11101 odra-casper/rpc-client/resources/casper-nctl-condor.Dockerfile
+
 test-livenet:
     set shell := bash
     mkdir -p examples/.node-keys

@@ -1,7 +1,8 @@
 use datasize::DataSize;
-use odra_core::casper_types::{account::AccountHash, NamedKey, URef};
+use odra_core::casper_types::{account::AccountHash, URef};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use odra_core::casper_types::addressable_entity::NamedKeys;
 
 /// Structure representing a user's account, stored in global state.
 #[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize, DataSize, JsonSchema)]
@@ -9,7 +10,7 @@ use serde::{Deserialize, Serialize};
 pub struct Account {
     account_hash: AccountHash,
     #[data_size(skip)]
-    named_keys: Vec<NamedKey>,
+    named_keys: NamedKeys,
     #[data_size(skip)]
     main_purse: URef,
     associated_keys: Vec<AssociatedKey>,
