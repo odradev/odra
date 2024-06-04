@@ -1,5 +1,6 @@
 use odra_core::consts::*;
 use odra_core::prelude::*;
+use odra_core::OdraResult;
 use std::cell::RefCell;
 use std::env;
 use std::path::PathBuf;
@@ -248,6 +249,35 @@ impl CasperVm {
         match address {
             Address::Account(account_hash) => self.get_account_cspr_balance(account_hash),
             Address::Contract(contract_hash) => self.get_contract_cspr_balance(contract_hash)
+        }
+    }
+
+    /// Transfers the specified amount of tokens to the given address.
+    ///
+    /// Results an OdraError if the transfer fails.
+    pub fn transfer(&mut self, to: Address, amount: U512) -> OdraResult<()> {
+        let deploy_item = DeployItemBuilder::new()
+            .with_empty_payment_bytes(runtime_args! {ARG_AMOUNT => *DEFAULT_PAYMENT})
+            .with_transfer_args(runtime_args! {
+                "amount" => amount,
+                "target" => to,
+                "id" => Some(0u64),
+            })
+            .with_authorization_keys(&[self.active_account_hash()])
+            .with_address(self.active_account_hash())
+            .with_deploy_hash(self.next_hash())
+            .build();
+
+        let execute_request = ExecuteRequestBuilder::from_deploy_item(deploy_item)
+            .with_block_time(self.block_time)
+            .build();
+        self.context.exec(execute_request).commit();
+
+        if let Some(error) = self.context.get_error() {
+            let odra_error = parse_error(error);
+            Err(odra_error)
+        } else {
+            Ok(())
         }
     }
 
@@ -561,6 +591,8 @@ fn parse_error(err: engine_state::Error) -> OdraError {
             }
             _ => OdraError::VmError(VmError::Other(format!("Casper ExecError: {}", exec_err)))
         }
+    } else if let engine_state::Error::InsufficientPayment = err {
+        OdraError::VmError(VmError::BalanceExceeded)
     } else {
         OdraError::VmError(VmError::Other(format!("Casper EngineStateError: {}", err)))
     }

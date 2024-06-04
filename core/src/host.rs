@@ -193,6 +193,9 @@ pub trait HostContext {
 
     /// Returns the public key associated with the specified address.
     fn public_key(&self, address: &Address) -> PublicKey;
+
+    /// Transfers the specified amount of CSPR from the current caller to the specified address.
+    fn transfer(&self, to: Address, amount: U512) -> OdraResult<()>;
 }
 
 /// Represents the host environment for executing smart contracts.
@@ -497,6 +500,12 @@ impl HostEnv {
     pub fn set_gas(&self, gas: u64) {
         let backend = self.backend.borrow();
         backend.set_gas(gas)
+    }
+
+    /// Transfers the specified amount of CSPR from the current caller to the specified address.
+    pub fn transfer(&self, to: Address, amount: U512) -> OdraResult<()> {
+        let backend = self.backend.borrow();
+        backend.transfer(to, amount)
     }
 }
 

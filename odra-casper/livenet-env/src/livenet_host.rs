@@ -14,7 +14,7 @@ use odra_core::{
     host::HostContext,
     Address, CallDef, ContractEnv, GasReport, OdraError
 };
-use odra_core::{prelude::*, EventError};
+use odra_core::{prelude::*, EventError, OdraResult};
 use odra_core::{ContractContainer, ContractRegister};
 
 use crate::livenet_contract_env::LivenetContractEnv;
@@ -176,5 +176,9 @@ impl HostContext for LivenetHost {
 
     fn public_key(&self, address: &Address) -> PublicKey {
         self.casper_client.borrow().address_public_key(address)
+    }
+
+    fn transfer(&self, to: Address, amount: U512) -> OdraResult<()> {
+        self.casper_client.borrow_mut().transfer(to, amount)
     }
 }

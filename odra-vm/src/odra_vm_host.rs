@@ -124,6 +124,13 @@ impl HostContext for OdraVmHost {
     fn public_key(&self, address: &Address) -> PublicKey {
         self.vm.borrow().public_key(address)
     }
+
+    fn transfer(&self, to: Address, amount: U512) -> OdraResult<()> {
+        let caller = self.caller();
+        self.vm
+            .borrow()
+            .checked_transfer_tokens(&caller, &to, &amount)
+    }
 }
 
 impl OdraVmHost {
