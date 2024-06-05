@@ -15,8 +15,12 @@ use crate::cep18::storage::{
 use crate::cep18::utils::{Cep18Modality, SecurityBadge};
 
 /// CEP-18 token module
-#[odra::module(events = [Mint, Burn, SetAllowance, IncreaseAllowance, DecreaseAllowance, Transfer,
-    TransferFrom, ChangeSecurity])]
+#[odra::module(
+    events = [
+        Mint, Burn, SetAllowance, IncreaseAllowance, DecreaseAllowance, Transfer,TransferFrom, ChangeSecurity
+    ],
+    errors = Error
+)]
 pub struct Cep18 {
     decimals: SubModule<Cep18DecimalsStorage>,
     symbol: SubModule<Cep18SymbolStorage>,

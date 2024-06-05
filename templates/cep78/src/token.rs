@@ -1,7 +1,7 @@
 use odra::{args::Maybe, prelude::*, Address, SubModule};
 use odra_modules::cep78::{
     modalities::{MetadataMutability, NFTIdentifierMode, NFTKind, NFTMetadataKind, OwnershipMode},
-    token::{Cep78, MintReceipt, TransferReceipt},
+    token::Cep78,
 };
 
 /// A module definition. Each module struct consists Vars and Mappings
@@ -76,7 +76,7 @@ impl MyToken {
                 token_owner: Address,
                 token_meta_data: String,
                 token_hash: Maybe<String>
-            ) -> MintReceipt;
+            );
 
             /// Burns the token with provided `token_id` argument, after which it is no
             /// longer possible to transfer it.
@@ -96,7 +96,7 @@ impl MyToken {
                 token_hash: Maybe<String>,
                 source_key: Address,
                 target_key: Address
-            ) -> TransferReceipt;
+            );
 
             /// Approves another token holder (an approved account) to transfer tokens. It
             /// reverts if token_id is invalid, if caller is not the owner nor operator, if token has already
