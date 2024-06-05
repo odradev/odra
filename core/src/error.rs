@@ -22,13 +22,17 @@ impl OdraError {
     pub fn code(&self) -> u16 {
         match self {
             OdraError::ExecutionError(e) => e.code(),
-            OdraError::VmError(_e) => 123
+            OdraError::VmError(_e) => 0
         }
     }
 
     /// Creates a new user error with a given code.
     pub fn user(code: u16) -> Self {
-        OdraError::ExecutionError(ExecutionError::User(code))
+        if code >= ExecutionError::UserErrorTooHigh.code() {
+            ExecutionError::UserErrorTooHigh.into()
+        } else {
+            ExecutionError::User(code).into()
+        }
     }
 }
 
@@ -128,9 +132,9 @@ pub enum ExecutionError {
     /// Calling a contract with missing entrypoint arguments.
     MissingArg = 122,
     /// Maximum code for user errors
-    MaxUserError = 32767,
+    MaxUserError = 64535,
     /// User error too high. The code should be in range 0..32767.
-    UserErrorTooHigh = 32768,
+    UserErrorTooHigh = 64536,
     /// User error
     User(u16)
 }
@@ -141,7 +145,7 @@ impl ExecutionError {
         unsafe {
             match self {
                 ExecutionError::User(code) => *code,
-                ExecutionError::UserErrorTooHigh => 32768,
+                ExecutionError::UserErrorTooHigh => 64536,
                 _ => ExecutionError::UserErrorTooHigh.code() + *(self as *const Self as *const u16)
             }
         }

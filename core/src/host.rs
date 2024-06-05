@@ -122,10 +122,12 @@ impl<R: HostRef + EntryPointsCallerProvider + HasIdent> Deployer for R {
     }
 }
 
-impl<T: EntryPointsCallerProvider + HostRef> HostRefLoader for T {
+impl<T: EntryPointsCallerProvider + HostRef + HasIdent> HostRefLoader for T {
     fn load(env: &HostEnv, address: Address) -> Self {
         let caller = T::entry_points_caller(env);
+        let contract_name = T::ident();
         env.register_contract(address, caller);
+        env.register_name(address, &contract_name);
         T::new(address, env.clone())
     }
 }
@@ -178,6 +180,9 @@ pub trait HostContext {
 
     /// Registers an existing contract with the specified address and entry points caller.
     fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller);
+
+    /// Registers an existing contract with the specified address and name.
+    fn register_name(&self, address: Address, contract_name: &str);
 
     /// Returns the contract environment.
     fn contract_env(&self) -> ContractEnv;
@@ -282,6 +287,12 @@ impl HostEnv {
         self.events_count
             .borrow_mut()
             .insert(address, self.events_count(&address));
+    }
+
+    /// Registers an existing contract with the specified address and name.
+    pub fn register_name(&self, address: Address, contract_name: &str) {
+        let backend = self.backend.borrow();
+        backend.register_name(address, contract_name);
     }
 
     /// Calls a contract at the specified address with the given call definition.
@@ -727,7 +738,7 @@ mod test {
     }
 
     #[test]
-    fn test_emited() {
+    fn test_emitted() {
         let addr = Address::Account(AccountHash::new([0; 32]));
         let mut ctx = MockHostContext::new();
 

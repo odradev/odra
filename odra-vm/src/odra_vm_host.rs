@@ -103,6 +103,10 @@ impl HostContext for OdraVmHost {
         panic!("register_contract is not supported for OdraVM");
     }
 
+    fn register_name(&self, address: Address, contract_name: &str) {
+        panic!("register_name is not supported for OdraVM")
+    }
+
     fn contract_env(&self) -> ContractEnv {
         (*self.contract_env).clone()
     }

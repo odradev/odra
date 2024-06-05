@@ -123,6 +123,10 @@ impl HostContext for CasperHost {
         panic!("register_contract is not supported in CasperHost");
     }
 
+    fn register_name(&self, address: Address, contract_name: &str) {
+        panic!("register_name is not supported in CasperHost")
+    }
+
     fn contract_env(&self) -> ContractEnv {
         unreachable!()
     }

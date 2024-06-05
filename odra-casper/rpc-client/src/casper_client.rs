@@ -1,4 +1,5 @@
 //! Client for interacting with Casper node.
+use std::collections::BTreeMap;
 use std::{fs, path::PathBuf, str::from_utf8_unchecked, time::Duration};
 
 use anyhow::Context;
@@ -36,6 +37,8 @@ use crate::casper_node_port::{
 };
 use crate::log;
 
+mod error;
+
 /// Environment variable holding a path to a secret key of a main account.
 pub const ENV_SECRET_KEY: &str = "ODRA_CASPER_LIVENET_SECRET_KEY_PATH";
 /// Environment variable holding an address of the casper node exposing RPC API.
@@ -61,7 +64,8 @@ pub struct CasperClient {
     chain_name: String,
     active_account: usize,
     secret_keys: Vec<SecretKey>,
-    gas: U512
+    gas: U512,
+    contracts: BTreeMap<Address, String>
 }
 
 impl CasperClient {
@@ -85,7 +89,8 @@ impl CasperClient {
             chain_name: get_env_variable(ENV_CHAIN_NAME),
             active_account: 0,
             secret_keys,
-            gas: U512::zero()
+            gas: U512::zero(),
+            contracts: Default::default()
         }
     }
 
@@ -445,7 +450,7 @@ impl CasperClient {
     }
 
     /// Deploy the contract.
-    pub fn deploy_wasm(&self, contract_name: &str, args: RuntimeArgs) -> Address {
+    pub fn deploy_wasm(&mut self, contract_name: &str, args: RuntimeArgs) -> Address {
         log::info(format!("Deploying \"{}\".", contract_name));
         let wasm_path = find_wasm_file_path(contract_name);
         let wasm_bytes = fs::read(wasm_path).unwrap();
@@ -467,11 +472,21 @@ impl CasperClient {
 
         let response: PutDeployResult = self.post_request(request);
         let deploy_hash = response.deploy_hash;
-        self.wait_for_deploy_hash(deploy_hash);
+        let _ = self.wait_for_deploy_hash(deploy_hash, None);
 
         let address = self.get_contract_address(contract_name);
         log::info(format!("Contract {:?} deployed.", &address.to_string()));
+        self.contracts.insert(address, contract_name.to_string());
         address
+    }
+
+    pub fn register_name(&mut self, address: Address, contract_name: &str) {
+        self.contracts.insert(address, contract_name.to_string());
+    }
+
+    pub fn find_error(&self, contract_address: &Address, error_msg: &str) -> Result<String> {
+        let contract_name = self.contracts.get(contract_address).unwrap();
+        error::find(contract_name, error_msg)
     }
 
     /// Deploy the entrypoint call using getter_proxy.
@@ -516,7 +531,7 @@ impl CasperClient {
         );
         let response: PutDeployResult = self.post_request(request);
         let deploy_hash = response.deploy_hash;
-        self.wait_for_deploy_hash(deploy_hash);
+        let _ = self.wait_for_deploy_hash(deploy_hash, Some(addr));
 
         let r = self.query_global_state(&CasperKey::Account(self.public_key().to_account_hash()));
         match r.stored_value {
@@ -559,7 +574,7 @@ impl CasperClient {
         );
         let response: PutDeployResult = self.post_request(request);
         let deploy_hash = response.deploy_hash;
-        self.wait_for_deploy_hash(deploy_hash);
+        let _ = self.wait_for_deploy_hash(deploy_hash, Some(addr));
     }
 
     fn query_global_state_path(
@@ -662,7 +677,11 @@ impl CasperClient {
         }
     }
 
-    fn wait_for_deploy_hash(&self, deploy_hash: DeployHash) -> ExecutionResult {
+    fn wait_for_deploy_hash(
+        &self,
+        deploy_hash: DeployHash,
+        called_contract: Option<Address>
+    ) -> Result<ExecutionResult> {
         let deploy_hash_str = format!("{:?}", deploy_hash.inner());
         let time_diff = Duration::from_secs(15);
         let final_result;
@@ -679,7 +698,6 @@ impl CasperClient {
                 break;
             }
         }
-
         match &final_result.execution_results[0].result {
             ExecutionResult::Failure {
                 effect: _,
@@ -687,11 +705,20 @@ impl CasperClient {
                 cost: _,
                 error_message
             } => {
+                let error = if let Some(addr) = called_contract {
+                    match self.find_error(&addr, error_message) {
+                        Ok(contract_error) => anyhow::anyhow!(contract_error),
+                        Err(_) => anyhow::anyhow!(error_message.clone())
+                    }
+                } else {
+                    anyhow::anyhow!("Deploy failed")
+                };
                 log::error(format!(
                     "Deploy {:?} failed with error: {:?}.",
-                    deploy_hash_str, error_message
+                    deploy_hash_str,
+                    error.to_string()
                 ));
-                panic!("Deploy failed");
+                Err(error)
             }
             ExecutionResult::Success {
                 effect: _,
@@ -702,7 +729,7 @@ impl CasperClient {
                     "Deploy {:?} successfully executed.",
                     deploy_hash_str
                 ));
-                final_result.execution_results[0].result.clone()
+                Ok(final_result.execution_results[0].result.clone())
             }
         }
     }

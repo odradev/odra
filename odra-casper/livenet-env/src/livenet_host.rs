@@ -180,4 +180,10 @@ impl HostContext for LivenetHost {
     fn public_key(&self, address: &Address) -> PublicKey {
         self.casper_client.borrow().address_public_key(address)
     }
+
+    fn register_name(&self, address: Address, contract_name: &str) {
+        self.casper_client
+            .borrow_mut()
+            .register_name(address, contract_name);
+    }
 }
