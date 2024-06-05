@@ -1,13 +1,16 @@
 //! Client for interacting with Casper node.
 use std::{fs, path::PathBuf, str::from_utf8_unchecked, time::Duration};
 
+use anyhow::Context;
 use casper_execution_engine::core::engine_state::ExecutableDeployItem;
 use casper_hashing::Digest;
 use itertools::Itertools;
 use jsonrpc_lite::JsonRpc;
+use odra_core::OdraResult;
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 
+use anyhow::Result;
 use odra_core::casper_types::{sign, URef};
 use odra_core::{
     casper_types::{
@@ -16,7 +19,7 @@ use odra_core::{
         Key as CasperKey, PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, U512
     },
     consts::*,
-    Address, CallDef, ExecutionError, OdraError, OdraResult
+    Address, CallDef, ExecutionError, OdraError
 };
 
 use crate::casper_node_port::query_balance::{
@@ -111,7 +114,7 @@ impl CasperClient {
     }
 
     /// Gets a value from the storage
-    pub fn get_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
+    pub fn get_value(&self, address: &Address, key: &[u8]) -> Result<Bytes> {
         self.query_state_dictionary(address, unsafe { from_utf8_unchecked(key) })
     }
 
@@ -248,18 +251,16 @@ impl CasperClient {
     }
 
     /// Get the event bytes from storage
-    pub fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, OdraError> {
-        let event_bytes: Bytes =
-            self.query_dict(contract_address, "__events".to_string(), index.to_string())?;
-        Ok(event_bytes)
+    pub fn get_event(&self, contract_address: &Address, index: u32) -> OdraResult<Bytes> {
+        self.query_dict(contract_address, "__events".to_string(), index.to_string())
     }
 
     /// Get the events count from storage
-    pub fn events_count(&self, contract_address: &Address) -> u32 {
-        let uref = self
-            .query_contract_named_key(contract_address, "__events_length")
-            .unwrap();
-        self.query_uref(uref).unwrap()
+    pub fn events_count(&self, contract_address: &Address) -> Option<u32> {
+        match self.query_contract_named_key(contract_address, "__events_length") {
+            Ok(uref) => self.query_uref(uref).ok(),
+            Err(_) => None
+        }
     }
 
     /// Query the node for the current state root hash.
@@ -281,9 +282,11 @@ impl CasperClient {
         contract_address: &Address,
         dictionary_name: String,
         dictionary_item_key: String
-    ) -> Result<T, OdraError> {
+    ) -> OdraResult<T> {
         let state_root_hash = self.get_state_root_hash();
-        let contract_hash = self.query_global_state_for_contract_hash(contract_address);
+        let contract_hash = self
+            .query_global_state_for_contract_hash(contract_address)
+            .map_err(|_| OdraError::ExecutionError(ExecutionError::TypeMismatch))?;
         let contract_hash = contract_hash
             .to_formatted_string()
             .replace("contract-", "hash-");
@@ -306,10 +309,9 @@ impl CasperClient {
         );
         let result: GetDictionaryItemResult = self.post_request(request);
         match result.stored_value {
-            CLValue(value) => {
-                let return_value: T = value.into_t().unwrap();
-                Ok(return_value)
-            }
+            CLValue(value) => value
+                .into_t()
+                .map_err(|_| OdraError::ExecutionError(ExecutionError::UnwrapError)),
             _ => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
         }
     }
@@ -319,9 +321,11 @@ impl CasperClient {
         contract_address: &Address,
         dictionary_name: String,
         dictionary_item_key: String
-    ) -> Result<Bytes, OdraError> {
+    ) -> OdraResult<Bytes> {
         let state_root_hash = self.get_state_root_hash();
-        let contract_hash = self.query_global_state_for_contract_hash(contract_address);
+        let contract_hash = self
+            .query_global_state_for_contract_hash(contract_address)
+            .map_err(|_| OdraError::ExecutionError(ExecutionError::TypeMismatch))?;
         let contract_hash = contract_hash
             .to_formatted_string()
             .replace("contract-", "hash-");
@@ -344,10 +348,7 @@ impl CasperClient {
         );
         let result: GetDictionaryItemResult = self.post_request(request);
         match result.stored_value {
-            CLValue(value) => {
-                let return_value: Bytes = Bytes::from(value.inner_bytes().as_slice());
-                Ok(return_value)
-            }
+            CLValue(value) => Ok(value.inner_bytes().as_slice().into()),
             _ => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
         }
     }
@@ -357,10 +358,10 @@ impl CasperClient {
         &self,
         contract_address: &Address,
         key: T
-    ) -> Option<URef> {
+    ) -> Result<URef> {
         let contract_state =
-            self.query_global_state_path(contract_address, key.as_ref().to_string());
-        let uref_str = match contract_state.as_ref().unwrap().stored_value.clone() {
+            self.query_global_state_path(contract_address, key.as_ref().to_string())?;
+        let uref_str = match contract_state.stored_value.clone() {
             Contract(contract) => contract.named_keys().find_map(|named_key| {
                 if named_key.name == key.as_ref() {
                     Some(named_key.key.clone())
@@ -370,14 +371,14 @@ impl CasperClient {
             }),
             _ => panic!("Not a contract")
         }
-        .unwrap_or_else(|| {
-            panic!(
+        .ok_or_else(|| {
+            anyhow::anyhow!(
                 "Couldn't get named key {} from contract state at address {:?}",
                 key.as_ref(),
                 contract_address
             )
-        });
-        URef::from_formatted_str(&uref_str).ok()
+        })?;
+        URef::from_formatted_str(&uref_str).map_err(|_| anyhow::anyhow!("Invalid URef format"))
     }
 
     /// Query the node for the deploy state.
@@ -428,15 +429,19 @@ impl CasperClient {
     }
 
     /// Find the contract hash by the contract package hash.
-    fn query_global_state_for_contract_hash(&self, address: &Address) -> ContractHash {
-        let key = CasperKey::Hash(address.as_contract_package_hash().unwrap().value());
+    fn query_global_state_for_contract_hash(&self, address: &Address) -> Result<ContractHash> {
+        let contract_package_hash = address
+            .as_contract_package_hash()
+            .context("Not a contract package hash")?;
+        let key = CasperKey::Hash(contract_package_hash.value());
         let result = self.query_global_state(&key);
-        let result_as_json = serde_json::to_value(result).unwrap();
+        let result_as_json = serde_json::to_value(result).context("Couldn't parse result")?;
         let contract_hash: &str = result_as_json["stored_value"]["ContractPackage"]["versions"][0]
             ["contract_hash"]
             .as_str()
-            .unwrap();
-        ContractHash::from_formatted_str(contract_hash).unwrap()
+            .context("Couldn't get contract hash")?;
+        ContractHash::from_formatted_str(contract_hash)
+            .map_err(|_| anyhow::anyhow!("Invalid contract hash format"))
     }
 
     /// Deploy the contract.
@@ -476,7 +481,7 @@ impl CasperClient {
         &self,
         addr: Address,
         call_def: CallDef
-    ) -> Result<Bytes, OdraError> {
+    ) -> OdraResult<Bytes> {
         log::info(format!(
             "Calling {:?} with entrypoint \"{}\" through proxy.",
             addr.to_string(),
@@ -561,8 +566,8 @@ impl CasperClient {
         &self,
         address: &Address,
         _path: String
-    ) -> Option<QueryGlobalStateResult> {
-        let hash = self.query_global_state_for_contract_hash(address);
+    ) -> Result<QueryGlobalStateResult> {
+        let hash = self.query_global_state_for_contract_hash(address)?;
         let key = CasperKey::Hash(hash.value());
         let state_root_hash = self.get_state_root_hash();
         let params = QueryGlobalStateParams {
@@ -578,7 +583,7 @@ impl CasperClient {
                 "id": 1,
             }
         );
-        self.post_request(request)
+        Ok(self.post_request(request))
     }
 
     fn query_global_state(&self, key: &CasperKey) -> QueryGlobalStateResult {
@@ -599,9 +604,9 @@ impl CasperClient {
         self.post_request(request)
     }
 
-    fn query_state_dictionary(&self, address: &Address, key: &str) -> Option<Bytes> {
+    fn query_state_dictionary(&self, address: &Address, key: &str) -> Result<Bytes> {
         let state_root_hash = self.get_state_root_hash();
-        let contract_hash = self.query_global_state_for_contract_hash(address);
+        let contract_hash = self.query_global_state_for_contract_hash(address)?;
         let contract_hash = contract_hash
             .to_formatted_string()
             .replace("contract-", "hash-");
@@ -623,24 +628,28 @@ impl CasperClient {
             }
         );
         let result: Option<GetDictionaryItemResult> = self.post_request(request);
-        result.map(|result| {
-            let result_as_json = serde_json::to_value(result).unwrap();
-            let result = result_as_json["stored_value"]["CLValue"]["bytes"]
-                .as_str()
-                .unwrap();
-            let bytes = hex::decode(result).unwrap();
-            let (value, _) = FromBytes::from_bytes(&bytes).unwrap();
-            value
-        })
+        result
+            .context("Couldn't get dictionary item")
+            .and_then(|result| {
+                let result_as_json =
+                    serde_json::to_value(result).context("Couldn't parse result")?;
+                let result = result_as_json["stored_value"]["CLValue"]["bytes"]
+                    .as_str()
+                    .context("Couldn't get bytes")?;
+                let bytes = hex::decode(result).context("Couldn't decode bytes")?;
+                let (value, _) = FromBytes::from_bytes(&bytes)
+                    .map_err(|_| anyhow::anyhow!("Couldn't parse bytes"))?;
+
+                Ok(value)
+            })
     }
 
     fn query_uref<T: CLTyped + FromBytes>(&self, uref: URef) -> OdraResult<T> {
         let result = self.query_global_state(&CasperKey::URef(uref));
         match result.stored_value {
-            CLValue(value) => {
-                let return_value: T = value.into_t().unwrap();
-                Ok(return_value)
-            }
+            CLValue(value) => value
+                .into_t()
+                .map_err(|_| OdraError::ExecutionError(ExecutionError::UnwrapError)),
             _ => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
         }
     }
@@ -648,7 +657,7 @@ impl CasperClient {
     fn query_uref_bytes(&self, uref: URef) -> OdraResult<Bytes> {
         let result = self.query_global_state(&CasperKey::URef(uref));
         match result.stored_value {
-            CLValue(value) => Ok(Bytes::from(value.inner_bytes().as_slice())),
+            CLValue(value) => Ok(value.inner_bytes().as_slice().into()),
             _ => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
         }
     }
