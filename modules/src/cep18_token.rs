@@ -150,7 +150,7 @@ impl Cep18 {
 
     /// Returns the balance of the given address.
     pub fn balance_of(&self, address: &Address) -> U256 {
-        self.balances.get_or_default(address)
+        self.balances.get(address).unwrap_or_default()
     }
 
     /// Returns the amount of tokens the owner has allowed the spender to spend.
@@ -281,7 +281,7 @@ impl Cep18 {
 impl Cep18 {
     /// Transfers tokens from the sender to the recipient without checking the permissions.
     pub fn raw_transfer(&mut self, sender: &Address, recipient: &Address, amount: &U256) {
-        if *amount > self.balances.get_or_default(sender) {
+        if *amount > self.balances.get(sender).unwrap_or_default() {
             self.env().revert(Error::InsufficientBalance)
         }
 
