@@ -631,6 +631,7 @@ mod test {
 
         let mut ctx = MockHostContext::new();
         ctx.expect_register_contract().returning(|_, _| ());
+        ctx.expect_register_name().returning(|_, _| ());
         ctx.expect_get_events_count().returning(|_| 0);
 
         // check if TestRef::new() is called exactly once
