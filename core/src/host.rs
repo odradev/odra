@@ -611,11 +611,12 @@ mod test {
 
     #[test]
     fn test_load_ref() {
-        // MockTestRef::ident() and  MockEv::validate() are static and can't be safely used
+        // MockTestRef::ident(), MockEv::validate(), MockTestRef::entry_points_caller() are static and can't be safely used
         // from multiple tests at the same time. Should be to protected with a Mutex. Each function has
         // a separate Mutex.
         // https://github.com/asomers/mockall/blob/master/mockall/tests/mock_struct_with_static_method.rs
         let _e = EPC_MTX.lock();
+        let _i = IDENT_MTX.lock();
         let _v = VALIDATE_MTX.lock();
 
         // stubs
@@ -625,6 +626,8 @@ mod test {
         epc_ctx
             .expect()
             .returning(|h| EntryPointsCaller::new(h.clone(), vec![], |_, _| Ok(Bytes::default())));
+        let indent_ctx = MockTestRef::ident_context();
+        indent_ctx.expect().returning(|| "TestRef".to_string());
 
         let mut ctx = MockHostContext::new();
         ctx.expect_register_contract().returning(|_, _| ());
