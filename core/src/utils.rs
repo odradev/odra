@@ -106,6 +106,39 @@ pub fn hex_to_slice(src: &[u8], dst: &mut [u8]) {
     }
 }
 
+pub(crate) const fn decode_hex_32(input: &[u8], start: usize) -> Result<[u8; 32], &'static str> {
+    let mut output = [0u8; 32];
+    let mut i = 0;
+    let mut j = 0;
+
+    while i < 64 {
+        let high_value = match hex_char_to_value(input[start + i]) {
+            Ok(v) => v,
+            Err(e) => return Err(e)
+        };
+
+        let low_value = match hex_char_to_value(input[start + i + 1]) {
+            Ok(v) => v,
+            Err(e) => return Err(e)
+        };
+
+        output[j] = (high_value << 4) | low_value;
+        i += 2;
+        j += 1;
+    }
+
+    Ok(output)
+}
+
+const fn hex_char_to_value(c: u8) -> Result<u8, &'static str> {
+    match c {
+        b'0'..=b'9' => Ok(c - b'0'),
+        b'a'..=b'f' => Ok(c - b'a' + 10),
+        b'A'..=b'F' => Ok(c - b'A' + 10),
+        _ => Err("Invalid character in input")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::event_absolute_position;

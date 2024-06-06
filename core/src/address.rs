@@ -1,6 +1,6 @@
 //! Better address representation for Casper.
-use crate::prelude::*;
 use crate::AddressError::ZeroAddress;
+use crate::{prelude::*, utils, ExecutionError, OdraResult};
 use crate::{AddressError, OdraError, VmError};
 use casper_types::{
     account::AccountHash,
@@ -8,6 +8,14 @@ use casper_types::{
     CLType, CLTyped, ContractPackageHash, Key, PublicKey
 };
 use serde::{Deserialize, Serialize};
+
+const ADDRESS_HASH_LENGTH: usize = 64;
+/// An address has format `hash-<64-byte-hash>`.
+const CONTRACT_STR_LENGTH: usize = 69;
+/// An address has format `contract-package-wasm<64-byte-hash>`.
+const LEGACY_CONTRACT_STR_LENGTH: usize = 85;
+/// An address has format `account-hash-<64-byte-hash>`.
+const ACCOUNT_STR_LENGTH: usize = 77;
 
 /// An enum representing an [`AccountHash`] or a [`ContractPackageHash`].
 #[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -19,6 +27,35 @@ pub enum Address {
 }
 
 impl Address {
+    /// Creates a new `Address` from a hex-encoded string.
+    pub const fn new(input: &'static str) -> OdraResult<Self> {
+        let src: &[u8] = input.as_bytes();
+        let src_len: usize = src.len();
+
+        // fail fast if the input is too short
+        if src_len < ADDRESS_HASH_LENGTH {
+            return Err(OdraError::ExecutionError(
+                ExecutionError::AddressCreationFailed
+            ));
+        }
+        // skip the prefix, process the last 64 bytes
+        if let Ok(dst) = utils::decode_hex_32(src, src_len - ADDRESS_HASH_LENGTH) {
+            // depending on the length of the input, we can determine the type of address
+            match src_len {
+                LEGACY_CONTRACT_STR_LENGTH => Ok(Self::Contract(ContractPackageHash::new(dst))),
+                ACCOUNT_STR_LENGTH => Ok(Self::Account(AccountHash::new(dst))),
+                CONTRACT_STR_LENGTH => Ok(Self::Contract(ContractPackageHash::new(dst))),
+                _ => Err(OdraError::ExecutionError(
+                    ExecutionError::AddressCreationFailed
+                ))
+            }
+        } else {
+            Err(OdraError::ExecutionError(
+                ExecutionError::AddressCreationFailed
+            ))
+        }
+    }
+
     /// Returns the inner account hash if `self` is the `Account` variant.
     pub fn as_account_hash(&self) -> Option<&AccountHash> {
         if let Self::Account(v) = self {
@@ -200,6 +237,20 @@ mod tests {
 
     fn mock_contract_package_hash() -> ContractPackageHash {
         ContractPackageHash::from_formatted_str(CONTRACT_PACKAGE_HASH).unwrap()
+    }
+
+    #[test]
+    fn test_casper_address_new() {
+        let address = Address::new(CONTRACT_PACKAGE_HASH).unwrap();
+        assert!(address.is_contract());
+        assert_eq!(
+            address.as_contract_package_hash().unwrap(),
+            &mock_contract_package_hash()
+        );
+
+        let address = Address::new(ACCOUNT_HASH).unwrap();
+        assert!(!address.is_contract());
+        assert_eq!(address.as_account_hash().unwrap(), &mock_account_hash());
     }
 
     #[test]
