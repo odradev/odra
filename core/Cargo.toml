@@ -15,6 +15,11 @@ num-traits = { workspace = true }
 serde = { workspace = true, default-features = false, features = ["alloc", "derive"] }
 serde_json = { workspace = true, default-features = false, features = ["alloc"] }
 
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+casper-contract = { version = "4.0.0", default-features = false }
+ink_allocator = { version = "4.2.1", default-features = false }
+lazy_static = { version = "1.4.0", features = [ "spin_no_std" ] }
+
 [dev-dependencies]
 mockall = { workspace = true }
 

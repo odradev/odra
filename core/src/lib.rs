@@ -1,6 +1,8 @@
 #![doc = "Core of the Odra Framework"]
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(test, feature(never_type))]
+#![allow(internal_features)]
+#![cfg_attr(not(test), feature(core_intrinsics))]
 
 extern crate alloc;
 
@@ -54,3 +56,6 @@ pub use sequence::Sequence;
 pub use var::Var;
 
 pub use casper_types;
+
+#[cfg(target_arch = "wasm32")]
+pub mod wasm;

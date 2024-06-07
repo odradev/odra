@@ -16,12 +16,9 @@ odra-macros = { workspace = true }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 odra-schema = { workspace = true }
 
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-odra-casper-wasm-env = { workspace = true }
-
 [lints.rust]
 missing_docs = "warn"
 
 [features]
 default = []
-disable-allocator = ["odra-casper-wasm-env/disable-allocator"]
+disable-allocator = []
