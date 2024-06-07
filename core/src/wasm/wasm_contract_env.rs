@@ -1,13 +1,12 @@
-use crate::wasm::host_functions;
-use casper_contract::contract_api::runtime;
-use casper_types::bytesrepr::ToBytes;
-use casper_types::U512;
+//! WasmContractEnv is an implementation of ContractContext for Wasm environment.
+
+use crate::casper_types;
 use crate::casper_types::bytesrepr::Bytes;
-use crate::casper_types::{CLType, CLValue, BLAKE2B_DIGEST_LENGTH};
-use crate::prelude::*;
-use crate::{casper_types, UnwrapOrRevert};
+use crate::casper_types::{CLValue, BLAKE2B_DIGEST_LENGTH};
+use crate::wasm::host_functions;
 use crate::{Address, OdraError};
 use crate::{ContractContext, ContractEnv, ExecutionError, OdraResult};
+use casper_types::U512;
 
 /// ContractContext implementation for Wasm environment.
 #[derive(Clone)]
@@ -107,7 +106,8 @@ impl WasmContractEnv {
         ContractEnv::new(0, WasmContractEnv)
     }
 
-    pub fn borrow(&self) -> &dyn ContractContext {
+    /// Borrows self.
+    pub fn borrow(&self) -> &Self {
         self
     }
 }

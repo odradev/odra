@@ -9,7 +9,7 @@ repository = "https://github.com/odradev/odra"
 
 [dependencies]
 odra-core = { path = "../../core" }
-odra-casper-wasm-env = { path = "../wasm-env" }
+odra-casper-wasm-env = { path = "../wasm-env",  features = ["disable-allocator"] }
 
 [[bin]]
 name = "proxy_caller"

@@ -1,3 +1,5 @@
+//! Constants used in the wasm runtime.
+
 use crate::casper_event_standard;
 
 /// The arg name for the package hash key name.

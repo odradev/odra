@@ -7,7 +7,17 @@
 //!
 //! Build on top of the [casper_contract] crate.
 
-use casper_contract::contract_api::storage::new_uref;
+use crate::casper_event_standard::{self, Schemas};
+use crate::casper_types::bytesrepr::deserialize;
+use crate::casper_types::{
+    api_error, bytesrepr,
+    bytesrepr::{Bytes, FromBytes, ToBytes},
+    contracts::NamedKeys,
+    system::CallStackElement,
+    ApiError, CLValue, ContractPackageHash, ContractVersion, EntryPoints, Key, RuntimeArgs, URef,
+    DICTIONARY_ITEM_KEY_MAX_LENGTH, U512, UREF_SERIALIZED_LENGTH
+};
+use crate::{prelude::*, Address, CallDef, ExecutionError};
 use casper_contract::{
     contract_api::{
         self, runtime, storage,
@@ -20,21 +30,6 @@ use casper_contract::{
     unwrap_or_revert::UnwrapOrRevert
 };
 use core::mem::MaybeUninit;
-use crate::casper_types::bytesrepr::deserialize;
-use crate::casper_types::{
-    api_error, bytesrepr,
-    bytesrepr::{Bytes, FromBytes, ToBytes},
-    contracts::NamedKeys,
-    system::CallStackElement,
-    ApiError, CLTyped, CLValue, ContractPackageHash, ContractVersion, EntryPoints, Key,
-    RuntimeArgs, URef, DICTIONARY_ITEM_KEY_MAX_LENGTH, U512, UREF_SERIALIZED_LENGTH
-};
-use crate::ExecutionError::EmptyDictionaryName;
-use crate::{
-    args::EntrypointArgument,
-    casper_event_standard::{self, Schema, Schemas}
-};
-use crate::{prelude::*, Address, CallDef, ExecutionError};
 
 use crate::wasm::consts;
 

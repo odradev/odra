@@ -1,5 +1,3 @@
-use core::marker::PhantomData;
-
 use crate::args::EntrypointArgument;
 use crate::call_def::CallDef;
 use crate::casper_types::bytesrepr::{deserialize_from_slice, Bytes, FromBytes, ToBytes};
@@ -13,7 +11,6 @@ use crate::{Address, OdraError};
 
 #[cfg(target_arch = "wasm32")]
 use crate::wasm::wasm_contract_env::WasmContractEnv;
-
 
 const INDEX_SIZE: usize = 4;
 const KEY_LEN: usize = 64;
@@ -55,6 +52,7 @@ impl ContractEnv {
     }
 
     #[cfg(target_arch = "wasm32")]
+    /// Creates a new ContractEnv instance.
     pub const fn new(index: u32, backend: WasmContractEnv) -> Self {
         Self {
             index,

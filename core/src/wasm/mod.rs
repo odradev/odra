@@ -1,3 +1,5 @@
+//! Wasm environment.
+
 pub mod consts;
 pub mod host_functions;
 pub mod wasm_contract_env;

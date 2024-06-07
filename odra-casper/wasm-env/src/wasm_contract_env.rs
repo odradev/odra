@@ -102,8 +102,15 @@ impl ContractContext for WasmContractEnv {
 }
 
 impl WasmContractEnv {
+    #[cfg(not(target_arch = "wasm32"))]
     /// Creates new ContractEnv with WasmContractEnv as backend.
     pub fn new_env() -> ContractEnv {
         ContractEnv::new(0, Rc::new(RefCell::new(WasmContractEnv)))
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    /// Creates new ContractEnv with WasmContractEnv as backend.
+    pub fn new() -> ContractEnv {
+        ContractEnv::new(0, odra_core::wasm::WasmContractEnv)
     }
 }
