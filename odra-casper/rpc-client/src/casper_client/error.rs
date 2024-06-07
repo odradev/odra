@@ -1,11 +1,11 @@
 use anyhow::{anyhow, Result};
-use odra_core::ExecutionError;
+use odra_core::{ExecutionError, OdraError};
 use serde_json::Value;
 use std::{fs, path::PathBuf};
 
 use crate::log;
 
-pub(crate) fn find(contract_name: &str, error_msg: &str) -> Result<String> {
+pub(crate) fn find(contract_name: &str, error_msg: &str) -> Result<(String, OdraError)> {
     let schema_path = find_schema_file_path(contract_name)?;
     let schema = fs::read_to_string(schema_path)?;
     let error_num: u16 = error_msg
@@ -24,13 +24,17 @@ pub(crate) fn find(contract_name: &str, error_msg: &str) -> Result<String> {
 
     errors
         .iter()
-        .find_map(|err| match_error(err, error_num as u64))
+        .find_map(|err| match_error(err, error_num))
         .ok_or_else(|| anyhow!("Couldn't find error"))
 }
 
-fn match_error(val: &Value, error_num: u64) -> Option<String> {
-    if val["discriminant"].as_u64() == Some(error_num) {
-        val["name"].as_str().map(|s| s.to_string())
+fn match_error(val: &Value, error_num: u16) -> Option<(String, OdraError)> {
+    if val["discriminant"].as_u64() == Some(error_num as u64) {
+        let odra_error = OdraError::user(error_num);
+        val["name"]
+            .as_str()
+            .map(|s| s.to_string())
+            .map(|s| (s, odra_error))
     } else {
         None
     }
@@ -41,53 +45,114 @@ fn is_internal_error(error_num: u16) -> bool {
     error_num >= ExecutionError::UserErrorTooHigh.code()
 }
 
-fn get_internal_error_name(error_num: u16) -> String {
+fn get_internal_error_name(error_num: u16) -> (String, OdraError) {
     match error_num {
-        x if x == ExecutionError::UnwrapError.code() => "ExecutionError::UnwrapError",
-        x if x == ExecutionError::AdditionOverflow.code() => "ExecutionError::AdditionOverflow",
-        x if x == ExecutionError::SubtractionOverflow.code() => {
-            "ExecutionError::SubtractionOverflow"
-        }
-        x if x == ExecutionError::NonPayable.code() => "ExecutionError::NonPayable",
-        x if x == ExecutionError::TransferToContract.code() => "ExecutionError::TransferToContract",
-        x if x == ExecutionError::ReentrantCall.code() => "ExecutionError::ReentrantCall",
-        x if x == ExecutionError::ContractAlreadyInstalled.code() => {
-            "ExecutionError::ContractAlreadyInstalled"
-        }
-        x if x == ExecutionError::UnknownConstructor.code() => "ExecutionError::UnknownConstructor",
-        x if x == ExecutionError::NativeTransferError.code() => {
-            "ExecutionError::NativeTransferError"
-        }
-        x if x == ExecutionError::IndexOutOfBounds.code() => "ExecutionError::IndexOutOfBounds",
-        x if x == ExecutionError::ZeroAddress.code() => "ExecutionError::ZeroAddress",
-        x if x == ExecutionError::AddressCreationFailed.code() => {
-            "ExecutionError::AddressCreationFailed"
-        }
-        x if x == ExecutionError::EarlyEndOfStream.code() => "ExecutionError::EarlyEndOfStream",
-        x if x == ExecutionError::Formatting.code() => "ExecutionError::Formatting",
-        x if x == ExecutionError::LeftOverBytes.code() => "ExecutionError::LeftOverBytes",
-        x if x == ExecutionError::OutOfMemory.code() => "ExecutionError::OutOfMemory",
-        x if x == ExecutionError::NotRepresentable.code() => "ExecutionError::NotRepresentable",
-        x if x == ExecutionError::ExceededRecursionDepth.code() => {
-            "ExecutionError::ExceededRecursionDepth"
-        }
-        x if x == ExecutionError::KeyNotFound.code() => "ExecutionError::KeyNotFound",
-        x if x == ExecutionError::CouldNotDeserializeSignature.code() => {
-            "ExecutionError::CouldNotDeserializeSignature"
-        }
-        x if x == ExecutionError::TypeMismatch.code() => "ExecutionError::TypeMismatch",
-        x if x == ExecutionError::CouldNotSignMessage.code() => {
-            "ExecutionError::CouldNotSignMessage"
-        }
-        x if x == ExecutionError::EmptyDictionaryName.code() => {
-            "ExecutionError::EmptyDictionaryName"
-        }
-        x if x == ExecutionError::MissingArg.code() => "ExecutionError::MissingArg",
-        x if x == ExecutionError::MaxUserError.code() => "ExecutionError::MaxUserError",
-        x if x == ExecutionError::UserErrorTooHigh.code() => "ExecutionError::UserErrorTooHigh",
-        _ => "UnknownError"
+        x if x == ExecutionError::UnwrapError.code() => (
+            "ExecutionError::UnwrapError".to_string(),
+            ExecutionError::UnwrapError.into()
+        ),
+        x if x == ExecutionError::AdditionOverflow.code() => (
+            "ExecutionError::AdditionOverflow".to_string(),
+            ExecutionError::AdditionOverflow.into()
+        ),
+        x if x == ExecutionError::SubtractionOverflow.code() => (
+            "ExecutionError::SubtractionOverflow".to_string(),
+            ExecutionError::SubtractionOverflow.into()
+        ),
+        x if x == ExecutionError::NonPayable.code() => (
+            "ExecutionError::NonPayable".to_string(),
+            ExecutionError::NonPayable.into()
+        ),
+        x if x == ExecutionError::TransferToContract.code() => (
+            "ExecutionError::TransferToContract".to_string(),
+            ExecutionError::TransferToContract.into()
+        ),
+        x if x == ExecutionError::ReentrantCall.code() => (
+            "ExecutionError::ReentrantCall".to_string(),
+            ExecutionError::ReentrantCall.into()
+        ),
+        x if x == ExecutionError::ContractAlreadyInstalled.code() => (
+            "ExecutionError::ContractAlreadyInstalled".to_string(),
+            ExecutionError::ContractAlreadyInstalled.into()
+        ),
+        x if x == ExecutionError::UnknownConstructor.code() => (
+            "ExecutionError::UnknownConstructor".to_string(),
+            ExecutionError::UnknownConstructor.into()
+        ),
+        x if x == ExecutionError::NativeTransferError.code() => (
+            "ExecutionError::NativeTransferError".to_string(),
+            ExecutionError::NativeTransferError.into()
+        ),
+        x if x == ExecutionError::IndexOutOfBounds.code() => (
+            "ExecutionError::IndexOutOfBounds".to_string(),
+            ExecutionError::IndexOutOfBounds.into()
+        ),
+        x if x == ExecutionError::ZeroAddress.code() => (
+            "ExecutionError::ZeroAddress".to_string(),
+            ExecutionError::ZeroAddress.into()
+        ),
+        x if x == ExecutionError::AddressCreationFailed.code() => (
+            "ExecutionError::AddressCreationFailed".to_string(),
+            ExecutionError::AddressCreationFailed.into()
+        ),
+        x if x == ExecutionError::EarlyEndOfStream.code() => (
+            "ExecutionError::EarlyEndOfStream".to_string(),
+            ExecutionError::EarlyEndOfStream.into()
+        ),
+        x if x == ExecutionError::Formatting.code() => (
+            "ExecutionError::Formatting".to_string(),
+            ExecutionError::Formatting.into()
+        ),
+        x if x == ExecutionError::LeftOverBytes.code() => (
+            "ExecutionError::LeftOverBytes".to_string(),
+            ExecutionError::LeftOverBytes.into()
+        ),
+        x if x == ExecutionError::OutOfMemory.code() => (
+            "ExecutionError::OutOfMemory".to_string(),
+            ExecutionError::OutOfMemory.into()
+        ),
+        x if x == ExecutionError::NotRepresentable.code() => (
+            "ExecutionError::NotRepresentable".to_string(),
+            ExecutionError::NotRepresentable.into()
+        ),
+        x if x == ExecutionError::ExceededRecursionDepth.code() => (
+            "ExecutionError::ExceededRecursionDepth".to_string(),
+            ExecutionError::ExceededRecursionDepth.into()
+        ),
+        x if x == ExecutionError::KeyNotFound.code() => (
+            "ExecutionError::KeyNotFound".to_string(),
+            ExecutionError::KeyNotFound.into()
+        ),
+        x if x == ExecutionError::CouldNotDeserializeSignature.code() => (
+            "ExecutionError::CouldNotDeserializeSignature".to_string(),
+            ExecutionError::CouldNotDeserializeSignature.into()
+        ),
+        x if x == ExecutionError::TypeMismatch.code() => (
+            "ExecutionError::TypeMismatch".to_string(),
+            ExecutionError::TypeMismatch.into()
+        ),
+        x if x == ExecutionError::CouldNotSignMessage.code() => (
+            "ExecutionError::CouldNotSignMessage".to_string(),
+            ExecutionError::CouldNotSignMessage.into()
+        ),
+        x if x == ExecutionError::EmptyDictionaryName.code() => (
+            "ExecutionError::EmptyDictionaryName".to_string(),
+            ExecutionError::EmptyDictionaryName.into()
+        ),
+        x if x == ExecutionError::MissingArg.code() => (
+            "ExecutionError::MissingArg".to_string(),
+            ExecutionError::MissingArg.into()
+        ),
+        x if x == ExecutionError::MaxUserError.code() => (
+            "ExecutionError::MaxUserError".to_string(),
+            ExecutionError::MaxUserError.into()
+        ),
+        x if x == ExecutionError::UserErrorTooHigh.code() => (
+            "ExecutionError::UserErrorTooHigh".to_string(),
+            ExecutionError::UserErrorTooHigh.into()
+        ),
+        _ => panic!("Unknown execution error code: {}", error_num)
     }
-    .to_string()
 }
 
 fn find_schema_file_path(contract_name: &str) -> Result<PathBuf> {
@@ -116,26 +181,33 @@ fn find_schema_file_path(contract_name: &str) -> Result<PathBuf> {
 #[cfg(test)]
 mod test {
     use anyhow::Result;
+    use odra_core::{ExecutionError, OdraError};
 
     #[test]
     fn test_reading_errors() {
         // Contract errors
         assert_eq!(
             call("User error: 60017").ok(),
-            Some("CannotTargetSelfUser".to_string())
+            Some(("CannotTargetSelfUser".to_string(), OdraError::user(60017)))
         );
         assert_eq!(
             call("User error: 60010").ok(),
-            Some("InsufficientRights".to_string())
+            Some(("InsufficientRights".to_string(), OdraError::user(60010)))
         );
         // Odra error
         assert_eq!(
             call("User error: 64537").ok(),
-            Some("ExecutionError::UnwrapError".to_string())
+            Some((
+                "ExecutionError::UnwrapError".to_string(),
+                ExecutionError::UnwrapError.into()
+            ))
         );
         assert_eq!(
             call("User error: 64657").ok(),
-            Some("ExecutionError::EmptyDictionaryName".to_string())
+            Some((
+                "ExecutionError::EmptyDictionaryName".to_string(),
+                ExecutionError::EmptyDictionaryName.into()
+            ))
         );
         // Unknown user error
         assert!(call("User error: 60300").is_err());
@@ -143,7 +215,7 @@ mod test {
         assert!(call("Casper Engine error").is_err());
     }
 
-    fn call(error_msg: &str) -> Result<String> {
+    fn call(error_msg: &str) -> Result<(String, OdraError)> {
         super::find("cep18", error_msg)
     }
 }

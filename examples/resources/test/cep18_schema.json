@@ -1,0 +1,687 @@
+{
+  "casper_contract_schema_version": 1,
+  "toolchain": "rustc 1.78.0-nightly (98aa3624b 2024-02-08)",
+  "authors": [
+    "Jakub Płaskonka <kuba@odra.dev>",
+    "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
+    "Maciej Zieliński <maciej@odra.dev>"
+  ],
+  "repository": "https://github.com/odradev/odra",
+  "homepage": null,
+  "contract_name": "Cep18",
+  "contract_version": "1.0.0",
+  "types": [
+    {
+      "struct": {
+        "name": "Burn",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "ChangeSecurity",
+        "description": null,
+        "members": [
+          {
+            "name": "admin",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "sec_change_map",
+            "description": null,
+            "ty": {
+              "Map": {
+                "key": "Key",
+                "value": "SecurityBadge"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "DecreaseAllowance",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "spender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "allowance",
+            "description": null,
+            "ty": "U256"
+          },
+          {
+            "name": "decr_by",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "IncreaseAllowance",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "spender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "allowance",
+            "description": null,
+            "ty": "U256"
+          },
+          {
+            "name": "inc_by",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "Mint",
+        "description": null,
+        "members": [
+          {
+            "name": "recipient",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "SetAllowance",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "spender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "allowance",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "Transfer",
+        "description": null,
+        "members": [
+          {
+            "name": "sender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "recipient",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "TransferFrom",
+        "description": null,
+        "members": [
+          {
+            "name": "spender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "recipient",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "name": "AlreadyInitialized",
+      "description": "This contract instance cannot be initialized again.",
+      "discriminant": 60015
+    },
+    {
+      "name": "CannotTargetSelfUser",
+      "description": "The user cannot target themselves.",
+      "discriminant": 60017
+    },
+    {
+      "name": "FailedToGetArgBytes",
+      "description": "Failed to read the runtime arguments provided.",
+      "discriminant": 60009
+    },
+    {
+      "name": "InsufficientAllowance",
+      "description": "Spender does not have enough allowance approved.",
+      "discriminant": 60002
+    },
+    {
+      "name": "InsufficientBalance",
+      "description": "Spender does not have enough balance.",
+      "discriminant": 60001
+    },
+    {
+      "name": "InsufficientRights",
+      "description": "The caller does not have sufficient security access.",
+      "discriminant": 60010
+    },
+    {
+      "name": "InvalidAdminList",
+      "description": "The list of Admin accounts provided is invalid.",
+      "discriminant": 60011
+    },
+    {
+      "name": "InvalidBurnTarget",
+      "description": "The burn target is invalid.",
+      "discriminant": 60018
+    },
+    {
+      "name": "InvalidContext",
+      "description": "CEP-18 contract called from within an invalid context.",
+      "discriminant": 60000
+    },
+    {
+      "name": "InvalidEnableMBFlag",
+      "description": "The flag to enable the mint and burn mode is invalid.",
+      "discriminant": 60014
+    },
+    {
+      "name": "InvalidEventsMode",
+      "description": "An invalid event mode was specified.",
+      "discriminant": 60006
+    },
+    {
+      "name": "InvalidMinterList",
+      "description": "The list of accounts that can mint tokens is invalid.",
+      "discriminant": 60012
+    },
+    {
+      "name": "InvalidNoneList",
+      "description": "The list of accounts with no access rights is invalid.",
+      "discriminant": 60013
+    },
+    {
+      "name": "InvalidState",
+      "description": "The contract is in an invalid state. This error should never happen.",
+      "discriminant": 60100
+    },
+    {
+      "name": "MintBurnDisabled",
+      "description": "The mint and burn mode is disabled.",
+      "discriminant": 60016
+    },
+    {
+      "name": "MissingEventsMode",
+      "description": "The event mode required was not specified.",
+      "discriminant": 60007
+    },
+    {
+      "name": "Overflow",
+      "description": "Operation would cause an integer overflow.",
+      "discriminant": 60003
+    },
+    {
+      "name": "PackageHashMissing",
+      "description": "A required package hash was not specified.",
+      "discriminant": 60004
+    },
+    {
+      "name": "PackageHashNotPackage",
+      "description": "The package hash specified does not represent a package.",
+      "discriminant": 60005
+    },
+    {
+      "name": "Phantom",
+      "description": "An unknown error occurred.",
+      "discriminant": 60008
+    },
+    {
+      "name": "_MissingPackageHashForUpgrade",
+      "description": "The package hash for the upgrade is missing.",
+      "discriminant": 60019
+    }
+  ],
+  "entry_points": [
+    {
+      "name": "change_security",
+      "description": "Admin EntryPoint to manipulate the security access granted to users.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "admin_list",
+          "description": null,
+          "ty": {
+            "List": "Key"
+          },
+          "optional": false
+        },
+        {
+          "name": "minter_list",
+          "description": null,
+          "ty": {
+            "List": "Key"
+          },
+          "optional": false
+        },
+        {
+          "name": "none_list",
+          "description": null,
+          "ty": {
+            "List": "Key"
+          },
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "name",
+      "description": "Returns the name of the token.",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "String",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "symbol",
+      "description": "Returns the symbol of the token.",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "String",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "decimals",
+      "description": "Returns the number of decimals the token uses.",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U8",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "total_supply",
+      "description": "Returns the total supply of the token.",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U256",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "balance_of",
+      "description": "Returns the balance of the given address.",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "address",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "U256",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "allowance",
+      "description": "Returns the amount of tokens the owner has allowed the spender to spend.",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "spender",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "U256",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "approve",
+      "description": "Approves the spender to spend the given amount of tokens on behalf of the caller.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "spender",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "decrease_allowance",
+      "description": "Decreases the allowance of the spender by the given amount.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "spender",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "decr_by",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "increase_allowance",
+      "description": "Increases the allowance of the spender by the given amount.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "spender",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "inc_by",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "transfer",
+      "description": "Transfers tokens from the caller to the recipient.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "recipient",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "transfer_from",
+      "description": "Transfers tokens from the owner to the recipient using the spender's allowance.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "recipient",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "mint",
+      "description": "Mints new tokens and assigns them to the given address.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "burn",
+      "description": "Burns the given amount of tokens from the given address.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    }
+  ],
+  "events": [
+    {
+      "name": "Burn",
+      "ty": "Burn"
+    },
+    {
+      "name": "ChangeSecurity",
+      "ty": "ChangeSecurity"
+    },
+    {
+      "name": "DecreaseAllowance",
+      "ty": "DecreaseAllowance"
+    },
+    {
+      "name": "IncreaseAllowance",
+      "ty": "IncreaseAllowance"
+    },
+    {
+      "name": "Mint",
+      "ty": "Mint"
+    },
+    {
+      "name": "SetAllowance",
+      "ty": "SetAllowance"
+    },
+    {
+      "name": "Transfer",
+      "ty": "Transfer"
+    },
+    {
+      "name": "TransferFrom",
+      "ty": "TransferFrom"
+    }
+  ],
+  "call": {
+    "wasm_file_name": "Cep18.wasm",
+    "description": "Initializes the contract with the given metadata, initial supply, security and modality.",
+    "arguments": [
+      {
+        "name": "odra_cfg_package_hash_key_name",
+        "description": "The arg name for the package hash key name.",
+        "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_allow_key_override",
+        "description": "The arg name for the allow key override.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_is_upgradable",
+        "description": "The arg name for the contract upgradeability setting.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "symbol",
+        "description": null,
+        "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "name",
+        "description": null,
+        "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "decimals",
+        "description": null,
+        "ty": "U8",
+        "optional": false
+      },
+      {
+        "name": "initial_supply",
+        "description": null,
+        "ty": "U256",
+        "optional": false
+      },
+      {
+        "name": "admin_list",
+        "description": null,
+        "ty": {
+          "List": "Key"
+        },
+        "optional": false
+      },
+      {
+        "name": "minter_list",
+        "description": null,
+        "ty": {
+          "List": "Key"
+        },
+        "optional": false
+      },
+      {
+        "name": "modality",
+        "description": null,
+        "ty": {
+          "Option": "Cep18Modality"
+        },
+        "optional": false
+      }
+    ]
+  }
+}

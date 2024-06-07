@@ -83,8 +83,10 @@ impl From<casper_types::bytesrepr::Error> for ExecutionError {
 #[repr(u16)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ExecutionError {
-    /// Unwrap error
+    /// Unwrap error.
     UnwrapError = 1,
+    /// Something unexpected happened.
+    UnexpectedError = 2,
     /// Addition overflow
     AdditionOverflow = 100,
     /// Subtraction overflow
