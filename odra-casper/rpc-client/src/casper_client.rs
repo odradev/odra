@@ -44,6 +44,8 @@ pub const ENV_NODE_ADDRESS: &str = "ODRA_CASPER_LIVENET_NODE_ADDRESS";
 pub const ENV_CHAIN_NAME: &str = "ODRA_CASPER_LIVENET_CHAIN_NAME";
 /// Environment variable holding a filename prefix for additional accounts.
 pub const ENV_ACCOUNT_PREFIX: &str = "ODRA_CASPER_LIVENET_KEY_";
+/// Environment variable holding cspr.cloud auth token.
+pub const ENV_CSPR_CLOUD_AUTH_TOKEN: &str = "CSPR_CLOUD_AUTH_TOKEN";
 
 fn get_env_variable(name: &str) -> String {
     std::env::var(name).unwrap_or_else(|err| {
@@ -55,10 +57,15 @@ fn get_env_variable(name: &str) -> String {
     })
 }
 
+fn get_optional_env_variable(name: &str) -> Option<String> {
+    std::env::var(name).ok()
+}
+
 /// Client for interacting with Casper node.
 pub struct CasperClient {
     node_address: String,
     chain_name: String,
+    cspr_cloud_auth_token: Option<String>,
     active_account: usize,
     secret_keys: Vec<SecretKey>,
     gas: U512
@@ -83,6 +90,7 @@ impl CasperClient {
         CasperClient {
             node_address: get_env_variable(ENV_NODE_ADDRESS),
             chain_name: get_env_variable(ENV_CHAIN_NAME),
+            cspr_cloud_auth_token: get_optional_env_variable(ENV_CSPR_CLOUD_AUTH_TOKEN),
             active_account: 0,
             secret_keys,
             gas: U512::zero()
@@ -724,7 +732,13 @@ impl CasperClient {
 
     fn post_request<T: DeserializeOwned>(&self, request: Value) -> T {
         let client = reqwest::blocking::Client::new();
-        let response = client.post(self.node_address_rpc()).json(&request).send();
+
+        let mut client = client.post(self.node_address_rpc());
+        if let Some(token) = &self.cspr_cloud_auth_token {
+            client = client.header("Authorization", token);
+        }
+        let response = client.json(&request).send();
+
         let response = match response {
             Ok(r) => r,
             Err(e) => {
