@@ -193,6 +193,9 @@ pub trait HostContext {
 
     /// Returns the public key associated with the specified address.
     fn public_key(&self, address: &Address) -> PublicKey;
+
+    /// Transfers the specified amount of CSPR from the current caller to the specified address.
+    fn transfer(&self, to: Address, amount: U512) -> OdraResult<()>;
 }
 
 /// Represents the host environment for executing smart contracts.
@@ -498,6 +501,17 @@ impl HostEnv {
         let backend = self.backend.borrow();
         backend.set_gas(gas)
     }
+
+    /// Transfers the specified amount of CSPR from the current caller to the specified address.
+    pub fn transfer(&self, to: Address, amount: U512) -> OdraResult<()> {
+        if to.is_contract() {
+            return Err(OdraError::ExecutionError(
+                ExecutionError::TransferToContract
+            ));
+        }
+        let backend = self.backend.borrow();
+        backend.transfer(to, amount)
+    }
 }
 
 #[cfg(test)]
@@ -506,7 +520,7 @@ mod test {
 
     use super::*;
     use casper_event_standard::Event;
-    use casper_types::account::AccountHash;
+    use casper_types::{account::AccountHash, ContractPackageHash};
     use mockall::{mock, predicate};
     use std::sync::Mutex;
 
@@ -648,6 +662,57 @@ mod test {
         // should call the `HostContext`
         env.gas_report();
         env.set_gas(1_000u64)
+    }
+
+    #[test]
+    fn test_successful_transfer_to_account() {
+        // Given a host context that successfully transfers tokens.
+        let mut ctx = MockHostContext::new();
+        ctx.expect_transfer().returning(|_, _| Ok(()));
+        let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+
+        let addr = Address::Account(AccountHash::new([0; 32]));
+        // When transfer 100 tokens to an account.
+        let result = env.transfer(addr, 100.into());
+        // Then the transfer should be successful.
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_failing_transfer_to_account() {
+        // Given a host context that fails to transfer tokens.
+        let mut ctx = MockHostContext::new();
+        ctx.expect_transfer()
+            .returning(|_, _| Err(OdraError::ExecutionError(ExecutionError::UnwrapError)));
+        let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+
+        let addr = Address::Account(AccountHash::new([0; 32]));
+        // When transfer 100 tokens to an account.
+        let result = env.transfer(addr, 100.into());
+        // Then the transfer should fail.
+        assert_eq!(
+            result.err(),
+            Some(OdraError::ExecutionError(ExecutionError::UnwrapError))
+        );
+    }
+
+    #[test]
+    fn test_transfer_to_contract() {
+        // Given a host context that successfully transfers tokens.
+        let mut ctx = MockHostContext::new();
+        ctx.expect_transfer().returning(|_, _| Ok(()));
+        let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+
+        let addr = Address::Contract(ContractPackageHash::new([0; 32]));
+        // When transfer 100 tokens to a contract.
+        let result = env.transfer(addr, 100.into());
+        // Then the transfer should fail.
+        assert_eq!(
+            result,
+            Err(OdraError::ExecutionError(
+                ExecutionError::TransferToContract
+            ))
+        );
     }
 
     #[test]

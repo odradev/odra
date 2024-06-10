@@ -142,6 +142,10 @@ impl HostContext for CasperHost {
     fn public_key(&self, address: &Address) -> PublicKey {
         self.vm.borrow().public_key(address)
     }
+
+    fn transfer(&self, to: Address, amount: U512) -> OdraResult<()> {
+        self.vm.borrow_mut().transfer(to, amount)
+    }
 }
 
 impl CasperHost {

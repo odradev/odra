@@ -228,6 +228,23 @@ impl CasperClient {
         result.balance
     }
 
+    pub fn transfer(&self, to: Address, amount: U512) -> OdraResult<()> {
+        let session = ExecutableDeployItem::Transfer {
+            args: runtime_args! {
+                "amount" => amount,
+                "target" => to,
+                "id" => Some(0u64),
+            }
+        };
+        let deploy = self.new_deploy(session, self.gas);
+        let request = put_deploy_request(deploy);
+        let response: PutDeployResult = self.post_request(request);
+        let deploy_hash = response.deploy_hash;
+        // TODO: wait_for_deploy_hash should return a result not panic, then this function can return a result
+        self.wait_for_deploy_hash(deploy_hash);
+        Ok(())
+    }
+
     /// Returns the current block_time
     pub fn get_block_time(&self) -> u64 {
         let request = json!(
@@ -454,17 +471,7 @@ impl CasperClient {
             args
         };
         let deploy = self.new_deploy(session, self.gas);
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": "account_put_deploy",
-                "params": {
-                    "deploy": deploy
-                },
-                "id": 1,
-            }
-        );
-
+        let request = put_deploy_request(deploy);
         let response: PutDeployResult = self.post_request(request);
         let deploy_hash = response.deploy_hash;
         self.wait_for_deploy_hash(deploy_hash);
@@ -504,16 +511,7 @@ impl CasperClient {
         };
 
         let deploy = self.new_deploy(session, self.gas);
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": "account_put_deploy",
-                "params": {
-                    "deploy": deploy
-                },
-                "id": 1,
-            }
-        );
+        let request = put_deploy_request(deploy);
         let response: PutDeployResult = self.post_request(request);
         let deploy_hash = response.deploy_hash;
         self.wait_for_deploy_hash(deploy_hash);
@@ -547,16 +545,7 @@ impl CasperClient {
             args: call_def.args().clone()
         };
         let deploy = self.new_deploy(session, self.gas);
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": "account_put_deploy",
-                "params": {
-                    "deploy": deploy
-                },
-                "id": 1,
-            }
-        );
+        let request = put_deploy_request(deploy);
         let response: PutDeployResult = self.post_request(request);
         let deploy_hash = response.deploy_hash;
         self.wait_for_deploy_hash(deploy_hash);
@@ -795,4 +784,18 @@ fn find_wasm_file_path(wasm_file_name: &str) -> PathBuf {
     }
     log::error(format!("Could not find wasm under {:?}.", checked_paths));
     panic!("Wasm not found");
+}
+
+fn put_deploy_request(deploy: Deploy) -> Value {
+    let request = json!(
+        {
+            "jsonrpc": "2.0",
+            "method": "account_put_deploy",
+            "params": {
+                "deploy": deploy
+            },
+            "id": 1,
+        }
+    );
+    request
 }
