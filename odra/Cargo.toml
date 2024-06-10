@@ -21,4 +21,4 @@ missing_docs = "warn"
 
 [features]
 default = []
-disable-allocator = []
+disable-allocator = ["odra-core/disable-allocator"]

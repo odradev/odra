@@ -25,3 +25,7 @@ mockall = { workspace = true }
 
 [lints.rust]
 missing_docs = "warn"
+
+[features]
+default = []
+disable-allocator = []
