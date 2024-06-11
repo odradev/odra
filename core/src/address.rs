@@ -1,6 +1,6 @@
 //! Better address representation for Casper.
 use crate::AddressError::ZeroAddress;
-use crate::{prelude::*, utils, ExecutionError, OdraResult};
+use crate::{prelude::*, ExecutionError, OdraResult};
 use crate::{AddressError, OdraError, VmError};
 use casper_types::{
     account::AccountHash,
@@ -9,6 +9,7 @@ use casper_types::{
 };
 use serde::{Deserialize, Serialize};
 
+/// The length of the hash part of an address.
 const ADDRESS_HASH_LENGTH: usize = 64;
 /// An address has format `hash-<64-byte-hash>`.
 const CONTRACT_STR_LENGTH: usize = 69;
@@ -32,14 +33,7 @@ impl Address {
         let src: &[u8] = input.as_bytes();
         let src_len: usize = src.len();
 
-        // fail fast if the input is too short
-        if src_len < ADDRESS_HASH_LENGTH {
-            return Err(OdraError::ExecutionError(
-                ExecutionError::AddressCreationFailed
-            ));
-        }
-        // skip the prefix, process the last 64 bytes
-        if let Ok(dst) = utils::decode_hex_32(src, src_len - ADDRESS_HASH_LENGTH) {
+        if let Ok(dst) = decode_base16(src) {
             // depending on the length of the input, we can determine the type of address
             match src_len {
                 LEGACY_CONTRACT_STR_LENGTH => Ok(Self::Contract(ContractPackageHash::new(dst))),
@@ -217,6 +211,46 @@ impl<'de> Deserialize<'de> for Address {
     }
 }
 
+const fn decode_base16(input: &[u8]) -> Result<[u8; 32], &'static str> {
+    // fail fast if the input is too short
+    let input_len = input.len();
+    if input_len < ADDRESS_HASH_LENGTH {
+        return Err("Input too short");
+    }
+    // An address is always 32 bytes long.
+    let mut output = [0u8; 32];
+    let mut i = 0;
+    let mut j = 0;
+    // In a const fn, we can't use a for loop.
+    // We consider only the last 64 characters of the input.
+    while i < 64 {
+        let high_value = match hex_char_to_value(input[input_len - ADDRESS_HASH_LENGTH + i]) {
+            Ok(v) => v,
+            Err(e) => return Err(e)
+        };
+
+        let low_value = match hex_char_to_value(input[input_len - ADDRESS_HASH_LENGTH + i + 1]) {
+            Ok(v) => v,
+            Err(e) => return Err(e)
+        };
+
+        output[j] = (high_value << 4) | low_value;
+        i += 2;
+        j += 1;
+    }
+
+    Ok(output)
+}
+
+const fn hex_char_to_value(c: u8) -> Result<u8, &'static str> {
+    match c {
+        b'0'..=b'9' => Ok(c - b'0'),
+        b'a'..=b'f' => Ok(c - b'a' + 10),
+        b'A'..=b'F' => Ok(c - b'A' + 10),
+        _ => Err("Invalid character in input")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use casper_types::EraId;
@@ -251,6 +285,32 @@ mod tests {
         let address = Address::new(ACCOUNT_HASH).unwrap();
         assert!(!address.is_contract());
         assert_eq!(address.as_account_hash().unwrap(), &mock_account_hash());
+
+        let address = Address::new(CONTRACT_HASH).unwrap();
+        assert!(address.is_contract());
+    }
+
+    #[test]
+    fn contract_package_hash_from_str() {
+        let valid_prefix =
+            "account-hash-0000000000000000000000000000000000000000000000000000000000000000";
+        assert!(Address::new(valid_prefix).is_ok());
+
+        let invalid_prefix =
+            "account-hash0000000000000000000000000000000000000000000000000000000000000000";
+        assert!(Address::new(invalid_prefix).is_err());
+
+        let short_addr =
+            "account-hash-00000000000000000000000000000000000000000000000000000000000000";
+        assert!(Address::new(short_addr).is_err());
+
+        let long_addr =
+            "account-hash-000000000000000000000000000000000000000000000000000000000000000000";
+        assert!(Address::new(long_addr).is_err());
+
+        let invalid_hex =
+            "account-hash-000000000000000000000000000000000000000000000000000000000000000g";
+        assert!(Address::new(invalid_hex).is_err());
     }
 
     #[test]
