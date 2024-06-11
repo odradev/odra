@@ -1,6 +1,6 @@
 //! Better address representation for Casper.
-use crate::prelude::*;
 use crate::AddressError::ZeroAddress;
+use crate::{prelude::*, ExecutionError, OdraResult};
 use crate::{AddressError, OdraError, VmError};
 use casper_types::{
     account::AccountHash,
@@ -8,6 +8,15 @@ use casper_types::{
     CLType, CLTyped, ContractPackageHash, Key, PublicKey
 };
 use serde::{Deserialize, Serialize};
+
+/// The length of the hash part of an address.
+const ADDRESS_HASH_LENGTH: usize = 64;
+/// An address has format `hash-<64-byte-hash>`.
+const CONTRACT_STR_LENGTH: usize = 69;
+/// An address has format `contract-package-wasm<64-byte-hash>`.
+const LEGACY_CONTRACT_STR_LENGTH: usize = 85;
+/// An address has format `account-hash-<64-byte-hash>`.
+const ACCOUNT_STR_LENGTH: usize = 77;
 
 /// An enum representing an [`AccountHash`] or a [`ContractPackageHash`].
 #[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -19,6 +28,28 @@ pub enum Address {
 }
 
 impl Address {
+    /// Creates a new `Address` from a hex-encoded string.
+    pub const fn new(input: &'static str) -> OdraResult<Self> {
+        let src: &[u8] = input.as_bytes();
+        let src_len: usize = src.len();
+
+        if let Ok(dst) = decode_base16(src) {
+            // depending on the length of the input, we can determine the type of address
+            match src_len {
+                LEGACY_CONTRACT_STR_LENGTH => Ok(Self::Contract(ContractPackageHash::new(dst))),
+                ACCOUNT_STR_LENGTH => Ok(Self::Account(AccountHash::new(dst))),
+                CONTRACT_STR_LENGTH => Ok(Self::Contract(ContractPackageHash::new(dst))),
+                _ => Err(OdraError::ExecutionError(
+                    ExecutionError::AddressCreationFailed
+                ))
+            }
+        } else {
+            Err(OdraError::ExecutionError(
+                ExecutionError::AddressCreationFailed
+            ))
+        }
+    }
+
     /// Returns the inner account hash if `self` is the `Account` variant.
     pub fn as_account_hash(&self) -> Option<&AccountHash> {
         if let Self::Account(v) = self {
@@ -180,6 +211,46 @@ impl<'de> Deserialize<'de> for Address {
     }
 }
 
+const fn decode_base16(input: &[u8]) -> Result<[u8; 32], &'static str> {
+    // fail fast if the input is too short
+    let input_len = input.len();
+    if input_len < ADDRESS_HASH_LENGTH {
+        return Err("Input too short");
+    }
+    // An address is always 32 bytes long.
+    let mut output = [0u8; 32];
+    let mut i = 0;
+    let mut j = 0;
+    // In a const fn, we can't use a for loop.
+    // We consider only the last 64 characters of the input.
+    while i < 64 {
+        let high_value = match hex_char_to_value(input[input_len - ADDRESS_HASH_LENGTH + i]) {
+            Ok(v) => v,
+            Err(e) => return Err(e)
+        };
+
+        let low_value = match hex_char_to_value(input[input_len - ADDRESS_HASH_LENGTH + i + 1]) {
+            Ok(v) => v,
+            Err(e) => return Err(e)
+        };
+
+        output[j] = (high_value << 4) | low_value;
+        i += 2;
+        j += 1;
+    }
+
+    Ok(output)
+}
+
+const fn hex_char_to_value(c: u8) -> Result<u8, &'static str> {
+    match c {
+        b'0'..=b'9' => Ok(c - b'0'),
+        b'a'..=b'f' => Ok(c - b'a' + 10),
+        b'A'..=b'F' => Ok(c - b'A' + 10),
+        _ => Err("Invalid character in input")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use casper_types::EraId;
@@ -200,6 +271,46 @@ mod tests {
 
     fn mock_contract_package_hash() -> ContractPackageHash {
         ContractPackageHash::from_formatted_str(CONTRACT_PACKAGE_HASH).unwrap()
+    }
+
+    #[test]
+    fn test_casper_address_new() {
+        let address = Address::new(CONTRACT_PACKAGE_HASH).unwrap();
+        assert!(address.is_contract());
+        assert_eq!(
+            address.as_contract_package_hash().unwrap(),
+            &mock_contract_package_hash()
+        );
+
+        let address = Address::new(ACCOUNT_HASH).unwrap();
+        assert!(!address.is_contract());
+        assert_eq!(address.as_account_hash().unwrap(), &mock_account_hash());
+
+        let address = Address::new(CONTRACT_HASH).unwrap();
+        assert!(address.is_contract());
+    }
+
+    #[test]
+    fn contract_package_hash_from_str() {
+        let valid_prefix =
+            "account-hash-0000000000000000000000000000000000000000000000000000000000000000";
+        assert!(Address::new(valid_prefix).is_ok());
+
+        let invalid_prefix =
+            "account-hash0000000000000000000000000000000000000000000000000000000000000000";
+        assert!(Address::new(invalid_prefix).is_err());
+
+        let short_addr =
+            "account-hash-00000000000000000000000000000000000000000000000000000000000000";
+        assert!(Address::new(short_addr).is_err());
+
+        let long_addr =
+            "account-hash-000000000000000000000000000000000000000000000000000000000000000000";
+        assert!(Address::new(long_addr).is_err());
+
+        let invalid_hex =
+            "account-hash-000000000000000000000000000000000000000000000000000000000000000g";
+        assert!(Address::new(invalid_hex).is_err());
     }
 
     #[test]
