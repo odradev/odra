@@ -1,4 +1,5 @@
 //! Client for interacting with Casper node.
+use std::time::SystemTime;
 use std::{fs, path::PathBuf, str::from_utf8_unchecked, time::Duration};
 
 use anyhow::Context;
@@ -263,7 +264,7 @@ impl CasperClient {
             }
         );
         let result: serde_json::Value = self.post_request(request);
-        let result = result["result"]["last_added_block_info"]["timestamp"]
+        let result = result["last_added_block_info"]["timestamp"]
             .as_str()
             .unwrap_or_else(|| {
                 panic!(
@@ -271,8 +272,11 @@ impl CasperClient {
                     result
                 )
             });
-        let timestamp: u64 = result.parse().expect("Couldn't parse block time");
-        timestamp
+        let system_time = humantime::parse_rfc3339_weak(result).expect("Couldn't parse block time");
+        system_time
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap_or_else(|_| panic!("Couldn't parse block time"))
+            .as_millis() as u64
     }
 
     /// Get the event bytes from storage
