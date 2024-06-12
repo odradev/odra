@@ -29,6 +29,7 @@ pub enum Address {
 
 /// A trait for types that can be converted into an [`Address`].
 pub trait Addressable {
+    /// Returns a reference to the [`Address`] of the type.
     fn address(&self) -> &Address;
 }
 
