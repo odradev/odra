@@ -381,7 +381,7 @@ mod ref_item_tests {
                 where
                     T: odra::casper_types::bytesrepr::FromBytes + odra::casper_event_standard::EventInstance,
                 {
-                    self.env.get_event(&self.address, index)
+                    self.env.get_event(self, index)
                 }
 
                 fn last_call(&self) -> odra::ContractCallResult {
@@ -571,7 +571,7 @@ mod ref_item_tests {
                 where
                     T: odra::casper_types::bytesrepr::FromBytes + odra::casper_event_standard::EventInstance,
                 {
-                    self.env.get_event(&self.address, index)
+                    self.env.get_event(self, index)
                 }
 
                 fn last_call(&self) -> odra::ContractCallResult {
@@ -674,7 +674,7 @@ mod ref_item_tests {
                 where
                 T: odra::casper_types::bytesrepr::FromBytes + odra::casper_event_standard::EventInstance,
                 {
-                    self.env.get_event(&self.address, index)
+                    self.env.get_event(self, index)
                 }
 
                 fn last_call(&self) -> odra::ContractCallResult {
