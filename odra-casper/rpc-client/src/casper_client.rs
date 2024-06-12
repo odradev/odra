@@ -1,5 +1,6 @@
 //! Client for interacting with Casper node.
 use std::collections::BTreeMap;
+use std::time::SystemTime;
 use std::{fs, path::PathBuf, str::from_utf8_unchecked, time::Duration};
 
 use anyhow::Context;
@@ -47,6 +48,8 @@ pub const ENV_NODE_ADDRESS: &str = "ODRA_CASPER_LIVENET_NODE_ADDRESS";
 pub const ENV_CHAIN_NAME: &str = "ODRA_CASPER_LIVENET_CHAIN_NAME";
 /// Environment variable holding a filename prefix for additional accounts.
 pub const ENV_ACCOUNT_PREFIX: &str = "ODRA_CASPER_LIVENET_KEY_";
+/// Environment variable holding cspr.cloud auth token.
+pub const ENV_CSPR_CLOUD_AUTH_TOKEN: &str = "CSPR_CLOUD_AUTH_TOKEN";
 
 enum ContractId {
     Name(String),
@@ -63,10 +66,15 @@ fn get_env_variable(name: &str) -> String {
     })
 }
 
+fn get_optional_env_variable(name: &str) -> Option<String> {
+    std::env::var(name).ok()
+}
+
 /// Client for interacting with Casper node.
 pub struct CasperClient {
     node_address: String,
     chain_name: String,
+    cspr_cloud_auth_token: Option<String>,
     active_account: usize,
     secret_keys: Vec<SecretKey>,
     gas: U512,
@@ -92,6 +100,7 @@ impl CasperClient {
         CasperClient {
             node_address: get_env_variable(ENV_NODE_ADDRESS),
             chain_name: get_env_variable(ENV_CHAIN_NAME),
+            cspr_cloud_auth_token: get_optional_env_variable(ENV_CSPR_CLOUD_AUTH_TOKEN),
             active_account: 0,
             secret_keys,
             gas: U512::zero(),
@@ -238,6 +247,23 @@ impl CasperClient {
         result.balance
     }
 
+    pub fn transfer(&self, to: Address, amount: U512) -> OdraResult<()> {
+        let session = ExecutableDeployItem::Transfer {
+            args: runtime_args! {
+                "amount" => amount,
+                "target" => to,
+                "id" => Some(0u64),
+            }
+        };
+        let deploy = self.new_deploy(session, self.gas);
+        let request = put_deploy_request(deploy);
+        let response: PutDeployResult = self.post_request(request);
+        let deploy_hash = response.deploy_hash;
+        // TODO: wait_for_deploy_hash should return a result not panic, then this function can return a result
+        self.wait_for_deploy_hash(deploy_hash);
+        Ok(())
+    }
+
     /// Returns the current block_time
     pub fn get_block_time(&self) -> u64 {
         let request = json!(
@@ -248,7 +274,7 @@ impl CasperClient {
             }
         );
         let result: serde_json::Value = self.post_request(request);
-        let result = result["result"]["last_added_block_info"]["timestamp"]
+        let result = result["last_added_block_info"]["timestamp"]
             .as_str()
             .unwrap_or_else(|| {
                 panic!(
@@ -256,8 +282,11 @@ impl CasperClient {
                     result
                 )
             });
-        let timestamp: u64 = result.parse().expect("Couldn't parse block time");
-        timestamp
+        let system_time = humantime::parse_rfc3339_weak(result).expect("Couldn't parse block time");
+        system_time
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap_or_else(|_| panic!("Couldn't parse block time"))
+            .as_millis() as u64
     }
 
     /// Get the event bytes from storage
@@ -464,17 +493,7 @@ impl CasperClient {
             args
         };
         let deploy = self.new_deploy(session, self.gas);
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": "account_put_deploy",
-                "params": {
-                    "deploy": deploy
-                },
-                "id": 1,
-            }
-        );
-
+        let request = put_deploy_request(deploy);
         let response: PutDeployResult = self.post_request(request);
         let deploy_hash = response.deploy_hash;
         let result = self.wait_for_deploy_hash(deploy_hash);
@@ -533,16 +552,7 @@ impl CasperClient {
         };
 
         let deploy = self.new_deploy(session, self.gas);
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": "account_put_deploy",
-                "params": {
-                    "deploy": deploy
-                },
-                "id": 1,
-            }
-        );
+        let request = put_deploy_request(deploy);
         let response: PutDeployResult = self.post_request(request);
         let deploy_hash = response.deploy_hash;
         let result = self.wait_for_deploy_hash(deploy_hash);
@@ -577,16 +587,7 @@ impl CasperClient {
             args: call_def.args().clone()
         };
         let deploy = self.new_deploy(session, self.gas);
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": "account_put_deploy",
-                "params": {
-                    "deploy": deploy
-                },
-                "id": 1,
-            }
-        );
+        let request = put_deploy_request(deploy);
         let response: PutDeployResult = self.post_request(request);
         let deploy_hash = response.deploy_hash;
         let result = self.wait_for_deploy_hash(deploy_hash);
@@ -776,7 +777,13 @@ impl CasperClient {
 
     fn post_request<T: DeserializeOwned>(&self, request: Value) -> T {
         let client = reqwest::blocking::Client::new();
-        let response = client.post(self.node_address_rpc()).json(&request).send();
+
+        let mut client = client.post(self.node_address_rpc());
+        if let Some(token) = &self.cspr_cloud_auth_token {
+            client = client.header("Authorization", token);
+        }
+        let response = client.json(&request).send();
+
         let response = match response {
             Ok(r) => r,
             Err(e) => {
@@ -836,4 +843,18 @@ fn find_wasm_file_path(wasm_file_name: &str) -> PathBuf {
     }
     log::error(format!("Could not find wasm under {:?}.", checked_paths));
     panic!("Wasm not found");
+}
+
+fn put_deploy_request(deploy: Deploy) -> Value {
+    let request = json!(
+        {
+            "jsonrpc": "2.0",
+            "method": "account_put_deploy",
+            "params": {
+                "deploy": deploy
+            },
+            "id": 1,
+        }
+    );
+    request
 }

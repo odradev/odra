@@ -1,7 +1,11 @@
 # Changelog
 
 Changelog for `odra`.
-## [1.0.0] - 2024-05-xx
+## [1.1.0] - 2024-06-XX
+### Added
+- Support for CSPR.cloud's auth token.
+
+## [1.0.0] - 2024-05-23
 ### Added
 - Add `try_deploy` function to the `Deployer` trait, which allows deploying a contract and returning an error if the deployment fails.
 - Add `Cep18` to `odra-modules` - a standard for fungible tokens.

@@ -1,6 +1,4 @@
 //! Deploys a CEP-78 contract, mints an nft token and transfers it to another address.
-use std::str::FromStr;
-
 use odra::args::Maybe;
 use odra::casper_types::U256;
 use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader};
@@ -37,7 +35,7 @@ fn main() {
     env.set_gas(3_000_000_000u64);
     let owner = env.caller();
     let recipient =
-        Address::from_str(RECIPIENT_ADDRESS).expect("Should be a valid recipient address");
+        Address::new(RECIPIENT_ADDRESS).expect("Should be a valid recipient address");
     // casper contract may return a result or not, so deserialization may fail and it's better to use `try_transfer`/`try_mint`/`try_burn` methods
     let _ = token.try_mint(owner, CEP78_METADATA.to_string(), Maybe::None);
     println!("Owner's balance: {:?}", token.balance_of(owner));
@@ -51,7 +49,7 @@ fn main() {
 
 /// Loads a Cep78 contract.
 pub fn load_contract(env: &HostEnv, address: &str) -> TestCep78HostRef {
-    let address = Address::from_str(address).expect("Should be a valid contract address");
+    let address = Address::new(address).expect("Should be a valid contract address");
     TestCep78HostRef::load(env, address)
 }
 

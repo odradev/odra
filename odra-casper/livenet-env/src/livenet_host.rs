@@ -176,4 +176,7 @@ impl HostContext for LivenetHost {
         self.casper_client.borrow().address_public_key(address)
     }
 
+    fn transfer(&self, to: Address, amount: U512) -> OdraResult<()> {
+        self.casper_client.borrow_mut().transfer(to, amount)
+    }
 }
