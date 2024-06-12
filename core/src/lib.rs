@@ -33,7 +33,7 @@ mod unwrap_or_revert;
 pub mod utils;
 mod var;
 
-pub use address::Address;
+pub use address::{Address, Addressable};
 pub use call_def::CallDef;
 pub use call_result::ContractCallResult;
 pub use casper_event_standard;
