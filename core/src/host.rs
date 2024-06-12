@@ -178,7 +178,12 @@ pub trait HostContext {
     ) -> OdraResult<Address>;
 
     /// Registers an existing contract with the specified address, name, and entry points caller.
-    fn register_contract(&self, address: Address, contract_name: String, entry_points_caller: EntryPointsCaller);
+    fn register_contract(
+        &self,
+        address: Address,
+        contract_name: String,
+        entry_points_caller: EntryPointsCaller
+    );
 
     /// Returns the contract environment.
     fn contract_env(&self) -> ContractEnv;
@@ -279,7 +284,12 @@ impl HostEnv {
 
     /// Registers an existing contract with the specified address, name and entry points caller.
     /// Similar to `new_contract`, but skips the deployment phase.
-    pub fn register_contract(&self, address: Address, contract_name: String, entry_points_caller: EntryPointsCaller) {
+    pub fn register_contract(
+        &self,
+        address: Address,
+        contract_name: String,
+        entry_points_caller: EntryPointsCaller
+    ) {
         let backend = self.backend.borrow();
         backend.register_contract(address, contract_name, entry_points_caller);
         self.deployed_contracts.borrow_mut().push(address);

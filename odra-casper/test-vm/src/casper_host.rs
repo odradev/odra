@@ -119,7 +119,12 @@ impl HostContext for CasperHost {
         }
     }
 
-    fn register_contract(&self, address: Address, contract_name: String, entry_points_caller: EntryPointsCaller) {
+    fn register_contract(
+        &self,
+        address: Address,
+        contract_name: String,
+        entry_points_caller: EntryPointsCaller
+    ) {
         panic!("register_contract is not supported in CasperHost");
     }
 

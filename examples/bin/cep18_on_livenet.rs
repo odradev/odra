@@ -9,7 +9,9 @@ fn main() {
     let env = odra_casper_livenet_env::env();
 
     let owner = env.caller();
-    let recipient = Address::new("hash-2c4a6ce0da5d175e9638ec0830e01dd6cf5f4b1fbb0724f7d2d9de12b1e0f840").unwrap();
+    let recipient =
+        Address::new("hash-2c4a6ce0da5d175e9638ec0830e01dd6cf5f4b1fbb0724f7d2d9de12b1e0f840")
+            .unwrap();
 
     // Deploy new contract.
     // let mut token = deploy_cep18(&env);
@@ -35,7 +37,9 @@ fn main() {
 
 /// Loads a CEP-18 contract.
 fn _load_cep18(env: &HostEnv) -> Cep18HostRef {
-    let address = Address::new("hash-568fd396922fbbc8f8499f9b888795b2155aa60a68ef9cc38752b2771693a9ce").unwrap();
+    let address =
+        Address::new("hash-568fd396922fbbc8f8499f9b888795b2155aa60a68ef9cc38752b2771693a9ce")
+            .unwrap();
     Cep18HostRef::load(env, address)
 }
 

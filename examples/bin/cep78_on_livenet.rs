@@ -34,8 +34,7 @@ fn main() {
 
     env.set_gas(3_000_000_000u64);
     let owner = env.caller();
-    let recipient =
-        Address::new(RECIPIENT_ADDRESS).expect("Should be a valid recipient address");
+    let recipient = Address::new(RECIPIENT_ADDRESS).expect("Should be a valid recipient address");
     // casper contract may return a result or not, so deserialization may fail and it's better to use `try_transfer`/`try_mint`/`try_burn` methods
     let _ = token.try_mint(owner, CEP78_METADATA.to_string(), Maybe::None);
     println!("Owner's balance: {:?}", token.balance_of(owner));
