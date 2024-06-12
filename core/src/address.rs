@@ -27,6 +27,17 @@ pub enum Address {
     Contract(ContractPackageHash)
 }
 
+/// A trait for types that can be converted into an [`Address`].
+pub trait Addressable {
+    fn address(&self) -> &Address;
+}
+
+impl Addressable for Address {
+    fn address(&self) -> &Address {
+        self
+    }
+}
+
 impl Address {
     /// Creates a new `Address` from a hex-encoded string.
     pub const fn new(input: &'static str) -> OdraResult<Self> {

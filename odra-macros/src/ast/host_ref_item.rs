@@ -272,7 +272,7 @@ struct GetEventFnItem;
 impl ToTokens for GetEventFnItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let m_env = utils::member::env();
-        let m_address = utils::member::address();
+        let _self = utils::ty::_self();
 
         let ty_ev = utils::ty::event_instance();
         let ty_from_bytes = utils::ty::from_bytes();
@@ -283,7 +283,7 @@ impl ToTokens for GetEventFnItem {
             where
                 T: #ty_from_bytes + #ty_ev
             {
-                #m_env.get_event(&#m_address, index)
+                #m_env.get_event(#_self, index)
             }
         ));
     }
