@@ -129,11 +129,12 @@ impl HostContext for LivenetHost {
         }
     }
 
-    fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller) {
+    fn register_contract(&self, address: Address, contract_name: String, entry_points_caller: EntryPointsCaller) {
         self.contract_register
             .write()
             .expect("Couldn't write contract register.")
             .add(address, ContractContainer::new(entry_points_caller));
+        self.casper_client.borrow_mut().register_name(address, contract_name);
     }
 
     fn new_contract(
@@ -146,7 +147,7 @@ impl HostContext for LivenetHost {
             .casper_client
             .borrow_mut()
             .deploy_wasm(name, init_args)?;
-        self.register_contract(address, entry_points_caller);
+        self.register_contract(address, name.to_string(), entry_points_caller);
         Ok(address)
     }
 
@@ -175,9 +176,4 @@ impl HostContext for LivenetHost {
         self.casper_client.borrow().address_public_key(address)
     }
 
-    fn register_name(&self, address: Address, contract_name: &str) {
-        self.casper_client
-            .borrow_mut()
-            .register_name(address, contract_name);
-    }
 }

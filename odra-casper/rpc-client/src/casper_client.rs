@@ -486,12 +486,11 @@ impl CasperClient {
 
         let address = self.get_contract_address(contract_name);
         log::info(format!("Contract {:?} deployed.", &address.to_string()));
-        self.contracts.insert(address, contract_name.to_string());
         Ok(address)
     }
 
-    pub fn register_name(&mut self, address: Address, contract_name: &str) {
-        self.contracts.insert(address, contract_name.to_string());
+    pub fn register_name(&mut self, address: Address, contract_name: String) {
+        self.contracts.insert(address, contract_name);
     }
 
     fn find_error(&self, contract_id: ContractId, error_msg: &str) -> Option<(String, OdraError)> {
