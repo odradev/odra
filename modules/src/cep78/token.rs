@@ -705,6 +705,16 @@ impl Cep78 {
         self.data.decrement_counter(&token_owner);
         self.emit_ces_event(Burn::new(token_owner, token_id, burner));
     }
+
+    // Returns collection name.
+    pub fn get_collection_name(&self) -> String {
+        self.data.collection_name()
+    }
+
+    // Returns collection symbol.
+    pub fn get_collection_symbol(&self) -> String {
+        self.data.collection_symbol()
+    }
 }
 
 #[odra::external_contract]
