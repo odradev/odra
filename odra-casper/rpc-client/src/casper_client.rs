@@ -1,4 +1,5 @@
 //! Client for interacting with Casper node.
+use std::collections::BTreeMap;
 use std::time::SystemTime;
 use std::{fs, path::PathBuf, str::from_utf8_unchecked, time::Duration};
 
@@ -37,6 +38,8 @@ use crate::casper_node_port::{
 };
 use crate::log;
 
+mod error;
+
 /// Environment variable holding a path to a secret key of a main account.
 pub const ENV_SECRET_KEY: &str = "ODRA_CASPER_LIVENET_SECRET_KEY_PATH";
 /// Environment variable holding an address of the casper node exposing RPC API.
@@ -47,6 +50,11 @@ pub const ENV_CHAIN_NAME: &str = "ODRA_CASPER_LIVENET_CHAIN_NAME";
 pub const ENV_ACCOUNT_PREFIX: &str = "ODRA_CASPER_LIVENET_KEY_";
 /// Environment variable holding cspr.cloud auth token.
 pub const ENV_CSPR_CLOUD_AUTH_TOKEN: &str = "CSPR_CLOUD_AUTH_TOKEN";
+
+enum ContractId {
+    Name(String),
+    Address(Address)
+}
 
 fn get_env_variable(name: &str) -> String {
     std::env::var(name).unwrap_or_else(|err| {
@@ -69,7 +77,8 @@ pub struct CasperClient {
     cspr_cloud_auth_token: Option<String>,
     active_account: usize,
     secret_keys: Vec<SecretKey>,
-    gas: U512
+    gas: U512,
+    contracts: BTreeMap<Address, String>
 }
 
 impl CasperClient {
@@ -94,7 +103,8 @@ impl CasperClient {
             cspr_cloud_auth_token: get_optional_env_variable(ENV_CSPR_CLOUD_AUTH_TOKEN),
             active_account: 0,
             secret_keys,
-            gas: U512::zero()
+            gas: U512::zero(),
+            contracts: Default::default()
         }
     }
 
@@ -474,7 +484,7 @@ impl CasperClient {
     }
 
     /// Deploy the contract.
-    pub fn deploy_wasm(&self, contract_name: &str, args: RuntimeArgs) -> Address {
+    pub fn deploy_wasm(&mut self, contract_name: &str, args: RuntimeArgs) -> OdraResult<Address> {
         log::info(format!("Deploying \"{}\".", contract_name));
         let wasm_path = find_wasm_file_path(contract_name);
         let wasm_bytes = fs::read(wasm_path).unwrap();
@@ -486,11 +496,30 @@ impl CasperClient {
         let request = put_deploy_request(deploy);
         let response: PutDeployResult = self.post_request(request);
         let deploy_hash = response.deploy_hash;
-        self.wait_for_deploy_hash(deploy_hash);
+        let result = self.wait_for_deploy_hash(deploy_hash);
+        self.process_result(
+            result,
+            ContractId::Name(contract_name.to_string()),
+            deploy_hash
+        )?;
 
         let address = self.get_contract_address(contract_name);
         log::info(format!("Contract {:?} deployed.", &address.to_string()));
-        address
+        Ok(address)
+    }
+
+    pub fn register_name(&mut self, address: Address, contract_name: String) {
+        self.contracts.insert(address, contract_name);
+    }
+
+    fn find_error(&self, contract_id: ContractId, error_msg: &str) -> Option<(String, OdraError)> {
+        match contract_id {
+            ContractId::Name(contract_name) => error::find(&contract_name, error_msg).ok(),
+            ContractId::Address(addr) => match self.contracts.get(&addr) {
+                Some(contract_name) => error::find(contract_name, error_msg).ok(),
+                None => None
+            }
+        }
     }
 
     /// Deploy the entrypoint call using getter_proxy.
@@ -526,7 +555,8 @@ impl CasperClient {
         let request = put_deploy_request(deploy);
         let response: PutDeployResult = self.post_request(request);
         let deploy_hash = response.deploy_hash;
-        self.wait_for_deploy_hash(deploy_hash);
+        let result = self.wait_for_deploy_hash(deploy_hash);
+        self.process_result(result, ContractId::Address(addr), deploy_hash)?;
 
         let r = self.query_global_state(&CasperKey::Account(self.public_key().to_account_hash()));
         match r.stored_value {
@@ -544,7 +574,7 @@ impl CasperClient {
     }
 
     /// Deploy the entrypoint call.
-    pub fn deploy_entrypoint_call(&self, addr: Address, call_def: CallDef) {
+    pub fn deploy_entrypoint_call(&self, addr: Address, call_def: CallDef) -> OdraResult<Bytes> {
         log::info(format!(
             "Calling {:?} with entrypoint \"{}\".",
             addr.to_string(),
@@ -560,7 +590,10 @@ impl CasperClient {
         let request = put_deploy_request(deploy);
         let response: PutDeployResult = self.post_request(request);
         let deploy_hash = response.deploy_hash;
-        self.wait_for_deploy_hash(deploy_hash);
+        let result = self.wait_for_deploy_hash(deploy_hash);
+
+        self.process_result(result, ContractId::Address(addr), deploy_hash)
+            .map(|_| ().to_bytes().expect("Couldn't serialize (). This shouldn't happen.").into())
     }
 
     fn query_global_state_path(
@@ -680,30 +713,38 @@ impl CasperClient {
                 break;
             }
         }
+        final_result.execution_results[0].result.clone()
+    }
 
-        match &final_result.execution_results[0].result {
-            ExecutionResult::Failure {
-                effect: _,
-                transfers: _,
-                cost: _,
-                error_message
-            } => {
+    fn process_result(
+        &self,
+        result: ExecutionResult,
+        called_contract_id: ContractId,
+        deploy_hash: DeployHash
+    ) -> OdraResult<()> {
+        let deploy_hash_str = format!("{:?}", deploy_hash.inner());
+        match result {
+            ExecutionResult::Failure { error_message, .. } => {
+                let (error_msg, odra_error) =
+                    match self.find_error(called_contract_id, &error_message) {
+                        Some((contract_error, odra_error)) => (contract_error, odra_error),
+                        None => (
+                            error_message,
+                            OdraError::ExecutionError(ExecutionError::UnexpectedError)
+                        )
+                    };
                 log::error(format!(
                     "Deploy {:?} failed with error: {:?}.",
-                    deploy_hash_str, error_message
+                    deploy_hash_str, error_msg
                 ));
-                panic!("Deploy failed");
+                Err(odra_error)
             }
-            ExecutionResult::Success {
-                effect: _,
-                transfers: _,
-                cost: _
-            } => {
+            ExecutionResult::Success { .. } => {
                 log::info(format!(
                     "Deploy {:?} successfully executed.",
                     deploy_hash_str
                 ));
-                final_result.execution_results[0].result.clone()
+                Ok(())
             }
         }
     }

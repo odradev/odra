@@ -7,12 +7,9 @@ use odra_casper_rpc_client::log::info;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::{
-    casper_types::{
-        bytesrepr::{Bytes, ToBytes},
-        PublicKey, RuntimeArgs, U512
-    },
+    casper_types::{bytesrepr::Bytes, PublicKey, RuntimeArgs, U512},
     host::HostContext,
-    Address, CallDef, ContractEnv, GasReport, OdraError
+    Address, CallDef, ContractEnv, GasReport
 };
 use odra_core::{prelude::*, EventError, OdraResult};
 use odra_core::{ContractContainer, ContractRegister};
@@ -104,7 +101,7 @@ impl HostContext for LivenetHost {
         address: &Address,
         call_def: CallDef,
         use_proxy: bool
-    ) -> Result<Bytes, OdraError> {
+    ) -> OdraResult<Bytes> {
         if !call_def.is_mut() {
             self.callstack
                 .borrow_mut()
@@ -125,24 +122,26 @@ impl HostContext for LivenetHost {
                 .casper_client
                 .borrow_mut()
                 .deploy_entrypoint_call_with_proxy(*address, call_def),
-            false => {
-                self.casper_client
-                    .borrow_mut()
-                    .deploy_entrypoint_call(*address, call_def);
-                Ok(
-                    ().to_bytes()
-                        .expect("Couldn't serialize (). This shouldn't happen.")
-                        .into()
-                )
-            }
+            false => self
+                .casper_client
+                .borrow_mut()
+                .deploy_entrypoint_call(*address, call_def)
         }
     }
 
-    fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller) {
+    fn register_contract(
+        &self,
+        address: Address,
+        contract_name: String,
+        entry_points_caller: EntryPointsCaller
+    ) {
         self.contract_register
             .write()
             .expect("Couldn't write contract register.")
             .add(address, ContractContainer::new(entry_points_caller));
+        self.casper_client
+            .borrow_mut()
+            .register_name(address, contract_name);
     }
 
     fn new_contract(
@@ -150,9 +149,12 @@ impl HostContext for LivenetHost {
         name: &str,
         init_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
-    ) -> Result<Address, OdraError> {
-        let address = self.casper_client.borrow_mut().deploy_wasm(name, init_args);
-        self.register_contract(address, entry_points_caller);
+    ) -> OdraResult<Address> {
+        let address = self
+            .casper_client
+            .borrow_mut()
+            .deploy_wasm(name, init_args)?;
+        self.register_contract(address, name.to_string(), entry_points_caller);
         Ok(address)
     }
 

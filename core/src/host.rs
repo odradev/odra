@@ -122,10 +122,11 @@ impl<R: HostRef + EntryPointsCallerProvider + HasIdent> Deployer for R {
     }
 }
 
-impl<T: EntryPointsCallerProvider + HostRef> HostRefLoader for T {
+impl<T: EntryPointsCallerProvider + HostRef + HasIdent> HostRefLoader for T {
     fn load(env: &HostEnv, address: Address) -> Self {
         let caller = T::entry_points_caller(env);
-        env.register_contract(address, caller);
+        let contract_name = T::ident();
+        env.register_contract(address, contract_name, caller);
         T::new(address, env.clone())
     }
 }
@@ -176,8 +177,13 @@ pub trait HostContext {
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address>;
 
-    /// Registers an existing contract with the specified address and entry points caller.
-    fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller);
+    /// Registers an existing contract with the specified address, name, and entry points caller.
+    fn register_contract(
+        &self,
+        address: Address,
+        contract_name: String,
+        entry_points_caller: EntryPointsCaller
+    );
 
     /// Returns the contract environment.
     fn contract_env(&self) -> ContractEnv;
@@ -276,11 +282,16 @@ impl HostEnv {
         Ok(deployed_contract)
     }
 
-    /// Registers an existing contract with the specified address and entry points caller.
+    /// Registers an existing contract with the specified address, name and entry points caller.
     /// Similar to `new_contract`, but skips the deployment phase.
-    pub fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller) {
+    pub fn register_contract(
+        &self,
+        address: Address,
+        contract_name: String,
+        entry_points_caller: EntryPointsCaller
+    ) {
         let backend = self.backend.borrow();
-        backend.register_contract(address, entry_points_caller);
+        backend.register_contract(address, contract_name, entry_points_caller);
         self.deployed_contracts.borrow_mut().push(address);
         self.events_count
             .borrow_mut()
@@ -614,11 +625,12 @@ mod test {
 
     #[test]
     fn test_load_ref() {
-        // MockTestRef::ident() and  MockEv::validate() are static and can't be safely used
+        // MockTestRef::ident(), MockEv::validate(), MockTestRef::entry_points_caller() are static and can't be safely used
         // from multiple tests at the same time. Should be to protected with a Mutex. Each function has
         // a separate Mutex.
         // https://github.com/asomers/mockall/blob/master/mockall/tests/mock_struct_with_static_method.rs
         let _e = EPC_MTX.lock();
+        let _i = IDENT_MTX.lock();
         let _v = VALIDATE_MTX.lock();
 
         // stubs
@@ -628,9 +640,11 @@ mod test {
         epc_ctx
             .expect()
             .returning(|h| EntryPointsCaller::new(h.clone(), vec![], |_, _| Ok(Bytes::default())));
+        let indent_ctx = MockTestRef::ident_context();
+        indent_ctx.expect().returning(|| "TestRef".to_string());
 
         let mut ctx = MockHostContext::new();
-        ctx.expect_register_contract().returning(|_, _| ());
+        ctx.expect_register_contract().returning(|_, _, _| ());
         ctx.expect_get_events_count().returning(|_| 0);
 
         // check if TestRef::new() is called exactly once
@@ -792,7 +806,7 @@ mod test {
     }
 
     #[test]
-    fn test_emited() {
+    fn test_emitted() {
         let addr = Address::Account(AccountHash::new([0; 32]));
         let mut ctx = MockHostContext::new();
 
