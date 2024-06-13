@@ -3,10 +3,13 @@ use odra_core::{ExecutionError, OdraError};
 use serde_json::Value;
 use std::{fs, path::PathBuf};
 
-use crate::log;
-
 pub(crate) fn find(contract_name: &str, error_msg: &str) -> Result<(String, OdraError)> {
-    let schema_path = find_schema_file_path(contract_name)?;
+    #[cfg(test)]
+    let schema_path = PathBuf::from("resources/test");
+    #[cfg(not(test))]
+    let schema_path = PathBuf::from("resources/casper_contract_schemas");
+    let schema_path =
+        odra_schema::find_schema_file_path(contract_name, schema_path).map_err(|e| anyhow!(e))?;
     let schema = fs::read_to_string(schema_path)?;
     let error_num: u16 = error_msg
         .strip_prefix("User error: ")
@@ -45,137 +48,53 @@ fn is_internal_error(error_num: u16) -> bool {
     error_num >= ExecutionError::UserErrorTooHigh.code()
 }
 
-fn get_internal_error_name(error_num: u16) -> (String, OdraError) {
-    match error_num {
-        x if x == ExecutionError::UnwrapError.code() => (
-            "ExecutionError::UnwrapError".to_string(),
-            ExecutionError::UnwrapError.into()
-        ),
-        x if x == ExecutionError::AdditionOverflow.code() => (
-            "ExecutionError::AdditionOverflow".to_string(),
-            ExecutionError::AdditionOverflow.into()
-        ),
-        x if x == ExecutionError::SubtractionOverflow.code() => (
-            "ExecutionError::SubtractionOverflow".to_string(),
-            ExecutionError::SubtractionOverflow.into()
-        ),
-        x if x == ExecutionError::NonPayable.code() => (
-            "ExecutionError::NonPayable".to_string(),
-            ExecutionError::NonPayable.into()
-        ),
-        x if x == ExecutionError::TransferToContract.code() => (
-            "ExecutionError::TransferToContract".to_string(),
-            ExecutionError::TransferToContract.into()
-        ),
-        x if x == ExecutionError::ReentrantCall.code() => (
-            "ExecutionError::ReentrantCall".to_string(),
-            ExecutionError::ReentrantCall.into()
-        ),
-        x if x == ExecutionError::ContractAlreadyInstalled.code() => (
-            "ExecutionError::ContractAlreadyInstalled".to_string(),
-            ExecutionError::ContractAlreadyInstalled.into()
-        ),
-        x if x == ExecutionError::UnknownConstructor.code() => (
-            "ExecutionError::UnknownConstructor".to_string(),
-            ExecutionError::UnknownConstructor.into()
-        ),
-        x if x == ExecutionError::NativeTransferError.code() => (
-            "ExecutionError::NativeTransferError".to_string(),
-            ExecutionError::NativeTransferError.into()
-        ),
-        x if x == ExecutionError::IndexOutOfBounds.code() => (
-            "ExecutionError::IndexOutOfBounds".to_string(),
-            ExecutionError::IndexOutOfBounds.into()
-        ),
-        x if x == ExecutionError::ZeroAddress.code() => (
-            "ExecutionError::ZeroAddress".to_string(),
-            ExecutionError::ZeroAddress.into()
-        ),
-        x if x == ExecutionError::AddressCreationFailed.code() => (
-            "ExecutionError::AddressCreationFailed".to_string(),
-            ExecutionError::AddressCreationFailed.into()
-        ),
-        x if x == ExecutionError::EarlyEndOfStream.code() => (
-            "ExecutionError::EarlyEndOfStream".to_string(),
-            ExecutionError::EarlyEndOfStream.into()
-        ),
-        x if x == ExecutionError::Formatting.code() => (
-            "ExecutionError::Formatting".to_string(),
-            ExecutionError::Formatting.into()
-        ),
-        x if x == ExecutionError::LeftOverBytes.code() => (
-            "ExecutionError::LeftOverBytes".to_string(),
-            ExecutionError::LeftOverBytes.into()
-        ),
-        x if x == ExecutionError::OutOfMemory.code() => (
-            "ExecutionError::OutOfMemory".to_string(),
-            ExecutionError::OutOfMemory.into()
-        ),
-        x if x == ExecutionError::NotRepresentable.code() => (
-            "ExecutionError::NotRepresentable".to_string(),
-            ExecutionError::NotRepresentable.into()
-        ),
-        x if x == ExecutionError::ExceededRecursionDepth.code() => (
-            "ExecutionError::ExceededRecursionDepth".to_string(),
-            ExecutionError::ExceededRecursionDepth.into()
-        ),
-        x if x == ExecutionError::KeyNotFound.code() => (
-            "ExecutionError::KeyNotFound".to_string(),
-            ExecutionError::KeyNotFound.into()
-        ),
-        x if x == ExecutionError::CouldNotDeserializeSignature.code() => (
-            "ExecutionError::CouldNotDeserializeSignature".to_string(),
-            ExecutionError::CouldNotDeserializeSignature.into()
-        ),
-        x if x == ExecutionError::TypeMismatch.code() => (
-            "ExecutionError::TypeMismatch".to_string(),
-            ExecutionError::TypeMismatch.into()
-        ),
-        x if x == ExecutionError::CouldNotSignMessage.code() => (
-            "ExecutionError::CouldNotSignMessage".to_string(),
-            ExecutionError::CouldNotSignMessage.into()
-        ),
-        x if x == ExecutionError::EmptyDictionaryName.code() => (
-            "ExecutionError::EmptyDictionaryName".to_string(),
-            ExecutionError::EmptyDictionaryName.into()
-        ),
-        x if x == ExecutionError::MissingArg.code() => (
-            "ExecutionError::MissingArg".to_string(),
-            ExecutionError::MissingArg.into()
-        ),
-        x if x == ExecutionError::MaxUserError.code() => (
-            "ExecutionError::MaxUserError".to_string(),
-            ExecutionError::MaxUserError.into()
-        ),
-        x if x == ExecutionError::UserErrorTooHigh.code() => (
-            "ExecutionError::UserErrorTooHigh".to_string(),
-            ExecutionError::UserErrorTooHigh.into()
-        ),
-        _ => panic!("Unknown execution error code: {}", error_num)
-    }
+macro_rules! match_error {
+    ($err:expr) => {
+        (stringify!($err).to_string(), $err.into())
+    };
 }
 
-fn find_schema_file_path(contract_name: &str) -> Result<PathBuf> {
-    #[cfg(test)]
-    let mut path = PathBuf::from("resources/test");
-    #[cfg(not(test))]
-    let mut path = PathBuf::from("resources/casper_contract_schemas");
-
-    path = path
-        .join(format!("{}_schema.json", contract_name.to_lowercase()))
-        .with_extension("json");
-    let mut checked_paths = vec![];
-    for _ in 0..2 {
-        if path.exists() && path.is_file() {
-            log::info(format!("Found schema under {:?}.", path));
-            return Ok(path);
-        } else {
-            checked_paths.push(path.clone());
-            path = path.parent().unwrap().to_path_buf();
+macro_rules! match_errors {
+    ( $num:expr, $($err:expr),* ) => {
+        match $num {
+            $(
+                x if x == $err.code() => match_error!($err),
+            )*
+            _ => panic!("Unknown execution error code: {}", $num)
         }
-    }
-    log::error(format!("Could not find schema under {:?}.", checked_paths));
-    Err(anyhow!("Schema not found"))
+    };
+}
+
+fn get_internal_error_name(error_num: u16) -> (String, OdraError) {
+    match_errors!(
+        error_num,
+        ExecutionError::UnwrapError,
+        ExecutionError::AdditionOverflow,
+        ExecutionError::SubtractionOverflow,
+        ExecutionError::NonPayable,
+        ExecutionError::TransferToContract,
+        ExecutionError::ReentrantCall,
+        ExecutionError::ContractAlreadyInstalled,
+        ExecutionError::UnknownConstructor,
+        ExecutionError::NativeTransferError,
+        ExecutionError::IndexOutOfBounds,
+        ExecutionError::ZeroAddress,
+        ExecutionError::AddressCreationFailed,
+        ExecutionError::EarlyEndOfStream,
+        ExecutionError::Formatting,
+        ExecutionError::LeftOverBytes,
+        ExecutionError::OutOfMemory,
+        ExecutionError::NotRepresentable,
+        ExecutionError::ExceededRecursionDepth,
+        ExecutionError::KeyNotFound,
+        ExecutionError::CouldNotDeserializeSignature,
+        ExecutionError::TypeMismatch,
+        ExecutionError::CouldNotSignMessage,
+        ExecutionError::EmptyDictionaryName,
+        ExecutionError::MissingArg,
+        ExecutionError::MaxUserError,
+        ExecutionError::UserErrorTooHigh
+    )
 }
 
 #[cfg(test)]
