@@ -97,7 +97,7 @@ pub struct OperationEnded {
 
 #[cfg(test)]
 mod tests {
-    use odra::host::{Deployer, HostRef, NoArgs};
+    use odra::host::{Deployer, NoArgs};
 
     use super::*;
 
@@ -166,7 +166,7 @@ mod tests {
 
         // Events are also saved properly, even with nested Odra Types
         test_env.emitted_event(
-            nested_odra_types.address(),
+            &nested_odra_types,
             &OperationEnded {
                 id: operation_results()[0].clone().id,
                 status: operation_results()[0].clone().status,

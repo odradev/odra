@@ -365,9 +365,9 @@ impl HostEnv {
     }
 
     /// Returns the CSPR balance of the specified address.
-    pub fn balance_of(&self, address: &Address) -> U512 {
+    pub fn balance_of<T: Addressable>(&self, address: &T) -> U512 {
         let backend = self.backend.borrow();
-        backend.balance_of(address)
+        backend.balance_of(address.address())
     }
 
     /// Retrieves an event with the specified index from the specified contract.

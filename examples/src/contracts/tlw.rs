@@ -160,14 +160,14 @@ mod test {
 
         // Then two deposit event were emitted.
         test_env.emitted_event(
-            contract.address(),
+            &contract,
             &Deposit {
                 address: user_1,
                 amount: user_1_deposit
             }
         );
         test_env.emitted_event(
-            contract.address(),
+            &contract,
             &Deposit {
                 address: user_2,
                 amount: user_2_deposit
@@ -221,14 +221,14 @@ mod test {
 
         // Then two Withdrawal events were emitted.
         test_env.emitted_event(
-            contract.address(),
+            &contract,
             &Withdrawal {
                 address: user,
                 amount: first_withdrawal_amount
             }
         );
         test_env.emitted_event(
-            contract.address(),
+            &contract,
             &Withdrawal {
                 address: user,
                 amount: second_withdrawal_amount
