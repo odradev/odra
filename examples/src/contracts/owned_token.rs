@@ -79,14 +79,14 @@ pub mod tests {
         assert_eq!(token.total_supply(), INITIAL_SUPPLY.into());
         assert_eq!(token.balance_of(&owner), INITIAL_SUPPLY.into());
         test_env.emitted_event(
-            token.address(),
+            &token,
             &odra_modules::access::events::OwnershipTransferred {
                 previous_owner: None,
                 new_owner: Some(owner)
             }
         );
         test_env.emitted_event(
-            token.address(),
+            &token,
             &odra_modules::erc20::events::Transfer {
                 from: None,
                 to: Some(owner),
