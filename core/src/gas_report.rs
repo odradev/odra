@@ -6,7 +6,24 @@ use core::fmt::{Debug, Display, Formatter, Result};
 use serde::{Deserialize, Serialize};
 
 /// A Vector of deploy reports makes a full gas report.
-pub type GasReport = Vec<DeployReport>;
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct GasReport(Vec<DeployReport>);
+
+impl GasReport {
+    /// Adds a deploy report to the gas report.
+    pub fn push(&mut self, report: DeployReport) {
+        self.0.push(report)
+    }
+}
+
+impl Display for GasReport {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        for report in &self.0 {
+            writeln!(f, "{}", report)?;
+        }
+        Ok(())
+    }
+}
 
 /// Represents a deploy report, which includes the gas used and the deploy details.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -32,18 +49,25 @@ pub enum DeployReport {
 impl Display for DeployReport {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
-            DeployReport::WasmDeploy { gas: _, file_name } => {
-                write!(f, "Wasm deploy: {}", file_name)
+            DeployReport::WasmDeploy { gas, file_name } => {
+                write!(f, "Wasm deploy: {} - {} CSPR", file_name, cspr_pretty_string(gas))
             }
             DeployReport::ContractCall {
-                gas: _,
-                contract_address: _,
-                call_def
+                gas,
+                call_def,
+                ..
             } => {
-                write!(f, "Contract call: {}", call_def.entry_point(),)
+                write!(f, "Contract call: {} - {} CSPR", call_def.entry_point(), cspr_pretty_string(gas))
             }
         }
     }
+}
+
+/// Render 1234567890 as 1.23456789
+fn cspr_pretty_string(cspr: &U512) -> String {
+    let cspr_top = cspr / U512::from(1_000_000_000);
+    let cspr_bottom = cspr - cspr_top;
+    format!("{}.{:8}", cspr_top, cspr_bottom)
 }
 
 #[cfg(test)]

@@ -277,11 +277,14 @@ impl Cep78 {
 
         self.data.set_owner(&token_id, token_owner);
         self.data.set_issuer(&token_id, caller);
+        self.data.mark_not_burnt(&token_id);
 
-        if let NFTIdentifierMode::Hash = identifier_mode {
-            self.reverse_lookup
-                .insert_hash(minted_tokens_count, &token_identifier);
-        }
+        // TODO: This is commented out because it prevents to mint, burn
+        // and then mint the token again.
+        // if let NFTIdentifierMode::Hash = identifier_mode {
+        //     self.reverse_lookup
+        //         .insert_hash(minted_tokens_count, &token_identifier);
+        // }
 
         self.data.increment_counter(&token_owner);
         self.data.increment_number_of_minted_tokens();
@@ -322,6 +325,7 @@ impl Cep78 {
         self.ensure_not_burned(&token_id);
         self.data.mark_burnt(&token_id);
         self.data.decrement_counter(&token_owner);
+        self.data.decrement_number_of_minted_tokens();
         self.emit_ces_event(Burn::new(token_owner, token_id, caller));
     }
 
@@ -562,7 +566,7 @@ impl Cep78 {
     }
 
     #[inline]
-    fn token_identifier(&self, token_id: Maybe<u64>, token_hash: Maybe<String>) -> TokenIdentifier {
+    pub fn token_identifier(&self, token_id: Maybe<u64>, token_hash: Maybe<String>) -> TokenIdentifier {
         let env = self.env();
         let identifier_mode: NFTIdentifierMode = self.metadata.get_identifier_mode();
         match identifier_mode {
@@ -682,7 +686,7 @@ impl Cep78 {
 
     // TODO: Verify correctness of this function.
     pub fn token_exists_by_hash(&self, token_id: &str) -> bool {
-        self.data.owner_of(token_id).is_some()
+        self.data.owner_of(token_id).is_some() && !self.is_token_burned(token_id)
     }
 
     // Update metadata without ownership check.
@@ -703,6 +707,7 @@ impl Cep78 {
         self.ensure_not_burned(&token_id);
         self.data.mark_burnt(&token_id);
         self.data.decrement_counter(&token_owner);
+        self.data.decrement_number_of_minted_tokens();
         self.emit_ces_event(Burn::new(token_owner, token_id, burner));
     }
 
@@ -714,6 +719,11 @@ impl Cep78 {
     // Returns collection symbol.
     pub fn get_collection_symbol(&self) -> String {
         self.data.collection_symbol()
+    }
+
+    // Returns if address has admin rights.
+    pub fn is_whitelisted(&self, address: &Address) -> bool {
+        self.whitelist.is_whitelisted(address)
     }
 }
 
@@ -800,11 +810,8 @@ impl TestCep78 {
             );
             fn balance_of(&mut self, token_owner: Address) -> u64;
             fn register_owner(&mut self, token_owner: Maybe<Address>) -> String;
+            fn is_whitelisted(&self, address: &Address) -> bool;
         }
-    }
-
-    pub fn is_whitelisted(&self, address: &Address) -> bool {
-        self.token.whitelist.is_whitelisted(address)
     }
 
     pub fn get_whitelist_mode(&self) -> WhitelistMode {

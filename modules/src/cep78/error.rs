@@ -169,5 +169,6 @@ pub enum CEP78Error {
     InvalidOperatorBurnMode = 167,
     MissingOperatorBurnMode = 168,
     InvalidIdentifier = 169,
-    DuplicateIdentifier = 170
+    DuplicateIdentifier = 170,
+    GoingBelowZeroSupply = 171,
 }
