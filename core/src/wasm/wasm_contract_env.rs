@@ -1,13 +1,12 @@
-use crate::host_functions;
-use casper_contract::contract_api::runtime;
-use casper_types::bytesrepr::ToBytes;
+//! WasmContractEnv is an implementation of ContractContext for Wasm environment.
+
+use crate::casper_types;
+use crate::casper_types::bytesrepr::Bytes;
+use crate::casper_types::{CLValue, BLAKE2B_DIGEST_LENGTH};
+use crate::wasm::host_functions;
+use crate::{Address, OdraError};
+use crate::{ContractContext, ContractEnv, ExecutionError, OdraResult};
 use casper_types::U512;
-use odra_core::casper_types::bytesrepr::Bytes;
-use odra_core::casper_types::{CLType, CLValue, BLAKE2B_DIGEST_LENGTH};
-use odra_core::prelude::*;
-use odra_core::{casper_types, UnwrapOrRevert};
-use odra_core::{Address, OdraError};
-use odra_core::{ContractContext, ContractEnv, ExecutionError, OdraResult};
 
 /// ContractContext implementation for Wasm environment.
 #[derive(Clone)]
@@ -50,7 +49,7 @@ impl ContractContext for WasmContractEnv {
         host_functions::self_address()
     }
 
-    fn call_contract(&self, address: Address, call_def: odra_core::CallDef) -> Bytes {
+    fn call_contract(&self, address: Address, call_def: crate::CallDef) -> Bytes {
         host_functions::call_contract(address, call_def)
     }
 
@@ -102,15 +101,13 @@ impl ContractContext for WasmContractEnv {
 }
 
 impl WasmContractEnv {
-    #[cfg(not(target_arch = "wasm32"))]
     /// Creates new ContractEnv with WasmContractEnv as backend.
     pub fn new_env() -> ContractEnv {
-        ContractEnv::new(0, Rc::new(RefCell::new(WasmContractEnv)))
+        ContractEnv::new(0, WasmContractEnv)
     }
 
-    #[cfg(target_arch = "wasm32")]
-    /// Creates new ContractEnv with WasmContractEnv as backend.
-    pub fn new() -> ContractEnv {
-        ContractEnv::new(0, odra_core::wasm::WasmContractEnv)
+    /// Borrows self.
+    pub fn borrow(&self) -> &Self {
+        self
     }
 }

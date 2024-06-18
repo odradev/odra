@@ -9,6 +9,9 @@ use crate::{consts, prelude::*, ExecutionError};
 use crate::{utils, UnwrapOrRevert};
 use crate::{Address, OdraError};
 
+#[cfg(target_arch = "wasm32")]
+use crate::wasm::wasm_contract_env::WasmContractEnv;
+
 const INDEX_SIZE: usize = 4;
 const KEY_LEN: usize = 64;
 pub(crate) type StorageKey = [u8; KEY_LEN];
@@ -31,12 +34,26 @@ pub trait ContractRef {
 pub struct ContractEnv {
     index: u32,
     mapping_data: Vec<u8>,
-    backend: Rc<RefCell<dyn ContractContext>>
+    #[cfg(not(target_arch = "wasm32"))]
+    backend: Rc<RefCell<dyn ContractContext>>,
+    #[cfg(target_arch = "wasm32")]
+    backend: WasmContractEnv
 }
 
 impl ContractEnv {
+    #[cfg(not(target_arch = "wasm32"))]
     /// Creates a new ContractEnv instance.
     pub const fn new(index: u32, backend: Rc<RefCell<dyn ContractContext>>) -> Self {
+        Self {
+            index,
+            mapping_data: Vec::new(),
+            backend
+        }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    /// Creates a new ContractEnv instance.
+    pub const fn new(index: u32, backend: WasmContractEnv) -> Self {
         Self {
             index,
             mapping_data: Vec::new(),

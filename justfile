@@ -128,7 +128,7 @@ coverage:
     grcov . --binary-path ./target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o target/coverage/tests.lcov
 
 benchmark:
-    cd benchmark && cargo odra build && ODRA_BACKEND=casper cargo run --bin benchmark --features=benchmark
+    cd benchmark && RUSTFLAGS="-C passes=mergefunc" cargo odra build && ODRA_BACKEND=casper cargo run --bin benchmark --features=benchmark
 
 evaluate-benchmark: benchmark
     cd benchmark && cargo run --bin evaluate_benchmark gas_report.json base/gas_report.json
