@@ -18,3 +18,17 @@ pub fn find_wasm_file_path(wasm_file_name: &str) -> PathBuf {
     crate::log::error(format!("Could not find wasm under {:?}.", checked_paths));
     panic!("Wasm not found");
 }
+
+pub fn get_env_variable(name: &str) -> String {
+    std::env::var(name).unwrap_or_else(|err| {
+        crate::log::error(format!(
+            "{} must be set. Have you setup your .env file?",
+            name
+        ));
+        panic!("{}", err)
+    })
+}
+
+pub fn get_optional_env_variable(name: &str) -> Option<String> {
+    std::env::var(name).ok()
+}

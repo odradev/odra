@@ -45,20 +45,6 @@ enum ContractId {
     Address(Address)
 }
 
-fn get_env_variable(name: &str) -> String {
-    std::env::var(name).unwrap_or_else(|err| {
-        log::error(format!(
-            "{} must be set. Have you setup your .env file?",
-            name
-        ));
-        panic!("{}", err)
-    })
-}
-
-fn get_optional_env_variable(name: &str) -> Option<String> {
-    std::env::var(name).ok()
-}
-
 /// Client for interacting with Casper node.
 pub struct CasperClient {
     configuration: CasperClientConfiguration,

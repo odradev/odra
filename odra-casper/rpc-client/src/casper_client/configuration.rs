@@ -1,8 +1,9 @@
 use crate::casper_client::{
-    get_env_variable, ENV_ACCOUNT_PREFIX, ENV_CHAIN_NAME, ENV_NODE_ADDRESS, ENV_SECRET_KEY
+    ENV_ACCOUNT_PREFIX, ENV_CHAIN_NAME, ENV_NODE_ADDRESS, ENV_SECRET_KEY
 };
 use odra_core::casper_types::SecretKey;
 use std::path::PathBuf;
+use crate::utils::get_env_variable;
 
 #[derive(Debug)]
 pub struct CasperClientConfiguration {
@@ -36,7 +37,7 @@ impl CasperClientConfiguration {
 
     /// Loads secret keys from ENV_SECRET_KEY file and ENV_ACCOUNT_PREFIX files.
     /// e.g. ENV_SECRET_KEY=secret_key.pem, ENV_ACCOUNT_PREFIX=account_1_key.pem
-    /// This will load secret_key.pem as an account 0 and account_1_key.pem as account 1.
+    /// This will load secret_key.pem as account 0 and account_1_key.pem as account 1.
     fn secret_keys_from_env() -> Vec<SecretKey> {
         let mut secret_keys = vec![];
         secret_keys.push(
