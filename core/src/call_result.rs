@@ -1,8 +1,17 @@
 use crate::casper_types::bytesrepr::{Bytes, ToBytes};
 use crate::utils::extract_event_name;
-use crate::{prelude::*, OdraResult};
+use crate::{prelude::*, OdraResult, CallDef};
 use crate::{Address, OdraError};
 use casper_event_standard::EventInstance;
+
+#[derive(Debug, Clone)]
+pub struct ContractCall {
+    pub call_def: CallDef,
+    pub contract_address: Address,
+    pub caller: Address,
+    pub call_result: Option<CallResult>,
+    pub TMP_RESULT: OdraResult<Bytes>
+}
 
 /// Represents the result of a contract call. Includes external contracts calls.
 ///
@@ -24,7 +33,7 @@ impl CallResult {
         caller: Address,
         gas_used: u64,
         result: OdraResult<Bytes>,
-        events: BTreeMap<Address, Vec<Bytes>>
+        events: BTreeMap<Address, Vec<Bytes>>,
     ) -> Self {
         Self {
             contract_address,

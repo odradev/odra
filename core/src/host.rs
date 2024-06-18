@@ -12,6 +12,7 @@ use casper_types::{
     bytesrepr::{Bytes, FromBytes, ToBytes},
     CLTyped, PublicKey, RuntimeArgs, U512
 };
+use crate::call_result::ContractCall;
 
 /// A host side reference to a contract.
 pub trait HostRef {
@@ -218,6 +219,7 @@ pub trait HostContext {
 #[derive(Clone)]
 pub struct HostEnv {
     backend: Rc<RefCell<dyn HostContext>>,
+    calls: Rc<RefCell<Vec<ContractCall>>>,
     last_call_result: Rc<RefCell<Option<CallResult>>>,
     deployed_contracts: Rc<RefCell<Vec<Address>>>,
     events_count: Rc<RefCell<BTreeMap<Address, u32>>> // contract_address -> events_count
@@ -228,6 +230,7 @@ impl HostEnv {
     pub fn new(backend: Rc<RefCell<dyn HostContext>>) -> HostEnv {
         HostEnv {
             backend,
+            calls: Rc::new(RefCell::new(vec![])),
             last_call_result: RefCell::new(None).into(),
             deployed_contracts: RefCell::new(vec![]).into(),
             events_count: Rc::new(RefCell::new(Default::default()))
@@ -313,39 +316,17 @@ impl HostEnv {
     ) -> OdraResult<T> {
         let backend = self.backend.borrow();
         let use_proxy = T::cl_type() != <()>::cl_type() || !call_def.amount().is_zero();
-        let call_result = backend.call_contract(&address, call_def, use_proxy);
+        let call_result = backend.call_contract(&address, call_def.clone(), use_proxy);
 
-        let mut events_map: BTreeMap<Address, Vec<Bytes>> = BTreeMap::new();
-        let mut binding = self.events_count.borrow_mut();
-
-        // Go through all contracts and collect their events
-        self.deployed_contracts
-            .borrow()
-            .iter()
-            .for_each(|contract_address| {
-                let events_count = binding.get_mut(contract_address).unwrap();
-                let old_events_last_id = *events_count;
-                let new_events_count = backend.get_events_count(contract_address);
-                let mut events = vec![];
-                for event_id in old_events_last_id..new_events_count {
-                    let event = backend.get_event(contract_address, event_id).unwrap();
-                    events.push(event);
-                }
-
-                events_map.insert(*contract_address, events);
-
-                *events_count = new_events_count;
-            });
-
-        let last_call_gas_cost = backend.last_call_gas_cost();
-
-        self.last_call_result.replace(Some(CallResult::new(
-            address,
-            backend.caller(),
-            last_call_gas_cost,
-            call_result.clone(),
-            events_map
-        )));
+        let call =
+            ContractCall {
+                call_def: call_def.clone(),
+                contract_address: address,
+                caller: self.caller(),
+                call_result: None,
+                TMP_RESULT: call_result.clone(),
+            };
+        self.calls.borrow_mut().push(call);
 
         call_result.map(|bytes| {
             T::from_bytes(&bytes)
@@ -381,10 +362,11 @@ impl HostEnv {
         contract_address: &R,
         index: i32
     ) -> Result<T, EventError> {
+        self.collect_events();
         let contract_address = contract_address.address();
         let backend = self.backend.borrow();
         let events_count = self.events_count(contract_address);
-        let event_absolute_position = crate::utils::event_absolute_position(events_count, index)
+        let event_absolute_position = utils::event_absolute_position(events_count, index)
             .ok_or(EventError::IndexOutOfBounds)?;
 
         let bytes = backend.get_event(contract_address, event_absolute_position)?;
@@ -399,12 +381,14 @@ impl HostEnv {
         contract_address: &T,
         index: u32
     ) -> Result<Bytes, EventError> {
+        self.collect_events();
         let backend = self.backend.borrow();
         backend.get_event(contract_address.address(), index)
     }
 
     /// Returns the names of all events emitted by the specified contract.
     pub fn event_names<T: Addressable>(&self, contract_address: &T) -> Vec<String> {
+        self.collect_events();
         let backend = self.backend.borrow();
         let events_count = backend.get_events_count(contract_address.address());
 
@@ -420,6 +404,7 @@ impl HostEnv {
 
     /// Returns all events emitted by the specified contract.
     pub fn events<T: Addressable>(&self, contract_address: &T) -> Vec<Bytes> {
+        self.collect_events();
         let backend = self.backend.borrow();
         let contract_address = contract_address.address();
         let events_count = backend.get_events_count(contract_address);
@@ -439,6 +424,7 @@ impl HostEnv {
 
     /// Returns the number of events emitted by the specified contract.
     pub fn events_count<T: Addressable>(&self, contract_address: &T) -> u32 {
+        self.collect_events();
         let backend = self.backend.borrow();
         backend.get_events_count(contract_address.address())
     }
@@ -449,6 +435,7 @@ impl HostEnv {
         contract_address: &R,
         event: &T
     ) -> bool {
+        self.collect_events();
         let contract_address = contract_address.address();
         let events_count = self.events_count(contract_address);
         let event_bytes = Bytes::from(
@@ -475,6 +462,7 @@ impl HostEnv {
         contract_address: &R,
         event_name: T
     ) -> bool {
+        self.collect_events();
         let events_count = self.events_count(contract_address);
         (0..events_count)
             .map(|event_id| {
@@ -498,6 +486,7 @@ impl HostEnv {
 
     /// Returns the last call result for the specified contract.
     pub fn last_call_result(&self, contract_address: Address) -> ContractCallResult {
+        self.collect_events();
         self.last_call_result
             .borrow()
             .clone()
@@ -538,6 +527,46 @@ impl HostEnv {
         }
         let backend = self.backend.borrow();
         backend.transfer(to, amount)
+    }
+
+    /// Go through all contracts and collect their events
+    fn collect_events(&self) {
+        let mut events_map: BTreeMap<Address, Vec<Bytes>> = BTreeMap::new();
+        let mut binding = self.events_count.borrow_mut();
+        let backend = self.backend.borrow();
+
+        self.deployed_contracts
+            .borrow()
+            .iter()
+            .for_each(|contract_address| {
+                let events_count = binding.get_mut(contract_address).unwrap();
+                let old_events_last_id = *events_count;
+                let new_events_count = backend.get_events_count(contract_address);
+                let mut events = vec![];
+                for event_id in old_events_last_id..new_events_count {
+                    let event = backend.get_event(contract_address, event_id).unwrap();
+                    events.push(event);
+                }
+
+                events_map.insert(*contract_address, events);
+
+                *events_count = new_events_count;
+            });
+
+        let last_call_gas_cost = backend.last_call_gas_cost();
+        let calls = self.calls.borrow();
+        if calls.is_empty() {
+            return;
+        }
+        let last_call = calls.last().unwrap();
+
+        self.last_call_result.replace(Some(CallResult::new(
+            last_call.contract_address,
+            backend.caller(),
+            last_call_gas_cost,
+            last_call.TMP_RESULT.clone(),
+            events_map
+        )));
     }
 }
 
@@ -684,6 +713,7 @@ mod test {
             .returning(|| Address::Account(AccountHash::new([2; 32])))
             .times(1);
         ctx.expect_gas_report().returning(GasReport::new).times(1);
+        ctx.expect_last_call_gas_cost().returning(|| 0);
         ctx.expect_set_gas().returning(|_| ()).times(1);
 
         let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
@@ -752,6 +782,7 @@ mod test {
         let mut ctx = MockHostContext::new();
         // there are 2 events emitted by the contract
         ctx.expect_get_events_count().returning(|_| 2);
+        ctx.expect_last_call_gas_cost().returning(|| 0);
         // get_event() at index 0 will return an invalid event
         ctx.expect_get_event()
             .with(predicate::always(), predicate::eq(0))
@@ -784,10 +815,11 @@ mod test {
     }
 
     #[test]
-    fn test_events_works() {
+    fn test_events_work() {
         let addr = Address::Account(AccountHash::new([0; 32]));
 
         let mut ctx = MockHostContext::new();
+        ctx.expect_last_call_gas_cost().returning(|| 0);
         // there are 2 events emitted by the contract
         ctx.expect_get_events_count().returning(|_| 2);
         // get_event() at index 0 will return an invalid event
@@ -817,6 +849,7 @@ mod test {
         let mut ctx = MockHostContext::new();
         // there are 2 events emitted by the contract
         ctx.expect_get_events_count().returning(|_| 2);
+        ctx.expect_last_call_gas_cost().returning(|| 0);
         // get_event() at index 0 panics
         ctx.expect_get_event()
             .with(predicate::always(), predicate::eq(0))
@@ -833,6 +866,7 @@ mod test {
         let mut ctx = MockHostContext::new();
 
         ctx.expect_get_events_count().returning(|_| 1);
+        ctx.expect_last_call_gas_cost().returning(|| 0);
         ctx.expect_get_event()
             .returning(|_, _| Ok(TestEv {}.to_bytes().unwrap().into()));
 
