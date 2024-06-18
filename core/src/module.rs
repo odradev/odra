@@ -6,7 +6,7 @@
 //! In order to create a module, you need to create a struct that implements the [Module] trait.
 //! However, most of the time you will want to use `#[odra::module]` macro to generate the module.
 
-use crate::{contract_def::HasEvents, prelude::*};
+use crate::{contract_def::HasEvents, prelude::*, OdraError};
 use core::cell::OnceCell;
 
 use crate::contract_env::ContractEnv;
@@ -25,6 +25,24 @@ pub trait Module {
 pub trait ModuleComponent {
     /// Creates a new instance of the module component.
     fn instance(env: Rc<ContractEnv>, index: u8) -> Self;
+}
+
+/// Represents a component that can revert the contract execution.
+pub trait Revertible {
+    /// Reverts the contract execution with the given error.
+    fn revert<E: Into<OdraError>>(&self, error: E) -> !;
+}
+
+impl Revertible for Rc<ContractEnv> {
+    fn revert<E: Into<OdraError>>(&self, error: E) -> ! {
+        self.as_ref().revert(error)
+    }
+}
+
+impl<T: Module> Revertible for T {
+    fn revert<E: Into<OdraError>>(&self, error: E) -> ! {
+        self.env().revert(error)
+    }
 }
 
 /// A marker trait for a module component that does not emit events.

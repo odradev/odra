@@ -3,13 +3,13 @@ use crate::casper_types::{
     bytesrepr::{FromBytes, ToBytes},
     CLTyped
 };
-use crate::module::{ModuleComponent, ModulePrimitive};
-use crate::prelude::*;
+use crate::module::{ModuleComponent, ModulePrimitive, Revertible};
 use crate::{
     module::{Module, SubModule},
     var::Var,
     ContractEnv, UnwrapOrRevert
 };
+use crate::{prelude::*, OdraError};
 use core::fmt::Debug;
 
 /// Data structure for storing key-value pairs.
@@ -27,6 +27,12 @@ impl<K: ToBytes, V> ModuleComponent for Mapping<K, V> {
             phantom: core::marker::PhantomData,
             index
         }
+    }
+}
+
+impl<K: ToBytes, V> Revertible for Mapping<K, V> {
+    fn revert<E: Into<OdraError>>(&self, e: E) -> ! {
+        self.parent_env.revert(e)
     }
 }
 
@@ -84,11 +90,10 @@ impl<K: ToBytes, V: ToBytes + FromBytes + CLTyped + OverflowingAdd + Default> Ma
     ///
     /// If the operation fails due to overflow, the currently executing contract reverts.
     pub fn add(&mut self, key: &K, value: V) {
-        let current_value = self.get_or_default(key);
-        let new_value = current_value
-            .overflowing_add(value)
-            .unwrap_or_revert(&self.env_for_key(key));
-        self.set(key, new_value);
+        let env = self.env_for_key(key);
+        let current_value = Var::<V>::instance(Rc::new(env.clone()), self.index).get_or_default();
+        let new_value = current_value.overflowing_add(value).unwrap_or_revert(self);
+        Var::<V>::instance(Rc::new(env), self.index).set(new_value);
     }
 }
 
@@ -102,10 +107,9 @@ impl<
     ///
     /// If the operation fails due to overflow, the currently executing contract reverts.
     pub fn subtract(&mut self, key: &K, value: V) {
-        let current_value = self.get_or_default(key);
-        let new_value = current_value
-            .overflowing_sub(value)
-            .unwrap_or_revert(&self.env_for_key(key));
-        self.set(key, new_value);
+        let env = self.env_for_key(key);
+        let current_value = Var::<V>::instance(Rc::new(env.clone()), self.index).get_or_default();
+        let new_value = current_value.overflowing_sub(value).unwrap_or_revert(self);
+        Var::<V>::instance(Rc::new(env), self.index).set(new_value);
     }
 }

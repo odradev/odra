@@ -87,7 +87,7 @@ impl ReverseLookup {
 
         self.hash_by_index.set(
             &current_number_of_minted_tokens,
-            token_identifier.get_hash().unwrap_or_revert(&self.env())
+            token_identifier.get_hash().unwrap_or_revert(self)
         );
         self.index_by_hash.set(
             &token_identifier.to_string(),
@@ -236,7 +236,7 @@ impl ReverseLookup {
             vec![false; PAGE_SIZE as usize]
         } else {
             env.get_dictionary_value(&page_dict, new_item_key.as_bytes())
-                .unwrap_or_revert(&env)
+                .unwrap_or_revert(self)
         };
 
         let _ = core::mem::replace(&mut target_page[page_address as usize], true);

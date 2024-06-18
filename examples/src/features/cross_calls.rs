@@ -18,7 +18,7 @@ impl CrossContract {
 
     /// Adds 3 and 5 using the math engine contract.
     pub fn add_using_another(&self) -> u32 {
-        let math_engine_address = self.math_engine.get().unwrap_or_revert(&self.env());
+        let math_engine_address = self.math_engine.get().unwrap_or_revert(self);
         MathEngineContractRef::new(self.env(), math_engine_address).add(3, 5)
     }
 }

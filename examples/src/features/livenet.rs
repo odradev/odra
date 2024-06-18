@@ -40,7 +40,7 @@ impl LivenetContract {
 
     /// Pops a value from the stack.
     pub fn pop_from_stack(&mut self) -> u64 {
-        self.stack.pop().unwrap_or_revert(&self.env())
+        self.stack.pop().unwrap_or_revert(self)
     }
 
     /// Returns the length of the stack.

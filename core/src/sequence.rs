@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::module::Revertible;
 use crate::{
     casper_types::{
         bytesrepr::{FromBytes, ToBytes},
@@ -7,6 +7,7 @@ use crate::{
     module::{ModuleComponent, ModulePrimitive},
     ContractEnv
 };
+use crate::{prelude::*, OdraError};
 use num_traits::{Num, One, Zero};
 
 use crate::Var;
@@ -19,6 +20,15 @@ where
     env: Rc<ContractEnv>,
     index: u8,
     value: Var<T>
+}
+
+impl<T> Revertible for Sequence<T>
+where
+    T: Num + One + Zero + Default + Copy + ToBytes + FromBytes + CLTyped
+{
+    fn revert<E: Into<OdraError>>(&self, e: E) -> ! {
+        self.env.revert(e)
+    }
 }
 
 impl<T> Sequence<T>

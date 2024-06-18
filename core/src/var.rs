@@ -1,10 +1,13 @@
-use crate::casper_types::{
-    bytesrepr::{FromBytes, ToBytes},
-    CLTyped
-};
 use crate::contract_env::ContractEnv;
 use crate::module::{ModuleComponent, ModulePrimitive};
 use crate::prelude::*;
+use crate::{
+    casper_types::{
+        bytesrepr::{FromBytes, ToBytes},
+        CLTyped
+    },
+    module::Revertible
+};
 use crate::{OdraError, UnwrapOrRevert};
 
 /// Data structure for storing a single value.
@@ -12,6 +15,12 @@ pub struct Var<T> {
     env: Rc<ContractEnv>,
     phantom: core::marker::PhantomData<T>,
     index: u8
+}
+
+impl<T> Revertible for Var<T> {
+    fn revert<E: Into<OdraError>>(&self, e: E) -> ! {
+        self.env.revert(e)
+    }
 }
 
 impl<T> Var<T> {
@@ -48,8 +57,7 @@ impl<T: FromBytes> Var<T> {
     ///
     /// If the variable has a value, it is returned. Otherwise, the provided error is reverted.
     pub fn get_or_revert_with<E: Into<OdraError>>(&self, error: E) -> T {
-        let env = self.env();
-        self.get().unwrap_or_revert_with(&env, error)
+        self.get().unwrap_or_revert_with(self, error)
     }
 }
 
@@ -76,9 +84,7 @@ impl<V: ToBytes + FromBytes + CLTyped + OverflowingAdd + Default> Var<V> {
     #[inline(always)]
     pub fn add(&mut self, value: V) {
         let current_value = self.get_or_default();
-        let new_value = current_value
-            .overflowing_add(value)
-            .unwrap_or_revert(&self.env());
+        let new_value = current_value.overflowing_add(value).unwrap_or_revert(self);
         self.set(new_value);
     }
 }
@@ -91,9 +97,7 @@ impl<V: ToBytes + FromBytes + CLTyped + OverflowingSub + Default> Var<V> {
     #[inline(always)]
     pub fn subtract(&mut self, value: V) {
         let current_value = self.get().unwrap_or_default();
-        let new_value = current_value
-            .overflowing_sub(value)
-            .unwrap_or_revert(&self.env());
+        let new_value = current_value.overflowing_sub(value).unwrap_or_revert(self);
         self.set(new_value);
     }
 }
