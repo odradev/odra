@@ -20,6 +20,7 @@ mod contract_register;
 pub mod crypto;
 pub mod entry_point_callback;
 mod error;
+mod external;
 mod gas_report;
 pub mod host;
 mod list;
@@ -46,6 +47,7 @@ pub use error::{
 };
 pub use unwrap_or_revert::UnwrapOrRevert;
 
+pub use external::External;
 pub use gas_report::*;
 pub use list::{List, ListIter};
 pub use mapping::Mapping;
