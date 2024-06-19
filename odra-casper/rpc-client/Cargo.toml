@@ -13,7 +13,7 @@ odra-core = { workspace = true }
 odra-schema = { workspace = true }
 casper-execution-engine = { workspace = true }
 casper-client = { workspace = true }
-tokio = { version = "1.38.0", features = ["rt"] }
+tokio = { version = "1.38.0", features = ["rt-multi-thread"] }
 
 jsonrpc-lite = "0.6.0"
 serde_json = { version = "1.0", features = ["raw_value"] }

@@ -74,6 +74,8 @@ max_associated_keys = 100
 max_runtime_call_stack_height = 12
 # Minimum allowed delegation amount in motes
 minimum_delegation_amount = 500_000_000_000
+# Maximum allowed delegation amount in motes
+maximum_delegation_amount = 1_000_000_000_000_000_000
 # Global state prune batch size (0 = this feature is off)
 prune_batch_size = 0
 # Enables strict arguments checking when calling a contract; i.e. that all non-optional args are provided and of the correct `CLType`.
@@ -159,23 +161,10 @@ administrators = []
 [highway]
 # Highway dynamically chooses its round length, between minimum_block_time and maximum_round_length.
 maximum_round_length = '17 seconds'
-# The factor by which rewards for a round are multiplied if the greatest summit has ≤50% quorum, i.e. no finality.
-# Expressed as a fraction (1/5 by default).
-reduced_reward_multiplier = [1, 5]
 
 [transactions]
 # The duration after the transaction timestamp that it can be included in a block.
 max_ttl = '18 hours'
-# Maximum transaction size in bytes.  Size is of the transaction when serialized via ToBytes.
-max_transaction_size = 1_048_576
-# Maximum number of mint transactions (i.e. transfers) allowed in a block.
-block_max_mint_count = 500
-# Maximum number of auction transactions allowed in a block.
-block_max_auction_count = 100
-# Maximum number of installer/upgrader transactions allowed in a block.
-block_max_install_upgrade_count = 2
-# Maximum number of other transactions (non-transfer, non-staking, non-installer/upgrader) allowed in a block.
-block_max_standard_count = 50
 # The maximum number of approvals permitted in a single block.
 block_max_approval_count = 2600
 # Maximum block size in bytes including transactions contained by the block.  0 means unlimited.
@@ -188,8 +177,23 @@ native_transfer_minimum_motes = 2_500_000_000
 max_timestamp_leeway = '5 seconds'
 
 [transactions.v1]
+# The configuration settings for the lanes of transactions including both native and Wasm based interactions.
+# Currently the node supports two native interactions the mint and auction and have the reserved identifiers of 0 and 1
+# respectively
+# The remaining wasm based lanes specify the range of configuration settings for a given Wasm based transaction
+# within a given lane.
 # The maximum length in bytes of runtime args per V1 transaction.
-max_args_length = 1024
+# [0] -> Transaction lane label (apart from the reserved native identifiers these are simply labels)
+# Note: For the Casper mainnet implementation we specially reserve the label 2 for install and upgrades and
+# the lane must be present and defined.
+# Different casper networks may not impose such a restriction.
+# [1] -> Max transaction size in bytes for a given transaction in a certain lane
+# [2] -> Max args length size in bytes for a given transaction in a certain lane
+# [3] -> Transaction gas limit size in bytes for a given transaction in a certain lane
+# [4] -> The maximum number of transactions the lane can contain
+native_mint_lane = [0, 1024, 1024, 65_000_000_000, 650]
+native_auction_lane = [1, 2048, 2048, 362_500_000_000, 145]
+wasm_lanes = [[2, 1_048_576, 2048, 1_000_000_000_000, 2], [3, 262_144, 1024, 100_000_000_000, 3], [4, 131_072, 1024, 50_000_000_000, 5], [5, 8_192, 512, 1_500_000_000, 15]]
 
 [transactions.deploy]
 # The maximum number of Motes allowed to be spent during payment.  0 means unlimited.
@@ -209,7 +213,7 @@ max_stack_height = 500
 
 [wasm.storage_costs]
 # Gas charged per byte stored in the global state.
-gas_per_byte = 630_000
+gas_per_byte = 1_117_587
 
 [wasm.opcode_costs]
 # Bit operations multiplier.
@@ -295,7 +299,7 @@ provision_contract_user_group_uref = { cost = 200, arguments = [0, 0, 0, 0, 0] }
 put_key = { cost = 38_000, arguments = [0, 1_100, 0, 0] }
 read_host_buffer = { cost = 3_500, arguments = [0, 310, 0] }
 read_value = { cost = 6_000, arguments = [0, 0, 0] }
-read_value_local = { cost = 5_500, arguments = [0, 590, 0] }
+dictionary_get = { cost = 5_500, arguments = [0, 590, 0] }
 remove_associated_key = { cost = 4_200, arguments = [0, 0] }
 remove_contract_user_group = { cost = 200, arguments = [0, 0, 0, 0] }
 remove_contract_user_group_urefs = { cost = 200, arguments = [0, 0, 0, 0, 0, 0] }
@@ -308,7 +312,7 @@ transfer_from_purse_to_purse = { cost = 82_000, arguments = [0, 0, 0, 0, 0, 0, 0
 transfer_to_account = { cost = 2_500_000_000, arguments = [0, 0, 0, 0, 0, 0, 0] }
 update_associated_key = { cost = 4_200, arguments = [0, 0, 0] }
 write = { cost = 14_000, arguments = [0, 0, 0, 980] }
-write_local = { cost = 9_500, arguments = [0, 1_800, 0, 520] }
+dictionary_put = { cost = 9_500, arguments = [0, 1_800, 0, 520] }
 enable_contract_version = { cost = 200, arguments = [0, 0, 0, 0] }
 manage_message_topic = { cost = 200, arguments = [0, 30_000, 0, 0] }
 emit_message = { cost = 200, arguments = [0, 30_000, 0, 120_000] }
@@ -320,8 +324,6 @@ max_topics_per_contract = 128
 max_message_size = 1_024
 
 [system_costs]
-install_upgrade_gas_limit = 3_500_000_000_000
-standard_transaction_gas_limit = 500_000_000_000
 
 [system_costs.auction_costs]
 get_era_validators = 10_000

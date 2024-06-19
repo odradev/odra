@@ -267,7 +267,6 @@ impl CasperVm {
     /// Results an OdraError if the transfer fails.
     pub fn transfer(&mut self, to: Address, amount: U512) -> OdraResult<()> {
         let deploy_item = DeployItemBuilder::new()
-            .with_empty_payment_bytes(runtime_args! {ARG_AMOUNT => *DEFAULT_PAYMENT})
             .with_transfer_args(runtime_args! {
                 "amount" => amount,
                 "target" => to,
@@ -278,7 +277,7 @@ impl CasperVm {
             .with_deploy_hash(self.next_hash())
             .build();
 
-        let execute_request = ExecuteRequestBuilder::from_deploy_item(deploy_item)
+        let execute_request = ExecuteRequestBuilder::from_deploy_item(&deploy_item)
             .with_block_time(self.block_time)
             .build();
         self.context.exec(execute_request).commit();

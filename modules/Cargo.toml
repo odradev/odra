@@ -14,7 +14,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 serde-json-wasm = { workspace = true }
 base16 = { workspace = true }
-base64 = { workspace = true }
+base64 = { workspace = true, features = ["alloc"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 odra-build = { path = "../odra-build" }
@@ -41,16 +41,6 @@ name = "odra_modules_build_schema"
 path = "bin/build_schema.rs"
 test = false
 
-[profile.release]
-codegen-units = 1
-lto = true
-
-[profile.dev.package."*"]
-opt-level = 3
-
 [lints.rust]
 missing_docs = "warn"
 
-[patch.crates-io]
-casper-client = { path = "../../../casper-client-rs" }
-casper-types = { git = "https://github.com/casper-network/casper-node.git", branch = "feat-2.0" }

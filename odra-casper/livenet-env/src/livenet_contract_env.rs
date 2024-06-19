@@ -23,7 +23,6 @@ impl ContractContext for LivenetContractEnv {
         self.casper_client
             .borrow()
             .get_value(self.callstack.borrow().current().address(), key)
-            .ok()
     }
 
     fn set_value(&self, _key: &[u8], _value: Bytes) {

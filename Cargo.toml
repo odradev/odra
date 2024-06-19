@@ -52,13 +52,20 @@ env_logger = "0.11"
 serde = { version = "1.0", default-features = false }
 serde_json = { version = "1.0", default-features = false }
 num-traits = { version = "0.2", default-features = false }
+serde-json-wasm = { version = "1.0.1", default-features = false}
 mockall = { version = "0.12" }
-base64 = "0.22"
-base16 = "0.2"
-serde-json-wasm = "1.0"
-sha3 = "0.10"
-hex = "0.4"
+base64 = { version = "0.22", default-features = false }
+base16 = { version = "0.2", default-features = false }
+sha3 = { version = "0.10", default-features = false }
+hex = { version = "0.4", default-features = false }
 
 [patch.crates-io]
 casper-client = { path = "../../casper-client-rs" }
 casper-types = { git = "https://github.com/casper-network/casper-node.git", branch = "feat-2.0" }
+
+[profile.release]
+codegen-units = 1
+lto = true
+
+[profile.dev.package."*"]
+opt-level = 3

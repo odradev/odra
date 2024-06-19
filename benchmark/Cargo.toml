@@ -32,13 +32,6 @@ name = "evaluate_benchmark"
 path = "bin/evaluate_benchmark.rs"
 test = false
 
-[profile.release]
-codegen-units = 1
-lto = true
-
-[profile.dev.package."*"]
-opt-level = 3
-
 [features]
 default = []
 benchmark = ["odra-test"]

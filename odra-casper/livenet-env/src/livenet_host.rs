@@ -93,7 +93,6 @@ impl HostContext for LivenetHost {
         self.casper_client
             .borrow()
             .events_count(contract_address)
-            .unwrap_or_default()
     }
 
     fn call_contract(
@@ -135,13 +134,14 @@ impl HostContext for LivenetHost {
         contract_name: String,
         entry_points_caller: EntryPointsCaller
     ) {
-        self.contract_register
-            .write()
-            .expect("Couldn't write contract register.")
-            .add(address, ContractContainer::new(entry_points_caller));
-        self.casper_client
-            .borrow_mut()
-            .register_name(address, contract_name);
+        todo!()
+        // self.contract_register
+        //     .write()
+        //     .expect("Couldn't write contract register.")
+        //     .add(address, ContractContainer::new(entry_points_caller));
+        // self.casper_client
+        //     .borrow_mut()
+        //     .register_name(address, contract_name);
     }
 
     fn new_contract(
@@ -153,7 +153,7 @@ impl HostContext for LivenetHost {
         let address = self
             .casper_client
             .borrow_mut()
-            .deploy_wasm(name, init_args)?;
+            .deploy_wasm(name, init_args);
         self.register_contract(address, name.to_string(), entry_points_caller);
         Ok(address)
     }
@@ -184,6 +184,7 @@ impl HostContext for LivenetHost {
     }
 
     fn transfer(&self, to: Address, amount: U512) -> OdraResult<()> {
-        self.casper_client.borrow_mut().transfer(to, amount)
+        todo!()
+        // self.casper_client.borrow_mut().transfer(to, amount)
     }
 }
