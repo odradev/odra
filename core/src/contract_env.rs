@@ -1,3 +1,5 @@
+use casper_event_standard::EventInstance;
+
 use crate::args::EntrypointArgument;
 use crate::call_def::CallDef;
 use crate::casper_types::bytesrepr::{deserialize_from_slice, Bytes, FromBytes, ToBytes};
@@ -197,7 +199,7 @@ impl ContractEnv {
     }
 
     /// Emits an event with the specified data.
-    pub fn emit_event<T: ToBytes>(&self, event: T) {
+    pub fn emit_event<T: ToBytes + EventInstance>(&self, event: T) {
         let backend = self.backend.borrow();
         let result = event.to_bytes().map_err(ExecutionError::from);
         let bytes = result.unwrap_or_revert(self);
