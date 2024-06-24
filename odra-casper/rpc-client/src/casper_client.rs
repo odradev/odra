@@ -2,7 +2,8 @@
 pub mod configuration;
 
 use std::{fs, path::PathBuf, str::from_utf8_unchecked, time::Duration};
-use casper_client::cli::{get_state_root_hash, query_balance, query_global_state};
+use casper_client::cli::{DeployStrParams, get_state_root_hash, make_deploy, make_transaction, query_balance, query_global_state, TransactionBuilderParams, TransactionStrParams};
+use casper_client::{put_transaction, Verbosity};
 use casper_client::rpcs::results::{PutDeployResult, QueryGlobalStateResult};
 
 use itertools::Itertools;
@@ -11,7 +12,7 @@ use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 use tokio::runtime::Runtime;
 
-use odra_core::casper_types::{DeployHash, Digest, ExecutableDeployItem, sign, URef};
+use odra_core::casper_types::{DeployHash, Digest, ExecutableDeployItem, sign, Transaction, TransactionCategory, URef};
 use odra_core::{
     casper_types::{
         bytesrepr::{Bytes, FromBytes, ToBytes},
@@ -407,30 +408,47 @@ impl CasperClient {
         // ContractHash::from_formatted_str(contract_hash).unwrap()
     }
 
+
     /// Deploy the contract.
     pub fn deploy_wasm(&self, contract_name: &str, args: RuntimeArgs) -> Address {
         log::info(format!("Deploying \"{}\".", contract_name));
         let wasm_path = find_wasm_file_path(contract_name);
         let wasm_bytes = fs::read(wasm_path).unwrap();
-        let session = ExecutableDeployItem::ModuleBytes {
-            module_bytes: Bytes::from(wasm_bytes),
-            args
+        let transaction_builder_params = TransactionBuilderParams::Session {
+            transaction_bytes: wasm_bytes.into(),
+            transaction_category: TransactionCategory::InstallUpgrade,
         };
-        let deploy = self.new_deploy(session, self.gas);
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": "account_put_deploy",
-                "params": {
-                    "deploy": deploy
-                },
-                "id": 1,
-            }
-        );
 
-        let response: PutDeployResult = self.post_request(request);
-        let deploy_hash = response.deploy_hash;
-        self.wait_for_deploy_hash(deploy_hash);
+        let secret_key = self.configuration.secret_key_paths.first();
+        let secret_key = secret_key.unwrap().to_string();
+
+        let gas = self.gas.to_string();
+
+        let transaction_str_params = TransactionStrParams {
+            secret_key: secret_key.as_str(),
+            timestamp: "",
+            ttl: "30min",
+            chain_name: self.configuration.chain_name.as_str(),
+            initiator_addr: "".to_string(),
+            session_args_simple: vec![],
+            session_args_json: "",
+            pricing_mode: "classic",
+            output_path: "",
+            payment_amount: gas.as_str(),
+            gas_price_tolerance: "1.0",
+            receipt: "",
+            standard_payment: "",
+        };
+
+        let transaction = make_transaction(transaction_builder_params, transaction_str_params, true).unwrap();
+        let transaction = Transaction::V1(transaction);
+        let response =
+            put_transaction(self.configuration.rpc_id.clone(), self.configuration.node_address.as_str(), Verbosity::High, transaction);
+
+        let rt = Runtime::new().unwrap();
+        let result = rt.block_on(response).unwrap();
+        dbg!(result);
+        // self.wait_for_deploy_hash(deploy_hash);
 
         let address = self.get_contract_address(contract_name);
         log::info(format!("Contract {:?} deployed.", &address.to_string()));
