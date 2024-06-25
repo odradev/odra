@@ -21,8 +21,8 @@ use super::{
     whitelist::ACLWhitelist
 };
 use odra::{
-    args::Maybe, casper_types::bytesrepr::ToBytes, prelude::*, Address, OdraError, SubModule,
-    UnwrapOrRevert
+    args::Maybe, casper_event_standard::EventInstance, casper_types::bytesrepr::ToBytes,
+    prelude::*, Address, OdraError, SubModule, UnwrapOrRevert
 };
 
 single_value_storage!(
@@ -647,7 +647,7 @@ impl Cep78 {
     }
 
     #[inline]
-    fn emit_ces_event<T: ToBytes>(&self, event: T) {
+    fn emit_ces_event<T: ToBytes + EventInstance>(&self, event: T) {
         let events_mode = self.settings.events_mode();
         if let EventsMode::CES = events_mode {
             self.env().emit_event(event);
