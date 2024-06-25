@@ -133,6 +133,8 @@ pub enum ExecutionError {
     EmptyDictionaryName = 121,
     /// Calling a contract with missing entrypoint arguments.
     MissingArg = 122,
+    /// Out of gas error
+    OutOfGas = 123,
     /// Maximum code for user errors
     MaxUserError = 64535,
     /// User error too high. The code should be in range 0..32767.

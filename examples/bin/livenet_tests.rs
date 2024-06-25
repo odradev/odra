@@ -2,6 +2,7 @@
 use odra::casper_types::U256;
 use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader};
 use odra::Address;
+use odra::ExecutionError;
 use odra_examples::features::livenet::{LivenetContractHostRef, LivenetContractInitArgs};
 use odra_modules::access::events::OwnershipTransferred;
 use odra_modules::erc20::{Erc20HostRef, Erc20InitArgs};
@@ -18,6 +19,11 @@ fn main() {
 
     // Contract can be loaded
     let (mut contract, erc20) = load(&env, *contract.address(), *erc20.address());
+
+    // Errors can be handled
+    env.set_gas(1_000u64);
+    let result = contract.try_push_on_stack(1).unwrap_err();
+    assert_eq!(result, ExecutionError::OutOfGas.into());
 
     // Set gas will be used for all subsequent calls
     env.set_gas(1_000_000_000u64);
