@@ -137,9 +137,6 @@ impl_schema_events!(
     Bytes
 );
 
-// impl<M: ContractRef> SchemaEvents for M {}
-// impl<M: ContractRef> SchemaErrors for M {}
-
 impl<T: CLTyped> SchemaEvents for Option<T> {}
 
 impl<T: CLTyped> SchemaEvents for Vec<T> {}

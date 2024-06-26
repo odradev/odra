@@ -4,69 +4,14 @@ use crate::ast::parts_utils::{UsePreludeItem, UseSuperItem};
 use crate::ast::test_parts::{PartsModuleItem, TestPartsReexportItem};
 use crate::ir::ModuleImplIR;
 use derive_try_from_ref::TryFromRef;
-use quote::ToTokens;
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
 #[source(ModuleImplIR)]
 #[err(syn::Error)]
 pub struct ExternalContractImpl {
     ref_item: RefItem,
-    schema_errors_item: SchemaErrorsItem,
-    schema_events_item: SchemaEventsItem,
     test_parts: TestPartsItem,
     test_parts_reexport: TestPartsReexportItem
-}
-
-pub struct SchemaErrorsItem {
-    ident: syn::Ident
-}
-
-impl TryFrom<&ModuleImplIR> for SchemaErrorsItem {
-    type Error = syn::Error;
-
-    fn try_from(ir: &ModuleImplIR) -> Result<Self, Self::Error> {
-        Ok(Self {
-            ident: ir.contract_ref_ident()?
-        })
-    }
-}
-
-impl ToTokens for SchemaErrorsItem {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let ident = &self.ident;
-        let item = quote::quote!(
-            #[automatically_derived]
-            #[cfg(not(target_arch = "wasm32"))]
-            impl odra::schema::SchemaErrors for #ident {}
-        );
-        item.to_tokens(tokens);
-    }
-}
-
-pub struct SchemaEventsItem {
-    ident: syn::Ident
-}
-
-impl TryFrom<&ModuleImplIR> for SchemaEventsItem {
-    type Error = syn::Error;
-
-    fn try_from(ir: &ModuleImplIR) -> Result<Self, Self::Error> {
-        Ok(Self {
-            ident: ir.contract_ref_ident()?
-        })
-    }
-}
-
-impl ToTokens for SchemaEventsItem {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let ident = &self.ident;
-        let item = quote::quote!(
-            #[automatically_derived]
-            #[cfg(not(target_arch = "wasm32"))]
-            impl odra::schema::SchemaEvents for #ident {}
-        );
-        item.to_tokens(tokens);
-    }
 }
 
 #[derive(syn_derive::ToTokens, TryFromRef)]
