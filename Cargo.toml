@@ -41,3 +41,4 @@ serde = { version = "1.0.195", default-features = false }
 serde_json = { version = "1.0.113", default-features = false }
 num-traits = { version = "0.2.14", default-features = false }
 mockall = { version = "0.12.1" }
+tokio = "1.38"
