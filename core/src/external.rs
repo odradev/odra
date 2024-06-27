@@ -20,7 +20,7 @@ use crate::{
 ///
 /// #[odra::module]
 /// pub struct Contract {
-///     ext: odra::External<SetterContractRef>
+///     ext: odra::External<SetterGetterContractRef>
 /// }
 ///
 /// #[odra::module]
