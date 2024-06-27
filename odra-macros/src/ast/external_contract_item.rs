@@ -76,6 +76,14 @@ mod test {
                 }
             }
 
+            #[automatically_derived]
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::SchemaErrors for TokenContractRef {}
+
+            #[automatically_derived]
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::SchemaEvents for TokenContractRef {}
+
             #[cfg(not(target_arch = "wasm32"))]
             mod __token_test_parts {
                 use super::*;

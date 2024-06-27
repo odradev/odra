@@ -6,6 +6,8 @@ use derive_try_from_ref::TryFromRef;
 use quote::TokenStreamExt;
 use syn::parse_quote;
 
+use super::ref_utils::{SchemaErrorsItem, SchemaEventsItem};
+
 #[derive(syn_derive::ToTokens)]
 struct ContractRefStructItem {
     doc: syn::Attribute,
@@ -160,7 +162,9 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefImplItem {
 pub struct RefItem {
     struct_item: ContractRefStructItem,
     trait_impl_item: ContractRefTraitImplItem,
-    impl_item: ContractRefImplItem
+    impl_item: ContractRefImplItem,
+    schema_errors_item: SchemaErrorsItem,
+    schema_events_item: SchemaEventsItem,
 }
 
 #[cfg(test)]
@@ -274,6 +278,14 @@ mod ref_item_tests {
                         )
                 }
             }
+
+            #[automatically_derived]
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::SchemaErrors for Erc20ContractRef {}
+
+            #[automatically_derived]
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::SchemaEvents for Erc20ContractRef {}
         };
         let actual = RefItem::try_from(&module).unwrap();
         test_utils::assert_eq(actual, expected);
@@ -329,6 +341,14 @@ mod ref_item_tests {
                         )
                 }
             }
+
+            #[automatically_derived]
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::SchemaErrors for Erc20ContractRef {}
+
+            #[automatically_derived]
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::SchemaEvents for Erc20ContractRef {}
         };
         let actual = RefItem::try_from(&module).unwrap();
         test_utils::assert_eq(actual, expected);
@@ -435,6 +455,14 @@ mod ref_item_tests {
                         )
                 }
             }
+
+            #[automatically_derived]
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::SchemaErrors for Erc20ContractRef {}
+
+            #[automatically_derived]
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::SchemaEvents for Erc20ContractRef {}
         };
         let actual = RefItem::try_from(&module).unwrap();
         test_utils::assert_eq(actual, expected);
