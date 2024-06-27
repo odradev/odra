@@ -14,6 +14,7 @@ use crate::{
 ///
 /// # Example
 ///
+/// ```ignore
 /// use core::ops::DerefMut;
 /// use odra::{Address, External, prelude::*};
 ///
@@ -49,6 +50,7 @@ use crate::{
 ///     fn set(&mut self, value: bool);
 ///     fn get(&self) -> bool;
 /// }
+/// ```
 pub struct External<T: ContractRef> {
     env: Rc<ContractEnv>,
     value: Var<Address>,
