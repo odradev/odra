@@ -83,9 +83,11 @@ impl<V: ToBytes + FromBytes + CLTyped + OverflowingAdd + Default> Var<V> {
     /// If the operation fails due to overflow, the currently executing contract reverts.
     #[inline(always)]
     pub fn add(&mut self, value: V) {
-        let current_value = self.get_or_default();
+        let env = self.env();
+        let key = env.current_key();
+        let current_value = env.get_value::<V>(&key).unwrap_or_default();
         let new_value = current_value.overflowing_add(value).unwrap_or_revert(self);
-        self.set(new_value);
+        env.set_value(&key, new_value);
     }
 }
 
@@ -96,8 +98,10 @@ impl<V: ToBytes + FromBytes + CLTyped + OverflowingSub + Default> Var<V> {
     /// If the operation fails due to overflow, the currently executing contract reverts.
     #[inline(always)]
     pub fn subtract(&mut self, value: V) {
-        let current_value = self.get().unwrap_or_default();
+        let env = self.env();
+        let key = env.current_key();
+        let current_value = env.get_value::<V>(&key).unwrap_or_default();
         let new_value = current_value.overflowing_sub(value).unwrap_or_revert(self);
-        self.set(new_value);
+        env.set_value(&key, new_value);
     }
 }

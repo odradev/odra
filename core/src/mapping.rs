@@ -7,7 +7,7 @@ use crate::module::{ModuleComponent, ModulePrimitive, Revertible};
 use crate::{
     module::{Module, SubModule},
     var::Var,
-    ContractEnv, UnwrapOrRevert
+    ContractEnv
 };
 use crate::{prelude::*, OdraError};
 use core::fmt::Debug;
@@ -91,9 +91,8 @@ impl<K: ToBytes, V: ToBytes + FromBytes + CLTyped + OverflowingAdd + Default> Ma
     /// If the operation fails due to overflow, the currently executing contract reverts.
     pub fn add(&mut self, key: &K, value: V) {
         let env = self.env_for_key(key);
-        let current_value = Var::<V>::instance(Rc::new(env.clone()), self.index).get_or_default();
-        let new_value = current_value.overflowing_add(value).unwrap_or_revert(self);
-        Var::<V>::instance(Rc::new(env), self.index).set(new_value);
+        let mut var = Var::<V>::instance(Rc::new(env), self.index);
+        var.add(value);
     }
 }
 
@@ -108,8 +107,7 @@ impl<
     /// If the operation fails due to overflow, the currently executing contract reverts.
     pub fn subtract(&mut self, key: &K, value: V) {
         let env = self.env_for_key(key);
-        let current_value = Var::<V>::instance(Rc::new(env.clone()), self.index).get_or_default();
-        let new_value = current_value.overflowing_sub(value).unwrap_or_revert(self);
-        Var::<V>::instance(Rc::new(env), self.index).set(new_value);
+        let mut var = Var::<V>::instance(Rc::new(env), self.index);
+        var.subtract(value);
     }
 }
