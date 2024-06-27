@@ -96,7 +96,7 @@ impl Cep18 {
         let caller_badge = self
             .security_badges
             .get(&caller)
-            .unwrap_or_revert_with(&self.env(), Error::InsufficientRights);
+            .unwrap_or_revert_with(self, Error::InsufficientRights);
 
         if !caller_badge.can_admin() {
             self.env().revert(Error::InsufficientRights);
@@ -234,7 +234,7 @@ impl Cep18 {
             recipient,
             allowance
                 .checked_sub(*amount)
-                .unwrap_or_revert_with(&self.env(), Error::InsufficientAllowance)
+                .unwrap_or_revert_with(self, Error::InsufficientAllowance)
         );
         self.env().emit_event(TransferFrom {
             spender,
@@ -254,7 +254,7 @@ impl Cep18 {
         let security_badge = self
             .security_badges
             .get(&self.env().caller())
-            .unwrap_or_revert_with(&self.env(), Error::InsufficientRights);
+            .unwrap_or_revert_with(self, Error::InsufficientRights);
         if !security_badge.can_mint() {
             self.env().revert(Error::InsufficientRights);
         }

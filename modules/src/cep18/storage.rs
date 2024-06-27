@@ -52,7 +52,7 @@ impl Cep18BalancesStorage {
     /// Adds the given amount to the balance of the given account.
     pub fn add(&self, account: &Address, amount: U256) {
         let balance = self.get(account).unwrap_or_default();
-        let new_balance = balance.checked_add(amount).unwrap_or_revert(&self.env());
+        let new_balance = balance.checked_add(amount).unwrap_or_revert(self);
         self.set(account, new_balance);
     }
 
@@ -61,7 +61,7 @@ impl Cep18BalancesStorage {
         let balance = self.get(account).unwrap_or_default();
         let new_balance = balance
             .checked_sub(amount)
-            .unwrap_or_revert_with(&self.env(), Overflow);
+            .unwrap_or_revert_with(self, Overflow);
         self.set(account, new_balance);
     }
 }

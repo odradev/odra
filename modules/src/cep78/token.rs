@@ -586,8 +586,7 @@ impl Cep78 {
         let number_of_minted_tokens = self.data.number_of_minted_tokens();
         if let NFTIdentifierMode::Ordinal = identifier_mode {
             // Revert if token_id is out of bounds
-            if token_identifier.get_index().unwrap_or_revert(&self.__env) >= number_of_minted_tokens
-            {
+            if token_identifier.get_index().unwrap_or_revert(self) >= number_of_minted_tokens {
                 self.revert(CEP78Error::InvalidTokenIdentifier);
             }
         }
