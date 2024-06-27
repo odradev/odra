@@ -11,6 +11,44 @@ use crate::{
 };
 
 /// A module component that is a reference to an external contract.
+///
+/// # Example
+///
+/// use core::ops::DerefMut;
+/// use odra::{Address, External, prelude::*};
+///
+/// #[odra::module]
+/// pub struct Contract {
+///     ext: odra::External<SetterContractRef>
+/// }
+///
+/// #[odra::module]
+/// impl Contract {
+///     pub fn init(&mut self, address: odra::Address) {
+///         self.ext.set(address);
+///     }
+///
+///     /// If a contract implements the set() method, you can't use
+///     /// the deref coercion mechanism, so you call the `External::set()` method.
+///     /// In this case you need to dereference the contract explicitly:
+///     pub fn set(&mut self, value: bool) {
+///         self.ext.deref_mut().set(value);
+///         // or
+///         // DerefMut::deref_mut(&mut self.ext).set(value);
+///     }
+///
+///     /// For any other method, you can use the deref coercion mechanism, and call
+///     /// the method directly on the external instance:
+///     pub fn get(&self) -> bool {
+///         self.ext.get()
+///     }
+/// }
+///
+/// #[odra::external_contract]
+/// pub trait SetterGetter {
+///     fn set(&mut self, value: bool);
+///     fn get(&self) -> bool;
+/// }
 pub struct External<T: ContractRef> {
     env: Rc<ContractEnv>,
     value: Var<Address>,
