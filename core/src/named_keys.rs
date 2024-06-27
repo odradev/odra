@@ -16,7 +16,7 @@ macro_rules! single_value_storage {
                 use odra::UnwrapOrRevert;
                 self.env()
                     .get_named_value($key)
-                    .unwrap_or_revert_with(&self.env(), $err)
+                    .unwrap_or_revert_with(self, $err)
             }
         }
     };
@@ -69,23 +69,23 @@ macro_rules! base64_encoded_key_value_storage {
 
         impl $name {
             pub fn set(&self, key: &$key, value: $value_type) {
-                let env = self.env();
-                let encoded_key = Self::key(&env, key);
-                env.set_dictionary_value($dict, encoded_key.as_bytes(), value);
+                let encoded_key = Self::key(self, key);
+                self.env()
+                    .set_dictionary_value($dict, encoded_key.as_bytes(), value);
             }
 
             pub fn get(&self, key: &$key) -> Option<$value_type> {
-                let env = self.env();
-                let encoded_key = Self::key(&env, key);
-                env.get_dictionary_value($dict, encoded_key.as_bytes())
+                let encoded_key = Self::key(self, key);
+                self.env()
+                    .get_dictionary_value($dict, encoded_key.as_bytes())
             }
 
             #[inline]
-            fn key(env: &odra::ContractEnv, key: &$key) -> String {
+            fn key<R: odra::module::Revertible>(rev: &R, key: &$key) -> String {
                 use base64::prelude::{Engine, BASE64_STANDARD};
                 use odra::UnwrapOrRevert;
 
-                let preimage = key.to_bytes().unwrap_or_revert(&env);
+                let preimage = key.to_bytes().unwrap_or_revert(rev);
                 BASE64_STANDARD.encode(preimage)
             }
         }
@@ -106,12 +106,12 @@ macro_rules! compound_key_value_storage {
             pub fn set(&self, key1: &$k1_type, key2: &$k2_type, value: $value_type) {
                 use odra::UnwrapOrRevert;
 
-                let env = self.env();
                 let mut key = [0u8; 64];
                 let mut preimage = odra::prelude::Vec::new();
-                preimage.extend_from_slice(&key1.to_bytes().unwrap_or_revert(&env));
-                preimage.extend_from_slice(&key2.to_bytes().unwrap_or_revert(&env));
+                preimage.extend_from_slice(&key1.to_bytes().unwrap_or_revert(self));
+                preimage.extend_from_slice(&key2.to_bytes().unwrap_or_revert(self));
 
+                let env = self.env();
                 let key_bytes = env.hash(&preimage);
                 odra::utils::hex_to_slice(&key_bytes, &mut key);
                 env.set_dictionary_value($dict, &key, value);
@@ -119,13 +119,13 @@ macro_rules! compound_key_value_storage {
 
             pub fn get_or_default(&self, key1: &$k1_type, key2: &$k2_type) -> $value_type {
                 use odra::UnwrapOrRevert;
-                let env = self.env();
 
                 let mut key = [0u8; 64];
                 let mut preimage = odra::prelude::Vec::new();
-                preimage.extend_from_slice(&key1.to_bytes().unwrap_or_revert(&env));
-                preimage.extend_from_slice(&key2.to_bytes().unwrap_or_revert(&env));
+                preimage.extend_from_slice(&key1.to_bytes().unwrap_or_revert(self));
+                preimage.extend_from_slice(&key2.to_bytes().unwrap_or_revert(self));
 
+                let env = self.env();
                 let key_bytes = env.hash(&preimage);
                 odra::utils::hex_to_slice(&key_bytes, &mut key);
                 env.get_dictionary_value($dict, &key).unwrap_or_default()

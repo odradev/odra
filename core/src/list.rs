@@ -8,9 +8,9 @@ use casper_types::{
 
 use crate::{
     mapping::Mapping,
-    module::{ModuleComponent, ModulePrimitive},
+    module::{ModuleComponent, ModulePrimitive, Revertible},
     var::Var,
-    CollectionError, ContractEnv, UnwrapOrRevert
+    CollectionError, ContractEnv, OdraError, UnwrapOrRevert
 };
 
 /// Data structure for an indexed, iterable collection.
@@ -36,6 +36,12 @@ impl<T> ModuleComponent for List<T> {
             values: Mapping::instance(env.child(index).into(), 0),
             current_index: Var::instance(env.child(index).into(), 1)
         }
+    }
+}
+
+impl<T> Revertible for List<T> {
+    fn revert<E: Into<OdraError>>(&self, e: E) -> ! {
+        self.env.revert(e)
     }
 }
 
@@ -70,12 +76,11 @@ impl<T: ToBytes + FromBytes + CLTyped> List<T> {
 
     /// Replaces the current value with the `value` and returns it.
     pub fn replace(&mut self, index: u32, value: T) -> T {
-        let env = self.env();
         if index >= self.len() {
-            env.revert(CollectionError::IndexOutOfBounds);
+            self.env.revert(CollectionError::IndexOutOfBounds);
         }
 
-        let prev_value = self.values.get(&index).unwrap_or_revert(&env);
+        let prev_value = self.values.get(&index).unwrap_or_revert(self);
         self.values.set(&index, value);
         prev_value
     }
@@ -86,9 +91,8 @@ impl<T: ToBytes + FromBytes + CLTyped> List<T> {
         if next_index == 0 {
             return None;
         }
-        let env = self.env();
         let last = next_index - 1;
-        let value = self.values.get(&last).unwrap_or_revert(&env);
+        let value = self.values.get(&last).unwrap_or_revert(self);
         self.current_index.set(last);
         Some(value)
     }

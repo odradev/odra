@@ -4,13 +4,10 @@ use serde_json::Value;
 use std::{fs, path::PathBuf};
 
 pub(crate) fn find(contract_name: &str, error_msg: &str) -> Result<(String, OdraError)> {
-    #[cfg(test)]
-    let schema_path = PathBuf::from("resources/test");
-    #[cfg(not(test))]
-    let schema_path = PathBuf::from("resources/casper_contract_schemas");
-    let schema_path =
-        odra_schema::find_schema_file_path(contract_name, schema_path).map_err(|e| anyhow!(e))?;
-    let schema = fs::read_to_string(schema_path)?;
+    if error_msg == "Out of gas error" {
+        return Ok(("OutOfGas".to_string(), ExecutionError::OutOfGas.into()));
+    }
+
     let error_num: u16 = error_msg
         .strip_prefix("User error: ")
         .ok_or_else(|| anyhow!("Couldn't parse error message: {:?}", error_msg))?
@@ -19,6 +16,14 @@ pub(crate) fn find(contract_name: &str, error_msg: &str) -> Result<(String, Odra
     if is_internal_error(error_num) {
         return Ok(get_internal_error_name(error_num));
     }
+
+    #[cfg(test)]
+    let schema_path = PathBuf::from("resources/test");
+    #[cfg(not(test))]
+    let schema_path = PathBuf::from("resources/casper_contract_schemas");
+    let schema_path =
+        odra_schema::find_schema_file_path(contract_name, schema_path).map_err(|e| anyhow!(e))?;
+    let schema = fs::read_to_string(schema_path)?;
 
     let schema: Value = serde_json::from_str(&schema)?;
     let errors = schema["errors"]
@@ -92,6 +97,7 @@ fn get_internal_error_name(error_num: u16) -> (String, OdraError) {
         ExecutionError::CouldNotSignMessage,
         ExecutionError::EmptyDictionaryName,
         ExecutionError::MissingArg,
+        ExecutionError::OutOfGas,
         ExecutionError::MaxUserError,
         ExecutionError::UserErrorTooHigh
     )
@@ -132,6 +138,10 @@ mod test {
         assert!(call("User error: 60300").is_err());
         // Other errors
         assert!(call("Casper Engine error").is_err());
+        assert_eq!(
+            call("Out of gas error").ok(),
+            Some(("OutOfGas".to_string(), ExecutionError::OutOfGas.into()))
+        );
     }
 
     fn call(error_msg: &str) -> Result<(String, OdraError)> {

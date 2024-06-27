@@ -1,8 +1,11 @@
+use casper_event_standard::EventInstance;
+
 use crate::args::EntrypointArgument;
 use crate::call_def::CallDef;
 use crate::casper_types::bytesrepr::{deserialize_from_slice, Bytes, FromBytes, ToBytes};
 use crate::casper_types::crypto::PublicKey;
 use crate::casper_types::{CLTyped, CLValue, BLAKE2B_DIGEST_LENGTH, U512};
+use crate::module::Revertible;
 pub use crate::ContractContext;
 use crate::ExecutionError::Formatting;
 use crate::{consts, prelude::*, ExecutionError};
@@ -32,6 +35,12 @@ pub struct ContractEnv {
     index: u32,
     mapping_data: Vec<u8>,
     backend: Rc<RefCell<dyn ContractContext>>
+}
+
+impl Revertible for ContractEnv {
+    fn revert<E: Into<OdraError>>(&self, e: E) -> ! {
+        self.revert(e)
+    }
 }
 
 impl ContractEnv {
@@ -197,7 +206,7 @@ impl ContractEnv {
     }
 
     /// Emits an event with the specified data.
-    pub fn emit_event<T: ToBytes>(&self, event: T) {
+    pub fn emit_event<T: ToBytes + EventInstance>(&self, event: T) {
         let backend = self.backend.borrow();
         let result = event.to_bytes().map_err(ExecutionError::from);
         let bytes = result.unwrap_or_revert(self);
@@ -242,6 +251,12 @@ impl ContractEnv {
 /// and handling the attached value.
 pub struct ExecutionEnv {
     env: Rc<ContractEnv>
+}
+
+impl Revertible for ExecutionEnv {
+    fn revert<E: Into<OdraError>>(&self, e: E) -> ! {
+        self.env.revert(e)
+    }
 }
 
 impl ExecutionEnv {
@@ -293,13 +308,12 @@ impl ExecutionEnv {
         if T::is_required() {
             let result = self.env.backend.borrow().get_named_arg_bytes(name);
             match result {
-                Ok(bytes) => deserialize_from_slice(bytes).unwrap_or_revert(&self.env),
+                Ok(bytes) => deserialize_from_slice(bytes).unwrap_or_revert(self),
                 Err(err) => self.env.revert(err)
             }
         } else {
             let bytes = self.env.backend.borrow().get_opt_named_arg_bytes(name);
-            let result =
-                bytes.map(|bytes| deserialize_from_slice(bytes).unwrap_or_revert(&self.env));
+            let result = bytes.map(|bytes| deserialize_from_slice(bytes).unwrap_or_revert(self));
             T::unwrap(result, &self.env)
         }
     }

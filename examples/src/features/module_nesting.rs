@@ -61,7 +61,7 @@ impl NestedOdraTypesContract {
                 self.current_generation_storage
                     .results
                     .get(&key)
-                    .unwrap_or_revert(&self.env())
+                    .unwrap_or_revert(self)
             })
             .collect()
     }
