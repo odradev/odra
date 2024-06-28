@@ -10,20 +10,26 @@ use odra_core::{Address, OdraError};
 use odra_core::{CallDef, ContractContext, ContractRegister};
 use std::io::Write;
 use std::sync::RwLock;
+use tokio::runtime::Runtime;
 
 /// Livenet contract environment struct.
 pub struct LivenetContractEnv {
     casper_client: Rc<RefCell<CasperClient>>,
     callstack: Rc<RefCell<Callstack>>,
-    contract_register: Rc<RwLock<ContractRegister>>
+    contract_register: Rc<RwLock<ContractRegister>>,
+    runtime: Runtime
 }
 
 impl ContractContext for LivenetContractEnv {
     fn get_value(&self, key: &[u8]) -> Option<Bytes> {
-        self.casper_client
-            .borrow()
-            .get_value(self.callstack.borrow().current().address(), key)
-            .ok()
+        let callstack = self.callstack.borrow();
+        let client = self.casper_client.borrow();
+        self.runtime.block_on(async {
+            client
+                .get_value(callstack.current().address(), key)
+                .await
+                .ok()
+        })
     }
 
     fn set_value(&self, _key: &[u8], _value: Bytes) {
@@ -31,9 +37,13 @@ impl ContractContext for LivenetContractEnv {
     }
 
     fn get_named_value(&self, name: &str) -> Option<Bytes> {
-        self.casper_client
-            .borrow()
-            .get_named_value(self.callstack.borrow().current().address(), name)
+        let client = self.casper_client.borrow();
+        let callstack = self.callstack.borrow();
+        self.runtime.block_on(async {
+            client
+                .get_named_value(callstack.current().address(), name)
+                .await
+        })
     }
 
     fn set_named_value(&self, _name: &str, _value: CLValue) {
@@ -41,11 +51,13 @@ impl ContractContext for LivenetContractEnv {
     }
 
     fn get_dictionary_value(&self, dictionary_name: &str, key: &[u8]) -> Option<Bytes> {
-        self.casper_client.borrow().get_dictionary_value(
-            self.callstack.borrow().current().address(),
-            dictionary_name,
-            key
-        )
+        let callstack = self.callstack.borrow();
+        let client = self.casper_client.borrow();
+        self.runtime.block_on(async {
+            client
+                .get_dictionary_value(callstack.current().address(), dictionary_name, key)
+                .await
+        })
     }
 
     fn set_dictionary_value(&self, _dictionary_name: &str, _key: &[u8], _value: CLValue) {
@@ -85,7 +97,9 @@ impl ContractContext for LivenetContractEnv {
     }
 
     fn get_block_time(&self) -> u64 {
-        self.casper_client.borrow().get_block_time()
+        let client = self.casper_client.borrow();
+        self.runtime
+            .block_on(async { client.get_block_time().await })
     }
 
     fn attached_value(&self) -> U512 {
@@ -93,9 +107,10 @@ impl ContractContext for LivenetContractEnv {
     }
 
     fn self_balance(&self) -> U512 {
-        self.casper_client
-            .borrow()
-            .get_balance(self.callstack.borrow().current().address())
+        let client = self.casper_client.borrow();
+        let callstack = self.callstack.borrow();
+        self.runtime
+            .block_on(async { client.get_balance(callstack.current().address()).await })
     }
 
     fn emit_event(&self, _event: &Bytes) {
@@ -162,7 +177,10 @@ impl LivenetContractEnv {
         Rc::new(RefCell::new(Self {
             casper_client,
             callstack,
-            contract_register
+            contract_register,
+            runtime: Runtime::new().unwrap_or_else(|_| {
+                panic!("Couldn't create tokio runtime");
+            })
         }))
     }
 }
