@@ -36,7 +36,7 @@ pub trait HostRef {
     fn last_call(&self) -> ContractCallResult;
 }
 
-impl<T: HostRef> Addressable for T {
+impl<T: HostRef + 'static> Addressable for T {
     fn address(&self) -> &Address {
         HostRef::address(self)
     }

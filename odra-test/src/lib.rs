@@ -13,7 +13,7 @@
 //!    // Test your contract here.
 //! }
 //! ```
-#![no_std]
+// #![no_std]
 
 #[cfg(target_arch = "wasm32")]
 compile_error!("odra-test is not meant to be compiled for wasm32");
@@ -47,3 +47,6 @@ fn odra_env() -> HostEnv {
     let host_env = OdraVmHost::new(vm);
     HostEnv::new(host_env)
 }
+
+#[cfg(feature = "bdd")]
+pub mod bdd;

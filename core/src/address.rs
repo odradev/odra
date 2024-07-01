@@ -1,4 +1,6 @@
 //! Better address representation for Casper.
+use core::any::Any;
+
 use crate::AddressError::ZeroAddress;
 use crate::{prelude::*, ExecutionError, OdraResult};
 use crate::{AddressError, OdraError, VmError};
@@ -27,8 +29,26 @@ pub enum Address {
     Contract(ContractPackageHash)
 }
 
+/// A trait for types that can be converted into a [`Key`].
+pub trait AnyAddressable {
+    /// Returns a reference to the [`Any`] of the type.
+    fn as_any(&self) -> &dyn Any;
+    /// Returns a boxed [`Any`] of the type.
+    fn as_boxed_any(self: Box<Self>) -> Box<dyn Any>;
+}
+
+impl<T: Addressable> AnyAddressable for T {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_boxed_any(self: Box<Self>) -> Box<dyn Any> {
+        self
+    }
+}
+
 /// A trait for types that can be converted into an [`Address`].
-pub trait Addressable {
+pub trait Addressable: Any + AnyAddressable {
     /// Returns a reference to the [`Address`] of the type.
     fn address(&self) -> &Address;
 }
