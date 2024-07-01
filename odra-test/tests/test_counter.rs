@@ -1,5 +1,4 @@
 use cucumber::{given, then, when, World};
-use odra_test::bdd::SyncRunner;
 
 mod counter {
     use std::{cell::RefCell, thread_local};

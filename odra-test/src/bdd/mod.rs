@@ -25,7 +25,7 @@ pub fn run_sync<
 >(
     input: I
 ) where
-    <T as World>::Error: Debug
+    <T as cucumber::World>::Error: std::fmt::Debug
 {
     let future = T::cucumber()
         .with_runner(sync_runner::SyncRunner::default())
