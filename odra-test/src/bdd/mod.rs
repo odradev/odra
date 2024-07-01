@@ -28,7 +28,7 @@ pub fn run_sync<
     <T as World>::Error: Debug
 {
     let future = T::cucumber()
-        .with_runner(SyncRunner::default())
+        .with_runner(sync_runner::SyncRunner::default())
         .run_and_exit(input);
     futures::executor::block_on(future);
 }
