@@ -1,13 +1,15 @@
 //! The `world` module contains the `OdraWorld` struct, which holds the state of the world for the tests.
 
+use core::panic;
 use odra_core::{
+    casper_types::{account, U256},
     contract_def::HasIdent,
     host::{HostEnv, HostRef},
     Address, Addressable
 };
 use std::{any::Any, collections::HashMap};
 
-use super::param::Account;
+use super::{param::Account, steps::Cep18TokenHostRef};
 
 /// OdraWorld is a struct that holds the state of the world for the tests.
 pub struct OdraWorld {
@@ -45,8 +47,21 @@ impl OdraWorld {
     }
 
     /// Returns a mutable reference to a contract.
-    pub fn get_contract<T: HostRef + HasIdent + 'static>(&mut self) -> &mut T {
-        self.container.get(&T::ident())
+    pub fn get_contract<T: HostRef + 'static, I: HasIdent>(&mut self) -> &mut T {
+        self.container.get(&I::ident())
+    }
+
+    /// Returns a mutable reference to the Cep18TokenHostRef contract.
+    pub fn cep18<I: HasIdent>(&mut self) -> &mut Cep18TokenHostRef {
+        self.get_contract::<Cep18TokenHostRef, I>()
+    }
+
+    pub fn cep18_balance_of<I: HasIdent>(&mut self, account: Account) -> U256 {
+        let contract = match account {
+            Account::Contract(name) => self.get_contract::<Cep18TokenHostRef, I>(),
+            _ => panic!("Only contract accounts can be used for this operation")
+        };
+        contract.balance_of(&self.get_address(account))
     }
 
     /// Returns the address of an account.
