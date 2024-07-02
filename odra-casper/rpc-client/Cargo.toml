@@ -11,13 +11,16 @@ repository = { workspace = true }
 [dependencies]
 odra-core = { workspace = true }
 odra-schema = { workspace = true }
-casper-execution-engine = { workspace = true }
-casper-hashing = "3.0.0"
+base16 = "0.2.1"
+chrono = { version = "0.4", features = ["serde"] }
 jsonrpc-lite = "0.6.0"
 serde_json = { version = "1.0", features = ["raw_value"] }
 serde = "1.0"
+serde_with = "3.8.2"
 log = "0.4.20"
 hex = "0.4.3"
+hex_fmt = "0.3.0"
+hex-buffer-serde = "0.4.0"
 reqwest = { version = "0.11.16", features = ["blocking", "json"] }
 datasize = "0.2.14"
 schemars = "0.8.5"
@@ -29,4 +32,8 @@ thiserror = "1.0.40"
 bytes = "1.5.0"
 anyhow = "1.0.86"
 humantime = "2.1.0"
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["time"] }
+
+[features]
+default = []
+std = []

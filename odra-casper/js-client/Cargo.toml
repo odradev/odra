@@ -1,0 +1,36 @@
+[package]
+name = "odra-casper-js-client"
+edition = "2021"
+description = "Wasm client library for Odra Casper"
+keywords = ["wasm", "webassembly", "blockchain"]
+categories = ["wasm"]
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+odra-casper-rpc-client = { path = "../rpc-client" }
+odra-schema = { path = "../../odra-schema" }
+console_error_panic_hook = "0.1.7"
+wasm-bindgen = "0.2.84"
+wasm-bindgen-futures = "0.4.37"
+bincode = "1.3.3"
+hex = "0.4.3"
+js-sys = "0.3.64"
+web-sys = { version = "0.3.69", features = ["console"]}
+gloo-utils = { version = "0.1.7", features = ["serde"] }
+regex = "1.4.2"
+chrono = "0.4.19"
+serde = { version = "1.0.183", features = ["derive"] }
+serde_derive = "1.0.183"
+serde_json = { version = "1.0", features = ["raw_value"] }
+schemars = { version = "0.8.5", features = ["preserve_order"] }
+
+[build-dependencies]
+serde_json = "1.0.103"
+bincode = "1.3.3"
+
+[lib]
+crate-type = ["cdylib", "rlib"]

@@ -13,5 +13,10 @@ pub mod query_balance;
 pub mod rpcs;
 pub mod utils;
 
+pub mod executable_deploy_item;
+
+pub mod deploy_item;
+pub mod hashing;
+
 pub use deploy::Deploy;
 pub use deploy_hash::DeployHash;

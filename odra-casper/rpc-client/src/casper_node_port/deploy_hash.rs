@@ -1,6 +1,5 @@
 use std::fmt;
 
-use casper_hashing::Digest;
 use datasize::DataSize;
 use odra_core::casper_types::{
     self,
@@ -8,6 +7,7 @@ use odra_core::casper_types::{
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use crate::casper_node_port::hashing::Digest;
 
 #[derive(
     Copy,

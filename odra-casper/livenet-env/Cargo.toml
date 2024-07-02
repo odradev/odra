@@ -10,7 +10,7 @@ repository = { workspace = true }
 
 [dependencies]
 odra-core = { workspace = true }
-odra-casper-rpc-client = { workspace = true }
+odra-casper-rpc-client = { workspace = true, features = ["std"] }
 blake2 = { workspace = true }
 log = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread"]}

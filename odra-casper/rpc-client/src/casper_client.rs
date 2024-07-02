@@ -4,8 +4,6 @@ use std::time::SystemTime;
 use std::{fs, path::PathBuf, str::from_utf8_unchecked, time::Duration};
 
 use anyhow::Context;
-use casper_execution_engine::core::engine_state::ExecutableDeployItem;
-use casper_hashing::Digest;
 use itertools::Itertools;
 use jsonrpc_lite::JsonRpc;
 use odra_core::OdraResult;
@@ -32,12 +30,15 @@ use odra_core::{
     casper_types::{
         bytesrepr::{Bytes, FromBytes, ToBytes},
         runtime_args, CLTyped, ContractHash, ContractPackageHash, ExecutionResult,
-        Key as CasperKey, PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, U512
+        Key as CasperKey, PublicKey, RuntimeArgs, SecretKey, U512,
     },
     consts::*,
     Address, CallDef, ExecutionError, OdraError
 };
 use tokio::time::sleep;
+use crate::casper_node_port::executable_deploy_item::ExecutableDeployItem;
+use crate::casper_node_port::hashing::Digest;
+use crate::casper_types_port::timestamp::{Timestamp, TimeDiff};
 
 pub mod configuration;
 mod error;
@@ -209,6 +210,7 @@ impl CasperClient {
                 "id" => Some(0u64),
             }
         };
+        let timestamp = Timestamp::from(timestamp);
         let deploy = self.new_deploy(session, self.gas, timestamp);
         let request = put_deploy_request(deploy);
         let response: PutDeployResult = self.post_request(request).await;
@@ -261,7 +263,7 @@ impl CasperClient {
     }
 
     /// Query the node for the current state root hash.
-    async fn get_state_root_hash(&self) -> Digest {
+    pub async fn get_state_root_hash(&self) -> Digest {
         let request = json!(
             {
                 "jsonrpc": "2.0",
@@ -463,7 +465,7 @@ impl CasperClient {
             module_bytes: Bytes::from(wasm_bytes),
             args
         };
-        let deploy = self.new_deploy(session, self.gas, timestamp);
+        let deploy = self.new_deploy(session, self.gas, Timestamp::from(timestamp));
         let request = put_deploy_request(deploy);
         let response: PutDeployResult = self.post_request(request).await;
         let deploy_hash = response.deploy_hash;
@@ -523,7 +525,7 @@ impl CasperClient {
             args
         };
 
-        let deploy = self.new_deploy(session, self.gas, timestamp);
+        let deploy = self.new_deploy(session, self.gas, Timestamp::from(timestamp));
         let request = put_deploy_request(deploy);
         let response: PutDeployResult = self.post_request(request).await;
         let deploy_hash = response.deploy_hash;
@@ -562,6 +564,7 @@ impl CasperClient {
             addr.to_string(),
             call_def.entry_point()
         ));
+        let timestamp = Timestamp::from(timestamp);
         let session = ExecutableDeployItem::StoredVersionedContractByHash {
             hash: *addr.as_contract_package_hash().unwrap(),
             version: None,
@@ -785,7 +788,7 @@ impl CasperClient {
                 })
             })
             .unwrap_or_else(|| {
-                log::error(format!("Couldn't get result: {:?}", json));
+                log::error(format!("Couldn't get result: {:?} - {:?}", json, request));
                 panic!("Couldn't get result")
             })
     }
@@ -806,6 +809,7 @@ impl CasperClient {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Default for CasperClient {
     fn default() -> Self {
         Self::new(CasperClientConfiguration::from_env())
