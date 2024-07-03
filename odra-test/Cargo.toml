@@ -22,7 +22,7 @@ derive_more = { version = "0.99.11", optional = true}
 missing_docs = "warn"
 
 [features]
-default = ["bdd"]
+default = []
 bdd = ["cucumber", "gherkin", "futures", "regex", "derive_more"]
 
 [[test]]
