@@ -2,20 +2,34 @@
 
 use core::panic;
 use odra_core::{
-    casper_types::{account, U256},
     contract_def::HasIdent,
     host::{HostEnv, HostRef},
     Address, Addressable
 };
-use std::{any::Any, collections::HashMap};
+use std::{any::Any, collections::HashMap, fmt::Debug};
 
-use super::{param::Account, steps::Cep18TokenHostRef};
+use super::{
+    param::Account,
+    refs::Cep18TokenHostRef
+};
 
+#[derive(cucumber::World)]
 /// OdraWorld is a struct that holds the state of the world for the tests.
 pub struct OdraWorld {
     env: HostEnv,
     container: ContractsContainer,
-    registered_users: HashMap<String, Address>
+    registered_users: HashMap<String, Address>,
+    state: HashMap<String, Box<dyn Any>>
+}
+
+impl Debug for OdraWorld {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OdraWorld")
+            .field("container", &self.container)
+            .field("registered_users", &self.registered_users)
+            .field("state", &self.state)
+            .finish()
+    }
 }
 
 impl Default for OdraWorld {
@@ -23,7 +37,8 @@ impl Default for OdraWorld {
         Self {
             env: crate::env(),
             container: ContractsContainer::default(),
-            registered_users: HashMap::new()
+            registered_users: HashMap::new(),
+            state: HashMap::new()
         }
     }
 }
@@ -47,21 +62,14 @@ impl OdraWorld {
     }
 
     /// Returns a mutable reference to a contract.
-    pub fn get_contract<T: HostRef + 'static, I: HasIdent>(&mut self) -> &mut T {
-        self.container.get(&I::ident())
+    pub fn get_contract<T: HostRef + HasIdent + 'static>(&mut self) -> &mut T {
+        self.container.get(&T::ident())
     }
 
     /// Returns a mutable reference to the Cep18TokenHostRef contract.
-    pub fn cep18<I: HasIdent>(&mut self) -> &mut Cep18TokenHostRef {
-        self.get_contract::<Cep18TokenHostRef, I>()
-    }
-
-    pub fn cep18_balance_of<I: HasIdent>(&mut self, account: Account) -> U256 {
-        let contract = match account {
-            Account::Contract(name) => self.get_contract::<Cep18TokenHostRef, I>(),
-            _ => panic!("Only contract accounts can be used for this operation")
-        };
-        contract.balance_of(&self.get_address(account))
+    pub fn cep18<I: HasIdent>(&mut self) -> Cep18TokenHostRef {
+        let address = self.get_contract_address::<I>();
+        Cep18TokenHostRef::new(address, self)
     }
 
     /// Returns the address of an account.
@@ -94,19 +102,42 @@ impl OdraWorld {
         }
     }
 
+    /// Returns the address of a contract.
+    pub fn get_contract_address<I: HasIdent>(&self) -> Address {
+        let name = format!("{}Contract", I::ident());
+        self.container.get_address(&name)
+    }
+
     /// Sets the caller of the HostEnv.
     pub fn set_caller(&mut self, account: Account) {
         let address = self.get_address(account);
         self.env.set_caller(address);
     }
 
+    /// Sets the caller of the HostEnv and returns a mutable reference to the world.
+    pub fn with_caller(&mut self, account: Account) -> &mut Self {
+        let address = self.get_address(account);
+        self.env.set_caller(address);
+        self
+    }
+
     /// Advances the block time of the HostEnv.
     pub fn advance_block_time(&mut self, seconds: u64) {
         self.env.advance_block_time(seconds);
     }
+
+    /// Sets the state of the world.
+    pub fn set_state<T: 'static>(&mut self, key: String, state: T) {
+        self.state.insert(key, Box::new(state));
+    }
+
+    /// Returns the state of the world.
+    pub fn get_state<T: 'static>(&self, key: &str) -> &T {
+        self.state.get(key).unwrap().downcast_ref::<T>().unwrap()
+    }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct ContractsContainer {
     contracts: HashMap<String, Box<dyn Any>>,
     addresses: HashMap<String, Address>

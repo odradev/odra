@@ -1,7 +1,7 @@
 //! Behavior driven development test utilities for the Odra contracts.
 
 pub mod param;
-mod steps;
+pub mod refs;
 mod sync_runner;
 mod world;
 pub use world::OdraWorld;

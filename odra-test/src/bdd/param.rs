@@ -113,6 +113,18 @@ impl Deref for Amount {
     }
 }
 
+impl PartialEq<U256> for Amount {
+    fn eq(&self, other: &U256) -> bool {
+        self.0 == *other
+    }
+}
+
+impl PartialEq<Amount> for U256 {
+    fn eq(&self, other: &Amount) -> bool {
+        *self == other.0
+    }
+}
+
 /// Time unit parameter type.
 #[derive(Debug, Parameter)]
 #[param(name = "time_unit", regex = r".*")]
@@ -182,5 +194,17 @@ impl Deref for Result {
             Result::Success => &true,
             Result::Failure => &false
         }
+    }
+}
+
+impl PartialEq<bool> for Result {
+    fn eq(&self, other: &bool) -> bool {
+        self.deref() == other
+    }
+}
+
+impl PartialEq<Result> for bool {
+    fn eq(&self, other: &Result) -> bool {
+        other == self
     }
 }
