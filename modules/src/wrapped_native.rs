@@ -28,7 +28,7 @@ impl WrappedNativeToken {
 
         let amount = self.env().attached_value();
 
-        let amount = amount.to_u256().unwrap_or_revert(&self.env());
+        let amount = amount.to_u256().unwrap_or_revert(self);
         self.erc20.mint(&caller, &amount);
 
         self.env().emit_event(Deposit {

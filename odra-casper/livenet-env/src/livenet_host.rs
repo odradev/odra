@@ -1,23 +1,21 @@
 //! Livenet implementation of HostContext for HostEnv.
-use std::sync::RwLock;
-use std::thread::sleep;
-
+use crate::livenet_contract_env::LivenetContractEnv;
 use odra_casper_rpc_client::casper_client::CasperClient;
 use odra_casper_rpc_client::log::info;
 use odra_core::callstack::{Callstack, CallstackElement};
+use odra_core::casper_types::bytesrepr::ToBytes;
+use odra_core::casper_types::Timestamp;
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::{
-    casper_types::{
-        bytesrepr::{Bytes, ToBytes},
-        PublicKey, RuntimeArgs, U512
-    },
+    casper_types::{bytesrepr::Bytes, PublicKey, RuntimeArgs, U512},
     host::HostContext,
-    Address, CallDef, ContractEnv, GasReport, OdraError
+    Address, CallDef, ContractEnv, GasReport
 };
-use odra_core::{prelude::*, EventError};
+use odra_core::{prelude::*, EventError, OdraResult};
 use odra_core::{ContractContainer, ContractRegister};
-
-use crate::livenet_contract_env::LivenetContractEnv;
+use std::sync::RwLock;
+use std::thread::sleep;
+use tokio::runtime::Runtime;
 
 /// LivenetHost struct.
 pub struct LivenetHost {
@@ -70,7 +68,9 @@ impl HostContext for LivenetHost {
     }
 
     fn balance_of(&self, address: &Address) -> U512 {
-        self.casper_client.borrow().get_balance(address)
+        let rt = Runtime::new().unwrap();
+        let client = self.casper_client.borrow();
+        rt.block_on(async { client.get_balance(address).await })
     }
 
     fn advance_block_time(&self, time_diff: u64) {
@@ -82,20 +82,22 @@ impl HostContext for LivenetHost {
     }
 
     fn block_time(&self) -> u64 {
-        self.casper_client.borrow().get_block_time()
+        let rt = Runtime::new().unwrap();
+        let client = self.casper_client.borrow();
+        rt.block_on(async { client.get_block_time().await })
     }
 
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
-        self.casper_client
-            .borrow()
-            .get_event(contract_address, index)
+        let rt = Runtime::new().unwrap();
+        let client = self.casper_client.borrow();
+        rt.block_on(async { client.get_event(contract_address, index).await })
             .map_err(|_| EventError::CouldntExtractEventData)
     }
 
     fn get_events_count(&self, contract_address: &Address) -> u32 {
-        self.casper_client
-            .borrow()
-            .events_count(contract_address)
+        let rt = Runtime::new().unwrap();
+        let client = self.casper_client.borrow();
+        rt.block_on(async { client.events_count(contract_address).await })
             .unwrap_or_default()
     }
 
@@ -104,7 +106,7 @@ impl HostContext for LivenetHost {
         address: &Address,
         call_def: CallDef,
         use_proxy: bool
-    ) -> Result<Bytes, OdraError> {
+    ) -> OdraResult<Bytes> {
         if !call_def.is_mut() {
             self.callstack
                 .borrow_mut()
@@ -120,15 +122,21 @@ impl HostContext for LivenetHost {
             self.callstack.borrow_mut().pop();
             return result;
         }
+        let timestamp = Timestamp::now();
+        let rt = Runtime::new().unwrap();
+        let client = self.casper_client.borrow_mut();
         match use_proxy {
-            true => self
-                .casper_client
-                .borrow_mut()
-                .deploy_entrypoint_call_with_proxy(*address, call_def),
+            true => rt.block_on(async {
+                client
+                    .deploy_entrypoint_call_with_proxy(*address, call_def, timestamp)
+                    .await
+            }),
             false => {
-                self.casper_client
-                    .borrow_mut()
-                    .deploy_entrypoint_call(*address, call_def);
+                rt.block_on(async {
+                    client
+                        .deploy_entrypoint_call(*address, call_def, timestamp)
+                        .await
+                })?;
                 Ok(
                     ().to_bytes()
                         .expect("Couldn't serialize (). This shouldn't happen.")
@@ -138,22 +146,35 @@ impl HostContext for LivenetHost {
         }
     }
 
-    fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller) {
-        self.contract_register
-            .write()
-            .expect("Couldn't write contract register.")
-            .add(address, ContractContainer::new(entry_points_caller));
-    }
-
     fn new_contract(
         &self,
         name: &str,
         init_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
-    ) -> Result<Address, OdraError> {
-        let address = self.casper_client.borrow_mut().deploy_wasm(name, init_args);
-        self.register_contract(address, entry_points_caller);
+    ) -> OdraResult<Address> {
+        let timestamp = Timestamp::now();
+        let address = {
+            let mut client = self.casper_client.borrow_mut();
+            let rt = Runtime::new().unwrap();
+            rt.block_on(async { client.deploy_wasm(name, init_args, timestamp).await })?
+        };
+        self.register_contract(address, name.to_string(), entry_points_caller);
         Ok(address)
+    }
+
+    fn register_contract(
+        &self,
+        address: Address,
+        contract_name: String,
+        entry_points_caller: EntryPointsCaller
+    ) {
+        self.contract_register
+            .write()
+            .expect("Couldn't write contract register.")
+            .add(address, ContractContainer::new(entry_points_caller));
+        self.casper_client
+            .borrow_mut()
+            .register_name(address, contract_name);
     }
 
     fn contract_env(&self) -> ContractEnv {
@@ -179,5 +200,12 @@ impl HostContext for LivenetHost {
 
     fn public_key(&self, address: &Address) -> PublicKey {
         self.casper_client.borrow().address_public_key(address)
+    }
+
+    fn transfer(&self, to: Address, amount: U512) -> OdraResult<()> {
+        let rt = Runtime::new().unwrap();
+        let timestamp = Timestamp::now();
+        let client = self.casper_client.borrow_mut();
+        rt.block_on(async { client.transfer(to, amount, timestamp).await })
     }
 }

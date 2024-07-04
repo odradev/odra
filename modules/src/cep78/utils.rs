@@ -9,7 +9,7 @@ use crate::cep78::{
     },
     token::TestCep78InitArgs
 };
-use odra::{args::Maybe, prelude::*, Address, Var};
+use odra::{args::Maybe, prelude::*, Address, External, Var};
 
 pub fn address_to_key(address: &Address) -> String {
     match address {
@@ -56,7 +56,7 @@ impl MockCep78TransferFilter {
 
 #[odra::module]
 struct MockCep78Operator {
-    nft_contract: Var<Address>
+    nft_contract: External<NftContractContractRef>
 }
 
 #[odra::module]
@@ -66,76 +66,46 @@ impl MockCep78Operator {
     }
 
     pub fn mint(&mut self, token_metadata: String, is_reverse_lookup_enabled: bool) {
-        let nft_contract_address = self.nft_contract.get().unwrap();
+        let addr = self.env().self_address();
         if is_reverse_lookup_enabled {
-            NftContractContractRef::new(self.env(), nft_contract_address)
-                .register_owner(Maybe::Some(self.env().self_address()));
+            self.nft_contract.register_owner(Maybe::Some(addr));
         }
 
-        NftContractContractRef::new(self.env(), nft_contract_address).mint(
-            self.env().self_address(),
-            token_metadata,
-            Maybe::None
-        )
+        self.nft_contract.mint(addr, token_metadata, Maybe::None)
     }
 
     pub fn mint_with_hash(&mut self, token_metadata: String, token_hash: String) {
-        let nft_contract_address = self.nft_contract.get().unwrap();
-        NftContractContractRef::new(self.env(), nft_contract_address).mint(
-            self.env().self_address(),
-            token_metadata,
-            Maybe::Some(token_hash)
-        )
+        let addr = self.env().self_address();
+        self.nft_contract
+            .mint(addr, token_metadata, Maybe::Some(token_hash))
     }
 
     pub fn burn(&mut self, token_id: u64) {
-        let nft_contract_address = self.nft_contract.get().unwrap();
-        NftContractContractRef::new(self.env(), nft_contract_address)
-            .burn(Maybe::Some(token_id), Maybe::None)
+        self.nft_contract.burn(Maybe::Some(token_id), Maybe::None);
     }
 
     pub fn mint_for(&mut self, token_owner: Address, token_metadata: String) {
-        let nft_contract_address = self.nft_contract.get().unwrap();
-        NftContractContractRef::new(self.env(), nft_contract_address).mint(
-            token_owner,
-            token_metadata,
-            Maybe::None
-        )
+        self.nft_contract
+            .mint(token_owner, token_metadata, Maybe::None)
     }
 
     pub fn transfer(&mut self, token_id: u64, target: Address) {
         let address = self.env().self_address();
-        let nft_contract_address = self.nft_contract.get().unwrap();
-        NftContractContractRef::new(self.env(), nft_contract_address).transfer(
-            Maybe::Some(token_id),
-            Maybe::None,
-            address,
-            target
-        )
+        self.nft_contract
+            .transfer(Maybe::Some(token_id), Maybe::None, address, target)
     }
     pub fn transfer_from(&mut self, token_id: u64, source: Address, target: Address) {
-        let nft_contract_address = self.nft_contract.get().unwrap();
-        NftContractContractRef::new(self.env(), nft_contract_address).transfer(
-            Maybe::Some(token_id),
-            Maybe::None,
-            source,
-            target
-        )
+        self.nft_contract
+            .transfer(Maybe::Some(token_id), Maybe::None, source, target)
     }
 
     pub fn approve(&mut self, spender: Address, token_id: u64) {
-        let nft_contract_address = self.nft_contract.get().unwrap();
-        NftContractContractRef::new(self.env(), nft_contract_address).approve(
-            spender,
-            Maybe::Some(token_id),
-            Maybe::None
-        )
+        self.nft_contract
+            .approve(spender, Maybe::Some(token_id), Maybe::None)
     }
 
     pub fn revoke(&mut self, token_id: u64) {
-        let nft_contract_address = self.nft_contract.get().unwrap();
-        NftContractContractRef::new(self.env(), nft_contract_address)
-            .revoke(Maybe::Some(token_id), Maybe::None)
+        self.nft_contract.revoke(Maybe::Some(token_id), Maybe::None)
     }
 }
 

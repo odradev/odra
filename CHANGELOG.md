@@ -1,7 +1,21 @@
 # Changelog
 
 Changelog for `odra`.
-## [1.0.0] - 2024-05-xx
+## [1.1.0] - 2024-06-XX
+### Added
+- Support for CSPR.cloud's auth token.
+- `new` method for `Address` to create an address from a string.
+- `transfer` function in the `HostEnv` allowing native token transfers between accounts.
+- Reverse lookup feature for `CEP78`.
+- `Addressable` trait for types that can be converted to `Address`.
+
+### Updated
+- Fix `get_block_time` in `casper-rpc-client`.
+- Calling `try_` functions in the livenet context now returns a `Result` instead of panicking.
+- Improve error messages in the livenet context.
+- Update `HostEnv` functions accept `Addressable` instead of `Address`.
+
+## [1.0.0] - 2024-05-23
 ### Added
 - Add `try_deploy` function to the `Deployer` trait, which allows deploying a contract and returning an error if the deployment fails.
 - Add `Cep18` to `odra-modules` - a standard for fungible tokens.

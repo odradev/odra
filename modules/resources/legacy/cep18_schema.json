@@ -248,7 +248,7 @@
           "is_required": true
         },
         {
-          "name": "minter_list",
+          "name": "admin_list",
           "ty": {
             "List": "Key"
           },
@@ -257,7 +257,7 @@
           "is_required": true
         },
         {
-          "name": "admin_list",
+          "name": "minter_list",
           "ty": {
             "List": "Key"
           },

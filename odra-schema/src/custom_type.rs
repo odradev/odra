@@ -6,7 +6,7 @@ use casper_types::{bytesrepr::Bytes, CLTyped, PublicKey, U128, U256, U512};
 use casper_types::{Key, URef};
 use num_traits::{Num, One, Zero};
 use odra_core::{args::Maybe, Address};
-use odra_core::{List, Mapping, Sequence, SubModule, Var};
+use odra_core::{ContractRef, External, List, Mapping, Sequence, SubModule, Var};
 
 use crate::{SchemaCustomTypes, SchemaErrors, SchemaEvents};
 
@@ -157,6 +157,7 @@ impl<T: SchemaEvents> SchemaEvents for Maybe<T> {}
 
 // I don't like it, but it's the only way to make it work
 // If it was implemented it `core`, SchemaEvents would be implemented for ModulePrimitive
+impl<M: SchemaErrors + ContractRef> SchemaErrors for External<M> {}
 impl<M: SchemaErrors> SchemaErrors for Var<M> {}
 impl<K: SchemaErrors, V> SchemaErrors for Mapping<K, V> {}
 impl<V: SchemaErrors> SchemaErrors for List<V> {}
@@ -176,6 +177,7 @@ impl<M: SchemaEvents> SchemaEvents for SubModule<M> {
 }
 // I don't like it, but it's the only way to make it work
 // If it was implemented it `core`, SchemaEvents would be implemented for ModulePrimitive
+impl<M: SchemaEvents + ContractRef> SchemaEvents for External<M> {}
 impl<M: SchemaEvents> SchemaEvents for Var<M> {}
 impl<K: SchemaEvents, V> SchemaEvents for Mapping<K, V> {}
 impl<V: SchemaEvents> SchemaEvents for List<V> {}

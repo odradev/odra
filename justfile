@@ -95,6 +95,9 @@ test-templates:
     just test-template workspace
     just test-template cep78
 
+run-nctl:
+    docker run --rm -it --name mynctl -d -p 11101:11101 -p 14101:14101 -p 18101:18101 makesoftware/casper-nctl:v155
+
 test-livenet:
     set shell := bash
     mkdir -p examples/.node-keys

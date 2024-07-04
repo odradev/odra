@@ -100,7 +100,7 @@ impl Metadata {
             if req == &Requirement::Required || req == &Requirement::Optional {
                 serde_json_wasm::from_str::<CustomMetadataSchema>(&json_schema)
                     .map_err(|_| CEP78Error::InvalidJsonSchema)
-                    .unwrap_or_revert(&self.env());
+                    .unwrap_or_revert(self);
             }
         }
         self.nft_metadata_kind.set(base_metadata_kind);
@@ -301,7 +301,7 @@ impl Metadata {
             NFTMetadataKind::CustomValidated => {
                 serde_json_wasm::from_str::<CustomMetadataSchema>(&self.json_schema.get())
                     .map_err(|_| CEP78Error::InvalidJsonSchema)
-                    .unwrap_or_revert(&self.env())
+                    .unwrap_or_revert(self)
             }
         }
     }

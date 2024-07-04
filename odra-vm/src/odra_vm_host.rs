@@ -99,7 +99,12 @@ impl HostContext for OdraVmHost {
         Ok(address)
     }
 
-    fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller) {
+    fn register_contract(
+        &self,
+        address: Address,
+        contract_name: String,
+        entry_points_caller: EntryPointsCaller
+    ) {
         panic!("register_contract is not supported for OdraVM");
     }
 
@@ -123,6 +128,13 @@ impl HostContext for OdraVmHost {
 
     fn public_key(&self, address: &Address) -> PublicKey {
         self.vm.borrow().public_key(address)
+    }
+
+    fn transfer(&self, to: Address, amount: U512) -> OdraResult<()> {
+        let caller = self.caller();
+        self.vm
+            .borrow()
+            .checked_transfer_tokens(&caller, &to, &amount)
     }
 }
 

@@ -10,6 +10,7 @@ repository = { workspace = true }
 
 [dependencies]
 odra-core = { workspace = true }
+odra-schema = { workspace = true }
 casper-execution-engine = { workspace = true }
 casper-hashing = "3.0.0"
 jsonrpc-lite = "0.6.0"
@@ -27,3 +28,5 @@ prettycli = "0.1.1"
 thiserror = "1.0.40"
 bytes = "1.5.0"
 anyhow = "1.0.86"
+humantime = "2.1.0"
+tokio = { workspace = true }

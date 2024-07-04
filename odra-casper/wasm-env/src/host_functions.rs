@@ -81,8 +81,8 @@ pub fn install_contract(
     let named_keys = initial_named_keys(events);
 
     // Create new contract.
+    let access_uref_key = format!("{}_access_token", package_hash_key);
     if is_upgradable {
-        let access_uref_key = format!("{}_access_token", package_hash_key);
         storage::new_contract(
             entry_points,
             Some(named_keys),
@@ -94,7 +94,7 @@ pub fn install_contract(
             entry_points,
             Some(named_keys),
             Some(package_hash_key.clone()),
-            None
+            Some(access_uref_key)
         );
     }
 

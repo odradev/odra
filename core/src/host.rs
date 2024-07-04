@@ -1,5 +1,6 @@
 //! A module that provides the interface for interacting with the host environment.
 
+use crate::address::Addressable;
 use crate::gas_report::GasReport;
 use crate::{
     call_result::CallResult, contract_def::HasIdent, entry_point_callback::EntryPointsCaller,
@@ -33,6 +34,12 @@ pub trait HostRef {
         T: FromBytes + EventInstance + 'static;
     /// Returns a detailed information about the last call of the contract.
     fn last_call(&self) -> ContractCallResult;
+}
+
+impl<T: HostRef> Addressable for T {
+    fn address(&self) -> &Address {
+        HostRef::address(self)
+    }
 }
 
 /// Trait for loading a contract from the host environment.
@@ -122,10 +129,11 @@ impl<R: HostRef + EntryPointsCallerProvider + HasIdent> Deployer for R {
     }
 }
 
-impl<T: EntryPointsCallerProvider + HostRef> HostRefLoader for T {
+impl<T: EntryPointsCallerProvider + HostRef + HasIdent> HostRefLoader for T {
     fn load(env: &HostEnv, address: Address) -> Self {
         let caller = T::entry_points_caller(env);
-        env.register_contract(address, caller);
+        let contract_name = T::ident();
+        env.register_contract(address, contract_name, caller);
         T::new(address, env.clone())
     }
 }
@@ -176,8 +184,13 @@ pub trait HostContext {
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address>;
 
-    /// Registers an existing contract with the specified address and entry points caller.
-    fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller);
+    /// Registers an existing contract with the specified address, name, and entry points caller.
+    fn register_contract(
+        &self,
+        address: Address,
+        contract_name: String,
+        entry_points_caller: EntryPointsCaller
+    );
 
     /// Returns the contract environment.
     fn contract_env(&self) -> ContractEnv;
@@ -193,6 +206,9 @@ pub trait HostContext {
 
     /// Returns the public key associated with the specified address.
     fn public_key(&self, address: &Address) -> PublicKey;
+
+    /// Transfers the specified amount of CSPR from the current caller to the specified address.
+    fn transfer(&self, to: Address, amount: U512) -> OdraResult<()>;
 }
 
 /// Represents the host environment for executing smart contracts.
@@ -273,15 +289,20 @@ impl HostEnv {
         Ok(deployed_contract)
     }
 
-    /// Registers an existing contract with the specified address and entry points caller.
+    /// Registers an existing contract with the specified address, name and entry points caller.
     /// Similar to `new_contract`, but skips the deployment phase.
-    pub fn register_contract(&self, address: Address, entry_points_caller: EntryPointsCaller) {
+    pub fn register_contract(
+        &self,
+        address: Address,
+        contract_name: String,
+        entry_points_caller: EntryPointsCaller
+    ) {
         let backend = self.backend.borrow();
-        backend.register_contract(address, entry_points_caller);
+        backend.register_contract(address, contract_name, entry_points_caller);
         self.deployed_contracts.borrow_mut().push(address);
         self.events_count
             .borrow_mut()
-            .insert(address, self.events_count(&address));
+            .insert(address, backend.get_events_count(&address));
     }
 
     /// Calls a contract at the specified address with the given call definition.
@@ -344,9 +365,9 @@ impl HostEnv {
     }
 
     /// Returns the CSPR balance of the specified address.
-    pub fn balance_of(&self, address: &Address) -> U512 {
+    pub fn balance_of<T: Addressable>(&self, address: &T) -> U512 {
         let backend = self.backend.borrow();
-        backend.balance_of(address)
+        backend.balance_of(address.address())
     }
 
     /// Retrieves an event with the specified index from the specified contract.
@@ -355,11 +376,12 @@ impl HostEnv {
     ///
     /// Returns the event as an instance of the specified type, or an error if the event
     /// couldn't be retrieved or parsed.
-    pub fn get_event<T: FromBytes + EventInstance>(
+    pub fn get_event<T: FromBytes + EventInstance, R: Addressable>(
         &self,
-        contract_address: &Address,
+        contract_address: &R,
         index: i32
     ) -> Result<T, EventError> {
+        let contract_address = contract_address.address();
         let backend = self.backend.borrow();
         let events_count = self.events_count(contract_address);
         let event_absolute_position = crate::utils::event_absolute_position(events_count, index)
@@ -372,24 +394,24 @@ impl HostEnv {
     }
 
     /// Retrieves a raw event (serialized) with the specified index from the specified contract.
-    pub fn get_event_bytes(
+    pub fn get_event_bytes<T: Addressable>(
         &self,
-        contract_address: &Address,
+        contract_address: &T,
         index: u32
     ) -> Result<Bytes, EventError> {
         let backend = self.backend.borrow();
-        backend.get_event(contract_address, index)
+        backend.get_event(contract_address.address(), index)
     }
 
     /// Returns the names of all events emitted by the specified contract.
-    pub fn event_names(&self, contract_address: &Address) -> Vec<String> {
+    pub fn event_names<T: Addressable>(&self, contract_address: &T) -> Vec<String> {
         let backend = self.backend.borrow();
-        let events_count = backend.get_events_count(contract_address);
+        let events_count = backend.get_events_count(contract_address.address());
 
         (0..events_count)
             .map(|event_id| {
                 backend
-                    .get_event(contract_address, event_id)
+                    .get_event(contract_address.address(), event_id)
                     .and_then(|bytes| utils::extract_event_name(&bytes))
                     .unwrap_or_else(|e| panic!("Couldn't extract event name: {:?}", e))
             })
@@ -397,8 +419,9 @@ impl HostEnv {
     }
 
     /// Returns all events emitted by the specified contract.
-    pub fn events(&self, contract_address: &Address) -> Vec<Bytes> {
+    pub fn events<T: Addressable>(&self, contract_address: &T) -> Vec<Bytes> {
         let backend = self.backend.borrow();
+        let contract_address = contract_address.address();
         let events_count = backend.get_events_count(contract_address);
         (0..events_count)
             .map(|event_id| {
@@ -415,17 +438,18 @@ impl HostEnv {
     }
 
     /// Returns the number of events emitted by the specified contract.
-    pub fn events_count(&self, contract_address: &Address) -> u32 {
+    pub fn events_count<T: Addressable>(&self, contract_address: &T) -> u32 {
         let backend = self.backend.borrow();
-        backend.get_events_count(contract_address)
+        backend.get_events_count(contract_address.address())
     }
 
     /// Returns true if the specified event was emitted by the specified contract.
-    pub fn emitted_event<T: ToBytes + EventInstance>(
+    pub fn emitted_event<T: ToBytes + EventInstance, R: Addressable>(
         &self,
-        contract_address: &Address,
+        contract_address: &R,
         event: &T
     ) -> bool {
+        let contract_address = contract_address.address();
         let events_count = self.events_count(contract_address);
         let event_bytes = Bytes::from(
             event
@@ -446,7 +470,11 @@ impl HostEnv {
     }
 
     /// Returns true if an event with the specified name was emitted by the specified contract.
-    pub fn emitted<T: AsRef<str>>(&self, contract_address: &Address, event_name: T) -> bool {
+    pub fn emitted<T: AsRef<str>, R: Addressable>(
+        &self,
+        contract_address: &R,
+        event_name: T
+    ) -> bool {
         let events_count = self.events_count(contract_address);
         (0..events_count)
             .map(|event_id| {
@@ -454,7 +482,9 @@ impl HostEnv {
                     .unwrap_or_else(|e| {
                         panic!(
                             "Couldn't get event at address {:?} with id {}: {:?}",
-                            &contract_address, event_id, e
+                            contract_address.address(),
+                            event_id,
+                            e
                         )
                     })
             })
@@ -498,6 +528,17 @@ impl HostEnv {
         let backend = self.backend.borrow();
         backend.set_gas(gas)
     }
+
+    /// Transfers the specified amount of CSPR from the current caller to the specified address.
+    pub fn transfer(&self, to: Address, amount: U512) -> OdraResult<()> {
+        if to.is_contract() {
+            return Err(OdraError::ExecutionError(
+                ExecutionError::TransferToContract
+            ));
+        }
+        let backend = self.backend.borrow();
+        backend.transfer(to, amount)
+    }
 }
 
 #[cfg(test)]
@@ -506,7 +547,7 @@ mod test {
 
     use super::*;
     use casper_event_standard::Event;
-    use casper_types::account::AccountHash;
+    use casper_types::{account::AccountHash, ContractPackageHash};
     use mockall::{mock, predicate};
     use std::sync::Mutex;
 
@@ -600,11 +641,12 @@ mod test {
 
     #[test]
     fn test_load_ref() {
-        // MockTestRef::ident() and  MockEv::validate() are static and can't be safely used
+        // MockTestRef::ident(), MockEv::validate(), MockTestRef::entry_points_caller() are static and can't be safely used
         // from multiple tests at the same time. Should be to protected with a Mutex. Each function has
         // a separate Mutex.
         // https://github.com/asomers/mockall/blob/master/mockall/tests/mock_struct_with_static_method.rs
         let _e = EPC_MTX.lock();
+        let _i = IDENT_MTX.lock();
         let _v = VALIDATE_MTX.lock();
 
         // stubs
@@ -614,9 +656,11 @@ mod test {
         epc_ctx
             .expect()
             .returning(|h| EntryPointsCaller::new(h.clone(), vec![], |_, _| Ok(Bytes::default())));
+        let indent_ctx = MockTestRef::ident_context();
+        indent_ctx.expect().returning(|| "TestRef".to_string());
 
         let mut ctx = MockHostContext::new();
-        ctx.expect_register_contract().returning(|_, _| ());
+        ctx.expect_register_contract().returning(|_, _, _| ());
         ctx.expect_get_events_count().returning(|_| 0);
 
         // check if TestRef::new() is called exactly once
@@ -651,6 +695,57 @@ mod test {
     }
 
     #[test]
+    fn test_successful_transfer_to_account() {
+        // Given a host context that successfully transfers tokens.
+        let mut ctx = MockHostContext::new();
+        ctx.expect_transfer().returning(|_, _| Ok(()));
+        let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+
+        let addr = Address::Account(AccountHash::new([0; 32]));
+        // When transfer 100 tokens to an account.
+        let result = env.transfer(addr, 100.into());
+        // Then the transfer should be successful.
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_failing_transfer_to_account() {
+        // Given a host context that fails to transfer tokens.
+        let mut ctx = MockHostContext::new();
+        ctx.expect_transfer()
+            .returning(|_, _| Err(OdraError::ExecutionError(ExecutionError::UnwrapError)));
+        let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+
+        let addr = Address::Account(AccountHash::new([0; 32]));
+        // When transfer 100 tokens to an account.
+        let result = env.transfer(addr, 100.into());
+        // Then the transfer should fail.
+        assert_eq!(
+            result.err(),
+            Some(OdraError::ExecutionError(ExecutionError::UnwrapError))
+        );
+    }
+
+    #[test]
+    fn test_transfer_to_contract() {
+        // Given a host context that successfully transfers tokens.
+        let mut ctx = MockHostContext::new();
+        ctx.expect_transfer().returning(|_, _| Ok(()));
+        let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+
+        let addr = Address::Contract(ContractPackageHash::new([0; 32]));
+        // When transfer 100 tokens to a contract.
+        let result = env.transfer(addr, 100.into());
+        // Then the transfer should fail.
+        assert_eq!(
+            result,
+            Err(OdraError::ExecutionError(
+                ExecutionError::TransferToContract
+            ))
+        );
+    }
+
+    #[test]
     fn test_get_event() {
         let addr = Address::Account(AccountHash::new([0; 32]));
 
@@ -668,16 +763,22 @@ mod test {
 
         let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
 
-        assert_eq!(env.get_event::<TestEv>(&addr, 1), Ok(TestEv {}));
-        assert_eq!(env.get_event::<TestEv>(&addr, -1), Ok(TestEv {}));
-        assert_eq!(env.get_event::<TestEv>(&addr, 0), Err(EventError::Parsing));
-        assert_eq!(env.get_event::<TestEv>(&addr, -2), Err(EventError::Parsing));
+        assert_eq!(env.get_event(&addr, 1), Ok(TestEv {}));
+        assert_eq!(env.get_event(&addr, -1), Ok(TestEv {}));
         assert_eq!(
-            env.get_event::<TestEv>(&addr, 2),
+            env.get_event::<TestEv, _>(&addr, 0),
+            Err(EventError::Parsing)
+        );
+        assert_eq!(
+            env.get_event::<TestEv, _>(&addr, -2),
+            Err(EventError::Parsing)
+        );
+        assert_eq!(
+            env.get_event::<TestEv, _>(&addr, 2),
             Err(EventError::IndexOutOfBounds)
         );
         assert_eq!(
-            env.get_event::<TestEv>(&addr, -3),
+            env.get_event::<TestEv, _>(&addr, -3),
             Err(EventError::IndexOutOfBounds)
         );
     }
@@ -727,7 +828,7 @@ mod test {
     }
 
     #[test]
-    fn test_emited() {
+    fn test_emitted() {
         let addr = Address::Account(AccountHash::new([0; 32]));
         let mut ctx = MockHostContext::new();
 

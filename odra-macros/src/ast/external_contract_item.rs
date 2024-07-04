@@ -76,6 +76,14 @@ mod test {
                 }
             }
 
+            #[automatically_derived]
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::SchemaErrors for TokenContractRef {}
+
+            #[automatically_derived]
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::SchemaEvents for TokenContractRef {}
+
             #[cfg(not(target_arch = "wasm32"))]
             mod __token_test_parts {
                 use super::*;
@@ -117,7 +125,7 @@ mod test {
                     where
                         T: odra::casper_types::bytesrepr::FromBytes + odra::casper_event_standard::EventInstance,
                     {
-                        self.env.get_event(&self.address, index)
+                        self.env.get_event(self, index)
                     }
 
                     fn last_call(&self) -> odra::ContractCallResult {

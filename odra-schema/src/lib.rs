@@ -3,7 +3,7 @@
 //! It includes traits for defining entrypoints, events, custom types, and errors, as well as functions
 //! for creating various schema elements such as arguments, entrypoints, struct members, enum variants, custom types,
 //! events, and errors.
-use std::{collections::BTreeSet, env};
+use std::{collections::BTreeSet, env, path::PathBuf};
 
 pub use casper_contract_schema;
 use casper_contract_schema::{
@@ -217,6 +217,27 @@ pub fn schema<T: SchemaEntrypoints + SchemaEvents + SchemaCustomTypes + SchemaEr
         homepage,
         errors
     }
+}
+
+/// Finds the path to the schema file for the given contract name.
+pub fn find_schema_file_path(
+    contract_name: &str,
+    root_path: PathBuf
+) -> Result<PathBuf, &'static str> {
+    let mut path = root_path
+        .join(format!("{}_schema.json", contract_name.to_lowercase()))
+        .with_extension("json");
+
+    let mut checked_paths = vec![];
+    for _ in 0..2 {
+        if path.exists() && path.is_file() {
+            return Ok(path);
+        } else {
+            checked_paths.push(path.clone());
+            path = path.parent().unwrap().to_path_buf();
+        }
+    }
+    Err("Schema not found")
 }
 
 fn call_method(

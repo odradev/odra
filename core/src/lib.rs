@@ -20,6 +20,7 @@ mod contract_register;
 pub mod crypto;
 pub mod entry_point_callback;
 mod error;
+mod external;
 mod gas_report;
 pub mod host;
 mod list;
@@ -33,7 +34,7 @@ mod unwrap_or_revert;
 pub mod utils;
 mod var;
 
-pub use address::Address;
+pub use address::{Address, Addressable};
 pub use call_def::CallDef;
 pub use call_result::ContractCallResult;
 pub use casper_event_standard;
@@ -46,6 +47,7 @@ pub use error::{
 };
 pub use unwrap_or_revert::UnwrapOrRevert;
 
+pub use external::External;
 pub use gas_report::*;
 pub use list::{List, ListIter};
 pub use mapping::Mapping;

@@ -1,6 +1,4 @@
 //! Deploys a CEP-18 contract and transfers some tokens to another address.
-use std::str::FromStr;
-
 use odra::casper_types::U256;
 use odra::host::{Deployer, HostEnv, HostRefLoader};
 use odra::Address;
@@ -11,8 +9,9 @@ fn main() {
     let env = odra_casper_livenet_env::env();
 
     let owner = env.caller();
-    let recipient = "hash-2c4a6ce0da5d175e9638ec0830e01dd6cf5f4b1fbb0724f7d2d9de12b1e0f840";
-    let recipient = Address::from_str(recipient).unwrap();
+    let recipient =
+        Address::new("hash-2c4a6ce0da5d175e9638ec0830e01dd6cf5f4b1fbb0724f7d2d9de12b1e0f840")
+            .unwrap();
 
     // Deploy new contract.
     // let mut token = deploy_cep18(&env);
@@ -38,8 +37,9 @@ fn main() {
 
 /// Loads a CEP-18 contract.
 fn _load_cep18(env: &HostEnv) -> Cep18HostRef {
-    let address = "hash-568fd396922fbbc8f8499f9b888795b2155aa60a68ef9cc38752b2771693a9ce";
-    let address = Address::from_str(address).unwrap();
+    let address =
+        Address::new("hash-568fd396922fbbc8f8499f9b888795b2155aa60a68ef9cc38752b2771693a9ce")
+            .unwrap();
     Cep18HostRef::load(env, address)
 }
 

@@ -22,13 +22,17 @@ impl OdraError {
     pub fn code(&self) -> u16 {
         match self {
             OdraError::ExecutionError(e) => e.code(),
-            OdraError::VmError(_e) => 123
+            OdraError::VmError(_e) => 0
         }
     }
 
     /// Creates a new user error with a given code.
     pub fn user(code: u16) -> Self {
-        OdraError::ExecutionError(ExecutionError::User(code))
+        if code >= ExecutionError::UserErrorTooHigh.code() {
+            ExecutionError::UserErrorTooHigh.into()
+        } else {
+            ExecutionError::User(code).into()
+        }
     }
 }
 
@@ -79,8 +83,10 @@ impl From<casper_types::bytesrepr::Error> for ExecutionError {
 #[repr(u16)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ExecutionError {
-    /// Unwrap error
+    /// Unwrap error.
     UnwrapError = 1,
+    /// Something unexpected happened.
+    UnexpectedError = 2,
     /// Addition overflow
     AdditionOverflow = 100,
     /// Subtraction overflow
@@ -127,10 +133,16 @@ pub enum ExecutionError {
     EmptyDictionaryName = 121,
     /// Calling a contract with missing entrypoint arguments.
     MissingArg = 122,
+    /// Reading the address from the storage failed.
+    MissingAddress = 123,
+    /// Writing the address to the storage failed.
+    AddressAlreadySet = 124,
+    /// Out of gas error
+    OutOfGas = 125,
     /// Maximum code for user errors
-    MaxUserError = 32767,
+    MaxUserError = 64535,
     /// User error too high. The code should be in range 0..32767.
-    UserErrorTooHigh = 32768,
+    UserErrorTooHigh = 64536,
     /// User error
     User(u16)
 }
@@ -141,7 +153,7 @@ impl ExecutionError {
         unsafe {
             match self {
                 ExecutionError::User(code) => *code,
-                ExecutionError::UserErrorTooHigh => 32768,
+                ExecutionError::UserErrorTooHigh => 64536,
                 _ => ExecutionError::UserErrorTooHigh.code() + *(self as *const Self as *const u16)
             }
         }
