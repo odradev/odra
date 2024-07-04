@@ -135,3 +135,7 @@ benchmark:
 
 evaluate-benchmark: benchmark
     cd benchmark && cargo run --bin evaluate_benchmark gas_report.json base/gas_report.json
+
+run-client:
+    cd modules/client && wasm-pack build
+    cd modules/client/www && npm run start

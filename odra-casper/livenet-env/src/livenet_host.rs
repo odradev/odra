@@ -1,6 +1,7 @@
 //! Livenet implementation of HostContext for HostEnv.
 use crate::livenet_contract_env::LivenetContractEnv;
 use odra_casper_rpc_client::casper_client::CasperClient;
+use odra_casper_rpc_client::casper_types_port::timestamp::Timestamp;
 use odra_casper_rpc_client::log::info;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::bytesrepr::ToBytes;
@@ -15,7 +16,6 @@ use odra_core::{ContractContainer, ContractRegister};
 use std::sync::RwLock;
 use std::thread::sleep;
 use tokio::runtime::Runtime;
-use odra_casper_rpc_client::casper_types_port::timestamp::Timestamp;
 
 /// LivenetHost struct.
 pub struct LivenetHost {

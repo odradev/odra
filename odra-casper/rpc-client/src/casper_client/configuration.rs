@@ -4,6 +4,7 @@ use crate::casper_client::{
     ENV_NODE_ADDRESS, ENV_SECRET_KEY
 };
 use odra_core::casper_types::SecretKey;
+#[cfg(feature = "std")]
 use std::path::PathBuf;
 
 #[derive(Debug)]
@@ -83,4 +84,3 @@ impl CasperClientConfiguration {
         std::env::var(name).ok()
     }
 }
-

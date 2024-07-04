@@ -13,6 +13,7 @@ repository.workspace = true
 [dependencies]
 odra-casper-rpc-client = { path = "../rpc-client" }
 odra-schema = { path = "../../odra-schema" }
+odra-core = { path = "../../core" }
 console_error_panic_hook = "0.1.7"
 wasm-bindgen = "0.2.84"
 wasm-bindgen-futures = "0.4.37"

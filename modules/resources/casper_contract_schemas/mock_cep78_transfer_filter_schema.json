@@ -8,8 +8,8 @@
   ],
   "repository": "https://github.com/odradev/odra",
   "homepage": null,
-  "contract_name": "MockTransferFilterContract",
-  "contract_version": "1.0.0",
+  "contract_name": "MockCep78TransferFilter",
+  "contract_version": "1.1.0",
   "types": [],
   "errors": [],
   "entry_points": [
@@ -41,7 +41,7 @@
   ],
   "events": [],
   "call": {
-    "wasm_file_name": "MockTransferFilterContract.wasm",
+    "wasm_file_name": "MockCep78TransferFilter.wasm",
     "description": null,
     "arguments": [
       {

@@ -8,8 +8,8 @@
   ],
   "repository": "https://github.com/odradev/odra",
   "homepage": null,
-  "contract_name": "MockContract",
-  "contract_version": "1.0.0",
+  "contract_name": "MockCep78Operator",
+  "contract_version": "1.1.0",
   "types": [],
   "errors": [],
   "entry_points": [
@@ -47,13 +47,7 @@
           "optional": false
         }
       ],
-      "return_ty": {
-        "Tuple3": [
-          "String",
-          "Key",
-          "String"
-        ]
-      },
+      "return_ty": "Unit",
       "is_contract_context": true,
       "access": "public"
     },
@@ -75,13 +69,7 @@
           "optional": false
         }
       ],
-      "return_ty": {
-        "Tuple3": [
-          "String",
-          "Key",
-          "String"
-        ]
-      },
+      "return_ty": "Unit",
       "is_contract_context": true,
       "access": "public"
     },
@@ -119,13 +107,7 @@
           "optional": false
         }
       ],
-      "return_ty": {
-        "Tuple3": [
-          "String",
-          "Key",
-          "String"
-        ]
-      },
+      "return_ty": "Unit",
       "is_contract_context": true,
       "access": "public"
     },
@@ -147,12 +129,7 @@
           "optional": false
         }
       ],
-      "return_ty": {
-        "Tuple2": [
-          "String",
-          "Key"
-        ]
-      },
+      "return_ty": "Unit",
       "is_contract_context": true,
       "access": "public"
     },
@@ -180,12 +157,7 @@
           "optional": false
         }
       ],
-      "return_ty": {
-        "Tuple2": [
-          "String",
-          "Key"
-        ]
-      },
+      "return_ty": "Unit",
       "is_contract_context": true,
       "access": "public"
     },
@@ -230,7 +202,7 @@
   ],
   "events": [],
   "call": {
-    "wasm_file_name": "MockContract.wasm",
+    "wasm_file_name": "MockCep78Operator.wasm",
     "description": null,
     "arguments": [
       {

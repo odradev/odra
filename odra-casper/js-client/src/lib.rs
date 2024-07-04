@@ -1,9 +1,9 @@
 mod casper_wallet;
-mod client;
+pub mod client;
 mod deploy_util;
 mod imports;
 mod odra_client;
-mod schemas;
+pub mod schemas;
 mod utils;
 mod wasm;
 

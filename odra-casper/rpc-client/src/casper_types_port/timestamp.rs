@@ -1,22 +1,21 @@
 extern crate alloc;
 use alloc::vec::Vec;
+use datasize::DataSize;
+use humantime::{DurationError, TimestampError};
+use odra_core::casper_types::bytesrepr;
+use odra_core::casper_types::bytesrepr::{FromBytes, ToBytes};
+use schemars::JsonSchema;
+use serde::{de::Error as SerdeError, Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, AddAssign, Div, Mul, Rem, Shl, Shr, Sub, SubAssign};
 use std::str::FromStr;
 use std::time::{Duration, SystemTime};
-use datasize::DataSize;
-use humantime::{DurationError, TimestampError};
-use schemars::JsonSchema;
-use serde::{de::Error as SerdeError, Deserialize, Deserializer, Serialize, Serializer};
-use odra_core::casper_types::bytesrepr;
-use odra_core::casper_types::bytesrepr::{FromBytes, ToBytes};
 
 /// A timestamp type, representing a concrete moment in time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, DataSize, JsonSchema)]
 #[schemars(with = "String", description = "Timestamp formatted as per RFC 3339")]
 pub struct Timestamp(u64);
-
 
 impl Timestamp {
     /// The maximum value a timestamp can have.
@@ -74,7 +73,7 @@ impl Display for Timestamp {
         match SystemTime::UNIX_EPOCH.checked_add(Duration::from_millis(self.0)) {
             Some(system_time) => write!(f, "{}", humantime::format_rfc3339_millis(system_time))
                 .or_else(|e| write!(f, "Invalid timestamp: {}: {}", e, self.0)),
-            None => write!(f, "invalid Timestamp: {} ms after the Unix epoch", self.0),
+            None => write!(f, "invalid Timestamp: {} ms after the Unix epoch", self.0)
         }
     }
 }
@@ -125,7 +124,7 @@ impl Rem<TimeDiff> for Timestamp {
 
 impl<T> Shl<T> for Timestamp
 where
-    u64: Shl<T, Output = u64>,
+    u64: Shl<T, Output = u64>
 {
     type Output = Timestamp;
 
@@ -136,7 +135,7 @@ where
 
 impl<T> Shr<T> for Timestamp
 where
-    u64: Shr<T, Output = u64>,
+    u64: Shr<T, Output = u64>
 {
     type Output = Timestamp;
 
@@ -190,7 +189,9 @@ impl From<u64> for Timestamp {
 }
 
 /// A time difference between two timestamps.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, DataSize, JsonSchema)]
+#[derive(
+    Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, DataSize, JsonSchema,
+)]
 #[schemars(with = "String", description = "Human-readable duration.")]
 pub struct TimeDiff(u64);
 
@@ -355,7 +356,7 @@ pub mod serde_option_time_diff {
     /// Serializes an `Option<TimeDiff>`, using `0` if the value is `None`.
     pub fn serialize<S: Serializer>(
         maybe_td: &Option<TimeDiff>,
-        serializer: S,
+        serializer: S
     ) -> Result<S::Ok, S::Error> {
         maybe_td
             .unwrap_or_else(|| TimeDiff::from_millis(0))
@@ -364,7 +365,7 @@ pub mod serde_option_time_diff {
 
     /// Deserializes an `Option<TimeDiff>`, returning `None` if the value is `0`.
     pub fn deserialize<'de, D: Deserializer<'de>>(
-        deserializer: D,
+        deserializer: D
     ) -> Result<Option<TimeDiff>, D::Error> {
         let td = TimeDiff::deserialize(deserializer)?;
         if td.0 == 0 {

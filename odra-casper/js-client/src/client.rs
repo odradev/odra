@@ -4,15 +4,16 @@ use odra_casper_rpc_client::casper_client::CasperClient;
 use wasm_bindgen::prelude::wasm_bindgen;
 
 #[wasm_bindgen]
-struct JsClient {
-    casper_client: CasperClient
+pub struct OdraClient {
+    casper_client: CasperClient,
+    _public_key: String
 }
 
-impl JsClient {
+#[wasm_bindgen]
+impl OdraClient {
     pub async fn new(node_address: String, chain_name: String) -> Self {
         let cwp = CasperWalletProvider();
         cwp.requestConnection().await;
-        let public_key = cwp.getActivePublicKey().await;
         let client_configuration = CasperClientConfiguration {
             node_address,
             rpc_id: "1.0".to_string(),
@@ -23,11 +24,16 @@ impl JsClient {
         };
         let client = CasperClient::new(client_configuration);
         Self {
-            casper_client: client
+            casper_client: client,
+            _public_key: cwp.getActivePublicKey().await.as_string().unwrap()
         }
     }
 
     pub async fn get_state_root_hash(&self) -> String {
         self.casper_client.get_state_root_hash().await.to_string()
+    }
+
+    pub fn greet() -> String {
+        "Hello, Odra!".to_string()
     }
 }

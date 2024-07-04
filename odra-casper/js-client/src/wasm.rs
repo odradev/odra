@@ -1,16 +1,8 @@
-use super::utils::ToSnakeCase;
-use crate::casper_wallet::CasperWalletProvider;
-use crate::schemas::{assert_contract_exists_in_schema, load_schemas};
-use gloo_utils::format::JsValueSerdeExt;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use wasm_bindgen::JsValue;
 
-// #[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
-// struct WrappedDeploy {
-//     deploy: Deploy
-// }
+use super::utils::ToSnakeCase;
+use crate::schemas::Contracts;
+use wasm_bindgen::JsValue;
 
 pub fn load_wasm_bytes(contract_name: &str, contract_bins: &[u8]) -> Result<Vec<u8>, String> {
     let bins = load_bins(contract_bins);
@@ -35,9 +27,9 @@ pub async fn deploy_wasm(
     contract_schemas: &str,
     contract_bins: &[u8]
 ) -> Result<JsValue, String> {
-    let schemas = load_schemas(contract_schemas)?;
-    assert_contract_exists_in_schema(contract_name, schemas)?;
-    let wasm_bytes = load_wasm_bytes(contract_name, contract_bins)?;
+    let schemas = Contracts::load_schemas(contract_schemas)?;
+    Contracts::assert_contract_exists_in_schema(contract_name, schemas)?;
+    let _wasm_bytes = load_wasm_bytes(contract_name, contract_bins)?;
     // let mut args = CallArgs::new();
     // build_args(&mut args, contract_name, None);
     // let session_bytes = ExecutableDeployItem::ModuleBytes {
@@ -75,40 +67,4 @@ fn load_bins(contract_bins: &[u8]) -> HashMap<String, Vec<u8>> {
         Err(_) => panic!("Error parsing contract bins")
     };
     bins
-}
-
-use chrono::{DateTime, NaiveDateTime, Utc};
-use regex::Regex;
-
-fn fix_timestamp_and_ttl(json: String) -> String {
-    fix_timestamp(fix_ttl(json))
-}
-
-fn fix_timestamp(json: String) -> String {
-    let timestamp_regex = Regex::new(r#""timestamp":(\d+)"#).unwrap();
-
-    timestamp_regex
-        .replace_all(&json, |caps: &regex::Captures| {
-            let timestamp = caps.get(1).unwrap().as_str().parse::<i64>().unwrap() / 1000;
-            let timestamp = DateTime::<Utc>::from_utc(
-                NaiveDateTime::from_timestamp_millis(timestamp).unwrap(),
-                Utc
-            );
-
-            format!(r#""timestamp": "{}""#, timestamp.to_rfc3339())
-        })
-        .to_string()
-}
-
-fn fix_ttl(json: String) -> String {
-    let timestamp_regex = Regex::new(r#""ttl":(\d+)"#).unwrap();
-
-    timestamp_regex
-        .replace_all(&json, |caps: &regex::Captures| {
-            let ttl = caps.get(2).unwrap().as_str().parse::<i64>().unwrap() / 60000;
-            let ttl = format!("{}m", ttl);
-
-            format!(r#""ttl": "{}""#, ttl)
-        })
-        .to_string()
 }

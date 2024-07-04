@@ -1,9 +1,9 @@
+use crate::casper_node_port::hashing::Digest;
+use crate::casper_types_port::timestamp::TimeDiff;
 use datasize::DataSize;
 use odra_core::casper_types::U512;
 use serde::Serialize;
 use thiserror::Error;
-use crate::casper_node_port::hashing::Digest;
-use crate::casper_types_port::timestamp::TimeDiff;
 
 /// A representation of the way in which a deploy failed validation checks.
 #[allow(dead_code)]

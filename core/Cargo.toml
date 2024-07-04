@@ -18,7 +18,7 @@ serde_json = { workspace = true, default-features = false, features = ["alloc"] 
 casper-types = { workspace = true, features = ["datasize", "schemars", "json-schema", "std"]}
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-casper-types = { workspace = true, features = ["datasize", "schemars", "json-schema"]}
+casper-types = { workspace = true, features = ["datasize", "json-schema"]}
 
 [dev-dependencies]
 mockall = { workspace = true }

@@ -11,22 +11,12 @@ members = []
 console_error_panic_hook = "0.1.7"
 wasm-bindgen = "0.2.84"
 wasm-bindgen-futures = "0.4.37"
-odra-modules = { path = ".." }
-
-[dependencies.odra-casper-livenet]
-path = "../../odra-casper/livenet"
-
-[dependencies.casper-types]
-version = "3.0.0"
-
-[dependencies.odra-casper-types]
-path = "../../odra-casper/types"
-
-[dependencies.hex]
-version = "0.4.3"
+odra-casper-js-client = { path = "../../odra-casper/js-client" }
 
 [build-dependencies]
 serde_json = "1.0.103"
+odra-schema = { path = "../../odra-schema" }
+odra-casper-js-client = { path = "../../odra-casper/js-client" }
 
 [lib]
 crate-type = ["cdylib", "rlib"]

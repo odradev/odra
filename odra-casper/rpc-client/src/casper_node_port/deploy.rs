@@ -2,6 +2,14 @@
 
 use std::{cell::OnceCell, cmp, collections::BTreeSet, hash};
 
+use super::{
+    approval::Approval, deploy_hash::DeployHash, deploy_header::DeployHeader,
+    error::DeployConfigurationFailure, utils::ds
+};
+use crate::casper_node_port::deploy_item::DeployItem;
+use crate::casper_node_port::executable_deploy_item::ExecutableDeployItem;
+use crate::casper_node_port::hashing::Digest;
+use crate::casper_types_port::timestamp::{TimeDiff, Timestamp};
 use datasize::DataSize;
 use itertools::Itertools;
 use odra_core::casper_types::{
@@ -11,14 +19,6 @@ use odra_core::casper_types::{
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use crate::casper_node_port::executable_deploy_item::ExecutableDeployItem;
-use crate::casper_node_port::deploy_item::DeployItem;
-use crate::casper_node_port::hashing::Digest;
-use crate::casper_types_port::timestamp::{TimeDiff, Timestamp};
-use super::{
-    approval::Approval, deploy_hash::DeployHash, deploy_header::DeployHeader,
-    error::DeployConfigurationFailure, utils::ds
-};
 
 /// A deploy; an item containing a smart contract along with the requester's signature(s).
 #[derive(Clone, DataSize, Eq, Serialize, Deserialize, Debug, JsonSchema)]
