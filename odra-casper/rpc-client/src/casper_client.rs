@@ -345,10 +345,14 @@ impl CasperClient {
                 "id": 1,
             }
         );
-        let result: GetDictionaryItemResult = self.post_request(request).await;
-        match result.stored_value {
-            CLValue(value) => Ok(value.inner_bytes().as_slice().into()),
-            _ => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
+        let result: Option<GetDictionaryItemResult> = self.safe_post_request(request).await;
+        if let Some(result) = result {
+            match result.stored_value {
+                CLValue(value) => Ok(value.inner_bytes().as_slice().into()),
+                _ => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
+            }
+        } else {
+            Err(OdraError::ExecutionError(ExecutionError::KeyNotFound))
         }
     }
 
@@ -757,7 +761,7 @@ impl CasperClient {
         )
     }
 
-    async fn post_request<T: DeserializeOwned>(&self, request: Value) -> T {
+    async fn safe_post_request<T: DeserializeOwned>(&self, request: Value) -> Option<T> {
         let client = reqwest::Client::new();
 
         let mut client = client.post(self.node_address_rpc());
@@ -784,6 +788,11 @@ impl CasperClient {
                     panic!("Couldn't parse result")
                 })
             })
+    }
+
+    async fn post_request<T: DeserializeOwned>(&self, request: Value) -> T {
+        self.safe_post_request(request)
+            .await
             .unwrap_or_else(|| {
                 log::error(format!("Couldn't get result: {:?}", json));
                 panic!("Couldn't get result")
