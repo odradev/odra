@@ -345,14 +345,16 @@ impl CasperClient {
                 "id": 1,
             }
         );
-        let result: Option<GetDictionaryItemResult> = self.safe_post_request(request).await;
-        if let Some(result) = result {
-            match result.stored_value {
-                CLValue(value) => Ok(value.inner_bytes().as_slice().into()),
-                _ => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
-            }
-        } else {
-            Err(OdraError::ExecutionError(ExecutionError::KeyNotFound))
+        let result = self
+            .safe_post_request(request)
+            .await
+            .get_result()
+            .map(|result| serde_json::from_value::<GetDictionaryItemResult>(result.clone()).ok())
+            .flatten()
+            .ok_or_else(|| OdraError::ExecutionError(ExecutionError::KeyNotFound))?;
+        match result.stored_value {
+            CLValue(value) => Ok(value.inner_bytes().as_slice().into()),
+            _ => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
         }
     }
 
@@ -761,7 +763,7 @@ impl CasperClient {
         )
     }
 
-    async fn safe_post_request<T: DeserializeOwned>(&self, request: Value) -> Option<T> {
+    async fn safe_post_request(&self, request: Value) -> JsonRpc {
         let client = reqwest::Client::new();
 
         let mut client = client.post(self.node_address_rpc());
@@ -781,6 +783,11 @@ impl CasperClient {
             log::error(format!("Couldn't parse response: {:?}", e));
             panic!("Couldn't parse response")
         });
+        json
+    }
+
+    async fn post_request<T: DeserializeOwned>(&self, request: Value) -> T {
+        let json = self.safe_post_request(request).await;
         json.get_result()
             .map(|result| {
                 serde_json::from_value::<T>(result.clone()).unwrap_or_else(|e| {
@@ -788,11 +795,6 @@ impl CasperClient {
                     panic!("Couldn't parse result")
                 })
             })
-    }
-
-    async fn post_request<T: DeserializeOwned>(&self, request: Value) -> T {
-        self.safe_post_request(request)
-            .await
             .unwrap_or_else(|| {
                 log::error(format!("Couldn't get result: {:?}", json));
                 panic!("Couldn't get result")
