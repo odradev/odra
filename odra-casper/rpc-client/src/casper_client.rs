@@ -649,7 +649,13 @@ impl CasperClient {
                 "id": 1,
             }
         );
-        let result: Option<GetDictionaryItemResult> = self.post_request(request).await;
+
+        let result = self
+            .safe_post_request(request)
+            .await
+            .get_result()
+            .map(|result| serde_json::from_value::<GetDictionaryItemResult>(result.clone()).ok())
+            .flatten();
         result
             .context("Couldn't get dictionary item")
             .and_then(|result| {
