@@ -226,7 +226,7 @@ impl Metadata {
 
                 for (property_name, property_type) in token_schema.properties.iter() {
                     if property_type.required
-                        && custom_metadata.attributes.get(property_name).is_none()
+                        && !custom_metadata.attributes.contains_key(property_name)
                     {
                         self.env().revert(CEP78Error::InvalidCustomMetadata)
                     }
