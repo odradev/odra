@@ -10,8 +10,8 @@ keywords = ["wasm", "webassembly", "blockchain"]
 
 [dependencies]
 odra = { path = "../odra", version = "1.1.0", default-features = false }
-serde = { version = "1.0.80", default-features = false }
-serde_json = { version = "1.0.59", default-features = false }
+serde = { version = "=1.0.195", default-features = false }
+serde_json = { version = "=1.0.113", default-features = false }
 serde-json-wasm = { version = "1.0.1", default-features = false }
 base16 = { version = "0.2.1", default-features = false }
 base64 = { version = "0.22.0", default-features = false, features = ["alloc"] }
