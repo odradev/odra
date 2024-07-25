@@ -14,8 +14,8 @@ odra-schema = { workspace = true }
 casper-execution-engine = { workspace = true }
 casper-hashing = "3.0.0"
 jsonrpc-lite = "0.6.0"
-serde_json = { version = "=1.0.113", features = ["raw_value"] }
-serde = { workspace = true }
+serde_json = { version = "1.0", features = ["raw_value"] }
+serde = "1.0"
 log = "0.4.20"
 hex = "0.4.3"
 reqwest = { version = "0.11.16", features = ["blocking", "json"] }
