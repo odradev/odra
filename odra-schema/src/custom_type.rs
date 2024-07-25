@@ -55,19 +55,62 @@ impl_schema_custom_types!(
     URef
 );
 
-impl<T: CLTyped> SchemaCustomTypes for Option<T> {}
+impl<T: SchemaCustomTypes> SchemaCustomTypes for Option<T> {
+    fn schema_types() -> Vec<Option<CustomType>> {
+        T::schema_types()
+    }
+}
 
-impl<T: CLTyped> SchemaCustomTypes for Vec<T> {}
+impl<T: SchemaCustomTypes> SchemaCustomTypes for Vec<T> {
+    fn schema_types() -> Vec<Option<CustomType>> {
+        T::schema_types()
+    }
+}
 
-impl<T: CLTyped, E: CLTyped> SchemaCustomTypes for Result<T, E> {}
+impl<T: SchemaCustomTypes, E: SchemaCustomTypes> SchemaCustomTypes for Result<T, E> {
+    fn schema_types() -> Vec<Option<CustomType>> {
+        let mut types = vec![];
+        types.extend(T::schema_types());
+        types.extend(E::schema_types());
+        types
+    }
+}
 
-impl<T: CLTyped, E: CLTyped> SchemaCustomTypes for BTreeMap<T, E> {}
+impl<T: SchemaCustomTypes, E: SchemaCustomTypes> SchemaCustomTypes for BTreeMap<T, E> {
+    fn schema_types() -> Vec<Option<CustomType>> {
+        let mut types = vec![];
+        types.extend(T::schema_types());
+        types.extend(E::schema_types());
+        types
+    }
+}
 
-impl<T1: CLTyped> SchemaCustomTypes for (T1,) {}
+impl<T1: SchemaCustomTypes> SchemaCustomTypes for (T1,) {
+    fn schema_types() -> Vec<Option<CustomType>> {
+        T1::schema_types()
+    }
+}
 
-impl<T1: CLTyped, T2: CLTyped> SchemaCustomTypes for (T1, T2) {}
+impl<T1: SchemaCustomTypes, T2: SchemaCustomTypes> SchemaCustomTypes for (T1, T2) {
+    fn schema_types() -> Vec<Option<CustomType>> {
+        let mut types = vec![];
+        types.extend(T1::schema_types());
+        types.extend(T2::schema_types());
+        types
+    }
+}
 
-impl<T1: CLTyped, T2: CLTyped, T3: CLTyped> SchemaCustomTypes for (T1, T2, T3) {}
+impl<T1: SchemaCustomTypes, T2: SchemaCustomTypes, T3: SchemaCustomTypes> SchemaCustomTypes
+    for (T1, T2, T3)
+{
+    fn schema_types() -> Vec<Option<CustomType>> {
+        let mut types = vec![];
+        types.extend(T1::schema_types());
+        types.extend(T2::schema_types());
+        types.extend(T3::schema_types());
+        types
+    }
+}
 
 impl SchemaCustomTypes for Key {}
 
@@ -137,19 +180,62 @@ impl_schema_events!(
     Bytes
 );
 
-impl<T: CLTyped> SchemaEvents for Option<T> {}
+impl<T: SchemaCustomTypes> SchemaEvents for Option<T> {
+    fn custom_types() -> Vec<Option<CustomType>> {
+        T::schema_types()
+    }
+}
 
-impl<T: CLTyped> SchemaEvents for Vec<T> {}
+impl<T: SchemaCustomTypes> SchemaEvents for Vec<T> {
+    fn custom_types() -> Vec<Option<CustomType>> {
+        T::schema_types()
+    }
+}
 
-impl<T: CLTyped, E: CLTyped> SchemaEvents for Result<T, E> {}
+impl<T: SchemaCustomTypes, E: SchemaCustomTypes> SchemaEvents for Result<T, E> {
+    fn custom_types() -> Vec<Option<CustomType>> {
+        let mut types = vec![];
+        types.extend(T::schema_types());
+        types.extend(E::schema_types());
+        types
+    }
+}
 
-impl<T: CLTyped, E: CLTyped> SchemaEvents for BTreeMap<T, E> {}
+impl<T: SchemaCustomTypes, E: SchemaCustomTypes> SchemaEvents for BTreeMap<T, E> {
+    fn custom_types() -> Vec<Option<CustomType>> {
+        let mut types = vec![];
+        types.extend(T::schema_types());
+        types.extend(E::schema_types());
+        types
+    }
+}
 
-impl<T1: CLTyped> SchemaEvents for (T1,) {}
+impl<T1: SchemaCustomTypes> SchemaEvents for (T1,) {
+    fn custom_types() -> Vec<Option<CustomType>> {
+        T1::schema_types()
+    }
+}
 
-impl<T1: CLTyped, T2: CLTyped> SchemaEvents for (T1, T2) {}
+impl<T1: SchemaCustomTypes, T2: SchemaCustomTypes> SchemaEvents for (T1, T2) {
+    fn custom_types() -> Vec<Option<CustomType>> {
+        let mut types = vec![];
+        types.extend(T1::schema_types());
+        types.extend(T2::schema_types());
+        types
+    }
+}
 
-impl<T1: CLTyped, T2: CLTyped, T3: CLTyped> SchemaEvents for (T1, T2, T3) {}
+impl<T1: SchemaCustomTypes, T2: SchemaCustomTypes, T3: SchemaCustomTypes> SchemaEvents
+    for (T1, T2, T3)
+{
+    fn custom_types() -> Vec<Option<CustomType>> {
+        let mut types = vec![];
+        types.extend(T1::schema_types());
+        types.extend(T2::schema_types());
+        types.extend(T3::schema_types());
+        types
+    }
+}
 
 impl<const COUNT: usize> SchemaEvents for [u8; COUNT] {}
 
