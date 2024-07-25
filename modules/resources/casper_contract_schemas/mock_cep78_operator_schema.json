@@ -8,98 +8,20 @@
   ],
   "repository": "https://github.com/odradev/odra",
   "homepage": null,
-  "contract_name": "Cep18ClientContract",
+  "contract_name": "MockCep78Operator",
   "contract_version": "1.1.0",
   "types": [],
   "errors": [],
   "entry_points": [
     {
-      "name": "check_total_supply",
-      "description": "Calls total_supply method of the token contract at the given address.",
-      "is_mutable": false,
+      "name": "set_address",
+      "description": "",
+      "is_mutable": true,
       "arguments": [
         {
-          "name": "address",
+          "name": "nft_contract",
           "description": null,
           "ty": "Key",
-          "optional": false
-        }
-      ],
-      "return_ty": "U256",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "check_balance_of",
-      "description": "Calls balance_of method of the token contract at the given address.",
-      "is_mutable": false,
-      "arguments": [
-        {
-          "name": "address",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "owner",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        }
-      ],
-      "return_ty": "U256",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "check_allowance_of",
-      "description": "Calls allowance method of the token contract at the given address.",
-      "is_mutable": false,
-      "arguments": [
-        {
-          "name": "address",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "owner",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "spender",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        }
-      ],
-      "return_ty": "U256",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "transfer_as_stored_contract",
-      "description": "Calls transfer method of the token contract at the given address.",
-      "is_mutable": false,
-      "arguments": [
-        {
-          "name": "address",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "recipient",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "amount",
-          "description": null,
-          "ty": "U256",
           "optional": false
         }
       ],
@@ -108,32 +30,20 @@
       "access": "public"
     },
     {
-      "name": "transfer_from_as_stored_contract",
-      "description": "Calls transfer_from method of the token contract at the given address.",
-      "is_mutable": false,
+      "name": "mint",
+      "description": "",
+      "is_mutable": true,
       "arguments": [
         {
-          "name": "address",
+          "name": "token_metadata",
           "description": null,
-          "ty": "Key",
+          "ty": "String",
           "optional": false
         },
         {
-          "name": "owner",
+          "name": "is_reverse_lookup_enabled",
           "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "recipient",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "amount",
-          "description": null,
-          "ty": "U256",
+          "ty": "Bool",
           "optional": false
         }
       ],
@@ -142,16 +52,120 @@
       "access": "public"
     },
     {
-      "name": "approve_as_stored_contract",
-      "description": "Calls approve method of the token contract at the given address.",
-      "is_mutable": false,
+      "name": "mint_with_hash",
+      "description": "",
+      "is_mutable": true,
       "arguments": [
         {
-          "name": "address",
+          "name": "token_metadata",
+          "description": null,
+          "ty": "String",
+          "optional": false
+        },
+        {
+          "name": "token_hash",
+          "description": null,
+          "ty": "String",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "burn",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U64",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "mint_for",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "token_owner",
           "description": null,
           "ty": "Key",
           "optional": false
         },
+        {
+          "name": "token_metadata",
+          "description": null,
+          "ty": "String",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "transfer",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U64",
+          "optional": false
+        },
+        {
+          "name": "target",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "transfer_from",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U64",
+          "optional": false
+        },
+        {
+          "name": "source",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "target",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "approve",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
         {
           "name": "spender",
           "description": null,
@@ -159,9 +173,25 @@
           "optional": false
         },
         {
-          "name": "amount",
+          "name": "token_id",
           "description": null,
-          "ty": "U256",
+          "ty": "U64",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "revoke",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U64",
           "optional": false
         }
       ],
@@ -172,7 +202,7 @@
   ],
   "events": [],
   "call": {
-    "wasm_file_name": "Cep18ClientContract.wasm",
+    "wasm_file_name": "MockCep78Operator.wasm",
     "description": null,
     "arguments": [
       {
