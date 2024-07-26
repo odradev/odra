@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use quote::ToTokens;
 
 use crate::{
@@ -29,10 +31,16 @@ impl ToTokens for SchemaCustomTypesItem {
             })
             .collect::<Vec<_>>();
 
-        let chain = types
+        let mut tmp = HashSet::<String>::new();
+        let mut chain = vec![];
+        types
             .iter()
-            .map(|t| quote::quote!(.chain(<#t as odra::schema::SchemaCustomTypes>::schema_types())))
-            .collect::<Vec<_>>();
+            .for_each(|t| {
+                let v = quote::quote!(.chain(<#t as odra::schema::SchemaCustomTypes>::schema_types()));
+                if tmp.insert(v.to_string()) {
+                    chain.push(v);
+                }
+            });
 
         let item = quote::quote! {
             #[automatically_derived]
@@ -82,10 +90,8 @@ mod test {
                         .chain(<Option<U256> as odra::schema::SchemaCustomTypes>::schema_types())
                         .chain(<U256 as odra::schema::SchemaCustomTypes>::schema_types())
                         .chain(<Address as odra::schema::SchemaCustomTypes>::schema_types())
-                        .chain(<U256 as odra::schema::SchemaCustomTypes>::schema_types())
                         .chain(<Maybe<String> as odra::schema::SchemaCustomTypes>::schema_types())
                         .chain(<odra::prelude::vec::Vec<Address> as odra::schema::SchemaCustomTypes>::schema_types())
-                        .chain(<U256 as odra::schema::SchemaCustomTypes>::schema_types())
                         .chain(<Self as odra::schema::SchemaEvents>::custom_types())
                         .collect()
                 }

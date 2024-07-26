@@ -8,14 +8,40 @@
   ],
   "repository": "https://github.com/odradev/odra",
   "homepage": null,
-  "contract_name": "MockDummyContract",
+  "contract_name": "MockCep78TransferFilter",
   "contract_version": "1.1.0",
   "types": [],
   "errors": [],
-  "entry_points": [],
+  "entry_points": [
+    {
+      "name": "set_return_value",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "return_value",
+          "description": null,
+          "ty": "U8",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "can_transfer",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U8",
+      "is_contract_context": true,
+      "access": "public"
+    }
+  ],
   "events": [],
   "call": {
-    "wasm_file_name": "MockDummyContract.wasm",
+    "wasm_file_name": "MockCep78TransferFilter.wasm",
     "description": null,
     "arguments": [
       {

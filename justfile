@@ -1,5 +1,5 @@
 CARGO_ODRA_GIT_REPO := "https://github.com/odradev/cargo-odra"
-CARGO_ODRA_BRANCH := "release/0.1.2"
+CARGO_ODRA_BRANCH := "release/0.1.3"
 BINARYEN_VERSION := "version_116"
 BINARYEN_CHECKSUM := "c55b74f3109cdae97490faf089b0286d3bba926bb6ea5ed00c8c784fc53718fd"
 
@@ -36,7 +36,7 @@ install-cargo-odra:
 prepare-test-env: install-cargo-odra
     rustup target add wasm32-unknown-unknown
     rustup component add llvm-tools-preview
-    cargo install grcov
+    cargo +stable install grcov
     sudo apt install wabt
     wget https://github.com/WebAssembly/binaryen/releases/download/{{BINARYEN_VERSION}}/binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz || { echo "Download failed"; exit 1; }
     sha256sum binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz | grep {{BINARYEN_CHECKSUM}} || { echo "Checksum verification failed"; exit 1; }
