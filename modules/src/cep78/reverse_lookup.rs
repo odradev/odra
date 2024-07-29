@@ -47,7 +47,7 @@ pub struct ReverseLookup {
 }
 
 impl ReverseLookup {
-    pub fn init(&mut self, mode: OwnerReverseLookupMode, receipt_name: String) {
+    pub fn init(&mut self, mode: OwnerReverseLookupMode, receipt_name: String, tokens: u64) {
         self.mode.set(mode);
         self.receipt_name.set(receipt_name);
 
@@ -57,7 +57,7 @@ impl ReverseLookup {
         ]
         .contains(&mode)
         {
-            let page_table_width = utils::max_number_of_pages(0);
+            let page_table_width = utils::max_number_of_pages(tokens);
             self.page_limit.set(page_table_width);
         }
     }
@@ -132,8 +132,12 @@ impl ReverseLookup {
     pub fn on_mint(&mut self, tokens_count: u64, token_owner: Address, _token_id: String) {
         if self.get_mode() == OwnerReverseLookupMode::Complete {
             let token_owner_key = utils::address_to_key(&token_owner);
+            let page_table = self.get_page_table(token_owner).unwrap_or_revert_with(
+                &self.env(),
+                CEP78Error::UnregisteredOwnerInMint
+            );
             let (_page_table_entry, _page_uref) =
-                self.add_page_entry_and_page_record(tokens_count, &token_owner_key, true);
+                self.add_page_entry_and_page_record(tokens_count, &token_owner_key, page_table);
             // Uncomment if deciding to return the receipt
 
             // let receipt_name = self.receipt_name.get();
@@ -149,14 +153,28 @@ impl ReverseLookup {
         source: Address,
         target: Address
     ) {
+        // Check if the mode is set to Complete or TransfersOnly.
+        // use OwnerReverseLookupMode::*;
+        // if matches!(self.get_mode(), Complete | TransfersOnly) {
+        //     return;
+        // }
         let mode = self.get_mode();
         if let OwnerReverseLookupMode::Complete | OwnerReverseLookupMode::TransfersOnly = mode {
             // Update to_account owned_tokens. Revert if owned_tokens list is not found
             let tokens_count = self.get_token_index(&token_identifier);
             let source_key = utils::address_to_key(&source);
             let target_key = utils::address_to_key(&target);
+            let source_page_table = self.get_page_table(source).unwrap_or_revert_with(
+                &self.env(),
+                CEP78Error::UnregisteredOwnerInTransfer
+            );
+            let target_page_table = self.get_page_table(target).unwrap_or_revert_with(
+                &self.env(),
+                CEP78Error::UnregisteredOwnerInTransfer
+            );
+
             if OwnerReverseLookupMode::TransfersOnly == mode {
-                self.add_page_entry_and_page_record(tokens_count, &source_key, false);
+                self.add_page_entry_and_page_record(tokens_count, &source_key, source_page_table);
             }
 
             let (_page_table_entry, _page_uref) =
@@ -172,27 +190,15 @@ impl ReverseLookup {
 
     fn add_page_entry_and_page_record(
         &mut self,
-        tokens_count: u64,
+        token_index: u64,
         item_key: &str,
-        on_mint: bool
+        mut page_table: Vec<bool>
     ) -> (u64, URef) {
         // there is an explicit page_table;
         // this is the entry in that overall page table which maps to the underlying page
         // upon which this mint's address will exist
         let env = self.env();
-        let page_table_entry = tokens_count / PAGE_SIZE;
-        let page_address = tokens_count % PAGE_SIZE;
-
-        let mut page_table = match self.page_table.get(item_key) {
-            Some(page_table) => page_table,
-            None => env.revert(if on_mint {
-                CEP78Error::UnregisteredOwnerInMint
-            } else {
-                CEP78Error::UnregisteredOwnerInTransfer
-            })
-        };
-
-        let page_dict = format!("{PREFIX_PAGE_DICTIONARY}_{}", page_table_entry);
+        let (page_table_entry, page_address, page_dict) = self.page_details(token_index);
 
         let mut page = if !page_table[page_table_entry as usize] {
             // We mark the page table entry to true to signal the allocation of a page.
@@ -259,6 +265,24 @@ impl ReverseLookup {
         let uref_a = URef::new(addr_array, AccessRights::READ);
         // (page_table_entry, page_uref)
         (page_table_entry, uref_a)
+    }
+
+    // Verified methods.
+
+    // It returns:
+    // - page_table_entry: the entry in the page table that maps to the underlying page
+    // - page_address: the address in the page that maps to the token
+    // - page_dict: the dictionary that holds the page
+    pub fn page_details(&self, token_index: u64) -> (u64, u64, String) {
+        let page_table_entry = token_index / PAGE_SIZE;
+        let page_address = token_index % PAGE_SIZE;
+        let page_dict = format!("{PREFIX_PAGE_DICTIONARY}_{}", page_table_entry);
+        (page_table_entry, page_address, page_dict)
+    }
+
+    pub fn get_account_page_table(&self, owner: &Address) -> Option<Vec<bool>> {
+        let owner_key = utils::address_to_key(owner);
+        self.page_table.get(&owner_key)
     }
 
     pub fn get_token_index(&self, token_identifier: &TokenIdentifier) -> u64 {

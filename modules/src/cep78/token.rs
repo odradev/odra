@@ -162,7 +162,7 @@ impl Cep78 {
         );
 
         self.reverse_lookup
-            .init(owner_reverse_lookup_mode, receipt_name);
+            .init(owner_reverse_lookup_mode, receipt_name, total_token_supply);
 
         self.whitelist.init(acl_white_list.clone(), whitelist_mode);
 
