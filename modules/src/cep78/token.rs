@@ -507,7 +507,7 @@ impl Cep78 {
     }
 
     /// Returns number of owned tokens associated with the provided token holder
-    pub fn balance_of(&mut self, token_owner: Address) -> u64 {
+    pub fn balance_of(&self, token_owner: Address) -> u64 {
         self.data.token_count(&token_owner)
     }
 
@@ -826,7 +826,7 @@ impl TestCep78 {
                 token_hash: Maybe<String>,
                 token_meta_data: String
             );
-            fn balance_of(&mut self, token_owner: Address) -> u64;
+            fn balance_of(&self, token_owner: Address) -> u64;
             fn register_owner(&mut self, token_owner: Maybe<Address>) -> String;
             fn is_whitelisted(&self, address: &Address) -> bool;
         }
