@@ -1,4 +1,5 @@
 use casper_event_standard::EventInstance;
+use casper_types::CLValueError;
 
 use crate::args::EntrypointArgument;
 use crate::call_def::CallDef;
@@ -7,6 +8,7 @@ use crate::casper_types::crypto::PublicKey;
 use crate::casper_types::{CLTyped, CLValue, BLAKE2B_DIGEST_LENGTH, U512};
 use crate::module::Revertible;
 pub use crate::ContractContext;
+use crate::VmError::{Serialization, TypeMismatch};
 use crate::{consts, prelude::*, utils};
 
 const INDEX_SIZE: usize = 4;
@@ -104,8 +106,15 @@ impl ContractEnv {
     /// Sets the value associated with the given named key in the contract storage.
     pub fn set_named_value<T: CLTyped + ToBytes, U: AsRef<str>>(&self, name: U, value: T) {
         let key = name.as_ref();
-        // todo: map errors to correct Odra errors
-        let cl_value = CLValue::from_t(value).unwrap_or_revert(self);
+        let cl_value = CLValue::from_t(value)
+            .map_err(|e| match e {
+                CLValueError::Serialization(_) => OdraError::VmError(Serialization),
+                CLValueError::Type(e) => OdraError::VmError(TypeMismatch {
+                    found: e.found,
+                    expected: e.expected
+                })
+            })
+            .unwrap_or_revert(self);
         self.backend.borrow().set_named_value(key, cl_value);
     }
 
@@ -208,6 +217,14 @@ impl ContractEnv {
         let result = event.to_bytes().map_err(ExecutionError::from);
         let bytes = result.unwrap_or_revert(self);
         backend.emit_event(&bytes.into())
+    }
+
+    /// Emits an event with the specified data using the native mechanism.
+    pub fn emit_native_event<T: ToBytes + EventInstance>(&self, event: T) {
+        let backend = self.backend.borrow();
+        let result = event.to_bytes().map_err(ExecutionError::from);
+        let bytes = result.unwrap_or_revert(self);
+        backend.emit_native_event(&bytes.into())
     }
 
     /// Verifies the signature of a message using the specified signature, public key, and message.

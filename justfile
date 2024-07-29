@@ -8,28 +8,20 @@ default:
 
 clippy:
     cargo clippy --all-targets -- -D warnings
-    cd odra-casper/proxy-caller && cargo clippy --target=wasm32-unknown-unknown -- -D warnings -A clippy::single-component-path-imports
     cd examples && cargo clippy --all-targets -- -D warnings
     cd examples && cargo clippy --features=livenet -- -D warnings
     cd modules && cargo clippy --all-targets -- -D warnings
     cd benchmark && cargo clippy --all-targets -- -D warnings
+    cd odra-casper/proxy-caller && cargo clippy --target=wasm32-unknown-unknown -- -D warnings
 
 lint: clippy
     cargo fmt
     cd odra-casper/proxy-caller && cargo fmt
-    cd examples && cargo fmt
-    cd modules && cargo fmt
-    cd benchmark && cargo fmt
 
 check-lint: clippy
     cargo fmt -- --check
+    cargo check --all-targets
     cd odra-casper/proxy-caller && cargo fmt -- --check
-    cd modules && cargo fmt -- --check
-    cd modules && cargo check --all-targets
-    cd examples && cargo fmt -- --check
-    cd examples && cargo check --all-targets
-    cd benchmark && cargo fmt -- --check
-    cd benchmark && cargo check --all-targets --features=benchmark
 
 install-cargo-odra:
     rustup toolchain install stable
@@ -67,6 +59,8 @@ test-examples-on-odravm:
     cd examples/ourcoin && cargo odra test
 
 test-examples-on-casper:
+    mkdir -p examples/wasm
+    cp modules/wasm/Erc20.wasm examples/wasm/
     cd examples && cargo odra test -b casper
     cd examples/ourcoin && cargo odra test -b casper
 
@@ -80,7 +74,7 @@ test-modules-on-casper:
 
 test-modules: test-modules-on-odravm test-modules-on-casper
 
-test: test-odra test-examples test-modules
+test: test-odra test-modules test-examples
 
 test-template name:
     cd tests && cargo odra new -n {{name}} --template {{name}} -s ../ \
@@ -98,17 +92,17 @@ test-templates:
     just test-template cep78
 
 run-nctl:
-    docker run --rm -it --name mynctl -d -p 11101:11101 -p 14101:14101 -p 18101:18101 makesoftware/casper-nctl:v155
+    docker run --rm -it --name mynctl -d -p 11101:11101 -p 14101:14101 -p 18101:18101 casper-nctl:feat-2.0
 
 test-livenet:
     set shell := bash
     mkdir -p examples/.node-keys
     cp modules/wasm/Erc20.wasm examples/wasm/
     # Extract the secret keys from the local Casper node
-    docker exec mynctl /bin/bash -c "cat /home/casper/casper-node/utils/nctl/assets/net-1/users/user-1/secret_key.pem" > examples/.node-keys/secret_key.pem
-    docker exec mynctl /bin/bash -c "cat /home/casper/casper-node/utils/nctl/assets/net-1/users/user-2/secret_key.pem" > examples/.node-keys/secret_key_1.pem
+    docker exec mynctl /bin/bash -c "cat /home/casper/casper-nctl/assets/net-1/users/user-1/secret_key.pem" > examples/.node-keys/secret_key.pem
+    docker exec mynctl /bin/bash -c "cat  /home/casper/casper-nctl/assets/net-1/users/user-2/secret_key.pem" > examples/.node-keys/secret_key_1.pem
     # Run the tests
-    cd examples && ODRA_CASPER_LIVENET_SECRET_KEY_PATH=.node-keys/secret_key.pem ODRA_CASPER_LIVENET_NODE_ADDRESS=http://localhost:11101 ODRA_CASPER_LIVENET_CHAIN_NAME=casper-net-1 ODRA_CASPER_LIVENET_KEY_1=.node-keys/secret_key_1.pem  cargo run --bin livenet_tests --features=livenet
+    cd examples && ODRA_CASPER_LIVENET_SECRET_KEY_PATH=.node-keys/secret_key.pem ODRA_CASPER_LIVENET_NODE_ADDRESS=http://localhost:11101 ODRA_CASPER_LIVENET_EVENTS_URL=http://localhost:18101/events ODRA_CASPER_LIVENET_CHAIN_NAME=casper-net-1 ODRA_CASPER_LIVENET_KEY_1=.node-keys/secret_key_1.pem  cargo run --bin livenet_tests --features=livenet
     rm -rf examples/.node-keys
 
 run-example-erc20-on-livenet:

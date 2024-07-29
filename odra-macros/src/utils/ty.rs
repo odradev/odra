@@ -89,6 +89,10 @@ pub fn entry_point_type() -> syn::Type {
     parse_quote!(odra::casper_types::EntryPointType)
 }
 
+pub fn entry_point_payment() -> syn::Type {
+    parse_quote!(odra::casper_types::EntryPointPayment)
+}
+
 pub fn group() -> syn::Type {
     parse_quote!(odra::casper_types::Group)
 }

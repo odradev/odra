@@ -69,6 +69,10 @@ impl ContractContext for WasmContractEnv {
         host_functions::emit_event(event);
     }
 
+    fn emit_native_event(&self, event: &Bytes) {
+        host_functions::emit_native_event(event);
+    }
+
     fn transfer_tokens(&self, to: &Address, amount: &U512) {
         host_functions::transfer_tokens(to, amount);
     }

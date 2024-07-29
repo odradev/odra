@@ -111,6 +111,13 @@ pub trait ContractContext {
     /// * `event` - The event data to emit.
     fn emit_event(&self, event: &Bytes);
 
+    /// Emits an event with the specified event data using native mechanism.
+    ///
+    /// # Arguments
+    ///
+    /// * `event` - The event data to emit.
+    fn emit_native_event(&self, event: &Bytes);
+
     /// Transfers tokens to the specified address.
     ///
     /// # Arguments

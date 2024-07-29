@@ -254,8 +254,15 @@ pub trait HostContext {
     /// Returns the event bytes for the specified contract address and index.
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError>;
 
+    /// Returns the native event bytes for the specified contract address and index.
+    fn get_native_event(&self, contract_address: &Address, index: u32)
+        -> Result<Bytes, EventError>;
+
     /// Returns the number of emitted events for the specified contract address.
-    fn get_events_count(&self, contract_address: &Address) -> u32;
+    fn get_events_count(&self, contract_address: &Address) -> Result<u32, EventError>;
+
+    /// Returns the number of emitted native events for the specified contract address.
+    fn get_native_events_count(&self, contract_address: &Address) -> Result<u32, EventError>;
 
     /// Calls a contract at the specified address with the given call definition.
     fn call_contract(
@@ -309,7 +316,8 @@ pub struct HostEnv {
     backend: Rc<RefCell<dyn HostContext>>,
     last_call_result: Rc<RefCell<Option<CallResult>>>,
     deployed_contracts: Rc<RefCell<Vec<Address>>>,
-    events_count: Rc<RefCell<BTreeMap<Address, u32>>> // contract_address -> events_count
+    events_count: Rc<RefCell<BTreeMap<Address, u32>>>, // contract_address -> events_count
+    native_events_count: Rc<RefCell<BTreeMap<Address, u32>>>  // contract_address -> events_count
 }
 
 impl HostEnv {
@@ -319,7 +327,8 @@ impl HostEnv {
             backend,
             last_call_result: RefCell::new(None).into(),
             deployed_contracts: RefCell::new(vec![]).into(),
-            events_count: Rc::new(RefCell::new(Default::default()))
+            events_count: Rc::new(RefCell::new(Default::default())),
+            native_events_count: Rc::new(RefCell::new(Default::default()))
         }
     }
 
@@ -362,6 +371,9 @@ impl HostEnv {
 
         self.deployed_contracts.borrow_mut().push(deployed_contract);
         self.events_count.borrow_mut().insert(deployed_contract, 0);
+        self.native_events_count
+            .borrow_mut()
+            .insert(deployed_contract, 0);
         Ok(deployed_contract)
     }
 
@@ -373,9 +385,15 @@ impl HostEnv {
         contract_name: String,
         entry_points_caller: EntryPointsCaller
     ) {
+        let events_count = self.events_count(&address);
+        let native_events_count = self.native_events_count(&address);
         let backend = self.backend.borrow();
         backend.register_contract(address, contract_name, entry_points_caller);
         self.deployed_contracts.borrow_mut().push(address);
+        self.events_count.borrow_mut().insert(address, events_count);
+        self.native_events_count
+            .borrow_mut()
+            .insert(address, native_events_count);
     }
 
     /// Calls a contract at the specified address with the given call definition.
@@ -405,31 +423,30 @@ impl HostEnv {
         let call_result = backend.call_contract(&address, call_def, use_proxy);
 
         let mut events_map: BTreeMap<Address, Vec<Bytes>> = BTreeMap::new();
-        let mut binding = self.events_count.borrow_mut();
+        let mut native_events_map: BTreeMap<Address, Vec<Bytes>> = BTreeMap::new();
 
         // Go through all contracts and collect their events
         self.deployed_contracts
             .borrow()
             .iter()
             .for_each(|contract_address| {
-                if binding.get(contract_address).is_none() {
-                    binding.insert(
-                        *contract_address,
-                        backend.get_events_count(contract_address)
-                    );
-                }
-                let events_count = binding.get_mut(contract_address).unwrap();
-                let old_events_last_id = *events_count;
-                let new_events_count = backend.get_events_count(contract_address);
-                let mut events = vec![];
-                for event_id in old_events_last_id..new_events_count {
-                    let event = backend.get_event(contract_address, event_id).unwrap();
-                    events.push(event);
-                }
-
+                let events = self.last_events(contract_address);
+                let native_events = self.last_native_events(contract_address);
+                // let events_count = events_count_binding.get_mut(contract_address).unwrap();
+                // let old_events_last_id = *events_count;
+                // let new_events_count = backend
+                //     .get_events_count(contract_address)
+                //     .unwrap_or_default();
+                // let mut events = vec![];
+                // for event_id in old_events_last_id..new_events_count {
+                //     let event = backend.get_event(contract_address, event_id).unwrap();
+                //     events.push(event);
+                // }
+                //
                 events_map.insert(*contract_address, events);
-
-                *events_count = new_events_count;
+                native_events_map.insert(*contract_address, native_events);
+                //
+                // *events_count = new_events_count;
             });
 
         let last_call_gas_cost = backend.last_call_gas_cost();
@@ -439,7 +456,8 @@ impl HostEnv {
             backend.caller(),
             last_call_gas_cost,
             call_result.clone(),
-            events_map
+            events_map,
+            native_events_map
         )));
 
         call_result
@@ -484,6 +502,29 @@ impl HostEnv {
             .map(|r| r.0)
     }
 
+    /// Retrieves a native event with the specified index from the specified contract.
+    ///
+    /// # Returns
+    ///
+    /// Returns the event as an instance of the specified type, or an error if the event
+    /// couldn't be retrieved or parsed.
+    pub fn get_native_event<T: FromBytes + EventInstance, R: Addressable>(
+        &self,
+        contract_address: &R,
+        index: i32
+    ) -> Result<T, EventError> {
+        let contract_address = contract_address.address();
+        let backend = self.backend.borrow();
+        let events_count = self.native_events_count(contract_address);
+        let event_absolute_position = crate::utils::event_absolute_position(events_count, index)
+            .ok_or(EventError::IndexOutOfBounds)?;
+
+        let bytes = backend.get_native_event(contract_address, event_absolute_position)?;
+        T::from_bytes(&bytes)
+            .map_err(|_| EventError::Parsing)
+            .map(|r| r.0)
+    }
+
     /// Retrieves a raw event (serialized) with the specified index from the specified contract.
     pub fn get_event_bytes<T: Addressable>(
         &self,
@@ -494,11 +535,21 @@ impl HostEnv {
         backend.get_event(contract_address.address(), index)
     }
 
+    /// Retrieves a raw native event (serialized) with the specified index from the specified contract.
+    pub fn get_native_event_bytes<T: Addressable>(
+        &self,
+        contract_address: &T,
+        index: u32
+    ) -> Result<Bytes, EventError> {
+        let backend = self.backend.borrow();
+        backend.get_native_event(contract_address.address(), index)
+    }
+
     /// Returns the names of all events emitted by the specified contract.
     pub fn event_names<T: Addressable>(&self, contract_address: &T) -> Vec<String> {
-        let backend = self.backend.borrow();
-        let events_count = backend.get_events_count(contract_address.address());
+        let events_count = self.events_count(contract_address);
 
+        let backend = self.backend.borrow();
         (0..events_count)
             .map(|event_id| {
                 backend
@@ -513,7 +564,9 @@ impl HostEnv {
     pub fn events<T: Addressable>(&self, contract_address: &T) -> Vec<Bytes> {
         let backend = self.backend.borrow();
         let contract_address = contract_address.address();
-        let events_count = backend.get_events_count(contract_address);
+        let events_count = backend
+            .get_events_count(contract_address)
+            .unwrap_or_default();
         (0..events_count)
             .map(|event_id| {
                 backend
@@ -529,9 +582,19 @@ impl HostEnv {
     }
 
     /// Returns the number of events emitted by the specified contract.
-    pub fn events_count<T: Addressable>(&self, contract_address: &T) -> u32 {
+    pub fn events_count<T: Addressable>(&self, address: &T) -> u32 {
         let backend = self.backend.borrow();
-        backend.get_events_count(contract_address.address())
+        backend
+            .get_events_count(address.address())
+            .unwrap_or_default()
+    }
+
+    /// Returns the number of native events emitted by the specified contract.
+    pub fn native_events_count<T: Addressable>(&self, address: &T) -> u32 {
+        let backend = self.backend.borrow();
+        backend
+            .get_native_events_count(address.address())
+            .unwrap_or_default()
     }
 
     /// Returns true if the specified event was emitted by the specified contract.
@@ -542,6 +605,34 @@ impl HostEnv {
     ) -> bool {
         let contract_address = contract_address.address();
         let events_count = self.events_count(contract_address);
+
+        let event_bytes = Bytes::from(
+            event
+                .to_bytes()
+                .unwrap_or_else(|_| panic!("Couldn't serialize event"))
+        );
+
+        (0..events_count)
+            .map(|event_id| {
+                self.get_event_bytes(contract_address, event_id)
+                    .unwrap_or_else(|e| {
+                        panic!(
+                            "Couldn't get event at address {:?} with id {}: {:?}",
+                            &contract_address, event_id, e
+                        )
+                    })
+            })
+            .any(|bytes| bytes == event_bytes)
+    }
+
+    /// Returns true if the specified event was emitted by the specified contract.
+    pub fn emitted_native_event<T: ToBytes + EventInstance, R: Addressable>(
+        &self,
+        contract_address: &R,
+        event: &T
+    ) -> bool {
+        let contract_address = contract_address.address();
+        let events_count = self.native_events_count(contract_address);
         let event_bytes = Bytes::from(
             event
                 .to_bytes()
@@ -549,7 +640,7 @@ impl HostEnv {
         );
         (0..events_count)
             .map(|event_id| {
-                self.get_event_bytes(contract_address, event_id)
+                self.get_native_event_bytes(contract_address, event_id)
                     .unwrap_or_else(|e| {
                         panic!(
                             "Couldn't get event at address {:?} with id {}: {:?}",
@@ -567,6 +658,7 @@ impl HostEnv {
         event_name: T
     ) -> bool {
         let events_count = self.events_count(contract_address);
+
         (0..events_count)
             .map(|event_id| {
                 self.get_event_bytes(contract_address, event_id)
@@ -630,6 +722,36 @@ impl HostEnv {
         let backend = self.backend.borrow();
         backend.transfer(to, amount)
     }
+
+    fn last_events(&self, contract_address: &Address) -> Vec<Bytes> {
+        let mut old_count_binding = self.events_count.borrow_mut();
+        let old_count = *old_count_binding.get(contract_address).unwrap();
+        let new_count = self.events_count(contract_address);
+        let mut events = vec![];
+        for count in old_count..new_count {
+            let event = self.get_event_bytes(contract_address, count).unwrap();
+            events.push(event);
+        }
+
+        old_count_binding.insert(*contract_address, new_count);
+        events
+    }
+
+    fn last_native_events(&self, contract_address: &Address) -> Vec<Bytes> {
+        let mut old_count_binding = self.native_events_count.borrow_mut();
+        let old_count = *old_count_binding.get(contract_address).unwrap();
+        let new_count = self.native_events_count(contract_address);
+        let mut events = vec![];
+        for count in old_count..new_count {
+            let event = self
+                .get_native_event_bytes(contract_address, count)
+                .unwrap();
+            events.push(event);
+        }
+
+        old_count_binding.insert(*contract_address, new_count);
+        events
+    }
 }
 
 #[cfg(test)]
@@ -638,7 +760,8 @@ mod test {
 
     use super::*;
     use casper_event_standard::Event;
-    use casper_types::{account::AccountHash, ContractPackageHash};
+    use casper_types::account::AccountHash;
+    use casper_types::PackageHash;
     use mockall::{mock, predicate};
     use std::sync::Mutex;
 
@@ -741,7 +864,8 @@ mod test {
 
         let mut ctx = MockHostContext::new();
         ctx.expect_register_contract().returning(|_, _, _| ());
-        ctx.expect_get_events_count().returning(|_| 0);
+        ctx.expect_get_events_count().returning(|_| Ok(0));
+        ctx.expect_get_native_events_count().returning(|_| Ok(0));
 
         // check if TestRef::new() is called exactly once
         let instance_ctx = MockTestRef::new_context();
@@ -813,7 +937,7 @@ mod test {
         ctx.expect_transfer().returning(|_, _| Ok(()));
         let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
 
-        let addr = Address::Contract(ContractPackageHash::new([0; 32]));
+        let addr = Address::Contract(PackageHash::new([0; 32]));
         // When transfer 100 tokens to a contract.
         let result = env.transfer(addr, 100.into());
         // Then the transfer should fail.
@@ -831,7 +955,7 @@ mod test {
 
         let mut ctx = MockHostContext::new();
         // there are 2 events emitted by the contract
-        ctx.expect_get_events_count().returning(|_| 2);
+        ctx.expect_get_events_count().returning(|_| Ok(2));
         // get_event() at index 0 will return an invalid event
         ctx.expect_get_event()
             .with(predicate::always(), predicate::eq(0))
@@ -869,7 +993,7 @@ mod test {
 
         let mut ctx = MockHostContext::new();
         // there are 2 events emitted by the contract
-        ctx.expect_get_events_count().returning(|_| 2);
+        ctx.expect_get_events_count().returning(|_| Ok(2));
         // get_event() at index 0 will return an invalid event
         ctx.expect_get_event()
             .with(predicate::always(), predicate::eq(0))
@@ -896,7 +1020,7 @@ mod test {
 
         let mut ctx = MockHostContext::new();
         // there are 2 events emitted by the contract
-        ctx.expect_get_events_count().returning(|_| 2);
+        ctx.expect_get_events_count().returning(|_| Ok(2));
         // get_event() at index 0 panics
         ctx.expect_get_event()
             .with(predicate::always(), predicate::eq(0))
@@ -912,7 +1036,7 @@ mod test {
         let addr = Address::Account(AccountHash::new([0; 32]));
         let mut ctx = MockHostContext::new();
 
-        ctx.expect_get_events_count().returning(|_| 1);
+        ctx.expect_get_events_count().returning(|_| Ok(1));
         ctx.expect_get_event()
             .returning(|_, _| Ok(TestEv {}.to_bytes().unwrap().into()));
 

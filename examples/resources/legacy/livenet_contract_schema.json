@@ -113,6 +113,14 @@
       "return_ty": "Unit",
       "ty": "Public",
       "attributes": []
+    },
+    {
+      "name": "function_that_reverts",
+      "args": [],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
     }
   ]
 }

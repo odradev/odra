@@ -11,11 +11,13 @@ Cargo.lock
 odra-casper/**/target/
 examples/.builder_casper
 examples/wasm
+examples/ourcoin/wasm
 examples/.env
 examples/.env.testnet
 examples/.env.integration
 modules/.builder_casper
 modules/wasm
+benchmark/wasm
 benchmark/gas_report.json
 benchmark/wasm
 .DS_Store
