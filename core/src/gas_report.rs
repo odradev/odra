@@ -14,6 +14,11 @@ impl GasReport {
     pub fn push(&mut self, report: DeployReport) {
         self.0.push(report)
     }
+
+    /// Returns new, empty gas report.
+    pub fn new() -> Self {
+        GasReport::default()
+    }
 }
 
 impl Display for GasReport {
@@ -22,6 +27,15 @@ impl Display for GasReport {
             writeln!(f, "{}", report)?;
         }
         Ok(())
+    }
+}
+
+impl IntoIterator for GasReport {
+    type Item = DeployReport;
+    type IntoIter = IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 
@@ -50,14 +64,20 @@ impl Display for DeployReport {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             DeployReport::WasmDeploy { gas, file_name } => {
-                write!(f, "Wasm deploy: {} - {} CSPR", file_name, cspr_pretty_string(gas))
+                write!(
+                    f,
+                    "Wasm deploy: {} - {} CSPR",
+                    file_name,
+                    cspr_pretty_string(gas)
+                )
             }
-            DeployReport::ContractCall {
-                gas,
-                call_def,
-                ..
-            } => {
-                write!(f, "Contract call: {} - {} CSPR", call_def.entry_point(), cspr_pretty_string(gas))
+            DeployReport::ContractCall { gas, call_def, .. } => {
+                write!(
+                    f,
+                    "Contract call: {} - {} CSPR",
+                    call_def.entry_point(),
+                    cspr_pretty_string(gas)
+                )
             }
         }
     }
