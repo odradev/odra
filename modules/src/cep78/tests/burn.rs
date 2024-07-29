@@ -331,15 +331,22 @@ fn should_allow_to_remint_with_reverse_lookup() {
     let token_page = contract.get_page_by_token_id(0);
     assert!(token_page[0]);
     assert_eq!(contract.balance_of(token_owner), 1);
+    assert_eq!(contract.get_number_of_minted_tokens(), 1);
 
     // Burn the token.
     contract.burn(Maybe::None, Maybe::Some(token_hash.clone()));
     assert_eq!(contract.balance_of(token_owner), 0);
 
     // Mint the token again.
-    // contract.mint(
-    //     token_owner,
-    //     TEST_PRETTY_721_META_DATA.to_string(),
-    //     Maybe::Some(token_hash.clone())
-    // );
+    contract.mint(
+        token_owner,
+        TEST_PRETTY_721_META_DATA.to_string(),
+        Maybe::Some(token_hash.clone())
+    );
+
+    // Check if the token is minted.
+    let token_page = contract.get_page_by_token_id(0);
+    assert!(token_page[0]);
+    assert_eq!(contract.balance_of(token_owner), 1);
+    assert_eq!(contract.get_number_of_minted_tokens(), 1);
 }

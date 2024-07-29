@@ -121,6 +121,18 @@ impl ReverseLookup {
         }
     }
 
+    pub fn on_burn(&mut self, token_owner: &Address, token_identifier: &TokenIdentifier) {
+        if self.get_mode() == OwnerReverseLookupMode::Complete {
+            let token_index = self.get_token_index_checked(token_identifier);
+            self.update_page(
+                token_index,
+                token_owner,
+                CEP78Error::UnregisteredOwnerInBurn,
+                false
+            );
+        }
+    }
+
     fn update_page(
         &mut self,
         token_index: u64,
@@ -146,11 +158,8 @@ impl ReverseLookup {
 
         // Update page value.
         page[page_address as usize] = value;
-
         self.set_page(&page_dict, token_owner, page);
     }
-
-    // Verified methods.
 
     // Based on the `allocated` flag, it returns either a new page or an empty page.
     pub fn page(&self, allocated: bool, page_dict: &str, token_owner: &Address) -> Vec<bool> {
@@ -161,12 +170,6 @@ impl ReverseLookup {
         self.env()
             .get_dictionary_value(page_dict, item_key.as_bytes())
             .unwrap_or_revert_with(self, CEP78Error::MissingPage)
-    }
-
-    pub fn set_page(&mut self, page_dict: &str, token_owner: &Address, page: Vec<bool>) {
-        let item_key = utils::address_to_key(token_owner);
-        self.env()
-            .set_dictionary_value(page_dict, item_key.as_bytes(), page);
     }
 
     // It returns:
@@ -193,6 +196,12 @@ impl ReverseLookup {
                 .get(&token_identifier.to_string())
                 .unwrap_or_revert_with(&self.env(), CEP78Error::InvalidTokenIdentifier)
         }
+    }
+
+    fn set_page(&mut self, page_dict: &str, token_owner: &Address, page: Vec<bool>) {
+        let item_key = utils::address_to_key(token_owner);
+        self.env()
+            .set_dictionary_value(page_dict, item_key.as_bytes(), page);
     }
 
     // It returns the token index based on the token identifier.

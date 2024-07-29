@@ -325,6 +325,8 @@ impl Cep78 {
         self.data.decrement_counter(&token_owner);
         self.data.decrement_number_of_minted_tokens();
         self.emit_ces_event(Burn::new(token_owner, token_id, caller));
+
+        self.reverse_lookup.on_burn(&token_owner, &token_identifier);
     }
 
     /// Transfers ownership of the token from one account to another.
