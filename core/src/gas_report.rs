@@ -86,8 +86,13 @@ impl Display for DeployReport {
 /// Render 1234567890 as 1.23456789
 fn cspr_pretty_string(cspr: &U512) -> String {
     let cspr_top = cspr / U512::from(1_000_000_000);
-    let cspr_bottom = cspr - cspr_top;
-    format!("{}.{:8}", cspr_top, cspr_bottom)
+    let cspr_bottom = cspr % U512::from(1_000_000_000); // Use modulo to get the remainder
+    let cspr_bottom_str = format!("{:09}", cspr_bottom);
+    let mut cspr_bottom_str = cspr_bottom_str.trim_end_matches('0');
+    if cspr_bottom_str.is_empty() {
+        cspr_bottom_str = "0";
+    }
+    format!("{}.{}", cspr_top, cspr_bottom_str)
 }
 
 #[cfg(test)]
@@ -103,13 +108,19 @@ mod tests {
             gas: U512::from(1000),
             file_name: String::from("test.wasm")
         };
-        assert_eq!(format!("{}", wasm_deploy), "Wasm deploy: test.wasm");
+        assert_eq!(
+            format!("{}", wasm_deploy),
+            "Wasm deploy: test.wasm - 0.000001 CSPR"
+        );
 
         let contract_call = DeployReport::ContractCall {
-            gas: U512::from(1000),
+            gas: U512::from(1_000_000_000),
             contract_address: Account(AccountHash([0; 32])),
             call_def: CallDef::new("test", false, RuntimeArgs::new())
         };
-        assert_eq!(format!("{}", contract_call), "Contract call: test");
+        assert_eq!(
+            format!("{}", contract_call),
+            "Contract call: test - 1.0 CSPR"
+        );
     }
 }
