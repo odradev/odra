@@ -436,7 +436,7 @@ impl CasperVm {
             error: None,
             attached_value: U512::zero(),
             gas_used: BTreeMap::new(),
-            gas_report: Vec::new(),
+            gas_report: GasReport::default(),
             key_pairs
         }
     }

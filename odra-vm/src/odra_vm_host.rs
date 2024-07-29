@@ -114,7 +114,7 @@ impl HostContext for OdraVmHost {
 
     fn gas_report(&self) -> GasReport {
         // For OdraVM there is no gas, so nothing to report.c
-        GasReport::new()
+        GasReport::default()
     }
 
     fn last_call_gas_cost(&self) -> u64 {
