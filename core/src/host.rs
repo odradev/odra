@@ -547,7 +547,8 @@ mod test {
 
     use super::*;
     use casper_event_standard::Event;
-    use casper_types::{account::AccountHash, ContractPackageHash};
+    use casper_types::account::AccountHash;
+    use casper_types::contracts::ContractPackageHash;
     use mockall::{mock, predicate};
     use std::sync::Mutex;
 

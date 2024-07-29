@@ -2,7 +2,6 @@
 #![doc = "It allows calling other contracts and saving the return values to the named key"]
 #![doc = "of the Proxy Caller."]
 #![no_std]
-
 extern crate alloc;
 
 use core::mem::MaybeUninit;
@@ -16,21 +15,22 @@ use odra_casper_wasm_env::casper_contract::{
     ext_ffi,
     unwrap_or_revert::UnwrapOrRevert
 };
+use odra_core::casper_types::contracts::{ContractPackageHash, ContractVersion};
 use odra_core::casper_types::{
     api_error,
     bytesrepr::{Bytes, FromBytes, ToBytes},
-    ApiError, CLTyped, ContractPackageHash, ContractVersion, RuntimeArgs, URef, U512
+    ApiError, CLTyped, PackageHash, RuntimeArgs, URef, U512
 };
 use odra_core::consts::{
-    ARGS_ARG, ATTACHED_VALUE_ARG, CARGO_PURSE_ARG, CARGO_PURSE_KEY, CONTRACT_PACKAGE_HASH_ARG,
-    ENTRY_POINT_ARG
+    ARGS_ARG, ATTACHED_VALUE_ARG, CARGO_PURSE_ARG, CARGO_PURSE_KEY, ENTRY_POINT_ARG,
+    PACKAGE_HASH_ARG
 };
 use odra_core::prelude::*;
 
 /// Contract call definition.
 pub struct ProxyCall {
     /// Contract package hash.
-    pub contract_package_hash: ContractPackageHash,
+    pub package_hash: PackageHash,
     /// Entry point name.
     pub entry_point_name: String,
     /// Runtime arguments.
@@ -42,7 +42,7 @@ pub struct ProxyCall {
 impl ProxyCall {
     /// Load proxy call arguments from the runtime.
     pub fn load_from_args() -> ProxyCall {
-        let contract_package_hash = get_named_arg(CONTRACT_PACKAGE_HASH_ARG);
+        let package_hash = get_named_arg(PACKAGE_HASH_ARG);
         let entry_point_name = get_named_arg(ENTRY_POINT_ARG);
         let runtime_args: Bytes = get_named_arg(ARGS_ARG);
         let (mut runtime_args, bytes) = RuntimeArgs::from_bytes(&runtime_args).unwrap_or_revert();
@@ -60,7 +60,7 @@ impl ProxyCall {
         }
 
         ProxyCall {
-            contract_package_hash,
+            package_hash,
             entry_point_name,
             runtime_args,
             attached_value
@@ -85,12 +85,11 @@ pub fn set_key<T: ToBytes + CLTyped>(name: &str, value: T) {
 /// Customized version of `call_versioned_contract` from `casper_contract::contract_api::runtime`.
 /// It returns raw bytes instead of deserialized value.
 pub fn call_versioned_contract_ret_bytes(
-    contract_package_hash: ContractPackageHash,
+    package_hash: ContractPackageHash,
     entry_point_name: &str,
     runtime_args: RuntimeArgs
 ) -> Vec<u8> {
-    let (contract_package_hash_ptr, contract_package_hash_size, _bytes) =
-        to_ptr(contract_package_hash);
+    let (contract_package_hash_ptr, contract_package_hash_size, _bytes) = to_ptr(package_hash);
     let (contract_version_ptr, contract_version_size, _bytes) = to_ptr(None::<ContractVersion>);
     let (entry_point_name_ptr, entry_point_name_size, _bytes) = to_ptr(entry_point_name);
     let (runtime_args_ptr, runtime_args_size, _bytes) = to_ptr(runtime_args);
@@ -184,4 +183,12 @@ fn to_ptr<T: ToBytes>(t: T) -> (*const u8, usize, Vec<u8>) {
     let ptr = bytes.as_ptr();
     let size = bytes.len();
     (ptr, size, bytes)
+}
+
+/// Panic handler for the WASM target architecture.
+#[cfg(target_arch = "wasm32")]
+#[panic_handler]
+#[no_mangle]
+pub fn panic(_info: &core::panic::PanicInfo) -> ! {
+    core::intrinsics::abort();
 }

@@ -4,9 +4,9 @@ version = "1.2.0"
 edition = "2021"
 
 [dependencies]
-odra = { path = "../odra", default-features = false }
-odra-modules = { path = "../modules", default-features = false }
-sha3 = { version = "0.10.6", default-features = false }
+odra = { path = "../odra", features = [], default-features = false }
+odra-modules = { path = "../modules", features = [], default-features = false }
+sha3 = { workspace = true }
 odra-casper-livenet-env = { path = "../odra-casper/livenet-env", optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -14,7 +14,7 @@ odra-build = { path = "../odra-build" }
 
 [dev-dependencies]
 odra-test = { path = "../odra-test" }
-hex = "0.4.3"
+hex = { workspace = true }
 
 [build-dependencies]
 odra-build = { path = "../odra-build" }
@@ -62,13 +62,6 @@ name = "livenet_tests"
 path = "bin/livenet_tests.rs"
 required-features = ["livenet"]
 test = false
-
-[profile.release]
-codegen-units = 1
-lto = true
-
-[profile.dev.package."*"]
-opt-level = 3
 
 [lints.rust]
 missing_docs = "warn"

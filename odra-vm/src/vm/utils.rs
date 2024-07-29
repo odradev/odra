@@ -1,5 +1,5 @@
 use odra_core::{
-    casper_types::{account::AccountHash, ContractPackageHash},
+    casper_types::{account::AccountHash, contracts::ContractPackageHash},
     Address
 };
 

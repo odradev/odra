@@ -113,7 +113,7 @@ impl Callstack {
 
 #[cfg(test)]
 mod tests {
-    use casper_types::{account::AccountHash, ContractPackageHash, RuntimeArgs};
+    use casper_types::{account::AccountHash, contracts::ContractPackageHash, RuntimeArgs};
 
     use super::*;
 

@@ -3,37 +3,47 @@ members = [
     "odra",
     "odra-vm",
     "core",
+    "examples",
+    "examples/ourcoin",
+    "modules",
     "odra-macros",
     "odra-casper/rpc-client",
     "odra-casper/livenet-env",
     "odra-casper/wasm-env",
     "odra-casper/test-vm",
+    "odra-casper/utils",
     "odra-schema",
     "odra-test",
-    "odra-build"
-]
+    "odra-build",
+    "odra-casper/utils",
+    "odra-casper/proxy-caller"
+    ]
 exclude = [ "examples", "modules", "benchmark", "odra-casper/proxy-caller", "templates/blank", "templates/full", "templates/workspace", "tests"]
 resolver = "2"
 
 [workspace.package]
-version = "1.2.0"
+version = "1.1.0"
 authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
 license = "MIT"
 homepage = "https://odra.dev/docs"
 repository = "https://github.com/odradev/odra"
 
 [workspace.dependencies]
-odra-core = { path = "core", version = "1.2.0" }
-odra-macros = { path = "odra-macros", version = "1.2.0" }
-odra-casper-test-vm = { path = "odra-casper/test-vm", version = "1.2.0" }
-odra-casper-rpc-client = { path = "odra-casper/rpc-client", version = "1.2.0" }
-odra-vm = { path = "odra-vm", version = "1.2.0" }
-odra-casper-wasm-env = { path = "odra-casper/wasm-env", version = "1.2.0"}
-odra-schema = { path = "odra-schema", version = "1.2.0" }
-casper-contract = { version = "4.0.0", default-features = false }
-casper-types = { version = "4.0.1", default-features = false }
-casper-execution-engine = "7.0.1"
-casper-event-standard = "0.5.0"
+odra-core = { path = "core", version = "1.1.0" }
+odra-macros = { path = "odra-macros", version = "1.1.0" }
+odra-casper-test-vm = { path = "odra-casper/test-vm", version = "1.1.0" }
+odra-casper-rpc-client = { path = "odra-casper/rpc-client", version = "1.1.0" }
+odra-vm = { path = "odra-vm", version = "1.1.0" }
+odra-casper-wasm-env = { path = "odra-casper/wasm-env", version = "1.1.0"}
+odra-schema = { path = "odra-schema", version = "1.1.0" }
+casper-contract = { git = "https://github.com/casper-network/casper-node.git", branch = "rustSDK-feat-2.0",  default-features = false }
+casper-contract-schema = { path = "../casper-contract-schema"}
+casper-types = "5.0.0"
+casper-execution-engine = { git = "https://github.com/casper-network/casper-node.git", branch = "rustSDK-feat-2.0" }
+casper-engine-test-support = { git = "https://github.com/casper-network/casper-node.git", branch = "rustSDK-feat-2.0" }
+casper-storage = { git = "https://github.com/casper-network/casper-node.git", branch = "rustSDK-feat-2.0" }
+casper-event-standard = { path = "../../casper-event-standard/casper-event-standard" }
+casper-client = { git = "https://github.com/casper-ecosystem/casper-client-rs.git", branch = "rustSDK-feat-2.0" }
 blake2 = "0.10.6"
 log = "0.4.20"
 env_logger = "0.11.1"
@@ -41,4 +51,13 @@ serde = { version = "1.0.195", default-features = false }
 serde_json = { version = "1.0.113", default-features = false }
 num-traits = { version = "0.2.14", default-features = false }
 mockall = { version = "0.12.1" }
+sha3 = "0.10"
+hex = "0.4"
 tokio = "1.38"
+base16 = "0.2"
+base64 = "0.22"
+serde-json-wasm = "1.0"
+casper-rust-wasm-sdk = { path = "../../rustSDK" }
+
+[patch.crates-io]
+casper-types = { version = "5.0.0", git = "https://github.com/casper-network/casper-node", branch = "rustSDK-feat-2.0" }
