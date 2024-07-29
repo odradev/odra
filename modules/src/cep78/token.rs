@@ -281,10 +281,14 @@ impl Cep78 {
 
         // TODO: This is commented out because it prevents to mint, burn
         // and then mint the token again.
-        // if let NFTIdentifierMode::Hash = identifier_mode {
-        //     self.reverse_lookup
-        //         .insert_hash(minted_tokens_count, &token_identifier);
-        // }
+        if let NFTIdentifierMode::Hash = identifier_mode {
+            let inserted = self.reverse_lookup
+                .insert_hash(minted_tokens_count, &token_identifier);
+
+            if !inserted {
+                self.revert(CEP78Error::DuplicateIdentifier);
+            }
+        }
 
         self.data.increment_counter(&token_owner);
         self.data.increment_number_of_minted_tokens();

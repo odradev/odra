@@ -171,4 +171,5 @@ pub enum CEP78Error {
     InvalidIdentifier = 169,
     DuplicateIdentifier = 170,
     GoingBelowZeroSupply = 171,
+    ReverseLookupIntegrityViolation = 172,
 }

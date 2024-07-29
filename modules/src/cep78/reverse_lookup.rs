@@ -62,37 +62,49 @@ impl ReverseLookup {
         }
     }
 
+    /// Insert a hash into the reverse lookup table.
+    /// Returns:
+    /// - true if the hash was inserted,
+    /// - false if it was already present,
     pub fn insert_hash(
         &mut self,
         current_number_of_minted_tokens: u64,
         token_identifier: &TokenIdentifier
-    ) {
-        if token_identifier.get_index().is_some() {
-            return;
-        }
-        if self
+    ) -> bool {
+        let token_identifier = token_identifier.get_hash().unwrap();
+
+        let inserted_token_index = self
             .index_by_hash
-            .get(&token_identifier.to_string())
-            .is_some()
-        {
-            self.env().revert(CEP78Error::DuplicateIdentifier)
-        }
-        if self
-            .hash_by_index
-            .get(&current_number_of_minted_tokens)
-            .is_some()
-        {
-            self.env().revert(CEP78Error::DuplicateIdentifier)
+            .get(&token_identifier);
+
+        // If data is not inserted, then insert it.
+        if inserted_token_index.is_none() {
+            self.index_by_hash.set(
+                &token_identifier,
+                current_number_of_minted_tokens
+            );
+            self.hash_by_index.set(
+                &current_number_of_minted_tokens,
+                token_identifier
+            );
+            return true;
         }
 
-        self.hash_by_index.set(
-            &current_number_of_minted_tokens,
-            token_identifier.get_hash().unwrap_or_revert(self)
-        );
-        self.index_by_hash.set(
-            &token_identifier.to_string(),
-            current_number_of_minted_tokens
-        );
+        // If token identifier points at the index.
+        // Check if the index points back to the token identifier.
+        if let Some(token_index) = inserted_token_index.clone() {
+            let token_hash = self
+                .hash_by_index
+                .get(&token_index);
+            if let Some(token_hash) = token_hash {
+                if token_hash == token_identifier {
+                    return false;
+                }
+            }
+        }
+
+        // In other case the data is not inserted correctly, and should be reverted.
+        self.env().revert(CEP78Error::ReverseLookupIntegrityViolation);
     }
 
     pub fn register_owner(&mut self, owner: Maybe<Address>, ownership_mode: OwnershipMode) {
