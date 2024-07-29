@@ -1,11 +1,14 @@
 //! Livenet implementation of HostContext for HostEnv.
+
+use crate::error;
 use crate::livenet_contract_env::LivenetContractEnv;
 use odra_casper_rpc_client::casper_client::CasperClient;
 use odra_casper_rpc_client::log::info;
+use odra_casper_rpc_client::utils::find_wasm_file_path;
 use odra_core::callstack::{Callstack, CallstackElement};
-use odra_core::casper_types::bytesrepr::ToBytes;
 use odra_core::casper_types::Timestamp;
 use odra_core::entry_point_callback::EntryPointsCaller;
+use odra_core::prelude::ExecutionError::{UnexpectedError, User};
 use odra_core::{
     casper_types::{bytesrepr::Bytes, PublicKey, RuntimeArgs, U512},
     host::HostContext,
@@ -13,9 +16,19 @@ use odra_core::{
 };
 use odra_core::{prelude::*, EventError};
 use odra_core::{ContractContainer, ContractRegister};
+use std::fs;
 use std::sync::RwLock;
 use std::thread::sleep;
 use tokio::runtime::Runtime;
+
+/// Enum representing a contract identifier used by Livenet Host.
+#[derive(Debug)]
+pub enum ContractId {
+    /// Contract name.
+    Name(String),
+    /// Contract address.
+    Address(Address)
+}
 
 /// LivenetHost struct.
 pub struct LivenetHost {
@@ -84,7 +97,7 @@ impl HostContext for LivenetHost {
     fn block_time(&self) -> u64 {
         let rt = Runtime::new().unwrap();
         let client = self.casper_client.borrow();
-        rt.block_on(async { client.get_block_time().await })
+        rt.block_on(async { client.get_block_time().await.unwrap() })
     }
 
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
@@ -94,11 +107,23 @@ impl HostContext for LivenetHost {
             .map_err(|_| EventError::CouldntExtractEventData)
     }
 
-    fn get_events_count(&self, contract_address: &Address) -> u32 {
+    fn get_native_event(
+        &self,
+        _contract_address: &Address,
+        _index: u32
+    ) -> Result<Bytes, EventError> {
+        todo!("get_native_event not implemented for LivenetHost")
+    }
+
+    fn get_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
         let rt = Runtime::new().unwrap();
         let client = self.casper_client.borrow();
         rt.block_on(async { client.events_count(contract_address).await })
-            .unwrap_or_default()
+            .ok_or(EventError::CouldntExtractEventData)
+    }
+
+    fn get_native_events_count(&self, _contract_address: &Address) -> Result<u32, EventError> {
+        todo!("get_native_events_count not implemented for LivenetHost")
     }
 
     fn call_contract(
@@ -130,19 +155,24 @@ impl HostContext for LivenetHost {
                 client
                     .deploy_entrypoint_call_with_proxy(*address, call_def, timestamp)
                     .await
+                    .map_err(|e| {
+                        self.map_error_code_to_odra_error(
+                            ContractId::Address(*address),
+                            &e.error_message()
+                        )
+                    })
             }),
-            false => {
-                rt.block_on(async {
-                    client
-                        .deploy_entrypoint_call(*address, call_def, timestamp)
-                        .await
-                })?;
-                Ok(
-                    ().to_bytes()
-                        .expect("Couldn't serialize (). This shouldn't happen.")
-                        .into()
-                )
-            }
+            false => rt.block_on(async {
+                let r = client
+                    .deploy_entrypoint_call(*address, call_def, timestamp)
+                    .await;
+                r.map_err(|e| {
+                    self.map_error_code_to_odra_error(
+                        ContractId::Address(*address),
+                        &e.error_message()
+                    )
+                })
+            })
         }
     }
 
@@ -153,10 +183,21 @@ impl HostContext for LivenetHost {
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address> {
         let timestamp = Timestamp::now();
+        let wasm_path = find_wasm_file_path(name);
+        let wasm_bytes = fs::read(wasm_path).unwrap();
         let address = {
             let mut client = self.casper_client.borrow_mut();
             let rt = Runtime::new().unwrap();
-            rt.block_on(async { client.deploy_wasm(name, init_args, timestamp).await })?
+            match rt.block_on(async {
+                client
+                    .deploy_wasm(name, init_args, timestamp, wasm_bytes)
+                    .await
+            }) {
+                Ok(addr) => addr,
+                Err(e) => {
+                    todo!("Handle error: {:?}", e);
+                }
+            }
         };
         self.register_contract(address, name.to_string(), entry_points_caller);
         Ok(address)
@@ -171,10 +212,10 @@ impl HostContext for LivenetHost {
         self.contract_register
             .write()
             .expect("Couldn't write contract register.")
-            .add(address, ContractContainer::new(entry_points_caller));
-        self.casper_client
-            .borrow_mut()
-            .register_name(address, contract_name);
+            .add(
+                address,
+                ContractContainer::new(&contract_name, entry_points_caller)
+            );
     }
 
     fn contract_env(&self) -> ContractEnv {
@@ -207,5 +248,28 @@ impl HostContext for LivenetHost {
         let timestamp = Timestamp::now();
         let client = self.casper_client.borrow_mut();
         rt.block_on(async { client.transfer(to, amount, timestamp).await })
+            .map_err(|e| {
+                self.map_error_code_to_odra_error(
+                    ContractId::Address(client.caller()),
+                    &e.error_message()
+                )
+            })
+    }
+}
+
+impl LivenetHost {
+    fn map_error_code_to_odra_error(&self, contract_id: ContractId, error_msg: &str) -> OdraError {
+        let found = match contract_id {
+            ContractId::Name(contract_name) => error::find(&contract_name, error_msg).ok(),
+            ContractId::Address(addr) => match self.contract_register.read().unwrap().get(&addr) {
+                Some(contract_name) => error::find(contract_name, error_msg).ok(),
+                None => None
+            }
+        };
+
+        match found {
+            None => OdraError::ExecutionError(UnexpectedError),
+            Some((_, error)) => OdraError::ExecutionError(User(error.code()))
+        }
     }
 }

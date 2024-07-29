@@ -8,6 +8,9 @@ pub const CONSTRUCTOR_GROUP_NAME: &str = "constructor_group";
 /// The key under which the events are stored.
 pub const EVENTS: &str = casper_event_standard::EVENTS_DICT;
 
+/// The topic name used by Odra for native events.
+pub const NATIVE_EVENT_TOPIC: &str = "EVENTS";
+
 /// The key under which the events length is stored.
 pub const EVENTS_LENGTH: &str = casper_event_standard::EVENTS_LENGTH;
 

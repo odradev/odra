@@ -23,12 +23,8 @@ impl ContractContext for LivenetContractEnv {
     fn get_value(&self, key: &[u8]) -> Option<Bytes> {
         let callstack = self.callstack.borrow();
         let client = self.casper_client.borrow();
-        self.runtime.block_on(async {
-            client
-                .get_value(callstack.current().address(), key)
-                .await
-                .ok()
-        })
+        self.runtime
+            .block_on(async { client.get_value(callstack.current().address(), key).await })
     }
 
     fn set_value(&self, _key: &[u8], _value: Bytes) {
@@ -98,7 +94,7 @@ impl ContractContext for LivenetContractEnv {
     fn get_block_time(&self) -> u64 {
         let client = self.casper_client.borrow();
         self.runtime
-            .block_on(async { client.get_block_time().await })
+            .block_on(async { client.get_block_time().await.unwrap() })
     }
 
     fn attached_value(&self) -> U512 {
@@ -114,6 +110,10 @@ impl ContractContext for LivenetContractEnv {
 
     fn emit_event(&self, _event: &Bytes) {
         panic!("Cannot emit event in LivenetEnv")
+    }
+
+    fn emit_native_event(&self, _event: &Bytes) {
+        panic!("Cannot emit native event in LivenetEnv")
     }
 
     fn transfer_tokens(&self, _to: &Address, _amount: &U512) {

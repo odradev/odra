@@ -43,7 +43,7 @@ impl OdraVm {
         let address = { self.state.write().unwrap().next_contract_address() };
         // Register new contract under the new address.
         {
-            let contract = ContractContainer::new(entry_points_caller);
+            let contract = ContractContainer::new(name, entry_points_caller);
             self.contract_register
                 .write()
                 .unwrap()
@@ -230,14 +230,29 @@ impl OdraVm {
         self.state.write().unwrap().emit_event(event_data);
     }
 
+    /// Writes an event data to the global state and marks it as native.
+    pub fn emit_native_event(&self, event_data: &Bytes) {
+        self.state.write().unwrap().emit_native_event(event_data);
+    }
+
     /// Gets the event emitted by the given address at the given index from the global state.
     pub fn get_event(&self, address: &Address, index: u32) -> Result<Bytes, EventError> {
         self.state.read().unwrap().get_event(address, index)
     }
 
+    /// Gets the native event emitted by the given address at the given index from the global state.
+    pub fn get_native_event(&self, address: &Address, index: u32) -> Result<Bytes, EventError> {
+        self.state.read().unwrap().get_native_event(address, index)
+    }
+
     /// Gets the number of events emitted by the given address from the global state.
-    pub fn get_events_count(&self, address: &Address) -> u32 {
+    pub fn get_events_count(&self, address: &Address) -> Result<u32, EventError> {
         self.state.read().unwrap().get_events_count(address)
+    }
+
+    /// Gets the number of events emitted by the given address from the global state.
+    pub fn get_native_events_count(&self, address: &Address) -> Result<u32, EventError> {
+        self.state.read().unwrap().get_native_events_count(address)
     }
 
     /// Attaches the given amount of tokens to the current call from the global state.
@@ -607,7 +622,7 @@ mod tests {
         // given an empty instance
         let instance = OdraVm::default();
 
-        let first_contract_address = utils::account_address_from_str("abc");
+        let first_contract_address = utils::contract_address_from_u32(123);
         // put a contract on stack
         push_address(&instance, &first_contract_address);
 
@@ -616,7 +631,7 @@ mod tests {
         instance.emit_event(&first_event);
         instance.emit_event(&second_event);
 
-        let second_contract_address = utils::account_address_from_str("bca");
+        let second_contract_address = utils::contract_address_from_u32(321);
         // put a next contract on stack
         push_address(&instance, &second_contract_address);
 

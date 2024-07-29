@@ -365,7 +365,7 @@ pub fn attached_value_arg() -> Arg {
 #[cfg(test)]
 mod tests {
     use clap::{Arg, Command};
-    use odra::casper_types::{bytesrepr::Bytes, runtime_args, RuntimeArgs};
+    use odra::casper_types::{bytesrepr::Bytes, runtime_args};
     use odra::schema::casper_contract_schema::{NamedCLType, Type};
 
     use crate::test_utils::{self, NameMintInfo, PaymentInfo, PaymentVoucher};

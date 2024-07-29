@@ -113,7 +113,7 @@ impl Callstack {
 
 #[cfg(test)]
 mod tests {
-    use casper_types::{account::AccountHash, ContractPackageHash, RuntimeArgs};
+    use casper_types::{account::AccountHash, RuntimeArgs};
 
     use super::*;
 
@@ -196,8 +196,8 @@ mod tests {
         assert!(!callstack.is_empty());
     }
 
-    const CONTRACT_PACKAGE_HASH: &str =
-        "contract-package-wasm7ba9daac84bebee8111c186588f21ebca35550b6cf1244e71768bd871938be6a";
+    const PACKAGE_HASH: &str =
+        "package-7ba9daac84bebee8111c186588f21ebca35550b6cf1244e71768bd871938be6a";
     const ACCOUNT_HASH: &str =
         "account-hash-3b4ffcfb21411ced5fc1560c3f6ffed86f4885e5ea05cde49d90962a48a14d95";
 
@@ -209,18 +209,14 @@ mod tests {
 
     fn mock_contract_element() -> CallstackElement {
         CallstackElement::new_contract_call(
-            Address::Contract(
-                ContractPackageHash::from_formatted_str(CONTRACT_PACKAGE_HASH).unwrap()
-            ),
+            Address::new(PACKAGE_HASH).unwrap(),
             CallDef::new("a", false, RuntimeArgs::default())
         )
     }
 
     fn mock_contract_element_with_value(amount: U512) -> CallstackElement {
         CallstackElement::new_contract_call(
-            Address::Contract(
-                ContractPackageHash::from_formatted_str(CONTRACT_PACKAGE_HASH).unwrap()
-            ),
+            Address::new(PACKAGE_HASH).unwrap(),
             CallDef::new("a", false, RuntimeArgs::default()).with_amount(amount)
         )
     }

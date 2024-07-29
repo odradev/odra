@@ -1,6 +1,8 @@
 //! This crate provides a host environment for the livenet.
+pub mod error;
 pub mod livenet_contract_env;
 pub mod livenet_host;
+
 use livenet_host::LivenetHost;
 use odra_core::host::HostEnv;
 

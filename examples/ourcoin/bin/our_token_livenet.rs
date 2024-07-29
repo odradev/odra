@@ -4,8 +4,8 @@ use std::str::FromStr;
 
 use odra::casper_types::U256;
 use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader};
-use Address;
 use ourcoin::token::{OurTokenHostRef, OurTokenInitArgs};
+use Address;
 
 fn main() {
     // Load the Casper livenet environment.

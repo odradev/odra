@@ -7,7 +7,11 @@
 //!
 //! Build on top of the [casper_contract] crate.
 
+use crate::consts;
+use crate::consts::NATIVE_EVENT_TOPIC;
+use casper_contract::contract_api::runtime::emit_message;
 use casper_contract::contract_api::storage::new_uref;
+use casper_contract::ext_ffi::casper_emit_message;
 use casper_contract::{
     contract_api::{
         self, runtime, storage,
@@ -20,16 +24,18 @@ use casper_contract::{
     unwrap_or_revert::UnwrapOrRevert
 };
 use core::mem::MaybeUninit;
+use odra_core::casper_types::addressable_entity::NamedKeys;
 use odra_core::casper_types::bytesrepr::deserialize;
+use odra_core::casper_types::contract_messages::{MessagePayload, MessageTopicOperation};
+use odra_core::casper_types::contracts::ContractVersion;
+use odra_core::casper_types::system::Caller;
 use odra_core::casper_types::{
     api_error, bytesrepr,
     bytesrepr::{Bytes, FromBytes, ToBytes},
-    contracts::NamedKeys,
-    system::CallStackElement,
-    ApiError, CLTyped, CLValue, ContractPackageHash, ContractVersion, EntryPoints, Key,
-    RuntimeArgs, URef, DICTIONARY_ITEM_KEY_MAX_LENGTH, U512, UREF_SERIALIZED_LENGTH
+    ApiError, CLTyped, CLValue, EntryPoints, Key, PackageHash, RuntimeArgs, URef,
+    DICTIONARY_ITEM_KEY_MAX_LENGTH, U512, UREF_SERIALIZED_LENGTH
 };
-use odra_core::consts;
+use odra_core::consts::{ALLOW_KEY_OVERRIDE_ARG, IS_UPGRADABLE_ARG, PACKAGE_HASH_KEY_NAME_ARG};
 use odra_core::{
     args::EntrypointArgument,
     casper_event_standard::{self, Schema, Schemas}
@@ -63,11 +69,11 @@ pub fn install_contract(
     entry_points: EntryPoints,
     events: Schemas,
     init_args: Option<RuntimeArgs>
-) -> ContractPackageHash {
+) -> PackageHash {
     // Read arguments
-    let package_hash_key: String = runtime::get_named_arg(consts::PACKAGE_HASH_KEY_NAME_ARG);
-    let allow_key_override: bool = runtime::get_named_arg(consts::ALLOW_KEY_OVERRIDE_ARG);
-    let is_upgradable: bool = runtime::get_named_arg(consts::IS_UPGRADABLE_ARG);
+    let package_hash_key: String = runtime::get_named_arg(PACKAGE_HASH_KEY_NAME_ARG);
+    let allow_key_override: bool = runtime::get_named_arg(ALLOW_KEY_OVERRIDE_ARG);
+    let is_upgradable: bool = runtime::get_named_arg(IS_UPGRADABLE_ARG);
 
     // Check if the package hash is already in the storage.
     // Revert if key override is not allowed.
@@ -78,38 +84,45 @@ pub fn install_contract(
     // Prepare named keys.
     let named_keys = initial_named_keys(events);
 
+    // Prepare message topic
+    let mut mesage_topics = BTreeMap::new();
+    mesage_topics.insert(NATIVE_EVENT_TOPIC.to_string(), MessageTopicOperation::Add);
+
     // Create new contract.
     let access_uref_key = format!("{}_access_token", package_hash_key);
     if is_upgradable {
+        // TODO: Handle message topics
         storage::new_contract(
             entry_points,
             Some(named_keys),
             Some(package_hash_key.clone()),
-            Some(access_uref_key)
+            Some(access_uref_key),
+            Some(mesage_topics)
         );
     } else {
+        // TODO: Handle message topics
         storage::new_locked_contract(
             entry_points,
             Some(named_keys),
             Some(package_hash_key.clone()),
-            Some(access_uref_key)
+            Some(access_uref_key),
+            Some(mesage_topics)
         );
     }
 
-    // Read contract package hash from the storage.
-    let contract_package_hash: ContractPackageHash = runtime::get_key(&package_hash_key)
+    // Read package hash from the storage.
+    let package_hash: PackageHash = runtime::get_key(&package_hash_key)
         .unwrap_or_revert()
-        .into_hash()
-        .unwrap_or_revert()
-        .into();
+        .into_package_hash()
+        .unwrap_or_revert();
 
     if let Some(args) = init_args {
-        let init_access = create_constructor_group(contract_package_hash);
-        let _: () = runtime::call_versioned_contract(contract_package_hash, None, "init", args);
-        revoke_access_to_constructor_group(contract_package_hash, init_access);
+        let init_access = create_constructor_group(package_hash);
+        let _: () = runtime::call_versioned_contract(package_hash, None, "init", args);
+        revoke_access_to_constructor_group(package_hash, init_access);
     }
 
-    contract_package_hash
+    package_hash
 }
 
 /// Stops a contract execution and reverts the state with a given error.
@@ -343,24 +356,30 @@ pub fn emit_event(event: &Bytes) {
     casper_event_standard::emit_bytes(event.clone())
 }
 
+/// Emits a native event.
+pub fn emit_native_event(event: &Bytes) {
+    let payload = MessagePayload::Bytes(event.clone());
+    emit_message(NATIVE_EVENT_TOPIC, &payload).unwrap_or_revert();
+}
+
 /// Gets the immediate session caller of the current execution.
 ///
 /// This function ensures that only session code can execute this function, and disallows stored
 /// session/stored contracts.
 #[inline(always)]
 pub fn caller() -> Address {
-    let second_elem = take_call_stack_elem(1);
-    call_stack_element_to_address(second_elem)
+    let second_elem = take_nth_caller_from_stack(1);
+    second_elem.into()
 }
 
 /// Calls a contract method by Address
 #[inline(always)]
 pub fn call_contract(address: Address, call_def: CallDef) -> Bytes {
-    let contract_package_hash = *address.as_contract_package_hash().unwrap_or_revert();
+    let package_hash = *address.as_package_hash().unwrap_or_revert();
     let method = call_def.entry_point();
     let mut args = call_def.args().to_owned();
     if call_def.amount() == U512::zero() {
-        call_versioned_contract(contract_package_hash, None, method, args)
+        call_versioned_contract(package_hash, None, method, args)
     } else {
         let cargo_purse = get_or_create_cargo_purse();
         let main_purse = get_main_purse().unwrap_or_revert();
@@ -370,7 +389,7 @@ pub fn call_contract(address: Address, call_def: CallDef) -> Bytes {
         args.insert(consts::CARGO_PURSE_ARG, cargo_purse)
             .unwrap_or_revert();
 
-        let result = call_versioned_contract(contract_package_hash, None, method, args);
+        let result = call_versioned_contract(package_hash, None, method, args);
         if !is_purse_empty(cargo_purse) {
             runtime::revert(ApiError::InvalidPurse)
         }
@@ -381,8 +400,8 @@ pub fn call_contract(address: Address, call_def: CallDef) -> Bytes {
 /// Gets the address of the currently run contract
 #[inline(always)]
 pub fn self_address() -> Address {
-    let first_elem = take_call_stack_elem(0);
-    call_stack_element_to_address(first_elem)
+    let first_elem = take_nth_caller_from_stack(0);
+    first_elem.into()
 }
 
 /// Gets the balance of the current contract.
@@ -396,13 +415,12 @@ pub fn self_balance() -> U512 {
 /// address, for the most current version of a contract package by default or a specific
 /// `contract_version` if one is provided, and passing the provided `runtime_args` to it.
 pub fn call_versioned_contract(
-    contract_package_hash: ContractPackageHash,
+    package_hash: PackageHash,
     contract_version: Option<ContractVersion>,
     entry_point_name: &str,
     runtime_args: RuntimeArgs
 ) -> Bytes {
-    let (contract_package_hash_ptr, contract_package_hash_size, _bytes) =
-        to_ptr(contract_package_hash);
+    let (package_hash_ptr, package_hash_size, _bytes) = to_ptr(package_hash);
     let (contract_version_ptr, contract_version_size, _bytes) = to_ptr(contract_version);
     let (entry_point_name_ptr, entry_point_name_size, _bytes) = to_ptr(entry_point_name);
     let (runtime_args_ptr, runtime_args_size, _bytes) = to_ptr(runtime_args);
@@ -411,8 +429,8 @@ pub fn call_versioned_contract(
         let mut bytes_written = MaybeUninit::uninit();
         let ret = unsafe {
             ext_ffi::casper_call_versioned_contract(
-                contract_package_hash_ptr,
-                contract_package_hash_size,
+                package_hash_ptr,
+                package_hash_size,
                 contract_version_ptr,
                 contract_version_size,
                 entry_point_name_ptr,
@@ -553,16 +571,16 @@ fn deserialize_contract_result(bytes_written: usize) -> Vec<u8> {
     }
 }
 
-fn take_call_stack_elem(n: usize) -> CallStackElement {
+fn take_nth_caller_from_stack(n: usize) -> Caller {
     runtime::get_call_stack()
         .into_iter()
         .nth_back(n)
         .unwrap_or_revert()
 }
 
-fn create_constructor_group(contract_package_hash: ContractPackageHash) -> URef {
+fn create_constructor_group(package_hash: PackageHash) -> URef {
     storage::create_contract_user_group(
-        contract_package_hash,
+        package_hash,
         consts::CONSTRUCTOR_GROUP_NAME,
         1,
         Default::default()
@@ -572,43 +590,11 @@ fn create_constructor_group(contract_package_hash: ContractPackageHash) -> URef 
     .unwrap_or_revert()
 }
 
-fn revoke_access_to_constructor_group(
-    contract_package_hash: ContractPackageHash,
-    constructor_access: URef
-) {
+fn revoke_access_to_constructor_group(package_hash: PackageHash, constructor_access: URef) {
     let mut urefs = BTreeSet::new();
     urefs.insert(constructor_access);
-    storage::remove_contract_user_group_urefs(
-        contract_package_hash,
-        consts::CONSTRUCTOR_GROUP_NAME,
-        urefs
-    )
-    .unwrap_or_revert();
-}
-
-/// Returns address based on a [`CallStackElement`].
-///
-/// For `Session` and `StoredSession` variants it will return account hash, and for `StoredContract`
-/// case it will use contract hash as the address.
-fn call_stack_element_to_address(call_stack_element: CallStackElement) -> Address {
-    match call_stack_element {
-        CallStackElement::Session { account_hash } => Address::try_from(account_hash)
-            .map_err(|e| ApiError::User(ExecutionError::from(e).code()))
-            .unwrap_or_revert(),
-        CallStackElement::StoredSession { account_hash, .. } => {
-            // Stored session code acts in account's context, so if stored session
-            // wants to interact, caller's address will be used.
-            Address::try_from(account_hash)
-                .map_err(|e| ApiError::User(ExecutionError::from(e).code()))
-                .unwrap_or_revert()
-        }
-        CallStackElement::StoredContract {
-            contract_package_hash,
-            ..
-        } => Address::try_from(contract_package_hash)
-            .map_err(|e| ApiError::User(ExecutionError::from(e).code()))
-            .unwrap_or_revert()
-    }
+    storage::remove_contract_user_group_urefs(package_hash, consts::CONSTRUCTOR_GROUP_NAME, urefs)
+        .unwrap_or_revert();
 }
 
 fn is_purse_empty(purse: URef) -> bool {

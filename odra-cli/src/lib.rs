@@ -130,7 +130,7 @@ impl OdraCli {
                 continue;
             }
             let mut ep_cmd = Command::new(&entry_point.name)
-                .about(&entry_point.description.clone().unwrap_or_default());
+                .about(entry_point.description.clone().unwrap_or_default());
             for arg in args::entry_point_args(&entry_point, &self.custom_types) {
                 ep_cmd = ep_cmd.arg(arg);
             }

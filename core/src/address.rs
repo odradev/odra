@@ -1,10 +1,11 @@
 //! Better address representation for Casper.
 use crate::prelude::*;
 use crate::{AddressError, VmError};
+use casper_types::system::Caller;
 use casper_types::{
     account::AccountHash,
     bytesrepr::{self, FromBytes, ToBytes},
-    CLType, CLTyped, ContractPackageHash, Key, PublicKey
+    CLType, CLTyped, EntityAddr, HashAddr, Key, PackageHash, PublicKey
 };
 use serde::{Deserialize, Serialize};
 
@@ -14,16 +15,18 @@ const ADDRESS_HASH_LENGTH: usize = 64;
 const CONTRACT_STR_LENGTH: usize = 69;
 /// An address has format `contract-package-wasm<64-byte-hash>`.
 const LEGACY_CONTRACT_STR_LENGTH: usize = 85;
+/// An address has format `package-<64-byte-hash>`.
+const PACKAGE_STR_LENGTH: usize = 72;
 /// An address has format `account-hash-<64-byte-hash>`.
 const ACCOUNT_STR_LENGTH: usize = 77;
 
-/// An enum representing an [`AccountHash`] or a [`ContractPackageHash`].
+/// An enum representing an [`AccountHash`] or a [`PackageHash`].
 #[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum Address {
     /// Represents an account hash.
     Account(AccountHash),
     /// Represents a contract package hash.
-    Contract(ContractPackageHash)
+    Contract(PackageHash)
 }
 
 /// A trait for types that can be converted into an [`Address`].
@@ -47,9 +50,10 @@ impl Address {
         if let Ok(dst) = decode_base16(src) {
             // depending on the length of the input, we can determine the type of address
             match src_len {
-                LEGACY_CONTRACT_STR_LENGTH => Ok(Self::Contract(ContractPackageHash::new(dst))),
+                LEGACY_CONTRACT_STR_LENGTH => Ok(Self::Contract(PackageHash::new(dst))),
+                PACKAGE_STR_LENGTH => Ok(Self::Contract(PackageHash::new(dst))),
                 ACCOUNT_STR_LENGTH => Ok(Self::Account(AccountHash::new(dst))),
-                CONTRACT_STR_LENGTH => Ok(Self::Contract(ContractPackageHash::new(dst))),
+                CONTRACT_STR_LENGTH => Ok(Self::Contract(PackageHash::new(dst))),
                 _ => Err(OdraError::ExecutionError(
                     ExecutionError::AddressCreationFailed
                 ))
@@ -71,7 +75,7 @@ impl Address {
     }
 
     /// Returns the inner contract hash if `self` is the `Contract` variant.
-    pub fn as_contract_package_hash(&self) -> Option<&ContractPackageHash> {
+    pub fn as_package_hash(&self) -> Option<&PackageHash> {
         if let Self::Contract(v) = self {
             Some(v)
         } else {
@@ -81,27 +85,42 @@ impl Address {
 
     /// Returns true if the address is a contract address.
     pub fn is_contract(&self) -> bool {
-        self.as_contract_package_hash().is_some()
+        self.as_package_hash().is_some()
+    }
+
+    /// Returns the [`HashAddr`] of the address.
+    pub fn value(&self) -> HashAddr {
+        match self {
+            Address::Account(account_hash) => account_hash.value(),
+            Address::Contract(package_hash) => package_hash.value()
+        }
+    }
+
+    /// Returns the [`EntityAddr`] of the address.
+    pub fn to_entity_addr(&self) -> EntityAddr {
+        match self {
+            Address::Account(_) => EntityAddr::Account(self.value()),
+            Address::Contract(_) => EntityAddr::SmartContract(self.value())
+        }
+    }
+
+    /// Returns a formatted string representation of the address.
+    pub fn to_formatted_string(&self) -> String {
+        match self {
+            Address::Account(_) => self.to_entity_addr().to_formatted_string(),
+            Address::Contract(package_hash) => package_hash.to_formatted_string()
+        }
     }
 }
 
-impl TryFrom<ContractPackageHash> for Address {
-    type Error = AddressError;
-    fn try_from(contract_package_hash: ContractPackageHash) -> Result<Self, Self::Error> {
-        if contract_package_hash.value().iter().all(|&b| b == 0) {
-            return Err(AddressError::ZeroAddress);
-        }
-        Ok(Self::Contract(contract_package_hash))
+impl From<PackageHash> for Address {
+    fn from(package_hash: PackageHash) -> Self {
+        Self::Contract(package_hash)
     }
 }
-
-impl TryFrom<AccountHash> for Address {
-    type Error = AddressError;
-    fn try_from(account_hash: AccountHash) -> Result<Self, Self::Error> {
-        if account_hash.value().iter().all(|&b| b == 0) {
-            return Err(AddressError::ZeroAddress);
-        }
-        Ok(Self::Account(account_hash))
+impl From<AccountHash> for Address {
+    fn from(account_hash: AccountHash) -> Self {
+        Self::Account(account_hash)
     }
 }
 
@@ -109,7 +128,7 @@ impl From<Address> for Key {
     fn from(address: Address) -> Self {
         match address {
             Address::Account(account_hash) => Key::Account(account_hash),
-            Address::Contract(contract_package_hash) => Key::Hash(contract_package_hash.value())
+            Address::Contract(package_hash) => Key::Hash(package_hash.value())
         }
     }
 }
@@ -119,10 +138,8 @@ impl TryFrom<Key> for Address {
 
     fn try_from(key: Key) -> Result<Self, Self::Error> {
         match key {
-            Key::Account(account_hash) => Self::try_from(account_hash),
-            Key::Hash(contract_package_hash) => {
-                Self::try_from(ContractPackageHash::new(contract_package_hash))
-            }
+            Key::Account(account_hash) => Ok(Self::from(account_hash)),
+            Key::Hash(hash_addr) => Ok(Self::from(PackageHash::new(hash_addr))),
             _ => Err(AddressError::AddressCreationError)
         }
     }
@@ -157,7 +174,7 @@ impl FromBytes for Address {
         let address = match key {
             Key::Account(account_hash) => Address::Account(account_hash),
             Key::Hash(raw_contract_package_hash) => {
-                Address::Contract(ContractPackageHash::new(raw_contract_package_hash))
+                Address::Contract(PackageHash::new(raw_contract_package_hash))
             }
             _ => return Err(bytesrepr::Error::Formatting)
         };
@@ -223,6 +240,15 @@ impl<'de> Deserialize<'de> for Address {
     }
 }
 
+impl From<Caller> for Address {
+    fn from(value: Caller) -> Self {
+        match value {
+            Caller::Initiator { account_hash } => Address::from(account_hash),
+            Caller::Entity { package_hash, .. } => Address::from(package_hash)
+        }
+    }
+}
+
 const fn decode_base16(input: &[u8]) -> Result<[u8; 32], &'static str> {
     // fail fast if the input is too short
     let input_len = input.len();
@@ -265,13 +291,13 @@ const fn hex_char_to_value(c: u8) -> Result<u8, &'static str> {
 
 #[cfg(test)]
 mod tests {
-    use casper_types::EraId;
-
     use super::*;
+    use casper_types::system::Caller;
+    use casper_types::{AddressableEntityHash, EraId};
 
     // TODO: casper-types > 1.5.0 will have prefix fixed.
-    const CONTRACT_PACKAGE_HASH: &str =
-        "contract-package-wasm7ba9daac84bebee8111c186588f21ebca35550b6cf1244e71768bd871938be6a";
+    const PACKAGE_HASH: &str =
+        "package-7ba9daac84bebee8111c186588f21ebca35550b6cf1244e71768bd871938be6a";
     const ACCOUNT_HASH: &str =
         "account-hash-3b4ffcfb21411ced5fc1560c3f6ffed86f4885e5ea05cde49d90962a48a14d95";
     const CONTRACT_HASH: &str =
@@ -281,18 +307,15 @@ mod tests {
         AccountHash::from_formatted_str(ACCOUNT_HASH).unwrap()
     }
 
-    fn mock_contract_package_hash() -> ContractPackageHash {
-        ContractPackageHash::from_formatted_str(CONTRACT_PACKAGE_HASH).unwrap()
+    fn mock_package_hash() -> PackageHash {
+        PackageHash::from_formatted_str(PACKAGE_HASH).unwrap()
     }
 
     #[test]
     fn test_casper_address_new() {
-        let address = Address::new(CONTRACT_PACKAGE_HASH).unwrap();
+        let address = Address::new(PACKAGE_HASH).unwrap();
         assert!(address.is_contract());
-        assert_eq!(
-            address.as_contract_package_hash().unwrap(),
-            &mock_contract_package_hash()
-        );
+        assert_eq!(address.as_package_hash().unwrap(), &mock_package_hash());
 
         let address = Address::new(ACCOUNT_HASH).unwrap();
         assert!(!address.is_contract());
@@ -330,11 +353,11 @@ mod tests {
         let account_hash = mock_account_hash();
 
         // It is possible to convert Address back to AccountHash.
-        let casper_address = Address::try_from(account_hash).unwrap();
+        let casper_address = Address::from(account_hash);
         assert_eq!(casper_address.as_account_hash().unwrap(), &account_hash);
 
-        // It is not possible to convert Address to ContractPackageHash.
-        assert!(casper_address.as_contract_package_hash().is_none());
+        // It is not possible to convert Address to PackageHash.
+        assert!(casper_address.as_package_hash().is_none());
 
         // And it is not a contract.
         assert!(!casper_address.is_contract());
@@ -344,14 +367,11 @@ mod tests {
 
     #[test]
     fn test_casper_address_contract_package_hash_conversion() {
-        let contract_package_hash = mock_contract_package_hash();
-        let casper_address = Address::try_from(contract_package_hash).unwrap();
+        let package_hash = mock_package_hash();
+        let casper_address = Address::from(package_hash);
 
-        // It is possible to convert Address back to ContractPackageHash.
-        assert_eq!(
-            casper_address.as_contract_package_hash().unwrap(),
-            &contract_package_hash
-        );
+        // It is possible to convert Address back to .
+        assert_eq!(casper_address.as_package_hash().unwrap(), &package_hash);
 
         // It is not possible to convert Address to AccountHash.
         assert!(casper_address.as_account_hash().is_none());
@@ -386,7 +406,7 @@ mod tests {
         assert_eq!(&address.to_string(), ACCOUNT_HASH);
 
         assert_eq!(
-            Address::from_str(CONTRACT_PACKAGE_HASH).unwrap_err(),
+            Address::from_str(PACKAGE_HASH).unwrap_err(),
             OdraError::VmError(VmError::Deserialization)
         )
     }
@@ -431,5 +451,21 @@ mod tests {
         let serialized = serde_json::to_string(&address).unwrap();
         let deserialized: Address = serde_json::from_str(&serialized).unwrap();
         assert_eq!(deserialized, address);
+    }
+
+    #[test]
+    fn test_address_from_caller() {
+        let account_hash = mock_account_hash();
+        let address = Address::from(account_hash);
+        let caller = Caller::Initiator { account_hash };
+        assert_eq!(address, caller.into());
+
+        let package_hash = mock_package_hash();
+        let address = Address::from(package_hash);
+        let caller = Caller::Entity {
+            package_hash,
+            entity_hash: AddressableEntityHash::new(package_hash.value())
+        };
+        assert_eq!(address, caller.into());
     }
 }
