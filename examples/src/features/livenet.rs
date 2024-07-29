@@ -59,3 +59,37 @@ impl LivenetContract {
             .transfer(&self.env().caller(), &1.into());
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::features::livenet::{LivenetContractHostRef, LivenetContractInitArgs};
+    use alloc::string::ToString;
+    use odra::host::{Deployer, HostRef};
+    use odra_modules::erc20::{Erc20HostRef, Erc20InitArgs};
+
+    #[test]
+    fn livenet_contract_test() {
+        let test_env = odra_test::env();
+        let mut erc20 = Erc20HostRef::deploy(
+            &test_env,
+            Erc20InitArgs {
+                name: "TestToken".to_string(),
+                symbol: "TT".to_string(),
+                decimals: 18,
+                initial_supply: Some(100_000.into())
+            }
+        );
+        let mut livenet_contract = LivenetContractHostRef::deploy(
+            &test_env,
+            LivenetContractInitArgs {
+                erc20_address: *erc20.address()
+            }
+        );
+
+        erc20.transfer(livenet_contract.address(), &1000.into());
+
+        livenet_contract.push_on_stack(1);
+        assert_eq!(livenet_contract.pop_from_stack(), 1);
+        livenet_contract.mutable_cross_call();
+    }
+}

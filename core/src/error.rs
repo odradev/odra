@@ -251,7 +251,9 @@ pub enum EventError {
     /// Could not extract event name.
     CouldntExtractName,
     /// Could not extract event data.
-    CouldntExtractEventData
+    CouldntExtractEventData,
+    /// Contract doesn't support CES events.
+    ContractDoesntSupportEvents
 }
 
 /// Represents the result of a contract call.

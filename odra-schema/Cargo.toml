@@ -9,7 +9,7 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
-casper-contract-schema = "0.1.0"
+casper-contract-schema = { workspace = true }
 casper-types = { workspace = true }
 odra-core = { workspace = true }
 num-traits = { workspace = true }

@@ -1,13 +1,18 @@
 //! Better address representation for Casper.
-use crate::AddressError::ZeroAddress;
-use crate::{prelude::*, ExecutionError, OdraResult};
-use crate::{AddressError, OdraError, VmError};
+
+use core::hash::Hash;
+
 use casper_types::{
     account::AccountHash,
     bytesrepr::{self, FromBytes, ToBytes},
-    CLType, CLTyped, ContractPackageHash, Key, PublicKey
+    contracts::ContractPackageHash,
+    AddressableEntityHash, CLType, CLTyped, EntityAddr, HashAddr, Key, PackageHash, PublicKey
 };
 use serde::{Deserialize, Serialize};
+
+use crate::AddressError::ZeroAddress;
+use crate::{prelude::*, ExecutionError, OdraResult};
+use crate::{AddressError, OdraError, VmError};
 
 /// The length of the hash part of an address.
 const ADDRESS_HASH_LENGTH: usize = 64;
@@ -80,9 +85,42 @@ impl Address {
         }
     }
 
+    /// Returns the inner contract hash if `self` is the `Contract` variant.
+    pub fn as_package_hash(&self) -> Option<PackageHash> {
+        self.as_contract_package_hash().map(|cph| {
+            PackageHash::new(cph.value())
+        })
+    }
+
     /// Returns true if the address is a contract address.
     pub fn is_contract(&self) -> bool {
         self.as_contract_package_hash().is_some()
+    }
+
+    /// Returns the [`HashAddr`] of the address.
+    pub fn value(&self) -> HashAddr {
+        match self {
+            Address::Account(account_hash) => account_hash.value(),
+            Address::Contract(contract_package_hash) => contract_package_hash.value()
+        }
+    }
+
+    /// Returns the [`EntityAddr`] of the address.
+    pub fn to_entity_addr(&self) -> EntityAddr {
+        match self {
+            Address::Account(_) => EntityAddr::Account(self.value()),
+            Address::Contract(_) => EntityAddr::SmartContract(self.value())
+        }
+    }
+
+    /// Returns a formatted string representation of the address.
+    pub fn to_formatted_string(&self) -> String {
+        match self {
+            Address::Account(_) => self.to_entity_addr().to_formatted_string(),
+            Address::Contract(package_hash) => {
+                PackageHash::new(package_hash.value()).to_formatted_string()
+            }
+        }
     }
 }
 
@@ -96,6 +134,12 @@ impl TryFrom<ContractPackageHash> for Address {
     }
 }
 
+impl From<PackageHash> for Address {
+    fn from(package_hash: PackageHash) -> Self {
+        let contract_package_hash = ContractPackageHash::new(package_hash.value());
+        Self::Contract(contract_package_hash)
+    }
+}
 impl TryFrom<AccountHash> for Address {
     type Error = AddressError;
     fn try_from(account_hash: AccountHash) -> Result<Self, Self::Error> {
@@ -207,6 +251,21 @@ impl FromStr for Address {
 impl ToString for Address {
     fn to_string(&self) -> String {
         Key::from(*self).to_formatted_string()
+    }
+}
+
+impl From<AddressableEntityHash> for Address {
+    fn from(value: AddressableEntityHash) -> Self {
+        Address::Contract(ContractPackageHash::new(value.value()))
+    }
+}
+
+impl From<Address> for AddressableEntityHash {
+    fn from(value: Address) -> Self {
+        match value {
+            Address::Account(account) => AddressableEntityHash::new(account.value()),
+            Address::Contract(contract) => AddressableEntityHash::new(contract.value())
+        }
     }
 }
 

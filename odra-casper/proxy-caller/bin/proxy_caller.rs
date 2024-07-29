@@ -15,7 +15,7 @@ use odra_casper_wasm_env::casper_contract::contract_api::runtime;
 fn call() {
     let proxy_call = ProxyCall::load_from_args();
     let _: () = runtime::call_versioned_contract(
-        proxy_call.contract_package_hash,
+        proxy_call.package_hash,
         None,
         proxy_call.entry_point_name.as_str(),
         proxy_call.runtime_args

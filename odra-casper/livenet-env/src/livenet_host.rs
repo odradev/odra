@@ -1,4 +1,5 @@
 //! Livenet implementation of HostContext for HostEnv.
+
 use crate::livenet_contract_env::LivenetContractEnv;
 use odra_casper_rpc_client::casper_client::CasperClient;
 use odra_casper_rpc_client::log::info;
@@ -13,6 +14,8 @@ use odra_core::{
 };
 use odra_core::{prelude::*, EventError, OdraResult};
 use odra_core::{ContractContainer, ContractRegister};
+use std::fs;
+use std::path::PathBuf;
 use std::sync::RwLock;
 use std::thread::sleep;
 use tokio::runtime::Runtime;
@@ -153,10 +156,16 @@ impl HostContext for LivenetHost {
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address> {
         let timestamp = Timestamp::now();
+        let wasm_path = find_wasm_file_path(name);
+        let wasm_bytes = fs::read(wasm_path).unwrap();
         let address = {
             let mut client = self.casper_client.borrow_mut();
             let rt = Runtime::new().unwrap();
-            rt.block_on(async { client.deploy_wasm(name, init_args, timestamp).await })?
+            rt.block_on(async {
+                client
+                    .deploy_wasm(name, init_args, timestamp, wasm_bytes)
+                    .await
+            })?
         };
         self.register_contract(address, name.to_string(), entry_points_caller);
         Ok(address)
@@ -208,4 +217,22 @@ impl HostContext for LivenetHost {
         let client = self.casper_client.borrow_mut();
         rt.block_on(async { client.transfer(to, amount, timestamp).await })
     }
+}
+
+fn find_wasm_file_path(wasm_file_name: &str) -> PathBuf {
+    let mut path = PathBuf::from("wasm")
+        .join(wasm_file_name)
+        .with_extension("wasm");
+    let mut checked_paths = vec![];
+    for _ in 0..2 {
+        if path.exists() && path.is_file() {
+            info(format!("Found wasm under {:?}.", path));
+            return path;
+        } else {
+            checked_paths.push(path.clone());
+            path = path.parent().unwrap().to_path_buf();
+        }
+    }
+    odra_casper_rpc_client::log::error(format!("Could not find wasm under {:?}.", checked_paths));
+    panic!("Wasm not found");
 }

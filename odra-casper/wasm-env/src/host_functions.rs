@@ -20,14 +20,15 @@ use casper_contract::{
     unwrap_or_revert::UnwrapOrRevert
 };
 use core::mem::MaybeUninit;
+use odra_core::casper_types::addressable_entity::NamedKeys;
 use odra_core::casper_types::bytesrepr::deserialize;
+use odra_core::casper_types::contracts::{ContractPackageHash, ContractVersion};
+use odra_core::casper_types::system::Caller;
 use odra_core::casper_types::{
     api_error, bytesrepr,
     bytesrepr::{Bytes, FromBytes, ToBytes},
-    contracts::NamedKeys,
-    system::CallStackElement,
-    ApiError, CLTyped, CLValue, ContractPackageHash, ContractVersion, EntryPoints, Key,
-    RuntimeArgs, URef, DICTIONARY_ITEM_KEY_MAX_LENGTH, U512, UREF_SERIALIZED_LENGTH
+    ApiError, CLTyped, CLValue, EntryPoints, Key, PackageHash, RuntimeArgs, URef,
+    DICTIONARY_ITEM_KEY_MAX_LENGTH, U512, UREF_SERIALIZED_LENGTH
 };
 use odra_core::ExecutionError::EmptyDictionaryName;
 use odra_core::{
@@ -65,7 +66,7 @@ pub fn install_contract(
     entry_points: EntryPoints,
     events: Schemas,
     init_args: Option<RuntimeArgs>
-) -> ContractPackageHash {
+) -> PackageHash {
     // Read arguments
     let package_hash_key: String = runtime::get_named_arg(consts::PACKAGE_HASH_KEY_NAME_ARG);
     let allow_key_override: bool = runtime::get_named_arg(consts::ALLOW_KEY_OVERRIDE_ARG);
@@ -83,35 +84,38 @@ pub fn install_contract(
     // Create new contract.
     let access_uref_key = format!("{}_access_token", package_hash_key);
     if is_upgradable {
+        // TODO: Handle message topics
         storage::new_contract(
             entry_points,
             Some(named_keys),
             Some(package_hash_key.clone()),
-            Some(access_uref_key)
+            Some(access_uref_key),
+            None
         );
     } else {
+        // TODO: Handle message topics
         storage::new_locked_contract(
             entry_points,
             Some(named_keys),
             Some(package_hash_key.clone()),
-            Some(access_uref_key)
+            Some(access_uref_key),
+            None
         );
     }
 
-    // Read contract package hash from the storage.
-    let contract_package_hash: ContractPackageHash = runtime::get_key(&package_hash_key)
+    // Read package hash from the storage.
+    let package_hash: PackageHash = runtime::get_key(&package_hash_key)
         .unwrap_or_revert()
-        .into_hash()
-        .unwrap_or_revert()
-        .into();
+        .into_package_hash()
+        .unwrap_or_revert();
 
     if let Some(args) = init_args {
-        let init_access = create_constructor_group(contract_package_hash);
-        let _: () = runtime::call_versioned_contract(contract_package_hash, None, "init", args);
-        revoke_access_to_constructor_group(contract_package_hash, init_access);
+        let init_access = create_constructor_group(package_hash);
+        let _: () = runtime::call_versioned_contract(package_hash, None, "init", args);
+        revoke_access_to_constructor_group(package_hash, init_access);
     }
 
-    contract_package_hash
+    package_hash
 }
 
 /// Stops a contract execution and reverts the state with a given error.
@@ -351,8 +355,8 @@ pub fn emit_event(event: &Bytes) {
 /// session/stored contracts.
 #[inline(always)]
 pub fn caller() -> Address {
-    let second_elem = take_call_stack_elem(1);
-    call_stack_element_to_address(second_elem)
+    let second_elem = take_nth_caller_from_stack(1);
+    caller_to_address(second_elem)
 }
 
 /// Calls a contract method by Address
@@ -383,8 +387,8 @@ pub fn call_contract(address: Address, call_def: CallDef) -> Bytes {
 /// Gets the address of the currently run contract
 #[inline(always)]
 pub fn self_address() -> Address {
-    let first_elem = take_call_stack_elem(0);
-    call_stack_element_to_address(first_elem)
+    let first_elem = take_nth_caller_from_stack(0);
+    caller_to_address(first_elem)
 }
 
 /// Gets the balance of the current contract.
@@ -555,16 +559,16 @@ fn deserialize_contract_result(bytes_written: usize) -> Vec<u8> {
     }
 }
 
-fn take_call_stack_elem(n: usize) -> CallStackElement {
+fn take_nth_caller_from_stack(n: usize) -> Caller {
     runtime::get_call_stack()
         .into_iter()
         .nth_back(n)
         .unwrap_or_revert()
 }
 
-fn create_constructor_group(contract_package_hash: ContractPackageHash) -> URef {
+fn create_constructor_group(package_hash: PackageHash) -> URef {
     storage::create_contract_user_group(
-        contract_package_hash,
+        package_hash,
         consts::CONSTRUCTOR_GROUP_NAME,
         1,
         Default::default()
@@ -574,42 +578,26 @@ fn create_constructor_group(contract_package_hash: ContractPackageHash) -> URef 
     .unwrap_or_revert()
 }
 
-fn revoke_access_to_constructor_group(
-    contract_package_hash: ContractPackageHash,
-    constructor_access: URef
-) {
+fn revoke_access_to_constructor_group(package_hash: PackageHash, constructor_access: URef) {
     let mut urefs = BTreeSet::new();
     urefs.insert(constructor_access);
-    storage::remove_contract_user_group_urefs(
-        contract_package_hash,
-        consts::CONSTRUCTOR_GROUP_NAME,
-        urefs
-    )
-    .unwrap_or_revert();
+    storage::remove_contract_user_group_urefs(package_hash, consts::CONSTRUCTOR_GROUP_NAME, urefs)
+        .unwrap_or_revert();
 }
 
 /// Returns address based on a [`CallStackElement`].
 ///
 /// For `Session` and `StoredSession` variants it will return account hash, and for `StoredContract`
 /// case it will use contract hash as the address.
-fn call_stack_element_to_address(call_stack_element: CallStackElement) -> Address {
-    match call_stack_element {
-        CallStackElement::Session { account_hash } => Address::try_from(account_hash)
+fn caller_to_address(caller: Caller) -> Address {
+    match caller {
+        Caller::Initiator { account_hash } => Address::try_from(account_hash)
             .map_err(|e| ApiError::User(ExecutionError::from(e).code()))
             .unwrap_or_revert(),
-        CallStackElement::StoredSession { account_hash, .. } => {
-            // Stored session code acts in account's context, so if stored session
-            // wants to interact, caller's address will be used.
-            Address::try_from(account_hash)
-                .map_err(|e| ApiError::User(ExecutionError::from(e).code()))
-                .unwrap_or_revert()
-        }
-        CallStackElement::StoredContract {
-            contract_package_hash,
-            ..
-        } => Address::try_from(contract_package_hash)
-            .map_err(|e| ApiError::User(ExecutionError::from(e).code()))
-            .unwrap_or_revert()
+        Caller::Entity {
+            entity_hash,
+            package_hash
+        } => Address::from(package_hash)
     }
 }
 
