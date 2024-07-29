@@ -12,6 +12,7 @@ mod prelude {
     pub use alloc::collections::*;
     pub use alloc::format;
     pub use alloc::rc::Rc;
+    pub use alloc::slice::Iter;
     pub use alloc::string;
     pub use alloc::string::{FromUtf16Error, FromUtf8Error, ParseError, String, ToString};
     pub use alloc::{vec, vec::*};

@@ -19,6 +19,11 @@ impl GasReport {
     pub fn new() -> Self {
         GasReport::default()
     }
+
+    /// Returns an iterator over the gas report.
+    pub fn iter(&self) -> Iter<'_, DeployReport> {
+        self.0.iter()
+    }
 }
 
 impl Display for GasReport {
@@ -32,7 +37,7 @@ impl Display for GasReport {
 
 impl IntoIterator for GasReport {
     type Item = DeployReport;
-    type IntoIter = IntoIter<Self::Item>;
+    type IntoIter = IntoIter<DeployReport>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
