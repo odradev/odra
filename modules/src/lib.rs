@@ -1,7 +1,6 @@
 #![doc = "Odra's library of plug and play modules"]
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
-#![recursion_limit = "256"]
 
 extern crate alloc;
 

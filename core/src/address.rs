@@ -203,6 +203,7 @@ impl FromStr for Address {
     }
 }
 
+#[allow(clippy::to_string_trait_impl)]
 impl ToString for Address {
     fn to_string(&self) -> String {
         Key::from(*self).to_formatted_string()

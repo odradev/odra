@@ -9,7 +9,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": null,
   "contract_name": "Cep18",
-  "contract_version": "1.0.0",
+  "contract_version": "1.1.0",
   "types": [
     {
       "struct": {
@@ -196,6 +196,52 @@
             "name": "amount",
             "description": null,
             "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "enum": {
+        "name": "Cep18Modality",
+        "description": null,
+        "variants": [
+          {
+            "name": "None",
+            "description": null,
+            "discriminant": 0,
+            "ty": "Unit"
+          },
+          {
+            "name": "MintAndBurn",
+            "description": null,
+            "discriminant": 1,
+            "ty": "Unit"
+          }
+        ]
+      }
+    },
+    {
+      "enum": {
+        "name": "SecurityBadge",
+        "description": null,
+        "variants": [
+          {
+            "name": "Admin",
+            "description": null,
+            "discriminant": 0,
+            "ty": "Unit"
+          },
+          {
+            "name": "Minter",
+            "description": null,
+            "discriminant": 1,
+            "ty": "Unit"
+          },
+          {
+            "name": "None",
+            "description": null,
+            "discriminant": 2,
+            "ty": "Unit"
           }
         ]
       }

@@ -9,7 +9,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": null,
   "contract_name": "Ownable2Step",
-  "contract_version": "1.0.0",
+  "contract_version": "1.1.0",
   "types": [
     {
       "struct": {

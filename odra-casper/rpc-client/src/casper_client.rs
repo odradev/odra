@@ -349,8 +349,9 @@ impl CasperClient {
             .safe_post_request(request)
             .await
             .get_result()
-            .map(|result| serde_json::from_value::<GetDictionaryItemResult>(result.clone()).ok())
-            .flatten()
+            .and_then(|result| {
+                serde_json::from_value::<GetDictionaryItemResult>(result.clone()).ok()
+            })
             .ok_or_else(|| OdraError::ExecutionError(ExecutionError::KeyNotFound))?;
         match result.stored_value {
             CLValue(value) => Ok(value.inner_bytes().as_slice().into()),
@@ -654,8 +655,9 @@ impl CasperClient {
             .safe_post_request(request)
             .await
             .get_result()
-            .map(|result| serde_json::from_value::<GetDictionaryItemResult>(result.clone()).ok())
-            .flatten();
+            .and_then(|result| {
+                serde_json::from_value::<GetDictionaryItemResult>(result.clone()).ok()
+            });
         result
             .context("Couldn't get dictionary item")
             .and_then(|result| {

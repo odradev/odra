@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use quote::ToTokens;
 use syn::{punctuated::Punctuated, token::Comma};
 
@@ -21,13 +22,19 @@ impl ToTokens for OdraEventItem {
         let comment = format!("Creates a new instance of the {} event.", ident);
         let doc_attr = quote::quote!(#[doc = #comment]);
 
-        let chain = item.fields
+        let mut tmp = HashSet::<String>::new();
+        let mut chain = vec![];
+
+        item.fields
             .iter()
-            .map(|f| {
+            .for_each(|f| {
                 let ty = &f.ty;
-                quote::quote!(.chain(<#ty as odra::schema::SchemaEvents>::custom_types()))
-            })
-            .collect::<Vec<_>>();
+                let v = quote::quote!(.chain(<#ty as odra::schema::SchemaEvents>::custom_types()));
+                if tmp.insert(v.to_string()) {
+                    chain.push(v);
+                }
+            });
+
 
         let self_item = custom_struct(&name, &item.fields);
 
