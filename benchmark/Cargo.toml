@@ -26,6 +26,7 @@ test = false
 name = "benchmark"
 path = "bin/benchmark.rs"
 test = false
+required-features = ["odra-test"]
 
 [[bin]]
 name = "evaluate_benchmark"

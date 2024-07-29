@@ -39,7 +39,7 @@ fn compare_gas_reports(current_gas_report: &GasReport, base_gas_report: &GasRepo
     let mut report: Vec<String> = Vec::new();
     let mut errors: Vec<String> = Vec::new();
     let mut unchanged: Vec<String> = Vec::new();
-    for (current_report, base_report) in current_gas_report.iter().zip(base_gas_report) {
+    for (current_report, base_report) in current_gas_report.iter().zip(base_gas_report.iter()) {
         let (report_line, error_line, unchanged_line) =
             compare_reports(current_report, base_report);
         if let Some(line) = report_line {

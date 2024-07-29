@@ -73,9 +73,6 @@ impl<T: ContractRef> ModulePrimitive for External<T> {}
 impl<T: ContractRef> External<T> {
     /// Sets the address of the external contract.
     pub fn set(&mut self, address: Address) {
-        if self.value.get().is_some() {
-            self.env.revert(ExecutionError::AddressAlreadySet);
-        }
         self.value.set(address);
     }
 

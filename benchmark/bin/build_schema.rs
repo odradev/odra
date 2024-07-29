@@ -1,4 +1,4 @@
-#[allow(unused_imports)]
+#[allow(unused_imports, clippy::single_component_path_imports)]
 use benchmark;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -15,7 +15,7 @@ fn main() {
     }
 
     let module = std::env::var("ODRA_MODULE").expect("ODRA_MODULE environment variable is not set");
-    let mut schema_file = std::fs::File::create(&format!("resources/{}_schema.json", module))
+    let mut schema_file = std::fs::File::create(format!("resources/{}_schema.json", module))
         .expect("Failed to create schema file");
     let json = schema.as_json().expect("Failed to convert schema to JSON");
     std::io::Write::write_all(&mut schema_file, &json.into_bytes())

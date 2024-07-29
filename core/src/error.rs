@@ -135,10 +135,8 @@ pub enum ExecutionError {
     MissingArg = 122,
     /// Reading the address from the storage failed.
     MissingAddress = 123,
-    /// Writing the address to the storage failed.
-    AddressAlreadySet = 124,
     /// Out of gas error
-    OutOfGas = 125,
+    OutOfGas = 124,
     /// Maximum code for user errors
     MaxUserError = 64535,
     /// User error too high. The code should be in range 0..32767.
