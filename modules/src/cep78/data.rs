@@ -33,6 +33,13 @@ impl Cep78TokenCounter {
             None => self.set(value)
         }
     }
+
+    pub fn sub(&mut self, value: u64) {
+        match self.get() {
+            Some(current_value) => self.set(current_value - value),
+            None => self.env().revert(CEP78Error::GoingBelowZeroSupply)
+        }
+    }
 }
 single_value_storage!(
     Cep78Installer,
@@ -43,7 +50,7 @@ single_value_storage!(
 compound_key_value_storage!(Cep78Operators, OPERATORS, Address, bool);
 key_value_storage!(Cep78Owners, TOKEN_OWNERS, Address);
 key_value_storage!(Cep78Issuers, TOKEN_ISSUERS, Address);
-key_value_storage!(Cep78BurntTokens, BURNT_TOKENS, ());
+key_value_storage!(Cep78BurntTokens, BURNT_TOKENS, bool);
 base64_encoded_key_value_storage!(Cep78TokenCount, TOKEN_COUNT, Address, u64);
 key_value_storage!(Cep78Approved, APPROVED, Option<Address>);
 
@@ -100,6 +107,11 @@ impl CollectionData {
     }
 
     #[inline]
+    pub fn decrement_number_of_minted_tokens(&mut self) {
+        self.minted_tokens_count.sub(1);
+    }
+
+    #[inline]
     pub fn number_of_minted_tokens(&self) -> u64 {
         self.minted_tokens_count.get().unwrap_or_default()
     }
@@ -148,12 +160,17 @@ impl CollectionData {
 
     #[inline]
     pub fn mark_burnt(&mut self, token_id: &str) {
-        self.burnt_tokens.set(token_id, ());
+        self.burnt_tokens.set(token_id, true);
+    }
+
+    #[inline]
+    pub fn mark_not_burnt(&mut self, token_id: &str) {
+        self.burnt_tokens.set(token_id, false);
     }
 
     #[inline]
     pub fn is_burnt(&self, token_id: &str) -> bool {
-        self.burnt_tokens.get(token_id).is_some()
+        self.burnt_tokens.get(token_id).unwrap_or_default()
     }
 
     #[inline]

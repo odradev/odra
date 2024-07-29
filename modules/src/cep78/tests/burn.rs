@@ -306,3 +306,47 @@ fn should_burn_token_in_hash_identifier_mode() {
         .try_burn(Maybe::None, Maybe::Some(token_hash))
         .is_ok());
 }
+
+#[test]
+fn should_allow_to_remint_with_reverse_lookup() {
+    let env = odra_test::env();
+    let args = default_args_builder()
+        .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
+        .ownership_mode(OwnershipMode::Transferable)
+        .events_mode(EventsMode::CES)
+        .identifier_mode(NFTIdentifierMode::Hash)
+        .build();
+    let mut contract = TestCep78HostRef::deploy(&env, args);
+
+    let token_hash = "token_hash".to_string();
+    let token_owner = env.get_account(0);
+
+    // Mint the token.
+    contract.register_owner(Maybe::Some(token_owner));
+    contract.mint(
+        token_owner,
+        TEST_PRETTY_721_META_DATA.to_string(),
+        Maybe::Some(token_hash.clone())
+    );
+    let token_page = contract.get_page_by_token_id(0);
+    assert!(token_page[0]);
+    assert_eq!(contract.balance_of(token_owner), 1);
+    assert_eq!(contract.get_number_of_minted_tokens(), 1);
+
+    // Burn the token.
+    contract.burn(Maybe::None, Maybe::Some(token_hash.clone()));
+    assert_eq!(contract.balance_of(token_owner), 0);
+
+    // Mint the token again.
+    contract.mint(
+        token_owner,
+        TEST_PRETTY_721_META_DATA.to_string(),
+        Maybe::Some(token_hash.clone())
+    );
+
+    // Check if the token is minted.
+    let token_page = contract.get_page_by_token_id(0);
+    assert!(token_page[0]);
+    assert_eq!(contract.balance_of(token_owner), 1);
+    assert_eq!(contract.get_number_of_minted_tokens(), 1);
+}

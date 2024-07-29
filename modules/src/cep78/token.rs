@@ -162,7 +162,7 @@ impl Cep78 {
         );
 
         self.reverse_lookup
-            .init(owner_reverse_lookup_mode, receipt_name);
+            .init(owner_reverse_lookup_mode, receipt_name, total_token_supply);
 
         self.whitelist.init(acl_white_list.clone(), whitelist_mode);
 
@@ -267,6 +267,12 @@ impl Cep78 {
             })
         };
         let token_id = token_identifier.to_string();
+
+        // Check if token already exists.
+        if self.token_exists_by_hash(&token_id) {
+            self.revert(CEP78Error::DuplicateIdentifier)
+        }
+
         self.metadata.update_or_revert(&token_meta_data, &token_id);
 
         let token_owner = if self.is_transferable_or_assigned() {
@@ -277,19 +283,14 @@ impl Cep78 {
 
         self.data.set_owner(&token_id, token_owner);
         self.data.set_issuer(&token_id, caller);
-
-        if let NFTIdentifierMode::Hash = identifier_mode {
-            self.reverse_lookup
-                .insert_hash(minted_tokens_count, &token_identifier);
-        }
+        self.data.mark_not_burnt(&token_id);
 
         self.data.increment_counter(&token_owner);
         self.data.increment_number_of_minted_tokens();
 
         self.emit_ces_event(Mint::new(token_owner, token_id.clone(), token_meta_data));
 
-        self.reverse_lookup
-            .on_mint(minted_tokens_count, token_owner, token_id)
+        self.reverse_lookup.on_mint(&token_owner, &token_identifier)
     }
 
     /// Burns the token with provided `token_id` argument, after which it is no
@@ -322,7 +323,10 @@ impl Cep78 {
         self.ensure_not_burned(&token_id);
         self.data.mark_burnt(&token_id);
         self.data.decrement_counter(&token_owner);
+        self.data.decrement_number_of_minted_tokens();
         self.emit_ces_event(Burn::new(token_owner, token_id, caller));
+
+        self.reverse_lookup.on_burn(&token_owner, &token_identifier);
     }
 
     /// Transfers ownership of the token from one account to another.
@@ -377,20 +381,15 @@ impl Cep78 {
                 if token_actual_owner != source_key {
                     self.revert(CEP78Error::InvalidTokenOwner)
                 }
-                self.data.set_owner(&token_id, target_key);
             }
             None => self.revert(CEP78Error::MissingOwnerTokenIdentifierKey)
         }
 
-        self.data.decrement_counter(&source_key);
-        self.data.increment_counter(&target_key);
-        self.data.revoke(&token_id);
-
         let spender = if caller == owner { None } else { Some(caller) };
-        self.emit_ces_event(Transfer::new(owner, spender, target_key, token_id));
+        self.transfer_unchecked(token_id, source_key, spender, target_key);
 
         self.reverse_lookup
-            .on_transfer(token_identifier, source_key, target_key)
+            .on_transfer(&token_identifier, &source_key, &target_key)
     }
 
     /// Approves another token holder (an approved account) to transfer tokens. It
@@ -508,7 +507,7 @@ impl Cep78 {
     }
 
     /// Returns number of owned tokens associated with the provided token holder
-    pub fn balance_of(&mut self, token_owner: Address) -> u64 {
+    pub fn balance_of(&self, token_owner: Address) -> u64 {
         self.data.token_count(&token_owner)
     }
 
@@ -539,7 +538,7 @@ impl Cep78 {
     }
 
     #[inline]
-    fn is_minter_or_assigned(&self) -> bool {
+    pub fn is_minter_or_assigned(&self) -> bool {
         matches!(
             self.ownership_mode(),
             OwnershipMode::Minter | OwnershipMode::Assigned
@@ -547,7 +546,7 @@ impl Cep78 {
     }
 
     #[inline]
-    fn is_transferable_or_assigned(&self) -> bool {
+    pub fn is_transferable_or_assigned(&self) -> bool {
         matches!(
             self.ownership_mode(),
             OwnershipMode::Transferable | OwnershipMode::Assigned
@@ -555,14 +554,18 @@ impl Cep78 {
     }
 
     #[inline]
-    fn ensure_not_minter_or_assigned(&self) {
+    pub fn ensure_not_minter_or_assigned(&self) {
         if self.is_minter_or_assigned() {
             self.revert(CEP78Error::InvalidOwnershipMode)
         }
     }
 
     #[inline]
-    fn token_identifier(&self, token_id: Maybe<u64>, token_hash: Maybe<String>) -> TokenIdentifier {
+    pub fn token_identifier(
+        &self,
+        token_id: Maybe<u64>,
+        token_hash: Maybe<String>
+    ) -> TokenIdentifier {
         let env = self.env();
         let identifier_mode: NFTIdentifierMode = self.metadata.get_identifier_mode();
         match identifier_mode {
@@ -571,8 +574,13 @@ impl Cep78 {
         }
     }
 
+    pub fn token_id(&self, token_id: Maybe<u64>, token_hash: Maybe<String>) -> String {
+        let token_identifier = self.token_identifier(token_id, token_hash);
+        token_identifier.to_string()
+    }
+
     #[inline]
-    fn checked_token_identifier(
+    pub fn checked_token_identifier(
         &self,
         token_id: Maybe<u64>,
         token_hash: Maybe<String>
@@ -594,7 +602,7 @@ impl Cep78 {
     }
 
     #[inline]
-    fn owner_of_by_id(&self, id: &str) -> Address {
+    pub fn owner_of_by_id(&self, id: &str) -> Address {
         match self.data.owner_of(id) {
             Some(token_owner) => token_owner,
             None => self
@@ -604,12 +612,12 @@ impl Cep78 {
     }
 
     #[inline]
-    fn is_token_burned(&self, token_id: &str) -> bool {
+    pub fn is_token_burned(&self, token_id: &str) -> bool {
         self.data.is_burnt(token_id)
     }
 
     #[inline]
-    fn ensure_owner(&self, token_id: &str, address: &Address) {
+    pub fn ensure_owner(&self, token_id: &str, address: &Address) {
         let owner = self.owner_of_by_id(token_id);
         if address != &owner {
             self.revert(CEP78Error::InvalidAccount);
@@ -617,7 +625,7 @@ impl Cep78 {
     }
 
     #[inline]
-    fn ensure_caller_is_owner(&self, token_id: &str) {
+    pub fn ensure_caller_is_owner(&self, token_id: &str) {
         let owner = self.owner_of_by_id(token_id);
         if self.caller() != owner {
             self.revert(CEP78Error::InvalidTokenOwner);
@@ -625,28 +633,28 @@ impl Cep78 {
     }
 
     #[inline]
-    fn ensure_not_burned(&self, token_id: &str) {
+    pub fn ensure_not_burned(&self, token_id: &str) {
         if self.is_token_burned(token_id) {
             self.revert(CEP78Error::PreviouslyBurntToken);
         }
     }
 
     #[inline]
-    fn ensure_not_caller(&self, address: Address) {
+    pub fn ensure_not_caller(&self, address: Address) {
         if self.caller() == address {
             self.revert(CEP78Error::InvalidAccount);
         }
     }
 
     #[inline]
-    fn ensure_caller(&self, address: Address) {
+    pub fn ensure_caller(&self, address: Address) {
         if self.caller() != address {
             self.revert(CEP78Error::InvalidAccount);
         }
     }
 
     #[inline]
-    fn emit_ces_event<T: ToBytes + EventInstance>(&self, event: T) {
+    pub fn emit_ces_event<T: ToBytes + EventInstance>(&self, event: T) {
         let events_mode = self.settings.events_mode();
         if let EventsMode::CES = events_mode {
             self.env().emit_event(event);
@@ -654,19 +662,19 @@ impl Cep78 {
     }
 
     #[inline]
-    fn ensure_burnable(&self) {
+    pub fn ensure_burnable(&self) {
         if let BurnMode::NonBurnable = self.settings.burn_mode() {
             self.revert(CEP78Error::InvalidBurnMode)
         }
     }
 
     #[inline]
-    fn ownership_mode(&self) -> OwnershipMode {
+    pub fn ownership_mode(&self) -> OwnershipMode {
         self.settings.ownership_mode()
     }
 
     #[inline]
-    fn verified_caller(&self) -> Address {
+    pub fn verified_caller(&self) -> Address {
         let holder_mode = self.settings.holder_mode();
         let caller = self.caller();
 
@@ -679,9 +687,9 @@ impl Cep78 {
         }
     }
 
-    // TODO: Verify correctness of this function.
+    // Check if token exists by hash.
     pub fn token_exists_by_hash(&self, token_id: &str) -> bool {
-        self.data.owner_of(token_id).is_some()
+        self.data.owner_of(token_id).is_some() && !self.is_token_burned(token_id)
     }
 
     // Update metadata without ownership check.
@@ -702,6 +710,7 @@ impl Cep78 {
         self.ensure_not_burned(&token_id);
         self.data.mark_burnt(&token_id);
         self.data.decrement_counter(&token_owner);
+        self.data.decrement_number_of_minted_tokens();
         self.emit_ces_event(Burn::new(token_owner, token_id, burner));
     }
 
@@ -713,6 +722,26 @@ impl Cep78 {
     // Returns collection symbol.
     pub fn get_collection_symbol(&self) -> String {
         self.data.collection_symbol()
+    }
+
+    // Returns if address has admin rights.
+    pub fn is_whitelisted(&self, address: &Address) -> bool {
+        self.whitelist.is_whitelisted(address)
+    }
+
+    pub fn transfer_unchecked(
+        &mut self,
+        token_id: String,
+        owner: Address,
+        spender: Option<Address>,
+        reciepient: Address
+    ) {
+        self.data.set_owner(&token_id, reciepient);
+        self.data.decrement_counter(&owner);
+        self.data.increment_counter(&reciepient);
+        self.data.revoke(&token_id);
+
+        self.emit_ces_event(Transfer::new(owner, spender, reciepient, token_id));
     }
 }
 
@@ -797,13 +826,10 @@ impl TestCep78 {
                 token_hash: Maybe<String>,
                 token_meta_data: String
             );
-            fn balance_of(&mut self, token_owner: Address) -> u64;
+            fn balance_of(&self, token_owner: Address) -> u64;
             fn register_owner(&mut self, token_owner: Maybe<Address>) -> String;
+            fn is_whitelisted(&self, address: &Address) -> bool;
         }
-    }
-
-    pub fn is_whitelisted(&self, address: &Address) -> bool {
-        self.token.whitelist.is_whitelisted(address)
     }
 
     pub fn get_whitelist_mode(&self) -> WhitelistMode {
@@ -866,15 +892,17 @@ impl TestCep78 {
 
     pub fn get_page_by_token_hash(&self, token_hash: String) -> Vec<bool> {
         let identifier = TokenIdentifier::Hash(token_hash);
-        let token_id = self.token.reverse_lookup.get_token_index(&identifier);
+        let token_id = self
+            .token
+            .reverse_lookup
+            .get_token_index_checked(&identifier);
         self.get_page_by_token_id(token_id)
     }
 
     pub fn get_page_table(&self) -> Vec<bool> {
         self.token
             .reverse_lookup
-            .get_page_table(self.__env.caller())
-            .unwrap_or_revert_with(&self.__env, CEP78Error::MissingPage)
+            .get_page_table(&self.__env.caller(), CEP78Error::MissingPage)
     }
 
     pub fn get_metadata_by_kind(
