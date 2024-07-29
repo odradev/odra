@@ -267,6 +267,12 @@ impl Cep78 {
             })
         };
         let token_id = token_identifier.to_string();
+
+        // Check if token already exists.
+        if self.token_exists_by_hash(&token_id) {
+            self.revert(CEP78Error::DuplicateIdentifier)
+        }
+
         self.metadata.update_or_revert(&token_meta_data, &token_id);
 
         let token_owner = if self.is_transferable_or_assigned() {
@@ -279,24 +285,12 @@ impl Cep78 {
         self.data.set_issuer(&token_id, caller);
         self.data.mark_not_burnt(&token_id);
 
-        // TODO: This is commented out because it prevents to mint, burn
-        // and then mint the token again.
-        if let NFTIdentifierMode::Hash = identifier_mode {
-            let inserted = self.reverse_lookup
-                .insert_hash(minted_tokens_count, &token_identifier);
-
-            if !inserted {
-                self.revert(CEP78Error::DuplicateIdentifier);
-            }
-        }
-
         self.data.increment_counter(&token_owner);
         self.data.increment_number_of_minted_tokens();
 
         self.emit_ces_event(Mint::new(token_owner, token_id.clone(), token_meta_data));
 
-        self.reverse_lookup
-            .on_mint(minted_tokens_count, token_owner, token_id)
+        self.reverse_lookup.on_mint(&token_owner, &token_identifier)
     }
 
     /// Burns the token with provided `token_id` argument, after which it is no
@@ -385,7 +379,6 @@ impl Cep78 {
                 if token_actual_owner != source_key {
                     self.revert(CEP78Error::InvalidTokenOwner)
                 }
-               
             }
             None => self.revert(CEP78Error::MissingOwnerTokenIdentifierKey)
         }
@@ -394,7 +387,7 @@ impl Cep78 {
         self.transfer_unchecked(token_id, source_key, spender, target_key);
 
         self.reverse_lookup
-            .on_transfer(token_identifier, source_key, target_key)
+            .on_transfer(&token_identifier, &source_key, &target_key)
     }
 
     /// Approves another token holder (an approved account) to transfer tokens. It
@@ -566,7 +559,11 @@ impl Cep78 {
     }
 
     #[inline]
-    pub fn token_identifier(&self, token_id: Maybe<u64>, token_hash: Maybe<String>) -> TokenIdentifier {
+    pub fn token_identifier(
+        &self,
+        token_id: Maybe<u64>,
+        token_hash: Maybe<String>
+    ) -> TokenIdentifier {
         let env = self.env();
         let identifier_mode: NFTIdentifierMode = self.metadata.get_identifier_mode();
         match identifier_mode {
@@ -688,7 +685,7 @@ impl Cep78 {
         }
     }
 
-    // TODO: Verify correctness of this function.
+    // Check if token exists by hash.
     pub fn token_exists_by_hash(&self, token_id: &str) -> bool {
         self.data.owner_of(token_id).is_some() && !self.is_token_burned(token_id)
     }
@@ -730,7 +727,13 @@ impl Cep78 {
         self.whitelist.is_whitelisted(address)
     }
 
-    pub fn transfer_unchecked(&mut self, token_id: String, owner: Address, spender: Option<Address>, reciepient: Address) {
+    pub fn transfer_unchecked(
+        &mut self,
+        token_id: String,
+        owner: Address,
+        spender: Option<Address>,
+        reciepient: Address
+    ) {
         self.data.set_owner(&token_id, reciepient);
         self.data.decrement_counter(&owner);
         self.data.increment_counter(&reciepient);
@@ -887,15 +890,17 @@ impl TestCep78 {
 
     pub fn get_page_by_token_hash(&self, token_hash: String) -> Vec<bool> {
         let identifier = TokenIdentifier::Hash(token_hash);
-        let token_id = self.token.reverse_lookup.get_token_index(&identifier);
+        let token_id = self
+            .token
+            .reverse_lookup
+            .get_token_index_checked(&identifier);
         self.get_page_by_token_id(token_id)
     }
 
     pub fn get_page_table(&self) -> Vec<bool> {
         self.token
             .reverse_lookup
-            .get_page_table(self.__env.caller())
-            .unwrap_or_revert_with(&self.__env, CEP78Error::MissingPage)
+            .get_page_table(&self.__env.caller(), CEP78Error::MissingPage)
     }
 
     pub fn get_metadata_by_kind(

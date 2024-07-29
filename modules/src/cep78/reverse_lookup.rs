@@ -1,9 +1,8 @@
 use odra::{
     args::Maybe,
-    casper_types::{AccessRights, URef},
     named_keys::{key_value_storage, single_value_storage},
     prelude::*,
-    Address, Mapping, SubModule, UnwrapOrRevert
+    Address, Mapping, Sequence, SubModule, UnwrapOrRevert
 };
 
 use super::{
@@ -43,7 +42,8 @@ pub struct ReverseLookup {
     index_by_hash: Mapping<String, u64>,
     page_table: SubModule<Cep78PageTable>,
     receipt_name: SubModule<Cep78ReceiptName>,
-    page_limit: SubModule<Cep78PageLimit>
+    page_limit: SubModule<Cep78PageLimit>,
+    tokens_count: Sequence<u64>
 }
 
 impl ReverseLookup {
@@ -60,51 +60,6 @@ impl ReverseLookup {
             let page_table_width = utils::max_number_of_pages(tokens);
             self.page_limit.set(page_table_width);
         }
-    }
-
-    /// Insert a hash into the reverse lookup table.
-    /// Returns:
-    /// - true if the hash was inserted,
-    /// - false if it was already present,
-    pub fn insert_hash(
-        &mut self,
-        current_number_of_minted_tokens: u64,
-        token_identifier: &TokenIdentifier
-    ) -> bool {
-        let token_identifier = token_identifier.get_hash().unwrap();
-
-        let inserted_token_index = self
-            .index_by_hash
-            .get(&token_identifier);
-
-        // If data is not inserted, then insert it.
-        if inserted_token_index.is_none() {
-            self.index_by_hash.set(
-                &token_identifier,
-                current_number_of_minted_tokens
-            );
-            self.hash_by_index.set(
-                &current_number_of_minted_tokens,
-                token_identifier
-            );
-            return true;
-        }
-
-        // If token identifier points at the index.
-        // Check if the index points back to the token identifier.
-        if let Some(token_index) = inserted_token_index.clone() {
-            let token_hash = self
-                .hash_by_index
-                .get(&token_index);
-            if let Some(token_hash) = token_hash {
-                if token_hash == token_identifier {
-                    return false;
-                }
-            }
-        }
-
-        // In other case the data is not inserted correctly, and should be reverted.
-        self.env().revert(CEP78Error::ReverseLookupIntegrityViolation);
     }
 
     pub fn register_owner(&mut self, owner: Maybe<Address>, ownership_mode: OwnershipMode) {
@@ -129,145 +84,90 @@ impl ReverseLookup {
         }
     }
 
-    pub fn on_mint(&mut self, tokens_count: u64, token_owner: Address, _token_id: String) {
+    pub fn on_mint(&mut self, token_owner: &Address, token_identifier: &TokenIdentifier) {
         if self.get_mode() == OwnerReverseLookupMode::Complete {
-            let token_owner_key = utils::address_to_key(&token_owner);
-            let page_table = self.get_page_table(token_owner).unwrap_or_revert_with(
-                &self.env(),
-                CEP78Error::UnregisteredOwnerInMint
+            let token_index = self.prepare_token_index(token_identifier);
+            self.update_page(
+                token_index,
+                token_owner,
+                CEP78Error::UnregisteredOwnerInMint,
+                true
             );
-            let (_page_table_entry, _page_uref) =
-                self.add_page_entry_and_page_record(tokens_count, &token_owner_key, page_table);
-            // Uncomment if deciding to return the receipt
-
-            // let receipt_name = self.receipt_name.get();
-            // let receipt_string = format!("{receipt_name}_m_{PAGE_SIZE}_p_{page_table_entry}");
-            // let receipt_address = Key::dictionary(page_uref, token_owner_key.as_bytes());
-            // return (receipt_string, receipt_address, token_id);
         }
     }
 
     pub fn on_transfer(
         &mut self,
-        token_identifier: TokenIdentifier,
-        source: Address,
-        target: Address
+        token_identifier: &TokenIdentifier,
+        source: &Address,
+        target: &Address
     ) {
-        // Check if the mode is set to Complete or TransfersOnly.
-        // use OwnerReverseLookupMode::*;
-        // if matches!(self.get_mode(), Complete | TransfersOnly) {
-        //     return;
-        // }
-        let mode = self.get_mode();
-        if let OwnerReverseLookupMode::Complete | OwnerReverseLookupMode::TransfersOnly = mode {
-            // Update to_account owned_tokens. Revert if owned_tokens list is not found
-            let tokens_count = self.get_token_index(&token_identifier);
-            let source_key = utils::address_to_key(&source);
-            let target_key = utils::address_to_key(&target);
-            let source_page_table = self.get_page_table(source).unwrap_or_revert_with(
-                &self.env(),
-                CEP78Error::UnregisteredOwnerInTransfer
+        use OwnerReverseLookupMode::*;
+        if matches!(self.get_mode(), Complete | TransfersOnly) {
+            let token_index = self.get_token_index_checked(token_identifier);
+
+            self.update_page(
+                token_index,
+                source,
+                CEP78Error::UnregisteredOwnerInTransfer,
+                false
             );
-            let target_page_table = self.get_page_table(target).unwrap_or_revert_with(
-                &self.env(),
-                CEP78Error::UnregisteredOwnerInTransfer
+            self.update_page(
+                token_index,
+                target,
+                CEP78Error::UnregisteredOwnerInTransfer,
+                true
             );
-
-            if OwnerReverseLookupMode::TransfersOnly == mode {
-                self.add_page_entry_and_page_record(tokens_count, &source_key, source_page_table);
-            }
-
-            let (_page_table_entry, _page_uref) =
-                self.update_page_entry_and_page_record(tokens_count, &source_key, &target_key);
-            // Uncomment if deciding to return the receipt
-
-            // let receipt_name = self.receipt_name.get();
-            // let receipt_string = format!("{receipt_name}_m_{PAGE_SIZE}_p_{page_table_entry}");
-            // let owned_tokens_actual_key = Key::dictionary(page_uref, source_key.as_bytes());
-            // return (receipt_string, owned_tokens_actual_key);
         }
     }
 
-    fn add_page_entry_and_page_record(
+    fn update_page(
         &mut self,
         token_index: u64,
-        item_key: &str,
-        mut page_table: Vec<bool>
-    ) -> (u64, URef) {
-        // there is an explicit page_table;
-        // this is the entry in that overall page table which maps to the underlying page
-        // upon which this mint's address will exist
-        let env = self.env();
+        token_owner: &Address,
+        missing_table_error: CEP78Error,
+        value: bool
+    ) {
+        // Get the page table, page address and page dictionary.
         let (page_table_entry, page_address, page_dict) = self.page_details(token_index);
+        let mut page_table = self.get_page_table(token_owner, missing_table_error);
 
-        let mut page = if !page_table[page_table_entry as usize] {
-            // We mark the page table entry to true to signal the allocation of a page.
-            let _ = core::mem::replace(&mut page_table[page_table_entry as usize], true);
-            self.page_table.set(item_key, page_table);
-            vec![false; PAGE_SIZE as usize]
-        } else {
-            env.get_dictionary_value(&page_dict, item_key.as_bytes())
-                .unwrap_or_revert_with(&env, CEP78Error::MissingPage)
-        };
+        // Check if the page is already allocated.
+        let page_allocated = page_table[page_table_entry as usize];
 
-        let _ = core::mem::replace(&mut page[page_address as usize], true);
-        env.set_dictionary_value(page_dict, item_key.as_bytes(), page);
-
-        // TODO: return the page_uref
-        let addr_array = [0u8; 32];
-        let uref_a = URef::new(addr_array, AccessRights::READ);
-        (page_table_entry, uref_a)
-    }
-
-    fn update_page_entry_and_page_record(
-        &mut self,
-        tokens_count: u64,
-        old_item_key: &str,
-        new_item_key: &str
-    ) -> (u64, URef) {
-        let env = self.env();
-        let page_table_entry = tokens_count / PAGE_SIZE;
-        let page_address = tokens_count % PAGE_SIZE;
-        let page_dict = format!("{PREFIX_PAGE_DICTIONARY}_{}", page_table_entry);
-
-        let mut source_page: Vec<bool> = env
-            .get_dictionary_value(&page_dict, old_item_key.as_bytes())
-            .unwrap_or_revert_with(&env, CEP78Error::InvalidPageNumber);
-
-        if !source_page[page_address as usize] {
-            env.revert(CEP78Error::InvalidTokenIdentifier)
+        // If the page is not allocated, allocate a new page in the page table.
+        if !page_allocated {
+            page_table[page_table_entry as usize] = true;
+            self.set_page_table(token_owner, page_table);
         }
 
-        let _ = core::mem::replace(&mut source_page[page_address as usize], false);
+        // Load page.
+        let mut page = self.page(page_allocated, &page_dict, token_owner);
 
-        env.set_dictionary_value(&page_dict, old_item_key.as_bytes(), source_page);
+        // Update page value.
+        page[page_address as usize] = value;
 
-        let mut target_page_table = self
-            .page_table
-            .get(new_item_key)
-            .unwrap_or_revert_with(&env, CEP78Error::UnregisteredOwnerInTransfer);
-
-        let mut target_page = if !target_page_table[page_table_entry as usize] {
-            // Create a new page here
-            let _ = core::mem::replace(&mut target_page_table[page_table_entry as usize], true);
-            self.page_table.set(new_item_key, target_page_table);
-            vec![false; PAGE_SIZE as usize]
-        } else {
-            env.get_dictionary_value(&page_dict, new_item_key.as_bytes())
-                .unwrap_or_revert(self)
-        };
-
-        let _ = core::mem::replace(&mut target_page[page_address as usize], true);
-
-        env.set_dictionary_value(&page_dict, new_item_key.as_bytes(), target_page);
-
-        let addr_array = [0u8; 32];
-        let uref_a = URef::new(addr_array, AccessRights::READ);
-        // (page_table_entry, page_uref)
-        (page_table_entry, uref_a)
+        self.set_page(&page_dict, token_owner, page);
     }
 
     // Verified methods.
+
+    // Based on the `allocated` flag, it returns either a new page or an empty page.
+    pub fn page(&self, allocated: bool, page_dict: &str, token_owner: &Address) -> Vec<bool> {
+        if !allocated {
+            return vec![false; PAGE_SIZE as usize];
+        }
+        let item_key = utils::address_to_key(token_owner);
+        self.env()
+            .get_dictionary_value(page_dict, item_key.as_bytes())
+            .unwrap_or_revert_with(self, CEP78Error::MissingPage)
+    }
+
+    pub fn set_page(&mut self, page_dict: &str, token_owner: &Address, page: Vec<bool>) {
+        let item_key = utils::address_to_key(token_owner);
+        self.env()
+            .set_dictionary_value(page_dict, item_key.as_bytes(), page);
+    }
 
     // It returns:
     // - page_table_entry: the entry in the page table that maps to the underlying page
@@ -285,7 +185,7 @@ impl ReverseLookup {
         self.page_table.get(&owner_key)
     }
 
-    pub fn get_token_index(&self, token_identifier: &TokenIdentifier) -> u64 {
+    pub fn get_token_index_checked(&self, token_identifier: &TokenIdentifier) -> u64 {
         match token_identifier {
             TokenIdentifier::Index(token_index) => *token_index,
             TokenIdentifier::Hash(_) => self
@@ -295,13 +195,45 @@ impl ReverseLookup {
         }
     }
 
+    // It returns the token index based on the token identifier.
+    fn prepare_token_index(&mut self, token_identifier: &TokenIdentifier) -> u64 {
+        match token_identifier {
+            TokenIdentifier::Index(token_index) => *token_index,
+            TokenIdentifier::Hash(token_hash) => {
+                let token_index = self.index_by_hash.get(token_hash);
+
+                // If the token exists, return the token index.
+                if let Some(token_index) = token_index {
+                    return token_index;
+                }
+
+                // If the token does not exist, create a new token index.
+                let token_index = self.tokens_count.next_value();
+
+                // Insert the token index into the hash table.
+                self.index_by_hash.set(token_hash, token_index);
+                self.hash_by_index.set(&token_index, token_hash.clone());
+
+                // Return new token index.
+                token_index
+            }
+        }
+    }
+
     #[inline]
     fn get_mode(&self) -> OwnerReverseLookupMode {
         self.mode.get()
     }
 
-    pub fn get_page_table(&self, owner: Address) -> Option<Vec<bool>> {
-        let owner_key = utils::address_to_key(&owner);
-        self.page_table.get(&owner_key)
+    pub fn get_page_table(&self, owner: &Address, error: CEP78Error) -> Vec<bool> {
+        let owner_key = utils::address_to_key(owner);
+        self.page_table
+            .get(&owner_key)
+            .unwrap_or_revert_with(&self.env(), error)
+    }
+
+    pub fn set_page_table(&mut self, owner: &Address, page_table: Vec<bool>) {
+        let owner_key = utils::address_to_key(owner);
+        self.page_table.set(&owner_key, page_table);
     }
 }
