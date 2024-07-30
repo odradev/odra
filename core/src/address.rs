@@ -87,9 +87,8 @@ impl Address {
 
     /// Returns the inner contract hash if `self` is the `Contract` variant.
     pub fn as_package_hash(&self) -> Option<PackageHash> {
-        self.as_contract_package_hash().map(|cph| {
-            PackageHash::new(cph.value())
-        })
+        self.as_contract_package_hash()
+            .map(|cph| PackageHash::new(cph.value()))
     }
 
     /// Returns true if the address is a contract address.
