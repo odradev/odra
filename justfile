@@ -66,6 +66,7 @@ test-examples-on-odravm:
     cd examples/ourcoin && cargo odra test
 
 test-examples-on-casper:
+    cp modules/wasm/Erc20.wasm examples/wasm/
     cd examples && cargo odra test -b casper
     cd examples/ourcoin && cargo odra test -b casper
 
@@ -79,7 +80,7 @@ test-modules-on-casper:
 
 test-modules: test-modules-on-odravm test-modules-on-casper
 
-test: test-odra test-examples test-modules
+test: test-odra test-modules test-examples
 
 test-template name:
     cd tests && cargo odra new -n {{name}} --template {{name}} -s ../ \
