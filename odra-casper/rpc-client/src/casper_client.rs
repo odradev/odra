@@ -15,7 +15,7 @@ use crate::casper_client::configuration::CasperClientConfiguration;
 use crate::log;
 use anyhow::{Context, Result};
 use casper_client::cli::{
-    get_balance, get_deploy, get_dictionary_item, get_entity, get_state_root_hash,
+    get_balance, get_deploy, get_dictionary_item, get_entity, get_node_status, get_state_root_hash,
     query_global_state, DictionaryItemStrParams
 };
 use casper_client::rpcs::results::{GetDeployResult, GetDictionaryItemResult, PutDeployResult};
@@ -26,6 +26,7 @@ use casper_types::execution::ExecutionResultV1::{Failure, Success};
 use casper_types::StoredValue::CLValue;
 use casper_types::{execution::ExecutionResult, EntityAddr};
 use casper_types::{Deploy, DeployHash, ExecutableDeployItem, StoredValue, TimeDiff, Timestamp};
+use odra_core::casper_event_standard::EVENTS_DICT;
 use odra_core::casper_types::{sign, URef};
 use odra_core::{
     casper_types::{
@@ -79,20 +80,14 @@ impl CasperClient {
         }
     }
 
-    /// Gets a value from the storage
-    pub async fn get_value(&self, address: &Address, key: &[u8]) -> Result<Bytes> {
-        Ok(self
-            .get_dictionary_value(address, "state", key)
-            .await
-            .unwrap())
+    /// Gets a value from the Odra storage (`state` dictionary)
+    pub async fn get_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
+        self.get_dictionary_value(address, STATE_KEY, key).await
     }
 
-    /// Gets a value from a named key
+    /// Gets a value from a named key of an account or a contract
     pub async fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes> {
-        let entity_hash = self
-            .query_global_state_for_entity_addr(address)
-            .await
-            .unwrap();
+        let entity_hash = self.query_global_state_for_entity_addr(address).await;
         let stored_value = self
             .query_global_state(&entity_hash.to_formatted_string(), Some(name.to_string()))
             .await;
@@ -115,14 +110,22 @@ impl CasperClient {
                 &self
                     .caller()
                     .as_account_hash()
-                    .unwrap()
+                    .expect(
+                        format!(
+                            "Tried to query for proxy results from contract, it should be an account: {:?}",
+                            self.caller()
+                        )
+                        .as_str()
+                    )
                     .to_formatted_string(),
                 Some(RESULT_KEY.to_string())
             )
             .await;
         match stored_value {
             CLValue(value) => {
-                let bytes: Bytes = value.into_t().unwrap();
+                let bytes: Bytes = value.into_t().expect(
+                    format!("Value stored in result key is not Bytes: {:?}", value).as_str()
+                );
                 bytes
             }
             _ => panic!("Value stored in result key is not a CLValue")
@@ -136,7 +139,8 @@ impl CasperClient {
         dictionary_name: &str,
         key: &[u8]
     ) -> Option<Bytes> {
-        let key = String::from_utf8(key.to_vec()).unwrap();
+        let key = String::from_utf8(key.to_vec())
+            .expect(format!("Couldn't convert key to string: {:?}", key).as_str());
         self.query_dict(address, dictionary_name.to_string(), key)
             .await
             .ok()
@@ -149,12 +153,12 @@ impl CasperClient {
 
     /// Node rpc address.
     pub fn node_address_rpc(&self) -> String {
-        format!("{}/rpc", self.configuration.node_address)
+        format!("{}/rpc", self.node_address())
     }
 
     /// Node address.
     pub fn node_address(&self) -> &str {
-        &self.configuration.node_address
+        &self.node_address()
     }
 
     /// Chain name.
@@ -220,27 +224,25 @@ impl CasperClient {
         // TODO: Use rpc when it will be public to do this in one call
         let main_purse = self.get_main_purse(address).await.to_formatted_string();
         get_balance(
-            // TODO: set rpc id to a random number
-            "",
-            &self.configuration.node_address,
+            &self.rpc_id(),
+            &self.node_address(),
             self.configuration.verbosity(),
             &self.get_state_root_hash().await,
             &main_purse
         )
         .await
-        .unwrap()
+        .expect(format!("Couldn't get balance for address: {:?}", address).as_str())
         .result
         .balance_value
     }
 
+    /// Gets an uref of a main purse of an account or a contract.
     pub async fn get_main_purse(&self, address: &Address) -> URef {
         let purse_uref = self
             .query_global_state(&address.to_formatted_string(), None)
             .await;
         match purse_uref {
-            CLValue(value) => {
-                value.into_t().unwrap()
-            }
+            CLValue(value) => value.into_t().unwrap(),
             StoredValue::AddressableEntity(entity) => entity.main_purse(),
             _ => panic!("Not an addressable entity")
         }
@@ -270,55 +272,72 @@ impl CasperClient {
 
     /// Returns the current block_time
     pub async fn get_block_time(&self) -> u64 {
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": "info_get_status",
-                "id": 1,
-            }
-        );
-        let result: Value = self.post_request(request).await;
-        let result = result["last_added_block_info"]["timestamp"]
+        get_node_status(
+            &self.rpc_id(),
+            self.node_address(),
+            self.configuration.verbosity()
+        )
+        .await
+        .expect(
+            format!(
+                "Couldn't get block time from node: {:?}",
+                self.node_address()
+            )
             .as_str()
-            .unwrap_or_else(|| {
-                panic!(
-                    "Couldn't get block time - malformed JSON response: {:?}",
-                    result
-                )
-            });
-        let system_time = humantime::parse_rfc3339_weak(result).expect("Couldn't parse block time");
-        system_time
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap_or_else(|_| panic!("Couldn't parse block time"))
-            .as_millis() as u64
+        )
+        .result
+        .last_added_block_info
+        .expect(
+            format!(
+                "Couldn't get last added block info from node: {:?}",
+                self.node_address()
+            )
+            .as_str()
+        )
+        .timestamp
+        .millis()
     }
 
     /// Get the event bytes from storage
     pub async fn get_event(&self, contract_address: &Address, index: u32) -> OdraResult<Bytes> {
-        self.query_dict(contract_address, "__events".to_string(), index.to_string())
+        self.query_dict(contract_address, EVENTS.to_string(), index.to_string())
             .await
     }
 
     /// Get the events count from storage
     pub async fn events_count(&self, contract_address: &Address) -> Option<u32> {
-        self.get_named_value(contract_address, "__events_length")
+        self.get_named_value(contract_address, EVENTS_LENGTH)
             .await
-            .map(|bytes| deserialize_from_slice(&bytes).unwrap())
+            .map(|bytes| {
+                deserialize_from_slice(&bytes).expect(
+                    format!(
+                        "Couldn't deserialize events count for contract: {:?}. Bytes: {:?}",
+                        contract_address, bytes
+                    )
+                    .as_str()
+                )
+            })
     }
 
     /// Query the node for the current state root hash.
     pub async fn get_state_root_hash(&self) -> String {
         let digest = get_state_root_hash(
-            "",
-            &self.configuration.node_address,
-            Verbosity::Low as u64,
+            &self.rpc_id(),
+            &self.node_address(),
+            self.configuration.verbosity(),
             ""
         )
         .await
-        .unwrap()
+        .expect(
+            format!(
+                "Couldn't get state root hash from node: {:?}",
+                self.node_address()
+            )
+            .as_str()
+        )
         .result
         .state_root_hash
-        .unwrap();
+        .expect(format!("Node doesn't have the root hash: {:?}", self.node_address()).as_str());
 
         base16::encode_lower(&digest)
     }
@@ -330,79 +349,123 @@ impl CasperClient {
         dictionary_name: String,
         dictionary_item_key: String
     ) -> OdraResult<T> {
-        let entity_addr = self
-            .query_global_state_for_entity_addr(address)
-            .await
-            .unwrap();
+        let entity_addr = self.query_global_state_for_entity_addr(address).await;
         let params = DictionaryItemStrParams::EntityNamedKey {
             entity_addr: &entity_addr.to_formatted_string(),
             dictionary_name: &dictionary_name,
             dictionary_item_key: &dictionary_item_key
         };
         let r = get_dictionary_item(
-            "",
-            &self.configuration.node_address,
-            Verbosity::Low as u64,
+            &self.rpc_id(),
+            &self.node_address(),
+            self.configuration.verbosity(),
             &self.get_state_root_hash().await,
             params
         )
         .await;
 
-        r.unwrap()
-            .result
-            .stored_value
-            .into_cl_value()
-            .unwrap()
-            .into_t()
-            .map_err(|_| OdraError::ExecutionError(ExecutionError::TypeMismatch))
+        r.expect(
+            format!(
+                "Couldn't get dictionary item for contract: {:?}",
+                address.to_formatted_string()
+            )
+            .as_str()
+        )
+        .result
+        .stored_value
+        .into_cl_value()
+        .map_err(|_| OdraError::ExecutionError(ExecutionError::TypeMismatch))
+        .into_t()
+        .map_err(|_| OdraError::ExecutionError(ExecutionError::TypeMismatch))
     }
 
     /// Query the node for the transaction state.
     pub async fn get_deploy(&self, deploy_hash: DeployHash) -> GetDeployResult {
         let t = get_deploy(
-            "",
-            &self.configuration.node_address.clone(),
-            Verbosity::Low as u64,
+            &self.rpc_id(),
+            &self.node_address().clone(),
+            self.configuration.verbosity(),
             &deploy_hash.to_hex_string(),
             true
         )
         .await;
-
-        t.unwrap().result
+        t.expect(format!("Couldn't get deploy: {:?}", deploy_hash.to_hex_string()).as_str())
+            .result
     }
 
     /// Discover the contract address by name.
     async fn get_contract_address(&self, key_name: &str) -> Address {
-        let key_name = format!("{}_package_hash", key_name);
+        let key_name = format!("{}_{}", key_name, PACKAGE_HASH_ARG);
 
-        // TODO: set rpc id to a random number
         let result = get_entity(
-            "",
-            &self.configuration.node_address,
-            Verbosity::Low as u64,
+            &self.rpc_id(),
+            &self.node_address(),
+            self.configuration.verbosity(),
             "",
             &self.public_key().to_hex_string()
         )
         .await
-        .unwrap()
+        .expect(
+            format!(
+                "Couldn't get entity for public key: {:?}",
+                self.public_key().to_hex_string()
+            )
+            .as_str()
+        )
         .result;
-        let account = result.entity_result.addressable_entity().unwrap();
+        let account = result.entity_result.addressable_entity().expect(
+            format!(
+                "Couldn't get addressable entity for public key: {:?}",
+                self.public_key().to_hex_string()
+            )
+            .as_str()
+        );
 
-        let key = account.named_keys.get(&key_name).unwrap();
+        let key = account.named_keys.get(&key_name).expect(
+            format!(
+                "Couldn't get key {:?} for account: {:?}",
+                key_name,
+                self.public_key().to_hex_string()
+            )
+            .as_str()
+        );
 
-        Address::from(key.into_package_hash().unwrap())
+        Address::from(
+            key.into_package_hash().expect(
+                format!(
+                    "Couldn't get package hash from key {:?} for account: {:?}",
+                    key_name,
+                    self.public_key().to_hex_string()
+                )
+                .as_str()
+            )
+        )
     }
 
     /// Find the entity addr in global state for an address
-    async fn query_global_state_for_entity_addr(&self, address: &Address) -> Result<EntityAddr> {
+    async fn query_global_state_for_entity_addr(&self, address: &Address) -> EntityAddr {
         let result = self
             .query_global_state(&address.to_formatted_string(), None)
             .await;
         match result {
-            StoredValue::Package(package) => Ok(EntityAddr::SmartContract(
-                package.current_entity_hash().unwrap().value()
-            )),
-            _ => Err(anyhow::anyhow!("Not a package"))
+            StoredValue::Package(package) => EntityAddr::SmartContract(
+                package
+                    .current_entity_hash()
+                    .expect(
+                        format!(
+                            "Couldn't get entity addr for address: {:?}",
+                            address.to_formatted_string()
+                        )
+                        .as_str()
+                    )
+                    .value()
+            ),
+            _ => {
+                panic!(
+                    "Couldn't get entity addr for address: {:?}",
+                    address.to_formatted_string()
+                )
+            }
         }
     }
 
@@ -530,7 +593,7 @@ impl CasperClient {
         // Todo: set rpc id to a random number
         query_global_state(
             "",
-            &self.configuration.node_address,
+            &self.node_address(),
             Verbosity::Low as u64,
             "",
             &self.get_state_root_hash().await,
@@ -538,73 +601,15 @@ impl CasperClient {
             &path.unwrap_or_default()
         )
         .await
-        .unwrap()
+        .expect(
+            format!(
+                "Couldn't query global state for key: {:?}, and path: {:?}",
+                key, path
+            )
+            .as_str()
+        )
         .result
         .stored_value
-    }
-
-    async fn _query_state_dictionary(&self, address: &Address, key: &str) -> Result<Bytes> {
-        let contract_hash = self.query_global_state_for_entity_addr(address).await?;
-        let contract_hash = contract_hash
-            .to_formatted_string()
-            .replace("contract-", "hash-");
-        let params = DictionaryItemIdentifier::ContractNamedKey {
-            key: contract_hash,
-            dictionary_name: "state".to_string(),
-            dictionary_item_key: key.to_string()
-        };
-        // TODO: set rpc id to a random number
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": "state_get_dictionary_item",
-                "params": params,
-                "id": 1,
-            }
-        );
-
-        let result = self
-            .safe_post_request(request.clone())
-            .await
-            .get_result()
-            .and_then(|result| {
-                serde_json::from_value::<GetDictionaryItemResult>(result.clone()).ok()
-            });
-        result
-            .context("Couldn't get dictionary item")
-            .and_then(|result| {
-                let result_as_json =
-                    serde_json::to_value(result).context("Couldn't parse result")?;
-                let result = result_as_json["stored_value"]["CLValue"]["bytes"]
-                    .as_str()
-                    .context("Couldn't get bytes")?;
-                let bytes = hex::decode(result).context("Couldn't decode bytes")?;
-                let (value, _) = FromBytes::from_bytes(&bytes)
-                    .map_err(|_| anyhow::anyhow!("Couldn't parse bytes"))?;
-
-                Ok(value)
-            })
-    }
-
-    async fn _query_uref<T: CLTyped + FromBytes>(&self, _uref: URef) -> OdraResult<T> {
-        todo!()
-        // let result = self.query_global_state(&CasperKey::URef(uref)).await;
-        // match result.stored_value {
-        //     CLValue(value) => value
-        //         .into_t()
-        //         .map_err(|_| OdraError::ExecutionError(ExecutionError::UnwrapError)),
-        //     _ => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
-        // }
-    }
-
-    async fn _query_uref_bytes(&self, _uref: URef) -> OdraResult<Bytes> {
-        todo!()
-        // let key = CasperKey::URef(uref);
-        // let result = self.query_global_state(&key).await;
-        // match result.stored_value {
-        //     CLValue(value) => Ok(value.inner_bytes().as_slice().into()),
-        //     _ => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
-        // }
     }
 
     async fn wait_for_deploy(&self, deploy_hash: DeployHash) -> ExecutionResult {
@@ -754,6 +759,11 @@ impl CasperClient {
 
     fn secret_keys(&self) -> &Vec<SecretKey> {
         &self.configuration.secret_keys
+    }
+
+    // TODO: Maybe make it random to be in line with rpc spec?
+    fn rpc_id(&self) -> String {
+        "1".to_string()
     }
 }
 
