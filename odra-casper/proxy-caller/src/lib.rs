@@ -16,12 +16,12 @@ use odra_casper_wasm_env::casper_contract::{
     ext_ffi,
     unwrap_or_revert::UnwrapOrRevert
 };
+use odra_core::casper_types::contracts::ContractVersion;
 use odra_core::casper_types::{
     api_error,
-    ApiError,
-    bytesrepr::{Bytes, FromBytes, ToBytes}, CLTyped, PackageHash, RuntimeArgs, U512, URef
+    bytesrepr::{Bytes, FromBytes, ToBytes},
+    ApiError, CLTyped, PackageHash, RuntimeArgs, URef, U512
 };
-use odra_core::casper_types::contracts::ContractVersion;
 use odra_core::consts::{
     ARGS_ARG, ATTACHED_VALUE_ARG, CARGO_PURSE_ARG, CARGO_PURSE_KEY, ENTRY_POINT_ARG,
     PACKAGE_HASH_ARG
