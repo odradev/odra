@@ -2,7 +2,6 @@
 
 use std::collections::BTreeMap;
 use std::time::Duration;
-use std::time::SystemTime;
 
 use itertools::Itertools;
 use jsonrpc_lite::JsonRpc;
@@ -13,20 +12,17 @@ use serde_json::{json, Value};
 use crate::casper_client::configuration::CasperClientConfiguration;
 
 use crate::log;
-use anyhow::{Context, Result};
 use casper_client::cli::{
     get_balance, get_deploy, get_dictionary_item, get_entity, get_node_status, get_state_root_hash,
     query_global_state, DictionaryItemStrParams
 };
-use casper_client::rpcs::results::{GetDeployResult, GetDictionaryItemResult, PutDeployResult};
-use casper_client::rpcs::DictionaryItemIdentifier;
+use casper_client::rpcs::results::{GetDeployResult, PutDeployResult};
 use casper_client::Verbosity;
 use casper_types::bytesrepr::deserialize_from_slice;
 use casper_types::execution::ExecutionResultV1::{Failure, Success};
 use casper_types::StoredValue::CLValue;
 use casper_types::{execution::ExecutionResult, EntityAddr};
 use casper_types::{Deploy, DeployHash, ExecutableDeployItem, StoredValue, TimeDiff, Timestamp};
-use odra_core::casper_event_standard::EVENTS_DICT;
 use odra_core::casper_types::{sign, URef};
 use odra_core::{
     casper_types::{
@@ -110,24 +106,21 @@ impl CasperClient {
                 &self
                     .caller()
                     .as_account_hash()
-                    .expect(
-                        format!(
+                    .unwrap_or_else(|| {
+                        panic!(
                             "Tried to query for proxy results from contract, it should be an account: {:?}",
                             self.caller()
                         )
-                        .as_str()
-                    )
+                    })
                     .to_formatted_string(),
                 Some(RESULT_KEY.to_string())
             )
             .await;
         match stored_value {
-            CLValue(value) => {
-                let bytes: Bytes = value.into_t().expect(
-                    format!("Value stored in result key is not Bytes: {:?}", value).as_str()
-                );
-                bytes
-            }
+            CLValue(value) => value
+                .clone()
+                .into_t()
+                .unwrap_or_else(|_| panic!("Couldn't get bytes from CLValue: {:?}", value)),
             _ => panic!("Value stored in result key is not a CLValue")
         }
     }
@@ -140,7 +133,7 @@ impl CasperClient {
         key: &[u8]
     ) -> Option<Bytes> {
         let key = String::from_utf8(key.to_vec())
-            .expect(format!("Couldn't convert key to string: {:?}", key).as_str());
+            .unwrap_or_else(|_| panic!("Couldn't convert key to string: {:?}", key));
         self.query_dict(address, dictionary_name.to_string(), key)
             .await
             .ok()
@@ -158,7 +151,7 @@ impl CasperClient {
 
     /// Node address.
     pub fn node_address(&self) -> &str {
-        &self.node_address()
+        &self.configuration.node_address
     }
 
     /// Chain name.
@@ -225,13 +218,18 @@ impl CasperClient {
         let main_purse = self.get_main_purse(address).await.to_formatted_string();
         get_balance(
             &self.rpc_id(),
-            &self.node_address(),
+            self.node_address(),
             self.configuration.verbosity(),
             &self.get_state_root_hash().await,
             &main_purse
         )
         .await
-        .expect(format!("Couldn't get balance for address: {:?}", address).as_str())
+        .unwrap_or_else(|_| {
+            panic!(
+                "Couldn't get balance for address: {:?}",
+                address.to_formatted_string()
+            )
+        })
         .result
         .balance_value
     }
@@ -278,22 +276,20 @@ impl CasperClient {
             self.configuration.verbosity()
         )
         .await
-        .expect(
-            format!(
+        .unwrap_or_else(|_| {
+            panic!(
                 "Couldn't get block time from node: {:?}",
                 self.node_address()
             )
-            .as_str()
-        )
+        })
         .result
         .last_added_block_info
-        .expect(
-            format!(
+        .unwrap_or_else(|| {
+            panic!(
                 "Couldn't get last added block info from node: {:?}",
                 self.node_address()
             )
-            .as_str()
-        )
+        })
         .timestamp
         .millis()
     }
@@ -309,13 +305,12 @@ impl CasperClient {
         self.get_named_value(contract_address, EVENTS_LENGTH)
             .await
             .map(|bytes| {
-                deserialize_from_slice(&bytes).expect(
-                    format!(
-                        "Couldn't deserialize events count for contract: {:?}. Bytes: {:?}",
+                deserialize_from_slice(&bytes).unwrap_or_else(|_| {
+                    panic!(
+                        "Couldn't deserialize events count for contract: {:?}, bytes: {:?}",
                         contract_address, bytes
                     )
-                    .as_str()
-                )
+                })
             })
     }
 
@@ -323,21 +318,25 @@ impl CasperClient {
     pub async fn get_state_root_hash(&self) -> String {
         let digest = get_state_root_hash(
             &self.rpc_id(),
-            &self.node_address(),
+            self.node_address(),
             self.configuration.verbosity(),
             ""
         )
         .await
-        .expect(
-            format!(
+        .unwrap_or_else(|_| {
+            panic!(
                 "Couldn't get state root hash from node: {:?}",
                 self.node_address()
             )
-            .as_str()
-        )
+        })
         .result
         .state_root_hash
-        .expect(format!("Node doesn't have the root hash: {:?}", self.node_address()).as_str());
+        .unwrap_or_else(|| {
+            panic!(
+                "Couldn't get state root hash from node: {:?}",
+                self.node_address()
+            )
+        });
 
         base16::encode_lower(&digest)
     }
@@ -357,24 +356,28 @@ impl CasperClient {
         };
         let r = get_dictionary_item(
             &self.rpc_id(),
-            &self.node_address(),
+            self.node_address(),
             self.configuration.verbosity(),
             &self.get_state_root_hash().await,
             params
         )
         .await;
 
-        r.expect(
-            format!(
+        r.unwrap_or_else(|_| {
+            panic!(
                 "Couldn't get dictionary item for contract: {:?}",
                 address.to_formatted_string()
             )
-            .as_str()
-        )
+        })
         .result
         .stored_value
         .into_cl_value()
-        .map_err(|_| OdraError::ExecutionError(ExecutionError::TypeMismatch))
+        .unwrap_or_else(|| {
+            panic!(
+                "Couldn't get CLValue from dictionary item for contract: {:?}",
+                address.to_formatted_string()
+            )
+        })
         .into_t()
         .map_err(|_| OdraError::ExecutionError(ExecutionError::TypeMismatch))
     }
@@ -383,14 +386,19 @@ impl CasperClient {
     pub async fn get_deploy(&self, deploy_hash: DeployHash) -> GetDeployResult {
         let t = get_deploy(
             &self.rpc_id(),
-            &self.node_address().clone(),
+            self.node_address(),
             self.configuration.verbosity(),
             &deploy_hash.to_hex_string(),
             true
         )
         .await;
-        t.expect(format!("Couldn't get deploy: {:?}", deploy_hash.to_hex_string()).as_str())
-            .result
+        t.unwrap_or_else(|_| {
+            panic!(
+                "Couldn't get deploy: {:?}",
+                deploy_hash.to_hex_string().as_str()
+            )
+        })
+        .result
     }
 
     /// Discover the contract address by name.
@@ -399,47 +407,47 @@ impl CasperClient {
 
         let result = get_entity(
             &self.rpc_id(),
-            &self.node_address(),
+            self.node_address(),
             self.configuration.verbosity(),
             "",
             &self.public_key().to_hex_string()
         )
         .await
-        .expect(
-            format!(
-                "Couldn't get entity for public key: {:?}",
-                self.public_key().to_hex_string()
-            )
-            .as_str()
-        )
+        .unwrap_or_else(|_| {
+            panic!(
+                "{}",
+                format!(
+                    "Couldn't get entity for public key: {:?}",
+                    &self.public_key().to_hex_string()
+                )
+            );
+        })
         .result;
-        let account = result.entity_result.addressable_entity().expect(
-            format!(
-                "Couldn't get addressable entity for public key: {:?}",
-                self.public_key().to_hex_string()
-            )
-            .as_str()
-        );
+        let account = result
+            .entity_result
+            .addressable_entity()
+            .unwrap_or_else(|| {
+                panic!(
+                    "Couldn't get addressable entity for public key: {:?}",
+                    self.public_key().to_hex_string()
+                )
+            });
 
-        let key = account.named_keys.get(&key_name).expect(
-            format!(
-                "Couldn't get key {:?} for account: {:?}",
+        let key = account.named_keys.get(&key_name).unwrap_or_else(|| {
+            panic!(
+                "Couldn't get named key {:?} for account: {:?}",
                 key_name,
                 self.public_key().to_hex_string()
             )
-            .as_str()
-        );
+        });
 
-        Address::from(
-            key.into_package_hash().expect(
-                format!(
-                    "Couldn't get package hash from key {:?} for account: {:?}",
-                    key_name,
-                    self.public_key().to_hex_string()
-                )
-                .as_str()
+        Address::from(key.into_package_hash().unwrap_or_else(|| {
+            panic!(
+                "Couldn't get package hash from key {:?} for account: {:?}",
+                key_name,
+                self.public_key().to_hex_string()
             )
-        )
+        }))
     }
 
     /// Find the entity addr in global state for an address
@@ -451,13 +459,12 @@ impl CasperClient {
             StoredValue::Package(package) => EntityAddr::SmartContract(
                 package
                     .current_entity_hash()
-                    .expect(
-                        format!(
+                    .unwrap_or_else(|| {
+                        panic!(
                             "Couldn't get entity addr for address: {:?}",
                             address.to_formatted_string()
                         )
-                        .as_str()
-                    )
+                    })
                     .value()
             ),
             _ => {
@@ -593,21 +600,18 @@ impl CasperClient {
         // Todo: set rpc id to a random number
         query_global_state(
             "",
-            &self.node_address(),
+            self.node_address(),
             Verbosity::Low as u64,
             "",
             &self.get_state_root_hash().await,
             key,
-            &path.unwrap_or_default()
+            &path.clone().unwrap_or_default()
         )
         .await
-        .expect(
-            format!(
-                "Couldn't query global state for key: {:?}, and path: {:?}",
-                key, path
-            )
-            .as_str()
-        )
+        .unwrap_or_else(|e| {
+            log::error(format!("Couldn't query global state: {:?}", e));
+            panic!("Couldn't query global state")
+        })
         .result
         .stored_value
     }
