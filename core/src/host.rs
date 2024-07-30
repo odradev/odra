@@ -548,7 +548,7 @@ mod test {
     use super::*;
     use casper_event_standard::Event;
     use casper_types::account::AccountHash;
-    use casper_types::contracts::ContractPackageHash;
+    use casper_types::PackageHash;
     use mockall::{mock, predicate};
     use std::sync::Mutex;
 
@@ -734,7 +734,7 @@ mod test {
         ctx.expect_transfer().returning(|_, _| Ok(()));
         let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
 
-        let addr = Address::Contract(ContractPackageHash::new([0; 32]));
+        let addr = Address::Contract(PackageHash::new([0; 32]));
         // When transfer 100 tokens to a contract.
         let result = env.transfer(addr, 100.into());
         // Then the transfer should fail.

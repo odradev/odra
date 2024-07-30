@@ -581,7 +581,12 @@ impl CasperClient {
             call_def.entry_point()
         ));
         let session = ExecutableDeployItem::StoredVersionedContractByHash {
-            hash: addr.as_package_hash().unwrap(),
+            hash: *addr.as_package_hash().unwrap_or_else(|| {
+                panic!(
+                    "Couldn't get package hash from address: {:?}",
+                    addr.to_formatted_string()
+                )
+            }),
             version: None,
             entry_point: call_def.entry_point().to_string(),
             args: call_def.args().clone()

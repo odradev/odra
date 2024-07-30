@@ -26,7 +26,7 @@ use std::rc::Rc;
 use odra_core::casper_types::account::{Account, AccountHash};
 use odra_core::casper_types::addressable_entity::NamedKeys;
 use odra_core::casper_types::bytesrepr::{Bytes, ToBytes};
-use odra_core::casper_types::contracts::{ContractHash, ContractPackageHash};
+use odra_core::casper_types::contracts::ContractHash;
 use odra_core::casper_types::{
     bytesrepr::FromBytes, CLTyped, GenesisAccount, PublicKey, RuntimeArgs, U512
 };
@@ -64,14 +64,14 @@ impl CasperVm {
         Rc::new(RefCell::new(Self::new_instance()))
     }
 
-    /// Read a ContractPackageHash of a given name, from the active account.
-    pub fn contract_package_hash_from_name(&self, name: &str) -> ContractPackageHash {
+    /// Read a PackageHash of a given name, from the active account.
+    pub fn package_hash_from_name(&self, name: &str) -> PackageHash {
         let named_keys = self
             .context
             .get_named_keys_by_account_hash(self.active_account_hash());
 
         let key: &Key = named_keys.get(name).unwrap();
-        ContractPackageHash::from(key.into_package_hash().unwrap().value())
+        PackageHash::from(key.into_package_hash().unwrap().value())
     }
 
     /// Updates the active account (caller) address.
@@ -105,11 +105,10 @@ impl CasperVm {
     ///
     /// Returns [EventError::IndexOutOfBounds] if the index is out of bounds.
     pub fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
-        let contract_package_hash = contract_address.as_contract_package_hash().unwrap();
-        let contract_hash: ContractHash = self.get_contract_hash(contract_package_hash);
+        let package_hash = contract_address.as_package_hash().unwrap();
 
         let dictionary_seed_uref = self
-            .package_named_key(*contract_package_hash, EVENTS)
+            .package_named_key(*package_hash, EVENTS)
             .ok_or(EventError::ContractDoesntSupportEvents)?;
 
         Ok(self.get_dict_value(*dictionary_seed_uref.as_uref().unwrap(), &index.to_string()))
@@ -134,10 +133,10 @@ impl CasperVm {
 
     /// Gets the count of events for the given contract address.
     pub fn get_events_count(&self, contract_address: &Address) -> u32 {
-        let contract_package_hash = contract_address
-            .as_contract_package_hash()
+        let package_hash = contract_address
+            .as_package_hash()
             .expect("Events can only be queried for contracts");
-        self.events_length(*contract_package_hash)
+        self.events_length(*package_hash)
     }
 
     /// Attaches a value to the next call.
@@ -237,9 +236,8 @@ impl CasperVm {
             self.error = Some(odra_error.clone());
             panic!("Revert: Contract deploy failed {:?}", odra_error);
         } else {
-            let contract_package_hash =
-                self.contract_package_hash_from_name(&package_hash_key_name);
-            contract_package_hash.try_into().unwrap()
+            let package_hash = self.package_hash_from_name(&package_hash_key_name);
+            package_hash.into()
         }
     }
 
@@ -254,9 +252,7 @@ impl CasperVm {
     pub fn balance_of(&self, address: &Address) -> U512 {
         match address {
             Address::Account(account_hash) => self.get_account_cspr_balance(account_hash),
-            Address::Contract(contract_package_hash) => {
-                self.get_contract_cspr_balance(contract_package_hash)
-            }
+            Address::Contract(package_hash) => self.get_contract_cspr_balance(package_hash)
         }
     }
 
@@ -384,9 +380,9 @@ impl CasperVm {
         self.context.get_purse_balance(purse)
     }
 
-    fn get_contract_cspr_balance(&self, contract_package_hash: &ContractPackageHash) -> U512 {
+    fn get_contract_cspr_balance(&self, package_hash: &PackageHash) -> U512 {
         // TODO: Addressable entity has main purse inside it, is it the same as ours for contracts?
-        let purse_key = self.package_named_key(*contract_package_hash, CONTRACT_MAIN_PURSE);
+        let purse_key = self.package_named_key(*package_hash, CONTRACT_MAIN_PURSE);
         match purse_key {
             None => U512::zero(),
             Some(purse_key) => {
@@ -401,8 +397,8 @@ impl CasperVm {
         }
     }
 
-    fn get_contract_hash(&self, contract_package_hash: &ContractPackageHash) -> ContractHash {
-        ContractHash::new(contract_package_hash.value())
+    fn get_contract_hash(&self, package_hash: &PackageHash) -> ContractHash {
+        ContractHash::new(package_hash.value())
     }
 
     fn genesis_accounts(
@@ -499,10 +495,10 @@ impl CasperVm {
 }
 
 impl CasperVm {
-    fn get_package(&self, contract_package_hash: ContractPackageHash) -> Package {
+    fn get_package(&self, package_hash: PackageHash) -> Package {
         let stored_value = self
             .context
-            .query(None, Key::Package(contract_package_hash.value()), &[])
+            .query(None, Key::Package(package_hash.value()), &[])
             .unwrap();
 
         match stored_value {
@@ -511,11 +507,8 @@ impl CasperVm {
         }
     }
 
-    fn get_current_contract(
-        &self,
-        contract_package_hash: ContractPackageHash
-    ) -> EntityWithNamedKeys {
-        let package = self.get_package(contract_package_hash);
+    fn get_current_contract(&self, package_hash: PackageHash) -> EntityWithNamedKeys {
+        let package = self.get_package(package_hash);
         let addressable_entity_hash = package
             .current_entity_hash()
             .expect("Package doesn't have current entity hash");
@@ -526,8 +519,8 @@ impl CasperVm {
 
     /// Gets current contract from contract package and
     /// returns its named keys.
-    fn package_named_keys(&self, contract_package_hash: ContractPackageHash) -> NamedKeys {
-        let package = self.get_package(contract_package_hash);
+    fn package_named_keys(&self, package_hash: PackageHash) -> NamedKeys {
+        let package = self.get_package(package_hash);
         let addressable_entity_hash = package
             .current_entity_hash()
             .expect("Package doesn't have current entity hash");
@@ -538,18 +531,14 @@ impl CasperVm {
         contract.named_keys().clone()
     }
 
-    fn package_named_key(
-        &self,
-        contract_package_hash: ContractPackageHash,
-        name: &str
-    ) -> Option<Key> {
-        let keys = self.package_named_keys(contract_package_hash);
+    fn package_named_key(&self, package_hash: PackageHash, name: &str) -> Option<Key> {
+        let keys = self.package_named_keys(package_hash);
         let key = keys.get(name);
         key.copied()
     }
 
-    fn events_length(&self, contract_package_hash: ContractPackageHash) -> u32 {
-        let key = self.package_named_key(contract_package_hash, EVENTS_LENGTH);
+    fn events_length(&self, package_hash: PackageHash) -> u32 {
+        let key = self.package_named_key(package_hash, EVENTS_LENGTH);
         match key {
             None => 0,
             Some(key) => self.get_value(key)
@@ -580,7 +569,12 @@ impl CasperVm {
             .unwrap()
     }
 
-    fn panic_with_error(&self, error: OdraError, entrypoint: &str, package_hash: PackageHash) -> ! {
+    fn panic_with_error(
+        &self,
+        error: OdraError,
+        entrypoint: &str,
+        package_hash: &PackageHash
+    ) -> ! {
         panic!("Revert: {:?} - {:?}::{}", error, package_hash, entrypoint)
     }
 }
