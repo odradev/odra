@@ -698,7 +698,7 @@
           "is_required": true
         }
       ],
-      "is_mutable": true,
+      "is_mutable": false,
       "return_ty": "U64",
       "ty": "Public",
       "attributes": []

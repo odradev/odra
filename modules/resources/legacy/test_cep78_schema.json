@@ -197,22 +197,6 @@
   ],
   "entrypoints": [
     {
-      "name": "is_whitelisted",
-      "args": [
-        {
-          "name": "address",
-          "ty": "Key",
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        }
-      ],
-      "is_mutable": false,
-      "return_ty": "Bool",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
       "name": "get_whitelist_mode",
       "args": [],
       "is_mutable": false,
@@ -926,7 +910,7 @@
           "is_required": true
         }
       ],
-      "is_mutable": true,
+      "is_mutable": false,
       "return_ty": "U64",
       "ty": "Public",
       "attributes": []
@@ -944,6 +928,22 @@
       ],
       "is_mutable": true,
       "return_ty": "String",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "is_whitelisted",
+      "args": [
+        {
+          "name": "address",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": false,
+      "return_ty": "Bool",
       "ty": "Public",
       "attributes": []
     }

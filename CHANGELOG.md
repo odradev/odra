@@ -1,7 +1,16 @@
 # Changelog
 
 Changelog for `odra`.
-## [1.1.0] - 2024-06-XX
+
+## [1.2.0] - 2024-07-30
+### Added
+- `Extern` type for simple external calls.
+
+### Changed
+- Allow for reminting tokens in `CEP78`.
+- Include custom types into schema.
+
+## [1.1.0] - 2024-06-17
 ### Added
 - Support for CSPR.cloud's auth token.
 - `new` method for `Address` to create an address from a string.

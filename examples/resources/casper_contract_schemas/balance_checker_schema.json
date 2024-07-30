@@ -1,11 +1,11 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.78.0-nightly (98aa3624b 2024-02-08)",
+  "toolchain": "rustc 1.79.0-nightly (3a36386dc 2024-04-25)",
   "authors": [],
   "repository": null,
   "homepage": null,
   "contract_name": "BalanceChecker",
-  "contract_version": "1.0.0",
+  "contract_version": "1.2.0",
   "types": [],
   "errors": [],
   "entry_points": [
@@ -14,12 +14,6 @@
       "description": "Checks the balance of the given account for the given token.",
       "is_mutable": false,
       "arguments": [
-        {
-          "name": "token",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
         {
           "name": "account",
           "description": null,
@@ -35,7 +29,7 @@
   "events": [],
   "call": {
     "wasm_file_name": "BalanceChecker.wasm",
-    "description": null,
+    "description": "Initializes the contract with the given parameters.",
     "arguments": [
       {
         "name": "odra_cfg_package_hash_key_name",
@@ -53,6 +47,12 @@
         "name": "odra_cfg_is_upgradable",
         "description": "The arg name for the contract upgradeability setting.",
         "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "address",
+        "description": null,
+        "ty": "Key",
         "optional": false
       }
     ]
