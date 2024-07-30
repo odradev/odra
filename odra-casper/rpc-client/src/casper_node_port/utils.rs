@@ -5,7 +5,7 @@ use std::{cell::RefCell, fmt};
 pub(crate) struct DisplayIter<T>(RefCell<Option<T>>);
 
 impl<T> DisplayIter<T> {
-    pub(crate) fn new(item: T) -> Self {
+    pub(crate) fn _new(item: T) -> Self {
         DisplayIter(RefCell::new(Some(item)))
     }
 }

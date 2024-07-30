@@ -1,6 +1,6 @@
 use std::fmt;
 
-use casper_hashing::Digest;
+use crate::casper_node_port::hashing::Digest;
 use datasize::DataSize;
 use odra_core::casper_types::{
     self,

@@ -1,10 +1,10 @@
 //! Livenet implementation of HostContext for HostEnv.
 use crate::livenet_contract_env::LivenetContractEnv;
 use odra_casper_rpc_client::casper_client::CasperClient;
+use odra_casper_rpc_client::casper_types_port::timestamp::Timestamp;
 use odra_casper_rpc_client::log::info;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::bytesrepr::ToBytes;
-use odra_core::casper_types::Timestamp;
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::{
     casper_types::{bytesrepr::Bytes, PublicKey, RuntimeArgs, U512},

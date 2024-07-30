@@ -4,8 +4,6 @@ use std::time::SystemTime;
 use std::{fs, path::PathBuf, str::from_utf8_unchecked, time::Duration};
 
 use anyhow::Context;
-use casper_execution_engine::core::engine_state::ExecutableDeployItem;
-use casper_hashing::Digest;
 use itertools::Itertools;
 use jsonrpc_lite::JsonRpc;
 use odra_core::OdraResult;
@@ -13,6 +11,8 @@ use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 
 use crate::casper_client::configuration::CasperClientConfiguration;
+use crate::casper_node_port::executable_deploy_item::ExecutableDeployItem;
+use crate::casper_node_port::hashing::Digest;
 use crate::casper_node_port::query_balance::{
     PurseIdentifier, QueryBalanceParams, QueryBalanceResult, QUERY_BALANCE_METHOD
 };
@@ -25,6 +25,7 @@ use crate::casper_node_port::{
     },
     Deploy, DeployHash
 };
+use crate::casper_types_port::timestamp::{TimeDiff, Timestamp};
 use crate::log;
 use anyhow::Result;
 use odra_core::casper_types::{sign, URef};
@@ -32,7 +33,7 @@ use odra_core::{
     casper_types::{
         bytesrepr::{Bytes, FromBytes, ToBytes},
         runtime_args, CLTyped, ContractHash, ContractPackageHash, ExecutionResult,
-        Key as CasperKey, PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, U512
+        Key as CasperKey, PublicKey, RuntimeArgs, SecretKey, U512
     },
     consts::*,
     Address, CallDef, ExecutionError, OdraError
@@ -261,7 +262,7 @@ impl CasperClient {
     }
 
     /// Query the node for the current state root hash.
-    async fn get_state_root_hash(&self) -> Digest {
+    pub async fn get_state_root_hash(&self) -> Digest {
         let request = json!(
             {
                 "jsonrpc": "2.0",
@@ -804,7 +805,7 @@ impl CasperClient {
                 })
             })
             .unwrap_or_else(|| {
-                log::error(format!("Couldn't get result: {:?}", json));
+                log::error(format!("Couldn't get result: {:?} - {:?}", json, request));
                 panic!("Couldn't get result")
             })
     }
@@ -825,6 +826,7 @@ impl CasperClient {
     }
 }
 
+#[cfg(feature = "std")]
 impl Default for CasperClient {
     fn default() -> Self {
         Self::new(CasperClientConfiguration::from_env())

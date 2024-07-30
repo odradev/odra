@@ -1,0 +1,22 @@
+[package]
+name = "client"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[workspace]
+members = []
+
+[dependencies]
+console_error_panic_hook = "0.1.7"
+wasm-bindgen = "0.2.84"
+wasm-bindgen-futures = "0.4.37"
+odra-casper-js-client = { path = "../../odra-casper/js-client" }
+
+[build-dependencies]
+serde_json = "1.0.103"
+odra-schema = { path = "../../odra-schema" }
+odra-casper-js-client = { path = "../../odra-casper/js-client" }
+
+[lib]
+crate-type = ["cdylib", "rlib"]

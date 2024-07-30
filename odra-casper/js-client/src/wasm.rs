@@ -1,0 +1,70 @@
+use std::collections::HashMap;
+
+use super::utils::ToSnakeCase;
+use crate::schemas::Contracts;
+use wasm_bindgen::JsValue;
+
+pub fn load_wasm_bytes(contract_name: &str, contract_bins: &[u8]) -> Result<Vec<u8>, String> {
+    let bins = load_bins(contract_bins);
+    let filename = format!("{}.wasm", contract_name.to_snake_case());
+
+    let mut contract_bin = Vec::new();
+    bins.iter().for_each(|(name, bin)| {
+        if name == &filename {
+            contract_bin = bin.clone()
+        }
+    });
+
+    if !contract_bin.is_empty() {
+        return Ok(contract_bin);
+    }
+
+    Err(format!("Couldn't find {filename} in contract binaries."))
+}
+
+pub async fn deploy_wasm(
+    contract_name: &str,
+    contract_schemas: &str,
+    contract_bins: &[u8]
+) -> Result<JsValue, String> {
+    let schemas = Contracts::load_schemas(contract_schemas)?;
+    Contracts::assert_contract_exists_in_schema(contract_name, schemas)?;
+    let _wasm_bytes = load_wasm_bytes(contract_name, contract_bins)?;
+    // let mut args = CallArgs::new();
+    // build_args(&mut args, contract_name, None);
+    // let session_bytes = ExecutableDeployItem::ModuleBytes {
+    //     module_bytes: Bytes::from(wasm_bytes),
+    //     args: args.as_casper_runtime_args().clone()
+    // };
+    // let cwp = CasperWalletProvider();
+    // cwp.requestConnection().await;
+    // let Some(public_key) = cwp.getActivePublicKey().await.as_string() else { return Err("Couldn't get public key".to_string()) };
+    // log_1(&JsValue::from(&public_key));
+    //
+    // let unsigned_deploy = ClientEnv::instance().casper_client().unwrap().new_deploy(
+    //     session_bytes,
+    //     100.into(),
+    //     Timestamp::from(js_sys::Date::now() as u64)
+    // );
+    //
+    // let wrapped_deploy = WrappedDeploy {
+    //     deploy: unsigned_deploy
+    // };
+    //
+    // let unsigned_deploy_json = JsValue::from_serde(&wrapped_deploy).unwrap_or(JsValue::UNDEFINED);
+    // web_sys::console::log_1(&unsigned_deploy_json);
+    // let well_formatted_deploy = deployFromJson(unsigned_deploy_json);
+    // web_sys::console::log_1(&well_formatted_deploy);
+    // let stringified_deploy = stringify(&well_formatted_deploy).unwrap().as_string().unwrap();
+    // let signed_deploy = cwp.sign(stringified_deploy, public_key).await;
+    // // Ok(signed_deploy)
+    Err("Not implemented".to_string())
+}
+
+fn load_bins(contract_bins: &[u8]) -> HashMap<String, Vec<u8>> {
+    let bins: HashMap<String, Vec<u8>> = match bincode::deserialize(contract_bins) {
+        Ok(bins) => bins,
+        Err(_) => panic!("Error parsing contract bins")
+    };
+    bins
+}

@@ -8,6 +8,7 @@ members = [
     "odra-casper/livenet-env",
     "odra-casper/wasm-env",
     "odra-casper/test-vm",
+    "odra-casper/js-client",
     "odra-schema",
     "odra-test",
     "odra-build"

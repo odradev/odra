@@ -1,5 +1,7 @@
+use crate::casper_node_port::hashing::Digest;
+use crate::casper_types_port::timestamp::TimeDiff;
 use datasize::DataSize;
-use odra_core::casper_types::{TimeDiff, U512};
+use odra_core::casper_types::U512;
 use serde::Serialize;
 use thiserror::Error;
 
@@ -30,7 +32,7 @@ pub enum DeployConfigurationFailure {
     ExcessiveSize(#[from] ExcessiveSizeError),
 
     /// Excessive time-to-live.
-    #[error("time-to-live of {got} exceeds limit of {max_ttl}")]
+    #[error("time-to-live of exceeds limit")]
     ExcessiveTimeToLive {
         /// The time-to-live limit.
         max_ttl: TimeDiff,
@@ -128,4 +130,16 @@ pub struct ExcessiveSizeError {
     pub max_deploy_size: u32,
     /// The serialized size of the deploy provided, in bytes.
     pub actual_deploy_size: usize
+}
+
+/// Possible hashing errors.
+#[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
+pub enum HashingError {
+    #[error("Incorrect digest length {0}, expected length {}.", Digest::LENGTH)]
+    /// The digest length was an incorrect size.
+    IncorrectDigestLength(usize),
+    /// There was a decoding error.
+    #[error("Base16 decode error {0}.")]
+    Base16DecodeError(base16::DecodeError)
 }
