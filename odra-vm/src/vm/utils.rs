@@ -1,7 +1,5 @@
-use odra_core::{
-    casper_types::{account::AccountHash, contracts::ContractPackageHash},
-    Address
-};
+use odra_core::casper_types::PackageHash;
+use odra_core::{casper_types::account::AccountHash, Address};
 
 pub fn account_address_from_str(str: &str) -> Address {
     use odra_core::casper_types::account::{
@@ -22,6 +20,6 @@ pub fn contract_address_from_u32(i: u32) -> Address {
     let padding = "0".repeat(padding_length);
 
     let a = i.to_string();
-    let account_str = format!("{}{}{}", "contract-package-", a, padding);
-    Address::Contract(ContractPackageHash::from_formatted_str(account_str.as_str()).unwrap())
+    let account_str = format!("{}{}{}", "package-", a, padding);
+    Address::Contract(PackageHash::from_formatted_str(account_str.as_str()).unwrap())
 }

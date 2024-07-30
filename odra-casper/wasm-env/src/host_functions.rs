@@ -22,7 +22,7 @@ use casper_contract::{
 use core::mem::MaybeUninit;
 use odra_core::casper_types::addressable_entity::NamedKeys;
 use odra_core::casper_types::bytesrepr::deserialize;
-use odra_core::casper_types::contracts::{ContractPackageHash, ContractVersion};
+use odra_core::casper_types::contracts::ContractVersion;
 use odra_core::casper_types::system::Caller;
 use odra_core::casper_types::{
     api_error, bytesrepr,
@@ -362,11 +362,11 @@ pub fn caller() -> Address {
 /// Calls a contract method by Address
 #[inline(always)]
 pub fn call_contract(address: Address, call_def: CallDef) -> Bytes {
-    let contract_package_hash = *address.as_contract_package_hash().unwrap_or_revert();
+    let package_hash = *address.as_package_hash().unwrap_or_revert();
     let method = call_def.entry_point();
     let mut args = call_def.args().to_owned();
     if call_def.amount() == U512::zero() {
-        call_versioned_contract(contract_package_hash, None, method, args)
+        call_versioned_contract(package_hash, None, method, args)
     } else {
         let cargo_purse = get_or_create_cargo_purse();
         let main_purse = get_main_purse().unwrap_or_revert();
@@ -376,7 +376,7 @@ pub fn call_contract(address: Address, call_def: CallDef) -> Bytes {
         args.insert(consts::CARGO_PURSE_ARG, cargo_purse)
             .unwrap_or_revert();
 
-        let result = call_versioned_contract(contract_package_hash, None, method, args);
+        let result = call_versioned_contract(package_hash, None, method, args);
         if !is_purse_empty(cargo_purse) {
             runtime::revert(ApiError::InvalidPurse)
         }
@@ -402,13 +402,12 @@ pub fn self_balance() -> U512 {
 /// address, for the most current version of a contract package by default or a specific
 /// `contract_version` if one is provided, and passing the provided `runtime_args` to it.
 pub fn call_versioned_contract(
-    contract_package_hash: ContractPackageHash,
+    package_hash: PackageHash,
     contract_version: Option<ContractVersion>,
     entry_point_name: &str,
     runtime_args: RuntimeArgs
 ) -> Bytes {
-    let (contract_package_hash_ptr, contract_package_hash_size, _bytes) =
-        to_ptr(contract_package_hash);
+    let (package_hash_ptr, package_hash_size, _bytes) = to_ptr(package_hash);
     let (contract_version_ptr, contract_version_size, _bytes) = to_ptr(contract_version);
     let (entry_point_name_ptr, entry_point_name_size, _bytes) = to_ptr(entry_point_name);
     let (runtime_args_ptr, runtime_args_size, _bytes) = to_ptr(runtime_args);
@@ -417,8 +416,8 @@ pub fn call_versioned_contract(
         let mut bytes_written = MaybeUninit::uninit();
         let ret = unsafe {
             ext_ffi::casper_call_versioned_contract(
-                contract_package_hash_ptr,
-                contract_package_hash_size,
+                package_hash_ptr,
+                package_hash_size,
                 contract_version_ptr,
                 contract_version_size,
                 entry_point_name_ptr,
@@ -591,9 +590,7 @@ fn revoke_access_to_constructor_group(package_hash: PackageHash, constructor_acc
 /// case it will use contract hash as the address.
 fn caller_to_address(caller: Caller) -> Address {
     match caller {
-        Caller::Initiator { account_hash } => Address::try_from(account_hash)
-            .map_err(|e| ApiError::User(ExecutionError::from(e).code()))
-            .unwrap_or_revert(),
+        Caller::Initiator { account_hash } => Address::from(account_hash),
         Caller::Entity {
             entity_hash,
             package_hash

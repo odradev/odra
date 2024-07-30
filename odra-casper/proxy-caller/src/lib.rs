@@ -2,6 +2,7 @@
 #![doc = "It allows calling other contracts and saving the return values to the named key"]
 #![doc = "of the Proxy Caller."]
 #![no_std]
+#![feature(core_intrinsics)]
 extern crate alloc;
 
 use core::mem::MaybeUninit;
@@ -15,12 +16,12 @@ use odra_casper_wasm_env::casper_contract::{
     ext_ffi,
     unwrap_or_revert::UnwrapOrRevert
 };
-use odra_core::casper_types::contracts::{ContractPackageHash, ContractVersion};
 use odra_core::casper_types::{
     api_error,
-    bytesrepr::{Bytes, FromBytes, ToBytes},
-    ApiError, CLTyped, PackageHash, RuntimeArgs, URef, U512
+    ApiError,
+    bytesrepr::{Bytes, FromBytes, ToBytes}, CLTyped, PackageHash, RuntimeArgs, U512, URef
 };
+use odra_core::casper_types::contracts::ContractVersion;
 use odra_core::consts::{
     ARGS_ARG, ATTACHED_VALUE_ARG, CARGO_PURSE_ARG, CARGO_PURSE_KEY, ENTRY_POINT_ARG,
     PACKAGE_HASH_ARG
@@ -85,7 +86,7 @@ pub fn set_key<T: ToBytes + CLTyped>(name: &str, value: T) {
 /// Customized version of `call_versioned_contract` from `casper_contract::contract_api::runtime`.
 /// It returns raw bytes instead of deserialized value.
 pub fn call_versioned_contract_ret_bytes(
-    package_hash: ContractPackageHash,
+    package_hash: PackageHash,
     entry_point_name: &str,
     runtime_args: RuntimeArgs
 ) -> Vec<u8> {

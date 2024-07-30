@@ -27,3 +27,6 @@ test = false
 
 [lints.rust]
 missing_docs = "warn"
+
+[patch.crates-io]
+casper-types = { version = "5.0.0", git = "https://github.com/casper-network/casper-node", branch = "rustSDK-feat-2.0" }

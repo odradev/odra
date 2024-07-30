@@ -11,16 +11,14 @@ use odra_casper_proxy_caller::{
     call_versioned_contract_ret_bytes, ensure_cargo_purse_is_empty, set_key, ProxyCall
 };
 use odra_core::casper_types::bytesrepr::Bytes;
-use odra_core::casper_types::contracts::ContractPackageHash;
 use odra_core::consts::RESULT_KEY;
 use odra_core::prelude::*;
 
 #[no_mangle]
 fn call() {
     let proxy_call = ProxyCall::load_from_args();
-    let cph = ContractPackageHash::new(proxy_call.package_hash.value());
     let result: Vec<u8> = call_versioned_contract_ret_bytes(
-        cph,
+        proxy_call.package_hash,
         proxy_call.entry_point_name.as_str(),
         proxy_call.runtime_args
     );
