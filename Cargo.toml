@@ -2,6 +2,7 @@
 members = [
     "odra",
     "odra-vm",
+    "benchmark",
     "core",
     "examples",
     "examples/ourcoin",
@@ -16,9 +17,8 @@ members = [
     "odra-test",
     "odra-build",
     "odra-casper/utils",
-    "odra-casper/proxy-caller"
     ]
-exclude = [ "examples", "modules", "benchmark", "odra-casper/proxy-caller", "templates/blank", "templates/full", "templates/workspace", "tests"]
+exclude = ["odra-casper/proxy-caller", "templates/blank", "templates/full", "templates/workspace", "tests"]
 resolver = "2"
 
 [workspace.package]
@@ -42,7 +42,7 @@ casper-types = "5.0.0"
 casper-execution-engine = { git = "https://github.com/casper-network/casper-node.git", branch = "rustSDK-feat-2.0" }
 casper-engine-test-support = { git = "https://github.com/casper-network/casper-node.git", branch = "rustSDK-feat-2.0" }
 casper-storage = { git = "https://github.com/casper-network/casper-node.git", branch = "rustSDK-feat-2.0" }
-casper-event-standard = { path = "../../casper-event-standard/casper-event-standard" }
+casper-event-standard = { git = "https://github.com/odradev/casper-event-standard.git", branch = "rustSDK-feat-2.0" }
 casper-client = { git = "https://github.com/casper-ecosystem/casper-client-rs.git", branch = "rustSDK-feat-2.0" }
 blake2 = "0.10.6"
 log = "0.4.20"

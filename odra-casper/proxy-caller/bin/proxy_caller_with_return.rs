@@ -10,7 +10,6 @@ extern crate alloc;
 use odra_casper_proxy_caller::{
     call_versioned_contract_ret_bytes, ensure_cargo_purse_is_empty, set_key, ProxyCall
 };
-use odra_casper_wasm_env::host_functions::revert;
 use odra_core::casper_types::bytesrepr::Bytes;
 use odra_core::casper_types::contracts::ContractPackageHash;
 use odra_core::consts::RESULT_KEY;
