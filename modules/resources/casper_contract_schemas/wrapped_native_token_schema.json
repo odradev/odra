@@ -1,6 +1,6 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.78.0-nightly (98aa3624b 2024-02-08)",
+  "toolchain": "rustc 1.79.0-nightly (3a36386dc 2024-04-25)",
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,7 +9,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": null,
   "contract_name": "WrappedNativeToken",
-  "contract_version": "1.1.0",
+  "contract_version": "1.2.0",
   "types": [
     {
       "struct": {

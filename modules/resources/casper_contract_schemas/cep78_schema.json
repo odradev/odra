@@ -1,6 +1,6 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.78.0-nightly (98aa3624b 2024-02-08)",
+  "toolchain": "rustc 1.79.0-nightly (3a36386dc 2024-04-25)",
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -587,6 +587,11 @@
       "name": "ForbiddenMetadataUpdate",
       "description": "",
       "discriminant": 104
+    },
+    {
+      "name": "GoingBelowZeroSupply",
+      "description": "",
+      "discriminant": 171
     },
     {
       "name": "InvalidACLPackageMode",
@@ -1249,6 +1254,11 @@
       "discriminant": 42
     },
     {
+      "name": "ReverseLookupIntegrityViolation",
+      "description": "",
+      "discriminant": 172
+    },
+    {
       "name": "TokenAlreadyApproved",
       "description": "",
       "discriminant": 52
@@ -1287,6 +1297,11 @@
       "name": "UnregisteredOwnerFromMigration",
       "description": "",
       "discriminant": 132
+    },
+    {
+      "name": "UnregisteredOwnerInBurn",
+      "description": "",
+      "discriminant": 173
     },
     {
       "name": "UnregisteredOwnerInMint",
@@ -1612,7 +1627,7 @@
     {
       "name": "balance_of",
       "description": "Returns number of owned tokens associated with the provided token holder",
-      "is_mutable": true,
+      "is_mutable": false,
       "arguments": [
         {
           "name": "token_owner",
