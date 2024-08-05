@@ -42,7 +42,7 @@ impl Flapper {
 
 #[cfg(test)]
 mod tests {
-    use crate::flapper::FlapperHostRef;
+    use crate::flapper::Flapper;
     use odra::host::{Deployer, NoArgs};
 
     #[test]
@@ -50,7 +50,7 @@ mod tests {
         let env = odra_test::env();
         // To test a module we need to deploy it. `Flapper` implements `Deployer` trait, 
         // so we can use it to deploy the module.
-        let mut contract = FlapperHostRef::deploy(&env, NoArgs);
+        let mut contract = Flapper::deploy(&env, NoArgs);
         assert!(!contract.get());
         contract.flap();
         assert!(contract.get());

@@ -42,7 +42,7 @@ impl Flipper {
 
 #[cfg(test)]
 mod tests {
-    use crate::flipper::FlipperHostRef;
+    use crate::flipper::Flipper;
     use odra::host::{Deployer, NoArgs};
 
     #[test]
@@ -50,7 +50,7 @@ mod tests {
         let env = odra_test::env();
         // To test a module we need to deploy it. `Flipper` implements `Deployer` trait, 
         // so we can use it to deploy the module.
-        let mut contract = FlipperHostRef::deploy(&env, NoArgs);
+        let mut contract = Flipper::deploy(&env, NoArgs);
         assert!(!contract.get());
         contract.flip();
         assert!(contract.get());

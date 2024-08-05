@@ -42,7 +42,7 @@ impl Flipper {
 
 #[cfg(test)]
 mod tests {
-    use crate::flipper::FlipperHostRef;
+    use crate::flipper::Flipper;
     use odra::host::{Deployer, NoArgs};
 
     #[test]
