@@ -2,6 +2,7 @@
 
 use core::hash::Hash;
 
+use casper_types::system::Caller;
 use casper_types::{
     account::AccountHash,
     bytesrepr::{self, FromBytes, ToBytes},
@@ -255,6 +256,15 @@ impl<'de> Deserialize<'de> for Address {
     }
 }
 
+impl From<Caller> for Address {
+    fn from(value: Caller) -> Self {
+        match value {
+            Caller::Initiator { account_hash } => Address::from(account_hash),
+            Caller::Entity { package_hash, .. } => Address::from(package_hash)
+        }
+    }
+}
+
 const fn decode_base16(input: &[u8]) -> Result<[u8; 32], &'static str> {
     // fail fast if the input is too short
     let input_len = input.len();
@@ -297,9 +307,9 @@ const fn hex_char_to_value(c: u8) -> Result<u8, &'static str> {
 
 #[cfg(test)]
 mod tests {
-    use casper_types::EraId;
-
     use super::*;
+    use casper_types::system::Caller;
+    use casper_types::EraId;
 
     // TODO: casper-types > 1.5.0 will have prefix fixed.
     const PACKAGE_HASH: &str =
@@ -457,5 +467,21 @@ mod tests {
         let serialized = serde_json::to_string(&address).unwrap();
         let deserialized: Address = serde_json::from_str(&serialized).unwrap();
         assert_eq!(deserialized, address);
+    }
+
+    #[test]
+    fn test_address_from_caller() {
+        let account_hash = mock_account_hash();
+        let address = Address::from(account_hash);
+        let caller = Caller::Initiator { account_hash };
+        assert_eq!(address, caller.into());
+
+        let package_hash = mock_package_hash();
+        let address = Address::from(package_hash);
+        let caller = Caller::Entity {
+            package_hash,
+            entity_hash: AddressableEntityHash::new(package_hash.value())
+        };
+        assert_eq!(address, caller.into());
     }
 }
