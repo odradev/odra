@@ -1,16 +1,18 @@
 use casper_event_standard::EventInstance;
+use casper_types::CLValueError;
 
+use crate::{consts, ExecutionError, prelude::*};
+use crate::{UnwrapOrRevert, utils};
+use crate::{Address, OdraError};
 use crate::args::EntrypointArgument;
 use crate::call_def::CallDef;
-use crate::casper_types::bytesrepr::{deserialize_from_slice, Bytes, FromBytes, ToBytes};
+use crate::casper_types::{BLAKE2B_DIGEST_LENGTH, CLTyped, CLValue, U512};
+use crate::casper_types::bytesrepr::{Bytes, deserialize_from_slice, FromBytes, ToBytes};
 use crate::casper_types::crypto::PublicKey;
-use crate::casper_types::{CLTyped, CLValue, BLAKE2B_DIGEST_LENGTH, U512};
-use crate::module::Revertible;
 pub use crate::ContractContext;
 use crate::ExecutionError::Formatting;
-use crate::{consts, prelude::*, ExecutionError};
-use crate::{utils, UnwrapOrRevert};
-use crate::{Address, OdraError};
+use crate::module::Revertible;
+use crate::VmError::{Serialization, TypeMismatch};
 
 const INDEX_SIZE: usize = 4;
 const KEY_LEN: usize = 64;
@@ -108,7 +110,19 @@ impl ContractEnv {
     pub fn set_named_value<T: CLTyped + ToBytes, U: AsRef<str>>(&self, name: U, value: T) {
         let key = name.as_ref();
         // todo: map errors to correct Odra errors
-        let cl_value = CLValue::from_t(value).unwrap_or_revert(self);
+        let cl_value = CLValue::from_t(value).map_err(|e| {
+            match e {
+                CLValueError::Serialization(_) => {
+                    OdraError::VmError(Serialization)
+                }
+                CLValueError::Type(e) => {
+                    OdraError::VmError(TypeMismatch {
+                        found: e.found,
+                        expected: e.expected
+                    })
+                }
+            }
+        }).unwrap_or_revert(self);
         self.backend.borrow().set_named_value(key, cl_value);
     }
 
