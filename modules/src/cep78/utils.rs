@@ -33,7 +33,7 @@ pub fn max_number_of_pages(total_token_supply: u64) -> u64 {
 }
 
 #[odra::module]
-struct MockDummyContract;
+pub struct MockDummyContract;
 
 #[odra::module]
 impl MockDummyContract {}
@@ -55,7 +55,7 @@ impl MockCep78TransferFilter {
 }
 
 #[odra::module]
-struct MockCep78Operator {
+pub struct MockCep78Operator {
     nft_contract: External<NftContractContractRef>
 }
 

@@ -41,7 +41,7 @@ mod tests {
         let token = setup();
         let env = token.env();
         let (owner, second_account) = (env.get_account(0), env.get_account(1));
-        let balance_checker = BalanceCheckerHostRef::deploy(
+        let balance_checker = BalanceChecker::deploy(
             env,
             BalanceCheckerInitArgs {
                 address: *token.address()

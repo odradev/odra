@@ -40,13 +40,13 @@ impl TestingContract {
 mod tests {
     use odra::{host::Deployer, prelude::*};
 
-    use crate::features::testing::{TestingContractHostRef, TestingContractInitArgs};
+    use crate::features::testing::{TestingContract, TestingContractInitArgs};
 
     #[test]
     fn env() {
         let test_env = odra_test::env();
         test_env.set_caller(test_env.get_account(0));
-        let testing_contract = TestingContractHostRef::deploy(
+        let testing_contract = TestingContract::deploy(
             &test_env,
             TestingContractInitArgs {
                 name: "MyContract".to_string()
@@ -54,7 +54,7 @@ mod tests {
         );
         let creator = testing_contract.created_by();
         test_env.set_caller(test_env.get_account(1));
-        let testing_contract2 = TestingContractHostRef::deploy(
+        let testing_contract2 = TestingContract::deploy(
             &test_env,
             TestingContractInitArgs {
                 name: "MyContract2".to_string()

@@ -3,7 +3,7 @@ use odra::casper_types::U256;
 use odra::host::{Deployer, HostEnv, HostRefLoader};
 use odra::Address;
 use odra_modules::cep18::utils::Cep18Modality;
-use odra_modules::cep18_token::{Cep18HostRef, Cep18InitArgs};
+use odra_modules::cep18_token::{Cep18, Cep18HostRef, Cep18InitArgs};
 
 fn main() {
     let env = odra_casper_livenet_env::env();
@@ -40,7 +40,7 @@ fn _load_cep18(env: &HostEnv) -> Cep18HostRef {
     let address =
         Address::new("hash-568fd396922fbbc8f8499f9b888795b2155aa60a68ef9cc38752b2771693a9ce")
             .unwrap();
-    Cep18HostRef::load(env, address)
+    Cep18::load(env, address)
 }
 
 /// Deploys a CEP-18 contract.
@@ -61,5 +61,5 @@ pub fn deploy_cep18(env: &HostEnv) -> Cep18HostRef {
     };
 
     env.set_gas(300_000_000_000u64);
-    Cep18HostRef::deploy(env, init_args)
+    Cep18::deploy(env, init_args)
 }

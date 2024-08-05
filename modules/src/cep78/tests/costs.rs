@@ -3,7 +3,7 @@ use odra::{args::Maybe, host::Deployer};
 use crate::cep78::{
     modalities::{NFTMetadataKind, OwnerReverseLookupMode, OwnershipMode},
     tests::{default_args_builder, utils},
-    token::TestCep78HostRef
+    token::TestCep78
 };
 
 #[test]
@@ -15,7 +15,7 @@ fn mint_cost_should_remain_stable() {
         .ownership_mode(OwnershipMode::Transferable)
         .build();
 
-    let mut contract = TestCep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78::deploy(&env, args);
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
     contract.mint(token_owner, "".to_string(), Maybe::None);
@@ -34,7 +34,7 @@ fn transfer_costs_should_remain_stable() {
         .nft_metadata_kind(NFTMetadataKind::Raw)
         .ownership_mode(OwnershipMode::Transferable)
         .build();
-    let mut contract: TestCep78HostRef = TestCep78HostRef::deploy(&env, args);
+    let mut contract = TestCep78::deploy(&env, args);
     let token_owner = env.get_account(0);
     contract.register_owner(Maybe::Some(token_owner));
     let receiver = env.get_account(1);
@@ -63,14 +63,14 @@ fn should_cost_less_when_installing_without_reverse_lookup(reporting: OwnerRever
         .nft_metadata_kind(NFTMetadataKind::Raw)
         .ownership_mode(OwnershipMode::Transferable)
         .build();
-    TestCep78HostRef::deploy(&env, args);
+    TestCep78::deploy(&env, args);
 
     let args = default_args_builder()
         .owner_reverse_lookup_mode(reporting)
         .nft_metadata_kind(NFTMetadataKind::Raw)
         .ownership_mode(OwnershipMode::Transferable)
         .build();
-    TestCep78HostRef::deploy(&env, args);
+    TestCep78::deploy(&env, args);
 
     let costs = utils::get_deploy_gas_cost(&env);
     if let Some(no_lookup_gas_cost) = costs.first() {

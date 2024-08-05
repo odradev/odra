@@ -23,6 +23,7 @@ mod test_parts;
 mod utils;
 mod wasm_parts;
 mod wasm_parts_utils;
+mod contract_item;
 
 pub(crate) use error_item::OdraErrorAttrItem;
 pub(crate) use external_contract_item::ExternalContractImpl;

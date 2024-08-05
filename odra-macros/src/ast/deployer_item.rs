@@ -1,14 +1,12 @@
+#![allow(unused_variables)]
+
 use crate::{
     ir::ModuleImplIR,
-    utils::{self, misc::AsBlock}
+    utils
 };
 use derive_try_from_ref::TryFromRef;
-use syn::parse_quote;
 
-use super::{
-    deployer_utils::{EntrypointCallerExpr, EntrypointsInitExpr, EpcSignature},
-    fn_utils::FnItem
-};
+use super::deployer_utils::{EntrypointCallerExpr, EntrypointsInitExpr, EpcSignature};
 
 #[derive(syn_derive::ToTokens)]
 struct DeployImplItem {
@@ -124,32 +122,18 @@ struct InitArgsImplItem {
     ident: syn::Ident,
     #[syn(braced)]
     brace_token: syn::token::Brace,
-    #[syn(in = brace_token)]
-    validate_fn: FnItem
 }
 
 impl TryFrom<&'_ ModuleImplIR> for InitArgsImplItem {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        let module_str = module.module_str()?;
-        let ident_validate = utils::ident::validate();
-        let ident_expected_ident = utils::ident::expected_ident();
-        let ty_string = utils::ty::string_ref();
-        let validate_expr: syn::Expr = parse_quote!(#module_str == expected_ident);
-
         Ok(Self {
             impl_token: Default::default(),
             trait_ty: utils::ty::init_args(),
             for_token: Default::default(),
             ident: module.init_args_ident()?,
             brace_token: Default::default(),
-            validate_fn: FnItem::new(
-                &ident_validate,
-                vec![parse_quote!(#ident_expected_ident: #ty_string)],
-                parse_quote!(-> bool),
-                validate_expr.as_block()
-            )
         })
     }
 }
@@ -199,9 +183,6 @@ mod deployer_impl {
             }
 
             impl odra::host::InitArgs for Erc20InitArgs {
-                fn validate(expected_ident: &str) -> bool {
-                    "Erc20" == expected_ident
-                }
             }
 
             impl odra::host::EntryPointsCallerProvider for Erc20HostRef {

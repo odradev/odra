@@ -168,10 +168,6 @@ pub fn string() -> syn::Type {
     parse_quote!(odra::prelude::string::String)
 }
 
-pub fn string_ref() -> syn::Type {
-    parse_quote!(&str)
-}
-
 pub fn result(ty: &syn::Type, err_ty: &syn::Type) -> syn::Type {
     parse_quote!(Result<#ty, #err_ty>)
 }

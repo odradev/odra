@@ -29,12 +29,12 @@ impl HostContract {
 mod tests {
     use odra::{host::Deployer, prelude::string::ToString};
 
-    use crate::features::host_functions::{HostContractHostRef, HostContractInitArgs};
+    use crate::features::host_functions::{HostContract, HostContractInitArgs};
 
     #[test]
     fn host_test() {
         let test_env = odra_test::env();
-        let host_contract = HostContractHostRef::deploy(
+        let host_contract = HostContract::deploy(
             &test_env,
             HostContractInitArgs {
                 name: "HostContract".to_string()

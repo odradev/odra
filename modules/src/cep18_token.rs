@@ -369,7 +369,9 @@ pub(crate) mod tests {
     use odra::host::{Deployer, HostEnv, HostRef};
     use odra::Address;
 
-    use crate::cep18_token::{Cep18HostRef, Cep18InitArgs};
+    use crate::cep18_token::{Cep18, Cep18InitArgs};
+
+    use super::Cep18HostRef;
 
     pub const TOKEN_NAME: &str = "Plascoin";
     pub const TOKEN_SYMBOL: &str = "PLS";
@@ -401,7 +403,7 @@ pub(crate) mod tests {
     }
 
     pub fn setup_with_args(env: &HostEnv, args: Cep18InitArgs) -> Cep18HostRef {
-        Cep18HostRef::deploy(env, args)
+        Cep18::deploy(env, args)
     }
 
     pub fn invert_address(address: Address) -> Address {

@@ -21,7 +21,7 @@ impl SignatureVerifier {
 
 #[cfg(test)]
 mod test {
-    use super::SignatureVerifierHostRef;
+    use super::SignatureVerifier;
     use odra::{
         casper_types::{
             bytesrepr::{Bytes, FromBytes},
@@ -41,7 +41,7 @@ mod test {
 
         let public_key = test_env.public_key(&account);
 
-        let signature_verifier = SignatureVerifierHostRef::deploy(&test_env, NoArgs);
+        let signature_verifier = SignatureVerifier::deploy(&test_env, NoArgs);
         assert!(signature_verifier.verify_signature(&message_bytes, &signature, &public_key));
     }
 
@@ -68,7 +68,7 @@ mod test {
         let public_key_decoded = hex::decode(public_key_hex).unwrap();
         let (public_key, _) = PublicKey::from_bytes(public_key_decoded.as_slice()).unwrap();
 
-        let signature_verifier = SignatureVerifierHostRef::deploy(&odra_test::env(), NoArgs);
+        let signature_verifier = SignatureVerifier::deploy(&odra_test::env(), NoArgs);
         assert!(signature_verifier.verify_signature(&message_bytes, &signature_bytes, &public_key));
     }
 }

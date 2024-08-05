@@ -210,7 +210,7 @@ mod tests {
     use super::{
         errors::Error,
         events::{Approval, Transfer},
-        Erc20HostRef, Erc20InitArgs
+        Erc20, Erc20HostRef, Erc20InitArgs
     };
     use odra::{
         casper_types::U256,
@@ -227,7 +227,7 @@ mod tests {
         let env = odra_test::env();
         (
             env.clone(),
-            Erc20HostRef::deploy(
+            Erc20::deploy(
                 &env,
                 Erc20InitArgs {
                     symbol: SYMBOL.to_string(),

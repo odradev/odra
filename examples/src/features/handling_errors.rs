@@ -49,7 +49,7 @@ impl OwnedContract {
 
 #[cfg(test)]
 mod tests {
-    use super::{Error, OwnedContractHostRef, OwnedContractInitArgs};
+    use super::{Error, OwnedContract, OwnedContractInitArgs};
     use odra::{host::Deployer, prelude::*};
 
     #[test]
@@ -59,7 +59,7 @@ mod tests {
         let not_an_owner = test_env.get_account(1);
 
         test_env.set_caller(owner);
-        let mut owned_contract = OwnedContractHostRef::deploy(
+        let mut owned_contract = OwnedContract::deploy(
             &test_env,
             OwnedContractInitArgs {
                 name: "OwnedContract".to_string()
@@ -83,7 +83,7 @@ mod tests {
         let not_an_owner = test_env.get_account(1);
 
         test_env.set_caller(owner);
-        let mut owned_contract = OwnedContractHostRef::deploy(
+        let mut owned_contract = OwnedContract::deploy(
             &test_env,
             OwnedContractInitArgs {
                 name: "OwnedContract".to_string()

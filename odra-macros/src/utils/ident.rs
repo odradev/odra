@@ -110,11 +110,3 @@ pub fn from() -> syn::Ident {
 pub fn error() -> syn::Ident {
     format_ident!("error")
 }
-
-pub fn expected_ident() -> syn::Ident {
-    format_ident!("expected_ident")
-}
-
-pub fn validate() -> syn::Ident {
-    format_ident!("validate")
-}

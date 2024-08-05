@@ -2,7 +2,7 @@
 use odra::casper_types::{AsymmetricType, PublicKey, U512};
 use odra::host::{Deployer, HostRef};
 use odra::Address;
-use odra_examples::contracts::tlw::{TimeLockWalletHostRef, TimeLockWalletInitArgs};
+use odra_examples::contracts::tlw::{TimeLockWallet, TimeLockWalletInitArgs};
 
 const DEPOSIT: u64 = 100;
 const WITHDRAWAL: u64 = 99;
@@ -15,7 +15,7 @@ fn main() {
     env.set_caller(caller);
     env.set_gas(GAS);
 
-    let mut contract = TimeLockWalletHostRef::deploy(
+    let mut contract = TimeLockWallet::deploy(
         &env,
         TimeLockWalletInitArgs {
             lock_duration: 60 * 60

@@ -1,4 +1,4 @@
-use benchmark::benchmark::{BenchmarkHostRef, StructVariable};
+use benchmark::benchmark::{Benchmark, StructVariable};
 use odra::host::{Deployer, HostRef, NoArgs};
 use odra_test::env;
 use std::fs;
@@ -8,7 +8,7 @@ pub fn main() {
     println!("Running benchmark...");
     let env = env();
 
-    let mut contract = BenchmarkHostRef::deploy(&env, NoArgs);
+    let mut contract = Benchmark::deploy(&env, NoArgs);
     // Var
     contract.set_variable(true);
     assert!(contract.get_variable());
