@@ -48,7 +48,10 @@ fn main() {
 
 /// Loads a Cep78 contract.
 pub fn load_contract(env: &HostEnv, address: &'static str) -> TestCep78HostRef {
-    let address = Address::new(address).expect("Should be a valid contract address");
+    let address = Address::new(address).expect("Should be a valid address");
+    if !address.is_contract() {
+        panic!("Address is not a contract");
+    }
     TestCep78::load(env, address)
 }
 
