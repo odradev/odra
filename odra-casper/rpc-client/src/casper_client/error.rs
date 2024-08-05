@@ -97,6 +97,7 @@ fn get_internal_error_name(error_num: u16) -> (String, OdraError) {
         ExecutionError::CouldNotSignMessage,
         ExecutionError::EmptyDictionaryName,
         ExecutionError::MissingArg,
+        ExecutionError::MissingAddress,
         ExecutionError::OutOfGas,
         ExecutionError::MaxUserError,
         ExecutionError::UserErrorTooHigh
@@ -128,10 +129,10 @@ mod test {
             ))
         );
         assert_eq!(
-            call("User error: 64657").ok(),
+            call("User error: 64659").ok(),
             Some((
-                "ExecutionError::EmptyDictionaryName".to_string(),
-                ExecutionError::EmptyDictionaryName.into()
+                "ExecutionError::MissingAddress".to_string(),
+                ExecutionError::MissingAddress.into()
             ))
         );
         // Unknown user error
