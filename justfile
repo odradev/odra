@@ -66,6 +66,7 @@ test-examples-on-odravm:
     cd examples/ourcoin && cargo odra test
 
 test-examples-on-casper:
+    mkdir -p examples/wasm
     cp modules/wasm/Erc20.wasm examples/wasm/
     cd examples && cargo odra test -b casper
     cd examples/ourcoin && cargo odra test -b casper
