@@ -356,7 +356,7 @@ pub fn emit_event(event: &Bytes) {
 #[inline(always)]
 pub fn caller() -> Address {
     let second_elem = take_nth_caller_from_stack(1);
-    caller_to_address(second_elem)
+    second_elem.into()
 }
 
 /// Calls a contract method by Address
@@ -388,7 +388,7 @@ pub fn call_contract(address: Address, call_def: CallDef) -> Bytes {
 #[inline(always)]
 pub fn self_address() -> Address {
     let first_elem = take_nth_caller_from_stack(0);
-    caller_to_address(first_elem)
+    first_elem.into()
 }
 
 /// Gets the balance of the current contract.
@@ -582,20 +582,6 @@ fn revoke_access_to_constructor_group(package_hash: PackageHash, constructor_acc
     urefs.insert(constructor_access);
     storage::remove_contract_user_group_urefs(package_hash, consts::CONSTRUCTOR_GROUP_NAME, urefs)
         .unwrap_or_revert();
-}
-
-/// Returns address based on a [`CallStackElement`].
-///
-/// For `Session` and `StoredSession` variants it will return account hash, and for `StoredContract`
-/// case it will use contract hash as the address.
-fn caller_to_address(caller: Caller) -> Address {
-    match caller {
-        Caller::Initiator { account_hash } => Address::from(account_hash),
-        Caller::Entity {
-            entity_hash,
-            package_hash
-        } => Address::from(package_hash)
-    }
 }
 
 fn is_purse_empty(purse: URef) -> bool {
