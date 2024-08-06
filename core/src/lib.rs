@@ -23,6 +23,7 @@ pub mod entry_point_callback;
 mod error;
 mod external;
 mod gas_report;
+// TODO: consider making this not wasm32
 pub mod host;
 mod list;
 mod mapping;
