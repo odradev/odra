@@ -51,7 +51,7 @@ impl DogContract {
 
 #[cfg(test)]
 mod tests {
-    use super::{DogContractHostRef, DogContractInitArgs};
+    use super::{DogContract, DogContractInitArgs};
     use odra::{host::Deployer, prelude::string::ToString};
 
     #[test]
@@ -62,7 +62,7 @@ mod tests {
             weight: 10,
             name: "Mantus".to_string()
         };
-        let dog_contract = DogContractHostRef::deploy(&test_env, init_args);
+        let dog_contract = DogContract::deploy(&test_env, init_args);
         assert!(dog_contract.barks());
         assert_eq!(dog_contract.weight(), 10);
         assert_eq!(dog_contract.name(), "Mantus".to_string());

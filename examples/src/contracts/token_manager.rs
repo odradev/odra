@@ -55,7 +55,7 @@ impl TokenManager {
 
 #[cfg(test)]
 mod test {
-    use super::TokenManagerHostRef;
+    use super::{TokenManager, TokenManagerHostRef};
     use odra::casper_types::U256;
     use odra::{
         host::{Deployer, HostRef, NoArgs},
@@ -70,7 +70,7 @@ mod test {
 
     fn setup() -> TokenManagerHostRef {
         let test_env = odra_test::env();
-        let mut contract = TokenManagerHostRef::deploy(&test_env, NoArgs);
+        let mut contract = TokenManager::deploy(&test_env, NoArgs);
 
         contract.add_token(String::from(PLASCOIN), DECIMALS, String::from(PLS));
         contract.add_token(String::from(MY_COIN), DECIMALS, String::from(MCN));
@@ -137,7 +137,7 @@ mod test {
     #[test]
     fn many_tokens_works() {
         let test_env = odra_test::env();
-        let mut contract = TokenManagerHostRef::deploy(&test_env, NoArgs);
+        let mut contract = TokenManager::deploy(&test_env, NoArgs);
         let (user, balance) = (test_env.get_account(0), U256::from(111));
         for i in 0..20 {
             contract.add_token(i.to_string(), DECIMALS, i.to_string());

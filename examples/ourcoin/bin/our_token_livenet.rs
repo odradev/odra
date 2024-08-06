@@ -69,5 +69,5 @@ pub fn deploy_our_token(env: &HostEnv) -> OurTokenHostRef {
     };
 
     env.set_gas(300_000_000_000u64);
-    OurTokenHostRef::deploy(env, init_args)
+    OurToken::deploy(env, init_args)
 }

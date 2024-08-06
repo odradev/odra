@@ -51,8 +51,8 @@ pub use odra_core::{casper_event_standard, casper_event_standard::Event, casper_
 pub use odra_core::{
     Address, AddressError, Addressable, CallDef, CollectionError, ContractCallResult,
     ContractContext, ContractEnv, ContractRef, DeployReport, EventError, ExecutionEnv,
-    ExecutionError, External, GasReport, List, ListIter, Mapping, OdraError, OdraResult, Sequence,
-    SubModule, UnwrapOrRevert, Var, VmError
+    ExecutionError, External, GasReport, List, ListIter, Mapping, OdraContract, OdraError,
+    OdraResult, Sequence, SubModule, UnwrapOrRevert, Var, VmError
 };
 
 pub use odra_macros::*;

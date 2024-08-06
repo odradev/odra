@@ -6,8 +6,8 @@ use crate::cep78::{
         MintingMode, NFTHolderMode, OwnerReverseLookupMode, OwnershipMode, WhitelistMode
     },
     tests::{default_args_builder, COLLECTION_NAME, COLLECTION_SYMBOL},
-    token::TestCep78HostRef,
-    utils::MockDummyContractHostRef
+    token::TestCep78,
+    utils::MockDummyContract
 };
 
 #[test]
@@ -20,7 +20,7 @@ fn should_install_contract() {
         .total_token_supply(1u64)
         .allow_minting(true)
         .build();
-    let contract = TestCep78HostRef::deploy(&env, args);
+    let contract = TestCep78::deploy(&env, args);
 
     assert_eq!(&contract.get_collection_name(), COLLECTION_NAME);
     assert_eq!(&contract.get_collection_symbol(), COLLECTION_SYMBOL);
@@ -39,7 +39,7 @@ fn should_install_with_allow_minting_set_to_false() {
     let env = odra_test::env();
 
     let args = default_args_builder().allow_minting(false).build();
-    let contract = TestCep78HostRef::deploy(&env, args);
+    let contract = TestCep78::deploy(&env, args);
     assert!(!contract.is_minting_allowed());
 }
 
@@ -58,7 +58,7 @@ fn should_reject_non_numerical_total_token_supply_value() {}
 #[test]
 fn should_install_with_contract_holder_mode() {
     let env = odra_test::env();
-    let whitelisted_contract = MockDummyContractHostRef::deploy(&env, NoArgs);
+    let whitelisted_contract = MockDummyContract::deploy(&env, NoArgs);
     let contract_whitelist = vec![*whitelisted_contract.address()];
     let args = default_args_builder()
         .holder_mode(NFTHolderMode::Contracts)
@@ -67,7 +67,7 @@ fn should_install_with_contract_holder_mode() {
         .minting_mode(MintingMode::Acl)
         .acl_white_list(contract_whitelist)
         .build();
-    let contract = TestCep78HostRef::deploy(&env, args);
+    let contract = TestCep78::deploy(&env, args);
 
     assert_eq!(
         contract.get_holder_mode(),
@@ -97,7 +97,7 @@ fn should_disallow_installation_of_contract_with_empty_locked_whitelist_with_hol
         .build();
 
     assert_eq!(
-        TestCep78HostRef::try_deploy(&env, args).err(),
+        TestCep78::try_deploy(&env, args).err(),
         Some(CEP78Error::EmptyACLWhitelist.into()),
         "should fail execution since whitelist mode is locked and the provided whitelist is empty",
     );
@@ -121,7 +121,7 @@ fn should_disallow_installation_with_zero_issuance() {
     let env = odra_test::env();
     let args = default_args_builder().total_token_supply(0).build();
     assert_eq!(
-        TestCep78HostRef::try_deploy(&env, args).err(),
+        TestCep78::try_deploy(&env, args).err(),
         Some(CEP78Error::CannotInstallWithZeroSupply.into()),
         "cannot install when issuance is equal 0",
     );
@@ -134,7 +134,7 @@ fn should_disallow_installation_with_supply_exceeding_hard_cap() {
         .total_token_supply(1_000_001u64)
         .build();
     assert_eq!(
-        TestCep78HostRef::try_deploy(&env, args).err(),
+        TestCep78::try_deploy(&env, args).err(),
         Some(CEP78Error::ExceededMaxTotalSupply.into()),
         "cannot install when issuance is more than 1_000_000",
     );
@@ -149,7 +149,7 @@ fn should_prevent_installation_with_ownership_and_minting_modality_conflict() {
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::Complete)
         .build();
     assert_eq!(
-        TestCep78HostRef::try_deploy(&env, args).err(),
+        TestCep78::try_deploy(&env, args).err(),
         Some(CEP78Error::InvalidReportingMode.into()),
         "cannot install when Ownership::Minter and MintingMode::Installer",
     );
@@ -164,7 +164,7 @@ fn should_prevent_installation_with_ownership_minter_and_owner_reverse_lookup_mo
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::TransfersOnly)
         .build();
     assert_eq!(
-        TestCep78HostRef::try_deploy(&env, args).err(),
+        TestCep78::try_deploy(&env, args).err(),
         Some(CEP78Error::OwnerReverseLookupModeNotTransferable.into()),
         "cannot install when Ownership::Minter and OwnerReverseLookupMode::TransfersOnly",
     );
@@ -180,7 +180,7 @@ fn should_prevent_installation_with_ownership_assigned_and_owner_reverse_lookup_
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::TransfersOnly)
         .build();
     assert_eq!(
-        TestCep78HostRef::try_deploy(&env, args).err(),
+        TestCep78::try_deploy(&env, args).err(),
         Some(CEP78Error::OwnerReverseLookupModeNotTransferable.into()),
         "cannot install when Ownership::Minter and OwnerReverseLookupMode::TransfersOnly",
     );
@@ -195,5 +195,5 @@ fn should_allow_installation_with_ownership_transferable_and_owner_reverse_looku
         .ownership_mode(OwnershipMode::Transferable)
         .owner_reverse_lookup_mode(OwnerReverseLookupMode::TransfersOnly)
         .build();
-    assert_eq!(TestCep78HostRef::try_deploy(&env, args).err(), None);
+    assert_eq!(TestCep78::try_deploy(&env, args).err(), None);
 }

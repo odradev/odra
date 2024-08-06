@@ -151,6 +151,7 @@ impl ExecutionError {
         unsafe {
             match self {
                 ExecutionError::User(code) => *code,
+                ExecutionError::MaxUserError => 64535,
                 ExecutionError::UserErrorTooHigh => 64536,
                 _ => ExecutionError::UserErrorTooHigh.code() + *(self as *const Self as *const u16)
             }

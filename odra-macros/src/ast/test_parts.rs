@@ -280,9 +280,6 @@ mod test {
                 }
 
                 impl odra::host::InitArgs for Erc20InitArgs {
-                    fn validate(expected_ident: &str) -> bool {
-                        "Erc20" == expected_ident
-                    }
                 }
 
                 impl odra::host::EntryPointsCallerProvider for Erc20HostRef {

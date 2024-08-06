@@ -121,7 +121,7 @@ mod test {
     fn setup() -> (TimeLockWalletHostRef, Address, Address) {
         let test_env = odra_test::env();
         (
-            TimeLockWalletHostRef::deploy(
+            TimeLockWallet::deploy(
                 &test_env,
                 TimeLockWalletInitArgs {
                     lock_duration: ONE_DAY_IN_SECONDS

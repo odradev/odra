@@ -25,7 +25,7 @@ impl PublicWallet {
 
 #[cfg(test)]
 mod tests {
-    use super::PublicWalletHostRef;
+    use super::PublicWallet;
     use odra::{
         casper_types::U512,
         host::{Deployer, HostRef, NoArgs}
@@ -34,7 +34,7 @@ mod tests {
     #[test]
     fn test_modules() {
         let test_env = odra_test::env();
-        let mut my_contract = PublicWalletHostRef::deploy(&test_env, NoArgs);
+        let mut my_contract = PublicWallet::deploy(&test_env, NoArgs);
         let original_contract_balance = test_env.balance_of(&my_contract);
         assert_eq!(test_env.balance_of(&my_contract), U512::zero());
 
@@ -51,7 +51,7 @@ mod tests {
     #[test]
     fn test_call_non_payable_function_with_tokens() {
         let test_env = odra_test::env();
-        let contract = PublicWalletHostRef::deploy(&test_env, NoArgs);
+        let contract = PublicWallet::deploy(&test_env, NoArgs);
         let caller_address = test_env.get_account(0);
         let original_caller_balance = test_env.balance_of(&caller_address);
 

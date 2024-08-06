@@ -225,7 +225,7 @@ mod tests {
             initial_supply: U256::from(1_000u64)
         };
 
-        let mut token = OurTokenHostRef::deploy(&env, init_args);
+        let mut token = OurToken::deploy(&env, init_args);
 
         // The deployer, as the only token holder,
         // starts a new voting to mint 1000 tokens to account 1.

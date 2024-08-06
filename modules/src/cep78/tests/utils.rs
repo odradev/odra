@@ -48,12 +48,12 @@ pub(crate) fn create_blake2b_hash<T: AsRef<[u8]>>(data: T) -> [u8; BLAKE2B_DIGES
 pub(crate) fn get_gas_cost_of(env: &HostEnv, entry_point: &str) -> Vec<U512> {
     let gas_report = env.gas_report();
     gas_report
-        .into_iter()
+        .iter()
         .filter_map(|r| match r {
             DeployReport::WasmDeploy { .. } => None,
             DeployReport::ContractCall { gas, call_def, .. } => {
                 if call_def.entry_point() == entry_point {
-                    Some(gas)
+                    Some(*gas)
                 } else {
                     None
                 }
@@ -65,9 +65,9 @@ pub(crate) fn get_gas_cost_of(env: &HostEnv, entry_point: &str) -> Vec<U512> {
 pub(crate) fn get_deploy_gas_cost(env: &HostEnv) -> Vec<U512> {
     let gas_report = env.gas_report();
     gas_report
-        .into_iter()
+        .iter()
         .filter_map(|r| match r {
-            DeployReport::WasmDeploy { gas, .. } => Some(gas),
+            DeployReport::WasmDeploy { gas, .. } => Some(*gas),
             DeployReport::ContractCall { .. } => None
         })
         .collect::<Vec<_>>()

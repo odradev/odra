@@ -12,6 +12,7 @@ mod call_result;
 pub mod callstack;
 #[doc(hidden)]
 pub mod consts;
+mod contract;
 mod contract_container;
 mod contract_context;
 pub mod contract_def;
@@ -22,6 +23,7 @@ pub mod entry_point_callback;
 mod error;
 mod external;
 mod gas_report;
+// TODO: consider making this not wasm32
 pub mod host;
 mod list;
 mod mapping;
@@ -47,6 +49,7 @@ pub use error::{
 };
 pub use unwrap_or_revert::UnwrapOrRevert;
 
+pub use contract::OdraContract;
 pub use external::External;
 pub use gas_report::*;
 pub use list::{List, ListIter};

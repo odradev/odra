@@ -136,6 +136,8 @@ mod tests {
         Address, OdraError
     };
 
+    use super::WrappedNativeToken;
+
     fn setup() -> (
         HostEnv,
         WrappedNativeTokenHostRef,
@@ -145,7 +147,7 @@ mod tests {
         U512
     ) {
         let env = odra_test::env();
-        let token = WrappedNativeTokenHostRef::deploy(&env, NoArgs);
+        let token = WrappedNativeToken::deploy(&env, NoArgs);
         let account_1 = env.get_account(0);
         let account_1_balance = env.balance_of(&account_1);
         let account_2 = env.get_account(1);

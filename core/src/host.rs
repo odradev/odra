@@ -3,10 +3,12 @@
 use crate::address::Addressable;
 use crate::gas_report::GasReport;
 use crate::{
-    call_result::CallResult, contract_def::HasIdent, entry_point_callback::EntryPointsCaller,
-    Address, CallDef, ContractCallResult, ContractEnv, EventError, OdraError, OdraResult, VmError
+    call_result::CallResult, entry_point_callback::EntryPointsCaller, Address, CallDef,
+    ContractCallResult, ContractEnv, EventError, OdraError, OdraResult, VmError
 };
 use crate::{consts, prelude::*, utils, ExecutionError};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::{contract::OdraContract, contract_def::HasIdent};
 use casper_event_standard::EventInstance;
 use casper_types::{
     bytesrepr::{Bytes, FromBytes, ToBytes},
@@ -45,9 +47,9 @@ impl<T: HostRef> Addressable for T {
 /// Trait for loading a contract from the host environment.
 ///
 /// Similar to [Deployer], but does not deploy a new contract, but loads an existing one.
-pub trait HostRefLoader {
+pub trait HostRefLoader<T: HostRef> {
     /// Loads an existing contract from the host environment.
-    fn load(env: &HostEnv, address: Address) -> Self;
+    fn load(env: &HostEnv, address: Address) -> T;
 }
 
 /// A type which can provide an [EntryPointsCaller].
@@ -62,7 +64,8 @@ pub trait EntryPointsCallerProvider {
 /// on a virtual machine or on a real blockchain.
 ///
 /// The `Deployer` trait provides a simple way to deploy a contract.
-pub trait Deployer: Sized {
+#[cfg(not(target_arch = "wasm32"))]
+pub trait Deployer<R: OdraContract>: Sized {
     /// Deploys a contract with given init args.
     ///
     /// If the init args are provided, the contract is deployed and initialized
@@ -70,21 +73,16 @@ pub trait Deployer: Sized {
     /// is deployed without initialization.
     ///
     /// Returns a host reference to the deployed contract.
-    fn deploy<T: InitArgs>(env: &HostEnv, init_args: T) -> Self;
+    fn deploy(env: &HostEnv, init_args: R::InitArgs) -> R::HostRef;
 
     /// Tries to deploy a contract with given init args.
     ///
     /// Similar to `deploy`, but returns a result instead of panicking.
-    fn try_deploy<T: InitArgs>(env: &HostEnv, init_args: T) -> OdraResult<Self>;
+    fn try_deploy(env: &HostEnv, init_args: R::InitArgs) -> OdraResult<R::HostRef>;
 }
 
 /// A type which can be used as initialization arguments for a contract.
-pub trait InitArgs: Into<RuntimeArgs> {
-    /// Validates the args are used to initialized the right contact.
-    ///
-    /// If the `expected_ident` does not match the contract ident, the method returns `false`.
-    fn validate(expected_ident: &str) -> bool;
-}
+pub trait InitArgs: Into<RuntimeArgs> {}
 
 /// Default implementation of [InitArgs]. Should be used when the contract
 /// does not require initialization arguments.
@@ -93,11 +91,7 @@ pub trait InitArgs: Into<RuntimeArgs> {
 /// or does not require any arguments.
 pub struct NoArgs;
 
-impl InitArgs for NoArgs {
-    fn validate(_expected_ident: &str) -> bool {
-        true
-    }
-}
+impl InitArgs for NoArgs {}
 
 impl From<NoArgs> for RuntimeArgs {
     fn from(_: NoArgs) -> Self {
@@ -105,9 +99,13 @@ impl From<NoArgs> for RuntimeArgs {
     }
 }
 
-impl<R: HostRef + EntryPointsCallerProvider + HasIdent> Deployer for R {
-    fn deploy<T: InitArgs>(env: &HostEnv, init_args: T) -> Self {
-        let contract_ident = R::ident();
+#[cfg(not(target_arch = "wasm32"))]
+impl<R: OdraContract> Deployer<R> for R {
+    fn deploy(
+        env: &HostEnv,
+        init_args: <R as OdraContract>::InitArgs
+    ) -> <R as OdraContract>::HostRef {
+        let contract_ident = R::HostRef::ident();
         match Self::try_deploy(env, init_args) {
             Ok(contract) => contract,
             Err(OdraError::ExecutionError(ExecutionError::MissingArg)) => {
@@ -117,24 +115,25 @@ impl<R: HostRef + EntryPointsCallerProvider + HasIdent> Deployer for R {
         }
     }
 
-    fn try_deploy<T: InitArgs>(env: &HostEnv, init_args: T) -> OdraResult<Self> {
-        let contract_ident = R::ident();
-        if !T::validate(&contract_ident) {
-            return Err(OdraError::ExecutionError(ExecutionError::MissingArg));
-        }
+    fn try_deploy(
+        env: &HostEnv,
+        init_args: <R as OdraContract>::InitArgs
+    ) -> OdraResult<<R as OdraContract>::HostRef> {
+        let contract_ident = R::HostRef::ident();
 
-        let caller = R::entry_points_caller(env);
+        let caller = R::HostRef::entry_points_caller(env);
         let address = env.new_contract(&contract_ident, init_args.into(), caller)?;
-        Ok(R::new(address, env.clone()))
+        Ok(R::HostRef::new(address, env.clone()))
     }
 }
 
-impl<T: EntryPointsCallerProvider + HostRef + HasIdent> HostRefLoader for T {
-    fn load(env: &HostEnv, address: Address) -> Self {
-        let caller = T::entry_points_caller(env);
-        let contract_name = T::ident();
+#[cfg(not(target_arch = "wasm32"))]
+impl<T: OdraContract> HostRefLoader<T::HostRef> for T {
+    fn load(env: &HostEnv, address: Address) -> T::HostRef {
+        let caller = T::HostRef::entry_points_caller(env);
+        let contract_name = T::HostRef::ident();
         env.register_contract(address, contract_name, caller);
-        T::new(address, env.clone())
+        T::HostRef::new(address, env.clone())
     }
 }
 
@@ -311,8 +310,24 @@ impl HostEnv {
         address: Address,
         call_def: CallDef
     ) -> OdraResult<T> {
-        let backend = self.backend.borrow();
         let use_proxy = T::cl_type() != <()>::cl_type() || !call_def.amount().is_zero();
+        let call_result = self.raw_call_contract(address, call_def, use_proxy);
+        call_result.map(|bytes| {
+            T::from_bytes(&bytes)
+                .map(|(obj, _)| obj)
+                .map_err(|_| OdraError::VmError(VmError::Deserialization))
+        })?
+    }
+
+    /// Calls a contract at the specified address with the given call definition. Returns raw,
+    /// not serialized bytes.
+    pub fn raw_call_contract(
+        &self,
+        address: Address,
+        call_def: CallDef,
+        use_proxy: bool
+    ) -> OdraResult<Bytes> {
+        let backend = self.backend.borrow();
         let call_result = backend.call_contract(&address, call_def, use_proxy);
 
         let mut events_map: BTreeMap<Address, Vec<Bytes>> = BTreeMap::new();
@@ -347,11 +362,7 @@ impl HostEnv {
             events_map
         )));
 
-        call_result.map(|bytes| {
-            T::from_bytes(&bytes)
-                .map(|(obj, _)| obj)
-                .map_err(|_| OdraError::VmError(VmError::Deserialization))
-        })?
+        call_result
     }
 
     /// Returns the gas cost of the last contract call.
@@ -553,7 +564,6 @@ mod test {
 
     static IDENT_MTX: Mutex<()> = Mutex::new(());
     static EPC_MTX: Mutex<()> = Mutex::new(());
-    static VALIDATE_MTX: Mutex<()> = Mutex::new(());
 
     #[derive(Debug, Event, PartialEq)]
     struct TestEv {}
@@ -576,11 +586,25 @@ mod test {
         }
     }
 
+    impl ContractRef for MockTestRef {
+        fn new(_env: Rc<ContractEnv>, _address: Address) -> Self {
+            unimplemented!()
+        }
+        fn address(&self) -> &Address {
+            unimplemented!()
+        }
+    }
+
+    impl OdraContract for MockTestRef {
+        type HostRef = MockTestRef;
+
+        type ContractRef = MockTestRef;
+
+        type InitArgs = NoArgs;
+    }
+
     mock! {
         Ev {}
-        impl InitArgs for Ev {
-            fn validate(expected_ident: &str) -> bool;
-        }
         impl Into<RuntimeArgs> for Ev {
             fn into(self) -> RuntimeArgs;
         }
@@ -615,43 +639,19 @@ mod test {
         ctx.expect_new_contract()
             .returning(|_, _, _| Ok(Address::Account(AccountHash::new([0; 32]))));
         let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
-        <MockTestRef as Deployer>::deploy(&env, NoArgs);
-    }
-
-    #[test]
-    #[should_panic(expected = "Invalid init args for contract TestRef.")]
-    fn test_deploy_with_invalid_args() {
-        // MockTestRef::ident() and  MockEv::validate() are static and can't be safely used
-        // from multiple tests at the same time. Should be to protected with a Mutex. Each function has
-        // a separate Mutex.
-        // https://github.com/asomers/mockall/blob/master/mockall/tests/mock_struct_with_static_method.rs
-        let _i = IDENT_MTX.lock();
-        let _v = VALIDATE_MTX.lock();
-
-        // stubs
-        let args_ctx = MockEv::validate_context();
-        args_ctx.expect().returning(|_| false);
-        let indent_ctx = MockTestRef::ident_context();
-        indent_ctx.expect().returning(|| "TestRef".to_string());
-
-        let env = HostEnv::new(Rc::new(RefCell::new(MockHostContext::new())));
-        let args = MockEv::new();
-        MockTestRef::deploy(&env, args);
+        MockTestRef::deploy(&env, NoArgs);
     }
 
     #[test]
     fn test_load_ref() {
-        // MockTestRef::ident(), MockEv::validate(), MockTestRef::entry_points_caller() are static and can't be safely used
+        // MockTestRef::ident() and MockTestRef::entry_points_caller() are static and can't be safely used
         // from multiple tests at the same time. Should be to protected with a Mutex. Each function has
         // a separate Mutex.
         // https://github.com/asomers/mockall/blob/master/mockall/tests/mock_struct_with_static_method.rs
         let _e = EPC_MTX.lock();
         let _i = IDENT_MTX.lock();
-        let _v = VALIDATE_MTX.lock();
 
         // stubs
-        let args_ctx = MockEv::validate_context();
-        args_ctx.expect().returning(|_| true);
         let epc_ctx = MockTestRef::entry_points_caller_context();
         epc_ctx
             .expect()
@@ -672,7 +672,7 @@ mod test {
 
         let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
         let address = Address::Account(AccountHash::new([0; 32]));
-        <MockTestRef as HostRefLoader>::load(&env, address);
+        MockTestRef::load(&env, address);
     }
 
     #[test]

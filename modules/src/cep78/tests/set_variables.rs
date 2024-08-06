@@ -5,7 +5,7 @@ use odra::{
 
 use crate::cep78::{
     error::CEP78Error, events::VariablesSet, modalities::EventsMode, tests::default_args_builder,
-    token::TestCep78HostRef
+    token::TestCep78
 };
 
 #[test]
@@ -16,7 +16,7 @@ fn only_installer_should_be_able_to_toggle_allow_minting() {
         .allow_minting(false)
         .events_mode(EventsMode::CES)
         .build();
-    let mut contract = TestCep78HostRef::deploy(&env, args);
+    let mut contract = <TestCep78 as Deployer<TestCep78>>::deploy(&env, args);
 
     // Account other than installer account should not be able to change allow_minting
     env.set_caller(other_user);
@@ -50,7 +50,7 @@ fn installer_should_be_able_to_toggle_package_operator_mode() {}
 fn installer_should_be_able_to_toggle_operator_burn_mode() {
     let env = odra_test::env();
     let args = default_args_builder().events_mode(EventsMode::CES).build();
-    let mut contract = TestCep78HostRef::deploy(&env, args);
+    let mut contract = <TestCep78 as Deployer<TestCep78>>::deploy(&env, args);
 
     // Installer account should be able to change allow_minting
     assert_eq!(

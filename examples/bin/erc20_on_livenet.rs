@@ -2,7 +2,7 @@
 use odra::casper_types::U256;
 use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader};
 use odra::Address;
-use odra_modules::erc20::{Erc20HostRef, Erc20InitArgs};
+use odra_modules::erc20::{Erc20, Erc20HostRef, Erc20InitArgs};
 use std::str::FromStr;
 
 fn main() {
@@ -32,7 +32,7 @@ fn main() {
 fn _load_erc20(env: &HostEnv) -> Erc20HostRef {
     let address = "hash-d26fcbd2106e37be975d2045c580334a6d7b9d0a241c2358a4db970dfd516945";
     let address = Address::from_str(address).unwrap();
-    Erc20HostRef::load(env, address)
+    Erc20::load(env, address)
 }
 
 /// Deploys an ERC20 contract.
@@ -50,5 +50,5 @@ pub fn deploy_erc20(env: &HostEnv) -> Erc20HostRef {
     };
 
     env.set_gas(100_000_000_000u64);
-    Erc20HostRef::deploy(env, init_args)
+    Erc20::deploy(env, init_args)
 }

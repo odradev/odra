@@ -6,7 +6,7 @@ mod allowance_tests {
     use odra::host::{Deployer, HostRef, NoArgs};
     use odra::Address;
 
-    use crate::cep18::cep18_client_contract::Cep18ClientContractHostRef;
+    use crate::cep18::cep18_client_contract::Cep18ClientContract;
     use crate::cep18::errors::Error::InsufficientAllowance;
     use crate::cep18_token::tests::{
         invert_address, setup, ALLOWANCE_AMOUNT_1, ALLOWANCE_AMOUNT_2, TRANSFER_AMOUNT_1
@@ -56,8 +56,8 @@ mod allowance_tests {
         let owner = cep18_token.env().get_account(0);
         let alice = cep18_token.env().get_account(1);
         let token_address = *cep18_token.address();
-        let client_contract = Cep18ClientContractHostRef::deploy(cep18_token.env(), NoArgs);
-        let another_client_contract = Cep18ClientContractHostRef::deploy(cep18_token.env(), NoArgs);
+        let client_contract = Cep18ClientContract::deploy(cep18_token.env(), NoArgs);
+        let another_client_contract = Cep18ClientContract::deploy(cep18_token.env(), NoArgs);
 
         let client_contract_address = client_contract.address();
         let another_client_contract_address = another_client_contract.address();

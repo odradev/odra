@@ -2,6 +2,12 @@
 
 Changelog for `odra`.
 
+## [1.3.0] - 2024-08-xx
+### Added
+- `OdraContract` trait grouping module-related structures.
+### Changed
+- `Deployer` is no longer implemented for `HostRef` but for `OdraContract`.
+
 ## [1.2.0] - 2024-07-30
 ### Added
 - `Extern` type for simple external calls.

@@ -105,7 +105,7 @@ mod tests {
             unit: Unit::C,
             my_struct: MyStruct { a: 10, b: 20 }
         };
-        let contract = MyContractHostRef::deploy(&test_env, init_args);
+        let contract = MyContract::deploy(&test_env, init_args);
 
         assert_eq!(contract.get_ip(), IP::IPv4([192, 168, 0, 1]));
         assert_eq!(contract.get_fieldless(), Fieldless::Tuple());

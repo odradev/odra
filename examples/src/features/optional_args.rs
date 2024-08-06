@@ -40,7 +40,7 @@ mod test {
             name: String::from("MyToken"),
             metadata: Maybe::None
         };
-        let my_contract = TokenHostRef::deploy(&test_env, init_args);
+        let my_contract = Token::deploy(&test_env, init_args);
         assert_eq!(my_contract.metadata(), String::from(""));
     }
 
@@ -51,7 +51,7 @@ mod test {
             name: String::from("MyToken"),
             metadata: Maybe::Some(String::from("MyMetadata"))
         };
-        let my_contract = TokenHostRef::deploy(&test_env, init_args);
+        let my_contract = Token::deploy(&test_env, init_args);
         assert_eq!(my_contract.metadata(), String::from("MyMetadata"));
     }
 }

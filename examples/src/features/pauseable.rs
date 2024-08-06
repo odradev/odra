@@ -48,7 +48,7 @@ impl PauseableCounter {
 
 #[cfg(test)]
 mod test {
-    use super::PauseableCounterHostRef;
+    use super::PauseableCounter;
     use odra::host::{Deployer, HostRef, NoArgs};
     use odra_modules::security::errors::Error::{PausedRequired, UnpausedRequired};
     use odra_modules::security::events::{Paused, Unpaused};
@@ -56,7 +56,7 @@ mod test {
     #[test]
     fn pause_works() {
         let test_env = odra_test::env();
-        let mut contract = PauseableCounterHostRef::deploy(&test_env, NoArgs);
+        let mut contract = PauseableCounter::deploy(&test_env, NoArgs);
         let caller = test_env.get_account(0);
 
         assert!(!contract.is_paused());
@@ -76,7 +76,7 @@ mod test {
     #[test]
     fn increment_only_if_unpaused() {
         let test_env = odra_test::env();
-        let mut contract = PauseableCounterHostRef::deploy(&test_env, NoArgs);
+        let mut contract = PauseableCounter::deploy(&test_env, NoArgs);
         contract.increment();
         contract.pause();
 
@@ -90,7 +90,7 @@ mod test {
     #[test]
     fn cannot_unpause_unpaused() {
         let test_env = odra_test::env();
-        let mut contract = PauseableCounterHostRef::deploy(&test_env, NoArgs);
+        let mut contract = PauseableCounter::deploy(&test_env, NoArgs);
 
         assert_eq!(contract.try_unpause().unwrap_err(), PausedRequired.into());
     }
@@ -98,7 +98,7 @@ mod test {
     #[test]
     fn cannot_pause_paused() {
         let test_env = odra_test::env();
-        let mut contract = PauseableCounterHostRef::deploy(&test_env, NoArgs);
+        let mut contract = PauseableCounter::deploy(&test_env, NoArgs);
         contract.pause();
         assert_eq!(contract.try_pause().unwrap_err(), UnpausedRequired.into());
     }

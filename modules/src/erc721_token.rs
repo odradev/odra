@@ -139,13 +139,13 @@ pub mod errors {
 
 #[cfg(test)]
 mod tests {
-    use super::{Erc721TokenHostRef, Erc721TokenInitArgs};
+    use super::{Erc721Token, Erc721TokenHostRef, Erc721TokenInitArgs};
     use crate::access::errors::Error as AccessError;
-    use crate::erc20::{Erc20HostRef, Erc20InitArgs};
+    use crate::erc20::{Erc20, Erc20InitArgs};
     use crate::erc721::errors::Error::{InvalidTokenId, NotAnOwnerOrApproved};
     use crate::erc721::owned_erc721_with_metadata::OwnedErc721WithMetadata;
     use crate::erc721_receiver::events::Received;
-    use crate::erc721_receiver::Erc721ReceiverHostRef;
+    use crate::erc721_receiver::Erc721Receiver;
     use crate::erc721_token::errors::Error::TokenAlreadyExists;
     use odra::host::{Deployer, HostEnv, HostRef, NoArgs};
     use odra::prelude::*;
@@ -166,7 +166,7 @@ mod tests {
         let env = odra_test::env();
         TokenEnv {
             env: env.clone(),
-            token: Erc721TokenHostRef::deploy(
+            token: Erc721Token::deploy(
                 &env,
                 Erc721TokenInitArgs {
                     name: NAME.to_string(),
@@ -501,7 +501,7 @@ mod tests {
         // When deploy a contract with the initial supply
         let mut erc721_env = setup();
         // And another contract which does not support nfts
-        let erc20 = Erc20HostRef::deploy(
+        let erc20 = Erc20::deploy(
             &erc721_env.env,
             Erc20InitArgs {
                 name: "PLASCOIN".to_string(),
@@ -534,7 +534,7 @@ mod tests {
         // When deploy a contract with the initial supply
         let mut erc721_env = setup();
         // And another contract which does not support nfts
-        let receiver = Erc721ReceiverHostRef::deploy(&erc721_env.env, NoArgs);
+        let receiver = Erc721Receiver::deploy(&erc721_env.env, NoArgs);
 
         // And mint a token to Alice.
         erc721_env.token.mint(&erc721_env.alice, &U256::from(1));
@@ -567,7 +567,7 @@ mod tests {
         // When deploy a contract with the initial supply
         let mut erc721_env = setup();
         // And another contract which does not support nfts
-        let receiver = Erc721ReceiverHostRef::deploy(&erc721_env.env, NoArgs);
+        let receiver = Erc721Receiver::deploy(&erc721_env.env, NoArgs);
 
         // And mint a token to Alice.
         erc721_env.token.mint(&erc721_env.alice, &U256::from(1));

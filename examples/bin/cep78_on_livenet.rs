@@ -6,7 +6,7 @@ use odra::Address;
 use odra_modules::cep78::modalities::{
     EventsMode, MetadataMutability, NFTIdentifierMode, NFTKind, NFTMetadataKind, OwnershipMode
 };
-use odra_modules::cep78::token::{TestCep78HostRef, TestCep78InitArgs};
+use odra_modules::cep78::token::{TestCep78, TestCep78HostRef, TestCep78InitArgs};
 use odra_modules::cep78::utils::InitArgsBuilder;
 
 const CEP78_METADATA: &str = r#"{
@@ -47,9 +47,12 @@ fn main() {
 }
 
 /// Loads a Cep78 contract.
-pub fn load_contract(env: &HostEnv, address: &str) -> TestCep78HostRef {
-    let address = Address::new(address).expect("Should be a valid contract address");
-    TestCep78HostRef::load(env, address)
+pub fn load_contract(env: &HostEnv, address: &'static str) -> TestCep78HostRef {
+    let address = Address::new(address).expect("Should be a valid address");
+    if !address.is_contract() {
+        panic!("Address is not a contract");
+    }
+    TestCep78::load(env, address)
 }
 
 /// Deploys a Cep78 contract.
@@ -72,5 +75,5 @@ pub fn deploy_contract(env: &HostEnv) -> TestCep78HostRef {
         .build();
 
     env.set_gas(430_000_000_000u64);
-    TestCep78HostRef::deploy(env, init_args)
+    TestCep78::deploy(env, init_args)
 }

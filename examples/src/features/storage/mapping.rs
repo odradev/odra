@@ -38,13 +38,13 @@ impl DogContract2 {
 
 #[cfg(test)]
 mod tests {
-    use super::{DogContract2HostRef, DogContract2InitArgs};
+    use super::{DogContract2, DogContract2InitArgs};
     use odra::{host::Deployer, prelude::string::ToString};
 
     #[test]
     fn visit_test() {
         let test_env = odra_test::env();
-        let mut dog_contract = DogContract2HostRef::deploy(
+        let mut dog_contract = DogContract2::deploy(
             &test_env,
             DogContract2InitArgs {
                 name: "Mantus".to_string()

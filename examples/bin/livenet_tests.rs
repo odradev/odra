@@ -3,9 +3,11 @@ use odra::casper_types::U256;
 use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader};
 use odra::Address;
 use odra::ExecutionError;
-use odra_examples::features::livenet::{LivenetContractHostRef, LivenetContractInitArgs};
+use odra_examples::features::livenet::{
+    LivenetContract, LivenetContractHostRef, LivenetContractInitArgs
+};
 use odra_modules::access::events::OwnershipTransferred;
-use odra_modules::erc20::{Erc20HostRef, Erc20InitArgs};
+use odra_modules::erc20::{Erc20, Erc20HostRef, Erc20InitArgs};
 
 fn main() {
     let env = odra_casper_livenet_env::env();
@@ -68,7 +70,7 @@ fn deploy_new(env: &HostEnv) -> (LivenetContractHostRef, Erc20HostRef) {
     let init_args = LivenetContractInitArgs {
         erc20_address: *erc20_contract.address()
     };
-    let livenet_contract = LivenetContractHostRef::deploy(env, init_args);
+    let livenet_contract = LivenetContract::deploy(env, init_args);
     erc20_contract.transfer(livenet_contract.address(), &1000.into());
     (livenet_contract, erc20_contract)
 }
@@ -79,8 +81,8 @@ fn load(
     erc20_address: Address
 ) -> (LivenetContractHostRef, Erc20HostRef) {
     (
-        LivenetContractHostRef::load(env, contract_address),
-        Erc20HostRef::load(env, erc20_address)
+        LivenetContract::load(env, contract_address),
+        Erc20::load(env, erc20_address)
     )
 }
 
@@ -99,5 +101,5 @@ pub fn deploy_erc20(env: &HostEnv) -> Erc20HostRef {
     };
 
     env.set_gas(100_000_000_000u64);
-    Erc20HostRef::deploy(env, init_args)
+    Erc20::deploy(env, init_args)
 }
