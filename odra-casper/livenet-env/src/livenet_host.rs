@@ -2,7 +2,7 @@
 
 use crate::error;
 use crate::livenet_contract_env::LivenetContractEnv;
-use odra_casper_rpc_client::casper_client::{CasperClient, ContractId};
+use odra_casper_rpc_client::casper_client::CasperClient;
 use odra_casper_rpc_client::log::info;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::bytesrepr::ToBytes;
@@ -20,6 +20,14 @@ use std::path::PathBuf;
 use std::sync::RwLock;
 use std::thread::sleep;
 use tokio::runtime::Runtime;
+
+/// Enum representing a contract identifier used by Livenet Host.
+pub enum ContractId {
+    /// Contract name.
+    Name(String),
+    /// Contract address.
+    Address(Address)
+}
 
 /// LivenetHost struct.
 pub struct LivenetHost {
@@ -191,9 +199,6 @@ impl HostContext for LivenetHost {
                 address,
                 ContractContainer::new(&contract_name, entry_points_caller)
             );
-        self.casper_client
-            .borrow_mut()
-            .register_name(address, contract_name);
     }
 
     fn contract_env(&self) -> ContractEnv {
@@ -230,7 +235,8 @@ impl HostContext for LivenetHost {
 }
 
 impl LivenetHost {
-    fn find_error(&self, contract_id: ContractId, error_msg: &str) -> Option<(String, OdraError)> {
+    // TODO: Use it
+    fn _find_error(&self, contract_id: ContractId, error_msg: &str) -> Option<(String, OdraError)> {
         match contract_id {
             ContractId::Name(contract_name) => error::find(&contract_name, error_msg).ok(),
             ContractId::Address(addr) => match self.contract_register.read().unwrap().get(&addr) {
