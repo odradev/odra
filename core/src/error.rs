@@ -1,7 +1,6 @@
-use core::any::Any;
-
 use casper_types::bytesrepr::Error as BytesReprError;
 use casper_types::{CLType, CLValueError};
+use core::any::Any;
 
 use crate::arithmetic::ArithmeticsError;
 use crate::prelude::*;
@@ -240,7 +239,7 @@ impl From<AddressError> for OdraError {
 /// Event-related errors.
 #[derive(Debug, PartialEq, Eq, PartialOrd)]
 pub enum EventError {
-    /// The type of event is different than expected.
+    /// The type of event is different from expected.
     UnexpectedType(String),
     /// Index of the event is out of bounds.
     IndexOutOfBounds,
@@ -283,5 +282,11 @@ impl From<BytesReprError> for OdraError {
             _ => ExecutionError::Formatting
         }
         .into()
+    }
+}
+
+impl From<anyhow::Error> for OdraError {
+    fn from(value: anyhow::Error) -> Self {
+        OdraError::VmError(VmError::Other(value.to_string()))
     }
 }

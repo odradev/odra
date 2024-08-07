@@ -1,16 +1,16 @@
 //! Client for interacting with Casper node.
 
+use itertools::Itertools;
+use jsonrpc_lite::JsonRpc;
+use serde::de::DeserializeOwned;
+use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::time::Duration;
 
-use itertools::Itertools;
-use jsonrpc_lite::JsonRpc;
-use odra_core::OdraResult;
-use serde::de::DeserializeOwned;
-use serde_json::{json, Value};
-
 use crate::casper_client::configuration::CasperClientConfiguration;
 
+use crate::error::Error;
+use crate::error::Error::LivenetToDoError;
 use crate::log;
 use casper_client::cli::{
     get_balance, get_deploy, get_dictionary_item, get_entity, get_node_status, get_state_root_hash,
@@ -51,6 +51,10 @@ pub const ENV_ACCOUNT_PREFIX: &str = "ODRA_CASPER_LIVENET_KEY_";
 pub const ENV_CSPR_CLOUD_AUTH_TOKEN: &str = "CSPR_CLOUD_AUTH_TOKEN";
 /// Environment variable holding a path to an additional .env file.
 pub const ENV_LIVENET_ENV_FILE: &str = "ODRA_CASPER_LIVENET_ENV";
+/// Time between retries when waiting for a deploy to be processed.
+pub const DEPLOY_WAIT_TIME: Duration = Duration::from_secs(5);
+
+pub type Result<T> = core::result::Result<T, Error>;
 
 enum ContractId {
     Name(String),
@@ -175,12 +179,12 @@ impl CasperClient {
     }
 
     /// Signs the message using keys associated with an address.
-    pub fn sign_message(&self, message: &Bytes, address: &Address) -> OdraResult<Bytes> {
+    pub fn sign_message(&self, message: &Bytes, address: &Address) -> Result<Bytes> {
         let secret_key = self.address_secret_key(address);
         let public_key = &PublicKey::from(secret_key);
         let signature = sign(message, secret_key, public_key)
             .to_bytes()
-            .map_err(|_| OdraError::ExecutionError(ExecutionError::CouldNotSignMessage))?;
+            .map_err(|_| LivenetToDoError)?;
 
         Ok(Bytes::from(signature))
     }
@@ -246,12 +250,7 @@ impl CasperClient {
         }
     }
 
-    pub async fn transfer(
-        &self,
-        to: Address,
-        amount: U512,
-        timestamp: Timestamp
-    ) -> OdraResult<()> {
+    pub async fn transfer(&self, to: Address, amount: U512, timestamp: Timestamp) -> Result<()> {
         let session = ExecutableDeployItem::Transfer {
             args: runtime_args! {
                 "amount" => amount,
@@ -261,41 +260,32 @@ impl CasperClient {
         };
         let deploy = self.new_deploy(session, self.gas, timestamp);
         let request = put_deploy_request(deploy);
-        let response: PutDeployResult = self.post_request(request).await;
+        let response: PutDeployResult = self.post_request(request).await?;
         let deploy_hash = response.deploy_hash;
         // TODO: wait_for_deploy_hash should return a result not panic, then this function can return a result
-        self.wait_for_deploy(deploy_hash).await;
+        self.wait_for_deploy(deploy_hash).await?;
         Ok(())
     }
 
     /// Returns the current block_time
-    pub async fn get_block_time(&self) -> u64 {
-        get_node_status(
+    pub async fn get_block_time(&self) -> Result<u64> {
+        let block_time = get_node_status(
             &self.rpc_id(),
             self.node_address(),
             self.configuration.verbosity()
         )
         .await
-        .unwrap_or_else(|_| {
-            panic!(
-                "Couldn't get block time from node: {:?}",
-                self.node_address()
-            )
-        })
+        .map_err(|_| LivenetToDoError)?
         .result
         .last_added_block_info
-        .unwrap_or_else(|| {
-            panic!(
-                "Couldn't get last added block info from node: {:?}",
-                self.node_address()
-            )
-        })
+        .ok_or(LivenetToDoError)?
         .timestamp
-        .millis()
+        .millis();
+        Ok(block_time)
     }
 
     /// Get the event bytes from storage
-    pub async fn get_event(&self, contract_address: &Address, index: u32) -> OdraResult<Bytes> {
+    pub async fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes> {
         self.query_dict(contract_address, EVENTS.to_string(), index.to_string())
             .await
     }
@@ -347,7 +337,7 @@ impl CasperClient {
         address: &Address,
         dictionary_name: String,
         dictionary_item_key: String
-    ) -> OdraResult<T> {
+    ) -> Result<T> {
         let entity_addr = self.query_global_state_for_entity_addr(address).await;
         let params = DictionaryItemStrParams::EntityNamedKey {
             entity_addr: &entity_addr.to_formatted_string(),
@@ -363,23 +353,13 @@ impl CasperClient {
         )
         .await;
 
-        r.unwrap_or_else(|_| {
-            panic!(
-                "Couldn't get dictionary item for contract: {:?}",
-                address.to_formatted_string()
-            )
-        })
-        .result
-        .stored_value
-        .into_cl_value()
-        .unwrap_or_else(|| {
-            panic!(
-                "Couldn't get CLValue from dictionary item for contract: {:?}",
-                address.to_formatted_string()
-            )
-        })
-        .into_t()
-        .map_err(|_| OdraError::ExecutionError(ExecutionError::TypeMismatch))
+        r.map_err(|_| LivenetToDoError)?
+            .result
+            .stored_value
+            .into_cl_value()
+            .ok_or(LivenetToDoError)?
+            .into_t()
+            .map_err(|_| LivenetToDoError)
     }
 
     /// Query the node for the transaction state.
@@ -483,7 +463,7 @@ impl CasperClient {
         args: RuntimeArgs,
         timestamp: Timestamp,
         wasm_bytes: Vec<u8>
-    ) -> OdraResult<Address> {
+    ) -> Result<Address> {
         log::info(format!("Deploying \"{}\".", contract_name));
         let session = ExecutableDeployItem::ModuleBytes {
             module_bytes: Bytes::from(wasm_bytes),
@@ -491,9 +471,9 @@ impl CasperClient {
         };
         let deploy = self.new_deploy(session, self.gas, timestamp);
         let request = put_deploy_request(deploy);
-        let response: PutDeployResult = self.post_request(request).await;
+        let response: PutDeployResult = self.post_request(request).await?;
         let deploy_hash = response.deploy_hash;
-        let result = self.wait_for_deploy(deploy_hash).await;
+        let result = self.wait_for_deploy(deploy_hash).await?;
         self.process_execution(
             result,
             ContractId::Name(contract_name.to_string()),
@@ -531,7 +511,7 @@ impl CasperClient {
         address: Address,
         call_def: CallDef,
         timestamp: Timestamp
-    ) -> OdraResult<Bytes> {
+    ) -> Result<Bytes> {
         log::info(format!(
             "Calling {:?} with entrypoint \"{}\" through proxy.",
             address.to_formatted_string(),
@@ -561,9 +541,9 @@ impl CasperClient {
 
         let deploy = self.new_deploy(session, self.gas, timestamp);
         let request = put_deploy_request(deploy);
-        let response: PutDeployResult = self.post_request(request).await;
+        let response: PutDeployResult = self.post_request(request).await?;
         let deploy_hash = response.deploy_hash;
-        let result = self.wait_for_deploy(deploy_hash).await;
+        let result = self.wait_for_deploy(deploy_hash).await?;
         self.process_execution(result, ContractId::Address(address), deploy_hash)?;
         Ok(self.get_proxy_result().await)
     }
@@ -574,7 +554,7 @@ impl CasperClient {
         addr: Address,
         call_def: CallDef,
         timestamp: Timestamp
-    ) -> OdraResult<Bytes> {
+    ) -> Result<Bytes> {
         log::info(format!(
             "Calling {:?} directly with entrypoint \"{}\".",
             addr.to_formatted_string(),
@@ -593,9 +573,9 @@ impl CasperClient {
         };
         let deploy = self.new_deploy(session, self.gas, timestamp);
         let request = put_deploy_request(deploy);
-        let response: PutDeployResult = self.post_request(request).await;
+        let response: PutDeployResult = self.post_request(request).await?;
         let deploy_hash = response.deploy_hash;
-        let result = self.wait_for_deploy(deploy_hash).await;
+        let result = self.wait_for_deploy(deploy_hash).await?;
 
         self.process_execution(result, ContractId::Address(addr), deploy_hash)
             .map(|_| ().to_bytes().expect("Couldn't serialize (). This shouldn't happen.").into())
@@ -621,24 +601,26 @@ impl CasperClient {
         .stored_value
     }
 
-    async fn wait_for_deploy(&self, deploy_hash: DeployHash) -> ExecutionResult {
+    async fn wait_for_deploy(&self, deploy_hash: DeployHash) -> Result<ExecutionResult> {
         let deploy_hash_str = format!("{:?}", deploy_hash.inner());
-        let time_diff = Duration::from_secs(15);
         let final_result;
 
         loop {
             log::wait(format!(
                 "Waiting {:?} for {:?}.",
-                &time_diff, &deploy_hash_str
+                &DEPLOY_WAIT_TIME, &deploy_hash_str
             ));
-            sleep(time_diff).await;
-            let result = self.get_deploy(deploy_hash).await.execution_info.unwrap();
-            if result.execution_result.is_some() {
-                final_result = result.execution_result.unwrap();
+            sleep(DEPLOY_WAIT_TIME).await;
+            let result = self.get_deploy(deploy_hash).await.execution_info;
+            if result.is_some() {
+                final_result = result
+                    .ok_or(LivenetToDoError)?
+                    .execution_result
+                    .ok_or(LivenetToDoError)?;
                 break;
             }
         }
-        final_result.clone()
+        Ok(final_result.clone())
     }
 
     fn process_execution(
@@ -646,7 +628,7 @@ impl CasperClient {
         result: ExecutionResult,
         called_contract_id: ContractId,
         deploy_hash: DeployHash
-    ) -> OdraResult<()> {
+    ) -> Result<()> {
         let deploy_hash_str = format!("{:?}", deploy_hash.inner());
         match result {
             ExecutionResult::V1(r) => match r {
@@ -663,7 +645,7 @@ impl CasperClient {
                         "Deploy V1 {:?} failed with error: {:?}.",
                         deploy_hash_str, error_msg
                     ));
-                    Err(odra_error)
+                    Err(LivenetToDoError)
                 }
                 Success { .. } => {
                     log::info(format!(
@@ -686,7 +668,7 @@ impl CasperClient {
                         "Deploy V2 {:?} failed with error: {:?}.",
                         deploy_hash_str, e
                     ));
-                    Err(OdraError::ExecutionError(ExecutionError::UnexpectedError))
+                    Err(LivenetToDoError)
                 }
             }
         }
@@ -717,42 +699,31 @@ impl CasperClient {
         )
     }
 
-    async fn safe_post_request(&self, request: Value) -> JsonRpc {
+    async fn safe_post_request(&self, request: Value) -> Result<JsonRpc> {
         let client = reqwest::Client::new();
 
         let mut client = client.post(self.node_address_rpc());
         if let Some(token) = &self.configuration.cspr_cloud_auth_token {
             client = client.header("Authorization", token);
         }
-        let response = client.json(&request).send().await;
 
-        let response = match response {
-            Ok(r) => r,
-            Err(e) => {
-                log::error(format!("Couldn't send request: {:?}", e));
-                panic!("Couldn't send request")
-            }
-        };
-        let json: JsonRpc = response.json().await.unwrap_or_else(|e| {
-            log::error(format!("Couldn't parse response: {:?}", e));
-            panic!("Couldn't parse response")
-        });
-        json
+        let response = client
+            .json(&request)
+            .send()
+            .await
+            .map_err(|_| LivenetToDoError)?;
+        let json: JsonRpc = response.json().await.map_err(|_| LivenetToDoError)?;
+        Ok(json)
     }
 
-    async fn post_request<T: DeserializeOwned>(&self, request: Value) -> T {
-        let json = self.safe_post_request(request.clone()).await;
-        json.get_result()
-            .map(|result| {
-                serde_json::from_value::<T>(result.clone()).unwrap_or_else(|e| {
-                    log::error(format!("Couldn't parse result: {:?}", e));
-                    panic!("Couldn't parse result")
-                })
-            })
-            .unwrap_or_else(|| {
-                log::error(format!("Couldn't get result: {:?} - {:?}", json, request));
-                panic!("Couldn't get result")
-            })
+    async fn post_request<T: DeserializeOwned>(&self, request: Value) -> Result<T> {
+        let json = self.safe_post_request(request.clone()).await?;
+        let result = json
+            .get_result()
+            .map(|result| serde_json::from_value::<T>(result.clone()))
+            .unwrap()
+            .unwrap();
+        Ok(result)
     }
 
     fn address_secret_key(&self, address: &Address) -> &SecretKey {

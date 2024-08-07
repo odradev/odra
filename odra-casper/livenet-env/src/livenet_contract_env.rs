@@ -95,7 +95,7 @@ impl ContractContext for LivenetContractEnv {
     fn get_block_time(&self) -> u64 {
         let client = self.casper_client.borrow();
         self.runtime
-            .block_on(async { client.get_block_time().await })
+            .block_on(async { client.get_block_time().await.unwrap() })
     }
 
     fn attached_value(&self) -> U512 {
