@@ -87,7 +87,7 @@ impl HostContext for LivenetHost {
     fn block_time(&self) -> u64 {
         let rt = Runtime::new().unwrap();
         let client = self.casper_client.borrow();
-        rt.block_on(async { client.get_block_time().await })
+        rt.block_on(async { client.get_block_time().await.unwrap() })
     }
 
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
@@ -133,6 +133,7 @@ impl HostContext for LivenetHost {
                 client
                     .deploy_entrypoint_call_with_proxy(*address, call_def, timestamp)
                     .await
+                    .map_err(|e| e.into())
             }),
             false => {
                 rt.block_on(async {
@@ -215,7 +216,7 @@ impl HostContext for LivenetHost {
         let rt = Runtime::new().unwrap();
         let timestamp = Timestamp::now();
         let client = self.casper_client.borrow_mut();
-        rt.block_on(async { client.transfer(to, amount, timestamp).await })
+        Ok(rt.block_on(async { client.transfer(to, amount, timestamp).await })?)
     }
 }
 

@@ -11,6 +11,8 @@ fn main() {
 
     let owner = env.caller();
 
+    println!("Block time: {}", env.block_time());
+
     // Funds can be transferred
     let another_account = env.get_account(1);
     let another_account_balance = env.balance_of(&another_account);
@@ -20,7 +22,7 @@ fn main() {
         env.balance_of(&another_account),
         another_account_balance + U512::from(10_000_000_000u64)
     );
-    //
+
     // Contract can be deployed
     env.set_gas(30_000_000_000u64);
     let (contract, erc20) = deploy_new(&env);
