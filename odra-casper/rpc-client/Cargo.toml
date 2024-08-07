@@ -10,7 +10,6 @@ repository = { workspace = true }
 
 [dependencies]
 odra-core = { workspace = true }
-odra-schema = { workspace = true }
 casper-execution-engine = { workspace = true }
 casper-types = { workspace = true }
 casper-client = { workspace = true }
@@ -32,8 +31,6 @@ bytes = "1.5.0"
 humantime = "2.1.0"
 tokio = { workspace = true, features = ["rt-multi-thread"]}
 base16 = { workspace = true }
-snafu = { version = "0.8.4", no-default-features = true }
-anyhow = { workspace = true }
 
 [features]
 default = []

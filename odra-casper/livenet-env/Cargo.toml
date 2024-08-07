@@ -14,6 +14,9 @@ odra-casper-rpc-client = { workspace = true, features = ["std"]}
 blake2 = { workspace = true }
 log = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread"]}
+anyhow = { workspace = true }
+serde_json = { workspace = true }
+odra-schema = { workspace = true }
 
 [lints.rust]
 missing_docs = "warn"

@@ -43,7 +43,7 @@ impl OdraVm {
         let address = { self.state.write().unwrap().next_contract_address() };
         // Register new contract under the new address.
         {
-            let contract = ContractContainer::new(entry_points_caller);
+            let contract = ContractContainer::new(name, entry_points_caller);
             self.contract_register
                 .write()
                 .unwrap()
