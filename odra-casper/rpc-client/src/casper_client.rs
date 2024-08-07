@@ -18,20 +18,15 @@ use casper_client::cli::{
 };
 use casper_client::rpcs::results::{GetDeployResult, PutDeployResult};
 use casper_client::Verbosity;
-use casper_types::bytesrepr::deserialize_from_slice;
+use casper_types::bytesrepr::{deserialize_from_slice, Bytes, FromBytes, ToBytes};
 use casper_types::execution::ExecutionResultV1::{Failure, Success};
 use casper_types::StoredValue::CLValue;
-use casper_types::{execution::ExecutionResult, EntityAddr};
-use casper_types::{Deploy, DeployHash, ExecutableDeployItem, StoredValue, TimeDiff, Timestamp};
-use odra_core::casper_types::{sign, URef};
-use odra_core::{
-    casper_types::{
-        bytesrepr::{Bytes, FromBytes, ToBytes},
-        runtime_args, CLTyped, PublicKey, RuntimeArgs, SecretKey, U512
-    },
-    consts::*,
-    Address, CallDef, OdraError
+use casper_types::{
+    execution::ExecutionResult, runtime_args, sign, CLTyped, EntityAddr, PublicKey, RuntimeArgs,
+    SecretKey, URef, U512
 };
+use casper_types::{Deploy, DeployHash, ExecutableDeployItem, StoredValue, TimeDiff, Timestamp};
+use odra_core::{consts::*, Address, CallDef, OdraError};
 use tokio::time::sleep;
 
 pub mod configuration;
@@ -473,11 +468,7 @@ impl CasperClient {
         let response: PutDeployResult = self.post_request(request).await?;
         let deploy_hash = response.deploy_hash;
         let result = self.wait_for_deploy(deploy_hash).await?;
-        self.process_execution(
-            result,
-            ContractId::Name(contract_name.to_string()),
-            deploy_hash
-        )?;
+        self.process_execution(result, deploy_hash)?;
 
         let address = self.get_contract_address(contract_name).await;
         log::info(format!(
@@ -533,7 +524,7 @@ impl CasperClient {
         let response: PutDeployResult = self.post_request(request).await?;
         let deploy_hash = response.deploy_hash;
         let result = self.wait_for_deploy(deploy_hash).await?;
-        self.process_execution(result, ContractId::Address(address), deploy_hash)?;
+        self.process_execution(result, deploy_hash)?;
         Ok(self.get_proxy_result().await)
     }
 
@@ -566,8 +557,11 @@ impl CasperClient {
         let deploy_hash = response.deploy_hash;
         let result = self.wait_for_deploy(deploy_hash).await?;
 
-        self.process_execution(result, ContractId::Address(addr), deploy_hash)
-            .map(|_| ().to_bytes().expect("Couldn't serialize (). This shouldn't happen.").into())
+        self.process_execution(result, deploy_hash).map(|_| {
+            ().to_bytes()
+                .expect("Couldn't serialize (). This shouldn't happen.")
+                .into()
+        })
     }
 
     async fn query_global_state(&self, key: &str, path: Option<String>) -> StoredValue {
@@ -612,12 +606,7 @@ impl CasperClient {
         Ok(final_result.clone())
     }
 
-    fn process_execution(
-        &self,
-        result: ExecutionResult,
-        called_contract_id: ContractId,
-        deploy_hash: DeployHash
-    ) -> Result<()> {
+    fn process_execution(&self, result: ExecutionResult, deploy_hash: DeployHash) -> Result<()> {
         let deploy_hash_str = format!("{:?}", deploy_hash.inner());
         match result {
             ExecutionResult::V1(r) => match r {
