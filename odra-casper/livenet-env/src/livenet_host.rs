@@ -1,7 +1,8 @@
 //! Livenet implementation of HostContext for HostEnv.
 
+use crate::error;
 use crate::livenet_contract_env::LivenetContractEnv;
-use odra_casper_rpc_client::casper_client::CasperClient;
+use odra_casper_rpc_client::casper_client::{CasperClient, ContractId};
 use odra_casper_rpc_client::log::info;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::bytesrepr::ToBytes;
@@ -10,7 +11,7 @@ use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::{
     casper_types::{bytesrepr::Bytes, PublicKey, RuntimeArgs, U512},
     host::HostContext,
-    Address, CallDef, ContractEnv, GasReport
+    Address, CallDef, ContractEnv, GasReport, OdraError
 };
 use odra_core::{prelude::*, EventError, OdraResult};
 use odra_core::{ContractContainer, ContractRegister};
@@ -162,11 +163,16 @@ impl HostContext for LivenetHost {
         let address = {
             let mut client = self.casper_client.borrow_mut();
             let rt = Runtime::new().unwrap();
-            rt.block_on(async {
+            match rt.block_on(async {
                 client
                     .deploy_wasm(name, init_args, timestamp, wasm_bytes)
                     .await
-            })?
+            }) {
+                Ok(addr) => addr,
+                Err(e) => {
+                    todo!("Handle error: {:?}", e);
+                }
+            }
         };
         self.register_contract(address, name.to_string(), entry_points_caller);
         Ok(address)
@@ -181,7 +187,10 @@ impl HostContext for LivenetHost {
         self.contract_register
             .write()
             .expect("Couldn't write contract register.")
-            .add(address, ContractContainer::new(entry_points_caller));
+            .add(
+                address,
+                ContractContainer::new(&contract_name, entry_points_caller)
+            );
         self.casper_client
             .borrow_mut()
             .register_name(address, contract_name);
@@ -217,6 +226,18 @@ impl HostContext for LivenetHost {
         let timestamp = Timestamp::now();
         let client = self.casper_client.borrow_mut();
         Ok(rt.block_on(async { client.transfer(to, amount, timestamp).await })?)
+    }
+}
+
+impl LivenetHost {
+    fn find_error(&self, contract_id: ContractId, error_msg: &str) -> Option<(String, OdraError)> {
+        match contract_id {
+            ContractId::Name(contract_name) => error::find(&contract_name, error_msg).ok(),
+            ContractId::Address(addr) => match self.contract_register.read().unwrap().get(&addr) {
+                Some(contract_name) => error::find(contract_name, error_msg).ok(),
+                None => None
+            }
+        }
     }
 }
 

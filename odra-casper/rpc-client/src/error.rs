@@ -1,5 +1,4 @@
 use odra_core::OdraError;
-use odra_core::VmError::Other;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -7,7 +6,9 @@ pub enum Error {
     #[error("Livenet generic error")]
     LivenetToDoError,
     #[error("Livenet communication error")]
-    RpcCommunicationError
+    RpcCommunicationError,
+    #[error("Livenet execution error")]
+    ExecutionError { error_message: String }
 }
 
 // impl Into<OdraError> for Error {

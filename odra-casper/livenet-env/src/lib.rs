@@ -1,4 +1,5 @@
 //! This crate provides a host environment for the livenet.
+pub mod error;
 pub mod livenet_contract_env;
 pub mod livenet_host;
 

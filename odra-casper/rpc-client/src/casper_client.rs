@@ -10,7 +10,7 @@ use std::time::Duration;
 use crate::casper_client::configuration::CasperClientConfiguration;
 
 use crate::error::Error;
-use crate::error::Error::LivenetToDoError;
+use crate::error::Error::{ExecutionError, LivenetToDoError};
 use crate::log;
 use casper_client::cli::{
     get_balance, get_deploy, get_dictionary_item, get_entity, get_node_status, get_state_root_hash,
@@ -30,12 +30,11 @@ use odra_core::{
         runtime_args, CLTyped, PublicKey, RuntimeArgs, SecretKey, U512
     },
     consts::*,
-    Address, CallDef, ExecutionError, OdraError
+    Address, CallDef, OdraError
 };
 use tokio::time::sleep;
 
 pub mod configuration;
-mod error;
 
 /// Environment variable holding a path to a secret key of a main account.
 pub const ENV_SECRET_KEY: &str = "ODRA_CASPER_LIVENET_SECRET_KEY_PATH";
@@ -56,7 +55,7 @@ pub const DEPLOY_WAIT_TIME: Duration = Duration::from_secs(5);
 
 pub type Result<T> = core::result::Result<T, Error>;
 
-enum ContractId {
+pub enum ContractId {
     Name(String),
     Address(Address)
 }
@@ -493,16 +492,6 @@ impl CasperClient {
         self.contracts.insert(address, contract_name);
     }
 
-    fn find_error(&self, contract_id: ContractId, error_msg: &str) -> Option<(String, OdraError)> {
-        match contract_id {
-            ContractId::Name(contract_name) => error::find(&contract_name, error_msg).ok(),
-            ContractId::Address(addr) => match self.contracts.get(&addr) {
-                Some(contract_name) => error::find(contract_name, error_msg).ok(),
-                None => None
-            }
-        }
-    }
-
     /// Deploy the entrypoint call using getter_proxy.
     /// It runs the getter_proxy contract in an account context and stores the return value of the call
     /// in under the key RESULT_KEY.
@@ -633,19 +622,11 @@ impl CasperClient {
         match result {
             ExecutionResult::V1(r) => match r {
                 Failure { error_message, .. } => {
-                    let (error_msg, odra_error) =
-                        match self.find_error(called_contract_id, &error_message) {
-                            Some((contract_error, odra_error)) => (contract_error, odra_error),
-                            None => (
-                                error_message,
-                                OdraError::ExecutionError(ExecutionError::UnexpectedError)
-                            )
-                        };
                     log::error(format!(
                         "Deploy V1 {:?} failed with error: {:?}.",
-                        deploy_hash_str, error_msg
+                        deploy_hash_str, error_message
                     ));
-                    Err(LivenetToDoError)
+                    Err(ExecutionError { error_message })
                 }
                 Success { .. } => {
                     log::info(format!(
@@ -663,13 +644,7 @@ impl CasperClient {
                     ));
                     Ok(())
                 }
-                Some(e) => {
-                    log::error(format!(
-                        "Deploy V2 {:?} failed with error: {:?}.",
-                        deploy_hash_str, e
-                    ));
-                    Err(LivenetToDoError)
-                }
+                Some(error_message) => Err(ExecutionError { error_message })
             }
         }
     }

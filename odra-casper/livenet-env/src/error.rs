@@ -1,9 +1,9 @@
 use anyhow::{anyhow, Result};
-use odra_core::{ExecutionError, OdraError};
+use odra_core::{ExecutionError, OdraError, OdraResult};
 use serde_json::Value;
 use std::{fs, path::PathBuf};
 
-pub(crate) fn find(contract_name: &str, error_msg: &str) -> Result<(String, OdraError)> {
+pub fn find(contract_name: &str, error_msg: &str) -> Result<(String, OdraError)> {
     if error_msg == "Out of gas error" {
         return Ok(("OutOfGas".to_string(), ExecutionError::OutOfGas.into()));
     }
