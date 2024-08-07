@@ -4,7 +4,6 @@ use itertools::Itertools;
 use jsonrpc_lite::JsonRpc;
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
-use std::collections::BTreeMap;
 use std::time::Duration;
 
 use crate::casper_client::configuration::CasperClientConfiguration;
@@ -26,7 +25,12 @@ use casper_types::{
     SecretKey, URef, U512
 };
 use casper_types::{Deploy, DeployHash, ExecutableDeployItem, StoredValue, TimeDiff, Timestamp};
-use odra_core::{consts::*, Address, CallDef, OdraError};
+use odra_core::casper_event_standard::EVENTS_LENGTH;
+use odra_core::consts::{
+    AMOUNT_ARG, ARGS_ARG, ATTACHED_VALUE_ARG, ENTRY_POINT_ARG, EVENTS, PACKAGE_HASH_ARG,
+    RESULT_KEY, STATE_KEY
+};
+use odra_core::{Address, CallDef};
 use tokio::time::sleep;
 
 pub mod configuration;
@@ -50,17 +54,11 @@ pub const DEPLOY_WAIT_TIME: Duration = Duration::from_secs(5);
 
 pub type Result<T> = core::result::Result<T, Error>;
 
-pub enum ContractId {
-    Name(String),
-    Address(Address)
-}
-
 /// Client for interacting with Casper node.
 pub struct CasperClient {
     configuration: CasperClientConfiguration,
     active_account: usize,
-    gas: U512,
-    contracts: BTreeMap<Address, String>
+    gas: U512
 }
 
 impl CasperClient {
@@ -69,8 +67,7 @@ impl CasperClient {
         CasperClient {
             configuration,
             active_account: 0,
-            gas: U512::zero(),
-            contracts: BTreeMap::new()
+            gas: U512::zero()
         }
     }
 
@@ -477,10 +474,6 @@ impl CasperClient {
         ));
 
         Ok(address)
-    }
-
-    pub fn register_name(&mut self, address: Address, contract_name: String) {
-        self.contracts.insert(address, contract_name);
     }
 
     /// Deploy the entrypoint call using getter_proxy.

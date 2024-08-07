@@ -1,3 +1,5 @@
+//! Module for handling Odra errors coming out of the Livenet execution.
+
 use std::{fs, path::PathBuf};
 
 use anyhow::{anyhow, Result};
@@ -5,6 +7,7 @@ use serde_json::Value;
 
 use odra_core::{ExecutionError, OdraError};
 
+/// Finds the error message in the contract schema.
 pub fn find(contract_name: &str, error_msg: &str) -> Result<(String, OdraError)> {
     if error_msg == "Out of gas error" {
         return Ok(("OutOfGas".to_string(), ExecutionError::OutOfGas.into()));
