@@ -29,9 +29,9 @@ prettycli = "0.1.1"
 thiserror = "1.0.40"
 bytes = "1.5.0"
 humantime = "2.1.0"
-tokio = { workspace = true, features = ["rt-multi-thread"]}
 base16 = { workspace = true }
+tokio = { workspace = true, optional = true }
 
 [features]
 default = []
-std = ["casper-types/std-fs-io"]
+std = ["casper-types/std-fs-io", "tokio/rt"]

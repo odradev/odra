@@ -4,7 +4,6 @@ use itertools::Itertools;
 use jsonrpc_lite::JsonRpc;
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
-use std::time::Duration;
 
 use crate::casper_client::configuration::CasperClientConfiguration;
 
@@ -31,7 +30,6 @@ use odra_core::consts::{
     RESULT_KEY, STATE_KEY
 };
 use odra_core::{Address, CallDef};
-use tokio::time::sleep;
 
 pub mod configuration;
 
@@ -50,7 +48,7 @@ pub const ENV_CSPR_CLOUD_AUTH_TOKEN: &str = "CSPR_CLOUD_AUTH_TOKEN";
 /// Environment variable holding a path to an additional .env file.
 pub const ENV_LIVENET_ENV_FILE: &str = "ODRA_CASPER_LIVENET_ENV";
 /// Time between retries when waiting for a deploy to be processed.
-pub const DEPLOY_WAIT_TIME: Duration = Duration::from_secs(5);
+pub const DEPLOY_WAIT_TIME: u64 = 5;
 
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -586,7 +584,16 @@ impl CasperClient {
                 "Waiting {:?} for {:?}.",
                 &DEPLOY_WAIT_TIME, &deploy_hash_str
             ));
-            sleep(DEPLOY_WAIT_TIME).await;
+
+            #[cfg(feature = "std")]
+            {
+                tokio::time::sleep(std::time::Duration::from_secs(DEPLOY_WAIT_TIME)).await;
+            }
+            #[cfg(not(feature = "std"))]
+            {
+                // TODO: Implement sleep for no_std
+            }
+
             let result = self.get_deploy(deploy_hash).await.execution_info;
             if result.is_some() {
                 final_result = result
