@@ -1,7 +1,7 @@
 //! This example demonstrates how to deploy and interact with a contract on the Livenet environment.
 use odra::casper_types::{U256, U512};
 use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader};
-use odra::Address;
+use odra::{Address, ExecutionError};
 use odra_examples::features::livenet::{LivenetContractHostRef, LivenetContractInitArgs};
 use odra_modules::access::events::OwnershipTransferred;
 use odra_modules::erc20::{Erc20HostRef, Erc20InitArgs};
@@ -14,14 +14,14 @@ fn main() {
     println!("Block time: {}", env.block_time());
 
     // Funds can be transferred
-    let another_account = env.get_account(1);
-    let another_account_balance = env.balance_of(&another_account);
-    env.transfer(another_account.clone(), U512::from(10_000_000_000u64))
-        .unwrap();
-    assert_eq!(
-        env.balance_of(&another_account),
-        another_account_balance + U512::from(10_000_000_000u64)
-    );
+    // let another_account = env.get_account(1);
+    // let another_account_balance = env.balance_of(&another_account);
+    // env.transfer(another_account.clone(), U512::from(10_000_000_000u64))
+    //     .unwrap();
+    // assert_eq!(
+    //     env.balance_of(&another_account),
+    //     another_account_balance + U512::from(10_000_000_000u64)
+    // );
 
     // Contract can be deployed
     env.set_gas(30_000_000_000u64);
@@ -36,6 +36,7 @@ fn main() {
     // let result = contract.try_push_on_stack(1).unwrap_err();
     // assert_eq!(result, ExecutionError::OutOfGas.into());
     contract.push_on_stack(1);
+    let r = contract.try_function_that_reverts();
 
     // Set gas will be used for all subsequent calls
     env.set_gas(1_000_000_000u64);

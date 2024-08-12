@@ -548,11 +548,12 @@ impl CasperClient {
         let deploy_hash = response.deploy_hash;
         let result = self.wait_for_deploy(deploy_hash).await?;
 
-        self.process_execution(result, deploy_hash).map(|_| {
+        let p = self.process_execution(result, deploy_hash).map(|_| {
             ().to_bytes()
                 .expect("Couldn't serialize (). This shouldn't happen.")
                 .into()
-        })
+        });
+        p
     }
 
     async fn query_global_state(&self, key: &str, path: Option<String>) -> StoredValue {
@@ -633,7 +634,13 @@ impl CasperClient {
                     ));
                     Ok(())
                 }
-                Some(error_message) => Err(ExecutionError { error_message })
+                Some(error_message) => {
+                    log::error(format!(
+                        "Deploy V1 {:?} failed with error: {:?}.",
+                        deploy_hash_str, error_message
+                    ));
+                    Err(ExecutionError { error_message })
+                }
             }
         }
     }

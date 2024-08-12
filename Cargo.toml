@@ -56,6 +56,7 @@ base16 = "0.2"
 base64 = "0.22"
 serde-json-wasm = "1.0"
 anyhow = "1.0.86"
+convert_case = "0.6.0"
 
 [patch.crates-io]
 casper-types = { version = "5.0.0", git = "https://github.com/casper-network/casper-node", branch = "rustSDK-feat-2.0" }
