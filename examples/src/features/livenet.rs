@@ -1,12 +1,14 @@
 //! This is an example contract used to showcase and test Livenet Environment.
+use crate::features::livenet::Error::SillyError;
 use odra::casper_types::U256;
+use odra::module::Revertible;
 use odra::prelude::*;
 use odra::{Address, List, SubModule, UnwrapOrRevert, Var};
 use odra_modules::access::Ownable;
 use odra_modules::erc20::Erc20ContractRef;
 
 /// Contract used by the Livenet examples.
-#[odra::module]
+#[odra::module(errors = Error)]
 pub struct LivenetContract {
     creator: Var<Address>,
     ownable: SubModule<Ownable>,
@@ -58,6 +60,18 @@ impl LivenetContract {
         Erc20ContractRef::new(self.env(), self.erc20_address.get().unwrap())
             .transfer(&self.env().caller(), &1.into());
     }
+
+    /// Function that reverts with a silly error.
+    pub fn function_that_reverts(&mut self) {
+        self.revert(SillyError)
+    }
+}
+
+/// Errors that can occur in the `LivenetContract` module.
+#[odra::odra_error]
+pub enum Error {
+    /// Silly error.
+    SillyError = 1
 }
 
 #[cfg(test)]

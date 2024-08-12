@@ -6,7 +6,7 @@ use casper_types::system::Caller;
 use casper_types::{
     account::AccountHash,
     bytesrepr::{self, FromBytes, ToBytes},
-    AddressableEntityHash, CLType, CLTyped, EntityAddr, HashAddr, Key, PackageHash, PublicKey
+    CLType, CLTyped, EntityAddr, HashAddr, Key, PackageHash, PublicKey
 };
 use serde::{Deserialize, Serialize};
 
@@ -230,15 +230,6 @@ impl FromStr for Address {
 impl ToString for Address {
     fn to_string(&self) -> String {
         Key::from(*self).to_formatted_string()
-    }
-}
-
-impl From<Address> for AddressableEntityHash {
-    fn from(value: Address) -> Self {
-        match value {
-            Address::Account(account) => AddressableEntityHash::new(account.value()),
-            Address::Contract(contract) => AddressableEntityHash::new(contract.value())
-        }
     }
 }
 

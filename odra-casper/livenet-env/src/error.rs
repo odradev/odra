@@ -35,10 +35,11 @@ pub fn find(contract_name: &str, error_msg: &str) -> Result<(String, OdraError)>
         .as_array()
         .ok_or_else(|| anyhow!("Couldn't get value"))?;
 
-    errors
+    let f = errors
         .iter()
         .find_map(|err| match_error(err, error_num))
-        .ok_or_else(|| anyhow!("Couldn't find error"))
+        .ok_or_else(|| anyhow!("Couldn't find error"));
+    f
 }
 
 fn match_error(val: &Value, error_num: u16) -> Option<(String, OdraError)> {

@@ -13,6 +13,7 @@ casper-contract-schema = { workspace = true }
 casper-types = { workspace = true }
 odra-core = { workspace = true }
 num-traits = { workspace = true }
+convert_case = { workspace = true }
 
 [lints.rust]
 missing_docs = "warn"
