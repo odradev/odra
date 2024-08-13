@@ -114,7 +114,7 @@ impl Callstack {
 
 #[cfg(test)]
 mod tests {
-    use casper_types::{account::AccountHash, PackageHash, RuntimeArgs};
+    use casper_types::{account::AccountHash, RuntimeArgs};
 
     use super::*;
 
@@ -210,14 +210,14 @@ mod tests {
 
     fn mock_contract_element() -> CallstackElement {
         CallstackElement::new_contract_call(
-            Address::Contract(PackageHash::from_formatted_str(PACKAGE_HASH).unwrap()),
+            Address::new(PACKAGE_HASH).unwrap(),
             CallDef::new("a", false, RuntimeArgs::default())
         )
     }
 
     fn mock_contract_element_with_value(amount: U512) -> CallstackElement {
         CallstackElement::new_contract_call(
-            Address::Contract(PackageHash::from_formatted_str(PACKAGE_HASH).unwrap()),
+            Address::new(PACKAGE_HASH).unwrap(),
             CallDef::new("a", false, RuntimeArgs::default()).with_amount(amount)
         )
     }

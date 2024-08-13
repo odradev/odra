@@ -49,7 +49,7 @@ impl HostContext for OdraVmHost {
         self.vm.borrow().get_event(contract_address, index)
     }
 
-    fn get_events_count(&self, contract_address: &Address) -> u32 {
+    fn get_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
         self.vm.borrow().get_events_count(contract_address)
     }
 

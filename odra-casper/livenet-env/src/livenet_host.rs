@@ -4,6 +4,7 @@ use crate::error;
 use crate::livenet_contract_env::LivenetContractEnv;
 use odra_casper_rpc_client::casper_client::CasperClient;
 use odra_casper_rpc_client::log::info;
+use odra_casper_rpc_client::utils::find_wasm_file_path;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::Timestamp;
 use odra_core::entry_point_callback::EntryPointsCaller;
@@ -16,7 +17,6 @@ use odra_core::{
 use odra_core::{prelude::*, EventError, OdraResult};
 use odra_core::{ContractContainer, ContractRegister};
 use std::fs;
-use std::path::PathBuf;
 use std::sync::RwLock;
 use std::thread::sleep;
 use tokio::runtime::Runtime;
@@ -107,11 +107,11 @@ impl HostContext for LivenetHost {
             .map_err(|_| EventError::CouldntExtractEventData)
     }
 
-    fn get_events_count(&self, contract_address: &Address) -> u32 {
+    fn get_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
         let rt = Runtime::new().unwrap();
         let client = self.casper_client.borrow();
         rt.block_on(async { client.events_count(contract_address).await })
-            .unwrap_or_default()
+            .ok_or(EventError::CouldntExtractEventData)
     }
 
     fn call_contract(
@@ -235,14 +235,13 @@ impl HostContext for LivenetHost {
         let rt = Runtime::new().unwrap();
         let timestamp = Timestamp::now();
         let client = self.casper_client.borrow_mut();
-        Ok(rt
-            .block_on(async { client.transfer(to, amount, timestamp).await })
+        rt.block_on(async { client.transfer(to, amount, timestamp).await })
             .map_err(|e| {
                 self.map_error_code_to_odra_error(
                     ContractId::Address(client.caller()),
                     &e.error_message()
                 )
-            })?)
+            })
     }
 }
 
@@ -258,25 +257,7 @@ impl LivenetHost {
 
         match found {
             None => OdraError::ExecutionError(UnexpectedError),
-            Some((message, error)) => {}
+            Some((_, error)) => OdraError::ExecutionError(User(error.code()))
         }
     }
-}
-
-fn find_wasm_file_path(wasm_file_name: &str) -> PathBuf {
-    let mut path = PathBuf::from("wasm")
-        .join(wasm_file_name)
-        .with_extension("wasm");
-    let mut checked_paths = vec![];
-    for _ in 0..2 {
-        if path.exists() && path.is_file() {
-            info(format!("Found wasm under {:?}.", path));
-            return path;
-        } else {
-            checked_paths.push(path.clone());
-            path = path.parent().unwrap().to_path_buf();
-        }
-    }
-    odra_casper_rpc_client::log::error(format!("Could not find wasm under {:?}.", checked_paths));
-    panic!("Wasm not found");
 }

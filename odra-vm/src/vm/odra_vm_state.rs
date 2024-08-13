@@ -86,6 +86,9 @@ impl OdraVmState {
     }
 
     pub fn get_event(&self, address: &Address, index: u32) -> Result<Bytes, EventError> {
+        if !address.is_contract() {
+            return Err(EventError::ContractDoesntSupportEvents);
+        }
         let events = self.events.get(address);
         if events.is_none() {
             return Err(EventError::IndexOutOfBounds);
@@ -97,10 +100,15 @@ impl OdraVmState {
         Ok(event.clone())
     }
 
-    pub fn get_events_count(&self, address: &Address) -> u32 {
-        self.events
-            .get(address)
-            .map_or(0, |events| events.len() as u32)
+    pub fn get_events_count(&self, address: &Address) -> Result<u32, EventError> {
+        if !address.is_contract() {
+            return Err(EventError::ContractDoesntSupportEvents);
+        }
+        let events = self.events.get(address);
+        if events.is_none() {
+            return Err(EventError::CouldntExtractEventData);
+        }
+        Ok(events.unwrap().len() as u32)
     }
 
     pub fn attach_value(&mut self, amount: U512) {

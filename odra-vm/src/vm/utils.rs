@@ -1,6 +1,7 @@
 use odra_core::casper_types::PackageHash;
 use odra_core::{casper_types::account::AccountHash, Address};
 
+#[cfg(test)]
 pub fn account_address_from_str(str: &str) -> Address {
     use odra_core::casper_types::account::{
         ACCOUNT_HASH_FORMATTED_STRING_PREFIX, ACCOUNT_HASH_LENGTH

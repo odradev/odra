@@ -16,7 +16,3 @@ mod wasm_contract_env;
 
 pub use casper_contract;
 pub use wasm_contract_env::WasmContractEnv;
-
-#[cfg(all(target_arch = "wasm32", not(feature = "disable-allocator")))]
-#[allow(unused_imports)]
-use ink_allocator;
