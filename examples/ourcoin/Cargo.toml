@@ -7,6 +7,7 @@ edition = "2021"
 odra = { path = "../../odra", features = [], default-features = false }
 odra-modules = { path = "../../modules", features = [], default-features = false }
 odra-casper-livenet-env = { path = "../../odra-casper/livenet-env", optional = true }
+odra-build = { path = "../../odra-build", features = [], default-features = false }
 
 [dev-dependencies]
 odra-test = { path = "../../odra-test", features = [], default-features = false }

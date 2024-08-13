@@ -8,7 +8,7 @@ use serde_json::{json, Value};
 use crate::casper_client::configuration::CasperClientConfiguration;
 
 use crate::error::Error;
-use crate::error::Error::{ExecutionError, LivenetToDoError};
+use crate::error::Error::{Execution, LivenetToDo};
 use crate::log;
 use casper_client::cli::{
     get_balance, get_deploy, get_dictionary_item, get_entity, get_node_status, get_state_root_hash,
@@ -173,7 +173,7 @@ impl CasperClient {
         let public_key = &PublicKey::from(secret_key);
         let signature = sign(message, secret_key, public_key)
             .to_bytes()
-            .map_err(|_| LivenetToDoError)?;
+            .map_err(|_| LivenetToDo)?;
 
         Ok(Bytes::from(signature))
     }
@@ -264,10 +264,10 @@ impl CasperClient {
             self.configuration.verbosity()
         )
         .await
-        .map_err(|_| LivenetToDoError)?
+        .map_err(|_| LivenetToDo)?
         .result
         .last_added_block_info
-        .ok_or(LivenetToDoError)?
+        .ok_or(LivenetToDo)?
         .timestamp
         .millis();
         Ok(block_time)
@@ -342,13 +342,13 @@ impl CasperClient {
         )
         .await;
 
-        r.map_err(|_| LivenetToDoError)?
+        r.map_err(|_| LivenetToDo)?
             .result
             .stored_value
             .into_cl_value()
-            .ok_or(LivenetToDoError)?
+            .ok_or(LivenetToDo)?
             .into_t()
-            .map_err(|_| LivenetToDoError)
+            .map_err(|_| LivenetToDo)
     }
 
     /// Query the node for the transaction state.
@@ -548,12 +548,11 @@ impl CasperClient {
         let deploy_hash = response.deploy_hash;
         let result = self.wait_for_deploy(deploy_hash).await?;
 
-        let p = self.process_execution(result, deploy_hash).map(|_| {
+        self.process_execution(result, deploy_hash).map(|_| {
             ().to_bytes()
                 .expect("Couldn't serialize (). This shouldn't happen.")
                 .into()
-        });
-        p
+        })
     }
 
     async fn query_global_state(&self, key: &str, path: Option<String>) -> StoredValue {
@@ -598,9 +597,9 @@ impl CasperClient {
             let result = self.get_deploy(deploy_hash).await.execution_info;
             if result.is_some() {
                 final_result = result
-                    .ok_or(LivenetToDoError)?
+                    .ok_or(LivenetToDo)?
                     .execution_result
-                    .ok_or(LivenetToDoError)?;
+                    .ok_or(LivenetToDo)?;
                 break;
             }
         }
@@ -616,7 +615,7 @@ impl CasperClient {
                         "Deploy V1 {:?} failed with error: {:?}.",
                         deploy_hash_str, error_message
                     ));
-                    Err(ExecutionError { error_message })
+                    Err(Execution { error_message })
                 }
                 Success { .. } => {
                     log::info(format!(
@@ -639,7 +638,7 @@ impl CasperClient {
                         "Deploy V1 {:?} failed with error: {:?}.",
                         deploy_hash_str, error_message
                     ));
-                    Err(ExecutionError { error_message })
+                    Err(Execution { error_message })
                 }
             }
         }
@@ -682,8 +681,8 @@ impl CasperClient {
             .json(&request)
             .send()
             .await
-            .map_err(|_| LivenetToDoError)?;
-        let json: JsonRpc = response.json().await.map_err(|_| LivenetToDoError)?;
+            .map_err(|_| LivenetToDo)?;
+        let json: JsonRpc = response.json().await.map_err(|_| LivenetToDo)?;
         Ok(json)
     }
 

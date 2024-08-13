@@ -252,7 +252,9 @@ pub enum EventError {
     /// Could not extract event data.
     CouldntExtractEventData,
     /// Contract doesn't support CES events.
-    ContractDoesntSupportEvents
+    ContractDoesntSupportEvents,
+    /// Tried to query event for a non-contract entity.
+    TriedToQueryEventForNonContract
 }
 
 /// Represents the result of a contract call.

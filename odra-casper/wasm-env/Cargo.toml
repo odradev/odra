@@ -14,7 +14,6 @@ odra-core = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 casper-contract = { workspace = true, default-features = false }
-ink_allocator = { version = "4.2.1", default-features = false }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 casper-contract = { workspace = true, default-features = false, features = ["test-support"] }

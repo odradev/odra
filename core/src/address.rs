@@ -113,9 +113,7 @@ impl Address {
     pub fn to_formatted_string(&self) -> String {
         match self {
             Address::Account(_) => self.to_entity_addr().to_formatted_string(),
-            Address::Contract(package_hash) => {
-                PackageHash::new(package_hash.value()).to_formatted_string()
-            }
+            Address::Contract(package_hash) => package_hash.to_formatted_string()
         }
     }
 }
@@ -300,7 +298,7 @@ const fn hex_char_to_value(c: u8) -> Result<u8, &'static str> {
 mod tests {
     use super::*;
     use casper_types::system::Caller;
-    use casper_types::EraId;
+    use casper_types::{AddressableEntityHash, EraId};
 
     // TODO: casper-types > 1.5.0 will have prefix fixed.
     const PACKAGE_HASH: &str =

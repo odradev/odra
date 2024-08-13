@@ -2,7 +2,6 @@
 #![doc = "It allows calling other contracts and saving the return values to the named key"]
 #![doc = "of the Proxy Caller."]
 #![no_std]
-#![feature(core_intrinsics)]
 extern crate alloc;
 
 use core::mem::MaybeUninit;
@@ -184,12 +183,4 @@ fn to_ptr<T: ToBytes>(t: T) -> (*const u8, usize, Vec<u8>) {
     let ptr = bytes.as_ptr();
     let size = bytes.len();
     (ptr, size, bytes)
-}
-
-/// Panic handler for the WASM target architecture.
-#[cfg(target_arch = "wasm32")]
-#[panic_handler]
-#[no_mangle]
-pub fn panic(_info: &core::panic::PanicInfo) -> ! {
-    core::intrinsics::abort();
 }

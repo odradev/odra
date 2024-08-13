@@ -165,7 +165,7 @@ pub trait HostContext {
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError>;
 
     /// Returns the number of emitted events for the specified contract address.
-    fn get_events_count(&self, contract_address: &Address) -> u32;
+    fn get_events_count(&self, contract_address: &Address) -> Result<u32, EventError>;
 
     /// Calls a contract at the specified address with the given call definition.
     fn call_contract(
@@ -296,12 +296,11 @@ impl HostEnv {
         contract_name: String,
         entry_points_caller: EntryPointsCaller
     ) {
+        let events_count = self.events_count(&address);
         let backend = self.backend.borrow();
         backend.register_contract(address, contract_name, entry_points_caller);
         self.deployed_contracts.borrow_mut().push(address);
-        self.events_count
-            .borrow_mut()
-            .insert(address, backend.get_events_count(&address));
+        self.events_count.borrow_mut().insert(address, events_count);
     }
 
     /// Calls a contract at the specified address with the given call definition.
@@ -340,7 +339,9 @@ impl HostEnv {
             .for_each(|contract_address| {
                 let events_count = binding.get_mut(contract_address).unwrap();
                 let old_events_last_id = *events_count;
-                let new_events_count = backend.get_events_count(contract_address);
+                let new_events_count = backend
+                    .get_events_count(contract_address)
+                    .unwrap_or_default();
                 let mut events = vec![];
                 for event_id in old_events_last_id..new_events_count {
                     let event = backend.get_event(contract_address, event_id).unwrap();
@@ -416,9 +417,9 @@ impl HostEnv {
 
     /// Returns the names of all events emitted by the specified contract.
     pub fn event_names<T: Addressable>(&self, contract_address: &T) -> Vec<String> {
-        let backend = self.backend.borrow();
-        let events_count = backend.get_events_count(contract_address.address());
+        let events_count = self.events_count(contract_address);
 
+        let backend = self.backend.borrow();
         (0..events_count)
             .map(|event_id| {
                 backend
@@ -433,7 +434,9 @@ impl HostEnv {
     pub fn events<T: Addressable>(&self, contract_address: &T) -> Vec<Bytes> {
         let backend = self.backend.borrow();
         let contract_address = contract_address.address();
-        let events_count = backend.get_events_count(contract_address);
+        let events_count = backend
+            .get_events_count(contract_address)
+            .unwrap_or_default();
         (0..events_count)
             .map(|event_id| {
                 backend
@@ -449,9 +452,11 @@ impl HostEnv {
     }
 
     /// Returns the number of events emitted by the specified contract.
-    pub fn events_count<T: Addressable>(&self, contract_address: &T) -> u32 {
+    pub fn events_count<T: Addressable>(&self, address: &T) -> u32 {
         let backend = self.backend.borrow();
-        backend.get_events_count(contract_address.address())
+        backend
+            .get_events_count(address.address())
+            .unwrap_or_default()
     }
 
     /// Returns true if the specified event was emitted by the specified contract.
@@ -462,6 +467,7 @@ impl HostEnv {
     ) -> bool {
         let contract_address = contract_address.address();
         let events_count = self.events_count(contract_address);
+
         let event_bytes = Bytes::from(
             event
                 .to_bytes()
@@ -487,6 +493,7 @@ impl HostEnv {
         event_name: T
     ) -> bool {
         let events_count = self.events_count(contract_address);
+
         (0..events_count)
             .map(|event_id| {
                 self.get_event_bytes(contract_address, event_id)
@@ -662,7 +669,7 @@ mod test {
 
         let mut ctx = MockHostContext::new();
         ctx.expect_register_contract().returning(|_, _, _| ());
-        ctx.expect_get_events_count().returning(|_| 0);
+        ctx.expect_get_events_count().returning(|_| Ok(0));
 
         // check if TestRef::new() is called exactly once
         let instance_ctx = MockTestRef::new_context();
@@ -752,7 +759,7 @@ mod test {
 
         let mut ctx = MockHostContext::new();
         // there are 2 events emitted by the contract
-        ctx.expect_get_events_count().returning(|_| 2);
+        ctx.expect_get_events_count().returning(|_| Ok(2));
         // get_event() at index 0 will return an invalid event
         ctx.expect_get_event()
             .with(predicate::always(), predicate::eq(0))
@@ -790,7 +797,7 @@ mod test {
 
         let mut ctx = MockHostContext::new();
         // there are 2 events emitted by the contract
-        ctx.expect_get_events_count().returning(|_| 2);
+        ctx.expect_get_events_count().returning(|_| Ok(2));
         // get_event() at index 0 will return an invalid event
         ctx.expect_get_event()
             .with(predicate::always(), predicate::eq(0))
@@ -817,7 +824,7 @@ mod test {
 
         let mut ctx = MockHostContext::new();
         // there are 2 events emitted by the contract
-        ctx.expect_get_events_count().returning(|_| 2);
+        ctx.expect_get_events_count().returning(|_| Ok(2));
         // get_event() at index 0 panics
         ctx.expect_get_event()
             .with(predicate::always(), predicate::eq(0))
@@ -833,7 +840,7 @@ mod test {
         let addr = Address::Account(AccountHash::new([0; 32]));
         let mut ctx = MockHostContext::new();
 
-        ctx.expect_get_events_count().returning(|_| 1);
+        ctx.expect_get_events_count().returning(|_| Ok(1));
         ctx.expect_get_event()
             .returning(|_, _| Ok(TestEv {}.to_bytes().unwrap().into()));
 

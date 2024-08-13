@@ -229,7 +229,7 @@ impl OdraVm {
     }
 
     /// Gets the number of events emitted by the given address from the global state.
-    pub fn get_events_count(&self, address: &Address) -> u32 {
+    pub fn get_events_count(&self, address: &Address) -> Result<u32, EventError> {
         self.state.read().unwrap().get_events_count(address)
     }
 
@@ -602,7 +602,7 @@ mod tests {
         // given an empty instance
         let instance = OdraVm::default();
 
-        let first_contract_address = utils::account_address_from_str("abc");
+        let first_contract_address = utils::contract_address_from_u32(123);
         // put a contract on stack
         push_address(&instance, &first_contract_address);
 
@@ -611,7 +611,7 @@ mod tests {
         instance.emit_event(&first_event);
         instance.emit_event(&second_event);
 
-        let second_contract_address = utils::account_address_from_str("bca");
+        let second_contract_address = utils::contract_address_from_u32(321);
         // put a next contract on stack
         push_address(&instance, &second_contract_address);
 

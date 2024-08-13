@@ -132,11 +132,12 @@ impl CasperVm {
     }
 
     /// Gets the count of events for the given contract address.
-    pub fn get_events_count(&self, contract_address: &Address) -> u32 {
-        let package_hash = contract_address
-            .as_package_hash()
-            .expect("Events can only be queried for contracts");
-        self.events_length(*package_hash)
+    pub fn get_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
+        let package_hash = contract_address.as_package_hash();
+        if package_hash.is_none() {
+            return Err(EventError::TriedToQueryEventForNonContract);
+        }
+        Ok(self.events_length(*package_hash.unwrap()))
     }
 
     /// Attaches a value to the next call.

@@ -107,11 +107,11 @@ impl HostContext for LivenetHost {
             .map_err(|_| EventError::CouldntExtractEventData)
     }
 
-    fn get_events_count(&self, contract_address: &Address) -> u32 {
+    fn get_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
         let rt = Runtime::new().unwrap();
         let client = self.casper_client.borrow();
         rt.block_on(async { client.events_count(contract_address).await })
-            .unwrap_or_default()
+            .ok_or(EventError::CouldntExtractEventData)
     }
 
     fn call_contract(
@@ -235,14 +235,13 @@ impl HostContext for LivenetHost {
         let rt = Runtime::new().unwrap();
         let timestamp = Timestamp::now();
         let client = self.casper_client.borrow_mut();
-        Ok(rt
-            .block_on(async { client.transfer(to, amount, timestamp).await })
+        rt.block_on(async { client.transfer(to, amount, timestamp).await })
             .map_err(|e| {
                 self.map_error_code_to_odra_error(
                     ContractId::Address(client.caller()),
                     &e.error_message()
                 )
-            })?)
+            })
     }
 }
 
@@ -258,7 +257,7 @@ impl LivenetHost {
 
         match found {
             None => OdraError::ExecutionError(UnexpectedError),
-            Some((message, error)) => {}
+            Some((_, error)) => OdraError::ExecutionError(User(error.code()))
         }
     }
 }

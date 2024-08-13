@@ -6,29 +6,18 @@ BINARYEN_CHECKSUM := "c55b74f3109cdae97490faf089b0286d3bba926bb6ea5ed00c8c784fc5
 default:
     just --list
 
-# TODO: reenable this   cd odra-casper/proxy-caller && cargo clippy --target=wasm32-unknown-unknown -- -D warnings -A clippy::single-component-path-imports
 clippy:
     cargo clippy --all-targets -- -D warnings
-    cd examples && cargo clippy --all-targets -- -D warnings 
-    cd modules && cargo clippy --all-targets -- -D warnings
-    cd benchmark && cargo clippy --all-targets -- -D warnings
+    cd odra-casper/proxy-caller && cargo clippy --target=wasm32-unknown-unknown -- -D warnings
 
-# TODO: reenable this   cd odra-casper/proxy-caller && cargo fmt
 lint: clippy
     cargo fmt
-    cd examples && cargo fmt
-    cd modules && cargo fmt
-    cd benchmark && cargo fmt
+    cd odra-casper/proxy-caller && cargo fmt
 
 check-lint: clippy
     cargo fmt -- --check
+    cargo check --all-targets
     cd odra-casper/proxy-caller && cargo fmt -- --check
-    cd modules && cargo fmt -- --check
-    cd modules && cargo check --all-targets
-    cd examples && cargo fmt -- --check
-    cd examples && cargo check --all-targets
-    cd benchmark && cargo fmt -- --check
-    cd benchmark && cargo check --all-targets --features=benchmark
 
 install-cargo-odra:
     rustup toolchain install stable

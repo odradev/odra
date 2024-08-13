@@ -76,15 +76,15 @@ pub enum Error {
 
 #[cfg(test)]
 mod tests {
-    use crate::features::livenet::{LivenetContractHostRef, LivenetContractInitArgs};
+    use crate::features::livenet::{LivenetContract, LivenetContractInitArgs};
     use alloc::string::ToString;
     use odra::host::{Deployer, HostRef};
-    use odra_modules::erc20::{Erc20HostRef, Erc20InitArgs};
+    use odra_modules::erc20::{Erc20, Erc20InitArgs};
 
     #[test]
     fn livenet_contract_test() {
         let test_env = odra_test::env();
-        let mut erc20 = Erc20HostRef::deploy(
+        let mut erc20 = Erc20::deploy(
             &test_env,
             Erc20InitArgs {
                 name: "TestToken".to_string(),
@@ -93,7 +93,7 @@ mod tests {
                 initial_supply: Some(100_000.into())
             }
         );
-        let mut livenet_contract = LivenetContractHostRef::deploy(
+        let mut livenet_contract = LivenetContract::deploy(
             &test_env,
             LivenetContractInitArgs {
                 erc20_address: *erc20.address()
