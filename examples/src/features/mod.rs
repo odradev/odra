@@ -1,5 +1,5 @@
 //! Module containing examples of various Odra features.
-// pub mod access_control;
+pub mod access_control;
 pub mod collecting_events;
 pub mod cross_calls;
 pub mod custom_types;
