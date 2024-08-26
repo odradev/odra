@@ -11,7 +11,7 @@ repository = { workspace = true }
 [dependencies]
 odra-core = { workspace = true }
 casper-execution-engine = { workspace = true }
-casper-types = { workspace = true }
+casper-types = { workspace = true, features = ["std-fs-io"] }
 casper-client = { workspace = true }
 derive_more = { version = "1.0.0-beta.7", features = ["from"]}
 
@@ -30,8 +30,4 @@ thiserror = "1.0.40"
 bytes = "1.5.0"
 humantime = "2.1.0"
 base16 = { workspace = true }
-tokio = { workspace = true, optional = true }
-
-[features]
-default = []
-std = ["casper-types/std-fs-io", "tokio/rt"]
+tokio = { workspace = true, features = ["rt"] }

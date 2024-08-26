@@ -109,7 +109,6 @@ impl ContractEnv {
     /// Sets the value associated with the given named key in the contract storage.
     pub fn set_named_value<T: CLTyped + ToBytes, U: AsRef<str>>(&self, name: U, value: T) {
         let key = name.as_ref();
-        // todo: map errors to correct Odra errors
         let cl_value = CLValue::from_t(value)
             .map_err(|e| match e {
                 CLValueError::Serialization(_) => OdraError::VmError(Serialization),

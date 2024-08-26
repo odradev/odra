@@ -556,9 +556,8 @@ impl CasperClient {
     }
 
     async fn query_global_state(&self, key: &str, path: Option<String>) -> StoredValue {
-        // Todo: set rpc id to a random number
         query_global_state(
-            "",
+            &self.rpc_id(),
             self.node_address(),
             Verbosity::Low as u64,
             "",
@@ -585,16 +584,10 @@ impl CasperClient {
                 &DEPLOY_WAIT_TIME, &deploy_hash_str
             ));
 
-            #[cfg(feature = "std")]
-            {
-                tokio::time::sleep(std::time::Duration::from_secs(DEPLOY_WAIT_TIME)).await;
-            }
-            #[cfg(not(feature = "std"))]
-            {
-                // TODO: Implement sleep for no_std
-            }
+            tokio::time::sleep(std::time::Duration::from_secs(DEPLOY_WAIT_TIME)).await;
 
             let result = self.get_deploy(deploy_hash).await.execution_info;
+
             if result.is_some() {
                 final_result = result
                     .ok_or(LivenetToDo)?
@@ -717,7 +710,6 @@ impl CasperClient {
     }
 }
 
-#[cfg(feature = "std")]
 impl Default for CasperClient {
     fn default() -> Self {
         Self::new(CasperClientConfiguration::from_env())

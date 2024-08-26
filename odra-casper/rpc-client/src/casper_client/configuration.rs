@@ -1,4 +1,3 @@
-#[cfg(feature = "std")]
 use crate::casper_client::{
     ENV_ACCOUNT_PREFIX, ENV_CHAIN_NAME, ENV_CSPR_CLOUD_AUTH_TOKEN, ENV_EVENTS_ADDRESS,
     ENV_LIVENET_ENV_FILE, ENV_NODE_ADDRESS, ENV_SECRET_KEY
@@ -6,7 +5,6 @@ use crate::casper_client::{
 use crate::utils::{get_env_variable, get_optional_env_variable};
 use casper_client::Verbosity;
 use odra_core::casper_types::SecretKey;
-#[cfg(feature = "std")]
 use std::path::PathBuf;
 
 #[derive(Debug)]
@@ -20,7 +18,6 @@ pub struct CasperClientConfiguration {
     pub cspr_cloud_auth_token: Option<String>
 }
 
-#[cfg(feature = "std")]
 impl CasperClientConfiguration {
     pub fn from_env() -> Self {
         // Check for additional .env file
