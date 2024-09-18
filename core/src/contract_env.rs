@@ -222,6 +222,14 @@ impl ContractEnv {
         backend.emit_event(&bytes.into())
     }
 
+    /// Emits an event with the specified data using the native mechanism.
+    pub fn emit_native_event<T: ToBytes + EventInstance>(&self, event: T) {
+        let backend = self.backend.borrow();
+        let result = event.to_bytes().map_err(ExecutionError::from);
+        let bytes = result.unwrap_or_revert(self);
+        backend.emit_native_event(&bytes.into())
+    }
+
     /// Verifies the signature of a message using the specified signature, public key, and message.
     ///
     /// # Arguments

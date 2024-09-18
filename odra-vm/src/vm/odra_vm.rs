@@ -223,14 +223,29 @@ impl OdraVm {
         self.state.write().unwrap().emit_event(event_data);
     }
 
+    /// Writes an event data to the global state and marks it as native.
+    pub fn emit_native_event(&self, event_data: &Bytes) {
+        self.state.write().unwrap().emit_native_event(event_data);
+    }
+
     /// Gets the event emitted by the given address at the given index from the global state.
     pub fn get_event(&self, address: &Address, index: u32) -> Result<Bytes, EventError> {
         self.state.read().unwrap().get_event(address, index)
     }
 
+    /// Gets the native event emitted by the given address at the given index from the global state.
+    pub fn get_native_event(&self, address: &Address, index: u32) -> Result<Bytes, EventError> {
+        self.state.read().unwrap().get_native_event(address, index)
+    }
+
     /// Gets the number of events emitted by the given address from the global state.
     pub fn get_events_count(&self, address: &Address) -> Result<u32, EventError> {
         self.state.read().unwrap().get_events_count(address)
+    }
+
+    /// Gets the number of events emitted by the given address from the global state.
+    pub fn get_native_events_count(&self, address: &Address) -> Result<u32, EventError> {
+        self.state.read().unwrap().get_native_events_count(address)
     }
 
     /// Attaches the given amount of tokens to the current call from the global state.

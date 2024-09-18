@@ -107,11 +107,19 @@ impl HostContext for LivenetHost {
             .map_err(|_| EventError::CouldntExtractEventData)
     }
 
+    fn get_native_event(&self, _contract_address: &Address, _index: u32) -> Result<Bytes, EventError> {
+        todo!("get_native_event not implemented for LivenetHost")
+    }
+
     fn get_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
         let rt = Runtime::new().unwrap();
         let client = self.casper_client.borrow();
         rt.block_on(async { client.events_count(contract_address).await })
             .ok_or(EventError::CouldntExtractEventData)
+    }
+
+    fn get_native_events_count(&self, _contract_address: &Address) -> Result<u32, EventError> {
+        todo!("get_native_events_count not implemented for LivenetHost")
     }
 
     fn call_contract(

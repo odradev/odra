@@ -113,6 +113,10 @@ impl ContractContext for LivenetContractEnv {
         panic!("Cannot emit event in LivenetEnv")
     }
 
+    fn emit_native_event(&self, event: &Bytes) {
+        panic!("Cannot emit native event in LivenetEnv")
+    }
+
     fn transfer_tokens(&self, _to: &Address, _amount: &U512) {
         panic!("Cannot transfer tokens in LivenetEnv")
     }

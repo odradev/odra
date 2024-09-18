@@ -1,12 +1,10 @@
-use odra_core::casper_types::{
-    AddressableEntity, AddressableEntityHash, GenesisConfig, GenesisConfigBuilder, Package,
-    PackageHash, ProtocolVersion
-};
+use odra_core::casper_types::{AddressableEntity, AddressableEntityHash, EntityAddr, GenesisConfig, GenesisConfigBuilder, HashAddr, Package, PackageHash, ProtocolVersion};
 use odra_core::consts::*;
 use odra_core::prelude::*;
 use odra_core::OdraResult;
 use std::cell::RefCell;
 use std::env;
+use std::hash::Hash;
 use std::path::PathBuf;
 
 use casper_engine_test_support::{
@@ -43,11 +41,13 @@ use odra_core::{
     CallDef, ContractEnv
 };
 use odra_core::{Address, ExecutionError, OdraError, VmError};
+use odra_core::casper_types::contract_messages::MessagePayload;
 
 /// Casper virtual machine utilizing [LmdbWasmTestBuilder].
 pub struct CasperVm {
     accounts: Vec<Address>,
     key_pairs: BTreeMap<Address, (SecretKey, PublicKey)>,
+    messages: BTreeMap<Address, Vec<MessagePayload>>,
     active_account: Address,
     context: LmdbWasmTestBuilder,
     block_time: u64,
@@ -131,6 +131,21 @@ impl CasperVm {
         // }
     }
 
+    /// Gets the native event at the specified index for the given contract address.
+    ///
+    /// TODO: Support negative index
+    /// The index may be negative, in which case it is interpreted as an offset from the end of the event list.
+    ///
+    /// Returns [EventError::IndexOutOfBounds] if the index is out of bounds.
+    pub fn get_native_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
+        let messages = self.messages.get(contract_address).ok_or(EventError::IndexOutOfBounds)?;
+        let message = messages.get(index as usize).ok_or(EventError::IndexOutOfBounds)?;
+        match message {
+            MessagePayload::String(_) => { Err(EventError::CouldntExtractEventData)}
+            MessagePayload::Bytes(b) => {Ok(b.clone())}
+        }
+    }
+
     /// Gets the count of events for the given contract address.
     pub fn get_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
         let package_hash = contract_address.as_package_hash();
@@ -138,6 +153,12 @@ impl CasperVm {
             return Err(EventError::TriedToQueryEventForNonContract);
         }
         Ok(self.events_length(*package_hash.unwrap()))
+    }
+
+    /// Gets the count of native events for the given contract address.
+    pub fn get_native_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
+        let messages = self.messages.get(contract_address).ok_or(EventError::IndexOutOfBounds)?;
+        Ok(messages.len() as u32)
     }
 
     /// Attaches a value to the next call.
@@ -206,6 +227,8 @@ impl CasperVm {
             call_def: call_def.clone()
         });
 
+        self.collect_messages();
+
         self.attached_value = U512::zero();
         if let Some(error) = self.context.get_error() {
             let odra_error = parse_error(error);
@@ -214,6 +237,87 @@ impl CasperVm {
         } else {
             self.get_active_account_result()
         }
+    }
+
+    fn collect_messages(&mut self) {
+        let messages = self.context.get_last_exec_result().unwrap();
+        let messages = messages.messages();
+        messages.iter().for_each(|message| {
+            let payload = message.payload().clone();
+            let addressable_entity = self.get_addressable_entity_from_entity_addr(message.entity_hash());
+            let address = Address::Contract(addressable_entity.package_hash());
+            let contract_hash = message.entity_hash().value();
+            self.messages
+                .entry(address.into())
+                .or_insert_with(Vec::new)
+                .push(payload);
+        });
+    }
+
+    fn get_addressable_entity(&self, address: &Address) -> AddressableEntity {
+        let query_result = self.context.query(None,
+                                              Key::Package(address.value()),
+                                              &[]).unwrap();
+        let entity_hash = if let StoredValue::Package(package) = query_result {
+            package.current_entity_hash()
+        } else {
+            panic!(
+                "Stored value is not an adressable entity: {:?}",
+                query_result
+            );
+        }.unwrap();
+
+        self.context.get_addressable_entity(entity_hash).unwrap()
+    }
+
+    fn get_addressable_entity_from_entity_addr(&self, entity_addr: &EntityAddr) -> AddressableEntity {
+        let query_result = self.context.query(None,
+                                              Key::AddressableEntity(*entity_addr),
+                                              &[]).unwrap();
+        let addressable_entity = if let StoredValue::AddressableEntity(entity) = query_result {
+            entity
+        } else {
+            panic!(
+                "Stored value is not an adressable entity: {:?}",
+                query_result
+            );
+        };
+        addressable_entity
+    }
+
+    fn get_addressable_entity_hash(&self, address: &Address) -> AddressableEntityHash {
+        let query_result = self.context.query(None,
+                                              Key::Package(address.value()),
+                                              &[]).unwrap();
+        let entity_hash = if let StoredValue::Package(package) = query_result {
+            package.current_entity_hash()
+        } else {
+            panic!(
+                "Stored value is not an adressable entity: {:?}",
+                query_result
+            );
+        }.unwrap();
+
+        entity_hash
+    }
+    fn get_messages(&self, address: &Address) {
+        let entity = self.get_addressable_entity(address);
+        let (topic_name, message_topic_hash) = entity
+        .message_topics()
+        .iter()
+        .next()
+        .expect("should have at least one topic");
+
+        let entity_hash = self.get_addressable_entity_hash(address).value();
+
+        let q = self.context.query(
+            None,
+            Key::message_topic(
+                EntityAddr::SmartContract(entity_hash),
+                message_topic_hash.clone()
+            ),
+            &[]
+        ).unwrap();
     }
 
     /// Creates a new contract with the specified name, initialization arguments, and entry points caller.
@@ -398,9 +502,6 @@ impl CasperVm {
         }
     }
 
-    fn get_contract_hash(&self, package_hash: &PackageHash) -> ContractHash {
-        ContractHash::new(package_hash.value())
-    }
 
     fn genesis_accounts(
         key_pairs: &BTreeMap<Address, (SecretKey, PublicKey)>
@@ -463,7 +564,8 @@ impl CasperVm {
             attached_value: U512::zero(),
             gas_used: BTreeMap::new(),
             gas_report: GasReport::default(),
-            key_pairs
+            key_pairs,
+            messages: Default::default(),
         }
     }
 

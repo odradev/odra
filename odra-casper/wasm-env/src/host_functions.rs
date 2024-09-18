@@ -20,6 +20,8 @@ use casper_contract::{
     unwrap_or_revert::UnwrapOrRevert
 };
 use core::mem::MaybeUninit;
+use casper_contract::contract_api::runtime::emit_message;
+use casper_contract::ext_ffi::casper_emit_message;
 use odra_core::casper_types::addressable_entity::NamedKeys;
 use odra_core::casper_types::bytesrepr::deserialize;
 use odra_core::casper_types::contracts::ContractVersion;
@@ -36,8 +38,9 @@ use odra_core::{
     casper_event_standard::{self, Schema, Schemas}
 };
 use odra_core::{prelude::*, Address, CallDef, ExecutionError};
-
+use odra_core::casper_types::contract_messages::{MessagePayload, MessageTopicOperation};
 use crate::consts;
+use crate::consts::NATIVE_EVENT_TOPIC;
 
 lazy_static::lazy_static! {
     static ref STATE: URef = {
@@ -81,6 +84,11 @@ pub fn install_contract(
     // Prepare named keys.
     let named_keys = initial_named_keys(events);
 
+    // Prepare message topic
+    let mut mesage_topics = BTreeMap::new();
+    mesage_topics.insert(NATIVE_EVENT_TOPIC.to_string(), MessageTopicOperation::Add);
+
+
     // Create new contract.
     let access_uref_key = format!("{}_access_token", package_hash_key);
     if is_upgradable {
@@ -90,7 +98,7 @@ pub fn install_contract(
             Some(named_keys),
             Some(package_hash_key.clone()),
             Some(access_uref_key),
-            None
+            Some(mesage_topics)
         );
     } else {
         // TODO: Handle message topics
@@ -99,7 +107,7 @@ pub fn install_contract(
             Some(named_keys),
             Some(package_hash_key.clone()),
             Some(access_uref_key),
-            None
+            Some(mesage_topics)
         );
     }
 
@@ -347,6 +355,12 @@ pub fn transfer_tokens(to: &Address, amount: &U512) {
 /// Writes an event to the contract's storage.
 pub fn emit_event(event: &Bytes) {
     casper_event_standard::emit_bytes(event.clone())
+}
+
+/// Emits a native event.
+pub fn emit_native_event(event: &Bytes) {
+    let payload = MessagePayload::Bytes(event.clone());
+    emit_message(NATIVE_EVENT_TOPIC, &payload).unwrap_or_revert();
 }
 
 /// Gets the immediate session caller of the current execution.

@@ -164,8 +164,14 @@ pub trait HostContext {
     /// Returns the event bytes for the specified contract address and index.
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError>;
 
+    /// Returns the native event bytes for the specified contract address and index.
+    fn get_native_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError>;
+
     /// Returns the number of emitted events for the specified contract address.
     fn get_events_count(&self, contract_address: &Address) -> Result<u32, EventError>;
+
+    /// Returns the number of emitted native events for the specified contract address.
+    fn get_native_events_count(&self, contract_address: &Address) -> Result<u32, EventError>;
 
     /// Calls a contract at the specified address with the given call definition.
     fn call_contract(
@@ -415,6 +421,16 @@ impl HostEnv {
         backend.get_event(contract_address.address(), index)
     }
 
+    /// Retrieves a raw native event (serialized) with the specified index from the specified contract.
+    pub fn get_native_event_bytes<T: Addressable>(
+        &self,
+        contract_address: &T,
+        index: u32
+    ) -> Result<Bytes, EventError> {
+        let backend = self.backend.borrow();
+        backend.get_native_event(contract_address.address(), index)
+    }
+
     /// Returns the names of all events emitted by the specified contract.
     pub fn event_names<T: Addressable>(&self, contract_address: &T) -> Vec<String> {
         let events_count = self.events_count(contract_address);
@@ -459,6 +475,14 @@ impl HostEnv {
             .unwrap_or_default()
     }
 
+    /// Returns the number of native events emitted by the specified contract.
+    pub fn native_events_count<T: Addressable>(&self, address: &T) -> u32 {
+        let backend = self.backend.borrow();
+        backend
+            .get_native_events_count(address.address())
+            .unwrap_or_default()
+    }
+
     /// Returns true if the specified event was emitted by the specified contract.
     pub fn emitted_event<T: ToBytes + EventInstance, R: Addressable>(
         &self,
@@ -473,9 +497,37 @@ impl HostEnv {
                 .to_bytes()
                 .unwrap_or_else(|_| panic!("Couldn't serialize event"))
         );
+
         (0..events_count)
             .map(|event_id| {
                 self.get_event_bytes(contract_address, event_id)
+                    .unwrap_or_else(|e| {
+                        panic!(
+                            "Couldn't get event at address {:?} with id {}: {:?}",
+                            &contract_address, event_id, e
+                        )
+                    })
+            })
+            .any(|bytes| bytes == event_bytes)
+    }
+
+    /// Returns true if the specified event was emitted by the specified contract.
+    pub fn emitted_native_event<T: ToBytes + EventInstance, R: Addressable>(
+        &self,
+        contract_address: &R,
+        event: &T
+    ) -> bool {
+        let contract_address = contract_address.address();
+        let events_count = self.native_events_count(contract_address);
+
+        let event_bytes = Bytes::from(
+            event
+                .to_bytes()
+                .unwrap_or_else(|_| panic!("Couldn't serialize event"))
+        );
+        (0..events_count)
+            .map(|event_id| {
+                self.get_native_event_bytes(contract_address, event_id)
                     .unwrap_or_else(|e| {
                         panic!(
                             "Couldn't get event at address {:?} with id {}: {:?}",
