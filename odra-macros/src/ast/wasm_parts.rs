@@ -251,6 +251,7 @@ impl TryFrom<&'_ FnIR> for NewEntryPointItem {
             param_ret_ty,
             param_access,
             utils::expr::entry_point_contract(),
+            utils::expr::entry_point_payment(),
         ]);
         Ok(Self {
             ty: utils::ty::entry_point(),
@@ -288,14 +289,18 @@ mod test {
                         vec![odra::args::parameter::<Option<U256> >("total_supply")].into_iter().filter_map(|x| x).collect(),
                         <() as odra::casper_types::CLTyped>::cl_type(),
                         odra::casper_types::EntryPointAccess::Groups(vec![odra::casper_types::Group::new("constructor_group")]),
-                        odra::casper_types::EntryPointType::Contract
+                                                        odra::casper_types::EntryPointType::Called,
+                                odra::casper_types::EntryPointPayment::Caller,
+
                     ));
                     entry_points.add_entry_point(odra::casper_types::EntryPoint::new(
                         "total_supply",
                         vec![],
                         <U256 as odra::casper_types::CLTyped>::cl_type(),
                         odra::casper_types::EntryPointAccess::Public,
-                        odra::casper_types::EntryPointType::Contract
+                        odra::casper_types::EntryPointType::Called,
+                        odra::casper_types::EntryPointPayment::Caller,
+
                     ));
                     entry_points
                         .add_entry_point(
@@ -304,7 +309,9 @@ mod test {
                                 vec![],
                                 <() as odra::casper_types::CLTyped>::cl_type(),
                                 odra::casper_types::EntryPointAccess::Public,
-                                odra::casper_types::EntryPointType::Contract,
+                                odra::casper_types::EntryPointType::Called,
+                                odra::casper_types::EntryPointPayment::Caller,
+
                             ),
                         );
                     entry_points
@@ -318,7 +325,9 @@ mod test {
                                 ].into_iter().filter_map(|x| x).collect(),
                                 <() as odra::casper_types::CLTyped>::cl_type(),
                                 odra::casper_types::EntryPointAccess::Public,
-                                odra::casper_types::EntryPointType::Contract,
+                                odra::casper_types::EntryPointType::Called,
+                                odra::casper_types::EntryPointPayment::Caller,
+
                             ),
                         );
                     entry_points
@@ -331,7 +340,9 @@ mod test {
                                 ].into_iter().filter_map(|x| x).collect(),
                                 <() as odra::casper_types::CLTyped>::cl_type(),
                                 odra::casper_types::EntryPointAccess::Public,
-                                odra::casper_types::EntryPointType::Contract,
+                                odra::casper_types::EntryPointType::Called,
+                                odra::casper_types::EntryPointPayment::Caller,
+
                             ),
                         );
                     entry_points
@@ -420,7 +431,9 @@ mod test {
                         vec![],
                         <U256 as odra::casper_types::CLTyped>::cl_type(),
                         odra::casper_types::EntryPointAccess::Public,
-                        odra::casper_types::EntryPointType::Contract
+                        odra::casper_types::EntryPointType::Called,
+                        odra::casper_types::EntryPointPayment::Caller,
+
                     ));
                     entry_points
                         .add_entry_point(
@@ -429,7 +442,9 @@ mod test {
                                 vec![],
                                 <() as odra::casper_types::CLTyped>::cl_type(),
                                 odra::casper_types::EntryPointAccess::Public,
-                                odra::casper_types::EntryPointType::Contract,
+                                odra::casper_types::EntryPointType::Called,
+                                odra::casper_types::EntryPointPayment::Caller,
+
                             ),
                         );
                     entry_points
@@ -488,7 +503,8 @@ mod test {
                         vec![],
                         <U256 as odra::casper_types::CLTyped>::cl_type(),
                         odra::casper_types::EntryPointAccess::Public,
-                        odra::casper_types::EntryPointType::Contract
+                        odra::casper_types::EntryPointType::Called,
+                        odra::casper_types::EntryPointPayment::Caller,
                     ));
                     entry_points
                         .add_entry_point(
@@ -497,7 +513,8 @@ mod test {
                                 vec![],
                                 <Address as odra::casper_types::CLTyped>::cl_type(),
                                 odra::casper_types::EntryPointAccess::Public,
-                                odra::casper_types::EntryPointType::Contract,
+                                odra::casper_types::EntryPointType::Called,
+                                odra::casper_types::EntryPointPayment::Caller,
                             ),
                         );
                     entry_points
@@ -507,7 +524,9 @@ mod test {
                                 vec![odra::args::parameter::<Address>("new_owner")].into_iter().filter_map(|x| x).collect(),
                                 <() as odra::casper_types::CLTyped>::cl_type(),
                                 odra::casper_types::EntryPointAccess::Public,
-                                odra::casper_types::EntryPointType::Contract,
+                                odra::casper_types::EntryPointType::Called,
+                                odra::casper_types::EntryPointPayment::Caller,
+
                             ),
                         );
                     entry_points
@@ -517,7 +536,9 @@ mod test {
                                 vec![],
                                 <String as odra::casper_types::CLTyped>::cl_type(),
                                 odra::casper_types::EntryPointAccess::Public,
-                                odra::casper_types::EntryPointType::Contract,
+                                odra::casper_types::EntryPointType::Called,
+                                odra::casper_types::EntryPointPayment::Caller,
+
                             ),
                         );
                     entry_points
@@ -527,7 +548,9 @@ mod test {
                                 vec![],
                                 <String as odra::casper_types::CLTyped>::cl_type(),
                                 odra::casper_types::EntryPointAccess::Public,
-                                odra::casper_types::EntryPointType::Contract,
+                                odra::casper_types::EntryPointType::Called,
+                                odra::casper_types::EntryPointPayment::Caller,
+
                             ),
                         );
                     entry_points

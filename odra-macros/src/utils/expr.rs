@@ -34,7 +34,12 @@ pub fn new_entry_points() -> syn::Expr {
 
 pub fn entry_point_contract() -> syn::Expr {
     let ty = super::ty::entry_point_type();
-    parse_quote!(#ty::Contract)
+    parse_quote!(#ty::Called)
+}
+
+pub fn entry_point_payment() -> syn::Expr {
+    let ty = super::ty::entry_point_payment();
+    parse_quote!(#ty::Caller)
 }
 
 pub fn entry_point_public() -> syn::Expr {

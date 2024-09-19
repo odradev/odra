@@ -9,15 +9,15 @@ homepage = { workspace = true }
 repository = { workspace = true }
 
 [dependencies]
-lazy_static = { version = "1.4.0", features = [ "spin_no_std" ] }
+lazy_static = { workspace = true, features = [ "spin_no_std" ] }
 odra-core = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-casper-contract = { version = "4.0.0", default-features = false }
-ink_allocator = { version = "4.2.1", default-features = false }
+casper-contract = { workspace = true, default-features = false }
+ink_allocator = { version = "5.0.0", default-features = false }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-casper-contract = { version = "4.0.0", default-features = false, features = ["test-support"] }
+casper-contract = { workspace = true, default-features = false, features = ["test-support"] }
 
 [lints.rust]
 missing_docs = "warn"

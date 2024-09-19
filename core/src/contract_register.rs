@@ -28,4 +28,12 @@ impl ContractRegister {
         }
         Err(OdraError::VmError(VmError::InvalidContractAddress))
     }
+
+    /// Returns the name of the contract at the given address.
+    pub fn get(&self, addr: &Address) -> Option<&str> {
+        match self.contracts.get(addr) {
+            Some(contract) => Some(contract.name()),
+            None => None
+        }
+    }
 }

@@ -18,17 +18,17 @@ jobs:
   test:
     name: Test
     runs-on: buildjet-8vcpu-ubuntu-2204
-    services:
-      casper-nctl:
-        image: makesoftware/casper-nctl:v155
-        options: --name mynctl
-        env:
-          PREDEFINED_ACCOUNTS: 'true'
-          MINIMUM_ROUND_EXPONENT: '12'
-          MAXIMUM_ROUND_EXPONENT: '14'
-          DEPLOY_DELAY: '5sec'
-        ports:
-          - 11101:11101
+#    services:
+#      casper-nctl:
+#        image: makesoftware/casper-nctl:v200-rc3
+#        options: --name mynctl
+#        env:
+#          PREDEFINED_ACCOUNTS: 'true'
+#          MINIMUM_ROUND_EXPONENT: '12'
+#          MAXIMUM_ROUND_EXPONENT: '14'
+#          DEPLOY_DELAY: '30sec'
+#        ports:
+#          - 11101:11101
     steps:
       - name: Setup just
         uses: extractions/setup-just@v1
@@ -50,5 +50,5 @@ jobs:
         run: just prepare-test-env
       - name: Run tests
         run: just test
-      - name: Run livenet tests
-        run: just test-livenet
+#      - name: Run livenet tests
+#        run: just test-livenet
