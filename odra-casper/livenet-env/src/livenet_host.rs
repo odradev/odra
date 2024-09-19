@@ -107,7 +107,11 @@ impl HostContext for LivenetHost {
             .map_err(|_| EventError::CouldntExtractEventData)
     }
 
-    fn get_native_event(&self, _contract_address: &Address, _index: u32) -> Result<Bytes, EventError> {
+    fn get_native_event(
+        &self,
+        _contract_address: &Address,
+        _index: u32
+    ) -> Result<Bytes, EventError> {
         todo!("get_native_event not implemented for LivenetHost")
     }
 

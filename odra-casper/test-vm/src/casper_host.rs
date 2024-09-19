@@ -66,7 +66,11 @@ impl HostContext for CasperHost {
         self.vm.borrow().get_event(contract_address, index)
     }
 
-    fn get_native_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
+    fn get_native_event(
+        &self,
+        contract_address: &Address,
+        index: u32
+    ) -> Result<Bytes, EventError> {
         if !contract_address.is_contract() {
             return Err(EventError::TriedToQueryEventForNonContract);
         }

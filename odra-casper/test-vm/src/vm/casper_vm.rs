@@ -1,4 +1,7 @@
-use odra_core::casper_types::{AddressableEntity, AddressableEntityHash, EntityAddr, GenesisConfig, GenesisConfigBuilder, HashAddr, Package, PackageHash, ProtocolVersion};
+use odra_core::casper_types::{
+    AddressableEntity, AddressableEntityHash, EntityAddr, GenesisConfig, GenesisConfigBuilder,
+    HashAddr, Package, PackageHash, ProtocolVersion
+};
 use odra_core::consts::*;
 use odra_core::prelude::*;
 use odra_core::OdraResult;
@@ -24,6 +27,7 @@ use std::rc::Rc;
 use odra_core::casper_types::account::{Account, AccountHash};
 use odra_core::casper_types::addressable_entity::NamedKeys;
 use odra_core::casper_types::bytesrepr::{Bytes, ToBytes};
+use odra_core::casper_types::contract_messages::MessagePayload;
 use odra_core::casper_types::contracts::ContractHash;
 use odra_core::casper_types::{
     bytesrepr::FromBytes, CLTyped, GenesisAccount, PublicKey, RuntimeArgs, U512
@@ -41,7 +45,6 @@ use odra_core::{
     CallDef, ContractEnv
 };
 use odra_core::{Address, ExecutionError, OdraError, VmError};
-use odra_core::casper_types::contract_messages::MessagePayload;
 
 /// Casper virtual machine utilizing [LmdbWasmTestBuilder].
 pub struct CasperVm {
@@ -137,12 +140,21 @@ impl CasperVm {
     /// The index may be negative, in which case it is interpreted as an offset from the end of the event list.
     ///
     /// Returns [EventError::IndexOutOfBounds] if the index is out of bounds.
-    pub fn get_native_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
-        let messages = self.messages.get(contract_address).ok_or(EventError::IndexOutOfBounds)?;
-        let message = messages.get(index as usize).ok_or(EventError::IndexOutOfBounds)?;
+    pub fn get_native_event(
+        &self,
+        contract_address: &Address,
+        index: u32
+    ) -> Result<Bytes, EventError> {
+        let messages = self
+            .messages
+            .get(contract_address)
+            .ok_or(EventError::IndexOutOfBounds)?;
+        let message = messages
+            .get(index as usize)
+            .ok_or(EventError::IndexOutOfBounds)?;
         match message {
-            MessagePayload::String(_) => { Err(EventError::CouldntExtractEventData)}
-            MessagePayload::Bytes(b) => {Ok(b.clone())}
+            MessagePayload::String(_) => Err(EventError::CouldntExtractEventData),
+            MessagePayload::Bytes(b) => Ok(b.clone())
         }
     }
 
@@ -157,7 +169,10 @@ impl CasperVm {
 
     /// Gets the count of native events for the given contract address.
     pub fn get_native_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
-        let messages = self.messages.get(contract_address).ok_or(EventError::IndexOutOfBounds)?;
+        let messages = self
+            .messages
+            .get(contract_address)
+            .ok_or(EventError::IndexOutOfBounds)?;
         Ok(messages.len() as u32)
     }
 
@@ -244,20 +259,19 @@ impl CasperVm {
         let messages = messages.messages();
         messages.iter().for_each(|message| {
             let payload = message.payload().clone();
-            let addressable_entity = self.get_addressable_entity_from_entity_addr(message.entity_hash());
+            let addressable_entity =
+                self.get_addressable_entity_from_entity_addr(message.entity_hash());
             let address = Address::Contract(addressable_entity.package_hash());
             let contract_hash = message.entity_hash().value();
-            self.messages
-                .entry(address.into())
-                .or_insert_with(Vec::new)
-                .push(payload);
+            self.messages.entry(address).or_default().push(payload);
         });
     }
 
     fn get_addressable_entity(&self, address: &Address) -> AddressableEntity {
-        let query_result = self.context.query(None,
-                                              Key::Package(address.value()),
-                                              &[]).unwrap();
+        let query_result = self
+            .context
+            .query(None, Key::Package(address.value()), &[])
+            .unwrap();
         let entity_hash = if let StoredValue::Package(package) = query_result {
             package.current_entity_hash()
         } else {
@@ -265,59 +279,63 @@ impl CasperVm {
                 "Stored value is not an adressable entity: {:?}",
                 query_result
             );
-        }.unwrap();
+        }
+        .unwrap();
 
         self.context.get_addressable_entity(entity_hash).unwrap()
     }
 
-    fn get_addressable_entity_from_entity_addr(&self, entity_addr: &EntityAddr) -> AddressableEntity {
-        let query_result = self.context.query(None,
-                                              Key::AddressableEntity(*entity_addr),
-                                              &[]).unwrap();
-        let addressable_entity = if let StoredValue::AddressableEntity(entity) = query_result {
+    fn get_addressable_entity_from_entity_addr(
+        &self,
+        entity_addr: &EntityAddr
+    ) -> AddressableEntity {
+        let query_result = self
+            .context
+            .query(None, Key::AddressableEntity(*entity_addr), &[])
+            .unwrap();
+        if let StoredValue::AddressableEntity(entity) = query_result {
             entity
         } else {
             panic!(
                 "Stored value is not an adressable entity: {:?}",
                 query_result
             );
-        };
-        addressable_entity
+        }
     }
 
     fn get_addressable_entity_hash(&self, address: &Address) -> AddressableEntityHash {
-        let query_result = self.context.query(None,
-                                              Key::Package(address.value()),
-                                              &[]).unwrap();
-        let entity_hash = if let StoredValue::Package(package) = query_result {
+        let query_result = self
+            .context
+            .query(None, Key::Package(address.value()), &[])
+            .unwrap();
+        if let StoredValue::Package(package) = query_result {
             package.current_entity_hash()
         } else {
             panic!(
                 "Stored value is not an adressable entity: {:?}",
                 query_result
             );
-        }.unwrap();
-
-        entity_hash
+        }
+        .unwrap()
     }
     fn get_messages(&self, address: &Address) {
         let entity = self.get_addressable_entity(address);
         let (topic_name, message_topic_hash) = entity
-        .message_topics()
-        .iter()
-        .next()
-        .expect("should have at least one topic");
+            .message_topics()
+            .iter()
+            .next()
+            .expect("should have at least one topic");
 
         let entity_hash = self.get_addressable_entity_hash(address).value();
 
-        let q = self.context.query(
-            None,
-            Key::message_topic(
-                EntityAddr::SmartContract(entity_hash),
-                message_topic_hash.clone()
-            ),
-            &[]
-        ).unwrap();
+        let q = self
+            .context
+            .query(
+                None,
+                Key::message_topic(EntityAddr::SmartContract(entity_hash), *message_topic_hash),
+                &[]
+            )
+            .unwrap();
     }
 
     /// Creates a new contract with the specified name, initialization arguments, and entry points caller.
@@ -342,6 +360,7 @@ impl CasperVm {
             panic!("Revert: Contract deploy failed {:?}", odra_error);
         } else {
             let package_hash = self.package_hash_from_name(&package_hash_key_name);
+            self.collect_messages();
             package_hash.into()
         }
     }
@@ -502,7 +521,6 @@ impl CasperVm {
         }
     }
 
-
     fn genesis_accounts(
         key_pairs: &BTreeMap<Address, (SecretKey, PublicKey)>
     ) -> Vec<GenesisAccount> {
@@ -565,7 +583,7 @@ impl CasperVm {
             gas_used: BTreeMap::new(),
             gas_report: GasReport::default(),
             key_pairs,
-            messages: Default::default(),
+            messages: Default::default()
         }
     }
 

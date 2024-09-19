@@ -15,6 +15,7 @@ pub struct PartyStarted {
     pub block_time: u64
 }
 
+/// Native version of the above.
 #[odra::event]
 pub struct NativePartyStarted {
     /// Address of the caller.
@@ -37,6 +38,7 @@ impl PartyContract {
         });
     }
 
+    /// Emits the events.
     pub fn emit(&mut self) {
         self.env().emit_event(PartyStarted {
             caller: self.env().caller(),
@@ -58,7 +60,6 @@ mod tests {
     fn test_party() {
         let test_env = odra_test::env();
         let mut party_contract = PartyContract::deploy(&test_env, NoArgs);
-        party_contract.emit();
         assert!(test_env.emitted_event(
             &party_contract,
             &PartyStarted {
@@ -73,5 +74,27 @@ mod tests {
                 block_time: 0
             }
         ));
+        assert_eq!(test_env.events_count(&party_contract), 1);
+        assert_eq!(test_env.native_events_count(&party_contract), 1);
+        test_env.advance_block_time(42);
+        test_env.set_caller(test_env.get_account(1));
+        party_contract.emit();
+
+        assert!(test_env.emitted_event(
+            &party_contract,
+            &PartyStarted {
+                caller: test_env.get_account(1),
+                block_time: 42
+            }
+        ));
+        assert!(test_env.emitted_native_event(
+            &party_contract,
+            &NativePartyStarted {
+                caller: test_env.get_account(1),
+                block_time: 42
+            }
+        ));
+        assert_eq!(test_env.events_count(&party_contract), 2);
+        assert_eq!(test_env.native_events_count(&party_contract), 2);
     }
 }

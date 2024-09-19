@@ -7,7 +7,11 @@
 //!
 //! Build on top of the [casper_contract] crate.
 
+use crate::consts;
+use crate::consts::NATIVE_EVENT_TOPIC;
+use casper_contract::contract_api::runtime::emit_message;
 use casper_contract::contract_api::storage::new_uref;
+use casper_contract::ext_ffi::casper_emit_message;
 use casper_contract::{
     contract_api::{
         self, runtime, storage,
@@ -20,10 +24,9 @@ use casper_contract::{
     unwrap_or_revert::UnwrapOrRevert
 };
 use core::mem::MaybeUninit;
-use casper_contract::contract_api::runtime::emit_message;
-use casper_contract::ext_ffi::casper_emit_message;
 use odra_core::casper_types::addressable_entity::NamedKeys;
 use odra_core::casper_types::bytesrepr::deserialize;
+use odra_core::casper_types::contract_messages::{MessagePayload, MessageTopicOperation};
 use odra_core::casper_types::contracts::ContractVersion;
 use odra_core::casper_types::system::Caller;
 use odra_core::casper_types::{
@@ -38,9 +41,6 @@ use odra_core::{
     casper_event_standard::{self, Schema, Schemas}
 };
 use odra_core::{prelude::*, Address, CallDef, ExecutionError};
-use odra_core::casper_types::contract_messages::{MessagePayload, MessageTopicOperation};
-use crate::consts;
-use crate::consts::NATIVE_EVENT_TOPIC;
 
 lazy_static::lazy_static! {
     static ref STATE: URef = {
@@ -87,7 +87,6 @@ pub fn install_contract(
     // Prepare message topic
     let mut mesage_topics = BTreeMap::new();
     mesage_topics.insert(NATIVE_EVENT_TOPIC.to_string(), MessageTopicOperation::Add);
-
 
     // Create new contract.
     let access_uref_key = format!("{}_access_token", package_hash_key);
