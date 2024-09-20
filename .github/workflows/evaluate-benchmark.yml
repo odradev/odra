@@ -34,7 +34,7 @@ jobs:
         id: set-benchmark-filename
         run: echo "BASE_BENCHMARK=${GITHUB_BASE_REF}" | sed 's:/:-:g' | sed 's:\.:-:g' >> $GITHUB_OUTPUT
       - name: Download base benchmark report for ${{ github.base_ref }}
-        uses: dawidd6/action-download-artifact@v3
+        uses: dawidd6/action-download-artifact@v4
         with:
           name: ${{ steps.set-benchmark-filename.outputs.BASE_BENCHMARK }}
           branch: ${{ github.base_ref }}
@@ -54,7 +54,7 @@ jobs:
           issue-number: ${{ github.event.number }}
           body-path: benchmark/benchmark_report.txt
       - name: Upload full report artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: benchmark-report
           path: benchmark/benchmark_full_report.txt

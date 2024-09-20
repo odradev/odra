@@ -7,6 +7,8 @@ Changelog for `odra`.
 - `OdraContract` trait grouping module-related structures.
 ### Changed
 - `Deployer` is no longer implemented for `HostRef` but for `OdraContract`.
+- `chainspec.toml` file has been updated to be compatible with the latest version
+of `casper-execution-engine`.
 
 ## [1.2.0] - 2024-07-30
 ### Added
