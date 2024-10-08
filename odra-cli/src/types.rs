@@ -1,19 +1,21 @@
 #![allow(dead_code, unused_variables)]
-use std::{fmt::{Debug, Display}, str::FromStr};
+use std::{
+    fmt::{Debug, Display},
+    str::FromStr
+};
 
-use odra_core::{
+use odra::schema::casper_contract_schema::NamedCLType;
+use odra::{
     casper_types::{
         bytesrepr::{
-            FromBytes, ToBytes, OPTION_NONE_TAG, OPTION_SOME_TAG, RESULT_ERR_TAG, RESULT_OK_TAG,
+            FromBytes, ToBytes, OPTION_NONE_TAG, OPTION_SOME_TAG, RESULT_ERR_TAG, RESULT_OK_TAG
         },
-        AsymmetricType, CLType, Key, PublicKey, URef, U128, U256, U512,
+        AsymmetricType, CLType, Key, PublicKey, URef, U128, U256, U512
     },
-    Address,
+    Address
 };
-use odra_schema::casper_contract_schema::NamedCLType;
 
 use thiserror::Error;
-
 
 const PREFIX_ERROR: &str = "err:";
 const PREFIX_OK: &str = "ok:";
@@ -25,7 +27,7 @@ pub enum Format {
     Option,
     Tuple { actual: usize, expected: usize },
     Map,
-    ByteArray,
+    ByteArray
 }
 
 impl Debug for Format {
@@ -47,15 +49,16 @@ impl Format {
         match self {
             Format::Result => vec![String::from("'ok:{value}'"), String::from("'err:{value}'")],
             Format::Option => vec![String::from("'none'"), String::from("'some:{value}'")],
-            Format::Tuple { actual, expected } => vec![
-                format!("expected tuple with {} elements, found {}", expected, actual)
-            ],
+            Format::Tuple { actual, expected } => vec![format!(
+                "expected tuple with {} elements, found {}",
+                expected, actual
+            )],
             Format::Map => vec![String::from("'key1:value1,key2:value2,...'")],
             Format::ByteArray => vec![
                 String::from("'0x000102...'"),
                 String::from("'0x00,0x01,...'"),
                 String::from("'0,1,...'"),
-            ],
+            ]
         }
     }
 }
@@ -65,15 +68,15 @@ pub enum Error {
     #[error("Invalid hex string")]
     InvalidHexString,
     #[error("Hex decode error")]
-    HexDecodeError,
+    HexDecode,
     #[error("Parse error: {0}")]
-    ParseError(String),
+    Parse(String),
     #[error("BigUint error: {0}")]
-    BigUintError(String),
+    BigUint(String),
     #[error("Serialization error")]
-    SerializationError,
+    Serialization,
     #[error("Deserialization error")]
-    DeserializationError,
+    Deserialization,
     #[error("Invalid URef")]
     InvalidURef,
     #[error("Invalid public key")]
@@ -83,7 +86,7 @@ pub enum Error {
     #[error("Formatting error:\nexpected formats\n{0}")]
     Formatting(Format),
     #[error("Unexpected error: {0}")]
-    Other(String),
+    Other(String)
 }
 
 type TypeResult<T> = Result<T, Error>;
@@ -92,7 +95,7 @@ macro_rules! call_from_bytes {
     ($ty:ty, $value:ident) => {
         <$ty as FromBytes>::from_bytes($value)
             .map(|(v, rem)| (v.to_string(), rem))
-            .map_err(|_| Error::SerializationError)
+            .map_err(|_| Error::Serialization)
     };
 }
 
@@ -100,24 +103,24 @@ macro_rules! call_to_bytes {
     ($ty:ty, $value:ident) => {
         parse_value::<$ty>($value)?
             .to_bytes()
-            .map_err(|_| Error::SerializationError)
+            .map_err(|_| Error::Serialization)
     };
 }
 
 macro_rules! big_int_to_bytes {
     ($ty:ident, $value:ident) => {
         $ty::from_dec_str($value)
-            .map_err(|_| Error::BigUintError($value.to_string()))?
+            .map_err(|_| Error::BigUint($value.to_string()))?
             .to_bytes()
-            .map_err(|_| Error::SerializationError)
+            .map_err(|_| Error::Serialization)
     };
 }
 
 pub(crate) fn parse_value<T: FromStr>(value: &str) -> TypeResult<T>
 where
-    <T as FromStr>::Err: Debug,
+    <T as FromStr>::Err: Debug
 {
-    <T as FromStr>::from_str(value).map_err(|_| Error::ParseError(value.to_string()))
+    <T as FromStr>::from_str(value).map_err(|_| Error::Parse(value.to_string()))
 }
 
 pub(crate) fn named_cl_type_to_cl_type(ty: &NamedCLType) -> CLType {
@@ -140,31 +143,31 @@ pub(crate) fn named_cl_type_to_cl_type(ty: &NamedCLType) -> CLType {
         NamedCLType::ByteArray(n) => CLType::ByteArray(*n),
         NamedCLType::Result { ok, err } => CLType::Result {
             ok: Box::new(named_cl_type_to_cl_type(ok)),
-            err: Box::new(named_cl_type_to_cl_type(err)),
+            err: Box::new(named_cl_type_to_cl_type(err))
         },
         NamedCLType::Map { key, value } => CLType::Map {
             key: Box::new(named_cl_type_to_cl_type(key)),
-            value: Box::new(named_cl_type_to_cl_type(value)),
+            value: Box::new(named_cl_type_to_cl_type(value))
         },
         NamedCLType::Tuple1(ty) => CLType::Tuple1([Box::new(named_cl_type_to_cl_type(&ty[0]))]),
         NamedCLType::Tuple2(ty) => CLType::Tuple2([
             Box::new(named_cl_type_to_cl_type(&ty[0])),
-            Box::new(named_cl_type_to_cl_type(&ty[1])),
+            Box::new(named_cl_type_to_cl_type(&ty[1]))
         ]),
         NamedCLType::Tuple3(ty) => CLType::Tuple3([
             Box::new(named_cl_type_to_cl_type(&ty[0])),
             Box::new(named_cl_type_to_cl_type(&ty[1])),
-            Box::new(named_cl_type_to_cl_type(&ty[2])),
+            Box::new(named_cl_type_to_cl_type(&ty[2]))
         ]),
         NamedCLType::Custom(_) => CLType::Any,
-        NamedCLType::Unit => CLType::Unit,
+        NamedCLType::Unit => CLType::Unit
     }
 }
 
 pub(crate) fn vec_into_bytes(ty: &NamedCLType, input: Vec<&str>) -> TypeResult<Vec<u8>> {
     let mut result = _to_bytes(input.len() as u32)?;
     for value in input {
-        result.extend(into_bytes(ty, &value)?);
+        result.extend(into_bytes(ty, value)?);
     }
     Ok(result)
 }
@@ -185,11 +188,11 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
         NamedCLType::URef => URef::from_formatted_str(input)
             .map_err(|_| Error::InvalidURef)?
             .to_bytes()
-            .map_err(|_| Error::SerializationError),
+            .map_err(|_| Error::Serialization),
         NamedCLType::PublicKey => PublicKey::from_hex(input)
             .map_err(|_| Error::InvalidPublicKey)?
             .to_bytes()
-            .map_err(|_| Error::SerializationError),
+            .map_err(|_| Error::Serialization),
         NamedCLType::Option(ty) => {
             if input == "none" {
                 Ok(vec![OPTION_NONE_TAG])
@@ -207,12 +210,12 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
             if input.starts_with(PREFIX_ERROR) {
                 let value = input.strip_prefix(PREFIX_ERROR).unwrap();
                 result.push(RESULT_ERR_TAG);
-                result.extend(into_bytes(err, &value)?);
+                result.extend(into_bytes(err, value)?);
                 Ok(result)
             } else if input.starts_with(PREFIX_OK) {
                 let value = input.strip_prefix(PREFIX_OK).unwrap();
                 result.push(RESULT_OK_TAG);
-                result.extend(into_bytes(ok, &value)?);
+                result.extend(into_bytes(ok, value)?);
                 Ok(result)
             } else {
                 Err(Error::Formatting(Format::Result))
@@ -222,7 +225,10 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
         NamedCLType::Tuple2(ty) => {
             let parts = input.split(',').collect::<Vec<_>>();
             if parts.len() != 2 {
-                return Err(Error::Formatting(Format::Tuple { actual: parts.len(), expected: 2 }));
+                return Err(Error::Formatting(Format::Tuple {
+                    actual: parts.len(),
+                    expected: 2
+                }));
             }
             let mut result = vec![];
             result.extend(into_bytes(&ty[0], parts[0])?);
@@ -232,7 +238,10 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
         NamedCLType::Tuple3(ty) => {
             let parts = input.split(',').collect::<Vec<_>>();
             if parts.len() != 3 {
-                return Err(Error::Formatting(Format::Tuple { actual: parts.len(), expected: 3 }));
+                return Err(Error::Formatting(Format::Tuple {
+                    actual: parts.len(),
+                    expected: 3
+                }));
             }
             let mut result = vec![];
             result.extend(into_bytes(&ty[0], parts[0])?);
@@ -255,8 +264,8 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
 
             let mut result = _to_bytes(parts.len() as u32)?;
             for (k, v) in parts.iter() {
-                result.extend(into_bytes(&key, k)?);
-                result.extend(into_bytes(&value, v)?);
+                result.extend(into_bytes(key, k)?);
+                result.extend(into_bytes(value, v)?);
             }
             Ok(result)
         }
@@ -296,10 +305,10 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
                             .map_err(|_| Error::Formatting(Format::ByteArray))
                     }
                 }
-                Err(e) => Err(e),
+                Err(e) => Err(e)
             }
         }
-        NamedCLType::Custom(_) => unreachable!("should not be here"),
+        NamedCLType::Custom(_) => unreachable!("should not be here")
     }
 }
 
@@ -319,10 +328,10 @@ pub(crate) fn from_bytes<'a>(ty: &NamedCLType, input: &'a [u8]) -> TypeResult<(S
         NamedCLType::URef => call_from_bytes!(URef, input),
         NamedCLType::PublicKey => call_from_bytes!(PublicKey, input),
         NamedCLType::Option(ty) => {
-            if input.get(0) == Some(&OPTION_NONE_TAG) {
+            if input.first() == Some(&OPTION_NONE_TAG) {
                 Ok(("null".to_string(), input))
             } else {
-                from_bytes(&*ty, &input[1..])
+                from_bytes(ty, &input[1..])
             }
         }
         NamedCLType::Result { ok, err } => {
@@ -336,7 +345,7 @@ pub(crate) fn from_bytes<'a>(ty: &NamedCLType, input: &'a [u8]) -> TypeResult<(S
                     let (value, rem) = from_bytes(ok, rem)?;
                     Ok((format!("Ok({})", value), rem))
                 }
-                _ => Err(Error::Other("Invalid result variant".to_string())),
+                _ => Err(Error::Other("Invalid result variant".to_string()))
             }
         }
         NamedCLType::Tuple1(ty) => {
@@ -356,7 +365,7 @@ pub(crate) fn from_bytes<'a>(ty: &NamedCLType, input: &'a [u8]) -> TypeResult<(S
         }
         NamedCLType::Unit => <() as FromBytes>::from_bytes(input)
             .map(|(v, rem)| ("".to_string(), rem))
-            .map_err(|_| Error::DeserializationError),
+            .map_err(|_| Error::Deserialization),
 
         NamedCLType::List(ty) => {
             let (num_keys, mut stream) = _from_bytes::<u32>(input)?;
@@ -364,7 +373,7 @@ pub(crate) fn from_bytes<'a>(ty: &NamedCLType, input: &'a [u8]) -> TypeResult<(S
             for _ in 0..num_keys {
                 let (v, rem) = from_bytes(ty, stream)?;
                 result.push_str(&v);
-                result.push_str(",");
+                result.push(',');
                 stream = rem;
             }
             if num_keys > 0 {
@@ -377,9 +386,9 @@ pub(crate) fn from_bytes<'a>(ty: &NamedCLType, input: &'a [u8]) -> TypeResult<(S
 
             let mut hex = "0x".to_string();
             let mut dec = "".to_string();
-            for i in 0..size {
-                dec.push_str(&format!("{}, ", input[i]));
-                hex.push_str(&format!("{:02x}", input[i]));
+            for val in input.iter().take(size) {
+                dec.push_str(&format!("{}, ", val));
+                hex.push_str(&format!("{:02x}", val));
             }
 
             // remove trailing comma
@@ -406,25 +415,25 @@ pub(crate) fn from_bytes<'a>(ty: &NamedCLType, input: &'a [u8]) -> TypeResult<(S
             }
             Ok((result, stream))
         }
-        NamedCLType::Custom(_) => unreachable!("should not be here"),
+        NamedCLType::Custom(_) => unreachable!("should not be here")
     }
 }
 
 fn parse_hex(input: &str) -> TypeResult<Vec<u8>> {
     match input.strip_prefix("0x") {
-        Some(data) => hex::decode(data).map_err(|_| Error::HexDecodeError),
-        None => Err(Error::InvalidHexString),
+        Some(data) => hex::decode(data).map_err(|_| Error::HexDecode),
+        None => Err(Error::InvalidHexString)
     }
 }
 
 #[inline]
 pub(crate) fn _from_bytes<T: FromBytes>(input: &[u8]) -> TypeResult<(T, &[u8])> {
-    T::from_bytes(input).map_err(|_| Error::DeserializationError)
+    T::from_bytes(input).map_err(|_| Error::Deserialization)
 }
 
 #[inline]
 pub(crate) fn _to_bytes<T: ToBytes>(input: T) -> TypeResult<Vec<u8>> {
-    input.to_bytes().map_err(|_| Error::SerializationError)
+    input.to_bytes().map_err(|_| Error::Serialization)
 }
 
 fn validate_byte_array_size(expected: usize, actual: usize) -> TypeResult<()> {

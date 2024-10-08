@@ -2,8 +2,8 @@ use anyhow::Result;
 use clap::ArgMatches;
 use contract::ContractCmd;
 use deploy::DeployCmd;
-use odra_core::host::HostEnv;
-use odra_schema::SchemaEntrypoints;
+use odra::host::HostEnv;
+use odra::schema::SchemaEntrypoints;
 use scenario::ScenarioCmd;
 
 use crate::{CustomTypeSet, DeployScript, Scenario, ScenarioMetadata};
@@ -22,13 +22,13 @@ pub(crate) trait OdraCommand {
 pub(crate) enum OdraCliCommand {
     Deploy(DeployCmd),
     Scenario(ScenarioCmd),
-    Contract(ContractCmd),
+    Contract(ContractCmd)
 }
 
 impl OdraCliCommand {
     pub fn new_deploy(script: impl DeployScript + 'static) -> Self {
         OdraCliCommand::Deploy(DeployCmd {
-            script: Box::new(script),
+            script: Box::new(script)
         })
     }
 
@@ -46,7 +46,7 @@ impl OdraCommand for OdraCliCommand {
         match self {
             OdraCliCommand::Deploy(deploy) => deploy.name(),
             OdraCliCommand::Scenario(scenario) => scenario.name(),
-            OdraCliCommand::Contract(contract) => contract.name(),
+            OdraCliCommand::Contract(contract) => contract.name()
         }
     }
 
@@ -54,7 +54,7 @@ impl OdraCommand for OdraCliCommand {
         match self {
             OdraCliCommand::Deploy(deploy) => deploy.run(env, args, types),
             OdraCliCommand::Scenario(scenario) => scenario.run(env, args, types),
-            OdraCliCommand::Contract(contract) => contract.run(env, args, types),
+            OdraCliCommand::Contract(contract) => contract.run(env, args, types)
         }
     }
 }

@@ -336,7 +336,10 @@ impl HostEnv {
             .iter()
             .for_each(|contract_address| {
                 if binding.get(contract_address).is_none() {
-                    binding.insert(*contract_address, backend.get_events_count(contract_address));
+                    binding.insert(
+                        *contract_address,
+                        backend.get_events_count(contract_address)
+                    );
                 }
                 let events_count = binding.get_mut(contract_address).unwrap();
                 let old_events_last_id = *events_count;

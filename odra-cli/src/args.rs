@@ -1,8 +1,8 @@
 use std::str::FromStr;
 
 use clap::{Arg, ArgAction, ArgMatches};
-use odra_core::casper_types::{CLType, CLValue, RuntimeArgs};
-use odra_schema::casper_contract_schema::{Argument, CustomType, Entrypoint, NamedCLType, Type};
+use odra::casper_types::{CLType, CLValue, RuntimeArgs};
+use odra::schema::casper_contract_schema::{Argument, CustomType, Entrypoint, NamedCLType, Type};
 use serde_json::Value;
 use thiserror::Error;
 
@@ -19,7 +19,7 @@ pub enum ArgsError {
     #[error("Arg not found: {0}")]
     ArgNotFound(String),
     #[error("Arg type not found: {0}")]
-    ArgTypeNotFound(String),
+    ArgTypeNotFound(String)
 }
 
 /// A typed command argument.
@@ -29,7 +29,7 @@ pub struct CommandArg {
     pub required: bool,
     pub description: String,
     pub ty: NamedCLType,
-    pub is_list_element: bool,
+    pub is_list_element: bool
 }
 
 impl CommandArg {
@@ -38,14 +38,14 @@ impl CommandArg {
         description: &str,
         ty: NamedCLType,
         required: bool,
-        is_list_element: bool,
+        is_list_element: bool
     ) -> Self {
         Self {
             name: name.to_string(),
             required,
             description: description.to_string(),
             ty,
-            is_list_element,
+            is_list_element
         }
     }
 }
@@ -60,7 +60,7 @@ impl From<CommandArg> for Arg {
 
         match arg.is_list_element {
             true => result.action(ArgAction::Append),
-            false => result.action(ArgAction::Set),
+            false => result.action(ArgAction::Set)
         }
     }
 }
@@ -78,7 +78,7 @@ pub fn entry_point_args(entry_point: &Entrypoint, types: &CustomTypeSet) -> Vec<
 fn flat_arg(
     arg: &Argument,
     types: &CustomTypeSet,
-    is_list_element: bool,
+    is_list_element: bool
 ) -> Result<Vec<CommandArg>, ArgsError> {
     match &arg.ty.0 {
         NamedCLType::Custom(name) => {
@@ -87,7 +87,7 @@ fn flat_arg(
                 .find(|ty| {
                     let type_name = match ty {
                         CustomType::Struct { name, .. } => &name.0,
-                        CustomType::Enum { name, .. } => &name.0,
+                        CustomType::Enum { name, .. } => &name.0
                     };
                     name == type_name
                 })
@@ -102,7 +102,7 @@ fn flat_arg(
                                 name: format!("{}.{}", arg.name, field.name),
                                 ty: field.ty.clone(),
                                 optional: arg.optional,
-                                description: field.description.clone(),
+                                description: field.description.clone()
                             };
                             flat_arg(&field_arg, types, is_list_element)
                         })
@@ -117,7 +117,7 @@ fn flat_arg(
                                 name: format!("{}.{}", arg.name, variant.name.to_lowercase()),
                                 ty: variant.ty.clone(),
                                 optional: arg.optional,
-                                description: variant.description.clone(),
+                                description: variant.description.clone()
                             };
                             flat_arg(&variant_arg, types, is_list_element)
                         })
@@ -138,15 +138,15 @@ fn flat_arg(
             &arg.description.clone().unwrap_or_default(),
             arg.ty.0.clone(),
             !arg.optional,
-            is_list_element,
-        )]),
+            is_list_element
+        )])
     }
 }
 
 pub fn compose(
     entry_point: &Entrypoint,
     args: &ArgMatches,
-    types: &CustomTypeSet,
+    types: &CustomTypeSet
 ) -> Result<RuntimeArgs, ArgsError> {
     let mut runtime_args = RuntimeArgs::new();
 
@@ -167,8 +167,7 @@ pub fn compose(
                 NamedCLType::List(inner) => {
                     let input = input
                         .iter()
-                        .map(|v| v.split(',').collect::<Vec<_>>())
-                        .flatten()
+                        .flat_map(|v| v.split(',').collect::<Vec<_>>())
                         .collect();
                     let bytes = types::vec_into_bytes(inner, input)?;
                     let cl_type = CLType::List(Box::new(types::named_cl_type_to_cl_type(inner)));
@@ -192,7 +191,7 @@ pub fn compose(
 #[derive(Debug, PartialEq)]
 struct ComposedArg<'a> {
     name: String,
-    values: Vec<Values<'a>>,
+    values: Vec<Values<'a>>
 }
 type Values<'a> = (NamedCLType, Vec<&'a str>);
 
@@ -200,7 +199,7 @@ impl<'a> ComposedArg<'a> {
     fn new(name: &str) -> Self {
         Self {
             name: name.to_string(),
-            values: vec![],
+            values: vec![]
         }
     }
 
@@ -255,16 +254,16 @@ fn build_complex_arg(args: Vec<CommandArg>, matches: &ArgMatches) -> Result<CLVa
 
         let parts = arg
             .name
-            .split(".")
+            .split('.')
             .map(|s| s.to_string())
             .collect::<Vec<_>>();
         let parent = parts[parts.len() - 2].clone();
 
-        if &current_group.name != &parent && is_list_element {
+        if current_group.name != parent && is_list_element {
             current_group.flush(&mut buffer)?;
             current_group = ComposedArg::new(&parent);
             current_group.add((ty, args));
-        } else if &current_group.name == &parent && is_list_element {
+        } else if current_group.name == parent && is_list_element {
             current_group.add((ty, args));
         } else {
             current_group.flush(&mut buffer)?;
@@ -279,7 +278,7 @@ fn build_complex_arg(args: Vec<CommandArg>, matches: &ArgMatches) -> Result<CLVa
 pub fn decode<'a>(
     bytes: &'a [u8],
     ty: &Type,
-    types: &'a CustomTypeSet,
+    types: &'a CustomTypeSet
 ) -> Result<(String, &'a [u8]), ArgsError> {
     match &ty.0 {
         NamedCLType::Custom(name) => {
@@ -288,7 +287,7 @@ pub fn decode<'a>(
                 .find(|ty| {
                     let type_name = match ty {
                         CustomType::Struct { name, .. } => &name.0,
-                        CustomType::Enum { name, .. } => &name.0,
+                        CustomType::Enum { name, .. } => &name.0
                     };
                     name == type_name
                 })
@@ -334,10 +333,10 @@ pub fn decode<'a>(
                 decoded.push_str(format!("{},", value).as_str());
             }
             decoded.pop();
-            decoded.push_str("]");
+            decoded.push(']');
             match &**inner {
                 NamedCLType::Custom(_) => Ok((to_json(&decoded)?, bytes)),
-                _ => Ok((decoded, bytes)),
+                _ => Ok((decoded, bytes))
             }
         }
         _ => {
@@ -366,17 +365,15 @@ pub fn attached_value_arg() -> Arg {
 #[cfg(test)]
 mod t {
     use clap::{Arg, Command};
-    use odra::{
-        casper_types::{bytesrepr::Bytes, runtime_args, RuntimeArgs},
-        schema::casper_contract_schema::{NamedCLType, Type},
-    };
+    use odra::casper_types::{bytesrepr::Bytes, runtime_args, RuntimeArgs};
+    use odra::schema::casper_contract_schema::{NamedCLType, Type};
 
     use crate::test_utils::{self, NameMintInfo, PaymentInfo, PaymentVoucher};
 
     const NAMED_TOKEN_METADATA_BYTES: [u8; 50] = [
         4, 0, 0, 0, 107, 112, 111, 98, 0, 32, 74, 169, 209, 1, 0, 0, 1, 1, 226, 74, 54, 110, 186,
         196, 135, 233, 243, 218, 49, 175, 91, 142, 42, 103, 172, 205, 97, 76, 95, 247, 61, 188, 60,
-        100, 10, 52, 124, 59, 94, 73,
+        100, 10, 52, 124, 59, 94, 73
     ];
 
     const NAMED_TOKEN_METADATA_JSON: &str = r#"{

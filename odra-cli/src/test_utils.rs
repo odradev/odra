@@ -1,8 +1,8 @@
-use odra_core::{casper_types::U512, Address};
-use odra_schema::{
+use odra::schema::{
     casper_contract_schema::{Access, Argument, Entrypoint, NamedCLType, Type},
-    SchemaCustomTypes,
+    SchemaCustomTypes
 };
+use odra::{casper_types::U512, Address};
 
 use crate::{CommandArg, CustomTypeSet};
 
@@ -15,17 +15,17 @@ pub fn mock_entry_point() -> Entrypoint {
             Argument::new(
                 "voucher",
                 "",
-                NamedCLType::Custom("PaymentVoucher".to_string()),
+                NamedCLType::Custom("PaymentVoucher".to_string())
             ),
             Argument::new(
                 "signature",
                 "",
-                NamedCLType::List(Box::new(NamedCLType::U8)),
+                NamedCLType::List(Box::new(NamedCLType::U8))
             ),
         ],
         return_ty: Type(NamedCLType::Bool),
         is_contract_context: true,
-        access: Access::Public,
+        access: Access::Public
     }
 }
 
@@ -37,7 +37,7 @@ pub fn mock_command_args() -> Vec<CommandArg> {
             "",
             NamedCLType::String,
             true,
-            false,
+            false
         ),
         CommandArg::new("voucher.payment.amount", "", NamedCLType::U512, true, false),
         CommandArg::new("voucher.names.label", "", NamedCLType::String, true, true),
@@ -47,27 +47,22 @@ pub fn mock_command_args() -> Vec<CommandArg> {
             "",
             NamedCLType::U64,
             true,
-            true,
+            true
         ),
         CommandArg::new(
             "voucher.voucher_expiration",
             "",
             NamedCLType::U64,
             true,
-            false,
+            false
         ),
         CommandArg::new("signature", "", NamedCLType::U8, true, true),
     ]
 }
 
 pub fn custom_types() -> CustomTypeSet {
-    let mut types =
-        CustomTypeSet::from_iter(PaymentVoucher::schema_types().into_iter().filter_map(|t| t));
-    types.extend(
-        NameTokenMetadata::schema_types()
-            .into_iter()
-            .filter_map(|t| t),
-    );
+    let mut types = CustomTypeSet::from_iter(PaymentVoucher::schema_types().into_iter().flatten());
+    types.extend(NameTokenMetadata::schema_types().into_iter().flatten());
     types
 }
 
@@ -75,14 +70,14 @@ pub fn custom_types() -> CustomTypeSet {
 pub struct NameTokenMetadata {
     pub token_hash: String,
     pub expiration: u64,
-    pub resolver: Option<Address>,
+    pub resolver: Option<Address>
 }
 
 #[odra::odra_type]
 pub struct PaymentVoucher {
     pub payment: PaymentInfo,
     pub names: Vec<NameMintInfo>,
-    pub voucher_expiration: u64,
+    pub voucher_expiration: u64
 }
 
 impl PaymentVoucher {
@@ -90,7 +85,7 @@ impl PaymentVoucher {
         Self {
             payment,
             names,
-            voucher_expiration,
+            voucher_expiration
         }
     }
 }
@@ -99,7 +94,7 @@ impl PaymentVoucher {
 pub struct PaymentInfo {
     pub buyer: Address,
     pub payment_id: String,
-    pub amount: U512,
+    pub amount: U512
 }
 
 impl PaymentInfo {
@@ -107,7 +102,7 @@ impl PaymentInfo {
         Self {
             buyer: buyer.parse().unwrap(),
             payment_id: payment_id.to_string(),
-            amount: U512::from_dec_str(amount).unwrap(),
+            amount: U512::from_dec_str(amount).unwrap()
         }
     }
 }
@@ -116,7 +111,7 @@ impl PaymentInfo {
 pub struct NameMintInfo {
     pub label: String,
     pub owner: Address,
-    pub token_expiration: u64,
+    pub token_expiration: u64
 }
 
 impl NameMintInfo {
@@ -124,7 +119,7 @@ impl NameMintInfo {
         Self {
             label: label.to_string(),
             owner: owner.parse().unwrap(),
-            token_expiration,
+            token_expiration
         }
     }
 }

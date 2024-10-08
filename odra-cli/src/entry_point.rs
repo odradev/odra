@@ -1,12 +1,11 @@
 use clap::ArgMatches;
-use odra_core::{
-    casper_types::U512,
-    host::HostEnv,
-    CallDef,
-};
-use odra_schema::casper_contract_schema::{Entrypoint, NamedCLType};
+use odra::schema::casper_contract_schema::{Entrypoint, NamedCLType};
+use odra::{casper_types::U512, host::HostEnv, CallDef};
 
-use crate::{args::{self, ARG_ATTACHED_VALUE}, container, types, CustomTypeSet, DeployedContractsContainer};
+use crate::{
+    args::{self, ARG_ATTACHED_VALUE},
+    container, types, CustomTypeSet, DeployedContractsContainer
+};
 
 pub const DEFAULT_GAS: u64 = 20_000_000_000;
 
@@ -21,7 +20,7 @@ pub enum CallError {
     #[error("Contract not found")]
     ContractNotFound,
     #[error(transparent)]
-    ContractError(#[from] container::ContractError),
+    ContractError(#[from] container::ContractError)
 }
 
 pub fn call(
@@ -29,17 +28,17 @@ pub fn call(
     contract_name: &str,
     entry_point: &Entrypoint,
     args: &ArgMatches,
-    types: &CustomTypeSet,
+    types: &CustomTypeSet
 ) -> Result<String, CallError> {
     let container = DeployedContractsContainer::load()?;
     let amount = args
         .try_get_one::<String>(ARG_ATTACHED_VALUE)
         .ok()
         .flatten()
-        .map(|s| U512::from_dec_str(s).map_err(|_| types::Error::SerializationError))
+        .map(|s| U512::from_dec_str(s).map_err(|_| types::Error::Serialization))
         .unwrap_or(Ok(U512::zero()))?;
 
-    let runtime_args = args::compose(&entry_point, args, types)?;
+    let runtime_args = args::compose(entry_point, args, types)?;
     let contract_address = container
         .address(contract_name)
         .ok_or(CallError::ContractNotFound)?;

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::ArgMatches;
-use odra_core::host::HostEnv; 
-use odra_schema::casper_contract_schema::Entrypoint;
+use odra::host::HostEnv;
+use odra::schema::casper_contract_schema::Entrypoint;
 
 use crate::{entry_point, CustomTypeSet};
 
@@ -12,23 +12,23 @@ use super::OdraCommand;
 /// The contract command runs a contract with a given entry point.
 pub(crate) struct ContractCmd {
     name: String,
-    commands: Vec<Box<dyn OdraCommand>>,
+    commands: Vec<Box<dyn OdraCommand>>
 }
 
 impl ContractCmd {
-    pub fn new<T: odra_schema::SchemaEntrypoints>(contract_name: String) -> Self {
+    pub fn new<T: odra::schema::SchemaEntrypoints>(contract_name: String) -> Self {
         let commands = T::schema_entrypoints()
             .into_iter()
             .map(|entry_point| {
                 Box::new(CallCmd {
                     contract_name: contract_name.clone(),
-                    entry_point,
+                    entry_point
                 }) as Box<dyn OdraCommand>
             })
             .collect::<Vec<_>>();
         ContractCmd {
             name: contract_name,
-            commands,
+            commands
         }
     }
 }
@@ -56,7 +56,7 @@ impl OdraCommand for ContractCmd {
 /// The call command runs a contract with a given entry point.
 struct CallCmd {
     contract_name: String,
-    entry_point: Entrypoint,
+    entry_point: Entrypoint
 }
 
 impl OdraCommand for CallCmd {

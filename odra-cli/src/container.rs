@@ -1,10 +1,10 @@
 use std::{fs::File, io::Write, path::PathBuf, str::FromStr};
 
 use chrono::{DateTime, SecondsFormat, Utc};
-use odra_core::{
+use odra::{
     contract_def::HasIdent,
     host::{HostEnv, HostRef, HostRefLoader},
-    Address, OdraContract,
+    Address, OdraContract
 };
 use serde_derive::{Deserialize, Serialize};
 use thiserror::Error;
@@ -20,7 +20,7 @@ pub enum ContractError {
     #[error("Couldn't read file")]
     Io(#[from] std::io::Error),
     #[error("Couldn't {0} find contract")]
-    NotFound(String),
+    NotFound(String)
 }
 
 /// Struct representing the deployed contracts.
@@ -32,7 +32,7 @@ pub enum ContractError {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct DeployedContractsContainer {
     time: String,
-    contracts: Vec<DeployedContract>,
+    contracts: Vec<DeployedContract>
 }
 
 impl DeployedContractsContainer {
@@ -42,14 +42,14 @@ impl DeployedContractsContainer {
         let now: DateTime<Utc> = Utc::now();
         Ok(Self {
             time: now.to_rfc3339_opts(SecondsFormat::Secs, true),
-            contracts: Vec::new(),
+            contracts: Vec::new()
         })
     }
 
     /// Adds a contract to the container.
     pub fn add_contract<T: HostRef + HasIdent>(
         &mut self,
-        contract: &T,
+        contract: &T
     ) -> Result<(), ContractError> {
         self.contracts
             .push(DeployedContract::new::<T>(contract.address()));
@@ -61,14 +61,13 @@ impl DeployedContractsContainer {
     /// Returns a reference to the contract if it is found in the list, otherwise returns an error.
     pub fn get_ref<T: OdraContract + 'static>(
         &self,
-        env: &HostEnv,
+        env: &HostEnv
     ) -> Result<T::HostRef, ContractError> {
         self.contracts
             .iter()
             .find(|c| c.name == T::HostRef::ident())
             .map(|c| Address::from_str(&c.package_hash).ok())
-            .map(|opt| opt.map(|addr| <T as HostRefLoader<T::HostRef>>::load(env, addr)))
-            .flatten()
+            .and_then(|opt| opt.map(|addr| <T as HostRefLoader<T::HostRef>>::load(env, addr)))
             .ok_or(ContractError::NotFound(T::HostRef::ident()))
     }
 
@@ -77,8 +76,7 @@ impl DeployedContractsContainer {
         self.contracts
             .iter()
             .find(|c| c.name == name)
-            .map(|c| Address::from_str(&c.package_hash).ok())
-            .flatten()
+            .and_then(|c| Address::from_str(&c.package_hash).ok())
     }
 
     /// Load from the file.
@@ -140,14 +138,14 @@ impl DeployedContractsContainer {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 struct DeployedContract {
     name: String,
-    package_hash: String,
+    package_hash: String
 }
 
 impl DeployedContract {
     fn new<T: HasIdent>(address: &Address) -> Self {
         Self {
             name: T::ident(),
-            package_hash: address.to_string(),
+            package_hash: address.to_string()
         }
     }
 }

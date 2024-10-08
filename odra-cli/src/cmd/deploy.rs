@@ -1,9 +1,9 @@
 use crate::{
-    container::ContractError, CustomTypeSet, DeployedContractsContainer, DEPLOY_SUBCOMMAND,
+    container::ContractError, CustomTypeSet, DeployedContractsContainer, DEPLOY_SUBCOMMAND
 };
 use anyhow::Result;
 use clap::ArgMatches;
-use odra_core::{host::HostEnv, OdraError};
+use odra::{host::HostEnv, OdraError};
 use thiserror::Error;
 
 use super::OdraCommand;
@@ -12,7 +12,7 @@ use super::OdraCommand;
 ///
 /// The deploy command runs the [DeployScript].
 pub(crate) struct DeployCmd {
-    pub script: Box<dyn DeployScript>,
+    pub script: Box<dyn DeployScript>
 }
 
 impl OdraCommand for DeployCmd {
@@ -35,7 +35,7 @@ pub trait DeployScript {
     fn deploy(
         &self,
         env: &HostEnv,
-        container: &mut DeployedContractsContainer,
+        container: &mut DeployedContractsContainer
     ) -> core::result::Result<(), DeployError>;
 }
 
@@ -45,13 +45,13 @@ pub enum DeployError {
     #[error("Deploy error: {message}")]
     OdraError { message: String },
     #[error("Contract read error: {0}")]
-    ContractReadError(#[from] ContractError),
+    ContractReadError(#[from] ContractError)
 }
 
 impl From<OdraError> for DeployError {
     fn from(err: OdraError) -> Self {
         DeployError::OdraError {
-            message: format!("{:?}", err),
+            message: format!("{:?}", err)
         }
     }
 }

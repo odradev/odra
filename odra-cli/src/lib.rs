@@ -9,12 +9,12 @@ use std::collections::BTreeSet;
 use clap::{command, Arg, Command};
 use cmd::{OdraCliCommand, OdraCommand};
 use deploy::DeployScript;
-use odra_core::{
+use odra::schema::{casper_contract_schema::CustomType, SchemaCustomTypes, SchemaEntrypoints};
+use odra::{
     contract_def::HasIdent,
     host::{EntryPointsCallerProvider, HostEnv},
-    OdraContract,
+    OdraContract
 };
-use odra_schema::{casper_contract_schema::CustomType, SchemaCustomTypes, SchemaEntrypoints};
 
 mod args;
 mod cmd;
@@ -41,7 +41,7 @@ pub mod scenario {
     //! If you want to run a custom scenario that calls multiple entry points,
     //! you need to implement the [Scenario] and [ScenarioMetadata] traits.
     pub use crate::cmd::scenario::{
-        Scenario, ScenarioArgs as Args, ScenarioError as Error, ScenarioMetadata,
+        Scenario, ScenarioArgs as Args, ScenarioError as Error, ScenarioMetadata
     };
 }
 
@@ -60,7 +60,13 @@ pub struct OdraCli {
     contracts_cmd: Command,
     commands: Vec<OdraCliCommand>,
     custom_types: CustomTypeSet,
-    host_env: HostEnv,
+    host_env: HostEnv
+}
+
+impl Default for OdraCli {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl OdraCli {
@@ -84,7 +90,7 @@ impl OdraCli {
             custom_types: CustomTypeSet::new(),
             host_env: odra_casper_livenet_env::env(),
             contracts_cmd,
-            scenarios_cmd,
+            scenarios_cmd
         }
     }
 
@@ -109,7 +115,7 @@ impl OdraCli {
                 .register_contract(address, contract_name.clone(), caller);
         }
         self.custom_types
-            .extend(T::schema_types().into_iter().filter_map(|ty| ty));
+            .extend(T::schema_types().into_iter().flatten());
 
         // build entry points commands
         let mut contract_cmd = Command::new(&contract_name)
@@ -188,7 +194,7 @@ impl OdraCli {
         let matches = self.main_cmd.get_matches();
         let (cmd, args) = matches
             .subcommand()
-            .map(|(subcommand, sub_matches)| match subcommand {
+            .and_then(|(subcommand, sub_matches)| match subcommand {
                 DEPLOY_SUBCOMMAND => {
                     find_deploy(&self.commands).map(|deploy| (deploy, sub_matches))
                 }
@@ -198,7 +204,7 @@ impl OdraCli {
                         .map(|(contract_name, entrypoint_matches)| {
                             (
                                 find_contract(&self.commands, contract_name),
-                                entrypoint_matches,
+                                entrypoint_matches
                             )
                         })
                 }
@@ -207,14 +213,13 @@ impl OdraCli {
                         (find_scenario(&self.commands, subcommand), sub_matches)
                     })
                 }
-                _ => unreachable!(),
+                _ => unreachable!()
             })
-            .flatten()
             .expect("Subcommand not found");
 
         match cmd.run(&self.host_env, args, &self.custom_types) {
             Ok(_) => prettycli::info("Command executed successfully"),
-            Err(err) => prettycli::error(&format!("{:?}", err)),
+            Err(err) => prettycli::error(&format!("{:?}", err))
         }
     }
 }
@@ -224,12 +229,12 @@ fn find_scenario<'a>(commands: &'a [OdraCliCommand], name: &str) -> &'a OdraCliC
         .iter()
         .find(|cmd| match cmd {
             OdraCliCommand::Scenario(scenario) => scenario.name() == name,
-            _ => false,
+            _ => false
         })
         .unwrap()
 }
 
-fn find_deploy<'a>(commands: &'a [OdraCliCommand]) -> Option<&'a OdraCliCommand> {
+fn find_deploy(commands: &[OdraCliCommand]) -> Option<&OdraCliCommand> {
     commands
         .iter()
         .find(|cmd| matches!(cmd, OdraCliCommand::Deploy(_)))
@@ -240,7 +245,7 @@ fn find_contract<'a>(commands: &'a [OdraCliCommand], contract_name: &str) -> &'a
         .iter()
         .find(|cmd| match cmd {
             OdraCliCommand::Contract(contract) => contract.name() == contract_name,
-            _ => false,
+            _ => false
         })
         .unwrap()
 }
