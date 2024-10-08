@@ -485,11 +485,12 @@ impl CasperClient {
             deploy_hash
         )?;
 
-        let package_hash: String = args.get(odra_core::consts::PACKAGE_HASH_KEY_NAME_ARG)
+        let package_hash: String = args
+            .get(odra_core::consts::PACKAGE_HASH_KEY_NAME_ARG)
             .ok_or(OdraError::ExecutionError(ExecutionError::TypeMismatch))
             .map(|v| v.clone().into_t())
             .map_err(|_| OdraError::ExecutionError(ExecutionError::TypeMismatch))??;
-        
+
         let address = self.get_contract_address(&package_hash).await;
         log::info(format!("Contract {:?} deployed.", &address.to_string()));
         Ok(address)

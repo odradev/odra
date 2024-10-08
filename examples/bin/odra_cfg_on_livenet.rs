@@ -30,11 +30,14 @@ fn main() {
 
     env.set_gas(100_000_000_000u64);
     let result = Erc20::try_deploy_with_cfg(
-        &env, 
-        erc20_args(), 
-        Cfg { is_upgradable: false, allow_key_override: false }
+        &env,
+        erc20_args(),
+        Cfg {
+            is_upgradable: false,
+            allow_key_override: false
+        }
     );
-    
+
     // println!("Deploy result: {:?}", result.err());
     let token = result.unwrap();
     println!("Token address: {:?}", token.address());
@@ -42,11 +45,14 @@ fn main() {
 
     env.set_gas(100_000_000_000u64);
     let result = Erc20::try_deploy_with_cfg(
-        &env, 
-        erc20_args(), 
-        Cfg { is_upgradable: false, allow_key_override: true }
+        &env,
+        erc20_args(),
+        Cfg {
+            is_upgradable: false,
+            allow_key_override: true
+        }
     );
-   
+
     // println!("Deploy result: {:?}", result.err());
     let token = result.unwrap();
     println!("Token address: {:?}", token.address());
@@ -54,11 +60,14 @@ fn main() {
 
     env.set_gas(100_000_000_000u64);
     let result = Erc20::try_deploy_with_cfg(
-        &env, 
-        erc20_args(), 
-        Cfg { is_upgradable: false, allow_key_override: false }
+        &env,
+        erc20_args(),
+        Cfg {
+            is_upgradable: false,
+            allow_key_override: false
+        }
     );
-   
+
     println!("Deploy result: {:?}", result.err());
 }
 
