@@ -35,8 +35,7 @@ use odra_core::{
     casper_event_standard::{self, Schema, Schemas}
 };
 use odra_core::{prelude::*, Address, CallDef, ExecutionError};
-
-use crate::consts;
+use odra_core::consts;
 
 lazy_static::lazy_static! {
     static ref STATE: URef = {
