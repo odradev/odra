@@ -158,7 +158,7 @@ mod test {
                 impl Erc20HostRef {
                     /// Initializes the contract with the given parameters.
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_init(&mut self, total_supply: Option<U256>) -> odra::OdraResult<()> {
+                    pub fn try_init(&mut self, total_supply: Option<U256>) -> OdraResult<()> {
                         self.env
                             .call_contract(
                                 self.address,
@@ -180,7 +180,7 @@ mod test {
 
                     /// Returns the total supply of the token.
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_total_supply(&self) -> odra::OdraResult<U256> {
+                    pub fn try_total_supply(&self) -> OdraResult<U256> {
                         self.env.call_contract(
                             self.address,
                             odra::CallDef::new(
@@ -198,7 +198,7 @@ mod test {
                     }
                     /// Pay to mint.
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_pay_to_mint(&mut self) -> odra::OdraResult<()> {
+                    pub fn try_pay_to_mint(&mut self) -> OdraResult<()> {
                         self.env
                             .call_contract(
                                 self.address,
@@ -223,7 +223,7 @@ mod test {
                         to: &Address,
                         amount: &U256,
                         msg: Maybe<String>,
-                    ) -> odra::OdraResult<()> {
+                    ) -> OdraResult<()> {
                         self.env
                             .call_contract(
                                 self.address,
@@ -246,7 +246,7 @@ mod test {
                     }
                     /// Airdrops the given amount to the given addresses.
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_airdrop(&self, to: &[Address], amount: &U256) -> odra::OdraResult<()> {
+                    pub fn try_airdrop(&self, to: &[Address], amount: &U256) -> OdraResult<()> {
                         self.env.call_contract(
                             self.address,
                             odra::CallDef::new(
@@ -403,7 +403,7 @@ mod test {
 
                 impl Erc20HostRef {
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_total_supply(&self) -> odra::OdraResult<U256> {
+                    pub fn try_total_supply(&self) -> OdraResult<U256> {
                         self.env.call_contract(
                             self.address,
                             odra::CallDef::new(
@@ -421,7 +421,7 @@ mod test {
                     }
 
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_pay_to_mint(&mut self) -> odra::OdraResult<()> {
+                    pub fn try_pay_to_mint(&mut self) -> OdraResult<()> {
                         self.env
                             .call_contract(
                                 self.address,

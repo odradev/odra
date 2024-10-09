@@ -45,12 +45,12 @@ mod test {
         let expected = quote::quote! {
             /// [Token] Contract Ref.
             pub struct TokenContractRef {
-                env: odra::prelude::Rc<odra::ContractEnv>,
+                env: Rc<odra::ContractEnv>,
                 address: Address,
             }
 
             impl odra::ContractRef for TokenContractRef {
-                fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: Address) -> Self {
+                fn new(env: Rc<odra::ContractEnv>, address: Address) -> Self {
                     Self { env, address }
                 }
 
@@ -141,7 +141,7 @@ mod test {
 
                 impl TokenHostRef {
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_balance_of(&self, owner: Address) -> odra::OdraResult<U256> {
+                    pub fn try_balance_of(&self, owner: Address) -> OdraResult<U256> {
                         self.env.call_contract(
                             self.address,
                             odra::CallDef::new(

@@ -11,7 +11,7 @@
 //!
 //! #[odra::module]
 //! struct Counter {
-//!     count: odra::Var<u32>,
+//!     count: Var<u32>,
 //! }
 //!
 //! #[odra::module]

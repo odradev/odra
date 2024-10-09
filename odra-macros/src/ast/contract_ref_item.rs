@@ -179,12 +179,12 @@ mod ref_item_tests {
         let expected = quote! {
             /// [Erc20] Contract Ref.
             pub struct Erc20ContractRef {
-                env: odra::prelude::Rc<odra::ContractEnv>,
+                env: Rc<odra::ContractEnv>,
                 address: Address,
             }
 
             impl odra::ContractRef for Erc20ContractRef {
-                fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: Address) -> Self {
+                fn new(env: Rc<odra::ContractEnv>, address: Address) -> Self {
                     Self { env, address }
                 }
 
@@ -297,12 +297,12 @@ mod ref_item_tests {
         let expected = quote! {
             /// [Erc20] Contract Ref.
             pub struct Erc20ContractRef {
-                env: odra::prelude::Rc<odra::ContractEnv>,
+                env: Rc<odra::ContractEnv>,
                 address: Address,
             }
 
             impl odra::ContractRef for Erc20ContractRef {
-                fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: Address) -> Self {
+                fn new(env: Rc<odra::ContractEnv>, address: Address) -> Self {
                     Self { env, address }
                 }
 
@@ -360,12 +360,12 @@ mod ref_item_tests {
         let expected = quote! {
             /// [Erc20] Contract Ref.
             pub struct Erc20ContractRef {
-                env: odra::prelude::Rc<odra::ContractEnv>,
+                env: Rc<odra::ContractEnv>,
                 address: Address,
             }
 
             impl odra::ContractRef for Erc20ContractRef {
-                fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: Address) -> Self {
+                fn new(env: Rc<odra::ContractEnv>, address: Address) -> Self {
                     Self { env, address }
                 }
 
