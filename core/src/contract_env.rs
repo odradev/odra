@@ -7,10 +7,7 @@ use crate::casper_types::crypto::PublicKey;
 use crate::casper_types::{CLTyped, CLValue, BLAKE2B_DIGEST_LENGTH, U512};
 use crate::module::Revertible;
 pub use crate::ContractContext;
-use crate::ExecutionError::Formatting;
-use crate::{consts, prelude::*, ExecutionError};
-use crate::{utils, UnwrapOrRevert};
-use crate::{Address, OdraError};
+use crate::{consts, prelude::*, utils};
 
 const INDEX_SIZE: usize = 4;
 const KEY_LEN: usize = 64;
@@ -125,7 +122,7 @@ impl ContractEnv {
             .get_dictionary_value(dictionary_name, key);
         bytes.map(|b| {
             deserialize_from_slice(b)
-                .map_err(|_| Formatting)
+                .map_err(|_| ExecutionError::Formatting)
                 .unwrap_or_revert(self)
         })
     }
@@ -139,7 +136,7 @@ impl ContractEnv {
     ) {
         let dictionary_name = dictionary_name.as_ref();
         let cl_value = CLValue::from_t(value)
-            .map_err(|_| Formatting)
+            .map_err(|_| ExecutionError::Formatting)
             .unwrap_or_revert(self);
         self.backend
             .borrow()

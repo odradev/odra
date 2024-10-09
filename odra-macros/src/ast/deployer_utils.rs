@@ -192,7 +192,7 @@ struct DefaultBranch;
 
 impl ToTokens for DefaultBranch {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        tokens.extend(quote::quote!(name => Err(odra::OdraError::VmError(
+        tokens.extend(quote::quote!(name => Err(OdraError::VmError(
             odra::VmError::NoSuchMethod(odra::prelude::String::from(name))
         ))))
     }

@@ -1,7 +1,6 @@
 //! Cryptographic utilities.
 
 use crate::prelude::*;
-use crate::Address;
 use casper_types::account::AccountHash;
 use casper_types::{PublicKey, SecretKey};
 

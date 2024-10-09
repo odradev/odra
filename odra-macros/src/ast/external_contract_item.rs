@@ -46,15 +46,15 @@ mod test {
             /// [Token] Contract Ref.
             pub struct TokenContractRef {
                 env: odra::prelude::Rc<odra::ContractEnv>,
-                address: odra::Address,
+                address: Address,
             }
 
             impl odra::ContractRef for TokenContractRef {
-                fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::Address) -> Self {
+                fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: Address) -> Self {
                     Self { env, address }
                 }
 
-                fn address(&self) -> &odra::Address {
+                fn address(&self) -> &Address {
                     &self.address
                 }
             }
@@ -91,13 +91,13 @@ mod test {
 
                 /// [Token] Host Ref.
                 pub struct TokenHostRef {
-                    address: odra::Address,
+                    address: Address,
                     env: odra::host::HostEnv,
                     attached_value: odra::casper_types::U512
                 }
 
                 impl odra::host::HostRef for TokenHostRef {
-                    fn new(address: odra::Address, env: odra::host::HostEnv) -> Self {
+                    fn new(address: Address, env: odra::host::HostEnv) -> Self {
                         Self {
                             address,
                             env,
@@ -113,7 +113,7 @@ mod test {
                         }
                     }
 
-                    fn address(&self) -> &odra::Address {
+                    fn address(&self) -> &Address {
                         &self.address
                     }
 

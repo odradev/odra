@@ -2,8 +2,6 @@
 
 use crate::erc721::extensions::erc721_metadata::errors::Error;
 use odra::prelude::*;
-use odra::UnwrapOrRevert;
-use odra::Var;
 
 /// The ERC721 Metadata interface as defined in the standard.
 pub trait Erc721Metadata {
@@ -54,6 +52,8 @@ impl Erc721MetadataExtension {
 
 /// Erc721Metadata-related errors.
 pub mod errors {
+    use odra::prelude::*;
+
     /// Possible errors in the context of Erc721 metadata.
     #[odra::odra_error]
     pub enum Error {

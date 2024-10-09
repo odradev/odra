@@ -3,10 +3,10 @@
 use crate::address::Addressable;
 use crate::gas_report::GasReport;
 use crate::{
-    call_result::CallResult, entry_point_callback::EntryPointsCaller, Address, CallDef,
-    ContractCallResult, ContractEnv, EventError, OdraError, OdraResult, VmError
+    call_result::CallResult, entry_point_callback::EntryPointsCaller, CallDef, ContractCallResult,
+    ContractEnv, EventError, VmError
 };
-use crate::{consts, prelude::*, utils, ExecutionError};
+use crate::{consts, prelude::*, utils};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::{contract::OdraContract, contract_def::HasIdent};
 use casper_event_standard::EventInstance;
@@ -586,7 +586,7 @@ mod test {
         }
     }
 
-    impl ContractRef for MockTestRef {
+    impl crate::ContractRef for MockTestRef {
         fn new(_env: Rc<ContractEnv>, _address: Address) -> Self {
             unimplemented!()
         }

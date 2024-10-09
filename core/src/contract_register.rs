@@ -1,7 +1,7 @@
 use crate::call_def::CallDef;
+use crate::prelude::*;
 use crate::ContractContainer;
-use crate::{casper_types::bytesrepr::Bytes, Address, OdraError, VmError};
-use crate::{prelude::*, OdraResult};
+use crate::{casper_types::bytesrepr::Bytes, VmError};
 
 /// A struct representing a contract register that maps an address to a contract.
 ///

@@ -4,7 +4,7 @@
 //! the current account and contract address, the attached value, and the current entry point.
 //!
 //! The module provides building blocks for a callstack, such as `CallstackElement` and `ContractCall`.
-use super::{casper_types::U512, Address, CallDef};
+use super::{casper_types::U512, CallDef};
 use crate::prelude::*;
 
 /// A struct representing a callstack element.

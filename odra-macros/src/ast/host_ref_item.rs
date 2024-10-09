@@ -347,13 +347,13 @@ mod ref_item_tests {
         let expected = quote! {
             /// [Erc20] Host Ref.
             pub struct Erc20HostRef {
-                address: odra::Address,
+                address: Address,
                 env: odra::host::HostEnv,
                 attached_value: odra::casper_types::U512
             }
 
             impl odra::host::HostRef for Erc20HostRef {
-                fn new(address: odra::Address, env: odra::host::HostEnv) -> Self {
+                fn new(address: Address, env: odra::host::HostEnv) -> Self {
                     Self {
                         address,
                         env,
@@ -369,7 +369,7 @@ mod ref_item_tests {
                     }
                 }
 
-                fn address(&self) -> &odra::Address {
+                fn address(&self) -> &Address {
                     &self.address
                 }
 
@@ -537,13 +537,13 @@ mod ref_item_tests {
         let expected = quote! {
             /// [Erc20] Host Ref.
             pub struct Erc20HostRef {
-                address: odra::Address,
+                address: Address,
                 env: odra::host::HostEnv,
                 attached_value: odra::casper_types::U512
             }
 
             impl odra::host::HostRef for Erc20HostRef {
-                fn new(address: odra::Address, env: odra::host::HostEnv) -> Self {
+                fn new(address: Address, env: odra::host::HostEnv) -> Self {
                     Self {
                         address,
                         env,
@@ -559,7 +559,7 @@ mod ref_item_tests {
                     }
                 }
 
-                fn address(&self) -> &odra::Address {
+                fn address(&self) -> &Address {
                     &self.address
                 }
 
@@ -640,13 +640,13 @@ mod ref_item_tests {
         let expected = quote! {
             /// [Erc20] Host Ref.
             pub struct Erc20HostRef {
-                address: odra::Address,
+                address: Address,
                 env: odra::host::HostEnv,
                 attached_value: odra::casper_types::U512
             }
 
             impl odra::host::HostRef for Erc20HostRef {
-                fn new(address: odra::Address, env: odra::host::HostEnv) -> Self {
+                fn new(address: Address, env: odra::host::HostEnv) -> Self {
                     Self {
                         address,
                         env,
@@ -662,7 +662,7 @@ mod ref_item_tests {
                     }
                 }
 
-                fn address(&self) -> &odra::Address {
+                fn address(&self) -> &Address {
                     &self.address
                 }
 

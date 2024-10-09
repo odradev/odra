@@ -1,9 +1,9 @@
 //! Wrapped CSPR token implementation
 use crate::erc20::Erc20;
 use crate::wrapped_native::events::{Deposit, Withdrawal};
+use odra::casper_types::U256;
 use odra::prelude::*;
 use odra::uints::{ToU256, ToU512};
-use odra::{casper_types::U256, Address, SubModule, UnwrapOrRevert};
 
 /// The WrappedNativeToken module.
 #[odra::module(events = [Deposit, Withdrawal])]
@@ -99,7 +99,8 @@ impl WrappedNativeToken {
 /// Events emitted by the WrappedNativeToken module.
 pub mod events {
     use odra::casper_event_standard;
-    use odra::{casper_types::U256, Address};
+    use odra::casper_types::U256;
+    use odra::prelude::*;
 
     /// Event emitted when native tokens are deposited into the contract.
     #[odra::event]
@@ -127,14 +128,11 @@ mod tests {
     use crate::wrapped_native::events::{Deposit, Withdrawal};
     use crate::wrapped_native::WrappedNativeTokenHostRef;
     use odra::casper_event_standard::EventInstance;
+    use odra::casper_types::{U256, U512};
     use odra::host::{Deployer, HostEnv, HostRef, NoArgs};
     use odra::prelude::*;
     use odra::uints::{ToU256, ToU512};
     use odra::VmError::BalanceExceeded;
-    use odra::{
-        casper_types::{U256, U512},
-        Address, OdraError
-    };
 
     use super::WrappedNativeToken;
 
