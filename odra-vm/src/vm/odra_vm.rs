@@ -58,8 +58,7 @@ impl OdraVm {
     }
 
     pub(crate) fn post_install(&self, address: Address) {
-        self
-            .contract_register
+        self.contract_register
             .write()
             .unwrap()
             .post_install(&address);

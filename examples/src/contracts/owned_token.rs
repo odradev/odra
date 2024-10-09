@@ -51,7 +51,10 @@ impl OwnedToken {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use odra::{host::{Deployer, HostRef}, VmError};
+    use odra::{
+        host::{Deployer, HostRef},
+        OdraError, VmError
+    };
     use odra_modules::access::errors::Error::CallerNotTheOwner;
 
     pub const NAME: &str = "Plascoin";
@@ -98,8 +101,16 @@ pub mod tests {
     #[test]
     fn should_not_init_twice() {
         let mut token = setup();
-        let result = token.try_init(String::from(NAME), String::from(SYMBOL), 11u8, INITIAL_SUPPLY.into());
-        assert_eq!(result.unwrap_err(), OdraError::VmError(VmError::InvalidContext));
+        let result = token.try_init(
+            String::from(NAME),
+            String::from(SYMBOL),
+            11u8,
+            INITIAL_SUPPLY.into()
+        );
+        assert_eq!(
+            result.unwrap_err(),
+            OdraError::VmError(VmError::InvalidContext)
+        );
     }
 
     #[test]

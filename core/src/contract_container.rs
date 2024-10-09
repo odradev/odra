@@ -21,7 +21,7 @@ impl ContractContainer {
             ctx: ExecutionContext::Installation
         }
     }
-    
+
     pub(crate) fn post_install(&mut self) {
         self.ctx = ExecutionContext::Runtime;
     }
@@ -55,7 +55,7 @@ enum ExecutionContext {
 
 #[cfg(test)]
 mod tests {
-    use super::ContractContainer;
+    use super::{ContractContainer, ExecutionContext};
     use crate::contract_context::MockContractContext;
     use crate::entry_point_callback::{Argument, EntryPoint, EntryPointsCaller};
     use crate::host::{HostEnv, MockHostContext};
