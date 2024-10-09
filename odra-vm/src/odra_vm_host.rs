@@ -94,6 +94,7 @@ impl HostContext for OdraVmHost {
                 CallDef::new(String::from("init"), true, init_args),
                 false
             )?;
+            self.vm.borrow().post_install(address);
         }
 
         Ok(address)
