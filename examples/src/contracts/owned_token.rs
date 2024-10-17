@@ -53,7 +53,7 @@ pub mod tests {
     use super::*;
     use odra::{
         host::{Deployer, HostRef},
-        OdraError, VmError
+        VmError
     };
     use odra_modules::access::errors::Error::CallerNotTheOwner;
 

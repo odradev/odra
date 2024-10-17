@@ -6,9 +6,9 @@ use crate::{
     call_result::CallResult, entry_point_callback::EntryPointsCaller, CallDef, ContractCallResult,
     ContractEnv, EventError, VmError
 };
-use crate::{consts, prelude::*, utils};
 #[cfg(not(target_arch = "wasm32"))]
-use crate::{contract::OdraContract, contract_def::HasIdent};
+use crate::{consts, contract::OdraContract, contract_def::HasIdent};
+use crate::{prelude::*, utils};
 use casper_event_standard::EventInstance;
 use casper_types::{
     bytesrepr::{Bytes, FromBytes, ToBytes},
