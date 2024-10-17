@@ -279,7 +279,8 @@ fn call_method(
 
 #[cfg(test)]
 mod test {
-    use odra_core::{args::Maybe, Address};
+    use odra_core::args::Maybe;
+    use odra_core::prelude::Address;
 
     use super::*;
 

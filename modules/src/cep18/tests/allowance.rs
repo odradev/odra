@@ -4,7 +4,7 @@ mod allowance_tests {
 
     use odra::casper_types::U256;
     use odra::host::{Deployer, HostRef, NoArgs};
-    use odra::Address;
+    use odra::prelude::*;
 
     use crate::cep18::cep18_client_contract::Cep18ClientContract;
     use crate::cep18::errors::Error::InsufficientAllowance;

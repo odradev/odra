@@ -1,6 +1,5 @@
 //! This example demonstrates how to handle errors in a contract.
 use odra::prelude::*;
-use odra::{Address, Var};
 
 /// Contract that has an owner.
 #[odra::module(errors = Error)]

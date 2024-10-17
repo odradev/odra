@@ -3,7 +3,8 @@ use std::collections::BTreeMap;
 pub use casper_contract_schema;
 use casper_contract_schema::NamedCLType;
 use casper_types::{bytesrepr::Bytes, ContractHash, Key, PublicKey, URef, U128, U256, U512};
-use odra_core::{args::Maybe, Address};
+use odra_core::args::Maybe;
+use odra_core::prelude::*;
 
 /// Trait for types that can be represented as a NamedCLType.
 pub trait NamedCLTyped {

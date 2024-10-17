@@ -2,12 +2,12 @@
 use odra::args::Maybe;
 use odra::casper_types::U256;
 use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader};
-use odra::Address;
 use odra_modules::cep78::modalities::{
     EventsMode, MetadataMutability, NFTIdentifierMode, NFTKind, NFTMetadataKind, OwnershipMode
 };
 use odra_modules::cep78::token::{TestCep78, TestCep78HostRef, TestCep78InitArgs};
 use odra_modules::cep78::utils::InitArgsBuilder;
+use Address;
 
 const CEP78_METADATA: &str = r#"{
     "name": "John Doe",

@@ -1,8 +1,8 @@
 //! ERC20 token standard implementation.
 use crate::erc20::errors::Error;
 use crate::erc20::events::*;
+use odra::casper_types::U256;
 use odra::prelude::*;
-use odra::{casper_types::U256, Address, Mapping, Var};
 
 /// ERC20 token module
 #[odra::module(events = [Approval, Transfer], errors = Error)]
@@ -162,7 +162,8 @@ impl Erc20 {
 /// ERC20 Events
 pub mod events {
     use odra::casper_event_standard;
-    use odra::{casper_types::U256, Address};
+    use odra::casper_types::U256;
+    use odra::prelude::*;
 
     /// Transfer event
     #[odra::event]
@@ -189,6 +190,8 @@ pub mod events {
 
 /// ERC20 Errors
 pub mod errors {
+    use odra::prelude::*;
+
     /// ERC20 errors
     #[odra::odra_error]
     pub enum Error {

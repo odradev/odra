@@ -3,12 +3,12 @@ use core::{
     ops::{Deref, DerefMut}
 };
 
-use alloc::rc::Rc;
-
+use crate::{contract_env::ContractRef, prelude::*};
 use crate::{
     module::{ModuleComponent, ModulePrimitive},
-    Address, ContractEnv, ContractRef, ExecutionError, Var
+    ContractEnv
 };
+use alloc::rc::Rc;
 
 /// A module component that is a reference to an external contract.
 ///
@@ -25,7 +25,7 @@ use crate::{
 ///
 /// #[odra::module]
 /// impl Contract {
-///     pub fn init(&mut self, address: odra::Address) {
+///     pub fn init(&mut self, address: Address) {
 ///         self.ext.set(address);
 ///     }
 ///

@@ -5,8 +5,9 @@ use casper_types::bytesrepr::{FromBytes, ToBytes};
 use casper_types::{bytesrepr::Bytes, CLTyped, PublicKey, U128, U256, U512};
 use casper_types::{Key, URef};
 use num_traits::{Num, One, Zero};
-use odra_core::{args::Maybe, Address};
-use odra_core::{ContractRef, External, List, Mapping, Sequence, SubModule, Var};
+use odra_core::args::Maybe;
+use odra_core::prelude::*;
+use odra_core::ContractRef;
 
 use crate::{SchemaCustomTypes, SchemaErrors, SchemaEvents};
 

@@ -1,7 +1,7 @@
 //! Optional arguments example.
 
+use odra::args::Maybe;
 use odra::prelude::*;
-use odra::{args::Maybe, Var};
 
 /// Contract structure.
 #[odra::module]

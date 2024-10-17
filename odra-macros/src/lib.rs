@@ -55,7 +55,7 @@ pub fn odra_type(_attr: TokenStream, item: TokenStream) -> TokenStream {
     span_error!(item, "Struct or Enum expected")
 }
 
-/// Implements `Into<odra::OdraError>` for an error enum.
+/// Implements `Into<OdraError>` for an error enum.
 #[proc_macro_attribute]
 pub fn odra_error(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let item = item.into();

@@ -1,7 +1,5 @@
-use odra_core::{
-    casper_types::{account::AccountHash, ContractPackageHash},
-    Address
-};
+use odra_core::casper_types::{account::AccountHash, ContractPackageHash};
+use odra_core::prelude::*;
 
 pub fn account_address_from_str(str: &str) -> Address {
     use odra_core::casper_types::account::{

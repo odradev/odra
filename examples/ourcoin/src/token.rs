@@ -1,4 +1,4 @@
-use odra::{casper_types::U256, prelude::*, Address, List, SubModule, Var};
+use odra::{casper_types::U256, prelude::*};
 use odra_modules::cep18_token::Cep18;
 
 /// A ballot cast by a voter.

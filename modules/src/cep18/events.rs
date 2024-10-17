@@ -1,6 +1,5 @@
 use odra::casper_types::U256;
 use odra::prelude::*;
-use odra::Address;
 
 use crate::cep18::utils::SecurityBadge;
 

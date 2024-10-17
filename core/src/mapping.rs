@@ -3,13 +3,9 @@ use crate::casper_types::{
     bytesrepr::{FromBytes, ToBytes},
     CLTyped
 };
-use crate::module::{ModuleComponent, ModulePrimitive, Revertible};
-use crate::{
-    module::{Module, SubModule},
-    var::Var,
-    ContractEnv
-};
-use crate::{prelude::*, OdraError};
+use crate::module::{ModuleComponent, ModulePrimitive};
+use crate::prelude::*;
+use crate::ContractEnv;
 use core::fmt::Debug;
 
 /// Data structure for storing key-value pairs.

@@ -1,3 +1,5 @@
+use odra::prelude::OdraError;
+
 /// Error enum for the CEP-18 contract.
 #[odra::odra_error]
 pub enum Error {

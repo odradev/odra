@@ -67,9 +67,9 @@ mod tests {
             }
             
             #[automatically_derived]
-            impl ::core::convert::From<MyType> for odra::OdraError {
+            impl ::core::convert::From<MyType> for OdraError {
                 fn from(error: MyType) -> Self {
-                    odra::OdraError::user(error as u16)
+                    OdraError::user(error as u16)
                 }
             }
         };

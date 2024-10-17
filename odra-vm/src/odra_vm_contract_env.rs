@@ -5,9 +5,8 @@ use odra_core::casper_types::{
     bytesrepr::{Bytes, ToBytes},
     CLValue, U512
 };
-use odra_core::{casper_types, Address, OdraError};
-use odra_core::{prelude::*, OdraResult};
-use odra_core::{CallDef, ContractContext};
+use odra_core::prelude::*;
+use odra_core::{casper_types, CallDef, ContractContext};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
 use std::io::Write;

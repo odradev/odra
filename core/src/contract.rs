@@ -6,7 +6,7 @@ pub trait OdraContract {
         + crate::host::EntryPointsCallerProvider
         + crate::contract_def::HasIdent;
     /// The contract reference type.
-    type ContractRef: crate::ContractRef;
+    type ContractRef: crate::contract_env::ContractRef;
     /// The init args type.
     #[cfg(not(target_arch = "wasm32"))]
     type InitArgs: crate::host::InitArgs;

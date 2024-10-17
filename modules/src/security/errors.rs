@@ -1,4 +1,5 @@
 //! Errors implementation for the security module.
+use odra::prelude::OdraError;
 
 /// Errors for the security module.
 #[odra::odra_error]

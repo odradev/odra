@@ -1,7 +1,6 @@
 use crate::casper_types::bytesrepr::{Bytes, ToBytes};
+use crate::prelude::*;
 use crate::utils::extract_event_name;
-use crate::{prelude::*, OdraResult};
-use crate::{Address, OdraError};
 use casper_event_standard::EventInstance;
 
 /// Represents the result of a contract call. Includes external contracts calls.

@@ -1,13 +1,13 @@
 //! This example demonstrates how to deploy and interact with a contract on the Livenet environment.
 use odra::casper_types::U256;
 use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader};
-use odra::Address;
 use odra::ExecutionError;
 use odra_examples::features::livenet::{
     LivenetContract, LivenetContractHostRef, LivenetContractInitArgs
 };
 use odra_modules::access::events::OwnershipTransferred;
 use odra_modules::erc20::{Erc20, Erc20HostRef, Erc20InitArgs};
+use Address;
 
 fn main() {
     let env = odra_casper_livenet_env::env();

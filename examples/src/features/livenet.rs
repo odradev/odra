@@ -1,7 +1,7 @@
 //! This is an example contract used to showcase and test Livenet Environment.
 use odra::casper_types::U256;
 use odra::prelude::*;
-use odra::{Address, List, SubModule, UnwrapOrRevert, Var};
+use odra::ContractRef;
 use odra_modules::access::Ownable;
 use odra_modules::erc20::Erc20ContractRef;
 

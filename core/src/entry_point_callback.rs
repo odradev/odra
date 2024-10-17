@@ -5,7 +5,7 @@ use casper_types::CLType;
 use crate::args::EntrypointArgument;
 use crate::call_def::CallDef;
 use crate::casper_types::bytesrepr::Bytes;
-use crate::{host::HostEnv, prelude::*, ContractEnv, OdraResult};
+use crate::{host::HostEnv, prelude::*, ContractEnv};
 
 /// A struct representing an entry point caller.
 ///

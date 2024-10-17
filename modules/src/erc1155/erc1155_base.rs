@@ -3,11 +3,9 @@ use super::events::*;
 use crate::erc1155::errors::Error;
 use crate::erc1155::Erc1155;
 use crate::erc1155_receiver::Erc1155ReceiverContractRef;
+use odra::casper_types::{bytesrepr::Bytes, U256};
 use odra::prelude::*;
-use odra::{
-    casper_types::{bytesrepr::Bytes, U256},
-    Address, ContractRef, Mapping
-};
+use odra::ContractRef;
 
 /// The ERC1155 base implementation.
 #[odra::module(events = [ApprovalForAll, TransferBatch, TransferSingle], errors = Error)]

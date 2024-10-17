@@ -4,11 +4,9 @@ use crate::erc721::events::{Approval, ApprovalForAll, Transfer};
 use crate::erc721::extensions::erc721_receiver::Erc721Receiver;
 use crate::erc721::Erc721;
 use crate::erc721_receiver::Erc721ReceiverContractRef;
+use odra::casper_types::{bytesrepr::Bytes, U256};
 use odra::prelude::*;
-use odra::{
-    casper_types::{bytesrepr::Bytes, U256},
-    Address, ContractRef, Mapping, UnwrapOrRevert
-};
+use odra::ContractRef;
 /// The ERC721 base implementation.
 #[odra::module(events = [Approval, ApprovalForAll, Transfer], errors = Error)]
 pub struct Erc721Base {

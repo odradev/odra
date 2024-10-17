@@ -1,7 +1,6 @@
 //! Safe, overflowing addition and subtraction utilities.
+use crate::prelude::*;
 use casper_types::{U128, U256, U512};
-
-use crate::ExecutionError;
 
 /// Overflowing addition, returning the result of addition or [ArithmeticsError::AdditionOverflow].
 pub trait OverflowingAdd: Sized {

@@ -1,8 +1,8 @@
 //! Deploys an [odra_examples::contracts::tlw::TimeLockWallet] contract, then deposits and withdraw some CSPRs.
 use odra::casper_types::{AsymmetricType, PublicKey, U512};
 use odra::host::{Deployer, HostRef};
-use odra::Address;
 use odra_examples::contracts::tlw::{TimeLockWallet, TimeLockWalletInitArgs};
+use Address;
 
 const DEPOSIT: u64 = 100;
 const WITHDRAWAL: u64 = 99;

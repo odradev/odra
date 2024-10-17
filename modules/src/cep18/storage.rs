@@ -1,14 +1,11 @@
 #![allow(missing_docs)]
 
+use odra::casper_types::bytesrepr::ToBytes;
 use odra::casper_types::U256;
 use odra::named_keys::{
     base64_encoded_key_value_storage, compound_key_value_storage, single_value_storage
 };
-use odra::ExecutionError::AdditionOverflow;
-
-use odra::casper_types::bytesrepr::ToBytes;
 use odra::prelude::*;
-use odra::{Address, UnwrapOrRevert};
 
 use crate::cep18::errors::Error::{InvalidState, Overflow};
 
@@ -34,7 +31,7 @@ impl Cep18TotalSupplyStorage {
         let total_supply = self.get();
         let new_total_supply = total_supply
             .checked_add(amount)
-            .unwrap_or_revert_with(&self.env(), AdditionOverflow);
+            .unwrap_or_revert_with(&self.env(), ExecutionError::AdditionOverflow);
         self.set(new_total_supply);
     }
 
@@ -72,7 +69,7 @@ impl Cep18AllowancesStorage {
         let allowance = self.get_or_default(owner, spender);
         let new_allowance = allowance
             .checked_add(amount)
-            .unwrap_or_revert_with(&self.env(), AdditionOverflow);
+            .unwrap_or_revert_with(&self.env(), ExecutionError::AdditionOverflow);
         self.set(owner, spender, new_allowance);
     }
 
@@ -81,7 +78,7 @@ impl Cep18AllowancesStorage {
         let allowance = self.get_or_default(owner, spender);
         let new_allowance = allowance
             .checked_sub(amount)
-            .unwrap_or_revert_with(&self.env(), AdditionOverflow);
+            .unwrap_or_revert_with(&self.env(), ExecutionError::AdditionOverflow);
         self.set(owner, spender, new_allowance);
     }
 }

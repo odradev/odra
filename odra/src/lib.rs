@@ -11,7 +11,7 @@
 //!
 //! #[odra::module]
 //! struct Counter {
-//!     count: odra::Var<u32>,
+//!     count: Var<u32>,
 //! }
 //!
 //! #[odra::module]
@@ -38,7 +38,7 @@
 #![no_std]
 
 pub use odra_core::{
-    args, arithmetic, contract_def, entry_point_callback, host, module, prelude, uints, utils
+    args, contract_def, entry_point_callback, host, module, prelude, uints, utils
 };
 /// Macros for creating Odra modules that store values in named keys or dictionaries.
 pub mod named_keys {
@@ -49,10 +49,9 @@ pub mod named_keys {
 }
 pub use odra_core::{casper_event_standard, casper_event_standard::Event, casper_types};
 pub use odra_core::{
-    Address, AddressError, Addressable, CallDef, CollectionError, ContractCallResult,
-    ContractContext, ContractEnv, ContractRef, DeployReport, EventError, ExecutionEnv,
-    ExecutionError, External, GasReport, List, ListIter, Mapping, OdraContract, OdraError,
-    OdraResult, Sequence, SubModule, UnwrapOrRevert, Var, VmError
+    AddressError, Addressable, CallDef, CollectionError, ContractCallResult, ContractContext,
+    ContractEnv, ContractRef, DeployReport, EventError, ExecutionEnv, GasReport, OdraContract,
+    VmError
 };
 
 pub use odra_macros::*;

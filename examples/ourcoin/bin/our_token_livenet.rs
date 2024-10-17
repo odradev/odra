@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use odra::casper_types::U256;
 use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader};
-use odra::Address;
+use Address;
 use ourcoin::token::{OurTokenHostRef, OurTokenInitArgs};
 
 fn main() {

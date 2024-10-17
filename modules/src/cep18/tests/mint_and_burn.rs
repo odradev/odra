@@ -2,10 +2,10 @@
 mod mint_and_burn_tests {
     use alloc::string::ToString;
     use alloc::vec;
+    use odra::prelude::*;
 
     use odra::casper_types::U256;
     use odra::host::HostRef;
-    use odra::ExecutionError::AdditionOverflow;
 
     use crate::cep18::errors::Error::{InsufficientBalance, InsufficientRights, MintBurnDisabled};
     use crate::cep18::utils::Cep18Modality;
@@ -61,7 +61,7 @@ mod mint_and_burn_tests {
         );
 
         let result = cep18_token.try_mint(&alice, &mint_amount);
-        assert_eq!(result, Err(AdditionOverflow.into()));
+        assert_eq!(result, Err(ExecutionError::AdditionOverflow.into()));
     }
 
     #[test]

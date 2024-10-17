@@ -1,9 +1,6 @@
 //! Erc721 with ownership.
+use odra::casper_types::{bytesrepr::Bytes, U256};
 use odra::prelude::*;
-use odra::{
-    casper_types::{bytesrepr::Bytes, U256},
-    Address
-};
 
 /// The ERC721 interface with the Ownable and Metadata traits included manually.
 pub trait OwnedErc721WithMetadata {

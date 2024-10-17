@@ -1,4 +1,5 @@
 //! Errors for Access Control module.
+use odra::prelude::OdraError;
 
 /// Access Control-related errors.
 #[odra::odra_error]

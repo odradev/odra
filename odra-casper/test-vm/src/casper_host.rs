@@ -1,4 +1,4 @@
-use odra_core::{prelude::*, GasReport, OdraError};
+use odra_core::{prelude::*, GasReport};
 use std::cell::RefCell;
 use std::env;
 use std::path::PathBuf;
@@ -21,12 +21,12 @@ use odra_core::casper_types::{PublicKey, RuntimeArgs, U512};
 use odra_core::consts;
 use odra_core::consts::*;
 use odra_core::entry_point_callback::EntryPointsCaller;
+use odra_core::prelude::*;
 use odra_core::EventError;
 use odra_core::{
     host::{HostContext, HostEnv},
-    CallDef, ContractEnv
+    CallDef, ContractEnv, VmError
 };
-use odra_core::{Address, OdraResult, VmError};
 
 /// HostContext utilizing the Casper test virtual machine.
 pub struct CasperHost {

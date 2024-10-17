@@ -1,4 +1,4 @@
-use odra::{prelude::*, Address};
+use odra::prelude::*;
 
 #[odra::event]
 pub struct Mint {

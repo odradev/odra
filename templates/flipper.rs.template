@@ -1,5 +1,4 @@
 use odra::prelude::*;
-use odra::Var;
 
 /// A module definition. Each module struct consists Vars and Mappings
 /// or/and another modules.

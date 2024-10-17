@@ -6,7 +6,7 @@
 //! In order to create a module, you need to create a struct that implements the [Module] trait.
 //! However, most of the time you will want to use `#[odra::module]` macro to generate the module.
 
-use crate::{contract_def::HasEvents, prelude::*, OdraError};
+use crate::{contract_def::HasEvents, prelude::*};
 use core::cell::OnceCell;
 
 use crate::contract_env::ContractEnv;

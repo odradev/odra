@@ -36,7 +36,6 @@ mod unwrap_or_revert;
 pub mod utils;
 mod var;
 
-pub use address::{Address, Addressable};
 pub use call_def::CallDef;
 pub use call_result::ContractCallResult;
 pub use casper_event_standard;
@@ -44,18 +43,9 @@ pub use contract_container::ContractContainer;
 pub use contract_context::ContractContext;
 pub use contract_env::{ContractEnv, ContractRef, ExecutionEnv};
 pub use contract_register::ContractRegister;
-pub use error::{
-    AddressError, CollectionError, EventError, ExecutionError, OdraError, OdraResult, VmError
-};
-pub use unwrap_or_revert::UnwrapOrRevert;
+pub use error::{AddressError, CollectionError, EventError, VmError};
 
-pub use contract::OdraContract;
-pub use external::External;
-pub use gas_report::*;
-pub use list::{List, ListIter};
-pub use mapping::Mapping;
-pub use module::{Module, SubModule};
-pub use sequence::Sequence;
-pub use var::Var;
-
+pub use address::Addressable;
 pub use casper_types;
+pub use contract::OdraContract;
+pub use gas_report::*;

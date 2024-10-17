@@ -1,6 +1,6 @@
 //! This is an example of a TimeLockWallet.
+use odra::casper_types::U512;
 use odra::prelude::*;
-use odra::{casper_types::U512, Address, Mapping, Var};
 
 /// TimeLockWallet contract.
 #[odra::module(errors = Error, events = [Deposit, Withdrawal])]
@@ -111,10 +111,7 @@ pub struct Withdrawal {
 mod test {
     use super::*;
     use crate::contracts::tlw::{Deposit, Withdrawal};
-    use odra::{
-        host::{Deployer, HostRef},
-        Address
-    };
+    use odra::host::{Deployer, HostRef};
 
     const ONE_DAY_IN_SECONDS: u64 = 60 * 60 * 24;
 

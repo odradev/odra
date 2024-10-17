@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use odra_core::{ExecutionError, OdraError};
+use odra_core::prelude::*;
 use serde_json::Value;
 use std::{fs, path::PathBuf};
 
@@ -106,8 +106,8 @@ fn get_internal_error_name(error_num: u16) -> (String, OdraError) {
 
 #[cfg(test)]
 mod test {
+    use super::*;
     use anyhow::Result;
-    use odra_core::{ExecutionError, OdraError};
 
     #[test]
     fn test_reading_errors() {

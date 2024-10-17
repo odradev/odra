@@ -4,8 +4,6 @@ use base64::Engine;
 use odra::casper_types::bytesrepr::ToBytes;
 use odra::casper_types::U256;
 use odra::prelude::*;
-use odra::ExecutionError::UnwrapError;
-use odra::UnwrapOrRevert;
 
 const VALUE_KEY: &str = "value";
 const DICT_KEY: &str = "dict";
@@ -25,7 +23,7 @@ impl NamedKeyStorage {
     pub fn get(&self) -> String {
         self.env()
             .get_named_value(VALUE_KEY)
-            .unwrap_or_revert_with(&self.env(), UnwrapError)
+            .unwrap_or_revert_with(&self.env(), ExecutionError::UnwrapError)
     }
 }
 

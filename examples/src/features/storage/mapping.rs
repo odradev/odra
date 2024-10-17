@@ -1,6 +1,5 @@
 //! Module containing DogContract. It is used in docs to explain how to interact with the storage.
 use odra::prelude::*;
-use odra::{Mapping, Var};
 
 type FriendName = String;
 type Visits = u32;

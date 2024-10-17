@@ -30,12 +30,11 @@ use odra_core::casper_types::{
     RuntimeArgs, URef, DICTIONARY_ITEM_KEY_MAX_LENGTH, U512, UREF_SERIALIZED_LENGTH
 };
 use odra_core::consts;
-use odra_core::ExecutionError::EmptyDictionaryName;
 use odra_core::{
     args::EntrypointArgument,
     casper_event_standard::{self, Schema, Schemas}
 };
-use odra_core::{prelude::*, Address, CallDef, ExecutionError};
+use odra_core::{prelude::*, CallDef};
 
 lazy_static::lazy_static! {
     static ref STATE: URef = {

@@ -1,7 +1,6 @@
 //! Better address representation for Casper.
-use crate::AddressError::ZeroAddress;
-use crate::{prelude::*, ExecutionError, OdraResult};
-use crate::{AddressError, OdraError, VmError};
+use crate::prelude::*;
+use crate::{AddressError, VmError};
 use casper_types::{
     account::AccountHash,
     bytesrepr::{self, FromBytes, ToBytes},
@@ -90,7 +89,7 @@ impl TryFrom<ContractPackageHash> for Address {
     type Error = AddressError;
     fn try_from(contract_package_hash: ContractPackageHash) -> Result<Self, Self::Error> {
         if contract_package_hash.value().iter().all(|&b| b == 0) {
-            return Err(ZeroAddress);
+            return Err(AddressError::ZeroAddress);
         }
         Ok(Self::Contract(contract_package_hash))
     }
@@ -100,7 +99,7 @@ impl TryFrom<AccountHash> for Address {
     type Error = AddressError;
     fn try_from(account_hash: AccountHash) -> Result<Self, Self::Error> {
         if account_hash.value().iter().all(|&b| b == 0) {
-            return Err(ZeroAddress);
+            return Err(AddressError::ZeroAddress);
         }
         Ok(Self::Account(account_hash))
     }
@@ -179,7 +178,7 @@ impl TryFrom<&[u8; 33]> for Address {
             .iter()
             .all(|&x| x == 0)
         {
-            Err(ZeroAddress)
+            Err(AddressError::ZeroAddress)
         } else {
             Ok(address)
         }

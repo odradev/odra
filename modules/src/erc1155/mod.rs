@@ -1,9 +1,6 @@
 //! Erc1155 standard implementation.
+use odra::casper_types::{bytesrepr::Bytes, U256};
 use odra::prelude::*;
-use odra::{
-    casper_types::{bytesrepr::Bytes, U256},
-    Address
-};
 
 pub mod erc1155_base;
 pub mod extensions;
@@ -53,8 +50,8 @@ pub trait Erc1155 {
 
 /// Erc1155-related Odra events.
 pub mod events {
+    use odra::casper_types::U256;
     use odra::prelude::*;
-    use odra::{casper_types::U256, Address};
 
     /// Emitted when a single Erc1155 transfer is performed.
     #[odra::event]
@@ -100,6 +97,8 @@ pub mod events {
 
 /// Erc1155-related Odra errors.
 pub mod errors {
+    use odra::prelude::OdraError;
+
     /// Possible errors in the context of Erc1155.
     #[odra::odra_error]
     pub enum Error {

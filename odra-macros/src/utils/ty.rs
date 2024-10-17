@@ -2,11 +2,11 @@ use quote::ToTokens;
 use syn::parse_quote;
 
 pub fn address() -> syn::Type {
-    parse_quote!(odra::Address)
+    parse_quote!(Address)
 }
 
 pub fn address_ref() -> syn::Type {
-    parse_quote!(&odra::Address)
+    parse_quote!(&Address)
 }
 
 pub fn contract_env() -> syn::Type {
@@ -14,7 +14,7 @@ pub fn contract_env() -> syn::Type {
 }
 
 pub fn rc_contract_env() -> syn::Type {
-    parse_quote!(odra::prelude::Rc<odra::ContractEnv>)
+    parse_quote!(Rc<odra::ContractEnv>)
 }
 
 pub fn from_bytes() -> syn::Type {
@@ -62,15 +62,15 @@ pub fn contract_call_result() -> syn::Type {
 }
 
 pub fn odra_error() -> syn::Type {
-    parse_quote!(odra::OdraError)
+    parse_quote!(OdraError)
 }
 
 pub fn odra_result(ty: syn::Type) -> syn::Type {
-    parse_quote!(odra::OdraResult<#ty>)
+    parse_quote!(OdraResult<#ty>)
 }
 
 pub fn module() -> syn::Type {
-    parse_quote!(odra::prelude::Module)
+    parse_quote!(Module)
 }
 
 pub fn entry_points() -> syn::Type {

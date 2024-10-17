@@ -8,7 +8,6 @@ use casper_execution_engine::core::engine_state::ExecutableDeployItem;
 use casper_hashing::Digest;
 use itertools::Itertools;
 use jsonrpc_lite::JsonRpc;
-use odra_core::OdraResult;
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 
@@ -35,7 +34,8 @@ use odra_core::{
         Key as CasperKey, PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, U512
     },
     consts::*,
-    Address, CallDef, ExecutionError, OdraError
+    prelude::*,
+    CallDef
 };
 use tokio::time::sleep;
 

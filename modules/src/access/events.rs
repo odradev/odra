@@ -1,7 +1,6 @@
 //! Events emitted by the AccessControl module.
 use super::access_control::Role;
 use odra::prelude::*;
-use odra::Address;
 
 /// Emitted when ownership of the contract is transferred.
 #[odra::event]

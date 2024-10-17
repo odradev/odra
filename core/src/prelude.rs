@@ -4,9 +4,17 @@
 
 #[allow(clippy::module_inception)]
 mod prelude {
+    pub use crate::address::Address;
     pub use crate::arithmetic::*;
-    pub use crate::module::Module;
-    pub use crate::ContractRef;
+    pub use crate::contract_env::ContractEnv;
+    pub use crate::error::{ExecutionError, OdraError, OdraResult};
+    pub use crate::external::External;
+    pub use crate::list::{List, ListIter};
+    pub use crate::mapping::Mapping;
+    pub use crate::module::{Module, Revertible, SubModule};
+    pub use crate::sequence::Sequence;
+    pub use crate::unwrap_or_revert::UnwrapOrRevert;
+    pub use crate::var::Var;
     pub use alloc::borrow::ToOwned;
     pub use alloc::boxed::Box;
     pub use alloc::collections::*;

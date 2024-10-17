@@ -1,7 +1,6 @@
 //! This example demonstrates how to collect events from a module and its submodules.
 #![allow(dead_code)]
 use odra::prelude::*;
-use odra::{SubModule, Var};
 
 #[odra::event]
 struct Start {}

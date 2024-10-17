@@ -1,6 +1,6 @@
 //! This module provides types and traits for working with entrypoint arguments.
 
-use crate::{contract_def::Argument, prelude::*, ContractEnv, ExecutionError};
+use crate::{contract_def::Argument, prelude::*, ContractEnv};
 use casper_types::{
     bytesrepr::{FromBytes, ToBytes},
     CLType, CLTyped, Parameter, RuntimeArgs
@@ -164,11 +164,9 @@ pub fn odra_argument<T: EntrypointArgument>(name: &str) -> Argument {
 
 #[cfg(test)]
 mod tests {
-    use casper_types::U256;
-
-    use crate::{contract_context::MockContractContext, Address};
-
     use super::*;
+    use crate::contract_context::MockContractContext;
+    use casper_types::U256;
 
     #[test]
     fn test_maybe() {
