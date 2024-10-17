@@ -28,4 +28,11 @@ impl ContractRegister {
         }
         Err(OdraError::VmError(VmError::InvalidContractAddress))
     }
+
+    /// Post install hook.
+    pub fn post_install(&mut self, addr: &Address) {
+        if let Some(contract) = self.contracts.get_mut(addr) {
+            contract.post_install();
+        }
+    }
 }

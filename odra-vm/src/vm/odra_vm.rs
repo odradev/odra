@@ -57,6 +57,13 @@ impl OdraVm {
         address
     }
 
+    pub(crate) fn post_install(&self, address: Address) {
+        self.contract_register
+            .write()
+            .unwrap()
+            .post_install(&address);
+    }
+
     /// Calls a contract with the specified address and call definition.
     ///
     /// Returns the result of the call as [Bytes].
