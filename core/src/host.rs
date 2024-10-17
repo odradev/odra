@@ -6,9 +6,9 @@ use crate::{
     call_result::CallResult, entry_point_callback::EntryPointsCaller, Address, CallDef,
     ContractCallResult, ContractEnv, EventError, OdraError, OdraResult, VmError
 };
-use crate::{consts, prelude::*, utils, ExecutionError};
 #[cfg(not(target_arch = "wasm32"))]
-use crate::{contract::OdraContract, contract_def::HasIdent};
+use crate::{consts, contract::OdraContract, contract_def::HasIdent};
+use crate::{prelude::*, utils, ExecutionError};
 use casper_event_standard::EventInstance;
 use casper_types::{
     bytesrepr::{Bytes, FromBytes, ToBytes},
@@ -68,9 +68,10 @@ pub trait EntryPointsCallerProvider {
 pub trait Deployer<R: OdraContract>: Sized {
     /// Deploys a contract with given init args.
     ///
-    /// If the init args are provided, the contract is deployed and initialized
-    /// by calling the constructor. If the init args are not provided, the contract
-    /// is deployed without initialization.
+    /// If the `init_args` is not [NoArgs], the contract is deployed and initialized
+    /// by calling the constructor. Otherwise no constructor is called.
+    ///
+    /// The default [OdraConfig] is used for deployment.
     ///
     /// Returns a host reference to the deployed contract.
     fn deploy(env: &HostEnv, init_args: R::InitArgs) -> R::HostRef;
@@ -79,6 +80,20 @@ pub trait Deployer<R: OdraContract>: Sized {
     ///
     /// Similar to `deploy`, but returns a result instead of panicking.
     fn try_deploy(env: &HostEnv, init_args: R::InitArgs) -> OdraResult<R::HostRef>;
+
+    /// Deploys a contract with given init args and configuration.
+    ///
+    /// Returns a host reference to the deployed contract.
+    fn deploy_with_cfg<T: OdraConfig>(env: &HostEnv, init_args: R::InitArgs, cfg: T) -> R::HostRef;
+
+    /// Tries to deploy a contract with given init args and configuration.
+    ///
+    /// Similar to `deploy_with_cfg`, but returns a result instead of panicking.
+    fn try_deploy_with_cfg<T: OdraConfig>(
+        env: &HostEnv,
+        init_args: R::InitArgs,
+        cfg: T
+    ) -> OdraResult<R::HostRef>;
 }
 
 /// A type which can be used as initialization arguments for a contract.
@@ -96,6 +111,44 @@ impl InitArgs for NoArgs {}
 impl From<NoArgs> for RuntimeArgs {
     fn from(_: NoArgs) -> Self {
         RuntimeArgs::new()
+    }
+}
+
+/// A configuration for a contract.
+///
+/// The configuration every contract written in Odra expects.
+/// Read more: [https://odra.dev/docs/backends/casper/#wasm-arguments]
+pub trait OdraConfig {
+    /// Returns the package hash of the contract.
+    ///
+    /// Used to set the `odra_cfg_package_hash_key_name` key at the contract initialization.
+    fn package_hash(&self) -> String;
+    /// Returns true if the contract should be deployed as upgradable.
+    ///
+    /// If true, the `odra_cfg_is_upgradable` key is set to `true` at the contract initialization.
+    fn is_upgradable(&self) -> bool;
+    /// If true and the key `odra_cfg_package_hash_key_name` already exists, it should be overwritten.
+    fn allow_key_override(&self) -> bool;
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// Default configuration for a contract.
+struct DefaultOdraConfig {
+    name: String
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl OdraConfig for DefaultOdraConfig {
+    fn package_hash(&self) -> String {
+        self.name.clone()
+    }
+
+    fn is_upgradable(&self) -> bool {
+        false
+    }
+
+    fn allow_key_override(&self) -> bool {
+        true
     }
 }
 
@@ -119,10 +172,47 @@ impl<R: OdraContract> Deployer<R> for R {
         env: &HostEnv,
         init_args: <R as OdraContract>::InitArgs
     ) -> OdraResult<<R as OdraContract>::HostRef> {
-        let contract_ident = R::HostRef::ident();
+        Self::try_deploy_with_cfg(
+            env,
+            init_args,
+            DefaultOdraConfig {
+                name: R::HostRef::ident()
+            }
+        )
+    }
 
+    fn deploy_with_cfg<T: OdraConfig>(
+        env: &HostEnv,
+        init_args: <R as OdraContract>::InitArgs,
+        cfg: T
+    ) -> <R as OdraContract>::HostRef {
+        let contract_ident = R::HostRef::ident();
+        match Self::try_deploy_with_cfg(env, init_args, cfg) {
+            Ok(contract) => contract,
+            Err(OdraError::ExecutionError(ExecutionError::MissingArg)) => {
+                core::panic!("Invalid init args for contract {}.", contract_ident)
+            }
+            Err(e) => core::panic!("Contract init failed {:?}", e)
+        }
+    }
+
+    fn try_deploy_with_cfg<T: OdraConfig>(
+        env: &HostEnv,
+        init_args: <R as OdraContract>::InitArgs,
+        cfg: T
+    ) -> OdraResult<<R as OdraContract>::HostRef> {
+        let contract_ident = R::HostRef::ident();
         let caller = R::HostRef::entry_points_caller(env);
-        let address = env.new_contract(&contract_ident, init_args.into(), caller)?;
+
+        let mut init_args = init_args.into();
+        init_args.insert(consts::IS_UPGRADABLE_ARG, cfg.is_upgradable())?;
+        init_args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, cfg.allow_key_override())?;
+        init_args.insert(
+            consts::PACKAGE_HASH_KEY_NAME_ARG,
+            format!("{}_package_hash", cfg.package_hash())
+        )?;
+
+        let address = env.new_contract(&contract_ident, init_args, caller)?;
         Ok(R::HostRef::new(address, env.clone()))
     }
 }
@@ -268,19 +358,6 @@ impl HostEnv {
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address> {
         let backend = self.backend.borrow();
-
-        let mut init_args = init_args;
-        init_args.insert(consts::IS_UPGRADABLE_ARG, false).unwrap();
-        init_args
-            .insert(consts::ALLOW_KEY_OVERRIDE_ARG, true)
-            .unwrap();
-        init_args
-            .insert(
-                consts::PACKAGE_HASH_KEY_NAME_ARG,
-                format!("{}_package_hash", name)
-            )
-            .unwrap();
-
         let deployed_contract = backend.new_contract(name, init_args, entry_points_caller)?;
 
         self.deployed_contracts.borrow_mut().push(deployed_contract);
