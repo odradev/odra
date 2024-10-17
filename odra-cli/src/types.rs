@@ -293,7 +293,7 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
                     if parts.iter().all(|s| s.starts_with("0x")) {
                         let bytes = parts
                             .iter()
-                            .map(|part| parse_hex(input))
+                            .map(|part| parse_hex(part))
                             .collect::<Result<Vec<_>, _>>()?;
                         Ok(bytes.concat())
                     } else {
