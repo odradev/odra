@@ -1,4 +1,3 @@
-#![allow(dead_code, unused_variables)]
 use std::{
     fmt::{Debug, Display},
     str::FromStr
@@ -19,8 +18,8 @@ use thiserror::Error;
 
 const PREFIX_ERROR: &str = "err:";
 const PREFIX_OK: &str = "ok:";
-const PREFIX_NONE: &str = "none";
-const PREFIX_SOME: &str = "some:";
+// const PREFIX_NONE: &str = "none";
+// const PREFIX_SOME: &str = "some:";
 
 pub enum Format {
     Result,
@@ -165,7 +164,7 @@ pub(crate) fn named_cl_type_to_cl_type(ty: &NamedCLType) -> CLType {
 }
 
 pub(crate) fn vec_into_bytes(ty: &NamedCLType, input: Vec<&str>) -> TypeResult<Vec<u8>> {
-    let mut result = _to_bytes(input.len() as u32)?;
+    let mut result = to_bytes_or_err(input.len() as u32)?;
     for value in input {
         result.extend(into_bytes(ty, value)?);
     }
@@ -262,7 +261,7 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
                 })
                 .collect::<Result<Vec<_>, _>>()?;
 
-            let mut result = _to_bytes(parts.len() as u32)?;
+            let mut result = to_bytes_or_err(parts.len() as u32)?;
             for (k, v) in parts.iter() {
                 result.extend(into_bytes(key, k)?);
                 result.extend(into_bytes(value, v)?);
@@ -274,7 +273,7 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
                 .split(',')
                 .map(|part| into_bytes(ty, part))
                 .collect::<Result<Vec<_>, _>>()?;
-            let mut result = _to_bytes(parts.len() as u32)?;
+            let mut result = to_bytes_or_err(parts.len() as u32)?;
             for part in parts {
                 result.extend(part);
             }
@@ -335,7 +334,7 @@ pub(crate) fn from_bytes<'a>(ty: &NamedCLType, input: &'a [u8]) -> TypeResult<(S
             }
         }
         NamedCLType::Result { ok, err } => {
-            let (variant, rem) = _from_bytes::<u8>(input)?;
+            let (variant, rem) = from_bytes_or_err::<u8>(input)?;
             match variant {
                 RESULT_ERR_TAG => {
                     let (value, rem) = from_bytes(err, rem)?;
@@ -364,11 +363,11 @@ pub(crate) fn from_bytes<'a>(ty: &NamedCLType, input: &'a [u8]) -> TypeResult<(S
             Ok((format!("({}, {}, {})", v1, v2, v3), rem))
         }
         NamedCLType::Unit => <() as FromBytes>::from_bytes(input)
-            .map(|(v, rem)| ("".to_string(), rem))
+            .map(|(_, rem)| ("".to_string(), rem))
             .map_err(|_| Error::Deserialization),
 
         NamedCLType::List(ty) => {
-            let (num_keys, mut stream) = _from_bytes::<u32>(input)?;
+            let (num_keys, mut stream) = from_bytes_or_err::<u32>(input)?;
             let mut result = "".to_string();
             for _ in 0..num_keys {
                 let (v, rem) = from_bytes(ty, stream)?;
@@ -400,7 +399,7 @@ pub(crate) fn from_bytes<'a>(ty: &NamedCLType, input: &'a [u8]) -> TypeResult<(S
             Ok((format!("{} ({})", hex, dec), &input[size..]))
         }
         NamedCLType::Map { key, value } => {
-            let (num_keys, mut stream) = _from_bytes::<u32>(input)?;
+            let (num_keys, mut stream) = from_bytes_or_err::<u32>(input)?;
             let mut result = "".to_string();
             for _ in 0..num_keys {
                 let (k, rem) = from_bytes(key, stream)?;
@@ -427,12 +426,12 @@ fn parse_hex(input: &str) -> TypeResult<Vec<u8>> {
 }
 
 #[inline]
-pub(crate) fn _from_bytes<T: FromBytes>(input: &[u8]) -> TypeResult<(T, &[u8])> {
+pub(crate) fn from_bytes_or_err<T: FromBytes>(input: &[u8]) -> TypeResult<(T, &[u8])> {
     T::from_bytes(input).map_err(|_| Error::Deserialization)
 }
 
 #[inline]
-pub(crate) fn _to_bytes<T: ToBytes>(input: T) -> TypeResult<Vec<u8>> {
+pub(crate) fn to_bytes_or_err<T: ToBytes>(input: T) -> TypeResult<Vec<u8>> {
     input.to_bytes().map_err(|_| Error::Serialization)
 }
 

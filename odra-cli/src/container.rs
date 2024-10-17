@@ -13,22 +13,23 @@ const DEPLOYED_CONTRACTS_FILE: &str = "resources/deployed_contracts.toml";
 
 #[derive(Error, Debug)]
 pub enum ContractError {
-    #[error("Invalid TOML")]
+    #[error("TOML serialization error")]
     TomlSerialize(#[from] toml::ser::Error),
-    #[error("Invalid TOML")]
+    #[error("TOML deserialization error")]
     TomlDeserialize(#[from] toml::de::Error),
     #[error("Couldn't read file")]
     Io(#[from] std::io::Error),
-    #[error("Couldn't {0} find contract")]
+    #[error("Couldn't find contract `{0}`")]
     NotFound(String)
 }
 
 /// Struct representing the deployed contracts.
 ///
-/// This struct is used to store the contracts name and address at the deploy time
-/// and to retrieve a reference to the contract at runtime.
+/// This struct is used to store the contracts name and address at the deploy
+/// time and to retrieve a reference to the contract at runtime.
 ///
-/// The data is stored in a TOML file `deployed_contracts.toml` in the `{projet_root}/resources` directory.
+/// The data is stored in a TOML file `deployed_contracts.toml` in the
+/// `{project_root}/resources` directory.
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct DeployedContractsContainer {
     time: String,

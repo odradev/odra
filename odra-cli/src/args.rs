@@ -12,7 +12,7 @@ pub const ARG_ATTACHED_VALUE: &str = "__attached_value";
 
 #[derive(Debug, Error)]
 pub enum ArgsError {
-    #[error("Invalid arg value")]
+    #[error("Invalid arg value: {0}")]
     TypesError(#[from] types::Error),
     #[error("Decoding error: {0}")]
     DecodingError(String),
@@ -227,7 +227,7 @@ impl<'a> ComposedArg<'a> {
             )));
         }
 
-        buffer.extend(types::_to_bytes(size as u32)?);
+        buffer.extend(types::to_bytes_or_err(size as u32)?);
 
         for i in 0..size {
             for (ty, values) in &self.values {
@@ -325,7 +325,7 @@ pub fn decode<'a>(
             let mut bytes = bytes;
             let mut decoded = "[".to_string();
 
-            let (len, rem) = types::_from_bytes::<u32>(bytes)?;
+            let (len, rem) = types::from_bytes_or_err::<u32>(bytes)?;
             bytes = rem;
             for _ in 0..len {
                 let (value, rem) = decode(bytes, &ty, types)?;
@@ -334,7 +334,7 @@ pub fn decode<'a>(
             }
             decoded.pop();
             decoded.push(']');
-            match &**inner {
+            match inner.as_ref() {
                 NamedCLType::Custom(_) => Ok((to_json(&decoded)?, bytes)),
                 _ => Ok((decoded, bytes))
             }
@@ -347,8 +347,8 @@ pub fn decode<'a>(
 }
 
 fn to_json(str: &str) -> Result<String, ArgsError> {
-    let json =
-        Value::from_str(str).map_err(|_| ArgsError::DecodingError("Invalid JSON".to_string()))?;
+    let json = Value::from_str(str)
+        .map_err(|_| ArgsError::DecodingError("Invalid JSON".to_string()))?;
     serde_json::to_string_pretty(&json)
         .map_err(|_| ArgsError::DecodingError("Invalid JSON".to_string()))
 }
@@ -363,7 +363,7 @@ pub fn attached_value_arg() -> Arg {
 }
 
 #[cfg(test)]
-mod t {
+mod tests {
     use clap::{Arg, Command};
     use odra::casper_types::{bytesrepr::Bytes, runtime_args, RuntimeArgs};
     use odra::schema::casper_contract_schema::{NamedCLType, Type};
