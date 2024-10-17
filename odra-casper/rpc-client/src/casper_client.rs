@@ -408,7 +408,11 @@ impl CasperClient {
 
     /// Discover the contract address by name.
     async fn get_contract_address(&self, key_name: &str) -> Address {
-        let key_name = format!("{}_package_hash", key_name);
+        let key_name = if key_name.ends_with("_package_hash") {
+            key_name.to_string()
+        } else {
+            format!("{}_package_hash", key_name)
+        };
         let account_hash = self.public_key().to_account_hash();
         let result = self
             .query_global_state(&CasperKey::Account(account_hash))
@@ -468,7 +472,7 @@ impl CasperClient {
         let wasm_bytes = fs::read(wasm_path).unwrap();
         let session = ExecutableDeployItem::ModuleBytes {
             module_bytes: Bytes::from(wasm_bytes),
-            args
+            args: args.clone()
         };
         let deploy = self.new_deploy(session, self.gas, timestamp);
         let request = put_deploy_request(deploy);
@@ -481,7 +485,13 @@ impl CasperClient {
             deploy_hash
         )?;
 
-        let address = self.get_contract_address(contract_name).await;
+        let package_hash: String = args
+            .get(odra_core::consts::PACKAGE_HASH_KEY_NAME_ARG)
+            .ok_or(OdraError::ExecutionError(ExecutionError::TypeMismatch))
+            .map(|v| v.clone().into_t())
+            .map_err(|_| OdraError::ExecutionError(ExecutionError::TypeMismatch))??;
+
+        let address = self.get_contract_address(&package_hash).await;
         log::info(format!("Contract {:?} deployed.", &address.to_string()));
         Ok(address)
     }

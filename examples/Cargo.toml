@@ -63,6 +63,12 @@ path = "bin/livenet_tests.rs"
 required-features = ["livenet"]
 test = false
 
+[[bin]]
+name = "odra_cfg_on_livenet"
+path = "bin/odra_cfg_on_livenet.rs"
+required-features = ["livenet"]
+test = false
+
 [profile.release]
 codegen-units = 1
 lto = true

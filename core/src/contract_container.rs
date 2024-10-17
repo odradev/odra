@@ -9,15 +9,21 @@ use casper_types::U512;
 /// The container validates a contract call definition before calling the entry point.
 #[derive(Clone)]
 pub struct ContractContainer {
-    entry_points_caller: EntryPointsCaller
+    entry_points_caller: EntryPointsCaller,
+    ctx: ExecutionContext
 }
 
 impl ContractContainer {
     /// Creates a new instance of `ContractContainer`.
     pub fn new(entry_points_caller: EntryPointsCaller) -> Self {
         Self {
-            entry_points_caller
+            entry_points_caller,
+            ctx: ExecutionContext::Installation
         }
+    }
+
+    pub(crate) fn post_install(&mut self) {
+        self.ctx = ExecutionContext::Runtime;
     }
 
     /// Calls the entry point with the given call definition.
@@ -34,13 +40,22 @@ impl ContractContainer {
         if !ep.is_payable && call_def.amount() > U512::zero() {
             return Err(OdraError::ExecutionError(ExecutionError::NonPayable));
         }
+        if ep.name == "init" && self.ctx == ExecutionContext::Runtime {
+            return Err(OdraError::VmError(VmError::InvalidContext));
+        }
         self.entry_points_caller.call(call_def)
     }
 }
 
+#[derive(PartialEq, Eq, Clone, Copy)]
+enum ExecutionContext {
+    Installation,
+    Runtime
+}
+
 #[cfg(test)]
 mod tests {
-    use super::ContractContainer;
+    use super::{ContractContainer, ExecutionContext};
     use crate::contract_context::MockContractContext;
     use crate::entry_point_callback::{Argument, EntryPoint, EntryPointsCaller};
     use crate::host::{HostEnv, MockHostContext};
@@ -85,7 +100,8 @@ mod tests {
                 )))
             });
             Self {
-                entry_points_caller
+                entry_points_caller,
+                ctx: ExecutionContext::Installation
             }
         }
 
@@ -113,7 +129,8 @@ mod tests {
             });
 
             Self {
-                entry_points_caller
+                entry_points_caller,
+                ctx: ExecutionContext::Installation
             }
         }
     }

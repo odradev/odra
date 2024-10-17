@@ -257,7 +257,7 @@ fn call_method(
             },
             Argument {
                 name: odra_core::consts::ALLOW_KEY_OVERRIDE_ARG.to_string(),
-                description: Some("The arg name for the allow key override.".to_string()),
+                description: Some("If true and the key specified in odra_cfg_package_hash_key_name already exists, it will be overwritten.".to_string()),
                 ty: NamedCLType::Bool.into(),
                 optional: false
             },
