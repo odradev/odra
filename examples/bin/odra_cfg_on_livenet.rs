@@ -1,10 +1,8 @@
 //! Deploys an ERC20 contract and transfers some tokens to another address.
 use odra::casper_types::U256;
-use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader, OdraConfig};
-use odra::Address;
-use odra_modules::cep78::token;
-use odra_modules::erc20::{Erc20, Erc20HostRef, Erc20InitArgs};
-use std::str::FromStr;
+use odra::host::{Deployer, HostRef, OdraConfig};
+use odra::prelude::*;
+use odra_modules::erc20::{Erc20, Erc20InitArgs};
 
 struct Cfg {
     is_upgradable: bool,

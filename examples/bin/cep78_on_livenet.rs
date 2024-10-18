@@ -1,23 +1,22 @@
 //! Deploys a CEP-78 contract, mints an nft token and transfers it to another address.
 use odra::args::Maybe;
-use odra::casper_types::U256;
 use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader};
+use odra::prelude::*;
 use odra_modules::cep78::modalities::{
     EventsMode, MetadataMutability, NFTIdentifierMode, NFTKind, NFTMetadataKind, OwnershipMode
 };
-use odra_modules::cep78::token::{TestCep78, TestCep78HostRef, TestCep78InitArgs};
+use odra_modules::cep78::token::{TestCep78, TestCep78HostRef};
 use odra_modules::cep78::utils::InitArgsBuilder;
-use Address;
 
 const CEP78_METADATA: &str = r#"{
     "name": "John Doe",
     "token_uri": "https://www.barfoo.com",
     "checksum": "940bffb3f2bba35f84313aa26da09ece3ad47045c6a1292c2bbd2df4ab1a55fb"
 }"#;
-const CASPER_CONTRACT_ADDRESS: &str =
-    "hash-d4b8fa492d55ac7a515c0c6043d72ba43c49cd120e7ba7eec8c0a330dedab3fb";
-const ODRA_CONTRACT_ADDRESS: &str =
-    "hash-3d35238431c5c6fa1d7df70d73bfc2efd5a03fd5af99ab8c7828a56b2f330274";
+// const CASPER_CONTRACT_ADDRESS: &str =
+//     "hash-d4b8fa492d55ac7a515c0c6043d72ba43c49cd120e7ba7eec8c0a330dedab3fb";
+// const ODRA_CONTRACT_ADDRESS: &str =
+//     "hash-3d35238431c5c6fa1d7df70d73bfc2efd5a03fd5af99ab8c7828a56b2f330274";
 const RECIPIENT_ADDRESS: &str =
     "hash-7821386ecdda83ff100379a06558b69a675d5a170d1c5bf5fbe9fd35262d091f";
 
