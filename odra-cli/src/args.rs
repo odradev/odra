@@ -347,8 +347,8 @@ pub fn decode<'a>(
 }
 
 fn to_json(str: &str) -> Result<String, ArgsError> {
-    let json = Value::from_str(str)
-        .map_err(|_| ArgsError::DecodingError("Invalid JSON".to_string()))?;
+    let json =
+        Value::from_str(str).map_err(|_| ArgsError::DecodingError("Invalid JSON".to_string()))?;
     serde_json::to_string_pretty(&json)
         .map_err(|_| ArgsError::DecodingError("Invalid JSON".to_string()))
 }
