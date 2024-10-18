@@ -376,9 +376,6 @@ impl HostEnv {
         let backend = self.backend.borrow();
         backend.register_contract(address, contract_name, entry_points_caller);
         self.deployed_contracts.borrow_mut().push(address);
-        self.events_count
-            .borrow_mut()
-            .insert(address, backend.get_events_count(&address));
     }
 
     /// Calls a contract at the specified address with the given call definition.
@@ -415,6 +412,12 @@ impl HostEnv {
             .borrow()
             .iter()
             .for_each(|contract_address| {
+                if binding.get(contract_address).is_none() {
+                    binding.insert(
+                        *contract_address,
+                        backend.get_events_count(contract_address)
+                    );
+                }
                 let events_count = binding.get_mut(contract_address).unwrap();
                 let old_events_last_id = *events_count;
                 let new_events_count = backend.get_events_count(contract_address);
