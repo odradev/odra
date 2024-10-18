@@ -7,11 +7,8 @@ use crate::erc721::extensions::erc721_metadata::{Erc721Metadata, Erc721MetadataE
 use crate::erc721::owned_erc721_with_metadata::OwnedErc721WithMetadata;
 use crate::erc721::Erc721;
 use crate::erc721_token::errors::Error;
+use odra::casper_types::{bytesrepr::Bytes, U256};
 use odra::prelude::*;
-use odra::{
-    casper_types::{bytesrepr::Bytes, U256},
-    Address, SubModule
-};
 
 /// The ERC721 token implementation.
 ///
@@ -129,6 +126,8 @@ impl OwnedErc721WithMetadata for Erc721Token {
 
 /// Erc721 errors.
 pub mod errors {
+    use odra::prelude::OdraError;
+
     /// Erc721 errors.
     #[odra::odra_error]
     pub enum Error {
@@ -149,7 +148,7 @@ mod tests {
     use crate::erc721_token::errors::Error::TokenAlreadyExists;
     use odra::host::{Deployer, HostEnv, HostRef, NoArgs};
     use odra::prelude::*;
-    use odra::{casper_types::U256, Address, OdraError, VmError};
+    use odra::{casper_types::U256, VmError};
     const NAME: &str = "PlascoinNFT";
     const SYMBOL: &str = "PLSNFT";
     const BASE_URI: &str = "https://plascoin.org/";

@@ -1,5 +1,5 @@
 //! Module containing DogContract. It is used in docs to explain how to interact with the storage.
-use odra::{prelude::*, List, Var};
+use odra::prelude::*;
 
 /// A simple contract that represents a third dog.
 #[odra::module]

@@ -1,6 +1,6 @@
 //! This example demonstrates how to use the reentrancy guard in a contract.
 use odra::prelude::*;
-use odra::Var;
+use odra::ContractRef;
 
 /// Contract used to test reentrancy guard.
 #[odra::module]
@@ -52,6 +52,7 @@ impl ReentrancyMock {
 mod test {
     use super::ReentrancyMock;
     use odra::host::{Deployer, NoArgs};
+    use odra::prelude::*;
 
     #[test]
     fn non_reentrant_function_can_be_called() {
@@ -66,7 +67,7 @@ mod test {
         let mut contract = ReentrancyMock::deploy(&odra_test::env(), NoArgs);
         assert_eq!(
             contract.try_count_ref_recursive(11).unwrap_err(),
-            odra::ExecutionError::ReentrantCall.into()
+            ExecutionError::ReentrantCall.into()
         );
     }
 

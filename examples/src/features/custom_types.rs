@@ -1,5 +1,5 @@
 #![allow(missing_docs)]
-use odra::{prelude::*, Var};
+use odra::prelude::*;
 
 type IPv4 = [u8; 4];
 type IPv6 = [u8; 16];

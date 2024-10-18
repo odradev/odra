@@ -2,7 +2,7 @@ use odra::named_keys::{
     base64_encoded_key_value_storage, compound_key_value_storage, key_value_storage,
     single_value_storage
 };
-use odra::{casper_types::bytesrepr::ToBytes, prelude::*, Address, SubModule, UnwrapOrRevert};
+use odra::{casper_types::bytesrepr::ToBytes, prelude::*};
 
 use super::constants::*;
 use super::error::CEP78Error;

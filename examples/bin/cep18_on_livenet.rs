@@ -1,7 +1,7 @@
 //! Deploys a CEP-18 contract and transfers some tokens to another address.
 use odra::casper_types::U256;
 use odra::host::{Deployer, HostEnv, HostRefLoader};
-use odra::Address;
+use odra::prelude::*;
 use odra_modules::cep18::utils::Cep18Modality;
 use odra_modules::cep18_token::{Cep18, Cep18HostRef, Cep18InitArgs};
 

@@ -9,7 +9,7 @@ use crate::cep78::{
     },
     token::TestCep78InitArgs
 };
-use odra::{args::Maybe, prelude::*, Address, External, Var};
+use odra::{args::Maybe, prelude::*};
 
 pub fn address_to_key(address: &Address) -> String {
     match address {

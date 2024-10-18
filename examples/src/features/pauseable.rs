@@ -1,6 +1,5 @@
 //! This example demonstrates how to use the pauseable module in a contract.
 use odra::prelude::*;
-use odra::{SubModule, Var};
 use odra_modules::security::Pauseable;
 
 /// Contract showing the capabilities of the pauseable module.

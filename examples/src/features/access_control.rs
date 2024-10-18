@@ -1,6 +1,5 @@
 //! This example is used by the Access Control tutorial.
 use odra::prelude::*;
-use odra::{Address, SubModule};
 use sha3::{Digest, Keccak256};
 
 use odra_modules::access::{AccessControl, Role, DEFAULT_ADMIN_ROLE};
@@ -90,10 +89,8 @@ pub mod test {
     use super::{
         keccak_256, MockModerated, MockModeratedHostRef, ROLE_MODERATOR, ROLE_MODERATOR_ADMIN
     };
-    use odra::{
-        host::{Deployer, HostRef, NoArgs},
-        Address
-    };
+    use odra::host::{Deployer, HostRef, NoArgs};
+    use odra::prelude::*;
     use odra_modules::access::{
         errors::Error,
         events::{RoleGranted, RoleRevoked}

@@ -1,8 +1,7 @@
 //! This example demonstrates how to deploy and interact with a contract on the Livenet environment.
 use odra::casper_types::U256;
 use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader};
-use odra::Address;
-use odra::ExecutionError;
+use odra::prelude::*;
 use odra_examples::features::livenet::{
     LivenetContract, LivenetContractHostRef, LivenetContractInitArgs
 };

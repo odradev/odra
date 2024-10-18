@@ -3,7 +3,7 @@ use casper_types::CLValue;
 use crate::call_def::CallDef;
 use crate::casper_types::bytesrepr::Bytes;
 use crate::casper_types::U512;
-use crate::{Address, OdraError, OdraResult};
+use crate::prelude::*;
 
 /// Trait representing the context of a smart contract.
 #[cfg_attr(test, allow(unreachable_code))]

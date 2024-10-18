@@ -1,6 +1,5 @@
 use odra_core::consts::*;
 use odra_core::prelude::*;
-use odra_core::OdraResult;
 use std::cell::RefCell;
 use std::env;
 use std::path::PathBuf;
@@ -26,12 +25,13 @@ use odra_core::consts;
 use odra_core::consts::*;
 use odra_core::crypto::generate_key_pairs;
 use odra_core::entry_point_callback::EntryPointsCaller;
+use odra_core::prelude::*;
 use odra_core::EventError;
+use odra_core::VmError;
 use odra_core::{
     host::{HostContext, HostEnv},
     CallDef, ContractEnv
 };
-use odra_core::{Address, ExecutionError, OdraError, VmError};
 
 /// Casper virtual machine utilizing [InMemoryWasmTestBuilder].
 pub struct CasperVm {

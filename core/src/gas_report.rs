@@ -1,6 +1,6 @@
 //! Module with structs for handling gas reports.
 use crate::prelude::*;
-use crate::{Address, CallDef};
+use crate::CallDef;
 use casper_types::U512;
 use core::fmt::{Debug, Display, Formatter, Result};
 use serde::{Deserialize, Serialize};
@@ -103,7 +103,6 @@ fn cspr_pretty_string(cspr: &U512) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Address::Account;
     use casper_types::account::AccountHash;
     use casper_types::RuntimeArgs;
 
@@ -120,7 +119,7 @@ mod tests {
 
         let contract_call = DeployReport::ContractCall {
             gas: U512::from(1_000_000_000),
-            contract_address: Account(AccountHash([0; 32])),
+            contract_address: Address::Account(AccountHash([0; 32])),
             call_def: CallDef::new("test", false, RuntimeArgs::new())
         };
         assert_eq!(

@@ -2,7 +2,6 @@
 use super::events::*;
 use crate::access::errors::Error;
 use odra::prelude::*;
-use odra::{Address, Mapping};
 
 /// The role identifier.
 pub type Role = [u8; 32];

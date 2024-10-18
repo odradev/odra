@@ -1,14 +1,10 @@
+use crate::casper_types::{
+    bytesrepr::{FromBytes, ToBytes},
+    CLTyped
+};
 use crate::contract_env::ContractEnv;
 use crate::module::{ModuleComponent, ModulePrimitive};
 use crate::prelude::*;
-use crate::{
-    casper_types::{
-        bytesrepr::{FromBytes, ToBytes},
-        CLTyped
-    },
-    module::Revertible
-};
-use crate::{OdraError, UnwrapOrRevert};
 
 /// Data structure for storing a single value.
 pub struct Var<T> {
