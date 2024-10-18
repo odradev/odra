@@ -2,7 +2,7 @@ use odra::schema::{
     casper_contract_schema::{Access, Argument, Entrypoint, NamedCLType, Type},
     SchemaCustomTypes
 };
-use odra::{casper_types::U512, Address};
+use odra::{casper_types::U512, prelude::Address};
 
 use crate::{CommandArg, CustomTypeSet};
 

@@ -4,7 +4,8 @@ use chrono::{DateTime, SecondsFormat, Utc};
 use odra::{
     contract_def::HasIdent,
     host::{HostEnv, HostRef, HostRefLoader},
-    Address, OdraContract
+    prelude::Address,
+    OdraContract
 };
 use serde_derive::{Deserialize, Serialize};
 use thiserror::Error;

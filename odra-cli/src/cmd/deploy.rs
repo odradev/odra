@@ -3,7 +3,7 @@ use crate::{
 };
 use anyhow::Result;
 use clap::ArgMatches;
-use odra::{host::HostEnv, OdraError};
+use odra::{host::HostEnv, prelude::OdraError};
 use thiserror::Error;
 
 use super::OdraCommand;

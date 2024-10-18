@@ -11,7 +11,7 @@ use odra::{
         },
         AsymmetricType, CLType, Key, PublicKey, URef, U128, U256, U512
     },
-    Address
+    prelude::Address
 };
 
 use thiserror::Error;

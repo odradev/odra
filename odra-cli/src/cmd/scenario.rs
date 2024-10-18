@@ -6,7 +6,7 @@ use crate::{
 use anyhow::Result;
 use clap::ArgMatches;
 use odra::schema::NamedCLTyped;
-use odra::{casper_types::bytesrepr::FromBytes, host::HostEnv, OdraError};
+use odra::{casper_types::bytesrepr::FromBytes, host::HostEnv, prelude::OdraError};
 use thiserror::Error;
 
 use super::OdraCommand;
