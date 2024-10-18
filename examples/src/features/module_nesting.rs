@@ -1,7 +1,6 @@
 //! This example demonstrates how to use nested Odra types in a contract.
 use odra::casper_event_standard;
 use odra::prelude::*;
-use odra::{Mapping, SubModule, UnwrapOrRevert, Var};
 
 /// Module containing the results' storage.
 #[odra::module]

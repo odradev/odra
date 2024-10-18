@@ -1,7 +1,6 @@
 //! This example demonstrates how to use modules in a contract.
 use crate::features::cross_calls::MathEngine;
 use odra::prelude::*;
-use odra::SubModule;
 
 /// Contract that uses a module.
 #[odra::module]

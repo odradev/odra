@@ -9,7 +9,8 @@ default:
 clippy:
     cargo clippy --all-targets -- -D warnings
     cd odra-casper/proxy-caller && cargo clippy --target=wasm32-unknown-unknown -- -D warnings -A clippy::single-component-path-imports
-    cd examples && cargo clippy --all-targets -- -D warnings 
+    cd examples && cargo clippy --all-targets -- -D warnings
+    cd examples && cargo clippy --features=livenet -- -D warnings
     cd modules && cargo clippy --all-targets -- -D warnings
     cd benchmark && cargo clippy --all-targets -- -D warnings
 

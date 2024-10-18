@@ -8,18 +8,18 @@ use odra_core::callstack::CallstackElement;
 use odra_core::casper_types::bytesrepr::{deserialize, deserialize_from_slice, serialize};
 use odra_core::casper_types::{CLType, CLValue};
 use odra_core::entry_point_callback::EntryPointsCaller;
+use odra_core::prelude::*;
+use odra_core::CallDef;
 use odra_core::EventError;
+use odra_core::VmError;
 use odra_core::{
     callstack,
     casper_types::{
         bytesrepr::{Bytes, FromBytes, ToBytes},
         PublicKey, SecretKey, U512
-    },
-    Address, ExecutionError
+    }
 };
-use odra_core::{CallDef, OdraResult};
 use odra_core::{ContractContainer, ContractRegister};
-use odra_core::{OdraError, VmError};
 
 use super::odra_vm_state::OdraVmState;
 const NAMED_KEY_PREFIX: &str = "NAMED_KEY";
@@ -398,9 +398,7 @@ mod tests {
     use odra_core::casper_types::bytesrepr::FromBytes;
     use odra_core::casper_types::{CLValue, RuntimeArgs, U512};
     use odra_core::host::HostEnv;
-    use odra_core::Address;
-    use odra_core::CallDef;
-    use odra_core::{ExecutionError, OdraError, VmError};
+    use odra_core::{prelude::*, CallDef, VmError};
 
     use crate::vm::utils;
     use crate::{OdraVm, OdraVmHost};

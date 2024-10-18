@@ -1,4 +1,4 @@
-use odra::{casper_types::U256, prelude::*, Address, SubModule};
+use odra::{casper_types::U256, prelude::*};
 use odra_modules::cep18_token::Cep18;
 
 /// A module definition. Each module struct consists of Vars and Mappings

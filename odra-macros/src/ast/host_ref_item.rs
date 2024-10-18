@@ -347,13 +347,13 @@ mod ref_item_tests {
         let expected = quote! {
             /// [Erc20] Host Ref.
             pub struct Erc20HostRef {
-                address: odra::Address,
+                address: Address,
                 env: odra::host::HostEnv,
                 attached_value: odra::casper_types::U512
             }
 
             impl odra::host::HostRef for Erc20HostRef {
-                fn new(address: odra::Address, env: odra::host::HostEnv) -> Self {
+                fn new(address: Address, env: odra::host::HostEnv) -> Self {
                     Self {
                         address,
                         env,
@@ -369,7 +369,7 @@ mod ref_item_tests {
                     }
                 }
 
-                fn address(&self) -> &odra::Address {
+                fn address(&self) -> &Address {
                     &self.address
                 }
 
@@ -419,7 +419,7 @@ mod ref_item_tests {
             impl Erc20HostRef {
                 /// Initializes the contract with the given parameters.
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                pub fn try_init(&mut self, total_supply: Option<U256>) -> odra::OdraResult<()> {
+                pub fn try_init(&mut self, total_supply: Option<U256>) -> OdraResult<()> {
                     self.env
                         .call_contract(
                             self.address,
@@ -441,7 +441,7 @@ mod ref_item_tests {
 
                 /// Returns the total supply of the token.
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                pub fn try_total_supply(&self) -> odra::OdraResult<U256> {
+                pub fn try_total_supply(&self) -> OdraResult<U256> {
                     self.env.call_contract(
                         self.address,
                         odra::CallDef::new(
@@ -459,7 +459,7 @@ mod ref_item_tests {
                 }
                 /// Pay to mint.
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                pub fn try_pay_to_mint(&mut self) -> odra::OdraResult<()> {
+                pub fn try_pay_to_mint(&mut self) -> OdraResult<()> {
                     self.env
                         .call_contract(
                             self.address,
@@ -484,7 +484,7 @@ mod ref_item_tests {
                     to: &Address,
                     amount: &U256,
                     msg: Maybe<String>,
-                ) -> odra::OdraResult<()> {
+                ) -> OdraResult<()> {
                     self.env
                         .call_contract(
                             self.address,
@@ -507,7 +507,7 @@ mod ref_item_tests {
                 }
                 /// Airdrops the given amount to the given addresses.
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                pub fn try_airdrop(&self, to: &[Address], amount: &U256) -> odra::OdraResult<()> {
+                pub fn try_airdrop(&self, to: &[Address], amount: &U256) -> OdraResult<()> {
                     self.env.call_contract(
                         self.address,
                         odra::CallDef::new(
@@ -537,13 +537,13 @@ mod ref_item_tests {
         let expected = quote! {
             /// [Erc20] Host Ref.
             pub struct Erc20HostRef {
-                address: odra::Address,
+                address: Address,
                 env: odra::host::HostEnv,
                 attached_value: odra::casper_types::U512
             }
 
             impl odra::host::HostRef for Erc20HostRef {
-                fn new(address: odra::Address, env: odra::host::HostEnv) -> Self {
+                fn new(address: Address, env: odra::host::HostEnv) -> Self {
                     Self {
                         address,
                         env,
@@ -559,7 +559,7 @@ mod ref_item_tests {
                     }
                 }
 
-                fn address(&self) -> &odra::Address {
+                fn address(&self) -> &Address {
                     &self.address
                 }
 
@@ -591,7 +591,7 @@ mod ref_item_tests {
 
             impl Erc20HostRef {
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                pub fn try_total_supply(&self) -> odra::OdraResult<U256> {
+                pub fn try_total_supply(&self) -> OdraResult<U256> {
                     self.env.call_contract(
                         self.address,
                         odra::CallDef::new(
@@ -610,7 +610,7 @@ mod ref_item_tests {
 
 
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                pub fn try_pay_to_mint(&mut self) -> odra::OdraResult<()>  {
+                pub fn try_pay_to_mint(&mut self) -> OdraResult<()>  {
                     self.env
                         .call_contract(
                             self.address,
@@ -640,13 +640,13 @@ mod ref_item_tests {
         let expected = quote! {
             /// [Erc20] Host Ref.
             pub struct Erc20HostRef {
-                address: odra::Address,
+                address: Address,
                 env: odra::host::HostEnv,
                 attached_value: odra::casper_types::U512
             }
 
             impl odra::host::HostRef for Erc20HostRef {
-                fn new(address: odra::Address, env: odra::host::HostEnv) -> Self {
+                fn new(address: Address, env: odra::host::HostEnv) -> Self {
                     Self {
                         address,
                         env,
@@ -662,7 +662,7 @@ mod ref_item_tests {
                     }
                 }
 
-                fn address(&self) -> &odra::Address {
+                fn address(&self) -> &Address {
                     &self.address
                 }
 
@@ -712,7 +712,7 @@ mod ref_item_tests {
             impl Erc20HostRef {
                 /// Returns the total supply of the token.
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                pub fn try_total_supply(&self) -> odra::OdraResult<U256> {
+                pub fn try_total_supply(&self) -> OdraResult<U256> {
                     self.env.call_contract(
                         self.address,
                         odra::CallDef::new(
@@ -731,7 +731,7 @@ mod ref_item_tests {
 
                 /// Returns the owner of the contract.
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                pub fn try_get_owner(&self) -> odra::OdraResult<Address> {
+                pub fn try_get_owner(&self) -> OdraResult<Address> {
                     self.env
                         .call_contract(
                             self.address,
@@ -752,7 +752,7 @@ mod ref_item_tests {
 
                 /// Sets the owner of the contract.
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                pub fn try_set_owner(&mut self, new_owner: Address) -> odra::OdraResult<()> {
+                pub fn try_set_owner(&mut self, new_owner: Address) -> OdraResult<()> {
                     self.env
                         .call_contract(
                             self.address,
@@ -774,7 +774,7 @@ mod ref_item_tests {
 
                 /// Returns the name of the token.
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                pub fn try_name(&self) -> odra::OdraResult<String> {
+                pub fn try_name(&self) -> OdraResult<String> {
                     self.env
                         .call_contract(
                             self.address,
@@ -795,7 +795,7 @@ mod ref_item_tests {
 
                 /// Delegated. See `self.metadata.symbol()` for details.
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                pub fn try_symbol(&self) -> odra::OdraResult<String> {
+                pub fn try_symbol(&self) -> OdraResult<String> {
                     self.env
                         .call_contract(
                             self.address,

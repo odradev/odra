@@ -1,6 +1,6 @@
 //! Example of Balance Checker contract.
-use odra::{casper_types::U256, Address};
-use odra::{prelude::*, External};
+use odra::casper_types::U256;
+use odra::prelude::*;
 
 /// BalanceChecker contract.
 #[odra::module]

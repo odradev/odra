@@ -1,7 +1,6 @@
 use crate::cep18_token::Cep18ContractRef;
-use odra::casper_types::U256;
 use odra::prelude::*;
-use odra::Address;
+use odra::{casper_types::U256, ContractRef};
 
 /// A client contract that can interact with CEP-18 contracts.
 /// Only for purpose of testing CEP-18 module the same way as

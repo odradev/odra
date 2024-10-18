@@ -86,13 +86,13 @@ mod test {
 
                 /// [Erc20] Host Ref.
                 pub struct Erc20HostRef {
-                    address: odra::Address,
+                    address: Address,
                     env: odra::host::HostEnv,
                     attached_value: odra::casper_types::U512
                 }
 
                 impl odra::host::HostRef for Erc20HostRef {
-                    fn new(address: odra::Address, env: odra::host::HostEnv) -> Self {
+                    fn new(address: Address, env: odra::host::HostEnv) -> Self {
                         Self {
                             address,
                             env,
@@ -108,7 +108,7 @@ mod test {
                         }
                     }
 
-                    fn address(&self) -> &odra::Address {
+                    fn address(&self) -> &Address {
                         &self.address
                     }
 
@@ -158,7 +158,7 @@ mod test {
                 impl Erc20HostRef {
                     /// Initializes the contract with the given parameters.
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_init(&mut self, total_supply: Option<U256>) -> odra::OdraResult<()> {
+                    pub fn try_init(&mut self, total_supply: Option<U256>) -> OdraResult<()> {
                         self.env
                             .call_contract(
                                 self.address,
@@ -180,7 +180,7 @@ mod test {
 
                     /// Returns the total supply of the token.
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_total_supply(&self) -> odra::OdraResult<U256> {
+                    pub fn try_total_supply(&self) -> OdraResult<U256> {
                         self.env.call_contract(
                             self.address,
                             odra::CallDef::new(
@@ -198,7 +198,7 @@ mod test {
                     }
                     /// Pay to mint.
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_pay_to_mint(&mut self) -> odra::OdraResult<()> {
+                    pub fn try_pay_to_mint(&mut self) -> OdraResult<()> {
                         self.env
                             .call_contract(
                                 self.address,
@@ -223,7 +223,7 @@ mod test {
                         to: &Address,
                         amount: &U256,
                         msg: Maybe<String>,
-                    ) -> odra::OdraResult<()> {
+                    ) -> OdraResult<()> {
                         self.env
                             .call_contract(
                                 self.address,
@@ -246,7 +246,7 @@ mod test {
                     }
                     /// Airdrops the given amount to the given addresses.
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_airdrop(&self, to: &[Address], amount: &U256) -> odra::OdraResult<()> {
+                    pub fn try_airdrop(&self, to: &[Address], amount: &U256) -> OdraResult<()> {
                         self.env.call_contract(
                             self.address,
                             odra::CallDef::new(
@@ -304,25 +304,25 @@ mod test {
                             match call_def.entry_point() {
                                 "init" => {
                                     let result = __erc20_exec_parts::execute_init(contract_env);
-                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
+                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
                                 }
                                 "total_supply" => {
                                     let result = __erc20_exec_parts::execute_total_supply(contract_env);
-                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
+                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
                                 }
                                 "pay_to_mint" => {
                                     let result = __erc20_exec_parts::execute_pay_to_mint(contract_env);
-                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
+                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
                                 }
                                 "approve" => {
                                     let result = __erc20_exec_parts::execute_approve(contract_env);
-                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
+                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
                                 }
                                 "airdrop" => {
                                     let result = __erc20_exec_parts::execute_airdrop(contract_env);
-                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
+                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
                                 }
-                                name => Err(odra::OdraError::VmError(
+                                name => Err(OdraError::VmError(
                                     odra::VmError::NoSuchMethod(odra::prelude::String::from(name))
                                 ))
                             }
@@ -348,13 +348,13 @@ mod test {
 
                 /// [Erc20] Host Ref.
                 pub struct Erc20HostRef {
-                    address: odra::Address,
+                    address: Address,
                     env: odra::host::HostEnv,
                     attached_value: odra::casper_types::U512
                 }
 
                 impl odra::host::HostRef for Erc20HostRef {
-                    fn new(address: odra::Address, env: odra::host::HostEnv) -> Self {
+                    fn new(address: Address, env: odra::host::HostEnv) -> Self {
                         Self {
                             address,
                             env,
@@ -370,7 +370,7 @@ mod test {
                         }
                     }
 
-                    fn address(&self) -> &odra::Address {
+                    fn address(&self) -> &Address {
                         &self.address
                     }
 
@@ -403,7 +403,7 @@ mod test {
 
                 impl Erc20HostRef {
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_total_supply(&self) -> odra::OdraResult<U256> {
+                    pub fn try_total_supply(&self) -> OdraResult<U256> {
                         self.env.call_contract(
                             self.address,
                             odra::CallDef::new(
@@ -421,7 +421,7 @@ mod test {
                     }
 
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_pay_to_mint(&mut self) -> odra::OdraResult<()> {
+                    pub fn try_pay_to_mint(&mut self) -> OdraResult<()> {
                         self.env
                             .call_contract(
                                 self.address,
@@ -457,13 +457,13 @@ mod test {
                             match call_def.entry_point() {
                                 "total_supply" => {
                                     let result = __erc20_exec_parts::execute_total_supply(contract_env);
-                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
+                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
                                 }
                                 "pay_to_mint" => {
                                     let result = __erc20_exec_parts::execute_pay_to_mint(contract_env);
-                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| odra::OdraError::ExecutionError(err.into()))
+                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
                                 }
-                                name => Err(odra::OdraError::VmError(
+                                name => Err(OdraError::VmError(
                                     odra::VmError::NoSuchMethod(odra::prelude::String::from(name)),
                                 ))
                             }

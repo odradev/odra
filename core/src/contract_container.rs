@@ -1,6 +1,6 @@
 use crate::entry_point_callback::EntryPointsCaller;
-use crate::{prelude::*, ExecutionError, OdraResult};
-use crate::{CallDef, OdraError, VmError};
+use crate::prelude::*;
+use crate::{CallDef, VmError};
 use casper_types::bytesrepr::Bytes;
 use casper_types::U512;
 
@@ -59,7 +59,7 @@ mod tests {
     use crate::contract_context::MockContractContext;
     use crate::entry_point_callback::{Argument, EntryPoint, EntryPointsCaller};
     use crate::host::{HostEnv, MockHostContext};
-    use crate::{casper_types::RuntimeArgs, OdraError, VmError};
+    use crate::{casper_types::RuntimeArgs, VmError};
     use crate::{prelude::*, CallDef, ContractEnv};
 
     const TEST_ENTRYPOINT: &str = "ep";

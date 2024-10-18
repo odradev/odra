@@ -1,4 +1,5 @@
 use crate::module::Revertible;
+use crate::prelude::*;
 use crate::{
     casper_types::{
         bytesrepr::{FromBytes, ToBytes},
@@ -7,10 +8,7 @@ use crate::{
     module::{ModuleComponent, ModulePrimitive},
     ContractEnv
 };
-use crate::{prelude::*, OdraError};
 use num_traits::{Num, One, Zero};
-
-use crate::Var;
 
 /// A module that stores a single value in the storage that can be read or incremented.
 pub struct Sequence<T>

@@ -1,6 +1,6 @@
 //! This examples shows how to handle events in a contract.
 use odra::prelude::*;
-use odra::Address;
+use Address;
 
 /// Contract that emits an event when initialized.
 #[odra::module(events = [PartyStarted])]

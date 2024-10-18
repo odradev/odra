@@ -5,11 +5,8 @@ use crate::erc1155::errors::Error;
 use crate::erc1155::events::{TransferBatch, TransferSingle};
 use crate::erc1155::owned_erc1155::OwnedErc1155;
 use crate::erc1155::Erc1155;
+use odra::casper_types::{bytesrepr::Bytes, U256};
 use odra::prelude::*;
-use odra::{
-    casper_types::{bytesrepr::Bytes, U256},
-    Address, SubModule
-};
 
 /// The ERC1155 token implementation.
 /// It uses the [ERC1155](Erc1155Base) base implementation and the [Ownable] module.
@@ -193,7 +190,7 @@ mod tests {
     use odra::prelude::*;
     use odra::{
         casper_types::{bytesrepr::Bytes, U256},
-        Address, OdraError, VmError
+        VmError
     };
 
     use super::Erc1155Token;

@@ -1,6 +1,6 @@
 //! Encapsulates a set of structures that abstract out a smart contract layout.
 
-use crate::{prelude::*, Address};
+use crate::prelude::*;
 use casper_event_standard::EventInstance;
 use casper_types::{
     bytesrepr::{FromBytes, ToBytes},

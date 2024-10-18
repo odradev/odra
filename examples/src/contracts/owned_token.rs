@@ -1,6 +1,6 @@
 //! An example of a OwnedToken contract.
+use odra::casper_types::U256;
 use odra::prelude::*;
-use odra::{casper_types::U256, Address, SubModule};
 use odra_modules::access::Ownable;
 use odra_modules::erc20::Erc20;
 
@@ -53,7 +53,7 @@ pub mod tests {
     use super::*;
     use odra::{
         host::{Deployer, HostRef},
-        OdraError, VmError
+        VmError
     };
     use odra_modules::access::errors::Error::CallerNotTheOwner;
 

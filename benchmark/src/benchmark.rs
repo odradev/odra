@@ -1,7 +1,6 @@
 use crate::storage::{DictionaryStorage, NamedKeyStorage};
 use odra::casper_types::{U256, U512};
 use odra::prelude::*;
-use odra::{List, Mapping, SubModule, Var};
 use odra_modules::erc20::Erc20;
 
 /// Contract designed to benchmark the Odra framework.

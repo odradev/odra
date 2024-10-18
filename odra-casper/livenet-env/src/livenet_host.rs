@@ -9,9 +9,9 @@ use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::{
     casper_types::{bytesrepr::Bytes, PublicKey, RuntimeArgs, U512},
     host::HostContext,
-    Address, CallDef, ContractEnv, GasReport
+    CallDef, ContractEnv, GasReport
 };
-use odra_core::{prelude::*, EventError, OdraResult};
+use odra_core::{prelude::*, EventError};
 use odra_core::{ContractContainer, ContractRegister};
 use std::sync::RwLock;
 use std::thread::sleep;
