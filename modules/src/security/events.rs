@@ -1,6 +1,5 @@
 //! Security module events implementation.
 use odra::prelude::*;
-use odra::Address;
 
 /// Informs the contract has been stopped by `account`.
 

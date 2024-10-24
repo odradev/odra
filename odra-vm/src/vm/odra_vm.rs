@@ -8,18 +8,18 @@ use odra_core::callstack::CallstackElement;
 use odra_core::casper_types::bytesrepr::{deserialize, deserialize_from_slice, serialize};
 use odra_core::casper_types::{CLType, CLValue};
 use odra_core::entry_point_callback::EntryPointsCaller;
+use odra_core::prelude::*;
+use odra_core::CallDef;
 use odra_core::EventError;
+use odra_core::VmError;
 use odra_core::{
     callstack,
     casper_types::{
         bytesrepr::{Bytes, FromBytes, ToBytes},
         PublicKey, SecretKey, U512
-    },
-    Address, ExecutionError
+    }
 };
-use odra_core::{CallDef, OdraResult};
 use odra_core::{ContractContainer, ContractRegister};
-use odra_core::{OdraError, VmError};
 
 use super::odra_vm_state::OdraVmState;
 const NAMED_KEY_PREFIX: &str = "NAMED_KEY";
@@ -43,7 +43,7 @@ impl OdraVm {
         let address = { self.state.write().unwrap().next_contract_address() };
         // Register new contract under the new address.
         {
-            let contract = ContractContainer::new(entry_points_caller);
+            let contract = ContractContainer::new(name, entry_points_caller);
             self.contract_register
                 .write()
                 .unwrap()
@@ -55,6 +55,13 @@ impl OdraVm {
         }
 
         address
+    }
+
+    pub(crate) fn post_install(&self, address: Address) {
+        self.contract_register
+            .write()
+            .unwrap()
+            .post_install(&address);
     }
 
     /// Calls a contract with the specified address and call definition.
@@ -223,14 +230,29 @@ impl OdraVm {
         self.state.write().unwrap().emit_event(event_data);
     }
 
+    /// Writes an event data to the global state and marks it as native.
+    pub fn emit_native_event(&self, event_data: &Bytes) {
+        self.state.write().unwrap().emit_native_event(event_data);
+    }
+
     /// Gets the event emitted by the given address at the given index from the global state.
     pub fn get_event(&self, address: &Address, index: u32) -> Result<Bytes, EventError> {
         self.state.read().unwrap().get_event(address, index)
     }
 
+    /// Gets the native event emitted by the given address at the given index from the global state.
+    pub fn get_native_event(&self, address: &Address, index: u32) -> Result<Bytes, EventError> {
+        self.state.read().unwrap().get_native_event(address, index)
+    }
+
     /// Gets the number of events emitted by the given address from the global state.
-    pub fn get_events_count(&self, address: &Address) -> u32 {
+    pub fn get_events_count(&self, address: &Address) -> Result<u32, EventError> {
         self.state.read().unwrap().get_events_count(address)
+    }
+
+    /// Gets the number of events emitted by the given address from the global state.
+    pub fn get_native_events_count(&self, address: &Address) -> Result<u32, EventError> {
+        self.state.read().unwrap().get_native_events_count(address)
     }
 
     /// Attaches the given amount of tokens to the current call from the global state.
@@ -391,9 +413,7 @@ mod tests {
     use odra_core::casper_types::bytesrepr::FromBytes;
     use odra_core::casper_types::{CLValue, RuntimeArgs, U512};
     use odra_core::host::HostEnv;
-    use odra_core::Address;
-    use odra_core::CallDef;
-    use odra_core::{ExecutionError, OdraError, VmError};
+    use odra_core::{prelude::*, CallDef, VmError};
 
     use crate::vm::utils;
     use crate::{OdraVm, OdraVmHost};
@@ -602,7 +622,7 @@ mod tests {
         // given an empty instance
         let instance = OdraVm::default();
 
-        let first_contract_address = utils::account_address_from_str("abc");
+        let first_contract_address = utils::contract_address_from_u32(123);
         // put a contract on stack
         push_address(&instance, &first_contract_address);
 
@@ -611,7 +631,7 @@ mod tests {
         instance.emit_event(&first_event);
         instance.emit_event(&second_event);
 
-        let second_contract_address = utils::account_address_from_str("bca");
+        let second_contract_address = utils::contract_address_from_u32(321);
         // put a next contract on stack
         push_address(&instance, &second_contract_address);
 

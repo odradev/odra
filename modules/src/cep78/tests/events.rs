@@ -35,5 +35,5 @@ fn should_not_record_events_in_no_events_mode() {
     let expected_balance = 1u64;
     assert_eq!(actual_balance, expected_balance);
 
-    assert!(env.events_count(contract.address()) == 0);
+    assert_eq!(0, env.events_count(contract.address()));
 }

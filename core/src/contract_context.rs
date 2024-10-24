@@ -3,7 +3,7 @@ use casper_types::CLValue;
 use crate::call_def::CallDef;
 use crate::casper_types::bytesrepr::Bytes;
 use crate::casper_types::U512;
-use crate::{Address, OdraError, OdraResult};
+use crate::prelude::*;
 
 /// Trait representing the context of a smart contract.
 #[cfg_attr(test, allow(unreachable_code))]
@@ -110,6 +110,13 @@ pub trait ContractContext {
     ///
     /// * `event` - The event data to emit.
     fn emit_event(&self, event: &Bytes);
+
+    /// Emits an event with the specified event data using native mechanism.
+    ///
+    /// # Arguments
+    ///
+    /// * `event` - The event data to emit.
+    fn emit_native_event(&self, event: &Bytes);
 
     /// Transfers tokens to the specified address.
     ///

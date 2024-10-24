@@ -10,14 +10,15 @@ use odra_core::casper_types::{
     PublicKey, SecretKey, U512
 };
 use odra_core::crypto::generate_key_pairs;
+use odra_core::prelude::*;
 use odra_core::EventError;
-use odra_core::{Address, ExecutionError, OdraError};
 use std::collections::BTreeMap;
 
 pub struct OdraVmState {
     storage: Storage,
     callstack: Callstack,
     events: BTreeMap<Address, Vec<Bytes>>,
+    native_events: BTreeMap<Address, Vec<Bytes>>,
     contract_counter: u32,
     pub error: Option<OdraError>,
     block_time: u64,
@@ -74,6 +75,7 @@ impl OdraVmState {
 
     pub fn emit_event(&mut self, event_data: &Bytes) {
         let contract_address = self.callstack.current().address();
+        #[allow(clippy::manual_inspect)]
         let events = self.events.get_mut(contract_address).map(|events| {
             events.push(event_data.clone());
             events
@@ -84,22 +86,70 @@ impl OdraVmState {
         }
     }
 
+    pub fn emit_native_event(&mut self, event_data: &Bytes) {
+        let contract_address = self.callstack.current().address();
+        #[allow(clippy::manual_inspect)]
+        let events = self.native_events.get_mut(contract_address).map(|events| {
+            events.push(event_data.clone());
+            events
+        });
+        if events.is_none() {
+            self.native_events
+                .insert(*contract_address, vec![event_data.clone()]);
+        }
+    }
+
     pub fn get_event(&self, address: &Address, index: u32) -> Result<Bytes, EventError> {
+        if !address.is_contract() {
+            return Err(EventError::ContractDoesntSupportEvents);
+        }
         let events = self.events.get(address);
         if events.is_none() {
             return Err(EventError::IndexOutOfBounds);
         }
-        let events: &Vec<Bytes> = events.unwrap();
+        let events = events.unwrap();
         let event = events
             .get(index as usize)
             .ok_or(EventError::IndexOutOfBounds)?;
         Ok(event.clone())
     }
 
-    pub fn get_events_count(&self, address: &Address) -> u32 {
-        self.events
-            .get(address)
-            .map_or(0, |events| events.len() as u32)
+    pub fn get_native_event(&self, address: &Address, index: u32) -> Result<Bytes, EventError> {
+        if !address.is_contract() {
+            return Err(EventError::ContractDoesntSupportEvents);
+        }
+        let events = self.native_events.get(address);
+        if events.is_none() {
+            return Err(EventError::IndexOutOfBounds);
+        }
+        let events = events.unwrap();
+        let event = events
+            .get(index as usize)
+            .ok_or(EventError::IndexOutOfBounds)?;
+        Ok(event.clone())
+    }
+
+    // TODO: Reduce duplication
+    pub fn get_events_count(&self, address: &Address) -> Result<u32, EventError> {
+        if !address.is_contract() {
+            return Err(EventError::ContractDoesntSupportEvents);
+        }
+        let events = self.events.get(address);
+        if events.is_none() {
+            return Err(EventError::CouldntExtractEventData);
+        }
+        Ok(events.unwrap().len() as u32)
+    }
+
+    pub fn get_native_events_count(&self, address: &Address) -> Result<u32, EventError> {
+        if !address.is_contract() {
+            return Err(EventError::ContractDoesntSupportEvents);
+        }
+        let events = self.native_events.get(address);
+        if events.is_none() {
+            return Err(EventError::CouldntExtractEventData);
+        }
+        Ok(events.unwrap().len() as u32)
     }
 
     pub fn attach_value(&mut self, amount: U512) {
@@ -231,6 +281,7 @@ impl Default for OdraVmState {
             storage: Storage::new(balances),
             callstack: Default::default(),
             events: Default::default(),
+            native_events: Default::default(),
             contract_counter: 0,
             error: None,
             block_time: 0,

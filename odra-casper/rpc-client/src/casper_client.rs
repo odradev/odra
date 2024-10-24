@@ -1,51 +1,45 @@
 //! Client for interacting with Casper node.
-use std::collections::BTreeMap;
-use std::time::SystemTime;
-use std::{fs, path::PathBuf, str::from_utf8_unchecked, time::Duration};
 
-use anyhow::Context;
-use casper_execution_engine::core::engine_state::ExecutableDeployItem;
-use casper_hashing::Digest;
 use itertools::Itertools;
 use jsonrpc_lite::JsonRpc;
-use odra_core::OdraResult;
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 
 use crate::casper_client::configuration::CasperClientConfiguration;
-use crate::casper_node_port::query_balance::{
-    PurseIdentifier, QueryBalanceParams, QueryBalanceResult, QUERY_BALANCE_METHOD
-};
-use crate::casper_node_port::rpcs::StoredValue::*;
-use crate::casper_node_port::{
-    rpcs::{
-        DictionaryIdentifier, GetDeployParams, GetDeployResult, GetDictionaryItemParams,
-        GetDictionaryItemResult, GetStateRootHashResult, GlobalStateIdentifier, PutDeployResult,
-        QueryGlobalStateParams, QueryGlobalStateResult
-    },
-    Deploy, DeployHash
-};
+
+use crate::error::Error;
+use crate::error::Error::{Execution, LivenetToDo};
 use crate::log;
-use anyhow::Result;
-use odra_core::casper_types::{sign, URef};
-use odra_core::{
-    casper_types::{
-        bytesrepr::{Bytes, FromBytes, ToBytes},
-        runtime_args, CLTyped, ContractHash, ContractPackageHash, ExecutionResult,
-        Key as CasperKey, PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, U512
-    },
-    consts::*,
-    Address, CallDef, ExecutionError, OdraError
+use casper_client::cli::{
+    get_balance, get_deploy, get_dictionary_item, get_entity, get_node_status, get_state_root_hash,
+    query_global_state, DictionaryItemStrParams
 };
-use tokio::time::sleep;
+use casper_client::rpcs::results::{GetDeployResult, PutDeployResult};
+use casper_client::Verbosity;
+use casper_types::bytesrepr::{deserialize_from_slice, Bytes, FromBytes, ToBytes};
+use casper_types::execution::ExecutionResultV1::{Failure, Success};
+use casper_types::StoredValue::CLValue;
+use casper_types::{
+    execution::ExecutionResult, runtime_args, sign, CLTyped, EntityAddr, PublicKey, RuntimeArgs,
+    SecretKey, URef, U512
+};
+use casper_types::{Deploy, DeployHash, ExecutableDeployItem, StoredValue, TimeDiff, Timestamp};
+use odra_core::casper_event_standard::EVENTS_LENGTH;
+use odra_core::consts::{
+    AMOUNT_ARG, ARGS_ARG, ATTACHED_VALUE_ARG, ENTRY_POINT_ARG, EVENTS, PACKAGE_HASH_ARG,
+    RESULT_KEY, STATE_KEY
+};
+use odra_core::prelude::*;
+use odra_core::CallDef;
 
 pub mod configuration;
-mod error;
 
 /// Environment variable holding a path to a secret key of a main account.
 pub const ENV_SECRET_KEY: &str = "ODRA_CASPER_LIVENET_SECRET_KEY_PATH";
 /// Environment variable holding an address of the casper node exposing RPC API.
 pub const ENV_NODE_ADDRESS: &str = "ODRA_CASPER_LIVENET_NODE_ADDRESS";
+/// Environment variable holding the URL of the events stream.
+pub const ENV_EVENTS_ADDRESS: &str = "ODRA_CASPER_LIVENET_EVENTS_URL";
 /// Environment variable holding a name of the chain.
 pub const ENV_CHAIN_NAME: &str = "ODRA_CASPER_LIVENET_CHAIN_NAME";
 /// Environment variable holding a filename prefix for additional accounts.
@@ -54,18 +48,16 @@ pub const ENV_ACCOUNT_PREFIX: &str = "ODRA_CASPER_LIVENET_KEY_";
 pub const ENV_CSPR_CLOUD_AUTH_TOKEN: &str = "CSPR_CLOUD_AUTH_TOKEN";
 /// Environment variable holding a path to an additional .env file.
 pub const ENV_LIVENET_ENV_FILE: &str = "ODRA_CASPER_LIVENET_ENV";
+/// Time between retries when waiting for a deploy to be processed.
+pub const DEPLOY_WAIT_TIME: u64 = 5;
 
-enum ContractId {
-    Name(String),
-    Address(Address)
-}
+pub type Result<T> = core::result::Result<T, Error>;
 
 /// Client for interacting with Casper node.
 pub struct CasperClient {
     configuration: CasperClientConfiguration,
     active_account: usize,
-    gas: U512,
-    contracts: BTreeMap<Address, String>
+    gas: U512
 }
 
 impl CasperClient {
@@ -74,21 +66,57 @@ impl CasperClient {
         CasperClient {
             configuration,
             active_account: 0,
-            gas: U512::zero(),
-            contracts: BTreeMap::new()
+            gas: U512::zero()
         }
     }
 
-    /// Gets a value from the storage
-    pub async fn get_value(&self, address: &Address, key: &[u8]) -> Result<Bytes> {
-        self.query_state_dictionary(address, unsafe { from_utf8_unchecked(key) })
-            .await
+    /// Gets a value from the Odra storage (`state` dictionary)
+    pub async fn get_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
+        self.get_dictionary_value(address, STATE_KEY, key).await
     }
 
-    /// Gets a value from a named key
+    /// Gets a value from a named key of an account or a contract
     pub async fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes> {
-        let uref = self.query_contract_named_key(address, name).await.unwrap();
-        self.query_uref_bytes(uref).await.ok()
+        let entity_hash = self.query_global_state_for_entity_addr(address).await;
+        let stored_value = self
+            .query_global_state(&entity_hash.to_formatted_string(), Some(name.to_string()))
+            .await;
+        match stored_value.clone() {
+            CLValue(value) => Some(Bytes::from(value.inner_bytes().as_slice())),
+            _ => {
+                panic!(
+                    "Couldn't get {} from {:?}",
+                    name,
+                    address.to_formatted_string()
+                )
+            }
+        }
+    }
+
+    /// Gets a value from a result key
+    pub async fn get_proxy_result(&self) -> Bytes {
+        let stored_value = self
+            .query_global_state(
+                &self
+                    .caller()
+                    .as_account_hash()
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "Tried to query for proxy results from contract, it should be an account: {:?}",
+                            self.caller()
+                        )
+                    })
+                    .to_formatted_string(),
+                Some(RESULT_KEY.to_string())
+            )
+            .await;
+        match stored_value {
+            CLValue(value) => value
+                .clone()
+                .into_t()
+                .unwrap_or_else(|_| panic!("Couldn't get bytes from CLValue: {:?}", value)),
+            _ => panic!("Value stored in result key is not a CLValue")
+        }
     }
 
     /// Gets a value from a named dictionary
@@ -98,8 +126,9 @@ impl CasperClient {
         dictionary_name: &str,
         key: &[u8]
     ) -> Option<Bytes> {
-        let key = String::from_utf8(key.to_vec()).unwrap();
-        self.query_dict_bytes(address, dictionary_name.to_string(), key)
+        let key = String::from_utf8(key.to_vec())
+            .unwrap_or_else(|_| panic!("Couldn't convert key to string: {:?}", key));
+        self.query_dict(address, dictionary_name.to_string(), key)
             .await
             .ok()
     }
@@ -109,9 +138,14 @@ impl CasperClient {
         self.gas = gas.into();
     }
 
-    /// Node address.
+    /// Node rpc address.
     pub fn node_address_rpc(&self) -> String {
-        format!("{}/rpc", self.configuration.node_address)
+        format!("{}/rpc", self.node_address())
+    }
+
+    /// Node address.
+    pub fn node_address(&self) -> &str {
+        &self.configuration.node_address
     }
 
     /// Chain name.
@@ -135,12 +169,12 @@ impl CasperClient {
     }
 
     /// Signs the message using keys associated with an address.
-    pub fn sign_message(&self, message: &Bytes, address: &Address) -> OdraResult<Bytes> {
+    pub fn sign_message(&self, message: &Bytes, address: &Address) -> Result<Bytes> {
         let secret_key = self.address_secret_key(address);
         let public_key = &PublicKey::from(secret_key);
         let signature = sign(message, secret_key, public_key)
             .to_bytes()
-            .map_err(|_| OdraError::ExecutionError(ExecutionError::CouldNotSignMessage))?;
+            .map_err(|_| LivenetToDo)?;
 
         Ok(Bytes::from(signature))
     }
@@ -174,34 +208,39 @@ impl CasperClient {
 
     /// Returns the balance of the account.
     pub async fn get_balance(&self, address: &Address) -> U512 {
-        let query_balance_params = QueryBalanceParams::new(
-            Some(GlobalStateIdentifier::StateRootHash(
-                self.get_state_root_hash().await
-            )),
-            PurseIdentifier::MainPurseUnderAccountHash(
-                *address
-                    .as_account_hash()
-                    .unwrap_or_else(|| panic!("Address {:?} is not an account address", address))
+        // TODO: Use rpc when it will be public to do this in one call
+        let main_purse = self.get_main_purse(address).await.to_formatted_string();
+        get_balance(
+            &self.rpc_id(),
+            self.node_address(),
+            self.configuration.verbosity(),
+            &self.get_state_root_hash().await,
+            &main_purse
+        )
+        .await
+        .unwrap_or_else(|_| {
+            panic!(
+                "Couldn't get balance for address: {:?}",
+                address.to_formatted_string()
             )
-        );
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": QUERY_BALANCE_METHOD,
-                "params": query_balance_params,
-                "id": 1,
-            }
-        );
-        let result: QueryBalanceResult = self.post_request(request).await;
-        result.balance
+        })
+        .result
+        .balance_value
     }
 
-    pub async fn transfer(
-        &self,
-        to: Address,
-        amount: U512,
-        timestamp: Timestamp
-    ) -> OdraResult<()> {
+    /// Gets an uref of a main purse of an account or a contract.
+    pub async fn get_main_purse(&self, address: &Address) -> URef {
+        let purse_uref = self
+            .query_global_state(&address.to_formatted_string(), None)
+            .await;
+        match purse_uref {
+            CLValue(value) => value.into_t().unwrap(),
+            StoredValue::AddressableEntity(entity) => entity.main_purse(),
+            _ => panic!("Not an addressable entity")
+        }
+    }
+
+    pub async fn transfer(&self, to: Address, amount: U512, timestamp: Timestamp) -> Result<()> {
         let session = ExecutableDeployItem::Transfer {
             args: runtime_args! {
                 "amount" => amount,
@@ -211,249 +250,200 @@ impl CasperClient {
         };
         let deploy = self.new_deploy(session, self.gas, timestamp);
         let request = put_deploy_request(deploy);
-        let response: PutDeployResult = self.post_request(request).await;
+        let response: PutDeployResult = self.post_request(request).await?;
         let deploy_hash = response.deploy_hash;
         // TODO: wait_for_deploy_hash should return a result not panic, then this function can return a result
-        self.wait_for_deploy_hash(deploy_hash).await;
+        self.wait_for_deploy(deploy_hash).await?;
         Ok(())
     }
 
     /// Returns the current block_time
-    pub async fn get_block_time(&self) -> u64 {
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": "info_get_status",
-                "id": 1,
-            }
-        );
-        let result: Value = self.post_request(request).await;
-        let result = result["last_added_block_info"]["timestamp"]
-            .as_str()
-            .unwrap_or_else(|| {
-                panic!(
-                    "Couldn't get block time - malformed JSON response: {:?}",
-                    result
-                )
-            });
-        let system_time = humantime::parse_rfc3339_weak(result).expect("Couldn't parse block time");
-        system_time
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap_or_else(|_| panic!("Couldn't parse block time"))
-            .as_millis() as u64
+    pub async fn get_block_time(&self) -> Result<u64> {
+        let block_time = get_node_status(
+            &self.rpc_id(),
+            self.node_address(),
+            self.configuration.verbosity()
+        )
+        .await
+        .map_err(|_| LivenetToDo)?
+        .result
+        .last_added_block_info
+        .ok_or(LivenetToDo)?
+        .timestamp
+        .millis();
+        Ok(block_time)
     }
 
     /// Get the event bytes from storage
-    pub async fn get_event(&self, contract_address: &Address, index: u32) -> OdraResult<Bytes> {
-        self.query_dict(contract_address, "__events".to_string(), index.to_string())
+    pub async fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes> {
+        self.query_dict(contract_address, EVENTS.to_string(), index.to_string())
             .await
     }
 
     /// Get the events count from storage
     pub async fn events_count(&self, contract_address: &Address) -> Option<u32> {
-        match self
-            .query_contract_named_key(contract_address, "__events_length")
+        self.get_named_value(contract_address, EVENTS_LENGTH)
             .await
-        {
-            Ok(uref) => self.query_uref(uref).await.ok(),
-            Err(_) => None
-        }
+            .map(|bytes| {
+                deserialize_from_slice(&bytes).unwrap_or_else(|_| {
+                    panic!(
+                        "Couldn't deserialize events count for contract: {:?}, bytes: {:?}",
+                        contract_address, bytes
+                    )
+                })
+            })
     }
 
     /// Query the node for the current state root hash.
-    async fn get_state_root_hash(&self) -> Digest {
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": "chain_get_state_root_hash",
-                "id": 1,
-            }
-        );
-        let result: GetStateRootHashResult = self.post_request(request).await;
-        result.state_root_hash.unwrap()
+    pub async fn get_state_root_hash(&self) -> String {
+        let digest = get_state_root_hash(
+            &self.rpc_id(),
+            self.node_address(),
+            self.configuration.verbosity(),
+            ""
+        )
+        .await
+        .unwrap_or_else(|_| {
+            panic!(
+                "Couldn't get state root hash from node: {:?}",
+                self.node_address()
+            )
+        })
+        .result
+        .state_root_hash
+        .unwrap_or_else(|| {
+            panic!(
+                "Couldn't get state root hash from node: {:?}",
+                self.node_address()
+            )
+        });
+
+        base16::encode_lower(&digest)
     }
 
-    /// Query the node for the dictionary item of a contract.
+    /// Query the node for the dictionary item of a contract or an account.
     async fn query_dict<T: FromBytes + CLTyped>(
         &self,
-        contract_address: &Address,
+        address: &Address,
         dictionary_name: String,
         dictionary_item_key: String
-    ) -> OdraResult<T> {
-        let state_root_hash = self.get_state_root_hash().await;
-        let contract_hash = self
-            .query_global_state_for_contract_hash(contract_address)
-            .await
-            .map_err(|_| OdraError::ExecutionError(ExecutionError::TypeMismatch))?;
-        let contract_hash = contract_hash
-            .to_formatted_string()
-            .replace("contract-", "hash-");
-        let params = GetDictionaryItemParams {
-            state_root_hash,
-            dictionary_identifier: DictionaryIdentifier::ContractNamedKey {
-                key: contract_hash,
-                dictionary_name,
-                dictionary_item_key
-            }
+    ) -> Result<T> {
+        let entity_addr = self.query_global_state_for_entity_addr(address).await;
+        let params = DictionaryItemStrParams::EntityNamedKey {
+            entity_addr: &entity_addr.to_formatted_string(),
+            dictionary_name: &dictionary_name,
+            dictionary_item_key: &dictionary_item_key
         };
+        let r = get_dictionary_item(
+            &self.rpc_id(),
+            self.node_address(),
+            self.configuration.verbosity(),
+            &self.get_state_root_hash().await,
+            params
+        )
+        .await;
 
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": "state_get_dictionary_item",
-                "params": params,
-                "id": 1,
-            }
-        );
-        let result: GetDictionaryItemResult = self.post_request(request).await;
-        match result.stored_value {
-            CLValue(value) => value
-                .into_t()
-                .map_err(|_| OdraError::ExecutionError(ExecutionError::UnwrapError)),
-            _ => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
-        }
+        r.map_err(|_| LivenetToDo)?
+            .result
+            .stored_value
+            .into_cl_value()
+            .ok_or(LivenetToDo)?
+            .into_t()
+            .map_err(|_| LivenetToDo)
     }
 
-    async fn query_dict_bytes(
-        &self,
-        contract_address: &Address,
-        dictionary_name: String,
-        dictionary_item_key: String
-    ) -> OdraResult<Bytes> {
-        let state_root_hash = self.get_state_root_hash().await;
-        let contract_hash = self
-            .query_global_state_for_contract_hash(contract_address)
-            .await
-            .map_err(|_| OdraError::ExecutionError(ExecutionError::TypeMismatch))?;
-        let contract_hash = contract_hash
-            .to_formatted_string()
-            .replace("contract-", "hash-");
-        let params = GetDictionaryItemParams {
-            state_root_hash,
-            dictionary_identifier: DictionaryIdentifier::ContractNamedKey {
-                key: contract_hash,
-                dictionary_name,
-                dictionary_item_key
-            }
-        };
-
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": "state_get_dictionary_item",
-                "params": params,
-                "id": 1,
-            }
-        );
-        let result = self
-            .safe_post_request(request)
-            .await
-            .get_result()
-            .and_then(|result| {
-                serde_json::from_value::<GetDictionaryItemResult>(result.clone()).ok()
-            })
-            .ok_or_else(|| OdraError::ExecutionError(ExecutionError::KeyNotFound))?;
-        match result.stored_value {
-            CLValue(value) => Ok(value.inner_bytes().as_slice().into()),
-            _ => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
-        }
-    }
-
-    /// Query the contract for the direct value of a named key
-    pub async fn query_contract_named_key<T: AsRef<str>>(
-        &self,
-        contract_address: &Address,
-        key: T
-    ) -> Result<URef> {
-        let contract_state = self
-            .query_global_state_path(contract_address, key.as_ref().to_string())
-            .await?;
-        let uref_str = match contract_state.stored_value.clone() {
-            Contract(contract) => contract.named_keys().find_map(|named_key| {
-                if named_key.name == key.as_ref() {
-                    Some(named_key.key.clone())
-                } else {
-                    None
-                }
-            }),
-            _ => panic!("Not a contract")
-        }
-        .ok_or_else(|| {
-            anyhow::anyhow!(
-                "Couldn't get named key {} from contract state at address {:?}",
-                key.as_ref(),
-                contract_address
-            )
-        })?;
-        URef::from_formatted_str(&uref_str).map_err(|_| anyhow::anyhow!("Invalid URef format"))
-    }
-
-    /// Query the node for the deploy state.
+    /// Query the node for the transaction state.
     pub async fn get_deploy(&self, deploy_hash: DeployHash) -> GetDeployResult {
-        let params = GetDeployParams {
-            deploy_hash,
-            finalized_approvals: false
-        };
-
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": "info_get_deploy",
-                "params": params,
-                "id": 1,
-            }
-        );
-        self.post_request(request).await
+        let t = get_deploy(
+            &self.rpc_id(),
+            self.node_address(),
+            self.configuration.verbosity(),
+            &deploy_hash.to_hex_string(),
+            true
+        )
+        .await;
+        t.unwrap_or_else(|_| {
+            panic!(
+                "Couldn't get deploy: {:?}",
+                deploy_hash.to_hex_string().as_str()
+            )
+        })
+        .result
     }
 
     /// Discover the contract address by name.
     async fn get_contract_address(&self, key_name: &str) -> Address {
-        let key_name = format!("{}_package_hash", key_name);
-        let account_hash = self.public_key().to_account_hash();
-        let result = self
-            .query_global_state(&CasperKey::Account(account_hash))
-            .await;
-        let key = match result.stored_value {
-            Account(account) => account
-                .named_keys()
-                .find(|named_key| named_key.name == key_name)
-                .map_or_else(
-                    || {
-                        panic!(
-                            "Couldn't get contract address from account state at key {}",
-                            key_name
-                        )
-                    },
-                    |named_key| named_key.key.clone()
-                ),
-            _ => panic!(
-                "Couldn't get contract address from account state at key {}",
-                key_name
+        let key_name = format!("{}_{}", key_name, PACKAGE_HASH_ARG);
+
+        let result = get_entity(
+            &self.rpc_id(),
+            self.node_address(),
+            self.configuration.verbosity(),
+            "",
+            &self.public_key().to_hex_string()
+        )
+        .await
+        .unwrap_or_else(|_| {
+            panic!(
+                "{}",
+                format!(
+                    "Couldn't get entity for public key: {:?}",
+                    &self.public_key().to_hex_string()
+                )
+            );
+        })
+        .result;
+        let account = result
+            .entity_result
+            .addressable_entity()
+            .unwrap_or_else(|| {
+                panic!(
+                    "Couldn't get addressable entity for public key: {:?}",
+                    self.public_key().to_hex_string()
+                )
+            });
+
+        let key = account.named_keys.get(&key_name).unwrap_or_else(|| {
+            panic!(
+                "Couldn't get named key {:?} for account: {:?}",
+                key_name,
+                self.public_key().to_hex_string()
             )
-        }
-        .as_str()
-        .replace("hash-", "contract-package-wasm");
-        let contract_hash = ContractPackageHash::from_formatted_str(&key).unwrap();
-        Address::try_from(contract_hash).unwrap()
+        });
+
+        Address::from(key.into_package_hash().unwrap_or_else(|| {
+            panic!(
+                "Couldn't get package hash from key {:?} for account: {:?}",
+                key_name,
+                self.public_key().to_hex_string()
+            )
+        }))
     }
 
-    /// Find the contract hash by the contract package hash.
-    async fn query_global_state_for_contract_hash(
-        &self,
-        address: &Address
-    ) -> Result<ContractHash> {
-        let contract_package_hash = address
-            .as_contract_package_hash()
-            .context("Not a contract package hash")?;
-        let key = CasperKey::Hash(contract_package_hash.value());
-        let result = self.query_global_state(&key).await;
-        let result_as_json = serde_json::to_value(result).context("Couldn't parse result")?;
-        let contract_hash: &str = result_as_json["stored_value"]["ContractPackage"]["versions"][0]
-            ["contract_hash"]
-            .as_str()
-            .context("Couldn't get contract hash")?;
-        ContractHash::from_formatted_str(contract_hash)
-            .map_err(|_| anyhow::anyhow!("Invalid contract hash format"))
+    /// Find the entity addr in global state for an address
+    async fn query_global_state_for_entity_addr(&self, address: &Address) -> EntityAddr {
+        let result = self
+            .query_global_state(&address.to_formatted_string(), None)
+            .await;
+        match result {
+            StoredValue::Package(package) => EntityAddr::SmartContract(
+                package
+                    .current_entity_hash()
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "Couldn't get entity addr for address: {:?}",
+                            address.to_formatted_string()
+                        )
+                    })
+                    .value()
+            ),
+            _ => {
+                panic!(
+                    "Couldn't get entity addr for address: {:?}",
+                    address.to_formatted_string()
+                )
+            }
+        }
     }
 
     /// Deploy the contract.
@@ -461,43 +451,28 @@ impl CasperClient {
         &mut self,
         contract_name: &str,
         args: RuntimeArgs,
-        timestamp: Timestamp
-    ) -> OdraResult<Address> {
+        timestamp: Timestamp,
+        wasm_bytes: Vec<u8>
+    ) -> Result<Address> {
         log::info(format!("Deploying \"{}\".", contract_name));
-        let wasm_path = find_wasm_file_path(contract_name);
-        let wasm_bytes = fs::read(wasm_path).unwrap();
         let session = ExecutableDeployItem::ModuleBytes {
             module_bytes: Bytes::from(wasm_bytes),
             args
         };
         let deploy = self.new_deploy(session, self.gas, timestamp);
         let request = put_deploy_request(deploy);
-        let response: PutDeployResult = self.post_request(request).await;
+        let response: PutDeployResult = self.post_request(request).await?;
         let deploy_hash = response.deploy_hash;
-        let result = self.wait_for_deploy_hash(deploy_hash).await;
-        self.process_result(
-            result,
-            ContractId::Name(contract_name.to_string()),
-            deploy_hash
-        )?;
+        let result = self.wait_for_deploy(deploy_hash).await?;
+        self.process_execution(result, deploy_hash)?;
 
         let address = self.get_contract_address(contract_name).await;
-        log::info(format!("Contract {:?} deployed.", &address.to_string()));
+        log::info(format!(
+            "Contract {:?} deployed.",
+            &address.to_formatted_string()
+        ));
+
         Ok(address)
-    }
-
-    pub fn register_name(&mut self, address: Address, contract_name: String) {
-        self.contracts.insert(address, contract_name);
-    }
-
-    fn find_error(&self, contract_id: ContractId, error_msg: &str) -> Option<(String, OdraError)> {
-        match contract_id {
-            ContractId::Name(contract_name) => error::find(&contract_name, error_msg).ok(),
-            ContractId::Address(addr) => match self.contracts.get(&addr) {
-                Some(contract_name) => error::find(contract_name, error_msg).ok(),
-                None => None
-            }
-        }
     }
 
     /// Deploy the entrypoint call using getter_proxy.
@@ -505,26 +480,32 @@ impl CasperClient {
     /// in under the key RESULT_KEY.
     pub async fn deploy_entrypoint_call_with_proxy(
         &self,
-        addr: Address,
+        address: Address,
         call_def: CallDef,
         timestamp: Timestamp
-    ) -> OdraResult<Bytes> {
+    ) -> Result<Bytes> {
         log::info(format!(
             "Calling {:?} with entrypoint \"{}\" through proxy.",
-            addr.to_string(),
+            address.to_formatted_string(),
             call_def.entry_point()
         ));
 
+        let hash = address.as_package_hash().unwrap();
+        let args_bytes: Vec<u8> = call_def
+            .args()
+            .to_bytes()
+            .expect("Should serialize to bytes");
+        let entry_point = call_def.entry_point();
         let args = runtime_args! {
-            CONTRACT_PACKAGE_HASH_ARG => *addr.as_contract_package_hash().unwrap(),
-            ENTRY_POINT_ARG => call_def.entry_point(),
-            ARGS_ARG => Bytes::from(call_def.args().to_bytes().unwrap()),
+            PACKAGE_HASH_ARG => hash,
+            ENTRY_POINT_ARG => entry_point,
+            ARGS_ARG => Bytes::from(args_bytes),
             ATTACHED_VALUE_ARG => call_def.amount(),
             AMOUNT_ARG => call_def.amount(),
         };
 
         let session = ExecutableDeployItem::ModuleBytes {
-            module_bytes: include_bytes!("../resources/proxy_caller_with_return.wasm")
+            module_bytes: include_bytes!("../../test-vm/resources/proxy_caller_with_return.wasm")
                 .to_vec()
                 .into(),
             args
@@ -532,29 +513,11 @@ impl CasperClient {
 
         let deploy = self.new_deploy(session, self.gas, timestamp);
         let request = put_deploy_request(deploy);
-        let response: PutDeployResult = self.post_request(request).await;
+        let response: PutDeployResult = self.post_request(request).await?;
         let deploy_hash = response.deploy_hash;
-        let result = self.wait_for_deploy_hash(deploy_hash).await;
-        self.process_result(result, ContractId::Address(addr), deploy_hash)?;
-
-        let r = self
-            .query_global_state(&CasperKey::Account(self.public_key().to_account_hash()))
-            .await;
-        match r.stored_value {
-            Account(account) => {
-                let result = account
-                    .named_keys()
-                    .find(|named_key| named_key.name == RESULT_KEY);
-                match result {
-                    Some(result) => {
-                        self.query_uref(URef::from_formatted_str(&result.key).unwrap())
-                            .await
-                    }
-                    None => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
-                }
-            }
-            _ => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
-        }
+        let result = self.wait_for_deploy(deploy_hash).await?;
+        self.process_execution(result, deploy_hash)?;
+        Ok(self.get_proxy_result().await)
     }
 
     /// Deploy the entrypoint call.
@@ -563,185 +526,114 @@ impl CasperClient {
         addr: Address,
         call_def: CallDef,
         timestamp: Timestamp
-    ) -> OdraResult<Bytes> {
+    ) -> Result<Bytes> {
         log::info(format!(
-            "Calling {:?} with entrypoint \"{}\".",
-            addr.to_string(),
+            "Calling {:?} directly with entrypoint \"{}\".",
+            addr.to_formatted_string(),
             call_def.entry_point()
         ));
         let session = ExecutableDeployItem::StoredVersionedContractByHash {
-            hash: *addr.as_contract_package_hash().unwrap(),
+            hash: *addr.as_package_hash().unwrap_or_else(|| {
+                panic!(
+                    "Couldn't get package hash from address: {:?}",
+                    addr.to_formatted_string()
+                )
+            }),
             version: None,
             entry_point: call_def.entry_point().to_string(),
             args: call_def.args().clone()
         };
         let deploy = self.new_deploy(session, self.gas, timestamp);
         let request = put_deploy_request(deploy);
-        let response: PutDeployResult = self.post_request(request).await;
+        let response: PutDeployResult = self.post_request(request).await?;
         let deploy_hash = response.deploy_hash;
-        let result = self.wait_for_deploy_hash(deploy_hash).await;
+        let result = self.wait_for_deploy(deploy_hash).await?;
 
-        self.process_result(result, ContractId::Address(addr), deploy_hash)
-            .map(|_| ().to_bytes().expect("Couldn't serialize (). This shouldn't happen.").into())
+        self.process_execution(result, deploy_hash).map(|_| {
+            ().to_bytes()
+                .expect("Couldn't serialize (). This shouldn't happen.")
+                .into()
+        })
     }
 
-    async fn query_global_state_path(
-        &self,
-        address: &Address,
-        _path: String
-    ) -> Result<QueryGlobalStateResult> {
-        let hash = self.query_global_state_for_contract_hash(address).await?;
-        let key = CasperKey::Hash(hash.value());
-        let state_root_hash = self.get_state_root_hash().await;
-        let params = QueryGlobalStateParams {
-            state_identifier: GlobalStateIdentifier::StateRootHash(state_root_hash),
-            key: key.to_formatted_string(),
-            path: vec![]
-        };
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": "query_global_state",
-                "params": params,
-                "id": 1,
-            }
-        );
-        Ok(self.post_request(request).await)
+    async fn query_global_state(&self, key: &str, path: Option<String>) -> StoredValue {
+        query_global_state(
+            &self.rpc_id(),
+            self.node_address(),
+            Verbosity::Low as u64,
+            "",
+            &self.get_state_root_hash().await,
+            key,
+            &path.clone().unwrap_or_default()
+        )
+        .await
+        .unwrap_or_else(|e| {
+            log::error(format!("Couldn't query global state: {:?}", e));
+            panic!("Couldn't query global state")
+        })
+        .result
+        .stored_value
     }
 
-    async fn query_global_state(&self, key: &CasperKey) -> QueryGlobalStateResult {
-        let state_root_hash = self.get_state_root_hash().await;
-        let params = QueryGlobalStateParams {
-            state_identifier: GlobalStateIdentifier::StateRootHash(state_root_hash),
-            key: key.to_formatted_string(),
-            path: Vec::new()
-        };
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": "query_global_state",
-                "params": params,
-                "id": 1,
-            }
-        );
-        self.post_request(request).await
-    }
-
-    async fn query_state_dictionary(&self, address: &Address, key: &str) -> Result<Bytes> {
-        let state_root_hash = self.get_state_root_hash().await;
-        let contract_hash = self.query_global_state_for_contract_hash(address).await?;
-        let contract_hash = contract_hash
-            .to_formatted_string()
-            .replace("contract-", "hash-");
-        let params = GetDictionaryItemParams {
-            state_root_hash,
-            dictionary_identifier: DictionaryIdentifier::ContractNamedKey {
-                key: contract_hash,
-                dictionary_name: String::from("state"),
-                dictionary_item_key: String::from(key)
-            }
-        };
-
-        let request = json!(
-            {
-                "jsonrpc": "2.0",
-                "method": "state_get_dictionary_item",
-                "params": params,
-                "id": 1,
-            }
-        );
-
-        let result = self
-            .safe_post_request(request)
-            .await
-            .get_result()
-            .and_then(|result| {
-                serde_json::from_value::<GetDictionaryItemResult>(result.clone()).ok()
-            });
-        result
-            .context("Couldn't get dictionary item")
-            .and_then(|result| {
-                let result_as_json =
-                    serde_json::to_value(result).context("Couldn't parse result")?;
-                let result = result_as_json["stored_value"]["CLValue"]["bytes"]
-                    .as_str()
-                    .context("Couldn't get bytes")?;
-                let bytes = hex::decode(result).context("Couldn't decode bytes")?;
-                let (value, _) = FromBytes::from_bytes(&bytes)
-                    .map_err(|_| anyhow::anyhow!("Couldn't parse bytes"))?;
-
-                Ok(value)
-            })
-    }
-
-    async fn query_uref<T: CLTyped + FromBytes>(&self, uref: URef) -> OdraResult<T> {
-        let result = self.query_global_state(&CasperKey::URef(uref)).await;
-        match result.stored_value {
-            CLValue(value) => value
-                .into_t()
-                .map_err(|_| OdraError::ExecutionError(ExecutionError::UnwrapError)),
-            _ => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
-        }
-    }
-
-    async fn query_uref_bytes(&self, uref: URef) -> OdraResult<Bytes> {
-        let key = CasperKey::URef(uref);
-        let result = self.query_global_state(&key).await;
-        match result.stored_value {
-            CLValue(value) => Ok(value.inner_bytes().as_slice().into()),
-            _ => Err(OdraError::ExecutionError(ExecutionError::TypeMismatch))
-        }
-    }
-
-    async fn wait_for_deploy_hash(&self, deploy_hash: DeployHash) -> ExecutionResult {
+    async fn wait_for_deploy(&self, deploy_hash: DeployHash) -> Result<ExecutionResult> {
         let deploy_hash_str = format!("{:?}", deploy_hash.inner());
-        let time_diff = Duration::from_secs(15);
         let final_result;
 
         loop {
             log::wait(format!(
                 "Waiting {:?} for {:?}.",
-                &time_diff, &deploy_hash_str
+                &DEPLOY_WAIT_TIME, &deploy_hash_str
             ));
-            sleep(time_diff).await;
-            let result: GetDeployResult = self.get_deploy(deploy_hash).await;
-            if !result.execution_results.is_empty() {
-                final_result = result;
+
+            tokio::time::sleep(std::time::Duration::from_secs(DEPLOY_WAIT_TIME)).await;
+
+            let result = self.get_deploy(deploy_hash).await.execution_info;
+
+            if result.is_some() {
+                final_result = result
+                    .ok_or(LivenetToDo)?
+                    .execution_result
+                    .ok_or(LivenetToDo)?;
                 break;
             }
         }
-        final_result.execution_results[0].result.clone()
+        Ok(final_result.clone())
     }
 
-    fn process_result(
-        &self,
-        result: ExecutionResult,
-        called_contract_id: ContractId,
-        deploy_hash: DeployHash
-    ) -> OdraResult<()> {
+    fn process_execution(&self, result: ExecutionResult, deploy_hash: DeployHash) -> Result<()> {
         let deploy_hash_str = format!("{:?}", deploy_hash.inner());
         match result {
-            ExecutionResult::Failure { error_message, .. } => {
-                let (error_msg, odra_error) =
-                    match self.find_error(called_contract_id, &error_message) {
-                        Some((contract_error, odra_error)) => (contract_error, odra_error),
-                        None => (
-                            error_message,
-                            OdraError::ExecutionError(ExecutionError::UnexpectedError)
-                        )
-                    };
-                log::error(format!(
-                    "Deploy {:?} failed with error: {:?}.",
-                    deploy_hash_str, error_msg
-                ));
-                Err(odra_error)
-            }
-            ExecutionResult::Success { .. } => {
-                log::info(format!(
-                    "Deploy {:?} successfully executed.",
-                    deploy_hash_str
-                ));
-                Ok(())
+            ExecutionResult::V1(r) => match r {
+                Failure { error_message, .. } => {
+                    log::error(format!(
+                        "Deploy V1 {:?} failed with error: {:?}.",
+                        deploy_hash_str, error_message
+                    ));
+                    Err(Execution { error_message })
+                }
+                Success { .. } => {
+                    log::info(format!(
+                        "Deploy {:?} successfully executed.",
+                        deploy_hash_str
+                    ));
+                    Ok(())
+                }
+            },
+            ExecutionResult::V2(r) => match r.error_message {
+                None => {
+                    log::info(format!(
+                        "Deploy {:?} successfully executed.",
+                        deploy_hash_str
+                    ));
+                    Ok(())
+                }
+                Some(error_message) => {
+                    log::error(format!(
+                        "Deploy V1 {:?} failed with error: {:?}.",
+                        deploy_hash_str, error_message
+                    ));
+                    Err(Execution { error_message })
+                }
             }
         }
     }
@@ -771,42 +663,31 @@ impl CasperClient {
         )
     }
 
-    async fn safe_post_request(&self, request: Value) -> JsonRpc {
+    async fn safe_post_request(&self, request: Value) -> Result<JsonRpc> {
         let client = reqwest::Client::new();
 
         let mut client = client.post(self.node_address_rpc());
         if let Some(token) = &self.configuration.cspr_cloud_auth_token {
             client = client.header("Authorization", token);
         }
-        let response = client.json(&request).send().await;
 
-        let response = match response {
-            Ok(r) => r,
-            Err(e) => {
-                log::error(format!("Couldn't send request: {:?}", e));
-                panic!("Couldn't send request")
-            }
-        };
-        let json: JsonRpc = response.json().await.unwrap_or_else(|e| {
-            log::error(format!("Couldn't parse response: {:?}", e));
-            panic!("Couldn't parse response")
-        });
-        json
+        let response = client
+            .json(&request)
+            .send()
+            .await
+            .map_err(|_| LivenetToDo)?;
+        let json: JsonRpc = response.json().await.map_err(|_| LivenetToDo)?;
+        Ok(json)
     }
 
-    async fn post_request<T: DeserializeOwned>(&self, request: Value) -> T {
-        let json = self.safe_post_request(request).await;
-        json.get_result()
-            .map(|result| {
-                serde_json::from_value::<T>(result.clone()).unwrap_or_else(|e| {
-                    log::error(format!("Couldn't parse result: {:?}", e));
-                    panic!("Couldn't parse result")
-                })
-            })
-            .unwrap_or_else(|| {
-                log::error(format!("Couldn't get result: {:?}", json));
-                panic!("Couldn't get result")
-            })
+    async fn post_request<T: DeserializeOwned>(&self, request: Value) -> Result<T> {
+        let json = self.safe_post_request(request.clone()).await?;
+        let result = json
+            .get_result()
+            .map(|result| serde_json::from_value::<T>(result.clone()))
+            .unwrap()
+            .unwrap();
+        Ok(result)
     }
 
     fn address_secret_key(&self, address: &Address) -> &SecretKey {
@@ -823,31 +704,17 @@ impl CasperClient {
     fn secret_keys(&self) -> &Vec<SecretKey> {
         &self.configuration.secret_keys
     }
+
+    // TODO: Maybe make it random to be in line with rpc spec?
+    fn rpc_id(&self) -> String {
+        "1".to_string()
+    }
 }
 
 impl Default for CasperClient {
     fn default() -> Self {
         Self::new(CasperClientConfiguration::from_env())
     }
-}
-
-/// Search for the wasm file in the current directory and in the parent directory.
-fn find_wasm_file_path(wasm_file_name: &str) -> PathBuf {
-    let mut path = PathBuf::from("wasm")
-        .join(wasm_file_name)
-        .with_extension("wasm");
-    let mut checked_paths = vec![];
-    for _ in 0..2 {
-        if path.exists() && path.is_file() {
-            log::info(format!("Found wasm under {:?}.", path));
-            return path;
-        } else {
-            checked_paths.push(path.clone());
-            path = path.parent().unwrap().to_path_buf();
-        }
-    }
-    log::error(format!("Could not find wasm under {:?}.", checked_paths));
-    panic!("Wasm not found");
 }
 
 fn put_deploy_request(deploy: Deploy) -> Value {

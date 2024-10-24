@@ -13,7 +13,6 @@ macro_rules! single_value_storage {
             }
 
             pub fn get(&self) -> $value_ty {
-                use odra::UnwrapOrRevert;
                 self.env()
                     .get_named_value($key)
                     .unwrap_or_revert_with(self, $err)
@@ -83,7 +82,6 @@ macro_rules! base64_encoded_key_value_storage {
             #[inline]
             fn key<R: odra::module::Revertible>(rev: &R, key: &$key) -> String {
                 use base64::prelude::{Engine, BASE64_STANDARD};
-                use odra::UnwrapOrRevert;
 
                 let preimage = key.to_bytes().unwrap_or_revert(rev);
                 BASE64_STANDARD.encode(preimage)
@@ -104,8 +102,6 @@ macro_rules! compound_key_value_storage {
 
         impl $name {
             pub fn set(&self, key1: &$k1_type, key2: &$k2_type, value: $value_type) {
-                use odra::UnwrapOrRevert;
-
                 let mut key = [0u8; 64];
                 let mut preimage = odra::prelude::Vec::new();
                 preimage.extend_from_slice(&key1.to_bytes().unwrap_or_revert(self));
@@ -118,8 +114,6 @@ macro_rules! compound_key_value_storage {
             }
 
             pub fn get_or_default(&self, key1: &$k1_type, key2: &$k2_type) -> $value_type {
-                use odra::UnwrapOrRevert;
-
                 let mut key = [0u8; 64];
                 let mut preimage = odra::prelude::Vec::new();
                 preimage.extend_from_slice(&key1.to_bytes().unwrap_or_revert(self));

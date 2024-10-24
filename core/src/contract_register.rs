@@ -1,7 +1,7 @@
 use crate::call_def::CallDef;
+use crate::prelude::*;
 use crate::ContractContainer;
-use crate::{casper_types::bytesrepr::Bytes, Address, OdraError, VmError};
-use crate::{prelude::*, OdraResult};
+use crate::{casper_types::bytesrepr::Bytes, VmError};
 
 /// A struct representing a contract register that maps an address to a contract.
 ///
@@ -27,5 +27,20 @@ impl ContractRegister {
             return contract.call(call_def);
         }
         Err(OdraError::VmError(VmError::InvalidContractAddress))
+    }
+
+    /// Returns the name of the contract at the given address.
+    pub fn get(&self, addr: &Address) -> Option<&str> {
+        match self.contracts.get(addr) {
+            Some(contract) => Some(contract.name()),
+            None => None
+        }
+    }
+
+    /// Post install hook.
+    pub fn post_install(&mut self, addr: &Address) {
+        if let Some(contract) = self.contracts.get_mut(addr) {
+            contract.post_install();
+        }
     }
 }

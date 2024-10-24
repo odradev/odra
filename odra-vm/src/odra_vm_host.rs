@@ -2,13 +2,12 @@ use crate::odra_vm_contract_env::OdraVmContractEnv;
 use crate::OdraVm;
 use odra_core::casper_types::{bytesrepr::Bytes, PublicKey, RuntimeArgs, U512};
 use odra_core::entry_point_callback::EntryPointsCaller;
+use odra_core::prelude::*;
 use odra_core::{
     host::{HostContext, HostEnv},
     CallDef, ContractContext, ContractEnv
 };
-use odra_core::{prelude::*, OdraResult};
-use odra_core::{Address, OdraError, VmError};
-use odra_core::{EventError, GasReport};
+use odra_core::{EventError, GasReport, VmError};
 
 /// HostContext utilizing the Odra in-memory virtual machine.
 pub struct OdraVmHost {
@@ -49,8 +48,20 @@ impl HostContext for OdraVmHost {
         self.vm.borrow().get_event(contract_address, index)
     }
 
-    fn get_events_count(&self, contract_address: &Address) -> u32 {
+    fn get_native_event(
+        &self,
+        contract_address: &Address,
+        index: u32
+    ) -> Result<Bytes, EventError> {
+        self.vm.borrow().get_native_event(contract_address, index)
+    }
+
+    fn get_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
         self.vm.borrow().get_events_count(contract_address)
+    }
+
+    fn get_native_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
+        self.vm.borrow().get_native_events_count(contract_address)
     }
 
     fn call_contract(
@@ -94,6 +105,7 @@ impl HostContext for OdraVmHost {
                 CallDef::new(String::from("init"), true, init_args),
                 false
             )?;
+            self.vm.borrow().post_install(address);
         }
 
         Ok(address)

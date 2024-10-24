@@ -1,7 +1,6 @@
 //! Cryptographic utilities.
 
 use crate::prelude::*;
-use crate::Address;
 use casper_types::account::AccountHash;
 use casper_types::{PublicKey, SecretKey};
 
@@ -30,12 +29,8 @@ pub fn generate_key_pairs(amount: u8) -> BTreeMap<Address, (SecretKey, PublicKey
         // Create an AccountHash from a public key.
         let account_addr = AccountHash::from(&public_key);
 
-        let address = account_addr.try_into().unwrap_or_else(|_| {
-            panic!("Couldn't convert AccountHash to Address. This shouldn't happen!")
-        });
-
         // Create a GenesisAccount.
-        accounts.insert(address, (secret_key, public_key));
+        accounts.insert(account_addr.into(), (secret_key, public_key));
     }
     accounts
 }

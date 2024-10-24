@@ -22,7 +22,7 @@ use super::{
 };
 use odra::{
     args::Maybe, casper_event_standard::EventInstance, casper_types::bytesrepr::ToBytes,
-    prelude::*, Address, OdraError, SubModule, UnwrapOrRevert
+    prelude::*, ContractRef
 };
 
 single_value_storage!(

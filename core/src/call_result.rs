@@ -1,7 +1,6 @@
 use crate::casper_types::bytesrepr::{Bytes, ToBytes};
+use crate::prelude::*;
 use crate::utils::extract_event_name;
-use crate::{prelude::*, OdraResult};
-use crate::{Address, OdraError};
 use casper_event_standard::EventInstance;
 
 /// Represents the result of a contract call. Includes external contracts calls.
@@ -14,7 +13,8 @@ pub(crate) struct CallResult {
     caller: Address,
     gas_used: u64,
     result: OdraResult<Bytes>,
-    events: BTreeMap<Address, Vec<Bytes>>
+    events: BTreeMap<Address, Vec<Bytes>>,
+    native_events: BTreeMap<Address, Vec<Bytes>>
 }
 
 impl CallResult {
@@ -24,14 +24,16 @@ impl CallResult {
         caller: Address,
         gas_used: u64,
         result: OdraResult<Bytes>,
-        events: BTreeMap<Address, Vec<Bytes>>
+        events: BTreeMap<Address, Vec<Bytes>>,
+        native_events: BTreeMap<Address, Vec<Bytes>>
     ) -> Self {
         Self {
             contract_address,
             caller,
             gas_used,
             result,
-            events
+            events,
+            native_events
         }
     }
 
@@ -79,7 +81,7 @@ impl CallResult {
         self.contract_address
     }
 
-    /// Returns the names of the events emitted by the contract at the given address.
+    /// Returns the names of the events emitted in the call.
     pub fn event_names(&self, contract_address: &Address) -> Vec<String> {
         self.events
             .get(contract_address)
@@ -89,24 +91,54 @@ impl CallResult {
             .collect()
     }
 
-    /// Returns the events emitted by the contract at the given address.
+    pub fn native_event_names(&self, contract_address: &Address) -> Vec<String> {
+        self.native_events
+            .get(contract_address)
+            .unwrap_or(&vec![])
+            .iter()
+            .map(|event_bytes| extract_event_name(event_bytes).unwrap())
+            .collect()
+    }
+
+    /// Returns the events emitted by the contract in this call.
     pub fn contract_events(&self, contract_address: &Address) -> Vec<Bytes> {
         self.events.get(contract_address).unwrap_or(&vec![]).clone()
     }
 
-    /// Checks if the specified event has been emitted by the contract at the given address.
+    /// Returns the native events emitted by the contract in this call.
+    pub fn contract_native_events(&self, contract_address: &Address) -> Vec<Bytes> {
+        self.events.get(contract_address).unwrap_or(&vec![]).clone()
+    }
+
+    /// Checks if the specified event has been emitted by the contract during the call.
     pub fn emitted(&self, contract_address: &Address, event_name: &str) -> bool {
         self.event_names(contract_address)
             .contains(&event_name.to_string())
     }
 
-    /// Checks if the specified event instance has been emitted by the contract at the given address.
+    /// Checks if the specified native event has been emitted by the contract during the call.
+    pub fn emitted_native(&self, contract_address: &Address, event_name: &str) -> bool {
+        self.native_event_names(contract_address)
+            .contains(&event_name.to_string())
+    }
+
+    /// Checks if the specified event instance has been emitted by the contract during the call.
     pub fn emitted_event<T: ToBytes + EventInstance>(
         &self,
         contract_address: &Address,
         event: &T
     ) -> bool {
         self.contract_events(contract_address)
+            .contains(&Bytes::from(event.to_bytes().unwrap()))
+    }
+
+    /// Checks if the specified native event instance has been emitted by the contract during the call.
+    pub fn emitted_native_event<T: ToBytes + EventInstance>(
+        &self,
+        contract_address: &Address,
+        event: &T
+    ) -> bool {
+        self.contract_native_events(contract_address)
             .contains(&Bytes::from(event.to_bytes().unwrap()))
     }
 
@@ -186,6 +218,15 @@ impl ContractCallResult {
         self.call_result.event_names(&self.contract_address)
     }
 
+    /// Returns the names of the native events emitted by the contract call.
+    ///
+    /// # Returns
+    ///
+    /// A vector containing the names of the events emitted by the contract call.
+    pub fn native_event_names(&self) -> Vec<String> {
+        self.call_result.native_event_names(&self.contract_address)
+    }
+
     /// Returns the events emitted by the contract call.
     ///
     /// # Returns
@@ -193,6 +234,16 @@ impl ContractCallResult {
     /// A vector containing the events emitted by the contract call.
     pub fn events(&self) -> Vec<Bytes> {
         self.call_result.contract_events(&self.contract_address)
+    }
+
+    /// Returns the native events emitted by the contract call.
+    ///
+    /// # Returns
+    ///
+    /// A vector containing the events emitted by the contract call.
+    pub fn native_events(&self) -> Vec<Bytes> {
+        self.call_result
+            .contract_native_events(&self.contract_address)
     }
 
     /// Checks if an event with the specified name was emitted by the contract call.
@@ -208,6 +259,19 @@ impl ContractCallResult {
         self.call_result.emitted(&self.contract_address, event_name)
     }
 
+    /// Checks if a native event with the specified name was emitted by the contract call.
+    ///
+    /// # Arguments
+    ///
+    /// * `event_name` - The name of the event to check.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the event was emitted, otherwise `false`.
+    pub fn emitted_native(&self, event_name: &str) -> bool {
+        self.call_result
+            .emitted_native(&self.contract_address, event_name)
+    }
     /// Checks if the specified event instance was emitted by the contract call.
     ///
     /// # Arguments
@@ -220,5 +284,19 @@ impl ContractCallResult {
     pub fn emitted_event<T: ToBytes + EventInstance>(&self, event: &T) -> bool {
         self.call_result
             .emitted_event(&self.contract_address, event)
+    }
+
+    /// Checks if the specified native event instance was emitted by the contract call.
+    ///
+    /// # Arguments
+    ///
+    /// * `event` - The event instance to check.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the event was emitted, otherwise `false`.
+    pub fn emitted_native_event<T: ToBytes + EventInstance>(&self, event: &T) -> bool {
+        self.call_result
+            .emitted_native_event(&self.contract_address, event)
     }
 }

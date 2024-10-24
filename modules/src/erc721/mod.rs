@@ -1,9 +1,6 @@
 //! Erc721 standard implementation.
-
-use odra::{
-    casper_types::{bytesrepr::Bytes, U256},
-    Address
-};
+use odra::casper_types::{bytesrepr::Bytes, U256};
+use odra::prelude::*;
 
 pub mod erc721_base;
 pub mod extensions;
@@ -57,7 +54,8 @@ pub trait Erc721 {
 /// Erc721-related Odra events.
 pub mod events {
     use odra::casper_event_standard;
-    use odra::{casper_types::U256, Address};
+    use odra::casper_types::U256;
+    use odra::prelude::*;
 
     /// Emitted when the `token_id` token is transferred (also minted or burned).
     #[odra::event]
@@ -95,6 +93,8 @@ pub mod events {
 
 /// Erc721-related Odra errors.
 pub mod errors {
+    use odra::prelude::OdraError;
+
     /// Possible errors in the context of Erc721 token.
     #[odra::odra_error]
     pub enum Error {

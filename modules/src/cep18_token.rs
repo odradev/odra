@@ -1,6 +1,6 @@
 //! CEP-18 Casper Fungible Token standard implementation.
+use odra::casper_types::U256;
 use odra::prelude::*;
-use odra::{casper_types::U256, Address, Mapping, SubModule, UnwrapOrRevert, Var};
 
 use crate::cep18::errors::Error;
 
@@ -364,12 +364,11 @@ pub(crate) mod tests {
     use alloc::vec;
 
     use crate::cep18::utils::Cep18Modality;
-    use odra::casper_types::account::AccountHash;
-    use odra::casper_types::ContractPackageHash;
-    use odra::host::{Deployer, HostEnv, HostRef};
-    use odra::Address;
-
     use crate::cep18_token::{Cep18, Cep18InitArgs};
+    use odra::casper_types::account::AccountHash;
+    use odra::casper_types::PackageHash;
+    use odra::host::{Deployer, HostEnv, HostRef};
+    use odra::prelude::*;
 
     use super::Cep18HostRef;
 
@@ -408,7 +407,7 @@ pub(crate) mod tests {
 
     pub fn invert_address(address: Address) -> Address {
         match address {
-            Address::Account(hash) => Address::Contract(ContractPackageHash::new(hash.value())),
+            Address::Account(hash) => Address::Contract(PackageHash::new(hash.value())),
             Address::Contract(hash) => Address::Account(AccountHash(hash.value()))
         }
     }

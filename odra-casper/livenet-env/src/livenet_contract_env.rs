@@ -5,8 +5,7 @@ use odra_casper_rpc_client::casper_client::CasperClient;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::bytesrepr::Bytes;
 use odra_core::casper_types::{CLValue, U512};
-use odra_core::{prelude::*, ExecutionError, OdraResult};
-use odra_core::{Address, OdraError};
+use odra_core::prelude::*;
 use odra_core::{CallDef, ContractContext, ContractRegister};
 use std::io::Write;
 use std::sync::RwLock;
@@ -24,12 +23,8 @@ impl ContractContext for LivenetContractEnv {
     fn get_value(&self, key: &[u8]) -> Option<Bytes> {
         let callstack = self.callstack.borrow();
         let client = self.casper_client.borrow();
-        self.runtime.block_on(async {
-            client
-                .get_value(callstack.current().address(), key)
-                .await
-                .ok()
-        })
+        self.runtime
+            .block_on(async { client.get_value(callstack.current().address(), key).await })
     }
 
     fn set_value(&self, _key: &[u8], _value: Bytes) {
@@ -99,7 +94,7 @@ impl ContractContext for LivenetContractEnv {
     fn get_block_time(&self) -> u64 {
         let client = self.casper_client.borrow();
         self.runtime
-            .block_on(async { client.get_block_time().await })
+            .block_on(async { client.get_block_time().await.unwrap() })
     }
 
     fn attached_value(&self) -> U512 {
@@ -115,6 +110,10 @@ impl ContractContext for LivenetContractEnv {
 
     fn emit_event(&self, _event: &Bytes) {
         panic!("Cannot emit event in LivenetEnv")
+    }
+
+    fn emit_native_event(&self, _event: &Bytes) {
+        panic!("Cannot emit native event in LivenetEnv")
     }
 
     fn transfer_tokens(&self, _to: &Address, _amount: &U512) {

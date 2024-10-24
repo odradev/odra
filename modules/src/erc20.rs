@@ -1,8 +1,28 @@
 //! ERC20 token standard implementation.
 use crate::erc20::errors::Error;
 use crate::erc20::events::*;
+use odra::casper_types::U256;
 use odra::prelude::*;
-use odra::{casper_types::U256, Address, Mapping, Var};
+
+/// A panic handler for use in a `no_std` environment which simply aborts the process.
+// #[panic_handler]
+// #[no_mangle]
+// pub fn panic(_info: &core::panic::PanicInfo) -> ! {
+//     #[cfg(feature = "test-support")]
+//     crate::contract_api::runtime::print(&alloc::format!("{}", _info));
+//     core::intrinsics::abort();
+// }
+
+// /// An out-of-memory allocation error handler for use in a `no_std` environment which simply aborts
+// /// the process.
+// #[alloc_error_handler]
+// #[no_mangle]
+// pub fn oom(_: core::alloc::Layout) -> ! {
+//     core::intrinsics::abort();
+// }
+
+// #[lang = "eh_personality"]
+// extern "C" fn eh_personality() {}
 
 /// ERC20 token module
 #[odra::module(events = [Approval, Transfer], errors = Error)]
@@ -162,7 +182,8 @@ impl Erc20 {
 /// ERC20 Events
 pub mod events {
     use odra::casper_event_standard;
-    use odra::{casper_types::U256, Address};
+    use odra::casper_types::U256;
+    use odra::prelude::*;
 
     /// Transfer event
     #[odra::event]
@@ -189,6 +210,8 @@ pub mod events {
 
 /// ERC20 Errors
 pub mod errors {
+    use odra::prelude::*;
+
     /// ERC20 errors
     #[odra::odra_error]
     pub enum Error {

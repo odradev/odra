@@ -11,6 +11,8 @@ use casper_contract_schema::{
     NamedCLType, StructMember, UserError
 };
 
+use convert_case::{Boundary, Case, Casing};
+
 use odra_core::args::EntrypointArgument;
 
 const CCSV: u8 = 1;
@@ -225,7 +227,7 @@ pub fn find_schema_file_path(
     root_path: PathBuf
 ) -> Result<PathBuf, &'static str> {
     let mut path = root_path
-        .join(format!("{}_schema.json", contract_name.to_lowercase()))
+        .join(format!("{}_schema.json", camel_to_snake(contract_name)))
         .with_extension("json");
 
     let mut checked_paths = vec![];
@@ -257,7 +259,7 @@ fn call_method(
             },
             Argument {
                 name: odra_core::consts::ALLOW_KEY_OVERRIDE_ARG.to_string(),
-                description: Some("The arg name for the allow key override.".to_string()),
+                description: Some("If true and the key specified in odra_cfg_package_hash_key_name already exists, it will be overwritten.".to_string()),
                 ty: NamedCLType::Bool.into(),
                 optional: false
             },
@@ -277,9 +279,18 @@ fn call_method(
     }
 }
 
+/// Converts a string from camel case to snake case.
+pub fn camel_to_snake<T: ToString>(text: T) -> String {
+    text.to_string()
+        .from_case(Case::UpperCamel)
+        .without_boundaries(&[Boundary::UpperDigit, Boundary::LowerDigit])
+        .to_case(Case::Snake)
+}
+
 #[cfg(test)]
 mod test {
-    use odra_core::{args::Maybe, Address};
+    use odra_core::args::Maybe;
+    use odra_core::prelude::Address;
 
     use super::*;
 

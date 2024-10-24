@@ -1,6 +1,6 @@
 //! This example demonstrates how to call a method from another contract.
 use odra::prelude::*;
-use odra::{Address, UnwrapOrRevert, Var};
+use odra::ContractRef;
 
 /// Contract that uses another contract to perform an operation.
 #[odra::module]

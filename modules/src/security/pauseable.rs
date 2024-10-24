@@ -8,7 +8,6 @@
 use crate::security::errors::Error;
 use crate::security::events::{Paused, Unpaused};
 use odra::prelude::*;
-use odra::Var;
 
 /// The Pauseable module.
 #[odra::module(events = [Paused, Unpaused], errors = Error)]

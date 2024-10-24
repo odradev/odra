@@ -1,32 +1,28 @@
-use odra_core::{prelude::*, GasReport, OdraError};
+use odra_core::{prelude::*, GasReport};
 use std::cell::RefCell;
 use std::env;
 use std::path::PathBuf;
 
 use casper_engine_test_support::{
-    DeployItemBuilder, ExecuteRequestBuilder, InMemoryWasmTestBuilder, ARG_AMOUNT,
-    DEFAULT_ACCOUNT_INITIAL_BALANCE, DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_GENESIS_CONFIG,
-    DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_PAYMENT
+    DeployItemBuilder, ExecuteRequestBuilder, ARG_AMOUNT, DEFAULT_ACCOUNT_INITIAL_BALANCE,
+    DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_PAYMENT
 };
 use std::rc::Rc;
 
 use crate::CasperVm;
-use casper_execution_engine::core::engine_state::{GenesisAccount, RunGenesisRequest};
 use odra_core::casper_types::account::AccountHash;
 use odra_core::casper_types::bytesrepr::{Bytes, ToBytes};
-use odra_core::casper_types::{
-    runtime_args, BlockTime, ContractPackageHash, Key, Motes, SecretKey
-};
+use odra_core::casper_types::{runtime_args, BlockTime, Key, Motes, SecretKey};
 use odra_core::casper_types::{PublicKey, RuntimeArgs, U512};
 use odra_core::consts;
 use odra_core::consts::*;
 use odra_core::entry_point_callback::EntryPointsCaller;
+use odra_core::prelude::*;
 use odra_core::EventError;
 use odra_core::{
     host::{HostContext, HostEnv},
-    CallDef, ContractEnv
+    CallDef, ContractEnv, VmError
 };
-use odra_core::{Address, OdraResult, VmError};
 
 /// HostContext utilizing the Casper test virtual machine.
 pub struct CasperHost {
@@ -64,7 +60,29 @@ impl HostContext for CasperHost {
     }
 
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
+        if !contract_address.is_contract() {
+            return Err(EventError::TriedToQueryEventForNonContract);
+        }
         self.vm.borrow().get_event(contract_address, index)
+    }
+
+    fn get_native_event(
+        &self,
+        contract_address: &Address,
+        index: u32
+    ) -> Result<Bytes, EventError> {
+        if !contract_address.is_contract() {
+            return Err(EventError::TriedToQueryEventForNonContract);
+        }
+        self.vm.borrow().get_native_event(contract_address, index)
+    }
+
+    fn get_events_count(&self, address: &Address) -> Result<u32, EventError> {
+        self.vm.borrow().get_events_count(address)
+    }
+
+    fn get_native_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
+        self.vm.borrow().get_native_events_count(contract_address)
     }
 
     fn call_contract(
@@ -89,10 +107,6 @@ impl HostContext for CasperHost {
                 Err(error.unwrap_or(OdraError::VmError(VmError::Panic)))
             }
         }
-    }
-
-    fn get_events_count(&self, contract_address: &Address) -> u32 {
-        self.vm.borrow().get_events_count(contract_address)
     }
 
     fn new_contract(

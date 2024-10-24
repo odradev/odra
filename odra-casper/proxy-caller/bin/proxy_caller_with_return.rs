@@ -18,7 +18,7 @@ use odra_core::prelude::*;
 fn call() {
     let proxy_call = ProxyCall::load_from_args();
     let result: Vec<u8> = call_versioned_contract_ret_bytes(
-        proxy_call.contract_package_hash,
+        proxy_call.package_hash,
         proxy_call.entry_point_name.as_str(),
         proxy_call.runtime_args
     );

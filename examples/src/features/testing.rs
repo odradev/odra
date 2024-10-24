@@ -1,6 +1,5 @@
 //! This example shows how to test a contract.
 use odra::prelude::*;
-use odra::{Address, Var};
 
 /// Contract presenting the testing abilities of the Odra Framework
 #[odra::module]

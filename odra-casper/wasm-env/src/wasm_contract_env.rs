@@ -2,12 +2,11 @@ use crate::host_functions;
 use casper_contract::contract_api::runtime;
 use casper_types::bytesrepr::ToBytes;
 use casper_types::U512;
+use odra_core::casper_types;
 use odra_core::casper_types::bytesrepr::Bytes;
 use odra_core::casper_types::{CLType, CLValue, BLAKE2B_DIGEST_LENGTH};
 use odra_core::prelude::*;
-use odra_core::{casper_types, UnwrapOrRevert};
-use odra_core::{Address, OdraError};
-use odra_core::{ContractContext, ContractEnv, ExecutionError, OdraResult};
+use odra_core::{ContractContext, ContractEnv};
 
 /// ContractContext implementation for Wasm environment.
 #[derive(Clone)]
@@ -68,6 +67,10 @@ impl ContractContext for WasmContractEnv {
 
     fn emit_event(&self, event: &Bytes) {
         host_functions::emit_event(event);
+    }
+
+    fn emit_native_event(&self, event: &Bytes) {
+        host_functions::emit_native_event(event);
     }
 
     fn transfer_tokens(&self, to: &Address, amount: &U512) {

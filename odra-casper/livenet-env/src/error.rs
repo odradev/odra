@@ -1,9 +1,13 @@
-use anyhow::{anyhow, Result};
-use odra_core::{ExecutionError, OdraError};
-use serde_json::Value;
+//! Module for handling Odra errors coming out of the Livenet execution.
+
 use std::{fs, path::PathBuf};
 
-pub(crate) fn find(contract_name: &str, error_msg: &str) -> Result<(String, OdraError)> {
+use anyhow::{anyhow, Result};
+use odra_core::prelude::*;
+use serde_json::Value;
+
+/// Finds the error message in the contract schema.
+pub fn find(contract_name: &str, error_msg: &str) -> Result<(String, OdraError)> {
     if error_msg == "Out of gas error" {
         return Ok(("OutOfGas".to_string(), ExecutionError::OutOfGas.into()));
     }
@@ -30,10 +34,11 @@ pub(crate) fn find(contract_name: &str, error_msg: &str) -> Result<(String, Odra
         .as_array()
         .ok_or_else(|| anyhow!("Couldn't get value"))?;
 
-    errors
+    let f = errors
         .iter()
         .find_map(|err| match_error(err, error_num))
-        .ok_or_else(|| anyhow!("Couldn't find error"))
+        .ok_or_else(|| anyhow!("Couldn't find error"));
+    f
 }
 
 fn match_error(val: &Value, error_num: u16) -> Option<(String, OdraError)> {
@@ -106,8 +111,8 @@ fn get_internal_error_name(error_num: u16) -> (String, OdraError) {
 
 #[cfg(test)]
 mod test {
+    use super::*;
     use anyhow::Result;
-    use odra_core::{ExecutionError, OdraError};
 
     #[test]
     fn test_reading_errors() {

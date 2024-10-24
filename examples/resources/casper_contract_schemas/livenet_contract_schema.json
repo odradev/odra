@@ -1,11 +1,11 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.79.0-nightly (3a36386dc 2024-04-25)",
+  "toolchain": "rustc 1.81.0-nightly (cf2df68d1 2024-07-01)",
   "authors": [],
   "repository": null,
   "homepage": null,
   "contract_name": "LivenetContract",
-  "contract_version": "1.2.0",
+  "contract_version": "2.0.0",
   "types": [
     {
       "struct": {
@@ -55,6 +55,11 @@
       "name": "RoleRenounceForAnotherAddress",
       "description": "The role cannot be renounced for another address.",
       "discriminant": 20004
+    },
+    {
+      "name": "SillyError",
+      "description": "Silly error.",
+      "discriminant": 1
     }
   ],
   "entry_points": [
@@ -129,6 +134,15 @@
     {
       "name": "mutable_cross_call",
       "description": "Transfers 1 token from the ERC20 contract to the caller. This is an example of a mutable cross-contract call.",
+      "is_mutable": true,
+      "arguments": [],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "function_that_reverts",
+      "description": "Function that reverts with a silly error.",
       "is_mutable": true,
       "arguments": [],
       "return_ty": "Unit",

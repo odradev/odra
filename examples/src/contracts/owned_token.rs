@@ -1,6 +1,6 @@
 //! An example of a OwnedToken contract.
+use odra::casper_types::U256;
 use odra::prelude::*;
-use odra::{casper_types::U256, Address, SubModule};
 use odra_modules::access::Ownable;
 use odra_modules::erc20::Erc20;
 
@@ -51,7 +51,10 @@ impl OwnedToken {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use odra::host::{Deployer, HostRef};
+    use odra::{
+        host::{Deployer, HostRef},
+        VmError
+    };
     use odra_modules::access::errors::Error::CallerNotTheOwner;
 
     pub const NAME: &str = "Plascoin";
@@ -92,6 +95,21 @@ pub mod tests {
                 to: Some(owner),
                 amount: INITIAL_SUPPLY.into()
             }
+        );
+    }
+
+    #[test]
+    fn should_not_init_twice() {
+        let mut token = setup();
+        let result = token.try_init(
+            String::from(NAME),
+            String::from(SYMBOL),
+            11u8,
+            INITIAL_SUPPLY.into()
+        );
+        assert_eq!(
+            result.unwrap_err(),
+            OdraError::VmError(VmError::InvalidContext)
         );
     }
 

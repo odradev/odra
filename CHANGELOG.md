@@ -2,7 +2,16 @@
 
 Changelog for `odra`.
 
-## [1.3.0] - 2024-08-xx
+## [1.4.0] - 2024-10-18
+### Added
+- `deploy_with_cfg` to handle `odra_cfg` args in `livenet`.
+- `odra-cli` is now in the repository.
+
+### Fixed
+- Calling `init` fails in `odra_vm`.
+
+
+## [1.4.0] - 2024-08-20
 ### Added
 - `OdraContract` trait grouping module-related structures.
 ### Changed

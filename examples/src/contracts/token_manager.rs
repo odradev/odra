@@ -1,7 +1,7 @@
 //! This is an example of a TokenManager contract that manages multiple tokens.
 use crate::contracts::owned_token::OwnedToken;
+use odra::casper_types::U256;
 use odra::prelude::*;
-use odra::{casper_types::U256, Address, Mapping, SubModule, Var};
 
 /// Contract that manages multiple tokens.
 #[odra::module]
