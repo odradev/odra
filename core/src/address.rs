@@ -244,7 +244,13 @@ impl From<Caller> for Address {
     fn from(value: Caller) -> Self {
         match value {
             Caller::Initiator { account_hash } => Address::from(account_hash),
-            Caller::Entity { package_hash, .. } => Address::from(package_hash)
+            Caller::Entity { package_hash, .. } => Address::from(package_hash),
+            Caller::SmartContract {
+                contract_hash,
+                contract_package_hash
+            } => {
+                todo!("CONTRACTPACKAGEWHAT!?")
+            }
         }
     }
 }
@@ -293,7 +299,7 @@ const fn hex_char_to_value(c: u8) -> Result<u8, &'static str> {
 mod tests {
     use super::*;
     use casper_types::system::Caller;
-    use casper_types::{AddressableEntityHash, EraId};
+    use casper_types::EraId;
 
     // TODO: casper-types > 1.5.0 will have prefix fixed.
     const PACKAGE_HASH: &str =
@@ -464,7 +470,7 @@ mod tests {
         let address = Address::from(package_hash);
         let caller = Caller::Entity {
             package_hash,
-            entity_hash: AddressableEntityHash::new(package_hash.value())
+            entity_addr: EntityAddr::SmartContract(package_hash.value())
         };
         assert_eq!(address, caller.into());
     }

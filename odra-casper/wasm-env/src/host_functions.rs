@@ -24,15 +24,16 @@ use casper_contract::{
     unwrap_or_revert::UnwrapOrRevert
 };
 use core::mem::MaybeUninit;
+use odra_core::casper_types::account::AccountHash;
 use odra_core::casper_types::addressable_entity::NamedKeys;
 use odra_core::casper_types::bytesrepr::deserialize;
 use odra_core::casper_types::contract_messages::{MessagePayload, MessageTopicOperation};
-use odra_core::casper_types::contracts::ContractVersion;
-use odra_core::casper_types::system::Caller;
+use odra_core::casper_types::contracts::{ContractHash, ContractPackageHash, ContractVersion};
+use odra_core::casper_types::system::{Caller, CallerInfo};
 use odra_core::casper_types::{
     api_error, bytesrepr,
     bytesrepr::{Bytes, FromBytes, ToBytes},
-    ApiError, CLTyped, CLValue, EntryPoints, Key, PackageHash, RuntimeArgs, URef,
+    ApiError, CLTyped, CLValue, EntityAddr, EntryPoints, Key, PackageHash, RuntimeArgs, URef,
     DICTIONARY_ITEM_KEY_MAX_LENGTH, U512, UREF_SERIALIZED_LENGTH
 };
 use odra_core::consts::{ALLOW_KEY_OVERRIDE_ARG, IS_UPGRADABLE_ARG, PACKAGE_HASH_KEY_NAME_ARG};
@@ -369,7 +370,7 @@ pub fn emit_native_event(event: &Bytes) {
 #[inline(always)]
 pub fn caller() -> Address {
     let second_elem = take_nth_caller_from_stack(1);
-    second_elem.into()
+    caller_info_to_caller(second_elem).into()
 }
 
 /// Calls a contract method by Address
@@ -401,7 +402,7 @@ pub fn call_contract(address: Address, call_def: CallDef) -> Bytes {
 #[inline(always)]
 pub fn self_address() -> Address {
     let first_elem = take_nth_caller_from_stack(0);
-    first_elem.into()
+    caller_info_to_caller(first_elem).into()
 }
 
 /// Gets the balance of the current contract.
@@ -573,7 +574,7 @@ fn deserialize_contract_result(bytes_written: usize) -> Vec<u8> {
     }
 }
 
-fn take_nth_caller_from_stack(n: usize) -> Caller {
+fn take_nth_caller_from_stack(n: usize) -> CallerInfo {
     runtime::get_call_stack()
         .into_iter()
         .nth_back(n)
@@ -699,5 +700,67 @@ fn get_named_arg_size(name: &str) -> Result<usize, ApiError> {
     match ret {
         0 => Ok(arg_size),
         _ => Err(ApiError::from(ret as u32))
+    }
+}
+
+fn caller_info_to_caller(info: CallerInfo) -> Caller {
+    let kind = info.kind();
+    match kind {
+        0 => {
+            let account_hash = info
+                .get_field_by_index(0)
+                .map(|val| {
+                    val.to_t::<Option<AccountHash>>()
+                        .expect("must convert out of cl_value")
+                })
+                .expect("must have index 0 in fields")
+                .expect("account hash must be some");
+            Caller::Initiator { account_hash }
+        }
+        3 => {
+            let package_hash = info
+                .get_field_by_index(1)
+                .map(|val| {
+                    val.to_t::<Option<PackageHash>>()
+                        .expect("must convert out of cl_value")
+                })
+                .expect("must have index 1 in fields")
+                .expect("package hash must be some");
+            let entity_addr = info
+                .get_field_by_index(3)
+                .map(|val| {
+                    val.to_t::<Option<EntityAddr>>()
+                        .expect("must convert out of cl_value")
+                })
+                .expect("must have index 3 in fields")
+                .expect("entity addr must be some");
+            Caller::Entity {
+                package_hash,
+                entity_addr
+            }
+        }
+        4 => {
+            let contract_package_hash = info
+                .get_field_by_index(2)
+                .map(|val| {
+                    val.to_t::<Option<ContractPackageHash>>()
+                        .expect("must convert out of cl_value")
+                })
+                .expect("must have index 2 in fields")
+                .expect("contract package hash must be some");
+            let contract_hash = info
+                .get_field_by_index(4)
+                .map(|val| {
+                    val.to_t::<Option<ContractHash>>()
+                        .expect("must convert out of cl_value")
+                })
+                .expect("must have index 4 in fields")
+                .expect("contract hash must be some");
+            Caller::SmartContract {
+                contract_package_hash,
+                contract_hash
+            }
+        }
+        _ => panic!("unhandled kind")
     }
 }

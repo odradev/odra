@@ -67,6 +67,7 @@ mod tests {
                 block_time: 0
             }
         ));
+
         assert!(test_env.emitted_native_event(
             &party_contract,
             &NativePartyStarted {
