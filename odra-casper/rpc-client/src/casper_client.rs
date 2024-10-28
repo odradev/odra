@@ -17,6 +17,7 @@ use casper_client::cli::{
 use casper_client::rpcs::results::{GetDeployResult, PutDeployResult};
 use casper_client::Verbosity;
 use casper_types::bytesrepr::{deserialize_from_slice, Bytes, FromBytes, ToBytes};
+use casper_types::contracts::ContractPackageHash;
 use casper_types::execution::ExecutionResultV1::{Failure, Success};
 use casper_types::StoredValue::CLValue;
 use casper_types::{
@@ -533,12 +534,16 @@ impl CasperClient {
             call_def.entry_point()
         ));
         let session = ExecutableDeployItem::StoredVersionedContractByHash {
-            hash: *addr.as_package_hash().unwrap_or_else(|| {
-                panic!(
-                    "Couldn't get package hash from address: {:?}",
-                    addr.to_formatted_string()
-                )
-            }),
+            hash: ContractPackageHash::from(
+                addr.as_package_hash()
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "Couldn't get package hash from address: {:?}",
+                            addr.to_formatted_string()
+                        )
+                    })
+                    .value()
+            ),
             version: None,
             entry_point: call_def.entry_point().to_string(),
             args: call_def.args().clone()

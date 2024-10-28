@@ -50,7 +50,7 @@ use odra_core::{
 pub struct CasperVm {
     accounts: Vec<Address>,
     key_pairs: BTreeMap<Address, (SecretKey, PublicKey)>,
-    messages: BTreeMap<Address, Vec<MessagePayload>>,
+    messages: BTreeMap<AddressableEntityHash, Vec<MessagePayload>>,
     active_account: Address,
     context: LmdbWasmTestBuilder,
     block_time: u64,
@@ -145,9 +145,10 @@ impl CasperVm {
         contract_address: &Address,
         index: u32
     ) -> Result<Bytes, EventError> {
+        let current_entity_hash = self.get_current_entity_hash(contract_address);
         let messages = self
             .messages
-            .get(contract_address)
+            .get(&current_entity_hash)
             .ok_or(EventError::IndexOutOfBounds)?;
         let message = messages
             .get(index as usize)
@@ -169,9 +170,10 @@ impl CasperVm {
 
     /// Gets the count of native events for the given contract address.
     pub fn get_native_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
+        let current_entity_hash = self.get_current_entity_hash(&contract_address);
         let messages = self
             .messages
-            .get(contract_address)
+            .get(&current_entity_hash)
             .ok_or(EventError::IndexOutOfBounds)?;
         Ok(messages.len() as u32)
     }
@@ -259,11 +261,8 @@ impl CasperVm {
         let messages = messages.messages();
         messages.iter().for_each(|message| {
             let payload = message.payload().clone();
-            let addressable_entity =
-                self.get_addressable_entity_from_entity_addr(message.entity_hash());
-            let address = Address::Contract(addressable_entity.package_hash());
-            let contract_hash = message.entity_hash().value();
-            self.messages.entry(address).or_default().push(payload);
+            let hash = AddressableEntityHash::new(*message.hash_addr());
+            self.messages.entry(hash).or_default().push(payload);
         });
     }
 
@@ -317,25 +316,6 @@ impl CasperVm {
             );
         }
         .unwrap()
-    }
-    fn get_messages(&self, address: &Address) {
-        let entity = self.get_addressable_entity(address);
-        let (topic_name, message_topic_hash) = entity
-            .message_topics()
-            .iter()
-            .next()
-            .expect("should have at least one topic");
-
-        let entity_hash = self.get_addressable_entity_hash(address).value();
-
-        let q = self
-            .context
-            .query(
-                None,
-                Key::message_topic(EntityAddr::SmartContract(entity_hash), *message_topic_hash),
-                &[]
-            )
-            .unwrap();
     }
 
     /// Creates a new contract with the specified name, initialization arguments, and entry points caller.
@@ -617,25 +597,15 @@ impl CasperVm {
 
 impl CasperVm {
     fn get_package(&self, package_hash: PackageHash) -> Package {
-        let stored_value = self
-            .context
-            .query(None, Key::Package(package_hash.value()), &[])
-            .unwrap();
-
-        match stored_value {
-            StoredValue::Package(package) => package,
-            _ => panic!("Expected Package")
-        }
+        self.context.get_package(package_hash).unwrap()
     }
 
-    fn get_current_contract(&self, package_hash: PackageHash) -> EntityWithNamedKeys {
-        let package = self.get_package(package_hash);
-        let addressable_entity_hash = package
+    fn get_current_entity_hash(&self, address: &Address) -> AddressableEntityHash {
+        let package_hash = address.as_package_hash().unwrap();
+        let package = self.get_package(*package_hash);
+        package
             .current_entity_hash()
-            .expect("Package doesn't have current entity hash");
-        self.context
-            .get_entity_with_named_keys_by_entity_hash(addressable_entity_hash)
-            .expect("Couldn't find entity by hash")
+            .expect("Package doesn't have current entity hash")
     }
 
     /// Gets current contract from contract package and
@@ -793,8 +763,6 @@ fn parse_error(err: engine_state::Error) -> OdraError {
             }
             _ => OdraError::VmError(VmError::Other(format!("Casper ExecError: {}", exec_err)))
         }
-    } else if let engine_state::Error::InsufficientPayment = err {
-        OdraError::VmError(VmError::BalanceExceeded)
     } else {
         OdraError::VmError(VmError::Other(format!("Casper EngineStateError: {}", err)))
     }
