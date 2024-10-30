@@ -246,11 +246,9 @@ impl From<Caller> for Address {
             Caller::Initiator { account_hash } => Address::from(account_hash),
             Caller::Entity { package_hash, .. } => Address::from(package_hash),
             Caller::SmartContract {
-                contract_hash,
+                contract_hash: _contract_hash,
                 contract_package_hash
-            } => {
-                todo!("CONTRACTPACKAGEWHAT!?")
-            }
+            } => Address::Contract(PackageHash::new(contract_package_hash.value()))
         }
     }
 }

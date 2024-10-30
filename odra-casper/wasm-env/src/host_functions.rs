@@ -759,6 +759,6 @@ fn caller_info_to_caller(info: CallerInfo) -> Caller {
                 contract_hash
             }
         }
-        _ => panic!("unhandled kind")
+        _ => revert(777)
     }
 }
