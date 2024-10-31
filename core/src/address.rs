@@ -83,6 +83,7 @@ impl Address {
         }
     }
 
+    /// Returns the inner hash as a Key
     pub fn as_key(&self) -> Key {
         Key::from(*self)
     }

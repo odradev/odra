@@ -11,17 +11,22 @@ use crate::error::Error;
 use crate::error::Error::{Execution, LivenetToDo};
 use crate::log;
 use casper_client::cli::{
-    get_dictionary_item, get_entity, get_node_status, get_state_root_hash,
-    DictionaryItemStrParams
+    get_dictionary_item, get_entity, get_node_status, get_state_root_hash, DictionaryItemStrParams
 };
 use casper_client::rpcs::results::{GetDeployResult, GetTransactionResult, PutDeployResult};
-use casper_client::{get_balance, get_deploy, get_transaction, put_deploy, put_transaction, query_global_state, JsonRpcId, Verbosity};
 use casper_client::rpcs::GlobalStateIdentifier;
+use casper_client::{
+    get_balance, get_deploy, get_transaction, put_transaction, query_global_state, JsonRpcId,
+    Verbosity
+};
 use casper_types::bytesrepr::{deserialize_from_slice, Bytes, FromBytes, ToBytes};
 use casper_types::contracts::ContractPackageHash;
 use casper_types::execution::ExecutionResultV1::{Failure, Success};
 use casper_types::StoredValue::CLValue;
-use casper_types::{execution::ExecutionResult, runtime_args, sign, CLTyped, Digest, EntityAddr, Key, PublicKey, RuntimeArgs, SecretKey, Transaction, TransactionHash, URef, U512};
+use casper_types::{
+    execution::ExecutionResult, runtime_args, sign, CLTyped, Digest, EntityAddr, Key, PublicKey,
+    RuntimeArgs, SecretKey, Transaction, TransactionHash, URef, U512
+};
 use casper_types::{Deploy, DeployHash, ExecutableDeployItem, StoredValue, TimeDiff, Timestamp};
 use odra_core::casper_event_standard::EVENTS_LENGTH;
 use odra_core::consts::{
@@ -78,7 +83,7 @@ impl CasperClient {
     pub async fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes> {
         let entity_hash = self.query_global_state_for_entity_addr(address).await;
         let stored_value = self
-            .query_global_state(&entity_hash.to_formatted_string(), Some(name.to_string()))
+            .query_global_state(Key::AddressableEntity(entity_hash), Some(name.to_string()))
             .await;
         match stored_value.clone() {
             CLValue(value) => Some(Bytes::from(value.inner_bytes().as_slice())),
@@ -95,19 +100,7 @@ impl CasperClient {
     /// Gets a value from a result key
     pub async fn get_proxy_result(&self) -> Bytes {
         let stored_value = self
-            .query_global_state(
-                &self
-                    .caller()
-                    .as_account_hash()
-                    .unwrap_or_else(|| {
-                        panic!(
-                            "Tried to query for proxy results from contract, it should be an account: {:?}",
-                            self.caller()
-                        )
-                    })
-                    .to_formatted_string(),
-                Some(RESULT_KEY.to_string())
-            )
+            .query_global_state(self.caller().as_key(), Some(RESULT_KEY.to_string()))
             .await;
         match stored_value {
             CLValue(value) => value
@@ -208,18 +201,27 @@ impl CasperClient {
     /// Returns the balance of the account.
     pub async fn get_balance(&self, address: &Address) -> U512 {
         let main_purse = self.get_main_purse(address);
-        get_balance(self.rpc_id_typed(), self.node_address(), self.configuration.verbosity_typed(), self.get_state_root_hash_digest().await, main_purse.await)
-            .await
-            .unwrap_or_else(|_| panic!("Couldn't get balance for address: {:?}", address.to_formatted_string()))
-            .result
-            .balance_value
+        get_balance(
+            self.rpc_id_typed(),
+            self.node_address(),
+            self.configuration.verbosity_typed(),
+            self.get_state_root_hash_digest().await,
+            main_purse.await
+        )
+        .await
+        .unwrap_or_else(|_| {
+            panic!(
+                "Couldn't get balance for address: {:?}",
+                address.to_formatted_string()
+            )
+        })
+        .result
+        .balance_value
     }
 
     /// Gets an uref of a main purse of an account or a contract.
     pub async fn get_main_purse(&self, address: &Address) -> URef {
-        let purse_uref = self
-            .query_global_state_typed(address.as_key(), None)
-            .await;
+        let purse_uref = self.query_global_state(address.as_key(), None).await;
         match purse_uref {
             CLValue(value) => value.into_t().unwrap(),
             StoredValue::AddressableEntity(entity) => entity.main_purse(),
@@ -294,21 +296,21 @@ impl CasperClient {
             self.configuration.verbosity(),
             ""
         )
-            .await
-            .unwrap_or_else(|_| {
-                panic!(
-                    "Couldn't get state root hash from node: {:?}",
-                    self.node_address()
-                )
-            })
-            .result
-            .state_root_hash
-            .unwrap_or_else(|| {
-                panic!(
-                    "Couldn't get state root hash from node: {:?}",
-                    self.node_address()
-                )
-            })
+        .await
+        .unwrap_or_else(|_| {
+            panic!(
+                "Couldn't get state root hash from node: {:?}",
+                self.node_address()
+            )
+        })
+        .result
+        .state_root_hash
+        .unwrap_or_else(|| {
+            panic!(
+                "Couldn't get state root hash from node: {:?}",
+                self.node_address()
+            )
+        })
     }
 
     /// Query the node for the dictionary item of a contract or an account.
@@ -352,7 +354,7 @@ impl CasperClient {
             transaction_hash,
             true
         )
-            .await;
+        .await;
         t.unwrap_or_else(|e| {
             log::error(format!("Couldn't get transaction: {:?}", e));
             panic!(
@@ -360,7 +362,7 @@ impl CasperClient {
                 transaction_hash.to_hex_string().as_str()
             )
         })
-            .result
+        .result
     }
 
     /// Query the node for the transaction state.
@@ -435,9 +437,7 @@ impl CasperClient {
 
     /// Find the entity addr in global state for an address
     async fn query_global_state_for_entity_addr(&self, address: &Address) -> EntityAddr {
-        let result = self
-            .query_global_state(&address.to_formatted_string(), None)
-            .await;
+        let result = self.query_global_state(address.as_key(), None).await;
         match result {
             StoredValue::Package(package) => EntityAddr::SmartContract(
                 package
@@ -478,7 +478,8 @@ impl CasperClient {
             self.node_address(),
             self.configuration.verbosity_typed(),
             Transaction::Deploy(deploy)
-        ).await;
+        )
+        .await;
         let deploy_hash = response.unwrap().result.transaction_hash;
         let result = self.wait_for_transaction(deploy_hash).await?;
         self.process_transaction(result, deploy_hash)?;
@@ -577,26 +578,7 @@ impl CasperClient {
         })
     }
 
-    async fn query_global_state(&self, key: &str, path: Option<String>) -> StoredValue {
-        todo!("Implement query_global_state")
-        // query_global_state(
-        //     self.rpc_id_typed(),
-        //     self.node_address(),
-        //     self.configuration.verbosity_typed(),
-        //     GlobalStateIdentifier::StateRootHash(self.get_state_root_hash_digest()),
-        //     key,
-        //     &path.clone().unwrap_or_default()
-        // )
-        // .await
-        // .unwrap_or_else(|e| {
-        //     log::error(format!("Couldn't query global state: {:?}", e));
-        //     panic!("Couldn't query global state")
-        // })
-        // .result
-        // .stored_value
-    }
-
-    async fn query_global_state_typed(&self, key: Key, path: Option<String>) -> StoredValue {
+    async fn query_global_state(&self, key: Key, path: Option<String>) -> StoredValue {
         let path = match path {
             None => vec![],
             Some(string) => vec![string]
@@ -609,16 +591,19 @@ impl CasperClient {
             key,
             path
         )
-            .await
-            .unwrap_or_else(|e| {
-                log::error(format!("Couldn't query global state: {:?}", e));
-                panic!("Couldn't query global state")
-            })
-            .result
-            .stored_value
+        .await
+        .unwrap_or_else(|e| {
+            log::error(format!("Couldn't query global state: {:?}", e));
+            panic!("Couldn't query global state")
+        })
+        .result
+        .stored_value
     }
 
-    async fn wait_for_transaction(&self, transation_hash: TransactionHash) -> Result<ExecutionResult> {
+    async fn wait_for_transaction(
+        &self,
+        transation_hash: TransactionHash
+    ) -> Result<ExecutionResult> {
         let final_result;
 
         loop {
@@ -667,7 +652,11 @@ impl CasperClient {
         Ok(final_result.clone())
     }
 
-    fn process_transaction(&self, result: ExecutionResult, deploy_hash: TransactionHash) -> Result<()> {
+    fn process_transaction(
+        &self,
+        result: ExecutionResult,
+        deploy_hash: TransactionHash
+    ) -> Result<()> {
         let deploy_hash_str = deploy_hash.to_hex_string();
         match result {
             ExecutionResult::V1(r) => match r {
