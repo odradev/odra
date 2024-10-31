@@ -76,4 +76,8 @@ impl CasperClientConfiguration {
     pub fn verbosity(&self) -> u64 {
         Verbosity::Low as u64
     }
+
+    pub fn verbosity_typed(&self) -> Verbosity {
+        Verbosity::Low
+    }
 }
