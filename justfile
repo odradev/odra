@@ -92,15 +92,15 @@ test-templates:
     just test-template cep78
 
 run-nctl:
-    docker run --rm -it --name mynctl -d -p 11101:11101 -p 14101:14101 -p 18101:18101 casper-nctl:feat-2.0
+    docker run --rm -it --name mynctl -d -p 11101:11101 -p 14101:14101 -p 18101:18101 -p 25101:25101  casper-nctl:feat-2.0
 
 test-livenet:
     set shell := bash
     mkdir -p examples/.node-keys
     cp modules/wasm/Erc20.wasm examples/wasm/
     # Extract the secret keys from the local Casper node
-    docker exec mynctl /bin/bash -c "cat /home/casper/casper-nctl/assets/net-1/users/user-1/secret_key.pem" > examples/.node-keys/secret_key.pem
-    docker exec mynctl /bin/bash -c "cat  /home/casper/casper-nctl/assets/net-1/users/user-2/secret_key.pem" > examples/.node-keys/secret_key_1.pem
+    docker exec casper-nctl /bin/bash -c "cat /home/casper/casper-nctl/assets/net-1/users/user-1/secret_key.pem" > examples/.node-keys/secret_key.pem
+    docker exec casper-nctl /bin/bash -c "cat  /home/casper/casper-nctl/assets/net-1/users/user-2/secret_key.pem" > examples/.node-keys/secret_key_1.pem
     # Run the tests
     cd examples && ODRA_CASPER_LIVENET_SECRET_KEY_PATH=.node-keys/secret_key.pem ODRA_CASPER_LIVENET_NODE_ADDRESS=http://localhost:11101 ODRA_CASPER_LIVENET_EVENTS_URL=http://localhost:18101/events ODRA_CASPER_LIVENET_CHAIN_NAME=casper-net-1 ODRA_CASPER_LIVENET_KEY_1=.node-keys/secret_key_1.pem  cargo run --bin livenet_tests --features=livenet
     rm -rf examples/.node-keys

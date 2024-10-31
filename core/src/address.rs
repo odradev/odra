@@ -83,6 +83,10 @@ impl Address {
         }
     }
 
+    pub fn as_key(&self) -> Key {
+        Key::from(*self)
+    }
+
     /// Returns true if the address is a contract address.
     pub fn is_contract(&self) -> bool {
         self.as_package_hash().is_some()

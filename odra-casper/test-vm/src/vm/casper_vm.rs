@@ -170,7 +170,7 @@ impl CasperVm {
 
     /// Gets the count of native events for the given contract address.
     pub fn get_native_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
-        let current_entity_hash = self.get_current_entity_hash(&contract_address);
+        let current_entity_hash = self.get_current_entity_hash(contract_address);
         let messages = self
             .messages
             .get(&current_entity_hash)
