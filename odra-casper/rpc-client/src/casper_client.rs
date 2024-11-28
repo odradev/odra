@@ -426,7 +426,7 @@ impl CasperClient {
             )
         });
 
-        Address::from(key.into_package_hash().unwrap_or_else(|| {
+        Address::from(key.into_contract_package_hash().unwrap_or_else(|| {
             panic!(
                 "Couldn't get package hash from key {:?} for account: {:?}",
                 key_name,
@@ -439,7 +439,7 @@ impl CasperClient {
     async fn query_global_state_for_entity_addr(&self, address: &Address) -> EntityAddr {
         let result = self.query_global_state(address.as_key(), None).await;
         match result {
-            StoredValue::Package(package) => EntityAddr::SmartContract(
+            StoredValue::SmartContract(package) => EntityAddr::SmartContract(
                 package
                     .current_entity_hash()
                     .unwrap_or_else(|| {
@@ -508,7 +508,7 @@ impl CasperClient {
             call_def.entry_point()
         ));
 
-        let hash = address.as_package_hash().unwrap();
+        let hash = address.as_contract_package_hash().unwrap();
         let args_bytes: Vec<u8> = call_def
             .args()
             .to_bytes()
@@ -552,7 +552,7 @@ impl CasperClient {
         ));
         let session = ExecutableDeployItem::StoredVersionedContractByHash {
             hash: ContractPackageHash::from(
-                addr.as_package_hash()
+                addr.as_contract_package_hash()
                     .unwrap_or_else(|| {
                         panic!(
                             "Couldn't get package hash from address: {:?}",

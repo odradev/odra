@@ -1,6 +1,6 @@
 use odra_core::casper_types::{
     AddressableEntity, AddressableEntityHash, EntityAddr, GenesisConfig, GenesisConfigBuilder,
-    HashAddr, Package, PackageHash, ProtocolVersion
+    HashAddr, NamedKeys, Package, PackageHash, ProtocolVersion
 };
 use odra_core::consts::*;
 use odra_core::prelude::*;
@@ -24,10 +24,9 @@ use odra_core::{casper_event_standard, DeployReport, GasReport};
 use std::rc::Rc;
 
 use odra_core::casper_types::account::{Account, AccountHash};
-use odra_core::casper_types::addressable_entity::NamedKeys;
 use odra_core::casper_types::bytesrepr::{Bytes, ToBytes};
 use odra_core::casper_types::contract_messages::MessagePayload;
-use odra_core::casper_types::contracts::ContractHash;
+use odra_core::casper_types::contracts::{ContractHash, ContractPackageHash};
 use odra_core::casper_types::{
     bytesrepr::FromBytes, CLTyped, GenesisAccount, PublicKey, RuntimeArgs, U512
 };
@@ -74,7 +73,7 @@ impl CasperVm {
             .get_named_keys_by_account_hash(self.active_account_hash());
 
         let key: &Key = named_keys.get(name).unwrap();
-        PackageHash::from(key.into_package_hash().unwrap().value())
+        PackageHash::from(key.into_contract_package_hash().unwrap().value())
     }
 
     /// Updates the active account (caller) address.
@@ -111,7 +110,7 @@ impl CasperVm {
         let package_hash = contract_address.as_package_hash().unwrap();
 
         let dictionary_seed_uref = self
-            .package_named_key(*package_hash, EVENTS)
+            .package_named_key(package_hash, EVENTS)
             .ok_or(EventError::ContractDoesntSupportEvents)?;
 
         Ok(self.get_dict_value(*dictionary_seed_uref.as_uref().unwrap(), &index.to_string()))
@@ -165,7 +164,7 @@ impl CasperVm {
         if package_hash.is_none() {
             return Err(EventError::TriedToQueryEventForNonContract);
         }
-        Ok(self.events_length(*package_hash.unwrap()))
+        Ok(self.events_length(package_hash.unwrap()))
     }
 
     /// Gets the count of native events for the given contract address.
@@ -193,7 +192,9 @@ impl CasperVm {
         use_proxy: bool
     ) -> Bytes {
         self.error = None;
-        let hash = address.as_package_hash().expect("Contract hash expected");
+        let hash = address
+            .as_contract_package_hash()
+            .expect("Contract hash expected");
 
         let deploy_item = if use_proxy {
             let session_code =
@@ -269,9 +270,9 @@ impl CasperVm {
     fn get_addressable_entity(&self, address: &Address) -> AddressableEntity {
         let query_result = self
             .context
-            .query(None, Key::Package(address.value()), &[])
+            .query(None, Key::Hash(address.value()), &[])
             .unwrap();
-        let entity_hash = if let StoredValue::Package(package) = query_result {
+        let entity_hash = if let StoredValue::SmartContract(package) = query_result {
             package.current_entity_hash()
         } else {
             panic!(
@@ -305,9 +306,9 @@ impl CasperVm {
     fn get_addressable_entity_hash(&self, address: &Address) -> AddressableEntityHash {
         let query_result = self
             .context
-            .query(None, Key::Package(address.value()), &[])
+            .query(None, Key::Hash(address.value()), &[])
             .unwrap();
-        if let StoredValue::Package(package) = query_result {
+        if let StoredValue::SmartContract(package) = query_result {
             package.current_entity_hash()
         } else {
             panic!(
@@ -356,7 +357,9 @@ impl CasperVm {
     pub fn balance_of(&self, address: &Address) -> U512 {
         match address {
             Address::Account(account_hash) => self.get_account_cspr_balance(account_hash),
-            Address::Contract(package_hash) => self.get_contract_cspr_balance(package_hash)
+            Address::Contract(package_hash) => {
+                self.get_contract_cspr_balance(&address.as_package_hash().unwrap())
+            }
         }
     }
 
@@ -405,7 +408,7 @@ impl CasperVm {
     /// Keep in mind that this may be different from the cost of the transaction on the live network.
     /// This is NOT the amount of gas charged - see [last_call_contract_gas_used()](Self::last_call_contract_gas_used).
     pub fn last_call_contract_gas_cost(&self) -> U512 {
-        self.context.last_exec_gas_cost().value()
+        self.context.last_exec_gas_consumed().value()
     }
 
     /// Returns the amount of gas used for last call.
@@ -602,7 +605,7 @@ impl CasperVm {
 
     fn get_current_entity_hash(&self, address: &Address) -> AddressableEntityHash {
         let package_hash = address.as_package_hash().unwrap();
-        let package = self.get_package(*package_hash);
+        let package = self.get_package(package_hash);
         package
             .current_entity_hash()
             .expect("Package doesn't have current entity hash")
@@ -664,7 +667,7 @@ impl CasperVm {
         &self,
         error: OdraError,
         entrypoint: &str,
-        package_hash: &PackageHash
+        package_hash: &ContractPackageHash
     ) -> ! {
         panic!("Revert: {:?} - {:?}::{}", error, package_hash, entrypoint)
     }
