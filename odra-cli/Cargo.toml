@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-clap = { version = "4.4", features = ["derive", "cargo", "string"] }
+clap = { version = "4.5.21", features = ["derive", "cargo", "string"] }
 prettycli = "0.1.1"
 odra = { path = "../odra", default-features = false }
 odra-casper-livenet-env = { path = "../odra-casper/livenet-env" }
