@@ -396,7 +396,7 @@ pub(crate) mod tests {
     use crate::cep18::utils::Cep18Modality;
     use crate::cep18_token::{Cep18, Cep18InitArgs};
     use odra::casper_types::account::AccountHash;
-    use odra::casper_types::PackageHash;
+    use odra::casper_types::contracts::ContractPackageHash;
     use odra::host::{Deployer, HostEnv, HostRef};
     use odra::prelude::*;
 
@@ -437,7 +437,7 @@ pub(crate) mod tests {
 
     pub fn invert_address(address: Address) -> Address {
         match address {
-            Address::Account(hash) => Address::Contract(PackageHash::new(hash.value())),
+            Address::Account(hash) => Address::Contract(ContractPackageHash::new(hash.value())),
             Address::Contract(hash) => Address::Account(AccountHash(hash.value()))
         }
     }

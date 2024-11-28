@@ -25,7 +25,6 @@ use casper_contract::{
 };
 use core::mem::MaybeUninit;
 use odra_core::casper_types::account::AccountHash;
-use odra_core::casper_types::addressable_entity::NamedKeys;
 use odra_core::casper_types::bytesrepr::deserialize;
 use odra_core::casper_types::contract_messages::{MessagePayload, MessageTopicOperation};
 use odra_core::casper_types::contracts::{ContractHash, ContractPackageHash, ContractVersion};
@@ -33,8 +32,8 @@ use odra_core::casper_types::system::{Caller, CallerInfo};
 use odra_core::casper_types::{
     api_error, bytesrepr,
     bytesrepr::{Bytes, FromBytes, ToBytes},
-    ApiError, CLTyped, CLValue, EntityAddr, EntryPoints, Key, PackageHash, RuntimeArgs, URef,
-    DICTIONARY_ITEM_KEY_MAX_LENGTH, U512, UREF_SERIALIZED_LENGTH
+    ApiError, CLTyped, CLValue, EntityAddr, EntryPoints, Key, NamedKeys, PackageHash, RuntimeArgs,
+    URef, DICTIONARY_ITEM_KEY_MAX_LENGTH, U512, UREF_SERIALIZED_LENGTH
 };
 use odra_core::consts::{ALLOW_KEY_OVERRIDE_ARG, IS_UPGRADABLE_ARG, PACKAGE_HASH_KEY_NAME_ARG};
 use odra_core::{
@@ -70,7 +69,7 @@ pub fn install_contract(
     entry_points: EntryPoints,
     events: Schemas,
     init_args: Option<RuntimeArgs>
-) -> PackageHash {
+) -> ContractPackageHash {
     // Read arguments
     let package_hash_key: String = runtime::get_named_arg(PACKAGE_HASH_KEY_NAME_ARG);
     let allow_key_override: bool = runtime::get_named_arg(ALLOW_KEY_OVERRIDE_ARG);
@@ -112,18 +111,18 @@ pub fn install_contract(
     }
 
     // Read package hash from the storage.
-    let package_hash: PackageHash = runtime::get_key(&package_hash_key)
+    let contract_package_hash: ContractPackageHash = runtime::get_key(&package_hash_key)
         .unwrap_or_revert()
-        .into_package_hash()
+        .into_contract_package_hash()
         .unwrap_or_revert();
 
     if let Some(args) = init_args {
-        let init_access = create_constructor_group(package_hash);
-        let _: () = runtime::call_versioned_contract(package_hash, None, "init", args);
-        revoke_access_to_constructor_group(package_hash, init_access);
+        let init_access = create_constructor_group(contract_package_hash);
+        let _: () = runtime::call_versioned_contract(contract_package_hash, None, "init", args);
+        revoke_access_to_constructor_group(contract_package_hash, init_access);
     }
 
-    package_hash
+    contract_package_hash
 }
 
 /// Stops a contract execution and reverts the state with a given error.
@@ -376,7 +375,7 @@ pub fn caller() -> Address {
 /// Calls a contract method by Address
 #[inline(always)]
 pub fn call_contract(address: Address, call_def: CallDef) -> Bytes {
-    let package_hash = *address.as_package_hash().unwrap_or_revert();
+    let package_hash = *address.as_contract_package_hash().unwrap_or_revert();
     let method = call_def.entry_point();
     let mut args = call_def.args().to_owned();
     if call_def.amount() == U512::zero() {
@@ -418,12 +417,12 @@ pub fn self_balance() -> U512 {
 /// It does it for the most current version of a contract package by default or a specific
 /// `contract_version` if one is provided, and passing the provided `runtime_args` to it.
 pub fn call_versioned_contract(
-    package_hash: PackageHash,
+    contract_package_hash: ContractPackageHash,
     contract_version: Option<ContractVersion>,
     entry_point_name: &str,
     runtime_args: RuntimeArgs
 ) -> Bytes {
-    let (package_hash_ptr, package_hash_size, _bytes) = to_ptr(package_hash);
+    let (contract_package_hash_ptr, package_hash_size, _bytes) = to_ptr(contract_package_hash);
     let (contract_version_ptr, contract_version_size, _bytes) = to_ptr(contract_version);
     let (entry_point_name_ptr, entry_point_name_size, _bytes) = to_ptr(entry_point_name);
     let (runtime_args_ptr, runtime_args_size, _bytes) = to_ptr(runtime_args);
@@ -432,7 +431,7 @@ pub fn call_versioned_contract(
         let mut bytes_written = MaybeUninit::uninit();
         let ret = unsafe {
             ext_ffi::casper_call_versioned_contract(
-                package_hash_ptr,
+                contract_package_hash_ptr,
                 package_hash_size,
                 contract_version_ptr,
                 contract_version_size,
@@ -581,9 +580,9 @@ fn take_nth_caller_from_stack(n: usize) -> CallerInfo {
         .unwrap_or_revert()
 }
 
-fn create_constructor_group(package_hash: PackageHash) -> URef {
+fn create_constructor_group(contract_package_hash: ContractPackageHash) -> URef {
     storage::create_contract_user_group(
-        package_hash,
+        contract_package_hash,
         consts::CONSTRUCTOR_GROUP_NAME,
         1,
         Default::default()
@@ -593,11 +592,18 @@ fn create_constructor_group(package_hash: PackageHash) -> URef {
     .unwrap_or_revert()
 }
 
-fn revoke_access_to_constructor_group(package_hash: PackageHash, constructor_access: URef) {
+fn revoke_access_to_constructor_group(
+    contract_package_hash: ContractPackageHash,
+    constructor_access: URef
+) {
     let mut urefs = BTreeSet::new();
     urefs.insert(constructor_access);
-    storage::remove_contract_user_group_urefs(package_hash, consts::CONSTRUCTOR_GROUP_NAME, urefs)
-        .unwrap_or_revert();
+    storage::remove_contract_user_group_urefs(
+        contract_package_hash,
+        consts::CONSTRUCTOR_GROUP_NAME,
+        urefs
+    )
+    .unwrap_or_revert();
 }
 
 fn is_purse_empty(purse: URef) -> bool {
