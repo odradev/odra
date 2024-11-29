@@ -93,14 +93,7 @@ impl Cep18 {
 
         // check if the caller has the admin badge
         let caller = self.env().caller();
-        let caller_badge = self
-            .security_badges
-            .get(&caller)
-            .unwrap_or_revert_with(self, Error::InsufficientRights);
-
-        if !caller_badge.can_admin() {
-            self.env().revert(Error::InsufficientRights);
-        }
+        self.assert_is_admin(&caller);
 
         let mut badges_map = BTreeMap::new();
 
@@ -249,16 +242,7 @@ impl Cep18 {
     /// Mints new tokens and assigns them to the given address.
     pub fn mint(&mut self, owner: &Address, amount: &U256) {
         self.assert_burn_and_mint_enabled();
-
-        // check if the caller has the minter badge
-        let security_badge = self
-            .security_badges
-            .get(&self.env().caller())
-            .unwrap_or_revert_with(self, Error::InsufficientRights);
-        if !security_badge.can_mint() {
-            self.env().revert(Error::InsufficientRights);
-        }
-
+        self.assert_is_minter(&self.env().caller());
         self.raw_mint(owner, amount);
     }
 
@@ -350,9 +334,55 @@ impl Cep18 {
         });
     }
 
+    #[inline]
+    /// Returns true if the given address is an admin.
+    pub fn is_admin(&self, address: &Address) -> bool {
+        self.security_badges
+            .get(address)
+            .map_or(false, |badge| badge.can_admin())
+    }
+
+    #[inline]
+    /// Returns true if the given address is a minter.
+    pub fn is_minter(&self, address: &Address) -> bool {
+        self.security_badges
+            .get(address)
+            .map_or(false, |badge| badge.can_mint())
+    }
+
+    /// Asserts that the caller is an admin.
+    pub fn assert_is_admin(&self, address: &Address) {
+        let badge = self
+            .security_badges
+            .get(address)
+            .unwrap_or_revert_with(self, Error::InsufficientRights);
+
+        if !badge.can_admin() {
+            self.env().revert(Error::InsufficientRights);
+        }
+    }
+
+    /// Asserts that the caller is a minter.
+    pub fn assert_is_minter(&self, address: &Address) {
+        let badge = self
+            .security_badges
+            .get(address)
+            .unwrap_or_revert_with(self, Error::InsufficientRights);
+
+        if !badge.can_mint() {
+            self.env().revert(Error::InsufficientRights);
+        }
+    }
+
+    /// Returns true if the mint and burn functionality is enabled.
+    #[inline]
+    pub fn is_burn_and_mint_enabled(&self) -> bool {
+        self.modality.get_or_default().mint_and_burn_enabled()
+    }
+
+    /// Asserts that the mint and burn functionality is enabled.
     fn assert_burn_and_mint_enabled(&mut self) {
-        // check if mint_burn is enabled
-        if !self.modality.get_or_default().mint_and_burn_enabled() {
+        if !self.is_burn_and_mint_enabled() {
             self.env().revert(Error::MintBurnDisabled);
         }
     }
