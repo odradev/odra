@@ -3,7 +3,7 @@ use blake2::digest::VariableOutput;
 use blake2::{Blake2b, Blake2b512, Blake2bVar, Blake2s256, Digest};
 use odra_core::casper_types::{
     bytesrepr::{Bytes, ToBytes},
-    CLValue, U512
+    CLValue, PublicKey, U512
 };
 use odra_core::prelude::*;
 use odra_core::{casper_types, CallDef, ContractContext};
@@ -108,6 +108,18 @@ impl ContractContext for OdraVmContractEnv {
             .finalize_variable(&mut result)
             .expect("should copy hash to the result array");
         result
+    }
+
+    fn delegate(&self, validator: PublicKey, amount: U512) {
+        todo!()
+    }
+
+    fn undelegate(&self, validator: PublicKey, amount: U512) {
+        todo!()
+    }
+
+    fn delegated_amount(&self, validator: PublicKey) -> U512 {
+        todo!()
     }
 }
 

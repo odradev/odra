@@ -4,7 +4,7 @@ use blake2::Blake2bVar;
 use odra_casper_rpc_client::casper_client::CasperClient;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::bytesrepr::Bytes;
-use odra_core::casper_types::{CLValue, U512};
+use odra_core::casper_types::{CLValue, PublicKey, U512};
 use odra_core::prelude::*;
 use odra_core::{CallDef, ContractContext, ContractRegister};
 use std::io::Write;
@@ -163,6 +163,18 @@ impl ContractContext for LivenetContractEnv {
             .finalize_variable(&mut result)
             .expect("should copy hash to the result array");
         result
+    }
+
+    fn delegate(&self, validator: PublicKey, amount: U512) {
+        todo!()
+    }
+
+    fn undelegate(&self, validator: PublicKey, amount: U512) {
+        todo!()
+    }
+
+    fn delegated_amount(&self, validator: PublicKey) -> U512 {
+        todo!()
     }
 }
 

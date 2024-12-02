@@ -1,6 +1,6 @@
 use odra_core::casper_types::{
     AddressableEntity, AddressableEntityHash, EntityAddr, GenesisConfig, GenesisConfigBuilder,
-    HashAddr, NamedKeys, Package, PackageHash, ProtocolVersion
+    GenesisValidator, HashAddr, NamedKeys, Package, PackageHash, ProtocolVersion
 };
 use odra_core::consts::*;
 use odra_core::prelude::*;
@@ -48,6 +48,7 @@ use odra_core::{
 /// Casper virtual machine utilizing [LmdbWasmTestBuilder].
 pub struct CasperVm {
     accounts: Vec<Address>,
+    validator: GenesisAccount,
     key_pairs: BTreeMap<Address, (SecretKey, PublicKey)>,
     messages: BTreeMap<AddressableEntityHash, Vec<MessagePayload>>,
     active_account: Address,
@@ -89,6 +90,11 @@ impl CasperVm {
     /// Gets the account address at the specified index.
     pub fn get_account(&self, index: usize) -> Address {
         self.accounts[index]
+    }
+
+    /// Gets the validator public key.
+    pub fn get_validator(&self) -> PublicKey {
+        self.validator.public_key()
     }
 
     /// Advances the block time by the specified time difference.
@@ -506,16 +512,27 @@ impl CasperVm {
 
     fn genesis_accounts(
         key_pairs: &BTreeMap<Address, (SecretKey, PublicKey)>
-    ) -> Vec<GenesisAccount> {
+    ) -> (Vec<GenesisAccount>, GenesisAccount) {
         let mut accounts = Vec::new();
-        for (_, (_, public_key)) in key_pairs.iter() {
+        let iter = key_pairs.iter();
+        for (_, (_, public_key)) in iter.take(ACCOUNTS_NUMBER as usize) {
             accounts.push(GenesisAccount::account(
                 public_key.clone(),
                 Motes::new(DEFAULT_ACCOUNT_INITIAL_BALANCE),
                 None
             ));
         }
-        accounts
+        let (_, (_, validator_public_key)) = key_pairs.last_key_value().unwrap();
+        let validator_account = GenesisAccount::account(
+            validator_public_key.clone(),
+            Motes::new(DEFAULT_ACCOUNT_INITIAL_BALANCE),
+            Some(GenesisValidator::new(
+                Motes::new(DEFAULT_ACCOUNT_INITIAL_BALANCE),
+                50
+            ))
+        );
+        accounts.push(validator_account.clone());
+        (accounts, validator_account)
     }
 
     /// Creates a new genesis config.
@@ -536,8 +553,9 @@ impl CasperVm {
     }
 
     fn new_instance() -> Self {
-        let key_pairs = generate_key_pairs(ACCOUNTS_NUMBER);
-        let genesis_accounts = Self::genesis_accounts(&key_pairs);
+        // We generate +1 account for a validator.
+        let key_pairs = generate_key_pairs(ACCOUNTS_NUMBER + 1);
+        let (genesis_accounts, validator_account) = Self::genesis_accounts(&key_pairs);
         let accounts: Vec<Address> = key_pairs.keys().copied().collect();
 
         let genesis_config = Self::genesis_config(genesis_accounts);
@@ -555,6 +573,12 @@ impl CasperVm {
 
         builder.run_genesis(run_genesis_request).commit();
 
+        // crank the auction
+        let timestamp_millis = DEFAULT_GENESIS_TIMESTAMP_MILLIS;
+        for _ in 0..=builder.get_auction_delay() {
+            builder.run_auction(timestamp_millis, vec![]);
+        }
+
         Self {
             active_account: accounts[0],
             context: builder,
@@ -566,7 +590,8 @@ impl CasperVm {
             gas_used: BTreeMap::new(),
             gas_report: GasReport::default(),
             key_pairs,
-            messages: Default::default()
+            messages: Default::default(),
+            validator: validator_account
         }
     }
 

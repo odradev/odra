@@ -11,7 +11,9 @@ use crate::consts;
 use crate::consts::NATIVE_EVENT_TOPIC;
 use casper_contract::contract_api::runtime::emit_message;
 use casper_contract::contract_api::storage::new_uref;
+use casper_contract::contract_api::system;
 use casper_contract::ext_ffi::casper_emit_message;
+use casper_contract::unwrap_or_revert::UnwrapOrRevert;
 use casper_contract::{
     contract_api::{
         self, runtime, storage,
@@ -20,20 +22,20 @@ use casper_contract::{
             transfer_from_purse_to_purse
         }
     },
-    ext_ffi,
-    unwrap_or_revert::UnwrapOrRevert
+    ext_ffi
 };
 use core::mem::MaybeUninit;
 use odra_core::casper_types::account::AccountHash;
 use odra_core::casper_types::bytesrepr::deserialize;
 use odra_core::casper_types::contract_messages::{MessagePayload, MessageTopicOperation};
 use odra_core::casper_types::contracts::{ContractHash, ContractPackageHash, ContractVersion};
+use odra_core::casper_types::system::auction;
 use odra_core::casper_types::system::{Caller, CallerInfo};
 use odra_core::casper_types::{
     api_error, bytesrepr,
     bytesrepr::{Bytes, FromBytes, ToBytes},
-    ApiError, CLTyped, CLValue, EntityAddr, EntryPoints, Key, NamedKeys, PackageHash, RuntimeArgs,
-    URef, DICTIONARY_ITEM_KEY_MAX_LENGTH, U512, UREF_SERIALIZED_LENGTH
+    ApiError, CLTyped, CLValue, EntityAddr, EntryPoints, Key, NamedKeys, PackageHash, PublicKey,
+    RuntimeArgs, URef, DICTIONARY_ITEM_KEY_MAX_LENGTH, U512, UREF_SERIALIZED_LENGTH
 };
 use odra_core::consts::{ALLOW_KEY_OVERRIDE_ARG, IS_UPGRADABLE_ARG, PACKAGE_HASH_KEY_NAME_ARG};
 use odra_core::{
@@ -767,4 +769,34 @@ fn caller_info_to_caller(info: CallerInfo) -> Caller {
         }
         _ => revert(777)
     }
+}
+
+pub fn delegate(validator: PublicKey, amount: U512) {
+    let mut purse = system::create_purse();
+    let contract_hash = system::get_auction();
+    let mut args = RuntimeArgs::new();
+    args.insert(auction::ARG_DELEGATOR_PURSE, purse.addr())
+        .unwrap_or_revert();
+    args.insert(auction::ARG_VALIDATOR, validator)
+        .unwrap_or_revert();
+    args.insert(auction::ARG_AMOUNT, amount).unwrap_or_revert();
+
+    runtime::call_contract::<U512>(contract_hash, auction::METHOD_DELEGATE, args);
+}
+
+pub fn undelegate(validator: PublicKey, amount: U512) {
+    let purse = get_main_purse().unwrap_or_revert_with(ApiError::InvalidPurse);
+    let contract_hash = system::get_auction();
+    let mut args = RuntimeArgs::new();
+    args.insert(auction::ARG_DELEGATOR_PURSE, purse.addr())
+        .unwrap_or_revert();
+    args.insert(auction::ARG_VALIDATOR, validator)
+        .unwrap_or_revert();
+    args.insert(auction::ARG_AMOUNT, amount).unwrap_or_revert();
+
+    runtime::call_contract::<U512>(contract_hash, auction::METHOD_UNDELEGATE, args);
+}
+
+pub fn delegated_amount(p0: PublicKey) -> U512 {
+    U512::from(666)
 }
