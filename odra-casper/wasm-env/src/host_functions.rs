@@ -113,10 +113,12 @@ pub fn install_contract(
     }
 
     // Read package hash from the storage.
-    let contract_package_hash: ContractPackageHash = runtime::get_key(&package_hash_key)
+    let contract_hash: PackageHash = runtime::get_key(&package_hash_key)
         .unwrap_or_revert()
-        .into_contract_package_hash()
+        .into_package_hash()
         .unwrap_or_revert();
+
+    let contract_package_hash = ContractPackageHash::new(contract_hash.value());
 
     if let Some(args) = init_args {
         let init_access = create_constructor_group(contract_package_hash);
