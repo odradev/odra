@@ -257,6 +257,18 @@ impl ContractEnv {
     pub fn hash<T: AsRef<[u8]>>(&self, value: T) -> [u8; BLAKE2B_DIGEST_LENGTH] {
         self.backend.borrow().hash(value.as_ref())
     }
+
+    pub fn delegate(&self, validator: PublicKey, amount: U512) {
+        self.backend.borrow().delegate(validator, amount)
+    }
+
+    pub fn undelegate(&self, validator: PublicKey, amount: U512) {
+        self.backend.borrow().undelegate(validator, amount)
+    }
+
+    pub fn delegated_amount(&self, validator: PublicKey) -> U512 {
+        self.backend.borrow().delegated_amount(validator)
+    }
 }
 
 /// Represents the environment accessible in the contract execution context.

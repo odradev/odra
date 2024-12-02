@@ -242,6 +242,9 @@ pub trait HostContext {
     /// Returns the account address at the specified index.
     fn get_account(&self, index: usize) -> Address;
 
+    /// Returns the validator public key.
+    fn get_validator(&self) -> PublicKey;
+
     /// Returns the CSPR balance of the specified address.
     fn balance_of(&self, address: &Address) -> U512;
 
@@ -320,6 +323,8 @@ pub struct HostEnv {
     native_events_count: Rc<RefCell<BTreeMap<Address, u32>>>  // contract_address -> events_count
 }
 
+impl HostEnv {}
+
 impl HostEnv {
     /// Creates a new `HostEnv` instance with the specified backend.
     pub fn new(backend: Rc<RefCell<dyn HostContext>>) -> HostEnv {
@@ -336,6 +341,11 @@ impl HostEnv {
     pub fn get_account(&self, index: usize) -> Address {
         let backend = self.backend.borrow();
         backend.get_account(index)
+    }
+
+    pub fn get_validator(&self) -> PublicKey {
+        let backend = self.backend.borrow();
+        backend.get_validator()
     }
 
     /// Sets the caller address for the current contract execution.

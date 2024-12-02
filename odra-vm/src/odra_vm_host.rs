@@ -32,6 +32,10 @@ impl HostContext for OdraVmHost {
         self.vm.borrow().get_account(index)
     }
 
+    fn get_validator(&self) -> PublicKey {
+        todo!("get_validator is not yet supported for OdraVM")
+    }
+
     fn balance_of(&self, address: &Address) -> U512 {
         self.vm.borrow().balance_of(address)
     }

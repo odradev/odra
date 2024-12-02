@@ -136,6 +136,8 @@ pub enum ExecutionError {
     MissingAddress = 123,
     /// Out of gas error
     OutOfGas = 124,
+    /// MainPurse error
+    MainPurseError = 125,
     /// Maximum code for user errors
     MaxUserError = 64535,
     /// User error too high. The code should be in range 0..32767.

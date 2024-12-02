@@ -26,7 +26,7 @@ fn main() {
     );
 
     // Contract can be deployed
-    env.set_gas(30_000_000_000u64);
+    env.set_gas(1_000_000_000_000u64);
     let (contract, erc20) = deploy_new(&env);
 
     // Contract can be loaded

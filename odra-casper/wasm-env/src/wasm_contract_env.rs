@@ -4,7 +4,7 @@ use casper_types::bytesrepr::ToBytes;
 use casper_types::U512;
 use odra_core::casper_types;
 use odra_core::casper_types::bytesrepr::Bytes;
-use odra_core::casper_types::{CLType, CLValue, BLAKE2B_DIGEST_LENGTH};
+use odra_core::casper_types::{CLType, CLValue, PublicKey, BLAKE2B_DIGEST_LENGTH};
 use odra_core::prelude::*;
 use odra_core::{ContractContext, ContractEnv};
 
@@ -101,6 +101,18 @@ impl ContractContext for WasmContractEnv {
 
     fn hash(&self, bytes: &[u8]) -> [u8; BLAKE2B_DIGEST_LENGTH] {
         host_functions::blake2b(bytes)
+    }
+
+    fn delegate(&self, validator: PublicKey, amount: U512) {
+        host_functions::delegate(validator, amount);
+    }
+
+    fn undelegate(&self, validator: PublicKey, amount: U512) {
+        host_functions::undelegate(validator, amount);
+    }
+
+    fn delegated_amount(&self, validator: PublicKey) -> U512 {
+        host_functions::delegated_amount(validator)
     }
 }
 

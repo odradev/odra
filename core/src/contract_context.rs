@@ -1,4 +1,4 @@
-use casper_types::CLValue;
+use casper_types::{CLValue, PublicKey};
 
 use crate::call_def::CallDef;
 use crate::casper_types::bytesrepr::Bytes;
@@ -167,4 +167,10 @@ pub trait ContractContext {
     ///
     /// The computed hash as a fixed-size byte array of length 32.
     fn hash(&self, bytes: &[u8]) -> [u8; 32];
+
+    fn delegate(&self, validator: PublicKey, amount: U512);
+
+    fn undelegate(&self, validator: PublicKey, amount: U512);
+
+    fn delegated_amount(&self, validator: PublicKey) -> U512;
 }
