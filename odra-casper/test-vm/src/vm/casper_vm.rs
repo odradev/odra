@@ -74,7 +74,7 @@ impl CasperVm {
             .get_named_keys_by_account_hash(self.active_account_hash());
 
         let key: &Key = named_keys.get(name).unwrap();
-        PackageHash::from(key.into_contract_package_hash().unwrap().value())
+        PackageHash::from(key.into_package_hash().unwrap().value())
     }
 
     /// Updates the active account (caller) address.

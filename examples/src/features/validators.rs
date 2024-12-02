@@ -18,6 +18,11 @@ impl ValidatorsContract {
     }
 
     #[odra(payable)]
+    pub fn topup(&mut self) {
+
+    }
+
+    #[odra(payable)]
     pub fn stake(&mut self) {
         let amount = self.env().attached_value();
         self.env().delegate(self.validator.get().unwrap(), amount);
@@ -62,6 +67,7 @@ mod tests {
 
         // Stake some amount
         let staking_amount = U512::from(1_000_000_000_000u64);
+        staking.with_tokens(staking_amount).topup();
         staking.with_tokens(staking_amount).stake();
         // assert_eq!(staking.currently_delegated_amount(), staking_amount);
         //
