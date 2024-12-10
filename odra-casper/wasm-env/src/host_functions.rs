@@ -10,7 +10,7 @@
 use crate::consts;
 use crate::consts::NATIVE_EVENT_TOPIC;
 use casper_contract::contract_api::runtime::emit_message;
-use casper_contract::contract_api::storage::new_uref;
+use casper_contract::contract_api::storage::{new_uref, read_from_key};
 use casper_contract::contract_api::system;
 use casper_contract::ext_ffi::casper_emit_message;
 use casper_contract::unwrap_or_revert::UnwrapOrRevert;
@@ -24,12 +24,13 @@ use casper_contract::{
     },
     ext_ffi
 };
+use odra_core::casper_types::StoredValue;
 use core::mem::MaybeUninit;
 use odra_core::casper_types::account::AccountHash;
 use odra_core::casper_types::bytesrepr::deserialize;
 use odra_core::casper_types::contract_messages::{MessagePayload, MessageTopicOperation};
 use odra_core::casper_types::contracts::{ContractHash, ContractPackageHash, ContractVersion};
-use odra_core::casper_types::system::auction;
+use odra_core::casper_types::system::auction::{self, BidAddr, BidKind};
 use odra_core::casper_types::system::{Caller, CallerInfo};
 use odra_core::casper_types::{
     api_error, bytesrepr,
@@ -774,10 +775,10 @@ fn caller_info_to_caller(info: CallerInfo) -> Caller {
 }
 
 pub fn delegate(validator: PublicKey, amount: U512) {
-    let mut purse = system::create_purse();
+    let purse = get_main_purse().unwrap_or_revert_with(ApiError::InvalidPurse);
     let contract_hash = system::get_auction();
     let mut args = RuntimeArgs::new();
-    args.insert(auction::ARG_DELEGATOR_PURSE, purse.addr())
+    args.insert(auction::ARG_DELEGATOR_PURSE, purse)
         .unwrap_or_revert();
     args.insert(auction::ARG_VALIDATOR, validator)
         .unwrap_or_revert();
@@ -790,7 +791,7 @@ pub fn undelegate(validator: PublicKey, amount: U512) {
     let purse = get_main_purse().unwrap_or_revert_with(ApiError::InvalidPurse);
     let contract_hash = system::get_auction();
     let mut args = RuntimeArgs::new();
-    args.insert(auction::ARG_DELEGATOR_PURSE, purse.addr())
+    args.insert(auction::ARG_DELEGATOR_PURSE, purse)
         .unwrap_or_revert();
     args.insert(auction::ARG_VALIDATOR, validator)
         .unwrap_or_revert();
@@ -800,5 +801,15 @@ pub fn undelegate(validator: PublicKey, amount: U512) {
 }
 
 pub fn delegated_amount(p0: PublicKey) -> U512 {
-    U512::from(666)
+    let purse = get_main_purse().unwrap_or_revert_with(ApiError::InvalidPurse);
+    let account_hash = p0.to_account_hash();
+    let key = Key::BidAddr(BidAddr::DelegatedPurse { validator: account_hash, delegator: purse.addr() });
+    let result: BidKind = read_from_key(key).unwrap_or_revert().unwrap_or_revert();
+    
+    match result {
+        BidKind::Delegator(purse) => {
+            purse.staked_amount()
+        },
+        _ => U512::zero()
+    }
 }
