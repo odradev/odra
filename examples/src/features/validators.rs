@@ -1,5 +1,7 @@
 //! This example shows how to test a contract.
 
+use core::fmt::Error;
+
 use odra::casper_types::{PublicKey, U512};
 use odra::prelude::*;
 
@@ -22,9 +24,11 @@ impl ValidatorsContract {
 
     }
 
-    #[odra(payable)]
     pub fn stake(&mut self) {
-        let amount = self.env().attached_value();
+        let amount = self.env().self_balance();
+        if amount.is_zero() {
+            self.env().revert(ValError::InsufficientBalancee);
+        }
         self.env().delegate(self.validator.get().unwrap(), amount);
     }
 
@@ -39,6 +43,11 @@ impl ValidatorsContract {
     pub fn current_casper_balance(&self) -> U512 {
         self.env().self_balance()
     }
+}
+
+#[odra::odra_error]
+pub enum ValError {
+    InsufficientBalancee = 1,
 }
 
 #[cfg(test)]
@@ -68,19 +77,19 @@ mod tests {
         // Stake some amount
         let staking_amount = U512::from(1_000_000_000_000u64);
         staking.with_tokens(staking_amount).topup();
-        staking.with_tokens(staking_amount).stake();
-        // assert_eq!(staking.currently_delegated_amount(), staking_amount);
-        //
-        // test_env.advance_block_time(ERA_DURATION * 10);
-        //
-        // let balance = staking.current_casper_balance();
-        // assert_eq!(balance, U512::zero());
+        staking.stake();
+        assert_eq!(staking.currently_delegated_amount(), staking_amount);
+        panic!("dupppa");
+        test_env.advance_block_time(ERA_DURATION * 10);
+        
+        let balance = staking.current_casper_balance();
+        assert_eq!(balance, staking_amount/2);
         // assert!(staking.currently_delegated_amount() > staking_amount);
-        // staking.unstake(staking_amount);
-        //
-        // test_env.advance_block_time(ERA_DURATION * 10);
-        //
-        // assert!(staking.current_casper_balance() > staking_amount);
-        // assert_eq!(staking.currently_delegated_amount(), U512::zero());
+        staking.unstake(staking_amount);
+        
+        test_env.advance_block_time(ERA_DURATION * 10);
+        
+        assert!(staking.current_casper_balance() > staking_amount);
+        assert_eq!(staking.currently_delegated_amount(), U512::zero());
     }
 }

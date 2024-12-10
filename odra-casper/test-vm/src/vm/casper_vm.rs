@@ -1,7 +1,9 @@
+use odra_core::casper_types::system::auction::DelegationRate;
 use odra_core::casper_types::{
-    AddressableEntity, AddressableEntityHash, EntityAddr, GenesisConfig, GenesisConfigBuilder,
+    AddressableEntity, AddressableEntityHash, EntityAddr, GenesisConfig,
     GenesisValidator, HashAddr, NamedKeys, Package, PackageHash, ProtocolVersion
 };
+use casper_engine_test_support::genesis_config_builder::GenesisConfigBuilder;
 use odra_core::consts::*;
 use odra_core::prelude::*;
 use std::cell::RefCell;
@@ -44,6 +46,7 @@ use odra_core::{
     host::{HostContext, HostEnv},
     CallDef, ContractEnv
 };
+
 
 /// Casper virtual machine utilizing [LmdbWasmTestBuilder].
 pub struct CasperVm {
@@ -560,18 +563,19 @@ impl CasperVm {
 
         let genesis_config = Self::genesis_config(genesis_accounts);
 
-        let run_genesis_request = GenesisRequest::new(
+        let mut genesis_request = GenesisRequest::new(
             DEFAULT_GENESIS_CONFIG_HASH,
             ProtocolVersion::V2_0_0,
             genesis_config,
             DEFAULT_CHAINSPEC_REGISTRY.clone()
         );
+        genesis_request.set_enable_entity(false);
 
         let chainspec_path =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/chainspec.toml");
         let mut builder = LmdbWasmTestBuilder::new_temporary_with_chainspec(chainspec_path);
 
-        builder.run_genesis(run_genesis_request).commit();
+        builder.run_genesis(genesis_request).commit();
 
         // crank the auction
         let timestamp_millis = DEFAULT_GENESIS_TIMESTAMP_MILLIS;
