@@ -44,6 +44,10 @@ impl HostContext for OdraVmHost {
         self.vm.borrow().advance_block_time_by(time_diff)
     }
 
+    fn advance_with_auctions(&self, time_diff: u64) {
+        todo!()
+    }
+
     fn block_time(&self) -> u64 {
         self.vm.borrow().get_block_time()
     }

@@ -1,9 +1,11 @@
-use odra_core::casper_types::system::auction::DelegationRate;
-use odra_core::casper_types::{
-    AddressableEntity, AddressableEntityHash, EntityAddr, GenesisConfig,
-    GenesisValidator, HashAddr, NamedKeys, Package, PackageHash, ProtocolVersion
-};
 use casper_engine_test_support::genesis_config_builder::GenesisConfigBuilder;
+use odra_core::casper_types::system::auction::{
+    DelegationRate, ARG_ENTRY_POINT, ARG_REWARDS_MAP, BLOCK_REWARD, METHOD_DISTRIBUTE
+};
+use odra_core::casper_types::{
+    AddressableEntity, AddressableEntityHash, EntityAddr, GenesisConfig, GenesisValidator,
+    HashAddr, NamedKeys, Package, PackageHash, ProtocolVersion
+};
 use odra_core::consts::*;
 use odra_core::prelude::*;
 use std::cell::RefCell;
@@ -17,7 +19,8 @@ use casper_engine_test_support::{
     DEFAULT_AUCTION_DELAY, DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_EXEC_CONFIG,
     DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_GENESIS_TIMESTAMP_MILLIS,
     DEFAULT_LOCKED_FUNDS_PERIOD_MILLIS, DEFAULT_PAYMENT, DEFAULT_ROUND_SEIGNIORAGE_RATE,
-    DEFAULT_SYSTEM_CONFIG, DEFAULT_UNBONDING_DELAY, DEFAULT_VALIDATOR_SLOTS, DEFAULT_WASM_CONFIG
+    DEFAULT_SYSTEM_CONFIG, DEFAULT_UNBONDING_DELAY, DEFAULT_VALIDATOR_SLOTS, DEFAULT_WASM_CONFIG,
+    SYSTEM_ADDR
 };
 use casper_event_standard::try_full_name_from_bytes;
 use casper_execution_engine::{engine_state, execution};
@@ -46,7 +49,6 @@ use odra_core::{
     host::{HostContext, HostEnv},
     CallDef, ContractEnv
 };
-
 
 /// Casper virtual machine utilizing [LmdbWasmTestBuilder].
 pub struct CasperVm {
@@ -103,6 +105,48 @@ impl CasperVm {
     /// Advances the block time by the specified time difference.
     pub fn advance_block_time(&mut self, time_diff: u64) {
         self.block_time += time_diff
+    }
+
+    /// Advances the block time by the specified time difference and processes auctions
+    /// Giving the rewards to the validators
+    pub fn advance_with_auctions(&mut self, time_diff: u64) {
+        let time_between_auctions = self
+            .context
+            .get_auction_delay()
+            .saturating_mul(self.context.chainspec().core_config.era_duration.millis());
+        // Calculate how many auctions we can run based on time_diff
+        let num_auctions = time_diff / time_between_auctions;
+
+        // Run auctions for each complete delay period
+        for _ in 0..num_auctions {
+            self.context.run_auction(0u64, vec![]);
+        }
+
+        // Distribute rewards
+        let mut rewards = BTreeMap::new();
+        rewards.insert(
+            self.get_validator(),
+            vec![U512::from(BLOCK_REWARD * num_auctions)]
+        );
+
+        let distribute_request = ExecuteRequestBuilder::contract_call_by_hash(
+            *SYSTEM_ADDR,
+            self.context.get_auction_contract_hash(),
+            METHOD_DISTRIBUTE,
+            runtime_args! {
+                ARG_ENTRY_POINT => METHOD_DISTRIBUTE,
+                ARG_REWARDS_MAP => rewards,
+            }
+        )
+        .build();
+
+        self.context
+            .exec(distribute_request)
+            .commit()
+            .expect_success();
+
+        // Run remaining auctions with the leftover time
+        let remaining_time = time_diff % time_between_auctions;
     }
 
     /// Gets the current block time.
@@ -579,7 +623,7 @@ impl CasperVm {
 
         // crank the auction
         let timestamp_millis = DEFAULT_GENESIS_TIMESTAMP_MILLIS;
-        for _ in 0..=builder.get_auction_delay() {
+        for _ in 0..=builder.get_unbonding_delay() {
             builder.run_auction(timestamp_millis, vec![]);
         }
 

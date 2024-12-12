@@ -59,6 +59,10 @@ impl HostContext for CasperHost {
         self.vm.borrow_mut().advance_block_time(time_diff)
     }
 
+    fn advance_with_auctions(&self, time_diff: u64) {
+        self.vm.borrow_mut().advance_with_auctions(time_diff)
+    }
+
     fn block_time(&self) -> u64 {
         self.vm.borrow().block_time()
     }

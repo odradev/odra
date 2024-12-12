@@ -251,6 +251,9 @@ pub trait HostContext {
     /// Advances the block time by the specified time difference.
     fn advance_block_time(&self, time_diff: u64);
 
+    /// Advances the block time by the specified time difference and processes auctions.
+    fn advance_with_auctions(&self, time_diff: u64);
+
     /// Returns the current block time.
     fn block_time(&self) -> u64;
 
@@ -343,6 +346,7 @@ impl HostEnv {
         backend.get_account(index)
     }
 
+    /// Returns the validator public key.
     pub fn get_validator(&self) -> PublicKey {
         let backend = self.backend.borrow();
         backend.get_validator()
@@ -361,6 +365,12 @@ impl HostEnv {
     pub fn advance_block_time(&self, time_diff: u64) {
         let backend = self.backend.borrow();
         backend.advance_block_time(time_diff)
+    }
+
+    /// Advances the block time by the specified time difference and processes auctions.
+    pub fn advance_with_rewards(&self, time_diff: u64) {
+        let backend = self.backend.borrow();
+        backend.advance_with_auctions(time_diff);
     }
 
     /// Returns the current block time.
