@@ -258,14 +258,35 @@ impl ContractEnv {
         self.backend.borrow().hash(value.as_ref())
     }
 
+    /// Delegate tokens to a validator
+    ///
+    /// # Arguments
+    ///
+    /// * `validator` - The validator to delegate to
+    /// * `amount` - The amount of tokens to delegate
     pub fn delegate(&self, validator: PublicKey, amount: U512) {
         self.backend.borrow().delegate(validator, amount)
     }
 
+    /// Undelegate tokens from a validator
+    ///
+    /// # Arguments
+    ///
+    /// * `validator` - The validator to undelegate from
+    /// * `amount` - The amount of tokens to undelegate
     pub fn undelegate(&self, validator: PublicKey, amount: U512) {
         self.backend.borrow().undelegate(validator, amount)
     }
 
+    /// Returns the amount of tokens delegated to a validator
+    ///
+    /// # Arguments
+    ///
+    /// * `validator` - The validator to get the delegated amount from
+    ///
+    /// # Returns
+    ///
+    /// The amount of tokens delegated to the validator
     pub fn delegated_amount(&self, validator: PublicKey) -> U512 {
         self.backend.borrow().delegated_amount(validator)
     }

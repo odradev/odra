@@ -24,7 +24,6 @@ use casper_contract::{
     },
     ext_ffi
 };
-use odra_core::casper_types::StoredValue;
 use core::mem::MaybeUninit;
 use odra_core::casper_types::account::AccountHash;
 use odra_core::casper_types::bytesrepr::deserialize;
@@ -32,6 +31,7 @@ use odra_core::casper_types::contract_messages::{MessagePayload, MessageTopicOpe
 use odra_core::casper_types::contracts::{ContractHash, ContractPackageHash, ContractVersion};
 use odra_core::casper_types::system::auction::{self, BidAddr, BidKind};
 use odra_core::casper_types::system::{Caller, CallerInfo};
+use odra_core::casper_types::StoredValue;
 use odra_core::casper_types::{
     api_error, bytesrepr,
     bytesrepr::{Bytes, FromBytes, ToBytes},
@@ -774,6 +774,7 @@ fn caller_info_to_caller(info: CallerInfo) -> Caller {
     }
 }
 
+/// Delegate tokens to a validator
 pub fn delegate(validator: PublicKey, amount: U512) {
     let purse = get_main_purse().unwrap_or_revert_with(ApiError::InvalidPurse);
     let contract_hash = system::get_auction();
@@ -787,6 +788,7 @@ pub fn delegate(validator: PublicKey, amount: U512) {
     runtime::call_contract::<U512>(contract_hash, auction::METHOD_DELEGATE, args);
 }
 
+/// Undelegate tokens from a validator
 pub fn undelegate(validator: PublicKey, amount: U512) {
     let purse = get_main_purse().unwrap_or_revert_with(ApiError::InvalidPurse);
     let contract_hash = system::get_auction();
@@ -800,16 +802,21 @@ pub fn undelegate(validator: PublicKey, amount: U512) {
     runtime::call_contract::<U512>(contract_hash, auction::METHOD_UNDELEGATE, args);
 }
 
-pub fn delegated_amount(p0: PublicKey) -> U512 {
+/// Retrieves the amount of tokens delegated to the validator by the caller (the contract)
+pub fn delegated_amount(public_key: PublicKey) -> U512 {
     let purse = get_main_purse().unwrap_or_revert_with(ApiError::InvalidPurse);
-    let account_hash = p0.to_account_hash();
-    let key = Key::BidAddr(BidAddr::DelegatedPurse { validator: account_hash, delegator: purse.addr() });
-    let result: BidKind = read_from_key(key).unwrap_or_revert().unwrap_or_revert();
-    
-    match result {
-        BidKind::Delegator(purse) => {
-            purse.staked_amount()
-        },
-        _ => U512::zero()
-    }
+    let account_hash = public_key.to_account_hash();
+    let key = Key::BidAddr(BidAddr::DelegatedPurse {
+        validator: account_hash,
+        delegator: purse.addr()
+    });
+
+    read_from_key(key)
+        .ok()
+        .and_then(|stored_value| stored_value)
+        .and_then(|bid_kind| match bid_kind {
+            BidKind::Delegator(purse) => Some(purse.staked_amount()),
+            _ => None
+        })
+        .unwrap_or_else(U512::zero)
 }
