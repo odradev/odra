@@ -426,7 +426,7 @@ impl CasperClient {
             )
         });
 
-        Address::from(key.into_contract_package_hash().unwrap_or_else(|| {
+        Address::from(key.into_package_hash().unwrap_or_else(|| {
             panic!(
                 "Couldn't get package hash from key {:?} for account: {:?}",
                 key_name,
@@ -743,7 +743,7 @@ impl CasperClient {
             }
         };
 
-        Deploy::new(
+        Deploy::new_signed(
             timestamp,
             ttl,
             gas_price,

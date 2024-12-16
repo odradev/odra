@@ -165,16 +165,16 @@ impl ContractContext for LivenetContractEnv {
         result
     }
 
-    fn delegate(&self, validator: PublicKey, amount: U512) {
-        todo!()
+    fn delegate(&self, _validator: PublicKey, _amount: U512) {
+        panic!("delegate is not supported for LivenetContractEnv")
     }
 
-    fn undelegate(&self, validator: PublicKey, amount: U512) {
-        todo!()
+    fn undelegate(&self, _validator: PublicKey, _amount: U512) {
+        panic!("undelegate is not supported for LivenetContractEnv")
     }
 
-    fn delegated_amount(&self, validator: PublicKey) -> U512 {
-        todo!()
+    fn delegated_amount(&self, _validator: PublicKey) -> U512 {
+        panic!("delegated_amount is not supported for LivenetContractEnv")
     }
 }
 
