@@ -255,6 +255,14 @@ impl HostContext for LivenetHost {
                 )
             })
     }
+
+    fn get_validator(&self) -> PublicKey {
+        panic!("get_validator not supported for LivenetHost")
+    }
+
+    fn advance_with_auctions(&self, _: u64) {
+        panic!("advance_with_auctions not supported for LivenetHost")
+    }
 }
 
 impl LivenetHost {

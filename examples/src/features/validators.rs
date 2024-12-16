@@ -59,16 +59,18 @@ pub enum ValError {
 
 #[cfg(test)]
 mod tests {
-    use crate::features::validators::{ValidatorsContract, ValidatorsContractInitArgs};
-    use odra::casper_types::U512;
-    use odra::host::Deployer;
-    use odra::host::HostRef;
 
-    /// Time in milliseconds for one era. On livenet it's 120 minutes. On local, by default it's 41 seconds.
-    pub const ERA_DURATION: u64 = 41 * 1000;
-
+    // Validators are now supported only on casper target
+    #[cfg(target_arch = "wasm32")]
     #[test]
     fn test_validators() {
+        use crate::features::validators::{ValidatorsContract, ValidatorsContractInitArgs};
+        use odra::casper_types::U512;
+        use odra::host::Deployer;
+        use odra::host::HostRef;
+
+        /// Time in milliseconds for one era. On livenet it's 120 minutes. On local, by default it's 41 seconds.
+        pub const ERA_DURATION: u64 = 41 * 1000;
         let test_env = odra_test::env();
         test_env.set_caller(test_env.get_account(0));
         let mut staking = ValidatorsContract::deploy(
