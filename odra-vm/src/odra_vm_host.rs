@@ -156,6 +156,10 @@ impl HostContext for OdraVmHost {
             .borrow()
             .checked_transfer_tokens(&caller, &to, &amount)
     }
+
+    fn era_length(&self) -> u64 {
+        1_000u64
+    }
 }
 
 impl OdraVmHost {

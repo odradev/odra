@@ -149,6 +149,11 @@ impl CasperVm {
         let remaining_time = time_diff % time_between_auctions;
     }
 
+    /// Gets the era length in milliseconds.
+    pub fn era_length(&self) -> u64 {
+        self.context.chainspec().core_config.era_duration.millis()
+    }
+
     /// Gets the current block time.
     pub fn block_time(&self) -> u64 {
         self.block_time
