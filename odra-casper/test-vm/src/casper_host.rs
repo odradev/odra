@@ -173,6 +173,10 @@ impl HostContext for CasperHost {
     fn transfer(&self, to: Address, amount: U512) -> OdraResult<()> {
         self.vm.borrow_mut().transfer(to, amount)
     }
+
+    fn era_length(&self) -> u64 {
+        self.vm.borrow().era_length()
+    }
 }
 
 impl CasperHost {

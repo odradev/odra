@@ -263,6 +263,10 @@ impl HostContext for LivenetHost {
     fn advance_with_auctions(&self, _: u64) {
         panic!("advance_with_auctions not supported for LivenetHost")
     }
+
+    fn era_length(&self) -> u64 {
+        panic!("era_length not yet implemented for LivenetHost")
+    }
 }
 
 impl LivenetHost {
