@@ -29,4 +29,4 @@ test = false
 missing_docs = "warn"
 
 [patch.crates-io]
-casper-types = { version = "5.0.0", git = "https://github.com/casper-network/casper-node", branch = "release-2.0.0-rc5" }
+casper-types = { version = "5.0.0", git = "https://github.com/casper-network/casper-node", branch = "feat-2.0" }
