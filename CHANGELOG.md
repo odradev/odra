@@ -2,6 +2,10 @@
 
 Changelog for `odra`.
 
+## [1.5.0] - 2025-01-07
+### Added
+- More public methods in `CEP18` module.
+
 ## [1.4.0] - 2024-10-18
 ### Added
 - `deploy_with_cfg` to handle `odra_cfg` args in `livenet`.
@@ -10,8 +14,7 @@ Changelog for `odra`.
 ### Fixed
 - Calling `init` fails in `odra_vm`.
 
-
-## [1.4.0] - 2024-08-20
+## [1.3.0] - 2024-08-20
 ### Added
 - `OdraContract` trait grouping module-related structures.
 ### Changed
