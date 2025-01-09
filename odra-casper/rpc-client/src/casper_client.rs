@@ -27,7 +27,7 @@ use casper_types::{
     execution::ExecutionResult, runtime_args, sign, CLTyped, Digest, EntityAddr, Key, PublicKey,
     RuntimeArgs, SecretKey, Transaction, TransactionHash, URef, U512
 };
-use casper_types::{Deploy, DeployHash, ExecutableDeployItem, StoredValue, TimeDiff, Timestamp};
+use casper_types::{ Deploy, DeployHash, ExecutableDeployItem, StoredValue, TimeDiff, Timestamp};
 use odra_core::casper_event_standard::EVENTS_LENGTH;
 use odra_core::consts::{
     AMOUNT_ARG, ARGS_ARG, ATTACHED_VALUE_ARG, ENTRY_POINT_ARG, EVENTS, PACKAGE_HASH_ARG,
@@ -83,7 +83,7 @@ impl CasperClient {
     pub async fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes> {
         let entity_hash = self.query_global_state_for_entity_addr(address).await;
         let stored_value = self
-            .query_global_state(Key::AddressableEntity(entity_hash), Some(name.to_string()))
+            .query_global_state(Key::Hash(entity_hash.value()), Some(name.to_string()))
             .await;
         match stored_value.clone() {
             CLValue(value) => Some(Bytes::from(value.inner_bytes().as_slice())),
@@ -314,18 +314,24 @@ impl CasperClient {
     }
 
     /// Query the node for the dictionary item of a contract or an account.
-    async fn query_dict<T: FromBytes + CLTyped>(
+    /// TODO: consider remove T
+    async fn query_dict(
         &self,
         address: &Address,
         dictionary_name: String,
         dictionary_item_key: String
-    ) -> Result<T> {
+    ) -> Result<Bytes> {
         let entity_addr = self.query_global_state_for_entity_addr(address).await;
-        let params = DictionaryItemStrParams::EntityNamedKey {
-            entity_addr: &entity_addr.to_formatted_string(),
+        let hash_addr = Key::Hash(entity_addr.value()).to_formatted_string();
+        let params = DictionaryItemStrParams::ContractNamedKey {
+            hash_addr: &hash_addr,
             dictionary_name: &dictionary_name,
             dictionary_item_key: &dictionary_item_key
         };
+        println!("hash_addr: {:?}", hash_addr);
+        println!("dict_name: {:?}", dictionary_name);
+        println!("dict_item_key: {:?}", dictionary_item_key);
+
         let r = get_dictionary_item(
             &self.rpc_id(),
             self.node_address(),
@@ -335,13 +341,18 @@ impl CasperClient {
         )
         .await;
 
-        r.map_err(|_| LivenetToDo)?
-            .result
-            .stored_value
-            .into_cl_value()
-            .ok_or(LivenetToDo)?
-            .into_t()
-            .map_err(|_| LivenetToDo)
+        let result = r.map_err(|_| LivenetToDo)?;
+        let stored_value = result.result.stored_value;
+        let cl_value = stored_value.into_cl_value().ok_or(LivenetToDo)?;
+        
+        // Note: this is for compatibility with CEP18 named keys.
+        if cl_value.cl_type() == &Vec::<u8>::cl_type() {
+            let bytes = cl_value.into_t().map_err(|_| LivenetToDo)?;
+            Ok(bytes)
+        } else {
+            let bytes = cl_value.inner_bytes();
+            Ok(Bytes::from(bytes.to_vec()))
+        }
     }
 
     /// Query the node for the transaction state.
@@ -436,6 +447,7 @@ impl CasperClient {
     }
 
     /// Find the entity addr in global state for an address
+    /// TODO: Remove this method.
     async fn query_global_state_for_entity_addr(&self, address: &Address) -> EntityAddr {
         let result = self.query_global_state(address.as_key(), None).await;
         match result {
@@ -450,6 +462,10 @@ impl CasperClient {
                     })
                     .value()
             ),
+            StoredValue::ContractPackage(package) => {
+                let last_version = package.current_contract_hash().unwrap();
+                EntityAddr::SmartContract(last_version.value())
+            },
             _ => {
                 panic!(
                     "Couldn't get entity addr for address: {:?}",
