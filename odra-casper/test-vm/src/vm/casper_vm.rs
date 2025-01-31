@@ -620,10 +620,10 @@ impl CasperVm {
         );
         genesis_request.set_enable_entity(false);
 
-        // let chainspec_path =
-        //     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/chainspec.toml");
-        // let mut builder = LmdbWasmTestBuilder::new_temporary_with_chainspec(chainspec_path);
-        let mut builder = LmdbWasmTestBuilder::default();
+        let chainspec_path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/chainspec.toml");
+        let mut builder = LmdbWasmTestBuilder::new_temporary_with_chainspec(chainspec_path);
+        // let mut builder = LmdbWasmTestBuilder::default();
         
         builder.run_genesis(genesis_request).commit();
 
