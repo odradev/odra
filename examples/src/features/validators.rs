@@ -57,67 +57,68 @@ pub enum ValError {
     InsufficientBalance = 1
 }
 
-#[cfg(test)]
-mod tests {
+// Validators are now supported only on casper target
+#[cfg(target_arch = "wasm32")]
+#[test]
+fn test_validators() {
+    use crate::features::validators::{ValidatorsContract, ValidatorsContractInitArgs};
+    use odra::casper_types::U512;
+    use odra::host::Deployer;
+    use odra::host::HostRef;
 
-    // Validators are now supported only on casper target
-    #[cfg(target_arch = "wasm32")]
-    #[test]
-    fn test_validators() {
-        use crate::features::validators::{ValidatorsContract, ValidatorsContractInitArgs};
-        use odra::casper_types::U512;
-        use odra::host::Deployer;
-        use odra::host::HostRef;
+    let test_env = odra_test::env();
+    let auction_delay = test_env.auction_delay();
+    // Should we put it into host method?
+    let unbonding_delay = auction_delay * 8;
 
-        /// Time in milliseconds for one era. On livenet it's 120 minutes. On local, by default it's 41 seconds.
-        pub const ERA_DURATION: u64 = 41 * 1000;
-        let test_env = odra_test::env();
-        test_env.set_caller(test_env.get_account(0));
-        let mut staking = ValidatorsContract::deploy(
-            &test_env,
-            ValidatorsContractInitArgs {
-                validator: test_env.get_validator()
-            }
-        );
+    test_env.set_caller(test_env.get_account(0));
+    let mut staking = ValidatorsContract::deploy(
+        &test_env,
+        ValidatorsContractInitArgs {
+            validator: test_env.get_validator()
+        }
+    );
 
-        // Setup validators in vm
-        let inital_account_balance = test_env.balance_of(&test_env.get_account(0));
+    // Setup validators in vm
+    let inital_account_balance = test_env.balance_of(&test_env.get_account(0));
 
-        // Stake some amount
-        let staking_amount = U512::from(1_000_000_000_000u64);
-        staking.with_tokens(staking_amount).stake();
-        assert_eq!(staking.currently_delegated_amount(), staking_amount);
-        assert_eq!(
-            test_env.balance_of(&test_env.get_account(0)),
-            inital_account_balance - staking_amount
-        );
+    // Stake some amount
+    let staking_amount = U512::from(1_000_000_000_000u64);
+    staking.with_tokens(staking_amount).stake();
+    assert_eq!(staking.currently_delegated_amount(), staking_amount);
+    assert_eq!(
+        test_env.balance_of(&test_env.get_account(0)),
+        inital_account_balance - staking_amount
+    );
 
-        // Advance time, run auctions and give off rewards
-        test_env.advance_with_rewards(ERA_DURATION * 10);
+    // Advance time, run auctions and give off rewards
+    // TODO: Why it works with auction delay * 2 and not with auction delay?
+    test_env.advance_with_auctions(auction_delay * 2);
 
-        // Check that the amount is greater than the staking amount
-        let staking_with_reward = staking.currently_delegated_amount();
-        assert!(staking_with_reward > staking_amount);
+    // Check that the amount is greater than the staking amount
+    let staking_with_reward = staking.currently_delegated_amount();
+    assert!(staking_with_reward > staking_amount);
 
-        // Unstake
-        staking.unstake(staking_with_reward);
-        assert_eq!(staking.currently_delegated_amount(), U512::from(0));
+    // Unstake
+    staking.unstake(staking_with_reward);
+    assert_eq!(staking.currently_delegated_amount(), U512::from(0));
 
-        // Withdraw should first fail, as we need to wait 7 eras
-        staking.try_withdraw(staking_with_reward).unwrap_err();
-        // To confirm, the contract balance should be 0
-        assert_eq!(staking.current_casper_balance(), U512::from(0));
+    // Withdraw should first fail, as we need to wait for auction delay
+    staking.try_withdraw(staking_with_reward).unwrap_err();
+    // To confirm, the contract balance should be 0
+    assert_eq!(staking.current_casper_balance(), U512::from(0));
 
-        // Advance time, run auctions and give off rewards
-        test_env.advance_with_rewards(ERA_DURATION * 8);
-        assert_eq!(staking.current_casper_balance(), staking_with_reward);
-        staking.withdraw(staking_with_reward);
-        assert_eq!(staking.current_casper_balance(), U512::from(0));
+    // Advance time, run auctions and give off rewards
+    test_env.advance_with_auctions(unbonding_delay);
+    assert_eq!(staking.current_casper_balance(), staking_with_reward);
+    staking.withdraw(staking_with_reward);
+    assert_eq!(staking.current_casper_balance(), U512::from(0));
 
-        // The user now should have the tokens
-        assert_eq!(
-            test_env.balance_of(&test_env.get_account(0)),
-            staking_with_reward + inital_account_balance - staking_amount
-        );
-    }
+    // The user now should have the tokens
+    assert_eq!(
+        test_env.balance_of(&test_env.get_account(0)),
+        staking_with_reward + inital_account_balance - staking_amount
+    );
 }
+#[cfg(test)]
+mod tests {}

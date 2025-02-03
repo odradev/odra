@@ -19,7 +19,7 @@ use casper_client::{
     get_balance, get_deploy, get_transaction, put_transaction, query_global_state, JsonRpcId,
     Verbosity
 };
-use casper_types::bytesrepr::{deserialize_from_slice, Bytes, FromBytes, ToBytes};
+use casper_types::bytesrepr::{deserialize_from_slice, Bytes, ToBytes};
 use casper_types::contracts::ContractPackageHash;
 use casper_types::execution::ExecutionResultV1::{Failure, Success};
 use casper_types::StoredValue::CLValue;
@@ -27,7 +27,7 @@ use casper_types::{
     execution::ExecutionResult, runtime_args, sign, CLTyped, Digest, EntityAddr, Key, PublicKey,
     RuntimeArgs, SecretKey, Transaction, TransactionHash, URef, U512
 };
-use casper_types::{ Deploy, DeployHash, ExecutableDeployItem, StoredValue, TimeDiff, Timestamp};
+use casper_types::{Deploy, DeployHash, ExecutableDeployItem, StoredValue, TimeDiff, Timestamp};
 use odra_core::casper_event_standard::EVENTS_LENGTH;
 use odra_core::consts::{
     AMOUNT_ARG, ARGS_ARG, ATTACHED_VALUE_ARG, ENTRY_POINT_ARG, EVENTS, PACKAGE_HASH_ARG,
@@ -344,7 +344,7 @@ impl CasperClient {
         let result = r.map_err(|_| LivenetToDo)?;
         let stored_value = result.result.stored_value;
         let cl_value = stored_value.into_cl_value().ok_or(LivenetToDo)?;
-        
+
         // Note: this is for compatibility with CEP18 named keys.
         if cl_value.cl_type() == &Vec::<u8>::cl_type() {
             let bytes = cl_value.into_t().map_err(|_| LivenetToDo)?;
@@ -465,7 +465,7 @@ impl CasperClient {
             StoredValue::ContractPackage(package) => {
                 let last_version = package.current_contract_hash().unwrap();
                 EntityAddr::SmartContract(last_version.value())
-            },
+            }
             _ => {
                 panic!(
                     "Couldn't get entity addr for address: {:?}",

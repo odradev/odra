@@ -254,8 +254,8 @@ pub trait HostContext {
     /// Advances the block time by the specified time difference and processes auctions.
     fn advance_with_auctions(&self, time_diff: u64);
 
-    /// Era length in milliseconds.
-    fn era_length(&self) -> u64;
+    /// Time between auctions in milliseconds.
+    fn auction_delay(&self) -> u64;
 
     /// Returns the current block time.
     fn block_time(&self) -> u64;
@@ -371,16 +371,15 @@ impl HostEnv {
     }
 
     /// Advances the block time by the specified time difference and processes auctions.
-    pub fn advance_with_rewards(&self, time_diff: u64) {
+    pub fn advance_with_auctions(&self, time_diff: u64) {
         let backend = self.backend.borrow();
         backend.advance_with_auctions(time_diff);
-        backend.advance_block_time(time_diff);
     }
 
     /// Returns the era length in milliseconds.
-    pub fn era_length(&self) -> u64 {
+    pub fn auction_delay(&self) -> u64 {
         let backend = self.backend.borrow();
-        backend.era_length()
+        backend.auction_delay()
     }
 
     /// Returns the current block time.
