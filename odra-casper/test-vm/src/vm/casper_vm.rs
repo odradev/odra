@@ -110,16 +110,14 @@ impl CasperVm {
     /// Advances the block time by the specified time difference and processes auctions
     /// Giving the rewards to the validators
     pub fn advance_with_auctions(&mut self, time_diff: u64) {
-        let time_between_auctions = self
-            .context
-            .get_auction_delay()
-            .saturating_mul(self.context.chainspec().core_config.era_duration.millis());
+        let time_between_auctions = self.auction_delay();
         // Calculate how many auctions we can run based on time_diff
         let num_auctions = time_diff / time_between_auctions;
 
         // Run auctions for each complete delay period
         for _ in 0..num_auctions {
             self.context.run_auction(0u64, vec![]);
+            self.advance_block_time(time_between_auctions);
         }
 
         // Distribute rewards
@@ -147,11 +145,14 @@ impl CasperVm {
 
         // Run remaining auctions with the leftover time
         let remaining_time = time_diff % time_between_auctions;
+        self.advance_block_time(remaining_time);
     }
 
-    /// Gets the era length in milliseconds.
-    pub fn era_length(&self) -> u64 {
-        self.context.chainspec().core_config.era_duration.millis()
+    /// Gets the time between auctions.
+    pub fn auction_delay(&mut self) -> u64 {
+        self.context
+            .get_auction_delay()
+            .saturating_mul(self.context.chainspec().core_config.era_duration.millis())
     }
 
     /// Gets the current block time.
@@ -624,7 +625,7 @@ impl CasperVm {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/chainspec.toml");
         let mut builder = LmdbWasmTestBuilder::new_temporary_with_chainspec(chainspec_path);
         // let mut builder = LmdbWasmTestBuilder::default();
-        
+
         builder.run_genesis(genesis_request).commit();
 
         // crank the auction

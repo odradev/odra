@@ -174,8 +174,9 @@ impl HostContext for CasperHost {
         self.vm.borrow_mut().transfer(to, amount)
     }
 
-    fn era_length(&self) -> u64 {
-        self.vm.borrow().era_length()
+    fn auction_delay(&self) -> u64 {
+        let mut backend = self.vm.borrow_mut();
+        backend.auction_delay()
     }
 }
 

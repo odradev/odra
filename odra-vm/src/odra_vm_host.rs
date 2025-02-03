@@ -157,7 +157,7 @@ impl HostContext for OdraVmHost {
             .checked_transfer_tokens(&caller, &to, &amount)
     }
 
-    fn era_length(&self) -> u64 {
+    fn auction_delay(&self) -> u64 {
         1_000u64
     }
 }
