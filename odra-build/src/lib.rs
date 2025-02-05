@@ -62,6 +62,12 @@ fn flags() -> Vec<String> {
     let module = std::env::var("ODRA_MODULE").unwrap_or_else(|_| "".to_string());
     let msg = format!("cargo:rustc-cfg=odra_module=\"{}\"", module);
     flags.push(msg);
+
+    flags.push("cargo:rerun-if-env-changed=ODRA_BACKEND".to_string());
+    let backend_env = std::env::var("ODRA_BACKEND").unwrap_or_else(|_| "".to_string());
+    let msg = format!("cargo:rustc-cfg=odra_backend=\"{}\"", backend_env);
+    flags.push(msg);
+
     flags
 }
 
@@ -70,15 +76,21 @@ mod test {
     #[test]
     fn test_flags() {
         std::env::remove_var("ODRA_MODULE");
+        std::env::remove_var("ODRA_BACKEND");
         let flags = super::flags();
-        assert_eq!(flags.len(), 2);
+        assert_eq!(flags.len(), 4);
         assert_eq!(flags[0], "cargo:rerun-if-env-changed=ODRA_MODULE");
         assert_eq!(flags[1], "cargo:rustc-cfg=odra_module=\"\"");
+        assert_eq!(flags[2], "cargo:rerun-if-env-changed=ODRA_BACKEND");
+        assert_eq!(flags[3], "cargo:rustc-cfg=odra_backend=\"\"");
 
         std::env::set_var("ODRA_MODULE", "test");
+        std::env::set_var("ODRA_BACKEND", "backend_test");
         let flags = super::flags();
-        assert_eq!(flags.len(), 2);
+        assert_eq!(flags.len(), 4);
         assert_eq!(flags[0], "cargo:rerun-if-env-changed=ODRA_MODULE");
         assert_eq!(flags[1], "cargo:rustc-cfg=odra_module=\"test\"");
+        assert_eq!(flags[2], "cargo:rerun-if-env-changed=ODRA_BACKEND");
+        assert_eq!(flags[3], "cargo:rustc-cfg=odra_backend=\"backend_test\"");
     }
 }
