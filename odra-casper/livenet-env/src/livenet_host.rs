@@ -257,7 +257,7 @@ impl HostContext for LivenetHost {
             })
     }
 
-    fn get_validator(&self) -> PublicKey {
+    fn get_validator(&self, index: usize) -> PublicKey {
         panic!("get_validator not supported for LivenetHost")
     }
 

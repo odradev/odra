@@ -32,7 +32,7 @@ impl HostContext for OdraVmHost {
         self.vm.borrow().get_account(index)
     }
 
-    fn get_validator(&self) -> PublicKey {
+    fn get_validator(&self, index: usize) -> PublicKey {
         todo!("get_validator is not yet supported for OdraVM")
     }
 

@@ -243,7 +243,7 @@ pub trait HostContext {
     fn get_account(&self, index: usize) -> Address;
 
     /// Returns the validator public key.
-    fn get_validator(&self) -> PublicKey;
+    fn get_validator(&self, index: usize) -> PublicKey;
 
     /// Returns the CSPR balance of the specified address.
     fn balance_of(&self, address: &Address) -> U512;
@@ -350,9 +350,9 @@ impl HostEnv {
     }
 
     /// Returns the validator public key.
-    pub fn get_validator(&self) -> PublicKey {
+    pub fn get_validator(&self, index: usize) -> PublicKey {
         let backend = self.backend.borrow();
-        backend.get_validator()
+        backend.get_validator(index)
     }
 
     /// Sets the caller address for the current contract execution.

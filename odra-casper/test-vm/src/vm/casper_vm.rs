@@ -53,7 +53,8 @@ use odra_core::{
 /// Casper virtual machine utilizing [LmdbWasmTestBuilder].
 pub struct CasperVm {
     accounts: Vec<Address>,
-    validator: GenesisAccount,
+    validators: Vec<GenesisAccount>,
+    active_validator_index: usize,
     key_pairs: BTreeMap<Address, (SecretKey, PublicKey)>,
     messages: BTreeMap<AddressableEntityHash, Vec<MessagePayload>>,
     active_account: Address,
@@ -98,8 +99,11 @@ impl CasperVm {
     }
 
     /// Gets the validator public key.
-    pub fn get_validator(&self) -> PublicKey {
-        self.validator.public_key()
+    pub fn get_validator(&self, index: usize) -> PublicKey {
+        self.validators
+            .get(index)
+            .unwrap_or_else(|| panic!("Not enough validators: {}", index))
+            .public_key()
     }
 
     /// Advances the block time by the specified time difference.
@@ -114,34 +118,39 @@ impl CasperVm {
         // Calculate how many auctions we can run based on time_diff
         let num_auctions = time_diff / time_between_auctions;
 
-        // Run auctions for each complete delay period
+        // Run auctions and distribute rewards one at a time
         for _ in 0..num_auctions {
             self.context.run_auction(0u64, vec![]);
+
+            // Distribute reward to current validator
+            let current_validator = &self.validators[self.active_validator_index];
+            let mut rewards = BTreeMap::new();
+            rewards.insert(
+                current_validator.public_key(),
+                vec![U512::from(BLOCK_REWARD)]
+            );
+
+            let distribute_request = ExecuteRequestBuilder::contract_call_by_hash(
+                *SYSTEM_ADDR,
+                self.context.get_auction_contract_hash(),
+                METHOD_DISTRIBUTE,
+                runtime_args! {
+                    ARG_ENTRY_POINT => METHOD_DISTRIBUTE,
+                    ARG_REWARDS_MAP => rewards,
+                }
+            )
+            .build();
+
+            self.context
+                .exec(distribute_request)
+                .commit()
+                .expect_success();
+
+            // Move to next validator
+            self.active_validator_index = (self.active_validator_index + 1) % self.validators.len();
+
             self.advance_block_time(time_between_auctions);
         }
-
-        // Distribute rewards
-        let mut rewards = BTreeMap::new();
-        rewards.insert(
-            self.get_validator(),
-            vec![U512::from(BLOCK_REWARD * num_auctions)]
-        );
-
-        let distribute_request = ExecuteRequestBuilder::contract_call_by_hash(
-            *SYSTEM_ADDR,
-            self.context.get_auction_contract_hash(),
-            METHOD_DISTRIBUTE,
-            runtime_args! {
-                ARG_ENTRY_POINT => METHOD_DISTRIBUTE,
-                ARG_REWARDS_MAP => rewards,
-            }
-        )
-        .build();
-
-        self.context
-            .exec(distribute_request)
-            .commit()
-            .expect_success();
 
         // Run remaining auctions with the leftover time
         let remaining_time = time_diff % time_between_auctions;
@@ -565,27 +574,38 @@ impl CasperVm {
 
     fn genesis_accounts(
         key_pairs: &BTreeMap<Address, (SecretKey, PublicKey)>
-    ) -> (Vec<GenesisAccount>, GenesisAccount) {
+    ) -> (Vec<GenesisAccount>, Vec<GenesisAccount>) {
         let mut accounts = Vec::new();
+        let mut validators = Vec::new();
+        let total_accounts = key_pairs.len();
+        let validators_count = 5; // Fixed number of validators
+        let regular_accounts_count = total_accounts - validators_count;
+
+        // Create regular accounts
         let iter = key_pairs.iter();
-        for (_, (_, public_key)) in iter.take(ACCOUNTS_NUMBER as usize) {
+        for (_, (_, public_key)) in iter.take(regular_accounts_count) {
             accounts.push(GenesisAccount::account(
                 public_key.clone(),
                 Motes::new(DEFAULT_ACCOUNT_INITIAL_BALANCE),
                 None
             ));
         }
-        let (_, (_, validator_public_key)) = key_pairs.last_key_value().unwrap();
-        let validator_account = GenesisAccount::account(
-            validator_public_key.clone(),
-            Motes::new(DEFAULT_ACCOUNT_INITIAL_BALANCE),
-            Some(GenesisValidator::new(
+
+        // Create validator accounts (last 5 accounts)
+        for (_, (_, public_key)) in key_pairs.iter().skip(regular_accounts_count) {
+            let validator_account = GenesisAccount::account(
+                public_key.clone(),
                 Motes::new(DEFAULT_ACCOUNT_INITIAL_BALANCE),
-                50
-            ))
-        );
-        accounts.push(validator_account.clone());
-        (accounts, validator_account)
+                Some(GenesisValidator::new(
+                    Motes::new(DEFAULT_ACCOUNT_INITIAL_BALANCE),
+                    50
+                ))
+            );
+            accounts.push(validator_account.clone());
+            validators.push(validator_account);
+        }
+
+        (accounts, validators)
     }
 
     /// Creates a new genesis config.
@@ -607,8 +627,8 @@ impl CasperVm {
 
     fn new_instance() -> Self {
         // We generate +1 account for a validator.
-        let key_pairs = generate_key_pairs(ACCOUNTS_NUMBER + 1);
-        let (genesis_accounts, validator_account) = Self::genesis_accounts(&key_pairs);
+        let key_pairs = generate_key_pairs(ACCOUNTS_NUMBER);
+        let (genesis_accounts, validators) = Self::genesis_accounts(&key_pairs);
         let accounts: Vec<Address> = key_pairs.keys().copied().collect();
 
         let genesis_config = Self::genesis_config(genesis_accounts);
@@ -624,7 +644,6 @@ impl CasperVm {
         let chainspec_path =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/chainspec.toml");
         let mut builder = LmdbWasmTestBuilder::new_temporary_with_chainspec(chainspec_path);
-        // let mut builder = LmdbWasmTestBuilder::default();
 
         builder.run_genesis(genesis_request).commit();
 
@@ -646,7 +665,8 @@ impl CasperVm {
             gas_report: GasReport::default(),
             key_pairs,
             messages: Default::default(),
-            validator: validator_account
+            validators,
+            active_validator_index: 0
         }
     }
 

@@ -47,8 +47,8 @@ impl HostContext for CasperHost {
         self.vm.borrow().get_account(index)
     }
 
-    fn get_validator(&self) -> PublicKey {
-        self.vm.borrow().get_validator()
+    fn get_validator(&self, index: usize) -> PublicKey {
+        self.vm.borrow().get_validator(index)
     }
 
     fn balance_of(&self, address: &Address) -> U512 {
