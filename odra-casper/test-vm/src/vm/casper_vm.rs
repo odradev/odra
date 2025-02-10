@@ -54,7 +54,6 @@ use odra_core::{
 pub struct CasperVm {
     accounts: Vec<Address>,
     validators: Vec<GenesisAccount>,
-    active_validator_index: usize,
     key_pairs: BTreeMap<Address, (SecretKey, PublicKey)>,
     messages: BTreeMap<AddressableEntityHash, Vec<MessagePayload>>,
     active_account: Address,
@@ -70,7 +69,8 @@ pub struct CasperVm {
 impl CasperVm {
     /// Creates a new instance with predefined accounts.
     pub fn new() -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(Self::new_instance()))
+        let vm = Self::new_instance();
+        Rc::new(RefCell::new(vm))
     }
 
     /// Read a PackageHash of a given name, from the active account.
@@ -121,15 +121,11 @@ impl CasperVm {
         // Run auctions and distribute rewards one at a time
         for _ in 0..num_auctions {
             self.context.run_auction(0u64, vec![]);
-
-            // Distribute reward to current validator
-            let current_validator = &self.validators[self.active_validator_index];
             let mut rewards = BTreeMap::new();
-            rewards.insert(
-                current_validator.public_key(),
-                vec![U512::from(BLOCK_REWARD)]
-            );
-
+            // distribute rewards to all validators
+            for validator in &self.validators {
+                rewards.insert(validator.public_key(), vec![U512::from(BLOCK_REWARD)]);
+            }
             let distribute_request = ExecuteRequestBuilder::contract_call_by_hash(
                 *SYSTEM_ADDR,
                 self.context.get_auction_contract_hash(),
@@ -145,9 +141,6 @@ impl CasperVm {
                 .exec(distribute_request)
                 .commit()
                 .expect_success();
-
-            // Move to next validator
-            self.active_validator_index = (self.active_validator_index + 1) % self.validators.len();
 
             self.advance_block_time(time_between_auctions);
         }
@@ -598,7 +591,7 @@ impl CasperVm {
                 Motes::new(DEFAULT_ACCOUNT_INITIAL_BALANCE),
                 Some(GenesisValidator::new(
                     Motes::new(DEFAULT_ACCOUNT_INITIAL_BALANCE),
-                    50
+                    0
                 ))
             );
             accounts.push(validator_account.clone());
@@ -626,7 +619,6 @@ impl CasperVm {
     }
 
     fn new_instance() -> Self {
-        // We generate +1 account for a validator.
         let key_pairs = generate_key_pairs(ACCOUNTS_NUMBER);
         let (genesis_accounts, validators) = Self::genesis_accounts(&key_pairs);
         let accounts: Vec<Address> = key_pairs.keys().copied().collect();
@@ -646,12 +638,7 @@ impl CasperVm {
         let mut builder = LmdbWasmTestBuilder::new_temporary_with_chainspec(chainspec_path);
 
         builder.run_genesis(genesis_request).commit();
-
-        // crank the auction
-        let timestamp_millis = DEFAULT_GENESIS_TIMESTAMP_MILLIS;
-        for _ in 0..=builder.get_unbonding_delay() {
-            builder.run_auction(timestamp_millis, vec![]);
-        }
+        builder.advance_eras_by_default_auction_delay();
 
         Self {
             active_account: accounts[0],
@@ -665,8 +652,7 @@ impl CasperVm {
             gas_report: GasReport::default(),
             key_pairs,
             messages: Default::default(),
-            validators,
-            active_validator_index: 0
+            validators
         }
     }
 
