@@ -16,6 +16,7 @@ members = [
     "odra-schema",
     "odra-test",
     "odra-build",
+    "odra-bdd",
     ]
 exclude = ["odra-casper/proxy-caller", "templates/blank", "templates/full", "templates/workspace", "tests"]
 resolver = "2"
@@ -59,7 +60,9 @@ serde-json-wasm = { version = "1.0", default-features = false }
 anyhow = { version = "1.0.86", default-features = false }
 convert_case = "0.6.0"
 lazy_static = "1.5.0"
-
+cucumber = "0.21.1"
+futures = "0.3.5"
+derive_more = { version = "1.0.0", features = ["full"] }
 [patch.crates-io]
 casper-types = { version = "5.0.0", git = "https://github.com/casper-network/casper-node.git", branch = "feat-2.0" }
 
