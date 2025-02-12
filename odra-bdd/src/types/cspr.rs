@@ -7,7 +7,7 @@ use std::ops::Deref;
 use std::str::FromStr;
 
 #[derive(Parameter, Debug, Clone, Copy)]
-#[param(regex = r"\d+(\.\d+)?", name = "cspr_amount")]
+#[param(regex = r"\d+(\.\d+)?( Motes)?", name = "cspr_amount")]
 pub struct CSPRAmount {
     amount: U512,
     precision: usize
@@ -58,10 +58,17 @@ impl FromStr for CSPRAmount {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Some(motes_str) = s.strip_suffix(" Motes") {
+            let amount = U512::from_dec_str(motes_str).map_err(|e| e.to_string())?;
+            return Ok(CSPRAmount {
+                amount,
+                precision: 9
+            });
+        }
+
         let parts: Vec<&str> = s.split('.').collect();
         match parts.len() {
             1 => {
-                // No decimal point
                 let amount = U512::from_dec_str(parts[0]).map_err(|e| e.to_string())?;
                 Ok(CSPRAmount {
                     amount: amount * U512::from(1_000_000_000u64),
@@ -69,15 +76,12 @@ impl FromStr for CSPRAmount {
                 })
             }
             2 => {
-                // Has decimal point
                 let whole = U512::from_dec_str(parts[0]).map_err(|e| e.to_string())?;
                 let mut decimal = parts[1].to_string();
                 let precision = 9 - decimal.len();
-                // Pad with zeros if less than 9 decimal places
                 while decimal.len() < 9 {
                     decimal.push('0');
                 }
-                // Truncate if more than 9 decimal places
                 decimal.truncate(9);
                 let fractional = U512::from_dec_str(&decimal).map_err(|e| e.to_string())?;
 
