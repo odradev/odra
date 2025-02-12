@@ -150,6 +150,11 @@ impl Ownable2Step {
         self.pending_owner.set(None);
         self.ownable.unchecked_transfer_ownership(caller);
     }
+
+    /// Reverts with if the function called by any account other than the owner.
+    pub fn assert_owner(&self, address: &Address) {
+        self.ownable.assert_owner(address)
+    }
 }
 
 #[cfg(test)]
