@@ -21,11 +21,9 @@ pub struct Ownable {
 
 #[odra::module]
 impl Ownable {
-    /// Initializes the module setting the caller as the initial owner.
-    pub fn init(&mut self) {
-        let caller = self.env().caller();
-        let initial_owner = Some(caller);
-        self.unchecked_transfer_ownership(initial_owner);
+    /// Initializes the module setting an `owner` as the initial owner.
+    pub fn init(&mut self, owner: Address) {
+        self.unchecked_transfer_ownership(Some(owner));
     }
 
     /// Transfers ownership of the module to `new_owner`. This function can only
@@ -97,9 +95,9 @@ pub struct Ownable2Step {
 
 #[odra::module]
 impl Ownable2Step {
-    /// Initializes the module setting the caller as the initial owner.
-    pub fn init(&mut self) {
-        self.ownable.init();
+    /// Initializes the module setting an `owner` as the initial owner.
+    pub fn init(&mut self, owner: Address) {
+        self.ownable.init(owner);
     }
 
     /// Returns the address of the current owner.
@@ -342,18 +340,35 @@ mod test {
 
     fn setup_ownable() -> (OwnableHostRef, Address) {
         let env = odra_test::env();
-        (Ownable::deploy(&env, NoArgs), env.get_account(0))
+        (
+            Ownable::deploy(
+                &env,
+                OwnableInitArgs {
+                    owner: env.get_account(0)
+                }
+            ),
+            env.get_account(0)
+        )
     }
 
     fn setup_ownable_2_step() -> (Ownable2StepHostRef, Address) {
         let env = odra_test::env();
-        (Ownable2Step::deploy(&env, NoArgs), env.get_account(0))
+        (
+            Ownable2Step::deploy(
+                &env,
+                Ownable2StepInitArgs {
+                    owner: env.get_account(0)
+                }
+            ),
+            env.get_account(0)
+        )
     }
 
     fn setup_renounceable() -> (Vec<RenounceableHostRef>, Address) {
         let env = odra_test::env();
-        let ownable = Ownable::deploy(&env, NoArgs);
-        let ownable_2_step = Ownable2Step::deploy(&env, NoArgs);
+        let owner = env.caller();
+        let ownable = Ownable::deploy(&env, OwnableInitArgs { owner });
+        let ownable_2_step = Ownable2Step::deploy(&env, Ownable2StepInitArgs { owner });
         let renouncable_ref = RenounceableHostRef::new(*ownable.address(), env.clone());
         let renouncable_2_step_ref =
             RenounceableHostRef::new(*ownable_2_step.address(), env.clone());
@@ -365,8 +380,9 @@ mod test {
 
     fn setup_owned() -> (HostEnv, OwnableHostRef, Ownable2StepHostRef, Address) {
         let env = odra_test::env();
-        let ownable = Ownable::deploy(&env, NoArgs);
-        let ownable_2_step = Ownable2Step::deploy(&env, NoArgs);
+        let owner = env.caller();
+        let ownable = Ownable::deploy(&env, OwnableInitArgs { owner });
+        let ownable_2_step = Ownable2Step::deploy(&env, Ownable2StepInitArgs { owner });
         (env.clone(), ownable, ownable_2_step, env.get_account(0))
     }
 }
