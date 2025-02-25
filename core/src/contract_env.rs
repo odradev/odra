@@ -193,6 +193,12 @@ impl ContractEnv {
         backend.get_block_time()
     }
 
+    /// Returns the current block time in seconds
+    pub fn get_timestamp_seconds(&self) -> u64 {
+        let backend = self.backend.borrow();
+        backend.get_block_time() / 1000
+    }
+
     /// Returns the value attached to the contract call.
     pub fn attached_value(&self) -> U512 {
         let backend = self.backend.borrow();
