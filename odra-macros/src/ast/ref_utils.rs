@@ -41,7 +41,7 @@ pub fn contract_function_item(fun: &FnIR, is_trait_impl: bool) -> syn::ItemFn {
         false => visibility_pub()
     };
     let signature = function_signature(fun);
-    let call_def_expr = call_def(fun);
+    let call_def_expr = call_def_with_amount(fun);
     let attrs = function_filtered_attrs(fun);
 
     env_call(signature, call_def_expr, attrs, vis)
@@ -65,15 +65,6 @@ fn env_call(
             )
         }
     )
-}
-
-fn call_def(fun: &FnIR) -> syn::Expr {
-    let ty_call_def = utils::ty::call_def();
-    let fun_name_str = fun.name_str();
-    let args_block = fn_utils::runtime_args_block(fun, insert_arg_stmt);
-    let is_mut = fun.is_mut();
-    let fun_name = utils::expr::string_from(fun_name_str);
-    syn::parse_quote!(#ty_call_def::new(#fun_name, #is_mut, #args_block))
 }
 
 fn call_def_with_amount(fun: &FnIR) -> syn::Expr {

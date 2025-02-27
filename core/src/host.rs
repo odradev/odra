@@ -825,6 +825,10 @@ mod test {
         fn address(&self) -> &Address {
             unimplemented!()
         }
+
+        fn with_tokens(&self, _tokens: U512) -> Self {
+            unimplemented!()
+        }
     }
 
     impl OdraContract for MockTestRef {

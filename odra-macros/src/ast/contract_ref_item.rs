@@ -6,6 +6,7 @@ use derive_try_from_ref::TryFromRef;
 use quote::TokenStreamExt;
 use syn::parse_quote;
 
+use super::host_ref_item::WithTokensFnItem;
 use super::ref_utils::{SchemaErrorsItem, SchemaEventsItem};
 
 #[derive(syn_derive::ToTokens)]
@@ -23,12 +24,15 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefStructItem {
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let address = utils::ident::address();
         let env = utils::ident::env();
+        let attached_value = utils::ident::attached_value();
         let ty_address = utils::ty::address();
         let ty_rc_contract_env = utils::ty::rc_contract_env();
+        let ty_u512 = utils::ty::u512();
 
         let named_fields: syn::FieldsNamed = parse_quote!({
             #env: #ty_rc_contract_env,
             #address: #ty_address,
+            #attached_value: #ty_u512,
         });
 
         let comment = format!(" [{}] Contract Ref.", module.module_str()?);
@@ -77,11 +81,13 @@ impl NewFnItem {
         let m_address = utils::ident::address();
         let ret_ty = utils::misc::ret_ty(&utils::ty::_Self());
         let ty_rc_contract_env = utils::ty::rc_contract_env();
+        let ty_u512 = utils::ty::u512();
+        let attached_value = utils::ident::attached_value();
         let args = vec![
             parse_quote!(#m_env: #ty_rc_contract_env),
             parse_quote!(#m_address: #ty_address),
         ];
-        let ret_expr: syn::Expr = parse_quote!(Self { #m_env, #m_address });
+        let ret_expr: syn::Expr = parse_quote!(Self { #m_env, #m_address, #attached_value: #ty_u512::zero() });
         let fn_item = FnItem::new(&utils::ident::new(), args, ret_ty, ret_expr.as_block());
         Self { fn_item }
     }
@@ -98,7 +104,9 @@ struct ContractRefTraitImplItem {
     #[syn(in = brace_token)]
     new_fn: NewFnItem,
     #[syn(in = brace_token)]
-    address_fn: AddressFnItem
+    address_fn: AddressFnItem,
+    #[syn(in = brace_token)]
+    with_tokens_fn: WithTokensFnItem,
 }
 
 impl TryFrom<&'_ ModuleImplIR> for ContractRefTraitImplItem {
@@ -112,7 +120,8 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefTraitImplItem {
             ref_ident: module.contract_ref_ident()?,
             brace_token: Default::default(),
             new_fn: NewFnItem::new(),
-            address_fn: AddressFnItem::new()
+            address_fn: AddressFnItem::new(),
+            with_tokens_fn: WithTokensFnItem,
         })
     }
 }
@@ -181,15 +190,28 @@ mod ref_item_tests {
             pub struct Erc20ContractRef {
                 env: Rc<odra::ContractEnv>,
                 address: Address,
+                attached_value: odra::casper_types::U512,
             }
 
             impl odra::ContractRef for Erc20ContractRef {
                 fn new(env: Rc<odra::ContractEnv>, address: Address) -> Self {
-                    Self { env, address }
+                    Self { 
+                        env,
+                        address,
+                        attached_value: odra::casper_types::U512::zero()
+                    }
                 }
 
                 fn address(&self) -> &Address {
                     &self.address
+                }
+
+                fn with_tokens(&self, tokens: odra::casper_types::U512) -> Self {
+                    Self {
+                        address: self.address,
+                        env: self.env.clone(),
+                        attached_value: tokens,
+                    }
                 }
             }
 
@@ -203,10 +225,14 @@ mod ref_item_tests {
                             true,
                             {
                                 let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                if self.attached_value > odra::casper_types::U512::zero() {
+                                    let _ = named_args.insert("amount", self.attached_value);
+                                }
                                 odra::args::EntrypointArgument::insert_runtime_arg(total_supply.clone(), "total_supply", &mut named_args);
                                 named_args
                             }
-                        ),
+                        )
+                        .with_amount(self.attached_value),
                     )
                 }
 
@@ -219,9 +245,13 @@ mod ref_item_tests {
                             false,
                             {
                                 let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                if self.attached_value > odra::casper_types::U512::zero() {
+                                    let _ = named_args.insert("amount", self.attached_value);
+                                }
                                 named_args
                             }
-                        ),
+                        )
+                        .with_amount(self.attached_value),
                     )
                 }
 
@@ -235,9 +265,13 @@ mod ref_item_tests {
                                 true,
                                 {
                                     let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    if self.attached_value > odra::casper_types::U512::zero() {
+                                        let _ = named_args.insert("amount", self.attached_value);
+                                    }
                                     named_args
-                                },
-                            ),
+                                }
+                            )
+                            .with_amount(self.attached_value),
                         )
                 }
 
@@ -251,12 +285,16 @@ mod ref_item_tests {
                                 true,
                                 {
                                     let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    if self.attached_value > odra::casper_types::U512::zero() {
+                                        let _ = named_args.insert("amount", self.attached_value);
+                                    }
                                     odra::args::EntrypointArgument::insert_runtime_arg(to.clone(), "to", &mut named_args);
                                     odra::args::EntrypointArgument::insert_runtime_arg(amount.clone(), "amount", &mut named_args);
                                     odra::args::EntrypointArgument::insert_runtime_arg(msg.clone(), "msg", &mut named_args);
                                     named_args
-                                },
-                            ),
+                                }
+                            )
+                            .with_amount(self.attached_value),
                         )
                 }
 
@@ -270,11 +308,15 @@ mod ref_item_tests {
                                 false,
                                 {
                                     let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    if self.attached_value > odra::casper_types::U512::zero() {
+                                        let _ = named_args.insert("amount", self.attached_value);
+                                    }
                                     odra::args::EntrypointArgument::insert_runtime_arg(to.clone(), "to", &mut named_args);
                                     odra::args::EntrypointArgument::insert_runtime_arg(amount.clone(), "amount", &mut named_args);
                                     named_args
-                                },
-                            ),
+                                }
+                            )
+                            .with_amount(self.attached_value),
                         )
                 }
             }
@@ -299,15 +341,28 @@ mod ref_item_tests {
             pub struct Erc20ContractRef {
                 env: Rc<odra::ContractEnv>,
                 address: Address,
+                attached_value: odra::casper_types::U512,
             }
 
             impl odra::ContractRef for Erc20ContractRef {
                 fn new(env: Rc<odra::ContractEnv>, address: Address) -> Self {
-                    Self { env, address }
+                    Self { 
+                        env,
+                        address,
+                        attached_value: odra::casper_types::U512::zero()
+                    }
                 }
 
                 fn address(&self) -> &Address {
                     &self.address
+                }
+
+                fn with_tokens(&self, tokens: odra::casper_types::U512) -> Self {
+                    Self {
+                        address: self.address,
+                        env: self.env.clone(),
+                        attached_value: tokens,
+                    }
                 }
             }
 
@@ -320,9 +375,13 @@ mod ref_item_tests {
                             false,
                             {
                                 let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                if self.attached_value > odra::casper_types::U512::zero() {
+                                    let _ = named_args.insert("amount", self.attached_value);
+                                }
                                 named_args
                             }
-                        ),
+                        )
+                        .with_amount(self.attached_value),
                     )
                 }
 
@@ -335,9 +394,13 @@ mod ref_item_tests {
                                 true,
                                 {
                                     let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    if self.attached_value > odra::casper_types::U512::zero() {
+                                        let _ = named_args.insert("amount", self.attached_value);
+                                    }
                                     named_args
-                                },
-                            ),
+                                }
+                            )
+                            .with_amount(self.attached_value),
                         )
                 }
             }
@@ -362,15 +425,28 @@ mod ref_item_tests {
             pub struct Erc20ContractRef {
                 env: Rc<odra::ContractEnv>,
                 address: Address,
+                attached_value: odra::casper_types::U512,
             }
 
             impl odra::ContractRef for Erc20ContractRef {
                 fn new(env: Rc<odra::ContractEnv>, address: Address) -> Self {
-                    Self { env, address }
+                    Self { 
+                        env,
+                        address,
+                        attached_value: odra::casper_types::U512::zero()
+                    }
                 }
 
                 fn address(&self) -> &Address {
                     &self.address
+                }
+
+                fn with_tokens(&self, tokens: odra::casper_types::U512) -> Self {
+                    Self {
+                        address: self.address,
+                        env: self.env.clone(),
+                        attached_value: tokens,
+                    }
                 }
             }
 
@@ -384,9 +460,13 @@ mod ref_item_tests {
                             false,
                             {
                                 let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                if self.attached_value > odra::casper_types::U512::zero() {
+                                    let _ = named_args.insert("amount", self.attached_value);
+                                }
                                 named_args
                             }
-                        ),
+                        )
+                        .with_amount(self.attached_value),
                     )
                 }
 
@@ -400,9 +480,13 @@ mod ref_item_tests {
                                 false,
                                 {
                                     let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    if self.attached_value > odra::casper_types::U512::zero() {
+                                        let _ = named_args.insert("amount", self.attached_value);
+                                    }
                                     named_args
-                                },
-                            ),
+                                }
+                            )
+                            .with_amount(self.attached_value),
                         )
                 }
 
@@ -416,10 +500,14 @@ mod ref_item_tests {
                                 true,
                                 {
                                     let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    if self.attached_value > odra::casper_types::U512::zero() {
+                                        let _ = named_args.insert("amount", self.attached_value);
+                                    }
                                     odra::args::EntrypointArgument::insert_runtime_arg(new_owner.clone(), "new_owner", &mut named_args);
                                     named_args
-                                },
-                            ),
+                                }
+                            )
+                            .with_amount(self.attached_value),
                         )
                 }
 
@@ -433,9 +521,13 @@ mod ref_item_tests {
                                 false,
                                 {
                                     let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    if self.attached_value > odra::casper_types::U512::zero() {
+                                        let _ = named_args.insert("amount", self.attached_value);
+                                    }
                                     named_args
-                                },
-                            ),
+                                }
+                            )
+                            .with_amount(self.attached_value),
                         )
                 }
 
@@ -449,9 +541,13 @@ mod ref_item_tests {
                                 false,
                                 {
                                     let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    if self.attached_value > odra::casper_types::U512::zero() {
+                                        let _ = named_args.insert("amount", self.attached_value);
+                                    }
                                     named_args
-                                },
-                            ),
+                                }
+                            )
+                            .with_amount(self.attached_value),
                         )
                 }
             }

@@ -21,6 +21,11 @@ pub trait ContractRef {
     fn new(env: Rc<ContractEnv>, address: Address) -> Self;
     /// Returns the address of the contract.
     fn address(&self) -> &Address;
+    /// Creates a new contract reference with attached tokens, based on the current instance.
+    ///
+    /// If there are tokens attached to the current instance, the tokens will be attached
+    /// to the next contract call.
+    fn with_tokens(&self, tokens: U512) -> Self;
 }
 
 /// Represents the environment accessible in the contract context.
