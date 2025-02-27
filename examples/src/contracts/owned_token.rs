@@ -15,7 +15,8 @@ pub struct OwnedToken {
 impl OwnedToken {
     /// Initializes the contract with the given parameters.
     pub fn init(&mut self, name: String, symbol: String, decimals: u8, initial_supply: U256) {
-        self.ownable.init();
+        let owner = self.env().caller();
+        self.ownable.init(owner);
         self.erc20
             .init(symbol, name, decimals, Some(initial_supply));
     }

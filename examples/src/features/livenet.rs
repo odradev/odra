@@ -20,8 +20,9 @@ pub struct LivenetContract {
 impl LivenetContract {
     /// Initializes the contract.
     pub fn init(mut self, erc20_address: Address) {
-        self.creator.set(self.env().caller());
-        self.ownable.init();
+        let caller = self.env().caller();
+        self.creator.set(caller);
+        self.ownable.init(caller);
         self.erc20_address.set(erc20_address);
     }
 
