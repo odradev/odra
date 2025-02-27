@@ -208,7 +208,7 @@ impl ToTokens for NewFnItem {
     }
 }
 
-struct WithTokensFnItem;
+pub struct WithTokensFnItem;
 
 impl ToTokens for WithTokensFnItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
