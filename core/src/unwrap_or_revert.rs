@@ -1,6 +1,7 @@
 use crate::prelude::*;
 
 /// A trait that allows safe unwrapping in the context of a smart contract.
+///
 /// On failure the contract does not panic, but reverts calling [`ContractEnv::revert`](crate::ContractEnv::revert()).
 /// Works with `Result` and `Option`.
 pub trait UnwrapOrRevert<T> {

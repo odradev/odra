@@ -1,4 +1,5 @@
 /// Creates an Odra module that stores a single value under a given named key.
+///
 /// The module has two methods: `set` and `get`.
 /// If the value is not set and an error is passed as the fourth argument, `get` will revert with the provided error.
 #[macro_export]
@@ -58,6 +59,7 @@ macro_rules! key_value_storage {
 }
 
 /// Creates an Odra module that stores a values in a given dictionary.
+///
 /// The module has two methods: `set` and `get`.
 /// The `key` argument of `set` and `get` is base64-encoded and then used as a dictionary key.
 #[macro_export]
@@ -91,6 +93,7 @@ macro_rules! base64_encoded_key_value_storage {
 }
 
 /// Creates an Odra module that stores a values in a given dictionary.
+///
 /// The module has two methods: `set` and `get`.
 /// The `key1` and `key2` arguments of `set` and `get` are converted to bytes, combined into a single bytes vector,
 /// and finally hex-encoded and then used as a dictionary key.

@@ -19,3 +19,4 @@ modules/wasm
 benchmark/gas_report.json
 benchmark/wasm
 .DS_Store
+*.code-workspace
