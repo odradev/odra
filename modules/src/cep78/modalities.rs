@@ -435,7 +435,9 @@ impl TryFrom<u8> for EventsMode {
     }
 }
 
-/// The transfer filter modality, if enabled, specifies a contract package hash
+/// The transfer filter modality.
+///
+/// If enabled, specifies a contract package hash
 /// pointing to a contract that will be called when the transfer method is
 /// invoked on the contract. CEP-78 will call the `can_transfer` method on the
 /// specified callback contract, which is expected to return a value of

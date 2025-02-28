@@ -74,6 +74,7 @@ impl OdraVmState {
 
     pub fn emit_event(&mut self, event_data: &Bytes) {
         let contract_address = self.callstack.current().address();
+        #[allow(clippy::manual_inspect)]
         let events = self.events.get_mut(contract_address).map(|events| {
             events.push(event_data.clone());
             events

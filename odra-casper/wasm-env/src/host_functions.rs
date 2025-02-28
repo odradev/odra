@@ -392,8 +392,10 @@ pub fn self_balance() -> U512 {
     get_purse_balance(main_purse).unwrap_or_revert()
 }
 
-/// Invokes the specified `entry_point_name` of stored logic at a specific `contract_package_hash`
-/// address, for the most current version of a contract package by default or a specific
+/// Invokes the specified `entry_point_name` of stored logic at a specific`contract_package_hash`
+/// address.
+///
+/// It does it for the most current version of a contract package by default or a specific
 /// `contract_version` if one is provided, and passing the provided `runtime_args` to it.
 pub fn call_versioned_contract(
     contract_package_hash: ContractPackageHash,
