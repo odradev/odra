@@ -1,6 +1,7 @@
 use crate::vm::OdraVm;
 use blake2::digest::VariableOutput;
 use blake2::{Blake2b, Blake2b512, Blake2bVar, Blake2s256, Digest};
+use odra_core::casper_types::URef;
 use odra_core::casper_types::{
     bytesrepr::{Bytes, ToBytes},
     CLValue, PublicKey, U512
@@ -119,6 +120,10 @@ impl ContractContext for OdraVmContractEnv {
     }
 
     fn delegated_amount(&self, validator: PublicKey) -> U512 {
+        todo!()
+    }
+
+    fn purse(&self) -> URef {
         todo!()
     }
 }
