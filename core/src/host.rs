@@ -743,6 +743,11 @@ impl HostEnv {
 
     /// Transfers the specified amount of CSPR from the current caller to the specified address.
     pub fn transfer(&self, to: Address, amount: U512) -> OdraResult<()> {
+        if to.is_contract() {
+            return Err(OdraError::ExecutionError(
+                ExecutionError::TransferToContract
+            ));
+        }
         let backend = self.backend.borrow();
         backend.transfer(to, amount)
     }
@@ -969,7 +974,12 @@ mod test {
         // When transfer 100 tokens to a contract.
         let result = env.transfer(addr, 100.into());
         // Then the transfer should fail.
-        assert_eq!(result, Ok(()));
+        assert_eq!(
+            result,
+            Err(OdraError::ExecutionError(
+                ExecutionError::TransferToContract
+            ))
+        );
     }
 
     #[test]

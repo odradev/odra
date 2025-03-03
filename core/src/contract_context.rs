@@ -1,4 +1,4 @@
-use casper_types::{CLValue, PublicKey, URef};
+use casper_types::{CLValue, PublicKey};
 
 use crate::call_def::CallDef;
 use crate::casper_types::bytesrepr::Bytes;
@@ -194,7 +194,4 @@ pub trait ContractContext {
     ///
     /// The amount of tokens delegated to the validator as a `U512` value.
     fn delegated_amount(&self, validator: PublicKey) -> U512;
-
-    /// Retrieves the purse associated with the contract.
-    fn purse(&self) -> URef;
 }

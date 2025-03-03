@@ -1,5 +1,5 @@
 use casper_event_standard::EventInstance;
-use casper_types::{CLValueError, URef};
+use casper_types::CLValueError;
 
 use crate::args::EntrypointArgument;
 use crate::call_def::CallDef;
@@ -300,11 +300,6 @@ impl ContractEnv {
     /// The amount of tokens delegated to the validator
     pub fn delegated_amount(&self, validator: PublicKey) -> U512 {
         self.backend.borrow().delegated_amount(validator)
-    }
-
-    /// Returns the address of the purse associated with the contract.
-    pub fn purse(&self) -> URef {
-        self.backend.borrow().purse()
     }
 }
 
