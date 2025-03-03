@@ -2,8 +2,8 @@ use crate::host_functions;
 use casper_contract::contract_api::runtime;
 use casper_types::bytesrepr::ToBytes;
 use casper_types::U512;
-use odra_core::casper_types;
 use odra_core::casper_types::bytesrepr::Bytes;
+use odra_core::casper_types::{self, URef};
 use odra_core::casper_types::{CLType, CLValue, PublicKey, BLAKE2B_DIGEST_LENGTH};
 use odra_core::prelude::*;
 use odra_core::{ContractContext, ContractEnv};
@@ -113,6 +113,11 @@ impl ContractContext for WasmContractEnv {
 
     fn delegated_amount(&self, validator: PublicKey) -> U512 {
         host_functions::delegated_amount(validator)
+    }
+
+    #[doc = " Retrieves the purse associated with the contract."]
+    fn purse(&self) -> URef {
+        host_functions::get_or_create_main_purse()
     }
 }
 

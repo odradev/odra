@@ -4,7 +4,7 @@ use blake2::Blake2bVar;
 use odra_casper_rpc_client::casper_client::CasperClient;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::bytesrepr::Bytes;
-use odra_core::casper_types::{CLValue, PublicKey, U512};
+use odra_core::casper_types::{CLValue, PublicKey, URef, U512};
 use odra_core::prelude::*;
 use odra_core::{CallDef, ContractContext, ContractRegister};
 use std::io::Write;
@@ -175,6 +175,10 @@ impl ContractContext for LivenetContractEnv {
 
     fn delegated_amount(&self, _validator: PublicKey) -> U512 {
         panic!("delegated_amount is not supported for LivenetContractEnv")
+    }
+
+    fn purse(&self) -> URef {
+        panic!("purse is not supported for LivenetContractEnv")
     }
 }
 
