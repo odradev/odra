@@ -352,15 +352,7 @@ pub fn transfer_tokens(to: &Address, amount: &U512) {
             transfer_from_purse_to_account(main_purse, *account, *amount, None).unwrap_or_revert();
         }
         // todo: Why?
-        Address::Contract(contract) => {
-            let call_def = CallDef::new("main_purse", false, RuntimeArgs::new());
-            let result = call_contract(*to, call_def);
-            let (purse, _) = URef::from_bytes(&result)
-                .unwrap_or_revert_with(ApiError::User(ExecutionError::TransferToContract.code()));
-
-            transfer_from_purse_to_purse(main_purse, purse, *amount, None)
-                .unwrap_or_revert_with(ApiError::User(ExecutionError::TransferToContract.code()));
-        }
+        Address::Contract(_) => revert(ExecutionError::TransferToContract.code())
     };
 }
 
