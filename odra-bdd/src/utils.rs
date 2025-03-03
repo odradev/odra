@@ -4,6 +4,7 @@ pub fn to_motes(amount: &str) -> U256 {
     if amount.matches('.').count() > 1 {
         panic!("Invalid number format: multiple decimal points");
     }
+    let amount = amount.replace("_", "");
 
     let parts: Vec<&str> = amount.split('.').collect();
     let whole = parts[0].parse::<u64>().unwrap();
