@@ -8,8 +8,10 @@ use odra::{prelude::*, ContractRef};
 /// An event emitted when native tokens are deposited into the contract.
 #[odra::event]
 pub struct OnCsprDeposit {
-    account: Address,
-    value: U512
+    /// Address of the account that deposited the tokens.
+    pub account: Address,
+    /// The amount of tokens deposited.
+    pub value: U512
 }
 
 /// The CsprDeposit contract.
