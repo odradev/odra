@@ -58,6 +58,10 @@ impl<const DECIMALS: usize> TokenAmount<DECIMALS> {
         self.amount
     }
 
+    pub fn precision(&self) -> usize {
+        self.precision
+    }
+
     fn multiplier() -> U256 {
         U256::from(10u64).pow(U256::from(DECIMALS))
     }

@@ -1,5 +1,6 @@
 // TODO: CSPRParam
 
+use crate::types::token_amount::TokenAmount;
 use cucumber::Parameter;
 use odra::casper_types::U512;
 use std::fmt::Display;
@@ -7,7 +8,7 @@ use std::ops::Deref;
 use std::str::FromStr;
 
 #[derive(Parameter, Debug, Clone, Copy)]
-#[param(regex = r"\d+(\.\d+)?( Motes)?", name = "cspr_amount")]
+#[param(regex = r"(?:roughly\s+)?\d+(\.\d+)?( Motes)?", name = "cspr_amount")]
 pub struct CSPRAmount {
     amount: U512,
     precision: usize
@@ -38,6 +39,10 @@ impl CSPRAmount {
     pub fn amount(&self) -> U512 {
         self.amount
     }
+
+    pub fn precision(&self) -> usize {
+        self.precision
+    }
 }
 
 impl Deref for CSPRAmount {
@@ -66,31 +71,11 @@ impl FromStr for CSPRAmount {
             });
         }
 
-        let parts: Vec<&str> = s.split('.').collect();
-        match parts.len() {
-            1 => {
-                let amount = U512::from_dec_str(parts[0]).map_err(|e| e.to_string())?;
-                Ok(CSPRAmount {
-                    amount: amount * U512::from(1_000_000_000u64),
-                    precision: 0
-                })
-            }
-            2 => {
-                let whole = U512::from_dec_str(parts[0]).map_err(|e| e.to_string())?;
-                let mut decimal = parts[1].to_string();
-                let precision = 9 - decimal.len();
-                while decimal.len() < 9 {
-                    decimal.push('0');
-                }
-                decimal.truncate(9);
-                let fractional = U512::from_dec_str(&decimal).map_err(|e| e.to_string())?;
-
-                Ok(CSPRAmount {
-                    amount: (whole * U512::from(1_000_000_000u64)) + fractional,
-                    precision
-                })
-            }
-            _ => Err("Invalid CSPR amount format".to_string())
-        }
+        let amount = TokenAmount::<9>::from_str(s);
+        // TODO: make from_str generic over U256 and U512
+        Ok(CSPRAmount {
+            amount: amount.clone()?.amount().as_u128().into(),
+            precision: amount?.precision()
+        })
     }
 }

@@ -38,14 +38,18 @@ impl Account {
 
 impl Display for Account {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self.account_id {
-            0 => "Owner",
-            1 => "Alice",
-            2 => "Bob",
-            3 => "Charlie",
-            4 => "Dave",
-            5 => "Eve",
-            _ => "Unknown"
-        })
+        write!(
+            f,
+            "{}",
+            match self.account_id {
+                0 => "Owner",
+                1 => "Alice",
+                2 => "Bob",
+                3 => "Charlie",
+                4 => "Dave",
+                5 => "Eve",
+                _ => "Unknown"
+            }
+        )
     }
 }
