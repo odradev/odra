@@ -39,7 +39,8 @@ impl From<ArithmeticsError> for ExecutionError {
     fn from(error: ArithmeticsError) -> Self {
         match error {
             ArithmeticsError::AdditionOverflow => Self::AdditionOverflow,
-            ArithmeticsError::SubtractingOverflow => Self::SubtractionOverflow
+            ArithmeticsError::SubtractingOverflow => Self::SubtractionOverflow,
+            ArithmeticsError::ConversionError => Self::ConversionError,
         }
     }
 }
@@ -138,6 +139,8 @@ pub enum ExecutionError {
     OutOfGas = 124,
     /// MainPurse error
     MainPurseError = 125,
+    /// Conversion error
+    ConversionError = 126,
     /// Maximum code for user errors
     MaxUserError = 64535,
     /// User error too high. The code should be in range 0..32767.
