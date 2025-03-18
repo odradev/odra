@@ -20,7 +20,9 @@ pub enum ArithmeticsError {
     /// Addition result exceeds the max value.
     AdditionOverflow,
     /// Subtraction result is lower than the min value.
-    SubtractingOverflow
+    SubtractingOverflow,
+    /// Conversion error
+    ConversionError
 }
 
 /// Implements [OverflowingAdd] and [OverflowingSub] for all the given types.
