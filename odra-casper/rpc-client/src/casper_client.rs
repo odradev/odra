@@ -546,11 +546,16 @@ impl CasperClient {
         };
 
         let deploy = self.new_deploy(session, self.gas, timestamp);
-        let request = put_deploy_request(deploy);
-        let response: PutDeployResult = self.post_request(request).await?;
-        let deploy_hash = response.deploy_hash;
-        let result = self.wait_for_deploy(deploy_hash).await?;
-        self.process_execution(result, deploy_hash)?;
+        let response = put_transaction(
+            self.rpc_id_typed(),
+            self.node_address(),
+            self.configuration.verbosity_typed(),
+            Transaction::Deploy(deploy)
+        )
+        .await;
+        let deploy_hash = response.unwrap().result.transaction_hash;
+        let result = self.wait_for_transaction(deploy_hash).await?;
+        self.process_transaction(result, deploy_hash)?;
         Ok(self.get_proxy_result().await)
     }
 
@@ -582,12 +587,17 @@ impl CasperClient {
             args: call_def.args().clone()
         };
         let deploy = self.new_deploy(session, self.gas, timestamp);
-        let request = put_deploy_request(deploy);
-        let response: PutDeployResult = self.post_request(request).await?;
-        let deploy_hash = response.deploy_hash;
-        let result = self.wait_for_deploy(deploy_hash).await?;
 
-        self.process_execution(result, deploy_hash).map(|_| {
+        let response = put_transaction(
+            self.rpc_id_typed(),
+            self.node_address(),
+            self.configuration.verbosity_typed(),
+            Transaction::Deploy(deploy)
+        )
+        .await;
+        let deploy_hash = response.unwrap().result.transaction_hash;
+        let result = self.wait_for_transaction(deploy_hash).await?;
+        self.process_transaction(result, deploy_hash).map(|_| {
             ().to_bytes()
                 .expect("Couldn't serialize (). This shouldn't happen.")
                 .into()
