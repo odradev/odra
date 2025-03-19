@@ -749,7 +749,7 @@ impl CasperClient {
 
     fn new_deploy(&self, session: ExecutableDeployItem, gas: U512, timestamp: Timestamp) -> Deploy {
         let ttl = TimeDiff::from_seconds(1000);
-        let gas_price = 1;
+        let gas_price = 2;
         let dependencies = vec![];
         let chain_name = String::from(self.chain_name());
         let payment = ExecutableDeployItem::ModuleBytes {
