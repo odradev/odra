@@ -806,7 +806,10 @@ pub fn undelegate(validator: PublicKey, amount: U512) {
 
 /// Retrieves the amount of tokens delegated to the validator by the caller (the contract)
 pub fn delegated_amount(public_key: PublicKey) -> U512 {
-    let purse = get_main_purse().unwrap_or_revert_with(ApiError::InvalidPurse);
+    let purse = match get_main_purse() {
+        Some(p) => p,
+        None => return U512::zero()
+    };
     let account_hash = public_key.to_account_hash();
     let key = Key::BidAddr(BidAddr::DelegatedPurse {
         validator: account_hash,
