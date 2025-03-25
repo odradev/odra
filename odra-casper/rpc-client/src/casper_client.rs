@@ -11,7 +11,8 @@ use crate::error::Error;
 use crate::error::Error::{Execution, LivenetToDo};
 use crate::log;
 use casper_client::cli::{
-    get_dictionary_item, get_entity, get_node_status, get_state_root_hash, DictionaryItemStrParams
+    get_account, get_dictionary_item, get_entity, get_node_status, get_state_root_hash,
+    DictionaryItemStrParams
 };
 use casper_client::rpcs::results::{GetDeployResult, GetTransactionResult, PutDeployResult};
 use casper_client::rpcs::GlobalStateIdentifier;
@@ -328,9 +329,6 @@ impl CasperClient {
             dictionary_name: &dictionary_name,
             dictionary_item_key: &dictionary_item_key
         };
-        println!("hash_addr: {:?}", hash_addr);
-        println!("dict_name: {:?}", dictionary_name);
-        println!("dict_item_key: {:?}", dictionary_item_key);
 
         let r = get_dictionary_item(
             &self.rpc_id(),
@@ -401,7 +399,7 @@ impl CasperClient {
     async fn get_contract_address(&self, key_name: &str) -> Address {
         let key_name = format!("{}_{}", key_name, PACKAGE_HASH_ARG);
 
-        let result = get_entity(
+        let result = get_account(
             &self.rpc_id(),
             self.node_address(),
             self.configuration.verbosity(),
@@ -409,27 +407,16 @@ impl CasperClient {
             &self.public_key().to_hex_string()
         )
         .await
-        .unwrap_or_else(|_| {
+        .unwrap_or_else(|e| {
             panic!(
                 "{}",
-                format!(
-                    "Couldn't get entity for public key: {:?}",
-                    &self.public_key().to_hex_string()
-                )
+                format!("Couldn't get entity for key: {:?}, reason: {}", key_name, e)
             );
         })
         .result;
-        let account = result
-            .entity_result
-            .addressable_entity()
-            .unwrap_or_else(|| {
-                panic!(
-                    "Couldn't get addressable entity for public key: {:?}",
-                    self.public_key().to_hex_string()
-                )
-            });
+        let account = result.account;
 
-        let key = account.named_keys.get(&key_name).unwrap_or_else(|| {
+        let key = account.named_keys().get(&key_name).unwrap_or_else(|| {
             panic!(
                 "Couldn't get named key {:?} for account: {:?}",
                 key_name,
@@ -684,43 +671,6 @@ impl CasperClient {
         deploy_hash: TransactionHash
     ) -> Result<()> {
         let deploy_hash_str = deploy_hash.to_hex_string();
-        match result {
-            ExecutionResult::V1(r) => match r {
-                Failure { error_message, .. } => {
-                    log::error(format!(
-                        "Deploy V1 {:?} failed with error: {:?}.",
-                        deploy_hash_str, error_message
-                    ));
-                    Err(Execution { error_message })
-                }
-                Success { .. } => {
-                    log::info(format!(
-                        "Deploy {:?} successfully executed.",
-                        deploy_hash_str
-                    ));
-                    Ok(())
-                }
-            },
-            ExecutionResult::V2(r) => match r.error_message {
-                None => {
-                    log::info(format!(
-                        "Deploy {:?} successfully executed.",
-                        deploy_hash_str
-                    ));
-                    Ok(())
-                }
-                Some(error_message) => {
-                    log::error(format!(
-                        "Deploy V1 {:?} failed with error: {:?}.",
-                        deploy_hash_str, error_message
-                    ));
-                    Err(Execution { error_message })
-                }
-            }
-        }
-    }
-    fn process_execution(&self, result: ExecutionResult, deploy_hash: DeployHash) -> Result<()> {
-        let deploy_hash_str = format!("{:?}", deploy_hash.inner());
         match result {
             ExecutionResult::V1(r) => match r {
                 Failure { error_message, .. } => {
