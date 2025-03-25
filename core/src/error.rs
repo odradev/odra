@@ -40,7 +40,7 @@ impl From<ArithmeticsError> for ExecutionError {
         match error {
             ArithmeticsError::AdditionOverflow => Self::AdditionOverflow,
             ArithmeticsError::SubtractingOverflow => Self::SubtractionOverflow,
-            ArithmeticsError::ConversionError => Self::ConversionError,
+            ArithmeticsError::ConversionError => Self::ConversionError
         }
     }
 }

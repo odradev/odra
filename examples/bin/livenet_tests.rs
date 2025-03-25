@@ -1,4 +1,6 @@
 //! This example demonstrates how to deploy and interact with a contract on the Livenet environment.
+use std::time::Duration;
+
 use odra::casper_types::{U256, U512};
 use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader};
 use odra::prelude::*;
@@ -26,11 +28,16 @@ fn main() {
     );
 
     // Contract can be deployed
-    env.set_gas(1_000_000_000_000u64);
+    env.set_gas(500_000_000_000u64);
+    println!("Balance of user: {}", env.balance_of(&owner));
+    deploy_erc20(&env);
     let (contract, erc20) = deploy_new(&env);
 
     // Contract can be loaded
     let (mut contract, erc20) = load(&env, *contract.address(), *erc20.address());
+
+    // Set gas will be used for all subsequent calls
+    env.set_gas(10_000_000_000u64);
 
     // Errors can be handled
     // env.set_gas(1u64);
@@ -39,9 +46,6 @@ fn main() {
     // assert_eq!(result, ExecutionError::OutOfGas.into());
     contract.push_on_stack(1);
     let _ = contract.try_function_that_reverts();
-
-    // Set gas will be used for all subsequent calls
-    env.set_gas(1_000_000_000u64);
 
     // There are three ways contract endpoints can be called in Livenet environment:
     // 1. If the endpoint is mutable and does not return anything, it can be called directly:
@@ -65,6 +69,9 @@ fn main() {
     // - we can test immutable crosscalls without deploying (but crosscall contracts needs to be registered)
     assert_eq!(contract.immutable_cross_call(), 10_000.into());
 
+    // wait some time to avoid node throttling
+    std::thread::sleep(Duration::from_secs(5));
+
     // - mutable crosscalls will require a deploy
     let pre_call_balance = erc20.balance_of(&env.caller());
     contract.mutable_cross_call();
@@ -80,7 +87,6 @@ fn main() {
 
 fn deploy_new(env: &HostEnv) -> (LivenetContractHostRef, Erc20HostRef) {
     let mut erc20_contract = deploy_erc20(env);
-    env.set_gas(100_000_000_000u64);
     let init_args = LivenetContractInitArgs {
         erc20_address: *erc20_contract.address()
     };
@@ -114,6 +120,5 @@ pub fn deploy_erc20(env: &HostEnv) -> Erc20HostRef {
         initial_supply
     };
 
-    env.set_gas(100_000_000_000u64);
     Erc20::deploy(env, init_args)
 }
