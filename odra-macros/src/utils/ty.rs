@@ -78,7 +78,7 @@ pub fn entry_points() -> syn::Type {
 }
 
 pub fn entry_point() -> syn::Type {
-    parse_quote!(odra::casper_types::EntryPoint)
+    parse_quote!(odra::casper_types::EntityEntryPoint)
 }
 
 pub fn entry_point_access() -> syn::Type {

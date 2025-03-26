@@ -662,22 +662,26 @@ impl HostEnv {
     ) -> bool {
         let contract_address = contract_address.address();
         let events_count = self.native_events_count(contract_address);
-        let event_bytes = Bytes::from(
-            event
-                .to_bytes()
-                .unwrap_or_else(|_| panic!("Couldn't serialize event"))
-        );
-        (0..events_count)
-            .map(|event_id| {
-                self.get_native_event_bytes(contract_address, event_id)
-                    .unwrap_or_else(|e| {
-                        panic!(
-                            "Couldn't get event at address {:?} with id {}: {:?}",
-                            &contract_address, event_id, e
-                        )
-                    })
-            })
-            .any(|bytes| bytes == event_bytes)
+        if events_count > 0 {
+            let event_bytes = Bytes::from(
+                event
+                    .to_bytes()
+                    .unwrap_or_else(|_| panic!("Couldn't serialize event"))
+            );
+            (0..events_count)
+                .map(|event_id| {
+                    self.get_native_event_bytes(contract_address, event_id)
+                        .unwrap_or_else(|e| {
+                            panic!(
+                                "Couldn't get event at address {:?} with id {}: {:?}",
+                                &contract_address, event_id, e
+                            )
+                        })
+                })
+                .any(|bytes| bytes == event_bytes)
+        } else {
+            false
+        }
     }
 
     /// Returns true if an event with the specified name was emitted by the specified contract.

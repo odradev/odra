@@ -11,7 +11,7 @@ use crate::error::Error;
 use crate::error::Error::{Execution, LivenetToDo};
 use crate::log;
 use casper_client::cli::{
-    get_account, get_dictionary_item, get_entity, get_node_status, get_state_root_hash,
+    get_account, get_dictionary_item, get_node_status, get_state_root_hash,
     DictionaryItemStrParams
 };
 use casper_client::rpcs::results::{GetDeployResult, GetTransactionResult, PutDeployResult};

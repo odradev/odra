@@ -284,7 +284,7 @@ mod test {
                 fn entry_points() -> odra::casper_types::EntryPoints {
                     let mut entry_points = odra::casper_types::EntryPoints::new();
 
-                    entry_points.add_entry_point(odra::casper_types::EntryPoint::new(
+                    entry_points.add_entry_point(odra::casper_types::EntityEntryPoint::new(
                         "init",
                         vec![odra::args::parameter::<Option<U256> >("total_supply")].into_iter().filter_map(|x| x).collect(),
                         <() as odra::casper_types::CLTyped>::cl_type(),
@@ -293,7 +293,7 @@ mod test {
                                 odra::casper_types::EntryPointPayment::Caller,
 
                     ));
-                    entry_points.add_entry_point(odra::casper_types::EntryPoint::new(
+                    entry_points.add_entry_point(odra::casper_types::EntityEntryPoint::new(
                         "total_supply",
                         vec![],
                         <U256 as odra::casper_types::CLTyped>::cl_type(),
@@ -304,7 +304,7 @@ mod test {
                     ));
                     entry_points
                         .add_entry_point(
-                            odra::casper_types::EntryPoint::new(
+                            odra::casper_types::EntityEntryPoint::new(
                                 "pay_to_mint",
                                 vec![],
                                 <() as odra::casper_types::CLTyped>::cl_type(),
@@ -316,7 +316,7 @@ mod test {
                         );
                     entry_points
                         .add_entry_point(
-                            odra::casper_types::EntryPoint::new(
+                            odra::casper_types::EntityEntryPoint::new(
                                 "approve",
                                 vec![
                                     odra::args::parameter::<Address>("to"),
@@ -332,7 +332,7 @@ mod test {
                         );
                     entry_points
                         .add_entry_point(
-                            odra::casper_types::EntryPoint::new(
+                            odra::casper_types::EntityEntryPoint::new(
                                 "airdrop",
                                 vec![
                                     odra::args::parameter::<odra::prelude::vec::Vec<Address> >("to"),
@@ -426,7 +426,7 @@ mod test {
                 #[inline]
                 fn entry_points() -> odra::casper_types::EntryPoints {
                     let mut entry_points = odra::casper_types::EntryPoints::new();
-                    entry_points.add_entry_point(odra::casper_types::EntryPoint::new(
+                    entry_points.add_entry_point(odra::casper_types::EntityEntryPoint::new(
                         "total_supply",
                         vec![],
                         <U256 as odra::casper_types::CLTyped>::cl_type(),
@@ -437,7 +437,7 @@ mod test {
                     ));
                     entry_points
                         .add_entry_point(
-                            odra::casper_types::EntryPoint::new(
+                            odra::casper_types::EntityEntryPoint::new(
                                 "pay_to_mint",
                                 vec![],
                                 <() as odra::casper_types::CLTyped>::cl_type(),
@@ -498,7 +498,7 @@ mod test {
                 #[inline]
                 fn entry_points() -> odra::casper_types::EntryPoints {
                     let mut entry_points = odra::casper_types::EntryPoints::new();
-                    entry_points.add_entry_point(odra::casper_types::EntryPoint::new(
+                    entry_points.add_entry_point(odra::casper_types::EntityEntryPoint::new(
                         "total_supply",
                         vec![],
                         <U256 as odra::casper_types::CLTyped>::cl_type(),
@@ -508,7 +508,7 @@ mod test {
                     ));
                     entry_points
                         .add_entry_point(
-                            odra::casper_types::EntryPoint::new(
+                            odra::casper_types::EntityEntryPoint::new(
                                 "get_owner",
                                 vec![],
                                 <Address as odra::casper_types::CLTyped>::cl_type(),
@@ -519,7 +519,7 @@ mod test {
                         );
                     entry_points
                          .add_entry_point(
-                             odra::casper_types::EntryPoint::new(
+                             odra::casper_types::EntityEntryPoint::new(
                                 "set_owner",
                                 vec![odra::args::parameter::<Address>("new_owner")].into_iter().filter_map(|x| x).collect(),
                                 <() as odra::casper_types::CLTyped>::cl_type(),
@@ -531,7 +531,7 @@ mod test {
                         );
                     entry_points
                         .add_entry_point(
-                            odra::casper_types::EntryPoint::new(
+                            odra::casper_types::EntityEntryPoint::new(
                                 "name",
                                 vec![],
                                 <String as odra::casper_types::CLTyped>::cl_type(),
@@ -543,7 +543,7 @@ mod test {
                         );
                     entry_points
                         .add_entry_point(
-                            odra::casper_types::EntryPoint::new(
+                            odra::casper_types::EntityEntryPoint::new(
                                 "symbol",
                                 vec![],
                                 <String as odra::casper_types::CLTyped>::cl_type(),

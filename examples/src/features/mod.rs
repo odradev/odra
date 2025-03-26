@@ -17,3 +17,4 @@ pub mod signature_verifier;
 pub mod storage;
 pub mod testing;
 pub mod validators;
+pub mod staking;
