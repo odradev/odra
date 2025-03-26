@@ -362,7 +362,7 @@ mod tests {
     fn test_one_decimal_place_difference() {
         let amount1 = USDCAmount::from_str("50.00000").unwrap();
         assert_eq!(amount1.0.precision, 6);
-        let mut amount2 = USDCAmount::from_str("49.999999").unwrap();
+        let amount2 = USDCAmount::from_str("49.999999").unwrap();
         assert_eq!(amount2.0.precision, 6);
 
         assert_ne!(amount1, amount2);

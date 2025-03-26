@@ -109,18 +109,10 @@ impl Address {
         }
     }
 
-    /// Returns the [`EntityAddr`] of the address.
-    pub fn to_entity_addr(&self) -> EntityAddr {
-        match self {
-            Address::Account(_) => EntityAddr::Account(self.value()),
-            Address::Contract(_) => EntityAddr::SmartContract(self.value())
-        }
-    }
-
     /// Returns a formatted string representation of the address.
     pub fn to_formatted_string(&self) -> String {
         match self {
-            Address::Account(_) => self.to_entity_addr().to_formatted_string(),
+            Address::Account(_) => EntityAddr::Account(self.value()).to_formatted_string(),
             Address::Contract(contract_package_hash) => contract_package_hash.to_formatted_string()
         }
     }

@@ -55,7 +55,7 @@ pub struct CasperVm {
     accounts: Vec<Address>,
     validators: Vec<GenesisAccount>,
     key_pairs: BTreeMap<Address, (SecretKey, PublicKey)>,
-    messages: BTreeMap<AddressableEntityHash, Vec<MessagePayload>>,
+    messages: BTreeMap<EntityAddr, Vec<MessagePayload>>,
     active_account: Address,
     context: LmdbWasmTestBuilder,
     block_time: u64,
@@ -205,10 +205,9 @@ impl CasperVm {
         contract_address: &Address,
         index: u32
     ) -> Result<Bytes, EventError> {
-        let current_entity_hash = self.get_current_entity_hash(contract_address);
         let messages = self
             .messages
-            .get(&current_entity_hash)
+            .get(&self.get_contract_entity_addr(&contract_address))
             .ok_or(EventError::IndexOutOfBounds)?;
         let message = messages
             .get(index as usize)
@@ -230,10 +229,9 @@ impl CasperVm {
 
     /// Gets the count of native events for the given contract address.
     pub fn get_native_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
-        let current_entity_hash = self.get_current_entity_hash(contract_address);
         let messages = self
             .messages
-            .get(&current_entity_hash)
+            .get(&self.get_contract_entity_addr(&contract_address))
             .ok_or(EventError::IndexOutOfBounds)?;
         Ok(messages.len() as u32)
     }
@@ -323,27 +321,25 @@ impl CasperVm {
         let messages = messages.messages();
         messages.iter().for_each(|message| {
             let payload = message.payload().clone();
-            let hash = AddressableEntityHash::new(*message.hash_addr());
-            self.messages.entry(hash).or_default().push(payload);
+            self.messages.entry(*message.entity_addr()).or_default().push(payload);
         });
     }
-
-    fn get_addressable_entity(&self, address: &Address) -> AddressableEntity {
-        let query_result = self
-            .context
-            .query(None, Key::Hash(address.value()), &[])
-            .unwrap();
-        let entity_hash = if let StoredValue::SmartContract(package) = query_result {
-            package.current_entity_hash()
-        } else {
-            panic!(
-                "Stored value is not an adressable entity: {:?}",
-                query_result
-            );
+    
+    fn get_contract_entity_addr(&self, address: &Address) -> EntityAddr {
+        match address {
+            Address::Account(account) => {
+                todo!("Not needed yet")
+            }
+            Address::Contract(contract) => {
+                let package = self.context.get_package(PackageHash::new(contract.value())).unwrap_or_else(
+                    || panic!("Contract package not found while getting entity addr: {:?}", contract)
+                );
+                
+                package.current_entity_hash().unwrap_or_else(
+                    || panic!("Current entity hash not found while getting entity addr: {:?}", contract)
+                )
+            }
         }
-        .unwrap();
-
-        self.context.get_addressable_entity(entity_hash).unwrap()
     }
 
     fn get_addressable_entity_from_entity_addr(
@@ -362,22 +358,6 @@ impl CasperVm {
                 query_result
             );
         }
-    }
-
-    fn get_addressable_entity_hash(&self, address: &Address) -> AddressableEntityHash {
-        let query_result = self
-            .context
-            .query(None, Key::Hash(address.value()), &[])
-            .unwrap();
-        if let StoredValue::SmartContract(package) = query_result {
-            package.current_entity_hash()
-        } else {
-            panic!(
-                "Stored value is not an adressable entity: {:?}",
-                query_result
-            );
-        }
-        .unwrap()
     }
 
     /// Creates a new contract with the specified name, initialization arguments, and entry points caller.
@@ -689,32 +669,19 @@ impl CasperVm {
         self.context.get_package(package_hash).unwrap()
     }
 
-    fn get_current_entity_hash(&self, address: &Address) -> AddressableEntityHash {
-        let package_hash = address.as_package_hash().unwrap();
-        let package = self.get_package(package_hash);
-        package
-            .current_entity_hash()
-            .expect("Package doesn't have current entity hash")
-    }
-
     /// Gets current contract from contract package and
     /// returns its named keys.
     fn package_named_keys(&self, package_hash: PackageHash) -> NamedKeys {
-        let package = self.get_package(package_hash);
-        let addressable_entity_hash = package
-            .current_entity_hash()
-            .expect("Package doesn't have current entity hash");
-        let contract = self
-            .context
-            .get_entity_with_named_keys_by_entity_hash(addressable_entity_hash)
-            .expect("Entity not found");
-        contract.named_keys().clone()
+        // TODO: fix unwraps
+        let a = self.context.get_package(package_hash).unwrap().current_entity_hash().unwrap();
+        let addressable_entity_hash = AddressableEntityHash::new(a.value());
+        let named_keys = self.context.get_entity_with_named_keys_by_entity_hash(addressable_entity_hash).unwrap();
+        let keys = named_keys.named_keys();
+        keys.clone()
     }
 
     fn package_named_key(&self, package_hash: PackageHash, name: &str) -> Option<Key> {
-        let keys = self.package_named_keys(package_hash);
-        let key = keys.get(name);
-        key.copied()
+        self.package_named_keys(package_hash).get(name).cloned()
     }
 
     fn events_length(&self, package_hash: PackageHash) -> u32 {
