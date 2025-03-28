@@ -510,14 +510,11 @@ pub fn handle_attached_value() {
 ///
 /// The main purse as a [`URef`] if it already exists, otherwise a new purse is created and returned.
 pub fn get_or_create_main_purse() -> URef {
-    match get_main_purse() {
-        Some(purse) => purse,
-        None => {
-            let purse = create_purse();
-            runtime::put_key(consts::CONTRACT_MAIN_PURSE, purse.into());
-            purse
-        }
-    }
+    get_main_purse().unwrap_or_else(|| {
+        let purse = create_purse();
+        runtime::put_key(consts::CONTRACT_MAIN_PURSE, purse.into());
+        purse
+    })
 }
 
 /// Gets the main purse of the currently executing contract.

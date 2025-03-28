@@ -9,7 +9,6 @@ repository = "https://github.com/odradev/odra"
 
 [dependencies]
 odra-core = { path = "../../core" }
-odra-casper-wasm-env = { path = "../wasm-env" }
 
 [[bin]]
 name = "proxy_caller"
@@ -29,4 +28,4 @@ test = false
 missing_docs = "warn"
 
 [patch.crates-io]
-casper-types = { version = "5.0.0", git = "https://github.com/casper-network/casper-node", branch = "feat-2.0" }
+casper-types = { version = "5.0.0", git = "https://github.com/casper-network/casper-node", branch = "release-2.0.0-rc9" }
