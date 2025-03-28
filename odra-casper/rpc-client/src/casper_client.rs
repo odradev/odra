@@ -1,20 +1,14 @@
 //! Client for interacting with Casper node.
 
 use itertools::Itertools;
-use jsonrpc_lite::JsonRpc;
-use serde::de::DeserializeOwned;
-use serde_json::{json, Value};
 
 use crate::casper_client::configuration::CasperClientConfiguration;
 
 use crate::error::Error;
 use crate::error::Error::{Execution, LivenetToDo};
 use crate::log;
-use casper_client::cli::{
-    get_account, get_dictionary_item, get_node_status, get_state_root_hash,
-    DictionaryItemStrParams
-};
-use casper_client::rpcs::results::{GetDeployResult, GetTransactionResult, PutDeployResult};
+use casper_client::cli::{get_account, get_dictionary_item, get_node_status, get_state_root_hash, DictionaryItemStrParams, TransactionV1Builder};
+use casper_client::rpcs::results::{GetDeployResult, GetTransactionResult};
 use casper_client::rpcs::GlobalStateIdentifier;
 use casper_client::{
     get_balance, get_deploy, get_transaction, put_transaction, query_global_state, JsonRpcId,
@@ -24,10 +18,7 @@ use casper_types::bytesrepr::{deserialize_from_slice, Bytes, ToBytes};
 use casper_types::contracts::ContractPackageHash;
 use casper_types::execution::ExecutionResultV1::{Failure, Success};
 use casper_types::StoredValue::CLValue;
-use casper_types::{
-    execution::ExecutionResult, runtime_args, sign, CLTyped, Digest, EntityAddr, Key, PublicKey,
-    RuntimeArgs, SecretKey, Transaction, TransactionHash, URef, U512
-};
+use casper_types::{execution::ExecutionResult, runtime_args, sign, CLTyped, Digest, EntityAddr, Key, PricingMode, PublicKey, RuntimeArgs, SecretKey, Transaction, TransactionHash, TransactionRuntimeParams, TransferTarget, URef, U512};
 use casper_types::{Deploy, DeployHash, ExecutableDeployItem, StoredValue, TimeDiff, Timestamp};
 use odra_core::casper_event_standard::EVENTS_LENGTH;
 use odra_core::consts::{
@@ -60,7 +51,7 @@ pub type Result<T> = core::result::Result<T, Error>;
 
 /// Client for interacting with Casper node.
 pub struct CasperClient {
-    configuration: CasperClientConfiguration,
+    pub configuration: CasperClientConfiguration,
     active_account: usize,
     gas: U512
 }
@@ -131,21 +122,6 @@ impl CasperClient {
         self.gas = gas.into();
     }
 
-    /// Node rpc address.
-    pub fn node_address_rpc(&self) -> String {
-        format!("{}/rpc", self.node_address())
-    }
-
-    /// Node address.
-    pub fn node_address(&self) -> &str {
-        &self.configuration.node_address
-    }
-
-    /// Chain name.
-    pub fn chain_name(&self) -> &str {
-        &self.configuration.chain_name
-    }
-
     /// Public key of the client account.
     pub fn public_key(&self) -> PublicKey {
         PublicKey::from(&self.configuration.secret_keys[self.active_account])
@@ -204,7 +180,7 @@ impl CasperClient {
         let main_purse = self.get_main_purse(address);
         get_balance(
             self.rpc_id_typed(),
-            self.node_address(),
+            self.configuration.node_address(),
             self.configuration.verbosity_typed(),
             self.get_state_root_hash_digest().await,
             main_purse.await
@@ -232,19 +208,8 @@ impl CasperClient {
     }
 
     pub async fn transfer(&self, to: Address, amount: U512, timestamp: Timestamp) -> Result<()> {
-        let session = ExecutableDeployItem::Transfer {
-            args: runtime_args! {
-                "amount" => amount,
-                "target" => to,
-                "id" => Some(0u64),
-            }
-        };
-        let deploy = self.new_deploy(session, self.gas, timestamp);
-        let request = put_deploy_request(deploy);
-        let response: PutDeployResult = self.post_request(request).await?;
-        let deploy_hash = response.deploy_hash;
-        // TODO: wait_for_deploy_hash should return a result not panic, then this function can return a result
-        self.wait_for_deploy(deploy_hash).await?;
+        let transaction = self.new_transfer_transaction(to, amount, timestamp);
+        self.put_transaction(transaction).await?;
         Ok(())
     }
 
@@ -252,7 +217,7 @@ impl CasperClient {
     pub async fn get_block_time(&self) -> Result<u64> {
         let block_time = get_node_status(
             &self.rpc_id(),
-            self.node_address(),
+            self.configuration.node_address(),
             self.configuration.verbosity()
         )
         .await
@@ -293,7 +258,7 @@ impl CasperClient {
     pub async fn get_state_root_hash_digest(&self) -> Digest {
         get_state_root_hash(
             &self.rpc_id(),
-            self.node_address(),
+            self.configuration.node_address(),
             self.configuration.verbosity(),
             ""
         )
@@ -301,7 +266,7 @@ impl CasperClient {
         .unwrap_or_else(|_| {
             panic!(
                 "Couldn't get state root hash from node: {:?}",
-                self.node_address()
+                self.configuration.node_address()
             )
         })
         .result
@@ -309,13 +274,12 @@ impl CasperClient {
         .unwrap_or_else(|| {
             panic!(
                 "Couldn't get state root hash from node: {:?}",
-                self.node_address()
+                self.configuration.node_address()
             )
         })
     }
 
     /// Query the node for the dictionary item of a contract or an account.
-    /// TODO: consider remove T
     async fn query_dict(
         &self,
         address: &Address,
@@ -332,7 +296,7 @@ impl CasperClient {
 
         let r = get_dictionary_item(
             &self.rpc_id(),
-            self.node_address(),
+            self.configuration.node_address(),
             self.configuration.verbosity(),
             &self.get_state_root_hash().await,
             params
@@ -357,7 +321,7 @@ impl CasperClient {
     pub async fn get_transaction(&self, transaction_hash: TransactionHash) -> GetTransactionResult {
         let t = get_transaction(
             self.rpc_id_typed(),
-            self.node_address(),
+            self.configuration.node_address(),
             // self.configuration.verbosity_typed(),
             Verbosity::High,
             transaction_hash,
@@ -378,7 +342,7 @@ impl CasperClient {
     pub async fn get_deploy(&self, deploy_hash: DeployHash) -> GetDeployResult {
         let t = get_deploy(
             self.rpc_id_typed(),
-            self.node_address(),
+            self.configuration.node_address(),
             // self.configuration.verbosity_typed(),
             Verbosity::High,
             deploy_hash,
@@ -401,7 +365,7 @@ impl CasperClient {
 
         let result = get_account(
             &self.rpc_id(),
-            self.node_address(),
+            self.configuration.node_address(),
             self.configuration.verbosity(),
             "",
             &self.public_key().to_hex_string()
@@ -471,22 +435,10 @@ impl CasperClient {
         wasm_bytes: Vec<u8>
     ) -> Result<Address> {
         log::info(format!("Deploying \"{}\".", contract_name));
-        let session = ExecutableDeployItem::ModuleBytes {
-            module_bytes: Bytes::from(wasm_bytes),
-            args
-        };
-        let deploy = self.new_deploy(session, self.gas, timestamp);
-        let response = put_transaction(
-            self.rpc_id_typed(),
-            self.node_address(),
-            self.configuration.verbosity_typed(),
-            Transaction::Deploy(deploy)
-        )
-        .await;
-        let deploy_hash = response.unwrap().result.transaction_hash;
-        let result = self.wait_for_transaction(deploy_hash).await?;
-        self.process_transaction(result, deploy_hash)?;
 
+        let transaction = self.new_wasm_deploy_transaction(Bytes::from(wasm_bytes), args, timestamp);
+        self.put_transaction(transaction).await?;
+        
         let address = self.get_contract_address(contract_name).await;
         log::info(format!(
             "Contract {:?} deployed.",
@@ -535,7 +487,7 @@ impl CasperClient {
         let deploy = self.new_deploy(session, self.gas, timestamp);
         let response = put_transaction(
             self.rpc_id_typed(),
-            self.node_address(),
+            self.configuration.node_address(),
             self.configuration.verbosity_typed(),
             Transaction::Deploy(deploy)
         )
@@ -577,7 +529,7 @@ impl CasperClient {
 
         let response = put_transaction(
             self.rpc_id_typed(),
-            self.node_address(),
+            self.configuration.node_address(),
             self.configuration.verbosity_typed(),
             Transaction::Deploy(deploy)
         )
@@ -598,7 +550,7 @@ impl CasperClient {
         };
         query_global_state(
             self.rpc_id_typed(),
-            self.node_address(),
+            self.configuration.node_address(),
             self.configuration.verbosity_typed(),
             GlobalStateIdentifier::StateRootHash(self.get_state_root_hash_digest().await),
             key,
@@ -639,30 +591,19 @@ impl CasperClient {
         }
         Ok(final_result.clone())
     }
-
-    async fn wait_for_deploy(&self, deploy_hash: DeployHash) -> Result<ExecutionResult> {
-        let deploy_hash_str = format!("{:?}", deploy_hash.inner());
-        let final_result;
-
-        loop {
-            log::wait(format!(
-                "Waiting {:?} for {:?}.",
-                &DEPLOY_WAIT_TIME, &deploy_hash_str
-            ));
-
-            tokio::time::sleep(std::time::Duration::from_secs(DEPLOY_WAIT_TIME)).await;
-
-            let result = self.get_deploy(deploy_hash).await.execution_info;
-
-            if result.is_some() {
-                final_result = result
-                    .ok_or(LivenetToDo)?
-                    .execution_result
-                    .ok_or(LivenetToDo)?;
-                break;
-            }
-        }
-        Ok(final_result.clone())
+    
+    async fn put_transaction(&self, transaction: Transaction) -> Result<()> {
+         let response = put_transaction(
+            self.rpc_id_typed(),
+            self.configuration.node_address(),
+            self.configuration.verbosity_typed(),
+            transaction,
+        )
+        .await;
+        let deploy_hash = response.unwrap().result.transaction_hash;
+        let result = self.wait_for_transaction(deploy_hash).await?;
+        self.process_transaction(result, deploy_hash)?;
+        Ok(())
     }
 
     fn process_transaction(
@@ -707,11 +648,53 @@ impl CasperClient {
         }
     }
 
+    fn new_wasm_deploy_transaction(&self, transaction_bytes: Bytes, args: RuntimeArgs, timestamp: Timestamp) -> Transaction {
+        let transaction_builder = TransactionV1Builder::new_session(true, transaction_bytes, TransactionRuntimeParams::VmCasperV1);
+        Transaction::V1(transaction_builder.with_runtime_args(args)
+            .with_ttl(self.configuration.ttl())
+            .with_chain_name(self.configuration.chain_name())
+            .with_pricing_mode(self.pricing_mode())
+            .with_secret_key(self.secret_key())
+            .with_timestamp(timestamp)
+            .build()
+            .unwrap_or_else(|e| panic!("Failed to build transaction: {:?}", e)))
+    }
+    
+    fn new_transfer_transaction(&self, to: Address, amount: U512, timestamp: Timestamp) -> Transaction {
+        let transaction_builder = TransactionV1Builder::new_transfer(amount, None, TransferTarget::AccountHash(*to.as_account_hash().unwrap_or_else(
+            || panic!("Couldn't get account hash from address: {:?}. You can transfer only to accounts.", to)
+        )) , None).unwrap_or_else(
+            |e| panic!("Failed to build transfer transaction: {:?}", e)
+        );
+        Transaction::V1(
+            transaction_builder
+                .with_ttl(self.configuration.ttl())
+                .with_chain_name(self.configuration.chain_name())
+                .with_pricing_mode(PricingMode::PaymentLimited {
+                    payment_amount: amount.as_u64(),
+                    gas_price_tolerance: 5,
+                    standard_payment: true,
+                })
+                .with_secret_key(self.secret_key())
+                .with_timestamp(timestamp)
+                .build().unwrap_or_else(|e| panic!("Failed to build transfer transaction: {:?}", e))
+        )
+        
+    }
+    
+    fn pricing_mode(&self) -> PricingMode {
+        PricingMode::PaymentLimited {
+            payment_amount: self.gas.as_u64(),
+            gas_price_tolerance: self.configuration.gas_price_tolerance(),
+            standard_payment: true,
+        }
+    }
+
     fn new_deploy(&self, session: ExecutableDeployItem, gas: U512, timestamp: Timestamp) -> Deploy {
         let ttl = TimeDiff::from_seconds(1000);
         let gas_price = 2;
         let dependencies = vec![];
-        let chain_name = String::from(self.chain_name());
+        let chain_name = String::from(self.configuration.chain_name());
         let payment = ExecutableDeployItem::ModuleBytes {
             module_bytes: Default::default(),
             args: runtime_args! {
@@ -730,33 +713,6 @@ impl CasperClient {
             self.secret_key(),
             Some(self.public_key())
         )
-    }
-
-    async fn safe_post_request(&self, request: Value) -> Result<JsonRpc> {
-        let client = reqwest::Client::new();
-
-        let mut client = client.post(self.node_address_rpc());
-        if let Some(token) = &self.configuration.cspr_cloud_auth_token {
-            client = client.header("Authorization", token);
-        }
-
-        let response = client
-            .json(&request)
-            .send()
-            .await
-            .map_err(|_| LivenetToDo)?;
-        let json: JsonRpc = response.json().await.map_err(|_| LivenetToDo)?;
-        Ok(json)
-    }
-
-    async fn post_request<T: DeserializeOwned>(&self, request: Value) -> Result<T> {
-        let json = self.safe_post_request(request.clone()).await?;
-        let result = json
-            .get_result()
-            .map(|result| serde_json::from_value::<T>(result.clone()))
-            .unwrap()
-            .unwrap();
-        Ok(result)
     }
 
     fn address_secret_key(&self, address: &Address) -> &SecretKey {
@@ -790,16 +746,3 @@ impl Default for CasperClient {
     }
 }
 
-fn put_deploy_request(deploy: Deploy) -> Value {
-    let request = json!(
-        {
-            "jsonrpc": "2.0",
-            "method": "account_put_deploy",
-            "params": {
-                "deploy": deploy
-            },
-            "id": 1,
-        }
-    );
-    request
-}
