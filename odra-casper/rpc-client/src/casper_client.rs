@@ -7,7 +7,10 @@ use crate::casper_client::configuration::CasperClientConfiguration;
 use crate::error::Error;
 use crate::error::Error::{Execution, LivenetToDo};
 use crate::log;
-use casper_client::cli::{get_account, get_dictionary_item, get_node_status, get_state_root_hash, DictionaryItemStrParams, TransactionV1Builder};
+use casper_client::cli::{
+    get_account, get_dictionary_item, get_node_status, get_state_root_hash,
+    DictionaryItemStrParams, TransactionV1Builder
+};
 use casper_client::rpcs::results::{GetDeployResult, GetTransactionResult};
 use casper_client::rpcs::GlobalStateIdentifier;
 use casper_client::{
@@ -15,11 +18,14 @@ use casper_client::{
     Verbosity
 };
 use casper_types::bytesrepr::{deserialize_from_slice, Bytes, ToBytes};
-use casper_types::contracts::ContractPackageHash;
 use casper_types::execution::ExecutionResultV1::{Failure, Success};
 use casper_types::StoredValue::CLValue;
-use casper_types::{execution::ExecutionResult, runtime_args, sign, CLTyped, Digest, EntityAddr, Key, PricingMode, PublicKey, RuntimeArgs, SecretKey, Transaction, TransactionHash, TransactionRuntimeParams, TransferTarget, URef, U512};
-use casper_types::{Deploy, DeployHash, ExecutableDeployItem, StoredValue, TimeDiff, Timestamp};
+use casper_types::{
+    execution::ExecutionResult, runtime_args, sign, CLTyped, Digest, EntityAddr, Key, PricingMode,
+    PublicKey, RuntimeArgs, SecretKey, Transaction, TransactionHash, TransactionRuntimeParams,
+    TransferTarget, URef, U512
+};
+use casper_types::{DeployHash, StoredValue, Timestamp};
 use odra_core::casper_event_standard::EVENTS_LENGTH;
 use odra_core::consts::{
     AMOUNT_ARG, ARGS_ARG, ATTACHED_VALUE_ARG, ENTRY_POINT_ARG, EVENTS, PACKAGE_HASH_ARG,
@@ -436,9 +442,10 @@ impl CasperClient {
     ) -> Result<Address> {
         log::info(format!("Deploying \"{}\".", contract_name));
 
-        let transaction = self.new_wasm_deploy_transaction(Bytes::from(wasm_bytes), args, timestamp);
+        let transaction =
+            self.new_wasm_deploy_transaction(Bytes::from(wasm_bytes), args, timestamp);
         self.put_transaction(transaction).await?;
-        
+
         let address = self.get_contract_address(contract_name).await;
         log::info(format!(
             "Contract {:?} deployed.",
@@ -477,19 +484,16 @@ impl CasperClient {
             AMOUNT_ARG => call_def.amount(),
         };
 
-        let session = ExecutableDeployItem::ModuleBytes {
-            module_bytes: include_bytes!("../../test-vm/resources/proxy_caller_with_return.wasm")
-                .to_vec()
-                .into(),
-            args
-        };
+        let module_bytes = include_bytes!("../../test-vm/resources/proxy_caller_with_return.wasm")
+            .to_vec()
+            .into();
 
-        let deploy = self.new_deploy(session, self.gas, timestamp);
+        let transaction = self.new_wasm_deploy_transaction(module_bytes, args, timestamp);
         let response = put_transaction(
             self.rpc_id_typed(),
             self.configuration.node_address(),
             self.configuration.verbosity_typed(),
-            Transaction::Deploy(deploy)
+            transaction
         )
         .await;
         let deploy_hash = response.unwrap().result.transaction_hash;
@@ -510,28 +514,14 @@ impl CasperClient {
             addr.to_formatted_string(),
             call_def.entry_point()
         ));
-        let session = ExecutableDeployItem::StoredVersionedContractByHash {
-            hash: ContractPackageHash::from(
-                addr.as_contract_package_hash()
-                    .unwrap_or_else(|| {
-                        panic!(
-                            "Couldn't get package hash from address: {:?}",
-                            addr.to_formatted_string()
-                        )
-                    })
-                    .value()
-            ),
-            version: None,
-            entry_point: call_def.entry_point().to_string(),
-            args: call_def.args().clone()
-        };
-        let deploy = self.new_deploy(session, self.gas, timestamp);
+
+        let transaction = self.new_call_transaction(addr, call_def, timestamp);
 
         let response = put_transaction(
             self.rpc_id_typed(),
             self.configuration.node_address(),
             self.configuration.verbosity_typed(),
-            Transaction::Deploy(deploy)
+            transaction
         )
         .await;
         let deploy_hash = response.unwrap().result.transaction_hash;
@@ -591,13 +581,13 @@ impl CasperClient {
         }
         Ok(final_result.clone())
     }
-    
+
     async fn put_transaction(&self, transaction: Transaction) -> Result<()> {
-         let response = put_transaction(
+        let response = put_transaction(
             self.rpc_id_typed(),
             self.configuration.node_address(),
             self.configuration.verbosity_typed(),
-            transaction,
+            transaction
         )
         .await;
         let deploy_hash = response.unwrap().result.transaction_hash;
@@ -648,19 +638,36 @@ impl CasperClient {
         }
     }
 
-    fn new_wasm_deploy_transaction(&self, transaction_bytes: Bytes, args: RuntimeArgs, timestamp: Timestamp) -> Transaction {
-        let transaction_builder = TransactionV1Builder::new_session(true, transaction_bytes, TransactionRuntimeParams::VmCasperV1);
-        Transaction::V1(transaction_builder.with_runtime_args(args)
-            .with_ttl(self.configuration.ttl())
-            .with_chain_name(self.configuration.chain_name())
-            .with_pricing_mode(self.pricing_mode())
-            .with_secret_key(self.secret_key())
-            .with_timestamp(timestamp)
-            .build()
-            .unwrap_or_else(|e| panic!("Failed to build transaction: {:?}", e)))
+    fn new_wasm_deploy_transaction(
+        &self,
+        transaction_bytes: Bytes,
+        args: RuntimeArgs,
+        timestamp: Timestamp
+    ) -> Transaction {
+        let transaction_builder = TransactionV1Builder::new_session(
+            true,
+            transaction_bytes,
+            TransactionRuntimeParams::VmCasperV1
+        );
+        Transaction::V1(
+            transaction_builder
+                .with_runtime_args(args)
+                .with_ttl(self.configuration.ttl())
+                .with_chain_name(self.configuration.chain_name())
+                .with_pricing_mode(self.pricing_mode())
+                .with_secret_key(self.secret_key())
+                .with_timestamp(timestamp)
+                .build()
+                .unwrap_or_else(|e| panic!("Failed to build transaction: {:?}", e))
+        )
     }
-    
-    fn new_transfer_transaction(&self, to: Address, amount: U512, timestamp: Timestamp) -> Transaction {
+
+    fn new_transfer_transaction(
+        &self,
+        to: Address,
+        amount: U512,
+        timestamp: Timestamp
+    ) -> Transaction {
         let transaction_builder = TransactionV1Builder::new_transfer(amount, None, TransferTarget::AccountHash(*to.as_account_hash().unwrap_or_else(
             || panic!("Couldn't get account hash from address: {:?}. You can transfer only to accounts.", to)
         )) , None).unwrap_or_else(
@@ -673,46 +680,50 @@ impl CasperClient {
                 .with_pricing_mode(PricingMode::PaymentLimited {
                     payment_amount: amount.as_u64(),
                     gas_price_tolerance: 5,
-                    standard_payment: true,
+                    standard_payment: true
                 })
                 .with_secret_key(self.secret_key())
                 .with_timestamp(timestamp)
-                .build().unwrap_or_else(|e| panic!("Failed to build transfer transaction: {:?}", e))
+                .build()
+                .unwrap_or_else(|e| panic!("Failed to build transfer transaction: {:?}", e))
         )
-        
     }
-    
+
+    fn new_call_transaction(
+        &self,
+        to: Address,
+        call_def: CallDef,
+        timestamp: Timestamp
+    ) -> Transaction {
+        let transaction_builder = TransactionV1Builder::new_targeting_package(
+            to.as_package_hash().unwrap(),
+            None,
+            call_def.entry_point(),
+            TransactionRuntimeParams::VmCasperV1
+        );
+        Transaction::V1(
+            transaction_builder
+                .with_ttl(self.configuration.ttl())
+                .with_chain_name(self.configuration.chain_name())
+                .with_pricing_mode(PricingMode::PaymentLimited {
+                    payment_amount: call_def.amount().as_u64() + self.gas.as_u64(),
+                    gas_price_tolerance: 5,
+                    standard_payment: true
+                })
+                .with_secret_key(self.secret_key())
+                .with_timestamp(timestamp)
+                .with_runtime_args(call_def.args().clone())
+                .build()
+                .unwrap_or_else(|e| panic!("Failed to build call transaction: {:?}", e))
+        )
+    }
+
     fn pricing_mode(&self) -> PricingMode {
         PricingMode::PaymentLimited {
             payment_amount: self.gas.as_u64(),
             gas_price_tolerance: self.configuration.gas_price_tolerance(),
-            standard_payment: true,
+            standard_payment: true
         }
-    }
-
-    fn new_deploy(&self, session: ExecutableDeployItem, gas: U512, timestamp: Timestamp) -> Deploy {
-        let ttl = TimeDiff::from_seconds(1000);
-        let gas_price = 2;
-        let dependencies = vec![];
-        let chain_name = String::from(self.configuration.chain_name());
-        let payment = ExecutableDeployItem::ModuleBytes {
-            module_bytes: Default::default(),
-            args: runtime_args! {
-                "amount" => gas
-            }
-        };
-
-        Deploy::new_signed(
-            timestamp,
-            ttl,
-            gas_price,
-            dependencies,
-            chain_name,
-            payment,
-            session,
-            self.secret_key(),
-            Some(self.public_key())
-        )
     }
 
     fn address_secret_key(&self, address: &Address) -> &SecretKey {
@@ -745,4 +756,3 @@ impl Default for CasperClient {
         Self::new(CasperClientConfiguration::from_env())
     }
 }
-
