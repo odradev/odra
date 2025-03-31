@@ -4,9 +4,9 @@ use crate::casper_client::{
 };
 use crate::utils::{get_env_variable, get_optional_env_variable};
 use casper_client::Verbosity;
+use casper_types::TimeDiff;
 use odra_core::casper_types::SecretKey;
 use std::path::PathBuf;
-use casper_types::TimeDiff;
 
 pub const DEFAULT_TTL: u64 = 1000 * 60;
 pub const DEFAULT_GAS_TOLERANCE: u8 = 5;
@@ -83,11 +83,11 @@ impl CasperClientConfiguration {
     pub fn verbosity_typed(&self) -> Verbosity {
         Verbosity::Low
     }
-    
+
     pub fn ttl(&self) -> TimeDiff {
         TimeDiff::from_millis(DEFAULT_TTL)
     }
-    
+
     pub fn chain_name(&self) -> &str {
         &self.chain_name
     }
@@ -101,7 +101,7 @@ impl CasperClientConfiguration {
     pub fn node_address(&self) -> &str {
         &self.node_address
     }
-    
+
     /// Gas price tolerance
     pub fn gas_price_tolerance(&self) -> u8 {
         DEFAULT_GAS_TOLERANCE

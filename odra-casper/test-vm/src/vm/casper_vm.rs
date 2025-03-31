@@ -321,23 +321,35 @@ impl CasperVm {
         let messages = messages.messages();
         messages.iter().for_each(|message| {
             let payload = message.payload().clone();
-            self.messages.entry(*message.entity_addr()).or_default().push(payload);
+            self.messages
+                .entry(*message.entity_addr())
+                .or_default()
+                .push(payload);
         });
     }
-    
+
     fn get_contract_entity_addr(&self, address: &Address) -> EntityAddr {
         match address {
             Address::Account(account) => {
                 todo!("Not needed yet")
             }
             Address::Contract(contract) => {
-                let package = self.context.get_package(PackageHash::new(contract.value())).unwrap_or_else(
-                    || panic!("Contract package not found while getting entity addr: {:?}", contract)
-                );
-                
-                package.current_entity_hash().unwrap_or_else(
-                    || panic!("Current entity hash not found while getting entity addr: {:?}", contract)
-                )
+                let package = self
+                    .context
+                    .get_package(PackageHash::new(contract.value()))
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "Contract package not found while getting entity addr: {:?}",
+                            contract
+                        )
+                    });
+
+                package.current_entity_hash().unwrap_or_else(|| {
+                    panic!(
+                        "Current entity hash not found while getting entity addr: {:?}",
+                        contract
+                    )
+                })
             }
         }
     }
@@ -673,9 +685,17 @@ impl CasperVm {
     /// returns its named keys.
     fn package_named_keys(&self, package_hash: PackageHash) -> NamedKeys {
         // TODO: fix unwraps
-        let a = self.context.get_package(package_hash).unwrap().current_entity_hash().unwrap();
+        let a = self
+            .context
+            .get_package(package_hash)
+            .unwrap()
+            .current_entity_hash()
+            .unwrap();
         let addressable_entity_hash = AddressableEntityHash::new(a.value());
-        let named_keys = self.context.get_entity_with_named_keys_by_entity_hash(addressable_entity_hash).unwrap();
+        let named_keys = self
+            .context
+            .get_entity_with_named_keys_by_entity_hash(addressable_entity_hash)
+            .unwrap();
         let keys = named_keys.named_keys();
         keys.clone()
     }
