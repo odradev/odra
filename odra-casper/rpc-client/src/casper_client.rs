@@ -13,18 +13,12 @@ use casper_client::cli::{
 };
 use casper_client::rpcs::results::{GetDeployResult, GetTransactionResult};
 use casper_client::rpcs::GlobalStateIdentifier;
-use casper_client::{
-    get_balance, get_deploy, get_transaction, put_transaction, query_global_state, JsonRpcId,
-    Verbosity
-};
+use casper_client::{get_balance, get_deploy, get_transaction, put_transaction, query_global_state, JsonRpcId, Verbosity};
 use casper_types::bytesrepr::{deserialize_from_slice, Bytes, ToBytes};
 use casper_types::execution::ExecutionResultV1::{Failure, Success};
+use casper_types::system::auction::BidAddr;
 use casper_types::StoredValue::CLValue;
-use casper_types::{
-    execution::ExecutionResult, runtime_args, sign, CLTyped, Digest, EntityAddr, Key, PricingMode,
-    PublicKey, RuntimeArgs, SecretKey, Transaction, TransactionHash, TransactionRuntimeParams,
-    TransferTarget, URef, U512
-};
+use casper_types::{execution::ExecutionResult, runtime_args, sign, CLTyped, Digest, EntityAddr, Key, PricingMode, PublicKey, RuntimeArgs, SecretKey, Transaction, TransactionHash, TransactionRuntimeParams, TransferTarget, URef, U512};
 use casper_types::{DeployHash, StoredValue, Timestamp};
 use odra_core::casper_event_standard::EVENTS_LENGTH;
 use odra_core::consts::{
@@ -123,6 +117,33 @@ impl CasperClient {
             .ok()
     }
 
+    pub async fn get_delegated_amount(&self, address: &Address, public_key: PublicKey) -> U512 {
+        let purse_uref = self.get_main_purse(address).await;
+        let account_hash = public_key.to_account_hash();
+        let key = Key::BidAddr(BidAddr::DelegatedPurse {
+            validator: account_hash,
+            delegator: purse_uref.addr()
+        });
+
+        let stored_value = self.query_global_state_maybe(key, None).await;
+        match stored_value {
+            None => U512::zero(),
+            Some(sv) => {
+                match sv {
+                    StoredValue::BidKind(bid_kind) => {
+                        bid_kind.staked_amount().unwrap_or_default()
+                    },
+                    _ => {
+                        panic!(
+                            "Couldn't get delegated amount for address: {:?}",
+                            address.to_formatted_string()
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     /// Sets amount of gas for the next deploy.
     pub fn set_gas(&mut self, gas: u64) {
         self.gas = gas.into();
@@ -209,6 +230,21 @@ impl CasperClient {
             CLValue(value) => value.into_t().unwrap(),
             StoredValue::AddressableEntity(entity) => entity.main_purse(),
             StoredValue::Account(account) => account.main_purse(),
+            StoredValue::ContractPackage(contract_package) => {
+                let last_version = contract_package.current_contract_hash().unwrap();
+                let contract = self
+                    .query_global_state(Key::Hash(last_version.value()), None)
+                    .await;
+                match contract {
+                    StoredValue::Contract(contract) => {
+                        contract.named_keys().get("__contract_main_purse").unwrap().into_uref().unwrap()
+                    },
+                    _ => panic!(
+                        "Couldn't get main purse for address: {:?}",
+                        address.to_formatted_string()
+                    )
+                }
+            }
             _ => panic!("Getting main purse is not supported for: {:?}", purse_uref)
         }
     }
@@ -533,6 +569,30 @@ impl CasperClient {
         })
     }
 
+    async fn query_global_state_maybe(&self, key: Key, path: Option<String>) -> Option<StoredValue> {
+        let path = match path {
+            None => vec![],
+            Some(string) => vec![string]
+        };
+        let result = query_global_state(
+            self.rpc_id_typed(),
+            self.configuration.node_address(),
+            self.configuration.verbosity_typed(),
+            GlobalStateIdentifier::StateRootHash(self.get_state_root_hash_digest().await),
+            key,
+            path
+        )
+            .await;
+        match result {
+            Ok(r) => {
+                Some(r.result.stored_value)
+            }
+            Err(_) => {
+                None
+            }
+        } 
+    }
+    
     async fn query_global_state(&self, key: Key, path: Option<String>) -> StoredValue {
         let path = match path {
             None => vec![],
