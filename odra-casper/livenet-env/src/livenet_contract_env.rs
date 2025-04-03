@@ -174,7 +174,16 @@ impl ContractContext for LivenetContractEnv {
     }
 
     fn delegated_amount(&self, _validator: PublicKey) -> U512 {
-        panic!("delegated_amount is not supported for LivenetContractEnv")
+        let address = match self.callstack.borrow().current() {
+            CallstackElement::Account(acc) => acc.clone(),
+            CallstackElement::ContractCall { address, .. } => address.clone()
+        };
+        self.runtime.block_on(async {
+            self.casper_client
+                .borrow()
+                .get_delegated_amount(&address, _validator)
+                .await
+        })
     }
 }
 
