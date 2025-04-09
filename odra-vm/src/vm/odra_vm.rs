@@ -124,6 +124,10 @@ impl OdraVm {
         self.state.read().unwrap().caller()
     }
 
+    pub fn callee(&self) -> Address {
+        self.state.read().unwrap().callee()
+    }
+
     /// Retrieves the first element from the callstack.
     pub fn callstack_tip(&self) -> CallstackElement {
         self.state.read().unwrap().callstack_tip().clone()
@@ -273,6 +277,14 @@ impl OdraVm {
             .advance_block_time_by(milliseconds)
     }
 
+    /// Advances the block time by the given number of milliseconds and updates the auctions.
+    pub fn advance_with_auctions(&self, milliseconds: u64) {
+        self.state
+            .write()
+            .unwrap()
+            .advance_with_auctions(milliseconds)
+    }
+
     /// Gets the value attached to the current call.
     pub fn attached_value(&self) -> U512 {
         self.state.read().unwrap().attached_value()
@@ -281,6 +293,19 @@ impl OdraVm {
     /// Gets the address of the account at the given index.
     pub fn get_account(&self, n: usize) -> Address {
         self.state.read().unwrap().accounts.get(n).cloned().unwrap()
+    }
+
+    /// Gets the public key of the validator at the given index.
+    pub fn get_validator(&self, n: usize) -> PublicKey {
+        self.state
+            .read()
+            .unwrap()
+            .validators
+            .iter()
+            .map(|a| a.0)
+            .nth(n)
+            .unwrap_or_else(|| panic!("Validator with index {} does not exist", n))
+            .clone()
     }
 
     /// Reads the balance of the given address from the global state.
@@ -367,6 +392,52 @@ impl OdraVm {
         signature.into()
     }
 
+    /// Gets the amount of tokens delegated to a given validator.
+    ///
+    /// # Arguments
+    ///
+    /// * `validator` - The public key of the validator.
+    ///
+    /// # Returns
+    ///
+    /// The amount of tokens delegated to the validator.
+    pub fn delegated_amount(&self, validator: PublicKey, delegator: Address) -> U512 {
+        self.state
+            .read()
+            .unwrap()
+            .delegated_amount(validator, delegator)
+    }
+
+    /// Delegates the given amount of tokens to a given validator.
+    ///
+    /// # Arguments
+    ///
+    /// * `validator` - The public key of the validator.
+    /// * `amount` - The amount of tokens to delegate.
+    pub fn delegate(&self, validator: PublicKey, delegator: Address, amount: U512) {
+        let mut state = self.state.write().unwrap();
+        state.delegate(validator, delegator, amount);
+    }
+
+    /// Undelegates the given amount of tokens from a given validator.
+    /// The amount will be transferred to the caller after the unbonding period.
+    ///
+    /// # Arguments
+    ///
+    /// * `validator` - The public key of the validator.
+    /// * `amount` - The amount of tokens to undelegate.
+    pub fn undelegate(&self, validator: PublicKey, delegator: Address, amount: U512) {
+        let mut state = self.state.write().unwrap();
+        state.undelegate(validator, delegator, amount);
+    }
+
+    /// Gets the current auction delay.
+    pub fn auction_delay(&self) -> u64 {
+        self.state.read().unwrap().auction_delay()
+    }
+}
+
+impl OdraVm {
     fn prepare_call(&self, address: Address, call_def: &CallDef) {
         let mut state = self.state.write().unwrap();
         // If only one address on the call_stack, record snapshot.

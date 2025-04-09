@@ -5,6 +5,7 @@ use anyhow::Result;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::account::AccountHash;
 use odra_core::casper_types::bytesrepr::Error;
+use odra_core::casper_types::crypto::gens::public_key_arb;
 use odra_core::casper_types::{
     bytesrepr::{Bytes, FromBytes, ToBytes},
     PublicKey, SecretKey, U512
@@ -13,6 +14,10 @@ use odra_core::crypto::generate_key_pairs;
 use odra_core::prelude::*;
 use odra_core::EventError;
 use std::collections::BTreeMap;
+use std::fmt::format;
+
+// TODO: Set it to a value corresponding to the auction delay in the Casper VM
+pub const ODRA_VM_AUCTION_DELAY: u64 = 41000;
 
 pub struct OdraVmState {
     storage: Storage,
@@ -23,6 +28,8 @@ pub struct OdraVmState {
     pub error: Option<OdraError>,
     block_time: u64,
     pub accounts: Vec<Address>,
+    pub validators: BTreeMap<PublicKey, U512>,
+    pub delegations: BTreeMap<PublicKey, BTreeMap<Address, U512>>,
     key_pairs: BTreeMap<Address, (SecretKey, PublicKey)>
 }
 
@@ -152,6 +159,55 @@ impl OdraVmState {
         Ok(events.unwrap().len() as u32)
     }
 
+    pub fn delegated_amount(&self, validator: PublicKey, delegator: Address) -> U512 {
+        let validators_delegations = self.delegations.get(&validator).unwrap();
+        let delegators_amount = validators_delegations
+            .get(&delegator)
+            .cloned()
+            .unwrap_or_default();
+        delegators_amount
+    }
+
+    pub fn delegate(&mut self, validator: PublicKey, delegator: Address, amount: U512) {
+        let validators_delegations = self
+            .delegations
+            .entry(validator.clone())
+            .or_insert_with(BTreeMap::new);
+        let mut delegation = validators_delegations
+            .get(&delegator)
+            .cloned()
+            .unwrap_or_default();
+        validators_delegations.insert(delegator, delegation + amount);
+
+        let mut validators_total_amount =
+            self.validators.get(&validator).cloned().unwrap_or_default();
+        self.validators
+            .insert(validator, validators_total_amount + amount);
+
+        // TODO: Transfer funds
+    }
+
+    pub fn undelegate(&mut self, validator: PublicKey, delegator: Address, amount: U512) {
+        let validators_delegations = self
+            .delegations
+            .entry(validator.clone())
+            .or_insert_with(BTreeMap::new);
+        let mut delegation = validators_delegations
+            .get(&delegator)
+            .cloned()
+            .unwrap_or_default();
+        validators_delegations.insert(delegator, delegation.checked_sub(amount).unwrap());
+
+        let mut validators_total_amount =
+            self.validators.get(&validator).cloned().unwrap_or_default();
+        self.validators.insert(
+            validator,
+            validators_total_amount.checked_sub(amount).unwrap()
+        );
+
+        // TODO: Mark funds to be transferred
+    }
+
     pub fn attach_value(&mut self, amount: U512) {
         self.callstack.attach_value(amount);
     }
@@ -230,6 +286,43 @@ impl OdraVmState {
         self.block_time += milliseconds;
     }
 
+    pub fn advance_with_auctions(&mut self, milliseconds: u64) {
+        let time_between_auctions = self.auction_delay();
+
+        // Calculate how many auctions we can run based on time_diff
+        let num_auctions = milliseconds / time_between_auctions;
+
+        // Run auctions and distribute rewards one at a time
+        // to each validator which has a delegation
+        for _ in 0..num_auctions {
+            self.validators
+                .iter_mut()
+                .for_each(|(validator, total_amount)| {
+                    if total_amount.is_zero() {
+                        return;
+                    }
+
+                    let mut new_total_amount = *total_amount;
+
+                    let delegations = self.delegations.get_mut(validator).unwrap();
+                    delegations.iter_mut().for_each(|(address, amount)| {
+                        let reward = *total_amount / 1000;
+                        *amount += reward;
+                        new_total_amount += reward;
+                    });
+
+                    *total_amount = new_total_amount;
+                });
+        }
+
+        // Update the block time
+        self.block_time += milliseconds;
+    }
+
+    pub fn auction_delay(&self) -> u64 {
+        ODRA_VM_AUCTION_DELAY
+    }
+
     pub fn balance_of(&self, address: &Address) -> U512 {
         self.storage
             .balance_of(address)
@@ -277,6 +370,15 @@ impl Default for OdraVmState {
             balances.insert(address, 10_000_000_000_000_000_000u64.into());
         }
 
+        // last 5 key pairs are validators
+        let validators = key_pairs
+            .iter()
+            .clone()
+            .rev()
+            .take(5)
+            .map(|(_, pk)| (pk.1.clone(), U512::zero()))
+            .collect::<BTreeMap<PublicKey, U512>>();
+
         let mut backend = OdraVmState {
             storage: Storage::new(balances),
             callstack: Default::default(),
@@ -286,6 +388,8 @@ impl Default for OdraVmState {
             error: None,
             block_time: 0,
             accounts: accounts.clone(),
+            validators,
+            delegations: Default::default(),
             key_pairs
         };
         backend.push_callstack_element(CallstackElement::Account(*accounts.first().unwrap()));
