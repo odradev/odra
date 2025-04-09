@@ -14,7 +14,7 @@ pub mod optional_args;
 pub mod pauseable;
 pub mod reentrancy_guard;
 pub mod signature_verifier;
-pub mod staking;
 pub mod storage;
 pub mod testing;
+
 pub mod validators;

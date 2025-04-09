@@ -33,7 +33,7 @@ impl HostContext for OdraVmHost {
     }
 
     fn get_validator(&self, index: usize) -> PublicKey {
-        todo!("get_validator is not yet supported for OdraVM")
+        self.vm.borrow().get_validator(index)
     }
 
     fn balance_of(&self, address: &Address) -> U512 {
@@ -45,7 +45,7 @@ impl HostContext for OdraVmHost {
     }
 
     fn advance_with_auctions(&self, time_diff: u64) {
-        todo!()
+        self.vm.borrow().advance_with_auctions(time_diff)
     }
 
     fn block_time(&self) -> u64 {
@@ -158,7 +158,7 @@ impl HostContext for OdraVmHost {
     }
 
     fn auction_delay(&self) -> u64 {
-        1_000u64
+        self.vm.borrow().auction_delay()
     }
 }
 

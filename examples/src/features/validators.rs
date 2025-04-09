@@ -1,11 +1,11 @@
-//! This example shows how to test a contract.
+//! This example shows how to test delegation.
 
 use odra::{
     casper_types::{PublicKey, U512},
     prelude::*
 };
 
-/// Contract presenting the testing abilities of the Odra Framework
+/// Contract presenting the test
 #[odra::module]
 pub struct ValidatorsContract {
     validator: Var<PublicKey>
@@ -58,7 +58,6 @@ pub enum ValError {
 }
 
 #[cfg(test)]
-#[cfg(target_arch = "wasm32")]
 mod tests {
     use alloc::vec::Vec;
     use odra::casper_types::U512;
@@ -75,7 +74,6 @@ mod tests {
         // Deploy 5 staking contracts, one for each validator
         let mut staking_contracts = Vec::new();
         let staking_amount = U512::from(1_000_000_000_000u64);
-
         for i in 0..5 {
             test_env.set_caller(test_env.get_account(i));
             let staking = ValidatorsContract::deploy(
@@ -96,10 +94,12 @@ mod tests {
         test_env.advance_with_auctions(auction_delay);
 
         // Now we should have rewards for each validator
-        for contract in staking_contracts.iter() {
+        for i in 0..5 {
+            let contract = staking_contracts.get(i).unwrap();
             assert!(
                 contract.currently_delegated_amount() > staking_amount,
-                "Validator should have received rewards"
+                "Validator should have received rewards in contract no {}, delegated amount: {}, staking amount: {}",
+                i, contract.currently_delegated_amount(), staking_amount
             );
         }
     }

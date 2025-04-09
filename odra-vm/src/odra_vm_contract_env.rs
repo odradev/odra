@@ -111,15 +111,18 @@ impl ContractContext for OdraVmContractEnv {
     }
 
     fn delegate(&self, validator: PublicKey, amount: U512) {
-        todo!()
+        let delegator = self.vm.borrow().callee();
+        self.vm.borrow().delegate(validator, delegator, amount);
     }
 
     fn undelegate(&self, validator: PublicKey, amount: U512) {
-        todo!()
+        let delegator = self.vm.borrow().callee();
+        self.vm.borrow().undelegate(validator, delegator, amount);
     }
 
     fn delegated_amount(&self, validator: PublicKey) -> U512 {
-        todo!()
+        let delegator = self.vm.borrow().callee();
+        self.vm.borrow().delegated_amount(validator, delegator)
     }
 }
 
