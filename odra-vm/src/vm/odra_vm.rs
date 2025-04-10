@@ -124,6 +124,8 @@ impl OdraVm {
         self.state.read().unwrap().caller()
     }
 
+    /// Retrieves from the state the address of the current callee. It is taken from the
+    /// tip of the callstack.
     pub fn callee(&self) -> Address {
         self.state.read().unwrap().callee()
     }

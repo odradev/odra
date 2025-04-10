@@ -19,6 +19,17 @@ use std::fmt::format;
 // TODO: Set it to a value corresponding to the auction delay in the Casper VM
 pub const ODRA_VM_AUCTION_DELAY: u64 = 41000;
 
+/// Struct holding the information about a transfer that is awaiting to be processed.
+/// It should be executed when the block_time is greater than the block_time of the transfer.
+#[derive(Clone)]
+pub struct AwaitingTransfer {
+    pub from: Address,
+    pub to: Address,
+    pub amount: U512,
+    pub block_time: u64
+}
+
+/// Struct representing the state of the Odra VM.
 pub struct OdraVmState {
     storage: Storage,
     callstack: Callstack,
@@ -29,7 +40,9 @@ pub struct OdraVmState {
     block_time: u64,
     pub accounts: Vec<Address>,
     pub validators: BTreeMap<PublicKey, U512>,
+    pub validator_account: BTreeMap<PublicKey, Address>,
     pub delegations: BTreeMap<PublicKey, BTreeMap<Address, U512>>,
+    pub awaiting_transfers: Vec<AwaitingTransfer>,
     key_pairs: BTreeMap<Address, (SecretKey, PublicKey)>
 }
 
@@ -173,18 +186,20 @@ impl OdraVmState {
             .delegations
             .entry(validator.clone())
             .or_insert_with(BTreeMap::new);
-        let mut delegation = validators_delegations
+        let delegation = validators_delegations
             .get(&delegator)
             .cloned()
             .unwrap_or_default();
         validators_delegations.insert(delegator, delegation + amount);
 
-        let mut validators_total_amount =
-            self.validators.get(&validator).cloned().unwrap_or_default();
+        let validators_total_amount = self.validators.get(&validator).cloned().unwrap_or_default();
         self.validators
-            .insert(validator, validators_total_amount + amount);
+            .insert(validator.clone(), validators_total_amount + amount);
 
-        // TODO: Transfer funds
+        let validator_account = self.validator_account.get(&validator).cloned().unwrap();
+
+        self.transfer(&delegator, &validator_account, &amount)
+            .unwrap();
     }
 
     pub fn undelegate(&mut self, validator: PublicKey, delegator: Address, amount: U512) {
@@ -192,20 +207,26 @@ impl OdraVmState {
             .delegations
             .entry(validator.clone())
             .or_insert_with(BTreeMap::new);
-        let mut delegation = validators_delegations
+        let delegation = validators_delegations
             .get(&delegator)
             .cloned()
             .unwrap_or_default();
         validators_delegations.insert(delegator, delegation.checked_sub(amount).unwrap());
 
-        let mut validators_total_amount =
-            self.validators.get(&validator).cloned().unwrap_or_default();
+        let validators_total_amount = self.validators.get(&validator).cloned().unwrap_or_default();
         self.validators.insert(
-            validator,
+            validator.clone(),
             validators_total_amount.checked_sub(amount).unwrap()
         );
 
-        // TODO: Mark funds to be transferred
+        let transfer = AwaitingTransfer {
+            from: self.validator_account[&validator],
+            to: delegator,
+            amount,
+            block_time: self.block_time + self.unbonding_period()
+        };
+
+        self.awaiting_transfers.push(transfer);
     }
 
     pub fn attach_value(&mut self, amount: U512) {
@@ -317,10 +338,29 @@ impl OdraVmState {
 
         // Update the block time
         self.block_time += milliseconds;
+
+        // Process awaiting transfers
+        self.awaiting_transfers
+            .clone()
+            .into_iter()
+            .for_each(|transfer| {
+                if self.block_time >= transfer.block_time {
+                    self.transfer(&transfer.from, &transfer.to, &transfer.amount)
+                        .unwrap();
+                }
+            });
+
+        // Remove the processed transfers from the list
+        self.awaiting_transfers
+            .retain(|transfer| self.block_time < transfer.block_time);
     }
 
     pub fn auction_delay(&self) -> u64 {
         ODRA_VM_AUCTION_DELAY
+    }
+
+    pub fn unbonding_period(&self) -> u64 {
+        self.auction_delay() * 7
     }
 
     pub fn balance_of(&self, address: &Address) -> U512 {
@@ -379,6 +419,14 @@ impl Default for OdraVmState {
             .map(|(_, pk)| (pk.1.clone(), U512::zero()))
             .collect::<BTreeMap<PublicKey, U512>>();
 
+        let validator_accounts = key_pairs
+            .iter()
+            .clone()
+            .rev()
+            .take(5)
+            .map(|(address, pk)| (pk.1.clone(), *address))
+            .collect::<BTreeMap<PublicKey, Address>>();
+
         let mut backend = OdraVmState {
             storage: Storage::new(balances),
             callstack: Default::default(),
@@ -389,7 +437,9 @@ impl Default for OdraVmState {
             block_time: 0,
             accounts: accounts.clone(),
             validators,
+            validator_account: validator_accounts,
             delegations: Default::default(),
+            awaiting_transfers: Default::default(),
             key_pairs
         };
         backend.push_callstack_element(CallstackElement::Account(*accounts.first().unwrap()));
