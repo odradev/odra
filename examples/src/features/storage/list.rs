@@ -39,17 +39,15 @@ impl DogContract3 {
 #[cfg(test)]
 mod tests {
     use super::{DogContract3, DogContract3InitArgs};
-    use odra::{host::Deployer, prelude::string::ToString};
+    use odra::{host::Deployer, prelude::*};
 
     #[test]
     fn init_test() {
         let test_env = odra_test::env();
-        let mut dog_contract = DogContract3::deploy(
-            &test_env,
-            DogContract3InitArgs {
-                name: "DogContract".to_string()
-            }
-        );
+        let init_args = DogContract3InitArgs {
+            name: "DogContract".to_string()
+        };
+        let mut dog_contract = DogContract3::deploy(&test_env, init_args);
         assert_eq!(dog_contract.walks_amount(), 0);
         assert_eq!(dog_contract.walks_total_length(), 0);
         dog_contract.walk_the_dog(5);

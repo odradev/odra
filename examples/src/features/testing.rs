@@ -37,28 +37,26 @@ impl TestingContract {
 
 #[cfg(test)]
 mod tests {
-    use odra::{host::Deployer, prelude::*};
-
     use crate::features::testing::{TestingContract, TestingContractInitArgs};
+    use odra::{
+        host::{Deployer, HostEnv},
+        prelude::*
+    };
 
     #[test]
     fn env() {
-        let test_env = odra_test::env();
+        let test_env: HostEnv = odra_test::env();
         test_env.set_caller(test_env.get_account(0));
-        let testing_contract = TestingContract::deploy(
-            &test_env,
-            TestingContractInitArgs {
-                name: "MyContract".to_string()
-            }
-        );
+        let init_args = TestingContractInitArgs {
+            name: "MyContract".to_string()
+        };
+        let testing_contract = TestingContract::deploy(&test_env, init_args);
         let creator = testing_contract.created_by();
         test_env.set_caller(test_env.get_account(1));
-        let testing_contract2 = TestingContract::deploy(
-            &test_env,
-            TestingContractInitArgs {
-                name: "MyContract2".to_string()
-            }
-        );
+        let init_args = TestingContractInitArgs {
+            name: "MyContract2".to_string()
+        };
+        let testing_contract2 = TestingContract::deploy(&test_env, init_args);
         let creator2 = testing_contract2.created_by();
         assert_ne!(creator, creator2);
     }
