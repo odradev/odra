@@ -711,6 +711,33 @@ impl HostEnv {
                     == event_name.as_ref()
             })
     }
+    /// Returns true if a native event with the specified name was emitted by the specified contract.
+    pub fn emitted_native<T: AsRef<str>, R: Addressable>(
+        &self,
+        contract_address: &R,
+        event_name: T
+    ) -> bool {
+        let events_count = self.native_events_count(contract_address);
+
+        (0..events_count)
+            .map(|event_id| {
+                self.get_native_event_bytes(contract_address, event_id)
+                    .unwrap_or_else(|e| {
+                        panic!(
+                            "Couldn't get event at address {:?} with id {}: {:?}",
+                            contract_address.address(),
+                            event_id,
+                            e
+                        )
+                    })
+            })
+            .any(|bytes| {
+                utils::extract_event_name(&bytes)
+                    .unwrap_or_else(|e| panic!("Couldn't extract event name: {:?}", e))
+                    .as_str()
+                    == event_name.as_ref()
+            })
+    }
 
     /// Returns the last call result for the specified contract.
     pub fn last_call_result(&self, contract_address: Address) -> ContractCallResult {
