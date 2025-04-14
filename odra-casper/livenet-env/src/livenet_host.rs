@@ -268,6 +268,14 @@ impl HostContext for LivenetHost {
     fn auction_delay(&self) -> u64 {
         panic!("era_length not yet implemented for LivenetHost")
     }
+
+    fn unbonding_delay(&self) -> u64 {
+        panic!("unbonding_delay not yet implemented for LivenetHost")
+    }
+
+    fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
+        todo!()
+    }
 }
 
 impl LivenetHost {

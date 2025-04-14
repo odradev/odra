@@ -174,6 +174,7 @@ impl OdraVmState {
 
     pub fn delegated_amount(&self, validator: PublicKey, delegator: Address) -> U512 {
         let validators_delegations = self.delegations.get(&validator).unwrap();
+        dbg!(validators_delegations);
         let delegators_amount = validators_delegations
             .get(&delegator)
             .cloned()

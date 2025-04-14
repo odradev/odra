@@ -160,6 +160,14 @@ impl HostContext for OdraVmHost {
     fn auction_delay(&self) -> u64 {
         self.vm.borrow().auction_delay()
     }
+
+    fn unbonding_delay(&self) -> u64 {
+        self.vm.borrow().unbonding_delay()
+    }
+
+    fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
+        self.vm.borrow().delegated_amount(delegator, validator)
+    }
 }
 
 impl OdraVmHost {
