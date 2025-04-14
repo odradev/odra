@@ -257,6 +257,12 @@ pub trait HostContext {
     /// Time between auctions in milliseconds.
     fn auction_delay(&self) -> u64;
 
+    /// Time for the funds to be transferred back to the delegator after undelegation in milliseconds.
+    fn unbonding_delay(&self) -> u64;
+
+    /// Returns the delegated amount for the specified delegator and validator.
+    fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512;
+
     /// Returns the current block time.
     fn block_time(&self) -> u64;
 
@@ -380,6 +386,18 @@ impl HostEnv {
     pub fn auction_delay(&self) -> u64 {
         let backend = self.backend.borrow();
         backend.auction_delay()
+    }
+
+    /// Returns the delay between unstaking and the transfer of funds back to the delegator in milliseconds.
+    pub fn unbonding_delay(&self) -> u64 {
+        let backend = self.backend.borrow();
+        backend.unbonding_delay()
+    }
+
+    /// Returns the amount of CSPR delegated to the specified validator by the specified delegator.
+    pub fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
+        let backend = self.backend.borrow();
+        backend.delegated_amount(delegator, validator)
     }
 
     /// Returns the current block time.

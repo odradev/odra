@@ -1,6 +1,7 @@
 use casper_engine_test_support::genesis_config_builder::GenesisConfigBuilder;
 use odra_core::casper_types::system::auction::{
-    DelegationRate, ARG_ENTRY_POINT, ARG_REWARDS_MAP, BLOCK_REWARD, METHOD_DISTRIBUTE
+    BidAddr, BidKind, DelegationRate, DelegatorKind, ARG_ENTRY_POINT, ARG_REWARDS_MAP,
+    BLOCK_REWARD, METHOD_DISTRIBUTE
 };
 use odra_core::casper_types::{
     AddressableEntity, AddressableEntityHash, EntityAddr, GenesisConfig, GenesisValidator,
@@ -155,6 +156,49 @@ impl CasperVm {
         self.context
             .get_auction_delay()
             .saturating_mul(self.context.chainspec().core_config.era_duration.millis())
+    }
+
+    /// Returns the unbonding delay.
+    pub fn unbonding_delay(&mut self) -> u64 {
+        self.context
+            .get_unbonding_delay()
+            .saturating_mul(self.context.chainspec().core_config.era_duration.millis())
+    }
+
+    /// Returns the delegated amount.
+    pub fn delegated_amount(&mut self, delegator: Address, validator: PublicKey) -> U512 {
+        let purse_uref = self.get_main_purse(delegator);
+        let account_hash = validator.to_account_hash();
+
+        let bid = self
+            .context
+            .get_bids()
+            .into_iter()
+            .find(|bid| bid.validator_public_key() == validator && bid.is_delegator());
+
+        match bid {
+            None => U512::zero(),
+            Some(bid_kind) => bid_kind.staked_amount().unwrap_or_default()
+        }
+    }
+
+    fn get_main_purse(&self, address: Address) -> URef {
+        match address {
+            Address::Account(account) => {
+                let account = self.context.get_account(account).unwrap_or_else(|| {
+                    panic!("Account not found while getting entity addr: {:?}", account)
+                });
+                account.main_purse()
+            }
+            Address::Contract(contract) => self
+                .get_contract_main_purse(PackageHash::new(contract.value()))
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Contract purse not found while getting entity addr: {:?}",
+                        contract
+                    )
+                })
+        }
     }
 
     /// Gets the current block time.
@@ -330,8 +374,11 @@ impl CasperVm {
 
     fn get_contract_entity_addr(&self, address: &Address) -> EntityAddr {
         match address {
-            Address::Account(account) => {
-                todo!("Not needed yet")
+            Address::Account(_) => {
+                panic!(
+                    "Account address passed instead of contract address: {:?}",
+                    address
+                )
             }
             Address::Contract(contract) => {
                 let package = self
@@ -542,9 +589,17 @@ impl CasperVm {
 
     fn get_contract_cspr_balance(&self, package_hash: &PackageHash) -> U512 {
         // TODO: Addressable entity has main purse inside it, is it the same as ours for contracts?
-        let purse_key = self.package_named_key(*package_hash, CONTRACT_MAIN_PURSE);
-        match purse_key {
+        let purse_uref = self.get_contract_main_purse(*package_hash);
+        match purse_uref {
             None => U512::zero(),
+            Some(uref) => self.context.get_purse_balance(uref)
+        }
+    }
+
+    fn get_contract_main_purse(&self, package_hash: PackageHash) -> Option<URef> {
+        let purse_key = self.package_named_key(package_hash, CONTRACT_MAIN_PURSE);
+        match purse_key {
+            None => None,
             Some(purse_key) => {
                 let purse_uref = purse_key.as_uref().unwrap_or_else(|| {
                     panic!(
@@ -552,7 +607,7 @@ impl CasperVm {
                         CONTRACT_MAIN_PURSE
                     )
                 });
-                self.context.get_purse_balance(*purse_uref)
+                Some(*purse_uref)
             }
         }
     }

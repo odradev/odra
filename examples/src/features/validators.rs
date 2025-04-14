@@ -14,7 +14,7 @@ pub struct ValidatorsContract {
 /// Implementation of the TestingContract
 #[odra::module]
 impl ValidatorsContract {
-    /// Initializes the contract with the name
+    /// Initializes the contract with the validator's public key
     pub fn init(&mut self, validator: PublicKey) {
         self.validator.set(validator);
     }
@@ -61,6 +61,8 @@ pub enum ValError {
 mod tests {
     use alloc::vec::Vec;
     use odra::casper_types::U512;
+    use odra::host::HostRef;
+    use odra::Addressable;
 
     #[test]
     fn test_advance_with_auctions() {
@@ -113,8 +115,7 @@ mod tests {
 
         let test_env = odra_test::env();
         let auction_delay = test_env.auction_delay();
-        // Should we put it into host method?
-        let unbonding_delay = auction_delay * 8;
+        let unbonding_delay = test_env.unbonding_delay();
 
         test_env.set_caller(test_env.get_account(0));
         let mut staking = ValidatorsContract::deploy(
@@ -124,7 +125,6 @@ mod tests {
             }
         );
 
-        // Setup validators in vm
         let inital_account_balance = test_env.balance_of(&test_env.get_account(0));
 
         // Stake some amount
@@ -136,11 +136,8 @@ mod tests {
             inital_account_balance - staking_amount
         );
 
-        // First auction for dwarves, we are waiting for the auction delay to pass
-        test_env.advance_with_auctions(auction_delay);
-
         // Advance time, run auctions and give off rewards
-        test_env.advance_with_auctions(auction_delay);
+        test_env.advance_with_auctions(auction_delay * 2);
 
         // Check that the amount is greater than the staking amount
         let staking_with_reward = staking.currently_delegated_amount();
@@ -158,7 +155,7 @@ mod tests {
         assert_eq!(staking.current_casper_balance(), U512::from(0));
 
         // Advance time, run auctions and give off rewards
-        test_env.advance_with_auctions(unbonding_delay);
+        test_env.advance_with_auctions(unbonding_delay * 2);
 
         staking.withdraw(staking_with_reward);
 
@@ -167,7 +164,38 @@ mod tests {
             test_env.balance_of(&test_env.get_account(0)),
             inital_account_balance + reward
         );
+    }
+    #[test]
+    fn test_config() {
+        use crate::features::validators::{ValidatorsContract, ValidatorsContractInitArgs};
+        use odra::casper_types::U512;
+        use odra::host::Deployer;
+        use odra::host::HostRef;
 
-        // TODO: Why there is a reward left in the contract?
+        let test_env = odra_test::env();
+        let auction_delay = test_env.auction_delay();
+        let unbonding_delay = test_env.unbonding_delay();
+        let delegator = test_env.get_account(0);
+        let validator = test_env.get_validator(0);
+
+        test_env.set_caller(test_env.get_account(0));
+        let mut staking = ValidatorsContract::deploy(
+            &test_env,
+            ValidatorsContractInitArgs {
+                validator: validator.clone()
+            }
+        );
+
+        let staking_amount = U512::from(1_000_000_000_000u64);
+        staking.with_tokens(staking_amount).stake();
+
+        // HostEnv's staked amount should be equal to the staking amount
+        assert_eq!(
+            test_env.delegated_amount(*HostRef::address(&staking), validator),
+            staking_amount
+        );
+
+        // And to the amount reported by the contract
+        assert_eq!(staking.currently_delegated_amount(), staking_amount);
     }
 }

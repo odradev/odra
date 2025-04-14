@@ -398,12 +398,13 @@ impl OdraVm {
     ///
     /// # Arguments
     ///
+    /// * `delegator` - The address of the delegator.
     /// * `validator` - The public key of the validator.
     ///
     /// # Returns
     ///
     /// The amount of tokens delegated to the validator.
-    pub fn delegated_amount(&self, validator: PublicKey, delegator: Address) -> U512 {
+    pub fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
         self.state
             .read()
             .unwrap()
@@ -436,6 +437,11 @@ impl OdraVm {
     /// Gets the current auction delay.
     pub fn auction_delay(&self) -> u64 {
         self.state.read().unwrap().auction_delay()
+    }
+
+    /// Returns the delay between the unstaking and the moment when the tokens can be transferred.
+    pub fn unbonding_delay(&self) -> u64 {
+        self.auction_delay() * 7
     }
 }
 

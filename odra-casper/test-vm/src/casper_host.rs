@@ -178,6 +178,16 @@ impl HostContext for CasperHost {
         let mut backend = self.vm.borrow_mut();
         backend.auction_delay()
     }
+
+    fn unbonding_delay(&self) -> u64 {
+        let mut backend = self.vm.borrow_mut();
+        backend.unbonding_delay()
+    }
+
+    fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
+        let mut backend = self.vm.borrow_mut();
+        backend.delegated_amount(delegator, validator)
+    }
 }
 
 impl CasperHost {
