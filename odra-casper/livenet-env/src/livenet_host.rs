@@ -274,7 +274,9 @@ impl HostContext for LivenetHost {
     }
 
     fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
-        todo!()
+        self.casper_client
+            .borrow()
+            .delegated_amount(delegator, validator)
     }
 }
 

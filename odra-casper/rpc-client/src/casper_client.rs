@@ -14,8 +14,8 @@ use casper_client::cli::{
 use casper_client::rpcs::results::{GetDeployResult, GetTransactionResult};
 use casper_client::rpcs::GlobalStateIdentifier;
 use casper_client::{
-    get_balance, get_deploy, get_transaction, put_transaction, query_global_state, JsonRpcId,
-    Verbosity
+    get_balance, get_chainspec, get_deploy, get_transaction, put_transaction, query_global_state,
+    JsonRpcId, Verbosity
 };
 use casper_types::bytesrepr::{deserialize_from_slice, Bytes, ToBytes};
 use casper_types::execution::ExecutionResultV1::{Failure, Success};
@@ -124,9 +124,9 @@ impl CasperClient {
             .ok()
     }
 
-    pub async fn get_delegated_amount(&self, address: &Address, public_key: PublicKey) -> U512 {
-        let purse_uref = self.get_main_purse(address).await;
-        let account_hash = public_key.to_account_hash();
+    pub async fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
+        let purse_uref = self.get_main_purse(&delegator).await;
+        let account_hash = validator.to_account_hash();
         let key = Key::BidAddr(BidAddr::DelegatedPurse {
             validator: account_hash,
             delegator: purse_uref.addr()
@@ -140,11 +140,28 @@ impl CasperClient {
                 _ => {
                     panic!(
                         "Couldn't get delegated amount for address: {:?}",
-                        address.to_formatted_string()
+                        delegator.to_formatted_string()
                     )
                 }
             }
         }
+    }
+
+    pub async fn auction_delay(&self) -> u64 {
+        let chainspec = get_chainspec(
+            self.rpc_id_typed(),
+            self.configuration.node_address(),
+            self.configuration.verbosity_typed()
+        )
+        .await
+        .unwrap_or_else(|e| {
+            panic!(
+                "Couldn't get chainspec from node: {:?}, reason: {:?}",
+                self.configuration.node_address(),
+                e
+            )
+        })
+        .result;
     }
 
     /// Sets amount of gas for the next deploy.

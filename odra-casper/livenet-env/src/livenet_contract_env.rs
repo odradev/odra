@@ -181,7 +181,7 @@ impl ContractContext for LivenetContractEnv {
         self.runtime.block_on(async {
             self.casper_client
                 .borrow()
-                .get_delegated_amount(&address, _validator)
+                .delegated_amount(&address, _validator)
                 .await
         })
     }
