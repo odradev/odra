@@ -69,5 +69,11 @@ path = "bin/odra_cfg_on_livenet.rs"
 required-features = ["livenet"]
 test = false
 
+[[bin]]
+name = "validators_on_livenet"
+path = "bin/validators_on_livenet.rs"
+required-features = ["livenet"]
+test = false
+
 [lints.rust]
 missing_docs = "warn"
