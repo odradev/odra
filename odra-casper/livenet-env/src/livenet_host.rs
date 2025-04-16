@@ -257,26 +257,33 @@ impl HostContext for LivenetHost {
             })
     }
 
-    fn get_validator(&self, _index: usize) -> PublicKey {
-        panic!("get_validator not supported for LivenetHost")
+    fn get_validator(&self, index: usize) -> PublicKey {
+        let rt = Runtime::new().unwrap();
+        let client = self.casper_client.borrow_mut();
+        rt.block_on(async { client.get_validator(index).await })
     }
 
-    fn advance_with_auctions(&self, _: u64) {
-        panic!("advance_with_auctions not supported for LivenetHost")
+    fn advance_with_auctions(&self, diff: u64) {
+        println!("advance_with_auctions called - Waiting for {diff} ms");
+        sleep(std::time::Duration::from_millis(diff));
     }
 
     fn auction_delay(&self) -> u64 {
-        panic!("era_length not yet implemented for LivenetHost")
+        let rt = Runtime::new().unwrap();
+        let client = self.casper_client.borrow_mut();
+        rt.block_on(async { client.auction_delay().await })
     }
 
     fn unbonding_delay(&self) -> u64 {
-        panic!("unbonding_delay not yet implemented for LivenetHost")
+        let rt = Runtime::new().unwrap();
+        let client = self.casper_client.borrow_mut();
+        rt.block_on(async { client.unbonding_delay().await })
     }
 
     fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
-        self.casper_client
-            .borrow()
-            .delegated_amount(delegator, validator)
+        let rt = Runtime::new().unwrap();
+        let client = self.casper_client.borrow_mut();
+        rt.block_on(async { client.delegated_amount(delegator, validator).await })
     }
 }
 

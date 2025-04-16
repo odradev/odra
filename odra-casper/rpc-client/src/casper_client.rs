@@ -14,8 +14,8 @@ use casper_client::cli::{
 use casper_client::rpcs::results::{GetDeployResult, GetTransactionResult};
 use casper_client::rpcs::GlobalStateIdentifier;
 use casper_client::{
-    get_balance, get_chainspec, get_deploy, get_transaction, put_transaction, query_global_state,
-    JsonRpcId, Verbosity
+    get_auction_info, get_balance, get_chainspec, get_deploy, get_transaction, put_transaction,
+    query_global_state, JsonRpcId, Verbosity
 };
 use casper_types::bytesrepr::{deserialize_from_slice, Bytes, ToBytes};
 use casper_types::execution::ExecutionResultV1::{Failure, Success};
@@ -23,8 +23,8 @@ use casper_types::system::auction::BidAddr;
 use casper_types::StoredValue::CLValue;
 use casper_types::{
     execution::ExecutionResult, runtime_args, sign, CLTyped, Digest, EntityAddr, Key, PricingMode,
-    PublicKey, RuntimeArgs, SecretKey, Transaction, TransactionHash, TransactionRuntimeParams,
-    TransferTarget, URef, U512
+    PublicKey, RuntimeArgs, SecretKey, TimeDiff, Transaction, TransactionHash,
+    TransactionRuntimeParams, TransferTarget, URef, U512
 };
 use casper_types::{DeployHash, StoredValue, Timestamp};
 use odra_core::casper_event_standard::EVENTS_LENGTH;
@@ -34,6 +34,7 @@ use odra_core::consts::{
 };
 use odra_core::prelude::*;
 use odra_core::CallDef;
+use toml::Value;
 
 pub mod configuration;
 
@@ -124,6 +125,34 @@ impl CasperClient {
             .ok()
     }
 
+    pub async fn get_validator(&self, index: usize) -> PublicKey {
+        let auction_info = get_auction_info(
+            self.rpc_id_typed(),
+            self.configuration.node_address(),
+            self.configuration.verbosity_typed(),
+            None
+        )
+        .await;
+        let auction_info = auction_info.unwrap_or_else(|e| {
+            panic!(
+                "Couldn't get auction info from node: {:?}, reason: {:?}",
+                self.configuration.node_address(),
+                e
+            )
+        });
+        let auction_info = auction_info.result;
+        let validator = auction_info
+            .auction_state
+            .era_validators()
+            .nth(0)
+            .unwrap_or_else(|| panic!("Couldn't get auction state",))
+            .validator_weights()
+            .nth(index)
+            .unwrap()
+            .public_key();
+        validator.clone()
+    }
+
     pub async fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
         let purse_uref = self.get_main_purse(&delegator).await;
         let account_hash = validator.to_account_hash();
@@ -148,6 +177,56 @@ impl CasperClient {
     }
 
     pub async fn auction_delay(&self) -> u64 {
+        let chainspec = self.chainspec().await;
+
+        let auction_delay = chainspec
+            .get("core")
+            .unwrap_or_else(|| panic!("Couldn't get auction from chainspec"))
+            .get("auction_delay")
+            .unwrap_or_else(|| {
+                panic!("Couldn't get era_delay from chainspec");
+            });
+
+        let era_duration = Self::era_duration(&chainspec);
+
+        era_duration as u64 * auction_delay.as_integer().unwrap() as u64
+    }
+
+    pub async fn unbonding_delay(&self) -> u64 {
+        let chainspec = self.chainspec().await;
+
+        let unbonding_delay = chainspec
+            .get("core")
+            .unwrap_or_else(|| panic!("Couldn't get core from chainspec"))
+            .get("unbonding_delay")
+            .unwrap_or_else(|| {
+                panic!("Couldn't get unbonding_delay from chainspec");
+            });
+
+        let era_duration = Self::era_duration(&chainspec);
+
+        unbonding_delay.as_integer().unwrap() as u64 * era_duration
+    }
+
+    fn era_duration(chainspec: &Value) -> u64 {
+        let era_duration = chainspec
+            .get("core")
+            .unwrap_or_else(|| panic!("Couldn't get core from chainspec"))
+            .get("era_duration")
+            .unwrap_or_else(|| {
+                panic!("Couldn't get era_duration from chainspec");
+            });
+        TimeDiff::from_str(era_duration.as_str().unwrap())
+            .unwrap_or_else(|_| {
+                panic!(
+                    "Couldn't parse era_duration from chainspec: {:?}",
+                    era_duration
+                )
+            })
+            .millis()
+    }
+
+    async fn chainspec(&self) -> Value {
         let chainspec = get_chainspec(
             self.rpc_id_typed(),
             self.configuration.node_address(),
@@ -162,6 +241,10 @@ impl CasperClient {
             )
         })
         .result;
+        let toml_bytes: &[u8] = chainspec.chainspec_bytes.chainspec_bytes();
+        let toml = String::from_utf8_lossy(toml_bytes);
+        toml.parse::<toml::Value>()
+            .unwrap_or_else(|_| panic!("Couldn't parse chainspec bytes: {:?}", toml))
     }
 
     /// Sets amount of gas for the next deploy.
