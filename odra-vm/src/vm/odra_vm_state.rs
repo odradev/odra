@@ -5,7 +5,6 @@ use anyhow::Result;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::account::AccountHash;
 use odra_core::casper_types::bytesrepr::Error;
-use odra_core::casper_types::crypto::gens::public_key_arb;
 use odra_core::casper_types::{
     bytesrepr::{Bytes, FromBytes, ToBytes},
     PublicKey, SecretKey, U512
