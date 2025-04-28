@@ -26,6 +26,7 @@ mod types;
 
 pub use args::CommandArg;
 pub use container::DeployedContractsContainer;
+pub use cmd::scenario::{ScenarioArgs, ScenarioError};
 use scenario::{Scenario, ScenarioMetadata};
 
 const CONTRACTS_SUBCOMMAND: &str = "contract";
