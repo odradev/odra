@@ -106,7 +106,7 @@ compute_rewards = true
 # This causes excess payment amounts to be sent to either a
 # pre-defined purse, or back to the sender.  The refunded amount is calculated as the given ratio of the payment amount
 # minus the execution costs.
-refund_handling = { type = 'refund', refund_ratio = [99, 100] }
+refund_handling = { type = 'refund', refund_ratio = [75, 100] }
 # Defines how fees are handled.
 #
 # Valid options are:
@@ -167,8 +167,8 @@ administrators = []
 # Note: Enabling of the AddressableEntity feature is one-way; i.e once enabled as part of a protocol upgrade
 # the flag cannot be disabled in a future protocol upgrade.
 enable_addressable_entity = false
-# This value is used as the penalty payment amount, the minimum balance amount,
-# and the minimum consumed amount.
+
+# This value is used as the penalty payment amount, the lowest cost, and the minimum balance amount.
 baseline_motes_amount = 2_500_000_000
 
 [highway]
@@ -298,7 +298,7 @@ add = { cost = 5_800, arguments = [0, 0, 0, 0] }
 add_associated_key = { cost = 1_200_000, arguments = [0, 0, 0] }
 add_contract_version = { cost = 200, arguments = [0, 0, 0, 0, 120_000, 0, 0, 0, 0, 0] }
 add_contract_version_with_message_topics = { cost = 200, arguments = [0, 0, 0, 0, 120_000, 0, 0, 0, 30_000, 0, 0] }
-add_package_version = { cost = 200, arguments = [0, 0, 0, 0, 120_000, 0, 0, 0, 30_000, 0, 0] }
+add_package_version_with_message_topics = { cost = 200, arguments = [0, 0, 0, 0, 120_000, 0, 0, 0, 30_000, 0, 0] }
 blake2b = { cost = 1_200_000, arguments = [0, 120_000, 0, 0] }
 call_contract = { cost = 300_000_000, arguments = [0, 0, 0, 120_000, 0, 120_000, 0] }
 call_versioned_contract = { cost = 300_000_000, arguments = [0, 0, 0, 0, 0, 120_000, 0, 120_000, 0] }

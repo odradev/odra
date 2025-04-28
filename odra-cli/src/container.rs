@@ -82,7 +82,7 @@ impl DeployedContractsContainer {
     }
 
     /// Load from the file.
-    pub(crate) fn load() -> Result<Self, ContractError> {
+    pub fn load() -> Result<Self, ContractError> {
         let path = Self::file_path()?;
         let file = std::fs::read_to_string(path).map_err(ContractError::Io)?;
 
