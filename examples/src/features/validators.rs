@@ -61,8 +61,6 @@ pub enum ValError {
 mod tests {
     use alloc::vec::Vec;
     use odra::casper_types::U512;
-    use odra::host::HostRef;
-    use odra::Addressable;
 
     #[test]
     fn test_advance_with_auctions() {
@@ -173,13 +171,10 @@ mod tests {
         use odra::host::HostRef;
 
         let test_env = odra_test::env();
-        let auction_delay = test_env.auction_delay();
-        let unbonding_delay = test_env.unbonding_delay();
-        let delegator = test_env.get_account(0);
         let validator = test_env.get_validator(0);
 
         test_env.set_caller(test_env.get_account(0));
-        let mut staking = ValidatorsContract::deploy(
+        let staking = ValidatorsContract::deploy(
             &test_env,
             ValidatorsContractInitArgs {
                 validator: validator.clone()
