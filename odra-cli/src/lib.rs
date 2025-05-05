@@ -25,8 +25,8 @@ mod test_utils;
 mod types;
 
 pub use args::CommandArg;
-pub use container::DeployedContractsContainer;
 pub use cmd::scenario::{ScenarioArgs, ScenarioError};
+pub use container::DeployedContractsContainer;
 use scenario::{Scenario, ScenarioMetadata};
 
 const CONTRACTS_SUBCOMMAND: &str = "contract";
@@ -221,7 +221,7 @@ impl OdraCli {
         match cmd.run(&self.host_env, args, &self.custom_types) {
             Ok(_) => {
                 // prettycli::info("Command executed successfully")
-            },
+            }
             Err(err) => prettycli::error(&format!("{:?}", err))
         }
     }

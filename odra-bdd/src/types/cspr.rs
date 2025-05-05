@@ -7,6 +7,8 @@ use std::fmt::Display;
 use std::ops::Deref;
 use std::str::FromStr;
 
+pub const CSPR_DECIMALS: usize = 9;
+
 #[derive(Parameter, Debug, Clone, Copy)]
 #[param(regex = r"(?:roughly\s+)?\d+(\.\d+)?( Motes)?", name = "cspr_amount")]
 pub struct CSPRAmount {
@@ -16,12 +18,24 @@ pub struct CSPRAmount {
 
 impl PartialEq for CSPRAmount {
     fn eq(&self, other: &Self) -> bool {
+        // If amounts are exactly equal, they are always equal
+        if self.amount == other.amount {
+            return true;
+        }
+
+        // Use the minimum precision between the two amounts
         let min_precision = self.precision.min(other.precision);
 
-        let tolerance = U512::from(10u64).pow(U512::from(min_precision));
-        let diff = self.amount.abs_diff(other.amount);
+        // Calculate the maximum difference allowed based on precision
+        let max_diff = U512::from(10u64).pow(U512::from(CSPR_DECIMALS - min_precision));
 
-        diff <= tolerance
+        let diff = if self.amount > other.amount {
+            self.amount - other.amount
+        } else {
+            other.amount - self.amount
+        };
+
+        diff < max_diff
     }
 }
 
