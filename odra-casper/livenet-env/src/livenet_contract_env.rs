@@ -185,6 +185,13 @@ impl ContractContext for LivenetContractEnv {
                 .await
         })
     }
+
+    fn pseudorandom_bytes(&self, _size: usize) -> Vec<u8> {
+        panic!(
+            "pseudorandom_bytes is not supported for LivenetContractEnv, it should be run\
+        in the context of a deploy to get consistent results"
+        )
+    }
 }
 
 impl LivenetContractEnv {

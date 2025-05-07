@@ -822,3 +822,16 @@ pub fn delegated_amount(public_key: PublicKey) -> U512 {
         })
         .unwrap_or_else(U512::zero)
 }
+
+/// Returns a pseudorandom byte array of the specified size.
+/// It uses the `random_bytes` function from the Casper runtime to generate random bytes.
+pub fn pseudorandom_bytes(size: usize) -> Vec<u8> {
+    let mut result = Vec::with_capacity(size);
+    while result.len() < size {
+        let random_chunk = runtime::random_bytes();
+        let remaining = size - result.len();
+        let take_bytes = remaining.min(random_chunk.len());
+        result.extend_from_slice(&random_chunk[..take_bytes]);
+    }
+    result
+}

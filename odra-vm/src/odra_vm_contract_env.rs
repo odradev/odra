@@ -7,6 +7,7 @@ use odra_core::casper_types::{
 };
 use odra_core::prelude::*;
 use odra_core::{casper_types, CallDef, ContractContext};
+use rand::Rng;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
 use std::io::Write;
@@ -123,6 +124,12 @@ impl ContractContext for OdraVmContractEnv {
     fn delegated_amount(&self, validator: PublicKey) -> U512 {
         let delegator = self.vm.borrow().callee();
         self.vm.borrow().delegated_amount(delegator, validator)
+    }
+    fn pseudorandom_bytes(&self, size: usize) -> Vec<u8> {
+        use rand::Rng;
+        let mut bytes = vec![0u8; size];
+        rand::rng().fill(&mut bytes[..]);
+        bytes
     }
 }
 

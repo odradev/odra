@@ -114,6 +114,10 @@ impl ContractContext for WasmContractEnv {
     fn delegated_amount(&self, validator: PublicKey) -> U512 {
         host_functions::delegated_amount(validator)
     }
+
+    fn pseudorandom_bytes(&self, size: usize) -> Vec<u8> {
+        host_functions::pseudorandom_bytes(size)
+    }
 }
 
 impl WasmContractEnv {

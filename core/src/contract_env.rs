@@ -301,6 +301,12 @@ impl ContractEnv {
     pub fn delegated_amount(&self, validator: PublicKey) -> U512 {
         self.backend.borrow().delegated_amount(validator)
     }
+
+    /// Returns a vector of pseudorandom bytes of the specified size.
+    /// There is no guarantee that the returned bytes are in any way cryptographically secure.
+    pub fn pseudorandom_bytes(&self, size: usize) -> Vec<u8> {
+        self.backend.borrow().pseudorandom_bytes(size)
+    }
 }
 
 /// Represents the environment accessible in the contract execution context.

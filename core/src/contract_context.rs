@@ -194,4 +194,8 @@ pub trait ContractContext {
     ///
     /// The amount of tokens delegated to the validator as a `U512` value.
     fn delegated_amount(&self, validator: PublicKey) -> U512;
+
+    /// Returns a vector of pseudorandom bytes of the specified size.
+    /// There is no guarantee that the returned bytes are in any way cryptographically secure.
+    fn pseudorandom_bytes(&self, size: usize) -> Vec<u8>;
 }

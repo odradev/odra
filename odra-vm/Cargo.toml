@@ -10,10 +10,9 @@ repository = { workspace = true }
 
 [dependencies]
 odra-core = { workspace = true }
-anyhow = "1.0.75"
-url = "2.4.1"
+anyhow = { workspace = true }
 blake2 = { workspace = true }
-bytes = "1.6.0"
+rand = { workspace = true, features = ["thread_rng"] }
 
 [lints.rust]
 missing_docs = "warn"
