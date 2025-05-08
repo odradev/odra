@@ -112,14 +112,13 @@ impl CallResult {
 
     /// Checks if the specified event has been emitted by the contract during the call.
     pub fn emitted(&self, contract_address: &Address, event_name: &str) -> bool {
-        self.event_names(contract_address)
-            .contains(&event_name.to_string())
+        self.event_names(contract_address).contains(event_name)
     }
 
     /// Checks if the specified native event has been emitted by the contract during the call.
     pub fn emitted_native(&self, contract_address: &Address, event_name: &str) -> bool {
         self.native_event_names(contract_address)
-            .contains(&event_name.to_string())
+            .contains(event_name)
     }
 
     /// Checks if the specified event instance has been emitted by the contract during the call.
