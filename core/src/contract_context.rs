@@ -84,7 +84,7 @@ pub trait ContractContext {
     /// The result of the contract call as a byte array.
     fn call_contract(&self, address: Address, call_def: CallDef) -> Bytes;
 
-    /// Retrieves the current block time.
+    /// Retrieves the current block time in milliseconds.
     ///
     /// # Returns
     ///

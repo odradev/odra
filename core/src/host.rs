@@ -400,10 +400,22 @@ impl HostEnv {
         backend.delegated_amount(delegator, validator)
     }
 
-    /// Returns the current block time.
+    /// Returns the current block time in milliseconds.
     pub fn block_time(&self) -> u64 {
         let backend = self.backend.borrow();
         backend.block_time()
+    }
+
+    /// Returns the current block time in milliseconds.
+    pub fn block_time_millis(&self) -> u64 {
+        let backend = self.backend.borrow();
+        backend.block_time()
+    }
+
+    /// Returns the current block time in seconds.
+    pub fn block_time_secs(&self) -> u64 {
+        let backend = self.backend.borrow();
+        backend.block_time().checked_div(1000).unwrap()
     }
 
     /// Registers a new contract with the specified name, initialization arguments, and entry points caller.

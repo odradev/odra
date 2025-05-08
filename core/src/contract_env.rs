@@ -1,6 +1,3 @@
-use casper_event_standard::EventInstance;
-use casper_types::CLValueError;
-
 use crate::args::EntrypointArgument;
 use crate::call_def::CallDef;
 use crate::casper_types::bytesrepr::{deserialize_from_slice, Bytes, FromBytes, ToBytes};
@@ -10,6 +7,8 @@ use crate::module::Revertible;
 pub use crate::ContractContext;
 use crate::VmError::{Serialization, TypeMismatch};
 use crate::{consts, prelude::*, utils};
+use casper_event_standard::EventInstance;
+use casper_types::CLValueError;
 
 const INDEX_SIZE: usize = 4;
 const KEY_LEN: usize = 64;
@@ -192,16 +191,22 @@ impl ContractEnv {
         backend.transfer_tokens(to, amount)
     }
 
-    /// Returns the current block time as u64 value.
+    /// Returns the current block time in milliseconds.
     pub fn get_block_time(&self) -> u64 {
         let backend = self.backend.borrow();
         backend.get_block_time()
     }
 
-    /// Returns the current block time in seconds
-    pub fn get_timestamp_seconds(&self) -> u64 {
+    /// Returns the current block time in milliseconds.
+    pub fn get_block_time_millis(&self) -> u64 {
         let backend = self.backend.borrow();
-        backend.get_block_time() / 1000
+        backend.get_block_time()
+    }
+
+    /// Returns the current block time in seconds.
+    pub fn get_block_time_secs(&self) -> u64 {
+        let backend = self.backend.borrow();
+        backend.get_block_time().checked_div(1000).unwrap()
     }
 
     /// Returns the value attached to the contract call.
