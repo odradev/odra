@@ -182,10 +182,7 @@ impl OdraVmState {
     }
 
     pub fn delegate(&mut self, validator: PublicKey, delegator: Address, amount: U512) {
-        let validators_delegations = self
-            .delegations
-            .entry(validator.clone())
-            .or_insert_with(BTreeMap::new);
+        let validators_delegations = self.delegations.entry(validator.clone()).or_default();
         let delegation = validators_delegations
             .get(&delegator)
             .cloned()
@@ -203,10 +200,7 @@ impl OdraVmState {
     }
 
     pub fn undelegate(&mut self, validator: PublicKey, delegator: Address, amount: U512) {
-        let validators_delegations = self
-            .delegations
-            .entry(validator.clone())
-            .or_insert_with(BTreeMap::new);
+        let validators_delegations = self.delegations.entry(validator.clone()).or_default();
         let delegation = validators_delegations
             .get(&delegator)
             .cloned()

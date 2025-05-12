@@ -251,7 +251,7 @@ impl CasperVm {
     ) -> Result<Bytes, EventError> {
         let messages = self
             .messages
-            .get(&self.get_contract_entity_addr(&contract_address))
+            .get(&self.get_contract_entity_addr(contract_address))
             .ok_or(EventError::IndexOutOfBounds)?;
         let message = messages
             .get(index as usize)
@@ -275,7 +275,7 @@ impl CasperVm {
     pub fn get_native_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
         let messages = self
             .messages
-            .get(&self.get_contract_entity_addr(&contract_address))
+            .get(&self.get_contract_entity_addr(contract_address))
             .ok_or(EventError::IndexOutOfBounds)?;
         Ok(messages.len() as u32)
     }

@@ -13,7 +13,10 @@ use casper_client::cli::{
 };
 use casper_client::rpcs::results::{GetDeployResult, GetTransactionResult};
 use casper_client::rpcs::GlobalStateIdentifier;
-use casper_client::{get_auction_info, get_balance, get_chainspec, get_deploy, get_transaction, put_transaction, query_global_state, JsonRpcId, Verbosity};
+use casper_client::{
+    get_auction_info, get_balance, get_chainspec, get_deploy, get_transaction, put_transaction,
+    query_global_state, JsonRpcId, Verbosity
+};
 use casper_types::bytesrepr::{deserialize_from_slice, Bytes, ToBytes};
 use casper_types::execution::ExecutionResultV1::{Failure, Success};
 use casper_types::system::auction::BidAddr;
@@ -665,7 +668,11 @@ impl CasperClient {
         .await;
         let deploy_hash = match response {
             Ok(r) => r.result.transaction_hash,
-            Err(e) => return Err(Error::Execution { error_message: e.to_string() })
+            Err(e) => {
+                return Err(Error::Execution {
+                    error_message: e.to_string()
+                })
+            }
         };
         let result = self.wait_for_transaction(deploy_hash).await?;
         self.process_transaction(result, deploy_hash).map(|_| {

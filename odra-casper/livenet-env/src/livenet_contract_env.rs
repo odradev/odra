@@ -175,15 +175,12 @@ impl ContractContext for LivenetContractEnv {
 
     fn delegated_amount(&self, _validator: PublicKey) -> U512 {
         let address = match self.callstack.borrow().current() {
-            CallstackElement::Account(acc) => acc.clone(),
-            CallstackElement::ContractCall { address, .. } => address.clone()
+            CallstackElement::Account(acc) => *acc,
+            CallstackElement::ContractCall { address, .. } => *address
         };
-        self.runtime.block_on(async {
-            self.casper_client
-                .borrow()
-                .delegated_amount(address, _validator)
-                .await
-        })
+        let client = self.casper_client.borrow();
+        self.runtime
+            .block_on(async { client.delegated_amount(address, _validator).await })
     }
 
     fn pseudorandom_bytes(&self, _size: usize) -> Vec<u8> {

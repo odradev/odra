@@ -301,7 +301,7 @@ impl LivenetHost {
             None => {
                 println!("Error: {}", error_msg);
                 OdraError::ExecutionError(UnexpectedError)
-            },
+            }
             Some((_, error)) => OdraError::ExecutionError(User(error.code()))
         }
     }

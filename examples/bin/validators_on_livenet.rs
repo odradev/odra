@@ -38,7 +38,7 @@ pub fn deploy_validators(env: &HostEnv) -> (ValidatorsContractHostRef, PublicKey
     let validator = env.get_validator(0);
     (
         ValidatorsContract::deploy(
-            &env,
+            env,
             ValidatorsContractInitArgs {
                 validator: validator.clone()
             }

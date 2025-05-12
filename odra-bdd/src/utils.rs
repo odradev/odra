@@ -28,12 +28,12 @@ mod tests {
     fn test_to_motes() {
         // Whole numbers
         assert_eq!(to_motes("1"), U256::from(1000000000));
-        assert_eq!(to_motes("42"), U256::from(42000000000 as u64));
+        assert_eq!(to_motes("42"), U256::from(42000000000_u64));
         assert_eq!(to_motes("0"), U256::from(0));
 
         // Decimal numbers
         assert_eq!(to_motes("0.5"), U256::from(500000000));
-        assert_eq!(to_motes("1.23"), U256::from(1230000000 as u64));
+        assert_eq!(to_motes("1.23"), U256::from(1230000000));
         assert_eq!(to_motes("0.000000001"), U256::from(1));
 
         // Numbers with trailing zeros
@@ -41,7 +41,7 @@ mod tests {
         assert_eq!(to_motes("0.100000000"), U256::from(100000000));
 
         // Large numbers
-        assert_eq!(to_motes("1000.123456789"), U256::from(1000123456789 as u64));
+        assert_eq!(to_motes("1000.123456789"), U256::from(1000123456789_u64));
     }
 
     #[test]
