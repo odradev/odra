@@ -335,8 +335,6 @@ pub struct HostEnv {
     native_events_count: Rc<RefCell<BTreeMap<Address, u32>>>  // contract_address -> events_count
 }
 
-impl HostEnv {}
-
 impl HostEnv {
     /// Creates a new `HostEnv` instance with the specified backend.
     pub fn new(backend: Rc<RefCell<dyn HostContext>>) -> HostEnv {
@@ -491,21 +489,8 @@ impl HostEnv {
             .for_each(|contract_address| {
                 let events = self.last_events(contract_address);
                 let native_events = self.last_native_events(contract_address);
-                // let events_count = events_count_binding.get_mut(contract_address).unwrap();
-                // let old_events_last_id = *events_count;
-                // let new_events_count = backend
-                //     .get_events_count(contract_address)
-                //     .unwrap_or_default();
-                // let mut events = vec![];
-                // for event_id in old_events_last_id..new_events_count {
-                //     let event = backend.get_event(contract_address, event_id).unwrap();
-                //     events.push(event);
-                // }
-                //
                 events_map.insert(*contract_address, events);
                 native_events_map.insert(*contract_address, native_events);
-                //
-                // *events_count = new_events_count;
             });
 
         let last_call_gas_cost = backend.last_call_gas_cost();

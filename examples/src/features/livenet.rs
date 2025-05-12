@@ -66,6 +66,16 @@ impl LivenetContract {
     pub fn function_that_reverts(&mut self) {
         self.revert(SillyError)
     }
+
+    /// Function that eats up a lot of gas.
+    pub fn expensive_function(&mut self) {
+        let mut i = 0;
+        while i < 50 {
+            self.push_on_stack(i);
+            self.pop_from_stack();
+            i += 1;
+        }
+    }
 }
 
 /// Errors that can occur in the `LivenetContract` module.

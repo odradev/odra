@@ -4,6 +4,7 @@ use std::time::Duration;
 use odra::casper_types::{U256, U512};
 use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader};
 use odra::prelude::*;
+use odra_examples::features::livenet::Error::SillyError;
 use odra_examples::features::livenet::{
     LivenetContract, LivenetContractHostRef, LivenetContractInitArgs
 };
@@ -36,20 +37,15 @@ fn main() {
     // Contract can be loaded
     let (mut contract, erc20) = load(&env, *contract.address(), *erc20.address());
 
-    // Set gas will be used for all subsequent calls
-    env.set_gas(10_000_000_000u64);
-
     // Errors can be handled
-    // env.set_gas(1u64);
-    // TODO: Fix setting gas for contract calls
-    // let result = contract.try_push_on_stack(1).unwrap_err();
-    // assert_eq!(result, ExecutionError::OutOfGas.into());
-    contract.push_on_stack(1);
-    let _ = contract.try_function_that_reverts();
+    env.set_gas(10_000_000_000u64);
+    let r = contract.try_function_that_reverts();
+    assert!(r.is_err());
+    assert_eq!(r.unwrap_err(), SillyError.into());
 
     // There are three ways contract endpoints can be called in Livenet environment:
     // 1. If the endpoint is mutable and does not return anything, it can be called directly:
-    assert_eq!(contract.get_stack_len(), 1);
+    assert_eq!(contract.get_stack_len(), 0);
 
     // 2. If the endpoint is mutable and returns something, it can be called through the proxy:
     contract.push_on_stack(1);

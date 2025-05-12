@@ -80,6 +80,12 @@ impl HostContext for LivenetHost {
         self.casper_client.borrow().get_account(index)
     }
 
+    fn get_validator(&self, index: usize) -> PublicKey {
+        let rt = Runtime::new().unwrap();
+        let client = self.casper_client.borrow_mut();
+        rt.block_on(async { client.get_validator(index).await })
+    }
+
     fn balance_of(&self, address: &Address) -> U512 {
         let rt = Runtime::new().unwrap();
         let client = self.casper_client.borrow();
@@ -92,6 +98,29 @@ impl HostContext for LivenetHost {
             time_diff
         ));
         sleep(std::time::Duration::from_millis(time_diff));
+    }
+
+    fn advance_with_auctions(&self, diff: u64) {
+        println!("advance_with_auctions called - Waiting for {diff} ms");
+        sleep(std::time::Duration::from_millis(diff));
+    }
+
+    fn auction_delay(&self) -> u64 {
+        let rt = Runtime::new().unwrap();
+        let client = self.casper_client.borrow_mut();
+        rt.block_on(async { client.auction_delay().await })
+    }
+
+    fn unbonding_delay(&self) -> u64 {
+        let rt = Runtime::new().unwrap();
+        let client = self.casper_client.borrow_mut();
+        rt.block_on(async { client.unbonding_delay().await })
+    }
+
+    fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
+        let rt = Runtime::new().unwrap();
+        let client = self.casper_client.borrow_mut();
+        rt.block_on(async { client.delegated_amount(delegator, validator).await })
     }
 
     fn block_time(&self) -> u64 {
@@ -256,35 +285,6 @@ impl HostContext for LivenetHost {
                 )
             })
     }
-
-    fn get_validator(&self, index: usize) -> PublicKey {
-        let rt = Runtime::new().unwrap();
-        let client = self.casper_client.borrow_mut();
-        rt.block_on(async { client.get_validator(index).await })
-    }
-
-    fn advance_with_auctions(&self, diff: u64) {
-        println!("advance_with_auctions called - Waiting for {diff} ms");
-        sleep(std::time::Duration::from_millis(diff));
-    }
-
-    fn auction_delay(&self) -> u64 {
-        let rt = Runtime::new().unwrap();
-        let client = self.casper_client.borrow_mut();
-        rt.block_on(async { client.auction_delay().await })
-    }
-
-    fn unbonding_delay(&self) -> u64 {
-        let rt = Runtime::new().unwrap();
-        let client = self.casper_client.borrow_mut();
-        rt.block_on(async { client.unbonding_delay().await })
-    }
-
-    fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
-        let rt = Runtime::new().unwrap();
-        let client = self.casper_client.borrow_mut();
-        rt.block_on(async { client.delegated_amount(delegator, validator).await })
-    }
 }
 
 impl LivenetHost {
@@ -298,7 +298,10 @@ impl LivenetHost {
         };
 
         match found {
-            None => OdraError::ExecutionError(UnexpectedError),
+            None => {
+                println!("Error: {}", error_msg);
+                OdraError::ExecutionError(UnexpectedError)
+            },
             Some((_, error)) => OdraError::ExecutionError(User(error.code()))
         }
     }

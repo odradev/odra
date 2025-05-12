@@ -53,7 +53,7 @@ casper-execution-engine = "8"
 casper-engine-test-support = "8"
 casper-storage = "2"
 casper-event-standard = "0.6.0"
-casper-client = { version = "3", default-features = false }
+casper-client = { git = "https://github.com/odradev/casper-client-rs.git", branch = "feature/transaction-builder-public", default-features = false}
 blake2 = "0.10.6"
 log = "0.4.20"
 env_logger = "0.11.1"
