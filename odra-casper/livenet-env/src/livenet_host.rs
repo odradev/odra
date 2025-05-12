@@ -141,7 +141,8 @@ impl HostContext for LivenetHost {
         _contract_address: &Address,
         _index: u32
     ) -> Result<Bytes, EventError> {
-        todo!("get_native_event not implemented for LivenetHost")
+        // TODO: Implement
+        Err(EventError::CouldntExtractEventData)
     }
 
     fn get_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
@@ -152,8 +153,8 @@ impl HostContext for LivenetHost {
     }
 
     fn get_native_events_count(&self, _contract_address: &Address) -> Result<u32, EventError> {
-        // todo!("get_native_events_count not implemented for LivenetHost")
-        Ok(0)
+        // TODO: Implement
+        Err(EventError::CouldntExtractEventData)
     }
 
     fn call_contract(
