@@ -168,6 +168,10 @@ impl HostContext for OdraVmHost {
     fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
         self.vm.borrow().delegated_amount(delegator, validator)
     }
+
+    fn remove_validator(&self, index: usize) {
+        self.vm.borrow().remove_validator(index);
+    }
 }
 
 impl OdraVmHost {

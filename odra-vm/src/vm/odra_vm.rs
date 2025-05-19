@@ -411,6 +411,13 @@ impl OdraVm {
             .delegated_amount(validator, delegator)
     }
 
+    /// Disables the validator at the given index.
+    /// Undelegates all tokens from the validator.
+    pub fn remove_validator(&self, index: usize) {
+        let validator = self.get_validator(index);
+        self.state.write().unwrap().remove_validator(validator);
+    }
+
     /// Delegates the given amount of tokens to a given validator.
     ///
     /// # Arguments

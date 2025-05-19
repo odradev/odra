@@ -1,7 +1,8 @@
 use casper_engine_test_support::genesis_config_builder::GenesisConfigBuilder;
 use odra_core::casper_types::system::auction::{
-    BidAddr, BidKind, DelegationRate, DelegatorKind, ARG_ENTRY_POINT, ARG_REWARDS_MAP,
-    BLOCK_REWARD, METHOD_DISTRIBUTE
+    BidAddr, BidKind, DelegationRate, DelegatorKind, ARG_ENTRY_POINT, ARG_EVICTED_VALIDATORS,
+    ARG_PUBLIC_KEY, ARG_REWARDS_MAP, BLOCK_REWARD, METHOD_DISTRIBUTE, METHOD_RUN_AUCTION,
+    METHOD_WITHDRAW_BID
 };
 use odra_core::casper_types::{
     AddressableEntity, AddressableEntityHash, EntityAddr, GenesisConfig, GenesisValidator,
@@ -55,6 +56,7 @@ use odra_core::{
 pub struct CasperVm {
     accounts: Vec<Address>,
     validators: Vec<GenesisAccount>,
+    removed_validators: Vec<PublicKey>,
     key_pairs: BTreeMap<Address, (SecretKey, PublicKey)>,
     messages: BTreeMap<EntityAddr, Vec<MessagePayload>>,
     active_account: Address,
@@ -125,6 +127,9 @@ impl CasperVm {
             let mut rewards = BTreeMap::new();
             // distribute rewards to all validators
             for validator in &self.validators {
+                if self.removed_validators.contains(&validator.public_key()) {
+                    continue;
+                }
                 rewards.insert(validator.public_key(), vec![U512::from(BLOCK_REWARD)]);
             }
             let distribute_request = ExecuteRequestBuilder::contract_call_by_hash(
@@ -180,6 +185,42 @@ impl CasperVm {
             None => U512::zero(),
             Some(bid_kind) => bid_kind.staked_amount().unwrap_or_default()
         }
+    }
+
+    fn total_delegated_amount(&mut self, validator: PublicKey) -> U512 {
+        let bids = self
+            .context
+            .get_bids()
+            .into_iter()
+            .filter(|bid| bid.validator_public_key() == validator)
+            .collect::<Vec<_>>();
+
+        bids.iter().fold(U512::zero(), |acc, bid| {
+            acc + bid.staked_amount().unwrap_or_default()
+        })
+    }
+
+    /// Disables the validator.
+    /// Undelegates the validator's stakes.
+    pub fn remove_validator(&mut self, validator: PublicKey) {
+        let amount = self.total_delegated_amount(validator.clone());
+        let withdraw_request = ExecuteRequestBuilder::contract_call_by_hash(
+            validator.to_account_hash(),
+            self.context.get_auction_contract_hash(),
+            METHOD_WITHDRAW_BID,
+            runtime_args! {
+                ARG_PUBLIC_KEY => validator.clone(),
+                ARG_AMOUNT => amount,
+            }
+        )
+        .build();
+
+        self.context
+            .exec(withdraw_request)
+            .commit()
+            .expect_success();
+
+        self.removed_validators.push(validator.clone());
     }
 
     fn get_main_purse(&self, address: Address) -> URef {
@@ -699,7 +740,8 @@ impl CasperVm {
             gas_report: GasReport::default(),
             key_pairs,
             messages: Default::default(),
-            validators
+            validators,
+            removed_validators: Default::default()
         }
     }
 

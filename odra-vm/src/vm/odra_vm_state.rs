@@ -41,6 +41,7 @@ pub struct OdraVmState {
     pub validators: BTreeMap<PublicKey, U512>,
     pub validator_account: BTreeMap<PublicKey, Address>,
     pub delegations: BTreeMap<PublicKey, BTreeMap<Address, U512>>,
+    pub removed_validators: Vec<PublicKey>,
     pub awaiting_transfers: Vec<AwaitingTransfer>,
     key_pairs: BTreeMap<Address, (SecretKey, PublicKey)>
 }
@@ -172,8 +173,10 @@ impl OdraVmState {
     }
 
     pub fn delegated_amount(&self, validator: PublicKey, delegator: Address) -> U512 {
+        if self.removed_validators.contains(&validator) {
+            return U512::zero();
+        }
         let validators_delegations = self.delegations.get(&validator).unwrap();
-        dbg!(validators_delegations);
         let delegators_amount = validators_delegations
             .get(&delegator)
             .cloned()
@@ -181,7 +184,30 @@ impl OdraVmState {
         delegators_amount
     }
 
+    pub fn remove_validator(&mut self, validator: PublicKey) {
+        if !self.validators.contains_key(&validator) {
+            return;
+        }
+
+        // Collect the delegations to avoid borrowing issues
+        let delegations_to_remove: Vec<(Address, U512)> = if let Some(delegations) = self.delegations.get(&validator) {
+            delegations.iter().map(|(delegator, amount)| (*delegator, *amount)).collect()
+        } else {
+            Vec::new()
+        };
+
+        // Process the collected delegations
+        for (delegator, amount) in delegations_to_remove {
+            self.undelegate(validator.clone(), delegator, amount);
+        }
+
+        self.removed_validators.push(validator.clone());
+    }
+
     pub fn delegate(&mut self, validator: PublicKey, delegator: Address, amount: U512) {
+        if self.removed_validators.contains(&validator) {
+            panic!("Validator is disabled");
+        }
         let validators_delegations = self.delegations.entry(validator.clone()).or_default();
         let delegation = validators_delegations
             .get(&delegator)
@@ -200,6 +226,9 @@ impl OdraVmState {
     }
 
     pub fn undelegate(&mut self, validator: PublicKey, delegator: Address, amount: U512) {
+        if self.removed_validators.contains(&validator) {
+            panic!("Validator is disabled");
+        }
         let validators_delegations = self.delegations.entry(validator.clone()).or_default();
         let delegation = validators_delegations
             .get(&delegator)
@@ -433,6 +462,7 @@ impl Default for OdraVmState {
             validators,
             validator_account: validator_accounts,
             delegations: Default::default(),
+            removed_validators: Default::default(),
             awaiting_transfers: Default::default(),
             key_pairs
         };

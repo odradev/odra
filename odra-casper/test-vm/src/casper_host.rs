@@ -51,6 +51,12 @@ impl HostContext for CasperHost {
         self.vm.borrow().get_validator(index)
     }
 
+    fn remove_validator(&self, index: usize) {
+        let validator = self.get_validator(index);
+        let mut backend = self.vm.borrow_mut();
+        backend.remove_validator(validator);
+    }
+
     fn balance_of(&self, address: &Address) -> U512 {
         self.vm.borrow().balance_of(address)
     }
@@ -61,6 +67,21 @@ impl HostContext for CasperHost {
 
     fn advance_with_auctions(&self, time_diff: u64) {
         self.vm.borrow_mut().advance_with_auctions(time_diff)
+    }
+
+    fn auction_delay(&self) -> u64 {
+        let mut backend = self.vm.borrow_mut();
+        backend.auction_delay()
+    }
+
+    fn unbonding_delay(&self) -> u64 {
+        let mut backend = self.vm.borrow_mut();
+        backend.unbonding_delay()
+    }
+
+    fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
+        let mut backend = self.vm.borrow_mut();
+        backend.delegated_amount(delegator, validator)
     }
 
     fn block_time(&self) -> u64 {
@@ -172,21 +193,6 @@ impl HostContext for CasperHost {
 
     fn transfer(&self, to: Address, amount: U512) -> OdraResult<()> {
         self.vm.borrow_mut().transfer(to, amount)
-    }
-
-    fn auction_delay(&self) -> u64 {
-        let mut backend = self.vm.borrow_mut();
-        backend.auction_delay()
-    }
-
-    fn unbonding_delay(&self) -> u64 {
-        let mut backend = self.vm.borrow_mut();
-        backend.unbonding_delay()
-    }
-
-    fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
-        let mut backend = self.vm.borrow_mut();
-        backend.delegated_amount(delegator, validator)
     }
 }
 

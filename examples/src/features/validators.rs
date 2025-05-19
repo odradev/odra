@@ -193,4 +193,42 @@ mod tests {
         // And to the amount reported by the contract
         assert_eq!(staking.currently_delegated_amount(), staking_amount);
     }
+
+    #[test]
+    fn test_remove_validator() {
+        use crate::features::validators::{ValidatorsContract, ValidatorsContractInitArgs};
+        use odra::casper_types::U512;
+        use odra::host::Deployer;
+        use odra::host::HostRef;
+
+        let test_env = odra_test::env();
+        let unbonding_delay = test_env.unbonding_delay();
+
+        test_env.set_caller(test_env.get_account(0));
+        let staking = ValidatorsContract::deploy(
+            &test_env,
+            ValidatorsContractInitArgs {
+                validator: test_env.get_validator(0)
+            }
+        );
+
+        // Stake some amount
+        let staking_amount = U512::from(1_000_000_000_000u64);
+        staking.with_tokens(staking_amount).stake();
+        assert_eq!(staking.currently_delegated_amount(), staking_amount);
+
+        // Remove the validator
+        test_env.remove_validator(0);
+
+        assert_eq!(staking.currently_delegated_amount(), U512::zero());
+        assert_eq!(test_env.balance_of(staking.address()), U512::zero());
+
+        // Advance time, run auctions and give off rewards
+        test_env.advance_with_auctions(unbonding_delay * 2);
+
+        // No rewards should be given, as the validator was removed,
+        // but the cspr should be returned
+        assert_eq!(staking.currently_delegated_amount(), U512::zero());
+        assert_eq!(test_env.balance_of(staking.address()), staking_amount);
+    }
 }

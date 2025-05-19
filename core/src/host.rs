@@ -245,6 +245,9 @@ pub trait HostContext {
     /// Returns the validator public key.
     fn get_validator(&self, index: usize) -> PublicKey;
 
+    /// The validator at the given index will withdraw all funds and be removed from the validator set.
+    fn remove_validator(&self, index: usize);
+
     /// Returns the CSPR balance of the specified address.
     fn balance_of(&self, address: &Address) -> U512;
 
@@ -396,6 +399,12 @@ impl HostEnv {
     pub fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
         let backend = self.backend.borrow();
         backend.delegated_amount(delegator, validator)
+    }
+
+    /// Evicts the validator at the specified index from the validator set.
+    pub fn remove_validator(&self, index: usize) {
+        let backend = self.backend.borrow();
+        backend.remove_validator(index);
     }
 
     /// Returns the current block time in milliseconds.

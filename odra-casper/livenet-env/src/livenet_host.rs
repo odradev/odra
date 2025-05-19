@@ -86,6 +86,10 @@ impl HostContext for LivenetHost {
         rt.block_on(async { client.get_validator(index).await })
     }
 
+    fn remove_validator(&self, _index: usize) {
+        panic!("remove_validator is not supported on livenet");
+    }
+
     fn balance_of(&self, address: &Address) -> U512 {
         let rt = Runtime::new().unwrap();
         let client = self.casper_client.borrow();
