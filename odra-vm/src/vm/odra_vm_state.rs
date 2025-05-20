@@ -190,11 +190,15 @@ impl OdraVmState {
         }
 
         // Collect the delegations to avoid borrowing issues
-        let delegations_to_remove: Vec<(Address, U512)> = if let Some(delegations) = self.delegations.get(&validator) {
-            delegations.iter().map(|(delegator, amount)| (*delegator, *amount)).collect()
-        } else {
-            Vec::new()
-        };
+        let delegations_to_remove: Vec<(Address, U512)> =
+            if let Some(delegations) = self.delegations.get(&validator) {
+                delegations
+                    .iter()
+                    .map(|(delegator, amount)| (*delegator, *amount))
+                    .collect()
+            } else {
+                Vec::new()
+            };
 
         // Process the collected delegations
         for (delegator, amount) in delegations_to_remove {

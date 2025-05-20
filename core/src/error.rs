@@ -141,6 +141,8 @@ pub enum ExecutionError {
     MainPurseError = 125,
     /// Conversion error
     ConversionError = 126,
+    /// Couldn't deploy the contract
+    ContractDeploymentError = 127,
     /// Maximum code for user errors
     MaxUserError = 64535,
     /// User error too high. The code should be in range 0..32767.

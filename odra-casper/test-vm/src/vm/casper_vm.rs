@@ -72,8 +72,7 @@ pub struct CasperVm {
 impl CasperVm {
     /// Creates a new instance with predefined accounts.
     pub fn new() -> Rc<RefCell<Self>> {
-        let vm = Self::new_instance();
-        Rc::new(RefCell::new(vm))
+        Rc::new(RefCell::new(Self::new_instance()))
     }
 
     /// Read a PackageHash of a given name, from the active account.
@@ -109,17 +108,17 @@ impl CasperVm {
             .public_key()
     }
 
-    /// Advances the block time by the specified time difference.
-    pub fn advance_block_time(&mut self, time_diff: u64) {
-        self.block_time += time_diff
+    /// Advances the block time by the specified time difference in milliseconds.
+    pub fn advance_block_time(&mut self, time_diff_millis: u64) {
+        self.block_time += time_diff_millis
     }
 
-    /// Advances the block time by the specified time difference and processes auctions
-    /// Giving the rewards to the validators
-    pub fn advance_with_auctions(&mut self, time_diff: u64) {
+    /// Advances the block time by the specified time difference in milliseconds
+    /// and processes auctions giving the rewards to the validators.
+    pub fn advance_with_auctions(&mut self, time_diff_millis: u64) {
         let time_between_auctions = self.auction_delay();
         // Calculate how many auctions we can run based on time_diff
-        let num_auctions = time_diff / time_between_auctions;
+        let num_auctions = time_diff_millis / time_between_auctions;
 
         // Run auctions and distribute rewards one at a time
         for _ in 0..num_auctions {
@@ -152,7 +151,7 @@ impl CasperVm {
         }
 
         // Run remaining auctions with the leftover time
-        let remaining_time = time_diff % time_between_auctions;
+        let remaining_time = time_diff_millis % time_between_auctions;
         self.advance_block_time(remaining_time);
     }
 
@@ -255,28 +254,12 @@ impl CasperVm {
     pub fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
         let package_hash = contract_address.as_package_hash().unwrap();
 
-        let dictionary_seed_uref = self
-            .package_named_key(package_hash, EVENTS)
-            .ok_or(EventError::ContractDoesntSupportEvents)?;
+        let dictionary_seed_uref = self.package_named_key(package_hash, EVENTS);
 
-        Ok(self.get_dict_value(*dictionary_seed_uref.as_uref().unwrap(), &index.to_string()))
-        // TODO: Handle errors properly...
-        // match self.context.query_dictionary_item(
-        //     None,
-        //     *dictionary_seed_uref.as_uref().unwrap(),
-        //     &index.to_string()
-        // ) {
-        //     Ok(val) => {
-        //         let bytes = val
-        //             .as_cl_value()
-        //             .unwrap()
-        //             .clone()
-        //             .into_t::<Bytes>()
-        //             .unwrap();
-        //         Ok(bytes)
-        //     }
-        //     Err(_) => Err(EventError::IndexOutOfBounds)
-        // }
+        match dictionary_seed_uref {
+            None => Err(EventError::CouldntExtractEventData),
+            Some(uref) => Ok(self.get_dict_value(*uref.as_uref().unwrap(), &index.to_string()))
+        }
     }
 
     /// Gets the native event at the specified index for the given contract address.

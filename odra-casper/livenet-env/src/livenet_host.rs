@@ -230,7 +230,8 @@ impl HostContext for LivenetHost {
             }) {
                 Ok(addr) => addr,
                 Err(e) => {
-                    todo!("Handle error: {:?}", e);
+                    log::error!("Error deploying contract: {}", e);
+                    return Err(ExecutionError::ContractDeploymentError.into());
                 }
             }
         };
