@@ -143,6 +143,8 @@ pub enum ExecutionError {
     ConversionError = 126,
     /// Couldn't deploy the contract
     ContractDeploymentError = 127,
+    /// Couldn't extract caller info
+    CannotExtractCallerInfo = 128,
     /// Maximum code for user errors
     MaxUserError = 64535,
     /// User error too high. The code should be in range 0..32767.

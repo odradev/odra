@@ -42,11 +42,11 @@ impl ContractContext for WasmContractEnv {
     }
 
     fn caller(&self) -> Address {
-        host_functions::caller()
+        host_functions::caller().unwrap_or_else(|e| self.revert(e))
     }
 
     fn self_address(&self) -> Address {
-        host_functions::self_address()
+        host_functions::self_address().unwrap_or_else(|e| self.revert(e))
     }
 
     fn call_contract(&self, address: Address, call_def: odra_core::CallDef) -> Bytes {

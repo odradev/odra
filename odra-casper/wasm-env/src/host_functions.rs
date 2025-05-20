@@ -368,13 +368,11 @@ pub fn emit_native_event(event: &Bytes) {
 }
 
 /// Gets the immediate session caller of the current execution.
-///
-/// This function ensures that only session code can execute this function, and disallows stored
-/// session/stored contracts.
 #[inline(always)]
-pub fn caller() -> Address {
+pub fn caller() -> OdraResult<Address> {
     let second_elem = take_nth_caller_from_stack(1);
-    caller_info_to_caller(second_elem).into()
+    let caller = caller_info_to_caller(second_elem)?;
+    Ok(Address::from(caller))
 }
 
 /// Calls a contract method by Address
@@ -404,9 +402,10 @@ pub fn call_contract(address: Address, call_def: CallDef) -> Bytes {
 
 /// Gets the address of the currently run contract
 #[inline(always)]
-pub fn self_address() -> Address {
+pub fn self_address() -> OdraResult<Address> {
     let first_elem = take_nth_caller_from_stack(0);
-    caller_info_to_caller(first_elem).into()
+    let caller = caller_info_to_caller(first_elem)?;
+    Ok(Address::from(caller))
 }
 
 /// Gets the balance of the current contract.
@@ -711,65 +710,62 @@ fn get_named_arg_size(name: &str) -> Result<usize, ApiError> {
     }
 }
 
-fn caller_info_to_caller(info: CallerInfo) -> Caller {
+fn caller_info_to_caller(info: CallerInfo) -> OdraResult<Caller> {
     let kind = info.kind();
     match kind {
         0 => {
             let account_hash = info
                 .get_field_by_index(0)
-                .map(|val| {
-                    val.to_t::<Option<AccountHash>>()
-                        .expect("must convert out of cl_value")
-                })
-                .expect("must have index 0 in fields")
-                .expect("account hash must be some");
-            Caller::Initiator { account_hash }
+                .map(|val| val.to_t::<Option<AccountHash>>().unwrap_or_revert())
+                .ok_or(ExecutionError::CannotExtractCallerInfo)?
+                .ok_or(ExecutionError::CannotExtractCallerInfo)?;
+            Ok(Caller::Initiator { account_hash })
         }
         3 => {
             let package_hash = info
                 .get_field_by_index(1)
                 .map(|val| {
                     val.to_t::<Option<PackageHash>>()
-                        .expect("must convert out of cl_value")
+                        .map_err(|_| ExecutionError::CannotExtractCallerInfo)
                 })
-                .expect("must have index 1 in fields")
-                .expect("package hash must be some");
+                .ok_or(ExecutionError::CannotExtractCallerInfo)?
+                .map_err(|_| ExecutionError::CannotExtractCallerInfo)?
+                .ok_or(ExecutionError::CannotExtractCallerInfo)?;
             let entity_addr = info
                 .get_field_by_index(3)
                 .map(|val| {
                     val.to_t::<Option<EntityAddr>>()
-                        .expect("must convert out of cl_value")
+                        .map_err(|_| ExecutionError::CannotExtractCallerInfo)
                 })
-                .expect("must have index 3 in fields")
-                .expect("entity addr must be some");
-            Caller::Entity {
+                .ok_or(ExecutionError::CannotExtractCallerInfo)?
+                .map_err(|_| ExecutionError::CannotExtractCallerInfo)?
+                .ok_or(ExecutionError::CannotExtractCallerInfo)?;
+            Ok(Caller::Entity {
                 package_hash,
                 entity_addr
-            }
+            })
         }
         4 => {
             let contract_package_hash = info
                 .get_field_by_index(2)
                 .map(|val| {
                     val.to_t::<Option<ContractPackageHash>>()
-                        .expect("must convert out of cl_value")
+                        .map_err(|_| ExecutionError::CannotExtractCallerInfo)
                 })
-                .expect("must have index 2 in fields")
-                .expect("contract package hash must be some");
+                .ok_or(ExecutionError::CannotExtractCallerInfo)?
+                .map_err(|_| ExecutionError::CannotExtractCallerInfo)?
+                .ok_or(ExecutionError::CannotExtractCallerInfo)?;
             let contract_hash = info
                 .get_field_by_index(4)
-                .map(|val| {
-                    val.to_t::<Option<ContractHash>>()
-                        .expect("must convert out of cl_value")
-                })
+                .map(|val| val.to_t::<Option<ContractHash>>().unwrap_or_revert())
                 .expect("must have index 4 in fields")
                 .expect("contract hash must be some");
-            Caller::SmartContract {
+            Ok(Caller::SmartContract {
                 contract_package_hash,
                 contract_hash
-            }
+            })
         }
-        _ => revert(777)
+        _ => revert(ExecutionError::CannotExtractCallerInfo.code())
     }
 }
 

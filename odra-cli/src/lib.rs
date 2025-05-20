@@ -219,9 +219,7 @@ impl OdraCli {
             .expect("Subcommand not found");
 
         match cmd.run(&self.host_env, args, &self.custom_types) {
-            Ok(_) => {
-                // prettycli::info("Command executed successfully")
-            }
+            Ok(_) => prettycli::info("Command executed successfully"),
             Err(err) => prettycli::error(&format!("{:?}", err))
         }
     }

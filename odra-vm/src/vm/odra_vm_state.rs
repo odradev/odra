@@ -149,7 +149,6 @@ impl OdraVmState {
         Ok(event.clone())
     }
 
-    // TODO: Reduce duplication
     pub fn get_events_count(&self, address: &Address) -> Result<u32, EventError> {
         if !address.is_contract() {
             return Err(EventError::ContractDoesntSupportEvents);

@@ -17,12 +17,11 @@ use std::path::PathBuf;
 
 use casper_engine_test_support::{
     DeployItemBuilder, EntityWithNamedKeys, ExecuteRequestBuilder, LmdbWasmTestBuilder,
-    WasmTestBuilder, ARG_AMOUNT, DEFAULT_ACCOUNTS, DEFAULT_ACCOUNT_INITIAL_BALANCE,
-    DEFAULT_AUCTION_DELAY, DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_EXEC_CONFIG,
-    DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_GENESIS_TIMESTAMP_MILLIS,
-    DEFAULT_LOCKED_FUNDS_PERIOD_MILLIS, DEFAULT_PAYMENT, DEFAULT_ROUND_SEIGNIORAGE_RATE,
-    DEFAULT_SYSTEM_CONFIG, DEFAULT_UNBONDING_DELAY, DEFAULT_VALIDATOR_SLOTS, DEFAULT_WASM_CONFIG,
-    SYSTEM_ADDR
+    WasmTestBuilder, ARG_AMOUNT, DEFAULT_ACCOUNTS, DEFAULT_AUCTION_DELAY,
+    DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_EXEC_CONFIG, DEFAULT_GENESIS_CONFIG_HASH,
+    DEFAULT_GENESIS_TIMESTAMP_MILLIS, DEFAULT_LOCKED_FUNDS_PERIOD_MILLIS, DEFAULT_PAYMENT,
+    DEFAULT_ROUND_SEIGNIORAGE_RATE, DEFAULT_SYSTEM_CONFIG, DEFAULT_UNBONDING_DELAY,
+    DEFAULT_VALIDATOR_SLOTS, DEFAULT_WASM_CONFIG, SYSTEM_ADDR
 };
 use casper_event_standard::try_full_name_from_bytes;
 use casper_execution_engine::{engine_state, execution};
@@ -437,13 +436,13 @@ impl CasperVm {
             entity
         } else {
             panic!(
-                "Stored value is not an adressable entity: {:?}",
+                "Stored value is not an addressable entity: {:?}",
                 query_result
             );
         }
     }
 
-    /// Creates a new contract with the specified name, initialization arguments, and entry points caller.
+    /// Creates a new contract with the specified name, initialisation arguments, and entry points caller.
     pub fn new_contract(
         &mut self,
         name: &str,
@@ -487,7 +486,7 @@ impl CasperVm {
         }
     }
 
-    /// Transfers the specified amount of tokens to the given address.
+    /// Transfers the specified number of tokens to the given address.
     ///
     /// Results an OdraError if the transfer fails.
     pub fn transfer(&mut self, to: Address, amount: U512) -> OdraResult<()> {
@@ -535,7 +534,7 @@ impl CasperVm {
         self.context.last_exec_gas_consumed().value()
     }
 
-    /// Returns the amount of gas used for last call.
+    /// Returns the amount of gas used for the last call.
     pub fn last_call_contract_gas_used(&self) -> U512 {
         *DEFAULT_PAYMENT
     }
@@ -642,7 +641,7 @@ impl CasperVm {
         let mut accounts = Vec::new();
         let mut validators = Vec::new();
         let total_accounts = key_pairs.len();
-        let validators_count = 5; // Fixed number of validators
+        let validators_count = 5; // Fixed the number of validators
         let regular_accounts_count = total_accounts - validators_count;
 
         // Create regular accounts
@@ -650,7 +649,7 @@ impl CasperVm {
         for (_, (_, public_key)) in iter.take(regular_accounts_count) {
             accounts.push(GenesisAccount::account(
                 public_key.clone(),
-                Motes::new(DEFAULT_ACCOUNT_INITIAL_BALANCE),
+                Motes::new(DEFAULT_BALANCE),
                 None
             ));
         }
@@ -659,11 +658,8 @@ impl CasperVm {
         for (_, (_, public_key)) in key_pairs.iter().skip(regular_accounts_count) {
             let validator_account = GenesisAccount::account(
                 public_key.clone(),
-                Motes::new(DEFAULT_ACCOUNT_INITIAL_BALANCE),
-                Some(GenesisValidator::new(
-                    Motes::new(DEFAULT_ACCOUNT_INITIAL_BALANCE),
-                    0
-                ))
+                Motes::new(DEFAULT_BALANCE),
+                Some(GenesisValidator::new(Motes::new(DEFAULT_BALANCE), 0))
             );
             accounts.push(validator_account.clone());
             validators.push(validator_account);
@@ -762,7 +758,7 @@ impl CasperVm {
     }
 
     /// Gets current contract from contract package and
-    /// returns its named keys.
+    /// returns it's named keys.
     fn package_named_keys(&self, package_hash: PackageHash) -> NamedKeys {
         // TODO: fix unwraps
         let a = self

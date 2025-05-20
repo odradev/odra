@@ -69,8 +69,7 @@ impl OdraCommand for CallCmd {
         let contract_name = &self.contract_name;
 
         let result = entry_point::call(env, contract_name, entry_point, args, types)?;
-        // prettycli::info(&result);
-        println!("{}", result);
+        prettycli::info(&result);
         Ok(())
     }
 }

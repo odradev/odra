@@ -4,8 +4,10 @@ use itertools::Itertools;
 
 use crate::casper_client::configuration::CasperClientConfiguration;
 
-use crate::error::Error;
-use crate::error::Error::{Execution, LivenetToDo};
+use crate::error::LivenetError;
+use crate::error::LivenetError::{
+    BlockTimeError, ClientError, DictQueryError, ExecutionError, SerializationError
+};
 use crate::log;
 use casper_client::cli::{
     get_account, get_dictionary_item, get_node_status, get_state_root_hash,
@@ -52,10 +54,10 @@ pub const ENV_ACCOUNT_PREFIX: &str = "ODRA_CASPER_LIVENET_KEY_";
 pub const ENV_CSPR_CLOUD_AUTH_TOKEN: &str = "CSPR_CLOUD_AUTH_TOKEN";
 /// Environment variable holding a path to an additional .env file.
 pub const ENV_LIVENET_ENV_FILE: &str = "ODRA_CASPER_LIVENET_ENV";
-/// Time between retries when waiting for a deploy to be processed.
+/// Time between retries when waiting for a deployment to be processed.
 pub const DEPLOY_WAIT_TIME: u64 = 10;
 
-pub type Result<T> = core::result::Result<T, Error>;
+pub type Result<T> = core::result::Result<T, LivenetError>;
 
 /// Client for interacting with Casper node.
 pub struct CasperClient {
@@ -189,7 +191,7 @@ impl CasperClient {
 
         let era_duration = Self::era_duration(&chainspec);
 
-        era_duration as u64 * auction_delay.as_integer().unwrap() as u64
+        era_duration * auction_delay.as_integer().unwrap() as u64
     }
 
     pub async fn unbonding_delay(&self) -> u64 {
@@ -243,11 +245,11 @@ impl CasperClient {
         .result;
         let toml_bytes: &[u8] = chainspec.chainspec_bytes.chainspec_bytes();
         let toml = String::from_utf8_lossy(toml_bytes);
-        toml.parse::<toml::Value>()
+        toml.parse::<Value>()
             .unwrap_or_else(|_| panic!("Couldn't parse chainspec bytes: {:?}", toml))
     }
 
-    /// Sets amount of gas for the next deploy.
+    /// Sets the amount of gas for the next deployment.
     pub fn set_gas(&mut self, gas: u64) {
         self.gas = gas.into();
     }
@@ -273,7 +275,7 @@ impl CasperClient {
         let public_key = &PublicKey::from(secret_key);
         let signature = sign(message, secret_key, public_key)
             .to_bytes()
-            .map_err(|_| LivenetToDo)?;
+            .map_err(|_| SerializationError)?;
 
         Ok(Bytes::from(signature))
     }
@@ -326,7 +328,7 @@ impl CasperClient {
         .balance_value
     }
 
-    /// Gets an uref of a main purse of an account or a contract.
+    /// Gets an uref for a main purse of an account or a contract.
     pub async fn get_main_purse(&self, address: &Address) -> URef {
         let purse_uref = self.query_global_state(address.as_key(), None).await;
         match purse_uref {
@@ -369,10 +371,10 @@ impl CasperClient {
             self.configuration.verbosity()
         )
         .await
-        .map_err(|_| LivenetToDo)?
+        .map_err(|_| BlockTimeError)?
         .result
         .last_added_block_info
-        .ok_or(LivenetToDo)?
+        .ok_or(BlockTimeError)?
         .timestamp
         .millis();
         Ok(block_time)
@@ -451,13 +453,13 @@ impl CasperClient {
         )
         .await;
 
-        let result = r.map_err(|_| LivenetToDo)?;
+        let result = r.map_err(|e| ClientError(e.to_string()))?;
         let stored_value = result.result.stored_value;
-        let cl_value = stored_value.into_cl_value().ok_or(LivenetToDo)?;
+        let cl_value = stored_value.into_cl_value().ok_or(DictQueryError)?;
 
         // Note: this is for compatibility with CEP18 named keys.
         if cl_value.cl_type() == &Vec::<u8>::cl_type() {
-            let bytes = cl_value.into_t().map_err(|_| LivenetToDo)?;
+            let bytes = cl_value.into_t().map_err(|_| DictQueryError)?;
             Ok(bytes)
         } else {
             let bytes = cl_value.inner_bytes();
@@ -668,11 +670,7 @@ impl CasperClient {
         .await;
         let deploy_hash = match response {
             Ok(r) => r.result.transaction_hash,
-            Err(e) => {
-                return Err(Error::Execution {
-                    error_message: e.to_string()
-                })
-            }
+            Err(e) => return Err(ExecutionError(e.to_string()))
         };
         let result = self.wait_for_transaction(deploy_hash).await?;
         self.process_transaction(result, deploy_hash).map(|_| {
@@ -730,25 +728,25 @@ impl CasperClient {
 
     async fn wait_for_transaction(
         &self,
-        transation_hash: TransactionHash
+        transaction_hash: TransactionHash
     ) -> Result<ExecutionResult> {
         let final_result;
 
         loop {
             log::wait(format!(
                 "Waiting {:?} for {:?}.",
-                &DEPLOY_WAIT_TIME, &transation_hash
+                &DEPLOY_WAIT_TIME, &transaction_hash
             ));
 
             tokio::time::sleep(std::time::Duration::from_secs(DEPLOY_WAIT_TIME)).await;
 
-            let result = self.get_transaction(transation_hash).await.execution_info;
+            let result = self.get_transaction(transaction_hash).await.execution_info;
 
             if result.is_some() {
                 final_result = result
-                    .ok_or(LivenetToDo)?
+                    .ok_or(ExecutionError("Execution result was empty".to_string()))?
                     .execution_result
-                    .ok_or(LivenetToDo)?;
+                    .ok_or(ExecutionError("Execution result was empty".to_string()))?;
                 break;
             }
         }
@@ -782,7 +780,7 @@ impl CasperClient {
                         "Deploy V1 {:?} failed with error: {:?}.",
                         deploy_hash_str, error_message
                     ));
-                    Err(Execution { error_message })
+                    Err(ExecutionError(error_message.to_string()))
                 }
                 Success { .. } => {
                     log::info(format!(
@@ -805,7 +803,7 @@ impl CasperClient {
                         "Deploy V1 {:?} failed with error: {:?}.",
                         deploy_hash_str, error_message
                     ));
-                    Err(Execution { error_message })
+                    Err(ExecutionError(error_message.to_string()))
                 }
             }
         }
