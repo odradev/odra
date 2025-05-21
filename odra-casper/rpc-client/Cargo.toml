@@ -21,3 +21,4 @@ thiserror = "1.0.40"
 base16 = { workspace = true }
 tokio = { workspace = true, features = ["rt"] }
 toml = "0.8.20"
+rand = "0.8.5"

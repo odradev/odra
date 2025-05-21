@@ -9,6 +9,7 @@ use crate::error::LivenetError::{
     BlockTimeError, ClientError, DictQueryError, ExecutionError, SerializationError
 };
 use crate::log;
+use crate::utils::extract_stored_value;
 use casper_client::cli::{
     get_account, get_dictionary_item, get_node_status, get_state_root_hash,
     DictionaryItemStrParams, TransactionV1Builder
@@ -31,11 +32,12 @@ use casper_types::{
 use casper_types::{DeployHash, StoredValue, Timestamp};
 use odra_core::casper_event_standard::EVENTS_LENGTH;
 use odra_core::consts::{
-    AMOUNT_ARG, ARGS_ARG, ATTACHED_VALUE_ARG, ENTRY_POINT_ARG, EVENTS, PACKAGE_HASH_ARG,
-    RESULT_KEY, STATE_KEY
+    AMOUNT_ARG, ARGS_ARG, ATTACHED_VALUE_ARG, CONTRACT_MAIN_PURSE, ENTRY_POINT_ARG, EVENTS,
+    PACKAGE_HASH_ARG, RESULT_KEY, STATE_KEY
 };
 use odra_core::prelude::*;
 use odra_core::CallDef;
+use rand::random;
 use toml::Value;
 
 pub mod configuration;
@@ -85,16 +87,20 @@ impl CasperClient {
     pub async fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes> {
         let entity_hash = self.query_global_state_for_entity_addr(address).await;
         let stored_value = self
-            .query_global_state(Key::Hash(entity_hash.value()), Some(name.to_string()))
+            .query_global_state_maybe(Key::Hash(entity_hash.value()), Some(name.to_string()))
             .await;
-        match stored_value.clone() {
-            CLValue(value) => Some(Bytes::from(value.inner_bytes().as_slice())),
-            _ => {
-                panic!(
-                    "Couldn't get {} from {:?}",
-                    name,
-                    address.to_formatted_string()
-                )
+        match stored_value {
+            None => None,
+            Some(value) => match value {
+                CLValue(value) => Some(Bytes::from(value.inner_bytes().as_slice())),
+                _ => {
+                    panic!(
+                        "Couldn't get {} from {:?}, instead of CLValue got {:?}",
+                        name,
+                        address.to_formatted_string(),
+                        value
+                    )
+                }
             }
         }
     }
@@ -102,14 +108,18 @@ impl CasperClient {
     /// Gets a value from a result key
     pub async fn get_proxy_result(&self) -> Bytes {
         let stored_value = self
-            .query_global_state(self.caller().as_key(), Some(RESULT_KEY.to_string()))
+            .query_global_state_maybe(self.caller().as_key(), Some(RESULT_KEY.to_string()))
             .await;
+
         match stored_value {
-            CLValue(value) => value
-                .clone()
-                .into_t()
-                .unwrap_or_else(|_| panic!("Couldn't get bytes from CLValue: {:?}", value)),
-            _ => panic!("Value stored in result key is not a CLValue")
+            None => {
+                panic!(
+                    "Couldn't query {} from {:?}, instead of CLValue got None",
+                    RESULT_KEY,
+                    self.caller().to_formatted_string()
+                )
+            }
+            Some(sv) => extract_stored_value(sv)
         }
     }
 
@@ -330,20 +340,39 @@ impl CasperClient {
 
     /// Gets an uref for a main purse of an account or a contract.
     pub async fn get_main_purse(&self, address: &Address) -> URef {
-        let purse_uref = self.query_global_state(address.as_key(), None).await;
-        match purse_uref {
+        let maybe_purse_uref = self.query_global_state_maybe(address.as_key(), None).await;
+        let purse_uref_value = match maybe_purse_uref {
+            None => {
+                panic!(
+                    "Couldn't get purse uref for address: {:?}",
+                    address.to_formatted_string()
+                )
+            }
+            Some(p) => p
+        };
+
+        match purse_uref_value {
             CLValue(value) => value.into_t().unwrap(),
             StoredValue::AddressableEntity(entity) => entity.main_purse(),
             StoredValue::Account(account) => account.main_purse(),
             StoredValue::ContractPackage(contract_package) => {
                 let last_version = contract_package.current_contract_hash().unwrap();
-                let contract = self
-                    .query_global_state(Key::Hash(last_version.value()), None)
+                let maybe_contract = self
+                    .query_global_state_maybe(Key::Hash(last_version.value()), None)
                     .await;
-                match contract {
+                let contract_value = match maybe_contract {
+                    None => {
+                        panic!(
+                            "Couldn't get contract for address: {:?}",
+                            address.to_formatted_string()
+                        )
+                    }
+                    Some(c) => c
+                };
+                match contract_value {
                     StoredValue::Contract(contract) => contract
                         .named_keys()
-                        .get("__contract_main_purse")
+                        .get(CONTRACT_MAIN_PURSE)
                         .unwrap()
                         .into_uref()
                         .unwrap(),
@@ -353,7 +382,10 @@ impl CasperClient {
                     )
                 }
             }
-            _ => panic!("Getting main purse is not supported for: {:?}", purse_uref)
+            _ => panic!(
+                "Getting main purse is not supported for: {:?}",
+                purse_uref_value
+            )
         }
     }
 
@@ -548,10 +580,13 @@ impl CasperClient {
     }
 
     /// Find the entity addr in global state for an address
-    /// TODO: Remove this method.
     async fn query_global_state_for_entity_addr(&self, address: &Address) -> EntityAddr {
-        let result = self.query_global_state(address.as_key(), None).await;
-        match result {
+        let maybe_result = self.query_global_state_maybe(address.as_key(), None).await;
+        let entity_addr_value = match maybe_result {
+            None => panic!("Couldn't query for entity address value at {:?}", address),
+            Some(entity_addr_value) => entity_addr_value
+        };
+        match entity_addr_value {
             StoredValue::SmartContract(package) => EntityAddr::SmartContract(
                 package
                     .current_entity_hash()
@@ -569,8 +604,9 @@ impl CasperClient {
             }
             _ => {
                 panic!(
-                    "Couldn't get entity addr for address: {:?}",
-                    address.to_formatted_string()
+                    "Entity addr for {:?} was incorrect: {:?}",
+                    address.to_formatted_string(),
+                    entity_addr_value
                 )
             }
         }
@@ -702,28 +738,6 @@ impl CasperClient {
             Ok(r) => Some(r.result.stored_value),
             Err(_) => None
         }
-    }
-
-    async fn query_global_state(&self, key: Key, path: Option<String>) -> StoredValue {
-        let path = match path {
-            None => vec![],
-            Some(string) => vec![string]
-        };
-        query_global_state(
-            self.rpc_id_typed(),
-            self.configuration.node_address(),
-            self.configuration.verbosity_typed(),
-            GlobalStateIdentifier::StateRootHash(self.get_state_root_hash_digest().await),
-            key,
-            path
-        )
-        .await
-        .unwrap_or_else(|e| {
-            log::error(format!("Couldn't query global state: {:?}", e));
-            panic!("Couldn't query global state")
-        })
-        .result
-        .stored_value
     }
 
     async fn wait_for_transaction(
@@ -912,9 +926,9 @@ impl CasperClient {
         &self.configuration.secret_keys
     }
 
-    // TODO: Maybe make it random to be in line with rpc spec?
     fn rpc_id(&self) -> String {
-        "1".to_string()
+        let random_number: u32 = random();
+        random_number.to_string()
     }
 
     fn rpc_id_typed(&self) -> JsonRpcId {

@@ -1,3 +1,6 @@
+use casper_types::bytesrepr::FromBytes;
+use casper_types::StoredValue::CLValue;
+use casper_types::{CLTyped, StoredValue};
 use serde_json::Value;
 use std::path::PathBuf;
 
@@ -52,4 +55,14 @@ pub fn runtime_args_to_simple_args(runtime_args: &casper_types::RuntimeArgs) -> 
             )
         })
         .collect()
+}
+
+pub fn extract_stored_value<T: CLTyped + FromBytes>(value: StoredValue) -> T {
+    match value {
+        CLValue(value) => value
+            .clone()
+            .into_t()
+            .unwrap_or_else(|_| panic!("Couldn't get bytes from CLValue: {:?}", value)),
+        _ => panic!("Value stored in result key is not a CLValue")
+    }
 }
