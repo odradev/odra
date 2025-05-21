@@ -1,0 +1,745 @@
+use odra::{
+    casper_types::{
+        bytesrepr::{Bytes, ToBytes},
+        U256
+    },
+    named_keys::{
+        base64_encoded_key_value_storage, compound_key_value_storage, key_value_storage,
+        single_value_storage
+    },
+    prelude::*,
+    ContractRef
+};
+
+/// Casper-compatible NFT interface
+pub trait CEP95Interface {
+    /// Returns a name of the NFT token/collection.
+    fn name(&self) -> String;
+
+    /// Returns a short symbol or abbreviation for the NFT token/collection.
+    fn symbol(&self) -> String;
+
+    /// Returns the number of NFTs owned by a given account or contract
+    ///
+    /// # Arguments
+    /// owner - The account to query.
+    ///
+    /// # Returns
+    /// The number of NFTs owned by the account.
+    fn balance_of(&self, owner: Address) -> U256;
+
+    /// Returns the owner of a specific NFT.
+    ///
+    /// # Arguments
+    /// token_id - The ID of the NFT.
+    ///
+    /// # Returns
+    /// The owner if it exists, else None.
+    fn owner_of(&self, token_id: U256) -> Option<Address>;
+
+    /// Performs a recipient check and transfers the ownership of an NFT.
+    ///
+    /// Reverts unless the contract caller is the current owner, an authorized
+    /// operator, or the approved spender for this NFT. Reverts if `from` is not
+    /// the current owner, or if `token_id` does not reference a valid NFT.
+    /// Once ownership is updated and a `Transfer` event is emitted, the function
+    /// checks whether `to` is a contract hash. If it is, the contract MUST call
+    /// `on_cep95_received` on `to` and revert the entire transfer if that call
+    /// is absent or returns any value other than `true`.
+    ///
+    /// # Arguments
+    /// from - The current owner of the NFT.
+    /// to - The new owner.
+    /// token_id - The NFT ID.
+    /// data - Optional payload to pass to a receiving contract.
+    fn safe_transfer_from(
+        &mut self,
+        from: Address,
+        to: Address,
+        token_id: U256,
+        data: Option<Bytes>
+    );
+
+    /// Transfers the ownership of an NFT without checking the recipient contract.
+    ///
+    /// @param from - The current owner of the NFT.
+    /// @param to - The new owner.
+    /// @param token_id - The NFT ID.
+    fn transfer_from(&mut self, from: Address, to: Address, token_id: U256);
+
+    /// Approves another account or contract to transfer a specific NFT.
+    ///
+    /// @param to - The account that will be granted approval.
+    /// @param token_id - The NFT ID.
+    fn approve(&mut self, spender: Address, token_id: U256);
+
+    /// Revokes approval for a specific NFT.
+    ///
+    /// @param token_id - The NFT ID.
+    fn revoke_approval(&mut self, token_id: U256);
+
+    /// Gets the approved account or contract for a specific NFT.
+    ///
+    /// @param token_id - The NFT ID.
+    /// @return Option<Address> - Approved spender account if one exists.
+    fn approved_for(&self, token_id: U256) -> Option<Address>;
+
+    /// Enables operator approval for all of the caller's NFTs.
+    ///
+    /// # Arguments
+    /// operator - The operator address to be approved.
+    fn approve_for_all(&mut self, operator: Address);
+
+    /// Revokes operator approval for all of the caller's NFTs.
+    ///
+    /// # Arguments
+    /// operator - The operator address to be revoked.
+    fn revoke_approval_for_all(&mut self, operator: Address);
+
+    /// Checks if an operator is approved to manage all NFTs of the owner.
+    ///
+    /// # Arguments
+    /// owner - The NFT owner's address.
+    /// operator - The operator to check.
+    ///
+    /// # Returns
+    /// True if the operator is approved for all NFTs, false otherwise.
+    fn is_approved_for_all(&self, owner: Address, operator: Address) -> bool;
+
+    /// Returns metadata for a given token ID.
+    ///
+    /// # Arguments
+    /// token_id - The ID of the NFT.
+    ///
+    /// # Returns
+    /// A vector of key-value pairs representing the metadata.
+    fn token_metadata(&self, token_id: U256) -> Vec<(String, String)>;
+}
+
+#[odra::module]
+/// Receiver interface
+pub struct CEP95Receiver;
+
+#[odra::module]
+impl CEP95Receiver {
+    /// Called after a `safe_transfer_from` completes its internal state update.
+    /// MUST return `true` to signal acceptance; returning `false` or reverting
+    /// causes the entire transfer to roll back.
+    ///
+    /// # Arguments
+    /// operator - The account (EOA or contract) that invoked `safe_transfer_from`.
+    /// from - The previous owner of `token_id`.
+    /// token_id - The NFT being transferred.
+    /// data - Opaque auxiliary data forwarded from the original call; may be `None` if no extra data was
+    /// supplied.
+    ///
+    /// # Returns
+    /// `true` to accept the NFT, anything else to reject.
+    pub fn on_cep95_received(
+        &mut self,
+        operator: &Address,
+        from: &Address,
+        token_id: &U256,
+        data: &Option<Bytes>
+    ) -> bool {
+        // This is a placeholder implementation. In a real contract, you would
+        // implement the logic to handle the received NFT here.
+        // For example, you might want to store the token ID and data in your contract's state.
+        // For now, we just return true to indicate acceptance.
+        true
+    }
+}
+
+const KEY_BALANCES: &str = "balances";
+const KEY_NAME: &str = "name";
+const KEY_SYMBOL: &str = "decimals";
+const KEY_APPROVED: &str = "approvals";
+const KEY_OPERATORS: &str = "operators";
+const KEY_METADATA: &str = "metadata";
+const KEY_OWNERS: &str = "owners";
+
+single_value_storage!(Cep95Name, String, KEY_NAME, Error::ValueNotSet);
+single_value_storage!(Cep95Symbol, String, KEY_SYMBOL, Error::ValueNotSet);
+base64_encoded_key_value_storage!(Cep95Balances, KEY_BALANCES, Address, U256);
+base64_encoded_key_value_storage!(Cep95Approvals, KEY_APPROVED, U256, Option<Address>);
+compound_key_value_storage!(Cep95Operators, KEY_OPERATORS, Address, bool);
+base64_encoded_key_value_storage!(Cep95Owners, KEY_OWNERS, U256, Option<Address>);
+base64_encoded_key_value_storage!(Cep95Metadata, KEY_METADATA, U256, Vec<(String, String)>);
+
+/// Error enum for the CEP-95 contract.
+#[odra::odra_error]
+pub enum Error {
+    /// The value is not set.
+    ValueNotSet = 40_000,
+    TransferFailed = 40_001,
+    NotAnOwnerOrApproved = 40_002,
+    ApprovalToCurrentOwner = 40_003,
+    ApproveToCaller = 40_004,
+    InvalidTokenId = 40_005
+}
+
+#[odra::event]
+/// Emitted when an NFT is minted
+pub struct Mint {
+    /// The address of the recipient.
+    pub to: Address,
+    /// The ID of the minted token.
+    pub token_id: U256
+}
+
+#[odra::event]
+/// Emitted when an NFT is burned
+pub struct Burn {
+    /// The address of the owner.
+    pub from: Address,
+    /// The ID of the burned token.
+    pub token_id: U256
+}
+
+#[odra::event]
+/// Emitted when an NFT is transferred
+pub struct Transfer {
+    /// The address of the previous owner.
+    pub from: Address,
+    /// The address of the new owner.
+    pub to: Address,
+    /// The ID of the transferred token.
+    pub token_id: U256
+}
+
+#[odra::event]
+/// Emitted when a specific NFT is approved to an account/contract
+pub struct Approval {
+    /// The address of the owner.
+    pub owner: Address,
+    /// The address of the approved spender.
+    pub spender: Address,
+    /// The ID of the approved token.
+    pub token_id: U256
+}
+
+#[odra::event]
+/// Emitted when a specific NFT approval is revoked from an account/contract
+pub struct RevokeApproval {
+    /// The address of the owner.
+    pub owner: Address,
+    /// The address of the revoked spender.
+    pub spender: Address,
+    /// The ID of the revoked token.
+    pub token_id: U256
+}
+
+#[odra::event]
+/// Emitted when an operator is approved for all NFTs of an owner
+pub struct ApprovalForAll {
+    /// The address of the owner.
+    pub owner: Address,
+    /// The address of the operator.
+    pub operator: Address
+}
+
+#[odra::event]
+/// Emitted when an operator approval is revoked for all NFTs of an owner
+pub struct RevokeApprovalForAll {
+    /// The address of the owner.
+    pub owner: Address,
+    /// The address of the operator.
+    pub operator: Address
+}
+
+#[odra::event]
+/// Emitted whenever on-chain metadata for a token is created or updated
+pub struct MetadataUpdate {
+    /// The ID of the token.
+    pub token_id: U256
+}
+
+#[odra::module(
+    events = [
+        Transfer,
+        Approval,
+        RevokeApproval,
+        ApprovalForAll,
+        RevokeApprovalForAll,
+        Mint,
+        Burn,
+        MetadataUpdate
+    ],
+    errors = Error
+)]
+pub struct Cep95 {
+    pub name: SubModule<Cep95Name>,
+    pub symbol: SubModule<Cep95Symbol>,
+    pub balances: SubModule<Cep95Balances>,
+    pub owners: SubModule<Cep95Owners>,
+    pub approvals: SubModule<Cep95Approvals>,
+    pub operators: SubModule<Cep95Operators>,
+    pub metadata: SubModule<Cep95Metadata>
+}
+
+#[odra::module]
+impl CEP95Interface for Cep95 {
+    fn name(&self) -> String {
+        self.name.get()
+    }
+
+    fn symbol(&self) -> String {
+        self.symbol.get()
+    }
+
+    fn balance_of(&self, owner: Address) -> U256 {
+        self.balances.get(&owner).unwrap_or_default()
+    }
+
+    fn owner_of(&self, token_id: U256) -> Option<Address> {
+        self.owners.get(&token_id).flatten()
+    }
+
+    fn safe_transfer_from(
+        &mut self,
+        from: Address,
+        to: Address,
+        token_id: U256,
+        data: Option<Bytes>
+    ) {
+        self.transfer_from(from, to, token_id);
+        if to.is_contract() {
+            let mut receiver = CEP95ReceiverContractRef::new(self.env(), to);
+            let result = receiver.on_cep95_received(&to, &from, &token_id, &data);
+            if !result {
+                self.env().revert(Error::TransferFailed);
+            }
+        }
+    }
+
+    fn transfer_from(&mut self, from: Address, to: Address, token_id: U256) {
+        let caller = self.env().caller();
+        if from != caller && !self.is_approved_for_all(from, caller) {
+            if let Some(approved) = self.approved_for(token_id) {
+                if approved != caller {
+                    self.env().revert(Error::NotAnOwnerOrApproved);
+                }
+            } else {
+                self.env().revert(Error::NotAnOwnerOrApproved);
+            }
+        }
+
+        self.clear_approval(&token_id);
+        self.balances.set(&from, self.balance_of(from) - 1);
+        self.balances.set(&to, self.balance_of(to) + 1);
+        self.owners.set(&token_id, Some(to));
+
+        self.env().emit_event(Transfer { from, to, token_id });
+    }
+
+    fn approve(&mut self, spender: Address, token_id: U256) {
+        let caller = self.env().caller();
+        self.set_approve(token_id, Some(spender));
+        self.env().emit_event(Approval {
+            owner: caller,
+            spender,
+            token_id
+        });
+    }
+
+    fn revoke_approval(&mut self, token_id: U256) {
+        let spender = self
+            .approved_for(token_id)
+            .unwrap_or_revert_with(self, Error::ValueNotSet);
+        self.set_approve(token_id, None);
+        self.env().emit_event(RevokeApproval {
+            owner: self.env().caller(),
+            spender,
+            token_id
+        });
+    }
+
+    fn approved_for(&self, token_id: U256) -> Option<Address> {
+        self.assert_exists(&token_id);
+        self.approvals.get(&token_id).flatten()
+    }
+
+    fn approve_for_all(&mut self, operator: Address) {
+        let caller = self.env().caller();
+        self.set_approval_for_all(caller, operator, true);
+        self.env().emit_event(ApprovalForAll {
+            owner: caller,
+            operator
+        });
+    }
+
+    fn revoke_approval_for_all(&mut self, operator: Address) {
+        let caller = self.env().caller();
+        self.set_approval_for_all(caller, operator, false);
+        self.env().emit_event(RevokeApprovalForAll {
+            owner: caller,
+            operator
+        });
+    }
+
+    fn is_approved_for_all(&self, owner: Address, operator: Address) -> bool {
+        self.operators.get_or_default(&owner, &operator)
+    }
+
+    fn token_metadata(&self, token_id: U256) -> Vec<(String, String)> {
+        self.metadata.get(&token_id).unwrap_or_default()
+    }
+}
+
+impl Cep95 {
+    #[inline]
+    fn set_approve(&mut self, token_id: U256, spender: Option<Address>) {
+        let owner = self
+            .owner_of(token_id)
+            .unwrap_or_revert_with(self, Error::ValueNotSet);
+        let caller = self.env().caller();
+
+        if Some(owner) == spender {
+            self.env().revert(Error::ApprovalToCurrentOwner);
+        }
+
+        if caller != owner && !self.is_approved_for_all(owner, caller) {
+            self.env().revert(Error::NotAnOwnerOrApproved);
+        }
+
+        self.approvals.set(&token_id, spender);
+    }
+
+    #[inline]
+    fn set_approval_for_all(&mut self, caller: Address, operator: Address, approved: bool) {
+        if caller == operator {
+            self.env().revert(Error::ApproveToCaller)
+        }
+
+        self.operators.set(&caller, &operator, approved);
+    }
+
+    #[inline]
+    pub fn assert_exists(&self, token_id: &U256) {
+        if !self.exists(token_id) {
+            self.env().revert(Error::InvalidTokenId);
+        }
+    }
+
+    #[inline]
+    pub fn exists(&self, token_id: &U256) -> bool {
+        self.owners.get(token_id).flatten().is_some()
+    }
+
+    #[inline]
+    /// Revokes permission to transfer the `token_id` token.
+    pub fn clear_approval(&mut self, token_id: &U256) {
+        if self.approvals.get(token_id).is_some() {
+            self.approvals.set(token_id, None);
+        }
+    }
+
+    pub fn mint(&mut self, to: Address, token_id: U256, metadata: Vec<(String, String)>) {
+        if self.exists(&token_id) {
+            self.env().revert(Error::InvalidTokenId);
+        }
+
+        self.balances.set(&to, self.balance_of(to) + 1);
+        self.owners.set(&token_id, Some(to));
+        self.metadata.set(&token_id, metadata);
+
+        self.env().emit_event(Mint { to, token_id });
+    }
+
+    pub fn burn(&mut self, token_id: U256) {
+        let caller = self.env().caller();
+
+        self.clear_approval(&token_id);
+        self.balances.set(&caller, self.balance_of(caller) - 1);
+        self.owners.set(&token_id, None);
+        self.metadata.set(&token_id, Vec::new());
+
+        self.env().emit_event(Burn {
+            from: caller,
+            token_id
+        });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use odra::{
+        host::{Deployer, HostEnv, NoArgs},
+        Addressable, VmError
+    };
+    use odra_test;
+
+    #[odra::module]
+    struct BasicCep95 {
+        token: SubModule<Cep95>
+    }
+
+    #[odra::module]
+    impl BasicCep95 {
+        /// Initializes the contract with the given parameters.
+        pub fn init(&mut self, name: String, symbol: String) {
+            self.token.name.set(name);
+            self.token.symbol.set(symbol);
+        }
+
+        delegate! {
+            to self.token {
+                fn name(&self) -> String;
+                fn symbol(&self) -> String;
+                fn balance_of(&self, owner: Address) -> U256;
+                fn owner_of(&self, token_id: U256) -> Option<Address>;
+                fn safe_transfer_from(&mut self, from: Address, to: Address, token_id: U256, data: Option<Bytes>);
+                fn transfer_from(&mut self, from: Address, to: Address, token_id: U256);
+                fn approve(&mut self, spender: Address, token_id: U256);
+                fn revoke_approval(&mut self, token_id: U256);
+                fn approved_for(&self, token_id: U256) -> Option<Address>;
+                fn approve_for_all(&mut self, operator: Address);
+                fn revoke_approval_for_all(&mut self, operator: Address);
+                fn is_approved_for_all(&self, owner: Address, operator: Address) -> bool;
+                fn token_metadata(&self, token_id: U256) -> Vec<(String, String)>;
+            }
+        }
+
+        pub fn mint(&mut self, to: Address, token_id: U256, metadata: Vec<(String, String)>) {
+            self.token.mint(to, token_id, metadata);
+        }
+
+        pub fn burn(&mut self, token_id: U256) {
+            self.token.burn(token_id);
+        }
+    }
+
+    #[odra::module]
+    struct NFTReceiver;
+
+    #[odra::module]
+    impl NFTReceiver {
+        pub fn on_cep95_received(
+            &mut self,
+            operator: Address,
+            from: Address,
+            token_id: U256,
+            data: Option<Bytes>
+        ) -> bool {
+            true
+        }
+    }
+
+    #[odra::module]
+    struct RejectingNFTReceiver;
+
+    #[odra::module]
+    impl RejectingNFTReceiver {
+        pub fn on_cep95_received(
+            &mut self,
+            operator: Address,
+            from: Address,
+            token_id: U256,
+            data: Option<Bytes>
+        ) -> bool {
+            false
+        }
+    }
+
+    #[odra::module]
+    struct BasicContract;
+
+    #[odra::module]
+    impl BasicContract {}
+
+    fn setup() -> (HostEnv, BasicCep95HostRef) {
+        let env = odra_test::env();
+        let cep95 = BasicCep95::try_deploy(
+            &env,
+            BasicCep95InitArgs {
+                name: "TestToken".to_string(),
+                symbol: "TT".to_string()
+            }
+        )
+        .unwrap();
+        (env, cep95)
+    }
+
+    #[test]
+    fn test_cep95() {
+        let env = odra_test::env();
+        let cep95 = BasicCep95::try_deploy(
+            &env,
+            BasicCep95InitArgs {
+                name: "TestToken".to_string(),
+                symbol: "TT".to_string()
+            }
+        );
+
+        assert!(cep95.is_ok());
+    }
+
+    #[test]
+    fn test_cep95_mint() {
+        let (env, mut cep95) = setup();
+        let owner = env.caller();
+
+        let token_id = U256::from(1);
+        let metadata = vec![("key".to_string(), "value".to_string())];
+        cep95.mint(owner, token_id, metadata);
+
+        assert_eq!(cep95.balance_of(owner), U256::from(1));
+    }
+
+    #[test]
+    fn test_cep95_burn() {
+        let (env, mut cep95) = setup();
+        let owner = env.caller();
+
+        let token_id = U256::from(1);
+        let metadata = vec![("key".to_string(), "value".to_string())];
+        cep95.mint(owner, token_id, metadata);
+        cep95.burn(token_id);
+
+        assert_eq!(cep95.balance_of(owner), U256::from(0));
+    }
+
+    #[test]
+    fn test_cep95_safe_transfer_to_receiver() {
+        let (env, mut cep95) = setup();
+        let nft_receiver = NFTReceiver::deploy(&env, NoArgs);
+        let recipient = *nft_receiver.address();
+        let owner = env.caller();
+
+        let token_id = U256::from(1);
+        let metadata = vec![("key".to_string(), "value".to_string())];
+        cep95.mint(owner, token_id, metadata);
+
+        cep95.safe_transfer_from(owner, recipient, token_id, None);
+
+        assert_eq!(cep95.balance_of(owner), U256::from(0));
+        assert_eq!(cep95.balance_of(recipient), U256::from(1));
+    }
+
+    #[test]
+    fn test_cep95_safe_transfer_to_non_receiver() {
+        let (env, mut cep95) = setup();
+        let contract = BasicContract::deploy(&env, NoArgs);
+        let recipient = *contract.address();
+        let owner = env.caller();
+
+        let token_id = U256::from(1);
+        let metadata = vec![("key".to_string(), "value".to_string())];
+        cep95.mint(owner, token_id, metadata);
+
+        let result = cep95.try_safe_transfer_from(owner, recipient, token_id, None);
+        assert_eq!(
+            result,
+            Err(OdraError::VmError(VmError::NoSuchMethod(
+                "on_cep95_received".to_string()
+            )))
+        );
+
+        assert_eq!(cep95.balance_of(owner), U256::from(1));
+        assert_eq!(cep95.balance_of(recipient), U256::from(0));
+    }
+
+    #[test]
+    fn test_cep95_safe_transfer_to_rejecting_receiver() {
+        let (env, mut cep95) = setup();
+
+        let owner = env.get_account(0);
+        let contract = RejectingNFTReceiver::deploy(&env, NoArgs);
+        let recipient = *contract.address();
+
+        let token_id = U256::from(1);
+        let metadata = vec![("key".to_string(), "value".to_string())];
+        cep95.mint(owner, token_id, metadata);
+
+        let result = cep95.try_safe_transfer_from(owner, recipient, token_id, None);
+        assert_eq!(result, Err(Error::TransferFailed.into()));
+
+        assert_eq!(cep95.balance_of(owner), U256::from(1));
+        assert_eq!(cep95.balance_of(recipient), U256::from(0));
+    }
+
+    #[test]
+    fn test_cep95_transfer() {
+        let (env, mut cep95) = setup();
+
+        let owner = env.get_account(0);
+        let recipient = env.get_account(10);
+
+        let token_id = U256::from(1);
+        let metadata = vec![("key".to_string(), "value".to_string())];
+        cep95.mint(owner, token_id, metadata);
+        cep95.transfer_from(owner, recipient, token_id);
+
+        assert_eq!(cep95.balance_of(owner), U256::from(0));
+        assert_eq!(cep95.balance_of(recipient), U256::from(1));
+    }
+
+    #[test]
+    fn test_transfer_by_non_owner() {
+        let (env, mut cep95) = setup();
+
+        let recipient = env.get_account(10);
+        let non_owner = env.get_account(11);
+        let owner = env.get_account(0);
+
+        let token_id = U256::from(1);
+        let metadata = vec![("key".to_string(), "value".to_string())];
+        cep95.mint(owner, token_id, metadata);
+
+        let result = cep95.try_transfer_from(non_owner, recipient, token_id);
+        assert_eq!(result, Err(Error::NotAnOwnerOrApproved.into()));
+        assert_eq!(cep95.balance_of(owner), U256::from(1));
+        assert_eq!(cep95.balance_of(recipient), U256::from(0));
+    }
+
+    #[test]
+    fn test_approve() {
+        let (env, mut cep95) = setup();
+        let owner = env.caller();
+
+        let token_id = U256::from(1);
+        let metadata = vec![("key".to_string(), "value".to_string())];
+        cep95.mint(owner, token_id, metadata);
+
+        let spender = env.get_account(10);
+        cep95.approve(spender, token_id);
+
+        assert_eq!(cep95.approved_for(token_id), Some(spender));
+    }
+
+    #[test]
+    fn test_approve_by_non_owner() {
+        let (env, mut cep95) = setup();
+        let owner = env.get_account(0);
+        let non_owner = env.get_account(11);
+
+        let token_id = U256::from(1);
+        let metadata = vec![("key".to_string(), "value".to_string())];
+        cep95.mint(owner, token_id, metadata);
+
+        let spender = env.get_account(10);
+        env.set_caller(non_owner);
+        let result = cep95.try_approve(spender, token_id);
+        assert_eq!(result, Err(Error::NotAnOwnerOrApproved.into()));
+    }
+
+    #[test]
+    fn test_transfer_by_approved() {
+        let (env, mut cep95) = setup();
+        let owner = env.get_account(0);
+        let recipient = env.get_account(10);
+
+        let token_id = U256::from(1);
+        let metadata = vec![("key".to_string(), "value".to_string())];
+        cep95.mint(owner, token_id, metadata);
+
+        let spender = env.get_account(11);
+        cep95.approve(spender, token_id);
+        env.set_caller(spender);
+        cep95.transfer_from(owner, recipient, token_id);
+
+        assert_eq!(cep95.balance_of(owner), U256::from(0));
+        assert_eq!(cep95.balance_of(recipient), U256::from(1));
+    }
+}
