@@ -1,11 +1,12 @@
+#![allow(unused_variables)]
+
 use odra::{
     casper_types::{
         bytesrepr::{Bytes, ToBytes},
         U256
     },
     named_keys::{
-        base64_encoded_key_value_storage, compound_key_value_storage, key_value_storage,
-        single_value_storage
+        base64_encoded_key_value_storage, compound_key_value_storage, single_value_storage
     },
     prelude::*,
     ContractRef
@@ -118,7 +119,7 @@ pub trait CEP95Interface {
 
 #[odra::module]
 /// Receiver interface
-pub struct CEP95Receiver;
+struct CEP95Receiver;
 
 #[odra::module]
 impl CEP95Receiver {
@@ -313,6 +314,8 @@ impl CEP95Interface for Cep95 {
     }
 
     fn transfer_from(&mut self, from: Address, to: Address, token_id: U256) {
+        self.assert_exists(&token_id);
+
         let caller = self.env().caller();
         if from != caller && !self.is_approved_for_all(from, caller) {
             if let Some(approved) = self.approved_for(token_id) {
@@ -427,7 +430,6 @@ impl Cep95 {
     }
 
     #[inline]
-    /// Revokes permission to transfer the `token_id` token.
     pub fn clear_approval(&mut self, token_id: &U256) {
         if self.approvals.get(token_id).is_some() {
             self.approvals.set(token_id, None);
@@ -447,6 +449,7 @@ impl Cep95 {
     }
 
     pub fn burn(&mut self, token_id: U256) {
+        self.assert_exists(&token_id);
         let caller = self.env().caller();
 
         self.clear_approval(&token_id);
@@ -562,7 +565,7 @@ mod tests {
     }
 
     #[test]
-    fn test_cep95() {
+    fn test_deploy() {
         let env = odra_test::env();
         let cep95 = BasicCep95::try_deploy(
             &env,
@@ -571,12 +574,25 @@ mod tests {
                 symbol: "TT".to_string()
             }
         );
-
         assert!(cep95.is_ok());
     }
 
     #[test]
-    fn test_cep95_mint() {
+    fn test_name() {
+        let (env, cep95) = setup();
+        let name = cep95.name();
+        assert_eq!(name, "TestToken");
+    }
+
+    #[test]
+    fn test_symbol() {
+        let (env, cep95) = setup();
+        let symbol = cep95.symbol();
+        assert_eq!(symbol, "TT");
+    }
+
+    #[test]
+    fn test_mint() {
         let (env, mut cep95) = setup();
         let owner = env.caller();
 
@@ -585,10 +601,47 @@ mod tests {
         cep95.mint(owner, token_id, metadata);
 
         assert_eq!(cep95.balance_of(owner), U256::from(1));
+        assert_eq!(cep95.owner_of(token_id), Some(owner));
+        assert_eq!(
+            cep95.token_metadata(token_id),
+            vec![("key".to_string(), "value".to_string())]
+        );
+        assert!(env.emitted(cep95.address(), "Mint"));
     }
 
     #[test]
-    fn test_cep95_burn() {
+    fn test_minting_existing_token() {
+        let (env, mut cep95) = setup();
+        let owner = env.caller();
+
+        let token_id = U256::from(1);
+        let metadata = vec![("key".to_string(), "value".to_string())];
+        cep95.mint(owner, token_id, metadata.clone());
+
+        let result = cep95.try_mint(owner, token_id, metadata);
+        assert_eq!(result, Err(Error::InvalidTokenId.into()));
+    }
+
+    #[test]
+    fn test_mint_many_tokens() {
+        let (env, mut cep95) = setup();
+        let owner = env.caller();
+
+        let token_id1 = U256::from(1);
+        let metadata1 = vec![("key1".to_string(), "value1".to_string())];
+        cep95.mint(owner, token_id1, metadata1);
+
+        let token_id2 = U256::from(2);
+        let metadata2 = vec![("key2".to_string(), "value2".to_string())];
+        cep95.mint(owner, token_id2, metadata2);
+
+        assert_eq!(cep95.balance_of(owner), U256::from(2));
+        assert_eq!(cep95.owner_of(token_id1), Some(owner));
+        assert_eq!(cep95.owner_of(token_id2), Some(owner));
+    }
+
+    #[test]
+    fn test_burn() {
         let (env, mut cep95) = setup();
         let owner = env.caller();
 
@@ -598,10 +651,26 @@ mod tests {
         cep95.burn(token_id);
 
         assert_eq!(cep95.balance_of(owner), U256::from(0));
+        assert_eq!(cep95.owner_of(token_id), None);
+        assert_eq!(
+            cep95.token_metadata(token_id),
+            Vec::<(String, String)>::new()
+        );
+        assert!(env.emitted(cep95.address(), "Burn"));
     }
 
     #[test]
-    fn test_cep95_safe_transfer_to_receiver() {
+    fn test_burn_non_existing_token() {
+        let (env, mut cep95) = setup();
+        let owner = env.caller();
+
+        let token_id = U256::from(1);
+        let result = cep95.try_burn(token_id);
+        assert_eq!(result, Err(Error::InvalidTokenId.into()));
+    }
+
+    #[test]
+    fn test_safe_transfer_to_receiver() {
         let (env, mut cep95) = setup();
         let nft_receiver = NFTReceiver::deploy(&env, NoArgs);
         let recipient = *nft_receiver.address();
@@ -618,7 +687,7 @@ mod tests {
     }
 
     #[test]
-    fn test_cep95_safe_transfer_to_non_receiver() {
+    fn test_safe_transfer_to_non_receiver() {
         let (env, mut cep95) = setup();
         let contract = BasicContract::deploy(&env, NoArgs);
         let recipient = *contract.address();
@@ -641,7 +710,7 @@ mod tests {
     }
 
     #[test]
-    fn test_cep95_safe_transfer_to_rejecting_receiver() {
+    fn test_safe_transfer_to_rejecting_receiver() {
         let (env, mut cep95) = setup();
 
         let owner = env.get_account(0);
@@ -660,7 +729,7 @@ mod tests {
     }
 
     #[test]
-    fn test_cep95_transfer() {
+    fn test_transfer() {
         let (env, mut cep95) = setup();
 
         let owner = env.get_account(0);
@@ -673,6 +742,22 @@ mod tests {
 
         assert_eq!(cep95.balance_of(owner), U256::from(0));
         assert_eq!(cep95.balance_of(recipient), U256::from(1));
+        assert!(env.emitted(cep95.address(), "Transfer"));
+    }
+
+    #[test]
+    fn test_transfer_non_existing_token() {
+        let (env, mut cep95) = setup();
+
+        let owner = env.get_account(0);
+        let recipient = env.get_account(10);
+
+        let token_id = U256::from(1);
+        let metadata = vec![("key".to_string(), "value".to_string())];
+        cep95.mint(owner, token_id, metadata);
+
+        let result = cep95.try_transfer_from(owner, recipient, U256::from(2));
+        assert_eq!(result, Err(Error::InvalidTokenId.into()));
     }
 
     #[test]
@@ -741,5 +826,124 @@ mod tests {
 
         assert_eq!(cep95.balance_of(owner), U256::from(0));
         assert_eq!(cep95.balance_of(recipient), U256::from(1));
+    }
+
+    #[test]
+    fn test_approve_for_all() {
+        let (env, mut cep95) = setup();
+        let owner = env.caller();
+        let operator = env.get_account(10);
+
+        cep95.approve_for_all(operator);
+
+        assert!(cep95.is_approved_for_all(owner, operator));
+        assert!(env.emitted(cep95.address(), "ApprovalForAll"));
+    }
+
+    #[test]
+    fn test_revoke_approval_for_all() {
+        let (env, mut cep95) = setup();
+        let owner = env.caller();
+        let operator = env.get_account(10);
+
+        cep95.approve_for_all(operator);
+        cep95.revoke_approval_for_all(operator);
+
+        assert!(!cep95.is_approved_for_all(owner, operator));
+        assert!(env.emitted(cep95.address(), "RevokeApprovalForAll"));
+    }
+
+    #[test]
+    fn test_approve_for_all_self() {
+        let (env, mut cep95) = setup();
+        let owner = env.caller();
+
+        let result = cep95.try_approve_for_all(owner);
+        assert_eq!(result, Err(Error::ApproveToCaller.into()));
+    }
+
+    #[test]
+    fn test_revoke_approval() {
+        let (env, mut cep95) = setup();
+        let owner = env.caller();
+
+        let token_id = U256::from(1);
+        let metadata = vec![("key".to_string(), "value".to_string())];
+        cep95.mint(owner, token_id, metadata);
+
+        let spender = env.get_account(10);
+        cep95.approve(spender, token_id);
+        cep95.revoke_approval(token_id);
+
+        assert_eq!(cep95.approved_for(token_id), None);
+        assert!(env.emitted(cep95.address(), "RevokeApproval"));
+    }
+
+    #[test]
+    fn revoke_non_existing_approval() {
+        let (env, mut cep95) = setup();
+        let owner = env.caller();
+
+        let token_id = U256::from(1);
+        let metadata = vec![("key".to_string(), "value".to_string())];
+        cep95.mint(owner, token_id, metadata);
+
+        let result = cep95.try_revoke_approval(token_id);
+        assert_eq!(result, Err(Error::ValueNotSet.into()));
+    }
+
+    #[test]
+    fn test_revoke_approval_by_non_owner() {
+        let (env, mut cep95) = setup();
+        let owner = env.get_account(0);
+        let non_owner = env.get_account(11);
+
+        let token_id = U256::from(1);
+        let metadata = vec![("key".to_string(), "value".to_string())];
+        cep95.mint(owner, token_id, metadata);
+
+        let spender = env.get_account(10);
+        cep95.approve(spender, token_id);
+        env.set_caller(non_owner);
+        let result = cep95.try_revoke_approval(token_id);
+        assert_eq!(result, Err(Error::NotAnOwnerOrApproved.into()));
+    }
+
+    #[test]
+    fn test_metadata() {
+        let (env, mut cep95) = setup();
+        let owner = env.caller();
+
+        let token_id = U256::from(1);
+        let metadata = vec![("key".to_string(), "value".to_string())];
+        cep95.mint(owner, token_id, metadata);
+
+        assert_eq!(
+            cep95.token_metadata(token_id),
+            vec![("key".to_string(), "value".to_string())]
+        );
+    }
+
+    #[test]
+    fn test_transfer_by_operator() {
+        let (env, mut cep95) = setup();
+        let owner = env.caller();
+        let recipient = env.get_account(10);
+        let operator = env.get_account(11);
+
+        let token_id1 = U256::from(1);
+        let metadata = vec![("key".to_string(), "value".to_string())];
+        cep95.mint(owner, token_id1, metadata.clone());
+
+        cep95.approve_for_all(operator);
+        let token_id2 = U256::from(2);
+        cep95.mint(owner, token_id2, metadata);
+
+        env.set_caller(operator);
+        cep95.transfer_from(owner, recipient, token_id1);
+        cep95.transfer_from(owner, recipient, token_id2);
+
+        assert_eq!(cep95.balance_of(owner), U256::from(0));
+        assert_eq!(cep95.balance_of(recipient), U256::from(2));
     }
 }
