@@ -45,7 +45,6 @@ Use [Cargo Odra](https://github.com/odradev/cargo-odra) to generate, build and t
 
 ```rust
 use odra::prelude::*;
-use odra::Var;
 
 #[odra::module]
 pub struct Flipper {
@@ -73,13 +72,13 @@ impl Flipper {
 
 #[cfg(test)]
 mod tests {
-    use crate::flipper::FlipperHostRef;
+    use crate::flipper::Flipper;
     use odra::host::{Deployer, NoArgs};
 
     #[test]
     fn flipping() {
         let env = odra_test::env();
-        let mut contract = FlipperHostRef::deploy(&env, NoArgs);
+        let mut contract = Flipper::deploy(&env, NoArgs);
         assert!(!contract.get());
         contract.flip();
         assert!(contract.get());
@@ -95,7 +94,7 @@ It shows most of Odra features.
 Before running tests make sure you have following packages installed:
 
 - Rust toolchain (see [rustup.rs](https://rustup.rs/)) with `wasm32-unknown-unknown` target.
-- `cargo-odra` (see [Cargo Odra](https://github.com/odradev/cargo-odra))
+- `cargo-odra` with its dependencies (see [Cargo Odra](https://github.com/odradev/cargo-odra))
 - `just` (see [just](https://github.com/casey/just#packages))
 
 Run tests:
