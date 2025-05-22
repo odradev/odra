@@ -1,4 +1,4 @@
-#![allow(unused_variables)]
+#![allow(unused_variables, missing_docs)]
 
 use odra::{
     casper_types::{
@@ -136,6 +136,7 @@ impl CEP95Receiver {
     ///
     /// # Returns
     /// `true` to accept the NFT, anything else to reject.
+    #[allow(dead_code)]
     pub fn on_cep95_received(
         &mut self,
         operator: &Address,
@@ -431,7 +432,7 @@ impl Cep95 {
     }
 
     #[inline]
-    /// Asserts that the token ID exists. 
+    /// Asserts that the token ID exists.
     /// Reverts with `Error::InvalidTokenId` if it does not.
     pub fn assert_exists(&self, token_id: &U256) {
         if !self.exists(token_id) {
@@ -483,17 +484,11 @@ impl Cep95 {
     }
 }
 
-#[cfg(test)]
-mod tests {
+mod utils {
     use super::*;
-    use odra::{
-        host::{Deployer, HostEnv, NoArgs},
-        Addressable, VmError
-    };
-    use odra_test;
 
     #[odra::module]
-    struct BasicCep95 {
+    pub(crate) struct BasicCep95 {
         token: SubModule<Cep95>
     }
 
@@ -533,10 +528,11 @@ mod tests {
     }
 
     #[odra::module]
-    struct NFTReceiver;
+    pub(crate) struct NFTReceiver;
 
     #[odra::module]
     impl NFTReceiver {
+        #[allow(dead_code)]
         pub fn on_cep95_received(
             &mut self,
             operator: Address,
@@ -549,10 +545,11 @@ mod tests {
     }
 
     #[odra::module]
-    struct RejectingNFTReceiver;
+    pub(crate) struct RejectingNFTReceiver;
 
     #[odra::module]
     impl RejectingNFTReceiver {
+        #[allow(dead_code)]
         pub fn on_cep95_received(
             &mut self,
             operator: Address,
@@ -565,10 +562,21 @@ mod tests {
     }
 
     #[odra::module]
-    struct BasicContract;
+    pub(crate) struct BasicContract;
 
     #[odra::module]
     impl BasicContract {}
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cep95::utils::*;
+    use odra::{
+        host::{Deployer, HostEnv, NoArgs},
+        Addressable, VmError
+    };
+    use odra_test;
 
     fn setup() -> (HostEnv, BasicCep95HostRef) {
         let env = odra_test::env();

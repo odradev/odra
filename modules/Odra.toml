@@ -29,6 +29,18 @@ fqn = "cep78::token::Cep78"
 fqn = "cep78::token::TestCep78"
 
 [[contracts]]
+fqn = "cep95::utils::BasicCep95"
+
+[[contracts]]
+fqn = "cep95::utils::NFTReceiver"
+
+[[contracts]]
+fqn = "cep95::utils::RejectingNFTReceiver"
+
+[[contracts]]
+fqn = "cep95::utils::BasicContract"
+
+[[contracts]]
 fqn = "cep78::utils::MockCep78Operator"
 
 [[contracts]]
