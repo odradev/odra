@@ -1,16 +1,16 @@
 [package]
 name = "benchmark"
-version = "0.1.0"
+version = "2.0.0"
 edition = "2021"
 
 [dependencies]
 odra = { path = "../odra" }
 odra-test = { path = "../odra-test", optional = true }
 odra-modules = { path = "../modules" }
-base64 = { version = "0.22.0", default-features = false, features = ["alloc"] }
+base64 = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-serde_json = "1.0.113"
+serde_json = { workspace = true }
 
 [[bin]]
 name = "benchmark_build_contract"
@@ -32,13 +32,6 @@ required-features = ["odra-test"]
 name = "evaluate_benchmark"
 path = "bin/evaluate_benchmark.rs"
 test = false
-
-[profile.release]
-codegen-units = 1
-lto = true
-
-[profile.dev.package."*"]
-opt-level = 3
 
 [features]
 default = []

@@ -1,9 +1,35 @@
 //! Wrapped CSPR token implementation
 use crate::erc20::Erc20;
 use crate::wrapped_native::events::{Deposit, Withdrawal};
-use odra::casper_types::U256;
-use odra::prelude::*;
+use odra::casper_types::{U256, U512};
 use odra::uints::{ToU256, ToU512};
+use odra::{prelude::*, ContractRef};
+
+/// An event emitted when native tokens are deposited into the contract.
+#[odra::event]
+pub struct OnCsprDeposit {
+    /// Address of the account that deposited the tokens.
+    pub account: Address,
+    /// The amount of tokens deposited.
+    pub value: U512
+}
+
+/// The CsprDeposit contract.
+#[odra::module]
+pub struct CsprDeposit {}
+
+/// The CsprDeposit contract implementation.
+#[odra::module]
+impl CsprDeposit {
+    /// Deposits native tokens into the contract.
+    #[odra(payable)]
+    pub fn deposit(&self) {
+        self.env().emit_event(OnCsprDeposit {
+            account: self.env().caller(),
+            value: self.env().attached_value()
+        });
+    }
+}
 
 /// The WrappedNativeToken module.
 #[odra::module(events = [Deposit, Withdrawal])]
@@ -42,7 +68,13 @@ impl WrappedNativeToken {
         let caller = self.env().caller();
 
         self.erc20.burn(&caller, amount);
-        self.env().transfer_tokens(&caller, &amount.to_u512());
+        if caller.is_contract() {
+            CsprDepositContractRef::new(self.env(), caller)
+                .with_tokens(amount.to_u512())
+                .deposit();
+        } else {
+            self.env().transfer_tokens(&caller, &amount.to_u512());
+        }
 
         self.env().emit_event(Withdrawal {
             account: caller,

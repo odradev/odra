@@ -137,7 +137,8 @@ impl Erc721Base {
         }
     }
 
-    fn transfer(&mut self, from: &Address, to: &Address, token_id: &U256) {
+    /// Transfers the `token_id` token from `from` to `to`.
+    pub fn transfer(&mut self, from: &Address, to: &Address, token_id: &U256) {
         self.clear_approval(token_id);
         self.balances.set(from, self.balance_of(from) - 1);
         self.balances.set(to, self.balance_of(to) + 1);

@@ -25,6 +25,7 @@ mod test_utils;
 mod types;
 
 pub use args::CommandArg;
+pub use cmd::scenario::{ScenarioArgs, ScenarioError};
 pub use container::DeployedContractsContainer;
 use scenario::{Scenario, ScenarioMetadata};
 

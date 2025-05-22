@@ -4,19 +4,15 @@ use std::env;
 use std::path::PathBuf;
 
 use casper_engine_test_support::{
-    DeployItemBuilder, ExecuteRequestBuilder, InMemoryWasmTestBuilder, ARG_AMOUNT,
-    DEFAULT_ACCOUNT_INITIAL_BALANCE, DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_GENESIS_CONFIG,
-    DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_PAYMENT
+    DeployItemBuilder, ExecuteRequestBuilder, ARG_AMOUNT, DEFAULT_ACCOUNT_INITIAL_BALANCE,
+    DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_PAYMENT
 };
 use std::rc::Rc;
 
 use crate::CasperVm;
-use casper_execution_engine::core::engine_state::{GenesisAccount, RunGenesisRequest};
 use odra_core::casper_types::account::AccountHash;
 use odra_core::casper_types::bytesrepr::{Bytes, ToBytes};
-use odra_core::casper_types::{
-    runtime_args, BlockTime, ContractPackageHash, Key, Motes, SecretKey
-};
+use odra_core::casper_types::{runtime_args, BlockTime, Key, Motes, SecretKey};
 use odra_core::casper_types::{PublicKey, RuntimeArgs, U512};
 use odra_core::consts;
 use odra_core::consts::*;
@@ -51,6 +47,16 @@ impl HostContext for CasperHost {
         self.vm.borrow().get_account(index)
     }
 
+    fn get_validator(&self, index: usize) -> PublicKey {
+        self.vm.borrow().get_validator(index)
+    }
+
+    fn remove_validator(&self, index: usize) {
+        let validator = self.get_validator(index);
+        let mut backend = self.vm.borrow_mut();
+        backend.remove_validator(validator);
+    }
+
     fn balance_of(&self, address: &Address) -> U512 {
         self.vm.borrow().balance_of(address)
     }
@@ -59,12 +65,53 @@ impl HostContext for CasperHost {
         self.vm.borrow_mut().advance_block_time(time_diff)
     }
 
+    fn advance_with_auctions(&self, time_diff: u64) {
+        self.vm.borrow_mut().advance_with_auctions(time_diff)
+    }
+
+    fn auction_delay(&self) -> u64 {
+        let mut backend = self.vm.borrow_mut();
+        backend.auction_delay()
+    }
+
+    fn unbonding_delay(&self) -> u64 {
+        let mut backend = self.vm.borrow_mut();
+        backend.unbonding_delay()
+    }
+
+    fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
+        let mut backend = self.vm.borrow_mut();
+        backend.delegated_amount(delegator, validator)
+    }
+
     fn block_time(&self) -> u64 {
         self.vm.borrow().block_time()
     }
 
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
+        if !contract_address.is_contract() {
+            return Err(EventError::TriedToQueryEventForNonContract);
+        }
         self.vm.borrow().get_event(contract_address, index)
+    }
+
+    fn get_native_event(
+        &self,
+        contract_address: &Address,
+        index: u32
+    ) -> Result<Bytes, EventError> {
+        if !contract_address.is_contract() {
+            return Err(EventError::TriedToQueryEventForNonContract);
+        }
+        self.vm.borrow().get_native_event(contract_address, index)
+    }
+
+    fn get_events_count(&self, address: &Address) -> Result<u32, EventError> {
+        self.vm.borrow().get_events_count(address)
+    }
+
+    fn get_native_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
+        self.vm.borrow().get_native_events_count(contract_address)
     }
 
     fn call_contract(
@@ -89,10 +136,6 @@ impl HostContext for CasperHost {
                 Err(error.unwrap_or(OdraError::VmError(VmError::Panic)))
             }
         }
-    }
-
-    fn get_events_count(&self, contract_address: &Address) -> u32 {
-        self.vm.borrow().get_events_count(contract_address)
     }
 
     fn new_contract(

@@ -1,4 +1,4 @@
-use casper_types::CLValue;
+use casper_types::{CLValue, PublicKey};
 
 use crate::call_def::CallDef;
 use crate::casper_types::bytesrepr::Bytes;
@@ -84,7 +84,7 @@ pub trait ContractContext {
     /// The result of the contract call as a byte array.
     fn call_contract(&self, address: Address, call_def: CallDef) -> Bytes;
 
-    /// Retrieves the current block time.
+    /// Retrieves the current block time in milliseconds.
     ///
     /// # Returns
     ///
@@ -110,6 +110,13 @@ pub trait ContractContext {
     ///
     /// * `event` - The event data to emit.
     fn emit_event(&self, event: &Bytes);
+
+    /// Emits an event with the specified event data using native mechanism.
+    ///
+    /// # Arguments
+    ///
+    /// * `event` - The event data to emit.
+    fn emit_native_event(&self, event: &Bytes);
 
     /// Transfers tokens to the specified address.
     ///
@@ -160,4 +167,35 @@ pub trait ContractContext {
     ///
     /// The computed hash as a fixed-size byte array of length 32.
     fn hash(&self, bytes: &[u8]) -> [u8; 32];
+
+    /// Delegate the amount of tokens to the validator
+    ///
+    /// # Arguments
+    ///
+    /// * `validator` - The validator to delegate the tokens to.
+    /// * `amount` - The amount of tokens to delegate.
+    fn delegate(&self, validator: PublicKey, amount: U512);
+
+    /// Undelegate the amount of tokens from the validator
+    ///
+    /// # Arguments
+    ///
+    /// * `validator` - The validator to undelegate the tokens from.
+    /// * `amount` - The amount of tokens to undelegate.
+    fn undelegate(&self, validator: PublicKey, amount: U512);
+
+    /// Gets the amount of tokens delegated to the validator
+    ///
+    /// # Arguments
+    ///
+    /// * `validator` - The validator to get the delegated amount from.
+    ///
+    /// # Returns
+    ///
+    /// The amount of tokens delegated to the validator as a `U512` value.
+    fn delegated_amount(&self, validator: PublicKey) -> U512;
+
+    /// Returns a vector of pseudorandom bytes of the specified size.
+    /// There is no guarantee that the returned bytes are in any way cryptographically secure.
+    fn pseudorandom_bytes(&self, size: usize) -> Vec<u8>;
 }

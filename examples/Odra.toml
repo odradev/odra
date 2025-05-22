@@ -66,3 +66,9 @@ fqn = "features::optional_args::Token"
 
 [[contracts]]
 fqn = "features::custom_types::MyContract"
+
+[[contracts]]
+fqn = "features::validators::ValidatorsContract"
+
+[[contracts]]
+fqn = "features::staking::DelegateContract"

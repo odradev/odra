@@ -19,7 +19,8 @@ pub struct Erc1155Token {
 #[odra::module]
 impl OwnedErc1155 for Erc1155Token {
     fn init(&mut self) {
-        self.ownable.init();
+        let caller = self.env().caller();
+        self.ownable.init(caller);
     }
 
     fn balance_of(&self, owner: &Address, id: &U256) -> U256 {

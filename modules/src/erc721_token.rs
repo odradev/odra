@@ -25,7 +25,8 @@ pub struct Erc721Token {
 impl OwnedErc721WithMetadata for Erc721Token {
     fn init(&mut self, name: String, symbol: String, base_uri: String) {
         self.metadata.init(name, symbol, base_uri);
-        self.ownable.init();
+        let caller = self.env().caller();
+        self.ownable.init(caller);
     }
 
     fn name(&self) -> String {

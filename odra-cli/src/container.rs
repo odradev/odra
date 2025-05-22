@@ -34,7 +34,7 @@ pub enum ContractError {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct DeployedContractsContainer {
     time: String,
-    contracts: Vec<DeployedContract>
+    pub contracts: Vec<DeployedContract>
 }
 
 impl DeployedContractsContainer {
@@ -82,7 +82,7 @@ impl DeployedContractsContainer {
     }
 
     /// Load from the file.
-    pub(crate) fn load() -> Result<Self, ContractError> {
+    pub fn load() -> Result<Self, ContractError> {
         let path = Self::file_path()?;
         let file = std::fs::read_to_string(path).map_err(ContractError::Io)?;
 
@@ -138,9 +138,9 @@ impl DeployedContractsContainer {
 
 /// This struct represents a contract in the `deployed_contracts.toml` file.
 #[derive(Deserialize, Serialize, Debug, Clone)]
-struct DeployedContract {
-    name: String,
-    package_hash: String
+pub struct DeployedContract {
+    pub name: String,
+    pub package_hash: String
 }
 
 impl DeployedContract {

@@ -1,13 +1,18 @@
 [package]
 name = "odra-cli"
-version = "0.1.0"
 edition = "2021"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
 
 [dependencies]
-clap = { version = "4.5.4", features = ["derive", "cargo", "string"] }
+clap = { version = "4.5.21", features = ["derive", "cargo", "string"] }
 prettycli = "0.1.1"
 odra = { path = "../odra", default-features = false }
-odra-casper-livenet-env = { workspace = true }
+odra-casper-livenet-env = { path = "../odra-casper/livenet-env" }
 chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1", default-features = false }
 serde_json = { version = "1", default-features = false }

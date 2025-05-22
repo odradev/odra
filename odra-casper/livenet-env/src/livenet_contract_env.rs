@@ -4,7 +4,7 @@ use blake2::Blake2bVar;
 use odra_casper_rpc_client::casper_client::CasperClient;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::bytesrepr::Bytes;
-use odra_core::casper_types::{CLValue, U512};
+use odra_core::casper_types::{CLValue, PublicKey, U512};
 use odra_core::prelude::*;
 use odra_core::{CallDef, ContractContext, ContractRegister};
 use std::io::Write;
@@ -23,12 +23,8 @@ impl ContractContext for LivenetContractEnv {
     fn get_value(&self, key: &[u8]) -> Option<Bytes> {
         let callstack = self.callstack.borrow();
         let client = self.casper_client.borrow();
-        self.runtime.block_on(async {
-            client
-                .get_value(callstack.current().address(), key)
-                .await
-                .ok()
-        })
+        self.runtime
+            .block_on(async { client.get_value(callstack.current().address(), key).await })
     }
 
     fn set_value(&self, _key: &[u8], _value: Bytes) {
@@ -98,7 +94,7 @@ impl ContractContext for LivenetContractEnv {
     fn get_block_time(&self) -> u64 {
         let client = self.casper_client.borrow();
         self.runtime
-            .block_on(async { client.get_block_time().await })
+            .block_on(async { client.get_block_time().await.unwrap() })
     }
 
     fn attached_value(&self) -> U512 {
@@ -114,6 +110,10 @@ impl ContractContext for LivenetContractEnv {
 
     fn emit_event(&self, _event: &Bytes) {
         panic!("Cannot emit event in LivenetEnv")
+    }
+
+    fn emit_native_event(&self, _event: &Bytes) {
+        panic!("Cannot emit native event in LivenetEnv")
     }
 
     fn transfer_tokens(&self, _to: &Address, _amount: &U512) {
@@ -163,6 +163,31 @@ impl ContractContext for LivenetContractEnv {
             .finalize_variable(&mut result)
             .expect("should copy hash to the result array");
         result
+    }
+
+    fn delegate(&self, _validator: PublicKey, _amount: U512) {
+        panic!("delegate is not supported for LivenetContractEnv")
+    }
+
+    fn undelegate(&self, _validator: PublicKey, _amount: U512) {
+        panic!("undelegate is not supported for LivenetContractEnv")
+    }
+
+    fn delegated_amount(&self, _validator: PublicKey) -> U512 {
+        let address = match self.callstack.borrow().current() {
+            CallstackElement::Account(acc) => *acc,
+            CallstackElement::ContractCall { address, .. } => *address
+        };
+        let client = self.casper_client.borrow();
+        self.runtime
+            .block_on(async { client.delegated_amount(address, _validator).await })
+    }
+
+    fn pseudorandom_bytes(&self, _size: usize) -> Vec<u8> {
+        panic!(
+            "pseudorandom_bytes is not supported for LivenetContractEnv, it should be run\
+        in the context of a deploy to get consistent results"
+        )
     }
 }
 

@@ -1,5 +1,3 @@
-use casper_event_standard::EventInstance;
-
 use crate::args::EntrypointArgument;
 use crate::call_def::CallDef;
 use crate::casper_types::bytesrepr::{deserialize_from_slice, Bytes, FromBytes, ToBytes};
@@ -7,7 +5,10 @@ use crate::casper_types::crypto::PublicKey;
 use crate::casper_types::{CLTyped, CLValue, BLAKE2B_DIGEST_LENGTH, U512};
 use crate::module::Revertible;
 pub use crate::ContractContext;
+use crate::VmError::{Serialization, TypeMismatch};
 use crate::{consts, prelude::*, utils};
+use casper_event_standard::EventInstance;
+use casper_types::CLValueError;
 
 const INDEX_SIZE: usize = 4;
 const KEY_LEN: usize = 64;
@@ -19,6 +20,11 @@ pub trait ContractRef {
     fn new(env: Rc<ContractEnv>, address: Address) -> Self;
     /// Returns the address of the contract.
     fn address(&self) -> &Address;
+    /// Creates a new contract reference with attached tokens, based on the current instance.
+    ///
+    /// If there are tokens attached to the current instance, the tokens will be attached
+    /// to the next contract call.
+    fn with_tokens(&self, tokens: U512) -> Self;
 }
 
 /// Represents the environment accessible in the contract context.
@@ -104,8 +110,15 @@ impl ContractEnv {
     /// Sets the value associated with the given named key in the contract storage.
     pub fn set_named_value<T: CLTyped + ToBytes, U: AsRef<str>>(&self, name: U, value: T) {
         let key = name.as_ref();
-        // todo: map errors to correct Odra errors
-        let cl_value = CLValue::from_t(value).unwrap_or_revert(self);
+        let cl_value = CLValue::from_t(value)
+            .map_err(|e| match e {
+                CLValueError::Serialization(_) => OdraError::VmError(Serialization),
+                CLValueError::Type(e) => OdraError::VmError(TypeMismatch {
+                    found: e.found,
+                    expected: e.expected
+                })
+            })
+            .unwrap_or_revert(self);
         self.backend.borrow().set_named_value(key, cl_value);
     }
 
@@ -178,10 +191,22 @@ impl ContractEnv {
         backend.transfer_tokens(to, amount)
     }
 
-    /// Returns the current block time as u64 value.
+    /// Returns the current block time in milliseconds.
     pub fn get_block_time(&self) -> u64 {
         let backend = self.backend.borrow();
         backend.get_block_time()
+    }
+
+    /// Returns the current block time in milliseconds.
+    pub fn get_block_time_millis(&self) -> u64 {
+        let backend = self.backend.borrow();
+        backend.get_block_time()
+    }
+
+    /// Returns the current block time in seconds.
+    pub fn get_block_time_secs(&self) -> u64 {
+        let backend = self.backend.borrow();
+        backend.get_block_time().checked_div(1000).unwrap()
     }
 
     /// Returns the value attached to the contract call.
@@ -208,6 +233,14 @@ impl ContractEnv {
         let result = event.to_bytes().map_err(ExecutionError::from);
         let bytes = result.unwrap_or_revert(self);
         backend.emit_event(&bytes.into())
+    }
+
+    /// Emits an event with the specified data using the native mechanism.
+    pub fn emit_native_event<T: ToBytes + EventInstance>(&self, event: T) {
+        let backend = self.backend.borrow();
+        let result = event.to_bytes().map_err(ExecutionError::from);
+        let bytes = result.unwrap_or_revert(self);
+        backend.emit_native_event(&bytes.into())
     }
 
     /// Verifies the signature of a message using the specified signature, public key, and message.
@@ -239,6 +272,45 @@ impl ContractEnv {
     /// The hash value as a 32-byte array.
     pub fn hash<T: AsRef<[u8]>>(&self, value: T) -> [u8; BLAKE2B_DIGEST_LENGTH] {
         self.backend.borrow().hash(value.as_ref())
+    }
+
+    /// Delegate tokens to a validator
+    ///
+    /// # Arguments
+    ///
+    /// * `validator` - The validator to delegate to
+    /// * `amount` - The amount of tokens to delegate
+    pub fn delegate(&self, validator: PublicKey, amount: U512) {
+        self.backend.borrow().delegate(validator, amount)
+    }
+
+    /// Undelegate tokens from a validator
+    ///
+    /// # Arguments
+    ///
+    /// * `validator` - The validator to undelegate from
+    /// * `amount` - The amount of tokens to undelegate
+    pub fn undelegate(&self, validator: PublicKey, amount: U512) {
+        self.backend.borrow().undelegate(validator, amount)
+    }
+
+    /// Returns the amount of tokens delegated to a validator
+    ///
+    /// # Arguments
+    ///
+    /// * `validator` - The validator to get the delegated amount from
+    ///
+    /// # Returns
+    ///
+    /// The amount of tokens delegated to the validator
+    pub fn delegated_amount(&self, validator: PublicKey) -> U512 {
+        self.backend.borrow().delegated_amount(validator)
+    }
+
+    /// Returns a vector of pseudorandom bytes of the specified size.
+    /// There is no guarantee that the returned bytes are in any way cryptographically secure.
+    pub fn pseudorandom_bytes(&self, size: usize) -> Vec<u8> {
+        self.backend.borrow().pseudorandom_bytes(size)
     }
 }
 

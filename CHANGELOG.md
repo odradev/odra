@@ -2,6 +2,27 @@
 
 Changelog for `odra`.
 
+## [2.0.0] - 2025-05-23
+### Added
+- Support for Casper 2.
+- Native Casper events are now supported, alongside CES events:
+  - new contract env functions: `emit_native_event`
+  - new host env function `emitted_native`, `emitted_native_event`, `native_events` and `native_event_names`
+- Support for delegating funds by the contracts: 
+  - new contract env functions: `delegate`, `undelegate` and `delegated_amount`
+  - new host env functions: `delegated_amount`, `get_validator`, `remove_validator`, `advance_with_auctions`,
+  `auction_delay` and `unbonding_delay`
+- New contract env function `pseudorandom_bytes` which uses a randomness source from host.
+- New host env functions `block_time_millis` and `block_time_secs` to avoid any confusion with EVM based code.
+- `odra-bdd` - a new crate for testing Odra contracts using BDD style.
+- `odra-cli` - a new crate for creating cli tools for Odra contracts.
+
+### Removed
+- Support for Casper 1.
+
+### Changed
+- bumped rust-toolchain to `nightly-2024-07-31`
+
 ## [1.5.0] - 2025-01-07
 ### Added
 - More public methods in `CEP18` module.

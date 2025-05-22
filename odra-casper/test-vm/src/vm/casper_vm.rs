@@ -1,25 +1,43 @@
+use casper_engine_test_support::genesis_config_builder::GenesisConfigBuilder;
+use odra_core::casper_types::system::auction::{
+    BidAddr, BidKind, DelegationRate, DelegatorKind, ARG_ENTRY_POINT, ARG_EVICTED_VALIDATORS,
+    ARG_PUBLIC_KEY, ARG_REWARDS_MAP, BLOCK_REWARD, METHOD_DISTRIBUTE, METHOD_RUN_AUCTION,
+    METHOD_WITHDRAW_BID
+};
+use odra_core::casper_types::{
+    AddressableEntity, AddressableEntityHash, EntityAddr, GenesisConfig, GenesisValidator,
+    HashAddr, NamedKeys, Package, PackageHash, ProtocolVersion
+};
 use odra_core::consts::*;
 use odra_core::prelude::*;
 use std::cell::RefCell;
 use std::env;
+use std::hash::Hash;
 use std::path::PathBuf;
 
 use casper_engine_test_support::{
-    DeployItemBuilder, ExecuteRequestBuilder, InMemoryWasmTestBuilder, ARG_AMOUNT,
-    DEFAULT_ACCOUNT_INITIAL_BALANCE, DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_GENESIS_CONFIG,
-    DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_PAYMENT
+    DeployItemBuilder, EntityWithNamedKeys, ExecuteRequestBuilder, LmdbWasmTestBuilder,
+    WasmTestBuilder, ARG_AMOUNT, DEFAULT_ACCOUNTS, DEFAULT_AUCTION_DELAY,
+    DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_EXEC_CONFIG, DEFAULT_GENESIS_CONFIG_HASH,
+    DEFAULT_GENESIS_TIMESTAMP_MILLIS, DEFAULT_LOCKED_FUNDS_PERIOD_MILLIS, DEFAULT_PAYMENT,
+    DEFAULT_ROUND_SEIGNIORAGE_RATE, DEFAULT_SYSTEM_CONFIG, DEFAULT_UNBONDING_DELAY,
+    DEFAULT_VALIDATOR_SLOTS, DEFAULT_WASM_CONFIG, SYSTEM_ADDR
 };
 use casper_event_standard::try_full_name_from_bytes;
+use casper_execution_engine::{engine_state, execution};
+use casper_storage::data_access_layer::{DataAccessLayer, GenesisRequest};
 use odra_core::{casper_event_standard, DeployReport, GasReport};
 use std::rc::Rc;
 
-use casper_execution_engine::core::engine_state::{self, GenesisAccount, RunGenesisRequest};
 use odra_core::casper_types::account::{Account, AccountHash};
 use odra_core::casper_types::bytesrepr::{Bytes, ToBytes};
-use odra_core::casper_types::{bytesrepr::FromBytes, CLTyped, PublicKey, RuntimeArgs, U512};
+use odra_core::casper_types::contract_messages::MessagePayload;
+use odra_core::casper_types::contracts::{ContractHash, ContractPackageHash};
 use odra_core::casper_types::{
-    runtime_args, ApiError, BlockTime, Contract, ContractHash, ContractPackageHash, Key, Motes,
-    SecretKey, StoredValue, URef
+    bytesrepr::FromBytes, CLTyped, GenesisAccount, PublicKey, RuntimeArgs, U512
+};
+use odra_core::casper_types::{
+    runtime_args, ApiError, BlockTime, Contract, Key, Motes, SecretKey, StoredValue, URef
 };
 use odra_core::consts;
 use odra_core::consts::*;
@@ -33,12 +51,15 @@ use odra_core::{
     CallDef, ContractEnv
 };
 
-/// Casper virtual machine utilizing [InMemoryWasmTestBuilder].
+/// Casper virtual machine utilizing [LmdbWasmTestBuilder].
 pub struct CasperVm {
     accounts: Vec<Address>,
+    validators: Vec<GenesisAccount>,
+    removed_validators: Vec<PublicKey>,
     key_pairs: BTreeMap<Address, (SecretKey, PublicKey)>,
+    messages: BTreeMap<EntityAddr, Vec<MessagePayload>>,
     active_account: Address,
-    context: InMemoryWasmTestBuilder,
+    context: LmdbWasmTestBuilder,
     block_time: u64,
     calls_counter: u32,
     error: Option<OdraError>,
@@ -53,14 +74,14 @@ impl CasperVm {
         Rc::new(RefCell::new(Self::new_instance()))
     }
 
-    /// Read a ContractPackageHash of a given name, from the active account.
-    pub fn contract_package_hash_from_name(&self, name: &str) -> ContractPackageHash {
-        let account = self
+    /// Read a PackageHash of a given name, from the active account.
+    pub fn package_hash_from_name(&self, name: &str) -> PackageHash {
+        let named_keys = self
             .context
-            .get_account(self.active_account_hash())
-            .unwrap();
-        let key: &Key = account.named_keys().get(name).unwrap();
-        ContractPackageHash::from(key.into_hash().unwrap())
+            .get_named_keys_by_account_hash(self.active_account_hash());
+
+        let key: &Key = named_keys.get(name).unwrap();
+        PackageHash::from(key.into_package_hash().unwrap().value())
     }
 
     /// Updates the active account (caller) address.
@@ -78,9 +99,145 @@ impl CasperVm {
         self.accounts[index]
     }
 
-    /// Advances the block time by the specified time difference.
-    pub fn advance_block_time(&mut self, time_diff: u64) {
-        self.block_time += time_diff
+    /// Gets the validator public key.
+    pub fn get_validator(&self, index: usize) -> PublicKey {
+        self.validators
+            .get(index)
+            .unwrap_or_else(|| panic!("Not enough validators: {}", index))
+            .public_key()
+    }
+
+    /// Advances the block time by the specified time difference in milliseconds.
+    pub fn advance_block_time(&mut self, time_diff_millis: u64) {
+        self.block_time += time_diff_millis
+    }
+
+    /// Advances the block time by the specified time difference in milliseconds
+    /// and processes auctions giving the rewards to the validators.
+    pub fn advance_with_auctions(&mut self, time_diff_millis: u64) {
+        let time_between_auctions = self.auction_delay();
+        // Calculate how many auctions we can run based on time_diff
+        let num_auctions = time_diff_millis / time_between_auctions;
+
+        // Run auctions and distribute rewards one at a time
+        for _ in 0..num_auctions {
+            self.context.run_auction(0u64, vec![]);
+            let mut rewards = BTreeMap::new();
+            // distribute rewards to all validators
+            for validator in &self.validators {
+                if self.removed_validators.contains(&validator.public_key()) {
+                    continue;
+                }
+                rewards.insert(validator.public_key(), vec![U512::from(BLOCK_REWARD)]);
+            }
+            let distribute_request = ExecuteRequestBuilder::contract_call_by_hash(
+                *SYSTEM_ADDR,
+                self.context.get_auction_contract_hash(),
+                METHOD_DISTRIBUTE,
+                runtime_args! {
+                    ARG_ENTRY_POINT => METHOD_DISTRIBUTE,
+                    ARG_REWARDS_MAP => rewards,
+                }
+            )
+            .build();
+
+            self.context
+                .exec(distribute_request)
+                .commit()
+                .expect_success();
+
+            self.advance_block_time(time_between_auctions);
+        }
+
+        // Run remaining auctions with the leftover time
+        let remaining_time = time_diff_millis % time_between_auctions;
+        self.advance_block_time(remaining_time);
+    }
+
+    /// Gets the time between auctions.
+    pub fn auction_delay(&mut self) -> u64 {
+        self.context
+            .get_auction_delay()
+            .saturating_mul(self.context.chainspec().core_config.era_duration.millis())
+    }
+
+    /// Returns the unbonding delay.
+    pub fn unbonding_delay(&mut self) -> u64 {
+        self.context
+            .get_unbonding_delay()
+            .saturating_mul(self.context.chainspec().core_config.era_duration.millis())
+    }
+
+    /// Returns the delegated amount.
+    pub fn delegated_amount(&mut self, delegator: Address, validator: PublicKey) -> U512 {
+        let purse_uref = self.get_main_purse(delegator);
+        let account_hash = validator.to_account_hash();
+
+        let bid = self
+            .context
+            .get_bids()
+            .into_iter()
+            .find(|bid| bid.validator_public_key() == validator && bid.is_delegator());
+
+        match bid {
+            None => U512::zero(),
+            Some(bid_kind) => bid_kind.staked_amount().unwrap_or_default()
+        }
+    }
+
+    fn total_delegated_amount(&mut self, validator: PublicKey) -> U512 {
+        let bids = self
+            .context
+            .get_bids()
+            .into_iter()
+            .filter(|bid| bid.validator_public_key() == validator)
+            .collect::<Vec<_>>();
+
+        bids.iter().fold(U512::zero(), |acc, bid| {
+            acc + bid.staked_amount().unwrap_or_default()
+        })
+    }
+
+    /// Disables the validator.
+    /// Undelegates the validator's stakes.
+    pub fn remove_validator(&mut self, validator: PublicKey) {
+        let amount = self.total_delegated_amount(validator.clone());
+        let withdraw_request = ExecuteRequestBuilder::contract_call_by_hash(
+            validator.to_account_hash(),
+            self.context.get_auction_contract_hash(),
+            METHOD_WITHDRAW_BID,
+            runtime_args! {
+                ARG_PUBLIC_KEY => validator.clone(),
+                ARG_AMOUNT => amount,
+            }
+        )
+        .build();
+
+        self.context
+            .exec(withdraw_request)
+            .commit()
+            .expect_success();
+
+        self.removed_validators.push(validator.clone());
+    }
+
+    fn get_main_purse(&self, address: Address) -> URef {
+        match address {
+            Address::Account(account) => {
+                let account = self.context.get_account(account).unwrap_or_else(|| {
+                    panic!("Account not found while getting entity addr: {:?}", account)
+                });
+                account.main_purse()
+            }
+            Address::Contract(contract) => self
+                .get_contract_main_purse(PackageHash::new(contract.value()))
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Contract purse not found while getting entity addr: {:?}",
+                        contract
+                    )
+                })
+        }
     }
 
     /// Gets the current block time.
@@ -94,42 +251,56 @@ impl CasperVm {
     ///
     /// Returns [EventError::IndexOutOfBounds] if the index is out of bounds.
     pub fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
-        let contract_package_hash = contract_address.as_contract_package_hash().unwrap();
-        let contract_hash: ContractHash = self.get_contract_package_hash(contract_package_hash);
+        let package_hash = contract_address.as_package_hash().unwrap();
 
-        let dictionary_seed_uref: URef = *self
-            .context
-            .get_contract(contract_hash)
-            .unwrap()
-            .named_keys()
-            .get(consts::EVENTS)
-            .unwrap()
-            .as_uref()
-            .unwrap();
+        let dictionary_seed_uref = self.package_named_key(package_hash, EVENTS);
 
-        match self
-            .context
-            .query_dictionary_item(None, dictionary_seed_uref, &index.to_string())
-        {
-            Ok(val) => {
-                let bytes = val
-                    .as_cl_value()
-                    .unwrap()
-                    .clone()
-                    .into_t::<Bytes>()
-                    .unwrap();
-                Ok(bytes)
-            }
-            Err(_) => Err(EventError::IndexOutOfBounds)
+        match dictionary_seed_uref {
+            None => Err(EventError::CouldntExtractEventData),
+            Some(uref) => Ok(self.get_dict_value(*uref.as_uref().unwrap(), &index.to_string()))
+        }
+    }
+
+    /// Gets the native event at the specified index for the given contract address.
+    ///
+    /// TODO: Support negative index
+    /// The index may be negative, in which case it is interpreted as an offset from the end of the event list.
+    ///
+    /// Returns [EventError::IndexOutOfBounds] if the index is out of bounds.
+    pub fn get_native_event(
+        &self,
+        contract_address: &Address,
+        index: u32
+    ) -> Result<Bytes, EventError> {
+        let messages = self
+            .messages
+            .get(&self.get_contract_entity_addr(contract_address))
+            .ok_or(EventError::IndexOutOfBounds)?;
+        let message = messages
+            .get(index as usize)
+            .ok_or(EventError::IndexOutOfBounds)?;
+        match message {
+            MessagePayload::String(_) => Err(EventError::CouldntExtractEventData),
+            MessagePayload::Bytes(b) => Ok(b.clone())
         }
     }
 
     /// Gets the count of events for the given contract address.
-    pub fn get_events_count(&self, contract_address: &Address) -> u32 {
-        let contract_package_hash = contract_address.as_contract_package_hash().unwrap();
-        let contract_hash: ContractHash = self.get_contract_package_hash(contract_package_hash);
+    pub fn get_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
+        let package_hash = contract_address.as_package_hash();
+        if package_hash.is_none() {
+            return Err(EventError::TriedToQueryEventForNonContract);
+        }
+        Ok(self.events_length(package_hash.unwrap()))
+    }
 
-        self.events_length(&contract_hash)
+    /// Gets the count of native events for the given contract address.
+    pub fn get_native_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
+        let messages = self
+            .messages
+            .get(&self.get_contract_entity_addr(contract_address))
+            .ok_or(EventError::IndexOutOfBounds)?;
+        Ok(messages.len() as u32)
     }
 
     /// Attaches a value to the next call.
@@ -147,7 +318,7 @@ impl CasperVm {
         use_proxy: bool
     ) -> Bytes {
         self.error = None;
-        let hash = *address
+        let hash = address
             .as_contract_package_hash()
             .expect("Contract hash expected");
 
@@ -158,9 +329,9 @@ impl CasperVm {
                 .args()
                 .to_bytes()
                 .expect("Should serialize to bytes");
-            let entry_point = call_def.entry_point().to_string();
+            let entry_point = call_def.entry_point();
             let args = runtime_args! {
-                CONTRACT_PACKAGE_HASH_ARG => hash,
+                PACKAGE_HASH_ARG => hash,
                 ENTRY_POINT_ARG => entry_point,
                 ARGS_ARG => Bytes::from(args_bytes),
                 ATTACHED_VALUE_ARG => call_def.amount(),
@@ -168,7 +339,7 @@ impl CasperVm {
             };
 
             DeployItemBuilder::new()
-                .with_empty_payment_bytes(runtime_args! { ARG_AMOUNT => *DEFAULT_PAYMENT})
+                .with_standard_payment(runtime_args! { ARG_AMOUNT => *DEFAULT_PAYMENT})
                 .with_authorization_keys(&[self.active_account_hash()])
                 .with_address(self.active_account_hash())
                 .with_session_bytes(session_code, args)
@@ -176,7 +347,7 @@ impl CasperVm {
                 .build()
         } else {
             DeployItemBuilder::new()
-                .with_empty_payment_bytes(runtime_args! { ARG_AMOUNT => *DEFAULT_PAYMENT})
+                .with_standard_payment(runtime_args! { ARG_AMOUNT => *DEFAULT_PAYMENT})
                 .with_authorization_keys(&[self.active_account_hash()])
                 .with_address(self.active_account_hash())
                 .with_stored_versioned_contract_by_hash(
@@ -189,7 +360,7 @@ impl CasperVm {
                 .build()
         };
 
-        let execute_request = ExecuteRequestBuilder::from_deploy_item(deploy_item)
+        let execute_request = ExecuteRequestBuilder::from_deploy_item(&deploy_item)
             .with_block_time(self.block_time)
             .build();
         self.context.exec(execute_request).commit();
@@ -199,6 +370,8 @@ impl CasperVm {
             contract_address: *address,
             call_def: call_def.clone()
         });
+
+        self.collect_messages();
 
         self.attached_value = U512::zero();
         if let Some(error) = self.context.get_error() {
@@ -210,7 +383,66 @@ impl CasperVm {
         }
     }
 
-    /// Creates a new contract with the specified name, initialization arguments, and entry points caller.
+    fn collect_messages(&mut self) {
+        let messages = self.context.get_last_exec_result().unwrap();
+        let messages = messages.messages();
+        messages.iter().for_each(|message| {
+            let payload = message.payload().clone();
+            self.messages
+                .entry(*message.entity_addr())
+                .or_default()
+                .push(payload);
+        });
+    }
+
+    fn get_contract_entity_addr(&self, address: &Address) -> EntityAddr {
+        match address {
+            Address::Account(_) => {
+                panic!(
+                    "Account address passed instead of contract address: {:?}",
+                    address
+                )
+            }
+            Address::Contract(contract) => {
+                let package = self
+                    .context
+                    .get_package(PackageHash::new(contract.value()))
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "Contract package not found while getting entity addr: {:?}",
+                            contract
+                        )
+                    });
+
+                package.current_entity_hash().unwrap_or_else(|| {
+                    panic!(
+                        "Current entity hash not found while getting entity addr: {:?}",
+                        contract
+                    )
+                })
+            }
+        }
+    }
+
+    fn get_addressable_entity_from_entity_addr(
+        &self,
+        entity_addr: &EntityAddr
+    ) -> AddressableEntity {
+        let query_result = self
+            .context
+            .query(None, Key::AddressableEntity(*entity_addr), &[])
+            .unwrap();
+        if let StoredValue::AddressableEntity(entity) = query_result {
+            entity
+        } else {
+            panic!(
+                "Stored value is not an addressable entity: {:?}",
+                query_result
+            );
+        }
+    }
+
+    /// Creates a new contract with the specified name, initialisation arguments, and entry points caller.
     pub fn new_contract(
         &mut self,
         name: &str,
@@ -231,9 +463,9 @@ impl CasperVm {
             self.error = Some(odra_error.clone());
             panic!("Revert: Contract deploy failed {:?}", odra_error);
         } else {
-            let contract_package_hash =
-                self.contract_package_hash_from_name(&package_hash_key_name);
-            contract_package_hash.try_into().unwrap()
+            let package_hash = self.package_hash_from_name(&package_hash_key_name);
+            self.collect_messages();
+            package_hash.into()
         }
     }
 
@@ -248,16 +480,17 @@ impl CasperVm {
     pub fn balance_of(&self, address: &Address) -> U512 {
         match address {
             Address::Account(account_hash) => self.get_account_cspr_balance(account_hash),
-            Address::Contract(contract_hash) => self.get_contract_cspr_balance(contract_hash)
+            Address::Contract(package_hash) => {
+                self.get_contract_cspr_balance(&address.as_package_hash().unwrap())
+            }
         }
     }
 
-    /// Transfers the specified amount of tokens to the given address.
+    /// Transfers the specified number of tokens to the given address.
     ///
     /// Results an OdraError if the transfer fails.
     pub fn transfer(&mut self, to: Address, amount: U512) -> OdraResult<()> {
         let deploy_item = DeployItemBuilder::new()
-            .with_empty_payment_bytes(runtime_args! {ARG_AMOUNT => *DEFAULT_PAYMENT})
             .with_transfer_args(runtime_args! {
                 "amount" => amount,
                 "target" => to,
@@ -268,7 +501,7 @@ impl CasperVm {
             .with_deploy_hash(self.next_hash())
             .build();
 
-        let execute_request = ExecuteRequestBuilder::from_deploy_item(deploy_item)
+        let execute_request = ExecuteRequestBuilder::from_deploy_item(&deploy_item)
             .with_block_time(self.block_time)
             .build();
         self.context.exec(execute_request).commit();
@@ -295,13 +528,13 @@ impl CasperVm {
     }
 
     /// Returns the cost of the last deploy.
-    /// Keep in mind that this may be different from the cost of the deploy on the live network.
+    /// Keep in mind that this may be different from the cost of the transaction on the live network.
     /// This is NOT the amount of gas charged - see [last_call_contract_gas_used()](Self::last_call_contract_gas_used).
     pub fn last_call_contract_gas_cost(&self) -> U512 {
-        self.context.last_exec_gas_cost().value()
+        self.context.last_exec_gas_consumed().value()
     }
 
-    /// Returns the amount of gas used for last call.
+    /// Returns the amount of gas used for the last call.
     pub fn last_call_contract_gas_used(&self) -> U512 {
         *DEFAULT_PAYMENT
     }
@@ -369,63 +602,110 @@ impl CasperVm {
     }
 
     fn get_account_cspr_balance(&self, account_hash: &AccountHash) -> U512 {
-        let account: Account = self.context.get_account(*account_hash).unwrap();
+        let account: AddressableEntity = self
+            .context
+            .get_entity_by_account_hash(*account_hash)
+            .unwrap();
         let purse = account.main_purse();
-        let gas_used = self
-            .gas_used
-            .get(account_hash)
-            .copied()
-            .unwrap_or(U512::zero());
-        self.context.get_purse_balance(purse) + gas_used
+        self.context.get_purse_balance(purse)
     }
 
-    fn get_contract_cspr_balance(&self, contract_hash: &ContractPackageHash) -> U512 {
-        let contract_hash: ContractHash = self.get_contract_package_hash(contract_hash);
-        let contract: Contract = self.context.get_contract(contract_hash).unwrap();
-        contract
-            .named_keys()
-            .get(consts::CONTRACT_MAIN_PURSE)
-            .and_then(|key| key.as_uref())
-            .map(|purse| self.context.get_purse_balance(*purse))
-            .unwrap_or_else(U512::zero)
+    fn get_contract_cspr_balance(&self, package_hash: &PackageHash) -> U512 {
+        // TODO: Addressable entity has main purse inside it, is it the same as ours for contracts?
+        let purse_uref = self.get_contract_main_purse(*package_hash);
+        match purse_uref {
+            None => U512::zero(),
+            Some(uref) => self.context.get_purse_balance(uref)
+        }
     }
 
-    fn get_contract_package_hash(&self, contract_hash: &ContractPackageHash) -> ContractHash {
-        self.context
-            .get_contract_package(*contract_hash)
-            .unwrap()
-            .current_contract_hash()
-            .unwrap()
+    fn get_contract_main_purse(&self, package_hash: PackageHash) -> Option<URef> {
+        let purse_key = self.package_named_key(package_hash, CONTRACT_MAIN_PURSE);
+        match purse_key {
+            None => None,
+            Some(purse_key) => {
+                let purse_uref = purse_key.as_uref().unwrap_or_else(|| {
+                    panic!(
+                        "Contract doesn't have main purse uref under {} named key",
+                        CONTRACT_MAIN_PURSE
+                    )
+                });
+                Some(*purse_uref)
+            }
+        }
+    }
+
+    fn genesis_accounts(
+        key_pairs: &BTreeMap<Address, (SecretKey, PublicKey)>
+    ) -> (Vec<GenesisAccount>, Vec<GenesisAccount>) {
+        let mut accounts = Vec::new();
+        let mut validators = Vec::new();
+        let total_accounts = key_pairs.len();
+        let validators_count = 5; // Fixed the number of validators
+        let regular_accounts_count = total_accounts - validators_count;
+
+        // Create regular accounts
+        let iter = key_pairs.iter();
+        for (_, (_, public_key)) in iter.take(regular_accounts_count) {
+            accounts.push(GenesisAccount::account(
+                public_key.clone(),
+                Motes::new(DEFAULT_BALANCE),
+                None
+            ));
+        }
+
+        // Create validator accounts (last 5 accounts)
+        for (_, (_, public_key)) in key_pairs.iter().skip(regular_accounts_count) {
+            let validator_account = GenesisAccount::account(
+                public_key.clone(),
+                Motes::new(DEFAULT_BALANCE),
+                Some(GenesisValidator::new(Motes::new(DEFAULT_BALANCE), 0))
+            );
+            accounts.push(validator_account.clone());
+            validators.push(validator_account);
+        }
+
+        (accounts, validators)
+    }
+
+    /// Creates a new genesis config.
+    /// It is the same as the default one, but with the given genesis,
+    /// so we will know their private keys.
+    fn genesis_config(genesis_accounts: Vec<GenesisAccount>) -> GenesisConfig {
+        GenesisConfigBuilder::default()
+            .with_accounts(genesis_accounts)
+            .with_wasm_config(*DEFAULT_WASM_CONFIG)
+            .with_system_config(*DEFAULT_SYSTEM_CONFIG)
+            .with_validator_slots(DEFAULT_VALIDATOR_SLOTS)
+            .with_auction_delay(DEFAULT_AUCTION_DELAY)
+            .with_locked_funds_period_millis(DEFAULT_LOCKED_FUNDS_PERIOD_MILLIS)
+            .with_round_seigniorage_rate(DEFAULT_ROUND_SEIGNIORAGE_RATE)
+            .with_unbonding_delay(DEFAULT_UNBONDING_DELAY)
+            .with_genesis_timestamp_millis(DEFAULT_GENESIS_TIMESTAMP_MILLIS)
+            .build()
     }
 
     fn new_instance() -> Self {
-        let mut genesis_config = DEFAULT_GENESIS_CONFIG.clone();
-        let mut accounts: Vec<Address> = Vec::new();
-        let key_pairs = generate_key_pairs(20);
-        key_pairs
-            .iter()
-            .for_each(|(address, (secret_key, public_key))| {
-                accounts.push(*address);
-                let account = GenesisAccount::account(
-                    public_key.clone(),
-                    Motes::new(U512::from(DEFAULT_ACCOUNT_INITIAL_BALANCE)),
-                    None
-                );
-                genesis_config.ee_config_mut().push_account(account);
-            });
+        let key_pairs = generate_key_pairs(ACCOUNTS_NUMBER);
+        let (genesis_accounts, validators) = Self::genesis_accounts(&key_pairs);
+        let accounts: Vec<Address> = key_pairs.keys().copied().collect();
 
-        let run_genesis_request = RunGenesisRequest::new(
-            *DEFAULT_GENESIS_CONFIG_HASH,
-            genesis_config.protocol_version(),
-            genesis_config.take_ee_config(),
+        let genesis_config = Self::genesis_config(genesis_accounts);
+
+        let mut genesis_request = GenesisRequest::new(
+            DEFAULT_GENESIS_CONFIG_HASH,
+            ProtocolVersion::V2_0_0,
+            genesis_config,
             DEFAULT_CHAINSPEC_REGISTRY.clone()
         );
+        genesis_request.set_enable_entity(false);
 
         let chainspec_path =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/chainspec.toml");
-        let mut builder = InMemoryWasmTestBuilder::new_with_chainspec(chainspec_path, None);
+        let mut builder = LmdbWasmTestBuilder::new_temporary_with_chainspec(chainspec_path);
 
-        builder.run_genesis(&run_genesis_request).commit();
+        builder.run_genesis(genesis_request).commit();
+        builder.advance_eras_by_default_auction_delay();
 
         Self {
             active_account: accounts[0],
@@ -437,7 +717,10 @@ impl CasperVm {
             attached_value: U512::zero(),
             gas_used: BTreeMap::new(),
             gas_report: GasReport::default(),
-            key_pairs
+            key_pairs,
+            messages: Default::default(),
+            validators,
+            removed_validators: Default::default()
         }
     }
 
@@ -449,14 +732,14 @@ impl CasperVm {
         self.error = None;
         let session_code = PathBuf::from(wasm_path);
         let deploy_item = DeployItemBuilder::new()
-            .with_empty_payment_bytes(runtime_args! {ARG_AMOUNT => *DEFAULT_PAYMENT})
+            .with_standard_payment(runtime_args! {ARG_AMOUNT => *DEFAULT_PAYMENT})
             .with_authorization_keys(&[self.active_account_hash()])
             .with_address(self.active_account_hash())
             .with_session_code(session_code, args.clone())
             .with_deploy_hash(self.next_hash())
             .build();
 
-        let execute_request = ExecuteRequestBuilder::from_deploy_item(deploy_item)
+        let execute_request = ExecuteRequestBuilder::from_deploy_item(&deploy_item)
             .with_block_time(self.block_time)
             .build();
         let result = self.context.exec(execute_request).commit();
@@ -470,18 +753,62 @@ impl CasperVm {
 }
 
 impl CasperVm {
-    fn events_length(&self, contract_hash: &ContractHash) -> u32 {
-        self.context
-            .query(
-                None,
-                Key::Hash(contract_hash.value()),
-                &[String::from(consts::EVENTS_LENGTH)]
-            )
+    fn get_package(&self, package_hash: PackageHash) -> Package {
+        self.context.get_package(package_hash).unwrap()
+    }
+
+    /// Gets current contract from contract package and
+    /// returns it's named keys.
+    fn package_named_keys(&self, package_hash: PackageHash) -> NamedKeys {
+        // TODO: fix unwraps
+        let a = self
+            .context
+            .get_package(package_hash)
+            .unwrap()
+            .current_entity_hash()
+            .unwrap();
+        let addressable_entity_hash = AddressableEntityHash::new(a.value());
+        let named_keys = self
+            .context
+            .get_entity_with_named_keys_by_entity_hash(addressable_entity_hash)
+            .unwrap();
+        let keys = named_keys.named_keys();
+        keys.clone()
+    }
+
+    fn package_named_key(&self, package_hash: PackageHash, name: &str) -> Option<Key> {
+        self.package_named_keys(package_hash).get(name).cloned()
+    }
+
+    fn events_length(&self, package_hash: PackageHash) -> u32 {
+        let key = self.package_named_key(package_hash, EVENTS_LENGTH);
+        match key {
+            None => 0,
+            Some(key) => self.get_value(key)
+        }
+    }
+
+    // TODO: Make this return Result
+    fn get_value<T: CLTyped + FromBytes>(&self, key: Key) -> T {
+        let value = self.context.query(None, key, &[]);
+        value
             .unwrap()
             .as_cl_value()
             .unwrap()
             .clone()
-            .into_t()
+            .into_t::<T>()
+            .unwrap()
+    }
+
+    // Make this return Result also
+    fn get_dict_value<T: CLTyped + FromBytes>(&self, uref: URef, name: &str) -> T {
+        let value = self.context.query_dictionary_item(None, uref, name);
+        value
+            .unwrap()
+            .as_cl_value()
+            .unwrap()
+            .clone()
+            .into_t::<T>()
             .unwrap()
     }
 
@@ -489,25 +816,22 @@ impl CasperVm {
         &self,
         error: OdraError,
         entrypoint: &str,
-        contract_package_hash: ContractPackageHash
+        package_hash: &ContractPackageHash
     ) -> ! {
-        panic!(
-            "Revert: {:?} - {:?}::{}",
-            error, contract_package_hash, entrypoint
-        )
+        panic!("Revert: {:?} - {:?}::{}", error, package_hash, entrypoint)
     }
 }
 
 fn parse_error(err: engine_state::Error) -> OdraError {
     if let engine_state::Error::Exec(exec_err) = err {
         match exec_err {
-            engine_state::ExecError::Revert(ApiError::MissingArgument) => {
+            execution::ExecError::Revert(ApiError::MissingArgument) => {
                 OdraError::ExecutionError(ExecutionError::MissingArg)
             }
-            engine_state::ExecError::Revert(ApiError::Mint(0)) => {
+            execution::ExecError::Revert(ApiError::Mint(0)) => {
                 OdraError::VmError(VmError::BalanceExceeded)
             }
-            engine_state::ExecError::Revert(ApiError::User(code)) => match code {
+            execution::ExecError::Revert(ApiError::User(code)) => match code {
                 x if x == ExecutionError::UnwrapError.code() => {
                     OdraError::ExecutionError(ExecutionError::UnwrapError)
                 }
@@ -582,17 +906,15 @@ fn parse_error(err: engine_state::Error) -> OdraError {
                 }
                 _ => OdraError::ExecutionError(ExecutionError::User(code))
             },
-            engine_state::ExecError::InvalidContext => OdraError::VmError(VmError::InvalidContext),
-            engine_state::ExecError::NoSuchMethod(name) => {
+            execution::ExecError::InvalidContext => OdraError::VmError(VmError::InvalidContext),
+            execution::ExecError::NoSuchMethod(name) => {
                 OdraError::VmError(VmError::NoSuchMethod(name))
             }
-            engine_state::ExecError::MissingArgument { name } => {
+            execution::ExecError::MissingArgument { name } => {
                 OdraError::ExecutionError(ExecutionError::MissingArg)
             }
             _ => OdraError::VmError(VmError::Other(format!("Casper ExecError: {}", exec_err)))
         }
-    } else if let engine_state::Error::InsufficientPayment = err {
-        OdraError::VmError(VmError::BalanceExceeded)
     } else {
         OdraError::VmError(VmError::Other(format!("Casper EngineStateError: {}", err)))
     }

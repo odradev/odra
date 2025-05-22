@@ -3,10 +3,11 @@ use blake2::digest::VariableOutput;
 use blake2::{Blake2b, Blake2b512, Blake2bVar, Blake2s256, Digest};
 use odra_core::casper_types::{
     bytesrepr::{Bytes, ToBytes},
-    CLValue, U512
+    CLValue, PublicKey, U512
 };
 use odra_core::prelude::*;
 use odra_core::{casper_types, CallDef, ContractContext};
+use rand::Rng;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
 use std::io::Write;
@@ -72,6 +73,10 @@ impl ContractContext for OdraVmContractEnv {
         self.vm.borrow().emit_event(event);
     }
 
+    fn emit_native_event(&self, event: &Bytes) {
+        self.vm.borrow().emit_native_event(event);
+    }
+
     fn transfer_tokens(&self, to: &Address, amount: &U512) {
         self.vm.borrow().transfer_tokens(to, amount)
     }
@@ -104,6 +109,27 @@ impl ContractContext for OdraVmContractEnv {
             .finalize_variable(&mut result)
             .expect("should copy hash to the result array");
         result
+    }
+
+    fn delegate(&self, validator: PublicKey, amount: U512) {
+        let delegator = self.vm.borrow().callee();
+        self.vm.borrow().delegate(validator, delegator, amount);
+    }
+
+    fn undelegate(&self, validator: PublicKey, amount: U512) {
+        let delegator = self.vm.borrow().callee();
+        self.vm.borrow().undelegate(validator, delegator, amount);
+    }
+
+    fn delegated_amount(&self, validator: PublicKey) -> U512 {
+        let delegator = self.vm.borrow().callee();
+        self.vm.borrow().delegated_amount(delegator, validator)
+    }
+    fn pseudorandom_bytes(&self, size: usize) -> Vec<u8> {
+        use rand::Rng;
+        let mut bytes = vec![0u8; size];
+        rand::rng().fill(&mut bytes[..]);
+        bytes
     }
 }
 

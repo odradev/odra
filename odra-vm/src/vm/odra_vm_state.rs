@@ -13,15 +13,36 @@ use odra_core::crypto::generate_key_pairs;
 use odra_core::prelude::*;
 use odra_core::EventError;
 use std::collections::BTreeMap;
+use std::fmt::format;
 
+// TODO: Set it to a value corresponding to the auction delay in the Casper VM
+pub const ODRA_VM_AUCTION_DELAY: u64 = 41000;
+
+/// Struct holding the information about a transfer that is awaiting to be processed.
+/// It should be executed when the block_time is greater than the block_time of the transfer.
+#[derive(Clone)]
+pub struct AwaitingTransfer {
+    pub from: Address,
+    pub to: Address,
+    pub amount: U512,
+    pub block_time: u64
+}
+
+/// Struct representing the state of the Odra VM.
 pub struct OdraVmState {
     storage: Storage,
     callstack: Callstack,
     events: BTreeMap<Address, Vec<Bytes>>,
+    native_events: BTreeMap<Address, Vec<Bytes>>,
     contract_counter: u32,
     pub error: Option<OdraError>,
     block_time: u64,
     pub accounts: Vec<Address>,
+    pub validators: BTreeMap<PublicKey, U512>,
+    pub validator_account: BTreeMap<PublicKey, Address>,
+    pub delegations: BTreeMap<PublicKey, BTreeMap<Address, U512>>,
+    pub removed_validators: Vec<PublicKey>,
+    pub awaiting_transfers: Vec<AwaitingTransfer>,
     key_pairs: BTreeMap<Address, (SecretKey, PublicKey)>
 }
 
@@ -85,22 +106,153 @@ impl OdraVmState {
         }
     }
 
+    pub fn emit_native_event(&mut self, event_data: &Bytes) {
+        let contract_address = self.callstack.current().address();
+        #[allow(clippy::manual_inspect)]
+        let events = self.native_events.get_mut(contract_address).map(|events| {
+            events.push(event_data.clone());
+            events
+        });
+        if events.is_none() {
+            self.native_events
+                .insert(*contract_address, vec![event_data.clone()]);
+        }
+    }
+
     pub fn get_event(&self, address: &Address, index: u32) -> Result<Bytes, EventError> {
+        if !address.is_contract() {
+            return Err(EventError::ContractDoesntSupportEvents);
+        }
         let events = self.events.get(address);
         if events.is_none() {
             return Err(EventError::IndexOutOfBounds);
         }
-        let events: &Vec<Bytes> = events.unwrap();
+        let events = events.unwrap();
         let event = events
             .get(index as usize)
             .ok_or(EventError::IndexOutOfBounds)?;
         Ok(event.clone())
     }
 
-    pub fn get_events_count(&self, address: &Address) -> u32 {
-        self.events
-            .get(address)
-            .map_or(0, |events| events.len() as u32)
+    pub fn get_native_event(&self, address: &Address, index: u32) -> Result<Bytes, EventError> {
+        if !address.is_contract() {
+            return Err(EventError::ContractDoesntSupportEvents);
+        }
+        let events = self.native_events.get(address);
+        if events.is_none() {
+            return Err(EventError::IndexOutOfBounds);
+        }
+        let events = events.unwrap();
+        let event = events
+            .get(index as usize)
+            .ok_or(EventError::IndexOutOfBounds)?;
+        Ok(event.clone())
+    }
+
+    pub fn get_events_count(&self, address: &Address) -> Result<u32, EventError> {
+        if !address.is_contract() {
+            return Err(EventError::ContractDoesntSupportEvents);
+        }
+        let events = self.events.get(address);
+        if events.is_none() {
+            return Err(EventError::CouldntExtractEventData);
+        }
+        Ok(events.unwrap().len() as u32)
+    }
+
+    pub fn get_native_events_count(&self, address: &Address) -> Result<u32, EventError> {
+        if !address.is_contract() {
+            return Err(EventError::ContractDoesntSupportEvents);
+        }
+        let events = self.native_events.get(address);
+        if events.is_none() {
+            return Err(EventError::CouldntExtractEventData);
+        }
+        Ok(events.unwrap().len() as u32)
+    }
+
+    pub fn delegated_amount(&self, validator: PublicKey, delegator: Address) -> U512 {
+        if self.removed_validators.contains(&validator) {
+            return U512::zero();
+        }
+        let validators_delegations = self.delegations.get(&validator).unwrap();
+        let delegators_amount = validators_delegations
+            .get(&delegator)
+            .cloned()
+            .unwrap_or_default();
+        delegators_amount
+    }
+
+    pub fn remove_validator(&mut self, validator: PublicKey) {
+        if !self.validators.contains_key(&validator) {
+            return;
+        }
+
+        // Collect the delegations to avoid borrowing issues
+        let delegations_to_remove: Vec<(Address, U512)> =
+            if let Some(delegations) = self.delegations.get(&validator) {
+                delegations
+                    .iter()
+                    .map(|(delegator, amount)| (*delegator, *amount))
+                    .collect()
+            } else {
+                Vec::new()
+            };
+
+        // Process the collected delegations
+        for (delegator, amount) in delegations_to_remove {
+            self.undelegate(validator.clone(), delegator, amount);
+        }
+
+        self.removed_validators.push(validator.clone());
+    }
+
+    pub fn delegate(&mut self, validator: PublicKey, delegator: Address, amount: U512) {
+        if self.removed_validators.contains(&validator) {
+            panic!("Validator is disabled");
+        }
+        let validators_delegations = self.delegations.entry(validator.clone()).or_default();
+        let delegation = validators_delegations
+            .get(&delegator)
+            .cloned()
+            .unwrap_or_default();
+        validators_delegations.insert(delegator, delegation + amount);
+
+        let validators_total_amount = self.validators.get(&validator).cloned().unwrap_or_default();
+        self.validators
+            .insert(validator.clone(), validators_total_amount + amount);
+
+        let validator_account = self.validator_account.get(&validator).cloned().unwrap();
+
+        self.transfer(&delegator, &validator_account, &amount)
+            .unwrap();
+    }
+
+    pub fn undelegate(&mut self, validator: PublicKey, delegator: Address, amount: U512) {
+        if self.removed_validators.contains(&validator) {
+            panic!("Validator is disabled");
+        }
+        let validators_delegations = self.delegations.entry(validator.clone()).or_default();
+        let delegation = validators_delegations
+            .get(&delegator)
+            .cloned()
+            .unwrap_or_default();
+        validators_delegations.insert(delegator, delegation.checked_sub(amount).unwrap());
+
+        let validators_total_amount = self.validators.get(&validator).cloned().unwrap_or_default();
+        self.validators.insert(
+            validator.clone(),
+            validators_total_amount.checked_sub(amount).unwrap()
+        );
+
+        let transfer = AwaitingTransfer {
+            from: self.validator_account[&validator],
+            to: delegator,
+            amount,
+            block_time: self.block_time + self.unbonding_period()
+        };
+
+        self.awaiting_transfers.push(transfer);
     }
 
     pub fn attach_value(&mut self, amount: U512) {
@@ -181,6 +333,62 @@ impl OdraVmState {
         self.block_time += milliseconds;
     }
 
+    pub fn advance_with_auctions(&mut self, milliseconds: u64) {
+        let time_between_auctions = self.auction_delay();
+
+        // Calculate how many auctions we can run based on time_diff
+        let num_auctions = milliseconds / time_between_auctions;
+
+        // Run auctions and distribute rewards one at a time
+        // to each validator which has a delegation
+        for _ in 0..num_auctions {
+            self.validators
+                .iter_mut()
+                .for_each(|(validator, total_amount)| {
+                    if total_amount.is_zero() {
+                        return;
+                    }
+
+                    let mut new_total_amount = *total_amount;
+
+                    let delegations = self.delegations.get_mut(validator).unwrap();
+                    delegations.iter_mut().for_each(|(address, amount)| {
+                        let reward = *total_amount / 1000;
+                        *amount += reward;
+                        new_total_amount += reward;
+                    });
+
+                    *total_amount = new_total_amount;
+                });
+        }
+
+        // Update the block time
+        self.block_time += milliseconds;
+
+        // Process awaiting transfers
+        self.awaiting_transfers
+            .clone()
+            .into_iter()
+            .for_each(|transfer| {
+                if self.block_time >= transfer.block_time {
+                    self.transfer(&transfer.from, &transfer.to, &transfer.amount)
+                        .unwrap();
+                }
+            });
+
+        // Remove the processed transfers from the list
+        self.awaiting_transfers
+            .retain(|transfer| self.block_time < transfer.block_time);
+    }
+
+    pub fn auction_delay(&self) -> u64 {
+        ODRA_VM_AUCTION_DELAY
+    }
+
+    pub fn unbonding_period(&self) -> u64 {
+        self.auction_delay() * 7
+    }
+
     pub fn balance_of(&self, address: &Address) -> U512 {
         self.storage
             .balance_of(address)
@@ -225,17 +433,40 @@ impl Default for OdraVmState {
         let accounts: Vec<Address> = key_pairs.keys().copied().collect();
         let mut balances = BTreeMap::<Address, AccountBalance>::new();
         for address in accounts.clone() {
-            balances.insert(address, 100_000_000_000_000_000u64.into());
+            balances.insert(address, 10_000_000_000_000_000_000u64.into());
         }
+
+        // last 5 key pairs are validators
+        let validators = key_pairs
+            .iter()
+            .clone()
+            .rev()
+            .take(5)
+            .map(|(_, pk)| (pk.1.clone(), U512::zero()))
+            .collect::<BTreeMap<PublicKey, U512>>();
+
+        let validator_accounts = key_pairs
+            .iter()
+            .clone()
+            .rev()
+            .take(5)
+            .map(|(address, pk)| (pk.1.clone(), *address))
+            .collect::<BTreeMap<PublicKey, Address>>();
 
         let mut backend = OdraVmState {
             storage: Storage::new(balances),
             callstack: Default::default(),
             events: Default::default(),
+            native_events: Default::default(),
             contract_counter: 0,
             error: None,
             block_time: 0,
             accounts: accounts.clone(),
+            validators,
+            validator_account: validator_accounts,
+            delegations: Default::default(),
+            removed_validators: Default::default(),
+            awaiting_transfers: Default::default(),
             key_pairs
         };
         backend.push_callstack_element(CallstackElement::Account(*accounts.first().unwrap()));

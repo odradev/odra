@@ -47,15 +47,28 @@ mod test {
             pub struct TokenContractRef {
                 env: Rc<odra::ContractEnv>,
                 address: Address,
+                attached_value: odra::casper_types::U512,
             }
 
             impl odra::ContractRef for TokenContractRef {
                 fn new(env: Rc<odra::ContractEnv>, address: Address) -> Self {
-                    Self { env, address }
+                    Self {
+                        env, 
+                        address,
+                        attached_value: odra::casper_types::U512::zero()
+                    }
                 }
 
                 fn address(&self) -> &Address {
                     &self.address
+                }
+
+                fn with_tokens(&self, tokens: odra::casper_types::U512) -> Self {
+                    Self {
+                        address: self.address,
+                        env: self.env.clone(),
+                        attached_value: tokens,
+                    }
                 }
             }
 
@@ -68,10 +81,14 @@ mod test {
                             false,
                             {
                                 let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                if self.attached_value > odra::casper_types::U512::zero() {
+                                    let _ = named_args.insert("amount", self.attached_value);
+                                }
                                 odra::args::EntrypointArgument::insert_runtime_arg(owner.clone(), "owner", &mut named_args);
                                 named_args
                             }
-                        ),
+                        )
+                        .with_amount(self.attached_value),
                     )
                 }
             }

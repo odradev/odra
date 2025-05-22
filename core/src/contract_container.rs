@@ -9,14 +9,16 @@ use casper_types::U512;
 /// The container validates a contract call definition before calling the entry point.
 #[derive(Clone)]
 pub struct ContractContainer {
+    contract_name: String,
     entry_points_caller: EntryPointsCaller,
     ctx: ExecutionContext
 }
 
 impl ContractContainer {
     /// Creates a new instance of `ContractContainer`.
-    pub fn new(entry_points_caller: EntryPointsCaller) -> Self {
+    pub fn new(name: &str, entry_points_caller: EntryPointsCaller) -> Self {
         Self {
+            contract_name: name.to_string(),
             entry_points_caller,
             ctx: ExecutionContext::Installation
         }
@@ -44,6 +46,11 @@ impl ContractContainer {
             return Err(OdraError::VmError(VmError::InvalidContext));
         }
         self.entry_points_caller.call(call_def)
+    }
+
+    /// Returns the name of the contract.
+    pub fn name(&self) -> &str {
+        &self.contract_name
     }
 }
 
@@ -100,6 +107,7 @@ mod tests {
                 )))
             });
             Self {
+                contract_name: "empty".to_string(),
                 entry_points_caller,
                 ctx: ExecutionContext::Installation
             }
@@ -129,6 +137,7 @@ mod tests {
             });
 
             Self {
+                contract_name: "with_entrypoints".to_string(),
                 entry_points_caller,
                 ctx: ExecutionContext::Installation
             }

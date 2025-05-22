@@ -2,7 +2,6 @@ use odra::{
     args::Maybe,
     host::{Deployer, HostEnv, HostRef}
 };
-use serde::{Deserialize, Serialize};
 
 use crate::cep78::{
     error::CEP78Error,
@@ -23,13 +22,6 @@ use crate::cep78::{
 };
 
 use super::{default_args_builder, utils::TEST_PRETTY_721_META_DATA};
-
-#[derive(Serialize, Deserialize, Debug)]
-struct Metadata {
-    name: String,
-    symbol: String,
-    token_uri: String
-}
 
 fn default_token() -> (TestCep78HostRef, HostEnv) {
     let env = odra_test::env();

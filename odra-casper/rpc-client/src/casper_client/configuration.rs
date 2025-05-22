@@ -1,13 +1,19 @@
 use crate::casper_client::{
-    ENV_ACCOUNT_PREFIX, ENV_CHAIN_NAME, ENV_CSPR_CLOUD_AUTH_TOKEN, ENV_LIVENET_ENV_FILE,
-    ENV_NODE_ADDRESS, ENV_SECRET_KEY
+    ENV_ACCOUNT_PREFIX, ENV_CHAIN_NAME, ENV_CSPR_CLOUD_AUTH_TOKEN, ENV_EVENTS_ADDRESS,
+    ENV_LIVENET_ENV_FILE, ENV_NODE_ADDRESS, ENV_SECRET_KEY
 };
+use crate::utils::{get_env_variable, get_optional_env_variable};
+use casper_client::Verbosity;
+use casper_types::TimeDiff;
 use odra_core::casper_types::SecretKey;
 use std::path::PathBuf;
 
+pub const DEFAULT_TTL: u64 = 1000 * 60;
+pub const DEFAULT_GAS_TOLERANCE: u8 = 5;
 #[derive(Debug)]
 pub struct CasperClientConfiguration {
     pub node_address: String,
+    pub events_url: String,
     pub rpc_id: String,
     pub chain_name: String,
     pub secret_keys: Vec<SecretKey>,
@@ -30,6 +36,8 @@ impl CasperClientConfiguration {
 
         let node_address = get_env_variable(ENV_NODE_ADDRESS);
         let chain_name = get_env_variable(ENV_CHAIN_NAME);
+        let events_url = get_env_variable(ENV_EVENTS_ADDRESS);
+
         let (secret_keys, secret_key_paths) = Self::secret_keys_from_env();
         CasperClientConfiguration {
             node_address,
@@ -37,7 +45,8 @@ impl CasperClientConfiguration {
             chain_name,
             secret_keys,
             secret_key_paths,
-            cspr_cloud_auth_token: get_optional_env_variable(ENV_CSPR_CLOUD_AUTH_TOKEN)
+            cspr_cloud_auth_token: get_optional_env_variable(ENV_CSPR_CLOUD_AUTH_TOKEN),
+            events_url
         }
     }
 
@@ -66,18 +75,35 @@ impl CasperClientConfiguration {
         }
         (secret_keys, secret_key_paths)
     }
-}
 
-fn get_env_variable(name: &str) -> String {
-    std::env::var(name).unwrap_or_else(|err| {
-        crate::log::error(format!(
-            "{} must be set. Have you setup your .env file?",
-            name
-        ));
-        panic!("{}", err)
-    })
-}
+    pub fn verbosity(&self) -> u64 {
+        Verbosity::Low as u64
+    }
 
-fn get_optional_env_variable(name: &str) -> Option<String> {
-    std::env::var(name).ok()
+    pub fn verbosity_typed(&self) -> Verbosity {
+        Verbosity::Low
+    }
+
+    pub fn ttl(&self) -> TimeDiff {
+        TimeDiff::from_millis(DEFAULT_TTL)
+    }
+
+    pub fn chain_name(&self) -> &str {
+        &self.chain_name
+    }
+
+    /// Node rpc address.
+    pub fn node_address_rpc(&self) -> String {
+        format!("{}/rpc", self.node_address())
+    }
+
+    /// Node address.
+    pub fn node_address(&self) -> &str {
+        &self.node_address
+    }
+
+    /// Gas price tolerance
+    pub fn gas_price_tolerance(&self) -> u8 {
+        DEFAULT_GAS_TOLERANCE
+    }
 }

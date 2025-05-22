@@ -20,28 +20,29 @@ jobs:
     runs-on: buildjet-8vcpu-ubuntu-2204
     services:
       casper-nctl:
-        image: makesoftware/casper-nctl:v155
+        image: makesoftware/casper-nctl:v200-0119c2b7
         options: --name mynctl
         env:
           PREDEFINED_ACCOUNTS: 'true'
           MINIMUM_ROUND_EXPONENT: '12'
           MAXIMUM_ROUND_EXPONENT: '14'
-          DEPLOY_DELAY: '5sec'
+          DEPLOY_DELAY: '30sec'
         ports:
           - 11101:11101
     steps:
       - name: Setup just
         uses: extractions/setup-just@v1
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Cache target
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: target
           key: odra-target-folder
       - name: Setup toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: nightly-2024-07-31
           target: wasm32-unknown-unknown
           components: rustfmt, clippy, llvm-tools-preview
       - name: Run lints

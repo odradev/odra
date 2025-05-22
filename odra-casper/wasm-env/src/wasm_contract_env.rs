@@ -4,7 +4,7 @@ use casper_types::bytesrepr::ToBytes;
 use casper_types::U512;
 use odra_core::casper_types;
 use odra_core::casper_types::bytesrepr::Bytes;
-use odra_core::casper_types::{CLType, CLValue, BLAKE2B_DIGEST_LENGTH};
+use odra_core::casper_types::{CLType, CLValue, PublicKey, BLAKE2B_DIGEST_LENGTH};
 use odra_core::prelude::*;
 use odra_core::{ContractContext, ContractEnv};
 
@@ -42,11 +42,11 @@ impl ContractContext for WasmContractEnv {
     }
 
     fn caller(&self) -> Address {
-        host_functions::caller()
+        host_functions::caller().unwrap_or_else(|e| self.revert(e))
     }
 
     fn self_address(&self) -> Address {
-        host_functions::self_address()
+        host_functions::self_address().unwrap_or_else(|e| self.revert(e))
     }
 
     fn call_contract(&self, address: Address, call_def: odra_core::CallDef) -> Bytes {
@@ -67,6 +67,10 @@ impl ContractContext for WasmContractEnv {
 
     fn emit_event(&self, event: &Bytes) {
         host_functions::emit_event(event);
+    }
+
+    fn emit_native_event(&self, event: &Bytes) {
+        host_functions::emit_native_event(event);
     }
 
     fn transfer_tokens(&self, to: &Address, amount: &U512) {
@@ -97,6 +101,22 @@ impl ContractContext for WasmContractEnv {
 
     fn hash(&self, bytes: &[u8]) -> [u8; BLAKE2B_DIGEST_LENGTH] {
         host_functions::blake2b(bytes)
+    }
+
+    fn delegate(&self, validator: PublicKey, amount: U512) {
+        host_functions::delegate(validator, amount);
+    }
+
+    fn undelegate(&self, validator: PublicKey, amount: U512) {
+        host_functions::undelegate(validator, amount);
+    }
+
+    fn delegated_amount(&self, validator: PublicKey) -> U512 {
+        host_functions::delegated_amount(validator)
+    }
+
+    fn pseudorandom_bytes(&self, size: usize) -> Vec<u8> {
+        host_functions::pseudorandom_bytes(size)
     }
 }
 

@@ -1,7 +1,6 @@
-use core::any::Any;
-
 use casper_types::bytesrepr::Error as BytesReprError;
 use casper_types::{CLType, CLValueError};
+use core::any::Any;
 
 use crate::arithmetic::ArithmeticsError;
 use crate::prelude::*;
@@ -40,7 +39,8 @@ impl From<ArithmeticsError> for ExecutionError {
     fn from(error: ArithmeticsError) -> Self {
         match error {
             ArithmeticsError::AdditionOverflow => Self::AdditionOverflow,
-            ArithmeticsError::SubtractingOverflow => Self::SubtractionOverflow
+            ArithmeticsError::SubtractingOverflow => Self::SubtractionOverflow,
+            ArithmeticsError::ConversionError => Self::ConversionError
         }
     }
 }
@@ -137,6 +137,14 @@ pub enum ExecutionError {
     MissingAddress = 123,
     /// Out of gas error
     OutOfGas = 124,
+    /// MainPurse error
+    MainPurseError = 125,
+    /// Conversion error
+    ConversionError = 126,
+    /// Couldn't deploy the contract
+    ContractDeploymentError = 127,
+    /// Couldn't extract caller info
+    CannotExtractCallerInfo = 128,
     /// Maximum code for user errors
     MaxUserError = 64535,
     /// User error too high. The code should be in range 0..32767.
@@ -240,7 +248,7 @@ impl From<AddressError> for OdraError {
 /// Event-related errors.
 #[derive(Debug, PartialEq, Eq, PartialOrd)]
 pub enum EventError {
-    /// The type of event is different than expected.
+    /// The type of event is different from expected.
     UnexpectedType(String),
     /// Index of the event is out of bounds.
     IndexOutOfBounds,
@@ -251,7 +259,11 @@ pub enum EventError {
     /// Could not extract event name.
     CouldntExtractName,
     /// Could not extract event data.
-    CouldntExtractEventData
+    CouldntExtractEventData,
+    /// Contract doesn't support CES events.
+    ContractDoesntSupportEvents,
+    /// Tried to query event for a non-contract entity.
+    TriedToQueryEventForNonContract
 }
 
 /// Represents the result of a contract call.
@@ -281,5 +293,11 @@ impl From<BytesReprError> for OdraError {
             _ => ExecutionError::Formatting
         }
         .into()
+    }
+}
+
+impl From<anyhow::Error> for OdraError {
+    fn from(value: anyhow::Error) -> Self {
+        OdraError::VmError(VmError::Other(value.to_string()))
     }
 }

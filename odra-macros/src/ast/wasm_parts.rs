@@ -251,6 +251,7 @@ impl TryFrom<&'_ FnIR> for NewEntryPointItem {
             param_ret_ty,
             param_access,
             utils::expr::entry_point_contract(),
+            utils::expr::entry_point_payment(),
         ]);
         Ok(Self {
             ty: utils::ty::entry_point(),
@@ -283,33 +284,39 @@ mod test {
                 fn entry_points() -> odra::casper_types::EntryPoints {
                     let mut entry_points = odra::casper_types::EntryPoints::new();
 
-                    entry_points.add_entry_point(odra::casper_types::EntryPoint::new(
+                    entry_points.add_entry_point(odra::casper_types::EntityEntryPoint::new(
                         "init",
                         vec![odra::args::parameter::<Option<U256> >("total_supply")].into_iter().filter_map(|x| x).collect(),
                         <() as odra::casper_types::CLTyped>::cl_type(),
                         odra::casper_types::EntryPointAccess::Groups(vec![odra::casper_types::Group::new("constructor_group")]),
-                        odra::casper_types::EntryPointType::Contract
+                                                        odra::casper_types::EntryPointType::Called,
+                                odra::casper_types::EntryPointPayment::Caller,
+
                     ));
-                    entry_points.add_entry_point(odra::casper_types::EntryPoint::new(
+                    entry_points.add_entry_point(odra::casper_types::EntityEntryPoint::new(
                         "total_supply",
                         vec![],
                         <U256 as odra::casper_types::CLTyped>::cl_type(),
                         odra::casper_types::EntryPointAccess::Public,
-                        odra::casper_types::EntryPointType::Contract
+                        odra::casper_types::EntryPointType::Called,
+                        odra::casper_types::EntryPointPayment::Caller,
+
                     ));
                     entry_points
                         .add_entry_point(
-                            odra::casper_types::EntryPoint::new(
+                            odra::casper_types::EntityEntryPoint::new(
                                 "pay_to_mint",
                                 vec![],
                                 <() as odra::casper_types::CLTyped>::cl_type(),
                                 odra::casper_types::EntryPointAccess::Public,
-                                odra::casper_types::EntryPointType::Contract,
+                                odra::casper_types::EntryPointType::Called,
+                                odra::casper_types::EntryPointPayment::Caller,
+
                             ),
                         );
                     entry_points
                         .add_entry_point(
-                            odra::casper_types::EntryPoint::new(
+                            odra::casper_types::EntityEntryPoint::new(
                                 "approve",
                                 vec![
                                     odra::args::parameter::<Address>("to"),
@@ -318,12 +325,14 @@ mod test {
                                 ].into_iter().filter_map(|x| x).collect(),
                                 <() as odra::casper_types::CLTyped>::cl_type(),
                                 odra::casper_types::EntryPointAccess::Public,
-                                odra::casper_types::EntryPointType::Contract,
+                                odra::casper_types::EntryPointType::Called,
+                                odra::casper_types::EntryPointPayment::Caller,
+
                             ),
                         );
                     entry_points
                         .add_entry_point(
-                            odra::casper_types::EntryPoint::new(
+                            odra::casper_types::EntityEntryPoint::new(
                                 "airdrop",
                                 vec![
                                     odra::args::parameter::<odra::prelude::vec::Vec<Address> >("to"),
@@ -331,7 +340,9 @@ mod test {
                                 ].into_iter().filter_map(|x| x).collect(),
                                 <() as odra::casper_types::CLTyped>::cl_type(),
                                 odra::casper_types::EntryPointAccess::Public,
-                                odra::casper_types::EntryPointType::Contract,
+                                odra::casper_types::EntryPointType::Called,
+                                odra::casper_types::EntryPointPayment::Caller,
+
                             ),
                         );
                     entry_points
@@ -415,21 +426,25 @@ mod test {
                 #[inline]
                 fn entry_points() -> odra::casper_types::EntryPoints {
                     let mut entry_points = odra::casper_types::EntryPoints::new();
-                    entry_points.add_entry_point(odra::casper_types::EntryPoint::new(
+                    entry_points.add_entry_point(odra::casper_types::EntityEntryPoint::new(
                         "total_supply",
                         vec![],
                         <U256 as odra::casper_types::CLTyped>::cl_type(),
                         odra::casper_types::EntryPointAccess::Public,
-                        odra::casper_types::EntryPointType::Contract
+                        odra::casper_types::EntryPointType::Called,
+                        odra::casper_types::EntryPointPayment::Caller,
+
                     ));
                     entry_points
                         .add_entry_point(
-                            odra::casper_types::EntryPoint::new(
+                            odra::casper_types::EntityEntryPoint::new(
                                 "pay_to_mint",
                                 vec![],
                                 <() as odra::casper_types::CLTyped>::cl_type(),
                                 odra::casper_types::EntryPointAccess::Public,
-                                odra::casper_types::EntryPointType::Contract,
+                                odra::casper_types::EntryPointType::Called,
+                                odra::casper_types::EntryPointPayment::Caller,
+
                             ),
                         );
                     entry_points
@@ -483,51 +498,59 @@ mod test {
                 #[inline]
                 fn entry_points() -> odra::casper_types::EntryPoints {
                     let mut entry_points = odra::casper_types::EntryPoints::new();
-                    entry_points.add_entry_point(odra::casper_types::EntryPoint::new(
+                    entry_points.add_entry_point(odra::casper_types::EntityEntryPoint::new(
                         "total_supply",
                         vec![],
                         <U256 as odra::casper_types::CLTyped>::cl_type(),
                         odra::casper_types::EntryPointAccess::Public,
-                        odra::casper_types::EntryPointType::Contract
+                        odra::casper_types::EntryPointType::Called,
+                        odra::casper_types::EntryPointPayment::Caller,
                     ));
                     entry_points
                         .add_entry_point(
-                            odra::casper_types::EntryPoint::new(
+                            odra::casper_types::EntityEntryPoint::new(
                                 "get_owner",
                                 vec![],
                                 <Address as odra::casper_types::CLTyped>::cl_type(),
                                 odra::casper_types::EntryPointAccess::Public,
-                                odra::casper_types::EntryPointType::Contract,
+                                odra::casper_types::EntryPointType::Called,
+                                odra::casper_types::EntryPointPayment::Caller,
                             ),
                         );
                     entry_points
                          .add_entry_point(
-                             odra::casper_types::EntryPoint::new(
+                             odra::casper_types::EntityEntryPoint::new(
                                 "set_owner",
                                 vec![odra::args::parameter::<Address>("new_owner")].into_iter().filter_map(|x| x).collect(),
                                 <() as odra::casper_types::CLTyped>::cl_type(),
                                 odra::casper_types::EntryPointAccess::Public,
-                                odra::casper_types::EntryPointType::Contract,
+                                odra::casper_types::EntryPointType::Called,
+                                odra::casper_types::EntryPointPayment::Caller,
+
                             ),
                         );
                     entry_points
                         .add_entry_point(
-                            odra::casper_types::EntryPoint::new(
+                            odra::casper_types::EntityEntryPoint::new(
                                 "name",
                                 vec![],
                                 <String as odra::casper_types::CLTyped>::cl_type(),
                                 odra::casper_types::EntryPointAccess::Public,
-                                odra::casper_types::EntryPointType::Contract,
+                                odra::casper_types::EntryPointType::Called,
+                                odra::casper_types::EntryPointPayment::Caller,
+
                             ),
                         );
                     entry_points
                         .add_entry_point(
-                            odra::casper_types::EntryPoint::new(
+                            odra::casper_types::EntityEntryPoint::new(
                                 "symbol",
                                 vec![],
                                 <String as odra::casper_types::CLTyped>::cl_type(),
                                 odra::casper_types::EntryPointAccess::Public,
-                                odra::casper_types::EntryPointType::Contract,
+                                odra::casper_types::EntryPointType::Called,
+                                odra::casper_types::EntryPointPayment::Caller,
+
                             ),
                         );
                     entry_points

@@ -32,12 +32,20 @@ impl HostContext for OdraVmHost {
         self.vm.borrow().get_account(index)
     }
 
+    fn get_validator(&self, index: usize) -> PublicKey {
+        self.vm.borrow().get_validator(index)
+    }
+
     fn balance_of(&self, address: &Address) -> U512 {
         self.vm.borrow().balance_of(address)
     }
 
     fn advance_block_time(&self, time_diff: u64) {
         self.vm.borrow().advance_block_time_by(time_diff)
+    }
+
+    fn advance_with_auctions(&self, time_diff: u64) {
+        self.vm.borrow().advance_with_auctions(time_diff)
     }
 
     fn block_time(&self) -> u64 {
@@ -48,8 +56,20 @@ impl HostContext for OdraVmHost {
         self.vm.borrow().get_event(contract_address, index)
     }
 
-    fn get_events_count(&self, contract_address: &Address) -> u32 {
+    fn get_native_event(
+        &self,
+        contract_address: &Address,
+        index: u32
+    ) -> Result<Bytes, EventError> {
+        self.vm.borrow().get_native_event(contract_address, index)
+    }
+
+    fn get_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
         self.vm.borrow().get_events_count(contract_address)
+    }
+
+    fn get_native_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
+        self.vm.borrow().get_native_events_count(contract_address)
     }
 
     fn call_contract(
@@ -135,6 +155,22 @@ impl HostContext for OdraVmHost {
         self.vm
             .borrow()
             .checked_transfer_tokens(&caller, &to, &amount)
+    }
+
+    fn auction_delay(&self) -> u64 {
+        self.vm.borrow().auction_delay()
+    }
+
+    fn unbonding_delay(&self) -> u64 {
+        self.vm.borrow().unbonding_delay()
+    }
+
+    fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
+        self.vm.borrow().delegated_amount(delegator, validator)
+    }
+
+    fn remove_validator(&self, index: usize) {
+        self.vm.borrow().remove_validator(index);
     }
 }
 

@@ -7,7 +7,13 @@
 //!
 //! Build on top of the [casper_contract] crate.
 
-use casper_contract::contract_api::storage::new_uref;
+use crate::consts;
+use crate::consts::NATIVE_EVENT_TOPIC;
+use casper_contract::contract_api::runtime::emit_message;
+use casper_contract::contract_api::storage::{new_uref, read_from_key};
+use casper_contract::contract_api::system;
+use casper_contract::ext_ffi::casper_emit_message;
+use casper_contract::unwrap_or_revert::UnwrapOrRevert;
 use casper_contract::{
     contract_api::{
         self, runtime, storage,
@@ -16,20 +22,23 @@ use casper_contract::{
             transfer_from_purse_to_purse
         }
     },
-    ext_ffi,
-    unwrap_or_revert::UnwrapOrRevert
+    ext_ffi
 };
 use core::mem::MaybeUninit;
+use odra_core::casper_types::account::AccountHash;
 use odra_core::casper_types::bytesrepr::deserialize;
+use odra_core::casper_types::contract_messages::{MessagePayload, MessageTopicOperation};
+use odra_core::casper_types::contracts::{ContractHash, ContractPackageHash, ContractVersion};
+use odra_core::casper_types::system::auction::{self, BidAddr, BidKind};
+use odra_core::casper_types::system::{Caller, CallerInfo};
+use odra_core::casper_types::StoredValue;
 use odra_core::casper_types::{
     api_error, bytesrepr,
     bytesrepr::{Bytes, FromBytes, ToBytes},
-    contracts::NamedKeys,
-    system::CallStackElement,
-    ApiError, CLTyped, CLValue, ContractPackageHash, ContractVersion, EntryPoints, Key,
+    ApiError, CLTyped, CLValue, EntityAddr, EntryPoints, Key, NamedKeys, PackageHash, PublicKey,
     RuntimeArgs, URef, DICTIONARY_ITEM_KEY_MAX_LENGTH, U512, UREF_SERIALIZED_LENGTH
 };
-use odra_core::consts;
+use odra_core::consts::{ALLOW_KEY_OVERRIDE_ARG, IS_UPGRADABLE_ARG, PACKAGE_HASH_KEY_NAME_ARG};
 use odra_core::{
     args::EntrypointArgument,
     casper_event_standard::{self, Schema, Schemas}
@@ -65,9 +74,9 @@ pub fn install_contract(
     init_args: Option<RuntimeArgs>
 ) -> ContractPackageHash {
     // Read arguments
-    let package_hash_key: String = runtime::get_named_arg(consts::PACKAGE_HASH_KEY_NAME_ARG);
-    let allow_key_override: bool = runtime::get_named_arg(consts::ALLOW_KEY_OVERRIDE_ARG);
-    let is_upgradable: bool = runtime::get_named_arg(consts::IS_UPGRADABLE_ARG);
+    let package_hash_key: String = runtime::get_named_arg(PACKAGE_HASH_KEY_NAME_ARG);
+    let allow_key_override: bool = runtime::get_named_arg(ALLOW_KEY_OVERRIDE_ARG);
+    let is_upgradable: bool = runtime::get_named_arg(IS_UPGRADABLE_ARG);
 
     // Check if the package hash is already in the storage.
     // Revert if key override is not allowed.
@@ -78,30 +87,39 @@ pub fn install_contract(
     // Prepare named keys.
     let named_keys = initial_named_keys(events);
 
+    // Prepare message topic
+    let mut mesage_topics = BTreeMap::new();
+    mesage_topics.insert(NATIVE_EVENT_TOPIC.to_string(), MessageTopicOperation::Add);
+
     // Create new contract.
     let access_uref_key = format!("{}_access_token", package_hash_key);
     if is_upgradable {
+        // TODO: Handle message topics
         storage::new_contract(
             entry_points,
             Some(named_keys),
             Some(package_hash_key.clone()),
-            Some(access_uref_key)
+            Some(access_uref_key),
+            Some(mesage_topics)
         );
     } else {
+        // TODO: Handle message topics
         storage::new_locked_contract(
             entry_points,
             Some(named_keys),
             Some(package_hash_key.clone()),
-            Some(access_uref_key)
+            Some(access_uref_key),
+            Some(mesage_topics)
         );
     }
 
-    // Read contract package hash from the storage.
-    let contract_package_hash: ContractPackageHash = runtime::get_key(&package_hash_key)
+    // Read package hash from the storage.
+    let contract_hash: PackageHash = runtime::get_key(&package_hash_key)
         .unwrap_or_revert()
-        .into_hash()
-        .unwrap_or_revert()
-        .into();
+        .into_package_hash()
+        .unwrap_or_revert();
+
+    let contract_package_hash = ContractPackageHash::new(contract_hash.value());
 
     if let Some(args) = init_args {
         let init_access = create_constructor_group(contract_package_hash);
@@ -343,24 +361,28 @@ pub fn emit_event(event: &Bytes) {
     casper_event_standard::emit_bytes(event.clone())
 }
 
+/// Emits a native event.
+pub fn emit_native_event(event: &Bytes) {
+    let payload = MessagePayload::Bytes(event.clone());
+    emit_message(NATIVE_EVENT_TOPIC, &payload).unwrap_or_revert();
+}
+
 /// Gets the immediate session caller of the current execution.
-///
-/// This function ensures that only session code can execute this function, and disallows stored
-/// session/stored contracts.
 #[inline(always)]
-pub fn caller() -> Address {
-    let second_elem = take_call_stack_elem(1);
-    call_stack_element_to_address(second_elem)
+pub fn caller() -> OdraResult<Address> {
+    let second_elem = take_nth_caller_from_stack(1);
+    let caller = caller_info_to_caller(second_elem)?;
+    Ok(Address::from(caller))
 }
 
 /// Calls a contract method by Address
 #[inline(always)]
 pub fn call_contract(address: Address, call_def: CallDef) -> Bytes {
-    let contract_package_hash = *address.as_contract_package_hash().unwrap_or_revert();
+    let package_hash = *address.as_contract_package_hash().unwrap_or_revert();
     let method = call_def.entry_point();
     let mut args = call_def.args().to_owned();
     if call_def.amount() == U512::zero() {
-        call_versioned_contract(contract_package_hash, None, method, args)
+        call_versioned_contract(package_hash, None, method, args)
     } else {
         let cargo_purse = get_or_create_cargo_purse();
         let main_purse = get_main_purse().unwrap_or_revert();
@@ -370,7 +392,7 @@ pub fn call_contract(address: Address, call_def: CallDef) -> Bytes {
         args.insert(consts::CARGO_PURSE_ARG, cargo_purse)
             .unwrap_or_revert();
 
-        let result = call_versioned_contract(contract_package_hash, None, method, args);
+        let result = call_versioned_contract(package_hash, None, method, args);
         if !is_purse_empty(cargo_purse) {
             runtime::revert(ApiError::InvalidPurse)
         }
@@ -380,9 +402,10 @@ pub fn call_contract(address: Address, call_def: CallDef) -> Bytes {
 
 /// Gets the address of the currently run contract
 #[inline(always)]
-pub fn self_address() -> Address {
-    let first_elem = take_call_stack_elem(0);
-    call_stack_element_to_address(first_elem)
+pub fn self_address() -> OdraResult<Address> {
+    let first_elem = take_nth_caller_from_stack(0);
+    let caller = caller_info_to_caller(first_elem)?;
+    Ok(Address::from(caller))
 }
 
 /// Gets the balance of the current contract.
@@ -403,8 +426,7 @@ pub fn call_versioned_contract(
     entry_point_name: &str,
     runtime_args: RuntimeArgs
 ) -> Bytes {
-    let (contract_package_hash_ptr, contract_package_hash_size, _bytes) =
-        to_ptr(contract_package_hash);
+    let (contract_package_hash_ptr, package_hash_size, _bytes) = to_ptr(contract_package_hash);
     let (contract_version_ptr, contract_version_size, _bytes) = to_ptr(contract_version);
     let (entry_point_name_ptr, entry_point_name_size, _bytes) = to_ptr(entry_point_name);
     let (runtime_args_ptr, runtime_args_size, _bytes) = to_ptr(runtime_args);
@@ -414,7 +436,7 @@ pub fn call_versioned_contract(
         let ret = unsafe {
             ext_ffi::casper_call_versioned_contract(
                 contract_package_hash_ptr,
-                contract_package_hash_size,
+                package_hash_size,
                 contract_version_ptr,
                 contract_version_size,
                 entry_point_name_ptr,
@@ -487,14 +509,11 @@ pub fn handle_attached_value() {
 ///
 /// The main purse as a [`URef`] if it already exists, otherwise a new purse is created and returned.
 pub fn get_or_create_main_purse() -> URef {
-    match get_main_purse() {
-        Some(purse) => purse,
-        None => {
-            let purse = create_purse();
-            runtime::put_key(consts::CONTRACT_MAIN_PURSE, purse.into());
-            purse
-        }
-    }
+    get_main_purse().unwrap_or_else(|| {
+        let purse = create_purse();
+        runtime::put_key(consts::CONTRACT_MAIN_PURSE, purse.into());
+        purse
+    })
 }
 
 /// Gets the main purse of the currently executing contract.
@@ -555,7 +574,7 @@ fn deserialize_contract_result(bytes_written: usize) -> Vec<u8> {
     }
 }
 
-fn take_call_stack_elem(n: usize) -> CallStackElement {
+fn take_nth_caller_from_stack(n: usize) -> CallerInfo {
     runtime::get_call_stack()
         .into_iter()
         .nth_back(n)
@@ -586,31 +605,6 @@ fn revoke_access_to_constructor_group(
         urefs
     )
     .unwrap_or_revert();
-}
-
-/// Returns address based on a [`CallStackElement`].
-///
-/// For `Session` and `StoredSession` variants it will return account hash, and for `StoredContract`
-/// case it will use contract hash as the address.
-fn call_stack_element_to_address(call_stack_element: CallStackElement) -> Address {
-    match call_stack_element {
-        CallStackElement::Session { account_hash } => Address::try_from(account_hash)
-            .map_err(|e| ApiError::User(ExecutionError::from(e).code()))
-            .unwrap_or_revert(),
-        CallStackElement::StoredSession { account_hash, .. } => {
-            // Stored session code acts in account's context, so if stored session
-            // wants to interact, caller's address will be used.
-            Address::try_from(account_hash)
-                .map_err(|e| ApiError::User(ExecutionError::from(e).code()))
-                .unwrap_or_revert()
-        }
-        CallStackElement::StoredContract {
-            contract_package_hash,
-            ..
-        } => Address::try_from(contract_package_hash)
-            .map_err(|e| ApiError::User(ExecutionError::from(e).code()))
-            .unwrap_or_revert()
-    }
 }
 
 fn is_purse_empty(purse: URef) -> bool {
@@ -714,4 +708,126 @@ fn get_named_arg_size(name: &str) -> Result<usize, ApiError> {
         0 => Ok(arg_size),
         _ => Err(ApiError::from(ret as u32))
     }
+}
+
+fn caller_info_to_caller(info: CallerInfo) -> OdraResult<Caller> {
+    let kind = info.kind();
+    match kind {
+        0 => {
+            let account_hash = info
+                .get_field_by_index(0)
+                .map(|val| val.to_t::<Option<AccountHash>>().unwrap_or_revert())
+                .ok_or(ExecutionError::CannotExtractCallerInfo)?
+                .ok_or(ExecutionError::CannotExtractCallerInfo)?;
+            Ok(Caller::Initiator { account_hash })
+        }
+        3 => {
+            let package_hash = info
+                .get_field_by_index(1)
+                .map(|val| {
+                    val.to_t::<Option<PackageHash>>()
+                        .map_err(|_| ExecutionError::CannotExtractCallerInfo)
+                })
+                .ok_or(ExecutionError::CannotExtractCallerInfo)?
+                .map_err(|_| ExecutionError::CannotExtractCallerInfo)?
+                .ok_or(ExecutionError::CannotExtractCallerInfo)?;
+            let entity_addr = info
+                .get_field_by_index(3)
+                .map(|val| {
+                    val.to_t::<Option<EntityAddr>>()
+                        .map_err(|_| ExecutionError::CannotExtractCallerInfo)
+                })
+                .ok_or(ExecutionError::CannotExtractCallerInfo)?
+                .map_err(|_| ExecutionError::CannotExtractCallerInfo)?
+                .ok_or(ExecutionError::CannotExtractCallerInfo)?;
+            Ok(Caller::Entity {
+                package_hash,
+                entity_addr
+            })
+        }
+        4 => {
+            let contract_package_hash = info
+                .get_field_by_index(2)
+                .map(|val| {
+                    val.to_t::<Option<ContractPackageHash>>()
+                        .map_err(|_| ExecutionError::CannotExtractCallerInfo)
+                })
+                .ok_or(ExecutionError::CannotExtractCallerInfo)?
+                .map_err(|_| ExecutionError::CannotExtractCallerInfo)?
+                .ok_or(ExecutionError::CannotExtractCallerInfo)?;
+            let contract_hash = info
+                .get_field_by_index(4)
+                .map(|val| val.to_t::<Option<ContractHash>>().unwrap_or_revert())
+                .expect("must have index 4 in fields")
+                .expect("contract hash must be some");
+            Ok(Caller::SmartContract {
+                contract_package_hash,
+                contract_hash
+            })
+        }
+        _ => revert(ExecutionError::CannotExtractCallerInfo.code())
+    }
+}
+
+/// Delegate tokens to a validator
+pub fn delegate(validator: PublicKey, amount: U512) {
+    let purse = get_main_purse().unwrap_or_revert_with(ApiError::InvalidPurse);
+    let contract_hash = system::get_auction();
+    let mut args = RuntimeArgs::new();
+    args.insert(auction::ARG_DELEGATOR_PURSE, purse)
+        .unwrap_or_revert();
+    args.insert(auction::ARG_VALIDATOR, validator)
+        .unwrap_or_revert();
+    args.insert(auction::ARG_AMOUNT, amount).unwrap_or_revert();
+
+    runtime::call_contract::<U512>(contract_hash, auction::METHOD_DELEGATE, args);
+}
+
+/// Undelegate tokens from a validator
+pub fn undelegate(validator: PublicKey, amount: U512) {
+    let purse = get_main_purse().unwrap_or_revert_with(ApiError::InvalidPurse);
+    let contract_hash = system::get_auction();
+    let mut args = RuntimeArgs::new();
+    args.insert(auction::ARG_DELEGATOR_PURSE, purse)
+        .unwrap_or_revert();
+    args.insert(auction::ARG_VALIDATOR, validator)
+        .unwrap_or_revert();
+    args.insert(auction::ARG_AMOUNT, amount).unwrap_or_revert();
+
+    runtime::call_contract::<U512>(contract_hash, auction::METHOD_UNDELEGATE, args);
+}
+
+/// Retrieves the amount of tokens delegated to the validator by the caller (the contract)
+pub fn delegated_amount(public_key: PublicKey) -> U512 {
+    let purse = match get_main_purse() {
+        Some(p) => p,
+        None => return U512::zero()
+    };
+    let account_hash = public_key.to_account_hash();
+    let key = Key::BidAddr(BidAddr::DelegatedPurse {
+        validator: account_hash,
+        delegator: purse.addr()
+    });
+
+    read_from_key(key)
+        .ok()
+        .and_then(|stored_value| stored_value)
+        .and_then(|bid_kind| match bid_kind {
+            BidKind::Delegator(purse) => Some(purse.staked_amount()),
+            _ => None
+        })
+        .unwrap_or_else(U512::zero)
+}
+
+/// Returns a pseudorandom byte array of the specified size.
+/// It uses the `random_bytes` function from the Casper runtime to generate random bytes.
+pub fn pseudorandom_bytes(size: usize) -> Vec<u8> {
+    let mut result = Vec::with_capacity(size);
+    while result.len() < size {
+        let random_chunk = runtime::random_bytes();
+        let remaining = size - result.len();
+        let take_bytes = remaining.min(random_chunk.len());
+        result.extend_from_slice(&random_chunk[..take_bytes]);
+    }
+    result
 }

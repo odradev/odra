@@ -43,7 +43,7 @@ impl OdraVm {
         let address = { self.state.write().unwrap().next_contract_address() };
         // Register new contract under the new address.
         {
-            let contract = ContractContainer::new(entry_points_caller);
+            let contract = ContractContainer::new(name, entry_points_caller);
             self.contract_register
                 .write()
                 .unwrap()
@@ -122,6 +122,12 @@ impl OdraVm {
     /// Retrieves from the state the address of the current caller.
     pub fn caller(&self) -> Address {
         self.state.read().unwrap().caller()
+    }
+
+    /// Retrieves from the state the address of the current callee. It is taken from the
+    /// tip of the callstack.
+    pub fn callee(&self) -> Address {
+        self.state.read().unwrap().callee()
     }
 
     /// Retrieves the first element from the callstack.
@@ -230,14 +236,29 @@ impl OdraVm {
         self.state.write().unwrap().emit_event(event_data);
     }
 
+    /// Writes an event data to the global state and marks it as native.
+    pub fn emit_native_event(&self, event_data: &Bytes) {
+        self.state.write().unwrap().emit_native_event(event_data);
+    }
+
     /// Gets the event emitted by the given address at the given index from the global state.
     pub fn get_event(&self, address: &Address, index: u32) -> Result<Bytes, EventError> {
         self.state.read().unwrap().get_event(address, index)
     }
 
+    /// Gets the native event emitted by the given address at the given index from the global state.
+    pub fn get_native_event(&self, address: &Address, index: u32) -> Result<Bytes, EventError> {
+        self.state.read().unwrap().get_native_event(address, index)
+    }
+
     /// Gets the number of events emitted by the given address from the global state.
-    pub fn get_events_count(&self, address: &Address) -> u32 {
+    pub fn get_events_count(&self, address: &Address) -> Result<u32, EventError> {
         self.state.read().unwrap().get_events_count(address)
+    }
+
+    /// Gets the number of events emitted by the given address from the global state.
+    pub fn get_native_events_count(&self, address: &Address) -> Result<u32, EventError> {
+        self.state.read().unwrap().get_native_events_count(address)
     }
 
     /// Attaches the given amount of tokens to the current call from the global state.
@@ -258,6 +279,14 @@ impl OdraVm {
             .advance_block_time_by(milliseconds)
     }
 
+    /// Advances the block time by the given number of milliseconds and updates the auctions.
+    pub fn advance_with_auctions(&self, milliseconds: u64) {
+        self.state
+            .write()
+            .unwrap()
+            .advance_with_auctions(milliseconds)
+    }
+
     /// Gets the value attached to the current call.
     pub fn attached_value(&self) -> U512 {
         self.state.read().unwrap().attached_value()
@@ -266,6 +295,19 @@ impl OdraVm {
     /// Gets the address of the account at the given index.
     pub fn get_account(&self, n: usize) -> Address {
         self.state.read().unwrap().accounts.get(n).cloned().unwrap()
+    }
+
+    /// Gets the public key of the validator at the given index.
+    pub fn get_validator(&self, n: usize) -> PublicKey {
+        self.state
+            .read()
+            .unwrap()
+            .validators
+            .iter()
+            .map(|a| a.0)
+            .nth(n)
+            .unwrap_or_else(|| panic!("Validator with index {} does not exist", n))
+            .clone()
     }
 
     /// Reads the balance of the given address from the global state.
@@ -352,6 +394,65 @@ impl OdraVm {
         signature.into()
     }
 
+    /// Gets the amount of tokens delegated to a given validator.
+    ///
+    /// # Arguments
+    ///
+    /// * `delegator` - The address of the delegator.
+    /// * `validator` - The public key of the validator.
+    ///
+    /// # Returns
+    ///
+    /// The amount of tokens delegated to the validator.
+    pub fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
+        self.state
+            .read()
+            .unwrap()
+            .delegated_amount(validator, delegator)
+    }
+
+    /// Disables the validator at the given index.
+    /// Undelegates all tokens from the validator.
+    pub fn remove_validator(&self, index: usize) {
+        let validator = self.get_validator(index);
+        self.state.write().unwrap().remove_validator(validator);
+    }
+
+    /// Delegates the given amount of tokens to a given validator.
+    ///
+    /// # Arguments
+    ///
+    /// * `validator` - The public key of the validator.
+    /// * `amount` - The amount of tokens to delegate.
+    pub fn delegate(&self, validator: PublicKey, delegator: Address, amount: U512) {
+        let mut state = self.state.write().unwrap();
+        state.delegate(validator, delegator, amount);
+    }
+
+    /// Undelegates the given amount of tokens from a given validator.
+    /// The amount will be transferred to the caller after the unbonding period.
+    ///
+    /// # Arguments
+    ///
+    /// * `validator` - The public key of the validator.
+    /// * `amount` - The amount of tokens to undelegate.
+    pub fn undelegate(&self, validator: PublicKey, delegator: Address, amount: U512) {
+        let mut state = self.state.write().unwrap();
+        state.undelegate(validator, delegator, amount);
+    }
+
+    /// Gets the current auction delay.
+    pub fn auction_delay(&self) -> u64 {
+        self.state.read().unwrap().auction_delay()
+    }
+
+    /// Returns the delay between the unstaking and the moment when the tokens can be transferred.
+    pub fn unbonding_delay(&self) -> u64 {
+        self.auction_delay() * 7
+    }
+}
+
+impl OdraVm {
     fn prepare_call(&self, address: Address, call_def: &CallDef) {
         let mut state = self.state.write().unwrap();
         // If only one address on the call_stack, record snapshot.
@@ -607,7 +708,7 @@ mod tests {
         // given an empty instance
         let instance = OdraVm::default();
 
-        let first_contract_address = utils::account_address_from_str("abc");
+        let first_contract_address = utils::contract_address_from_u32(123);
         // put a contract on stack
         push_address(&instance, &first_contract_address);
 
@@ -616,7 +717,7 @@ mod tests {
         instance.emit_event(&first_event);
         instance.emit_event(&second_event);
 
-        let second_contract_address = utils::account_address_from_str("bca");
+        let second_contract_address = utils::contract_address_from_u32(321);
         // put a next contract on stack
         push_address(&instance, &second_contract_address);
 
