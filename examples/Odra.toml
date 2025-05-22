@@ -11,6 +11,9 @@ fqn = "contracts::token_manager::TokenManager"
 fqn = "contracts::tlw::TimeLockWallet"
 
 [[contracts]]
+fqn = "contracts::owned_cep95::OwnedCep95"
+
+[[contracts]]
 fqn = "features::reentrancy_guard::ReentrancyMock"
 
 [[contracts]]
