@@ -172,10 +172,15 @@ base64_encoded_key_value_storage!(Cep95Metadata, KEY_METADATA, U256, Vec<(String
 pub enum Error {
     /// The value is not set.
     ValueNotSet = 40_000,
+    /// The transfer failed.
     TransferFailed = 40_001,
+    /// The token ID is invalid.
     NotAnOwnerOrApproved = 40_002,
+    /// The approval is set to the current owner.
     ApprovalToCurrentOwner = 40_003,
+    /// The caller is the same as the operator.
     ApproveToCaller = 40_004,
+    /// The token ID is invalid.
     InvalidTokenId = 40_005
 }
 
@@ -268,13 +273,21 @@ pub struct MetadataUpdate {
     ],
     errors = Error
 )]
+/// A module representing a CEP-95 standard.
 pub struct Cep95 {
+    /// A submodule for the token name.
     pub name: SubModule<Cep95Name>,
+    /// A submodule for the token symbol.
     pub symbol: SubModule<Cep95Symbol>,
+    /// A submodule for the token balances mapping.
     pub balances: SubModule<Cep95Balances>,
+    /// A submodule for the token owners mapping.
     pub owners: SubModule<Cep95Owners>,
+    /// A submodule for the token approvals mapping.
     pub approvals: SubModule<Cep95Approvals>,
+    /// A submodule for the token operators mapping.
     pub operators: SubModule<Cep95Operators>,
+    /// A submodule for the token metadata mapping.
     pub metadata: SubModule<Cep95Metadata>
 }
 
@@ -418,17 +431,21 @@ impl Cep95 {
     }
 
     #[inline]
+    /// Asserts that the token ID exists. 
+    /// Reverts with `Error::InvalidTokenId` if it does not.
     pub fn assert_exists(&self, token_id: &U256) {
         if !self.exists(token_id) {
             self.env().revert(Error::InvalidTokenId);
         }
     }
 
+    /// Checks if the token ID exists.
     #[inline]
     pub fn exists(&self, token_id: &U256) -> bool {
         self.owners.get(token_id).flatten().is_some()
     }
 
+    /// Clears the approval for a specific token ID.
     #[inline]
     pub fn clear_approval(&mut self, token_id: &U256) {
         if self.approvals.get(token_id).is_some() {
@@ -436,6 +453,7 @@ impl Cep95 {
         }
     }
 
+    /// Mints a new NFT and assigns it to the specified address.
     pub fn mint(&mut self, to: Address, token_id: U256, metadata: Vec<(String, String)>) {
         if self.exists(&token_id) {
             self.env().revert(Error::InvalidTokenId);
@@ -448,6 +466,7 @@ impl Cep95 {
         self.env().emit_event(Mint { to, token_id });
     }
 
+    /// Burns an NFT, removing it from the owner's balance and the contract.
     pub fn burn(&mut self, token_id: U256) {
         self.assert_exists(&token_id);
         let caller = self.env().caller();
