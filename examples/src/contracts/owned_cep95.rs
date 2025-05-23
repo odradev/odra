@@ -54,7 +54,7 @@ impl OwnedCep95 {
         self.ownable.assert_owner(&self.env().caller());
         self.token.mint(to, token_id, metadata);
     }
-    
+
     /// Burns the token with the given ID.
     /// Only the token owner can call this function.
     /// This function will remove the token from the owner's balance and delete its metadata.
@@ -69,21 +69,21 @@ impl OwnedCep95 {
 
 #[cfg(test)]
 mod test {
-    use crate::contracts::owned_cep95::OwnedCep95InitArgs;
     use super::OwnedCep95;
-    use odra::{
-        host::Deployer,
-        prelude::*,
-    };
+    use crate::contracts::owned_cep95::OwnedCep95InitArgs;
+    use odra::{host::Deployer, prelude::*};
     use odra_test;
 
     #[test]
     fn test_init() {
         let env = odra_test::env();
-        let contract = OwnedCep95::deploy(&env, OwnedCep95InitArgs {
-            name: "Test".to_string(),
-            symbol: "TST".to_string(),
-        });
+        let contract = OwnedCep95::deploy(
+            &env,
+            OwnedCep95InitArgs {
+                name: "Test".to_string(),
+                symbol: "TST".to_string()
+            }
+        );
         assert_eq!(contract.name(), "Test");
         assert_eq!(contract.symbol(), "TST");
     }
@@ -91,28 +91,42 @@ mod test {
     #[test]
     fn test_mint() {
         let env = odra_test::env();
-        let mut contract = OwnedCep95::deploy(&env, OwnedCep95InitArgs {
-            name: "Test".to_string(),
-            symbol: "TST".to_string(),
-        });
+        let mut contract = OwnedCep95::deploy(
+            &env,
+            OwnedCep95InitArgs {
+                name: "Test".to_string(),
+                symbol: "TST".to_string()
+            }
+        );
         let owner = env.caller();
         let token_id = 1.into();
 
-        contract.mint(owner, token_id, vec![("key".to_string(), "value".to_string())]);
+        contract.mint(
+            owner,
+            token_id,
+            vec![("key".to_string(), "value".to_string())]
+        );
         assert_eq!(contract.owner_of(token_id), Some(owner));
     }
 
     #[test]
     fn test_burn() {
         let env = odra_test::env();
-        let mut contract = OwnedCep95::deploy(&env, OwnedCep95InitArgs {
-            name: "Test".to_string(),
-            symbol: "TST".to_string(),
-        });
+        let mut contract = OwnedCep95::deploy(
+            &env,
+            OwnedCep95InitArgs {
+                name: "Test".to_string(),
+                symbol: "TST".to_string()
+            }
+        );
         let owner = env.caller();
         let token_id = 1.into();
 
-        contract.mint(owner, token_id, vec![("key".to_string(), "value".to_string())]);
+        contract.mint(
+            owner,
+            token_id,
+            vec![("key".to_string(), "value".to_string())]
+        );
         contract.burn(token_id);
         assert_eq!(contract.owner_of(token_id), None);
     }
