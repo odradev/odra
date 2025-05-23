@@ -1,5 +1,6 @@
 #![allow(unused_variables, missing_docs)]
 
+use alloc::collections::BTreeMap;
 use odra::{
     casper_types::{
         bytesrepr::{Bytes, ToBytes},
@@ -166,7 +167,7 @@ base64_encoded_key_value_storage!(Cep95Balances, KEY_BALANCES, Address, U256);
 base64_encoded_key_value_storage!(Cep95Approvals, KEY_APPROVED, U256, Option<Address>);
 compound_key_value_storage!(Cep95Operators, KEY_OPERATORS, Address, bool);
 base64_encoded_key_value_storage!(Cep95Owners, KEY_OWNERS, U256, Option<Address>);
-base64_encoded_key_value_storage!(Cep95Metadata, KEY_METADATA, U256, Vec<(String, String)>);
+base64_encoded_key_value_storage!(Cep95Metadata, KEY_METADATA, U256, BTreeMap<String, String>);
 
 /// Error enum for the CEP-95 contract.
 #[odra::odra_error]
@@ -399,7 +400,11 @@ impl CEP95Interface for Cep95 {
     }
 
     fn token_metadata(&self, token_id: U256) -> Vec<(String, String)> {
-        self.metadata.get(&token_id).unwrap_or_default()
+        self.metadata
+            .get(&token_id)
+            .unwrap_or_default()
+            .into_iter()
+            .collect()
     }
 }
 
@@ -462,7 +467,7 @@ impl Cep95 {
 
         self.balances.set(&to, self.balance_of(to) + 1);
         self.owners.set(&token_id, Some(to));
-        self.metadata.set(&token_id, metadata);
+        self.set_metadata(token_id, metadata);
 
         self.env().emit_event(Mint { to, token_id });
     }
@@ -475,12 +480,41 @@ impl Cep95 {
         self.clear_approval(&token_id);
         self.balances.set(&caller, self.balance_of(caller) - 1);
         self.owners.set(&token_id, None);
-        self.metadata.set(&token_id, Vec::new());
+        self.metadata.set(&token_id, Default::default());
 
         self.env().emit_event(Burn {
             from: caller,
             token_id
         });
+    }
+
+    /// Sets metadata for a specific token ID.
+    /// Replaces any existing metadata.
+    pub fn set_metadata(&mut self, token_id: U256, metadata: Vec<(String, String)>) {
+        self.raw_update_metadata(token_id, metadata, BTreeMap::new());
+    }
+
+    /// Updates metadata for a specific token ID.
+    /// If a key already exists, its value will be updated.
+    /// If a key does not exist, it will be added.
+    /// The remaining keys will be preserved.
+    pub fn update_metadata(&mut self, token_id: U256, metadata: Vec<(String, String)>) {
+        let current_metadata = self.metadata.get(&token_id).unwrap_or_default();
+        self.raw_update_metadata(token_id, metadata, current_metadata);
+    }
+
+    fn raw_update_metadata(
+        &mut self,
+        token_id: U256,
+        metadata: Vec<(String, String)>,
+        mut new_metadata: BTreeMap<String, String>
+    ) {
+        self.assert_exists(&token_id);
+        for (k, v) in metadata {
+            new_metadata.insert(k, v);
+        }
+        self.metadata.set(&token_id, new_metadata);
+        self.env().emit_event(MetadataUpdate { token_id });
     }
 }
 
@@ -524,6 +558,14 @@ mod utils {
 
         pub fn burn(&mut self, token_id: U256) {
             self.token.burn(token_id);
+        }
+
+        pub fn set_metadata(&mut self, token_id: U256, metadata: Vec<(String, String)>) {
+            self.token.set_metadata(token_id, metadata);
+        }
+
+        pub fn update_metadata(&mut self, token_id: U256, metadata: Vec<(String, String)>) {
+            self.token.update_metadata(token_id, metadata);
         }
     }
 
@@ -972,5 +1014,50 @@ mod tests {
 
         assert_eq!(cep95.balance_of(owner), U256::from(0));
         assert_eq!(cep95.balance_of(recipient), U256::from(2));
+    }
+
+    #[test]
+    fn test_update_metadata() {
+        let (env, mut cep95) = setup();
+        let owner = env.caller();
+
+        let token_id = U256::from(1);
+        let metadata = vec![
+            ("age".to_string(), "30".to_string()),
+            ("name".to_string(), "Alice".to_string()),
+        ];
+        cep95.mint(owner, token_id, metadata);
+
+        let new_metadata = vec![("name".to_string(), "Bob".to_string())];
+        cep95.update_metadata(token_id, new_metadata);
+
+        assert_eq!(
+            cep95.token_metadata(token_id),
+            vec![
+                ("age".to_string(), "30".to_string()),
+                ("name".to_string(), "Bob".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_set_metadata() {
+        let (env, mut cep95) = setup();
+        let owner = env.caller();
+
+        let token_id = U256::from(1);
+        let metadata = vec![
+            ("age".to_string(), "30".to_string()),
+            ("name".to_string(), "Alice".to_string()),
+        ];
+        cep95.mint(owner, token_id, metadata);
+
+        let new_metadata = vec![("name".to_string(), "Bob".to_string())];
+        cep95.set_metadata(token_id, new_metadata);
+
+        assert_eq!(
+            cep95.token_metadata(token_id),
+            vec![("name".to_string(), "Bob".to_string())]
+        );
     }
 }
