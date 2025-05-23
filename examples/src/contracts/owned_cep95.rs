@@ -48,11 +48,16 @@ impl OwnedCep95 {
         }
     }
 
+    /// Mints a new token with the given ID and metadata to the specified address.
+    /// Only the contract owner can call this function.
     pub fn mint(&mut self, to: Address, token_id: U256, metadata: Vec<(String, String)>) {
         self.ownable.assert_owner(&self.env().caller());
         self.token.mint(to, token_id, metadata);
     }
     
+    /// Burns the token with the given ID.
+    /// Only the token owner can call this function.
+    /// This function will remove the token from the owner's balance and delete its metadata.
     pub fn burn(&mut self, token_id: U256) {
         let owner = self.token.owner_of(token_id);
         let caller = self.env().caller();
