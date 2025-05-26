@@ -342,12 +342,7 @@ impl CEP95Interface for Cep95 {
             }
         }
 
-        self.clear_approval(&token_id);
-        self.balances.set(&from, self.balance_of(from) - 1);
-        self.balances.set(&to, self.balance_of(to) + 1);
-        self.owners.set(&token_id, Some(to));
-
-        self.env().emit_event(Transfer { from, to, token_id });
+        self.raw_transfer_from(from, to, token_id);
     }
 
     fn approve(&mut self, spender: Address, token_id: U256) {
@@ -475,15 +470,16 @@ impl Cep95 {
     /// Burns an NFT, removing it from the owner's balance and the contract.
     pub fn burn(&mut self, token_id: U256) {
         self.assert_exists(&token_id);
-        let caller = self.env().caller();
+        let owner = self.owner_of(token_id)
+            .unwrap_or_revert_with(self, Error::ValueNotSet);
 
         self.clear_approval(&token_id);
-        self.balances.set(&caller, self.balance_of(caller) - 1);
+        self.balances.set(&owner, self.balance_of(owner) - 1);
         self.owners.set(&token_id, None);
         self.metadata.set(&token_id, Default::default());
 
         self.env().emit_event(Burn {
-            from: caller,
+            from: owner,
             token_id
         });
     }
@@ -501,6 +497,16 @@ impl Cep95 {
     pub fn update_metadata(&mut self, token_id: U256, metadata: Vec<(String, String)>) {
         let current_metadata = self.metadata.get(&token_id).unwrap_or_default();
         self.raw_update_metadata(token_id, metadata, current_metadata);
+    }
+
+    /// Transfers an NFT from one address to another without checking the recipient contract.
+    pub fn raw_transfer_from(&mut self, from: Address, to: Address, token_id: U256) {
+        self.clear_approval(&token_id);
+        self.balances.set(&from, self.balance_of(from) - 1);
+        self.balances.set(&to, self.balance_of(to) + 1);
+        self.owners.set(&token_id, Some(to));
+
+        self.env().emit_event(Transfer { from, to, token_id });
     }
 
     fn raw_update_metadata(
