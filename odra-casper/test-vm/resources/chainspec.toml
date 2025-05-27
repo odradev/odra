@@ -499,5 +499,5 @@ pay = 10_000
 # The cost charged for the transaction is simply the gas_used * current_gas_price.
 upper_threshold = 90
 lower_threshold = 50
-max_gas_price = 1
+max_gas_price = 3
 min_gas_price = 1
