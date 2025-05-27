@@ -89,7 +89,7 @@ test-templates:
     just test-template cep18
     just test-template full
     just test-template workspace
-    just test-template cep78
+    just test-template cep95
 
 run-nctl:
     docker run --rm -it --name mynctl -d -p 11101:11101 -p 14101:14101 -p 18101:18101 -p 25101:25101 makesoftware/casper-nctl:v210
