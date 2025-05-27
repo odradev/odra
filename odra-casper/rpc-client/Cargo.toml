@@ -11,7 +11,7 @@ repository = { workspace = true }
 [dependencies]
 odra-core = { workspace = true }
 casper-types = { workspace = true, features = ["std-fs-io"] }
-casper-client = { workspace = true }
+odra-casper-client = { workspace = true }
 
 serde_json = { version = "1.0", features = ["raw_value"] }
 itertools = "0.10.5"
