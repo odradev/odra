@@ -38,4 +38,7 @@ fqn = "cep95::utils::BasicContract"
 fqn = "cep18_token::Cep18"
 
 [[contracts]]
+fqn = "cep18_token::utils::Cep18Example"
+
+[[contracts]]
 fqn = "cep18::cep18_client_contract::Cep18ClientContract"
