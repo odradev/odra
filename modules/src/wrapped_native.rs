@@ -1,5 +1,5 @@
 //! Wrapped CSPR token implementation
-use crate::erc20::Erc20;
+use crate::cep18_token::Cep18;
 use crate::wrapped_native::events::{Deposit, Withdrawal};
 use odra::casper_types::{U256, U512};
 use odra::uints::{ToU256, ToU512};
@@ -34,7 +34,7 @@ impl CsprDeposit {
 /// The WrappedNativeToken module.
 #[odra::module(events = [Deposit, Withdrawal])]
 pub struct WrappedNativeToken {
-    erc20: SubModule<Erc20>
+    token: SubModule<Cep18>
 }
 
 /// The WrappedNativeToken module implementation.
@@ -44,7 +44,7 @@ impl WrappedNativeToken {
     pub fn init(&mut self) {
         let symbol = "WCSPR".to_string();
         let name = "Wrapped CSPR".to_string();
-        self.erc20.init(symbol, name, 9, None);
+        self.token.init(symbol, name, 9, U256::zero());
     }
 
     /// Deposits native tokens into the contract.
@@ -55,7 +55,7 @@ impl WrappedNativeToken {
         let amount = self.env().attached_value();
 
         let amount = amount.to_u256().unwrap_or_revert(self);
-        self.erc20.mint(&caller, &amount);
+        self.token.raw_mint(&caller, &amount);
 
         self.env().emit_event(Deposit {
             account: caller,
@@ -67,7 +67,7 @@ impl WrappedNativeToken {
     pub fn withdraw(&mut self, amount: &U256) {
         let caller = self.env().caller();
 
-        self.erc20.burn(&caller, amount);
+        self.token.raw_burn(&caller, amount);
         if caller.is_contract() {
             CsprDepositContractRef::new(self.env(), caller)
                 .with_tokens(amount.to_u512())
@@ -84,47 +84,47 @@ impl WrappedNativeToken {
 
     /// Sets the allowance for `spender` to spend `amount` of the caller's tokens.
     pub fn allowance(&self, owner: &Address, spender: &Address) -> U256 {
-        self.erc20.allowance(owner, spender)
+        self.token.allowance(owner, spender)
     }
 
     /// Returns the balance of `address`.
     pub fn balance_of(&self, address: &Address) -> U256 {
-        self.erc20.balance_of(address)
+        self.token.balance_of(address)
     }
 
     /// Returns the total supply of the token.
     pub fn total_supply(&self) -> U256 {
-        self.erc20.total_supply()
+        self.token.total_supply()
     }
 
     /// Returns the number of decimals used by the token.
     pub fn decimals(&self) -> u8 {
-        self.erc20.decimals()
+        self.token.decimals()
     }
 
     /// Returns the symbol of the token.
     pub fn symbol(&self) -> String {
-        self.erc20.symbol()
+        self.token.symbol()
     }
 
     /// Returns the name of the token.
     pub fn name(&self) -> String {
-        self.erc20.name()
+        self.token.name()
     }
 
     /// Approves `spender` to spend `amount` of the caller's tokens.
     pub fn approve(&mut self, spender: &Address, amount: &U256) {
-        self.erc20.approve(spender, amount)
+        self.token.approve(spender, amount)
     }
 
     /// Transfers `amount` of the owners tokens to `recipient` using allowance.
     pub fn transfer_from(&mut self, owner: &Address, recipient: &Address, amount: &U256) {
-        self.erc20.transfer_from(owner, recipient, amount)
+        self.token.transfer_from(owner, recipient, amount)
     }
 
     /// Transfers `amount` of the caller's tokens to `recipient`.
     pub fn transfer(&mut self, recipient: &Address, amount: &U256) {
-        self.erc20.transfer(recipient, amount)
+        self.token.transfer(recipient, amount)
     }
 }
 
@@ -155,8 +155,8 @@ pub mod events {
 
 #[cfg(test)]
 mod tests {
-    use crate::erc20::errors::Error::InsufficientBalance;
-    use crate::erc20::events::Transfer;
+    use crate::cep18::errors::Error::InsufficientBalance;
+    use crate::cep18::events::{Burn, Mint};
     use crate::wrapped_native::events::{Deposit, Withdrawal};
     use crate::wrapped_native::WrappedNativeTokenHostRef;
     use odra::casper_event_standard::EventInstance;
@@ -223,9 +223,8 @@ mod tests {
         // The events were emitted.
         assert!(env.emitted_event(
             token.address(),
-            &Transfer {
-                from: None,
-                to: Some(account),
+            &Mint {
+                recipient: account,
                 amount: deposit_amount.into()
             }
         ));
@@ -260,13 +259,7 @@ mod tests {
         );
         // Then events were emitted.
         assert!(env.event_names(token.address()).ends_with(
-            vec![
-                Transfer::name(),
-                Deposit::name(),
-                Transfer::name(),
-                Deposit::name()
-            ]
-            .as_slice()
+            vec![Mint::name(), Deposit::name(), Mint::name(), Deposit::name()].as_slice()
         ));
     }
 
@@ -308,9 +301,8 @@ mod tests {
         // Then events were emitted.
         assert!(env.emitted_event(
             token.address(),
-            &Transfer {
-                from: Some(account),
-                to: None,
+            &Burn {
+                owner: account,
                 amount: withdrawal_amount
             }
         ));
