@@ -92,7 +92,7 @@ test-templates:
     just test-template cep78
 
 run-nctl:
-    docker run --rm -it --name mynctl -d -p 11101:11101 -p 14101:14101 -p 18101:18101 -p 25101:25101 makesoftware/casper-nctl:v200-0119c2b7
+    docker run --rm -it --name mynctl -d -p 11101:11101 -p 14101:14101 -p 18101:18101 -p 25101:25101 makesoftware/casper-nctl:v210
 
 test-livenet:
     set shell := bash
