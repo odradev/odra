@@ -1,6 +1,6 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.79.0-nightly (3a36386dc 2024-04-25)",
+  "toolchain": "rustc 1.82.0-nightly (f8060d282 2024-07-30)",
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,7 +9,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": null,
   "contract_name": "Ownable2Step",
-  "contract_version": "1.2.0",
+  "contract_version": "2.0.0",
   "types": [
     {
       "struct": {
@@ -137,6 +137,22 @@
       "return_ty": "Unit",
       "is_contract_context": true,
       "access": "public"
+    },
+    {
+      "name": "assert_owner",
+      "description": "Reverts with if the function called by any account other than the owner.",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "address",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
     }
   ],
   "events": [
@@ -151,7 +167,7 @@
   ],
   "call": {
     "wasm_file_name": "Ownable2Step.wasm",
-    "description": "Initializes the module setting the caller as the initial owner.",
+    "description": "Initializes the module setting an `owner` as the initial owner.",
     "arguments": [
       {
         "name": "odra_cfg_package_hash_key_name",
@@ -161,7 +177,7 @@
       },
       {
         "name": "odra_cfg_allow_key_override",
-        "description": "The arg name for the allow key override.",
+        "description": "If true and the key specified in odra_cfg_package_hash_key_name already exists, it will be overwritten.",
         "ty": "Bool",
         "optional": false
       },
@@ -169,6 +185,12 @@
         "name": "odra_cfg_is_upgradable",
         "description": "The arg name for the contract upgradeability setting.",
         "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "owner",
+        "description": null,
+        "ty": "Key",
         "optional": false
       }
     ]

@@ -7,7 +7,6 @@ extern crate alloc;
 pub mod access;
 pub mod cep18;
 pub mod cep18_token;
-pub mod cep78;
 pub mod cep95;
 pub mod erc1155;
 pub mod erc1155_receiver;
