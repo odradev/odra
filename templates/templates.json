@@ -30,9 +30,9 @@
     "template_type":"Project"
   },
   {
-    "name":"cep78",
-    "description":"Project template with a sample CEP-78 contract",
-    "path":"templates/cep78",
+    "name":"cep95",
+    "description":"Project template with a sample CEP-95 contract",
+    "path":"templates/cep95",
     "template_type":"Project"
   },
   {
