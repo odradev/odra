@@ -50,6 +50,10 @@ build-proxy-callers:
         odra-casper/test-vm/resources/proxy_caller.wasm
     cp target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm \
         odra-casper/test-vm/resources/proxy_caller_with_return.wasm
+    cp target/wasm32-unknown-unknown/release/proxy_caller.wasm \
+        odra-casper/rpc-client/resources/proxy_caller.wasm
+    cp target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm \
+        odra-casper/rpc-client/resources/proxy_caller_with_return.wasm
 
 test-odra:
     cargo test

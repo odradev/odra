@@ -1,5 +1,3 @@
-# Before running, comment out dev-dependencies in odra-proc-macros crate.
-
 # Exit immediately if a command exits with a non-zero status.
 set -e
 

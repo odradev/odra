@@ -1,5 +1,6 @@
 [package]
 name = "odra-cli"
+description = "Odra CLI - Command Line Interface for Odra smart contracts."
 edition = "2021"
 version.workspace = true
 authors.workspace = true
@@ -11,8 +12,8 @@ repository.workspace = true
 [dependencies]
 clap = { version = "4.5.21", features = ["derive", "cargo", "string"] }
 prettycli = "0.1.1"
-odra = { path = "../odra", default-features = false }
-odra-casper-livenet-env = { path = "../odra-casper/livenet-env" }
+odra = { path = "../odra", version = "2.0.0", default-features = false }
+odra-casper-livenet-env = { path = "../odra-casper/livenet-env", version = "2.0.0"}
 chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1", default-features = false }
 serde_json = { version = "1", default-features = false }
