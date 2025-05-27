@@ -134,7 +134,7 @@ impl Cep18 {
         self.raw_transfer(&caller, recipient, amount);
 
         self.env().emit_event(Transfer {
-            sender: *sender,
+            sender: caller,
             recipient: *recipient,
             amount: *amount
         });
