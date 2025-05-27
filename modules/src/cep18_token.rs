@@ -39,12 +39,14 @@ impl Cep18 {
         self.decimals.set(decimals);
         self.total_supply.set(initial_supply);
 
-        // mint the initial supply for the caller
-        self.balances.set(&caller, initial_supply);
-        self.env().emit_event(Mint {
-            recipient: caller,
-            amount: initial_supply
-        });
+        if !initial_supply.is_zero() {
+            // mint the initial supply for the caller
+            self.balances.set(&caller, initial_supply);
+            self.env().emit_event(Mint {
+                recipient: caller,
+                amount: initial_supply
+            });
+        }
     }
 
     /// Returns the name of the token.
@@ -209,6 +211,13 @@ impl Cep18 {
             owner: *owner,
             amount: *amount
         });
+    }
+
+    /// Reverts with `InsufficientRights` error if a given address is not the caller of the contract.
+    pub fn assert_caller(&self, address: &Address) {
+        if self.env().caller() != *address {
+            self.env().revert(Error::InsufficientRights);
+        }
     }
 }
 
