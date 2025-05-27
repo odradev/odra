@@ -87,7 +87,7 @@ pub trait CEP95Interface {
     ///
     /// # Arguments
     /// token_id - The ID of the NFT to check.
-    /// 
+    ///
     /// # Returns
     /// Option<Address> - The approved spender account if one exists, else None.
     fn approved_for(&self, token_id: U256) -> Option<Address>;
@@ -476,7 +476,8 @@ impl Cep95 {
     /// Burns an NFT, removing it from the owner's balance and the contract.
     pub fn burn(&mut self, token_id: U256) {
         self.assert_exists(&token_id);
-        let owner = self.owner_of(token_id)
+        let owner = self
+            .owner_of(token_id)
             .unwrap_or_revert_with(self, Error::ValueNotSet);
 
         self.clear_approval(&token_id);
