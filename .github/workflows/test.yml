@@ -20,7 +20,7 @@ jobs:
     runs-on: buildjet-8vcpu-ubuntu-2204
     services:
       casper-nctl:
-        image: makesoftware/casper-nctl:v210
+        image: makesoftware/casper-nctl:v200
         options: --name mynctl
         env:
           PREDEFINED_ACCOUNTS: 'true'

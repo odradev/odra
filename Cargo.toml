@@ -46,14 +46,14 @@ odra-casper-rpc-client = { path = "odra-casper/rpc-client", version = "2.0.0" }
 odra-vm = { path = "odra-vm", version = "2.0.0" }
 odra-casper-wasm-env = { path = "odra-casper/wasm-env", version = "2.0.0" }
 odra-schema = { path = "odra-schema", version = "2.0.0" }
-casper-contract = { version = "5",  default-features = false }
-casper-contract-schema = { git = "https://github.com/odradev/casper-contract-schema.git", branch = "feature/casper-2.0"}
-casper-types = "6"
-casper-execution-engine = "8"
-casper-engine-test-support = "8"
-casper-storage = "2"
-casper-event-standard = "0.7"
-casper-client = { git = "https://github.com/odradev/casper-client-rs.git", branch = "feature/casper-types-6", default-features = false}
+casper-contract = { version = "=5.0.0",  default-features = false }
+casper-contract-schema = { version = "0.3.0" }
+casper-types = "5.0.1"
+casper-execution-engine = "=8.0.0"
+casper-engine-test-support = "=8.0.0"
+casper-storage = "=2.0.0"
+casper-event-standard = "0.6"
+casper-client = { git = "https://github.com/odradev/casper-client-rs.git", branch = "feature/transaction-builder-public", default-features = false}
 blake2 = "0.10.6"
 log = "0.4.20"
 env_logger = "0.11.1"
