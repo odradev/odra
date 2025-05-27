@@ -155,7 +155,7 @@ impl CEP95Receiver {
 
 const KEY_BALANCES: &str = "balances";
 const KEY_NAME: &str = "name";
-const KEY_SYMBOL: &str = "decimals";
+const KEY_SYMBOL: &str = "symbol";
 const KEY_APPROVED: &str = "approvals";
 const KEY_OPERATORS: &str = "operators";
 const KEY_METADATA: &str = "metadata";
