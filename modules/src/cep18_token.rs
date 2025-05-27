@@ -132,6 +132,12 @@ impl Cep18 {
         }
 
         self.raw_transfer(&caller, recipient, amount);
+
+        self.env().emit_event(Transfer {
+            sender: *sender,
+            recipient: *recipient,
+            amount: *amount
+        });
     }
 
     /// Transfers tokens from the owner to the recipient using the spender's allowance.
@@ -155,14 +161,14 @@ impl Cep18 {
                 .checked_sub(*amount)
                 .unwrap_or_revert_with(self, Error::InsufficientAllowance)
         );
+        self.raw_transfer(owner, recipient, amount);
+
         self.env().emit_event(TransferFrom {
             spender,
             owner: *owner,
             recipient: *recipient,
             amount: *amount
         });
-
-        self.raw_transfer(owner, recipient, amount);
     }
 }
 
@@ -177,12 +183,6 @@ impl Cep18 {
             self.balances.subtract(sender, *amount);
             self.balances.add(recipient, *amount);
         }
-
-        self.env().emit_event(Transfer {
-            sender: *sender,
-            recipient: *recipient,
-            amount: *amount
-        });
     }
 
     /// Mints new tokens and assigns them to the given address without checking the permissions.
