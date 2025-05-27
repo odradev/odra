@@ -64,26 +64,32 @@ pub trait CEP95Interface {
 
     /// Transfers the ownership of an NFT without checking the recipient contract.
     ///
-    /// @param from - The current owner of the NFT.
-    /// @param to - The new owner.
-    /// @param token_id - The NFT ID.
+    /// # Arguments
+    /// from - The current owner of the NFT.
+    /// to - The new owner.
+    /// token_id - The NFT ID.
     fn transfer_from(&mut self, from: Address, to: Address, token_id: U256);
 
     /// Approves another account or contract to transfer a specific NFT.
     ///
-    /// @param to - The account that will be granted approval.
-    /// @param token_id - The NFT ID.
+    /// # Arguments
+    /// spender - The account or contract that will be granted approval.
+    /// token_id - The NFT ID.
     fn approve(&mut self, spender: Address, token_id: U256);
 
     /// Revokes approval for a specific NFT.
     ///
-    /// @param token_id - The NFT ID.
+    /// # Arguments
+    /// token_id - The NFT ID to revoke approval for.
     fn revoke_approval(&mut self, token_id: U256);
 
     /// Gets the approved account or contract for a specific NFT.
     ///
-    /// @param token_id - The NFT ID.
-    /// @return Option<Address> - Approved spender account if one exists.
+    /// # Arguments
+    /// token_id - The ID of the NFT to check.
+    /// 
+    /// # Returns
+    /// Option<Address> - The approved spender account if one exists, else None.
     fn approved_for(&self, token_id: U256) -> Option<Address>;
 
     /// Enables operator approval for all of the caller's NFTs.
