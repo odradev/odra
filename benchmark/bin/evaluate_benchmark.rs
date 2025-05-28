@@ -26,12 +26,41 @@ pub fn main() {
 fn load_gas_report(file: &PathBuf) -> GasReport {
     let gas_report_json =
         fs::read(file).unwrap_or_else(|_| panic!("Failed to read file: {:?}", file));
-    serde_json::from_str(
-        String::from_utf8(gas_report_json)
-            .unwrap_or_else(|_| panic!("Failed to parse file {:?}", file))
-            .as_str()
-    )
-    .unwrap_or_else(|_| panic!("Failed to parse json: {:?}", file))
+
+    let json_str = String::from_utf8(gas_report_json)
+        .unwrap_or_else(|_| panic!("Failed to parse file {:?}", file));
+
+    // Process the JSON to remove "parsed" fields
+    let mut gas_report_value: serde_json::Value = serde_json::from_str(&json_str)
+        .unwrap_or_else(|e| panic!("Failed to parse json as Value: {:?}, error: {}", file, e));
+
+    // Function to remove "parsed" field from a value
+    fn remove_parsed(value: &mut serde_json::Value) {
+        if let serde_json::Value::Object(map) = value {
+            map.remove("parsed");
+
+            // Recursively process all values in the object
+            for (_, v) in map {
+                remove_parsed(v);
+            }
+        } else if let serde_json::Value::Array(array) = value {
+            for item in array {
+                remove_parsed(item);
+            }
+        }
+    }
+
+    remove_parsed(&mut gas_report_value);
+
+    let processed_json = serde_json::to_string(&gas_report_value).unwrap_or_else(|e| {
+        panic!(
+            "Failed to serialize processed json: {:?}, error: {}",
+            file, e
+        )
+    });
+
+    serde_json::from_str(&processed_json)
+        .unwrap_or_else(|e| panic!("Failed to parse processed json: {:?}, error: {}", file, e))
 }
 
 fn compare_gas_reports(current_gas_report: &GasReport, base_gas_report: &GasReport) -> i32 {
