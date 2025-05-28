@@ -52,8 +52,12 @@ fn load_gas_report(file: &PathBuf) -> GasReport {
 
     remove_parsed(&mut gas_report_value);
 
-    let processed_json = serde_json::to_string(&gas_report_value)
-        .unwrap_or_else(|e| panic!("Failed to serialize processed json: {:?}, error: {}", file, e));
+    let processed_json = serde_json::to_string(&gas_report_value).unwrap_or_else(|e| {
+        panic!(
+            "Failed to serialize processed json: {:?}, error: {}",
+            file, e
+        )
+    });
 
     serde_json::from_str(&processed_json)
         .unwrap_or_else(|e| panic!("Failed to parse processed json: {:?}, error: {}", file, e))
