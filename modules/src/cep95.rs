@@ -15,6 +15,9 @@ use odra::{
 
 /// Casper-compatible NFT interface
 pub trait CEP95Interface {
+    /// Initializes the contract with a name and symbol.
+    fn init(&mut self, name: String, symbol: String);
+
     /// Returns a name of the NFT token/collection.
     fn name(&self) -> String;
 
@@ -189,7 +192,9 @@ pub enum Error {
     /// The caller is the same as the operator.
     ApproveToCaller = 40_004,
     /// The token ID is invalid.
-    InvalidTokenId = 40_005
+    InvalidTokenId = 40_005,
+    /// The token with the given ID already exists.
+    TokenAlreadyExists = 40_006
 }
 
 #[odra::event]
@@ -301,6 +306,11 @@ pub struct Cep95 {
 
 #[odra::module]
 impl CEP95Interface for Cep95 {
+    fn init(&mut self, name: String, symbol: String) {
+        self.name.set(name);
+        self.symbol.set(symbol);
+    }
+
     fn name(&self) -> String {
         self.name.get()
     }
@@ -327,7 +337,8 @@ impl CEP95Interface for Cep95 {
         self.transfer_from(from, to, token_id);
         if to.is_contract() {
             let mut receiver = CEP95ReceiverContractRef::new(self.env(), to);
-            let result = receiver.on_cep95_received(&to, &from, &token_id, &data);
+            let caller = self.env().caller();
+            let result = receiver.on_cep95_received(&caller, &from, &token_id, &data);
             if !result {
                 self.env().revert(Error::TransferFailed);
             }
@@ -338,6 +349,7 @@ impl CEP95Interface for Cep95 {
         self.assert_exists(&token_id);
 
         let caller = self.env().caller();
+        // Only the owner or an approved spender can transfer the token.
         if from != caller && !self.is_approved_for_all(from, caller) {
             if let Some(approved) = self.approved_for(token_id) {
                 if approved != caller {
@@ -401,6 +413,7 @@ impl CEP95Interface for Cep95 {
     }
 
     fn token_metadata(&self, token_id: U256) -> Vec<(String, String)> {
+        self.assert_exists(&token_id);
         self.metadata
             .get(&token_id)
             .unwrap_or_default()
@@ -463,7 +476,7 @@ impl Cep95 {
     /// Mints a new NFT and assigns it to the specified address.
     pub fn mint(&mut self, to: Address, token_id: U256, metadata: Vec<(String, String)>) {
         if self.exists(&token_id) {
-            self.env().revert(Error::InvalidTokenId);
+            self.env().revert(Error::TokenAlreadyExists);
         }
 
         self.balances.set(&to, self.balance_of(to) + 1);
@@ -519,14 +532,14 @@ impl Cep95 {
     fn raw_update_metadata(
         &mut self,
         token_id: U256,
-        metadata: Vec<(String, String)>,
-        mut new_metadata: BTreeMap<String, String>
+        new_metadata: Vec<(String, String)>,
+        mut current_metadata: BTreeMap<String, String>
     ) {
         self.assert_exists(&token_id);
-        for (k, v) in metadata {
-            new_metadata.insert(k, v);
+        for (k, v) in new_metadata {
+            current_metadata.insert(k, v);
         }
-        self.metadata.set(&token_id, new_metadata);
+        self.metadata.set(&token_id, current_metadata);
         self.env().emit_event(MetadataUpdate { token_id });
     }
 }
@@ -543,8 +556,7 @@ mod utils {
     impl BasicCep95 {
         /// Initializes the contract with the given parameters.
         pub fn init(&mut self, name: String, symbol: String) {
-            self.token.name.set(name);
-            self.token.symbol.set(symbol);
+            self.token.init(name, symbol);
         }
 
         delegate! {
@@ -583,7 +595,9 @@ mod utils {
     }
 
     #[odra::module]
-    pub(crate) struct NFTReceiver;
+    pub(crate) struct NFTReceiver {
+        last_call_data: Var<((Address, Address), (U256, Option<Bytes>))>
+    }
 
     #[odra::module]
     impl NFTReceiver {
@@ -595,7 +609,13 @@ mod utils {
             token_id: U256,
             data: Option<Bytes>
         ) -> bool {
+            self.last_call_data
+                .set(((operator, from), (token_id, data.clone())));
             true
+        }
+
+        pub fn last_call_result(&self) -> ((Address, Address), (U256, Option<Bytes>)) {
+            self.last_call_data.get().unwrap_or_revert(self)
         }
     }
 
@@ -766,6 +786,10 @@ mod tests {
 
         assert_eq!(cep95.balance_of(owner), U256::from(0));
         assert_eq!(cep95.balance_of(recipient), U256::from(1));
+        assert_eq!(
+            nft_receiver.last_call_result(),
+            ((owner, owner), (token_id, None))
+        );
     }
 
     #[test]
@@ -873,6 +897,14 @@ mod tests {
         cep95.approve(spender, token_id);
 
         assert_eq!(cep95.approved_for(token_id), Some(spender));
+        assert!(env.emitted_event(
+            &cep95,
+            &Approval {
+                owner,
+                spender,
+                token_id
+            }
+        ));
     }
 
     #[test]
@@ -908,6 +940,14 @@ mod tests {
 
         assert_eq!(cep95.balance_of(owner), U256::from(0));
         assert_eq!(cep95.balance_of(recipient), U256::from(1));
+        assert!(env.emitted_event(
+            &cep95,
+            &Transfer {
+                from: owner,
+                to: recipient,
+                token_id
+            }
+        ));
     }
 
     #[test]
@@ -1051,6 +1091,7 @@ mod tests {
                 ("name".to_string(), "Bob".to_string()),
             ]
         );
+        assert!(env.emitted(cep95.address(), "MetadataUpdate"));
     }
 
     #[test]
@@ -1072,5 +1113,6 @@ mod tests {
             cep95.token_metadata(token_id),
             vec![("name".to_string(), "Bob".to_string())]
         );
+        assert!(env.emitted(cep95.address(), "MetadataUpdate"));
     }
 }

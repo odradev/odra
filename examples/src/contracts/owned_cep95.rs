@@ -18,9 +18,7 @@ impl OwnedCep95 {
     pub fn init(&mut self, name: String, symbol: String) {
         let owner = self.env().caller();
         self.ownable.init(owner);
-
-        self.token.name.set(name);
-        self.token.symbol.set(symbol);
+        self.token.init(name, symbol);
     }
 
     delegate! {
