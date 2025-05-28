@@ -596,6 +596,7 @@ mod utils {
 
     #[odra::module]
     pub(crate) struct NFTReceiver {
+        #[allow(clippy::type_complexity)]
         last_call_data: Var<((Address, Address), (U256, Option<Bytes>))>
     }
 
@@ -721,7 +722,7 @@ mod tests {
         cep95.mint(owner, token_id, metadata.clone());
 
         let result = cep95.try_mint(owner, token_id, metadata);
-        assert_eq!(result, Err(Error::InvalidTokenId.into()));
+        assert_eq!(result, Err(Error::TokenAlreadyExists.into()));
     }
 
     #[test]
@@ -755,8 +756,8 @@ mod tests {
         assert_eq!(cep95.balance_of(owner), U256::from(0));
         assert_eq!(cep95.owner_of(token_id), None);
         assert_eq!(
-            cep95.token_metadata(token_id),
-            Vec::<(String, String)>::new()
+            cep95.try_token_metadata(token_id),
+            Err(Error::InvalidTokenId.into())
         );
         assert!(env.emitted(cep95.address(), "Burn"));
     }
