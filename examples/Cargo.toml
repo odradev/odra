@@ -7,11 +7,11 @@ edition = "2021"
 odra = { path = "../odra", features = [], default-features = false }
 odra-modules = { path = "../modules", features = [], default-features = false }
 odra-casper-livenet-env = { path = "../odra-casper/livenet-env", optional = true }
-odra-cli = { path = "../odra-cli", features = [], default-features = false }
 sha3 = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 odra-build = { path = "../odra-build" }
+odra-cli = { path = "../odra-cli", features = [], default-features = false }
 
 [dev-dependencies]
 odra-test = { path = "../odra-test" }
