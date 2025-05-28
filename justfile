@@ -50,6 +50,10 @@ build-proxy-callers:
         odra-casper/test-vm/resources/proxy_caller.wasm
     cp target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm \
         odra-casper/test-vm/resources/proxy_caller_with_return.wasm
+    cp target/wasm32-unknown-unknown/release/proxy_caller.wasm \
+        odra-casper/rpc-client/resources/proxy_caller.wasm
+    cp target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm \
+        odra-casper/rpc-client/resources/proxy_caller_with_return.wasm
 
 test-odra:
     cargo test
@@ -92,7 +96,7 @@ test-templates:
     just test-template cep95
 
 run-nctl:
-    docker run --rm -it --name mynctl -d -p 11101:11101 -p 14101:14101 -p 18101:18101 -p 25101:25101 makesoftware/casper-nctl:v210
+    docker run --rm -it --name mynctl -d -p 11101:11101 -p 14101:14101 -p 18101:18101 -p 25101:25101 makesoftware/casper-nctl:v200
 
 test-livenet:
     set shell := bash

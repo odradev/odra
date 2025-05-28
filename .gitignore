@@ -15,6 +15,7 @@ examples/ourcoin/wasm
 examples/.env
 examples/.env.testnet
 examples/.env.integration
+examples/resources/deployed_contracts.toml
 modules/.builder_casper
 modules/wasm
 benchmark/wasm

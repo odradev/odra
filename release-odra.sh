@@ -1,5 +1,3 @@
-# Before running, comment out dev-dependencies in odra-proc-macros crate.
-
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
@@ -14,4 +12,6 @@ cargo publish -p odra-casper-test-vm
 cargo publish -p odra-test
 cargo publish -p odra-casper-rpc-client
 cargo publish -p odra-casper-livenet-env
+cargo publish -p odra-cli
+cargo publish -p odra-bdd
 cd modules && cargo publish --allow-dirty --no-verify

@@ -2,7 +2,7 @@
 
 Changelog for `odra`.
 
-## [2.0.0] - 2025-05-23
+## [2.0.0] - 2025-05-27
 ### Added
 - Support for Casper 2.
 - Native Casper events are now supported, alongside CES events:

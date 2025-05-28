@@ -11,6 +11,7 @@ sha3 = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 odra-build = { path = "../odra-build" }
+odra-cli = { path = "../odra-cli", features = [], default-features = false }
 
 [dev-dependencies]
 odra-test = { path = "../odra-test" }
@@ -68,6 +69,10 @@ name = "validators_on_livenet"
 path = "bin/validators_on_livenet.rs"
 required-features = ["livenet"]
 test = false
+
+[[bin]]
+name = "odra_cli"
+path = "bin/odra_cli.rs"
 
 [lints.rust]
 missing_docs = "warn"

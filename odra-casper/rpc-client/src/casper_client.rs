@@ -18,7 +18,7 @@ use casper_client::rpcs::results::{GetDeployResult, GetTransactionResult};
 use casper_client::rpcs::GlobalStateIdentifier;
 use casper_client::{
     get_auction_info, get_balance, get_chainspec, get_deploy, get_transaction, put_transaction,
-    query_global_state, JsonRpcId, Verbosity
+    query_global_state, JsonRpcId
 };
 use casper_types::bytesrepr::{deserialize_from_slice, Bytes, ToBytes};
 use casper_types::execution::ExecutionResultV1::{Failure, Success};
@@ -504,8 +504,7 @@ impl CasperClient {
         let t = get_transaction(
             self.rpc_id_typed(),
             self.configuration.node_address(),
-            // self.configuration.verbosity_typed(),
-            Verbosity::High,
+            self.configuration.verbosity_typed(),
             transaction_hash,
             true
         )
@@ -525,8 +524,7 @@ impl CasperClient {
         let t = get_deploy(
             self.rpc_id_typed(),
             self.configuration.node_address(),
-            // self.configuration.verbosity_typed(),
-            Verbosity::High,
+            self.configuration.verbosity_typed(),
             deploy_hash,
             true
         )
@@ -664,7 +662,7 @@ impl CasperClient {
             AMOUNT_ARG => call_def.amount(),
         };
 
-        let module_bytes = include_bytes!("../../test-vm/resources/proxy_caller_with_return.wasm")
+        let module_bytes = include_bytes!("../resources/proxy_caller_with_return.wasm")
             .to_vec()
             .into();
 

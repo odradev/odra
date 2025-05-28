@@ -1,4 +1,4 @@
-//! Functions that interact with the casper host environment.
+﻿//! Functions that interact with the casper host environment.
 //!
 //! This module provides functions for interacting with the casper host environment, including
 //! installing contracts, reverting contract execution, accessing named arguments, getting the
