@@ -1,4 +1,4 @@
-use odra::prelude::*;
+use odra::{casper_types::{bytesrepr::Bytes, U256}, prelude::*};
 use odra_modules::cep95::{CEP95Interface, Cep95};
 
 /// A module definition. Each module struct consists Vars and Mappings
@@ -66,9 +66,8 @@ mod tests {
         // implements `InitArgs` trait and `MyToken` implements `Deployer` trait,
         // so we can use it to deploy the module.
         let init_args = MyTokenInitArgs {
-            collection_name: "MyToken".to_string(),
-            collection_symbol: "MT".to_string(),
-            total_supply: 100,
+            name: "MyToken".to_string(),
+            symbol: "MT".to_string(),
         };
         assert!(MyToken::try_deploy(&env, init_args).is_ok());
     }
