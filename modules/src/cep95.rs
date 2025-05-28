@@ -15,9 +15,6 @@ use odra::{
 
 /// Casper-compatible NFT interface
 pub trait CEP95Interface {
-    /// Initializes the contract with a name and symbol.
-    fn init(&mut self, name: String, symbol: String);
-
     /// Returns a name of the NFT token/collection.
     fn name(&self) -> String;
 
@@ -306,11 +303,6 @@ pub struct Cep95 {
 
 #[odra::module]
 impl CEP95Interface for Cep95 {
-    fn init(&mut self, name: String, symbol: String) {
-        self.name.set(name);
-        self.symbol.set(symbol);
-    }
-
     fn name(&self) -> String {
         self.name.get()
     }
@@ -349,8 +341,11 @@ impl CEP95Interface for Cep95 {
         self.assert_exists(&token_id);
 
         let caller = self.env().caller();
+        let owner = self
+            .owner_of(token_id)
+            .unwrap_or_revert_with(self, Error::ValueNotSet);
         // Only the owner or an approved spender can transfer the token.
-        if from != caller && !self.is_approved_for_all(from, caller) {
+        if (owner != from || owner != caller) && !self.is_approved_for_all(from, caller) {
             if let Some(approved) = self.approved_for(token_id) {
                 if approved != caller {
                     self.env().revert(Error::NotAnOwnerOrApproved);
@@ -423,31 +418,10 @@ impl CEP95Interface for Cep95 {
 }
 
 impl Cep95 {
-    #[inline]
-    fn set_approve(&mut self, token_id: U256, spender: Option<Address>) {
-        let owner = self
-            .owner_of(token_id)
-            .unwrap_or_revert_with(self, Error::ValueNotSet);
-        let caller = self.env().caller();
-
-        if Some(owner) == spender {
-            self.env().revert(Error::ApprovalToCurrentOwner);
-        }
-
-        if caller != owner && !self.is_approved_for_all(owner, caller) {
-            self.env().revert(Error::NotAnOwnerOrApproved);
-        }
-
-        self.approvals.set(&token_id, spender);
-    }
-
-    #[inline]
-    fn set_approval_for_all(&mut self, caller: Address, operator: Address, approved: bool) {
-        if caller == operator {
-            self.env().revert(Error::ApproveToCaller)
-        }
-
-        self.operators.set(&caller, &operator, approved);
+    /// Initializes the module with a name and symbol.
+    pub fn init(&mut self, name: String, symbol: String) {
+        self.name.set(name);
+        self.symbol.set(symbol);
     }
 
     #[inline]
@@ -542,6 +516,33 @@ impl Cep95 {
         self.metadata.set(&token_id, current_metadata);
         self.env().emit_event(MetadataUpdate { token_id });
     }
+
+    #[inline]
+    fn set_approve(&mut self, token_id: U256, spender: Option<Address>) {
+        let owner = self
+            .owner_of(token_id)
+            .unwrap_or_revert_with(self, Error::ValueNotSet);
+        let caller = self.env().caller();
+
+        if Some(owner) == spender {
+            self.env().revert(Error::ApprovalToCurrentOwner);
+        }
+
+        if caller != owner && !self.is_approved_for_all(owner, caller) {
+            self.env().revert(Error::NotAnOwnerOrApproved);
+        }
+
+        self.approvals.set(&token_id, spender);
+    }
+
+    #[inline]
+    fn set_approval_for_all(&mut self, caller: Address, operator: Address, approved: bool) {
+        if caller == operator {
+            self.env().revert(Error::ApproveToCaller)
+        }
+
+        self.operators.set(&caller, &operator, approved);
+    }
 }
 
 mod utils {
@@ -615,6 +616,7 @@ mod utils {
             true
         }
 
+        #[allow(dead_code)]
         pub fn last_call_result(&self) -> ((Address, Address), (U256, Option<Bytes>)) {
             self.last_call_data.get().unwrap_or_revert(self)
         }
@@ -868,7 +870,7 @@ mod tests {
     }
 
     #[test]
-    fn test_transfer_by_non_owner() {
+    fn test_transfer_from_non_owner() {
         let (env, mut cep95) = setup();
 
         let recipient = env.get_account(10);
