@@ -8,7 +8,7 @@
   ],
   "repository": "https://github.com/odradev/odra",
   "homepage": null,
-  "contract_name": "Erc721Token",
+  "contract_name": "BasicCep95",
   "contract_version": "2.0.0",
   "types": [
     {
@@ -22,11 +22,9 @@
             "ty": "Key"
           },
           {
-            "name": "approved",
+            "name": "spender",
             "description": null,
-            "ty": {
-              "Option": "Key"
-            }
+            "ty": "Key"
           },
           {
             "name": "token_id",
@@ -50,33 +48,96 @@
             "name": "operator",
             "description": null,
             "ty": "Key"
-          },
-          {
-            "name": "approved",
-            "description": null,
-            "ty": "Bool"
           }
         ]
       }
     },
     {
       "struct": {
-        "name": "OwnershipTransferred",
+        "name": "Burn",
         "description": null,
         "members": [
           {
-            "name": "previous_owner",
+            "name": "from",
             "description": null,
-            "ty": {
-              "Option": "Key"
-            }
+            "ty": "Key"
           },
           {
-            "name": "new_owner",
+            "name": "token_id",
             "description": null,
-            "ty": {
-              "Option": "Key"
-            }
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "MetadataUpdate",
+        "description": null,
+        "members": [
+          {
+            "name": "token_id",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "Mint",
+        "description": null,
+        "members": [
+          {
+            "name": "to",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "token_id",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "RevokeApproval",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "spender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "token_id",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "RevokeApprovalForAll",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "operator",
+            "description": null,
+            "ty": "Key"
           }
         ]
       }
@@ -89,16 +150,12 @@
           {
             "name": "from",
             "description": null,
-            "ty": {
-              "Option": "Key"
-            }
+            "ty": "Key"
           },
           {
             "name": "to",
             "description": null,
-            "ty": {
-              "Option": "Key"
-            }
+            "ty": "Key"
           },
           {
             "name": "token_id",
@@ -112,79 +169,148 @@
   "errors": [
     {
       "name": "ApprovalToCurrentOwner",
-      "description": "The owner cannot be approved.",
-      "discriminant": 30002
+      "description": "The approval is set to the current owner.",
+      "discriminant": 40003
     },
     {
       "name": "ApproveToCaller",
-      "description": "The caller cannot approve self.",
-      "discriminant": 30003
-    },
-    {
-      "name": "BaseUriNotSet",
-      "description": "The base URI is not set.",
-      "discriminant": 31002
-    },
-    {
-      "name": "CallerNotTheNewOwner",
-      "description": "The caller is not the new owner.",
-      "discriminant": 20002
-    },
-    {
-      "name": "CallerNotTheOwner",
-      "description": "The caller is not the owner.",
-      "discriminant": 20001
+      "description": "The caller is the same as the operator.",
+      "discriminant": 40004
     },
     {
       "name": "InvalidTokenId",
-      "description": "Token is invalid in the given context or does not exist.",
-      "discriminant": 30000
-    },
-    {
-      "name": "MissingRole",
-      "description": "The role is missing.",
-      "discriminant": 20003
-    },
-    {
-      "name": "NameNotSet",
-      "description": "The name is not set.",
-      "discriminant": 31000
+      "description": "The token ID is invalid.",
+      "discriminant": 40005
     },
     {
       "name": "NotAnOwnerOrApproved",
-      "description": "Address in not eligible to operate on the token.",
-      "discriminant": 30001
-    },
-    {
-      "name": "OwnerNotSet",
-      "description": "The owner is not set.",
-      "discriminant": 20000
-    },
-    {
-      "name": "RoleRenounceForAnotherAddress",
-      "description": "The role cannot be renounced for another address.",
-      "discriminant": 20004
-    },
-    {
-      "name": "SymbolNotSet",
-      "description": "The symbol is not set.",
-      "discriminant": 31001
-    },
-    {
-      "name": "TokenAlreadyExists",
-      "description": "Token with a given id already exists.",
-      "discriminant": 35000
+      "description": "The token ID is invalid.",
+      "discriminant": 40002
     },
     {
       "name": "TransferFailed",
-      "description": "Token transfer ends with an error",
-      "discriminant": 30004
+      "description": "The transfer failed.",
+      "discriminant": 40001
+    },
+    {
+      "name": "ValueNotSet",
+      "description": "The value is not set.",
+      "discriminant": 40000
     }
   ],
   "entry_points": [
     {
-      "name": "name",
+      "name": "mint",
       "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "to",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        },
+        {
+          "name": "metadata",
+          "description": null,
+          "ty": {
+            "List": {
+              "Tuple2": [
+                "String",
+                "String"
+              ]
+            }
+          },
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "burn",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "set_metadata",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        },
+        {
+          "name": "metadata",
+          "description": null,
+          "ty": {
+            "List": {
+              "Tuple2": [
+                "String",
+                "String"
+              ]
+            }
+          },
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "update_metadata",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "token_id",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        },
+        {
+          "name": "metadata",
+          "description": null,
+          "ty": {
+            "List": {
+              "Tuple2": [
+                "String",
+                "String"
+              ]
+            }
+          },
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "name",
+      "description": "Delegated. See `self.token.name()` for details.",
       "is_mutable": false,
       "arguments": [],
       "return_ty": "String",
@@ -193,16 +319,7 @@
     },
     {
       "name": "symbol",
-      "description": "",
-      "is_mutable": false,
-      "arguments": [],
-      "return_ty": "String",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "base_uri",
-      "description": "",
+      "description": "Delegated. See `self.token.symbol()` for details.",
       "is_mutable": false,
       "arguments": [],
       "return_ty": "String",
@@ -211,7 +328,7 @@
     },
     {
       "name": "balance_of",
-      "description": "",
+      "description": "Delegated. See `self.token.balance_of()` for details.",
       "is_mutable": false,
       "arguments": [
         {
@@ -227,7 +344,7 @@
     },
     {
       "name": "owner_of",
-      "description": "",
+      "description": "Delegated. See `self.token.owner_of()` for details.",
       "is_mutable": false,
       "arguments": [
         {
@@ -237,41 +354,15 @@
           "optional": false
         }
       ],
-      "return_ty": "Key",
+      "return_ty": {
+        "Option": "Key"
+      },
       "is_contract_context": true,
       "access": "public"
     },
     {
       "name": "safe_transfer_from",
-      "description": "",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "from",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "to",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "token_id",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "safe_transfer_from_with_data",
-      "description": "",
+      "description": "Delegated. See `self.token.safe_transfer_from()` for details.",
       "is_mutable": true,
       "arguments": [
         {
@@ -296,7 +387,9 @@
           "name": "data",
           "description": null,
           "ty": {
-            "List": "U8"
+            "Option": {
+              "List": "U8"
+            }
           },
           "optional": false
         }
@@ -307,7 +400,7 @@
     },
     {
       "name": "transfer_from",
-      "description": "",
+      "description": "Delegated. See `self.token.transfer_from()` for details.",
       "is_mutable": true,
       "arguments": [
         {
@@ -335,15 +428,13 @@
     },
     {
       "name": "approve",
-      "description": "",
+      "description": "Delegated. See `self.token.approve()` for details.",
       "is_mutable": true,
       "arguments": [
         {
-          "name": "approved",
+          "name": "spender",
           "description": null,
-          "ty": {
-            "Option": "Key"
-          },
+          "ty": "Key",
           "optional": false
         },
         {
@@ -358,20 +449,14 @@
       "access": "public"
     },
     {
-      "name": "set_approval_for_all",
-      "description": "",
+      "name": "revoke_approval",
+      "description": "Delegated. See `self.token.revoke_approval()` for details.",
       "is_mutable": true,
       "arguments": [
         {
-          "name": "operator",
+          "name": "token_id",
           "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "approved",
-          "description": null,
-          "ty": "Bool",
+          "ty": "U256",
           "optional": false
         }
       ],
@@ -380,8 +465,8 @@
       "access": "public"
     },
     {
-      "name": "get_approved",
-      "description": "",
+      "name": "approved_for",
+      "description": "Delegated. See `self.token.approved_for()` for details.",
       "is_mutable": false,
       "arguments": [
         {
@@ -398,8 +483,40 @@
       "access": "public"
     },
     {
+      "name": "approve_for_all",
+      "description": "Delegated. See `self.token.approve_for_all()` for details.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "operator",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "revoke_approval_for_all",
+      "description": "Delegated. See `self.token.revoke_approval_for_all()` for details.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "operator",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
       "name": "is_approved_for_all",
-      "description": "",
+      "description": "Delegated. See `self.token.is_approved_for_all()` for details.",
       "is_mutable": false,
       "arguments": [
         {
@@ -420,65 +537,9 @@
       "access": "public"
     },
     {
-      "name": "renounce_ownership",
-      "description": "",
-      "is_mutable": true,
-      "arguments": [],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "transfer_ownership",
-      "description": "",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "new_owner",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "owner",
-      "description": "",
+      "name": "token_metadata",
+      "description": "Delegated. See `self.token.token_metadata()` for details.",
       "is_mutable": false,
-      "arguments": [],
-      "return_ty": "Key",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "mint",
-      "description": "",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "to",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "token_id",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "burn",
-      "description": "",
-      "is_mutable": true,
       "arguments": [
         {
           "name": "token_id",
@@ -487,7 +548,14 @@
           "optional": false
         }
       ],
-      "return_ty": "Unit",
+      "return_ty": {
+        "List": {
+          "Tuple2": [
+            "String",
+            "String"
+          ]
+        }
+      },
       "is_contract_context": true,
       "access": "public"
     }
@@ -502,8 +570,24 @@
       "ty": "ApprovalForAll"
     },
     {
-      "name": "OwnershipTransferred",
-      "ty": "OwnershipTransferred"
+      "name": "Burn",
+      "ty": "Burn"
+    },
+    {
+      "name": "MetadataUpdate",
+      "ty": "MetadataUpdate"
+    },
+    {
+      "name": "Mint",
+      "ty": "Mint"
+    },
+    {
+      "name": "RevokeApproval",
+      "ty": "RevokeApproval"
+    },
+    {
+      "name": "RevokeApprovalForAll",
+      "ty": "RevokeApprovalForAll"
     },
     {
       "name": "Transfer",
@@ -511,8 +595,8 @@
     }
   ],
   "call": {
-    "wasm_file_name": "Erc721Token.wasm",
-    "description": "",
+    "wasm_file_name": "BasicCep95.wasm",
+    "description": "Initializes the contract with the given parameters.",
     "arguments": [
       {
         "name": "odra_cfg_package_hash_key_name",
@@ -540,12 +624,6 @@
       },
       {
         "name": "symbol",
-        "description": null,
-        "ty": "String",
-        "optional": false
-      },
-      {
-        "name": "base_uri",
         "description": null,
         "ty": "String",
         "optional": false

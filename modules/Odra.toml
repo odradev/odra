@@ -23,19 +23,16 @@ fqn = "access::Ownable"
 fqn = "ownable_2step::Ownable2Step"
 
 [[contracts]]
-fqn = "cep78::token::Cep78"
+fqn = "cep95::utils::BasicCep95"
 
 [[contracts]]
-fqn = "cep78::token::TestCep78"
+fqn = "cep95::utils::NFTReceiver"
 
 [[contracts]]
-fqn = "cep78::utils::MockCep78Operator"
+fqn = "cep95::utils::RejectingNFTReceiver"
 
 [[contracts]]
-fqn = "cep78::utils::MockDummyContract"
-
-[[contracts]]
-fqn = "cep78::utils::MockCep78TransferFilter"
+fqn = "cep95::utils::BasicContract"
 
 [[contracts]]
 fqn = "cep18_token::Cep18"

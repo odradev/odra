@@ -28,7 +28,15 @@
   "entrypoints": [
     {
       "name": "init",
-      "args": [],
+      "args": [
+        {
+          "name": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
       "is_mutable": true,
       "return_ty": "Unit",
       "ty": "Constructor",
