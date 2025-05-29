@@ -1,4 +1,4 @@
-﻿//! Functions that interact with the casper host environment.
+//! Functions that interact with the casper host environment.
 //!
 //! This module provides functions for interacting with the casper host environment, including
 //! installing contracts, reverting contract execution, accessing named arguments, getting the
@@ -38,7 +38,9 @@ use odra_core::casper_types::{
     ApiError, CLTyped, CLValue, EntityAddr, EntryPoints, Key, NamedKeys, PackageHash, PublicKey,
     RuntimeArgs, URef, DICTIONARY_ITEM_KEY_MAX_LENGTH, U512, UREF_SERIALIZED_LENGTH
 };
-use odra_core::consts::{ALLOW_KEY_OVERRIDE_ARG, IS_UPGRADABLE_ARG, PACKAGE_HASH_KEY_NAME_ARG};
+use odra_core::consts::{
+    ALLOW_KEY_OVERRIDE_ARG, IS_UPGRADABLE_ARG, PACKAGE_HASH_KEY_NAME_ARG, RANDOM_BYTES_COUNT
+};
 use odra_core::{
     args::EntrypointArgument,
     casper_event_standard::{self, Schema, Schemas}
@@ -819,15 +821,7 @@ pub fn delegated_amount(public_key: PublicKey) -> U512 {
         .unwrap_or_else(U512::zero)
 }
 
-/// Returns a pseudorandom byte array of the specified size.
-/// It uses the `random_bytes` function from the Casper runtime to generate random bytes.
-pub fn pseudorandom_bytes(size: usize) -> Vec<u8> {
-    let mut result = Vec::with_capacity(size);
-    while result.len() < size {
-        let random_chunk = runtime::random_bytes();
-        let remaining = size - result.len();
-        let take_bytes = remaining.min(random_chunk.len());
-        result.extend_from_slice(&random_chunk[..take_bytes]);
-    }
-    result
+/// Returns a pseudorandom byte array
+pub fn pseudorandom_bytes() -> [u8; RANDOM_BYTES_COUNT] {
+    runtime::random_bytes()
 }

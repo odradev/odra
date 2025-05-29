@@ -3,6 +3,7 @@ use casper_types::{CLValue, PublicKey};
 use crate::call_def::CallDef;
 use crate::casper_types::bytesrepr::Bytes;
 use crate::casper_types::U512;
+use crate::consts::RANDOM_BYTES_COUNT;
 use crate::prelude::*;
 
 /// Trait representing the context of a smart contract.
@@ -197,5 +198,5 @@ pub trait ContractContext {
 
     /// Returns a vector of pseudorandom bytes of the specified size.
     /// There is no guarantee that the returned bytes are in any way cryptographically secure.
-    fn pseudorandom_bytes(&self, size: usize) -> Vec<u8>;
+    fn pseudorandom_bytes(&self) -> [u8; RANDOM_BYTES_COUNT];
 }

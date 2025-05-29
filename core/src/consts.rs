@@ -64,3 +64,6 @@ pub const CONSTRUCTOR_NAME: &str = "init";
 pub const ACCOUNTS_NUMBER: u8 = 20;
 
 pub const DEFAULT_BALANCE: u64 = 10_000_000_000_000_000_000;
+
+/// Amount of random bytes returned by pseudorandom_bytes
+pub const RANDOM_BYTES_COUNT: usize = 32;

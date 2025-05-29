@@ -9,6 +9,8 @@ use crate::VmError::{Serialization, TypeMismatch};
 use crate::{consts, prelude::*, utils};
 use casper_event_standard::EventInstance;
 use casper_types::CLValueError;
+use rand_chacha::rand_core::{RngCore, SeedableRng};
+use rand_chacha::ChaCha8Rng;
 
 const INDEX_SIZE: usize = 4;
 const KEY_LEN: usize = 64;
@@ -310,7 +312,41 @@ impl ContractEnv {
     /// Returns a vector of pseudorandom bytes of the specified size.
     /// There is no guarantee that the returned bytes are in any way cryptographically secure.
     pub fn pseudorandom_bytes(&self, size: usize) -> Vec<u8> {
-        self.backend.borrow().pseudorandom_bytes(size)
+        let seed_bytes = self.backend.borrow().pseudorandom_bytes();
+
+        if size <= seed_bytes.len() {
+            return seed_bytes[..size].to_vec();
+        }
+
+        // Use initial random bytes as seed for ChaCha8
+        let mut result = seed_bytes.to_vec();
+        let mut rng = ChaCha8Rng::from_seed(seed_bytes);
+        let additional_bytes = size - result.len();
+        let mut extra = vec![0u8; additional_bytes];
+        rng.fill_bytes(&mut extra);
+        result.extend_from_slice(&extra);
+
+        result
+    }
+
+    /// Returns a pseudorandom integer.
+    pub fn pseudorandom_number(&self, high: U512) -> U512 {
+        let seed_bytes = self.backend.borrow().pseudorandom_bytes();
+        let mut rng = ChaCha8Rng::from_seed(seed_bytes);
+        let bits = high.bits();
+        let bytes_len = (bits + 7) / 8;
+        let max = U512::from(1u64) << bits; // 2^bits
+        let limit = max - (max % high);
+        loop {
+            let mut bytes = vec![0u8; bytes_len];
+            rng.fill_bytes(&mut bytes);
+            let candidate = U512::from_big_endian(&bytes);
+
+            if candidate < limit {
+                return candidate % high;
+            }
+            // else: reject and try again
+        }
     }
 }
 
