@@ -53,7 +53,7 @@ pub fn deploy_cep18(env: &HostEnv) -> Cep18HostRef {
         name,
         symbol,
         decimals,
-        initial_supply,
+        initial_supply
     };
 
     env.set_gas(300_000_000_000u64);
