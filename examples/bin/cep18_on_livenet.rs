@@ -2,7 +2,6 @@
 use odra::casper_types::U256;
 use odra::host::{Deployer, HostEnv, HostRefLoader};
 use odra::prelude::*;
-use odra_modules::cep18::utils::Cep18Modality;
 use odra_modules::cep18_token::{Cep18, Cep18HostRef, Cep18InitArgs};
 
 fn main() {
@@ -55,9 +54,6 @@ pub fn deploy_cep18(env: &HostEnv) -> Cep18HostRef {
         symbol,
         decimals,
         initial_supply,
-        minter_list: vec![],
-        admin_list: vec![env.caller()],
-        modality: Some(Cep18Modality::MintAndBurn)
     };
 
     env.set_gas(300_000_000_000u64);
