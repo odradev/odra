@@ -106,4 +106,12 @@ impl CasperClientConfiguration {
     pub fn gas_price_tolerance(&self) -> u8 {
         DEFAULT_GAS_TOLERANCE
     }
+
+    pub fn transaction_url(&self, transaction_id: &str) -> String {
+        match self.chain_name.as_str() {
+            "casper-test" => format!("https://testnet.cspr.live/transaction/{}", transaction_id),
+            "casper" => format!("https://cspr.live/transaction/{}", transaction_id),
+            _ => "".to_string()
+        }
+    }
 }
