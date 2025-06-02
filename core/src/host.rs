@@ -335,7 +335,8 @@ pub struct HostEnv {
     last_call_result: Rc<RefCell<Option<CallResult>>>,
     deployed_contracts: Rc<RefCell<Vec<Address>>>,
     events_count: Rc<RefCell<BTreeMap<Address, u32>>>, // contract_address -> events_count
-    native_events_count: Rc<RefCell<BTreeMap<Address, u32>>>  // contract_address -> events_count
+    native_events_count: Rc<RefCell<BTreeMap<Address, u32>>>, // contract_address -> events_count
+    events_initialized: Rc<RefCell<BTreeMap<Address, bool>>>
 }
 
 impl HostEnv {
@@ -346,7 +347,8 @@ impl HostEnv {
             last_call_result: RefCell::new(None).into(),
             deployed_contracts: RefCell::new(vec![]).into(),
             events_count: Rc::new(RefCell::new(Default::default())),
-            native_events_count: Rc::new(RefCell::new(Default::default()))
+            native_events_count: Rc::new(RefCell::new(Default::default())),
+            events_initialized: Rc::new(RefCell::new(Default::default()))
         }
     }
 
@@ -440,6 +442,9 @@ impl HostEnv {
         self.native_events_count
             .borrow_mut()
             .insert(deployed_contract, 0);
+        self.events_initialized
+            .borrow_mut()
+            .insert(deployed_contract, true);
         Ok(deployed_contract)
     }
 
@@ -451,15 +456,9 @@ impl HostEnv {
         contract_name: String,
         entry_points_caller: EntryPointsCaller
     ) {
-        let events_count = self.events_count(&address);
-        let native_events_count = self.native_events_count(&address);
         let backend = self.backend.borrow();
         backend.register_contract(address, contract_name, entry_points_caller);
         self.deployed_contracts.borrow_mut().push(address);
-        self.events_count.borrow_mut().insert(address, events_count);
-        self.native_events_count
-            .borrow_mut()
-            .insert(address, native_events_count);
     }
 
     /// Calls a contract at the specified address with the given call definition.
@@ -808,8 +807,29 @@ impl HostEnv {
     }
 
     fn last_events(&self, contract_address: &Address) -> Vec<Bytes> {
+        let events_initialized = self
+            .events_initialized
+            .borrow()
+            .get(contract_address)
+            .copied()
+            .unwrap_or(false);
+        if !events_initialized {
+            self.events_count
+                .borrow_mut()
+                .insert(*contract_address, self.events_count(contract_address));
+            self.native_events_count.borrow_mut().insert(
+                *contract_address,
+                self.native_events_count(contract_address)
+            );
+            self.events_initialized
+                .borrow_mut()
+                .insert(*contract_address, true);
+        }
+
         let mut old_count_binding = self.events_count.borrow_mut();
-        let old_count = *old_count_binding.get(contract_address).unwrap();
+        let old_count = *old_count_binding
+            .get(contract_address)
+            .expect("Contract address not found in events count");
         let new_count = self.events_count(contract_address);
         let mut events = vec![];
         for count in old_count..new_count {
