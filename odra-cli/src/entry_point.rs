@@ -1,7 +1,9 @@
 use std::str::FromStr;
 
 use clap::ArgMatches;
+use odra::prelude::OdraError;
 use odra::schema::casper_contract_schema::{Entrypoint, NamedCLType};
+use odra::VmError;
 use odra::{casper_types::U512, host::HostEnv, CallDef};
 
 use crate::{
@@ -11,8 +13,12 @@ use crate::{
 
 #[derive(Debug, thiserror::Error)]
 pub enum CallError {
-    #[error("Execution error: {0}")]
-    ExecutionError(String),
+    #[error("Calling {contract_name}::{method} failed with: {message}")]
+    ExecutionError {
+        contract_name: String,
+        method: String,
+        message: String
+    },
     #[error(transparent)]
     ArgsError(#[from] args::ArgsError),
     #[error(transparent)]
@@ -50,7 +56,14 @@ pub fn call(
     }
     let bytes = env
         .raw_call_contract(contract_address, call_def, use_proxy)
-        .map_err(|e| CallError::ExecutionError(format!("{:?}", e)))?;
+        .map_err(|e| CallError::ExecutionError {
+            contract_name: contract_name.to_string(),
+            method: method.to_string(),
+            message: match e {
+                OdraError::VmError(VmError::Other(msg)) => msg,
+                _ => format!("{:?}", e)
+            }
+        })?;
     let result = args::decode(bytes.inner_bytes(), ty, types)?;
     Ok(result.0)
 }
