@@ -9,6 +9,7 @@ use std::collections::BTreeSet;
 use clap::{command, Arg, Command};
 use cmd::{OdraCliCommand, OdraCommand};
 use deploy::DeployScript;
+use odra::host::Deployer;
 use odra::schema::{casper_contract_schema::CustomType, SchemaCustomTypes, SchemaEntrypoints};
 use odra::{
     contract_def::HasIdent,
@@ -32,6 +33,34 @@ use scenario::{Scenario, ScenarioMetadata};
 const CONTRACTS_SUBCOMMAND: &str = "contract";
 const SCENARIOS_SUBCOMMAND: &str = "scenario";
 const DEPLOY_SUBCOMMAND: &str = "deploy";
+
+/// Trait that extends the functionality of OdraContract to include deployment capabilities.
+pub trait DeployerExt: Sized {
+    /// Contract that implements OdraContract and Deployer for Self
+    type Contract: OdraContract + 'static + Deployer<Self::Contract>;
+
+    /// Load an existing contract instance from container or deploy a new one.
+    fn load_or_deploy(
+        env: &HostEnv,
+        args: <<Self as DeployerExt>::Contract as OdraContract>::InitArgs,
+        container: &mut DeployedContractsContainer,
+        gas: u64
+    ) -> Result<<<Self as DeployerExt>::Contract as OdraContract>::HostRef, crate::deploy::Error>
+    {
+        if let Ok(contract) = container.get_ref::<Self::Contract>(env) {
+            Ok(contract)
+        } else {
+            env.set_gas(gas);
+            let contract = Self::Contract::try_deploy(env, args)?;
+            container.add_contract(&contract)?;
+            Ok(contract)
+        }
+    }
+}
+
+impl<T: OdraContract + Deployer<T> + 'static> DeployerExt for T {
+    type Contract = T;
+}
 
 pub(crate) type CustomTypeSet = BTreeSet<CustomType>;
 
