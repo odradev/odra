@@ -8,7 +8,7 @@ use thiserror::Error;
 
 use crate::{types, CustomTypeSet};
 
-pub const ARG_ATTACHED_VALUE: &str = "__attached_value";
+pub const ARG_ATTACHED_VALUE: &str = "attached_value";
 pub const ARG_GAS: &str = "gas";
 
 #[derive(Debug, Error)]

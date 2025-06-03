@@ -419,7 +419,7 @@ impl FnIR {
 }
 
 const PROTECTED_FUNCTIONS: [&str; 3] = ["new", "env", "address"];
-const PROTECTED_ARGS: [&str; 1] = ["gas"];
+const PROTECTED_ARGS: [&str; 2] = ["gas", "attached_value"];
 
 fn validate_fn_name<T: ToTokens>(name: &str, ctx: T) -> syn::Result<()> {
     if PROTECTED_FUNCTIONS.contains(&name) {
@@ -739,11 +739,18 @@ mod test {
             pub fn abc(&self, gas: u64) {}
         );
         let result = FnIR::try_from(code);
-        assert!(result.is_err());
-
         assert_eq!(
             result.err().unwrap().to_string(),
             "Argument name `gas` is reserved"
+        );
+
+        let code: syn::ImplItemFn = syn::parse_quote!(
+            pub fn pay(&self, attached_value: u64) {}
+        );
+        let result = FnIR::try_from(code);
+        assert_eq!(
+            result.err().unwrap().to_string(),
+            "Argument name `attached_value` is reserved"
         );
     }
 }
