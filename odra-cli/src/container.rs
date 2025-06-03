@@ -34,7 +34,7 @@ pub enum ContractError {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct DeployedContractsContainer {
     time: String,
-    pub contracts: Vec<DeployedContract>
+    contracts: Vec<DeployedContract>
 }
 
 impl DeployedContractsContainer {
@@ -130,6 +130,9 @@ impl DeployedContractsContainer {
 
     fn file_path() -> Result<PathBuf, ContractError> {
         let mut path = project_root::get_project_root().map_err(ContractError::Io)?;
+        if !path.exists() {
+            std::fs::create_dir_all(&path).map_err(ContractError::Io)?;
+        }
         path.push(DEPLOYED_CONTRACTS_FILE);
 
         Ok(path)
