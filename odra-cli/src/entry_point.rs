@@ -1,13 +1,13 @@
+use std::str::FromStr;
+
 use clap::ArgMatches;
 use odra::schema::casper_contract_schema::{Entrypoint, NamedCLType};
 use odra::{casper_types::U512, host::HostEnv, CallDef};
 
 use crate::{
-    args::{self, ARG_ATTACHED_VALUE},
+    args::{self, ARG_ATTACHED_VALUE, ARG_GAS},
     container, types, CustomTypeSet, DeployedContractsContainer
 };
-
-pub const DEFAULT_GAS: u64 = 20_000_000_000;
 
 #[derive(Debug, thiserror::Error)]
 pub enum CallError {
@@ -31,12 +31,7 @@ pub fn call(
     types: &CustomTypeSet
 ) -> Result<String, CallError> {
     let container = DeployedContractsContainer::load()?;
-    let amount = args
-        .try_get_one::<String>(ARG_ATTACHED_VALUE)
-        .ok()
-        .flatten()
-        .map(|s| U512::from_dec_str(s).map_err(|_| types::Error::Serialization))
-        .unwrap_or(Ok(U512::zero()))?;
+    let amount = args::read(args, ARG_ATTACHED_VALUE, U512::from_dec_str)?;
 
     let runtime_args = args::compose(entry_point, args, types)?;
     let contract_address = container
@@ -50,7 +45,8 @@ pub fn call(
     let use_proxy = ty.0 != NamedCLType::Unit || !call_def.amount().is_zero();
 
     if is_mut {
-        env.set_gas(DEFAULT_GAS);
+        let gas = args::read(args, ARG_GAS, FromStr::from_str)?;
+        env.set_gas(gas);
     }
     let bytes = env
         .raw_call_contract(contract_address, call_def, use_proxy)

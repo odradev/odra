@@ -135,7 +135,13 @@ impl OdraCli {
             for arg in args::entry_point_args(&entry_point, &self.custom_types) {
                 ep_cmd = ep_cmd.arg(arg);
             }
+            // For a payable entry point, a user can attach a value to the call.
             ep_cmd = ep_cmd.arg(args::attached_value_arg());
+            // If the entry point is mutable, a transaction is being sent, so we need to
+            // provide the gas argument.
+            if entry_point.is_mutable {
+                ep_cmd = ep_cmd.arg(args::gas_arg());
+            }
             contract_cmd = contract_cmd.subcommand(ep_cmd);
         }
         self.contracts_cmd = self.contracts_cmd.subcommand(contract_cmd);
