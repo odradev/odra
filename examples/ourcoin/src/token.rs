@@ -89,12 +89,6 @@ impl OurToken {
         }
     }
 
-    /// Burns the given amount of tokens from the given address.
-    pub fn burn(&mut self, owner: &Address, amount: &U256) {
-        self.token.assert_caller(owner);
-        self.token.raw_burn(owner, amount);
-    }
-
     /// Proposes a new mint for the contract.
     pub fn propose_new_mint(&mut self, account: Address, amount: U256) {
         // Only allow proposing a new mint if there is no vote in progress.

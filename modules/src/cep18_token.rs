@@ -177,7 +177,7 @@ impl Cep18 {
 impl Cep18 {
     /// Transfers tokens from the sender to the recipient without checking the permissions.
     pub fn raw_transfer(&mut self, sender: &Address, recipient: &Address, amount: &U256) {
-        if *amount > self.balances.get(sender).unwrap_or_default() {
+        if amount > &self.balance_of(sender) {
             self.env().revert(Error::InsufficientBalance)
         }
 
@@ -200,7 +200,7 @@ impl Cep18 {
 
     /// Burns the given amount of tokens from the given address without checking the permissions.
     pub fn raw_burn(&mut self, owner: &Address, amount: &U256) {
-        if self.balance_of(owner) < *amount {
+        if &self.balance_of(owner) < amount {
             self.env().revert(Error::InsufficientBalance);
         }
 
@@ -211,13 +211,6 @@ impl Cep18 {
             owner: *owner,
             amount: *amount
         });
-    }
-
-    /// Reverts with `InsufficientRights` error if a given address is not the caller of the contract.
-    pub fn assert_caller(&self, address: &Address) {
-        if self.env().caller() != *address {
-            self.env().revert(Error::InsufficientRights);
-        }
     }
 }
 
@@ -258,16 +251,15 @@ pub(crate) mod utils {
 
         pub fn mint(&mut self, owner: &Address, amount: &U256) {
             if self.env().caller() != self.ownable.get_owner() {
-                self.env().revert(Error::InsufficientRights);
+                self.env().revert(OdraError::user(99));
             }
             self.token.raw_mint(owner, amount);
         }
 
         pub fn burn(&mut self, owner: &Address, amount: &U256) {
             if self.env().caller() != *owner {
-                self.env().revert(Error::InvalidBurnTarget);
+                self.env().revert(OdraError::user(100));
             }
-
             self.token.raw_burn(owner, amount);
         }
     }

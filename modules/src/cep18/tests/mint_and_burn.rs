@@ -5,7 +5,7 @@ mod mint_and_burn_tests {
     use odra::casper_types::U256;
     use odra::host::HostRef;
 
-    use crate::cep18::errors::Error::{InsufficientBalance, InsufficientRights};
+    use crate::cep18::errors::Error;
     use crate::cep18_token::tests::{
         setup, TOKEN_OWNER_AMOUNT_1, TOKEN_OWNER_AMOUNT_2, TRANSFER_AMOUNT_1
     };
@@ -75,7 +75,7 @@ mod mint_and_burn_tests {
 
         cep18_token.env().set_caller(alice);
         let result = cep18_token.try_burn(&alice, &U256::from(TOKEN_OWNER_AMOUNT_1 + 1));
-        assert_eq!(result.err().unwrap(), InsufficientBalance.into());
+        assert_eq!(result.err().unwrap(), Error::InsufficientBalance.into());
     }
 
     #[test]
@@ -96,7 +96,7 @@ mod mint_and_burn_tests {
         // user without permissions cannot mint tokens
         cep18_token.env().set_caller(alice);
         let result = cep18_token.try_mint(&bob, &amount);
-        assert_eq!(result.err().unwrap(), InsufficientRights.into());
+        assert_eq!(result.err().unwrap(), OdraError::user(99));
 
         // but can burn their own tokens
         cep18_token.burn(&alice, &amount);
