@@ -805,15 +805,18 @@ impl CasperClient {
             ExecutionResult::V2(r) => match r.error_message {
                 None => {
                     log::info(format!(
-                        "Deploy {:?} successfully executed.",
-                        deploy_hash_str
+                        "Transaction {:?} successfully executed. {}",
+                        &deploy_hash_str,
+                        self.configuration.transaction_url(&deploy_hash_str)
                     ));
                     Ok(())
                 }
                 Some(error_message) => {
                     log::error(format!(
-                        "Deploy V1 {:?} failed with error: {:?}.",
-                        deploy_hash_str, error_message
+                        "Transaction {:?} failed with error: {:?}. {}",
+                        deploy_hash_str,
+                        error_message,
+                        self.configuration.transaction_url(&deploy_hash_str)
                     ));
                     Err(ExecutionError(error_message.to_string()))
                 }
