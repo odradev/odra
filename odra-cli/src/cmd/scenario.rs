@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::{any::Any, collections::HashMap};
 
 use crate::{
@@ -50,8 +51,14 @@ impl OdraCommand for ScenarioCmd {
         &self.name
     }
 
-    fn run(&self, env: &HostEnv, args: &ArgMatches, _types: &CustomTypeSet) -> Result<()> {
-        let container = DeployedContractsContainer::load()?;
+    fn run(
+        &self,
+        env: &HostEnv,
+        args: &ArgMatches,
+        _types: &CustomTypeSet,
+        contracts_path: Option<PathBuf>
+    ) -> Result<()> {
+        let container = DeployedContractsContainer::load(contracts_path)?;
         let args = ScenarioArgs::new(self.scenario.args(), args);
 
         self.scenario.run(env, container, args)?;

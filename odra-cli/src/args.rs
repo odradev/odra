@@ -10,6 +10,7 @@ use crate::{types, CustomTypeSet};
 
 pub const ARG_ATTACHED_VALUE: &str = "attached_value";
 pub const ARG_GAS: &str = "gas";
+pub const ARG_CONTRACTS: &str = "contracts";
 
 #[derive(Debug, Error)]
 pub enum ArgsError {
@@ -369,6 +370,16 @@ pub fn gas_arg() -> Arg {
         .long(ARG_GAS)
         .required(true)
         .value_name(format!("{:?}", NamedCLType::U64))
+        .action(ArgAction::Set)
+}
+
+pub fn contracts_arg() -> Arg {
+    Arg::new(ARG_CONTRACTS)
+        .help("The path to the file with the deployed contracts. Relative to the project root.")
+        .long(ARG_CONTRACTS)
+        .short('c')
+        .required(false)
+        .value_name(format!("{:?}", NamedCLType::String))
         .action(ArgAction::Set)
 }
 

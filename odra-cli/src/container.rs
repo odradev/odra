@@ -34,18 +34,30 @@ pub enum ContractError {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct DeployedContractsContainer {
     time: String,
-    contracts: Vec<DeployedContract>
+    contracts: Vec<DeployedContract>,
+    #[serde(skip)]
+    custom_path: Option<PathBuf>
 }
 
 impl DeployedContractsContainer {
     /// Creates a new instance.
-    pub(crate) fn new() -> Result<Self, ContractError> {
-        Self::handle_previous_version()?;
+    pub(crate) fn new(path: Option<PathBuf>) -> Result<Self, ContractError> {
         let now: DateTime<Utc> = Utc::now();
-        Ok(Self {
-            time: now.to_rfc3339_opts(SecondsFormat::Secs, true),
-            contracts: Vec::new()
-        })
+        let current_version = Self::load(path.clone());
+        match current_version {
+            Ok(mut container) => {
+                // If the file already exists, we update the time.
+                container.time = now.to_rfc3339_opts(SecondsFormat::Secs, true);
+                container.update()?;
+                container.custom_path = path;
+                Ok(container)
+            }
+            Err(_) => Ok(Self {
+                time: now.to_rfc3339_opts(SecondsFormat::Secs, true),
+                contracts: Vec::new(),
+                custom_path: path
+            })
+        }
     }
 
     /// Adds a contract to the container.
@@ -81,30 +93,20 @@ impl DeployedContractsContainer {
             .and_then(|c| Address::from_str(&c.package_hash).ok())
     }
 
+    pub fn contracts(&self) -> Vec<(String, Address)> {
+        self.contracts
+            .iter()
+            .map(|c| (c.name.clone(), Address::from_str(&c.package_hash).unwrap()))
+            .collect()
+    }
+
     /// Load from the file.
-    pub fn load() -> Result<Self, ContractError> {
-        let path = Self::file_path()?;
+    pub fn load(path: Option<PathBuf>) -> Result<Self, ContractError> {
+        let path = Self::file_path(path)?;
         let file = std::fs::read_to_string(path).map_err(ContractError::Io)?;
 
         let result = toml::from_str(&file).map_err(ContractError::TomlDeserialize)?;
         Ok(result)
-    }
-
-    /// Backup previous version of the file.
-    pub(crate) fn handle_previous_version() -> Result<(), ContractError> {
-        if let Ok(deployed_contracts) = Self::load() {
-            // Build new file name.
-            let date = deployed_contracts.time();
-            let mut path = project_root::get_project_root().map_err(ContractError::Io)?;
-            path.push(format!("{}.{}", DEPLOYED_CONTRACTS_FILE, date));
-
-            // Store previous version under new file name.
-            deployed_contracts.save_at(&path)?;
-
-            // Remove old file.
-            std::fs::remove_file(path).map_err(ContractError::Io)?;
-        }
-        Ok(())
     }
 
     /// Save the file at the given path.
@@ -117,23 +119,28 @@ impl DeployedContractsContainer {
         Ok(())
     }
 
-    /// Return creation time.
-    fn time(&self) -> &str {
-        &self.time
-    }
-
     /// Update the file.
     fn update(&self) -> Result<(), ContractError> {
-        let path = Self::file_path()?;
+        let custom_path = self.custom_path.clone();
+        let path = Self::file_path(custom_path)?;
         self.save_at(&path)
     }
 
-    fn file_path() -> Result<PathBuf, ContractError> {
+    fn file_path(custom_path: Option<PathBuf>) -> Result<PathBuf, ContractError> {
         let mut path = project_root::get_project_root().map_err(ContractError::Io)?;
-        if !path.exists() {
-            std::fs::create_dir_all(&path).map_err(ContractError::Io)?;
+        match &custom_path {
+            Some(custom_path) => path.push(custom_path),
+            None => path.push(DEPLOYED_CONTRACTS_FILE)
         }
-        path.push(DEPLOYED_CONTRACTS_FILE);
+        if !path.exists() {
+            let parent_path = path.parent().ok_or_else(|| {
+                ContractError::Io(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    "Parent directory not found"
+                ))
+            })?;
+            std::fs::create_dir_all(parent_path).map_err(ContractError::Io)?;
+        }
 
         Ok(path)
     }
