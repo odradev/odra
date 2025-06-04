@@ -328,7 +328,7 @@ pub(crate) fn from_bytes<'a>(ty: &NamedCLType, input: &'a [u8]) -> TypeResult<(S
         NamedCLType::PublicKey => call_from_bytes!(PublicKey, input),
         NamedCLType::Option(ty) => {
             if input.first() == Some(&OPTION_NONE_TAG) {
-                Ok(("null".to_string(), input))
+                Ok(("null".to_string(), &input[1..]))
             } else {
                 from_bytes(ty, &input[1..])
             }
