@@ -42,7 +42,6 @@ impl PrintEventsCmd {
                 _ => false
             })
             .expect("Event type not found in custom types");
-        println!("{}:", event_name);
         match ct {
             CustomType::Struct { members, .. } => {
                 let (_name, rem): (String, _) = FromBytes::from_bytes(bytes)
@@ -51,7 +50,7 @@ impl PrintEventsCmd {
                 for m in members {
                     let (data, rem) = types::from_bytes(&m.ty.0, bytes)?;
                     bytes = rem;
-                    println!("\t'{}': {}", m.name, data);
+                    println!("  '{}': {}", m.name, data);
                 }
             }
             CustomType::Enum { name, .. } => {
@@ -70,7 +69,7 @@ impl OdraCommand for PrintEventsCmd {
     fn run(
         &self,
         env: &HostEnv,
-        _args: &ArgMatches,
+        args: &ArgMatches,
         types: &CustomTypeSet,
         contracts_path: Option<PathBuf>
     ) -> Result<()> {
@@ -78,14 +77,26 @@ impl OdraCommand for PrintEventsCmd {
         let contract_address = container
             .address(&self.contract_name)
             .ok_or(EventError::ContractNotFound)?;
-        let events = env.event_names(&contract_address);
-        for (i, event_name) in events.iter().enumerate() {
-            let ev = env
-                .get_event_bytes(&contract_address, i as u32)
-                .map_err(|_| EventError::EventNotFound {
+        let mut names = env.event_names(&contract_address);
+        let names = names.iter_mut().rev().collect::<Vec<_>>();
+        let max_events = args::read(args, "n", |s| s.parse()).unwrap_or(names.len());
+        let max_events = max_events.min(names.len());
+        println!(
+            "Printing the most recent {:?} events for contract '{}'",
+            max_events, self.contract_name
+        );
+        for (i, event_name) in names.iter().enumerate() {
+            if i >= max_events {
+                break;
+            }
+            let idx = (names.len() - i - 1) as u32;
+            let ev = env.get_event_bytes(&contract_address, idx).map_err(|_| {
+                EventError::EventNotFound {
                     index: i,
                     contract_name: self.contract_name.clone()
-                })?;
+                }
+            })?;
+            println!("Event {}: {}", i + 1, event_name);
             self.decode_event(&ev, event_name, types)?;
         }
 

@@ -120,7 +120,7 @@ impl OdraCli {
             .subcommand_required(true)
             .arg_required_else_help(true);
         let print_events_cmd = Command::new("print-events")
-            .about("Prints events emitted by the contract")
+            .about("Prints the most recent events emitted by a contract")
             .arg_required_else_help(true)
             .subcommand_required(true);
         let main_cmd = Command::new("Odra CLI")
@@ -171,7 +171,8 @@ impl OdraCli {
             .subcommand_required(true)
             .arg_required_else_help(true);
         let print_cmd = Command::new(&contract_name)
-            .about(format!("Print events of the {} contract", &contract_name));
+            .about(format!("Print events of the {} contract", &contract_name))
+            .arg(args::number_arg("Number of events to print"));
         for entry_point in T::schema_entrypoints() {
             if entry_point.name == "init" {
                 continue;
