@@ -119,7 +119,7 @@ impl OdraCli {
             .about("Commands for running user-defined scenarios")
             .subcommand_required(true)
             .arg_required_else_help(true);
-        let print_events_cmd = Command::new("print-events")
+        let print_events_cmd = Command::new(PRINT_EVENTS_SUBCOMMAND)
             .about("Prints the most recent events emitted by a contract")
             .arg_required_else_help(true)
             .subcommand_required(true);
