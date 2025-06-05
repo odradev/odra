@@ -250,7 +250,13 @@ impl OdraCli {
 
     /// Runs the CLI and parses the input.
     pub fn run(self) {
-        let matches = self.main_cmd.get_matches();
+        let matches = match self.main_cmd.try_get_matches() {
+            Ok(matches) => matches,
+            Err(err) => {
+                println!("{}", err);
+                std::process::exit(0);
+            }
+        };
         // Check if the user provided a custom contracts path.
         let path = args::read(&matches, ARG_CONTRACTS, PathBuf::from_str).ok();
         // Init contracts container with the provided path or default to the resources directory.
