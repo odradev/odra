@@ -547,7 +547,6 @@ impl Cep95 {
 
 mod utils {
     #![allow(dead_code)]
-    
     use super::*;
 
     #[odra::module]
