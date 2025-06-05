@@ -164,7 +164,7 @@ const KEY_NAME: &str = "name";
 const KEY_SYMBOL: &str = "symbol";
 const KEY_APPROVED: &str = "approvals";
 const KEY_OPERATORS: &str = "operators";
-const KEY_METADATA: &str = "metadata";
+const KEY_METADATA: &str = "token_metadata";
 const KEY_OWNERS: &str = "owners";
 
 single_value_storage!(Cep95Name, String, KEY_NAME, Error::ValueNotSet);
