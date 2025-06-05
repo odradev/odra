@@ -7,8 +7,6 @@ use odra::named_keys::{
 };
 use odra::prelude::*;
 
-use crate::cep18::errors::Error::{InvalidState, Overflow};
-
 const ALLOWANCES_KEY: &str = "allowances";
 const BALANCES_KEY: &str = "balances";
 const NAME_KEY: &str = "name";
@@ -16,14 +14,29 @@ const DECIMALS_KEY: &str = "decimals";
 const SYMBOL_KEY: &str = "symbol";
 const TOTAL_SUPPLY_KEY: &str = "total_supply";
 
-single_value_storage!(Cep18NameStorage, String, NAME_KEY, InvalidState);
-single_value_storage!(Cep18DecimalsStorage, u8, DECIMALS_KEY, InvalidState);
-single_value_storage!(Cep18SymbolStorage, String, SYMBOL_KEY, InvalidState);
+single_value_storage!(
+    Cep18NameStorage,
+    String,
+    NAME_KEY,
+    ExecutionError::KeyNotFound
+);
+single_value_storage!(
+    Cep18DecimalsStorage,
+    u8,
+    DECIMALS_KEY,
+    ExecutionError::KeyNotFound
+);
+single_value_storage!(
+    Cep18SymbolStorage,
+    String,
+    SYMBOL_KEY,
+    ExecutionError::KeyNotFound
+);
 single_value_storage!(
     Cep18TotalSupplyStorage,
     U256,
     TOTAL_SUPPLY_KEY,
-    InvalidState
+    ExecutionError::KeyNotFound
 );
 impl Cep18TotalSupplyStorage {
     /// Adds the given amount to the total supply of the token.
@@ -40,7 +53,7 @@ impl Cep18TotalSupplyStorage {
         let total_supply = self.get();
         let new_total_supply = total_supply
             .checked_sub(amount)
-            .unwrap_or_revert_with(&self.env(), Overflow);
+            .unwrap_or_revert_with(&self.env(), ExecutionError::SubtractionOverflow);
         self.set(new_total_supply);
     }
 }
@@ -58,7 +71,7 @@ impl Cep18BalancesStorage {
         let balance = self.get(account).unwrap_or_default();
         let new_balance = balance
             .checked_sub(amount)
-            .unwrap_or_revert_with(self, Overflow);
+            .unwrap_or_revert_with(self, ExecutionError::SubtractionOverflow);
         self.set(account, new_balance);
     }
 }

@@ -9,6 +9,7 @@ mod mint_and_burn_tests {
     use crate::cep18_token::tests::{
         setup, TOKEN_OWNER_AMOUNT_1, TOKEN_OWNER_AMOUNT_2, TRANSFER_AMOUNT_1
     };
+    use crate::cep18_token::utils::Error as MockErrors;
 
     #[test]
     fn test_mint_and_burn() {
@@ -96,7 +97,7 @@ mod mint_and_burn_tests {
         // user without permissions cannot mint tokens
         cep18_token.env().set_caller(alice);
         let result = cep18_token.try_mint(&bob, &amount);
-        assert_eq!(result.err().unwrap(), OdraError::user(99));
+        assert_eq!(result.err().unwrap(), MockErrors::CantMint.into());
 
         // but can burn their own tokens
         cep18_token.burn(&alice, &amount);

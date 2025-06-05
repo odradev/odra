@@ -219,6 +219,12 @@ pub(crate) mod utils {
 
     use super::*;
 
+    #[odra::odra_error]
+    pub enum Error {
+        CantMint = 99,
+        CantBurn = 100
+    }
+
     #[odra::module]
     pub struct Cep18Example {
         token: SubModule<Cep18>,
@@ -251,14 +257,14 @@ pub(crate) mod utils {
 
         pub fn mint(&mut self, owner: &Address, amount: &U256) {
             if self.env().caller() != self.ownable.get_owner() {
-                self.env().revert(OdraError::user(99));
+                self.env().revert(Error::CantMint);
             }
             self.token.raw_mint(owner, amount);
         }
 
         pub fn burn(&mut self, owner: &Address, amount: &U256) {
             if self.env().caller() != *owner {
-                self.env().revert(OdraError::user(100));
+                self.env().revert(Error::CantBurn);
             }
             self.token.raw_burn(owner, amount);
         }

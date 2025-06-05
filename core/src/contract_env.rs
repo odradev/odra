@@ -334,7 +334,7 @@ impl ContractEnv {
         let seed_bytes = self.backend.borrow().pseudorandom_bytes();
         let mut rng = ChaCha8Rng::from_seed(seed_bytes);
         let bits = high.bits();
-        let bytes_len = (bits + 7) / 8;
+        let bytes_len = bits.div_ceil(8);
         let max = U512::from(1u64) << bits; // 2^bits
         let limit = max - (max % high);
         loop {
