@@ -11,10 +11,10 @@ mod allowance_tests {
     use crate::cep18_token::tests::{
         invert_address, setup, ALLOWANCE_AMOUNT_1, ALLOWANCE_AMOUNT_2, TRANSFER_AMOUNT_1
     };
-    use crate::cep18_token::Cep18HostRef;
+    use crate::cep18_token::utils::Cep18ExampleHostRef;
 
     fn test_approve_for(
-        cep18_token: &mut Cep18HostRef,
+        cep18_token: &mut Cep18ExampleHostRef,
         sender: Address,
         owner: Address,
         spender: Address
@@ -52,7 +52,7 @@ mod allowance_tests {
     #[test]
     fn should_approve_funds() {
         // given a token
-        let mut cep18_token = setup(false);
+        let mut cep18_token = setup();
         let owner = cep18_token.env().get_account(0);
         let alice = cep18_token.env().get_account(1);
         let token_address = *cep18_token.address();
@@ -109,7 +109,7 @@ mod allowance_tests {
     #[test]
     fn should_not_transfer_from_without_enough_allowance() {
         // given a token
-        let mut cep18_token = setup(false);
+        let mut cep18_token = setup();
         let owner = cep18_token.env().get_account(0);
         let alice = cep18_token.env().get_account(1);
 
@@ -135,7 +135,7 @@ mod allowance_tests {
     #[test]
     fn test_decrease_allowance() {
         // given a token
-        let mut cep18_token = setup(false);
+        let mut cep18_token = setup();
         let owner = cep18_token.env().get_account(0);
         let alice = cep18_token.env().get_account(1);
 

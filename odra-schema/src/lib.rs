@@ -249,7 +249,7 @@ fn call_method(
 ) -> CallMethod {
     CallMethod {
         wasm_file_name: file_name.to_string(),
-        description: description.map(String::from),
+        description,
         arguments: vec![
             Argument {
                 name: odra_core::consts::PACKAGE_HASH_KEY_NAME_ARG.to_string(),

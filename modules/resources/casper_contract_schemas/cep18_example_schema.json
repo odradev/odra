@@ -8,7 +8,7 @@
   ],
   "repository": "https://github.com/odradev/odra",
   "homepage": null,
-  "contract_name": "Cep18",
+  "contract_name": "Cep18Example",
   "contract_version": "2.0.0",
   "types": [
     {
@@ -105,6 +105,28 @@
     },
     {
       "struct": {
+        "name": "OwnershipTransferred",
+        "description": null,
+        "members": [
+          {
+            "name": "previous_owner",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "new_owner",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
         "name": "SetAllowance",
         "description": null,
         "members": [
@@ -185,6 +207,16 @@
       "discriminant": 60015
     },
     {
+      "name": "CallerNotTheNewOwner",
+      "description": "The caller is not the new owner.",
+      "discriminant": 20002
+    },
+    {
+      "name": "CallerNotTheOwner",
+      "description": "The caller is not the owner.",
+      "discriminant": 20001
+    },
+    {
       "name": "CannotTargetSelfUser",
       "description": "The user cannot target themselves.",
       "discriminant": 60017
@@ -260,9 +292,19 @@
       "discriminant": 60007
     },
     {
+      "name": "MissingRole",
+      "description": "The role is missing.",
+      "discriminant": 20003
+    },
+    {
       "name": "Overflow",
       "description": "Operation would cause an integer overflow.",
       "discriminant": 60003
+    },
+    {
+      "name": "OwnerNotSet",
+      "description": "The owner is not set.",
+      "discriminant": 20000
     },
     {
       "name": "PackageHashMissing",
@@ -280,6 +322,11 @@
       "discriminant": 60008
     },
     {
+      "name": "RoleRenounceForAnotherAddress",
+      "description": "The role cannot be renounced for another address.",
+      "discriminant": 20004
+    },
+    {
       "name": "_MissingPackageHashForUpgrade",
       "description": "The package hash for the upgrade is missing.",
       "discriminant": 60019
@@ -287,8 +334,52 @@
   ],
   "entry_points": [
     {
+      "name": "mint",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "burn",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
       "name": "name",
-      "description": "Returns the name of the token.",
+      "description": "Delegated. See `self.token.name()` for details.",
       "is_mutable": false,
       "arguments": [],
       "return_ty": "String",
@@ -297,7 +388,7 @@
     },
     {
       "name": "symbol",
-      "description": "Returns the symbol of the token.",
+      "description": "Delegated. See `self.token.symbol()` for details.",
       "is_mutable": false,
       "arguments": [],
       "return_ty": "String",
@@ -306,7 +397,7 @@
     },
     {
       "name": "decimals",
-      "description": "Returns the number of decimals the token uses.",
+      "description": "Delegated. See `self.token.decimals()` for details.",
       "is_mutable": false,
       "arguments": [],
       "return_ty": "U8",
@@ -315,7 +406,7 @@
     },
     {
       "name": "total_supply",
-      "description": "Returns the total supply of the token.",
+      "description": "Delegated. See `self.token.total_supply()` for details.",
       "is_mutable": false,
       "arguments": [],
       "return_ty": "U256",
@@ -324,7 +415,7 @@
     },
     {
       "name": "balance_of",
-      "description": "Returns the balance of the given address.",
+      "description": "Delegated. See `self.token.balance_of()` for details.",
       "is_mutable": false,
       "arguments": [
         {
@@ -340,7 +431,7 @@
     },
     {
       "name": "allowance",
-      "description": "Returns the amount of tokens the owner has allowed the spender to spend.",
+      "description": "Delegated. See `self.token.allowance()` for details.",
       "is_mutable": false,
       "arguments": [
         {
@@ -362,7 +453,7 @@
     },
     {
       "name": "approve",
-      "description": "Approves the spender to spend the given amount of tokens on behalf of the caller.",
+      "description": "Delegated. See `self.token.approve()` for details.",
       "is_mutable": true,
       "arguments": [
         {
@@ -384,7 +475,7 @@
     },
     {
       "name": "decrease_allowance",
-      "description": "Decreases the allowance of the spender by the given amount.",
+      "description": "Delegated. See `self.token.decrease_allowance()` for details.",
       "is_mutable": true,
       "arguments": [
         {
@@ -406,7 +497,7 @@
     },
     {
       "name": "increase_allowance",
-      "description": "Increases the allowance of the spender by the given amount.",
+      "description": "Delegated. See `self.token.increase_allowance()` for details.",
       "is_mutable": true,
       "arguments": [
         {
@@ -428,7 +519,7 @@
     },
     {
       "name": "transfer",
-      "description": "Transfers tokens from the caller to the recipient.",
+      "description": "Delegated. See `self.token.transfer()` for details.",
       "is_mutable": true,
       "arguments": [
         {
@@ -450,7 +541,7 @@
     },
     {
       "name": "transfer_from",
-      "description": "Transfers tokens from the owner to the recipient using the spender's allowance.",
+      "description": "Delegated. See `self.token.transfer_from()` for details.",
       "is_mutable": true,
       "arguments": [
         {
@@ -495,6 +586,10 @@
       "ty": "Mint"
     },
     {
+      "name": "OwnershipTransferred",
+      "ty": "OwnershipTransferred"
+    },
+    {
       "name": "SetAllowance",
       "ty": "SetAllowance"
     },
@@ -508,8 +603,8 @@
     }
   ],
   "call": {
-    "wasm_file_name": "Cep18.wasm",
-    "description": "Initializes the contract with the given metadata, initial supply.",
+    "wasm_file_name": "Cep18Example.wasm",
+    "description": "",
     "arguments": [
       {
         "name": "odra_cfg_package_hash_key_name",

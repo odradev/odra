@@ -48,26 +48,12 @@ impl OurToken {
     /// Initializes the contract with the given metadata and initial supply.
     pub fn init(&mut self, name: String, symbol: String, decimals: u8, initial_supply: U256) {
         // We put the token address as an admin, so it can govern itself. Self-governing token!
-        self.token
-            .init(symbol, name, decimals, initial_supply, vec![], vec![], None);
+        self.token.init(symbol, name, decimals, initial_supply);
     }
 
     // Delegate all Cep18 functions to the token submodule.
     delegate! {
         to self.token {
-            /// Admin EntryPoint to manipulate the security access granted to users.
-            /// One user can only possess one access group badge.
-            /// Change strength: None > Admin > Minter
-            /// Change strength meaning by example: If a user is added to both Minter and Admin, they will be an
-            /// Admin, also if a user is added to Admin and None then they will be removed from having rights.
-            /// Beware: do not remove the last Admin because that will lock out all admin functionality.
-            fn change_security(
-                &mut self,
-                admin_list: Vec<Address>,
-                minter_list: Vec<Address>,
-                none_list: Vec<Address>
-            );
-
             /// Returns the name of the token.
             fn name(&self) -> String;
 
@@ -100,12 +86,6 @@ impl OurToken {
 
             /// Transfers tokens from the owner to the recipient using the spender's allowance.
             fn transfer_from(&mut self, owner: &Address, recipient: &Address, amount: &U256);
-
-            /// Mints new tokens and assigns them to the given address.
-            fn mint(&mut self, owner: &Address, amount: &U256);
-
-            /// Burns the given amount of tokens from the given address.
-            fn burn(&mut self, owner: &Address, amount: &U256);
         }
     }
 
