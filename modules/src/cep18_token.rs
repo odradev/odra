@@ -215,6 +215,9 @@ impl Cep18 {
 }
 
 pub(crate) mod utils {
+    #![allow(missing_docs)]
+    #![allow(dead_code)]
+
     use crate::access::Ownable;
 
     use super::*;
