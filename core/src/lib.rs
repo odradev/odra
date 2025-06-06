@@ -45,7 +45,6 @@ pub use contract_env::{ContractEnv, ContractRef, ExecutionEnv};
 pub use contract_register::ContractRegister;
 pub use error::{AddressError, CollectionError, EventError, VmError};
 
-pub use address::Addressable;
 pub use casper_types;
 pub use contract::OdraContract;
 pub use gas_report::*;

@@ -36,6 +36,10 @@ pub fn address() -> syn::Ident {
     format_ident!("address")
 }
 
+pub fn contract_address() -> syn::Ident {
+    format_ident!("contract_address")
+}
+
 pub fn attached_value() -> syn::Ident {
     format_ident!("attached_value")
 }

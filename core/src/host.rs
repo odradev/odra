@@ -25,7 +25,7 @@ pub trait HostRef {
     /// to the next contract call.
     fn with_tokens(&self, tokens: U512) -> Self;
     /// Returns the address of the contract.
-    fn address(&self) -> &Address;
+    fn contract_address(&self) -> Address;
     /// Returns the host environment.
     fn env(&self) -> &HostEnv;
     /// Returns the n-th event emitted by the contract.
@@ -39,8 +39,8 @@ pub trait HostRef {
 }
 
 impl<T: HostRef> Addressable for T {
-    fn address(&self) -> &Address {
-        HostRef::address(self)
+    fn address(&self) -> Address {
+        HostRef::contract_address(self)
     }
 }
 
@@ -526,9 +526,9 @@ impl HostEnv {
     }
 
     /// Returns the CSPR balance of the specified address.
-    pub fn balance_of<T: Addressable>(&self, address: &T) -> U512 {
+    pub fn balance_of<T: Addressable>(&self, addr: &T) -> U512 {
         let backend = self.backend.borrow();
-        backend.balance_of(address.address())
+        backend.balance_of(&addr.address())
     }
 
     /// Retrieves an event with the specified index from the specified contract.
@@ -539,16 +539,16 @@ impl HostEnv {
     /// couldn't be retrieved or parsed.
     pub fn get_event<T: FromBytes + EventInstance, R: Addressable>(
         &self,
-        contract_address: &R,
+        addr: &R,
         index: i32
     ) -> Result<T, EventError> {
-        let contract_address = contract_address.address();
+        let contract_address = addr.address();
         let backend = self.backend.borrow();
-        let events_count = self.events_count(contract_address);
+        let events_count = self.events_count(&contract_address);
         let event_absolute_position = crate::utils::event_absolute_position(events_count, index)
             .ok_or(EventError::IndexOutOfBounds)?;
 
-        let bytes = backend.get_event(contract_address, event_absolute_position)?;
+        let bytes = backend.get_event(&contract_address, event_absolute_position)?;
         T::from_bytes(&bytes)
             .map_err(|_| EventError::Parsing)
             .map(|r| r.0)
@@ -562,16 +562,16 @@ impl HostEnv {
     /// couldn't be retrieved or parsed.
     pub fn get_native_event<T: FromBytes + EventInstance, R: Addressable>(
         &self,
-        contract_address: &R,
+        addr: &R,
         index: i32
     ) -> Result<T, EventError> {
-        let contract_address = contract_address.address();
+        let contract_address = addr.address();
         let backend = self.backend.borrow();
-        let events_count = self.native_events_count(contract_address);
+        let events_count = self.native_events_count(&contract_address);
         let event_absolute_position = crate::utils::event_absolute_position(events_count, index)
             .ok_or(EventError::IndexOutOfBounds)?;
 
-        let bytes = backend.get_native_event(contract_address, event_absolute_position)?;
+        let bytes = backend.get_native_event(&contract_address, event_absolute_position)?;
         T::from_bytes(&bytes)
             .map_err(|_| EventError::Parsing)
             .map(|r| r.0)
@@ -580,32 +580,32 @@ impl HostEnv {
     /// Retrieves a raw event (serialized) with the specified index from the specified contract.
     pub fn get_event_bytes<T: Addressable>(
         &self,
-        contract_address: &T,
+        addr: &T,
         index: u32
     ) -> Result<Bytes, EventError> {
         let backend = self.backend.borrow();
-        backend.get_event(contract_address.address(), index)
+        backend.get_event(&addr.address(), index)
     }
 
     /// Retrieves a raw native event (serialized) with the specified index from the specified contract.
     pub fn get_native_event_bytes<T: Addressable>(
         &self,
-        contract_address: &T,
+        addr: &T,
         index: u32
     ) -> Result<Bytes, EventError> {
         let backend = self.backend.borrow();
-        backend.get_native_event(contract_address.address(), index)
+        backend.get_native_event(&addr.address(), index)
     }
 
     /// Returns the names of all events emitted by the specified contract.
-    pub fn event_names<T: Addressable>(&self, contract_address: &T) -> Vec<String> {
-        let events_count = self.events_count(contract_address);
+    pub fn event_names<T: Addressable>(&self, addr: &T) -> Vec<String> {
+        let events_count = self.events_count(addr);
 
         let backend = self.backend.borrow();
         (0..events_count)
             .map(|event_id| {
                 backend
-                    .get_event(contract_address.address(), event_id)
+                    .get_event(&addr.address(), event_id)
                     .and_then(|bytes| utils::extract_event_name(&bytes))
                     .unwrap_or_else(|e| panic!("Couldn't extract event name: {:?}", e))
             })
@@ -613,16 +613,16 @@ impl HostEnv {
     }
 
     /// Returns all events emitted by the specified contract.
-    pub fn events<T: Addressable>(&self, contract_address: &T) -> Vec<Bytes> {
+    pub fn events<T: Addressable>(&self, addr: &T) -> Vec<Bytes> {
         let backend = self.backend.borrow();
-        let contract_address = contract_address.address();
+        let contract_address = addr.address();
         let events_count = backend
-            .get_events_count(contract_address)
+            .get_events_count(&contract_address)
             .unwrap_or_default();
         (0..events_count)
             .map(|event_id| {
                 backend
-                    .get_event(contract_address, event_id)
+                    .get_event(&contract_address, event_id)
                     .unwrap_or_else(|e| {
                         panic!(
                             "Couldn't get event at address {:?} with id {}: {:?}",
@@ -634,29 +634,29 @@ impl HostEnv {
     }
 
     /// Returns the number of events emitted by the specified contract.
-    pub fn events_count<T: Addressable>(&self, address: &T) -> u32 {
+    pub fn events_count<T: Addressable>(&self, addr: &T) -> u32 {
         let backend = self.backend.borrow();
         backend
-            .get_events_count(address.address())
+            .get_events_count(&addr.address())
             .unwrap_or_default()
     }
 
     /// Returns the number of native events emitted by the specified contract.
-    pub fn native_events_count<T: Addressable>(&self, address: &T) -> u32 {
+    pub fn native_events_count<T: Addressable>(&self, addr: &T) -> u32 {
         let backend = self.backend.borrow();
         backend
-            .get_native_events_count(address.address())
+            .get_native_events_count(&addr.address())
             .unwrap_or_default()
     }
 
     /// Returns true if the specified event was emitted by the specified contract.
     pub fn emitted_event<T: ToBytes + EventInstance, R: Addressable>(
         &self,
-        contract_address: &R,
-        event: &T
+        addr: &R,
+        event: T
     ) -> bool {
-        let contract_address = contract_address.address();
-        let events_count = self.events_count(contract_address);
+        let contract_address = addr.address();
+        let events_count = self.events_count(addr);
 
         let event_bytes = Bytes::from(
             event
@@ -666,7 +666,7 @@ impl HostEnv {
 
         (0..events_count)
             .map(|event_id| {
-                self.get_event_bytes(contract_address, event_id)
+                self.get_event_bytes(&contract_address, event_id)
                     .unwrap_or_else(|e| {
                         panic!(
                             "Couldn't get event at address {:?} with id {}: {:?}",
@@ -680,11 +680,11 @@ impl HostEnv {
     /// Returns true if the specified event was emitted by the specified contract.
     pub fn emitted_native_event<T: ToBytes + EventInstance, R: Addressable>(
         &self,
-        contract_address: &R,
-        event: &T
+        addr: &R,
+        event: T
     ) -> bool {
-        let contract_address = contract_address.address();
-        let events_count = self.native_events_count(contract_address);
+        let contract_address = addr.address();
+        let events_count = self.native_events_count(addr);
         if events_count > 0 {
             let event_bytes = Bytes::from(
                 event
@@ -693,7 +693,7 @@ impl HostEnv {
             );
             (0..events_count)
                 .map(|event_id| {
-                    self.get_native_event_bytes(contract_address, event_id)
+                    self.get_native_event_bytes(&contract_address, event_id)
                         .unwrap_or_else(|e| {
                             panic!(
                                 "Couldn't get event at address {:?} with id {}: {:?}",
@@ -708,24 +708,19 @@ impl HostEnv {
     }
 
     /// Returns true if an event with the specified name was emitted by the specified contract.
-    pub fn emitted<T: AsRef<str>, R: Addressable>(
-        &self,
-        contract_address: &R,
-        event_name: T
-    ) -> bool {
-        let events_count = self.events_count(contract_address);
+    pub fn emitted<T: AsRef<str>, R: Addressable>(&self, addr: &R, event_name: T) -> bool {
+        let events_count = self.events_count(addr);
 
         (0..events_count)
             .map(|event_id| {
-                self.get_event_bytes(contract_address, event_id)
-                    .unwrap_or_else(|e| {
-                        panic!(
-                            "Couldn't get event at address {:?} with id {}: {:?}",
-                            contract_address.address(),
-                            event_id,
-                            e
-                        )
-                    })
+                self.get_event_bytes(addr, event_id).unwrap_or_else(|e| {
+                    panic!(
+                        "Couldn't get event at address {:?} with id {}: {:?}",
+                        addr.address(),
+                        event_id,
+                        e
+                    )
+                })
             })
             .any(|bytes| {
                 utils::extract_event_name(&bytes)
@@ -735,20 +730,16 @@ impl HostEnv {
             })
     }
     /// Returns true if a native event with the specified name was emitted by the specified contract.
-    pub fn emitted_native<T: AsRef<str>, R: Addressable>(
-        &self,
-        contract_address: &R,
-        event_name: T
-    ) -> bool {
-        let events_count = self.native_events_count(contract_address);
+    pub fn emitted_native<T: AsRef<str>, R: Addressable>(&self, addr: &R, event_name: T) -> bool {
+        let events_count = self.native_events_count(addr);
 
         (0..events_count)
             .map(|event_id| {
-                self.get_native_event_bytes(contract_address, event_id)
+                self.get_native_event_bytes(addr, event_id)
                     .unwrap_or_else(|e| {
                         panic!(
                             "Couldn't get event at address {:?} with id {}: {:?}",
-                            contract_address.address(),
+                            addr.address(),
                             event_id,
                             e
                         )
@@ -886,7 +877,7 @@ mod test {
         impl HostRef for TestRef {
             fn new(address: Address, env: HostEnv) -> Self;
             fn with_tokens(&self, tokens: U512) -> Self;
-            fn address(&self) -> &Address;
+            fn contract_address(&self) -> Address;
             fn env(&self) -> &HostEnv;
             fn get_event<T>(&self, index: i32) -> Result<T, EventError> where T: FromBytes + EventInstance + 'static;
             fn last_call(&self) -> ContractCallResult;

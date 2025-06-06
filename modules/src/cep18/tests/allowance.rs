@@ -55,7 +55,7 @@ mod allowance_tests {
         let mut cep18_token = setup();
         let owner = cep18_token.env().get_account(0);
         let alice = cep18_token.env().get_account(1);
-        let token_address = *cep18_token.address();
+        let token_address = cep18_token.address();
         let client_contract = Cep18ClientContract::deploy(cep18_token.env(), NoArgs);
         let another_client_contract = Cep18ClientContract::deploy(cep18_token.env(), NoArgs);
 
@@ -66,42 +66,42 @@ mod allowance_tests {
         test_approve_for(&mut cep18_token, owner, owner, alice);
 
         // account to contract
-        cep18_token.approve(client_contract_address, &ALLOWANCE_AMOUNT_1.into());
+        cep18_token.approve(&client_contract_address, &ALLOWANCE_AMOUNT_1.into());
         assert_eq!(
-            cep18_token.allowance(&owner, client_contract_address),
+            cep18_token.allowance(&owner, &client_contract_address),
             ALLOWANCE_AMOUNT_1.into()
         );
 
         client_contract.transfer_from_as_stored_contract(
             token_address,
             owner,
-            *client_contract_address,
+            client_contract_address,
             ALLOWANCE_AMOUNT_1.into()
         );
         assert_eq!(
-            cep18_token.balance_of(client_contract_address),
+            cep18_token.balance_of(&client_contract_address),
             ALLOWANCE_AMOUNT_1.into()
         );
 
         // contract to contract
         client_contract.approve_as_stored_contract(
             token_address,
-            *another_client_contract_address,
+            another_client_contract_address,
             ALLOWANCE_AMOUNT_1.into()
         );
         assert_eq!(
-            cep18_token.allowance(client_contract_address, another_client_contract_address),
+            cep18_token.allowance(&client_contract_address, &another_client_contract_address),
             ALLOWANCE_AMOUNT_1.into()
         );
 
         another_client_contract.transfer_from_as_stored_contract(
             token_address,
-            *client_contract_address,
-            *another_client_contract_address,
+            client_contract_address,
+            another_client_contract_address,
             ALLOWANCE_AMOUNT_1.into()
         );
         assert_eq!(
-            cep18_token.balance_of(another_client_contract_address),
+            cep18_token.balance_of(&another_client_contract_address),
             ALLOWANCE_AMOUNT_1.into()
         );
     }

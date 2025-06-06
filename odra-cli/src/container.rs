@@ -4,7 +4,7 @@ use chrono::{DateTime, SecondsFormat, Utc};
 use odra::{
     contract_def::HasIdent,
     host::{HostEnv, HostRef, HostRefLoader},
-    prelude::Address,
+    prelude::{Address, Addressable},
     OdraContract
 };
 use serde_derive::{Deserialize, Serialize};
@@ -144,7 +144,7 @@ pub struct DeployedContract {
 }
 
 impl DeployedContract {
-    fn new<T: HasIdent>(address: &Address) -> Self {
+    fn new<T: HasIdent>(address: Address) -> Self {
         Self {
             name: T::ident(),
             package_hash: address.to_string()

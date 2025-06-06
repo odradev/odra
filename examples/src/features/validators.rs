@@ -169,6 +169,7 @@ mod tests {
         use odra::casper_types::U512;
         use odra::host::Deployer;
         use odra::host::HostRef;
+        use odra::prelude::Addressable;
 
         let test_env = odra_test::env();
         let validator = test_env.get_validator(0);
@@ -186,7 +187,7 @@ mod tests {
 
         // HostEnv's staked amount should be equal to the staking amount
         assert_eq!(
-            test_env.delegated_amount(*HostRef::address(&staking), validator),
+            test_env.delegated_amount(staking.address(), validator),
             staking_amount
         );
 
@@ -200,6 +201,7 @@ mod tests {
         use odra::casper_types::U512;
         use odra::host::Deployer;
         use odra::host::HostRef;
+        use odra::prelude::Addressable;
 
         let test_env = odra_test::env();
         let unbonding_delay = test_env.unbonding_delay();
@@ -221,7 +223,7 @@ mod tests {
         test_env.remove_validator(0);
 
         assert_eq!(staking.currently_delegated_amount(), U512::zero());
-        assert_eq!(test_env.balance_of(staking.address()), U512::zero());
+        assert_eq!(test_env.balance_of(&staking.address()), U512::zero());
 
         // Advance time, run auctions and give off rewards
         test_env.advance_with_auctions(unbonding_delay * 2);
@@ -229,6 +231,6 @@ mod tests {
         // No rewards should be given, as the validator was removed,
         // but the cspr should be returned
         assert_eq!(staking.currently_delegated_amount(), U512::zero());
-        assert_eq!(test_env.balance_of(staking.address()), staking_amount);
+        assert_eq!(test_env.balance_of(&staking.address()), staking_amount);
     }
 }
