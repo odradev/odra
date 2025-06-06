@@ -1,6 +1,6 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.82.0-nightly (f8060d282 2024-07-30)",
+  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,7 +9,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": null,
   "contract_name": "Cep18",
-  "contract_version": "2.0.0",
+  "contract_version": "2.0.1",
   "types": [
     {
       "struct": {
@@ -180,19 +180,9 @@
   ],
   "errors": [
     {
-      "name": "AlreadyInitialized",
-      "description": "This contract instance cannot be initialized again.",
-      "discriminant": 60015
-    },
-    {
       "name": "CannotTargetSelfUser",
       "description": "The user cannot target themselves.",
-      "discriminant": 60017
-    },
-    {
-      "name": "FailedToGetArgBytes",
-      "description": "Failed to read the runtime arguments provided.",
-      "discriminant": 60009
+      "discriminant": 60003
     },
     {
       "name": "InsufficientAllowance",
@@ -203,86 +193,6 @@
       "name": "InsufficientBalance",
       "description": "Spender does not have enough balance.",
       "discriminant": 60001
-    },
-    {
-      "name": "InsufficientRights",
-      "description": "The caller does not have sufficient security access.",
-      "discriminant": 60010
-    },
-    {
-      "name": "InvalidAdminList",
-      "description": "The list of Admin accounts provided is invalid.",
-      "discriminant": 60011
-    },
-    {
-      "name": "InvalidBurnTarget",
-      "description": "The burn target is invalid.",
-      "discriminant": 60018
-    },
-    {
-      "name": "InvalidContext",
-      "description": "CEP-18 contract called from within an invalid context.",
-      "discriminant": 60000
-    },
-    {
-      "name": "InvalidEnableMBFlag",
-      "description": "The flag to enable the mint and burn mode is invalid.",
-      "discriminant": 60014
-    },
-    {
-      "name": "InvalidEventsMode",
-      "description": "An invalid event mode was specified.",
-      "discriminant": 60006
-    },
-    {
-      "name": "InvalidMinterList",
-      "description": "The list of accounts that can mint tokens is invalid.",
-      "discriminant": 60012
-    },
-    {
-      "name": "InvalidNoneList",
-      "description": "The list of accounts with no access rights is invalid.",
-      "discriminant": 60013
-    },
-    {
-      "name": "InvalidState",
-      "description": "The contract is in an invalid state. This error should never happen.",
-      "discriminant": 60100
-    },
-    {
-      "name": "MintBurnDisabled",
-      "description": "The mint and burn mode is disabled.",
-      "discriminant": 60016
-    },
-    {
-      "name": "MissingEventsMode",
-      "description": "The event mode required was not specified.",
-      "discriminant": 60007
-    },
-    {
-      "name": "Overflow",
-      "description": "Operation would cause an integer overflow.",
-      "discriminant": 60003
-    },
-    {
-      "name": "PackageHashMissing",
-      "description": "A required package hash was not specified.",
-      "discriminant": 60004
-    },
-    {
-      "name": "PackageHashNotPackage",
-      "description": "The package hash specified does not represent a package.",
-      "discriminant": 60005
-    },
-    {
-      "name": "Phantom",
-      "description": "An unknown error occurred.",
-      "discriminant": 60008
-    },
-    {
-      "name": "_MissingPackageHashForUpgrade",
-      "description": "The package hash for the upgrade is missing.",
-      "discriminant": 60019
     }
   ],
   "entry_points": [

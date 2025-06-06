@@ -42,6 +42,33 @@
       "return_ty": "Bool",
       "ty": "Public",
       "attributes": []
+    },
+    {
+      "name": "last_call_result",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": {
+        "Tuple2": [
+          {
+            "Tuple2": [
+              "Key",
+              "Key"
+            ]
+          },
+          {
+            "Tuple2": [
+              "U256",
+              {
+                "Option": {
+                  "List": "U8"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "ty": "Public",
+      "attributes": []
     }
   ]
 }

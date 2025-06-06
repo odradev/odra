@@ -12,8 +12,8 @@ repository.workspace = true
 [dependencies]
 clap = { version = "4.5.21", features = ["derive", "cargo", "string"] }
 prettycli = "0.1.1"
-odra = { path = "../odra", version = "2.0.0", default-features = false }
-odra-casper-livenet-env = { path = "../odra-casper/livenet-env", version = "2.0.0"}
+odra = { path = "../odra", version = "2.0.1", default-features = false }
+odra-casper-livenet-env = { path = "../odra-casper/livenet-env", version = "2.0.1"}
 chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1", default-features = false }
 serde_json = { version = "1", default-features = false }
