@@ -279,13 +279,13 @@ impl OdraCli {
 
         let result = matches.subcommand();
 
-        match result {
-            Some((cmd, args)) => self.run_command(cmd, args, &container, path),
+        let (cmd, args) = match result {
+            Some((cmd, args)) => (cmd, args),
             None => {
                 prettycli::error("No subcommand provided. Use --help to see available commands.");
                 std::process::exit(1);
             }
-        }
+        };
 
         let (cmd, args) = match cmd {
             DEPLOY_SUBCOMMAND => (
