@@ -5,6 +5,7 @@ use odra_core::casper_types::{
     bytesrepr::{Bytes, ToBytes},
     CLValue, PublicKey, U512
 };
+use odra_core::consts::RANDOM_BYTES_COUNT;
 use odra_core::prelude::*;
 use odra_core::{casper_types, CallDef, ContractContext};
 use rand::Rng;
@@ -125,9 +126,9 @@ impl ContractContext for OdraVmContractEnv {
         let delegator = self.vm.borrow().callee();
         self.vm.borrow().delegated_amount(delegator, validator)
     }
-    fn pseudorandom_bytes(&self, size: usize) -> Vec<u8> {
+    fn pseudorandom_bytes(&self) -> [u8; RANDOM_BYTES_COUNT] {
         use rand::Rng;
-        let mut bytes = vec![0u8; size];
+        let mut bytes = [0u8; RANDOM_BYTES_COUNT];
         rand::rng().fill(&mut bytes[..]);
         bytes
     }

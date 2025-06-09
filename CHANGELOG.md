@@ -2,6 +2,15 @@
 
 Changelog for `odra`.
 
+## [2.0.1] - 2025-06-06
+### Added
+- `CEP-95` token implementation in `odra-modules`.
+- Psuedorandom number generator in `ContractEnv`.
+- Examples of `odra-cli` usage in `odra-examples`.
+
+### Changed
+- `CEP-18` is now more relaxed in terms of required entrypoints.
+
 ## [2.0.0] - 2025-05-27
 ### Added
 - Support for Casper 2.

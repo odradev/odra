@@ -1,6 +1,9 @@
 use serde::Serialize;
 
 pub fn build() {
+    // Allow the `odra_module` cfg flag to be set.
+    println!("cargo::rustc-check-cfg=cfg(odra_module, values(any()))");
+    // Load flags.
     flags().iter().for_each(|flag| println!("{}", flag));
 }
 

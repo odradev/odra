@@ -1,11 +1,11 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.81.0-nightly (cf2df68d1 2024-07-01)",
+  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
   "authors": [],
   "repository": null,
   "homepage": null,
   "contract_name": "PublicWallet",
-  "contract_version": "2.0.0",
+  "contract_version": "2.0.1",
   "types": [],
   "errors": [],
   "entry_points": [
@@ -57,7 +57,7 @@
       },
       {
         "name": "odra_cfg_allow_key_override",
-        "description": "The arg name for the allow key override.",
+        "description": "If true and the key specified in odra_cfg_package_hash_key_name already exists, it will be overwritten.",
         "ty": "Bool",
         "optional": false
       },

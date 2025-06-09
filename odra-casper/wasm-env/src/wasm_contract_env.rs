@@ -5,6 +5,7 @@ use casper_types::U512;
 use odra_core::casper_types;
 use odra_core::casper_types::bytesrepr::Bytes;
 use odra_core::casper_types::{CLType, CLValue, PublicKey, BLAKE2B_DIGEST_LENGTH};
+use odra_core::consts::RANDOM_BYTES_COUNT;
 use odra_core::prelude::*;
 use odra_core::{ContractContext, ContractEnv};
 
@@ -115,8 +116,8 @@ impl ContractContext for WasmContractEnv {
         host_functions::delegated_amount(validator)
     }
 
-    fn pseudorandom_bytes(&self, size: usize) -> Vec<u8> {
-        host_functions::pseudorandom_bytes(size)
+    fn pseudorandom_bytes(&self) -> [u8; RANDOM_BYTES_COUNT] {
+        host_functions::pseudorandom_bytes()
     }
 }
 

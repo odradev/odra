@@ -30,7 +30,7 @@ impl EntryPointsCaller {
     /// * `host_env` - The host environment.
     /// * `entry_points` - A collection of available entry points.
     /// * `f` - A function pointer that performs a call using a given contract environment and a call definition
-    ///         and returns a result in the form of bytes.
+    ///   and returns a result in the form of bytes.
     ///
     /// # Returns
     ///

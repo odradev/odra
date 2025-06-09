@@ -183,7 +183,7 @@ impl ContractContext for LivenetContractEnv {
             .block_on(async { client.delegated_amount(address, _validator).await })
     }
 
-    fn pseudorandom_bytes(&self, _size: usize) -> Vec<u8> {
+    fn pseudorandom_bytes(&self) -> [u8; 32] {
         panic!(
             "pseudorandom_bytes is not supported for LivenetContractEnv, it should be run\
         in the context of a deploy to get consistent results"

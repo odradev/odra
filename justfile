@@ -7,12 +7,12 @@ default:
     just --list
 
 clippy:
-    cargo clippy --all-targets -- -D warnings
-    cd examples && cargo clippy --all-targets -- -D warnings
-    cd examples && cargo clippy --features=livenet -- -D warnings
-    cd modules && cargo clippy --all-targets -- -D warnings
-    cd benchmark && cargo clippy --all-targets -- -D warnings
-    cd odra-casper/proxy-caller && cargo clippy --target=wasm32-unknown-unknown -- -D warnings
+    cargo clippy --all-targets -- -D warnings --allow unexpected_cfgs
+    cd examples && cargo clippy --all-targets -- -D warnings --allow unexpected_cfgs
+    cd examples && cargo clippy --features=livenet -- -D warnings --allow unexpected_cfgs
+    cd modules && cargo clippy --all-targets -- -D warnings --allow unexpected_cfgs
+    cd benchmark && cargo clippy --all-targets -- -D warnings --allow unexpected_cfgs
+    cd odra-casper/proxy-caller && cargo clippy --target=wasm32-unknown-unknown -- -D warnings --allow unexpected_cfgs
 
 lint: clippy
     cargo fmt

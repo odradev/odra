@@ -1,6 +1,6 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.82.0-nightly (f8060d282 2024-07-30)",
+  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,7 +9,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": null,
   "contract_name": "BasicCep95",
-  "contract_version": "2.0.0",
+  "contract_version": "2.0.1",
   "types": [
     {
       "struct": {
@@ -186,6 +186,11 @@
       "name": "NotAnOwnerOrApproved",
       "description": "The token ID is invalid.",
       "discriminant": 40002
+    },
+    {
+      "name": "TokenAlreadyExists",
+      "description": "The token with the given ID already exists.",
+      "discriminant": 40006
     },
     {
       "name": "TransferFailed",

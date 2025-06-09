@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+
 pub mod odra {
     pub use casper_types;
 

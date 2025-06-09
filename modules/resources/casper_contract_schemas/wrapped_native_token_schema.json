@@ -1,6 +1,6 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.82.0-nightly (f8060d282 2024-07-30)",
+  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,11 +9,29 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": null,
   "contract_name": "WrappedNativeToken",
-  "contract_version": "2.0.0",
+  "contract_version": "2.0.1",
   "types": [
     {
       "struct": {
-        "name": "Approval",
+        "name": "Burn",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "DecreaseAllowance",
         "description": null,
         "members": [
           {
@@ -27,7 +45,12 @@
             "ty": "Key"
           },
           {
-            "name": "value",
+            "name": "allowance",
+            "description": null,
+            "ty": "U256"
+          },
+          {
+            "name": "decr_by",
             "description": null,
             "ty": "U256"
           }
@@ -54,22 +77,115 @@
     },
     {
       "struct": {
+        "name": "IncreaseAllowance",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "spender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "allowance",
+            "description": null,
+            "ty": "U256"
+          },
+          {
+            "name": "inc_by",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "Mint",
+        "description": null,
+        "members": [
+          {
+            "name": "recipient",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "SetAllowance",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "spender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "allowance",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
         "name": "Transfer",
         "description": null,
         "members": [
           {
-            "name": "from",
+            "name": "sender",
             "description": null,
-            "ty": {
-              "Option": "Key"
-            }
+            "ty": "Key"
           },
           {
-            "name": "to",
+            "name": "recipient",
             "description": null,
-            "ty": {
-              "Option": "Key"
-            }
+            "ty": "Key"
+          },
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "TransferFrom",
+        "description": null,
+        "members": [
+          {
+            "name": "spender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "recipient",
+            "description": null,
+            "ty": "Key"
           },
           {
             "name": "amount",
@@ -100,29 +216,19 @@
   ],
   "errors": [
     {
-      "name": "DecimalsNotSet",
-      "description": "Decimals not set",
-      "discriminant": 30004
+      "name": "CannotTargetSelfUser",
+      "description": "The user cannot target themselves.",
+      "discriminant": 60003
     },
     {
       "name": "InsufficientAllowance",
-      "description": "Insufficient allowance",
-      "discriminant": 30001
+      "description": "Spender does not have enough allowance approved.",
+      "discriminant": 60002
     },
     {
       "name": "InsufficientBalance",
-      "description": "Insufficient balance",
-      "discriminant": 30000
-    },
-    {
-      "name": "NameNotSet",
-      "description": "Name not set",
-      "discriminant": 30002
-    },
-    {
-      "name": "SymbolNotSet",
-      "description": "Symbol not set",
-      "discriminant": 30003
+      "description": "Spender does not have enough balance.",
+      "discriminant": 60001
     }
   ],
   "entry_points": [
@@ -300,16 +406,36 @@
   ],
   "events": [
     {
-      "name": "Approval",
-      "ty": "Approval"
+      "name": "Burn",
+      "ty": "Burn"
+    },
+    {
+      "name": "DecreaseAllowance",
+      "ty": "DecreaseAllowance"
     },
     {
       "name": "Deposit",
       "ty": "Deposit"
     },
     {
+      "name": "IncreaseAllowance",
+      "ty": "IncreaseAllowance"
+    },
+    {
+      "name": "Mint",
+      "ty": "Mint"
+    },
+    {
+      "name": "SetAllowance",
+      "ty": "SetAllowance"
+    },
+    {
       "name": "Transfer",
       "ty": "Transfer"
+    },
+    {
+      "name": "TransferFrom",
+      "ty": "TransferFrom"
     },
     {
       "name": "Withdrawal",

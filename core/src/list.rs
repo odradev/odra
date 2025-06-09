@@ -131,7 +131,7 @@ impl<'a, T> ListIter<'a, T> {
     }
 }
 
-impl<'a, T> core::iter::Iterator for ListIter<'a, T>
+impl<T> core::iter::Iterator for ListIter<'_, T>
 where
     T: ToBytes + FromBytes + CLTyped
 {
@@ -156,11 +156,11 @@ where
     }
 }
 
-impl<'a, T> core::iter::ExactSizeIterator for ListIter<'a, T> where T: ToBytes + FromBytes + CLTyped {}
+impl<T> core::iter::ExactSizeIterator for ListIter<'_, T> where T: ToBytes + FromBytes + CLTyped {}
 
-impl<'a, T> core::iter::FusedIterator for ListIter<'a, T> where T: ToBytes + FromBytes + CLTyped {}
+impl<T> core::iter::FusedIterator for ListIter<'_, T> where T: ToBytes + FromBytes + CLTyped {}
 
-impl<'a, T> core::iter::DoubleEndedIterator for ListIter<'a, T>
+impl<T> core::iter::DoubleEndedIterator for ListIter<'_, T>
 where
     T: ToBytes + FromBytes + CLTyped
 {

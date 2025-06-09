@@ -1,13 +1,13 @@
 {
-  "name": "HostContract",
+  "name": "ValidatorsContract",
   "events": [],
   "entrypoints": [
     {
       "name": "init",
       "args": [
         {
-          "name": "name",
-          "ty": "String",
+          "name": "validator",
+          "ty": "PublicKey",
           "is_ref": false,
           "is_slice": false,
           "is_required": true
@@ -19,42 +19,58 @@
       "attributes": []
     },
     {
-      "name": "name",
+      "name": "stake",
       "args": [],
-      "is_mutable": false,
-      "return_ty": "String",
+      "is_mutable": true,
+      "return_ty": "Unit",
       "ty": "Public",
-      "attributes": []
+      "attributes": [
+        "Payable"
+      ]
     },
     {
-      "name": "pseudorandom_bytes",
+      "name": "unstake",
       "args": [
         {
-          "name": "size",
-          "ty": "U32",
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        }
-      ],
-      "is_mutable": false,
-      "return_ty": {
-        "List": "U8"
-      },
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "name": "pseudorandom_number",
-      "args": [
-        {
-          "name": "max",
+          "name": "amount",
           "ty": "U512",
           "is_ref": false,
           "is_slice": false,
           "is_required": true
         }
       ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "withdraw",
+      "args": [
+        {
+          "name": "amount",
+          "ty": "U512",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "currently_delegated_amount",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U512",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "current_casper_balance",
+      "args": [],
       "is_mutable": false,
       "return_ty": "U512",
       "ty": "Public",

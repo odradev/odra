@@ -1,5 +1,8 @@
 //! This example demonstrates how to use host functions in a contract.
-use odra::prelude::*;
+use odra::{
+    casper_types::{bytesrepr::Bytes, U512},
+    prelude::*
+};
 
 /// Host contract. It shows the Odra's capabilities regarding host functions.
 #[odra::module]
@@ -22,13 +25,23 @@ impl HostContract {
     pub fn name(&self) -> String {
         self.name.get_or_default()
     }
+
+    /// Returns pseudorandom bytes of the given size.
+    pub fn pseudorandom_bytes(&self, size: u32) -> Bytes {
+        self.env().pseudorandom_bytes(size as usize).into()
+    }
+
+    /// Returns the pseudorandom number
+    pub fn pseudorandom_number(&self, max: U512) -> U512 {
+        self.env().pseudorandom_number(max)
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use odra::{host::Deployer, prelude::string::ToString};
-
     use crate::features::host_functions::{HostContract, HostContractInitArgs};
+    use odra::casper_types::U512;
+    use odra::{host::Deployer, prelude::string::ToString};
 
     #[test]
     fn host_test() {
@@ -40,5 +53,22 @@ mod tests {
             }
         );
         assert_eq!(host_contract.name(), "HostContract".to_string());
+    }
+
+    #[test]
+    fn pseudorandom_test() {
+        let test_env = odra_test::env();
+        let host_contract = HostContract::deploy(
+            &test_env,
+            HostContractInitArgs {
+                name: "HostContract".to_string()
+            }
+        );
+
+        let bytes = host_contract.pseudorandom_bytes(129);
+        assert_eq!(bytes.len(), 129);
+
+        let number = host_contract.pseudorandom_number(U512::from(255));
+        assert!(number < U512::from(255));
     }
 }
