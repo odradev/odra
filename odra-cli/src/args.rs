@@ -10,7 +10,7 @@ use crate::{types, CustomTypeSet};
 
 pub const ARG_ATTACHED_VALUE: &str = "attached_value";
 pub const ARG_GAS: &str = "gas";
-pub const ARG_CONTRACTS: &str = "contracts";
+pub const ARG_CONTRACTS: &str = "contracts-toml";
 
 #[derive(Debug, Error)]
 pub enum ArgsError {
