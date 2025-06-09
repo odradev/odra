@@ -235,15 +235,20 @@ impl OdraCli {
         // Check if the user provided a custom contracts path.
         let path = args::read(&matches, ARG_CONTRACTS, PathBuf::from_str).ok();
         // Init contracts container with the provided path or default to the resources directory.
-        let container = DeployedContractsContainer::new(path.clone())
-            .expect("Failed to create or load the deployed contracts container");
+        let container = match DeployedContractsContainer::new(path.clone()) {
+            Ok(c) => c,
+            Err(e) => {
+                prettycli::error(&format!("Container error: {e}"));
+                return;
+            }
+        };
         // Register the contracts from the container in the host environment.
         for (name, address) in container.contracts() {
             let caller = self.callers.get(&name).expect("Caller not found").clone();
             self.host_env.register_contract(address, name, caller);
         }
 
-        let (cmd, args) = matches
+        let result = matches
             .subcommand()
             .and_then(|(subcommand, sub_matches)| match subcommand {
                 DEPLOY_SUBCOMMAND => {
@@ -265,8 +270,15 @@ impl OdraCli {
                     })
                 }
                 _ => unreachable!()
-            })
-            .expect("Subcommand not found");
+            });
+
+        let (cmd, args) = match result {
+            Some((cmd, args)) => (cmd, args),
+            None => {
+                prettycli::error("No command found");
+                return;
+            }
+        };
 
         match cmd.run(&self.host_env, args, &self.custom_types, path) {
             Ok(_) => prettycli::info("Command executed successfully"),
