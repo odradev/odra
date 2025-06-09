@@ -419,6 +419,7 @@ impl FnIR {
 }
 
 const PROTECTED_FUNCTIONS: [&str; 3] = ["new", "env", "address"];
+const PROTECTED_ARGS: [&str; 2] = ["gas", "attached_value"];
 
 fn validate_fn_name<T: ToTokens>(name: &str, ctx: T) -> syn::Result<()> {
     if PROTECTED_FUNCTIONS.contains(&name) {
@@ -430,12 +431,22 @@ fn validate_fn_name<T: ToTokens>(name: &str, ctx: T) -> syn::Result<()> {
     Ok(())
 }
 
+fn validate_fn_arg<T: ToTokens>(name: &str, ctx: T) -> syn::Result<()> {
+    if PROTECTED_ARGS.contains(&name) {
+        return Err(syn::Error::new_spanned(
+            ctx,
+            format!("Argument name `{}` is reserved", name)
+        ));
+    }
+    Ok(())
+}
+
 impl TryFrom<syn::TraitItemFn> for FnIR {
     type Error = syn::Error;
 
     fn try_from(code: syn::TraitItemFn) -> Result<Self, Self::Error> {
         let fn_name = utils::syn::function_name(&code.sig);
-        validate_fn_name(&fn_name, &code)?;
+        validate_fn_ir(&fn_name, &code.sig)?;
         Ok(Self::Def(FnTraitIR::new(code)))
     }
 }
@@ -445,9 +456,17 @@ impl TryFrom<syn::ImplItemFn> for FnIR {
 
     fn try_from(code: syn::ImplItemFn) -> Result<Self, Self::Error> {
         let fn_name = utils::syn::function_name(&code.sig);
-        validate_fn_name(&fn_name, &code)?;
+        validate_fn_ir(&fn_name, &code.sig)?;
         Ok(Self::Impl(FnImplIR::new(code)))
     }
+}
+
+fn validate_fn_ir(fn_name: &str, sig: &syn::Signature) -> syn::Result<()> {
+    validate_fn_name(fn_name, sig)?;
+    utils::syn::function_arg_names(sig)
+        .iter()
+        .try_for_each(|arg_ident| validate_fn_arg(&arg_ident.to_string(), arg_ident))?;
+    Ok(())
 }
 
 impl FnIR {
@@ -698,5 +717,40 @@ pub enum TypeKind {
     },
     Struct {
         fields: Vec<(syn::Ident, syn::Type)>
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_not_reserved_fn_arg() {
+        let code: syn::ImplItemFn = syn::parse_quote!(
+            pub fn abc(&self, arg_name: u64) {}
+        );
+        let result = FnIR::try_from(code);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_reserved_fn_arg() {
+        let code: syn::ImplItemFn = syn::parse_quote!(
+            pub fn abc(&self, gas: u64) {}
+        );
+        let result = FnIR::try_from(code);
+        assert_eq!(
+            result.err().unwrap().to_string(),
+            "Argument name `gas` is reserved"
+        );
+
+        let code: syn::ImplItemFn = syn::parse_quote!(
+            pub fn pay(&self, attached_value: u64) {}
+        );
+        let result = FnIR::try_from(code);
+        assert_eq!(
+            result.err().unwrap().to_string(),
+            "Argument name `attached_value` is reserved"
+        );
     }
 }

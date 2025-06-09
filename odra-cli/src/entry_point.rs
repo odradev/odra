@@ -1,18 +1,25 @@
+use std::path::PathBuf;
+use std::str::FromStr;
+
 use clap::ArgMatches;
+use odra::prelude::OdraError;
 use odra::schema::casper_contract_schema::{Entrypoint, NamedCLType};
+use odra::VmError;
 use odra::{casper_types::U512, host::HostEnv, CallDef};
 
 use crate::{
-    args::{self, ARG_ATTACHED_VALUE},
+    args::{self, ARG_ATTACHED_VALUE, ARG_GAS},
     container, types, CustomTypeSet, DeployedContractsContainer
 };
 
-pub const DEFAULT_GAS: u64 = 20_000_000_000;
-
 #[derive(Debug, thiserror::Error)]
 pub enum CallError {
-    #[error("Execution error: {0}")]
-    ExecutionError(String),
+    #[error("Calling {contract_name}::{method} failed with: {message}")]
+    ExecutionError {
+        contract_name: String,
+        method: String,
+        message: String
+    },
     #[error(transparent)]
     ArgsError(#[from] args::ArgsError),
     #[error(transparent)]
@@ -28,15 +35,11 @@ pub fn call(
     contract_name: &str,
     entry_point: &Entrypoint,
     args: &ArgMatches,
-    types: &CustomTypeSet
+    types: &CustomTypeSet,
+    contracts_path: Option<PathBuf>
 ) -> Result<String, CallError> {
-    let container = DeployedContractsContainer::load()?;
-    let amount = args
-        .try_get_one::<String>(ARG_ATTACHED_VALUE)
-        .ok()
-        .flatten()
-        .map(|s| U512::from_dec_str(s).map_err(|_| types::Error::Serialization))
-        .unwrap_or(Ok(U512::zero()))?;
+    let container = DeployedContractsContainer::load(contracts_path)?;
+    let amount = args::read(args, ARG_ATTACHED_VALUE, U512::from_dec_str)?;
 
     let runtime_args = args::compose(entry_point, args, types)?;
     let contract_address = container
@@ -50,11 +53,19 @@ pub fn call(
     let use_proxy = ty.0 != NamedCLType::Unit || !call_def.amount().is_zero();
 
     if is_mut {
-        env.set_gas(DEFAULT_GAS);
+        let gas = args::read(args, ARG_GAS, FromStr::from_str)?;
+        env.set_gas(gas);
     }
     let bytes = env
         .raw_call_contract(contract_address, call_def, use_proxy)
-        .map_err(|e| CallError::ExecutionError(format!("{:?}", e)))?;
+        .map_err(|e| CallError::ExecutionError {
+            contract_name: contract_name.to_string(),
+            method: method.to_string(),
+            message: match e {
+                OdraError::VmError(VmError::Other(msg)) => msg,
+                _ => format!("{:?}", e)
+            }
+        })?;
     let result = args::decode(bytes.inner_bytes(), ty, types)?;
     Ok(result.0)
 }

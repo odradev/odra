@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use anyhow::Result;
 use clap::ArgMatches;
 use odra::host::HostEnv;
@@ -38,13 +40,19 @@ impl OdraCommand for ContractCmd {
         &self.name
     }
 
-    fn run(&self, env: &HostEnv, args: &ArgMatches, types: &CustomTypeSet) -> Result<()> {
+    fn run(
+        &self,
+        env: &HostEnv,
+        args: &ArgMatches,
+        types: &CustomTypeSet,
+        contracts_path: Option<PathBuf>
+    ) -> Result<()> {
         args.subcommand()
             .map(|(entrypoint_name, entrypoint_args)| {
                 self.commands
                     .iter()
                     .find(|cmd| cmd.name() == entrypoint_name)
-                    .map(|entry_point| entry_point.run(env, entrypoint_args, types))
+                    .map(|entry_point| entry_point.run(env, entrypoint_args, types, contracts_path))
                     .unwrap_or(Err(anyhow::anyhow!("No entry point found")))
             })
             .unwrap_or(Err(anyhow::anyhow!("No entry point found")))
@@ -64,11 +72,18 @@ impl OdraCommand for CallCmd {
         &self.entry_point.name
     }
 
-    fn run(&self, env: &HostEnv, args: &ArgMatches, types: &CustomTypeSet) -> Result<()> {
+    fn run(
+        &self,
+        env: &HostEnv,
+        args: &ArgMatches,
+        types: &CustomTypeSet,
+        contracts_path: Option<PathBuf>
+    ) -> Result<()> {
         let entry_point = &self.entry_point;
         let contract_name = &self.contract_name;
 
-        let result = entry_point::call(env, contract_name, entry_point, args, types)?;
+        let result =
+            entry_point::call(env, contract_name, entry_point, args, types, contracts_path)?;
         prettycli::info(&result);
         Ok(())
     }

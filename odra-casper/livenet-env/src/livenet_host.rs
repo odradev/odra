@@ -8,13 +8,13 @@ use odra_casper_rpc_client::utils::find_wasm_file_path;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::Timestamp;
 use odra_core::entry_point_callback::EntryPointsCaller;
-use odra_core::prelude::ExecutionError::{UnexpectedError, User};
+use odra_core::prelude::ExecutionError::User;
 use odra_core::{
     casper_types::{bytesrepr::Bytes, PublicKey, RuntimeArgs, U512},
     host::HostContext,
     CallDef, ContractEnv, GasReport
 };
-use odra_core::{prelude::*, EventError};
+use odra_core::{prelude::*, EventError, VmError};
 use odra_core::{ContractContainer, ContractRegister};
 use std::fs;
 use std::sync::RwLock;
@@ -304,10 +304,7 @@ impl LivenetHost {
         };
 
         match found {
-            None => {
-                println!("Error: {}", error_msg);
-                OdraError::ExecutionError(UnexpectedError)
-            }
+            None => OdraError::VmError(VmError::Other(error_msg.to_string())),
             Some((_, error)) => OdraError::ExecutionError(User(error.code()))
         }
     }

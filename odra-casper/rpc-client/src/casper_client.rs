@@ -6,7 +6,8 @@ use crate::casper_client::configuration::CasperClientConfiguration;
 
 use crate::error::LivenetError;
 use crate::error::LivenetError::{
-    BlockTimeError, ClientError, DictQueryError, ExecutionError, SerializationError
+    BlockTimeError, ClientError, DictQueryError, ExecutionError, RpcRequestError,
+    SerializationError
 };
 use crate::log;
 use crate::utils::extract_stored_value;
@@ -704,7 +705,19 @@ impl CasperClient {
         .await;
         let deploy_hash = match response {
             Ok(r) => r.result.transaction_hash,
-            Err(e) => return Err(ExecutionError(e.to_string()))
+            Err(e) => {
+                return match e {
+                    casper_client::Error::ResponseIsRpcError {
+                        rpc_method, error, ..
+                    } => Err(RpcRequestError(
+                        rpc_method.to_string(),
+                        error
+                            .data
+                            .map_or_else(|| "No data".to_string(), |d| d.to_string())
+                    )),
+                    _ => Err(ExecutionError(e.to_string()))
+                }
+            }
         };
         let result = self.wait_for_transaction(deploy_hash).await?;
         self.process_transaction(result, deploy_hash).map(|_| {

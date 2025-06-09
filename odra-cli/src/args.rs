@@ -8,7 +8,9 @@ use thiserror::Error;
 
 use crate::{types, CustomTypeSet};
 
-pub const ARG_ATTACHED_VALUE: &str = "__attached_value";
+pub const ARG_ATTACHED_VALUE: &str = "attached_value";
+pub const ARG_GAS: &str = "gas";
+pub const ARG_CONTRACTS: &str = "contracts-toml";
 
 #[derive(Debug, Error)]
 pub enum ArgsError {
@@ -360,6 +362,37 @@ pub fn attached_value_arg() -> Arg {
         .required(false)
         .value_name(format!("{:?}", NamedCLType::U512))
         .action(ArgAction::Set)
+}
+
+pub fn gas_arg() -> Arg {
+    Arg::new(ARG_GAS)
+        .help("The amount of gas to attach to the call")
+        .long(ARG_GAS)
+        .required(true)
+        .value_name(format!("{:?}", NamedCLType::U64))
+        .action(ArgAction::Set)
+}
+
+pub fn contracts_arg() -> Arg {
+    Arg::new(ARG_CONTRACTS)
+        .help("The path to the file with the deployed contracts. Relative to the project root.")
+        .long(ARG_CONTRACTS)
+        .short('c')
+        .required(false)
+        .value_name(format!("{:?}", NamedCLType::String))
+        .action(ArgAction::Set)
+}
+
+pub fn read<T: Default, E, F: FnOnce(&str) -> Result<T, E>>(
+    args: &ArgMatches,
+    name: &str,
+    f: F
+) -> Result<T, types::Error> {
+    args.try_get_one::<String>(name)
+        .ok()
+        .flatten()
+        .map(|s| f(s).map_err(|_| types::Error::Serialization))
+        .unwrap_or(Ok(T::default()))
 }
 
 #[cfg(test)]

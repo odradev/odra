@@ -1,12 +1,30 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.81.0-nightly (cf2df68d1 2024-07-01)",
+  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
   "authors": [],
   "repository": null,
   "homepage": null,
   "contract_name": "PartyContract",
-  "contract_version": "2.0.0",
+  "contract_version": "2.0.1",
   "types": [
+    {
+      "struct": {
+        "name": "NativePartyStarted",
+        "description": null,
+        "members": [
+          {
+            "name": "caller",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "block_time",
+            "description": null,
+            "ty": "U64"
+          }
+        ]
+      }
+    },
     {
       "struct": {
         "name": "PartyStarted",
@@ -27,8 +45,22 @@
     }
   ],
   "errors": [],
-  "entry_points": [],
+  "entry_points": [
+    {
+      "name": "emit",
+      "description": "Emits the events.",
+      "is_mutable": true,
+      "arguments": [],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    }
+  ],
   "events": [
+    {
+      "name": "NativePartyStarted",
+      "ty": "NativePartyStarted"
+    },
     {
       "name": "PartyStarted",
       "ty": "PartyStarted"
@@ -46,7 +78,7 @@
       },
       {
         "name": "odra_cfg_allow_key_override",
-        "description": "The arg name for the allow key override.",
+        "description": "If true and the key specified in odra_cfg_package_hash_key_name already exists, it will be overwritten.",
         "ty": "Bool",
         "optional": false
       },

@@ -4,6 +4,8 @@ use thiserror::Error;
 pub enum LivenetError {
     #[error("Livenet communication error")]
     RpcCommunicationFailure,
+    #[error("RPC request error {0}: {1}")]
+    RpcRequestError(String, String),
     #[error("Livenet execution error")]
     ExecutionError(String),
     #[error("Serialization error")]
@@ -21,6 +23,7 @@ impl LivenetError {
         match self {
             LivenetError::RpcCommunicationFailure => "Livenet communication error".to_string(),
             LivenetError::ExecutionError(error_message) => error_message.to_string(),
+            LivenetError::RpcRequestError(_, _) => self.to_string(),
             _ => todo!()
         }
     }

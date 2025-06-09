@@ -121,6 +121,14 @@
       "return_ty": "Unit",
       "ty": "Public",
       "attributes": []
+    },
+    {
+      "name": "expensive_function",
+      "args": [],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
     }
   ]
 }
