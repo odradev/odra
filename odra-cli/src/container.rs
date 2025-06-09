@@ -10,7 +10,7 @@ use odra::{
 use serde_derive::{Deserialize, Serialize};
 use thiserror::Error;
 
-const DEPLOYED_CONTRACTS_FILE: &str = "resources/deployed_contracts.toml";
+const DEPLOYED_CONTRACTS_FILE: &str = "resources/contracts.toml";
 
 #[derive(Error, Debug)]
 pub enum ContractError {
@@ -65,6 +65,8 @@ impl DeployedContractsContainer {
         &mut self,
         contract: &T
     ) -> Result<(), ContractError> {
+        let name = T::ident();
+        self.contracts.retain(|c| c.name != name);
         self.contracts
             .push(DeployedContract::new::<T>(contract.address()));
         self.update()
