@@ -1,5 +1,5 @@
 {
-  "name": "Cep18",
+  "name": "Cep18Example",
   "events": [
     {
       "name": "Mint",
@@ -189,6 +189,29 @@
           "is_required": true
         }
       ]
+    },
+    {
+      "name": "OwnershipTransferred",
+      "args": [
+        {
+          "name": "previous_owner",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "new_owner",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
     }
   ],
   "entrypoints": [
@@ -227,6 +250,52 @@
       "is_mutable": true,
       "return_ty": "Unit",
       "ty": "Constructor",
+      "attributes": []
+    },
+    {
+      "name": "mint",
+      "args": [
+        {
+          "name": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "burn",
+      "args": [
+        {
+          "name": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
       "attributes": []
     },
     {

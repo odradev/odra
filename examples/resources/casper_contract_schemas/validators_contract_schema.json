@@ -4,46 +4,14 @@
   "authors": [],
   "repository": null,
   "homepage": null,
-  "contract_name": "ReentrancyMock",
+  "contract_name": "ValidatorsContract",
   "contract_version": "2.0.1",
   "types": [],
   "errors": [],
   "entry_points": [
     {
-      "name": "count_local_recursive",
-      "description": "Simple recursive function that counts to `n`.",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "n",
-          "description": null,
-          "ty": "U32",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "count_ref_recursive",
-      "description": "Recursive function that counts to `n` using a reference to the contract.",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "n",
-          "description": null,
-          "ty": "U32",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "non_reentrant_count",
-      "description": "Recursive function that counts to `n` and is protected.",
+      "name": "stake",
+      "description": "Stake the amount of tokens",
       "is_mutable": true,
       "arguments": [],
       "return_ty": "Unit",
@@ -51,19 +19,60 @@
       "access": "public"
     },
     {
-      "name": "get_value",
-      "description": "Returns the value of the counter.",
+      "name": "unstake",
+      "description": "Undelegate the amount from the validator",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U512",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "withdraw",
+      "description": "Withdraw the amount from the validator",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U512",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "currently_delegated_amount",
+      "description": "Get the currently delegated amount",
       "is_mutable": false,
       "arguments": [],
-      "return_ty": "U32",
+      "return_ty": "U512",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "current_casper_balance",
+      "description": "Get the current casper balance of the contract",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U512",
       "is_contract_context": true,
       "access": "public"
     }
   ],
   "events": [],
   "call": {
-    "wasm_file_name": "ReentrancyMock.wasm",
-    "description": null,
+    "wasm_file_name": "ValidatorsContract.wasm",
+    "description": "Initializes the contract with the validator's public key",
     "arguments": [
       {
         "name": "odra_cfg_package_hash_key_name",
@@ -81,6 +90,12 @@
         "name": "odra_cfg_is_upgradable",
         "description": "The arg name for the contract upgradeability setting.",
         "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "validator",
+        "description": null,
+        "ty": "PublicKey",
         "optional": false
       }
     ]

@@ -12,7 +12,7 @@ mod transfer_tests {
     #[test]
     fn should_transfer_full_owned_amount() {
         // given a token
-        let mut cep18_token = setup(false);
+        let mut cep18_token = setup();
         let owner = cep18_token.env().get_account(0);
         let alice = cep18_token.env().get_account(1);
         let amount = TOKEN_TOTAL_SUPPLY.into();
@@ -31,7 +31,7 @@ mod transfer_tests {
     #[test]
     fn should_not_transfer_more_than_owned_balance() {
         // given a token
-        let mut cep18_token = setup(false);
+        let mut cep18_token = setup();
         let owner = cep18_token.env().get_account(0);
         let alice = cep18_token.env().get_account(1);
         let amount = TOKEN_TOTAL_SUPPLY.into();
@@ -51,7 +51,7 @@ mod transfer_tests {
     #[test]
     fn should_transfer_from_account_to_account() {
         // given a token
-        let mut cep18_token = setup(false);
+        let mut cep18_token = setup();
         let owner = cep18_token.env().get_account(0);
         let alice = cep18_token.env().get_account(1);
         let transfer_amount = TRANSFER_AMOUNT_1.into();
@@ -85,7 +85,7 @@ mod transfer_tests {
 
     #[test]
     fn should_transfer_from_account_by_contract() {
-        let mut cep18_token = setup(false);
+        let mut cep18_token = setup();
         let client_contract = Cep18ClientContract::deploy(cep18_token.env(), NoArgs);
         let spender = cep18_token.env().get_account(1);
         let owner = cep18_token.env().get_account(0);
@@ -119,7 +119,7 @@ mod transfer_tests {
     #[test]
     fn should_not_be_able_to_own_transfer() {
         // given a token
-        let mut cep18_token = setup(false);
+        let mut cep18_token = setup();
         let owner = cep18_token.env().get_account(0);
         let amount = TOKEN_TOTAL_SUPPLY.into();
 
@@ -137,7 +137,7 @@ mod transfer_tests {
     #[test]
     fn should_not_be_able_to_own_transfer_from() {
         // given a token
-        let mut cep18_token = setup(false);
+        let mut cep18_token = setup();
         let owner = cep18_token.env().get_account(0);
         let amount = TOKEN_TOTAL_SUPPLY.into();
 
@@ -161,7 +161,7 @@ mod transfer_tests {
     #[test]
     fn should_verify_zero_amount_transfer_is_noop() {
         // given a token
-        let mut cep18_token = setup(false);
+        let mut cep18_token = setup();
         let owner = cep18_token.env().get_account(0);
         let alice = cep18_token.env().get_account(1);
         let amount = TOKEN_TOTAL_SUPPLY.into();
@@ -178,7 +178,7 @@ mod transfer_tests {
     #[test]
     fn should_verify_zero_amount_transfer_from_is_noop() {
         // given a token
-        let mut cep18_token = setup(false);
+        let mut cep18_token = setup();
         let owner = cep18_token.env().get_account(0);
         let alice = cep18_token.env().get_account(1);
         let amount = TOKEN_TOTAL_SUPPLY.into();
@@ -198,7 +198,7 @@ mod transfer_tests {
     #[test]
     fn should_transfer() {
         // given a token
-        let mut cep18_token = setup(false);
+        let mut cep18_token = setup();
         let owner = cep18_token.env().get_account(0);
         let client_contract = Cep18ClientContract::deploy(cep18_token.env(), NoArgs);
 

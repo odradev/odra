@@ -1,6 +1,6 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.82.0-nightly (f8060d282 2024-07-30)",
+  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,7 +9,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": null,
   "contract_name": "NFTReceiver",
-  "contract_version": "2.0.0",
+  "contract_version": "2.0.1",
   "types": [],
   "errors": [],
   "entry_points": [
@@ -48,6 +48,34 @@
         }
       ],
       "return_ty": "Bool",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "last_call_result",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": {
+        "Tuple2": [
+          {
+            "Tuple2": [
+              "Key",
+              "Key"
+            ]
+          },
+          {
+            "Tuple2": [
+              "U256",
+              {
+                "Option": {
+                  "List": "U8"
+                }
+              }
+            ]
+          }
+        ]
+      },
       "is_contract_context": true,
       "access": "public"
     }

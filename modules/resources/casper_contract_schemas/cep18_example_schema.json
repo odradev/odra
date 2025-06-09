@@ -8,12 +8,12 @@
   ],
   "repository": "https://github.com/odradev/odra",
   "homepage": null,
-  "contract_name": "Erc721Token",
+  "contract_name": "Cep18Example",
   "contract_version": "2.0.1",
   "types": [
     {
       "struct": {
-        "name": "Approval",
+        "name": "Burn",
         "description": null,
         "members": [
           {
@@ -22,14 +22,7 @@
             "ty": "Key"
           },
           {
-            "name": "approved",
-            "description": null,
-            "ty": {
-              "Option": "Key"
-            }
-          },
-          {
-            "name": "token_id",
+            "name": "amount",
             "description": null,
             "ty": "U256"
           }
@@ -38,7 +31,7 @@
     },
     {
       "struct": {
-        "name": "ApprovalForAll",
+        "name": "DecreaseAllowance",
         "description": null,
         "members": [
           {
@@ -47,14 +40,65 @@
             "ty": "Key"
           },
           {
-            "name": "operator",
+            "name": "spender",
             "description": null,
             "ty": "Key"
           },
           {
-            "name": "approved",
+            "name": "allowance",
             "description": null,
-            "ty": "Bool"
+            "ty": "U256"
+          },
+          {
+            "name": "decr_by",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "IncreaseAllowance",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "spender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "allowance",
+            "description": null,
+            "ty": "U256"
+          },
+          {
+            "name": "inc_by",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "Mint",
+        "description": null,
+        "members": [
+          {
+            "name": "recipient",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U256"
           }
         ]
       }
@@ -83,25 +127,72 @@
     },
     {
       "struct": {
+        "name": "SetAllowance",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "spender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "allowance",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
         "name": "Transfer",
         "description": null,
         "members": [
           {
-            "name": "from",
+            "name": "sender",
             "description": null,
-            "ty": {
-              "Option": "Key"
-            }
+            "ty": "Key"
           },
           {
-            "name": "to",
+            "name": "recipient",
             "description": null,
-            "ty": {
-              "Option": "Key"
-            }
+            "ty": "Key"
           },
           {
-            "name": "token_id",
+            "name": "amount",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "TransferFrom",
+        "description": null,
+        "members": [
+          {
+            "name": "spender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "recipient",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "amount",
             "description": null,
             "ty": "U256"
           }
@@ -110,21 +201,6 @@
     }
   ],
   "errors": [
-    {
-      "name": "ApprovalToCurrentOwner",
-      "description": "The owner cannot be approved.",
-      "discriminant": 30002
-    },
-    {
-      "name": "ApproveToCaller",
-      "description": "The caller cannot approve self.",
-      "discriminant": 30003
-    },
-    {
-      "name": "BaseUriNotSet",
-      "description": "The base URI is not set.",
-      "discriminant": 31002
-    },
     {
       "name": "CallerNotTheNewOwner",
       "description": "The caller is not the new owner.",
@@ -136,24 +212,24 @@
       "discriminant": 20001
     },
     {
-      "name": "InvalidTokenId",
-      "description": "Token is invalid in the given context or does not exist.",
-      "discriminant": 30000
+      "name": "CannotTargetSelfUser",
+      "description": "The user cannot target themselves.",
+      "discriminant": 60003
+    },
+    {
+      "name": "InsufficientAllowance",
+      "description": "Spender does not have enough allowance approved.",
+      "discriminant": 60002
+    },
+    {
+      "name": "InsufficientBalance",
+      "description": "Spender does not have enough balance.",
+      "discriminant": 60001
     },
     {
       "name": "MissingRole",
       "description": "The role is missing.",
       "discriminant": 20003
-    },
-    {
-      "name": "NameNotSet",
-      "description": "The name is not set.",
-      "discriminant": 31000
-    },
-    {
-      "name": "NotAnOwnerOrApproved",
-      "description": "Address in not eligible to operate on the token.",
-      "discriminant": 30001
     },
     {
       "name": "OwnerNotSet",
@@ -164,308 +240,22 @@
       "name": "RoleRenounceForAnotherAddress",
       "description": "The role cannot be renounced for another address.",
       "discriminant": 20004
-    },
-    {
-      "name": "SymbolNotSet",
-      "description": "The symbol is not set.",
-      "discriminant": 31001
-    },
-    {
-      "name": "TokenAlreadyExists",
-      "description": "Token with a given id already exists.",
-      "discriminant": 35000
-    },
-    {
-      "name": "TransferFailed",
-      "description": "Token transfer ends with an error",
-      "discriminant": 30004
     }
   ],
   "entry_points": [
-    {
-      "name": "name",
-      "description": "",
-      "is_mutable": false,
-      "arguments": [],
-      "return_ty": "String",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "symbol",
-      "description": "",
-      "is_mutable": false,
-      "arguments": [],
-      "return_ty": "String",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "base_uri",
-      "description": "",
-      "is_mutable": false,
-      "arguments": [],
-      "return_ty": "String",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "balance_of",
-      "description": "",
-      "is_mutable": false,
-      "arguments": [
-        {
-          "name": "owner",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        }
-      ],
-      "return_ty": "U256",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "owner_of",
-      "description": "",
-      "is_mutable": false,
-      "arguments": [
-        {
-          "name": "token_id",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Key",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "safe_transfer_from",
-      "description": "",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "from",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "to",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "token_id",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "safe_transfer_from_with_data",
-      "description": "",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "from",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "to",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "token_id",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        },
-        {
-          "name": "data",
-          "description": null,
-          "ty": {
-            "List": "U8"
-          },
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "transfer_from",
-      "description": "",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "from",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "to",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "token_id",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "approve",
-      "description": "",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "approved",
-          "description": null,
-          "ty": {
-            "Option": "Key"
-          },
-          "optional": false
-        },
-        {
-          "name": "token_id",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "set_approval_for_all",
-      "description": "",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "operator",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "approved",
-          "description": null,
-          "ty": "Bool",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "get_approved",
-      "description": "",
-      "is_mutable": false,
-      "arguments": [
-        {
-          "name": "token_id",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": {
-        "Option": "Key"
-      },
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "is_approved_for_all",
-      "description": "",
-      "is_mutable": false,
-      "arguments": [
-        {
-          "name": "owner",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "operator",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        }
-      ],
-      "return_ty": "Bool",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "renounce_ownership",
-      "description": "",
-      "is_mutable": true,
-      "arguments": [],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "transfer_ownership",
-      "description": "",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "new_owner",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "owner",
-      "description": "",
-      "is_mutable": false,
-      "arguments": [],
-      "return_ty": "Key",
-      "is_contract_context": true,
-      "access": "public"
-    },
     {
       "name": "mint",
       "description": "",
       "is_mutable": true,
       "arguments": [
         {
-          "name": "to",
+          "name": "owner",
           "description": null,
           "ty": "Key",
           "optional": false
         },
         {
-          "name": "token_id",
+          "name": "amount",
           "description": null,
           "ty": "U256",
           "optional": false
@@ -481,7 +271,203 @@
       "is_mutable": true,
       "arguments": [
         {
-          "name": "token_id",
+          "name": "owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "name",
+      "description": "Delegated. See `self.token.name()` for details.",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "String",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "symbol",
+      "description": "Delegated. See `self.token.symbol()` for details.",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "String",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "decimals",
+      "description": "Delegated. See `self.token.decimals()` for details.",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U8",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "total_supply",
+      "description": "Delegated. See `self.token.total_supply()` for details.",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U256",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "balance_of",
+      "description": "Delegated. See `self.token.balance_of()` for details.",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "address",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "U256",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "allowance",
+      "description": "Delegated. See `self.token.allowance()` for details.",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "spender",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "U256",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "approve",
+      "description": "Delegated. See `self.token.approve()` for details.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "spender",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "decrease_allowance",
+      "description": "Delegated. See `self.token.decrease_allowance()` for details.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "spender",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "decr_by",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "increase_allowance",
+      "description": "Delegated. See `self.token.increase_allowance()` for details.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "spender",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "inc_by",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "transfer",
+      "description": "Delegated. See `self.token.transfer()` for details.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "recipient",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "transfer_from",
+      "description": "Delegated. See `self.token.transfer_from()` for details.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "recipient",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "amount",
           "description": null,
           "ty": "U256",
           "optional": false
@@ -494,24 +480,40 @@
   ],
   "events": [
     {
-      "name": "Approval",
-      "ty": "Approval"
+      "name": "Burn",
+      "ty": "Burn"
     },
     {
-      "name": "ApprovalForAll",
-      "ty": "ApprovalForAll"
+      "name": "DecreaseAllowance",
+      "ty": "DecreaseAllowance"
+    },
+    {
+      "name": "IncreaseAllowance",
+      "ty": "IncreaseAllowance"
+    },
+    {
+      "name": "Mint",
+      "ty": "Mint"
     },
     {
       "name": "OwnershipTransferred",
       "ty": "OwnershipTransferred"
     },
     {
+      "name": "SetAllowance",
+      "ty": "SetAllowance"
+    },
+    {
       "name": "Transfer",
       "ty": "Transfer"
+    },
+    {
+      "name": "TransferFrom",
+      "ty": "TransferFrom"
     }
   ],
   "call": {
-    "wasm_file_name": "Erc721Token.wasm",
+    "wasm_file_name": "Cep18Example.wasm",
     "description": "",
     "arguments": [
       {
@@ -533,21 +535,27 @@
         "optional": false
       },
       {
-        "name": "name",
-        "description": null,
-        "ty": "String",
-        "optional": false
-      },
-      {
         "name": "symbol",
         "description": null,
         "ty": "String",
         "optional": false
       },
       {
-        "name": "base_uri",
+        "name": "name",
         "description": null,
         "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "decimals",
+        "description": null,
+        "ty": "U8",
+        "optional": false
+      },
+      {
+        "name": "initial_supply",
+        "description": null,
+        "ty": "U256",
         "optional": false
       }
     ]

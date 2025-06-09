@@ -145,7 +145,7 @@ impl OdraVm {
                 .args()
                 .get(name)
                 .map(|arg| arg.inner_bytes().to_vec())
-                .ok_or_else(|| OdraError::ExecutionError(ExecutionError::MissingArg))
+                .ok_or(OdraError::ExecutionError(ExecutionError::MissingArg))
         }
     }
 

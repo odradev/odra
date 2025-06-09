@@ -1,6 +1,6 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.82.0-nightly (f8060d282 2024-07-30)",
+  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,7 +9,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": null,
   "contract_name": "Cep18",
-  "contract_version": "2.0.0",
+  "contract_version": "2.0.1",
   "types": [
     {
       "struct": {
@@ -25,29 +25,6 @@
             "name": "amount",
             "description": null,
             "ty": "U256"
-          }
-        ]
-      }
-    },
-    {
-      "struct": {
-        "name": "ChangeSecurity",
-        "description": null,
-        "members": [
-          {
-            "name": "admin",
-            "description": null,
-            "ty": "Key"
-          },
-          {
-            "name": "sec_change_map",
-            "description": null,
-            "ty": {
-              "Map": {
-                "key": "Key",
-                "value": "SecurityBadge"
-              }
-            }
           }
         ]
       }
@@ -199,69 +176,13 @@
           }
         ]
       }
-    },
-    {
-      "enum": {
-        "name": "Cep18Modality",
-        "description": null,
-        "variants": [
-          {
-            "name": "None",
-            "description": null,
-            "discriminant": 0,
-            "ty": "Unit"
-          },
-          {
-            "name": "MintAndBurn",
-            "description": null,
-            "discriminant": 1,
-            "ty": "Unit"
-          }
-        ]
-      }
-    },
-    {
-      "enum": {
-        "name": "SecurityBadge",
-        "description": null,
-        "variants": [
-          {
-            "name": "Admin",
-            "description": null,
-            "discriminant": 0,
-            "ty": "Unit"
-          },
-          {
-            "name": "Minter",
-            "description": null,
-            "discriminant": 1,
-            "ty": "Unit"
-          },
-          {
-            "name": "None",
-            "description": null,
-            "discriminant": 2,
-            "ty": "Unit"
-          }
-        ]
-      }
     }
   ],
   "errors": [
     {
-      "name": "AlreadyInitialized",
-      "description": "This contract instance cannot be initialized again.",
-      "discriminant": 60015
-    },
-    {
       "name": "CannotTargetSelfUser",
       "description": "The user cannot target themselves.",
-      "discriminant": 60017
-    },
-    {
-      "name": "FailedToGetArgBytes",
-      "description": "Failed to read the runtime arguments provided.",
-      "discriminant": 60009
+      "discriminant": 60003
     },
     {
       "name": "InsufficientAllowance",
@@ -272,123 +193,9 @@
       "name": "InsufficientBalance",
       "description": "Spender does not have enough balance.",
       "discriminant": 60001
-    },
-    {
-      "name": "InsufficientRights",
-      "description": "The caller does not have sufficient security access.",
-      "discriminant": 60010
-    },
-    {
-      "name": "InvalidAdminList",
-      "description": "The list of Admin accounts provided is invalid.",
-      "discriminant": 60011
-    },
-    {
-      "name": "InvalidBurnTarget",
-      "description": "The burn target is invalid.",
-      "discriminant": 60018
-    },
-    {
-      "name": "InvalidContext",
-      "description": "CEP-18 contract called from within an invalid context.",
-      "discriminant": 60000
-    },
-    {
-      "name": "InvalidEnableMBFlag",
-      "description": "The flag to enable the mint and burn mode is invalid.",
-      "discriminant": 60014
-    },
-    {
-      "name": "InvalidEventsMode",
-      "description": "An invalid event mode was specified.",
-      "discriminant": 60006
-    },
-    {
-      "name": "InvalidMinterList",
-      "description": "The list of accounts that can mint tokens is invalid.",
-      "discriminant": 60012
-    },
-    {
-      "name": "InvalidNoneList",
-      "description": "The list of accounts with no access rights is invalid.",
-      "discriminant": 60013
-    },
-    {
-      "name": "InvalidState",
-      "description": "The contract is in an invalid state. This error should never happen.",
-      "discriminant": 60100
-    },
-    {
-      "name": "MintBurnDisabled",
-      "description": "The mint and burn mode is disabled.",
-      "discriminant": 60016
-    },
-    {
-      "name": "MissingEventsMode",
-      "description": "The event mode required was not specified.",
-      "discriminant": 60007
-    },
-    {
-      "name": "Overflow",
-      "description": "Operation would cause an integer overflow.",
-      "discriminant": 60003
-    },
-    {
-      "name": "PackageHashMissing",
-      "description": "A required package hash was not specified.",
-      "discriminant": 60004
-    },
-    {
-      "name": "PackageHashNotPackage",
-      "description": "The package hash specified does not represent a package.",
-      "discriminant": 60005
-    },
-    {
-      "name": "Phantom",
-      "description": "An unknown error occurred.",
-      "discriminant": 60008
-    },
-    {
-      "name": "_MissingPackageHashForUpgrade",
-      "description": "The package hash for the upgrade is missing.",
-      "discriminant": 60019
     }
   ],
   "entry_points": [
-    {
-      "name": "change_security",
-      "description": "Admin EntryPoint to manipulate the security access granted to users.",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "admin_list",
-          "description": null,
-          "ty": {
-            "List": "Key"
-          },
-          "optional": false
-        },
-        {
-          "name": "minter_list",
-          "description": null,
-          "ty": {
-            "List": "Key"
-          },
-          "optional": false
-        },
-        {
-          "name": "none_list",
-          "description": null,
-          "ty": {
-            "List": "Key"
-          },
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
     {
       "name": "name",
       "description": "Returns the name of the token.",
@@ -578,60 +385,12 @@
       "return_ty": "Unit",
       "is_contract_context": true,
       "access": "public"
-    },
-    {
-      "name": "mint",
-      "description": "Mints new tokens and assigns them to the given address.",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "owner",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "amount",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "burn",
-      "description": "Burns the given amount of tokens from the given address.",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "owner",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "amount",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
     }
   ],
   "events": [
     {
       "name": "Burn",
       "ty": "Burn"
-    },
-    {
-      "name": "ChangeSecurity",
-      "ty": "ChangeSecurity"
     },
     {
       "name": "DecreaseAllowance",
@@ -660,7 +419,7 @@
   ],
   "call": {
     "wasm_file_name": "Cep18.wasm",
-    "description": "Initializes the contract with the given metadata, initial supply, security and modality.",
+    "description": "Initializes the contract with the given metadata, initial supply.",
     "arguments": [
       {
         "name": "odra_cfg_package_hash_key_name",
@@ -702,30 +461,6 @@
         "name": "initial_supply",
         "description": null,
         "ty": "U256",
-        "optional": false
-      },
-      {
-        "name": "admin_list",
-        "description": null,
-        "ty": {
-          "List": "Key"
-        },
-        "optional": false
-      },
-      {
-        "name": "minter_list",
-        "description": null,
-        "ty": {
-          "List": "Key"
-        },
-        "optional": false
-      },
-      {
-        "name": "modality",
-        "description": null,
-        "ty": {
-          "Option": "Cep18Modality"
-        },
         "optional": false
       }
     ]
