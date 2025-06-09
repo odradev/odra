@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use anyhow::Result;
 use clap::ArgMatches;
 use contract::ContractCmd;
@@ -15,7 +17,13 @@ pub mod scenario;
 /// OdraCommand is a trait that represents a command that can be run in the Odra CLI.
 pub(crate) trait OdraCommand {
     fn name(&self) -> &str;
-    fn run(&self, env: &HostEnv, args: &ArgMatches, types: &CustomTypeSet) -> Result<()>;
+    fn run(
+        &self,
+        env: &HostEnv,
+        args: &ArgMatches,
+        types: &CustomTypeSet,
+        contracts_path: Option<PathBuf>
+    ) -> Result<()>;
 }
 
 /// OdraCliCommand is an enum that represents the different commands that can be run in the Odra CLI.
@@ -50,11 +58,17 @@ impl OdraCommand for OdraCliCommand {
         }
     }
 
-    fn run(&self, env: &HostEnv, args: &ArgMatches, types: &CustomTypeSet) -> Result<()> {
+    fn run(
+        &self,
+        env: &HostEnv,
+        args: &ArgMatches,
+        types: &CustomTypeSet,
+        contracts_path: Option<PathBuf>
+    ) -> Result<()> {
         match self {
-            OdraCliCommand::Deploy(deploy) => deploy.run(env, args, types),
-            OdraCliCommand::Scenario(scenario) => scenario.run(env, args, types),
-            OdraCliCommand::Contract(contract) => contract.run(env, args, types)
+            OdraCliCommand::Deploy(deploy) => deploy.run(env, args, types, contracts_path),
+            OdraCliCommand::Scenario(scenario) => scenario.run(env, args, types, contracts_path),
+            OdraCliCommand::Contract(contract) => contract.run(env, args, types, contracts_path)
         }
     }
 }

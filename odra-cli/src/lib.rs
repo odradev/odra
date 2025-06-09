@@ -4,11 +4,15 @@
 //! that allows users to interact with smart contracts.
 
 #![feature(box_patterns, error_generic_member_access)]
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
+use std::path::PathBuf;
+use std::str::FromStr;
 
 use clap::{command, Arg, Command};
 use cmd::{OdraCliCommand, OdraCommand};
 use deploy::DeployScript;
+use odra::entry_point_callback::EntryPointsCaller;
+use odra::host::Deployer;
 use odra::schema::{casper_contract_schema::CustomType, SchemaCustomTypes, SchemaEntrypoints};
 use odra::{
     contract_def::HasIdent,
@@ -29,9 +33,39 @@ pub use cmd::scenario::{ScenarioArgs, ScenarioError};
 pub use container::DeployedContractsContainer;
 use scenario::{Scenario, ScenarioMetadata};
 
+use crate::args::ARG_CONTRACTS;
+
 const CONTRACTS_SUBCOMMAND: &str = "contract";
 const SCENARIOS_SUBCOMMAND: &str = "scenario";
 const DEPLOY_SUBCOMMAND: &str = "deploy";
+
+/// Trait that extends the functionality of OdraContract to include deployment capabilities.
+pub trait DeployerExt: Sized {
+    /// Contract that implements OdraContract and Deployer for Self
+    type Contract: OdraContract + 'static + Deployer<Self::Contract>;
+
+    /// Load an existing contract instance from container or deploy a new one.
+    fn load_or_deploy(
+        env: &HostEnv,
+        args: <<Self as DeployerExt>::Contract as OdraContract>::InitArgs,
+        container: &mut DeployedContractsContainer,
+        gas: u64
+    ) -> Result<<<Self as DeployerExt>::Contract as OdraContract>::HostRef, crate::deploy::Error>
+    {
+        if let Ok(contract) = container.get_ref::<Self::Contract>(env) {
+            Ok(contract)
+        } else {
+            env.set_gas(gas);
+            let contract = Self::Contract::try_deploy(env, args)?;
+            container.add_contract(&contract)?;
+            Ok(contract)
+        }
+    }
+}
+
+impl<T: OdraContract + Deployer<T> + 'static> DeployerExt for T {
+    type Contract = T;
+}
 
 pub(crate) type CustomTypeSet = BTreeSet<CustomType>;
 
@@ -61,7 +95,8 @@ pub struct OdraCli {
     contracts_cmd: Command,
     commands: Vec<OdraCliCommand>,
     custom_types: CustomTypeSet,
-    host_env: HostEnv
+    host_env: HostEnv,
+    callers: HashMap<String, EntryPointsCaller>
 }
 
 impl Default for OdraCli {
@@ -91,7 +126,8 @@ impl OdraCli {
             custom_types: CustomTypeSet::new(),
             host_env: odra_casper_livenet_env::env(),
             contracts_cmd,
-            scenarios_cmd
+            scenarios_cmd,
+            callers: HashMap::new()
         }
     }
 
@@ -107,14 +143,10 @@ impl OdraCli {
     /// To call the constructor of the contract, implement and register the [DeployScript].
     pub fn contract<T: SchemaEntrypoints + SchemaCustomTypes + OdraContract>(mut self) -> Self {
         let contract_name = T::HostRef::ident();
-        if let Ok(container) = DeployedContractsContainer::load() {
-            let caller = T::HostRef::entry_points_caller(&self.host_env);
-            let address = container
-                .address(&contract_name)
-                .expect("Contract not found");
-            self.host_env
-                .register_contract(address, contract_name.clone(), caller);
-        }
+        self.callers.insert(
+            contract_name.clone(),
+            T::HostRef::entry_points_caller(&self.host_env)
+        );
         self.custom_types
             .extend(T::schema_types().into_iter().flatten());
 
@@ -193,13 +225,30 @@ impl OdraCli {
     pub fn build(mut self) -> Self {
         self.main_cmd = self.main_cmd.subcommand(self.contracts_cmd.clone());
         self.main_cmd = self.main_cmd.subcommand(self.scenarios_cmd.clone());
+        self.main_cmd = self.main_cmd.arg(args::contracts_arg());
         self
     }
 
     /// Runs the CLI and parses the input.
     pub fn run(self) {
         let matches = self.main_cmd.get_matches();
-        let (cmd, args) = matches
+        // Check if the user provided a custom contracts path.
+        let path = args::read(&matches, ARG_CONTRACTS, PathBuf::from_str).ok();
+        // Init contracts container with the provided path or default to the resources directory.
+        let container = match DeployedContractsContainer::new(path.clone()) {
+            Ok(c) => c,
+            Err(e) => {
+                prettycli::error(&format!("Container error: {e}"));
+                return;
+            }
+        };
+        // Register the contracts from the container in the host environment.
+        for (name, address) in container.contracts() {
+            let caller = self.callers.get(&name).expect("Caller not found").clone();
+            self.host_env.register_contract(address, name, caller);
+        }
+
+        let result = matches
             .subcommand()
             .and_then(|(subcommand, sub_matches)| match subcommand {
                 DEPLOY_SUBCOMMAND => {
@@ -221,10 +270,17 @@ impl OdraCli {
                     })
                 }
                 _ => unreachable!()
-            })
-            .expect("Subcommand not found");
+            });
 
-        match cmd.run(&self.host_env, args, &self.custom_types) {
+        let (cmd, args) = match result {
+            Some((cmd, args)) => (cmd, args),
+            None => {
+                prettycli::error("No command found");
+                return;
+            }
+        };
+
+        match cmd.run(&self.host_env, args, &self.custom_types, path) {
             Ok(_) => prettycli::info("Command executed successfully"),
             Err(err) => prettycli::error(&format!("{:?}", err))
         }

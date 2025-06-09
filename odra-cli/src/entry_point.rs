@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::str::FromStr;
 
 use clap::ArgMatches;
@@ -34,9 +35,10 @@ pub fn call(
     contract_name: &str,
     entry_point: &Entrypoint,
     args: &ArgMatches,
-    types: &CustomTypeSet
+    types: &CustomTypeSet,
+    contracts_path: Option<PathBuf>
 ) -> Result<String, CallError> {
-    let container = DeployedContractsContainer::load()?;
+    let container = DeployedContractsContainer::load(contracts_path)?;
     let amount = args::read(args, ARG_ATTACHED_VALUE, U512::from_dec_str)?;
 
     let runtime_args = args::compose(entry_point, args, types)?;

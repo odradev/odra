@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::{
     container::ContractError, CustomTypeSet, DeployedContractsContainer, DEPLOY_SUBCOMMAND
 };
@@ -20,8 +22,14 @@ impl OdraCommand for DeployCmd {
         DEPLOY_SUBCOMMAND
     }
 
-    fn run(&self, env: &HostEnv, _args: &ArgMatches, _types: &CustomTypeSet) -> Result<()> {
-        let mut container = DeployedContractsContainer::new()?;
+    fn run(
+        &self,
+        env: &HostEnv,
+        _args: &ArgMatches,
+        _types: &CustomTypeSet,
+        contracts_path: Option<PathBuf>
+    ) -> Result<()> {
+        let mut container = DeployedContractsContainer::new(contracts_path)?;
         self.script.deploy(env, &mut container)?;
         Ok(())
     }
