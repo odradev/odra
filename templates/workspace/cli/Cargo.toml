@@ -6,8 +6,8 @@ edition = "2021"
 [dependencies]
 flapper = { path = "../flapper" }
 flipper = { path = "../flipper" }
-odra = { path = "../odra/odra", features = [], default-features = false }
-odra-cli = { path = "../odra/odra-cli" }
+odra = { workspace = true }
+odra-cli = { workspace = true }
 
 [[bin]]
 name = "cli"
