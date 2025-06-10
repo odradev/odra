@@ -8,7 +8,6 @@ use odra_casper_rpc_client::utils::find_wasm_file_path;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::Timestamp;
 use odra_core::entry_point_callback::EntryPointsCaller;
-use odra_core::prelude::ExecutionError::User;
 use odra_core::{
     casper_types::{bytesrepr::Bytes, PublicKey, RuntimeArgs, U512},
     host::HostContext,
@@ -295,17 +294,17 @@ impl HostContext for LivenetHost {
 
 impl LivenetHost {
     fn map_error_code_to_odra_error(&self, contract_id: ContractId, error_msg: &str) -> OdraError {
-        let found = match contract_id {
-            ContractId::Name(contract_name) => error::find(&contract_name, error_msg).ok(),
-            ContractId::Address(addr) => match self.contract_register.read().unwrap().get(&addr) {
-                Some(contract_name) => error::find(contract_name, error_msg).ok(),
+        let found = match &contract_id {
+            ContractId::Name(_contract_name) => error::find(error_msg).ok(),
+            ContractId::Address(addr) => match self.contract_register.read().unwrap().get(addr) {
+                Some(_contract_name) => error::find(error_msg).ok(),
                 None => None
             }
         };
 
         match found {
             None => OdraError::VmError(VmError::Other(error_msg.to_string())),
-            Some((_, error)) => OdraError::ExecutionError(User(error.code()))
+            Some((msg, _error)) => OdraError::VmError(VmError::Other(msg))
         }
     }
 }

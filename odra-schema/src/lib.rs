@@ -242,6 +242,23 @@ pub fn find_schema_file_path(
     Err("Schema not found")
 }
 
+pub fn find_schemas_file_paths(
+    root_path: PathBuf
+) -> Result<Vec<PathBuf>, &'static str> {
+    let mut path = root_path;
+    if path.exists() && path.is_dir() {
+        let mut paths = vec![];
+        for entry in path.read_dir().map_err(|_| "Failed to read directory")? {
+            let entry = entry.map_err(|_| "Failed to read directory entry")?;
+            if entry.path().is_file() && entry.path().extension() == Some("json".as_ref()) {
+                paths.push(entry.path());
+            }
+        }
+        return Ok(paths);
+    }
+    Err("Schemas not found")
+}
+
 fn call_method(
     file_name: String,
     description: Option<String>,
