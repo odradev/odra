@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use clap::ArgMatches;
-use odra::prelude::OdraError;
+use odra::prelude::{Address, OdraError};
 use odra::schema::casper_contract_schema::{Entrypoint, NamedCLType};
 use odra::VmError;
 use odra::{casper_types::U512, host::HostEnv, CallDef};
@@ -56,6 +56,12 @@ pub fn call(
         let gas = args::read(args, ARG_GAS, FromStr::from_str)?;
         env.set_gas(gas);
     }
+
+    let print_events = args.get_flag("print-events");
+    if print_events {
+        prettycli::info("Syncing events for the call...");
+    }
+    env.set_captures_events(print_events);
     let bytes = env
         .raw_call_contract(contract_address, call_def, use_proxy)
         .map_err(|e| CallError::ExecutionError {
@@ -66,6 +72,40 @@ pub fn call(
                 _ => format!("{:?}", e)
             }
         })?;
+
+    if print_events {
+        log_events(env, &container, types, contract_address)?;
+    }
+
     let result = args::decode(bytes.inner_bytes(), ty, types)?;
     Ok(result.0)
+}
+
+fn log_events(
+    env: &HostEnv,
+    container: &DeployedContractsContainer,
+    types: &CustomTypeSet,
+    contract_address: Address
+) -> Result<(), CallError> {
+    let call_result = env.last_call_result(contract_address).raw_call_result();
+
+    for (name, address) in container.contracts() {
+        let events = call_result.contract_events(&address);
+        if events.is_empty() {
+            continue;
+        }
+        prettycli::info(&format!(
+            "Captured {} events for contract '{}'",
+            events.len(),
+            name
+        ));
+        for (i, event) in events.iter().enumerate() {
+            prettycli::info(&format!(
+                "Event {}: {}",
+                i + 1,
+                types::decode_event(event, types)?
+            ));
+        }
+    }
+    Ok(())
 }

@@ -392,6 +392,14 @@ pub fn number_arg(description: &'static str) -> Arg {
         .help(description)
 }
 
+pub fn print_events_arg() -> Arg {
+    Arg::new("print-events")
+        .long("print-events")
+        .short('p')
+        .help("Print events emitted by the contract")
+        .action(ArgAction::SetTrue)
+}
+
 pub fn read<T: Default, E, F: FnOnce(&str) -> Result<T, E>>(
     args: &ArgMatches,
     name: &str,

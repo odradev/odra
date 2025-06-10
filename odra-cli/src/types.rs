@@ -3,7 +3,7 @@ use std::{
     str::FromStr
 };
 
-use odra::schema::casper_contract_schema::NamedCLType;
+use odra::schema::casper_contract_schema::{CustomType, NamedCLType};
 use odra::{
     casper_types::{
         bytesrepr::{
@@ -16,17 +16,18 @@ use odra::{
 
 use thiserror::Error;
 
+use crate::CustomTypeSet;
+
 const PREFIX_ERROR: &str = "err:";
 const PREFIX_OK: &str = "ok:";
-// const PREFIX_NONE: &str = "none";
-// const PREFIX_SOME: &str = "some:";
 
 pub enum Format {
     Result,
     Option,
     Tuple { actual: usize, expected: usize },
     Map,
-    ByteArray
+    ByteArray,
+    InvalidLength { actual: usize, expected: usize }
 }
 
 impl Debug for Format {
@@ -57,7 +58,10 @@ impl Format {
                 String::from("'0x000102...'"),
                 String::from("'0x00,0x01,...'"),
                 String::from("'0,1,...'"),
-            ]
+            ],
+            Format::InvalidLength { actual, expected } => {
+                vec![format!("expected length {}, found {}", expected, actual)]
+            }
         }
     }
 }
@@ -84,6 +88,10 @@ pub enum Error {
     InvalidMap,
     #[error("Formatting error:\nexpected formats\n{0}")]
     Formatting(Format),
+    #[error("Invalid event member type {0}")]
+    InvalidEventMemberType(String),
+    #[error("Invalid event type {0}")]
+    InvalidEventType(String),
     #[error("Unexpected error: {0}")]
     Other(String)
 }
@@ -222,7 +230,7 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
         }
         NamedCLType::Tuple1(ty) => into_bytes(&ty[0], input),
         NamedCLType::Tuple2(ty) => {
-            let parts = input.split(',').collect::<Vec<_>>();
+            let parts = input.split(':').collect::<Vec<_>>();
             if parts.len() != 2 {
                 return Err(Error::Formatting(Format::Tuple {
                     actual: parts.len(),
@@ -235,7 +243,7 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
             Ok(result)
         }
         NamedCLType::Tuple3(ty) => {
-            let parts = input.split(',').collect::<Vec<_>>();
+            let parts = input.split(':').collect::<Vec<_>>();
             if parts.len() != 3 {
                 return Err(Error::Formatting(Format::Tuple {
                     actual: parts.len(),
@@ -309,6 +317,32 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
         }
         NamedCLType::Custom(_) => unreachable!("should not be here")
     }
+}
+
+pub(crate) fn decode_event(bytes: &[u8], types: &CustomTypeSet) -> TypeResult<String> {
+    // Event name is stored as the first element in the bytes
+    let (mut name, rem): (String, _) = FromBytes::from_bytes(bytes)
+        .map_err(|_| Error::InvalidEventType("Invalid event schema".to_string()))?;
+    let mut bytes = rem;
+    // Ignore the `event_` prefix
+    let event_name = name.split_off(6);
+    let members = types
+        .iter()
+        .find_map(|ty| match ty {
+            CustomType::Struct { name, members, .. } if name.0 == event_name => Some(members),
+            _ => None
+        })
+        .ok_or_else(|| {
+            Error::InvalidEventType(format!("Invalid event schema for '{}'", event_name))
+        })?;
+
+    let mut output = format!("'{}':\n", event_name);
+    for m in members {
+        let (data, rem) = from_bytes(&m.ty.0, bytes)?;
+        bytes = rem;
+        output.push_str(&format!("  '{}': {}\n", m.name, data));
+    }
+    Ok(output)
 }
 
 pub(crate) fn from_bytes<'a>(ty: &NamedCLType, input: &'a [u8]) -> TypeResult<(String, &'a [u8])> {
@@ -437,7 +471,10 @@ pub(crate) fn to_bytes_or_err<T: ToBytes>(input: T) -> TypeResult<Vec<u8>> {
 
 fn validate_byte_array_size(expected: usize, actual: usize) -> TypeResult<()> {
     if actual != expected {
-        return Err(Error::Formatting(Format::ByteArray));
+        return Err(Error::Formatting(Format::InvalidLength {
+            actual,
+            expected
+        }));
     }
     Ok(())
 }

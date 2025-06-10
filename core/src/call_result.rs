@@ -8,7 +8,7 @@ use casper_event_standard::EventInstance;
 /// The result contains the address of the called contract, the address of the caller, the amount of gas
 /// used, the result of the call, and the events emitted by the contract.
 #[derive(Debug, Clone)]
-pub(crate) struct CallResult {
+pub struct CallResult {
     contract_address: Address,
     caller: Address,
     gas_used: u64,
@@ -298,5 +298,10 @@ impl ContractCallResult {
     pub fn emitted_native_event<T: ToBytes + EventInstance>(&self, event: &T) -> bool {
         self.call_result
             .emitted_native_event(&self.contract_address, event)
+    }
+
+    /// Returns the raw call result. Includes data from sub-calls to external contracts.
+    pub fn raw_call_result(&self) -> CallResult {
+        self.call_result.clone()
     }
 }

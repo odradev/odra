@@ -187,7 +187,7 @@ impl OdraCli {
             // If the entry point is mutable, a transaction is being sent, so we need to
             // provide the gas argument.
             if entry_point.is_mutable {
-                ep_cmd = ep_cmd.arg(args::gas_arg());
+                ep_cmd = ep_cmd.arg(args::gas_arg()).arg(args::print_events_arg());
             }
             contract_cmd = contract_cmd.subcommand(ep_cmd);
         }
