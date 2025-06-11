@@ -4,17 +4,17 @@
 //! that allows users to interact with smart contracts.
 
 #![feature(box_patterns, error_generic_member_access)]
-use std::collections::{BTreeSet, HashMap};
+use std::collections::HashMap;
 use std::path::PathBuf;
-use std::str::FromStr;
 
-use clap::{command, Arg, Command};
-use cmd::{OdraCliCommand, OdraCommand};
+use anyhow::Result;
+use clap::ArgMatches;
+use cmd::OdraCommand;
 use deploy::DeployScript;
 use odra::entry_point_callback::EntryPointsCaller;
 use odra::host::Deployer;
 use odra::schema::SchemaEvents;
-use odra::schema::{casper_contract_schema::CustomType, SchemaCustomTypes, SchemaEntrypoints};
+use odra::schema::{SchemaCustomTypes, SchemaEntrypoints};
 use odra::{
     contract_def::HasIdent,
     host::{EntryPointsCallerProvider, HostEnv},
@@ -24,6 +24,7 @@ use odra::{
 mod args;
 mod cmd;
 mod container;
+mod custom_types;
 mod entry_point;
 #[cfg(test)]
 mod test_utils;
@@ -34,7 +35,12 @@ pub use cmd::scenario::{ScenarioArgs, ScenarioError};
 pub use container::DeployedContractsContainer;
 use scenario::{Scenario, ScenarioMetadata};
 
-use crate::args::ARG_CONTRACTS;
+use crate::cmd::contract::ContractsCmd;
+use crate::cmd::deploy::DeployCmd;
+use crate::cmd::events::PrintEventsCmd;
+use crate::cmd::main::MainCmd;
+use crate::cmd::scenario::ScenariosCmd;
+use crate::custom_types::{CustomTypeSet, CustomTypes};
 
 const CONTRACTS_SUBCOMMAND: &str = "contract";
 const SCENARIOS_SUBCOMMAND: &str = "scenario";
@@ -69,8 +75,6 @@ impl<T: OdraContract + Deployer<T> + 'static> DeployerExt for T {
     type Contract = T;
 }
 
-pub(crate) type CustomTypeSet = BTreeSet<CustomType>;
-
 pub mod scenario {
     //! Traits and structs for defining custom scenarios.
     //!
@@ -92,12 +96,12 @@ pub mod deploy {
 
 /// Command line interface for Odra smart contracts.
 pub struct OdraCli {
-    main_cmd: Command,
-    scenarios_cmd: Command,
-    contracts_cmd: Command,
-    print_events_cmd: Command,
-    commands: Vec<OdraCliCommand>,
-    custom_types: CustomTypeSet,
+    main_cmd: MainCmd,
+    deploy_cmd: Option<DeployCmd>,
+    contracts_cmd: ContractsCmd,
+    print_events_cmd: PrintEventsCmd,
+    scenarios_cmd: ScenariosCmd,
+    custom_types: CustomTypes,
     host_env: HostEnv,
     callers: HashMap<String, EntryPointsCaller>
 }
@@ -111,37 +115,21 @@ impl Default for OdraCli {
 impl OdraCli {
     /// Creates a new empty instance of the Odra CLI.
     pub fn new() -> Self {
-        let contracts_cmd = Command::new(CONTRACTS_SUBCOMMAND)
-            .about("Commands for interacting with contracts")
-            .subcommand_required(true)
-            .arg_required_else_help(true);
-        let scenarios_cmd = Command::new(SCENARIOS_SUBCOMMAND)
-            .about("Commands for running user-defined scenarios")
-            .subcommand_required(true)
-            .arg_required_else_help(true);
-        let print_events_cmd = Command::new(PRINT_EVENTS_SUBCOMMAND)
-            .about("Prints the most recent events emitted by a contract")
-            .arg_required_else_help(true)
-            .subcommand_required(true);
-        let main_cmd = Command::new("Odra CLI")
-            .subcommand_required(true)
-            .arg_required_else_help(true);
-
         Self {
-            main_cmd,
-            commands: vec![],
-            custom_types: CustomTypeSet::new(),
+            main_cmd: MainCmd::default(),
+            deploy_cmd: None,
+            contracts_cmd: ContractsCmd::default(),
+            print_events_cmd: PrintEventsCmd::default(),
+            scenarios_cmd: ScenariosCmd::default(),
             host_env: odra_casper_livenet_env::env(),
-            contracts_cmd,
-            scenarios_cmd,
-            print_events_cmd,
-            callers: HashMap::new()
+            custom_types: CustomTypes::default(),
+            callers: HashMap::default()
         }
     }
 
     /// Sets the description of the CLI
-    pub fn about(mut self, about: &str) -> Self {
-        self.main_cmd = self.main_cmd.about(about.to_string());
+    pub fn about(mut self, about: &'static str) -> Self {
+        self.main_cmd = self.main_cmd.about(about);
         self
     }
 
@@ -152,53 +140,13 @@ impl OdraCli {
     pub fn contract<T: SchemaEntrypoints + SchemaCustomTypes + SchemaEvents + OdraContract>(
         mut self
     ) -> Self {
-        let contract_name = T::HostRef::ident();
         self.callers.insert(
-            contract_name.clone(),
+            T::HostRef::ident(),
             T::HostRef::entry_points_caller(&self.host_env)
         );
-        self.custom_types
-            .extend(T::schema_types().into_iter().flatten());
-        self.custom_types
-            .extend(<T as SchemaEvents>::custom_types().into_iter().flatten());
-
-        // build entry points commands
-        let mut contract_cmd = Command::new(&contract_name)
-            .about(format!(
-                "Commands for interacting with the {} contract",
-                &contract_name
-            ))
-            .subcommand_required(true)
-            .arg_required_else_help(true);
-        let print_cmd = Command::new(&contract_name)
-            .about(format!("Print events of the {} contract", &contract_name))
-            .arg(args::number_arg("Number of events to print"));
-        for entry_point in T::schema_entrypoints() {
-            if entry_point.name == "init" {
-                continue;
-            }
-            let mut ep_cmd = Command::new(&entry_point.name)
-                .about(entry_point.description.clone().unwrap_or_default());
-            for arg in args::entry_point_args(&entry_point, &self.custom_types) {
-                ep_cmd = ep_cmd.arg(arg);
-            }
-            // For a payable entry point, a user can attach a value to the call.
-            ep_cmd = ep_cmd.arg(args::attached_value_arg());
-            // If the entry point is mutable, a transaction is being sent, so we need to
-            // provide the gas argument.
-            if entry_point.is_mutable {
-                ep_cmd = ep_cmd.arg(args::gas_arg()).arg(args::print_events_arg());
-            }
-            contract_cmd = contract_cmd.subcommand(ep_cmd);
-        }
-        self.contracts_cmd = self.contracts_cmd.subcommand(contract_cmd);
-        self.print_events_cmd = self.print_events_cmd.subcommand(print_cmd);
-
-        // store a command
-        self.commands
-            .push(OdraCliCommand::new_contract::<T>(contract_name.clone()));
-        self.commands
-            .push(OdraCliCommand::new_print_events(contract_name));
+        self.custom_types.register::<T>();
+        self.contracts_cmd.add_contract::<T>();
+        self.print_events_cmd.add_contract::<T>();
         self
     }
 
@@ -206,12 +154,9 @@ impl OdraCli {
     ///
     /// There is only one deploy script allowed in the CLI.
     pub fn deploy(mut self, script: impl DeployScript + 'static) -> Self {
-        // register a subcommand for the deploy script
-        self.main_cmd = self
-            .main_cmd
-            .subcommand(command!(DEPLOY_SUBCOMMAND).about("Runs the deploy script"));
-        // store a command
-        self.commands.push(OdraCliCommand::new_deploy(script));
+        let cmd = DeployCmd::new(script);
+        self.main_cmd = self.main_cmd.subcommand(&cmd);
+        self.deploy_cmd = Some(cmd);
         self
     }
 
@@ -221,52 +166,31 @@ impl OdraCli {
     /// is a complex set of commands that need to be run in a specific order, a
     /// scenario can be used to group them together.
     pub fn scenario<S: ScenarioMetadata + Scenario>(mut self, scenario: S) -> Self {
-        // register a subcommand for the scenario
-        let mut scenario_cmd = Command::new(S::NAME).about(S::DESCRIPTION);
-        let args = scenario
-            .args()
-            .into_iter()
-            .map(Into::into)
-            .collect::<Vec<Arg>>();
-        for arg in args {
-            scenario_cmd = scenario_cmd.arg(arg);
-        }
-
-        self.scenarios_cmd = self.scenarios_cmd.subcommand(scenario_cmd);
-
-        // store a command
-        self.commands.push(OdraCliCommand::new_scenario(scenario));
+        self.scenarios_cmd.add_scenario(scenario);
         self
     }
 
     /// Builds the CLI.
     pub fn build(mut self) -> Self {
-        self.main_cmd = self.main_cmd.subcommand(self.contracts_cmd.clone());
-        self.main_cmd = self.main_cmd.subcommand(self.scenarios_cmd.clone());
-        self.main_cmd = self.main_cmd.subcommand(self.print_events_cmd.clone());
-        self.main_cmd = self.main_cmd.arg(args::contracts_arg());
+        self.main_cmd = self.main_cmd.subcommand(&self.contracts_cmd);
+        self.main_cmd = self.main_cmd.subcommand(&self.scenarios_cmd);
+        self.main_cmd = self.main_cmd.subcommand(&self.print_events_cmd);
         self
     }
 
     /// Runs the CLI and parses the input.
     pub fn run(self) {
-        let matches = match self.main_cmd.try_get_matches() {
-            Ok(matches) => matches,
-            Err(err) => {
-                println!("{}", err);
-                std::process::exit(0);
-            }
-        };
-        // Check if the user provided a custom contracts path.
-        let path = args::read(&matches, ARG_CONTRACTS, PathBuf::from_str).ok();
+        let (cmd, args, contracts_path) = self.main_cmd.get_matches();
+
         // Init contracts container with the provided path or default to the resources directory.
-        let container = match DeployedContractsContainer::new(path.clone()) {
+        let container = match DeployedContractsContainer::new(contracts_path.clone()) {
             Ok(c) => c,
             Err(e) => {
                 prettycli::error(&format!("Container error: {e}"));
                 return;
             }
         };
+
         // Register the contracts from the container in the host environment.
         for (name, address) in container.contracts() {
             let caller = self
@@ -277,66 +201,34 @@ impl OdraCli {
             self.host_env.register_contract(address, name, caller);
         }
 
-        let result = matches.subcommand();
-
-        let (cmd, args) = match result {
-            Some((cmd, args)) => (cmd, args),
-            None => {
-                prettycli::error("No subcommand provided. Use --help to see available commands.");
-                std::process::exit(1);
-            }
-        };
-
-        let (cmd, args) = match cmd {
-            DEPLOY_SUBCOMMAND => (
-                find_cmd_by_type(&self.commands, DEPLOY_SUBCOMMAND, ""),
-                args
+        let result = match cmd.as_str() {
+            DEPLOY_SUBCOMMAND => self.run_command(
+                self.deploy_cmd.as_ref().unwrap_or_else(|| {
+                    panic!("Deploy command not found. Did you forget to add it?")
+                }),
+                args,
+                contracts_path
             ),
-            _ => {
-                let (name, ep_matches) = args
-                    .subcommand()
-                    .unwrap_or_else(|| panic!("No {} subcommand found", cmd));
-                (find_cmd_by_type(&self.commands, cmd, name), ep_matches)
+            CONTRACTS_SUBCOMMAND => self.run_command(&self.contracts_cmd, args, contracts_path),
+            PRINT_EVENTS_SUBCOMMAND => {
+                self.run_command(&self.print_events_cmd, args, contracts_path)
             }
+            SCENARIOS_SUBCOMMAND => self.run_command(&self.scenarios_cmd, args, contracts_path),
+            _ => unreachable!()
         };
 
-        match cmd.run(&self.host_env, args, &self.custom_types, path) {
+        match result {
             Ok(_) => prettycli::info("Command executed successfully"),
             Err(err) => prettycli::error(&format!("{:?}", err))
         }
     }
-}
 
-fn find_cmd_by_type<'a>(
-    commands: &'a [OdraCliCommand],
-    ty: &str,
-    name: &str
-) -> &'a OdraCliCommand {
-    commands
-        .iter()
-        .find(|cmd| match cmd {
-            OdraCliCommand::Deploy(_) if ty == DEPLOY_SUBCOMMAND => true,
-            OdraCliCommand::Scenario(scenario)
-                if ty == SCENARIOS_SUBCOMMAND && scenario.name() == name =>
-            {
-                true
-            }
-            OdraCliCommand::Contract(contract)
-                if ty == CONTRACTS_SUBCOMMAND && contract.name() == name =>
-            {
-                true
-            }
-            OdraCliCommand::PrintEvents(cmd)
-                if ty == PRINT_EVENTS_SUBCOMMAND && cmd.name() == name =>
-            {
-                true
-            }
-            _ => false
-        })
-        .unwrap_or_else(|| {
-            panic!(
-                "Command for '{}' with type '{}' not found. Make sure the command is registered.",
-                name, ty
-            )
-        })
+    fn run_command<T: OdraCommand>(
+        &self,
+        cmd: &T,
+        args: ArgMatches,
+        contracts_path: Option<PathBuf>
+    ) -> Result<()> {
+        cmd.run(&self.host_env, &args, &self.custom_types, contracts_path)
+    }
 }

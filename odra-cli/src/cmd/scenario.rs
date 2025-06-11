@@ -1,11 +1,12 @@
 use std::path::PathBuf;
 use std::{any::Any, collections::HashMap};
 
+use crate::SCENARIOS_SUBCOMMAND;
 use crate::{
     args::CommandArg, container::ContractError, types, CustomTypeSet, DeployedContractsContainer
 };
 use anyhow::Result;
-use clap::ArgMatches;
+use clap::{ArgMatches, Command};
 use odra::schema::NamedCLTyped;
 use odra::{casper_types::bytesrepr::FromBytes, host::HostEnv, prelude::OdraError};
 use thiserror::Error;
@@ -29,11 +30,53 @@ pub trait Scenario: Any {
     ) -> core::result::Result<(), ScenarioError>;
 }
 
+#[derive(Default)]
+pub(crate) struct ScenariosCmd {
+    scenarios: Vec<ScenarioCmd>
+}
+
+impl ScenariosCmd {
+    pub fn add_scenario<S: ScenarioMetadata + Scenario>(&mut self, scenario: S) {
+        self.scenarios.push(ScenarioCmd::new(scenario));
+    }
+}
+
+impl OdraCommand for ScenariosCmd {
+    fn run(
+        &self,
+        env: &HostEnv,
+        args: &ArgMatches,
+        types: &CustomTypeSet,
+        contracts_path: Option<PathBuf>
+    ) -> Result<()> {
+        args.subcommand()
+            .map(|(scenario_name, scenario_args)| {
+                self.scenarios
+                    .iter()
+                    .find(|cmd| cmd.name == scenario_name)
+                    .map(|scenario| scenario.run(env, scenario_args, types, contracts_path))
+                    .unwrap_or(Err(anyhow::anyhow!("No scenario found")))
+            })
+            .unwrap_or(Err(anyhow::anyhow!("No scenario found")))
+    }
+}
+
+impl From<&ScenariosCmd> for Command {
+    fn from(value: &ScenariosCmd) -> Self {
+        Command::new(SCENARIOS_SUBCOMMAND)
+            .about("Commands for interacting with scenarios")
+            .subcommand_required(true)
+            .arg_required_else_help(true)
+            .subcommands(&value.scenarios)
+    }
+}
+
 /// ScenarioCmd is a struct that represents a scenario command in the Odra CLI.
 ///
 /// The scenario command runs a [Scenario]. A scenario is a user-defined set of actions that can be run in the Odra CLI.
 pub(crate) struct ScenarioCmd {
     name: String,
+    description: String,
     scenario: Box<dyn Scenario>
 }
 
@@ -41,16 +84,13 @@ impl ScenarioCmd {
     pub fn new<S: ScenarioMetadata + Scenario>(scenario: S) -> Self {
         ScenarioCmd {
             name: S::NAME.to_string(),
+            description: S::DESCRIPTION.to_string(),
             scenario: Box::new(scenario)
         }
     }
 }
 
 impl OdraCommand for ScenarioCmd {
-    fn name(&self) -> &str {
-        &self.name
-    }
-
     fn run(
         &self,
         env: &HostEnv,
@@ -63,6 +103,14 @@ impl OdraCommand for ScenarioCmd {
 
         self.scenario.run(env, container, args)?;
         Ok(())
+    }
+}
+
+impl From<&ScenarioCmd> for Command {
+    fn from(value: &ScenarioCmd) -> Self {
+        Command::new(&value.name)
+            .about(&value.description)
+            .args(value.scenario.args())
     }
 }
 

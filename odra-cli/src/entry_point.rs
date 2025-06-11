@@ -7,6 +7,7 @@ use odra::schema::casper_contract_schema::{Entrypoint, NamedCLType};
 use odra::VmError;
 use odra::{casper_types::U512, host::HostEnv, CallDef};
 
+use crate::cmd::args::read_arg;
 use crate::{
     args::{self, ARG_ATTACHED_VALUE, ARG_GAS},
     container, types, CustomTypeSet, DeployedContractsContainer
@@ -27,7 +28,14 @@ pub enum CallError {
     #[error("Contract not found")]
     ContractNotFound,
     #[error(transparent)]
-    ContractError(#[from] container::ContractError)
+    ContractError(#[from] container::ContractError),
+    #[error("Entry point '{entry_point}' not found in contract '{contract_name}'")]
+    EntryPointNotFound {
+        entry_point: String,
+        contract_name: String
+    },
+    #[error("No entry point found in contract '{contract_name}'")]
+    NoEntryPointFound { contract_name: String }
 }
 
 pub fn call(
@@ -39,7 +47,7 @@ pub fn call(
     contracts_path: Option<PathBuf>
 ) -> Result<String, CallError> {
     let container = DeployedContractsContainer::load(contracts_path)?;
-    let amount = args::read(args, ARG_ATTACHED_VALUE, U512::from_dec_str)?;
+    let amount = read_arg(args, ARG_ATTACHED_VALUE, U512::from_dec_str)?;
 
     let runtime_args = args::compose(entry_point, args, types)?;
     let contract_address = container
@@ -53,11 +61,15 @@ pub fn call(
     let use_proxy = ty.0 != NamedCLType::Unit || !call_def.amount().is_zero();
 
     if is_mut {
-        let gas = args::read(args, ARG_GAS, FromStr::from_str)?;
+        let gas = read_arg(args, ARG_GAS, FromStr::from_str)?;
         env.set_gas(gas);
     }
 
-    let print_events = args.get_flag("print-events");
+    let print_events = if is_mut {
+        args.get_flag("print-events")
+    } else {
+        false
+    };
     if print_events {
         prettycli::info("Syncing events for the call...");
     }

@@ -4,7 +4,7 @@ use crate::{
     container::ContractError, CustomTypeSet, DeployedContractsContainer, DEPLOY_SUBCOMMAND
 };
 use anyhow::Result;
-use clap::ArgMatches;
+use clap::{ArgMatches, Command};
 use odra::{host::HostEnv, prelude::OdraError};
 use thiserror::Error;
 
@@ -17,11 +17,16 @@ pub(crate) struct DeployCmd {
     pub script: Box<dyn DeployScript>
 }
 
-impl OdraCommand for DeployCmd {
-    fn name(&self) -> &str {
-        DEPLOY_SUBCOMMAND
+impl DeployCmd {
+    /// Creates a new instance of `DeployCmd` with the provided script.
+    pub fn new(script: impl DeployScript + 'static) -> Self {
+        DeployCmd {
+            script: Box::new(script)
+        }
     }
+}
 
+impl OdraCommand for DeployCmd {
     fn run(
         &self,
         env: &HostEnv,
@@ -32,6 +37,14 @@ impl OdraCommand for DeployCmd {
         let mut container = DeployedContractsContainer::new(contracts_path)?;
         self.script.deploy(env, &mut container)?;
         Ok(())
+    }
+}
+
+impl From<&DeployCmd> for Command {
+    fn from(_value: &DeployCmd) -> Self {
+        Command::new(DEPLOY_SUBCOMMAND)
+            .about("Runs the deploy script")
+            .arg_required_else_help(true)
     }
 }
 

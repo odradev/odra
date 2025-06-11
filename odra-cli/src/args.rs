@@ -39,15 +39,27 @@ impl CommandArg {
         name: &str,
         description: &str,
         ty: NamedCLType,
-        required: bool,
-        is_list_element: bool
     ) -> Self {
         Self {
             name: name.to_string(),
-            required,
             description: description.to_string(),
             ty,
-            is_list_element
+            required: false,
+            is_list_element: false
+        }
+    }
+
+    pub fn required(self) -> Self {
+        Self {
+            required: true,
+            ..self
+        }
+    }
+
+    pub fn list(self) -> Self {
+        Self {
+            is_list_element: true,
+            ..self
         }
     }
 }
@@ -67,13 +79,12 @@ impl From<CommandArg> for Arg {
     }
 }
 
-pub fn entry_point_args(entry_point: &Entrypoint, types: &CustomTypeSet) -> Vec<Arg> {
+pub fn entry_point_args(entry_point: &Entrypoint, types: &CustomTypeSet) -> Vec<CommandArg> {
     entry_point
         .arguments
         .iter()
         .flat_map(|arg| flat_arg(arg, types, false))
         .flatten()
-        .map(Into::into)
         .collect()
 }
 
@@ -135,13 +146,20 @@ fn flat_arg(
             };
             flat_arg(&arg, types, true)
         }
-        _ => Ok(vec![CommandArg::new(
-            &arg.name,
-            &arg.description.clone().unwrap_or_default(),
-            arg.ty.0.clone(),
-            !arg.optional,
-            is_list_element
-        )])
+        _ => {
+            let mut ca= CommandArg::new(
+                &arg.name,
+                &arg.description.clone().unwrap_or_default(),
+                arg.ty.0.clone()
+            );
+            if !arg.optional {
+                ca = ca.required();
+            }
+            if is_list_element {
+                ca = ca.list();
+            }
+            Ok(vec![ca])
+    }
     }
 }
 
@@ -353,63 +371,6 @@ fn to_json(str: &str) -> Result<String, ArgsError> {
         Value::from_str(str).map_err(|_| ArgsError::DecodingError("Invalid JSON".to_string()))?;
     serde_json::to_string_pretty(&json)
         .map_err(|_| ArgsError::DecodingError("Invalid JSON".to_string()))
-}
-
-pub fn attached_value_arg() -> Arg {
-    Arg::new(ARG_ATTACHED_VALUE)
-        .help("The amount of CSPRs attached to the call")
-        .long(ARG_ATTACHED_VALUE)
-        .required(false)
-        .value_name(format!("{:?}", NamedCLType::U512))
-        .action(ArgAction::Set)
-}
-
-pub fn gas_arg() -> Arg {
-    Arg::new(ARG_GAS)
-        .help("The amount of gas to attach to the call")
-        .long(ARG_GAS)
-        .required(true)
-        .value_name(format!("{:?}", NamedCLType::U64))
-        .action(ArgAction::Set)
-}
-
-pub fn contracts_arg() -> Arg {
-    Arg::new(ARG_CONTRACTS)
-        .help("The path to the file with the deployed contracts. Relative to the project root.")
-        .long(ARG_CONTRACTS)
-        .short('c')
-        .required(false)
-        .value_name(format!("{:?}", NamedCLType::String))
-        .action(ArgAction::Set)
-}
-
-pub fn number_arg(description: &'static str) -> Arg {
-    Arg::new("n")
-        .short('n')
-        .long("number")
-        .value_name("N")
-        .default_value("10")
-        .help(description)
-}
-
-pub fn print_events_arg() -> Arg {
-    Arg::new("print-events")
-        .long("print-events")
-        .short('p')
-        .help("Print events emitted by the contract")
-        .action(ArgAction::SetTrue)
-}
-
-pub fn read<T: Default, E, F: FnOnce(&str) -> Result<T, E>>(
-    args: &ArgMatches,
-    name: &str,
-    f: F
-) -> Result<T, types::Error> {
-    args.try_get_one::<String>(name)
-        .ok()
-        .flatten()
-        .map(|s| f(s).map_err(|_| types::Error::Serialization))
-        .unwrap_or(Ok(T::default()))
 }
 
 #[cfg(test)]
