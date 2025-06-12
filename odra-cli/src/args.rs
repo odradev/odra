@@ -8,10 +8,6 @@ use thiserror::Error;
 
 use crate::{types, CustomTypeSet};
 
-pub const ARG_ATTACHED_VALUE: &str = "attached_value";
-pub const ARG_GAS: &str = "gas";
-pub const ARG_CONTRACTS: &str = "contracts-toml";
-
 #[derive(Debug, Error)]
 pub enum ArgsError {
     #[error("Invalid arg value: {0}")]
@@ -35,11 +31,7 @@ pub struct CommandArg {
 }
 
 impl CommandArg {
-    pub fn new(
-        name: &str,
-        description: &str,
-        ty: NamedCLType,
-    ) -> Self {
+    pub fn new(name: &str, description: &str, ty: NamedCLType) -> Self {
         Self {
             name: name.to_string(),
             description: description.to_string(),
@@ -147,7 +139,7 @@ fn flat_arg(
             flat_arg(&arg, types, true)
         }
         _ => {
-            let mut ca= CommandArg::new(
+            let mut ca = CommandArg::new(
                 &arg.name,
                 &arg.description.clone().unwrap_or_default(),
                 arg.ty.0.clone()
@@ -159,7 +151,7 @@ fn flat_arg(
                 ca = ca.list();
             }
             Ok(vec![ca])
-    }
+        }
     }
 }
 

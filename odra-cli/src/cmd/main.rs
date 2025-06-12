@@ -1,7 +1,4 @@
-use crate::{
-    args::ARG_CONTRACTS,
-    cmd::args::{read_arg, Arg}
-};
+use crate::cmd::args::{read_arg, Arg, ARG_CONTRACTS};
 use clap::{ArgMatches, Command};
 use std::{path::PathBuf, str::FromStr};
 

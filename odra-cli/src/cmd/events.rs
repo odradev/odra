@@ -1,8 +1,9 @@
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use crate::{
     args::ArgsError,
-    cmd::args::{read_arg, Arg},
+    cmd::args::{read_arg, Arg, ARG_NUMBER},
     container, types, CustomTypeSet, DeployedContractsContainer, OdraCommand,
     PRINT_EVENTS_SUBCOMMAND
 };
@@ -93,7 +94,7 @@ impl OdraCommand for PrintContractEventsCmd {
         // Max number of events to print is read from the arguments, defaulting to 10.
         // If the number exceeds the total number of events, it is capped.
         // If no number is provided, it defaults to the total number of events.
-        let max_events = read_arg(args, "n", |s| s.parse()).unwrap_or(events_count);
+        let max_events = read_arg(args, ARG_NUMBER, u32::from_str).unwrap_or(events_count);
         let max_events = max_events.min(events_count);
 
         prettycli::info(&format!(

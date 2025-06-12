@@ -32,25 +32,21 @@ pub fn mock_entry_point() -> Entrypoint {
 pub fn mock_command_args() -> Vec<CommandArg> {
     vec![
         CommandArg::new("voucher.payment.buyer", "", NamedCLType::Key).required(),
-        CommandArg::new(
-            "voucher.payment.payment_id",
-            "",
-            NamedCLType::String,
-        ).required(),
+        CommandArg::new("voucher.payment.payment_id", "", NamedCLType::String).required(),
         CommandArg::new("voucher.payment.amount", "", NamedCLType::U512).required(),
-        CommandArg::new("voucher.names.label", "", NamedCLType::String).required().list(),
-        CommandArg::new("voucher.names.owner", "", NamedCLType::Key).required().list(),
-        CommandArg::new(
-            "voucher.names.token_expiration",
-            "",
-            NamedCLType::U64,
-        ).required().list(),
-        CommandArg::new(
-            "voucher.voucher_expiration",
-            "",
-            NamedCLType::U64,
-        ).required(),
-        CommandArg::new("signature", "", NamedCLType::U8).required().list(),
+        CommandArg::new("voucher.names.label", "", NamedCLType::String)
+            .required()
+            .list(),
+        CommandArg::new("voucher.names.owner", "", NamedCLType::Key)
+            .required()
+            .list(),
+        CommandArg::new("voucher.names.token_expiration", "", NamedCLType::U64)
+            .required()
+            .list(),
+        CommandArg::new("voucher.voucher_expiration", "", NamedCLType::U64).required(),
+        CommandArg::new("signature", "", NamedCLType::U8)
+            .required()
+            .list(),
     ]
 }
 

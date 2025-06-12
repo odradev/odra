@@ -7,11 +7,8 @@ use odra::schema::casper_contract_schema::{Entrypoint, NamedCLType};
 use odra::VmError;
 use odra::{casper_types::U512, host::HostEnv, CallDef};
 
-use crate::cmd::args::read_arg;
-use crate::{
-    args::{self, ARG_ATTACHED_VALUE, ARG_GAS},
-    container, types, CustomTypeSet, DeployedContractsContainer
-};
+use crate::cmd::args::{read_arg, ARG_GAS, ARG_PRINT_EVENTS};
+use crate::{args, container, types, CustomTypeSet, DeployedContractsContainer};
 
 #[derive(Debug, thiserror::Error)]
 pub enum CallError {
@@ -47,7 +44,7 @@ pub fn call(
     contracts_path: Option<PathBuf>
 ) -> Result<String, CallError> {
     let container = DeployedContractsContainer::load(contracts_path)?;
-    let amount = read_arg(args, ARG_ATTACHED_VALUE, U512::from_dec_str)?;
+    let amount = read_arg(args, ARG_PRINT_EVENTS, U512::from_dec_str)?;
 
     let runtime_args = args::compose(entry_point, args, types)?;
     let contract_address = container
@@ -66,7 +63,7 @@ pub fn call(
     }
 
     let print_events = if is_mut {
-        args.get_flag("print-events")
+        args.get_flag(ARG_PRINT_EVENTS)
     } else {
         false
     };

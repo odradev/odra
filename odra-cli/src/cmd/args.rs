@@ -1,10 +1,12 @@
+use crate::types;
 use clap::{ArgAction, ArgMatches};
 use odra::schema::casper_contract_schema::NamedCLType;
 
-use crate::{
-    args::{ARG_ATTACHED_VALUE, ARG_CONTRACTS, ARG_GAS},
-    types
-};
+pub const ARG_ATTACHED_VALUE: &str = "attached_value";
+pub const ARG_GAS: &str = "gas";
+pub const ARG_CONTRACTS: &str = "contracts-toml";
+pub const ARG_PRINT_EVENTS: &str = "print-events";
+pub const ARG_NUMBER: &str = "number";
 
 pub enum Arg {
     AttachedValue,
@@ -55,17 +57,17 @@ fn arg_contracts() -> clap::Arg {
 }
 
 fn arg_number(description: String) -> clap::Arg {
-    clap::Arg::new("n")
+    clap::Arg::new(ARG_NUMBER)
         .short('n')
-        .long("number")
+        .long(ARG_NUMBER)
         .value_name("N")
         .default_value("10")
         .help(description)
 }
 
 fn arg_print_events() -> clap::Arg {
-    clap::Arg::new("print-events")
-        .long("print-events")
+    clap::Arg::new(ARG_PRINT_EVENTS)
+        .long(ARG_PRINT_EVENTS)
         .short('p')
         .help("Print events emitted by the contract")
         .action(ArgAction::SetTrue)
@@ -79,9 +81,6 @@ pub fn read_arg<T: Default, E, F: FnOnce(&str) -> Result<T, E>>(
     args.try_get_one::<String>(name)
         .ok()
         .flatten()
-        .map(|s| {
-            println!("Reading argument `{}`: {}", name, s);
-            f(s).map_err(|_| types::Error::Serialization)
-        })
+        .map(|s| f(s).map_err(|_| types::Error::Serialization))
         .unwrap_or(Ok(T::default()))
 }

@@ -38,9 +38,7 @@ impl Scenario for DogCheckScenario {
         vec![CommandArg::new(
             "name",
             "The name of the dog",
-            NamedCLType::String,
-            false,
-            false
+            NamedCLType::String
         )]
     }
 
