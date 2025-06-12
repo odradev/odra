@@ -46,6 +46,7 @@ use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::prelude::*;
 use odra_core::EventError;
 use odra_core::VmError;
+use odra_core::CASPER_ERROR_GENERIC_NAME;
 use odra_core::{
     host::{HostContext, HostEnv},
     CallDef, ContractEnv
@@ -904,7 +905,8 @@ fn parse_error(err: engine_state::Error) -> OdraError {
                 x if x == ExecutionError::MissingArg.code() => {
                     OdraError::ExecutionError(ExecutionError::MissingArg)
                 }
-                _ => OdraError::ExecutionError(ExecutionError::User(code))
+                // The exact error name is not known, so we return a generic error.
+                _ => OdraError::user(code, CASPER_ERROR_GENERIC_NAME)
             },
             execution::ExecError::InvalidContext => OdraError::VmError(VmError::InvalidContext),
             execution::ExecError::NoSuchMethod(name) => {

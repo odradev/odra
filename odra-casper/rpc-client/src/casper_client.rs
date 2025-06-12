@@ -818,19 +818,18 @@ impl CasperClient {
             ExecutionResult::V2(r) => match r.error_message {
                 None => {
                     log::info(format!(
-                        "Transaction {:?} successfully executed. {}",
+                        "Transaction {:?} successfully executed.",
                         &deploy_hash_str,
-                        self.configuration.transaction_url(&deploy_hash_str)
                     ));
+                    log::link(self.configuration.transaction_url(&deploy_hash_str));
                     Ok(())
                 }
                 Some(error_message) => {
                     log::error(format!(
-                        "Transaction {:?} failed with error: {:?}. {}",
-                        deploy_hash_str,
-                        error_message,
-                        self.configuration.transaction_url(&deploy_hash_str)
+                        "Transaction {:?} failed with error: {:?}.",
+                        deploy_hash_str, error_message,
                     ));
+                    log::link(self.configuration.transaction_url(&deploy_hash_str));
                     Err(ExecutionError(error_message.to_string()))
                 }
             }

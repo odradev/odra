@@ -6,6 +6,12 @@ use crate::arithmetic::ArithmeticsError;
 use crate::prelude::*;
 use crate::VmError::Serialization;
 
+/// The name of the generic Casper error used in Odra framework.
+/// When we get an error from the Casper VM, we use this name to represent it,
+/// because the Casper VM does not provide a specific error name, but the code
+/// only.
+pub const CASPER_ERROR_GENERIC_NAME: &str = "CasperExecError";
+
 /// General error type in Odra framework
 #[repr(u16)]
 #[derive(Clone, Debug, PartialEq)]
@@ -25,12 +31,27 @@ impl OdraError {
         }
     }
 
+    #[cfg(target_arch = "wasm32")]
     /// Creates a new user error with a given code.
     pub fn user(code: u16) -> Self {
         if code >= ExecutionError::UserErrorTooHigh.code() {
             ExecutionError::UserErrorTooHigh.into()
         } else {
             ExecutionError::User(code).into()
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    /// Creates a new user error with a given code.
+    pub fn user(code: u16, msg: &str) -> Self {
+        if code >= ExecutionError::UserErrorTooHigh.code() {
+            ExecutionError::UserErrorTooHigh.into()
+        } else {
+            ExecutionError::User(UserError {
+                code,
+                message: msg.to_string()
+            })
+            .into()
         }
     }
 }
@@ -81,7 +102,7 @@ impl From<casper_types::bytesrepr::Error> for ExecutionError {
 ///
 /// The rest of codes 32769..[u16::MAX](u16::MAX), are used internally by the framework.
 #[repr(u16)]
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ExecutionError {
     /// Unwrap error.
     UnwrapError = 1,
@@ -150,7 +171,29 @@ pub enum ExecutionError {
     /// User error too high. The code should be in range 0..32767.
     UserErrorTooHigh = 64536,
     /// User error
-    User(u16)
+    #[cfg(target_arch = "wasm32")]
+    User(u16),
+    #[cfg(not(target_arch = "wasm32"))]
+    /// User error
+    User(UserError)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Debug, Clone)]
+pub struct UserError {
+    code: u16,
+    message: String
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl PartialEq for UserError {
+    fn eq(&self, other: &Self) -> bool {
+        if self.message == CASPER_ERROR_GENERIC_NAME || other.message == CASPER_ERROR_GENERIC_NAME {
+            return self.code == other.code;
+        }
+        // Compare both code and message for equality
+        self.code == other.code && self.message == other.message
+    }
 }
 
 impl ExecutionError {
@@ -158,7 +201,10 @@ impl ExecutionError {
     pub fn code(&self) -> u16 {
         unsafe {
             match self {
+                #[cfg(target_arch = "wasm32")]
                 ExecutionError::User(code) => *code,
+                #[cfg(not(target_arch = "wasm32"))]
+                ExecutionError::User(UserError { code, .. }) => *code,
                 ExecutionError::MaxUserError => 64535,
                 ExecutionError::UserErrorTooHigh => 64536,
                 _ => ExecutionError::UserErrorTooHigh.code() + *(self as *const Self as *const u16)
