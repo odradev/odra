@@ -1,8 +1,15 @@
-use odra::schema::{
-    casper_contract_schema::{Access, Argument, Entrypoint, NamedCLType, Type},
-    SchemaCustomTypes
+#![allow(unused_variables)]
+use odra::{
+    casper_types::{bytesrepr::Bytes, PublicKey, RuntimeArgs, U512},
+    entry_point_callback::EntryPointsCaller,
+    host::{HostContext, HostEnv},
+    prelude::*,
+    schema::{
+        casper_contract_schema::{Access, Argument, Entrypoint, NamedCLType, Type},
+        SchemaCustomTypes
+    },
+    CallDef, EventError, GasReport
 };
-use odra::{casper_types::U512, prelude::Address};
 
 use crate::{CommandArg, CustomTypeSet};
 
@@ -112,4 +119,177 @@ impl NameMintInfo {
             token_expiration
         }
     }
+}
+
+#[odra::module]
+pub struct TestContract;
+
+#[odra::module]
+impl TestContract {
+    pub fn add(&self, x: u64, y: u64) -> u64 {
+        x + y
+    }
+
+    pub fn echo(&self, message: String) -> String {
+        message
+    }
+
+    pub fn mutable(&mut self) {}
+}
+
+struct DummyHostCtx;
+
+impl HostContext for DummyHostCtx {
+    #[doc = " Sets the caller address for the current contract execution."]
+    fn set_caller(&self, caller: Address) {
+        todo!()
+    }
+
+    #[doc = " Sets the gas limit for the current contract execution."]
+    fn set_gas(&self, gas: u64) {
+        todo!()
+    }
+
+    #[doc = " Returns the caller address for the current contract execution."]
+    fn caller(&self) -> Address {
+        todo!()
+    }
+
+    #[doc = " Returns the account address at the specified index."]
+    fn get_account(&self, index: usize) -> Address {
+        todo!()
+    }
+
+    #[doc = " Returns the validator public key."]
+    fn get_validator(&self, index: usize) -> PublicKey {
+        todo!()
+    }
+
+    #[doc = " The validator at the given index will withdraw all funds and be removed from the validator set."]
+    fn remove_validator(&self, index: usize) {
+        todo!()
+    }
+
+    #[doc = " Returns the CSPR balance of the specified address."]
+    fn balance_of(&self, address: &Address) -> U512 {
+        todo!()
+    }
+
+    #[doc = " Advances the block time by the specified time difference."]
+    fn advance_block_time(&self, time_diff: u64) {
+        todo!()
+    }
+
+    #[doc = " Advances the block time by the specified time difference and processes auctions."]
+    fn advance_with_auctions(&self, time_diff: u64) {
+        todo!()
+    }
+
+    #[doc = " Time between auctions in milliseconds."]
+    fn auction_delay(&self) -> u64 {
+        todo!()
+    }
+
+    #[doc = " Time for the funds to be transferred back to the delegator after undelegation in milliseconds."]
+    fn unbonding_delay(&self) -> u64 {
+        todo!()
+    }
+
+    #[doc = " Returns the delegated amount for the specified delegator and validator."]
+    fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
+        todo!()
+    }
+
+    #[doc = " Returns the current block time."]
+    fn block_time(&self) -> u64 {
+        todo!()
+    }
+
+    #[doc = " Returns the event bytes for the specified contract address and index."]
+    fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
+        todo!()
+    }
+
+    #[doc = " Returns the native event bytes for the specified contract address and index."]
+    fn get_native_event(
+        &self,
+        contract_address: &Address,
+        index: u32
+    ) -> Result<Bytes, EventError> {
+        todo!()
+    }
+
+    #[doc = " Returns the number of emitted events for the specified contract address."]
+    fn get_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
+        todo!()
+    }
+
+    #[doc = " Returns the number of emitted native events for the specified contract address."]
+    fn get_native_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
+        todo!()
+    }
+
+    #[doc = " Calls a contract at the specified address with the given call definition."]
+    fn call_contract(
+        &self,
+        address: &Address,
+        call_def: CallDef,
+        use_proxy: bool
+    ) -> OdraResult<Bytes> {
+        todo!()
+    }
+
+    #[doc = " Creates a new contract with the specified name, initialization arguments, and entry points caller."]
+    fn new_contract(
+        &self,
+        name: &str,
+        init_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCaller
+    ) -> OdraResult<Address> {
+        todo!()
+    }
+
+    #[doc = " Registers an existing contract with the specified address, name, and entry points caller."]
+    fn register_contract(
+        &self,
+        address: Address,
+        contract_name: String,
+        entry_points_caller: EntryPointsCaller
+    ) {
+        todo!()
+    }
+
+    #[doc = " Returns the contract environment."]
+    fn contract_env(&self) -> ContractEnv {
+        todo!()
+    }
+
+    #[doc = " Returns the gas report for the current contract execution."]
+    fn gas_report(&self) -> GasReport {
+        todo!()
+    }
+
+    #[doc = " Returns the gas cost of the last contract call."]
+    fn last_call_gas_cost(&self) -> u64 {
+        todo!()
+    }
+
+    #[doc = " Signs the specified message with the given address and returns the signature."]
+    fn sign_message(&self, message: &Bytes, address: &Address) -> Bytes {
+        todo!()
+    }
+
+    #[doc = " Returns the public key associated with the specified address."]
+    fn public_key(&self, address: &Address) -> PublicKey {
+        todo!()
+    }
+
+    #[doc = " Transfers the specified amount of CSPR from the current caller to the specified address."]
+    fn transfer(&self, to: Address, amount: U512) -> OdraResult<()> {
+        todo!()
+    }
+}
+
+pub fn mock_host_env() -> HostEnv {
+    HostEnv::new(Rc::new(RefCell::new(DummyHostCtx)))
 }

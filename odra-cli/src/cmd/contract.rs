@@ -9,7 +9,6 @@ use odra::OdraContract;
 use odra::{contract_def::HasIdent, host::HostEnv};
 
 use crate::cmd::args::Arg;
-use crate::entry_point::CallError;
 use crate::{args, entry_point, CustomTypeSet, CONTRACTS_SUBCOMMAND};
 
 use super::OdraCommand;
@@ -94,13 +93,13 @@ impl OdraCommand for ContractCmd {
                     .iter()
                     .find(|cmd| cmd.entry_point.name == entrypoint_name)
                     .map(|entry_point| entry_point.run(env, entrypoint_args, types, contracts_path))
-                    .unwrap_or(Err(CallError::EntryPointNotFound {
+                    .unwrap_or(Err(entry_point::CallError::EntryPointNotFound {
                         entry_point: entrypoint_name.to_string(),
                         contract_name: self.name.clone()
                     }
                     .into()))
             })
-            .unwrap_or(Err(CallError::NoEntryPointFound {
+            .unwrap_or(Err(entry_point::CallError::NoEntryPointFound {
                 contract_name: self.name.clone()
             }
             .into()))
@@ -145,6 +144,7 @@ impl CallCmd {
 }
 
 impl OdraCommand for CallCmd {
+    #[cfg(not(test))]
     fn run(
         &self,
         env: &HostEnv,
@@ -158,6 +158,27 @@ impl OdraCommand for CallCmd {
         let result =
             entry_point::call(env, contract_name, entry_point, args, types, contracts_path)?;
         prettycli::info(&result);
+        Ok(())
+    }
+
+    #[cfg(test)]
+    fn run(
+        &self,
+        _env: &HostEnv,
+        args: &ArgMatches,
+        _types: &CustomTypeSet,
+        _contracts_path: Option<PathBuf>
+    ) -> Result<()> {
+        for a in &self.entry_point.arguments {
+            if !args.contains_id(&a.name) {
+                return Err(entry_point::CallError::ExecutionError {
+                    contract_name: self.contract_name.clone(),
+                    method: self.entry_point.name.clone(),
+                    message: format!("Missing required argument: {}", a.name)
+                }
+                .into());
+            }
+        }
         Ok(())
     }
 }
@@ -177,5 +198,132 @@ impl From<&CallCmd> for Command {
             cmd = cmd.arg(Arg::Gas).arg(Arg::PrintEvents);
         }
         cmd
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::test_utils::{self, TestContract};
+
+    use super::*;
+
+    #[test]
+    fn test_contracts_cmd() {
+        let mut cmd = ContractsCmd::default();
+        cmd.add_contract::<TestContract>();
+
+        assert_eq!(cmd.contracts.len(), 1);
+        assert_eq!(cmd.contracts[0].name, "TestContract");
+
+        let clap_cmd: Command = (&cmd).into();
+        assert_eq!(clap_cmd.get_name(), CONTRACTS_SUBCOMMAND);
+        assert!(clap_cmd.get_subcommands().any(|c| c.get_name() == "TestContract"));
+    }
+
+    #[test]
+    fn test_contract_cmd() {
+        let cmd = ContractCmd::new::<TestContract>();
+
+        assert_eq!(cmd.name, "TestContract");
+        assert_eq!(cmd.entry_points.len(), 3);
+    }
+
+    #[test]
+    fn parsing_fails_if_entry_point_missing() {
+        let cmd = ContractCmd::new::<TestContract>();
+
+        let clap_cmd: Command = (&cmd).into();
+        let result = clap_cmd.try_get_matches_from(vec!["test"]);
+        assert_eq!(
+            result.unwrap_err().kind(),
+            clap::error::ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand
+        );
+    }
+
+    #[test]
+    fn parsing_fails_if_invalid_entry_point() {
+        let cmd = ContractCmd::new::<TestContract>();
+
+        let clap_cmd: Command = (&cmd).into();
+        let result = clap_cmd.try_get_matches_from(vec!["test", "sub"]);
+        assert_eq!(
+            result.unwrap_err().kind(),
+            clap::error::ErrorKind::InvalidSubcommand
+        );
+    }
+
+    #[test]
+    fn parsing_entry_point() {
+        let cmd = ContractCmd::new::<TestContract>();
+
+        let clap_cmd: Command = (&cmd).into();
+        let result = clap_cmd.try_get_matches_from(vec!["test", "add", "--x", "5", "--y", "10"]);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parsing_entry_point_fails_if_arg_is_missing() {
+        let cmd = ContractCmd::new::<TestContract>();
+
+        let clap_cmd: Command = (&cmd).into();
+        let result = clap_cmd.try_get_matches_from(vec!["test", "add", "--x", "5"]);
+        assert_eq!(
+            result.unwrap_err().kind(),
+            clap::error::ErrorKind::MissingRequiredArgument
+        );
+    }
+
+    #[test]
+    fn parsing_entry_point_fails_if_wrong_arg() {
+        let cmd = ContractCmd::new::<TestContract>();
+
+        let clap_cmd: Command = (&cmd).into();
+        let result = clap_cmd.try_get_matches_from(vec!["test", "add", "--x", "5", "--yy", "10"]);
+        assert_eq!(
+            result.unwrap_err().kind(),
+            clap::error::ErrorKind::UnknownArgument
+        );
+    }
+
+    #[test]
+    fn gas_required_if_mutable_entry_point() {
+        let cmd = ContractCmd::new::<TestContract>();
+
+        let clap_cmd: Command = (&cmd).into();
+        let result = clap_cmd.try_get_matches_from(vec!["test", "mutable"]);
+        assert_eq!(
+            result.unwrap_err().kind(),
+            clap::error::ErrorKind::MissingRequiredArgument
+        );
+
+        let clap_cmd: Command = (&cmd).into();
+        let result = clap_cmd.try_get_matches_from(vec!["test", "mutable", "--gas", "1000"]);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn attached_value_if_allowed() {
+        let cmd = ContractCmd::new::<TestContract>();
+
+        let clap_cmd: Command = (&cmd).into();
+        let result = clap_cmd.try_get_matches_from(vec![
+            "test",
+            "mutable",
+            "--gas",
+            "1000",
+            "--attached_value",
+            "1000",
+        ]);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_run() {
+        let cmd = ContractCmd::new::<TestContract>();
+        let clap_cmd: Command = (&cmd).into();
+        let args = clap_cmd.get_matches_from(vec!["test", "add", "--x", "5", "--y", "10"]);
+        let env = test_utils::mock_host_env();
+        let result = cmd.run(&env, &args, &CustomTypeSet::new(), None);
+        assert!(result.is_ok());
     }
 }
