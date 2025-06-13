@@ -1,12 +1,88 @@
-use crate::types;
-use clap::{ArgAction, ArgMatches};
-use odra::schema::casper_contract_schema::NamedCLType;
+use std::any::Any;
+
+use crate::parser::{CLTypedParser, GenericCLValueParser};
+use clap::{builder::PathBufValueParser, ArgAction, ArgMatches};
+use odra::{
+    casper_types::{bytesrepr::FromBytes, CLTyped, CLValue, U512},
+    schema::casper_contract_schema::NamedCLType
+};
 
 pub const ARG_ATTACHED_VALUE: &str = "attached_value";
 pub const ARG_GAS: &str = "gas";
 pub const ARG_CONTRACTS: &str = "contracts-toml";
 pub const ARG_PRINT_EVENTS: &str = "print-events";
 pub const ARG_NUMBER: &str = "number";
+
+#[derive(Debug, thiserror::Error)]
+pub enum ArgsError {
+    #[error("Invalid arg value: {0}")]
+    TypesError(#[from] crate::types::Error),
+    #[error("Decoding error: {0}")]
+    DecodingError(String),
+    #[error("Arg not found: {0}")]
+    ArgNotFound(String),
+    #[error("Arg type not found: {0}")]
+    ArgTypeNotFound(String)
+}
+
+/// A typed command argument.
+#[derive(Debug, PartialEq)]
+pub struct CommandArg {
+    pub name: String,
+    pub required: bool,
+    pub description: String,
+    pub ty: NamedCLType,
+    pub is_list_element: bool
+}
+
+impl CommandArg {
+    pub fn new(name: &str, description: &str, ty: NamedCLType) -> Self {
+        Self {
+            name: name.to_string(),
+            description: description.to_string(),
+            ty,
+            required: false,
+            is_list_element: false
+        }
+    }
+
+    pub fn required(self) -> Self {
+        Self {
+            required: true,
+            ..self
+        }
+    }
+
+    pub fn list(self) -> Self {
+        Self {
+            is_list_element: true,
+            ..self
+        }
+    }
+
+    pub(crate) fn split_name(&self) -> Vec<String> {
+        self.name
+            .split('.')
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>()
+    }
+}
+
+impl From<CommandArg> for clap::Arg {
+    fn from(arg: CommandArg) -> Self {
+        let result = clap::Arg::new(&arg.name)
+            .long(arg.name)
+            .value_name(format!("{:?}", arg.ty))
+            .required(arg.required)
+            .value_parser(CLTypedParser::new(arg.ty))
+            .help(arg.description);
+
+        match arg.is_list_element {
+            true => result.action(ArgAction::Append),
+            false => result.action(ArgAction::Set)
+        }
+    }
+}
 
 pub enum Arg {
     AttachedValue,
@@ -34,6 +110,7 @@ fn arg_attached_value() -> clap::Arg {
         .long(ARG_ATTACHED_VALUE)
         .required(false)
         .value_name(format!("{:?}", NamedCLType::U512))
+        .value_parser(GenericCLValueParser::<U512>::new())
         .action(ArgAction::Set)
 }
 
@@ -43,6 +120,7 @@ fn arg_gas() -> clap::Arg {
         .long(ARG_GAS)
         .required(true)
         .value_name(format!("{:?}", NamedCLType::U64))
+        .value_parser(clap::value_parser!(u64).range(2_500_000_000..))
         .action(ArgAction::Set)
 }
 
@@ -52,7 +130,8 @@ fn arg_contracts() -> clap::Arg {
         .long(ARG_CONTRACTS)
         .short('c')
         .required(false)
-        .value_name(format!("{:?}", NamedCLType::String))
+        .value_name("PathBuf")
+        .value_parser(PathBufValueParser::new())
         .action(ArgAction::Set)
 }
 
@@ -62,6 +141,7 @@ fn arg_number(description: String) -> clap::Arg {
         .long(ARG_NUMBER)
         .value_name("N")
         .default_value("10")
+        .value_parser(clap::value_parser!(u32).range(1..50))
         .help(description)
 }
 
@@ -73,14 +153,21 @@ fn arg_print_events() -> clap::Arg {
         .action(ArgAction::SetTrue)
 }
 
-pub fn read_arg<T: Default, E, F: FnOnce(&str) -> Result<T, E>>(
+pub fn read_arg<T: ToOwned<Owned = T> + Any + Clone + Send + Sync + 'static>(
     args: &ArgMatches,
-    name: &str,
-    f: F
-) -> Result<T, types::Error> {
-    args.try_get_one::<String>(name)
-        .ok()
+    name: &str
+) -> Option<T> {
+    args.get_one::<T>(name).map(ToOwned::to_owned)
+}
+
+pub fn read_cl_value_arg<
+    T: CLTyped + FromBytes + ToOwned<Owned = T> + Any + Clone + Send + Sync + 'static
+>(
+    args: &ArgMatches,
+    name: &str
+) -> Option<T> {
+    args.get_one::<CLValue>(name)
+        .map(ToOwned::to_owned)
+        .map(|cl_value| cl_value.into_t::<T>().ok())
         .flatten()
-        .map(|s| f(s).map_err(|_| types::Error::Serialization))
-        .unwrap_or(Ok(T::default()))
 }

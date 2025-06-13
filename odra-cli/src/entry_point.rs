@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 use std::path::PathBuf;
-use std::str::FromStr;
 
 use clap::ArgMatches;
 use odra::prelude::{Address, OdraError};
@@ -8,8 +7,14 @@ use odra::schema::casper_contract_schema::{Entrypoint, NamedCLType};
 use odra::VmError;
 use odra::{casper_types::U512, host::HostEnv, CallDef};
 
-use crate::cmd::args::{read_arg, ARG_GAS, ARG_PRINT_EVENTS};
-use crate::{args, container, types, CustomTypeSet, DeployedContractsContainer};
+use crate::cmd::args::{
+    read_arg, read_cl_value_arg, ArgsError, ARG_ATTACHED_VALUE, ARG_GAS, ARG_PRINT_EVENTS
+};
+use crate::{container, types, CustomTypeSet, DeployedContractsContainer};
+
+pub(crate) mod cmd_args;
+mod runtime_args;
+mod utils;
 
 #[derive(Debug, thiserror::Error)]
 pub enum CallError {
@@ -20,7 +25,7 @@ pub enum CallError {
         message: String
     },
     #[error(transparent)]
-    ArgsError(#[from] args::ArgsError),
+    ArgsError(#[from] ArgsError),
     #[error(transparent)]
     TypesError(#[from] types::Error),
     #[error("Contract not found")]
@@ -33,7 +38,9 @@ pub enum CallError {
         contract_name: String
     },
     #[error("No entry point found in contract '{contract_name}'")]
-    NoEntryPointFound { contract_name: String }
+    NoEntryPointFound { contract_name: String },
+    #[error("Invalid gas value: {0}")]
+    InvalidGasValue(String)
 }
 
 pub fn call(
@@ -45,9 +52,9 @@ pub fn call(
     contracts_path: Option<PathBuf>
 ) -> Result<String, CallError> {
     let container = DeployedContractsContainer::load(contracts_path)?;
-    let amount = read_arg(args, ARG_PRINT_EVENTS, U512::from_dec_str)?;
+    let amount = read_cl_value_arg::<U512>(args, ARG_ATTACHED_VALUE).unwrap_or_default();
 
-    let runtime_args = args::compose(entry_point, args, types)?;
+    let runtime_args = runtime_args::compose(entry_point, args, types)?;
     let contract_address = container
         .address(contract_name)
         .ok_or(CallError::ContractNotFound)?;
@@ -59,7 +66,9 @@ pub fn call(
     let use_proxy = ty.0 != NamedCLType::Unit || !call_def.amount().is_zero();
 
     if is_mut {
-        let gas = read_arg(args, ARG_GAS, FromStr::from_str)?;
+        let gas = read_arg(args, ARG_GAS).ok_or(CallError::InvalidGasValue(
+            "Failed to read gas value. Use --gas <value> to specify it.".to_string()
+        ))?;
         env.set_gas(gas);
     }
 
@@ -87,7 +96,7 @@ pub fn call(
         log_events(env, &container, types, contract_address)?;
     }
 
-    let result = args::decode(bytes.inner_bytes(), ty, types)?;
+    let result = types::decode(bytes.inner_bytes(), ty, types)?;
     Ok(result.0)
 }
 

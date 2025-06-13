@@ -9,7 +9,7 @@ use odra::OdraContract;
 use odra::{contract_def::HasIdent, host::HostEnv};
 
 use crate::cmd::args::Arg;
-use crate::{args, entry_point, CustomTypeSet, CONTRACTS_SUBCOMMAND};
+use crate::{entry_point, CustomTypeSet, CONTRACTS_SUBCOMMAND};
 
 use super::OdraCommand;
 
@@ -187,7 +187,7 @@ impl From<&CallCmd> for Command {
     fn from(value: &CallCmd) -> Self {
         let mut cmd = Command::new(&value.entry_point.name)
             .about(value.entry_point.description.clone().unwrap_or_default())
-            .args(args::entry_point_args(
+            .args(entry_point::cmd_args::entry_point_args(
                 &value.entry_point,
                 &value.custom_types
             ))
@@ -217,7 +217,9 @@ mod tests {
 
         let clap_cmd: Command = (&cmd).into();
         assert_eq!(clap_cmd.get_name(), CONTRACTS_SUBCOMMAND);
-        assert!(clap_cmd.get_subcommands().any(|c| c.get_name() == "TestContract"));
+        assert!(clap_cmd
+            .get_subcommands()
+            .any(|c| c.get_name() == "TestContract"));
     }
 
     #[test]
@@ -225,7 +227,7 @@ mod tests {
         let cmd = ContractCmd::new::<TestContract>();
 
         assert_eq!(cmd.name, "TestContract");
-        assert_eq!(cmd.entry_points.len(), 3);
+        assert_eq!(cmd.entry_points.len(), 4);
     }
 
     #[test]
@@ -297,8 +299,17 @@ mod tests {
         );
 
         let clap_cmd: Command = (&cmd).into();
-        let result = clap_cmd.try_get_matches_from(vec!["test", "mutable", "--gas", "1000"]);
+        let result =
+            clap_cmd.try_get_matches_from(vec!["test", "mutable", "--gas", "10000000000000"]);
         assert!(result.is_ok());
+
+        let clap_cmd: Command = (&cmd).into();
+        // The minimum gas value is 2500000000, so this should fail.
+        let result = clap_cmd.try_get_matches_from(vec!["test", "mutable", "--gas", "2400000000"]);
+        assert_eq!(
+            result.unwrap_err().kind(),
+            clap::error::ErrorKind::ValueValidation
+        );
     }
 
     #[test]
@@ -310,7 +321,7 @@ mod tests {
             "test",
             "mutable",
             "--gas",
-            "1000",
+            "10000000000000",
             "--attached_value",
             "1000",
         ]);
@@ -325,5 +336,16 @@ mod tests {
         let env = test_utils::mock_host_env();
         let result = cmd.run(&env, &args, &CustomTypeSet::new(), None);
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_parsing_arguments() {
+        let cmd = CallCmd::new::<TestContract>(TestContract::schema_entrypoints()[0].clone());
+        let clap_cmd: Command = (&cmd).into();
+        let args = clap_cmd.get_matches_from(vec!["test", "--x", "5", "--y", "10"]);
+        assert!(args.contains_id("x"));
+        assert!(args.contains_id("y"));
+        assert_eq!(args.get_one::<u32>("x").unwrap(), &5);
+        assert_eq!(args.get_one::<u32>("y").unwrap(), &10);
     }
 }

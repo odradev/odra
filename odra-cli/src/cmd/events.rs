@@ -1,9 +1,7 @@
 use std::path::PathBuf;
-use std::str::FromStr;
 
 use crate::{
-    args::ArgsError,
-    cmd::args::{read_arg, Arg, ARG_NUMBER},
+    cmd::args::{read_arg, Arg, ArgsError, ARG_NUMBER},
     container, types, CustomTypeSet, DeployedContractsContainer, OdraCommand,
     PRINT_EVENTS_SUBCOMMAND
 };
@@ -94,8 +92,9 @@ impl OdraCommand for PrintContractEventsCmd {
         // Max number of events to print is read from the arguments, defaulting to 10.
         // If the number exceeds the total number of events, it is capped.
         // If no number is provided, it defaults to the total number of events.
-        let max_events = read_arg(args, ARG_NUMBER, u32::from_str).unwrap_or(events_count);
-        let max_events = max_events.min(events_count);
+        let max_events = read_arg(args, ARG_NUMBER)
+            .unwrap_or(events_count)
+            .min(events_count);
 
         prettycli::info(&format!(
             "Printing {:?} the most recent events for contract '{}'",
@@ -130,5 +129,81 @@ impl From<&PrintContractEventsCmd> for Command {
                 &value.contract_name
             ))
             .arg(Arg::Number("Number of events to print".to_string()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utils::TestContract;
+
+    #[test]
+    fn test_print_events_cmd() {
+        let mut cmd = PrintEventsCmd::default();
+        let command: Command = (&cmd).into();
+        assert_eq!(command.get_name(), PRINT_EVENTS_SUBCOMMAND);
+        assert_eq!(command.get_subcommands().count(), 0);
+
+        cmd.add_contract::<TestContract>();
+        let command: Command = (&cmd).into();
+        assert_eq!(command.get_subcommands().count(), 1);
+    }
+
+    #[test]
+    fn test_match_print_events_cmd() {
+        let mut cmd = PrintEventsCmd::default();
+        cmd.add_contract::<TestContract>();
+        let command: Command = (&cmd).into();
+        let matches = command
+            .try_get_matches_from(vec![PRINT_EVENTS_SUBCOMMAND, &TestContract::ident()])
+            .unwrap();
+        let (subcommand, _) = matches.subcommand().expect("Subcommand should be present");
+        assert_eq!(subcommand, TestContract::ident());
+    }
+
+    #[test]
+    fn parsing_print_events_cmd_invalid_contract() {
+        // This test checks that an invalid contract name results in an error.
+        let mut cmd = PrintEventsCmd::default();
+        cmd.add_contract::<TestContract>();
+
+        let command: Command = (&cmd).into();
+        let matches = command.try_get_matches_from(vec![PRINT_EVENTS_SUBCOMMAND, "TestContract2"]);
+
+        assert_eq!(
+            matches.unwrap_err().kind(),
+            clap::error::ErrorKind::InvalidSubcommand
+        );
+    }
+
+    #[test]
+    fn parsing_number_of_events() {
+        let cmd = PrintContractEventsCmd::new::<TestContract>();
+        let command: Command = (&cmd).into();
+        let matches = command.get_matches_from(vec!["TestContract", "--number", "5"]);
+        assert_eq!(*matches.get_one::<u32>(ARG_NUMBER).unwrap(), 5);
+    }
+
+    #[test]
+    fn parsing_default_number_of_events() {
+        let cmd = PrintContractEventsCmd::new::<TestContract>();
+        let command: Command = (&cmd).into();
+        let matches = command.try_get_matches_from(vec!["TestContract"]);
+        assert!(matches.is_ok());
+        let matches = matches.unwrap();
+        assert!(matches.contains_id(ARG_NUMBER));
+        assert_eq!(*matches.get_one::<u32>(ARG_NUMBER).unwrap(), 10);
+    }
+
+    #[test]
+    fn parsing_default_number_of_events_with_invalid_value() {
+        let cmd = PrintContractEventsCmd::new::<TestContract>();
+        let command: Command = (&cmd).into();
+        let matches = command.try_get_matches_from(vec!["TestContract", "--number", "invalid"]);
+        assert!(matches.is_err());
+        assert_eq!(
+            matches.unwrap_err().kind(),
+            clap::error::ErrorKind::ValueValidation
+        );
     }
 }

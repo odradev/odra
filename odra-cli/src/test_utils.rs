@@ -1,6 +1,9 @@
 #![allow(unused_variables)]
 use odra::{
-    casper_types::{bytesrepr::Bytes, PublicKey, RuntimeArgs, U512},
+    casper_types::{
+        bytesrepr::{Bytes, ToBytes},
+        PublicKey, RuntimeArgs, U512
+    },
     entry_point_callback::EntryPointsCaller,
     host::{HostContext, HostEnv},
     prelude::*,
@@ -11,7 +14,7 @@ use odra::{
     CallDef, EventError, GasReport
 };
 
-use crate::{CommandArg, CustomTypeSet};
+use crate::{cmd::args::CommandArg, CustomTypeSet};
 
 pub fn mock_entry_point() -> Entrypoint {
     Entrypoint {
@@ -51,9 +54,13 @@ pub fn mock_command_args() -> Vec<CommandArg> {
             .required()
             .list(),
         CommandArg::new("voucher.voucher_expiration", "", NamedCLType::U64).required(),
-        CommandArg::new("signature", "", NamedCLType::U8)
-            .required()
-            .list(),
+        CommandArg::new(
+            "signature",
+            "",
+            NamedCLType::List(Box::new(NamedCLType::U8))
+        )
+        .required()
+        .list(),
     ]
 }
 
@@ -135,6 +142,17 @@ impl TestContract {
     }
 
     pub fn mutable(&mut self) {}
+
+    pub fn various_args(
+        &self,
+        a: u64,
+        b: String,
+        c: Address,
+        d: Option<Address>,
+        e: Vec<u8>
+    ) -> Vec<u8> {
+        (a, b, c, d, e).to_bytes().unwrap_or_revert(self)
+    }
 }
 
 struct DummyHostCtx;

@@ -42,8 +42,7 @@ impl OdraCommand for DeployCmd {
 
 impl From<&DeployCmd> for Command {
     fn from(_value: &DeployCmd) -> Self {
-        Command::new(DEPLOY_SUBCOMMAND)
-            .about("Runs the deploy script")
+        Command::new(DEPLOY_SUBCOMMAND).about("Runs the deploy script")
     }
 }
 
@@ -76,22 +75,12 @@ impl From<OdraError> for DeployError {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use crate::test_utils;
 
     use super::*;
     use odra::host::HostEnv;
-
-    #[test]
-    fn deploy_cmd_run() {
-        // This is a placeholder test to ensure the DeployCmd can be instantiated and run.
-        let env = test_utils::mock_host_env();
-        let cmd = DeployCmd::new(MockDeployScript);
-        let result = cmd.run(&env, &ArgMatches::default(), &CustomTypeSet::default(), None);
-        assert!(result.is_ok());
-    }
 
     struct MockDeployScript;
 
@@ -103,6 +92,20 @@ mod tests {
         ) -> core::result::Result<(), DeployError> {
             Ok(())
         }
+    }
+
+    #[test]
+    fn deploy_cmd_run() {
+        // This is a placeholder test to ensure the DeployCmd can be instantiated and run.
+        let env = test_utils::mock_host_env();
+        let cmd = DeployCmd::new(MockDeployScript);
+        let result = cmd.run(
+            &env,
+            &ArgMatches::default(),
+            &CustomTypeSet::default(),
+            None
+        );
+        assert!(result.is_ok());
     }
 
     #[test]
@@ -119,7 +122,7 @@ mod tests {
         // This is a placeholder test to ensure the DeployCmd can be converted to a Command.
         let cmd = DeployCmd::new(MockDeployScript);
         let command: Command = (&cmd).into();
-        
+
         let result = command.try_get_matches_from(vec!["test"]);
         assert!(result.is_ok());
 

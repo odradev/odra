@@ -1,6 +1,6 @@
 use crate::cmd::args::{read_arg, Arg, ARG_CONTRACTS};
 use clap::{ArgMatches, Command};
-use std::{path::PathBuf, str::FromStr};
+use std::path::PathBuf;
 
 /// MainCmd is a struct that represents the main command of the Odra CLI.
 pub(crate) struct MainCmd {
@@ -34,13 +34,12 @@ impl MainCmd {
         let matches = match self.main_cmd.clone().try_get_matches() {
             Ok(matches) => matches,
             Err(err) => {
-                println!("{}", err);
-                std::process::exit(0);
+                err.exit();
             }
         };
 
         // Check if the user provided a custom contracts path.
-        let contracts_path = read_arg(&matches, ARG_CONTRACTS, PathBuf::from_str).ok();
+        let contracts_path = read_arg(&matches, ARG_CONTRACTS);
 
         let result = matches.subcommand();
 

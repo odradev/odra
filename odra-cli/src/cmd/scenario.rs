@@ -1,12 +1,12 @@
 use std::path::PathBuf;
 use std::{any::Any, collections::HashMap};
 
+use crate::cmd::args::CommandArg;
 use crate::SCENARIOS_SUBCOMMAND;
-use crate::{
-    args::CommandArg, container::ContractError, types, CustomTypeSet, DeployedContractsContainer
-};
+use crate::{container::ContractError, types, CustomTypeSet, DeployedContractsContainer};
 use anyhow::Result;
 use clap::{ArgMatches, Command};
+use odra::casper_types::{CLTyped, CLValue};
 use odra::schema::NamedCLTyped;
 use odra::{casper_types::bytesrepr::FromBytes, host::HostEnv, prelude::OdraError};
 use thiserror::Error;
@@ -143,47 +143,48 @@ impl ScenarioArgs {
         let map = args
             .into_iter()
             .filter_map(|arg| {
-                let arg_name = &arg.name;
-                let values = matches.get_many::<String>(arg_name);
+                let arg_name = arg.name.clone();
+                let values = matches
+                    .get_many::<CLValue>(&arg_name)
+                    .unwrap_or_default()
+                    .map(|v| v.clone())
+                    .collect::<Vec<_>>();
 
-                if arg.required && values.is_none() {
+                if arg.required && values.is_empty() {
                     panic!("Missing argument: {}", arg.name);
                 }
-                values.as_ref()?;
-                let values = values
-                    .expect("Arg not found")
-                    .map(|v| v.to_string())
-                    .collect::<Vec<_>>();
+
                 let scenario_arg = match arg.is_list_element {
                     true => ScenarioArg::Many(values),
                     false => ScenarioArg::Single(values[0].clone())
                 };
 
-                Some((arg_name.clone(), scenario_arg))
+                Some((arg_name, scenario_arg))
             })
             .collect();
         Self(map)
     }
 
-    pub fn get_single<T: NamedCLTyped + FromBytes>(&self, name: &str) -> Result<T, ScenarioError> {
+    pub fn get_single<T: NamedCLTyped + FromBytes + CLTyped>(
+        &self,
+        name: &str
+    ) -> Result<T, ScenarioError> {
         let arg = self
             .0
             .get(name)
             .ok_or(ArgError::MissingArg(name.to_string()))?;
 
         let result = match arg {
-            ScenarioArg::Single(value) => {
-                let bytes = types::into_bytes(&T::ty(), value)?;
-                T::from_bytes(&bytes)
-                    .map_err(|_| ArgError::Deserialization)
-                    .map(|t| t.0)
-            }
+            ScenarioArg::Single(value) => value
+                .clone()
+                .into_t::<T>()
+                .map_err(|_| ArgError::Deserialization),
             ScenarioArg::Many(_) => Err(ArgError::SingleExpected)
         }?;
         Ok(result)
     }
 
-    pub fn get_many<T: NamedCLTyped + FromBytes>(
+    pub fn get_many<T: NamedCLTyped + FromBytes + CLTyped>(
         &self,
         name: &str
     ) -> Result<Vec<T>, ScenarioError> {
@@ -194,15 +195,9 @@ impl ScenarioArgs {
         match arg {
             ScenarioArg::Many(values) => values
                 .iter()
-                .map(|value| {
-                    let bytes = types::into_bytes(&T::ty(), value);
-                    bytes.map_err(ScenarioError::TypesError).and_then(|bytes| {
-                        T::from_bytes(&bytes)
-                            .map_err(|_| ScenarioError::ArgError(ArgError::Deserialization))
-                            .map(|t| t.0)
-                    })
-                })
-                .collect::<Result<Vec<T>, ScenarioError>>(),
+                .map(|value| value.clone().into_t::<T>())
+                .collect::<Result<Vec<T>, _>>()
+                .map_err(|_| ScenarioError::ArgError(ArgError::Deserialization)),
             ScenarioArg::Single(_) => Err(ScenarioError::ArgError(ArgError::ManyExpected))
         }
     }
@@ -222,8 +217,8 @@ pub enum ArgError {
 }
 
 enum ScenarioArg {
-    Single(String),
-    Many(Vec<String>)
+    Single(CLValue),
+    Many(Vec<CLValue>)
 }
 
 /// ScenarioMetadata is a trait that represents the metadata of a scenario.
