@@ -145,11 +145,16 @@ impl TestContract {
 
     pub fn various_args(
         &self,
-        a: u64,
-        b: String,
-        c: Address,
-        d: Option<Address>,
-        e: Vec<u8>
+        a: Address,
+        b: Option<Address>,
+        c: Vec<String>,
+        d: Result<u64, String>,
+        e: Result<u64, String>,
+        f: (String,),
+        g: (String, String),
+        h: (String, String, String),
+        i: BTreeMap<String, u64>,
+        j: Bytes
     ) -> Vec<u8> {
         (a, b, c, d, e).to_bytes().unwrap_or_revert(self)
     }

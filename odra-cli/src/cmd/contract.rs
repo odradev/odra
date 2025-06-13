@@ -340,12 +340,32 @@ mod tests {
 
     #[test]
     fn test_parsing_arguments() {
-        let cmd = CallCmd::new::<TestContract>(TestContract::schema_entrypoints()[0].clone());
+        let cmd = ContractCmd::new::<TestContract>();
         let clap_cmd: Command = (&cmd).into();
-        let args = clap_cmd.get_matches_from(vec!["test", "--x", "5", "--y", "10"]);
-        assert!(args.contains_id("x"));
-        assert!(args.contains_id("y"));
-        assert_eq!(args.get_one::<u32>("x").unwrap(), &5);
-        assert_eq!(args.get_one::<u32>("y").unwrap(), &10);
+        let args = clap_cmd.try_get_matches_from(vec![
+            "test",
+            "various_args",
+            "--a",
+            "account-hash-5e3725bec4389ea63151903f5c9005233d19a569c5e593e5bbd83b05714f7364",
+            "--b",
+            "some:account-hash-5e3725bec4389ea63151903f5c9005233d19a569c5e593e5bbd83b05714f7364",
+            "--c",
+            "'alice','bob','caroline'",
+            "--d",
+            "ok:100",
+            "--e",
+            "err:Error message",
+            "--f",
+            "('single_value')",
+            "--g",
+            "('value1':'value2')",
+            "--h",
+            "('value1':'value2':'value3')",
+            "--i",
+            "'key1': 1, 'key2': 2",
+            "--j",
+            "0x12,0x34,0x56,0x78,0x9a,0xbc,0xde,0xf0",
+        ]);
+        assert!(args.is_ok());
     }
 }
