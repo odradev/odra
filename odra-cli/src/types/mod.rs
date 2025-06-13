@@ -109,7 +109,24 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
         NamedCLType::Bool => call_to_bytes!(bool, input),
         NamedCLType::I32 => call_to_bytes!(i32, input),
         NamedCLType::I64 => call_to_bytes!(i64, input),
-        NamedCLType::U8 => call_to_bytes!(u8, input),
+        NamedCLType::U8 => {
+            if input.starts_with("0x") {
+                u8::from_str_radix(&input[2..], 16)
+                    .map_err(|_| Error::InvalidHexString)
+                    .and_then(|byte| Ok(vec![byte]))
+            } else if input.starts_with("0b") {
+                let bits = input.strip_prefix("0b").ok_or(Error::InvalidHexString)?;
+                let byte = u8::from_str_radix(bits, 2).map_err(|_| Error::Serialization)?;
+                Ok(vec![byte])
+            } else {
+                // Fallback to parsing as decimal
+                if let Ok(byte) = input.parse::<u8>() {
+                    Ok(vec![byte])
+                } else {
+                    Err(Error::Formatting(Format::Option))
+                }
+            }
+        }
         NamedCLType::U32 => call_to_bytes!(u32, input),
         NamedCLType::U64 => call_to_bytes!(u64, input),
         NamedCLType::U128 => big_int_to_bytes!(U128, input),
@@ -190,7 +207,7 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
                     if key_value.len() != 2 {
                         return Err(Error::Formatting(Format::Map));
                     }
-                    Ok((key_value[0], key_value[1]))
+                    Ok((key_value[0].trim(), key_value[1].trim()))
                 })
                 .collect::<Result<Vec<_>, _>>()?;
 

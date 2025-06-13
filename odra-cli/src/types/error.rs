@@ -5,6 +5,8 @@ use thiserror::Error;
 pub enum Error {
     #[error("Invalid hex string")]
     InvalidHexString,
+    #[error("Invalid binary string")]
+    InvalidBinaryString,
     #[error("Hex decode error")]
     HexDecode,
     #[error("{0}")]
@@ -37,7 +39,8 @@ pub enum Format {
     Tuple { actual: usize, expected: usize },
     Map,
     ByteArray,
-    InvalidLength { actual: usize, expected: usize }
+    InvalidLength { actual: usize, expected: usize },
+    U8
 }
 
 impl Debug for Format {
@@ -72,6 +75,12 @@ impl Format {
             Format::InvalidLength { actual, expected } => {
                 vec![format!("expected length {}, found {}", expected, actual)]
             }
+            Format::U8 => vec![
+                String::from("'0x00'"),
+                String::from("'0b00000001'"),
+                String::from("'1'"),
+                String::from("'255'"),
+            ]
         }
     }
 }
