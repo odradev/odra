@@ -455,7 +455,7 @@ impl Cep95 {
 
         self.balances.set(&to, self.balance_of(to) + 1);
         self.owners.set(&token_id, Some(to));
-        self.set_metadata(token_id, metadata);
+        self.metadata.set(&token_id, BTreeMap::from_iter(metadata));
 
         self.env().emit_event(Mint { to, token_id });
     }
