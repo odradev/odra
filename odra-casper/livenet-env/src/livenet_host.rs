@@ -20,6 +20,15 @@ use std::sync::RwLock;
 use std::thread::sleep;
 use tokio::runtime::Runtime;
 
+/// Enum representing a contract identifier used by Livenet Host.
+#[derive(Debug)]
+pub enum ContractId {
+    /// Contract name.
+    Name(String),
+    /// Contract address.
+    Address(Address)
+}
+
 /// LivenetHost struct.
 pub struct LivenetHost {
     casper_client: Rc<RefCell<CasperClient>>,

@@ -8,7 +8,7 @@ use anyhow::Result;
 use odra_core::callstack::CallstackElement;
 use odra_core::casper_types::bytesrepr::{deserialize, deserialize_from_slice, serialize};
 use odra_core::casper_types::system::auction::ValidatorBid;
-use odra_core::casper_types::{CLType, CLValue};
+use odra_core::casper_types::{CLType, CLValue, HashAddr, PackageHash, RuntimeArgs};
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::prelude::*;
 use odra_core::validator::ValidatorInfo;
@@ -39,10 +39,35 @@ impl OdraVm {
     }
 
     /// Adds a new contract to the virtual machine.
-    pub fn register_contract(&self, name: &str, entry_points_caller: EntryPointsCaller) -> Address {
-        // Create a new address.
-        let address = { self.state.write().unwrap().next_contract_address() };
-        // Register new contract under the new address.
+    pub fn new_contract(
+        &self,
+        name: &str,
+        init_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCaller
+    ) -> Address {
+        let is_upgrade = match init_args.get(odra_core::consts::IS_UPGRADE_ARG) {
+            Some(value) => value.clone().into_t().unwrap(),
+            None => false
+        };
+
+        let address = match is_upgrade {
+            true => {
+                let hash_addr: HashAddr = init_args
+                    .get(odra_core::consts::PREVIOUS_VERSION_ADDRESS_ARG)
+                    .unwrap()
+                    .clone()
+                    .into_t()
+                    .unwrap();
+                let package_hash = PackageHash::new(hash_addr);
+                Address::from(package_hash)
+            }
+            false => {
+                // Create a new address.
+                self.state.write().unwrap().next_contract_address()
+            }
+        };
+
+        // Register the contract under the address.
         {
             let contract = ContractContainer::new(name, entry_points_caller);
             self.contract_register
@@ -528,8 +553,10 @@ mod tests {
         // given a new instance
         let instance = OdraVm::default();
         // when register two contracts with the same entrypoints
-        let address1 = instance.register_contract("A", test_caller(TEST_ENTRY_POINT));
-        let address2 = instance.register_contract("B", test_caller(TEST_ENTRY_POINT));
+        let address1 =
+            instance.new_contract("A", RuntimeArgs::new(), test_caller(TEST_ENTRY_POINT));
+        let address2 =
+            instance.new_contract("B", RuntimeArgs::new(), test_caller(TEST_ENTRY_POINT));
 
         // then addresses are different
         assert_ne!(address1, address2);
@@ -822,7 +849,7 @@ mod tests {
 
     fn setup_contract(instance: &OdraVm, entry_point_name: &str) -> Address {
         let caller = test_caller(entry_point_name);
-        instance.register_contract("contract", caller)
+        instance.new_contract("contract", RuntimeArgs::new(), caller)
     }
 
     fn test_caller(entry_point_name: &str) -> EntryPointsCaller {

@@ -2,12 +2,14 @@
 use std::time::Duration;
 
 use odra::casper_types::{U256, U512};
-use odra::host::{Deployer, HostEnv, HostRefLoader};
+use odra::contract_def::HasIdent;
+use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader, NoArgs, UpgradableOdraConfig};
 use odra::prelude::*;
 use odra_examples::features::livenet::Error::SillyError;
 use odra_examples::features::livenet::{
     LivenetContract, LivenetContractHostRef, LivenetContractInitArgs
 };
+use odra_examples::features::upgrade::{CounterV1, CounterV2};
 use odra_modules::access::events::OwnershipTransferred;
 use odra_modules::erc20::{Erc20, Erc20HostRef, Erc20InitArgs};
 
@@ -31,6 +33,7 @@ fn main() {
     // Contract can be deployed
     env.set_gas(500_000_000_000u64);
     println!("Balance of user: {}", env.balance_of(&owner));
+
     deploy_erc20(&env);
     let (contract, erc20) = deploy_new(&env);
 
@@ -79,6 +82,23 @@ fn main() {
 
     // And query the balance
     println!("Balance of caller: {}", env.balance_of(&env.caller()));
+
+    // Contracts can be upgraded
+    let mut counter = CounterV1::deploy_with_cfg(
+        &env,
+        NoArgs,
+        UpgradableOdraConfig {
+            name: CounterV1::ident()
+        }
+    );
+
+    counter.increment();
+    assert_eq!(counter.get(), 1);
+
+    let counter2 = CounterV2::try_upgrade(&env, counter.contract_address(), NoArgs).unwrap();
+
+    assert_eq!(counter2.get(), U256::zero());
+    assert_eq!(counter2.get_old(), 1);
 }
 
 fn deploy_new(env: &HostEnv) -> (LivenetContractHostRef, Erc20HostRef) {

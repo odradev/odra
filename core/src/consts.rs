@@ -48,6 +48,12 @@ pub const ALLOW_KEY_OVERRIDE_ARG: &str = "odra_cfg_allow_key_override";
 /// The arg name for the contract upgradeability setting.
 pub const IS_UPGRADABLE_ARG: &str = "odra_cfg_is_upgradable";
 
+/// The arg name for telling the installer that the contract is being upgraded.
+pub const IS_UPGRADE_ARG: &str = "odra_cfg_is_upgrade";
+
+/// The arg name for telling the installer the previous contract version.
+pub const PREVIOUS_VERSION_ADDRESS_ARG: &str = "odra_cfg_previous_version";
+
 /// Constructor name argument.
 pub const CONSTRUCTOR_NAME_ARG: &str = "odra_cfg_constructor";
 

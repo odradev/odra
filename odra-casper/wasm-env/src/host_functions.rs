@@ -31,15 +31,16 @@ use odra_core::casper_types::contract_messages::{MessagePayload, MessageTopicOpe
 use odra_core::casper_types::contracts::{ContractHash, ContractPackageHash, ContractVersion};
 use odra_core::casper_types::system::auction::{self, BidAddr, BidKind, ValidatorBid};
 use odra_core::casper_types::system::{Caller, CallerInfo};
-use odra_core::casper_types::StoredValue;
 use odra_core::casper_types::{
     api_error, bytesrepr,
     bytesrepr::{Bytes, FromBytes, ToBytes},
     ApiError, CLTyped, CLValue, EntityAddr, EntryPoints, Key, NamedKeys, PackageHash, PublicKey,
     RuntimeArgs, URef, DICTIONARY_ITEM_KEY_MAX_LENGTH, U512, UREF_SERIALIZED_LENGTH
 };
+use odra_core::casper_types::{HashAddr, StoredValue};
 use odra_core::consts::{
-    ALLOW_KEY_OVERRIDE_ARG, IS_UPGRADABLE_ARG, PACKAGE_HASH_KEY_NAME_ARG, RANDOM_BYTES_COUNT
+    ALLOW_KEY_OVERRIDE_ARG, IS_UPGRADABLE_ARG, IS_UPGRADE_ARG, PACKAGE_HASH_KEY_NAME_ARG,
+    PREVIOUS_VERSION_ADDRESS_ARG, RANDOM_BYTES_COUNT
 };
 use odra_core::validator::ValidatorInfo;
 use odra_core::{
@@ -80,12 +81,20 @@ pub fn install_contract(
     let package_hash_key: String = runtime::get_named_arg(PACKAGE_HASH_KEY_NAME_ARG);
     let allow_key_override: bool = runtime::get_named_arg(ALLOW_KEY_OVERRIDE_ARG);
     let is_upgradable: bool = runtime::get_named_arg(IS_UPGRADABLE_ARG);
+    let is_upgrade = runtime::try_get_named_arg(IS_UPGRADE_ARG).unwrap_or(false);
 
-    // Check if the package hash is already in the storage.
-    // Revert if key override is not allowed.
-    if !allow_key_override && runtime::has_key(&package_hash_key) {
-        revert(ExecutionError::ContractAlreadyInstalled.code()); // TODO: fix
-    };
+    let package_hash = runtime::get_key(&package_hash_key);
+
+    match package_hash {
+        // There is an existing contract.
+        Some(package_hash) => {
+            if !is_upgrade && !allow_key_override {
+                revert(ExecutionError::ContractAlreadyInstalled.code());
+            }
+        }
+        // We're doing a fresh install.
+        None => {}
+    }
 
     // Prepare named keys.
     let named_keys = initial_named_keys(events);
@@ -96,8 +105,20 @@ pub fn install_contract(
 
     // Create new contract.
     let access_uref_key = format!("{}_access_token", package_hash_key);
-    if is_upgradable {
-        // TODO: Handle message topics
+    let contract_hash = if is_upgrade {
+        let previous_version: HashAddr = runtime::get_named_arg(PREVIOUS_VERSION_ADDRESS_ARG);
+        let previous_version = ContractPackageHash::new(previous_version);
+        storage::add_contract_version(
+            previous_version,
+            entry_points,
+            named_keys,
+            // TODO: Handle updating message topics
+            BTreeMap::new()
+        );
+
+        runtime::put_key(&package_hash_key, Key::from(previous_version));
+        PackageHash::new(previous_version.value())
+    } else if is_upgradable {
         storage::new_contract(
             entry_points,
             Some(named_keys),
@@ -105,8 +126,14 @@ pub fn install_contract(
             Some(access_uref_key),
             Some(mesage_topics)
         );
+
+        // Read package hash from the storage.
+        let contract_hash: PackageHash = runtime::get_key(&package_hash_key)
+            .unwrap_or_revert_with(ApiError::AllocLayout)
+            .into_package_hash()
+            .unwrap_or_revert_with(ApiError::BufferTooSmall);
+        contract_hash
     } else {
-        // TODO: Handle message topics
         storage::new_locked_contract(
             entry_points,
             Some(named_keys),
@@ -114,13 +141,14 @@ pub fn install_contract(
             Some(access_uref_key),
             Some(mesage_topics)
         );
-    }
+        // Read package hash from the storage.
+        let contract_hash: PackageHash = runtime::get_key(&package_hash_key)
+            .unwrap_or_revert_with(ApiError::AllocLayout)
+            .into_package_hash()
+            .unwrap_or_revert_with(ApiError::BufferTooSmall);
 
-    // Read package hash from the storage.
-    let contract_hash: PackageHash = runtime::get_key(&package_hash_key)
-        .unwrap_or_revert()
-        .into_package_hash()
-        .unwrap_or_revert();
+        contract_hash
+    };
 
     let contract_package_hash = ContractPackageHash::new(contract_hash.value());
 

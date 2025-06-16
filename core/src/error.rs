@@ -166,6 +166,12 @@ pub enum ExecutionError {
     ContractDeploymentError = 127,
     /// Couldn't extract caller info
     CannotExtractCallerInfo = 128,
+    /// Upgrading a contract that is not installed.
+    ContractNotInstalled = 129,
+    /// Upgrading a contract without previous version
+    UpgradingWithoutPreviousVersion = 130,
+    /// Upgrading not a contract
+    UpgradingNotAContract = 131,
     /// Maximum code for user errors
     MaxUserError = 64535,
     /// User error too high. The code should be in range 0..32767.
