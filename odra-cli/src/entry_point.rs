@@ -1,16 +1,13 @@
 #![allow(dead_code)]
-use std::path::PathBuf;
-
 use clap::ArgMatches;
 use odra::prelude::{Address, OdraError};
 use odra::schema::casper_contract_schema::{Entrypoint, NamedCLType};
 use odra::VmError;
 use odra::{casper_types::U512, host::HostEnv, CallDef};
 
-use crate::cmd::args::{
-    read_arg, read_cl_value_arg, ArgsError, ARG_ATTACHED_VALUE, ARG_GAS, ARG_PRINT_EVENTS
-};
-use crate::{container, types, CustomTypeSet, DeployedContractsContainer};
+use crate::cmd::args::{read_arg, read_cl_value_arg, Arg, ArgsError, ARG_PRINT_EVENTS};
+use crate::container::ContractProvider;
+use crate::{container, types, CustomTypeSet};
 
 pub(crate) mod cmd_args;
 mod runtime_args;
@@ -43,20 +40,19 @@ pub enum CallError {
     InvalidGasValue(String)
 }
 
-pub fn call(
+pub fn call<T: ContractProvider>(
     env: &HostEnv,
     contract_name: &str,
     entry_point: &Entrypoint,
     args: &ArgMatches,
     types: &CustomTypeSet,
-    contracts_path: Option<PathBuf>
+    contract_provider: &T
 ) -> Result<String, CallError> {
-    let container = DeployedContractsContainer::load(contracts_path)?;
-    let amount = read_cl_value_arg::<U512>(args, ARG_ATTACHED_VALUE).unwrap_or_default();
+    let amount = read_cl_value_arg::<U512>(args, Arg::AttachedValue).unwrap_or_default();
 
     let runtime_args = runtime_args::compose(entry_point, args, types)?;
-    let contract_address = container
-        .address(contract_name)
+    let contract_address = contract_provider
+        .address_by_name(contract_name)
         .ok_or(CallError::ContractNotFound)?;
 
     let method = &entry_point.name;
@@ -66,7 +62,7 @@ pub fn call(
     let use_proxy = ty.0 != NamedCLType::Unit || !call_def.amount().is_zero();
 
     if is_mut {
-        let gas = read_arg(args, ARG_GAS).ok_or(CallError::InvalidGasValue(
+        let gas = read_arg(args, Arg::Gas).ok_or(CallError::InvalidGasValue(
             "Failed to read gas value. Use --gas <value> to specify it.".to_string()
         ))?;
         env.set_gas(gas);
@@ -93,22 +89,22 @@ pub fn call(
         })?;
 
     if print_events {
-        log_events(env, &container, types, contract_address)?;
+        log_events(env, contract_provider, types, contract_address)?;
     }
 
     let result = types::decode(bytes.inner_bytes(), ty, types)?;
     Ok(result.0)
 }
 
-fn log_events(
+fn log_events<T: ContractProvider>(
     env: &HostEnv,
-    container: &DeployedContractsContainer,
+    contract_provider: &T,
     types: &CustomTypeSet,
     contract_address: Address
 ) -> Result<(), CallError> {
     let call_result = env.last_call_result(contract_address).raw_call_result();
 
-    for (name, address) in container.contracts() {
+    for (name, address) in contract_provider.all_contracts() {
         let events = call_result.contract_events(&address);
         if events.is_empty() {
             continue;

@@ -14,7 +14,11 @@ use odra::{
     CallDef, EventError, GasReport
 };
 
-use crate::{cmd::args::CommandArg, CustomTypeSet};
+use crate::{
+    cmd::args::CommandArg,
+    container::{ContractError, ContractStorage, ContractsData},
+    CustomTypeSet, DeployedContractsContainer
+};
 
 pub fn mock_entry_point() -> Entrypoint {
     Entrypoint {
@@ -315,4 +319,20 @@ impl HostContext for DummyHostCtx {
 
 pub fn mock_host_env() -> HostEnv {
     HostEnv::new(Rc::new(RefCell::new(DummyHostCtx)))
+}
+
+struct MockContractStorage;
+
+impl ContractStorage for MockContractStorage {
+    fn read(&self) -> Result<ContractsData, ContractError> {
+        Ok(ContractsData::default())
+    }
+
+    fn write(&mut self, data: &ContractsData) -> Result<(), ContractError> {
+        Ok(())
+    }
+}
+
+pub fn mock_contracts_container() -> DeployedContractsContainer {
+    DeployedContractsContainer::instance(MockContractStorage)
 }

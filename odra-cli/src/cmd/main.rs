@@ -1,4 +1,4 @@
-use crate::cmd::args::{read_arg, Arg, ARG_CONTRACTS};
+use crate::cmd::args::{read_arg, Arg};
 use clap::{ArgMatches, Command};
 use std::path::PathBuf;
 
@@ -54,7 +54,7 @@ impl MainCmd {
         };
 
         // Check if the user provided a custom contracts path.
-        let contracts_path = read_arg(&matches, ARG_CONTRACTS);
+        let contracts_path = read_arg(&matches, Arg::Contracts);
 
         let result = matches.subcommand();
 
@@ -106,7 +106,7 @@ mod tests {
             "path/to/contracts",
             "test",
         ]);
-        let contracts_path = read_arg(&matches, ARG_CONTRACTS);
+        let contracts_path = read_arg(&matches, Arg::Contracts);
         assert_eq!(contracts_path, Some(PathBuf::from("path/to/contracts")));
     }
 }

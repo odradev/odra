@@ -5,14 +5,12 @@
 
 #![feature(box_patterns, error_generic_member_access)]
 use std::collections::HashMap;
-use std::path::PathBuf;
 
 use anyhow::Result;
 use clap::ArgMatches;
 use cmd::OdraCommand;
 use deploy::DeployScript;
 use odra::entry_point_callback::EntryPointsCaller;
-use odra::host::Deployer;
 use odra::schema::SchemaEvents;
 use odra::schema::{SchemaCustomTypes, SchemaEntrypoints};
 use odra::{
@@ -29,50 +27,20 @@ mod parser;
 #[cfg(test)]
 mod test_utils;
 mod types;
+mod utils;
 
-pub use cmd::scenario::{ScenarioArgs, ScenarioError};
-pub use container::DeployedContractsContainer;
-use scenario::{Scenario, ScenarioMetadata};
+pub use cmd::args::CommandArg;
+pub use cmd::{ScenarioArgs, ScenarioError};
+pub use container::{ContractProvider, DeployedContractsContainer};
+pub use utils::{log, DeployerExt};
 
-use crate::cmd::contract::ContractsCmd;
-use crate::cmd::deploy::DeployCmd;
-use crate::cmd::events::PrintEventsCmd;
-use crate::cmd::main::MainCmd;
-use crate::cmd::scenario::ScenariosCmd;
+use crate::cmd::{
+    ContractsCmd, DeployCmd, MainCmd, MutableCommand, PrintEventsCmd, ScenariosCmd,
+    CONTRACTS_SUBCOMMAND, DEPLOY_SUBCOMMAND, PRINT_EVENTS_SUBCOMMAND, SCENARIOS_SUBCOMMAND
+};
+use crate::container::FileContractStorage;
 use crate::custom_types::{CustomTypeSet, CustomTypes};
-
-const CONTRACTS_SUBCOMMAND: &str = "contract";
-const SCENARIOS_SUBCOMMAND: &str = "scenario";
-const DEPLOY_SUBCOMMAND: &str = "deploy";
-const PRINT_EVENTS_SUBCOMMAND: &str = "print-events";
-
-/// Trait that extends the functionality of OdraContract to include deployment capabilities.
-pub trait DeployerExt: Sized {
-    /// Contract that implements OdraContract and Deployer for Self
-    type Contract: OdraContract + 'static + Deployer<Self::Contract>;
-
-    /// Load an existing contract instance from container or deploy a new one.
-    fn load_or_deploy(
-        env: &HostEnv,
-        args: <<Self as DeployerExt>::Contract as OdraContract>::InitArgs,
-        container: &mut DeployedContractsContainer,
-        gas: u64
-    ) -> Result<<<Self as DeployerExt>::Contract as OdraContract>::HostRef, crate::deploy::Error>
-    {
-        if let Ok(contract) = container.get_ref::<Self::Contract>(env) {
-            Ok(contract)
-        } else {
-            env.set_gas(gas);
-            let contract = Self::Contract::try_deploy(env, args)?;
-            container.add_contract(&contract)?;
-            Ok(contract)
-        }
-    }
-}
-
-impl<T: OdraContract + Deployer<T> + 'static> DeployerExt for T {
-    type Contract = T;
-}
+use scenario::{Scenario, ScenarioMetadata};
 
 pub mod scenario {
     //! Traits and structs for defining custom scenarios.
@@ -80,7 +48,7 @@ pub mod scenario {
     //! A scenario is a user-defined set of actions that can be run in the Odra CLI.
     //! If you want to run a custom scenario that calls multiple entry points,
     //! you need to implement the [Scenario] and [ScenarioMetadata] traits.
-    pub use crate::cmd::scenario::{
+    pub use crate::cmd::{
         Scenario, ScenarioArgs as Args, ScenarioError as Error, ScenarioMetadata
     };
 }
@@ -90,7 +58,7 @@ pub mod deploy {
     //!
     //! In a deploy script, you can define the contracts that you want to deploy to the blockchain
     //! and write metadata to the container.
-    pub use crate::cmd::deploy::{DeployError as Error, DeployScript};
+    pub use crate::cmd::{DeployError as Error, DeployScript};
 }
 
 /// Command line interface for Odra smart contracts.
@@ -195,17 +163,15 @@ impl OdraCli {
     pub fn run(self) {
         let (cmd, args, contracts_path) = self.main_cmd.get_matches();
 
+        let storage = FileContractStorage::new(contracts_path.clone()).unwrap_or_else(|e| {
+            prettycli::error(&format!("Failed to create contract storage: {e}"));
+            std::process::exit(1);
+        });
         // Init contracts container with the provided path or default to the resources directory.
-        let container = match DeployedContractsContainer::new(contracts_path.clone()) {
-            Ok(c) => c,
-            Err(e) => {
-                prettycli::error(&format!("Container error: {e}"));
-                return;
-            }
-        };
+        let mut container = DeployedContractsContainer::instance(storage);
 
         // Register the contracts from the container in the host environment.
-        for (name, address) in container.contracts() {
+        for (name, address) in container.all_contracts() {
             let caller = self
                 .callers
                 .get(&name)
@@ -215,18 +181,14 @@ impl OdraCli {
         }
 
         let result = match cmd.as_str() {
-            DEPLOY_SUBCOMMAND => self.run_command(
-                self.deploy_cmd.as_ref().unwrap_or_else(|| {
-                    panic!("Deploy command not found. Did you forget to add it?")
-                }),
-                args,
-                contracts_path
-            ),
-            CONTRACTS_SUBCOMMAND => self.run_command(&self.contracts_cmd, args, contracts_path),
-            PRINT_EVENTS_SUBCOMMAND => {
-                self.run_command(&self.print_events_cmd, args, contracts_path)
-            }
-            SCENARIOS_SUBCOMMAND => self.run_command(&self.scenarios_cmd, args, contracts_path),
+            DEPLOY_SUBCOMMAND => self
+                .deploy_cmd
+                .as_ref()
+                .unwrap_or_else(|| panic!("Deploy command not found. Did you forget to add it?"))
+                .run(&self.host_env, &args, &self.custom_types, &mut container),
+            CONTRACTS_SUBCOMMAND => self.run_command(&self.contracts_cmd, args, &container),
+            PRINT_EVENTS_SUBCOMMAND => self.run_command(&self.print_events_cmd, args, &container),
+            SCENARIOS_SUBCOMMAND => self.run_command(&self.scenarios_cmd, args, &container),
             _ => unreachable!()
         };
 
@@ -240,8 +202,8 @@ impl OdraCli {
         &self,
         cmd: &T,
         args: ArgMatches,
-        contracts_path: Option<PathBuf>
+        container: &DeployedContractsContainer
     ) -> Result<()> {
-        cmd.run(&self.host_env, &args, &self.custom_types, contracts_path)
+        cmd.run(&self.host_env, &args, &self.custom_types, container)
     }
 }

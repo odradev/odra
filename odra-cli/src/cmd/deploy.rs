@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use crate::{
     container::ContractError, CustomTypeSet, DeployedContractsContainer, DEPLOY_SUBCOMMAND
 };
@@ -8,7 +6,7 @@ use clap::{ArgMatches, Command};
 use odra::{host::HostEnv, prelude::OdraError};
 use thiserror::Error;
 
-use super::OdraCommand;
+use super::MutableCommand;
 
 /// DeployCmd is a struct that represents the deploy command in the Odra CLI.
 ///
@@ -26,16 +24,15 @@ impl DeployCmd {
     }
 }
 
-impl OdraCommand for DeployCmd {
+impl MutableCommand for DeployCmd {
     fn run(
         &self,
         env: &HostEnv,
         _args: &ArgMatches,
         _types: &CustomTypeSet,
-        contracts_path: Option<PathBuf>
+        container: &mut DeployedContractsContainer
     ) -> Result<()> {
-        let mut container = DeployedContractsContainer::new(contracts_path)?;
-        self.script.deploy(env, &mut container)?;
+        self.script.deploy(env, container)?;
         Ok(())
     }
 }
@@ -99,11 +96,12 @@ mod tests {
         // This is a placeholder test to ensure the DeployCmd can be instantiated and run.
         let env = test_utils::mock_host_env();
         let cmd = DeployCmd::new(MockDeployScript);
+        let mut container = test_utils::mock_contracts_container();
         let result = cmd.run(
             &env,
             &ArgMatches::default(),
             &CustomTypeSet::default(),
-            None
+            &mut container
         );
         assert!(result.is_ok());
     }

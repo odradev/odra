@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Display};
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum Error {
     #[error("Invalid hex string")]
     InvalidHexString,
@@ -33,6 +33,7 @@ pub enum Error {
     Other(String)
 }
 
+#[derive(PartialEq)]
 pub enum Format {
     Result,
     Option,

@@ -1,5 +1,4 @@
-use std::path::PathBuf;
-use std::{any::Any, collections::HashMap};
+use std::any::Any;
 
 use crate::cmd::args::CommandArg;
 use crate::SCENARIOS_SUBCOMMAND;
@@ -25,7 +24,7 @@ pub trait Scenario: Any {
     fn run(
         &self,
         env: &HostEnv,
-        container: DeployedContractsContainer,
+        container: &DeployedContractsContainer,
         args: ScenarioArgs
     ) -> core::result::Result<(), ScenarioError>;
 }
@@ -47,14 +46,14 @@ impl OdraCommand for ScenariosCmd {
         env: &HostEnv,
         args: &ArgMatches,
         types: &CustomTypeSet,
-        contracts_path: Option<PathBuf>
+        container: &DeployedContractsContainer
     ) -> Result<()> {
         args.subcommand()
             .map(|(scenario_name, scenario_args)| {
                 self.scenarios
                     .iter()
                     .find(|cmd| cmd.name == scenario_name)
-                    .map(|scenario| scenario.run(env, scenario_args, types, contracts_path))
+                    .map(|scenario| scenario.run(env, scenario_args, types, container))
                     .unwrap_or(Err(anyhow::anyhow!("No scenario found")))
             })
             .unwrap_or(Err(anyhow::anyhow!("No scenario found")))
@@ -73,8 +72,9 @@ impl From<&ScenariosCmd> for Command {
 
 /// ScenarioCmd is a struct that represents a scenario command in the Odra CLI.
 ///
-/// The scenario command runs a [Scenario]. A scenario is a user-defined set of actions that can be run in the Odra CLI.
-pub(crate) struct ScenarioCmd {
+/// The scenario command runs a [Scenario]. A scenario is a user-defined set of
+/// actions that can be run in the Odra CLI.
+struct ScenarioCmd {
     name: String,
     description: String,
     scenario: Box<dyn Scenario>
@@ -96,10 +96,9 @@ impl OdraCommand for ScenarioCmd {
         env: &HostEnv,
         args: &ArgMatches,
         _types: &CustomTypeSet,
-        contracts_path: Option<PathBuf>
+        container: &DeployedContractsContainer
     ) -> Result<()> {
-        let container = DeployedContractsContainer::load(contracts_path)?;
-        let args = ScenarioArgs::new(self.scenario.args(), args);
+        let args = ScenarioArgs::new(args);
 
         self.scenario.run(env, container, args)?;
         Ok(())
@@ -124,7 +123,9 @@ pub enum ScenarioError {
     #[error("Arg error")]
     ArgError(#[from] ArgError),
     #[error("Types error")]
-    TypesError(#[from] types::Error)
+    TypesError(#[from] types::Error),
+    #[error("Missing scenario argument: {0}")]
+    MissingScenarioArg(String)
 }
 
 impl From<OdraError> for ScenarioError {
@@ -136,33 +137,11 @@ impl From<OdraError> for ScenarioError {
 }
 
 /// ScenarioArgs is a struct that represents the arguments passed to a scenario.
-pub struct ScenarioArgs(HashMap<String, ScenarioArg>);
+pub struct ScenarioArgs<'a>(&'a ArgMatches);
 
-impl ScenarioArgs {
-    pub(crate) fn new(args: Vec<CommandArg>, matches: &ArgMatches) -> Self {
-        let map = args
-            .into_iter()
-            .filter_map(|arg| {
-                let arg_name = arg.name.clone();
-                let values = matches
-                    .get_many::<CLValue>(&arg_name)
-                    .unwrap_or_default()
-                    .map(|v| v.clone())
-                    .collect::<Vec<_>>();
-
-                if arg.required && values.is_empty() {
-                    panic!("Missing argument: {}", arg.name);
-                }
-
-                let scenario_arg = match arg.is_list_element {
-                    true => ScenarioArg::Many(values),
-                    false => ScenarioArg::Single(values[0].clone())
-                };
-
-                Some((arg_name, scenario_arg))
-            })
-            .collect();
-        Self(map)
+impl<'a> ScenarioArgs<'a> {
+    pub(crate) fn new(matches: &'a ArgMatches) -> Self {
+        Self(matches)
     }
 
     pub fn get_single<T: NamedCLTyped + FromBytes + CLTyped>(
@@ -171,40 +150,33 @@ impl ScenarioArgs {
     ) -> Result<T, ScenarioError> {
         let arg = self
             .0
-            .get(name)
+            .try_get_one::<CLValue>(name)
+            .map_err(|_| ScenarioError::ArgError(ArgError::UnexpectedArg(name.to_string())))?
             .ok_or(ArgError::MissingArg(name.to_string()))?;
 
-        let result = match arg {
-            ScenarioArg::Single(value) => value
-                .clone()
-                .into_t::<T>()
-                .map_err(|_| ArgError::Deserialization),
-            ScenarioArg::Many(_) => Err(ArgError::SingleExpected)
-        }?;
-        Ok(result)
+        arg.clone()
+            .into_t::<T>()
+            .map_err(|_| ScenarioError::ArgError(ArgError::Deserialization))
     }
 
     pub fn get_many<T: NamedCLTyped + FromBytes + CLTyped>(
         &self,
         name: &str
     ) -> Result<Vec<T>, ScenarioError> {
-        let arg = self
-            .0
-            .get(name)
-            .ok_or(ArgError::MissingArg(name.to_string()))?;
-        match arg {
-            ScenarioArg::Many(values) => values
-                .iter()
-                .map(|value| value.clone().into_t::<T>())
-                .collect::<Result<Vec<T>, _>>()
-                .map_err(|_| ScenarioError::ArgError(ArgError::Deserialization)),
-            ScenarioArg::Single(_) => Err(ScenarioError::ArgError(ArgError::ManyExpected))
-        }
+        self.0
+            .try_get_many::<CLValue>(name)
+            .map_err(|_| ScenarioError::ArgError(ArgError::UnexpectedArg(name.to_string())))?
+            .unwrap_or_default()
+            .collect::<Vec<_>>()
+            .into_iter()
+            .map(|value| value.clone().into_t::<T>())
+            .collect::<Result<Vec<T>, _>>()
+            .map_err(|_| ScenarioError::ArgError(ArgError::Deserialization))
     }
 }
 
 /// ArgError is an enum representing the different errors that can occur when parsing scenario arguments.
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum ArgError {
     #[error("Arg deserialization failed")]
     Deserialization,
@@ -213,16 +185,236 @@ pub enum ArgError {
     #[error("Single value expected")]
     SingleExpected,
     #[error("Missing arg: {0}")]
-    MissingArg(String)
-}
-
-enum ScenarioArg {
-    Single(CLValue),
-    Many(Vec<CLValue>)
+    MissingArg(String),
+    #[error("Unexpected arg: {0}")]
+    UnexpectedArg(String)
 }
 
 /// ScenarioMetadata is a trait that represents the metadata of a scenario.
 pub trait ScenarioMetadata {
     const NAME: &'static str;
     const DESCRIPTION: &'static str;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utils;
+    use odra::schema::casper_contract_schema::NamedCLType;
+
+    struct TestScenario;
+
+    impl Scenario for TestScenario {
+        fn args(&self) -> Vec<CommandArg> {
+            vec![
+                CommandArg::new("arg1", "First argument", NamedCLType::U32).required(),
+                CommandArg::new("arg2", "Second argument", NamedCLType::String),
+                CommandArg::new("arg3", "Optional argument", NamedCLType::String).list(),
+            ]
+        }
+
+        fn run(
+            &self,
+            _env: &HostEnv,
+            _container: &DeployedContractsContainer,
+            args: ScenarioArgs
+        ) -> core::result::Result<(), ScenarioError> {
+            _ = args.get_single::<u32>("arg1")?;
+            _ = args.get_single::<String>("arg2")?;
+            _ = args.get_many::<String>("arg3")?;
+            Ok(())
+        }
+    }
+
+    impl ScenarioMetadata for TestScenario {
+        const NAME: &'static str = "test_scenario";
+        const DESCRIPTION: &'static str = "A test scenario for unit testing";
+    }
+
+    #[test]
+    fn test_scenarios_command() {
+        let mut scenarios = ScenariosCmd::default();
+        scenarios.add_scenario(TestScenario);
+
+        let cmd: Command = (&scenarios).into();
+
+        assert_eq!(cmd.get_name(), SCENARIOS_SUBCOMMAND);
+        assert!(cmd
+            .get_subcommands()
+            .any(|c| c.get_name() == "test_scenario"));
+    }
+
+    #[test]
+    fn test_match_required_args() {
+        let cmd = ScenarioCmd::new(TestScenario);
+        let cmd: Command = (&cmd).into();
+
+        let matches = cmd.try_get_matches_from(vec!["odra-cli", "--arg1", "1"]);
+        assert!(matches.is_ok());
+        assert_eq!(
+            matches.unwrap().get_one::<CLValue>("arg1"),
+            Some(&CLValue::from_t(1u32).unwrap())
+        );
+    }
+
+    #[test]
+    fn test_match_required_arg_missing() {
+        let cmd = ScenarioCmd::new(TestScenario);
+        let cmd: Command = (&cmd).into();
+
+        let matches = cmd.try_get_matches_from(vec!["odra-cli"]);
+        assert!(matches.is_err());
+        assert_eq!(
+            matches.unwrap_err().kind(),
+            clap::error::ErrorKind::MissingRequiredArgument
+        );
+    }
+
+    #[test]
+    fn test_match_required_arg_with_wrong_type() {
+        let cmd = ScenarioCmd::new(TestScenario);
+        let cmd: Command = (&cmd).into();
+
+        let matches = cmd.try_get_matches_from(vec!["odra-cli", "--arg1", "not_a_number"]);
+        assert!(matches.is_err());
+        assert_eq!(
+            matches.unwrap_err().kind(),
+            clap::error::ErrorKind::InvalidValue
+        );
+    }
+
+    #[test]
+    fn test_match_optional_args() {
+        let cmd = ScenarioCmd::new(TestScenario);
+        let cmd: Command = (&cmd).into();
+
+        let matches = cmd.try_get_matches_from(vec![
+            "odra-cli", "--arg1", "1", "--arg2", "test", "--arg3", "value1", "--arg3", "value2",
+        ]);
+        assert!(matches.is_ok());
+        let matches = matches.unwrap();
+        assert_eq!(
+            matches.get_one::<CLValue>("arg1"),
+            Some(&CLValue::from_t(1u32).unwrap())
+        );
+        assert_eq!(
+            matches.get_one::<CLValue>("arg2"),
+            Some(&CLValue::from_t("test".to_string()).unwrap())
+        );
+        assert_eq!(
+            matches
+                .get_many::<CLValue>("arg3")
+                .unwrap()
+                .collect::<Vec<_>>(),
+            vec![
+                &CLValue::from_t("value1".to_string()).unwrap(),
+                &CLValue::from_t("value2".to_string()).unwrap()
+            ]
+        );
+    }
+
+    #[test]
+    fn test_matching_list_args() {
+        let scenario = ScenarioCmd::new(TestScenario);
+        let cmd: Command = (&scenario).into();
+
+        let matches = cmd.try_get_matches_from(vec![
+            "odra-cli", "--arg1", "1", "--arg3", "value1", "--arg3", "value2",
+        ]);
+        assert!(matches.is_ok());
+        let matches = matches.unwrap();
+        assert_eq!(
+            matches
+                .get_many::<CLValue>("arg3")
+                .unwrap()
+                .collect::<Vec<_>>(),
+            vec![
+                &CLValue::from_t("value1".to_string()).unwrap(),
+                &CLValue::from_t("value2".to_string()).unwrap()
+            ]
+        );
+
+        // If we pass `arg2` multiple times, it should return an error
+        let cmd: Command = (&scenario).into();
+        let matches = cmd.try_get_matches_from(vec![
+            "odra-cli", "--arg1", "1", "--arg2", "value1", "--arg2", "value2",
+        ]);
+
+        assert!(matches.is_err());
+        assert_eq!(
+            matches.unwrap_err().kind(),
+            clap::error::ErrorKind::ArgumentConflict
+        );
+    }
+
+    #[test]
+    fn test_scenario_args_get_single() {
+        let scenario = ScenarioCmd::new(TestScenario);
+        let cmd: Command = (&scenario).into();
+
+        let matches = cmd
+            .try_get_matches_from(vec!["odra-cli", "--arg1", "42", "--arg2", "test_value"])
+            .unwrap();
+
+        let args = ScenarioArgs::new(&matches);
+        let arg1: u32 = args.get_single("arg1").unwrap();
+        assert_eq!(arg1, 42);
+
+        let arg2: String = args.get_single("arg2").unwrap();
+        assert_eq!(arg2, "test_value");
+    }
+
+    #[test]
+    fn test_scenario_args_get_many() {
+        let scenario = ScenarioCmd::new(TestScenario);
+        let cmd: Command = (&scenario).into();
+
+        let matches = cmd
+            .try_get_matches_from(vec![
+                "odra-cli", "--arg1", "42", "--arg3", "value1", "--arg3", "value2",
+            ])
+            .unwrap();
+
+        let args = ScenarioArgs::new(&matches);
+        let arg3: Vec<String> = args.get_many("arg3").unwrap();
+        assert_eq!(arg3, vec!["value1".to_string(), "value2".to_string()]);
+    }
+
+    #[test]
+    fn test_run_cmd() {
+        let scenario = ScenarioCmd::new(TestScenario);
+        let cmd: Command = (&scenario).into();
+
+        let matches = cmd
+            .try_get_matches_from(vec![
+                "odra-cli",
+                "--arg1",
+                "42",
+                "--arg2",
+                "test_value",
+                "--arg3",
+                "value1",
+                "--arg3",
+                "value2",
+            ])
+            .unwrap();
+
+        let env = test_utils::mock_host_env();
+        let container = test_utils::mock_contracts_container();
+        let result = scenario.run(&env, &matches, &CustomTypeSet::default(), &container);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_scenario_args_missing_arg() {
+        let scenario = ScenarioCmd::new(TestScenario);
+        let cmd: Command = (&scenario).into();
+
+        let matches = cmd.get_matches_from(vec!["odra-cli", "--arg1", "1", "--arg2", "value1"]);
+        ScenarioArgs(&matches)
+            .get_single::<u32>("arg3")
+            .expect_err("Expected an error for missing arg3");
+
+        assert_eq!(ScenarioArgs(&matches).get_single::<u32>("arg1").unwrap(), 1);
+    }
 }

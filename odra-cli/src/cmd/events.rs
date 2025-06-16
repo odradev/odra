@@ -1,9 +1,7 @@
-use std::path::PathBuf;
-
 use crate::{
-    cmd::args::{read_arg, Arg, ArgsError, ARG_NUMBER},
-    container, types, CustomTypeSet, DeployedContractsContainer, OdraCommand,
-    PRINT_EVENTS_SUBCOMMAND
+    cmd::args::{read_arg, Arg, ArgsError},
+    container::{self, ContractProvider},
+    types, CustomTypeSet, DeployedContractsContainer, OdraCommand, PRINT_EVENTS_SUBCOMMAND
 };
 use anyhow::Result;
 use clap::{ArgMatches, Command};
@@ -40,11 +38,11 @@ impl OdraCommand for PrintEventsCmd {
         env: &HostEnv,
         args: &ArgMatches,
         types: &CustomTypeSet,
-        contracts_path: Option<PathBuf>
+        container: &DeployedContractsContainer
     ) -> Result<()> {
         let (subcmd, args) = args.subcommand().ok_or(EventError::ContractNotFound)?;
         if let Some(cmd) = self.subcommands.iter().find(|c| c.contract_name == subcmd) {
-            cmd.run(env, args, types, contracts_path)
+            cmd.run(env, args, types, container)
         } else {
             Err(EventError::ContractNotFound.into())
         }
@@ -79,20 +77,19 @@ impl OdraCommand for PrintContractEventsCmd {
         env: &HostEnv,
         args: &ArgMatches,
         types: &CustomTypeSet,
-        contracts_path: Option<PathBuf>
+        container: &DeployedContractsContainer
     ) -> Result<()> {
         // Ensure the host environment is set up to capture events.
         env.set_captures_events(true);
-        let container = DeployedContractsContainer::load(contracts_path)?;
         let contract_address = container
-            .address(&self.contract_name)
+            .address_by_name(&self.contract_name)
             .ok_or(EventError::ContractNotFound)?;
         // Get the number of events emitted by the contract.
         let events_count = env.events_count(&contract_address);
         // Max number of events to print is read from the arguments, defaulting to 10.
         // If the number exceeds the total number of events, it is capped.
         // If no number is provided, it defaults to the total number of events.
-        let max_events = read_arg(args, ARG_NUMBER)
+        let max_events = read_arg(args, Arg::EventsNumber)
             .unwrap_or(events_count)
             .min(events_count);
 
@@ -128,14 +125,14 @@ impl From<&PrintContractEventsCmd> for Command {
                 "Print events of the {} contract",
                 &value.contract_name
             ))
-            .arg(Arg::Number("Number of events to print".to_string()))
+            .arg(Arg::EventsNumber)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::TestContract;
+    use crate::{cmd::args::ARG_NUMBER, test_utils::TestContract};
 
     #[test]
     fn test_print_events_cmd() {

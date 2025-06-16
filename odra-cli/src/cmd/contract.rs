@@ -1,5 +1,4 @@
 use std::collections::BTreeSet;
-use std::path::PathBuf;
 
 use anyhow::Result;
 use clap::{ArgMatches, Command};
@@ -9,7 +8,7 @@ use odra::OdraContract;
 use odra::{contract_def::HasIdent, host::HostEnv};
 
 use crate::cmd::args::Arg;
-use crate::{entry_point, CustomTypeSet, CONTRACTS_SUBCOMMAND};
+use crate::{entry_point, CustomTypeSet, DeployedContractsContainer, CONTRACTS_SUBCOMMAND};
 
 use super::OdraCommand;
 
@@ -32,14 +31,14 @@ impl OdraCommand for ContractsCmd {
         env: &HostEnv,
         args: &ArgMatches,
         types: &CustomTypeSet,
-        contracts_path: Option<PathBuf>
+        container: &DeployedContractsContainer
     ) -> Result<()> {
         args.subcommand()
             .map(|(contract_name, contract_args)| {
                 self.contracts
                     .iter()
                     .find(|cmd| cmd.name == contract_name)
-                    .map(|contract| contract.run(env, contract_args, types, contracts_path))
+                    .map(|contract| contract.run(env, contract_args, types, container))
                     .unwrap_or(Err(anyhow::anyhow!("No contract found")))
             })
             .unwrap_or(Err(anyhow::anyhow!("No contract found")))
@@ -85,14 +84,14 @@ impl OdraCommand for ContractCmd {
         env: &HostEnv,
         args: &ArgMatches,
         types: &CustomTypeSet,
-        contracts_path: Option<PathBuf>
+        container: &DeployedContractsContainer
     ) -> Result<()> {
         args.subcommand()
             .map(|(entrypoint_name, entrypoint_args)| {
                 self.entry_points
                     .iter()
                     .find(|cmd| cmd.entry_point.name == entrypoint_name)
-                    .map(|entry_point| entry_point.run(env, entrypoint_args, types, contracts_path))
+                    .map(|entry_point| entry_point.run(env, entrypoint_args, types, container))
                     .unwrap_or(Err(entry_point::CallError::EntryPointNotFound {
                         entry_point: entrypoint_name.to_string(),
                         contract_name: self.name.clone()
@@ -150,14 +149,17 @@ impl OdraCommand for CallCmd {
         env: &HostEnv,
         args: &ArgMatches,
         types: &CustomTypeSet,
-        contracts_path: Option<PathBuf>
+        container: &DeployedContractsContainer
     ) -> Result<()> {
         let entry_point = &self.entry_point;
         let contract_name = &self.contract_name;
 
-        let result =
-            entry_point::call(env, contract_name, entry_point, args, types, contracts_path)?;
-        prettycli::info(&result);
+        let result = entry_point::call(env, contract_name, entry_point, args, types, container)?;
+        if result.is_empty() {
+            prettycli::info("Call executed successfully, but no result was returned.");
+        } else {
+            prettycli::info(&format!("Call result: {result}"));
+        }
         Ok(())
     }
 
@@ -167,7 +169,7 @@ impl OdraCommand for CallCmd {
         _env: &HostEnv,
         args: &ArgMatches,
         _types: &CustomTypeSet,
-        _contracts_path: Option<PathBuf>
+        _container: &DeployedContractsContainer
     ) -> Result<()> {
         for a in &self.entry_point.arguments {
             if !args.contains_id(&a.name) {
@@ -334,7 +336,8 @@ mod tests {
         let clap_cmd: Command = (&cmd).into();
         let args = clap_cmd.get_matches_from(vec!["test", "add", "--x", "5", "--y", "10"]);
         let env = test_utils::mock_host_env();
-        let result = cmd.run(&env, &args, &CustomTypeSet::new(), None);
+        let container = test_utils::mock_contracts_container();
+        let result = cmd.run(&env, &args, &CustomTypeSet::new(), &container);
         assert!(result.is_ok());
     }
 

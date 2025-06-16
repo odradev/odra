@@ -88,8 +88,20 @@ pub enum Arg {
     AttachedValue,
     Gas,
     Contracts,
-    Number(String),
+    EventsNumber,
     PrintEvents
+}
+
+impl Arg {
+    pub fn name(&self) -> &str {
+        match self {
+            Arg::AttachedValue => ARG_ATTACHED_VALUE,
+            Arg::Gas => ARG_GAS,
+            Arg::Contracts => ARG_CONTRACTS,
+            Arg::EventsNumber => ARG_NUMBER,
+            Arg::PrintEvents => ARG_PRINT_EVENTS
+        }
+    }
 }
 
 impl From<Arg> for clap::Arg {
@@ -98,7 +110,7 @@ impl From<Arg> for clap::Arg {
             Arg::AttachedValue => arg_attached_value(),
             Arg::Gas => arg_gas(),
             Arg::Contracts => arg_contracts(),
-            Arg::Number(description) => arg_number(description),
+            Arg::EventsNumber => arg_number("Number of events to print"),
             Arg::PrintEvents => arg_print_events()
         }
     }
@@ -135,7 +147,7 @@ fn arg_contracts() -> clap::Arg {
         .action(ArgAction::Set)
 }
 
-fn arg_number(description: String) -> clap::Arg {
+fn arg_number(description: &'static str) -> clap::Arg {
     clap::Arg::new(ARG_NUMBER)
         .short('n')
         .long(ARG_NUMBER)
@@ -154,19 +166,20 @@ fn arg_print_events() -> clap::Arg {
 }
 
 pub fn read_arg<T: ToOwned<Owned = T> + Any + Clone + Send + Sync + 'static>(
-    args: &ArgMatches,
-    name: &str
+    matches: &ArgMatches,
+    arg: Arg
 ) -> Option<T> {
-    args.get_one::<T>(name).map(ToOwned::to_owned)
+    matches.get_one::<T>(arg.name()).map(ToOwned::to_owned)
 }
 
 pub fn read_cl_value_arg<
     T: CLTyped + FromBytes + ToOwned<Owned = T> + Any + Clone + Send + Sync + 'static
 >(
-    args: &ArgMatches,
-    name: &str
+    matches: &ArgMatches,
+    arg: Arg
 ) -> Option<T> {
-    args.get_one::<CLValue>(name)
+    matches
+        .get_one::<CLValue>(arg.name())
         .map(ToOwned::to_owned)
         .map(|cl_value| cl_value.into_t::<T>().ok())
         .flatten()
