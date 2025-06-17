@@ -89,7 +89,8 @@ pub enum Error {
 mod tests {
     use crate::features::livenet::{LivenetContract, LivenetContractInitArgs};
     use alloc::string::ToString;
-    use odra::host::{Deployer, HostRef};
+    use odra::host::Deployer;
+    use odra::prelude::Addressable;
     use odra_modules::erc20::{Erc20, Erc20InitArgs};
 
     #[test]
@@ -107,11 +108,11 @@ mod tests {
         let mut livenet_contract = LivenetContract::deploy(
             &test_env,
             LivenetContractInitArgs {
-                erc20_address: *erc20.address()
+                erc20_address: erc20.address()
             }
         );
 
-        erc20.transfer(livenet_contract.address(), &1000.into());
+        erc20.transfer(&livenet_contract.address(), &1000.into());
 
         livenet_contract.push_on_stack(1);
         assert_eq!(livenet_contract.pop_from_stack(), 1);

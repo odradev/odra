@@ -38,7 +38,8 @@ impl MathEngine {
 #[cfg(test)]
 mod tests {
     use super::{CrossContract, CrossContractInitArgs, MathEngine};
-    use odra::host::{Deployer, HostRef, NoArgs};
+    use odra::host::{Deployer, NoArgs};
+    use odra::prelude::*;
 
     #[test]
     fn test_cross_calls() {
@@ -47,7 +48,7 @@ mod tests {
         let cross_contract = CrossContract::deploy(
             &test_env,
             CrossContractInitArgs {
-                math_engine_address: *math_engine_contract.address()
+                math_engine_address: math_engine_contract.address()
             }
         );
         assert_eq!(cross_contract.add_using_another(), 8);

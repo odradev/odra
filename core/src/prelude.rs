@@ -4,7 +4,7 @@
 
 #[allow(clippy::module_inception)]
 mod prelude {
-    pub use crate::address::Address;
+    pub use crate::address::{Address, Addressable};
     pub use crate::arithmetic::*;
     pub use crate::contract_env::ContractEnv;
     pub use crate::error::{ExecutionError, OdraError, OdraResult};

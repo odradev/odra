@@ -108,8 +108,8 @@ mod test {
                         }
                     }
 
-                    fn address(&self) -> &Address {
-                        &self.address
+                    fn contract_address(&self) -> Address {
+                        self.address
                     }
 
                     fn env(&self) -> &odra::host::HostEnv {
@@ -370,8 +370,8 @@ mod test {
                         }
                     }
 
-                    fn address(&self) -> &Address {
-                        &self.address
+                    fn contract_address(&self) -> Address {
+                        self.address
                     }
 
                     fn env(&self) -> &odra::host::HostEnv {

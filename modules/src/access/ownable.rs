@@ -120,7 +120,7 @@ impl Ownable2Step {
         let previous_owner = self.ownable.get_optional_owner();
         let new_owner = Some(*new_owner);
         self.pending_owner.set(new_owner);
-        self.env().emit_event(OwnershipTransferred {
+        self.env().emit_event(OwnershipTransferStarted {
             previous_owner,
             new_owner
         });
@@ -161,7 +161,8 @@ mod test {
     use crate::access::errors::Error;
     use odra::{
         external_contract,
-        host::{Deployer, HostEnv, HostRef}
+        host::{Deployer, HostEnv, HostRef},
+        prelude::Addressable
     };
 
     #[test]
@@ -174,13 +175,20 @@ mod test {
         assert_eq!(deployer, ownable_2step.get_owner());
         // then a OwnershipTransferred event was emitted
 
-        let event = OwnershipTransferred {
-            previous_owner: None,
-            new_owner: Some(deployer)
-        };
-
-        env.emitted_event(ownable.address(), &event);
-        env.emitted_event(ownable_2step.address(), &event);
+        env.emitted_event(
+            &ownable,
+            OwnershipTransferred {
+                previous_owner: None,
+                new_owner: Some(deployer)
+            }
+        );
+        env.emitted_event(
+            &ownable_2step,
+            OwnershipTransferred {
+                previous_owner: None,
+                new_owner: Some(deployer)
+            }
+        );
     }
 
     #[test]
@@ -195,13 +203,13 @@ mod test {
         // then the new owner is set
         assert_eq!(new_owner, contract.get_owner());
         // then a OwnershipTransferred event was emitted
-        contract.env().emitted_event(
-            contract.address(),
-            &OwnershipTransferred {
+        assert!(contract.env().emitted_event(
+            &contract,
+            OwnershipTransferred {
                 previous_owner: Some(initial_owner),
                 new_owner: Some(new_owner)
             }
-        );
+        ));
     }
 
     #[test]
@@ -222,20 +230,20 @@ mod test {
         // then the pending owner is unset
         assert_eq!(None, contract.get_pending_owner());
         // then OwnershipTransferStarted and OwnershipTransferred events were emitted
-        contract.env().emitted_event(
-            contract.address(),
-            &OwnershipTransferStarted {
+        assert!(contract.env().emitted_event(
+            &contract,
+            OwnershipTransferStarted {
                 previous_owner: Some(initial_owner),
                 new_owner: Some(new_owner)
             }
-        );
-        contract.env().emitted_event(
-            contract.address(),
-            &OwnershipTransferred {
+        ));
+        assert!(contract.env().emitted_event(
+            &contract,
+            OwnershipTransferred {
                 previous_owner: Some(initial_owner),
                 new_owner: Some(new_owner)
             }
-        );
+        ));
     }
 
     #[test]
@@ -295,13 +303,13 @@ mod test {
                 contract.renounce_ownership();
 
                 // then an event is emitted
-                contract.env().emitted_event(
-                    contract.address(),
-                    &OwnershipTransferred {
+                assert!(contract.env().emitted_event(
+                    contract,
+                    OwnershipTransferred {
                         previous_owner: Some(initial_owner),
                         new_owner: None
                     }
-                );
+                ));
                 // then the owner is not set
                 let err = contract.try_get_owner().unwrap_err();
                 assert_eq!(err, Error::OwnerNotSet.into());
@@ -369,9 +377,9 @@ mod test {
         let owner = env.caller();
         let ownable = Ownable::deploy(&env, OwnableInitArgs { owner });
         let ownable_2_step = Ownable2Step::deploy(&env, Ownable2StepInitArgs { owner });
-        let renouncable_ref = RenounceableHostRef::new(*ownable.address(), env.clone());
+        let renouncable_ref = RenounceableHostRef::new(ownable.address(), env.clone());
         let renouncable_2_step_ref =
-            RenounceableHostRef::new(*ownable_2_step.address(), env.clone());
+            RenounceableHostRef::new(ownable_2_step.address(), env.clone());
         (
             vec![renouncable_ref, renouncable_2_step_ref],
             env.get_account(0)

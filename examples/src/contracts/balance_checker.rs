@@ -44,7 +44,7 @@ mod tests {
         let balance_checker = BalanceChecker::deploy(
             env,
             BalanceCheckerInitArgs {
-                address: *token.address()
+                address: token.address()
             }
         );
         let expected_owner_balance = INITIAL_SUPPLY;
