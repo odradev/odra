@@ -166,7 +166,7 @@ mod tests {
         // Events are also saved properly, even with nested Odra Types
         test_env.emitted_event(
             &nested_odra_types,
-            &OperationEnded {
+            OperationEnded {
                 id: operation_results()[0].clone().id,
                 status: operation_results()[0].clone().status,
                 description: operation_results()[0].clone().description

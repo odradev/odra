@@ -62,7 +62,7 @@ mod tests {
         let mut party_contract = PartyContract::deploy(&test_env, NoArgs);
         assert!(test_env.emitted_event(
             &party_contract,
-            &PartyStarted {
+            PartyStarted {
                 caller: test_env.get_account(0),
                 block_time: 0
             }
@@ -70,7 +70,7 @@ mod tests {
 
         assert!(test_env.emitted_native_event(
             &party_contract,
-            &NativePartyStarted {
+            NativePartyStarted {
                 caller: test_env.get_account(0),
                 block_time: 0
             }
@@ -85,14 +85,14 @@ mod tests {
 
         assert!(test_env.emitted_event(
             &party_contract,
-            &PartyStarted {
+            PartyStarted {
                 caller: test_env.get_account(1),
                 block_time: 42
             }
         ));
         assert!(test_env.emitted_native_event(
             &party_contract,
-            &NativePartyStarted {
+            NativePartyStarted {
                 caller: test_env.get_account(1),
                 block_time: 42
             }

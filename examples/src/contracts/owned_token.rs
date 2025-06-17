@@ -84,14 +84,14 @@ pub mod tests {
         assert_eq!(token.balance_of(&owner), INITIAL_SUPPLY.into());
         test_env.emitted_event(
             &token,
-            &odra_modules::access::events::OwnershipTransferred {
+            odra_modules::access::events::OwnershipTransferred {
                 previous_owner: None,
                 new_owner: Some(owner)
             }
         );
         test_env.emitted_event(
             &token,
-            &odra_modules::erc20::events::Transfer {
+            odra_modules::erc20::events::Transfer {
                 from: None,
                 to: Some(owner),
                 amount: INITIAL_SUPPLY.into()
@@ -121,13 +121,13 @@ pub mod tests {
         let amount = 10.into();
         token.mint(&recipient, &amount);
         assert_eq!(token.total_supply(), U256::from(INITIAL_SUPPLY) + amount);
-        assert_eq!(&token.balance_of(&recipient), &amount);
+        assert_eq!(token.balance_of(&recipient), amount);
     }
 
     #[test]
     fn mint_error() {
         let mut token = setup();
-        let test_env = token.env().clone();
+        let test_env = token.env();
         let recipient = test_env.get_account(1);
         let amount = 10.into();
         test_env.set_caller(recipient);
@@ -148,7 +148,7 @@ pub mod tests {
     #[test]
     fn change_ownership_error() {
         let mut token = setup();
-        let test_env = token.env().clone();
+        let test_env = token.env();
         let new_owner = test_env.get_account(1);
         test_env.set_caller(new_owner);
         assert_eq!(

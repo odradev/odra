@@ -2,6 +2,7 @@
 mod transfer_tests {
     use odra::casper_types::U256;
     use odra::host::{Deployer, HostRef, NoArgs};
+    use odra::prelude::Addressable;
 
     use crate::cep18::cep18_client_contract::Cep18ClientContract;
     use crate::cep18::errors::Error::{CannotTargetSelfUser, InsufficientBalance};
@@ -90,13 +91,13 @@ mod transfer_tests {
         let spender = cep18_token.env().get_account(1);
         let owner = cep18_token.env().get_account(0);
 
-        cep18_token.approve(client_contract.address(), &ALLOWANCE_AMOUNT_1.into());
+        cep18_token.approve(&client_contract.address(), &ALLOWANCE_AMOUNT_1.into());
 
-        let spender_allowance_before = cep18_token.allowance(&owner, client_contract.address());
+        let spender_allowance_before = cep18_token.allowance(&owner, &client_contract.address());
         let owner_balance_before = cep18_token.balance_of(&owner);
 
         client_contract.transfer_from_as_stored_contract(
-            *cep18_token.address(),
+            cep18_token.address(),
             owner,
             spender,
             ALLOWANCE_AMOUNT_1.into()
@@ -203,7 +204,7 @@ mod transfer_tests {
         let client_contract = Cep18ClientContract::deploy(cep18_token.env(), NoArgs);
 
         // when the owner transfers tokens to another contract
-        cep18_token.transfer(client_contract.address(), &TRANSFER_AMOUNT_1.into());
+        cep18_token.transfer(&client_contract.address(), &TRANSFER_AMOUNT_1.into());
 
         // then the balances are updated
         assert_eq!(
@@ -211,21 +212,21 @@ mod transfer_tests {
             (TOKEN_TOTAL_SUPPLY - TRANSFER_AMOUNT_1).into()
         );
         assert_eq!(
-            cep18_token.balance_of(client_contract.address()),
+            cep18_token.balance_of(&client_contract.address()),
             TRANSFER_AMOUNT_1.into()
         );
 
         // when the token transfers tokens to yet another contract
         client_contract.transfer_as_stored_contract(
-            *cep18_token.address(),
-            *cep18_token.address(),
+            cep18_token.address(),
+            cep18_token.address(),
             TRANSFER_AMOUNT_1.into()
         );
 
         // then the balances are updated
-        assert_eq!(cep18_token.balance_of(client_contract.address()), 0.into());
+        assert_eq!(cep18_token.balance_of(&client_contract.address()), 0.into());
         assert_eq!(
-            cep18_token.balance_of(cep18_token.address()),
+            cep18_token.balance_of(&cep18_token.address()),
             TRANSFER_AMOUNT_1.into()
         );
     }

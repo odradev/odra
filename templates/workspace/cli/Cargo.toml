@@ -1,0 +1,14 @@
+[package]
+name = "casper-cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+flapper = { path = "../flapper" }
+flipper = { path = "../flipper" }
+odra = { workspace = true }
+odra-cli = { workspace = true }
+
+[[bin]]
+name = "cli"
+path = "cli.rs"

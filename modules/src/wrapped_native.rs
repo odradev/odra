@@ -222,16 +222,16 @@ mod tests {
 
         // The events were emitted.
         assert!(env.emitted_event(
-            token.address(),
-            &Mint {
+            &token,
+            Mint {
                 recipient: account,
                 amount: deposit_amount.into()
             }
         ));
 
         assert!(env.emitted_event(
-            token.address(),
-            &Deposit {
+            &token,
+            Deposit {
                 account,
                 value: deposit_amount.into()
             }
@@ -255,10 +255,12 @@ mod tests {
         // Then the total supply in the sum of deposits.
         assert_eq!(
             token.total_supply(),
-            (deposit_amount + deposit_amount).to_u256().unwrap()
+            (deposit_amount + deposit_amount)
+                .to_u256()
+                .expect("Valid U256")
         );
         // Then events were emitted.
-        assert!(env.event_names(token.address()).ends_with(
+        assert!(env.event_names(&token).ends_with(
             vec![Mint::name(), Deposit::name(), Mint::name(), Deposit::name()].as_slice()
         ));
     }
@@ -295,20 +297,20 @@ mod tests {
         // Then the balance in the contract is deducted.
         assert_eq!(
             token.balance_of(&account),
-            deposit_amount.to_u256().unwrap() - withdrawal_amount
+            deposit_amount.to_u256().expect("Valid U256") - withdrawal_amount
         );
 
         // Then events were emitted.
         assert!(env.emitted_event(
-            token.address(),
-            &Burn {
+            &token,
+            Burn {
                 owner: account,
                 amount: withdrawal_amount
             }
         ));
         assert!(env.emitted_event(
-            token.address(),
-            &Withdrawal {
+            &token,
+            Withdrawal {
                 account,
                 value: withdrawal_amount
             }

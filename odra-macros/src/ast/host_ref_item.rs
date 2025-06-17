@@ -238,13 +238,13 @@ struct AddressFnItem;
 impl ToTokens for AddressFnItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let m_address = utils::member::address();
-        let ident = utils::ident::address();
-        let ty_address_ref = utils::ty::address_ref();
+        let ident = utils::ident::contract_address();
+        let ty_address_ref = utils::ty::address();
         let ty_self_ref = utils::ty::self_ref();
 
         tokens.extend(quote!(
             fn #ident(#ty_self_ref) -> #ty_address_ref {
-                &#m_address
+                #m_address
             }
         ));
     }
@@ -369,8 +369,8 @@ mod ref_item_tests {
                     }
                 }
 
-                fn address(&self) -> &Address {
-                    &self.address
+                fn contract_address(&self) -> Address {
+                    self.address
                 }
 
                 fn env(&self) -> &odra::host::HostEnv {
@@ -559,8 +559,8 @@ mod ref_item_tests {
                     }
                 }
 
-                fn address(&self) -> &Address {
-                    &self.address
+                fn contract_address(&self) -> Address {
+                    self.address
                 }
 
                 fn env(&self) -> &odra::host::HostEnv {
@@ -662,8 +662,8 @@ mod ref_item_tests {
                     }
                 }
 
-                fn address(&self) -> &Address {
-                    &self.address
+                fn contract_address(&self) -> Address {
+                    self.address
                 }
 
                 fn env(&self) -> &odra::host::HostEnv {

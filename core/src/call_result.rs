@@ -126,7 +126,7 @@ impl CallResult {
     pub fn emitted_event<T: ToBytes + EventInstance>(
         &self,
         contract_address: &Address,
-        event: &T
+        event: T
     ) -> bool {
         self.contract_events(contract_address)
             .contains(&Bytes::from(event.to_bytes().unwrap()))
@@ -136,7 +136,7 @@ impl CallResult {
     pub fn emitted_native_event<T: ToBytes + EventInstance>(
         &self,
         contract_address: &Address,
-        event: &T
+        event: T
     ) -> bool {
         self.contract_native_events(contract_address)
             .contains(&Bytes::from(event.to_bytes().unwrap()))
@@ -281,7 +281,7 @@ impl ContractCallResult {
     /// # Returns
     ///
     /// `true` if the event was emitted, otherwise `false`.
-    pub fn emitted_event<T: ToBytes + EventInstance>(&self, event: &T) -> bool {
+    pub fn emitted_event<T: ToBytes + EventInstance>(&self, event: T) -> bool {
         self.call_result
             .emitted_event(&self.contract_address, event)
     }
@@ -295,7 +295,7 @@ impl ContractCallResult {
     /// # Returns
     ///
     /// `true` if the event was emitted, otherwise `false`.
-    pub fn emitted_native_event<T: ToBytes + EventInstance>(&self, event: &T) -> bool {
+    pub fn emitted_native_event<T: ToBytes + EventInstance>(&self, event: T) -> bool {
         self.call_result
             .emitted_native_event(&self.contract_address, event)
     }

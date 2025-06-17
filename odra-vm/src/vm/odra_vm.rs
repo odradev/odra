@@ -643,7 +643,7 @@ mod tests {
     #[should_panic]
     fn test_revert() {
         let instance = OdraVm::default();
-        instance.revert(ExecutionError::User(1).into());
+        instance.revert(OdraError::user(1, "Test revert"));
     }
 
     #[test]
