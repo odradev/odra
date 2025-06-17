@@ -43,7 +43,7 @@ fn main() {
     assert!(r.is_err());
     assert_eq!(
         r.unwrap_err(),
-        OdraError::user(SillyError as u16, stringify!(SillyError))
+        SillyError.into()
     );
 
     // There are three ways contract endpoints can be called in Livenet environment:
