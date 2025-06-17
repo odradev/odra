@@ -2,9 +2,8 @@
 use std::time::Duration;
 
 use odra::casper_types::{U256, U512};
-use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader};
+use odra::host::{Deployer, HostEnv, HostRefLoader};
 use odra::{prelude::*, VmError};
-use odra_examples::features::livenet::Error::SillyError;
 use odra_examples::features::livenet::{
     LivenetContract, LivenetContractHostRef, LivenetContractInitArgs
 };
@@ -41,7 +40,10 @@ fn main() {
     env.set_gas(10_000_000_000u64);
     let r = contract.try_function_that_reverts();
     assert!(r.is_err());
-    assert_eq!(r.unwrap_err(), OdraError::VmError(VmError::Other("SillyError".to_string())));
+    assert_eq!(
+        r.unwrap_err(),
+        OdraError::VmError(VmError::Other("SillyError".to_string()))
+    );
 
     // There are three ways contract endpoints can be called in Livenet environment:
     // 1. If the endpoint is mutable and does not return anything, it can be called directly:
