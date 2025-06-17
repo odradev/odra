@@ -14,7 +14,7 @@ pub const ARG_CONTRACTS: &str = "contracts-toml";
 
 #[derive(Debug, Error)]
 pub enum ArgsError {
-    #[error("Invalid arg value: {0}")]
+    #[error("Invalid arg value")]
     TypesError(#[from] types::Error),
     #[error("Decoding error: {0}")]
     DecodingError(String),

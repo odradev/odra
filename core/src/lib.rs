@@ -43,7 +43,7 @@ pub use contract_container::ContractContainer;
 pub use contract_context::ContractContext;
 pub use contract_env::{ContractEnv, ContractRef, ExecutionEnv};
 pub use contract_register::ContractRegister;
-pub use error::{AddressError, CollectionError, EventError, VmError};
+pub use error::{AddressError, CollectionError, EventError, VmError, CASPER_ERROR_GENERIC_NAME};
 
 pub use casper_types;
 pub use contract::OdraContract;

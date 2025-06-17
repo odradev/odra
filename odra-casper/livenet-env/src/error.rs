@@ -7,9 +7,9 @@ use odra_core::prelude::*;
 use serde_json::Value;
 
 /// Finds the error message in the contract schema.
-pub fn find(error_msg: &str) -> Result<(String, OdraError)> {
+pub fn find(error_msg: &str) -> Result<OdraError> {
     if error_msg == "Out of gas error" {
-        return Ok(("OutOfGas".to_string(), ExecutionError::OutOfGas.into()));
+        return Ok(ExecutionError::OutOfGas.into());
     }
 
     let error_num: u16 = error_msg
@@ -34,8 +34,8 @@ pub fn find(error_msg: &str) -> Result<(String, OdraError)> {
             .as_array()
             .ok_or_else(|| anyhow!("Couldn't get value"))?;
         let f = errors.iter().find_map(|err| match_error(err, error_num));
-        if let Some((name, odra_error)) = f {
-            return Ok((name, odra_error));
+        if let Some(odra_error) = f {
+            return Ok(odra_error);
         }
     }
     Err(anyhow!(
@@ -44,13 +44,11 @@ pub fn find(error_msg: &str) -> Result<(String, OdraError)> {
     ))
 }
 
-fn match_error(val: &Value, error_num: u16) -> Option<(String, OdraError)> {
+fn match_error(val: &Value, error_num: u16) -> Option<OdraError> {
     if val["discriminant"].as_u64() == Some(error_num as u64) {
-        let odra_error = OdraError::user(error_num);
         val["name"]
             .as_str()
-            .map(|s| s.to_string())
-            .map(|s| (s, odra_error))
+            .map(|msg| OdraError::user(error_num, msg))
     } else {
         None
     }
@@ -63,7 +61,7 @@ fn is_internal_error(error_num: u16) -> bool {
 
 macro_rules! match_error {
     ($err:expr) => {
-        (stringify!($err).to_string(), $err.into())
+        $err.into()
     };
 }
 
@@ -78,7 +76,7 @@ macro_rules! match_errors {
     };
 }
 
-fn get_internal_error_name(error_num: u16) -> (String, OdraError) {
+fn get_internal_error_name(error_num: u16) -> OdraError {
     match_errors!(
         error_num,
         ExecutionError::UnwrapError,
@@ -122,26 +120,20 @@ mod test {
         // Contract errors
         assert_eq!(
             call("User error: 60017").ok(),
-            Some(("CannotTargetSelfUser".to_string(), OdraError::user(60017)))
+            Some(OdraError::user(60017, "CannotTargetSelfUser"))
         );
         assert_eq!(
             call("User error: 60010").ok(),
-            Some(("InsufficientRights".to_string(), OdraError::user(60010)))
+            Some(OdraError::user(60010, "InsufficientRights"))
         );
         // Odra error
         assert_eq!(
             call("User error: 64537").ok(),
-            Some((
-                "ExecutionError::UnwrapError".to_string(),
-                ExecutionError::UnwrapError.into()
-            ))
+            Some(ExecutionError::UnwrapError.into())
         );
         assert_eq!(
             call("User error: 64659").ok(),
-            Some((
-                "ExecutionError::MissingAddress".to_string(),
-                ExecutionError::MissingAddress.into()
-            ))
+            Some(ExecutionError::MissingAddress.into())
         );
         // Unknown user error
         assert!(call("User error: 60300").is_err());
@@ -149,11 +141,11 @@ mod test {
         assert!(call("Casper Engine error").is_err());
         assert_eq!(
             call("Out of gas error").ok(),
-            Some(("OutOfGas".to_string(), ExecutionError::OutOfGas.into()))
+            Some(ExecutionError::OutOfGas.into())
         );
     }
 
-    fn call(error_msg: &str) -> Result<(String, OdraError)> {
+    fn call(error_msg: &str) -> Result<OdraError> {
         super::find(error_msg)
     }
 }

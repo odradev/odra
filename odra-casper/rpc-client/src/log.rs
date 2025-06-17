@@ -13,3 +13,8 @@ pub fn error<T: AsRef<str>>(message: T) {
 pub fn wait<T: AsRef<str>>(message: T) {
     prettycli::wait(message.as_ref());
 }
+
+/// Link message.
+pub fn link<T: AsRef<str>>(message: T) {
+    prettycli::link(message.as_ref());
+}

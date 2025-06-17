@@ -20,15 +20,6 @@ use std::sync::RwLock;
 use std::thread::sleep;
 use tokio::runtime::Runtime;
 
-/// Enum representing a contract identifier used by Livenet Host.
-#[derive(Debug)]
-pub enum ContractId {
-    /// Contract name.
-    Name(String),
-    /// Contract address.
-    Address(Address)
-}
-
 /// LivenetHost struct.
 pub struct LivenetHost {
     casper_client: Rc<RefCell<CasperClient>>,
@@ -189,23 +180,15 @@ impl HostContext for LivenetHost {
                 client
                     .deploy_entrypoint_call_with_proxy(*address, call_def, timestamp)
                     .await
-                    .map_err(|e| {
-                        self.map_error_code_to_odra_error(
-                            ContractId::Address(*address),
-                            &e.error_message()
-                        )
-                    })
+                    .map_err(|e| e.error_message())
+                    .map_err(Self::error_msg_to_odra_error)
             }),
             false => rt.block_on(async {
-                let r = client
+                client
                     .deploy_entrypoint_call(*address, call_def, timestamp)
-                    .await;
-                r.map_err(|e| {
-                    self.map_error_code_to_odra_error(
-                        ContractId::Address(*address),
-                        &e.error_message()
-                    )
-                })
+                    .await
+                    .map_err(|e| e.error_message())
+                    .map_err(Self::error_msg_to_odra_error)
             })
         }
     }
@@ -283,28 +266,16 @@ impl HostContext for LivenetHost {
         let timestamp = Timestamp::now();
         let client = self.casper_client.borrow_mut();
         rt.block_on(async { client.transfer(to, amount, timestamp).await })
-            .map_err(|e| {
-                self.map_error_code_to_odra_error(
-                    ContractId::Address(client.caller()),
-                    &e.error_message()
-                )
-            })
+            .map_err(|e| e.error_message())
+            .map_err(Self::error_msg_to_odra_error)
     }
 }
 
 impl LivenetHost {
-    fn map_error_code_to_odra_error(&self, contract_id: ContractId, error_msg: &str) -> OdraError {
-        let found = match &contract_id {
-            ContractId::Name(_contract_name) => error::find(error_msg).ok(),
-            ContractId::Address(addr) => match self.contract_register.read().unwrap().get(addr) {
-                Some(_contract_name) => error::find(error_msg).ok(),
-                None => None
-            }
-        };
-
-        match found {
-            None => OdraError::VmError(VmError::Other(error_msg.to_string())),
-            Some((msg, _error)) => OdraError::VmError(VmError::Other(msg))
+    fn error_msg_to_odra_error(error_msg: String) -> OdraError {
+        match error::find(&error_msg) {
+            Ok(err) => err,
+            _ => OdraError::VmError(VmError::Other(error_msg))
         }
     }
 }
