@@ -4,6 +4,7 @@ use anyhow::Result;
 use clap::ArgMatches;
 use contract::ContractCmd;
 use deploy::DeployCmd;
+use events::PrintEventsCmd;
 use odra::host::HostEnv;
 use odra::schema::SchemaEntrypoints;
 use scenario::ScenarioCmd;
@@ -12,6 +13,7 @@ use crate::{CustomTypeSet, DeployScript, Scenario, ScenarioMetadata};
 
 pub mod contract;
 pub mod deploy;
+pub mod events;
 pub mod scenario;
 
 /// OdraCommand is a trait that represents a command that can be run in the Odra CLI.
@@ -30,7 +32,8 @@ pub(crate) trait OdraCommand {
 pub(crate) enum OdraCliCommand {
     Deploy(DeployCmd),
     Scenario(ScenarioCmd),
-    Contract(ContractCmd)
+    Contract(ContractCmd),
+    PrintEvents(PrintEventsCmd)
 }
 
 impl OdraCliCommand {
@@ -47,6 +50,10 @@ impl OdraCliCommand {
     pub fn new_contract<T: SchemaEntrypoints>(contract_name: String) -> Self {
         OdraCliCommand::Contract(ContractCmd::new::<T>(contract_name))
     }
+
+    pub fn new_print_events(contract_name: String) -> Self {
+        OdraCliCommand::PrintEvents(PrintEventsCmd::new(contract_name))
+    }
 }
 
 impl OdraCommand for OdraCliCommand {
@@ -54,7 +61,8 @@ impl OdraCommand for OdraCliCommand {
         match self {
             OdraCliCommand::Deploy(deploy) => deploy.name(),
             OdraCliCommand::Scenario(scenario) => scenario.name(),
-            OdraCliCommand::Contract(contract) => contract.name()
+            OdraCliCommand::Contract(contract) => contract.name(),
+            OdraCliCommand::PrintEvents(cmd) => cmd.name()
         }
     }
 
@@ -68,7 +76,8 @@ impl OdraCommand for OdraCliCommand {
         match self {
             OdraCliCommand::Deploy(deploy) => deploy.run(env, args, types, contracts_path),
             OdraCliCommand::Scenario(scenario) => scenario.run(env, args, types, contracts_path),
-            OdraCliCommand::Contract(contract) => contract.run(env, args, types, contracts_path)
+            OdraCliCommand::Contract(contract) => contract.run(env, args, types, contracts_path),
+            OdraCliCommand::PrintEvents(cmd) => cmd.run(env, args, types, contracts_path)
         }
     }
 }

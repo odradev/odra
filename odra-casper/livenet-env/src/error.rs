@@ -7,7 +7,7 @@ use odra_core::prelude::*;
 use serde_json::Value;
 
 /// Finds the error message in the contract schema.
-pub fn find(contract_name: &str, error_msg: &str) -> Result<(String, OdraError)> {
+pub fn find(error_msg: &str) -> Result<(String, OdraError)> {
     if error_msg == "Out of gas error" {
         return Ok(("OutOfGas".to_string(), ExecutionError::OutOfGas.into()));
     }
@@ -25,20 +25,23 @@ pub fn find(contract_name: &str, error_msg: &str) -> Result<(String, OdraError)>
     let schema_path = PathBuf::from("resources/test");
     #[cfg(not(test))]
     let schema_path = PathBuf::from("resources/casper_contract_schemas");
-    let schema_path =
-        odra_schema::find_schema_file_path(contract_name, schema_path).map_err(|e| anyhow!(e))?;
-    let schema = fs::read_to_string(schema_path)?;
+    let schema_path = odra_schema::find_schemas_file_paths(schema_path).map_err(|e| anyhow!(e))?;
+    for schema_path in schema_path {
+        let schema = fs::read_to_string(schema_path)?;
 
-    let schema: Value = serde_json::from_str(&schema)?;
-    let errors = schema["errors"]
-        .as_array()
-        .ok_or_else(|| anyhow!("Couldn't get value"))?;
-
-    let f = errors
-        .iter()
-        .find_map(|err| match_error(err, error_num))
-        .ok_or_else(|| anyhow!("Couldn't find error"));
-    f
+        let schema: Value = serde_json::from_str(&schema)?;
+        let errors = schema["errors"]
+            .as_array()
+            .ok_or_else(|| anyhow!("Couldn't get value"))?;
+        let f = errors.iter().find_map(|err| match_error(err, error_num));
+        if let Some((name, odra_error)) = f {
+            return Ok((name, odra_error));
+        }
+    }
+    Err(anyhow!(
+        "Couldn't find error in the contract schema: {}",
+        error_msg
+    ))
 }
 
 fn match_error(val: &Value, error_num: u16) -> Option<(String, OdraError)> {
@@ -151,6 +154,6 @@ mod test {
     }
 
     fn call(error_msg: &str) -> Result<(String, OdraError)> {
-        super::find("cep18", error_msg)
+        super::find(error_msg)
     }
 }

@@ -336,7 +336,8 @@ pub struct HostEnv {
     deployed_contracts: Rc<RefCell<Vec<Address>>>,
     events_count: Rc<RefCell<BTreeMap<Address, u32>>>, // contract_address -> events_count
     native_events_count: Rc<RefCell<BTreeMap<Address, u32>>>, // contract_address -> events_count
-    events_initialized: Rc<RefCell<BTreeMap<Address, bool>>>
+    events_initialized: Rc<RefCell<BTreeMap<Address, bool>>>,
+    captures_events: Rc<RefCell<bool>>
 }
 
 impl HostEnv {
@@ -348,7 +349,19 @@ impl HostEnv {
             deployed_contracts: RefCell::new(vec![]).into(),
             events_count: Rc::new(RefCell::new(Default::default())),
             native_events_count: Rc::new(RefCell::new(Default::default())),
-            events_initialized: Rc::new(RefCell::new(Default::default()))
+            events_initialized: Rc::new(RefCell::new(Default::default())),
+            captures_events: Rc::new(RefCell::new(true))
+        }
+    }
+
+    /// Sets the `captures_events` flag, which determines whether events should be captured.
+    pub fn set_captures_events(&self, captures: bool) {
+        *self.captures_events.borrow_mut() = captures;
+        if captures {
+            // Initialize events for all deployed contracts if capturing is enabled
+            for contract in self.deployed_contracts.borrow().iter() {
+                self.init_events(contract);
+            }
         }
     }
 
@@ -490,16 +503,19 @@ impl HostEnv {
         let mut events_map: BTreeMap<Address, Vec<Bytes>> = BTreeMap::new();
         let mut native_events_map: BTreeMap<Address, Vec<Bytes>> = BTreeMap::new();
 
-        // Go through all contracts and collect their events
-        self.deployed_contracts
-            .borrow()
-            .iter()
-            .for_each(|contract_address| {
-                let events = self.last_events(contract_address);
-                let native_events = self.last_native_events(contract_address);
-                events_map.insert(*contract_address, events);
-                native_events_map.insert(*contract_address, native_events);
-            });
+        let captures_events = *self.captures_events.borrow();
+        if captures_events {
+            // Go through all contracts and collect their events
+            self.deployed_contracts
+                .borrow()
+                .iter()
+                .for_each(|contract_address| {
+                    let events = self.last_events(contract_address);
+                    let native_events = self.last_native_events(contract_address);
+                    events_map.insert(*contract_address, events);
+                    native_events_map.insert(*contract_address, native_events);
+                });
+        }
 
         let last_call_gas_cost = backend.last_call_gas_cost();
 
@@ -798,25 +814,6 @@ impl HostEnv {
     }
 
     fn last_events(&self, contract_address: &Address) -> Vec<Bytes> {
-        let events_initialized = self
-            .events_initialized
-            .borrow()
-            .get(contract_address)
-            .copied()
-            .unwrap_or(false);
-        if !events_initialized {
-            self.events_count
-                .borrow_mut()
-                .insert(*contract_address, self.events_count(contract_address));
-            self.native_events_count.borrow_mut().insert(
-                *contract_address,
-                self.native_events_count(contract_address)
-            );
-            self.events_initialized
-                .borrow_mut()
-                .insert(*contract_address, true);
-        }
-
         let mut old_count_binding = self.events_count.borrow_mut();
         let old_count = *old_count_binding
             .get(contract_address)
@@ -846,6 +843,27 @@ impl HostEnv {
 
         old_count_binding.insert(*contract_address, new_count);
         events
+    }
+
+    fn init_events(&self, contract_address: &Address) {
+        let events_initialized = self
+            .events_initialized
+            .borrow()
+            .get(contract_address)
+            .copied()
+            .unwrap_or(false);
+        if !events_initialized {
+            self.events_count
+                .borrow_mut()
+                .insert(*contract_address, self.events_count(contract_address));
+            self.native_events_count.borrow_mut().insert(
+                *contract_address,
+                self.native_events_count(contract_address)
+            );
+            self.events_initialized
+                .borrow_mut()
+                .insert(*contract_address, true);
+        }
     }
 }
 

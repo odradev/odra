@@ -21,7 +21,9 @@ pub enum ContractError {
     #[error("Couldn't read file")]
     Io(#[from] std::io::Error),
     #[error("Couldn't find contract `{0}`")]
-    NotFound(String)
+    NotFound(String),
+    #[error("Couldn't find schema file for contract `{0}`")]
+    SchemaFileNotFound(String)
 }
 
 /// Struct representing the deployed contracts.
@@ -131,8 +133,10 @@ impl DeployedContractsContainer {
     fn file_path(custom_path: Option<PathBuf>) -> Result<PathBuf, ContractError> {
         let mut path = project_root::get_project_root().map_err(ContractError::Io)?;
         match &custom_path {
-            Some(custom_path) => path.push(custom_path),
-            None => path.push(DEPLOYED_CONTRACTS_FILE)
+            Some(path_str) if !path_str.to_str().unwrap_or_default().is_empty() => {
+                path.push(path_str);
+            }
+            _ => path.push(DEPLOYED_CONTRACTS_FILE)
         }
         if !path.exists() {
             let parent_path = path.parent().ok_or_else(|| {
