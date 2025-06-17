@@ -41,10 +41,7 @@ fn main() {
     env.set_gas(10_000_000_000u64);
     let r = contract.try_function_that_reverts();
     assert!(r.is_err());
-    assert_eq!(
-        r.unwrap_err(),
-        SillyError.into()
-    );
+    assert_eq!(r.unwrap_err(), SillyError.into());
 
     // There are three ways contract endpoints can be called in Livenet environment:
     // 1. If the endpoint is mutable and does not return anything, it can be called directly:
