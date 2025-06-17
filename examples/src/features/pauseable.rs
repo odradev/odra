@@ -63,12 +63,12 @@ mod test {
         contract.pause();
         assert!(contract
             .last_call()
-            .emitted_event(&Paused { account: caller }));
+            .emitted_event(Paused { account: caller }));
 
         contract.unpause();
         assert!(contract
             .last_call()
-            .emitted_event(&Unpaused { account: caller }));
+            .emitted_event(Unpaused { account: caller }));
         assert!(!contract.is_paused());
     }
 

@@ -330,7 +330,7 @@ pub(crate) mod tests {
         let owner_balance = cep18_token.balance_of(&owner_key);
         assert_eq!(owner_balance, TOKEN_TOTAL_SUPPLY.into());
 
-        let contract_balance = cep18_token.balance_of(cep18_token.address());
+        let contract_balance = cep18_token.balance_of(&cep18_token.address());
         assert_eq!(contract_balance, 0.into());
 
         // Ensures that Account and Contract ownership is respected, and we're not keying ownership under

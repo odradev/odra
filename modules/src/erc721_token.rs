@@ -147,7 +147,7 @@ mod tests {
     use crate::erc721_receiver::events::Received;
     use crate::erc721_receiver::Erc721Receiver;
     use crate::erc721_token::errors::Error::TokenAlreadyExists;
-    use odra::host::{Deployer, HostEnv, HostRef, NoArgs};
+    use odra::host::{Deployer, HostEnv, NoArgs};
     use odra::prelude::*;
     use odra::{casper_types::U256, VmError};
     const NAME: &str = "PlascoinNFT";
@@ -523,7 +523,7 @@ mod tests {
             ))),
             erc721_env.token.try_safe_transfer_from(
                 &erc721_env.alice,
-                erc20.address(),
+                &erc20.address(),
                 &U256::from(1)
             )
         );
@@ -543,17 +543,17 @@ mod tests {
         erc721_env.env.set_caller(erc721_env.alice);
         erc721_env
             .token
-            .safe_transfer_from(&erc721_env.alice, receiver.address(), &U256::from(1));
+            .safe_transfer_from(&erc721_env.alice, &receiver.address(), &U256::from(1));
 
         // Then the owner of the token is the contract
         assert_eq!(
             erc721_env.token.owner_of(&U256::from(1)),
-            *receiver.address()
+            receiver.address()
         );
         // And the receiver contract is aware of the transfer
         erc721_env.env.emitted_event(
-            receiver.address(),
-            &Received {
+            &receiver,
+            Received {
                 operator: Some(erc721_env.alice),
                 from: Some(erc721_env.alice),
                 token_id: U256::from(1),
@@ -576,7 +576,7 @@ mod tests {
         erc721_env.env.set_caller(erc721_env.alice);
         erc721_env.token.safe_transfer_from_with_data(
             &erc721_env.alice,
-            receiver.address(),
+            &receiver.address(),
             &U256::from(1),
             &b"data".to_vec().into()
         );
@@ -584,12 +584,12 @@ mod tests {
         // Then the owner of the token is the contract
         assert_eq!(
             erc721_env.token.owner_of(&U256::from(1)),
-            receiver.address().clone()
+            receiver.address()
         );
         // And the receiver contract is aware of the transfer
         erc721_env.env.emitted_event(
-            receiver.address(),
-            &Received {
+            &receiver,
+            Received {
                 operator: Some(erc721_env.alice),
                 from: Some(erc721_env.alice),
                 token_id: U256::from(1),

@@ -1,6 +1,6 @@
 //! Deploys an ERC20 contract and transfers some tokens to another address.
 use odra::casper_types::U256;
-use odra::host::{Deployer, HostRef, OdraConfig};
+use odra::host::{Deployer, OdraConfig};
 use odra::prelude::*;
 use odra_modules::erc20::{Erc20, Erc20InitArgs};
 

@@ -23,7 +23,7 @@ fn main() {
 
     // Compare delegated amount from contract and from host env
     let delegated_amount_contract = validators_contract.currently_delegated_amount();
-    let delegated_amount_host = env.delegated_amount(*validators_contract.address(), validator);
+    let delegated_amount_host = env.delegated_amount(validators_contract.address(), validator);
     assert_eq!(delegated_amount_contract, delegated_amount_host);
 
     // Check Host's validator's functionality

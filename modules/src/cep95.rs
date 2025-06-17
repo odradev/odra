@@ -455,7 +455,7 @@ impl Cep95 {
 
         self.balances.set(&to, self.balance_of(to) + 1);
         self.owners.set(&token_id, Some(to));
-        self.set_metadata(token_id, metadata);
+        self.metadata.set(&token_id, BTreeMap::from_iter(metadata));
 
         self.env().emit_event(Mint { to, token_id });
     }
@@ -653,7 +653,8 @@ mod tests {
     use crate::cep95::utils::*;
     use odra::{
         host::{Deployer, HostEnv, NoArgs},
-        Addressable, VmError
+        prelude::Addressable,
+        VmError
     };
     use odra_test;
 
@@ -712,7 +713,7 @@ mod tests {
             cep95.token_metadata(token_id),
             vec![("key".to_string(), "value".to_string())]
         );
-        assert!(env.emitted(cep95.address(), "Mint"));
+        assert!(env.emitted(&cep95, "Mint"));
     }
 
     #[test]
@@ -762,7 +763,7 @@ mod tests {
             cep95.try_token_metadata(token_id),
             Err(Error::InvalidTokenId.into())
         );
-        assert!(env.emitted(cep95.address(), "Burn"));
+        assert!(env.emitted(&cep95, "Burn"));
     }
 
     #[test]
@@ -779,7 +780,7 @@ mod tests {
     fn test_safe_transfer_to_receiver() {
         let (env, mut cep95) = setup();
         let nft_receiver = NFTReceiver::deploy(&env, NoArgs);
-        let recipient = *nft_receiver.address();
+        let recipient = nft_receiver.address();
         let owner = env.caller();
 
         let token_id = U256::from(1);
@@ -800,7 +801,7 @@ mod tests {
     fn test_safe_transfer_to_non_receiver() {
         let (env, mut cep95) = setup();
         let contract = BasicContract::deploy(&env, NoArgs);
-        let recipient = *contract.address();
+        let recipient = contract.address();
         let owner = env.caller();
 
         let token_id = U256::from(1);
@@ -825,7 +826,7 @@ mod tests {
 
         let owner = env.get_account(0);
         let contract = RejectingNFTReceiver::deploy(&env, NoArgs);
-        let recipient = *contract.address();
+        let recipient = contract.address();
 
         let token_id = U256::from(1);
         let metadata = vec![("key".to_string(), "value".to_string())];
@@ -852,7 +853,7 @@ mod tests {
 
         assert_eq!(cep95.balance_of(owner), U256::from(0));
         assert_eq!(cep95.balance_of(recipient), U256::from(1));
-        assert!(env.emitted(cep95.address(), "Transfer"));
+        assert!(env.emitted(&cep95, "Transfer"));
     }
 
     #[test]
@@ -903,7 +904,7 @@ mod tests {
         assert_eq!(cep95.approved_for(token_id), Some(spender));
         assert!(env.emitted_event(
             &cep95,
-            &Approval {
+            Approval {
                 owner,
                 spender,
                 token_id
@@ -946,7 +947,7 @@ mod tests {
         assert_eq!(cep95.balance_of(recipient), U256::from(1));
         assert!(env.emitted_event(
             &cep95,
-            &Transfer {
+            Transfer {
                 from: owner,
                 to: recipient,
                 token_id
@@ -963,7 +964,7 @@ mod tests {
         cep95.approve_for_all(operator);
 
         assert!(cep95.is_approved_for_all(owner, operator));
-        assert!(env.emitted(cep95.address(), "ApprovalForAll"));
+        assert!(env.emitted(&cep95, "ApprovalForAll"));
     }
 
     #[test]
@@ -976,7 +977,7 @@ mod tests {
         cep95.revoke_approval_for_all(operator);
 
         assert!(!cep95.is_approved_for_all(owner, operator));
-        assert!(env.emitted(cep95.address(), "RevokeApprovalForAll"));
+        assert!(env.emitted(&cep95, "RevokeApprovalForAll"));
     }
 
     #[test]
@@ -1002,7 +1003,7 @@ mod tests {
         cep95.revoke_approval(token_id);
 
         assert_eq!(cep95.approved_for(token_id), None);
-        assert!(env.emitted(cep95.address(), "RevokeApproval"));
+        assert!(env.emitted(&cep95, "RevokeApproval"));
     }
 
     #[test]
@@ -1095,7 +1096,7 @@ mod tests {
                 ("name".to_string(), "Bob".to_string()),
             ]
         );
-        assert!(env.emitted(cep95.address(), "MetadataUpdate"));
+        assert!(env.emitted(&cep95, "MetadataUpdate"));
     }
 
     #[test]
@@ -1117,6 +1118,6 @@ mod tests {
             cep95.token_metadata(token_id),
             vec![("name".to_string(), "Bob".to_string())]
         );
-        assert!(env.emitted(cep95.address(), "MetadataUpdate"));
+        assert!(env.emitted(&cep95, "MetadataUpdate"));
     }
 }

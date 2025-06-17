@@ -129,14 +129,14 @@ pub mod test {
         assert!(!contract.is_moderator(&user2));
 
         // then two RoleGranted events were emitted.
-        contract.env().emitted_event(
+        assert!(contract.env().emitted_event(
             &contract,
-            &RoleGranted {
+            RoleGranted {
                 role: keccak_256(ROLE_MODERATOR),
                 address: user1,
                 sender: admin
             }
-        );
+        ));
     }
 
     #[test]
@@ -173,30 +173,30 @@ pub mod test {
         // then Moderator still is a moderator.
         assert!(contract.is_moderator(&moderator));
 
-        contract.env().emitted_event(
+        assert!(contract.env().emitted_event(
             &contract,
-            &RoleGranted {
+            RoleGranted {
                 role: keccak_256(ROLE_MODERATOR),
                 address: moderator,
                 sender: admin
             }
-        );
-        contract.env().emitted_event(
+        ));
+        assert!(contract.env().emitted_event(
             &contract,
-            &RoleRevoked {
+            RoleRevoked {
                 role: keccak_256(ROLE_MODERATOR),
                 address: moderator,
                 sender: admin
             }
-        );
-        contract.env().emitted_event(
+        ));
+        assert!(contract.env().emitted_event(
             &contract,
-            &RoleGranted {
+            RoleGranted {
                 role: keccak_256(ROLE_MODERATOR),
                 address: moderator,
                 sender: admin
             }
-        );
+        ));
     }
 
     #[test]
@@ -218,14 +218,14 @@ pub mod test {
         // then is no longer a moderator.
         assert!(!contract.is_moderator(&moderator));
         // RoleRevoked event was emitted.
-        contract.env().emitted_event(
+        assert!(contract.env().emitted_event(
             &contract,
-            &RoleRevoked {
+            RoleRevoked {
                 role: keccak_256(ROLE_MODERATOR),
                 address: moderator,
                 sender: moderator
             }
-        );
+        ));
     }
 
     #[test]
@@ -247,22 +247,22 @@ pub mod test {
         // then User is a moderator.
         assert!(contract.is_moderator(&user));
 
-        contract.env().emitted_event(
+        assert!(contract.env().emitted_event(
             &contract,
-            &RoleGranted {
+            RoleGranted {
                 role: keccak_256(ROLE_MODERATOR_ADMIN),
                 address: moderator,
                 sender: admin
             }
-        );
-        contract.env().emitted_event(
+        ));
+        assert!(contract.env().emitted_event(
             &contract,
-            &RoleGranted {
+            RoleGranted {
                 role: keccak_256(ROLE_MODERATOR),
                 address: user,
                 sender: moderator
             }
-        );
+        ));
     }
 
     fn setup(add_moderator: bool) -> (MockModeratedHostRef, Address, Address, Address) {

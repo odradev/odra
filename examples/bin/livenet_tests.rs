@@ -35,7 +35,7 @@ fn main() {
     let (contract, erc20) = deploy_new(&env);
 
     // Contract can be loaded
-    let (mut contract, erc20) = load(&env, *contract.address(), *erc20.address());
+    let (mut contract, erc20) = load(&env, contract.address(), erc20.address());
 
     // Errors can be handled
     env.set_gas(10_000_000_000u64);
@@ -57,9 +57,9 @@ fn main() {
 
     // By querying livenet storage
     // - we can also test the events
-    assert_eq!(env.events_count(contract.address()), 1);
+    assert_eq!(env.events_count(&contract), 1);
 
-    let event: OwnershipTransferred = env.get_event(contract.address(), 0).unwrap();
+    let event: OwnershipTransferred = env.get_event(&contract, 0).unwrap();
     assert_eq!(event.new_owner, Some(owner));
 
     // - we can test immutable crosscalls without deploying (but crosscall contracts needs to be registered)
@@ -84,10 +84,10 @@ fn main() {
 fn deploy_new(env: &HostEnv) -> (LivenetContractHostRef, Erc20HostRef) {
     let mut erc20_contract = deploy_erc20(env);
     let init_args = LivenetContractInitArgs {
-        erc20_address: *erc20_contract.address()
+        erc20_address: erc20_contract.address()
     };
     let livenet_contract = LivenetContract::deploy(env, init_args);
-    erc20_contract.transfer(livenet_contract.address(), &1000.into());
+    erc20_contract.transfer(&livenet_contract.address(), &1000.into());
     (livenet_contract, erc20_contract)
 }
 

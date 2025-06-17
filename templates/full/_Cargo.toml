@@ -14,6 +14,7 @@ edition = "2021"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 #odra_build_dependency
+#odra_cli_dependency
 
 [[bin]]
 name = "{{project-name}}_build_contract"
@@ -23,6 +24,11 @@ test = false
 [[bin]]
 name = "{{project-name}}_build_schema"
 path = "bin/build_schema.rs"
+test = false
+
+[[bin]]
+name = "{{project-name}}_cli"
+path = "bin/cli.rs"
 test = false
 
 [profile.release]
