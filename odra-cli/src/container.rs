@@ -195,7 +195,7 @@ impl Default for ContractsData {
 }
 
 impl ContractsData {
-    pub fn add_contract<T: HasIdent>(&mut self, address: &Address) {
+    pub fn add_contract<T: HasIdent>(&mut self, address: Address) {
         let contract = DeployedContract::new::<T>(address);
         self.contracts.retain(|c| c.name != contract.name);
         self.contracts.push(contract);
