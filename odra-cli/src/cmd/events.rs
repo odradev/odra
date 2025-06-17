@@ -1,7 +1,11 @@
 use crate::{
-    cmd::args::{read_arg, Arg, ArgsError},
+    cmd::{
+        args::{read_arg, Arg, ArgsError},
+        OdraCommand, PRINT_EVENTS_SUBCOMMAND
+    },
     container::{self, ContractProvider},
-    types, CustomTypeSet, DeployedContractsContainer, OdraCommand, PRINT_EVENTS_SUBCOMMAND
+    custom_types::CustomTypeSet,
+    types, DeployedContractsContainer
 };
 use anyhow::Result;
 use clap::{ArgMatches, Command};

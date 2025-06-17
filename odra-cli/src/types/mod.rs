@@ -11,13 +11,13 @@ use odra::{
     prelude::Address
 };
 
-use crate::CustomTypeSet;
-
 mod decoder;
 mod error;
 
 pub(crate) use decoder::decode;
 pub(crate) use error::{Error, Format};
+
+use crate::custom_types::CustomTypeSet;
 
 const PREFIX_ERROR: &str = "err:";
 const PREFIX_OK: &str = "ok:";
@@ -110,12 +110,11 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
         NamedCLType::I32 => call_to_bytes!(i32, input),
         NamedCLType::I64 => call_to_bytes!(i64, input),
         NamedCLType::U8 => {
-            if input.starts_with("0x") {
-                u8::from_str_radix(&input[2..], 16)
+            if let Some(hex) = input.strip_prefix("0x") {
+                u8::from_str_radix(hex, 16)
                     .map_err(|_| Error::InvalidHexString)
-                    .and_then(|byte| Ok(vec![byte]))
-            } else if input.starts_with("0b") {
-                let bits = input.strip_prefix("0b").ok_or(Error::InvalidHexString)?;
+                    .map(|byte| vec![byte])
+            } else if let Some(bits) = input.strip_prefix("0b") {
                 let byte = u8::from_str_radix(bits, 2).map_err(|_| Error::Serialization)?;
                 Ok(vec![byte])
             } else {

@@ -26,12 +26,17 @@ pub enum ContractError {
     SchemaFileNotFound(String)
 }
 
-pub trait ContractStorage {
+/// Represents storage for deployed contracts.
+/// This trait defines the methods for reading and writing contract data.
+pub(crate) trait ContractStorage {
+    /// Reads the contract data from the storage.
     fn read(&self) -> Result<ContractsData, ContractError>;
+    /// Writes the contract data to the storage.
     fn write(&mut self, data: &ContractsData) -> Result<(), ContractError>;
 }
 
-pub struct FileContractStorage {
+/// Represents the data structure for storing deployed contracts in a TOML file.
+pub(crate) struct FileContractStorage {
     file_path: PathBuf
 }
 
@@ -73,6 +78,7 @@ impl ContractStorage for FileContractStorage {
     }
 }
 
+/// This trait defines the methods for providing access to deployed contracts.
 pub trait ContractProvider {
     /// Gets a reference to the contract.
     ///
@@ -82,6 +88,7 @@ pub trait ContractProvider {
         env: &HostEnv
     ) -> Result<T::HostRef, ContractError>;
 
+    /// Returns a list of all deployed contracts with their names and addresses.
     fn all_contracts(&self) -> Vec<(String, Address)>;
 
     /// Returns the contract address.
@@ -173,7 +180,7 @@ impl DeployedContract {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct ContractsData {
+pub(crate) struct ContractsData {
     time: String,
     contracts: Vec<DeployedContract>
 }

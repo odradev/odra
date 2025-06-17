@@ -3,7 +3,7 @@ use std::str::FromStr;
 use odra::schema::casper_contract_schema::{CustomType, NamedCLType, Type};
 use serde_json::Value;
 
-use crate::{cmd::args::ArgsError, CustomTypeSet};
+use crate::{cmd::args::ArgsError, custom_types::CustomTypeSet};
 
 pub fn decode<'a>(
     bytes: &'a [u8],

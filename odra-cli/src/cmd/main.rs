@@ -3,18 +3,10 @@ use clap::{ArgMatches, Command};
 use std::path::PathBuf;
 
 /// MainCmd is a struct that represents the main command of the Odra CLI.
+#[derive(Default)]
 pub(crate) struct MainCmd {
     sub_cmds: Vec<Command>,
     about: Option<&'static str>
-}
-
-impl Default for MainCmd {
-    fn default() -> Self {
-        MainCmd {
-            sub_cmds: vec![],
-            about: None
-        }
-    }
 }
 
 impl From<&MainCmd> for Command {

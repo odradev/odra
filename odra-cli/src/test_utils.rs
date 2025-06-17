@@ -17,7 +17,8 @@ use odra::{
 use crate::{
     cmd::args::CommandArg,
     container::{ContractError, ContractStorage, ContractsData},
-    CustomTypeSet, DeployedContractsContainer
+    custom_types::CustomTypeSet,
+    DeployedContractsContainer
 };
 
 pub fn mock_entry_point() -> Entrypoint {
@@ -147,6 +148,7 @@ impl TestContract {
 
     pub fn mutable(&mut self) {}
 
+    #[allow(clippy::too_many_arguments)]
     pub fn various_args(
         &self,
         a: Address,

@@ -3,8 +3,9 @@ use odra::casper_types::{CLType, CLValue, RuntimeArgs};
 use odra::schema::casper_contract_schema::{Argument, Entrypoint, NamedCLType};
 
 use crate::cmd::args::{ArgsError, CommandArg};
+use crate::custom_types::CustomTypeSet;
 use crate::entry_point::utils::flatten_schema_arg;
-use crate::{types, CustomTypeSet};
+use crate::types;
 
 pub fn compose(
     entry_point: &Entrypoint,

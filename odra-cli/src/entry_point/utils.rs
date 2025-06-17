@@ -1,7 +1,9 @@
 use odra::schema::casper_contract_schema::{Argument, CustomType, NamedCLType, Type};
 
-use crate::cmd::args::{ArgsError, CommandArg};
-use crate::CustomTypeSet;
+use crate::{
+    cmd::args::{ArgsError, CommandArg},
+    custom_types::CustomTypeSet
+};
 
 pub(super) fn flatten_schema_arg(
     arg: &Argument,

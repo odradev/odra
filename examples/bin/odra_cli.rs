@@ -1,8 +1,8 @@
 //! This example demonstrates how to use the `odra-cli` tool to deploy and interact with a smart contract.
 use odra::host::{Deployer, HostEnv};
 use odra::schema::casper_contract_schema::NamedCLType;
-use odra_cli::scenario::{Scenario, ScenarioMetadata};
-use odra_cli::{CommandArg, DeployedContractsContainer, OdraCli, ScenarioArgs, ScenarioError};
+use odra_cli::scenario::{Args, Error, Scenario, ScenarioMetadata};
+use odra_cli::{CommandArg, ContractProvider, DeployedContractsContainer, OdraCli};
 use odra_examples::features::storage::variable::{DogContract, DogContractInitArgs};
 use std::vec;
 
@@ -45,10 +45,10 @@ impl Scenario for DogCheckScenario {
     fn run(
         &self,
         env: &HostEnv,
-        container: DeployedContractsContainer,
-        args: ScenarioArgs
-    ) -> Result<(), ScenarioError> {
-        let dog_contract = container.get_ref::<DogContract>(env)?;
+        container: &DeployedContractsContainer,
+        args: Args
+    ) -> Result<(), Error> {
+        let dog_contract = container.contract_ref::<DogContract>(env)?;
         let test_name = args.get_single::<String>("name")?;
 
         env.set_gas(50_000_000);

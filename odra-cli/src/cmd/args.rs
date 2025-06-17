@@ -181,6 +181,5 @@ pub fn read_cl_value_arg<
     matches
         .get_one::<CLValue>(arg.name())
         .map(ToOwned::to_owned)
-        .map(|cl_value| cl_value.into_t::<T>().ok())
-        .flatten()
+        .and_then(|cl_value| cl_value.into_t::<T>().ok())
 }

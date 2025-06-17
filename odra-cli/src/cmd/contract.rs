@@ -8,7 +8,9 @@ use odra::OdraContract;
 use odra::{contract_def::HasIdent, host::HostEnv};
 
 use crate::cmd::args::Arg;
-use crate::{entry_point, CustomTypeSet, DeployedContractsContainer, CONTRACTS_SUBCOMMAND};
+use crate::cmd::CONTRACTS_SUBCOMMAND;
+use crate::custom_types::CustomTypeSet;
+use crate::{entry_point, DeployedContractsContainer};
 
 use super::OdraCommand;
 
@@ -205,9 +207,8 @@ impl From<&CallCmd> for Command {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_utils::{self, TestContract};
-
     use super::*;
+    use crate::test_utils::{self, TestContract};
 
     #[test]
     fn test_contracts_cmd() {

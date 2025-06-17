@@ -1,5 +1,6 @@
 use crate::{
-    container::ContractError, CustomTypeSet, DeployedContractsContainer, DEPLOY_SUBCOMMAND
+    cmd::DEPLOY_SUBCOMMAND, container::ContractError, custom_types::CustomTypeSet,
+    DeployedContractsContainer
 };
 use anyhow::Result;
 use clap::{ArgMatches, Command};

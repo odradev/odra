@@ -7,7 +7,8 @@ use odra::{casper_types::U512, host::HostEnv, CallDef};
 
 use crate::cmd::args::{read_arg, read_cl_value_arg, Arg, ArgsError, ARG_PRINT_EVENTS};
 use crate::container::ContractProvider;
-use crate::{container, types, CustomTypeSet};
+use crate::custom_types::CustomTypeSet;
+use crate::{container, types};
 
 pub(crate) mod cmd_args;
 mod runtime_args;

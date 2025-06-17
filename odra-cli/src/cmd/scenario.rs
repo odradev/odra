@@ -1,8 +1,9 @@
 use std::any::Any;
 
 use crate::cmd::args::CommandArg;
-use crate::SCENARIOS_SUBCOMMAND;
-use crate::{container::ContractError, types, CustomTypeSet, DeployedContractsContainer};
+use crate::cmd::SCENARIOS_SUBCOMMAND;
+use crate::custom_types::CustomTypeSet;
+use crate::{container::ContractError, types, DeployedContractsContainer};
 use anyhow::Result;
 use clap::{ArgMatches, Command};
 use odra::casper_types::{CLTyped, CLValue};

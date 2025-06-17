@@ -2,8 +2,6 @@ use anyhow::Result;
 use clap::ArgMatches;
 use odra::host::HostEnv;
 
-use crate::{CustomTypeSet, DeployedContractsContainer};
-
 pub mod args;
 mod contract;
 mod deploy;
@@ -19,10 +17,12 @@ pub(crate) use main::MainCmd;
 pub(crate) use scenario::ScenariosCmd;
 pub use scenario::{Scenario, ScenarioArgs, ScenarioError, ScenarioMetadata};
 
-pub const CONTRACTS_SUBCOMMAND: &str = "contract";
-pub const SCENARIOS_SUBCOMMAND: &str = "scenario";
-pub const DEPLOY_SUBCOMMAND: &str = "deploy";
-pub const PRINT_EVENTS_SUBCOMMAND: &str = "print-events";
+use crate::{custom_types::CustomTypeSet, DeployedContractsContainer};
+
+pub(crate) const CONTRACTS_SUBCOMMAND: &str = "contract";
+pub(crate) const SCENARIOS_SUBCOMMAND: &str = "scenario";
+pub(crate) const DEPLOY_SUBCOMMAND: &str = "deploy";
+pub(crate) const PRINT_EVENTS_SUBCOMMAND: &str = "print-events";
 
 /// OdraCommand is a trait that represents a command that can be run in the Odra CLI.
 pub(crate) trait OdraCommand {

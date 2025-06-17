@@ -5,7 +5,7 @@ use odra::{
 
 use crate::{ContractProvider, DeployedContractsContainer};
 
-//// Logs a message to the console.
+/// Logs a message to the console.
 pub fn log<T: ToString>(msg: T) {
     prettycli::info(&msg.to_string());
 }
