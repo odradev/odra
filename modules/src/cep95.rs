@@ -420,8 +420,16 @@ impl CEP95Interface for Cep95 {
 impl Cep95 {
     /// Initializes the module with a name and symbol.
     pub fn init(&mut self, name: String, symbol: String) {
+        // Initialize the name and symbol.
         self.name.set(name);
         self.symbol.set(symbol);
+
+        // Initialize dictionaries.
+        self.balances.init();
+        self.owners.init();
+        self.approvals.init();
+        self.operators.init();
+        self.metadata.init();
     }
 
     #[inline]

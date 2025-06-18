@@ -46,6 +46,10 @@ impl ContractContext for OdraVmContractEnv {
         self.vm.borrow().remove_dictionary(dictionary_name);
     }
 
+    fn init_dictionary(&self, dictionary_name: &str) {
+        // no-op, dictionaries are initialized automatically in Odra VM
+    }
+
     fn caller(&self) -> Address {
         self.vm.borrow().caller()
     }
