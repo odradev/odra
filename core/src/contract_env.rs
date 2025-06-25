@@ -164,6 +164,12 @@ impl ContractEnv {
         self.backend.borrow().remove_dictionary(dictionary_name);
     }
 
+    /// Initializes the empty dictionary with the given name.
+    pub fn init_dictionary<U: AsRef<str>>(&self, dictionary_name: U) {
+        let dictionary_name = dictionary_name.as_ref();
+        self.backend.borrow().init_dictionary(dictionary_name);
+    }
+
     /// Returns the address of the caller of the contract.
     pub fn caller(&self) -> Address {
         let backend = self.backend.borrow();

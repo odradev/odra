@@ -42,6 +42,10 @@ impl ContractContext for WasmContractEnv {
         host_functions::remove_dictionary(dictionary_name);
     }
 
+    fn init_dictionary(&self, dictionary_name: &str) {
+        host_functions::init_dictionary(dictionary_name);
+    }
+
     fn caller(&self) -> Address {
         host_functions::caller().unwrap_or_else(|e| self.revert(e))
     }

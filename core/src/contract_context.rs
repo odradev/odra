@@ -67,6 +67,12 @@ pub trait ContractContext {
     /// * `dictionary_name` - The name of the dictionary.
     fn remove_dictionary(&self, dictionary_name: &str);
 
+    /// Initializes the empty dictionary with the given name.
+    ///
+    /// # Arguments
+    /// * `dictionary_name` - The name of the dictionary to initialize.
+    fn init_dictionary(&self, dictionary_name: &str);
+
     /// Retrieves the address of the caller.
     fn caller(&self) -> Address;
 

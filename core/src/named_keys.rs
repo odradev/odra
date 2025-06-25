@@ -37,8 +37,10 @@ macro_rules! single_value_storage {
 }
 
 /// Creates an Odra module that stores a values in a given dictionary.
-/// The module has two methods: `set` and `get`.
+///
+/// The module has three methods: `set`, `get` and `init`.
 /// The `key` argument of `set` and `get` is used as a dictionary key.
+/// The `init` method initializes the dictionary with the given name.
 #[macro_export]
 macro_rules! key_value_storage {
     ($name:ident, $dict:expr, $value_type:ty) => {
@@ -54,14 +56,19 @@ macro_rules! key_value_storage {
             pub fn get(&self, key: &str) -> Option<$value_type> {
                 self.env().get_dictionary_value($dict, key.as_bytes())
             }
+
+            pub fn init(&self) {
+                self.env().init_dictionary($dict);
+            }
         }
     };
 }
 
 /// Creates an Odra module that stores a values in a given dictionary.
 ///
-/// The module has two methods: `set` and `get`.
+/// The module has three methods: `set`, `get` and `init`.
 /// The `key` argument of `set` and `get` is base64-encoded and then used as a dictionary key.
+/// The `init` method initializes the dictionary with the given name.
 #[macro_export]
 macro_rules! base64_encoded_key_value_storage {
     ($name:ident, $dict:expr, $key:ty, $value_type:ty) => {
@@ -81,6 +88,10 @@ macro_rules! base64_encoded_key_value_storage {
                     .get_dictionary_value($dict, encoded_key.as_bytes())
             }
 
+            pub fn init(&self) {
+                self.env().init_dictionary($dict);
+            }
+
             #[inline]
             fn key<R: odra::module::Revertible>(rev: &R, key: &$key) -> String {
                 use base64::prelude::{Engine, BASE64_STANDARD};
@@ -94,9 +105,10 @@ macro_rules! base64_encoded_key_value_storage {
 
 /// Creates an Odra module that stores a values in a given dictionary.
 ///
-/// The module has two methods: `set` and `get`.
+/// The module has three methods: `set`, `get` and `init`.
 /// The `key1` and `key2` arguments of `set` and `get` are converted to bytes, combined into a single bytes vector,
 /// and finally hex-encoded and then used as a dictionary key.
+/// The `init` method initializes the dictionary with the given name.
 #[macro_export]
 macro_rules! compound_key_value_storage {
     ($name:ident, $dict:expr, $k1_type:ty, $k2_type:ty, $value_type:ty) => {
@@ -126,6 +138,10 @@ macro_rules! compound_key_value_storage {
                 let key_bytes = env.hash(&preimage);
                 odra::utils::hex_to_slice(&key_bytes, &mut key);
                 env.get_dictionary_value($dict, &key).unwrap_or_default()
+            }
+
+            pub fn init(&self) {
+                self.env().init_dictionary($dict);
             }
         }
     };
