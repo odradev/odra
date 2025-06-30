@@ -69,11 +69,7 @@ pub fn call<T: ContractProvider>(
         env.set_gas(gas);
     }
 
-    let print_events = if is_mut {
-        args.get_flag(ARG_PRINT_EVENTS)
-    } else {
-        false
-    };
+    let print_events = is_mut && args.get_flag(ARG_PRINT_EVENTS);
     if print_events {
         prettycli::info("Syncing events for the call...");
     }
