@@ -1,5 +1,5 @@
 //! This example demonstrates how to use the `odra-cli` tool to deploy and interact with a smart contract.
-use odra::host::{Deployer, HostEnv};
+use odra::host::HostEnv;
 use odra::schema::casper_contract_schema::NamedCLType;
 use odra_cli::DeployerExt;
 use odra_cli::{
