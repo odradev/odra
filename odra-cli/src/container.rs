@@ -150,7 +150,11 @@ impl ContractProvider for DeployedContractsContainer {
         self.data
             .contracts()
             .iter()
-            .map(|c| (c.name.clone(), Address::from_str(&c.package_hash).unwrap()))
+            .filter_map(|c| { 
+                Address::from_str(&c.package_hash)
+                    .ok()
+                    .map(|addr| (c.name.clone(), addr))
+            })
             .collect()
     }
 
@@ -181,14 +185,15 @@ impl DeployedContract {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub(crate) struct ContractsData {
-    time: String,
+    #[serde(alias = "time")]
+    last_updated: String,
     contracts: Vec<DeployedContract>
 }
 
 impl Default for ContractsData {
     fn default() -> Self {
         Self {
-            time: Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true),
+            last_updated: Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true),
             contracts: Vec::new()
         }
     }
@@ -199,6 +204,7 @@ impl ContractsData {
         let contract = DeployedContract::new::<T>(address);
         self.contracts.retain(|c| c.name != contract.name);
         self.contracts.push(contract);
+        self.last_updated = Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true);
     }
 
     fn contracts(&self) -> &Vec<DeployedContract> {
