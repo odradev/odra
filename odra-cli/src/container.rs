@@ -150,7 +150,7 @@ impl ContractProvider for DeployedContractsContainer {
         self.data
             .contracts()
             .iter()
-            .filter_map(|c| { 
+            .filter_map(|c| {
                 Address::from_str(&c.package_hash)
                     .ok()
                     .map(|addr| (c.name.clone(), addr))

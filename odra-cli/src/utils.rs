@@ -1,6 +1,8 @@
 use odra::{
     contract_def::HasIdent,
-    host::{Deployer, HostEnv}, prelude::Addressable, OdraContract
+    host::{Deployer, HostEnv},
+    prelude::Addressable,
+    OdraContract
 };
 
 use crate::{ContractProvider, DeployedContractsContainer};
@@ -24,13 +26,11 @@ pub trait DeployerExt: Sized {
     ) -> Result<<<Self as DeployerExt>::Contract as OdraContract>::HostRef, crate::deploy::Error>
     {
         if let Ok(contract) = container.contract_ref::<Self::Contract>(env) {
-            prettycli::info(
-                &format!(
-                    "Using existing contract {} at address {:?}",
-                    <Self::Contract as OdraContract>::HostRef::ident(),
-                    contract.address()
-                )
-            );
+            prettycli::info(&format!(
+                "Using existing contract {} at address {:?}",
+                <Self::Contract as OdraContract>::HostRef::ident(),
+                contract.address()
+            ));
             Ok(contract)
         } else {
             env.set_gas(gas);
