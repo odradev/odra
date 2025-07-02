@@ -16,7 +16,7 @@ use crate::{
         PrintEventsCmd, Scenario, ScenarioMetadata, ScenariosCmd, CONTRACTS_SUBCOMMAND,
         DEPLOY_SUBCOMMAND, PRINT_EVENTS_SUBCOMMAND, SCENARIOS_SUBCOMMAND
     },
-    container::FileContractStorage,
+    container::{FileContractStorage, DEPLOYED_CONTRACTS_FILE},
     custom_types::CustomTypes,
     ContractProvider, DeployedContractsContainer
 };
@@ -132,11 +132,17 @@ impl OdraCli {
 
         // Register the contracts from the container in the host environment.
         for (name, address) in container.all_contracts() {
-            let caller = self
-                .callers
-                .get(&name)
-                .unwrap_or_else(|| panic!("Caller for {} not found", &name))
-                .clone();
+            let caller = self.callers.get(&name).unwrap_or_else(|| {
+                let path = match &contracts_path {
+                    Some(path) => path.to_str().map(|s| s.to_string()).unwrap_or_default(),
+                    None => DEPLOYED_CONTRACTS_FILE.to_string()
+                };
+                prettycli::error(&format!(
+                    "Caller for `{}` not found. The contract is registered in {:?} file, but not in the CLI builder. Make sure you have added it to the builder using `.contract::<{}>()`.",
+                    &name, path, &name
+                ));
+                std::process::exit(1);
+            }).clone();
             self.host_env.register_contract(address, name, caller);
         }
 
@@ -144,7 +150,10 @@ impl OdraCli {
             DEPLOY_SUBCOMMAND => self
                 .deploy_cmd
                 .as_ref()
-                .unwrap_or_else(|| panic!("Deploy command not found. Did you forget to add it?"))
+                .unwrap_or_else(|| {
+                    prettycli::error("Deploy command not found. Did you forget to add it?");
+                    std::process::exit(1);
+                })
                 .run(&self.host_env, &args, &self.custom_types, &mut container),
             CONTRACTS_SUBCOMMAND => self.run_command(&self.contracts_cmd, args, &container),
             PRINT_EVENTS_SUBCOMMAND => self.run_command(&self.print_events_cmd, args, &container),
