@@ -1,6 +1,5 @@
 //! Module for handling Odra errors coming out of the Livenet execution.
-
-use std::{fs, path::PathBuf};
+use std::fs;
 
 use anyhow::{anyhow, Result};
 use odra_core::prelude::*;
@@ -22,9 +21,11 @@ pub fn find(error_msg: &str) -> Result<OdraError> {
     }
 
     #[cfg(test)]
-    let schema_path = PathBuf::from("resources/test");
+    let schema_path = std::path::PathBuf::from("resources/test");
     #[cfg(not(test))]
-    let schema_path = PathBuf::from("resources/casper_contract_schemas");
+    let schema_path = project_root::get_project_root()
+        .map_err(|_| anyhow!("Couldn't get project root"))?
+        .join("resources/casper_contract_schemas");
     let schema_path = odra_schema::find_schemas_file_paths(schema_path).map_err(|e| anyhow!(e))?;
     for schema_path in schema_path {
         let schema = fs::read_to_string(schema_path)?;

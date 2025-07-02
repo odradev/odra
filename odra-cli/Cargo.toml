@@ -19,7 +19,7 @@ serde = { version = "1", default-features = false }
 serde_json = { version = "1", default-features = false }
 serde_derive = { version = "1", features = ["default"] }
 toml = "0.8.13"
-project-root = "0.2.2"
+project-root = { workspace = true }
 pretty_assertions = "1.4.0"
 anyhow = "1.0.86"
 thiserror = "1.0.30"
