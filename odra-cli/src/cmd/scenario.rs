@@ -100,7 +100,7 @@ impl OdraCommand for ScenarioCmd {
         container: &DeployedContractsContainer
     ) -> Result<()> {
         let args = ScenarioArgs::new(args);
-
+        env.set_captures_events(false);
         self.scenario.run(env, container, args)?;
         Ok(())
     }
