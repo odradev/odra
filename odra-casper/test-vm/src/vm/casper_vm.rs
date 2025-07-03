@@ -710,7 +710,6 @@ impl CasperVm {
             builder.exec(bid_request).commit().expect_success();
         }
 
-        builder.advance_eras_by(20);
         Self {
             active_account: accounts[0],
             context: builder,
