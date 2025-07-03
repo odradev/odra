@@ -3,7 +3,7 @@ use casper_types::StoredValue::CLValue;
 use casper_types::{CLTyped, StoredValue};
 use odra_core::prelude::{ExecutionError, OdraError, OdraResult};
 use serde_json::Value;
-use std::path::PathBuf;
+use std::path::{self, PathBuf};
 
 /// Search for the wasm file in the current directory and in the parent directory.
 pub fn find_wasm_file_path(wasm_file_name: &str) -> OdraResult<PathBuf> {
@@ -11,17 +11,20 @@ pub fn find_wasm_file_path(wasm_file_name: &str) -> OdraResult<PathBuf> {
         .join(wasm_file_name)
         .with_extension("wasm");
 
-    let mut base_path = project_root::get_project_root()
+    let project_root = project_root::get_project_root()
         .map_err(|_| OdraError::ExecutionError(ExecutionError::ContractDeploymentError))?;
+    let mut current_dir = path::absolute(".")
+        .map_err(|_| OdraError::ExecutionError(ExecutionError::ContractDeploymentError))?;
+
     let mut checked_paths = vec![];
-    for _ in 0..2 {
-        let path = base_path.join(&contract_path);
+    while current_dir != project_root {
+        let path = current_dir.join(&contract_path);
         if path.exists() {
             crate::log::info(format!("Found wasm under {:?}.", path));
             return Ok(path);
         } else {
             checked_paths.push(path);
-            base_path = base_path
+            current_dir = current_dir
                 .parent()
                 .ok_or(OdraError::ExecutionError(
                     ExecutionError::ContractDeploymentError
@@ -29,6 +32,13 @@ pub fn find_wasm_file_path(wasm_file_name: &str) -> OdraResult<PathBuf> {
                 .to_path_buf();
         }
     }
+    let path = current_dir.join(&contract_path);
+    checked_paths.push(path.clone());
+    if path.exists() {
+        crate::log::info(format!("Found wasm under {:?}.", path));
+        return Ok(path);
+    }
+
     crate::log::error(format!("Could not find wasm under {:?}.", checked_paths));
     Err(OdraError::ExecutionError(
         ExecutionError::ContractDeploymentError
