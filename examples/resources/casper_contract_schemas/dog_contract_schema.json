@@ -6,7 +6,26 @@
   "homepage": null,
   "contract_name": "DogContract",
   "contract_version": "2.0.1",
-  "types": [],
+  "types": [
+    {
+      "struct": {
+        "name": "NamedChanged",
+        "description": null,
+        "members": [
+          {
+            "name": "old_name",
+            "description": null,
+            "ty": "String"
+          },
+          {
+            "name": "new_name",
+            "description": null,
+            "ty": "String"
+          }
+        ]
+      }
+    }
+  ],
   "errors": [],
   "entry_points": [
     {
@@ -53,9 +72,30 @@
       "return_ty": "U32",
       "is_contract_context": true,
       "access": "public"
+    },
+    {
+      "name": "rename",
+      "description": "It is uncommon but you can change the dog's name.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "new_name",
+          "description": null,
+          "ty": "String",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
     }
   ],
-  "events": [],
+  "events": [
+    {
+      "name": "NamedChanged",
+      "ty": "NamedChanged"
+    }
+  ],
   "call": {
     "wasm_file_name": "DogContract.wasm",
     "description": "Initializes the contract with the given parameters.",

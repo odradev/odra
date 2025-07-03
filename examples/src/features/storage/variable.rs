@@ -1,8 +1,17 @@
 //! Module containing DogContract. It is used in docs to explain how to interact with the storage.
 use odra::prelude::*;
 
+/// Emits when the dog's name is changed.
+#[odra::event]
+pub struct NamedChanged {
+    /// The old name of the dog.
+    pub old_name: String,
+    /// The new name of the dog.
+    pub new_name: String
+}
+
 /// A simple contract that represents a dog.
-#[odra::module]
+#[odra::module(events = [NamedChanged])]
 pub struct DogContract {
     barks: Var<bool>,
     weight: Var<u32>,
@@ -45,6 +54,13 @@ impl DogContract {
     pub fn walks_total_length(&self) -> u32 {
         let walks = self.walks.get_or_default();
         walks.iter().sum()
+    }
+
+    /// It is uncommon but you can change the dog's name.
+    pub fn rename(&mut self, new_name: String) {
+        let old_name = self.name.get_or_default();
+        self.name.set(new_name.clone());
+        self.env().emit_event(NamedChanged { old_name, new_name });
     }
 }
 

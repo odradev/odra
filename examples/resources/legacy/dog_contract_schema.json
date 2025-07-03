@@ -1,6 +1,26 @@
 {
   "name": "DogContract",
-  "events": [],
+  "events": [
+    {
+      "name": "NamedChanged",
+      "args": [
+        {
+          "name": "old_name",
+          "ty": "String",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "new_name",
+          "ty": "String",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    }
+  ],
   "entrypoints": [
     {
       "name": "init",
@@ -69,6 +89,22 @@
       "args": [],
       "is_mutable": false,
       "return_ty": "U32",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "rename",
+      "args": [
+        {
+          "name": "new_name",
+          "ty": "String",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
       "ty": "Public",
       "attributes": []
     }

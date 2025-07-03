@@ -263,8 +263,8 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
 
 pub(crate) fn decode_event(bytes: &[u8], types: &CustomTypeSet) -> TypeResult<String> {
     // Event name is stored as the first element in the bytes
-    let (mut name, rem): (String, _) = FromBytes::from_bytes(bytes)
-        .map_err(|_| Error::InvalidEventType("Invalid event schema".to_string()))?;
+    let (mut name, rem): (String, _) =
+        FromBytes::from_bytes(bytes).map_err(|_| Error::InvalidEventType("Unknown".to_string()))?;
     let mut bytes = rem;
     // Ignore the `event_` prefix
     let event_name = name.split_off(6);
@@ -274,9 +274,7 @@ pub(crate) fn decode_event(bytes: &[u8], types: &CustomTypeSet) -> TypeResult<St
             CustomType::Struct { name, members, .. } if name.0 == event_name => Some(members),
             _ => None
         })
-        .ok_or_else(|| {
-            Error::InvalidEventType(format!("Invalid event schema for '{}'", event_name))
-        })?;
+        .ok_or_else(|| Error::InvalidEventType(event_name.clone()))?;
 
     let mut output = format!("'{}':\n", event_name);
     for m in members {

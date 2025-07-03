@@ -38,11 +38,7 @@ pub struct DogCheckScenario;
 
 impl Scenario for DogCheckScenario {
     fn args(&self) -> Vec<CommandArg> {
-        vec![CommandArg::new(
-            "name",
-            "The name of the dog",
-            NamedCLType::String
-        )]
+        vec![CommandArg::new("name", "The name of the dog", NamedCLType::String).required()]
     }
 
     fn run(
