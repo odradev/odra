@@ -4,6 +4,7 @@ use casper_types::bytesrepr::ToBytes;
 use casper_types::U512;
 use odra_core::casper_types;
 use odra_core::casper_types::bytesrepr::Bytes;
+use odra_core::casper_types::system::auction::ValidatorBid;
 use odra_core::casper_types::{CLType, CLValue, PublicKey, BLAKE2B_DIGEST_LENGTH};
 use odra_core::consts::RANDOM_BYTES_COUNT;
 use odra_core::prelude::*;
@@ -118,6 +119,10 @@ impl ContractContext for WasmContractEnv {
 
     fn delegated_amount(&self, validator: PublicKey) -> U512 {
         host_functions::delegated_amount(validator)
+    }
+
+    fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorBid> {
+        host_functions::get_validator_info(validator)
     }
 
     fn pseudorandom_bytes(&self) -> [u8; RANDOM_BYTES_COUNT] {

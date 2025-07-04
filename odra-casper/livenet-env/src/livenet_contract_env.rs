@@ -4,6 +4,7 @@ use blake2::Blake2bVar;
 use odra_casper_rpc_client::casper_client::CasperClient;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::bytesrepr::Bytes;
+use odra_core::casper_types::system::auction::ValidatorBid;
 use odra_core::casper_types::{CLValue, PublicKey, U512};
 use odra_core::prelude::*;
 use odra_core::{CallDef, ContractContext, ContractRegister};
@@ -185,6 +186,10 @@ impl ContractContext for LivenetContractEnv {
         let client = self.casper_client.borrow();
         self.runtime
             .block_on(async { client.delegated_amount(address, _validator).await })
+    }
+
+    fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorBid> {
+        todo!()
     }
 
     fn pseudorandom_bytes(&self) -> [u8; 32] {

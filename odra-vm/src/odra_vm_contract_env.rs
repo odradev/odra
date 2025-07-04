@@ -1,6 +1,7 @@
 use crate::vm::OdraVm;
 use blake2::digest::VariableOutput;
 use blake2::{Blake2b, Blake2b512, Blake2bVar, Blake2s256, Digest};
+use odra_core::casper_types::system::auction::ValidatorBid;
 use odra_core::casper_types::{
     bytesrepr::{Bytes, ToBytes},
     CLValue, PublicKey, U512
@@ -130,6 +131,11 @@ impl ContractContext for OdraVmContractEnv {
         let delegator = self.vm.borrow().callee();
         self.vm.borrow().delegated_amount(delegator, validator)
     }
+
+    fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorBid> {
+        todo!()
+    }
+
     fn pseudorandom_bytes(&self) -> [u8; RANDOM_BYTES_COUNT] {
         use rand::Rng;
         let mut bytes = [0u8; RANDOM_BYTES_COUNT];

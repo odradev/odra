@@ -29,7 +29,7 @@ use odra_core::casper_types::account::AccountHash;
 use odra_core::casper_types::bytesrepr::deserialize;
 use odra_core::casper_types::contract_messages::{MessagePayload, MessageTopicOperation};
 use odra_core::casper_types::contracts::{ContractHash, ContractPackageHash, ContractVersion};
-use odra_core::casper_types::system::auction::{self, BidAddr, BidKind};
+use odra_core::casper_types::system::auction::{self, BidAddr, BidKind, ValidatorBid};
 use odra_core::casper_types::system::{Caller, CallerInfo};
 use odra_core::casper_types::StoredValue;
 use odra_core::casper_types::{
@@ -831,4 +831,18 @@ pub fn delegated_amount(public_key: PublicKey) -> U512 {
 /// Returns a pseudorandom byte array
 pub fn pseudorandom_bytes() -> [u8; RANDOM_BYTES_COUNT] {
     runtime::random_bytes()
+}
+
+/// Retrieves ValidatorBid from the storage
+pub fn get_validator_info(validator: PublicKey) -> Option<ValidatorBid> {
+    let account_hash = validator.to_account_hash();
+    let key = Key::Bid(account_hash);
+
+    read_from_key(key)
+        .ok()
+        .and_then(|stored_value| stored_value)
+        .and_then(|bid_kind| match bid_kind {
+            BidKind::Validator(bid) => Some(*bid),
+            _ => None
+        })
 }

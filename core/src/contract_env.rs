@@ -8,6 +8,7 @@ pub use crate::ContractContext;
 use crate::VmError::{Serialization, TypeMismatch};
 use crate::{consts, prelude::*, utils};
 use casper_event_standard::EventInstance;
+use casper_types::system::auction::ValidatorBid;
 use casper_types::CLValueError;
 use rand_chacha::rand_core::{RngCore, SeedableRng};
 use rand_chacha::ChaCha8Rng;
@@ -313,6 +314,17 @@ impl ContractEnv {
     /// The amount of tokens delegated to the validator
     pub fn delegated_amount(&self, validator: PublicKey) -> U512 {
         self.backend.borrow().delegated_amount(validator)
+    }
+
+    /// Returns information about the validator
+    ///
+    /// # Arguments
+    /// - validator - The validator to query
+    ///
+    /// # Returns
+    /// Option<ValidatorBid>
+    pub fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorBid> {
+        self.backend.borrow().get_validator_info(validator)
     }
 
     /// Returns a vector of pseudorandom bytes of the specified size.

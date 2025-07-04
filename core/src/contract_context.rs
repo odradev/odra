@@ -1,10 +1,10 @@
-use casper_types::{CLValue, PublicKey};
-
 use crate::call_def::CallDef;
 use crate::casper_types::bytesrepr::Bytes;
 use crate::casper_types::U512;
 use crate::consts::RANDOM_BYTES_COUNT;
 use crate::prelude::*;
+use casper_types::system::auction::ValidatorBid;
+use casper_types::{CLValue, PublicKey};
 
 /// Trait representing the context of a smart contract.
 #[cfg_attr(test, allow(unreachable_code))]
@@ -201,6 +201,15 @@ pub trait ContractContext {
     ///
     /// The amount of tokens delegated to the validator as a `U512` value.
     fn delegated_amount(&self, validator: PublicKey) -> U512;
+
+    /// Returns information about the validator
+    ///
+    /// # Arguments
+    /// - validator - The validator to query
+    ///
+    /// # Returns
+    /// Option<ValidatorBid>
+    fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorBid>;
 
     /// Returns a vector of pseudorandom bytes of the specified size.
     /// There is no guarantee that the returned bytes are in any way cryptographically secure.
