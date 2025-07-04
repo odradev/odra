@@ -13,8 +13,8 @@ use odra::{
 use crate::{
     cmd::{
         ContractsCmd, DeployCmd, DeployScript, MainCmd, MutableCommand, OdraCommand,
-        PrintEventsCmd, Scenario, ScenarioMetadata, ScenariosCmd, CONTRACTS_SUBCOMMAND,
-        DEPLOY_SUBCOMMAND, PRINT_EVENTS_SUBCOMMAND, SCENARIOS_SUBCOMMAND
+        PrintEventsCmd, Scenario, ScenarioMetadata, ScenariosCmd, WhoamiCmd, CONTRACTS_SUBCOMMAND,
+        DEPLOY_SUBCOMMAND, PRINT_EVENTS_SUBCOMMAND, SCENARIOS_SUBCOMMAND, WHOAMI_SUBCOMMAND
     },
     container::{FileContractStorage, DEPLOYED_CONTRACTS_FILE},
     custom_types::CustomTypes,
@@ -28,6 +28,7 @@ pub struct OdraCli {
     contracts_cmd: ContractsCmd,
     print_events_cmd: PrintEventsCmd,
     scenarios_cmd: ScenariosCmd,
+    whoami_cmd: WhoamiCmd,
     custom_types: CustomTypes,
     host_env: HostEnv,
     callers: HashMap<String, EntryPointsCaller>
@@ -48,6 +49,7 @@ impl OdraCli {
             contracts_cmd: ContractsCmd::default(),
             print_events_cmd: PrintEventsCmd::default(),
             scenarios_cmd: ScenariosCmd::default(),
+            whoami_cmd: WhoamiCmd::new(),
             host_env: odra_casper_livenet_env::env(),
             custom_types: CustomTypes::default(),
             callers: HashMap::default()
@@ -62,6 +64,7 @@ impl OdraCli {
             contracts_cmd: ContractsCmd::default(),
             print_events_cmd: PrintEventsCmd::default(),
             scenarios_cmd: ScenariosCmd::default(),
+            whoami_cmd: WhoamiCmd::new(),
             host_env,
             custom_types: CustomTypes::default(),
             callers: HashMap::default()
@@ -116,6 +119,7 @@ impl OdraCli {
         self.main_cmd = self.main_cmd.subcommand(&self.contracts_cmd);
         self.main_cmd = self.main_cmd.subcommand(&self.scenarios_cmd);
         self.main_cmd = self.main_cmd.subcommand(&self.print_events_cmd);
+        self.main_cmd = self.main_cmd.subcommand(&self.whoami_cmd);
         self
     }
 
@@ -158,6 +162,7 @@ impl OdraCli {
             CONTRACTS_SUBCOMMAND => self.run_command(&self.contracts_cmd, args, &container),
             PRINT_EVENTS_SUBCOMMAND => self.run_command(&self.print_events_cmd, args, &container),
             SCENARIOS_SUBCOMMAND => self.run_command(&self.scenarios_cmd, args, &container),
+            WHOAMI_SUBCOMMAND => self.run_command(&self.whoami_cmd, args, &container),
             _ => unreachable!()
         };
 
