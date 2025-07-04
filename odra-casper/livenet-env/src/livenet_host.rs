@@ -200,7 +200,7 @@ impl HostContext for LivenetHost {
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address> {
         let timestamp = Timestamp::now();
-        let wasm_path = find_wasm_file_path(name);
+        let wasm_path = find_wasm_file_path(name)?;
         let wasm_bytes = fs::read(wasm_path).unwrap();
         let address = {
             let mut client = self.casper_client.borrow_mut();
