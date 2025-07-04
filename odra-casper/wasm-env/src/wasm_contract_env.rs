@@ -8,6 +8,7 @@ use odra_core::casper_types::system::auction::ValidatorBid;
 use odra_core::casper_types::{CLType, CLValue, PublicKey, BLAKE2B_DIGEST_LENGTH};
 use odra_core::consts::RANDOM_BYTES_COUNT;
 use odra_core::prelude::*;
+use odra_core::validator::ValidatorInfo;
 use odra_core::{ContractContext, ContractEnv};
 
 /// ContractContext implementation for Wasm environment.
@@ -121,7 +122,7 @@ impl ContractContext for WasmContractEnv {
         host_functions::delegated_amount(validator)
     }
 
-    fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorBid> {
+    fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorInfo> {
         host_functions::get_validator_info(validator)
     }
 

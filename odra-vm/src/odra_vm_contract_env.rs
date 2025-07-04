@@ -8,6 +8,7 @@ use odra_core::casper_types::{
 };
 use odra_core::consts::RANDOM_BYTES_COUNT;
 use odra_core::prelude::*;
+use odra_core::validator::ValidatorInfo;
 use odra_core::{casper_types, CallDef, ContractContext};
 use rand::Rng;
 use std::collections::hash_map::DefaultHasher;
@@ -132,8 +133,8 @@ impl ContractContext for OdraVmContractEnv {
         self.vm.borrow().delegated_amount(delegator, validator)
     }
 
-    fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorBid> {
-        todo!()
+    fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorInfo> {
+        self.vm.borrow().get_validator_info(validator)
     }
 
     fn pseudorandom_bytes(&self) -> [u8; RANDOM_BYTES_COUNT] {

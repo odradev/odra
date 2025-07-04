@@ -4,11 +4,11 @@ use crate::casper_types::bytesrepr::{deserialize_from_slice, Bytes, FromBytes, T
 use crate::casper_types::crypto::PublicKey;
 use crate::casper_types::{CLTyped, CLValue, BLAKE2B_DIGEST_LENGTH, U512};
 use crate::module::Revertible;
+use crate::validator::ValidatorInfo;
 pub use crate::ContractContext;
 use crate::VmError::{Serialization, TypeMismatch};
 use crate::{consts, prelude::*, utils};
 use casper_event_standard::EventInstance;
-use casper_types::system::auction::ValidatorBid;
 use casper_types::CLValueError;
 use rand_chacha::rand_core::{RngCore, SeedableRng};
 use rand_chacha::ChaCha8Rng;
@@ -323,7 +323,7 @@ impl ContractEnv {
     ///
     /// # Returns
     /// Option<ValidatorBid>
-    pub fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorBid> {
+    pub fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorInfo> {
         self.backend.borrow().get_validator_info(validator)
     }
 

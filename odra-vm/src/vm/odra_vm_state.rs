@@ -5,12 +5,15 @@ use anyhow::Result;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::account::AccountHash;
 use odra_core::casper_types::bytesrepr::Error;
+use odra_core::casper_types::system::auction::ValidatorBid;
 use odra_core::casper_types::{
     bytesrepr::{Bytes, FromBytes, ToBytes},
     PublicKey, SecretKey, U512
 };
+use odra_core::consts::DEFAULT_MINIMUM_DELEGATION_AMOUNT;
 use odra_core::crypto::generate_key_pairs;
 use odra_core::prelude::*;
+use odra_core::validator::ValidatorInfo;
 use odra_core::EventError;
 use std::collections::BTreeMap;
 use std::fmt::format;
@@ -38,7 +41,7 @@ pub struct OdraVmState {
     pub error: Option<OdraError>,
     block_time: u64,
     pub accounts: Vec<Address>,
-    pub validators: BTreeMap<PublicKey, U512>,
+    pub validators: BTreeMap<PublicKey, ValidatorInfo>,
     pub validator_account: BTreeMap<PublicKey, Address>,
     pub delegations: BTreeMap<PublicKey, BTreeMap<Address, U512>>,
     pub removed_validators: Vec<PublicKey>,
@@ -218,9 +221,10 @@ impl OdraVmState {
             .unwrap_or_default();
         validators_delegations.insert(delegator, delegation + amount);
 
-        let validators_total_amount = self.validators.get(&validator).cloned().unwrap_or_default();
-        self.validators
-            .insert(validator.clone(), validators_total_amount + amount);
+        let mut validator_info = self.validators.get(&validator).cloned().unwrap();
+        validator_info.set_staked_amount(validator_info.staked_amount + amount);
+
+        self.validators.insert(validator.clone(), validator_info);
 
         let validator_account = self.validator_account.get(&validator).cloned().unwrap();
 
@@ -239,11 +243,13 @@ impl OdraVmState {
             .unwrap_or_default();
         validators_delegations.insert(delegator, delegation.checked_sub(amount).unwrap());
 
-        let validators_total_amount = self.validators.get(&validator).cloned().unwrap_or_default();
-        self.validators.insert(
-            validator.clone(),
-            validators_total_amount.checked_sub(amount).unwrap()
-        );
+        let mut validator_info = match self.validators.get(&validator) {
+            None => ValidatorInfo::new(U512::zero(), DEFAULT_MINIMUM_DELEGATION_AMOUNT),
+            Some(vi) => vi.clone()
+        };
+
+        validator_info.set_staked_amount(validator_info.staked_amount.checked_sub(amount).unwrap());
+        self.validators.insert(validator.clone(), validator_info);
 
         let transfer = AwaitingTransfer {
             from: self.validator_account[&validator],
@@ -344,21 +350,21 @@ impl OdraVmState {
         for _ in 0..num_auctions {
             self.validators
                 .iter_mut()
-                .for_each(|(validator, total_amount)| {
-                    if total_amount.is_zero() {
+                .for_each(|(validator, validator_info)| {
+                    if validator_info.staked_amount.is_zero() {
                         return;
                     }
 
-                    let mut new_total_amount = *total_amount;
+                    let mut new_total_amount = validator_info.staked_amount;
 
                     let delegations = self.delegations.get_mut(validator).unwrap();
                     delegations.iter_mut().for_each(|(address, amount)| {
-                        let reward = *total_amount / 1000;
+                        let reward = validator_info.staked_amount / 1000;
                         *amount += reward;
                         new_total_amount += reward;
                     });
 
-                    *total_amount = new_total_amount;
+                    validator_info.staked_amount = new_total_amount;
                 });
         }
 
@@ -442,8 +448,13 @@ impl Default for OdraVmState {
             .clone()
             .rev()
             .take(5)
-            .map(|(_, pk)| (pk.1.clone(), U512::zero()))
-            .collect::<BTreeMap<PublicKey, U512>>();
+            .map(|(_, pk)| {
+                (
+                    pk.1.clone(),
+                    ValidatorInfo::new(U512::zero(), DEFAULT_MINIMUM_DELEGATION_AMOUNT)
+                )
+            })
+            .collect::<BTreeMap<PublicKey, ValidatorInfo>>();
 
         let validator_accounts = key_pairs
             .iter()

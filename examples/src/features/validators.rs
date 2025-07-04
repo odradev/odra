@@ -48,6 +48,14 @@ impl ValidatorsContract {
     pub fn current_casper_balance(&self) -> U512 {
         self.env().self_balance()
     }
+
+    /// Get minimum delegation amount
+    pub fn get_minimum_delegation_amount(&self) -> u64 {
+        self.env()
+            .get_validator_info(self.validator.get().unwrap())
+            .unwrap()
+            .minimum_delegation_amount
+    }
 }
 
 /// Error enum for the ValidatorsContract
@@ -232,5 +240,25 @@ mod tests {
         // but the cspr should be returned
         assert_eq!(staking.currently_delegated_amount(), U512::zero());
         assert_eq!(test_env.balance_of(&staking.address()), staking_amount);
+    }
+
+    #[test]
+    fn test_validator_info() {
+        use crate::features::validators::{ValidatorsContract, ValidatorsContractInitArgs};
+        use odra::host::Deployer;
+        let test_env = odra_test::env();
+        let validator = test_env.get_validator(0);
+
+        test_env.set_caller(test_env.get_account(0));
+        let staking = ValidatorsContract::deploy(
+            &test_env,
+            ValidatorsContractInitArgs {
+                validator: validator.clone()
+            }
+        );
+
+        let minimum_delegation_amount = staking.get_minimum_delegation_amount();
+
+        assert_eq!(minimum_delegation_amount, 500_000_000_000u64);
     }
 }

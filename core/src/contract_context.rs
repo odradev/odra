@@ -3,7 +3,7 @@ use crate::casper_types::bytesrepr::Bytes;
 use crate::casper_types::U512;
 use crate::consts::RANDOM_BYTES_COUNT;
 use crate::prelude::*;
-use casper_types::system::auction::ValidatorBid;
+use crate::validator::ValidatorInfo;
 use casper_types::{CLValue, PublicKey};
 
 /// Trait representing the context of a smart contract.
@@ -209,7 +209,7 @@ pub trait ContractContext {
     ///
     /// # Returns
     /// Option<ValidatorBid>
-    fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorBid>;
+    fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorInfo>;
 
     /// Returns a vector of pseudorandom bytes of the specified size.
     /// There is no guarantee that the returned bytes are in any way cryptographically secure.

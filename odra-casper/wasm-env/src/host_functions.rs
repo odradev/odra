@@ -41,6 +41,7 @@ use odra_core::casper_types::{
 use odra_core::consts::{
     ALLOW_KEY_OVERRIDE_ARG, IS_UPGRADABLE_ARG, PACKAGE_HASH_KEY_NAME_ARG, RANDOM_BYTES_COUNT
 };
+use odra_core::validator::ValidatorInfo;
 use odra_core::{
     args::EntrypointArgument,
     casper_event_standard::{self, Schema, Schemas}
@@ -834,9 +835,9 @@ pub fn pseudorandom_bytes() -> [u8; RANDOM_BYTES_COUNT] {
 }
 
 /// Retrieves ValidatorBid from the storage
-pub fn get_validator_info(validator: PublicKey) -> Option<ValidatorBid> {
+pub fn get_validator_info(validator: PublicKey) -> Option<ValidatorInfo> {
     let account_hash = validator.to_account_hash();
-    let key = Key::Bid(account_hash);
+    let key = Key::BidAddr(BidAddr::Validator(account_hash));
 
     read_from_key(key)
         .ok()
@@ -844,5 +845,11 @@ pub fn get_validator_info(validator: PublicKey) -> Option<ValidatorBid> {
         .and_then(|bid_kind| match bid_kind {
             BidKind::Validator(bid) => Some(*bid),
             _ => None
+        })
+        .map(|validator_bid| {
+            ValidatorInfo::new(
+                validator_bid.staked_amount(),
+                validator_bid.minimum_delegation_amount()
+            )
         })
 }
