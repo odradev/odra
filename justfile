@@ -138,3 +138,7 @@ benchmark:
 
 evaluate-benchmark: benchmark
     cd benchmark && cargo run --bin evaluate_benchmark gas_report.json base/gas_report.json
+
+generate-schemas:
+    cd modules && cargo odra schema
+    cd examples && cargo odra schema
