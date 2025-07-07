@@ -41,6 +41,7 @@ pub enum Format {
     Map,
     ByteArray,
     InvalidLength { actual: usize, expected: usize },
+    PatternLength { actual: usize, expected: usize },
     U8
 }
 
@@ -81,7 +82,11 @@ impl Format {
                 String::from("'0b00000001'"),
                 String::from("'1'"),
                 String::from("'255'"),
-            ]
+            ],
+            Format::PatternLength { actual, expected } => vec![format!(
+                "pattern length {} does not divide expected length {}",
+                actual, expected
+            )],
         }
     }
 }

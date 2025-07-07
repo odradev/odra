@@ -14,6 +14,9 @@ use odra::{
 mod decoder;
 mod error;
 
+#[cfg(test)]
+mod into_bytes;
+
 pub(crate) use decoder::decode;
 pub(crate) use error::{Error, Format};
 
@@ -21,6 +24,10 @@ use crate::custom_types::CustomTypeSet;
 
 const PREFIX_ERROR: &str = "err:";
 const PREFIX_OK: &str = "ok:";
+const PREFIX_HEX: &str = "0x";
+const PREFIX_BINARY: &str = "0b";
+const PREFIX_SOME: &str = "some:";
+const PREFIX_NONE: &str = "none";
 
 type TypeResult<T> = Result<T, Error>;
 
@@ -110,11 +117,11 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
         NamedCLType::I32 => call_to_bytes!(i32, input),
         NamedCLType::I64 => call_to_bytes!(i64, input),
         NamedCLType::U8 => {
-            if let Some(hex) = input.strip_prefix("0x") {
+            if let Some(hex) = input.strip_prefix(PREFIX_HEX) {
                 u8::from_str_radix(hex, 16)
                     .map_err(|_| Error::InvalidHexString)
                     .map(|byte| vec![byte])
-            } else if let Some(bits) = input.strip_prefix("0b") {
+            } else if let Some(bits) = input.strip_prefix(PREFIX_BINARY) {
                 let byte = u8::from_str_radix(bits, 2).map_err(|_| Error::Serialization)?;
                 Ok(vec![byte])
             } else {
@@ -122,7 +129,7 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
                 if let Ok(byte) = input.parse::<u8>() {
                     Ok(vec![byte])
                 } else {
-                    Err(Error::Formatting(Format::Option))
+                    Err(Error::Formatting(Format::U8))
                 }
             }
         }
@@ -142,10 +149,10 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
             .to_bytes()
             .map_err(|_| Error::Serialization),
         NamedCLType::Option(ty) => {
-            if input == "none" {
+            if input == PREFIX_NONE {
                 Ok(vec![OPTION_NONE_TAG])
-            } else if input.starts_with("some:") {
-                let value = input.strip_prefix("some:").unwrap();
+            } else if input.starts_with(PREFIX_SOME) {
+                let value = strip_prefix_or_err(input, PREFIX_SOME)?;
                 let mut result = vec![OPTION_SOME_TAG];
                 result.extend(into_bytes(ty, value)?);
                 Ok(result)
@@ -156,12 +163,12 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
         NamedCLType::Result { ok, err } => {
             let mut result = vec![];
             if input.starts_with(PREFIX_ERROR) {
-                let value = input.strip_prefix(PREFIX_ERROR).unwrap();
+                let value = strip_prefix_or_err(input, PREFIX_ERROR)?;
                 result.push(RESULT_ERR_TAG);
                 result.extend(into_bytes(err, value)?);
                 Ok(result)
             } else if input.starts_with(PREFIX_OK) {
-                let value = input.strip_prefix(PREFIX_OK).unwrap();
+                let value = strip_prefix_or_err(input, PREFIX_OK)?;
                 result.push(RESULT_OK_TAG);
                 result.extend(into_bytes(ok, value)?);
                 Ok(result)
@@ -233,14 +240,30 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
 
             match parse_hex(input) {
                 Ok(data) => {
-                    validate_byte_array_size(n, data.len())?;
-                    Ok(data)
+                    let pattern_len = data.len();
+                    if pattern_len == 0 {
+                        return if n == 0 {
+                            Ok(vec![])
+                        } else {
+                            Err(Error::Formatting(Format::ByteArray))
+                        };
+                    }
+
+                    if n % pattern_len != 0 {
+                        return Err(Error::Formatting(Format::PatternLength {
+                            actual: pattern_len,
+                            expected: n
+                        }));
+                    }
+
+                    let count = n / pattern_len;
+                    Ok(data.repeat(count))
                 }
                 Err(Error::InvalidHexString) => {
                     let parts = input.split(',').collect::<Vec<_>>();
                     validate_byte_array_size(n, parts.len())?;
 
-                    if parts.iter().all(|s| s.starts_with("0x")) {
+                    if parts.iter().all(|s| s.starts_with(PREFIX_HEX)) {
                         let bytes = parts
                             .iter()
                             .map(|part| parse_hex(part))
@@ -357,7 +380,7 @@ pub(crate) fn from_bytes<'a>(ty: &NamedCLType, input: &'a [u8]) -> TypeResult<(S
         NamedCLType::ByteArray(n) => {
             let size = *n as usize;
 
-            let mut hex = "0x".to_string();
+            let mut hex = PREFIX_HEX.to_string();
             let mut dec = "".to_string();
             for val in input.iter().take(size) {
                 dec.push_str(&format!("{}, ", val));
@@ -393,8 +416,24 @@ pub(crate) fn from_bytes<'a>(ty: &NamedCLType, input: &'a [u8]) -> TypeResult<(S
 }
 
 fn parse_hex(input: &str) -> TypeResult<Vec<u8>> {
-    match input.strip_prefix("0x") {
-        Some(data) => hex::decode(data).map_err(|_| Error::HexDecode),
+    if input.is_empty() || input.contains(',') {
+        return Err(Error::InvalidHexString);
+    }
+    if !input.starts_with(PREFIX_HEX) {
+        return Err(Error::InvalidHexString);
+    }
+    match input.strip_prefix(PREFIX_HEX) {
+        Some(data) => {
+            if data.is_empty() {
+                return Err(Error::InvalidHexString);
+            }
+            if data.len() % 2 != 0 {
+                hex::decode(format!("{}{}", data, data))
+                    .map_err(|_| Error::HexDecode)
+            } else {
+                hex::decode(data).map_err(|_| Error::HexDecode)
+            }
+        }
         None => Err(Error::InvalidHexString)
     }
 }
@@ -407,6 +446,10 @@ pub(crate) fn from_bytes_or_err<T: FromBytes>(input: &[u8]) -> TypeResult<(T, &[
 #[inline]
 pub(crate) fn to_bytes_or_err<T: ToBytes>(input: T) -> TypeResult<Vec<u8>> {
     input.to_bytes().map_err(|_| Error::Serialization)
+}
+#[inline]
+fn strip_prefix_or_err<'a>(input: &'a str, prefix: &str) -> TypeResult<&'a str> {
+    input.strip_prefix(prefix).ok_or(Error::Serialization)
 }
 
 fn validate_byte_array_size(expected: usize, actual: usize) -> TypeResult<()> {
