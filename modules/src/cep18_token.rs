@@ -33,20 +33,29 @@ impl Cep18 {
     /// Initializes the contract with the given metadata, initial supply.
     pub fn init(&mut self, symbol: String, name: String, decimals: u8, initial_supply: U256) {
         let caller = self.env().caller();
-        // set the metadata
+
+        // Set the metadata
         self.symbol.set(symbol);
         self.name.set(name);
         self.decimals.set(decimals);
         self.total_supply.set(initial_supply);
 
         if !initial_supply.is_zero() {
-            // mint the initial supply for the caller
+            // If the initial supply is not zero:
+            // - mint the initial supply to the caller,
+            // - emit the `Mint` event.
             self.balances.set(&caller, initial_supply);
             self.env().emit_event(Mint {
                 recipient: caller,
                 amount: initial_supply
             });
+        } else {
+            // If the initial supply is zero, initialize `balances`.
+            self.balances.init();
         }
+
+        // Initialize allowances.
+        self.allowances.init();
     }
 
     /// Returns the name of the token.

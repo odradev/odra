@@ -1,8 +1,8 @@
 use casper_engine_test_support::genesis_config_builder::GenesisConfigBuilder;
 use odra_core::casper_types::system::auction::{
-    BidAddr, BidKind, DelegationRate, DelegatorKind, ARG_ENTRY_POINT, ARG_EVICTED_VALIDATORS,
-    ARG_PUBLIC_KEY, ARG_REWARDS_MAP, BLOCK_REWARD, METHOD_DISTRIBUTE, METHOD_RUN_AUCTION,
-    METHOD_WITHDRAW_BID
+    BidAddr, BidKind, DelegationRate, DelegatorKind, ARG_DELEGATION_RATE, ARG_ENTRY_POINT,
+    ARG_EVICTED_VALIDATORS, ARG_MINIMUM_DELEGATION_AMOUNT, ARG_PUBLIC_KEY, ARG_REWARDS_MAP,
+    BLOCK_REWARD, METHOD_ADD_BID, METHOD_DISTRIBUTE, METHOD_RUN_AUCTION, METHOD_WITHDRAW_BID
 };
 use odra_core::casper_types::{
     AddressableEntity, AddressableEntityHash, EntityAddr, GenesisConfig, GenesisValidator,
@@ -16,16 +16,16 @@ use std::hash::Hash;
 use std::path::PathBuf;
 
 use casper_engine_test_support::{
-    DeployItemBuilder, EntityWithNamedKeys, ExecuteRequestBuilder, LmdbWasmTestBuilder,
-    WasmTestBuilder, ARG_AMOUNT, DEFAULT_ACCOUNTS, DEFAULT_AUCTION_DELAY,
+    ChainspecConfig, DeployItemBuilder, EntityWithNamedKeys, ExecuteRequestBuilder,
+    LmdbWasmTestBuilder, WasmTestBuilder, ARG_AMOUNT, DEFAULT_ACCOUNTS, DEFAULT_AUCTION_DELAY,
     DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_EXEC_CONFIG, DEFAULT_GENESIS_CONFIG_HASH,
     DEFAULT_GENESIS_TIMESTAMP_MILLIS, DEFAULT_LOCKED_FUNDS_PERIOD_MILLIS, DEFAULT_PAYMENT,
-    DEFAULT_ROUND_SEIGNIORAGE_RATE, DEFAULT_SYSTEM_CONFIG, DEFAULT_UNBONDING_DELAY,
-    DEFAULT_VALIDATOR_SLOTS, DEFAULT_WASM_CONFIG, SYSTEM_ADDR
+    DEFAULT_PROTOCOL_VERSION, DEFAULT_ROUND_SEIGNIORAGE_RATE, DEFAULT_SYSTEM_CONFIG,
+    DEFAULT_UNBONDING_DELAY, DEFAULT_VALIDATOR_SLOTS, DEFAULT_WASM_CONFIG, SYSTEM_ADDR
 };
 use casper_event_standard::try_full_name_from_bytes;
 use casper_execution_engine::{engine_state, execution};
-use casper_storage::data_access_layer::{DataAccessLayer, GenesisRequest};
+use casper_storage::data_access_layer::{DataAccessLayer, GenesisRequest, RewardItem, StepRequest};
 use odra_core::{casper_event_standard, DeployReport, GasReport};
 use std::rc::Rc;
 
@@ -122,32 +122,24 @@ impl CasperVm {
 
         // Run auctions and distribute rewards one at a time
         for _ in 0..num_auctions {
-            self.context.run_auction(0u64, vec![]);
-            let mut rewards = BTreeMap::new();
+            let mut step_request_builder = self.context.step_request_builder();
             // distribute rewards to all validators
+            let mut rewards = BTreeMap::new();
             for validator in &self.validators {
                 if self.removed_validators.contains(&validator.public_key()) {
                     continue;
                 }
                 rewards.insert(validator.public_key(), vec![U512::from(BLOCK_REWARD)]);
+                let reward_item = RewardItem::new(validator.public_key(), BLOCK_REWARD);
+                step_request_builder = step_request_builder.with_reward_item(reward_item);
             }
-            let distribute_request = ExecuteRequestBuilder::contract_call_by_hash(
-                *SYSTEM_ADDR,
-                self.context.get_auction_contract_hash(),
-                METHOD_DISTRIBUTE,
-                runtime_args! {
-                    ARG_ENTRY_POINT => METHOD_DISTRIBUTE,
-                    ARG_REWARDS_MAP => rewards,
-                }
-            )
-            .build();
 
-            self.context
-                .exec(distribute_request)
-                .commit()
-                .expect_success();
-
+            let step_request = step_request_builder.build();
+            self.context.step(step_request);
+            self.context.advance_eras_by_default_auction_delay();
             self.advance_block_time(time_between_auctions);
+            self.context
+                .distribute(None, DEFAULT_PROTOCOL_VERSION, rewards, self.block_time);
         }
 
         // Run remaining auctions with the leftover time
@@ -691,23 +683,34 @@ impl CasperVm {
         let (genesis_accounts, validators) = Self::genesis_accounts(&key_pairs);
         let accounts: Vec<Address> = key_pairs.keys().copied().collect();
 
-        let genesis_config = Self::genesis_config(genesis_accounts);
-
-        let mut genesis_request = GenesisRequest::new(
-            DEFAULT_GENESIS_CONFIG_HASH,
-            ProtocolVersion::V2_0_0,
-            genesis_config,
-            DEFAULT_CHAINSPEC_REGISTRY.clone()
+        let mut builder = LmdbWasmTestBuilder::default();
+        let chainspec = ChainspecConfig::create_genesis_request_from_local_chainspec(
+            genesis_accounts.clone(),
+            ProtocolVersion::V2_0_0
         );
-        genesis_request.set_enable_entity(false);
 
-        let chainspec_path =
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/chainspec.toml");
-        let mut builder = LmdbWasmTestBuilder::new_temporary_with_chainspec(chainspec_path);
+        builder.run_genesis(chainspec.unwrap()).commit();
 
-        builder.run_genesis(genesis_request).commit();
-        builder.advance_eras_by_default_auction_delay();
+        builder.advance_eras_by(20);
 
+        for account in validators.iter() {
+            let bid_request = ExecuteRequestBuilder::contract_call_by_hash(
+                account.account_hash(),
+                builder.get_auction_contract_hash(),
+                METHOD_ADD_BID,
+                runtime_args! {
+                    ARG_PUBLIC_KEY => account.public_key(),
+                    ARG_AMOUNT => U512::from(1_000_000_000_000u64),
+                    ARG_DELEGATION_RATE=> 0u8,
+                    ARG_MINIMUM_DELEGATION_AMOUNT => 500_000_000_000u64,
+                }
+            )
+            .build();
+
+            builder.exec(bid_request).commit().expect_success();
+        }
+
+        builder.advance_eras_by(20);
         Self {
             active_account: accounts[0],
             context: builder,

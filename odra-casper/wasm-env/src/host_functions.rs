@@ -290,6 +290,13 @@ pub fn remove_dictionary(dictionary_name: &str) {
     runtime::remove_key(dictionary_name);
 }
 
+/// Initializes an empty dictionary with the given name if it does not exist.
+#[inline]
+pub fn init_dictionary(dictionary_name: &str) {
+    // Reuse `get_dictionary` to create a new dictionary if it does not exist.
+    let _ = get_dictionary(dictionary_name);
+}
+
 /// Gets a value under a key in a dictionary from the contract's storage.
 pub fn get_dictionary_value(dictionary_name: &str, key: &[u8]) -> Option<Bytes> {
     let dictionary_uref = get_dictionary(dictionary_name);

@@ -1,5 +1,4 @@
 //! Module for handling Odra errors coming out of the Livenet execution.
-
 use std::{fs, path::PathBuf};
 
 use anyhow::{anyhow, Result};
@@ -21,27 +20,48 @@ pub fn find(error_msg: &str) -> Result<OdraError> {
         return Ok(get_internal_error_name(error_num));
     }
 
+    let root =
+        project_root::get_project_root().map_err(|_| anyhow!("Couldn't get project root"))?;
+    let mut current_dir =
+        std::env::current_dir().map_err(|_| anyhow!("Couldn't get current directory"))?;
     #[cfg(test)]
-    let schema_path = PathBuf::from("resources/test");
+    let schema_path = std::path::PathBuf::from("resources/test");
     #[cfg(not(test))]
-    let schema_path = PathBuf::from("resources/casper_contract_schemas");
-    let schema_path = odra_schema::find_schemas_file_paths(schema_path).map_err(|e| anyhow!(e))?;
-    for schema_path in schema_path {
-        let schema = fs::read_to_string(schema_path)?;
+    let schema_path = std::path::PathBuf::from("resources/casper_contract_schemas");
 
-        let schema: Value = serde_json::from_str(&schema)?;
-        let errors = schema["errors"]
-            .as_array()
-            .ok_or_else(|| anyhow!("Couldn't get value"))?;
-        let f = errors.iter().find_map(|err| match_error(err, error_num));
-        if let Some(odra_error) = f {
-            return Ok(odra_error);
+    while current_dir != root {
+        match find_error_in_path(current_dir.join(&schema_path), error_num) {
+            Some(odra_error) => return Ok(odra_error),
+            None => {
+                current_dir = current_dir
+                    .parent()
+                    .ok_or_else(|| anyhow!("Couldn't get parent directory"))?
+                    .to_path_buf()
+            }
         }
     }
-    Err(anyhow!(
-        "Couldn't find error in the contract schema: {}",
-        error_msg
-    ))
+    match find_error_in_path(current_dir.join(&schema_path), error_num) {
+        Some(odra_error) => Ok(odra_error),
+        None => Err(anyhow!(
+            "Couldn't find error in the contract schema: {}",
+            error_msg
+        ))
+    }
+}
+
+fn find_error_in_path(path: PathBuf, error_num: u16) -> Option<OdraError> {
+    let schema_path = odra_schema::find_schemas_file_paths(path).ok()?;
+    for schema_path in schema_path {
+        let schema = fs::read_to_string(schema_path).ok()?;
+
+        let schema: Value = serde_json::from_str(&schema).ok()?;
+        let errors = schema["errors"].as_array()?;
+        let f = errors.iter().find_map(|err| match_error(err, error_num));
+        if let Some(odra_error) = f {
+            return Some(odra_error);
+        }
+    }
+    None
 }
 
 fn match_error(val: &Value, error_num: u16) -> Option<OdraError> {

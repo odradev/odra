@@ -63,6 +63,10 @@ impl ContractContext for LivenetContractEnv {
         panic!("Cannot remove dictionary value in LivenetEnv without a deploy")
     }
 
+    fn init_dictionary(&self, _dictionary_name: &str) {
+        panic!("Cannot initialize dictionary in LivenetEnv without a deploy")
+    }
+
     fn caller(&self) -> Address {
         *self.callstack.borrow().first().address()
     }
