@@ -1,7 +1,4 @@
-use std::{
-    fmt::{Debug, Display},
-    str::FromStr
-};
+use std::{fmt::Debug, str::FromStr};
 
 use odra::schema::casper_contract_schema::{CustomType, NamedCLType};
 use odra::{
@@ -14,87 +11,16 @@ use odra::{
     prelude::Address
 };
 
-use thiserror::Error;
+mod decoder;
+mod error;
 
-use crate::CustomTypeSet;
+pub(crate) use decoder::decode;
+pub(crate) use error::{Error, Format};
+
+use crate::custom_types::CustomTypeSet;
 
 const PREFIX_ERROR: &str = "err:";
 const PREFIX_OK: &str = "ok:";
-
-pub enum Format {
-    Result,
-    Option,
-    Tuple { actual: usize, expected: usize },
-    Map,
-    ByteArray,
-    InvalidLength { actual: usize, expected: usize }
-}
-
-impl Debug for Format {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let msg = self.as_string_vec().join("\n");
-        f.write_str(&msg)
-    }
-}
-
-impl Display for Format {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let msg = self.as_string_vec().join("\n");
-        f.write_str(&msg)
-    }
-}
-
-impl Format {
-    fn as_string_vec(&self) -> Vec<String> {
-        match self {
-            Format::Result => vec![String::from("'ok:{value}'"), String::from("'err:{value}'")],
-            Format::Option => vec![String::from("'none'"), String::from("'some:{value}'")],
-            Format::Tuple { actual, expected } => vec![format!(
-                "expected tuple with {} elements, found {}",
-                expected, actual
-            )],
-            Format::Map => vec![String::from("'key1:value1,key2:value2,...'")],
-            Format::ByteArray => vec![
-                String::from("'0x000102...'"),
-                String::from("'0x00,0x01,...'"),
-                String::from("'0,1,...'"),
-            ],
-            Format::InvalidLength { actual, expected } => {
-                vec![format!("expected length {}, found {}", expected, actual)]
-            }
-        }
-    }
-}
-
-#[derive(Debug, Error)]
-pub enum Error {
-    #[error("Invalid hex string")]
-    InvalidHexString,
-    #[error("Hex decode error")]
-    HexDecode,
-    #[error("Parse error: {0}")]
-    Parse(String),
-    #[error("BigUint error: {0}")]
-    BigUint(String),
-    #[error("Serialization error")]
-    Serialization,
-    #[error("Deserialization error")]
-    Deserialization,
-    #[error("Invalid URef")]
-    InvalidURef,
-    #[error("Invalid public key")]
-    InvalidPublicKey,
-    #[error("Invalid map")]
-    InvalidMap,
-    #[error("Formatting error:\nexpected formats\n{0}")]
-    Formatting(Format),
-    #[error("Invalid event member type {0}")]
-    InvalidEventMemberType(String),
-    #[error("Invalid event type {0}")]
-    InvalidEventType(String),
-    #[error("Unexpected error: {0}")]
-    Other(String)
-}
 
 type TypeResult<T> = Result<T, Error>;
 
@@ -117,7 +43,7 @@ macro_rules! call_to_bytes {
 macro_rules! big_int_to_bytes {
     ($ty:ident, $value:ident) => {
         $ty::from_dec_str($value)
-            .map_err(|_| Error::BigUint($value.to_string()))?
+            .map_err(|e| Error::BigUint(e.to_string()))?
             .to_bytes()
             .map_err(|_| Error::Serialization)
     };
@@ -127,7 +53,14 @@ pub(crate) fn parse_value<T: FromStr>(value: &str) -> TypeResult<T>
 where
     <T as FromStr>::Err: Debug
 {
-    <T as FromStr>::from_str(value).map_err(|_| Error::Parse(value.to_string()))
+    <T as FromStr>::from_str(value).map_err(|err| {
+        Error::Parse(format!(
+            "Failed to parse value '{}' as {}: {:?}",
+            value,
+            std::any::type_name::<T>(),
+            err
+        ))
+    })
 }
 
 pub(crate) fn named_cl_type_to_cl_type(ty: &NamedCLType) -> CLType {
@@ -171,20 +104,28 @@ pub(crate) fn named_cl_type_to_cl_type(ty: &NamedCLType) -> CLType {
     }
 }
 
-pub(crate) fn vec_into_bytes(ty: &NamedCLType, input: Vec<&str>) -> TypeResult<Vec<u8>> {
-    let mut result = to_bytes_or_err(input.len() as u32)?;
-    for value in input {
-        result.extend(into_bytes(ty, value)?);
-    }
-    Ok(result)
-}
-
 pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
     match ty {
         NamedCLType::Bool => call_to_bytes!(bool, input),
         NamedCLType::I32 => call_to_bytes!(i32, input),
         NamedCLType::I64 => call_to_bytes!(i64, input),
-        NamedCLType::U8 => call_to_bytes!(u8, input),
+        NamedCLType::U8 => {
+            if let Some(hex) = input.strip_prefix("0x") {
+                u8::from_str_radix(hex, 16)
+                    .map_err(|_| Error::InvalidHexString)
+                    .map(|byte| vec![byte])
+            } else if let Some(bits) = input.strip_prefix("0b") {
+                let byte = u8::from_str_radix(bits, 2).map_err(|_| Error::Serialization)?;
+                Ok(vec![byte])
+            } else {
+                // Fallback to parsing as decimal
+                if let Ok(byte) = input.parse::<u8>() {
+                    Ok(vec![byte])
+                } else {
+                    Err(Error::Formatting(Format::Option))
+                }
+            }
+        }
         NamedCLType::U32 => call_to_bytes!(u32, input),
         NamedCLType::U64 => call_to_bytes!(u64, input),
         NamedCLType::U128 => big_int_to_bytes!(U128, input),
@@ -265,7 +206,7 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
                     if key_value.len() != 2 {
                         return Err(Error::Formatting(Format::Map));
                     }
-                    Ok((key_value[0], key_value[1]))
+                    Ok((key_value[0].trim(), key_value[1].trim()))
                 })
                 .collect::<Result<Vec<_>, _>>()?;
 
@@ -289,6 +230,7 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
         }
         NamedCLType::ByteArray(n) => {
             let n = *n as usize;
+
             match parse_hex(input) {
                 Ok(data) => {
                     validate_byte_array_size(n, data.len())?;
@@ -321,8 +263,8 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
 
 pub(crate) fn decode_event(bytes: &[u8], types: &CustomTypeSet) -> TypeResult<String> {
     // Event name is stored as the first element in the bytes
-    let (mut name, rem): (String, _) = FromBytes::from_bytes(bytes)
-        .map_err(|_| Error::InvalidEventType("Invalid event schema".to_string()))?;
+    let (mut name, rem): (String, _) =
+        FromBytes::from_bytes(bytes).map_err(|_| Error::InvalidEventType("Unknown".to_string()))?;
     let mut bytes = rem;
     // Ignore the `event_` prefix
     let event_name = name.split_off(6);
@@ -332,9 +274,7 @@ pub(crate) fn decode_event(bytes: &[u8], types: &CustomTypeSet) -> TypeResult<St
             CustomType::Struct { name, members, .. } if name.0 == event_name => Some(members),
             _ => None
         })
-        .ok_or_else(|| {
-            Error::InvalidEventType(format!("Invalid event schema for '{}'", event_name))
-        })?;
+        .ok_or_else(|| Error::InvalidEventType(event_name.clone()))?;
 
     let mut output = format!("'{}':\n", event_name);
     for m in members {

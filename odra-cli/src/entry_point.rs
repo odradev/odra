@@ -1,16 +1,18 @@
-use std::path::PathBuf;
-use std::str::FromStr;
-
+#![allow(dead_code)]
 use clap::ArgMatches;
 use odra::prelude::{Address, OdraError};
 use odra::schema::casper_contract_schema::{Entrypoint, NamedCLType};
 use odra::VmError;
 use odra::{casper_types::U512, host::HostEnv, CallDef};
 
-use crate::{
-    args::{self, ARG_ATTACHED_VALUE, ARG_GAS},
-    container, types, CustomTypeSet, DeployedContractsContainer
-};
+use crate::cmd::args::{read_arg, read_cl_value_arg, Arg, ArgsError, ARG_PRINT_EVENTS};
+use crate::container::ContractProvider;
+use crate::custom_types::CustomTypeSet;
+use crate::{container, types};
+
+pub(crate) mod cmd_args;
+mod runtime_args;
+mod utils;
 
 #[derive(Debug, thiserror::Error)]
 pub enum CallError {
@@ -21,29 +23,37 @@ pub enum CallError {
         message: String
     },
     #[error(transparent)]
-    ArgsError(#[from] args::ArgsError),
+    ArgsError(#[from] ArgsError),
     #[error(transparent)]
     TypesError(#[from] types::Error),
     #[error("Contract not found")]
     ContractNotFound,
     #[error(transparent)]
-    ContractError(#[from] container::ContractError)
+    ContractError(#[from] container::ContractError),
+    #[error("Entry point '{entry_point}' not found in contract '{contract_name}'")]
+    EntryPointNotFound {
+        entry_point: String,
+        contract_name: String
+    },
+    #[error("No entry point found in contract '{contract_name}'")]
+    NoEntryPointFound { contract_name: String },
+    #[error("Invalid gas value: {0}")]
+    InvalidGasValue(String)
 }
 
-pub fn call(
+pub fn call<T: ContractProvider>(
     env: &HostEnv,
     contract_name: &str,
     entry_point: &Entrypoint,
     args: &ArgMatches,
     types: &CustomTypeSet,
-    contracts_path: Option<PathBuf>
+    contract_provider: &T
 ) -> Result<String, CallError> {
-    let container = DeployedContractsContainer::load(contracts_path)?;
-    let amount = args::read(args, ARG_ATTACHED_VALUE, U512::from_dec_str)?;
+    let amount = read_cl_value_arg::<U512>(args, Arg::AttachedValue).unwrap_or_default();
 
-    let runtime_args = args::compose(entry_point, args, types)?;
-    let contract_address = container
-        .address(contract_name)
+    let runtime_args = runtime_args::compose(entry_point, args, types)?;
+    let contract_address = contract_provider
+        .address_by_name(contract_name)
         .ok_or(CallError::ContractNotFound)?;
 
     let method = &entry_point.name;
@@ -53,11 +63,13 @@ pub fn call(
     let use_proxy = ty.0 != NamedCLType::Unit || !call_def.amount().is_zero();
 
     if is_mut {
-        let gas = args::read(args, ARG_GAS, FromStr::from_str)?;
+        let gas = read_arg(args, Arg::Gas).ok_or(CallError::InvalidGasValue(
+            "Failed to read gas value. Use --gas <value> to specify it.".to_string()
+        ))?;
         env.set_gas(gas);
     }
 
-    let print_events = args.get_flag("print-events");
+    let print_events = is_mut && args.get_flag(ARG_PRINT_EVENTS);
     if print_events {
         prettycli::info("Syncing events for the call...");
     }
@@ -74,22 +86,22 @@ pub fn call(
         })?;
 
     if print_events {
-        log_events(env, &container, types, contract_address)?;
+        log_events(env, contract_provider, types, contract_address)?;
     }
 
-    let result = args::decode(bytes.inner_bytes(), ty, types)?;
+    let result = types::decode(bytes.inner_bytes(), ty, types)?;
     Ok(result.0)
 }
 
-fn log_events(
+fn log_events<T: ContractProvider>(
     env: &HostEnv,
-    container: &DeployedContractsContainer,
+    contract_provider: &T,
     types: &CustomTypeSet,
     contract_address: Address
 ) -> Result<(), CallError> {
     let call_result = env.last_call_result(contract_address).raw_call_result();
 
-    for (name, address) in container.contracts() {
+    for (name, address) in contract_provider.all_contracts() {
         let events = call_result.contract_events(&address);
         if events.is_empty() {
             continue;

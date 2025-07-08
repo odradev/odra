@@ -24,3 +24,6 @@ pretty_assertions = "1.4.0"
 anyhow = "1.0.86"
 thiserror = "1.0.30"
 hex = "0.4.3"
+
+[build-dependencies]
+odra-build = { path = "../odra-build", version = "2.0.1", default-features = false }

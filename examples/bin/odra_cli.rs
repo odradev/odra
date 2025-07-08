@@ -1,30 +1,33 @@
 //! This example demonstrates how to use the `odra-cli` tool to deploy and interact with a smart contract.
-use odra::host::{Deployer, HostEnv};
+use odra::host::HostEnv;
 use odra::schema::casper_contract_schema::NamedCLType;
-use odra_cli::scenario::{Scenario, ScenarioMetadata};
-use odra_cli::{CommandArg, DeployedContractsContainer, OdraCli, ScenarioArgs, ScenarioError};
+use odra_cli::DeployerExt;
+use odra_cli::{
+    deploy::DeployScript,
+    scenario::{Args, Error, Scenario, ScenarioMetadata},
+    CommandArg, ContractProvider, DeployedContractsContainer, OdraCli
+};
 use odra_examples::features::storage::variable::{DogContract, DogContractInitArgs};
 use std::vec;
 
 /// Deploys the `DogContract` and adds it to the container.
 pub struct DeployDogScript;
-impl odra_cli::deploy::DeployScript for DeployDogScript {
+impl DeployScript for DeployDogScript {
     fn deploy(
         &self,
         env: &HostEnv,
         container: &mut DeployedContractsContainer
     ) -> Result<(), odra_cli::deploy::Error> {
-        env.set_gas(350_000_000_000);
-        let dog_contract = DogContract::try_deploy(
+        _ = DogContract::load_or_deploy(
             env,
             DogContractInitArgs {
                 barks: true,
                 weight: 10,
                 name: "Mantus".to_string()
-            }
+            },
+            container,
+            350_000_000_000
         )?;
-
-        container.add_contract(&dog_contract)?;
 
         Ok(())
     }
@@ -35,22 +38,16 @@ pub struct DogCheckScenario;
 
 impl Scenario for DogCheckScenario {
     fn args(&self) -> Vec<CommandArg> {
-        vec![CommandArg::new(
-            "name",
-            "The name of the dog",
-            NamedCLType::String,
-            false,
-            false
-        )]
+        vec![CommandArg::new("name", "The name of the dog", NamedCLType::String).required()]
     }
 
     fn run(
         &self,
         env: &HostEnv,
-        container: DeployedContractsContainer,
-        args: ScenarioArgs
-    ) -> Result<(), ScenarioError> {
-        let dog_contract = container.get_ref::<DogContract>(env)?;
+        container: &DeployedContractsContainer,
+        args: Args
+    ) -> Result<(), Error> {
+        let dog_contract = container.contract_ref::<DogContract>(env)?;
         let test_name = args.get_single::<String>("name")?;
 
         env.set_gas(50_000_000);
