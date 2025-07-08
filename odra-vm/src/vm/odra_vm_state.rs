@@ -178,12 +178,16 @@ impl OdraVmState {
         if self.removed_validators.contains(&validator) {
             return U512::zero();
         }
-        let validators_delegations = self.delegations.get(&validator).unwrap();
-        let delegators_amount = validators_delegations
-            .get(&delegator)
-            .cloned()
-            .unwrap_or_default();
-        delegators_amount
+        let validators_delegations = self.delegations.get(&validator);
+        if validators_delegations.is_none() {
+            return U512::zero();
+        } else {
+            validators_delegations
+                .unwrap()
+                .get(&delegator)
+                .cloned()
+                .unwrap_or_default()
+        }
     }
 
     pub fn remove_validator(&mut self, validator: PublicKey) {
