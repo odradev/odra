@@ -2,6 +2,12 @@
 
 Changelog for `odra`.
 
+## [2.1.0] - 2025-07-08
+### Added
+- `init_dictionary` function in `ContractEnv`.
+- `init` functions to all named keys related modules.
+- Enforce all named keys in `CEP-18` and `CEP-95` to be initialized in the `init` function.
+
 ## [2.0.1] - 2025-06-06
 ### Added
 - `CEP-95` token implementation in `odra-modules`.

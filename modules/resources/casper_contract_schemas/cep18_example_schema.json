@@ -9,7 +9,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": null,
   "contract_name": "Cep18Example",
-  "contract_version": "2.0.1",
+  "contract_version": "2.1.0",
   "types": [
     {
       "struct": {
