@@ -5,7 +5,7 @@ use odra::schema::casper_contract_schema::{Entrypoint, NamedCLType};
 use odra::VmError;
 use odra::{casper_types::U512, host::HostEnv, CallDef};
 
-use crate::cmd::args::{read_arg, read_cl_value_arg, Arg, ArgsError, ARG_PRINT_EVENTS};
+use crate::cmd::args::{read_arg, Arg, ArgsError, ARG_PRINT_EVENTS};
 use crate::container::ContractProvider;
 use crate::custom_types::CustomTypeSet;
 use crate::{container, types};
@@ -49,7 +49,7 @@ pub fn call<T: ContractProvider>(
     types: &CustomTypeSet,
     contract_provider: &T
 ) -> Result<String, CallError> {
-    let amount = read_cl_value_arg::<U512>(args, Arg::AttachedValue).unwrap_or_default();
+    let amount = read_arg::<U512>(args, Arg::AttachedValue).unwrap_or_default();
 
     let runtime_args = runtime_args::compose(entry_point, args, types)?;
     let contract_address = contract_provider

@@ -1,11 +1,8 @@
 use std::any::Any;
 
-use crate::parser::{CLTypedParser, GenericCLValueParser};
+use crate::parser::{CLTypedParser, CsprTokenAmountParser, GasParser};
 use clap::{builder::PathBufValueParser, ArgAction, ArgMatches};
-use odra::{
-    casper_types::{bytesrepr::FromBytes, CLTyped, CLValue, U512},
-    schema::casper_contract_schema::NamedCLType
-};
+use odra::schema::casper_contract_schema::NamedCLType;
 
 pub const ARG_ATTACHED_VALUE: &str = "attached_value";
 pub const ARG_GAS: &str = "gas";
@@ -121,8 +118,8 @@ fn arg_attached_value() -> clap::Arg {
         .help("The amount of CSPRs attached to the call")
         .long(ARG_ATTACHED_VALUE)
         .required(false)
-        .value_name(format!("{:?}", NamedCLType::U512))
-        .value_parser(GenericCLValueParser::<U512>::new())
+        .value_name("CSPR")
+        .value_parser(CsprTokenAmountParser)
         .action(ArgAction::Set)
 }
 
@@ -131,8 +128,8 @@ fn arg_gas() -> clap::Arg {
         .help("The amount of gas to attach to the call")
         .long(ARG_GAS)
         .required(true)
-        .value_name(format!("{:?}", NamedCLType::U64))
-        .value_parser(clap::value_parser!(u64).range(2_500_000_000..))
+        .value_name("CSPR")
+        .value_parser(GasParser)
         .action(ArgAction::Set)
 }
 
@@ -170,16 +167,4 @@ pub fn read_arg<T: ToOwned<Owned = T> + Any + Clone + Send + Sync + 'static>(
     arg: Arg
 ) -> Option<T> {
     matches.get_one::<T>(arg.name()).map(ToOwned::to_owned)
-}
-
-pub fn read_cl_value_arg<
-    T: CLTyped + FromBytes + ToOwned<Owned = T> + Any + Clone + Send + Sync + 'static
->(
-    matches: &ArgMatches,
-    arg: Arg
-) -> Option<T> {
-    matches
-        .get_one::<CLValue>(arg.name())
-        .map(ToOwned::to_owned)
-        .and_then(|cl_value| cl_value.into_t::<T>().ok())
 }
