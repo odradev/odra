@@ -86,7 +86,7 @@ impl Format {
             Format::PatternLength { actual, expected } => vec![format!(
                 "pattern length {} does not divide expected length {}",
                 actual, expected
-            )],
+            )]
         }
     }
 }

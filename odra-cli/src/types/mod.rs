@@ -428,8 +428,7 @@ fn parse_hex(input: &str) -> TypeResult<Vec<u8>> {
                 return Err(Error::InvalidHexString);
             }
             if data.len() % 2 != 0 {
-                hex::decode(format!("{}{}", data, data))
-                    .map_err(|_| Error::HexDecode)
+                hex::decode(format!("{}{}", data, data)).map_err(|_| Error::HexDecode)
             } else {
                 hex::decode(data).map_err(|_| Error::HexDecode)
             }
