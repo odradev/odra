@@ -18,6 +18,8 @@ Changelog for `odra`.
 a `&T` reference.
 - `odra-cli` requires the `gas` parameter to call a mutable entrypoint.
 - `__attached_value` is now `attached_value` in `odra-cli`.
+- `HostEnv::address() -> &Address` now is `HostEnv::contract_address(&self) -> Address`.
+- `Addressable::address()` returns `Address` instead of `&Address`.
 
 ## [2.0.1] - 2025-06-06
 ### Added
