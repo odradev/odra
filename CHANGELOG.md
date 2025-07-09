@@ -7,6 +7,19 @@ Changelog for `odra`.
 - `init_dictionary` function in `ContractEnv`.
 - `init` functions to all named keys related modules.
 - Enforce all named keys in `CEP-18` and `CEP-95` to be initialized in the `init` function.
+- New commands in `odra-cli`:
+  - `whoami` - prints the address of the current account.
+  - `print-events` - prints all events emitted by the contract.
+- A base cli implementation in templates.
+
+### Changed
+- Signature of functions in `HostEnv`, to accept `&Addressable` instead of `Address`.
+- Signature of `emitted_*` functions in `HostEnv`, to accept `T: ToBytes + EventInstance` instead of
+a `&T` reference.
+- `odra-cli` requires the `gas` parameter to call a mutable entrypoint.
+- `__attached_value` is now `attached_value` in `odra-cli`.
+- `HostEnv::address() -> &Address` now is `HostEnv::contract_address(&self) -> Address`.
+- `Addressable::address()` returns `Address` instead of `&Address`.
 
 ## [2.0.1] - 2025-06-06
 ### Added
