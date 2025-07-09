@@ -23,7 +23,7 @@ use casper_client::{
 };
 use casper_types::bytesrepr::{deserialize_from_slice, Bytes, ToBytes};
 use casper_types::execution::ExecutionResultV1::{Failure, Success};
-use casper_types::system::auction::BidAddr;
+use casper_types::system::auction::{BidAddr, ValidatorBid};
 use casper_types::StoredValue::CLValue;
 use casper_types::{
     execution::ExecutionResult, runtime_args, sign, CLTyped, Digest, EntityAddr, Key, PricingMode,
@@ -187,6 +187,10 @@ impl CasperClient {
                 }
             }
         }
+    }
+
+    pub async fn get_validator_info(&self, _validator: PublicKey) -> Option<ValidatorBid> {
+        todo!("Implement get_validator_info")
     }
 
     pub async fn auction_delay(&self) -> u64 {

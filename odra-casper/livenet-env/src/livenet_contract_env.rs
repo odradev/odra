@@ -6,6 +6,7 @@ use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::bytesrepr::Bytes;
 use odra_core::casper_types::{CLValue, PublicKey, U512};
 use odra_core::prelude::*;
+use odra_core::validator::ValidatorInfo;
 use odra_core::{CallDef, ContractContext, ContractRegister};
 use std::io::Write;
 use std::sync::RwLock;
@@ -185,6 +186,10 @@ impl ContractContext for LivenetContractEnv {
         let client = self.casper_client.borrow();
         self.runtime
             .block_on(async { client.delegated_amount(address, _validator).await })
+    }
+
+    fn get_validator_info(&self, _validator: PublicKey) -> Option<ValidatorInfo> {
+        todo!()
     }
 
     fn pseudorandom_bytes(&self) -> [u8; 32] {

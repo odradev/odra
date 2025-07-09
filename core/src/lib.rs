@@ -34,6 +34,7 @@ mod sequence;
 pub mod uints;
 mod unwrap_or_revert;
 pub mod utils;
+pub mod validator;
 mod var;
 
 pub use call_def::CallDef;

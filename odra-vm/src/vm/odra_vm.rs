@@ -3,12 +3,15 @@ use std::panic::{self, AssertUnwindSafe};
 use std::rc::Rc;
 use std::sync::{Arc, RwLock};
 
+use super::odra_vm_state::OdraVmState;
 use anyhow::Result;
 use odra_core::callstack::CallstackElement;
 use odra_core::casper_types::bytesrepr::{deserialize, deserialize_from_slice, serialize};
+use odra_core::casper_types::system::auction::ValidatorBid;
 use odra_core::casper_types::{CLType, CLValue};
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::prelude::*;
+use odra_core::validator::ValidatorInfo;
 use odra_core::CallDef;
 use odra_core::EventError;
 use odra_core::VmError;
@@ -20,8 +23,6 @@ use odra_core::{
     }
 };
 use odra_core::{ContractContainer, ContractRegister};
-
-use super::odra_vm_state::OdraVmState;
 const NAMED_KEY_PREFIX: &str = "NAMED_KEY";
 
 /// Odra in-memory virtual machine.
@@ -409,6 +410,22 @@ impl OdraVm {
             .read()
             .unwrap()
             .delegated_amount(validator, delegator)
+    }
+
+    /// Returns information about the validator
+    ///
+    /// # Arguments
+    /// - validator - The validator to query
+    ///
+    /// # Returns
+    /// Option<ValidatorBid>
+    pub fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorInfo> {
+        self.state
+            .read()
+            .unwrap()
+            .validators
+            .get(&validator)
+            .cloned()
     }
 
     /// Disables the validator at the given index.

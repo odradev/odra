@@ -48,6 +48,16 @@ impl Storage {
         to_balance.increase(*amount)
     }
 
+    pub fn increase_balance(&mut self, address: &Address, amount: &U512) -> Result<()> {
+        let balance = self.balances.get_mut(address).context("Unknown address")?;
+        balance.increase(*amount)
+    }
+
+    pub fn decrease_balance(&mut self, address: &Address, amount: &U512) -> Result<()> {
+        let balance = self.balances.get_mut(address).context("Unknown address")?;
+        balance.reduce(*amount)
+    }
+
     pub fn get_value(&self, address: &Address, key: &[u8]) -> Result<Option<Bytes>, Error> {
         let hash = Storage::hashed_key(address, key);
         let result = self.state.get(&hash).cloned();

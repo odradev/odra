@@ -4,6 +4,7 @@ use crate::casper_types::bytesrepr::{deserialize_from_slice, Bytes, FromBytes, T
 use crate::casper_types::crypto::PublicKey;
 use crate::casper_types::{CLTyped, CLValue, BLAKE2B_DIGEST_LENGTH, U512};
 use crate::module::Revertible;
+use crate::validator::ValidatorInfo;
 pub use crate::ContractContext;
 use crate::VmError::{Serialization, TypeMismatch};
 use crate::{consts, prelude::*, utils};
@@ -313,6 +314,17 @@ impl ContractEnv {
     /// The amount of tokens delegated to the validator
     pub fn delegated_amount(&self, validator: PublicKey) -> U512 {
         self.backend.borrow().delegated_amount(validator)
+    }
+
+    /// Returns information about the validator
+    ///
+    /// # Arguments
+    /// - validator - The validator to query
+    ///
+    /// # Returns
+    /// Option<ValidatorBid>
+    pub fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorInfo> {
+        self.backend.borrow().get_validator_info(validator)
     }
 
     /// Returns a vector of pseudorandom bytes of the specified size.
