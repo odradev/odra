@@ -136,7 +136,7 @@ impl CasperVm {
 
             let step_request = step_request_builder.build();
             self.context.step(step_request);
-            self.context.advance_eras_by_default_auction_delay();
+            self.context.advance_era();
             self.advance_block_time(time_between_auctions);
             self.context
                 .distribute(None, DEFAULT_PROTOCOL_VERSION, rewards, self.block_time);

@@ -179,14 +179,10 @@ impl OdraVmState {
             return U512::zero();
         }
         let validators_delegations = self.delegations.get(&validator);
-        if validators_delegations.is_none() {
-            return U512::zero();
+        if let Some(vd) = validators_delegations {
+            vd.get(&delegator).cloned().unwrap_or_default()
         } else {
-            validators_delegations
-                .unwrap()
-                .get(&delegator)
-                .cloned()
-                .unwrap_or_default()
+            U512::zero()
         }
     }
 
@@ -345,13 +341,20 @@ impl OdraVmState {
 
     pub fn advance_with_auctions(&mut self, milliseconds: u64) {
         let time_between_auctions = self.auction_delay();
-
         // Calculate how many auctions we can run based on time_diff
         let num_auctions = milliseconds / time_between_auctions;
+
+        let auction_reward = 99999u64;
 
         // Run auctions and distribute rewards one at a time
         // to each validator which has a delegation
         for _ in 0..num_auctions {
+            let total_staked = self
+                .validators
+                .values()
+                .fold(U512::zero(), |acc, validator_info| {
+                    acc + validator_info.staked_amount
+                });
             self.validators
                 .iter_mut()
                 .for_each(|(validator, validator_info)| {
@@ -363,7 +366,7 @@ impl OdraVmState {
 
                     let delegations = self.delegations.get_mut(validator).unwrap();
                     delegations.iter_mut().for_each(|(address, amount)| {
-                        let reward = validator_info.staked_amount / 1000;
+                        let reward = (validator_info.staked_amount * auction_reward) / total_staked;
                         *amount += reward;
                         new_total_amount += reward;
                     });
