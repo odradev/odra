@@ -10,7 +10,7 @@ use odra_core::casper_types::{
     bytesrepr::{Bytes, FromBytes, ToBytes},
     PublicKey, SecretKey, U512
 };
-use odra_core::consts::DEFAULT_MINIMUM_DELEGATION_AMOUNT;
+use odra_core::consts::{DEFAULT_BALANCE, DEFAULT_MINIMUM_DELEGATION_AMOUNT};
 use odra_core::crypto::generate_key_pairs;
 use odra_core::prelude::*;
 use odra_core::validator::ValidatorInfo;
@@ -28,7 +28,7 @@ pub struct AwaitingTransfer {
     pub from: Address,
     pub to: Address,
     pub amount: U512,
-    pub block_time: u64
+    pub transfer_unlock: u64
 }
 
 /// Struct representing the state of the Odra VM.
@@ -236,6 +236,8 @@ impl OdraVmState {
         if self.removed_validators.contains(&validator) {
             panic!("Validator is disabled");
         }
+
+        let transfer_unlock = self.block_time + self.unbonding_period();
         let validators_delegations = self.delegations.entry(validator.clone()).or_default();
         let delegation = validators_delegations
             .get(&delegator)
@@ -249,16 +251,33 @@ impl OdraVmState {
         };
 
         validator_info.set_staked_amount(validator_info.staked_amount.checked_sub(amount).unwrap());
-        self.validators.insert(validator.clone(), validator_info);
 
         let transfer = AwaitingTransfer {
             from: self.validator_account[&validator],
             to: delegator,
             amount,
-            block_time: self.block_time + self.unbonding_period()
+            transfer_unlock,
         };
-
         self.awaiting_transfers.push(transfer);
+
+        if validator_info.staked_amount < validator_info.minimum_delegation_amount.into() {
+            // Undelegate everything
+            validator_info.set_staked_amount(U512::zero());
+
+            validators_delegations.iter().for_each(|(delegator, amount)|  {
+
+                let transfer = AwaitingTransfer {
+                    from: self.validator_account[&validator],
+                    to: *delegator,
+                    amount: *amount,
+                    transfer_unlock,
+                };
+                self.awaiting_transfers.push(transfer);
+            });
+
+            self.delegations.remove(&validator);
+        }
+        self.validators.insert(validator.clone(), validator_info);
     }
 
     pub fn attach_value(&mut self, amount: U512) {
@@ -344,7 +363,7 @@ impl OdraVmState {
         // Calculate how many auctions we can run based on time_diff
         let num_auctions = milliseconds / time_between_auctions;
 
-        let auction_reward = 99999u64;
+        let auction_total_reward = 5_000_000_000_000u64;
 
         // Run auctions and distribute rewards one at a time
         // to each validator which has a delegation
@@ -362,16 +381,22 @@ impl OdraVmState {
                         return;
                     }
 
-                    let mut new_total_amount = validator_info.staked_amount;
+                    let validator_reward = (validator_info.staked_amount * auction_total_reward) / total_staked;
 
-                    let delegations = self.delegations.get_mut(validator).unwrap();
-                    delegations.iter_mut().for_each(|(address, amount)| {
-                        let reward = (validator_info.staked_amount * auction_reward) / total_staked;
-                        *amount += reward;
-                        new_total_amount += reward;
+                    let mut delegations = match self.delegations.get(validator) {
+                        None => BTreeMap::new(),
+                        Some(delegation) => delegation.clone()
+                    };
+
+                    delegations.iter_mut().for_each(|(delegator_address, delegator_amount)| {
+                        let delegator_reward = (*delegator_amount * validator_reward) / validator_info.staked_amount;
+                        *delegator_amount += delegator_reward;
                     });
 
-                    validator_info.staked_amount = new_total_amount;
+
+                    self.delegations.insert(validator.clone(), delegations);
+
+                    validator_info.staked_amount += validator_reward;
                 });
         }
 
@@ -383,7 +408,7 @@ impl OdraVmState {
             .clone()
             .into_iter()
             .for_each(|transfer| {
-                if self.block_time >= transfer.block_time {
+                if self.block_time >= transfer.transfer_unlock {
                     self.transfer(&transfer.from, &transfer.to, &transfer.amount)
                         .unwrap();
                 }
@@ -391,7 +416,7 @@ impl OdraVmState {
 
         // Remove the processed transfers from the list
         self.awaiting_transfers
-            .retain(|transfer| self.block_time < transfer.block_time);
+            .retain(|transfer| self.block_time < transfer.transfer_unlock);
     }
 
     pub fn auction_delay(&self) -> u64 {
@@ -458,7 +483,7 @@ impl Default for OdraVmState {
             .map(|(_, pk)| {
                 (
                     pk.1.clone(),
-                    ValidatorInfo::new(U512::zero(), DEFAULT_MINIMUM_DELEGATION_AMOUNT)
+                    ValidatorInfo::new(DEFAULT_BALANCE.into(), DEFAULT_MINIMUM_DELEGATION_AMOUNT)
                 )
             })
             .collect::<BTreeMap<PublicKey, ValidatorInfo>>();
