@@ -690,7 +690,7 @@ impl CasperVm {
         );
 
         builder.run_genesis(chainspec.unwrap()).commit();
-
+        let unbonding_delay = builder.get_unbonding_delay();
         builder.advance_eras_by(20);
 
         for account in validators.iter() {
@@ -702,7 +702,7 @@ impl CasperVm {
                     ARG_PUBLIC_KEY => account.public_key(),
                     ARG_AMOUNT => U512::from(1_000_000_000_000u64),
                     ARG_DELEGATION_RATE=> 0u8,
-                    ARG_MINIMUM_DELEGATION_AMOUNT => 500_000_000_000u64,
+                    ARG_MINIMUM_DELEGATION_AMOUNT => DEFAULT_MINIMUM_DELEGATION_AMOUNT,
                 }
             )
             .build();

@@ -279,19 +279,26 @@ mod tests {
         );
 
         let minimum_delegation_amount = staking.get_minimum_delegation_amount().into();
+        assert_eq!(staking.currently_delegated_amount(), U512::zero());
 
         staking.with_tokens(minimum_delegation_amount).stake();
 
-        assert_eq!(staking.currently_delegated_amount(), minimum_delegation_amount);
+        assert_eq!(
+            staking.currently_delegated_amount(),
+            minimum_delegation_amount
+        );
 
-        test_env.advance_with_auctions(test_env.auction_delay() * 2);
+        test_env.advance_with_auctions(test_env.auction_delay());
 
-        assert_eq!(staking.currently_delegated_amount(), U512::from(500_000_099_998u64));
+        assert_eq!(
+            staking.currently_delegated_amount(),
+            U512::from(500_000_049_999u64)
+        );
 
         staking.unstake(U512::from(500_000_000_000u64));
 
         test_env.advance_with_auctions(test_env.auction_delay());
-        test_env.advance_with_auctions(test_env.unbonding_delay());
+        test_env.advance_with_auctions(test_env.unbonding_delay() * 5);
 
         assert_eq!(staking.currently_delegated_amount(), U512::zero());
     }

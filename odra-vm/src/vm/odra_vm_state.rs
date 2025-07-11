@@ -243,7 +243,8 @@ impl OdraVmState {
             .get(&delegator)
             .cloned()
             .unwrap_or_default();
-        validators_delegations.insert(delegator, delegation.checked_sub(amount).unwrap());
+        let new_delegation = delegation.checked_sub(amount).unwrap();
+        validators_delegations.insert(delegator, new_delegation);
 
         let mut validator_info = match self.validators.get(&validator) {
             None => ValidatorInfo::new(U512::zero(), DEFAULT_MINIMUM_DELEGATION_AMOUNT),
@@ -256,27 +257,23 @@ impl OdraVmState {
             from: self.validator_account[&validator],
             to: delegator,
             amount,
-            transfer_unlock,
+            transfer_unlock
         };
         self.awaiting_transfers.push(transfer);
 
-        if validator_info.staked_amount < validator_info.minimum_delegation_amount.into() {
-            // Undelegate everything
-            validator_info.set_staked_amount(U512::zero());
+        if new_delegation < validator_info.minimum_delegation_amount.into() {
+            // Undelegate everything, as we are below the minimum delegation amount
+            validators_delegations.remove(&delegator);
 
-            validators_delegations.iter().for_each(|(delegator, amount)|  {
-
-                let transfer = AwaitingTransfer {
-                    from: self.validator_account[&validator],
-                    to: *delegator,
-                    amount: *amount,
-                    transfer_unlock,
-                };
-                self.awaiting_transfers.push(transfer);
-            });
-
-            self.delegations.remove(&validator);
+            let transfer = AwaitingTransfer {
+                from: self.validator_account[&validator],
+                to: delegator,
+                amount: new_delegation,
+                transfer_unlock
+            };
+            self.awaiting_transfers.push(transfer);
         }
+
         self.validators.insert(validator.clone(), validator_info);
     }
 
@@ -363,7 +360,7 @@ impl OdraVmState {
         // Calculate how many auctions we can run based on time_diff
         let num_auctions = milliseconds / time_between_auctions;
 
-        let auction_total_reward = 5_000_000_000_000u64;
+        let auction_total_reward = 299_999u64;
 
         // Run auctions and distribute rewards one at a time
         // to each validator which has a delegation
@@ -381,18 +378,21 @@ impl OdraVmState {
                         return;
                     }
 
-                    let validator_reward = (validator_info.staked_amount * auction_total_reward) / total_staked;
+                    let validator_reward =
+                        (validator_info.staked_amount * auction_total_reward) / total_staked;
 
                     let mut delegations = match self.delegations.get(validator) {
                         None => BTreeMap::new(),
                         Some(delegation) => delegation.clone()
                     };
 
-                    delegations.iter_mut().for_each(|(delegator_address, delegator_amount)| {
-                        let delegator_reward = (*delegator_amount * validator_reward) / validator_info.staked_amount;
-                        *delegator_amount += delegator_reward;
-                    });
-
+                    delegations
+                        .iter_mut()
+                        .for_each(|(delegator_address, delegator_amount)| {
+                            let delegator_reward = (*delegator_amount * validator_reward)
+                                / validator_info.staked_amount;
+                            *delegator_amount += delegator_reward;
+                        });
 
                     self.delegations.insert(validator.clone(), delegations);
 
@@ -471,7 +471,7 @@ impl Default for OdraVmState {
         let accounts: Vec<Address> = key_pairs.keys().copied().collect();
         let mut balances = BTreeMap::<Address, AccountBalance>::new();
         for address in accounts.clone() {
-            balances.insert(address, 10_000_000_000_000_000_000u64.into());
+            balances.insert(address, DEFAULT_BALANCE.into());
         }
 
         // last 5 key pairs are validators
@@ -483,7 +483,10 @@ impl Default for OdraVmState {
             .map(|(_, pk)| {
                 (
                     pk.1.clone(),
-                    ValidatorInfo::new(DEFAULT_BALANCE.into(), DEFAULT_MINIMUM_DELEGATION_AMOUNT)
+                    ValidatorInfo::new(
+                        U512::from(DEFAULT_MINIMUM_DELEGATION_AMOUNT * 2),
+                        DEFAULT_MINIMUM_DELEGATION_AMOUNT
+                    )
                 )
             })
             .collect::<BTreeMap<PublicKey, ValidatorInfo>>();
