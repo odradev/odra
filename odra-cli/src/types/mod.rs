@@ -1,12 +1,12 @@
 use std::{fmt::Debug, str::FromStr};
 
-use odra::schema::casper_contract_schema::{CustomType, NamedCLType};
+use odra::schema::casper_contract_schema::NamedCLType;
 use odra::{
     casper_types::{
         bytesrepr::{
             FromBytes, ToBytes, OPTION_NONE_TAG, OPTION_SOME_TAG, RESULT_ERR_TAG, RESULT_OK_TAG
         },
-        AsymmetricType, CLType, Key, PublicKey, URef, U128, U256, U512
+        AsymmetricType, CLType, PublicKey, URef, U128, U256, U512
     },
     prelude::Address
 };
@@ -17,10 +17,8 @@ mod error;
 #[cfg(test)]
 mod into_bytes;
 
-pub(crate) use decoder::decode;
+pub(crate) use decoder::{decode, decode_event};
 pub(crate) use error::{Error, Format};
-
-use crate::custom_types::CustomTypeSet;
 
 const PREFIX_ERROR: &str = "err:";
 const PREFIX_OK: &str = "ok:";
@@ -30,14 +28,6 @@ const PREFIX_SOME: &str = "some:";
 const PREFIX_NONE: &str = "none";
 
 type TypeResult<T> = Result<T, Error>;
-
-macro_rules! call_from_bytes {
-    ($ty:ty, $value:ident) => {
-        <$ty as FromBytes>::from_bytes($value)
-            .map(|(v, rem)| (v.to_string(), rem))
-            .map_err(|_| Error::Serialization)
-    };
-}
 
 macro_rules! call_to_bytes {
     ($ty:ty, $value:ident) => {
@@ -54,20 +44,6 @@ macro_rules! big_int_to_bytes {
             .to_bytes()
             .map_err(|_| Error::Serialization)
     };
-}
-
-pub(crate) fn parse_value<T: FromStr>(value: &str) -> TypeResult<T>
-where
-    <T as FromStr>::Err: Debug
-{
-    <T as FromStr>::from_str(value).map_err(|err| {
-        Error::Parse(format!(
-            "Failed to parse value '{}' as {}: {:?}",
-            value,
-            std::any::type_name::<T>(),
-            err
-        ))
-    })
 }
 
 pub(crate) fn named_cl_type_to_cl_type(ty: &NamedCLType) -> CLType {
@@ -284,135 +260,18 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
     }
 }
 
-pub(crate) fn decode_event(bytes: &[u8], types: &CustomTypeSet) -> TypeResult<String> {
-    // Event name is stored as the first element in the bytes
-    let (mut name, rem): (String, _) =
-        FromBytes::from_bytes(bytes).map_err(|_| Error::InvalidEventType("Unknown".to_string()))?;
-    let mut bytes = rem;
-    // Ignore the `event_` prefix
-    let event_name = name.split_off(6);
-    let members = types
-        .iter()
-        .find_map(|ty| match ty {
-            CustomType::Struct { name, members, .. } if name.0 == event_name => Some(members),
-            _ => None
-        })
-        .ok_or_else(|| Error::InvalidEventType(event_name.clone()))?;
-
-    let mut output = format!("'{}':\n", event_name);
-    for m in members {
-        let (data, rem) = from_bytes(&m.ty.0, bytes)?;
-        bytes = rem;
-        output.push_str(&format!("  '{}': {}\n", m.name, data));
-    }
-    Ok(output)
-}
-
-pub(crate) fn from_bytes<'a>(ty: &NamedCLType, input: &'a [u8]) -> TypeResult<(String, &'a [u8])> {
-    match ty {
-        NamedCLType::Bool => call_from_bytes!(bool, input),
-        NamedCLType::I32 => call_from_bytes!(i32, input),
-        NamedCLType::I64 => call_from_bytes!(i64, input),
-        NamedCLType::U8 => call_from_bytes!(u8, input),
-        NamedCLType::U32 => call_from_bytes!(u32, input),
-        NamedCLType::U64 => call_from_bytes!(u64, input),
-        NamedCLType::U128 => call_from_bytes!(U128, input),
-        NamedCLType::U256 => call_from_bytes!(U256, input),
-        NamedCLType::U512 => call_from_bytes!(U512, input),
-        NamedCLType::String => call_from_bytes!(String, input),
-        NamedCLType::Key => call_from_bytes!(Key, input),
-        NamedCLType::URef => call_from_bytes!(URef, input),
-        NamedCLType::PublicKey => call_from_bytes!(PublicKey, input),
-        NamedCLType::Option(ty) => {
-            if input.first() == Some(&OPTION_NONE_TAG) {
-                Ok(("null".to_string(), &input[1..]))
-            } else {
-                from_bytes(ty, &input[1..])
-            }
-        }
-        NamedCLType::Result { ok, err } => {
-            let (variant, rem) = from_bytes_or_err::<u8>(input)?;
-            match variant {
-                RESULT_ERR_TAG => {
-                    let (value, rem) = from_bytes(err, rem)?;
-                    Ok((format!("Err({})", value), rem))
-                }
-                RESULT_OK_TAG => {
-                    let (value, rem) = from_bytes(ok, rem)?;
-                    Ok((format!("Ok({})", value), rem))
-                }
-                _ => Err(Error::Other("Invalid result variant".to_string()))
-            }
-        }
-        NamedCLType::Tuple1(ty) => {
-            let v = from_bytes(&ty[0], input)?;
-            Ok((format!("({},)", v.0), v.1))
-        }
-        NamedCLType::Tuple2(ty) => {
-            let (v1, rem) = from_bytes(&ty[0], input)?;
-            let (v2, rem) = from_bytes(&ty[1], rem)?;
-            Ok((format!("({}, {})", v1, v2), rem))
-        }
-        NamedCLType::Tuple3(ty) => {
-            let (v1, rem) = from_bytes(&ty[0], input)?;
-            let (v2, rem) = from_bytes(&ty[1], rem)?;
-            let (v3, rem) = from_bytes(&ty[2], rem)?;
-            Ok((format!("({}, {}, {})", v1, v2, v3), rem))
-        }
-        NamedCLType::Unit => <() as FromBytes>::from_bytes(input)
-            .map(|(_, rem)| ("".to_string(), rem))
-            .map_err(|_| Error::Deserialization),
-
-        NamedCLType::List(ty) => {
-            let (num_keys, mut stream) = from_bytes_or_err::<u32>(input)?;
-            let mut result = "".to_string();
-            for _ in 0..num_keys {
-                let (v, rem) = from_bytes(ty, stream)?;
-                result.push_str(&v);
-                result.push(',');
-                stream = rem;
-            }
-            if num_keys > 0 {
-                result.pop();
-            }
-            Ok((result, stream))
-        }
-        NamedCLType::ByteArray(n) => {
-            let size = *n as usize;
-
-            let mut hex = PREFIX_HEX.to_string();
-            let mut dec = "".to_string();
-            for val in input.iter().take(size) {
-                dec.push_str(&format!("{}, ", val));
-                hex.push_str(&format!("{:02x}", val));
-            }
-
-            // remove trailing comma
-            if size > 0 {
-                dec.pop();
-                dec.pop();
-            }
-
-            Ok((format!("{} ({})", hex, dec), &input[size..]))
-        }
-        NamedCLType::Map { key, value } => {
-            let (num_keys, mut stream) = from_bytes_or_err::<u32>(input)?;
-            let mut result = "".to_string();
-            for _ in 0..num_keys {
-                let (k, rem) = from_bytes(key, stream)?;
-                let (v, rem) = from_bytes(value, rem)?;
-                result.push_str(&format!("{}:{}, ", k, v));
-                stream = rem;
-            }
-            // remove trailing comma
-            if num_keys > 0 {
-                result.pop();
-                result.pop();
-            }
-            Ok((result, stream))
-        }
-        NamedCLType::Custom(_) => unreachable!("should not be here")
-    }
+fn parse_value<T: FromStr>(value: &str) -> TypeResult<T>
+where
+    <T as FromStr>::Err: Debug
+{
+    <T as FromStr>::from_str(value).map_err(|err| {
+        Error::Parse(format!(
+            "Failed to parse value '{}' as {}: {:?}",
+            value,
+            std::any::type_name::<T>(),
+            err
+        ))
+    })
 }
 
 fn parse_hex(input: &str) -> TypeResult<Vec<u8>> {
