@@ -1,6 +1,6 @@
 use odra::{
     contract_def::HasIdent,
-    host::{Deployer, HostEnv},
+    host::{Deployer, HostEnv, OdraConfig},
     prelude::Addressable,
     OdraContract
 };
@@ -35,6 +35,30 @@ pub trait DeployerExt: Sized {
         } else {
             env.set_gas(gas);
             let contract = Self::Contract::try_deploy(env, args)?;
+            container.add_contract(&contract)?;
+            Ok(contract)
+        }
+    }
+
+    /// Load an existing contract instance from container or deploy a new one with a custom configuration.
+    fn load_or_deploy_with_cfg<T: OdraConfig>(
+        env: &HostEnv,
+        args: <<Self as DeployerExt>::Contract as OdraContract>::InitArgs,
+        cfg: T,
+        container: &mut DeployedContractsContainer,
+        gas: u64
+    ) -> Result<<<Self as DeployerExt>::Contract as OdraContract>::HostRef, crate::deploy::Error>
+    {
+        if let Ok(contract) = container.contract_ref::<Self::Contract>(env) {
+            prettycli::info(&format!(
+                "Using existing contract {} at address {:?}",
+                <Self::Contract as OdraContract>::HostRef::ident(),
+                contract.address()
+            ));
+            Ok(contract)
+        } else {
+            env.set_gas(gas);
+            let contract = Self::Contract::try_deploy_with_cfg(env, args, cfg)?;
             container.add_contract(&contract)?;
             Ok(contract)
         }
