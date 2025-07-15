@@ -652,7 +652,7 @@ impl CasperVm {
             let validator_account = GenesisAccount::account(
                 public_key.clone(),
                 Motes::new(DEFAULT_BALANCE),
-                Some(GenesisValidator::new(Motes::new(DEFAULT_BALANCE), 0))
+                Some(GenesisValidator::new(Motes::new(DEFAULT_BID_AMOUNT), 0))
             );
             accounts.push(validator_account.clone());
             validators.push(validator_account);
@@ -691,7 +691,8 @@ impl CasperVm {
 
         builder.run_genesis(chainspec.unwrap()).commit();
         let unbonding_delay = builder.get_unbonding_delay();
-        builder.advance_eras_by(20);
+        let auction_delay = builder.get_auction_delay();
+        builder.advance_eras_by(unbonding_delay + auction_delay);
 
         for account in validators.iter() {
             let bid_request = ExecuteRequestBuilder::contract_call_by_hash(
@@ -700,7 +701,7 @@ impl CasperVm {
                 METHOD_ADD_BID,
                 runtime_args! {
                     ARG_PUBLIC_KEY => account.public_key(),
-                    ARG_AMOUNT => U512::from(1_000_000_000_000u64),
+                    ARG_AMOUNT => U512::from(DEFAULT_BID_AMOUNT),
                     ARG_DELEGATION_RATE=> 0u8,
                     ARG_MINIMUM_DELEGATION_AMOUNT => DEFAULT_MINIMUM_DELEGATION_AMOUNT,
                 }

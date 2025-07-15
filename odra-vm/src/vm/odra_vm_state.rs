@@ -10,7 +10,9 @@ use odra_core::casper_types::{
     bytesrepr::{Bytes, FromBytes, ToBytes},
     PublicKey, SecretKey, U512
 };
-use odra_core::consts::{DEFAULT_BALANCE, DEFAULT_MINIMUM_DELEGATION_AMOUNT};
+use odra_core::consts::{
+    DEFAULT_BALANCE, DEFAULT_BID_AMOUNT, DEFAULT_MINIMUM_DELEGATION_AMOUNT, DEFAULT_REWARD_AMOUNT
+};
 use odra_core::crypto::generate_key_pairs;
 use odra_core::prelude::*;
 use odra_core::validator::ValidatorInfo;
@@ -360,7 +362,7 @@ impl OdraVmState {
         // Calculate how many auctions we can run based on time_diff
         let num_auctions = milliseconds / time_between_auctions;
 
-        let auction_total_reward = 299_999u64;
+        let auction_total_reward = DEFAULT_REWARD_AMOUNT;
 
         // Run auctions and distribute rewards one at a time
         // to each validator which has a delegation
@@ -484,7 +486,7 @@ impl Default for OdraVmState {
                 (
                     pk.1.clone(),
                     ValidatorInfo::new(
-                        U512::from(DEFAULT_MINIMUM_DELEGATION_AMOUNT * 2),
+                        U512::from(DEFAULT_BID_AMOUNT),
                         DEFAULT_MINIMUM_DELEGATION_AMOUNT
                     )
                 )
