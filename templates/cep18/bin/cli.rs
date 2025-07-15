@@ -6,8 +6,9 @@ use odra::prelude::Address;
 use odra::schema::casper_contract_schema::NamedCLType;
 use odra_cli::{
     deploy::DeployScript,
-    scenario::{Scenario, ScenarioMetadata},
-    CommandArg, DeployedContractsContainer, DeployerExt, OdraCli, ScenarioArgs, ScenarioError,
+    scenario::{Args, Error, Scenario, ScenarioMetadata},
+    CommandArg, ContractProvider, DeployedContractsContainer,
+    DeployerExt, OdraCli,
 };
 
 /// Deploys the `MyToken` and adds it to the container.
@@ -35,56 +36,54 @@ impl DeployScript for MyTokenDeployScript {
     }
 }
 
-/// Scenario that flips the state of the deployed `MyToken` contract a specified number of times.
+/// Scenario that transfers tokens to three specified recipients.
 pub struct DistributeScenario;
 
 impl Scenario for DistributeScenario {
     fn args(&self) -> Vec<CommandArg> {
         vec![
-            CommandArg::new("r1", "Recipient 1 address", NamedCLType::Key, true, false),
-            CommandArg::new("r2", "Recipient 2 address", NamedCLType::Key, false, false),
-            CommandArg::new("r3", "Recipient 3 address", NamedCLType::Key, false, false),
+            CommandArg::new("r1", "Recipient 1 address", NamedCLType::Key).required(),
+            CommandArg::new("r2", "Recipient 2 address", NamedCLType::Key),
+            CommandArg::new("r3", "Recipient 3 address", NamedCLType::Key),
             CommandArg::new(
                 "amount",
                 "Amount to mint for each recipient",
                 NamedCLType::U256,
-                true,
-                false,
-            ),
+            ).required(),
         ]
     }
 
     fn run(
         &self,
         env: &HostEnv,
-        container: DeployedContractsContainer,
-        args: ScenarioArgs,
-    ) -> Result<(), ScenarioError> {
-        let mut contract = container.get_ref::<MyToken>(env)?;
+        container: &DeployedContractsContainer,
+        args: Args,
+    ) -> Result<(), Error> {
+        let mut contract = container.contract_ref::<MyToken>(env)?;
         let recipient1 = args.get_single::<Address>("r1")?;
         let recipient2 = args.get_single::<Address>("r2");
         let recipient3 = args.get_single::<Address>("r3");
         let amount = args.get_single("amount").unwrap_or(1_000_000_000u64.into());
 
         env.set_gas(50_000_000);
-        contract.mint(&recipient1, &amount);
+        contract.transfer(&recipient1, &amount);
         assert!(contract.balance_of(&recipient1) == amount);
 
         match recipient2 {
             Ok(recipient2) => {
                 env.set_gas(50_000_000);
-                contract.mint(&recipient2, &amount);
+                contract.transfer(&recipient2, &amount);
                 assert!(contract.balance_of(&recipient2) == amount);
             }
-            _ => println!("No second recipient provided, skipping minting for recipient 2."),
+            _ => println!("No second recipient provided, skipping transfer for recipient 2."),
         }
         match recipient3 {
             Ok(recipient3) => {
                 env.set_gas(50_000_000);
-                contract.mint(&recipient3, &amount);
+                contract.transfer(&recipient3, &amount);
                 assert_eq!(contract.balance_of(&recipient3), amount);
             }
-            _ => println!("No third recipient provided, skipping minting for recipient 3."),
+            _ => println!("No third recipient provided, skipping transfer for recipient 3."),
         }
 
         Ok(())
@@ -94,7 +93,7 @@ impl Scenario for DistributeScenario {
 impl ScenarioMetadata for DistributeScenario {
     const NAME: &'static str = "distribute";
     const DESCRIPTION: &'static str =
-        "Distributes tokens to three specified recipients by minting a specified amount for each";
+        "Distributes tokens to three specified recipients by transferring a specified amount for each";
 }
 
 /// Main function to run the CLI tool.

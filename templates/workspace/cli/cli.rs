@@ -5,8 +5,9 @@ use flipper::flipper::Flipper;
 use odra::host::{HostEnv, NoArgs};
 use odra_cli::{
     deploy::DeployScript,
-    scenario::{Scenario, ScenarioMetadata},
-    CommandArg, DeployedContractsContainer, DeployerExt, OdraCli, ScenarioArgs, ScenarioError,
+    scenario::{Args, Error, Scenario, ScenarioMetadata},
+    CommandArg, ContractProvider, DeployedContractsContainer, DeployerExt,
+    OdraCli,
 };
 
 /// Deploys the `Flipper` and `Flapper` contracts.
@@ -47,11 +48,11 @@ impl Scenario for FlipThemAll {
     fn run(
         &self,
         env: &HostEnv,
-        container: DeployedContractsContainer,
-        _args: ScenarioArgs,
-    ) -> Result<(), ScenarioError> {
-        let mut flipper = container.get_ref::<Flipper>(env)?;
-        let mut flapper = container.get_ref::<Flapper>(env)?;
+        container: &DeployedContractsContainer,
+        _args: Args,
+    ) -> Result<(), Error> {
+        let mut flipper = container.contract_ref::<Flipper>(env)?;
+        let mut flapper = container.contract_ref::<Flapper>(env)?;
 
         env.set_gas(50_000_000);
         flipper.try_flip()?;
