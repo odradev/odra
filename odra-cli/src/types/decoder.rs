@@ -288,7 +288,12 @@ fn decode_simple_type<'a>(ty: &NamedCLType, input: &'a [u8]) -> TypeResult<(Stri
 
 #[cfg(test)]
 mod tests {
-    use odra::schema::casper_contract_schema::{NamedCLType, Type};
+    use std::collections::BTreeMap;
+
+    use odra::{
+        casper_types::bytesrepr::{ToBytes, RESULT_ERR_TAG, RESULT_OK_TAG},
+        schema::casper_contract_schema::{NamedCLType, Type}
+    };
 
     use crate::test_utils;
 
@@ -305,12 +310,182 @@ mod tests {
 }"#;
 
     #[test]
-    fn test_decode() {
+    fn test_decode_custom_type() {
         let custom_types = test_utils::custom_types();
 
         let ty = Type(NamedCLType::Custom("NameTokenMetadata".to_string()));
         let (result, _bytes) =
             super::decode(&NAMED_TOKEN_METADATA_BYTES, &ty, &custom_types).unwrap();
         pretty_assertions::assert_eq!(result, NAMED_TOKEN_METADATA_JSON);
+    }
+
+    #[test]
+    fn test_decode_map() {
+        let custom_types = test_utils::custom_types();
+
+        let ty = Type(NamedCLType::Map {
+            key: Box::new(NamedCLType::String),
+            value: Box::new(NamedCLType::U64)
+        });
+
+        let map = BTreeMap::from_iter([("foo".to_string(), 1u64), ("bar".to_string(), 2u64)]);
+        let bytes = map.to_bytes().unwrap();
+
+        let (result, _bytes) = super::decode(&bytes, &ty, &custom_types).unwrap();
+        pretty_assertions::assert_eq!(result, r#"bar:2, foo:1"#);
+    }
+
+    #[test]
+    fn test_decode_list() {
+        let custom_types = test_utils::custom_types();
+        let ty = Type(NamedCLType::List(Box::new(NamedCLType::U64)));
+        let list = vec![1u64, 2u64, 3u64];
+        let bytes = list.to_bytes().unwrap();
+        let (result, _bytes) = super::decode(&bytes, &ty, &custom_types).unwrap();
+        pretty_assertions::assert_eq!(result, "[1,2,3]");
+
+        let list = Vec::<u64>::new();
+        let bytes = list.to_bytes().unwrap();
+        let (result, _bytes) = super::decode(&bytes, &ty, &custom_types).unwrap();
+        pretty_assertions::assert_eq!(result, "[]");
+    }
+
+    #[test]
+    fn test_decode_option() {
+        let custom_types = test_utils::custom_types();
+
+        let ty = Type(NamedCLType::Option(Box::new(NamedCLType::U64)));
+        let value = Some(42u64);
+        let bytes = value.to_bytes().unwrap();
+        let (result, _bytes) = super::decode(&bytes, &ty, &custom_types).unwrap();
+        pretty_assertions::assert_eq!(result, "42");
+
+        let value: Option<u64> = None;
+        let bytes = value.to_bytes().unwrap();
+        let (result, _bytes) = super::decode(&bytes, &ty, &custom_types).unwrap();
+        pretty_assertions::assert_eq!(result, "None");
+    }
+
+    #[test]
+    fn test_decode_result() {
+        let custom_types = test_utils::custom_types();
+
+        let ty = Type(NamedCLType::Result {
+            ok: Box::new(NamedCLType::U64),
+            err: Box::new(NamedCLType::String)
+        });
+
+        let value: Result<u64, String> = Ok(42u64);
+        let bytes = value.to_bytes().unwrap();
+        let (result, _bytes) = super::decode(&bytes, &ty, &custom_types).unwrap();
+        pretty_assertions::assert_eq!(result, "Ok(42)");
+
+        let value: Result<u64, String> = Err("Error".to_string());
+        let bytes = value.to_bytes().unwrap();
+        let (result, _bytes) = super::decode(&bytes, &ty, &custom_types).unwrap();
+        pretty_assertions::assert_eq!(result, "Err(Error)");
+    }
+
+    #[test]
+    fn test_decode_tuple() {
+        let custom_types = test_utils::custom_types();
+
+        let ty = Type(NamedCLType::Tuple1([Box::new(NamedCLType::U64)]));
+
+        let value = (42u64,);
+        let bytes = value.to_bytes().unwrap();
+        let (result, _bytes) = super::decode(&bytes, &ty, &custom_types).unwrap();
+        pretty_assertions::assert_eq!(result, "(42)");
+
+        let ty = Type(NamedCLType::Tuple2([
+            Box::new(NamedCLType::U64),
+            Box::new(NamedCLType::String)
+        ]));
+
+        let value = (42u64, "Hello".to_string());
+        let bytes = value.to_bytes().unwrap();
+        let (result, _bytes) = super::decode(&bytes, &ty, &custom_types).unwrap();
+        pretty_assertions::assert_eq!(result, "(42, Hello)");
+
+        let ty = Type(NamedCLType::Tuple3([
+            Box::new(NamedCLType::U64),
+            Box::new(NamedCLType::String),
+            Box::new(NamedCLType::Bool)
+        ]));
+
+        let value = (42u64, "Hello".to_string(), true);
+        let bytes = value.to_bytes().unwrap();
+        let (result, _bytes) = super::decode(&bytes, &ty, &custom_types).unwrap();
+        pretty_assertions::assert_eq!(result, "(42, Hello, true)");
+    }
+
+    #[test]
+    fn test_option_custom_type() {
+        let custom_types = test_utils::custom_types();
+
+        let ty = Type(NamedCLType::Option(Box::new(NamedCLType::Custom(
+            "NameTokenMetadata".to_string()
+        ))));
+
+        let mut bytes = vec![1];
+        bytes.extend_from_slice(&NAMED_TOKEN_METADATA_BYTES);
+        let (result, _bytes) = super::decode(&bytes, &ty, &custom_types).unwrap();
+        pretty_assertions::assert_eq!(result, NAMED_TOKEN_METADATA_JSON);
+
+        let (result, _bytes) = super::decode(&[0], &ty, &custom_types).unwrap();
+        pretty_assertions::assert_eq!(result, "None");
+    }
+
+    #[test]
+    fn test_decode_simple_type() {
+        let custom_types = test_utils::custom_types();
+        let ty = Type(NamedCLType::U64);
+        let value = 42u64;
+        let bytes = value.to_bytes().unwrap();
+        let (result, _bytes) = super::decode(&bytes, &ty, &custom_types).unwrap();
+        pretty_assertions::assert_eq!(result, "42");
+
+        let ty = Type(NamedCLType::String);
+        let value = "Hello".to_string();
+        let bytes = value.to_bytes().unwrap();
+        let (result, _bytes) = super::decode(&bytes, &ty, &custom_types).unwrap();
+        pretty_assertions::assert_eq!(result, "Hello");
+    }
+
+    #[test]
+    fn test_decode_result_custom_type() {
+        let custom_types = test_utils::custom_types();
+
+        let ty = Type(NamedCLType::Result {
+            ok: Box::new(NamedCLType::Custom("NameTokenMetadata".to_string())),
+            err: Box::new(NamedCLType::String)
+        });
+
+        let mut bytes = vec![RESULT_OK_TAG];
+        bytes.extend_from_slice(&NAMED_TOKEN_METADATA_BYTES);
+        let (result, _bytes) = super::decode(&bytes, &ty, &custom_types).unwrap();
+        pretty_assertions::assert_eq!(result, format!("Ok({})", NAMED_TOKEN_METADATA_JSON));
+
+        let mut bytes = vec![RESULT_ERR_TAG];
+        bytes.extend_from_slice(&"Error".to_string().to_bytes().unwrap());
+        let (result, _bytes) = super::decode(&bytes, &ty, &custom_types).unwrap();
+        pretty_assertions::assert_eq!(result, "Err(Error)");
+    }
+
+    #[test]
+    fn test_decode_map_custom_type() {
+        let custom_types = test_utils::custom_types();
+
+        let ty = Type(NamedCLType::Map {
+            key: Box::new(NamedCLType::String),
+            value: Box::new(NamedCLType::Custom("NameTokenMetadata".to_string()))
+        });
+
+        let mut bytes = 1u32.to_bytes().unwrap();
+        bytes.extend_from_slice(&"foo".to_string().to_bytes().unwrap());
+        bytes.extend_from_slice(&NAMED_TOKEN_METADATA_BYTES);
+
+        let (result, _bytes) = super::decode(&bytes, &ty, &custom_types).unwrap();
+        pretty_assertions::assert_eq!(result, format!("foo:{}", NAMED_TOKEN_METADATA_JSON));
     }
 }
