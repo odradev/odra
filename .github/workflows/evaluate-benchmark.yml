@@ -25,7 +25,7 @@ jobs:
           toolchain: nightly-2025-01-01
           target: wasm32-unknown-unknown
       - name: Cache target
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: target
           key: odra-target-folder
