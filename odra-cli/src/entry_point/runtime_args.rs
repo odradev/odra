@@ -5,7 +5,7 @@ use odra::schema::casper_contract_schema::{Argument, Entrypoint, NamedCLType};
 use crate::cmd::args::{ArgsError, CommandArg};
 use crate::custom_types::CustomTypeSet;
 use crate::entry_point::utils::flatten_schema_arg;
-use crate::types;
+use crate::types::{self, named_cl_type_to_cl_type};
 
 pub fn compose(
     entry_point: &Entrypoint,
@@ -112,7 +112,10 @@ fn compose_basic_arg(arg: &Argument, matches: &ArgMatches) -> Result<CLValue, Ar
         .collect::<Vec<_>>();
 
     if input.is_empty() {
-        return Err(ArgsError::ArgNotFound(arg.name.clone()));
+        return Ok(CLValue::from_components(
+            named_cl_type_to_cl_type(&arg.ty.0),
+            vec![0u8]
+        ));
     }
 
     Ok(match &arg.ty.0 {
