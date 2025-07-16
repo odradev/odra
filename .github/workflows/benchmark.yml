@@ -21,11 +21,6 @@ jobs:
         with:
           toolchain: nightly-2025-01-01
           target: wasm32-unknown-unknown
-      - name: Cache target
-        uses: actions/cache@v3
-        with:
-          path: target
-          key: odra-target-folder
       - name: Prepare test environment
         run: just prepare-test-env
       - name: Run benchmark
