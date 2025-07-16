@@ -26,7 +26,7 @@ jobs:
       - name: Setup toolchain
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2024-07-31
+          toolchain: nightly-2025-01-01
           target: wasm32-unknown-unknown
           components: rustfmt, clippy, llvm-tools-preview
       - name: Prepare test environment
