@@ -431,13 +431,14 @@ impl HostEnv {
         backend.set_caller(address)
     }
 
-    /// Advances the block time by the specified time difference.
+    /// Advances the block time by the specified time difference in milliseconds.
     pub fn advance_block_time(&self, time_diff: u64) {
         let backend = self.backend.borrow();
         backend.advance_block_time(time_diff)
     }
 
-    /// Advances the block time by the specified time difference and processes auctions.
+    /// Advances the block time by the specified time difference in milliseconds
+    /// and processes auctions.
     pub fn advance_with_auctions(&self, time_diff: u64) {
         let backend = self.backend.borrow();
         backend.advance_with_auctions(time_diff);

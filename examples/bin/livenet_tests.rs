@@ -83,6 +83,8 @@ fn main() {
     // And query the balance
     println!("Balance of caller: {}", env.balance_of(&env.caller()));
 
+    env.set_gas(500_000_000_000u64);
+
     // Contracts can be upgraded
     let mut counter = CounterV1::deploy_with_cfg(
         &env,
