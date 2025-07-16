@@ -67,5 +67,9 @@ pub const DEFAULT_BALANCE: u64 = 10_000_000_000_000_000_000;
 
 pub const DEFAULT_MINIMUM_DELEGATION_AMOUNT: u64 = 500_000_000_000u64;
 
+pub const DEFAULT_BID_AMOUNT: u64 = 5_000_000_000_000_000_000u64;
+
+pub const DEFAULT_REWARD_AMOUNT: u64 = 2_500_000_000_000u64;
+
 /// Amount of random bytes returned by pseudorandom_bytes
 pub const RANDOM_BYTES_COUNT: usize = 32;

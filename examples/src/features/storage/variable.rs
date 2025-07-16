@@ -3,7 +3,7 @@ use odra::prelude::*;
 
 /// Emits when the dog's name is changed.
 #[odra::event]
-pub struct NamedChanged {
+pub struct NameChanged {
     /// The old name of the dog.
     pub old_name: String,
     /// The new name of the dog.
@@ -11,7 +11,7 @@ pub struct NamedChanged {
 }
 
 /// A simple contract that represents a dog.
-#[odra::module(events = [NamedChanged])]
+#[odra::module(events = [NameChanged])]
 pub struct DogContract {
     barks: Var<bool>,
     weight: Var<u32>,
@@ -60,7 +60,7 @@ impl DogContract {
     pub fn rename(&mut self, new_name: String) {
         let old_name = self.name.get_or_default();
         self.name.set(new_name.clone());
-        self.env().emit_event(NamedChanged { old_name, new_name });
+        self.env().emit_event(NameChanged { old_name, new_name });
     }
 }
 

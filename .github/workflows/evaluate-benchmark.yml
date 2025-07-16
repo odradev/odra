@@ -22,13 +22,17 @@ jobs:
       - name: Setup toolchain
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2024-07-31
+          toolchain: nightly-2025-01-01
           target: wasm32-unknown-unknown
       - name: Cache target
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
-          path: target
-          key: odra-target-folder
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/debug/.fingerprint
+            target/debug/build
+          key: odra-cache
       - name: Prepare test environment
         run: just prepare-test-env
       - name: Set base benchmark filename

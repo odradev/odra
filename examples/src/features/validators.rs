@@ -69,6 +69,7 @@ pub enum ValError {
 mod tests {
     use alloc::vec::Vec;
     use odra::casper_types::U512;
+    use odra::host::HostRef;
 
     #[test]
     fn test_advance_with_auctions() {
@@ -260,5 +261,45 @@ mod tests {
         let minimum_delegation_amount = staking.get_minimum_delegation_amount();
 
         assert_eq!(minimum_delegation_amount, 500_000_000_000u64);
+    }
+
+    #[test]
+    fn test_delegation() {
+        use crate::features::validators::{ValidatorsContract, ValidatorsContractInitArgs};
+        use odra::host::Deployer;
+        let test_env = odra_test::env();
+        let validator = test_env.get_validator(0);
+
+        test_env.set_caller(test_env.get_account(0));
+        let mut staking = ValidatorsContract::deploy(
+            &test_env,
+            ValidatorsContractInitArgs {
+                validator: validator.clone()
+            }
+        );
+
+        let minimum_delegation_amount = staking.get_minimum_delegation_amount().into();
+        assert_eq!(staking.currently_delegated_amount(), U512::zero());
+
+        staking.with_tokens(minimum_delegation_amount).stake();
+
+        assert_eq!(
+            staking.currently_delegated_amount(),
+            minimum_delegation_amount
+        );
+
+        test_env.advance_with_auctions(test_env.auction_delay());
+
+        assert_eq!(
+            staking.currently_delegated_amount(),
+            U512::from(500_000_049_999u64)
+        );
+
+        staking.unstake(U512::from(500_000_000_000u64));
+
+        test_env.advance_with_auctions(test_env.auction_delay());
+        test_env.advance_with_auctions(test_env.unbonding_delay() * 5);
+
+        assert_eq!(staking.currently_delegated_amount(), U512::zero());
     }
 }
