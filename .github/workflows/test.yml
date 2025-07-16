@@ -35,10 +35,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Cache target
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
-          path: target
-          key: odra-target-folder
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/debug/.fingerprint
+            target/debug/build
+          key: odra-cache
       - name: Setup toolchain
         uses: dtolnay/rust-toolchain@master
         with:
