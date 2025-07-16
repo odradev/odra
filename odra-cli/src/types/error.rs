@@ -29,8 +29,8 @@ pub enum Error {
     InvalidEventMemberType(String),
     #[error("Invalid event type {0}")]
     InvalidEventType(String),
-    #[error("Unexpected custom type {0}")]
-    UnexpectedCustomType(String),
+    #[error("Unexpected type while decoding")]
+    UnexpectedType,
     #[error("Unexpected error: {0}")]
     Other(String)
 }

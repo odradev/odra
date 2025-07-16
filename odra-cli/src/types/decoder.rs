@@ -282,7 +282,7 @@ fn decode_simple_type<'a>(ty: &NamedCLType, input: &'a [u8]) -> TypeResult<(Stri
 
             Ok((format!("{} ({})", hex, dec), &input[size..]))
         }
-        _ => unreachable!("should not be here")
+        _ => Err(Error::UnexpectedType)
     }
 }
 
