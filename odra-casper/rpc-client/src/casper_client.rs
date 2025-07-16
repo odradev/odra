@@ -58,7 +58,9 @@ pub const ENV_CSPR_CLOUD_AUTH_TOKEN: &str = "CSPR_CLOUD_AUTH_TOKEN";
 /// Environment variable holding a path to an additional .env file.
 pub const ENV_LIVENET_ENV_FILE: &str = "ODRA_CASPER_LIVENET_ENV";
 /// Time between retries when waiting for a deployment to be processed.
-pub const DEPLOY_WAIT_TIME: u64 = 10;
+pub const TRANSACTION_WAIT_TIME: u64 = 10;
+/// Maximum number of retries when waiting for a transaction to be processed.
+pub const TRANSACTION_MAX_RETRIES: u64 = 12;
 
 pub type Result<T> = core::result::Result<T, LivenetError>;
 
@@ -759,27 +761,32 @@ impl CasperClient {
         &self,
         transaction_hash: TransactionHash
     ) -> Result<ExecutionResult> {
-        let final_result;
+        let mut retries = TRANSACTION_MAX_RETRIES;
 
         loop {
+            if retries == 0 {
+                return Err(ExecutionError(String::from(
+                    "RPC is unable to process transaction in time."
+                )));
+            }
+
             log::wait(format!(
                 "Waiting {:?} for {:?}.",
-                &DEPLOY_WAIT_TIME, &transaction_hash
+                &TRANSACTION_WAIT_TIME, &transaction_hash
             ));
 
-            tokio::time::sleep(std::time::Duration::from_secs(DEPLOY_WAIT_TIME)).await;
+            tokio::time::sleep(std::time::Duration::from_secs(TRANSACTION_WAIT_TIME)).await;
 
-            let result = self.get_transaction(transaction_hash).await.execution_info;
+            let transaction_info = self.get_transaction(transaction_hash).await;
 
-            if result.is_some() {
-                final_result = result
-                    .ok_or(ExecutionError("Execution result was empty".to_string()))?
-                    .execution_result
-                    .ok_or(ExecutionError("Execution result was empty".to_string()))?;
-                break;
+            if let Some(deploy_info) = transaction_info.execution_info {
+                if let Some(execution_result) = deploy_info.execution_result {
+                    return Ok(execution_result);
+                }
             }
+
+            retries -= 1;
         }
-        Ok(final_result.clone())
     }
 
     async fn put_transaction(&self, transaction: Transaction) -> Result<()> {
