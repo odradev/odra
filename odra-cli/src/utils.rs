@@ -1,6 +1,6 @@
 use odra::{
     contract_def::HasIdent,
-    host::{Deployer, HostEnv, OdraConfig},
+    host::{Deployer, HostEnv, InstallConfig},
     prelude::Addressable,
     OdraContract
 };
@@ -41,10 +41,10 @@ pub trait DeployerExt: Sized {
     }
 
     /// Load an existing contract instance from container or deploy a new one with a custom configuration.
-    fn load_or_deploy_with_cfg<T: OdraConfig>(
+    fn load_or_deploy_with_cfg(
         env: &HostEnv,
         args: <<Self as DeployerExt>::Contract as OdraContract>::InitArgs,
-        cfg: T,
+        cfg: InstallConfig,
         container: &mut DeployedContractsContainer,
         gas: u64
     ) -> Result<<<Self as DeployerExt>::Contract as OdraContract>::HostRef, crate::deploy::Error>

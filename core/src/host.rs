@@ -84,15 +84,15 @@ pub trait Deployer<R: OdraContract>: Sized {
     /// Deploys a contract with given init args and configuration.
     ///
     /// Returns a host reference to the deployed contract.
-    fn deploy_with_cfg<T: OdraConfig>(env: &HostEnv, init_args: R::InitArgs, cfg: T) -> R::HostRef;
+    fn deploy_with_cfg(env: &HostEnv, init_args: R::InitArgs, cfg: InstallConfig) -> R::HostRef;
 
     /// Tries to deploy a contract with given init args and configuration.
     ///
     /// Similar to `deploy_with_cfg`, but returns a result instead of panicking.
-    fn try_deploy_with_cfg<T: OdraConfig>(
+    fn try_deploy_with_cfg(
         env: &HostEnv,
         init_args: R::InitArgs,
-        cfg: T
+        cfg: InstallConfig
     ) -> OdraResult<R::HostRef>;
 }
 
@@ -118,37 +118,28 @@ impl From<NoArgs> for RuntimeArgs {
 ///
 /// The configuration every contract written in Odra expects.
 /// Read more: [https://odra.dev/docs/backends/casper/#wasm-arguments]
-pub trait OdraConfig {
+#[cfg(not(target_arch = "wasm32"))]
+pub struct InstallConfig {
     /// Returns the package hash of the contract.
     ///
     /// Used to set the `odra_cfg_package_hash_key_name` key at the contract initialization.
-    fn package_hash(&self) -> String;
+    pub package_named_key: String,
     /// Returns true if the contract should be deployed as upgradable.
     ///
     /// If true, the `odra_cfg_is_upgradable` key is set to `true` at the contract initialization.
-    fn is_upgradable(&self) -> bool;
+    pub is_upgradable: bool,
     /// If true and the key `odra_cfg_package_hash_key_name` already exists, it should be overwritten.
-    fn allow_key_override(&self) -> bool;
+    pub allow_key_override: bool
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-/// Default configuration for a contract.
-struct DefaultOdraConfig {
-    name: String
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-impl OdraConfig for DefaultOdraConfig {
-    fn package_hash(&self) -> String {
-        self.name.clone()
-    }
-
-    fn is_upgradable(&self) -> bool {
-        false
-    }
-
-    fn allow_key_override(&self) -> bool {
-        true
+impl InstallConfig {
+    fn new<T: HasIdent>(is_upgradable: bool, allow_key_override: bool) -> Self {
+        InstallConfig {
+            package_named_key: T::ident(),
+            is_upgradable,
+            allow_key_override
+        }
     }
 }
 
@@ -175,16 +166,14 @@ impl<R: OdraContract> Deployer<R> for R {
         Self::try_deploy_with_cfg(
             env,
             init_args,
-            DefaultOdraConfig {
-                name: R::HostRef::ident()
-            }
+            InstallConfig::new::<<R as OdraContract>::HostRef>(false, true)
         )
     }
 
-    fn deploy_with_cfg<T: OdraConfig>(
+    fn deploy_with_cfg(
         env: &HostEnv,
         init_args: <R as OdraContract>::InitArgs,
-        cfg: T
+        cfg: InstallConfig
     ) -> <R as OdraContract>::HostRef {
         let contract_ident = R::HostRef::ident();
         match Self::try_deploy_with_cfg(env, init_args, cfg) {
@@ -196,20 +185,20 @@ impl<R: OdraContract> Deployer<R> for R {
         }
     }
 
-    fn try_deploy_with_cfg<T: OdraConfig>(
+    fn try_deploy_with_cfg(
         env: &HostEnv,
         init_args: <R as OdraContract>::InitArgs,
-        cfg: T
+        cfg: InstallConfig
     ) -> OdraResult<<R as OdraContract>::HostRef> {
         let contract_ident = R::HostRef::ident();
         let caller = R::HostRef::entry_points_caller(env);
 
         let mut init_args = init_args.into();
-        init_args.insert(consts::IS_UPGRADABLE_ARG, cfg.is_upgradable())?;
-        init_args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, cfg.allow_key_override())?;
+        init_args.insert(consts::IS_UPGRADABLE_ARG, cfg.is_upgradable)?;
+        init_args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, cfg.allow_key_override)?;
         init_args.insert(
             consts::PACKAGE_HASH_KEY_NAME_ARG,
-            format!("{}_package_hash", cfg.package_hash())
+            format!("{}_package_hash", cfg.package_named_key)
         )?;
 
         let address = env.new_contract(&contract_ident, init_args, caller)?;

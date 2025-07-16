@@ -1,27 +1,8 @@
 //! Deploys an ERC20 contract and transfers some tokens to another address.
 use odra::casper_types::U256;
-use odra::host::{Deployer, OdraConfig};
+use odra::host::{Deployer, InstallConfig};
 use odra::prelude::*;
 use odra_modules::erc20::{Erc20, Erc20InitArgs};
-
-struct Cfg {
-    is_upgradable: bool,
-    allow_key_override: bool
-}
-
-impl OdraConfig for Cfg {
-    fn package_hash(&self) -> String {
-        "aaerc20".to_string()
-    }
-
-    fn is_upgradable(&self) -> bool {
-        self.is_upgradable
-    }
-
-    fn allow_key_override(&self) -> bool {
-        self.allow_key_override
-    }
-}
 
 fn main() {
     let env = odra_casper_livenet_env::env();
@@ -30,7 +11,8 @@ fn main() {
     let result = Erc20::try_deploy_with_cfg(
         &env,
         erc20_args(),
-        Cfg {
+        InstallConfig {
+            package_named_key: "aaerc20".to_string(),
             is_upgradable: false,
             allow_key_override: false
         }
@@ -45,7 +27,8 @@ fn main() {
     let result = Erc20::try_deploy_with_cfg(
         &env,
         erc20_args(),
-        Cfg {
+        InstallConfig {
+            package_named_key: "aaerc20".to_string(),
             is_upgradable: false,
             allow_key_override: true
         }
@@ -60,7 +43,8 @@ fn main() {
     let result = Erc20::try_deploy_with_cfg(
         &env,
         erc20_args(),
-        Cfg {
+        InstallConfig {
+            package_named_key: "aaerc20".to_string(),
             is_upgradable: false,
             allow_key_override: false
         }
