@@ -68,7 +68,7 @@ pub(crate) static mut ATTACHED_VALUE: U512 = U512::zero();
 /// Create a locked contract stored under a [Key::Hash]. The contract is upgradeable or not, depending on the
 /// value of `odra_cfg_is_upgradable` argument.
 ///
-/// If a contract with the same name already exists, it may be override depending on the value of `odra_cfg_allow_key_override`
+/// If a contract with the same name already exists, it may be overriden depending on the value of `odra_cfg_allow_key_override`
 /// argument.
 ///
 /// Along with the contract, named keys with events and state are created.
@@ -159,6 +159,18 @@ pub fn install_contract(
     }
 
     contract_package_hash
+}
+
+/// Upgrades a contract within package.
+///
+/// Creates a locked contract stored under a [Key::Hash]. The contract is upgradeable or not, depending on the
+/// value of `odra_cfg_is_upgradable` argument.
+pub fn upgrade_contract(
+    package_hash: PackageHash,
+    entry_points: EntryPoints,
+    events: Schemas,
+    upgrade_args: Option<RuntimeArgs>
+) {
 }
 
 /// Stops a contract execution and reverts the state with a given error.

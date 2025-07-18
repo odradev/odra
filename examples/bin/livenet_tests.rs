@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use odra::casper_types::{U256, U512};
 use odra::contract_def::HasIdent;
-use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader, NoArgs, UpgradableOdraConfig};
+use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader, InstallConfig, NoArgs};
 use odra::prelude::*;
 use odra_examples::features::livenet::Error::SillyError;
 use odra_examples::features::livenet::{
@@ -86,13 +86,8 @@ fn main() {
     env.set_gas(500_000_000_000u64);
 
     // Contracts can be upgraded
-    let mut counter = CounterV1::deploy_with_cfg(
-        &env,
-        NoArgs,
-        UpgradableOdraConfig {
-            name: CounterV1::ident()
-        }
-    );
+    let mut counter =
+        CounterV1::deploy_with_cfg(&env, NoArgs, InstallConfig::upgradable::<CounterV1>());
 
     counter.increment();
     assert_eq!(counter.get(), 1);

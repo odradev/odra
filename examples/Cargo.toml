@@ -71,6 +71,12 @@ required-features = ["livenet"]
 test = false
 
 [[bin]]
+name = "upgrade_on_livenet"
+path = "bin/upgrade_on_livenet.rs"
+required-features = ["livenet"]
+test = false
+
+[[bin]]
 name = "odra_cli"
 path = "bin/odra_cli.rs"
 

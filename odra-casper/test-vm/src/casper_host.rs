@@ -162,6 +162,15 @@ impl HostContext for CasperHost {
         }
     }
 
+    fn upgrade_contract(
+        &self,
+        name: &str,
+        upgrade_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCaller
+    ) -> OdraResult<Address> {
+        todo!()
+    }
+
     fn register_contract(
         &self,
         address: Address,

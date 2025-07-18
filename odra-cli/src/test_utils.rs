@@ -278,6 +278,15 @@ impl HostContext for DummyHostCtx {
         todo!()
     }
 
+    fn upgrade_contract(
+        &self,
+        name: &str,
+        upgrade_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCaller
+    ) -> OdraResult<Address> {
+        todo!()
+    }
+
     #[doc = " Registers an existing contract with the specified address, name, and entry points caller."]
     fn register_contract(
         &self,

@@ -3,7 +3,7 @@ use odra::casper_types::U256;
 use odra::prelude::*;
 
 /// A Contract that counts, version 1
-#[odra::module]
+#[odra::module(events = [IncrementEvent])]
 pub struct CounterV1 {
     counter: Var<u32>
 }
@@ -36,7 +36,7 @@ pub struct IncrementEventV2 {
 }
 
 /// A Contract that counts, version 2
-#[odra::module]
+#[odra::module(events = [IncrementEventV2])]
 pub struct CounterV2 {
     counter: Var<u32>,
     new_counter: Var<U256>

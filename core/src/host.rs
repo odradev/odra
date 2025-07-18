@@ -1,7 +1,11 @@
 //! A module that provides the interface for interacting with the host environment.
 
+mod deployed_contracts;
+
 use crate::address::Addressable;
+use crate::error::ExecutionError::ContractNotInstalled;
 use crate::gas_report::GasReport;
+use crate::host::deployed_contracts::DeployedContract;
 use crate::{
     call_result::CallResult, entry_point_callback::EntryPointsCaller, CallDef, ContractCallResult,
     ContractEnv, EventError, VmError
@@ -343,6 +347,13 @@ pub trait HostContext {
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address>;
 
+    fn upgrade_contract(
+        &self,
+        name: &str,
+        upgrade_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCaller
+    ) -> OdraResult<Address>;
+
     /// Registers an existing contract with the specified address, name, and entry points caller.
     fn register_contract(
         &self,
@@ -378,10 +389,10 @@ pub trait HostContext {
 pub struct HostEnv {
     backend: Rc<RefCell<dyn HostContext>>,
     last_call_result: Rc<RefCell<Option<CallResult>>>,
-    deployed_contracts: Rc<RefCell<Vec<Address>>>,
-    events_count: Rc<RefCell<BTreeMap<Address, u32>>>, // contract_address -> events_count
-    native_events_count: Rc<RefCell<BTreeMap<Address, u32>>>, // contract_address -> events_count
-    events_initialized: Rc<RefCell<BTreeMap<Address, bool>>>,
+    deployed_contracts: Rc<RefCell<BTreeMap<Address, DeployedContract>>>,
+    _events_count: Rc<RefCell<BTreeMap<Address, u32>>>, // contract_address -> events_count
+    _native_events_count: Rc<RefCell<BTreeMap<Address, u32>>>, // contract_address -> events_count
+    _events_initialized: Rc<RefCell<BTreeMap<Address, bool>>>,
     captures_events: Rc<RefCell<bool>>
 }
 
@@ -391,10 +402,10 @@ impl HostEnv {
         HostEnv {
             backend,
             last_call_result: RefCell::new(None).into(),
-            deployed_contracts: RefCell::new(vec![]).into(),
-            events_count: Rc::new(RefCell::new(Default::default())),
-            native_events_count: Rc::new(RefCell::new(Default::default())),
-            events_initialized: Rc::new(RefCell::new(Default::default())),
+            deployed_contracts: RefCell::new(Default::default()).into(),
+            _events_count: Rc::new(RefCell::new(Default::default())),
+            _native_events_count: Rc::new(RefCell::new(Default::default())),
+            _events_initialized: Rc::new(RefCell::new(Default::default())),
             captures_events: Rc::new(RefCell::new(true))
         }
     }
@@ -404,8 +415,8 @@ impl HostEnv {
         *self.captures_events.borrow_mut() = captures;
         if captures {
             // Initialize events for all deployed contracts if capturing is enabled
-            for contract in self.deployed_contracts.borrow().iter() {
-                self.init_events(contract);
+            for (contract_address, _) in self.deployed_contracts.borrow().iter() {
+                self.init_events(contract_address);
             }
         }
     }
@@ -494,17 +505,22 @@ impl HostEnv {
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address> {
         let backend = self.backend.borrow();
-        let deployed_contract = backend.new_contract(name, init_args, entry_points_caller)?;
+        let contract_address = backend.new_contract(name, init_args, entry_points_caller)?;
 
-        self.deployed_contracts.borrow_mut().push(deployed_contract);
-        self.events_count.borrow_mut().insert(deployed_contract, 0);
-        self.native_events_count
+        self.deployed_contracts
             .borrow_mut()
-            .insert(deployed_contract, 0);
-        self.events_initialized
-            .borrow_mut()
-            .insert(deployed_contract, true);
-        Ok(deployed_contract)
+            .insert(contract_address, DeployedContract::new(contract_address));
+        Ok(contract_address)
+    }
+
+    pub fn upgrade_contract(
+        &self,
+        name: &str,
+        upgrade_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCaller
+    ) {
+        let backend = self.backend.borrow();
+        let upgraded_contract = backend.upgrade_contract(name, upgrade_args, entry_points_caller);
     }
 
     /// Registers an existing contract with the specified address, name and entry points caller.
@@ -517,7 +533,9 @@ impl HostEnv {
     ) {
         let backend = self.backend.borrow();
         backend.register_contract(address, contract_name, entry_points_caller);
-        self.deployed_contracts.borrow_mut().push(address);
+        self.deployed_contracts
+            .borrow_mut()
+            .insert(address, DeployedContract::new(address));
     }
 
     /// Calls a contract at the specified address with the given call definition.
@@ -543,8 +561,10 @@ impl HostEnv {
         call_def: CallDef,
         use_proxy: bool
     ) -> OdraResult<Bytes> {
-        let backend = self.backend.borrow();
-        let call_result = backend.call_contract(&address, call_def, use_proxy);
+        let call_result = {
+            let backend = self.backend.borrow();
+            backend.call_contract(&address, call_def, use_proxy)
+        };
 
         let mut events_map: BTreeMap<Address, Vec<Bytes>> = BTreeMap::new();
         let mut native_events_map: BTreeMap<Address, Vec<Bytes>> = BTreeMap::new();
@@ -552,17 +572,17 @@ impl HostEnv {
         let captures_events = *self.captures_events.borrow();
         if captures_events {
             // Go through all contracts and collect their events
-            self.deployed_contracts
-                .borrow()
-                .iter()
-                .for_each(|contract_address| {
-                    let events = self.last_events(contract_address);
-                    let native_events = self.last_native_events(contract_address);
+            self.deployed_contracts.borrow_mut().iter_mut().for_each(
+                |(contract_address, contract)| {
+                    let events = self.last_events(contract);
+                    let native_events = self.last_native_events(contract);
                     events_map.insert(*contract_address, events);
                     native_events_map.insert(*contract_address, native_events);
-                });
+                }
+            );
         }
 
+        let backend = self.backend.borrow();
         let last_call_gas_cost = backend.last_call_gas_cost();
 
         self.last_call_result.replace(Some(CallResult::new(
@@ -859,56 +879,42 @@ impl HostEnv {
         backend.transfer(to, amount)
     }
 
-    fn last_events(&self, contract_address: &Address) -> Vec<Bytes> {
-        let mut old_count_binding = self.events_count.borrow_mut();
-        let old_count = *old_count_binding
-            .get(contract_address)
-            .expect("Contract address not found in events count");
-        let new_count = self.events_count(contract_address);
+    fn last_events(&self, contract: &mut DeployedContract) -> Vec<Bytes> {
+        let old_count = contract.events_count;
+        let new_count = self.events_count(&contract.address);
         let mut events = vec![];
         for count in old_count..new_count {
-            let event = self.get_event_bytes(contract_address, count).unwrap();
+            let event = self.get_event_bytes(&contract.address, count).unwrap();
             events.push(event);
         }
 
-        old_count_binding.insert(*contract_address, new_count);
+        contract.events_count = new_count;
         events
     }
 
-    fn last_native_events(&self, contract_address: &Address) -> Vec<Bytes> {
-        let mut old_count_binding = self.native_events_count.borrow_mut();
-        let old_count = *old_count_binding.get(contract_address).unwrap();
-        let new_count = self.native_events_count(contract_address);
+    fn last_native_events(&self, contract: &mut DeployedContract) -> Vec<Bytes> {
+        let old_count = contract.native_events_count;
+        let new_count = self.native_events_count(&contract.address);
         let mut events = vec![];
         for count in old_count..new_count {
             let event = self
-                .get_native_event_bytes(contract_address, count)
+                .get_native_event_bytes(&contract.address, count)
                 .unwrap();
             events.push(event);
         }
 
-        old_count_binding.insert(*contract_address, new_count);
+        contract.native_events_count = new_count;
         events
     }
 
     fn init_events(&self, contract_address: &Address) {
-        let events_initialized = self
-            .events_initialized
-            .borrow()
-            .get(contract_address)
-            .copied()
-            .unwrap_or(false);
-        if !events_initialized {
-            self.events_count
-                .borrow_mut()
-                .insert(*contract_address, self.events_count(contract_address));
-            self.native_events_count.borrow_mut().insert(
-                *contract_address,
-                self.native_events_count(contract_address)
-            );
-            self.events_initialized
-                .borrow_mut()
-                .insert(*contract_address, true);
+        let mut contracts = self.deployed_contracts.borrow_mut();
+        let contract = contracts.get_mut(contract_address).unwrap();
+
+        if !contract.events_initialized {
+            contract.events_count = self.events_count(contract_address);
+            contract.native_events_count = self.native_events_count(contract_address);
+            contract.events_initialized = true;
         }
     }
 }
