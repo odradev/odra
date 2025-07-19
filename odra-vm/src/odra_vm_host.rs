@@ -141,7 +141,25 @@ impl HostContext for OdraVmHost {
         upgrade_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address> {
-        todo!()
+        let address =
+            self.vm
+                .borrow()
+                .upgrade_contract(name, upgrade_args.clone(), entry_points_caller.clone());
+
+        if entry_points_caller
+            .entry_points()
+            .iter()
+            .any(|ep| ep.name == "upgrade")
+        {
+            self.call_contract(
+                &address,
+                CallDef::new(String::from("upgrade"), true, upgrade_args),
+                false
+            )?;
+            self.vm.borrow().post_install(address);
+        }
+
+        Ok(address)
     }
 
     fn register_contract(

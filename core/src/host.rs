@@ -3,7 +3,6 @@
 mod deployed_contracts;
 
 use crate::address::Addressable;
-use crate::error::ExecutionError::ContractNotInstalled;
 use crate::gas_report::GasReport;
 use crate::host::deployed_contracts::DeployedContract;
 use crate::{
@@ -261,7 +260,7 @@ impl<R: OdraContract> Deployer<R> for R {
         let contract_ident = R::HostRef::ident();
         let caller = R::HostRef::entry_points_caller(env);
 
-        let address = env.new_contract(&contract_ident, upgrade_args, caller)?;
+        let address = env.upgrade_contract(&contract_ident, upgrade_args, caller)?;
         Ok(R::HostRef::new(address, env.clone()))
     }
 }
@@ -347,6 +346,8 @@ pub trait HostContext {
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address>;
 
+    /// Upgrades an existing contract with a new one with given upgrade arguments and new entry
+    /// points caller.
     fn upgrade_contract(
         &self,
         name: &str,
@@ -513,14 +514,22 @@ impl HostEnv {
         Ok(contract_address)
     }
 
+    /// Upgrades an existing contract with a new one with given upgrade arguments and new entry
+    /// points caller.
     pub fn upgrade_contract(
         &self,
         name: &str,
         upgrade_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
-    ) {
+    ) -> OdraResult<Address> {
         let backend = self.backend.borrow();
-        let upgraded_contract = backend.upgrade_contract(name, upgrade_args, entry_points_caller);
+        let upgraded_contract = backend.upgrade_contract(name, upgrade_args, entry_points_caller).unwrap();
+        let mut contracts = self.deployed_contracts.borrow_mut();
+        let contract = contracts.get_mut(&upgraded_contract).unwrap();
+        contract.current_version += 1;
+        // CES events are intact, but native events are connected to a contract, not a package.
+        contract.native_events_count = 0;
+        Ok(upgraded_contract)
     }
 
     /// Registers an existing contract with the specified address, name and entry points caller.

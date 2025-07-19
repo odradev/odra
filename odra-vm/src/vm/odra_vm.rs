@@ -45,34 +45,16 @@ impl OdraVm {
         init_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> Address {
-        let is_upgrade = match init_args.get(odra_core::consts::IS_UPGRADE_ARG) {
-            Some(value) => value.clone().into_t().unwrap(),
-            None => false
-        };
-
-        let address = match is_upgrade {
-            true => {
-                let hash_addr: HashAddr = init_args
-                    .get(odra_core::consts::PREVIOUS_VERSION_ADDRESS_ARG)
-                    .unwrap()
-                    .clone()
-                    .into_t()
-                    .unwrap();
-                let package_hash = PackageHash::new(hash_addr);
-                Address::from(package_hash)
-            }
-            false => {
-                // Create a new address.
-                self.state.write().unwrap().next_contract_address()
-            }
-        };
+        // Create a new address.
+        let address = self.state.write().unwrap().next_contract_address();
 
         // Register the contract under the address.
         {
             let contract = ContractContainer::new(name, entry_points_caller);
-            self.contract_register
+            let mut contract_register = self.contract_register
                 .write()
-                .unwrap()
+                .unwrap();
+            contract_register
                 .add(address, contract);
             self.state
                 .write()
@@ -80,6 +62,24 @@ impl OdraVm {
                 .set_balance(address, U512::zero());
         }
 
+        address
+    }
+
+    /// Upgrades an existing contract.
+    pub fn upgrade_contract(
+        &self,
+        name: &str,
+        upgrade_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCaller
+    ) -> Address {
+        let mut contract_register = self.contract_register.write().unwrap();
+        // we should search for previous version name, not current
+        let address = contract_register.get_address(name).unwrap();
+
+        // Register the contract under the address.
+            let contract = ContractContainer::new(name, entry_points_caller);
+        contract_register
+                .add(address, contract);
         address
     }
 

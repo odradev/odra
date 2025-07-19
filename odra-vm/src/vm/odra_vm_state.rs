@@ -16,7 +16,7 @@ use odra_core::consts::{
 use odra_core::crypto::generate_key_pairs;
 use odra_core::prelude::*;
 use odra_core::validator::ValidatorInfo;
-use odra_core::EventError;
+use odra_core::{EventError, OdraContract};
 use std::collections::BTreeMap;
 use std::fmt::format;
 
@@ -515,7 +515,7 @@ impl Default for OdraVmState {
             delegations: Default::default(),
             removed_validators: Default::default(),
             awaiting_transfers: Default::default(),
-            key_pairs
+            key_pairs,
         };
         backend.push_callstack_element(CallstackElement::Account(*accounts.first().unwrap()));
         backend

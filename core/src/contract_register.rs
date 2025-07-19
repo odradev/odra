@@ -12,6 +12,7 @@ pub type ContractVersion = u32;
 #[derive(Default)]
 pub struct ContractRegister {
     contracts: BTreeMap<(Address, ContractVersion), ContractContainer>,
+    named_contracts: BTreeMap<String, Address>,
     versions_count: BTreeMap<Address, ContractVersion>
 }
 
@@ -49,6 +50,13 @@ impl ContractRegister {
             Some(contract) => Some(contract.name()),
             None => None
         }
+    }
+    
+    /// Returns the address of the contract with the given name.
+    pub fn get_address(&self, name: &str) -> Option<Address> {
+        self.contracts.iter().find(|contract| {
+            contract.1.name() == name
+        }).and_then(|a| Some(a.0.0.clone()))
     }
 
     /// Returns the latest contract container for the given address.
