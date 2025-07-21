@@ -20,7 +20,6 @@ use std::sync::RwLock;
 use std::thread::sleep;
 use tokio::runtime::Runtime;
 
-
 /// LivenetHost struct.
 pub struct LivenetHost {
     casper_client: Rc<RefCell<CasperClient>>,
@@ -225,6 +224,7 @@ impl HostContext for LivenetHost {
     fn upgrade_contract(
         &self,
         name: &str,
+        contract_to_upgrade: Address,
         upgrade_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address> {

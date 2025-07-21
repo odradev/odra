@@ -515,7 +515,7 @@ impl Default for OdraVmState {
             delegations: Default::default(),
             removed_validators: Default::default(),
             awaiting_transfers: Default::default(),
-            key_pairs,
+            key_pairs
         };
         backend.push_callstack_element(CallstackElement::Account(*accounts.first().unwrap()));
         backend

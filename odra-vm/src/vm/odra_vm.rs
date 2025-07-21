@@ -51,11 +51,8 @@ impl OdraVm {
         // Register the contract under the address.
         {
             let contract = ContractContainer::new(name, entry_points_caller);
-            let mut contract_register = self.contract_register
-                .write()
-                .unwrap();
-            contract_register
-                .add(address, contract);
+            let mut contract_register = self.contract_register.write().unwrap();
+            contract_register.add(address, contract);
             self.state
                 .write()
                 .unwrap()
@@ -69,18 +66,16 @@ impl OdraVm {
     pub fn upgrade_contract(
         &self,
         name: &str,
+        contract_to_upgrade: Address,
         upgrade_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> Address {
         let mut contract_register = self.contract_register.write().unwrap();
-        // we should search for previous version name, not current
-        let address = contract_register.get_address(name).unwrap();
 
         // Register the contract under the address.
-            let contract = ContractContainer::new(name, entry_points_caller);
-        contract_register
-                .add(address, contract);
-        address
+        let contract = ContractContainer::new(name, entry_points_caller);
+        contract_register.add(contract_to_upgrade, contract);
+        contract_to_upgrade
     }
 
     pub(crate) fn post_install(&self, address: Address) {

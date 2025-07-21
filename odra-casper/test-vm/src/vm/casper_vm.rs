@@ -462,6 +462,34 @@ impl CasperVm {
         }
     }
 
+    /// Upgrades an existing contract with the specified name, initialisation arguments, and entry points caller.
+    pub fn upgrade_contract(
+        &mut self,
+        name: &str,
+        contract_to_upgrade: Address,
+        upgrade_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCaller
+    ) -> Address {
+        let wasm_path = format!("{}.wasm", name);
+        let package_hash_key_name: String = upgrade_args
+            .get(PACKAGE_HASH_KEY_NAME_ARG)
+            .unwrap()
+            .clone()
+            .into_t()
+            .unwrap();
+
+        let result = self.deploy_contract(&wasm_path, &upgrade_args);
+        if let Some(error) = result {
+            let odra_error = parse_error(error);
+            self.error = Some(odra_error.clone());
+            panic!("Revert: Contract deploy failed {:?}", odra_error);
+        } else {
+            let package_hash = self.package_hash_from_name(&package_hash_key_name);
+            self.collect_messages();
+            package_hash.into()
+        }
+    }
+
     /// Create a new instance with predefined accounts.
     pub fn active_account_hash(&self) -> AccountHash {
         *self.active_account.as_account_hash().unwrap()

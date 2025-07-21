@@ -138,13 +138,16 @@ impl HostContext for OdraVmHost {
     fn upgrade_contract(
         &self,
         name: &str,
+        contract_to_upgrade: Address,
         upgrade_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address> {
-        let address =
-            self.vm
-                .borrow()
-                .upgrade_contract(name, upgrade_args.clone(), entry_points_caller.clone());
+        let address = self.vm.borrow().upgrade_contract(
+            name,
+            contract_to_upgrade,
+            upgrade_args.clone(),
+            entry_points_caller.clone()
+        );
 
         if entry_points_caller
             .entry_points()

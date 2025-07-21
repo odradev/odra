@@ -1,6 +1,3 @@
-use alloc::string::String;
-use crate::address::Address;
-
 /// The contract trait.
 pub trait OdraContract {
     /// The host reference type.
@@ -13,13 +10,4 @@ pub trait OdraContract {
     /// The init args type.
     #[cfg(not(target_arch = "wasm32"))]
     type InitArgs: crate::host::InitArgs;
-}
-
-/// Enum representing a contract identifier used by Odra.
-#[derive(Debug)]
-pub enum ContractId {
-    /// Contract name. We can extract the address from named key using the name.
-    Name(String),
-    /// Contract address.
-    Address(Address)
 }

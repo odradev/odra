@@ -231,12 +231,12 @@ impl<R: OdraContract> Deployer<R> for R {
 
     fn try_upgrade(
         env: &HostEnv,
-        address: Address,
+        contract_to_upgrade: Address,
         upgrade_args: <R as OdraContract>::InitArgs
     ) -> OdraResult<<R as OdraContract>::HostRef> {
         Self::try_upgrade_with_cfg(
             env,
-            address,
+            contract_to_upgrade,
             upgrade_args,
             InstallConfig::new::<<R as OdraContract>::HostRef>(true, true)
         )
@@ -244,13 +244,16 @@ impl<R: OdraContract> Deployer<R> for R {
 
     fn try_upgrade_with_cfg(
         env: &HostEnv,
-        address: Address,
+        contract_to_upgrade: Address,
         upgrade_args: <R as OdraContract>::InitArgs,
         cfg: InstallConfig
     ) -> OdraResult<<R as OdraContract>::HostRef> {
         let mut upgrade_args = upgrade_args.into();
         upgrade_args.insert(consts::IS_UPGRADE_ARG, true)?;
-        upgrade_args.insert(consts::PREVIOUS_VERSION_ADDRESS_ARG, address.value())?;
+        upgrade_args.insert(
+            consts::PREVIOUS_VERSION_ADDRESS_ARG,
+            contract_to_upgrade.value()
+        )?;
         upgrade_args.insert(consts::IS_UPGRADABLE_ARG, cfg.is_upgradable)?;
         upgrade_args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, cfg.allow_key_override)?;
         upgrade_args.insert(
@@ -260,7 +263,8 @@ impl<R: OdraContract> Deployer<R> for R {
         let contract_ident = R::HostRef::ident();
         let caller = R::HostRef::entry_points_caller(env);
 
-        let address = env.upgrade_contract(&contract_ident, upgrade_args, caller)?;
+        let address =
+            env.upgrade_contract(&contract_ident, contract_to_upgrade, upgrade_args, caller)?;
         Ok(R::HostRef::new(address, env.clone()))
     }
 }
@@ -351,6 +355,7 @@ pub trait HostContext {
     fn upgrade_contract(
         &self,
         name: &str,
+        contract_to_upgrade: Address,
         upgrade_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address>;
@@ -519,11 +524,14 @@ impl HostEnv {
     pub fn upgrade_contract(
         &self,
         name: &str,
+        contract_to_upgrade: Address,
         upgrade_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address> {
         let backend = self.backend.borrow();
-        let upgraded_contract = backend.upgrade_contract(name, upgrade_args, entry_points_caller).unwrap();
+        let upgraded_contract = backend
+            .upgrade_contract(name, contract_to_upgrade, upgrade_args, entry_points_caller)
+            .unwrap();
         let mut contracts = self.deployed_contracts.borrow_mut();
         let contract = contracts.get_mut(&upgraded_contract).unwrap();
         contract.current_version += 1;
