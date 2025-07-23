@@ -119,7 +119,7 @@ pub enum ExecutionError {
     /// Reentrant call detected
     ReentrantCall = 104,
     /// Contract already installed
-    ContractAlreadyInstalled = 105,
+    CannotOverrideKeys = 105,
     /// Unknown constructor
     UnknownConstructor = 106,
     /// Native transfer error

@@ -3,6 +3,7 @@
 use odra::casper_types::U256;
 use odra::host::{Deployer, HostRef, HostRefLoader, InstallConfig, NoArgs};
 use odra::prelude::*;
+use odra_examples::features::storage::variable::{DogContract, DogContractInitArgs};
 use odra_examples::features::upgrade::{CounterV1, CounterV2};
 
 fn main() {
@@ -16,12 +17,12 @@ fn main() {
 
     env.set_gas(50_000_000_000u64);
     counter.increment();
-    assert_eq!(counter.get(), 1);
+    assert_eq!(counter.get(), 34);
 
     env.set_gas(500_000_000_000u64);
     let counter2 = CounterV2::try_upgrade(&env, counter.contract_address(), NoArgs).unwrap();
 
     env.set_gas(50_000_000_000u64);
-    assert_eq!(counter2.get(), U256::zero());
-    assert_eq!(counter2.get_old(), 1);
+    assert_eq!(counter2.get(), U256::from(67));
+    assert_eq!(counter2.get_old(), 123);
 }

@@ -52,7 +52,7 @@ pub const IS_UPGRADABLE_ARG: &str = "odra_cfg_is_upgradable";
 pub const IS_UPGRADE_ARG: &str = "odra_cfg_is_upgrade";
 
 /// The arg name for telling the installer the previous contract version.
-pub const PREVIOUS_VERSION_ADDRESS_ARG: &str = "odra_cfg_previous_version";
+pub const PACKAGE_HASH_TO_UPGRADE_ARG: &str = "odra_cfg_package_hash_to_upgrade";
 
 /// Constructor name argument.
 pub const CONSTRUCTOR_NAME_ARG: &str = "odra_cfg_constructor";

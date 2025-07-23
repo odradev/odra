@@ -882,8 +882,8 @@ fn parse_error(err: engine_state::Error) -> OdraError {
                 x if x == ExecutionError::ReentrantCall.code() => {
                     OdraError::ExecutionError(ExecutionError::ReentrantCall)
                 }
-                x if x == ExecutionError::ContractAlreadyInstalled.code() => {
-                    OdraError::ExecutionError(ExecutionError::ContractAlreadyInstalled)
+                x if x == ExecutionError::CannotOverrideKeys.code() => {
+                    OdraError::ExecutionError(ExecutionError::CannotOverrideKeys)
                 }
                 x if x == ExecutionError::UnknownConstructor.code() => {
                     OdraError::ExecutionError(ExecutionError::UnknownConstructor)

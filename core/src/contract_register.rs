@@ -55,7 +55,8 @@ impl ContractRegister {
     pub fn get_address(&self, name: &str) -> Option<Address> {
         self.contracts
             .iter()
-            .find(|contract| contract.1.name() == name).map(|a| a.0 .0)
+            .find(|contract| contract.1.name() == name)
+            .map(|a| a.0 .0)
     }
 
     /// Returns the latest contract container for the given address.

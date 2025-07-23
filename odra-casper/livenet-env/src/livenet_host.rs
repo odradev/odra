@@ -228,7 +228,24 @@ impl HostContext for LivenetHost {
         upgrade_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address> {
-        todo!()
+        let timestamp = Timestamp::now();
+        let wasm_path = find_wasm_file_path(name)?;
+        let wasm_bytes = fs::read(wasm_path).unwrap();
+        let mut client = self.casper_client.borrow_mut();
+        let rt = Runtime::new().unwrap();
+        match rt.block_on(async {
+            client
+                .deploy_wasm(name, upgrade_args, timestamp, wasm_bytes)
+                .await
+        }) {
+            Ok(_) => {}
+            Err(e) => {
+                log::error!("Error deploying contract: {}", e);
+                return Err(ExecutionError::ContractDeploymentError.into());
+            }
+        }
+        self.register_contract(contract_to_upgrade, name.to_string(), entry_points_caller);
+        Ok(contract_to_upgrade)
     }
 
     fn register_contract(

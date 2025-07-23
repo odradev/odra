@@ -251,7 +251,7 @@ impl<R: OdraContract> Deployer<R> for R {
         let mut upgrade_args = upgrade_args.into();
         upgrade_args.insert(consts::IS_UPGRADE_ARG, true)?;
         upgrade_args.insert(
-            consts::PREVIOUS_VERSION_ADDRESS_ARG,
+            consts::PACKAGE_HASH_TO_UPGRADE_ARG,
             contract_to_upgrade.value()
         )?;
         upgrade_args.insert(consts::IS_UPGRADABLE_ARG, cfg.is_upgradable)?;
@@ -510,6 +510,10 @@ impl HostEnv {
         init_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address> {
+        // Filter "upgrade" from EntryPointsCaller
+        let mut entry_points_caller = entry_points_caller.clone();
+        entry_points_caller.remove_entry_point("upgrade");
+
         let backend = self.backend.borrow();
         let contract_address = backend.new_contract(name, init_args, entry_points_caller)?;
 
@@ -528,10 +532,17 @@ impl HostEnv {
         upgrade_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address> {
+        // Filter "init" from EntryPointsCaller
+        let mut entry_points_caller = entry_points_caller.clone();
+        entry_points_caller.remove_entry_point("init");
+
         let backend = self.backend.borrow();
-        let upgraded_contract = backend
-            .upgrade_contract(name, contract_to_upgrade, upgrade_args, entry_points_caller)
-            .unwrap();
+        let upgraded_contract = backend.upgrade_contract(
+            name,
+            contract_to_upgrade,
+            upgrade_args,
+            entry_points_caller
+        )?;
         let mut contracts = self.deployed_contracts.borrow_mut();
         let contract = contracts.get_mut(&upgraded_contract).unwrap();
         contract.current_version += 1;

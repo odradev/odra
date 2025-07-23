@@ -40,7 +40,7 @@ use odra_core::casper_types::{
 use odra_core::casper_types::{HashAddr, StoredValue};
 use odra_core::consts::{
     ALLOW_KEY_OVERRIDE_ARG, IS_UPGRADABLE_ARG, IS_UPGRADE_ARG, PACKAGE_HASH_KEY_NAME_ARG,
-    PREVIOUS_VERSION_ADDRESS_ARG, RANDOM_BYTES_COUNT
+    PACKAGE_HASH_TO_UPGRADE_ARG, RANDOM_BYTES_COUNT
 };
 use odra_core::validator::ValidatorInfo;
 use odra_core::{
@@ -77,24 +77,23 @@ pub fn install_contract(
     events: Schemas,
     init_args: Option<RuntimeArgs>
 ) -> ContractPackageHash {
-    // Read arguments
-    let package_hash_key: String = runtime::get_named_arg(PACKAGE_HASH_KEY_NAME_ARG);
-    let allow_key_override: bool = runtime::get_named_arg(ALLOW_KEY_OVERRIDE_ARG);
-    let is_upgradable: bool = runtime::get_named_arg(IS_UPGRADABLE_ARG);
+    // Is it install or upgrade?
     let is_upgrade = runtime::try_get_named_arg(IS_UPGRADE_ARG).unwrap_or(false);
-
-    let package_hash = runtime::get_key(&package_hash_key);
-
-    match package_hash {
-        // There is an existing contract.
-        Some(package_hash) => {
-            if !is_upgrade && !allow_key_override {
-                revert(ExecutionError::ContractAlreadyInstalled.code());
-            }
-        }
-        // We're doing a fresh install.
-        None => {}
+    if is_upgrade {
+        return upgrade_contract(entry_points, events, init_args);
     }
+
+    // Extract existing package hash key
+    // And check if there is an existing contract.
+    let package_hash_key_name: String = runtime::get_named_arg(PACKAGE_HASH_KEY_NAME_ARG);
+    let package_hash_key = runtime::get_key(&package_hash_key_name);
+    let allow_key_override: bool = runtime::get_named_arg(ALLOW_KEY_OVERRIDE_ARG);
+    if package_hash_key.is_some() && !allow_key_override {
+        revert(ExecutionError::CannotOverrideKeys.code());
+    }
+
+    let is_upgradable: bool = runtime::get_named_arg(IS_UPGRADABLE_ARG);
+    let has_init = entry_points.has_entry_point("init");
 
     // Prepare named keys.
     let named_keys = initial_named_keys(events);
@@ -104,57 +103,41 @@ pub fn install_contract(
     mesage_topics.insert(NATIVE_EVENT_TOPIC.to_string(), MessageTopicOperation::Add);
 
     // Create new contract.
-    let access_uref_key = format!("{}_access_token", package_hash_key);
-    let contract_hash = if is_upgrade {
-        let previous_version: HashAddr = runtime::get_named_arg(PREVIOUS_VERSION_ADDRESS_ARG);
-        let previous_version = ContractPackageHash::new(previous_version);
-        storage::add_contract_version(
-            previous_version,
-            entry_points,
-            named_keys,
-            // TODO: Handle updating message topics
-            BTreeMap::new()
-        );
-
-        runtime::put_key(&package_hash_key, Key::from(previous_version));
-        PackageHash::new(previous_version.value())
-    } else if is_upgradable {
+    let access_uref_key = format!("{}_access_token", package_hash_key_name);
+    if is_upgradable {
         storage::new_contract(
             entry_points,
             Some(named_keys),
-            Some(package_hash_key.clone()),
+            Some(package_hash_key_name.clone()),
             Some(access_uref_key),
             Some(mesage_topics)
         );
-
-        // Read package hash from the storage.
-        let contract_hash: PackageHash = runtime::get_key(&package_hash_key)
-            .unwrap_or_revert_with(ApiError::AllocLayout)
-            .into_package_hash()
-            .unwrap_or_revert_with(ApiError::BufferTooSmall);
-        contract_hash
     } else {
         storage::new_locked_contract(
             entry_points,
             Some(named_keys),
-            Some(package_hash_key.clone()),
+            Some(package_hash_key_name.clone()),
             Some(access_uref_key),
             Some(mesage_topics)
         );
-        // Read package hash from the storage.
-        let contract_hash: PackageHash = runtime::get_key(&package_hash_key)
-            .unwrap_or_revert_with(ApiError::AllocLayout)
-            .into_package_hash()
-            .unwrap_or_revert_with(ApiError::BufferTooSmall);
-
-        contract_hash
     };
+
+    // Read package hash from the storage.
+    let contract_hash: PackageHash = runtime::get_key(&package_hash_key_name)
+        .unwrap_or_revert_with(ApiError::AllocLayout)
+        .into_package_hash()
+        .unwrap_or_revert_with(ApiError::BufferTooSmall);
 
     let contract_package_hash = ContractPackageHash::new(contract_hash.value());
 
-    if let Some(args) = init_args {
+    if has_init {
         let init_access = create_constructor_group(contract_package_hash);
-        let _: () = runtime::call_versioned_contract(contract_package_hash, None, "init", args);
+        let _: () = runtime::call_versioned_contract(
+            contract_package_hash,
+            None,
+            "init",
+            init_args.unwrap_or_default()
+        );
         revoke_access_to_constructor_group(contract_package_hash, init_access);
     }
 
@@ -166,11 +149,49 @@ pub fn install_contract(
 /// Creates a locked contract stored under a [Key::Hash]. The contract is upgradeable or not, depending on the
 /// value of `odra_cfg_is_upgradable` argument.
 pub fn upgrade_contract(
-    package_hash: PackageHash,
     entry_points: EntryPoints,
     events: Schemas,
     upgrade_args: Option<RuntimeArgs>
-) {
+) -> ContractPackageHash {
+    let package_hash_to_upgrade: HashAddr = runtime::get_named_arg(PACKAGE_HASH_TO_UPGRADE_ARG);
+    let new_package_hash_key: String = runtime::get_named_arg(PACKAGE_HASH_KEY_NAME_ARG);
+    let allow_key_override: bool = runtime::get_named_arg(ALLOW_KEY_OVERRIDE_ARG);
+    let is_upgradable: bool = runtime::get_named_arg(IS_UPGRADABLE_ARG);
+
+    let package_hash = runtime::get_key(&new_package_hash_key);
+
+    if package_hash.is_some() && !allow_key_override {
+        revert(ExecutionError::CannotOverrideKeys.code());
+    }
+
+    // Prepare named keys.
+    let named_keys = initial_named_keys(events);
+
+    // Create new contract.
+    let access_uref_key = format!("{}_access_token", new_package_hash_key);
+    let contract_package_hash = ContractPackageHash::new(package_hash_to_upgrade);
+    storage::add_contract_version(
+        contract_package_hash,
+        entry_points,
+        named_keys,
+        // TODO: Handle updating message topics
+        BTreeMap::new()
+    );
+
+    runtime::put_key(&new_package_hash_key, Key::from(contract_package_hash));
+
+    // How to update it?
+    // let upgrade_access = create_constructor_group(contract_package_hash);
+    let _: () = runtime::call_versioned_contract(
+        contract_package_hash,
+        None,
+        "upgrade",
+        upgrade_args.unwrap_or_default()
+    );
+
+    // And then revoke?
+    // revoke_access_to_constructor_group(contract_package_hash, upgrade_access);
+    contract_package_hash
 }
 
 /// Stops a contract execution and reverts the state with a given error.

@@ -15,6 +15,12 @@ pub struct IncrementEvent {
 
 #[odra::module]
 impl CounterV1 {
+    pub fn init(&mut self) {
+        self.counter.set(0);
+    }
+
+    pub fn upgrade(&mut self) {}
+
     pub fn increment(&mut self) {
         let counter = self.counter.get_or_default() + 1;
         self.counter.set(counter);
@@ -44,6 +50,14 @@ pub struct CounterV2 {
 
 #[odra::module]
 impl CounterV2 {
+    pub fn init(&mut self) {
+        self.new_counter.set(U256::from(0));
+    }
+
+    pub fn upgrade(&mut self) {
+        self.new_counter.set(self.counter.get_or_default().into());
+    }
+
     pub fn increment(&mut self) {
         let counter = self.new_counter.get_or_default() + U256::one();
         self.new_counter.set(counter);
@@ -97,14 +111,17 @@ mod test {
 
         let mut counter2 = CounterV2::try_upgrade(&test_env, counter.address(), NoArgs).unwrap();
 
-        assert_eq!(counter2.get(), U256::zero());
+        assert_eq!(counter2.get(), U256::one());
 
         counter2.increment();
-        assert_eq!(counter2.get(), U256::from(1));
+        assert_eq!(counter2.get(), U256::from(2));
         assert_eq!(counter.env().events_count(&counter), 3);
-        assert!(counter
-            .env()
-            .emitted_event(&counter, IncrementEventV2 { value: U256::one() }));
+        assert!(counter.env().emitted_event(
+            &counter,
+            IncrementEventV2 {
+                value: U256::from(2)
+            }
+        ));
 
         counter2.set(U256::from(100));
         assert_eq!(counter2.get(), U256::from(100));
