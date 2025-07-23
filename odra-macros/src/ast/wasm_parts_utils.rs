@@ -20,9 +20,12 @@ pub fn param_parameters(func: &FnIR) -> syn::Expr {
 }
 
 pub fn param_access(func: &FnIR) -> syn::Expr {
-    match func.is_constructor() {
-        true => utils::expr::entry_point_group("constructor_group"),
-        false => utils::expr::entry_point_public()
+    if func.is_constructor() {
+        utils::expr::entry_point_group("constructor_group")
+    } else if func.is_upgrader() {
+        utils::expr::entry_point_group("upgrader_group")
+    } else {
+        utils::expr::entry_point_public()
     }
 }
 

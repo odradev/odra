@@ -8,7 +8,7 @@
 //! Build on top of the [casper_contract] crate.
 
 use crate::consts;
-use crate::consts::NATIVE_EVENT_TOPIC;
+use crate::consts::{CONSTRUCTOR_GROUP_NAME, NATIVE_EVENT_TOPIC, UPGRADER_GROUP_NAME};
 use casper_contract::contract_api::runtime::emit_message;
 use casper_contract::contract_api::storage::{new_uref, read_from_key};
 use casper_contract::contract_api::system;
@@ -131,14 +131,14 @@ pub fn install_contract(
     let contract_package_hash = ContractPackageHash::new(contract_hash.value());
 
     if has_init {
-        let init_access = create_constructor_group(contract_package_hash);
+        let init_access = create_user_group(contract_package_hash, CONSTRUCTOR_GROUP_NAME);
         let _: () = runtime::call_versioned_contract(
             contract_package_hash,
             None,
             "init",
             init_args.unwrap_or_default()
         );
-        revoke_access_to_constructor_group(contract_package_hash, init_access);
+        revoke_access_to_user_group(contract_package_hash, CONSTRUCTOR_GROUP_NAME, init_access);
     }
 
     contract_package_hash
@@ -180,8 +180,7 @@ pub fn upgrade_contract(
 
     runtime::put_key(&new_package_hash_key, Key::from(contract_package_hash));
 
-    // How to update it?
-    // let upgrade_access = create_constructor_group(contract_package_hash);
+    let upgrade_access = create_user_group(contract_package_hash, UPGRADER_GROUP_NAME);
     let _: () = runtime::call_versioned_contract(
         contract_package_hash,
         None,
@@ -189,8 +188,7 @@ pub fn upgrade_contract(
         upgrade_args.unwrap_or_default()
     );
 
-    // And then revoke?
-    // revoke_access_to_constructor_group(contract_package_hash, upgrade_access);
+    revoke_access_to_user_group(contract_package_hash, UPGRADER_GROUP_NAME, upgrade_access);
     contract_package_hash
 }
 
@@ -652,30 +650,22 @@ fn take_nth_caller_from_stack(n: usize) -> CallerInfo {
         .unwrap_or_revert()
 }
 
-fn create_constructor_group(contract_package_hash: ContractPackageHash) -> URef {
-    storage::create_contract_user_group(
-        contract_package_hash,
-        consts::CONSTRUCTOR_GROUP_NAME,
-        1,
-        Default::default()
-    )
-    .unwrap_or_revert()
-    .pop()
-    .unwrap_or_revert()
+fn create_user_group(contract_package_hash: ContractPackageHash, group_label: &str) -> URef {
+    storage::create_contract_user_group(contract_package_hash, group_label, 1, Default::default())
+        .unwrap_or_revert()
+        .pop()
+        .unwrap_or_revert()
 }
 
-fn revoke_access_to_constructor_group(
+fn revoke_access_to_user_group(
     contract_package_hash: ContractPackageHash,
+    group_label: &str,
     constructor_access: URef
 ) {
     let mut urefs = BTreeSet::new();
     urefs.insert(constructor_access);
-    storage::remove_contract_user_group_urefs(
-        contract_package_hash,
-        consts::CONSTRUCTOR_GROUP_NAME,
-        urefs
-    )
-    .unwrap_or_revert();
+    storage::remove_contract_user_group_urefs(contract_package_hash, group_label, urefs)
+        .unwrap_or_revert();
 }
 
 fn is_purse_empty(purse: URef) -> bool {
