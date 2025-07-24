@@ -2,7 +2,6 @@ use derive_try_from_ref::TryFromRef;
 use syn::parse_quote;
 
 use crate::{ir::ModuleImplIR, utils};
-
 use super::{
     deployer_item::DeployerItem,
     host_ref_item::{HasIdentTraitImplItem, HostRefItem},
@@ -65,7 +64,7 @@ pub struct TestPartsItem {
     #[syn(in = brace_token)]
     trait_has_ident_impl_item: HasIdentTraitImplItem,
     #[syn(in = brace_token)]
-    deployer: DeployerItem
+    deployer: DeployerItem,
 }
 
 #[cfg(test)]

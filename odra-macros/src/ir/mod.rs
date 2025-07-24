@@ -311,7 +311,7 @@ impl ModuleImplIR {
             .find(|f| f.name_str() == CONSTRUCTOR_NAME)
     }
 
-    pub fn upgrador(&self) -> Option<FnIR> {
+    pub fn upgrader(&self) -> Option<FnIR> {
         self.functions()
             .unwrap_or_default()
             .into_iter()

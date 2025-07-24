@@ -78,7 +78,7 @@ pub fn install_contract(
     init_args: Option<RuntimeArgs>
 ) -> ContractPackageHash {
     // Is it install or upgrade?
-    let is_upgrade = runtime::try_get_named_arg(IS_UPGRADE_ARG).unwrap_or(false);
+    let is_upgrade = runtime::try_get_named_arg(IS_UPGRADE_ARG).unwrap_or_default();
     if is_upgrade {
         return upgrade_contract(entry_points, events, init_args);
     }

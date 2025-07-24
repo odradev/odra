@@ -13,5 +13,5 @@ pub trait OdraContract {
 
     /// The upgrade args type.
     #[cfg(not(target_arch = "wasm32"))]
-    type UpgradeArgs: crate::host::InitArgs;
+    type UpgradeArgs: crate::host::UpgradeArgs;
 }

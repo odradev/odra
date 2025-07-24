@@ -138,9 +138,100 @@ impl TryFrom<&'_ ModuleImplIR> for InitArgsImplItem {
     }
 }
 
+// UPGRADE ARGS STARTS HERE
+struct UpgradeArgsItem {
+    missing_docs: syn::Attribute,
+    docs: syn::Attribute,
+    attr: syn::Attribute,
+    vis: syn::Visibility,
+    struct_token: syn::token::Struct,
+    ident: syn::Ident,
+    braces: Option<syn::token::Brace>,
+    fields: syn::punctuated::Punctuated<syn::Field, syn::Token![,]>,
+    semi: Option<syn::token::Semi>,
+    upgrade_args_impl_item: UpgradeArgsImplItem
+}
+
+impl quote::ToTokens for UpgradeArgsItem {
+    fn to_tokens(&self, tokens: &mut ::proc_macro2::TokenStream) {
+        self.missing_docs.to_tokens(tokens);
+        self.docs.to_tokens(tokens);
+        self.attr.to_tokens(tokens);
+        self.vis.to_tokens(tokens);
+        self.struct_token.to_tokens(tokens);
+        self.ident.to_tokens(tokens);
+        if let Some(ref braces) = self.braces {
+            braces.surround(tokens, |tokens| {
+                self.fields.to_tokens(tokens);
+            });
+        }
+        self.semi.to_tokens(tokens);
+        self.upgrade_args_impl_item.to_tokens(tokens);
+    }
+}
+
+impl TryFrom<&'_ ModuleImplIR> for UpgradeArgsItem {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        let upgrader = module.upgrader().unwrap();
+        let fields = upgrader
+            .named_args()
+            .iter()
+            .map(|arg| {
+                let ty = utils::ty::unreferenced_ty(&arg.ty().unwrap());
+                let ident = arg.name().unwrap();
+                let field: syn::Field = syn::parse_quote!(pub #ident: #ty);
+                field
+            })
+            .collect::<syn::punctuated::Punctuated<syn::Field, syn::Token![,]>>();
+        let (braces, semi) = match fields.is_empty() {
+            true => (None, Some(Default::default())),
+            false => (Some(Default::default()), None)
+        };
+        Ok(Self {
+            missing_docs: utils::attr::missing_docs(),
+            docs: utils::attr::upgrade_args_docs(module.module_str()?),
+            attr: utils::attr::derive_into_runtime_args(),
+            vis: utils::syn::visibility_pub(),
+            struct_token: Default::default(),
+            ident: module.upgrade_args_ident()?,
+            braces,
+            fields,
+            semi,
+            upgrade_args_impl_item: module.try_into()?
+        })
+    }
+}
+
+#[derive(syn_derive::ToTokens)]
+struct UpgradeArgsImplItem {
+    impl_token: syn::token::Impl,
+    trait_ty: syn::Type,
+    for_token: syn::token::For,
+    ident: syn::Ident,
+    #[syn(braced)]
+    brace_token: syn::token::Brace,
+}
+
+impl TryFrom<&'_ ModuleImplIR> for UpgradeArgsImplItem {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        Ok(Self {
+            impl_token: Default::default(),
+            trait_ty: utils::ty::upgrade_args(),
+            for_token: Default::default(),
+            ident: module.upgrade_args_ident()?,
+            brace_token: Default::default(),
+        })
+    }
+}
+
 #[derive(syn_derive::ToTokens)]
 pub struct DeployerItem {
     args: Option<InitArgsItem>,
+    upgrade_args: Option<UpgradeArgsItem>,
     impl_item: DeployImplItem
 }
 
@@ -151,7 +242,17 @@ impl TryFrom<&'_ ModuleImplIR> for DeployerItem {
         let args = match module.constructor() {
             Some(f) => {
                 if f.has_args() {
-                    Some(module.try_into()?)
+                    Some(InitArgsItem::try_from(module)?)
+                } else {
+                    None
+                }
+            }
+            None => None
+        };
+        let upgrade_args = match module.upgrader() {
+            Some(f) => {
+                if f.has_args() {
+                    Some(UpgradeArgsItem::try_from(module)?)
                 } else {
                     None
                 }
@@ -160,10 +261,12 @@ impl TryFrom<&'_ ModuleImplIR> for DeployerItem {
         };
         Ok(Self {
             args,
+            upgrade_args,
             impl_item: module.try_into()?
         })
     }
 }
+
 
 #[cfg(test)]
 mod deployer_impl {
@@ -185,11 +288,26 @@ mod deployer_impl {
             impl odra::host::InitArgs for Erc20InitArgs {
             }
 
+            #[allow(missing_docs)]
+            /// [Erc20] contract upgrade arguments.
+            #[derive(odra::IntoRuntimeArgs)]
+            pub struct Erc20UpgradeArgs {
+                pub total_supply: Option<U256>
+            }
+            impl odra::host::UpgradeArgs for Erc20UpgradeArgs {
+            }
+
             impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
                 fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
                     let entry_points = odra::prelude::vec![
                         odra::entry_point_callback::EntryPoint::new(
                             odra::prelude::string::String::from("init"),
+                            odra::prelude::vec![
+                                odra::entry_point_callback::Argument::new::<Option<U256> >(odra::prelude::string::String::from("total_supply"))
+                            ]
+                        ),
+                        odra::entry_point_callback::EntryPoint::new(
+                            odra::prelude::string::String::from("upgrade"),
                             odra::prelude::vec![
                                 odra::entry_point_callback::Argument::new::<Option<U256> >(odra::prelude::string::String::from("total_supply"))
                             ]
@@ -217,6 +335,10 @@ mod deployer_impl {
                         match call_def.entry_point() {
                             "init" => {
                                 let result = __erc20_exec_parts::execute_init(contract_env);
+                                odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                            }
+                            "upgrade" => {
+                                let result = __erc20_exec_parts::execute_upgrade(contract_env);
                                 odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
                             }
                             "total_supply" => {

@@ -478,6 +478,7 @@ impl CasperVm {
             .into_t()
             .unwrap();
 
+        dbg!(&upgrade_args);
         let result = self.deploy_contract(&wasm_path, &upgrade_args);
         if let Some(error) = result {
             let odra_error = parse_error(error);

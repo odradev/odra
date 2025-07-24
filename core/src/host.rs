@@ -102,20 +102,22 @@ pub trait Deployer<R: OdraContract>: Sized {
     fn try_upgrade(
         env: &HostEnv,
         address: Address,
-        init_args: R::InitArgs
+        init_args: R::UpgradeArgs
     ) -> OdraResult<R::HostRef>;
 
     /// Tries to upgrade a contract with given init args and configuration
     fn try_upgrade_with_cfg(
         env: &HostEnv,
         address: Address,
-        init_args: R::InitArgs,
+        upgrade_args: R::UpgradeArgs,
         cfg: InstallConfig
     ) -> OdraResult<R::HostRef>;
 }
 
 /// A type which can be used as initialization arguments for a contract.
 pub trait InitArgs: Into<RuntimeArgs> {}
+/// A type which can be used as upgrade arguments for a contract.
+pub trait UpgradeArgs: Into<RuntimeArgs> {}
 
 /// Default implementation of [InitArgs]. Should be used when the contract
 /// does not require initialization arguments.
@@ -125,6 +127,8 @@ pub trait InitArgs: Into<RuntimeArgs> {}
 pub struct NoArgs;
 
 impl InitArgs for NoArgs {}
+
+impl UpgradeArgs for NoArgs {}
 
 impl From<NoArgs> for RuntimeArgs {
     fn from(_: NoArgs) -> Self {
@@ -232,7 +236,7 @@ impl<R: OdraContract> Deployer<R> for R {
     fn try_upgrade(
         env: &HostEnv,
         contract_to_upgrade: Address,
-        upgrade_args: <R as OdraContract>::InitArgs
+        upgrade_args: <R as OdraContract>::UpgradeArgs
     ) -> OdraResult<<R as OdraContract>::HostRef> {
         Self::try_upgrade_with_cfg(
             env,
@@ -245,7 +249,7 @@ impl<R: OdraContract> Deployer<R> for R {
     fn try_upgrade_with_cfg(
         env: &HostEnv,
         contract_to_upgrade: Address,
-        upgrade_args: <R as OdraContract>::InitArgs,
+        upgrade_args: <R as OdraContract>::UpgradeArgs,
         cfg: InstallConfig
     ) -> OdraResult<<R as OdraContract>::HostRef> {
         let mut upgrade_args = upgrade_args.into();
@@ -261,10 +265,14 @@ impl<R: OdraContract> Deployer<R> for R {
             format!("{}_package_hash", cfg.package_named_key)
         )?;
         let contract_ident = R::HostRef::ident();
-        let caller = R::HostRef::entry_points_caller(env);
+        let entry_points_caller = R::HostRef::entry_points_caller(env);
 
-        let address =
-            env.upgrade_contract(&contract_ident, contract_to_upgrade, upgrade_args, caller)?;
+        let address = env.upgrade_contract(
+            &contract_ident,
+            contract_to_upgrade,
+            upgrade_args,
+            entry_points_caller
+        )?;
         Ok(R::HostRef::new(address, env.clone()))
     }
 }

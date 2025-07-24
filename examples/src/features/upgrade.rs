@@ -50,12 +50,12 @@ pub struct CounterV2 {
 
 #[odra::module]
 impl CounterV2 {
-    pub fn init(&mut self) {
+    pub fn init(&mut self, counter: U256) {
         self.new_counter.set(U256::from(0));
     }
 
     pub fn upgrade(&mut self) {
-        self.new_counter.set(self.counter.get_or_default().into());
+        self.new_counter.set(U256::from(0));
     }
 
     pub fn increment(&mut self) {

@@ -33,6 +33,11 @@ pub fn init_args_docs(name: String) -> syn::Attribute {
     parse_quote!(#[doc = #name])
 }
 
+pub fn upgrade_args_docs(name: String) -> syn::Attribute {
+    let name = format!(" [{}] contract upgrade arguments.", name);
+    parse_quote!(#[doc = #name])
+}
+
 pub fn missing_docs() -> syn::Attribute {
     parse_quote!(#[allow(missing_docs)])
 }
