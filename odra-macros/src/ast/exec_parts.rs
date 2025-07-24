@@ -248,6 +248,16 @@ mod test {
                 }
 
                 #[inline]
+                pub fn execute_upgrade(env: odra::ContractEnv) {
+                    let env_rc = Rc::new(env);
+                    let exec_env = odra::ExecutionEnv::new(env_rc.clone());
+                    let total_supply = exec_env.get_named_arg::<Option<U256>>("total_supply");
+                    let mut contract = <Erc20 as Module>::new(env_rc);
+                    let result = contract.upgrade(total_supply);
+                    return result;
+                }
+
+                #[inline]
                 pub fn execute_total_supply(env: odra::ContractEnv) -> U256 {
                     let env_rc = Rc::new(env);
                     let contract = <Erc20 as Module>::new(env_rc);

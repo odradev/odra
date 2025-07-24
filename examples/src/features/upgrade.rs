@@ -111,15 +111,15 @@ mod test {
 
         let mut counter2 = CounterV2::try_upgrade(&test_env, counter.address(), NoArgs).unwrap();
 
-        assert_eq!(counter2.get(), U256::one());
+        assert_eq!(counter2.get(), U256::zero());
 
         counter2.increment();
-        assert_eq!(counter2.get(), U256::from(2));
+        assert_eq!(counter2.get(), U256::from(1));
         assert_eq!(counter.env().events_count(&counter), 3);
         assert!(counter.env().emitted_event(
             &counter,
             IncrementEventV2 {
-                value: U256::from(2)
+                value: U256::from(1)
             }
         ));
 

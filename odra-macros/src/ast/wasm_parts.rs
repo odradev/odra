@@ -294,6 +294,15 @@ mod test {
 
                     ));
                     entry_points.add_entry_point(odra::casper_types::EntityEntryPoint::new(
+                        "upgrade",
+                        vec![odra::args::parameter::<Option<U256> >("total_supply")].into_iter().filter_map(|x| x).collect(),
+                        <() as odra::casper_types::CLTyped>::cl_type(),
+                        odra::casper_types::EntryPointAccess::Groups(vec![odra::casper_types::Group::new("upgrader_group")]),
+                                                        odra::casper_types::EntryPointType::Called,
+                                odra::casper_types::EntryPointPayment::Caller,
+
+                    ));
+                    entry_points.add_entry_point(odra::casper_types::EntityEntryPoint::new(
                         "total_supply",
                         vec![],
                         <U256 as odra::casper_types::CLTyped>::cl_type(),
@@ -379,6 +388,11 @@ mod test {
                 #[no_mangle]
                 fn init() {
                     __erc20_exec_parts::execute_init(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                }
+
+                #[no_mangle]
+                fn upgrade() {
+                    __erc20_exec_parts::execute_upgrade(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
 
                 #[no_mangle]

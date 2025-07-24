@@ -395,6 +395,11 @@ mod ref_item_tests {
                     self.try_init(total_supply).unwrap()
                 }
 
+                /// Upgrades the contract with the given parameters.
+                pub fn upgrade(&mut self, total_supply: Option<U256>) {
+                    self.try_upgrade(total_supply).unwrap()
+                }
+
                 /// Returns the total supply of the token.
                 pub fn total_supply(&self) -> U256 {
                     self.try_total_supply().unwrap()
@@ -425,6 +430,28 @@ mod ref_item_tests {
                             self.address,
                             odra::CallDef::new(
                                 odra::prelude::string::String::from("init"),
+                                true,
+                                {
+                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    if self.attached_value > odra::casper_types::U512::zero() {
+                                        let _ = named_args.insert("amount", self.attached_value);
+                                    }
+                                    odra::args::EntrypointArgument::insert_runtime_arg(total_supply.clone(), "total_supply", &mut named_args);
+                                    named_args
+                                },
+                            )
+                            .with_amount(self.attached_value),
+                        )
+                }
+
+                /// Upgrades the contract with the given parameters.
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
+                pub fn try_upgrade(&mut self, total_supply: Option<U256>) -> OdraResult<()> {
+                    self.env
+                        .call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                odra::prelude::string::String::from("upgrade"),
                                 true,
                                 {
                                     let mut named_args = odra::casper_types::RuntimeArgs::new();

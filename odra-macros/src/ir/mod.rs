@@ -559,6 +559,10 @@ impl FnIR {
         receiver.map(|r| r.mutability.is_some()).unwrap_or_default()
     }
 
+    pub fn is_private(&self) -> bool {
+        self.is_constructor() || self.is_upgrader()
+    }
+
     pub fn is_constructor(&self) -> bool {
         self.name_str() == CONSTRUCTOR_NAME
     }

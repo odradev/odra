@@ -97,6 +97,12 @@ mod test {
                             true,
                             odra::prelude::vec![odra::schema::argument::<Option<U256> >("total_supply")]
                         ),
+                        odra::schema::entry_point::<()>(
+                            "upgrade",
+                            "Upgrades the contract with the given parameters.",
+                            true,
+                            odra::prelude::vec![odra::schema::argument::<Option<U256> >("total_supply")]
+                        ),
                         odra::schema::entry_point::<U256>(
                             "total_supply",
                             "Returns the total supply of the token.",
