@@ -1009,6 +1009,8 @@ mod test {
         type ContractRef = MockTestRef;
 
         type InitArgs = NoArgs;
+
+        type UpgradeArgs = NoArgs;
     }
 
     mock! {

@@ -1,9 +1,7 @@
 //! This example demonstrates how to deploy and upgrade a contract on the Livenet environment.
 
 use odra::casper_types::U256;
-use odra::host::{Deployer, HostRef, HostRefLoader, InstallConfig, NoArgs};
-use odra::prelude::*;
-use odra_examples::features::storage::variable::{DogContract, DogContractInitArgs};
+use odra::host::{Deployer, HostRef, InstallConfig, NoArgs};
 use odra_examples::features::upgrade::{CounterV1, CounterV2};
 
 fn main() {

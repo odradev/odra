@@ -2,7 +2,6 @@
 use std::time::Duration;
 
 use odra::casper_types::{U256, U512};
-use odra::contract_def::HasIdent;
 use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader, InstallConfig, NoArgs};
 use odra::prelude::*;
 use odra_examples::features::livenet::Error::SillyError;
