@@ -47,14 +47,11 @@ pub struct CounterV2 {
     counter: Var<u32>,
     new_counter: Var<U256>
 }
-
 #[odra::module]
 impl CounterV2 {
-    pub fn init(&mut self, lol: String) {
-        self.new_counter.set(U256::zero());
-    }
+    pub fn init(&mut self, _lol: String) {}
 
-    pub fn upgrade(&mut self) {
+    pub fn upgrade(&mut self, _miau: String) {
         self.new_counter.set(U256::from(0));
     }
 
@@ -80,7 +77,10 @@ impl CounterV2 {
 
 #[cfg(test)]
 mod test {
-    use crate::features::upgrade::{CounterV1, CounterV2, IncrementEvent, IncrementEventV2};
+    use crate::alloc::string::ToString;
+    use crate::features::upgrade::{
+        CounterV1, CounterV2, CounterV2UpgradeArgs, IncrementEvent, IncrementEventV2
+    };
     use odra::casper_types::U256;
     use odra::host::{Deployer, HostRef, InstallConfig, NoArgs};
     use odra::prelude::Addressable;
@@ -109,7 +109,14 @@ mod test {
         counter.increment();
         assert_eq!(counter.get(), 1);
 
-        let mut counter2 = CounterV2::try_upgrade(&test_env, counter.address(), NoArgs).unwrap();
+        let mut counter2 = CounterV2::try_upgrade(
+            &test_env,
+            counter.address(),
+            CounterV2UpgradeArgs {
+                _miau: "miau".to_string()
+            }
+        )
+        .unwrap();
 
         assert_eq!(counter2.get(), U256::zero());
 

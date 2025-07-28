@@ -223,6 +223,7 @@ impl<R: OdraContract> Deployer<R> for R {
 
         let mut init_args = init_args.into();
         init_args.insert(consts::IS_UPGRADABLE_ARG, cfg.is_upgradable)?;
+        init_args.insert(consts::IS_UPGRADE_ARG, false)?;
         init_args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, cfg.allow_key_override)?;
         init_args.insert(
             consts::PACKAGE_HASH_KEY_NAME_ARG,

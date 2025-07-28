@@ -8,7 +8,7 @@ use odra_examples::features::livenet::Error::SillyError;
 use odra_examples::features::livenet::{
     LivenetContract, LivenetContractHostRef, LivenetContractInitArgs
 };
-use odra_examples::features::upgrade::{CounterV1, CounterV2};
+use odra_examples::features::upgrade::{CounterV1, CounterV2, CounterV2UpgradeArgs};
 use odra_modules::access::events::OwnershipTransferred;
 use odra_modules::erc20::{Erc20, Erc20HostRef, Erc20InitArgs};
 
@@ -91,7 +91,14 @@ fn main() {
     counter.increment();
     assert_eq!(counter.get(), 1);
 
-    let counter2 = CounterV2::try_upgrade(&env, counter.contract_address(), NoArgs).unwrap();
+    let counter2 = CounterV2::try_upgrade(
+        &env,
+        counter.contract_address(),
+        CounterV2UpgradeArgs {
+            _miau: "miau".to_string()
+        }
+    )
+    .unwrap();
 
     assert_eq!(counter2.get(), U256::zero());
     assert_eq!(counter2.get_old(), 1);

@@ -748,11 +748,7 @@ impl CasperVm {
         }
     }
 
-    fn deploy_wasm(
-        &mut self,
-        wasm_path: &str,
-        args: &RuntimeArgs
-    ) -> Option<engine_state::Error> {
+    fn deploy_wasm(&mut self, wasm_path: &str, args: &RuntimeArgs) -> Option<engine_state::Error> {
         self.error = None;
         let session_code = PathBuf::from(wasm_path);
         let deploy_item = DeployItemBuilder::new()

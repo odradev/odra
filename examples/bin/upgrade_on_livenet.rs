@@ -2,7 +2,7 @@
 
 use odra::casper_types::U256;
 use odra::host::{Deployer, HostRef, InstallConfig, NoArgs};
-use odra_examples::features::upgrade::{CounterV1, CounterV2};
+use odra_examples::features::upgrade::{CounterV1, CounterV2, CounterV2UpgradeArgs};
 
 fn main() {
     let env = odra_casper_livenet_env::env();
@@ -15,12 +15,19 @@ fn main() {
 
     env.set_gas(50_000_000_000u64);
     counter.increment();
-    assert_eq!(counter.get(), 34);
+    assert_eq!(counter.get(), 1);
 
     env.set_gas(500_000_000_000u64);
-    let counter2 = CounterV2::try_upgrade(&env, counter.contract_address(), NoArgs).unwrap();
+    let counter2 = CounterV2::try_upgrade(
+        &env,
+        counter.contract_address(),
+        CounterV2UpgradeArgs {
+            _miau: "miau".to_string()
+        }
+    )
+    .unwrap();
 
     env.set_gas(50_000_000_000u64);
-    assert_eq!(counter2.get(), U256::from(67));
-    assert_eq!(counter2.get_old(), 123);
+    assert_eq!(counter2.get(), U256::from(0));
+    assert_eq!(counter2.get_old(), 1);
 }
