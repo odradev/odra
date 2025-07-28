@@ -450,7 +450,7 @@ impl CasperVm {
             .into_t()
             .unwrap();
 
-        let result = self.deploy_contract(&wasm_path, &init_args);
+        let result = self.deploy_wasm(&wasm_path, &init_args);
         if let Some(error) = result {
             let odra_error = parse_error(error);
             self.error = Some(odra_error.clone());
@@ -471,23 +471,14 @@ impl CasperVm {
         entry_points_caller: EntryPointsCaller
     ) -> Address {
         let wasm_path = format!("{}.wasm", name);
-        let package_hash_key_name: String = upgrade_args
-            .get(PACKAGE_HASH_KEY_NAME_ARG)
-            .unwrap()
-            .clone()
-            .into_t()
-            .unwrap();
-
-        dbg!(&upgrade_args);
-        let result = self.deploy_contract(&wasm_path, &upgrade_args);
+        let result = self.deploy_wasm(&wasm_path, &upgrade_args);
         if let Some(error) = result {
             let odra_error = parse_error(error);
             self.error = Some(odra_error.clone());
             panic!("Revert: Contract deploy failed {:?}", odra_error);
         } else {
-            let package_hash = self.package_hash_from_name(&package_hash_key_name);
             self.collect_messages();
-            package_hash.into()
+            contract_to_upgrade
         }
     }
 
@@ -757,7 +748,7 @@ impl CasperVm {
         }
     }
 
-    fn deploy_contract(
+    fn deploy_wasm(
         &mut self,
         wasm_path: &str,
         args: &RuntimeArgs

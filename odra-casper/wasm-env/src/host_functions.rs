@@ -31,12 +31,7 @@ use odra_core::casper_types::contract_messages::{MessagePayload, MessageTopicOpe
 use odra_core::casper_types::contracts::{ContractHash, ContractPackageHash, ContractVersion};
 use odra_core::casper_types::system::auction::{self, BidAddr, BidKind, ValidatorBid};
 use odra_core::casper_types::system::{Caller, CallerInfo};
-use odra_core::casper_types::{
-    api_error, bytesrepr,
-    bytesrepr::{Bytes, FromBytes, ToBytes},
-    ApiError, CLTyped, CLValue, EntityAddr, EntryPoints, Key, NamedKeys, PackageHash, PublicKey,
-    RuntimeArgs, URef, DICTIONARY_ITEM_KEY_MAX_LENGTH, U512, UREF_SERIALIZED_LENGTH
-};
+use odra_core::casper_types::{api_error, bytesrepr, bytesrepr::{Bytes, FromBytes, ToBytes}, ApiError, CLTyped, CLValue, EntityAddr, EntryPoints, Key, NamedKeys, PackageAddr, PackageHash, PublicKey, RuntimeArgs, URef, DICTIONARY_ITEM_KEY_MAX_LENGTH, U512, UREF_SERIALIZED_LENGTH};
 use odra_core::casper_types::{HashAddr, StoredValue};
 use odra_core::consts::{
     ALLOW_KEY_OVERRIDE_ARG, IS_UPGRADABLE_ARG, IS_UPGRADE_ARG, PACKAGE_HASH_KEY_NAME_ARG,
@@ -48,6 +43,7 @@ use odra_core::{
     casper_event_standard::{self, Schema, Schemas}
 };
 use odra_core::{prelude::*, CallDef};
+use odra_core::casper_types::Key::SmartContract;
 
 lazy_static::lazy_static! {
     static ref STATE: URef = {
@@ -157,7 +153,8 @@ pub fn upgrade_contract(
     let new_package_hash_key: String = runtime::get_named_arg(PACKAGE_HASH_KEY_NAME_ARG);
     let allow_key_override: bool = runtime::get_named_arg(ALLOW_KEY_OVERRIDE_ARG);
     let is_upgradable: bool = runtime::get_named_arg(IS_UPGRADABLE_ARG);
-
+    let has_upgrade = entry_points.has_entry_point("upgrade");
+    
     let package_hash = runtime::get_key(&new_package_hash_key);
 
     if package_hash.is_some() && !allow_key_override {
@@ -180,15 +177,18 @@ pub fn upgrade_contract(
 
     runtime::put_key(&new_package_hash_key, Key::from(contract_package_hash));
 
-    let upgrade_access = create_user_group(contract_package_hash, UPGRADER_GROUP_NAME);
-    let _: () = runtime::call_versioned_contract(
-        contract_package_hash,
-        None,
-        "upgrade",
-        upgrade_args.unwrap_or_default()
-    );
+    if has_upgrade {
+        let upgrade_access = create_user_group(contract_package_hash, UPGRADER_GROUP_NAME);
+        let _: () = runtime::call_versioned_contract(
+            contract_package_hash,
+            None,
+            "upgrade",
+            upgrade_args.unwrap_or_default()
+        );
+        revoke_access_to_user_group(contract_package_hash, UPGRADER_GROUP_NAME, upgrade_access);
+    }
 
-    revoke_access_to_user_group(contract_package_hash, UPGRADER_GROUP_NAME, upgrade_access);
+    // storage::disable_contract_version(contract_package_hash, get_latest_contract_hash(contract_package_hash).unwrap()).unwrap();
     contract_package_hash
 }
 
@@ -903,4 +903,18 @@ pub fn get_validator_info(validator: PublicKey) -> Option<ValidatorInfo> {
                 validator_bid.minimum_delegation_amount()
             )
         })
+}
+
+/// Retrieves latest contract version from the storage
+pub fn get_latest_contract_hash(contract_package_hash: ContractPackageHash) -> Option<ContractHash> {
+    let key = Key::from(contract_package_hash);
+    todo!();
+
+    // read_from_key(key)
+    //     .ok()
+    //     .and_then(|stored_value| stored_value)
+    //     .and_then(|stored_value| match stored_value {
+    //         StoredValue::Contract(contract) => Some(contract),
+    //         _ => None
+    //     })
 }

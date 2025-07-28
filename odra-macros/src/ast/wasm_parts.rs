@@ -119,6 +119,7 @@ impl TryFrom<&'_ ModuleImplIR> for CallFnItem {
         let ident_schemas = utils::ident::schemas();
         let ty_args = utils::ty::runtime_args();
         let ident_entry_points = utils::ident::entry_points();
+        // TODO: do the upgrador
         let runtime_args_expr: syn::Expr = match module.constructor() {
             Some(f) => {
                 let arg_block = fn_utils::runtime_args_block(&f, wasm_parts_utils::insert_arg_stmt);
