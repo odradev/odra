@@ -1,7 +1,7 @@
 const REVERT_MESSAGE_PREFIX: &str = "Revert: ExecutionError";
 const CONTRACT_PREFIX: &str = "Contract(ContractPackageHash";
 const USER_ERROR_PREFIX: &str = "UserError { code: ";
-const EXEC_PARTS_PREFIX: &str = "exec_parts";
+const EXEC_PARTS_PREFIX: &str = "exec_parts::execute";
 
 pub fn set_odra_panic_hook() {
     std::panic::set_hook(Box::new(|panic_info| {
@@ -25,6 +25,42 @@ pub fn set_odra_panic_hook() {
                 eprintln!("💣 {error_name}");
             } else {
                 eprintln!("💣 {panic_message} at {location}");
+            }
+        }
+        // Find the first symbol that contains `exec_parts::execute` in its name
+        // to identify the place where the panic occurred in the contract code.
+        let backtrace = backtrace::Backtrace::new();
+        let mut prev_symbol: Option<backtrace::BacktraceSymbol> = None;
+        for frame in backtrace.frames() {
+            for symbol in frame.symbols() {
+                match (symbol.name(), symbol.filename(), symbol.lineno()) {
+                    (Some(name), Some(filename), Some(lineno)) => {
+                        let name = name.to_string();
+                        if name.contains(EXEC_PARTS_PREFIX) {
+                            if let Some(prev) = prev_symbol {
+                                match (prev.name(), prev.filename(), prev.lineno()) {
+                                    (Some(prev_name), Some(prev_filename), Some(prev_lineno)) => {
+                                        let prev_name = prev_name.to_string();
+                                        let prev_name = prev_name
+                                            .rfind("::")
+                                            .map_or(prev_name.clone(), |pos| {
+                                                prev_name[..pos].to_string()
+                                            });
+                                        eprintln!("  ↳ {prev_name}");
+                                        eprintln!(
+                                            "    ↳ at {}:{prev_lineno}",
+                                            prev_filename.to_string_lossy()
+                                        );
+                                    }
+                                    _ => {} // no-op
+                                }
+                                return;
+                            }
+                        }
+                        prev_symbol = Some(symbol.clone());
+                    }
+                    _ => {} // no-op
+                }
             }
         }
     }));
