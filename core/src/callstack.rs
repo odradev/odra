@@ -145,10 +145,13 @@ impl Callstack {
                         .args()
                         .named_args()
                         .map(|arg| {
+                            let mut arg_json = serde_json::to_value(arg.cl_value())
+                                .unwrap_or_else(|_| serde_json::Value::Null);
+                            arg_json.as_object_mut().unwrap().remove("bytes");
                             format!(
                                 "      ↳ arg: {:?} - {}",
                                 arg.name(),
-                                serde_json::to_string(arg.cl_value()).unwrap_or_default()
+                                serde_json::to_string(&arg_json).unwrap_or_default()
                             )
                         })
                         .collect();
