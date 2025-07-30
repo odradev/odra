@@ -81,9 +81,18 @@ impl ContractContext for LivenetContractEnv {
             panic!("Cannot cross call mutable entrypoint from non-mutable entrypoint")
         }
 
+        let contract_name = self
+            .contract_register
+            .read()
+            .unwrap()
+            .get(&address)
+            .unwrap_or_default()
+            .to_string();
+
         self.callstack
             .borrow_mut()
             .push(CallstackElement::new_contract_call(
+                contract_name,
                 address,
                 call_def.clone()
             ));
@@ -127,8 +136,9 @@ impl ContractContext for LivenetContractEnv {
 
     fn revert(&self, error: OdraError) -> ! {
         let mut revert_msg = String::from("");
-        if let CallstackElement::ContractCall { address, call_def } =
-            self.callstack.borrow().current()
+        if let CallstackElement::ContractCall {
+            address, call_def, ..
+        } = self.callstack.borrow().current()
         {
             revert_msg = format!("{:?}::{}", address, call_def.entry_point());
         }

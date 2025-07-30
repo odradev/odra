@@ -86,6 +86,7 @@ impl HostContext for OdraVmHost {
         match opt_result {
             Some(result) => Ok(result),
             None => {
+                eprintln!("↳ Stack trace:\n{}", self.vm.borrow().read_stack_record());
                 let error = self.vm.borrow().error();
                 Err(error.unwrap_or(OdraError::VmError(VmError::Panic)))
             }
@@ -177,6 +178,11 @@ impl HostContext for OdraVmHost {
 impl OdraVmHost {
     /// Creates a new `OdraVmHost` instance.
     pub fn new(vm: Rc<RefCell<OdraVm>>) -> Rc<RefCell<Self>> {
+        static INIT: std::sync::Once = std::sync::Once::new();
+        INIT.call_once(|| {
+            crate::panic_hook::set_odra_panic_hook();
+        });
+
         let contract_env = Rc::new(ContractEnv::new(0, OdraVmContractEnv::new(vm.clone())));
         Rc::new(RefCell::new(Self { vm, contract_env }))
     }

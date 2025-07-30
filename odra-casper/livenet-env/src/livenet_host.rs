@@ -158,9 +158,18 @@ impl HostContext for LivenetHost {
         use_proxy: bool
     ) -> OdraResult<Bytes> {
         if !call_def.is_mut() {
+            let contract_name = self
+                .contract_register
+                .read()
+                .expect("Couldn't read contract register.")
+                .get(address)
+                .unwrap_or_default()
+                .to_string();
+
             self.callstack
                 .borrow_mut()
                 .push(CallstackElement::new_contract_call(
+                    contract_name,
                     *address,
                     call_def.clone()
                 ));

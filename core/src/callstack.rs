@@ -14,6 +14,8 @@ pub enum CallstackElement {
     Account(Address),
     /// A contract call.
     ContractCall {
+        /// The name of the contract.
+        contract_name: String,
         /// The address of the contract.
         address: Address,
         /// The contract call definition.
@@ -28,8 +30,12 @@ impl CallstackElement {
     }
 
     /// Creates a new element representing a contract call.
-    pub fn new_contract_call(address: Address, call_def: CallDef) -> Self {
-        Self::ContractCall { address, call_def }
+    pub fn new_contract_call(contract_name: String, address: Address, call_def: CallDef) -> Self {
+        Self::ContractCall {
+            contract_name,
+            address,
+            call_def
+        }
     }
 }
 
@@ -45,12 +51,15 @@ impl CallstackElement {
 
 /// A struct representing a callstack.
 #[derive(Clone, Default)]
-pub struct Callstack(Vec<CallstackElement>);
+pub struct Callstack {
+    elements: Vec<CallstackElement>,
+    stack_record: Vec<String>
+}
 
 impl Callstack {
     /// Returns the first (bottom most) callstack element.
     pub fn first(&self) -> CallstackElement {
-        self.0
+        self.elements
             .first()
             .expect("Not enough elements on callstack")
             .clone()
@@ -58,12 +67,12 @@ impl Callstack {
 
     /// Returns the current callstack element and removes it from the callstack.
     pub fn pop(&mut self) -> Option<CallstackElement> {
-        self.0.pop()
+        self.elements.pop()
     }
 
     /// Pushes a new callstack element onto the callstack.
     pub fn push(&mut self, element: CallstackElement) {
-        self.0.push(element);
+        self.elements.push(element);
     }
 
     /// Returns the attached value.
@@ -72,7 +81,10 @@ impl Callstack {
     /// attached to the contract call. If the current element is an account, the attached
     /// value is zero.
     pub fn attached_value(&self) -> U512 {
-        let ce = self.0.last().expect("Not enough elements on callstack");
+        let ce = self
+            .elements
+            .last()
+            .expect("Not enough elements on callstack");
         match ce {
             CallstackElement::Account(_) => U512::zero(),
             CallstackElement::ContractCall { call_def, .. } => call_def.amount()
@@ -83,31 +95,72 @@ impl Callstack {
     ///
     /// If the current element is not a contract call, this method does nothing.
     pub fn attach_value(&mut self, amount: U512) {
-        if let Some(CallstackElement::ContractCall { call_def, .. }) = self.0.last_mut() {
+        if let Some(CallstackElement::ContractCall { call_def, .. }) = self.elements.last_mut() {
             *call_def = call_def.clone().with_amount(amount);
         }
     }
 
     /// Returns the current callstack element.
     pub fn current(&self) -> &CallstackElement {
-        self.0.last().expect("Not enough elements on callstack")
+        self.elements
+            .last()
+            .expect("Not enough elements on callstack")
     }
 
     /// Returns the previous (second) callstack element.
     pub fn previous(&self) -> &CallstackElement {
-        self.0
-            .get(self.0.len() - 2)
+        self.elements
+            .get(self.elements.len() - 2)
             .expect("Not enough elements on callstack")
     }
 
     /// Returns the size of the callstack.
     pub fn size(&self) -> usize {
-        self.0.len()
+        self.elements.len()
     }
 
     /// Returns `true` if the callstack is empty.
     pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
+        self.elements.is_empty()
+    }
+
+    /// Stringifies the callstack elements and stores them in the stack record.
+    pub fn record(&mut self) {
+        self.stack_record.clear();
+        for element in self.elements.iter().rev() {
+            match element {
+                CallstackElement::Account(address) => {
+                    self.stack_record.push(format!("  ↳ caller: {:?}", address));
+                }
+                CallstackElement::ContractCall {
+                    contract_name,
+                    call_def,
+                    ..
+                } => {
+                    self.stack_record
+                        .push(format!("  ↳ contract: {:?}", contract_name));
+                    self.stack_record
+                        .push(format!("    ↳ entry point: {}", call_def.entry_point()));
+                    let args: Vec<String> = call_def
+                        .args()
+                        .named_args()
+                        .map(|arg| {
+                            format!(
+                                "      ↳ arg: {:?} - {}",
+                                arg.name(),
+                                serde_json::to_string(arg.cl_value()).unwrap_or_default()
+                            )
+                        })
+                        .collect();
+                    self.stack_record.extend(args);
+                }
+            }
+        }
+    }
+
+    /// Returns the stack record as a string.
+    pub fn record_to_string(&self) -> String {
+        self.stack_record.join("\n")
     }
 }
 
@@ -209,6 +262,7 @@ mod tests {
 
     fn mock_contract_element() -> CallstackElement {
         CallstackElement::new_contract_call(
+            "mock_contract".to_string(),
             Address::new(PACKAGE_HASH).unwrap(),
             CallDef::new("a", false, RuntimeArgs::default())
         )
@@ -216,6 +270,7 @@ mod tests {
 
     fn mock_contract_element_with_value(amount: U512) -> CallstackElement {
         CallstackElement::new_contract_call(
+            "mock_contract".to_string(),
             Address::new(PACKAGE_HASH).unwrap(),
             CallDef::new("a", false, RuntimeArgs::default()).with_amount(amount)
         )

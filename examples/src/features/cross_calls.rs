@@ -1,12 +1,11 @@
 //! This example demonstrates how to call a method from another contract.
 use odra::prelude::*;
-use odra::ContractRef;
 
 /// Contract that uses another contract to perform an operation.
 #[odra::module]
 pub struct CrossContract {
     /// Math engine contract address.
-    pub math_engine: Var<Address>
+    pub math_engine: External<MathEngineContractRef>
 }
 
 #[odra::module]
@@ -18,8 +17,7 @@ impl CrossContract {
 
     /// Adds 3 and 5 using the math engine contract.
     pub fn add_using_another(&self) -> u32 {
-        let math_engine_address = self.math_engine.get().unwrap_or_revert(self);
-        MathEngineContractRef::new(self.env(), math_engine_address).add(3, 5)
+        self.math_engine.add(3, 5)
     }
 }
 
