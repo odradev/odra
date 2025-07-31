@@ -78,6 +78,8 @@ impl HostContext for OdraVmHost {
         call_def: CallDef,
         _use_proxy: bool
     ) -> OdraResult<Bytes> {
+        crate::panic_hook::set_odra_panic_hook();
+
         let mut opt_result: Option<Bytes> = None;
         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             opt_result = Some(self.vm.borrow().call_contract(*address, call_def));
@@ -178,11 +180,6 @@ impl HostContext for OdraVmHost {
 impl OdraVmHost {
     /// Creates a new `OdraVmHost` instance.
     pub fn new(vm: Rc<RefCell<OdraVm>>) -> Rc<RefCell<Self>> {
-        static INIT: std::sync::Once = std::sync::Once::new();
-        INIT.call_once(|| {
-            crate::panic_hook::set_odra_panic_hook();
-        });
-
         let contract_env = Rc::new(ContractEnv::new(0, OdraVmContractEnv::new(vm.clone())));
         Rc::new(RefCell::new(Self { vm, contract_env }))
     }
