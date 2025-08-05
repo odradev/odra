@@ -47,7 +47,7 @@ pub fn set_odra_panic_hook() {
                             let name = name.to_string();
                             if should_print {
                                 if !name.contains("HostRef::") {
-                                    print_symbol_with_location(&symbol);
+                                    print_symbol_with_location(symbol);
                                     return;
                                 }
                                 should_print = false;
