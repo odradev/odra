@@ -5,13 +5,6 @@ const EXEC_PARTS_PREFIX: &str = "exec_parts::execute";
 
 pub fn set_odra_panic_hook() {
     std::panic::set_hook(Box::new(|panic_info| {
-        // let panic_message = if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
-        //     *s
-        // } else if let Some(s) = panic_info.payload().downcast_ref::<String>() {
-        //     s.as_str()
-        // } else {
-        //     "Unknown panic"
-        // };
         let panic_message = if let Some(s) = panic_info.payload().downcast_ref::<String>() {
             s.clone()
         } else if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
@@ -41,27 +34,39 @@ pub fn set_odra_panic_hook() {
             } else {
                 eprintln!("💣 {panic_message}");
             }
-        }
-        // Find the first symbol that contains `exec_parts::execute` in its name
-        // to identify the place where the panic occurred in the contract code.
-        let backtrace = backtrace::Backtrace::new();
-        let mut prev_symbol: Option<backtrace::BacktraceSymbol> = None;
-        for frame in backtrace.frames() {
-            for symbol in frame.symbols() {
-                match (symbol.name(), symbol.filename(), symbol.lineno()) {
-                    (Some(name), Some(filename), Some(lineno)) => {
-                        let name = name.to_string();
-                        if name.contains(EXEC_PARTS_PREFIX) {
-                            if let Some(prev) = prev_symbol {
-                                print_symbol_with_location(prev);
-                                // return;
+        
+            // Find the first symbol that contains `exec_parts::execute` in its name
+            // to identify the place where the panic occurred in the contract code.
+            let backtrace = backtrace::Backtrace::new();
+            let mut prev_symbol: Option<backtrace::BacktraceSymbol> = None;
+            let mut should_print = false;
+            for frame in backtrace.frames() {
+                for symbol in frame.symbols() {
+                    match (symbol.name(), symbol.filename(), symbol.lineno()) {
+                        (Some(name), Some(filename), Some(lineno)) => {
+                            let name = name.to_string();
+                            if should_print {
+                                if !name.contains("HostRef::") {
+                                    print_symbol_with_location(&symbol);
+                                    return;
+                                }
+                                should_print = false;
                             }
+                            if name.contains(EXEC_PARTS_PREFIX) {
+                                if let Some(prev) = &prev_symbol {
+                                    print_symbol_with_location(prev);
+                                }
+                            }
+                            if name.contains("HostRef::") {
+                                if let Some(prev) = &prev_symbol {
+                                    should_print = true;
+                                }
+                            }
+                            prev_symbol = Some(symbol.clone());
                         }
-                        prev_symbol = Some(symbol.clone());
+                        _ => {} // no-op
                     }
-                    _ => {} // no-op
                 }
-                // eprintln!("  ↳ {}", symbol.name().unwrap());
             }
         }
     }));
@@ -87,7 +92,7 @@ fn extract_contract_address(panic_message: &str) -> Option<String> {
     Some(contract_part.to_string())
 }
 
-fn print_symbol_with_location(symbol: backtrace::BacktraceSymbol) {
+fn print_symbol_with_location(symbol: &backtrace::BacktraceSymbol) {
     match (symbol.name(), symbol.filename(), symbol.lineno()) {
         (Some(name), Some(filename), Some(lineno)) => {
             let name = name.to_string();
