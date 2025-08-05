@@ -339,7 +339,7 @@ impl HostEnv {
             events_count: Rc::new(RefCell::new(Default::default())),
             native_events_count: Rc::new(RefCell::new(Default::default())),
             events_initialized: Rc::new(RefCell::new(Default::default())),
-            captures_events: Rc::new(RefCell::new(true))
+            captures_events: Rc::new(RefCell::new(false))
         }
     }
 
