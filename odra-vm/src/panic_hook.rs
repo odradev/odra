@@ -34,7 +34,7 @@ pub fn set_odra_panic_hook() {
             } else {
                 eprintln!("💣 {panic_message}");
             }
-        
+
             // Find the first symbol that contains `exec_parts::execute` in its name
             // to identify the place where the panic occurred in the contract code.
             let backtrace = backtrace::Backtrace::new();

@@ -146,7 +146,7 @@ impl Callstack {
                         .named_args()
                         .map(|arg| {
                             let mut arg_json = serde_json::to_value(arg.cl_value())
-                                .unwrap_or_else(|_| serde_json::Value::Null);
+                                .unwrap_or(serde_json::Value::Null);
                             arg_json.as_object_mut().unwrap().remove("bytes");
                             format!(
                                 "      ↳ arg: {:?} - {}",
