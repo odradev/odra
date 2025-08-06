@@ -18,16 +18,17 @@ fn main() {
     assert_eq!(counter.get(), 1);
 
     env.set_gas(500_000_000_000u64);
-    let counter2 = CounterV2::try_upgrade(
+    let mut counter2 = CounterV2::try_upgrade(
         &env,
         counter.contract_address(),
         CounterV2UpgradeArgs {
-            _miau: "miau".to_string()
+            new_start: None,
         }
     )
     .unwrap();
 
     env.set_gas(50_000_000_000u64);
-    assert_eq!(counter2.get(), U256::from(0));
+    counter2.increment();
+    assert_eq!(counter2.get(), U256::from(2));
     assert_eq!(counter2.get_old(), 1);
 }

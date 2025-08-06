@@ -19,8 +19,6 @@ impl CounterV1 {
         self.counter.set(0);
     }
 
-    pub fn upgrade(&mut self) {}
-
     pub fn increment(&mut self) {
         let counter = self.counter.get_or_default() + 1;
         self.counter.set(counter);
@@ -49,10 +47,21 @@ pub struct CounterV2 {
 }
 #[odra::module]
 impl CounterV2 {
-    pub fn init(&mut self, _lol: String) {}
+    pub fn init(&mut self, start_from: Option<U256>) {
+        if let Some(start) = start_from {
+            self.new_counter.set(start);
+        } else {
+            self.new_counter.set(U256::from(0));
+        }
+    }
 
-    pub fn upgrade(&mut self, _miau: String) {
-        self.new_counter.set(U256::from(0));
+    pub fn upgrade(&mut self, new_start: Option<U256>) {
+        if let Some(start) = new_start {
+            self.new_counter.set(start);
+        } else {
+            // If no new value is provided, we keep the current value
+            self.new_counter.set(self.counter.get_or_default().into());
+        }
     }
 
     pub fn increment(&mut self) {
@@ -75,35 +84,11 @@ impl CounterV2 {
     }
 }
 
-#[odra::module(events = [IncrementEventV2])]
-pub struct CounterV3 {
-    #[allow(dead_code)]
-    counter: Var<u32>,
-    new_counter: Var<U256>
-}
-
-#[odra::module]
-impl CounterV3 {
-    pub fn increment(&mut self) {
-        let counter = self.new_counter.get_or_default() + U256::one();
-        self.new_counter.set(counter);
-        self.env().emit_event(IncrementEventV2 { value: counter });
-    }
-
-    pub fn get(&self) -> U256 {
-        self.new_counter.get_or_default()
-    }
-
-    pub fn set(&mut self, value: U256) {
-        self.new_counter.set(value);
-    }
-}
 
 #[cfg(test)]
 mod test {
-    use crate::alloc::string::ToString;
     use crate::features::upgrade::{
-        CounterV1, CounterV2, CounterV2UpgradeArgs, CounterV3, IncrementEvent, IncrementEventV2
+        CounterV1, CounterV2, CounterV2UpgradeArgs, IncrementEvent, IncrementEventV2
     };
     use odra::casper_types::U256;
     use odra::host::{Deployer, HostRef, InstallConfig, NoArgs};
@@ -137,20 +122,20 @@ mod test {
             &test_env,
             counter.address(),
             CounterV2UpgradeArgs {
-                _miau: "miau".to_string()
+                new_start: None,
             }
         )
         .unwrap();
 
-        assert_eq!(counter2.get(), U256::zero());
+        assert_eq!(counter2.get(), U256::one());
 
         counter2.increment();
-        assert_eq!(counter2.get(), U256::from(1));
+        assert_eq!(counter2.get(), U256::from(2));
         assert_eq!(counter.env().events_count(&counter), 3);
         assert!(counter.env().emitted_event(
             &counter,
             IncrementEventV2 {
-                value: U256::from(1)
+                value: U256::from(2)
             }
         ));
 
@@ -158,9 +143,5 @@ mod test {
         assert_eq!(counter2.get(), U256::from(100));
 
         assert_eq!(counter2.get_old(), 1);
-
-        let counter3 = CounterV3::try_upgrade(&test_env, counter2.address(), NoArgs).unwrap();
-
-        assert_eq!(counter3.get(), U256::from(100));
     }
 }
