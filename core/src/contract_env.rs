@@ -8,7 +8,7 @@ use crate::validator::ValidatorInfo;
 pub use crate::ContractContext;
 use crate::VmError::{Serialization, TypeMismatch};
 use crate::{consts, prelude::*, utils};
-use casper_event_standard::EventInstance;
+use casper_event_standard::{EventInstance, Schema, Schemas, EVENTS_SCHEMA};
 use casper_types::CLValueError;
 use rand_chacha::rand_core::{RngCore, SeedableRng};
 use rand_chacha::ChaCha8Rng;
@@ -439,5 +439,28 @@ impl ExecutionEnv {
             let result = bytes.map(|bytes| deserialize_from_slice(bytes).unwrap_or_revert(self));
             T::unwrap(result, &self.env)
         }
+    }
+
+    /// Migrates the schemas in the contract storage to the new schemas.
+    pub fn migrate_schemas(&self, new_schemas: BTreeMap<String, Schema>) {
+        let mut old_schemas: Schemas = self.env.get_named_value(EVENTS_SCHEMA).unwrap_or_default();
+
+        for (name, new_schema) in new_schemas.iter() {
+            match old_schemas.0.get(name) {
+                // If the schema is not present in the old schemas, we add it.
+                None => {
+                    old_schemas.0.insert(name.clone(), new_schema.clone());
+                }
+                // If an existing schema is different from the new one, we revert.
+                Some(old_schema) => {
+                    if old_schema != new_schema {
+                        self.env.revert(ExecutionError::SchemaMismatch);
+                    }
+                }
+            }
+        }
+
+        // Store the updated schemas back to the contract storage.
+        self.env.set_named_value(EVENTS_SCHEMA, old_schemas);
     }
 }

@@ -78,3 +78,6 @@ fqn = "features::upgrade::CounterV1"
 
 [[contracts]]
 fqn = "features::upgrade::CounterV2"
+
+[[contracts]]
+fqn = "features::upgrade::CounterV3"

@@ -75,11 +75,35 @@ impl CounterV2 {
     }
 }
 
+#[odra::module(events = [IncrementEventV2])]
+pub struct CounterV3 {
+    #[allow(dead_code)]
+    counter: Var<u32>,
+    new_counter: Var<U256>
+}
+
+#[odra::module]
+impl CounterV3 {
+    pub fn increment(&mut self) {
+        let counter = self.new_counter.get_or_default() + U256::one();
+        self.new_counter.set(counter);
+        self.env().emit_event(IncrementEventV2 { value: counter });
+    }
+
+    pub fn get(&self) -> U256 {
+        self.new_counter.get_or_default()
+    }
+
+    pub fn set(&mut self, value: U256) {
+        self.new_counter.set(value);
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::alloc::string::ToString;
     use crate::features::upgrade::{
-        CounterV1, CounterV2, CounterV2UpgradeArgs, IncrementEvent, IncrementEventV2
+        CounterV1, CounterV2, CounterV2UpgradeArgs, CounterV3, IncrementEvent, IncrementEventV2
     };
     use odra::casper_types::U256;
     use odra::host::{Deployer, HostRef, InstallConfig, NoArgs};
@@ -134,5 +158,9 @@ mod test {
         assert_eq!(counter2.get(), U256::from(100));
 
         assert_eq!(counter2.get_old(), 1);
+
+        let counter3 = CounterV3::try_upgrade(&test_env, counter2.address(), NoArgs).unwrap();
+
+        assert_eq!(counter3.get(), U256::from(100));
     }
 }

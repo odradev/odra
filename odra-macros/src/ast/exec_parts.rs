@@ -1,4 +1,5 @@
 use super::parts_utils::{UsePreludeItem, UseSuperItem};
+use crate::utils::misc::AsType;
 use crate::{
     ir::{FnIR, ModuleImplIR},
     utils
@@ -59,6 +60,8 @@ struct ExecFunctionItem {
     #[syn(in = braces)]
     init_contract_stmt: syn::Stmt,
     #[syn(in = braces)]
+    migrate_stmt: Option<syn::Stmt>,
+    #[syn(in = braces)]
     call_contract_stmt: syn::Stmt,
     #[syn(in = braces)]
     clear_attached_value_stmt: Option<ExecEnvStmt>,
@@ -78,7 +81,7 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for ExecFunctionItem {
         let env_rc_ident = utils::ident::env_rc();
         let env_ident = utils::ident::env();
         let exec_env_ident = utils::ident::exec_env();
-        let exec_env_stmt = (func.is_payable() || func.is_non_reentrant() || func.has_args())
+        let exec_env_stmt = (func.is_payable() || func.is_non_reentrant() || func.has_args() || func.is_upgrader())
             .then(|| utils::stmt::new_execution_env(&exec_env_ident, &env_rc_ident));
         let contract_ident = utils::ident::contract();
         let module_ident = module.module_ident()?;
@@ -92,6 +95,15 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for ExecFunctionItem {
                 Ok(expr)
             })
             .collect::<syn::Result<syn::punctuated::Punctuated<syn::Expr, syn::token::Comma>>>()?;
+
+        let events_expr = utils::expr::event_schemas(&module_ident.as_type());
+        let migrate_stmt = if func.is_upgrader() {
+            Some(parse_quote!(
+                exec_env.migrate_schemas(#events_expr);
+            ))
+        } else {
+            None
+        };
 
         let args = func
             .named_args()
@@ -123,6 +135,7 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for ExecFunctionItem {
             handle_attached_value_stmt: func.is_payable().then(ExecEnvStmt::handle_attached_value),
             args,
             init_contract_stmt,
+            migrate_stmt,
             call_contract_stmt: parse_quote!(let #result_ident = #contract_ident.#fn_ident(#fn_args);),
             clear_attached_value_stmt: func.is_payable().then(ExecEnvStmt::clear_attached_value),
             non_reentrant_after_stmt: func
@@ -253,6 +266,8 @@ mod test {
                     let exec_env = odra::ExecutionEnv::new(env_rc.clone());
                     let total_supply = exec_env.get_named_arg::<Option<U256>>("total_supply");
                     let mut contract = <Erc20 as Module>::new(env_rc);
+                    exec_env
+                        .migrate_schemas(<Erc20 as odra::contract_def::HasEvents>::event_schemas());
                     let result = contract.upgrade(total_supply);
                     return result;
                 }

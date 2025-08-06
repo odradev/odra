@@ -28,9 +28,12 @@ use core::mem::MaybeUninit;
 use odra_core::casper_types::account::AccountHash;
 use odra_core::casper_types::bytesrepr::deserialize;
 use odra_core::casper_types::contract_messages::{MessagePayload, MessageTopicOperation};
-use odra_core::casper_types::contracts::{ContractHash, ContractPackageHash, ContractVersion};
+use odra_core::casper_types::contracts::{
+    ContractHash, ContractPackage, ContractPackageHash, ContractVersion
+};
 use odra_core::casper_types::system::auction::{self, BidAddr, BidKind, ValidatorBid};
 use odra_core::casper_types::system::{Caller, CallerInfo};
+use odra_core::casper_types::ApiError::User;
 use odra_core::casper_types::Key::SmartContract;
 use odra_core::casper_types::{
     api_error, bytesrepr,
@@ -90,7 +93,7 @@ pub fn install_contract(
     let package_hash_key = runtime::get_key(&package_hash_key_name);
     let allow_key_override: bool = runtime::get_named_arg(ALLOW_KEY_OVERRIDE_ARG);
     if package_hash_key.is_some() && !allow_key_override {
-        revert(ExecutionError::CannotOverrideKeys.code());
+        revert(ExecutionError::CannotOverrideKeys);
     }
 
     let is_upgradable: bool = runtime::get_named_arg(IS_UPGRADABLE_ARG);
@@ -163,15 +166,17 @@ pub fn upgrade_contract(
     let package_hash = runtime::get_key(&new_package_hash_key);
 
     if package_hash.is_some() && !allow_key_override {
-        revert(ExecutionError::CannotOverrideKeys.code());
+        revert(ExecutionError::CannotOverrideKeys);
     }
 
     // Prepare named keys.
     let named_keys = initial_named_keys(events);
 
-    // Create new contract.
     let access_uref_key = format!("{}_access_token", new_package_hash_key);
     let contract_package_hash = ContractPackageHash::new(package_hash_to_upgrade);
+    let previous_contract_hash = get_latest_contract_hash(contract_package_hash)
+        .unwrap_or_revert_with(ApiError::ContractNotFound);
+
     storage::add_contract_version(
         contract_package_hash,
         entry_points,
@@ -193,14 +198,19 @@ pub fn upgrade_contract(
         revoke_access_to_user_group(contract_package_hash, UPGRADER_GROUP_NAME, upgrade_access);
     }
 
-    // storage::disable_contract_version(contract_package_hash, get_latest_contract_hash(contract_package_hash).unwrap()).unwrap();
+    // Disable the previous contract version.
+    storage::disable_contract_version(contract_package_hash, previous_contract_hash)
+        .unwrap_or_revert_with(User(ExecutionError::CannotDisablePreviousVersion.code()));
     contract_package_hash
 }
 
 /// Stops a contract execution and reverts the state with a given error.
 #[inline(always)]
-pub fn revert(error: u16) -> ! {
-    runtime::revert(ApiError::User(error))
+pub fn revert<E>(error: E) -> !
+where
+    E: Into<OdraError>
+{
+    runtime::revert(User(error.into().code()))
 }
 
 /// Returns given named argument passed to the host. The result is not deserialized,
@@ -426,7 +436,7 @@ pub fn transfer_tokens(to: &Address, amount: &U512) {
             transfer_from_purse_to_account(main_purse, *account, *amount, None).unwrap_or_revert();
         }
         // todo: Why?
-        Address::Contract(_) => revert(ExecutionError::TransferToContract.code())
+        Address::Contract(_) => revert(ExecutionError::TransferToContract)
     };
 }
 
@@ -572,7 +582,7 @@ pub fn handle_attached_value() {
         transfer_from_purse_to_purse(cargo_purse, contract_purse, amount, None).unwrap_or_revert();
         set_attached_value(amount);
     } else {
-        revert(ExecutionError::NativeTransferError.code())
+        revert(ExecutionError::NativeTransferError)
     }
 }
 
@@ -831,7 +841,7 @@ fn caller_info_to_caller(info: CallerInfo) -> OdraResult<Caller> {
                 contract_hash
             })
         }
-        _ => revert(ExecutionError::CannotExtractCallerInfo.code())
+        _ => revert(ExecutionError::CannotExtractCallerInfo)
     }
 }
 
@@ -915,13 +925,10 @@ pub fn get_latest_contract_hash(
     contract_package_hash: ContractPackageHash
 ) -> Option<ContractHash> {
     let key = Key::from(contract_package_hash);
-    todo!();
 
-    // read_from_key(key)
-    //     .ok()
-    //     .and_then(|stored_value| stored_value)
-    //     .and_then(|stored_value| match stored_value {
-    //         StoredValue::Contract(contract) => Some(contract),
-    //         _ => None
-    //     })
+    let contract_package = read_from_key::<ContractPackage>(key);
+    contract_package
+        .unwrap_or_revert()
+        .unwrap_or_revert_with(ApiError::ValueNotFound)
+        .current_contract_hash()
 }
