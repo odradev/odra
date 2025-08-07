@@ -4,9 +4,8 @@ use odra::host::HostEnv;
 use odra::schema::casper_contract_schema::NamedCLType;
 use odra_cli::{
     deploy::DeployScript,
-    scenario::{Scenario, ScenarioMetadata},
-    CommandArg, DeployedContractsContainer, DeployerExt, OdraCli, ScenarioArgs, 
-    ScenarioError
+    scenario::{Args, Error, Scenario, ScenarioMetadata},
+    CommandArg, DeployedContractsContainer, OdraCli, 
 };
 
 /// Deploys contracts and adds it to the container.
@@ -32,19 +31,17 @@ impl Scenario for MyScenario {
             "my_arg",
             "A custom argument for the scenario",
             NamedCLType::String,
-            false,
-            false
         )]
     }
 
     fn run(
         &self,
         _env: &HostEnv,
-        _container: DeployedContractsContainer,
-        args: ScenarioArgs
-    ) -> Result<(), ScenarioError> {
+        _container: &DeployedContractsContainer,
+        args: Args
+    ) -> Result<(), Error> {
         // Read a contract reference from the container
-        // let mut contract = container.get_ref::<MyContract>(env)?;
+        // let mut contract = container.contract_ref::<MyContract>(env)?;
 
         // Read the argument value
         let _my_arg = args.get_single::<String>("my_arg")?;

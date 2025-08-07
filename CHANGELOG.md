@@ -2,10 +2,21 @@
 
 Changelog for `odra`.
 
-## [2.2.0] - 2025-08-XX
-
-### Added 
+## [2.2.0] - 2025-08-06
+### Added
+- `DeployerExt::load_or_deploy_with_cfg` in `odra-cli` to make contracts deployment smoother.
+- Support for minimum bid amount in OdraVM to reflect the default CasperVM behaviour.
+- Contract can query ValidatorInfo for its minimum bid amount.
 - Support for deploying upgradable contracts and possibility to upgrade them.
+
+### Fixed
+- Fixed mismatch between rewards in OdraVM and CasperVM.
+- Improved support for decoding a wider range of types in `odra-cli`.
+- Smarter `CasperClient::wait_for_transaction`, that handles empty execution results.
+
+### Changed
+- `OdraConfig` trait is now replaced by `InstallConfig` struct.
+>>>>>>> release/2.2.0
 
 ## [2.1.0] - 2025-07-08
 ### Added

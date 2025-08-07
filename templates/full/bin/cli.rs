@@ -5,9 +5,9 @@ use odra::host::{HostEnv, NoArgs};
 use odra::schema::casper_contract_schema::NamedCLType;
 use odra_cli::{
     deploy::DeployScript,
-    scenario::{Scenario, ScenarioMetadata},
-    CommandArg, DeployedContractsContainer, DeployerExt, OdraCli, ScenarioArgs, 
-    ScenarioError
+    scenario::{Args, Error, Scenario, ScenarioMetadata},
+    CommandArg, ContractProvider, DeployedContractsContainer, DeployerExt,
+    OdraCli, 
 };
 
 /// Deploys the `Flipper` and adds it to the container.
@@ -39,18 +39,16 @@ impl Scenario for FlippingScenario {
             "number",
             "The number of times to flip the state",
             NamedCLType::U64,
-            false,
-            false
         )]
     }
 
     fn run(
         &self,
         env: &HostEnv,
-        container: DeployedContractsContainer,
-        args: ScenarioArgs
-    ) -> Result<(), ScenarioError> {
-        let mut contract = container.get_ref::<Flipper>(env)?;
+        container: &DeployedContractsContainer,
+        args: Args
+    ) -> Result<(), Error> {
+        let mut contract = container.contract_ref::<Flipper>(env)?;
         let n = args.get_single::<u64>("name")?;
 
         env.set_gas(50_000_000);

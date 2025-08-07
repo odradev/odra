@@ -39,20 +39,14 @@ pub(super) fn flatten_schema_arg(
                         .collect::<Result<Vec<_>, _>>()?;
                     Ok(commands.into_iter().flatten().collect())
                 }
-                CustomType::Enum { variants, .. } => {
-                    let commands = variants
-                        .iter()
-                        .map(|variant| {
-                            let variant_arg = Argument {
-                                name: format!("{}.{}", arg.name, variant.name.to_lowercase()),
-                                ty: variant.ty.clone(),
-                                optional: arg.optional,
-                                description: variant.description.clone()
-                            };
-                            flatten_schema_arg(&variant_arg, types, is_list_element)
-                        })
-                        .collect::<Result<Vec<_>, _>>()?;
-                    Ok(commands.into_iter().flatten().collect())
+                CustomType::Enum { .. } => {
+                    let variant_arg = Argument {
+                        name: arg.name.clone(),
+                        ty: Type(NamedCLType::U8),
+                        optional: arg.optional,
+                        description: arg.description.clone()
+                    };
+                    flatten_schema_arg(&variant_arg, types, is_list_element)
                 }
             }
         }

@@ -6,8 +6,9 @@ use odra::schema::casper_contract_schema::NamedCLType;
 use odra::{casper_types::U256, host::HostEnv};
 use odra_cli::{
     deploy::DeployScript,
-    scenario::{Scenario, ScenarioMetadata},
-    CommandArg, DeployedContractsContainer, DeployerExt, OdraCli, ScenarioArgs, ScenarioError,
+    scenario::{Args, Error, Scenario, ScenarioMetadata},
+    CommandArg, ContractProvider, DeployedContractsContainer, DeployerExt,
+    OdraCli,
 };
 
 /// Deploys the `MyToken` and adds it to the container.
@@ -39,18 +40,18 @@ pub struct MintAndBurn;
 impl Scenario for MintAndBurn {
     fn args(&self) -> Vec<CommandArg> {
         vec![
-            CommandArg::new("to", "Token recipient", NamedCLType::Key, true, false),
-            CommandArg::new("token_id", "Token id", NamedCLType::U256, true, false),
+            CommandArg::new("to", "Token recipient", NamedCLType::Key).required(),
+            CommandArg::new("token_id", "Token id", NamedCLType::U256).required(),
         ]
     }
 
     fn run(
         &self,
         env: &HostEnv,
-        container: DeployedContractsContainer,
-        args: ScenarioArgs,
-    ) -> Result<(), ScenarioError> {
-        let mut contract = container.get_ref::<MyToken>(env)?;
+        container: &DeployedContractsContainer,
+        args: Args,
+    ) -> Result<(), Error> {
+        let mut contract = container.contract_ref::<MyToken>(env)?;
         let to = args.get_single::<Address>("to")?;
         let token_id = args.get_single::<U256>("token_id")?;
 

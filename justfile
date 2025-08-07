@@ -85,7 +85,8 @@ test-template name:
         && cd {{name}} \
         && cargo odra test \
         && cargo odra test -b casper \
-        && cargo odra schema
+        && cargo odra schema \
+        && cargo build --bin {{name}}_cli
 
 test-templates:
     rm -rf tests
