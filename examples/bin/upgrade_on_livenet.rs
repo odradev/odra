@@ -21,14 +21,18 @@ fn main() {
     let mut counter2 = CounterV2::try_upgrade(
         &env,
         counter.contract_address(),
-        CounterV2UpgradeArgs {
-            new_start: None,
-        }
+        CounterV2UpgradeArgs { new_start: None }
     )
     .unwrap();
 
     env.set_gas(50_000_000_000u64);
     counter2.increment();
-    assert_eq!(counter2.get(), U256::from(2));
-    assert_eq!(counter2.get_old(), 1);
+    assert_eq!(counter2.get(), U256::one());
+
+    env.set_gas(500_000_000_000u64);
+    let mut counter3 = CounterV1::try_upgrade(&env, counter.contract_address(), NoArgs).unwrap();
+
+    env.set_gas(50_000_000_000u64);
+    counter3.increment();
+    assert_eq!(counter3.get(), 2);
 }

@@ -176,6 +176,8 @@ pub enum ExecutionError {
     SchemaMismatch = 132,
     /// Cannot disable a previous version of a contract.
     CannotDisablePreviousVersion = 133,
+    /// Cannot upgrade a contract without an upgrade function.
+    CannotUpgradeWithoutUpgrade = 134,
     /// Maximum code for user errors
     MaxUserError = 64535,
     /// User error too high. The code should be in range 0..32767.

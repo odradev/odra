@@ -29,6 +29,7 @@ use casper_storage::data_access_layer::{DataAccessLayer, GenesisRequest, RewardI
 use odra_core::{casper_event_standard, DeployReport, GasReport};
 use std::rc::Rc;
 
+use odra_core::casper_event_standard::Schemas;
 use odra_core::casper_types::account::{Account, AccountHash};
 use odra_core::casper_types::bytesrepr::{Bytes, ToBytes};
 use odra_core::casper_types::contract_messages::MessagePayload;
@@ -644,6 +645,22 @@ impl CasperVm {
                     )
                 });
                 Some(*purse_uref)
+            }
+        }
+    }
+
+    fn get_current_entity(&self, address: Address) -> EntityAddr {
+        match address {
+            Address::Account(_) => panic!(
+                "Account address passed instead of contract address: {:?}",
+                address
+            ),
+            Address::Contract(contract) => {
+                let package_hash = PackageHash::new(contract.value());
+                let package = self.context.get_package(package_hash).unwrap_or_else(|| {
+                    panic!("Contract hash not found for address: {:?}", address)
+                });
+                package.current_entity_hash().unwrap()
             }
         }
     }

@@ -110,7 +110,7 @@ pub trait Deployer<R: OdraContract>: Sized {
         env: &HostEnv,
         address: Address,
         upgrade_args: R::UpgradeArgs,
-        cfg: InstallConfig
+        cfg: UpgradeConfig
     ) -> OdraResult<R::HostRef>;
 }
 
@@ -154,6 +154,23 @@ pub struct InstallConfig {
     pub allow_key_override: bool
 }
 
+/// A configuration for upgrading contract.
+///
+/// The configuration every contract upgrade written in Odra expects.
+/// Read more: [https://odra.dev/docs/backends/casper/#wasm-arguments]
+#[cfg(not(target_arch = "wasm32"))]
+pub struct UpgradeConfig {
+    /// Returns the package hash of the contract.
+    ///
+    /// Used to set the `odra_cfg_package_hash_key_name` key at the contract initialization.
+    pub package_named_key: String,
+    /// Create a new upgrade group for the contract. Set it to `true` if you want to upgrade a contract
+    /// Which was deployed using Odra 2.2 or earlier, or not using Odra at all.
+    pub force_create_upgrade_group: bool,
+    /// If true and the key `odra_cfg_package_hash_key_name` already exists, it should be overwritten.
+    pub allow_key_override: bool
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 impl InstallConfig {
     /// Returns new InstallConfig
@@ -168,6 +185,19 @@ impl InstallConfig {
     /// Returns new InstallConfig configured for default upgradable contract
     pub fn upgradable<T: HasIdent>() -> Self {
         InstallConfig::new::<T>(true, true)
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl UpgradeConfig {
+    /// Returns new UpgradeConfig with default values.
+    /// It is by default upgradable and allows key override.
+    pub fn new<T: HasIdent>() -> Self {
+        UpgradeConfig {
+            package_named_key: T::ident(),
+            force_create_upgrade_group: false,
+            allow_key_override: true
+        }
     }
 }
 
@@ -243,7 +273,7 @@ impl<R: OdraContract> Deployer<R> for R {
             env,
             contract_to_upgrade,
             upgrade_args,
-            InstallConfig::new::<<R as OdraContract>::HostRef>(true, true)
+            UpgradeConfig::new::<<R as OdraContract>::HostRef>()
         )
     }
 
@@ -251,7 +281,7 @@ impl<R: OdraContract> Deployer<R> for R {
         env: &HostEnv,
         contract_to_upgrade: Address,
         upgrade_args: <R as OdraContract>::UpgradeArgs,
-        cfg: InstallConfig
+        cfg: UpgradeConfig
     ) -> OdraResult<<R as OdraContract>::HostRef> {
         let mut upgrade_args = upgrade_args.into();
         upgrade_args.insert(consts::IS_UPGRADE_ARG, true)?;
@@ -259,12 +289,12 @@ impl<R: OdraContract> Deployer<R> for R {
             consts::PACKAGE_HASH_TO_UPGRADE_ARG,
             contract_to_upgrade.value()
         )?;
-        upgrade_args.insert(consts::IS_UPGRADABLE_ARG, cfg.is_upgradable)?;
         upgrade_args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, cfg.allow_key_override)?;
         upgrade_args.insert(
             consts::PACKAGE_HASH_KEY_NAME_ARG,
             format!("{}_package_hash", cfg.package_named_key)
         )?;
+        upgrade_args.insert(consts::CREATE_UPGRADE_GROUP, cfg.force_create_upgrade_group)?;
         let contract_ident = R::HostRef::ident();
         let entry_points_caller = R::HostRef::entry_points_caller(env);
 
@@ -274,7 +304,7 @@ impl<R: OdraContract> Deployer<R> for R {
             upgrade_args,
             entry_points_caller
         )?;
-        Ok(R::HostRef::new(address, env.clone()))
+        Ok(HostRef::new(address, env.clone()))
     }
 }
 

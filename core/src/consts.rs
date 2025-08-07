@@ -48,6 +48,9 @@ pub const ALLOW_KEY_OVERRIDE_ARG: &str = "odra_cfg_allow_key_override";
 /// The arg name for the contract upgradeability setting.
 pub const IS_UPGRADABLE_ARG: &str = "odra_cfg_is_upgradable";
 
+/// Force upgrade group creation during upgrade.
+pub const CREATE_UPGRADE_GROUP: &str = "odra_cfg_create_upgrade_group";
+
 /// The arg name for telling the installer that the contract is being upgraded.
 pub const IS_UPGRADE_ARG: &str = "odra_cfg_is_upgrade";
 

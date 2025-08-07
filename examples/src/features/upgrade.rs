@@ -1,4 +1,5 @@
 //! This example shows how to handle signature verification in a contract.
+
 use odra::casper_types::U256;
 use odra::prelude::*;
 
@@ -84,7 +85,6 @@ impl CounterV2 {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use crate::features::upgrade::{
@@ -121,9 +121,7 @@ mod test {
         let mut counter2 = CounterV2::try_upgrade(
             &test_env,
             counter.address(),
-            CounterV2UpgradeArgs {
-                new_start: None,
-            }
+            CounterV2UpgradeArgs { new_start: None }
         )
         .unwrap();
 
@@ -143,5 +141,12 @@ mod test {
         assert_eq!(counter2.get(), U256::from(100));
 
         assert_eq!(counter2.get_old(), 1);
+
+        let _counter3 = CounterV2::try_upgrade(
+            &test_env,
+            counter.address(),
+            CounterV2UpgradeArgs { new_start: None }
+        )
+        .unwrap();
     }
 }

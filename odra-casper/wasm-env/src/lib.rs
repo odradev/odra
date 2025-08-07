@@ -14,12 +14,29 @@ pub(crate) mod consts;
 pub mod host_functions;
 mod wasm_contract_env;
 
+pub use crate::wasm_contract_env::WasmContractEnv;
+use alloc::rc::Rc;
 pub use casper_contract;
-pub use wasm_contract_env::WasmContractEnv;
+
+/// This function is used to migrate the contract's events schemas during the upgrade process.
+#[no_mangle]
+pub fn migrate_events() {
+    let exec_env = {
+        let env = WasmContractEnv::new_env();
+        let env_rc = Rc::new(env);
+        ExecutionEnv::new(env_rc)
+    };
+    let schemas: Schemas = exec_env.get_named_arg("schemas");
+
+    exec_env.migrate_schemas(schemas.0);
+}
 
 #[cfg(all(target_arch = "wasm32", not(feature = "disable-allocator")))]
 #[allow(unused_imports)]
 use ink_allocator;
+use odra_core::casper_event_standard::Schemas;
+use odra_core::prelude::{ExecutionError, Revertible};
+use odra_core::ExecutionEnv;
 
 /// Panic handler for the WASM target architecture.
 #[cfg(target_arch = "wasm32")]

@@ -94,9 +94,7 @@ fn main() {
     let counter2 = CounterV2::try_upgrade(
         &env,
         counter.contract_address(),
-        CounterV2UpgradeArgs {
-            _miau: "miau".to_string()
-        }
+        CounterV2UpgradeArgs { new_start: None }
     )
     .unwrap();
 

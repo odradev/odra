@@ -1,5 +1,4 @@
 use super::parts_utils::{UsePreludeItem, UseSuperItem};
-use crate::utils::misc::AsType;
 use crate::{
     ir::{FnIR, ModuleImplIR},
     utils
@@ -60,8 +59,6 @@ struct ExecFunctionItem {
     #[syn(in = braces)]
     init_contract_stmt: syn::Stmt,
     #[syn(in = braces)]
-    migrate_stmt: Option<syn::Stmt>,
-    #[syn(in = braces)]
     call_contract_stmt: syn::Stmt,
     #[syn(in = braces)]
     clear_attached_value_stmt: Option<ExecEnvStmt>,
@@ -96,14 +93,6 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for ExecFunctionItem {
             })
             .collect::<syn::Result<syn::punctuated::Punctuated<syn::Expr, syn::token::Comma>>>()?;
 
-        let events_expr = utils::expr::event_schemas(&module_ident.as_type());
-        let migrate_stmt = if func.is_upgrader() {
-            Some(parse_quote!(
-                exec_env.migrate_schemas(#events_expr);
-            ))
-        } else {
-            None
-        };
 
         let args = func
             .named_args()
@@ -135,7 +124,6 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for ExecFunctionItem {
             handle_attached_value_stmt: func.is_payable().then(ExecEnvStmt::handle_attached_value),
             args,
             init_contract_stmt,
-            migrate_stmt,
             call_contract_stmt: parse_quote!(let #result_ident = #contract_ident.#fn_ident(#fn_args);),
             clear_attached_value_stmt: func.is_payable().then(ExecEnvStmt::clear_attached_value),
             non_reentrant_after_stmt: func
