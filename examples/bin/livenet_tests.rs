@@ -98,7 +98,7 @@ fn main() {
     )
     .unwrap();
 
-    assert_eq!(counter2.get(), U256::zero());
+    assert_eq!(counter2.get(), U256::one());
     assert_eq!(counter2.get_old(), 1);
 }
 

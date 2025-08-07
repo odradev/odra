@@ -27,7 +27,7 @@ fn main() {
 
     env.set_gas(50_000_000_000u64);
     counter2.increment();
-    assert_eq!(counter2.get(), U256::one());
+    assert_eq!(counter2.get(), U256::from(2));
 
     env.set_gas(500_000_000_000u64);
     let mut counter3 = CounterV1::try_upgrade(&env, counter.contract_address(), NoArgs).unwrap();

@@ -254,8 +254,6 @@ mod test {
                     let exec_env = odra::ExecutionEnv::new(env_rc.clone());
                     let total_supply = exec_env.get_named_arg::<Option<U256>>("total_supply");
                     let mut contract = <Erc20 as Module>::new(env_rc);
-                    exec_env
-                        .migrate_schemas(<Erc20 as odra::contract_def::HasEvents>::event_schemas());
                     let result = contract.upgrade(total_supply);
                     return result;
                 }

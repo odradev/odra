@@ -23,6 +23,7 @@ impl ContractRegister {
             None => 0
         };
         self.contracts.insert((addr, new_version), container);
+        self.versions_count.insert(addr, new_version);
     }
 
     /// Calls the entry point with the given call definition.

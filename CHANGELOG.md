@@ -2,6 +2,11 @@
 
 Changelog for `odra`.
 
+## [2.2.0] - 2025-08-XX
+
+### Added 
+- Support for deploying upgradable contracts and possibility to upgrade them.
+
 ## [2.1.0] - 2025-07-08
 ### Added
 - `init_dictionary` function in `ContractEnv`.
