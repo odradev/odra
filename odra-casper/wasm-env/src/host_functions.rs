@@ -198,8 +198,7 @@ pub fn upgrade_contract(
     let named_keys = initial_named_keys(events.clone());
 
     let contract_package_hash = ContractPackageHash::new(package_hash_to_upgrade);
-    let previous_contract_hash = get_latest_contract_hash(contract_package_hash)
-        .unwrap_or_revert_with(ApiError::ContractNotFound);
+    let previous_contract_hash = get_latest_contract_hash(contract_package_hash);
 
     // Upgrade!
     storage::add_contract_version(
@@ -980,16 +979,14 @@ pub fn get_validator_info(validator: PublicKey) -> Option<ValidatorInfo> {
 }
 
 /// Retrieves latest contract version from the storage
-pub fn get_latest_contract_hash(
-    contract_package_hash: ContractPackageHash
-) -> Option<ContractHash> {
+pub fn get_latest_contract_hash(contract_package_hash: ContractPackageHash) -> ContractHash {
     let key = Key::from(contract_package_hash);
 
-    let contract_package = read_from_key::<ContractPackage>(key);
-    contract_package
-        .unwrap_or_revert()
-        .unwrap_or_revert_with(ApiError::ValueNotFound)
-        .current_contract_hash()
+    read_from_key::<ContractPackage>(key)
+        .ok()
+        .and_then(|opt_contract_package| opt_contract_package)
+        .and_then(|contract_package| contract_package.current_contract_hash())
+        .unwrap_or_revert_with(ApiError::ContractNotFound)
 }
 
 /// Retrieves latest contract version number from the storage

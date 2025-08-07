@@ -1,4 +1,4 @@
-//! This example shows how to handle signature verification in a contract.
+//! This example shows how to upgrade a contract.
 
 use odra::casper_types::U256;
 use odra::prelude::*;
@@ -78,6 +78,8 @@ impl CounterV2 {
     pub fn get_old(&self) -> u32 {
         self.counter.get_or_default()
     }
+
+    /// We intentionally don't implement this method.
     pub fn reset(&mut self) {}
 
     pub fn set(&mut self, value: U256) {
