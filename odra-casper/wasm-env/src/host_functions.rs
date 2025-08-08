@@ -10,16 +10,13 @@
 use crate::consts;
 use crate::consts::{CONSTRUCTOR_GROUP_NAME, NATIVE_EVENT_TOPIC, UPGRADER_GROUP_NAME};
 use casper_contract::contract_api::runtime::emit_message;
-use casper_contract::contract_api::storage::{
-    create_contract_user_group, new_uref, provision_contract_user_group_uref, read_from_key,
-    remove_contract_user_group_urefs
-};
+use casper_contract::contract_api::storage;
 use casper_contract::contract_api::system;
 use casper_contract::ext_ffi::{casper_emit_message, casper_remove_contract_user_group_urefs};
 use casper_contract::unwrap_or_revert::UnwrapOrRevert;
 use casper_contract::{
     contract_api::{
-        self, runtime, storage,
+        self, runtime,
         system::{
             create_purse, get_purse_balance, transfer_from_purse_to_account,
             transfer_from_purse_to_purse
@@ -139,7 +136,7 @@ pub fn install_contract(
     let contract_package_hash = ContractPackageHash::new(contract_hash.value());
 
     if has_init {
-        let init_access = create_user_group(contract_package_hash, CONSTRUCTOR_GROUP_NAME);
+        let init_access = create_contract_user_group(contract_package_hash, CONSTRUCTOR_GROUP_NAME);
         let _: () = runtime::call_versioned_contract(
             contract_package_hash,
             None,
@@ -149,14 +146,13 @@ pub fn install_contract(
         revoke_access_to_user_group(contract_package_hash, CONSTRUCTOR_GROUP_NAME, init_access);
     }
 
-    let upgrade_access = create_user_group(contract_package_hash, UPGRADER_GROUP_NAME);
-    remove_contract_user_group_urefs(
+    let upgrade_access = create_contract_user_group(contract_package_hash, UPGRADER_GROUP_NAME);
+    storage::remove_contract_user_group_urefs(
         contract_package_hash,
         UPGRADER_GROUP_NAME,
         BTreeSet::from([upgrade_access])
     )
     .unwrap_or_revert();
-    // runtime::put_key(UPGRADER_GROUP_NAME, Key::from(upgrade_access));
 
     contract_package_hash
 }
@@ -214,7 +210,7 @@ pub fn upgrade_contract(
     // The user group should be already created during installation, but this
     // allows upgrading contracts deployed using previous Odra versions or without Odra.
     if create_user_group {
-        let upgrade_access = create_contract_user_group(
+        let upgrade_access = storage::create_contract_user_group(
             contract_package_hash,
             UPGRADER_GROUP_NAME,
             0,
@@ -225,7 +221,8 @@ pub fn upgrade_contract(
 
     // We enable access to upgrader functions ("upgrade" and "migrate_events");
     let new_uref =
-        provision_contract_user_group_uref(contract_package_hash, UPGRADER_GROUP_NAME).unwrap();
+        storage::provision_contract_user_group_uref(contract_package_hash, UPGRADER_GROUP_NAME)
+            .unwrap();
 
     // Call "migrate_events".
     let _: () = runtime::call_versioned_contract(
@@ -248,7 +245,7 @@ pub fn upgrade_contract(
     }
 
     // We disable access to upgrader functions.
-    remove_contract_user_group_urefs(
+    storage::remove_contract_user_group_urefs(
         contract_package_hash,
         UPGRADER_GROUP_NAME,
         BTreeSet::from([new_uref])
@@ -723,7 +720,10 @@ fn take_nth_caller_from_stack(n: usize) -> CallerInfo {
         .unwrap_or_revert()
 }
 
-fn create_user_group(contract_package_hash: ContractPackageHash, group_label: &str) -> URef {
+fn create_contract_user_group(
+    contract_package_hash: ContractPackageHash,
+    group_label: &str
+) -> URef {
     storage::create_contract_user_group(contract_package_hash, group_label, 1, Default::default())
         .unwrap_or_revert()
         .pop()
@@ -943,7 +943,7 @@ pub fn delegated_amount(public_key: PublicKey) -> U512 {
         delegator: purse.addr()
     });
 
-    read_from_key(key)
+    storage::read_from_key(key)
         .ok()
         .and_then(|stored_value| stored_value)
         .and_then(|bid_kind| match bid_kind {
@@ -963,7 +963,7 @@ pub fn get_validator_info(validator: PublicKey) -> Option<ValidatorInfo> {
     let account_hash = validator.to_account_hash();
     let key = Key::BidAddr(BidAddr::Validator(account_hash));
 
-    read_from_key(key)
+    storage::read_from_key(key)
         .ok()
         .and_then(|stored_value| stored_value)
         .and_then(|bid_kind| match bid_kind {
@@ -982,7 +982,7 @@ pub fn get_validator_info(validator: PublicKey) -> Option<ValidatorInfo> {
 pub fn get_latest_contract_hash(contract_package_hash: ContractPackageHash) -> ContractHash {
     let key = Key::from(contract_package_hash);
 
-    read_from_key::<ContractPackage>(key)
+    storage::read_from_key::<ContractPackage>(key)
         .ok()
         .and_then(|opt_contract_package| opt_contract_package)
         .and_then(|contract_package| contract_package.current_contract_hash())
@@ -993,7 +993,7 @@ pub fn get_latest_contract_hash(contract_package_hash: ContractPackageHash) -> C
 pub fn get_latest_contract_version(contract_package_hash: ContractPackageHash) -> u32 {
     let key = Key::from(contract_package_hash);
 
-    let contract_package = read_from_key::<ContractPackage>(key);
+    let contract_package = storage::read_from_key::<ContractPackage>(key);
     let version = contract_package
         .unwrap_or_revert()
         .unwrap_or_revert_with(ApiError::ValueNotFound)

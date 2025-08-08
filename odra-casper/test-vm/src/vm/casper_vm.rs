@@ -649,22 +649,6 @@ impl CasperVm {
         }
     }
 
-    fn get_current_entity(&self, address: Address) -> EntityAddr {
-        match address {
-            Address::Account(_) => panic!(
-                "Account address passed instead of contract address: {:?}",
-                address
-            ),
-            Address::Contract(contract) => {
-                let package_hash = PackageHash::new(contract.value());
-                let package = self.context.get_package(package_hash).unwrap_or_else(|| {
-                    panic!("Contract hash not found for address: {:?}", address)
-                });
-                package.current_entity_hash().unwrap()
-            }
-        }
-    }
-
     fn genesis_accounts(
         key_pairs: &BTreeMap<Address, (SecretKey, PublicKey)>
     ) -> (Vec<GenesisAccount>, Vec<GenesisAccount>) {

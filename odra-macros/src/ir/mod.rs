@@ -559,7 +559,7 @@ impl FnIR {
         receiver.map(|r| r.mutability.is_some()).unwrap_or_default()
     }
 
-    pub fn is_private(&self) -> bool {
+    pub fn is_restricted(&self) -> bool {
         self.is_constructor() || self.is_upgrader()
     }
 

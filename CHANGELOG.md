@@ -2,6 +2,10 @@
 
 Changelog for `odra`.
 
+## [2.3.0] - 2025-08-XX
+### Added
+- Support for deploying upgradable contracts and possibility to upgrade them.
+
 ## [2.2.0] - 2025-08-06
 ### Added
 - `DeployerExt::load_or_deploy_with_cfg` in `odra-cli` to make contracts deployment smoother.

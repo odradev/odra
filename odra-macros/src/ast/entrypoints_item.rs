@@ -70,7 +70,7 @@ fn struct_entrypoints_expr(ir: &ModuleImplIR) -> syn::Result<syn::Expr> {
                 syn::ReturnType::Type(_, ty) => utils::expr::as_cl_type(&ty)
             };
             let ty = f
-                .is_private()
+                .is_restricted()
                 .then(utils::ty::entry_point_def_ty_constructor)
                 .unwrap_or_else(utils::ty::entry_point_def_ty_public);
             let is_payable_attr = f.is_payable().then(utils::ty::entry_point_def_attr_payable);

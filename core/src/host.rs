@@ -435,9 +435,6 @@ pub struct HostEnv {
     backend: Rc<RefCell<dyn HostContext>>,
     last_call_result: Rc<RefCell<Option<CallResult>>>,
     deployed_contracts: Rc<RefCell<BTreeMap<Address, DeployedContract>>>,
-    _events_count: Rc<RefCell<BTreeMap<Address, u32>>>, // contract_address -> events_count
-    _native_events_count: Rc<RefCell<BTreeMap<Address, u32>>>, // contract_address -> events_count
-    _events_initialized: Rc<RefCell<BTreeMap<Address, bool>>>,
     captures_events: Rc<RefCell<bool>>
 }
 
@@ -448,9 +445,6 @@ impl HostEnv {
             backend,
             last_call_result: RefCell::new(None).into(),
             deployed_contracts: RefCell::new(Default::default()).into(),
-            _events_count: Rc::new(RefCell::new(Default::default())),
-            _native_events_count: Rc::new(RefCell::new(Default::default())),
-            _events_initialized: Rc::new(RefCell::new(Default::default())),
             captures_events: Rc::new(RefCell::new(true))
         }
     }
