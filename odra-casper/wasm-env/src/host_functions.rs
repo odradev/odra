@@ -69,6 +69,20 @@ lazy_static::lazy_static! {
 
 pub(crate) static mut ATTACHED_VALUE: U512 = U512::zero();
 
+/// Installs or upgrades a contract based on the provided entry points, events, and initialization arguments.
+pub fn install_or_upgrade(
+    entry_points: EntryPoints,
+    events: Schemas,
+    init_args: Option<RuntimeArgs>
+) -> ContractPackageHash {
+    let is_upgrade = runtime::try_get_named_arg(IS_UPGRADE_ARG).unwrap_or_default();
+    if is_upgrade {
+        upgrade_contract(entry_points, events, init_args)
+    } else {
+        install_new_contract(entry_points, events, init_args)
+    }
+}
+
 /// Installs a contract from a contract package.
 ///
 /// Create a locked contract stored under a [Key::Hash]. The contract is upgradeable or not, depending on the
@@ -78,17 +92,11 @@ pub(crate) static mut ATTACHED_VALUE: U512 = U512::zero();
 /// argument.
 ///
 /// Along with the contract, named keys with events and state are created.
-pub fn install_contract(
+pub fn install_new_contract(
     entry_points: EntryPoints,
     events: Schemas,
     init_args: Option<RuntimeArgs>
 ) -> ContractPackageHash {
-    // Is it install or upgrade?
-    let is_upgrade = runtime::try_get_named_arg(IS_UPGRADE_ARG).unwrap_or_default();
-    if is_upgrade {
-        return upgrade_contract(entry_points, events, init_args);
-    }
-
     // Extract named arguments, variables and check if the contract is upgradable.
     // And check if there is an existing contract.
     let package_hash_key_name: String = runtime::get_named_arg(PACKAGE_HASH_KEY_NAME_ARG);
@@ -993,12 +1001,10 @@ pub fn get_latest_contract_hash(contract_package_hash: ContractPackageHash) -> C
 pub fn get_latest_contract_version(contract_package_hash: ContractPackageHash) -> u32 {
     let key = Key::from(contract_package_hash);
 
-    let contract_package = storage::read_from_key::<ContractPackage>(key);
-    let version = contract_package
-        .unwrap_or_revert()
-        .unwrap_or_revert_with(ApiError::ValueNotFound)
-        .current_contract_version()
-        .unwrap_or_revert();
-
-    version.contract_version()
+    storage::read_from_key::<ContractPackage>(key)
+        .ok()
+        .and_then(|opt_contract_package| opt_contract_package)
+        .and_then(|contract_package| contract_package.current_contract_version())
+        .map(|version| version.contract_version())
+        .unwrap_or_revert_with(ApiError::ContractNotFound)
 }

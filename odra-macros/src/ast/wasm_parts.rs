@@ -111,7 +111,7 @@ struct CallFnItem {
     #[syn(in = braces)]
     runtime_args_stmt: syn::Stmt,
     #[syn(in = braces)]
-    install_contract_stmt: syn::Stmt
+    install_or_upgrade_stmt: syn::Stmt
 }
 
 impl TryFrom<&'_ ModuleImplIR> for CallFnItem {
@@ -162,7 +162,7 @@ impl TryFrom<&'_ ModuleImplIR> for CallFnItem {
         );
         let events_expr = utils::expr::event_schemas(&module_ident);
         let expr_new_schemas = utils::expr::schemas(&events_expr);
-        let install_contract_stmt = utils::stmt::install_contract(
+        let install_or_upgrade_stmt = utils::stmt::install_or_upgrade(
             parse_quote!(#ident_entry_points()),
             parse_quote!(#ident_schemas),
             parse_quote!(#ident_args)
@@ -176,7 +176,7 @@ impl TryFrom<&'_ ModuleImplIR> for CallFnItem {
             exec_env_stmt,
             is_upgrade_stmt,
             runtime_args_stmt: args_stmt,
-            install_contract_stmt
+            install_or_upgrade_stmt
         })
     }
 }
@@ -425,7 +425,7 @@ mod test {
                         }
                     };
 
-                    odra::odra_casper_wasm_env::host_functions::install_contract(
+                    odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
                         entry_points(),
                         schemas,
                         named_args
@@ -527,7 +527,7 @@ mod test {
                     } else {
                         Option::<odra::casper_types::RuntimeArgs>::None
                     };
-                    odra::odra_casper_wasm_env::host_functions::install_contract(
+                    odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
                         entry_points(),
                         schemas,
                         named_args
@@ -643,7 +643,7 @@ mod test {
                     } else {
                         Option::<odra::casper_types::RuntimeArgs>::None
                     };
-                    odra::odra_casper_wasm_env::host_functions::install_contract(
+                    odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
                         entry_points(),
                         schemas,
                         named_args

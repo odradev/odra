@@ -138,7 +138,6 @@ impl TryFrom<&'_ ModuleImplIR> for InitArgsImplItem {
     }
 }
 
-// UPGRADE ARGS STARTS HERE
 struct UpgradeArgsItem {
     missing_docs: syn::Attribute,
     docs: syn::Attribute,
