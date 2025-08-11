@@ -9,7 +9,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": null,
   "contract_name": "Erc1155Receiver",
-  "contract_version": "2.2.0",
+  "contract_version": "2.3.0",
   "types": [
     {
       "struct": {

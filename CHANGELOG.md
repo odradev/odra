@@ -2,9 +2,10 @@
 
 Changelog for `odra`.
 
-## [2.3.0] - 2025-08-XX
+## [2.3.0] - 2025-08-11
 ### Added
 - Support for deploying upgradable contracts and possibility to upgrade them.
+- Rich stacktrace for OdraVM.
 
 ## [2.2.0] - 2025-08-06
 ### Added
@@ -20,7 +21,6 @@ Changelog for `odra`.
 
 ### Changed
 - `OdraConfig` trait is now replaced by `InstallConfig` struct.
->>>>>>> release/2.2.0
 
 ## [2.1.0] - 2025-07-08
 ### Added

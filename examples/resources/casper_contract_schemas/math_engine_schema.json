@@ -5,7 +5,7 @@
   "repository": null,
   "homepage": null,
   "contract_name": "MathEngine",
-  "contract_version": "2.2.0",
+  "contract_version": "2.3.0",
   "types": [],
   "errors": [],
   "entry_points": [

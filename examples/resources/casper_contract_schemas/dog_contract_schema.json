@@ -5,11 +5,11 @@
   "repository": null,
   "homepage": null,
   "contract_name": "DogContract",
-  "contract_version": "2.2.0",
+  "contract_version": "2.3.0",
   "types": [
     {
       "struct": {
-        "name": "NamedChanged",
+        "name": "NameChanged",
         "description": null,
         "members": [
           {
@@ -92,8 +92,8 @@
   ],
   "events": [
     {
-      "name": "NamedChanged",
-      "ty": "NamedChanged"
+      "name": "NameChanged",
+      "ty": "NameChanged"
     }
   ],
   "call": {
