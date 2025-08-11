@@ -86,8 +86,8 @@ impl ContractContext for LivenetContractEnv {
             .read()
             .unwrap()
             .get(&address)
-            .unwrap_or_default()
-            .to_string();
+            .map(|c| String::from(c.name()))
+            .unwrap_or(String::from("UnknownContractName"));
 
         self.callstack
             .borrow_mut()

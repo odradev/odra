@@ -95,8 +95,8 @@ impl OdraVm {
             .read()
             .unwrap()
             .get(&address)
-            .unwrap_or_default()
-            .to_string();
+            .map(|c| String::from(c.name()))
+            .unwrap_or(String::from("UnknownContractName"));
 
         self.prepare_call(contract_name, address, &call_def);
         // Call contract from register.
