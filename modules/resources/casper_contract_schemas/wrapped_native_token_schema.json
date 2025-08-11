@@ -9,7 +9,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": null,
   "contract_name": "WrappedNativeToken",
-  "contract_version": "2.3.0",
+  "contract_version": "2.3.1",
   "types": [
     {
       "struct": {

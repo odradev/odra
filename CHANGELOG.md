@@ -4,6 +4,13 @@ Changelog for `odra`.
 
 ## [2.3.0] - 2025-08-11
 ### Added
+- `ODRA_CASPER_LIVENET_TTL` environment variable to set the TTL for the Casper livenet.
+
+### Changed
+- Transaction TTL changed from 1m to 5m.
+
+## [2.3.0] - 2025-08-11
+### Added
 - Support for deploying upgradable contracts and possibility to upgrade them.
 - Rich stacktrace for OdraVM.
 

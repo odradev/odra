@@ -57,6 +57,8 @@ pub const ENV_ACCOUNT_PREFIX: &str = "ODRA_CASPER_LIVENET_KEY_";
 pub const ENV_CSPR_CLOUD_AUTH_TOKEN: &str = "CSPR_CLOUD_AUTH_TOKEN";
 /// Environment variable holding a path to an additional .env file.
 pub const ENV_LIVENET_ENV_FILE: &str = "ODRA_CASPER_LIVENET_ENV";
+/// Environment variable holding TTL for transactions.
+pub const ENV_TTL: &str = "ODRA_CASPER_LIVENET_TTL";
 /// Time between retries when waiting for a deployment to be processed.
 pub const TRANSACTION_WAIT_TIME: u64 = 10;
 /// Maximum number of retries when waiting for a transaction to be processed.

@@ -1,6 +1,6 @@
 use crate::casper_client::{
     ENV_ACCOUNT_PREFIX, ENV_CHAIN_NAME, ENV_CSPR_CLOUD_AUTH_TOKEN, ENV_EVENTS_ADDRESS,
-    ENV_LIVENET_ENV_FILE, ENV_NODE_ADDRESS, ENV_SECRET_KEY
+    ENV_LIVENET_ENV_FILE, ENV_NODE_ADDRESS, ENV_SECRET_KEY, ENV_TTL
 };
 use crate::utils::{get_env_variable, get_optional_env_variable};
 use casper_client::Verbosity;
@@ -8,8 +8,9 @@ use casper_types::TimeDiff;
 use odra_core::casper_types::SecretKey;
 use std::path::PathBuf;
 
-pub const DEFAULT_TTL: u64 = 1000 * 60;
+pub const DEFAULT_TTL: u32 = 5 * 60; // Seconds.
 pub const DEFAULT_GAS_TOLERANCE: u8 = 5;
+
 #[derive(Debug)]
 pub struct CasperClientConfiguration {
     pub node_address: String,
@@ -18,7 +19,8 @@ pub struct CasperClientConfiguration {
     pub chain_name: String,
     pub secret_keys: Vec<SecretKey>,
     pub secret_key_paths: Vec<String>,
-    pub cspr_cloud_auth_token: Option<String>
+    pub cspr_cloud_auth_token: Option<String>,
+    pub ttl: u32
 }
 
 impl CasperClientConfiguration {
@@ -37,6 +39,9 @@ impl CasperClientConfiguration {
         let node_address = get_env_variable(ENV_NODE_ADDRESS);
         let chain_name = get_env_variable(ENV_CHAIN_NAME);
         let events_url = get_env_variable(ENV_EVENTS_ADDRESS);
+        let ttl = get_optional_env_variable(ENV_TTL)
+            .and_then(|ttl| ttl.parse::<u32>().ok())
+            .unwrap_or(DEFAULT_TTL);
 
         let (secret_keys, secret_key_paths) = Self::secret_keys_from_env();
         CasperClientConfiguration {
@@ -46,7 +51,8 @@ impl CasperClientConfiguration {
             secret_keys,
             secret_key_paths,
             cspr_cloud_auth_token: get_optional_env_variable(ENV_CSPR_CLOUD_AUTH_TOKEN),
-            events_url
+            events_url,
+            ttl
         }
     }
 
@@ -85,7 +91,7 @@ impl CasperClientConfiguration {
     }
 
     pub fn ttl(&self) -> TimeDiff {
-        TimeDiff::from_millis(DEFAULT_TTL)
+        TimeDiff::from_seconds(self.ttl)
     }
 
     pub fn chain_name(&self) -> &str {
