@@ -1,4 +1,7 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf}
+};
 
 use anyhow::Result;
 use clap::ArgMatches;
@@ -31,7 +34,8 @@ pub struct OdraCli {
     whoami_cmd: WhoamiCmd,
     custom_types: CustomTypes,
     host_env: HostEnv,
-    callers: HashMap<String, EntryPointsCaller>
+    callers: HashMap<String, EntryPointsCaller>,
+    default_contract_path: Option<PathBuf>
 }
 
 impl Default for OdraCli {
@@ -52,28 +56,22 @@ impl OdraCli {
             whoami_cmd: WhoamiCmd::new(),
             host_env: odra_casper_livenet_env::env(),
             custom_types: CustomTypes::default(),
-            callers: HashMap::default()
-        }
-    }
-
-    #[cfg(test)]
-    pub fn test(host_env: HostEnv) -> Self {
-        Self {
-            main_cmd: MainCmd::default(),
-            deploy_cmd: None,
-            contracts_cmd: ContractsCmd::default(),
-            print_events_cmd: PrintEventsCmd::default(),
-            scenarios_cmd: ScenariosCmd::default(),
-            whoami_cmd: WhoamiCmd::new(),
-            host_env,
-            custom_types: CustomTypes::default(),
-            callers: HashMap::default()
+            callers: HashMap::default(),
+            default_contract_path: None
         }
     }
 
     /// Sets the description of the CLI
     pub fn about(mut self, about: &'static str) -> Self {
         self.main_cmd = self.main_cmd.about(about);
+        self
+    }
+
+    /// Sets the path to a file that stores the deployed contract addresses.
+    ///
+    /// The path is relative to the resources directory in the project root.
+    pub fn contracts_file<P: AsRef<Path>>(mut self, path: P) -> Self {
+        self.default_contract_path = Some(path.as_ref().to_path_buf());
         self
     }
 
@@ -126,6 +124,10 @@ impl OdraCli {
     /// Runs the CLI and parses the input.
     pub fn run(self) {
         let (cmd, args, contracts_path) = self.main_cmd.get_matches();
+        let contracts_path = match contracts_path {
+            Some(path) => Some(path),
+            None => self.default_contract_path.clone()
+        };
 
         let storage = FileContractStorage::new(contracts_path.clone()).unwrap_or_else(|e| {
             prettycli::error(&format!("Failed to create contract storage: {e}"));

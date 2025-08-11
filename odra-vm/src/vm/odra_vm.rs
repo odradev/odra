@@ -90,7 +90,15 @@ impl OdraVm {
     /// Returns the result of the call as [Bytes].
     /// If the call fails, the virtual machine is in error state, all the changes are reverted.
     pub fn call_contract(&self, address: Address, call_def: CallDef) -> Bytes {
-        self.prepare_call(address, &call_def);
+        let contract_name = self
+            .contract_register
+            .read()
+            .unwrap()
+            .get(&address)
+            .map(|c| String::from(c.name()))
+            .unwrap_or(String::from("UnknownContractName"));
+
+        self.prepare_call(contract_name, address, &call_def);
         // Call contract from register.
         if call_def.amount() > U512::zero() {
             let status = self.checked_transfer_tokens(&self.caller(), &address, &call_def.amount());
@@ -113,8 +121,18 @@ impl OdraVm {
     /// Stops the execution of the virtual machine and reverts all the changes.
     pub fn revert(&self, error: OdraError) -> ! {
         let mut revert_msg = String::from("");
-        if let CallstackElement::ContractCall { address, call_def } = self.callstack_tip() {
-            revert_msg = format!("{:?}::{}", address, call_def.entry_point());
+        if let CallstackElement::ContractCall {
+            contract_name,
+            address,
+            call_def
+        } = self.callstack_tip()
+        {
+            revert_msg = format!(
+                "{}({:?})::{}",
+                contract_name,
+                address,
+                call_def.entry_point()
+            );
         }
 
         let mut state = self.state.write().unwrap();
@@ -143,6 +161,11 @@ impl OdraVm {
     /// Retrieves from the state the address of the current caller.
     pub fn caller(&self) -> Address {
         self.state.read().unwrap().caller()
+    }
+
+    /// Retrieves the callstack record.
+    pub fn read_stack_record(&self) -> String {
+        self.state.read().unwrap().read_stack_record()
     }
 
     /// Retrieves from the state the address of the current callee. It is taken from the
@@ -490,7 +513,7 @@ impl OdraVm {
 }
 
 impl OdraVm {
-    fn prepare_call(&self, address: Address, call_def: &CallDef) {
+    fn prepare_call(&self, contract_name: String, address: Address, call_def: &CallDef) {
         let mut state = self.state.write().unwrap();
         // If only one address on the call_stack, record snapshot.
         if state.is_in_caller_context() {
@@ -499,7 +522,7 @@ impl OdraVm {
         }
         // Put the address on stack.
 
-        let element = CallstackElement::new_contract_call(address, call_def.clone());
+        let element = CallstackElement::new_contract_call(contract_name, address, call_def.clone());
         state.push_callstack_element(element);
     }
 

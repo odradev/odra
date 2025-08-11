@@ -1,19 +1,12 @@
 {
-  "name": "DogContract",
+  "name": "CounterV2",
   "events": [
     {
-      "name": "NameChanged",
+      "name": "IncrementEventV2",
       "args": [
         {
-          "name": "old_name",
-          "ty": "String",
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        },
-        {
-          "name": "new_name",
-          "ty": "String",
+          "name": "value",
+          "ty": "U256",
           "is_ref": false,
           "is_slice": false,
           "is_required": true
@@ -26,22 +19,10 @@
       "name": "init",
       "args": [
         {
-          "name": "barks",
-          "ty": "Bool",
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        },
-        {
-          "name": "weight",
-          "ty": "U32",
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        },
-        {
-          "name": "name",
-          "ty": "String",
+          "name": "start_from",
+          "ty": {
+            "Option": "U256"
+          },
           "is_ref": false,
           "is_slice": false,
           "is_required": true
@@ -53,51 +34,61 @@
       "attributes": []
     },
     {
-      "name": "barks",
-      "args": [],
-      "is_mutable": false,
-      "return_ty": "Bool",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "name": "weight",
-      "args": [],
-      "is_mutable": false,
-      "return_ty": "U32",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "name": "name",
-      "args": [],
-      "is_mutable": false,
-      "return_ty": "String",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "name": "walks_amount",
-      "args": [],
-      "is_mutable": false,
-      "return_ty": "U32",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "name": "walks_total_length",
-      "args": [],
-      "is_mutable": false,
-      "return_ty": "U32",
-      "ty": "Public",
-      "attributes": []
-    },
-    {
-      "name": "rename",
+      "name": "upgrade",
       "args": [
         {
-          "name": "new_name",
-          "ty": "String",
+          "name": "new_start",
+          "ty": {
+            "Option": "U256"
+          },
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Constructor",
+      "attributes": []
+    },
+    {
+      "name": "increment",
+      "args": [],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U256",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_old",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U32",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "reset",
+      "args": [],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "set",
+      "args": [
+        {
+          "name": "value",
+          "ty": "U256",
           "is_ref": false,
           "is_slice": false,
           "is_required": true

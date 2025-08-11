@@ -5,13 +5,13 @@
   "repository": null,
   "homepage": null,
   "contract_name": "ValidatorsContract",
-  "contract_version": "2.2.0",
+  "contract_version": "2.3.0",
   "types": [],
   "errors": [],
   "entry_points": [
     {
       "name": "stake",
-      "description": "Stake the amount of tokens",
+      "description": "Stake the number of tokens",
       "is_mutable": true,
       "arguments": [],
       "return_ty": "Unit",
@@ -67,12 +67,21 @@
       "return_ty": "U512",
       "is_contract_context": true,
       "access": "public"
+    },
+    {
+      "name": "get_minimum_delegation_amount",
+      "description": "Get minimum delegation amount",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U64",
+      "is_contract_context": true,
+      "access": "public"
     }
   ],
   "events": [],
   "call": {
     "wasm_file_name": "ValidatorsContract.wasm",
-    "description": "Initializes the contract with the validator's public key",
+    "description": "Initialises the contract with the validator's public key",
     "arguments": [
       {
         "name": "odra_cfg_package_hash_key_name",

@@ -8,6 +8,7 @@
 
 mod odra_vm_contract_env;
 mod odra_vm_host;
+mod panic_hook;
 mod vm;
 
 pub use odra_vm_host::OdraVmHost;

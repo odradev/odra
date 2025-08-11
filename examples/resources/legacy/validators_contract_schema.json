@@ -75,6 +75,14 @@
       "return_ty": "U512",
       "ty": "Public",
       "attributes": []
+    },
+    {
+      "name": "get_minimum_delegation_amount",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U64",
+      "ty": "Public",
+      "attributes": []
     }
   ]
 }

@@ -4,47 +4,88 @@
   "authors": [],
   "repository": null,
   "homepage": null,
-  "contract_name": "DogContract3",
+  "contract_name": "CounterV2",
   "contract_version": "2.3.0",
-  "types": [],
+  "types": [
+    {
+      "struct": {
+        "name": "IncrementEventV2",
+        "description": null,
+        "members": [
+          {
+            "name": "value",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    }
+  ],
   "errors": [],
   "entry_points": [
     {
-      "name": "name",
-      "description": "Returns the dog's name.",
-      "is_mutable": false,
-      "arguments": [],
-      "return_ty": "String",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "walks_amount",
-      "description": "Returns the amount of walks the dog has taken.",
-      "is_mutable": false,
-      "arguments": [],
-      "return_ty": "U32",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "walks_total_length",
-      "description": "Returns the total length of the dog's walks.",
-      "is_mutable": false,
-      "arguments": [],
-      "return_ty": "U32",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "walk_the_dog",
-      "description": "Adds a walk to the dog's walks.",
+      "name": "upgrade",
+      "description": "",
       "is_mutable": true,
       "arguments": [
         {
-          "name": "length",
+          "name": "new_start",
           "description": null,
-          "ty": "U32",
+          "ty": {
+            "Option": "U256"
+          },
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "increment",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U256",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "get_old",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U32",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "reset",
+      "description": "We intentionally don't implement this method.",
+      "is_mutable": true,
+      "arguments": [],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "set",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "value",
+          "description": null,
+          "ty": "U256",
           "optional": false
         }
       ],
@@ -53,10 +94,15 @@
       "access": "public"
     }
   ],
-  "events": [],
+  "events": [
+    {
+      "name": "IncrementEventV2",
+      "ty": "IncrementEventV2"
+    }
+  ],
   "call": {
-    "wasm_file_name": "DogContract3.wasm",
-    "description": "Initializes the contract with the given parameters.",
+    "wasm_file_name": "CounterV2.wasm",
+    "description": "",
     "arguments": [
       {
         "name": "odra_cfg_package_hash_key_name",
@@ -77,9 +123,11 @@
         "optional": false
       },
       {
-        "name": "name",
+        "name": "start_from",
         "description": null,
-        "ty": "String",
+        "ty": {
+          "Option": "U256"
+        },
         "optional": false
       }
     ]

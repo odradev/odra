@@ -94,6 +94,8 @@ impl HostContext for OdraVmHost {
         call_def: CallDef,
         _use_proxy: bool
     ) -> OdraResult<Bytes> {
+        crate::panic_hook::set_odra_panic_hook();
+
         let mut opt_result: Option<Bytes> = None;
         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             opt_result = Some(self.vm.borrow().call_contract(*address, call_def));
@@ -102,6 +104,7 @@ impl HostContext for OdraVmHost {
         match opt_result {
             Some(result) => Ok(result),
             None => {
+                eprintln!("↳ Stack trace:\n{}", self.vm.borrow().read_stack_record());
                 let error = self.vm.borrow().error();
                 Err(error.unwrap_or(OdraError::VmError(VmError::Panic)))
             }

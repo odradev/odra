@@ -64,6 +64,10 @@ impl OdraVmState {
         self.callstack.current()
     }
 
+    pub fn read_stack_record(&self) -> String {
+        self.callstack.record_to_string()
+    }
+
     pub fn set_caller(&mut self, address: Address) {
         self.pop_callstack_element();
         self.push_callstack_element(CallstackElement::new_account(address));
@@ -292,6 +296,7 @@ impl OdraVmState {
     }
 
     pub fn clear_callstack(&mut self) {
+        self.callstack.record();
         let mut element = self.callstack.pop();
         while element.is_some() {
             let new_element = self.callstack.pop();

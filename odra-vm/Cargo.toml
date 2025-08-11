@@ -13,6 +13,7 @@ odra-core = { workspace = true }
 anyhow = { workspace = true }
 blake2 = { workspace = true }
 rand = { workspace = true, features = ["thread_rng"] }
+backtrace = { workspace = true }
 
 [lints.rust]
 missing_docs = "warn"
