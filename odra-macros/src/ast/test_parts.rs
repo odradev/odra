@@ -2,7 +2,6 @@ use derive_try_from_ref::TryFromRef;
 use syn::parse_quote;
 
 use crate::{ir::ModuleImplIR, utils};
-
 use super::{
     deployer_item::DeployerItem,
     host_ref_item::{HasIdentTraitImplItem, HostRefItem},
@@ -65,7 +64,7 @@ pub struct TestPartsItem {
     #[syn(in = brace_token)]
     trait_has_ident_impl_item: HasIdentTraitImplItem,
     #[syn(in = brace_token)]
-    deployer: DeployerItem
+    deployer: DeployerItem,
 }
 
 #[cfg(test)]
@@ -134,6 +133,11 @@ mod test {
                         self.try_init(total_supply).unwrap()
                     }
 
+                    /// Upgrades the contract with the given parameters.
+                    pub fn upgrade(&mut self, total_supply: Option<U256>) {
+                        self.try_upgrade(total_supply).unwrap()
+                    }
+
                     /// Returns the total supply of the token.
                     pub fn total_supply(&self) -> U256 {
                         self.try_total_supply().unwrap()
@@ -177,6 +181,28 @@ mod test {
                                 .with_amount(self.attached_value),
                             )
                     }
+                    /// Upgrades the contract with the given parameters.
+                    /// Does not fail in case of error, returns `odra::OdraResult` instead.
+                    pub fn try_upgrade(&mut self, total_supply: Option<U256>) -> OdraResult<()> {
+                        self.env
+                            .call_contract(
+                                self.address,
+                                odra::CallDef::new(
+                                    odra::prelude::string::String::from("upgrade"),
+                                    true,
+                                    {
+                                        let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                        if self.attached_value > odra::casper_types::U512::zero() {
+                                            let _ = named_args.insert("amount", self.attached_value);
+                                        }
+                                        odra::args::EntrypointArgument::insert_runtime_arg(total_supply.clone(), "total_supply", &mut named_args);
+                                        named_args
+                                    },
+                                )
+                                .with_amount(self.attached_value),
+                            )
+                    }
+
 
                     /// Returns the total supply of the token.
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
@@ -282,10 +308,23 @@ mod test {
                 impl odra::host::InitArgs for Erc20InitArgs {
                 }
 
+                #[allow(missing_docs)]
+                /// [Erc20] contract upgrade arguments.
+                #[derive(odra::IntoRuntimeArgs)]
+                pub struct Erc20UpgradeArgs {
+                    pub total_supply: Option<U256>,
+                }
+
+                impl odra::host::UpgradeArgs for Erc20UpgradeArgs {
+                }
+
                 impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
                     fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
                         let entry_points = odra::prelude::vec![
                             odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("init"), odra::prelude::vec![
+                                odra::entry_point_callback::Argument::new::<Option<U256> >(odra::prelude::string::String::from("total_supply"))
+                            ]),
+                            odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("upgrade"), odra::prelude::vec![
                                 odra::entry_point_callback::Argument::new::<Option<U256> >(odra::prelude::string::String::from("total_supply"))
                             ]),
                             odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
@@ -304,6 +343,10 @@ mod test {
                             match call_def.entry_point() {
                                 "init" => {
                                     let result = __erc20_exec_parts::execute_init(contract_env);
+                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                }
+                                "upgrade" => {
+                                    let result = __erc20_exec_parts::execute_upgrade(contract_env);
                                     odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
                                 }
                                 "total_supply" => {

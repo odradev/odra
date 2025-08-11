@@ -15,6 +15,14 @@ pub mod mock {
                     }
                 }
 
+                /// Upgrades the contract with the given parameters.
+                pub fn upgrade(&mut self, total_supply: Option<U256>) {
+                    if let Some(total_supply) = total_supply {
+                        self.total_supply.set(total_supply);
+                        self.balances.set(self.env().caller(), total_supply);
+                    }
+                }
+
                 /// Returns the total supply of the token.
                 pub fn total_supply(&self) -> U256 {
                     self.total_supply.get_or_default()

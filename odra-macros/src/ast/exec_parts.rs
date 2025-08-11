@@ -78,7 +78,7 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for ExecFunctionItem {
         let env_rc_ident = utils::ident::env_rc();
         let env_ident = utils::ident::env();
         let exec_env_ident = utils::ident::exec_env();
-        let exec_env_stmt = (func.is_payable() || func.is_non_reentrant() || func.has_args())
+        let exec_env_stmt = (func.is_payable() || func.is_non_reentrant() || func.has_args() || func.is_upgrader())
             .then(|| utils::stmt::new_execution_env(&exec_env_ident, &env_rc_ident));
         let contract_ident = utils::ident::contract();
         let module_ident = module.module_ident()?;
@@ -92,6 +92,7 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for ExecFunctionItem {
                 Ok(expr)
             })
             .collect::<syn::Result<syn::punctuated::Punctuated<syn::Expr, syn::token::Comma>>>()?;
+
 
         let args = func
             .named_args()
@@ -244,6 +245,16 @@ mod test {
                     let total_supply = exec_env.get_named_arg::<Option<U256>>("total_supply");
                     let mut contract = <Erc20 as Module>::new(env_rc);
                     let result = contract.init(total_supply);
+                    return result;
+                }
+
+                #[inline]
+                pub fn execute_upgrade(env: odra::ContractEnv) {
+                    let env_rc = Rc::new(env);
+                    let exec_env = odra::ExecutionEnv::new(env_rc.clone());
+                    let total_supply = exec_env.get_named_arg::<Option<U256>>("total_supply");
+                    let mut contract = <Erc20 as Module>::new(env_rc);
+                    let result = contract.upgrade(total_supply);
                     return result;
                 }
 

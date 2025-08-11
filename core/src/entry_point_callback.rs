@@ -57,6 +57,11 @@ impl EntryPointsCaller {
     pub fn entry_points(&self) -> &[EntryPoint] {
         self.entry_points.as_ref()
     }
+
+    /// Removes an entry point by its name.
+    pub fn remove_entry_point(&mut self, name: &str) {
+        self.entry_points.retain(|ep| ep.name != name);
+    }
 }
 
 /// A struct representing an entry point.

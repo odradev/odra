@@ -105,7 +105,7 @@ fn get_internal_error_name(error_num: u16) -> OdraError {
         ExecutionError::NonPayable,
         ExecutionError::TransferToContract,
         ExecutionError::ReentrantCall,
-        ExecutionError::ContractAlreadyInstalled,
+        ExecutionError::CannotOverrideKeys,
         ExecutionError::UnknownConstructor,
         ExecutionError::NativeTransferError,
         ExecutionError::IndexOutOfBounds,

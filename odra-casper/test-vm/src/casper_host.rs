@@ -162,6 +162,32 @@ impl HostContext for CasperHost {
         }
     }
 
+    fn upgrade_contract(
+        &self,
+        name: &str,
+        contract_to_upgrade: Address,
+        upgrade_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCaller
+    ) -> OdraResult<Address> {
+        let mut opt_result: Option<Address> = None;
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            opt_result = Some(self.vm.borrow_mut().upgrade_contract(
+                name,
+                contract_to_upgrade,
+                upgrade_args,
+                entry_points_caller
+            ));
+        }));
+
+        match opt_result {
+            Some(result) => Ok(result),
+            None => {
+                let error = self.vm.borrow().error();
+                Err(error.unwrap_or(OdraError::VmError(VmError::Panic)))
+            }
+        }
+    }
+
     fn register_contract(
         &self,
         address: Address,

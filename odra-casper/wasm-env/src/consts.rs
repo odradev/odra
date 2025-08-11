@@ -5,6 +5,10 @@ pub const STATE_KEY: &str = "state";
 
 /// Constuctor group name.
 pub const CONSTRUCTOR_GROUP_NAME: &str = "constructor_group";
+
+/// Upgrader group name.
+pub const UPGRADER_GROUP_NAME: &str = "upgrader_group";
+
 /// The key under which the events are stored.
 pub const EVENTS: &str = casper_event_standard::EVENTS_DICT;
 

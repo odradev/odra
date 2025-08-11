@@ -119,7 +119,7 @@ pub enum ExecutionError {
     /// Reentrant call detected
     ReentrantCall = 104,
     /// Contract already installed
-    ContractAlreadyInstalled = 105,
+    CannotOverrideKeys = 105,
     /// Unknown constructor
     UnknownConstructor = 106,
     /// Native transfer error
@@ -166,6 +166,18 @@ pub enum ExecutionError {
     ContractDeploymentError = 127,
     /// Couldn't extract caller info
     CannotExtractCallerInfo = 128,
+    /// Upgrading a contract that is not installed.
+    ContractNotInstalled = 129,
+    /// Upgrading a contract without previous version
+    UpgradingWithoutPreviousVersion = 130,
+    /// Upgrading not a contract
+    UpgradingNotAContract = 131,
+    /// Upgrading a contract with a schema that does not match the previous version.
+    SchemaMismatch = 132,
+    /// Cannot disable a previous version of a contract.
+    CannotDisablePreviousVersion = 133,
+    /// Cannot upgrade a contract without an upgrade function.
+    CannotUpgradeWithoutUpgrade = 134,
     /// Maximum code for user errors
     MaxUserError = 64535,
     /// User error too high. The code should be in range 0..32767.

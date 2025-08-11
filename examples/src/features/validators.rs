@@ -14,12 +14,12 @@ pub struct ValidatorsContract {
 /// Implementation of the TestingContract
 #[odra::module]
 impl ValidatorsContract {
-    /// Initializes the contract with the validator's public key
+    /// Initialises the contract with the validator's public key
     pub fn init(&mut self, validator: PublicKey) {
         self.validator.set(validator);
     }
 
-    /// Stake the amount of tokens
+    /// Stake the number of tokens
     #[odra(payable)]
     pub fn stake(&mut self) {
         let amount = self.env().attached_value();
@@ -132,7 +132,7 @@ mod tests {
             }
         );
 
-        let inital_account_balance = test_env.balance_of(&test_env.get_account(0));
+        let initial_account_balance = test_env.balance_of(&test_env.get_account(0));
 
         // Stake some amount
         let staking_amount = U512::from(1_000_000_000_000u64);
@@ -140,7 +140,7 @@ mod tests {
         assert_eq!(staking.currently_delegated_amount(), staking_amount);
         assert_eq!(
             test_env.balance_of(&test_env.get_account(0)),
-            inital_account_balance - staking_amount
+            initial_account_balance - staking_amount
         );
 
         // Advance time, run auctions and give off rewards
@@ -156,7 +156,7 @@ mod tests {
         staking.unstake(staking_with_reward);
         assert_eq!(staking.currently_delegated_amount(), U512::from(0));
 
-        // Withdraw should first fail, as we need to wait for auction delay
+        // Withdraw should first fail, as we need to wait for the auction delay
         staking.try_withdraw(staking_with_reward).unwrap_err();
         // To confirm, the contract balance should be 0
         assert_eq!(staking.current_casper_balance(), U512::from(0));
@@ -169,7 +169,7 @@ mod tests {
         // The user now should have the tokens
         assert_eq!(
             test_env.balance_of(&test_env.get_account(0)),
-            inital_account_balance + reward
+            initial_account_balance + reward
         );
     }
     #[test]
@@ -264,7 +264,7 @@ mod tests {
     }
 
     #[test]
-    fn test_delegation() {
+    fn test_minimum_delegation() {
         use crate::features::validators::{ValidatorsContract, ValidatorsContractInitArgs};
         use odra::host::Deployer;
         let test_env = odra_test::env();
@@ -281,6 +281,7 @@ mod tests {
         let minimum_delegation_amount = staking.get_minimum_delegation_amount().into();
         assert_eq!(staking.currently_delegated_amount(), U512::zero());
 
+        // When staking minimum
         staking.with_tokens(minimum_delegation_amount).stake();
 
         assert_eq!(
@@ -295,11 +296,13 @@ mod tests {
             U512::from(500_000_049_999u64)
         );
 
+        // And unstaking below it
         staking.unstake(U512::from(500_000_000_000u64));
 
         test_env.advance_with_auctions(test_env.auction_delay());
         test_env.advance_with_auctions(test_env.unbonding_delay() * 5);
 
+        // Everything is unstaked
         assert_eq!(staking.currently_delegated_amount(), U512::zero());
     }
 }

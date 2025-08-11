@@ -29,6 +29,7 @@ use casper_storage::data_access_layer::{DataAccessLayer, GenesisRequest, RewardI
 use odra_core::{casper_event_standard, DeployReport, GasReport};
 use std::rc::Rc;
 
+use odra_core::casper_event_standard::Schemas;
 use odra_core::casper_types::account::{Account, AccountHash};
 use odra_core::casper_types::bytesrepr::{Bytes, ToBytes};
 use odra_core::casper_types::contract_messages::MessagePayload;
@@ -450,7 +451,7 @@ impl CasperVm {
             .into_t()
             .unwrap();
 
-        let result = self.deploy_contract(&wasm_path, &init_args);
+        let result = self.deploy_wasm(&wasm_path, &init_args);
         if let Some(error) = result {
             let odra_error = parse_error(error);
             self.error = Some(odra_error.clone());
@@ -459,6 +460,26 @@ impl CasperVm {
             let package_hash = self.package_hash_from_name(&package_hash_key_name);
             self.collect_messages();
             package_hash.into()
+        }
+    }
+
+    /// Upgrades an existing contract with the specified name, initialisation arguments, and entry points caller.
+    pub fn upgrade_contract(
+        &mut self,
+        name: &str,
+        contract_to_upgrade: Address,
+        upgrade_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCaller
+    ) -> Address {
+        let wasm_path = format!("{}.wasm", name);
+        let result = self.deploy_wasm(&wasm_path, &upgrade_args);
+        if let Some(error) = result {
+            let odra_error = parse_error(error);
+            self.error = Some(odra_error.clone());
+            panic!("Revert: Contract deploy failed {:?}", odra_error);
+        } else {
+            self.collect_messages();
+            contract_to_upgrade
         }
     }
 
@@ -728,11 +749,7 @@ impl CasperVm {
         }
     }
 
-    fn deploy_contract(
-        &mut self,
-        wasm_path: &str,
-        args: &RuntimeArgs
-    ) -> Option<engine_state::Error> {
+    fn deploy_wasm(&mut self, wasm_path: &str, args: &RuntimeArgs) -> Option<engine_state::Error> {
         self.error = None;
         let session_code = PathBuf::from(wasm_path);
         let deploy_item = DeployItemBuilder::new()
@@ -854,8 +871,8 @@ fn parse_error(err: engine_state::Error) -> OdraError {
                 x if x == ExecutionError::ReentrantCall.code() => {
                     OdraError::ExecutionError(ExecutionError::ReentrantCall)
                 }
-                x if x == ExecutionError::ContractAlreadyInstalled.code() => {
-                    OdraError::ExecutionError(ExecutionError::ContractAlreadyInstalled)
+                x if x == ExecutionError::CannotOverrideKeys.code() => {
+                    OdraError::ExecutionError(ExecutionError::CannotOverrideKeys)
                 }
                 x if x == ExecutionError::UnknownConstructor.code() => {
                     OdraError::ExecutionError(ExecutionError::UnknownConstructor)

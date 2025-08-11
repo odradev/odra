@@ -70,7 +70,7 @@ fn struct_entrypoints_expr(ir: &ModuleImplIR) -> syn::Result<syn::Expr> {
                 syn::ReturnType::Type(_, ty) => utils::expr::as_cl_type(&ty)
             };
             let ty = f
-                .is_constructor()
+                .is_restricted()
                 .then(utils::ty::entry_point_def_ty_constructor)
                 .unwrap_or_else(utils::ty::entry_point_def_ty_public);
             let is_payable_attr = f.is_payable().then(utils::ty::entry_point_def_attr_payable);
@@ -128,6 +128,16 @@ mod test {
                     odra::prelude::vec![
                         odra::contract_def::Entrypoint {
                             name: odra::prelude::string::String::from("init"),
+                            args: odra::prelude::vec![
+                                odra::args::odra_argument::<Option<U256> >("total_supply")
+                            ],
+                            is_mutable: true,
+                            return_ty: <() as odra::casper_types::CLTyped>::cl_type(),
+                            ty: odra::contract_def::EntrypointType::Constructor,
+                            attributes: odra::prelude::vec![]
+                        },
+                        odra::contract_def::Entrypoint {
+                            name: odra::prelude::string::String::from("upgrade"),
                             args: odra::prelude::vec![
                                 odra::args::odra_argument::<Option<U256> >("total_supply")
                             ],

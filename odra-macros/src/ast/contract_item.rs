@@ -20,6 +20,12 @@ impl TryFrom<&'_ ModuleImplIR> for ContractItem {
             true => module.init_args_ident()?.into(),
             false => parse_quote!(odra::host::NoArgs)
         };
+
+        let has_upgrade_args = module.upgrader().map(|c| c.has_args()).unwrap_or_default();
+        let upgrade_args: syn::Path = match has_upgrade_args {
+            true => module.upgrade_args_ident()?.into(),
+            false => parse_quote!(odra::host::NoArgs)
+        };
         
         Ok(Self {
             code: quote::quote! {
@@ -31,6 +37,9 @@ impl TryFrom<&'_ ModuleImplIR> for ContractItem {
                     
                     #[cfg(not(target_arch = "wasm32"))]
                     type InitArgs = #init_args;
+                    
+                    #[cfg(not(target_arch = "wasm32"))]
+                    type UpgradeArgs = #upgrade_args;
                 }
             }
         })
@@ -58,6 +67,9 @@ mod test {
 
                 #[cfg(not(target_arch = "wasm32"))]
                 type InitArgs = Erc20InitArgs;
+
+                #[cfg(not(target_arch = "wasm32"))]
+                type UpgradeArgs = Erc20UpgradeArgs;
             }
         };
         test_utils::assert_eq(item, expected);
