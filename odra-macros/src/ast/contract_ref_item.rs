@@ -236,6 +236,26 @@ mod ref_item_tests {
                     )
                 }
 
+                /// Upgrades the contract with the given parameters.
+                pub fn upgrade(&mut self, total_supply: Option<U256>) {
+                    self.env.call_contract(
+                        self.address,
+                        odra::CallDef::new(
+                            odra::prelude::string::String::from("upgrade"),
+                            true,
+                            {
+                                let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                if self.attached_value > odra::casper_types::U512::zero() {
+                                    let _ = named_args.insert("amount", self.attached_value);
+                                }
+                                odra::args::EntrypointArgument::insert_runtime_arg(total_supply.clone(), "total_supply", &mut named_args);
+                                named_args
+                            }
+                        )
+                        .with_amount(self.attached_value),
+                    )
+                }
+
                 /// Returns the total supply of the token.
                 pub fn total_supply(&self) -> U256 {
                     self.env.call_contract(

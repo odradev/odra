@@ -14,6 +14,7 @@ mod config;
 pub mod delegate;
 
 const CONSTRUCTOR_NAME: &str = "init";
+const UPGRADER_NAME: &str = "upgrade";
 
 macro_rules! try_parse {
     ($from:path => $to:ident) => {
@@ -259,6 +260,14 @@ impl ModuleImplIR {
         ))
     }
 
+    pub fn upgrade_args_ident(&self) -> syn::Result<syn::Ident> {
+        let module_ident = self.module_ident()?;
+        Ok(Ident::new(
+            &format!("{}UpgradeArgs", module_ident),
+            module_ident.span()
+        ))
+    }
+
     pub fn schema_mod_ident(&self) -> syn::Result<Ident> {
         let module_ident = self.snake_cased_module_ident()?;
         Ok(Ident::new(
@@ -300,6 +309,13 @@ impl ModuleImplIR {
             .unwrap_or_default()
             .into_iter()
             .find(|f| f.name_str() == CONSTRUCTOR_NAME)
+    }
+
+    pub fn upgrader(&self) -> Option<FnIR> {
+        self.functions()
+            .unwrap_or_default()
+            .into_iter()
+            .find(|f| f.name_str() == UPGRADER_NAME)
     }
 
     pub fn functions(&self) -> syn::Result<Vec<FnIR>> {
@@ -543,8 +559,16 @@ impl FnIR {
         receiver.map(|r| r.mutability.is_some()).unwrap_or_default()
     }
 
+    pub fn is_restricted(&self) -> bool {
+        self.is_constructor() || self.is_upgrader()
+    }
+
     pub fn is_constructor(&self) -> bool {
         self.name_str() == CONSTRUCTOR_NAME
+    }
+
+    pub fn is_upgrader(&self) -> bool {
+        self.name_str() == UPGRADER_NAME
     }
 
     pub fn is_pub(&self) -> bool {

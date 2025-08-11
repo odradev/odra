@@ -1,7 +1,10 @@
 //! A module that provides the interface for interacting with the host environment.
 
+mod deployed_contracts;
+
 use crate::address::Addressable;
 use crate::gas_report::GasReport;
+use crate::host::deployed_contracts::DeployedContract;
 use crate::{
     call_result::CallResult, entry_point_callback::EntryPointsCaller, CallDef, ContractCallResult,
     ContractEnv, EventError, VmError
@@ -94,10 +97,27 @@ pub trait Deployer<R: OdraContract>: Sized {
         init_args: R::InitArgs,
         cfg: InstallConfig
     ) -> OdraResult<R::HostRef>;
+
+    /// Tries to upgrade a contract with given init args.
+    fn try_upgrade(
+        env: &HostEnv,
+        address: Address,
+        init_args: R::UpgradeArgs
+    ) -> OdraResult<R::HostRef>;
+
+    /// Tries to upgrade a contract with given init args and configuration
+    fn try_upgrade_with_cfg(
+        env: &HostEnv,
+        address: Address,
+        upgrade_args: R::UpgradeArgs,
+        cfg: UpgradeConfig
+    ) -> OdraResult<R::HostRef>;
 }
 
 /// A type which can be used as initialization arguments for a contract.
 pub trait InitArgs: Into<RuntimeArgs> {}
+/// A type which can be used as upgrade arguments for a contract.
+pub trait UpgradeArgs: Into<RuntimeArgs> {}
 
 /// Default implementation of [InitArgs]. Should be used when the contract
 /// does not require initialization arguments.
@@ -107,6 +127,8 @@ pub trait InitArgs: Into<RuntimeArgs> {}
 pub struct NoArgs;
 
 impl InitArgs for NoArgs {}
+
+impl UpgradeArgs for NoArgs {}
 
 impl From<NoArgs> for RuntimeArgs {
     fn from(_: NoArgs) -> Self {
@@ -132,13 +154,49 @@ pub struct InstallConfig {
     pub allow_key_override: bool
 }
 
+/// A configuration for upgrading contract.
+///
+/// The configuration every contract upgrade written in Odra expects.
+/// Read more: [https://odra.dev/docs/backends/casper/#wasm-arguments]
+#[cfg(not(target_arch = "wasm32"))]
+pub struct UpgradeConfig {
+    /// Returns the package hash of the contract.
+    ///
+    /// Used to set the `odra_cfg_package_hash_key_name` key at the contract initialization.
+    pub package_named_key: String,
+    /// Create a new upgrade group for the contract. Set it to `true` if you want to upgrade a contract
+    /// Which was deployed using Odra 2.2 or earlier, or not using Odra at all.
+    pub force_create_upgrade_group: bool,
+    /// If true and the key `odra_cfg_package_hash_key_name` already exists, it should be overwritten.
+    pub allow_key_override: bool
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 impl InstallConfig {
-    fn new<T: HasIdent>(is_upgradable: bool, allow_key_override: bool) -> Self {
+    /// Returns new InstallConfig
+    pub fn new<T: HasIdent>(is_upgradable: bool, allow_key_override: bool) -> Self {
         InstallConfig {
             package_named_key: T::ident(),
             is_upgradable,
             allow_key_override
+        }
+    }
+
+    /// Returns new InstallConfig configured for default upgradable contract
+    pub fn upgradable<T: HasIdent>() -> Self {
+        InstallConfig::new::<T>(true, true)
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl UpgradeConfig {
+    /// Returns new UpgradeConfig with default values.
+    /// It is by default upgradable and allows key override.
+    pub fn new<T: HasIdent>() -> Self {
+        UpgradeConfig {
+            package_named_key: T::ident(),
+            force_create_upgrade_group: false,
+            allow_key_override: true
         }
     }
 }
@@ -195,6 +253,7 @@ impl<R: OdraContract> Deployer<R> for R {
 
         let mut init_args = init_args.into();
         init_args.insert(consts::IS_UPGRADABLE_ARG, cfg.is_upgradable)?;
+        init_args.insert(consts::IS_UPGRADE_ARG, false)?;
         init_args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, cfg.allow_key_override)?;
         init_args.insert(
             consts::PACKAGE_HASH_KEY_NAME_ARG,
@@ -203,6 +262,49 @@ impl<R: OdraContract> Deployer<R> for R {
 
         let address = env.new_contract(&contract_ident, init_args, caller)?;
         Ok(R::HostRef::new(address, env.clone()))
+    }
+
+    fn try_upgrade(
+        env: &HostEnv,
+        contract_to_upgrade: Address,
+        upgrade_args: <R as OdraContract>::UpgradeArgs
+    ) -> OdraResult<<R as OdraContract>::HostRef> {
+        Self::try_upgrade_with_cfg(
+            env,
+            contract_to_upgrade,
+            upgrade_args,
+            UpgradeConfig::new::<<R as OdraContract>::HostRef>()
+        )
+    }
+
+    fn try_upgrade_with_cfg(
+        env: &HostEnv,
+        contract_to_upgrade: Address,
+        upgrade_args: <R as OdraContract>::UpgradeArgs,
+        cfg: UpgradeConfig
+    ) -> OdraResult<<R as OdraContract>::HostRef> {
+        let mut upgrade_args = upgrade_args.into();
+        upgrade_args.insert(consts::IS_UPGRADE_ARG, true)?;
+        upgrade_args.insert(
+            consts::PACKAGE_HASH_TO_UPGRADE_ARG,
+            contract_to_upgrade.value()
+        )?;
+        upgrade_args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, cfg.allow_key_override)?;
+        upgrade_args.insert(
+            consts::PACKAGE_HASH_KEY_NAME_ARG,
+            format!("{}_package_hash", cfg.package_named_key)
+        )?;
+        upgrade_args.insert(consts::CREATE_UPGRADE_GROUP, cfg.force_create_upgrade_group)?;
+        let contract_ident = R::HostRef::ident();
+        let entry_points_caller = R::HostRef::entry_points_caller(env);
+
+        let address = env.upgrade_contract(
+            &contract_ident,
+            contract_to_upgrade,
+            upgrade_args,
+            entry_points_caller
+        )?;
+        Ok(HostRef::new(address, env.clone()))
     }
 }
 
@@ -287,6 +389,16 @@ pub trait HostContext {
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address>;
 
+    /// Upgrades an existing contract with a new one with given upgrade arguments and new entry
+    /// points caller.
+    fn upgrade_contract(
+        &self,
+        name: &str,
+        contract_to_upgrade: Address,
+        upgrade_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCaller
+    ) -> OdraResult<Address>;
+
     /// Registers an existing contract with the specified address, name, and entry points caller.
     fn register_contract(
         &self,
@@ -322,10 +434,7 @@ pub trait HostContext {
 pub struct HostEnv {
     backend: Rc<RefCell<dyn HostContext>>,
     last_call_result: Rc<RefCell<Option<CallResult>>>,
-    deployed_contracts: Rc<RefCell<Vec<Address>>>,
-    events_count: Rc<RefCell<BTreeMap<Address, u32>>>, // contract_address -> events_count
-    native_events_count: Rc<RefCell<BTreeMap<Address, u32>>>, // contract_address -> events_count
-    events_initialized: Rc<RefCell<BTreeMap<Address, bool>>>,
+    deployed_contracts: Rc<RefCell<BTreeMap<Address, DeployedContract>>>,
     captures_events: Rc<RefCell<bool>>
 }
 
@@ -335,11 +444,8 @@ impl HostEnv {
         HostEnv {
             backend,
             last_call_result: RefCell::new(None).into(),
-            deployed_contracts: RefCell::new(vec![]).into(),
-            events_count: Rc::new(RefCell::new(Default::default())),
-            native_events_count: Rc::new(RefCell::new(Default::default())),
-            events_initialized: Rc::new(RefCell::new(Default::default())),
-            captures_events: Rc::new(RefCell::new(false))
+            deployed_contracts: RefCell::new(Default::default()).into(),
+            captures_events: Rc::new(RefCell::new(true))
         }
     }
 
@@ -348,8 +454,8 @@ impl HostEnv {
         *self.captures_events.borrow_mut() = captures;
         if captures {
             // Initialize events for all deployed contracts if capturing is enabled
-            for contract in self.deployed_contracts.borrow().iter() {
-                self.init_events(contract);
+            for (contract_address, _) in self.deployed_contracts.borrow().iter() {
+                self.init_events(contract_address);
             }
         }
     }
@@ -375,13 +481,14 @@ impl HostEnv {
         backend.set_caller(address)
     }
 
-    /// Advances the block time by the specified time difference.
+    /// Advances the block time by the specified time difference in milliseconds.
     pub fn advance_block_time(&self, time_diff: u64) {
         let backend = self.backend.borrow();
         backend.advance_block_time(time_diff)
     }
 
-    /// Advances the block time by the specified time difference and processes auctions.
+    /// Advances the block time by the specified time difference in milliseconds
+    /// and processes auctions.
     pub fn advance_with_auctions(&self, time_diff: u64) {
         let backend = self.backend.borrow();
         backend.advance_with_auctions(time_diff);
@@ -436,18 +543,45 @@ impl HostEnv {
         init_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address> {
-        let backend = self.backend.borrow();
-        let deployed_contract = backend.new_contract(name, init_args, entry_points_caller)?;
+        // Filter "upgrade" from EntryPointsCaller
+        let mut entry_points_caller = entry_points_caller.clone();
+        entry_points_caller.remove_entry_point("upgrade");
 
-        self.deployed_contracts.borrow_mut().push(deployed_contract);
-        self.events_count.borrow_mut().insert(deployed_contract, 0);
-        self.native_events_count
+        let backend = self.backend.borrow();
+        let contract_address = backend.new_contract(name, init_args, entry_points_caller)?;
+
+        self.deployed_contracts
             .borrow_mut()
-            .insert(deployed_contract, 0);
-        self.events_initialized
-            .borrow_mut()
-            .insert(deployed_contract, true);
-        Ok(deployed_contract)
+            .insert(contract_address, DeployedContract::new(contract_address));
+        Ok(contract_address)
+    }
+
+    /// Upgrades an existing contract with a new one with given upgrade arguments and new entry
+    /// points caller.
+    pub fn upgrade_contract(
+        &self,
+        name: &str,
+        contract_to_upgrade: Address,
+        upgrade_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCaller
+    ) -> OdraResult<Address> {
+        // Filter "init" from EntryPointsCaller
+        let mut entry_points_caller = entry_points_caller.clone();
+        entry_points_caller.remove_entry_point("init");
+
+        let backend = self.backend.borrow();
+        let upgraded_contract = backend.upgrade_contract(
+            name,
+            contract_to_upgrade,
+            upgrade_args,
+            entry_points_caller
+        )?;
+        let mut contracts = self.deployed_contracts.borrow_mut();
+        let contract = contracts.get_mut(&upgraded_contract).unwrap();
+        contract.current_version += 1;
+        // CES events are intact, but native events are connected to a contract, not a package.
+        contract.native_events_count = 0;
+        Ok(upgraded_contract)
     }
 
     /// Registers an existing contract with the specified address, name and entry points caller.
@@ -460,7 +594,9 @@ impl HostEnv {
     ) {
         let backend = self.backend.borrow();
         backend.register_contract(address, contract_name, entry_points_caller);
-        self.deployed_contracts.borrow_mut().push(address);
+        self.deployed_contracts
+            .borrow_mut()
+            .insert(address, DeployedContract::new(address));
     }
 
     /// Calls a contract at the specified address with the given call definition.
@@ -486,8 +622,10 @@ impl HostEnv {
         call_def: CallDef,
         use_proxy: bool
     ) -> OdraResult<Bytes> {
-        let backend = self.backend.borrow();
-        let call_result = backend.call_contract(&address, call_def, use_proxy);
+        let call_result = {
+            let backend = self.backend.borrow();
+            backend.call_contract(&address, call_def, use_proxy)
+        };
 
         let mut events_map: BTreeMap<Address, Vec<Bytes>> = BTreeMap::new();
         let mut native_events_map: BTreeMap<Address, Vec<Bytes>> = BTreeMap::new();
@@ -495,17 +633,17 @@ impl HostEnv {
         let captures_events = *self.captures_events.borrow();
         if captures_events {
             // Go through all contracts and collect their events
-            self.deployed_contracts
-                .borrow()
-                .iter()
-                .for_each(|contract_address| {
-                    let events = self.last_events(contract_address);
-                    let native_events = self.last_native_events(contract_address);
+            self.deployed_contracts.borrow_mut().iter_mut().for_each(
+                |(contract_address, contract)| {
+                    let events = self.last_events(contract);
+                    let native_events = self.last_native_events(contract);
                     events_map.insert(*contract_address, events);
                     native_events_map.insert(*contract_address, native_events);
-                });
+                }
+            );
         }
 
+        let backend = self.backend.borrow();
         let last_call_gas_cost = backend.last_call_gas_cost();
 
         self.last_call_result.replace(Some(CallResult::new(
@@ -802,56 +940,42 @@ impl HostEnv {
         backend.transfer(to, amount)
     }
 
-    fn last_events(&self, contract_address: &Address) -> Vec<Bytes> {
-        let mut old_count_binding = self.events_count.borrow_mut();
-        let old_count = *old_count_binding
-            .get(contract_address)
-            .expect("Contract address not found in events count");
-        let new_count = self.events_count(contract_address);
+    fn last_events(&self, contract: &mut DeployedContract) -> Vec<Bytes> {
+        let old_count = contract.events_count;
+        let new_count = self.events_count(&contract.address);
         let mut events = vec![];
         for count in old_count..new_count {
-            let event = self.get_event_bytes(contract_address, count).unwrap();
+            let event = self.get_event_bytes(&contract.address, count).unwrap();
             events.push(event);
         }
 
-        old_count_binding.insert(*contract_address, new_count);
+        contract.events_count = new_count;
         events
     }
 
-    fn last_native_events(&self, contract_address: &Address) -> Vec<Bytes> {
-        let mut old_count_binding = self.native_events_count.borrow_mut();
-        let old_count = *old_count_binding.get(contract_address).unwrap();
-        let new_count = self.native_events_count(contract_address);
+    fn last_native_events(&self, contract: &mut DeployedContract) -> Vec<Bytes> {
+        let old_count = contract.native_events_count;
+        let new_count = self.native_events_count(&contract.address);
         let mut events = vec![];
         for count in old_count..new_count {
             let event = self
-                .get_native_event_bytes(contract_address, count)
+                .get_native_event_bytes(&contract.address, count)
                 .unwrap();
             events.push(event);
         }
 
-        old_count_binding.insert(*contract_address, new_count);
+        contract.native_events_count = new_count;
         events
     }
 
     fn init_events(&self, contract_address: &Address) {
-        let events_initialized = self
-            .events_initialized
-            .borrow()
-            .get(contract_address)
-            .copied()
-            .unwrap_or(false);
-        if !events_initialized {
-            self.events_count
-                .borrow_mut()
-                .insert(*contract_address, self.events_count(contract_address));
-            self.native_events_count.borrow_mut().insert(
-                *contract_address,
-                self.native_events_count(contract_address)
-            );
-            self.events_initialized
-                .borrow_mut()
-                .insert(*contract_address, true);
+        let mut contracts = self.deployed_contracts.borrow_mut();
+        let contract = contracts.get_mut(contract_address).unwrap();
+
+        if !contract.events_initialized {
+            contract.events_count = self.events_count(contract_address);
+            contract.native_events_count = self.native_events_count(contract_address);
+            contract.events_initialized = true;
         }
     }
 }
@@ -910,6 +1034,8 @@ mod test {
         type ContractRef = MockTestRef;
 
         type InitArgs = NoArgs;
+
+        type UpgradeArgs = NoArgs;
     }
 
     mock! {

@@ -36,6 +36,10 @@ impl HostContext for OdraVmHost {
         self.vm.borrow().get_validator(index)
     }
 
+    fn remove_validator(&self, index: usize) {
+        self.vm.borrow().remove_validator(index);
+    }
+
     fn balance_of(&self, address: &Address) -> U512 {
         self.vm.borrow().balance_of(address)
     }
@@ -46,6 +50,18 @@ impl HostContext for OdraVmHost {
 
     fn advance_with_auctions(&self, time_diff: u64) {
         self.vm.borrow().advance_with_auctions(time_diff)
+    }
+
+    fn auction_delay(&self) -> u64 {
+        self.vm.borrow().auction_delay()
+    }
+
+    fn unbonding_delay(&self) -> u64 {
+        self.vm.borrow().unbonding_delay()
+    }
+
+    fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
+        self.vm.borrow().delegated_amount(delegator, validator)
     }
 
     fn block_time(&self) -> u64 {
@@ -101,10 +117,10 @@ impl HostContext for OdraVmHost {
         init_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address> {
-        let address = self
-            .vm
-            .borrow()
-            .register_contract(name, entry_points_caller.clone());
+        let address =
+            self.vm
+                .borrow()
+                .new_contract(name, init_args.clone(), entry_points_caller.clone());
 
         if entry_points_caller
             .entry_points()
@@ -114,6 +130,36 @@ impl HostContext for OdraVmHost {
             self.call_contract(
                 &address,
                 CallDef::new(String::from("init"), true, init_args),
+                false
+            )?;
+            self.vm.borrow().post_install(address);
+        }
+
+        Ok(address)
+    }
+
+    fn upgrade_contract(
+        &self,
+        name: &str,
+        contract_to_upgrade: Address,
+        upgrade_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCaller
+    ) -> OdraResult<Address> {
+        let address = self.vm.borrow().upgrade_contract(
+            name,
+            contract_to_upgrade,
+            upgrade_args.clone(),
+            entry_points_caller.clone()
+        );
+
+        if entry_points_caller
+            .entry_points()
+            .iter()
+            .any(|ep| ep.name == "upgrade")
+        {
+            self.call_contract(
+                &address,
+                CallDef::new(String::from("upgrade"), true, upgrade_args),
                 false
             )?;
             self.vm.borrow().post_install(address);
@@ -158,22 +204,6 @@ impl HostContext for OdraVmHost {
         self.vm
             .borrow()
             .checked_transfer_tokens(&caller, &to, &amount)
-    }
-
-    fn auction_delay(&self) -> u64 {
-        self.vm.borrow().auction_delay()
-    }
-
-    fn unbonding_delay(&self) -> u64 {
-        self.vm.borrow().unbonding_delay()
-    }
-
-    fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
-        self.vm.borrow().delegated_amount(delegator, validator)
-    }
-
-    fn remove_validator(&self, index: usize) {
-        self.vm.borrow().remove_validator(index);
     }
 }
 

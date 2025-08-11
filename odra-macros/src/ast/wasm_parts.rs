@@ -105,9 +105,13 @@ struct CallFnItem {
     #[syn(in = braces)]
     schemas_init_stmt: syn::Stmt,
     #[syn(in = braces)]
+    exec_env_stmt: syn::Stmt,
+    #[syn(in = braces)]
+    is_upgrade_stmt: syn::Stmt,
+    #[syn(in = braces)]
     runtime_args_stmt: syn::Stmt,
     #[syn(in = braces)]
-    install_contract_stmt: syn::Stmt
+    install_or_upgrade_stmt: syn::Stmt
 }
 
 impl TryFrom<&'_ ModuleImplIR> for CallFnItem {
@@ -119,22 +123,46 @@ impl TryFrom<&'_ ModuleImplIR> for CallFnItem {
         let ident_schemas = utils::ident::schemas();
         let ty_args = utils::ty::runtime_args();
         let ident_entry_points = utils::ident::entry_points();
+        let exec_env_stmt : syn::Stmt = parse_quote!(
+            let exec_env = {
+                let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
+                let env_rc = Rc::new(env);
+                odra::ExecutionEnv::new(env_rc)
+            };
+        );
+        let is_upgrade_stmt: syn::Stmt = parse_quote!(
+            let is_upgrade = exec_env.get_named_arg::<bool>("odra_cfg_is_upgrade");
+        );
         let runtime_args_expr: syn::Expr = match module.constructor() {
             Some(f) => {
                 let arg_block = fn_utils::runtime_args_block(&f, wasm_parts_utils::insert_arg_stmt);
-                parse_quote!(let #ident_args = {
-                    let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
-                    let env_rc = Rc::new(env);
-                    let exec_env = odra::ExecutionEnv::new(env_rc);
-
+                parse_quote!({
                     Some(#arg_block)
                 })
             }
-            None => parse_quote!(let #ident_args = Option::<#ty_args>::None)
+            None => parse_quote!(Option::<#ty_args>::None)
         };
+
+        let upgrade_args_expr: syn::Expr = match module.upgrader() {
+            Some(f) => {
+                let arg_block = fn_utils::runtime_args_block(&f, wasm_parts_utils::insert_arg_stmt);
+                parse_quote!({
+                    Some(#arg_block)
+                })
+            }
+            None => parse_quote!(Option::<#ty_args>::None)
+        };
+
+        let args_stmt: syn::Stmt = parse_quote!(
+            let #ident_args = if is_upgrade {
+                #upgrade_args_expr
+            } else {
+                #runtime_args_expr
+            };
+        );
         let events_expr = utils::expr::event_schemas(&module_ident);
         let expr_new_schemas = utils::expr::schemas(&events_expr);
-        let install_contract_stmt = utils::stmt::install_contract(
+        let install_or_upgrade_stmt = utils::stmt::install_or_upgrade(
             parse_quote!(#ident_entry_points()),
             parse_quote!(#ident_schemas),
             parse_quote!(#ident_args)
@@ -145,8 +173,10 @@ impl TryFrom<&'_ ModuleImplIR> for CallFnItem {
             sig: parse_quote!(fn call()),
             braces: Default::default(),
             schemas_init_stmt: parse_quote!(let #ident_schemas = #expr_new_schemas;),
-            runtime_args_stmt: parse_quote!(#runtime_args_expr;),
-            install_contract_stmt
+            exec_env_stmt,
+            is_upgrade_stmt,
+            runtime_args_stmt: args_stmt,
+            install_or_upgrade_stmt
         })
     }
 }
@@ -294,6 +324,15 @@ mod test {
 
                     ));
                     entry_points.add_entry_point(odra::casper_types::EntityEntryPoint::new(
+                        "upgrade",
+                        vec![odra::args::parameter::<Option<U256> >("total_supply")].into_iter().filter_map(|x| x).collect(),
+                        <() as odra::casper_types::CLTyped>::cl_type(),
+                        odra::casper_types::EntryPointAccess::Groups(vec![odra::casper_types::Group::new("upgrader_group")]),
+                                                        odra::casper_types::EntryPointType::Called,
+                                odra::casper_types::EntryPointPayment::Caller,
+
+                    ));
+                    entry_points.add_entry_point(odra::casper_types::EntityEntryPoint::new(
                         "total_supply",
                         vec![],
                         <U256 as odra::casper_types::CLTyped>::cl_type(),
@@ -353,23 +392,40 @@ mod test {
                     let schemas = odra::casper_event_standard::Schemas(
                         <Erc20 as odra::contract_def::HasEvents>::event_schemas()
                     );
-
-                    let named_args = {
+                    let exec_env = {
                         let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
                         let env_rc = Rc::new(env);
-                        let exec_env = odra::ExecutionEnv::new(env_rc);
-
-                        Some({
-                            let mut named_args = odra::casper_types::RuntimeArgs::new();
-                            odra::args::EntrypointArgument::insert_runtime_arg(
-                                exec_env.get_named_arg::<Option<U256>>("total_supply"),
-                                "total_supply",
-                                &mut named_args
-                            );
-                            named_args
-                        })
+                        odra::ExecutionEnv::new(env_rc)
                     };
-                    odra::odra_casper_wasm_env::host_functions::install_contract(
+                    let is_upgrade = exec_env.get_named_arg::<bool>("odra_cfg_is_upgrade");
+
+                    let named_args = if is_upgrade {
+                        {
+                            Some({
+                                let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                odra::args::EntrypointArgument::insert_runtime_arg(
+                                    exec_env.get_named_arg::<Option<U256>>("total_supply"),
+                                    "total_supply",
+                                    &mut named_args,
+                                );
+                                named_args
+                            })
+                        }
+                        } else {
+                        {
+                            Some({
+                                let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                odra::args::EntrypointArgument::insert_runtime_arg(
+                                    exec_env.get_named_arg::<Option<U256>>("total_supply"),
+                                    "total_supply",
+                                    &mut named_args,
+                                );
+                                named_args
+                            })
+                        }
+                    };
+
+                    odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
                         entry_points(),
                         schemas,
                         named_args
@@ -379,6 +435,11 @@ mod test {
                 #[no_mangle]
                 fn init() {
                     __erc20_exec_parts::execute_init(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                }
+
+                #[no_mangle]
+                fn upgrade() {
+                    __erc20_exec_parts::execute_upgrade(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
 
                 #[no_mangle]
@@ -455,8 +516,18 @@ mod test {
                     let schemas = odra::casper_event_standard::Schemas(
                         <Erc20 as odra::contract_def::HasEvents>::event_schemas()
                     );
-                    let named_args = Option::<odra::casper_types::RuntimeArgs>::None;
-                    odra::odra_casper_wasm_env::host_functions::install_contract(
+                    let exec_env = {
+                        let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
+                        let env_rc = Rc::new(env);
+                        odra::ExecutionEnv::new(env_rc)
+                    };
+                    let is_upgrade = exec_env.get_named_arg::<bool>("odra_cfg_is_upgrade");
+                    let named_args = if is_upgrade {
+                        Option::<odra::casper_types::RuntimeArgs>::None
+                    } else {
+                        Option::<odra::casper_types::RuntimeArgs>::None
+                    };
+                    odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
                         entry_points(),
                         schemas,
                         named_args
@@ -561,8 +632,18 @@ mod test {
                     let schemas = odra::casper_event_standard::Schemas(
                         <Erc20 as odra::contract_def::HasEvents>::event_schemas()
                     );
-                    let named_args = Option::<odra::casper_types::RuntimeArgs>::None;
-                    odra::odra_casper_wasm_env::host_functions::install_contract(
+                    let exec_env = {
+                        let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
+                        let env_rc = Rc::new(env);
+                        odra::ExecutionEnv::new(env_rc)
+                    };
+                    let is_upgrade = exec_env.get_named_arg::<bool>("odra_cfg_is_upgrade");
+                    let named_args = if is_upgrade {
+                        Option::<odra::casper_types::RuntimeArgs>::None
+                    } else {
+                        Option::<odra::casper_types::RuntimeArgs>::None
+                    };
+                    odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
                         entry_points(),
                         schemas,
                         named_args
