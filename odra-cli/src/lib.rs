@@ -38,3 +38,24 @@ pub mod deploy {
     //! and write metadata to the container.
     pub use crate::cmd::{DeployError as Error, DeployScript};
 }
+
+#[macro_export]
+macro_rules! cspr {
+    ($val:literal) => {{
+        const MOTES_PER_CSPR: u64 = 1_000_000_000;
+        ($val as f64 * MOTES_PER_CSPR as f64) as u64
+    }};
+    ($val:expr) => {{
+        const MOTES_PER_CSPR: u64 = 1_000_000_000;
+        let parsed: f64 = {
+            if let Some(s) = $val.as_ref().downcast_ref::<&str>() {
+                s.parse().expect("Invalid number string")
+            } else if let Some(s) = $val.as_ref().downcast_ref::<String>() {
+                s.parse().expect("Invalid number string")
+            } else {
+                $val as f64
+            }
+        };
+        (parsed * MOTES_PER_CSPR as f64) as u64
+    }};
+}

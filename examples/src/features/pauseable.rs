@@ -55,6 +55,7 @@ mod test {
     #[test]
     fn pause_works() {
         let test_env = odra_test::env();
+        test_env.set_captures_events(true);
         let mut contract = PauseableCounter::deploy(&test_env, NoArgs);
         let caller = test_env.get_account(0);
 
