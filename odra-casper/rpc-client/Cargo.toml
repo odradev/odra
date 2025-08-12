@@ -10,10 +10,9 @@ repository = { workspace = true }
 
 [dependencies]
 odra-core = { workspace = true }
-casper-types = { workspace = true, features = ["std-fs-io"] }
+casper-types = { workspace = true }
 odra-casper-client = { workspace = true }
 project-root = { workspace = true }
-
 serde_json = { version = "1.0", features = ["raw_value"] }
 itertools = "0.10.5"
 dotenv = "0.15.0"
@@ -23,3 +22,8 @@ base16 = { workspace = true }
 tokio = { workspace = true, features = ["rt"] }
 toml = "0.8.20"
 rand = "0.8.5"
+reqwest = "0.12.23"
+
+[features]
+default = []
+std-fs-io = ["odra-casper-client/std-fs-io"]

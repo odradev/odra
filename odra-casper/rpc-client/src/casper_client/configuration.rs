@@ -24,6 +24,7 @@ pub struct CasperClientConfiguration {
 }
 
 impl CasperClientConfiguration {
+    #[cfg(feature = "std-fs-io")]
     pub fn from_env() -> Self {
         // Check for additional .env file
         let additional_env_file = std::env::var(ENV_LIVENET_ENV_FILE);
@@ -56,6 +57,37 @@ impl CasperClientConfiguration {
         }
     }
 
+    #[cfg(not(feature = "std-fs-io"))]
+    pub fn from_env() -> Self {
+        // Check for additional .env file
+        let additional_env_file = std::env::var(ENV_LIVENET_ENV_FILE);
+
+        if let Ok(additional_env_file) = additional_env_file {
+            let filename = PathBuf::from(additional_env_file).with_extension("env");
+            dotenv::from_filename(filename).ok();
+        }
+
+        // Load .env
+        dotenv::dotenv().ok();
+        let ttl = get_optional_env_variable(ENV_TTL)
+            .and_then(|ttl| ttl.parse::<u32>().ok())
+            .unwrap_or(DEFAULT_TTL);
+        let node_address = get_env_variable(ENV_NODE_ADDRESS);
+        let chain_name = get_env_variable(ENV_CHAIN_NAME);
+        let events_url = get_env_variable(ENV_EVENTS_ADDRESS);
+        CasperClientConfiguration {
+            node_address,
+            rpc_id: "1".to_string(),
+            chain_name,
+            secret_keys: vec![],
+            secret_key_paths: vec![],
+            cspr_cloud_auth_token: get_optional_env_variable(ENV_CSPR_CLOUD_AUTH_TOKEN),
+            events_url,
+            ttl
+        }
+    }
+
+    #[cfg(feature = "std-fs-io")]
     /// Loads secret keys from ENV_SECRET_KEY file and ENV_ACCOUNT_PREFIX files.
     /// e.g. ENV_SECRET_KEY=secret_key.pem, ENV_ACCOUNT_PREFIX=account_1_key.pem
     /// This will load secret_key.pem as account 0 and account_1_key.pem as account 1.
