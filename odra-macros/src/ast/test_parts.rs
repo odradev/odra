@@ -20,7 +20,7 @@ impl TryFrom<&'_ ModuleImplIR> for TestPartsReexportItem {
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let test_parts_ident = module.test_parts_mod_ident()?;
         Ok(Self {
-            not_wasm_attr: utils::attr::not_wasm32(),
+            not_wasm_attr: utils::attr::not_wasm32_or_client(),
             reexport_stmt: parse_quote!(pub use #test_parts_ident::*;)
         })
     }
@@ -38,7 +38,7 @@ impl TryFrom<&'_ ModuleImplIR> for PartsModuleItem {
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            attr: utils::attr::not_wasm32(),
+            attr: utils::attr::not_wasm32_or_client(),
             mod_token: Default::default(),
             ident: module.test_parts_mod_ident()?
         })

@@ -30,6 +30,7 @@ odra-build = { path = "../odra-build", version = "2.3.1" }
 [features]
 default = []
 disable-allocator = ["odra/disable-allocator"]
+client = ["odra/client"]
 
 [[bin]]
 name = "odra_modules_build_contract"

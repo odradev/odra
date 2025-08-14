@@ -57,5 +57,5 @@ pub use odra_macros::*;
 #[cfg(not(target_arch = "wasm32"))]
 pub use odra_schema as schema;
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", not(feature = "client")))]
 pub use odra_casper_wasm_env;

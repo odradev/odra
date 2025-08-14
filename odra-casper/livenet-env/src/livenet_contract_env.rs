@@ -221,9 +221,24 @@ impl LivenetContractEnv {
             casper_client,
             callstack,
             contract_register,
-            runtime: Runtime::new().unwrap_or_else(|_| {
-                panic!("Couldn't create tokio runtime");
-            })
+            runtime: new_runtime()
         }))
     }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn new_runtime() -> Runtime {
+    Runtime::new().unwrap_or_else(|_| {
+        panic!("Couldn't create tokio runtime");
+    })
+}
+
+#[cfg(target_arch = "wasm32")]
+pub(crate) fn new_runtime() -> Runtime {
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap_or_else(|_| {
+            panic!("Couldn't create tokio runtime");
+        })
 }

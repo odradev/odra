@@ -1,7 +1,7 @@
 //! Livenet implementation of HostContext for HostEnv.
 
 use crate::error;
-use crate::livenet_contract_env::LivenetContractEnv;
+use crate::livenet_contract_env::{new_runtime, LivenetContractEnv};
 use odra_casper_rpc_client::casper_client::CasperClient;
 use odra_casper_rpc_client::log::info;
 use odra_casper_rpc_client::utils::find_wasm_file_path;
@@ -18,7 +18,6 @@ use odra_core::{ContractContainer, ContractRegister};
 use std::fs;
 use std::sync::RwLock;
 use std::thread::sleep;
-use tokio::runtime::Runtime;
 
 /// LivenetHost struct.
 pub struct LivenetHost {
@@ -71,7 +70,7 @@ impl HostContext for LivenetHost {
     }
 
     fn get_validator(&self, index: usize) -> PublicKey {
-        let rt = Runtime::new().unwrap();
+        let rt = new_runtime();
         let client = self.casper_client.borrow_mut();
         rt.block_on(async { client.get_validator(index).await })
     }
@@ -81,7 +80,7 @@ impl HostContext for LivenetHost {
     }
 
     fn balance_of(&self, address: &Address) -> U512 {
-        let rt = Runtime::new().unwrap();
+        let rt = new_runtime();
         let client = self.casper_client.borrow();
         rt.block_on(async { client.get_balance(address).await })
     }
@@ -100,31 +99,31 @@ impl HostContext for LivenetHost {
     }
 
     fn auction_delay(&self) -> u64 {
-        let rt = Runtime::new().unwrap();
+        let rt = new_runtime();
         let client = self.casper_client.borrow_mut();
         rt.block_on(async { client.auction_delay().await })
     }
 
     fn unbonding_delay(&self) -> u64 {
-        let rt = Runtime::new().unwrap();
+        let rt = new_runtime();
         let client = self.casper_client.borrow_mut();
         rt.block_on(async { client.unbonding_delay().await })
     }
 
     fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
-        let rt = Runtime::new().unwrap();
+        let rt = new_runtime();
         let client = self.casper_client.borrow_mut();
         rt.block_on(async { client.delegated_amount(delegator, validator).await })
     }
 
     fn block_time(&self) -> u64 {
-        let rt = Runtime::new().unwrap();
+        let rt = new_runtime();
         let client = self.casper_client.borrow();
         rt.block_on(async { client.get_block_time().await.unwrap() })
     }
 
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
-        let rt = Runtime::new().unwrap();
+        let rt = new_runtime();
         let client = self.casper_client.borrow();
         rt.block_on(async { client.get_event(contract_address, index).await })
             .map_err(|_| EventError::CouldntExtractEventData)
@@ -140,7 +139,7 @@ impl HostContext for LivenetHost {
     }
 
     fn get_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
-        let rt = Runtime::new().unwrap();
+        let rt = new_runtime();
         let client = self.casper_client.borrow();
         rt.block_on(async { client.events_count(contract_address).await })
             .ok_or(EventError::CouldntExtractEventData)
@@ -182,7 +181,7 @@ impl HostContext for LivenetHost {
             return result;
         }
         let timestamp = Timestamp::now();
-        let rt = Runtime::new().unwrap();
+        let rt = new_runtime();
         let client = self.casper_client.borrow_mut();
         match use_proxy {
             true => rt.block_on(async {
@@ -213,7 +212,7 @@ impl HostContext for LivenetHost {
         let wasm_bytes = fs::read(wasm_path).unwrap();
         let address = {
             let mut client = self.casper_client.borrow_mut();
-            let rt = Runtime::new().unwrap();
+            let rt = new_runtime();
             match rt.block_on(async {
                 client
                     .deploy_wasm(name, init_args, timestamp, wasm_bytes)
@@ -241,7 +240,7 @@ impl HostContext for LivenetHost {
         let wasm_path = find_wasm_file_path(name)?;
         let wasm_bytes = fs::read(wasm_path).unwrap();
         let mut client = self.casper_client.borrow_mut();
-        let rt = Runtime::new().unwrap();
+        let rt = new_runtime();
         match rt.block_on(async {
             client
                 .deploy_wasm(name, upgrade_args, timestamp, wasm_bytes)
@@ -298,7 +297,7 @@ impl HostContext for LivenetHost {
     }
 
     fn transfer(&self, to: Address, amount: U512) -> OdraResult<()> {
-        let rt = Runtime::new().unwrap();
+        let rt = new_runtime();
         let timestamp = Timestamp::now();
         let client = self.casper_client.borrow_mut();
         rt.block_on(async { client.transfer(to, amount, timestamp).await })

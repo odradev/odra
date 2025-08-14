@@ -30,15 +30,15 @@ impl TryFrom<&'_ ModuleImplIR> for ContractItem {
         Ok(Self {
             code: quote::quote! {
                 impl odra::OdraContract for #module_ident {
-                    #[cfg(not(target_arch = "wasm32"))]
+                    #[cfg(any(not(target_arch = "wasm32"), feature = "client"))]
                     type HostRef = #host_ref;
                 
                     type ContractRef = #contract_ref;
                     
-                    #[cfg(not(target_arch = "wasm32"))]
+                    #[cfg(any(not(target_arch = "wasm32"), feature = "client"))]
                     type InitArgs = #init_args;
                     
-                    #[cfg(not(target_arch = "wasm32"))]
+                    #[cfg(any(not(target_arch = "wasm32"), feature = "client"))]
                     type UpgradeArgs = #upgrade_args;
                 }
             }
