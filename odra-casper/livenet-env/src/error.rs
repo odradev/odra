@@ -64,16 +64,6 @@ fn find_error_in_path(path: PathBuf, error_num: u16) -> Option<OdraError> {
     None
 }
 
-#[cfg(target_arch = "wasm32")]
-fn match_error(val: &Value, error_num: u16) -> Option<OdraError> {
-    if val["discriminant"].as_u64() == Some(error_num as u64) {
-        Some(OdraError::user(error_num))
-    } else {
-        None
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 fn match_error(val: &Value, error_num: u16) -> Option<OdraError> {
     if val["discriminant"].as_u64() == Some(error_num as u64) {
         val["name"]

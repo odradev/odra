@@ -25,4 +25,3 @@ missing_docs = "warn"
 [features]
 default = []
 disable-allocator = ["odra-casper-wasm-env/disable-allocator"]
-client = ["odra-core/client"]

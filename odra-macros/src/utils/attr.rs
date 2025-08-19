@@ -3,9 +3,6 @@ use syn::parse_quote;
 pub fn not_wasm32() -> syn::Attribute {
     parse_quote!(#[cfg(not(target_arch = "wasm32"))])
 }
-pub fn not_wasm32_or_client() -> syn::Attribute {
-    parse_quote!(#[cfg(any(not(target_arch = "wasm32"), feature = "client"))])
-}
 
 pub fn wasm32() -> syn::Attribute {
     parse_quote!(#[cfg(target_arch = "wasm32")])

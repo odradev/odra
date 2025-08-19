@@ -9,7 +9,7 @@ use crate::{
     call_result::CallResult, entry_point_callback::EntryPointsCaller, CallDef, ContractCallResult,
     ContractEnv, EventError, VmError
 };
-#[cfg(any(not(target_arch = "wasm32"), feature = "client"))]
+#[cfg(not(target_arch = "wasm32"))]
 use crate::{consts, contract::OdraContract, contract_def::HasIdent};
 use crate::{prelude::*, utils};
 use casper_event_standard::EventInstance;
@@ -67,7 +67,7 @@ pub trait EntryPointsCallerProvider {
 /// on a virtual machine or on a real blockchain.
 ///
 /// The `Deployer` trait provides a simple way to deploy a contract.
-#[cfg(any(not(target_arch = "wasm32"), feature = "client"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub trait Deployer<R: OdraContract>: Sized {
     /// Deploys a contract with given init args.
     ///
@@ -140,7 +140,7 @@ impl From<NoArgs> for RuntimeArgs {
 ///
 /// The configuration every contract written in Odra expects.
 /// Read more: [https://odra.dev/docs/backends/casper/#wasm-arguments]
-#[cfg(any(not(target_arch = "wasm32"), feature = "client"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub struct InstallConfig {
     /// Returns the package hash of the contract.
     ///
@@ -158,8 +158,7 @@ pub struct InstallConfig {
 ///
 /// The configuration every contract upgrade written in Odra expects.
 /// Read more: [https://odra.dev/docs/backends/casper/#wasm-arguments]
-#[cfg(any(not(target_arch = "wasm32"), feature = "client"))]
-
+#[cfg(not(target_arch = "wasm32"))]
 pub struct UpgradeConfig {
     /// Returns the package hash of the contract.
     ///
@@ -172,8 +171,7 @@ pub struct UpgradeConfig {
     pub allow_key_override: bool
 }
 
-#[cfg(any(not(target_arch = "wasm32"), feature = "client"))]
-
+#[cfg(not(target_arch = "wasm32"))]
 impl InstallConfig {
     /// Returns new InstallConfig
     pub fn new<T: HasIdent>(is_upgradable: bool, allow_key_override: bool) -> Self {
@@ -190,8 +188,7 @@ impl InstallConfig {
     }
 }
 
-#[cfg(any(not(target_arch = "wasm32"), feature = "client"))]
-
+#[cfg(not(target_arch = "wasm32"))]
 impl UpgradeConfig {
     /// Returns new UpgradeConfig with default values.
     /// It is by default upgradable and allows key override.
@@ -204,8 +201,7 @@ impl UpgradeConfig {
     }
 }
 
-#[cfg(any(not(target_arch = "wasm32"), feature = "client"))]
-
+#[cfg(not(target_arch = "wasm32"))]
 impl<R: OdraContract> Deployer<R> for R {
     fn deploy(
         env: &HostEnv,
@@ -312,7 +308,7 @@ impl<R: OdraContract> Deployer<R> for R {
     }
 }
 
-#[cfg(any(not(target_arch = "wasm32"), feature = "client"))]
+#[cfg(not(target_arch = "wasm32"))]
 impl<T: OdraContract> HostRefLoader<T::HostRef> for T {
     fn load(env: &HostEnv, address: Address) -> T::HostRef {
         let caller = T::HostRef::entry_points_caller(env);
