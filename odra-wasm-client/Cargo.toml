@@ -21,6 +21,7 @@ serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 hex = { workspace = true }
 gloo-utils = { version = "0.2", default-features = false, features = ["serde"] }
+futures-channel = "0.3.31"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

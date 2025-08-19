@@ -27,3 +27,16 @@ impl Deref for Address {
         &self.0
     }
 }
+
+
+impl From<Address> for _Address {
+    fn from(address: Address) -> Self {
+        address.0
+    }
+}
+
+impl From<_Address> for Address {
+    fn from(address: _Address) -> Self {
+        Address(address)
+    }
+}

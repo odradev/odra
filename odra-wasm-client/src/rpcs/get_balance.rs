@@ -1,5 +1,6 @@
 use crate::{types::address::Address, OdraWasmClient};
 use casper_client::{get_balance, rpcs::results::GetBalanceResult as _GetBalanceResult};
+use casper_types::U512;
 #[cfg(target_arch = "wasm32")]
 use gloo_utils::format::JsValueSerdeExt;
 #[cfg(target_arch = "wasm32")]
@@ -9,7 +10,6 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsError;
 
 // Define a struct to wrap the GetBalanceResult
-#[cfg(target_arch = "wasm32")]
 #[derive(Debug, Deserialize, Clone, Serialize)]
 #[wasm_bindgen]
 pub struct GetBalanceResult(_GetBalanceResult);
@@ -41,6 +41,12 @@ impl GetBalanceResult {
     #[wasm_bindgen(js_name = "toJson")]
     pub fn to_json(&self) -> JsValue {
         JsValue::from_serde(&self.0).unwrap_or(JsValue::null())
+    }
+}
+
+impl GetBalanceResult {
+    pub fn val(&self) -> U512 {
+        self.0.balance_value
     }
 }
 

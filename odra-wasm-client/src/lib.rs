@@ -1,11 +1,25 @@
-use crate::types::verbosity::Verbosity;
+use crate::{livenet_host::LivenetHost, types::verbosity::Verbosity};
 use casper_client::JsonRpcId;
 use casper_types::{bytesrepr::Bytes, Key, StoredValue};
-use odra_core::prelude::Address;
+use odra_core::{host::HostEnv, prelude::Address};
 use wasm_bindgen::prelude::*;
 
+mod livenet_host;
 mod rpcs;
 mod types;
+pub mod js;
+
+#[wasm_bindgen]
+pub fn get_balance(address: crate::types::address::Address) -> String {
+    
+    let env = HostEnv::new(LivenetHost::new(
+        "http://95.165.150.165:7777".to_string(),
+        Verbosity::High
+    ));
+    crate::js::log("Getting balance");
+
+    env.balance_of(&*address).to_string()
+}
 
 #[wasm_bindgen]
 pub struct OdraWasmClient {
