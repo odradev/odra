@@ -3,14 +3,21 @@ use casper_types::{Key, StoredValue};
 
 use crate::OdraWasmClient;
 
-
 impl OdraWasmClient {
-    async fn query_global_state_maybe(&self, key: Key, path: Option<String>) -> Option<StoredValue> {
+    pub(crate) async fn query_global_state(
+        &self,
+        key: Key,
+        path: Option<String>
+    ) -> Option<StoredValue> {
         let path = match path {
             None => vec![],
             Some(string) => vec![string]
         };
-        let digest = self.get_state_root_hash_js_alias().await.ok()?.state_root_hash()?;
+        let digest = self
+            .get_state_root_hash_js_alias()
+            .await
+            .ok()?
+            .state_root_hash()?;
         let result = query_global_state(
             self.rpc_id_typed(),
             self.node_address(),
@@ -25,5 +32,4 @@ impl OdraWasmClient {
             Err(_) => None
         }
     }
-
 }

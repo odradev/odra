@@ -1,6 +1,6 @@
 use casper_client::{
     cli::get_state_root_hash as get_state_root_hash_cli,
-    rpcs::results::GetStateRootHashResult as _GetStateRootHashResult,
+    rpcs::results::GetStateRootHashResult as _GetStateRootHashResult
 };
 use rand::random;
 // #[cfg(target_arch = "wasm32")]
@@ -46,18 +46,21 @@ impl GetStateRootHashResult {
 #[wasm_bindgen]
 impl OdraWasmClient {
     #[wasm_bindgen(js_name = "get_state_root_hash")]
-    pub async fn get_state_root_hash_js_alias(
-        &self
-    ) -> Result<GetStateRootHashResult, JsError> {
+    pub async fn get_state_root_hash_js_alias(&self) -> Result<GetStateRootHashResult, JsError> {
         let random_id = random::<u32>();
-        get_state_root_hash_cli(&random_id.to_string(), self.node_address(), self.verbosity().into(), "")
-            .await
-            .map(|r| GetStateRootHashResult(r.result))
-            .map_err(|_| {
-                JsError::new(&format!(
-                    "Couldn't get state root hash from node: {:?}",
-                    self.node_address()
-                ))
-            })
+        get_state_root_hash_cli(
+            &random_id.to_string(),
+            self.node_address(),
+            self.verbosity().into(),
+            ""
+        )
+        .await
+        .map(|r| GetStateRootHashResult(r.result))
+        .map_err(|_| {
+            JsError::new(&format!(
+                "Couldn't get state root hash from node: {:?}",
+                self.node_address()
+            ))
+        })
     }
 }

@@ -36,7 +36,7 @@ impl From<Verbosity> for _Verbosity {
         match verbosity {
             Verbosity::Low => _Verbosity::Low,
             Verbosity::Medium => _Verbosity::Medium,
-            Verbosity::High => _Verbosity::High,
+            Verbosity::High => _Verbosity::High
         }
     }
 }
@@ -46,7 +46,7 @@ impl From<_Verbosity> for Verbosity {
         match verbosity {
             _Verbosity::Low => Verbosity::Low,
             _Verbosity::Medium => Verbosity::Medium,
-            _Verbosity::High => Verbosity::High,
+            _Verbosity::High => Verbosity::High
         }
     }
 }

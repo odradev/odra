@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use odra_core::prelude::Address as _Address;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
@@ -15,5 +17,13 @@ impl Address {
         _Address::from_str(address)
             .map(Address)
             .map_err(|err| JsError::new(&format!("{err:?}")))
+    }
+}
+
+impl Deref for Address {
+    type Target = _Address;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
