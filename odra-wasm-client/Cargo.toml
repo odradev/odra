@@ -1,0 +1,27 @@
+[package]
+name = "odra-wasm-client"
+description = "Wasm client"
+edition = "2021"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+casper-types = { workspace = true, features = ["datasize"] }
+odra-casper-client = { workspace = true }
+odra-core = { workspace = true }
+wasm-bindgen = "=0.2.100"
+wasm-bindgen-futures = "0.4.50"
+js-sys = "0.3.77"
+rand = "0.8.5"
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+hex = { workspace = true }
+gloo-utils = { version = "0.2", default-features = false, features = ["serde"] }
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+name = "odra_wasm_client"
+path = "src/lib.rs"

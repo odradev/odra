@@ -17,6 +17,7 @@ members = [
     "odra-test",
     "odra-build",
     "odra-bdd",
+    "odra-wasm-client",
 ]
 exclude = [
     "odra-casper/proxy-caller",

@@ -1,0 +1,8 @@
+prepare:
+    cargo install wasm-pack
+
+build:
+    wasm-pack build --target nodejs --release --out-dir pkg-nodejs .
+
+run:
+    cd example && npm run start

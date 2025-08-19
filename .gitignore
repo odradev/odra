@@ -23,3 +23,7 @@ benchmark/gas_report.json
 benchmark/wasm
 .DS_Store
 *.code-workspace
+odra-wasm-client/example/node_modules/**
+odra-wasm-client/example/package-lock.json
+AGENTS.md
+odra-wasm-client/example/index.js
