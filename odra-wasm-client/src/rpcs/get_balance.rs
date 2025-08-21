@@ -1,5 +1,5 @@
 use crate::{types::address::Address, OdraWasmClient};
-use casper_client::{get_balance, rpcs::results::GetBalanceResult as _GetBalanceResult};
+use casper_client::rpcs::results::GetBalanceResult as _GetBalanceResult;
 use casper_types::U512;
 #[cfg(target_arch = "wasm32")]
 use gloo_utils::format::JsValueSerdeExt;
@@ -52,15 +52,11 @@ impl GetBalanceResult {
 
 #[wasm_bindgen]
 impl OdraWasmClient {
-    #[wasm_bindgen(js_name = "get_balance")]
-    pub async fn get_balance_js_alias(
-        &self,
-        address: Address
-    ) -> Result<GetBalanceResult, JsError> {
+    #[wasm_bindgen(js_name = "getBalance")]
+    pub async fn get_balance(&self, address: Address) -> Result<GetBalanceResult, JsError> {
         let state_root_hash = self
-            .get_state_root_hash_js_alias()
+            .get_state_root_hash()
             .await
-            .map(|result| result.state_root_hash())
             .map_err(|err| JsError::new(&format!("Error getting state root hash: {err:?}")))?
             .ok_or(JsError::new("State root hash is None, cannot get balance"))?;
 
@@ -69,11 +65,11 @@ impl OdraWasmClient {
             .await
             .map_err(|err| JsError::new(&err))?;
 
-        let result = get_balance(
-            self.rpc_id_typed(),
+        let result = casper_client::get_balance(
+            self.rpc_id(),
             &self.node_address,
             self.verbosity().into(),
-            state_root_hash.into(),
+            state_root_hash,
             purse
         )
         .await

@@ -4,6 +4,8 @@ use odra_core::prelude::Address as _Address;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
+use crate::types::public_key::PublicKey;
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[wasm_bindgen]
 pub struct Address(_Address);
@@ -28,10 +30,16 @@ impl Deref for Address {
     }
 }
 
-
 impl From<Address> for _Address {
     fn from(address: Address) -> Self {
         address.0
+    }
+}
+
+impl From<PublicKey> for Address {
+    fn from(value: PublicKey) -> Self {
+        let pk: casper_types::PublicKey = value.into();
+        Address(_Address::from(pk))
     }
 }
 

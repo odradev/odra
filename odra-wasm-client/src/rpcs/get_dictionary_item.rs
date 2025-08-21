@@ -1,4 +1,4 @@
-use casper_client::{get_dictionary_item, rpcs::DictionaryItemIdentifier};
+use casper_client::rpcs::DictionaryItemIdentifier;
 use casper_types::{bytesrepr::Bytes, CLTyped, Key};
 use odra_core::prelude::Address;
 
@@ -20,17 +20,16 @@ impl OdraWasmClient {
         };
 
         let state_root_hash = self
-            .get_state_root_hash_js_alias()
+            .get_state_root_hash()
             .await
-            .map(|result| result.state_root_hash())
             .map_err(|err| format!("Error getting state root hash: {err:?}"))?
             .ok_or(format!("State root hash is None, cannot get balance"))?;
 
-        let stored_value = get_dictionary_item(
-            self.rpc_id_typed(),
+        let stored_value = casper_client::get_dictionary_item(
+            self.rpc_id(),
             self.node_address(),
             self.verbosity().into(),
-            state_root_hash.into(),
+            state_root_hash,
             identifier
         )
         .await

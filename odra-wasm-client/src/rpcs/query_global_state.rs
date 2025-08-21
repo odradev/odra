@@ -1,4 +1,4 @@
-use casper_client::{query_global_state, rpcs::GlobalStateIdentifier};
+use casper_client::rpcs::GlobalStateIdentifier;
 use casper_types::{Key, StoredValue};
 
 use crate::OdraWasmClient;
@@ -13,16 +13,12 @@ impl OdraWasmClient {
             None => vec![],
             Some(string) => vec![string]
         };
-        let digest = self
-            .get_state_root_hash_js_alias()
-            .await
-            .ok()?
-            .state_root_hash()?;
-        let result = query_global_state(
-            self.rpc_id_typed(),
+        let digest = self.get_state_root_hash().await.ok().flatten()?;
+        let result = casper_client::query_global_state(
+            self.rpc_id(),
             self.node_address(),
             self.verbosity().into(),
-            GlobalStateIdentifier::StateRootHash(digest.into()),
+            GlobalStateIdentifier::StateRootHash(digest),
             key,
             path
         )

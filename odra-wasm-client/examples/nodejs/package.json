@@ -11,7 +11,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "odra-wasm-client": "file:../pkg-nodejs"
+    "casper-js-sdk": "^5.0.6",
+    "odra-wasm-client": "file:../../pkg-nodejs"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",

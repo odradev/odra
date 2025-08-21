@@ -1,4 +1,11 @@
-use casper_types::{EntityAddr, Key, StoredValue, URef};
+use std::str::FromStr;
+
+use casper_client::cli::TransactionV1Builder;
+use casper_types::{
+    EntityAddr, Key, PricingMode, RuntimeArgs, StoredValue, TimeDiff, Timestamp, Transaction,
+    TransactionHash, TransactionRuntimeParams, URef
+};
+use js_sys::Date;
 use odra_core::prelude::Address;
 
 use crate::OdraWasmClient;
@@ -91,5 +98,73 @@ impl OdraWasmClient {
                 value
             ))
         }
+    }
+
+    pub fn new_call_transaction(
+        &self,
+        caller: Address,
+        contract_address: Address,
+        entry_point: &str,
+        runtime_args: RuntimeArgs,
+        amount: u64,
+    ) -> Option<Transaction> {
+        let transaction_builder = TransactionV1Builder::new_targeting_package(
+            contract_address.as_package_hash().unwrap(),
+            None,
+            entry_point,
+            TransactionRuntimeParams::VmCasperV1
+        );
+        let now = Date::new_0();
+        let now_str = now.to_iso_string().as_string()?;
+        let timestamp = Timestamp::from_str(&now_str).ok()?;
+
+        
+        Some(Transaction::V1(
+            transaction_builder
+                .with_initiator_addr(*caller.as_account_hash().unwrap())
+                .with_ttl(TimeDiff::from_seconds(60))
+                .with_chain_name("casper-test")
+                .with_pricing_mode(PricingMode::PaymentLimited {
+                    payment_amount: amount + 1_000_000_000, //self.gas.as_u64(),
+                    gas_price_tolerance: 5,
+                    standard_payment: true
+                })
+                .with_timestamp(timestamp)
+                .with_runtime_args(runtime_args)
+                .build()
+                .unwrap_or_else(|e| {
+                    crate::js::log(&format!("failed to build call transaction: {:?}", e));
+                    panic!("Failed to build call transaction: {:?}", e)
+                })
+        ))
+    }
+
+    pub(crate) async fn put_transaction(
+        &self,
+        transaction: Transaction
+    ) -> Result<TransactionHash, String> {
+        let response = casper_client::put_transaction(
+            self.rpc_id(),
+            self.node_address(),
+            self.verbosity().into(),
+            transaction
+        )
+        .await;
+
+        let deploy_hash = match response {
+            Ok(r) => r.result.transaction_hash,
+            Err(e) => {
+                return match e {
+                    casper_client::Error::ResponseIsRpcError {
+                        rpc_method, error, ..
+                    } => Err(format!(
+                        "Failed to put transaction via RPC method {}: {}",
+                        rpc_method, error
+                    )),
+                    _ => Err(format!("Failed to put transaction: {}", e))
+                }
+            }
+        };
+        Ok(deploy_hash)
     }
 }
