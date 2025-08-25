@@ -1,7 +1,8 @@
 use crate::{
     js::{casper_wallet_provider, CasperWalletProvider},
     types::{
-        public_key::PublicKey, signature_response::SignatureResponse, transaction::Transaction
+        deploy::Deploy, public_key::PublicKey, signature_response::SignatureResponse,
+        transaction::Transaction
     }
 };
 use gloo_utils::format::JsValueSerdeExt;
@@ -26,6 +27,56 @@ impl CasperWallet {
         CasperWallet {
             provider: casper_wallet_provider()
         }
+    }
+
+    #[deprecated(note = "prefer signTransaction")]
+    #[allow(deprecated)]
+    #[wasm_bindgen(js_name = "signDeploy")]
+    pub async fn sign_deploy(
+        &self,
+        deploy: Deploy,
+        public_key: Option<String>
+    ) -> Result<Deploy, JsError> {
+        let is_connected = self.request_connection().await.is_ok();
+
+        if !is_connected {
+            return Err(JsError::new("Could not connect to the wallet"));
+        }
+
+        let public_key = self.get_public_or_active_key(public_key).await?;
+
+        let deploy_json = deploy
+            .to_json_string()
+            .map_err(|err| JsError::new(&format!("Failed to serialize deploy: {err:?}")))?;
+
+        let sign = JsFuture::from(
+            self.provider
+                .sign(
+                    &format!("{{\"deploy\":{deploy_json}}}"),
+                    &public_key.to_string()
+                )
+                .map_err(|err| JsError::new(&format!("Signing failed: {err:?}")))?
+        )
+        .await
+        .map_err(|err| JsError::new(&format!("Signing failed: {err:?}")))?;
+
+        let signature_response: SignatureResponse = sign
+            .into_serde()
+            .map_err(|err| JsError::new(&format!("Deserialize signature failed: {err:?}")))?;
+
+        if signature_response.is_cancelled() {
+            return Err(JsError::new(&format!(
+                "Could not sign deploy for key {public_key}"
+            )));
+        }
+
+        let signature = format!(
+            "0{}{}",
+            public_key.tag(),
+            signature_response.get_signature_hex()
+        );
+        let signed_deploy = deploy.add_signature(&public_key.to_string(), &signature);
+        Ok(signed_deploy)
     }
 
     #[wasm_bindgen(js_name = "signTransaction")]

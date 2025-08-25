@@ -1,12 +1,10 @@
-use casper_types::{runtime_args, Timestamp, Transaction};
+use casper_types::{bytesrepr::FromBytes, runtime_args};
 use wasm_bindgen::prelude::*;
 
 use crate::{
-    types::{
-        address::Address, bigint::U256, public_key::PublicKey, transaction::{Transaction as JsTransaction, TransactionHash as JsTransactionHash}
-    },
-    wallet::CasperWallet,
-    OdraWasmClient
+    client::OdraWasmClient,
+    types::{address::Address, bigint::U256, transaction::TransactionHash as JsTransactionHash},
+    wallet::CasperWallet
 };
 
 #[wasm_bindgen]
@@ -29,40 +27,58 @@ impl Cep18Client {
 
     #[wasm_bindgen]
     pub async fn approve(
-        &self,
+        &mut self,
         spender: Address,
-        amount: U256
+        amount: U256,
+        gas: Option<u64>
     ) -> Result<JsTransactionHash, JsError> {
-        crate::js::log("starting approval");
-        let node_address = self.wasm_client.node_address();
-        crate::js::log(&format!("Node address: {node_address}"));
-        let caller = self.wallet.get_active_public_key().await?;
-
-        let pk = PublicKey::new(&caller).map_err(|e| JsError::new(&e.to_string()))?;
-        let caller = Address::from(pk);
-        let transaction: Transaction = self.wasm_client.new_call_transaction(
-            *caller,
-            *self.address,
-            "approve",
-            runtime_args! {
-                "spender" => *spender,
-                "amount" => *amount
-            },
-            0,
-        ).ok_or_else(|| JsError::new("Failed to create transaction"))?;
-        crate::js::log("transaction created");
-
-        let signed_transaction: JsTransaction = self
-            .wallet
-            .sign_transaction(transaction.into(), None)
-            .await?;
-
-        crate::js::log("transaction signed");
+        if let Some(gas) = gas {
+            self.wasm_client.set_gas(gas);
+        }
+        if !self.wallet.request_connection().await.is_ok() {
+            return Err(JsError::new("Could not connect to the wallet"));
+        }
 
         self.wasm_client
-            .put_transaction(signed_transaction.into())
+            .call_entry_point(
+                &self.wallet,
+                *self.address,
+                "approve",
+                runtime_args! {
+                    "spender" => *spender,
+                    "amount" => *amount
+                }
+            )
             .await
-            .map(Into::into)
-            .map_err(|e| JsError::new(&e))
+    }
+
+    #[wasm_bindgen]
+    pub async fn decimals(&self) -> Result<u8, JsError> {
+        if !self.wallet.request_connection().await.is_ok() {
+            return Err(JsError::new("Could not connect to the wallet"));
+        }
+        let cl_value = self
+            .wasm_client
+            .call_entry_point_with_proxy(&self.wallet, *self.address, "decimals", runtime_args! {})
+            .await?;
+
+        let result = <u8 as FromBytes>::from_bytes(&cl_value.inner_bytes()[4..])
+            .map_err(|err| JsError::new(&format!("{:?}", err)))?;
+        Ok(result.0)
+    }
+
+    #[wasm_bindgen]
+    pub async fn name(&self) -> Result<String, JsError> {
+        if !self.wallet.request_connection().await.is_ok() {
+            return Err(JsError::new("Could not connect to the wallet"));
+        }
+        let cl_value = self
+            .wasm_client
+            .call_entry_point_with_proxy(&self.wallet, *self.address, "name", runtime_args! {})
+            .await?;
+
+        let result = <String as FromBytes>::from_bytes(&cl_value.inner_bytes()[4..])
+            .map_err(|err| JsError::new(&format!("{:?}", err)))?;
+        Ok(result.0)
     }
 }

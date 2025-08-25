@@ -8,7 +8,7 @@ pub struct SignatureResponse {
     cancelled: bool,
     #[serde(rename = "signatureHex")]
     signature_hex: Option<String>,
-    signature: Option<HashMap<String, u8>>,
+    signature: Option<HashMap<String, u8>>
 }
 
 #[wasm_bindgen]

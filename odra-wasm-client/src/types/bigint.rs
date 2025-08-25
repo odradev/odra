@@ -1,3 +1,4 @@
+use js_sys::BigInt as JsBigInt;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 use wasm_bindgen::prelude::*;
@@ -11,6 +12,21 @@ impl U256 {
     #[wasm_bindgen(constructor)]
     pub fn from_dec_str(value: &str) -> Self {
         U256(casper_types::U256::from_dec_str(value).unwrap())
+    }
+
+    #[wasm_bindgen(js_name = "fromU32")]
+    pub fn from_u32(value: u32) -> Self {
+        U256(casper_types::U256::from(value))
+    }
+
+    #[wasm_bindgen(js_name = "fromBigInt")]
+    pub fn from_js_big_int(value: JsBigInt) -> Self {
+        let v = value
+            .to_string(10)
+            .map(|s| s.as_string())
+            .unwrap_or_default()
+            .unwrap_or_default();
+        Self::from_dec_str(&v)
     }
 }
 

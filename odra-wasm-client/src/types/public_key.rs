@@ -4,7 +4,10 @@ use casper_types::{
 };
 use gloo_utils::format::JsValueSerdeExt;
 use serde::{Deserialize, Serialize};
-use std::{fmt::{Display, Formatter, Result as FmtResult}, ops::Deref};
+use std::{
+    fmt::{Display, Formatter, Result as FmtResult},
+    ops::Deref
+};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]

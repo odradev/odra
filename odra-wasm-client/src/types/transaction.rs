@@ -2,7 +2,8 @@ use core::fmt;
 
 use crate::types::digest::Digest;
 use casper_types::{
-    AsymmetricType, Deploy, Digest as _Digest, Transaction as _Transaction, TransactionHash as _TransactionHash, TransactionV1
+    AsymmetricType, Deploy, Digest as _Digest, Transaction as _Transaction,
+    TransactionHash as _TransactionHash, TransactionV1
 };
 use gloo_utils::format::JsValueSerdeExt;
 use serde::{Deserialize, Serialize};
@@ -12,11 +13,6 @@ use wasm_bindgen::prelude::*;
 #[derive(Debug, Deserialize, Clone, Serialize)]
 #[wasm_bindgen]
 pub struct Transaction(_Transaction);
-
-// const ARGS_MAP_KEY: u16 = 0;
-// const TARGET_MAP_KEY: u16 = 1;
-// const ENTRY_POINT_MAP_KEY: u16 = 2;
-// const DEFAULT_GAS_PRICE_TOLERANCE: u8 = 1;
 
 #[wasm_bindgen]
 impl Transaction {

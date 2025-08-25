@@ -11,10 +11,6 @@ use wasm_bindgen::prelude::*;
 pub struct Digest(_Digest);
 
 impl Digest {
-    // pub fn new(digest_hex_str: &str) -> Result<Digest, Box<SdkError>> {
-    //     Digest::try_from(digest_hex_str).map_err(Box::new)
-    // }
-
     pub fn value(&self) -> [u8; _Digest::LENGTH] {
         self.0.value()
     }
@@ -25,7 +21,6 @@ impl Digest {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 impl Digest {
     #[wasm_bindgen(constructor)]
@@ -118,6 +113,7 @@ impl TryFrom<&str> for Digest {
     }
 }
 
+#[allow(unused)]
 pub trait ToDigest {
     fn to_digest(&self) -> Digest;
     fn is_empty(&self) -> bool;
