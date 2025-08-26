@@ -1,5 +1,6 @@
 use std::ops::Deref;
 
+use casper_types::Key;
 use odra_core::prelude::Address as _Address;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
@@ -16,9 +17,11 @@ impl Address {
     pub fn new(address: &str) -> Result<Address, JsError> {
         use std::str::FromStr;
 
-        _Address::from_str(address)
-            .map(Address)
-            .map_err(|err| JsError::new(&format!("{err:?}")))
+        _Address::from_str(address).map(Address).map_err(|err| {
+            JsError::new(&format!(
+                "Could not create Address from string {address}: {err:?}"
+            ))
+        })
     }
 }
 
@@ -46,5 +49,11 @@ impl From<PublicKey> for Address {
 impl From<_Address> for Address {
     fn from(address: _Address) -> Self {
         Address(address)
+    }
+}
+
+impl From<Key> for Address {
+    fn from(key: Key) -> Self {
+        Address(_Address::try_from(key).unwrap())
     }
 }

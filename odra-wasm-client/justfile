@@ -4,5 +4,8 @@ prepare:
 build:
     wasm-pack build --target nodejs --release --out-dir pkg-nodejs .
 
-run:
-    cd example && npm run start
+build-web:
+    wasm-pack build --target web --out-dir pkg-web .
+
+run-web:
+    cd examples/web && npm run start

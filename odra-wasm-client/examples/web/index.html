@@ -3,7 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Odra WASM Client Example</title>
+    <title>CEP-18 Client</title>
+    <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre-exp.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre-icons.min.css">
+    <style>
+        body {
+            padding: 2rem;
+        }
+        .card {
+            margin-bottom: 1rem;
+        }
+        .card-body {
+            padding: 0.5rem;
+        }
+    </style>
     <script type="importmap">
         {
             "imports": {
@@ -13,8 +27,153 @@
     </script>
 </head>
 <body>
-    <h1>Odra WASM Client Example</h1>
-    <button id="run-button">Run</button>
+    <div class="container">
+        <div class="columns">
+            <div class="column col-12">
+                <h1>CEP-18 Client</h1>
+            </div>
+        </div>
+        <div class="columns">
+            <div class="column col-4">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title h5">Name</div>
+                    </div>
+                    <div class="card-body">
+                        <p><span id="token-name"></span></p>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-primary" id="get-name-button">Get Name</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title h5">Symbol</div>
+                    </div>
+                    <div class="card-body">
+                        <p><span id="token-symbol"></span></p>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-primary" id="get-symbol-button">Get Symbol</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title h5">Decimals</div>
+                    </div>
+                    <div class="card-body">
+                        <p><span id="token-decimals"></span></p>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-primary" id="get-decimals-button">Get Decimals</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title h5">Total Supply</div>
+                    </div>
+                    <div class="card-body">
+                        <p><span id="total-supply"></span></p>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-primary" id="get-total-supply-button">Get Total Supply</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title h5">Balance Of</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label" for="balance-of-address">Address</label>
+                            <input class="form-input" type="text" id="balance-of-address" placeholder="Enter address">
+                        </div>
+                        <p><strong>Balance:</strong> <span id="balance-of-result"></span></p>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-primary" id="balance-of-button">Get Balance</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title h5">Approve</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label" for="approve-spender">Spender</label>
+                            <input class="form-input" type="text" id="approve-spender" placeholder="Enter spender address">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="approve-amount">Amount</label>
+                            <input class="form-input" type="text" id="approve-amount" placeholder="Enter amount">
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-primary" id="approve-button">Approve</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title h5">Transfer</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label" for="transfer-recipient">Recipient</label>
+                            <input class="form-input" type="text" id="transfer-recipient" placeholder="Enter recipient address">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="transfer-amount">Amount</label>
+                            <input class="form-input" type="text" id="transfer-amount" placeholder="Enter amount">
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-primary" id="transfer-button">Transfer</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title h5">Transfer From</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label" for="transfer-from-owner">Owner</label>
+                            <input class="form-input" type="text" id="transfer-from-owner" placeholder="Enter owner address">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="transfer-from-recipient">Recipient</label>
+                            <input class="form-input" type="text" id="transfer-from-recipient" placeholder="Enter recipient address">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="transfer-from-amount">Amount</label>
+                            <input class="form-input" type="text" id="transfer-from-amount" placeholder="Enter amount">
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-primary" id="transfer-from-button">Transfer From</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title h5">Allowance</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label" for="allowance-owner">Owner</label>
+                            <input class="form-input" type="text" id="allowance-owner" placeholder="Enter owner address">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="allowance-spender">Spender</label>
+                            <input class="form-input" type="text" id="allowance-spender" placeholder="Enter spender address">
+                        </div>
+                        <p><strong>Allowance:</strong> <span id="allowance-result"></span></p>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-primary" id="allowance-button">Get Allowance</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <script type="module" src="dist/main.js"></script>
 </body>
 </html>

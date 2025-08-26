@@ -18,8 +18,10 @@ members = [
     "odra-build",
     "odra-bdd",
     "odra-wasm-client",
+    "odra-wasm-client-builder",
 ]
 exclude = [
+    "wasm_client",
     "odra-casper/proxy-caller",
     "templates/blank",
     "templates/full",
@@ -54,7 +56,7 @@ casper-execution-engine = "8.1.0"
 casper-engine-test-support = "8.1.0"
 casper-storage = "2.0.0"
 casper-event-standard = "0.7"
-odra-casper-client = "3.0.1"
+casper-client = { version = "5.0.0", default-features = false }
 blake2 = "0.10.6"
 log = "0.4.20"
 env_logger = "0.11.1"

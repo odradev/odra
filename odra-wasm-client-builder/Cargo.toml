@@ -1,0 +1,20 @@
+[package]
+name = "odra-wasm-client-builder"
+description = "Wasm client"
+edition = "2021"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+odra-schema = { path = "../odra-schema" }
+serde_json = { workspace = true }
+quote = { version = "1.0.33" }
+syn = { version = "2.0.29", features = ["full", "extra-traits"] }
+
+[[bin]]
+name = "main"
+path = "bin/main.rs"
+test = false
