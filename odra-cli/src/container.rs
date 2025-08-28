@@ -10,6 +10,11 @@ use odra::{
 use serde_derive::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::{
+    cmd::args::{DEPLOY_MODE_ARCHIVE, DEPLOY_MODE_OVERRIDE},
+    log
+};
+
 pub const DEPLOYED_CONTRACTS_FILE: &str = "resources/contracts.toml";
 
 #[derive(Error, Debug)]
@@ -33,6 +38,8 @@ pub(crate) trait ContractStorage {
     fn read(&self) -> Result<ContractsData, ContractError>;
     /// Writes the contract data to the storage.
     fn write(&mut self, data: &ContractsData) -> Result<(), ContractError>;
+    /// Creates a backup copy of the contract data.
+    fn backup(&self) -> Result<(), ContractError>;
 }
 
 /// Represents the data structure for storing deployed contracts in a TOML file.
@@ -74,6 +81,15 @@ impl ContractStorage for FileContractStorage {
         let mut file = File::create(&self.file_path).map_err(ContractError::Io)?;
         file.write_all(content.as_bytes())
             .map_err(ContractError::Io)?;
+        Ok(())
+    }
+
+    fn backup(&self) -> Result<(), ContractError> {
+        let mut new_path = self.file_path.with_extension("old");
+        while new_path.exists() {
+            new_path = new_path.with_added_extension("old");
+        }
+        std::fs::copy(&self.file_path, new_path).map_err(ContractError::Io)?;
         Ok(())
     }
 }
@@ -120,6 +136,24 @@ impl DeployedContractsContainer {
                 storage: Box::new(storage)
             }
         }
+    }
+
+    pub fn apply_deploy_mode(&mut self, mode: String) -> Result<(), ContractError> {
+        match mode.as_str() {
+            DEPLOY_MODE_OVERRIDE => {
+                self.data.contracts.clear();
+                self.storage.write(&self.data)?;
+                log("Contracts configuration has been overridden");
+            }
+            DEPLOY_MODE_ARCHIVE => {
+                self.storage.backup()?;
+                self.data.contracts.clear();
+                self.storage.write(&self.data)?;
+                log("Starting fresh deployment. Previous contracts configuration has been backed up.");
+            }
+            _ => {} // default mode does nothing
+        }
+        Ok(())
     }
 
     /// Adds a contract to the container.

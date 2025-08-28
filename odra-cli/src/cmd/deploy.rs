@@ -1,8 +1,13 @@
 use crate::{
-    cmd::DEPLOY_SUBCOMMAND, container::ContractError, custom_types::CustomTypeSet,
+    cmd::{
+        args::{read_arg, Arg},
+        DEPLOY_SUBCOMMAND
+    },
+    container::ContractError,
+    custom_types::CustomTypeSet,
     DeployedContractsContainer
 };
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::{ArgMatches, Command};
 use odra::{host::HostEnv, prelude::OdraError};
 use thiserror::Error;
@@ -29,10 +34,14 @@ impl MutableCommand for DeployCmd {
     fn run(
         &self,
         env: &HostEnv,
-        _args: &ArgMatches,
+        args: &ArgMatches,
         _types: &CustomTypeSet,
         container: &mut DeployedContractsContainer
     ) -> Result<()> {
+        let deploy_mode = read_arg::<String>(args, Arg::DeployMode)
+            .ok_or_else(|| anyhow!("Failed to read deploy mode"))?;
+        container.apply_deploy_mode(deploy_mode)?;
+
         self.script.deploy(env, container)?;
         Ok(())
     }
@@ -40,7 +49,9 @@ impl MutableCommand for DeployCmd {
 
 impl From<&DeployCmd> for Command {
     fn from(_value: &DeployCmd) -> Self {
-        Command::new(DEPLOY_SUBCOMMAND).about("Runs the deploy script")
+        Command::new(DEPLOY_SUBCOMMAND)
+            .arg(Arg::DeployMode)
+            .about("Runs the deploy script")
     }
 }
 
@@ -117,15 +128,35 @@ mod tests {
     }
 
     #[test]
-    fn deploy_does_not_accept_args() {
-        // This is a placeholder test to ensure the DeployCmd can be converted to a Command.
+    fn deploy_accepts_mode_arg() {
         let cmd = DeployCmd::new(MockDeployScript);
         let command: Command = (&cmd).into();
+
+        let result =
+            command
+                .clone()
+                .try_get_matches_from(vec!["test", "--deploy-mode", "override"]);
+        assert!(result.is_ok());
+
+        let result = command
+            .clone()
+            .try_get_matches_from(vec!["test", "--deploy-mode", "default"]);
+        assert!(result.is_ok());
+
+        let result = command
+            .clone()
+            .try_get_matches_from(vec!["test", "--deploy-mode", "fresh"]);
+        assert!(result.is_ok());
+
+        let result = command
+            .clone()
+            .try_get_matches_from(vec!["test", "--deploy-mode", "abc"]);
+        assert!(result.is_err());
 
         let result = command.try_get_matches_from(vec!["test"]);
         assert!(result.is_ok());
 
         let command: Command = (&cmd).into();
-        assert_eq!(command.get_arguments().count(), 0);
+        assert_eq!(command.get_arguments().count(), 1);
     }
 }
