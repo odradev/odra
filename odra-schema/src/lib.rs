@@ -190,7 +190,7 @@ pub fn schema<T: SchemaEntrypoints + SchemaEvents + SchemaCustomTypes + SchemaEr
 
     let entry_points = entry_points
         .into_iter()
-        .filter(|e| e.name != "init")
+        .filter(|e| e.name != "init" && e.name != "upgrade")
         .collect();
 
     let wasm_file_name = format!("{}.wasm", module_name);
