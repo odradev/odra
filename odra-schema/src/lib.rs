@@ -287,6 +287,14 @@ fn call_method(
                 ty: NamedCLType::Bool.into(),
                 optional: false
             },
+            Argument {
+                name: odra_core::consts::IS_UPGRADE_ARG.to_string(),
+                description: Some(
+                    "The arg name for telling the installer that the contract is being upgraded.".to_string()
+                ),
+                ty: NamedCLType::Bool.into(),
+                optional: false
+            },
         ]
         .iter()
         .chain(constructor_args.iter())
