@@ -1,6 +1,6 @@
 //! Deploys an ERC20 contract and transfers some tokens to another address.
 use odra::casper_types::U256;
-use odra::host::{Deployer, HostEnv, HostRefLoader};
+use odra::host::{Deployer, HostEnv, HostRefLoader, InstallConfig};
 use odra::prelude::*;
 use odra_modules::erc20::{Erc20, Erc20HostRef, Erc20InitArgs};
 use std::str::FromStr;
@@ -49,6 +49,6 @@ pub fn deploy_erc20(env: &HostEnv) -> Erc20HostRef {
         initial_supply
     };
 
-    env.set_gas(100_000_000_000u64);
+    env.set_gas(450_000_000_000u64);
     Erc20::deploy(env, init_args)
 }

@@ -3,9 +3,9 @@
 use std::str::FromStr;
 
 use odra::casper_types::U256;
-use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader};
-use ourcoin::token::{OurTokenHostRef, OurTokenInitArgs};
-use Address;
+use odra::host::{Deployer, HostEnv, HostRefLoader};
+use odra::prelude::{Address, Addressable};
+use ourcoin::token::{OurToken, OurTokenHostRef, OurTokenInitArgs};
 
 fn main() {
     // Load the Casper livenet environment.
@@ -21,12 +21,11 @@ fn main() {
     let mut token = deploy_our_token(&env);
     println!("Token address: {}", token.address().to_string());
 
+    env.set_gas(2_500_000_000u64);
     // Propose minting new tokens.
-    env.set_gas(1_000_000_000u64);
     token.propose_new_mint(recipient, U256::from(1_000));
 
     // Vote, we are the only voter.
-    env.set_gas(1_000_000_000u64);
     token.vote(true, U256::from(1_000));
 
     // Let's advance the block time by 11 minutes, as
@@ -36,7 +35,6 @@ fn main() {
     env.advance_block_time(11 * 60 * 1000);
 
     // Tally the votes.
-    env.set_gas(1_500_000_000u64);
     token.tally();
 
     // Check the balances.
@@ -51,7 +49,7 @@ fn main() {
 fn _load_cep18(env: &HostEnv) -> OurTokenHostRef {
     let address = "hash-XXXXX";
     let address = Address::from_str(address).unwrap();
-    OurTokenHostRef::load(env, address)
+    OurToken::load(env, address)
 }
 
 /// Deploys a contract.
@@ -68,6 +66,6 @@ pub fn deploy_our_token(env: &HostEnv) -> OurTokenHostRef {
         initial_supply
     };
 
-    env.set_gas(300_000_000_000u64);
+    env.set_gas(400_000_000_000u64);
     OurToken::deploy(env, init_args)
 }
