@@ -176,7 +176,7 @@ fn arg_deploy_mode() -> clap::Arg {
         .long_help(
             "Deployment mode strategy:\n\
              - default: Use existing contract if available, otherwise deploy a new one\n\
-             - override: Force redeploy, make edits in the existing contract configuration\n\
+             - override: Force redeploy, overwrite the existing contract configuration\n\
              - archive: Redeploy contracts, archive the existing contract configuration and create a new one."
         )
         .value_name("MODE")

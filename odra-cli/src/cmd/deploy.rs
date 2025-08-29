@@ -7,7 +7,7 @@ use crate::{
     custom_types::CustomTypeSet,
     DeployedContractsContainer
 };
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use clap::{ArgMatches, Command};
 use odra::{host::HostEnv, prelude::OdraError};
 use thiserror::Error;
@@ -39,7 +39,7 @@ impl MutableCommand for DeployCmd {
         container: &mut DeployedContractsContainer
     ) -> Result<()> {
         let deploy_mode = read_arg::<String>(args, Arg::DeployMode)
-            .ok_or_else(|| anyhow!("Failed to read deploy mode"))?;
+            .unwrap_or("default".to_string());
         container.apply_deploy_mode(deploy_mode)?;
 
         self.script.deploy(env, container)?;
@@ -145,7 +145,7 @@ mod tests {
 
         let result = command
             .clone()
-            .try_get_matches_from(vec!["test", "--deploy-mode", "fresh"]);
+            .try_get_matches_from(vec!["test", "--deploy-mode", "archive"]);
         assert!(result.is_ok());
 
         let result = command
