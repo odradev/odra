@@ -24,24 +24,6 @@
   "errors": [],
   "entry_points": [
     {
-      "name": "upgrade",
-      "description": "",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "new_start",
-          "description": null,
-          "ty": {
-            "Option": "U256"
-          },
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
       "name": "increment",
       "description": "",
       "is_mutable": true,
@@ -119,6 +101,12 @@
       {
         "name": "odra_cfg_is_upgradable",
         "description": "The arg name for the contract upgradeability setting.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_is_upgrade",
+        "description": "The arg name for telling the installer that the contract is being upgraded.",
         "ty": "Bool",
         "optional": false
       },

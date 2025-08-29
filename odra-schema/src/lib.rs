@@ -190,7 +190,7 @@ pub fn schema<T: SchemaEntrypoints + SchemaEvents + SchemaCustomTypes + SchemaEr
 
     let entry_points = entry_points
         .into_iter()
-        .filter(|e| e.name != "init")
+        .filter(|e| e.name != "init" && e.name != "upgrade")
         .collect();
 
     let wasm_file_name = format!("{}.wasm", module_name);
@@ -283,6 +283,14 @@ fn call_method(
                 name: odra_core::consts::IS_UPGRADABLE_ARG.to_string(),
                 description: Some(
                     "The arg name for the contract upgradeability setting.".to_string()
+                ),
+                ty: NamedCLType::Bool.into(),
+                optional: false
+            },
+            Argument {
+                name: odra_core::consts::IS_UPGRADE_ARG.to_string(),
+                description: Some(
+                    "The arg name for telling the installer that the contract is being upgraded.".to_string()
                 ),
                 ty: NamedCLType::Bool.into(),
                 optional: false
