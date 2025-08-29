@@ -454,7 +454,8 @@ impl HostEnv {
         *self.captures_events.borrow_mut() = captures;
         if captures {
             // Initialize events for all deployed contracts if capturing is enabled
-            for (contract_address, _) in self.deployed_contracts.borrow().iter() {
+            let deployed_contracts = self.deployed_contracts.borrow().clone();
+            for (contract_address, _) in deployed_contracts.iter() {
                 self.init_events(contract_address);
             }
         }
