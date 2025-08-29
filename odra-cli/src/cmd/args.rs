@@ -9,7 +9,8 @@ pub const ARG_GAS: &str = "gas";
 pub const ARG_CONTRACTS: &str = "contracts-toml";
 pub const ARG_PRINT_EVENTS: &str = "print-events";
 pub const ARG_NUMBER: &str = "number";
-pub const ARG_DEPLOY_MODE: &str = "deploy-mode";
+pub const ARG_DEPLOY_MODE: &str = "deploy_mode";
+const ARG_DEPLOY_MODE_LONG: &str = "deploy-mode";
 
 pub const DEPLOY_MODE_OVERRIDE: &str = "override";
 pub const DEPLOY_MODE_ARCHIVE: &str = "archive";
@@ -171,7 +172,7 @@ fn arg_print_events() -> clap::Arg {
 
 fn arg_deploy_mode() -> clap::Arg {
     clap::Arg::new(ARG_DEPLOY_MODE)
-        .long(ARG_DEPLOY_MODE)
+        .long(ARG_DEPLOY_MODE_LONG)
         .help("Deployment mode strategy.")
         .long_help(
             "Deployment mode strategy:\n\

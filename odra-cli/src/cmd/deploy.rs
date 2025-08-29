@@ -38,8 +38,9 @@ impl MutableCommand for DeployCmd {
         _types: &CustomTypeSet,
         container: &mut DeployedContractsContainer
     ) -> Result<()> {
-        let deploy_mode = read_arg::<String>(args, Arg::DeployMode)
-            .unwrap_or("default".to_string());
+        let deploy_mode =
+            read_arg::<String>(args, Arg::DeployMode).ok_or(DeployError::MissingDeployMode)?;
+        crate::log(format!("Deploy mode: {}", deploy_mode));
         container.apply_deploy_mode(deploy_mode)?;
 
         self.script.deploy(env, container)?;
@@ -73,7 +74,9 @@ pub enum DeployError {
     #[error("Deploy error: {message}")]
     OdraError { message: String },
     #[error("Contract read error: {0}")]
-    ContractReadError(#[from] ContractError)
+    ContractReadError(#[from] ContractError),
+    #[error("Missing deploy mode argument")]
+    MissingDeployMode
 }
 
 impl From<OdraError> for DeployError {
@@ -109,9 +112,11 @@ mod tests {
         let env = test_utils::mock_host_env();
         let cmd = DeployCmd::new(MockDeployScript);
         let mut container = test_utils::mock_contracts_container();
+        let command: Command = (&cmd).into();
+        let arg_matches = command.try_get_matches_from(vec!["test"]).unwrap();
         let result = cmd.run(
             &env,
-            &ArgMatches::default(),
+            &arg_matches,
             &CustomTypeSet::default(),
             &mut container
         );
