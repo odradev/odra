@@ -1,9 +1,10 @@
+use gloo_utils::format::JsValueSerdeExt;
 use js_sys::BigInt as JsBigInt;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 use wasm_bindgen::prelude::*;
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[wasm_bindgen]
 pub struct U256(casper_types::U256);
 
@@ -30,8 +31,13 @@ impl U256 {
     }
 
     #[wasm_bindgen(js_name = "toString")]
-    pub fn to_string(&self) -> String {
+    pub fn to_string_js_alias(&self) -> String {
         self.0.to_string()
+    }
+
+    #[wasm_bindgen(js_name = "toJson")]
+    pub fn to_json(&self) -> JsValue {
+        JsValue::from_serde(self).unwrap_or(JsValue::null())
     }
 }
 
@@ -55,7 +61,7 @@ impl From<casper_types::U256> for U256 {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[wasm_bindgen]
 pub struct U512(casper_types::U512);
 
@@ -82,7 +88,7 @@ impl U512 {
     }
 
     #[wasm_bindgen(js_name = "toString")]
-    pub fn to_string(&self) -> String {
+    pub fn to_string_js_alias(&self) -> String {
         self.0.to_string()
     }
 }
@@ -107,7 +113,7 @@ impl From<casper_types::U512> for U512 {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[wasm_bindgen]
 pub struct U128(casper_types::U128);
 
@@ -134,7 +140,7 @@ impl U128 {
     }
 
     #[wasm_bindgen(js_name = "toString")]
-    pub fn to_string(&self) -> String {
+    pub fn to_string_js_alias(&self) -> String {
         self.0.to_string()
     }
 }

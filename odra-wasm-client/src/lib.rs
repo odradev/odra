@@ -3,6 +3,7 @@ use js_sys::Date;
 use std::str::FromStr;
 use wasm_bindgen::prelude::*;
 
+#[cfg(feature = "example")]
 mod cep18;
 mod client;
 pub mod js;
@@ -21,12 +22,11 @@ pub(crate) fn now() -> Option<Timestamp> {
     Some(timestamp)
 }
 
-#[wasm_bindgen]
+#[wasm_bindgen(js_name = "defaultPayment")]
 pub fn default_payment() -> u64 {
     2_500_000_000
 }
 
-// export macro
-// pub use odra_wasm_client_macro::wasm_client;
+pub use gloo_utils::format::JsValueSerdeExt;
 pub use wasm_bindgen;
 pub use wasm_bindgen_futures;

@@ -1,0 +1,208 @@
+use odra_schema::casper_contract_schema::{
+    ContractSchema, CustomType, EnumVariant, NamedCLType, StructMember
+};
+use quote::{format_ident, ToTokens};
+use syn::parse_quote;
+
+use crate::types::{named_cl_type_to_odra_type, named_cl_type_to_wasm_type};
+
+pub fn types_def(contract_schema: &ContractSchema) -> Vec<proc_macro2::TokenStream> {
+    contract_schema
+        .types
+        .iter()
+        .map(|custom_type| match custom_type {
+            CustomType::Struct { name, members, .. } => struct_def(&name.0, members),
+            CustomType::Enum { name, variants, .. } => enum_def(&name.0, variants)
+        })
+        .collect::<Vec<_>>()
+}
+
+fn struct_def(name: &str, members: &[StructMember]) -> proc_macro2::TokenStream {
+    let type_name = format_ident!("{}", name);
+    let struct_fields = members
+        .iter()
+        .map(|field| {
+            let field_name = format_ident!("{}", field.name);
+            let ty = named_cl_type_to_odra_type(&field.ty);
+            if matches!(field.ty.0, NamedCLType::ByteArray(_))
+                || matches!(field.ty.0, NamedCLType::List(_))
+            {
+                parse_quote!(#[wasm_bindgen(getter_with_clone)] pub #field_name: #ty)
+            } else {
+                parse_quote!(pub #field_name: #ty)
+            }
+        })
+        .collect::<Vec<syn::Field>>();
+
+    let fields = members
+        .iter()
+        .map(|field| {
+            let field_name = format_ident!("{}", field.name);
+            let ty = named_cl_type_to_wasm_type(&field.ty);
+            parse_quote!(#field_name: #ty)
+        })
+        .collect::<Vec<syn::Field>>();
+
+    let fields_init = members
+        .iter()
+        .map(|field| {
+            let field_name = format_ident!("{}", field.name);
+            let odra_ty = named_cl_type_to_odra_type(&field.ty);
+            let wasm_ty = named_cl_type_to_wasm_type(&field.ty);
+            if wasm_ty.to_token_stream().to_string() == odra_ty.to_token_stream().to_string() {
+                parse_quote!(#field_name)
+            } else {
+                println!(
+                    "Field: {}, Odra Type: {:?}, WASM Type: {:?}",
+                    field_name, odra_ty, wasm_ty
+                );
+                parse_quote!(#field_name: #field_name.into())
+            }
+        })
+        .collect::<Vec<proc_macro2::TokenStream>>();
+
+    let field_names = members
+        .iter()
+        .map(|field| {
+            let field_name = format_ident!("{}", field.name);
+            parse_quote!(#field_name)
+        })
+        .collect::<Vec<syn::Expr>>();
+
+    let fields_deser = members
+        .iter()
+        .map(|field| {
+            let field_name = format_ident!("{}", field.name);
+            parse_quote!(let (#field_name, bytes) = casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;)
+        })
+        .collect::<Vec<syn::Stmt>>();
+
+    let fields_ser = members
+        .iter()
+        .map(|field| {
+            let field_name = format_ident!("{}", field.name);
+            parse_quote!(result.extend(casper_types::bytesrepr::ToBytes::to_bytes(&self.#field_name)?);)
+        })
+        .collect::<Vec<syn::Stmt>>();
+
+    let fields_len = members
+        .iter()
+        .map(|field| {
+            let field_name = format_ident!("{}", field.name);
+            parse_quote!(result += self.#field_name.serialized_length();)
+        })
+        .collect::<Vec<syn::Stmt>>();
+
+    quote::quote! {
+        #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+        #[wasm_bindgen]
+        pub struct #type_name {
+            #(#struct_fields),*
+        }
+
+        #[wasm_bindgen]
+        impl #type_name {
+            #[wasm_bindgen(constructor)]
+            pub fn new(#(#fields),*) -> Self {
+                Self {
+                    #(#fields_init),*
+                }
+            }
+
+            #[wasm_bindgen(js_name = "toJson")]
+            pub fn to_json(&self) -> JsValue {
+                JsValue::from_serde(self).unwrap_or(JsValue::null())
+            }
+        }
+
+        impl casper_types::bytesrepr::FromBytes for #type_name {
+            fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), casper_types::bytesrepr::Error> {
+                #(#fields_deser)*
+                Ok((Self { #(#field_names),* }, bytes))
+            }
+        }
+
+        impl casper_types::bytesrepr::ToBytes for #type_name {
+            fn to_bytes(
+                &self
+            ) -> Result<Vec<u8>, casper_types::bytesrepr::Error> {
+                let mut result = Vec::with_capacity(self.serialized_length());
+                #(#fields_ser)*
+                Ok(result)
+            }
+            fn serialized_length(&self) -> usize {
+                let mut result = 0;
+                #(#fields_len)*
+                result
+            }
+        }
+
+        impl casper_types::CLTyped for #type_name {
+            fn cl_type() -> casper_types::CLType {
+                casper_types::CLType::Any
+            }
+        }
+    }
+}
+
+fn enum_def(name: &str, variants: &[EnumVariant]) -> proc_macro2::TokenStream {
+    let type_name = format_ident!("{}", name);
+    let variants_expr = variants
+        .iter()
+        .map(|v| {
+            let ident = format_ident!("{}", v.name);
+            let discriminant = v.discriminant;
+            parse_quote!(#ident = #discriminant)
+        })
+        .collect::<Vec<syn::Expr>>();
+    let match_arms = variants
+        .iter()
+        .map(|v| {
+            let ident = format_ident!("{}", v.name);
+            parse_quote!(x if x == Self::#ident as u8 => Ok((Self::#ident, bytes)))
+        })
+        .collect::<Vec<syn::Expr>>();
+
+    quote::quote! {
+        #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+        #[wasm_bindgen]
+        pub enum #type_name {
+            #(#variants_expr),*
+        }
+
+        #[wasm_bindgen]
+        impl #type_name {
+            #[wasm_bindgen(js_name = "toJson")]
+            pub fn to_json(&self) -> JsValue {
+                JsValue::from_serde(self).unwrap_or(JsValue::null())
+            }
+        }
+
+        impl casper_types::bytesrepr::FromBytes for #type_name {
+            fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), casper_types::bytesrepr::Error> {
+                let (result, bytes): (u8, _) = casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
+                match result {
+                    #(#match_arms),*
+                    _ => Err(casper_types::bytesrepr::Error::Formatting)
+                }
+            }
+        }
+
+        impl casper_types::bytesrepr::ToBytes for #type_name {
+            fn to_bytes(
+                &self
+            ) -> Result<Vec<u8>, casper_types::bytesrepr::Error> {
+                Ok(vec![(self.clone() as u8)])
+            }
+            fn serialized_length(&self) -> usize {
+                casper_types::bytesrepr::U8_SERIALIZED_LENGTH
+            }
+        }
+
+        impl casper_types::CLTyped for #type_name {
+            fn cl_type() -> casper_types::CLType {
+                casper_types::CLType::U8
+            }
+        }
+    }
+}

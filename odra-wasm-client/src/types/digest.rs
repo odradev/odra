@@ -15,9 +15,9 @@ impl Digest {
         self.0.value()
     }
 
-    pub fn from_raw(bytes: Vec<u8>) -> Result<Digest, Box<String>> {
+    pub fn from_raw(bytes: Vec<u8>) -> Result<Digest, String> {
         let hex_string = hex::encode(bytes);
-        Digest::try_from(&hex_string[..]).map_err(Box::new)
+        Digest::try_from(&hex_string[..]).map_err(|e| e.to_string())
     }
 }
 

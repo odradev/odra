@@ -30,6 +30,7 @@ const CHAIN_TESTNET: &str = "casper-test";
 #[wasm_bindgen]
 pub struct OdraWasmClient {
     node_address: String,
+    speculative_node_address: String,
     verbosity: Verbosity,
     gas: u64,
     chain_name: String,
@@ -41,6 +42,7 @@ impl OdraWasmClient {
     #[wasm_bindgen(constructor)]
     pub fn new(
         node_address: String,
+        speculative_node_address: String,
         chain_name: Option<String>,
         gas: Option<u64>,
         ttl: Option<u32>,
@@ -48,6 +50,7 @@ impl OdraWasmClient {
     ) -> Self {
         OdraWasmClient {
             node_address,
+            speculative_node_address,
             verbosity: verbosity.unwrap_or(Verbosity::Low),
             gas: gas.unwrap_or(DEFAULT_GAS),
             chain_name: chain_name.unwrap_or(CHAIN_TESTNET.into()),
@@ -80,8 +83,6 @@ impl OdraWasmClient {
             gas_price_tolerance: DEFAULT_GAS_TOLERANCE,
             standard_payment: true
         }
-
-        // PricingMode::Fixed { additional_computation_factor: 0, gas_price_tolerance: 5 }
     }
 
     async fn caller(&self, wallet: &CasperWallet) -> Result<WasmAddress, JsError> {
@@ -149,9 +150,9 @@ impl OdraWasmClient {
         // crate::js::log(&format!("Signed deploy: {}", signed_deploy_json.unwrap()));
         let response = casper_client::speculative_exec(
             self.rpc_id(),
-            self.node_address(),
+            &self.speculative_node_address,
             self.verbosity().into(),
-            signed_deploy.into()
+            signed_deploy
         )
         .await;
 
@@ -272,8 +273,7 @@ impl OdraWasmClient {
                     Some(StoredValue::Contract(contract)) => contract
                         .named_keys()
                         .get("__contract_main_purse")
-                        .map(|v| v.into_uref())
-                        .flatten()
+                        .and_then(|v| v.into_uref())
                         .ok_or(format!(
                             "Couldn't get main purse for address: {:?}",
                             address.to_formatted_string()
@@ -370,7 +370,7 @@ impl OdraWasmClient {
         )
         .await;
 
-        let deploy_hash = match response {
+        Ok(match response {
             Ok(r) => r.result.transaction_hash,
             Err(e) => {
                 return match e {
@@ -383,8 +383,7 @@ impl OdraWasmClient {
                     _ => Err(format!("Failed to put transaction: {}", e))
                 }
             }
-        };
-        Ok(deploy_hash)
+        })
     }
 
     pub async fn get_balance(&self, address: Address) -> Result<U512, String> {
@@ -401,7 +400,7 @@ impl OdraWasmClient {
 
         let result = casper_client::get_balance(
             self.rpc_id(),
-            &self.node_address(),
+            self.node_address(),
             self.verbosity().into(),
             state_root_hash,
             purse
@@ -445,72 +444,6 @@ MC4CAQAwBQYDK2VwBCIEIODIFIJtQQHcpRuDU0QdaygC/se2mntLKUMK2kCnEsKN
         .build()
         .map_err(|e| JsError::new(&e.to_string()))
     }
-
-    // async fn query_dict(
-    //     &self,
-    //     address: &Address,
-    //     dictionary_name: String,
-    //     dictionary_item_key: String
-    // ) -> Result<Bytes, String> {
-    //     let entity_addr = self.query_global_state_for_entity_addr(address).await?;
-    //     let key = Key::Hash(entity_addr.value()).to_formatted_string();
-    //     let identifier = DictionaryItemIdentifier::ContractNamedKey {
-    //         key,
-    //         dictionary_name,
-    //         dictionary_item_key
-    //     };
-
-    //     let state_root_hash = self
-    //         .get_state_root_hash()
-    //         .await
-    //         .map_err(|err| format!("Error getting state root hash: {err:?}"))?
-    //         .ok_or(format!("State root hash is None, cannot get balance"))?;
-
-    //     let stored_value = casper_client::get_dictionary_item(
-    //         self.rpc_id(),
-    //         self.node_address(),
-    //         self.verbosity().into(),
-    //         state_root_hash,
-    //         identifier
-    //     )
-    //     .await
-    //     .map(|response| response.result.stored_value)
-    //     .map_err(|e| format!("Error getting dictionary item: {e}"))?;
-
-    //     let cl_value = stored_value
-    //         .into_cl_value()
-    //         .ok_or(format!("Error converting stored value to CLValue"))?;
-
-    //     // Note: this is for compatibility with CEP18 named keys.
-    //     if cl_value.cl_type() == &Vec::<u8>::cl_type() {
-    //         let bytes = cl_value
-    //             .into_t()
-    //             .map_err(|_| format!("Error converting CLValue to bytes"))?;
-    //         Ok(bytes)
-    //     } else {
-    //         let bytes = cl_value.inner_bytes();
-    //         Ok(Bytes::from(bytes.to_vec()))
-    //     }
-    // }
-
-    // /// Gets a value from the Odra storage (`state` dictionary)
-    // async fn get_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
-    //     self.get_dictionary_value(address, "state", key).await
-    // }
-
-    // /// Gets a value from a named dictionary
-    // async fn get_dictionary_value(
-    //     &self,
-    //     address: &Address,
-    //     dictionary_name: &str,
-    //     key: &[u8]
-    // ) -> Option<Bytes> {
-    //     let key = String::from_utf8(key.to_vec())
-    //         .unwrap_or_else(|_| panic!("Couldn't convert key to string: {:?}", key));
-    //     self.query_dict(address, dictionary_name.to_string(), key)
-    //         .await
-    //         .ok()
-    // }
 }
 
 fn find_result(caller: Address, effects: &Effects) -> Option<CLValue> {
@@ -521,7 +454,7 @@ fn find_result(caller: Address, effects: &Effects) -> Option<CLValue> {
         if k == Some(caller) {
             if let TransformKindV2::AddKeys(nk) = v {
                 if let Some(k) = nk.get("__result") {
-                    return Some(k.clone());
+                    return Some(*k);
                 }
             }
         }

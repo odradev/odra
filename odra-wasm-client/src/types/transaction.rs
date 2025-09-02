@@ -74,7 +74,7 @@ impl Transaction {
     }
 
     pub fn to_json_string(&self) -> Result<String, String> {
-        Ok(serde_json::to_string(&self.0).map_err(|e| e.to_string())?)
+        serde_json::to_string(&self.0).map_err(|e| e.to_string())
     }
 }
 

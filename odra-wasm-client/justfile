@@ -5,7 +5,7 @@ build:
     wasm-pack build --target nodejs --release --out-dir pkg-nodejs .
 
 build-web:
-    wasm-pack build --target web --out-dir pkg-web .
+    wasm-pack build --target web --out-dir pkg-web . -- --features example
 
 run-web:
     cd examples/web && npm run start

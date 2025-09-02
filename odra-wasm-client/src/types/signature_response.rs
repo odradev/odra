@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use wasm_bindgen::prelude::*;
 
-#[wasm_bindgen]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SignatureResponse {
     cancelled: bool,
@@ -11,7 +9,6 @@ pub struct SignatureResponse {
     signature: Option<HashMap<String, u8>>
 }
 
-#[wasm_bindgen]
 impl SignatureResponse {
     pub fn is_cancelled(&self) -> bool {
         self.cancelled

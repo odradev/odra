@@ -5,9 +5,9 @@ use odra_core::prelude::Address as _Address;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-use crate::types::public_key::PublicKey;
+use crate::types::cl::public_key::PublicKey;
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, Copy)]
 #[wasm_bindgen]
 pub struct Address(_Address);
 
