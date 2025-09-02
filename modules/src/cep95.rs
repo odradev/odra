@@ -344,15 +344,23 @@ impl CEP95Interface for Cep95 {
         let owner = self
             .owner_of(token_id)
             .unwrap_or_revert_with(self, Error::ValueNotSet);
-        // Only the owner or an approved spender can transfer the token.
-        if (owner != from || owner != caller) && !self.is_approved_for_all(from, caller) {
-            if let Some(approved) = self.approved_for(token_id) {
-                if approved != caller {
-                    self.env().revert(Error::NotAnOwnerOrApproved);
-                }
-            } else {
-                self.env().revert(Error::NotAnOwnerOrApproved);
-            }
+
+        // `from` must be the current owner.
+        if owner != from {
+            self.env().revert(Error::NotAnOwnerOrApproved);
+        }
+
+        // Check if the caller is authorized to transfer the token.
+        // It can be either:
+        // - the owner,
+        // - an operator approved for all of the owner's tokens,
+        // - the approved spender for this specific token.
+        let is_authorized = owner == caller
+            || self.is_approved_for_all(from, caller)
+            || self.is_approved(token_id, caller);
+
+        if !is_authorized {
+            self.env().revert(Error::NotAnOwnerOrApproved);
         }
 
         self.raw_transfer_from(from, to, token_id);
@@ -448,6 +456,7 @@ impl Cep95 {
     }
 
     /// Clears the approval for a specific token ID.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     #[inline]
     pub fn clear_approval(&mut self, token_id: &U256) {
         if self.approvals.get(token_id).is_some() {
@@ -456,7 +465,8 @@ impl Cep95 {
     }
 
     /// Mints a new NFT and assigns it to the specified address.
-    pub fn mint(&mut self, to: Address, token_id: U256, metadata: Vec<(String, String)>) {
+    /// SECURITY: Do not expose this function publicly without proper access control.
+    pub fn raw_mint(&mut self, to: Address, token_id: U256, metadata: Vec<(String, String)>) {
         if self.exists(&token_id) {
             self.env().revert(Error::TokenAlreadyExists);
         }
@@ -469,7 +479,8 @@ impl Cep95 {
     }
 
     /// Burns an NFT, removing it from the owner's balance and the contract.
-    pub fn burn(&mut self, token_id: U256) {
+    /// SECURITY: Do not expose this function publicly without proper access control.
+    pub fn raw_burn(&mut self, token_id: U256) {
         self.assert_exists(&token_id);
         let owner = self
             .owner_of(token_id)
@@ -488,6 +499,7 @@ impl Cep95 {
 
     /// Sets metadata for a specific token ID.
     /// Replaces any existing metadata.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn set_metadata(&mut self, token_id: U256, metadata: Vec<(String, String)>) {
         self.raw_update_metadata(token_id, metadata, BTreeMap::new());
     }
@@ -496,12 +508,14 @@ impl Cep95 {
     /// If a key already exists, its value will be updated.
     /// If a key does not exist, it will be added.
     /// The remaining keys will be preserved.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn update_metadata(&mut self, token_id: U256, metadata: Vec<(String, String)>) {
         let current_metadata = self.metadata.get(&token_id).unwrap_or_default();
         self.raw_update_metadata(token_id, metadata, current_metadata);
     }
 
     /// Transfers an NFT from one address to another without checking the recipient contract.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn raw_transfer_from(&mut self, from: Address, to: Address, token_id: U256) {
         self.clear_approval(&token_id);
         self.balances.set(&from, self.balance_of(from) - 1);
@@ -551,21 +565,31 @@ impl Cep95 {
 
         self.operators.set(&caller, &operator, approved);
     }
+
+    #[inline]
+    fn is_approved(&self, token_id: U256, spender: Address) -> bool {
+        self.approved_for(token_id) == Some(spender)
+    }
 }
 
 mod utils {
     #![allow(dead_code)]
+    use crate::access::Ownable;
+
     use super::*;
 
     #[odra::module]
     pub(crate) struct BasicCep95 {
-        token: SubModule<Cep95>
+        token: SubModule<Cep95>,
+        ownable: SubModule<Ownable>
     }
 
     #[odra::module]
     impl BasicCep95 {
         /// Initializes the contract with the given parameters.
         pub fn init(&mut self, name: String, symbol: String) {
+            let owner = self.env().caller();
+            self.ownable.init(owner);
             self.token.init(name, symbol);
         }
 
@@ -588,19 +612,27 @@ mod utils {
         }
 
         pub fn mint(&mut self, to: Address, token_id: U256, metadata: Vec<(String, String)>) {
-            self.token.mint(to, token_id, metadata);
+            self.assert_owner();
+            self.token.raw_mint(to, token_id, metadata);
         }
 
         pub fn burn(&mut self, token_id: U256) {
-            self.token.burn(token_id);
+            self.assert_owner();
+            self.token.raw_burn(token_id);
         }
 
         pub fn set_metadata(&mut self, token_id: U256, metadata: Vec<(String, String)>) {
+            self.assert_owner();
             self.token.set_metadata(token_id, metadata);
         }
 
         pub fn update_metadata(&mut self, token_id: U256, metadata: Vec<(String, String)>) {
+            self.assert_owner();
             self.token.update_metadata(token_id, metadata);
+        }
+
+        pub fn assert_owner(&self) {
+            self.ownable.assert_owner(&self.env().caller());
         }
     }
 
