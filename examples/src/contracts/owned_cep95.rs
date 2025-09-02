@@ -50,7 +50,7 @@ impl OwnedCep95 {
     /// Only the contract owner can call this function.
     pub fn mint(&mut self, to: Address, token_id: U256, metadata: Vec<(String, String)>) {
         self.ownable.assert_owner(&self.env().caller());
-        self.token.mint(to, token_id, metadata);
+        self.token.raw_mint(to, token_id, metadata);
     }
 
     /// Burns the token with the given ID.
@@ -60,7 +60,7 @@ impl OwnedCep95 {
         let owner = self.token.owner_of(token_id);
         let caller = self.env().caller();
         if Some(caller) == owner {
-            self.token.burn(token_id);
+            self.token.raw_burn(token_id);
         }
     }
 }
