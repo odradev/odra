@@ -9,7 +9,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": null,
   "contract_name": "Cep18ClientContract",
-  "contract_version": "2.3.1",
+  "contract_version": "2.4.0",
   "types": [],
   "errors": [],
   "entry_points": [
