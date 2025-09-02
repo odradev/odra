@@ -50,6 +50,12 @@
         "optional": false
       },
       {
+        "name": "odra_cfg_is_upgrade",
+        "description": "The arg name for telling the installer that the contract is being upgraded.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
         "name": "address",
         "description": null,
         "ty": "Key",
