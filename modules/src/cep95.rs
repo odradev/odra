@@ -357,7 +357,7 @@ impl CEP95Interface for Cep95 {
         // - the approved spender for this specific token.
         let is_authorized = owner == caller
             || self.is_approved_for_all(from, caller)
-            || self.is_approved(token_id, caller);
+            || self.is_spender(token_id, caller);
 
         if !is_authorized {
             self.env().revert(Error::NotAnOwnerOrApproved);
@@ -567,7 +567,7 @@ impl Cep95 {
     }
 
     #[inline]
-    fn is_approved(&self, token_id: U256, spender: Address) -> bool {
+    fn is_spender(&self, token_id: U256, spender: Address) -> bool {
         self.approved_for(token_id) == Some(spender)
     }
 }
