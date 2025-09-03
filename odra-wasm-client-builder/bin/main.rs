@@ -43,6 +43,7 @@ fn build_code() -> Result<(), String> {
         .arg("web")
         .arg("--out-dir")
         .arg("pkg-web")
+        .arg("--release")
         .arg("../wasm_client")
         .status()
         .map_err(|e| e.to_string())?;

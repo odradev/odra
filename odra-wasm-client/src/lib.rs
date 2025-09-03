@@ -22,11 +22,6 @@ pub(crate) fn now() -> Option<Timestamp> {
     Some(timestamp)
 }
 
-#[wasm_bindgen(js_name = "defaultPayment")]
-pub fn default_payment() -> u64 {
-    2_500_000_000
-}
-
 pub use gloo_utils::format::JsValueSerdeExt;
 pub use wasm_bindgen;
 pub use wasm_bindgen_futures;

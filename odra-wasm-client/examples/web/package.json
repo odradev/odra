@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "express": "^4.18.2",
-    "odra-wasm-client": "file:../../pkg-web"
+    "wasm-client": "file:../../pkg-web"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",

@@ -1,9 +1,9 @@
 import init, {
     Address,
-    OdraWasmClient,
     Cep18Client,
+    OdraWasmClient,
     U256
-} from "odra-wasm-client";
+} from "wasm-client";
 
 let client: OdraWasmClient;
 let cep18: Cep18Client;
@@ -119,7 +119,8 @@ async function run() {
     }
 
     // 3. Initialize the clients
-    client = new OdraWasmClient("http://localhost:3000", 'casper-test');
+    client = new OdraWasmClient("https://testnet-rpc.odra.dev", "https://testnet-speculative-rpc.odra.dev", "casper-test");
+    // const address = new Address("hash-2879d6e927289197aab0101cc033f532fe22e4ab4686e44b5743cb1333031acc");
     const address = new Address("hash-b69714753812df8edcbd38aec02b9f86ab44a30891050ed331ac2f40ef7b2580");
     cep18 = new Cep18Client(client, address);
 

@@ -27,12 +27,9 @@ impl Cep18Client {
 
     #[wasm_bindgen]
     pub async fn decimals(&self) -> Result<u8, JsError> {
-        if !self.wallet.request_connection().await.is_ok() {
-            return Err(JsError::new("Could not connect to the wallet"));
-        }
         let cl_value = self
             .wasm_client
-            .call_entry_point_with_proxy(&self.wallet, *self.address, "decimals", runtime_args! {})
+            .call_entry_point_with_proxy(*self.address, "decimals", runtime_args! {})
             .await?;
 
         let result = <u8 as FromBytes>::from_bytes(&cl_value.inner_bytes()[4..])
@@ -42,12 +39,9 @@ impl Cep18Client {
 
     #[wasm_bindgen]
     pub async fn name(&self) -> Result<String, JsError> {
-        if !self.wallet.request_connection().await.is_ok() {
-            return Err(JsError::new("Could not connect to the wallet"));
-        }
         let cl_value = self
             .wasm_client
-            .call_entry_point_with_proxy(&self.wallet, *self.address, "name", runtime_args! {})
+            .call_entry_point_with_proxy(*self.address, "name", runtime_args! {})
             .await?;
 
         let result = <String as FromBytes>::from_bytes(&cl_value.inner_bytes()[4..])
@@ -57,12 +51,9 @@ impl Cep18Client {
 
     #[wasm_bindgen]
     pub async fn symbol(&self) -> Result<String, JsError> {
-        if !self.wallet.request_connection().await.is_ok() {
-            return Err(JsError::new("Could not connect to the wallet"));
-        }
         let cl_value = self
             .wasm_client
-            .call_entry_point_with_proxy(&self.wallet, *self.address, "symbol", runtime_args! {})
+            .call_entry_point_with_proxy(*self.address, "symbol", runtime_args! {})
             .await?;
 
         let result = <String as FromBytes>::from_bytes(&cl_value.inner_bytes()[4..])
@@ -72,13 +63,9 @@ impl Cep18Client {
 
     #[wasm_bindgen(js_name = "totalSupply")]
     pub async fn total_supply(&self) -> Result<U256, JsError> {
-        if !self.wallet.request_connection().await.is_ok() {
-            return Err(JsError::new("Could not connect to the wallet"));
-        }
         let cl_value = self
             .wasm_client
             .call_entry_point_with_proxy(
-                &self.wallet,
                 *self.address,
                 "total_supply",
                 runtime_args! {}
@@ -92,13 +79,9 @@ impl Cep18Client {
 
     #[wasm_bindgen(js_name = "balanceOf")]
     pub async fn balance_of(&self, address: Address) -> Result<U256, JsError> {
-        if !self.wallet.request_connection().await.is_ok() {
-            return Err(JsError::new("Could not connect to the wallet"));
-        }
         let cl_value = self
             .wasm_client
             .call_entry_point_with_proxy(
-                &self.wallet,
                 *self.address,
                 "balance_of",
                 runtime_args! {
@@ -114,13 +97,9 @@ impl Cep18Client {
 
     #[wasm_bindgen]
     pub async fn allowance(&self, owner: Address, spender: Address) -> Result<U256, JsError> {
-        if !self.wallet.request_connection().await.is_ok() {
-            return Err(JsError::new("Could not connect to the wallet"));
-        }
         let cl_value = self
             .wasm_client
             .call_entry_point_with_proxy(
-                &self.wallet,
                 *self.address,
                 "allowance",
                 runtime_args! {

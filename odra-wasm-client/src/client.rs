@@ -62,6 +62,11 @@ impl OdraWasmClient {
     pub fn set_gas(&mut self, gas: u64) {
         self.gas = gas;
     }
+
+    #[wasm_bindgen(js_name = "DEFAULT_PAYMENT")]
+    pub fn default_payment() -> u64 {
+        2_500_000_000
+    }
 }
 
 impl OdraWasmClient {
@@ -116,17 +121,16 @@ impl OdraWasmClient {
     #[allow(deprecated)]
     pub async fn call_entry_point_with_proxy(
         &self,
-        wallet: &CasperWallet,
         address: Address,
         entry_point: &str,
         runtime_args: RuntimeArgs
     ) -> Result<CLValue, JsError> {
-        crate::js::log(&format!(
-            "Calling entry point '{}' on contract at address: {:?} with args: {:?}",
-            entry_point,
-            address.to_formatted_string(),
-            runtime_args
-        ));
+        // crate::js::log(&format!(
+        //     "Calling entry point '{}' on contract at address: {:?} with args: {:?}",
+        //     entry_point,
+        //     address.to_formatted_string(),
+        //     runtime_args
+        // ));
         let hash = address.as_contract_package_hash().ok_or_else(|| {
             JsError::new(&format!(
                 "Address is not a contract package hash: {:?}",
@@ -144,10 +148,11 @@ impl OdraWasmClient {
             "amount" => U512::zero(),
         };
 
-        let signed_deploy = self.new_proxy_deploy(wallet, args).await?;
-        // let signed_deploy = wallet.sign_deploy(deploy.into(), None).await?;
-        // let signed_deploy_json = signed_deploy.to_json_string();
-        // crate::js::log(&format!("Signed deploy: {}", signed_deploy_json.unwrap()));
+        let sk_string = r#"-----BEGIN PRIVATE KEY-----
+MC4CAQAwBQYDK2VwBCIEIODIFIJtQQHcpRuDU0QdaygC/se2mntLKUMK2kCnEsKN
+-----END PRIVATE KEY-----"#;
+        let sk = SecretKey::from_pem(sk_string).map_err(|e| JsError::new(&e.to_string()))?;
+        let signed_deploy = self.new_proxy_deploy(&sk, args).await?;
         let response = casper_client::speculative_exec(
             self.rpc_id(),
             &self.speculative_node_address,
@@ -161,9 +166,10 @@ impl OdraWasmClient {
             .result
             .execution_result;
 
-        crate::js::log(&format!("Wasm effects: {:?}", res));
-        let caller = self.caller(wallet).await?;
-        find_result(*caller, &res.effects).ok_or_else(|| {
+        // crate::js::log(&format!("Wasm effects: {:?}", res));
+        let pk = casper_types::PublicKey::from(&sk);
+        let caller = Address::from(pk);
+        find_result(caller, &res.effects).ok_or_else(|| {
             JsError::new(&format!(
                 "Failed to find result in effects: {:?}",
                 res.effects
@@ -411,18 +417,8 @@ impl OdraWasmClient {
         Ok(result.result.balance_value)
     }
 
-    async fn new_proxy_deploy(
-        &self,
-        wallet: &CasperWallet,
-        args: RuntimeArgs
-    ) -> Result<Deploy, JsError> {
+    async fn new_proxy_deploy(&self, sk: &SecretKey, args: RuntimeArgs) -> Result<Deploy, JsError> {
         let proxy_bytes = PROXY_CALLER.to_vec().into();
-        let sk_string = r#"-----BEGIN PRIVATE KEY-----
-MC4CAQAwBQYDK2VwBCIEIODIFIJtQQHcpRuDU0QdaygC/se2mntLKUMK2kCnEsKN
------END PRIVATE KEY-----"#;
-        let pk = PublicKey::new(&wallet.get_active_public_key().await?)
-            .map_err(|e| JsError::new(&e.to_string()))?;
-        let sk = SecretKey::from_pem(sk_string).map_err(|e| JsError::new(&e.to_string()))?;
 
         DeployBuilder::new(
             &self.chain_name,
@@ -432,7 +428,7 @@ MC4CAQAwBQYDK2VwBCIEIODIFIJtQQHcpRuDU0QdaygC/se2mntLKUMK2kCnEsKN
             }
         )
         .with_ttl(TimeDiff::from_seconds(self.ttl))
-        .with_account(pk.into())
+        .with_account(sk.into())
         .with_timestamp(now().ok_or_else(|| JsError::new("Failed to get current time"))?)
         .with_payment(ExecutableDeployItem::ModuleBytes {
             module_bytes: Default::default(),
@@ -440,7 +436,7 @@ MC4CAQAwBQYDK2VwBCIEIODIFIJtQQHcpRuDU0QdaygC/se2mntLKUMK2kCnEsKN
                 "amount" => U512::from(self.gas)
             }
         })
-        .with_secret_key(&sk)
+        .with_secret_key(sk)
         .build()
         .map_err(|e| JsError::new(&e.to_string()))
     }

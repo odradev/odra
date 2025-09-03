@@ -1,3 +1,5 @@
+#![feature(box_patterns)]
+
 use odra_schema::casper_contract_schema::ContractSchema;
 use std::path::Path;
 

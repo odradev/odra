@@ -1,10 +1,8 @@
-use odra_schema::casper_contract_schema::{
-    ContractSchema, CustomType, EnumVariant, NamedCLType, StructMember
-};
+use odra_schema::casper_contract_schema::{ContractSchema, CustomType, EnumVariant, StructMember};
 use quote::{format_ident, ToTokens};
 use syn::parse_quote;
 
-use crate::types::{named_cl_type_to_odra_type, named_cl_type_to_wasm_type};
+use crate::types::{OdraType, WasmType};
 
 pub fn types_def(contract_schema: &ContractSchema) -> Vec<proc_macro2::TokenStream> {
     contract_schema
@@ -22,23 +20,35 @@ fn struct_def(name: &str, members: &[StructMember]) -> proc_macro2::TokenStream 
     let struct_fields = members
         .iter()
         .map(|field| {
-            let field_name = format_ident!("{}", field.name);
-            let ty = named_cl_type_to_odra_type(&field.ty);
-            if matches!(field.ty.0, NamedCLType::ByteArray(_))
-                || matches!(field.ty.0, NamedCLType::List(_))
-            {
-                parse_quote!(#[wasm_bindgen(getter_with_clone)] pub #field_name: #ty)
-            } else {
-                parse_quote!(pub #field_name: #ty)
-            }
+            let ty = OdraType::from(&field.ty);
+            ty.field(field)
         })
         .collect::<Vec<syn::Field>>();
+
+    let setters_getters = members
+        .iter()
+        .filter_map(|field| {
+            let wasm_ty = WasmType::from(&field.ty);
+            let odra_ty = OdraType::from(&field.ty);
+
+            if odra_ty.is_cloneable() {
+                return None;
+            }
+
+            let setter_code = wasm_ty.setter_code(field);
+            let getter_code = wasm_ty.getter_code(field);
+            Some(quote::quote! {
+                #setter_code
+                #getter_code
+            })
+        })
+        .collect::<Vec<proc_macro2::TokenStream>>();
 
     let fields = members
         .iter()
         .map(|field| {
             let field_name = format_ident!("{}", field.name);
-            let ty = named_cl_type_to_wasm_type(&field.ty);
+            let ty = WasmType::from(&field.ty);
             parse_quote!(#field_name: #ty)
         })
         .collect::<Vec<syn::Field>>();
@@ -47,15 +57,11 @@ fn struct_def(name: &str, members: &[StructMember]) -> proc_macro2::TokenStream 
         .iter()
         .map(|field| {
             let field_name = format_ident!("{}", field.name);
-            let odra_ty = named_cl_type_to_odra_type(&field.ty);
-            let wasm_ty = named_cl_type_to_wasm_type(&field.ty);
+            let odra_ty = OdraType::from(&field.ty);
+            let wasm_ty = WasmType::from(&field.ty);
             if wasm_ty.to_token_stream().to_string() == odra_ty.to_token_stream().to_string() {
                 parse_quote!(#field_name)
             } else {
-                println!(
-                    "Field: {}, Odra Type: {:?}, WASM Type: {:?}",
-                    field_name, odra_ty, wasm_ty
-                );
                 parse_quote!(#field_name: #field_name.into())
             }
         })
@@ -95,7 +101,7 @@ fn struct_def(name: &str, members: &[StructMember]) -> proc_macro2::TokenStream 
 
     quote::quote! {
         #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-        #[wasm_bindgen]
+        #[wasm_bindgen(getter_with_clone)]
         pub struct #type_name {
             #(#struct_fields),*
         }
@@ -113,6 +119,8 @@ fn struct_def(name: &str, members: &[StructMember]) -> proc_macro2::TokenStream 
             pub fn to_json(&self) -> JsValue {
                 JsValue::from_serde(self).unwrap_or(JsValue::null())
             }
+
+            #(#setters_getters)*
         }
 
         impl casper_types::bytesrepr::FromBytes for #type_name {
