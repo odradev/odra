@@ -24,7 +24,7 @@ pub fn client(contract_schema: &ContractSchema) -> proc_macro2::TokenStream {
         #[wasm_bindgen]
         impl #client_name {
             #[wasm_bindgen(constructor)]
-            pub fn new(wasm_client: odra_wasm_client::OdraWasmClient, address: odra_wasm_client::types::Address) -> Self {
+            pub fn new(#[wasm_bindgen(js_name = "wasmClient")] wasm_client: odra_wasm_client::OdraWasmClient, address: odra_wasm_client::types::Address) -> Self {
                 #client_name {
                     wasm_client,
                     wallet: odra_wasm_client::CasperWallet::default(),
@@ -75,7 +75,9 @@ fn entry_point_def(ep: &Entrypoint) -> proc_macro2::TokenStream {
     let is_mut = ep.is_mutable;
 
     if is_mut && returns_value {
-        quote::quote! {}
+        quote::quote! {
+            panic!("Mutable entry points with return values are not supported");
+        }
     } else if returns_value {
         quote::quote! {
             #[wasm_bindgen(js_name = #js_name)]
@@ -118,8 +120,9 @@ fn entry_point_def(ep: &Entrypoint) -> proc_macro2::TokenStream {
 
 fn parse_entry_point_arg(fn_arg: &Argument) -> syn::FnArg {
     let arg_ident = format_ident!("{}", fn_arg.name);
+    let js_name = fn_arg.name.to_case(Case::Camel);
     let ty = WasmType::from(&fn_arg.ty);
-    parse_quote!(#arg_ident: #ty)
+    parse_quote!(#[wasm_bindgen(js_name = #js_name)] #arg_ident: #ty)
 }
 
 fn parse_js_value_arg(arg: &Argument) -> Option<syn::Stmt> {

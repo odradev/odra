@@ -1,5 +1,7 @@
+use convert_case::{Case, Casing};
 use odra_schema::casper_contract_schema::{NamedCLType, StructMember, Type};
 use quote::{format_ident, ToTokens};
+use syn::parse_quote;
 
 pub enum WasmType {
     Bool,
@@ -29,6 +31,12 @@ pub enum WasmType {
 }
 
 impl WasmType {
+    pub fn field(&self, member: &StructMember) -> syn::Field {
+        let field_name = format_ident!("{}", member.name);
+        let js_name = member.name.to_case(Case::Camel);
+        parse_quote!(#[wasm_bindgen(js_name = #js_name)] #field_name: #self)
+    }
+
     pub fn is_wrapped_type(&self) -> bool {
         match self {
             WasmType::Option(e) if e.is_wrapped_type() => true,
@@ -54,40 +62,40 @@ impl WasmType {
                 }
             },
             WasmType::List(_) => quote::quote! {
-                #[wasm_bindgen(setter)]
+                #[wasm_bindgen(getter)]
                 pub fn #ident(&self) -> #self {
                     self.#ident.into_iter().map(Into::into).collect()
                 }
             },
             WasmType::JsValueList => quote::quote! {
-                #[wasm_bindgen(setter)]
+                #[wasm_bindgen(getter)]
                 pub fn #ident(&self) -> #self {
                     self.#ident.iter().map(|v| JsValue::from_serde(v).unwrap_or(JsValue::null())).collect()
                 }
             },
             WasmType::JsValue => quote::quote! {
-                #[wasm_bindgen(setter)]
+                #[wasm_bindgen(getter)]
                 pub fn #ident(&self) -> #self {
                     JsValue::from_serde(v).unwrap_or(JsValue::null())
                 }
             },
             WasmType::Option(box WasmType::JsValue) => quote::quote! {
-                #[wasm_bindgen(setter)]
+                #[wasm_bindgen(getter)]
                 pub fn #ident(&self) -> #self {
                     self.#ident.map(|v| JsValue::from_serde(v).unwrap_or(JsValue::null()))
                 }
             },
             WasmType::Option(box WasmType::JsValueList) => quote::quote! {
-                #[wasm_bindgen(setter)]
+                #[wasm_bindgen(getter)]
                 pub fn #ident(&self) -> #self {
                     self.#ident.iter().map(|v| JsValue::from_serde(v).unwrap_or(JsValue::null())).collect()
                 }
             },
             WasmType::Result { ok: _, err: _ } => quote::quote! {
-                panic!("Unsupported type for setter");
+                panic!("Unsupported type for getter");
             },
             _ => quote::quote! {
-                panic!("Unsupported type for setter");
+                panic!("Unsupported type for getter");
             }
         }
     }

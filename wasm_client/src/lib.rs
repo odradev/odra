@@ -12,7 +12,7 @@ pub struct StyksPriceFeedWasmClient {
 impl StyksPriceFeedWasmClient {
     #[wasm_bindgen(constructor)]
     pub fn new(
-        wasm_client: odra_wasm_client::OdraWasmClient,
+        #[wasm_bindgen(js_name = "wasmClient")] wasm_client: odra_wasm_client::OdraWasmClient,
         address: odra_wasm_client::types::Address
     ) -> Self {
         StyksPriceFeedWasmClient {
@@ -24,7 +24,7 @@ impl StyksPriceFeedWasmClient {
     #[wasm_bindgen(js_name = "setConfig")]
     pub async fn set_config(
         &self,
-        config: StyksPriceFeedConfig
+        #[wasm_bindgen(js_name = "config")] config: StyksPriceFeedConfig
     ) -> Result<odra_wasm_client::types::TransactionHash, odra_wasm_client::wasm_bindgen::JsError>
     {
         if !self.wallet.request_connection().await.is_ok() {
@@ -81,7 +81,7 @@ impl StyksPriceFeedWasmClient {
     #[wasm_bindgen(js_name = "getCurrentTwapStore")]
     pub async fn get_current_twap_store(
         &self,
-        id: String
+        #[wasm_bindgen(js_name = "id")] id: String
     ) -> Result<Vec<JsValue>, odra_wasm_client::wasm_bindgen::JsError> {
         let cl_value = self
             .wasm_client
@@ -123,7 +123,7 @@ impl StyksPriceFeedWasmClient {
     #[wasm_bindgen(js_name = "addToFeed")]
     pub async fn add_to_feed(
         &self,
-        input: Vec<JsValue>
+        #[wasm_bindgen(js_name = "input")] input: Vec<JsValue>
     ) -> Result<odra_wasm_client::types::TransactionHash, odra_wasm_client::wasm_bindgen::JsError>
     {
         if !self.wallet.request_connection().await.is_ok() {
@@ -151,7 +151,7 @@ impl StyksPriceFeedWasmClient {
     #[wasm_bindgen(js_name = "getTwapPrice")]
     pub async fn get_twap_price(
         &self,
-        id: String
+        #[wasm_bindgen(js_name = "id")] id: String
     ) -> Result<Option<u64>, odra_wasm_client::wasm_bindgen::JsError> {
         let cl_value = self
             .wasm_client
@@ -170,8 +170,8 @@ impl StyksPriceFeedWasmClient {
     #[wasm_bindgen(js_name = "hasRole")]
     pub async fn has_role(
         &self,
-        role: Vec<u8>,
-        address: odra_wasm_client::types::Address
+        #[wasm_bindgen(js_name = "role")] role: Vec<u8>,
+        #[wasm_bindgen(js_name = "address")] address: odra_wasm_client::types::Address
     ) -> Result<bool, odra_wasm_client::wasm_bindgen::JsError> {
         let cl_value = self . wasm_client . call_entry_point_with_proxy (* self . address , "has_role" , casper_types :: runtime_args ! { stringify ! (role) => role , stringify ! (address) => * address }) . await ? ;
         let result =
@@ -184,8 +184,8 @@ impl StyksPriceFeedWasmClient {
     #[wasm_bindgen(js_name = "grantRole")]
     pub async fn grant_role(
         &self,
-        role: Vec<u8>,
-        address: odra_wasm_client::types::Address
+        #[wasm_bindgen(js_name = "role")] role: Vec<u8>,
+        #[wasm_bindgen(js_name = "address")] address: odra_wasm_client::types::Address
     ) -> Result<odra_wasm_client::types::TransactionHash, odra_wasm_client::wasm_bindgen::JsError>
     {
         if !self.wallet.request_connection().await.is_ok() {
@@ -198,8 +198,8 @@ impl StyksPriceFeedWasmClient {
     #[wasm_bindgen(js_name = "revokeRole")]
     pub async fn revoke_role(
         &self,
-        role: Vec<u8>,
-        address: odra_wasm_client::types::Address
+        #[wasm_bindgen(js_name = "role")] role: Vec<u8>,
+        #[wasm_bindgen(js_name = "address")] address: odra_wasm_client::types::Address
     ) -> Result<odra_wasm_client::types::TransactionHash, odra_wasm_client::wasm_bindgen::JsError>
     {
         if !self.wallet.request_connection().await.is_ok() {
@@ -212,7 +212,7 @@ impl StyksPriceFeedWasmClient {
     #[wasm_bindgen(js_name = "getRoleAdmin")]
     pub async fn get_role_admin(
         &self,
-        role: Vec<u8>
+        #[wasm_bindgen(js_name = "role")] role: Vec<u8>
     ) -> Result<Vec<u8>, odra_wasm_client::wasm_bindgen::JsError> {
         let cl_value = self
             .wasm_client
@@ -231,8 +231,8 @@ impl StyksPriceFeedWasmClient {
     #[wasm_bindgen(js_name = "renounceRole")]
     pub async fn renounce_role(
         &self,
-        role: Vec<u8>,
-        address: odra_wasm_client::types::Address
+        #[wasm_bindgen(js_name = "role")] role: Vec<u8>,
+        #[wasm_bindgen(js_name = "address")] address: odra_wasm_client::types::Address
     ) -> Result<odra_wasm_client::types::TransactionHash, odra_wasm_client::wasm_bindgen::JsError>
     {
         if !self.wallet.request_connection().await.is_ok() {
@@ -246,14 +246,21 @@ impl StyksPriceFeedWasmClient {
 #[derive(Debug, Clone, serde :: Serialize, serde :: Deserialize)]
 #[wasm_bindgen(getter_with_clone)]
 pub struct RoleAdminChanged {
+    #[wasm_bindgen(js_name = "role")]
     pub role: Vec<u8>,
+    #[wasm_bindgen(js_name = "previousAdminRole")]
     pub previous_admin_role: Vec<u8>,
+    #[wasm_bindgen(js_name = "newAdminRole")]
     pub new_admin_role: Vec<u8>
 }
 #[wasm_bindgen]
 impl RoleAdminChanged {
     #[wasm_bindgen(constructor)]
-    pub fn new(role: Vec<u8>, previous_admin_role: Vec<u8>, new_admin_role: Vec<u8>) -> Self {
+    pub fn new(
+        #[wasm_bindgen(js_name = "role")] role: Vec<u8>,
+        #[wasm_bindgen(js_name = "previousAdminRole")] previous_admin_role: Vec<u8>,
+        #[wasm_bindgen(js_name = "newAdminRole")] new_admin_role: Vec<u8>
+    ) -> Self {
         Self {
             role,
             previous_admin_role,
@@ -308,17 +315,20 @@ impl casper_types::CLTyped for RoleAdminChanged {
 #[derive(Debug, Clone, serde :: Serialize, serde :: Deserialize)]
 #[wasm_bindgen(getter_with_clone)]
 pub struct RoleGranted {
+    #[wasm_bindgen(js_name = "role")]
     pub role: Vec<u8>,
+    #[wasm_bindgen(js_name = "address")]
     address: odra_core::prelude::Address,
+    #[wasm_bindgen(js_name = "sender")]
     sender: odra_core::prelude::Address
 }
 #[wasm_bindgen]
 impl RoleGranted {
     #[wasm_bindgen(constructor)]
     pub fn new(
-        role: Vec<u8>,
-        address: odra_wasm_client::types::Address,
-        sender: odra_wasm_client::types::Address
+        #[wasm_bindgen(js_name = "role")] role: Vec<u8>,
+        #[wasm_bindgen(js_name = "address")] address: odra_wasm_client::types::Address,
+        #[wasm_bindgen(js_name = "sender")] sender: odra_wasm_client::types::Address
     ) -> Self {
         Self {
             role,
@@ -386,17 +396,20 @@ impl casper_types::CLTyped for RoleGranted {
 #[derive(Debug, Clone, serde :: Serialize, serde :: Deserialize)]
 #[wasm_bindgen(getter_with_clone)]
 pub struct RoleRevoked {
+    #[wasm_bindgen(js_name = "role")]
     pub role: Vec<u8>,
+    #[wasm_bindgen(js_name = "address")]
     address: odra_core::prelude::Address,
+    #[wasm_bindgen(js_name = "sender")]
     sender: odra_core::prelude::Address
 }
 #[wasm_bindgen]
 impl RoleRevoked {
     #[wasm_bindgen(constructor)]
     pub fn new(
-        role: Vec<u8>,
-        address: odra_wasm_client::types::Address,
-        sender: odra_wasm_client::types::Address
+        #[wasm_bindgen(js_name = "role")] role: Vec<u8>,
+        #[wasm_bindgen(js_name = "address")] address: odra_wasm_client::types::Address,
+        #[wasm_bindgen(js_name = "sender")] sender: odra_wasm_client::types::Address
     ) -> Self {
         Self {
             role,
@@ -464,21 +477,26 @@ impl casper_types::CLTyped for RoleRevoked {
 #[derive(Debug, Clone, serde :: Serialize, serde :: Deserialize)]
 #[wasm_bindgen(getter_with_clone)]
 pub struct StyksPriceFeedConfig {
+    #[wasm_bindgen(js_name = "heartbeatInterval")]
     pub heartbeat_interval: u64,
+    #[wasm_bindgen(js_name = "heartbeatTolerance")]
     pub heartbeat_tolerance: u64,
+    #[wasm_bindgen(js_name = "twapWindow")]
     pub twap_window: u32,
+    #[wasm_bindgen(js_name = "twapTolerance")]
     pub twap_tolerance: u32,
+    #[wasm_bindgen(js_name = "priceFeedIds")]
     pub price_feed_ids: Vec<String>
 }
 #[wasm_bindgen]
 impl StyksPriceFeedConfig {
     #[wasm_bindgen(constructor)]
     pub fn new(
-        heartbeat_interval: u64,
-        heartbeat_tolerance: u64,
-        twap_window: u32,
-        twap_tolerance: u32,
-        price_feed_ids: Vec<String>
+        #[wasm_bindgen(js_name = "heartbeatInterval")] heartbeat_interval: u64,
+        #[wasm_bindgen(js_name = "heartbeatTolerance")] heartbeat_tolerance: u64,
+        #[wasm_bindgen(js_name = "twapWindow")] twap_window: u32,
+        #[wasm_bindgen(js_name = "twapTolerance")] twap_tolerance: u32,
+        #[wasm_bindgen(js_name = "priceFeedIds")] price_feed_ids: Vec<String>
     ) -> Self {
         Self {
             heartbeat_interval,

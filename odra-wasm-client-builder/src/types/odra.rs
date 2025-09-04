@@ -1,3 +1,4 @@
+use convert_case::{Case, Casing};
 use odra_schema::casper_contract_schema::{NamedCLType, StructMember, Type};
 use quote::{format_ident, ToTokens};
 use syn::parse_quote;
@@ -49,10 +50,11 @@ impl OdraType {
 
     pub fn field(&self, member: &StructMember) -> syn::Field {
         let field_name = format_ident!("{}", member.name);
+        let js_name = member.name.to_case(Case::Camel);
         if self.is_cloneable() {
-            parse_quote!(pub #field_name: #self)
+            parse_quote!(#[wasm_bindgen(js_name = #js_name)] pub #field_name: #self)
         } else {
-            parse_quote!(#field_name: #self)
+            parse_quote!(#[wasm_bindgen(js_name = #js_name)] #field_name: #self)
         }
     }
 }

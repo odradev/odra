@@ -47,9 +47,8 @@ fn struct_def(name: &str, members: &[StructMember]) -> proc_macro2::TokenStream 
     let fields = members
         .iter()
         .map(|field| {
-            let field_name = format_ident!("{}", field.name);
             let ty = WasmType::from(&field.ty);
-            parse_quote!(#field_name: #ty)
+            ty.field(field)
         })
         .collect::<Vec<syn::Field>>();
 
