@@ -21,7 +21,6 @@ members = [
     "odra-wasm-client-builder",
 ]
 exclude = [
-    "wasm_client",
     "odra-casper/proxy-caller",
     "templates/blank",
     "templates/full",

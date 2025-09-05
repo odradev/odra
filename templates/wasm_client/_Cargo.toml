@@ -1,0 +1,26 @@
+[package]
+name = "{{project-name}}-wasm-client"
+description = "Wasm client"
+edition = "2021"
+
+[dependencies]
+#odra_wasm_client_dependency
+#odra_core_dependency
+#odra_wasm_client_builder_dependency
+serde = { version = "1.0.195", default-features = false }
+serde_json = { version = "1.0.113", default-features = false }
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+name = "{{lib-name}}_wasm_client"
+path = "src/lib.rs"
+
+[features]
+default = ["client"]
+codegen = ["odra-wasm-client-builder"]
+client = []
+
+[[bin]]
+name = "codegen"
+path = "src/main.rs"
+required-features = ["codegen"]

@@ -40,5 +40,17 @@
     "description":"Cargo Odra's internal template for module registration",
     "path":"templates/module_register.rs.template",
     "template_type":"Internal"
+  },
+  {
+    "name": "wasm_client_cargo",
+    "description": "Cargo.toml for WASM client",
+    "path": "templates/wasm_client/_Cargo.toml",
+    "template_type": "Client"
+  },
+  {
+    "name": "wasm_client_codegen",
+    "description": "Cargo.toml for WASM client code generation",
+    "path": "templates/wasm_client/codegen.rs.template",
+    "template_type": "Client"
   }
 ]
