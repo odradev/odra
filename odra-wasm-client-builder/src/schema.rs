@@ -56,7 +56,6 @@ fn parse_type(value: &Value, _custom_types: &[CustomType]) -> Result<Type, Strin
         Ok(ty) => Ok(ty),
         Err(_) => match value.clone() {
             Value::Object(ref map) => {
-                println!("Warning: return_ty is an empty object, defaulting to Unit");
                 if map.contains_key("Option") {
                     let inner_value = map.get("Option").unwrap();
                     let it = parse_type(inner_value, _custom_types)?;
@@ -66,12 +65,7 @@ fn parse_type(value: &Value, _custom_types: &[CustomType]) -> Result<Type, Strin
                 }
             }
             Value::String(ty_name) => {
-                println!("Warning: return_ty is a string, defaulting to Custom");
                 Ok(Type(NamedCLType::Custom(ty_name.to_string())))
-            }
-            Value::Array(_elements) => {
-                println!("Warning: return_ty is an array, defaulting to Custom");
-                Ok(Type(NamedCLType::Custom("Array".to_string())))
             }
             _ => Err(format!("Unsupported type format {:?}", value))
         }

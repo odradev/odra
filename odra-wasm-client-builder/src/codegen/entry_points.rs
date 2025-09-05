@@ -15,10 +15,6 @@ pub fn client(contract_schema: &ContractSchema) -> proc_macro2::TokenStream {
         .collect::<Vec<_>>();
 
     quote::quote! {
-        use odra_wasm_client::wasm_bindgen as wasm_bindgen;
-        use odra_wasm_client::wasm_bindgen_futures as wasm_bindgen_futures;
-        use odra_wasm_client::JsValueSerdeExt;
-        use wasm_bindgen::prelude::*;
         #struct_definition
 
         #[wasm_bindgen]
@@ -85,12 +81,12 @@ fn entry_point_def(ep: &Entrypoint) -> proc_macro2::TokenStream {
                 #(#parse_js_input)*
                 let cl_value = self
                     .wasm_client
-                    .call_entry_point_with_proxy(*self.address, #entry_point_str, casper_types::runtime_args! {
+                    .call_entry_point_with_proxy(*self.address, #entry_point_str, odra_wasm_client::casper_types::runtime_args! {
                         #(#rt_args),*
                     })
                     .await?;
 
-                let result = <#deser_ty as casper_types::bytesrepr::FromBytes>::from_bytes(&cl_value.inner_bytes()[4..])
+                let result = <#deser_ty as odra_wasm_client::casper_types::bytesrepr::FromBytes>::from_bytes(&cl_value.inner_bytes()[4..])
                     .map_err(|err| odra_wasm_client::wasm_bindgen::JsError::new(&format!("{:?}", err)))?;
                 #ret_expr
             }
@@ -108,7 +104,7 @@ fn entry_point_def(ep: &Entrypoint) -> proc_macro2::TokenStream {
                         &self.wallet,
                         *self.address,
                         #entry_point_str,
-                        casper_types::runtime_args! {
+                        odra_wasm_client::casper_types::runtime_args! {
                             #(#rt_args),*
                         }
                     )

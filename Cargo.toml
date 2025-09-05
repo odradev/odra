@@ -49,6 +49,7 @@ odra-casper-rpc-client = { path = "odra-casper/rpc-client", version = "2.3.1" }
 odra-vm = { path = "odra-vm", version = "2.3.1" }
 odra-casper-wasm-env = { path = "odra-casper/wasm-env", version = "2.3.1" }
 odra-schema = { path = "odra-schema", version = "2.3.1" }
+odra-wasm-client = { path = "odra-wasm-client", version = "2.3.1" }
 casper-contract = { version = "5.1.0",  default-features = false }
 casper-contract-schema = { version = "0.5.0" }
 casper-types = "6.0.0"

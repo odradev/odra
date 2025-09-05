@@ -78,7 +78,7 @@ fn struct_def(name: &str, members: &[StructMember]) -> proc_macro2::TokenStream 
         .iter()
         .map(|field| {
             let field_name = format_ident!("{}", field.name);
-            parse_quote!(let (#field_name, bytes) = casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;)
+            parse_quote!(let (#field_name, bytes) = odra_wasm_client::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;)
         })
         .collect::<Vec<syn::Stmt>>();
 
@@ -86,7 +86,7 @@ fn struct_def(name: &str, members: &[StructMember]) -> proc_macro2::TokenStream 
         .iter()
         .map(|field| {
             let field_name = format_ident!("{}", field.name);
-            parse_quote!(result.extend(casper_types::bytesrepr::ToBytes::to_bytes(&self.#field_name)?);)
+            parse_quote!(result.extend(odra_wasm_client::casper_types::bytesrepr::ToBytes::to_bytes(&self.#field_name)?);)
         })
         .collect::<Vec<syn::Stmt>>();
 
@@ -122,17 +122,17 @@ fn struct_def(name: &str, members: &[StructMember]) -> proc_macro2::TokenStream 
             #(#setters_getters)*
         }
 
-        impl casper_types::bytesrepr::FromBytes for #type_name {
-            fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), casper_types::bytesrepr::Error> {
+        impl odra_wasm_client::casper_types::bytesrepr::FromBytes for #type_name {
+            fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra_wasm_client::casper_types::bytesrepr::Error> {
                 #(#fields_deser)*
                 Ok((Self { #(#field_names),* }, bytes))
             }
         }
 
-        impl casper_types::bytesrepr::ToBytes for #type_name {
+        impl odra_wasm_client::casper_types::bytesrepr::ToBytes for #type_name {
             fn to_bytes(
                 &self
-            ) -> Result<Vec<u8>, casper_types::bytesrepr::Error> {
+            ) -> Result<Vec<u8>, odra_wasm_client::casper_types::bytesrepr::Error> {
                 let mut result = Vec::with_capacity(self.serialized_length());
                 #(#fields_ser)*
                 Ok(result)
@@ -144,9 +144,9 @@ fn struct_def(name: &str, members: &[StructMember]) -> proc_macro2::TokenStream 
             }
         }
 
-        impl casper_types::CLTyped for #type_name {
-            fn cl_type() -> casper_types::CLType {
-                casper_types::CLType::Any
+        impl odra_wasm_client::casper_types::CLTyped for #type_name {
+            fn cl_type() -> odra_wasm_client::casper_types::CLType {
+                odra_wasm_client::casper_types::CLType::Any
             }
         }
     }
@@ -185,30 +185,30 @@ fn enum_def(name: &str, variants: &[EnumVariant]) -> proc_macro2::TokenStream {
             }
         }
 
-        impl casper_types::bytesrepr::FromBytes for #type_name {
-            fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), casper_types::bytesrepr::Error> {
-                let (result, bytes): (u8, _) = casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
+        impl odra_wasm_client::casper_types::bytesrepr::FromBytes for #type_name {
+            fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra_wasm_client::casper_types::bytesrepr::Error> {
+                let (result, bytes): (u8, _) = odra_wasm_client::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
                 match result {
                     #(#match_arms),*
-                    _ => Err(casper_types::bytesrepr::Error::Formatting)
+                    _ => Err(odra_wasm_client::casper_types::bytesrepr::Error::Formatting)
                 }
             }
         }
 
-        impl casper_types::bytesrepr::ToBytes for #type_name {
+        impl odra_wasm_client::casper_types::bytesrepr::ToBytes for #type_name {
             fn to_bytes(
                 &self
-            ) -> Result<Vec<u8>, casper_types::bytesrepr::Error> {
+            ) -> Result<Vec<u8>, odra_wasm_client::casper_types::bytesrepr::Error> {
                 Ok(vec![(self.clone() as u8)])
             }
             fn serialized_length(&self) -> usize {
-                casper_types::bytesrepr::U8_SERIALIZED_LENGTH
+                odra_wasm_client::casper_types::bytesrepr::U8_SERIALIZED_LENGTH
             }
         }
 
-        impl casper_types::CLTyped for #type_name {
-            fn cl_type() -> casper_types::CLType {
-                casper_types::CLType::U8
+        impl odra_wasm_client::casper_types::CLTyped for #type_name {
+            fn cl_type() -> odra_wasm_client::casper_types::CLType {
+                odra_wasm_client::casper_types::CLType::U8
             }
         }
     }

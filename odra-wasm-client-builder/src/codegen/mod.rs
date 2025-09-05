@@ -12,3 +12,13 @@ impl PartialEq<OdraType> for WasmType {
         self.to_token_stream().to_string() == other.to_token_stream().to_string()
     }
 }
+
+pub fn imports() -> proc_macro2::TokenStream {
+    quote::quote! {
+        #![allow(unused_imports)]
+        use odra_wasm_client::wasm_bindgen as wasm_bindgen;
+        use odra_wasm_client::wasm_bindgen_futures as wasm_bindgen_futures;
+        use odra_wasm_client::JsValueSerdeExt;
+        use wasm_bindgen::prelude::*;
+    }
+}

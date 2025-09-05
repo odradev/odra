@@ -68,14 +68,14 @@ impl ToTokens for OdraType {
             OdraType::U8 => quote::quote!(u8),
             OdraType::U32 => quote::quote!(u32),
             OdraType::U64 => quote::quote!(u64),
-            OdraType::U128 => quote::quote!(casper_types::U128),
-            OdraType::U256 => quote::quote!(casper_types::U256),
-            OdraType::U512 => quote::quote!(casper_types::U512),
+            OdraType::U128 => quote::quote!(odra_wasm_client::casper_types::U128),
+            OdraType::U256 => quote::quote!(odra_wasm_client::casper_types::U256),
+            OdraType::U512 => quote::quote!(odra_wasm_client::casper_types::U512),
             OdraType::Unit => quote::quote!(()),
             OdraType::String => quote::quote!(String),
-            OdraType::Key => quote::quote!(odra_core::prelude::Address),
-            OdraType::URef => quote::quote!(casper_types::URef),
-            OdraType::PublicKey => quote::quote!(casper_types::PublicKey),
+            OdraType::Key => quote::quote!(odra_wasm_client::OdraAddress),
+            OdraType::URef => quote::quote!(odra_wasm_client::casper_types::URef),
+            OdraType::PublicKey => quote::quote!(odra_wasm_client::casper_types::PublicKey),
             OdraType::Option(inner) => {
                 let inner = inner.to_token_stream();
                 quote::quote!(Option<#inner>)

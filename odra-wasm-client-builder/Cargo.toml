@@ -9,7 +9,7 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
-odra-schema = { path = "../odra-schema" }
+odra-schema = { workspace = true}
 serde_json = { workspace = true }
 quote = { version = "1.0.33" }
 syn = { version = "2.0.29", features = ["full", "extra-traits"] }

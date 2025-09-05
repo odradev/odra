@@ -25,3 +25,5 @@ pub(crate) fn now() -> Option<Timestamp> {
 pub use gloo_utils::format::JsValueSerdeExt;
 pub use wasm_bindgen;
 pub use wasm_bindgen_futures;
+pub use odra_core::casper_types;
+pub use odra_core::prelude::Address as OdraAddress;
