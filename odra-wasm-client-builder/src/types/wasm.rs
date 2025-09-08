@@ -39,7 +39,6 @@ impl WasmType {
 
     pub fn is_wrapped_type(&self) -> bool {
         match self {
-            WasmType::Option(e) if e.is_wrapped_type() => true,
             WasmType::Result { ok, err } if ok.is_wrapped_type() && err.is_wrapped_type() => true,
             WasmType::U128
             | WasmType::U256
@@ -58,7 +57,7 @@ impl WasmType {
             t if t.is_wrapped_type() => quote::quote! {
                 #[wasm_bindgen(getter)]
                 pub fn #ident(&self) -> #self {
-                    self.#ident.into()
+                    self.#ident.clone().into()
                 }
             },
             WasmType::List(_) => quote::quote! {
@@ -91,6 +90,14 @@ impl WasmType {
                     self.#ident.iter().map(|v| JsValue::from_serde(v).unwrap_or(JsValue::null())).collect()
                 }
             },
+            WasmType::Option(e) if e.is_wrapped_type() => {
+                quote::quote! {
+                    #[wasm_bindgen(getter)]
+                    pub fn #ident(&self) -> #self {
+                        self.#ident.map(|v| v.into())
+                    }
+                }
+            }
             WasmType::Result { ok: _, err: _ } => quote::quote! {
                 panic!("Unsupported type for getter");
             },
@@ -146,6 +153,14 @@ impl WasmType {
                     }).collect());
                 }
             },
+            WasmType::Option(e) if e.is_wrapped_type() => {
+                quote::quote! {
+                    #[wasm_bindgen(setter)]
+                    pub fn #ident(&mut self, value: #ty) {
+                        self.#field_name = value.map(|v| v.into());
+                    }
+                }
+            }
             WasmType::Result { ok: _, err: _ } => quote::quote! {
                 panic!("Unsupported type for setter");
             },
@@ -232,7 +247,7 @@ fn named_cl_type_to_wasm_type(ty: &Type) -> WasmType {
                 NamedCLType::Tuple1(_) => WasmType::JsValueList,
                 NamedCLType::Tuple2(_) => WasmType::JsValueList,
                 NamedCLType::Tuple3(_) => WasmType::JsValueList,
-                NamedCLType::Custom(_) => WasmType::JsValueList,
+                // NamedCLType::Custom(_) => WasmType::JsValueList,
                 _ => {
                     let inner = named_cl_type_to_wasm_type(&Type(*named_cltype.clone()));
                     WasmType::List(Box::new(inner))

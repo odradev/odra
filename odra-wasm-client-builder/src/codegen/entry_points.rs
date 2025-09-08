@@ -152,10 +152,22 @@ fn parse_js_value_arg(arg: &Argument) -> Option<syn::Stmt> {
 
 fn runtime_arg(arg: &Argument) -> TokenStream {
     let arg_name = format_ident!("{}", arg.name);
-    if WasmType::from(&arg.ty).is_wrapped_type() {
-        return parse_quote!(stringify!(#arg_name) => *#arg_name);
+    let odra_ty = OdraType::from(&arg.ty);
+    let wasm_ty = WasmType::from(&arg.ty);
+    if wasm_ty.is_wrapped_type() {
+        return parse_quote!(stringify!(#arg_name) => (*#arg_name).clone());
+    } else if matches!(wasm_ty, WasmType::Option(ref e) if e.is_wrapped_type()) {
+        if let OdraType::Option(inner_odra_ty) = odra_ty {
+            return parse_quote!(stringify!(#arg_name) => #arg_name.map(Into::<#inner_odra_ty>::into));
+        }
+        panic!("Expected OdraType::Option");
+    } else if matches!(wasm_ty, WasmType::Option(box WasmType::Bytes)) {
+        return parse_quote!(stringify!(#arg_name) => #arg_name);
+    } else if matches!(wasm_ty, WasmType::List(e) if e.is_wrapped_type()) {
+        return parse_quote!(stringify!(#arg_name) => #arg_name.into_iter().map(Into::into).collect::<#odra_ty>());
+    } else {
+        return parse_quote!(stringify!(#arg_name) => #arg_name);
     }
-    parse_quote!(stringify!(#arg_name) => #arg_name)
 }
 
 fn return_expr(ep: &Entrypoint) -> syn::Expr {
@@ -170,6 +182,8 @@ fn return_expr(ep: &Entrypoint) -> syn::Expr {
         WasmType::JsValue => parse_quote! {
             JsValue::from_serde(&result.0).map_err(|err| JsError::new(&format!("{:?}", err)))
         },
+        WasmType::Option(inner) if inner.is_wrapped_type() => parse_quote!(Ok(result.0.map(Into::into))),
+        WasmType::Option(_) => parse_quote!(Ok(result.0)),
         WasmType::Bytes => parse_quote!(Ok(result.0.to_vec())),
         WasmType::Custom(_) => parse_quote!(Ok(result.0)),
         _ => parse_quote!(Ok(result.0))

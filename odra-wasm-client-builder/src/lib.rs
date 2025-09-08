@@ -57,35 +57,44 @@ fn read_schema<P: AsRef<Path>>(schema_path: P) -> Result<ContractSchema, String>
     schema::parse(&result)
 }
 
-
 fn code<P: AsRef<Path>>(schema_path: P) -> Result<proc_macro2::TokenStream, String> {
     let imports = codegen::imports();
 
     let path = schema_path.as_ref();
     if path.is_dir() {
         // generate code for all schemas in the directory
-        let mut code = proc_macro2::TokenStream::new();
+        let mut clients = proc_macro2::TokenStream::new();
+        let mut types = Vec::new();
         for entry in std::fs::read_dir(path).map_err(|e| e.to_string())? {
             let entry = entry.map_err(|e| e.to_string())?;
             if entry.path().extension().map(|s| s == "json").unwrap_or(false) {
                 let contract_schema = read_schema(entry.path())?;
                 let client = client(&contract_schema);
-                let types = types_def(&contract_schema);
-                code.extend(quote::quote! {
-                    #client
-                    #(#types)*
-                });
+                types.extend(contract_schema.types);
+                clients.extend(client);
             }
         }
+        let mut seen = std::collections::HashSet::new();
+        let mut unique_types = Vec::new();
+        for t in types {
+            if seen.contains(&t.name()) {
+                continue;
+            }
+            seen.insert(t.name());
+            unique_types.push(t);
+        }
+        let types = types_def(&unique_types);
+
         Ok(quote::quote! {
             #imports
 
-            #code
+            #clients
+            #(#types)*
         })
     } else {
         let contract_schema = read_schema(schema_path)?;
         let client = client(&contract_schema);
-        let types = types_def(&contract_schema);
+        let types = types_def(&contract_schema.types);
 
         Ok(quote::quote! {
             #imports

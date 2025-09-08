@@ -1,12 +1,11 @@
-use odra_schema::casper_contract_schema::{ContractSchema, CustomType, EnumVariant, StructMember};
-use quote::{format_ident, ToTokens};
+use odra_schema::casper_contract_schema::{CustomType, EnumVariant, StructMember};
+use quote::format_ident;
 use syn::parse_quote;
 
 use crate::types::{OdraType, WasmType};
 
-pub fn types_def(contract_schema: &ContractSchema) -> Vec<proc_macro2::TokenStream> {
-    contract_schema
-        .types
+pub fn types_def(types: &[CustomType]) -> Vec<proc_macro2::TokenStream> {
+    types
         .iter()
         .map(|custom_type| match custom_type {
             CustomType::Struct { name, members, .. } => struct_def(&name.0, members),
@@ -58,10 +57,20 @@ fn struct_def(name: &str, members: &[StructMember]) -> proc_macro2::TokenStream 
             let field_name = format_ident!("{}", field.name);
             let odra_ty = OdraType::from(&field.ty);
             let wasm_ty = WasmType::from(&field.ty);
-            if wasm_ty.to_token_stream().to_string() == odra_ty.to_token_stream().to_string() {
+            if wasm_ty == odra_ty {
                 parse_quote!(#field_name)
             } else {
-                parse_quote!(#field_name: #field_name.into())
+                if matches!(wasm_ty, WasmType::Option(_)) {
+                    parse_quote!(#field_name: #field_name.map(|v| v.into()))
+                } else if matches!(wasm_ty, WasmType::List(_)) {
+                    parse_quote!(#field_name: #field_name.into_iter().map(|v| v.into()).collect())
+                } else if matches!(wasm_ty, WasmType::JsValueList) {
+                    parse_quote!(#field_name: #field_name.into_iter().map(|v| v.into_serde().expect("Failed to deserialize JsValue")).collect())
+                } else if matches!(wasm_ty, WasmType::JsValue) {
+                    parse_quote!(#field_name: #field_name.into_serde().expect("Failed to deserialize JsValue"))
+                } else {
+                    parse_quote!(#field_name: #field_name.into())
+                }
             }
         })
         .collect::<Vec<proc_macro2::TokenStream>>();

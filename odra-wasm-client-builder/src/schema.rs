@@ -4,14 +4,19 @@ use odra_schema::casper_contract_schema::{
 use serde_json::Value;
 
 fn parse_custom_types(v: &Value) -> Result<Vec<CustomType>, String> {
+    let mut seen = std::collections::HashSet::new();
     v["types"]
         .as_array()
         .ok_or_else(|| "Expected types to be an array".to_string())?
         .iter()
         .cloned()
         .map(|v| {
-            serde_json::from_value::<CustomType>(v.clone())
-                .map_err(|e| format!("Failed to parse type: {}", e))
+            let result = serde_json::from_value::<CustomType>(v.clone())
+                .map_err(|e| format!("Failed to parse type: {}, {:?}", e, v));
+            if result.is_ok() {
+                seen.insert(v["name"].as_str().unwrap_or_default().to_string());
+            }
+            result
         })
         .collect::<Result<Vec<_>, _>>()
 }
