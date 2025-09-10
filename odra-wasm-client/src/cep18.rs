@@ -65,11 +65,7 @@ impl Cep18Client {
     pub async fn total_supply(&self) -> Result<U256, JsError> {
         let cl_value = self
             .wasm_client
-            .call_entry_point_with_proxy(
-                *self.address,
-                "total_supply",
-                runtime_args! {}
-            )
+            .call_entry_point_with_proxy(*self.address, "total_supply", runtime_args! {})
             .await?;
 
         let result = <casper_types::U256 as FromBytes>::from_bytes(&cl_value.inner_bytes()[4..])

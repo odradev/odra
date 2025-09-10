@@ -77,7 +77,6 @@ impl ToTokens for OdraType {
             OdraType::URef => quote::quote!(odra_wasm_client::casper_types::URef),
             OdraType::PublicKey => quote::quote!(odra_wasm_client::casper_types::PublicKey),
             OdraType::Option(inner) => {
-                let inner = inner.to_token_stream();
                 quote::quote!(Option<#inner>)
             }
             OdraType::List(inner) => {
@@ -93,7 +92,6 @@ impl ToTokens for OdraType {
                 quote::quote!(std::collections::BTreeMap<#key, #value>)
             }
             OdraType::Tuple1(inner) => {
-                let inner = inner.to_token_stream();
                 quote::quote!( (#inner,) )
             }
             OdraType::Tuple2(inner1, inner2) => {

@@ -15,8 +15,7 @@ quote = { version = "1.0.33" }
 syn = { version = "2.0.29", features = ["full", "extra-traits"] }
 proc-macro2 = { version = "1.0.36" }
 convert_case = { workspace = true }
+thiserror = "1.0.40"
 
-[[bin]]
-name = "main"
-path = "bin/main.rs"
-test = false
+[dev-dependencies]
+pretty_assertions = "1.4.0"

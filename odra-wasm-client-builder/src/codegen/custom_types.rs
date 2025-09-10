@@ -1,20 +1,21 @@
 use odra_schema::casper_contract_schema::{CustomType, EnumVariant, StructMember};
+use proc_macro2::TokenStream;
 use quote::format_ident;
 use syn::parse_quote;
 
 use crate::types::{OdraType, WasmType};
 
-pub fn types_def(types: &[CustomType]) -> Vec<proc_macro2::TokenStream> {
+pub fn types_def<T: IntoIterator<Item = CustomType>>(types: T) -> Vec<TokenStream> {
     types
-        .iter()
+        .into_iter()
         .map(|custom_type| match custom_type {
-            CustomType::Struct { name, members, .. } => struct_def(&name.0, members),
-            CustomType::Enum { name, variants, .. } => enum_def(&name.0, variants)
+            CustomType::Struct { name, members, .. } => struct_def(&name.0, &members),
+            CustomType::Enum { name, variants, .. } => enum_def(&name.0, &variants)
         })
         .collect::<Vec<_>>()
 }
 
-fn struct_def(name: &str, members: &[StructMember]) -> proc_macro2::TokenStream {
+fn struct_def(name: &str, members: &[StructMember]) -> TokenStream {
     let type_name = format_ident!("{}", name);
     let struct_fields = members
         .iter()
@@ -27,53 +28,30 @@ fn struct_def(name: &str, members: &[StructMember]) -> proc_macro2::TokenStream 
     let setters_getters = members
         .iter()
         .filter_map(|field| {
-            let wasm_ty = WasmType::from(&field.ty);
             let odra_ty = OdraType::from(&field.ty);
 
             if odra_ty.is_cloneable() {
                 return None;
             }
 
-            let setter_code = wasm_ty.setter_code(field);
-            let getter_code = wasm_ty.getter_code(field);
+            let setter_code = WasmType::setter_code(field);
+            let getter_code = WasmType::getter_code(field);
             Some(quote::quote! {
                 #setter_code
                 #getter_code
             })
         })
-        .collect::<Vec<proc_macro2::TokenStream>>();
+        .collect::<Vec<TokenStream>>();
 
     let fields = members
         .iter()
-        .map(|field| {
-            let ty = WasmType::from(&field.ty);
-            ty.field(field)
-        })
+        .map(WasmType::field_def)
         .collect::<Vec<syn::Field>>();
 
     let fields_init = members
         .iter()
-        .map(|field| {
-            let field_name = format_ident!("{}", field.name);
-            let odra_ty = OdraType::from(&field.ty);
-            let wasm_ty = WasmType::from(&field.ty);
-            if wasm_ty == odra_ty {
-                parse_quote!(#field_name)
-            } else {
-                if matches!(wasm_ty, WasmType::Option(_)) {
-                    parse_quote!(#field_name: #field_name.map(|v| v.into()))
-                } else if matches!(wasm_ty, WasmType::List(_)) {
-                    parse_quote!(#field_name: #field_name.into_iter().map(|v| v.into()).collect())
-                } else if matches!(wasm_ty, WasmType::JsValueList) {
-                    parse_quote!(#field_name: #field_name.into_iter().map(|v| v.into_serde().expect("Failed to deserialize JsValue")).collect())
-                } else if matches!(wasm_ty, WasmType::JsValue) {
-                    parse_quote!(#field_name: #field_name.into_serde().expect("Failed to deserialize JsValue"))
-                } else {
-                    parse_quote!(#field_name: #field_name.into())
-                }
-            }
-        })
-        .collect::<Vec<proc_macro2::TokenStream>>();
+        .map(WasmType::field_init)
+        .collect::<Vec<TokenStream>>();
 
     let field_names = members
         .iter()
@@ -161,7 +139,7 @@ fn struct_def(name: &str, members: &[StructMember]) -> proc_macro2::TokenStream 
     }
 }
 
-fn enum_def(name: &str, variants: &[EnumVariant]) -> proc_macro2::TokenStream {
+fn enum_def(name: &str, variants: &[EnumVariant]) -> TokenStream {
     let type_name = format_ident!("{}", name);
     let variants_expr = variants
         .iter()

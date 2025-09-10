@@ -1,7 +1,0 @@
-fn main() -> Result<(), String> {
-    // Read the path to a schema file
-    let schema_path = std::env::args().nth(1).expect("No schema path provided");
-    let working_directory = std::env::args().nth(2).expect("No working directory provided");
-    odra_wasm_client_builder::generate_wasm_client_code(schema_path, working_directory)?;
-    Ok(())
-}
