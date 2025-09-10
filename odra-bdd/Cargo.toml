@@ -12,4 +12,4 @@ repository.workspace = true
 cucumber.workspace = true
 futures.workspace = true
 derive_more.workspace = true
-odra = { path = "../odra", version = "2.4.0" }
+odra = { path = "../odra", version = "2.4.1" }
