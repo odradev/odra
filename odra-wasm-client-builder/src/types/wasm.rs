@@ -26,11 +26,7 @@ pub enum WasmType {
     Address,
     Custom(String),
     Option(Box<WasmType>),
-    List(Box<WasmType>),
-    Result {
-        ok: Box<WasmType>,
-        err: Box<WasmType>
-    }
+    List(Box<WasmType>)
 }
 
 impl WasmType {
@@ -45,6 +41,7 @@ impl WasmType {
         let field_name = format_ident!("{}", member.name);
         let odra_ty = OdraType::from(&member.ty);
         let wasm_ty = WasmType::from(&member.ty);
+        // If the WASM type is equal to the Odra type, we can use the field directly
         if wasm_ty == odra_ty {
             return parse_quote!(#field_name);
         }
@@ -111,9 +108,6 @@ impl WasmType {
                     }
                 }
             }
-            WasmType::Result { ok: _, err: _ } => quote::quote! {
-                panic!("Unsupported type for getter");
-            },
             _ => quote::quote! {
                 panic!("Unsupported type for getter");
             }
@@ -174,9 +168,6 @@ impl WasmType {
                     }
                 }
             }
-            WasmType::Result { ok: _, err: _ } => quote::quote! {
-                panic!("Unsupported type for setter");
-            },
             _ => quote::quote! {
                 panic!("Unsupported type for setter");
             }
@@ -264,7 +255,6 @@ impl WasmType {
 
     fn is_wrapped_type(&self) -> bool {
         match self {
-            WasmType::Result { ok, err } if ok.is_wrapped_type() && err.is_wrapped_type() => true,
             WasmType::U128
             | WasmType::U256
             | WasmType::U512
@@ -301,7 +291,6 @@ impl ToTokens for WasmType {
                 let ident = format_ident!("{}", name);
                 quote::quote!(#ident)
             }
-            WasmType::Result { ok, err } => quote::quote!(Result<#ok, #err>),
             WasmType::List(inner) => quote::quote!(Vec<#inner>)
         });
     }
@@ -349,14 +338,7 @@ fn named_cl_type_to_wasm_type(ty: &Type) -> WasmType {
             }
         },
         NamedCLType::ByteArray(_) => WasmType::Bytes,
-        NamedCLType::Result { ok, err } => {
-            let ok = named_cl_type_to_wasm_type(&Type(*ok.clone()));
-            let err = named_cl_type_to_wasm_type(&Type(*err.clone()));
-            WasmType::Result {
-                ok: Box::new(ok),
-                err: Box::new(err)
-            }
-        }
+        NamedCLType::Result { ok: _, err: _ } => WasmType::JsValue,
         NamedCLType::Map { key: _, value: _ }
         | NamedCLType::Tuple1(_)
         | NamedCLType::Tuple2(_)
@@ -369,6 +351,7 @@ fn named_cl_type_to_wasm_type(ty: &Type) -> WasmType {
 mod test {
     use super::*;
     use pretty_assertions::assert_eq;
+    use quote::quote;
 
     #[test]
     fn test_wasm_type_conversion() {
@@ -477,10 +460,7 @@ mod test {
             err: Box::new(NamedCLType::String)
         });
         let wasm_type = WasmType::from(&ty);
-        let expected = WasmType::Result {
-            ok: Box::new(WasmType::U128),
-            err: Box::new(WasmType::String)
-        };
+        let expected = WasmType::JsValue;
         assert_eq!(wasm_type, expected);
 
         let ty = Type(NamedCLType::List(Box::new(NamedCLType::Custom(
@@ -523,5 +503,125 @@ mod test {
         let tokens = WasmType::field_def(&field);
         let expected = parse_quote!(#[wasm_bindgen(js_name = "testFieldRustStyle")] test_field_rust_style: String);
         assert_eq!(tokens, expected);
+    }
+
+    #[test]
+    fn test_init_string_field() {
+        let field = StructMember {
+            name: "test_field".to_string(),
+            description: None,
+            ty: Type(NamedCLType::String)
+        };
+        let tokens = WasmType::field_init(&field);
+        let expected = quote!(test_field);
+        assert_eq!(tokens.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_init_big_int_field() {
+        let field = StructMember {
+            name: "test_field".to_string(),
+            description: None,
+            ty: Type(NamedCLType::U128)
+        };
+        let tokens = WasmType::field_init(&field);
+        let expected = quote!(test_field: test_field.into());
+        assert_eq!(tokens.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_init_map_field() {
+        let field = StructMember {
+            name: "test_field".to_string(),
+            description: None,
+            ty: Type(NamedCLType::Map {
+                key: Box::new(NamedCLType::String),
+                value: Box::new(NamedCLType::U128)
+            })
+        };
+        let tokens = WasmType::field_init(&field);
+        let expected =
+            quote!(test_field: test_field.into_serde().expect("Failed to deserialize JsValue"));
+        assert_eq!(tokens.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_init_vec_custom_type_field() {
+        let field = StructMember {
+            name: "test_field".to_string(),
+            description: None,
+            ty: Type(NamedCLType::List(Box::new(NamedCLType::Custom(
+                "MyType".to_string()
+            ))))
+        };
+        let tokens = WasmType::field_init(&field);
+        let expected = quote!(test_field);
+        assert_eq!(tokens.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_init_vec_vec_custom_type_field() {
+        let field = StructMember {
+            name: "test_field".to_string(),
+            description: None,
+            ty: Type(NamedCLType::List(Box::new(NamedCLType::List(Box::new(
+                NamedCLType::Custom("MyType".to_string())
+            )))))
+        };
+        let tokens = WasmType::field_init(&field);
+        let expected = quote!(test_field: test_field.into_iter().map(|v| v.into_serde().expect("Failed to deserialize JsValue")).collect());
+        assert_eq!(tokens.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_init_result() {
+        let field = StructMember {
+            name: "test_field".to_string(),
+            description: None,
+            ty: Type(NamedCLType::Result {
+                ok: Box::new(NamedCLType::Custom("MyType".to_string())),
+                err: Box::new(NamedCLType::String)
+            })
+        };
+        let tokens = WasmType::field_init(&field);
+        let expected =
+            quote!(test_field: test_field.into_serde().expect("Failed to deserialize JsValue"));
+        assert_eq!(tokens.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_init_vec_address() {
+        let field = StructMember {
+            name: "test_field".to_string(),
+            description: None,
+            ty: Type(NamedCLType::List(Box::new(NamedCLType::Key)))
+        };
+        let tokens = WasmType::field_init(&field);
+        let expected = quote!(test_field: test_field.into_iter().map(Into::into).collect());
+        assert_eq!(tokens.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_init_option_address() {
+        let field = StructMember {
+            name: "test_field".to_string(),
+            description: None,
+            ty: Type(NamedCLType::Option(Box::new(NamedCLType::Key)))
+        };
+        let tokens = WasmType::field_init(&field);
+        let expected = quote!(test_field: test_field.map(Into::into));
+        assert_eq!(tokens.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_init_option_string() {
+        let field = StructMember {
+            name: "test_field".to_string(),
+            description: None,
+            ty: Type(NamedCLType::Option(Box::new(NamedCLType::String)))
+        };
+        let tokens = WasmType::field_init(&field);
+        let expected = quote!(test_field);
+        assert_eq!(tokens.to_string(), expected.to_string());
     }
 }
