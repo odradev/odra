@@ -370,7 +370,7 @@ impl CEP95Interface for Cep95 {
         let caller = self.env().caller();
         let owner = self
             .owner_of(token_id)
-            .unwrap_or_revert_with(self, Error::ValueNotSet);
+            .unwrap_or_revert_with(self, Error::InvalidTokenId);
         self.set_approve(token_id, owner, Some(spender));
         self.env().emit_event(Approval {
             owner,
@@ -385,7 +385,7 @@ impl CEP95Interface for Cep95 {
             .unwrap_or_revert_with(self, Error::ValueNotSet);
         let owner = self
             .owner_of(token_id)
-            .unwrap_or_revert_with(self, Error::ValueNotSet);
+            .unwrap_or_revert_with(self, Error::InvalidTokenId);
         self.set_approve(token_id, owner, None);
         self.env().emit_event(RevokeApproval {
             owner,
