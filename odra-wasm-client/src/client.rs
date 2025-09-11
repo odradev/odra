@@ -207,10 +207,8 @@ MC4CAQAwBQYDK2VwBCIEIODIFIJtQQHcpRuDU0QdaygC/se2mntLKUMK2kCnEsKN
     }
 }
 
-#[wasm_bindgen]
 impl OdraWasmClient {
     /// Gets a value from a named key of an account or a contract
-    #[wasm_bindgen(js_name = "getNamedValue")]
     pub async fn get_named_value(&self, address: &WasmAddress, name: &str) -> Option<WasmBytes> {
         let entity_hash = self
             .query_global_state_for_entity_addr(address)
@@ -490,7 +488,6 @@ impl OdraWasmClient {
                 .with_ttl(TimeDiff::from_seconds(self.ttl))
                 .with_chain_name(&self.chain_name)
                 .with_pricing_mode(self.pricing_mode())
-                // .with_secret_key(self.secret_key())
                 .with_timestamp(timestamp)
                 .build()
                 .map_err(|e| format!("Failed to build transfer transaction: {:?}", e))?
