@@ -1,6 +1,8 @@
 use gloo_utils::format::JsValueSerdeExt;
 use js_sys::BigInt as JsBigInt;
+
 use serde::{Deserialize, Serialize};
+use web_sys::HtmlInputElement;
 use std::ops::Deref;
 use wasm_bindgen::prelude::*;
 
@@ -18,6 +20,12 @@ impl U256 {
     #[wasm_bindgen(js_name = "fromU32")]
     pub fn from_u32(value: u32) -> Self {
         U256(casper_types::U256::from(value))
+    }
+
+    #[wasm_bindgen(js_name = "fromHtmlInput")]
+    pub fn from_input(input: HtmlInputElement) -> Self {
+        let value = input.value();
+        Self::from_dec_str(value.trim())
     }
 
     #[wasm_bindgen(js_name = "fromBigInt")]
@@ -77,6 +85,12 @@ impl U512 {
         U512(casper_types::U512::from(value))
     }
 
+    #[wasm_bindgen(js_name = "fromHtmlInput")]
+    pub fn from_input(input: HtmlInputElement) -> Self {
+        let value = input.value();
+        Self::from_dec_str(value.trim())
+    }
+
     #[wasm_bindgen(js_name = "fromBigInt")]
     pub fn from_js_big_int(value: JsBigInt) -> Self {
         let v = value
@@ -127,6 +141,12 @@ impl U128 {
     #[wasm_bindgen(js_name = "fromU32")]
     pub fn from_u32(value: u32) -> Self {
         U128(casper_types::U128::from(value))
+    }
+
+    #[wasm_bindgen(js_name = "fromHtmlInput")]
+    pub fn from_input(input: HtmlInputElement) -> Self {
+        let value = input.value();
+        Self::from_dec_str(value.trim())
     }
 
     #[wasm_bindgen(js_name = "fromBigInt")]

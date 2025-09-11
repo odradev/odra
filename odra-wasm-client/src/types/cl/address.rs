@@ -4,6 +4,7 @@ use casper_types::Key;
 use odra_core::prelude::Address as _Address;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
+use web_sys::HtmlInputElement;
 
 use crate::types::cl::public_key::PublicKey;
 
@@ -14,7 +15,7 @@ pub struct Address(_Address);
 #[wasm_bindgen]
 impl Address {
     #[wasm_bindgen(constructor)]
-    pub fn new(address: &str) -> Result<Address, JsError> {
+    pub fn new(address: &str) -> Result<Self, JsError> {
         use std::str::FromStr;
 
         _Address::from_str(address).map(Address).map_err(|err| {
@@ -22,6 +23,12 @@ impl Address {
                 "Could not create Address from string {address}: {err:?}"
             ))
         })
+    }
+
+    #[wasm_bindgen(js_name = "fromHtmlInput")]
+    pub fn from_input(input: HtmlInputElement) -> Result<Self, JsError> {
+        let value = input.value();
+        Self::new(value.trim())
     }
 }
 
