@@ -341,12 +341,10 @@ impl CEP95Interface for Cep95 {
         self.assert_exists(&token_id);
 
         let caller = self.env().caller();
-        let owner = self
-            .owner_of(token_id)
-            .unwrap_or_revert_with(self, Error::ValueNotSet);
+        let previous_owner = self.raw_transfer(to, token_id);
 
         // `from` must be the current owner.
-        if owner != from {
+        if previous_owner != from {
             self.env().revert(Error::NotAnOwnerOrApproved);
         }
 
@@ -355,22 +353,23 @@ impl CEP95Interface for Cep95 {
         // - the owner,
         // - an operator approved for all of the owner's tokens,
         // - the approved spender for this specific token.
-        let is_authorized = owner == caller
+        let is_authorized = previous_owner == caller
             || self.is_approved_for_all(from, caller)
             || self.is_spender(token_id, caller);
 
         if !is_authorized {
             self.env().revert(Error::NotAnOwnerOrApproved);
         }
-
-        self.raw_transfer_from(from, to, token_id);
     }
 
     fn approve(&mut self, spender: Address, token_id: U256) {
         let caller = self.env().caller();
-        self.set_approve(token_id, Some(spender));
+        let owner = self
+            .owner_of(token_id)
+            .unwrap_or_revert_with(self, Error::InvalidTokenId);
+        self.set_approve(token_id, owner, Some(spender));
         self.env().emit_event(Approval {
-            owner: caller,
+            owner,
             spender,
             token_id
         });
@@ -380,9 +379,12 @@ impl CEP95Interface for Cep95 {
         let spender = self
             .approved_for(token_id)
             .unwrap_or_revert_with(self, Error::ValueNotSet);
-        self.set_approve(token_id, None);
+        let owner = self
+            .owner_of(token_id)
+            .unwrap_or_revert_with(self, Error::InvalidTokenId);
+        self.set_approve(token_id, owner, None);
         self.env().emit_event(RevokeApproval {
-            owner: self.env().caller(),
+            owner,
             spender,
             token_id
         });
@@ -516,13 +518,16 @@ impl Cep95 {
 
     /// Transfers an NFT from one address to another without checking the recipient contract.
     /// SECURITY: Do not expose this function publicly without proper access control.
-    pub fn raw_transfer_from(&mut self, from: Address, to: Address, token_id: U256) {
-        self.clear_approval(&token_id);
+    pub fn raw_transfer(&mut self, to: Address, token_id: U256) -> Address {
+        let from = self
+            .owner_of(token_id)
+            .unwrap_or_revert_with(self, Error::InvalidTokenId);
         self.balances.set(&from, self.balance_of(from) - 1);
         self.balances.set(&to, self.balance_of(to) + 1);
         self.owners.set(&token_id, Some(to));
 
         self.env().emit_event(Transfer { from, to, token_id });
+        from
     }
 
     fn raw_update_metadata(
@@ -540,16 +545,12 @@ impl Cep95 {
     }
 
     #[inline]
-    fn set_approve(&mut self, token_id: U256, spender: Option<Address>) {
-        let owner = self
-            .owner_of(token_id)
-            .unwrap_or_revert_with(self, Error::ValueNotSet);
-        let caller = self.env().caller();
-
+    fn set_approve(&mut self, token_id: U256, owner: Address, spender: Option<Address>) {
         if Some(owner) == spender {
             self.env().revert(Error::ApprovalToCurrentOwner);
         }
 
+        let caller = self.env().caller();
         if caller != owner && !self.is_approved_for_all(owner, caller) {
             self.env().revert(Error::NotAnOwnerOrApproved);
         }
@@ -969,6 +970,30 @@ mod tests {
     }
 
     #[test]
+    fn test_approve_by_spender() {
+        let (env, mut cep95) = setup();
+        let owner = env.get_account(0);
+        let spender = env.get_account(10);
+
+        let token_id = U256::from(1);
+        let metadata = vec![("key".to_string(), "value".to_string())];
+        cep95.approve_for_all(spender);
+        cep95.mint(owner, token_id, metadata);
+
+        env.set_caller(spender);
+        let result = cep95.try_approve(spender, token_id);
+        assert!(result.is_ok());
+        assert!(env.emitted_event(
+            &cep95,
+            Approval {
+                owner,
+                spender,
+                token_id
+            }
+        ));
+    }
+
+    #[test]
     fn test_transfer_by_approved() {
         let (env, mut cep95) = setup();
         let owner = env.get_account(0);
@@ -1044,6 +1069,32 @@ mod tests {
 
         assert_eq!(cep95.approved_for(token_id), None);
         assert!(env.emitted(&cep95, "RevokeApproval"));
+    }
+
+    #[test]
+    fn test_revoke_approval_by_spender() {
+        let (env, mut cep95) = setup();
+        let owner = env.caller();
+        let spender = env.get_account(10);
+
+        let token_id = U256::from(1);
+        let metadata = vec![("key".to_string(), "value".to_string())];
+        cep95.approve_for_all(spender);
+        cep95.mint(owner, token_id, metadata);
+        cep95.approve(spender, token_id);
+
+        env.set_caller(spender);
+        cep95.revoke_approval(token_id);
+
+        assert_eq!(cep95.approved_for(token_id), None);
+        assert!(env.emitted_event(
+            &cep95,
+            RevokeApproval {
+                owner,
+                spender,
+                token_id
+            }
+        ));
     }
 
     #[test]
