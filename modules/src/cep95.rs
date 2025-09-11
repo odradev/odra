@@ -341,12 +341,10 @@ impl CEP95Interface for Cep95 {
         self.assert_exists(&token_id);
 
         let caller = self.env().caller();
-        let owner = self
-            .owner_of(token_id)
-            .unwrap_or_revert_with(self, Error::ValueNotSet);
+        let previous_owner = self.raw_transfer(to, token_id);
 
         // `from` must be the current owner.
-        if owner != from {
+        if previous_owner != from {
             self.env().revert(Error::NotAnOwnerOrApproved);
         }
 
@@ -355,15 +353,13 @@ impl CEP95Interface for Cep95 {
         // - the owner,
         // - an operator approved for all of the owner's tokens,
         // - the approved spender for this specific token.
-        let is_authorized = owner == caller
+        let is_authorized = previous_owner == caller
             || self.is_approved_for_all(from, caller)
             || self.is_spender(token_id, caller);
 
         if !is_authorized {
             self.env().revert(Error::NotAnOwnerOrApproved);
         }
-
-        self.raw_transfer_from(from, to, token_id);
     }
 
     fn approve(&mut self, spender: Address, token_id: U256) {
@@ -476,7 +472,7 @@ impl Cep95 {
         if self.exists(&token_id) {
             self.env().revert(Error::TokenAlreadyExists);
         }
-        
+
         self.balances.set(&to, self.balance_of(to) + 1);
         self.owners.set(&token_id, Some(to));
         self.metadata.set(&token_id, BTreeMap::from_iter(metadata));
@@ -522,13 +518,16 @@ impl Cep95 {
 
     /// Transfers an NFT from one address to another without checking the recipient contract.
     /// SECURITY: Do not expose this function publicly without proper access control.
-    pub fn raw_transfer_from(&mut self, from: Address, to: Address, token_id: U256) {
-        self.clear_approval(&token_id);
+    pub fn raw_transfer(&mut self, to: Address, token_id: U256) -> Address {
+        let from = self
+            .owner_of(token_id)
+            .unwrap_or_revert_with(self, Error::InvalidTokenId);
         self.balances.set(&from, self.balance_of(from) - 1);
         self.balances.set(&to, self.balance_of(to) + 1);
         self.owners.set(&token_id, Some(to));
 
         self.env().emit_event(Transfer { from, to, token_id });
+        from
     }
 
     fn raw_update_metadata(
