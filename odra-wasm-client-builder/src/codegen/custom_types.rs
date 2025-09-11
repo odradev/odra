@@ -19,17 +19,13 @@ fn struct_def(name: &str, members: &[StructMember]) -> TokenStream {
     let type_name = format_ident!("{}", name);
     let struct_fields = members
         .iter()
-        .map(|field| {
-            let ty = OdraType::from(&field.ty);
-            ty.field(field)
-        })
+        .map(OdraType::field)
         .collect::<Vec<syn::Field>>();
 
     let setters_getters = members
         .iter()
         .filter_map(|field| {
             let odra_ty = OdraType::from(&field.ty);
-
             if odra_ty.is_cloneable() {
                 return None;
             }
@@ -55,34 +51,26 @@ fn struct_def(name: &str, members: &[StructMember]) -> TokenStream {
 
     let field_names = members
         .iter()
-        .map(|field| {
-            let field_name = format_ident!("{}", field.name);
-            parse_quote!(#field_name)
-        })
-        .collect::<Vec<syn::Expr>>();
+        .map(|field| format_ident!("{}", field.name))
+        .collect::<Vec<syn::Ident>>();
 
-    let fields_deser = members
+    let fields_deser = field_names
         .iter()
-        .map(|field| {
-            let field_name = format_ident!("{}", field.name);
-            parse_quote!(let (#field_name, bytes) = odra_wasm_client::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;)
+        .map(|ident| {
+            parse_quote!(let (#ident, bytes) = odra_wasm_client::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;)
         })
         .collect::<Vec<syn::Stmt>>();
 
-    let fields_ser = members
+    let fields_ser = field_names
         .iter()
-        .map(|field| {
-            let field_name = format_ident!("{}", field.name);
-            parse_quote!(result.extend(odra_wasm_client::casper_types::bytesrepr::ToBytes::to_bytes(&self.#field_name)?);)
+        .map(|ident| {
+            parse_quote!(result.extend(odra_wasm_client::casper_types::bytesrepr::ToBytes::to_bytes(&self.#ident)?);)
         })
         .collect::<Vec<syn::Stmt>>();
 
-    let fields_len = members
+    let fields_len = field_names
         .iter()
-        .map(|field| {
-            let field_name = format_ident!("{}", field.name);
-            parse_quote!(result += self.#field_name.serialized_length();)
-        })
+        .map(|ident| parse_quote!(result += self.#ident.serialized_length();))
         .collect::<Vec<syn::Stmt>>();
 
     quote::quote! {

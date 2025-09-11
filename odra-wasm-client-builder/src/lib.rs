@@ -15,6 +15,8 @@ mod codegen;
 mod error;
 mod types;
 
+pub use error::Error;
+
 pub fn generate_wasm_client_code<P: AsRef<Path>>(
     schema_path: P,
     working_directory: P

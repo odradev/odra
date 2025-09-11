@@ -1,7 +1,7 @@
 use quote::ToTokens;
 use std::{fs::File, io::Write, path::Path, process::Command};
 
-use crate::error::{CodegenError, Result};
+use crate::error::{Error, Result};
 
 pub fn fmt<P: AsRef<Path>>(path: &P) -> Result<()> {
     Command::new("cargo")
@@ -22,7 +22,7 @@ pub fn build<P: AsRef<Path>>(path: &P) -> Result<()> {
         .arg(
             path.as_ref()
                 .to_str()
-                .ok_or(CodegenError::InvalidSchemaPath)?
+                .ok_or(Error::InvalidSchemaPath)?
         )
         .status()?;
     Ok(())

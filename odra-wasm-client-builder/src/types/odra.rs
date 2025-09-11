@@ -48,13 +48,14 @@ impl OdraType {
         }
     }
 
-    pub fn field(&self, member: &StructMember) -> syn::Field {
+    pub fn field(member: &StructMember) -> syn::Field {
+        let odra_ty = OdraType::from(&member.ty);
         let field_name = format_ident!("{}", member.name);
         let js_name = member.name.to_case(Case::Camel);
-        if self.is_cloneable() {
-            parse_quote!(#[wasm_bindgen(js_name = #js_name)] pub #field_name: #self)
+        if odra_ty.is_cloneable() {
+            parse_quote!(#[wasm_bindgen(js_name = #js_name)] pub #field_name: #odra_ty)
         } else {
-            parse_quote!(#[wasm_bindgen(js_name = #js_name)] #field_name: #self)
+            parse_quote!(#[wasm_bindgen(js_name = #js_name)] #field_name: #odra_ty)
         }
     }
 }

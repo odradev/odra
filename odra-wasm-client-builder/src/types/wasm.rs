@@ -59,133 +59,129 @@ impl WasmType {
         }
     }
 
-    pub fn getter_code(member: &StructMember) -> proc_macro2::TokenStream {
+    pub fn getter_code(member: &StructMember) -> Option<proc_macro2::TokenStream> {
         let ty = Self::from(&member.ty);
         let ident = format_ident!("{}", member.name);
 
         match &ty {
-            t if t.is_wrapped_type() => quote::quote! {
+            t if t.is_wrapped_type() => Some(quote::quote! {
                 #[wasm_bindgen(getter)]
                 pub fn #ident(&self) -> #ty {
                     self.#ident.clone().into()
                 }
-            },
-            WasmType::List(_) => quote::quote! {
+            }),
+            WasmType::List(t) if !t.is_primitive() => Some(quote::quote! {
                 #[wasm_bindgen(getter)]
                 pub fn #ident(&self) -> #ty {
                     self.#ident.into_iter().map(Into::into).collect()
                 }
-            },
-            WasmType::JsValueList => quote::quote! {
+            }),
+            WasmType::JsValueList => Some(quote::quote! {
                 #[wasm_bindgen(getter)]
                 pub fn #ident(&self) -> #ty {
                     self.#ident.iter().map(|v| JsValue::from_serde(v).unwrap_or(JsValue::null())).collect()
                 }
-            },
-            WasmType::JsValue => quote::quote! {
+            }),
+            WasmType::JsValue => Some(quote::quote! {
                 #[wasm_bindgen(getter)]
                 pub fn #ident(&self) -> #ty {
-                    JsValue::from_serde(v).unwrap_or(JsValue::null())
+                    JsValue::from_serde(self.#ident).unwrap_or(JsValue::null())
                 }
-            },
-            WasmType::Option(box WasmType::JsValue) => quote::quote! {
+            }),
+            WasmType::Option(box WasmType::JsValue) => Some(quote::quote! {
                 #[wasm_bindgen(getter)]
                 pub fn #ident(&self) -> #ty {
                     self.#ident.map(|v| JsValue::from_serde(v).unwrap_or(JsValue::null()))
                 }
-            },
-            WasmType::Option(box WasmType::JsValueList) => quote::quote! {
+            }),
+            WasmType::Option(box WasmType::JsValueList) => Some(quote::quote! {
                 #[wasm_bindgen(getter)]
                 pub fn #ident(&self) -> #ty {
                     self.#ident.iter().map(|v| JsValue::from_serde(v).unwrap_or(JsValue::null())).collect()
                 }
-            },
+            }),
             WasmType::Option(e) if e.is_wrapped_type() => {
-                quote::quote! {
+                Some(quote::quote! {
                     #[wasm_bindgen(getter)]
                     pub fn #ident(&self) -> #ty {
                         self.#ident.map(Into::into)
                     }
-                }
+                })
             }
-            _ => quote::quote! {
-                panic!("Unsupported type for getter");
-            }
+            _ => None
         }
     }
 
-    pub fn setter_code(member: &StructMember) -> proc_macro2::TokenStream {
+    pub fn setter_code(member: &StructMember) -> Option<proc_macro2::TokenStream> {
         let ty = Self::from(&member.ty);
         let ident = format_ident!("set_{}", member.name);
         let field_name = format_ident!("{}", member.name);
 
         match &ty {
-            t if t.is_wrapped_type() => quote::quote! {
+            t if t.is_wrapped_type() => Some(quote::quote! {
                 #[wasm_bindgen(setter)]
                 pub fn #ident(&mut self, value: #ty) {
                     self.#field_name = value.into();
                 }
-            },
-            WasmType::List(_) => quote::quote! {
+            }),
+            WasmType::List(t) if !t.is_primitive() => Some(quote::quote! {
                 #[wasm_bindgen(setter)]
                 pub fn #ident(&mut self, value: #ty) {
                     self.#field_name = value.into_iter().map(Into::into).collect();
                 }
-            },
-            WasmType::JsValueList => quote::quote! {
+            }),
+            WasmType::JsValueList => Some(quote::quote! {
                 #[wasm_bindgen(setter)]
                 pub fn #ident(&mut self, value: #ty) {
                     self.#field_name = value.into_iter().filter_map(|js_value| {
                         js_value.into_serde().ok()
                     }).collect();
                 }
-            },
-            WasmType::JsValue => quote::quote! {
+            }),
+            WasmType::JsValue => Some(quote::quote! {
                 #[wasm_bindgen(setter)]
                 pub fn #ident(&mut self, value: #ty) {
                     self.#field_name = value.into_serde().expect("Failed to deserialize JS value");
                 }
-            },
-            WasmType::Option(box WasmType::JsValue) => quote::quote! {
+            }),
+            WasmType::Option(box WasmType::JsValue) => Some(quote::quote! {
                 #[wasm_bindgen(setter)]
                 pub fn #ident(&mut self, value: #ty) {
                     self.#field_name = value.map(|v| v.into_serde().ok()).flatten();
                 }
-            },
-            WasmType::Option(box WasmType::JsValueList) => quote::quote! {
+            }),
+            WasmType::Option(box WasmType::JsValueList) => Some(quote::quote! {
                 #[wasm_bindgen(setter)]
                 pub fn #ident(&mut self, value: #ty) {
                     self.#field_name = value.map(|v| v.into_iter().filter_map(|js_value| {
                         js_value.into_serde().ok()
                     }).collect());
                 }
-            },
+            }),
             WasmType::Option(e) if e.is_wrapped_type() => {
-                quote::quote! {
+                Some(quote::quote! {
                     #[wasm_bindgen(setter)]
                     pub fn #ident(&mut self, value: #ty) {
                         self.#field_name = value.map(Into::into);
                     }
-                }
+                })
             }
-            _ => quote::quote! {
-                panic!("Unsupported type for setter");
-            }
+            _ => None
         }
     }
 
     pub fn runtime_arg(arg: &Argument) -> proc_macro2::TokenStream {
         let wasm_ty = WasmType::from(&arg.ty);
+        let odra_ty = OdraType::from(&arg.ty);
         let arg_name = format_ident!("{}", arg.name);
         let arg_str = &arg.name;
-        let odra_ty = OdraType::from(&arg.ty);
         if wasm_ty.is_wrapped_type() {
             return parse_quote!(#arg_str => (*#arg_name).clone());
         } else if matches!(wasm_ty, WasmType::Option(ref e) if e.is_wrapped_type()) {
             if let OdraType::Option(inner_odra_ty) = odra_ty {
                 return parse_quote!(#arg_str => #arg_name.map(Into::<#inner_odra_ty>::into));
             }
-            panic!("Expected OdraType::Option");
+            unreachable!("Expected OdraType::Option");
         } else if matches!(wasm_ty, WasmType::Option(box WasmType::Bytes)) {
             return parse_quote!(#arg_str => #arg_name);
         } else if matches!(wasm_ty, WasmType::List(e) if e.is_wrapped_type()) {
@@ -210,13 +206,13 @@ impl WasmType {
                             .map(|js_value| {
                                 js_value
                                     .into_serde()
-                                    .map_err(|err| odra_wasm_client::wasm_bindgen::JsError::new(&format!("{:?}", err)))
+                                    .map_err(|err| JsError::new(&format!("{:?}", err)))
                             })
                             .collect::<Result<_, _>>()?;
                     })
                 } else {
                     Some(
-                        parse_quote!(#arg_name.into_serde::<#odra_type>().map_err(|err| odra_wasm_client::wasm_bindgen::JsError::new(&format!("{:?}", err)))?)
+                        parse_quote!(#arg_name.into_serde::<#odra_type>().map_err(|err| JsError::new(&format!("{:?}", err)))?)
                     )
                 }
             }
@@ -238,7 +234,7 @@ impl WasmType {
                 result.0.into_iter()
                     .map(|v| JsValue::from_serde(&v))
                     .collect::<Result<Vec<JsValue>, _>>()
-                    .map_err(|err| odra_wasm_client::wasm_bindgen::JsError::new(&format!("{:?}", err)))
+                    .map_err(|err| JsError::new(&format!("{:?}", err)))
             },
             WasmType::JsValue => parse_quote! {
                 JsValue::from_serde(&result.0).map_err(|err| JsError::new(&format!("{:?}", err)))
@@ -261,6 +257,18 @@ impl WasmType {
             | WasmType::Address
             | WasmType::URef
             | WasmType::PublicKey => true,
+            _ => false
+        }
+    }
+
+    fn is_primitive(&self) -> bool {
+        match self {
+            WasmType::Bool
+            | WasmType::I32
+            | WasmType::I64
+            | WasmType::U8
+            | WasmType::U32
+            | WasmType::U64  => true,
             _ => false
         }
     }
@@ -623,5 +631,245 @@ mod test {
         let tokens = WasmType::field_init(&field);
         let expected = quote!(test_field);
         assert_eq!(tokens.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_primitive_getter() {
+        let member = StructMember {
+            name: "test_field".to_string(),
+            description: None,
+            ty: Type(NamedCLType::U32)
+        };
+
+        let actual = WasmType::getter_code(&member);
+        assert!(actual.is_none());
+    }
+
+    #[test]
+    fn test_address_getter() {
+        let member = StructMember {
+            name: "test_field".to_string(),
+            description: None,
+            ty: Type(NamedCLType::Key)
+        };
+
+        let actual = WasmType::getter_code(&member).unwrap();
+        let expected = quote! {
+            #[wasm_bindgen(getter)]
+            pub fn test_field(&self) -> odra_wasm_client::types::Address {
+                self.test_field.clone().into()
+            }
+        };
+
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_address_option_getter() {
+        let member = StructMember {
+            name: "test_field".to_string(),
+            description: None,
+            ty: Type(NamedCLType::Option(Box::new(NamedCLType::Key)))
+        };
+
+        let actual = WasmType::getter_code(&member).unwrap();
+        let expected = quote! {
+            #[wasm_bindgen(getter)]
+            pub fn test_field(&self) -> Option<odra_wasm_client::types::Address> {
+                self.test_field.map(Into::into)
+            }
+        };
+
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_map_getter() {
+        let member = StructMember {
+            name: "test_field".to_string(),
+            description: None,
+            ty: Type(NamedCLType::Map { key: Box::new(NamedCLType::U128), value: Box::new(NamedCLType::String) })
+        };
+
+        let actual = WasmType::getter_code(&member).unwrap();
+        let expected = quote! {
+            #[wasm_bindgen(getter)]
+            pub fn test_field(&self) -> JsValue {
+                JsValue::from_serde(self.test_field).unwrap_or(JsValue::null())
+            }
+        };
+
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_vec_u32_getter() {
+        let member = StructMember {
+            name: "test_field".to_string(),
+            description: None,
+            ty: Type(NamedCLType::List(Box::new(NamedCLType::U32)))
+        };
+
+        let actual = WasmType::getter_code(&member);
+        assert!(actual.is_none());
+    }
+
+    #[test]
+    fn test_vec_u256_getter() {
+        let member = StructMember {
+            name: "test_field".to_string(),
+            description: None,
+            ty: Type(NamedCLType::List(Box::new(NamedCLType::U256)))
+        };
+
+        let actual = WasmType::getter_code(&member).unwrap();
+        let expected = quote! {
+            #[wasm_bindgen(getter)]
+            pub fn test_field(&self) -> Vec<odra_wasm_client::types::U256> {
+                self.test_field.into_iter().map(Into::into).collect()
+            }
+        };
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+     #[test]
+    fn test_vec_map_getter() {
+        let member = StructMember {
+            name: "test_field".to_string(),
+            description: None,
+            ty: Type(NamedCLType::List(Box::new(NamedCLType::Map {
+                key: Box::new(NamedCLType::U256),
+                value: Box::new(NamedCLType::String)
+            })))
+        };
+
+        let actual = WasmType::getter_code(&member).unwrap();
+        let expected = quote! {
+            #[wasm_bindgen(getter)]
+            pub fn test_field(&self) -> Vec<JsValue> {
+                self.test_field.iter().map(|v| JsValue::from_serde(v).unwrap_or(JsValue::null())).collect()
+            }
+        };
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_primitive_setter() {
+        let member = StructMember {
+            name: "test_field".to_string(),
+            description: None,
+            ty: Type(NamedCLType::U32)
+        };
+
+        let actual = WasmType::setter_code(&member);
+        assert!(actual.is_none());
+    }
+
+    #[test]
+    fn test_address_setter() {
+        let member = StructMember {
+            name: "test_field".to_string(),
+            description: None,
+            ty: Type(NamedCLType::Key)
+        };
+
+        let actual = WasmType::setter_code(&member).unwrap();
+        let expected = quote! {
+            #[wasm_bindgen(setter)]
+            pub fn set_test_field(&mut self, value: odra_wasm_client::types::Address) {
+                self.test_field = value.into();
+            }
+        };
+
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_address_option_setter() {
+        let member = StructMember {
+            name: "test_field".to_string(),
+            description: None,
+            ty: Type(NamedCLType::Option(Box::new(NamedCLType::Key)))
+        };
+
+        let actual = WasmType::setter_code(&member).unwrap();
+        let expected = quote! {
+            #[wasm_bindgen(setter)]
+            pub fn set_test_field(&mut self, value: Option<odra_wasm_client::types::Address>) {
+                self.test_field = value.map(Into::into);
+            }
+        };
+
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_map_setter() {
+        let member = StructMember {
+            name: "test_field".to_string(),
+            description: None,
+            ty: Type(NamedCLType::Map { key: Box::new(NamedCLType::U128), value: Box::new(NamedCLType::String) })
+        };
+
+        let actual = WasmType::setter_code(&member).unwrap();
+        let expected = quote! {
+            #[wasm_bindgen(setter)]
+            pub fn set_test_field(&mut self, value: JsValue) {
+                self.test_field = value.into_serde().unwrap_or_default();
+            }
+        };
+
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+     #[test]
+    fn test_vec_u32_setter() {
+        let member = StructMember {
+            name: "test_field".to_string(),
+            description: None,
+            ty: Type(NamedCLType::List(Box::new(NamedCLType::U32)))
+        };
+
+        let actual = WasmType::setter_code(&member);
+        assert!(actual.is_none());
+    }
+
+    #[test]
+    fn test_vec_u256_setter() {
+        let member = StructMember {
+            name: "test_field".to_string(),
+            description: None,
+            ty: Type(NamedCLType::List(Box::new(NamedCLType::U256)))
+        };
+
+        let actual = WasmType::setter_code(&member).unwrap();
+        let expected = quote! {
+            #[wasm_bindgen(setter)]
+            pub fn set_test_field(&mut self, value: Vec<odra_wasm_client::types::U256>) {
+                self.test_field = value.into_iter().map(Into::into).collect();
+            }
+        };
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_vec_map_setter() {
+        let member = StructMember {
+            name: "test_field".to_string(),
+            description: None,
+            ty: Type(NamedCLType::List(Box::new(NamedCLType::Map {
+                key: Box::new(NamedCLType::U256),
+                value: Box::new(NamedCLType::String)
+            })))
+        };
+
+        let actual = WasmType::setter_code(&member).unwrap();
+        let expected = quote! {
+            #[wasm_bindgen(setter)]
+            pub fn set_test_field(&mut self, value: Vec<JsValue>) {
+                self.test_field = value.into_iter().map(|v| v.into_serde().unwrap_or_default()).collect();
+            }
+        };
+        assert_eq!(actual.to_string(), expected.to_string());
     }
 }

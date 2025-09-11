@@ -76,7 +76,7 @@ fn entry_point_def(ep: &Entrypoint) -> TokenStream {
     } else if returns_value {
         quote::quote! {
             #[wasm_bindgen(js_name = #js_name)]
-            pub async fn #entry_point_ident(&self, #(#args),*) -> Result<#ret_ty, odra_wasm_client::wasm_bindgen::JsError> {
+            pub async fn #entry_point_ident(&self, #(#args),*) -> Result<#ret_ty, JsError> {
                 #(#parse_js_input)*
                 let cl_value = self
                     .wasm_client
@@ -86,16 +86,16 @@ fn entry_point_def(ep: &Entrypoint) -> TokenStream {
                     .await?;
 
                 let result = <#deser_ty as odra_wasm_client::casper_types::bytesrepr::FromBytes>::from_bytes(&cl_value.inner_bytes()[4..])
-                    .map_err(|err| odra_wasm_client::wasm_bindgen::JsError::new(&format!("{:?}", err)))?;
+                    .map_err(|err| JsError::new(&format!("{:?}", err)))?;
                 #ret_expr
             }
         }
     } else {
         quote::quote! {
             #[wasm_bindgen(js_name = #js_name)]
-            pub async fn #entry_point_ident(&self, #(#args),*) -> Result<odra_wasm_client::types::TransactionHash, odra_wasm_client::wasm_bindgen::JsError> {
+            pub async fn #entry_point_ident(&self, #(#args),*) -> Result<odra_wasm_client::types::TransactionHash, JsError> {
                 if !self.wallet.request_connection().await.is_ok() {
-                    return Err(odra_wasm_client::wasm_bindgen::JsError::new("Could not connect to the wallet"));
+                    return Err(JsError::new("Could not connect to the wallet"));
                 }
                 #(#parse_js_input)*
                 self.wasm_client
