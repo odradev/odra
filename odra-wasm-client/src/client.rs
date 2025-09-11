@@ -2,7 +2,8 @@ use crate::{
     now,
     types::{
         Address as WasmAddress, Bytes as WasmBytes, PublicKey,
-        TransactionHash as WasmTransactionHash, Verbosity
+        TransactionHash as WasmTransactionHash, Verbosity,
+        U512 as WasmU512
     },
     wallet::CasperWallet,
     PROXY_CALLER
@@ -13,11 +14,7 @@ use casper_client::{
     JsonRpcId
 };
 use casper_types::{
-    bytesrepr::{Bytes, ToBytes},
-    execution::{Effects, TransformKindV2},
-    runtime_args, CLValue, Deploy, Digest, EntityAddr, ExecutableDeployItem, Key, PricingMode,
-    RuntimeArgs, SecretKey, StoredValue, TimeDiff, Transaction, TransactionHash,
-    TransactionRuntimeParams, URef, U512
+    bytesrepr::{Bytes, ToBytes}, execution::{Effects, TransformKindV2}, runtime_args, CLValue, Deploy, Digest, EntityAddr, ExecutableDeployItem, Key, PricingMode, RuntimeArgs, SecretKey, StoredValue, TimeDiff, Transaction, TransactionHash, TransactionRuntimeParams, TransferTarget, URef, U512
 };
 use odra_core::prelude::Address;
 use wasm_bindgen::prelude::*;
@@ -28,6 +25,7 @@ const DEFAULT_GAS_TOLERANCE: u8 = 5;
 const CHAIN_TESTNET: &str = "casper-test";
 
 #[wasm_bindgen]
+#[derive(Debug, Clone)]
 pub struct OdraWasmClient {
     node_address: String,
     speculative_node_address: String,
@@ -58,14 +56,51 @@ impl OdraWasmClient {
         }
     }
 
+    /// Sets the gas limit for the client.
     #[wasm_bindgen(js_name = "setGas")]
     pub fn set_gas(&mut self, gas: u64) {
         self.gas = gas;
     }
 
+    /// Returns the default payment amount for transactions.
     #[wasm_bindgen(js_name = "DEFAULT_PAYMENT")]
     pub fn default_payment() -> u64 {
         2_500_000_000
+    }
+
+    /// Returns the balance of the specified address.
+    #[wasm_bindgen(js_name = "getBalance")]
+    pub async fn get_balance_js(&self, address: WasmAddress) -> Result<WasmU512, JsError> {
+        self.get_balance(address.into())
+            .await
+            .map(Into::into)
+            .map_err(|e| JsError::new(&e))
+    }
+
+    /// Returns the address of the caller.
+    #[wasm_bindgen(js_name = "caller")]
+    pub async fn caller(&self, wallet: &CasperWallet) -> Result<WasmAddress, JsError> {
+        let pk_string = wallet.get_active_public_key().await?;
+        
+        PublicKey::new(&pk_string)
+            .map_err(|e| JsError::new(&e.to_string()))
+            .map(Into::<WasmAddress>::into)
+    }
+
+    /// Transfers the specified amount to the given address.
+    #[wasm_bindgen(js_name = "transfer")]
+    pub async fn transfer(&self, to: WasmAddress, amount: WasmU512, wallet: &CasperWallet) -> Result<WasmTransactionHash, JsError> {
+        let caller = self.caller(wallet).await?;
+        let transaction: Transaction = self
+            .new_transfer_transaction(*caller, *to, *amount)
+            .map_err(|e| JsError::new(&format!("Failed to create transaction: {}", e)))?;
+
+        let signed_transaction = wallet.sign_transaction(transaction.into(), None).await?;
+
+        self.put_transaction(signed_transaction.into())
+            .await
+            .map(Into::into)
+            .map_err(|e| JsError::new(&e.to_string()))
     }
 }
 
@@ -89,12 +124,6 @@ impl OdraWasmClient {
             standard_payment: true
         }
     }
-
-    async fn caller(&self, wallet: &CasperWallet) -> Result<WasmAddress, JsError> {
-        let pk_string = wallet.get_active_public_key().await?;
-        let pk = PublicKey::new(&pk_string).map_err(|e| JsError::new(&e.to_string()))?;
-        Ok(WasmAddress::from(pk))
-    }
 }
 
 impl OdraWasmClient {
@@ -108,7 +137,7 @@ impl OdraWasmClient {
         let caller = self.caller(wallet).await?;
         let transaction: Transaction = self
             .new_call_transaction(*caller, contract_address, entry_point, runtime_args)
-            .ok_or_else(|| JsError::new("Failed to create transaction"))?;
+            .map_err(|e| JsError::new(&format!("Failed to create transaction: {}", e)))?;
 
         let signed_transaction = wallet.sign_transaction(transaction.into(), None).await?;
 
@@ -342,28 +371,28 @@ impl OdraWasmClient {
         contract_address: Address,
         entry_point: &str,
         runtime_args: RuntimeArgs
-    ) -> Option<Transaction> {
+    ) -> Result<Transaction, String> {
         let transaction_builder = TransactionV1Builder::new_targeting_package(
-            contract_address.as_package_hash().unwrap(),
+            contract_address.as_package_hash().ok_or("Invalid contract address")?,
             None,
             entry_point,
             TransactionRuntimeParams::VmCasperV1
         );
-        let timestamp = now()?;
+        let timestamp = now().ok_or("Failed to get current time")?;
 
-        Some(Transaction::V1(
+        Ok(Transaction::V1(
             transaction_builder
-                .with_initiator_addr(*caller.as_account_hash().unwrap())
+                .with_initiator_addr(*caller.as_account_hash().ok_or("Invalid caller address")?)
                 .with_ttl(TimeDiff::from_seconds(self.ttl))
                 .with_chain_name(&self.chain_name)
                 .with_pricing_mode(self.pricing_mode())
                 .with_timestamp(timestamp)
                 .with_runtime_args(runtime_args)
                 .build()
-                .unwrap_or_else(|e| {
+                .map_err(|e| {
                     crate::js::log(&format!("failed to build call transaction: {:?}", e));
-                    panic!("Failed to build call transaction: {:?}", e)
-                })
+                    format!("Failed to build call transaction: {:?}", e)
+                })?
         ))
     }
 
@@ -391,7 +420,7 @@ impl OdraWasmClient {
             }
         })
     }
-
+    
     pub async fn get_balance(&self, address: Address) -> Result<U512, String> {
         let state_root_hash = self
             .get_state_root_hash()
@@ -439,6 +468,33 @@ impl OdraWasmClient {
         .with_secret_key(sk)
         .build()
         .map_err(|e| JsError::new(&e.to_string()))
+    }
+
+    fn new_transfer_transaction(
+        &self,
+        caller: Address,
+        to: Address,
+        amount: U512,
+    ) -> Result<Transaction, String> {
+        let transaction_builder = TransactionV1Builder::new_transfer(
+            amount, 
+            None, 
+            TransferTarget::AccountHash(*to.as_account_hash().ok_or("Invalid account hash")?) , 
+            None
+        ).map_err(|e| format!("Failed to build transfer transaction: {:?}", e))?;
+
+        let timestamp = now().ok_or("Failed to get current time")?;
+        Ok(Transaction::V1(
+            transaction_builder
+                .with_initiator_addr(*caller.as_account_hash().ok_or("Invalid caller address")?)
+                .with_ttl(TimeDiff::from_seconds(self.ttl))
+                .with_chain_name(&self.chain_name)
+                .with_pricing_mode(self.pricing_mode())
+                // .with_secret_key(self.secret_key())
+                .with_timestamp(timestamp)
+                .build()
+                .map_err(|e| format!("Failed to build transfer transaction: {:?}", e))?
+        ))
     }
 }
 

@@ -19,7 +19,10 @@ pub fn client(contract_schema: &ContractSchema) -> TokenStream {
         #[wasm_bindgen]
         impl #client_name {
             #[wasm_bindgen(constructor)]
-            pub fn new(#[wasm_bindgen(js_name = "wasmClient")] wasm_client: odra_wasm_client::OdraWasmClient, address: odra_wasm_client::types::Address) -> Self {
+            pub fn new(
+                #[wasm_bindgen(js_name = "wasmClient")] wasm_client: odra_wasm_client::OdraWasmClient,
+                address: odra_wasm_client::types::Address
+            ) -> Self {
                 #client_name {
                     wasm_client,
                     wallet: odra_wasm_client::CasperWallet::default(),
@@ -69,12 +72,16 @@ fn entry_point_def(ep: &Entrypoint) -> TokenStream {
     let returns_value = ep.return_ty.0 != NamedCLType::Unit;
     let is_mut = ep.is_mutable;
 
+    let desc = ep.description.as_deref().unwrap_or("");
+    let docs = quote::quote!(#[doc = #desc]);
+
     if is_mut && returns_value {
         quote::quote! {
             panic!("Mutable entry points with return values are not supported");
         }
     } else if returns_value {
         quote::quote! {
+            #docs
             #[wasm_bindgen(js_name = #js_name)]
             pub async fn #entry_point_ident(&self, #(#args),*) -> Result<#ret_ty, JsError> {
                 #(#parse_js_input)*
@@ -92,6 +99,7 @@ fn entry_point_def(ep: &Entrypoint) -> TokenStream {
         }
     } else {
         quote::quote! {
+            #docs
             #[wasm_bindgen(js_name = #js_name)]
             pub async fn #entry_point_ident(&self, #(#args),*) -> Result<odra_wasm_client::types::TransactionHash, JsError> {
                 if !self.wallet.request_connection().await.is_ok() {

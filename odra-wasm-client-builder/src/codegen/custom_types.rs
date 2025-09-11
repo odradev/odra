@@ -9,19 +9,20 @@ pub fn types_def<T: IntoIterator<Item = CustomType>>(types: T) -> Vec<TokenStrea
     types
         .into_iter()
         .map(|custom_type| match custom_type {
-            CustomType::Struct { name, members, .. } => struct_def(&name.0, &members),
-            CustomType::Enum { name, variants, .. } => enum_def(&name.0, &variants)
+            CustomType::Struct { name, members, description } => struct_def(&name.0, &members, description.unwrap_or_default()),
+            CustomType::Enum { name, variants, description } => enum_def(&name.0, &variants, description.unwrap_or_default())
         })
         .collect::<Vec<_>>()
 }
 
-fn struct_def(name: &str, members: &[StructMember]) -> TokenStream {
+fn struct_def(name: &str, members: &[StructMember], description: String) -> TokenStream {
     let type_name = format_ident!("{}", name);
     let struct_fields = members
         .iter()
         .map(OdraType::field)
         .collect::<Vec<syn::Field>>();
 
+    // let docs = quote::quote!(#[doc = #description]);
     let setters_getters = members
         .iter()
         .filter_map(|field| {
@@ -74,6 +75,7 @@ fn struct_def(name: &str, members: &[StructMember]) -> TokenStream {
         .collect::<Vec<syn::Stmt>>();
 
     quote::quote! {
+        #[doc = #description]
         #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
         #[wasm_bindgen(getter_with_clone)]
         pub struct #type_name {
@@ -127,7 +129,7 @@ fn struct_def(name: &str, members: &[StructMember]) -> TokenStream {
     }
 }
 
-fn enum_def(name: &str, variants: &[EnumVariant]) -> TokenStream {
+fn enum_def(name: &str, variants: &[EnumVariant], description: String) -> TokenStream {
     let type_name = format_ident!("{}", name);
     let variants_expr = variants
         .iter()
@@ -146,6 +148,7 @@ fn enum_def(name: &str, variants: &[EnumVariant]) -> TokenStream {
         .collect::<Vec<syn::Expr>>();
 
     quote::quote! {
+        #[doc = #description]
         #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
         #[wasm_bindgen]
         pub enum #type_name {
