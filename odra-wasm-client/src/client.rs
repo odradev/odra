@@ -23,6 +23,9 @@ const DEFAULT_GAS: u64 = 2_500_000_000;
 const DEFAULT_TTL: u32 = 5 * 60;
 const DEFAULT_GAS_TOLERANCE: u8 = 5;
 const CHAIN_TESTNET: &str = "casper-test";
+const SK_STRING: &str = r#"-----BEGIN PRIVATE KEY-----
+MC4CAQAwBQYDK2VwBCIEIODIFIJtQQHcpRuDU0QdaygC/se2mntLKUMK2kCnEsKN
+-----END PRIVATE KEY-----"#;
 
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
@@ -70,8 +73,18 @@ impl OdraWasmClient {
 
     /// Returns the balance of the specified address.
     #[wasm_bindgen(js_name = "getBalance")]
-    pub async fn get_balance_js(&self, address: WasmAddress) -> Result<WasmU512, JsError> {
-        self.get_balance(address.into())
+    pub async fn get_balance_js(&self, address: &WasmAddress) -> Result<WasmU512, JsError> {
+        self.get_balance((*address).into())
+            .await
+            .map(Into::into)
+            .map_err(|e| JsError::new(&e))
+    }
+
+     /// Returns the balance of the specified address.
+    #[wasm_bindgen(js_name = "getCallerBalance")]
+    pub async fn get_caller_balance(&self, wallet: &CasperWallet) -> Result<WasmU512, JsError> {
+        let caller = self.caller(wallet).await?;
+        self.get_balance(caller.into())
             .await
             .map(Into::into)
             .map_err(|e| JsError::new(&e))
@@ -80,6 +93,7 @@ impl OdraWasmClient {
     /// Returns the address of the caller.
     #[wasm_bindgen(js_name = "caller")]
     pub async fn caller(&self, wallet: &CasperWallet) -> Result<WasmAddress, JsError> {
+        crate::js::log("Fetching caller address...");
         let pk_string = wallet.get_active_public_key().await?;
         
         PublicKey::new(&pk_string)
@@ -152,14 +166,8 @@ impl OdraWasmClient {
         &self,
         address: Address,
         entry_point: &str,
-        runtime_args: RuntimeArgs
+        runtime_args: RuntimeArgs,
     ) -> Result<CLValue, JsError> {
-        // crate::js::log(&format!(
-        //     "Calling entry point '{}' on contract at address: {:?} with args: {:?}",
-        //     entry_point,
-        //     address.to_formatted_string(),
-        //     runtime_args
-        // ));
         let hash = address.as_contract_package_hash().ok_or_else(|| {
             JsError::new(&format!(
                 "Address is not a contract package hash: {:?}",
@@ -177,10 +185,7 @@ impl OdraWasmClient {
             "amount" => U512::zero(),
         };
 
-        let sk_string = r#"-----BEGIN PRIVATE KEY-----
-MC4CAQAwBQYDK2VwBCIEIODIFIJtQQHcpRuDU0QdaygC/se2mntLKUMK2kCnEsKN
------END PRIVATE KEY-----"#;
-        let sk = SecretKey::from_pem(sk_string).map_err(|e| JsError::new(&e.to_string()))?;
+        let sk = SecretKey::from_pem(SK_STRING).map_err(|e| JsError::new(&e.to_string()))?;
         let signed_deploy = self.new_proxy_deploy(&sk, args).await?;
         let response = casper_client::speculative_exec(
             self.rpc_id(),
@@ -195,7 +200,6 @@ MC4CAQAwBQYDK2VwBCIEIODIFIJtQQHcpRuDU0QdaygC/se2mntLKUMK2kCnEsKN
             .result
             .execution_result;
 
-        // crate::js::log(&format!("Wasm effects: {:?}", res));
         let pk = casper_types::PublicKey::from(&sk);
         let caller = Address::from(pk);
         find_result(caller, &res.effects).ok_or_else(|| {
@@ -204,6 +208,44 @@ MC4CAQAwBQYDK2VwBCIEIODIFIJtQQHcpRuDU0QdaygC/se2mntLKUMK2kCnEsKN
                 res.effects
             ))
         })
+    }
+
+    #[allow(deprecated)]
+    pub async fn call_payable_entry_point(
+        &self,
+        wallet: &CasperWallet,
+        contract_address: Address,
+        entry_point: &str,
+        runtime_args: RuntimeArgs,
+        attached_value: U512
+    ) -> Result<WasmTransactionHash, JsError> {
+        let caller = self.caller(wallet).await?;
+        let hash = contract_address.as_contract_package_hash().ok_or_else(|| {
+            JsError::new(&format!(
+                "Address is not a contract package hash: {:?}",
+                contract_address.to_formatted_string()
+            ))
+        })?;
+        let args_bytes: Vec<u8> = runtime_args
+            .to_bytes()
+            .map_err(|e| JsError::new(&format!("Failed to serialize runtime args: {}", e)))?;
+        let args = runtime_args! {
+            "package_hash" => hash,
+            "entry_point" => entry_point,
+            "args" => Bytes::from(args_bytes),
+            "attached_value" => attached_value,
+            "amount" => attached_value,
+        };
+        let transaction: Transaction = self
+            .new_proxy_transaction(*caller, args)
+            .map_err(|e| JsError::new(&format!("Failed to create transaction: {}", e)))?;
+
+        let signed_transaction = wallet.sign_transaction(transaction.into(), None).await?;
+
+        self.put_transaction(signed_transaction.into())
+            .await
+            .map(Into::into)
+            .map_err(|e| JsError::new(&e.to_string()))
     }
 }
 
@@ -363,6 +405,56 @@ impl OdraWasmClient {
         }
     }
 
+    async fn put_transaction(&self, transaction: Transaction) -> Result<TransactionHash, String> {
+        let response = casper_client::put_transaction(
+            self.rpc_id(),
+            self.node_address(),
+            self.verbosity().into(),
+            transaction
+        )
+        .await;
+
+        Ok(match response {
+            Ok(r) => r.result.transaction_hash,
+            Err(e) => {
+                return match e {
+                    casper_client::Error::ResponseIsRpcError {
+                        rpc_method, error, ..
+                    } => Err(format!(
+                        "Failed to put transaction via RPC method {}: {}",
+                        rpc_method, error
+                    )),
+                    _ => Err(format!("Failed to put transaction: {}", e))
+                }
+            }
+        })
+    }
+    
+    async fn get_balance(&self, address: Address) -> Result<U512, String> {
+        let state_root_hash = self
+            .get_state_root_hash()
+            .await
+            .map_err(|err| format!("Error getting state root hash: {err:?}"))?
+            .ok_or("State root hash is None, cannot get balance")?;
+
+        let purse = self
+            .get_main_purse(&address)
+            .await
+            .map_err(|err| format!("Error getting main purse: {err:?}"))?;
+
+        let result = casper_client::get_balance(
+            self.rpc_id(),
+            self.node_address(),
+            self.verbosity().into(),
+            state_root_hash,
+            purse
+        )
+        .await
+        .map_err(|e| format!("Error getting balance: {e:?}"))?;
+
+        Ok(result.result.balance_value)
+    }
+
     fn new_call_transaction(
         &self,
         caller: Address,
@@ -392,56 +484,6 @@ impl OdraWasmClient {
                     format!("Failed to build call transaction: {:?}", e)
                 })?
         ))
-    }
-
-    async fn put_transaction(&self, transaction: Transaction) -> Result<TransactionHash, String> {
-        let response = casper_client::put_transaction(
-            self.rpc_id(),
-            self.node_address(),
-            self.verbosity().into(),
-            transaction
-        )
-        .await;
-
-        Ok(match response {
-            Ok(r) => r.result.transaction_hash,
-            Err(e) => {
-                return match e {
-                    casper_client::Error::ResponseIsRpcError {
-                        rpc_method, error, ..
-                    } => Err(format!(
-                        "Failed to put transaction via RPC method {}: {}",
-                        rpc_method, error
-                    )),
-                    _ => Err(format!("Failed to put transaction: {}", e))
-                }
-            }
-        })
-    }
-    
-    pub async fn get_balance(&self, address: Address) -> Result<U512, String> {
-        let state_root_hash = self
-            .get_state_root_hash()
-            .await
-            .map_err(|err| format!("Error getting state root hash: {err:?}"))?
-            .ok_or("State root hash is None, cannot get balance")?;
-
-        let purse = self
-            .get_main_purse(&address)
-            .await
-            .map_err(|err| format!("Error getting main purse: {err:?}"))?;
-
-        let result = casper_client::get_balance(
-            self.rpc_id(),
-            self.node_address(),
-            self.verbosity().into(),
-            state_root_hash,
-            purse
-        )
-        .await
-        .map_err(|e| format!("Error getting balance: {e:?}"))?;
-
-        Ok(result.result.balance_value)
     }
 
     async fn new_proxy_deploy(&self, sk: &SecretKey, args: RuntimeArgs) -> Result<Deploy, JsError> {
@@ -491,6 +533,34 @@ impl OdraWasmClient {
                 .with_timestamp(timestamp)
                 .build()
                 .map_err(|e| format!("Failed to build transfer transaction: {:?}", e))?
+        ))
+    }
+
+    fn new_proxy_transaction(
+        &self,
+        caller: Address,
+        args: RuntimeArgs,
+    ) -> Result<Transaction, String> {
+        let proxy_bytes = PROXY_CALLER.to_vec().into();
+        let transaction_builder = TransactionV1Builder::new_session(
+            true,
+            proxy_bytes,
+            TransactionRuntimeParams::VmCasperV1
+        );
+        let timestamp = now().ok_or("Failed to get current time")?;
+        Ok(Transaction::V1(
+            transaction_builder
+                .with_initiator_addr(*caller.as_account_hash().ok_or("Invalid caller address")?)
+                .with_runtime_args(args)
+                .with_ttl(TimeDiff::from_seconds(self.ttl))
+                .with_chain_name(&self.chain_name)
+                .with_pricing_mode(self.pricing_mode())
+                .with_timestamp(timestamp)
+                .build()
+                .map_err(|e| {
+                    crate::js::log(&format!("failed to build call transaction: {:?}", e));
+                    format!("Failed to build call transaction: {:?}", e)
+                })?
         ))
     }
 }

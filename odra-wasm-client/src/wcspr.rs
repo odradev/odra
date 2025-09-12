@@ -1,24 +1,24 @@
-use casper_types::{bytesrepr::FromBytes, runtime_args, U512};
+use casper_types::{bytesrepr::FromBytes, runtime_args};
 use wasm_bindgen::prelude::*;
 
 use crate::{
     client::OdraWasmClient,
-    types::{Address, TransactionHash as JsTransactionHash, U256},
+    types::{Address, TransactionHash as JsTransactionHash, U256, U512},
     wallet::CasperWallet
 };
 
 #[wasm_bindgen]
-pub struct Cep18Client {
+pub struct WCSPRClient {
     wasm_client: OdraWasmClient,
     wallet: CasperWallet,
     address: Address
 }
 
 #[wasm_bindgen]
-impl Cep18Client {
+impl WCSPRClient {
     #[wasm_bindgen(constructor)]
     pub fn new(wasm_client: OdraWasmClient, address: Address) -> Self {
-        Cep18Client {
+        WCSPRClient {
             wasm_client,
             wallet: CasperWallet::default(),
             address
@@ -133,52 +133,6 @@ impl Cep18Client {
             .await
     }
 
-    #[wasm_bindgen(js_name = "decreaseAllowance")]
-    pub async fn decrease_allowance(
-        &mut self,
-        spender: Address,
-        decr_by: U256,
-    ) -> Result<JsTransactionHash, JsError> {
-        if !self.wallet.request_connection().await.is_ok() {
-            return Err(JsError::new("Could not connect to the wallet"));
-        }
-
-        self.wasm_client
-            .call_entry_point(
-                &self.wallet,
-                *self.address,
-                "decrease_allowance",
-                runtime_args! {
-                    "spender" => *spender,
-                    "decr_by" => *decr_by
-                }
-            )
-            .await
-    }
-
-    #[wasm_bindgen(js_name = "increaseAllowance")]
-    pub async fn increase_allowance(
-        &mut self,
-        spender: Address,
-        incr_by: U256,
-    ) -> Result<JsTransactionHash, JsError> {
-        if !self.wallet.request_connection().await.is_ok() {
-            return Err(JsError::new("Could not connect to the wallet"));
-        }
-
-        self.wasm_client
-            .call_entry_point(
-                &self.wallet,
-                *self.address,
-                "increase_allowance",
-                runtime_args! {
-                    "spender" => *spender,
-                    "incr_by" => *incr_by
-                }
-            )
-            .await
-    }
-
     #[wasm_bindgen]
     pub async fn transfer(
         &mut self,
@@ -228,32 +182,28 @@ impl Cep18Client {
     }
 
     #[wasm_bindgen]
-    pub async fn mint(
+    pub async fn deposit(
         &mut self,
-        owner: Address,
-        amount: U256,
+        attached_value: U512
     ) -> Result<JsTransactionHash, JsError> {
         if !self.wallet.request_connection().await.is_ok() {
             return Err(JsError::new("Could not connect to the wallet"));
         }
 
         self.wasm_client
-            .call_entry_point(
+            .call_payable_entry_point(
                 &self.wallet,
                 *self.address,
-                "mint",
-                runtime_args! {
-                    "owner" => *owner,
-                    "amount" => *amount
-                }
+                "deposit",
+                runtime_args! {},
+                *attached_value
             )
             .await
     }
 
     #[wasm_bindgen]
-    pub async fn burn(
+    pub async fn withdraw(
         &mut self,
-        owner: Address,
         amount: U256,
     ) -> Result<JsTransactionHash, JsError> {
         if !self.wallet.request_connection().await.is_ok() {
@@ -266,9 +216,8 @@ impl Cep18Client {
                 *self.address,
                 "burn",
                 runtime_args! {
-                    "owner" => *owner,
                     "amount" => *amount
-                }
+                },
             )
             .await
     }

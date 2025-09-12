@@ -8,7 +8,7 @@ use web_sys::HtmlInputElement;
 
 use crate::types::cl::public_key::PublicKey;
 
-#[derive(Debug, Clone, Deserialize, Serialize, Copy)]
+#[derive(Debug, Clone, Deserialize, Serialize, Copy, PartialEq, Eq)]
 #[wasm_bindgen]
 pub struct Address(_Address);
 

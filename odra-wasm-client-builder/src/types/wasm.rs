@@ -815,7 +815,7 @@ mod test {
         let expected = quote! {
             #[wasm_bindgen(setter)]
             pub fn set_test_field(&mut self, value: JsValue) {
-                self.test_field = value.into_serde().unwrap_or_default();
+                self.test_field = value.into_serde().expect("Failed to deserialize JS value");
             }
         };
 
@@ -867,7 +867,7 @@ mod test {
         let expected = quote! {
             #[wasm_bindgen(setter)]
             pub fn set_test_field(&mut self, value: Vec<JsValue>) {
-                self.test_field = value.into_iter().map(|v| v.into_serde().unwrap_or_default()).collect();
+                self.test_field = value.into_iter().filter_map(|js_value| { js_value.into_serde().ok() }).collect();
             }
         };
         assert_eq!(actual.to_string(), expected.to_string());

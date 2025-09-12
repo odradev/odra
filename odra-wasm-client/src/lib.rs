@@ -3,12 +3,16 @@ use js_sys::Date;
 use std::str::FromStr;
 use wasm_bindgen::prelude::*;
 
-#[cfg(feature = "example")]
+#[cfg(feature = "cep18")]
 mod cep18;
+
+#[cfg(feature = "wcspr")]
+mod wcspr;
 mod client;
 pub mod js;
 pub mod types;
 mod wallet;
+mod contracts;
 
 pub use client::OdraWasmClient;
 pub use wallet::CasperWallet;

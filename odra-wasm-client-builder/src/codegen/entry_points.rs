@@ -75,6 +75,11 @@ fn entry_point_def(ep: &Entrypoint) -> TokenStream {
     let desc = ep.description.as_deref().unwrap_or("");
     let docs = quote::quote!(#[doc = #desc]);
 
+    let attached_value_arg = match ep.is_payable {
+        true => Some(quote::quote!(attached_value: odra_wasm_client::types::U512)),
+        false => None
+    };
+
     if is_mut && returns_value {
         quote::quote! {
             panic!("Mutable entry points with return values are not supported");
@@ -83,13 +88,35 @@ fn entry_point_def(ep: &Entrypoint) -> TokenStream {
         quote::quote! {
             #docs
             #[wasm_bindgen(js_name = #js_name)]
-            pub async fn #entry_point_ident(&self, #(#args),*) -> Result<#ret_ty, JsError> {
+            pub async fn #entry_point_ident(&self, #(#args),* #attached_value_arg) -> Result<#ret_ty, JsError> {
                 #(#parse_js_input)*
                 let cl_value = self
                     .wasm_client
                     .call_entry_point_with_proxy(*self.address, #entry_point_str, odra_wasm_client::casper_types::runtime_args! {
                         #(#rt_args),*
                     })
+                    .await?;
+
+                let result = <#deser_ty as odra_wasm_client::casper_types::bytesrepr::FromBytes>::from_bytes(&cl_value.inner_bytes()[4..])
+                    .map_err(|err| JsError::new(&format!("{:?}", err)))?;
+                #ret_expr
+            }
+        }
+    } else if ep.is_payable {
+        quote::quote! {
+            #docs
+            #[wasm_bindgen(js_name = #js_name)]
+            pub async fn #entry_point_ident(&self, #(#args),* #attached_value_arg) -> Result<odra_wasm_client::types::TransactionHash, JsError> {
+                #(#parse_js_input)*
+                let cl_value = self
+                    .wasm_client
+                    .call_payable_entry_point(
+                        &self.wallet,
+                        *self.address,
+                        #entry_point_str, 
+                        odra_wasm_client::casper_types::runtime_args! { #(#rt_args),* },
+                        attached_value
+                    )
                     .await?;
 
                 let result = <#deser_ty as odra_wasm_client::casper_types::bytesrepr::FromBytes>::from_bytes(&cl_value.inner_bytes()[4..])

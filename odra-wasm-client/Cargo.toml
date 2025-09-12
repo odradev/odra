@@ -31,4 +31,5 @@ path = "src/lib.rs"
 
 [features]
 default = []
-example = []
+cep18 = []
+wcspr = []
