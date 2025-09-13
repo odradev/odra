@@ -93,9 +93,7 @@ impl OdraWasmClient {
     /// Returns the address of the caller.
     #[wasm_bindgen(js_name = "caller")]
     pub async fn caller(&self, wallet: &CasperWallet) -> Result<WasmAddress, JsError> {
-        crate::js::log("Fetching caller address...");
         let pk_string = wallet.get_active_public_key().await?;
-        
         PublicKey::new(&pk_string)
             .map_err(|e| JsError::new(&e.to_string()))
             .map(Into::<WasmAddress>::into)
@@ -103,10 +101,10 @@ impl OdraWasmClient {
 
     /// Transfers the specified amount to the given address.
     #[wasm_bindgen(js_name = "transfer")]
-    pub async fn transfer(&self, to: WasmAddress, amount: WasmU512, wallet: &CasperWallet) -> Result<WasmTransactionHash, JsError> {
+    pub async fn transfer(&self, to: &WasmAddress, amount: &WasmU512, wallet: &CasperWallet) -> Result<WasmTransactionHash, JsError> {
         let caller = self.caller(wallet).await?;
         let transaction: Transaction = self
-            .new_transfer_transaction(*caller, *to, *amount)
+            .new_transfer_transaction(*caller, **to, **amount)
             .map_err(|e| JsError::new(&format!("Failed to create transaction: {}", e)))?;
 
         let signed_transaction = wallet.sign_transaction(transaction.into(), None).await?;

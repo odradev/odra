@@ -17,9 +17,9 @@ pub struct WCSPRClient {
 #[wasm_bindgen]
 impl WCSPRClient {
     #[wasm_bindgen(constructor)]
-    pub fn new(wasm_client: OdraWasmClient, address: Address) -> Self {
+    pub fn new(wasm_client: &OdraWasmClient, address: Address) -> Self {
         WCSPRClient {
-            wasm_client,
+            wasm_client: wasm_client.clone(),
             wallet: CasperWallet::default(),
             address
         }
@@ -81,7 +81,7 @@ impl WCSPRClient {
                 *self.address,
                 "balance_of",
                 runtime_args! {
-                    "owner" => *address
+                    "address" => *address
                 }
             )
             .await?;

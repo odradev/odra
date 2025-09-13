@@ -20,11 +20,11 @@ pub fn client(contract_schema: &ContractSchema) -> TokenStream {
         impl #client_name {
             #[wasm_bindgen(constructor)]
             pub fn new(
-                #[wasm_bindgen(js_name = "wasmClient")] wasm_client: odra_wasm_client::OdraWasmClient,
+                #[wasm_bindgen(js_name = "wasmClient")] wasm_client: &odra_wasm_client::OdraWasmClient,
                 address: odra_wasm_client::types::Address
             ) -> Self {
                 #client_name {
-                    wasm_client,
+                    wasm_client: wasm_client.clone(),
                     wallet: odra_wasm_client::CasperWallet::default(),
                     address
                 }
