@@ -69,7 +69,7 @@ macro_rules! impl_big_int {
             pub fn div(&self, other: &Self) -> Self {
                 Self(self.0 / other.0)
             }
-            
+
             #[wasm_bindgen(js_name = "divBigInt")]
             pub fn div_bigint(&self, other: &js_sys::BigInt) -> Result<Self, JsError> {
                 let other = Self::from_js_big_int(other)?;
@@ -132,6 +132,26 @@ macro_rules! impl_big_int {
             pub fn to_big_int(&self) -> js_sys::BigInt {
                 JsValue::from(self.0.to_string()).unchecked_into()
             }
+
+            #[wasm_bindgen(js_name = "lt")]
+            pub fn lt(&self, other: &Self) -> bool {
+                self.0 < other.0
+            }
+
+            #[wasm_bindgen(js_name = "le")]
+            pub fn le(&self, other: &Self) -> bool {
+                self.0 <= other.0
+            }
+
+            #[wasm_bindgen(js_name = "gt")]
+            pub fn gt(&self, other: &Self) -> bool {
+                self.0 > other.0
+            }
+
+            #[wasm_bindgen(js_name = "ge")]
+            pub fn ge(&self, other: &Self) -> bool {
+                self.0 >= other.0
+            }
         }
 
         impl Deref for $name {
@@ -171,7 +191,7 @@ pub struct OverflowingResultU128 {
     #[wasm_bindgen(readonly)]
     pub result: U128,
     #[wasm_bindgen(readonly)]
-    pub overflow: bool,
+    pub overflow: bool
 }
 
 #[wasm_bindgen]
@@ -179,7 +199,7 @@ pub struct OverflowingResultU256 {
     #[wasm_bindgen(readonly)]
     pub result: U256,
     #[wasm_bindgen(readonly)]
-    pub overflow: bool,
+    pub overflow: bool
 }
 
 #[wasm_bindgen]
@@ -187,11 +207,124 @@ pub struct OverflowingResultU512 {
     #[wasm_bindgen(readonly)]
     pub result: U512,
     #[wasm_bindgen(readonly)]
-    pub overflow: bool,
+    pub overflow: bool
+}
+
+#[wasm_bindgen]
+impl U128 {
+    #[wasm_bindgen(js_name = "overflowingMul")]
+    pub fn overflowing_mul(&self, other: &Self) -> OverflowingResultU128 {
+        let (res, overflow) = self.0.overflowing_mul(other.0);
+        OverflowingResultU128 {
+            result: Self(res),
+            overflow
+        }
+    }
+
+    #[wasm_bindgen(js_name = "overflowingAdd")]
+    pub fn overflowing_add(&self, other: &Self) -> OverflowingResultU128 {
+        let (res, overflow) = self.0.overflowing_add(other.0);
+        OverflowingResultU128 {
+            result: Self(res),
+            overflow
+        }
+    }
+
+    #[wasm_bindgen(js_name = "overflowingSub")]
+    pub fn overflowing_sub(&self, other: &Self) -> OverflowingResultU128 {
+        let (res, overflow) = self.0.overflowing_sub(other.0);
+        OverflowingResultU128 {
+            result: Self(res),
+            overflow
+        }
+    }
+
+    #[wasm_bindgen(js_name = "overflowingPow")]
+    pub fn overflowing_pow(&self, exp: u32) -> OverflowingResultU128 {
+        let (res, overflow) = self.0.overflowing_pow(*Self::from_u32(exp));
+        OverflowingResultU128 {
+            result: Self(res),
+            overflow
+        }
+    }
+
+    #[wasm_bindgen(js_name = "fromU512")]
+    pub fn from_u512(value: U512) -> Result<Self, JsError> {
+        let max_u128 = (casper_types::U512::one() << 128) - 1;
+        if value.0 > max_u128 {
+            return Err(JsError::new("Value exceeds U128 maximum"));
+        }
+        let src = value.0 .0;
+        let mut words = [0u64; 2];
+        words.copy_from_slice(&src[0..2]);
+        Ok(casper_types::U128(words).into())
+    }
+
+    #[wasm_bindgen(js_name = "toU512")]
+    pub fn to_u512(&self) -> U512 {
+        let mut bytes = [0u8; 16];
+        self.to_little_endian(&mut bytes);
+        casper_types::U512::from_little_endian(&bytes).into()
+    }
+
+    #[wasm_bindgen(js_name = "fromU256")]
+    pub fn from_u256(value: U256) -> Result<Self, JsError> {
+        let max_u128 = (casper_types::U256::one() << 128) - 1;
+        if value.0 > max_u128 {
+            return Err(JsError::new("Value exceeds U128 maximum"));
+        }
+        let src = value.0 .0;
+        let mut words = [0u64; 2];
+        words.copy_from_slice(&src[0..2]);
+        Ok(casper_types::U128(words).into())
+    }
+
+    #[wasm_bindgen(js_name = "toU256")]
+    pub fn to_u256(&self) -> U256 {
+        let mut bytes = [0u8; 16];
+        self.to_little_endian(&mut bytes);
+        casper_types::U256::from_little_endian(&bytes).into()
+    }
 }
 
 #[wasm_bindgen]
 impl U256 {
+    #[wasm_bindgen(js_name = "overflowingMul")]
+    pub fn overflowing_mul(&self, other: &Self) -> OverflowingResultU256 {
+        let (res, overflow) = self.0.overflowing_mul(other.0);
+        OverflowingResultU256 {
+            result: Self(res),
+            overflow
+        }
+    }
+
+    #[wasm_bindgen(js_name = "overflowingAdd")]
+    pub fn overflowing_add(&self, other: &Self) -> OverflowingResultU256 {
+        let (res, overflow) = self.0.overflowing_add(other.0);
+        OverflowingResultU256 {
+            result: Self(res),
+            overflow
+        }
+    }
+
+    #[wasm_bindgen(js_name = "overflowingSub")]
+    pub fn overflowing_sub(&self, other: &Self) -> OverflowingResultU256 {
+        let (res, overflow) = self.0.overflowing_sub(other.0);
+        OverflowingResultU256 {
+            result: Self(res),
+            overflow
+        }
+    }
+
+    #[wasm_bindgen(js_name = "overflowingPow")]
+    pub fn overflowing_pow(&self, exp: u32) -> OverflowingResultU256 {
+        let (res, overflow) = self.0.overflowing_pow(*Self::from_u32(exp));
+        OverflowingResultU256 {
+            result: Self(res),
+            overflow
+        }
+    }
+
     #[wasm_bindgen(js_name = "fromU512")]
     pub fn from_u512(value: U512) -> Result<Self, JsError> {
         let max_u256 = (casper_types::U512::one() << 256) - 1;
@@ -203,59 +336,12 @@ impl U256 {
         words.copy_from_slice(&src[0..4]);
         Ok(U256(casper_types::U256(words)))
     }
-}
 
-#[wasm_bindgen]
-impl U128 {
-    #[wasm_bindgen(js_name = "overflowingMul")]
-    pub fn overflowing_mul(&self, other: &Self) -> OverflowingResultU128 {
-        let (res, overflow) = self.0.overflowing_mul(other.0);
-        OverflowingResultU128 { result: Self(res), overflow }
-    }
-
-    #[wasm_bindgen(js_name = "overflowingAdd")]
-    pub fn overflowing_add(&self, other: &Self) -> OverflowingResultU128 {
-        let (res, overflow) = self.0.overflowing_add(other.0);
-        OverflowingResultU128 { result: Self(res), overflow }
-    }
-
-    #[wasm_bindgen(js_name = "overflowingSub")]
-    pub fn overflowing_sub(&self, other: &Self) -> OverflowingResultU128 {
-        let (res, overflow) = self.0.overflowing_sub(other.0);
-        OverflowingResultU128 { result: Self(res), overflow }
-    }
-
-    #[wasm_bindgen(js_name = "overflowingPow")]
-    pub fn overflowing_pow(&self, exp: u32) -> OverflowingResultU128 {
-        let (res, overflow) = self.0.overflowing_pow(*Self::from_u32(exp));
-        OverflowingResultU128 { result: Self(res), overflow }
-    }
-}
-
-#[wasm_bindgen]
-impl U256 {
-    #[wasm_bindgen(js_name = "overflowingMul")]
-    pub fn overflowing_mul(&self, other: &Self) -> OverflowingResultU256 {
-        let (res, overflow) = self.0.overflowing_mul(other.0);
-        OverflowingResultU256 { result: Self(res), overflow }
-    }
-
-    #[wasm_bindgen(js_name = "overflowingAdd")]
-    pub fn overflowing_add(&self, other: &Self) -> OverflowingResultU256 {
-        let (res, overflow) = self.0.overflowing_add(other.0);
-        OverflowingResultU256 { result: Self(res), overflow }
-    }
-
-    #[wasm_bindgen(js_name = "overflowingSub")]
-    pub fn overflowing_sub(&self, other: &Self) -> OverflowingResultU256 {
-        let (res, overflow) = self.0.overflowing_sub(other.0);
-        OverflowingResultU256 { result: Self(res), overflow }
-    }
-
-    #[wasm_bindgen(js_name = "overflowingPow")]
-    pub fn overflowing_pow(&self, exp: u32) -> OverflowingResultU256 {
-        let (res, overflow) = self.0.overflowing_pow(*Self::from_u32(exp));
-        OverflowingResultU256 { result: Self(res), overflow }
+    #[wasm_bindgen(js_name = "toU512")]
+    pub fn to_u512(&self) -> U512 {
+        let mut bytes = [0u8; 32];
+        self.to_little_endian(&mut bytes);
+        casper_types::U512::from_little_endian(&bytes).into()
     }
 }
 
@@ -264,24 +350,36 @@ impl U512 {
     #[wasm_bindgen(js_name = "overflowingMul")]
     pub fn overflowing_mul(&self, other: &Self) -> OverflowingResultU512 {
         let (res, overflow) = self.0.overflowing_mul(other.0);
-        OverflowingResultU512 { result: Self(res), overflow }
+        OverflowingResultU512 {
+            result: Self(res),
+            overflow
+        }
     }
 
     #[wasm_bindgen(js_name = "overflowingAdd")]
     pub fn overflowing_add(&self, other: &Self) -> OverflowingResultU512 {
         let (res, overflow) = self.0.overflowing_add(other.0);
-        OverflowingResultU512 { result: Self(res), overflow }
+        OverflowingResultU512 {
+            result: Self(res),
+            overflow
+        }
     }
 
     #[wasm_bindgen(js_name = "overflowingSub")]
     pub fn overflowing_sub(&self, other: &Self) -> OverflowingResultU512 {
         let (res, overflow) = self.0.overflowing_sub(other.0);
-        OverflowingResultU512 { result: Self(res), overflow }
+        OverflowingResultU512 {
+            result: Self(res),
+            overflow
+        }
     }
 
     #[wasm_bindgen(js_name = "overflowingPow")]
     pub fn overflowing_pow(&self, exp: u32) -> OverflowingResultU512 {
         let (res, overflow) = self.0.overflowing_pow(*Self::from_u32(exp));
-        OverflowingResultU512 { result: Self(res), overflow }
+        OverflowingResultU512 {
+            result: Self(res),
+            overflow
+        }
     }
 }
