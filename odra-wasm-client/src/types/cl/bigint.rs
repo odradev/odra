@@ -18,7 +18,7 @@ macro_rules! impl_big_int {
                 ))
             }
 
-            #[wasm_bindgen(js_name = "fromU32")]
+            #[wasm_bindgen(js_name = "fromNumber")]
             pub fn from_u32(value: u32) -> Self {
                 $name(casper_types::$name::from(value))
             }
@@ -65,6 +65,69 @@ macro_rules! impl_big_int {
                 Ok(Self(self.0 * other.0))
             }
 
+            #[wasm_bindgen(js_name = "div")]
+            pub fn div(&self, other: &Self) -> Self {
+                Self(self.0 / other.0)
+            }
+            
+            #[wasm_bindgen(js_name = "divBigInt")]
+            pub fn div_bigint(&self, other: &js_sys::BigInt) -> Result<Self, JsError> {
+                let other = Self::from_js_big_int(other)?;
+                Ok(Self(self.0 / other.0))
+            }
+
+            #[wasm_bindgen(js_name = "add")]
+            pub fn add(&self, other: &Self) -> Self {
+                Self(self.0 + other.0)
+            }
+
+            #[wasm_bindgen(js_name = "addBigInt")]
+            pub fn add_bigint(&self, other: &js_sys::BigInt) -> Result<Self, JsError> {
+                let other = Self::from_js_big_int(other)?;
+                Ok(Self(self.0 + other.0))
+            }
+
+            #[wasm_bindgen(js_name = "sub")]
+            pub fn sub(&self, other: &Self) -> Self {
+                Self(self.0 - other.0)
+            }
+
+            #[wasm_bindgen(js_name = "subBigInt")]
+            pub fn sub_bigint(&self, other: &js_sys::BigInt) -> Result<Self, JsError> {
+                let other = Self::from_js_big_int(other)?;
+                Ok(Self(self.0 - other.0))
+            }
+
+            #[wasm_bindgen(js_name = "checkedMul")]
+            pub fn checked_mul(&self, other: &Self) -> Option<Self> {
+                self.0.checked_mul(other.0).map(Self)
+            }
+
+            #[wasm_bindgen(js_name = "checkedAdd")]
+            pub fn checked_add(&self, other: &Self) -> Option<Self> {
+                self.0.checked_add(other.0).map(Self)
+            }
+
+            #[wasm_bindgen(js_name = "checkedSub")]
+            pub fn checked_sub(&self, other: &Self) -> Option<Self> {
+                self.0.checked_sub(other.0).map(Self)
+            }
+
+            #[wasm_bindgen(js_name = "checkedDiv")]
+            pub fn checked_div(&self, other: &Self) -> Option<Self> {
+                self.0.checked_div(other.0).map(Self)
+            }
+
+            #[wasm_bindgen(js_name = "checkedRem")]
+            pub fn checked_rem(&self, other: &Self) -> Option<Self> {
+                self.0.checked_rem(other.0).map(Self)
+            }
+
+            #[wasm_bindgen(js_name = "checkedPow")]
+            pub fn checked_pow(&self, exp: u32) -> Option<Self> {
+                self.0.checked_pow(*Self::from_u32(exp)).map(Self)
+            }
+
             #[wasm_bindgen(js_name = "toBigInt")]
             pub fn to_big_int(&self) -> js_sys::BigInt {
                 JsValue::from(self.0.to_string()).unchecked_into()
@@ -104,6 +167,30 @@ impl_big_int!(U256);
 impl_big_int!(U512);
 
 #[wasm_bindgen]
+pub struct OverflowingResultU128 {
+    #[wasm_bindgen(readonly)]
+    pub result: U128,
+    #[wasm_bindgen(readonly)]
+    pub overflow: bool,
+}
+
+#[wasm_bindgen]
+pub struct OverflowingResultU256 {
+    #[wasm_bindgen(readonly)]
+    pub result: U256,
+    #[wasm_bindgen(readonly)]
+    pub overflow: bool,
+}
+
+#[wasm_bindgen]
+pub struct OverflowingResultU512 {
+    #[wasm_bindgen(readonly)]
+    pub result: U512,
+    #[wasm_bindgen(readonly)]
+    pub overflow: bool,
+}
+
+#[wasm_bindgen]
 impl U256 {
     #[wasm_bindgen(js_name = "fromU512")]
     pub fn from_u512(value: U512) -> Result<Self, JsError> {
@@ -119,4 +206,82 @@ impl U256 {
 }
 
 #[wasm_bindgen]
-impl U256 {}
+impl U128 {
+    #[wasm_bindgen(js_name = "overflowingMul")]
+    pub fn overflowing_mul(&self, other: &Self) -> OverflowingResultU128 {
+        let (res, overflow) = self.0.overflowing_mul(other.0);
+        OverflowingResultU128 { result: Self(res), overflow }
+    }
+
+    #[wasm_bindgen(js_name = "overflowingAdd")]
+    pub fn overflowing_add(&self, other: &Self) -> OverflowingResultU128 {
+        let (res, overflow) = self.0.overflowing_add(other.0);
+        OverflowingResultU128 { result: Self(res), overflow }
+    }
+
+    #[wasm_bindgen(js_name = "overflowingSub")]
+    pub fn overflowing_sub(&self, other: &Self) -> OverflowingResultU128 {
+        let (res, overflow) = self.0.overflowing_sub(other.0);
+        OverflowingResultU128 { result: Self(res), overflow }
+    }
+
+    #[wasm_bindgen(js_name = "overflowingPow")]
+    pub fn overflowing_pow(&self, exp: u32) -> OverflowingResultU128 {
+        let (res, overflow) = self.0.overflowing_pow(*Self::from_u32(exp));
+        OverflowingResultU128 { result: Self(res), overflow }
+    }
+}
+
+#[wasm_bindgen]
+impl U256 {
+    #[wasm_bindgen(js_name = "overflowingMul")]
+    pub fn overflowing_mul(&self, other: &Self) -> OverflowingResultU256 {
+        let (res, overflow) = self.0.overflowing_mul(other.0);
+        OverflowingResultU256 { result: Self(res), overflow }
+    }
+
+    #[wasm_bindgen(js_name = "overflowingAdd")]
+    pub fn overflowing_add(&self, other: &Self) -> OverflowingResultU256 {
+        let (res, overflow) = self.0.overflowing_add(other.0);
+        OverflowingResultU256 { result: Self(res), overflow }
+    }
+
+    #[wasm_bindgen(js_name = "overflowingSub")]
+    pub fn overflowing_sub(&self, other: &Self) -> OverflowingResultU256 {
+        let (res, overflow) = self.0.overflowing_sub(other.0);
+        OverflowingResultU256 { result: Self(res), overflow }
+    }
+
+    #[wasm_bindgen(js_name = "overflowingPow")]
+    pub fn overflowing_pow(&self, exp: u32) -> OverflowingResultU256 {
+        let (res, overflow) = self.0.overflowing_pow(*Self::from_u32(exp));
+        OverflowingResultU256 { result: Self(res), overflow }
+    }
+}
+
+#[wasm_bindgen]
+impl U512 {
+    #[wasm_bindgen(js_name = "overflowingMul")]
+    pub fn overflowing_mul(&self, other: &Self) -> OverflowingResultU512 {
+        let (res, overflow) = self.0.overflowing_mul(other.0);
+        OverflowingResultU512 { result: Self(res), overflow }
+    }
+
+    #[wasm_bindgen(js_name = "overflowingAdd")]
+    pub fn overflowing_add(&self, other: &Self) -> OverflowingResultU512 {
+        let (res, overflow) = self.0.overflowing_add(other.0);
+        OverflowingResultU512 { result: Self(res), overflow }
+    }
+
+    #[wasm_bindgen(js_name = "overflowingSub")]
+    pub fn overflowing_sub(&self, other: &Self) -> OverflowingResultU512 {
+        let (res, overflow) = self.0.overflowing_sub(other.0);
+        OverflowingResultU512 { result: Self(res), overflow }
+    }
+
+    #[wasm_bindgen(js_name = "overflowingPow")]
+    pub fn overflowing_pow(&self, exp: u32) -> OverflowingResultU512 {
+        let (res, overflow) = self.0.overflowing_pow(*Self::from_u32(exp));
+        OverflowingResultU512 { result: Self(res), overflow }
+    }
+}
