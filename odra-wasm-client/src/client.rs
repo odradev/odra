@@ -206,9 +206,7 @@ impl OdraWasmClient {
             .result
             .execution_result;
 
-        let pk = casper_types::PublicKey::from(&sk);
-        let caller = Address::from(pk);
-        find_result(caller, &res.effects).ok_or_else(|| {
+        find_result(&res.effects).ok_or_else(|| {
             JsError::new(&format!(
                 "Failed to find result in effects: {:?}",
                 res.effects
@@ -573,27 +571,11 @@ impl OdraWasmClient {
     }
 }
 
-fn find_result(caller: Address, effects: &Effects) -> Option<CLValue> {
+fn find_result(effects: &Effects) -> Option<CLValue> {
     let values = effects.clone().value();
-    let result_key = values.iter().find_map(|effect| {
-        let k = Address::try_from(*effect.key()).ok();
-        let v = effect.kind();
-        if k == Some(caller) {
-            if let TransformKindV2::AddKeys(nk) = v {
-                if let Some(k) = nk.get("__result") {
-                    return Some(*k);
-                }
-            }
-        }
-        None
-    })?;
-    let result_uref_addr = result_key.as_uref().map(|uref| uref.addr())?;
     values.iter().find_map(|effect| {
-        let effect_uref_addr = effect.key().as_uref().map(|uref| uref.addr());
-        if effect_uref_addr == Some(result_uref_addr) {
-            if let TransformKindV2::Write(StoredValue::CLValue(cl_value)) = effect.kind() {
-                return Some(cl_value.clone());
-            }
+        if let TransformKindV2::Write(StoredValue::CLValue(cl_value)) = effect.kind() {
+            return Some(cl_value.clone());
         }
         None
     })
