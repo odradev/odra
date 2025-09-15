@@ -1,6 +1,6 @@
 use crate::{
     js::{casper_wallet_provider, CasperWalletProvider},
-    types::{Deploy, PublicKey, SignatureResponse, Transaction}
+    types::{Address, Deploy, PublicKey, SignatureResponse, Transaction}
 };
 use gloo_utils::format::JsValueSerdeExt;
 use wasm_bindgen::prelude::*;
@@ -326,5 +326,14 @@ impl CasperWallet {
                 "Failed to create Public key from {public_key}: {err:?}"
             ))
         })
+    }
+
+    /// Returns the address of the caller.
+    #[wasm_bindgen(js_name = "caller")]
+    pub async fn caller(&self) -> Result<Address, JsError> {
+        let pk_string = self.get_active_public_key().await?;
+        PublicKey::new(&pk_string)
+            .map_err(|e| JsError::new(&e.to_string()))
+            .map(Into::<Address>::into)
     }
 }

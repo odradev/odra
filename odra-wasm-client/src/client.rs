@@ -3,8 +3,8 @@ use std::sync::{Arc, Mutex, OnceLock};
 use crate::{
     now,
     types::{
-        Address as WasmAddress, Bytes as WasmBytes, PublicKey,
-        TransactionHash as WasmTransactionHash, Verbosity, U512 as WasmU512
+        Address as WasmAddress, Bytes as WasmBytes, TransactionHash as WasmTransactionHash,
+        Verbosity, U512 as WasmU512
     },
     wallet::CasperWallet,
     PROXY_CALLER
@@ -35,8 +35,8 @@ MC4CAQAwBQYDK2VwBCIEIODIFIJtQQHcpRuDU0QdaygC/se2mntLKUMK2kCnEsKN
 static GAS: OnceLock<Arc<Mutex<u64>>> = OnceLock::new();
 
 /// Returns the gas limit for the client for the next calls.
-#[wasm_bindgen(js_name = "getGas")]
-pub fn get_gas() -> u64 {
+#[wasm_bindgen]
+pub fn gas() -> u64 {
     GAS.get_or_init(|| Arc::new(Mutex::new(DEFAULT_GAS)))
         .lock()
         .unwrap()
@@ -65,7 +65,7 @@ pub struct OdraWasmClient {
     verbosity: Verbosity,
     chain_name: String,
     ttl: u32
-}   
+}
 
 #[wasm_bindgen]
 impl OdraWasmClient {
@@ -98,20 +98,11 @@ impl OdraWasmClient {
     /// Returns the balance of the specified address.
     #[wasm_bindgen(js_name = "getCallerBalance")]
     pub async fn get_caller_balance(&self, wallet: &CasperWallet) -> Result<WasmU512, JsError> {
-        let caller = self.caller(wallet).await?;
+        let caller = wallet.caller().await?;
         self.get_balance(caller.into())
             .await
             .map(Into::into)
             .map_err(|e| JsError::new(&e))
-    }
-
-    /// Returns the address of the caller.
-    #[wasm_bindgen(js_name = "caller")]
-    pub async fn caller(&self, wallet: &CasperWallet) -> Result<WasmAddress, JsError> {
-        let pk_string = wallet.get_active_public_key().await?;
-        PublicKey::new(&pk_string)
-            .map_err(|e| JsError::new(&e.to_string()))
-            .map(Into::<WasmAddress>::into)
     }
 
     /// Transfers the specified amount to the given address.
@@ -122,7 +113,7 @@ impl OdraWasmClient {
         amount: &WasmU512,
         wallet: &CasperWallet
     ) -> Result<WasmTransactionHash, JsError> {
-        let caller = self.caller(wallet).await?;
+        let caller = wallet.caller().await?;
         let transaction: Transaction = self
             .new_transfer_transaction(*caller, **to, **amount)
             .map_err(|e| JsError::new(&format!("Failed to create transaction: {}", e)))?;
@@ -151,7 +142,7 @@ impl OdraWasmClient {
 
     fn pricing_mode(&self) -> PricingMode {
         PricingMode::PaymentLimited {
-            payment_amount: get_gas(),
+            payment_amount: gas(),
             gas_price_tolerance: DEFAULT_GAS_TOLERANCE,
             standard_payment: true
         }
@@ -166,7 +157,7 @@ impl OdraWasmClient {
         entry_point: &str,
         runtime_args: RuntimeArgs
     ) -> Result<WasmTransactionHash, JsError> {
-        let caller = self.caller(wallet).await?;
+        let caller = wallet.caller().await?;
         let transaction: Transaction = self
             .new_call_transaction(*caller, contract_address, entry_point, runtime_args)
             .map_err(|e| JsError::new(&format!("Failed to create transaction: {}", e)))?;
@@ -235,7 +226,7 @@ impl OdraWasmClient {
         runtime_args: RuntimeArgs,
         attached_value: U512
     ) -> Result<WasmTransactionHash, JsError> {
-        let caller = self.caller(wallet).await?;
+        let caller = wallet.caller().await?;
         let hash = contract_address.as_contract_package_hash().ok_or_else(|| {
             JsError::new(&format!(
                 "Address is not a contract package hash: {:?}",
@@ -519,7 +510,7 @@ impl OdraWasmClient {
         .with_payment(ExecutableDeployItem::ModuleBytes {
             module_bytes: Default::default(),
             args: runtime_args! {
-                "amount" => U512::from(get_gas())
+                "amount" => U512::from(gas())
             }
         })
         .with_secret_key(sk)
