@@ -29,14 +29,12 @@ impl ToTokens for SchemaEntrypointsItem {
                 };
                 let is_mut = f.is_mut();
                 let args = args_to_tokens(&f.raw_typed_args());
-                let is_payable = f.is_payable();
                 quote::quote! {
                     odra::schema::entry_point::<#ret_ty>(
                         #name,
                         #desc,
                         #is_mut,
-                        odra::prelude::vec![ #(#args),* ],
-                        #is_payable
+                        odra::prelude::vec![ #(#args),* ]
                     )
                 }
             })
@@ -97,29 +95,25 @@ mod test {
                             "init",
                             "Initializes the contract with the given parameters.",
                             true,
-                            odra::prelude::vec![odra::schema::argument::<Option<U256> >("total_supply")],
-                            false
+                            odra::prelude::vec![odra::schema::argument::<Option<U256> >("total_supply")]
                         ),
                         odra::schema::entry_point::<()>(
                             "upgrade",
                             "Upgrades the contract with the given parameters.",
                             true,
-                            odra::prelude::vec![odra::schema::argument::<Option<U256> >("total_supply")],
-                            false
+                            odra::prelude::vec![odra::schema::argument::<Option<U256> >("total_supply")]
                         ),
                         odra::schema::entry_point::<U256>(
                             "total_supply",
                             "Returns the total supply of the token.",
                             false,
-                            odra::prelude::vec![],
-                            false
+                            odra::prelude::vec![]
                         ),
                         odra::schema::entry_point::<()>(
                             "pay_to_mint",
                             "Pay to mint.",
                             true,
-                            odra::prelude::vec![],
-                            true
+                            odra::prelude::vec![]
                         ),
                         odra::schema::entry_point::<()>(
                             "approve",
@@ -129,8 +123,7 @@ mod test {
                                 odra::schema::argument::<Address>("to"),
                                 odra::schema::argument::<U256>("amount"),
                                 odra::schema::argument::<Maybe<String> >("msg")
-                            ],
-                            false
+                            ]
                         ),
                         odra::schema::entry_point::<()>(
                             "airdrop",
@@ -139,8 +132,7 @@ mod test {
                             odra::prelude::vec![
                                 odra::schema::argument::<odra::prelude::vec::Vec<Address> >("to"),
                                 odra::schema::argument::<U256>("amount")
-                            ],
-                            false
+                            ]
                         )
                     ]
                 }
@@ -159,8 +151,8 @@ mod test {
             impl odra::schema::SchemaEntrypoints for Erc20 {
                 fn schema_entrypoints() -> odra::prelude::vec::Vec<odra::schema::casper_contract_schema::Entrypoint> {
                     odra::prelude::vec![
-                        odra::schema::entry_point::<U256>("total_supply", "", false, odra::prelude::vec![], false),
-                        odra::schema::entry_point::<()>("pay_to_mint", "", true, odra::prelude::vec![], true)
+                        odra::schema::entry_point::<U256>("total_supply", "", false, odra::prelude::vec![]),
+                        odra::schema::entry_point::<()>("pay_to_mint", "", true, odra::prelude::vec![])
                     ]
                 }
             }
@@ -182,36 +174,31 @@ mod test {
                             "total_supply",
                             "Returns the total supply of the token.",
                             false,
-                            odra::prelude::vec![],
-                            false
+                            odra::prelude::vec![]
                         ),
                         odra::schema::entry_point::<Address>(
                             "get_owner", 
                             "Returns the owner of the contract.", 
                             false, 
-                            odra::prelude::vec![],
-                            false
+                            odra::prelude::vec![]
                         ),
                         odra::schema::entry_point::<()>(
                             "set_owner",
                             "Sets the owner of the contract.",
                             true,
-                            odra::prelude::vec![odra::schema::argument::<Address>("new_owner")],
-                            false
+                            odra::prelude::vec![odra::schema::argument::<Address>("new_owner")]
                         ),
                         odra::schema::entry_point::<String>(
                             "name",
                             "Returns the name of the token.",
                             false, 
-                            odra::prelude::vec![],
-                            false
+                            odra::prelude::vec![]
                         ),
                         odra::schema::entry_point::<String>(
                             "symbol",
                             "Delegated. See `self.metadata.symbol()` for details.",
                             false,
-                            odra::prelude::vec![],
-                            false
+                            odra::prelude::vec![]
                         )
                     ]
                 }

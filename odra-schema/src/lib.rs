@@ -80,8 +80,7 @@ pub fn entry_point<T: NamedCLTyped>(
     name: &str,
     description: &str,
     is_mutable: bool,
-    arguments: Vec<Argument>,
-    is_payable: bool
+    arguments: Vec<Argument>
 ) -> Entrypoint {
     Entrypoint {
         name: name.into(),
@@ -90,8 +89,7 @@ pub fn entry_point<T: NamedCLTyped>(
         arguments,
         return_ty: T::ty().into(),
         is_contract_context: true,
-        access: Access::Public,
-        is_payable
+        access: Access::Public
     }
 }
 
@@ -329,7 +327,7 @@ mod test {
     #[test]
     fn test_entry_point() {
         let arg = super::argument::<u32>("arg1");
-        let entry_point = super::entry_point::<u32>("entry1", "description", true, vec![arg], false);
+        let entry_point = super::entry_point::<u32>("entry1", "description", true, vec![arg]);
         assert_eq!(entry_point.name, "entry1");
         assert_eq!(entry_point.description, Some("description".to_string()));
         assert!(entry_point.is_mutable);
@@ -418,8 +416,7 @@ mod test {
                     "entry1",
                     "description",
                     true,
-                    vec![super::argument::<u32>("arg1")],
-                    false
+                    vec![super::argument::<u32>("arg1")]
                 )]
             }
         }
