@@ -40,7 +40,8 @@ pub fn mock_entry_point() -> Entrypoint {
         ],
         return_ty: Type(NamedCLType::Bool),
         is_contract_context: true,
-        access: Access::Public
+        access: Access::Public,
+        is_payable: false
     }
 }
 
