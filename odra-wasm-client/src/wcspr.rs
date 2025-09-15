@@ -26,11 +26,6 @@ impl WCSPRClient {
     }
 
     #[wasm_bindgen]
-    pub fn set_gas(&mut self, gas: u64) {
-        self.wasm_client.set_gas(gas);
-    }
-
-    #[wasm_bindgen]
     pub async fn decimals(&self) -> Result<u8, JsError> {
         let cl_value = self
             .wasm_client

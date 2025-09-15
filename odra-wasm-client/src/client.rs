@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex, OnceLock};
+
 use crate::{
     now,
     types::{
@@ -30,16 +32,40 @@ const SK_STRING: &str = r#"-----BEGIN PRIVATE KEY-----
 MC4CAQAwBQYDK2VwBCIEIODIFIJtQQHcpRuDU0QdaygC/se2mntLKUMK2kCnEsKN
 -----END PRIVATE KEY-----"#;
 
+static GAS: OnceLock<Arc<Mutex<u64>>> = OnceLock::new();
+
+/// Returns the gas limit for the client for the next calls.
+#[wasm_bindgen(js_name = "getGas")]
+pub fn get_gas() -> u64 {
+    GAS.get_or_init(|| Arc::new(Mutex::new(DEFAULT_GAS)))
+        .lock()
+        .unwrap()
+        .clone()
+}
+
+/// Sets the gas limit for the client for the next calls.
+#[wasm_bindgen(js_name = "setGas")]
+pub fn set_gas(gas: u64) {
+    let g = GAS.get_or_init(|| Arc::new(Mutex::new(DEFAULT_GAS)));
+    let mut value = g.lock().unwrap();
+    *value = gas;
+}
+
+/// Returns the default payment amount for transactions.
+#[wasm_bindgen(js_name = "DEFAULT_PAYMENT_AMOUNT")]
+pub fn default_payment() -> u64 {
+    2_500_000_000
+}
+
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
 pub struct OdraWasmClient {
     node_address: String,
     speculative_node_address: String,
     verbosity: Verbosity,
-    gas: u64,
     chain_name: String,
     ttl: u32
-}
+}   
 
 #[wasm_bindgen]
 impl OdraWasmClient {
@@ -48,7 +74,6 @@ impl OdraWasmClient {
         node_address: String,
         speculative_node_address: String,
         chain_name: Option<String>,
-        gas: Option<u64>,
         ttl: Option<u32>,
         verbosity: Option<Verbosity>
     ) -> Self {
@@ -56,22 +81,9 @@ impl OdraWasmClient {
             node_address,
             speculative_node_address,
             verbosity: verbosity.unwrap_or(Verbosity::Low),
-            gas: gas.unwrap_or(DEFAULT_GAS),
             chain_name: chain_name.unwrap_or(CHAIN_TESTNET.into()),
             ttl: ttl.unwrap_or(DEFAULT_TTL)
         }
-    }
-
-    /// Sets the gas limit for the client.
-    #[wasm_bindgen(js_name = "setGas")]
-    pub fn set_gas(&mut self, gas: u64) {
-        self.gas = gas;
-    }
-
-    /// Returns the default payment amount for transactions.
-    #[wasm_bindgen(js_name = "DEFAULT_PAYMENT")]
-    pub fn default_payment() -> u64 {
-        2_500_000_000
     }
 
     /// Returns the balance of the specified address.
@@ -139,7 +151,7 @@ impl OdraWasmClient {
 
     fn pricing_mode(&self) -> PricingMode {
         PricingMode::PaymentLimited {
-            payment_amount: self.gas,
+            payment_amount: get_gas(),
             gas_price_tolerance: DEFAULT_GAS_TOLERANCE,
             standard_payment: true
         }
@@ -507,7 +519,7 @@ impl OdraWasmClient {
         .with_payment(ExecutableDeployItem::ModuleBytes {
             module_bytes: Default::default(),
             args: runtime_args! {
-                "amount" => U512::from(self.gas)
+                "amount" => U512::from(get_gas())
             }
         })
         .with_secret_key(sk)

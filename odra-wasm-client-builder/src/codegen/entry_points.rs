@@ -43,14 +43,6 @@ fn client_struct_def<T: ToTokens>(client_name: &T) -> TokenStream {
             wallet: odra_wasm_client::CasperWallet,
             address: odra_wasm_client::types::Address
         }
-
-        #[wasm_bindgen]
-        impl #client_name {
-            #[wasm_bindgen]
-            pub fn set_gas(&mut self, gas: u64) {
-                self.wasm_client.set_gas(gas);
-            }
-        }
     }
 }
 
@@ -83,11 +75,8 @@ fn entry_point_def(ep: &Entrypoint) -> TokenStream {
     let desc = ep.description.as_deref().unwrap_or("");
     let docs = quote::quote!(#[doc = #desc]);
 
-    let attached_value_arg = match ep.is_payable {
-        true => Some(quote::quote!(attached_value: odra_wasm_client::types::U512)),
-        false => None
-    };
-
+    let is_payable = ep.arguments.iter().any(|arg| arg.name == "__cargo_purse");
+    
     if is_mut && returns_value {
         quote::quote! {
             panic!("Mutable entry points with return values are not supported");
@@ -96,7 +85,7 @@ fn entry_point_def(ep: &Entrypoint) -> TokenStream {
         quote::quote! {
             #docs
             #[wasm_bindgen(js_name = #js_name)]
-            pub async fn #entry_point_ident(&self, #(#args),* #attached_value_arg) -> Result<#ret_ty, JsError> {
+            pub async fn #entry_point_ident(&self, #(#args),*) -> Result<#ret_ty, JsError> {
                 #(#parse_js_input)*
                 let cl_value = self
                     .wasm_client
@@ -110,18 +99,18 @@ fn entry_point_def(ep: &Entrypoint) -> TokenStream {
                 #ret_expr
             }
         }
-    } else if ep.is_payable {
+    } else if is_payable {
         quote::quote! {
             #docs
             #[wasm_bindgen(js_name = #js_name)]
-            pub async fn #entry_point_ident(&self, #(#args),* #attached_value_arg) -> Result<odra_wasm_client::types::TransactionHash, JsError> {
+            pub async fn #entry_point_ident(&self, #(#args),* attached_value: odra_wasm_client::types::U512) -> Result<odra_wasm_client::types::TransactionHash, JsError> {
                 #(#parse_js_input)*
                 let cl_value = self
                     .wasm_client
                     .call_payable_entry_point(
                         &self.wallet,
                         *self.address,
-                        #entry_point_str, 
+                        #entry_point_str,
                         odra_wasm_client::casper_types::runtime_args! { #(#rt_args),* },
                         attached_value
                     )
