@@ -1,179 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CEP-18 Client</title>
-    <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre-exp.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre-icons.min.css">
-    <style>
-        body {
-            padding: 2rem;
-        }
-        .card {
-            margin-bottom: 1rem;
-        }
-        .card-body {
-            padding: 0.5rem;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CSPR ⇄ wCSPR Swap</title>
+  <script src="https://cdn.tailwindcss.com"></script>
     <script type="importmap">
-        {
-            "imports": {
-                "wasm-client": "./node_modules/wasm-client/wasm_client.js"
-            }
+    {
+        "imports": {
+            "odra-wasm-client": "./node_modules/odra-wasm-client/odra_wasm_client.js"
         }
-    </script>
+    }
+  </script>
 </head>
-<body>
-    <div class="container">
-        <div class="columns">
-            <div class="column col-12">
-                <h1>CEP-18 Client</h1>
-            </div>
+<body class="bg-gray-50">
+  <div class="max-w-3xl mx-auto p-6">
+    <div class="bg-white/80 backdrop-blur-md rounded-2xl shadow-md p-6">
+      <header class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-semibold">CSPR ⇄ wCSPR Swap</h1>
+        <div>
+          <button id="connect-btn" class="px-4 py-2 rounded-md bg-gradient-to-r from-indigo-500 to-indigo-400 text-white font-medium shadow">Connect Wallet</button>
+          <div class="flex items-center gap-4 hidden" id="disconnect-section">
+            <span id="address" class="text-sm text-gray-600"></span>
+            <button id="disconnect-btn" class="px-3 py-1 rounded-md border hover:bg-gray-50 text-sm hidden">Disconnect</button>
+          </div>
         </div>
-        <div class="columns">
-            <div class="column col-8">
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title h5">Name</div>
-                    </div>
-                    <div class="card-body">
-                        <p><span id="token-name"></span></p>
-                    </div>
-                    <div class="card-footer">
-                        <button class="btn btn-primary" id="get-name-button">Get Name</button>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title h5">Symbol</div>
-                    </div>
-                    <div class="card-body">
-                        <p><span id="token-symbol"></span></p>
-                    </div>
-                    <div class="card-footer">
-                        <button class="btn btn-primary" id="get-symbol-button">Get Symbol</button>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title h5">Decimals</div>
-                    </div>
-                    <div class="card-body">
-                        <p><span id="token-decimals"></span></p>
-                    </div>
-                    <div class="card-footer">
-                        <button class="btn btn-primary" id="get-decimals-button">Get Decimals</button>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title h5">Total Supply</div>
-                    </div>
-                    <div class="card-body">
-                        <p><span id="total-supply"></span></p>
-                    </div>
-                    <div class="card-footer">
-                        <button class="btn btn-primary" id="get-total-supply-button">Get Total Supply</button>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title h5">Balance Of</div>
-                    </div>
-                    <div class="card-body">
-                        <div class="form-group">
-                            <label class="form-label" for="balance-of-address">Address</label>
-                            <input class="form-input" type="text" id="balance-of-address" placeholder="Enter address">
-                        </div>
-                        <p><strong>Balance:</strong> <span id="balance-of-result"></span></p>
-                    </div>
-                    <div class="card-footer">
-                        <button class="btn btn-primary" id="balance-of-button">Get Balance</button>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title h5">Approve</div>
-                    </div>
-                    <div class="card-body">
-                        <div class="form-group">
-                            <label class="form-label" for="approve-spender">Spender</label>
-                            <input class="form-input" type="text" id="approve-spender" placeholder="Enter spender address">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="approve-amount">Amount</label>
-                            <input class="form-input" type="text" id="approve-amount" placeholder="Enter amount">
-                        </div>
-                    </div>
-                    <div class="card-footer">
-                        <button class="btn btn-primary" id="approve-button">Approve</button>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title h5">Transfer</div>
-                    </div>
-                    <div class="card-body">
-                        <div class="form-group">
-                            <label class="form-label" for="transfer-recipient">Recipient</label>
-                            <input class="form-input" type="text" id="transfer-recipient" placeholder="Enter recipient address">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="transfer-amount">Amount</label>
-                            <input class="form-input" type="text" id="transfer-amount" placeholder="Enter amount">
-                        </div>
-                    </div>
-                    <div class="card-footer">
-                        <button class="btn btn-primary" id="transfer-button">Transfer</button>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title h5">Transfer From</div>
-                    </div>
-                    <div class="card-body">
-                        <div class="form-group">
-                            <label class="form-label" for="transfer-from-owner">Owner</label>
-                            <input class="form-input" type="text" id="transfer-from-owner" placeholder="Enter owner address">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="transfer-from-recipient">Recipient</label>
-                            <input class="form-input" type="text" id="transfer-from-recipient" placeholder="Enter recipient address">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="transfer-from-amount">Amount</label>
-                            <input class="form-input" type="text" id="transfer-from-amount" placeholder="Enter amount">
-                        </div>
-                    </div>
-                    <div class="card-footer">
-                        <button class="btn btn-primary" id="transfer-from-button">Transfer From</button>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title h5">Allowance</div>
-                    </div>
-                    <div class="card-body">
-                        <div class="form-group">
-                            <label class="form-label" for="allowance-owner">Owner</label>
-                            <input class="form-input" type="text" id="allowance-owner" placeholder="Enter owner address">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="allowance-spender">Spender</label>
-                            <input class="form-input" type="text" id="allowance-spender" placeholder="Enter spender address">
-                        </div>
-                        <p><strong>Allowance:</strong> <span id="allowance-result"></span></p>
-                    </div>
-                    <div class="card-footer">
-                        <button class="btn btn-primary" id="allowance-button">Get Allowance</button>
-                    </div>
-                </div>
-            </div>
+      </header>
+
+      <section class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div class="p-4 border rounded-lg">
+          <div class="text-sm text-gray-500">Native CSPR</div>
+          <div id="native-bal" class="text-xl font-semibold">—</div>
+          <div id="native-bal-loader" class="text-sm text-gray-400 hidden">Loading...</div>
         </div>
+        <div class="p-4 border rounded-lg">
+          <div class="text-sm text-gray-500">Wrapped wCSPR</div>
+          <div id="wrapped-bal" class="text-xl font-semibold">—</div>
+          <div id="wrapped-bal-loader" class="text-sm text-gray-400 hidden">Loading...</div>
+        </div>
+      </section>
+
+      <section class="p-4 border rounded-lg mb-4">
+        <div class="flex items-center gap-2 mb-3">
+          <button id="dir-native" class="px-3 py-1 rounded bg-indigo-100">CSPR → wCSPR</button>
+          <button id="dir-wrapped" class="px-3 py-1 rounded hover:bg-gray-50">wCSPR → CSPR</button>
+        </div>
+
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">Amount</label>
+          <input id="amount" inputmode="decimal" class="w-full p-2 border rounded-md" placeholder="0.0" />
+        </div>
+
+        <div class="mt-4 flex gap-3">
+          <button id="swap-btn" class="px-4 py-2 rounded-md bg-gradient-to-r from-emerald-500 to-emerald-400 text-white font-medium">Swap</button>
+          <button id="refresh-btn" class="px-3 py-2 rounded-md border hover:bg-gray-50">Refresh Balances</button>
+        </div>
+      </section>
+
+      <section id="tx-section" class="mt-4 p-4 rounded-md bg-green-50 border border-green-100 hidden">
+        <div class="text-sm font-medium">Transaction submitted</div>
+        <a id="tx-link" class="text-sm underline break-all" target="_blank" rel="noopener noreferrer">View on explorer</a>
+      </section>
+
+      <section id="error-section" class="mt-4 p-3 rounded-md bg-red-50 border border-red-100 text-red-700 hidden">
+        <div id="error-text"></div>
+      </section>
     </div>
-    <script type="module" src="dist/main.js"></script>
+  </div>
+  <script type="module" src="dist/swap.js"></script>
 </body>
 </html>
