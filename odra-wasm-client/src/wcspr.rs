@@ -208,7 +208,7 @@ impl WCSPRClient {
             .call_entry_point(
                 &self.wallet,
                 *self.address,
-                "burn",
+                "withdraw",
                 runtime_args! {
                     "amount" => *amount
                 }
