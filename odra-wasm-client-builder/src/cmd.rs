@@ -19,11 +19,7 @@ pub fn build<P: AsRef<Path>>(path: &P) -> Result<()> {
         .arg("--out-dir")
         .arg("pkg-web")
         .arg("--release")
-        .arg(
-            path.as_ref()
-                .to_str()
-                .ok_or(Error::InvalidSchemaPath)?
-        )
+        .arg(path.as_ref().to_str().ok_or(Error::InvalidSchemaPath)?)
         .status()?;
     Ok(())
 }

@@ -100,14 +100,12 @@ impl WasmType {
                     self.#ident.iter().map(|v| JsValue::from_serde(v).unwrap_or(JsValue::null())).collect()
                 }
             }),
-            WasmType::Option(e) if e.is_wrapped_type() => {
-                Some(quote::quote! {
-                    #[wasm_bindgen(getter)]
-                    pub fn #ident(&self) -> #ty {
-                        self.#ident.map(Into::into)
-                    }
-                })
-            }
+            WasmType::Option(e) if e.is_wrapped_type() => Some(quote::quote! {
+                #[wasm_bindgen(getter)]
+                pub fn #ident(&self) -> #ty {
+                    self.#ident.map(Into::into)
+                }
+            }),
             _ => None
         }
     }
@@ -158,14 +156,12 @@ impl WasmType {
                     }).collect());
                 }
             }),
-            WasmType::Option(e) if e.is_wrapped_type() => {
-                Some(quote::quote! {
-                    #[wasm_bindgen(setter)]
-                    pub fn #ident(&mut self, value: #ty) {
-                        self.#field_name = value.map(Into::into);
-                    }
-                })
-            }
+            WasmType::Option(e) if e.is_wrapped_type() => Some(quote::quote! {
+                #[wasm_bindgen(setter)]
+                pub fn #ident(&mut self, value: #ty) {
+                    self.#field_name = value.map(Into::into);
+                }
+            }),
             _ => None
         }
     }
@@ -268,7 +264,7 @@ impl WasmType {
             | WasmType::I64
             | WasmType::U8
             | WasmType::U32
-            | WasmType::U64  => true,
+            | WasmType::U64 => true,
             _ => false
         }
     }
@@ -688,7 +684,10 @@ mod test {
         let member = StructMember {
             name: "test_field".to_string(),
             description: None,
-            ty: Type(NamedCLType::Map { key: Box::new(NamedCLType::U128), value: Box::new(NamedCLType::String) })
+            ty: Type(NamedCLType::Map {
+                key: Box::new(NamedCLType::U128),
+                value: Box::new(NamedCLType::String)
+            })
         };
 
         let actual = WasmType::getter_code(&member).unwrap();
@@ -732,7 +731,7 @@ mod test {
         assert_eq!(actual.to_string(), expected.to_string());
     }
 
-     #[test]
+    #[test]
     fn test_vec_map_getter() {
         let member = StructMember {
             name: "test_field".to_string(),
@@ -808,7 +807,10 @@ mod test {
         let member = StructMember {
             name: "test_field".to_string(),
             description: None,
-            ty: Type(NamedCLType::Map { key: Box::new(NamedCLType::U128), value: Box::new(NamedCLType::String) })
+            ty: Type(NamedCLType::Map {
+                key: Box::new(NamedCLType::U128),
+                value: Box::new(NamedCLType::String)
+            })
         };
 
         let actual = WasmType::setter_code(&member).unwrap();
@@ -822,7 +824,7 @@ mod test {
         assert_eq!(actual.to_string(), expected.to_string());
     }
 
-     #[test]
+    #[test]
     fn test_vec_u32_setter() {
         let member = StructMember {
             name: "test_field".to_string(),

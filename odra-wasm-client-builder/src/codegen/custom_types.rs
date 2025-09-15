@@ -9,8 +9,16 @@ pub fn types_def<T: IntoIterator<Item = CustomType>>(types: T) -> Vec<TokenStrea
     types
         .into_iter()
         .map(|custom_type| match custom_type {
-            CustomType::Struct { name, members, description } => struct_def(&name.0, &members, description.unwrap_or_default()),
-            CustomType::Enum { name, variants, description } => enum_def(&name.0, &variants, description.unwrap_or_default())
+            CustomType::Struct {
+                name,
+                members,
+                description
+            } => struct_def(&name.0, &members, description.unwrap_or_default()),
+            CustomType::Enum {
+                name,
+                variants,
+                description
+            } => enum_def(&name.0, &variants, description.unwrap_or_default())
         })
         .collect::<Vec<_>>()
 }
@@ -22,7 +30,6 @@ fn struct_def(name: &str, members: &[StructMember], description: String) -> Toke
         .map(OdraType::field)
         .collect::<Vec<syn::Field>>();
 
-    // let docs = quote::quote!(#[doc = #description]);
     let setters_getters = members
         .iter()
         .filter_map(|field| {
