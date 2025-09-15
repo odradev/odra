@@ -26,6 +26,11 @@ impl WCSPRClient {
     }
 
     #[wasm_bindgen]
+    pub fn set_gas(&mut self, gas: u64) {
+        self.wasm_client.set_gas(gas);
+    }
+
+    #[wasm_bindgen]
     pub async fn decimals(&self) -> Result<u8, JsError> {
         let cl_value = self
             .wasm_client
@@ -114,7 +119,7 @@ impl WCSPRClient {
     pub async fn approve(
         &mut self,
         spender: Address,
-        amount: U256,
+        amount: U256
     ) -> Result<JsTransactionHash, JsError> {
         if !self.wallet.request_connection().await.is_ok() {
             return Err(JsError::new("Could not connect to the wallet"));
@@ -137,7 +142,7 @@ impl WCSPRClient {
     pub async fn transfer(
         &mut self,
         recipient: Address,
-        amount: U256,
+        amount: U256
     ) -> Result<JsTransactionHash, JsError> {
         if !self.wallet.request_connection().await.is_ok() {
             return Err(JsError::new("Could not connect to the wallet"));
@@ -161,7 +166,7 @@ impl WCSPRClient {
         &mut self,
         owner: Address,
         recipient: Address,
-        amount: U256,
+        amount: U256
     ) -> Result<JsTransactionHash, JsError> {
         if !self.wallet.request_connection().await.is_ok() {
             return Err(JsError::new("Could not connect to the wallet"));
@@ -182,10 +187,7 @@ impl WCSPRClient {
     }
 
     #[wasm_bindgen]
-    pub async fn deposit(
-        &mut self,
-        attached_value: U512
-    ) -> Result<JsTransactionHash, JsError> {
+    pub async fn deposit(&mut self, attached_value: U512) -> Result<JsTransactionHash, JsError> {
         if !self.wallet.request_connection().await.is_ok() {
             return Err(JsError::new("Could not connect to the wallet"));
         }
@@ -202,10 +204,7 @@ impl WCSPRClient {
     }
 
     #[wasm_bindgen]
-    pub async fn withdraw(
-        &mut self,
-        amount: U256,
-    ) -> Result<JsTransactionHash, JsError> {
+    pub async fn withdraw(&mut self, amount: U256) -> Result<JsTransactionHash, JsError> {
         if !self.wallet.request_connection().await.is_ok() {
             return Err(JsError::new("Could not connect to the wallet"));
         }
@@ -217,7 +216,7 @@ impl WCSPRClient {
                 "burn",
                 runtime_args! {
                     "amount" => *amount
-                },
+                }
             )
             .await
     }

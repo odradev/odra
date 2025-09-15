@@ -8,7 +8,7 @@ use crate::types::Address;
 pub struct Contracts {
     #[serde(alias = "time")]
     last_updated: String,
-    contracts: Vec<ContractInfo>,
+    contracts: Vec<ContractInfo>
 }
 
 #[wasm_bindgen]
@@ -22,11 +22,11 @@ impl Contracts {
 
     #[wasm_bindgen]
     pub fn get(&self, name: &str) -> Result<ContractInfo, JsError> {
-        let contract = self.contracts.iter()
+        let contract = self
+            .contracts
+            .iter()
             .find(|c| c.name == name)
-            .ok_or_else(|| {
-                JsError::new(&format!("Contract with name {:?} not found", name))
-            })?;
+            .ok_or_else(|| JsError::new(&format!("Contract with name {:?} not found", name)))?;
         Ok(contract.clone())
     }
 }
@@ -35,7 +35,7 @@ impl Contracts {
 #[wasm_bindgen(getter_with_clone)]
 pub struct ContractInfo {
     pub name: String,
-    pub package_hash: String,
+    pub package_hash: String
 }
 
 #[wasm_bindgen]

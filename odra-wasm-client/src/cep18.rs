@@ -114,7 +114,7 @@ impl Cep18Client {
     pub async fn approve(
         &mut self,
         spender: Address,
-        amount: U256,
+        amount: U256
     ) -> Result<JsTransactionHash, JsError> {
         if !self.wallet.request_connection().await.is_ok() {
             return Err(JsError::new("Could not connect to the wallet"));
@@ -137,7 +137,7 @@ impl Cep18Client {
     pub async fn decrease_allowance(
         &mut self,
         spender: Address,
-        decr_by: U256,
+        decr_by: U256
     ) -> Result<JsTransactionHash, JsError> {
         if !self.wallet.request_connection().await.is_ok() {
             return Err(JsError::new("Could not connect to the wallet"));
@@ -160,7 +160,7 @@ impl Cep18Client {
     pub async fn increase_allowance(
         &mut self,
         spender: Address,
-        incr_by: U256,
+        incr_by: U256
     ) -> Result<JsTransactionHash, JsError> {
         if !self.wallet.request_connection().await.is_ok() {
             return Err(JsError::new("Could not connect to the wallet"));
@@ -183,7 +183,7 @@ impl Cep18Client {
     pub async fn transfer(
         &mut self,
         recipient: Address,
-        amount: U256,
+        amount: U256
     ) -> Result<JsTransactionHash, JsError> {
         if !self.wallet.request_connection().await.is_ok() {
             return Err(JsError::new("Could not connect to the wallet"));
@@ -207,7 +207,7 @@ impl Cep18Client {
         &mut self,
         owner: Address,
         recipient: Address,
-        amount: U256,
+        amount: U256
     ) -> Result<JsTransactionHash, JsError> {
         if !self.wallet.request_connection().await.is_ok() {
             return Err(JsError::new("Could not connect to the wallet"));
@@ -231,7 +231,7 @@ impl Cep18Client {
     pub async fn mint(
         &mut self,
         owner: Address,
-        amount: U256,
+        amount: U256
     ) -> Result<JsTransactionHash, JsError> {
         if !self.wallet.request_connection().await.is_ok() {
             return Err(JsError::new("Could not connect to the wallet"));
@@ -254,7 +254,7 @@ impl Cep18Client {
     pub async fn burn(
         &mut self,
         owner: Address,
-        amount: U256,
+        amount: U256
     ) -> Result<JsTransactionHash, JsError> {
         if !self.wallet.request_connection().await.is_ok() {
             return Err(JsError::new("Could not connect to the wallet"));

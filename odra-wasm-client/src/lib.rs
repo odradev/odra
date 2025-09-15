@@ -6,13 +6,14 @@ use wasm_bindgen::prelude::*;
 #[cfg(feature = "cep18")]
 mod cep18;
 
-#[cfg(feature = "wcspr")]
-mod wcspr;
 mod client;
+mod contracts;
 pub mod js;
 pub mod types;
+mod utils;
 mod wallet;
-mod contracts;
+#[cfg(feature = "wcspr")]
+mod wcspr;
 
 pub use client::OdraWasmClient;
 pub use wallet::CasperWallet;

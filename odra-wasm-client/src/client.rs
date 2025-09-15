@@ -2,8 +2,7 @@ use crate::{
     now,
     types::{
         Address as WasmAddress, Bytes as WasmBytes, PublicKey,
-        TransactionHash as WasmTransactionHash, Verbosity,
-        U512 as WasmU512
+        TransactionHash as WasmTransactionHash, Verbosity, U512 as WasmU512
     },
     wallet::CasperWallet,
     PROXY_CALLER
@@ -14,7 +13,11 @@ use casper_client::{
     JsonRpcId
 };
 use casper_types::{
-    bytesrepr::{Bytes, ToBytes}, execution::{Effects, TransformKindV2}, runtime_args, CLValue, Deploy, Digest, EntityAddr, ExecutableDeployItem, Key, PricingMode, RuntimeArgs, SecretKey, StoredValue, TimeDiff, Transaction, TransactionHash, TransactionRuntimeParams, TransferTarget, URef, U512
+    bytesrepr::{Bytes, ToBytes},
+    execution::{Effects, TransformKindV2},
+    runtime_args, CLValue, Deploy, Digest, EntityAddr, ExecutableDeployItem, Key, PricingMode,
+    RuntimeArgs, SecretKey, StoredValue, TimeDiff, Transaction, TransactionHash,
+    TransactionRuntimeParams, TransferTarget, URef, U512
 };
 use odra_core::prelude::Address;
 use wasm_bindgen::prelude::*;
@@ -80,7 +83,7 @@ impl OdraWasmClient {
             .map_err(|e| JsError::new(&e))
     }
 
-     /// Returns the balance of the specified address.
+    /// Returns the balance of the specified address.
     #[wasm_bindgen(js_name = "getCallerBalance")]
     pub async fn get_caller_balance(&self, wallet: &CasperWallet) -> Result<WasmU512, JsError> {
         let caller = self.caller(wallet).await?;
@@ -101,7 +104,12 @@ impl OdraWasmClient {
 
     /// Transfers the specified amount to the given address.
     #[wasm_bindgen(js_name = "transfer")]
-    pub async fn transfer(&self, to: &WasmAddress, amount: &WasmU512, wallet: &CasperWallet) -> Result<WasmTransactionHash, JsError> {
+    pub async fn transfer(
+        &self,
+        to: &WasmAddress,
+        amount: &WasmU512,
+        wallet: &CasperWallet
+    ) -> Result<WasmTransactionHash, JsError> {
         let caller = self.caller(wallet).await?;
         let transaction: Transaction = self
             .new_transfer_transaction(*caller, **to, **amount)
@@ -164,7 +172,7 @@ impl OdraWasmClient {
         &self,
         address: Address,
         entry_point: &str,
-        runtime_args: RuntimeArgs,
+        runtime_args: RuntimeArgs
     ) -> Result<CLValue, JsError> {
         let hash = address.as_contract_package_hash().ok_or_else(|| {
             JsError::new(&format!(
@@ -427,7 +435,7 @@ impl OdraWasmClient {
             }
         })
     }
-    
+
     async fn get_balance(&self, address: Address) -> Result<U512, String> {
         let state_root_hash = self
             .get_state_root_hash()
@@ -461,7 +469,9 @@ impl OdraWasmClient {
         runtime_args: RuntimeArgs
     ) -> Result<Transaction, String> {
         let transaction_builder = TransactionV1Builder::new_targeting_package(
-            contract_address.as_package_hash().ok_or("Invalid contract address")?,
+            contract_address
+                .as_package_hash()
+                .ok_or("Invalid contract address")?,
             None,
             entry_point,
             TransactionRuntimeParams::VmCasperV1
@@ -486,7 +496,6 @@ impl OdraWasmClient {
 
     async fn new_proxy_deploy(&self, sk: &SecretKey, args: RuntimeArgs) -> Result<Deploy, JsError> {
         let proxy_bytes = PROXY_CALLER.to_vec().into();
-
         DeployBuilder::new(
             &self.chain_name,
             ExecutableDeployItem::ModuleBytes {
@@ -512,14 +521,15 @@ impl OdraWasmClient {
         &self,
         caller: Address,
         to: Address,
-        amount: U512,
+        amount: U512
     ) -> Result<Transaction, String> {
         let transaction_builder = TransactionV1Builder::new_transfer(
-            amount, 
-            None, 
-            TransferTarget::AccountHash(*to.as_account_hash().ok_or("Invalid account hash")?) , 
+            amount,
+            None,
+            TransferTarget::AccountHash(*to.as_account_hash().ok_or("Invalid account hash")?),
             None
-        ).map_err(|e| format!("Failed to build transfer transaction: {:?}", e))?;
+        )
+        .map_err(|e| format!("Failed to build transfer transaction: {:?}", e))?;
 
         let timestamp = now().ok_or("Failed to get current time")?;
         Ok(Transaction::V1(
@@ -537,7 +547,7 @@ impl OdraWasmClient {
     fn new_proxy_transaction(
         &self,
         caller: Address,
-        args: RuntimeArgs,
+        args: RuntimeArgs
     ) -> Result<Transaction, String> {
         let proxy_bytes = PROXY_CALLER.to_vec().into();
         let transaction_builder = TransactionV1Builder::new_session(

@@ -43,6 +43,14 @@ fn client_struct_def<T: ToTokens>(client_name: &T) -> TokenStream {
             wallet: odra_wasm_client::CasperWallet,
             address: odra_wasm_client::types::Address
         }
+
+        #[wasm_bindgen]
+        impl #client_name {
+            #[wasm_bindgen]
+            pub fn set_gas(&mut self, gas: u64) {
+                self.wasm_client.set_gas(gas);
+            }
+        }
     }
 }
 
