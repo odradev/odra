@@ -28,18 +28,16 @@ impl ToTokens for SchemaEntrypointsItem {
                     syn::ReturnType::Type(_, t) => quote::quote! { #t }
                 };
                 let is_mut = f.is_mut();
-                let args = args_to_tokens(&f.raw_typed_args());
-                let cargo_purse_arg = if f.is_payable() {
-                    Some(quote::quote!(odra::schema::argument::<odra::casper_types::URef>("__cargo_purse")))
-                } else {
-                    None
+                let mut args = args_to_tokens(&f.raw_typed_args());
+                if f.is_payable() {
+                    args.push(quote::quote!(odra::schema::argument::<odra::casper_types::URef>("__cargo_purse")))
                 };
                 quote::quote! {
                     odra::schema::entry_point::<#ret_ty>(
                         #name,
                         #desc,
                         #is_mut,
-                        odra::prelude::vec![ #(#args),* #cargo_purse_arg ]
+                        odra::prelude::vec![ #(#args),* ]
                     )
                 }
             })

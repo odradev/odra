@@ -1,8 +1,9 @@
 use crate::types::{OdraType, WasmType};
 use convert_case::{Case, Casing};
-use odra_schema::casper_contract_schema::{ContractSchema, Entrypoint, NamedCLType};
+use odra_schema::casper_contract_schema::{Argument, ContractSchema, Entrypoint, NamedCLType, Type};
 use proc_macro2::TokenStream;
 use quote::{format_ident, ToTokens};
+use syn::{parse_quote, FnArg, PatIdent, PatType};
 
 pub fn client(contract_schema: &ContractSchema) -> TokenStream {
     let client_name = format_ident!("{}WasmClient", contract_schema.contract_name);
@@ -46,7 +47,25 @@ fn client_struct_def<T: ToTokens>(client_name: &T) -> TokenStream {
     }
 }
 
-fn entry_point_def(ep: &Entrypoint) -> TokenStream {
+fn entry_point_def(ep: &Entrypoint) -> syn::ImplItemFn {
+    let returns_value = ep.return_ty.0 != NamedCLType::Unit;
+    let is_mut = ep.is_mutable;
+    let is_payable = ep.arguments.iter().any(|arg| arg.name == "__cargo_purse");
+
+    if is_mut && returns_value {
+        panic!("Mutable entry points with return values are not supported");
+    } else if returns_value {
+        getter_impl(ep)
+    } else if is_payable {
+        payable_impl(ep)
+    } else if is_mut {
+        mutable_impl(ep)
+    } else {
+        getter_impl(ep)
+    }
+}
+
+fn getter_impl(ep: &Entrypoint) -> syn::ImplItemFn {
     let entry_point_ident = format_ident!("{}", &ep.name);
     let entry_point_str = &ep.name;
     let js_name = ep.name.to_case(Case::Camel);
@@ -69,78 +88,132 @@ fn entry_point_def(ep: &Entrypoint) -> TokenStream {
     let deser_ty = OdraType::from(&ep.return_ty);
     let ret_expr = WasmType::parse_return_expr(&ep.return_ty);
 
-    let returns_value = ep.return_ty.0 != NamedCLType::Unit;
-    let is_mut = ep.is_mutable;
+    let desc = ep.description.as_deref().unwrap_or("");
+    let docs = quote::quote!(#[doc = #desc]);
+
+    parse_quote! {
+        #docs
+        #[wasm_bindgen(js_name = #js_name)]
+        pub async fn #entry_point_ident(&self, #(#args),*) -> Result<#ret_ty, JsError> {
+            #(#parse_js_input)*
+            let cl_value = self
+                .wasm_client
+                .call_entry_point_with_proxy(*self.address, #entry_point_str, odra_wasm_client::casper_types::runtime_args! {
+                    #(#rt_args),*
+                })
+                .await?;
+
+            let result = <#deser_ty as odra_wasm_client::casper_types::bytesrepr::FromBytes>::from_bytes(&cl_value.inner_bytes()[4..])
+                .map_err(|err| JsError::new(&format!("{:?}", err)))?;
+            #ret_expr
+        }
+    }
+}
+
+fn payable_impl(ep: &Entrypoint) -> syn::ImplItemFn {
+    let mut arguments = ep
+        .arguments
+        .iter()
+        .filter(|arg| arg.name != "__cargo_purse")
+        .cloned()
+        .collect::<Vec<_>>();
+    arguments.push(Argument {
+        name: String::from("attached_value"),
+        description: Some(String::from("Amount of CSPR to attach to the call.")),
+        ty: Type(NamedCLType::U512),
+        optional: false,
+    });
+    let entry_point_ident = format_ident!("{}", &ep.name);
+    let entry_point_str = &ep.name;
+    let js_name = ep.name.to_case(Case::Camel);
+    let args = arguments
+        .iter()
+        .map(WasmType::parse_entry_point_arg)
+        .collect::<Vec<_>>();
+    let rt_args = arguments
+        .iter()
+        .map(WasmType::runtime_arg)
+        .collect::<Vec<TokenStream>>();
+    let parse_js_input = arguments
+        .iter()
+        .map(WasmType::parse_js_value_arg)
+        .collect::<Vec<Option<syn::Stmt>>>();
 
     let desc = ep.description.as_deref().unwrap_or("");
     let docs = quote::quote!(#[doc = #desc]);
 
-    let is_payable = ep.arguments.iter().any(|arg| arg.name == "__cargo_purse");
-    
-    if is_mut && returns_value {
-        quote::quote! {
-            panic!("Mutable entry points with return values are not supported");
+    let args = args.into_iter().map(|arg| {
+        if let FnArg::Typed(PatType { pat: box syn::Pat::Ident(PatIdent { ident, .. }), .. }) = &arg {
+            if ident == "__cargo_purse" {
+                parse_quote!(#[wasm_bindgen(js = "attachedValue")] attached_value: odra_wasm_client::types::U512)
+            } else {
+                    arg
+            }
+        } else {
+            arg
         }
-    } else if returns_value {
-        quote::quote! {
-            #docs
-            #[wasm_bindgen(js_name = #js_name)]
-            pub async fn #entry_point_ident(&self, #(#args),*) -> Result<#ret_ty, JsError> {
-                #(#parse_js_input)*
-                let cl_value = self
-                    .wasm_client
-                    .call_entry_point_with_proxy(*self.address, #entry_point_str, odra_wasm_client::casper_types::runtime_args! {
+    }).collect::<Vec<_>>();
+
+    parse_quote! {
+        #docs
+        #[wasm_bindgen(js_name = #js_name)]
+        pub async fn #entry_point_ident(&self, #(#args),*) -> Result<odra_wasm_client::types::TransactionHash, JsError> {
+            #(#parse_js_input)*
+            self.wasm_client
+                .call_payable_entry_point(
+                    &self.wallet,
+                    *self.address,
+                    #entry_point_str,
+                    odra_wasm_client::casper_types::runtime_args! { #(#rt_args),* },
+                    *attached_value
+                )
+                .await
+        }
+    }
+}
+
+
+fn mutable_impl(ep: &Entrypoint) -> syn::ImplItemFn {
+    let entry_point_ident = format_ident!("{}", &ep.name);
+    let entry_point_str = &ep.name;
+    let js_name = ep.name.to_case(Case::Camel);
+    let args = ep
+        .arguments
+        .iter()
+        .map(WasmType::parse_entry_point_arg)
+        .collect::<Vec<_>>();
+    let rt_args = ep
+        .arguments
+        .iter()
+        .map(WasmType::runtime_arg)
+        .collect::<Vec<TokenStream>>();
+    let parse_js_input = ep
+        .arguments
+        .iter()
+        .map(WasmType::parse_js_value_arg)
+        .collect::<Vec<Option<syn::Stmt>>>();
+
+    let desc = ep.description.as_deref().unwrap_or("");
+    let docs = quote::quote!(#[doc = #desc]);
+
+    parse_quote! {
+        #docs
+        #[wasm_bindgen(js_name = #js_name)]
+        pub async fn #entry_point_ident(&self, #(#args),*) -> Result<odra_wasm_client::types::TransactionHash, JsError> {
+            if !self.wallet.request_connection().await.is_ok() {
+                return Err(JsError::new("Could not connect to the wallet"));
+            }
+            #(#parse_js_input)*
+            self.wasm_client
+                .call_entry_point(
+                    &self.wallet,
+                    *self.address,
+                    #entry_point_str,
+                    odra_wasm_client::casper_types::runtime_args! {
                         #(#rt_args),*
-                    })
-                    .await?;
-
-                let result = <#deser_ty as odra_wasm_client::casper_types::bytesrepr::FromBytes>::from_bytes(&cl_value.inner_bytes()[4..])
-                    .map_err(|err| JsError::new(&format!("{:?}", err)))?;
-                #ret_expr
-            }
-        }
-    } else if is_payable {
-        quote::quote! {
-            #docs
-            #[wasm_bindgen(js_name = #js_name)]
-            pub async fn #entry_point_ident(&self, #(#args),* attached_value: odra_wasm_client::types::U512) -> Result<odra_wasm_client::types::TransactionHash, JsError> {
-                #(#parse_js_input)*
-                let cl_value = self
-                    .wasm_client
-                    .call_payable_entry_point(
-                        &self.wallet,
-                        *self.address,
-                        #entry_point_str,
-                        odra_wasm_client::casper_types::runtime_args! { #(#rt_args),* },
-                        attached_value
-                    )
-                    .await?;
-
-                let result = <#deser_ty as odra_wasm_client::casper_types::bytesrepr::FromBytes>::from_bytes(&cl_value.inner_bytes()[4..])
-                    .map_err(|err| JsError::new(&format!("{:?}", err)))?;
-                #ret_expr
-            }
-        }
-    } else {
-        quote::quote! {
-            #docs
-            #[wasm_bindgen(js_name = #js_name)]
-            pub async fn #entry_point_ident(&self, #(#args),*) -> Result<odra_wasm_client::types::TransactionHash, JsError> {
-                if !self.wallet.request_connection().await.is_ok() {
-                    return Err(JsError::new("Could not connect to the wallet"));
-                }
-                #(#parse_js_input)*
-                self.wasm_client
-                    .call_entry_point(
-                        &self.wallet,
-                        *self.address,
-                        #entry_point_str,
-                        odra_wasm_client::casper_types::runtime_args! {
-                            #(#rt_args),*
-                        }
-                    )
-                    .await
-            }
+                    }
+                )
+                .await
         }
     }
 }
