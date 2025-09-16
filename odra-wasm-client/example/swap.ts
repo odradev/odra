@@ -1,4 +1,3 @@
-import { on } from "events";
 import init, {
     Address,
     WCSPRClient,
@@ -6,7 +5,9 @@ import init, {
     CasperWallet,
     U256,
     U512,
-    TransactionHash
+    TransactionHash,
+    setGas,
+    DEFAULT_PAYMENT_AMOUNT
 } from "odra-wasm-client";
 
 // ---------- Types ----------
@@ -23,14 +24,13 @@ interface Balances {
 const EXPLORER_BASE = "https://testnet.cspr.live/";
 const TOKEN_DECIMALS = 9;
 const DEPOSIT_GAS_AMOUNT = BigInt(7_000_000_000); // 7 CSPR
-const WITHDRAW_GAS_AMOUNT = BigInt(2_500_000_000); // 2.5 CSPR
+const WITHDRAW_GAS_AMOUNT = BigInt(3_000_000_000); // 3 CSPR
 
 // ---------- State ----------
 let connected = false;
 let address: string | null = null;
 let balances: Balances | null = null;
 let direction: "NATIVE_TO_WRAPPED" | "WRAPPED_TO_NATIVE" = "NATIVE_TO_WRAPPED";
-let txLink: string | null = null;
 
 // ---------- DOM Elements ----------
 const connectBtn = document.getElementById("connect-btn") as HTMLButtonElement;
@@ -93,7 +93,7 @@ async function refreshBalances() {
   nativeBalLoader.classList.remove("hidden");
   wrappedBalLoader.classList.remove("hidden");
   try {
-    const caller: Address = await client.caller(wallet);
+    const caller: Address = await wallet.caller();
     const balance = await client.getBalance(caller);
     const wcsprBalance = await wcspr.balanceOf(caller);
     balances = {
@@ -114,12 +114,12 @@ async function refreshBalances() {
 }
 
 function validateAmount(): U512 | null {
-  const amount = U512.fromHtmlInput(amountInput).mulBigInt(BigInt(1_000_000_000)); // Convert to smallest unit
+  const amount = U512.fromHtmlInput(amountInput).mul(U512.fromNumber(1_000_000_000)); // Convert to smallest unit
   console.log("Validating amount:", amount.toString());
   console.log("Current balances:", balances?.nativeCSPR.toString(), balances?.wCSPR.toString());
   if (balances) {
-    if (direction === "NATIVE_TO_WRAPPED" && amount > balances.nativeCSPR) return null;
-    if (direction === "WRAPPED_TO_NATIVE" && amount > balances.wCSPR) return null;
+    if (direction === "NATIVE_TO_WRAPPED" && amount.gt(balances.nativeCSPR)) return null;
+    if (direction === "WRAPPED_TO_NATIVE" && amount.gt(balances.wCSPR.toU512())) return null;
   }
   return amount;
 }
@@ -135,14 +135,13 @@ async function onSwap() {
   try {
     let result: TransactionHash;
     if (direction === "NATIVE_TO_WRAPPED") {
-      // wcspr.set_gas(DEPOSIT_GAS_AMOUNT);
+      setGas(DEFAULT_PAYMENT_AMOUNT());
       result = await wcspr.deposit(amt);
     } else {
-      // wcspr.set_gas(WITHDRAW_GAS_AMOUNT);
+      setGas(WITHDRAW_GAS_AMOUNT);
       result = await wcspr.withdraw(U256.fromU512(amt));
     }
     const url = `${EXPLORER_BASE.replace(/\/+$/, "")}/transaction/${result.toString()}`;
-    txLink = url;
     txLinkAnchor.href = url;
     txSection.classList.remove("hidden");
     amountInput.value = "";
@@ -220,12 +219,10 @@ function waitForCasperWalletProvider(timeout = 10000): Promise<any> {
 async function run() {
     // 1. Initialize WASM
     await init();
-    console.log('WASM module initialized');
 
     // 2. Wait for wallet provider and connect
     try {
         const provider = await waitForCasperWalletProvider();
-        console.log('CasperWalletProvider found:', provider);
     } catch (error) {
         console.warn('No wallet extension detected:', error);
     }
