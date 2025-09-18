@@ -1,6 +1,5 @@
 use core::fmt;
 
-use crate::types::digest::Digest;
 use casper_types::{
     AsymmetricType, Deploy, Digest as _Digest, Transaction as _Transaction,
     TransactionHash as _TransactionHash, TransactionV1
@@ -32,7 +31,7 @@ impl Transaction {
 }
 
 impl Transaction {
-    pub fn add_signature(&self, public_key: &str, signature: &str) -> Transaction {
+    pub fn add_signature(&self, public_key: &str, signature: &str) -> Result<Self, String> {
         // Serialize the existing approvals to JSON
         let casper_transaction: _Transaction = self.0.clone();
         let existing_approvals_json = casper_transaction
@@ -58,19 +57,19 @@ impl Transaction {
 
         // Convert the approvals JSON back to string
         let updated_approvals_str = serde_json::to_string(&all_approvals_json)
-            .expect("Failed to serialize updated approvals JSON");
+            .map_err(|_| "Failed to serialize updated approvals JSON")?;
 
         // Replace the approvals field in the original transaction JSON string
         let mut transaction_json: Value = serde_json::from_str(&self.to_json_string().unwrap())
-            .expect("Failed to deserialize transaction JSON");
+            .map_err(|_| "Failed to deserialize transaction JSON")?;
         transaction_json["Version1"]["approvals"] = serde_json::from_str(&updated_approvals_str)
-            .expect("Failed to deserialize updated approvals JSON");
+            .map_err(|_| "Failed to deserialize updated approvals JSON")?;
 
         // Convert the updated transaction JSON back to a Transaction struct
         let updated_transaction: Transaction = serde_json::from_value(transaction_json)
-            .expect("Failed to deserialize updated transaction JSON");
+            .map_err(|_| "Failed to deserialize updated transaction JSON")?;
 
-        updated_transaction
+        Ok(updated_transaction)
     }
 
     pub fn to_json_string(&self) -> Result<String, String> {
@@ -123,10 +122,6 @@ impl TransactionHash {
         hash.copy_from_slice(bytes);
         Ok(Self(_TransactionHash::from_raw(hash)))
     }
-
-    pub fn digest(&self) -> Result<Digest, String> {
-        Ok(self.0.digest().into())
-    }
 }
 
 #[wasm_bindgen]
@@ -142,13 +137,6 @@ impl TransactionHash {
     #[wasm_bindgen(js_name = "fromRaw")]
     pub fn from_raw_js_alias(bytes: &[u8]) -> Result<TransactionHash, JsError> {
         TransactionHash::from_raw(bytes).map_err(|err| JsError::new(&format!("{err:?}")))
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    #[wasm_bindgen(js_name = "digest")]
-    pub fn digest_js_alias(&self) -> Result<Digest, JsError> {
-        self.digest()
-            .map_err(|err| JsError::new(&format!("{err:?}")))
     }
 
     #[cfg(target_arch = "wasm32")]

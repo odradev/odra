@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use web_sys::HtmlInputElement;
 
-use crate::types::cl::public_key::PublicKey;
+use crate::types::public_key::PublicKey;
 
 #[derive(Debug, Clone, Deserialize, Serialize, Copy, PartialEq, Eq)]
 #[wasm_bindgen]

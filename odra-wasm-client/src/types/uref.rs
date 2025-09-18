@@ -1,5 +1,5 @@
-use crate::types::{access_rights::AccessRights, uref_addr::URefAddr};
-use casper_types::URef as _URef;
+// use crate::types::{uref_addr::URefAddr};
+use casper_types::{AccessRights, URef as _URef, URefAddr, UREF_ADDR_LENGTH};
 use gloo_utils::format::JsValueSerdeExt;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
@@ -19,11 +19,16 @@ impl URef {
             }
         };
 
-        let uref_addr = URefAddr::from(bytes);
+        if bytes.len() != UREF_ADDR_LENGTH {
+            return Err(String::from("Invalid URefAddr length"));
+        }
+        let mut array = [0u8; UREF_ADDR_LENGTH];
+        array.copy_from_slice(&bytes);
+        let uref_addr = URefAddr::from(array);
 
         let uref = _URef::new(
             uref_addr.into(),
-            AccessRights::new(access_rights).unwrap_or_default().into()
+            AccessRights::from_bits(access_rights).unwrap_or_default()
         );
 
         Ok(URef(uref))
@@ -60,7 +65,7 @@ impl URef {
 
         URef(_URef::new(
             address_array,
-            AccessRights::new(access_rights).unwrap_or_default().into()
+            AccessRights::from_bits(access_rights).unwrap_or_default()
         ))
     }
 
