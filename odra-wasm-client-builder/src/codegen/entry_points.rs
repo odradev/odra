@@ -1,6 +1,8 @@
 use crate::types::{OdraType, WasmType};
 use convert_case::{Case, Casing};
-use odra_schema::casper_contract_schema::{Argument, ContractSchema, Entrypoint, NamedCLType, Type};
+use odra_schema::casper_contract_schema::{
+    Argument, ContractSchema, Entrypoint, NamedCLType, Type
+};
 use proc_macro2::TokenStream;
 use quote::{format_ident, ToTokens};
 use syn::{parse_quote, FnArg, PatIdent, PatType};
@@ -69,24 +71,14 @@ fn getter_impl(ep: &Entrypoint) -> syn::ImplItemFn {
     let entry_point_ident = format_ident!("{}", &ep.name);
     let entry_point_str = &ep.name;
     let js_name = ep.name.to_case(Case::Camel);
-    let args = ep
-        .arguments
-        .iter()
-        .map(WasmType::parse_entry_point_arg)
-        .collect::<Vec<_>>();
+    let args = ep.arguments.iter().map(entry_point_arg).collect::<Vec<_>>();
     let rt_args = ep
         .arguments
         .iter()
-        .map(WasmType::runtime_arg)
+        .map(runtime_arg)
         .collect::<Vec<TokenStream>>();
-    let parse_js_input = ep
-        .arguments
-        .iter()
-        .map(WasmType::parse_js_value_arg)
-        .collect::<Vec<Option<syn::Stmt>>>();
-    let ret_ty = WasmType::from(&ep.return_ty);
-    let deser_ty = OdraType::from(&ep.return_ty);
-    let ret_expr = WasmType::parse_return_expr(&ep.return_ty);
+    let wasm_ty = WasmType::from(&ep.return_ty);
+    let odra_ty = OdraType::from(&ep.return_ty);
 
     let desc = ep.description.as_deref().unwrap_or("");
     let docs = quote::quote!(#[doc = #desc]);
@@ -94,18 +86,13 @@ fn getter_impl(ep: &Entrypoint) -> syn::ImplItemFn {
     parse_quote! {
         #docs
         #[wasm_bindgen(js_name = #js_name)]
-        pub async fn #entry_point_ident(&self, #(#args),*) -> Result<#ret_ty, JsError> {
-            #(#parse_js_input)*
-            let cl_value = self
+        pub async fn #entry_point_ident(&self, #(#args),*) -> Result<#wasm_ty, JsError> {
+            self
                 .wasm_client
-                .call_entry_point_with_proxy(*self.address, #entry_point_str, odra_wasm_client::casper_types::runtime_args! {
+                .call_entry_point_with_proxy::<#wasm_ty, #odra_ty>(*self.address, #entry_point_str, odra_wasm_client::casper_types::runtime_args! {
                     #(#rt_args),*
                 })
-                .await?;
-
-            let result = <#deser_ty as odra_wasm_client::casper_types::bytesrepr::FromBytes>::from_bytes(&cl_value.inner_bytes()[4..])
-                .map_err(|err| JsError::new(&format!("{:?}", err)))?;
-            #ret_expr
+                .await
         }
     }
 }
@@ -121,23 +108,16 @@ fn payable_impl(ep: &Entrypoint) -> syn::ImplItemFn {
         name: String::from("attached_value"),
         description: Some(String::from("Amount of CSPR to attach to the call.")),
         ty: Type(NamedCLType::U512),
-        optional: false,
+        optional: false
     });
     let entry_point_ident = format_ident!("{}", &ep.name);
     let entry_point_str = &ep.name;
     let js_name = ep.name.to_case(Case::Camel);
-    let args = arguments
-        .iter()
-        .map(WasmType::parse_entry_point_arg)
-        .collect::<Vec<_>>();
+    let args = arguments.iter().map(entry_point_arg).collect::<Vec<_>>();
     let rt_args = arguments
         .iter()
-        .map(WasmType::runtime_arg)
+        .map(runtime_arg)
         .collect::<Vec<TokenStream>>();
-    let parse_js_input = arguments
-        .iter()
-        .map(WasmType::parse_js_value_arg)
-        .collect::<Vec<Option<syn::Stmt>>>();
 
     let desc = ep.description.as_deref().unwrap_or("");
     let docs = quote::quote!(#[doc = #desc]);
@@ -147,7 +127,7 @@ fn payable_impl(ep: &Entrypoint) -> syn::ImplItemFn {
             if ident == "__cargo_purse" {
                 parse_quote!(#[wasm_bindgen(js = "attachedValue")] attached_value: odra_wasm_client::types::U512)
             } else {
-                    arg
+                arg
             }
         } else {
             arg
@@ -158,7 +138,6 @@ fn payable_impl(ep: &Entrypoint) -> syn::ImplItemFn {
         #docs
         #[wasm_bindgen(js_name = #js_name)]
         pub async fn #entry_point_ident(&self, #(#args),*) -> Result<odra_wasm_client::types::TransactionHash, JsError> {
-            #(#parse_js_input)*
             self.wasm_client
                 .call_payable_entry_point(
                     &self.wallet,
@@ -172,27 +151,16 @@ fn payable_impl(ep: &Entrypoint) -> syn::ImplItemFn {
     }
 }
 
-
 fn mutable_impl(ep: &Entrypoint) -> syn::ImplItemFn {
     let entry_point_ident = format_ident!("{}", &ep.name);
     let entry_point_str = &ep.name;
     let js_name = ep.name.to_case(Case::Camel);
-    let args = ep
-        .arguments
-        .iter()
-        .map(WasmType::parse_entry_point_arg)
-        .collect::<Vec<_>>();
+    let args = ep.arguments.iter().map(entry_point_arg).collect::<Vec<_>>();
     let rt_args = ep
         .arguments
         .iter()
-        .map(WasmType::runtime_arg)
+        .map(runtime_arg)
         .collect::<Vec<TokenStream>>();
-    let parse_js_input = ep
-        .arguments
-        .iter()
-        .map(WasmType::parse_js_value_arg)
-        .collect::<Vec<Option<syn::Stmt>>>();
-
     let desc = ep.description.as_deref().unwrap_or("");
     let docs = quote::quote!(#[doc = #desc]);
 
@@ -203,7 +171,6 @@ fn mutable_impl(ep: &Entrypoint) -> syn::ImplItemFn {
             if !self.wallet.request_connection().await.is_ok() {
                 return Err(JsError::new("Could not connect to the wallet"));
             }
-            #(#parse_js_input)*
             self.wasm_client
                 .call_entry_point(
                     &self.wallet,
@@ -216,4 +183,18 @@ fn mutable_impl(ep: &Entrypoint) -> syn::ImplItemFn {
                 .await
         }
     }
+}
+
+fn runtime_arg(arg: &Argument) -> TokenStream {
+    let name = &arg.name;
+    let ident = format_ident!("{}", name);
+    let odra_ty = OdraType::from(&arg.ty);
+    quote::quote! { #name => odra_wasm_client::types::FromWasmValue::<#odra_ty>::from_wasm_value(#ident)? }
+}
+
+fn entry_point_arg(fn_arg: &Argument) -> syn::FnArg {
+    let arg_ident = format_ident!("{}", fn_arg.name);
+    let js_name = fn_arg.name.to_case(Case::Camel);
+    let ty = WasmType::from(&fn_arg.ty);
+    parse_quote!(#[wasm_bindgen(js_name = #js_name)] #arg_ident: #ty)
 }

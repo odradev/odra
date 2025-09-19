@@ -1,9 +1,9 @@
-use casper_types::{bytesrepr::FromBytes, runtime_args, U512};
+use casper_types::runtime_args;
 use wasm_bindgen::prelude::*;
 
 use crate::{
     client::OdraWasmClient,
-    types::{Address, TransactionHash as JsTransactionHash, U256},
+    types::{Address, FromWasmValue, TransactionHash as JsTransactionHash, U256},
     wallet::CasperWallet
 };
 
@@ -27,87 +27,65 @@ impl Cep18Client {
 
     #[wasm_bindgen]
     pub async fn decimals(&self) -> Result<u8, JsError> {
-        let cl_value = self
-            .wasm_client
-            .call_entry_point_with_proxy(*self.address, "decimals", runtime_args! {})
-            .await?;
-
-        let result = <u8 as FromBytes>::from_bytes(&cl_value.inner_bytes()[4..])
-            .map_err(|err| JsError::new(&format!("{:?}", err)))?;
-        Ok(result.0.into())
+        self.wasm_client
+            .call_entry_point_with_proxy::<u8, u8>(*self.address, "decimals", runtime_args! {})
+            .await
     }
 
     #[wasm_bindgen]
     pub async fn name(&self) -> Result<String, JsError> {
-        let cl_value = self
-            .wasm_client
-            .call_entry_point_with_proxy(*self.address, "name", runtime_args! {})
-            .await?;
-
-        let result = <String as FromBytes>::from_bytes(&cl_value.inner_bytes()[4..])
-            .map_err(|err| JsError::new(&format!("{:?}", err)))?;
-        Ok(result.0.into())
+        self.wasm_client
+            .call_entry_point_with_proxy::<String, String>(*self.address, "name", runtime_args! {})
+            .await
     }
 
     #[wasm_bindgen]
     pub async fn symbol(&self) -> Result<String, JsError> {
-        let cl_value = self
-            .wasm_client
-            .call_entry_point_with_proxy(*self.address, "symbol", runtime_args! {})
-            .await?;
-
-        let result = <String as FromBytes>::from_bytes(&cl_value.inner_bytes()[4..])
-            .map_err(|err| JsError::new(&format!("{:?}", err)))?;
-        Ok(result.0)
+        self.wasm_client
+            .call_entry_point_with_proxy::<String, String>(
+                *self.address,
+                "symbol",
+                runtime_args! {}
+            )
+            .await
     }
 
     #[wasm_bindgen(js_name = "totalSupply")]
     pub async fn total_supply(&self) -> Result<U256, JsError> {
-        let cl_value = self
-            .wasm_client
-            .call_entry_point_with_proxy(*self.address, "total_supply", runtime_args! {})
-            .await?;
-
-        let result = <casper_types::U256 as FromBytes>::from_bytes(&cl_value.inner_bytes()[4..])
-            .map_err(|err| JsError::new(&format!("{:?}", err)))?;
-        Ok(result.0.into())
+        self.wasm_client
+            .call_entry_point_with_proxy::<U256, casper_types::U256>(
+                *self.address,
+                "total_supply",
+                runtime_args! {}
+            )
+            .await
     }
 
     #[wasm_bindgen(js_name = "balanceOf")]
     pub async fn balance_of(&self, address: Address) -> Result<U256, JsError> {
-        let cl_value = self
-            .wasm_client
-            .call_entry_point_with_proxy(
+        self.wasm_client
+            .call_entry_point_with_proxy::<U256, casper_types::U256>(
                 *self.address,
                 "balance_of",
                 runtime_args! {
-                    "owner" => *address
+                    "owner" => FromWasmValue::<odra_core::prelude::Address>::from_wasm_value(address)?
                 }
             )
-            .await?;
-
-        let result = <casper_types::U256 as FromBytes>::from_bytes(&cl_value.inner_bytes()[4..])
-            .map_err(|err| JsError::new(&format!("{:?}", err)))?;
-        Ok(result.0.into())
+            .await
     }
 
     #[wasm_bindgen]
     pub async fn allowance(&self, owner: Address, spender: Address) -> Result<U256, JsError> {
-        let cl_value = self
-            .wasm_client
-            .call_entry_point_with_proxy(
+        self.wasm_client
+            .call_entry_point_with_proxy::<U256, casper_types::U256>(
                 *self.address,
                 "allowance",
                 runtime_args! {
-                    "owner" => *owner,
-                    "spender" => *spender
+                    "owner" => FromWasmValue::<odra_core::prelude::Address>::from_wasm_value(owner)?,
+                    "spender" => FromWasmValue::<odra_core::prelude::Address>::from_wasm_value(spender)?
                 }
             )
-            .await?;
-
-        let result = <casper_types::U256 as FromBytes>::from_bytes(&cl_value.inner_bytes()[4..])
-            .map_err(|err| JsError::new(&format!("{:?}", err)))?;
-        Ok(result.0.into())
+            .await
     }
 
     #[wasm_bindgen]
@@ -126,8 +104,8 @@ impl Cep18Client {
                 *self.address,
                 "approve",
                 runtime_args! {
-                    "spender" => *spender,
-                    "amount" => *amount
+                    "spender" => FromWasmValue::<odra_core::prelude::Address>::from_wasm_value(spender)?,
+                    "amount" => FromWasmValue::<casper_types::U256>::from_wasm_value(amount)?
                 }
             )
             .await
@@ -149,8 +127,8 @@ impl Cep18Client {
                 *self.address,
                 "decrease_allowance",
                 runtime_args! {
-                    "spender" => *spender,
-                    "decr_by" => *decr_by
+                    "spender" => FromWasmValue::<odra_core::prelude::Address>::from_wasm_value(spender)?,
+                    "decr_by" => FromWasmValue::<casper_types::U256>::from_wasm_value(decr_by)?
                 }
             )
             .await
@@ -172,8 +150,8 @@ impl Cep18Client {
                 *self.address,
                 "increase_allowance",
                 runtime_args! {
-                    "spender" => *spender,
-                    "incr_by" => *incr_by
+                    "spender" => FromWasmValue::<odra_core::prelude::Address>::from_wasm_value(spender)?,
+                    "incr_by" => FromWasmValue::<casper_types::U256>::from_wasm_value(incr_by)?
                 }
             )
             .await
@@ -195,8 +173,8 @@ impl Cep18Client {
                 *self.address,
                 "transfer",
                 runtime_args! {
-                    "recipient" => *recipient,
-                    "amount" => *amount
+                    "recipient" => FromWasmValue::<odra_core::prelude::Address>::from_wasm_value(recipient)?,
+                    "amount" => FromWasmValue::<casper_types::U256>::from_wasm_value(amount)?
                 }
             )
             .await
@@ -219,9 +197,9 @@ impl Cep18Client {
                 *self.address,
                 "transfer_from",
                 runtime_args! {
-                    "owner" => *owner,
-                    "recipient" => *recipient,
-                    "amount" => *amount
+                    "owner" => FromWasmValue::<odra_core::prelude::Address>::from_wasm_value(owner)?,
+                    "recipient" => FromWasmValue::<odra_core::prelude::Address>::from_wasm_value(recipient)?,
+                    "amount" => FromWasmValue::<casper_types::U256>::from_wasm_value(amount)?
                 }
             )
             .await
@@ -243,8 +221,8 @@ impl Cep18Client {
                 *self.address,
                 "mint",
                 runtime_args! {
-                    "owner" => *owner,
-                    "amount" => *amount
+                    "owner" => FromWasmValue::<odra_core::prelude::Address>::from_wasm_value(owner)?,
+                    "amount" => FromWasmValue::<casper_types::U256>::from_wasm_value(amount)?
                 }
             )
             .await
@@ -266,8 +244,8 @@ impl Cep18Client {
                 *self.address,
                 "burn",
                 runtime_args! {
-                    "owner" => *owner,
-                    "amount" => *amount
+                    "owner" => FromWasmValue::<odra_core::prelude::Address>::from_wasm_value(owner)?,
+                    "amount" => FromWasmValue::<casper_types::U256>::from_wasm_value(amount)?
                 }
             )
             .await

@@ -3,8 +3,8 @@ use std::sync::{Arc, Mutex, OnceLock};
 use crate::{
     now,
     types::{
-        Address as WasmAddress, Bytes as WasmBytes, TransactionHash as WasmTransactionHash,
-        Verbosity, U512 as WasmU512
+        Address as WasmAddress, Bytes as WasmBytes, IntoWasmValue,
+        TransactionHash as WasmTransactionHash, Verbosity, U512 as WasmU512
     },
     wallet::CasperWallet,
     PROXY_CALLER
@@ -15,7 +15,7 @@ use casper_client::{
     JsonRpcId
 };
 use casper_types::{
-    bytesrepr::{Bytes, ToBytes},
+    bytesrepr::{Bytes, FromBytes, ToBytes},
     execution::{Effects, TransformKindV2},
     runtime_args, CLValue, Deploy, Digest, EntityAddr, ExecutableDeployItem, Key, PricingMode,
     RuntimeArgs, SecretKey, StoredValue, TimeDiff, Transaction, TransactionHash,
@@ -171,12 +171,12 @@ impl OdraWasmClient {
     }
 
     #[allow(deprecated)]
-    pub async fn call_entry_point_with_proxy(
+    pub async fn call_entry_point_with_proxy<R, T: FromBytes + IntoWasmValue<R>>(
         &self,
         address: Address,
         entry_point: &str,
         runtime_args: RuntimeArgs
-    ) -> Result<CLValue, JsError> {
+    ) -> Result<R, JsError> {
         let hash = address.as_contract_package_hash().ok_or_else(|| {
             JsError::new(&format!(
                 "Address is not a contract package hash: {:?}",
@@ -209,12 +209,16 @@ impl OdraWasmClient {
             .result
             .execution_result;
 
-        find_result(&res.effects).ok_or_else(|| {
+        let cl_value = find_result(&res.effects).ok_or_else(|| {
             JsError::new(&format!(
                 "Failed to find result in effects: {:?}",
                 res.effects
             ))
-        })
+        })?;
+
+        T::from_bytes(&cl_value.inner_bytes()[4..])
+            .map_err(|err| JsError::new(&format!("{:?}", err)))
+            .and_then(|(value, _)| Ok(value.to_wasm_value()))
     }
 
     #[allow(deprecated)]

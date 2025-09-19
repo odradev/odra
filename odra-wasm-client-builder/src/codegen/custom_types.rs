@@ -1,3 +1,4 @@
+use convert_case::{Case, Casing};
 use odra_schema::casper_contract_schema::{CustomType, EnumVariant, StructMember};
 use proc_macro2::TokenStream;
 use quote::format_ident;
@@ -25,21 +26,18 @@ pub fn types_def<T: IntoIterator<Item = CustomType>>(types: T) -> Vec<TokenStrea
 
 fn struct_def(name: &str, members: &[StructMember], description: String) -> TokenStream {
     let type_name = format_ident!("{}", name);
-    let struct_fields = members
-        .iter()
-        .map(OdraType::field)
-        .collect::<Vec<syn::Field>>();
+    let struct_fields = members.iter().map(field_def).collect::<Vec<syn::Field>>();
 
     let setters_getters = members
         .iter()
         .filter_map(|field| {
             let odra_ty = OdraType::from(&field.ty);
-            if odra_ty.is_cloneable() {
+            if odra_ty.is_copyable() {
                 return None;
             }
 
-            let setter_code = WasmType::setter_code(field);
-            let getter_code = WasmType::getter_code(field);
+            let setter_code = setter_code(field);
+            let getter_code = getter_code(field);
             Some(quote::quote! {
                 #setter_code
                 #getter_code
@@ -47,15 +45,9 @@ fn struct_def(name: &str, members: &[StructMember], description: String) -> Toke
         })
         .collect::<Vec<TokenStream>>();
 
-    let fields = members
-        .iter()
-        .map(WasmType::field_def)
-        .collect::<Vec<syn::Field>>();
+    let field_args = members.iter().map(field_arg).collect::<Vec<syn::Field>>();
 
-    let fields_init = members
-        .iter()
-        .map(WasmType::field_init)
-        .collect::<Vec<TokenStream>>();
+    let fields_init = members.iter().map(field_init).collect::<Vec<TokenStream>>();
 
     let field_names = members
         .iter()
@@ -92,10 +84,10 @@ fn struct_def(name: &str, members: &[StructMember], description: String) -> Toke
         #[wasm_bindgen]
         impl #type_name {
             #[wasm_bindgen(constructor)]
-            pub fn new(#(#fields),*) -> Self {
-                Self {
+            pub fn new(#(#field_args),*) -> Result<Self, JsError> {
+                Ok(Self {
                     #(#fields_init),*
-                }
+                })
             }
 
             #[wasm_bindgen(js_name = "toJson")]
@@ -131,6 +123,18 @@ fn struct_def(name: &str, members: &[StructMember], description: String) -> Toke
         impl odra_wasm_client::casper_types::CLTyped for #type_name {
             fn cl_type() -> odra_wasm_client::casper_types::CLType {
                 odra_wasm_client::casper_types::CLType::Any
+            }
+        }
+
+        impl odra_wasm_client::types::FromWasmValue<#type_name> for #type_name {
+            fn from_wasm_value(self) -> Result<#type_name, JsError> {
+                Ok(self)
+            }
+        }
+
+        impl odra_wasm_client::types::IntoWasmValue<#type_name> for #type_name {
+            fn to_wasm_value(self) -> Self {
+                self
             }
         }
     }
@@ -196,5 +200,101 @@ fn enum_def(name: &str, variants: &[EnumVariant], description: String) -> TokenS
                 odra_wasm_client::casper_types::CLType::U8
             }
         }
+
+        impl odra_wasm_client::types::FromWasmValue<#type_name> for #type_name {
+            fn from_wasm_value(self) -> Result<#type_name, JsError> {
+                Ok(self)
+            }
+        }
+
+        impl odra_wasm_client::types::IntoWasmValue<#type_name> for #type_name {
+            fn to_wasm_value(self) -> Self {
+                self
+            }
+        }
+    }
+}
+
+fn field_def(member: &StructMember) -> syn::Field {
+    let odra_ty = OdraType::from(&member.ty);
+    let field_name = format_ident!("{}", member.name);
+    let js_name = member.name.to_case(Case::Camel);
+    if odra_ty.is_copyable() {
+        parse_quote!(#[wasm_bindgen(js_name = #js_name)] pub #field_name: #odra_ty)
+    } else {
+        parse_quote!(#[wasm_bindgen(js_name = #js_name)] #field_name: #odra_ty)
+    }
+}
+
+fn field_init(member: &StructMember) -> proc_macro2::TokenStream {
+    let field_name = format_ident!("{}", member.name);
+    let odra_ty = OdraType::from(&member.ty);
+    let wasm_ty = WasmType::from(&member.ty);
+    if wasm_ty == odra_ty {
+        return parse_quote!(#field_name);
+    }
+    quote::quote! {
+        #field_name: odra_wasm_client::types::FromWasmValue::from_wasm_value(#field_name)?
+    }
+}
+
+fn field_arg(member: &StructMember) -> syn::Field {
+    let ty = WasmType::from(&member.ty);
+    let field_name = format_ident!("{}", member.name);
+    let js_name = member.name.to_case(Case::Camel);
+    parse_quote!(#[wasm_bindgen(js_name = #js_name)] #field_name: #ty)
+}
+
+fn getter_code(member: &StructMember) -> proc_macro2::TokenStream {
+    let ty = WasmType::from(&member.ty);
+    let ident = format_ident!("{}", member.name);
+
+    quote::quote! {
+        #[wasm_bindgen(getter)]
+        pub fn #ident(&self) -> #ty {
+            odra_wasm_client::types::IntoWasmValue::to_wasm_value(self.#ident.clone())
+        }
+    }
+}
+
+fn setter_code(member: &StructMember) -> proc_macro2::TokenStream {
+    let ty = WasmType::from(&member.ty);
+    let ident = format_ident!("set_{}", member.name);
+    let field_name = format_ident!("{}", member.name);
+
+    quote::quote! {
+        #[wasm_bindgen(setter)]
+        pub fn #ident(&mut self, value: #ty) {
+            self.#field_name = odra_wasm_client::types::FromWasmValue::from_wasm_value(value).unwrap();
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::codegen::custom_types::field_def;
+    use odra_schema::casper_contract_schema::{NamedCLType, Type};
+
+    #[test]
+    fn test_field_def() {
+        let field = StructMember {
+            name: "test".to_string(),
+            description: None,
+            ty: Type(NamedCLType::U128)
+        };
+        let tokens = field_def(&field);
+        let expected =
+            parse_quote!(#[wasm_bindgen(js_name = "test")] test: odra_wasm_client::types::U128);
+        assert_eq!(tokens, expected);
+
+        let field = StructMember {
+            name: "test_field_rust_style".to_string(),
+            description: None,
+            ty: Type(NamedCLType::String)
+        };
+        let tokens = field_def(&field);
+        let expected = parse_quote!(#[wasm_bindgen(js_name = "testFieldRustStyle")] test_field_rust_style: String);
+        assert_eq!(tokens, expected);
     }
 }

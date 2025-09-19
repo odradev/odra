@@ -1,7 +1,5 @@
-use convert_case::{Case, Casing};
-use odra_schema::casper_contract_schema::{NamedCLType, StructMember, Type};
+use odra_schema::casper_contract_schema::{NamedCLType, Type};
 use quote::{format_ident, ToTokens};
-use syn::parse_quote;
 
 pub enum OdraType {
     Bool,
@@ -30,11 +28,11 @@ pub enum OdraType {
 }
 
 impl OdraType {
-    pub fn is_cloneable(&self) -> bool {
+    pub fn is_copyable(&self) -> bool {
         match self {
-            OdraType::Option(e) if e.is_cloneable() => true,
-            OdraType::List(e) if e.is_cloneable() => true,
-            OdraType::Result(ok, err) if ok.is_cloneable() && err.is_cloneable() => true,
+            OdraType::Option(e) if e.is_copyable() => true,
+            OdraType::List(e) if e.is_copyable() => true,
+            OdraType::Result(ok, err) if ok.is_copyable() && err.is_copyable() => true,
             OdraType::String
             | OdraType::ByteArray(_)
             | OdraType::Bool
@@ -45,17 +43,6 @@ impl OdraType {
             | OdraType::U64
             | OdraType::Custom(_) => true,
             _ => false
-        }
-    }
-
-    pub fn field(member: &StructMember) -> syn::Field {
-        let odra_ty = OdraType::from(&member.ty);
-        let field_name = format_ident!("{}", member.name);
-        let js_name = member.name.to_case(Case::Camel);
-        if odra_ty.is_cloneable() {
-            parse_quote!(#[wasm_bindgen(js_name = #js_name)] pub #field_name: #odra_ty)
-        } else {
-            parse_quote!(#[wasm_bindgen(js_name = #js_name)] #field_name: #odra_ty)
         }
     }
 }

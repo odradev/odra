@@ -6,6 +6,7 @@ mod signature_response;
 mod transaction;
 mod uref;
 mod verbosity;
+mod wasm_ty;
 
 pub use address::Address;
 pub use bigint::{U128, U256, U512};
@@ -15,3 +16,4 @@ pub(crate) use signature_response::SignatureResponse;
 pub use transaction::{Transaction, TransactionHash};
 pub use uref::URef;
 pub use verbosity::Verbosity;
+pub use wasm_ty::{FromWasmValue, IntoWasmValue};
