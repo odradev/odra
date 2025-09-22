@@ -2,7 +2,7 @@ use convert_case::{Case, Casing};
 use odra_schema::casper_contract_schema::{CustomType, EnumVariant, StructMember};
 use proc_macro2::TokenStream;
 use quote::format_ident;
-use syn::parse_quote;
+use syn::{parse_quote, punctuated::Punctuated, Token};
 
 use crate::types::{OdraType, WasmType};
 
@@ -146,17 +146,19 @@ fn enum_def(name: &str, variants: &[EnumVariant], description: String) -> TokenS
         .iter()
         .map(|v| {
             let ident = format_ident!("{}", v.name);
-            let discriminant = v.discriminant;
+            let discriminant = v.discriminant as isize;
             parse_quote!(#ident = #discriminant)
         })
         .collect::<Vec<syn::Expr>>();
     let match_arms = variants
         .iter()
-        .map(|v| {
+        .enumerate()
+        .map(|(v_idx, v)| {
+            let v_idx: u8 = v_idx as u8;
             let ident = format_ident!("{}", v.name);
-            parse_quote!(x if x == Self::#ident as u8 => Ok((Self::#ident, bytes)))
+            quote::quote!(#v_idx => Ok((Self::#ident, bytes)))
         })
-        .collect::<Vec<syn::Expr>>();
+        .collect::<Punctuated<TokenStream, Token![,]>>();
 
     quote::quote! {
         #[doc = #description]
@@ -166,19 +168,11 @@ fn enum_def(name: &str, variants: &[EnumVariant], description: String) -> TokenS
             #(#variants_expr),*
         }
 
-        #[wasm_bindgen]
-        impl #type_name {
-            #[wasm_bindgen(js_name = "toJson")]
-            pub fn to_json(&self) -> JsValue {
-                JsValue::from_serde(self).unwrap_or(JsValue::null())
-            }
-        }
-
         impl odra_wasm_client::casper_types::bytesrepr::FromBytes for #type_name {
             fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra_wasm_client::casper_types::bytesrepr::Error> {
                 let (result, bytes): (u8, _) = odra_wasm_client::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
                 match result {
-                    #(#match_arms),*
+                    #match_arms,
                     _ => Err(odra_wasm_client::casper_types::bytesrepr::Error::Formatting)
                 }
             }
