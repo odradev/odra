@@ -34,7 +34,7 @@ use casper_types::{DeployHash, StoredValue, Timestamp};
 use odra_core::casper_event_standard::EVENTS_LENGTH;
 use odra_core::consts::{
     AMOUNT_ARG, ARGS_ARG, ATTACHED_VALUE_ARG, CONTRACT_MAIN_PURSE, ENTRY_POINT_ARG, EVENTS,
-    PACKAGE_HASH_ARG, RESULT_KEY, STATE_KEY
+    PACKAGE_HASH_ARG, PACKAGE_HASH_KEY_NAME_ARG, RESULT_KEY, STATE_KEY
 };
 use odra_core::prelude::*;
 use odra_core::CallDef;
@@ -550,8 +550,6 @@ impl CasperClient {
 
     /// Discover the contract address by name.
     async fn get_contract_address(&self, key_name: &str) -> Address {
-        let key_name = format!("{}_{}", key_name, PACKAGE_HASH_ARG);
-
         let result = get_account(
             &self.rpc_id(),
             self.configuration.node_address(),
@@ -629,11 +627,18 @@ impl CasperClient {
     ) -> Result<Address> {
         log::info(format!("Deploying \"{}\".", contract_name));
 
+        let package_hash_key_name: String = args
+            .get(PACKAGE_HASH_KEY_NAME_ARG)
+            .unwrap()
+            .clone()
+            .into_t()
+            .unwrap();
+
         let transaction =
             self.new_wasm_deploy_transaction(Bytes::from(wasm_bytes), args, timestamp);
         self.put_transaction(transaction).await?;
 
-        let address = self.get_contract_address(contract_name).await;
+        let address = self.get_contract_address(&package_hash_key_name).await;
         log::info(format!(
             "Contract {:?} deployed.",
             &address.to_formatted_string()

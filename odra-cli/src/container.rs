@@ -101,7 +101,8 @@ pub trait ContractProvider {
     /// Returns a reference to the contract if it is found, otherwise returns an error.
     fn contract_ref<T: OdraContract + 'static>(
         &self,
-        env: &HostEnv
+        env: &HostEnv,
+        name: Option<String>
     ) -> Result<T::HostRef, ContractError>;
 
     /// Returns a list of all deployed contracts with their names and addresses.
@@ -169,12 +170,14 @@ impl DeployedContractsContainer {
 impl ContractProvider for DeployedContractsContainer {
     fn contract_ref<T: OdraContract + 'static>(
         &self,
-        env: &HostEnv
+        env: &HostEnv,
+        name: Option<String>
     ) -> Result<T::HostRef, ContractError> {
+        let name = name.unwrap_or(T::HostRef::ident());
         self.data
             .contracts()
             .iter()
-            .find(|c| c.name == T::HostRef::ident())
+            .find(|c| c.name == name)
             .map(|c| Address::from_str(&c.package_hash).ok())
             .and_then(|opt| opt.map(|addr| <T as HostRefLoader<T::HostRef>>::load(env, addr)))
             .ok_or(ContractError::NotFound(T::HostRef::ident()))

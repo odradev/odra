@@ -20,6 +20,7 @@ impl DeployScript for DeployDogScript {
     ) -> Result<(), odra_cli::deploy::Error> {
         _ = DogContract::load_or_deploy(
             env,
+            None,
             DogContractInitArgs {
                 barks: true,
                 weight: 10,

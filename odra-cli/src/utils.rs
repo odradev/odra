@@ -20,12 +20,13 @@ pub trait DeployerExt: Sized {
     /// Load an existing contract instance from container or deploy a new one.
     fn load_or_deploy(
         env: &HostEnv,
+        name: Option<String>,
         args: <<Self as DeployerExt>::Contract as OdraContract>::InitArgs,
         container: &mut DeployedContractsContainer,
         gas: u64
     ) -> Result<<<Self as DeployerExt>::Contract as OdraContract>::HostRef, crate::deploy::Error>
     {
-        if let Ok(contract) = container.contract_ref::<Self::Contract>(env) {
+        if let Ok(contract) = container.contract_ref::<Self::Contract>(env, name) {
             prettycli::info(&format!(
                 "Using existing contract {} at address {:?}",
                 <Self::Contract as OdraContract>::HostRef::ident(),
@@ -43,13 +44,14 @@ pub trait DeployerExt: Sized {
     /// Load an existing contract instance from container or deploy a new one with a custom configuration.
     fn load_or_deploy_with_cfg(
         env: &HostEnv,
+        name: Option<String>,
         args: <<Self as DeployerExt>::Contract as OdraContract>::InitArgs,
         cfg: InstallConfig,
         container: &mut DeployedContractsContainer,
         gas: u64
     ) -> Result<<<Self as DeployerExt>::Contract as OdraContract>::HostRef, crate::deploy::Error>
     {
-        if let Ok(contract) = container.contract_ref::<Self::Contract>(env) {
+        if let Ok(contract) = container.contract_ref::<Self::Contract>(env, name) {
             prettycli::info(&format!(
                 "Using existing contract {} at address {:?}",
                 <Self::Contract as OdraContract>::HostRef::ident(),
