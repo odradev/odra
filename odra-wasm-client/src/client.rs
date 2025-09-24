@@ -4,19 +4,19 @@ use crate::{
     now,
     types::{
         Address as WasmAddress, Bytes as WasmBytes, IntoWasmValue,
-        TransactionHash as WasmTransactionHash, Verbosity, U512 as WasmU512
+        TransactionHash as WasmTransactionHash, TransactionResult, Verbosity, U512 as WasmU512
     },
     wallet::CasperWallet,
     PROXY_CALLER
 };
 use casper_client::{
     cli::{DeployBuilder, TransactionV1Builder},
-    rpcs::GlobalStateIdentifier,
+    rpcs::{results::GetTransactionResult, GlobalStateIdentifier},
     JsonRpcId
 };
 use casper_types::{
     bytesrepr::{Bytes, FromBytes, ToBytes},
-    execution::{Effects, TransformKindV2},
+    execution::{Effects, ExecutionResult, ExecutionResultV1, TransformKindV2},
     runtime_args, CLValue, Deploy, Digest, EntityAddr, ExecutableDeployItem, Key, PricingMode,
     RuntimeArgs, SecretKey, StoredValue, TimeDiff, Transaction, TransactionHash,
     TransactionRuntimeParams, TransferTarget, URef, U512
@@ -124,6 +124,27 @@ impl OdraWasmClient {
             .await
             .map(Into::into)
             .map_err(|e| JsError::new(&e.to_string()))
+    }
+
+    #[wasm_bindgen(js_name = "getTransactionResult")]
+    pub async fn transaction_result(
+        &self,
+        tx_hash: &WasmTransactionHash
+    ) -> Result<TransactionResult, JsError> {
+        let transaction_info = self
+            .get_transaction(tx_hash.into())
+            .await
+            .map_err(|e| JsError::new(&e))?;
+
+        if let Some(deploy_info) = transaction_info.execution_info {
+            if let Some(execution_result) = deploy_info.execution_result {
+                match self.process_transaction(execution_result, tx_hash.into()) {
+                    Ok(()) => return Ok(TransactionResult::success(tx_hash.clone())),
+                    Err(err) => return Ok(TransactionResult::failure(tx_hash.clone(), &err))
+                }
+            }
+        }
+        Ok(TransactionResult::pending(tx_hash.clone()))
     }
 }
 
@@ -441,6 +462,28 @@ impl OdraWasmClient {
         })
     }
 
+    /// Query the node for the transaction state.
+    async fn get_transaction(
+        &self,
+        transaction_hash: TransactionHash
+    ) -> Result<GetTransactionResult, String> {
+        casper_client::get_transaction(
+            self.rpc_id(),
+            self.node_address(),
+            self.verbosity().into(),
+            transaction_hash,
+            true
+        )
+        .await
+        .map_err(|_e| {
+            format!(
+                "Couldn't get transaction: {:?}",
+                transaction_hash.to_hex_string().as_str()
+            )
+        })
+        .map(|response| response.result)
+    }
+
     async fn get_balance(&self, address: Address) -> Result<U512, String> {
         let state_root_hash = self
             .get_state_root_hash()
@@ -464,6 +507,36 @@ impl OdraWasmClient {
         .map_err(|e| format!("Error getting balance: {e:?}"))?;
 
         Ok(result.result.balance_value)
+    }
+
+    fn process_transaction(
+        &self,
+        result: ExecutionResult,
+        deploy_hash: TransactionHash
+    ) -> Result<(), String> {
+        let deploy_hash_str = deploy_hash.to_hex_string();
+        match result {
+            ExecutionResult::V1(r) => match r {
+                ExecutionResultV1::Failure { error_message, .. } => {
+                    let error = format!(
+                        "Deploy V1 {:?} failed with error: {:?}.",
+                        deploy_hash_str, error_message
+                    );
+                    Err(error)
+                }
+                ExecutionResultV1::Success { .. } => Ok(())
+            },
+            ExecutionResult::V2(r) => match r.error_message {
+                None => Ok(()),
+                Some(error_message) => {
+                    let error = format!(
+                        "Transaction {:?} failed with error: {:?}.",
+                        deploy_hash_str, error_message,
+                    );
+                    Err(error)
+                }
+            }
+        }
     }
 
     fn new_call_transaction(

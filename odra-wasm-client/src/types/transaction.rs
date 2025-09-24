@@ -11,6 +11,58 @@ use wasm_bindgen::prelude::*;
 
 #[derive(Debug, Deserialize, Clone, Serialize)]
 #[wasm_bindgen]
+pub enum TransactionStatus {
+    PENDING,
+    SUCCESS,
+    FAILURE
+}
+
+#[derive(Debug, Deserialize, Clone, Serialize)]
+#[wasm_bindgen(getter_with_clone)]
+pub struct TransactionResult {
+    pub hash: TransactionHash,
+    pub status: TransactionStatus,
+    pub error_code: Option<u16>
+}
+
+impl TransactionResult {
+    pub fn pending(hash: TransactionHash) -> Self {
+        TransactionResult {
+            hash,
+            status: TransactionStatus::PENDING,
+            error_code: None
+        }
+    }
+
+    pub fn success(hash: TransactionHash) -> Self {
+        TransactionResult {
+            hash,
+            status: TransactionStatus::SUCCESS,
+            error_code: None
+        }
+    }
+
+    pub fn failure(hash: TransactionHash, error: &str) -> Self {
+        TransactionResult {
+            hash,
+            status: TransactionStatus::FAILURE,
+            error_code: Self::find_error_code(error)
+        }
+    }
+
+    fn find_error_code(error: &str) -> Option<u16> {
+        if error == "Out of gas error" {
+            return Some(odra_core::prelude::ExecutionError::OutOfGas.code());
+        }
+
+        let error_num: u16 = error.strip_prefix("User error: ")?.parse().ok()?;
+
+        Some(error_num)
+    }
+}
+
+#[derive(Debug, Deserialize, Clone, Serialize)]
+#[wasm_bindgen]
 pub struct Transaction(_Transaction);
 
 #[wasm_bindgen]
@@ -160,6 +212,12 @@ impl fmt::Display for TransactionHash {
 
 impl From<TransactionHash> for _TransactionHash {
     fn from(transaction_hash: TransactionHash) -> Self {
+        transaction_hash.0
+    }
+}
+
+impl From<&TransactionHash> for _TransactionHash {
+    fn from(transaction_hash: &TransactionHash) -> Self {
         transaction_hash.0
     }
 }
