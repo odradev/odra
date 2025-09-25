@@ -6,8 +6,11 @@ import init, {
     U256,
     U512,
     TransactionHash,
+    TransactionResult,
+    TransactionStatus,
     setGas,
-    DEFAULT_PAYMENT_AMOUNT
+    DEFAULT_PAYMENT_AMOUNT,
+    WCSPRErrors,
 } from "odra-wasm-client";
 
 // ---------- Types ----------
@@ -44,6 +47,7 @@ const swapBtn = document.getElementById("swap-btn") as HTMLButtonElement;
 const refreshBtn = document.getElementById("refresh-btn") as HTMLButtonElement;
 const txSection = document.getElementById("tx-section") as HTMLDivElement;
 const txLinkAnchor = document.getElementById("tx-link") as HTMLAnchorElement;
+const txStatusDiv = document.getElementById("tx-status") as HTMLDivElement;
 const errorSection = document.getElementById("error-section") as HTMLDivElement;
 const errorText = document.getElementById("error-text") as HTMLDivElement;
 const dirNativeBtn = document.getElementById("dir-native") as HTMLButtonElement;
@@ -115,12 +119,10 @@ async function refreshBalances() {
 
 function validateAmount(): U512 | null {
   const amount = U512.fromHtmlInput(amountInput).mul(U512.fromNumber(1_000_000_000)); // Convert to smallest unit
-  console.log("Validating amount:", amount.toString());
-  console.log("Current balances:", balances?.nativeCSPR.toString(), balances?.wCSPR.toString());
-  if (balances) {
-    if (direction === "NATIVE_TO_WRAPPED" && amount.gt(balances.nativeCSPR)) return null;
-    if (direction === "WRAPPED_TO_NATIVE" && amount.gt(balances.wCSPR.toU512())) return null;
-  }
+  // if (balances) {
+  //   if (direction === "NATIVE_TO_WRAPPED" && amount.gt(balances.nativeCSPR)) return null;
+  //   if (direction === "WRAPPED_TO_NATIVE" && amount.gt(balances.wCSPR.toU512())) return null;
+  // }
   return amount;
 }
 
@@ -133,22 +135,61 @@ async function onSwap() {
     return;
   }
   try {
-    let result: TransactionHash;
+    let txHash: TransactionHash;
     if (direction === "NATIVE_TO_WRAPPED") {
       setGas(DEFAULT_PAYMENT_AMOUNT());
-      result = await wcspr.deposit(amt);
+      txHash = await wcspr.deposit(amt);
     } else {
       setGas(WITHDRAW_GAS_AMOUNT);
-      result = await wcspr.withdraw(U256.fromU512(amt));
+      txHash = await wcspr.withdraw(U256.fromU512(amt));
     }
-    const url = `${EXPLORER_BASE.replace(/\/+$/, "")}/transaction/${result.toString()}`;
+    const url = `${EXPLORER_BASE.replace(/\/+$/, "")}/transaction/${txHash.toString()}`;
     txLinkAnchor.href = url;
     txSection.classList.remove("hidden");
+    txStatusDiv.textContent = "Transaction is being processed...";
+    let timer = setInterval(async () => {
+      let result: TransactionResult = await client.getTransactionResult(txHash);
+      console.log("Transaction result:", result.toString());
+      if (result.status === TransactionStatus.PENDING) {
+        txStatusDiv.textContent = "Transaction is still pending...";
+      } else if (result.status === TransactionStatus.SUCCESS) {
+        txStatusDiv.textContent = "Transaction succeeded.";
+        clearInterval(timer);
+        await refreshBalances();
+      } else if (result.status === TransactionStatus.FAILURE) {
+        txSection.classList.add("hidden");
+        if (result.errorCode) {
+          if (result.errorCode === WCSPRErrors.CannotTargetSelfUser) {
+            showError("Transaction failed: Cannot target yourself.");
+          } else if (result.errorCode === WCSPRErrors.InsufficientAllowance) {
+            showError("Transaction failed: Insufficient allowance approved.");
+          } else if (result.errorCode === WCSPRErrors.InsufficientBalance) {
+            showError("Transaction failed: Insufficient balance.");
+          } else {
+            showError(`Transaction failed with error code: ${result.errorCode}`);
+          }
+        } else {
+          showError("Transaction failed with unknown error.");
+        }
+        clearInterval(timer);
+      }
+    }, 2000);
+    
     amountInput.value = "";
-    await refreshBalances();
   } catch (e: any) {
     showError(e || "Transaction failed or was rejected");
   }
+}
+
+async function pollTransactionStatus(txHash: TransactionHash, interval = 3000, maxAttempts = 10): Promise<TransactionResult | null> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const result = await client.getTransactionResult(txHash);
+    if (result) {
+      return result;
+    }
+    await new Promise(resolve => setTimeout(resolve, interval));
+  }
+  return null;
 }
 
 function setDirection(newDir: "NATIVE_TO_WRAPPED" | "WRAPPED_TO_NATIVE") {
