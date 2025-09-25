@@ -25,6 +25,12 @@ use odra_core::prelude::Address;
 use thiserror::Error;
 use wasm_bindgen::prelude::*;
 
+const ARG_PACKAGE_HASH: &str = "package_hash";
+const ARG_ENTRY_POINT: &str = "entry_point";
+const ARG_ARGS: &str = "args";
+const ARG_ATTACHED_VALUE: &str = "attached_value";
+const ARG_AMOUNT: &str = "amount";
+
 const DEFAULT_GAS: u64 = 2_500_000_000;
 const DEFAULT_TTL: u32 = 5 * 60;
 const DEFAULT_GAS_TOLERANCE: u8 = 5;
@@ -190,11 +196,11 @@ impl OdraWasmClient {
             .ok_or_else(|| ClientError::InvalidContractAddress(address))?;
         let args_bytes: Vec<u8> = runtime_args.to_bytes()?;
         let args = runtime_args! {
-            "package_hash" => hash,
-            "entry_point" => entry_point,
-            "args" => Bytes::from(args_bytes),
-            "attached_value" => U512::zero(),
-            "amount" => U512::zero(),
+            ARG_PACKAGE_HASH => hash,
+            ARG_ENTRY_POINT => entry_point,
+            ARG_ARGS => Bytes::from(args_bytes),
+            ARG_ATTACHED_VALUE => U512::zero(),
+            ARG_AMOUNT => U512::zero(),
         };
 
         let sk = SecretKey::from_pem(SK_STRING)?;
@@ -229,11 +235,11 @@ impl OdraWasmClient {
             .ok_or_else(|| ClientError::InvalidContractAddress(contract_address))?;
         let args_bytes: Vec<u8> = runtime_args.to_bytes()?;
         let args = runtime_args! {
-            "package_hash" => hash,
-            "entry_point" => entry_point,
-            "args" => Bytes::from(args_bytes),
-            "attached_value" => attached_value,
-            "amount" => attached_value,
+            ARG_PACKAGE_HASH => hash,
+            ARG_ENTRY_POINT => entry_point,
+            ARG_ARGS => Bytes::from(args_bytes),
+            ARG_ATTACHED_VALUE => attached_value,
+            ARG_AMOUNT => attached_value,
         };
         let transaction: Transaction = self.new_proxy_transaction(*caller, args)?;
         let signed_transaction = wallet.sign_transaction(transaction.into(), None).await?;
