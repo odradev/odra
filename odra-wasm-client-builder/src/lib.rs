@@ -41,8 +41,11 @@ fn code<P: AsRef<Path>>(schema_path: P) -> Result<TokenStream> {
             if is_json_file(&entry) {
                 let contract_schema = read_schema(entry.path())?;
                 let client = codegen::client(&contract_schema);
+                let user_errors = codegen::user_errors(&contract_schema.contract_name, &contract_schema.errors);
+
                 types.extend(contract_schema.types);
                 clients.extend(client);
+                clients.extend(user_errors);
             }
         }
         let types = codegen::types_def(types);

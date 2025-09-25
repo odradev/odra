@@ -1,7 +1,7 @@
 mod custom_types;
 mod entry_points;
 
-pub use custom_types::types_def;
+pub use custom_types::{user_errors, types_def};
 pub use entry_points::client;
 use quote::ToTokens;
 

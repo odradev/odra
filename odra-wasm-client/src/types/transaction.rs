@@ -9,6 +9,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use wasm_bindgen::prelude::*;
 
+const USER_ERR_PREFIX: &str = "User error: ";
+
 #[derive(Debug, Deserialize, Clone, Serialize)]
 #[wasm_bindgen]
 pub enum TransactionStatus {
@@ -18,10 +20,12 @@ pub enum TransactionStatus {
 }
 
 #[derive(Debug, Deserialize, Clone, Serialize)]
-#[wasm_bindgen(getter_with_clone)]
+#[wasm_bindgen(getter_with_clone, inspectable)]
 pub struct TransactionResult {
-    pub hash: TransactionHash,
+    hash: TransactionHash,
+    #[wasm_bindgen(js_name = "status", readonly)]
     pub status: TransactionStatus,
+    #[wasm_bindgen(js_name = "errorCode", readonly)]
     pub error_code: Option<u16>
 }
 
@@ -54,10 +58,7 @@ impl TransactionResult {
         if error == "Out of gas error" {
             return Some(odra_core::prelude::ExecutionError::OutOfGas.code());
         }
-
-        let error_num: u16 = error.strip_prefix("User error: ")?.parse().ok()?;
-
-        Some(error_num)
+        error.strip_prefix(USER_ERR_PREFIX)?.parse().ok()
     }
 }
 

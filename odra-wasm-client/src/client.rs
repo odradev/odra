@@ -138,7 +138,7 @@ impl OdraWasmClient {
 
         if let Some(deploy_info) = transaction_info.execution_info {
             if let Some(execution_result) = deploy_info.execution_result {
-                match self.process_transaction(execution_result, tx_hash.into()) {
+                match self.process_transaction(execution_result) {
                     Ok(()) => return Ok(TransactionResult::success(tx_hash.clone())),
                     Err(err) => return Ok(TransactionResult::failure(tx_hash.clone(), &err))
                 }
@@ -509,32 +509,15 @@ impl OdraWasmClient {
         Ok(result.result.balance_value)
     }
 
-    fn process_transaction(
-        &self,
-        result: ExecutionResult,
-        deploy_hash: TransactionHash
-    ) -> Result<(), String> {
-        let deploy_hash_str = deploy_hash.to_hex_string();
+    fn process_transaction(&self, result: ExecutionResult) -> Result<(), String> {
         match result {
             ExecutionResult::V1(r) => match r {
-                ExecutionResultV1::Failure { error_message, .. } => {
-                    let error = format!(
-                        "Deploy V1 {:?} failed with error: {:?}.",
-                        deploy_hash_str, error_message
-                    );
-                    Err(error)
-                }
+                ExecutionResultV1::Failure { error_message, .. } => Err(error_message),
                 ExecutionResultV1::Success { .. } => Ok(())
             },
             ExecutionResult::V2(r) => match r.error_message {
                 None => Ok(()),
-                Some(error_message) => {
-                    let error = format!(
-                        "Transaction {:?} failed with error: {:?}.",
-                        deploy_hash_str, error_message,
-                    );
-                    Err(error)
-                }
+                Some(error_message) => Err(error_message)
             }
         }
     }

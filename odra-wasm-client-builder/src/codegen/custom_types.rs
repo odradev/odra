@@ -1,10 +1,34 @@
 use convert_case::{Case, Casing};
-use odra_schema::casper_contract_schema::{CustomType, EnumVariant, StructMember};
+use odra_schema::casper_contract_schema::{CustomType, EnumVariant, StructMember, UserError};
 use proc_macro2::TokenStream;
 use quote::format_ident;
 use syn::{parse_quote, punctuated::Punctuated, Token};
 
 use crate::types::{OdraType, WasmType};
+
+pub fn user_errors(contract_ident: &str, errors: &[UserError]) -> TokenStream {
+    let errors = errors
+        .iter()
+        .map(|err| {
+            let name = format_ident!("{}", err.name);
+            let code = err.discriminant as isize;
+            let description = err.description.clone().unwrap_or_default();
+            quote::quote! {
+                #[doc = #description]
+                #name = #code
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let name = format_ident!("{}Errors", contract_ident);
+    quote::quote! {
+        #[wasm_bindgen]
+        #[derive(Debug, Clone)]
+        pub enum #name {
+            #(#errors),*
+        }
+    }
+}
 
 pub fn types_def<T: IntoIterator<Item = CustomType>>(types: T) -> Vec<TokenStream> {
     types

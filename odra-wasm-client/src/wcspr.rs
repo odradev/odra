@@ -194,3 +194,14 @@ impl WCSPRClient {
             .await
     }
 }
+
+#[wasm_bindgen]
+#[derive(Debug, Clone)]
+pub enum WCSPRErrors {
+    #[doc = "The user cannot target themselves."]
+    CannotTargetSelfUser = 60003isize,
+    #[doc = "Spender does not have enough allowance approved."]
+    InsufficientAllowance = 60002isize,
+    #[doc = "Spender does not have enough balance."]
+    InsufficientBalance = 60001isize
+}
