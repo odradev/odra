@@ -48,7 +48,7 @@ impl Scenario for DogCheckScenario {
         container: &DeployedContractsContainer,
         args: Args
     ) -> Result<(), Error> {
-        let dog_contract = container.contract_ref::<DogContract>(env)?;
+        let dog_contract = container.contract_ref::<DogContract>(env, None)?;
         let test_name = args.get_single::<String>("name")?;
 
         env.set_gas(50_000_000);
