@@ -5,8 +5,8 @@ use wasm_bindgen::prelude::*;
 extern "C" {
     pub(crate) type CasperWalletProvider;
 
-    #[wasm_bindgen(js_name = CasperWalletProvider)]
-    pub(crate) fn casper_wallet_provider() -> CasperWalletProvider;
+    #[wasm_bindgen(js_name = CasperWalletProvider, catch)]
+    pub(crate) fn casper_wallet_provider() -> Result<CasperWalletProvider, JsValue>;
 
     #[wasm_bindgen(method, catch, js_class = "CasperWalletProvider")]
     pub(crate) fn requestConnection(this: &CasperWalletProvider) -> Result<Promise, JsValue>;
@@ -54,4 +54,10 @@ extern "C" {
     // Multiple arguments too!
     #[wasm_bindgen(js_namespace = console, js_name = log)]
     fn log_many(a: &str, b: &str);
+
+    #[wasm_bindgen(js_namespace = console, js_name = warn)]
+    pub fn warn(s: &str);
+
+    #[wasm_bindgen(js_namespace = console, js_name = error)]
+    pub fn error(s: &str);
 }

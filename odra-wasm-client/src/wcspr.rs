@@ -3,14 +3,12 @@ use wasm_bindgen::prelude::*;
 
 use crate::{
     client::OdraWasmClient,
-    types::{Address, FromWasmValue, TransactionHash as JsTransactionHash, U256, U512},
-    wallet::CasperWallet
+    types::{Address, FromWasmValue, TransactionHash as JsTransactionHash, U256, U512}
 };
 
 #[wasm_bindgen]
 pub struct WCSPRClient {
     wasm_client: OdraWasmClient,
-    wallet: CasperWallet,
     address: Address
 }
 
@@ -20,7 +18,6 @@ impl WCSPRClient {
     pub fn new(wasm_client: &OdraWasmClient, address: Address) -> Self {
         WCSPRClient {
             wasm_client: wasm_client.clone(),
-            wallet: CasperWallet::default(),
             address
         }
     }
@@ -94,13 +91,8 @@ impl WCSPRClient {
         spender: Address,
         amount: U256
     ) -> Result<JsTransactionHash, JsError> {
-        if !self.wallet.request_connection().await.is_ok() {
-            return Err(JsError::new("Could not connect to the wallet"));
-        }
-
         self.wasm_client
             .call_entry_point(
-                &self.wallet,
                 *self.address,
                 "approve",
                 runtime_args! {
@@ -117,13 +109,8 @@ impl WCSPRClient {
         recipient: Address,
         amount: U256
     ) -> Result<JsTransactionHash, JsError> {
-        if !self.wallet.request_connection().await.is_ok() {
-            return Err(JsError::new("Could not connect to the wallet"));
-        }
-
         self.wasm_client
             .call_entry_point(
-                &self.wallet,
                 *self.address,
                 "transfer",
                 runtime_args! {
@@ -141,13 +128,8 @@ impl WCSPRClient {
         recipient: Address,
         amount: U256
     ) -> Result<JsTransactionHash, JsError> {
-        if !self.wallet.request_connection().await.is_ok() {
-            return Err(JsError::new("Could not connect to the wallet"));
-        }
-
         self.wasm_client
             .call_entry_point(
-                &self.wallet,
                 *self.address,
                 "transfer_from",
                 runtime_args! {
@@ -161,30 +143,15 @@ impl WCSPRClient {
 
     #[wasm_bindgen]
     pub async fn deposit(&mut self, attached_value: U512) -> Result<JsTransactionHash, JsError> {
-        if !self.wallet.request_connection().await.is_ok() {
-            return Err(JsError::new("Could not connect to the wallet"));
-        }
-
         self.wasm_client
-            .call_payable_entry_point(
-                &self.wallet,
-                *self.address,
-                "deposit",
-                runtime_args! {},
-                *attached_value
-            )
+            .call_payable_entry_point(*self.address, "deposit", runtime_args! {}, *attached_value)
             .await
     }
 
     #[wasm_bindgen]
     pub async fn withdraw(&mut self, amount: U256) -> Result<JsTransactionHash, JsError> {
-        if !self.wallet.request_connection().await.is_ok() {
-            return Err(JsError::new("Could not connect to the wallet"));
-        }
-
         self.wasm_client
             .call_entry_point(
-                &self.wallet,
                 *self.address,
                 "withdraw",
                 runtime_args! {

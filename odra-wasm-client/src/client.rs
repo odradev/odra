@@ -65,9 +65,10 @@ pub fn default_payment() -> u64 {
     2_500_000_000
 }
 
+#[derive(Clone)]
 #[wasm_bindgen]
-#[derive(Debug, Clone)]
 pub struct OdraWasmClient {
+    wallet: CasperWallet,
     node_address: String,
     speculative_node_address: String,
     verbosity: Verbosity,
@@ -86,6 +87,7 @@ impl OdraWasmClient {
         verbosity: Option<Verbosity>
     ) -> Self {
         OdraWasmClient {
+            wallet: CasperWallet::default(),
             node_address,
             speculative_node_address,
             verbosity: verbosity.unwrap_or(Verbosity::Low),
@@ -102,9 +104,15 @@ impl OdraWasmClient {
 
     /// Returns the balance of the specified address.
     #[wasm_bindgen(js_name = "getCallerBalance")]
-    pub async fn get_caller_balance(&self, wallet: &CasperWallet) -> Result<WasmU512, JsError> {
-        let caller = wallet.caller().await?;
+    pub async fn get_caller_balance(&self) -> Result<WasmU512, JsError> {
+        let caller = self.wallet.caller().await?;
         self.get_balance(caller.into()).await.map(Into::into)
+    }
+
+    /// Returns the balance of the specified address.
+    #[wasm_bindgen(js_name = "caller")]
+    pub async fn get_caller(&self) -> Result<WasmAddress, JsError> {
+        self.wallet.caller().await
     }
 
     /// Transfers the specified amount to the given address.
@@ -112,15 +120,14 @@ impl OdraWasmClient {
     pub async fn transfer(
         &self,
         to: &WasmAddress,
-        amount: &WasmU512,
-        wallet: &CasperWallet
+        amount: &WasmU512
     ) -> Result<WasmTransactionHash, JsError> {
-        let caller = wallet.caller().await?;
+        let caller = self.wallet.caller().await?;
         let transaction: Transaction = self.new_transfer_transaction(*caller, **to, **amount)?;
 
-        let signed_transaction = wallet.sign_transaction(transaction.into(), None).await?;
+        let signed_transaction = self.sign_transaction(transaction).await?;
 
-        self.put_transaction(signed_transaction.into())
+        self.put_transaction(signed_transaction)
             .await
             .map(Into::into)
     }
@@ -141,6 +148,36 @@ impl OdraWasmClient {
             }
         }
         Ok(TransactionResult::pending(tx_hash.clone()))
+    }
+
+    #[wasm_bindgen(js_name = "connect")]
+    pub async fn request_connection(&self) -> Result<(), JsError> {
+        self.wallet.request_connection().await
+    }
+
+    #[wasm_bindgen(js_name = "disconnect")]
+    pub async fn disconnect_from_site(&self) -> Result<bool, JsError> {
+        self.wallet.disconnect_from_site().await
+    }
+
+    #[wasm_bindgen(js_name = "isConnected")]
+    pub async fn is_connected(&self) -> Result<bool, JsError> {
+        self.wallet.is_connected().await
+    }
+
+    #[wasm_bindgen(js_name = "getActivePublicKey")]
+    pub async fn get_active_public_key(&self) -> Result<String, JsError> {
+        self.wallet.get_active_public_key().await
+    }
+
+    #[wasm_bindgen(js_name = "switchAccount")]
+    pub async fn request_switch_account(&self) -> Result<bool, JsError> {
+        self.wallet.request_switch_account().await
+    }
+
+    #[wasm_bindgen(js_name = "signMessage")]
+    pub async fn sign_message(&self, message: String) -> Result<String, JsError> {
+        self.wallet.sign_message(message, None).await
     }
 }
 
@@ -164,23 +201,33 @@ impl OdraWasmClient {
             standard_payment: true
         }
     }
+
+    async fn sign_transaction(&self, transaction: Transaction) -> Result<Transaction, JsError> {
+        self.wallet
+            .sign_transaction(transaction.into(), None)
+            .await
+            .map(Into::into)
+    }
 }
 
 impl OdraWasmClient {
     pub async fn call_entry_point(
         &self,
-        wallet: &CasperWallet,
         contract_address: Address,
         entry_point: &str,
         runtime_args: RuntimeArgs
     ) -> Result<WasmTransactionHash, JsError> {
-        let caller = wallet.caller().await?;
+        if !self.is_connected().await.unwrap_or_default() {
+            return Err(JsError::new("Is not connected to the wallet"));
+        }
+
+        let caller = self.wallet.caller().await?;
         let transaction: Transaction =
             self.new_call_transaction(*caller, contract_address, entry_point, runtime_args)?;
 
-        let signed_transaction = wallet.sign_transaction(transaction.into(), None).await?;
+        let signed_transaction = self.sign_transaction(transaction).await?;
 
-        self.put_transaction(signed_transaction.into())
+        self.put_transaction(signed_transaction)
             .await
             .map(Into::into)
     }
@@ -224,13 +271,16 @@ impl OdraWasmClient {
     #[allow(deprecated)]
     pub async fn call_payable_entry_point(
         &self,
-        wallet: &CasperWallet,
         contract_address: Address,
         entry_point: &str,
         runtime_args: RuntimeArgs,
         attached_value: U512
     ) -> Result<WasmTransactionHash, JsError> {
-        let caller = wallet.caller().await?;
+        if !self.is_connected().await.unwrap_or_default() {
+            return Err(JsError::new("Is not connected to the wallet"));
+        }
+
+        let caller = self.wallet.caller().await?;
         let hash = contract_address
             .as_contract_package_hash()
             .ok_or_else(|| ClientError::InvalidContractAddress(contract_address))?;
@@ -243,9 +293,9 @@ impl OdraWasmClient {
             ARG_AMOUNT => attached_value,
         };
         let transaction: Transaction = self.new_proxy_transaction(*caller, args)?;
-        let signed_transaction = wallet.sign_transaction(transaction.into(), None).await?;
+        let signed_transaction = self.sign_transaction(transaction).await?;
 
-        self.put_transaction(signed_transaction.into())
+        self.put_transaction(signed_transaction)
             .await
             .map(Into::into)
     }

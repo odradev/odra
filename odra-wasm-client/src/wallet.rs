@@ -8,7 +8,13 @@ use wasm_bindgen_futures::JsFuture;
 
 #[wasm_bindgen]
 pub struct CasperWallet {
-    provider: CasperWalletProvider
+    provider: Option<CasperWalletProvider>
+}
+
+impl Clone for CasperWallet {
+    fn clone(&self) -> Self {
+        Default::default()
+    }
 }
 
 impl Default for CasperWallet {
@@ -17,16 +23,23 @@ impl Default for CasperWallet {
     }
 }
 
-#[wasm_bindgen]
 impl CasperWallet {
-    #[wasm_bindgen(constructor)]
+    fn provider(&self) -> Result<&CasperWalletProvider, JsError> {
+        self.provider
+            .as_ref()
+            .ok_or_else(|| JsError::new("CasperWalletProvider is not available"))
+    }
+}
+
+impl CasperWallet {
     pub fn new() -> Self {
-        CasperWallet {
-            provider: casper_wallet_provider()
+        let provider = casper_wallet_provider().ok();
+        if provider.is_none() {
+            crate::js::warn("CasperWalletProvider is not available");
         }
+        CasperWallet { provider }
     }
 
-    #[wasm_bindgen(js_name = "signTransaction")]
     pub async fn sign_transaction(
         &self,
         transaction: Transaction,
@@ -45,7 +58,7 @@ impl CasperWallet {
             .map_err(|err| JsError::new(&format!("Failed to serialize transaction: {err:?}")))?;
 
         let sign = JsFuture::from(
-            self.provider
+            self.provider()?
                 .sign(&transaction_json, &public_key.to_string())
                 .map_err(|err| JsError::new(&format!("Signing failed: {err:?}")))?
         )
@@ -86,8 +99,7 @@ impl CasperWallet {
     ///
     /// * `Ok(String)` - The signature string.
     /// * `Err(JsError)` - An error if the signing process fails.
-    #[wasm_bindgen(js_name = "signTransactionHash")]
-    pub async fn sign_transaction_hash_js_alias(
+    pub async fn sign_transaction_hash(
         &self,
         transaction_hash: String,
         public_key: Option<String>
@@ -118,7 +130,6 @@ impl CasperWallet {
     /// * The public key could not be retrieved.
     /// * The signing operation fails.
     /// * The signing is cancelled by the user.
-    #[wasm_bindgen(js_name = "signMessage")]
     pub async fn sign_message(
         &self,
         message: String,
@@ -132,7 +143,7 @@ impl CasperWallet {
         let public_key = self.get_public_or_active_key(public_key).await?;
 
         let sign = JsFuture::from(
-            self.provider
+            self.provider()?
                 .signMessage(&message, &public_key.to_string())
                 .map_err(|err| JsError::new(&format!("Signing failed: {err:?}")))?
         )
@@ -156,10 +167,9 @@ impl CasperWallet {
         Ok(signature)
     }
 
-    #[wasm_bindgen(js_name = "connect")]
     pub async fn request_connection(&self) -> Result<(), JsError> {
         let connection = JsFuture::from(
-            self.provider
+            self.provider()?
                 .requestConnection()
                 .map_err(|err| JsError::new(&format!("Connection failed: {err:?}")))?
         )
@@ -173,10 +183,9 @@ impl CasperWallet {
         }
     }
 
-    #[wasm_bindgen(js_name = "disconnect")]
     pub async fn disconnect_from_site(&self) -> Result<bool, JsError> {
         let disconnection = JsFuture::from(
-            self.provider
+            self.provider()?
                 .disconnectFromSite()
                 .map_err(|err| JsError::new(&format!("Disconnection failed: {err:?}")))?
         )
@@ -190,10 +199,9 @@ impl CasperWallet {
         }
     }
 
-    #[wasm_bindgen(js_name = "isConnected")]
     pub async fn is_connected(&self) -> Result<bool, JsError> {
         let connection = JsFuture::from(
-            self.provider
+            self.provider()?
                 .isConnected()
                 .map_err(|err| JsError::new(&format!("Connection failed: {err:?}")))?
         )
@@ -202,10 +210,9 @@ impl CasperWallet {
         Ok(connection.as_bool().unwrap_or_default())
     }
 
-    #[wasm_bindgen(js_name = "getVersion")]
     pub async fn get_version(&self) -> Result<String, JsError> {
         let version = JsFuture::from(
-            self.provider
+            self.provider()?
                 .getVersion()
                 .map_err(|err| JsError::new(&format!("getVersion failed: {err:?}")))?
         )
@@ -222,10 +229,9 @@ impl CasperWallet {
         Ok(version)
     }
 
-    #[wasm_bindgen(js_name = "getActivePublicKey")]
     pub async fn get_active_public_key(&self) -> Result<String, JsError> {
         let public_key = JsFuture::from(
-            self.provider
+            self.provider()?
                 .getActivePublicKey()
                 .map_err(|err| JsError::new(&format!("getActivePublicKey failed: {err:?}")))?
         )
@@ -242,10 +248,9 @@ impl CasperWallet {
         Ok(public_key)
     }
 
-    #[wasm_bindgen(js_name = "switchAccount")]
     pub async fn request_switch_account(&self) -> Result<bool, JsError> {
         let switch = JsFuture::from(
-            self.provider
+            self.provider()?
                 .requestSwitchAccount()
                 .map_err(|err| JsError::new(&format!("requestSwitchAccount failed: {err:?}")))?
         )
@@ -280,7 +285,6 @@ impl CasperWallet {
     }
 
     /// Returns the address of the caller.
-    #[wasm_bindgen(js_name = "caller")]
     pub async fn caller(&self) -> Result<Address, JsError> {
         let pk_string = self.get_active_public_key().await?;
         PublicKey::new(&pk_string)

@@ -28,7 +28,6 @@ pub fn client(contract_schema: &ContractSchema) -> TokenStream {
             ) -> Self {
                 #client_name {
                     wasm_client: wasm_client.clone(),
-                    wallet: odra_wasm_client::CasperWallet::default(),
                     address
                 }
             }
@@ -43,7 +42,6 @@ fn client_struct_def<T: ToTokens>(client_name: &T) -> TokenStream {
         #[wasm_bindgen]
         pub struct #client_name {
             wasm_client: odra_wasm_client::OdraWasmClient,
-            wallet: odra_wasm_client::CasperWallet,
             address: odra_wasm_client::types::Address
         }
     }
@@ -140,7 +138,6 @@ fn payable_impl(ep: &Entrypoint) -> syn::ImplItemFn {
         pub async fn #entry_point_ident(&self, #(#args),*) -> Result<odra_wasm_client::types::TransactionHash, JsError> {
             self.wasm_client
                 .call_payable_entry_point(
-                    &self.wallet,
                     *self.address,
                     #entry_point_str,
                     odra_wasm_client::casper_types::runtime_args! { #(#rt_args),* },
@@ -168,12 +165,8 @@ fn mutable_impl(ep: &Entrypoint) -> syn::ImplItemFn {
         #docs
         #[wasm_bindgen(js_name = #js_name)]
         pub async fn #entry_point_ident(&self, #(#args),*) -> Result<odra_wasm_client::types::TransactionHash, JsError> {
-            if !self.wallet.request_connection().await.is_ok() {
-                return Err(JsError::new("Could not connect to the wallet"));
-            }
             self.wasm_client
                 .call_entry_point(
-                    &self.wallet,
                     *self.address,
                     #entry_point_str,
                     odra_wasm_client::casper_types::runtime_args! {

@@ -3,8 +3,7 @@ use wasm_bindgen::prelude::*;
 
 use crate::{
     client::OdraWasmClient,
-    types::{Address, FromWasmValue, TransactionHash as JsTransactionHash, U256},
-    wallet::CasperWallet
+    types::{Address, FromWasmValue, TransactionHash as JsTransactionHash, U256}
 };
 
 #[wasm_bindgen]
@@ -20,7 +19,6 @@ impl Cep18Client {
     pub fn new(wasm_client: OdraWasmClient, address: Address) -> Self {
         Cep18Client {
             wasm_client,
-            wallet: CasperWallet::default(),
             address
         }
     }
@@ -94,13 +92,8 @@ impl Cep18Client {
         spender: Address,
         amount: U256
     ) -> Result<JsTransactionHash, JsError> {
-        if !self.wallet.request_connection().await.is_ok() {
-            return Err(JsError::new("Could not connect to the wallet"));
-        }
-
         self.wasm_client
             .call_entry_point(
-                &self.wallet,
                 *self.address,
                 "approve",
                 runtime_args! {
@@ -117,13 +110,8 @@ impl Cep18Client {
         spender: Address,
         decr_by: U256
     ) -> Result<JsTransactionHash, JsError> {
-        if !self.wallet.request_connection().await.is_ok() {
-            return Err(JsError::new("Could not connect to the wallet"));
-        }
-
         self.wasm_client
             .call_entry_point(
-                &self.wallet,
                 *self.address,
                 "decrease_allowance",
                 runtime_args! {
@@ -140,13 +128,8 @@ impl Cep18Client {
         spender: Address,
         incr_by: U256
     ) -> Result<JsTransactionHash, JsError> {
-        if !self.wallet.request_connection().await.is_ok() {
-            return Err(JsError::new("Could not connect to the wallet"));
-        }
-
         self.wasm_client
             .call_entry_point(
-                &self.wallet,
                 *self.address,
                 "increase_allowance",
                 runtime_args! {
@@ -163,13 +146,8 @@ impl Cep18Client {
         recipient: Address,
         amount: U256
     ) -> Result<JsTransactionHash, JsError> {
-        if !self.wallet.request_connection().await.is_ok() {
-            return Err(JsError::new("Could not connect to the wallet"));
-        }
-
         self.wasm_client
             .call_entry_point(
-                &self.wallet,
                 *self.address,
                 "transfer",
                 runtime_args! {
@@ -187,13 +165,8 @@ impl Cep18Client {
         recipient: Address,
         amount: U256
     ) -> Result<JsTransactionHash, JsError> {
-        if !self.wallet.request_connection().await.is_ok() {
-            return Err(JsError::new("Could not connect to the wallet"));
-        }
-
         self.wasm_client
             .call_entry_point(
-                &self.wallet,
                 *self.address,
                 "transfer_from",
                 runtime_args! {
@@ -211,13 +184,8 @@ impl Cep18Client {
         owner: Address,
         amount: U256
     ) -> Result<JsTransactionHash, JsError> {
-        if !self.wallet.request_connection().await.is_ok() {
-            return Err(JsError::new("Could not connect to the wallet"));
-        }
-
         self.wasm_client
             .call_entry_point(
-                &self.wallet,
                 *self.address,
                 "mint",
                 runtime_args! {
@@ -234,13 +202,8 @@ impl Cep18Client {
         owner: Address,
         amount: U256
     ) -> Result<JsTransactionHash, JsError> {
-        if !self.wallet.request_connection().await.is_ok() {
-            return Err(JsError::new("Could not connect to the wallet"));
-        }
-
         self.wasm_client
             .call_entry_point(
-                &self.wallet,
                 *self.address,
                 "burn",
                 runtime_args! {
