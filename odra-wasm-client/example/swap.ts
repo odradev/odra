@@ -2,7 +2,6 @@ import init, {
     Address,
     WCSPRClient,
     OdraWasmClient,
-    CasperWallet,
     U256,
     U512,
     TransactionHash,
@@ -14,7 +13,6 @@ import init, {
 } from "odra-wasm-client";
 
 // ---------- Types ----------
-let wallet: CasperWallet;
 let wcspr: WCSPRClient;
 let client: OdraWasmClient;
 
@@ -59,16 +57,16 @@ const wrappedBalLoader = document.getElementById("wrapped-bal-loader") as HTMLDi
 async function connect() {
   clearError();
   try {
-    await wallet.connect();
+    await client.connect();
     onConnect();
   } catch (error) {
-      showError("Failed to connect wallet.");
+    showError("Failed to connect wallet.");
   }
 }
 
 async function onConnect() {
   connected = true;
-  address = await wallet.getActivePublicKey();
+  address = await client.getActivePublicKey();
   addressSpan.textContent = `${address.slice(0, 5)}...${address.slice(-5)}`;
   connectBtn.classList.add("hidden");
   disconnectBtn.classList.remove("hidden");
@@ -77,7 +75,7 @@ async function onConnect() {
 }
 
 async function disconnect() {
-  await wallet.disconnect();
+  await client.disconnect();
   connected = false;
   address = null;
   balances = null;
@@ -97,7 +95,7 @@ async function refreshBalances() {
   nativeBalLoader.classList.remove("hidden");
   wrappedBalLoader.classList.remove("hidden");
   try {
-    const caller: Address = await wallet.caller();
+    const caller: Address = await client.caller();
     const balance = await client.getBalance(caller);
     const wcsprBalance = await wcspr.balanceOf(caller);
     balances = {
@@ -119,10 +117,10 @@ async function refreshBalances() {
 
 function validateAmount(): U512 | null {
   const amount = U512.fromHtmlInput(amountInput).mul(U512.fromNumber(1_000_000_000)); // Convert to smallest unit
-  // if (balances) {
-  //   if (direction === "NATIVE_TO_WRAPPED" && amount.gt(balances.nativeCSPR)) return null;
-  //   if (direction === "WRAPPED_TO_NATIVE" && amount.gt(balances.wCSPR.toU512())) return null;
-  // }
+  if (balances) {
+    if (direction === "NATIVE_TO_WRAPPED" && amount.gt(balances.nativeCSPR)) return null;
+    if (direction === "WRAPPED_TO_NATIVE" && amount.gt(balances.wCSPR.toU512())) return null;
+  }
   return amount;
 }
 
@@ -181,17 +179,6 @@ async function onSwap() {
   }
 }
 
-async function pollTransactionStatus(txHash: TransactionHash, interval = 3000, maxAttempts = 10): Promise<TransactionResult | null> {
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const result = await client.getTransactionResult(txHash);
-    if (result) {
-      return result;
-    }
-    await new Promise(resolve => setTimeout(resolve, interval));
-  }
-  return null;
-}
-
 function setDirection(newDir: "NATIVE_TO_WRAPPED" | "WRAPPED_TO_NATIVE") {
   direction = newDir;
   if (direction === "NATIVE_TO_WRAPPED") {
@@ -224,60 +211,23 @@ dirWrappedBtn.addEventListener("click", () => setDirection("WRAPPED_TO_NATIVE"))
 // Initialize default state
 setDirection("NATIVE_TO_WRAPPED");
 
-declare global {
-    interface Window {
-        CasperWalletProvider?: any;
-    }
-}
-
-/**
- * Waits for CasperWalletProvider to be available on window
- */
-function waitForCasperWalletProvider(timeout = 10000): Promise<any> {
-    return new Promise((resolve, reject) => {
-        if (window.CasperWalletProvider) {
-            return resolve(window.CasperWalletProvider);
-        }
-
-        const startTime = Date.now();
-        const checkWallet = () => {
-            if (window.CasperWalletProvider) {
-                resolve(window.CasperWalletProvider);
-                return;
-            }
-
-            if (Date.now() - startTime > timeout) {
-                reject(new Error('CasperWalletProvider not available. Is the extension installed?'));
-                return;
-            }
-
-            setTimeout(checkWallet, 100);
-        };
-        checkWallet();
-    });
-}
-
 async function run() {
     // 1. Initialize WASM
     await init();
 
-    // 2. Wait for wallet provider and connect
-    try {
-        const provider = await waitForCasperWalletProvider();
-    } catch (error) {
-        console.warn('No wallet extension detected:', error);
-    }
-
-    // 3. Initialize the clients
+    // 2. Initialize the clients
     const address = new Address("hash-8bc2e4b85757651812f01bc65a37d5df221ac5110254a77ad29d07017110a675");
     client = new OdraWasmClient("https://testnet-rpc.odra.dev", "https://testnet-speculative-rpc.odra.dev", "casper-test");
     wcspr = new WCSPRClient(client, address);
-    wallet = new CasperWallet();
 
-    if (await wallet.isConnected()) {
-        await onConnect();
+    try {
+        if (await client.isConnected()) {
+            await onConnect();
+        }
+    } catch (error) {
+        console.warn("Error during wallet auto-connect:", error);
     }
 }
 
-// 4. Start the initialization process
+// 3. Start the initialization process
 run().catch(err => console.error("Failed to initialize:", err));
