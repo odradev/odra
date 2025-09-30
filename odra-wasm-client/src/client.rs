@@ -1,7 +1,9 @@
-use std::sync::{Arc, Mutex, OnceLock};
+use std::{
+    str::FromStr,
+    sync::{Arc, Mutex, OnceLock}
+};
 
 use crate::{
-    now,
     types::{
         Address as WasmAddress, IntoWasmValue, TransactionHash as WasmTransactionHash,
         TransactionResult, Verbosity, U512 as WasmU512
@@ -18,9 +20,10 @@ use casper_types::{
     bytesrepr::{Bytes, FromBytes, ToBytes},
     execution::{Effects, ExecutionResult, ExecutionResultV1, TransformKindV2},
     runtime_args, CLValue, Deploy, Digest, ExecutableDeployItem, Key, PricingMode, RuntimeArgs,
-    SecretKey, StoredValue, TimeDiff, Transaction, TransactionHash, TransactionRuntimeParams,
-    TransferTarget, URef, U512
+    SecretKey, StoredValue, TimeDiff, Timestamp, Transaction, TransactionHash,
+    TransactionRuntimeParams, TransferTarget, URef, U512
 };
+use js_sys::Date;
 use odra_core::prelude::Address;
 use thiserror::Error;
 use wasm_bindgen::prelude::*;
@@ -35,9 +38,7 @@ const DEFAULT_GAS: u64 = 2_500_000_000;
 const DEFAULT_TTL: u32 = 5 * 60;
 const DEFAULT_GAS_TOLERANCE: u8 = 5;
 const CHAIN_TESTNET: &str = "casper-test";
-const SK_STRING: &str = r#"-----BEGIN PRIVATE KEY-----
-MC4CAQAwBQYDK2VwBCIEIODIFIJtQQHcpRuDU0QdaygC/se2mntLKUMK2kCnEsKN
------END PRIVATE KEY-----"#;
+const SECRET_KEY_PEM: &str = env!("WASM_CLIENT_SK");
 
 static GAS: OnceLock<Arc<Mutex<u64>>> = OnceLock::new();
 
@@ -203,7 +204,7 @@ impl OdraWasmClient {
             ARG_AMOUNT => U512::zero(),
         };
 
-        let sk = SecretKey::from_pem(SK_STRING)?;
+        let sk = SecretKey::from_pem(SECRET_KEY_PEM)?;
         let signed_deploy = self.new_proxy_deploy(&sk, args).await?;
         let result = casper_client::speculative_exec(
             self.rpc_id(),
@@ -406,8 +407,6 @@ impl OdraWasmClient {
             entry_point,
             TransactionRuntimeParams::VmCasperV1
         );
-        let timestamp = now().ok_or(ClientError::TimestampError)?;
-
         Ok(Transaction::V1(
             transaction_builder
                 .with_initiator_addr(
@@ -418,7 +417,7 @@ impl OdraWasmClient {
                 .with_ttl(TimeDiff::from_seconds(self.ttl))
                 .with_chain_name(&self.chain_name)
                 .with_pricing_mode(self.pricing_mode())
-                .with_timestamp(timestamp)
+                .with_timestamp(now()?)
                 .with_runtime_args(runtime_args)
                 .build()?
         ))
@@ -435,7 +434,7 @@ impl OdraWasmClient {
         )
         .with_ttl(TimeDiff::from_seconds(self.ttl))
         .with_account(sk.into())
-        .with_timestamp(now().ok_or_else(|| ClientError::TimestampError)?)
+        .with_timestamp(now()?)
         .with_payment(ExecutableDeployItem::ModuleBytes {
             module_bytes: Default::default(),
             args: runtime_args! {
@@ -463,7 +462,6 @@ impl OdraWasmClient {
         )
         .map_err(ClientError::CLValue)?;
 
-        let timestamp = now().ok_or(ClientError::TimestampError)?;
         Ok(Transaction::V1(
             transaction_builder
                 .with_initiator_addr(
@@ -474,7 +472,7 @@ impl OdraWasmClient {
                 .with_ttl(TimeDiff::from_seconds(self.ttl))
                 .with_chain_name(&self.chain_name)
                 .with_pricing_mode(self.pricing_mode())
-                .with_timestamp(timestamp)
+                .with_timestamp(now()?)
                 .build()?
         ))
     }
@@ -490,7 +488,6 @@ impl OdraWasmClient {
             proxy_bytes,
             TransactionRuntimeParams::VmCasperV1
         );
-        let timestamp = now().ok_or(ClientError::TimestampError)?;
         Ok(Transaction::V1(
             transaction_builder
                 .with_initiator_addr(
@@ -502,7 +499,7 @@ impl OdraWasmClient {
                 .with_ttl(TimeDiff::from_seconds(self.ttl))
                 .with_chain_name(&self.chain_name)
                 .with_pricing_mode(self.pricing_mode())
-                .with_timestamp(timestamp)
+                .with_timestamp(now()?)
                 .build()?
         ))
     }
@@ -521,16 +518,24 @@ fn find_result(effects: &Effects) -> Result<CLValue, JsError> {
         .ok_or_else(|| JsError::new("Couldn't find CLValue in the execution result"))
 }
 
+fn now() -> Result<Timestamp, JsError> {
+    let now = Date::new_0();
+    let now_str = now
+        .to_iso_string()
+        .as_string()
+        .ok_or_else(|| JsError::new("Failed to convert date to string"))?;
+    let timestamp = Timestamp::from_str(&now_str)?;
+    Ok(timestamp)
+}
+
 #[derive(Error, Debug)]
 pub enum ClientError {
     #[error("Invalid account address: {:?}", .0.to_formatted_string())]
     InvalidAccountAddress(Address),
     #[error("Address is not a contract package hash: {:?}", .0.to_formatted_string())]
     InvalidContractAddress(Address),
-    #[error("Failed to get current timestamp")]
-    TimestampError,
     #[error("Failed to serialize/deserialize CLValue: {0}")]
     CLValue(casper_types::CLValueError),
     #[error("Read global state error: {0}")]
-    ReadGlobalStateError(String),
+    ReadGlobalStateError(String)
 }
