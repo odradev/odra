@@ -302,8 +302,7 @@ mod test {
             ty: Type(NamedCLType::U128)
         };
         let tokens = field_def(&field);
-        let expected =
-            parse_quote!(#[wasm_bindgen(js_name = "test")] test: odra_wasm_client::casper_types::U128);
+        let expected = parse_quote!(#[wasm_bindgen(js_name = "test")] test: odra_wasm_client::casper_types::U128);
         pretty_assertions::assert_eq!(tokens, expected);
 
         let field = StructMember {
