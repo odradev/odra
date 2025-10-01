@@ -303,8 +303,8 @@ mod test {
         };
         let tokens = field_def(&field);
         let expected =
-            parse_quote!(#[wasm_bindgen(js_name = "test")] test: odra_wasm_client::types::U128);
-        assert_eq!(tokens, expected);
+            parse_quote!(#[wasm_bindgen(js_name = "test")] test: odra_wasm_client::casper_types::U128);
+        pretty_assertions::assert_eq!(tokens, expected);
 
         let field = StructMember {
             name: "test_field_rust_style".to_string(),
@@ -312,7 +312,7 @@ mod test {
             ty: Type(NamedCLType::String)
         };
         let tokens = field_def(&field);
-        let expected = parse_quote!(#[wasm_bindgen(js_name = "testFieldRustStyle")] test_field_rust_style: String);
-        assert_eq!(tokens, expected);
+        let expected = parse_quote!(#[wasm_bindgen(js_name = "testFieldRustStyle")] pub test_field_rust_style: String);
+        pretty_assertions::assert_eq!(tokens, expected);
     }
 }
