@@ -94,19 +94,8 @@ impl IntoWasmValue<bool> for bool {
 }
 
 impl IntoWasmValue<()> for () {
-    fn to_wasm_value(self) -> () {
-        ()
-    }
+    fn to_wasm_value(self) {}
 }
-
-// impl<T, U> IntoWasmValue<Vec<U>> for Vec<Option<T>>
-// where
-//     T: IntoWasmValue<U>
-// {
-//     fn to_wasm_value(self) -> Vec<U> {
-//         self.into_iter().map(IntoWasmValue::to_wasm_value).collect()
-//     }
-// }
 
 impl<T, U> IntoWasmValue<Vec<U>> for Vec<T>
 where
@@ -162,131 +151,131 @@ impl<T: Serialize, U: Serialize> IntoWasmValue<JsValue> for Result<T, U> {
     }
 }
 
-pub trait FromWasmValue<T> {
-    fn from_wasm_value(self) -> Result<T, JsError>;
+pub trait IntoOdraValue<T> {
+    fn into_odra_value(self) -> Result<T, JsError>;
 }
 
-impl FromWasmValue<casper_types::PublicKey> for PublicKey {
-    fn from_wasm_value(self) -> Result<casper_types::PublicKey, JsError> {
+impl IntoOdraValue<casper_types::PublicKey> for PublicKey {
+    fn into_odra_value(self) -> Result<casper_types::PublicKey, JsError> {
         Ok(self.into())
     }
 }
 
-impl FromWasmValue<casper_types::PublicKey> for &PublicKey {
-    fn from_wasm_value(self) -> Result<casper_types::PublicKey, JsError> {
+impl IntoOdraValue<casper_types::PublicKey> for &PublicKey {
+    fn into_odra_value(self) -> Result<casper_types::PublicKey, JsError> {
         Ok(self.clone().into())
     }
 }
 
-impl FromWasmValue<casper_types::URef> for URef {
-    fn from_wasm_value(self) -> Result<casper_types::URef, JsError> {
+impl IntoOdraValue<casper_types::URef> for URef {
+    fn into_odra_value(self) -> Result<casper_types::URef, JsError> {
         Ok(self.into())
     }
 }
 
-impl FromWasmValue<casper_types::URef> for &URef {
-    fn from_wasm_value(self) -> Result<casper_types::URef, JsError> {
+impl IntoOdraValue<casper_types::URef> for &URef {
+    fn into_odra_value(self) -> Result<casper_types::URef, JsError> {
         Ok(self.clone().into())
     }
 }
 
-impl FromWasmValue<odra_core::prelude::Address> for Address {
-    fn from_wasm_value(self) -> Result<odra_core::prelude::Address, JsError> {
+impl IntoOdraValue<odra_core::prelude::Address> for Address {
+    fn into_odra_value(self) -> Result<odra_core::prelude::Address, JsError> {
         Ok(self.into())
     }
 }
 
-impl FromWasmValue<Vec<u8>> for Bytes {
-    fn from_wasm_value(self) -> Result<Vec<u8>, JsError> {
+impl IntoOdraValue<Vec<u8>> for Bytes {
+    fn into_odra_value(self) -> Result<Vec<u8>, JsError> {
         Ok(self.into())
     }
 }
 
-impl FromWasmValue<casper_types::U512> for U512 {
-    fn from_wasm_value(self) -> Result<casper_types::U512, JsError> {
+impl IntoOdraValue<casper_types::U512> for U512 {
+    fn into_odra_value(self) -> Result<casper_types::U512, JsError> {
         Ok(casper_types::U512::from(self))
     }
 }
 
-impl FromWasmValue<casper_types::U256> for U256 {
-    fn from_wasm_value(self) -> Result<casper_types::U256, JsError> {
+impl IntoOdraValue<casper_types::U256> for U256 {
+    fn into_odra_value(self) -> Result<casper_types::U256, JsError> {
         Ok(casper_types::U256::from(self))
     }
 }
 
-impl FromWasmValue<casper_types::U128> for U128 {
-    fn from_wasm_value(self) -> Result<casper_types::U128, JsError> {
+impl IntoOdraValue<casper_types::U128> for U128 {
+    fn into_odra_value(self) -> Result<casper_types::U128, JsError> {
         Ok(casper_types::U128::from(self))
     }
 }
 
-impl FromWasmValue<u8> for u8 {
-    fn from_wasm_value(self) -> Result<u8, JsError> {
+impl IntoOdraValue<u8> for u8 {
+    fn into_odra_value(self) -> Result<u8, JsError> {
         Ok(self)
     }
 }
 
-impl FromWasmValue<u32> for u32 {
-    fn from_wasm_value(self) -> Result<u32, JsError> {
+impl IntoOdraValue<u32> for u32 {
+    fn into_odra_value(self) -> Result<u32, JsError> {
         Ok(self)
     }
 }
 
-impl FromWasmValue<u64> for u64 {
-    fn from_wasm_value(self) -> Result<u64, JsError> {
+impl IntoOdraValue<u64> for u64 {
+    fn into_odra_value(self) -> Result<u64, JsError> {
         Ok(self)
     }
 }
 
-impl FromWasmValue<i32> for i32 {
-    fn from_wasm_value(self) -> Result<i32, JsError> {
+impl IntoOdraValue<i32> for i32 {
+    fn into_odra_value(self) -> Result<i32, JsError> {
         Ok(self)
     }
 }
 
-impl FromWasmValue<i64> for i64 {
-    fn from_wasm_value(self) -> Result<i64, JsError> {
+impl IntoOdraValue<i64> for i64 {
+    fn into_odra_value(self) -> Result<i64, JsError> {
         Ok(self)
     }
 }
 
-impl FromWasmValue<String> for String {
-    fn from_wasm_value(self) -> Result<String, JsError> {
+impl IntoOdraValue<String> for String {
+    fn into_odra_value(self) -> Result<String, JsError> {
         Ok(self)
     }
 }
 
-impl FromWasmValue<bool> for bool {
-    fn from_wasm_value(self) -> Result<bool, JsError> {
+impl IntoOdraValue<bool> for bool {
+    fn into_odra_value(self) -> Result<bool, JsError> {
         Ok(self)
     }
 }
 
-impl FromWasmValue<()> for () {
-    fn from_wasm_value(self) -> Result<(), JsError> {
+impl IntoOdraValue<()> for () {
+    fn into_odra_value(self) -> Result<(), JsError> {
         Ok(())
     }
 }
 
-impl<T: FromWasmValue<U>, U> FromWasmValue<Option<U>> for Option<T> {
-    fn from_wasm_value(self) -> Result<Option<U>, JsError> {
+impl<T: IntoOdraValue<U>, U> IntoOdraValue<Option<U>> for Option<T> {
+    fn into_odra_value(self) -> Result<Option<U>, JsError> {
         match self {
-            Some(value) => Ok(Some(value.from_wasm_value()?)),
+            Some(value) => Ok(Some(value.into_odra_value()?)),
             None => Ok(None)
         }
     }
 }
 
-impl<T: FromWasmValue<U>, U> FromWasmValue<Vec<U>> for Vec<T> {
-    fn from_wasm_value(self) -> Result<Vec<U>, JsError> {
+impl<T: IntoOdraValue<U>, U> IntoOdraValue<Vec<U>> for Vec<T> {
+    fn into_odra_value(self) -> Result<Vec<U>, JsError> {
         self.into_iter()
-            .map(|item| item.from_wasm_value())
+            .map(|item| item.into_odra_value())
             .collect::<Result<_, _>>()
     }
 }
 
-impl<T: for<'de> serde::Deserialize<'de> + Serialize> FromWasmValue<T> for JsValue {
-    fn from_wasm_value(self) -> Result<T, JsError> {
+impl<T: for<'de> serde::Deserialize<'de> + Serialize> IntoOdraValue<T> for JsValue {
+    fn into_odra_value(self) -> Result<T, JsError> {
         self.into_serde()
             .map_err(|err| JsError::new(&format!("{:?}", err)))
     }

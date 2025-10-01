@@ -45,10 +45,9 @@ static GAS: OnceLock<Arc<Mutex<u64>>> = OnceLock::new();
 /// Returns the gas limit for the client for the next calls.
 #[wasm_bindgen]
 pub fn gas() -> u64 {
-    GAS.get_or_init(|| Arc::new(Mutex::new(DEFAULT_GAS)))
+    *GAS.get_or_init(|| Arc::new(Mutex::new(DEFAULT_GAS)))
         .lock()
         .unwrap()
-        .clone()
 }
 
 /// Sets the gas limit for the client for the next calls.
@@ -241,7 +240,7 @@ impl OdraWasmClient {
     ) -> Result<R, JsError> {
         let hash = address
             .as_contract_package_hash()
-            .ok_or_else(|| ClientError::InvalidContractAddress(address))?;
+            .ok_or(ClientError::InvalidContractAddress(address))?;
         let args_bytes: Vec<u8> = runtime_args.to_bytes()?;
         let args = runtime_args! {
             ARG_PACKAGE_HASH => hash,
@@ -283,7 +282,7 @@ impl OdraWasmClient {
         let caller = self.wallet.caller().await?;
         let hash = contract_address
             .as_contract_package_hash()
-            .ok_or_else(|| ClientError::InvalidContractAddress(contract_address))?;
+            .ok_or(ClientError::InvalidContractAddress(contract_address))?;
         let args_bytes: Vec<u8> = runtime_args.to_bytes()?;
         let args = runtime_args! {
             ARG_PACKAGE_HASH => hash,
@@ -303,7 +302,7 @@ impl OdraWasmClient {
 
 impl OdraWasmClient {
     async fn get_state_root_hash(&self) -> Result<Digest, JsError> {
-        Ok(casper_client::get_state_root_hash(
+        casper_client::get_state_root_hash(
             self.rpc_id(),
             self.node_address(),
             self.verbosity().into(),
@@ -312,7 +311,7 @@ impl OdraWasmClient {
         .await?
         .result
         .state_root_hash
-        .ok_or(JsError::new("State root hash is None"))?)
+        .ok_or(JsError::new("State root hash is None"))
     }
 
     async fn query_global_state(

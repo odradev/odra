@@ -16,7 +16,6 @@ impl Contracts {
     #[wasm_bindgen(constructor)]
     pub fn new(js: JsValue) -> Result<Self, JsError> {
         js.into_serde::<Contracts>()
-            .and_then(Ok)
             .map_err(|err| JsError::new(&format!("Could not parse Contracts from JSON: {err:?}")))
     }
 

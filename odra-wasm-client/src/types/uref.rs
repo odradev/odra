@@ -27,7 +27,7 @@ impl URef {
         let uref_addr = URefAddr::from(array);
 
         let uref = _URef::new(
-            uref_addr.into(),
+            uref_addr,
             AccessRights::from_bits(access_rights).unwrap_or_default()
         );
 

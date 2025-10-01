@@ -3,7 +3,7 @@ use wasm_bindgen::prelude::*;
 
 use crate::{
     client::OdraWasmClient,
-    types::{Address, FromWasmValue, TransactionHash as JsTransactionHash, U256}
+    types::{Address, IntoOdraValue, TransactionHash as JsTransactionHash, U256}
 };
 
 #[wasm_bindgen]
@@ -66,7 +66,7 @@ impl Cep18Client {
                 *self.address,
                 "balance_of",
                 runtime_args! {
-                    "owner" => FromWasmValue::<odra_core::prelude::Address>::from_wasm_value(address)?
+                    "owner" => IntoOdraValue::<odra_core::prelude::Address>::from_wasm_value(address)?
                 }
             )
             .await
@@ -79,8 +79,8 @@ impl Cep18Client {
                 *self.address,
                 "allowance",
                 runtime_args! {
-                    "owner" => FromWasmValue::<odra_core::prelude::Address>::from_wasm_value(owner)?,
-                    "spender" => FromWasmValue::<odra_core::prelude::Address>::from_wasm_value(spender)?
+                    "owner" => IntoOdraValue::<odra_core::prelude::Address>::from_wasm_value(owner)?,
+                    "spender" => IntoOdraValue::<odra_core::prelude::Address>::from_wasm_value(spender)?
                 }
             )
             .await
@@ -97,8 +97,8 @@ impl Cep18Client {
                 *self.address,
                 "approve",
                 runtime_args! {
-                    "spender" => FromWasmValue::<odra_core::prelude::Address>::from_wasm_value(spender)?,
-                    "amount" => FromWasmValue::<casper_types::U256>::from_wasm_value(amount)?
+                    "spender" => IntoOdraValue::<odra_core::prelude::Address>::from_wasm_value(spender)?,
+                    "amount" => IntoOdraValue::<casper_types::U256>::from_wasm_value(amount)?
                 }
             )
             .await
@@ -115,8 +115,8 @@ impl Cep18Client {
                 *self.address,
                 "decrease_allowance",
                 runtime_args! {
-                    "spender" => FromWasmValue::<odra_core::prelude::Address>::from_wasm_value(spender)?,
-                    "decr_by" => FromWasmValue::<casper_types::U256>::from_wasm_value(decr_by)?
+                    "spender" => IntoOdraValue::<odra_core::prelude::Address>::from_wasm_value(spender)?,
+                    "decr_by" => IntoOdraValue::<casper_types::U256>::from_wasm_value(decr_by)?
                 }
             )
             .await
@@ -133,8 +133,8 @@ impl Cep18Client {
                 *self.address,
                 "increase_allowance",
                 runtime_args! {
-                    "spender" => FromWasmValue::<odra_core::prelude::Address>::from_wasm_value(spender)?,
-                    "incr_by" => FromWasmValue::<casper_types::U256>::from_wasm_value(incr_by)?
+                    "spender" => IntoOdraValue::<odra_core::prelude::Address>::from_wasm_value(spender)?,
+                    "incr_by" => IntoOdraValue::<casper_types::U256>::from_wasm_value(incr_by)?
                 }
             )
             .await
@@ -151,8 +151,8 @@ impl Cep18Client {
                 *self.address,
                 "transfer",
                 runtime_args! {
-                    "recipient" => FromWasmValue::<odra_core::prelude::Address>::from_wasm_value(recipient)?,
-                    "amount" => FromWasmValue::<casper_types::U256>::from_wasm_value(amount)?
+                    "recipient" => IntoOdraValue::<odra_core::prelude::Address>::from_wasm_value(recipient)?,
+                    "amount" => IntoOdraValue::<casper_types::U256>::from_wasm_value(amount)?
                 }
             )
             .await
@@ -170,9 +170,9 @@ impl Cep18Client {
                 *self.address,
                 "transfer_from",
                 runtime_args! {
-                    "owner" => FromWasmValue::<odra_core::prelude::Address>::from_wasm_value(owner)?,
-                    "recipient" => FromWasmValue::<odra_core::prelude::Address>::from_wasm_value(recipient)?,
-                    "amount" => FromWasmValue::<casper_types::U256>::from_wasm_value(amount)?
+                    "owner" => IntoOdraValue::<odra_core::prelude::Address>::from_wasm_value(owner)?,
+                    "recipient" => IntoOdraValue::<odra_core::prelude::Address>::from_wasm_value(recipient)?,
+                    "amount" => IntoOdraValue::<casper_types::U256>::from_wasm_value(amount)?
                 }
             )
             .await
@@ -189,8 +189,8 @@ impl Cep18Client {
                 *self.address,
                 "mint",
                 runtime_args! {
-                    "owner" => FromWasmValue::<odra_core::prelude::Address>::from_wasm_value(owner)?,
-                    "amount" => FromWasmValue::<casper_types::U256>::from_wasm_value(amount)?
+                    "owner" => IntoOdraValue::<odra_core::prelude::Address>::from_wasm_value(owner)?,
+                    "amount" => IntoOdraValue::<casper_types::U256>::from_wasm_value(amount)?
                 }
             )
             .await
@@ -207,8 +207,8 @@ impl Cep18Client {
                 *self.address,
                 "burn",
                 runtime_args! {
-                    "owner" => FromWasmValue::<odra_core::prelude::Address>::from_wasm_value(owner)?,
-                    "amount" => FromWasmValue::<casper_types::U256>::from_wasm_value(amount)?
+                    "owner" => IntoOdraValue::<odra_core::prelude::Address>::from_wasm_value(owner)?,
+                    "amount" => IntoOdraValue::<casper_types::U256>::from_wasm_value(amount)?
                 }
             )
             .await

@@ -1,3 +1,5 @@
+#![allow(clippy::to_string_trait_impl)]
+
 use gloo_utils::format::JsValueSerdeExt;
 use std::ops::Deref;
 use wasm_bindgen::prelude::*;

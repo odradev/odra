@@ -150,7 +150,7 @@ fn struct_def(name: &str, members: &[StructMember], description: String) -> Toke
             }
         }
 
-        impl odra_wasm_client::types::FromWasmValue<#type_name> for #type_name {
+        impl odra_wasm_client::types::IntoOdraValue<#type_name> for #type_name {
             fn from_wasm_value(self) -> Result<#type_name, JsError> {
                 Ok(self)
             }
@@ -219,7 +219,7 @@ fn enum_def(name: &str, variants: &[EnumVariant], description: String) -> TokenS
             }
         }
 
-        impl odra_wasm_client::types::FromWasmValue<#type_name> for #type_name {
+        impl odra_wasm_client::types::IntoOdraValue<#type_name> for #type_name {
             fn from_wasm_value(self) -> Result<#type_name, JsError> {
                 Ok(self)
             }
@@ -252,7 +252,7 @@ fn field_init(member: &StructMember) -> proc_macro2::TokenStream {
         return parse_quote!(#field_name);
     }
     quote::quote! {
-        #field_name: odra_wasm_client::types::FromWasmValue::from_wasm_value(#field_name)?
+        #field_name: odra_wasm_client::types::IntoOdraValue::from_wasm_value(#field_name)?
     }
 }
 
@@ -283,7 +283,7 @@ fn setter_code(member: &StructMember) -> proc_macro2::TokenStream {
     quote::quote! {
         #[wasm_bindgen(setter)]
         pub fn #ident(&mut self, value: #ty) {
-            self.#field_name = odra_wasm_client::types::FromWasmValue::from_wasm_value(value).unwrap();
+            self.#field_name = odra_wasm_client::types::IntoOdraValue::from_wasm_value(value).unwrap();
         }
     }
 }

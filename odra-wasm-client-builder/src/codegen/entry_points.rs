@@ -182,7 +182,7 @@ fn runtime_arg(arg: &Argument) -> TokenStream {
     let name = &arg.name;
     let ident = format_ident!("{}", name);
     let odra_ty = OdraType::from(&arg.ty);
-    quote::quote! { #name => odra_wasm_client::types::FromWasmValue::<#odra_ty>::from_wasm_value(#ident)? }
+    quote::quote! { #name => odra_wasm_client::types::IntoOdraValue::<#odra_ty>::from_wasm_value(#ident)? }
 }
 
 fn entry_point_arg(fn_arg: &Argument) -> syn::FnArg {

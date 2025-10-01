@@ -16,4 +16,4 @@ pub(crate) use signature_response::SignatureResponse;
 pub use transaction::{Transaction, TransactionHash, TransactionResult, TransactionStatus};
 pub use uref::URef;
 pub use verbosity::Verbosity;
-pub use wasm_ty::{FromWasmValue, IntoWasmValue};
+pub use wasm_ty::{IntoOdraValue, IntoWasmValue};
