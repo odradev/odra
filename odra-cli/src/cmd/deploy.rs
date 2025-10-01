@@ -1,5 +1,10 @@
 use crate::{
-    cmd::DEPLOY_SUBCOMMAND, container::ContractError, custom_types::CustomTypeSet,
+    cmd::{
+        args::{read_arg, Arg},
+        DEPLOY_SUBCOMMAND
+    },
+    container::ContractError,
+    custom_types::CustomTypeSet,
     DeployedContractsContainer
 };
 use anyhow::Result;
@@ -29,10 +34,15 @@ impl MutableCommand for DeployCmd {
     fn run(
         &self,
         env: &HostEnv,
-        _args: &ArgMatches,
+        args: &ArgMatches,
         _types: &CustomTypeSet,
         container: &mut DeployedContractsContainer
     ) -> Result<()> {
+        let deploy_mode =
+            read_arg::<String>(args, Arg::DeployMode).ok_or(DeployError::MissingDeployMode)?;
+        crate::log(format!("Deploy mode: {}", deploy_mode));
+        container.apply_deploy_mode(deploy_mode)?;
+
         self.script.deploy(env, container)?;
         Ok(())
     }
@@ -40,7 +50,9 @@ impl MutableCommand for DeployCmd {
 
 impl From<&DeployCmd> for Command {
     fn from(_value: &DeployCmd) -> Self {
-        Command::new(DEPLOY_SUBCOMMAND).about("Runs the deploy script")
+        Command::new(DEPLOY_SUBCOMMAND)
+            .arg(Arg::DeployMode)
+            .about("Runs the deploy script")
     }
 }
 
@@ -62,7 +74,9 @@ pub enum DeployError {
     #[error("Deploy error: {message}")]
     OdraError { message: String },
     #[error("Contract read error: {0}")]
-    ContractReadError(#[from] ContractError)
+    ContractReadError(#[from] ContractError),
+    #[error("Missing deploy mode argument")]
+    MissingDeployMode
 }
 
 impl From<OdraError> for DeployError {
@@ -98,9 +112,11 @@ mod tests {
         let env = test_utils::mock_host_env();
         let cmd = DeployCmd::new(MockDeployScript);
         let mut container = test_utils::mock_contracts_container();
+        let command: Command = (&cmd).into();
+        let arg_matches = command.try_get_matches_from(vec!["test"]).unwrap();
         let result = cmd.run(
             &env,
-            &ArgMatches::default(),
+            &arg_matches,
             &CustomTypeSet::default(),
             &mut container
         );
@@ -117,15 +133,35 @@ mod tests {
     }
 
     #[test]
-    fn deploy_does_not_accept_args() {
-        // This is a placeholder test to ensure the DeployCmd can be converted to a Command.
+    fn deploy_accepts_mode_arg() {
         let cmd = DeployCmd::new(MockDeployScript);
         let command: Command = (&cmd).into();
+
+        let result =
+            command
+                .clone()
+                .try_get_matches_from(vec!["test", "--deploy-mode", "override"]);
+        assert!(result.is_ok());
+
+        let result = command
+            .clone()
+            .try_get_matches_from(vec!["test", "--deploy-mode", "default"]);
+        assert!(result.is_ok());
+
+        let result = command
+            .clone()
+            .try_get_matches_from(vec!["test", "--deploy-mode", "archive"]);
+        assert!(result.is_ok());
+
+        let result = command
+            .clone()
+            .try_get_matches_from(vec!["test", "--deploy-mode", "abc"]);
+        assert!(result.is_err());
 
         let result = command.try_get_matches_from(vec!["test"]);
         assert!(result.is_ok());
 
         let command: Command = (&cmd).into();
-        assert_eq!(command.get_arguments().count(), 0);
+        assert_eq!(command.get_arguments().count(), 1);
     }
 }
