@@ -9,6 +9,11 @@ pub const ARG_GAS: &str = "gas";
 pub const ARG_CONTRACTS: &str = "contracts-toml";
 pub const ARG_PRINT_EVENTS: &str = "print-events";
 pub const ARG_NUMBER: &str = "number";
+pub const ARG_DEPLOY_MODE: &str = "deploy_mode";
+const ARG_DEPLOY_MODE_LONG: &str = "deploy-mode";
+
+pub const DEPLOY_MODE_OVERRIDE: &str = "override";
+pub const DEPLOY_MODE_ARCHIVE: &str = "archive";
 
 #[derive(Debug, thiserror::Error)]
 pub enum ArgsError {
@@ -86,7 +91,8 @@ pub enum Arg {
     Gas,
     Contracts,
     EventsNumber,
-    PrintEvents
+    PrintEvents,
+    DeployMode
 }
 
 impl Arg {
@@ -96,7 +102,8 @@ impl Arg {
             Arg::Gas => ARG_GAS,
             Arg::Contracts => ARG_CONTRACTS,
             Arg::EventsNumber => ARG_NUMBER,
-            Arg::PrintEvents => ARG_PRINT_EVENTS
+            Arg::PrintEvents => ARG_PRINT_EVENTS,
+            Arg::DeployMode => ARG_DEPLOY_MODE
         }
     }
 }
@@ -108,7 +115,8 @@ impl From<Arg> for clap::Arg {
             Arg::Gas => arg_gas(),
             Arg::Contracts => arg_contracts(),
             Arg::EventsNumber => arg_number("Number of events to print"),
-            Arg::PrintEvents => arg_print_events()
+            Arg::PrintEvents => arg_print_events(),
+            Arg::DeployMode => arg_deploy_mode()
         }
     }
 }
@@ -160,6 +168,23 @@ fn arg_print_events() -> clap::Arg {
         .short('p')
         .help("Print events emitted by the contract")
         .action(ArgAction::SetTrue)
+}
+
+fn arg_deploy_mode() -> clap::Arg {
+    clap::Arg::new(ARG_DEPLOY_MODE)
+        .long(ARG_DEPLOY_MODE_LONG)
+        .help("Deployment mode strategy.")
+        .long_help(
+            "Deployment mode strategy:\n\
+             - default: Use existing contract if available, otherwise deploy a new one\n\
+             - override: Force redeploy, overwrite the existing contract configuration\n\
+             - archive: Redeploy contracts, archive the existing contract configuration and create a new one."
+        )
+        .value_name("MODE")
+        .required(false)
+        .default_value("default")
+        .value_parser(["default", DEPLOY_MODE_OVERRIDE, DEPLOY_MODE_ARCHIVE])
+        .action(ArgAction::Set)
 }
 
 pub fn read_arg<T: ToOwned<Owned = T> + Any + Clone + Send + Sync + 'static>(

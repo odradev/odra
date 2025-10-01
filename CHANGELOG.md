@@ -2,7 +2,15 @@
 
 Changelog for `odra`.
 
-## [2.3.0] - 2025-08-11
+## [2.4.1] - 2025-09-10
+### Changed
+- Refactor of `CEP-95` token implementation.
+
+## [2.4.0] - 2025-09-02
+### Changed
+- Refactor of `CEP-95` token implementation.
+
+## [2.3.1] - 2025-08-11
 ### Added
 - `ODRA_CASPER_LIVENET_TTL` environment variable to set the TTL for the Casper livenet.
 

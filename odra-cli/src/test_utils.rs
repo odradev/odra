@@ -343,6 +343,10 @@ impl ContractStorage for MockContractStorage {
     fn write(&mut self, data: &ContractsData) -> Result<(), ContractError> {
         Ok(())
     }
+
+    fn backup(&self) -> Result<(), ContractError> {
+        Ok(())
+    }
 }
 
 pub fn mock_contracts_container() -> DeployedContractsContainer {

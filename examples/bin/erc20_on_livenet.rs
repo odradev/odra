@@ -49,6 +49,6 @@ pub fn deploy_erc20(env: &HostEnv) -> Erc20HostRef {
         initial_supply
     };
 
-    env.set_gas(100_000_000_000u64);
+    env.set_gas(450_000_000_000u64);
     Erc20::deploy(env, init_args)
 }

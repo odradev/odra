@@ -1,6 +1,6 @@
 [package]
 name = "odra-examples"
-version = "2.3.1"
+version = "2.4.1"
 edition = "2021"
 
 [dependencies]
