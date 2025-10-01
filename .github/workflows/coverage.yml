@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Setup just
         uses: extractions/setup-just@v1
+      - name: Set key for speculative execution
+        run: echo "WASM_CLIENT_SK=${{ secrets.CLIENT_SK }}" >> $GITHUB_ENV
       - name: Cache target
         uses: actions/cache@v4
         with:
