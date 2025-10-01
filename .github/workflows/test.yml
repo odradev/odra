@@ -32,6 +32,8 @@ jobs:
     steps:
       - name: Setup just
         uses: extractions/setup-just@v1
+      - name: Set WASM_CLIENT_SK
+        run: echo "WASM_CLIENT_SK=${{ vars.WASM_CLIENT_SK }}" >> $GITHUB_ENV
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Cache target
