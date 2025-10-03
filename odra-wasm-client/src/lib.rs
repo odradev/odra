@@ -4,6 +4,7 @@ use wasm_bindgen::prelude::*;
 mod cep18;
 mod client;
 mod contracts;
+mod cspr_click;
 pub mod js;
 pub mod types;
 mod utils;
@@ -21,3 +22,10 @@ pub use odra_core::casper_types;
 pub use odra_core::prelude::Address as OdraAddress;
 pub use wasm_bindgen;
 pub use wasm_bindgen_futures;
+
+#[wasm_bindgen(start)]
+fn run() -> Result<(), JsValue> {
+    cspr_click::init()?;
+    js::log("WASM module loaded");
+    Ok(())
+}

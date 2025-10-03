@@ -5,16 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CSPR ⇄ wCSPR Swap</title>
   <script src="https://cdn.tailwindcss.com"></script>
-    <script type="importmap">
+  <script type="importmap">
     {
         "imports": {
             "odra-wasm-client": "./node_modules/odra-wasm-client/odra_wasm_client.js"
         }
     }
   </script>
+  <script src="cspr-click.js"></script>
+  <script defer src="https://cdn.cspr.click/ui/v1.10.1/csprclick-client-1.10.1.js"></script>
 </head>
 <body class="bg-gray-50">
-  <div class="max-w-3xl mx-auto p-6">
+  <div id="root" class="max-w-3xl mx-auto p-6">
+    <div id="csprclick-ui"></div>
     <div class="bg-white/80 backdrop-blur-md rounded-2xl shadow-md p-6">
       <header class="flex items-center justify-between mb-6">
         <h1 class="text-2xl font-semibold">CSPR ⇄ wCSPR Swap</h1>

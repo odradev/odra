@@ -3,7 +3,7 @@ use wasm_bindgen::prelude::*;
 
 use crate::{
     client::OdraWasmClient,
-    types::{Address, IntoOdraValue, TransactionHash as JsTransactionHash, U256, U512}
+    types::{Address, IntoOdraValue, U256, U512}
 };
 
 #[wasm_bindgen]
@@ -86,11 +86,7 @@ impl WCSPRClient {
     }
 
     #[wasm_bindgen]
-    pub async fn approve(
-        &mut self,
-        spender: Address,
-        amount: U256
-    ) -> Result<JsTransactionHash, JsError> {
+    pub async fn approve(&mut self, spender: Address, amount: U256) -> Result<(), JsError> {
         self.wasm_client
             .call_entry_point(
                 *self.address,
@@ -104,11 +100,7 @@ impl WCSPRClient {
     }
 
     #[wasm_bindgen]
-    pub async fn transfer(
-        &mut self,
-        recipient: Address,
-        amount: U256
-    ) -> Result<JsTransactionHash, JsError> {
+    pub async fn transfer(&mut self, recipient: Address, amount: U256) -> Result<(), JsError> {
         self.wasm_client
             .call_entry_point(
                 *self.address,
@@ -127,7 +119,7 @@ impl WCSPRClient {
         owner: Address,
         recipient: Address,
         amount: U256
-    ) -> Result<JsTransactionHash, JsError> {
+    ) -> Result<(), JsError> {
         self.wasm_client
             .call_entry_point(
                 *self.address,
@@ -142,14 +134,14 @@ impl WCSPRClient {
     }
 
     #[wasm_bindgen]
-    pub async fn deposit(&mut self, attached_value: U512) -> Result<JsTransactionHash, JsError> {
+    pub async fn deposit(&mut self, attached_value: U512) -> Result<(), JsError> {
         self.wasm_client
             .call_payable_entry_point(*self.address, "deposit", runtime_args! {}, *attached_value)
             .await
     }
 
     #[wasm_bindgen]
-    pub async fn withdraw(&mut self, amount: U256) -> Result<JsTransactionHash, JsError> {
+    pub async fn withdraw(&mut self, amount: U256) -> Result<(), JsError> {
         self.wasm_client
             .call_entry_point(
                 *self.address,

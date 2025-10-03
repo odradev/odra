@@ -13,7 +13,7 @@ pub use bigint::{U128, U256, U512};
 pub use bytes::Bytes;
 pub use public_key::PublicKey;
 pub(crate) use signature_response::SignatureResponse;
-pub use transaction::{Transaction, TransactionHash, TransactionResult, TransactionStatus};
+pub use transaction::{Transaction, TransactionHash};
 pub use uref::URef;
 pub use verbosity::Verbosity;
 pub use wasm_ty::{IntoOdraValue, IntoWasmValue};

@@ -30,6 +30,17 @@ impl Address {
         let value = input.value();
         Self::new(value.trim())
     }
+
+    #[wasm_bindgen(js_name = "fromPublicKey")]
+    pub fn from_public_key(input: &str) -> Result<Self, JsError> {
+        PublicKey::new(input)
+            .map(|pk| Address::from(pk))
+            .map_err(|err| {
+                JsError::new(&format!(
+                    "Could not create Address from PublicKey string {input}: {err:?}"
+                ))
+            })
+    }
 }
 
 impl Deref for Address {

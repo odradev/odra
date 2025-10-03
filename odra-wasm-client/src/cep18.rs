@@ -3,7 +3,7 @@ use wasm_bindgen::prelude::*;
 
 use crate::{
     client::OdraWasmClient,
-    types::{Address, IntoOdraValue, TransactionHash as JsTransactionHash, U256}
+    types::{Address, IntoOdraValue, U256}
 };
 
 #[wasm_bindgen]
@@ -86,11 +86,7 @@ impl Cep18Client {
     }
 
     #[wasm_bindgen]
-    pub async fn approve(
-        &mut self,
-        spender: Address,
-        amount: U256
-    ) -> Result<JsTransactionHash, JsError> {
+    pub async fn approve(&mut self, spender: Address, amount: U256) -> Result<(), JsError> {
         self.wasm_client
             .call_entry_point(
                 *self.address,
@@ -108,7 +104,7 @@ impl Cep18Client {
         &mut self,
         spender: Address,
         decr_by: U256
-    ) -> Result<JsTransactionHash, JsError> {
+    ) -> Result<(), JsError> {
         self.wasm_client
             .call_entry_point(
                 *self.address,
@@ -126,7 +122,7 @@ impl Cep18Client {
         &mut self,
         spender: Address,
         incr_by: U256
-    ) -> Result<JsTransactionHash, JsError> {
+    ) -> Result<(), JsError> {
         self.wasm_client
             .call_entry_point(
                 *self.address,
@@ -140,11 +136,7 @@ impl Cep18Client {
     }
 
     #[wasm_bindgen]
-    pub async fn transfer(
-        &mut self,
-        recipient: Address,
-        amount: U256
-    ) -> Result<JsTransactionHash, JsError> {
+    pub async fn transfer(&mut self, recipient: Address, amount: U256) -> Result<(), JsError> {
         self.wasm_client
             .call_entry_point(
                 *self.address,
@@ -163,7 +155,7 @@ impl Cep18Client {
         owner: Address,
         recipient: Address,
         amount: U256
-    ) -> Result<JsTransactionHash, JsError> {
+    ) -> Result<(), JsError> {
         self.wasm_client
             .call_entry_point(
                 *self.address,
@@ -178,11 +170,7 @@ impl Cep18Client {
     }
 
     #[wasm_bindgen]
-    pub async fn mint(
-        &mut self,
-        owner: Address,
-        amount: U256
-    ) -> Result<JsTransactionHash, JsError> {
+    pub async fn mint(&mut self, owner: Address, amount: U256) -> Result<(), JsError> {
         self.wasm_client
             .call_entry_point(
                 *self.address,
@@ -196,11 +184,7 @@ impl Cep18Client {
     }
 
     #[wasm_bindgen]
-    pub async fn burn(
-        &mut self,
-        owner: Address,
-        amount: U256
-    ) -> Result<JsTransactionHash, JsError> {
+    pub async fn burn(&mut self, owner: Address, amount: U256) -> Result<(), JsError> {
         self.wasm_client
             .call_entry_point(
                 *self.address,

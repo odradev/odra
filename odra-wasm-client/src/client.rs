@@ -4,21 +4,21 @@ use std::{
 };
 
 use crate::{
+    cspr_click::{get_account, CsprClick},
     types::{
-        Address as WasmAddress, IntoWasmValue, TransactionHash as WasmTransactionHash,
-        TransactionResult, Verbosity, U512 as WasmU512
+        Address as WasmAddress, IntoWasmValue, PublicKey, TransactionHash as WasmTransactionHash,
+        Verbosity, U512 as WasmU512
     },
-    wallet::CasperWallet,
     PROXY_CALLER
 };
 use casper_client::{
     cli::{DeployBuilder, TransactionV1Builder},
-    rpcs::{results::GetTransactionResult, GlobalStateIdentifier},
+    rpcs::GlobalStateIdentifier,
     JsonRpcId
 };
 use casper_types::{
     bytesrepr::{Bytes, FromBytes, ToBytes},
-    execution::{Effects, ExecutionResult, ExecutionResultV1, TransformKindV2},
+    execution::{Effects, TransformKindV2},
     runtime_args, CLValue, Deploy, Digest, ExecutableDeployItem, Key, PricingMode, RuntimeArgs,
     SecretKey, StoredValue, TimeDiff, Timestamp, Transaction, TransactionHash,
     TransactionRuntimeParams, TransferTarget, URef, U512
@@ -67,7 +67,6 @@ pub fn default_payment() -> u64 {
 #[derive(Clone)]
 #[wasm_bindgen]
 pub struct OdraWasmClient {
-    wallet: CasperWallet,
     node_address: String,
     speculative_node_address: String,
     verbosity: Verbosity,
@@ -86,7 +85,6 @@ impl OdraWasmClient {
         verbosity: Option<Verbosity>
     ) -> Self {
         OdraWasmClient {
-            wallet: CasperWallet::default(),
             node_address,
             speculative_node_address,
             verbosity: verbosity.unwrap_or(Verbosity::Low),
@@ -104,14 +102,14 @@ impl OdraWasmClient {
     /// Returns the balance of the specified address.
     #[wasm_bindgen(js_name = "getCallerBalance")]
     pub async fn get_caller_balance(&self) -> Result<WasmU512, JsError> {
-        let caller = self.wallet.caller().await?;
+        let caller = CsprClick::caller().await?;
         self.get_balance(caller.into()).await.map(Into::into)
     }
 
     /// Returns the balance of the specified address.
     #[wasm_bindgen(js_name = "caller")]
     pub async fn get_caller(&self) -> Result<WasmAddress, JsError> {
-        self.wallet.caller().await
+        CsprClick::caller().await.map(Into::into)
     }
 
     /// Transfers the specified amount to the given address.
@@ -121,63 +119,43 @@ impl OdraWasmClient {
         to: &WasmAddress,
         amount: &WasmU512
     ) -> Result<WasmTransactionHash, JsError> {
-        let caller = self.wallet.caller().await?;
+        let caller = CsprClick::caller().await?;
         let transaction: Transaction = self.new_transfer_transaction(*caller, **to, **amount)?;
-
         let signed_transaction = self.sign_transaction(transaction).await?;
-
         self.put_transaction(signed_transaction)
             .await
             .map(Into::into)
     }
 
-    #[wasm_bindgen(js_name = "getTransactionResult")]
-    pub async fn transaction_result(
-        &self,
-        tx_hash: &WasmTransactionHash
-    ) -> Result<TransactionResult, JsError> {
-        let transaction_info = self.get_transaction(tx_hash.into()).await?;
-
-        if let Some(deploy_info) = transaction_info.execution_info {
-            if let Some(execution_result) = deploy_info.execution_result {
-                match self.process_transaction(execution_result) {
-                    Ok(()) => return Ok(TransactionResult::success(tx_hash.clone())),
-                    Err(err) => return Ok(TransactionResult::failure(tx_hash.clone(), &err))
-                }
-            }
-        }
-        Ok(TransactionResult::pending(tx_hash.clone()))
-    }
-
     #[wasm_bindgen(js_name = "connect")]
     pub async fn request_connection(&self) -> Result<(), JsError> {
-        self.wallet.request_connection().await
+        CsprClick::sign_in().await
     }
 
     #[wasm_bindgen(js_name = "disconnect")]
     pub async fn disconnect_from_site(&self) -> Result<bool, JsError> {
-        self.wallet.disconnect_from_site().await
+        CsprClick::disconnect().await
     }
 
-    #[wasm_bindgen(js_name = "isConnected")]
-    pub async fn is_connected(&self) -> Result<bool, JsError> {
-        self.wallet.is_connected().await
-    }
+    // #[wasm_bindgen(js_name = "isConnected")]
+    // pub async fn is_connected(&self) -> Result<bool, JsError> {
+    //     self.wallet.is_connected().await
+    // }
 
     #[wasm_bindgen(js_name = "getActivePublicKey")]
     pub async fn get_active_public_key(&self) -> Result<String, JsError> {
-        self.wallet.get_active_public_key().await
+        CsprClick::get_active_public_key().await
     }
 
-    #[wasm_bindgen(js_name = "switchAccount")]
-    pub async fn request_switch_account(&self) -> Result<bool, JsError> {
-        self.wallet.request_switch_account().await
-    }
+    // #[wasm_bindgen(js_name = "switchAccount")]
+    // pub async fn request_switch_account(&self) -> Result<bool, JsError> {
+    //     self.wallet.request_switch_account().await
+    // }
 
-    #[wasm_bindgen(js_name = "signMessage")]
-    pub async fn sign_message(&self, message: String) -> Result<String, JsError> {
-        self.wallet.sign_message(message, None).await
-    }
+    // #[wasm_bindgen(js_name = "signMessage")]
+    // pub async fn sign_message(&self, message: String) -> Result<String, JsError> {
+    //     self.wallet.sign_message(message, None).await
+    // }
 }
 
 impl OdraWasmClient {
@@ -201,9 +179,19 @@ impl OdraWasmClient {
         }
     }
 
+    fn caller_and_public_key(&self) -> Result<(Address, String), JsError> {
+        let public_key = get_account()?.public_key.ok_or_else(|| {
+            JsError::new("No active account found. Please connect to the wallet.")
+        })?;
+        let caller = PublicKey::new(&public_key)
+            .map_err(|e| JsError::new(&e.to_string()))
+            .map(Into::<WasmAddress>::into)?
+            .into();
+        Ok((caller, public_key))
+    }
+
     async fn sign_transaction(&self, transaction: Transaction) -> Result<Transaction, JsError> {
-        self.wallet
-            .sign_transaction(transaction.into(), None)
+        CsprClick::sign_transaction(transaction.into())
             .await
             .map(Into::into)
     }
@@ -215,20 +203,13 @@ impl OdraWasmClient {
         contract_address: Address,
         entry_point: &str,
         runtime_args: RuntimeArgs
-    ) -> Result<WasmTransactionHash, JsError> {
-        if !self.is_connected().await.unwrap_or_default() {
-            return Err(JsError::new("Is not connected to the wallet"));
-        }
-
-        let caller = self.wallet.caller().await?;
-        let transaction: Transaction =
-            self.new_call_transaction(*caller, contract_address, entry_point, runtime_args)?;
-
-        let signed_transaction = self.sign_transaction(transaction).await?;
-
-        self.put_transaction(signed_transaction)
+    ) -> Result<(), JsError> {
+        let (caller, public_key) = self.caller_and_public_key()?;
+        let transaction =
+            self.new_call_transaction(caller, contract_address, entry_point, runtime_args)?;
+        CsprClick::send_transaction(transaction.into(), public_key)
             .await
-            .map(Into::into)
+            .map(|_| ())
     }
 
     #[allow(deprecated)]
@@ -274,12 +255,8 @@ impl OdraWasmClient {
         entry_point: &str,
         runtime_args: RuntimeArgs,
         attached_value: U512
-    ) -> Result<WasmTransactionHash, JsError> {
-        if !self.is_connected().await.unwrap_or_default() {
-            return Err(JsError::new("Is not connected to the wallet"));
-        }
-
-        let caller = self.wallet.caller().await?;
+    ) -> Result<(), JsError> {
+        let (caller, public_key) = self.caller_and_public_key()?;
         let hash = contract_address
             .as_contract_package_hash()
             .ok_or(ClientError::InvalidContractAddress(contract_address))?;
@@ -291,12 +268,10 @@ impl OdraWasmClient {
             ARG_ATTACHED_VALUE => attached_value,
             ARG_AMOUNT => attached_value,
         };
-        let transaction: Transaction = self.new_proxy_transaction(*caller, args)?;
-        let signed_transaction = self.sign_transaction(transaction).await?;
-
-        self.put_transaction(signed_transaction)
+        let transaction: Transaction = self.new_proxy_transaction(caller, args)?;
+        CsprClick::send_transaction(transaction.into(), public_key)
             .await
-            .map(Into::into)
+            .map(|_| ())
     }
 }
 
@@ -395,22 +370,6 @@ impl OdraWasmClient {
         .transaction_hash)
     }
 
-    /// Query the node for the transaction state.
-    async fn get_transaction(
-        &self,
-        transaction_hash: TransactionHash
-    ) -> Result<GetTransactionResult, JsError> {
-        Ok(casper_client::get_transaction(
-            self.rpc_id(),
-            self.node_address(),
-            self.verbosity().into(),
-            transaction_hash,
-            true
-        )
-        .await?
-        .result)
-    }
-
     async fn get_balance(&self, address: Address) -> Result<U512, JsError> {
         let state_root_hash = self.get_state_root_hash().await?;
 
@@ -426,19 +385,6 @@ impl OdraWasmClient {
         .await?;
 
         Ok(result.result.balance_value)
-    }
-
-    fn process_transaction(&self, result: ExecutionResult) -> Result<(), String> {
-        match result {
-            ExecutionResult::V1(r) => match r {
-                ExecutionResultV1::Failure { error_message, .. } => Err(error_message),
-                ExecutionResultV1::Success { .. } => Ok(())
-            },
-            ExecutionResult::V2(r) => match r.error_message {
-                None => Ok(()),
-                Some(error_message) => Err(error_message)
-            }
-        }
     }
 
     fn new_call_transaction(

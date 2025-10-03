@@ -9,59 +9,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use wasm_bindgen::prelude::*;
 
-const USER_ERR_PREFIX: &str = "User error: ";
-
-#[derive(Debug, Deserialize, Clone, Serialize)]
-#[wasm_bindgen]
-pub enum TransactionStatus {
-    PENDING,
-    SUCCESS,
-    FAILURE
-}
-
-#[derive(Debug, Deserialize, Clone, Serialize)]
-#[wasm_bindgen(getter_with_clone, inspectable)]
-pub struct TransactionResult {
-    hash: TransactionHash,
-    #[wasm_bindgen(js_name = "status", readonly)]
-    pub status: TransactionStatus,
-    #[wasm_bindgen(js_name = "errorCode", readonly)]
-    pub error_code: Option<u16>
-}
-
-impl TransactionResult {
-    pub fn pending(hash: TransactionHash) -> Self {
-        TransactionResult {
-            hash,
-            status: TransactionStatus::PENDING,
-            error_code: None
-        }
-    }
-
-    pub fn success(hash: TransactionHash) -> Self {
-        TransactionResult {
-            hash,
-            status: TransactionStatus::SUCCESS,
-            error_code: None
-        }
-    }
-
-    pub fn failure(hash: TransactionHash, error: &str) -> Self {
-        TransactionResult {
-            hash,
-            status: TransactionStatus::FAILURE,
-            error_code: Self::find_error_code(error)
-        }
-    }
-
-    fn find_error_code(error: &str) -> Option<u16> {
-        if error == "Out of gas error" {
-            return Some(odra_core::prelude::ExecutionError::OutOfGas.code());
-        }
-        error.strip_prefix(USER_ERR_PREFIX)?.parse().ok()
-    }
-}
-
 #[derive(Debug, Deserialize, Clone, Serialize)]
 #[wasm_bindgen]
 pub struct Transaction(_Transaction);

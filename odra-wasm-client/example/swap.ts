@@ -4,12 +4,11 @@ import init, {
     OdraWasmClient,
     U256,
     U512,
-    TransactionHash,
-    TransactionResult,
     TransactionStatus,
     setGas,
     DEFAULT_PAYMENT_AMOUNT,
     WCSPRErrors,
+    CsprClickCallbacks
 } from "odra-wasm-client";
 
 // ---------- Types ----------
@@ -19,6 +18,40 @@ let client: OdraWasmClient;
 interface Balances {
   nativeCSPR: U512;
   wCSPR: U256;
+}
+
+interface AccountInfo {
+  origin: string;
+  account: {
+    provider: string;
+    providerSupports: string[];
+    name: string | null;
+    public_key: string;
+    connected_at: number;
+    token: string | null;
+    last_used: number;
+    cspr_name: string | null;
+    fiat_cspr_rate: number;
+    fiat_currency: string;
+    balance: string;
+    liquid_balance: string;
+  };
+}
+
+declare global {
+    interface Window {
+        csprclick?: CsprClick;
+    }
+}
+
+interface CsprClick {
+  signIn(): Promise<void>;
+  signOut(): void;
+  isSignedIn(): boolean;
+  getActivePublicKey(): Promise<string>;
+  getAccounts(): Promise<Array<{publicKey: string, name: string | null}>>;
+  signInWithAccount(account: {publicKey: string, name: string | null}): Promise<void>;
+  signMessage(message: string, signingPublicKey: string): Promise<{signature: string, publicKey: string} | undefined>;
 }
 
 // ---------- Configuration ----------
@@ -57,21 +90,25 @@ const wrappedBalLoader = document.getElementById("wrapped-bal-loader") as HTMLDi
 async function connect() {
   clearError();
   try {
-    await client.connect();
-    onConnect();
+    await window.csprclick?.signIn();
   } catch (error) {
     showError("Failed to connect wallet.");
   }
 }
 
-async function onConnect() {
+async function onConnect(accountInfo: AccountInfo) {
   connected = true;
-  address = await client.getActivePublicKey();
+  address = accountInfo.account.public_key;
+  const balance = BigInt(accountInfo.account.balance);
+  balances = {
+    nativeCSPR: U512.fromBigInt(balance),
+    wCSPR: U256.fromNumber(0)
+  };
   addressSpan.textContent = `${address.slice(0, 5)}...${address.slice(-5)}`;
   connectBtn.classList.add("hidden");
   disconnectBtn.classList.remove("hidden");
   disconnectSection.classList.remove("hidden");
-  await refreshBalances();
+  await refreshBalances(accountInfo);
 }
 
 async function disconnect() {
@@ -88,18 +125,17 @@ async function disconnect() {
   disconnectSection.classList.add("hidden");
 }
 
-async function refreshBalances() {
+async function refreshBalances(accountInfo: AccountInfo) {
   if (!connected) return;
   nativeBalSpan.classList.add("hidden");
   wrappedBalSpan.classList.add("hidden");
   nativeBalLoader.classList.remove("hidden");
   wrappedBalLoader.classList.remove("hidden");
   try {
-    const caller: Address = await client.caller();
-    const balance = await client.getBalance(caller);
+    const caller = Address.fromPublicKey(accountInfo.account.public_key);
     const wcsprBalance = await wcspr.balanceOf(caller);
     balances = {
-      nativeCSPR: balance,
+      nativeCSPR: balances!.nativeCSPR,
       wCSPR: wcsprBalance
     };
     nativeBalSpan.textContent = balances.nativeCSPR.formatter(TOKEN_DECIMALS).fmtWithPrecision(4);
@@ -117,10 +153,10 @@ async function refreshBalances() {
 
 function validateAmount(): U512 | null {
   const amount = U512.fromHtmlInput(amountInput).mul(U512.fromNumber(1_000_000_000)); // Convert to smallest unit
-  if (balances) {
-    if (direction === "NATIVE_TO_WRAPPED" && amount.gt(balances.nativeCSPR)) return null;
-    if (direction === "WRAPPED_TO_NATIVE" && amount.gt(balances.wCSPR.toU512())) return null;
-  }
+  // if (balances) {
+  //   if (direction === "NATIVE_TO_WRAPPED" && amount.gt(balances.nativeCSPR)) return null;
+  //   if (direction === "WRAPPED_TO_NATIVE" && amount.gt(balances.wCSPR.toU512())) return null;
+  // }
   return amount;
 }
 
@@ -133,46 +169,13 @@ async function onSwap() {
     return;
   }
   try {
-    let txHash: TransactionHash;
     if (direction === "NATIVE_TO_WRAPPED") {
       setGas(DEFAULT_PAYMENT_AMOUNT());
-      txHash = await wcspr.deposit(amt);
+      await wcspr.deposit(amt);
     } else {
       setGas(WITHDRAW_GAS_AMOUNT);
-      txHash = await wcspr.withdraw(U256.fromU512(amt));
+      await wcspr.withdraw(U256.fromU512(amt));
     }
-    const url = `${EXPLORER_BASE.replace(/\/+$/, "")}/transaction/${txHash.toString()}`;
-    txLinkAnchor.href = url;
-    txSection.classList.remove("hidden");
-    txStatusDiv.textContent = "Transaction is being processed...";
-    let timer = setInterval(async () => {
-      let result: TransactionResult = await client.getTransactionResult(txHash);
-      console.log("Transaction result:", result.toString());
-      if (result.status === TransactionStatus.PENDING) {
-        txStatusDiv.textContent = "Transaction is still pending...";
-      } else if (result.status === TransactionStatus.SUCCESS) {
-        txStatusDiv.textContent = "Transaction succeeded.";
-        clearInterval(timer);
-        await refreshBalances();
-      } else if (result.status === TransactionStatus.FAILURE) {
-        txSection.classList.add("hidden");
-        if (result.errorCode) {
-          if (result.errorCode === WCSPRErrors.CannotTargetSelfUser) {
-            showError("Transaction failed: Cannot target yourself.");
-          } else if (result.errorCode === WCSPRErrors.InsufficientAllowance) {
-            showError("Transaction failed: Insufficient allowance approved.");
-          } else if (result.errorCode === WCSPRErrors.InsufficientBalance) {
-            showError("Transaction failed: Insufficient balance.");
-          } else {
-            showError(`Transaction failed with error code: ${result.errorCode}`);
-          }
-        } else {
-          showError("Transaction failed with unknown error.");
-        }
-        clearInterval(timer);
-      }
-    }, 2000);
-    
     amountInput.value = "";
   } catch (e: any) {
     showError(e || "Transaction failed or was rejected");
@@ -203,7 +206,7 @@ function clearError() {
 // ---------- Event listeners ----------
 connectBtn.addEventListener("click", connect);
 disconnectBtn.addEventListener("click", disconnect);
-refreshBtn.addEventListener("click", refreshBalances);
+// refreshBtn.addEventListener("click", refreshBalances);
 swapBtn.addEventListener("click", onSwap);
 dirNativeBtn.addEventListener("click", () => setDirection("NATIVE_TO_WRAPPED"));
 dirWrappedBtn.addEventListener("click", () => setDirection("WRAPPED_TO_NATIVE"));
@@ -220,13 +223,47 @@ async function run() {
     client = new OdraWasmClient("https://testnet-rpc.odra.dev", "https://testnet-speculative-rpc.odra.dev", "casper-test");
     wcspr = new WCSPRClient(client, address);
 
-    try {
-        if (await client.isConnected()) {
-            await onConnect();
+    // Set your custom callback
+    CsprClickCallbacks.onSignedIn(async (accountInfo: AccountInfo) => {
+        console.log('Rust  signe in handler:', accountInfo);
+        await onConnect(accountInfo);
+    });
+    CsprClickCallbacks.onSwitchedAccount(async (event: any) => {
+    });
+    CsprClickCallbacks.onSignedOut(async (event: any) => {
+        disconnect();
+    });
+    CsprClickCallbacks.onTransactionStatusUpdate((status: TransactionStatus, data: any) => {
+        console.log('Rust transaction status update handler:', status, data);
+        if (status === TransactionStatus.SENT) {
+          txSection.classList.remove("hidden");
+          txStatusDiv.textContent = "Transaction is being processed...";
+          const url = `${EXPLORER_BASE.replace(/\/+$/, "")}/transaction/${data.transactionHash}`;
+          txLinkAnchor.href = url;
+        } else if (status === TransactionStatus.PROCESSED) {
+          if (data.error) {
+             if (data.odraErrorCode) {
+              if (data.odraErrorCode === WCSPRErrors.CannotTargetSelfUser) {
+                showError("Transaction failed: Cannot target yourself.");
+              } else if (data.odraErrorCode === WCSPRErrors.InsufficientAllowance) {
+                showError("Transaction failed: Insufficient allowance approved.");
+              } else if (data.odraErrorCode === WCSPRErrors.InsufficientBalance) {
+                showError("Transaction failed: Insuffcient balance.");
+              } else {
+                showError(`Transaction failed with error code: ${data.odraErrorCode}`);
+              }
+            } else {
+              showError("Transaction failed with unknown error.");
+            }
+          } else {
+            txStatusDiv.textContent = "Transaction succeeded.";
+          }
+        } else if (status === TransactionStatus.ERROR) {
+          txSection.classList.add("hidden");
+          showError("Transaction failed with unknown error.");
         }
-    } catch (error) {
-        console.warn("Error during wallet auto-connect:", error);
-    }
+        // Your custom logic here
+    });
 }
 
 // 3. Start the initialization process
