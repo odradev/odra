@@ -101,15 +101,15 @@ fn log_events<T: ContractProvider>(
 ) -> Result<(), CallError> {
     let call_result = env.last_call_result(contract_address).raw_call_result();
 
-    for (name, address) in contract_provider.all_contracts() {
-        let events = call_result.contract_events(&address);
+    for deployed_contract in contract_provider.all_contracts() {
+        let events = call_result.contract_events(&deployed_contract.address());
         if events.is_empty() {
             continue;
         }
         prettycli::info(&format!(
             "Captured {} events for contract '{}'",
             events.len(),
-            name
+            deployed_contract.key_name()
         ));
         for (i, event) in events.iter().enumerate() {
             prettycli::info(&format!(

@@ -34,7 +34,7 @@ pub struct OdraCli {
     whoami_cmd: WhoamiCmd,
     custom_types: CustomTypes,
     host_env: HostEnv,
-    callers: HashMap<String, EntryPointsCaller>,
+    callers: HashMap<(String, String), EntryPointsCaller>,
     default_contract_path: Option<PathBuf>
 }
 
@@ -83,12 +83,32 @@ impl OdraCli {
         mut self
     ) -> Self {
         self.callers.insert(
-            T::HostRef::ident(),
+            (T::HostRef::ident(), T::HostRef::ident()),
             T::HostRef::entry_points_caller(&self.host_env)
         );
         self.custom_types.register::<T>();
-        self.contracts_cmd.add_contract::<T>();
-        self.print_events_cmd.add_contract::<T>();
+        self.contracts_cmd.add_contract::<T>(None);
+        self.print_events_cmd.add_contract::<T>(None);
+        self
+    }
+
+    /// Adds a named contract to the CLI, in case of multiple instances of the same contract.
+    ///
+    /// Generates a subcommand for the contract with all of its entry points except the `init` entry point.
+    /// To call the constructor of the contract, implement and register the [DeployScript].
+    pub fn named_contract<
+        T: SchemaEntrypoints + SchemaCustomTypes + SchemaEvents + OdraContract
+    >(
+        mut self,
+        name: String
+    ) -> Self {
+        self.callers.insert(
+            (T::HostRef::ident(), name.clone()),
+            T::HostRef::entry_points_caller(&self.host_env)
+        );
+        self.custom_types.register::<T>();
+        self.contracts_cmd.add_contract::<T>(Some(name.clone()));
+        self.print_events_cmd.add_contract::<T>(Some(name));
         self
     }
 
@@ -137,19 +157,23 @@ impl OdraCli {
         let mut container = DeployedContractsContainer::instance(storage);
 
         // Register the contracts from the container in the host environment.
-        for (name, address) in container.all_contracts() {
-            let caller = self.callers.get(&name).unwrap_or_else(|| {
+        for deployed_contract in container.all_contracts() {
+            let caller = self.callers.get(&(deployed_contract.name(), deployed_contract.key_name())).unwrap_or_else(|| {
                 let path = match &contracts_path {
                     Some(path) => path.to_str().map(|s| s.to_string()).unwrap_or_default(),
                     None => DEPLOYED_CONTRACTS_FILE.to_string()
                 };
                 prettycli::error(&format!(
                     "Caller for `{}` not found. The contract is registered in {:?} file, but not in the CLI builder. Make sure you have added it to the builder using `.contract::<{}>()`.",
-                    &name, path, &name
+                    &deployed_contract.key_name(), path, &deployed_contract.name()
                 ));
                 std::process::exit(1);
             }).clone();
-            self.host_env.register_contract(address, name, caller);
+            self.host_env.register_contract(
+                deployed_contract.address(),
+                deployed_contract.key_name(),
+                caller
+            );
         }
 
         let result = match cmd.as_str() {

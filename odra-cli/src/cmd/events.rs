@@ -31,8 +31,9 @@ pub(crate) struct PrintEventsCmd {
 }
 
 impl PrintEventsCmd {
-    pub fn add_contract<T: OdraContract>(&mut self) {
-        self.subcommands.push(PrintContractEventsCmd::new::<T>());
+    pub fn add_contract<T: OdraContract>(&mut self, package_name: Option<String>) {
+        self.subcommands
+            .push(PrintContractEventsCmd::new::<T>(package_name));
     }
 }
 
@@ -68,10 +69,9 @@ struct PrintContractEventsCmd {
 }
 
 impl PrintContractEventsCmd {
-    fn new<T: OdraContract>() -> Self {
-        Self {
-            contract_name: T::HostRef::ident()
-        }
+    fn new<T: OdraContract>(package_name: Option<String>) -> Self {
+        let contract_name = package_name.unwrap_or_else(|| T::HostRef::ident());
+        Self { contract_name }
     }
 }
 
@@ -145,7 +145,7 @@ mod tests {
         assert_eq!(command.get_name(), PRINT_EVENTS_SUBCOMMAND);
         assert_eq!(command.get_subcommands().count(), 0);
 
-        cmd.add_contract::<TestContract>();
+        cmd.add_contract::<TestContract>(None);
         let command: Command = (&cmd).into();
         assert_eq!(command.get_subcommands().count(), 1);
     }
@@ -153,7 +153,7 @@ mod tests {
     #[test]
     fn test_match_print_events_cmd() {
         let mut cmd = PrintEventsCmd::default();
-        cmd.add_contract::<TestContract>();
+        cmd.add_contract::<TestContract>(None);
         let command: Command = (&cmd).into();
         let matches = command
             .try_get_matches_from(vec![PRINT_EVENTS_SUBCOMMAND, &TestContract::ident()])
@@ -166,7 +166,7 @@ mod tests {
     fn parsing_print_events_cmd_invalid_contract() {
         // This test checks that an invalid contract name results in an error.
         let mut cmd = PrintEventsCmd::default();
-        cmd.add_contract::<TestContract>();
+        cmd.add_contract::<TestContract>(None);
 
         let command: Command = (&cmd).into();
         let matches = command.try_get_matches_from(vec![PRINT_EVENTS_SUBCOMMAND, "TestContract2"]);
@@ -179,7 +179,7 @@ mod tests {
 
     #[test]
     fn parsing_number_of_events() {
-        let cmd = PrintContractEventsCmd::new::<TestContract>();
+        let cmd = PrintContractEventsCmd::new::<TestContract>(None);
         let command: Command = (&cmd).into();
         let matches = command.get_matches_from(vec!["TestContract", "--number", "5"]);
         assert_eq!(*matches.get_one::<u32>(ARG_NUMBER).unwrap(), 5);
@@ -187,7 +187,7 @@ mod tests {
 
     #[test]
     fn parsing_default_number_of_events() {
-        let cmd = PrintContractEventsCmd::new::<TestContract>();
+        let cmd = PrintContractEventsCmd::new::<TestContract>(None);
         let command: Command = (&cmd).into();
         let matches = command.try_get_matches_from(vec!["TestContract"]);
         assert!(matches.is_ok());
@@ -198,7 +198,7 @@ mod tests {
 
     #[test]
     fn parsing_default_number_of_events_with_invalid_value() {
-        let cmd = PrintContractEventsCmd::new::<TestContract>();
+        let cmd = PrintContractEventsCmd::new::<TestContract>(None);
         let command: Command = (&cmd).into();
         let matches = command.try_get_matches_from(vec!["TestContract", "--number", "invalid"]);
         assert!(matches.is_err());

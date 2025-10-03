@@ -454,11 +454,8 @@ impl HostEnv {
         *self.captures_events.borrow_mut() = captures;
         if captures {
             // Initialize events for all deployed contracts if capturing is enabled
-            let contract_addresses: Vec<Address> = self.deployed_contracts
-                .borrow()
-                .keys()
-                .copied()
-                .collect();
+            let contract_addresses: Vec<Address> =
+                self.deployed_contracts.borrow().keys().copied().collect();
 
             for contract_address in contract_addresses {
                 self.init_events(&contract_address);
