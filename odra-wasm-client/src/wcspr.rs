@@ -65,7 +65,7 @@ impl WCSPRClient {
                 *self.address,
                 "balance_of",
                 runtime_args! {
-                    "address" => IntoOdraValue::<odra_core::prelude::Address>::from_wasm_value(address)?
+                    "address" => IntoOdraValue::<odra_core::prelude::Address>::into_odra_value(address)?
                 }
             )
             .await
@@ -78,8 +78,8 @@ impl WCSPRClient {
                 *self.address,
                 "allowance",
                 runtime_args! {
-                    "owner" => IntoOdraValue::<odra_core::prelude::Address>::from_wasm_value(owner)?,
-                    "spender" => IntoOdraValue::<odra_core::prelude::Address>::from_wasm_value(spender)?
+                    "owner" => IntoOdraValue::<odra_core::prelude::Address>::into_odra_value(owner)?,
+                    "spender" => IntoOdraValue::<odra_core::prelude::Address>::into_odra_value(spender)?
                 }
             )
             .await
@@ -96,8 +96,8 @@ impl WCSPRClient {
                 *self.address,
                 "approve",
                 runtime_args! {
-                    "spender" => IntoOdraValue::<odra_core::prelude::Address>::from_wasm_value(spender)?,
-                    "amount" => IntoOdraValue::<casper_types::U256>::from_wasm_value(amount)?
+                    "spender" => IntoOdraValue::<odra_core::prelude::Address>::into_odra_value(spender)?,
+                    "amount" => IntoOdraValue::<casper_types::U256>::into_odra_value(amount)?
                 }
             )
             .await
@@ -114,8 +114,8 @@ impl WCSPRClient {
                 *self.address,
                 "transfer",
                 runtime_args! {
-                    "recipient" => IntoOdraValue::<odra_core::prelude::Address>::from_wasm_value(recipient)?,
-                    "amount" => IntoOdraValue::<casper_types::U256>::from_wasm_value(amount)?
+                    "recipient" => IntoOdraValue::<odra_core::prelude::Address>::into_odra_value(recipient)?,
+                    "amount" => IntoOdraValue::<casper_types::U256>::into_odra_value(amount)?
                 }
             )
             .await
@@ -133,9 +133,9 @@ impl WCSPRClient {
                 *self.address,
                 "transfer_from",
                 runtime_args! {
-                    "owner" => IntoOdraValue::<odra_core::prelude::Address>::from_wasm_value(owner)?,
-                    "recipient" => IntoOdraValue::<odra_core::prelude::Address>::from_wasm_value(recipient)?,
-                    "amount" => IntoOdraValue::<casper_types::U256>::from_wasm_value(amount)?
+                    "owner" => IntoOdraValue::<odra_core::prelude::Address>::into_odra_value(owner)?,
+                    "recipient" => IntoOdraValue::<odra_core::prelude::Address>::into_odra_value(recipient)?,
+                    "amount" => IntoOdraValue::<casper_types::U256>::into_odra_value(amount)?
                 }
             )
             .await
@@ -155,7 +155,7 @@ impl WCSPRClient {
                 *self.address,
                 "withdraw",
                 runtime_args! {
-                    "amount" => IntoOdraValue::<casper_types::U256>::from_wasm_value(amount)?
+                    "amount" => IntoOdraValue::<casper_types::U256>::into_odra_value(amount)?
                 }
             )
             .await
