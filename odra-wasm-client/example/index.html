@@ -23,9 +23,27 @@
         <h1 class="text-2xl font-semibold">CSPR ⇄ wCSPR Swap</h1>
         <div>
           <button id="connect-btn" class="px-4 py-2 rounded-md bg-gradient-to-r from-indigo-500 to-indigo-400 text-white font-medium shadow">Connect Wallet</button>
-          <div class="flex items-center gap-4 hidden" id="disconnect-section">
-            <span id="address" class="text-sm text-gray-600"></span>
-            <button id="disconnect-btn" class="px-3 py-1 rounded-md border hover:bg-gray-50 text-sm hidden">Disconnect</button>
+          <div class="relative hidden" id="disconnect-section">
+            <button id="address-dropdown-btn" class="flex items-center gap-2 px-3 py-2 rounded-md border hover:bg-gray-50 text-sm">
+              <span id="address" class="text-gray-600"></span>
+              <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <div id="address-dropdown-menu" class="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-10 hidden">
+              <button id="switch-account-btn" class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                </svg>
+                Switch Account
+              </button>
+              <button id="disconnect-btn" class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                </svg>
+                Disconnect
+              </button>
+            </div>
           </div>
         </div>
       </header>

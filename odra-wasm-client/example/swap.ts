@@ -5,6 +5,7 @@ import init, {
     U256,
     U512,
     TransactionStatus,
+    TransactionResult,
     setGas,
     DEFAULT_PAYMENT_AMOUNT,
     WCSPRErrors,
@@ -71,6 +72,9 @@ const connectBtn = document.getElementById("connect-btn") as HTMLButtonElement;
 const disconnectBtn = document.getElementById("disconnect-btn") as HTMLButtonElement;
 const disconnectSection = document.getElementById('disconnect-section') as HTMLDivElement;
 const addressSpan = document.getElementById("address") as HTMLSpanElement;
+const addressDropdownBtn = document.getElementById("address-dropdown-btn") as HTMLButtonElement;
+const addressDropdownMenu = document.getElementById("address-dropdown-menu") as HTMLDivElement;
+const switchAccountBtn = document.getElementById("switch-account-btn") as HTMLButtonElement;
 const nativeBalSpan = document.getElementById("native-bal") as HTMLSpanElement;
 const wrappedBalSpan = document.getElementById("wrapped-bal") as HTMLSpanElement;
 const amountInput = document.getElementById("amount") as HTMLInputElement;
@@ -106,7 +110,6 @@ async function onConnect(accountInfo: AccountInfo) {
   };
   addressSpan.textContent = `${address.slice(0, 5)}...${address.slice(-5)}`;
   connectBtn.classList.add("hidden");
-  disconnectBtn.classList.remove("hidden");
   disconnectSection.classList.remove("hidden");
   await refreshBalances(accountInfo);
 }
@@ -120,8 +123,8 @@ async function disconnect() {
   nativeBalSpan.textContent = "—";
   wrappedBalSpan.textContent = "—";
   txSection.classList.add("hidden");
+  addressDropdownMenu.classList.add("hidden");
   connectBtn.classList.remove("hidden");
-  disconnectBtn.classList.add("hidden");
   disconnectSection.classList.add("hidden");
 }
 
@@ -174,7 +177,8 @@ async function onSwap() {
       await wcspr.deposit(amt);
     } else {
       setGas(WITHDRAW_GAS_AMOUNT);
-      await wcspr.withdraw(U256.fromU512(amt));
+      let result = await wcspr.withdraw(U256.fromU512(amt));
+      
     }
     amountInput.value = "";
   } catch (e: any) {
@@ -211,6 +215,36 @@ swapBtn.addEventListener("click", onSwap);
 dirNativeBtn.addEventListener("click", () => setDirection("NATIVE_TO_WRAPPED"));
 dirWrappedBtn.addEventListener("click", () => setDirection("WRAPPED_TO_NATIVE"));
 
+// Dropdown functionality
+addressDropdownBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  addressDropdownMenu.classList.toggle("hidden");
+});
+
+switchAccountBtn.addEventListener("click", async () => {
+  addressDropdownMenu.classList.add("hidden");
+  try {
+    const accounts = await window.csprclick?.getAccounts();
+    if (accounts && accounts.length > 1) {
+      // Find the next account that's not the current one
+      const currentIndex = accounts.findIndex(acc => acc.publicKey === address);
+      const nextAccount = accounts[(currentIndex + 1) % accounts.length];
+      await window.csprclick?.signInWithAccount(nextAccount);
+    } else {
+      // If only one account or no accounts, show the regular sign in
+      await window.csprclick?.signIn();
+    }
+  } catch (error) {
+    console.error("Failed to switch account:", error);
+    showError("Failed to switch account.");
+  }
+});
+
+// Close dropdown when clicking outside
+document.addEventListener("click", () => {
+  addressDropdownMenu.classList.add("hidden");
+});
+
 // Initialize default state
 setDirection("NATIVE_TO_WRAPPED");
 
@@ -223,17 +257,25 @@ async function run() {
     client = new OdraWasmClient("https://testnet-rpc.odra.dev", "https://testnet-speculative-rpc.odra.dev", "casper-test");
     wcspr = new WCSPRClient(client, address);
 
-    // Set your custom callback
+    // 3. Set your custom callback
     CsprClickCallbacks.onSignedIn(async (accountInfo: AccountInfo) => {
-        console.log('Rust  signe in handler:', accountInfo);
+        console.log('Rust signed in handler:', accountInfo);
         await onConnect(accountInfo);
     });
-    CsprClickCallbacks.onSwitchedAccount(async (event: any) => {
+    CsprClickCallbacks.onSwitchedAccount(async (accountInfo: AccountInfo) => {
+        console.log('Rust switched account handler:', accountInfo);
+        await onConnect(accountInfo);
     });
-    CsprClickCallbacks.onSignedOut(async (event: any) => {
+    CsprClickCallbacks.onUnsolicitedAccountChange(async (accountInfo: AccountInfo) => {
+        console.log('Rust unsolicited account change handler:', accountInfo);
+        
+        // await onConnect(accountInfo);
+        // window.csprclick.signInWithAccount(evt.account);
+    });
+    CsprClickCallbacks.onSignedOut((event: any) => {
         disconnect();
     });
-    CsprClickCallbacks.onTransactionStatusUpdate((status: TransactionStatus, data: any) => {
+    CsprClickCallbacks.onTransactionStatusUpdate((status: TransactionStatus, data: TransactionResult) => {
         console.log('Rust transaction status update handler:', status, data);
         if (status === TransactionStatus.SENT) {
           txSection.classList.remove("hidden");
@@ -242,15 +284,15 @@ async function run() {
           txLinkAnchor.href = url;
         } else if (status === TransactionStatus.PROCESSED) {
           if (data.error) {
-             if (data.odraErrorCode) {
-              if (data.odraErrorCode === WCSPRErrors.CannotTargetSelfUser) {
+             if (data.errorCode) {
+              if (data.errorCode === WCSPRErrors.CannotTargetSelfUser) {
                 showError("Transaction failed: Cannot target yourself.");
-              } else if (data.odraErrorCode === WCSPRErrors.InsufficientAllowance) {
+              } else if (data.errorCode === WCSPRErrors.InsufficientAllowance) {
                 showError("Transaction failed: Insufficient allowance approved.");
-              } else if (data.odraErrorCode === WCSPRErrors.InsufficientBalance) {
+              } else if (data.errorCode === WCSPRErrors.InsufficientBalance) {
                 showError("Transaction failed: Insuffcient balance.");
               } else {
-                showError(`Transaction failed with error code: ${data.odraErrorCode}`);
+                showError(`Transaction failed with error code: ${data.errorCode}`);
               }
             } else {
               showError("Transaction failed with unknown error.");
@@ -262,9 +304,8 @@ async function run() {
           txSection.classList.add("hidden");
           showError("Transaction failed with unknown error.");
         }
-        // Your custom logic here
     });
 }
 
-// 3. Start the initialization process
+// 4. Start the initialization process
 run().catch(err => console.error("Failed to initialize:", err));
