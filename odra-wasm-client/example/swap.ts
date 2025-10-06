@@ -1,5 +1,6 @@
 import init, {
     Address,
+    AccountInfo,
     WCSPRClient,
     OdraWasmClient,
     U256,
@@ -9,7 +10,8 @@ import init, {
     setGas,
     DEFAULT_PAYMENT_AMOUNT,
     WCSPRErrors,
-    CsprClickCallbacks
+    CsprClickCallbacks,
+    getCurrentAccount
 } from "odra-wasm-client";
 
 // ---------- Types ----------
@@ -19,40 +21,6 @@ let client: OdraWasmClient;
 interface Balances {
   nativeCSPR: U512;
   wCSPR: U256;
-}
-
-interface AccountInfo {
-  origin: string;
-  account: {
-    provider: string;
-    providerSupports: string[];
-    name: string | null;
-    public_key: string;
-    connected_at: number;
-    token: string | null;
-    last_used: number;
-    cspr_name: string | null;
-    fiat_cspr_rate: number;
-    fiat_currency: string;
-    balance: string;
-    liquid_balance: string;
-  };
-}
-
-declare global {
-    interface Window {
-        csprclick?: CsprClick;
-    }
-}
-
-interface CsprClick {
-  signIn(): Promise<void>;
-  signOut(): void;
-  isSignedIn(): boolean;
-  getActivePublicKey(): Promise<string>;
-  getAccounts(): Promise<Array<{publicKey: string, name: string | null}>>;
-  signInWithAccount(account: {publicKey: string, name: string | null}): Promise<void>;
-  signMessage(message: string, signingPublicKey: string): Promise<{signature: string, publicKey: string} | undefined>;
 }
 
 // ---------- Configuration ----------
@@ -94,7 +62,7 @@ const wrappedBalLoader = document.getElementById("wrapped-bal-loader") as HTMLDi
 async function connect() {
   clearError();
   try {
-    await window.csprclick?.signIn();
+    await client.signIn();
   } catch (error) {
     showError("Failed to connect wallet.");
   }
@@ -102,10 +70,9 @@ async function connect() {
 
 async function onConnect(accountInfo: AccountInfo) {
   connected = true;
-  address = accountInfo.account.public_key;
-  const balance = BigInt(accountInfo.account.balance);
+  address = accountInfo.publicKey;
   balances = {
-    nativeCSPR: U512.fromBigInt(balance),
+    nativeCSPR: accountInfo.balance,
     wCSPR: U256.fromNumber(0)
   };
   addressSpan.textContent = `${address.slice(0, 5)}...${address.slice(-5)}`;
@@ -115,17 +82,7 @@ async function onConnect(accountInfo: AccountInfo) {
 }
 
 async function disconnect() {
-  await client.disconnect();
-  connected = false;
-  address = null;
-  balances = null;
-  addressSpan.textContent = "";
-  nativeBalSpan.textContent = "—";
-  wrappedBalSpan.textContent = "—";
-  txSection.classList.add("hidden");
-  addressDropdownMenu.classList.add("hidden");
-  connectBtn.classList.remove("hidden");
-  disconnectSection.classList.add("hidden");
+  await client.signOut();
 }
 
 async function refreshBalances(accountInfo: AccountInfo) {
@@ -135,7 +92,7 @@ async function refreshBalances(accountInfo: AccountInfo) {
   nativeBalLoader.classList.remove("hidden");
   wrappedBalLoader.classList.remove("hidden");
   try {
-    const caller = Address.fromPublicKey(accountInfo.account.public_key);
+    const caller = accountInfo.address;
     const wcsprBalance = await wcspr.balanceOf(caller);
     balances = {
       nativeCSPR: balances!.nativeCSPR,
@@ -156,10 +113,10 @@ async function refreshBalances(accountInfo: AccountInfo) {
 
 function validateAmount(): U512 | null {
   const amount = U512.fromHtmlInput(amountInput).mul(U512.fromNumber(1_000_000_000)); // Convert to smallest unit
-  // if (balances) {
-  //   if (direction === "NATIVE_TO_WRAPPED" && amount.gt(balances.nativeCSPR)) return null;
-  //   if (direction === "WRAPPED_TO_NATIVE" && amount.gt(balances.wCSPR.toU512())) return null;
-  // }
+  if (balances) {
+    if (direction === "NATIVE_TO_WRAPPED" && amount.gt(balances.nativeCSPR)) return null;
+    if (direction === "WRAPPED_TO_NATIVE" && amount.gt(balances.wCSPR.toU512())) return null;
+  }
   return amount;
 }
 
@@ -177,8 +134,7 @@ async function onSwap() {
       await wcspr.deposit(amt);
     } else {
       setGas(WITHDRAW_GAS_AMOUNT);
-      let result = await wcspr.withdraw(U256.fromU512(amt));
-      
+      await wcspr.withdraw(U256.fromU512(amt));
     }
     amountInput.value = "";
   } catch (e: any) {
@@ -207,10 +163,56 @@ function clearError() {
   errorText.textContent = "";
 }
 
+function clearUserData() {
+  connected = false;
+  address = null;
+  balances = null;
+  addressSpan.textContent = "";
+  nativeBalSpan.textContent = "—";
+  wrappedBalSpan.textContent = "—";
+  txSection.classList.add("hidden");
+  addressDropdownMenu.classList.add("hidden");
+  connectBtn.classList.remove("hidden");
+  disconnectSection.classList.add("hidden");
+}
+
+function onTransactionStatusUpdate(status: TransactionStatus, data: TransactionResult) {
+  if (status === TransactionStatus.SENT) {
+    txSection.classList.remove("hidden");
+    txStatusDiv.textContent = "Transaction is being processed...";
+    const url = `${EXPLORER_BASE.replace(/\/+$/, "")}/transaction/${data.transactionHash}`;
+    txLinkAnchor.href = url;
+  } else if (status === TransactionStatus.PROCESSED) {
+    if (data.error) {
+        if (data.errorCode) {
+        if (data.errorCode === WCSPRErrors.CannotTargetSelfUser) {
+          showError("Transaction failed: Cannot target yourself.");
+        } else if (data.errorCode === WCSPRErrors.InsufficientAllowance) {
+          showError("Transaction failed: Insufficient allowance approved.");
+        } else if (data.errorCode === WCSPRErrors.InsufficientBalance) {
+          showError("Transaction failed: Insuffcient balance.");
+        } else {
+          showError(`Transaction failed with error code: ${data.errorCode}`);
+        }
+      } else {
+        showError("Transaction failed with unknown error.");
+      }
+    } else {
+      txStatusDiv.textContent = "Transaction succeeded.";
+    }
+  } else if (status === TransactionStatus.ERROR) {
+    txSection.classList.add("hidden");
+    showError("Transaction failed with unknown error.");
+  }
+}
+
 // ---------- Event listeners ----------
 connectBtn.addEventListener("click", connect);
 disconnectBtn.addEventListener("click", disconnect);
-// refreshBtn.addEventListener("click", refreshBalances);
+refreshBtn.addEventListener("click", async () => {
+  const account = await getCurrentAccount();
+  await refreshBalances(account);
+});
 swapBtn.addEventListener("click", onSwap);
 dirNativeBtn.addEventListener("click", () => setDirection("NATIVE_TO_WRAPPED"));
 dirWrappedBtn.addEventListener("click", () => setDirection("WRAPPED_TO_NATIVE"));
@@ -224,16 +226,7 @@ addressDropdownBtn.addEventListener("click", (e) => {
 switchAccountBtn.addEventListener("click", async () => {
   addressDropdownMenu.classList.add("hidden");
   try {
-    const accounts = await window.csprclick?.getAccounts();
-    if (accounts && accounts.length > 1) {
-      // Find the next account that's not the current one
-      const currentIndex = accounts.findIndex(acc => acc.publicKey === address);
-      const nextAccount = accounts[(currentIndex + 1) % accounts.length];
-      await window.csprclick?.signInWithAccount(nextAccount);
-    } else {
-      // If only one account or no accounts, show the regular sign in
-      await window.csprclick?.signIn();
-    }
+    await client.switchAccount();
   } catch (error) {
     console.error("Failed to switch account:", error);
     showError("Failed to switch account.");
@@ -259,51 +252,23 @@ async function run() {
 
     // 3. Set your custom callback
     CsprClickCallbacks.onSignedIn(async (accountInfo: AccountInfo) => {
-        console.log('Rust signed in handler:', accountInfo);
+        console.log('Signed in handler:', accountInfo);
         await onConnect(accountInfo);
     });
     CsprClickCallbacks.onSwitchedAccount(async (accountInfo: AccountInfo) => {
-        console.log('Rust switched account handler:', accountInfo);
+        console.log('Switched account handler:', accountInfo);
         await onConnect(accountInfo);
     });
     CsprClickCallbacks.onUnsolicitedAccountChange(async (accountInfo: AccountInfo) => {
-        console.log('Rust unsolicited account change handler:', accountInfo);
-        
-        // await onConnect(accountInfo);
-        // window.csprclick.signInWithAccount(evt.account);
+        console.log('Unsolicited account change handler:', accountInfo);
     });
-    CsprClickCallbacks.onSignedOut((event: any) => {
-        disconnect();
+    CsprClickCallbacks.onSignedOut(() => {
+        console.log('Signed out handler');
+        clearUserData();
     });
     CsprClickCallbacks.onTransactionStatusUpdate((status: TransactionStatus, data: TransactionResult) => {
-        console.log('Rust transaction status update handler:', status, data);
-        if (status === TransactionStatus.SENT) {
-          txSection.classList.remove("hidden");
-          txStatusDiv.textContent = "Transaction is being processed...";
-          const url = `${EXPLORER_BASE.replace(/\/+$/, "")}/transaction/${data.transactionHash}`;
-          txLinkAnchor.href = url;
-        } else if (status === TransactionStatus.PROCESSED) {
-          if (data.error) {
-             if (data.errorCode) {
-              if (data.errorCode === WCSPRErrors.CannotTargetSelfUser) {
-                showError("Transaction failed: Cannot target yourself.");
-              } else if (data.errorCode === WCSPRErrors.InsufficientAllowance) {
-                showError("Transaction failed: Insufficient allowance approved.");
-              } else if (data.errorCode === WCSPRErrors.InsufficientBalance) {
-                showError("Transaction failed: Insuffcient balance.");
-              } else {
-                showError(`Transaction failed with error code: ${data.errorCode}`);
-              }
-            } else {
-              showError("Transaction failed with unknown error.");
-            }
-          } else {
-            txStatusDiv.textContent = "Transaction succeeded.";
-          }
-        } else if (status === TransactionStatus.ERROR) {
-          txSection.classList.add("hidden");
-          showError("Transaction failed with unknown error.");
-        }
+        console.log('Transaction status update handler:', status, data);
+        onTransactionStatusUpdate(status, data);
     });
 }
 
