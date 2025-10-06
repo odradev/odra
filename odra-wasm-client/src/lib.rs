@@ -1,16 +1,13 @@
 use wasm_bindgen::prelude::*;
 
-#[cfg(feature = "cep18")]
-mod cep18;
 mod client;
 mod contracts;
 mod cspr_click;
+mod examples;
 pub mod js;
 pub mod types;
 mod utils;
 mod wallet;
-#[cfg(feature = "wcspr")]
-mod wcspr;
 
 pub use client::OdraWasmClient;
 pub use wallet::CasperWallet;

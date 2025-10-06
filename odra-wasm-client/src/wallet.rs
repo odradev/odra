@@ -1,10 +1,11 @@
 use crate::{
-    js::{casper_wallet_provider, CasperWalletProvider},
-    types::{Address, PublicKey, SignatureResponse, Transaction}
+    types::{Address, PublicKey, SignatureResponse, Transaction}, wallet::js::{casper_wallet_provider, CasperWalletProvider}
 };
 use gloo_utils::format::JsValueSerdeExt;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
+
+mod js;
 
 #[wasm_bindgen]
 pub struct CasperWallet {
