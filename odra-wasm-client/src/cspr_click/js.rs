@@ -5,9 +5,6 @@ use crate::cspr_click::types::AccountInfo;
 
 #[wasm_bindgen]
 extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "csprclick"], js_name = signIn, catch)]
-    pub fn sign_in() -> Result<(), JsValue>;
-
     #[wasm_bindgen(js_namespace = ["window", "csprclick"], js_name = connect, catch)]
     pub fn connect(provider: &str) -> Result<Promise, JsValue>;
 
@@ -40,7 +37,13 @@ extern "C" {
     ) -> Result<Promise, JsValue>;
 
     #[wasm_bindgen(js_namespace = ["window", "csprclick"], js_name = sign, catch)]
-    pub(crate) fn sign(transaction: &str, signing_public_key: &str) -> Result<Promise, JsValue>;
+    pub(crate) fn sign_transaction(transaction: &str, signing_public_key: &str) -> Result<Promise, JsValue>;
+
+    #[wasm_bindgen(js_namespace = ["window", "csprclick"], js_name = signIn, catch)]
+    pub fn sign_in() -> Result<(), JsValue>;
+
+    #[wasm_bindgen(js_namespace = ["window", "csprclick"], js_name = signMessage, catch)]
+    pub(crate) fn sign_message(message: &str, signing_public_key: &str) -> Result<Promise, JsValue>;
 
     #[wasm_bindgen(js_namespace = ["window", "csprclick"], js_name = signOut, catch)]
     pub fn sign_out() -> Result<(), JsValue>;

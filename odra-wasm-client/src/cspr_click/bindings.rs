@@ -8,7 +8,7 @@ use super::js;
 use crate::{
     cspr_click::{
         callbacks::CALLBACKS,
-        types::{AccountInfo, SignResult, TransactionStatus},
+        types::{AccountInfo, SignResult, TransactionStatus, WrappedAccountInfo},
         TransactionResult
     },
     types::{Address, PublicKey, Transaction}
@@ -23,6 +23,14 @@ impl CsprClick {
 
     pub async fn sign_out() -> Result<(), JsError> {
         js::sign_out().into_js_error("[signOut]")
+    }
+
+    pub async fn connect(provider: &str) -> Result<AccountInfo, JsError> {
+        let result = js::connect(provider)
+            .into_js_value("[connect]")
+            .await?
+            .into_serde::<WrappedAccountInfo>()?;
+        Ok(result.account)
     }
 
     pub async fn disconnect() -> Result<bool, JsError> {
@@ -40,11 +48,7 @@ impl CsprClick {
             .to_json_string()
             .into_js_error("Failed to serialize transaction")?;
 
-        let result: SignResult = js::sign(&transaction_json, &public_key)
-            .into_js_value("[sign]")
-            .await?
-            .into_serde()?;
-
+        let result =  Self::process_sign_result(js::sign_transaction(&transaction_json, &public_key)).await?;
         if result.is_cancelled {
             return Err(JsError::new(&format!(
                 "Could not sign transaction for key {public_key}"
@@ -121,8 +125,8 @@ impl CsprClick {
         let result = js::get_active_account(&options)
             .into_js_value("[getActiveAccount]")
             .await?
-            .into_serde()?;
-        Ok(result)
+            .into_serde::<WrappedAccountInfo>()?;
+        Ok(result.account)
     }
 
     pub async fn is_unlocked(provider: &str) -> Result<bool, JsError> {
@@ -144,6 +148,18 @@ impl CsprClick {
     pub async fn switch_account() -> Result<(), JsError> {
         js::switch_account().into_js_value("[switchAccount").await?;
         Ok(())
+    }
+
+    pub async fn sign_message(message: &str) -> Result<SignResult, JsError> {
+        let public_key = Self::get_active_public_key().await?;
+        Self::process_sign_result(js::sign_message(message, &public_key)).await
+    }
+
+    async fn process_sign_result(promise: Result<Promise, JsValue>) -> Result<SignResult, JsError> {
+        let result: SignResult = promise
+            .into_js_error("[signMessage]")?
+            .into_serde()?;
+        Ok(result)
     }
 }
 

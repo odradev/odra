@@ -8,6 +8,7 @@ use crate::types::{Address, Transaction, U512};
 
 const USER_ERR_PREFIX: &str = "User error: ";
 
+#[wasm_bindgen(getter_with_clone)]
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SignResult {
     #[serde(rename = "cancelled")]

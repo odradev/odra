@@ -1,10 +1,9 @@
 use std::{
-    str::FromStr,
-    sync::{Arc, Mutex, OnceLock}
+    str::FromStr, sync::{Arc, Mutex, OnceLock}
 };
 
 use crate::{
-    cspr_click::{get_account, AccountInfo, CsprClick, TransactionResult},
+    cspr_click::{get_account, AccountInfo, CsprClick, SignResult, TransactionResult},
     types::{
         Address as WasmAddress, IntoWasmValue, PublicKey, TransactionHash as WasmTransactionHash,
         Verbosity, U512 as WasmU512
@@ -127,26 +126,42 @@ impl OdraWasmClient {
             .map(Into::into)
     }
 
-    // #[wasm_bindgen(js_name = "connect")]
-    // pub async fn sign_in(&self) -> Result<(), JsError> {
-    //     CsprClick::c().await
-    // }
+    /// Call the connect() method using a provider name as the first parameter to request a connection using that wallet
+    /// or login mechanism.
+    ///
+    /// Some providers may need an options argument to indicate the connection behavior requested.
+    #[wasm_bindgen(js_name = "connect")]
+    pub async fn connect(&self, provider: &str) -> Result<AccountInfo, JsError> {
+        CsprClick::connect(provider).await
+    }
 
+    /// Triggers a request to a UI library to show a sign-in dialog.
     #[wasm_bindgen(js_name = "signIn")]
     pub async fn sign_in(&self) -> Result<(), JsError> {
         CsprClick::sign_in().await
     }
 
+    /// Closes an active session in your dApp.
+    ///
+    /// Triggers the [Event::SignedOut](crate::cspr_click::event::Event::SignedOut) event.
     #[wasm_bindgen(js_name = "signOut")]
     pub async fn sign_out(&self) -> Result<(), JsError> {
         CsprClick::sign_out().await
     }
 
+    /// Usually you will call signOut() method to close a user session. Use disconnect() when you want to clear 
+    /// the connection between the wallet and your app. Next time the user signs in with that wallet, he'll 
+    /// must grant connection permission again.
     #[wasm_bindgen(js_name = "disconnect")]
     pub async fn disconnect_from_site(&self) -> Result<bool, JsError> {
         CsprClick::disconnect().await
     }
 
+    /// Starts a session with the indicated account. This account must be one of the accounts returned 
+    /// in getKnownAccounts or getSignInOptions.
+    ///
+    /// Note that no interaction with the account provider is required to sign-in. CSPR.click will check and restore 
+    /// the connection if needed when there's a transaction or message to sign.
     #[wasm_bindgen(js_name = "signInWithAccount")]
     pub async fn sign_in_with_account(
         &self,
@@ -155,29 +170,34 @@ impl OdraWasmClient {
         CsprClick::sign_in_with_account(account.clone()).await
     }
 
+    /// Returns true if the provider is unlocked. false if the provider is locked.
     #[wasm_bindgen(js_name = "isUnlocked")]
     pub async fn is_unlocked(&self, provider: &str) -> Result<bool, JsError> {
         CsprClick::is_unlocked(provider).await
     }
 
+    /// Gets the public key for the current session (if any).
     #[wasm_bindgen(js_name = "getActivePublicKey")]
     pub async fn get_active_public_key(&self) -> Result<String, JsError> {
         CsprClick::get_active_public_key().await
     }
 
+    /// Gets the account for the current session (if any). 
     #[wasm_bindgen(js_name = "getActiveAccount")]
     pub async fn get_active_account(&self) -> Result<AccountInfo, JsError> {
         CsprClick::get_active_account().await
     }
 
+    /// Call this method to request CSPR.click UI to show the Switch Account modal window.
     #[wasm_bindgen(js_name = "switchAccount")]
     pub async fn request_switch_account(&self) -> Result<(), JsError> {
         CsprClick::switch_account().await
     }
 
+    /// Triggers the mechanisms to request your user to sign a text message with the active wallet.
     #[wasm_bindgen(js_name = "signMessage")]
-    pub async fn sign_message(&self, _message: String) -> Result<String, JsError> {
-        todo!("Not implemented yet")
+    pub async fn sign_message(&self, message: String) -> Result<SignResult, JsError> {
+        CsprClick::sign_message(&message).await
     }
 }
 

@@ -10,7 +10,7 @@ pub(crate) mod js;
 mod types;
 
 pub(crate) use bindings::CsprClick;
-pub use types::{AccountInfo, TransactionResult};
+pub use types::{AccountInfo, TransactionResult, SignResult};
 
 macro_rules! register_cspr_event {
     ($ev:expr, $closure:ident) => {
