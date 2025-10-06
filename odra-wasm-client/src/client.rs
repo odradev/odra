@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    cspr_click::{get_account, CsprClick, TransactionResult},
+    cspr_click::{get_account, AccountType, CsprClick, TransactionResult},
     types::{
         Address as WasmAddress, IntoWasmValue, PublicKey, TransactionHash as WasmTransactionHash,
         Verbosity, U512 as WasmU512
@@ -137,25 +137,38 @@ impl OdraWasmClient {
         CsprClick::disconnect().await
     }
 
-    // #[wasm_bindgen(js_name = "isConnected")]
-    // pub async fn is_connected(&self) -> Result<bool, JsError> {
-    //     self.wallet.is_connected().await
-    // }
+    #[wasm_bindgen(js_name = "signInWithAccount")]
+    pub async fn sign_in_with_account(
+        &self,
+        account: &AccountType
+    ) -> Result<AccountType, JsError> {
+        CsprClick::sign_in_with_account(account.clone()).await
+    }
+
+    #[wasm_bindgen(js_name = "isUnlocked")]
+    pub async fn is_unlocked(&self, provider: &str) -> Result<bool, JsError> {
+        CsprClick::is_unlocked(provider).await
+    }
 
     #[wasm_bindgen(js_name = "getActivePublicKey")]
     pub async fn get_active_public_key(&self) -> Result<String, JsError> {
         CsprClick::get_active_public_key().await
     }
 
-    // #[wasm_bindgen(js_name = "switchAccount")]
-    // pub async fn request_switch_account(&self) -> Result<bool, JsError> {
-    //     self.wallet.request_switch_account().await
-    // }
+    #[wasm_bindgen(js_name = "getActiveAccount")]
+    pub async fn get_active_account(&self) -> Result<AccountType, JsError> {
+        CsprClick::get_active_account().await
+    }
 
-    // #[wasm_bindgen(js_name = "signMessage")]
-    // pub async fn sign_message(&self, message: String) -> Result<String, JsError> {
-    //     self.wallet.sign_message(message, None).await
-    // }
+    #[wasm_bindgen(js_name = "switchAccount")]
+    pub async fn request_switch_account(&self) -> Result<bool, JsError> {
+        todo!("Not implemented yet")
+    }
+
+    #[wasm_bindgen(js_name = "signMessage")]
+    pub async fn sign_message(&self, _message: String) -> Result<String, JsError> {
+        todo!("Not implemented yet")
+    }
 }
 
 impl OdraWasmClient {

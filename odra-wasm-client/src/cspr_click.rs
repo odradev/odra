@@ -1,4 +1,5 @@
 use gloo_utils::format::JsValueSerdeExt;
+use serde_json::json;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 
@@ -6,7 +7,7 @@ use crate::{
     cspr_click::{
         callbacks::{ACCOUNT, CALLBACKS},
         event::Event,
-        types::{AccountType, SignResult, TransactionStatus, WrappedAccountType}
+        types::{SignResult, TransactionStatus, WrappedAccountType}
     },
     types::{Address, PublicKey, Transaction}
 };
@@ -16,7 +17,7 @@ mod event;
 pub(crate) mod js;
 mod types;
 
-pub use types::TransactionResult;
+pub use types::{AccountType, TransactionResult};
 
 macro_rules! register_cspr_event {
     ($ev:expr, $closure:ident) => {
@@ -61,17 +62,13 @@ pub(crate) struct CsprClick;
 
 impl CsprClick {
     pub async fn sign_in() -> Result<(), JsError> {
-        js::sign_in().map_err(|err| JsError::new(&format!("signIn failed: {err:?}")))
+        js::sign_in().into_js_error("signIn failed")
     }
 
     pub async fn disconnect() -> Result<bool, JsError> {
-        let disconnected = JsFuture::from(
-            js::disconnect().map_err(|err| JsError::new(&format!("disconnect failed: {err:?}")))?
-        )
-        .await
-        .map_err(|err| JsError::new(&format!("disconnect failed: {err:?}")))?;
-
-        disconnected
+        JsFuture::from(js::disconnect().into_js_error("disconnect failed")?)
+            .await
+            .into_js_error("disconnect failed")?
             .as_bool()
             .ok_or_else(|| JsError::new("disconnect failed"))
     }
@@ -81,18 +78,17 @@ impl CsprClick {
 
         let transaction_json = transaction
             .to_json_string()
-            .map_err(|err| JsError::new(&format!("Failed to serialize transaction: {err:?}")))?;
+            .into_js_error("Failed to serialize transaction")?;
 
-        let sign = JsFuture::from(
-            js::sign(&transaction_json, &public_key.to_string())
-                .map_err(|err| JsError::new(&format!("Signing failed: {err:?}")))?
-        )
-        .await
-        .map_err(|err| JsError::new(&format!("Signing failed: {err:?}")))?;
+        let promise =
+            js::sign(&transaction_json, &public_key).into_js_error("Failed to sign transaction")?;
+        let sign = JsFuture::from(promise)
+            .await
+            .into_js_error("Signing failed")?;
 
         let result: SignResult = sign
             .into_serde()
-            .map_err(|err| JsError::new(&format!("Deserialize signature failed: {err:?}")))?;
+            .into_js_error("Deserialize signature failed")?;
 
         if result.is_cancelled {
             return Err(JsError::new(&format!(
@@ -102,18 +98,14 @@ impl CsprClick {
         let signature = String::from_utf8(result.signature).unwrap_or_default();
         transaction
             .add_signature(&public_key.to_string(), &signature)
-            .map_err(|e| JsError::new(&format!("Failed to add signature to transaction: {e:?}")))
+            .into_js_error("Failed to add signature to transaction")
     }
 
     pub async fn get_active_public_key() -> Result<String, JsError> {
-        let public_key = JsFuture::from(
-            js::get_active_public_key()
-                .map_err(|err| JsError::new(&format!("getActivePublicKey failed: {err:?}")))?
-        )
-        .await
-        .map_err(|err| JsError::new(&format!("getActivePublicKey failed: {err:?}")))?;
-
-        let public_key = public_key
+        let promise = js::get_active_public_key().into_js_error("getActivePublicKey failed")?;
+        let public_key = JsFuture::from(promise)
+            .await
+            .into_js_error("getActivePublicKey failed")?
             .as_string()
             .ok_or_else(|| JsError::new("getActivePublicKey failed"))?;
 
@@ -155,48 +147,65 @@ impl CsprClick {
 
         let transaction_json = transaction
             .to_json_string()
-            .map_err(|err| JsError::new(&format!("Failed to serialize transaction: {err:?}")))?;
+            .into_js_error("Failed to serialize transaction")?;
 
-        let sent = JsFuture::from(
-            js::send(
-                &transaction_json,
-                &public_key,
-                on_status_update.as_ref().unchecked_ref()
-            )
-            .map_err(|err| JsError::new(&format!("Sending failed: {err:?}")))?
+        let promise = js::send(
+            &transaction_json,
+            &public_key,
+            on_status_update.as_ref().unchecked_ref()
         )
-        .await
-        .map_err(|err| JsError::new(&format!("Sending failed: {err:?}")))?;
-        let result = sent.into_serde::<TransactionResult>().map_err(|err| {
-            JsError::new(&format!(
-                "Failed to deserialize send transaction result: {err:?}"
-            ))
-        })?;
+        .into_js_error("Failed to send transaction")?;
+        let result = JsFuture::from(promise)
+            .await
+            .into_js_error("Sending transaction failed")?
+            .into_serde::<TransactionResult>()
+            .into_js_error("Deserialize transaction result failed")?;
         on_status_update.forget(); // Prevent the closure from being dropped
         Ok(result)
     }
 
     pub async fn get_active_account() -> Result<AccountType, JsError> {
-        JsFuture::from(
-            js::get_active_account()
-                .map_err(|err| JsError::new(&format!("getActiveAccount failed: {err:?}")))?
-        )
-        .await
-        .map_err(|err| JsError::new(&format!("getActiveAccount failed: {err:?}")))?
-        .into_serde()
-        .map_err(|err| JsError::new(&format!("Deserialize account failed: {err:?}")))
+        let json = json!({ "withBalance": true });
+        let options = JsValue::from_serde(&json).into_js_error("Failed to serialize options")?;
+        let promise = js::get_active_account(&options).into_js_error("getActiveAccount failed")?;
+        JsFuture::from(promise)
+            .await
+            .into_js_error("getActiveAccount failed")?
+            .into_serde()
+            .into_js_error("Deserialize account failed")
     }
 
     pub async fn is_unlocked(provider: &str) -> Result<bool, JsError> {
-        let unlocked = JsFuture::from(
-            js::is_unlocked(provider)
-                .map_err(|err| JsError::new(&format!("isUnlocked failed: {err:?}")))?
-        )
-        .await
-        .map_err(|err| JsError::new(&format!("isUnlocked failed: {err:?}")))?;
-
-        unlocked
+        let promise = js::is_unlocked(provider).into_js_error("isUnlocked failed")?;
+        JsFuture::from(promise)
+            .await
+            .into_js_error("isUnlocked failed")?
             .as_bool()
             .ok_or_else(|| JsError::new("isUnlocked failed"))
+    }
+
+    pub async fn sign_in_with_account(account: AccountType) -> Result<AccountType, JsError> {
+        JsFuture::from(js::sign_in_with_account(account).into_js_error("signInWithAccount failed")?)
+            .await
+            .into_js_error("signInWithAccount failed")?
+            .into_serde()
+            .into_js_error("Deserialize account failed")
+    }
+}
+
+// Trait for converting errors to JsError with context
+trait IntoJsError<T> {
+    fn into_js_error(self, context: &str) -> Result<T, JsError>;
+}
+
+impl<T, E: std::fmt::Debug> IntoJsError<T> for Result<T, E> {
+    fn into_js_error(self, context: &str) -> Result<T, JsError> {
+        self.map_err(|err| JsError::new(&format!("{}: {err:?}", context)))
+    }
+}
+
+impl<T> IntoJsError<T> for Option<T> {
+    fn into_js_error(self, context: &str) -> Result<T, JsError> {
+        self.ok_or_else(|| JsError::new(context))
     }
 }
