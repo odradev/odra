@@ -1,5 +1,6 @@
 use crate::{
-    types::{Address, PublicKey, SignatureResponse, Transaction}, wallet::js::{casper_wallet_provider, CasperWalletProvider}
+    types::{Address, PublicKey, SignatureResponse, Transaction},
+    wallet::js::{casper_wallet_provider, CasperWalletProvider}
 };
 use gloo_utils::format::JsValueSerdeExt;
 use wasm_bindgen::prelude::*;

@@ -2,7 +2,10 @@ use gloo_utils::format::JsValueSerdeExt;
 use serde_json::Value;
 use wasm_bindgen::{JsError, JsValue};
 
-use crate::cspr_click::callbacks::{ACCOUNT, CALLBACKS};
+use crate::cspr_click::{
+    callbacks::{ACCOUNT, CALLBACKS},
+    types::WrappedAccountInfo
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Event {
@@ -29,16 +32,33 @@ impl Event {
     pub fn closure(self) -> wasm_bindgen::closure::Closure<dyn Fn(JsValue)> {
         wasm_bindgen::closure::Closure::<dyn Fn(JsValue)>::new(move |evt: JsValue| {
             self.log(&evt);
-            CALLBACKS.with(|callbacks| {
-                if let Some(ref cb) = callbacks.borrow().events.get(&self) {
-                    let _ = cb.call1(&JsValue::NULL, &evt);
+            let account = evt.into_serde::<WrappedAccountInfo>();
+            if let Ok(account) = account {
+                CALLBACKS.with(|callbacks| {
+                    if let Some(ref cb) = callbacks.borrow().events.get(&self) {
+                        let _ = cb.call1(&JsValue::NULL, &JsValue::from(account.account));
+                        ACCOUNT.with(|account| {
+                            *account.borrow_mut() = evt;
+                        });
+                    } else {
+                        crate::js::log(&format!("No callback registered for event: {:?}", self));
+                    }
+                });
+            } else {
+                if self != Event::SignedOut {
                     ACCOUNT.with(|account| {
-                        *account.borrow_mut() = evt;
+                        *account.borrow_mut() = JsValue::NULL;
                     });
-                } else {
-                    crate::js::log(&format!("No callback registered for event: {:?}", self));
                 }
-            });
+                CALLBACKS.with(|callbacks| {
+                    if let Some(ref cb) = callbacks.borrow().events.get(&self) {
+                        let _ = cb.call0(&JsValue::NULL);
+                    } else {
+                        crate::js::log(&format!("No callback registered for event: {:?}", self));
+                    }
+                });
+                crate::js::log(&format!("Failed to parse account info: {evt:?}"));
+            }
         })
     }
 

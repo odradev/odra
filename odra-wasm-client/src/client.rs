@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    cspr_click::{get_account, AccountType, CsprClick, TransactionResult},
+    cspr_click::{get_account, AccountInfo, CsprClick, TransactionResult},
     types::{
         Address as WasmAddress, IntoWasmValue, PublicKey, TransactionHash as WasmTransactionHash,
         Verbosity, U512 as WasmU512
@@ -127,9 +127,19 @@ impl OdraWasmClient {
             .map(Into::into)
     }
 
-    #[wasm_bindgen(js_name = "connect")]
-    pub async fn request_connection(&self) -> Result<(), JsError> {
+    // #[wasm_bindgen(js_name = "connect")]
+    // pub async fn sign_in(&self) -> Result<(), JsError> {
+    //     CsprClick::c().await
+    // }
+
+    #[wasm_bindgen(js_name = "signIn")]
+    pub async fn sign_in(&self) -> Result<(), JsError> {
         CsprClick::sign_in().await
+    }
+
+    #[wasm_bindgen(js_name = "signOut")]
+    pub async fn sign_out(&self) -> Result<(), JsError> {
+        CsprClick::sign_out().await
     }
 
     #[wasm_bindgen(js_name = "disconnect")]
@@ -140,8 +150,8 @@ impl OdraWasmClient {
     #[wasm_bindgen(js_name = "signInWithAccount")]
     pub async fn sign_in_with_account(
         &self,
-        account: &AccountType
-    ) -> Result<AccountType, JsError> {
+        account: &AccountInfo
+    ) -> Result<AccountInfo, JsError> {
         CsprClick::sign_in_with_account(account.clone()).await
     }
 
@@ -156,13 +166,13 @@ impl OdraWasmClient {
     }
 
     #[wasm_bindgen(js_name = "getActiveAccount")]
-    pub async fn get_active_account(&self) -> Result<AccountType, JsError> {
+    pub async fn get_active_account(&self) -> Result<AccountInfo, JsError> {
         CsprClick::get_active_account().await
     }
 
     #[wasm_bindgen(js_name = "switchAccount")]
-    pub async fn request_switch_account(&self) -> Result<bool, JsError> {
-        todo!("Not implemented yet")
+    pub async fn request_switch_account(&self) -> Result<(), JsError> {
+        CsprClick::switch_account().await
     }
 
     #[wasm_bindgen(js_name = "signMessage")]
@@ -193,9 +203,7 @@ impl OdraWasmClient {
     }
 
     fn caller_and_public_key(&self) -> Result<(Address, String), JsError> {
-        let public_key = get_account()?.public_key.ok_or_else(|| {
-            JsError::new("No active account found. Please connect to the wallet.")
-        })?;
+        let public_key = get_account()?.public_key;
         let caller = PublicKey::new(&public_key)
             .map_err(|e| JsError::new(&e.to_string()))
             .map(Into::<WasmAddress>::into)?

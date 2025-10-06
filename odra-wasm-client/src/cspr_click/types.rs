@@ -4,7 +4,7 @@ use casper_types::CLType;
 use gloo_utils::format::JsValueSerdeExt;
 use wasm_bindgen::prelude::*;
 
-use crate::types::Transaction;
+use crate::types::{Address, Transaction, U512};
 
 const USER_ERR_PREFIX: &str = "User error: ";
 
@@ -21,7 +21,7 @@ pub struct SignResult {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[wasm_bindgen(getter_with_clone)]
-pub struct AccountType {
+pub struct AccountInfo {
     #[wasm_bindgen(readonly)]
     pub provider: String,
     #[wasm_bindgen(readonly, js_name = "providerSupports")]
@@ -30,23 +30,40 @@ pub struct AccountType {
     #[wasm_bindgen(readonly, js_name = "csprName")]
     pub cspr_name: Option<String>,
     #[wasm_bindgen(readonly, js_name = "publicKey")]
-    pub public_key: Option<String>,
+    pub public_key: String,
     #[wasm_bindgen(readonly, js_name = "connectedAt")]
-    pub connected_at: u64,
+    pub connected_at: i64,
     #[wasm_bindgen(readonly)]
     pub token: Option<String>,
     custom: Option<serde_json::Value>,
     #[wasm_bindgen(readonly)]
-    pub balance: Option<String>,
+    balance: Option<String>,
     #[wasm_bindgen(readonly, js_name = "liquidBalance")]
     pub liquid_balance: Option<String>,
     #[wasm_bindgen(readonly)]
     pub logo: Option<String>
 }
 
+#[wasm_bindgen]
+impl AccountInfo {
+    #[wasm_bindgen(getter)]
+    pub fn address(&self) -> Result<Address, JsError> {
+        Address::from_public_key(&self.public_key)
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn balance(&self) -> U512 {
+        self.balance
+            .as_deref()
+            .and_then(|b| casper_types::U512::from_dec_str(b).ok())
+            .map(Into::into)
+            .unwrap_or_else(|| casper_types::U512::zero().into())
+    }
+}
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct WrappedAccountType {
-    pub account: AccountType
+pub struct WrappedAccountInfo {
+    pub account: AccountInfo
 }
 
 #[derive(Debug, Clone, Copy, serde::Serialize, PartialEq, Eq)]

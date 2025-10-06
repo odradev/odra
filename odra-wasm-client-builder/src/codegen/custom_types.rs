@@ -252,7 +252,7 @@ fn field_init(member: &StructMember) -> proc_macro2::TokenStream {
         return parse_quote!(#field_name);
     }
     quote::quote! {
-        #field_name: odra_wasm_client::types::IntoOdraValue::to_wasm_value(#field_name)?
+        #field_name: odra_wasm_client::types::IntoOdraValue::into_odra_value(#field_name)?
     }
 }
 
@@ -283,7 +283,7 @@ fn setter_code(member: &StructMember) -> proc_macro2::TokenStream {
     quote::quote! {
         #[wasm_bindgen(setter)]
         pub fn #ident(&mut self, value: #ty) {
-            self.#field_name = odra_wasm_client::types::IntoOdraValue::to_wasm_value(value).unwrap();
+            self.#field_name = odra_wasm_client::types::IntoOdraValue::into_odra_value(value).unwrap();
         }
     }
 }
