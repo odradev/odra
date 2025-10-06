@@ -6,7 +6,7 @@ use crate::{
     cspr_click::{
         callbacks::{ACCOUNT, CALLBACKS},
         event::Event,
-        types::{add_odra_error_value, AccountType, SignResult, TransactionStatus, WrappedAccountType}
+        types::{AccountType, SignResult, TransactionStatus, WrappedAccountType}
     },
     types::{Address, PublicKey, Transaction}
 };
@@ -15,6 +15,8 @@ pub(crate) mod callbacks;
 mod event;
 pub(crate) mod js;
 mod types;
+
+pub use types::TransactionResult;
 
 macro_rules! register_cspr_event {
     ($ev:expr, $closure:ident) => {
@@ -131,24 +133,22 @@ impl CsprClick {
     pub async fn send_transaction(
         transaction: Transaction,
         public_key: String
-    ) -> Result<JsValue, JsError> {
+    ) -> Result<TransactionResult, JsError> {
         let on_status_update =
-            Closure::<dyn Fn(JsValue, JsValue)>::new(move |status: JsValue, data: JsValue| {
-                let data = add_odra_error_value(&data).unwrap_or(data);
-                if let Ok(status) =
-                    TransactionStatus::from_str(&status.as_string().unwrap_or_default())
-                {
+            Closure::<dyn Fn(JsValue, JsValue)>::new(move |status: JsValue, result: JsValue| {
+                let parsed_result = result.into_serde::<TransactionResult>();
+                let status = status.into_serde::<TransactionStatus>();
+                if let (Ok(status), Ok(parsed_result)) = (status, parsed_result) {
                     CALLBACKS.with(|callbacks| {
                         let _ = callbacks.borrow().transaction.call2(
                             &JsValue::NULL,
                             &JsValue::from(status),
-                            &data
+                            &JsValue::from(parsed_result)
                         );
                     });
                 } else {
                     crate::js::log(&format!(
-                        "Failed to parse transaction status from: {:?}",
-                        status
+                        "Failed to parse transaction status update {result:?}"
                     ));
                 }
             });
@@ -167,9 +167,13 @@ impl CsprClick {
         )
         .await
         .map_err(|err| JsError::new(&format!("Sending failed: {err:?}")))?;
-
+        let result = sent.into_serde::<TransactionResult>().map_err(|err| {
+            JsError::new(&format!(
+                "Failed to deserialize send transaction result: {err:?}"
+            ))
+        })?;
         on_status_update.forget(); // Prevent the closure from being dropped
-        Ok(sent)
+        Ok(result)
     }
 
     pub async fn get_active_account() -> Result<AccountType, JsError> {
@@ -196,4 +200,3 @@ impl CsprClick {
             .ok_or_else(|| JsError::new("isUnlocked failed"))
     }
 }
-

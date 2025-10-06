@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    cspr_click::{get_account, CsprClick},
+    cspr_click::{get_account, CsprClick, TransactionResult},
     types::{
         Address as WasmAddress, IntoWasmValue, PublicKey, TransactionHash as WasmTransactionHash,
         Verbosity, U512 as WasmU512
@@ -203,13 +203,11 @@ impl OdraWasmClient {
         contract_address: Address,
         entry_point: &str,
         runtime_args: RuntimeArgs
-    ) -> Result<(), JsError> {
+    ) -> Result<TransactionResult, JsError> {
         let (caller, public_key) = self.caller_and_public_key()?;
         let transaction =
             self.new_call_transaction(caller, contract_address, entry_point, runtime_args)?;
-        CsprClick::send_transaction(transaction.into(), public_key)
-            .await
-            .map(|_| ())
+        CsprClick::send_transaction(transaction.into(), public_key).await
     }
 
     #[allow(deprecated)]
@@ -255,7 +253,7 @@ impl OdraWasmClient {
         entry_point: &str,
         runtime_args: RuntimeArgs,
         attached_value: U512
-    ) -> Result<(), JsError> {
+    ) -> Result<TransactionResult, JsError> {
         let (caller, public_key) = self.caller_and_public_key()?;
         let hash = contract_address
             .as_contract_package_hash()
@@ -268,10 +266,8 @@ impl OdraWasmClient {
             ARG_ATTACHED_VALUE => attached_value,
             ARG_AMOUNT => attached_value,
         };
-        let transaction: Transaction = self.new_proxy_transaction(caller, args)?;
-        CsprClick::send_transaction(transaction.into(), public_key)
-            .await
-            .map(|_| ())
+        let transaction = self.new_proxy_transaction(caller, args)?;
+        CsprClick::send_transaction(transaction.into(), public_key).await
     }
 }
 

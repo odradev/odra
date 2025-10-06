@@ -14,7 +14,6 @@ pub struct CsprClickCallbacks {
 impl CsprClickCallbacks {
     #[wasm_bindgen(js_name = "onSignedIn")]
     pub fn set_on_signed_in_callback(callback: js_sys::Function) {
-        crate::js::log("Setting onSignedIn callback");
         with_callbacks(|callbacks| {
             callbacks.events.insert(Event::SignedIn, callback);
         });
@@ -22,7 +21,6 @@ impl CsprClickCallbacks {
 
     #[wasm_bindgen(js_name = "onSwitchedAccount")]
     pub fn set_on_switched_account_callback(callback: js_sys::Function) {
-        crate::js::log("Setting onSwitchedAccount callback");
         with_callbacks(|callbacks| {
             callbacks.events.insert(Event::SwitchAccount, callback);
         });
@@ -30,7 +28,6 @@ impl CsprClickCallbacks {
 
     #[wasm_bindgen(js_name = "onSignedOut")]
     pub fn set_on_signed_out_callback(callback: js_sys::Function) {
-        crate::js::log("Setting onSignedOut callback");
         with_callbacks(|callbacks| {
             callbacks.events.insert(Event::SignedOut, callback);
         });
@@ -38,7 +35,6 @@ impl CsprClickCallbacks {
 
     #[wasm_bindgen(js_name = "onTransactionStatusUpdate")]
     pub fn set_on_transaction_update_callback(callback: js_sys::Function) {
-        crate::js::log("Setting onTransactionUpdate callback");
         with_callbacks(|callbacks| {
             callbacks.transaction = callback;
         });

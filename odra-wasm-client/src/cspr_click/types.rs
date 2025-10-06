@@ -1,5 +1,7 @@
+use std::collections::HashMap;
+
+use casper_types::CLType;
 use gloo_utils::format::JsValueSerdeExt;
-use serde_json::Value;
 use wasm_bindgen::prelude::*;
 
 use crate::types::Transaction;
@@ -20,16 +22,25 @@ pub struct SignResult {
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[wasm_bindgen(getter_with_clone)]
 pub struct AccountType {
+    #[wasm_bindgen(readonly)]
     pub provider: String,
+    #[wasm_bindgen(readonly, js_name = "providerSupports")]
     #[serde(rename = "providerSupports")]
     pub provider_supports: Option<Vec<String>>,
+    #[wasm_bindgen(readonly, js_name = "csprName")]
     pub cspr_name: Option<String>,
+    #[wasm_bindgen(readonly, js_name = "publicKey")]
     pub public_key: Option<String>,
+    #[wasm_bindgen(readonly, js_name = "connectedAt")]
     pub connected_at: u64,
+    #[wasm_bindgen(readonly)]
     pub token: Option<String>,
     custom: Option<serde_json::Value>,
+    #[wasm_bindgen(readonly)]
     pub balance: Option<String>,
+    #[wasm_bindgen(readonly, js_name = "liquidBalance")]
     pub liquid_balance: Option<String>,
+    #[wasm_bindgen(readonly)]
     pub logo: Option<String>
 }
 
@@ -38,7 +49,7 @@ pub struct WrappedAccountType {
     pub account: AccountType
 }
 
-
+#[derive(Debug, Clone, Copy, serde::Serialize, PartialEq, Eq)]
 #[wasm_bindgen]
 pub enum TransactionStatus {
     /// The transaction has been signed and successfully deployed to a Casper node.
@@ -57,6 +68,16 @@ pub enum TransactionStatus {
     PING
 }
 
+impl<'de> serde::Deserialize<'de> for TransactionStatus {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>
+    {
+        let s = String::deserialize(deserializer)?;
+        TransactionStatus::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
 impl TransactionStatus {
     pub fn from_str(status: &str) -> Result<Self, String> {
         match status {
@@ -72,33 +93,349 @@ impl TransactionStatus {
     }
 }
 
-// fn jsvalue_to_json_string(value: &JsValue) -> Result<String, Box<dyn std::error::Error>> {
-//     let mut  serde_value: Value = value.into_serde()?;
-//     serde_value
-//     Ok(serde_json::to_string(&serde_value)?)
-// }
+#[derive(Debug, Clone, serde::Serialize)]
+#[wasm_bindgen(getter_with_clone)]
+pub struct TransactionResult {
+    #[wasm_bindgen(readonly)]
+    pub status: Option<TransactionStatus>,
+    #[wasm_bindgen(readonly, js_name = "isCancelled")]
+    #[serde(rename = "cancelled")]
+    pub is_cancelled: bool,
+    #[wasm_bindgen(readonly, js_name = "deployHash")]
+    #[serde(rename = "deployHash")]
+    pub deploy_hash: Option<String>,
+    #[wasm_bindgen(readonly)]
+    pub error: Option<String>,
+    #[wasm_bindgen(readonly, js_name = "errorCode")]
+    pub error_code: Option<u16>,
+    #[wasm_bindgen(readonly, js_name = "errorData")]
+    #[serde(rename = "errorData")]
+    pub error_data: Option<String>,
+    #[wasm_bindgen(readonly, js_name = "transactionHash")]
+    #[serde(rename = "transactionHash")]
+    pub transaction_hash: Option<String>,
+    #[wasm_bindgen(readonly)]
+    #[serde(rename = "csprCloudTransaction")]
+    pub data: Option<TransactionData>
+}
 
-pub(super) fn add_odra_error_value(js_value: &JsValue) -> Result<JsValue, JsError> {
-    let mut value: Value = js_value.into_serde()?;
-    let error = value
-        .as_object()
-        .map(|obj| obj.get("error").map(|e| e.as_str()))
-        .flatten()
-        .flatten();
-    if let Some(error) = error {
-        let odra_err = if error == "Out of gas error" {
-            Some(odra_core::prelude::ExecutionError::OutOfGas.code())
-        } else {
-            error
-                .strip_prefix(USER_ERR_PREFIX)
-                .and_then(|s| s.parse().ok())
-        };
-        if let Some(code) = odra_err {
-            if let Some(obj) = value.as_object_mut() {
-                obj.insert("odraErrorCode".to_string(), Value::Number(code.into()));
+impl<'de> serde::Deserialize<'de> for TransactionResult {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>
+    {
+        use serde::de::{MapAccess, Visitor};
+        use std::fmt;
+
+        struct TransactionResultVisitor;
+
+        impl<'de> Visitor<'de> for TransactionResultVisitor {
+            type Value = TransactionResult;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a TransactionResult object")
+            }
+
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+            where
+                A: MapAccess<'de>
+            {
+                let mut status: Option<TransactionStatus> = None;
+                let mut is_cancelled: Option<bool> = None;
+                let mut deploy_hash: Option<String> = None;
+                let mut error: Option<String> = None;
+                let mut error_data: Option<String> = None;
+                let mut transaction_hash: Option<String> = None;
+                let mut data: Option<TransactionData> = None;
+
+                while let Some(key) = map.next_key::<String>()? {
+                    match key.as_str() {
+                        "status" => {
+                            status = map.next_value()?;
+                        }
+                        "cancelled" => {
+                            is_cancelled = Some(map.next_value()?);
+                        }
+                        "deployHash" => {
+                            deploy_hash = map.next_value()?;
+                        }
+                        "error" => {
+                            error = map.next_value()?;
+                        }
+                        "errorData" => {
+                            error_data = map.next_value()?;
+                        }
+                        "transactionHash" => {
+                            transaction_hash = map.next_value()?;
+                        }
+                        "csprCloudTransaction" => {
+                            data = map.next_value()?;
+                        }
+                        _ => {
+                            // Ignore unknown fields
+                            let _ = map.next_value::<serde_json::Value>()?;
+                        }
+                    }
+                }
+
+                // let status = status.ok_or_else(|| serde::de::Error::missing_field("status"))?;
+                let is_cancelled =
+                    is_cancelled.ok_or_else(|| serde::de::Error::missing_field("cancelled"))?;
+
+                let error_code = if let Some(ref error_str) = error {
+                    if error_str == "Out of gas error" {
+                        Some(odra_core::prelude::ExecutionError::OutOfGas.code())
+                    } else if let Some(stripped) = error_str.strip_prefix(USER_ERR_PREFIX) {
+                        stripped.parse().ok()
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
+
+                Ok(TransactionResult {
+                    status,
+                    is_cancelled,
+                    deploy_hash,
+                    error,
+                    error_data,
+                    transaction_hash,
+                    data,
+                    error_code
+                })
             }
         }
+
+        deserializer.deserialize_map(TransactionResultVisitor)
     }
-    JsValue::from_serde(&value)
-        .map_err(|e| JsError::new(&format!("Failed to serialize value: {}", e)))
+}
+
+#[wasm_bindgen(getter_with_clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct TransactionData {
+    args: HashMap<String, ArgValue>,
+    #[wasm_bindgen(readonly, js_name = "blockHash")]
+    pub block_hash: String,
+    #[wasm_bindgen(readonly, js_name = "blockHeight")]
+    pub block_height: u64,
+    #[wasm_bindgen(readonly, js_name = "callerHash")]
+    pub caller_hash: String,
+    #[wasm_bindgen(readonly, js_name = "callerPublicKey")]
+    pub caller_public_key: Option<String>,
+    #[wasm_bindgen(readonly, js_name = "consumedGas")]
+    pub consumed_gas: String,
+    #[wasm_bindgen(readonly, js_name = "contractHash")]
+    pub contract_hash: String,
+    #[wasm_bindgen(readonly, js_name = "contractPackageHash")]
+    pub contract_package_hash: String,
+    #[wasm_bindgen(readonly)]
+    pub cost: String,
+    #[wasm_bindgen(readonly, js_name = "deployHash")]
+    pub deploy_hash: String,
+    #[wasm_bindgen(readonly, js_name = "entryPointId")]
+    pub entry_point_id: u64,
+    #[wasm_bindgen(readonly, js_name = "errorMessage")]
+    pub error_message: Option<String>,
+    #[wasm_bindgen(readonly, js_name = "executionTypeId")]
+    pub execution_type_id: u64,
+    #[wasm_bindgen(readonly, js_name = "gasPriceLimit")]
+    pub gas_price_limit: u64,
+    #[wasm_bindgen(readonly, js_name = "isStandardPayment")]
+    pub is_standard_payment: bool,
+    #[wasm_bindgen(readonly, js_name = "paymentAmount")]
+    pub payment_amount: String,
+    #[wasm_bindgen(readonly, js_name = "pricingModeId")]
+    pub pricing_mode_id: u64,
+    #[wasm_bindgen(readonly, js_name = "refundAmount")]
+    pub refund_amount: String,
+    #[wasm_bindgen(readonly, js_name = "runtimeTypeId")]
+    pub runtime_type_id: u64,
+    #[wasm_bindgen(readonly)]
+    pub status: TransactionStatus,
+    #[wasm_bindgen(readonly)]
+    pub timestamp: String,
+    #[wasm_bindgen(readonly, js_name = "versionId")]
+    pub version_id: u64
+}
+
+#[wasm_bindgen]
+impl TransactionData {
+    #[wasm_bindgen(getter)]
+    pub fn args(&self) -> JsValue {
+        JsValue::from_serde(&self.args).unwrap_or(JsValue::NULL)
+    }
+}
+
+#[wasm_bindgen()]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ArgValue {
+    cl_type: CLType,
+    parsed: Option<String>
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const TRANSACTION_RESULT_TEST_DATA: &str = r#"
+{
+    "cancelled": false,
+    "transactionHash": "94429811f595902bb55e1b132a1228e58f831023f2b8d6f4c48919c7d3e51f23",
+    "error": null,
+    "errorData": null,
+    "deployHash": null,
+    "status": "processed",
+    "csprCloudTransaction": {
+        "deploy_hash": "94429811f595902bb55e1b132a1228e58f831023f2b8d6f4c48919c7d3e51f23",
+        "block_hash": "4fd53aa64f6b37e342a848913dfda6f29b443cdd724a8efd5c478c850fc2a5e3",
+        "block_height": 5714663,
+        "caller_public_key": null,
+        "caller_hash": "5e3725bec4389ea63151903f5c9005233d19a569c5e593e5bbd83b05714f7364",
+        "execution_type_id": 4,
+        "contract_package_hash": "8bc2e4b85757651812f01bc65a37d5df221ac5110254a77ad29d07017110a675",
+        "contract_hash": "575bd3677220fe8ff1915c588bda07fd7959671b773bb10ae1f387ca86d41789",
+        "entry_point_id": 2658797,
+        "args": {
+            "amount": {
+                "cl_type": "U256",
+                "parsed": "1000000000"
+            },
+            "id": {
+                "cl_type": {
+                    "Option": "U64"
+                },
+                "parsed": null
+            },
+            "target": {
+                "cl_type": {
+                    "ByteArray": 32
+                },
+                "parsed": "536345751b7c6c6299d5ef10862d76736ed062bc32c1dabcd1179c06469d93ca"
+            }
+        },
+        "payment_amount": "3000000000",
+        "refund_amount": "38057400",
+        "version_id": 2,
+        "pricing_mode_id": 0,
+        "gas_price_limit": 5,
+        "is_standard_payment": true,
+        "runtime_type_id": 1,
+        "cost": "3000000000",
+        "consumed_gas": "2949256800",
+        "error_message": null,
+        "status": "processed",
+        "timestamp": "2025-10-06T06:13:50.815Z"
+    }
+}
+"#;
+
+    #[test]
+    fn test_deserialize_transaction_result() {
+        let result: TransactionResult =
+            serde_json::from_str(TRANSACTION_RESULT_TEST_DATA).expect("Deserialization failed");
+        assert_eq!(result.status, Some(TransactionStatus::PROCESSED));
+        assert_eq!(result.is_cancelled, false);
+        assert_eq!(
+            result.transaction_hash.as_deref(),
+            Some("94429811f595902bb55e1b132a1228e58f831023f2b8d6f4c48919c7d3e51f23")
+        );
+        assert!(result.error.is_none());
+        assert!(result.error_data.is_none());
+        assert!(result.data.is_some());
+        assert_eq!(result.error_code, None); // No error, so error_code should be None
+        let data = result.data.unwrap();
+        assert_eq!(data.block_height, 5714663);
+        assert_eq!(data.args.get("amount").unwrap().cl_type, CLType::U256);
+    }
+
+    #[test]
+    fn test_deserialize_transaction_result_with_out_of_gas_error() {
+        let test_data = r#"
+{
+    "cancelled": false,
+    "transactionHash": null,
+    "error": "Out of gas error",
+    "errorData": null,
+    "deployHash": null,
+    "status": "error",
+    "csprCloudTransaction": null
+}
+"#;
+        let result: TransactionResult =
+            serde_json::from_str(test_data).expect("Deserialization failed");
+        assert_eq!(result.status, Some(TransactionStatus::ERROR));
+        assert_eq!(result.error.as_deref(), Some("Out of gas error"));
+        assert_eq!(
+            result.error_code,
+            Some(odra_core::prelude::ExecutionError::OutOfGas.code())
+        );
+    }
+
+    #[test]
+    fn test_deserialize_transaction_result_with_user_error() {
+        let test_data = r#"
+{
+    "cancelled": false,
+    "transactionHash": null,
+    "error": "User error: 65001",
+    "errorData": null,
+    "deployHash": null,
+    "status": "error",
+    "csprCloudTransaction": null
+}
+"#;
+        let result: TransactionResult =
+            serde_json::from_str(test_data).expect("Deserialization failed");
+        assert_eq!(result.status, Some(TransactionStatus::ERROR));
+        assert_eq!(result.error.as_deref(), Some("User error: 65001"));
+        assert_eq!(result.error_code, Some(65001));
+    }
+
+    #[test]
+    fn test_deserialize_transaction_result_with_other_error() {
+        let test_data = r#"
+{
+    "cancelled": false,
+    "transactionHash": null,
+    "error": "Some other error",
+    "errorData": null,
+    "deployHash": null,
+    "status": "error",
+    "csprCloudTransaction": null
+}
+"#;
+        let result: TransactionResult =
+            serde_json::from_str(test_data).expect("Deserialization failed");
+        assert_eq!(result.status, Some(TransactionStatus::ERROR));
+        assert_eq!(result.error.as_deref(), Some("Some other error"));
+        assert_eq!(result.error_code, None); // Unknown error types default to None
+    }
+
+    #[test]
+    fn aa() {
+        let test_data = r#"
+{
+    "cancelled": false,
+    "transactionHash": "67b6c0fcbdf2d5ece86ca90dff3b64f30b9c3a3cb4a80a24ae4ee862f0aa893d",
+    "error": null,
+    "errorData": null,
+    "deployHash": null,
+    "status": null,
+    "csprCloudTransaction": null
+}
+"#;
+        let result: TransactionResult =
+            serde_json::from_str(test_data).expect("Deserialization failed");
+        assert_eq!(result.status, None);
+        assert_eq!(result.is_cancelled, false);
+        assert_eq!(
+            result.transaction_hash.as_deref(),
+            Some("67b6c0fcbdf2d5ece86ca90dff3b64f30b9c3a3cb4a80a24ae4ee862f0aa893d")
+        );
+        assert!(result.error.is_none());
+        assert!(result.error_data.is_none());
+        assert!(result.data.is_none());
+        assert_eq!(result.error_code, None); // No error, so error_code should be None
+    }
 }
