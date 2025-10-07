@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use casper_types::{CLType, Transaction};
 use gloo_utils::format::JsValueSerdeExt;
+use serde_json::Value;
 use wasm_bindgen::prelude::*;
 
 use crate::types::{Address, U512};
@@ -33,7 +34,7 @@ impl SignResult {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-#[wasm_bindgen(getter_with_clone)]
+#[wasm_bindgen(getter_with_clone, inspectable)]
 pub struct AccountInfo {
     #[wasm_bindgen(readonly)]
     pub provider: String,
@@ -149,7 +150,7 @@ pub struct TransactionResult {
     pub error_code: Option<u16>,
     #[wasm_bindgen(readonly, js_name = "errorData")]
     #[serde(rename = "errorData")]
-    pub error_data: Option<String>,
+    error_data: Value,
     #[wasm_bindgen(readonly, js_name = "transactionHash")]
     #[serde(rename = "transactionHash")]
     pub transaction_hash: Option<String>,
@@ -183,7 +184,7 @@ impl<'de> serde::Deserialize<'de> for TransactionResult {
                 let mut is_cancelled: Option<bool> = None;
                 let mut deploy_hash: Option<String> = None;
                 let mut error: Option<String> = None;
-                let mut error_data: Option<String> = None;
+                let mut error_data: Option<Value> = None;
                 let mut transaction_hash: Option<String> = None;
                 let mut data: Option<TransactionData> = None;
 
@@ -217,7 +218,7 @@ impl<'de> serde::Deserialize<'de> for TransactionResult {
                     }
                 }
 
-                // let status = status.ok_or_else(|| serde::de::Error::missing_field("status"))?;
+                let error_data = error_data.unwrap_or( Value::Null);
                 let is_cancelled =
                     is_cancelled.ok_or_else(|| serde::de::Error::missing_field("cancelled"))?;
 
@@ -379,7 +380,7 @@ mod tests {
             Some("94429811f595902bb55e1b132a1228e58f831023f2b8d6f4c48919c7d3e51f23")
         );
         assert!(result.error.is_none());
-        assert!(result.error_data.is_none());
+        assert!(result.error_data.is_null());
         assert!(result.data.is_some());
         assert_eq!(result.error_code, None); // No error, so error_code should be None
         let data = result.data.unwrap();
@@ -451,7 +452,7 @@ mod tests {
     }
 
     #[test]
-    fn aa() {
+    fn test_null_status_and_error_data() {
         let test_data = r#"
 {
     "cancelled": false,
@@ -472,8 +473,36 @@ mod tests {
             Some("67b6c0fcbdf2d5ece86ca90dff3b64f30b9c3a3cb4a80a24ae4ee862f0aa893d")
         );
         assert!(result.error.is_none());
-        assert!(result.error_data.is_none());
+        assert_eq!(result.error_data, Value::Null);
         assert!(result.data.is_none());
         assert_eq!(result.error_code, None); // No error, so error_code should be None
+    }
+
+    #[test]
+    fn test_deserialize_transaction_result_with_error_data() {
+        let test_data = r#"
+{
+        "cancelled":false,
+        "deployHash":null,
+        "transactionHash":null,
+        "error":"Code: -32016, err: Invalid transaction",
+        "errorData":{
+            "code":-32016,
+            "message":"Invalid transaction",
+            "data":"the transaction was invalid: The transaction sent to the network had an invalid chain name"
+        },
+        "status":"error",
+        "csprCloudTransaction":null
+}
+"#;
+        let result: TransactionResult =
+            serde_json::from_str(test_data).expect("Deserialization failed");
+        assert_eq!(result.status, Some(TransactionStatus::ERROR));
+        assert_eq!(result.error.as_deref(), Some("Code: -32016, err: Invalid transaction"));
+        assert_eq!(result.error_data, serde_json::json!({
+            "code": -32016,
+            "message": "Invalid transaction",
+            "data": "the transaction was invalid: The transaction sent to the network had an invalid chain name"
+        }));
     }
 }
