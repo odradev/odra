@@ -1,5 +1,4 @@
 import init, {
-    Address,
     AccountInfo,
     WCSPRClient,
     OdraWasmClient,
@@ -11,12 +10,14 @@ import init, {
     DEFAULT_PAYMENT_AMOUNT,
     WCSPRErrors,
     CsprClickCallbacks,
-    getCurrentAccount
+    getCurrentAccount,
+    Contracts,
 } from "odra-wasm-client";
 
 // ---------- Types ----------
 let wcspr: WCSPRClient;
 let client: OdraWasmClient;
+let contracts: Contracts;
 
 interface Balances {
   nativeCSPR: U512;
@@ -246,21 +247,19 @@ async function run() {
     await init();
 
     // 2. Initialize the clients
-    const address = new Address("hash-8bc2e4b85757651812f01bc65a37d5df221ac5110254a77ad29d07017110a675");
+    contracts = await Contracts.fromPath('./contracts.json');
     client = new OdraWasmClient("https://testnet-rpc.odra.dev", "https://testnet-speculative-rpc.odra.dev", "casper-test");
-    wcspr = new WCSPRClient(client, address);
+    wcspr = new WCSPRClient(client, contracts.get("WCSPR").address);
 
     // 3. Set your custom callback
     CsprClickCallbacks.onSignedIn(async (accountInfo: AccountInfo) => {
-        console.log('Signed in handler:', accountInfo);
+        console.log('Signed in handler:');
+        console.log(accountInfo.toString());
         await onConnect(accountInfo);
     });
     CsprClickCallbacks.onSwitchedAccount(async (accountInfo: AccountInfo) => {
         console.log('Switched account handler:', accountInfo);
         await onConnect(accountInfo);
-    });
-    CsprClickCallbacks.onUnsolicitedAccountChange(async (accountInfo: AccountInfo) => {
-        console.log('Unsolicited account change handler:', accountInfo);
     });
     CsprClickCallbacks.onSignedOut(() => {
         console.log('Signed out handler');
