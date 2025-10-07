@@ -27,7 +27,7 @@ pub fn get_account() -> Result<AccountInfo, JsError> {
 }
 
 pub(crate) fn init() -> Result<(), JsValue> {
-    let window = web_sys::window().expect("no global `window` exists");
+    let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window object found"))?;
     let on_signed_in = Event::SignedIn.closure();
     let on_switched_account = Event::SwitchAccount.closure();
     let on_unsolicited_account_change = Event::UnsolicitedAccountChange.closure();

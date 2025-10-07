@@ -1,5 +1,3 @@
-#![allow(clippy::to_string_trait_impl)]
-
 use gloo_utils::format::JsValueSerdeExt;
 use std::ops::Deref;
 use wasm_bindgen::prelude::*;
@@ -7,7 +5,7 @@ use wasm_bindgen::prelude::*;
 macro_rules! impl_big_int {
     ($name:ident) => {
         #[derive(Debug, Clone, Copy, serde::Deserialize, serde::Serialize)]
-        #[wasm_bindgen]
+        #[wasm_bindgen(inspectable)]
         pub struct $name(casper_types::$name);
 
         #[wasm_bindgen]
@@ -154,6 +152,11 @@ macro_rules! impl_big_int {
             pub fn ge(&self, other: &Self) -> bool {
                 self.0 >= other.0
             }
+
+            #[wasm_bindgen(getter)]
+            pub fn value(&self) -> String {
+                self.to_string()
+            }
         }
 
         impl Deref for $name {
@@ -176,9 +179,9 @@ macro_rules! impl_big_int {
             }
         }
 
-        impl ToString for $name {
-            fn to_string(&self) -> String {
-                self.0.to_string()
+        impl core::fmt::Display for $name {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                write!(f, "{:?}", self.0)
             }
         }
     };

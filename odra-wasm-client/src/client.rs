@@ -62,7 +62,7 @@ pub fn default_payment() -> u64 {
 }
 
 /// A client for interacting with the Casper blockchain and CSPR.click.
-/// 
+///
 /// The `OdraWasmClient` struct provides methods to interact with the Casper blockchain,
 /// including querying balances, transferring tokens, and calling smart contract entry points.
 /// It also integrates with CSPR.click for account management and transaction signing.
