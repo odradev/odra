@@ -1,13 +1,11 @@
 use std::{
-    str::FromStr, sync::{Arc, Mutex, OnceLock}
+    str::FromStr,
+    sync::{Arc, Mutex, OnceLock}
 };
 
 use crate::{
     cspr_click::{get_account, AccountInfo, CsprClick, SignResult, TransactionResult},
-    types::{
-        Address as WasmAddress, IntoWasmValue, PublicKey,
-        Verbosity, U512 as WasmU512
-    },
+    types::{Address as WasmAddress, IntoWasmValue, PublicKey, Verbosity, U512 as WasmU512},
     PROXY_CALLER
 };
 use casper_client::{
@@ -19,8 +17,8 @@ use casper_types::{
     bytesrepr::{Bytes, FromBytes, ToBytes},
     execution::{Effects, TransformKindV2},
     runtime_args, CLValue, Deploy, Digest, ExecutableDeployItem, Key, PricingMode, RuntimeArgs,
-    SecretKey, StoredValue, TimeDiff, Timestamp, Transaction,
-    TransactionRuntimeParams, TransferTarget, URef, U512
+    SecretKey, StoredValue, TimeDiff, Timestamp, Transaction, TransactionRuntimeParams,
+    TransferTarget, URef, U512
 };
 use js_sys::Date;
 use odra_core::prelude::Address;
@@ -63,6 +61,11 @@ pub fn default_payment() -> u64 {
     2_500_000_000
 }
 
+/// A client for interacting with the Casper blockchain and CSPR.click.
+/// 
+/// The `OdraWasmClient` struct provides methods to interact with the Casper blockchain,
+/// including querying balances, transferring tokens, and calling smart contract entry points.
+/// It also integrates with CSPR.click for account management and transaction signing.
 #[derive(Clone)]
 #[wasm_bindgen]
 pub struct OdraWasmClient {
@@ -96,13 +99,6 @@ impl OdraWasmClient {
     #[wasm_bindgen(js_name = "getBalance")]
     pub async fn get_balance_js(&self, address: &WasmAddress) -> Result<WasmU512, JsError> {
         self.get_balance((*address).into()).await.map(Into::into)
-    }
-
-    /// Returns the balance of the specified address.
-    #[wasm_bindgen(js_name = "getCallerBalance")]
-    pub async fn get_caller_balance(&self) -> Result<WasmU512, JsError> {
-        let caller = CsprClick::caller().await?;
-        self.get_balance(caller.into()).await.map(Into::into)
     }
 
     /// Returns the balance of the specified address.
@@ -146,18 +142,18 @@ impl OdraWasmClient {
         CsprClick::sign_out().await
     }
 
-    /// Usually you will call signOut() method to close a user session. Use disconnect() when you want to clear 
-    /// the connection between the wallet and your app. Next time the user signs in with that wallet, he'll 
+    /// Usually you will call signOut() method to close a user session. Use disconnect() when you want to clear
+    /// the connection between the wallet and your app. Next time the user signs in with that wallet, he'll
     /// must grant connection permission again.
     #[wasm_bindgen(js_name = "disconnect")]
     pub async fn disconnect_from_site(&self) -> Result<bool, JsError> {
         CsprClick::disconnect().await
     }
 
-    /// Starts a session with the indicated account. This account must be one of the accounts returned 
+    /// Starts a session with the indicated account. This account must be one of the accounts returned
     /// in getKnownAccounts or getSignInOptions.
     ///
-    /// Note that no interaction with the account provider is required to sign-in. CSPR.click will check and restore 
+    /// Note that no interaction with the account provider is required to sign-in. CSPR.click will check and restore
     /// the connection if needed when there's a transaction or message to sign.
     #[wasm_bindgen(js_name = "signInWithAccount")]
     pub async fn sign_in_with_account(
@@ -179,7 +175,7 @@ impl OdraWasmClient {
         CsprClick::get_active_public_key().await
     }
 
-    /// Gets the account for the current session (if any). 
+    /// Gets the account for the current session (if any).
     #[wasm_bindgen(js_name = "getActiveAccount")]
     pub async fn get_active_account(&self) -> Result<AccountInfo, JsError> {
         CsprClick::get_active_account().await

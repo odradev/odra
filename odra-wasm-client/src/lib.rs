@@ -2,15 +2,14 @@ use wasm_bindgen::prelude::*;
 
 mod client;
 mod contracts;
-mod cspr_click;
+pub mod cspr_click;
 mod examples;
+mod extensions;
 pub mod js;
 pub mod types;
 mod utils;
-mod wallet;
 
 pub use client::OdraWasmClient;
-pub use wallet::CasperWallet;
 
 pub const PROXY_CALLER: &[u8; 52814] = include_bytes!("../proxy_caller_with_return.wasm");
 

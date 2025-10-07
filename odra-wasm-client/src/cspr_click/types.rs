@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use casper_types::CLType;
+use casper_types::{CLType, Transaction};
 use gloo_utils::format::JsValueSerdeExt;
 use wasm_bindgen::prelude::*;
 
-use crate::types::{Address, Transaction, U512};
+use crate::types::{Address, U512};
 
 const USER_ERR_PREFIX: &str = "User error: ";
 
@@ -16,8 +16,20 @@ pub struct SignResult {
     #[serde(rename = "signatureHex")]
     pub signature_hex: Option<String>,
     pub signature: Vec<u8>,
-    pub transaction: Option<Transaction>,
+    transaction: Option<Transaction>,
     pub error: Option<String>
+}
+
+#[wasm_bindgen]
+impl SignResult {
+    #[wasm_bindgen(getter)]
+    pub fn transaction(&self) -> JsValue {
+        if let Some(ref tx) = self.transaction {
+            JsValue::from_serde(tx).unwrap_or(JsValue::NULL)
+        } else {
+            JsValue::NULL
+        }
+    }
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -40,7 +52,7 @@ pub struct AccountInfo {
     #[wasm_bindgen(readonly)]
     balance: Option<String>,
     #[wasm_bindgen(readonly, js_name = "liquidBalance")]
-    pub liquid_balance: Option<String>,
+    liquid_balance: Option<String>,
     #[wasm_bindgen(readonly)]
     pub logo: Option<String>
 }
@@ -55,6 +67,15 @@ impl AccountInfo {
     #[wasm_bindgen(getter)]
     pub fn balance(&self) -> U512 {
         self.balance
+            .as_deref()
+            .and_then(|b| casper_types::U512::from_dec_str(b).ok())
+            .map(Into::into)
+            .unwrap_or_else(|| casper_types::U512::zero().into())
+    }
+
+    #[wasm_bindgen(getter, js_name = "liquidBalance")]
+    pub fn liquid_balance(&self) -> U512 {
+        self.liquid_balance
             .as_deref()
             .and_then(|b| casper_types::U512::from_dec_str(b).ok())
             .map(Into::into)
@@ -285,7 +306,6 @@ impl TransactionData {
     }
 }
 
-#[wasm_bindgen()]
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ArgValue {
     cl_type: CLType,

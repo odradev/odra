@@ -1,9 +1,3 @@
-use gloo_utils::format::JsValueSerdeExt;
-use js_sys::Promise;
-use serde_json::json;
-use wasm_bindgen::prelude::*;
-use wasm_bindgen_futures::JsFuture;
-
 use super::js;
 use crate::{
     cspr_click::{
@@ -11,8 +5,14 @@ use crate::{
         types::{AccountInfo, SignResult, TransactionStatus, WrappedAccountInfo},
         TransactionResult
     },
-    types::{Address, PublicKey, Transaction}
+    extensions::{IntoJsError, PromiseExt, TransactionExt},
+    types::{Address, PublicKey}
 };
+use casper_types::Transaction;
+use gloo_utils::format::JsValueSerdeExt;
+use js_sys::Promise;
+use serde_json::json;
+use wasm_bindgen::prelude::*;
 
 pub(crate) struct CsprClick;
 
@@ -49,7 +49,8 @@ impl CsprClick {
             .to_json_string()
             .into_js_error("Failed to serialize transaction")?;
 
-        let result =  Self::process_sign_result(js::sign_transaction(&transaction_json, &public_key)).await?;
+        let result =
+            Self::process_sign_result(js::sign_transaction(&transaction_json, &public_key)).await?;
         if result.is_cancelled {
             return Err(JsError::new(&format!(
                 "Could not sign transaction for key {public_key}"
@@ -157,32 +158,7 @@ impl CsprClick {
     }
 
     async fn process_sign_result(promise: Result<Promise, JsValue>) -> Result<SignResult, JsError> {
-        let result: SignResult = promise
-            .into_js_error("[signMessage]")?
-            .into_serde()?;
+        let result: SignResult = promise.into_js_error("[signMessage]")?.into_serde()?;
         Ok(result)
-    }
-}
-
-// Trait for converting errors to JsError with context
-trait IntoJsError<T> {
-    fn into_js_error(self, context: &str) -> Result<T, JsError>;
-}
-
-impl<T, E: std::fmt::Debug> IntoJsError<T> for Result<T, E> {
-    fn into_js_error(self, context: &str) -> Result<T, JsError> {
-        self.map_err(|err| JsError::new(&format!("{}: {err:?}", context)))
-    }
-}
-
-trait PromiseExt {
-    async fn into_js_value(self, context: &str) -> Result<JsValue, JsError>;
-}
-
-impl PromiseExt for Result<Promise, JsValue> {
-    async fn into_js_value(self, context: &str) -> Result<JsValue, JsError> {
-        JsFuture::from(self.into_js_error(context)?)
-            .await
-            .into_js_error(context)
     }
 }
