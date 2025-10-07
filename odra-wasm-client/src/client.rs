@@ -5,7 +5,7 @@ use std::{
 use crate::{
     cspr_click::{get_account, AccountInfo, CsprClick, SignResult, TransactionResult},
     types::{
-        Address as WasmAddress, IntoWasmValue, PublicKey, TransactionHash as WasmTransactionHash,
+        Address as WasmAddress, IntoWasmValue, PublicKey,
         Verbosity, U512 as WasmU512
     },
     PROXY_CALLER
@@ -19,7 +19,7 @@ use casper_types::{
     bytesrepr::{Bytes, FromBytes, ToBytes},
     execution::{Effects, TransformKindV2},
     runtime_args, CLValue, Deploy, Digest, ExecutableDeployItem, Key, PricingMode, RuntimeArgs,
-    SecretKey, StoredValue, TimeDiff, Timestamp, Transaction, TransactionHash,
+    SecretKey, StoredValue, TimeDiff, Timestamp, Transaction,
     TransactionRuntimeParams, TransferTarget, URef, U512
 };
 use js_sys::Date;
@@ -117,13 +117,10 @@ impl OdraWasmClient {
         &self,
         to: &WasmAddress,
         amount: &WasmU512
-    ) -> Result<WasmTransactionHash, JsError> {
-        let caller = CsprClick::caller().await?;
-        let transaction: Transaction = self.new_transfer_transaction(*caller, **to, **amount)?;
-        let signed_transaction = self.sign_transaction(transaction).await?;
-        self.put_transaction(signed_transaction)
-            .await
-            .map(Into::into)
+    ) -> Result<TransactionResult, JsError> {
+        let (caller, public_key) = self.caller_and_public_key()?;
+        let transaction: Transaction = self.new_transfer_transaction(caller, **to, **amount)?;
+        CsprClick::send_transaction(transaction.into(), public_key).await
     }
 
     /// Call the connect() method using a provider name as the first parameter to request a connection using that wallet
@@ -229,12 +226,6 @@ impl OdraWasmClient {
             .map(Into::<WasmAddress>::into)?
             .into();
         Ok((caller, public_key))
-    }
-
-    async fn sign_transaction(&self, transaction: Transaction) -> Result<Transaction, JsError> {
-        CsprClick::sign_transaction(transaction.into())
-            .await
-            .map(Into::into)
     }
 }
 
@@ -393,18 +384,6 @@ impl OdraWasmClient {
             )))
         }?;
         Ok(result)
-    }
-
-    async fn put_transaction(&self, transaction: Transaction) -> Result<TransactionHash, JsError> {
-        Ok(casper_client::put_transaction(
-            self.rpc_id(),
-            self.node_address(),
-            self.verbosity().into(),
-            transaction
-        )
-        .await?
-        .result
-        .transaction_hash)
     }
 
     async fn get_balance(&self, address: Address) -> Result<U512, JsError> {

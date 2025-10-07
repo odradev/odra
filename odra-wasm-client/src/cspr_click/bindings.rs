@@ -41,6 +41,7 @@ impl CsprClick {
             .ok_or_else(|| JsError::new("disconnect failed"))
     }
 
+    #[allow(unused)]
     pub async fn sign_transaction(transaction: Transaction) -> Result<Transaction, JsError> {
         let public_key = Self::get_active_public_key().await?;
 
