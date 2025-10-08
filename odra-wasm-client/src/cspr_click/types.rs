@@ -307,10 +307,17 @@ impl TransactionData {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+impl TransactionData {
+    pub fn args_map(&self) -> HashMap<String, ArgValue> {
+        self.args.clone()
+    }
+}
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ArgValue {
     cl_type: CLType,
-    parsed: Option<String>
+    parsed: Option<Value>
 }
 
 #[cfg(test)]
@@ -510,5 +517,70 @@ mod tests {
                 "data": "the transaction was invalid: The transaction sent to the network had an invalid chain name"
             })
         );
+    }
+
+    #[test]
+    fn test_list_u8_arg() {
+        let test_data = r#"
+{
+        "cancelled":false,
+        "transactionHash":"ee9e94fe2ad99fd32977dfa1c90ff86d324ff3bdecb773c805ab0ce3108e14ff",
+        "error":null,
+        "errorData":null,
+        "deployHash":null,
+        "status":"processed",
+        "csprCloudTransaction":{
+            "deploy_hash":"ee9e94fe2ad99fd32977dfa1c90ff86d324ff3bdecb773c805ab0ce3108e14ff",
+            "block_hash":"ac19271d0dcc940474867a8625fe6756ebf6b592f5bd58907710e10c4304efed",
+            "block_height":5725978,
+            "caller_public_key":null,
+            "caller_hash":"1ef371ec8f3626883a90a68c400672df0e988c0f76e7fd28beedfdb283a05bd4",
+            "execution_type_id":7,
+            "contract_package_hash":"8bc2e4b85757651812f01bc65a37d5df221ac5110254a77ad29d07017110a675",
+            "contract_hash":"575bd3677220fe8ff1915c588bda07fd7959671b773bb10ae1f387ca86d41789",
+            "entry_point_id":2658790,
+            "args":{
+                "amount":{
+                    "cl_type":"U512",
+                    "parsed":"2000000000"
+                },
+                "args": {
+                    "cl_type":{"List":"U8"},
+                    "parsed":[0,0,0,0]
+                },
+                "attached_value":{
+                    "cl_type":"U512",
+                    "parsed":"2000000000"
+                },
+                "entry_point":{
+                    "cl_type":"String",
+                    "parsed":"deposit"
+                },
+                "package_hash":{
+                    "cl_type":{"ByteArray":32},
+                    "parsed":"8bc2e4b85757651812f01bc65a37d5df221ac5110254a77ad29d07017110a675"}
+                },
+            "payment_amount":"2500000000",
+            "refund_amount":"1152168865",
+            "version_id":2,
+            "pricing_mode_id":0,
+            "gas_price_limit":5,
+            "is_standard_payment":true,
+            "runtime_type_id":1,
+            "cost":"2500000000",
+            "consumed_gas":"963774846",
+            "error_message":null,
+            "status":"processed",
+            "timestamp":"2025-10-08T09:39:01.81Z"
+        }
+}
+"#;
+        let result: TransactionResult =
+            serde_json::from_str(test_data).expect("Deserialization failed");
+        assert_eq!(result.status, Some(TransactionStatus::PROCESSED));
+        assert!(result.error.is_none());
+        assert!(result.error_data.is_null());
+        let args = result.data.map(|d| d.args_map()).expect("No args found");
+        assert_eq!(args.len(), 5);
     }
 }
