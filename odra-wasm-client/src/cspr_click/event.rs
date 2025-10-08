@@ -29,14 +29,16 @@ impl Event {
         }
     }
 
-    pub fn closure(self) -> wasm_bindgen::closure::Closure<dyn Fn(JsValue)> {
-        wasm_bindgen::closure::Closure::<dyn Fn(JsValue)>::new(move |evt: JsValue| {
+    pub fn closure(self) -> wasm_bindgen::closure::Closure<dyn FnMut(JsValue)> {
+        wasm_bindgen::closure::Closure::<dyn FnMut(JsValue)>::new(move |evt: JsValue| {
             self.log(&evt);
             let account = evt.into_serde::<WrappedAccountInfo>();
             if let Ok(account) = account {
                 CALLBACKS.with(|callbacks| {
                     if let Some(ref cb) = callbacks.borrow().events.get(&self) {
-                        let _ = cb.call1(&JsValue::NULL, &JsValue::from(account.account));
+                        if let Err(e) = cb.call1(&JsValue::NULL, &JsValue::from(account.account)) {
+                            crate::js::log(&format!("Callback call failed: {:?}", e));
+                        }
                         ACCOUNT.with(|account| {
                             *account.borrow_mut() = evt;
                         });
@@ -52,7 +54,9 @@ impl Event {
                 }
                 CALLBACKS.with(|callbacks| {
                     if let Some(ref cb) = callbacks.borrow().events.get(&self) {
-                        let _ = cb.call0(&JsValue::NULL);
+                        if let Err(e) = cb.call0(&JsValue::NULL) {
+                            crate::js::log(&format!("Callback call failed: {:?}", e));
+                        }
                     } else {
                         crate::js::log(&format!("No callback registered for event: {:?}", self));
                     }
