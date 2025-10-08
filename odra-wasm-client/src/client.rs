@@ -5,8 +5,7 @@ use std::{
 
 use crate::{
     cspr_click::{get_account, AccountInfo, CsprClick, SignResult, TransactionResult},
-    types::{Address as WasmAddress, IntoWasmValue, PublicKey, Verbosity, U512 as WasmU512},
-    PROXY_CALLER
+    types::{Address as WasmAddress, IntoWasmValue, PublicKey, Verbosity, U512 as WasmU512}
 };
 use casper_client::{
     cli::{DeployBuilder, TransactionV1Builder},
@@ -36,6 +35,8 @@ const DEFAULT_TTL: u32 = 5 * 60;
 const DEFAULT_GAS_TOLERANCE: u8 = 5;
 const CHAIN_TESTNET: &str = "casper-test";
 const SECRET_KEY_PEM: &str = env!("WASM_CLIENT_SK");
+
+pub const PROXY_CALLER: &[u8; 52814] = include_bytes!("../proxy_caller_with_return.wasm");
 
 static GAS: OnceLock<Arc<Mutex<u64>>> = OnceLock::new();
 

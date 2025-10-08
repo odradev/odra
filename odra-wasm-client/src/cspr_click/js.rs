@@ -20,13 +20,13 @@ extern "C" {
     #[wasm_bindgen(js_namespace = ["window", "csprclick"], js_name = getActivePublicKey, catch)]
     pub fn get_active_public_key() -> Result<Promise, JsValue>;
 
-    #[wasm_bindgen(js_namespace = ["window", "csprclick"], catch, js_name = "on")]
+    #[wasm_bindgen(js_namespace = ["window", "csprclick"], catch, js_name = on)]
     pub(crate) fn on_csprclick_event(
         event: &str,
         callback: &js_sys::Function
     ) -> Result<(), JsValue>;
 
-    #[wasm_bindgen(js_namespace = ["window", "csprclick"], js_name = "isUnlocked", catch)]
+    #[wasm_bindgen(js_namespace = ["window", "csprclick"], js_name = isUnlocked, catch)]
     pub fn is_unlocked(provider: &str) -> Result<Promise, JsValue>;
 
     #[wasm_bindgen(js_namespace = ["window", "csprclick"], js_name = send, catch)]

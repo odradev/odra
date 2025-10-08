@@ -218,7 +218,7 @@ impl<'de> serde::Deserialize<'de> for TransactionResult {
                     }
                 }
 
-                let error_data = error_data.unwrap_or( Value::Null);
+                let error_data = error_data.unwrap_or(Value::Null);
                 let is_cancelled =
                     is_cancelled.ok_or_else(|| serde::de::Error::missing_field("cancelled"))?;
 
@@ -498,11 +498,17 @@ mod tests {
         let result: TransactionResult =
             serde_json::from_str(test_data).expect("Deserialization failed");
         assert_eq!(result.status, Some(TransactionStatus::ERROR));
-        assert_eq!(result.error.as_deref(), Some("Code: -32016, err: Invalid transaction"));
-        assert_eq!(result.error_data, serde_json::json!({
-            "code": -32016,
-            "message": "Invalid transaction",
-            "data": "the transaction was invalid: The transaction sent to the network had an invalid chain name"
-        }));
+        assert_eq!(
+            result.error.as_deref(),
+            Some("Code: -32016, err: Invalid transaction")
+        );
+        assert_eq!(
+            result.error_data,
+            serde_json::json!({
+                "code": -32016,
+                "message": "Invalid transaction",
+                "data": "the transaction was invalid: The transaction sent to the network had an invalid chain name"
+            })
+        );
     }
 }

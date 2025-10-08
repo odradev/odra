@@ -1,7 +1,10 @@
 use gloo_utils::format::JsValueSerdeExt;
 use wasm_bindgen::prelude::*;
 
-use crate::cspr_click::{callbacks::ACCOUNT, event::Event, types::WrappedAccountInfo};
+use crate::{
+    cspr_click::{callbacks::ACCOUNT, event::Event, types::WrappedAccountInfo},
+    extensions::JsErrorContext
+};
 
 mod bindings;
 pub(crate) mod callbacks;
@@ -23,7 +26,7 @@ pub fn get_account() -> Result<AccountInfo, JsError> {
     ACCOUNT
         .with(|account| account.borrow().clone().into_serde::<WrappedAccountInfo>())
         .map(|wrapped| wrapped.account)
-        .map_err(|e| JsError::new(&format!("Failed to parse account: {}", e)))
+        .with_js_context("Failed to get current account")
 }
 
 pub(crate) fn init() -> Result<(), JsValue> {

@@ -2,7 +2,7 @@ use gloo_utils::format::JsValueSerdeExt;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 
-use crate::{extensions::IntoJsError, types::Address};
+use crate::{extensions::JsErrorContext, types::Address};
 
 /// Container for multiple smart contract definitions with metadata.
 ///
@@ -32,7 +32,7 @@ impl Contracts {
     #[wasm_bindgen(constructor)]
     pub fn new(js: JsValue) -> Result<Self, JsError> {
         js.into_serde::<Contracts>()
-            .into_js_error("Failed to parse Contracts from JSON")
+            .with_js_context("Failed to parse Contracts from JSON")
     }
 
     /// Asynchronously loads contract information from a remote JSON file.
@@ -61,18 +61,18 @@ impl Contracts {
                 JsError::new(&format!("Failed to fetch contracts from {path}: {err:?}"))
             })?
             .dyn_into::<web_sys::Response>()
-            .into_js_error("Failed to cast to Response")?;
+            .with_js_context("Failed to cast to Response")?;
 
         let promise = resp
             .json()
-            .into_js_error("Failed to get JSON from response")?;
+            .with_js_context("Failed to get JSON from response")?;
         let json = JsFuture::from(promise)
             .await
-            .into_js_error("Failed to resolve JSON promise")?;
+            .with_js_context("Failed to resolve JSON promise")?;
 
         let result = json
             .into_serde()
-            .into_js_error("Failed to parse Contracts from JSON")?;
+            .with_js_context("Failed to parse Contracts from JSON")?;
         crate::js::log(&format!("Loaded contracts: {:?}", result));
         Ok(result)
     }

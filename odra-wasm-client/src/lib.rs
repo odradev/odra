@@ -11,8 +11,6 @@ mod utils;
 
 pub use client::OdraWasmClient;
 
-pub const PROXY_CALLER: &[u8; 52814] = include_bytes!("../proxy_caller_with_return.wasm");
-
 pub use gloo_utils::format::JsValueSerdeExt;
 pub use odra_core::casper_types;
 pub use odra_core::prelude::Address as OdraAddress;

@@ -62,19 +62,19 @@ pub(crate) trait PromiseExt {
 
 impl PromiseExt for Result<Promise, JsValue> {
     async fn into_js_value(self, context: &str) -> Result<JsValue, JsError> {
-        JsFuture::from(self.into_js_error(context)?)
+        JsFuture::from(self.with_js_context(context)?)
             .await
-            .into_js_error(context)
+            .with_js_context(context)
     }
 }
 
 // Trait for converting errors to JsError with context
-pub(crate) trait IntoJsError<T> {
-    fn into_js_error(self, context: &str) -> Result<T, JsError>;
+pub(crate) trait JsErrorContext<T> {
+    fn with_js_context(self, context: &str) -> Result<T, JsError>;
 }
 
-impl<T, E: std::fmt::Debug> IntoJsError<T> for Result<T, E> {
-    fn into_js_error(self, context: &str) -> Result<T, JsError> {
+impl<T, E: std::fmt::Debug> JsErrorContext<T> for Result<T, E> {
+    fn with_js_context(self, context: &str) -> Result<T, JsError> {
         self.map_err(|err| JsError::new(&format!("{}: {err:?}", context)))
     }
 }

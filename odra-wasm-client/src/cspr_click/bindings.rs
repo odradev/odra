@@ -5,7 +5,7 @@ use crate::{
         types::{AccountInfo, SignResult, TransactionStatus, WrappedAccountInfo},
         TransactionResult
     },
-    extensions::{IntoJsError, PromiseExt, TransactionExt},
+    extensions::{JsErrorContext, PromiseExt, TransactionExt},
     types::{Address, PublicKey}
 };
 use casper_types::Transaction;
@@ -18,11 +18,11 @@ pub(crate) struct CsprClick;
 
 impl CsprClick {
     pub async fn sign_in() -> Result<(), JsError> {
-        js::sign_in().into_js_error("[signIn]")
+        js::sign_in().with_js_context("[signIn]")
     }
 
     pub async fn sign_out() -> Result<(), JsError> {
-        js::sign_out().into_js_error("[signOut]")
+        js::sign_out().with_js_context("[signOut]")
     }
 
     pub async fn connect(provider: &str) -> Result<AccountInfo, JsError> {
@@ -47,7 +47,7 @@ impl CsprClick {
 
         let transaction_json = transaction
             .to_json_string()
-            .into_js_error("Failed to serialize transaction")?;
+            .with_js_context("Failed to serialize transaction")?;
 
         let result =
             Self::process_sign_result(js::sign_transaction(&transaction_json, &public_key)).await?;
@@ -59,7 +59,7 @@ impl CsprClick {
         let signature = String::from_utf8(result.signature).unwrap_or_default();
         transaction
             .add_signature(&public_key.to_string(), &signature)
-            .into_js_error("Failed to add signature to transaction")
+            .with_js_context("Failed to add signature to transaction")
     }
 
     pub async fn get_active_public_key() -> Result<String, JsError> {
@@ -107,7 +107,7 @@ impl CsprClick {
 
         let transaction_json = transaction
             .to_json_string()
-            .into_js_error("Failed to serialize transaction")?;
+            .with_js_context("Failed to serialize transaction")?;
 
         let result = js::send(
             &transaction_json,
@@ -123,7 +123,7 @@ impl CsprClick {
 
     pub async fn get_active_account() -> Result<AccountInfo, JsError> {
         let json = json!({ "withBalance": true });
-        let options = JsValue::from_serde(&json).into_js_error("Failed to serialize options")?;
+        let options = JsValue::from_serde(&json).with_js_context("Failed to serialize options")?;
         let result = js::get_active_account(&options)
             .into_js_value("[getActiveAccount]")
             .await?
@@ -158,7 +158,7 @@ impl CsprClick {
     }
 
     async fn process_sign_result(promise: Result<Promise, JsValue>) -> Result<SignResult, JsError> {
-        let result: SignResult = promise.into_js_error("[signMessage]")?.into_serde()?;
+        let result: SignResult = promise.with_js_context("[signMessage]")?.into_serde()?;
         Ok(result)
     }
 }
