@@ -220,7 +220,7 @@ fn enum_def(name: &str, variants: &[EnumVariant], description: String) -> TokenS
         }
 
         impl odra_wasm_client::types::IntoOdraValue<#type_name> for #type_name {
-            fn to_wasm_value(self) -> Result<#type_name, JsError> {
+            fn into_odra_value(self) -> Result<#type_name, JsError> {
                 Ok(self)
             }
         }
