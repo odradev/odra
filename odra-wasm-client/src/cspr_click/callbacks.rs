@@ -55,7 +55,7 @@ impl CsprClickCallbacks {
 
 thread_local! {
     pub static CALLBACKS: RefCell<CsprClickCallbacks> = RefCell::new(CsprClickCallbacks::default());
-    pub static ACCOUNT: RefCell<JsValue> = RefCell::new(JsValue::NULL);
+    pub static ACCOUNT: RefCell<JsValue> = const { RefCell::new(JsValue::NULL) };
 }
 
 // Helper function to access callbacks

@@ -35,7 +35,7 @@ impl Event {
             let account = evt.clone().into_serde::<WrappedAccountInfo>();
             if let Ok(account) = account {
                 CALLBACKS.with(|callbacks| {
-                    if let Some(ref cb) = callbacks.borrow().events.get(&self) {
+                    if let Some(cb) = callbacks.borrow().events.get(&self) {
                         if let Err(e) = cb.call1(&JsValue::NULL, &JsValue::from(account.account)) {
                             crate::js::log(&format!("Callback call failed: {:?}", e));
                         }
@@ -53,7 +53,7 @@ impl Event {
                     });
                 }
                 CALLBACKS.with(|callbacks| {
-                    if let Some(ref cb) = callbacks.borrow().events.get(&self) {
+                    if let Some(cb) = callbacks.borrow().events.get(&self) {
                         if let Err(e) = cb.call0(&JsValue::NULL) {
                             crate::js::log(&format!("Callback call failed: {:?}", e));
                         }
@@ -67,7 +67,7 @@ impl Event {
     }
 
     pub fn log(&self, data: &JsValue) {
-        if let Ok(string) = self.to_json_string(data) {
+        if let Ok(string) = Self::to_json_string(data) {
             crate::js::log(&format!("Event triggered: {}: {}", self.as_str(), string));
         } else {
             crate::js::log(&format!(
@@ -77,7 +77,7 @@ impl Event {
         }
     }
 
-    fn to_json_string(&self, data: &JsValue) -> Result<String, JsError> {
+    fn to_json_string(data: &JsValue) -> Result<String, JsError> {
         let serde_value: Value = data.into_serde()?;
         serde_json::to_string(&serde_value)
             .map_err(|e| JsError::new(&format!("Serialization error: {}", e)))

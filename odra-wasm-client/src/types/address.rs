@@ -34,13 +34,11 @@ impl Address {
 
     #[wasm_bindgen(js_name = "fromPublicKey")]
     pub fn from_public_key(input: &str) -> Result<Self, JsError> {
-        PublicKey::new(input)
-            .map(|pk| Address::from(pk))
-            .map_err(|err| {
-                JsError::new(&format!(
-                    "Could not create Address from PublicKey string {input}: {err:?}"
-                ))
-            })
+        PublicKey::new(input).map(Address::from).map_err(|err| {
+            JsError::new(&format!(
+                "Could not create Address from PublicKey string {input}: {err:?}"
+            ))
+        })
     }
 
     #[wasm_bindgen(getter)]

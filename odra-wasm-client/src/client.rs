@@ -105,7 +105,7 @@ impl OdraWasmClient {
     /// Returns the balance of the specified address.
     #[wasm_bindgen(js_name = "caller")]
     pub async fn get_caller(&self) -> Result<WasmAddress, JsError> {
-        CsprClick::caller().await.map(Into::into)
+        CsprClick::caller().await
     }
 
     /// Transfers the specified amount to the given address.
@@ -117,7 +117,7 @@ impl OdraWasmClient {
     ) -> Result<TransactionResult, JsError> {
         let (caller, public_key) = self.caller_and_public_key()?;
         let transaction: Transaction = self.new_transfer_transaction(caller, **to, **amount)?;
-        CsprClick::send_transaction(transaction.into(), public_key).await
+        CsprClick::send_transaction(transaction, public_key).await
     }
 
     /// Call the connect() method using a provider name as the first parameter to request a connection using that wallet
@@ -236,7 +236,7 @@ impl OdraWasmClient {
         let (caller, public_key) = self.caller_and_public_key()?;
         let transaction =
             self.new_call_transaction(caller, contract_address, entry_point, runtime_args)?;
-        CsprClick::send_transaction(transaction.into(), public_key).await
+        CsprClick::send_transaction(transaction, public_key).await
     }
 
     #[allow(deprecated)]
@@ -296,7 +296,7 @@ impl OdraWasmClient {
             ARG_AMOUNT => attached_value,
         };
         let transaction = self.new_proxy_transaction(caller, args)?;
-        CsprClick::send_transaction(transaction.into(), public_key).await
+        CsprClick::send_transaction(transaction, public_key).await
     }
 }
 

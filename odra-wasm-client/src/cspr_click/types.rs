@@ -91,6 +91,7 @@ pub struct WrappedAccountInfo {
 
 #[derive(Debug, Clone, Copy, serde::Serialize, PartialEq, Eq)]
 #[wasm_bindgen]
+#[allow(clippy::upper_case_acronyms)]
 pub enum TransactionStatus {
     /// The transaction has been signed and successfully deployed to a Casper node.
     SENT,
@@ -381,7 +382,7 @@ mod tests {
         let result: TransactionResult =
             serde_json::from_str(TRANSACTION_RESULT_TEST_DATA).expect("Deserialization failed");
         assert_eq!(result.status, Some(TransactionStatus::PROCESSED));
-        assert_eq!(result.is_cancelled, false);
+        assert!(!result.is_cancelled);
         assert_eq!(
             result.transaction_hash.as_deref(),
             Some("94429811f595902bb55e1b132a1228e58f831023f2b8d6f4c48919c7d3e51f23")
@@ -474,7 +475,7 @@ mod tests {
         let result: TransactionResult =
             serde_json::from_str(test_data).expect("Deserialization failed");
         assert_eq!(result.status, None);
-        assert_eq!(result.is_cancelled, false);
+        assert!(!result.is_cancelled);
         assert_eq!(
             result.transaction_hash.as_deref(),
             Some("67b6c0fcbdf2d5ece86ca90dff3b64f30b9c3a3cb4a80a24ae4ee862f0aa893d")
