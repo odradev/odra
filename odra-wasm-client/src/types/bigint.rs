@@ -162,6 +162,11 @@ macro_rules! impl_big_int {
             pub fn max_value() -> Self {
                 Self(casper_types::$name::MAX)
             }
+
+            #[wasm_bindgen(js_name = "zero")]
+            pub fn zero() -> Self {
+                Self(casper_types::$name::zero())
+            }
         }
 
         impl Deref for $name {
@@ -181,6 +186,24 @@ macro_rules! impl_big_int {
         impl From<casper_types::$name> for $name {
             fn from(value: casper_types::$name) -> Self {
                 $name(value)
+            }
+        }
+
+        impl From<String> for $name {
+            fn from(value: String) -> Self {
+                $name::from_dec_str(&value).unwrap_or_else(|_| $name(casper_types::$name::zero()))
+            }
+        }
+
+        impl From<&str> for $name {
+            fn from(value: &str) -> Self {
+                $name::from_dec_str(value).unwrap_or_else(|_| $name(casper_types::$name::zero()))
+            }
+        }
+
+        impl Default for $name {
+            fn default() -> Self {
+                $name(casper_types::$name::zero())
             }
         }
 

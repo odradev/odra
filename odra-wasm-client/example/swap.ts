@@ -181,7 +181,7 @@ function onTransactionStatusUpdate(status: TransactionStatus, data: TransactionR
   if (status === TransactionStatus.SENT) {
     txSection.classList.remove("hidden");
     txStatusDiv.textContent = "Transaction is being processed...";
-    const url = `${EXPLORER_BASE.replace(/\/+$/, "")}/transaction/${data.transactionHash}`;
+    const url = `${EXPLORER_BASE.replace(/\/+$/, "")}/transaction/${data.txHash}`;
     txLinkAnchor.href = url;
   } else if (status === TransactionStatus.PROCESSED) {
     if (data.error) {

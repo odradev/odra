@@ -12,12 +12,20 @@ const USER_ERR_PREFIX: &str = "User error: ";
 #[wasm_bindgen(getter_with_clone)]
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SignResult {
+    /// true when the user has declined the signature of the transaction. false otherwise
+    #[wasm_bindgen(readonly, js_name = "isCancelled")]
     #[serde(rename = "cancelled")]
     pub is_cancelled: bool,
+    /// An hexadecimal string with the crytpographic signature of the deploy.
+    #[wasm_bindgen(readonly, js_name = "signatureHex")]
     #[serde(rename = "signatureHex")]
     pub signature_hex: Option<String>,
+    /// A byte array with the cryptographic signature of the deploy.
+    #[wasm_bindgen(readonly)]
     pub signature: Vec<u8>,
     transaction: Option<Transaction>,
+    /// None if the deploy has been successfully signed. It contains an error message otherwise.
+    #[wasm_bindgen(readonly)]
     pub error: Option<String>
 }
 
@@ -36,51 +44,58 @@ impl SignResult {
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[wasm_bindgen(getter_with_clone, inspectable)]
 pub struct AccountInfo {
+    /// The provider to which the account belongs to.
     #[wasm_bindgen(readonly)]
     pub provider: String,
+    /// An array of supported capabilities in the connected wallet.
+    /// Possible values: "sign-deploy", "sign-transactionv1", "sign-message".
     #[wasm_bindgen(readonly, js_name = "providerSupports")]
     #[serde(rename = "providerSupports")]
     pub provider_supports: Option<Vec<String>>,
+    /// CSPR.name name
     #[wasm_bindgen(readonly, js_name = "csprName")]
     pub cspr_name: Option<String>,
+    /// The account public key in hex format.
     #[wasm_bindgen(readonly, js_name = "publicKey")]
     pub public_key: String,
+    /// Timestamp for the initial connection of the account
     #[wasm_bindgen(readonly, js_name = "connectedAt")]
     pub connected_at: i64,
+    /// n/a (for future use)
     #[wasm_bindgen(readonly)]
-    pub token: Option<String>,
+    token: Option<serde_json::Value>,
+    /// Custom data. Depends on the provider.
     custom: Option<serde_json::Value>,
     #[wasm_bindgen(readonly)]
     balance: Option<String>,
     #[wasm_bindgen(readonly, js_name = "liquidBalance")]
     liquid_balance: Option<String>,
+    /// URL to the account avatar/logo.
     #[wasm_bindgen(readonly)]
     pub logo: Option<String>
 }
 
 #[wasm_bindgen]
 impl AccountInfo {
+    /// The account address derived from the public key.
     #[wasm_bindgen(getter)]
     pub fn address(&self) -> Result<Address, JsError> {
         Address::from_public_key(&self.public_key)
     }
 
+    /// Total balance of the account in CSPR motes (includes liquid +staked balance).
     #[wasm_bindgen(getter)]
     pub fn balance(&self) -> U512 {
-        self.balance
-            .as_deref()
-            .and_then(|b| casper_types::U512::from_dec_str(b).ok())
-            .map(Into::into)
-            .unwrap_or_else(|| casper_types::U512::zero().into())
+        self.balance.as_deref().map(Into::into).unwrap_or_default()
     }
 
+    /// Liquid balance of the account in CSPR motes (includes liquid +staked balance)
     #[wasm_bindgen(getter, js_name = "liquidBalance")]
     pub fn liquid_balance(&self) -> U512 {
         self.liquid_balance
             .as_deref()
-            .and_then(|b| casper_types::U512::from_dec_str(b).ok())
             .map(Into::into)
-            .unwrap_or_else(|| casper_types::U512::zero().into())
+            .unwrap_or_default()
     }
 }
 
@@ -137,27 +152,43 @@ impl TransactionStatus {
 #[derive(Debug, Clone, serde::Serialize)]
 #[wasm_bindgen(getter_with_clone)]
 pub struct TransactionResult {
+    /// Transaction status (pending, expired, or processed).
     #[wasm_bindgen(readonly)]
     pub status: Option<TransactionStatus>,
+    /// true when the user has declined the signature of the transaction. false otherwise
     #[wasm_bindgen(readonly, js_name = "isCancelled")]
     #[serde(rename = "cancelled")]
     pub is_cancelled: bool,
-    #[wasm_bindgen(readonly, js_name = "deployHash")]
     #[serde(rename = "deployHash")]
-    pub deploy_hash: Option<String>,
+    deploy_hash: Option<String>,
+    /// None if the deploy has been successfully executed. It contains an error message otherwise.
     #[wasm_bindgen(readonly)]
     pub error: Option<String>,
+    /// Error code extracted from the error message, if available.
     #[wasm_bindgen(readonly, js_name = "errorCode")]
     pub error_code: Option<u16>,
     #[wasm_bindgen(readonly, js_name = "errorData")]
     #[serde(rename = "errorData")]
     error_data: Value,
-    #[wasm_bindgen(readonly, js_name = "transactionHash")]
     #[serde(rename = "transactionHash")]
-    pub transaction_hash: Option<String>,
+    transaction_hash: Option<String>,
+    /// Transaction details from CSPR Cloud API. null if the transaction is not found or not processed yet.
     #[wasm_bindgen(readonly)]
     #[serde(rename = "csprCloudTransaction")]
     pub data: Option<TransactionData>
+}
+
+#[wasm_bindgen]
+impl TransactionResult {
+    /// If transactionHash is null, returns deployHash. Otherwise, returns transactionHash.
+    #[wasm_bindgen(getter, js_name = txHash)]
+    pub fn transaction_hash(&self) -> Option<String> {
+        if self.transaction_hash.is_none() {
+            self.deploy_hash.clone()
+        } else {
+            self.transaction_hash.clone()
+        }
+    }
 }
 
 impl<'de> serde::Deserialize<'de> for TransactionResult {
@@ -255,47 +286,76 @@ impl<'de> serde::Deserialize<'de> for TransactionResult {
 #[wasm_bindgen(getter_with_clone)]
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct TransactionData {
+    /// Transaction arguments provided for contract execution.
     args: HashMap<String, ArgValue>,
+    /// Hash of the block containing the transaction represented as a hexadecimal string.
     #[wasm_bindgen(readonly, js_name = "blockHash")]
     pub block_hash: String,
+    /// Height of the block containing the transaction.
     #[wasm_bindgen(readonly, js_name = "blockHeight")]
     pub block_height: u64,
+    /// Hash of the transaction caller account represented as a hexademical string.
     #[wasm_bindgen(readonly, js_name = "callerHash")]
     pub caller_hash: String,
+    /// Public key of the transaction caller account represented as a hexademical string.
+    /// May be null if the public key is not known, but the callerHash will still be present.
     #[wasm_bindgen(readonly, js_name = "callerPublicKey")]
     pub caller_public_key: Option<String>,
+    /// Represents the total amount of gas consumed during the execution of the transaction.
     #[wasm_bindgen(readonly, js_name = "consumedGas")]
     pub consumed_gas: String,
+    /// Hash of the contract called by the transaction represented as a hexadecimal string.
+    /// null if the transaction had no contract call.
     #[wasm_bindgen(readonly, js_name = "contractHash")]
     pub contract_hash: String,
+    /// Hash of the contract package called by the transaction represented as a hexadecimal string.
+    /// null if the transaction had no contract call.
     #[wasm_bindgen(readonly, js_name = "contractPackageHash")]
     pub contract_package_hash: String,
+    /// Transaction execution cost. The type is string to avoid overflow in languages that don't support uint64,
+    /// which is the correct type.
     #[wasm_bindgen(readonly)]
     pub cost: String,
-    #[wasm_bindgen(readonly, js_name = "deployHash")]
+    /// Transaction hash represented as a hexadecimal string. Primary transaction identifier.
+    #[wasm_bindgen(readonly, js_name = "transactionHash")]
     pub deploy_hash: String,
+    /// Identifier of the ContractEntrypoint called by transaction. null if the transaction had no contract call.
     #[wasm_bindgen(readonly, js_name = "entryPointId")]
     pub entry_point_id: u64,
+    /// Error message in case of a failed transaction. null for a successful transaction.
     #[wasm_bindgen(readonly, js_name = "errorMessage")]
     pub error_message: Option<String>,
+    /// Identifier, that tells what type of the transaction was executed
     #[wasm_bindgen(readonly, js_name = "executionTypeId")]
     pub execution_type_id: u64,
+    /// Maximum allowed gas price that was specified by the caller (used only in Limited(0) pricing mode)
     #[wasm_bindgen(readonly, js_name = "gasPriceLimit")]
     pub gas_price_limit: u64,
+    /// Indicates whether the transaction uses the standard payment mechanism or a custom payment contract
     #[wasm_bindgen(readonly, js_name = "isStandardPayment")]
     pub is_standard_payment: bool,
+    /// Payment amount provided by the caller in motes. The type is string to avoid overflow in languages
+    /// that don't support uint64, which is the correct type. null if a custom payment contract was provided
+    /// to the transaction instead of the value in motes.
     #[wasm_bindgen(readonly, js_name = "paymentAmount")]
     pub payment_amount: String,
+    /// Pricing mode identifier. Indicates which pricing model applies to the transaction
     #[wasm_bindgen(readonly, js_name = "pricingModeId")]
     pub pricing_mode_id: u64,
+    /// The amount of gas cost that was refunded to the caller account. In the current Mainnet configuration,
+    /// 75% of unused payment amount is refunded.
     #[wasm_bindgen(readonly, js_name = "refundAmount")]
     pub refund_amount: String,
+    /// Identifies how the transaction was executed: 0 for native execution, 1 for VM version 1, and 2 for VM version 2
     #[wasm_bindgen(readonly, js_name = "runtimeTypeId")]
     pub runtime_type_id: u64,
+    /// Transaction status (pending, expired, or processed).
     #[wasm_bindgen(readonly)]
     pub status: TransactionStatus,
+    /// Transaction creation timestamp in the ISO 8601 format.
     #[wasm_bindgen(readonly)]
     pub timestamp: String,
+    /// Transaction version identifier: 0 for Casper 1.X transactions, 1 for Casper 2.0 transactions, and 2 for Casper 2.0 transactions.
     #[wasm_bindgen(readonly, js_name = "versionId")]
     pub version_id: u64
 }

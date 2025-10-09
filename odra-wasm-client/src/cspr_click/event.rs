@@ -8,7 +8,7 @@ use crate::cspr_click::{
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Event {
+pub(crate) enum Event {
     SignedIn,
     Disconnected,
     SwitchAccount,
