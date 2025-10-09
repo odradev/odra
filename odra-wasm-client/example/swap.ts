@@ -211,7 +211,7 @@ function onTransactionStatusUpdate(status: TransactionStatus, data: TransactionR
 connectBtn.addEventListener("click", connect);
 disconnectBtn.addEventListener("click", disconnect);
 refreshBtn.addEventListener("click", async () => {
-  const account = await getCurrentAccount();
+  const account = getCurrentAccount();
   await refreshBalances(account);
 });
 swapBtn.addEventListener("click", onSwap);
@@ -254,7 +254,6 @@ async function run() {
     // 3. Set your custom callback
     CsprClickCallbacks.onSignedIn(async (accountInfo: AccountInfo) => {
         console.log('Signed in handler:');
-        console.log(accountInfo.toString());
         await onConnect(accountInfo);
     });
     CsprClickCallbacks.onSwitchedAccount(async (accountInfo: AccountInfo) => {

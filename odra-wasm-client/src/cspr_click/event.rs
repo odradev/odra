@@ -32,7 +32,7 @@ impl Event {
     pub fn closure(self) -> wasm_bindgen::closure::Closure<dyn FnMut(JsValue)> {
         wasm_bindgen::closure::Closure::<dyn FnMut(JsValue)>::new(move |evt: JsValue| {
             self.log(&evt);
-            let account = evt.into_serde::<WrappedAccountInfo>();
+            let account = evt.clone().into_serde::<WrappedAccountInfo>();
             if let Ok(account) = account {
                 CALLBACKS.with(|callbacks| {
                     if let Some(ref cb) = callbacks.borrow().events.get(&self) {

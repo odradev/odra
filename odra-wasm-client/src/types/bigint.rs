@@ -157,6 +157,11 @@ macro_rules! impl_big_int {
             pub fn value(&self) -> String {
                 self.to_string()
             }
+
+            #[wasm_bindgen(js_name = "MAX")]
+            pub fn max_value() -> Self {
+                Self(casper_types::$name::MAX)
+            }
         }
 
         impl Deref for $name {
