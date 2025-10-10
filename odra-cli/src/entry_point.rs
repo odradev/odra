@@ -16,9 +16,9 @@ mod utils;
 
 #[derive(Debug, thiserror::Error)]
 pub enum CallError {
-    #[error("Calling {contract_name}::{method} failed with: {message}")]
+    #[error("Calling {package_name}::{method} failed with: {message}")]
     ExecutionError {
-        contract_name: String,
+        package_name: String,
         method: String,
         message: String
     },
@@ -77,7 +77,7 @@ pub fn call<T: ContractProvider>(
     let bytes = env
         .raw_call_contract(contract_address, call_def, use_proxy)
         .map_err(|e| CallError::ExecutionError {
-            contract_name: contract_name.to_string(),
+            package_name: contract_name.to_string(),
             method: method.to_string(),
             message: match e {
                 OdraError::VmError(VmError::Other(msg)) => msg,

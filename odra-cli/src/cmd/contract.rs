@@ -183,7 +183,7 @@ impl OdraCommand for CallCmd {
         for a in &self.entry_point.arguments {
             if !args.contains_id(&a.name) {
                 return Err(entry_point::CallError::ExecutionError {
-                    contract_name: self.contract_name.clone(),
+                    package_name: self.package_name.clone(),
                     method: self.entry_point.name.clone(),
                     message: format!("Missing required argument: {}", a.name)
                 }

@@ -567,7 +567,7 @@ impl CasperClient {
         .result;
         let account = result.account;
 
-        let key = account.named_keys().get(&key_name).unwrap_or_else(|| {
+        let key = account.named_keys().get(key_name).unwrap_or_else(|| {
             panic!(
                 "Couldn't get named key {:?} for account: {:?}",
                 key_name,

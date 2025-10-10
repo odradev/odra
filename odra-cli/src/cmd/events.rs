@@ -70,7 +70,7 @@ struct PrintContractEventsCmd {
 
 impl PrintContractEventsCmd {
     fn new<T: OdraContract>(package_name: Option<String>) -> Self {
-        let contract_name = package_name.unwrap_or_else(|| T::HostRef::ident());
+        let contract_name = package_name.unwrap_or_else(T::HostRef::ident);
         Self { contract_name }
     }
 }
