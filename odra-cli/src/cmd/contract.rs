@@ -20,11 +20,20 @@ pub(crate) struct ContractsCmd {
 }
 
 impl ContractsCmd {
-    pub fn add_contract<T: SchemaEntrypoints + OdraContract + SchemaCustomTypes + SchemaEvents>(
+    pub fn add_contract_named<
+        T: SchemaEntrypoints + OdraContract + SchemaCustomTypes + SchemaEvents
+    >(
         &mut self,
-        package_name: Option<String>
+        package_name: String
     ) {
-        self.contracts.push(ContractCmd::new::<T>(package_name));
+        self.contracts
+            .push(ContractCmd::new::<T>(Some(package_name)));
+    }
+
+    pub fn add_contract<T: SchemaEntrypoints + OdraContract + SchemaCustomTypes + SchemaEvents>(
+        &mut self
+    ) {
+        self.contracts.push(ContractCmd::new::<T>(None));
     }
 }
 
@@ -220,7 +229,7 @@ mod tests {
     #[test]
     fn test_contracts_cmd() {
         let mut cmd = ContractsCmd::default();
-        cmd.add_contract::<TestContract>(None);
+        cmd.add_contract::<TestContract>();
 
         assert_eq!(cmd.contracts.len(), 1);
         assert_eq!(cmd.contracts[0].contract_name, "TestContract");

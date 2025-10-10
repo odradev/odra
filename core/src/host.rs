@@ -975,8 +975,10 @@ impl HostEnv {
         // First, check if initialization is needed and get event counts
         let needs_init = {
             let contracts = self.deployed_contracts.borrow();
-            let contract = contracts.get(contract_address).unwrap();
-            !contract.events_initialized
+            contracts
+                .get(contract_address)
+                .map(|contract| !contract.events_initialized)
+                .unwrap_or(false)
         };
 
         if needs_init {

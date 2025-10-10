@@ -87,8 +87,8 @@ impl OdraCli {
             T::HostRef::entry_points_caller(&self.host_env)
         );
         self.custom_types.register::<T>();
-        self.contracts_cmd.add_contract::<T>(None);
-        self.print_events_cmd.add_contract::<T>(None);
+        self.contracts_cmd.add_contract::<T>();
+        self.print_events_cmd.add_contract::<T>();
         self
     }
 
@@ -107,8 +107,8 @@ impl OdraCli {
             T::HostRef::entry_points_caller(&self.host_env)
         );
         self.custom_types.register::<T>();
-        self.contracts_cmd.add_contract::<T>(Some(name.clone()));
-        self.print_events_cmd.add_contract::<T>(Some(name));
+        self.contracts_cmd.add_contract_named::<T>(name.clone());
+        self.print_events_cmd.add_contract_named::<T>(name);
         self
     }
 

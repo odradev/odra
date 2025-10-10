@@ -31,9 +31,14 @@ pub(crate) struct PrintEventsCmd {
 }
 
 impl PrintEventsCmd {
-    pub fn add_contract<T: OdraContract>(&mut self, package_name: Option<String>) {
+    pub fn add_contract<T: OdraContract>(&mut self) {
         self.subcommands
-            .push(PrintContractEventsCmd::new::<T>(package_name));
+            .push(PrintContractEventsCmd::new::<T>(None));
+    }
+
+    pub fn add_contract_named<T: OdraContract>(&mut self, package_name: String) {
+        self.subcommands
+            .push(PrintContractEventsCmd::new::<T>(Some(package_name)));
     }
 }
 
@@ -145,7 +150,7 @@ mod tests {
         assert_eq!(command.get_name(), PRINT_EVENTS_SUBCOMMAND);
         assert_eq!(command.get_subcommands().count(), 0);
 
-        cmd.add_contract::<TestContract>(None);
+        cmd.add_contract::<TestContract>();
         let command: Command = (&cmd).into();
         assert_eq!(command.get_subcommands().count(), 1);
     }
@@ -153,7 +158,7 @@ mod tests {
     #[test]
     fn test_match_print_events_cmd() {
         let mut cmd = PrintEventsCmd::default();
-        cmd.add_contract::<TestContract>(None);
+        cmd.add_contract::<TestContract>();
         let command: Command = (&cmd).into();
         let matches = command
             .try_get_matches_from(vec![PRINT_EVENTS_SUBCOMMAND, &TestContract::ident()])
@@ -166,7 +171,7 @@ mod tests {
     fn parsing_print_events_cmd_invalid_contract() {
         // This test checks that an invalid contract name results in an error.
         let mut cmd = PrintEventsCmd::default();
-        cmd.add_contract::<TestContract>(None);
+        cmd.add_contract::<TestContract>();
 
         let command: Command = (&cmd).into();
         let matches = command.try_get_matches_from(vec![PRINT_EVENTS_SUBCOMMAND, "TestContract2"]);
