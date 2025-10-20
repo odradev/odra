@@ -5,10 +5,6 @@ pub fn address() -> syn::Type {
     parse_quote!(Address)
 }
 
-pub fn address_ref() -> syn::Type {
-    parse_quote!(&Address)
-}
-
 pub fn contract_env() -> syn::Type {
     parse_quote!(odra::ContractEnv)
 }
@@ -71,6 +67,10 @@ pub fn odra_result(ty: syn::Type) -> syn::Type {
 
 pub fn module() -> syn::Type {
     parse_quote!(Module)
+}
+
+pub fn key() -> syn::Type {
+    parse_quote!(odra::casper_types::Key)
 }
 
 pub fn entry_points() -> syn::Type {

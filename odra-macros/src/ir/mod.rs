@@ -54,6 +54,11 @@ impl ModuleStructIR {
         utils::syn::ident_from_struct(&self.code)
     }
 
+    pub fn factory_module_ident(&self) -> syn::Ident {
+        let module_ident = self.module_ident();
+        Ident::new(&format!("{}Factory", module_ident), module_ident.span())
+    }
+
     pub fn module_str(&self) -> String {
         self.module_ident().to_string()
     }
@@ -106,6 +111,14 @@ impl ModuleStructIR {
             (*cfg.errors).clone()
         } else {
             None
+        }
+    }
+
+    pub fn is_factory(&self) -> bool {
+        if let ConfigItem::Module(cfg) = &self.config {
+            *cfg.factory
+        } else {
+            false
         }
     }
 
@@ -214,6 +227,19 @@ impl ModuleImplIR {
         }
     }
 
+    pub fn is_factory(&self) -> bool {
+        match self {
+            ModuleImplIR::Impl(ir) => {
+                if let ConfigItem::Module(cfg) = &ir.config {
+                    *cfg.factory
+                } else {
+                    false
+                }
+            }
+            ModuleImplIR::Trait(_) => false
+        }
+    }
+
     pub fn impl_trait_ident(&self) -> Option<Ident> {
         match self {
             ModuleImplIR::Impl(ir) => ir
@@ -244,10 +270,19 @@ impl ModuleImplIR {
             module_ident.span()
         ))
     }
+
     pub fn contract_ref_ident(&self) -> syn::Result<Ident> {
         let module_ident = self.module_ident()?;
         Ok(Ident::new(
             &format!("{}ContractRef", module_ident),
+            module_ident.span()
+        ))
+    }
+
+    pub fn factory_module_ident(&self) -> syn::Result<Ident> {
+        let module_ident = self.module_ident()?;
+        Ok(Ident::new(
+            &format!("{}Factory", module_ident),
             module_ident.span()
         ))
     }
@@ -309,6 +344,23 @@ impl ModuleImplIR {
             .unwrap_or_default()
             .into_iter()
             .find(|f| f.name_str() == CONSTRUCTOR_NAME)
+    }
+
+    pub fn factory_fn(&self) -> FnIR {
+        let args = self
+            .constructor()
+            .map(|fn_ir| fn_ir.named_args())
+            .unwrap_or_default();
+        let args = args
+            .iter()
+            .map(FnArgIR::raw)
+            .collect::<syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma>>();
+        let ty_address = utils::ty::address();
+        let factory_fn = parse_quote! {
+            pub fn factory(&mut self, contract_name: String, #args) -> #ty_address {
+            }
+        };
+        FnIR::Impl(FnImplIR::new(factory_fn))
     }
 
     pub fn upgrader(&self) -> Option<FnIR> {
@@ -434,7 +486,7 @@ impl FnIR {
     }
 }
 
-const PROTECTED_FUNCTIONS: [&str; 3] = ["new", "env", "address"];
+const PROTECTED_FUNCTIONS: [&str; 4] = ["new", "env", "address", "factory"];
 const PROTECTED_ARGS: [&str; 2] = ["gas", "attached_value"];
 
 fn validate_fn_name<T: ToTokens>(name: &str, ctx: T) -> syn::Result<()> {
@@ -571,6 +623,10 @@ impl FnIR {
         self.name_str() == UPGRADER_NAME
     }
 
+    pub fn is_factory(&self) -> bool {
+        self.name_str() == "factory"
+    }
+
     pub fn is_pub(&self) -> bool {
         match self {
             FnIR::Impl(ir) => ir.is_pub(),
@@ -632,6 +688,10 @@ impl FnImplIR {
     fn is_pub(&self) -> bool {
         matches!(self.code.vis, syn::Visibility::Public(_))
     }
+
+    pub fn raw(&self) -> syn::ImplItemFn {
+        self.code.clone()
+    }
 }
 
 pub struct FnArgIR {
@@ -641,6 +701,10 @@ pub struct FnArgIR {
 impl FnArgIR {
     pub fn new(code: syn::FnArg) -> Self {
         FnArgIR { code }
+    }
+
+    pub fn raw(&self) -> syn::FnArg {
+        self.code.clone()
     }
 
     pub fn name(&self) -> syn::Result<Ident> {

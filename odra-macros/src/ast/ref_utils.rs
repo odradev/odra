@@ -18,6 +18,16 @@ pub fn host_try_function_item(fun: &FnIR) -> syn::ItemFn {
     env_call(signature, call_def_expr, attrs, visibility_pub())
 }
 
+pub fn factory_try_function_item(fun: &FnIR) -> syn::ItemFn {
+    let signature = try_function_signature(fun);
+
+    let call_def_expr = factory_call_def_with_amount(fun);
+    let mut attrs = function_filtered_attrs(fun);
+    attrs.push(parse_quote!(#[doc = " Does not fail in case of error, returns `odra::OdraResult` instead."]));
+
+    env_call(signature, call_def_expr, attrs, visibility_pub())
+}
+
 pub fn host_function_item(fun: &FnIR, is_trait_impl: bool) -> syn::ItemFn {
     let pub_vis = match is_trait_impl {
         true => None,
@@ -76,6 +86,35 @@ fn call_def_with_amount(fun: &FnIR) -> syn::Expr {
     let fun_name = utils::expr::string_from(fun_name_str);
 
     syn::parse_quote!(#ty_call_def::new(#fun_name, #is_mut, #args_block).with_amount(#attached_value))
+}
+
+fn factory_call_def_with_amount(fun: &FnIR) -> syn::Expr {
+    let ty_call_def = utils::ty::call_def();
+    let fun_name_str = fun.name_str();
+    let new_runtime_args = utils::expr::new_runtime_args();
+    let args = utils::ident::named_args();
+    let is_mut = fun.is_mut();
+    let fun_name = utils::expr::string_from(fun_name_str);
+
+    let fn_args = fun
+        .named_args()
+        .iter()
+        .map(|arg| {
+            let ident = arg.name().unwrap();
+            let name = ident.to_string();
+            quote::quote!(let _ = #args.insert(#name, #ident.clone());)
+        })
+        .collect::<Vec<_>>();
+
+    syn::parse_quote!(#ty_call_def::new(#fun_name, #is_mut, {
+        let mut #args = #new_runtime_args;
+        #(#fn_args)*
+        let _ = #args.insert("odra_cfg_is_upgradable", true);
+        let _ = #args.insert("odra_cfg_is_upgrade", false);
+        let _ = #args.insert("odra_cfg_allow_key_override", true);
+        let _ = #args.insert("odra_cfg_package_hash_key_name", contract_name);
+        #args
+    }))
 }
 
 fn function_signature(fun: &FnIR) -> syn::Signature {
@@ -193,4 +232,3 @@ impl ToTokens for SchemaEventsItem {
         item.to_tokens(tokens);
     }
 }
-
