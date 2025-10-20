@@ -7,7 +7,7 @@ use quote::TokenStreamExt;
 use syn::parse_quote;
 
 #[derive(syn_derive::ToTokens)]
-pub struct ExecPartsItem {
+pub struct ModuleExecPartsItem {
     parts_module: ExecPartsModuleItem,
     #[syn(braced)]
     brace_token: syn::token::Brace,
@@ -20,7 +20,7 @@ pub struct ExecPartsItem {
     exec_functions: Vec<ExecFunctionItem>
 }
 
-impl TryFrom<&'_ ModuleImplIR> for ExecPartsItem {
+impl TryFrom<&'_ ModuleImplIR> for ModuleExecPartsItem {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
@@ -78,8 +78,9 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for ExecFunctionItem {
         let env_rc_ident = utils::ident::env_rc();
         let env_ident = utils::ident::env();
         let exec_env_ident = utils::ident::exec_env();
-        let exec_env_stmt = (func.is_payable() || func.is_non_reentrant() || func.has_args() || func.is_upgrader())
-            .then(|| utils::stmt::new_execution_env(&exec_env_ident, &env_rc_ident));
+        let exec_env_stmt =
+            (func.is_payable() || func.is_non_reentrant() || func.has_args() || func.is_upgrader())
+                .then(|| utils::stmt::new_execution_env(&exec_env_ident, &env_rc_ident));
         let contract_ident = utils::ident::contract();
         let module_ident = module.module_ident()?;
         let fn_args = func
@@ -92,7 +93,6 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for ExecFunctionItem {
                 Ok(expr)
             })
             .collect::<syn::Result<syn::punctuated::Punctuated<syn::Expr, syn::token::Comma>>>()?;
-
 
         let args = func
             .named_args()
@@ -230,7 +230,7 @@ mod test {
     #[test]
     fn test_parts() {
         let module = mock::module_impl();
-        let actual = ExecPartsItem::try_from(&module).unwrap();
+        let actual = ModuleExecPartsItem::try_from(&module).unwrap();
 
         let expected = quote::quote! {
             #[allow(missing_docs)]
@@ -310,7 +310,7 @@ mod test {
     #[test]
     fn test_trait_impl_parts() {
         let module = mock::module_trait_impl();
-        let actual = ExecPartsItem::try_from(&module).unwrap();
+        let actual = ModuleExecPartsItem::try_from(&module).unwrap();
 
         let expected = quote::quote! {
             #[allow(missing_docs)]
@@ -345,7 +345,7 @@ mod test {
     #[test]
     fn test_delegated_parts() {
         let module = mock::module_delegation();
-        let actual = ExecPartsItem::try_from(&module).unwrap();
+        let actual = ModuleExecPartsItem::try_from(&module).unwrap();
 
         let expected = quote::quote! {
             #[allow(missing_docs)]

@@ -14,7 +14,7 @@ use super::{
 };
 
 #[derive(syn_derive::ToTokens)]
-pub struct WasmPartsModuleItem {
+pub struct ModuleWasmPartsItem {
     #[to_tokens(|tokens, f| tokens.append_all(f))]
     attrs: Vec<syn::Attribute>,
     mod_token: syn::token::Mod,
@@ -34,7 +34,7 @@ pub struct WasmPartsModuleItem {
     entry_points: Vec<NoMangleFnItem>
 }
 
-impl TryFrom<&'_ ModuleImplIR> for WasmPartsModuleItem {
+impl TryFrom<&'_ ModuleImplIR> for ModuleWasmPartsItem {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
@@ -123,7 +123,7 @@ impl TryFrom<&'_ ModuleImplIR> for CallFnItem {
         let ident_schemas = utils::ident::schemas();
         let ty_args = utils::ty::runtime_args();
         let ident_entry_points = utils::ident::entry_points();
-        let exec_env_stmt : syn::Stmt = parse_quote!(
+        let exec_env_stmt: syn::Stmt = parse_quote!(
             let exec_env = {
                 let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
                 let env_rc = Rc::new(env);
@@ -182,7 +182,7 @@ impl TryFrom<&'_ ModuleImplIR> for CallFnItem {
 }
 
 #[derive(syn_derive::ToTokens)]
-struct NoMangleFnItem {
+pub(super) struct NoMangleFnItem {
     attr: syn::Attribute,
     sig: syn::Signature,
     #[syn(braced)]
@@ -295,13 +295,13 @@ impl TryFrom<&'_ FnIR> for NewEntryPointItem {
 
 #[cfg(test)]
 mod test {
-    use super::WasmPartsModuleItem;
+    use super::ModuleWasmPartsItem;
     use crate::test_utils;
 
     #[test]
     fn test() {
         let module = test_utils::mock::module_impl();
-        let actual = WasmPartsModuleItem::try_from(&module).unwrap();
+        let actual = ModuleWasmPartsItem::try_from(&module).unwrap();
 
         let expected = quote::quote! {
             #[cfg(target_arch = "wasm32")]
@@ -319,8 +319,8 @@ mod test {
                         vec![odra::args::parameter::<Option<U256> >("total_supply")].into_iter().filter_map(|x| x).collect(),
                         <() as odra::casper_types::CLTyped>::cl_type(),
                         odra::casper_types::EntryPointAccess::Groups(vec![odra::casper_types::Group::new("constructor_group")]),
-                                                        odra::casper_types::EntryPointType::Called,
-                                odra::casper_types::EntryPointPayment::Caller,
+                        odra::casper_types::EntryPointType::Called,
+                        odra::casper_types::EntryPointPayment::Caller,
 
                     ));
                     entry_points.add_entry_point(odra::casper_types::EntityEntryPoint::new(
@@ -328,8 +328,8 @@ mod test {
                         vec![odra::args::parameter::<Option<U256> >("total_supply")].into_iter().filter_map(|x| x).collect(),
                         <() as odra::casper_types::CLTyped>::cl_type(),
                         odra::casper_types::EntryPointAccess::Groups(vec![odra::casper_types::Group::new("upgrader_group")]),
-                                                        odra::casper_types::EntryPointType::Called,
-                                odra::casper_types::EntryPointPayment::Caller,
+                        odra::casper_types::EntryPointType::Called,
+                        odra::casper_types::EntryPointPayment::Caller,
 
                     ));
                     entry_points.add_entry_point(odra::casper_types::EntityEntryPoint::new(
@@ -475,7 +475,7 @@ mod test {
     #[test]
     fn test_trait_impl() {
         let module = test_utils::mock::module_trait_impl();
-        let actual = WasmPartsModuleItem::try_from(&module).unwrap();
+        let actual = ModuleWasmPartsItem::try_from(&module).unwrap();
 
         let expected = quote::quote! {
             #[cfg(target_arch = "wasm32")]
@@ -557,7 +557,7 @@ mod test {
     #[test]
     fn test_delegate() {
         let module = test_utils::mock::module_delegation();
-        let actual = WasmPartsModuleItem::try_from(&module).unwrap();
+        let actual = ModuleWasmPartsItem::try_from(&module).unwrap();
 
         let expected = quote::quote! {
             #[cfg(target_arch = "wasm32")]

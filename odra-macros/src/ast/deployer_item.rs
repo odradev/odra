@@ -1,22 +1,13 @@
 #![allow(unused_variables)]
 
-use crate::{
-    ir::ModuleImplIR,
-    utils
-};
+use crate::{ir::ModuleImplIR, utils};
 use derive_try_from_ref::TryFromRef;
+use quote::{ToTokens, TokenStreamExt};
 
 use super::deployer_utils::{EntrypointCallerExpr, EntrypointsInitExpr, EpcSignature};
 
-#[derive(syn_derive::ToTokens)]
-struct DeployImplItem {
-    impl_token: syn::token::Impl,
-    epc_provider_ty: syn::Type,
-    for_token: syn::token::For,
+pub struct DeployImplItem {
     ident: syn::Ident,
-    #[syn(braced)]
-    brace_token: syn::token::Brace,
-    #[syn(in = brace_token)]
     epc_fn: ContractEpcFn
 }
 
@@ -25,13 +16,23 @@ impl TryFrom<&'_ ModuleImplIR> for DeployImplItem {
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            impl_token: Default::default(),
-            epc_provider_ty: utils::ty::entry_point_caller_provider(),
-            for_token: Default::default(),
             ident: module.host_ref_ident()?,
-            brace_token: Default::default(),
             epc_fn: module.try_into()?
         })
+    }
+}
+
+impl ToTokens for DeployImplItem {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let epc_ty = utils::ty::entry_point_caller_provider();
+        let ident = &self.ident;
+        let epc_fn = &self.epc_fn;
+
+        tokens.append_all(quote::quote! {
+            impl #epc_ty for #ident {
+                #epc_fn
+            }
+        });
     }
 }
 
@@ -121,7 +122,7 @@ struct InitArgsImplItem {
     for_token: syn::token::For,
     ident: syn::Ident,
     #[syn(braced)]
-    brace_token: syn::token::Brace,
+    brace_token: syn::token::Brace
 }
 
 impl TryFrom<&'_ ModuleImplIR> for InitArgsImplItem {
@@ -133,7 +134,7 @@ impl TryFrom<&'_ ModuleImplIR> for InitArgsImplItem {
             trait_ty: utils::ty::init_args(),
             for_token: Default::default(),
             ident: module.init_args_ident()?,
-            brace_token: Default::default(),
+            brace_token: Default::default()
         })
     }
 }
@@ -210,7 +211,7 @@ struct UpgradeArgsImplItem {
     for_token: syn::token::For,
     ident: syn::Ident,
     #[syn(braced)]
-    brace_token: syn::token::Brace,
+    brace_token: syn::token::Brace
 }
 
 impl TryFrom<&'_ ModuleImplIR> for UpgradeArgsImplItem {
@@ -222,7 +223,7 @@ impl TryFrom<&'_ ModuleImplIR> for UpgradeArgsImplItem {
             trait_ty: utils::ty::upgrade_args(),
             for_token: Default::default(),
             ident: module.upgrade_args_ident()?,
-            brace_token: Default::default(),
+            brace_token: Default::default()
         })
     }
 }
@@ -265,7 +266,6 @@ impl TryFrom<&'_ ModuleImplIR> for DeployerItem {
         })
     }
 }
-
 
 #[cfg(test)]
 mod deployer_impl {

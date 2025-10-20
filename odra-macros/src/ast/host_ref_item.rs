@@ -1,4 +1,5 @@
 use crate::{
+    ast::contract_ref_item::WithTokensFnItem,
     ir::ModuleImplIR,
     utils::{self, misc::AsBlock}
 };
@@ -10,7 +11,7 @@ use syn::parse_quote;
 use super::{fn_utils::FnItem, ref_utils};
 
 #[derive(syn_derive::ToTokens)]
-struct HostRefStructItem {
+pub(super) struct HostRefStructItem {
     doc: syn::Attribute,
     vis: syn::Visibility,
     struct_token: syn::token::Struct,
@@ -77,7 +78,7 @@ impl TryFrom<&'_ ModuleImplIR> for HasIdentTraitImplItem {
 }
 
 #[derive(syn_derive::ToTokens)]
-struct HostRefTraitImplItem {
+pub(super) struct HostRefTraitImplItem {
     impl_token: syn::token::Impl,
     trait_ty: syn::Type,
     for_token: syn::token::For,
@@ -202,31 +203,6 @@ impl ToTokens for NewFnItem {
                     #address,
                     #env,
                     #attached_value: #default
-                }
-            }
-        ));
-    }
-}
-
-pub struct WithTokensFnItem;
-
-impl ToTokens for WithTokensFnItem {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let m_address = utils::member::address();
-        let m_env = utils::member::env();
-
-        let ty_u512 = utils::ty::u512();
-
-        let address = utils::ident::address();
-        let attached_value = utils::ident::attached_value();
-        let env = utils::ident::env();
-
-        tokens.extend(quote!(
-            fn with_tokens(&self, tokens: #ty_u512) -> Self {
-                Self {
-                    #address: #m_address,
-                    #env: #m_env.clone(),
-                    #attached_value: tokens
                 }
             }
         ));

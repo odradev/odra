@@ -3,8 +3,8 @@ use crate::ast::utils::{ImplItem, Named};
 use crate::ir::{TypeIR, TypeKind};
 use crate::utils;
 use crate::utils::misc::AsBlock;
-use syn::parse_quote;
 use derive_try_from_ref::TryFromRef;
+use syn::parse_quote;
 
 use super::schema::SchemaErrorItem;
 
@@ -20,9 +20,8 @@ pub struct OdraErrorAttrItem {
 pub struct OdraErrorItem {
     item: syn::Item,
     wasm32_fn: FromErrorItem,
-    not_wasm32_fn: FromErrorItem,
+    not_wasm32_fn: FromErrorItem
 }
-
 
 impl TryFrom<&'_ TypeIR> for OdraErrorItem {
     type Error = syn::Error;
@@ -30,11 +29,19 @@ impl TryFrom<&'_ TypeIR> for OdraErrorItem {
     fn try_from(ty: &TypeIR) -> Result<Self, Self::Error> {
         let kind: TypeKind = ty.kind()?;
         let variants = match kind {
-            TypeKind::Enum { variants} => variants,
+            TypeKind::Enum { variants } => variants,
             TypeKind::UnitEnum { variants } => variants,
-            _ => return Err(syn::Error::new_spanned(ty.self_code(), "Expected an enum or unit enum for #[odra_error]"))
-        }.iter().map(|v| v.ident.clone()).collect::<Vec<_>>();
-        
+            _ => {
+                return Err(syn::Error::new_spanned(
+                    ty.self_code(),
+                    "Expected an enum or unit enum for #[odra_error]"
+                ))
+            }
+        }
+        .iter()
+        .map(|v| v.ident.clone())
+        .collect::<Vec<_>>();
+
         let ident = ty.name()?;
         let ident_error = utils::ident::error();
         let ty_odra_error = utils::ty::odra_error();
@@ -80,9 +87,8 @@ struct FromErrorItem {
     #[syn(braced)]
     braces: syn::token::Brace,
     #[syn(in = braces)]
-    fn_item: SingleArgFnItem,
+    fn_item: SingleArgFnItem
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -100,7 +106,7 @@ mod tests {
                 /// Description of B
                 B,
             }
-            
+
             #[cfg(target_arch = "wasm32")]
             #[automatically_derived]
             impl ::core::convert::From<MyType> for OdraError {
@@ -108,7 +114,7 @@ mod tests {
                     OdraError::user(error as u16)
                 }
             }
-            
+
             #[cfg(not(target_arch = "wasm32"))]
             #[automatically_derived]
             impl ::core::convert::From<MyType> for OdraError {

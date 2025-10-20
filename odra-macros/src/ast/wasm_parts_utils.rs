@@ -25,7 +25,7 @@ pub fn param_access(func: &FnIR) -> syn::Expr {
     } else if func.is_upgrader() {
         utils::expr::entry_point_group("upgrader_group")
     } else {
-        utils::expr::entry_point_public()
+        utils::expr::entry_point_access_public()
     }
 }
 

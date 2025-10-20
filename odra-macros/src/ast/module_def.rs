@@ -21,7 +21,10 @@ impl TryFrom<&'_ ModuleStructIR> for ModuleDefItem {
         if item_struct.fields.len() > MAX_FIELDS {
             return Err(syn::Error::new_spanned(
                 item_struct.fields,
-                format!("The number of fields in a module definition must be less than or equal to {}", MAX_FIELDS)
+                format!(
+                    "The number of fields in a module definition must be less than or equal to {}",
+                    MAX_FIELDS
+                )
             ));
         }
 

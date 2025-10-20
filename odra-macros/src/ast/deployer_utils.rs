@@ -7,34 +7,33 @@ use quote::ToTokens;
 use syn::parse_quote;
 use syn::punctuated::Punctuated;
 
-#[derive(syn_derive::ToTokens)]
 pub struct EntrypointsInitExpr {
-    let_token: syn::token::Let,
-    ident: syn::Ident,
-    assign_token: syn::token::Eq,
-    value_expr: syn::Expr,
-    semi_token: syn::token::Semi
+    value_expr: syn::Expr
 }
 
 impl TryFrom<&'_ ModuleImplIR> for EntrypointsInitExpr {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        let functions = module.functions()?;
-        
-        let entry_points = functions
+        let entry_points = module
+            .functions()?
             .iter()
             .map(|f| utils::expr::new_entry_point(f.name_str(), f.raw_typed_args(), f.is_payable()))
             .collect::<Punctuated<_, syn::Token![,]>>();
-        let value_expr = utils::expr::vec(entry_points);
 
         Ok(Self {
-            let_token: Default::default(),
-            ident: utils::ident::entry_points(),
-            assign_token: Default::default(),
-            value_expr,
-            semi_token: Default::default()
+            value_expr: utils::expr::vec(entry_points)
         })
+    }
+}
+
+impl ToTokens for EntrypointsInitExpr {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let ident = utils::ident::entry_points();
+        let value_expr = &self.value_expr;
+        tokens.extend(quote::quote! {
+            let #ident = #value_expr;
+        });
     }
 }
 

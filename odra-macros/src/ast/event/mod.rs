@@ -1,9 +1,9 @@
-use std::collections::HashSet;
 use quote::ToTokens;
+use std::collections::HashSet;
 use syn::{punctuated::Punctuated, token::Comma};
 
 pub struct OdraEventItem {
-    item_struct: syn::ItemStruct,
+    item_struct: syn::ItemStruct
 }
 
 impl ToTokens for OdraEventItem {
@@ -11,30 +11,33 @@ impl ToTokens for OdraEventItem {
         let item = &self.item_struct;
         let ident = &item.ident;
         let name = ident.to_string();
-        let fields = item.fields.iter()
+        let fields = item
+            .fields
+            .iter()
             .map(|f| {
                 let ident = f.ident.as_ref().unwrap();
                 let ty = &f.ty;
                 quote::quote!(#ident: #ty)
             })
             .collect::<Punctuated<_, Comma>>();
-        let field_names = item.fields.iter().map(|f| f.ident.as_ref().unwrap()).collect::<Punctuated<_, Comma>>();
+        let field_names = item
+            .fields
+            .iter()
+            .map(|f| f.ident.as_ref().unwrap())
+            .collect::<Punctuated<_, Comma>>();
         let comment = format!("Creates a new instance of the {} event.", ident);
         let doc_attr = quote::quote!(#[doc = #comment]);
 
         let mut tmp = HashSet::<String>::new();
         let mut chain = vec![];
 
-        item.fields
-            .iter()
-            .for_each(|f| {
-                let ty = &f.ty;
-                let v = quote::quote!(.chain(<#ty as odra::schema::SchemaEvents>::custom_types()));
-                if tmp.insert(v.to_string()) {
-                    chain.push(v);
-                }
-            });
-
+        item.fields.iter().for_each(|f| {
+            let ty = &f.ty;
+            let v = quote::quote!(.chain(<#ty as odra::schema::SchemaEvents>::custom_types()));
+            if tmp.insert(v.to_string()) {
+                chain.push(v);
+            }
+        });
 
         let self_item = custom_struct(&name, &item.fields);
 

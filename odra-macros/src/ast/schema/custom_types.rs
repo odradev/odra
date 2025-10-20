@@ -33,14 +33,12 @@ impl ToTokens for SchemaCustomTypesItem {
 
         let mut tmp = HashSet::<String>::new();
         let mut chain = vec![];
-        types
-            .iter()
-            .for_each(|t| {
-                let v = quote::quote!(.chain(<#t as odra::schema::SchemaCustomTypes>::schema_types()));
-                if tmp.insert(v.to_string()) {
-                    chain.push(v);
-                }
-            });
+        types.iter().for_each(|t| {
+            let v = quote::quote!(.chain(<#t as odra::schema::SchemaCustomTypes>::schema_types()));
+            if tmp.insert(v.to_string()) {
+                chain.push(v);
+            }
+        });
 
         let item = quote::quote! {
             #[automatically_derived]
@@ -84,7 +82,9 @@ mod test {
             #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaCustomTypes for Erc20 {
-                fn schema_types() -> odra::prelude::vec::Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
+                fn schema_types(
+                ) -> odra::prelude::vec::Vec<Option<odra::schema::casper_contract_schema::CustomType>>
+                {
                     odra::prelude::BTreeSet::<Option<odra::schema::casper_contract_schema::CustomType>>::new()
                         .into_iter()
                         .chain(<Option<U256> as odra::schema::SchemaCustomTypes>::schema_types())

@@ -30,7 +30,9 @@ impl ToTokens for SchemaEntrypointsItem {
                 let is_mut = f.is_mut();
                 let mut args = args_to_tokens(&f.raw_typed_args());
                 if f.is_payable() {
-                    args.push(quote::quote!(odra::schema::argument::<odra::casper_types::URef>("__cargo_purse")))
+                    args.push(quote::quote!(odra::schema::argument::<
+                        odra::casper_types::URef
+                    >("__cargo_purse")))
                 };
                 quote::quote! {
                     odra::schema::entry_point::<#ret_ty>(
@@ -92,19 +94,25 @@ mod test {
             #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaEntrypoints for Erc20 {
-                fn schema_entrypoints() -> odra::prelude::vec::Vec<odra::schema::casper_contract_schema::Entrypoint> {
+                fn schema_entrypoints(
+                ) -> odra::prelude::vec::Vec<odra::schema::casper_contract_schema::Entrypoint>
+                {
                     odra::prelude::vec![
                         odra::schema::entry_point::<()>(
                             "init",
                             "Initializes the contract with the given parameters.",
                             true,
-                            odra::prelude::vec![odra::schema::argument::<Option<U256> >("total_supply")]
+                            odra::prelude::vec![odra::schema::argument::<Option<U256> >(
+                                "total_supply"
+                            )]
                         ),
                         odra::schema::entry_point::<()>(
                             "upgrade",
                             "Upgrades the contract with the given parameters.",
                             true,
-                            odra::prelude::vec![odra::schema::argument::<Option<U256> >("total_supply")]
+                            odra::prelude::vec![odra::schema::argument::<Option<U256> >(
+                                "total_supply"
+                            )]
                         ),
                         odra::schema::entry_point::<U256>(
                             "total_supply",
@@ -116,7 +124,9 @@ mod test {
                             "pay_to_mint",
                             "Pay to mint.",
                             true,
-                            odra::prelude::vec![odra::schema::argument::<odra::casper_types::URef>("__cargo_purse")]
+                            odra::prelude::vec![
+                                odra::schema::argument::<odra::casper_types::URef>("__cargo_purse")
+                            ]
                         ),
                         odra::schema::entry_point::<()>(
                             "approve",
@@ -152,10 +162,24 @@ mod test {
             #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaEntrypoints for Erc20 {
-                fn schema_entrypoints() -> odra::prelude::vec::Vec<odra::schema::casper_contract_schema::Entrypoint> {
+                fn schema_entrypoints(
+                ) -> odra::prelude::vec::Vec<odra::schema::casper_contract_schema::Entrypoint>
+                {
                     odra::prelude::vec![
-                        odra::schema::entry_point::<U256>("total_supply", "", false, odra::prelude::vec![]),
-                        odra::schema::entry_point::<()>("pay_to_mint", "", true, odra::prelude::vec![odra::schema::argument::<odra::casper_types::URef>("__cargo_purse")])
+                        odra::schema::entry_point::<U256>(
+                            "total_supply",
+                            "",
+                            false,
+                            odra::prelude::vec![]
+                        ),
+                        odra::schema::entry_point::<()>(
+                            "pay_to_mint",
+                            "",
+                            true,
+                            odra::prelude::vec![
+                                odra::schema::argument::<odra::casper_types::URef>("__cargo_purse")
+                            ]
+                        )
                     ]
                 }
             }
@@ -171,7 +195,9 @@ mod test {
             #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaEntrypoints for Erc20 {
-                fn schema_entrypoints() -> odra::prelude::vec::Vec<odra::schema::casper_contract_schema::Entrypoint> {
+                fn schema_entrypoints(
+                ) -> odra::prelude::vec::Vec<odra::schema::casper_contract_schema::Entrypoint>
+                {
                     odra::prelude::vec![
                         odra::schema::entry_point::<U256>(
                             "total_supply",
@@ -180,9 +206,9 @@ mod test {
                             odra::prelude::vec![]
                         ),
                         odra::schema::entry_point::<Address>(
-                            "get_owner", 
-                            "Returns the owner of the contract.", 
-                            false, 
+                            "get_owner",
+                            "Returns the owner of the contract.",
+                            false,
                             odra::prelude::vec![]
                         ),
                         odra::schema::entry_point::<()>(
@@ -194,7 +220,7 @@ mod test {
                         odra::schema::entry_point::<String>(
                             "name",
                             "Returns the name of the token.",
-                            false, 
+                            false,
                             odra::prelude::vec![]
                         ),
                         odra::schema::entry_point::<String>(
