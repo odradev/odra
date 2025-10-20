@@ -73,6 +73,10 @@ pub fn key() -> syn::Type {
     parse_quote!(odra::casper_types::Key)
 }
 
+pub fn uref() -> syn::Type {
+    parse_quote!(odra::casper_types::URef)
+}
+
 pub fn entry_points() -> syn::Type {
     parse_quote!(odra::casper_types::EntryPoints)
 }

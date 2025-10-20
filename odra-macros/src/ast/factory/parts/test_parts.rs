@@ -116,14 +116,14 @@ mod test {
                 }
 
                 impl Erc20FactoryHostRef {
-                    pub fn factory(&mut self, contract_name: String, value: u32) -> Address {
+                    pub fn factory(&mut self, contract_name: String, value: u32) -> (Address, odra::casper_types::URef) {
                         self.try_factory(contract_name, value).unwrap()
                     }
                 }
 
                 impl Erc20FactoryHostRef {
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_factory(&mut self, contract_name: String, value: u32) -> OdraResult<Address> {
+                    pub fn try_factory(&mut self, contract_name: String, value: u32) -> OdraResult<(Address, odra::casper_types::URef)> {
                         self.env
                             .call_contract(
                                 self.address,

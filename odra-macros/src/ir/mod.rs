@@ -356,8 +356,9 @@ impl ModuleImplIR {
             .map(FnArgIR::raw)
             .collect::<syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma>>();
         let ty_address = utils::ty::address();
+        let ty_uref = utils::ty::uref();
         let factory_fn = parse_quote! {
-            pub fn factory(&mut self, contract_name: String, #args) -> #ty_address {
+            pub fn factory(&mut self, contract_name: String, #args) -> (#ty_address, #ty_uref) {
             }
         };
         FnIR::Impl(FnImplIR::new(factory_fn))

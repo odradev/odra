@@ -79,13 +79,8 @@ pub fn install_or_upgrade(
     if is_upgrade {
         upgrade_contract(entry_points, events, init_args)
     } else {
-        install_new_contract(entry_points, events, init_args)
+        install_new_contract(entry_points, events, init_args).0
     }
-}
-
-/// test
-pub fn print<T: ToString>(value: T) {
-    runtime::print(&value.to_string());
 }
 
 /// Installs a contract from a contract package.
@@ -101,11 +96,9 @@ pub fn install_new_contract(
     entry_points: EntryPoints,
     events: Schemas,
     init_args: Option<RuntimeArgs>
-) -> ContractPackageHash {
+) -> (ContractPackageHash, URef) {
     // Extract named arguments, variables and check if the contract is upgradable.
     // And check if there is an existing contract.
-    runtime::print("!!!!install_new_contract!!!!");
-
     let package_hash_key_name: String = runtime::get_named_arg(PACKAGE_HASH_KEY_NAME_ARG);
     let package_hash_key = runtime::get_key(&package_hash_key_name);
     let allow_key_override: bool = runtime::get_named_arg(ALLOW_KEY_OVERRIDE_ARG);
@@ -131,7 +124,7 @@ pub fn install_new_contract(
             entry_points,
             Some(named_keys),
             Some(package_hash_key_name.clone()),
-            Some(access_uref_key),
+            Some(access_uref_key.clone()),
             Some(message_topics)
         );
     } else {
@@ -139,7 +132,7 @@ pub fn install_new_contract(
             entry_points,
             Some(named_keys),
             Some(package_hash_key_name.clone()),
-            Some(access_uref_key),
+            Some(access_uref_key.clone()),
             Some(message_topics)
         );
     };
@@ -152,7 +145,6 @@ pub fn install_new_contract(
     let contract_package_hash = ContractPackageHash::new(contract_hash.value());
     if has_init {
         let init_access = create_contract_user_group(contract_package_hash, CONSTRUCTOR_GROUP_NAME);
-        print(init_args.clone().unwrap().get("value").is_some());
         let _: () = runtime::call_versioned_contract(
             contract_package_hash,
             None,
@@ -170,7 +162,12 @@ pub fn install_new_contract(
     )
     .unwrap_or_revert();
 
-    contract_package_hash
+    let access_uref = runtime::get_key(&access_uref_key)
+        .unwrap_or_revert_with(ApiError::AllocLayout)
+        .into_uref()
+        .unwrap_or_revert_with(ApiError::BufferTooSmall);
+
+    (contract_package_hash, access_uref)
 }
 
 /// Upgrades a contract within package.
@@ -238,7 +235,7 @@ pub fn upgrade_contract(
     // We enable access to upgrader functions ("upgrade" and "migrate_events");
     let new_uref =
         storage::provision_contract_user_group_uref(contract_package_hash, UPGRADER_GROUP_NAME)
-            .unwrap();
+            .unwrap_or_revert();
 
     // Call "migrate_events".
     let _: () = runtime::call_versioned_contract(

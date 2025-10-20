@@ -117,7 +117,7 @@ mod test {
                                 odra::args::odra_argument::<u32>("value")
                             ],
                             is_mutable: true,
-                            return_ty: <Address as odra::casper_types::CLTyped>::cl_type(),
+                            return_ty: <(Address, odra::casper_types::URef) as odra::casper_types::CLTyped>::cl_type(),
                             ty: odra::contract_def::EntrypointType::Public,
                             attributes: odra::prelude::vec![]
                         }
@@ -155,7 +155,7 @@ mod test {
             }
 
             impl Erc20FactoryContractRef {
-                pub fn factory(&mut self, contract_name: String, value: u32) -> Address {
+                pub fn factory(&mut self, contract_name: String, value: u32) -> (Address, odra::casper_types::URef) {
                     self.env.call_contract(
                         self.address,
                         odra::CallDef::new(
@@ -234,14 +234,14 @@ mod test {
                 }
 
                 impl Erc20FactoryHostRef {
-                    pub fn factory(&mut self, contract_name: String, value: u32) -> Address {
+                    pub fn factory(&mut self, contract_name: String, value: u32) -> (Address, odra::casper_types::URef) {
                         self.try_factory(contract_name, value).unwrap()
                     }
                 }
 
                 impl Erc20FactoryHostRef {
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_factory(&mut self, contract_name: String, value: u32) -> OdraResult<Address> {
+                    pub fn try_factory(&mut self, contract_name: String, value: u32) -> OdraResult<(Address, odra::casper_types::URef)> {
                         self.env
                             .call_contract(
                                 self.address,
@@ -496,16 +496,16 @@ mod test {
                         &mut named_args
                     );
 
-                    let result = odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
+                    let (contract_package_hash, access_uref) = odra::odra_casper_wasm_env::host_functions::install_new_contract(
                         entry_points,
                         schemas,
                         Some(named_args)
                     );
-                    let address: Address = result.into();
+                    let address: Address = contract_package_hash.into();
 
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
-                            odra::casper_types::CLValue::from_t(address)
+                            odra::casper_types::CLValue::from_t((address, access_uref))
                         )
                     );
                 }

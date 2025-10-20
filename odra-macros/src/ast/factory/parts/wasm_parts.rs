@@ -281,7 +281,6 @@ impl ToTokens for NoMangleFactoryFnItem {
         let contract_ident: syn::Ident = format_ident!("{}", contract_ident);
         let events_expr = utils::expr::event_schemas(&contract_ident.as_type());
         let expr_new_schemas = utils::expr::schemas(&events_expr);
-        let ident_result = utils::ident::result();
         let ident_args = utils::ident::named_args();
         let expr_entry_points = utils::expr::new_entry_points();
         let add_entry_point_items = &self.add_entry_point_items;
@@ -291,11 +290,6 @@ impl ToTokens for NoMangleFactoryFnItem {
         } else {
             vec![]
         };
-        let install_or_upgrade_stmt = utils::stmt::install_or_upgrade(
-            parse_quote!(#ident_entry_points),
-            parse_quote!(#ident_schemas),
-            parse_quote!(Some(#ident_args))
-        );
 
         tokens.append_all(quote::quote! {
             #[no_mangle]
@@ -312,12 +306,16 @@ impl ToTokens for NoMangleFactoryFnItem {
                 let mut #ident_args = #new_runtime_args;
                 #(#insert_args)*
         
-                let #ident_result = #install_or_upgrade_stmt
-                let address: #address_ty = #ident_result.into();
+                let (contract_package_hash, access_uref) = odra::odra_casper_wasm_env::host_functions::install_new_contract(
+                    #ident_entry_points,
+                    #ident_schemas,
+                    Some(#ident_args)
+                );
+                let address: #address_ty = contract_package_hash.into();
 
                 odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                     odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
-                        odra::casper_types::CLValue::from_t(address)
+                        odra::casper_types::CLValue::from_t((address, access_uref))
                     )
                 );
             }
@@ -492,7 +490,6 @@ mod test {
                         odra::ExecutionEnv::new(env_rc)
                     };
 
-
                     let mut named_args = odra::casper_types::RuntimeArgs::new();
                     odra::args::EntrypointArgument::insert_runtime_arg(
                         exec_env.get_named_arg::<u32>("value"),
@@ -500,16 +497,16 @@ mod test {
                         &mut named_args
                     );
 
-                    let result = odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
+                    let (contract_package_hash, access_uref) = odra::odra_casper_wasm_env::host_functions::install_new_contract(
                         entry_points,
                         schemas,
                         Some(named_args)
                     );
-                    let address: Address = result.into();
+                    let address: Address = contract_package_hash.into();
 
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
-                            odra::casper_types::CLValue::from_t(address)
+                            odra::casper_types::CLValue::from_t((address, access_uref))
                         )
                     );
                 }
