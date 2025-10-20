@@ -1,0 +1,61 @@
+{
+  "name": "CounterFactory",
+  "events": [],
+  "entrypoints": [
+    {
+      "name": "init",
+      "args": [
+        {
+          "name": "value",
+          "ty": "U32",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Constructor",
+      "attributes": []
+    },
+    {
+      "name": "increment",
+      "args": [],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "value",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U32",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "factory",
+      "args": [
+        {
+          "name": "contract_name",
+          "ty": "String",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "value",
+          "ty": "U32",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Key",
+      "ty": "Public",
+      "attributes": []
+    }
+  ]
+}
