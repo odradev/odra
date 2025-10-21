@@ -27,13 +27,13 @@ impl ContractsCmd {
         package_name: String
     ) {
         self.contracts
-            .push(ContractCmd::new::<T>(Some(package_name)));
+            .push(ContractCmd::new_named::<T>(Some(package_name)));
     }
 
     pub fn add_contract<T: SchemaEntrypoints + OdraContract + SchemaCustomTypes + SchemaEvents>(
         &mut self
     ) {
-        self.contracts.push(ContractCmd::new::<T>(None));
+        self.contracts.push(ContractCmd::new::<T>());
     }
 }
 
@@ -77,7 +77,11 @@ struct ContractCmd {
 }
 
 impl ContractCmd {
-    pub fn new<T: SchemaEntrypoints + OdraContract + SchemaCustomTypes + SchemaEvents>(
+    pub fn new<T: SchemaEntrypoints + OdraContract + SchemaCustomTypes + SchemaEvents>() -> Self {
+        Self::new_named::<T>(None)
+    }
+
+    pub fn new_named<T: SchemaEntrypoints + OdraContract + SchemaCustomTypes + SchemaEvents>(
         package_name: Option<String>
     ) -> Self {
         let contract_name = T::HostRef::ident();
@@ -243,7 +247,7 @@ mod tests {
 
     #[test]
     fn test_contract_cmd() {
-        let cmd = ContractCmd::new::<TestContract>(None);
+        let cmd = ContractCmd::new::<TestContract>();
 
         assert_eq!(cmd.contract_name, "TestContract");
         assert_eq!(cmd.entry_points.len(), 4);
@@ -251,7 +255,7 @@ mod tests {
 
     #[test]
     fn parsing_fails_if_entry_point_missing() {
-        let cmd = ContractCmd::new::<TestContract>(None);
+        let cmd = ContractCmd::new::<TestContract>();
 
         let clap_cmd: Command = (&cmd).into();
         let result = clap_cmd.try_get_matches_from(vec!["test"]);
@@ -263,7 +267,7 @@ mod tests {
 
     #[test]
     fn parsing_fails_if_invalid_entry_point() {
-        let cmd = ContractCmd::new::<TestContract>(None);
+        let cmd = ContractCmd::new::<TestContract>();
 
         let clap_cmd: Command = (&cmd).into();
         let result = clap_cmd.try_get_matches_from(vec!["test", "sub"]);
@@ -275,7 +279,7 @@ mod tests {
 
     #[test]
     fn parsing_entry_point() {
-        let cmd = ContractCmd::new::<TestContract>(None);
+        let cmd = ContractCmd::new::<TestContract>();
 
         let clap_cmd: Command = (&cmd).into();
         let result = clap_cmd.try_get_matches_from(vec!["test", "add", "--x", "5", "--y", "10"]);
@@ -284,7 +288,7 @@ mod tests {
 
     #[test]
     fn parsing_entry_point_fails_if_arg_is_missing() {
-        let cmd = ContractCmd::new::<TestContract>(None);
+        let cmd = ContractCmd::new::<TestContract>();
 
         let clap_cmd: Command = (&cmd).into();
         let result = clap_cmd.try_get_matches_from(vec!["test", "add", "--x", "5"]);
@@ -296,7 +300,7 @@ mod tests {
 
     #[test]
     fn parsing_entry_point_fails_if_wrong_arg() {
-        let cmd = ContractCmd::new::<TestContract>(None);
+        let cmd = ContractCmd::new::<TestContract>();
 
         let clap_cmd: Command = (&cmd).into();
         let result = clap_cmd.try_get_matches_from(vec!["test", "add", "--x", "5", "--yy", "10"]);
@@ -308,7 +312,7 @@ mod tests {
 
     #[test]
     fn gas_required_if_mutable_entry_point() {
-        let cmd = ContractCmd::new::<TestContract>(None);
+        let cmd = ContractCmd::new::<TestContract>();
 
         let clap_cmd: Command = (&cmd).into();
         let result = clap_cmd.try_get_matches_from(vec!["test", "mutable"]);
@@ -333,7 +337,7 @@ mod tests {
 
     #[test]
     fn attached_value_if_allowed() {
-        let cmd = ContractCmd::new::<TestContract>(None);
+        let cmd = ContractCmd::new::<TestContract>();
 
         let clap_cmd: Command = (&cmd).into();
         let result = clap_cmd.try_get_matches_from(vec![
@@ -349,7 +353,7 @@ mod tests {
 
     #[test]
     fn test_run() {
-        let cmd = ContractCmd::new::<TestContract>(None);
+        let cmd = ContractCmd::new::<TestContract>();
         let clap_cmd: Command = (&cmd).into();
         let args = clap_cmd.get_matches_from(vec!["test", "add", "--x", "5", "--y", "10"]);
         let env = test_utils::mock_host_env();
@@ -360,7 +364,7 @@ mod tests {
 
     #[test]
     fn test_parsing_arguments() {
-        let cmd = ContractCmd::new::<TestContract>(None);
+        let cmd = ContractCmd::new::<TestContract>();
         let clap_cmd: Command = (&cmd).into();
         let args = clap_cmd.try_get_matches_from(vec![
             "test",

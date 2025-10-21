@@ -82,6 +82,30 @@ impl WrappedNativeToken {
         });
     }
 
+    /// Withdraws native tokens from the contract to a specific recipient.
+    /// This allows the caller to burn their wrapped tokens and send the native tokens
+    /// directly to a different address, avoiding the need for intermediate transfers.
+    pub fn withdraw_to(&mut self, recipient: &Address, amount: &U256) {
+        let caller = self.env().caller();
+
+        // Burn tokens from caller
+        self.token.raw_burn(&caller, amount);
+        
+        // Send CSPR directly to recipient
+        if recipient.is_contract() {
+            CsprDepositContractRef::new(self.env(), *recipient)
+                .with_tokens(amount.to_u512())
+                .deposit();
+        } else {
+            self.env().transfer_tokens(recipient, &amount.to_u512());
+        }
+
+        self.env().emit_event(Withdrawal {
+            account: caller,
+            value: *amount
+        });
+    }
+
     /// Sets the allowance for `spender` to spend `amount` of the caller's tokens.
     pub fn allowance(&self, owner: &Address, spender: &Address) -> U256 {
         self.token.allowance(owner, spender)
