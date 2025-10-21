@@ -250,7 +250,7 @@ mod tests {
         let cmd = ContractCmd::new::<TestContract>();
 
         assert_eq!(cmd.contract_name, "TestContract");
-        assert_eq!(cmd.entry_points.len(), 4);
+        assert_eq!(cmd.entry_points.len(), 5);
     }
 
     #[test]
@@ -349,6 +349,16 @@ mod tests {
             "1000",
         ]);
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn cargo_purse_is_not_present() {
+        let cmd = ContractCmd::new::<TestContract>();
+
+        let clap_cmd: Command = (&cmd).into();
+        let result = clap_cmd.try_get_matches_from(vec!["test", "deposit", "--gas", "10000000000000"]);
+        dbg!(&result);
+        assert!(!result.is_ok());
     }
 
     #[test]
