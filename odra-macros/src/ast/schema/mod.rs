@@ -8,6 +8,6 @@ mod events;
 pub use contract_schema::SchemaItem;
 pub use custom_item::SchemaCustomTypeItem;
 pub use custom_types::SchemaCustomTypesItem;
-pub use entry_points::SchemaEntrypointsItem;
+pub use entry_points::{FactorySchemaEntrypointsItem, SchemaEntrypointsItem};
 pub use errors::{FactorySchemaErrorsItem, SchemaErrorItem, SchemaErrorsItem};
 pub use events::{FactorySchemaEventsItem, SchemaEventsItem};

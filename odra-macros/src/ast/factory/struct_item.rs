@@ -17,5 +17,5 @@ pub struct FactoryModuleStructItem {
     factory_has_events_impl_item: FactoryHasEventsImplItem,
     schema_item: SchemaItem,
     schema_events_item: FactorySchemaEventsItem,
-    schema_errors: FactorySchemaErrorsItem       // Should generate factory specific errors only
+    schema_errors: FactorySchemaErrorsItem
 }

@@ -29,20 +29,29 @@
   "errors": [],
   "entry_points": [
     {
-      "name": "increment",
+      "name": "factory",
       "description": "",
       "is_mutable": true,
-      "arguments": [],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "value",
-      "description": "",
-      "is_mutable": false,
-      "arguments": [],
-      "return_ty": "U32",
+      "arguments": [
+        {
+          "name": "contract_name",
+          "description": null,
+          "ty": "String",
+          "optional": false
+        },
+        {
+          "name": "value",
+          "description": null,
+          "ty": "U32",
+          "optional": false
+        }
+      ],
+      "return_ty": {
+        "Tuple2": [
+          "Key",
+          "URef"
+        ]
+      },
       "is_contract_context": true,
       "access": "public"
     }
@@ -79,12 +88,6 @@
         "name": "odra_cfg_is_upgrade",
         "description": "The arg name for telling the installer that the contract is being upgraded.",
         "ty": "Bool",
-        "optional": false
-      },
-      {
-        "name": "value",
-        "description": null,
-        "ty": "U32",
         "optional": false
       }
     ]

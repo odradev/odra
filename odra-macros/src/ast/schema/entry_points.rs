@@ -1,9 +1,55 @@
 use quote::ToTokens;
+use syn::{parse_quote, punctuated::Punctuated, Token};
 
 use crate::{
-    ir::{FnIR, ModuleImplIR},
+    ir::{FnIR, FnTraitIR, ModuleImplIR},
     utils::ty
 };
+
+#[derive(syn_derive::ToTokens)]
+pub struct FactorySchemaEntrypointsItem {
+    item: SchemaEntrypointsItem
+}
+
+impl TryFrom<&ModuleImplIR> for FactorySchemaEntrypointsItem {
+    type Error = syn::Error;
+
+    fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
+        let item = SchemaEntrypointsItem {
+            module_ident: module.module_ident()?,
+            fns: module.functions()?
+                .into_iter()
+                .filter(|f| f.is_constructor())
+                .map(|f| {
+                    let receiver: syn::FnArg = parse_quote!(&mut self);
+                    let mut inputs = Punctuated::<syn::FnArg, Token![,]>::new();
+                    inputs.push(receiver);
+                    let argless_sig = match f {
+                        FnIR::Impl(fn_impl_ir) => {
+                            let sig = fn_impl_ir.sig();
+                            syn::Signature {
+                                inputs,
+                                ..sig.clone()
+                            }
+                        },
+                        FnIR::Def(fn_trait_ir) => {
+                            let sig = fn_trait_ir.sig();
+                            syn::Signature {
+                                inputs,
+                                ..sig.clone()
+                            }
+                        }
+                    };
+                    FnIR::Def(FnTraitIR::new(parse_quote!(#argless_sig;)))
+                })
+                .chain(vec![module.factory_fn()].into_iter())
+                .collect()
+        };
+        Ok(Self {
+            item
+        })
+    }
+}
 
 pub struct SchemaEntrypointsItem {
     module_ident: syn::Ident,
@@ -82,7 +128,7 @@ impl TryFrom<&ModuleImplIR> for SchemaEntrypointsItem {
 
 #[cfg(test)]
 mod test {
-    use crate::test_utils;
+    use crate::{ast::schema::entry_points::FactorySchemaEntrypointsItem, test_utils};
     use quote::quote;
 
     use super::SchemaEntrypointsItem;
@@ -234,6 +280,40 @@ mod test {
             }
         );
         let actual = SchemaEntrypointsItem::try_from(&module).unwrap();
+        test_utils::assert_eq(actual, expected);
+    }
+
+    #[test]
+    fn test_factory_entrypoints() {
+        let module = test_utils::mock::module_factory_impl();
+        let expected = quote!(
+            #[automatically_derived]
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::SchemaEntrypoints for Erc20Factory {
+                fn schema_entrypoints(
+                ) -> odra::prelude::vec::Vec<odra::schema::casper_contract_schema::Entrypoint>
+                {
+                    odra::prelude::vec![
+                        odra::schema::entry_point::<()>(
+                            "init",
+                            "",
+                            true,
+                            odra::prelude::vec![]
+                        ),
+                        odra::schema::entry_point::<(Address, odra::casper_types::URef)>(
+                            "factory",
+                            "",
+                            true,
+                            odra::prelude::vec![
+                                odra::schema::argument::<String>("contract_name"),
+                                odra::schema::argument::<u32>("value")
+                            ]
+                        )
+                    ]
+                }
+            }
+        );
+        let actual = FactorySchemaEntrypointsItem::try_from(&module).unwrap();
         test_utils::assert_eq(actual, expected);
     }
 }

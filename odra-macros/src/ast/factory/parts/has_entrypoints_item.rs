@@ -1,3 +1,5 @@
+use std::vec;
+
 use quote::ToTokens;
 use syn::parse_quote;
 use syn::punctuated::Punctuated;
@@ -73,9 +75,9 @@ impl ToTokens for EntrypointsFnItem {
 }
 
 fn struct_entrypoints_expr(ir: &ModuleImplIR) -> syn::Result<syn::Expr> {
-    let struct_entrypoints = ir
-        .functions()?
+    let struct_entrypoints = vec![ir.constructor()]
         .iter()
+        .filter_map(|f| f.as_ref())
         .chain(vec![ir.factory_fn()].iter())
         .map(|f| {
             let ident = f.name_str();
@@ -85,6 +87,7 @@ fn struct_entrypoints_expr(ir: &ModuleImplIR) -> syn::Result<syn::Expr> {
                 syn::ReturnType::Default => utils::expr::unit_cl_type(),
                 syn::ReturnType::Type(_, ty) => utils::expr::as_cl_type(&ty)
             };
+            
             let ty = f
                 .is_restricted()
                 .then(utils::ty::entry_point_def_ty_constructor)
@@ -116,15 +119,18 @@ fn struct_entrypoints_expr(ir: &ModuleImplIR) -> syn::Result<syn::Expr> {
 }
 
 fn entrypoint_args(f: &FnIR) -> syn::Result<syn::Expr> {
-    let args = f
-        .named_args()
-        .iter()
-        .map(|arg| {
-            let ident = arg.name_str()?;
-            let ty = utils::ty::unreferenced_ty(&arg.ty()?);
-            Ok(utils::expr::into_arg(ty, ident))
-        })
-        .collect::<syn::Result<Punctuated<syn::Expr, syn::token::Comma>>>()?;
+    let args = if f.is_constructor() {
+        vec![]
+    } else {
+        f.named_args()
+    }
+    .iter()
+    .map(|arg: &crate::ir::FnArgIR| {
+        let ident = arg.name_str()?;
+        let ty = utils::ty::unreferenced_ty(&arg.ty()?);
+        Ok(utils::expr::into_arg(ty, ident))
+    })
+    .collect::<syn::Result<Punctuated<syn::Expr, syn::token::Comma>>>()?;
     Ok(utils::expr::vec(args))
 }
 
@@ -144,41 +150,11 @@ mod test {
                     odra::prelude::vec![
                         odra::contract_def::Entrypoint {
                             name: odra::prelude::string::String::from("init"),
-                            args: odra::prelude::vec![
-                                odra::args::odra_argument::<u32>("value")
-                            ],
+                            args: odra::prelude::vec![],
                             is_mutable: true,
                             return_ty: <() as odra::casper_types::CLTyped>::cl_type(),
                             ty: odra::contract_def::EntrypointType::Constructor,
                             attributes: odra::prelude::vec![]
-                        },
-                        odra::contract_def::Entrypoint {
-                            name: odra::prelude::string::String::from("total_supply"),
-                            args: odra::prelude::vec![],
-                            is_mutable: false,
-                            return_ty: <U256 as odra::casper_types::CLTyped>::cl_type(),
-                            ty: odra::contract_def::EntrypointType::Public,
-                            attributes : odra::prelude::vec![]
-                        },
-                        odra::contract_def::Entrypoint {
-                            name: odra::prelude::string::String::from("pay_to_mint"),
-                            args: odra::prelude::vec![],
-                            is_mutable: true,
-                            return_ty: <() as odra::casper_types::CLTyped>::cl_type(),
-                            ty: odra::contract_def::EntrypointType::Public,
-                            attributes: odra::prelude::vec![odra::contract_def::EntrypointAttribute::Payable]
-                        },
-                        odra::contract_def::Entrypoint {
-                            name: odra::prelude::string::String::from("approve"),
-                            args: odra::prelude::vec![
-                                odra::args::odra_argument::<Address>("to"),
-                                odra::args::odra_argument::<U256>("amount"),
-                                odra::args::odra_argument::<Maybe<String> >("msg")
-                            ],
-                            is_mutable: true,
-                            return_ty: <() as odra::casper_types::CLTyped >::cl_type(),
-                            ty: odra::contract_def::EntrypointType::Public,
-                            attributes: odra::prelude::vec![odra::contract_def::EntrypointAttribute::NonReentrant]
                         },
                         odra::contract_def::Entrypoint {
                             name: odra::prelude::string::String::from("factory"),

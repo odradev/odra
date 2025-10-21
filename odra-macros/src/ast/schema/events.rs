@@ -96,7 +96,6 @@ impl TryFrom<&ModuleStructIR> for FactorySchemaEventsItem {
 }
 
 impl ToTokens for FactorySchemaEventsItem {
-
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let module_ident = &self.module_ident;
         let event_ident = &self.event_ident;

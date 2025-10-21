@@ -660,7 +660,7 @@ impl FnTraitIR {
         Self { code }
     }
 
-    fn sig(&self) -> &syn::Signature {
+    pub fn sig(&self) -> &syn::Signature {
         &self.code.sig
     }
 
@@ -678,7 +678,7 @@ impl FnImplIR {
         Self { code }
     }
 
-    fn sig(&self) -> &syn::Signature {
+    pub fn sig(&self) -> &syn::Signature {
         &self.code.sig
     }
 

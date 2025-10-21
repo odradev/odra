@@ -7,7 +7,7 @@ use crate::{
             FactoryContractItem, FactoryExecPartsItem, FactoryHasEntrypointsImplItem,
             FactoryRefItem, FactoryTestPartsItem, FactoryWasmPartsItem
         },
-        schema::{SchemaCustomTypesItem, SchemaEntrypointsItem},
+        schema::{SchemaCustomTypesItem, FactorySchemaEntrypointsItem},
         test_parts::TestPartsReexportItem
     },
     ModuleImplIR
@@ -27,7 +27,7 @@ pub struct FactoryModuleImplItem {
     wasm_parts: FactoryWasmPartsItem,
     contract_item: FactoryContractItem,
     blueprint: BlueprintItem,
-    schema_entrypoints: SchemaEntrypointsItem,
+    schema_entrypoints: FactorySchemaEntrypointsItem,
     schema_custom_types: SchemaCustomTypesItem
 }
 
