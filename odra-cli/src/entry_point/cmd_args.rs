@@ -8,6 +8,7 @@ pub fn entry_point_args(entry_point: &Entrypoint, types: &CustomTypeSet) -> Vec<
     entry_point
         .arguments
         .iter()
+        .filter(|arg| arg.name != "__cargo_purse")
         .flat_map(|arg| flatten_schema_arg(arg, types, false))
         .flatten()
         .collect()
