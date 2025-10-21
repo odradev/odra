@@ -99,6 +99,37 @@ fn enum_variants(variants: &[syn::Variant]) -> proc_macro2::TokenStream {
     })
 }
 
+pub struct FactorySchemaErrorsItem {
+    module_ident: syn::Ident,
+}
+
+impl TryFrom<&ModuleStructIR> for FactorySchemaErrorsItem {
+    type Error = syn::Error;
+
+    fn try_from(ir: &ModuleStructIR) -> Result<Self, Self::Error> {
+        Ok(Self {
+            module_ident: ir.module_ident(),
+        })
+    }
+}
+
+impl ToTokens for FactorySchemaErrorsItem {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let module_ident = &self.module_ident;
+        let item = quote::quote! {
+            #[automatically_derived]
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::SchemaErrors for #module_ident {
+                fn schema_errors() -> odra::prelude::Vec<odra::schema::casper_contract_schema::UserError> {
+                    odra::prelude::vec![]
+                }
+            }
+        };
+
+        item.to_tokens(tokens);
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

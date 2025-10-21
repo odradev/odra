@@ -1,4 +1,4 @@
-use quote::ToTokens;
+use quote::{format_ident, ToTokens};
 
 use crate::ir::{EnumeratedTypedField, ModuleStructIR};
 
@@ -79,6 +79,49 @@ impl TryFrom<&ModuleStructIR> for SchemaEventsItem {
     }
 }
 
+pub struct FactorySchemaEventsItem {
+    module_ident: syn::Ident,
+    event_ident: syn::Ident,
+}
+
+impl TryFrom<&ModuleStructIR> for FactorySchemaEventsItem {
+    type Error = syn::Error;
+
+    fn try_from(ir: &ModuleStructIR) -> Result<Self, Self::Error> {
+        Ok(Self {
+            module_ident: ir.module_ident(),
+            event_ident: format_ident!("{}ContractDeployed", ir.module_ident()),
+        })
+    }
+}
+
+impl ToTokens for FactorySchemaEventsItem {
+
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let module_ident = &self.module_ident;
+        let event_ident = &self.event_ident;
+        let item = quote::quote! {
+            #[automatically_derived]
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::SchemaEvents for #module_ident {
+                fn schema_events() -> odra::prelude::Vec<odra::schema::casper_contract_schema::Event> {
+                    odra::prelude::vec![
+                        odra::schema::event(
+                            &<#event_ident as odra::casper_event_standard::EventInstance>::name()
+                        )
+                    ]
+                }
+
+                fn custom_types() -> odra::prelude::Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
+                    <#event_ident as odra::schema::SchemaCustomTypes>::schema_types()
+                }
+            }
+        };
+
+        item.to_tokens(tokens);
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -137,6 +180,33 @@ mod test {
             }
         );
 
+        test_utils::assert_eq(item, expected);
+    }
+
+    #[test]
+    fn test_factory_module() {
+        let module = test_utils::mock::factory_module_definition();
+        let item = FactorySchemaEventsItem::try_from(&module).unwrap();
+        let expected = quote::quote! {
+            #[automatically_derived]
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::SchemaEvents for CounterPack {
+                fn schema_events() -> odra::prelude::Vec<odra::schema::casper_contract_schema::Event>
+                {
+                    odra::prelude::vec![
+                        odra::schema::event(
+                            &<CounterPackContractDeployed as odra::casper_event_standard::EventInstance>::name()
+                        )
+                    ]
+                }
+
+                fn custom_types(
+                    ) -> odra::prelude::Vec<Option<odra::schema::casper_contract_schema::CustomType>>
+                {
+                    <CounterPackContractDeployed as odra::schema::SchemaCustomTypes>::schema_types()
+                }
+            }
+        };
         test_utils::assert_eq(item, expected);
     }
 }

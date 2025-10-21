@@ -9,5 +9,5 @@ pub use contract_schema::SchemaItem;
 pub use custom_item::SchemaCustomTypeItem;
 pub use custom_types::SchemaCustomTypesItem;
 pub use entry_points::SchemaEntrypointsItem;
-pub use errors::{SchemaErrorItem, SchemaErrorsItem};
-pub use events::SchemaEventsItem;
+pub use errors::{FactorySchemaErrorsItem, SchemaErrorItem, SchemaErrorsItem};
+pub use events::{FactorySchemaEventsItem, SchemaEventsItem};

@@ -177,7 +177,7 @@ pub fn user_error(error: &syn::Ident) -> syn::Expr {
     parse_quote!(#ty::user(#error as u16))
 }
 
-pub fn btree_from_iter(expr: &syn::Expr) -> syn::Expr {
+pub fn btree_from_iter<T: ToTokens>(expr: &T) -> syn::Expr {
     parse_quote!(odra::prelude::BTreeMap::from_iter(#expr))
 }
 

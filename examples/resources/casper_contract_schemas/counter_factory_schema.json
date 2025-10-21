@@ -6,7 +6,26 @@
   "homepage": null,
   "contract_name": "CounterFactory",
   "contract_version": "2.4.1",
-  "types": [],
+  "types": [
+    {
+      "struct": {
+        "name": "CounterFactoryContractDeployed",
+        "description": null,
+        "members": [
+          {
+            "name": "contract_name",
+            "description": null,
+            "ty": "String"
+          },
+          {
+            "name": "contract_address",
+            "description": null,
+            "ty": "Key"
+          }
+        ]
+      }
+    }
+  ],
   "errors": [],
   "entry_points": [
     {
@@ -28,7 +47,12 @@
       "access": "public"
     }
   ],
-  "events": [],
+  "events": [
+    {
+      "name": "CounterFactoryContractDeployed",
+      "ty": "CounterFactoryContractDeployed"
+    }
+  ],
   "call": {
     "wasm_file_name": "CounterFactory.wasm",
     "description": "",
