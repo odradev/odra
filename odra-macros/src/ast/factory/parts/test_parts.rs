@@ -153,8 +153,25 @@ mod test {
 
                 impl odra::host::EntryPointsCallerProvider for Erc20FactoryHostRef {
                     fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
-                        let entry_points = odra::prelude::vec::Vec::new();
+                        let entry_points = odra::prelude::vec![
+                            odra::entry_point_callback::EntryPoint::new(
+                                odra::prelude::string::String::from("factory"),
+                                odra::prelude::vec![
+                                    odra::entry_point_callback::Argument::new::<String>(
+                                        odra::prelude::string::String::from("contract_name")
+                                    ),
+                                    odra::entry_point_callback::Argument::new::<u32>(
+                                        odra::prelude::string::String::from("value")
+                                    )
+                                ]
+                            )
+                        ];
                         odra::entry_point_callback::EntryPointsCaller::new(env.clone(), entry_points, |contract_env, call_def| {
+                            if call_def.entry_point() == "factory" {
+                                return Err(OdraError::VmError(
+                                    odra::VmError::Other(odra::prelude::String::from("Factory is not supported for this configuration."))
+                                ));
+                            }
                             Err(OdraError::VmError(
                                 odra::VmError::NoSuchMethod(odra::prelude::String::from(call_def.entry_point()))
                             ))

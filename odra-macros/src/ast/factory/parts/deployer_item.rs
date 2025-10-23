@@ -1,4 +1,3 @@
-use derive_try_from_ref::TryFromRef;
 use quote::{ToTokens, TokenStreamExt};
 use syn::parse_quote;
 
@@ -6,16 +5,17 @@ use crate::{ast::deployer_utils::EpcSignature, utils, ModuleImplIR};
 
 pub struct FactoryDeployImplItem {
     ident: syn::Ident,
-    epc_fn: FactoryContractEpcFn
+    epc_fn: FactoryContractEpcFn,
 }
 
 impl TryFrom<&'_ ModuleImplIR> for FactoryDeployImplItem {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+       
         Ok(Self {
             ident: module.host_ref_ident()?,
-            epc_fn: module.try_into()?
+            epc_fn: module.try_into()?,
         })
     }
 }
@@ -34,24 +34,37 @@ impl ToTokens for FactoryDeployImplItem {
     }
 }
 
-#[derive(TryFromRef)]
-#[source(ModuleImplIR)]
-#[err(syn::Error)]
 struct FactoryContractEpcFn {
     sig: EpcSignature,
+    entry_points_expr: syn::Expr,
     caller: FactoryEntrypointCallerExpr
+}
+
+impl TryFrom<&'_ ModuleImplIR> for FactoryContractEpcFn {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        let fun = module.factory_fn();
+        let entry_point = utils::expr::new_entry_point(fun.name_str(), fun.raw_typed_args(), fun.is_payable());
+        Ok(Self {
+            sig: module.try_into()?,
+            entry_points_expr: utils::expr::vec(entry_point),
+            caller: module.try_into()?
+        })
+    }
 }
 
 impl ToTokens for FactoryContractEpcFn {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let sig = &self.sig;
         let entry_points_ident = utils::ident::entry_points();
-        let vec = utils::expr::empty_vec();
         let caller = &self.caller;
+        let entry_points_expr = &self.entry_points_expr;
+
 
         tokens.append_all(quote::quote! {
             #sig {
-                let #entry_points_ident = #vec;
+                let #entry_points_ident = #entry_points_expr;
                 #caller
             }
         });
@@ -67,8 +80,10 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryEntrypointCallerExpr {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+       
         Ok(Self {
             caller_expr: Self::entrypoint_caller(module)?
+
         })
     }
 }
@@ -83,6 +98,11 @@ impl FactoryEntrypointCallerExpr {
 
         Ok(parse_quote!(
             #ty_caller::new(#env_ident.clone(), #entry_points_ident, |#contract_env_ident, #call_def_ident| {
+                if #call_def_ident.entry_point() == "factory" {
+                    return Err(OdraError::VmError(
+                        odra::VmError::Other(odra::prelude::String::from("Factory is not supported for this configuration."))
+                    ));
+                }
                 Err(OdraError::VmError(odra::VmError::NoSuchMethod(odra::prelude::String::from(#call_def_ident.entry_point()))))
             })
         ))

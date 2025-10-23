@@ -42,7 +42,7 @@ impl TryFrom<&ModuleImplIR> for FactorySchemaEntrypointsItem {
                     };
                     FnIR::Def(FnTraitIR::new(parse_quote!(#argless_sig;)))
                 })
-                .chain(vec![module.factory_fn()].into_iter())
+                .chain(vec![module.factory_fn()])
                 .collect()
         };
         Ok(Self {

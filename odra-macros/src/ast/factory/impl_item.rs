@@ -74,41 +74,11 @@ mod test {
                     odra::prelude::vec![
                         odra::contract_def::Entrypoint {
                             name: odra::prelude::string::String::from("init"),
-                            args: odra::prelude::vec![
-                                odra::args::odra_argument::<u32>("value")
-                            ],
+                            args: odra::prelude::vec![],
                             is_mutable: true,
                             return_ty: <() as odra::casper_types::CLTyped>::cl_type(),
                             ty: odra::contract_def::EntrypointType::Constructor,
                             attributes: odra::prelude::vec![]
-                        },
-                        odra::contract_def::Entrypoint {
-                            name: odra::prelude::string::String::from("total_supply"),
-                            args: odra::prelude::vec![],
-                            is_mutable: false,
-                            return_ty: <U256 as odra::casper_types::CLTyped>::cl_type(),
-                            ty: odra::contract_def::EntrypointType::Public,
-                            attributes : odra::prelude::vec![]
-                        },
-                        odra::contract_def::Entrypoint {
-                            name: odra::prelude::string::String::from("pay_to_mint"),
-                            args: odra::prelude::vec![],
-                            is_mutable: true,
-                            return_ty: <() as odra::casper_types::CLTyped>::cl_type(),
-                            ty: odra::contract_def::EntrypointType::Public,
-                            attributes: odra::prelude::vec![odra::contract_def::EntrypointAttribute::Payable]
-                        },
-                        odra::contract_def::Entrypoint {
-                            name: odra::prelude::string::String::from("approve"),
-                            args: odra::prelude::vec![
-                                odra::args::odra_argument::<Address>("to"),
-                                odra::args::odra_argument::<U256>("amount"),
-                                odra::args::odra_argument::<Maybe<String> >("msg")
-                            ],
-                            is_mutable: true,
-                            return_ty: <() as odra::casper_types::CLTyped >::cl_type(),
-                            ty: odra::contract_def::EntrypointType::Public,
-                            attributes: odra::prelude::vec![odra::contract_def::EntrypointAttribute::NonReentrant]
                         },
                         odra::contract_def::Entrypoint {
                             name: odra::prelude::string::String::from("factory"),
@@ -271,9 +241,32 @@ mod test {
 
                 impl odra::host::EntryPointsCallerProvider for Erc20FactoryHostRef {
                     fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
-                        let entry_points = odra::prelude::vec::Vec::new();
+                        let entry_points = odra::prelude::vec![
+                            odra::entry_point_callback::EntryPoint::new(
+                                odra::prelude::string::String::from("factory"),
+                                odra::prelude::vec![
+                                    odra::entry_point_callback::Argument::new::<String>(
+                                        odra::prelude::string::String::from("contract_name")
+                                    ),
+                                    odra::entry_point_callback::Argument::new::<u32>(
+                                        odra::prelude::string::String::from("value")
+                                    )
+                                ]
+                            )
+                        ];
                         odra::entry_point_callback::EntryPointsCaller::new(env.clone(), entry_points, |contract_env, call_def| {
-                           Err(OdraError::VmError(
+                            if call_def.entry_point() == "factory" {
+                                return Err(
+                                    OdraError::VmError(
+                                        odra::VmError::Other(
+                                            odra::prelude::String::from(
+                                                "Factory is not supported for this configuration.",
+                                            ),
+                                        ),
+                                    ),
+                                );
+                            }
+                            Err(OdraError::VmError(
                                 odra::VmError::NoSuchMethod(odra::prelude::String::from(call_def.entry_point()))
                             ))
                         })
@@ -566,28 +559,15 @@ mod test {
                         "init",
                         "",
                         true,
-                        odra::prelude::vec![odra::schema::argument::<u32>("value")]
-                    ),
-                    odra::schema::entry_point::<U256>(
-                        "total_supply",
-                        "Returns the total supply of the token.",
-                        false,
                         odra::prelude::vec![]
                     ),
-                    odra::schema::entry_point::<()>(
-                        "pay_to_mint",
-                        "Pay to mint.",
-                        true,
-                        odra::prelude::vec![odra::schema::argument::<odra::casper_types::URef>("__cargo_purse")]
-                    ),
-                    odra::schema::entry_point::<()>(
-                        "approve",
-                        "Approve.",
-                        true,
+                    odra::schema::entry_point::<(Address, odra::casper_types::URef)>(
+                        "factory", 
+                        "", 
+                        true, 
                         odra::prelude::vec![
-                            odra::schema::argument::<Address>("to"),
-                            odra::schema::argument::<U256>("amount"),
-                            odra::schema::argument::<Maybe<String> >("msg")
+                            odra::schema::argument::<String>("contract_name"),
+                            odra::schema::argument::<u32>("value")
                         ]
                     )
                 ]
