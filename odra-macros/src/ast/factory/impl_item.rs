@@ -496,6 +496,11 @@ mod test {
                     );
                     let address: Address = contract_package_hash.into();
 
+                    exec_env.emit_event(Erc20FactoryContractDeployed {
+                        contract_name: exec_env.get_named_arg::<odra::prelude::string::String>("contract_name"),
+                        contract_address: address
+                    });
+
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
                             odra::casper_types::CLValue::from_t((address, access_uref))

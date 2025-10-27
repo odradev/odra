@@ -28,7 +28,9 @@ mod tests {
         prelude::*
     };
 
-    use super::{Counter, CounterFactory, CounterHostRef, CounterInitArgs};
+    use super::{
+        Counter, CounterFactory, CounterFactoryContractDeployed, CounterHostRef, CounterInitArgs
+    };
 
     #[test]
     fn test_standalone_module() {
@@ -47,6 +49,13 @@ mod tests {
         let mut factory_ref = CounterFactory::deploy(&env, NoArgs);
         // Use the factory to deploy a new Counter contract with initial value 10
         let (address, _access_uref) = factory_ref.factory(String::from("Counter"), 10);
+        assert!(env.emitted_event(
+            &factory_ref,
+            CounterFactoryContractDeployed {
+                contract_address: address,
+                contract_name: String::from("Counter")
+            }
+        ));
         // Interact with the newly deployed Counter contract
         let mut counter_ref = CounterHostRef::new(address, env);
         // Increment the counter

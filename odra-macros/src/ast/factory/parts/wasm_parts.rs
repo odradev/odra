@@ -250,6 +250,7 @@ impl TryFrom<&'_ ModuleImplIR> for CallFnItem {
 
 struct NoMangleFactoryFnItem {
     module_ident: syn::Ident,
+    event_ident: syn::Ident,
     init_fn: Option<FnIR>,
     add_entry_point_items: Vec<AddEntryPointStmtItem<InstallerContext>>
 }
@@ -259,8 +260,11 @@ impl TryFrom<&'_ ModuleImplIR> for NoMangleFactoryFnItem {
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let module_ident = module.module_ident()?;
+        let module_str = module_ident.to_string();
+        let event_ident = format_ident!("{}ContractDeployed", module_str);
         Ok(Self {
             module_ident,
+            event_ident,
             init_fn: module.constructor(),
             add_entry_point_items: module
                 .functions()?
@@ -276,6 +280,7 @@ impl ToTokens for NoMangleFactoryFnItem {
         let ident_entry_points = utils::ident::entry_points();
         let ident_schemas = utils::ident::schemas();
         let address_ty = utils::ty::address();
+        let string_ty = utils::ty::string();
         let ident = &self.module_ident.to_string();
         let contract_ident = ident.strip_suffix("Factory").unwrap_or(ident);
         let contract_ident: syn::Ident = format_ident!("{}", contract_ident);
@@ -290,6 +295,7 @@ impl ToTokens for NoMangleFactoryFnItem {
         } else {
             vec![]
         };
+        let event_ident = &self.event_ident;
 
         tokens.append_all(quote::quote! {
             #[no_mangle]
@@ -312,6 +318,11 @@ impl ToTokens for NoMangleFactoryFnItem {
                     Some(#ident_args)
                 );
                 let address: #address_ty = contract_package_hash.into();
+
+                exec_env.emit_event(#event_ident {
+                    contract_name: exec_env.get_named_arg::<#string_ty>("contract_name"),
+                    contract_address: address
+                });
 
                 odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                     odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
@@ -503,6 +514,11 @@ mod test {
                         Some(named_args)
                     );
                     let address: Address = contract_package_hash.into();
+
+                    exec_env.emit_event(Erc20FactoryContractDeployed {
+                        contract_name: exec_env.get_named_arg::<odra::prelude::string::String>("contract_name"),
+                        contract_address: address
+                    });
 
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
