@@ -59,14 +59,20 @@ impl URef {
     }
 
     #[wasm_bindgen(js_name = "fromUint8Array")]
-    pub fn from_bytes(bytes: Vec<u8>, access_rights: u8) -> Self {
+    pub fn from_bytes(bytes: Vec<u8>, access_rights: u8) -> Result<Self, JsError> {
+        if bytes.len() != UREF_ADDR_LENGTH {
+            return Err(JsError::new(&format!(
+                "Expected {UREF_ADDR_LENGTH} bytes for URef address, got {}",
+                bytes.len()
+            )));
+        }
         let mut address_array = [0u8; 32];
         address_array[..bytes.len()].copy_from_slice(&bytes);
 
-        URef(_URef::new(
+        Ok(URef(_URef::new(
             address_array,
             AccessRights::from_bits(access_rights).unwrap_or_default()
-        ))
+        )))
     }
 
     #[wasm_bindgen(js_name = "toFormattedString")]

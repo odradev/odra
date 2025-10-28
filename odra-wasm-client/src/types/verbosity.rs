@@ -26,7 +26,7 @@ impl From<u64> for Verbosity {
             0 => Verbosity::Low,
             1 => Verbosity::Medium,
             2 => Verbosity::High,
-            _ => unreachable!("Invalid u64 value for Verbosity")
+            _ => Verbosity::Low // Default to Low for invalid values
         }
     }
 }
