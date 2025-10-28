@@ -1,0 +1,215 @@
+use casper_types::runtime_args;
+use wasm_bindgen::prelude::*;
+
+use crate::{
+    client::OdraWasmClient,
+    types::{Address, IntoOdraValue, TransactionHash as JsTransactionHash, U256}
+};
+
+#[wasm_bindgen]
+pub struct Cep18Client {
+    wasm_client: OdraWasmClient,
+    address: Address
+}
+
+#[wasm_bindgen]
+impl Cep18Client {
+    #[wasm_bindgen(constructor)]
+    pub fn new(wasm_client: OdraWasmClient, address: Address) -> Self {
+        Cep18Client {
+            wasm_client,
+            address
+        }
+    }
+
+    #[wasm_bindgen]
+    pub async fn decimals(&self) -> Result<u8, JsError> {
+        self.wasm_client
+            .call_entry_point_with_proxy::<u8, u8>(*self.address, "decimals", runtime_args! {})
+            .await
+    }
+
+    #[wasm_bindgen]
+    pub async fn name(&self) -> Result<String, JsError> {
+        self.wasm_client
+            .call_entry_point_with_proxy::<String, String>(*self.address, "name", runtime_args! {})
+            .await
+    }
+
+    #[wasm_bindgen]
+    pub async fn symbol(&self) -> Result<String, JsError> {
+        self.wasm_client
+            .call_entry_point_with_proxy::<String, String>(
+                *self.address,
+                "symbol",
+                runtime_args! {}
+            )
+            .await
+    }
+
+    #[wasm_bindgen(js_name = "totalSupply")]
+    pub async fn total_supply(&self) -> Result<U256, JsError> {
+        self.wasm_client
+            .call_entry_point_with_proxy::<U256, casper_types::U256>(
+                *self.address,
+                "total_supply",
+                runtime_args! {}
+            )
+            .await
+    }
+
+    #[wasm_bindgen(js_name = "balanceOf")]
+    pub async fn balance_of(&self, address: Address) -> Result<U256, JsError> {
+        self.wasm_client
+            .call_entry_point_with_proxy::<U256, casper_types::U256>(
+                *self.address,
+                "balance_of",
+                runtime_args! {
+                    "owner" => IntoOdraValue::<odra_core::prelude::Address>::into_odra_value(address)?
+                }
+            )
+            .await
+    }
+
+    #[wasm_bindgen]
+    pub async fn allowance(&self, owner: Address, spender: Address) -> Result<U256, JsError> {
+        self.wasm_client
+            .call_entry_point_with_proxy::<U256, casper_types::U256>(
+                *self.address,
+                "allowance",
+                runtime_args! {
+                    "owner" => IntoOdraValue::<odra_core::prelude::Address>::into_odra_value(owner)?,
+                    "spender" => IntoOdraValue::<odra_core::prelude::Address>::into_odra_value(spender)?
+                }
+            )
+            .await
+    }
+
+    #[wasm_bindgen]
+    pub async fn approve(
+        &mut self,
+        spender: Address,
+        amount: U256
+    ) -> Result<JsTransactionHash, JsError> {
+        self.wasm_client
+            .call_entry_point(
+                *self.address,
+                "approve",
+                runtime_args! {
+                    "spender" => IntoOdraValue::<odra_core::prelude::Address>::into_odra_value(spender)?,
+                    "amount" => IntoOdraValue::<casper_types::U256>::into_odra_value(amount)?
+                }
+            )
+            .await
+    }
+
+    #[wasm_bindgen(js_name = "decreaseAllowance")]
+    pub async fn decrease_allowance(
+        &mut self,
+        spender: Address,
+        decr_by: U256
+    ) -> Result<JsTransactionHash, JsError> {
+        self.wasm_client
+            .call_entry_point(
+                *self.address,
+                "decrease_allowance",
+                runtime_args! {
+                    "spender" => IntoOdraValue::<odra_core::prelude::Address>::into_odra_value(spender)?,
+                    "decr_by" => IntoOdraValue::<casper_types::U256>::into_odra_value(decr_by)?
+                }
+            )
+            .await
+    }
+
+    #[wasm_bindgen(js_name = "increaseAllowance")]
+    pub async fn increase_allowance(
+        &mut self,
+        spender: Address,
+        incr_by: U256
+    ) -> Result<JsTransactionHash, JsError> {
+        self.wasm_client
+            .call_entry_point(
+                *self.address,
+                "increase_allowance",
+                runtime_args! {
+                    "spender" => IntoOdraValue::<odra_core::prelude::Address>::into_odra_value(spender)?,
+                    "incr_by" => IntoOdraValue::<casper_types::U256>::into_odra_value(incr_by)?
+                }
+            )
+            .await
+    }
+
+    #[wasm_bindgen]
+    pub async fn transfer(
+        &mut self,
+        recipient: Address,
+        amount: U256
+    ) -> Result<JsTransactionHash, JsError> {
+        self.wasm_client
+            .call_entry_point(
+                *self.address,
+                "transfer",
+                runtime_args! {
+                    "recipient" => IntoOdraValue::<odra_core::prelude::Address>::into_odra_value(recipient)?,
+                    "amount" => IntoOdraValue::<casper_types::U256>::into_odra_value(amount)?
+                }
+            )
+            .await
+    }
+
+    #[wasm_bindgen(js_name = "transferFrom")]
+    pub async fn transfer_from(
+        &mut self,
+        owner: Address,
+        recipient: Address,
+        amount: U256
+    ) -> Result<JsTransactionHash, JsError> {
+        self.wasm_client
+            .call_entry_point(
+                *self.address,
+                "transfer_from",
+                runtime_args! {
+                    "owner" => IntoOdraValue::<odra_core::prelude::Address>::into_odra_value(owner)?,
+                    "recipient" => IntoOdraValue::<odra_core::prelude::Address>::into_odra_value(recipient)?,
+                    "amount" => IntoOdraValue::<casper_types::U256>::into_odra_value(amount)?
+                }
+            )
+            .await
+    }
+
+    #[wasm_bindgen]
+    pub async fn mint(
+        &mut self,
+        owner: Address,
+        amount: U256
+    ) -> Result<JsTransactionHash, JsError> {
+        self.wasm_client
+            .call_entry_point(
+                *self.address,
+                "mint",
+                runtime_args! {
+                    "owner" => IntoOdraValue::<odra_core::prelude::Address>::into_odra_value(owner)?,
+                    "amount" => IntoOdraValue::<casper_types::U256>::into_odra_value(amount)?
+                }
+            )
+            .await
+    }
+
+    #[wasm_bindgen]
+    pub async fn burn(
+        &mut self,
+        owner: Address,
+        amount: U256
+    ) -> Result<JsTransactionHash, JsError> {
+        self.wasm_client
+            .call_entry_point(
+                *self.address,
+                "burn",
+                runtime_args! {
+                    "owner" => IntoOdraValue::<odra_core::prelude::Address>::into_odra_value(owner)?,
+                    "amount" => IntoOdraValue::<casper_types::U256>::into_odra_value(amount)?
+                }
+            )
+            .await
+    }
+}

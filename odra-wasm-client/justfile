@@ -1,0 +1,15 @@
+prepare:
+    cargo install wasm-pack
+
+build-cep18-wasm:
+    wasm-pack build --target web --out-dir pkg-web . -- --features cep18
+
+build-wcspr-wasm:
+    wasm-pack build --target web --out-dir pkg-web . -- --features wcspr
+
+run-web:
+    cd example && npm run start
+
+rebuild-and-run:
+    just build-wcspr-wasm
+    just run-web

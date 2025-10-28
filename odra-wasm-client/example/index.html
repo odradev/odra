@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CSPR ⇄ wCSPR Swap</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "odra-wasm-client": "./node_modules/odra-wasm-client/odra_wasm_client.js"
+        }
+    }
+  </script>
+</head>
+<body class="bg-gray-50">
+  <div class="max-w-3xl mx-auto p-6">
+    <div class="bg-white/80 backdrop-blur-md rounded-2xl shadow-md p-6">
+      <header class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-semibold">CSPR ⇄ wCSPR Swap</h1>
+        <div>
+          <button id="connect-btn" class="px-4 py-2 rounded-md bg-gradient-to-r from-indigo-500 to-indigo-400 text-white font-medium shadow">Connect Wallet</button>
+          <div class="flex items-center gap-4 hidden" id="disconnect-section">
+            <span id="address" class="text-sm text-gray-600"></span>
+            <button id="disconnect-btn" class="px-3 py-1 rounded-md border hover:bg-gray-50 text-sm hidden">Disconnect</button>
+          </div>
+        </div>
+      </header>
+
+      <section class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div class="p-4 border rounded-lg">
+          <div class="text-sm text-gray-500">Native CSPR</div>
+          <div id="native-bal" class="text-xl font-semibold">—</div>
+          <div id="native-bal-loader" class="text-sm text-gray-400 hidden">Loading...</div>
+        </div>
+        <div class="p-4 border rounded-lg">
+          <div class="text-sm text-gray-500">Wrapped wCSPR</div>
+          <div id="wrapped-bal" class="text-xl font-semibold">—</div>
+          <div id="wrapped-bal-loader" class="text-sm text-gray-400 hidden">Loading...</div>
+        </div>
+      </section>
+
+      <section class="p-4 border rounded-lg mb-4">
+        <div class="flex items-center gap-2 mb-3">
+          <button id="dir-native" class="px-3 py-1 rounded bg-indigo-100">CSPR → wCSPR</button>
+          <button id="dir-wrapped" class="px-3 py-1 rounded hover:bg-gray-50">wCSPR → CSPR</button>
+        </div>
+
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">Amount</label>
+          <input id="amount" inputmode="decimal" class="w-full p-2 border rounded-md" placeholder="0.0" />
+        </div>
+
+        <div class="mt-4 flex gap-3">
+          <button id="swap-btn" class="px-4 py-2 rounded-md bg-gradient-to-r from-emerald-500 to-emerald-400 text-white font-medium">Swap</button>
+          <button id="refresh-btn" class="px-3 py-2 rounded-md border hover:bg-gray-50">Refresh Balances</button>
+        </div>
+      </section>
+
+      <section id="tx-section" class="mt-4 p-4 rounded-md bg-green-50 border border-green-100 hidden">
+        <div class="text-sm font-medium">Transaction submitted</div>
+        <a id="tx-link" class="text-sm underline break-all" target="_blank" rel="noopener noreferrer">View on explorer</a>
+        <div id="tx-status" class="mt-2 text-sm text-gray-700"></div>
+      </section>
+
+      <section id="error-section" class="mt-4 p-3 rounded-md bg-red-50 border border-red-100 text-red-700 hidden">
+        <div id="error-text"></div>
+      </section>
+    </div>
+  </div>
+  <script type="module" src="dist/swap.js"></script>
+</body>
+</html>

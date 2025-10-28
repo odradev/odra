@@ -28,7 +28,10 @@ impl ToTokens for SchemaEntrypointsItem {
                     syn::ReturnType::Type(_, t) => quote::quote! { #t }
                 };
                 let is_mut = f.is_mut();
-                let args = args_to_tokens(&f.raw_typed_args());
+                let mut args = args_to_tokens(&f.raw_typed_args());
+                if f.is_payable() {
+                    args.push(quote::quote!(odra::schema::argument::<odra::casper_types::URef>("__cargo_purse")))
+                };
                 quote::quote! {
                     odra::schema::entry_point::<#ret_ty>(
                         #name,
@@ -113,7 +116,7 @@ mod test {
                             "pay_to_mint",
                             "Pay to mint.",
                             true,
-                            odra::prelude::vec![]
+                            odra::prelude::vec![odra::schema::argument::<odra::casper_types::URef>("__cargo_purse")]
                         ),
                         odra::schema::entry_point::<()>(
                             "approve",
@@ -152,7 +155,7 @@ mod test {
                 fn schema_entrypoints() -> odra::prelude::vec::Vec<odra::schema::casper_contract_schema::Entrypoint> {
                     odra::prelude::vec![
                         odra::schema::entry_point::<U256>("total_supply", "", false, odra::prelude::vec![]),
-                        odra::schema::entry_point::<()>("pay_to_mint", "", true, odra::prelude::vec![])
+                        odra::schema::entry_point::<()>("pay_to_mint", "", true, odra::prelude::vec![odra::schema::argument::<odra::casper_types::URef>("__cargo_purse")])
                     ]
                 }
             }

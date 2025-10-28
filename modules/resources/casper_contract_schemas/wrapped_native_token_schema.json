@@ -236,7 +236,14 @@
       "name": "deposit",
       "description": "Deposits native tokens into the contract.",
       "is_mutable": true,
-      "arguments": [],
+      "arguments": [
+        {
+          "name": "__cargo_purse",
+          "description": null,
+          "ty": "URef",
+          "optional": false
+        }
+      ],
       "return_ty": "Unit",
       "is_contract_context": true,
       "access": "public"
