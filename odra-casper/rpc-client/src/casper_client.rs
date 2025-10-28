@@ -671,7 +671,7 @@ impl CasperClient {
             AMOUNT_ARG => call_def.amount(),
         };
 
-        let module_bytes = include_bytes!("../resources/proxy_caller_with_return.wasm")
+        let module_bytes = include_bytes!("../../../resources/proxy_caller_with_return.wasm")
             .to_vec()
             .into();
 
