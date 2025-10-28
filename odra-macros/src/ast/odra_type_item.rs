@@ -1,14 +1,14 @@
 use crate::ast::events_item::HasEventsImplItem;
 use crate::ast::fn_utils::{FnItem, SingleArgFnItem};
+use crate::ast::schema::SchemaCustomTypeItem;
 use crate::ast::utils::ImplItem;
 use crate::ir::{TypeIR, TypeKind};
 use crate::utils;
 use crate::utils::misc::AsBlock;
 use derive_try_from_ref::TryFromRef;
 use quote::{format_ident, ToTokens};
-use syn::{parse_quote, Token};
 use syn::punctuated::Punctuated;
-use crate::ast::schema::SchemaCustomTypeItem;
+use syn::{parse_quote, Token};
 
 macro_rules! impl_from_ir {
     ($ty:path) => {
@@ -19,7 +19,7 @@ macro_rules! impl_from_ir {
                 match ir.kind()? {
                     TypeKind::UnitEnum { variants } => Self::from_unit_enum(variants),
                     TypeKind::Enum { variants } => Self::from_enum(variants),
-                    TypeKind::Struct { fields } => Self::from_struct(fields),
+                    TypeKind::Struct { fields } => Self::from_struct(fields)
                 }
             }
         }
@@ -119,7 +119,7 @@ impl TryFrom<&'_ TypeIR> for CLTypedItem {
         let ret_ty_cl_type_any = match ir.kind()? {
             TypeKind::UnitEnum { variants: _ } => utils::ty::cl_type_u8(),
             TypeKind::Enum { variants: _ } => utils::ty::cl_type_any(),
-            TypeKind::Struct { fields: _ } => utils::ty::cl_type_any(),
+            TypeKind::Struct { fields: _ } => utils::ty::cl_type_any()
         }
         .as_block();
         let ty_cl_type = utils::ty::cl_type();
@@ -144,7 +144,7 @@ struct FromBytesFnItem {
 impl_from_ir!(FromBytesFnItem);
 
 impl FromBytesFnItem {
-    fn from_enum(variants: Vec<syn::Variant>)  -> syn::Result<Self> {
+    fn from_enum(variants: Vec<syn::Variant>) -> syn::Result<Self> {
         let ident_bytes = utils::ident::bytes();
         let ident_from_bytes = utils::ident::from_bytes();
         let ident_result = utils::ident::result();
@@ -189,7 +189,7 @@ impl FromBytesFnItem {
         let block = parse_quote!({
             #read_stmt
             match #ident_result {
-                #arms 
+                #arms
                 _ => Err(odra::casper_types::bytesrepr::Error::Formatting),
             }
         });
@@ -207,8 +207,9 @@ impl FromBytesFnItem {
 
         let read_stmt: syn::Stmt =
             parse_quote!(let (#ident_result, #ident_bytes): (#ty_u8, _) = #from_bytes_expr;);
-        let deser = variants.iter()
-            .map(|v|  {
+        let deser = variants
+            .iter()
+            .map(|v| {
                 let i = &v.ident;
                 let self_ty = match &v.fields {
                     syn::Fields::Unit => quote::quote!(Self::#i),
@@ -241,7 +242,8 @@ impl FromBytesFnItem {
             .into_iter()
             .map(|(i, _)| i)
             .collect::<syn::punctuated::Punctuated<syn::Ident, syn::Token![,]>>();
-        let deser = fields.iter()
+        let deser = fields
+            .iter()
             .map(|i| quote::quote!(let (#i, #ident_bytes) = #from_bytes_expr;))
             .collect::<Vec<_>>();
         let arg = Self::arg();
@@ -290,11 +292,14 @@ impl ToBytesFnItem {
         let init_vec_stmt =
             utils::stmt::new_mut_vec_with_capacity(&ident_result, &serialized_length_expr);
 
-        let serialize = fields.iter().map(|(i, _)| {
-            let member = utils::member::_self(i);
-            let expr_to_bytes = utils::expr::failable_to_bytes(&member);
-            quote::quote!(#ident_result.extend(#expr_to_bytes);)
-        }).collect::<Vec<_>>();
+        let serialize = fields
+            .iter()
+            .map(|(i, _)| {
+                let member = utils::member::_self(i);
+                let expr_to_bytes = utils::expr::failable_to_bytes(&member);
+                quote::quote!(#ident_result.extend(#expr_to_bytes);)
+            })
+            .collect::<Vec<_>>();
 
         let name = utils::ident::to_bytes();
         let ret_ty = utils::misc::ret_ty(&ty_ret);
@@ -315,7 +320,8 @@ impl ToBytesFnItem {
         let ret_ty = utils::misc::ret_ty(&ty_ret);
         let ident_result = utils::ident::result();
 
-        let arms = variants.iter()
+        let arms = variants
+            .iter()
             .enumerate()
             .map(|(idx, v)| {
                 let idx = idx as u8;
@@ -334,7 +340,8 @@ impl ToBytesFnItem {
             })
             .collect::<Punctuated<_, Token![,]>>();
         Ok(Self {
-            fn_item: FnItem::new(&name, vec![], ret_ty, match_self_expr(arms).as_block()).instanced()
+            fn_item: FnItem::new(&name, vec![], ret_ty, match_self_expr(arms).as_block())
+                .instanced()
         })
     }
 
@@ -364,12 +371,15 @@ impl SerializedLengthFnItem {
         let ty_usize = utils::ty::usize();
         let ident_result = utils::ident::result();
 
-        let stmts = fields.iter().map(|(i, _)| {
-            let member = utils::member::_self(i);
-            let expr = utils::expr::serialized_length(&member);
-            let stmt: syn::Stmt = parse_quote!(#ident_result += #expr;);
-            stmt
-        }).collect::<Vec<_>>();
+        let stmts = fields
+            .iter()
+            .map(|(i, _)| {
+                let member = utils::member::_self(i);
+                let expr = utils::expr::serialized_length(&member);
+                let stmt: syn::Stmt = parse_quote!(#ident_result += #expr;);
+                stmt
+            })
+            .collect::<Vec<_>>();
 
         let name = utils::ident::serialized_length();
         let ret_ty = utils::misc::ret_ty(&ty_usize);
@@ -383,13 +393,14 @@ impl SerializedLengthFnItem {
         })
     }
 
-    fn from_enum(variants: Vec<syn::Variant>)  -> syn::Result<Self> {
+    fn from_enum(variants: Vec<syn::Variant>) -> syn::Result<Self> {
         let ty_usize = utils::ty::usize();
         let name = utils::ident::serialized_length();
         let ret_ty = utils::misc::ret_ty(&ty_usize);
         let expr_u8_serialized_len = utils::expr::u8_serialized_len();
-        
-        let arms = variants.iter()
+
+        let arms = variants
+            .iter()
             .map(|v| {
                 let ident = &v.ident;
                 let fields = variant_ident_vec(v);
@@ -402,7 +413,8 @@ impl SerializedLengthFnItem {
             })
             .collect::<Punctuated<_, Token![,]>>();
         Ok(Self {
-            fn_item: FnItem::new(&name, vec![], ret_ty, match_self_expr(arms).as_block()).instanced()
+            fn_item: FnItem::new(&name, vec![], ret_ty, match_self_expr(arms).as_block())
+                .instanced()
         })
     }
 
@@ -418,7 +430,8 @@ impl SerializedLengthFnItem {
 }
 
 fn variant_ident_vec(variant: &syn::Variant) -> Vec<syn::Ident> {
-    variant.fields
+    variant
+        .fields
         .clone()
         .iter()
         .enumerate()

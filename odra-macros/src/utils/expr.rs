@@ -37,14 +37,24 @@ pub fn entry_point_contract() -> syn::Expr {
     parse_quote!(#ty::Called)
 }
 
+pub fn entry_point_factory() -> syn::Expr {
+    let ty = super::ty::entry_point_type();
+    parse_quote!(#ty::Factory)
+}
+
 pub fn entry_point_payment() -> syn::Expr {
     let ty = super::ty::entry_point_payment();
     parse_quote!(#ty::Caller)
 }
 
-pub fn entry_point_public() -> syn::Expr {
+pub fn entry_point_access_public() -> syn::Expr {
     let ty = super::ty::entry_point_access();
     parse_quote!(#ty::Public)
+}
+
+pub fn entry_point_access_template() -> syn::Expr {
+    let ty = super::ty::entry_point_access();
+    parse_quote!(#ty::Template)
 }
 
 pub fn entry_point_group(name: &str) -> syn::Expr {
@@ -69,6 +79,12 @@ pub fn as_cl_type(ty: &syn::Type) -> syn::Expr {
 pub fn unit_cl_type() -> syn::Expr {
     let ty_cl_typed = super::ty::cl_typed();
     parse_quote!(<() as #ty_cl_typed>::cl_type())
+}
+
+pub fn key_cl_type() -> syn::Expr {
+    let ty_cl_typed = super::ty::cl_typed();
+    let key_ty = super::ty::key();
+    parse_quote!(<#key_ty as #ty_cl_typed>::cl_type())
 }
 
 pub fn schemas(events: &syn::Expr) -> syn::Expr {
@@ -161,7 +177,7 @@ pub fn user_error(error: &syn::Ident) -> syn::Expr {
     parse_quote!(#ty::user(#error as u16))
 }
 
-pub fn btree_from_iter(expr: &syn::Expr) -> syn::Expr {
+pub fn btree_from_iter<T: ToTokens>(expr: &T) -> syn::Expr {
     parse_quote!(odra::prelude::BTreeMap::from_iter(#expr))
 }
 

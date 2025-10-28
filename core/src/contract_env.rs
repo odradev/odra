@@ -463,4 +463,9 @@ impl ExecutionEnv {
         // Store the updated schemas back to the contract storage.
         self.env.set_named_value(EVENTS_SCHEMA, old_schemas);
     }
+
+    /// Emits an event with the specified data.
+    pub fn emit_event<T: ToBytes + EventInstance>(&self, event: T) {
+        self.env.emit_event(event);
+    }
 }

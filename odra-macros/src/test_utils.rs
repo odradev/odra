@@ -60,6 +60,42 @@ pub mod mock {
         ModuleImplIR::try_from((&attr, &module)).unwrap()
     }
 
+    pub fn module_factory_impl() -> ModuleImplIR {
+        let module = quote! {
+            impl Erc20Factory {
+                pub fn init(&mut self, value: u32) {
+                    self.value.set(value);
+                }
+
+                /// Returns the total supply of the token.
+                pub fn total_supply(&self) -> U256 {
+                    self.total_supply.get_or_default()
+                }
+
+                /// Pay to mint.
+                #[odra(payable)]
+                pub fn pay_to_mint(&mut self) {
+                    let attached_value = self.env().attached_value();
+                    self.total_supply
+                        .set(self.total_supply() + U256::from(attached_value.as_u64()));
+                }
+
+                /// Approve.
+                #[odra(non_reentrant)]
+                pub fn approve(&mut self, to: &Address, amount: &U256, msg: Maybe<String>) {
+                    self.env.emit_event(Approval {
+                        owner: self.env.caller(),
+                        spender: to,
+                        value: amount
+                    });
+                }
+            }
+        };
+
+        let attr = quote!(factory = on);
+        ModuleImplIR::try_from((&attr, &module)).unwrap()
+    }
+
     pub fn module_trait_impl() -> ModuleImplIR {
         let module = quote! {
             impl IErc20 for Erc20 {
@@ -148,6 +184,18 @@ pub mod mock {
             events = [OnTransfer, OnApprove],
             errors = Erc20Errors
         );
+        ModuleStructIR::try_from((&attr, &module)).unwrap()
+    }
+
+    pub fn factory_module_definition() -> ModuleStructIR {
+        let module = quote!(
+            pub struct CounterPack {
+                counter0: SubModule<Counter>,
+                counters: Var<u32>,
+                counters_map: Mapping<u8, Counter>
+            }
+        );
+        let attr = quote!(factory = on);
         ModuleStructIR::try_from((&attr, &module)).unwrap()
     }
 

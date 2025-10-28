@@ -80,5 +80,10 @@ test = false
 name = "odra_cli"
 path = "bin/odra_cli.rs"
 
+[[bin]]
+name = "factory_example"
+path = "bin/factory_example.rs"
+required-features = ["livenet"]
+
 [lints.rust]
 missing_docs = "warn"

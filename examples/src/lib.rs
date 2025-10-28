@@ -4,4 +4,5 @@
 extern crate alloc;
 
 pub mod contracts;
+pub mod factory;
 pub mod features;

@@ -79,7 +79,7 @@ pub fn install_or_upgrade(
     if is_upgrade {
         upgrade_contract(entry_points, events, init_args)
     } else {
-        install_new_contract(entry_points, events, init_args)
+        install_new_contract(entry_points, events, init_args).0
     }
 }
 
@@ -96,7 +96,7 @@ pub fn install_new_contract(
     entry_points: EntryPoints,
     events: Schemas,
     init_args: Option<RuntimeArgs>
-) -> ContractPackageHash {
+) -> (ContractPackageHash, URef) {
     // Extract named arguments, variables and check if the contract is upgradable.
     // And check if there is an existing contract.
     let package_hash_key_name: String = runtime::get_named_arg(PACKAGE_HASH_KEY_NAME_ARG);
@@ -106,8 +106,10 @@ pub fn install_new_contract(
         revert(ExecutionError::CannotOverrideKeys);
     }
     let is_upgradable: bool = runtime::get_named_arg(IS_UPGRADABLE_ARG);
-    let has_init = entry_points.has_entry_point("init");
-
+    let has_init = entry_points
+        .get("init")
+        .map(|ep| ep.access() != &EntryPointAccess::Template)
+        .unwrap_or_default();
     // Prepare named keys.
     let named_keys = initial_named_keys(events);
 
@@ -122,7 +124,7 @@ pub fn install_new_contract(
             entry_points,
             Some(named_keys),
             Some(package_hash_key_name.clone()),
-            Some(access_uref_key),
+            Some(access_uref_key.clone()),
             Some(message_topics)
         );
     } else {
@@ -130,11 +132,10 @@ pub fn install_new_contract(
             entry_points,
             Some(named_keys),
             Some(package_hash_key_name.clone()),
-            Some(access_uref_key),
+            Some(access_uref_key.clone()),
             Some(message_topics)
         );
     };
-
     // Read package hash from the storage.
     let contract_hash: PackageHash = runtime::get_key(&package_hash_key_name)
         .unwrap_or_revert_with(ApiError::AllocLayout)
@@ -142,7 +143,6 @@ pub fn install_new_contract(
         .unwrap_or_revert_with(ApiError::BufferTooSmall);
 
     let contract_package_hash = ContractPackageHash::new(contract_hash.value());
-
     if has_init {
         let init_access = create_contract_user_group(contract_package_hash, CONSTRUCTOR_GROUP_NAME);
         let _: () = runtime::call_versioned_contract(
@@ -162,7 +162,12 @@ pub fn install_new_contract(
     )
     .unwrap_or_revert();
 
-    contract_package_hash
+    let access_uref = runtime::get_key(&access_uref_key)
+        .unwrap_or_revert_with(ApiError::AllocLayout)
+        .into_uref()
+        .unwrap_or_revert_with(ApiError::BufferTooSmall);
+
+    (contract_package_hash, access_uref)
 }
 
 /// Upgrades a contract within package.
@@ -230,7 +235,7 @@ pub fn upgrade_contract(
     // We enable access to upgrader functions ("upgrade" and "migrate_events");
     let new_uref =
         storage::provision_contract_user_group_uref(contract_package_hash, UPGRADER_GROUP_NAME)
-            .unwrap();
+            .unwrap_or_revert();
 
     // Call "migrate_events".
     let _: () = runtime::call_versioned_contract(
@@ -677,11 +682,11 @@ fn initial_named_keys(schemas: Schemas) -> NamedKeys {
     let mut named_keys = NamedKeys::new();
     named_keys.insert(
         String::from(consts::STATE_KEY),
-        Key::URef(storage::new_dictionary(consts::STATE_KEY).unwrap_or_revert())
+        Key::URef(new_dictionary_uref(consts::STATE_KEY).unwrap_or_revert())
     );
     named_keys.insert(
         String::from(casper_event_standard::EVENTS_DICT),
-        Key::URef(storage::new_dictionary(casper_event_standard::EVENTS_DICT).unwrap_or_revert())
+        Key::URef(new_dictionary_uref(casper_event_standard::EVENTS_DICT).unwrap_or_revert())
     );
     named_keys.insert(
         String::from(casper_event_standard::EVENTS_LENGTH),
@@ -695,12 +700,6 @@ fn initial_named_keys(schemas: Schemas) -> NamedKeys {
         String::from(casper_event_standard::EVENTS_SCHEMA),
         Key::URef(storage::new_uref(schemas))
     );
-
-    runtime::remove_key(consts::STATE_KEY);
-    runtime::remove_key(casper_event_standard::EVENTS_DICT);
-    runtime::remove_key(casper_event_standard::EVENTS_LENGTH);
-    runtime::remove_key(casper_event_standard::EVENTS_SCHEMA);
-    runtime::remove_key(casper_event_standard::CES_VERSION_KEY);
 
     named_keys
 }
@@ -1007,4 +1006,22 @@ pub fn get_latest_contract_version(contract_package_hash: ContractPackageHash) -
         .and_then(|contract_package| contract_package.current_contract_version())
         .map(|version| version.contract_version())
         .unwrap_or_revert_with(ApiError::ContractNotFound)
+}
+
+/// Creates new [`URef`] that represents a seed for a dictionary partition of the global state
+/// without putting it under named keys.
+pub fn new_dictionary_uref(dictionary_name: &str) -> Result<URef, ApiError> {
+    if dictionary_name.is_empty() {
+        return Err(ApiError::InvalidArgument);
+    }
+
+    let value_size = {
+        let mut value_size = MaybeUninit::uninit();
+        let ret = unsafe { ext_ffi::casper_new_dictionary(value_size.as_mut_ptr()) };
+        api_error::result_from(ret)?;
+        unsafe { value_size.assume_init() }
+    };
+    let value_bytes = read_host_buffer(value_size).unwrap_or_revert();
+    let uref: URef = bytesrepr::deserialize(value_bytes).unwrap_or_revert();
+    Ok(uref)
 }

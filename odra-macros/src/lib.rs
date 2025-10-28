@@ -42,6 +42,21 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
     span_error!(item, "Struct or impl block expected")
 }
 
+/// Implements boilerplate for a factory module.
+#[proc_macro_attribute]
+pub fn factory(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let attr: TokenStream2 = attr.into();
+    let item: TokenStream2 = item.into();
+
+    if let Ok(ir) = ModuleStructIR::try_from((&attr, &item)) {
+        return FactoryModuleStructItem::try_from(&ir).into_code();
+    }
+    if let Ok(ir) = ModuleImplIR::try_from((&attr, &item)) {
+        return FactoryModuleImplItem::try_from(&ir).into_code();
+    }
+    span_error!(item, "Struct or impl block expected")
+}
+
 /// Implements boilerplate for a type to be used in an Odra module.
 ///
 /// This macro implements serialization and deserialization for the type, as well as

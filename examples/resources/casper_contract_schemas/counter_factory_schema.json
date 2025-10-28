@@ -1,0 +1,95 @@
+{
+  "casper_contract_schema_version": 1,
+  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
+  "authors": [],
+  "repository": null,
+  "homepage": null,
+  "contract_name": "CounterFactory",
+  "contract_version": "2.4.1",
+  "types": [
+    {
+      "struct": {
+        "name": "CounterFactoryContractDeployed",
+        "description": null,
+        "members": [
+          {
+            "name": "contract_name",
+            "description": null,
+            "ty": "String"
+          },
+          {
+            "name": "contract_address",
+            "description": null,
+            "ty": "Key"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [],
+  "entry_points": [
+    {
+      "name": "factory",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "contract_name",
+          "description": null,
+          "ty": "String",
+          "optional": false
+        },
+        {
+          "name": "value",
+          "description": null,
+          "ty": "U32",
+          "optional": false
+        }
+      ],
+      "return_ty": {
+        "Tuple2": [
+          "Key",
+          "URef"
+        ]
+      },
+      "is_contract_context": true,
+      "access": "public"
+    }
+  ],
+  "events": [
+    {
+      "name": "CounterFactoryContractDeployed",
+      "ty": "CounterFactoryContractDeployed"
+    }
+  ],
+  "call": {
+    "wasm_file_name": "CounterFactory.wasm",
+    "description": "",
+    "arguments": [
+      {
+        "name": "odra_cfg_package_hash_key_name",
+        "description": "The arg name for the package hash key name.",
+        "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_allow_key_override",
+        "description": "If true and the key specified in odra_cfg_package_hash_key_name already exists, it will be overwritten.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_is_upgradable",
+        "description": "The arg name for the contract upgradeability setting.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_is_upgrade",
+        "description": "The arg name for telling the installer that the contract is being upgraded.",
+        "ty": "Bool",
+        "optional": false
+      }
+    ]
+  }
+}

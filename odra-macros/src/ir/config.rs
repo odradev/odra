@@ -26,6 +26,7 @@ mod kw {
     syn::custom_keyword!(version);
     syn::custom_keyword!(events);
     syn::custom_keyword!(errors);
+    syn::custom_keyword!(factory);
 }
 
 #[derive(Default, Clone)]
@@ -33,7 +34,8 @@ pub struct ModuleConfiguration {
     pub events: ModuleEvents,
     pub errors: ModuleErrors,
     pub name: ModuleName,
-    pub version: ModuleVersion
+    pub version: ModuleVersion,
+    pub factory: Factory
 }
 
 impl Parse for ModuleConfiguration {
@@ -42,6 +44,7 @@ impl Parse for ModuleConfiguration {
         let mut version = None;
         let mut events = None;
         let mut errors = None;
+        let mut factory = None;
 
         while !input.is_empty() {
             if events.is_none() && input.peek(kw::events) {
@@ -67,6 +70,12 @@ impl Parse for ModuleConfiguration {
                 let _ = input.parse::<Token![,]>(); // optional comma
                 continue;
             }
+
+            if factory.is_none() && input.peek(kw::factory) {
+                factory = Some(input.parse::<Factory>()?);
+                let _ = input.parse::<Token![,]>(); // optional comma
+                continue;
+            }
             return Err(input.error("Unexpected token"));
         }
 
@@ -74,7 +83,8 @@ impl Parse for ModuleConfiguration {
             name: name.unwrap_or_default(),
             version: version.unwrap_or_default(),
             events: events.unwrap_or_default(),
-            errors: errors.unwrap_or_default()
+            errors: errors.unwrap_or_default(),
+            factory: factory.unwrap_or_default()
         })
     }
 }
@@ -157,6 +167,31 @@ impl Parse for ModuleErrors {
         input.parse::<Token![=]>()?;
 
         Ok(ModuleErrors(Some(input.parse::<syn::Type>()?)))
+    }
+}
+
+#[derive(Default, Clone, Debug)]
+pub struct Factory(bool);
+
+impl Deref for Factory {
+    type Target = bool;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Parse for Factory {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        if input.is_empty() {
+            return Ok(Factory(false));
+        }
+        input.parse::<kw::factory>()?;
+        input.parse::<Token![=]>()?;
+        // if 'on' then true, if 'off' then false
+        let value = input.parse::<syn::Ident>()?;
+        let value = matches!(value.to_string().as_str(), "on");
+        Ok(Factory(value))
     }
 }
 

@@ -63,6 +63,28 @@ impl EventsFnsItem {
         }
     }
 
+    pub fn single(ty: &syn::Type) -> Self {
+        let into_event = utils::expr::into_event(ty);
+        let name = utils::expr::event_instance_name(ty);
+        let schema = utils::expr::event_instance_schema(ty);
+        let content = quote::quote!((#name, #schema));
+        let schema_expr = utils::expr::vec(content);
+        Self {
+            events_fn: FnItem::new(
+                &utils::ident::events(),
+                vec![],
+                Self::events_ret_ty(),
+                utils::expr::vec(into_event).as_block()
+            ),
+            event_schemas_fn: FnItem::new(
+                &utils::ident::event_schemas(),
+                vec![],
+                Self::schemas_ret_ty(),
+                utils::expr::btree_from_iter(&schema_expr).as_block()
+            )
+        }
+    }
+
     fn events_ret_ty() -> syn::ReturnType {
         let ev_ty = utils::ty::event();
         let vec = utils::ty::vec_of(&ev_ty);

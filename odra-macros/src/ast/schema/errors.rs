@@ -1,5 +1,9 @@
+use crate::{
+    ast::utils::Named,
+    ir::{EnumeratedTypedField, ModuleStructIR, TypeIR},
+    utils
+};
 use quote::ToTokens;
-use crate::{ast::utils::Named, ir::{EnumeratedTypedField, ModuleStructIR, TypeIR}, utils};
 
 pub struct SchemaErrorsItem {
     module_ident: syn::Ident,
@@ -11,12 +15,11 @@ impl ToTokens for SchemaErrorsItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let module_ident = &self.module_ident;
 
-        let errors = self.errors
+        let errors = self
+            .errors
             .iter()
             .chain(self.fields.iter().map(|f| &f.ty))
-            .map(|ty| {
-                quote::quote!(.chain(<#ty as odra::schema::SchemaErrors>::schema_errors()))
-            })
+            .map(|ty| quote::quote!(.chain(<#ty as odra::schema::SchemaErrors>::schema_errors())))
             .collect::<Vec<_>>();
 
         let item = quote::quote! {
@@ -84,10 +87,7 @@ impl TryFrom<&TypeIR> for SchemaErrorItem {
                 errors: variants
             })
         } else {
-            Err(syn::Error::new_spanned(
-                ir.self_code(),
-                "An enum expected."
-            ))
+            Err(syn::Error::new_spanned(ir.self_code(), "An enum expected."))
         }
     }
 }
@@ -97,6 +97,37 @@ fn enum_variants(variants: &[syn::Variant]) -> proc_macro2::TokenStream {
         let description = docs.first().cloned().unwrap_or_default().trim().to_string();
         quote::quote!(odra::schema::error(#name, #description, #discriminant),)
     })
+}
+
+pub struct FactorySchemaErrorsItem {
+    module_ident: syn::Ident,
+}
+
+impl TryFrom<&ModuleStructIR> for FactorySchemaErrorsItem {
+    type Error = syn::Error;
+
+    fn try_from(ir: &ModuleStructIR) -> Result<Self, Self::Error> {
+        Ok(Self {
+            module_ident: ir.module_ident(),
+        })
+    }
+}
+
+impl ToTokens for FactorySchemaErrorsItem {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let module_ident = &self.module_ident;
+        let item = quote::quote! {
+            #[automatically_derived]
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::SchemaErrors for #module_ident {
+                fn schema_errors() -> odra::prelude::Vec<odra::schema::casper_contract_schema::UserError> {
+                    odra::prelude::vec![]
+                }
+            }
+        };
+
+        item.to_tokens(tokens);
+    }
 }
 
 #[cfg(test)]
@@ -112,7 +143,9 @@ mod test {
             #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaErrors for CounterPack {
-                fn schema_errors() -> odra::prelude::Vec<odra::schema::casper_contract_schema::UserError> {
+                fn schema_errors(
+                ) -> odra::prelude::Vec<odra::schema::casper_contract_schema::UserError>
+                {
                     odra::prelude::BTreeSet::<odra::schema::casper_contract_schema::UserError>::new()
                         .into_iter()
                         .chain(<Erc20Errors as odra::schema::SchemaErrors>::schema_errors())

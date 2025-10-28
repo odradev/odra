@@ -1,10 +1,14 @@
+use crate::{
+    ast::utils::Named,
+    ir::{TypeIR, TypeKind},
+    utils
+};
 use quote::ToTokens;
 use syn::Fields;
-use crate::{ast::utils::Named, ir::{TypeIR, TypeKind}, utils};
 
 pub struct SchemaCustomTypeItem {
     ty_ident: syn::Ident,
-    kind: TypeKind,
+    kind: TypeKind
 }
 
 impl ToTokens for SchemaCustomTypeItem {
@@ -15,7 +19,7 @@ impl ToTokens for SchemaCustomTypeItem {
         let custom_item = match &self.kind {
             TypeKind::UnitEnum { variants } => custom_enum(name, variants),
             TypeKind::Enum { variants } => custom_complex_enum(name, variants),
-            TypeKind::Struct { fields } => custom_struct(name, fields),
+            TypeKind::Struct { fields } => custom_struct(name, fields)
         };
 
         let sub_types = match &self.kind {
@@ -79,26 +83,25 @@ impl ToTokens for SchemaCustomTypeItem {
 }
 
 fn custom_enum(name: &str, variants: &[syn::Variant]) -> proc_macro2::TokenStream {
-    let variants = utils::syn::transform_variants(variants, |name, _, discriminant, _| {
-        quote::quote!(odra::schema::enum_variant(#name, #discriminant),)
-    });
+    let variants = utils::syn::transform_variants(
+        variants,
+        |name, _, discriminant, _| quote::quote!(odra::schema::enum_variant(#name, #discriminant),)
+    );
 
     quote::quote!(odra::schema::custom_enum(#name, #variants))
 }
 
 fn custom_complex_enum(enum_name: &str, variants: &[syn::Variant]) -> proc_macro2::TokenStream {
-    let variants = utils::syn::transform_variants(variants, |name, fields, discriminant, _| match fields {
-        Fields::Named(_) => {
-            match fields.len() {
+    let variants = utils::syn::transform_variants(variants, |name, fields, discriminant, _| {
+        match fields {
+            Fields::Named(_) => match fields.len() {
                 0 => quote::quote!(odra::schema::enum_variant(#name, #discriminant),),
                 _ => {
                     let ty_name = format!("{}::{}", enum_name, name);
                     quote::quote!(odra::schema::enum_custom_type_variant(#name, #discriminant, #ty_name),)
                 }
-            }
-        }
-        Fields::Unnamed(_) => {
-            match fields.len() {
+            },
+            Fields::Unnamed(_) => match fields.len() {
                 0 => quote::quote!(odra::schema::enum_variant(#name, #discriminant),),
                 1 => {
                     let ty = fields.iter().next().unwrap().ty.clone();
@@ -115,19 +118,17 @@ fn custom_complex_enum(enum_name: &str, variants: &[syn::Variant]) -> proc_macro
                     });
                     quote::quote!(odra::schema::enum_typed_variant::<#ty>(#name, #discriminant),)
                 }
-            }
+            },
+            Fields::Unit => quote::quote!(odra::schema::enum_variant(#name, #discriminant),)
         }
-        Fields::Unit => quote::quote!(odra::schema::enum_variant(#name, #discriminant),),
     });
     quote::quote!(odra::schema::custom_enum(#enum_name, #variants))
 }
 fn custom_struct(name: &str, fields: &[(syn::Ident, syn::Type)]) -> proc_macro2::TokenStream {
-    let members = fields
-        .iter()
-        .map(|(ident, ty)| {
-            let name = ident.to_string();
-            quote::quote!(odra::schema::struct_member::<#ty>(#name))
-        });
+    let members = fields.iter().map(|(ident, ty)| {
+        let name = ident.to_string();
+        quote::quote!(odra::schema::struct_member::<#ty>(#name))
+    });
 
     quote::quote!(odra::schema::custom_struct(#name, odra::prelude::vec![#(#members,)*]))
 }
@@ -138,7 +139,7 @@ impl TryFrom<&TypeIR> for SchemaCustomTypeItem {
     fn try_from(ir: &TypeIR) -> Result<Self, Self::Error> {
         Ok(Self {
             ty_ident: ir.name()?,
-            kind: ir.kind()?,
+            kind: ir.kind()?
         })
     }
 }
@@ -157,22 +158,24 @@ mod tests {
             #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaCustomTypes for MyType {
-                fn schema_types() -> odra::prelude::vec::Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
-                    odra::prelude::BTreeSet::<Option<odra::schema::casper_contract_schema::CustomType>>::new()
-                        .into_iter()
-                        .chain(odra::prelude::vec![
-                            Some(odra::schema::custom_struct(
-                                "MyType",
-                                odra::prelude::vec![
-                                    odra::schema::struct_member::<String>("a"),
-                                    odra::schema::struct_member::<u32>("b"),
-                                ]
-                            ))
-                        ])
-                        .chain(odra::prelude::vec![])
-                        .chain(<String as odra::schema::SchemaCustomTypes>::schema_types())
-                        .chain(<u32 as odra::schema::SchemaCustomTypes>::schema_types())
-                        .collect::<odra::prelude::Vec<_>>()
+                fn schema_types(
+                ) -> odra::prelude::vec::Vec<Option<odra::schema::casper_contract_schema::CustomType>>
+                {
+                    odra::prelude::BTreeSet::<
+                        Option<odra::schema::casper_contract_schema::CustomType>
+                    >::new()
+                    .into_iter()
+                    .chain(odra::prelude::vec![Some(odra::schema::custom_struct(
+                        "MyType",
+                        odra::prelude::vec![
+                            odra::schema::struct_member::<String>("a"),
+                            odra::schema::struct_member::<u32>("b"),
+                        ]
+                    ))])
+                    .chain(odra::prelude::vec![])
+                    .chain(<String as odra::schema::SchemaCustomTypes>::schema_types())
+                    .chain(<u32 as odra::schema::SchemaCustomTypes>::schema_types())
+                    .collect::<odra::prelude::Vec<_>>()
                 }
             }
 
@@ -180,9 +183,9 @@ mod tests {
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::NamedCLTyped for MyType {
                 fn ty() -> odra::schema::casper_contract_schema::NamedCLType {
-                    odra::schema::casper_contract_schema::NamedCLType::Custom(odra::prelude::String::from(
-                        "MyType"
-                    ))
+                    odra::schema::casper_contract_schema::NamedCLType::Custom(
+                        odra::prelude::String::from("MyType")
+                    )
                 }
             }
 
@@ -202,20 +205,22 @@ mod tests {
             #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaCustomTypes for MyType {
-                fn schema_types() -> odra::prelude::vec::Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
-                    odra::prelude::BTreeSet::<Option<odra::schema::casper_contract_schema::CustomType>>::new()
-                        .into_iter()
-                        .chain(odra::prelude::vec![
-                            Some(odra::schema::custom_enum(
-                                "MyType",
-                                odra::prelude::vec![
-                                    odra::schema::enum_variant("A", 10u16),
-                                    odra::schema::enum_variant("B", 11u16),
-                                ]
-                            ))
-                        ])
-                        .chain(odra::prelude::vec![])
-                        .collect::<odra::prelude::Vec<_>>()
+                fn schema_types(
+                ) -> odra::prelude::vec::Vec<Option<odra::schema::casper_contract_schema::CustomType>>
+                {
+                    odra::prelude::BTreeSet::<
+                        Option<odra::schema::casper_contract_schema::CustomType>
+                    >::new()
+                    .into_iter()
+                    .chain(odra::prelude::vec![Some(odra::schema::custom_enum(
+                        "MyType",
+                        odra::prelude::vec![
+                            odra::schema::enum_variant("A", 10u16),
+                            odra::schema::enum_variant("B", 11u16),
+                        ]
+                    ))])
+                    .chain(odra::prelude::vec![])
+                    .collect::<odra::prelude::Vec<_>>()
                 }
             }
 
@@ -223,9 +228,9 @@ mod tests {
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::NamedCLTyped for MyType {
                 fn ty() -> odra::schema::casper_contract_schema::NamedCLType {
-                    odra::schema::casper_contract_schema::NamedCLType::Custom(odra::prelude::String::from(
-                        "MyType"
-                    ))
+                    odra::schema::casper_contract_schema::NamedCLType::Custom(
+                        odra::prelude::String::from("MyType")
+                    )
                 }
             }
 
@@ -245,31 +250,36 @@ mod tests {
             #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaCustomTypes for MyType {
-                fn schema_types() -> odra::prelude::vec::Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
-                    odra::prelude::BTreeSet::<Option<odra::schema::casper_contract_schema::CustomType>>::new()
-                        .into_iter()
-                        .chain(odra::prelude::vec![
-                            Some(odra::schema::custom_enum(
-                                "MyType",
-                                odra::prelude::vec![
-                                    odra::schema::enum_custom_type_variant("A", 0u16, "MyType::A"),
-                                    odra::schema::enum_typed_variant::<(u32, String,)>("B", 1u16),
-                                    odra::schema::enum_variant("C", 2u16),
-                                    odra::schema::enum_variant("D", 3u16),
-                                ]
-                            ))
-                        ])
-                        .chain(odra::prelude::vec![
-                            Some(odra::schema::custom_struct(
-                                "MyType::A", 
-                                odra::prelude::vec![
-                                    odra::schema::struct_member::<String>("a"),
-                                    odra::schema::struct_member::<u32>("b")
-                                ]
-                            )),
-                            Some(odra::schema::custom_struct("MyType::D", odra::prelude::vec![]))
-                        ])
-                        .collect::<odra::prelude::Vec<_>>()
+                fn schema_types(
+                ) -> odra::prelude::vec::Vec<Option<odra::schema::casper_contract_schema::CustomType>>
+                {
+                    odra::prelude::BTreeSet::<
+                        Option<odra::schema::casper_contract_schema::CustomType>
+                    >::new()
+                    .into_iter()
+                    .chain(odra::prelude::vec![Some(odra::schema::custom_enum(
+                        "MyType",
+                        odra::prelude::vec![
+                            odra::schema::enum_custom_type_variant("A", 0u16, "MyType::A"),
+                            odra::schema::enum_typed_variant::<(u32, String,)>("B", 1u16),
+                            odra::schema::enum_variant("C", 2u16),
+                            odra::schema::enum_variant("D", 3u16),
+                        ]
+                    ))])
+                    .chain(odra::prelude::vec![
+                        Some(odra::schema::custom_struct(
+                            "MyType::A",
+                            odra::prelude::vec![
+                                odra::schema::struct_member::<String>("a"),
+                                odra::schema::struct_member::<u32>("b")
+                            ]
+                        )),
+                        Some(odra::schema::custom_struct(
+                            "MyType::D",
+                            odra::prelude::vec![]
+                        ))
+                    ])
+                    .collect::<odra::prelude::Vec<_>>()
                 }
             }
 
@@ -277,9 +287,9 @@ mod tests {
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::NamedCLTyped for MyType {
                 fn ty() -> odra::schema::casper_contract_schema::NamedCLType {
-                    odra::schema::casper_contract_schema::NamedCLType::Custom(odra::prelude::String::from(
-                        "MyType"
-                    ))
+                    odra::schema::casper_contract_schema::NamedCLType::Custom(
+                        odra::prelude::String::from("MyType")
+                    )
                 }
             }
 

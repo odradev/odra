@@ -53,7 +53,7 @@ mod test {
             impl odra::ContractRef for TokenContractRef {
                 fn new(env: Rc<odra::ContractEnv>, address: Address) -> Self {
                     Self {
-                        env, 
+                        env,
                         address,
                         attached_value: odra::casper_types::U512::zero()
                     }
