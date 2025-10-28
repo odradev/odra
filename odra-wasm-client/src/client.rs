@@ -275,7 +275,6 @@ impl OdraWasmClient {
         Ok(result.to_wasm_value())
     }
 
-    #[allow(deprecated)]
     pub async fn call_payable_entry_point(
         &self,
         contract_address: Address,
