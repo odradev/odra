@@ -1,5 +1,5 @@
 use gloo_utils::format::JsValueSerdeExt;
-use std::ops::Deref;
+use std::{ops::Deref, str::FromStr};
 use wasm_bindgen::prelude::*;
 
 macro_rules! impl_big_int {
@@ -130,7 +130,8 @@ macro_rules! impl_big_int {
 
             #[wasm_bindgen(js_name = "toBigInt")]
             pub fn to_big_int(&self) -> js_sys::BigInt {
-                JsValue::from(self.0.to_string()).unchecked_into()
+                js_sys::BigInt::from_str(&self.0.to_string())
+                    .expect("decimal string must be valid BigInt")
             }
 
             #[wasm_bindgen(js_name = "lt")]
