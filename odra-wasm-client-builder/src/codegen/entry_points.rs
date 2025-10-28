@@ -135,7 +135,7 @@ fn payable_impl(ep: &Entrypoint) -> syn::ImplItemFn {
     parse_quote! {
         #docs
         #[wasm_bindgen(js_name = #js_name)]
-        pub async fn #entry_point_ident(&self, #(#args),*) -> Result<odra_wasm_client::types::TransactionHash, JsError> {
+        pub async fn #entry_point_ident(&self, #(#args),*) -> Result<odra_wasm_client::cspr_click::TransactionResult, JsError> {
             self.wasm_client
                 .call_payable_entry_point(
                     *self.address,
@@ -164,7 +164,7 @@ fn mutable_impl(ep: &Entrypoint) -> syn::ImplItemFn {
     parse_quote! {
         #docs
         #[wasm_bindgen(js_name = #js_name)]
-        pub async fn #entry_point_ident(&self, #(#args),*) -> Result<odra_wasm_client::types::TransactionHash, JsError> {
+        pub async fn #entry_point_ident(&self, #(#args),*) -> Result<odra_wasm_client::cspr_click::TransactionResult, JsError> {
             self.wasm_client
                 .call_entry_point(
                     *self.address,

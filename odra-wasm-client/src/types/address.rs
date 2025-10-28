@@ -1,3 +1,4 @@
+use core::fmt;
 use std::ops::Deref;
 
 use casper_types::Key;
@@ -9,7 +10,7 @@ use web_sys::HtmlInputElement;
 use crate::types::public_key::PublicKey;
 
 #[derive(Debug, Clone, Deserialize, Serialize, Copy, PartialEq, Eq)]
-#[wasm_bindgen]
+#[wasm_bindgen(inspectable)]
 pub struct Address(_Address);
 
 #[wasm_bindgen]
@@ -29,6 +30,26 @@ impl Address {
     pub fn from_input(input: HtmlInputElement) -> Result<Self, JsError> {
         let value = input.value();
         Self::new(value.trim())
+    }
+
+    #[wasm_bindgen(js_name = "fromPublicKey")]
+    pub fn from_public_key(input: &str) -> Result<Self, JsError> {
+        PublicKey::new(input).map(Address::from).map_err(|err| {
+            JsError::new(&format!(
+                "Could not create Address from PublicKey string {input}: {err:?}"
+            ))
+        })
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn value(&self) -> String {
+        self.to_formatted_string()
+    }
+}
+
+impl fmt::Display for Address {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.0)
     }
 }
 

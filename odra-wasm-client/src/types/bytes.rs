@@ -28,6 +28,11 @@ impl Bytes {
     pub fn stringify(&self) -> String {
         hex::encode(&self.0)
     }
+
+    #[wasm_bindgen(getter)]
+    pub fn value(&self) -> String {
+        self.stringify()
+    }
 }
 
 impl Deref for Bytes {
