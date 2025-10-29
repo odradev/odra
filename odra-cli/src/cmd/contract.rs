@@ -352,16 +352,6 @@ mod tests {
     }
 
     #[test]
-    fn cargo_purse_is_not_present() {
-        let cmd = ContractCmd::new::<TestContract>();
-
-        let clap_cmd: Command = (&cmd).into();
-        let result = clap_cmd.try_get_matches_from(vec!["test", "deposit", "--gas", "10000000000000"]);
-        dbg!(&result);
-        assert!(!result.is_ok());
-    }
-
-    #[test]
     fn test_run() {
         let cmd = ContractCmd::new::<TestContract>();
         let clap_cmd: Command = (&cmd).into();

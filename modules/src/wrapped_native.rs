@@ -90,7 +90,7 @@ impl WrappedNativeToken {
 
         // Burn tokens from caller
         self.token.raw_burn(&caller, amount);
-        
+
         // Send CSPR directly to recipient
         if recipient.is_contract() {
             CsprDepositContractRef::new(self.env(), *recipient)
