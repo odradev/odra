@@ -16,9 +16,9 @@ mod utils;
 
 #[derive(Debug, thiserror::Error)]
 pub enum CallError {
-    #[error("Calling {contract_name}::{method} failed with: {message}")]
+    #[error("Calling {package_name}::{method} failed with: {message}")]
     ExecutionError {
-        contract_name: String,
+        package_name: String,
         method: String,
         message: String
     },
@@ -77,7 +77,7 @@ pub fn call<T: ContractProvider>(
     let bytes = env
         .raw_call_contract(contract_address, call_def, use_proxy)
         .map_err(|e| CallError::ExecutionError {
-            contract_name: contract_name.to_string(),
+            package_name: contract_name.to_string(),
             method: method.to_string(),
             message: match e {
                 OdraError::VmError(VmError::Other(msg)) => msg,
@@ -101,15 +101,15 @@ fn log_events<T: ContractProvider>(
 ) -> Result<(), CallError> {
     let call_result = env.last_call_result(contract_address).raw_call_result();
 
-    for (name, address) in contract_provider.all_contracts() {
-        let events = call_result.contract_events(&address);
+    for deployed_contract in contract_provider.all_contracts() {
+        let events = call_result.contract_events(&deployed_contract.address());
         if events.is_empty() {
             continue;
         }
         prettycli::info(&format!(
             "Captured {} events for contract '{}'",
             events.len(),
-            name
+            deployed_contract.key_name()
         ));
         for (i, event) in events.iter().enumerate() {
             prettycli::info(&format!(

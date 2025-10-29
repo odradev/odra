@@ -101,11 +101,12 @@ pub trait ContractProvider {
     /// Returns a reference to the contract if it is found, otherwise returns an error.
     fn contract_ref<T: OdraContract + 'static>(
         &self,
-        env: &HostEnv
+        env: &HostEnv,
+        name: Option<String>
     ) -> Result<T::HostRef, ContractError>;
 
     /// Returns a list of all deployed contracts with their names and addresses.
-    fn all_contracts(&self) -> Vec<(String, Address)>;
+    fn all_contracts(&self) -> Vec<DeployedContract>;
 
     /// Returns the contract address.
     fn address_by_name(&self, name: &str) -> Option<Address>;
@@ -159,9 +160,11 @@ impl DeployedContractsContainer {
     /// Adds a contract to the container.
     pub fn add_contract<T: HostRef + HasIdent>(
         &mut self,
-        contract: &T
+        contract: &T,
+        package_name: Option<String>
     ) -> Result<(), ContractError> {
-        self.data.add_contract::<T>(contract.address());
+        self.data
+            .add_contract::<T>(contract.address(), package_name);
         self.storage.write(&self.data)
     }
 }
@@ -169,51 +172,60 @@ impl DeployedContractsContainer {
 impl ContractProvider for DeployedContractsContainer {
     fn contract_ref<T: OdraContract + 'static>(
         &self,
-        env: &HostEnv
+        env: &HostEnv,
+        package_name: Option<String>
     ) -> Result<T::HostRef, ContractError> {
+        let name = package_name.unwrap_or(T::HostRef::ident());
         self.data
             .contracts()
             .iter()
-            .find(|c| c.name == T::HostRef::ident())
+            .find(|c| c.package_name == name)
             .map(|c| Address::from_str(&c.package_hash).ok())
             .and_then(|opt| opt.map(|addr| <T as HostRefLoader<T::HostRef>>::load(env, addr)))
             .ok_or(ContractError::NotFound(T::HostRef::ident()))
     }
 
-    fn all_contracts(&self) -> Vec<(String, Address)> {
-        self.data
-            .contracts()
-            .iter()
-            .filter_map(|c| {
-                Address::from_str(&c.package_hash)
-                    .ok()
-                    .map(|addr| (c.name.clone(), addr))
-            })
-            .collect()
+    fn all_contracts(&self) -> Vec<DeployedContract> {
+        self.data.contracts().clone()
     }
 
-    fn address_by_name(&self, name: &str) -> Option<Address> {
+    fn address_by_name(&self, package_name: &str) -> Option<Address> {
         self.data
             .contracts()
             .iter()
-            .find(|c| c.name == name)
+            .find(|c| c.package_name == package_name)
             .and_then(|c| Address::from_str(&c.package_hash).ok())
     }
 }
 
 /// This struct represents a contract in the `deployed_contracts.toml` file.
 #[derive(Deserialize, Serialize, Debug, Clone)]
-struct DeployedContract {
+pub struct DeployedContract {
     name: String,
+    package_name: String,
     package_hash: String
 }
 
 impl DeployedContract {
-    fn new<T: HasIdent>(address: Address) -> Self {
+    fn new<T: HasIdent>(address: Address, name: Option<String>) -> Self {
+        let contract_name = name.unwrap_or_else(|| T::ident());
         Self {
             name: T::ident(),
+            package_name: contract_name,
             package_hash: address.to_string()
         }
+    }
+
+    pub fn key_name(&self) -> String {
+        self.package_name.clone()
+    }
+
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
+
+    pub fn address(&self) -> Address {
+        Address::from_str(&self.package_hash).unwrap()
     }
 }
 
@@ -234,9 +246,9 @@ impl Default for ContractsData {
 }
 
 impl ContractsData {
-    pub fn add_contract<T: HasIdent>(&mut self, address: Address) {
-        let contract = DeployedContract::new::<T>(address);
-        self.contracts.retain(|c| c.name != contract.name);
+    pub fn add_contract<T: HasIdent>(&mut self, address: Address, package_name: Option<String>) {
+        let contract = DeployedContract::new::<T>(address, package_name);
+        self.contracts.retain(|c| c.name != contract.package_name);
         self.contracts.push(contract);
         self.last_updated = Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true);
     }

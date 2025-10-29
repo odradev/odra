@@ -164,6 +164,9 @@ impl TestContract {
     ) -> Vec<u8> {
         (a, b, c, d, e).to_bytes().unwrap_or_revert(self)
     }
+
+    #[odra(payable)]
+    pub fn deposit(&mut self) {}
 }
 
 struct DummyHostCtx;

@@ -32,7 +32,13 @@ pub(crate) struct PrintEventsCmd {
 
 impl PrintEventsCmd {
     pub fn add_contract<T: OdraContract>(&mut self) {
-        self.subcommands.push(PrintContractEventsCmd::new::<T>());
+        self.subcommands
+            .push(PrintContractEventsCmd::new::<T>(None));
+    }
+
+    pub fn add_contract_named<T: OdraContract>(&mut self, package_name: String) {
+        self.subcommands
+            .push(PrintContractEventsCmd::new::<T>(Some(package_name)));
     }
 }
 
@@ -68,10 +74,9 @@ struct PrintContractEventsCmd {
 }
 
 impl PrintContractEventsCmd {
-    fn new<T: OdraContract>() -> Self {
-        Self {
-            contract_name: T::HostRef::ident()
-        }
+    fn new<T: OdraContract>(package_name: Option<String>) -> Self {
+        let contract_name = package_name.unwrap_or_else(T::HostRef::ident);
+        Self { contract_name }
     }
 }
 
@@ -179,7 +184,7 @@ mod tests {
 
     #[test]
     fn parsing_number_of_events() {
-        let cmd = PrintContractEventsCmd::new::<TestContract>();
+        let cmd = PrintContractEventsCmd::new::<TestContract>(None);
         let command: Command = (&cmd).into();
         let matches = command.get_matches_from(vec!["TestContract", "--number", "5"]);
         assert_eq!(*matches.get_one::<u32>(ARG_NUMBER).unwrap(), 5);
@@ -187,7 +192,7 @@ mod tests {
 
     #[test]
     fn parsing_default_number_of_events() {
-        let cmd = PrintContractEventsCmd::new::<TestContract>();
+        let cmd = PrintContractEventsCmd::new::<TestContract>(None);
         let command: Command = (&cmd).into();
         let matches = command.try_get_matches_from(vec!["TestContract"]);
         assert!(matches.is_ok());
@@ -198,7 +203,7 @@ mod tests {
 
     #[test]
     fn parsing_default_number_of_events_with_invalid_value() {
-        let cmd = PrintContractEventsCmd::new::<TestContract>();
+        let cmd = PrintContractEventsCmd::new::<TestContract>(None);
         let command: Command = (&cmd).into();
         let matches = command.try_get_matches_from(vec!["TestContract", "--number", "invalid"]);
         assert!(matches.is_err());

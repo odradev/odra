@@ -454,9 +454,11 @@ impl HostEnv {
         *self.captures_events.borrow_mut() = captures;
         if captures {
             // Initialize events for all deployed contracts if capturing is enabled
-            let deployed_contracts = self.deployed_contracts.borrow().clone();
-            for (contract_address, _) in deployed_contracts.iter() {
-                self.init_events(contract_address);
+            let contract_addresses: Vec<Address> =
+                self.deployed_contracts.borrow().keys().copied().collect();
+
+            for contract_address in contract_addresses {
+                self.init_events(&contract_address);
             }
         }
     }
@@ -970,12 +972,25 @@ impl HostEnv {
     }
 
     fn init_events(&self, contract_address: &Address) {
-        let mut contracts = self.deployed_contracts.borrow_mut();
-        let contract = contracts.get_mut(contract_address).unwrap();
+        // First, check if initialization is needed and get event counts
+        let needs_init = {
+            let contracts = self.deployed_contracts.borrow();
+            contracts
+                .get(contract_address)
+                .map(|contract| !contract.events_initialized)
+                .unwrap_or(false)
+        };
 
-        if !contract.events_initialized {
-            contract.events_count = self.events_count(contract_address);
-            contract.native_events_count = self.native_events_count(contract_address);
+        if needs_init {
+            // Get event counts while not holding any borrows
+            let events_count = self.events_count(contract_address);
+            let native_events_count = self.native_events_count(contract_address);
+
+            // Now update the contract
+            let mut contracts = self.deployed_contracts.borrow_mut();
+            let contract = contracts.get_mut(contract_address).unwrap();
+            contract.events_count = events_count;
+            contract.native_events_count = native_events_count;
             contract.events_initialized = true;
         }
     }

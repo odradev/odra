@@ -20,12 +20,13 @@ pub trait DeployerExt: Sized {
     /// Load an existing contract instance from container or deploy a new one.
     fn load_or_deploy(
         env: &HostEnv,
+        package_name: Option<String>,
         args: <<Self as DeployerExt>::Contract as OdraContract>::InitArgs,
         container: &mut DeployedContractsContainer,
         gas: u64
     ) -> Result<<<Self as DeployerExt>::Contract as OdraContract>::HostRef, crate::deploy::Error>
     {
-        if let Ok(contract) = container.contract_ref::<Self::Contract>(env) {
+        if let Ok(contract) = container.contract_ref::<Self::Contract>(env, package_name.clone()) {
             prettycli::info(&format!(
                 "Using existing contract {} at address {:?}",
                 <Self::Contract as OdraContract>::HostRef::ident(),
@@ -35,7 +36,7 @@ pub trait DeployerExt: Sized {
         } else {
             env.set_gas(gas);
             let contract = Self::Contract::try_deploy(env, args)?;
-            container.add_contract(&contract)?;
+            container.add_contract(&contract, package_name)?;
             Ok(contract)
         }
     }
@@ -43,13 +44,14 @@ pub trait DeployerExt: Sized {
     /// Load an existing contract instance from container or deploy a new one with a custom configuration.
     fn load_or_deploy_with_cfg(
         env: &HostEnv,
+        package_name: Option<String>,
         args: <<Self as DeployerExt>::Contract as OdraContract>::InitArgs,
         cfg: InstallConfig,
         container: &mut DeployedContractsContainer,
         gas: u64
     ) -> Result<<<Self as DeployerExt>::Contract as OdraContract>::HostRef, crate::deploy::Error>
     {
-        if let Ok(contract) = container.contract_ref::<Self::Contract>(env) {
+        if let Ok(contract) = container.contract_ref::<Self::Contract>(env, package_name.clone()) {
             prettycli::info(&format!(
                 "Using existing contract {} at address {:?}",
                 <Self::Contract as OdraContract>::HostRef::ident(),
@@ -59,7 +61,7 @@ pub trait DeployerExt: Sized {
         } else {
             env.set_gas(gas);
             let contract = Self::Contract::try_deploy_with_cfg(env, args, cfg)?;
-            container.add_contract(&contract)?;
+            container.add_contract(&contract, package_name)?;
             Ok(contract)
         }
     }

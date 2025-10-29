@@ -20,6 +20,16 @@ pub(crate) struct ContractsCmd {
 }
 
 impl ContractsCmd {
+    pub fn add_contract_named<
+        T: SchemaEntrypoints + OdraContract + SchemaCustomTypes + SchemaEvents
+    >(
+        &mut self,
+        package_name: String
+    ) {
+        self.contracts
+            .push(ContractCmd::new_named::<T>(Some(package_name)));
+    }
+
     pub fn add_contract<T: SchemaEntrypoints + OdraContract + SchemaCustomTypes + SchemaEvents>(
         &mut self
     ) {
@@ -39,7 +49,7 @@ impl OdraCommand for ContractsCmd {
             .map(|(contract_name, contract_args)| {
                 self.contracts
                     .iter()
-                    .find(|cmd| cmd.name == contract_name)
+                    .find(|cmd| cmd.package_name == contract_name)
                     .map(|contract| contract.run(env, contract_args, types, container))
                     .unwrap_or(Err(anyhow::anyhow!("No contract found")))
             })
@@ -61,20 +71,29 @@ impl From<&ContractsCmd> for Command {
 ///
 /// The contract command runs a contract with a given entry point.
 struct ContractCmd {
-    name: String,
+    contract_name: String,
+    package_name: String,
     entry_points: Vec<CallCmd>
 }
 
 impl ContractCmd {
     pub fn new<T: SchemaEntrypoints + OdraContract + SchemaCustomTypes + SchemaEvents>() -> Self {
+        Self::new_named::<T>(None)
+    }
+
+    pub fn new_named<T: SchemaEntrypoints + OdraContract + SchemaCustomTypes + SchemaEvents>(
+        package_name: Option<String>
+    ) -> Self {
         let contract_name = T::HostRef::ident();
+        let package_name = package_name.unwrap_or(T::HostRef::ident());
         let entry_points = T::schema_entrypoints()
             .into_iter()
             .filter(|entry_point| entry_point.name != "init")
-            .map(CallCmd::new::<T>)
+            .map(|entry_point| CallCmd::new::<T>(entry_point, package_name.clone()))
             .collect::<Vec<_>>();
         ContractCmd {
-            name: contract_name,
+            contract_name,
+            package_name,
             entry_points
         }
     }
@@ -96,12 +115,12 @@ impl OdraCommand for ContractCmd {
                     .map(|entry_point| entry_point.run(env, entrypoint_args, types, container))
                     .unwrap_or(Err(entry_point::CallError::EntryPointNotFound {
                         entry_point: entrypoint_name.to_string(),
-                        contract_name: self.name.clone()
+                        contract_name: self.contract_name.clone()
                     }
                     .into()))
             })
             .unwrap_or(Err(entry_point::CallError::NoEntryPointFound {
-                contract_name: self.name.clone()
+                contract_name: self.package_name.clone()
             }
             .into()))
     }
@@ -109,10 +128,10 @@ impl OdraCommand for ContractCmd {
 
 impl From<&ContractCmd> for Command {
     fn from(value: &ContractCmd) -> Self {
-        Command::new(&value.name)
+        Command::new(&value.package_name)
             .about(format!(
                 "Commands for interacting with the {} contract",
-                &value.name
+                &value.package_name
             ))
             .subcommand_required(true)
             .arg_required_else_help(true)
@@ -124,20 +143,21 @@ impl From<&ContractCmd> for Command {
 ///
 /// The call command runs a contract with a given entry point.
 struct CallCmd {
-    contract_name: String,
+    package_name: String,
     entry_point: Entrypoint,
     custom_types: BTreeSet<CustomType>
 }
 
 impl CallCmd {
     pub fn new<T: SchemaEntrypoints + OdraContract + SchemaCustomTypes + SchemaEvents>(
-        entry_point: Entrypoint
+        entry_point: Entrypoint,
+        package_name: String
     ) -> Self {
         let mut custom_types = BTreeSet::new();
         custom_types.extend(T::schema_types().into_iter().flatten());
         custom_types.extend(<T as SchemaEvents>::custom_types().into_iter().flatten());
         CallCmd {
-            contract_name: T::HostRef::ident(),
+            package_name,
             entry_point,
             custom_types
         }
@@ -154,7 +174,7 @@ impl OdraCommand for CallCmd {
         container: &DeployedContractsContainer
     ) -> Result<()> {
         let entry_point = &self.entry_point;
-        let contract_name = &self.contract_name;
+        let contract_name = &self.package_name;
 
         let result = entry_point::call(env, contract_name, entry_point, args, types, container)?;
         if result.is_empty() {
@@ -176,7 +196,7 @@ impl OdraCommand for CallCmd {
         for a in &self.entry_point.arguments {
             if !args.contains_id(&a.name) {
                 return Err(entry_point::CallError::ExecutionError {
-                    contract_name: self.contract_name.clone(),
+                    package_name: self.package_name.clone(),
                     method: self.entry_point.name.clone(),
                     message: format!("Missing required argument: {}", a.name)
                 }
@@ -216,7 +236,7 @@ mod tests {
         cmd.add_contract::<TestContract>();
 
         assert_eq!(cmd.contracts.len(), 1);
-        assert_eq!(cmd.contracts[0].name, "TestContract");
+        assert_eq!(cmd.contracts[0].contract_name, "TestContract");
 
         let clap_cmd: Command = (&cmd).into();
         assert_eq!(clap_cmd.get_name(), CONTRACTS_SUBCOMMAND);
@@ -229,8 +249,8 @@ mod tests {
     fn test_contract_cmd() {
         let cmd = ContractCmd::new::<TestContract>();
 
-        assert_eq!(cmd.name, "TestContract");
-        assert_eq!(cmd.entry_points.len(), 4);
+        assert_eq!(cmd.contract_name, "TestContract");
+        assert_eq!(cmd.entry_points.len(), 5);
     }
 
     #[test]

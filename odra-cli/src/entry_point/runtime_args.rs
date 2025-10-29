@@ -15,6 +15,9 @@ pub fn compose(
     let mut runtime_args = RuntimeArgs::new();
 
     for arg in entry_point.arguments.iter() {
+        if arg.name == "__cargo_purse" {
+            continue;
+        }
         let parts: Vec<CommandArg> = flatten_schema_arg(arg, types, false)?;
         let cl_value = if parts.len() == 1 {
             compose_basic_arg(arg, args)?
