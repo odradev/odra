@@ -272,3 +272,7 @@ pub fn init_args() -> syn::Type {
 pub fn upgrade_args() -> syn::Type {
     parse_quote!(odra::host::UpgradeArgs)
 }
+
+pub fn bytes() -> syn::Type {
+    parse_quote!(odra::casper_types::bytesrepr::Bytes)
+}

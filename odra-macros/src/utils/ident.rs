@@ -48,6 +48,10 @@ pub fn entry_points() -> syn::Ident {
     format_ident!("entry_points")
 }
 
+pub fn factory_entry_points() -> syn::Ident {
+    format_ident!("factory_entry_points")
+}
+
 pub fn add_entry_point() -> syn::Ident {
     format_ident!("add")
 }

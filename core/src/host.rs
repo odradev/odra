@@ -136,6 +136,51 @@ impl From<NoArgs> for RuntimeArgs {
     }
 }
 
+/// Arguments for upgrading a factory contract.
+#[derive(Default)]
+pub struct FactoryUpgradeArgs {
+    /// Default arguments for the new contract instances created by the factory.
+    pub default_args: casper_types::RuntimeArgs,
+    /// Specific arguments for particular contract instances created by the factory.
+    pub specific_args:
+        alloc::collections::BTreeMap<alloc::string::String, casper_types::RuntimeArgs>,
+    /// Names of the contracts to be upgraded.
+    pub names_to_upgrade: Vec<alloc::string::String>
+}
+
+impl From<FactoryUpgradeArgs> for RuntimeArgs {
+    fn from(args: FactoryUpgradeArgs) -> Self {
+        let mut runtime_args = RuntimeArgs::new();
+        let _ = runtime_args.insert(
+            "default_args",
+            Bytes::from(
+                args.default_args
+                    .to_bytes()
+                    .expect("Failed to serialize default args")
+            )
+        );
+        let _ = runtime_args.insert(
+            "specific_args",
+            Bytes::from(
+                args.specific_args
+                    .to_bytes()
+                    .expect("Failed to serialize specific args")
+            )
+        );
+        let _ = runtime_args.insert(
+            "names_to_upgrade",
+            Bytes::from(
+                args.names_to_upgrade
+                    .to_bytes()
+                    .expect("Failed to serialize names to upgrade")
+            )
+        );
+        runtime_args
+    }
+}
+
+impl UpgradeArgs for FactoryUpgradeArgs {}
+
 /// A configuration for a contract.
 ///
 /// The configuration every contract written in Odra expects.

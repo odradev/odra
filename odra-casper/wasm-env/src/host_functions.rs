@@ -111,7 +111,15 @@ pub fn install_new_contract(
         .map(|ep| ep.access() != &EntryPointAccess::Template)
         .unwrap_or_default();
     // Prepare named keys.
-    let named_keys = initial_named_keys(events);
+    let mut named_keys = initial_named_keys(events);
+
+    let is_factory = entry_points.get("factory").is_some();
+    if is_factory {
+        named_keys.insert(
+            String::from("children_urefs"),
+            Key::URef(storage::new_uref(BTreeMap::<String, URef>::new()))
+        );
+    }
 
     // Prepare message topic
     let mut message_topics = BTreeMap::new();
@@ -196,6 +204,7 @@ pub fn upgrade_contract(
     let allow_key_override: bool = runtime::get_named_arg(ALLOW_KEY_OVERRIDE_ARG);
     let create_user_group: bool = runtime::get_named_arg(CREATE_UPGRADE_GROUP);
     let has_upgrade = entry_points.has_entry_point("upgrade");
+    let has_factory_upgrade = entry_points.has_entry_point("factory_upgrade");
 
     let package_hash = runtime::get_key(&new_package_hash_key);
 
@@ -254,6 +263,15 @@ pub fn upgrade_contract(
             None,
             "upgrade",
             upgrade_args.unwrap_or_default()
+        );
+    }
+
+    if has_factory_upgrade {
+        let _: () = runtime::call_versioned_contract(
+            contract_package_hash,
+            None,
+            "factory_upgrade",
+            runtime_args! {}
         );
     }
 

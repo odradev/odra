@@ -479,7 +479,7 @@ mod test {
                 #[cfg(not(target_arch = "wasm32"))]
                 type InitArgs = odra::host::NoArgs;
                 #[cfg(not(target_arch = "wasm32"))]
-                type UpgradeArgs = odra::host::NoArgs;
+                type UpgradeArgs = odra::host::FactoryUpgradeArgs;
             }
 
             #[cfg(odra_module = "Erc20Factory")]

@@ -24,7 +24,8 @@ impl Counter {
 #[cfg(test)]
 mod tests {
     use odra::{
-        host::{Deployer, HostRef, NoArgs},
+        casper_types::RuntimeArgs,
+        host::{Deployer, FactoryUpgradeArgs, HostRef, InstallConfig, NoArgs},
         prelude::*
     };
 
@@ -62,5 +63,24 @@ mod tests {
         counter_ref.increment();
         // The value should now be 11
         assert_eq!(counter_ref.value(), 11);
+    }
+
+    #[test]
+    fn test_factory_upgrade() {
+        let env = odra_test::env();
+        // Deploy the factory contract
+        let factory_ref = CounterFactory::deploy_with_cfg(
+            &env,
+            NoArgs,
+            InstallConfig::upgradable::<CounterFactory>()
+        );
+        let args = FactoryUpgradeArgs {
+            default_args: RuntimeArgs::new(),
+            names_to_upgrade: vec![],
+            ..Default::default()
+        };
+        // Upgrade the factory contract
+        let result = CounterFactory::try_upgrade(&env, factory_ref.address(), args);
+        assert!(result.is_ok());
     }
 }
