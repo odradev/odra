@@ -20,7 +20,6 @@ impl DeployScript for DeployDogScript {
     ) -> Result<(), odra_cli::deploy::Error> {
         _ = DogContract::load_or_deploy(
             env,
-            None,
             DogContractInitArgs {
                 barks: true,
                 weight: 10,
@@ -48,7 +47,7 @@ impl Scenario for DogCheckScenario {
         container: &DeployedContractsContainer,
         args: Args
     ) -> Result<(), Error> {
-        let dog_contract = container.contract_ref::<DogContract>(env, None)?;
+        let dog_contract = container.contract_ref::<DogContract>(env)?;
         let test_name = args.get_single::<String>("name")?;
 
         env.set_gas(50_000_000);
