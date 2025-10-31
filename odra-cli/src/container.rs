@@ -101,6 +101,14 @@ pub trait ContractProvider {
     /// Returns a reference to the contract if it is found, otherwise returns an error.
     fn contract_ref<T: OdraContract + 'static>(
         &self,
+        env: &HostEnv
+    ) -> Result<T::HostRef, ContractError>;
+
+    /// Gets a reference to the named contract.
+    ///
+    /// Returns a reference to the contract if it is found, otherwise returns an error.
+    fn contract_ref_named<T: OdraContract + 'static>(
+        &self,
         env: &HostEnv,
         name: Option<String>
     ) -> Result<T::HostRef, ContractError>;
@@ -158,7 +166,7 @@ impl DeployedContractsContainer {
     }
 
     /// Adds a contract to the container.
-    pub fn add_contract<T: HostRef + HasIdent>(
+    pub fn add_contract_named<T: HostRef + HasIdent>(
         &mut self,
         contract: &T,
         package_name: Option<String>
@@ -167,10 +175,25 @@ impl DeployedContractsContainer {
             .add_contract::<T>(contract.address(), package_name);
         self.storage.write(&self.data)
     }
+
+    /// Adds a contract to the container.
+    pub fn add_contract<T: HostRef + HasIdent>(
+        &mut self,
+        contract: &T
+    ) -> Result<(), ContractError> {
+        self.add_contract_named(contract, None)
+    }
 }
 
 impl ContractProvider for DeployedContractsContainer {
     fn contract_ref<T: OdraContract + 'static>(
+        &self,
+        env: &HostEnv
+    ) -> Result<T::HostRef, ContractError> {
+        self.contract_ref_named::<T>(env, None)
+    }
+
+    fn contract_ref_named<T: OdraContract + 'static>(
         &self,
         env: &HostEnv,
         package_name: Option<String>
