@@ -25,8 +25,6 @@ pub enum WasmType {
     List(Box<WasmType>)
 }
 
-impl WasmType {}
-
 impl ToTokens for WasmType {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         tokens.extend(match self {

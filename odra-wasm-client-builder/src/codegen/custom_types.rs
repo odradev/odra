@@ -174,13 +174,13 @@ fn enum_def(name: &str, variants: &[EnumVariant], description: String) -> TokenS
             parse_quote!(#ident = #discriminant)
         })
         .collect::<Vec<syn::Expr>>();
+
     let match_arms = variants
         .iter()
-        .enumerate()
-        .map(|(v_idx, v)| {
-            let v_idx: u8 = v_idx as u8;
+        .map(|v| {
+            let discriminant = v.discriminant as u8;
             let ident = format_ident!("{}", v.name);
-            quote::quote!(#v_idx => Ok((Self::#ident, bytes)))
+            quote::quote!(#discriminant => Ok((Self::#ident, bytes)))
         })
         .collect::<Punctuated<TokenStream, Token![,]>>();
 

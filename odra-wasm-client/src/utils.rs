@@ -19,14 +19,17 @@ impl BalanceFormatter {
 impl BalanceFormatter {
     #[wasm_bindgen(js_name = "fmt")]
     pub fn fmt(&self) -> String {
-        let s = self.amount_str.to_string();
+        let s = self.amount_str.as_str();
         let len = s.len();
-        if len <= self.decimals {
-            format!("0.{:0>9}", s)
-        } else {
-            let (int_part, frac_part) = s.split_at(len - 9);
-            format!("{}.{}", int_part, frac_part)
+        if self.decimals == 0 {
+            return s.to_string();
         }
+        if len <= self.decimals {
+            return format!("0.{:0>width$}", s, width = self.decimals);
+        }
+        let split = len - self.decimals;
+        let (int_part, frac_part) = s.split_at(split);
+        format!("{}.{}", int_part, frac_part)
     }
 
     #[wasm_bindgen(js_name = "fmtWithPrecision")]

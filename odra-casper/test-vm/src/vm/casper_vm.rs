@@ -318,7 +318,7 @@ impl CasperVm {
 
         let deploy_item = if use_proxy {
             let session_code =
-                include_bytes!("../../resources/proxy_caller_with_return.wasm").to_vec();
+                include_bytes!("../../../../resources/proxy_caller_with_return.wasm").to_vec();
             let args_bytes: Vec<u8> = call_def
                 .args()
                 .to_bytes()

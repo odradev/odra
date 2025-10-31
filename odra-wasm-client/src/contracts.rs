@@ -127,7 +127,7 @@ impl ContractInfo {
     /// # Panics
     /// Panics if the package hash is invalid and cannot be converted to an Address.
     #[wasm_bindgen(getter)]
-    pub fn address(&self) -> Address {
-        Address::new(&self.package_hash).expect("Invalid package hash")
+    pub fn address(&self) -> Result<Address, JsError> {
+        Address::new(&self.package_hash)
     }
 }

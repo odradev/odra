@@ -34,12 +34,12 @@ impl PublicKey {
         Ok(PublicKey(public_key))
     }
 
-    pub fn tag(&self) -> u8 {
+    pub fn tag(&self) -> Result<u8, String> {
         match self.0.clone() {
-            _PublicKey::System => SYSTEM_TAG,
-            _PublicKey::Ed25519(_) => ED25519_TAG,
-            _PublicKey::Secp256k1(_) => SECP256K1_TAG,
-            _ => unimplemented!()
+            _PublicKey::System => Ok(SYSTEM_TAG),
+            _PublicKey::Ed25519(_) => Ok(ED25519_TAG),
+            _PublicKey::Secp256k1(_) => Ok(SECP256K1_TAG),
+            _ => Err("Unsupported PublicKey variant".to_string())
         }
     }
 }
@@ -71,14 +71,18 @@ impl PublicKey {
     }
 
     #[wasm_bindgen(js_name = "toJson")]
-    pub fn to_json(&self) -> JsValue {
-        JsValue::from_serde(self).unwrap_or(JsValue::null())
+    pub fn to_json(&self) -> Result<JsValue, JsError> {
+        JsValue::from_serde(self)
+            .map_err(|e| JsError::new(&format!("Failed to serialize PublicKey: {}", e)))
     }
 }
 
 impl Display for PublicKey {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
-        let bytes = self.0.to_bytes().unwrap_or_default();
+        let bytes = self
+            .0
+            .to_bytes()
+            .expect("PublicKey serialization should never fail");
         let hex_string = hex::encode(bytes);
         write!(f, "{hex_string}")
     }

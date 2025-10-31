@@ -80,8 +80,12 @@ impl From<_Address> for Address {
     }
 }
 
-impl From<Key> for Address {
-    fn from(key: Key) -> Self {
-        Address(_Address::try_from(key).unwrap())
+impl TryFrom<Key> for Address {
+    type Error = JsError;
+
+    fn try_from(key: Key) -> Result<Self, Self::Error> {
+        Ok(Address(_Address::try_from(key).map_err(|_| {
+            JsError::new("Address could not be created from Key")
+        })?))
     }
 }

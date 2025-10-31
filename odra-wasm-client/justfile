@@ -8,7 +8,7 @@ build-wcspr-wasm:
     wasm-pack build --target web --out-dir pkg-web . -- --features wcspr
 
 run-web:
-    cd example && npm run start
+    cd example && npm run serve
 
 rebuild-and-run:
     just build-wcspr-wasm
