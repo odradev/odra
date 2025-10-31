@@ -38,7 +38,7 @@
 #![no_std]
 
 pub use odra_core::{
-    args, contract_def, entry_point_callback, host, module, prelude, uints, utils
+    args, contract_def, entry_point, entry_point_callback, host, module, prelude, uints, utils
 };
 /// Macros for creating Odra modules that store values in named keys or dictionaries.
 pub mod named_keys {

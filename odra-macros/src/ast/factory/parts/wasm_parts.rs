@@ -84,9 +84,11 @@ impl ToTokens for FactoryEntrypointsFnItem {
         let expr_entry_points = utils::expr::new_entry_points();
         let items = &self.items;
         let add_factory_entry_point = &self.add_factory_entry_point;
+        let use_ext_import = wasm_parts_utils::use_entity_entry_points_ext();
         tokens.append_all(quote::quote! {
             #[inline]
             fn #ident_entry_points() -> #ty_entry_points {
+                #use_ext_import
                 let mut #ident_entry_points = #expr_entry_points;
                 #(#items)*
                 #add_factory_entry_point
@@ -120,7 +122,7 @@ struct InstallerContext;
 impl EntryPointContext for InstallerContext {}
 
 struct AddEntryPointStmtItem<Ctx: EntryPointContext> {
-    entry_point_params: syn::punctuated::Punctuated<syn::Expr, syn::token::Comma>,
+    entry_point_expr: syn::Expr,
     ty: std::marker::PhantomData<Ctx>
 }
 
@@ -128,12 +130,9 @@ impl<T: EntryPointContext> ToTokens for AddEntryPointStmtItem<T> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let var_ident = utils::ident::entry_points();
         let fn_ident = utils::ident::add_entry_point();
-        let entry_point = utils::ty::entry_point();
-        let params = &self.entry_point_params;
+        let entry_point_expr = &self.entry_point_expr;
         tokens.append_all(quote::quote! {
-            #var_ident.#fn_ident(#entry_point::new(
-                #params
-            ));
+            #var_ident.#fn_ident(#entry_point_expr);
         });
     }
 }
@@ -142,19 +141,10 @@ impl TryFrom<&'_ FnIR> for AddEntryPointStmtItem<FactoryContext> {
     type Error = syn::Error;
 
     fn try_from(func: &'_ FnIR) -> Result<Self, Self::Error> {
-        let func_name = func.name_str();
-        let param_name = parse_quote!(#func_name);
-        let mut entry_point_params = syn::punctuated::Punctuated::new();
-        entry_point_params.extend(vec![
-            param_name,
-            wasm_parts_utils::param_parameters(func),
-            wasm_parts_utils::param_ret_ty(func),
-            utils::expr::entry_point_access_template(),
-            utils::expr::entry_point_contract(),
-            utils::expr::entry_point_payment(),
-        ]);
+        let args = wasm_parts_utils::param_parameters(func);
+     
         Ok(Self {
-            entry_point_params,
+            entry_point_expr: utils::expr::template_ep(func.name_str(), args, wasm_parts_utils::param_ret_ty(func)),
             ty: std::marker::PhantomData
         })
     }
@@ -164,19 +154,16 @@ impl TryFrom<&'_ FnIR> for AddEntryPointStmtItem<InstallerContext> {
     type Error = syn::Error;
 
     fn try_from(func: &'_ FnIR) -> Result<Self, Self::Error> {
-        let func_name = func.name_str();
-        let param_name = parse_quote!(#func_name);
-        let mut entry_point_params = syn::punctuated::Punctuated::new();
-        entry_point_params.extend(vec![
-            param_name,
-            wasm_parts_utils::param_parameters(func),
-            wasm_parts_utils::param_ret_ty(func),
-            wasm_parts_utils::param_access(func),
-            utils::expr::entry_point_contract(),
-            utils::expr::entry_point_payment(),
-        ]);
+        let args = wasm_parts_utils::param_parameters(func);
+        let entry_point_expr = if func.is_constructor() {
+            utils::expr::constructor_ep(args)
+        } else if func.is_upgrader() {
+            utils::expr::upgrader_ep(args)
+        } else {
+            utils::expr::regular_ep(func.name_str(), args, wasm_parts_utils::param_ret_ty(func))
+        };
         Ok(Self {
-            entry_point_params,
+            entry_point_expr,
             ty: std::marker::PhantomData
         })
     }
@@ -186,19 +173,9 @@ impl TryFrom<&'_ ModuleImplIR> for AddEntryPointStmtItem<FactoryContext> {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        let func = module.constructor().unwrap();
-        let param_name = parse_quote!("factory");
-        let mut entry_point_params = syn::punctuated::Punctuated::new();
-        entry_point_params.extend(vec![
-            param_name,
-            wasm_parts_utils::param_parameters(&func),
-            utils::expr::key_cl_type(),
-            utils::expr::entry_point_access_public(),
-            utils::expr::entry_point_factory(),
-            utils::expr::entry_point_payment(),
-        ]);
+        let func = &module.factory_fn();
         Ok(Self {
-            entry_point_params,
+            entry_point_expr: utils::expr::factory_ep(wasm_parts_utils::param_parameters(func)),
             ty: std::marker::PhantomData
         })
     }
@@ -296,10 +273,11 @@ impl ToTokens for NoMangleFactoryFnItem {
             vec![]
         };
         let event_ident = &self.event_ident;
-
+        let use_ext_import = wasm_parts_utils::use_entity_entry_points_ext();
         tokens.append_all(quote::quote! {
             #[no_mangle]
             fn factory() {
+                #use_ext_import
                 let mut #ident_entry_points = #expr_entry_points;
                 #(#add_entry_point_items)*
                 
@@ -353,71 +331,38 @@ mod test {
 
                 #[inline]
                 fn entry_points() -> odra::casper_types::EntryPoints {
+                    use odra::entry_point::EntityEntryPointsExt;
                     let mut entry_points = odra::casper_types::EntryPoints::new();
-                    entry_points
-                        .add_entry_point(
-                            odra::casper_types::EntityEntryPoint::new(
-                                "init",
-                                vec![odra::args::parameter::<u32>("value")]
-                                    .into_iter()
-                                    .filter_map(|x| x)
-                                    .collect(),
-                                <() as odra::casper_types::CLTyped>::cl_type(),
-                                odra::casper_types::EntryPointAccess::Template,
-                                odra::casper_types::EntryPointType::Called,
-                                odra::casper_types::EntryPointPayment::Caller,
-                            ),
-                        );
-                    entry_points
-                        .add_entry_point(odra::casper_types::EntityEntryPoint::new(
-                            "total_supply",
-                            vec![],
-                            <U256 as odra::casper_types::CLTyped>::cl_type(),
-                            odra::casper_types::EntryPointAccess::Template,
-                            odra::casper_types::EntryPointType::Called,
-                            odra::casper_types::EntryPointPayment::Caller,
-                        )
-                    );
-                    entry_points
-                        .add_entry_point(
-                            odra::casper_types::EntityEntryPoint::new(
-                                "pay_to_mint",
-                                vec![],
-                                <() as odra::casper_types::CLTyped>::cl_type(),
-                                odra::casper_types::EntryPointAccess::Template,
-                                odra::casper_types::EntryPointType::Called,
-                                odra::casper_types::EntryPointPayment::Caller,
-                            ),
-                        );
-                    entry_points
-                         .add_entry_point(
-                            odra::casper_types::EntityEntryPoint::new(
-                                "approve",
-                                vec![
-                                    odra::args::parameter:: < Address > ("to"),
-                                    odra::args::parameter:: < U256 > ("amount"),
-                                    odra::args::parameter:: < Maybe < String > > ("msg")
-                                ].into_iter().filter_map(|x| x).collect(),
-                                <() as odra::casper_types::CLTyped>::cl_type(),
-                                odra::casper_types::EntryPointAccess::Template,
-                                odra::casper_types::EntryPointType::Called,
-                                odra::casper_types::EntryPointPayment::Caller,
-                            ),
-                        );
-                    entry_points
-                        .add_entry_point(
-                            odra::casper_types::EntityEntryPoint::new(
-                                "factory",
-                                vec![odra::args::parameter::<u32>("value")]
-                                    .into_iter()
-                                    .filter_map(|x| x)
-                                    .collect(),
-                                <odra::casper_types::Key as odra::casper_types::CLTyped>::cl_type(),
-                                odra::casper_types::EntryPointAccess::Public,
-                                odra::casper_types::EntryPointType::Factory,
-                                odra::casper_types::EntryPointPayment::Caller,
-                            ),
-                        );
+                    entry_points.add(odra::entry_point::EntryPoint::Template {
+                        name: "init",
+                        args: vec![odra::args::parameter::<u32>("value")],
+                        ret_ty: <() as odra::casper_types::CLTyped>::cl_type(),
+                    });
+                    entry_points.add(odra::entry_point::EntryPoint::Template {
+                        name: "total_supply",
+                        args: vec![],
+                        ret_ty: <U256 as odra::casper_types::CLTyped>::cl_type(),
+                    });
+                    entry_points.add(odra::entry_point::EntryPoint::Template {
+                        name: "pay_to_mint",
+                        args: vec![],
+                        ret_ty: <() as odra::casper_types::CLTyped>::cl_type(),
+                    });
+                    entry_points.add(odra::entry_point::EntryPoint::Template {
+                        name: "approve",
+                        args: vec![
+                            odra::args::parameter:: < Address > ("to"),
+                            odra::args::parameter:: < U256 > ("amount"),
+                            odra::args::parameter:: < Maybe < String > > ("msg")
+                        ],
+                        ret_ty: <() as odra::casper_types::CLTyped>::cl_type(),
+                    });
+                    entry_points.add(odra::entry_point::EntryPoint::Factory {
+                        args: vec![
+                            odra::args::parameter::<String>("contract_name"),
+                            odra::args::parameter::<u32>("value")
+                        ],
+                    });
                     entry_points
                 }
 
@@ -441,57 +386,30 @@ mod test {
 
                 #[no_mangle]
                 fn factory() {
+                    use odra::entry_point::EntityEntryPointsExt;
                     let mut entry_points = odra::casper_types::EntryPoints::new();
-                    entry_points
-                        .add_entry_point(
-                            odra::casper_types::EntityEntryPoint::new(
-                                "init",
-                                vec![odra::args::parameter::<u32>("value")]
-                                    .into_iter()
-                                    .filter_map(|x| x)
-                                    .collect(),
-                                <() as odra::casper_types::CLTyped>::cl_type(),
-                                odra::casper_types::EntryPointAccess::Groups(vec![odra::casper_types::Group::new("constructor_group")]),
-                                odra::casper_types::EntryPointType::Called,
-                                odra::casper_types::EntryPointPayment::Caller,
-                            ),
-                        );
-                    entry_points
-                        .add_entry_point(odra::casper_types::EntityEntryPoint::new(
-                            "total_supply",
-                            vec![],
-                            <U256 as odra::casper_types::CLTyped>::cl_type(),
-                            odra::casper_types::EntryPointAccess::Public,
-                            odra::casper_types::EntryPointType::Called,
-                            odra::casper_types::EntryPointPayment::Caller,
-                        )
-                    );
-                    entry_points
-                        .add_entry_point(
-                            odra::casper_types::EntityEntryPoint::new(
-                                "pay_to_mint",
-                                vec![],
-                                <() as odra::casper_types::CLTyped>::cl_type(),
-                                odra::casper_types::EntryPointAccess::Public,
-                                odra::casper_types::EntryPointType::Called,
-                                odra::casper_types::EntryPointPayment::Caller,
-                            ),
-                        );
-                    entry_points
-                         .add_entry_point(
-                            odra::casper_types::EntityEntryPoint::new(
-                                "approve",
-                                vec![
-                                    odra::args::parameter:: < Address > ("to"),
-                                    odra::args::parameter:: < U256 > ("amount"),
-                                    odra::args::parameter:: < Maybe < String > > ("msg")
-                                ].into_iter().filter_map(|x| x).collect(),
-                                <() as odra::casper_types::CLTyped>::cl_type(),
-                                odra::casper_types::EntryPointAccess::Public,
-                                odra::casper_types::EntryPointType::Called,
-                                odra::casper_types::EntryPointPayment::Caller,
-                            ),
-                        );
+                    entry_points.add(odra::entry_point::EntryPoint::Constructor {
+                        args: vec![odra::args::parameter::<u32>("value")]
+                    });
+                    entry_points.add(odra::entry_point::EntryPoint::Regular {
+                        name: "total_supply",
+                        args: vec![],
+                        ret_ty: <U256 as odra::casper_types::CLTyped>::cl_type(),
+                    });
+                    entry_points.add(odra::entry_point::EntryPoint::Regular {
+                        name: "pay_to_mint",
+                        args: vec![],
+                        ret_ty: <() as odra::casper_types::CLTyped>::cl_type(),
+                    });
+                    entry_points.add(odra::entry_point::EntryPoint::Regular {
+                        name: "approve",
+                        args: vec![
+                            odra::args::parameter:: < Address > ("to"),
+                            odra::args::parameter:: < U256 > ("amount"),
+                            odra::args::parameter:: < Maybe < String > > ("msg")
+                        ],
+                        ret_ty: <() as odra::casper_types::CLTyped>::cl_type(),
+                    });
                     let schemas = odra::casper_event_standard::Schemas(
                         <Erc20 as odra::contract_def::HasEvents>::event_schemas()
                     );

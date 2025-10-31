@@ -12,21 +12,7 @@ pub fn param_parameters(func: &FnIR) -> syn::Expr {
         .filter_map(Result::ok)
         .map(|(name, ty)| utils::expr::new_parameter(name, ty))
         .collect::<Vec<_>>();
-    if params.is_empty() {
-        parse_quote!(vec![])
-    } else {
-        parse_quote!(vec![#(#params),*].into_iter().filter_map(|x| x).collect())
-    }
-}
-
-pub fn param_access(func: &FnIR) -> syn::Expr {
-    if func.is_constructor() {
-        utils::expr::entry_point_group("constructor_group")
-    } else if func.is_upgrader() {
-        utils::expr::entry_point_group("upgrader_group")
-    } else {
-        utils::expr::entry_point_access_public()
-    }
+    parse_quote!(vec![#(#params),*])
 }
 
 pub fn param_ret_ty(func: &FnIR) -> syn::Expr {
@@ -44,4 +30,8 @@ pub fn insert_arg_stmt(arg: &FnArgIR) -> syn::Stmt {
         #name,
         &mut #args
     );)
+}
+
+pub fn use_entity_entry_points_ext() -> syn::Stmt {
+    parse_quote!(use odra::entry_point::EntityEntryPointsExt;)
 }

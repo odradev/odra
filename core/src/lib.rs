@@ -19,6 +19,7 @@ pub mod contract_def;
 mod contract_env;
 mod contract_register;
 pub mod crypto;
+pub mod entry_point;
 pub mod entry_point_callback;
 mod error;
 mod external;

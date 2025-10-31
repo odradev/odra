@@ -69,10 +69,6 @@ pub fn module() -> syn::Type {
     parse_quote!(Module)
 }
 
-pub fn key() -> syn::Type {
-    parse_quote!(odra::casper_types::Key)
-}
-
 pub fn uref() -> syn::Type {
     parse_quote!(odra::casper_types::URef)
 }
@@ -95,10 +91,6 @@ pub fn entry_point_type() -> syn::Type {
 
 pub fn entry_point_payment() -> syn::Type {
     parse_quote!(odra::casper_types::EntryPointPayment)
-}
-
-pub fn group() -> syn::Type {
-    parse_quote!(odra::casper_types::Group)
 }
 
 pub fn schemas() -> syn::Type {
