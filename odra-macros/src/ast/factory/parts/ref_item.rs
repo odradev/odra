@@ -58,14 +58,14 @@ mod test {
     fn contract_ref() {
         let module = test_utils::mock::module_factory_impl();
         let expected = quote! {
-            /// [Erc20Factory] Contract Ref.
-            pub struct Erc20FactoryContractRef {
+            /// [Erc20] Contract Ref.
+            pub struct Erc20ContractRef {
                 env: Rc<odra::ContractEnv>,
                 address: Address,
                 attached_value: odra::casper_types::U512,
             }
 
-            impl odra::ContractRef for Erc20FactoryContractRef {
+            impl odra::ContractRef for Erc20ContractRef {
                 fn new(env: Rc<odra::ContractEnv>, address: Address) -> Self {
                     Self {
                         env,
@@ -87,7 +87,7 @@ mod test {
                 }
             }
 
-            impl Erc20FactoryContractRef {
+            impl Erc20ContractRef {
                 pub fn factory(&mut self, contract_name: String, value: u32) -> (Address, odra::casper_types::URef) {
                     self.env.call_contract(
                         self.address,
@@ -111,11 +111,11 @@ mod test {
 
             #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
-            impl odra::schema::SchemaErrors for Erc20FactoryContractRef {}
+            impl odra::schema::SchemaErrors for Erc20ContractRef {}
 
             #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
-            impl odra::schema::SchemaEvents for Erc20FactoryContractRef {}
+            impl odra::schema::SchemaEvents for Erc20ContractRef {}
         };
         let actual = FactoryRefItem::try_from(&module).unwrap();
         test_utils::assert_eq(actual, expected);

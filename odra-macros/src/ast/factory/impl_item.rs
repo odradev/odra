@@ -42,7 +42,7 @@ mod test {
             FactoryModuleImplItem::try_from(&ir).expect("Failed to create FactoryModuleImplItem");
 
         let expected = quote::quote! {
-            impl Erc20Factory {
+            impl Erc20 {
                 pub fn init(&mut self, value: u32) {
                     self.value.set(value);
                 }
@@ -69,7 +69,7 @@ mod test {
                 }
             }
 
-            impl odra::contract_def::HasEntrypoints for Erc20Factory {
+            impl odra::contract_def::HasEntrypoints for Erc20 {
                 fn entrypoints() -> odra::prelude::vec::Vec<odra::contract_def::Entrypoint> {
                     odra::prelude::vec![
                         odra::contract_def::Entrypoint {
@@ -95,14 +95,14 @@ mod test {
                 }
             }
 
-            /// [Erc20Factory] Contract Ref.
-            pub struct Erc20FactoryContractRef {
+            /// [Erc20] Contract Ref.
+            pub struct Erc20ContractRef {
                 env: Rc<odra::ContractEnv>,
                 address: Address,
                 attached_value: odra::casper_types::U512,
             }
 
-            impl odra::ContractRef for Erc20FactoryContractRef {
+            impl odra::ContractRef for Erc20ContractRef {
                 fn new(env: Rc<odra::ContractEnv>, address: Address) -> Self {
                     Self {
                         env,
@@ -124,7 +124,7 @@ mod test {
                 }
             }
 
-            impl Erc20FactoryContractRef {
+            impl Erc20ContractRef {
                 pub fn factory(&mut self, contract_name: String, value: u32) -> (Address, odra::casper_types::URef) {
                     self.env.call_contract(
                         self.address,
@@ -148,25 +148,25 @@ mod test {
 
             #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
-            impl odra::schema::SchemaErrors for Erc20FactoryContractRef {}
+            impl odra::schema::SchemaErrors for Erc20ContractRef {}
 
             #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
-            impl odra::schema::SchemaEvents for Erc20FactoryContractRef {}
+            impl odra::schema::SchemaEvents for Erc20ContractRef {}
 
             #[cfg(not(target_arch = "wasm32"))]
-            mod __erc20_factory_test_parts {
+            mod __erc20_test_parts {
                 use super::*;
                 use odra::prelude::*;
 
-                /// [Erc20Factory] Host Ref.
-                pub struct Erc20FactoryHostRef {
+                /// [Erc20] Host Ref.
+                pub struct Erc20HostRef {
                     address: Address,
                     env: odra::host::HostEnv,
                     attached_value: odra::casper_types::U512
                 }
 
-                impl odra::host::HostRef for Erc20FactoryHostRef {
+                impl odra::host::HostRef for Erc20HostRef {
                     fn new(address: Address, env: odra::host::HostEnv) -> Self {
                         Self {
                             address,
@@ -203,13 +203,13 @@ mod test {
                     }
                 }
 
-                impl Erc20FactoryHostRef {
+                impl Erc20HostRef {
                     pub fn factory(&mut self, contract_name: String, value: u32) -> (Address, odra::casper_types::URef) {
                         self.try_factory(contract_name, value).unwrap()
                     }
                 }
 
-                impl Erc20FactoryHostRef {
+                impl Erc20HostRef {
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
                     pub fn try_factory(&mut self, contract_name: String, value: u32) -> OdraResult<(Address, odra::casper_types::URef)> {
                         self.env
@@ -233,13 +233,13 @@ mod test {
                     }
                 }
 
-                impl odra::contract_def::HasIdent for Erc20FactoryHostRef {
+                impl odra::contract_def::HasIdent for Erc20HostRef {
                     fn ident() -> odra::prelude::string::String {
-                        Erc20Factory::ident()
+                        Erc20::ident()
                     }
                 }
 
-                impl odra::host::EntryPointsCallerProvider for Erc20FactoryHostRef {
+                impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
                     fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
                         let entry_points = odra::prelude::vec![
                             odra::entry_point_callback::EntryPoint::new(
@@ -275,10 +275,10 @@ mod test {
             }
 
             #[cfg(not(target_arch = "wasm32"))]
-            pub use __erc20_factory_test_parts::*;
+            pub use __erc20_test_parts::*;
 
             #[allow(missing_docs)]
-            mod __erc20_factory_exec_parts {
+            mod __erc20_exec_parts {
                 use super::*;
                 use odra::prelude::*;
 
@@ -287,7 +287,7 @@ mod test {
                     let env_rc = Rc::new(env);
                     let exec_env = odra::ExecutionEnv::new(env_rc.clone());
                     let value = exec_env.get_named_arg::<u32>("value");
-                    let mut contract = <Erc20Factory as Module>::new(env_rc);
+                    let mut contract = <Erc20 as Module>::new(env_rc);
                     let result = contract.init(value);
                     return result;
                 }
@@ -295,7 +295,7 @@ mod test {
                 #[inline]
                 pub fn execute_total_supply(env: odra::ContractEnv) -> U256 {
                     let env_rc = Rc::new(env);
-                    let contract = <Erc20Factory as Module>::new(env_rc);
+                    let contract = <Erc20 as Module>::new(env_rc);
                     let result = contract.total_supply();
                     return result;
                 }
@@ -305,7 +305,7 @@ mod test {
                     let env_rc = Rc::new(env);
                     let exec_env = odra::ExecutionEnv::new(env_rc.clone());
                     exec_env.handle_attached_value();
-                    let mut contract = <Erc20Factory as Module>::new(env_rc);
+                    let mut contract = <Erc20 as Module>::new(env_rc);
                     let result = contract.pay_to_mint();
                     exec_env.clear_attached_value();
                     return result;
@@ -319,7 +319,7 @@ mod test {
                     let to = exec_env.get_named_arg::<Address>("to");
                     let amount = exec_env.get_named_arg::<U256>("amount");
                     let msg = exec_env.get_named_arg::<Maybe<String>>("msg");
-                    let mut contract = <Erc20Factory as Module>::new(env_rc);
+                    let mut contract = <Erc20 as Module>::new(env_rc);
                     let result = contract.approve(&to, &amount, msg);
                     exec_env.non_reentrant_after();
                     return result;
@@ -327,8 +327,8 @@ mod test {
             }
 
             #[cfg(target_arch = "wasm32")]
-            #[cfg(odra_module = "Erc20Factory")]
-            mod __erc20_factory_wasm_parts {
+            #[cfg(odra_module = "Erc20")]
+            mod __erc20_wasm_parts {
                 use super::*;
                 use odra::prelude::*;
 
@@ -371,7 +371,7 @@ mod test {
                 #[no_mangle]
                 fn call() {
                     let schemas = odra::casper_event_standard::Schemas(
-                        <Erc20Factory as odra::contract_def::HasEvents>::event_schemas()
+                        <Erc20 as odra::contract_def::HasEvents>::event_schemas()
                     );
                     let exec_env = {
                         let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
@@ -434,7 +434,7 @@ mod test {
                     );
                     let address: Address = contract_package_hash.into();
 
-                    exec_env.emit_event(Erc20FactoryContractDeployed {
+                    exec_env.emit_event(Erc20ContractDeployed {
                         contract_name: exec_env.get_named_arg::<odra::prelude::string::String>("contract_name"),
                         contract_address: address
                     });
@@ -448,12 +448,12 @@ mod test {
 
                 #[no_mangle]
                 fn init() {
-                    __erc20_factory_exec_parts::execute_init(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    __erc20_exec_parts::execute_init(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
 
                 #[no_mangle]
                 fn total_supply() {
-                    let result = __erc20_factory_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    let result = __erc20_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
                             odra::casper_types::CLValue::from_t(result)
@@ -463,37 +463,37 @@ mod test {
 
                 #[no_mangle]
                 fn pay_to_mint() {
-                    __erc20_factory_exec_parts::execute_pay_to_mint(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    __erc20_exec_parts::execute_pay_to_mint(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
 
                 #[no_mangle]
                 fn approve() {
-                    __erc20_factory_exec_parts::execute_approve(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    __erc20_exec_parts::execute_approve(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
             }
 
-            impl odra::OdraContract for Erc20Factory {
+            impl odra::OdraContract for Erc20 {
                 #[cfg(not(target_arch = "wasm32"))]
-                type HostRef = Erc20FactoryHostRef;
-                type ContractRef = Erc20FactoryContractRef;
+                type HostRef = Erc20HostRef;
+                type ContractRef = Erc20ContractRef;
                 #[cfg(not(target_arch = "wasm32"))]
                 type InitArgs = odra::host::NoArgs;
                 #[cfg(not(target_arch = "wasm32"))]
                 type UpgradeArgs = odra::host::FactoryUpgradeArgs;
             }
 
-            #[cfg(odra_module = "Erc20Factory")]
-            mod __erc20_factory_schema {
+            #[cfg(odra_module = "Erc20")]
+            mod __erc20_schema {
                 use super::*;
                 #[no_mangle]
                 #[cfg(not(target_arch = "wasm32"))]
                 fn module_schema() -> odra::contract_def::ContractBlueprint {
-                    odra::contract_def::ContractBlueprint::new::<Erc20Factory>()
+                    odra::contract_def::ContractBlueprint::new::<Erc20>()
                 }
             }
         #[automatically_derived]
         #[cfg(not(target_arch = "wasm32"))]
-        impl odra::schema::SchemaEntrypoints for Erc20Factory {
+        impl odra::schema::SchemaEntrypoints for Erc20 {
             fn schema_entrypoints() -> odra::prelude::vec::Vec<
                 odra::schema::casper_contract_schema::Entrypoint,
             > {
@@ -518,7 +518,7 @@ mod test {
         }
         #[automatically_derived]
         #[cfg(not(target_arch = "wasm32"))]
-        impl odra::schema::SchemaCustomTypes for Erc20Factory {
+        impl odra::schema::SchemaCustomTypes for Erc20 {
             fn schema_types() -> odra::prelude::vec::Vec<
                 Option<odra::schema::casper_contract_schema::CustomType>,
             > {

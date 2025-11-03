@@ -62,7 +62,7 @@ pub mod mock {
 
     pub fn module_factory_impl() -> ModuleImplIR {
         let module = quote! {
-            impl Erc20Factory {
+            impl Erc20 {
                 pub fn init(&mut self, value: u32) {
                     self.value.set(value);
                 }
