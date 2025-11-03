@@ -7,7 +7,7 @@ use crate::{
     ir::{FnIR, ModuleImplIR},
     utils::{self, misc::AsType}
 };
-use quote::{ToTokens, TokenStreamExt};
+use quote::{format_ident, ToTokens, TokenStreamExt};
 use syn::{parse_quote, Ident};
 
 pub(crate) struct FactoryExecPartsItem {
@@ -228,6 +228,8 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for ExecutableFnBodyItem {
                 .then(|| utils::stmt::new_execution_env(&exec_env_ident, &env_rc_ident));
         let contract_ident = utils::ident::contract();
         let module_ident = module.module_ident()?;
+        let child_module_ident = format_ident!("{}", module_ident.to_string().strip_suffix("Factory").unwrap_or(&module_ident.to_string()));
+
         let fn_args = func
             .named_args()
             .iter()
@@ -253,8 +255,8 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for ExecutableFnBodyItem {
             .collect::<syn::Result<Vec<syn::Stmt>>>()?;
 
         let init_contract_stmt = match func.is_mut() {
-            true => utils::stmt::new_mut_module(&contract_ident, &module_ident, &env_rc_ident),
-            false => utils::stmt::new_module(&contract_ident, &module_ident, &env_rc_ident)
+            true => utils::stmt::new_mut_module(&contract_ident, &child_module_ident, &env_rc_ident),
+            false => utils::stmt::new_module(&contract_ident, &child_module_ident, &env_rc_ident)
         };
 
         Ok(Self {
@@ -364,7 +366,7 @@ mod test {
 
         let expected = quote::quote! {
             #[allow(missing_docs)]
-            mod __erc20_factory_exec_parts {
+            mod __erc20_exec_parts {
                 use super::*;
                 use odra::prelude::*;
 
@@ -373,7 +375,7 @@ mod test {
                     let env_rc = Rc::new(env);
                     let exec_env = odra::ExecutionEnv::new(env_rc.clone());
                     let value = exec_env.get_named_arg::<u32>("value");
-                    let mut contract = <Erc20Factory as Module>::new(env_rc);
+                    let mut contract = <Erc20 as Module>::new(env_rc);
                     let result = contract.init(value);
                     return result;
                 }
@@ -381,7 +383,7 @@ mod test {
                 #[inline]
                 pub fn execute_total_supply(env: odra::ContractEnv) -> U256 {
                     let env_rc = Rc::new(env);
-                    let contract = <Erc20Factory as Module>::new(env_rc);
+                    let contract = <Erc20 as Module>::new(env_rc);
                     let result = contract.total_supply();
                     return result;
                 }
@@ -391,7 +393,7 @@ mod test {
                     let env_rc = Rc::new(env);
                     let exec_env = odra::ExecutionEnv::new(env_rc.clone());
                     exec_env.handle_attached_value();
-                    let mut contract = <Erc20Factory as Module>::new(env_rc);
+                    let mut contract = <Erc20 as Module>::new(env_rc);
                     let result = contract.pay_to_mint();
                     exec_env.clear_attached_value();
                     return result;
@@ -405,7 +407,7 @@ mod test {
                     let to = exec_env.get_named_arg::<Address>("to");
                     let amount = exec_env.get_named_arg::<U256>("amount");
                     let msg = exec_env.get_named_arg::<Maybe<String>>("msg");
-                    let mut contract = <Erc20Factory as Module>::new(env_rc);
+                    let mut contract = <Erc20 as Module>::new(env_rc);
                     let result = contract.approve(&to, &amount, msg);
                     exec_env.non_reentrant_after();
                     return result;
