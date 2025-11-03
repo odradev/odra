@@ -366,7 +366,7 @@ mod test {
 
         let expected = quote::quote! {
             #[allow(missing_docs)]
-            mod __erc20_exec_parts {
+            mod __erc20_factory_exec_parts {
                 use super::*;
                 use odra::prelude::*;
 

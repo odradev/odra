@@ -456,8 +456,8 @@ mod test {
 
         let expected = quote::quote! {
             #[cfg(target_arch = "wasm32")]
-            #[cfg(odra_module = "Erc20")]
-            mod __erc20_wasm_parts {
+            #[cfg(odra_module = "Erc20Factory")]
+            mod __erc20_factory_wasm_parts {
                 use super::*;
                 use odra::prelude::*;
 
@@ -530,7 +530,7 @@ mod test {
                 #[no_mangle]
                 fn call() {
                     let schemas = odra::casper_event_standard::Schemas(
-                        <Erc20 as odra::contract_def::HasEvents>::event_schemas()
+                        <Erc20Factory as odra::contract_def::HasEvents>::event_schemas()
                     );
                     let exec_env = {
                         let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
@@ -596,7 +596,7 @@ mod test {
                     );
                     let address: Address = contract_package_hash.into();
 
-                    exec_env.emit_event(Erc20ContractDeployed {
+                    exec_env.emit_event(Erc20FactoryContractDeployed {
                         contract_name: exec_env.get_named_arg::<odra::prelude::string::String>("contract_name"),
                         contract_address: address
                     });
@@ -666,12 +666,12 @@ mod test {
 
                 #[no_mangle]
                 fn init() {
-                    __erc20_exec_parts::execute_init(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    __erc20_factory_exec_parts::execute_init(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
 
                 #[no_mangle]
                 fn total_supply() {
-                    let result = __erc20_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    let result = __erc20_factory_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
                             odra::casper_types::CLValue::from_t(result)
@@ -681,12 +681,12 @@ mod test {
 
                 #[no_mangle]
                 fn pay_to_mint() {
-                    __erc20_exec_parts::execute_pay_to_mint(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    __erc20_factory_exec_parts::execute_pay_to_mint(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
 
                 #[no_mangle]
                 fn approve() {
-                    __erc20_exec_parts::execute_approve(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    __erc20_factory_exec_parts::execute_approve(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
             }
         };
