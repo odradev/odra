@@ -19,6 +19,7 @@ pub struct FactoryWasmPartsItem {
     entry_points_fn: FactoryEntrypointsFnItem,
     call_fn: CallFnItem,
     factory_fn: NoMangleFactoryFnItem,
+    factory_upgrade_fn: NoMangleFactoryUpgradeFnItem,
     entry_points: Vec<NoMangleFnItem>
 }
 
@@ -35,6 +36,7 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryWasmPartsItem {
             entry_points_fn: module.try_into()?,
             call_fn: module.try_into()?,
             factory_fn: module.try_into()?,
+            factory_upgrade_fn: module.try_into()?,
             entry_points: module
                 .functions()?
                 .iter()
@@ -54,6 +56,7 @@ impl ToTokens for FactoryWasmPartsItem {
         let entry_points_fn = &self.entry_points_fn;
         let call_fn = &self.call_fn;
         let factory_fn = &self.factory_fn;
+        let factory_upgrade_fn = &self.factory_upgrade_fn;
         let entry_points = &self.entry_points;
         tokens.append_all(quote::quote! {
             #(#attrs)*
@@ -65,6 +68,7 @@ impl ToTokens for FactoryWasmPartsItem {
 
                 #call_fn
                 #factory_fn
+                #factory_upgrade_fn
 
                 #(#entry_points)*
             }
@@ -343,6 +347,103 @@ impl ToTokens for NoMangleFactoryFnItem {
     }
 }
 
+struct NoMangleFactoryUpgradeFnItem {
+    module_ident: syn::Ident,
+    event_ident: syn::Ident,
+}
+
+impl TryFrom<&'_ ModuleImplIR> for NoMangleFactoryUpgradeFnItem {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        let module_ident = module.module_ident()?;
+        let module_str = module_ident.to_string();
+        let event_ident = format_ident!("{}ContractDeployed", module_str);
+        Ok(Self {
+            module_ident,
+            event_ident,
+        })
+    }
+}
+
+impl ToTokens for NoMangleFactoryUpgradeFnItem {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let ident_entry_points = utils::ident::factory_entry_points();
+        let ident_schemas = utils::ident::schemas();
+        let address_ty = utils::ty::address();
+        let string_ty = utils::ty::string();
+        let vec_str_ty = utils::ty::vec_of(&string_ty);
+        let vec_ty = utils::ty::vec();
+        let runtime_args_ty = utils::ty::runtime_args();
+        let uref_ty = utils::ty::uref();
+        let btree_map_str_rt_ty = utils::ty::typed_btree_map(&string_ty, &runtime_args_ty);
+        let btree_map_str_uref_ty = utils::ty::typed_btree_map(&string_ty, &uref_ty);
+        let bytes_ty = utils::ty::bytes();
+        let ident = &self.module_ident.to_string();
+        let contract_ident = ident.strip_suffix("Factory").unwrap_or(ident);
+        let contract_ident: syn::Ident = format_ident!("{}", contract_ident);
+        let events_expr = utils::expr::event_schemas(&contract_ident.as_type());
+        let expr_new_schemas = utils::expr::schemas(&events_expr);
+        let event_ident = &self.event_ident;
+        tokens.append_all(quote::quote! {
+            #[no_mangle]
+            fn factory_upgrade() {
+                use odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert;
+                use odra::casper_types::bytesrepr::FromBytes;
+
+                let #ident_schemas = #expr_new_schemas;
+                let exec_env = {
+                    let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
+                    let env_rc = Rc::new(env);
+                    odra::ExecutionEnv::new(env_rc)
+                };
+                let default_args: #runtime_args_ty = UnwrapOrRevert::unwrap_or_revert(FromBytes::from_bytes(
+                    &exec_env.get_named_arg::<#bytes_ty>("default_args")
+                )).0;
+                let specific_args: #btree_map_str_rt_ty = UnwrapOrRevert::unwrap_or_revert(FromBytes::from_bytes(
+                    &exec_env.get_named_arg::<#bytes_ty>("specific_args")
+                )).0;
+                let names_to_upgrade: #vec_str_ty = UnwrapOrRevert::unwrap_or_revert(FromBytes::from_bytes(
+                    &exec_env.get_named_arg::<#bytes_ty>("names_to_upgrade")
+                )).0;
+
+                let children_urefs_map_bytes = UnwrapOrRevert::unwrap_or_revert(
+                    odra::odra_casper_wasm_env::host_functions::get_named_key("children_urefs")
+                );
+                let children_uref_map: #btree_map_str_uref_ty = UnwrapOrRevert::unwrap_or_revert(FromBytes::from_bytes(
+                    &children_urefs_map_bytes
+                )).0;
+
+                let mut result = #vec_ty::new();
+                for name in names_to_upgrade {
+                    if let Some(uref) = children_uref_map.get(&name) {
+                        let args = specific_args.get(&name).cloned().unwrap_or_else(|| default_args.clone());
+                        // let (contract_package_hash, access_uref) = odra::odra_casper_wasm_env::host_functions::upgrade_contract(
+                        let contract_package_hash = odra::odra_casper_wasm_env::host_functions::upgrade_contract(
+                            #ident_entry_points(),
+                            #ident_schemas.clone(),
+                            Some(args)
+                        );
+                        let address: #address_ty = contract_package_hash.into();
+
+                        exec_env.emit_event(#event_ident {
+                            contract_name: name,
+                            contract_address: address
+                        });
+                        result.push(address);
+                    }
+                }
+
+                odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
+                    odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
+                        odra::casper_types::CLValue::from_t(result)
+                    )
+                );  
+            }
+        });
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::FactoryWasmPartsItem;
@@ -526,7 +627,7 @@ mod test {
                     let specific_args: odra::prelude::BTreeMap<odra::prelude::string::String, odra::casper_types::RuntimeArgs> = FromBytes::from_bytes(
                         &exec_env.get_named_arg::<odra::casper_types::bytesrepr::Bytes>("specific_args")
                     );
-                    let names_to_upgrade: Vec<odra::prelude::string::String> = FromBytes::from_bytes(
+                    let names_to_upgrade: odra::prelude::vec::Vec<odra::prelude::string::String> = FromBytes::from_bytes(
                         &exec_env.get_named_arg::<odra::casper_types::bytesrepr::Bytes>("names_to_upgrade")
                     );
 
@@ -537,7 +638,7 @@ mod test {
                         odra::casper_types::CLValue::from_bytes(children_urefs_map_bytes)
                     );
 
-                    let mut result = odra::prelude::Vec::new();
+                    let mut result = odra::prelude::vec::Vec::new();
                     for name in names_to_upgrade {
                         if let Some(uref) = children_urefs.get(&name) {
                             let args = specific_args.get(&name).cloned().unwrap_or_else(|| default_args.clone());

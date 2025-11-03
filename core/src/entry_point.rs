@@ -33,6 +33,11 @@ pub enum EntryPoint {
         /// The arguments for the factory.
         args: Vec<Option<Parameter>>
     },
+    /// A factory upgrade entry point.
+    FactoryUpgrade {
+        /// The arguments for the factory.
+        args: Vec<Option<Parameter>>
+    },
     /// An upgrader entry point.
     Upgrader {
         /// The arguments for the upgrader entry point.
@@ -59,7 +64,8 @@ impl From<EntryPoint> for casper_types::EntityEntryPoint {
             EntryPoint::Constructor { args } => constructor(args),
             EntryPoint::Template { name, args, ret_ty } => template(name, args, ret_ty),
             EntryPoint::Factory { args } => factory(args),
-            EntryPoint::Upgrader { args } => upgrader(args)
+            EntryPoint::Upgrader { args } => upgrader(args),
+            EntryPoint::FactoryUpgrade { args } => factory_upgrade(args)
         }
     }
 }
@@ -112,6 +118,17 @@ fn factory(args: Vec<Option<Parameter>>) -> casper_types::EntityEntryPoint {
         CLType::Tuple2([Box::new(CLType::Key), Box::new(CLType::URef)]),
         casper_types::EntryPointAccess::Public,
         casper_types::EntryPointType::Factory,
+        casper_types::EntryPointPayment::Caller
+    )
+}
+
+fn factory_upgrade(args: Vec<Option<Parameter>>) -> casper_types::EntityEntryPoint {
+    casper_types::EntityEntryPoint::new(
+        "factory_upgrade",
+        args.into_iter().flatten().collect(),
+        CLType::List(Box::new(CLType::Key)),
+        casper_types::EntryPointAccess::Groups(vec![casper_types::Group::new("upgrader_group")]),
+        casper_types::EntryPointType::Called,
         casper_types::EntryPointPayment::Caller
     )
 }
