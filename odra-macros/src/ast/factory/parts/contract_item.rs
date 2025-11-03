@@ -53,11 +53,11 @@ mod test {
 
         let item = FactoryContractItem::try_from(&module).expect("Failed to create ContractItem");
         let expected = quote::quote! {
-            impl odra::OdraContract for Erc20 {
+            impl odra::OdraContract for Erc20Factory {
                 #[cfg(not(target_arch = "wasm32"))]
-                type HostRef = Erc20HostRef;
+                type HostRef = Erc20FactoryHostRef;
 
-                type ContractRef = Erc20ContractRef;
+                type ContractRef = Erc20FactoryContractRef;
 
                 #[cfg(not(target_arch = "wasm32"))]
                 type InitArgs = odra::host::NoArgs;

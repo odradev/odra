@@ -289,7 +289,7 @@ mod test {
         let expected = quote!(
             #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
-            impl odra::schema::SchemaEntrypoints for Erc20 {
+            impl odra::schema::SchemaEntrypoints for Erc20Factory {
                 fn schema_entrypoints(
                 ) -> odra::prelude::vec::Vec<odra::schema::casper_contract_schema::Entrypoint>
                 {

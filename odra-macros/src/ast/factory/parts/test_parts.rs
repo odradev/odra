@@ -67,18 +67,18 @@ mod test {
 
         let expected = quote::quote! {
             #[cfg(not(target_arch = "wasm32"))]
-            mod __erc20_test_parts {
+            mod __erc20_factory_test_parts {
                 use super::*;
                 use odra::prelude::*;
 
-                /// [Erc20] Host Ref.
-                pub struct Erc20HostRef {
+                /// [Erc20Factory] Host Ref.
+                pub struct Erc20FactoryHostRef {
                     address: Address,
                     env: odra::host::HostEnv,
                     attached_value: odra::casper_types::U512
                 }
 
-                impl odra::host::HostRef for Erc20HostRef {
+                impl odra::host::HostRef for Erc20FactoryHostRef {
                     fn new(address: Address, env: odra::host::HostEnv) -> Self {
                         Self {
                             address,
@@ -115,13 +115,13 @@ mod test {
                     }
                 }
 
-                impl Erc20HostRef {
+                impl Erc20FactoryHostRef {
                     pub fn factory(&mut self, contract_name: String, value: u32) -> (Address, odra::casper_types::URef) {
                         self.try_factory(contract_name, value).unwrap()
                     }
                 }
 
-                impl Erc20HostRef {
+                impl Erc20FactoryHostRef {
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
                     pub fn try_factory(&mut self, contract_name: String, value: u32) -> OdraResult<(Address, odra::casper_types::URef)> {
                         self.env
@@ -145,13 +145,13 @@ mod test {
                     }
                 }
 
-                impl odra::contract_def::HasIdent for Erc20HostRef {
+                impl odra::contract_def::HasIdent for Erc20FactoryHostRef {
                     fn ident() -> odra::prelude::string::String {
-                        Erc20::ident()
+                        Erc20Factory::ident()
                     }
                 }
 
-                impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
+                impl odra::host::EntryPointsCallerProvider for Erc20FactoryHostRef {
                     fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
                         let entry_points = odra::prelude::vec![
                             odra::entry_point_callback::EntryPoint::new(

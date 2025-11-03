@@ -124,16 +124,13 @@ mod test {
 
     #[test]
     fn test_factory_module_impl_item_generation() {
-        let ir = mock::module_factory_impl();
+        let ir = mock::module_factory_on();
         let actual = FactoryModuleImplItem::try_from(&ir).expect("A valid FactoryModuleImplItem");
 
         let expected = quote::quote! {
             #[automatically_derived]
             #[odra::factory]
             impl Erc20Factory {
-                pub fn init(&mut self, value: u32) {
-                    panic!("Factory modules cannot have regular methods");
-                }
                 /// Returns the total supply of the token.
                 pub fn total_supply(&self) -> U256 {
                     panic!("Factory modules cannot have regular methods");
@@ -141,11 +138,6 @@ mod test {
                 /// Pay to mint.
                 #[odra(payable)]
                 pub fn pay_to_mint(&mut self) {
-                    panic!("Factory modules cannot have regular methods");
-                }
-                /// Approve.
-                #[odra(non_reentrant)]
-                pub fn approve(&mut self, to: &Address, amount: &U256, msg: Maybe<String>) {
                     panic!("Factory modules cannot have regular methods");
                 }
             }
