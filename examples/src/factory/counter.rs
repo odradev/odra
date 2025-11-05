@@ -21,13 +21,40 @@ impl Counter {
     }
 }
 
+#[odra::module(factory=on)]
+pub struct BetterCounter {
+    /// The initial value for the counter.
+    value: Var<u32>
+}
+
+#[odra::module(factory=on)]
+impl BetterCounter {
+    pub fn init(&mut self, value: u32) {
+        self.value.set(value);
+    }
+
+    pub fn increment(&mut self) {
+        self.value.set(self.value.get_or_default() + 1);
+    }
+
+    pub fn value(&self) -> u32 {
+        self.value.get_or_default()
+    }
+
+    pub fn upgrade(&mut self, new_value: u32) {
+        self.value.set(new_value);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use odra::{
-        casper_types::RuntimeArgs,
+        casper_types::runtime_args,
         host::{Deployer, FactoryUpgradeArgs, HostRef, InstallConfig, NoArgs},
         prelude::*
     };
+
+    use crate::factory::counter::BetterCounterFactory;
 
     use super::{
         Counter, CounterFactory, CounterFactoryContractDeployed, CounterHostRef, CounterInitArgs
@@ -69,18 +96,62 @@ mod tests {
     fn test_factory_upgrade() {
         let env = odra_test::env();
         // Deploy the factory contract
-        let factory_ref = CounterFactory::deploy_with_cfg(
+        let mut factory_ref = CounterFactory::deploy_with_cfg(
             &env,
             NoArgs,
             InstallConfig::upgradable::<CounterFactory>()
         );
+        let (from_ten_address, _access_uref) = factory_ref.factory(String::from("FromTen"), 10);
+        let (from_two_address, _access_uref) = factory_ref.factory(String::from("FromTwo"), 2);
+        let (from_three_address, _access_uref) = factory_ref.factory(String::from("FromThree"), 3);
+        let (from_hundred_address, _access_uref) =
+            factory_ref.factory(String::from("FromHundred"), 100);
+
         let args = FactoryUpgradeArgs {
-            default_args: RuntimeArgs::new(),
-            names_to_upgrade: vec![],
-            ..Default::default()
+            default_args: runtime_args! {
+                "new_value" => 42u32
+            },
+            names_to_upgrade: vec![
+                "FromTen".to_string(),
+                "FromTwo".to_string(),
+                "FromThree".to_string(),
+                "FromHundred".to_string(),
+            ],
+            specific_args: [
+                (
+                    "FromTen".to_string(),
+                    runtime_args! {
+                        "new_value" => 122u32
+                    }
+                ),
+                (
+                    "FromHundred".to_string(),
+                    runtime_args! {
+                        "new_value" => 1000u32
+                    }
+                )
+            ]
+            .into()
         };
         // Upgrade the factory contract
-        let result = CounterFactory::try_upgrade(&env, factory_ref.address(), args);
+        let result = BetterCounterFactory::try_upgrade(&env, factory_ref.address(), args);
         assert!(result.is_ok());
+
+        assert_eq!(
+            CounterHostRef::new(from_ten_address, env.clone()).value(),
+            122
+        );
+        assert_eq!(
+            CounterHostRef::new(from_two_address, env.clone()).value(),
+            42
+        );
+        assert_eq!(
+            CounterHostRef::new(from_three_address, env.clone()).value(),
+            42
+        );
+        assert_eq!(
+            CounterHostRef::new(from_hundred_address, env.clone()).value(),
+            1000
+        );
     }
 }

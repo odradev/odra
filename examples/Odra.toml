@@ -83,4 +83,7 @@ fqn = "features::upgrade::CounterV2"
 fqn = "factory::CounterFactory"
 
 [[contracts]]
+fqn = "factory::BetterCounterFactory"
+
+[[contracts]]
 fqn = "factory::Counter"

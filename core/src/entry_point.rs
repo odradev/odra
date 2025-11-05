@@ -126,7 +126,7 @@ fn factory_upgrade(args: Vec<Option<Parameter>>) -> casper_types::EntityEntryPoi
     casper_types::EntityEntryPoint::new(
         "factory_upgrade",
         args.into_iter().flatten().collect(),
-        CLType::List(Box::new(CLType::Key)),
+        CLType::Unit,
         casper_types::EntryPointAccess::Groups(vec![casper_types::Group::new("upgrader_group")]),
         casper_types::EntryPointType::Called,
         casper_types::EntryPointPayment::Caller

@@ -224,6 +224,12 @@ pub fn factory_ep(args_expr: syn::Expr) -> syn::Expr {
     })
 }
 
+pub fn factory_upgrade_ep(args_expr: syn::Expr) -> syn::Expr {
+    parse_quote!(odra::entry_point::EntryPoint::FactoryUpgrade {
+        args: #args_expr,
+    })
+}
+
 pub fn template_ep(name: String, args_expr: syn::Expr, ret_ty_expr: syn::Expr) -> syn::Expr {
     parse_quote!(odra::entry_point::EntryPoint::Template {
         name: #name,
