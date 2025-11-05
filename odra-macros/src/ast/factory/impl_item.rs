@@ -81,7 +81,7 @@ mod test {
                             attributes: odra::prelude::vec![]
                         },
                         odra::contract_def::Entrypoint {
-                            name: odra::prelude::string::String::from("factory"),
+                            name: odra::prelude::string::String::from("new_contract"),
                             args: odra::prelude::vec![
                                 odra::args::odra_argument::<String>("contract_name"),
                                 odra::args::odra_argument::<u32>("value")
@@ -125,11 +125,11 @@ mod test {
             }
 
             impl Erc20FactoryContractRef {
-                pub fn factory(&mut self, contract_name: String, value: u32) -> (Address, odra::casper_types::URef) {
+                pub fn new_contract(&mut self, contract_name: String, value: u32) -> (Address, odra::casper_types::URef) {
                     self.env.call_contract(
                         self.address,
                         odra::CallDef::new(
-                            odra::prelude::string::String::from("factory"),
+                            odra::prelude::string::String::from("new_contract"),
                             true,
                             {
                                 let mut named_args = odra::casper_types::RuntimeArgs::new();
@@ -204,19 +204,19 @@ mod test {
                 }
 
                 impl Erc20FactoryHostRef {
-                    pub fn factory(&mut self, contract_name: String, value: u32) -> (Address, odra::casper_types::URef) {
-                        self.try_factory(contract_name, value).unwrap()
+                    pub fn new_contract(&mut self, contract_name: String, value: u32) -> (Address, odra::casper_types::URef) {
+                        self.try_new_contract(contract_name, value).unwrap()
                     }
                 }
 
                 impl Erc20FactoryHostRef {
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_factory(&mut self, contract_name: String, value: u32) -> OdraResult<(Address, odra::casper_types::URef)> {
+                    pub fn try_new_contract(&mut self, contract_name: String, value: u32) -> OdraResult<(Address, odra::casper_types::URef)> {
                         self.env
                             .call_contract(
                                 self.address,
                                 odra::CallDef::new(
-                                    odra::prelude::string::String::from("factory"),
+                                    odra::prelude::string::String::from("new_contract"),
                                     true,
                                     {
                                         let mut named_args = odra::casper_types::RuntimeArgs::new();
@@ -243,7 +243,7 @@ mod test {
                     fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
                         let entry_points = odra::prelude::vec![
                             odra::entry_point_callback::EntryPoint::new(
-                                odra::prelude::string::String::from("factory"),
+                                odra::prelude::string::String::from("new_contract"),
                                 odra::prelude::vec![
                                     odra::entry_point_callback::Argument::new::<String>(
                                         odra::prelude::string::String::from("contract_name")
@@ -255,7 +255,7 @@ mod test {
                             )
                         ];
                         odra::entry_point_callback::EntryPointsCaller::new(env.clone(), entry_points, |contract_env, call_def| {
-                            if call_def.entry_point() == "factory" {
+                            if call_def.entry_point() == "new_contract" {
                                 return Err(
                                     OdraError::VmError(
                                         odra::VmError::Other(
@@ -334,6 +334,7 @@ mod test {
 
                 #[inline]
                 fn entry_points() -> odra::casper_types::EntryPoints {
+                    use odra::entry_point::EntityEntryPointsExt;
                     let mut entry_points = odra::casper_types::EntryPoints::new();
                     entry_points.add(odra::entry_point::EntryPoint::Template {
                         name: "init",
@@ -365,6 +366,38 @@ mod test {
                             odra::args::parameter::<u32>("value")
                         ],
                     });
+                    entry_points.add(odra::entry_point::EntryPoint::FactoryUpgrade {
+                        args: vec![],
+                    });
+                    entry_points
+                }
+
+                #[inline]
+                fn child_contract_entry_points() -> odra::casper_types::EntryPoints {
+                    use odra::entry_point::EntityEntryPointsExt;
+                    let mut entry_points = odra::casper_types::EntryPoints::new();
+                    entry_points.add(odra::entry_point::EntryPoint::Constructor {
+                        args: vec![odra::args::parameter::<u32>("value")]
+                    });
+                    entry_points.add(odra::entry_point::EntryPoint::Regular {
+                        name: "total_supply",
+                        args: vec![],
+                        ret_ty: <U256 as odra::casper_types::CLTyped>::cl_type(),
+                    });
+                    entry_points.add(odra::entry_point::EntryPoint::Regular {
+                        name: "pay_to_mint",
+                        args: vec![],
+                        ret_ty: <() as odra::casper_types::CLTyped>::cl_type(),
+                    });
+                    entry_points.add(odra::entry_point::EntryPoint::Regular {
+                        name: "approve",
+                        args: vec![
+                            odra::args::parameter:: < Address > ("to"),
+                            odra::args::parameter:: < U256 > ("amount"),
+                            odra::args::parameter:: < Maybe < String > > ("msg")
+                        ],
+                        ret_ty: <() as odra::casper_types::CLTyped>::cl_type(),
+                    });
                     entry_points
                 }
 
@@ -378,39 +411,42 @@ mod test {
                         let env_rc = Rc::new(env);
                         odra::ExecutionEnv::new(env_rc)
                     };
+                    let is_upgrade = exec_env.get_named_arg::<bool>("odra_cfg_is_upgrade");
+                    let named_args = if is_upgrade {
+                        {
+                            Some({
+                                let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                odra::args::EntrypointArgument::insert_runtime_arg(
+                                    exec_env.get_named_arg::<odra::casper_types::bytesrepr::Bytes>("default_args"),
+                                    "default_args",
+                                    &mut named_args,
+                                );
+                                odra::args::EntrypointArgument::insert_runtime_arg(
+                                    exec_env.get_named_arg::<odra::casper_types::bytesrepr::Bytes>("specific_args"),
+                                    "specific_args",
+                                    &mut named_args,
+                                );
+                                odra::args::EntrypointArgument::insert_runtime_arg(
+                                    exec_env.get_named_arg::<odra::casper_types::bytesrepr::Bytes>("names_to_upgrade"),
+                                    "names_to_upgrade",
+                                    &mut named_args,
+                                );
+                                named_args
+                            })
+                        }
+                    } else {
+                        Option::<odra::casper_types::RuntimeArgs>::None
+                    };
 
                     odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
                         entry_points(),
                         schemas,
-                        Option::<odra::casper_types::RuntimeArgs>::None
+                        named_args
                     );
                 }
 
                 #[no_mangle]
-                fn factory() {
-                    let mut entry_points = odra::casper_types::EntryPoints::new();
-                    entry_points.add(odra::entry_point::EntryPoint::Constructor {
-                        args: vec![odra::args::parameter::<u32>("value")]
-                    });
-                    entry_points.add(odra::entry_point::EntryPoint::Regular {
-                        name: "total_supply",
-                        args: vec![],
-                        ret_ty: <U256 as odra::casper_types::CLTyped>::cl_type()
-                    });
-                    entry_points.add(odra::entry_point::EntryPoint::Regular {
-                        name: "pay_to_mint",
-                        args: vec![],
-                        ret_ty: <() as odra::casper_types::CLTyped>::cl_type()
-                    });
-                    entry_points.add(odra::entry_point::EntryPoint::Regular {
-                        name: "approve",
-                        args: vec![
-                            odra::args::parameter:: < Address > ("to"),
-                            odra::args::parameter:: < U256 > ("amount"),
-                            odra::args::parameter:: < Maybe < String > > ("msg")
-                        ],
-                        ret_ty: <() as odra::casper_types::CLTyped>::cl_type()
-                    });
+                fn new_contract() {
                     let schemas = odra::casper_event_standard::Schemas(
                         <Erc20 as odra::contract_def::HasEvents>::event_schemas()
                     );
@@ -428,7 +464,7 @@ mod test {
                     );
 
                     let (contract_package_hash, access_uref) = odra::odra_casper_wasm_env::host_functions::install_new_contract(
-                        entry_points,
+                        child_contract_entry_points(),
                         schemas,
                         Some(named_args)
                     );
@@ -444,6 +480,67 @@ mod test {
                             odra::casper_types::CLValue::from_t((address, access_uref))
                         )
                     );
+                }
+
+                #[no_mangle]
+                fn upgrade_children_contracts() {
+                    use odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert;
+                    use odra::casper_types::bytesrepr::FromBytes;
+                    let schemas = odra::casper_event_standard::Schemas(
+                        <Erc20 as odra::contract_def::HasEvents>::event_schemas()
+                    );
+                    let exec_env = {
+                        let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
+                        let env_rc = Rc::new(env);
+                        odra::ExecutionEnv::new(env_rc)
+                    };
+
+                    let default_args: odra::casper_types::RuntimeArgs = UnwrapOrRevert::unwrap_or_revert(
+                            FromBytes::from_bytes(
+                                &exec_env.get_named_arg::<odra::casper_types::bytesrepr::Bytes>("default_args"),
+                            ),
+                        )
+                        .0;
+
+                    let specific_args: odra::prelude::BTreeMap<
+                        odra::prelude::string::String,
+                        odra::casper_types::RuntimeArgs,
+                    > = UnwrapOrRevert::unwrap_or_revert(
+                            FromBytes::from_bytes(
+                                &exec_env.get_named_arg::<odra::casper_types::bytesrepr::Bytes>("specific_args")
+                            ),
+                        )
+                        .0;
+
+                    let names_to_upgrade: odra::prelude::vec::Vec<
+                        odra::prelude::string::String,
+                    > = UnwrapOrRevert::unwrap_or_revert(
+                            FromBytes::from_bytes(
+                                &exec_env.get_named_arg::<odra::casper_types::bytesrepr::Bytes>("names_to_upgrade"),
+                            ),
+                        )
+                        .0;
+
+                    for name in names_to_upgrade {
+                        let contract_key = odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::get_key(&name);
+                        if let Some(key) = contract_key {
+                            let package_hash = UnwrapOrRevert::unwrap_or_revert(key.into_package_hash());
+                            let mut named_args = specific_args.get(&name).cloned().unwrap_or_else(|| default_args.clone());
+                            let _ = named_args.insert("odra_cfg_package_hash_key_name", name.clone());
+                            let _ = named_args.insert("odra_cfg_package_hash_to_upgrade", package_hash.value());
+                            let contract_package_hash = odra::odra_casper_wasm_env::host_functions::upgrade_contract(
+                                child_contract_entry_points(),
+                                schemas.clone(),
+                                Some(named_args)
+                            );
+                            let address: Address = contract_package_hash.into();
+
+                            exec_env.emit_event(Erc20FactoryContractDeployed {
+                                contract_name: name,
+                                contract_address: address
+                            });
+                        }
+                    }
                 }
 
                 #[no_mangle]
@@ -505,7 +602,7 @@ mod test {
                         odra::prelude::vec![]
                     ),
                     odra::schema::entry_point::<(Address, odra::casper_types::URef)>(
-                        "factory", 
+                        "new_contract",
                         "", 
                         true, 
                         odra::prelude::vec![

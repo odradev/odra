@@ -301,7 +301,7 @@ mod test {
                             odra::prelude::vec![]
                         ),
                         odra::schema::entry_point::<(Address, odra::casper_types::URef)>(
-                            "factory",
+                            "new_contract",
                             "",
                             true,
                             odra::prelude::vec![

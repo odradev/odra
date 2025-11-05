@@ -358,7 +358,7 @@ impl ModuleImplIR {
         let ty_address = utils::ty::address();
         let ty_uref = utils::ty::uref();
         let factory_fn = parse_quote! {
-            pub fn factory(&mut self, contract_name: String, #args) -> (#ty_address, #ty_uref) {
+            pub fn new_contract(&mut self, contract_name: String, #args) -> (#ty_address, #ty_uref) {
             }
         };
         FnIR::Impl(FnImplIR::new(factory_fn))
@@ -487,7 +487,7 @@ impl FnIR {
     }
 }
 
-const PROTECTED_FUNCTIONS: [&str; 4] = ["new", "env", "address", "factory"];
+const PROTECTED_FUNCTIONS: [&str; 5] = ["new", "env", "address", "new_contract", "upgrade_children_contracts"];
 const PROTECTED_ARGS: [&str; 2] = ["gas", "attached_value"];
 
 fn validate_fn_name<T: ToTokens>(name: &str, ctx: T) -> syn::Result<()> {

@@ -83,7 +83,6 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryEntrypointCallerExpr {
        
         Ok(Self {
             caller_expr: Self::entrypoint_caller(module)?
-
         })
     }
 }
@@ -98,7 +97,7 @@ impl FactoryEntrypointCallerExpr {
 
         Ok(parse_quote!(
             #ty_caller::new(#env_ident.clone(), #entry_points_ident, |#contract_env_ident, #call_def_ident| {
-                if #call_def_ident.entry_point() == "factory" {
+                if #call_def_ident.entry_point() == "new_contract" {
                     return Err(OdraError::VmError(
                         odra::VmError::Other(odra::prelude::String::from("Factory is not supported for this configuration."))
                     ));

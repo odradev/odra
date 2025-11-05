@@ -116,19 +116,19 @@ mod test {
                 }
 
                 impl Erc20FactoryHostRef {
-                    pub fn factory(&mut self, contract_name: String, value: u32) -> (Address, odra::casper_types::URef) {
-                        self.try_factory(contract_name, value).unwrap()
+                    pub fn new_contract(&mut self, contract_name: String, value: u32) -> (Address, odra::casper_types::URef) {
+                        self.try_new_contract(contract_name, value).unwrap()
                     }
                 }
 
                 impl Erc20FactoryHostRef {
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_factory(&mut self, contract_name: String, value: u32) -> OdraResult<(Address, odra::casper_types::URef)> {
+                    pub fn try_new_contract(&mut self, contract_name: String, value: u32) -> OdraResult<(Address, odra::casper_types::URef)> {
                         self.env
                             .call_contract(
                                 self.address,
                                 odra::CallDef::new(
-                                    odra::prelude::string::String::from("factory"),
+                                    odra::prelude::string::String::from("new_contract"),
                                     true,
                                     {
                                         let mut named_args = odra::casper_types::RuntimeArgs::new();
@@ -155,7 +155,7 @@ mod test {
                     fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
                         let entry_points = odra::prelude::vec![
                             odra::entry_point_callback::EntryPoint::new(
-                                odra::prelude::string::String::from("factory"),
+                                odra::prelude::string::String::from("new_contract"),
                                 odra::prelude::vec![
                                     odra::entry_point_callback::Argument::new::<String>(
                                         odra::prelude::string::String::from("contract_name")
@@ -167,7 +167,7 @@ mod test {
                             )
                         ];
                         odra::entry_point_callback::EntryPointsCaller::new(env.clone(), entry_points, |contract_env, call_def| {
-                            if call_def.entry_point() == "factory" {
+                            if call_def.entry_point() == "new_contract" {
                                 return Err(OdraError::VmError(
                                     odra::VmError::Other(odra::prelude::String::from("Factory is not supported for this configuration."))
                                 ));

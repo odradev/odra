@@ -87,7 +87,7 @@ impl ToTokens for FactoryEntrypointsFnItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let ty_entry_points = utils::ty::entry_points();
         let ident_entry_points = utils::ident::entry_points();
-        let ident_factory_entry_points = utils::ident::factory_entry_points();
+        let ident_child_contract_entry_points = utils::ident::child_contract_entry_points();
         let expr_entry_points = utils::expr::new_entry_points();
         let items = &self.items;
         let installer_items = &self.installer_items;
@@ -106,7 +106,7 @@ impl ToTokens for FactoryEntrypointsFnItem {
             }
 
             #[inline]
-            fn #ident_factory_entry_points() -> #ty_entry_points {
+            fn #ident_child_contract_entry_points() -> #ty_entry_points {
                 #use_ext_import
                 let mut #ident_entry_points = #expr_entry_points;
                 #(#installer_items)*
@@ -314,7 +314,7 @@ impl TryFrom<&'_ ModuleImplIR> for NoMangleFactoryFnItem {
 
 impl ToTokens for NoMangleFactoryFnItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let ident_entry_points = utils::ident::factory_entry_points();
+        let ident_entry_points = utils::ident::child_contract_entry_points();
         let ident_schemas = utils::ident::schemas();
         let address_ty = utils::ty::address();
         let string_ty = utils::ty::string();
@@ -333,7 +333,7 @@ impl ToTokens for NoMangleFactoryFnItem {
         let event_ident = &self.event_ident;
         tokens.append_all(quote::quote! {
             #[no_mangle]
-            fn factory() {
+            fn new_contract() {
                 let #ident_schemas = #expr_new_schemas;
                 let exec_env = {
                     let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
@@ -386,7 +386,7 @@ impl TryFrom<&'_ ModuleImplIR> for NoMangleFactoryUpgradeFnItem {
 
 impl ToTokens for NoMangleFactoryUpgradeFnItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let ident_entry_points = utils::ident::factory_entry_points();
+        let ident_entry_points = utils::ident::child_contract_entry_points();
         let ident_schemas = utils::ident::schemas();
         let address_ty = utils::ty::address();
         let string_ty = utils::ty::string();
@@ -402,7 +402,7 @@ impl ToTokens for NoMangleFactoryUpgradeFnItem {
         let event_ident = &self.event_ident;
         tokens.append_all(quote::quote! {
             #[no_mangle]
-            fn factory_upgrade() {
+            fn upgrade_children_contracts() {
                 use odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert;
                 use odra::casper_types::bytesrepr::FromBytes;
 
@@ -505,7 +505,7 @@ mod test {
                 }
 
                 #[inline]
-                fn factory_entry_points() -> odra::casper_types::EntryPoints {
+                fn child_contract_entry_points() -> odra::casper_types::EntryPoints {
                     use odra::entry_point::EntityEntryPointsExt;
                     let mut entry_points = odra::casper_types::EntryPoints::new();
                     entry_points.add(odra::entry_point::EntryPoint::Constructor {
@@ -578,7 +578,7 @@ mod test {
                 }
 
                 #[no_mangle]
-                fn factory() {
+                fn new_contract() {
                     let schemas = odra::casper_event_standard::Schemas(
                         <Erc20 as odra::contract_def::HasEvents>::event_schemas()
                     );
@@ -596,7 +596,7 @@ mod test {
                     );
 
                     let (contract_package_hash, access_uref) = odra::odra_casper_wasm_env::host_functions::install_new_contract(
-                        factory_entry_points(),
+                        child_contract_entry_points(),
                         schemas,
                         Some(named_args)
                     );
@@ -614,7 +614,7 @@ mod test {
                 }
 
                 #[no_mangle]
-                fn factory_upgrade() {
+                fn upgrade_children_contracts() {
                     use odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert;
                     use odra::casper_types::bytesrepr::FromBytes;
                     let schemas = odra::casper_event_standard::Schemas(
@@ -660,7 +660,7 @@ mod test {
                             let _ = named_args.insert("odra_cfg_package_hash_key_name", name.clone());
                             let _ = named_args.insert("odra_cfg_package_hash_to_upgrade", package_hash.value());
                             let contract_package_hash = odra::odra_casper_wasm_env::host_functions::upgrade_contract(
-                                factory_entry_points(),
+                                child_contract_entry_points(),
                                 schemas.clone(),
                                 Some(named_args)
                             );

@@ -88,11 +88,11 @@ mod test {
             }
 
             impl Erc20FactoryContractRef {
-                pub fn factory(&mut self, contract_name: String, value: u32) -> (Address, odra::casper_types::URef) {
+                pub fn new_contract(&mut self, contract_name: String, value: u32) -> (Address, odra::casper_types::URef) {
                     self.env.call_contract(
                         self.address,
                         odra::CallDef::new(
-                            odra::prelude::string::String::from("factory"),
+                            odra::prelude::string::String::from("new_contract"),
                             true,
                             {
                                 let mut named_args = odra::casper_types::RuntimeArgs::new();

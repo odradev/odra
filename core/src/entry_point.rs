@@ -113,7 +113,7 @@ fn template(
 
 fn factory(args: Vec<Option<Parameter>>) -> casper_types::EntityEntryPoint {
     casper_types::EntityEntryPoint::new(
-        "factory",
+        "new_contract",
         args.into_iter().flatten().collect(),
         CLType::Tuple2([Box::new(CLType::Key), Box::new(CLType::URef)]),
         casper_types::EntryPointAccess::Public,
@@ -124,10 +124,10 @@ fn factory(args: Vec<Option<Parameter>>) -> casper_types::EntityEntryPoint {
 
 fn factory_upgrade(args: Vec<Option<Parameter>>) -> casper_types::EntityEntryPoint {
     casper_types::EntityEntryPoint::new(
-        "factory_upgrade",
+        "upgrade_children_contracts",
         args.into_iter().flatten().collect(),
         CLType::Unit,
-        casper_types::EntryPointAccess::Groups(vec![casper_types::Group::new("upgrader_group")]),
+        casper_types::EntryPointAccess::Groups(vec![casper_types::Group::new("factory_group")]),
         casper_types::EntryPointType::Called,
         casper_types::EntryPointPayment::Caller
     )

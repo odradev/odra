@@ -70,13 +70,13 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "This test does not work on odra vm"]
+    // #[ignore = "This test does not work on odra vm"]
     fn test_factory() {
         let env = odra_test::env();
         // Deploy the factory contract
         let mut factory_ref = CounterFactory::deploy(&env, NoArgs);
         // Use the factory to deploy a new Counter contract with initial value 10
-        let (address, _access_uref) = factory_ref.factory(String::from("Counter"), 10);
+        let (address, _access_uref) = factory_ref.new_contract(String::from("Counter"), 10);
         assert!(env.emitted_event(
             &factory_ref,
             CounterFactoryContractDeployed {
@@ -101,11 +101,11 @@ mod tests {
             NoArgs,
             InstallConfig::upgradable::<CounterFactory>()
         );
-        let (from_ten_address, _access_uref) = factory_ref.factory(String::from("FromTen"), 10);
-        let (from_two_address, _access_uref) = factory_ref.factory(String::from("FromTwo"), 2);
-        let (from_three_address, _access_uref) = factory_ref.factory(String::from("FromThree"), 3);
+        let (from_ten_address, _access_uref) = factory_ref.new_contract(String::from("FromTen"), 10);
+        let (from_two_address, _access_uref) = factory_ref.new_contract(String::from("FromTwo"), 2);
+        let (from_three_address, _access_uref) = factory_ref.new_contract(String::from("FromThree"), 3);
         let (from_hundred_address, _access_uref) =
-            factory_ref.factory(String::from("FromHundred"), 100);
+            factory_ref.new_contract(String::from("FromHundred"), 100);
 
         let args = FactoryUpgradeArgs {
             default_args: runtime_args! {

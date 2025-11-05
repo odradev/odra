@@ -157,7 +157,7 @@ mod test {
                             attributes: odra::prelude::vec![]
                         },
                         odra::contract_def::Entrypoint {
-                            name: odra::prelude::string::String::from("factory"),
+                            name: odra::prelude::string::String::from("new_contract"),
                             args: odra::prelude::vec![
                                 odra::args::odra_argument::<String>("contract_name"),
                                 odra::args::odra_argument::<u32>("value")
