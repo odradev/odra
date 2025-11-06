@@ -138,6 +138,26 @@ mod test {
                                 }
                                 odra::args::EntrypointArgument::insert_runtime_arg(contract_name.clone(), "contract_name", &mut named_args);
                                 odra::args::EntrypointArgument::insert_runtime_arg(value.clone(), "value", &mut named_args);
+                                odra::args::EntrypointArgument::insert_runtime_arg(
+                                    true,
+                                    "odra_cfg_is_upgradable",
+                                    &mut named_args,
+                                );
+                                odra::args::EntrypointArgument::insert_runtime_arg(
+                                    false,
+                                    "odra_cfg_is_upgrade",
+                                    &mut named_args,
+                                );
+                                odra::args::EntrypointArgument::insert_runtime_arg(
+                                    true,
+                                    "odra_cfg_allow_key_override",
+                                    &mut named_args,
+                                );
+                                odra::args::EntrypointArgument::insert_runtime_arg(
+                                    contract_name,
+                                    "odra_cfg_package_hash_key_name",
+                                    &mut named_args,
+                                );
                                 named_args
                             }
                         )
@@ -287,7 +307,7 @@ mod test {
                     let env_rc = Rc::new(env);
                     let exec_env = odra::ExecutionEnv::new(env_rc.clone());
                     let value = exec_env.get_named_arg::<u32>("value");
-                    let mut contract = <Erc20Factory as Module>::new(env_rc);
+                    let mut contract = <Erc20 as Module>::new(env_rc);
                     let result = contract.init(value);
                     return result;
                 }
@@ -295,7 +315,7 @@ mod test {
                 #[inline]
                 pub fn execute_total_supply(env: odra::ContractEnv) -> U256 {
                     let env_rc = Rc::new(env);
-                    let contract = <Erc20Factory as Module>::new(env_rc);
+                    let contract = <Erc20 as Module>::new(env_rc);
                     let result = contract.total_supply();
                     return result;
                 }
@@ -305,7 +325,7 @@ mod test {
                     let env_rc = Rc::new(env);
                     let exec_env = odra::ExecutionEnv::new(env_rc.clone());
                     exec_env.handle_attached_value();
-                    let mut contract = <Erc20Factory as Module>::new(env_rc);
+                    let mut contract = <Erc20 as Module>::new(env_rc);
                     let result = contract.pay_to_mint();
                     exec_env.clear_attached_value();
                     return result;
@@ -319,7 +339,7 @@ mod test {
                     let to = exec_env.get_named_arg::<Address>("to");
                     let amount = exec_env.get_named_arg::<U256>("amount");
                     let msg = exec_env.get_named_arg::<Maybe<String>>("msg");
-                    let mut contract = <Erc20Factory as Module>::new(env_rc);
+                    let mut contract = <Erc20 as Module>::new(env_rc);
                     let result = contract.approve(&to, &amount, msg);
                     exec_env.non_reentrant_after();
                     return result;

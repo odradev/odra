@@ -60,6 +60,28 @@ pub mod mock {
         ModuleImplIR::try_from((&attr, &module)).unwrap()
     }
 
+    pub fn module_factory_on() -> ModuleImplIR {
+        let module = quote! {
+            impl Erc20 {
+                /// Returns the total supply of the token.
+                pub fn total_supply(&self) -> U256 {
+                    self.total_supply.get_or_default()
+                }
+
+                /// Pay to mint.
+                #[odra(payable)]
+                pub fn pay_to_mint(&mut self) {
+                    let attached_value = self.env().attached_value();
+                    self.total_supply
+                        .set(self.total_supply() + U256::from(attached_value.as_u64()));
+                }
+            }
+        };
+
+        let attr = quote!(factory = on);
+        ModuleImplIR::try_from((&attr, &module)).unwrap()
+    }
+
     pub fn module_factory_impl() -> ModuleImplIR {
         let module = quote! {
             impl Erc20Factory {
@@ -92,7 +114,7 @@ pub mod mock {
             }
         };
 
-        let attr = quote!(factory = on);
+        let attr = quote!();
         ModuleImplIR::try_from((&attr, &module)).unwrap()
     }
 
