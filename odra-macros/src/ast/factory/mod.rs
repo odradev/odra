@@ -78,7 +78,7 @@ impl ToTokens for FactoryModuleImplItem {
             .map(|f| {
                 syn::ImplItemFn {
                     block: parse_quote!({
-                        panic!("Factory modules cannot have regular methods");
+                        self.env().revert(OdraError::ExecutionError(ExecutionError::FactoryModuleCall));
                     }),
                     ..f.raw()
                 }
@@ -133,12 +133,12 @@ mod test {
             impl Erc20Factory {
                 /// Returns the total supply of the token.
                 pub fn total_supply(&self) -> U256 {
-                    panic!("Factory modules cannot have regular methods");
+                    self.env().revert(OdraError::ExecutionError(ExecutionError::FactoryModuleCall));
                 }
                 /// Pay to mint.
                 #[odra(payable)]
                 pub fn pay_to_mint(&mut self) {
-                    panic!("Factory modules cannot have regular methods");
+                    self.env().revert(OdraError::ExecutionError(ExecutionError::FactoryModuleCall));
                 }
             }
         };
