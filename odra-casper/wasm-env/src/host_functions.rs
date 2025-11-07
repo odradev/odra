@@ -7,7 +7,7 @@
 //!
 //! Build on top of the [casper_contract] crate.
 
-use crate::consts;
+use crate::consts::{self, FACTORY_GROUP_NAME};
 use crate::consts::{CONSTRUCTOR_GROUP_NAME, NATIVE_EVENT_TOPIC, UPGRADER_GROUP_NAME};
 use casper_contract::contract_api::runtime::emit_message;
 use casper_contract::contract_api::storage;
@@ -108,8 +108,10 @@ pub fn install_new_contract(
     let is_upgradable: bool = runtime::get_named_arg(IS_UPGRADABLE_ARG);
     let has_init = entry_points
         .get("init")
-        .map(|ep| ep.access() != &EntryPointAccess::Template)
+        .map(|ep| *ep.access() != EntryPointAccess::Template)
         .unwrap_or_default();
+    let is_factory = entry_points.has_entry_point("new_contract");
+    
     // Prepare named keys.
     let named_keys = initial_named_keys(events);
 
@@ -162,6 +164,13 @@ pub fn install_new_contract(
     )
     .unwrap_or_revert();
 
+    if is_factory {
+        let factory_group_uref = create_contract_user_group(contract_package_hash, FACTORY_GROUP_NAME);
+        runtime::print(&format!("factory group uref created {:?}", factory_group_uref));
+        runtime::put_key(&format!("{}_factory_access", package_hash_key_name), Key::URef(factory_group_uref));
+        return (contract_package_hash, factory_group_uref);
+    }
+
     let access_uref = runtime::get_key(&access_uref_key)
         .unwrap_or_revert_with(ApiError::AllocLayout)
         .into_uref()
@@ -194,40 +203,16 @@ pub fn upgrade_contract(
     // Get named arguments.
     let is_factory_upgrade: bool =
         runtime::try_get_named_arg(IS_FACTORY_UPGRADE_ARG).unwrap_or_default();
-    let (package_hash_to_upgrade, new_package_hash_key, allow_key_override, create_user_group) =
-        if is_factory_upgrade {
-            let package_hash_to_upgrade = args
-                .get(PACKAGE_HASH_TO_UPGRADE_ARG)
-                .unwrap_or_revert()
-                .clone();
-            let package_hash_to_upgrade: HashAddr =
-                package_hash_to_upgrade.into_t().unwrap_or_revert();
-            let new_package_hash_key: String = args
-                .get(PACKAGE_HASH_KEY_NAME_ARG)
-                .unwrap_or_revert()
-                .clone()
-                .into_t()
-                .unwrap_or_revert();
-            (package_hash_to_upgrade, new_package_hash_key, true, false)
-        } else {
-            let package_hash_to_upgrade: HashAddr =
-                runtime::get_named_arg(PACKAGE_HASH_TO_UPGRADE_ARG);
-            let new_package_hash_key: String = runtime::get_named_arg(PACKAGE_HASH_KEY_NAME_ARG);
-            let allow_key_override: bool = runtime::get_named_arg(ALLOW_KEY_OVERRIDE_ARG);
-            let create_user_group: bool = runtime::get_named_arg(CREATE_UPGRADE_GROUP);
-            (
-                package_hash_to_upgrade,
-                new_package_hash_key,
-                allow_key_override,
-                create_user_group
-            )
-        };
+    runtime::print(&format!("upgrade args: {:?}", args));
+    let package_hash_to_upgrade: HashAddr = runtime::get_named_arg(PACKAGE_HASH_TO_UPGRADE_ARG);
+    let new_package_hash_key: String = runtime::get_named_arg(PACKAGE_HASH_KEY_NAME_ARG);
+    let allow_key_override: bool = runtime::get_named_arg(ALLOW_KEY_OVERRIDE_ARG);
+    let create_user_group: bool = runtime::get_named_arg(CREATE_UPGRADE_GROUP);
 
     let has_upgrade = entry_points
         .get("upgrade")
         .map(|e| *e.access() != EntryPointAccess::Template)
         .unwrap_or_default();
-    let has_factory_upgrade = entry_points.has_entry_point("factory_upgrade");
 
     let package_hash = runtime::get_key(&new_package_hash_key);
 
@@ -282,18 +267,6 @@ pub fn upgrade_contract(
     // Call "upgrade".
     if has_upgrade {
         let _: () = runtime::call_versioned_contract(contract_package_hash, None, "upgrade", args);
-    } else if has_factory_upgrade {
-        let mut upgrade_args = args;
-        upgrade_args
-            .insert(IS_FACTORY_UPGRADE_ARG, true)
-            .unwrap_or_revert();
-
-        let _: () = runtime::call_versioned_contract(
-            contract_package_hash,
-            None,
-            "factory_upgrade",
-            upgrade_args
-        );
     }
 
     // We disable access to upgrader functions.

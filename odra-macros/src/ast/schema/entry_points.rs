@@ -305,7 +305,7 @@ mod test {
                             "",
                             true,
                             odra::prelude::vec![
-                                odra::schema::argument::<String>("contract_name"),
+                                odra::schema::argument::<odra::prelude::string::String>("contract_name"),
                                 odra::schema::argument::<u32>("value")
                             ]
                         )

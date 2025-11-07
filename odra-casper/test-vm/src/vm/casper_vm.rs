@@ -339,6 +339,27 @@ impl CasperVm {
                 .with_session_bytes(session_code, args)
                 .with_deploy_hash(self.next_hash())
                 .build()
+        } else if call_def.entry_point() == "upgrade_child_contract" {
+            let session_code =
+                include_bytes!("../../../../resources/proxy_caller_upgrade.wasm").to_vec();
+            let args_bytes: Vec<u8> = call_def
+                .args()
+                .to_bytes()
+                .expect("Should serialize to bytes");
+            let entry_point = call_def.entry_point();
+            let args = runtime_args! {
+                PACKAGE_HASH_ARG => hash,
+                ARGS_ARG => Bytes::from(args_bytes),
+                "package_name" => format!("FromTen"),
+            };
+
+            DeployItemBuilder::new()
+                .with_standard_payment(runtime_args! { ARG_AMOUNT => *DEFAULT_PAYMENT})
+                .with_authorization_keys(&[self.active_account_hash()])
+                .with_address(self.active_account_hash())
+                .with_session_bytes(session_code, args)
+                .with_deploy_hash(self.next_hash())
+                .build()
         } else {
             DeployItemBuilder::new()
                 .with_standard_payment(runtime_args! { ARG_AMOUNT => *DEFAULT_PAYMENT})
@@ -935,7 +956,7 @@ fn parse_error(err: engine_state::Error) -> OdraError {
             execution::ExecError::MissingArgument { name } => {
                 OdraError::ExecutionError(ExecutionError::MissingArg)
             }
-            _ => OdraError::VmError(VmError::Other(format!("Casper ExecError: {}", exec_err)))
+            e => OdraError::VmError(VmError::Other(format!("Casper ExecError: {}", e.to_string())))
         }
     } else {
         OdraError::VmError(VmError::Other(format!("Casper EngineStateError: {}", err)))

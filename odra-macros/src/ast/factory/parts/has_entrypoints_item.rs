@@ -78,7 +78,7 @@ fn struct_entrypoints_expr(ir: &ModuleImplIR) -> syn::Result<syn::Expr> {
     let struct_entrypoints = vec![ir.constructor()]
         .iter()
         .filter_map(|f| f.as_ref())
-        .chain(vec![ir.factory_fn()].iter())
+        .chain(vec![ir.factory_fn(), ir.factory_upgrade_fn(), ir.factory_batch_upgrade_fn()].iter())
         .map(|f| {
             let ident = f.name_str();
             let args = entrypoint_args(f)?;
@@ -159,11 +159,36 @@ mod test {
                         odra::contract_def::Entrypoint {
                             name: odra::prelude::string::String::from("new_contract"),
                             args: odra::prelude::vec![
-                                odra::args::odra_argument::<String>("contract_name"),
+                                odra::args::odra_argument::<odra::prelude::string::String>("contract_name"),
                                 odra::args::odra_argument::<u32>("value")
                             ],
                             is_mutable: true,
                             return_ty: <(Address, odra::casper_types::URef) as odra::casper_types::CLTyped>::cl_type(),
+                            ty: odra::contract_def::EntrypointType::Public,
+                            attributes: odra::prelude::vec![]
+                        },
+                        odra::contract_def::Entrypoint {
+                            name: odra::prelude::string::String::from("upgrade_child_contract"),
+                            args: odra::prelude::vec![
+                                odra::args::odra_argument::<odra::prelude::string::String>("contract_name")
+                            ],
+                            is_mutable: true,
+                            return_ty: <() as odra::casper_types::CLTyped>::cl_type(),
+                            ty: odra::contract_def::EntrypointType::Public,
+                            attributes: odra::prelude::vec![]
+                        },
+                        odra::contract_def::Entrypoint {
+                            name: odra::prelude::string::String::from("batch_upgrade_child_contract"),
+                            args: odra::prelude::vec![
+                                odra::args::odra_argument::<odra::casper_types::bytesrepr::Bytes>("default_args"),
+                                odra::args::odra_argument::<odra::prelude::vec::Vec<odra::prelude::string::String> >("names_to_upgrade"),
+                                odra::args::odra_argument::<odra::prelude::BTreeMap<
+                                    odra::prelude::string::String,
+                                    odra::casper_types::bytesrepr::Bytes
+                                > >("specific_args")
+                            ],
+                            is_mutable: true,
+                            return_ty: <() as odra::casper_types::CLTyped>::cl_type(),
                             ty: odra::contract_def::EntrypointType::Public,
                             attributes: odra::prelude::vec![]
                         }

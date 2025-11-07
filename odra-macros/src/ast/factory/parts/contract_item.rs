@@ -36,7 +36,7 @@ impl ToTokens for FactoryContractItem {
                 type InitArgs = odra::host::NoArgs;
 
                 #[cfg(not(target_arch = "wasm32"))]
-                type UpgradeArgs = odra::host::FactoryUpgradeArgs;
+                type UpgradeArgs = odra::host::NoArgs;
             }
         });
     }
@@ -63,7 +63,7 @@ mod test {
                 type InitArgs = odra::host::NoArgs;
 
                 #[cfg(not(target_arch = "wasm32"))]
-                type UpgradeArgs = odra::host::FactoryUpgradeArgs;
+                type UpgradeArgs = odra::host::NoArgs;
             }
         };
         test_utils::assert_eq(item, expected);

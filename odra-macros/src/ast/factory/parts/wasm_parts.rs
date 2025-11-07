@@ -1,3 +1,4 @@
+use proc_macro2::TokenStream;
 use quote::{format_ident, ToTokens, TokenStreamExt};
 use syn::parse_quote;
 
@@ -80,7 +81,8 @@ struct FactoryEntrypointsFnItem {
     items: Vec<AddEntryPointStmtItem<FactoryContext>>,
     installer_items: Vec<AddEntryPointStmtItem<InstallerContext>>,
     add_factory_entry_point: AddEntryPointStmtItem<FactoryContext>,
-    add_factory_upgrade_entry_point: AddEntryPointStmtItem<FactoryUpgradeContext>
+    add_factory_upgrade_entry_point: AddEntryPointStmtItem<FactoryUpgradeContext>,
+    add_factory_batch_upgrade_entry_point: AddEntryPointStmtItem<FactoryBatchUpgradeContext>
 }
 
 impl ToTokens for FactoryEntrypointsFnItem {
@@ -93,6 +95,7 @@ impl ToTokens for FactoryEntrypointsFnItem {
         let installer_items = &self.installer_items;
         let add_factory_entry_point = &self.add_factory_entry_point;
         let add_factory_upgrade_entry_point = &self.add_factory_upgrade_entry_point;
+        let add_factory_batch_upgrade_entry_point = &self.add_factory_batch_upgrade_entry_point;
         let use_ext_import = wasm_parts_utils::use_entity_entry_points_ext();
         tokens.append_all(quote::quote! {
             #[inline]
@@ -102,6 +105,7 @@ impl ToTokens for FactoryEntrypointsFnItem {
                 #(#items)*
                 #add_factory_entry_point
                 #add_factory_upgrade_entry_point
+                #add_factory_batch_upgrade_entry_point
                 #ident_entry_points
             }
 
@@ -132,7 +136,8 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryEntrypointsFnItem {
                 .map(TryInto::try_into)
                 .collect::<Result<Vec<_>, _>>()?,
             add_factory_entry_point: AddEntryPointStmtItem::try_from(module)?,
-            add_factory_upgrade_entry_point: AddEntryPointStmtItem::try_from(module)?
+            add_factory_upgrade_entry_point: AddEntryPointStmtItem::try_from(module)?,
+            add_factory_batch_upgrade_entry_point: AddEntryPointStmtItem::try_from(module)?,
         })
     }
 }
@@ -144,6 +149,9 @@ impl EntryPointContext for FactoryContext {}
 
 struct FactoryUpgradeContext;
 impl EntryPointContext for FactoryUpgradeContext {}
+
+struct FactoryBatchUpgradeContext;
+impl EntryPointContext for FactoryBatchUpgradeContext {}
 
 struct InstallerContext;
 impl EntryPointContext for InstallerContext {}
@@ -213,7 +221,18 @@ impl TryFrom<&'_ ModuleImplIR> for AddEntryPointStmtItem<FactoryUpgradeContext> 
 
     fn try_from(_module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            entry_point_expr: utils::expr::factory_upgrade_ep( parse_quote!(vec![])),
+            entry_point_expr: utils::expr::factory_upgrade_ep(),
+            ty: std::marker::PhantomData
+        })
+    }
+}
+
+impl TryFrom<&'_ ModuleImplIR> for AddEntryPointStmtItem<FactoryBatchUpgradeContext> {
+    type Error = syn::Error;
+
+    fn try_from(_module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        Ok(Self {
+            entry_point_expr: utils::expr::factory_batch_upgrade_ep(),
             ty: std::marker::PhantomData
         })
     }
@@ -231,12 +250,10 @@ impl ToTokens for CallFnItem {
         let expr_new_schemas = utils::expr::schemas(&events_expr);
         let ident_entry_points = utils::ident::entry_points();
         let ty_args = utils::ty::runtime_args();
-        let ty_bytes = utils::ty::bytes();
-
         let install_or_upgrade_stmt = utils::stmt::install_or_upgrade(
             parse_quote!(#ident_entry_points()),
             parse_quote!(#ident_schemas),
-            parse_quote!(named_args)
+            parse_quote!(Option::<#ty_args>::None)
         );
 
         tokens.append_all(quote::quote! {
@@ -248,33 +265,7 @@ impl ToTokens for CallFnItem {
                     let env_rc = Rc::new(env);
                     odra::ExecutionEnv::new(env_rc)
                 };
-                let is_upgrade = exec_env.get_named_arg::<bool>("odra_cfg_is_upgrade");
-                let named_args = if is_upgrade {
-                    {
-                        Some({
-                            let mut named_args = #ty_args::new();
-                            odra::args::EntrypointArgument::insert_runtime_arg(
-                                exec_env.get_named_arg::<#ty_bytes>("default_args"),
-                                "default_args",
-                                &mut named_args,
-                            );
-                            odra::args::EntrypointArgument::insert_runtime_arg(
-                                exec_env.get_named_arg::<#ty_bytes>("specific_args"),
-                                "specific_args",
-                                &mut named_args,
-                            );
-
-                            odra::args::EntrypointArgument::insert_runtime_arg(
-                                exec_env.get_named_arg::<#ty_bytes>("names_to_upgrade"),
-                                "names_to_upgrade",
-                                &mut named_args,
-                            );
-                            named_args
-                        })
-                    }
-                } else {
-                    Option::<#ty_args>::None
-                };
+                
                 #install_or_upgrade_stmt
             }
         });
@@ -368,6 +359,7 @@ impl ToTokens for NoMangleFactoryFnItem {
 struct NoMangleFactoryUpgradeFnItem {
     module_ident: syn::Ident,
     event_ident: syn::Ident,
+    upgrader_args: Vec<(String, syn::Type)>,
 }
 
 impl TryFrom<&'_ ModuleImplIR> for NoMangleFactoryUpgradeFnItem {
@@ -376,10 +368,17 @@ impl TryFrom<&'_ ModuleImplIR> for NoMangleFactoryUpgradeFnItem {
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let module_ident = module.module_ident()?;
         let module_str = module_ident.to_string();
+        let upgrader_args = module.upgrader()
+            .map(|fn_ir| fn_ir.named_args())
+            .unwrap_or_default()
+            .iter()
+            .map(|arg| arg.name_and_ty())
+            .collect::<Result<Vec<_>, _>>()?;
         let event_ident = format_ident!("{}ContractDeployed", module_str);
         Ok(Self {
             module_ident,
             event_ident,
+            upgrader_args
         })
     }
 }
@@ -400,10 +399,42 @@ impl ToTokens for NoMangleFactoryUpgradeFnItem {
         let events_expr = utils::expr::event_schemas(&contract_ident.as_type());
         let expr_new_schemas = utils::expr::schemas(&events_expr);
         let event_ident = &self.event_ident;
+        let unwrap_or_revert = quote::quote!(odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert);
+        let args = self.upgrader_args.iter().map(|(name, ty)| {
+            quote::quote! { let _ = named_args.insert(#name, exec_env.get_named_arg::<#ty>(#name)); }
+        }).collect::<TokenStream>();
         tokens.append_all(quote::quote! {
             #[no_mangle]
-            fn upgrade_children_contracts() {
-                use odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert;
+            fn upgrade_child_contract() {
+                let #ident_schemas = #expr_new_schemas;
+                let exec_env = {
+                    let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
+                    let env_rc = Rc::new(env);
+                    odra::ExecutionEnv::new(env_rc)
+                };
+                let name = exec_env.get_named_arg::<#string_ty>("contract_name");
+                let named_args = {
+                    let mut named_args = #runtime_args_ty::new();
+                    #args
+                    named_args
+                };
+
+                let contract_package_hash = odra::odra_casper_wasm_env::host_functions::upgrade_contract(
+                    #ident_entry_points(),
+                    #ident_schemas,
+                    Some(named_args)
+                );
+
+                let address: Address = contract_package_hash.into();
+                exec_env.emit_event(#event_ident {
+                    contract_name: name,
+                    contract_address: address
+                });
+            }
+
+            #[no_mangle]
+            fn batch_upgrade_child_contract() {
+                use #unwrap_or_revert;
                 use odra::casper_types::bytesrepr::FromBytes;
 
                 let #ident_schemas = #expr_new_schemas;
@@ -426,9 +457,7 @@ impl ToTokens for NoMangleFactoryUpgradeFnItem {
                     let contract_key = odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::get_key(&name);
                     if let Some(key) = contract_key {
                         let package_hash = UnwrapOrRevert::unwrap_or_revert(key.into_package_hash());
-                        let mut named_args = specific_args.get(&name).cloned().unwrap_or_else(|| default_args.clone());
-                        let _ = named_args.insert("odra_cfg_package_hash_key_name", name.clone());
-                        let _ = named_args.insert("odra_cfg_package_hash_to_upgrade", package_hash.value()); //address
+                        let named_args = specific_args.get(&name).cloned().unwrap_or_else(|| default_args.clone());
                         let contract_package_hash = odra::odra_casper_wasm_env::host_functions::upgrade_contract(
                             #ident_entry_points(),
                             #ident_schemas.clone(),
@@ -494,13 +523,12 @@ mod test {
                     });
                     entry_points.add(odra::entry_point::EntryPoint::Factory {
                         args: vec![
-                            odra::args::parameter::<String>("contract_name"),
+                            odra::args::parameter::<odra::prelude::string::String>("contract_name"),
                             odra::args::parameter::<u32>("value")
                         ],
                     });
-                    entry_points.add(odra::entry_point::EntryPoint::FactoryUpgrade {
-                        args: vec![],
-                    });
+                    entry_points.add(odra::entry_point::EntryPoint::FactoryUpgrade);
+                    entry_points.add(odra::entry_point::EntryPoint::FactoryBatchUpgrade);
                     entry_points
                 }
 
@@ -543,37 +571,11 @@ mod test {
                         let env_rc = Rc::new(env);
                         odra::ExecutionEnv::new(env_rc)
                     };
-                    let is_upgrade = exec_env.get_named_arg::<bool>("odra_cfg_is_upgrade");
-                    let named_args = if is_upgrade {
-                        {
-                            Some({
-                                let mut named_args = odra::casper_types::RuntimeArgs::new();
-                                odra::args::EntrypointArgument::insert_runtime_arg(
-                                    exec_env.get_named_arg::<odra::casper_types::bytesrepr::Bytes>("default_args"),
-                                    "default_args",
-                                    &mut named_args,
-                                );
-                                odra::args::EntrypointArgument::insert_runtime_arg(
-                                    exec_env.get_named_arg::<odra::casper_types::bytesrepr::Bytes>("specific_args"),
-                                    "specific_args",
-                                    &mut named_args,
-                                );
-                                odra::args::EntrypointArgument::insert_runtime_arg(
-                                    exec_env.get_named_arg::<odra::casper_types::bytesrepr::Bytes>("names_to_upgrade"),
-                                    "names_to_upgrade",
-                                    &mut named_args,
-                                );
-                                named_args
-                            })
-                        }
-                    } else {
-                        Option::<odra::casper_types::RuntimeArgs>::None
-                    };
 
                     odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
                         entry_points(),
                         schemas,
-                        named_args
+                        Option::<odra::casper_types::RuntimeArgs>::None
                     );
                 }
 
@@ -614,7 +616,35 @@ mod test {
                 }
 
                 #[no_mangle]
-                fn upgrade_children_contracts() {
+                fn upgrade_child_contract() {
+                    let schemas = odra::casper_event_standard::Schemas(
+                        <Erc20 as odra::contract_def::HasEvents>::event_schemas()
+                    );
+                    let exec_env = {
+                        let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
+                        let env_rc = Rc::new(env);
+                        odra::ExecutionEnv::new(env_rc)
+                    };
+                    let name = exec_env.get_named_arg::<odra::prelude::string::String>("contract_name");
+                    let named_args = {
+                        let mut named_args = odra::casper_types::RuntimeArgs::new();
+                        named_args
+                    };
+                    let contract_package_hash = odra::odra_casper_wasm_env::host_functions::upgrade_contract(
+                        child_contract_entry_points(),
+                        schemas,
+                        Some(named_args)
+                    );
+
+                    let address: Address = contract_package_hash.into();
+                    exec_env.emit_event(Erc20FactoryContractDeployed {
+                        contract_name: name,
+                        contract_address: address
+                    });
+                }
+
+                #[no_mangle]
+                fn batch_upgrade_child_contract() {
                     use odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert;
                     use odra::casper_types::bytesrepr::FromBytes;
                     let schemas = odra::casper_event_standard::Schemas(
@@ -656,9 +686,7 @@ mod test {
                         let contract_key = odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::get_key(&name);
                         if let Some(key) = contract_key {
                             let package_hash = UnwrapOrRevert::unwrap_or_revert(key.into_package_hash());
-                            let mut named_args = specific_args.get(&name).cloned().unwrap_or_else(|| default_args.clone());
-                            let _ = named_args.insert("odra_cfg_package_hash_key_name", name.clone());
-                            let _ = named_args.insert("odra_cfg_package_hash_to_upgrade", package_hash.value());
+                            let named_args = specific_args.get(&name).cloned().unwrap_or_else(|| default_args.clone());
                             let contract_package_hash = odra::odra_casper_wasm_env::host_functions::upgrade_contract(
                                 child_contract_entry_points(),
                                 schemas.clone(),

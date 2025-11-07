@@ -15,6 +15,18 @@ pub mod delegate;
 
 const CONSTRUCTOR_NAME: &str = "init";
 const UPGRADER_NAME: &str = "upgrade";
+const FACTORY_NAME: &str = "new_contract";
+const FACTORY_UPGRADE_NAME: &str = "upgrade_child_contract";
+const BATCH_FACTORY_UPGRADE_NAME: &str = "batch_upgrade_child_contract";
+
+pub enum FnType {
+    Constructor,
+    Upgrader,
+    Factory,
+    FactoryUpgrader,
+    FactoryBatchUpgrader,
+    Regular
+}
 
 macro_rules! try_parse {
     ($from:path => $to:ident) => {
@@ -347,21 +359,35 @@ impl ModuleImplIR {
     }
 
     pub fn factory_fn(&self) -> FnIR {
-        let args = self
-            .constructor()
-            .map(|fn_ir| fn_ir.named_args())
-            .unwrap_or_default();
-        let args = args
-            .iter()
-            .map(FnArgIR::raw)
-            .collect::<syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma>>();
+        let args = self.constructor_args();
         let ty_address = utils::ty::address();
         let ty_uref = utils::ty::uref();
+        let ty_string = utils::ty::string();
         let factory_fn = parse_quote! {
-            pub fn new_contract(&mut self, contract_name: String, #args) -> (#ty_address, #ty_uref) {
+            pub fn new_contract(&mut self, contract_name: #ty_string, #args) -> (#ty_address, #ty_uref) {
             }
         };
         FnIR::Impl(FnImplIR::new(factory_fn))
+    }
+
+    pub fn factory_upgrade_fn(&self) -> FnIR {
+        let args = self.upgrader_args();
+        let ty_string = utils::ty::string();
+        FnIR::Impl(FnImplIR::new(parse_quote! {
+            pub fn upgrade_child_contract(&mut self, contract_name: #ty_string, #args) {
+            }
+        }))
+    }
+
+    pub fn factory_batch_upgrade_fn(&self) -> FnIR {
+        let ty_string = utils::ty::string();
+        let ty_vec_string = utils::ty::vec_of(&ty_string);
+        let ty_bytes = utils::ty::bytes();
+        let ty_btree_map = utils::ty::typed_btree_map(&ty_string, &ty_bytes);
+        FnIR::Impl(FnImplIR::new(parse_quote! {
+            pub fn batch_upgrade_child_contract(&mut self, default_args: #ty_bytes, names_to_upgrade: #ty_vec_string, specific_args: #ty_btree_map) {
+            }
+        }))
     }
 
     pub fn upgrader(&self) -> Option<FnIR> {
@@ -376,6 +402,26 @@ impl ModuleImplIR {
             ModuleImplIR::Impl(ir) => ir.functions(),
             ModuleImplIR::Trait(ir) => ir.functions()
         }
+    }
+
+    fn constructor_args(&self) -> syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma> {
+         self
+            .constructor()
+            .map(|fn_ir| fn_ir.named_args())
+            .unwrap_or_default()
+            .iter()
+            .map(FnArgIR::raw)
+            .collect::<syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma>>()
+    }
+
+    pub fn upgrader_args(&self) -> syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma> {
+         self
+            .upgrader()
+            .map(|fn_ir| fn_ir.named_args())
+            .unwrap_or_default()
+            .iter()
+            .map(FnArgIR::raw)
+            .collect::<syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma>>()
     }
 }
 
@@ -485,9 +531,21 @@ impl FnIR {
     pub fn docs(&self) -> Vec<String> {
         utils::syn::string_docs(self.attributes())
     }
+
+    pub fn fn_type(&self) -> FnType {
+        let name = self.name_str();
+        match name.as_str() {
+            CONSTRUCTOR_NAME => FnType::Constructor,
+            UPGRADER_NAME => FnType::Upgrader,
+            FACTORY_NAME => FnType::Factory,
+            FACTORY_UPGRADE_NAME => FnType::FactoryUpgrader,
+            BATCH_FACTORY_UPGRADE_NAME => FnType::FactoryBatchUpgrader,
+            _ => FnType::Regular
+        }
+    }
 }
 
-const PROTECTED_FUNCTIONS: [&str; 5] = ["new", "env", "address", "new_contract", "upgrade_children_contracts"];
+const PROTECTED_FUNCTIONS: [&str; 6] = ["new", "env", "address", "new_contract", "upgrade_child_contract", "batch_upgrade_child_contract"];
 const PROTECTED_ARGS: [&str; 2] = ["gas", "attached_value"];
 
 fn validate_fn_name<T: ToTokens>(name: &str, ctx: T) -> syn::Result<()> {
