@@ -180,6 +180,8 @@ pub enum ExecutionError {
     CannotUpgradeWithoutUpgrade = 134,
     /// Factory module function should not be called directly.
     FactoryModuleCall = 135,
+    /// Cannot get an immediate caller
+    CannotGetAnImmediateCaller = 136,
     /// Maximum code for user errors
     MaxUserError = 64535,
     /// User error too high. The code should be in range 0..32767.
