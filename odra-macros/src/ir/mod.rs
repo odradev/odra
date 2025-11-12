@@ -405,8 +405,7 @@ impl ModuleImplIR {
     }
 
     fn constructor_args(&self) -> syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma> {
-         self
-            .constructor()
+        self.constructor()
             .map(|fn_ir| fn_ir.named_args())
             .unwrap_or_default()
             .iter()
@@ -415,8 +414,7 @@ impl ModuleImplIR {
     }
 
     pub fn upgrader_args(&self) -> syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma> {
-         self
-            .upgrader()
+        self.upgrader()
             .map(|fn_ir| fn_ir.named_args())
             .unwrap_or_default()
             .iter()
@@ -545,7 +543,14 @@ impl FnIR {
     }
 }
 
-const PROTECTED_FUNCTIONS: [&str; 6] = ["new", "env", "address", "new_contract", "upgrade_child_contract", "batch_upgrade_child_contract"];
+const PROTECTED_FUNCTIONS: [&str; 6] = [
+    "new",
+    "env",
+    "address",
+    "new_contract",
+    "upgrade_child_contract",
+    "batch_upgrade_child_contract"
+];
 const PROTECTED_ARGS: [&str; 2] = ["gas", "attached_value"];
 
 fn validate_fn_name<T: ToTokens>(name: &str, ctx: T) -> syn::Result<()> {

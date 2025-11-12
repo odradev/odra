@@ -108,7 +108,6 @@ fn factory_call_def_with_amount(fun: &FnIR) -> syn::Expr {
     let package_hash_arg = match fun.fn_type() {
         FnType::FactoryUpgrader =>  quote::quote! {
             let _ = #args.insert("odra_cfg_is_factory_upgrade", true);
-            let _ = named_args.insert("odra_cfg_package_hash_to_upgrade", self.address.value());
             let _ = named_args.insert("odra_cfg_package_hash_key_name", contract_name);
             let _ = named_args.insert("odra_cfg_allow_key_override", true);
             let _ = named_args.insert("odra_cfg_create_upgrade_group", false);
@@ -116,7 +115,6 @@ fn factory_call_def_with_amount(fun: &FnIR) -> syn::Expr {
         },
         FnType::FactoryBatchUpgrader =>  quote::quote! {
             let _ = #args.insert("odra_cfg_is_factory_upgrade", true);
-            let _ = named_args.insert("odra_cfg_package_hash_to_upgrade", self.address.value());
             let _ = named_args.insert("odra_cfg_allow_key_override", true);
             let _ = named_args.insert("odra_cfg_create_upgrade_group", false);
         },

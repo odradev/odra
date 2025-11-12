@@ -337,7 +337,6 @@ mod test {
                                         let mut named_args = odra::casper_types::RuntimeArgs::new();
                                         let _ = named_args.insert("contract_name", contract_name.clone());
                                         let _ = named_args.insert("odra_cfg_is_factory_upgrade", true);
-                                        let _ = named_args.insert("odra_cfg_package_hash_to_upgrade", self.address.value());
                                         let _ = named_args.insert("odra_cfg_package_hash_key_name", contract_name);
                                         let _ = named_args.insert("odra_cfg_allow_key_override", true);
                                         let _ = named_args.insert("odra_cfg_create_upgrade_group", false);
@@ -368,10 +367,9 @@ mod test {
                                         let _ = named_args.insert("default_args", default_args.clone());
                                         let _ = named_args.insert("names_to_upgrade", names_to_upgrade.clone());
                                         let _ = named_args.insert("specific_args", specific_args.clone());
-                                        let _ = named_args.insert("odra_cfg_is_upgradable", true);
-                                        let _ = named_args.insert("odra_cfg_is_upgrade", true);
-                                        let _ = named_args.insert("odra_cfg_allow_key_override", true);
                                         let _ = named_args.insert("odra_cfg_is_factory_upgrade", true);
+                                        let _ = named_args.insert("odra_cfg_allow_key_override", true);
+                                        let _ = named_args.insert("odra_cfg_create_upgrade_group", false);
                                         named_args
                                     },
                                 )
@@ -603,6 +601,7 @@ mod test {
 
                 #[no_mangle]
                 fn upgrade_child_contract() {
+                    use odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert;
                     let schemas = odra::casper_event_standard::Schemas(
                         <Erc20 as odra::contract_def::HasEvents>::event_schemas()
                     );
@@ -612,10 +611,19 @@ mod test {
                         odra::ExecutionEnv::new(env_rc)
                     };
                     let name = exec_env.get_named_arg::<odra::prelude::string::String>("contract_name");
-                    let named_args = {
+                    let mut named_args = {
                         let mut named_args = odra::casper_types::RuntimeArgs::new();
                         named_args
                     };
+                    let contract_key = UnwrapOrRevert::unwrap_or_revert(
+                        odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::get_key(
+                            &name,
+                        ),
+                    );
+                    let package_hash = UnwrapOrRevert::unwrap_or_revert(
+                        contract_key.into_package_hash(),
+                    );
+                    let _ = named_args.insert("odra_cfg_package_hash_to_upgrade", package_hash.value());
                     let contract_package_hash = odra::odra_casper_wasm_env::host_functions::upgrade_contract(
                         child_contract_entry_points(),
                         schemas,
@@ -672,7 +680,8 @@ mod test {
                         let contract_key = odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::get_key(&name);
                         if let Some(key) = contract_key {
                             let package_hash = UnwrapOrRevert::unwrap_or_revert(key.into_package_hash());
-                            let named_args = specific_args.get(&name).cloned().unwrap_or_else(|| default_args.clone());
+                            let mut named_args = specific_args.get(&name).cloned().unwrap_or_else(|| default_args.clone());
+                            let _ = named_args.insert("odra_cfg_package_hash_to_upgrade", package_hash.value());
                             let contract_package_hash = odra::odra_casper_wasm_env::host_functions::upgrade_contract(
                                 child_contract_entry_points(),
                                 schemas.clone(),

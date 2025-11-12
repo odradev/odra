@@ -101,52 +101,47 @@ mod tests {
             InstallConfig::upgradable::<CounterFactory>()
         );
         let (ten_address, _) = factory_ref.new_contract(String::from("FromTen"), 10);
-        let (_from_two_address, _) = factory_ref.new_contract(String::from("FromTwo"), 2);
+        let (two_address, _) = factory_ref.new_contract(String::from("FromTwo"), 2);
         let (_from_three_address, _) = factory_ref.new_contract(String::from("FromThree"), 3);
         let (_from_hundred_address, _) = factory_ref.new_contract(String::from("FromHundred"), 100);
 
-        // Upgrade the factory contract
+        // // Upgrade the factory contract
         let result = BetterCounterFactory::try_upgrade(&env, factory_ref.address(), NoArgs);
         assert!(result.is_ok());
 
         let mut factory = result.unwrap();
         factory.upgrade_child_contract(String::from("FromTen"), 122);
+        factory.upgrade_child_contract(String::from("FromTwo"), 11);
 
-        let _args = odra::host::FactoryUpgradeArgs {
-            default_args: odra::casper_types::runtime_args! {
-                "new_value" => 42u32
-            },
-            names_to_upgrade: vec![
-                "FromTen".to_string(),
-                "FromTwo".to_string(),
-                "FromThree".to_string(),
-                "FromHundred".to_string(),
-            ],
-            specific_args: [
-                (
-                    "FromTen".to_string(),
-                    odra::casper_types::runtime_args! {
-                        "new_value" => 122u32
-                    }
-                ),
-                (
-                    "FromHundred".to_string(),
-                    odra::casper_types::runtime_args! {
-                        "new_value" => 1000u32
-                    }
-                )
-            ]
-            .into()
-        };
+        // let _args = odra::host::FactoryUpgradeArgs {
+        //     default_args: odra::casper_types::runtime_args! {
+        //         "new_value" => 42u32
+        //     },
+        //     names_to_upgrade: vec![
+        //         "FromTen".to_string(),
+        //         "FromTwo".to_string(),
+        //         "FromThree".to_string(),
+        //         "FromHundred".to_string(),
+        //     ],
+        //     specific_args: [
+        //         (
+        //             "FromTen".to_string(),
+        //             odra::casper_types::runtime_args! {
+        //                 "new_value" => 122u32
+        //             }
+        //         ),
+        //         (
+        //             "FromHundred".to_string(),
+        //             odra::casper_types::runtime_args! {
+        //                 "new_value" => 1000u32
+        //             }
+        //         )
+        //     ]
+        //     .into()
+        // };
 
-        assert_eq!(
-            CounterHostRef::new(ten_address, env.clone()).value(),
-            122
-        );
-        // assert_eq!(
-        //     CounterHostRef::new(from_two_address, env.clone()).value(),
-        //     42
-        // );
+        assert_eq!(CounterHostRef::new(ten_address, env.clone()).value(), 122);
+        assert_eq!(CounterHostRef::new(two_address, env.clone()).value(), 11);
         // assert_eq!(
         //     CounterHostRef::new(from_three_address, env.clone()).value(),
         //     42
