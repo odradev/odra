@@ -51,10 +51,11 @@ mod tests {
     use odra::{
         casper_types::{
             bytesrepr::{Bytes, ToBytes},
-            runtime_args
+            runtime_args, RuntimeArgs
         },
         host::{Deployer, HostRef, InstallConfig, NoArgs},
-        prelude::*
+        prelude::*,
+        VmError
     };
 
     use crate::factory::counter::BetterCounterFactory;
@@ -96,7 +97,7 @@ mod tests {
     }
 
     #[test]
-    fn test_factory_upgrade() {
+    fn test_factory_upgrade_works() {
         let env = odra_test::env();
         // Deploy the factory contract
         let mut factory = CounterFactory::deploy_with_cfg(
@@ -115,7 +116,6 @@ mod tests {
 
         let mut factory = result.unwrap();
         factory.upgrade_child_contract(String::from("FromTen"), 122);
-        env.set_caller(env.get_account(11));
         factory.upgrade_child_contract(String::from("FromTwo"), 11);
 
         factory.batch_upgrade_child_contract(
@@ -153,6 +153,113 @@ mod tests {
         assert_eq!(
             CounterHostRef::new(hundred_address, env.clone()).value(),
             1000
+        );
+    }
+
+    #[test]
+    fn test_factory_upgrade_fails_for_unauthorized_caller() {
+        let env = odra_test::env();
+        // Deploy the factory contract
+        let mut factory = CounterFactory::deploy_with_cfg(
+            &env,
+            NoArgs,
+            InstallConfig::upgradable::<CounterFactory>()
+        );
+        let (address, _) = factory.new_contract(String::from("FromTen"), 10);
+
+        // Upgrade the factory contract
+        let result = BetterCounterFactory::try_upgrade(&env, factory.address(), NoArgs);
+        assert!(result.is_ok());
+
+        let mut factory = result.unwrap();
+        // Change caller to unauthorized account
+        let unauthorized_account = env.get_account(11);
+        env.set_caller(unauthorized_account);
+        let upgrade_result = factory.try_upgrade_child_contract(String::from("FromTen"), 122);
+        assert_eq!(
+            upgrade_result,
+            Err(OdraError::VmError(VmError::InvalidContext))
+        );
+
+        // Ensure the value has not changed
+        assert_eq!(CounterHostRef::new(address, env.clone()).value(), 10);
+
+        let upgrade_result = factory.try_batch_upgrade_child_contract(
+            Bytes::from(
+                runtime_args! {
+                    "new_value" => 42u32
+                }
+                .to_bytes()
+                .expect("Failed to serialize runtime args for default_args")
+            ),
+            Bytes::from(
+                vec![
+                    "FromTwo".to_string(),
+                    "FromThree".to_string(),
+                    "FromHundred".to_string(),
+                ]
+                .to_bytes()
+                .expect("Failed to serialize runtime args for names_to_upgrade")
+            ),
+            Bytes::from(
+                BTreeMap::from([(
+                    "FromHundred".to_string(),
+                    runtime_args! {
+                        "new_value" => 1000u32
+                    }
+                )])
+                .to_bytes()
+                .expect("Failed to serialize runtime args for specific_args")
+            )
+        );
+        assert_eq!(
+            upgrade_result,
+            Err(OdraError::VmError(VmError::InvalidContext))
+        );
+    }
+
+    #[test]
+    fn test_factory_upgrade_fails_for_invalid_arg() {
+        let env = odra_test::env();
+        // Deploy the factory contract
+        let mut factory = CounterFactory::deploy_with_cfg(
+            &env,
+            NoArgs,
+            InstallConfig::upgradable::<CounterFactory>()
+        );
+        let _ = factory.new_contract(String::from("FromTen"), 10);
+        let _ = factory.new_contract(String::from("FromTwo"), 2);
+        let _ = factory.new_contract(String::from("FromThree"), 3);
+        let _ = factory.new_contract(String::from("FromHundred"), 100);
+
+        // Upgrade the factory contract
+        let result = BetterCounterFactory::try_upgrade(&env, factory.address(), NoArgs);
+        assert!(result.is_ok());
+
+        let mut factory = result.unwrap();
+
+        let upgrade_result = factory.try_batch_upgrade_child_contract(
+            Bytes::from(
+                runtime_args! {
+                    "new_val" => 42u32 // incorrect arg name
+                }
+                .to_bytes()
+                .expect("Failed to serialize runtime args for default_args")
+            ),
+            Bytes::from(
+                vec!["FromTwo".to_string()]
+                    .to_bytes()
+                    .expect("Failed to serialize runtime args for names_to_upgrade")
+            ),
+            Bytes::from(
+                BTreeMap::<String, RuntimeArgs>::new()
+                    .to_bytes()
+                    .expect("Failed to serialize runtime args for specific_args")
+            )
+        );
+        assert_eq!(
+            upgrade_result,
+            Err(OdraError::ExecutionError(ExecutionError::MissingArg))
         );
     }
 }
