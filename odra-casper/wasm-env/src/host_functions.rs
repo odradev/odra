@@ -68,6 +68,7 @@ lazy_static::lazy_static! {
 }
 
 pub(crate) static mut ATTACHED_VALUE: U512 = U512::zero();
+static mut CALLER_OVERRIDE: bool = false;
 
 /// Installs or upgrades a contract based on the provided entry points, events, and initialization arguments.
 pub fn install_or_upgrade(
@@ -146,6 +147,11 @@ pub fn install_new_contract(
 
     let contract_package_hash = ContractPackageHash::new(contract_hash.value());
     if has_init {
+        if is_factory {
+            unsafe {
+                CALLER_OVERRIDE = true;
+            }
+        }
         let init_access = create_contract_user_group(contract_package_hash, CONSTRUCTOR_GROUP_NAME);
         let _: () = runtime::call_versioned_contract(
             contract_package_hash,
@@ -554,8 +560,12 @@ pub fn emit_native_event(event: &Bytes) {
 /// Gets the immediate session caller of the current execution.
 #[inline(always)]
 pub fn caller() -> OdraResult<Address> {
-    let second_elem = take_nth_caller_from_stack(1);
-    let caller = caller_info_to_caller(second_elem)?;
+    let elem = if unsafe { CALLER_OVERRIDE } {
+        take_nth_caller_from_stack(2)
+    } else {
+        take_nth_caller_from_stack(1)
+    };
+    let caller = caller_info_to_caller(elem)?;
     Ok(Address::from(caller))
 }
 
@@ -1056,4 +1066,11 @@ pub fn new_dictionary_uref(dictionary_name: &str) -> Result<URef, ApiError> {
     let value_bytes = read_host_buffer(value_size).unwrap_or_revert();
     let uref: URef = bytesrepr::deserialize(value_bytes).unwrap_or_revert();
     Ok(uref)
+}
+
+/// Sets a flag to override the caller for factory contracts.
+pub fn override_factory_caller() {
+    unsafe {
+        CALLER_OVERRIDE = true;
+    }
 }

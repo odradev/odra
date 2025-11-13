@@ -1,4 +1,4 @@
-use quote::TokenStreamExt;
+use quote::{ToTokens, TokenStreamExt};
 use syn::parse_quote;
 
 use crate::utils::misc::AsType;
@@ -31,7 +31,7 @@ pub struct ModuleWasmPartsItem {
     call_fn: CallFnItem,
     #[syn(in = braces)]
     #[to_tokens(|tokens, f| tokens.append_all(f))]
-    entry_points: Vec<NoMangleFnItem>
+    entry_points: Vec<NoMangleFnItem<ModuleContext>>
 }
 
 impl TryFrom<&'_ ModuleImplIR> for ModuleWasmPartsItem {
@@ -184,19 +184,38 @@ impl TryFrom<&'_ ModuleImplIR> for CallFnItem {
     }
 }
 
-#[derive(syn_derive::ToTokens)]
-pub(super) struct NoMangleFnItem {
-    attr: syn::Attribute,
-    sig: syn::Signature,
-    #[syn(braced)]
-    braces: syn::token::Brace,
-    #[syn(in = braces)]
-    execute_stmt: syn::Stmt,
-    #[syn(in = braces)]
-    ret_stmt: Option<syn::Stmt>
+pub trait NoMangleItemContext {}
+
+struct ModuleContext;
+impl NoMangleItemContext for ModuleContext {}
+
+pub(super) struct NoMangleFnItem<C: NoMangleItemContext> {
+    pub sig: syn::Signature,
+    pub override_stmt: Option<syn::Stmt>,
+    pub execute_stmt: syn::Stmt,
+    pub ret_stmt: Option<syn::Stmt>,
+    pub ctx: std::marker::PhantomData<C>
 }
 
-impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for NoMangleFnItem {
+impl<C: NoMangleItemContext> ToTokens for NoMangleFnItem<C> {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let attr = utils::attr::no_mangle();
+        let sig = &self.sig;
+        let override_stmt = &self.override_stmt;
+        let execute_stmt = &self.execute_stmt;
+        let ret_stmt = &self.ret_stmt;
+        tokens.append_all(quote::quote! {
+            #attr
+            #sig {
+                #override_stmt
+                #execute_stmt
+                #ret_stmt
+            }
+        });
+    }
+}
+
+impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for NoMangleFnItem<ModuleContext> {
     type Error = syn::Error;
 
     fn try_from(value: (&'_ ModuleImplIR, &'_ FnIR)) -> Result<Self, Self::Error> {
@@ -220,11 +239,11 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for NoMangleFnItem {
         };
 
         Ok(Self {
-            attr: utils::attr::no_mangle(),
             sig: parse_quote!(fn #fn_ident()),
-            braces: Default::default(),
+            override_stmt: None,
             execute_stmt,
-            ret_stmt
+            ret_stmt,
+            ctx: std::marker::PhantomData::<ModuleContext>
         })
     }
 }

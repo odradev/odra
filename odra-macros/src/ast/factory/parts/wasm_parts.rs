@@ -3,7 +3,7 @@ use quote::{format_ident, ToTokens, TokenStreamExt};
 use syn::parse_quote;
 
 use crate::ast::parts_utils::{UsePreludeItem, UseSuperItem};
-use crate::ast::wasm_parts::NoMangleFnItem;
+use crate::ast::wasm_parts::{NoMangleFnItem, NoMangleItemContext};
 use crate::ast::wasm_parts_utils;
 use crate::utils::misc::AsType;
 use crate::{
@@ -11,6 +11,39 @@ use crate::{
     ir::{FnIR, ModuleImplIR},
     utils
 };
+
+impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for NoMangleFnItem<FactoryContext> {
+    type Error = syn::Error;
+
+    fn try_from(value: (&'_ ModuleImplIR, &'_ FnIR)) -> Result<Self, Self::Error> {
+        let (module, func) = value;
+        let fn_ident = func.name();
+        let result_ident = utils::ident::result();
+        let exec_parts_ident = module.exec_parts_mod_ident()?;
+        let exec_fn = func.execute_name();
+        let new_env = utils::expr::new_wasm_contract_env();
+
+        let execute_stmt = match func.return_type() {
+            syn::ReturnType::Default => parse_quote!(#exec_parts_ident::#exec_fn(#new_env);),
+            syn::ReturnType::Type(_, _) => {
+                parse_quote!(let #result_ident = #exec_parts_ident::#exec_fn(#new_env);)
+            }
+        };
+
+        let ret_stmt = match func.return_type() {
+            syn::ReturnType::Default => None,
+            syn::ReturnType::Type(_, _) => Some(utils::stmt::runtime_return(&result_ident))
+        };
+
+        Ok(Self {
+            sig: parse_quote!(fn #fn_ident()),
+            override_stmt: Some(parse_quote!(odra::odra_casper_wasm_env::host_functions::override_factory_caller();)),
+            execute_stmt,
+            ret_stmt,
+            ctx: std::marker::PhantomData::<FactoryContext>
+        })
+    }
+}
 
 pub struct FactoryWasmPartsItem {
     attrs: Vec<syn::Attribute>,
@@ -21,7 +54,7 @@ pub struct FactoryWasmPartsItem {
     call_fn: CallFnItem,
     factory_fn: NoMangleFactoryFnItem,
     factory_upgrade_fn: NoMangleFactoryUpgradeFnItem,
-    entry_points: Vec<NoMangleFnItem>
+    entry_points: Vec<NoMangleFnItem<FactoryContext>>
 }
 
 impl TryFrom<&'_ ModuleImplIR> for FactoryWasmPartsItem {
@@ -146,6 +179,7 @@ trait EntryPointContext {}
 
 struct FactoryContext;
 impl EntryPointContext for FactoryContext {}
+impl NoMangleItemContext for FactoryContext {}
 
 struct FactoryUpgradeContext;
 impl EntryPointContext for FactoryUpgradeContext {}
@@ -325,6 +359,7 @@ impl ToTokens for NoMangleFactoryFnItem {
         tokens.append_all(quote::quote! {
             #[no_mangle]
             fn new_contract() {
+                 odra::odra_casper_wasm_env::host_functions::override_factory_caller();
                 let #ident_schemas = #expr_new_schemas;
                 let exec_env = {
                     let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
@@ -591,6 +626,7 @@ mod test {
 
                 #[no_mangle]
                 fn new_contract() {
+                    odra::odra_casper_wasm_env::host_functions::override_factory_caller();
                     let schemas = odra::casper_event_standard::Schemas(
                         <Erc20 as odra::contract_def::HasEvents>::event_schemas()
                     );
@@ -650,6 +686,7 @@ mod test {
                         contract_key.into_package_hash(),
                     );
                     let _ = named_args.insert("odra_cfg_package_hash_to_upgrade", package_hash.value());
+                    let _ = named_args.insert("odra_cfg_package_hash_key_name", name.clone());
                     let contract_package_hash = odra::odra_casper_wasm_env::host_functions::upgrade_contract(
                         child_contract_entry_points(),
                         schemas,
@@ -726,11 +763,13 @@ mod test {
 
                 #[no_mangle]
                 fn init() {
+                    odra::odra_casper_wasm_env::host_functions::override_factory_caller();
                     __erc20_factory_exec_parts::execute_init(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
 
                 #[no_mangle]
                 fn total_supply() {
+                    odra::odra_casper_wasm_env::host_functions::override_factory_caller();
                     let result = __erc20_factory_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
@@ -741,11 +780,13 @@ mod test {
 
                 #[no_mangle]
                 fn pay_to_mint() {
+                    odra::odra_casper_wasm_env::host_functions::override_factory_caller();
                     __erc20_factory_exec_parts::execute_pay_to_mint(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
 
                 #[no_mangle]
                 fn approve() {
+                    odra::odra_casper_wasm_env::host_functions::override_factory_caller();
                     __erc20_factory_exec_parts::execute_approve(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
             }
