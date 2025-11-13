@@ -164,12 +164,11 @@ pub fn install_new_contract(
     )
     .unwrap_or_revert();
 
-    // if is_factory {
-    //     let factory_group_uref = create_contract_user_group(contract_package_hash, FACTORY_GROUP_NAME);
-    //     runtime::print(&format!("factory group uref created {:?}", factory_group_uref));
-    //     runtime::put_key(&format!("{}_factory_access", package_hash_key_name), Key::URef(factory_group_uref));
-    //     return (contract_package_hash, factory_group_uref);
-    // }
+    if is_factory {
+        let factory_group_uref = create_contract_user_group(contract_package_hash, FACTORY_GROUP_NAME);
+        runtime::put_key(&format!("{}_factory_access", package_hash_key_name), Key::URef(factory_group_uref));
+        return (contract_package_hash, factory_group_uref);
+    }
 
     let access_uref = runtime::get_key(&access_uref_key)
         .unwrap_or_revert_with(ApiError::AllocLayout)

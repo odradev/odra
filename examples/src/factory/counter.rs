@@ -99,22 +99,23 @@ mod tests {
     fn test_factory_upgrade() {
         let env = odra_test::env();
         // Deploy the factory contract
-        let mut factory_ref = CounterFactory::deploy_with_cfg(
+        let mut factory = CounterFactory::deploy_with_cfg(
             &env,
             NoArgs,
             InstallConfig::upgradable::<CounterFactory>()
         );
-        let (ten_address, _) = factory_ref.new_contract(String::from("FromTen"), 10);
-        let (two_address, _) = factory_ref.new_contract(String::from("FromTwo"), 2);
-        let (three_address, _) = factory_ref.new_contract(String::from("FromThree"), 3);
-        let (hundred_address, _) = factory_ref.new_contract(String::from("FromHundred"), 100);
+        let (ten_address, _) = factory.new_contract(String::from("FromTen"), 10);
+        let (two_address, _) = factory.new_contract(String::from("FromTwo"), 2);
+        let (three_address, _) = factory.new_contract(String::from("FromThree"), 3);
+        let (hundred_address, _) = factory.new_contract(String::from("FromHundred"), 100);
 
         // Upgrade the factory contract
-        let result = BetterCounterFactory::try_upgrade(&env, factory_ref.address(), NoArgs);
+        let result = BetterCounterFactory::try_upgrade(&env, factory.address(), NoArgs);
         assert!(result.is_ok());
 
         let mut factory = result.unwrap();
         factory.upgrade_child_contract(String::from("FromTen"), 122);
+        env.set_caller(env.get_account(11));
         factory.upgrade_child_contract(String::from("FromTwo"), 11);
 
         factory.batch_upgrade_child_contract(

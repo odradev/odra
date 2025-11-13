@@ -127,8 +127,7 @@ fn factory_upgrade() -> casper_types::EntityEntryPoint {
         "upgrade_child_contract",
         vec![casper_types::Parameter::new("args", Vec::<u8>::cl_type())],
         CLType::Unit,
-        // casper_types::EntryPointAccess::Groups(vec![casper_types::Group::new("factory_group")]),
-        casper_types::EntryPointAccess::Public,
+        casper_types::EntryPointAccess::Groups(vec![casper_types::Group::new("factory_group")]),
         casper_types::EntryPointType::Called,
         casper_types::EntryPointPayment::Caller
     )
@@ -143,8 +142,7 @@ fn factory_batch_upgrade() -> casper_types::EntityEntryPoint {
             casper_types::Parameter::new("specific_args", Vec::<u8>::cl_type()),
         ],
         CLType::Unit,
-        // casper_types::EntryPointAccess::Groups(vec![casper_types::Group::new("factory_group")]),
-        casper_types::EntryPointAccess::Public,
+        casper_types::EntryPointAccess::Groups(vec![casper_types::Group::new("factory_group")]),
         casper_types::EntryPointType::Called,
         casper_types::EntryPointPayment::Caller
     )
@@ -155,8 +153,7 @@ fn upgrader(args: Vec<Option<Parameter>>) -> casper_types::EntityEntryPoint {
         "upgrade",
         args.into_iter().flatten().collect(),
         CLType::Unit,
-        // casper_types::EntryPointAccess::Groups(vec![casper_types::Group::new("upgrader_group")]),
-        casper_types::EntryPointAccess::Public,
+        casper_types::EntryPointAccess::Groups(vec![casper_types::Group::new("upgrader_group")]),
         casper_types::EntryPointType::Called,
         casper_types::EntryPointPayment::Caller
     )
