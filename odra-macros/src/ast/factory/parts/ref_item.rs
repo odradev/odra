@@ -138,11 +138,8 @@ mod test {
                 pub fn batch_upgrade_child_contract(
                     &mut self,
                     default_args: odra::casper_types::bytesrepr::Bytes,
-                    names_to_upgrade: odra::prelude::vec::Vec<odra::prelude::string::String>,
-                    specific_args: odra::prelude::BTreeMap<
-                        odra::prelude::string::String,
-                        odra::casper_types::bytesrepr::Bytes,
-                    >,
+                    names_to_upgrade: odra::casper_types::bytesrepr::Bytes,
+                    specific_args: odra::casper_types::bytesrepr::Bytes
                 ) {
                     self.env
                         .call_contract(

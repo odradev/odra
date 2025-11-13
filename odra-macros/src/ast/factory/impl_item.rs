@@ -105,11 +105,8 @@ mod test {
                             name: odra::prelude::string::String::from("batch_upgrade_child_contract"),
                             args: odra::prelude::vec![
                                 odra::args::odra_argument::<odra::casper_types::bytesrepr::Bytes>("default_args"),
-                                odra::args::odra_argument::<odra::prelude::vec::Vec<odra::prelude::string::String> >("names_to_upgrade"),
-                                odra::args::odra_argument::<odra::prelude::BTreeMap<
-                                    odra::prelude::string::String,
-                                    odra::casper_types::bytesrepr::Bytes
-                                > >("specific_args")
+                                odra::args::odra_argument::<odra::casper_types::bytesrepr::Bytes>("names_to_upgrade"),
+                                odra::args::odra_argument::<odra::casper_types::bytesrepr::Bytes>("specific_args")
                             ],
                             is_mutable: true,
                             return_ty: <() as odra::casper_types::CLTyped>::cl_type(),
@@ -192,11 +189,8 @@ mod test {
                 pub fn batch_upgrade_child_contract(
                     &mut self,
                     default_args: odra::casper_types::bytesrepr::Bytes,
-                    names_to_upgrade: odra::prelude::vec::Vec<odra::prelude::string::String>,
-                    specific_args: odra::prelude::BTreeMap<
-                        odra::prelude::string::String,
-                        odra::casper_types::bytesrepr::Bytes,
-                    >
+                    names_to_upgrade: odra::casper_types::bytesrepr::Bytes,
+                    specific_args: odra::casper_types::bytesrepr::Bytes
                 ) {
                     self.env.call_contract(
                         self.address,
@@ -288,11 +282,8 @@ mod test {
                     pub fn batch_upgrade_child_contract(
                         &mut self,
                         default_args: odra::casper_types::bytesrepr::Bytes,
-                        names_to_upgrade: odra::prelude::vec::Vec<odra::prelude::string::String>,
-                        specific_args: odra::prelude::BTreeMap<
-                            odra::prelude::string::String,
-                            odra::casper_types::bytesrepr::Bytes,
-                        >
+                        names_to_upgrade: odra::casper_types::bytesrepr::Bytes,
+                        specific_args: odra::casper_types::bytesrepr::Bytes
                     ) {
                         self.try_batch_upgrade_child_contract(
                             default_args,
@@ -337,7 +328,6 @@ mod test {
                                         let mut named_args = odra::casper_types::RuntimeArgs::new();
                                         let _ = named_args.insert("contract_name", contract_name.clone());
                                         let _ = named_args.insert("odra_cfg_is_factory_upgrade", true);
-                                        let _ = named_args.insert("odra_cfg_package_hash_key_name", contract_name);
                                         let _ = named_args.insert("odra_cfg_allow_key_override", true);
                                         let _ = named_args.insert("odra_cfg_create_upgrade_group", false);
                                         named_args
@@ -350,11 +340,8 @@ mod test {
                     pub fn try_batch_upgrade_child_contract(
                         &mut self,
                         default_args: odra::casper_types::bytesrepr::Bytes,
-                        names_to_upgrade: odra::prelude::vec::Vec<odra::prelude::string::String>,
-                        specific_args: odra::prelude::BTreeMap<
-                            odra::prelude::string::String,
-                            odra::casper_types::bytesrepr::Bytes,
-                        >,
+                        names_to_upgrade: odra::casper_types::bytesrepr::Bytes,
+                        specific_args: odra::casper_types::bytesrepr::Bytes,
                     ) -> OdraResult<()> {
                         self.env
                             .call_contract(
@@ -682,6 +669,7 @@ mod test {
                             let package_hash = UnwrapOrRevert::unwrap_or_revert(key.into_package_hash());
                             let mut named_args = specific_args.get(&name).cloned().unwrap_or_else(|| default_args.clone());
                             let _ = named_args.insert("odra_cfg_package_hash_to_upgrade", package_hash.value());
+                            let _ = named_args.insert("odra_cfg_package_hash_key_name", name.clone());
                             let contract_package_hash = odra::odra_casper_wasm_env::host_functions::upgrade_contract(
                                 child_contract_entry_points(),
                                 schemas.clone(),

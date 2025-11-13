@@ -426,6 +426,7 @@ impl ToTokens for NoMangleFactoryUpgradeFnItem {
                     contract_key.into_package_hash()
                 );
                 let _ = named_args.insert("odra_cfg_package_hash_to_upgrade", package_hash.value());
+                let _ = named_args.insert("odra_cfg_package_hash_key_name", name.clone());
                 let contract_package_hash = odra::odra_casper_wasm_env::host_functions::upgrade_contract(
                     #ident_entry_points(),
                     #ident_schemas,
@@ -466,6 +467,7 @@ impl ToTokens for NoMangleFactoryUpgradeFnItem {
                         let package_hash = UnwrapOrRevert::unwrap_or_revert(key.into_package_hash());
                         let mut named_args = specific_args.get(&name).cloned().unwrap_or_else(|| default_args.clone());
                         let _ = named_args.insert("odra_cfg_package_hash_to_upgrade", package_hash.value());
+                        let _ = named_args.insert("odra_cfg_package_hash_key_name", name.clone());
                         let contract_package_hash = odra::odra_casper_wasm_env::host_functions::upgrade_contract(
                             #ident_entry_points(),
                             #ident_schemas.clone(),
@@ -706,6 +708,7 @@ mod test {
                             let package_hash = UnwrapOrRevert::unwrap_or_revert(key.into_package_hash());
                             let mut named_args = specific_args.get(&name).cloned().unwrap_or_else(|| default_args.clone());
                             let _ = named_args.insert("odra_cfg_package_hash_to_upgrade", package_hash.value());
+                            let _ = named_args.insert("odra_cfg_package_hash_key_name", name.clone());
                             let contract_package_hash = odra::odra_casper_wasm_env::host_functions::upgrade_contract(
                                 child_contract_entry_points(),
                                 schemas.clone(),

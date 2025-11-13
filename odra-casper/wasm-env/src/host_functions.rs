@@ -35,6 +35,7 @@ use odra_core::casper_types::system::auction::{self, BidAddr, BidKind, Validator
 use odra_core::casper_types::system::{Caller, CallerInfo};
 use odra_core::casper_types::ApiError::User;
 use odra_core::casper_types::Key::SmartContract;
+use odra_core::casper_types::{self, HashAddr, StoredValue};
 use odra_core::casper_types::{
     api_error, bytesrepr,
     bytesrepr::{Bytes, FromBytes, ToBytes},
@@ -43,7 +44,6 @@ use odra_core::casper_types::{
     PackageAddr, PackageHash, Parameter, Parameters, PublicKey, RuntimeArgs, URef,
     DICTIONARY_ITEM_KEY_MAX_LENGTH, U512, UREF_SERIALIZED_LENGTH
 };
-use odra_core::casper_types::{HashAddr, StoredValue};
 use odra_core::consts::{
     ALLOW_KEY_OVERRIDE_ARG, CREATE_UPGRADE_GROUP, IS_FACTORY_UPGRADE_ARG, IS_UPGRADABLE_ARG,
     IS_UPGRADE_ARG, PACKAGE_HASH_KEY_NAME_ARG, PACKAGE_HASH_TO_UPGRADE_ARG, RANDOM_BYTES_COUNT
@@ -164,12 +164,12 @@ pub fn install_new_contract(
     )
     .unwrap_or_revert();
 
-    if is_factory {
-        let factory_group_uref = create_contract_user_group(contract_package_hash, FACTORY_GROUP_NAME);
-        runtime::print(&format!("factory group uref created {:?}", factory_group_uref));
-        runtime::put_key(&format!("{}_factory_access", package_hash_key_name), Key::URef(factory_group_uref));
-        return (contract_package_hash, factory_group_uref);
-    }
+    // if is_factory {
+    //     let factory_group_uref = create_contract_user_group(contract_package_hash, FACTORY_GROUP_NAME);
+    //     runtime::print(&format!("factory group uref created {:?}", factory_group_uref));
+    //     runtime::put_key(&format!("{}_factory_access", package_hash_key_name), Key::URef(factory_group_uref));
+    //     return (contract_package_hash, factory_group_uref);
+    // }
 
     let access_uref = runtime::get_key(&access_uref_key)
         .unwrap_or_revert_with(ApiError::AllocLayout)
@@ -203,9 +203,20 @@ pub fn upgrade_contract(
     // Get named arguments.
     let is_factory_upgrade: bool =
         runtime::try_get_named_arg(IS_FACTORY_UPGRADE_ARG).unwrap_or_default();
-    runtime::print(&format!("upgrade args: {:?}", args));
-    let package_hash_to_upgrade: HashAddr = runtime::get_named_arg(PACKAGE_HASH_TO_UPGRADE_ARG);
-    let new_package_hash_key: String = runtime::get_named_arg(PACKAGE_HASH_KEY_NAME_ARG);
+
+    let (package_hash_to_upgrade, new_package_hash_key) = if is_factory_upgrade {
+        let package_hash_to_upgrade = args
+            .get(PACKAGE_HASH_TO_UPGRADE_ARG)
+            .cloned()
+            .unwrap_or_revert();
+        let new_package_hash_key = args
+            .get(PACKAGE_HASH_KEY_NAME_ARG)
+            .cloned()
+            .unwrap_or_revert();
+        (package_hash_to_upgrade.into_t().unwrap_or_revert(), new_package_hash_key.into_t().unwrap_or_revert())
+    } else {
+        (runtime::get_named_arg::<HashAddr>(PACKAGE_HASH_TO_UPGRADE_ARG), runtime::get_named_arg::<String>(PACKAGE_HASH_KEY_NAME_ARG))
+    };
     let allow_key_override: bool = runtime::get_named_arg(ALLOW_KEY_OVERRIDE_ARG);
     let create_user_group: bool = runtime::get_named_arg(CREATE_UPGRADE_GROUP);
 

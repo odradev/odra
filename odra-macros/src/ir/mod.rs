@@ -380,12 +380,9 @@ impl ModuleImplIR {
     }
 
     pub fn factory_batch_upgrade_fn(&self) -> FnIR {
-        let ty_string = utils::ty::string();
-        let ty_vec_string = utils::ty::vec_of(&ty_string);
         let ty_bytes = utils::ty::bytes();
-        let ty_btree_map = utils::ty::typed_btree_map(&ty_string, &ty_bytes);
         FnIR::Impl(FnImplIR::new(parse_quote! {
-            pub fn batch_upgrade_child_contract(&mut self, default_args: #ty_bytes, names_to_upgrade: #ty_vec_string, specific_args: #ty_btree_map) {
+            pub fn batch_upgrade_child_contract(&mut self, default_args: #ty_bytes, names_to_upgrade: #ty_bytes, specific_args: #ty_bytes) {
             }
         }))
     }

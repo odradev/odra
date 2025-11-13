@@ -127,11 +127,8 @@ mod test {
                     pub fn batch_upgrade_child_contract(
                         &mut self,
                         default_args: odra::casper_types::bytesrepr::Bytes,
-                        names_to_upgrade: odra::prelude::vec::Vec<odra::prelude::string::String>,
-                        specific_args: odra::prelude::BTreeMap<
-                            odra::prelude::string::String,
-                            odra::casper_types::bytesrepr::Bytes,
-                        >
+                        names_to_upgrade: odra::casper_types::bytesrepr::Bytes,
+                        specific_args: odra::casper_types::bytesrepr::Bytes
                     ) {
                         self.try_batch_upgrade_child_contract(default_args, names_to_upgrade, specific_args).unwrap()
                     }
@@ -175,12 +172,10 @@ mod test {
                                         let mut named_args = odra::casper_types::RuntimeArgs::new();
                                         let _ = named_args
                                             .insert("contract_name", contract_name.clone());
-                                        let _ = named_args.insert("odra_cfg_is_upgradable", true);
-                                        let _ = named_args.insert("odra_cfg_is_upgrade", true);
+                                        let _ = named_args.insert("odra_cfg_is_factory_upgrade", true);
                                         let _ = named_args
                                             .insert("odra_cfg_allow_key_override", true);
-                                        let _ = named_args
-                                            .insert("odra_cfg_package_hash_key_name", contract_name);
+                                        let _ = named_args.insert("odra_cfg_create_upgrade_group", false);
                                         named_args
                                     },
                                 ),
@@ -190,11 +185,8 @@ mod test {
                     pub fn try_batch_upgrade_child_contract(
                         &mut self,
                         default_args: odra::casper_types::bytesrepr::Bytes,
-                        names_to_upgrade: odra::prelude::vec::Vec<odra::prelude::string::String>,
-                        specific_args: odra::prelude::BTreeMap<
-                            odra::prelude::string::String,
-                            odra::casper_types::bytesrepr::Bytes,
-                        >,
+                        names_to_upgrade: odra::casper_types::bytesrepr::Bytes,
+                        specific_args: odra::casper_types::bytesrepr::Bytes,
                     ) -> OdraResult<()> {
                         self.env
                             .call_contract(
@@ -212,12 +204,10 @@ mod test {
                                             .insert("names_to_upgrade", names_to_upgrade.clone());
                                         let _ = named_args
                                             .insert("specific_args", specific_args.clone());
-                                        let _ = named_args.insert("odra_cfg_is_upgradable", true);
-                                        let _ = named_args.insert("odra_cfg_is_upgrade", true);
+                                        let _ = named_args.insert("odra_cfg_is_factory_upgrade", true);
                                         let _ = named_args
                                             .insert("odra_cfg_allow_key_override", true);
-                                        let _ = named_args
-                                            .insert("odra_cfg_package_hash_key_name", contract_name);
+                                        let _ = named_args.insert("odra_cfg_create_upgrade_group", false);
                                         named_args
                                     },
                                 ),

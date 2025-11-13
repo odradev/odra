@@ -1,5 +1,4 @@
 //! This module defines various types of entry points for smart contracts
-use crate::prelude::String;
 use alloc::boxed::Box;
 use alloc::{vec, vec::Vec};
 use casper_types::{CLType, CLTyped, Parameter};
@@ -140,7 +139,7 @@ fn factory_batch_upgrade() -> casper_types::EntityEntryPoint {
         "batch_upgrade_child_contract",
         vec![
             casper_types::Parameter::new("default_args", Vec::<u8>::cl_type()),
-            casper_types::Parameter::new("names_to_upgrade", Vec::<String>::cl_type()),
+            casper_types::Parameter::new("names_to_upgrade", Vec::<u8>::cl_type()),
             casper_types::Parameter::new("specific_args", Vec::<u8>::cl_type()),
         ],
         CLType::Unit,

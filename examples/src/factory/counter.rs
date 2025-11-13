@@ -49,6 +49,10 @@ impl BetterCounter {
 #[cfg(test)]
 mod tests {
     use odra::{
+        casper_types::{
+            bytesrepr::{Bytes, ToBytes},
+            runtime_args
+        },
         host::{Deployer, HostRef, InstallConfig, NoArgs},
         prelude::*
     };
@@ -102,10 +106,10 @@ mod tests {
         );
         let (ten_address, _) = factory_ref.new_contract(String::from("FromTen"), 10);
         let (two_address, _) = factory_ref.new_contract(String::from("FromTwo"), 2);
-        let (_from_three_address, _) = factory_ref.new_contract(String::from("FromThree"), 3);
-        let (_from_hundred_address, _) = factory_ref.new_contract(String::from("FromHundred"), 100);
+        let (three_address, _) = factory_ref.new_contract(String::from("FromThree"), 3);
+        let (hundred_address, _) = factory_ref.new_contract(String::from("FromHundred"), 100);
 
-        // // Upgrade the factory contract
+        // Upgrade the factory contract
         let result = BetterCounterFactory::try_upgrade(&env, factory_ref.address(), NoArgs);
         assert!(result.is_ok());
 
@@ -113,42 +117,41 @@ mod tests {
         factory.upgrade_child_contract(String::from("FromTen"), 122);
         factory.upgrade_child_contract(String::from("FromTwo"), 11);
 
-        // let _args = odra::host::FactoryUpgradeArgs {
-        //     default_args: odra::casper_types::runtime_args! {
-        //         "new_value" => 42u32
-        //     },
-        //     names_to_upgrade: vec![
-        //         "FromTen".to_string(),
-        //         "FromTwo".to_string(),
-        //         "FromThree".to_string(),
-        //         "FromHundred".to_string(),
-        //     ],
-        //     specific_args: [
-        //         (
-        //             "FromTen".to_string(),
-        //             odra::casper_types::runtime_args! {
-        //                 "new_value" => 122u32
-        //             }
-        //         ),
-        //         (
-        //             "FromHundred".to_string(),
-        //             odra::casper_types::runtime_args! {
-        //                 "new_value" => 1000u32
-        //             }
-        //         )
-        //     ]
-        //     .into()
-        // };
+        factory.batch_upgrade_child_contract(
+            Bytes::from(
+                runtime_args! {
+                    "new_value" => 42u32
+                }
+                .to_bytes()
+                .expect("Failed to serialize runtime args for default_args")
+            ),
+            Bytes::from(
+                vec![
+                    "FromTwo".to_string(),
+                    "FromThree".to_string(),
+                    "FromHundred".to_string(),
+                ]
+                .to_bytes()
+                .expect("Failed to serialize runtime args for names_to_upgrade")
+            ),
+            Bytes::from(
+                BTreeMap::from([(
+                    "FromHundred".to_string(),
+                    runtime_args! {
+                        "new_value" => 1000u32
+                    }
+                )])
+                .to_bytes()
+                .expect("Failed to serialize runtime args for specific_args")
+            )
+        );
 
         assert_eq!(CounterHostRef::new(ten_address, env.clone()).value(), 122);
-        assert_eq!(CounterHostRef::new(two_address, env.clone()).value(), 11);
-        // assert_eq!(
-        //     CounterHostRef::new(from_three_address, env.clone()).value(),
-        //     42
-        // );
-        // assert_eq!(
-        //     CounterHostRef::new(from_hundred_address, env.clone()).value(),
-        //     1000
-        // );
+        assert_eq!(CounterHostRef::new(two_address, env.clone()).value(), 42);
+        assert_eq!(CounterHostRef::new(three_address, env.clone()).value(), 42);
+        assert_eq!(
+            CounterHostRef::new(hundred_address, env.clone()).value(),
+            1000
+        );
     }
 }

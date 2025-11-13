@@ -181,11 +181,8 @@ mod test {
                             name: odra::prelude::string::String::from("batch_upgrade_child_contract"),
                             args: odra::prelude::vec![
                                 odra::args::odra_argument::<odra::casper_types::bytesrepr::Bytes>("default_args"),
-                                odra::args::odra_argument::<odra::prelude::vec::Vec<odra::prelude::string::String> >("names_to_upgrade"),
-                                odra::args::odra_argument::<odra::prelude::BTreeMap<
-                                    odra::prelude::string::String,
-                                    odra::casper_types::bytesrepr::Bytes
-                                > >("specific_args")
+                                odra::args::odra_argument::<odra::casper_types::bytesrepr::Bytes>("names_to_upgrade"),
+                                odra::args::odra_argument::<odra::casper_types::bytesrepr::Bytes>("specific_args")
                             ],
                             is_mutable: true,
                             return_ty: <() as odra::casper_types::CLTyped>::cl_type(),

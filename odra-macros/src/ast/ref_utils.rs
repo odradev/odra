@@ -108,22 +108,20 @@ fn factory_call_def_with_amount(fun: &FnIR) -> syn::Expr {
     let package_hash_arg = match fun.fn_type() {
         FnType::FactoryUpgrader =>  quote::quote! {
             let _ = #args.insert("odra_cfg_is_factory_upgrade", true);
-            let _ = named_args.insert("odra_cfg_package_hash_key_name", contract_name);
-            let _ = named_args.insert("odra_cfg_allow_key_override", true);
-            let _ = named_args.insert("odra_cfg_create_upgrade_group", false);
+            let _ = #args.insert("odra_cfg_allow_key_override", true);
+            let _ = #args.insert("odra_cfg_create_upgrade_group", false);
 
         },
         FnType::FactoryBatchUpgrader =>  quote::quote! {
             let _ = #args.insert("odra_cfg_is_factory_upgrade", true);
-            let _ = named_args.insert("odra_cfg_allow_key_override", true);
-            let _ = named_args.insert("odra_cfg_create_upgrade_group", false);
+            let _ = #args.insert("odra_cfg_allow_key_override", true);
+            let _ = #args.insert("odra_cfg_create_upgrade_group", false);
         },
         _ => quote::quote! {
             let _ = #args.insert("odra_cfg_is_upgradable", true);
-            let _ = named_args.insert("odra_cfg_is_upgrade", false);
-            let _ = named_args.insert("odra_cfg_allow_key_override", true);
-            // let _ = named_args.insert("odra_cfg_create_upgrade_group", false);
-            let _ = named_args.insert("odra_cfg_package_hash_key_name", contract_name);
+            let _ = #args.insert("odra_cfg_is_upgrade", false);
+            let _ = #args.insert("odra_cfg_allow_key_override", true);
+            let _ = #args.insert("odra_cfg_package_hash_key_name", contract_name);
         }
     };
     syn::parse_quote!(#ty_call_def::new(#fun_name, #is_mut, {
