@@ -160,6 +160,26 @@ mod test {
                                 }
                                 odra::args::EntrypointArgument::insert_runtime_arg(contract_name.clone(), "contract_name", &mut named_args);
                                 odra::args::EntrypointArgument::insert_runtime_arg(value.clone(), "value", &mut named_args);
+                                odra::args::EntrypointArgument::insert_runtime_arg(
+                                    true,
+                                    "odra_cfg_is_upgradable",
+                                    &mut named_args,
+                                );
+                                odra::args::EntrypointArgument::insert_runtime_arg(
+                                    false,
+                                    "odra_cfg_is_upgrade",
+                                    &mut named_args,
+                                );
+                                odra::args::EntrypointArgument::insert_runtime_arg(
+                                    true,
+                                    "odra_cfg_allow_key_override",
+                                    &mut named_args,
+                                );
+                                odra::args::EntrypointArgument::insert_runtime_arg(
+                                    contract_name,
+                                    "odra_cfg_package_hash_key_name",
+                                    &mut named_args,
+                                );
                                 named_args
                             }
                         )

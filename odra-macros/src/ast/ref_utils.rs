@@ -169,10 +169,23 @@ fn runtime_args_with_amount_block<F: FnMut(&FnArgIR) -> syn::Stmt>(
     let insert_amount = insert_amount_arg_stmt();
     let insert_args = fn_utils::insert_args_stmts(fun, insert_arg_fn);
 
+    let cfg_args = if fun.is_factory() {
+        let ty = ty::entry_point_arg();
+        quote::quote! {
+            #ty::insert_runtime_arg(true, "odra_cfg_is_upgradable", &mut #args);
+            #ty::insert_runtime_arg(false, "odra_cfg_is_upgrade", &mut #args);
+            #ty::insert_runtime_arg(true, "odra_cfg_allow_key_override", &mut #args);
+            #ty::insert_runtime_arg(contract_name, "odra_cfg_package_hash_key_name", &mut #args);
+        }
+    } else {
+        quote::quote! {}
+    };
+
     syn::parse_quote!({
         let mut #args = #runtime_args;
         #insert_amount
         #(#insert_args)*
+        #cfg_args
         #args
     })
 }

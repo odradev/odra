@@ -9,7 +9,7 @@
 
 use crate::consts::{self, FACTORY_GROUP_NAME};
 use crate::consts::{CONSTRUCTOR_GROUP_NAME, NATIVE_EVENT_TOPIC, UPGRADER_GROUP_NAME};
-use casper_contract::contract_api::runtime::emit_message;
+use casper_contract::contract_api::runtime::{emit_message, get_immediate_caller};
 use casper_contract::contract_api::storage;
 use casper_contract::contract_api::system;
 use casper_contract::ext_ffi::{casper_emit_message, casper_remove_contract_user_group_urefs};
@@ -48,6 +48,7 @@ use odra_core::consts::{
     ALLOW_KEY_OVERRIDE_ARG, CREATE_UPGRADE_GROUP, IS_FACTORY_UPGRADE_ARG, IS_UPGRADABLE_ARG,
     IS_UPGRADE_ARG, PACKAGE_HASH_KEY_NAME_ARG, PACKAGE_HASH_TO_UPGRADE_ARG, RANDOM_BYTES_COUNT
 };
+use odra_core::prelude::ExecutionError::{CannotExtractCallerInfo, CannotGetAnImmediateCaller};
 use odra_core::validator::ValidatorInfo;
 use odra_core::{args, prelude::*, CallDef};
 use odra_core::{
@@ -560,12 +561,11 @@ pub fn emit_native_event(event: &Bytes) {
 /// Gets the immediate session caller of the current execution.
 #[inline(always)]
 pub fn caller() -> OdraResult<Address> {
-    let elem = if unsafe { CALLER_OVERRIDE } {
-        take_nth_caller_from_stack(2)
+    let caller = if unsafe { CALLER_OVERRIDE } {
+        caller_info_to_caller(take_nth_caller_from_stack(2))?
     } else {
-        take_nth_caller_from_stack(1)
+        caller_info_to_caller(get_immediate_caller().unwrap_or_revert())?
     };
-    let caller = caller_info_to_caller(elem)?;
     Ok(Address::from(caller))
 }
 
