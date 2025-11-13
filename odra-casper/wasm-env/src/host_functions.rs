@@ -111,7 +111,7 @@ pub fn install_new_contract(
         .map(|ep| *ep.access() != EntryPointAccess::Template)
         .unwrap_or_default();
     let is_factory = entry_points.has_entry_point("new_contract");
-    
+
     // Prepare named keys.
     let named_keys = initial_named_keys(events);
 
@@ -165,8 +165,12 @@ pub fn install_new_contract(
     .unwrap_or_revert();
 
     if is_factory {
-        let factory_group_uref = create_contract_user_group(contract_package_hash, FACTORY_GROUP_NAME);
-        runtime::put_key(&format!("{}_factory_access", package_hash_key_name), Key::URef(factory_group_uref));
+        let factory_group_uref =
+            create_contract_user_group(contract_package_hash, FACTORY_GROUP_NAME);
+        runtime::put_key(
+            &format!("{}_factory_access", package_hash_key_name),
+            Key::URef(factory_group_uref)
+        );
         return (contract_package_hash, factory_group_uref);
     }
 
@@ -212,9 +216,15 @@ pub fn upgrade_contract(
             .get(PACKAGE_HASH_KEY_NAME_ARG)
             .cloned()
             .unwrap_or_revert();
-        (package_hash_to_upgrade.into_t().unwrap_or_revert(), new_package_hash_key.into_t().unwrap_or_revert())
+        (
+            package_hash_to_upgrade.into_t().unwrap_or_revert(),
+            new_package_hash_key.into_t().unwrap_or_revert()
+        )
     } else {
-        (runtime::get_named_arg::<HashAddr>(PACKAGE_HASH_TO_UPGRADE_ARG), runtime::get_named_arg::<String>(PACKAGE_HASH_KEY_NAME_ARG))
+        (
+            runtime::get_named_arg::<HashAddr>(PACKAGE_HASH_TO_UPGRADE_ARG),
+            runtime::get_named_arg::<String>(PACKAGE_HASH_KEY_NAME_ARG)
+        )
     };
     let allow_key_override: bool = runtime::get_named_arg(ALLOW_KEY_OVERRIDE_ARG);
     let create_user_group: bool = runtime::get_named_arg(CREATE_UPGRADE_GROUP);
