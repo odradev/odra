@@ -410,7 +410,7 @@ impl ModuleImplIR {
             .collect::<syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma>>()
     }
 
-    pub fn upgrader_args(&self) -> syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma> {
+    fn upgrader_args(&self) -> syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma> {
         self.upgrader()
             .map(|fn_ir| fn_ir.named_args())
             .unwrap_or_default()

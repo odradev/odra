@@ -3,8 +3,9 @@ use odra_modules::{access::Ownable, cep18_token::Cep18};
 
 #[odra::module(factory=on)]
 pub struct FToken {
-    /// The initial value for the counter.
+    /// The CEP-18 token submodule
     token: SubModule<Cep18>,
+    /// The Ownable submodule
     ownable: SubModule<Ownable>
 }
 
