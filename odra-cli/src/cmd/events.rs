@@ -48,7 +48,7 @@ impl OdraCommand for PrintEventsCmd {
         env: &HostEnv,
         args: &ArgMatches,
         types: &CustomTypeSet,
-        container: &DeployedContractsContainer
+        container: &mut DeployedContractsContainer
     ) -> Result<()> {
         let (subcmd, args) = args.subcommand().ok_or(EventError::ContractNotFound)?;
         if let Some(cmd) = self.subcommands.iter().find(|c| c.contract_name == subcmd) {
@@ -86,7 +86,7 @@ impl OdraCommand for PrintContractEventsCmd {
         env: &HostEnv,
         args: &ArgMatches,
         types: &CustomTypeSet,
-        container: &DeployedContractsContainer
+        container: &mut DeployedContractsContainer
     ) -> Result<()> {
         // Ensure the host environment is set up to capture events.
         env.set_captures_events(true);

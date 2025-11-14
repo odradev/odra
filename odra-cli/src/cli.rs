@@ -186,10 +186,12 @@ impl OdraCli {
                     std::process::exit(1);
                 })
                 .run(&self.host_env, &args, &self.custom_types, &mut container),
-            CONTRACTS_SUBCOMMAND => self.run_command(&self.contracts_cmd, args, &container),
-            PRINT_EVENTS_SUBCOMMAND => self.run_command(&self.print_events_cmd, args, &container),
-            SCENARIOS_SUBCOMMAND => self.run_command(&self.scenarios_cmd, args, &container),
-            WHOAMI_SUBCOMMAND => self.run_command(&self.whoami_cmd, args, &container),
+            CONTRACTS_SUBCOMMAND => self.run_command(&self.contracts_cmd, args, &mut container),
+            PRINT_EVENTS_SUBCOMMAND => {
+                self.run_command(&self.print_events_cmd, args, &mut container)
+            }
+            SCENARIOS_SUBCOMMAND => self.run_command(&self.scenarios_cmd, args, &mut container),
+            WHOAMI_SUBCOMMAND => self.run_command(&self.whoami_cmd, args, &mut container),
             _ => unreachable!()
         };
 
@@ -203,7 +205,7 @@ impl OdraCli {
         &self,
         cmd: &T,
         args: ArgMatches,
-        container: &DeployedContractsContainer
+        container: &mut DeployedContractsContainer
     ) -> Result<()> {
         cmd.run(&self.host_env, &args, &self.custom_types, container)
     }

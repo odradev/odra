@@ -43,7 +43,7 @@ impl OdraCommand for ContractsCmd {
         env: &HostEnv,
         args: &ArgMatches,
         types: &CustomTypeSet,
-        container: &DeployedContractsContainer
+        container: &mut DeployedContractsContainer
     ) -> Result<()> {
         args.subcommand()
             .map(|(contract_name, contract_args)| {
@@ -105,7 +105,7 @@ impl OdraCommand for ContractCmd {
         env: &HostEnv,
         args: &ArgMatches,
         types: &CustomTypeSet,
-        container: &DeployedContractsContainer
+        container: &mut DeployedContractsContainer
     ) -> Result<()> {
         args.subcommand()
             .map(|(entrypoint_name, entrypoint_args)| {
@@ -171,7 +171,7 @@ impl OdraCommand for CallCmd {
         env: &HostEnv,
         args: &ArgMatches,
         types: &CustomTypeSet,
-        container: &DeployedContractsContainer
+        container: &mut DeployedContractsContainer
     ) -> Result<()> {
         let entry_point = &self.entry_point;
         let contract_name = &self.package_name;
@@ -191,7 +191,7 @@ impl OdraCommand for CallCmd {
         _env: &HostEnv,
         args: &ArgMatches,
         _types: &CustomTypeSet,
-        _container: &DeployedContractsContainer
+        _container: &mut DeployedContractsContainer
     ) -> Result<()> {
         for a in &self.entry_point.arguments {
             if !args.contains_id(&a.name) {
@@ -357,8 +357,8 @@ mod tests {
         let clap_cmd: Command = (&cmd).into();
         let args = clap_cmd.get_matches_from(vec!["test", "add", "--x", "5", "--y", "10"]);
         let env = test_utils::mock_host_env();
-        let container = test_utils::mock_contracts_container();
-        let result = cmd.run(&env, &args, &CustomTypeSet::new(), &container);
+        let mut container = test_utils::mock_contracts_container();
+        let result = cmd.run(&env, &args, &CustomTypeSet::new(), &mut container);
         assert!(result.is_ok());
     }
 
