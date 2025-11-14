@@ -1,4 +1,4 @@
-use benchmark::benchmark::{Benchmark, StructVariable};
+use benchmark::benchmark::{Benchmark, BenchmarkFactory, StructVariable};
 use odra::host::{Deployer, HostRef, NoArgs};
 use odra_test::env;
 use std::fs;
@@ -43,6 +43,9 @@ pub fn main() {
     // Dictionary
     contract.set_dictionary("My key".to_string(), 42.into());
     assert_eq!(contract.get_dictionary("My key".to_string()), 42.into());
+
+    let mut factory_contract = BenchmarkFactory::deploy(&env, NoArgs);
+    let _ = factory_contract.new_contract("BenchmarkInstance1".to_string());
 
     // convert gas_report to json and dump it into a file
     let gas_report = env.gas_report();

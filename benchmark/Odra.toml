@@ -1,2 +1,5 @@
 [[contracts]]
 fqn = "benchmark::Benchmark"
+
+[[contracts]]
+fqn = "benchmark::BenchmarkFactory"

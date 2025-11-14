@@ -4,7 +4,7 @@ use odra::prelude::*;
 use odra_modules::erc20::Erc20;
 
 /// Contract designed to benchmark the Odra framework.
-#[odra::module]
+#[odra::module(factory=on)]
 pub struct Benchmark {
     variable: Var<bool>,
     struct_variable: Var<StructVariable>,
@@ -15,7 +15,7 @@ pub struct Benchmark {
     dictionary: SubModule<DictionaryStorage>
 }
 
-#[odra::module]
+#[odra::module(factory=on)]
 impl Benchmark {
     pub fn init(&mut self) {
         self.variable.set(false);
