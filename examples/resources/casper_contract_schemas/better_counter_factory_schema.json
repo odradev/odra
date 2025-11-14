@@ -4,12 +4,12 @@
   "authors": [],
   "repository": null,
   "homepage": null,
-  "contract_name": "CounterFactory",
+  "contract_name": "BetterCounterFactory",
   "contract_version": "2.4.1",
   "types": [
     {
       "struct": {
-        "name": "CounterFactoryContractDeployed",
+        "name": "BetterCounterFactoryContractDeployed",
         "description": null,
         "members": [
           {
@@ -65,6 +65,12 @@
           "description": null,
           "ty": "String",
           "optional": false
+        },
+        {
+          "name": "new_value",
+          "description": null,
+          "ty": "U32",
+          "optional": false
         }
       ],
       "return_ty": "Unit",
@@ -108,12 +114,12 @@
   ],
   "events": [
     {
-      "name": "CounterFactoryContractDeployed",
-      "ty": "CounterFactoryContractDeployed"
+      "name": "BetterCounterFactoryContractDeployed",
+      "ty": "BetterCounterFactoryContractDeployed"
     }
   ],
   "call": {
-    "wasm_file_name": "CounterFactory.wasm",
+    "wasm_file_name": "BetterCounterFactory.wasm",
     "description": "",
     "arguments": [
       {

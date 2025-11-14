@@ -1,8 +1,8 @@
 {
-  "name": "CounterFactory",
+  "name": "FTokenFactory",
   "events": [
     {
-      "name": "CounterFactoryContractDeployed",
+      "name": "FTokenFactoryContractDeployed",
       "args": [
         {
           "name": "contract_name",
@@ -41,8 +41,29 @@
           "is_required": true
         },
         {
-          "name": "value",
-          "ty": "U32",
+          "name": "name",
+          "ty": "String",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "symbol",
+          "ty": "String",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "decimals",
+          "ty": "U8",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "initial_supply",
+          "ty": "U256",
           "is_ref": false,
           "is_slice": false,
           "is_required": true

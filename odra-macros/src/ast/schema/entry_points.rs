@@ -42,7 +42,7 @@ impl TryFrom<&ModuleImplIR> for FactorySchemaEntrypointsItem {
                     };
                     FnIR::Def(FnTraitIR::new(parse_quote!(#argless_sig;)))
                 })
-                .chain(vec![module.factory_fn()])
+                .chain(vec![module.factory_fn(), module.factory_upgrade_fn(), module.factory_batch_upgrade_fn()])
                 .collect()
         };
         Ok(Self {
@@ -307,6 +307,24 @@ mod test {
                             odra::prelude::vec![
                                 odra::schema::argument::<odra::prelude::string::String>("contract_name"),
                                 odra::schema::argument::<u32>("value")
+                            ]
+                        ),
+                        odra::schema::entry_point::<()>(
+                            "upgrade_child_contract",
+                            "", 
+                            true, 
+                            odra::prelude::vec![
+                                odra::schema::argument::<odra::prelude::string::String>("contract_name")
+                            ]
+                        ),
+                        odra::schema::entry_point::<()>(
+                            "batch_upgrade_child_contract",
+                            "", 
+                            true, 
+                            odra::prelude::vec![
+                                odra::schema::argument::<odra::casper_types::bytesrepr::Bytes>("default_args"),
+                                odra::schema::argument::<odra::casper_types::bytesrepr::Bytes>("names_to_upgrade"),
+                                odra::schema::argument::<odra::casper_types::bytesrepr::Bytes>("specific_args")
                             ]
                         )
                     ]

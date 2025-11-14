@@ -757,6 +757,24 @@ mod test {
                             odra::schema::argument::<odra::prelude::string::String>("contract_name"),
                             odra::schema::argument::<u32>("value")
                         ]
+                    ),
+                    odra::schema::entry_point::<()>(
+                        "upgrade_child_contract",
+                        "", 
+                        true, 
+                        odra::prelude::vec![
+                            odra::schema::argument::<odra::prelude::string::String>("contract_name")
+                        ]
+                    ),
+                    odra::schema::entry_point::<()>(
+                        "batch_upgrade_child_contract",
+                        "", 
+                        true, 
+                        odra::prelude::vec![
+                            odra::schema::argument::<odra::casper_types::bytesrepr::Bytes>("default_args"),
+                            odra::schema::argument::<odra::casper_types::bytesrepr::Bytes>("names_to_upgrade"),
+                            odra::schema::argument::<odra::casper_types::bytesrepr::Bytes>("specific_args")
+                        ]
                     )
                 ]
             }
