@@ -44,7 +44,7 @@ impl Scenario for DogCheckScenario {
     fn run(
         &self,
         env: &HostEnv,
-        container: &mut DeployedContractsContainer,
+        container: &DeployedContractsContainer,
         args: Args
     ) -> Result<(), Error> {
         let dog_contract = container.contract_ref::<DogContract>(env)?;

@@ -158,6 +158,7 @@ impl OdraCli {
         let mut container = DeployedContractsContainer::instance(storage);
 
         // Register the contracts from the container in the host environment.
+        // Only register contracts that have callers (were added via .contract::<T>() in the builder).
         for deployed_contract in container.all_contracts() {
             let caller = self.callers.get(&(deployed_contract.name(), deployed_contract.key_name())).unwrap_or_else(|| {
                 let path = match &contracts_path {
@@ -186,12 +187,10 @@ impl OdraCli {
                     std::process::exit(1);
                 })
                 .run(&self.host_env, &args, &self.custom_types, &mut container),
-            CONTRACTS_SUBCOMMAND => self.run_command(&self.contracts_cmd, args, &mut container),
-            PRINT_EVENTS_SUBCOMMAND => {
-                self.run_command(&self.print_events_cmd, args, &mut container)
-            }
-            SCENARIOS_SUBCOMMAND => self.run_command(&self.scenarios_cmd, args, &mut container),
-            WHOAMI_SUBCOMMAND => self.run_command(&self.whoami_cmd, args, &mut container),
+            CONTRACTS_SUBCOMMAND => self.run_command(&self.contracts_cmd, args, &container),
+            PRINT_EVENTS_SUBCOMMAND => self.run_command(&self.print_events_cmd, args, &container),
+            SCENARIOS_SUBCOMMAND => self.run_command(&self.scenarios_cmd, args, &container),
+            WHOAMI_SUBCOMMAND => self.run_command(&self.whoami_cmd, args, &container),
             _ => unreachable!()
         };
 
@@ -205,7 +204,7 @@ impl OdraCli {
         &self,
         cmd: &T,
         args: ArgMatches,
-        container: &mut DeployedContractsContainer
+        container: &DeployedContractsContainer
     ) -> Result<()> {
         cmd.run(&self.host_env, &args, &self.custom_types, container)
     }

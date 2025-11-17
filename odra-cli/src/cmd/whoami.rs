@@ -21,7 +21,7 @@ impl OdraCommand for WhoamiCmd {
         env: &HostEnv,
         _args: &ArgMatches,
         _types: &CustomTypeSet,
-        _container: &mut DeployedContractsContainer
+        _container: &DeployedContractsContainer
     ) -> Result<()> {
         let caller = env.caller();
         prettycli::info(&format!("Address: {:?}", caller));

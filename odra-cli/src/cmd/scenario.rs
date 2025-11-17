@@ -25,7 +25,7 @@ pub trait Scenario: Any {
     fn run(
         &self,
         env: &HostEnv,
-        container: &mut DeployedContractsContainer,
+        container: &DeployedContractsContainer,
         args: ScenarioArgs
     ) -> core::result::Result<(), ScenarioError>;
 }
@@ -47,7 +47,7 @@ impl OdraCommand for ScenariosCmd {
         env: &HostEnv,
         args: &ArgMatches,
         types: &CustomTypeSet,
-        container: &mut DeployedContractsContainer
+        container: &DeployedContractsContainer
     ) -> Result<()> {
         args.subcommand()
             .map(|(scenario_name, scenario_args)| {
@@ -97,7 +97,7 @@ impl OdraCommand for ScenarioCmd {
         env: &HostEnv,
         args: &ArgMatches,
         _types: &CustomTypeSet,
-        container: &mut DeployedContractsContainer
+        container: &DeployedContractsContainer
     ) -> Result<()> {
         let args = ScenarioArgs::new(args);
         env.set_captures_events(false);
@@ -217,7 +217,7 @@ mod tests {
         fn run(
             &self,
             _env: &HostEnv,
-            _container: &mut DeployedContractsContainer,
+            _container: &DeployedContractsContainer,
             args: ScenarioArgs
         ) -> core::result::Result<(), ScenarioError> {
             _ = args.get_single::<u32>("arg1")?;
@@ -401,8 +401,8 @@ mod tests {
             .unwrap();
 
         let env = test_utils::mock_host_env();
-        let mut container = test_utils::mock_contracts_container();
-        let result = scenario.run(&env, &matches, &CustomTypeSet::default(), &mut container);
+        let container = test_utils::mock_contracts_container();
+        let result = scenario.run(&env, &matches, &CustomTypeSet::default(), &container);
         assert!(result.is_ok());
     }
 

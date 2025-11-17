@@ -34,7 +34,7 @@ pub(crate) trait OdraCommand {
         env: &HostEnv,
         args: &ArgMatches,
         types: &CustomTypeSet,
-        container: &mut DeployedContractsContainer
+        container: &DeployedContractsContainer
     ) -> Result<()>;
 }
 
