@@ -59,7 +59,7 @@ mod tests {
                 counter2: SubModule<Counter>,
                 counters: Var<u32>,
                 counters_map: Mapping<u8, Counter>,
-                __env: Rc<odra::ContractEnv>
+                __env: odra::prelude::Rc<odra::ContractEnv>
             }
         };
 
@@ -72,7 +72,7 @@ mod tests {
         let def = ModuleDefItem::try_from(&ir).unwrap();
         let expected = quote::quote! {
             pub struct CounterPack {
-                __env: Rc<odra::ContractEnv>
+                __env: odra::prelude::Rc<odra::ContractEnv>
             }
         };
         assert_eq(def, expected);

@@ -163,7 +163,7 @@ mod test {
                                 odra::args::odra_argument::<u32>("value")
                             ],
                             is_mutable: true,
-                            return_ty: <(Address, odra::casper_types::URef) as odra::casper_types::CLTyped>::cl_type(),
+                            return_ty: <(odra::prelude::Address, odra::casper_types::URef) as odra::casper_types::CLTyped>::cl_type(),
                             ty: odra::contract_def::EntrypointType::Public,
                             attributes: odra::prelude::vec![]
                         }

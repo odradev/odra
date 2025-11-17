@@ -89,13 +89,17 @@ pub fn odra_error(_attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn external_contract(attr: TokenStream, item: TokenStream) -> TokenStream {
     let attr: TokenStream2 = attr.into();
     let item: TokenStream2 = item.into();
-    if let Ok(ir) = ModuleImplIR::try_from((&attr, &item)) {
-        return ExternalContractImpl::try_from(&ir).into_code();
+
+    if syn::parse2::<syn::ItemImpl>(item.clone()).is_ok() {
+        return span_error!(
+            attr,
+            "#[external_contract] can be only applied to trait only"
+        );
     }
-    span_error!(
-        item,
-        "#[external_contract] can be only applied to trait only"
-    )
+    match ModuleImplIR::try_from((&attr, &item)) {
+        Ok(ir) => ExternalContractImpl::try_from(&ir).into_code(),
+        Err(e) => e.to_compile_error().into()
+    }
 }
 
 /// This macro is used to implement the boilerplate code for the event and contract schema.

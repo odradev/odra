@@ -73,13 +73,13 @@ mod test {
 
                 /// [Erc20Factory] Host Ref.
                 pub struct Erc20FactoryHostRef {
-                    address: Address,
+                    address: odra::prelude::Address,
                     env: odra::host::HostEnv,
                     attached_value: odra::casper_types::U512
                 }
 
                 impl odra::host::HostRef for Erc20FactoryHostRef {
-                    fn new(address: Address, env: odra::host::HostEnv) -> Self {
+                    fn new(address: odra::prelude::Address, env: odra::host::HostEnv) -> Self {
                         Self {
                             address,
                             env,
@@ -95,7 +95,7 @@ mod test {
                         }
                     }
 
-                    fn contract_address(&self) -> Address {
+                    fn contract_address(&self) -> odra::prelude::Address {
                         self.address
                     }
 
@@ -116,14 +116,14 @@ mod test {
                 }
 
                 impl Erc20FactoryHostRef {
-                    pub fn factory(&mut self, contract_name: String, value: u32) -> (Address, odra::casper_types::URef) {
+                    pub fn factory(&mut self, contract_name: String, value: u32) -> (odra::prelude::Address, odra::casper_types::URef) {
                         self.try_factory(contract_name, value).unwrap()
                     }
                 }
 
                 impl Erc20FactoryHostRef {
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_factory(&mut self, contract_name: String, value: u32) -> OdraResult<(Address, odra::casper_types::URef)> {
+                    pub fn try_factory(&mut self, contract_name: String, value: u32) -> OdraResult<(odra::prelude::Address, odra::casper_types::URef)> {
                         self.env
                             .call_contract(
                                 self.address,
