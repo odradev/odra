@@ -2,7 +2,6 @@ use casper_types::bytesrepr::FromBytes;
 use casper_types::StoredValue::CLValue;
 use casper_types::{CLTyped, StoredValue};
 use odra_core::prelude::{ExecutionError, OdraError, OdraResult};
-use serde_json::Value;
 use std::path::{self, PathBuf};
 
 /// Search for the wasm file in the current directory and in the parent directory.
@@ -59,24 +58,6 @@ pub fn get_env_variable(name: &str) -> String {
 /// Gets an optional env variable
 pub fn get_optional_env_variable(name: &str) -> Option<String> {
     std::env::var(name).ok()
-}
-
-/// Converts RuntimeArgs into Vec<String> compatible with rustSDK
-pub fn runtime_args_to_simple_args(runtime_args: &casper_types::RuntimeArgs) -> Vec<String> {
-    runtime_args
-        .named_args()
-        .map(|named_arg| {
-            let value = serde_json::to_string(&named_arg.cl_value()).unwrap();
-            let json: Value = serde_json::from_str(&value).unwrap();
-            let value = json.get("parsed").unwrap().to_string();
-            format!(
-                "{}:{}='{}'",
-                named_arg.name(),
-                named_arg.cl_value().cl_type(),
-                value,
-            )
-        })
-        .collect()
 }
 
 pub fn extract_stored_value<T: CLTyped + FromBytes>(value: StoredValue) -> T {

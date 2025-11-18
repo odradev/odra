@@ -12,13 +12,16 @@ use std::time::{Duration, Instant};
 /// Watches for transaction processed events in an SSE stream.
 pub struct TransactionWatcher {
     events_url: String,
-    timeout: Duration,
+    timeout: Duration
 }
 
 impl TransactionWatcher {
     /// Creates a new transaction watcher.
     pub fn new(events_url: String, timeout: Duration) -> Self {
-        Self { events_url, timeout }
+        Self {
+            events_url,
+            timeout
+        }
     }
 
     /// Waits for a transaction to be processed by monitoring the events stream.
@@ -27,7 +30,7 @@ impl TransactionWatcher {
     /// `Ok(false)` if the stream ended without finding it, or an error on timeout or connection failure.
     pub async fn wait_for_transaction_hash(
         &self,
-        transaction_hash: &str,
+        transaction_hash: &str
     ) -> Result<bool, LivenetError> {
         log::wait(format!(
             "Waiting for transaction {:?} to be processed.",
@@ -48,13 +51,14 @@ impl TransactionWatcher {
             )));
         }
 
-        self.process_stream(response.bytes_stream(), transaction_hash).await
+        self.process_stream(response.bytes_stream(), transaction_hash)
+            .await
     }
 
     async fn process_stream(
         &self,
         mut stream: impl futures_util::Stream<Item = Result<Bytes, reqwest::Error>> + Unpin,
-        transaction_hash: &str,
+        transaction_hash: &str
     ) -> Result<bool, LivenetError> {
         let start_time = Instant::now();
         let mut buffer = Vec::new();
@@ -65,7 +69,7 @@ impl TransactionWatcher {
             let elapsed = start_time.elapsed();
             if elapsed >= self.timeout {
                 return Err(ExecutionError(String::from(
-                    "Timeout waiting for transaction to be processed.",
+                    "Timeout waiting for transaction to be processed."
                 )));
             }
             let remaining_duration = self.timeout.saturating_sub(elapsed);
@@ -82,7 +86,7 @@ impl TransactionWatcher {
                 Err(_) => {
                     // Timeout occurred
                     return Err(ExecutionError(String::from(
-                        "Timeout waiting for transaction to be processed.",
+                        "Timeout waiting for transaction to be processed."
                     )));
                 }
             };
@@ -95,7 +99,7 @@ impl TransactionWatcher {
                 let line = buffer.drain(..=newline_pos).collect::<Vec<_>>();
                 let line_str = match std::str::from_utf8(&line) {
                     Ok(s) => s.trim(),
-                    Err(_) => continue,
+                    Err(_) => continue
                 };
 
                 // Blank line separates SSE events - process accumulated data lines
@@ -123,7 +127,7 @@ impl TransactionWatcher {
     fn process_event(
         &self,
         event_data_lines: &[String],
-        transaction_hash: &str,
+        transaction_hash: &str
     ) -> Result<bool, LivenetError> {
         // Join all accumulated data lines and parse as single JSON
         let json_str = event_data_lines.join("\n");
@@ -153,7 +157,7 @@ impl TransactionWatcher {
     fn process_remaining_data(
         &self,
         event_data_lines: Vec<String>,
-        transaction_hash: &str,
+        transaction_hash: &str
     ) -> Result<bool, LivenetError> {
         if event_data_lines.is_empty() {
             return Ok(false);
@@ -162,4 +166,3 @@ impl TransactionWatcher {
         self.process_event(&event_data_lines, transaction_hash)
     }
 }
-
