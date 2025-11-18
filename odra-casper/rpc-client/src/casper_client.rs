@@ -31,7 +31,6 @@ use casper_types::{
     TransactionRuntimeParams, TransferTarget, URef, U512
 };
 use casper_types::{DeployHash, StoredValue, Timestamp};
-use futures_util::StreamExt;
 use odra_core::casper_event_standard::EVENTS_LENGTH;
 use odra_core::consts::{
     AMOUNT_ARG, ARGS_ARG, ATTACHED_VALUE_ARG, CONTRACT_MAIN_PURSE, ENTRY_POINT_ARG, EVENTS,
@@ -40,11 +39,12 @@ use odra_core::consts::{
 use odra_core::prelude::*;
 use odra_core::CallDef;
 use rand::random;
-use serde_json::Value as JsonValue;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use toml::Value;
+use crate::casper_client::transaction_watcher::TransactionWatcher;
 
 pub mod configuration;
+mod transaction_watcher;
 
 /// Environment variable holding a path to a secret key of a main account.
 pub const ENV_SECRET_KEY: &str = "ODRA_CASPER_LIVENET_SECRET_KEY_PATH";
@@ -772,105 +772,52 @@ impl CasperClient {
         transaction_hash: TransactionHash
     ) -> Result<ExecutionResult> {
         let transaction_hash_str = transaction_hash.to_hex_string();
-        let events_url = &self.configuration.events_url;
         let timeout = Duration::from_secs(TRANSACTION_WAIT_TIME * TRANSACTION_MAX_RETRIES);
-        let start_time = Instant::now();
 
-        log::wait(format!(
-            "Waiting for transaction {:?} to be processed.",
-            &transaction_hash_str
-        ));
+        // Use TransactionWatcher to monitor events stream
+        let watcher = TransactionWatcher::new(
+            self.configuration.events_url.clone(),
+            timeout
+        );
 
-        let client = reqwest::Client::new();
-        let response = client
-            .get(events_url)
-            .send()
-            .await
-            .map_err(|e| ClientError(format!("Failed to connect to events stream: {}", e)))?;
-
-        if !response.status().is_success() {
-            return Err(ClientError(format!(
-                "Events stream returned status: {}",
-                response.status()
+        // Wait for the transaction to appear in the events stream
+        let found = watcher.wait_for_transaction_hash(&transaction_hash_str).await?;
+        
+        if !found {
+            return Err(ExecutionError(String::from(
+                "Events stream ended before transaction was processed."
             )));
         }
 
-        let mut buffer = Vec::new();
-        let mut stream = response.bytes_stream();
+        // Transaction found! Fetch the execution result
+        self.fetch_execution_result(transaction_hash).await
+    }
 
-        while let Some(chunk) = stream.next().await {
-            // Check timeout
-            if start_time.elapsed() > timeout {
-                return Err(ExecutionError(String::from(
-                    "Timeout waiting for transaction to be processed."
-                )));
+    /// Fetches the execution result for a transaction, with retry logic.
+    async fn fetch_execution_result(
+        &self,
+        transaction_hash: TransactionHash
+    ) -> Result<ExecutionResult> {
+        let transaction_info = self.get_transaction(transaction_hash).await;
+        
+        if let Some(deploy_info) = transaction_info.execution_info {
+            if let Some(execution_result) = deploy_info.execution_result {
+                return Ok(execution_result);
             }
+        }
 
-            let bytes = chunk.map_err(|e| ClientError(format!("Error reading stream: {}", e)))?;
-            buffer.extend_from_slice(&bytes);
-
-            // Process complete lines (SSE format: "data: ...\n")
-            while let Some(newline_pos) = buffer.iter().position(|&b| b == b'\n') {
-                let line = buffer.drain(..=newline_pos).collect::<Vec<_>>();
-                let line_str = match std::str::from_utf8(&line) {
-                    Ok(s) => s.trim(),
-                    Err(_) => continue
-                };
-
-                // Skip non-data lines
-                if !line_str.starts_with("data:") {
-                    continue;
-                }
-
-                // Extract JSON data after "data:"
-                let json_str = line_str.strip_prefix("data:").unwrap_or("").trim();
-                if json_str.is_empty() {
-                    continue;
-                }
-
-                // Parse and check for TransactionProcessed event
-                if let Ok(parsed) = serde_json::from_str::<JsonValue>(json_str) {
-                    if let Some(transaction_processed) = parsed.get("TransactionProcessed") {
-                        if let Some(hash_obj) = transaction_processed.get("transaction_hash") {
-                            let hash_str = hash_obj
-                                .get("Version1")
-                                .or_else(|| hash_obj.get("Deploy"))
-                                .and_then(|v| v.as_str());
-
-                            if let Some(hash) = hash_str {
-                                if hash == transaction_hash_str {
-                                    // Transaction found! Fetch the full result
-                                    let transaction_info =
-                                        self.get_transaction(transaction_hash).await;
-                                    if let Some(deploy_info) = transaction_info.execution_info {
-                                        if let Some(execution_result) = deploy_info.execution_result
-                                        {
-                                            return Ok(execution_result);
-                                        }
-                                    }
-                                    // If execution_info is not available yet, wait a bit and retry
-                                    tokio::time::sleep(Duration::from_millis(500)).await;
-                                    let transaction_info =
-                                        self.get_transaction(transaction_hash).await;
-                                    if let Some(deploy_info) = transaction_info.execution_info {
-                                        if let Some(execution_result) = deploy_info.execution_result
-                                        {
-                                            return Ok(execution_result);
-                                        }
-                                    }
-                                    return Err(ExecutionError(String::from(
-                                        "Transaction processed but execution result not available."
-                                    )));
-                                }
-                            }
-                        }
-                    }
-                }
+        // If execution_info is not available yet, wait a bit and retry
+        tokio::time::sleep(Duration::from_millis(500)).await;
+        let transaction_info = self.get_transaction(transaction_hash).await;
+        
+        if let Some(deploy_info) = transaction_info.execution_info {
+            if let Some(execution_result) = deploy_info.execution_result {
+                return Ok(execution_result);
             }
         }
 
         Err(ExecutionError(String::from(
-            "Events stream ended before transaction was processed."
+            "Transaction processed but execution result not available."
         )))
     }
 
