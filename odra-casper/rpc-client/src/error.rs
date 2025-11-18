@@ -24,7 +24,10 @@ impl LivenetError {
             LivenetError::RpcCommunicationFailure => "Livenet communication error".to_string(),
             LivenetError::ExecutionError(error_message) => error_message.to_string(),
             LivenetError::RpcRequestError(_, _) => self.to_string(),
-            _ => todo!()
+            LivenetError::SerializationError => self.to_string(),
+            LivenetError::BlockTimeError => self.to_string(),
+            LivenetError::ClientError(_) => self.to_string(),
+            LivenetError::DictQueryError => self.to_string()
         }
     }
 }
