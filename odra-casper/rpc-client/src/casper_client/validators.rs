@@ -31,13 +31,16 @@ impl super::CasperClient {
             .unwrap_or_else(|| panic!("Couldn't get auction state",))
             .validator_weights()
             .nth(index)
-            .unwrap()
+            .unwrap_or_else(|| panic!("Validator index {} out of bounds", index))
             .public_key();
         validator.clone()
     }
 
     pub async fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
-        let purse_uref = self.get_main_purse(&delegator).await;
+        let purse_uref = match self.get_main_purse(&delegator).await {
+            Ok(uref) => uref,
+            Err(_) => return U512::zero()
+        };
         let account_hash = validator.to_account_hash();
         let key = Key::BidAddr(BidAddr::DelegatedPurse {
             validator: account_hash,
@@ -74,9 +77,16 @@ impl super::CasperClient {
                 panic!("Couldn't get era_delay from chainspec");
             });
 
-        let era_duration = Self::era_duration(&chainspec);
+        let era_duration = Self::era_duration(&chainspec)
+            .unwrap_or_else(|e| panic!("Failed to get era_duration: {}", e));
 
-        era_duration * auction_delay.as_integer().unwrap() as u64
+        let auction_delay_int = auction_delay.as_integer().unwrap_or_else(|| {
+            panic!(
+                "auction_delay is not an integer in chainspec: {:?}",
+                auction_delay
+            )
+        });
+        era_duration * auction_delay_int as u64
     }
 
     pub async fn unbonding_delay(&self) -> u64 {
@@ -90,8 +100,15 @@ impl super::CasperClient {
                 panic!("Couldn't get unbonding_delay from chainspec");
             });
 
-        let era_duration = Self::era_duration(&chainspec);
+        let era_duration = Self::era_duration(&chainspec)
+            .unwrap_or_else(|e| panic!("Failed to get era_duration: {}", e));
 
-        unbonding_delay.as_integer().unwrap() as u64 * era_duration
+        let unbonding_delay_int = unbonding_delay.as_integer().unwrap_or_else(|| {
+            panic!(
+                "unbonding_delay is not an integer in chainspec: {:?}",
+                unbonding_delay
+            )
+        });
+        unbonding_delay_int as u64 * era_duration
     }
 }

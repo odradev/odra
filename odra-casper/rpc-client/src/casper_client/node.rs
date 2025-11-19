@@ -28,31 +28,31 @@ impl super::CasperClient {
     }
 
     /// Query the node for the current state root hash.
-    pub async fn get_state_root_hash(&self) -> String {
-        base16::encode_lower(&self.get_state_root_hash_digest().await)
+    pub async fn get_state_root_hash(&self) -> Result<String> {
+        let digest = self.get_state_root_hash_digest().await?;
+        Ok(base16::encode_lower(&digest))
     }
 
-    pub async fn get_state_root_hash_digest(&self) -> Digest {
-        get_state_root_hash(
+    pub async fn get_state_root_hash_digest(&self) -> Result<Digest> {
+        let response = get_state_root_hash(
             &self.rpc_id(),
             self.configuration.node_address(),
             self.configuration.verbosity(),
             ""
         )
         .await
-        .unwrap_or_else(|_| {
-            panic!(
-                "Couldn't get state root hash from node: {:?}",
+        .map_err(|e| {
+            crate::error::LivenetError::ClientError(format!(
+                "Couldn't get state root hash from node: {:?}, error: {}",
+                self.configuration.node_address(),
+                e
+            ))
+        })?;
+        response.result.state_root_hash.ok_or_else(|| {
+            crate::error::LivenetError::ClientError(format!(
+                "State root hash not available from node: {:?}",
                 self.configuration.node_address()
-            )
-        })
-        .result
-        .state_root_hash
-        .unwrap_or_else(|| {
-            panic!(
-                "Couldn't get state root hash from node: {:?}",
-                self.configuration.node_address()
-            )
+            ))
         })
     }
 
@@ -79,7 +79,7 @@ impl super::CasperClient {
     }
 
     /// Extracts era duration from chainspec.
-    pub(crate) fn era_duration(chainspec: &Value) -> u64 {
+    pub(crate) fn era_duration(chainspec: &Value) -> Result<u64> {
         let era_duration = chainspec
             .get("core")
             .unwrap_or_else(|| panic!("Couldn't get core from chainspec"))
@@ -87,13 +87,18 @@ impl super::CasperClient {
             .unwrap_or_else(|| {
                 panic!("Couldn't get era_duration from chainspec");
             });
-        TimeDiff::from_str(era_duration.as_str().unwrap())
-            .unwrap_or_else(|_| {
-                panic!(
-                    "Couldn't parse era_duration from chainspec: {:?}",
-                    era_duration
-                )
-            })
-            .millis()
+        let era_duration_str = era_duration.as_str().ok_or_else(|| {
+            crate::error::LivenetError::ClientError(format!(
+                "era_duration is not a string in chainspec: {:?}",
+                era_duration
+            ))
+        })?;
+        let time_diff = TimeDiff::from_str(era_duration_str).map_err(|e| {
+            crate::error::LivenetError::ClientError(format!(
+                "Couldn't parse era_duration from chainspec: {:?}, error: {}",
+                era_duration, e
+            ))
+        })?;
+        Ok(time_diff.millis())
     }
 }

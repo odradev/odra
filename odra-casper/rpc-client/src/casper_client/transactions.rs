@@ -28,10 +28,14 @@ const TRANSACTION_MAX_RETRIES: u64 = 12;
 /// Transaction methods implementation for CasperClient.
 impl super::CasperClient {
     /// Transfers the specified number of tokens to the given address.
-    pub async fn transfer(&self, to: Address, amount: U512, timestamp: Timestamp) -> Result<()> {
+    pub async fn transfer(
+        &self,
+        to: Address,
+        amount: U512,
+        timestamp: Timestamp
+    ) -> Result<TransactionHash> {
         let transaction = self.new_transfer_transaction(to, amount, timestamp);
-        self.put_transaction(transaction).await?;
-        Ok(())
+        self.put_transaction(transaction).await
     }
 
     /// Deploy the contract.
@@ -46,16 +50,26 @@ impl super::CasperClient {
 
         let package_hash_key_name: String = args
             .get(PACKAGE_HASH_KEY_NAME_ARG)
-            .unwrap()
+            .ok_or_else(|| {
+                ExecutionError(format!(
+                    "Missing required argument: {}",
+                    PACKAGE_HASH_KEY_NAME_ARG
+                ))
+            })?
             .clone()
             .into_t()
-            .unwrap();
+            .map_err(|e| {
+                ExecutionError(format!(
+                    "Failed to parse {} argument: {:?}",
+                    PACKAGE_HASH_KEY_NAME_ARG, e
+                ))
+            })?;
 
         let transaction =
             self.new_wasm_deploy_transaction(Bytes::from(wasm_bytes), args, timestamp);
         self.put_transaction(transaction).await?;
 
-        let address = self.get_contract_address(&package_hash_key_name).await;
+        let address = self.get_contract_address(&package_hash_key_name).await?;
         log::info(format!(
             "Contract {:?} deployed.",
             &address.to_formatted_string()
@@ -79,7 +93,12 @@ impl super::CasperClient {
             call_def.entry_point()
         ));
 
-        let hash = address.as_contract_package_hash().unwrap();
+        let hash = address.as_contract_package_hash().ok_or_else(|| {
+            ExecutionError(format!(
+                "Address {:?} is not a contract package hash. Expected contract address.",
+                address.to_formatted_string()
+            ))
+        })?;
         let args_bytes: Vec<u8> = call_def
             .args()
             .to_bytes()
@@ -104,8 +123,19 @@ impl super::CasperClient {
             self.configuration.verbosity_typed(),
             transaction
         )
-        .await;
-        let deploy_hash = response.unwrap().result.transaction_hash;
+        .await
+        .map_err(|e| match e {
+            casper_client::Error::ResponseIsRpcError {
+                rpc_method, error, ..
+            } => RpcRequestError(
+                rpc_method.to_string(),
+                error
+                    .data
+                    .map_or_else(|| "No data".to_string(), |d| d.to_string())
+            ),
+            _ => ExecutionError(format!("Failed to put transaction: {}", e))
+        })?;
+        let deploy_hash = response.result.transaction_hash;
         let result = self.wait_for_transaction(deploy_hash).await?;
         self.process_transaction(result, deploy_hash)?;
         Ok(self.get_proxy_result().await)
@@ -124,7 +154,7 @@ impl super::CasperClient {
             call_def.entry_point()
         ));
 
-        let transaction = self.new_call_transaction(addr, call_def, timestamp);
+        let transaction = self.new_call_transaction(addr, call_def, timestamp)?;
 
         let response = put_transaction(
             self.rpc_id_typed(),
@@ -187,7 +217,7 @@ impl super::CasperClient {
         &self,
         transaction_hash: TransactionHash
     ) -> Result<ExecutionResult> {
-        let transaction_info = self.get_transaction(transaction_hash).await;
+        let transaction_info = self.get_transaction(transaction_hash).await?;
 
         if let Some(deploy_info) = transaction_info.execution_info {
             if let Some(execution_result) = deploy_info.execution_result {
@@ -197,7 +227,7 @@ impl super::CasperClient {
 
         // If execution_info is not available yet, wait a bit and retry
         tokio::time::sleep(Duration::from_millis(500)).await;
-        let transaction_info = self.get_transaction(transaction_hash).await;
+        let transaction_info = self.get_transaction(transaction_hash).await?;
 
         if let Some(deploy_info) = transaction_info.execution_info {
             if let Some(execution_result) = deploy_info.execution_result {
@@ -210,18 +240,29 @@ impl super::CasperClient {
         )))
     }
 
-    async fn put_transaction(&self, transaction: Transaction) -> Result<()> {
+    async fn put_transaction(&self, transaction: Transaction) -> Result<TransactionHash> {
         let response = put_transaction(
             self.rpc_id_typed(),
             self.configuration.node_address(),
             self.configuration.verbosity_typed(),
             transaction
         )
-        .await;
-        let deploy_hash = response.unwrap().result.transaction_hash;
+        .await
+        .map_err(|e| match e {
+            casper_client::Error::ResponseIsRpcError {
+                rpc_method, error, ..
+            } => RpcRequestError(
+                rpc_method.to_string(),
+                error
+                    .data
+                    .map_or_else(|| "No data".to_string(), |d| d.to_string())
+            ),
+            _ => ExecutionError(format!("Failed to put transaction: {}", e))
+        })?;
+        let deploy_hash = response.result.transaction_hash;
         let result = self.wait_for_transaction(deploy_hash).await?;
         self.process_transaction(result, deploy_hash)?;
-        Ok(())
+        Ok(deploy_hash)
     }
 
     fn process_transaction(
@@ -324,28 +365,33 @@ impl super::CasperClient {
         to: Address,
         call_def: CallDef,
         timestamp: Timestamp
-    ) -> Transaction {
+    ) -> Result<Transaction> {
+        let package_hash = to.as_package_hash().ok_or_else(|| {
+            ExecutionError(format!(
+                "Address {:?} is not a package hash. Expected contract address.",
+                to.to_formatted_string()
+            ))
+        })?;
         let transaction_builder = TransactionV1Builder::new_targeting_package(
-            to.as_package_hash().unwrap(),
+            package_hash,
             None,
             call_def.entry_point(),
             TransactionRuntimeParams::VmCasperV1
         );
-        Transaction::V1(
-            transaction_builder
-                .with_ttl(self.configuration.ttl())
-                .with_chain_name(self.configuration.chain_name())
-                .with_pricing_mode(PricingMode::PaymentLimited {
-                    payment_amount: call_def.amount().as_u64() + self.gas.as_u64(),
-                    gas_price_tolerance: 5,
-                    standard_payment: true
-                })
-                .with_secret_key(self.secret_key())
-                .with_timestamp(timestamp)
-                .with_runtime_args(call_def.args().clone())
-                .build()
-                .unwrap_or_else(|e| panic!("Failed to build call transaction: {:?}", e))
-        )
+        let transaction_v1 = transaction_builder
+            .with_ttl(self.configuration.ttl())
+            .with_chain_name(self.configuration.chain_name())
+            .with_pricing_mode(PricingMode::PaymentLimited {
+                payment_amount: call_def.amount().as_u64() + self.gas.as_u64(),
+                gas_price_tolerance: 5,
+                standard_payment: true
+            })
+            .with_secret_key(self.secret_key())
+            .with_timestamp(timestamp)
+            .with_runtime_args(call_def.args().clone())
+            .build()
+            .map_err(|e| ExecutionError(format!("Failed to build call transaction: {:?}", e)))?;
+        Ok(Transaction::V1(transaction_v1))
     }
 
     fn pricing_mode(&self) -> PricingMode {

@@ -84,6 +84,13 @@ impl HostContext for LivenetHost {
         let rt = Runtime::new().unwrap();
         let client = self.casper_client.borrow();
         rt.block_on(async { client.get_balance(address).await })
+            .unwrap_or_else(|e| {
+                panic!(
+                    "Failed to get balance for address {:?}: {}",
+                    address,
+                    e.error_message()
+                )
+            })
     }
 
     fn advance_block_time(&self, time_diff: u64) {
@@ -302,6 +309,7 @@ impl HostContext for LivenetHost {
         let timestamp = Timestamp::now();
         let client = self.casper_client.borrow_mut();
         rt.block_on(async { client.transfer(to, amount, timestamp).await })
+            .map(|_| ())
             .map_err(|e| e.error_message())
             .map_err(Self::error_msg_to_odra_error)
     }

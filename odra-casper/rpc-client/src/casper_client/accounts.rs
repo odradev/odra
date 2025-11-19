@@ -1,6 +1,7 @@
 //! Account management methods.
 
 use crate::casper_client::Result;
+use crate::error::LivenetError;
 use casper_client::JsonRpcId;
 use casper_types::bytesrepr::{Bytes, ToBytes};
 use casper_types::{PublicKey, SecretKey};
@@ -35,7 +36,9 @@ impl super::CasperClient {
     pub fn sign_message(&self, message: &Bytes, address: &Address) -> Result<Bytes> {
         let secret_key = self.address_secret_key(address);
         let public_key = &PublicKey::from(secret_key);
-        let signature = sign(message, secret_key, public_key).to_bytes().unwrap();
+        let signature = sign(message, secret_key, public_key)
+            .to_bytes()
+            .map_err(|_| LivenetError::SerializationError)?;
         Ok(Bytes::from(signature))
     }
 

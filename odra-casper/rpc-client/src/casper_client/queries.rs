@@ -84,74 +84,93 @@ impl super::CasperClient {
     }
 
     /// Returns the balance of the account.
-    pub async fn get_balance(&self, address: &Address) -> U512 {
-        let main_purse = self.get_main_purse(address).await;
-        get_balance(
+    pub async fn get_balance(&self, address: &Address) -> Result<U512> {
+        let main_purse = self.get_main_purse(address).await?;
+        let response = get_balance(
             self.rpc_id_typed(),
             self.configuration.node_address(),
             self.configuration.verbosity_typed(),
-            self.get_state_root_hash_digest().await,
+            self.get_state_root_hash_digest().await?,
             main_purse
         )
         .await
-        .unwrap_or_else(|_| {
-            panic!(
-                "Couldn't get balance for address: {:?}",
-                address.to_formatted_string()
-            )
-        })
-        .result
-        .balance_value
+        .map_err(|e| {
+            ClientError(format!(
+                "Couldn't get balance for address: {:?}, error: {}",
+                address.to_formatted_string(),
+                e
+            ))
+        })?;
+        Ok(response.result.balance_value)
     }
 
     /// Gets an uref for a main purse of an account or a contract.
-    pub async fn get_main_purse(&self, address: &Address) -> URef {
+    pub async fn get_main_purse(&self, address: &Address) -> Result<URef> {
         let maybe_purse_uref = self.query_global_state_maybe(address.as_key(), None).await;
-        let purse_uref_value = match maybe_purse_uref {
-            None => {
-                panic!(
-                    "Couldn't get purse uref for address: {:?}",
-                    address.to_formatted_string()
-                )
-            }
-            Some(p) => p
-        };
+        let purse_uref_value = maybe_purse_uref.ok_or_else(|| {
+            ClientError(format!(
+                "Couldn't get purse uref for address: {:?}",
+                address.to_formatted_string()
+            ))
+        })?;
 
         match purse_uref_value {
-            CLValue(value) => value.into_t().unwrap(),
-            StoredValue::AddressableEntity(entity) => entity.main_purse(),
-            StoredValue::Account(account) => account.main_purse(),
+            CLValue(value) => value.into_t().map_err(|e| {
+                ClientError(format!(
+                    "Failed to convert CLValue to URef for address: {:?}, error: {:?}",
+                    address.to_formatted_string(),
+                    e
+                ))
+            }),
+            StoredValue::AddressableEntity(entity) => Ok(entity.main_purse()),
+            StoredValue::Account(account) => Ok(account.main_purse()),
             StoredValue::ContractPackage(contract_package) => {
-                let last_version = contract_package.current_contract_hash().unwrap();
+                let last_version = contract_package.current_contract_hash().ok_or_else(|| {
+                    ClientError(format!(
+                        "Contract package has no current contract hash for address: {:?}",
+                        address.to_formatted_string()
+                    ))
+                })?;
                 let maybe_contract = self
                     .query_global_state_maybe(Key::Hash(last_version.value()), None)
                     .await;
-                let contract_value = match maybe_contract {
-                    None => {
-                        panic!(
-                            "Couldn't get contract for address: {:?}",
-                            address.to_formatted_string()
-                        )
-                    }
-                    Some(c) => c
-                };
+                let contract_value = maybe_contract.ok_or_else(|| {
+                    ClientError(format!(
+                        "Couldn't get contract for address: {:?}",
+                        address.to_formatted_string()
+                    ))
+                })?;
                 match contract_value {
-                    StoredValue::Contract(contract) => contract
-                        .named_keys()
-                        .get(CONTRACT_MAIN_PURSE)
-                        .unwrap()
-                        .into_uref()
-                        .unwrap(),
-                    _ => panic!(
+                    StoredValue::Contract(contract) => {
+                        let purse_key =
+                            contract
+                                .named_keys()
+                                .get(CONTRACT_MAIN_PURSE)
+                                .ok_or_else(|| {
+                                    ClientError(format!(
+                                        "Contract missing {} named key for address: {:?}",
+                                        CONTRACT_MAIN_PURSE,
+                                        address.to_formatted_string()
+                                    ))
+                                })?;
+                        purse_key.into_uref().ok_or_else(|| {
+                            ClientError(format!(
+                                "{} named key is not a URef for address: {:?}",
+                                CONTRACT_MAIN_PURSE,
+                                address.to_formatted_string()
+                            ))
+                        })
+                    }
+                    _ => Err(ClientError(format!(
                         "Couldn't get main purse for address: {:?}",
                         address.to_formatted_string()
-                    )
+                    )))
                 }
             }
-            _ => panic!(
+            _ => Err(ClientError(format!(
                 "Getting main purse is not supported for: {:?}",
                 purse_uref_value
-            )
+            )))
         }
     }
 
@@ -176,7 +195,10 @@ impl super::CasperClient {
     }
 
     /// Query the node for the transaction state.
-    pub async fn get_transaction(&self, transaction_hash: TransactionHash) -> GetTransactionResult {
+    pub async fn get_transaction(
+        &self,
+        transaction_hash: TransactionHash
+    ) -> Result<GetTransactionResult> {
         let t = get_transaction(
             self.rpc_id_typed(),
             self.configuration.node_address(),
@@ -184,19 +206,19 @@ impl super::CasperClient {
             transaction_hash,
             true
         )
-        .await;
-        t.unwrap_or_else(|e| {
+        .await
+        .map_err(|e| {
             log::error(format!("Couldn't get transaction: {:?}", e));
-            panic!(
-                "Couldn't get transaction: {:?}",
-                transaction_hash.to_hex_string().as_str()
-            )
-        })
-        .result
+            ClientError(format!(
+                "Couldn't get transaction: {}",
+                transaction_hash.to_hex_string()
+            ))
+        })?;
+        Ok(t.result)
     }
 
     /// Query the node for the transaction state.
-    pub async fn get_deploy(&self, deploy_hash: DeployHash) -> GetDeployResult {
+    pub async fn get_deploy(&self, deploy_hash: DeployHash) -> Result<GetDeployResult> {
         let t = get_deploy(
             self.rpc_id_typed(),
             self.configuration.node_address(),
@@ -204,19 +226,19 @@ impl super::CasperClient {
             deploy_hash,
             true
         )
-        .await;
-        t.unwrap_or_else(|e| {
+        .await
+        .map_err(|e| {
             log::error(format!("Couldn't get deploy: {:?}", e));
-            panic!(
-                "Couldn't get deploy: {:?}",
-                deploy_hash.to_hex_string().as_str()
-            )
-        })
-        .result
+            ClientError(format!(
+                "Couldn't get deploy: {}",
+                deploy_hash.to_hex_string()
+            ))
+        })?;
+        Ok(t.result)
     }
 
     /// Discover the contract address by name.
-    pub(crate) async fn get_contract_address(&self, key_name: &str) -> Address {
+    pub(crate) async fn get_contract_address(&self, key_name: &str) -> Result<Address> {
         let result = get_account(
             &self.rpc_id(),
             self.configuration.node_address(),
@@ -225,30 +247,31 @@ impl super::CasperClient {
             &self.public_key().to_hex_string()
         )
         .await
-        .unwrap_or_else(|e| {
-            panic!(
-                "{}",
-                format!("Couldn't get entity for key: {:?}, reason: {}", key_name, e)
-            );
-        })
-        .result;
-        let account = result.account;
+        .map_err(|e| {
+            ClientError(format!(
+                "Couldn't get entity for key: {:?}, reason: {}",
+                key_name, e
+            ))
+        })?;
+        let account = result.result.account;
 
-        let key = account.named_keys().get(key_name).unwrap_or_else(|| {
-            panic!(
+        let key = account.named_keys().get(key_name).ok_or_else(|| {
+            ClientError(format!(
                 "Couldn't get named key {:?} for account: {:?}",
                 key_name,
                 self.public_key().to_hex_string()
-            )
-        });
+            ))
+        })?;
 
-        Address::from(key.into_package_hash().unwrap_or_else(|| {
-            panic!(
+        let package_hash = key.into_package_hash().ok_or_else(|| {
+            ClientError(format!(
                 "Couldn't get package hash from key {:?} for account: {:?}",
                 key_name,
                 self.public_key().to_hex_string()
-            )
-        }))
+            ))
+        })?;
+
+        Ok(Address::from(package_hash))
     }
 
     /// Find the entity addr in global state for an address
@@ -271,7 +294,12 @@ impl super::CasperClient {
                     .value()
             ),
             StoredValue::ContractPackage(package) => {
-                let last_version = package.current_contract_hash().unwrap();
+                let last_version = package.current_contract_hash().unwrap_or_else(|| {
+                    panic!(
+                        "Contract package has no current contract hash for address: {:?}",
+                        address.to_formatted_string()
+                    )
+                });
                 EntityAddr::SmartContract(last_version.value())
             }
             _ => {
@@ -303,7 +331,7 @@ impl super::CasperClient {
             &self.rpc_id(),
             self.configuration.node_address(),
             self.configuration.verbosity(),
-            &self.get_state_root_hash().await,
+            &self.get_state_root_hash().await?,
             params
         )
         .await;
@@ -331,11 +359,15 @@ impl super::CasperClient {
             None => vec![],
             Some(string) => vec![string]
         };
+        let state_root_hash = match self.get_state_root_hash_digest().await {
+            Ok(hash) => hash,
+            Err(_) => return None
+        };
         let result = query_global_state(
             self.rpc_id_typed(),
             self.configuration.node_address(),
             self.configuration.verbosity_typed(),
-            GlobalStateIdentifier::StateRootHash(self.get_state_root_hash_digest().await),
+            GlobalStateIdentifier::StateRootHash(state_root_hash),
             key,
             path
         )
