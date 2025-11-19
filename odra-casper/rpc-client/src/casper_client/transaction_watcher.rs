@@ -7,7 +7,7 @@ use bytes::Bytes;
 use futures_util::StreamExt;
 use reqwest::Client;
 use serde_json::Value as JsonValue;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 /// Watches for transaction processed events in an SSE stream.
 pub struct TransactionWatcher {
@@ -51,8 +51,16 @@ impl TransactionWatcher {
             )));
         }
 
-        self.process_stream(response.bytes_stream(), transaction_hash)
-            .await
+        tokio::time::timeout(
+            self.timeout,
+            self.process_stream(response.bytes_stream(), transaction_hash)
+        )
+        .await
+        .map_err(|_| {
+            ExecutionError(String::from(
+                "Timeout waiting for transaction to be processed."
+            ))
+        })?
     }
 
     async fn process_stream(
@@ -60,80 +68,41 @@ impl TransactionWatcher {
         mut stream: impl futures_util::Stream<Item = Result<Bytes, reqwest::Error>> + Unpin,
         transaction_hash: &str
     ) -> Result<bool, LivenetError> {
-        let start_time = Instant::now();
-        let mut buffer = Vec::new();
-        let mut event_data_lines = Vec::new();
+        let mut buffer = String::new();
+        let mut event_data = String::new();
 
-        loop {
-            // Calculate remaining timeout duration
-            let elapsed = start_time.elapsed();
-            if elapsed >= self.timeout {
-                return Err(ExecutionError(String::from(
-                    "Timeout waiting for transaction to be processed."
-                )));
-            }
-            let remaining_duration = self.timeout.saturating_sub(elapsed);
-
-            // Wrap stream.next() with timeout to prevent hanging
-            let chunk_result = tokio::time::timeout(remaining_duration, stream.next()).await;
-
-            let chunk = match chunk_result {
-                Ok(Some(chunk)) => chunk,
-                Ok(None) => {
-                    // Stream ended - process any remaining accumulated data lines
-                    return self.process_remaining_data(event_data_lines, transaction_hash);
-                }
-                Err(_) => {
-                    // Timeout occurred
-                    return Err(ExecutionError(String::from(
-                        "Timeout waiting for transaction to be processed."
-                    )));
-                }
-            };
-
+        while let Some(chunk) = stream.next().await {
             let bytes = chunk.map_err(|e| ClientError(format!("Error reading stream: {}", e)))?;
-            buffer.extend_from_slice(&bytes);
+            buffer.push_str(&String::from_utf8_lossy(&bytes));
 
-            // Process complete lines (SSE format: "data: ...\n")
-            while let Some(newline_pos) = buffer.iter().position(|&b| b == b'\n') {
-                let line = buffer.drain(..=newline_pos).collect::<Vec<_>>();
-                let line_str = match std::str::from_utf8(&line) {
-                    Ok(s) => s.trim(),
-                    Err(_) => continue
-                };
+            while let Some(newline_pos) = buffer.find('\n') {
+                let line = buffer[..newline_pos].trim().to_string();
+                buffer.replace_range(..=newline_pos, "");
 
-                // Blank line separates SSE events - process accumulated data lines
-                if line_str.is_empty() {
-                    if !event_data_lines.is_empty() {
-                        if self.process_event(&event_data_lines, transaction_hash)? {
+                if line.is_empty() {
+                    if !event_data.is_empty() {
+                        if self.check_event(&event_data, transaction_hash)? {
                             return Ok(true);
                         }
-                        event_data_lines.clear();
+                        event_data.clear();
                     }
-                    continue;
-                }
-
-                // Accumulate "data:" lines for multi-line events
-                if line_str.starts_with("data:") {
-                    let data_content = line_str.strip_prefix("data:").unwrap_or("").trim();
-                    if !data_content.is_empty() {
-                        event_data_lines.push(data_content.to_string());
-                    }
+                } else if let Some(data) = line.strip_prefix("data:") {
+                    event_data.push_str(data.trim());
+                    event_data.push('\n');
                 }
             }
         }
+
+        // Check remaining data if stream ended
+        if !event_data.is_empty() {
+            return self.check_event(&event_data, transaction_hash);
+        }
+
+        Ok(false)
     }
 
-    fn process_event(
-        &self,
-        event_data_lines: &[String],
-        transaction_hash: &str
-    ) -> Result<bool, LivenetError> {
-        // Join all accumulated data lines and parse as single JSON
-        let json_str = event_data_lines.join("\n");
-
-        // Parse and check for TransactionProcessed event
-        let parsed: JsonValue = serde_json::from_str(&json_str)
+    fn check_event(&self, json_str: &str, transaction_hash: &str) -> Result<bool, LivenetError> {
+        let parsed: JsonValue = serde_json::from_str(json_str.trim())
             .map_err(|e| ClientError(format!("Failed to parse event JSON: {}", e)))?;
 
         if let Some(transaction_processed) = parsed.get("TransactionProcessed") {
@@ -152,17 +121,5 @@ impl TransactionWatcher {
         }
 
         Ok(false)
-    }
-
-    fn process_remaining_data(
-        &self,
-        event_data_lines: Vec<String>,
-        transaction_hash: &str
-    ) -> Result<bool, LivenetError> {
-        if event_data_lines.is_empty() {
-            return Ok(false);
-        }
-
-        self.process_event(&event_data_lines, transaction_hash)
     }
 }
