@@ -142,6 +142,45 @@ impl<T: CLTyped + ToBytes> EntrypointArgument for T {
     }
 }
 
+/// A type representing arguments for batch upgrading child contracts.
+pub struct BatchUpgradeArgs<T: Into<casper_types::RuntimeArgs>>(BTreeMap<String, T>);
+
+impl<T: Into<casper_types::RuntimeArgs>> From<BTreeMap<String, T>> for BatchUpgradeArgs<T> {
+    fn from(val: BTreeMap<String, T>) -> Self {
+        BatchUpgradeArgs(val)
+    }
+}
+
+impl<T: Into<casper_types::RuntimeArgs>> EntrypointArgument for BatchUpgradeArgs<T> {
+    fn is_required() -> bool {
+        true
+    }
+
+    fn cl_type() -> CLType {
+        CLType::List(Box::new(CLType::U8))
+    }
+
+    fn insert_runtime_arg(self, name: &str, args: &mut RuntimeArgs) {
+        let mut rt_args_map: BTreeMap<String, casper_types::bytesrepr::Bytes> = Default::default();
+        for (contract, v) in self.0 {
+            let rt: RuntimeArgs = v.into();
+            let bytes = ToBytes::to_bytes(&rt).unwrap();
+            rt_args_map.insert(
+                contract.to_string(),
+                casper_types::bytesrepr::Bytes::from(bytes)
+            );
+        }
+        let _ = args.insert(name, rt_args_map);
+    }
+
+    fn unwrap(value: Option<Self>, env: &ContractEnv) -> Self {
+        match value {
+            Some(v) => v,
+            None => env.revert(ExecutionError::UnwrapError)
+        }
+    }
+}
+
 /// Returns a Casper entrypoint argument representation.
 /// If the parameter is not required, it returns `None`.
 pub fn parameter<T: EntrypointArgument>(name: &str) -> Option<Parameter> {

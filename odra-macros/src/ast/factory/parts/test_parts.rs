@@ -124,13 +124,14 @@ mod test {
                         self.try_upgrade_child_contract(contract_name).unwrap()
                     }
 
-                    pub fn batch_upgrade_child_contract(
+                    pub fn batch_upgrade_child_contract<
+                        S: Into<odra::args::BatchUpgradeArgs<T>>,
+                        T: Into<odra::casper_types::RuntimeArgs>
+                    >(
                         &mut self,
-                        default_args: odra::casper_types::bytesrepr::Bytes,
-                        names_to_upgrade: odra::casper_types::bytesrepr::Bytes,
-                        specific_args: odra::casper_types::bytesrepr::Bytes
+                        args: S
                     ) {
-                        self.try_batch_upgrade_child_contract(default_args, names_to_upgrade, specific_args).unwrap()
+                        self.try_batch_upgrade_child_contract(args).unwrap()
                     }
                 }
 
@@ -145,12 +146,12 @@ mod test {
                                     true,
                                     {
                                         let mut named_args = odra::casper_types::RuntimeArgs::new();
-                                        let _ = named_args.insert("contract_name", contract_name.clone());
-                                        let _ = named_args.insert("value", value.clone());
-                                        let _ = named_args.insert("odra_cfg_is_upgradable", true);
-                                        let _ = named_args.insert("odra_cfg_is_upgrade", false);
-                                        let _ = named_args.insert("odra_cfg_allow_key_override", true);
-                                        let _ = named_args.insert("odra_cfg_package_hash_key_name", contract_name);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_is_upgradable", &mut named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(false, "odra_cfg_is_upgrade", &mut named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_allow_key_override", &mut named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(contract_name.clone(), "odra_cfg_package_hash_key_name", &mut named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(contract_name, "contract_name", &mut named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(value, "value", &mut named_args);
                                         named_args
                                     },
                                 )
@@ -170,23 +171,22 @@ mod test {
                                     true,
                                     {
                                         let mut named_args = odra::casper_types::RuntimeArgs::new();
-                                        let _ = named_args
-                                            .insert("contract_name", contract_name.clone());
-                                        let _ = named_args.insert("odra_cfg_is_factory_upgrade", true);
-                                        let _ = named_args
-                                            .insert("odra_cfg_allow_key_override", true);
-                                        let _ = named_args.insert("odra_cfg_create_upgrade_group", false);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(contract_name, "contract_name", &mut named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_is_factory_upgrade", &mut named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_allow_key_override", &mut named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(false, "odra_cfg_create_upgrade_group", &mut named_args);
                                         named_args
                                     },
                                 ),
                             )
                     }
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_batch_upgrade_child_contract(
+                    pub fn try_batch_upgrade_child_contract<
+                        S: Into<odra::args::BatchUpgradeArgs<T>>,
+                        T: Into<odra::casper_types::RuntimeArgs>
+                    >(
                         &mut self,
-                        default_args: odra::casper_types::bytesrepr::Bytes,
-                        names_to_upgrade: odra::casper_types::bytesrepr::Bytes,
-                        specific_args: odra::casper_types::bytesrepr::Bytes,
+                        args: S
                     ) -> OdraResult<()> {
                         self.env
                             .call_contract(
@@ -198,16 +198,10 @@ mod test {
                                     true,
                                     {
                                         let mut named_args = odra::casper_types::RuntimeArgs::new();
-                                        let _ = named_args
-                                            .insert("default_args", default_args.clone());
-                                        let _ = named_args
-                                            .insert("names_to_upgrade", names_to_upgrade.clone());
-                                        let _ = named_args
-                                            .insert("specific_args", specific_args.clone());
-                                        let _ = named_args.insert("odra_cfg_is_factory_upgrade", true);
-                                        let _ = named_args
-                                            .insert("odra_cfg_allow_key_override", true);
-                                        let _ = named_args.insert("odra_cfg_create_upgrade_group", false);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(args.into(), "args", &mut named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_is_factory_upgrade", &mut named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_allow_key_override", &mut named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(false, "odra_cfg_create_upgrade_group", &mut named_args);
                                         named_args
                                     },
                                 ),

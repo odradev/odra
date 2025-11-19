@@ -2,8 +2,8 @@ use quote::ToTokens;
 use syn::{parse_quote, punctuated::Punctuated, Token};
 
 use crate::{
-    ir::{FnIR, FnTraitIR, ModuleImplIR},
-    utils::ty
+    ir::{FnIR, FnTraitIR, FnType, ModuleImplIR},
+    utils::{self, ty}
 };
 
 #[derive(syn_derive::ToTokens)]
@@ -74,7 +74,12 @@ impl ToTokens for SchemaEntrypointsItem {
                     syn::ReturnType::Type(_, t) => quote::quote! { #t }
                 };
                 let is_mut = f.is_mut();
-                let mut args = args_to_tokens(&f.raw_typed_args());
+                let mut args = if f.fn_type() == FnType::FactoryBatchUpgrader {
+                    let ty_bytes = utils::ty::bytes();
+                    vec![quote::quote!(odra::schema::argument::<#ty_bytes>("args"))]
+                } else  {
+                    args_to_tokens(&f.raw_typed_args())
+                };
                 if f.is_payable() {
                     args.push(quote::quote!(odra::schema::argument::<
                         odra::casper_types::URef
@@ -322,9 +327,7 @@ mod test {
                             "", 
                             true, 
                             odra::prelude::vec![
-                                odra::schema::argument::<odra::casper_types::bytesrepr::Bytes>("default_args"),
-                                odra::schema::argument::<odra::casper_types::bytesrepr::Bytes>("names_to_upgrade"),
-                                odra::schema::argument::<odra::casper_types::bytesrepr::Bytes>("specific_args")
+                                odra::schema::argument::<odra::casper_types::bytesrepr::Bytes>("args")
                             ]
                         )
                     ]

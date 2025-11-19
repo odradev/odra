@@ -146,6 +146,14 @@ pub fn vec<T: ToTokens>(content: T) -> syn::Expr {
     parse_quote!(odra::prelude::vec![#content])
 }
 
+pub fn vec_try_into<T: ToTokens>(content: T) -> syn::Expr {
+    parse_quote!(odra::prelude::vec![#content]
+        .into_iter()
+        .map(TryInto::try_into)
+        .collect::<Result<_, _>>()
+        .unwrap_or_default())
+}
+
 pub fn clone<T: ToTokens>(caller: &T) -> syn::Expr {
     parse_quote!(#caller.clone())
 }
@@ -210,11 +218,19 @@ pub fn upgrader_ep(args_expr: syn::Expr) -> syn::Expr {
     })
 }
 
-pub fn regular_ep(name: String, args_expr: syn::Expr, ret_ty_expr: syn::Expr) -> syn::Expr {
+pub fn regular_ep(
+    name: String,
+    args_expr: syn::Expr,
+    ret_ty_expr: syn::Expr,
+    is_payable: bool,
+    is_reentrant: bool
+) -> syn::Expr {
     parse_quote!(odra::entry_point::EntryPoint::Regular {
         name: #name,
         args: #args_expr,
-        ret_ty: #ret_ty_expr
+        ret_ty: #ret_ty_expr,
+        is_reentrant: #is_reentrant,
+        is_payable: #is_payable
     })
 }
 
@@ -224,8 +240,10 @@ pub fn factory_ep(args_expr: syn::Expr) -> syn::Expr {
     })
 }
 
-pub fn factory_upgrade_ep() -> syn::Expr {
-    parse_quote!(odra::entry_point::EntryPoint::FactoryUpgrade)
+pub fn factory_upgrade_ep(args_expr: syn::Expr) -> syn::Expr {
+    parse_quote!(odra::entry_point::EntryPoint::FactoryUpgrade {
+        args: #args_expr,
+    })
 }
 
 pub fn factory_batch_upgrade_ep() -> syn::Expr {

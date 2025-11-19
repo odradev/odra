@@ -1,14 +1,12 @@
 #![allow(missing_docs)]
 
 use odra::{
-    casper_types::{
-        bytesrepr::{Bytes, ToBytes},
-        runtime_args
-    },
     host::{Deployer, HostRefLoader, InstallConfig, NoArgs},
     prelude::*
 };
-use odra_examples::factory::counter::{BetterCounterFactory, Counter, CounterFactory};
+use odra_examples::factory::counter::{
+    BetterCounterFactory, BetterCounterUpgradeArgs, Counter, CounterFactory
+};
 
 fn main() {
     let env = odra_casper_livenet_env::env();
@@ -39,34 +37,15 @@ fn main() {
     assert_eq!(Counter::load(&env, from_ten_address).value(), 122);
 
     env.set_gas(900_000_000_000u64);
-    new_factory.batch_upgrade_child_contract(
-        Bytes::from(
-            runtime_args! {
-                "new_value" => 42u32
-            }
-            .to_bytes()
-            .expect("Failed to serialize runtime args for default_args")
-        ),
-        Bytes::from(
-            vec![
-                "FromTwo".to_string(),
-                "FromThree".to_string(),
-                "FromHundred".to_string(),
-            ]
-            .to_bytes()
-            .expect("Failed to serialize runtime args for names_to_upgrade")
-        ),
-        Bytes::from(
-            BTreeMap::from([(
-                "FromHundred".to_string(),
-                runtime_args! {
-                    "new_value" => 1000u32
-                }
-            )])
-            .to_bytes()
-            .expect("Failed to serialize runtime args for specific_args")
-        )
-    );
+    let args = vec![
+        ("FromTwo".to_string(), 42u32),
+        ("FromThree".to_string(), 42u32),
+        ("FromHundred".to_string(), 1000u32),
+    ]
+    .into_iter()
+    .map(|(contract_name, new_value)| (contract_name, BetterCounterUpgradeArgs { new_value }))
+    .collect::<BTreeMap<_, _>>();
+    new_factory.batch_upgrade_child_contract(args);
     assert_eq!(Counter::load(&env, from_two_address).value(), 42);
     assert_eq!(Counter::load(&env, from_three_address).value(), 42);
     assert_eq!(Counter::load(&env, from_hundred_address).value(), 1000);

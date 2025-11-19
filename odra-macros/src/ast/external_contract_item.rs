@@ -84,7 +84,7 @@ mod test {
                                 if self.attached_value > odra::casper_types::U512::zero() {
                                     let _ = named_args.insert("amount", self.attached_value);
                                 }
-                                odra::args::EntrypointArgument::insert_runtime_arg(owner.clone(), "owner", &mut named_args);
+                                odra::args::EntrypointArgument::insert_runtime_arg(owner, "owner", &mut named_args);
                                 named_args
                             }
                         )
@@ -169,7 +169,7 @@ mod test {
                                     if self.attached_value > odra::casper_types::U512::zero() {
                                         let _ = named_args.insert("amount", self.attached_value);
                                     }
-                                    odra::args::EntrypointArgument::insert_runtime_arg(owner.clone(), "owner", &mut named_args);
+                                    odra::args::EntrypointArgument::insert_runtime_arg(owner, "owner", &mut named_args);
                                     named_args
                                 }
                             ).with_amount(self.attached_value),

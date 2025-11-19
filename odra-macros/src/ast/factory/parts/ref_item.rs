@@ -99,8 +99,8 @@ mod test {
                                 if self.attached_value > odra::casper_types::U512::zero() {
                                     let _ = named_args.insert("amount", self.attached_value);
                                 }
-                                odra::args::EntrypointArgument::insert_runtime_arg(contract_name.clone(), "contract_name", &mut named_args);
-                                odra::args::EntrypointArgument::insert_runtime_arg(value.clone(), "value", &mut named_args);
+                                odra::args::EntrypointArgument::insert_runtime_arg(contract_name, "contract_name", &mut named_args);
+                                odra::args::EntrypointArgument::insert_runtime_arg(value, "value", &mut named_args);
                                 named_args
                             }
                         )
@@ -124,7 +124,7 @@ mod test {
                                             let _ = named_args.insert("amount", self.attached_value);
                                         }
                                         odra::args::EntrypointArgument::insert_runtime_arg(
-                                            contract_name.clone(),
+                                            contract_name,
                                             "contract_name",
                                             &mut named_args,
                                         );
@@ -135,11 +135,12 @@ mod test {
                         )
                 }
                 
-                pub fn batch_upgrade_child_contract(
+                pub fn batch_upgrade_child_contract<
+                    S: Into<odra::args::BatchUpgradeArgs<T>>,
+                    T: Into<odra::casper_types::RuntimeArgs>
+                >(
                     &mut self,
-                    default_args: odra::casper_types::bytesrepr::Bytes,
-                    names_to_upgrade: odra::casper_types::bytesrepr::Bytes,
-                    specific_args: odra::casper_types::bytesrepr::Bytes
+                    args: S
                 ) {
                     self.env
                         .call_contract(
@@ -155,18 +156,8 @@ mod test {
                                             let _ = named_args.insert("amount", self.attached_value);
                                         }
                                         odra::args::EntrypointArgument::insert_runtime_arg(
-                                            default_args.clone(),
-                                            "default_args",
-                                            &mut named_args,
-                                        );
-                                        odra::args::EntrypointArgument::insert_runtime_arg(
-                                            names_to_upgrade.clone(),
-                                            "names_to_upgrade",
-                                            &mut named_args,
-                                        );
-                                        odra::args::EntrypointArgument::insert_runtime_arg(
-                                            specific_args.clone(),
-                                            "specific_args",
+                                            args.into(),
+                                            "args",
                                             &mut named_args,
                                         );
                                         named_args

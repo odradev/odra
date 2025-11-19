@@ -49,16 +49,12 @@ impl BetterCounter {
 #[cfg(test)]
 mod tests {
     use odra::{
-        casper_types::{
-            bytesrepr::{Bytes, ToBytes},
-            runtime_args, RuntimeArgs
-        },
         host::{Deployer, HostRef, InstallConfig, NoArgs},
         prelude::*,
         VmError
     };
 
-    use crate::factory::counter::BetterCounterFactory;
+    use crate::factory::counter::{BetterCounterFactory, BetterCounterUpgradeArgs};
 
     use super::{
         Counter, CounterFactory, CounterFactoryContractDeployed, CounterHostRef, CounterInitArgs
@@ -74,7 +70,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "This test does not work on odra vm"]
+    // #[ignore = "This test does not work on odra vm"]
     fn test_factory() {
         let env = odra_test::env();
         // Deploy the factory contract
@@ -97,7 +93,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "This test does not work on odra vm"]
+    // #[ignore = "This test does not work on odra vm"]
     fn test_factory_upgrade_works() {
         let env = odra_test::env();
         // Deploy the factory contract
@@ -119,34 +115,16 @@ mod tests {
         factory.upgrade_child_contract(String::from("FromTen"), 122);
         factory.upgrade_child_contract(String::from("FromTwo"), 11);
 
-        factory.batch_upgrade_child_contract(
-            Bytes::from(
-                runtime_args! {
-                    "new_value" => 42u32
-                }
-                .to_bytes()
-                .expect("Failed to serialize runtime args for default_args")
-            ),
-            Bytes::from(
-                vec![
-                    "FromTwo".to_string(),
-                    "FromThree".to_string(),
-                    "FromHundred".to_string(),
-                ]
-                .to_bytes()
-                .expect("Failed to serialize runtime args for names_to_upgrade")
-            ),
-            Bytes::from(
-                BTreeMap::from([(
-                    "FromHundred".to_string(),
-                    runtime_args! {
-                        "new_value" => 1000u32
-                    }
-                )])
-                .to_bytes()
-                .expect("Failed to serialize runtime args for specific_args")
-            )
-        );
+        let args = vec![
+            ("FromTwo".to_string(), 42u32),
+            ("FromThree".to_string(), 42u32),
+            ("FromHundred".to_string(), 1000u32),
+        ]
+        .into_iter()
+        .map(|(contract_name, new_value)| (contract_name, BetterCounterUpgradeArgs { new_value }))
+        .collect::<BTreeMap<_, _>>();
+
+        factory.batch_upgrade_child_contract(args);
 
         assert_eq!(CounterHostRef::new(ten_address, env.clone()).value(), 122);
         assert_eq!(CounterHostRef::new(two_address, env.clone()).value(), 42);
@@ -158,7 +136,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "This test does not work on odra vm"]
+    // #[ignore = "This test does not work on odra vm"]
     fn test_factory_upgrade_fails_for_unauthorized_caller() {
         let env = odra_test::env();
         // Deploy the factory contract
@@ -186,34 +164,16 @@ mod tests {
         // Ensure the value has not changed
         assert_eq!(CounterHostRef::new(address, env.clone()).value(), 10);
 
-        let upgrade_result = factory.try_batch_upgrade_child_contract(
-            Bytes::from(
-                runtime_args! {
-                    "new_value" => 42u32
-                }
-                .to_bytes()
-                .expect("Failed to serialize runtime args for default_args")
-            ),
-            Bytes::from(
-                vec![
-                    "FromTwo".to_string(),
-                    "FromThree".to_string(),
-                    "FromHundred".to_string(),
-                ]
-                .to_bytes()
-                .expect("Failed to serialize runtime args for names_to_upgrade")
-            ),
-            Bytes::from(
-                BTreeMap::from([(
-                    "FromHundred".to_string(),
-                    runtime_args! {
-                        "new_value" => 1000u32
-                    }
-                )])
-                .to_bytes()
-                .expect("Failed to serialize runtime args for specific_args")
-            )
-        );
+        let args = vec![
+            ("FromTwo".to_string(), 42u32),
+            ("FromThree".to_string(), 42u32),
+            ("FromHundred".to_string(), 1000u32),
+        ]
+        .into_iter()
+        .map(|(contract_name, new_value)| (contract_name, BetterCounterUpgradeArgs { new_value }))
+        .collect::<BTreeMap<_, _>>();
+        let upgrade_result = factory.try_batch_upgrade_child_contract(args);
+
         assert_eq!(
             upgrade_result,
             Err(OdraError::VmError(VmError::InvalidContext))
@@ -221,7 +181,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "This test does not work on odra vm"]
+    // #[ignore = "This test does not work on odra vm"]
     fn test_factory_upgrade_fails_for_invalid_arg() {
         let env = odra_test::env();
         // Deploy the factory contract
@@ -241,25 +201,11 @@ mod tests {
 
         let mut factory = result.unwrap();
 
-        let upgrade_result = factory.try_batch_upgrade_child_contract(
-            Bytes::from(
-                runtime_args! {
-                    "new_val" => 42u32 // incorrect arg name
-                }
-                .to_bytes()
-                .expect("Failed to serialize runtime args for default_args")
-            ),
-            Bytes::from(
-                vec!["FromTwo".to_string()]
-                    .to_bytes()
-                    .expect("Failed to serialize runtime args for names_to_upgrade")
-            ),
-            Bytes::from(
-                BTreeMap::<String, RuntimeArgs>::new()
-                    .to_bytes()
-                    .expect("Failed to serialize runtime args for specific_args")
-            )
-        );
+        let args = vec![("FromTwo".to_string(), 42u32)]
+            .into_iter()
+            .map(|(contract_name, _)| (contract_name, NoArgs))
+            .collect::<BTreeMap<_, _>>();
+        let upgrade_result = factory.try_batch_upgrade_child_contract(args);
         assert_eq!(
             upgrade_result,
             Err(OdraError::ExecutionError(ExecutionError::MissingArg))

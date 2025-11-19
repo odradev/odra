@@ -19,6 +19,7 @@ const FACTORY_NAME: &str = "new_contract";
 const FACTORY_UPGRADE_NAME: &str = "upgrade_child_contract";
 const BATCH_FACTORY_UPGRADE_NAME: &str = "batch_upgrade_child_contract";
 
+#[derive(PartialEq, Eq)]
 pub enum FnType {
     Constructor,
     Upgrader,
@@ -380,9 +381,10 @@ impl ModuleImplIR {
     }
 
     pub fn factory_batch_upgrade_fn(&self) -> FnIR {
-        let ty_bytes = utils::ty::bytes();
+        let rt_args = utils::ty::runtime_args();
+        let batch_upgrade_args = utils::ty::batch_upgrade_args_of_t();
         FnIR::Impl(FnImplIR::new(parse_quote! {
-            pub fn batch_upgrade_child_contract(&mut self, default_args: #ty_bytes, names_to_upgrade: #ty_bytes, specific_args: #ty_bytes) {
+            pub fn batch_upgrade_child_contract<S: Into<#batch_upgrade_args>, T: Into<#rt_args>>(&mut self, args: S) {
             }
         }))
     }
@@ -655,6 +657,10 @@ impl FnIR {
 
     pub fn typed_args(&self) -> Vec<syn::PatType> {
         utils::syn::function_typed_args(self.sig())
+    }
+
+    pub fn generics(&self) -> &syn::Generics {
+        &self.sig().generics
     }
 
     pub fn raw_typed_args(&self) -> Vec<syn::PatType> {

@@ -95,51 +95,53 @@ fn factory_call_def_with_amount(fun: &FnIR) -> syn::Expr {
     let args = utils::ident::named_args();
     let is_mut = fun.is_mut();
     let fun_name = utils::expr::string_from(fun_name_str);
-
+    let ty_ep_arg = utils::ty::entry_point_arg();
     let fn_args = fun
         .named_args()
         .iter()
         .map(|arg| {
             let ident = arg.name().unwrap();
             let name = ident.to_string();
-            quote::quote!(let _ = #args.insert(#name, #ident.clone());)
+            quote::quote!(#ty_ep_arg::insert_runtime_arg(#ident, #name, &mut #args);)
         })
         .collect::<Vec<_>>();
-    let package_hash_arg = match fun.fn_type() {
-        FnType::FactoryUpgrader =>  quote::quote! {
-            let _ = #args.insert("odra_cfg_is_factory_upgrade", true);
-            let _ = #args.insert("odra_cfg_allow_key_override", true);
-            let _ = #args.insert("odra_cfg_create_upgrade_group", false);
-
-        },
-        FnType::FactoryBatchUpgrader =>  quote::quote! {
-            let _ = #args.insert("odra_cfg_is_factory_upgrade", true);
-            let _ = #args.insert("odra_cfg_allow_key_override", true);
-            let _ = #args.insert("odra_cfg_create_upgrade_group", false);
-        },
-        _ => quote::quote! {
-            let _ = #args.insert("odra_cfg_is_upgradable", true);
-            let _ = #args.insert("odra_cfg_is_upgrade", false);
-            let _ = #args.insert("odra_cfg_allow_key_override", true);
-            let _ = #args.insert("odra_cfg_package_hash_key_name", contract_name);
-        }
-    };
-    syn::parse_quote!(#ty_call_def::new(#fun_name, #is_mut, {
-        let mut #args = #new_runtime_args;
-        #(#fn_args)*
-       
-        #package_hash_arg
-        #args
-    }))
+    match fun.fn_type() {
+        FnType::FactoryUpgrader => syn::parse_quote!(#ty_call_def::new(#fun_name, #is_mut, {
+            let mut #args = #new_runtime_args;
+            #(#fn_args)*
+            #ty_ep_arg::insert_runtime_arg(true, "odra_cfg_is_factory_upgrade", &mut #args);
+            #ty_ep_arg::insert_runtime_arg(true, "odra_cfg_allow_key_override", &mut #args);
+            #ty_ep_arg::insert_runtime_arg(false, "odra_cfg_create_upgrade_group", &mut #args);
+            #args
+        })),
+        FnType::FactoryBatchUpgrader => syn::parse_quote!(#ty_call_def::new(#fun_name, #is_mut, {
+            let mut #args = #new_runtime_args;
+            #ty_ep_arg::insert_runtime_arg(args.into(), "args", &mut #args);
+            #ty_ep_arg::insert_runtime_arg(true, "odra_cfg_is_factory_upgrade", &mut #args);
+            #ty_ep_arg::insert_runtime_arg(true, "odra_cfg_allow_key_override", &mut #args);
+            #ty_ep_arg::insert_runtime_arg(false, "odra_cfg_create_upgrade_group", &mut #args);
+            #args
+        })),
+        _ => syn::parse_quote!(#ty_call_def::new(#fun_name, #is_mut, {
+            let mut #args = #new_runtime_args;
+            #ty_ep_arg::insert_runtime_arg(true, "odra_cfg_is_upgradable", &mut #args);
+            #ty_ep_arg::insert_runtime_arg(false, "odra_cfg_is_upgrade", &mut #args);
+            #ty_ep_arg::insert_runtime_arg(true, "odra_cfg_allow_key_override", &mut #args);
+            #ty_ep_arg::insert_runtime_arg(contract_name.clone(), "odra_cfg_package_hash_key_name", &mut #args);
+            #(#fn_args)*
+            #args
+        }))
+    }
 }
 
 fn function_signature(fun: &FnIR) -> syn::Signature {
     let fun_name = fun.name();
     let args = fun.typed_args();
     let return_type = fun.return_type();
+    let generics = fun.generics();
     let mutability = fun.is_mut().then(|| quote::quote!(mut));
 
-    syn::parse_quote!(fn #fun_name(& #mutability self #(, #args)*) #return_type)
+    syn::parse_quote!(fn #fun_name #generics(& #mutability self #(, #args)*) #return_type)
 }
 
 fn function_filtered_attrs(fun: &FnIR) -> Vec<syn::Attribute> {
@@ -154,10 +156,11 @@ fn try_function_signature(fun: &FnIR) -> syn::Signature {
     let fun_name = fun.try_name();
     let args = fun.typed_args();
     let return_type = fun.try_return_type();
+    let generics = fun.generics();
     let mutability = fun.is_mut().then(|| quote::quote!(mut));
 
     syn::parse_quote!(
-        fn #fun_name(& #mutability self #(, #args)*) #return_type)
+        fn #fun_name #generics(& #mutability self #(, #args)*) #return_type)
 }
 
 fn runtime_args_with_amount_block<F: FnMut(&FnArgIR) -> syn::Stmt>(
@@ -167,25 +170,29 @@ fn runtime_args_with_amount_block<F: FnMut(&FnArgIR) -> syn::Stmt>(
     let runtime_args = utils::expr::new_runtime_args();
     let args = utils::ident::named_args();
     let insert_amount = insert_amount_arg_stmt();
-    let insert_args = fn_utils::insert_args_stmts(fun, insert_arg_fn);
+    // let insert_args = fn_utils::insert_args_stmts(fun, insert_arg_fn);
+    let ty = utils::ty::entry_point_arg();
 
-    let cfg_args = if fun.is_factory() {
-        let ty = ty::entry_point_arg();
-        quote::quote! {
-            #ty::insert_runtime_arg(true, "odra_cfg_is_upgradable", &mut #args);
-            #ty::insert_runtime_arg(false, "odra_cfg_is_upgrade", &mut #args);
-            #ty::insert_runtime_arg(true, "odra_cfg_allow_key_override", &mut #args);
-            #ty::insert_runtime_arg(contract_name, "odra_cfg_package_hash_key_name", &mut #args);
+    let insert_args = match fun.fn_type() {
+        FnType::FactoryBatchUpgrader => {
+            vec![parse_quote!(#ty::insert_runtime_arg(args.into(), "args", &mut #args);)]
         }
-    } else {
-        quote::quote! {}
+        FnType::Factory => {
+            // let mut insert_args = fn_utils::insert_args_stmts(fun, insert_arg_fn);
+            // insert_args.push(parse_quote!(#ty::insert_runtime_arg(true, "odra_cfg_is_upgradable", &mut #args);));
+            // insert_args.push(parse_quote!(#ty::insert_runtime_arg(false, "odra_cfg_is_upgrade", &mut #args);));
+            // insert_args.push(parse_quote!(#ty::insert_runtime_arg(true, "odra_cfg_allow_key_override", &mut #args);));
+            // insert_args.push(parse_quote!(#ty::insert_runtime_arg(contract_name, "odra_cfg_package_hash_key_name", &mut #args);));
+            // insert_args
+             fn_utils::insert_args_stmts(fun, insert_arg_fn)
+        }
+        _ => fn_utils::insert_args_stmts(fun, insert_arg_fn)
     };
 
     syn::parse_quote!({
         let mut #args = #runtime_args;
         #insert_amount
         #(#insert_args)*
-        #cfg_args
         #args
     })
 }
@@ -207,7 +214,7 @@ pub fn insert_arg_stmt(arg: &FnArgIR) -> syn::Stmt {
     let name = ident.to_string();
     let args = utils::ident::named_args();
     let ty = ty::entry_point_arg();
-    syn::parse_quote!(#ty::insert_runtime_arg(#ident.clone(), #name, &mut #args);)
+    syn::parse_quote!(#ty::insert_runtime_arg(#ident, #name, &mut #args);)
 }
 
 pub struct SchemaErrorsItem {

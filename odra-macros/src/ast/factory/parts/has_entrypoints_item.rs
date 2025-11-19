@@ -2,9 +2,8 @@ use std::vec;
 
 use quote::ToTokens;
 use syn::parse_quote;
-use syn::punctuated::Punctuated;
 
-use crate::ir::FnIR;
+use crate::ast::wasm_parts_utils;
 use crate::{ir::ModuleImplIR, utils};
 
 pub struct FactoryHasEntrypointsImplItem {
@@ -80,58 +79,25 @@ fn struct_entrypoints_expr(ir: &ModuleImplIR) -> syn::Result<syn::Expr> {
         .filter_map(|f| f.as_ref())
         .chain(vec![ir.factory_fn(), ir.factory_upgrade_fn(), ir.factory_batch_upgrade_fn()].iter())
         .map(|f| {
-            let ident = f.name_str();
-            let args = entrypoint_args(f)?;
-            let is_mut = f.is_mut();
-            let ret = match f.return_type() {
-                syn::ReturnType::Default => utils::expr::unit_cl_type(),
-                syn::ReturnType::Type(_, ty) => utils::expr::as_cl_type(&ty)
+            let args = wasm_parts_utils::param_parameters(f);
+            let expr = match f.fn_type() {
+                crate::ir::FnType::Constructor => utils::expr::constructor_ep(parse_quote!(odra::prelude::vec![])),
+                crate::ir::FnType::Upgrader => utils::expr::upgrader_ep(args),
+                crate::ir::FnType::Factory => utils::expr::factory_ep(args),
+                crate::ir::FnType::FactoryUpgrader => utils::expr::factory_upgrade_ep(args),
+                crate::ir::FnType::FactoryBatchUpgrader => utils::expr::factory_batch_upgrade_ep(),
+                crate::ir::FnType::Regular => utils::expr::regular_ep(
+                    f.name_str(),
+                    args,
+                    wasm_parts_utils::param_ret_ty(f),
+                    f.is_payable(),
+                    f.is_non_reentrant()
+                ),
             };
-            
-            let ty = f
-                .is_restricted()
-                .then(utils::ty::entry_point_def_ty_constructor)
-                .unwrap_or_else(utils::ty::entry_point_def_ty_public);
-            let is_payable_attr = f.is_payable().then(utils::ty::entry_point_def_attr_payable);
-            let is_non_reentrant = f
-                .is_non_reentrant()
-                .then(utils::ty::entry_point_def_attr_non_reentrant);
-            let attributes = vec![is_payable_attr, is_non_reentrant]
-                .into_iter()
-                .flatten()
-                .collect::<Punctuated<_, syn::token::Comma>>();
-            let attributes = utils::expr::vec(attributes);
-            let ty_entrypoint = utils::ty::entry_point_def();
-            let name = utils::expr::string_from(ident);
-
-            let expr: syn::Expr = parse_quote!(#ty_entrypoint {
-                name: #name,
-                args: #args,
-                is_mutable: #is_mut,
-                return_ty: #ret,
-                ty: #ty,
-                attributes: #attributes
-            });
             Ok(expr)
         })
         .collect::<syn::Result<syn::punctuated::Punctuated<syn::Expr, syn::token::Comma>>>()?;
-    Ok(utils::expr::vec(struct_entrypoints))
-}
-
-fn entrypoint_args(f: &FnIR) -> syn::Result<syn::Expr> {
-    let args = if f.is_constructor() {
-        vec![]
-    } else {
-        f.named_args()
-    }
-    .iter()
-    .map(|arg: &crate::ir::FnArgIR| {
-        let ident = arg.name_str()?;
-        let ty = utils::ty::unreferenced_ty(&arg.ty()?);
-        Ok(utils::expr::into_arg(ty, ident))
-    })
-    .collect::<syn::Result<Punctuated<syn::Expr, syn::token::Comma>>>()?;
-    Ok(utils::expr::vec(args))
+    Ok(utils::expr::vec_try_into(struct_entrypoints))
 }
 
 #[cfg(test)]
@@ -148,48 +114,22 @@ mod test {
             impl odra::contract_def::HasEntrypoints for Erc20Factory {
                 fn entrypoints() -> odra::prelude::vec::Vec<odra::contract_def::Entrypoint> {
                     odra::prelude::vec![
-                        odra::contract_def::Entrypoint {
-                            name: odra::prelude::string::String::from("init"),
-                            args: odra::prelude::vec![],
-                            is_mutable: true,
-                            return_ty: <() as odra::casper_types::CLTyped>::cl_type(),
-                            ty: odra::contract_def::EntrypointType::Constructor,
-                            attributes: odra::prelude::vec![]
+                        odra::entry_point::EntryPoint::Constructor {
+                            args: odra::prelude::vec![]
                         },
-                        odra::contract_def::Entrypoint {
-                            name: odra::prelude::string::String::from("new_contract"),
-                            args: odra::prelude::vec![
-                                odra::args::odra_argument::<odra::prelude::string::String>("contract_name"),
-                                odra::args::odra_argument::<u32>("value")
+                        odra::entry_point::EntryPoint::Factory {
+                           args: vec![
+                                odra::args::parameter::<odra::prelude::string::String>("contract_name"),
+                                odra::args::parameter::<u32>("value")
                             ],
-                            is_mutable: true,
-                            return_ty: <(Address, odra::casper_types::URef) as odra::casper_types::CLTyped>::cl_type(),
-                            ty: odra::contract_def::EntrypointType::Public,
-                            attributes: odra::prelude::vec![]
                         },
-                        odra::contract_def::Entrypoint {
-                            name: odra::prelude::string::String::from("upgrade_child_contract"),
-                            args: odra::prelude::vec![
-                                odra::args::odra_argument::<odra::prelude::string::String>("contract_name")
+                        odra::entry_point::EntryPoint::FactoryUpgrade {
+                           args: vec![
+                                odra::args::parameter::<odra::prelude::string::String>("contract_name")
                             ],
-                            is_mutable: true,
-                            return_ty: <() as odra::casper_types::CLTyped>::cl_type(),
-                            ty: odra::contract_def::EntrypointType::Public,
-                            attributes: odra::prelude::vec![]
                         },
-                        odra::contract_def::Entrypoint {
-                            name: odra::prelude::string::String::from("batch_upgrade_child_contract"),
-                            args: odra::prelude::vec![
-                                odra::args::odra_argument::<odra::casper_types::bytesrepr::Bytes>("default_args"),
-                                odra::args::odra_argument::<odra::casper_types::bytesrepr::Bytes>("names_to_upgrade"),
-                                odra::args::odra_argument::<odra::casper_types::bytesrepr::Bytes>("specific_args")
-                            ],
-                            is_mutable: true,
-                            return_ty: <() as odra::casper_types::CLTyped>::cl_type(),
-                            ty: odra::contract_def::EntrypointType::Public,
-                            attributes: odra::prelude::vec![]
-                        }
-                    ]
+                        odra::entry_point::EntryPoint::FactoryBatchUpgrade
+                    ].into_iter().map(TryInto::try_into).collect::<Result<_, _>>().unwrap_or_default()
                 }
             }
         );
