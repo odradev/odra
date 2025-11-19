@@ -29,6 +29,7 @@ jobs:
           DEPLOY_DELAY: '30sec'
         ports:
           - 11101:11101
+          - 18101:18101
     steps:
       - name: Setup just
         uses: extractions/setup-just@v1
