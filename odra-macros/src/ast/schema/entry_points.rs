@@ -300,7 +300,7 @@ mod test {
                             true,
                             odra::prelude::vec![]
                         ),
-                        odra::schema::entry_point::<(Address, odra::casper_types::URef)>(
+                        odra::schema::entry_point::<(odra::prelude::Address, odra::casper_types::URef)>(
                             "factory",
                             "",
                             true,

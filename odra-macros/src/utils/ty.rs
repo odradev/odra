@@ -2,7 +2,7 @@ use quote::ToTokens;
 use syn::parse_quote;
 
 pub fn address() -> syn::Type {
-    parse_quote!(Address)
+    parse_quote!(odra::prelude::Address)
 }
 
 pub fn contract_env() -> syn::Type {
@@ -10,7 +10,7 @@ pub fn contract_env() -> syn::Type {
 }
 
 pub fn rc_contract_env() -> syn::Type {
-    parse_quote!(Rc<odra::ContractEnv>)
+    parse_quote!(odra::prelude::Rc<odra::ContractEnv>)
 }
 
 pub fn from_bytes() -> syn::Type {

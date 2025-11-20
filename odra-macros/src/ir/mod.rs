@@ -195,6 +195,11 @@ impl TryFrom<(&proc_macro2::TokenStream, &proc_macro2::TokenStream)> for ModuleI
         }
 
         if let Ok(code) = syn::parse2::<syn::ItemTrait>(stream.1.clone()) {
+            for c in code.items.iter() {
+                if let syn::TraitItem::Verbatim(func) = c {
+                    syn::parse2::<syn::TraitItemFn>(func.clone())?;
+                }
+            }
             return Ok(Self::Trait(ModuleTraitIR { code, config }));
         }
 
@@ -443,7 +448,7 @@ impl ModuleIR {
 try_parse!(syn::ItemTrait => ModuleTraitIR);
 
 impl ModuleTraitIR {
-    fn self_code(&self) -> syn::Result<syn::ItemTrait> {
+    pub fn self_code(&self) -> syn::Result<syn::ItemTrait> {
         let mut code = self.code.clone();
         code.items.iter_mut().for_each(|item| {
             if let syn::TraitItem::Fn(func) = item {

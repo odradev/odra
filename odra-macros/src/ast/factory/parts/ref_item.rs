@@ -60,13 +60,13 @@ mod test {
         let expected = quote! {
             /// [Erc20Factory] Contract Ref.
             pub struct Erc20FactoryContractRef {
-                env: Rc<odra::ContractEnv>,
-                address: Address,
+                env: odra::prelude::Rc<odra::ContractEnv>,
+                address: odra::prelude::Address,
                 attached_value: odra::casper_types::U512,
             }
 
             impl odra::ContractRef for Erc20FactoryContractRef {
-                fn new(env: Rc<odra::ContractEnv>, address: Address) -> Self {
+                fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::prelude::Address) -> Self {
                     Self {
                         env,
                         address,
@@ -74,7 +74,7 @@ mod test {
                     }
                 }
 
-                fn address(&self) -> &Address {
+                fn address(&self) -> &odra::prelude::Address {
                     &self.address
                 }
 
@@ -88,7 +88,7 @@ mod test {
             }
 
             impl Erc20FactoryContractRef {
-                pub fn factory(&mut self, contract_name: String, value: u32) -> (Address, odra::casper_types::URef) {
+                pub fn factory(&mut self, contract_name: String, value: u32) -> (odra::prelude::Address, odra::casper_types::URef) {
                     self.env.call_contract(
                         self.address,
                         odra::CallDef::new(

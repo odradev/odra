@@ -87,7 +87,7 @@ mod test {
                                 odra::args::odra_argument::<u32>("value")
                             ],
                             is_mutable: true,
-                            return_ty: <(Address, odra::casper_types::URef) as odra::casper_types::CLTyped>::cl_type(),
+                            return_ty: <(odra::prelude::Address, odra::casper_types::URef) as odra::casper_types::CLTyped>::cl_type(),
                             ty: odra::contract_def::EntrypointType::Public,
                             attributes: odra::prelude::vec![]
                         }
@@ -97,13 +97,13 @@ mod test {
 
             /// [Erc20Factory] Contract Ref.
             pub struct Erc20FactoryContractRef {
-                env: Rc<odra::ContractEnv>,
-                address: Address,
+                env: odra::prelude::Rc<odra::ContractEnv>,
+                address: odra::prelude::Address,
                 attached_value: odra::casper_types::U512,
             }
 
             impl odra::ContractRef for Erc20FactoryContractRef {
-                fn new(env: Rc<odra::ContractEnv>, address: Address) -> Self {
+                fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::prelude::Address) -> Self {
                     Self {
                         env,
                         address,
@@ -111,7 +111,7 @@ mod test {
                     }
                 }
 
-                fn address(&self) -> &Address {
+                fn address(&self) -> &odra::prelude::Address {
                     &self.address
                 }
 
@@ -125,7 +125,7 @@ mod test {
             }
 
             impl Erc20FactoryContractRef {
-                pub fn factory(&mut self, contract_name: String, value: u32) -> (Address, odra::casper_types::URef) {
+                pub fn factory(&mut self, contract_name: String, value: u32) -> (odra::prelude::Address, odra::casper_types::URef) {
                     self.env.call_contract(
                         self.address,
                         odra::CallDef::new(
@@ -181,13 +181,13 @@ mod test {
 
                 /// [Erc20Factory] Host Ref.
                 pub struct Erc20FactoryHostRef {
-                    address: Address,
+                    address: odra::prelude::Address,
                     env: odra::host::HostEnv,
                     attached_value: odra::casper_types::U512
                 }
 
                 impl odra::host::HostRef for Erc20FactoryHostRef {
-                    fn new(address: Address, env: odra::host::HostEnv) -> Self {
+                    fn new(address: odra::prelude::Address, env: odra::host::HostEnv) -> Self {
                         Self {
                             address,
                             env,
@@ -203,7 +203,7 @@ mod test {
                         }
                     }
 
-                    fn contract_address(&self) -> Address {
+                    fn contract_address(&self) -> odra::prelude::Address {
                         self.address
                     }
 
@@ -224,14 +224,14 @@ mod test {
                 }
 
                 impl Erc20FactoryHostRef {
-                    pub fn factory(&mut self, contract_name: String, value: u32) -> (Address, odra::casper_types::URef) {
+                    pub fn factory(&mut self, contract_name: String, value: u32) -> (odra::prelude::Address, odra::casper_types::URef) {
                         self.try_factory(contract_name, value).unwrap()
                     }
                 }
 
                 impl Erc20FactoryHostRef {
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_factory(&mut self, contract_name: String, value: u32) -> OdraResult<(Address, odra::casper_types::URef)> {
+                    pub fn try_factory(&mut self, contract_name: String, value: u32) -> OdraResult<(odra::prelude::Address, odra::casper_types::URef)> {
                         self.env
                             .call_contract(
                                 self.address,
@@ -514,7 +514,7 @@ mod test {
                         schemas,
                         Some(named_args)
                     );
-                    let address: Address = contract_package_hash.into();
+                    let address: odra::prelude::Address = contract_package_hash.into();
 
                     exec_env.emit_event(Erc20FactoryContractDeployed {
                         contract_name: exec_env.get_named_arg::<odra::prelude::string::String>("contract_name"),
@@ -586,7 +586,7 @@ mod test {
                         true,
                         odra::prelude::vec![]
                     ),
-                    odra::schema::entry_point::<(Address, odra::casper_types::URef)>(
+                    odra::schema::entry_point::<(odra::prelude::Address, odra::casper_types::URef)>(
                         "factory", 
                         "", 
                         true, 
