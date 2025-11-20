@@ -204,7 +204,7 @@ impl ContractProvider for DeployedContractsContainer {
         self.data
             .contracts()
             .iter()
-            .find(|c| c.package_name == name)
+            .find(|c| c.key_name() == name)
             .map(|c| Address::from_str(&c.package_hash).ok())
             .and_then(|opt| opt.map(|addr| <T as HostRefLoader<T::HostRef>>::load(env, addr)))
             .ok_or(ContractError::NotFound(T::HostRef::ident()))
@@ -218,7 +218,7 @@ impl ContractProvider for DeployedContractsContainer {
         self.data
             .contracts()
             .iter()
-            .find(|c| c.package_name == package_name)
+            .find(|c| c.key_name() == package_name)
             .and_then(|c| Address::from_str(&c.package_hash).ok())
     }
 }
@@ -227,6 +227,7 @@ impl ContractProvider for DeployedContractsContainer {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct DeployedContract {
     name: String,
+    #[serde(default)]
     package_name: String,
     package_hash: String
 }
@@ -242,7 +243,11 @@ impl DeployedContract {
     }
 
     pub fn key_name(&self) -> String {
-        self.package_name.clone()
+        if self.package_name.is_empty() {
+            self.name.clone()
+        } else {
+            self.package_name.clone()
+        }
     }
 
     pub fn name(&self) -> String {
