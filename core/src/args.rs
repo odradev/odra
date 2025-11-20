@@ -157,20 +157,23 @@ impl<T: Into<casper_types::RuntimeArgs>> EntrypointArgument for BatchUpgradeArgs
     }
 
     fn cl_type() -> CLType {
-        CLType::List(Box::new(CLType::U8))
+        CLType::Map {
+            key: Box::new(CLType::String),
+            value: Box::new(CLType::List(Box::new(CLType::U8)))
+        }
     }
 
     fn insert_runtime_arg(self, name: &str, args: &mut RuntimeArgs) {
-        let mut rt_args_map: BTreeMap<String, casper_types::bytesrepr::Bytes> = Default::default();
+        let mut args_map: BTreeMap<String, casper_types::bytesrepr::Bytes> = Default::default();
         for (contract, v) in self.0 {
             let rt: RuntimeArgs = v.into();
             let bytes = ToBytes::to_bytes(&rt).unwrap();
-            rt_args_map.insert(
+            args_map.insert(
                 contract.to_string(),
                 casper_types::bytesrepr::Bytes::from(bytes)
             );
         }
-        let _ = args.insert(name, rt_args_map);
+        let _ = args.insert(name, args_map);
     }
 
     fn unwrap(value: Option<Self>, env: &ContractEnv) -> Self {

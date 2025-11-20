@@ -42,7 +42,7 @@ pub enum EntryPoint {
         /// The arguments for the factory.
         args: Vec<Option<Parameter>>
     },
-    /// A factory upgrade entry point.
+    /// A factory batch upgrade entry point.
     FactoryBatchUpgrade,
     /// An upgrader entry point.
     Upgrader {
