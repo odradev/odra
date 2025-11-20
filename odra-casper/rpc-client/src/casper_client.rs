@@ -8,7 +8,7 @@ pub mod accounts;
 pub mod configuration;
 mod node;
 mod queries;
-mod transaction_watcher;
+pub mod transaction_watcher;
 mod transactions;
 mod validators;
 
