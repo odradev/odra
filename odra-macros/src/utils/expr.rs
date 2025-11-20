@@ -223,13 +223,13 @@ pub fn regular_ep(
     args_expr: syn::Expr,
     ret_ty_expr: syn::Expr,
     is_payable: bool,
-    is_reentrant: bool
+    is_non_reentrant: bool
 ) -> syn::Expr {
     parse_quote!(odra::entry_point::EntryPoint::Regular {
         name: #name,
         args: #args_expr,
         ret_ty: #ret_ty_expr,
-        is_reentrant: #is_reentrant,
+        is_non_reentrant: #is_non_reentrant,
         is_payable: #is_payable
     })
 }

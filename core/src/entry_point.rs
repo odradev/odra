@@ -13,8 +13,8 @@ pub enum EntryPoint {
         args: Vec<Option<Parameter>>,
         /// The return type of the entry point.
         ret_ty: CLType,
-        /// Indicates if the entry point is reentrant.
-        is_reentrant: bool,
+        /// Indicates if the entry point is non-reentrant.
+        is_non_reentrant: bool,
         /// Indicates if the entry point is payable.
         is_payable: bool
     },
@@ -84,13 +84,13 @@ impl TryFrom<EntryPoint> for crate::contract_def::Entrypoint {
 
     fn try_from(val: EntryPoint) -> Result<Self, Self::Error> {
         match val {
-            EntryPoint::Regular { name, args, ret_ty, is_reentrant, is_payable } => Ok(crate::contract_def::Entrypoint {
+            EntryPoint::Regular { name, args, ret_ty, is_non_reentrant, is_payable } => Ok(crate::contract_def::Entrypoint {
                 name: crate::prelude::string::String::from(name),
                 args: convert_args(args),
                 is_mutable: true,
                 return_ty: ret_ty,
                 ty: crate::contract_def::EntrypointType::Public,
-                attributes: match (is_reentrant, is_payable) {
+                attributes: match (is_non_reentrant, is_payable) {
                     (true, true) => vec![
                         crate::contract_def::EntrypointAttribute::NonReentrant,
                         crate::contract_def::EntrypointAttribute::Payable

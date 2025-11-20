@@ -314,14 +314,14 @@ mod test {
                         name: "total_supply",
                         args: vec![],
                         ret_ty: <U256 as odra::casper_types::CLTyped>::cl_type(),
-                        is_reentrant: false,
+                        is_non_reentrant: false,
                         is_payable: false,
                     });
                     entry_points.add(odra::entry_point::EntryPoint::Regular {
                         name: "pay_to_mint",
                         args: vec![],
                         ret_ty: <() as odra::casper_types::CLTyped>::cl_type(),
-                        is_reentrant: false,
+                        is_non_reentrant: false,
                         is_payable: true,
                     });
                     entry_points.add(odra::entry_point::EntryPoint::Regular {
@@ -332,7 +332,7 @@ mod test {
                             odra::args::parameter::<Maybe<String> >("msg")
                         ],
                         ret_ty: <() as odra::casper_types::CLTyped>::cl_type(),
-                        is_reentrant: true,
+                        is_non_reentrant: true,
                         is_payable: false,
                     });
                     entry_points.add(odra::entry_point::EntryPoint::Regular {
@@ -342,7 +342,7 @@ mod test {
                             odra::args::parameter::<U256>("amount")
                         ],
                         ret_ty: <() as odra::casper_types::CLTyped>::cl_type(),
-                        is_reentrant: false,
+                        is_non_reentrant: false,
                         is_payable: false,
                     });
                     entry_points
@@ -453,14 +453,14 @@ mod test {
                         name: "total_supply",
                         args: vec![],
                         ret_ty: <U256 as odra::casper_types::CLTyped>::cl_type(),
-                        is_reentrant: false,
+                        is_non_reentrant: false,
                         is_payable: false,
                     });
                     entry_points.add(odra::entry_point::EntryPoint::Regular {
                         name: "pay_to_mint",
                         args: vec![],
                         ret_ty: <() as odra::casper_types::CLTyped>::cl_type(),
-                        is_reentrant: false,
+                        is_non_reentrant: false,
                         is_payable: true,
                     });
                     entry_points
@@ -529,35 +529,35 @@ mod test {
                         name: "total_supply",
                         args: vec![],
                         ret_ty: <U256 as odra::casper_types::CLTyped>::cl_type(),
-                        is_reentrant: false,
+                        is_non_reentrant: false,
                         is_payable: false,
                     });
                     entry_points.add(odra::entry_point::EntryPoint::Regular {
                         name: "get_owner",
                         args: vec![],
                         ret_ty: <Address as odra::casper_types::CLTyped>::cl_type(),
-                        is_reentrant: false,
+                        is_non_reentrant: false,
                         is_payable: false,
                     });
                     entry_points.add(odra::entry_point::EntryPoint::Regular {
                         name: "set_owner",
                         args: vec![odra::args::parameter::<Address>("new_owner")],
                         ret_ty: <() as odra::casper_types::CLTyped>::cl_type(),
-                        is_reentrant: false,
+                        is_non_reentrant: false,
                         is_payable: false,
                     });
                     entry_points.add(odra::entry_point::EntryPoint::Regular {
                         name: "name",
                         args: vec![],
                         ret_ty: <String as odra::casper_types::CLTyped>::cl_type(),
-                        is_reentrant: false,
+                        is_non_reentrant: false,
                         is_payable: false,
                     });
                     entry_points.add(odra::entry_point::EntryPoint::Regular {
                         name: "symbol",
                         args: vec![],
                         ret_ty: <String as odra::casper_types::CLTyped>::cl_type(),
-                        is_reentrant: false,
+                        is_non_reentrant: false,
                         is_payable: false,
                     });
                     entry_points
