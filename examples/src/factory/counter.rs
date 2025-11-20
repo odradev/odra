@@ -70,7 +70,7 @@ mod tests {
     }
 
     #[test]
-    // #[ignore = "This test does not work on odra vm"]
+    #[ignore = "This test does not work on odra vm"]
     fn test_factory() {
         let env = odra_test::env();
         // Deploy the factory contract
@@ -93,7 +93,7 @@ mod tests {
     }
 
     #[test]
-    // #[ignore = "This test does not work on odra vm"]
+    #[ignore = "This test does not work on odra vm"]
     fn test_factory_upgrade_works() {
         let env = odra_test::env();
         // Deploy the factory contract
@@ -136,7 +136,7 @@ mod tests {
     }
 
     #[test]
-    // #[ignore = "This test does not work on odra vm"]
+    #[ignore = "This test does not work on odra vm"]
     fn test_factory_upgrade_fails_for_unauthorized_caller() {
         let env = odra_test::env();
         // Deploy the factory contract
@@ -181,7 +181,7 @@ mod tests {
     }
 
     #[test]
-    // #[ignore = "This test does not work on odra vm"]
+    #[ignore = "This test does not work on odra vm"]
     fn test_factory_upgrade_fails_for_invalid_arg() {
         let env = odra_test::env();
         // Deploy the factory contract

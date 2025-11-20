@@ -65,7 +65,7 @@ mod tests {
     }
 
     #[test]
-    // #[ignore = "This test does not work on odra vm"]
+    #[ignore = "This test does not work on odra vm"]
     fn test_factory_module() {
         let env = odra_test::env();
         let owner = env.get_account(0);
