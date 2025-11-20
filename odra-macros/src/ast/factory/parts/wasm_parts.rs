@@ -469,7 +469,7 @@ impl ToTokens for NoMangleFactoryUpgradeFnItem {
                     Some(named_args)
                 );
 
-                let address: Address = contract_package_hash.into();
+                let address: #address_ty = contract_package_hash.into();
                 exec_env.emit_event(#event_ident {
                     contract_name: name,
                     contract_address: address
@@ -694,7 +694,7 @@ mod test {
                         Some(named_args)
                     );
 
-                    let address: Address = contract_package_hash.into();
+                    let address: odra::prelude::Address = contract_package_hash.into();
                     exec_env.emit_event(Erc20FactoryContractDeployed {
                         contract_name: name,
                         contract_address: address
@@ -727,7 +727,7 @@ mod test {
                                 schemas.clone(),
                                 Some(named_args)
                             );
-                            let address: Address = contract_package_hash.into();
+                            let address: odra::prelude::Address = contract_package_hash.into();
 
                             exec_env.emit_event(Erc20FactoryContractDeployed {
                                 contract_name: name,

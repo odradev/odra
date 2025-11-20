@@ -116,7 +116,7 @@ mod test {
                 }
 
                 impl Erc20FactoryHostRef {
-                    pub fn new_contract(&mut self, contract_name: odra::prelude::string::String, value: u32) -> (Address, odra::casper_types::URef) {
+                    pub fn new_contract(&mut self, contract_name: odra::prelude::string::String, value: u32) -> (odra::prelude::Address, odra::casper_types::URef) {
                         self.try_new_contract(contract_name, value).unwrap()
                     }
                     
@@ -137,7 +137,7 @@ mod test {
 
                 impl Erc20FactoryHostRef {
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_new_contract(&mut self, contract_name: odra::prelude::string::String, value: u32) -> OdraResult<(Address, odra::casper_types::URef)> {
+                    pub fn try_new_contract(&mut self, contract_name: odra::prelude::string::String, value: u32) -> OdraResult<(odra::prelude::Address, odra::casper_types::URef)> {
                         self.env
                             .call_contract(
                                 self.address,
