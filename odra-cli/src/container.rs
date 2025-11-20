@@ -12,10 +12,9 @@ use thiserror::Error;
 
 use crate::{
     cmd::args::{DEPLOY_MODE_ARCHIVE, DEPLOY_MODE_OVERRIDE},
-    log
+    log,
+    utils::get_default_contracts_file
 };
-
-pub const DEPLOYED_CONTRACTS_FILE: &str = "resources/contracts.toml";
 
 #[derive(Error, Debug)]
 pub enum ContractError {
@@ -54,7 +53,10 @@ impl FileContractStorage {
             Some(path_str) if !path_str.to_str().unwrap_or_default().is_empty() => {
                 path.push(path_str);
             }
-            _ => path.push(DEPLOYED_CONTRACTS_FILE)
+            _ => {
+                let default_file = get_default_contracts_file();
+                path.push(&default_file);
+            }
         }
         if !path.exists() {
             let parent_path = path.parent().ok_or_else(|| {

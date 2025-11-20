@@ -202,11 +202,11 @@ mod test {
                 use super::*;
 
                 impl Module for CounterPack {
-                    fn new(env: Rc<odra::ContractEnv>) -> Self {
+                    fn new(env: odra::prelude::Rc<odra::ContractEnv>) -> Self {
                         Self { __env: env }
                     }
 
-                    fn env(&self) -> Rc<odra::ContractEnv> {
+                    fn env(&self) -> odra::prelude::Rc<odra::ContractEnv> {
                         self.__env.clone()
                     }
                 }
@@ -224,7 +224,7 @@ mod test {
                 use super::*;
 
                 impl Module for CounterPack {
-                    fn new(env: Rc<odra::ContractEnv>) -> Self {
+                    fn new(env: odra::prelude::Rc<odra::ContractEnv>) -> Self {
                         let counter0 =
                             <SubModule<Counter> as odra::module::ModuleComponent>::instance(
                                 odra::prelude::Rc::clone(&env),
@@ -259,7 +259,7 @@ mod test {
                         }
                     }
 
-                    fn env(&self) -> Rc<odra::ContractEnv> {
+                    fn env(&self) -> odra::prelude::Rc<odra::ContractEnv> {
                         self.__env.clone()
                     }
                 }

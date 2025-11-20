@@ -7,9 +7,22 @@ use odra::{
 
 use crate::{ContractProvider, DeployedContractsContainer};
 
+const DEFAULT_CONTRACTS_FILE: &str = "resources/contracts.toml";
+
 /// Logs a message to the console.
 pub fn log<T: ToString>(msg: T) {
     prettycli::info(&msg.to_string());
+}
+
+/// Returns the default contracts file path, checking for ODRA_CASPER_LIVENET_CHAIN_NAME
+/// environment variable. If the variable exists, returns `resources/{network_name}-contracts.toml`,
+/// otherwise returns the default contracts file path.
+pub(crate) fn get_default_contracts_file() -> String {
+    if let Ok(network_name) = std::env::var("ODRA_CASPER_LIVENET_CHAIN_NAME") {
+        format!("resources/{}-contracts.toml", network_name)
+    } else {
+        DEFAULT_CONTRACTS_FILE.to_string()
+    }
 }
 
 /// Trait that extends the functionality of OdraContract to include deployment capabilities.

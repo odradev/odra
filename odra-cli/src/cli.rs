@@ -19,8 +19,9 @@ use crate::{
         PrintEventsCmd, Scenario, ScenarioMetadata, ScenariosCmd, WhoamiCmd, CONTRACTS_SUBCOMMAND,
         DEPLOY_SUBCOMMAND, PRINT_EVENTS_SUBCOMMAND, SCENARIOS_SUBCOMMAND, WHOAMI_SUBCOMMAND
     },
-    container::{FileContractStorage, DEPLOYED_CONTRACTS_FILE},
+    container::FileContractStorage,
     custom_types::CustomTypes,
+    utils::get_default_contracts_file,
     ContractProvider, DeployedContractsContainer
 };
 
@@ -161,7 +162,7 @@ impl OdraCli {
             let caller = self.callers.get(&(deployed_contract.name(), deployed_contract.key_name())).unwrap_or_else(|| {
                 let path = match &contracts_path {
                     Some(path) => path.to_str().map(|s| s.to_string()).unwrap_or_default(),
-                    None => DEPLOYED_CONTRACTS_FILE.to_string()
+                    None => get_default_contracts_file()
                 };
                 prettycli::error(&format!(
                     "Caller for `{}` not found. The contract is registered in {:?} file, but not in the CLI builder. Make sure you have added it to the builder using `.contract::<{}>()`.",

@@ -649,7 +649,7 @@ mod test {
                         schemas,
                         Some(named_args)
                     );
-                    let address: Address = contract_package_hash.into();
+                    let address: odra::prelude::Address = contract_package_hash.into();
 
                     exec_env.emit_event(Erc20FactoryContractDeployed {
                         contract_name: exec_env.get_named_arg::<odra::prelude::string::String>("contract_name"),

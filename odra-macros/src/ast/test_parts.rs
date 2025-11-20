@@ -85,13 +85,13 @@ mod test {
 
                 /// [Erc20] Host Ref.
                 pub struct Erc20HostRef {
-                    address: Address,
+                    address: odra::prelude::Address,
                     env: odra::host::HostEnv,
                     attached_value: odra::casper_types::U512
                 }
 
                 impl odra::host::HostRef for Erc20HostRef {
-                    fn new(address: Address, env: odra::host::HostEnv) -> Self {
+                    fn new(address: odra::prelude::Address, env: odra::host::HostEnv) -> Self {
                         Self {
                             address,
                             env,
@@ -107,7 +107,7 @@ mod test {
                         }
                     }
 
-                    fn contract_address(&self) -> Address {
+                    fn contract_address(&self) -> odra::prelude::Address {
                         self.address
                     }
 
@@ -391,13 +391,13 @@ mod test {
 
                 /// [Erc20] Host Ref.
                 pub struct Erc20HostRef {
-                    address: Address,
+                    address: odra::prelude::Address,
                     env: odra::host::HostEnv,
                     attached_value: odra::casper_types::U512
                 }
 
                 impl odra::host::HostRef for Erc20HostRef {
-                    fn new(address: Address, env: odra::host::HostEnv) -> Self {
+                    fn new(address: odra::prelude::Address, env: odra::host::HostEnv) -> Self {
                         Self {
                             address,
                             env,
@@ -413,7 +413,7 @@ mod test {
                         }
                     }
 
-                    fn contract_address(&self) -> Address {
+                    fn contract_address(&self) -> odra::prelude::Address {
                         self.address
                     }
 

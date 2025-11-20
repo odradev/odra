@@ -89,13 +89,13 @@ mod test {
 
             /// [Erc20Factory] Contract Ref.
             pub struct Erc20FactoryContractRef {
-                env: Rc<odra::ContractEnv>,
-                address: Address,
+                env: odra::prelude::Rc<odra::ContractEnv>,
+                address: odra::prelude::Address,
                 attached_value: odra::casper_types::U512,
             }
 
             impl odra::ContractRef for Erc20FactoryContractRef {
-                fn new(env: Rc<odra::ContractEnv>, address: Address) -> Self {
+                fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::prelude::Address) -> Self {
                     Self {
                         env,
                         address,
@@ -103,7 +103,7 @@ mod test {
                     }
                 }
 
-                fn address(&self) -> &Address {
+                fn address(&self) -> &odra::prelude::Address {
                     &self.address
                 }
 
@@ -194,13 +194,13 @@ mod test {
 
                 /// [Erc20Factory] Host Ref.
                 pub struct Erc20FactoryHostRef {
-                    address: Address,
+                    address: odra::prelude::Address,
                     env: odra::host::HostEnv,
                     attached_value: odra::casper_types::U512
                 }
 
                 impl odra::host::HostRef for Erc20FactoryHostRef {
-                    fn new(address: Address, env: odra::host::HostEnv) -> Self {
+                    fn new(address: odra::prelude::Address, env: odra::host::HostEnv) -> Self {
                         Self {
                             address,
                             env,
@@ -216,7 +216,7 @@ mod test {
                         }
                     }
 
-                    fn contract_address(&self) -> Address {
+                    fn contract_address(&self) -> odra::prelude::Address {
                         self.address
                     }
 
@@ -537,7 +537,7 @@ mod test {
                         schemas,
                         Some(named_args)
                     );
-                    let address: Address = contract_package_hash.into();
+                    let address: odra::prelude::Address = contract_package_hash.into();
 
                     exec_env.emit_event(Erc20FactoryContractDeployed {
                         contract_name: exec_env.get_named_arg::<odra::prelude::string::String>("contract_name"),

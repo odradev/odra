@@ -45,13 +45,13 @@ mod test {
         let expected = quote::quote! {
             /// [Token] Contract Ref.
             pub struct TokenContractRef {
-                env: Rc<odra::ContractEnv>,
-                address: Address,
+                env: odra::prelude::Rc<odra::ContractEnv>,
+                address: odra::prelude::Address,
                 attached_value: odra::casper_types::U512,
             }
 
             impl odra::ContractRef for TokenContractRef {
-                fn new(env: Rc<odra::ContractEnv>, address: Address) -> Self {
+                fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::prelude::Address) -> Self {
                     Self {
                         env,
                         address,
@@ -59,7 +59,7 @@ mod test {
                     }
                 }
 
-                fn address(&self) -> &Address {
+                fn address(&self) -> &odra::prelude::Address {
                     &self.address
                 }
 
@@ -108,13 +108,13 @@ mod test {
 
                 /// [Token] Host Ref.
                 pub struct TokenHostRef {
-                    address: Address,
+                    address: odra::prelude::Address,
                     env: odra::host::HostEnv,
                     attached_value: odra::casper_types::U512
                 }
 
                 impl odra::host::HostRef for TokenHostRef {
-                    fn new(address: Address, env: odra::host::HostEnv) -> Self {
+                    fn new(address: odra::prelude::Address, env: odra::host::HostEnv) -> Self {
                         Self {
                             address,
                             env,
@@ -130,7 +130,7 @@ mod test {
                         }
                     }
 
-                    fn contract_address(&self) -> Address {
+                    fn contract_address(&self) -> odra::prelude::Address {
                         self.address
                     }
 

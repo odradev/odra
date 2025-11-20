@@ -133,8 +133,9 @@ struct AddressFnItem;
 
 impl ToTokens for AddressFnItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let ty_address = utils::ty::address();
         tokens.append_all(quote::quote! {
-            fn address(&self) -> &Address {
+            fn address(&self) -> &#ty_address {
                 &self.address
             }
         })
@@ -197,13 +198,13 @@ mod test {
         let expected = quote! {
             /// [Erc20] Contract Ref.
             pub struct Erc20ContractRef {
-                env: Rc<odra::ContractEnv>,
-                address: Address,
+                env: odra::prelude::Rc<odra::ContractEnv>,
+                address: odra::prelude::Address,
                 attached_value: odra::casper_types::U512,
             }
 
             impl odra::ContractRef for Erc20ContractRef {
-                fn new(env: Rc<odra::ContractEnv>, address: Address) -> Self {
+                fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::prelude::Address) -> Self {
                     Self {
                         env,
                         address,
@@ -211,7 +212,7 @@ mod test {
                     }
                 }
 
-                fn address(&self) -> &Address {
+                fn address(&self) -> &odra::prelude::Address {
                     &self.address
                 }
 
@@ -368,13 +369,13 @@ mod test {
         let expected = quote! {
             /// [Erc20] Contract Ref.
             pub struct Erc20ContractRef {
-                env: Rc<odra::ContractEnv>,
-                address: Address,
+                env: odra::prelude::Rc<odra::ContractEnv>,
+                address: odra::prelude::Address,
                 attached_value: odra::casper_types::U512,
             }
 
             impl odra::ContractRef for Erc20ContractRef {
-                fn new(env: Rc<odra::ContractEnv>, address: Address) -> Self {
+                fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::prelude::Address) -> Self {
                     Self {
                         env,
                         address,
@@ -382,7 +383,7 @@ mod test {
                     }
                 }
 
-                fn address(&self) -> &Address {
+                fn address(&self) -> &odra::prelude::Address {
                     &self.address
                 }
 
@@ -452,13 +453,13 @@ mod test {
         let expected = quote! {
             /// [Erc20] Contract Ref.
             pub struct Erc20ContractRef {
-                env: Rc<odra::ContractEnv>,
-                address: Address,
+                env: odra::prelude::Rc<odra::ContractEnv>,
+                address: odra::prelude::Address,
                 attached_value: odra::casper_types::U512,
             }
 
             impl odra::ContractRef for Erc20ContractRef {
-                fn new(env: Rc<odra::ContractEnv>, address: Address) -> Self {
+                fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::prelude::Address) -> Self {
                     Self {
                         env,
                         address,
@@ -466,7 +467,7 @@ mod test {
                     }
                 }
 
-                fn address(&self) -> &Address {
+                fn address(&self) -> &odra::prelude::Address {
                     &self.address
                 }
 
