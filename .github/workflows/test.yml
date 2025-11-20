@@ -20,7 +20,7 @@ jobs:
     runs-on: buildjet-8vcpu-ubuntu-2204
     services:
       casper-nctl:
-        image: makesoftware/casper-nctl:v200
+        image: makesoftware/casper-nctl:v203
         options: --name mynctl
         env:
           PREDEFINED_ACCOUNTS: 'true'
@@ -29,6 +29,7 @@ jobs:
           DEPLOY_DELAY: '30sec'
         ports:
           - 11101:11101
+          - 18101:18101
     steps:
       - name: Setup just
         uses: extractions/setup-just@v1

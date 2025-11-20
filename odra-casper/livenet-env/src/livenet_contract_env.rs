@@ -120,6 +120,7 @@ impl ContractContext for LivenetContractEnv {
         let callstack = self.callstack.borrow();
         self.runtime
             .block_on(async { client.get_balance(callstack.current().address()).await })
+            .unwrap_or_else(|e| panic!("Failed to get balance: {}", e.error_message()))
     }
 
     fn emit_event(&self, _event: &Bytes) {
