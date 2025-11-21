@@ -136,11 +136,10 @@ mod test {
                 }
                 
                 pub fn batch_upgrade_child_contract<
-                    S: Into<odra::args::BatchUpgradeArgs<T>>,
                     T: Into<odra::casper_types::RuntimeArgs>
                 >(
                     &mut self,
-                    args: S
+                    args: odra::prelude::BTreeMap<odra::prelude::string::String, T>
                 ) {
                     self.env
                         .call_contract(
@@ -156,7 +155,7 @@ mod test {
                                             let _ = named_args.insert("amount", self.attached_value);
                                         }
                                         odra::args::EntrypointArgument::insert_runtime_arg(
-                                            args.into(),
+                                            odra::args::BatchUpgradeArgs::from(args),
                                             "args",
                                             &mut named_args,
                                         );

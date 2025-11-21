@@ -105,6 +105,7 @@ fn factory_call_def_with_amount(fun: &FnIR) -> syn::Expr {
             quote::quote!(#ty_ep_arg::insert_runtime_arg(#ident, #name, &mut #args);)
         })
         .collect::<Vec<_>>();
+    let ty_args = utils::ty::batch_upgrade_args();
     match fun.fn_type() {
         FnType::FactoryUpgrader => syn::parse_quote!(#ty_call_def::new(#fun_name, #is_mut, {
             let mut #args = #new_runtime_args;
@@ -116,7 +117,7 @@ fn factory_call_def_with_amount(fun: &FnIR) -> syn::Expr {
         })),
         FnType::FactoryBatchUpgrader => syn::parse_quote!(#ty_call_def::new(#fun_name, #is_mut, {
             let mut #args = #new_runtime_args;
-            #ty_ep_arg::insert_runtime_arg(args.into(), "args", &mut #args);
+            #ty_ep_arg::insert_runtime_arg(#ty_args::from(args), "args", &mut #args);
             #ty_ep_arg::insert_runtime_arg(true, "odra_cfg_is_factory_upgrade", &mut #args);
             #ty_ep_arg::insert_runtime_arg(true, "odra_cfg_allow_key_override", &mut #args);
             #ty_ep_arg::insert_runtime_arg(false, "odra_cfg_create_upgrade_group", &mut #args);
@@ -170,20 +171,14 @@ fn runtime_args_with_amount_block<F: FnMut(&FnArgIR) -> syn::Stmt>(
     let runtime_args = utils::expr::new_runtime_args();
     let args = utils::ident::named_args();
     let insert_amount = insert_amount_arg_stmt();
-    // let insert_args = fn_utils::insert_args_stmts(fun, insert_arg_fn);
     let ty = utils::ty::entry_point_arg();
 
     let insert_args = match fun.fn_type() {
         FnType::FactoryBatchUpgrader => {
-            vec![parse_quote!(#ty::insert_runtime_arg(args.into(), "args", &mut #args);)]
+            let args_ty = utils::ty::batch_upgrade_args();
+            vec![parse_quote!(#ty::insert_runtime_arg(#args_ty::from(args), "args", &mut #args);)]
         }
         FnType::Factory => {
-            // let mut insert_args = fn_utils::insert_args_stmts(fun, insert_arg_fn);
-            // insert_args.push(parse_quote!(#ty::insert_runtime_arg(true, "odra_cfg_is_upgradable", &mut #args);));
-            // insert_args.push(parse_quote!(#ty::insert_runtime_arg(false, "odra_cfg_is_upgrade", &mut #args);));
-            // insert_args.push(parse_quote!(#ty::insert_runtime_arg(true, "odra_cfg_allow_key_override", &mut #args);));
-            // insert_args.push(parse_quote!(#ty::insert_runtime_arg(contract_name, "odra_cfg_package_hash_key_name", &mut #args);));
-            // insert_args
              fn_utils::insert_args_stmts(fun, insert_arg_fn)
         }
         _ => fn_utils::insert_args_stmts(fun, insert_arg_fn)

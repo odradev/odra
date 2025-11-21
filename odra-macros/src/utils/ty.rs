@@ -277,6 +277,6 @@ pub fn bytes() -> syn::Type {
     parse_quote!(odra::casper_types::bytesrepr::Bytes)
 }
 
-pub fn batch_upgrade_args_of_t() -> syn::Type {
-    parse_quote!(odra::args::BatchUpgradeArgs<T>)
+pub fn batch_upgrade_args() -> syn::Type {
+    parse_quote!(odra::args::BatchUpgradeArgs)
 }

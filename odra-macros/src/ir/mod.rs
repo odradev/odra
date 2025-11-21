@@ -387,9 +387,9 @@ impl ModuleImplIR {
 
     pub fn factory_batch_upgrade_fn(&self) -> FnIR {
         let rt_args = utils::ty::runtime_args();
-        let batch_upgrade_args = utils::ty::batch_upgrade_args_of_t();
+        let btree_map = utils::ty::typed_btree_map(&utils::ty::string(), &parse_quote!(T));
         FnIR::Impl(FnImplIR::new(parse_quote! {
-            pub fn batch_upgrade_child_contract<S: Into<#batch_upgrade_args>, T: Into<#rt_args>>(&mut self, args: S) {
+            pub fn batch_upgrade_child_contract<T: Into<#rt_args>>(&mut self, args: #btree_map) {
             }
         }))
     }

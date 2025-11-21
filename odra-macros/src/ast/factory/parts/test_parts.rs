@@ -125,11 +125,10 @@ mod test {
                     }
 
                     pub fn batch_upgrade_child_contract<
-                        S: Into<odra::args::BatchUpgradeArgs<T>>,
                         T: Into<odra::casper_types::RuntimeArgs>
                     >(
                         &mut self,
-                        args: S
+                        args: odra::prelude::BTreeMap<odra::prelude::string::String, T>
                     ) {
                         self.try_batch_upgrade_child_contract(args).unwrap()
                     }
@@ -182,11 +181,10 @@ mod test {
                     }
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
                     pub fn try_batch_upgrade_child_contract<
-                        S: Into<odra::args::BatchUpgradeArgs<T>>,
                         T: Into<odra::casper_types::RuntimeArgs>
                     >(
                         &mut self,
-                        args: S
+                        args: odra::prelude::BTreeMap<odra::prelude::string::String, T>
                     ) -> OdraResult<()> {
                         self.env
                             .call_contract(
@@ -198,7 +196,7 @@ mod test {
                                     true,
                                     {
                                         let mut named_args = odra::casper_types::RuntimeArgs::new();
-                                        odra::args::EntrypointArgument::insert_runtime_arg(args.into(), "args", &mut named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(odra::args::BatchUpgradeArgs::from(args), "args", &mut named_args);
                                         odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_is_factory_upgrade", &mut named_args);
                                         odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_allow_key_override", &mut named_args);
                                         odra::args::EntrypointArgument::insert_runtime_arg(false, "odra_cfg_create_upgrade_group", &mut named_args);
