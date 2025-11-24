@@ -2,8 +2,8 @@ use quote::ToTokens;
 use syn::{parse_quote, punctuated::Punctuated, Token};
 
 use crate::{
-    ir::{FnIR, FnTraitIR, ModuleImplIR},
-    utils::ty
+    ir::{FnIR, FnTraitIR, FnType, ModuleImplIR},
+    utils::{self, ty}
 };
 
 #[derive(syn_derive::ToTokens)]
@@ -42,7 +42,7 @@ impl TryFrom<&ModuleImplIR> for FactorySchemaEntrypointsItem {
                     };
                     FnIR::Def(FnTraitIR::new(parse_quote!(#argless_sig;)))
                 })
-                .chain(vec![module.factory_fn()])
+                .chain(vec![module.factory_fn(), module.factory_upgrade_fn(), module.factory_batch_upgrade_fn()])
                 .collect()
         };
         Ok(Self {
@@ -74,7 +74,12 @@ impl ToTokens for SchemaEntrypointsItem {
                     syn::ReturnType::Type(_, t) => quote::quote! { #t }
                 };
                 let is_mut = f.is_mut();
-                let mut args = args_to_tokens(&f.raw_typed_args());
+                let mut args = if f.fn_type() == FnType::FactoryBatchUpgrader {
+                    let ty_bytes = utils::ty::bytes();
+                    vec![quote::quote!(odra::schema::argument::<#ty_bytes>("args"))]
+                } else  {
+                    args_to_tokens(&f.raw_typed_args())
+                };
                 if f.is_payable() {
                     args.push(quote::quote!(odra::schema::argument::<
                         odra::casper_types::URef
@@ -301,12 +306,28 @@ mod test {
                             odra::prelude::vec![]
                         ),
                         odra::schema::entry_point::<(odra::prelude::Address, odra::casper_types::URef)>(
-                            "factory",
+                            "new_contract",
                             "",
                             true,
                             odra::prelude::vec![
-                                odra::schema::argument::<String>("contract_name"),
+                                odra::schema::argument::<odra::prelude::string::String>("contract_name"),
                                 odra::schema::argument::<u32>("value")
+                            ]
+                        ),
+                        odra::schema::entry_point::<()>(
+                            "upgrade_child_contract",
+                            "", 
+                            true, 
+                            odra::prelude::vec![
+                                odra::schema::argument::<odra::prelude::string::String>("contract_name")
+                            ]
+                        ),
+                        odra::schema::entry_point::<()>(
+                            "batch_upgrade_child_contract",
+                            "", 
+                            true, 
+                            odra::prelude::vec![
+                                odra::schema::argument::<odra::casper_types::bytesrepr::Bytes>("args")
                             ]
                         )
                     ]

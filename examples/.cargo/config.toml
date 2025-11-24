@@ -1,2 +1,5 @@
 [build]
 target-dir = "../target"
+
+[alias]
+rl = "run --features=livenet"

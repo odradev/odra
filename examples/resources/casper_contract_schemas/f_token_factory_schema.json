@@ -4,12 +4,12 @@
   "authors": [],
   "repository": null,
   "homepage": null,
-  "contract_name": "CounterFactory",
+  "contract_name": "FTokenFactory",
   "contract_version": "2.4.1",
   "types": [
     {
       "struct": {
-        "name": "CounterFactoryContractDeployed",
+        "name": "FTokenFactoryContractDeployed",
         "description": null,
         "members": [
           {
@@ -40,9 +40,27 @@
           "optional": false
         },
         {
-          "name": "value",
+          "name": "name",
           "description": null,
-          "ty": "U32",
+          "ty": "String",
+          "optional": false
+        },
+        {
+          "name": "symbol",
+          "description": null,
+          "ty": "String",
+          "optional": false
+        },
+        {
+          "name": "decimals",
+          "description": null,
+          "ty": "U8",
+          "optional": false
+        },
+        {
+          "name": "initial_supply",
+          "description": null,
+          "ty": "U256",
           "optional": false
         }
       ],
@@ -108,12 +126,12 @@
   ],
   "events": [
     {
-      "name": "CounterFactoryContractDeployed",
-      "ty": "CounterFactoryContractDeployed"
+      "name": "FTokenFactoryContractDeployed",
+      "ty": "FTokenFactoryContractDeployed"
     }
   ],
   "call": {
-    "wasm_file_name": "CounterFactory.wasm",
+    "wasm_file_name": "FTokenFactory.wasm",
     "description": "",
     "arguments": [
       {

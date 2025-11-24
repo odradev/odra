@@ -21,12 +21,40 @@ impl Counter {
     }
 }
 
+#[odra::module(factory=on)]
+pub struct BetterCounter {
+    /// The initial value for the counter.
+    value: Var<u32>
+}
+
+#[odra::module(factory=on)]
+impl BetterCounter {
+    pub fn init(&mut self, value: u32) {
+        self.value.set(value);
+    }
+
+    pub fn increment(&mut self) {
+        self.value.set(self.value.get_or_default() + 1);
+    }
+
+    pub fn value(&self) -> u32 {
+        self.value.get_or_default()
+    }
+
+    pub fn upgrade(&mut self, new_value: u32) {
+        self.value.set(new_value);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use odra::{
-        host::{Deployer, HostRef, NoArgs},
-        prelude::*
+        host::{Deployer, HostRef, InstallConfig, NoArgs},
+        prelude::*,
+        VmError
     };
+
+    use crate::factory::counter::{BetterCounterFactory, BetterCounterUpgradeArgs};
 
     use super::{
         Counter, CounterFactory, CounterFactoryContractDeployed, CounterHostRef, CounterInitArgs
@@ -48,7 +76,7 @@ mod tests {
         // Deploy the factory contract
         let mut factory_ref = CounterFactory::deploy(&env, NoArgs);
         // Use the factory to deploy a new Counter contract with initial value 10
-        let (address, _access_uref) = factory_ref.factory(String::from("Counter"), 10);
+        let (address, _access_uref) = factory_ref.new_contract(String::from("Counter"), 10);
         assert!(env.emitted_event(
             &factory_ref,
             CounterFactoryContractDeployed {
@@ -62,5 +90,125 @@ mod tests {
         counter_ref.increment();
         // The value should now be 11
         assert_eq!(counter_ref.value(), 11);
+    }
+
+    #[test]
+    #[ignore = "This test does not work on odra vm"]
+    fn test_factory_upgrade_works() {
+        let env = odra_test::env();
+        // Deploy the factory contract
+        let mut factory = CounterFactory::deploy_with_cfg(
+            &env,
+            NoArgs,
+            InstallConfig::upgradable::<CounterFactory>()
+        );
+        let (ten_address, _) = factory.new_contract(String::from("FromTen"), 10);
+        let (two_address, _) = factory.new_contract(String::from("FromTwo"), 2);
+        let (three_address, _) = factory.new_contract(String::from("FromThree"), 3);
+        let (hundred_address, _) = factory.new_contract(String::from("FromHundred"), 100);
+
+        // Upgrade the factory contract
+        let result = BetterCounterFactory::try_upgrade(&env, factory.address(), NoArgs);
+        assert!(result.is_ok());
+
+        let mut factory = result.unwrap();
+        factory.upgrade_child_contract(String::from("FromTen"), 122);
+        factory.upgrade_child_contract(String::from("FromTwo"), 11);
+
+        let args = vec![
+            ("FromTwo".to_string(), 42u32),
+            ("FromThree".to_string(), 42u32),
+            ("FromHundred".to_string(), 1000u32),
+        ]
+        .into_iter()
+        .map(|(contract_name, new_value)| (contract_name, BetterCounterUpgradeArgs { new_value }))
+        .collect::<BTreeMap<_, _>>();
+
+        factory.batch_upgrade_child_contract(args);
+
+        assert_eq!(CounterHostRef::new(ten_address, env.clone()).value(), 122);
+        assert_eq!(CounterHostRef::new(two_address, env.clone()).value(), 42);
+        assert_eq!(CounterHostRef::new(three_address, env.clone()).value(), 42);
+        assert_eq!(
+            CounterHostRef::new(hundred_address, env.clone()).value(),
+            1000
+        );
+    }
+
+    #[test]
+    #[ignore = "This test does not work on odra vm"]
+    fn test_factory_upgrade_fails_for_unauthorized_caller() {
+        let env = odra_test::env();
+        // Deploy the factory contract
+        let mut factory = CounterFactory::deploy_with_cfg(
+            &env,
+            NoArgs,
+            InstallConfig::upgradable::<CounterFactory>()
+        );
+        let (address, _) = factory.new_contract(String::from("FromTen"), 10);
+
+        // Upgrade the factory contract
+        let result = BetterCounterFactory::try_upgrade(&env, factory.address(), NoArgs);
+        assert!(result.is_ok());
+
+        let mut factory = result.unwrap();
+        // Change caller to unauthorized account
+        let unauthorized_account = env.get_account(11);
+        env.set_caller(unauthorized_account);
+        let upgrade_result = factory.try_upgrade_child_contract(String::from("FromTen"), 122);
+        assert_eq!(
+            upgrade_result,
+            Err(OdraError::VmError(VmError::InvalidContext))
+        );
+
+        // Ensure the value has not changed
+        assert_eq!(CounterHostRef::new(address, env.clone()).value(), 10);
+
+        let args = vec![
+            ("FromTwo".to_string(), 42u32),
+            ("FromThree".to_string(), 42u32),
+            ("FromHundred".to_string(), 1000u32),
+        ]
+        .into_iter()
+        .map(|(contract_name, new_value)| (contract_name, BetterCounterUpgradeArgs { new_value }))
+        .collect::<BTreeMap<_, _>>();
+        let upgrade_result = factory.try_batch_upgrade_child_contract(args);
+
+        assert_eq!(
+            upgrade_result,
+            Err(OdraError::VmError(VmError::InvalidContext))
+        );
+    }
+
+    #[test]
+    #[ignore = "This test does not work on odra vm"]
+    fn test_factory_upgrade_fails_for_invalid_arg() {
+        let env = odra_test::env();
+        // Deploy the factory contract
+        let mut factory = CounterFactory::deploy_with_cfg(
+            &env,
+            NoArgs,
+            InstallConfig::upgradable::<CounterFactory>()
+        );
+        let _ = factory.new_contract(String::from("FromTen"), 10);
+        let _ = factory.new_contract(String::from("FromTwo"), 2);
+        let _ = factory.new_contract(String::from("FromThree"), 3);
+        let _ = factory.new_contract(String::from("FromHundred"), 100);
+
+        // Upgrade the factory contract
+        let result = BetterCounterFactory::try_upgrade(&env, factory.address(), NoArgs);
+        assert!(result.is_ok());
+
+        let mut factory = result.unwrap();
+
+        let args = vec![("FromTwo".to_string(), 42u32)]
+            .into_iter()
+            .map(|(contract_name, _)| (contract_name, NoArgs))
+            .collect::<BTreeMap<_, _>>();
+        let upgrade_result = factory.try_batch_upgrade_child_contract(args);
+        assert_eq!(
+            upgrade_result,
+            Err(OdraError::ExecutionError(ExecutionError::MissingArg))
+        );
     }
 }

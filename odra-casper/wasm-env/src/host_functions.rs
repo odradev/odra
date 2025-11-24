@@ -7,7 +7,7 @@
 //!
 //! Build on top of the [casper_contract] crate.
 
-use crate::consts;
+use crate::consts::{self, FACTORY_GROUP_NAME};
 use crate::consts::{CONSTRUCTOR_GROUP_NAME, NATIVE_EVENT_TOPIC, UPGRADER_GROUP_NAME};
 use casper_contract::contract_api::runtime::{emit_message, get_immediate_caller};
 use casper_contract::contract_api::storage;
@@ -35,6 +35,7 @@ use odra_core::casper_types::system::auction::{self, BidAddr, BidKind, Validator
 use odra_core::casper_types::system::{Caller, CallerInfo};
 use odra_core::casper_types::ApiError::User;
 use odra_core::casper_types::Key::SmartContract;
+use odra_core::casper_types::{self, HashAddr, StoredValue};
 use odra_core::casper_types::{
     api_error, bytesrepr,
     bytesrepr::{Bytes, FromBytes, ToBytes},
@@ -43,18 +44,17 @@ use odra_core::casper_types::{
     PackageAddr, PackageHash, Parameter, Parameters, PublicKey, RuntimeArgs, URef,
     DICTIONARY_ITEM_KEY_MAX_LENGTH, U512, UREF_SERIALIZED_LENGTH
 };
-use odra_core::casper_types::{HashAddr, StoredValue};
 use odra_core::consts::{
-    ALLOW_KEY_OVERRIDE_ARG, CREATE_UPGRADE_GROUP, IS_UPGRADABLE_ARG, IS_UPGRADE_ARG,
-    PACKAGE_HASH_KEY_NAME_ARG, PACKAGE_HASH_TO_UPGRADE_ARG, RANDOM_BYTES_COUNT
+    ALLOW_KEY_OVERRIDE_ARG, CREATE_UPGRADE_GROUP, IS_FACTORY_UPGRADE_ARG, IS_UPGRADABLE_ARG,
+    IS_UPGRADE_ARG, PACKAGE_HASH_KEY_NAME_ARG, PACKAGE_HASH_TO_UPGRADE_ARG, RANDOM_BYTES_COUNT
 };
 use odra_core::prelude::ExecutionError::{CannotExtractCallerInfo, CannotGetAnImmediateCaller};
 use odra_core::validator::ValidatorInfo;
+use odra_core::{args, prelude::*, CallDef};
 use odra_core::{
     args::EntrypointArgument,
     casper_event_standard::{self, Schema, Schemas}
 };
-use odra_core::{prelude::*, CallDef};
 
 lazy_static::lazy_static! {
     static ref STATE: URef = {
@@ -69,6 +69,7 @@ lazy_static::lazy_static! {
 }
 
 pub(crate) static mut ATTACHED_VALUE: U512 = U512::zero();
+static mut CALLER_OVERRIDE: bool = false;
 
 /// Installs or upgrades a contract based on the provided entry points, events, and initialization arguments.
 pub fn install_or_upgrade(
@@ -109,8 +110,10 @@ pub fn install_new_contract(
     let is_upgradable: bool = runtime::get_named_arg(IS_UPGRADABLE_ARG);
     let has_init = entry_points
         .get("init")
-        .map(|ep| ep.access() != &EntryPointAccess::Template)
+        .map(|ep| *ep.access() != EntryPointAccess::Template)
         .unwrap_or_default();
+    let is_factory = entry_points.has_entry_point("new_contract");
+
     // Prepare named keys.
     let named_keys = initial_named_keys(events);
 
@@ -145,6 +148,11 @@ pub fn install_new_contract(
 
     let contract_package_hash = ContractPackageHash::new(contract_hash.value());
     if has_init {
+        if is_factory {
+            unsafe {
+                CALLER_OVERRIDE = true;
+            }
+        }
         let init_access = create_contract_user_group(contract_package_hash, CONSTRUCTOR_GROUP_NAME);
         let _: () = runtime::call_versioned_contract(
             contract_package_hash,
@@ -162,6 +170,16 @@ pub fn install_new_contract(
         BTreeSet::from([upgrade_access])
     )
     .unwrap_or_revert();
+
+    if is_factory {
+        let factory_group_uref =
+            create_contract_user_group(contract_package_hash, FACTORY_GROUP_NAME);
+        runtime::put_key(
+            &format!("{}_factory_access", package_hash_key_name),
+            Key::URef(factory_group_uref)
+        );
+        return (contract_package_hash, factory_group_uref);
+    }
 
     let access_uref = runtime::get_key(&access_uref_key)
         .unwrap_or_revert_with(ApiError::AllocLayout)
@@ -191,12 +209,37 @@ pub fn upgrade_contract(
         EntryPointPayment::Caller
     ));
 
+    let args = upgrade_args.unwrap_or_default();
     // Get named arguments.
-    let package_hash_to_upgrade: HashAddr = runtime::get_named_arg(PACKAGE_HASH_TO_UPGRADE_ARG);
-    let new_package_hash_key: String = runtime::get_named_arg(PACKAGE_HASH_KEY_NAME_ARG);
+    let is_factory_upgrade: bool =
+        runtime::try_get_named_arg(IS_FACTORY_UPGRADE_ARG).unwrap_or_default();
+
+    let (package_hash_to_upgrade, new_package_hash_key) = if is_factory_upgrade {
+        let package_hash_to_upgrade = args
+            .get(PACKAGE_HASH_TO_UPGRADE_ARG)
+            .cloned()
+            .unwrap_or_revert();
+        let new_package_hash_key = args
+            .get(PACKAGE_HASH_KEY_NAME_ARG)
+            .cloned()
+            .unwrap_or_revert();
+        (
+            package_hash_to_upgrade.into_t().unwrap_or_revert(),
+            new_package_hash_key.into_t().unwrap_or_revert()
+        )
+    } else {
+        (
+            runtime::get_named_arg::<HashAddr>(PACKAGE_HASH_TO_UPGRADE_ARG),
+            runtime::get_named_arg::<String>(PACKAGE_HASH_KEY_NAME_ARG)
+        )
+    };
     let allow_key_override: bool = runtime::get_named_arg(ALLOW_KEY_OVERRIDE_ARG);
     let create_user_group: bool = runtime::get_named_arg(CREATE_UPGRADE_GROUP);
-    let has_upgrade = entry_points.has_entry_point("upgrade");
+
+    let has_upgrade = entry_points
+        .get("upgrade")
+        .map(|e| *e.access() != EntryPointAccess::Template)
+        .unwrap_or_default();
 
     let package_hash = runtime::get_key(&new_package_hash_key);
 
@@ -250,12 +293,7 @@ pub fn upgrade_contract(
 
     // Call "upgrade".
     if has_upgrade {
-        let _: () = runtime::call_versioned_contract(
-            contract_package_hash,
-            None,
-            "upgrade",
-            upgrade_args.unwrap_or_default()
-        );
+        let _: () = runtime::call_versioned_contract(contract_package_hash, None, "upgrade", args);
     }
 
     // We disable access to upgrader functions.
@@ -523,7 +561,11 @@ pub fn emit_native_event(event: &Bytes) {
 /// Gets the immediate session caller of the current execution.
 #[inline(always)]
 pub fn caller() -> OdraResult<Address> {
-    let caller = caller_info_to_caller(get_immediate_caller().unwrap_or_revert())?;
+    let caller = if unsafe { CALLER_OVERRIDE } {
+        caller_info_to_caller(take_nth_caller_from_stack(2))?
+    } else {
+        caller_info_to_caller(get_immediate_caller().unwrap_or_revert())?
+    };
     Ok(Address::from(caller))
 }
 
@@ -1024,4 +1066,11 @@ pub fn new_dictionary_uref(dictionary_name: &str) -> Result<URef, ApiError> {
     let value_bytes = read_host_buffer(value_size).unwrap_or_revert();
     let uref: URef = bytesrepr::deserialize(value_bytes).unwrap_or_revert();
     Ok(uref)
+}
+
+/// Sets a flag to override the caller for factory contracts.
+pub fn override_factory_caller() {
+    unsafe {
+        CALLER_OVERRIDE = true;
+    }
 }

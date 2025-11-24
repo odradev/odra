@@ -54,6 +54,9 @@ pub const CREATE_UPGRADE_GROUP: &str = "odra_cfg_create_upgrade_group";
 /// The arg name for telling the installer that the contract is being upgraded.
 pub const IS_UPGRADE_ARG: &str = "odra_cfg_is_upgrade";
 
+/// The arg name for telling the installer that the contract is performing a factory upgrade.
+pub const IS_FACTORY_UPGRADE_ARG: &str = "odra_cfg_is_factory_upgrade";
+
 /// The arg name for telling the installer the previous contract version.
 pub const PACKAGE_HASH_TO_UPGRADE_ARG: &str = "odra_cfg_package_hash_to_upgrade";
 

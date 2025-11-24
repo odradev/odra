@@ -37,11 +37,6 @@ pub fn entry_point_contract() -> syn::Expr {
     parse_quote!(#ty::Called)
 }
 
-pub fn entry_point_factory() -> syn::Expr {
-    let ty = super::ty::entry_point_type();
-    parse_quote!(#ty::Factory)
-}
-
 pub fn entry_point_payment() -> syn::Expr {
     let ty = super::ty::entry_point_payment();
     parse_quote!(#ty::Caller)
@@ -50,17 +45,6 @@ pub fn entry_point_payment() -> syn::Expr {
 pub fn entry_point_access_public() -> syn::Expr {
     let ty = super::ty::entry_point_access();
     parse_quote!(#ty::Public)
-}
-
-pub fn entry_point_access_template() -> syn::Expr {
-    let ty = super::ty::entry_point_access();
-    parse_quote!(#ty::Template)
-}
-
-pub fn entry_point_group(name: &str) -> syn::Expr {
-    let ty = super::ty::entry_point_access();
-    let ty_group = super::ty::group();
-    parse_quote!(#ty::Groups(vec![#ty_group::new(#name)]))
 }
 
 pub fn new_parameter(name: String, ty: syn::Type) -> syn::Expr {
@@ -79,12 +63,6 @@ pub fn as_cl_type(ty: &syn::Type) -> syn::Expr {
 pub fn unit_cl_type() -> syn::Expr {
     let ty_cl_typed = super::ty::cl_typed();
     parse_quote!(<() as #ty_cl_typed>::cl_type())
-}
-
-pub fn key_cl_type() -> syn::Expr {
-    let ty_cl_typed = super::ty::cl_typed();
-    let key_ty = super::ty::key();
-    parse_quote!(<#key_ty as #ty_cl_typed>::cl_type())
 }
 
 pub fn schemas(events: &syn::Expr) -> syn::Expr {
@@ -168,6 +146,14 @@ pub fn vec<T: ToTokens>(content: T) -> syn::Expr {
     parse_quote!(odra::prelude::vec![#content])
 }
 
+pub fn vec_try_into<T: ToTokens>(content: T) -> syn::Expr {
+    parse_quote!(odra::prelude::vec![#content]
+        .into_iter()
+        .map(TryInto::try_into)
+        .collect::<Result<_, _>>()
+        .unwrap_or_default())
+}
+
 pub fn clone<T: ToTokens>(caller: &T) -> syn::Expr {
     parse_quote!(#caller.clone())
 }
@@ -218,4 +204,56 @@ impl IntoExpr for syn::Ident {
     fn into_expr(self) -> syn::Expr {
         parse_quote!(#self)
     }
+}
+
+pub fn constructor_ep(args_expr: syn::Expr) -> syn::Expr {
+    parse_quote!(odra::entry_point::EntryPoint::Constructor {
+        args: #args_expr
+    })
+}
+
+pub fn upgrader_ep(args_expr: syn::Expr) -> syn::Expr {
+    parse_quote!(odra::entry_point::EntryPoint::Upgrader {
+        args: #args_expr
+    })
+}
+
+pub fn regular_ep(
+    name: String,
+    args_expr: syn::Expr,
+    ret_ty_expr: syn::Expr,
+    is_payable: bool,
+    is_non_reentrant: bool
+) -> syn::Expr {
+    parse_quote!(odra::entry_point::EntryPoint::Regular {
+        name: #name,
+        args: #args_expr,
+        ret_ty: #ret_ty_expr,
+        is_non_reentrant: #is_non_reentrant,
+        is_payable: #is_payable
+    })
+}
+
+pub fn factory_ep(args_expr: syn::Expr) -> syn::Expr {
+    parse_quote!(odra::entry_point::EntryPoint::Factory {
+        args: #args_expr,
+    })
+}
+
+pub fn factory_upgrade_ep(args_expr: syn::Expr) -> syn::Expr {
+    parse_quote!(odra::entry_point::EntryPoint::FactoryUpgrade {
+        args: #args_expr,
+    })
+}
+
+pub fn factory_batch_upgrade_ep() -> syn::Expr {
+    parse_quote!(odra::entry_point::EntryPoint::FactoryBatchUpgrade)
+}
+
+pub fn template_ep(name: String, args_expr: syn::Expr, ret_ty_expr: syn::Expr) -> syn::Expr {
+    parse_quote!(odra::entry_point::EntryPoint::Template {
+        name: #name,
+        args: #args_expr,
+        ret_ty: #ret_ty_expr
+    })
 }

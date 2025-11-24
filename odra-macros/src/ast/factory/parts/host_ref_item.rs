@@ -21,17 +21,17 @@ pub struct FactoryHostRefItem {
 
 struct FactoryHostRefImplItem {
     ref_ident: syn::Ident,
-    factory_fn: syn::ItemFn
+    factory_fns: Vec<syn::ItemFn>
 }
 
 impl TryFrom<&'_ ModuleImplIR> for FactoryHostRefImplItem {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        let fun = module.factory_fn();
+        let fns = vec![module.factory_fn(), module.factory_upgrade_fn(), module.factory_batch_upgrade_fn()];
         Ok(Self {
             ref_ident: module.host_ref_ident()?,
-            factory_fn: ref_utils::host_function_item(&fun, false)
+            factory_fns: fns.iter().map(|f| ref_utils::host_function_item(f, false)).collect()
         })
     }
 }
@@ -39,10 +39,10 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryHostRefImplItem {
 impl ToTokens for FactoryHostRefImplItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let ref_ident = &self.ref_ident;
-        let factory_fn = &self.factory_fn;
+        let factory_fns = &self.factory_fns;
         tokens.extend(quote::quote! {
             impl #ref_ident {
-                #factory_fn
+                #(#factory_fns)*
             }
         });
     }
@@ -50,18 +50,18 @@ impl ToTokens for FactoryHostRefImplItem {
 
 struct FactoryHostRefTryImplItem {
     ref_ident: syn::Ident,
-    factory_fn: syn::ItemFn
+    factory_fns: Vec<syn::ItemFn>
 }
 
 impl TryFrom<&'_ ModuleImplIR> for FactoryHostRefTryImplItem {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        let fun = module.factory_fn();
+        let fns = vec![module.factory_fn(), module.factory_upgrade_fn(), module.factory_batch_upgrade_fn()];
 
         Ok(Self {
             ref_ident: module.host_ref_ident()?,
-            factory_fn: ref_utils::factory_try_function_item(&fun)
+            factory_fns: fns.iter().map(ref_utils::factory_try_function_item).collect()
         })
     }
 }
@@ -69,10 +69,10 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryHostRefTryImplItem {
 impl ToTokens for FactoryHostRefTryImplItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let ref_ident = &self.ref_ident;
-        let factory_fn = &self.factory_fn;
+        let factory_fns = &self.factory_fns;
         tokens.extend(quote::quote! {
             impl #ref_ident {
-                #factory_fn
+                #(#factory_fns)*
             }
         });
     }

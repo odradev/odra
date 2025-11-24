@@ -935,7 +935,7 @@ fn parse_error(err: engine_state::Error) -> OdraError {
             execution::ExecError::MissingArgument { name } => {
                 OdraError::ExecutionError(ExecutionError::MissingArg)
             }
-            _ => OdraError::VmError(VmError::Other(format!("Casper ExecError: {}", exec_err)))
+            _ => OdraError::VmError(VmError::Other(format!("Casper ExecError: {exec_err}")))
         }
     } else {
         OdraError::VmError(VmError::Other(format!("Casper EngineStateError: {}", err)))

@@ -73,7 +73,7 @@ impl ToTokens for FactoryModuleImplItem {
             .iter()
             .filter_map(|f| match f {
                 FnIR::Impl(fn_impl_ir) => Some(fn_impl_ir),
-                FnIR::Def(_) => None
+                _ => None
             })
             .map(|f| {
                 syn::ImplItemFn {
