@@ -148,11 +148,6 @@ pub fn install_new_contract(
 
     let contract_package_hash = ContractPackageHash::new(contract_hash.value());
     if has_init {
-        if is_factory {
-            unsafe {
-                CALLER_OVERRIDE = true;
-            }
-        }
         let init_access = create_contract_user_group(contract_package_hash, CONSTRUCTOR_GROUP_NAME);
         let _: () = runtime::call_versioned_contract(
             contract_package_hash,

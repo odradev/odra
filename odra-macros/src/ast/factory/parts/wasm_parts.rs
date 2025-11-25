@@ -5,6 +5,7 @@ use syn::parse_quote;
 use crate::ast::parts_utils::{UsePreludeItem, UseSuperItem};
 use crate::ast::wasm_parts::{NoMangleFnItem, NoMangleItemContext};
 use crate::ast::wasm_parts_utils;
+use crate::ir::FnType;
 use crate::utils::misc::AsType;
 use crate::{
     ast::fn_utils,
@@ -35,9 +36,15 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for NoMangleFnItem<FactoryContext> {
             syn::ReturnType::Type(_, _) => Some(utils::stmt::runtime_return(&result_ident))
         };
 
+        let override_stmt = if [FnType::Constructor, FnType::Upgrader].contains(&func.fn_type()) {
+            Some(parse_quote!(odra::odra_casper_wasm_env::host_functions::override_factory_caller();))
+        } else {
+            None
+        };
+
         Ok(Self {
             sig: parse_quote!(fn #fn_ident()),
-            override_stmt: Some(parse_quote!(odra::odra_casper_wasm_env::host_functions::override_factory_caller();)),
+            override_stmt,
             execute_stmt,
             ret_stmt,
             ctx: std::marker::PhantomData::<FactoryContext>
@@ -745,7 +752,6 @@ mod test {
 
                 #[no_mangle]
                 fn total_supply() {
-                    odra::odra_casper_wasm_env::host_functions::override_factory_caller();
                     let result = __erc20_factory_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
@@ -756,13 +762,11 @@ mod test {
 
                 #[no_mangle]
                 fn pay_to_mint() {
-                    odra::odra_casper_wasm_env::host_functions::override_factory_caller();
                     __erc20_factory_exec_parts::execute_pay_to_mint(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
 
                 #[no_mangle]
                 fn approve() {
-                    odra::odra_casper_wasm_env::host_functions::override_factory_caller();
                     __erc20_factory_exec_parts::execute_approve(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
             }
