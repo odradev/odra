@@ -695,9 +695,13 @@ impl HostEnv {
             .ok_or(EventError::IndexOutOfBounds)?;
 
         let bytes = backend.get_event(&contract_address, event_absolute_position)?;
-        T::from_bytes(&bytes)
-            .map_err(|_| EventError::Parsing)
-            .map(|r| r.0)
+        let (event, remainder) = T::from_bytes(&bytes).map_err(|_| EventError::Parsing)?;
+
+        if remainder.is_empty() {
+            Ok(event)
+        } else {
+            Err(EventError::Formatting)
+        }
     }
 
     /// Retrieves a native event with the specified index from the specified contract.
